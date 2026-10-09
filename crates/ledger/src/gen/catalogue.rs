@@ -25,8 +25,9 @@
 //! the drift fields, which keep R-381's `symlog` default until TASK-M3-05, the literal placement of `dbg_sentinel`,
 //! which needs no range (render contract Part 5). A vector field's view shows its norm, `‖·‖`, the reduction §3.8 names
 //! (applied per R-369). A categorical field's stored sentinel, `dmin_pair`'s 3, shows as its literal value on the ramp
-//! through `dbg_sentinel`, never as a class (R-136). The scale and range written in each view's header are the
-//! ledger's.
+//! through `dbg_sentinel`, never as a class (R-136). `last_symbol`, which has no in-band "none" code, is gated on
+//! the word's sidecar length ([`WORD_GATED`]; payload §2): the empty word and a truncated word draw the hatch. The
+//! scale and range written in each view's header are the ledger's.
 //!
 //! **The reductions** (gui_state_contract §4; dd_generation_root §3.8; render contract Part 5; TASK-M1-12). A field's
 //! view is one per field; the views that reduce a field another way, or combine fields, are written beside them to
@@ -639,10 +640,20 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
     ))
 }
 
+/// The field whose validity gates on the word's sidecar length: `last_symbol`, which has no in-band "none" code and is
+/// meaningful iff `length ≥ 1 && length ≠ 127` (payload §2): the empty word has no last symbol, and a truncated word's
+/// is invalid, like every word-derived read (payload §3).
+pub const WORD_GATED: &str = "last_symbol";
+
 /// The placeholder view of `e`, read as `r`.
 fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
     let value = r.wgsl(e.name);
     let body = match r {
+        Read::Member { wgsl, .. } if e.name == WORD_GATED => format!(
+            "let w = ctx.sample.word;\n    if (fgw_length_raw(w) == 0u || !fgw_reduced_length_valid(w)) {{\n        \
+             return debug_invalid(ctx.frag_xy);\n    }}\n    return {};",
+            ramp(e, &value, wgsl)
+        ),
         Read::Vector { wgsl: VEC2X3, .. } => format!(
             "let v = {value};\n    return dbg_sentinel(sqrt(dot(v[0], v[0]) + dot(v[1], v[1]) + dot(v[2], v[2])), \
              ctx.frag_xy);"
@@ -655,6 +666,10 @@ fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
     let colouring = if e.name == UNION_KEY {
         "Its colouring is the six-colour `dbg_cat` palette, one colour per state, not the outcome palette (R-115; \
          debug_tooling_plan §B)."
+    } else if e.name == WORD_GATED {
+        "The colouring is a placeholder (`ledger::gen::catalogue`), gated on the word: the field has no in-band \
+         \"none\" code and is meaningful iff `length ≥ 1 && length ≠ 127`, so the empty word and a truncated word \
+         draw the hatch (payload §2, §3; applied per R-369)."
     } else {
         "The colouring is a placeholder (`ledger::gen::catalogue`)."
     };

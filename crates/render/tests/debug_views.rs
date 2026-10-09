@@ -319,6 +319,109 @@ negative_control!(
     }
 );
 
+/// The live shape view before it hatched an undefined `n` or `θ̃`: mode 0 the raw `½(n + 1)`, mode 1 unguarded.
+const LIVE_SHAPE_UNGUARDED: &str = "// @uniform u_mode: u32 = 0 [0, 2]
+fn colour(ctx: Ctx) -> vec3<f32> {
+    let n = ctx.sample.n;
+    if (uniforms.u_mode == 0u) {
+        return 0.5 * (n + vec3<f32>(1.0));
+    }
+    if (uniforms.u_mode == 1u) {
+        return ramp_twilight(fract(ctx.sample.theta / 6.2831855));
+    }
+    return dbg_sentinel(length(n) - 1.0, ctx.frag_xy);
+}
+";
+
+/// Checks that the live shape view, `wgsl` at each mode, draws the hatch where its value is undefined, on the showcase
+/// set with three samples broken: sample 1 coincident at the origin (`I = 0`, so `n = 0/0`), sample 2's `θ̃` the absence NaN and
+/// sample 3's `+inf`. Modes 0 and 2 hatch sample 1, mode 1 samples 2 and 3; every other tile is no hatch.
+fn check_live_shape_undefined(wgsl: &str) {
+    let h = gpu();
+    for (mode, hatched) in [(0, [1].as_slice()), (1, &[2, 3]), (2, &[1])] {
+        let mut s = recoloured(
+            named("live_shape"),
+            Colouring::Probe(
+                wgsl.to_owned(),
+                vec![("u_mode".to_owned(), vec![f64::from(mode)])],
+            ),
+        );
+        s.set.sample(1).r([[0.0; 2]; 3]);
+        s.set.sample(2).theta(f32::from_bits(0x7fc0_0000));
+        s.set.sample(3).theta(f32::INFINITY);
+        assert!(
+            s.read(1).n.iter().all(|c| c.is_nan()),
+            "sample 1's n is 0/0"
+        );
+        let image = render(&h, &s);
+        for i in 0..8 {
+            let (x, y) = s.pixels(i)[0];
+            let hatch = near(
+                rgb(image[(y * s.size().0 + x) as usize]),
+                present::debug_invalid([f64::from(x) + 0.5, f64::from(y) + 0.5]),
+            );
+            let what = if hatched.contains(&i) {
+                "the hatch"
+            } else {
+                "no hatch"
+            };
+            assert_eq!(
+                hatch,
+                hatched.contains(&i),
+                "mode {mode}: sample {i} draws {}, not {what}",
+                if hatch { "the hatch" } else { "a colour" }
+            );
+        }
+    }
+}
+
+#[test]
+fn debug_views_live_shape_hatches_undefined() {
+    check_live_shape_undefined(&source("debug/live_shape"));
+}
+
+negative_control!(
+    debug_views_live_shape_hatches_undefined,
+    "the view before its guards, which colours an undefined n and θ̃",
+    expected = "mode 0: sample 1 draws a colour, not the hatch",
+    check_live_shape_undefined(LIVE_SHAPE_UNGUARDED)
+);
+
+/// Checks the `last_symbol` view, `colouring`, on the showcase set: the empty word (sample 0) and the truncated word
+/// (sample 6) draw the hatch, every other sample its last symbol by `dbg_cat(·, 4)` (payload §2: meaningful iff
+/// `length ≥ 1 && length ≠ 127`).
+fn check_last_symbol(colouring: Colouring) {
+    let s = showcase_scene(colouring);
+    let image = render(&gpu(), &s);
+    for i in 0..8 {
+        let read = s.read(i);
+        let length = golden_scene::fgw_length_raw(read.word);
+        if length == 0 || length == 127 {
+            assert!(i == 0 || i == 6, "sample {i}'s word is empty or truncated");
+            check_tile(&s, &image, i, &present::debug_invalid, "the hatch");
+        } else {
+            let want = present::dbg_cat(read.last_symbol, 4);
+            check_tile(&s, &image, i, &|_| want, "its last symbol");
+        }
+    }
+}
+
+#[test]
+fn debug_views_last_symbol_gates_on_the_word() {
+    check_last_symbol(Colouring::View("last_symbol"));
+}
+
+negative_control!(
+    debug_views_last_symbol_gates_on_the_word,
+    "the view ungated, which draws the empty word's stored 0 as symbol `a`",
+    expected = "sample 0 of",
+    check_last_symbol(Colouring::Probe(
+        "fn colour(ctx: Ctx) -> vec3<f32> { return dbg_cat(ctx.sample.last_symbol, 4u); }\n"
+            .to_owned(),
+        Vec::new()
+    ))
+);
+
 // ── REQ-TOOL-024: the derived views match a CPU reference ────────────────────────────────────────────────────────
 
 /// The showcase scene coloured by `colouring`.

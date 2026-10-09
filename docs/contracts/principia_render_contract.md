@@ -282,6 +282,9 @@ with dd_colouring §3.1's sRGB transfer.
 ### Live-state & array inspection
 
 - **Live shape views** (`u_mode`): mode 0 → `0.5·(n+1)` direction cosines RGB of the *current* derived `n`; mode 1 → cyclic map (Twilight) of the running unwrapped phase `θ̃`; mode 2 → `|n|−1` as error view (normalisation damage made visible — should be flat zero, since `n` is derived fresh each step).
+  Mode 0 is `dbg_dircos3(n, frag_xy)` (Part 5). Where `n` is undefined (a coincident configuration, `I = 0`, gives
+  `0/0`) or `θ̃` is not finite, the mode reading it draws `debug_invalid(frag_xy)`, the hatch, as every colouring maps
+  NaN or a sentinel to its invalid colour (Part 4; TASK-M1-12, applied per R-369).
 - **Accumulator views**: Benettin `S/t` (FTLE-running — a live approximation; the finalised read is `S_final/(n·dt)` with the partial renorm interval closed, payload §5), diffusion slope = C_ty/C_tt from the Welford accumulators, drift running-max vs running-final.
 - **Word inspector**: `fgw_reduced_length` as scalar view (styled invalid when truncated); symbol-at-slot-k via a slot slider; `fgw_truncated` (the 127-sentinel) as flag view.
 - **ICDescriptor views**: masses as ternary colour, `virial_ratio`, `rho_ratio`, `rho_angle`, `r_min_pair_0` as scalar views — these certify the *decoder*, independent of any integration.
@@ -323,7 +326,10 @@ with dd_colouring §3.1's sRGB transfer.
   `fgw_symbol(word, k)` (payload §3), draws by `dbg_cat(s, 4)`. A slot at or past the word's length, and every slot of
   a truncated word, holds no symbol and draws the hatch.
 - **Truncated:** `fgw_truncated` by `dbg_flag`.
-- **Whole-word hash:** `dbg_hash_word` of the word (Part 5, REQ-TOOL-155).
+- **Whole-word hash:** `dbg_hash_word` of the word (Part 5, REQ-TOOL-155); a truncated word draws the hatch.
+- **Last symbol:** `last_symbol` has no in-band "none" code; it is meaningful iff `length ≥ 1 && length ≠ 127`
+  (payload §2), so its view draws `dbg_cat(s, 4)` there and the hatch for the empty word and a truncated word
+  (applied per R-369).
 
 ### Cross-check views (the seams)
 

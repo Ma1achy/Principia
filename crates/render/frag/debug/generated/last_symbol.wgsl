@@ -3,7 +3,12 @@
 // categorical(4), range [0, 3]. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field
 // through `SimState.last_symbol`; its test, `catalogue_view_last_symbol` in
 // `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. The colouring is a placeholder
-// (`ledger::gen::catalogue`).
+// (`ledger::gen::catalogue`), gated on the word: the field has no in-band "none" code and is meaningful iff `length ≥ 1
+// && length ≠ 127`, so the empty word and a truncated word draw the hatch (payload §2, §3; applied per R-369).
 fn colour(ctx: Ctx) -> vec3<f32> {
+    let w = ctx.sample.word;
+    if (fgw_length_raw(w) == 0u || !fgw_reduced_length_valid(w)) {
+        return debug_invalid(ctx.frag_xy);
+    }
     return dbg_cat(ctx.sample.last_symbol, 4u);
 }
