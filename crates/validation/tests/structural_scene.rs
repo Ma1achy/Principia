@@ -7,12 +7,15 @@
 //! - REQ-RENDER-024: the boundary lines measure one pixel width on the depth-3 and depth-20 sets at quad sizes 16 and
 //!   64 px, and the thresholded-uv control does not (`structural_scene_boundary_width_*`);
 //! - every scene renders its CPU twin, far enough from every rounding tie that one reference holds on every backend
-//!   (`structural_scene_renders_*`), and the binary writes it (`structural_scene_binary_*`).
+//!   (`structural_scene_renders_*`), and the binary writes it (`structural_scene_binary_*`); the boundary scenes draw
+//!   their level and read every sample valid (`structural_scene_boundaries_*`), and the width is read off its own row
+//!   (`structural_scene_line_width_*`).
 //!
 //! Each test registers its negative control (R-176).
 
 use std::process::Command;
 
+use engine::structural::Level;
 use engine::synthetic::structural_record;
 use render::colour::combine::MID_GREY_L;
 use render::present::{self, Rgb};
@@ -20,7 +23,7 @@ use render::structural::{self as mirror, QuadMeta};
 use validation::golden_scene::{encode_image, tie_margin};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
-use validation::structural_scene::{line_width, scene, StructuralScene, NAMES};
+use validation::structural_scene::{edge, line_width, scene, Post, StructuralScene, NAMES};
 
 /// The largest per-channel difference, linear RGB, between a render and its CPU twin, as `golden_scene`'s tests allow.
 const TOL: f64 = 1e-5;
@@ -452,4 +455,58 @@ negative_control!(
     "the binary's quad boundaries are not the tile boundaries' render",
     expected = "is not `tile_boundaries`'s render",
     check_binary("quad_boundaries", "tile_boundaries")
+);
+
+/// Checks that `s` reads with every tile's sample count valid, `n²`, and draws `posts`.
+fn check_shape(s: &StructuralScene, posts: &[Post]) {
+    let n = s.context.grid.n;
+    assert_eq!(
+        s.context.valid_sample_count,
+        n * n,
+        "{}'s valid sample count",
+        s.name
+    );
+    assert_eq!(s.posts, posts, "{}'s posts", s.name);
+}
+
+#[test]
+fn structural_scene_boundaries_draw_their_level() {
+    check_shape(&named("quad_boundaries"), &[Post::Edge(edge(Level::Quad))]);
+    check_shape(&named("tile_boundaries"), &[Post::Edge(edge(Level::Tile))]);
+    check_shape(&named("width_d3_q64"), &[Post::Edge(edge(Level::Quad))]);
+    check_shape(&named("threshold_q16"), &[Post::Threshold]);
+}
+
+negative_control!(
+    structural_scene_boundaries_draw_their_level,
+    "the tile boundaries read as the quad boundaries fail",
+    expected = "tile_boundaries's posts",
+    check_shape(&named("tile_boundaries"), &[Post::Edge(edge(Level::Quad))])
+);
+
+/// A 4 × 3 image over black of white coverage: row 0 none, row 1 a 2 px antialiased line, row 2 all.
+fn rows() -> Vec<Rgb> {
+    [0.0, 0.0, 0.0, 0.0, 0.0, 0.5, 1.0, 0.5, 1.0, 1.0, 1.0, 1.0]
+        .map(|c| [c; 3])
+        .to_vec()
+}
+
+/// Checks that `line_width` reads row `row` of `rows()` as `want` pixels.
+fn check_line_width(row: u32, want: f64) {
+    let got = line_width(&rows(), 4, row, [0.0; 3], [1.0; 3]);
+    assert_eq!(got, want, "row {row}'s line width");
+}
+
+#[test]
+fn structural_scene_line_width_reads_its_row() {
+    check_line_width(0, 0.0);
+    check_line_width(1, 2.0);
+    check_line_width(2, 4.0);
+}
+
+negative_control!(
+    structural_scene_line_width_reads_its_row,
+    "row 2 read as row 1's width fails",
+    expected = "row 2's line width",
+    check_line_width(2, 2.0)
 );

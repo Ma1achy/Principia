@@ -54,3 +54,7 @@ justification = "w & 0xffff has bits 0..16 only and F16_QNAN << 16 bits 16..32 o
 [[equivalent]]
 mutant = "crates/render/src/colour/field_ramp.rs:92:29: replace == with != in ScalarField::payload"
 justification = "every ledger field payload reaches here (a scalar SimState member, an ICDescriptor member, or the word's) has its <lane>_valid in the validity lane (field_ramp_scalar_validity_is_the_lane checks each), so the guard never refuses, and any() over != finds another member: both accept the same fields"
+
+[[equivalent]]
+mutant = "crates/validation/src/structural_scene.rs:366:39: replace < with <= in StructuralScene::pixel"
+justification = "the threshold scenes' quad uv at a pixel centre is (k + 0.5)/quad_px with quad_px 16 or 64, a dyadic rational computed exactly, so d = min(uv, 1 - uv) is never the f64 0.01, which is not one, and d < 0.01 and d <= 0.01 agree at every pixel"
