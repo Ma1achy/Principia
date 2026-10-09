@@ -1070,6 +1070,7 @@ fn shade(
          ctx.frag_xy = frag_xy;\n    \
          ctx.screen = screen;\n    \
          ctx.quad = quad;\n    \
+         ctx.params = params;\n    \
          return shade(ctx);\n}\n\n\
          // Sample `i` shaded at pixel `frag_xy` where no raster places it in a target and a quad: its screen and quad\n\
          // lanes hold the absence NaN, the canonical quiet NaN (`is_absent_nan`).\n\

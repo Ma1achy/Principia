@@ -46,3 +46,11 @@ justification = "UNIFORM and COPY_DST are distinct single-bit wgpu::BufferUsages
 [[equivalent]]
 mutant = "crates/gui/src/explore/top_bar.rs:23:5: replace overlays_on -> u32 with 0"
 justification = "Overlays has no field yet (the overlay set has no toggle until its task, RQ-249), so the function's body is the constant 0 the mutant returns"
+
+[[equivalent]]
+mutant = "crates/validation/src/golden_scene.rs:238:32: replace | with ^ in d_min_samples"
+justification = "w & 0xffff has bits 0..16 only and F16_QNAN << 16 bits 16..32 only, so their ^ is their |"
+
+[[equivalent]]
+mutant = "crates/render/src/colour/field_ramp.rs:92:29: replace == with != in ScalarField::payload"
+justification = "every ledger field payload reaches here (a scalar SimState member, an ICDescriptor member, or the word's) has its <lane>_valid in the validity lane (field_ramp_scalar_validity_is_the_lane checks each), so the guard never refuses, and any() over != finds another member: both accept the same fields"

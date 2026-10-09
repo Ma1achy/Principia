@@ -9,7 +9,8 @@
 //! struct `uniforms` ([`occupant_context`]; applied per R-369, TASK-M7-04). The stain's context, a file under
 //! [`STAIN_DIR`], is linted after the prelude, the other files of [`LIB_FILES`], the unpack layer and the read side,
 //! whose `SimState` it holds; a generated debug view, a file under [`DEBUG_VIEWS`], after all of those and the stain's
-//! context, whose `Ctx` it reads, as the assembler presents it ([`view_context`]; applied per R-369, TASK-M1-08).
+//! context, whose `Ctx` it reads, and its `// @uniform` block, as the assembler presents it ([`view_context`],
+//! [`uniform_block`]; applied per R-369, TASK-M1-08, TASK-M1-09).
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -350,6 +351,24 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
 /// that renaming changes no float expression, so the lint reads the text as written. A `// @uniform` line without a
 /// name before `:` and a type between `:` and `=` is an error.
 pub fn occupant_context(prelude: &str, library: &[String], source: &str) -> Result<String, String> {
+    let mut out = String::from(prelude);
+    for file in library {
+        if !out.ends_with('\n') {
+            out.push('\n');
+        }
+        out.push_str(file);
+    }
+    if !out.ends_with('\n') {
+        out.push('\n');
+    }
+    out.push_str(&uniform_block(source)?);
+    Ok(out)
+}
+
+/// `source`'s `// @uniform` block as the assembler declares it: a struct of its uniforms in the prelude's uniform
+/// group, one binding past the prelude's, bound as `uniforms`; empty with no `// @uniform` line. A line without a name
+/// before `:` and a type between `:` and `=` is an error.
+pub fn uniform_block(source: &str) -> Result<String, String> {
     let mut members = Vec::new();
     for (k, line) in source.lines().enumerate() {
         let Some(rest) = line.trim_start().strip_prefix("// @uniform") else {
@@ -368,26 +387,17 @@ pub fn occupant_context(prelude: &str, library: &[String], source: &str) -> Resu
         };
         members.push(format!("    {name}: {ty},\n"));
     }
-    let mut out = String::from(prelude);
-    for file in library {
-        if !out.ends_with('\n') {
-            out.push('\n');
-        }
-        out.push_str(file);
+    if members.is_empty() {
+        return Ok(String::new());
     }
-    if !out.ends_with('\n') {
-        out.push('\n');
-    }
-    if !members.is_empty() {
-        let first = ledger::gen::prelude::uniforms_binding();
-        out.push_str("struct OccupantUniforms {\n");
-        out.extend(members);
-        out.push_str(&format!(
-            "}}\n@group({}) @binding({}) var<uniform> uniforms: OccupantUniforms;\n",
-            first.group,
-            first.binding + 1
-        ));
-    }
+    let first = ledger::gen::prelude::uniforms_binding();
+    let mut out = String::from("struct OccupantUniforms {\n");
+    out.extend(members);
+    out.push_str(&format!(
+        "}}\n@group({}) @binding({}) var<uniform> uniforms: OccupantUniforms;\n",
+        first.group,
+        first.binding + 1
+    ));
     Ok(out)
 }
 
@@ -412,7 +422,9 @@ fn lint_frag(root: &Path) -> Result<Vec<FileReport>, String> {
         } else if rel == READ_SIDE_FILE {
             check_read_side(&layer, &source)
         } else if rel.starts_with(&format!("{DEBUG_VIEWS}/")) {
-            view_context(root).and_then(|context| check_fragment_after(&context, &source))
+            view_context(root).and_then(|context| {
+                check_fragment_after(&format!("{context}{}", uniform_block(&source)?), &source)
+            })
         } else {
             check_fragment(&source)
         }

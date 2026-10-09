@@ -2,7 +2,13 @@
 // The debug view of `rho_ratio` (render contract Part 6; debug_tooling_plan §B–E): scalar index 6, f32, scale log,
 // range (0, ∞). A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field through
 // `ICDescriptor.rho_ratio`; its test, `catalogue_view_rho_ratio` in `crates/kernel/tests/catalogue_views/generated.rs`,
-// reads it through their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`).
+// reads it through their Rust twins. Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec
+// §10.1, RQ-231): the NaN guard, the stored sentinel's line where the field has one, and the ramp, with `RANGE_AUTO`
+// and `u_range` its uniforms.
+// @uniform RANGE_AUTO: u32 = 1 [0, 1]
+// @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
-    return dbg_sentinel(ctx.ic.rho_ratio, ctx.frag_xy);
+    let raw = ctx.ic.rho_ratio;
+    if (bitcast<u32>(raw) == 0x7fc00000u) { return debug_invalid(ctx.frag_xy); }
+    return ramp_viridis(range_norm(1.0 - 1.0 / (1.0 + log(1.0 + abs(raw) / 5.9604645e-8)), 0.0, 1.0, uniforms.RANGE_AUTO != 0u, uniforms.u_range));
 }

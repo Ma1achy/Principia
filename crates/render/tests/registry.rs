@@ -1,8 +1,8 @@
 //! The occupant registry, the scanned filesystem (gui_state_contract §3; TASK-M1-08): ledger codegen's generated
 //! field views surface through the same scan as the hand-written occupants, each a debug entry of the `colour` slot
-//! (REQ-GEN-009; RQ-219); the scan's slots, debug tag and declarations; and each generated view baked into a stain
-//! through the debug-view entry point (TASK-M1-05), loading only its own field (R-378). Each test has a registered
-//! negative control (R-176).
+//! (REQ-GEN-009; RQ-219), a numeric view declaring its `RANGE_AUTO` and `u_range` (RQ-231; TASK-M1-09); the scan's
+//! slots, debug tag and declarations; and each generated view baked into a stain through the debug-view entry point
+//! (TASK-M1-05), loading only its own field (R-378). Each test has a registered negative control (R-176).
 
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -49,6 +49,21 @@ fn catalogue_fields() -> Vec<&'static str> {
 /// Runs ledger codegen's catalogue emitter into a scratch workspace, removes the view of each of `removed`, scans the
 /// render crate there, and asserts each of the catalogue's views is a debug registry entry of the `colour` slot; then
 /// that the crate's own registry holds them the same way.
+/// The uniforms a generated view declares: a numeric view's `RANGE_AUTO` and `u_range` (RQ-231; TASK-M1-09), else
+/// none.
+fn declared_uniforms(field: &str) -> Vec<&'static str> {
+    let l = ledger::layout();
+    let entries = ledger::gen::validate(&l).expect("the ledger validates");
+    let numeric = entries
+        .iter()
+        .find(|e| e.name == field)
+        .and_then(ledger::gen::numeric::NumericView::of);
+    match numeric {
+        Some(_) => vec!["RANGE_AUTO", "u_range"],
+        None => Vec::new(),
+    }
+}
+
 fn check_generated_views_in_registry(removed: &[&str]) {
     let root = scratch("codegen");
     ledger::gen::run(&ledger::layout(), &[catalogue::emit], &root).expect("ledger codegen runs");
@@ -83,8 +98,13 @@ fn check_generated_views_in_registry(removed: &[&str]) {
                 "`{id}` is not tagged debug"
             );
             assert_eq!(entry.slot, Kind::Colour, "`{id}`'s slot is not colour");
+            let uniforms: Vec<&str> = entry
+                .uniform_schema
+                .iter()
+                .map(|u| u.name.as_str())
+                .collect();
             assert!(
-                entry.uniform_schema.is_empty() && entry.input_domains.len() == 1,
+                uniforms == declared_uniforms(field) && entry.input_domains.len() == 1,
                 "`{id}` declares {:?} and {:?}",
                 entry.uniform_schema,
                 entry.input_domains

@@ -201,7 +201,9 @@ validation::negative_control!(
 
 /// Runs `xtask <args>` with `CARGO` set to a stand-in, in a directory of its own named `case`, and returns whether it
 /// passed with each argument list the stand-in was called with. The stand-in reports one crate declaring `controls`,
-/// lists one test with its control, and answers any other call as a run of that control which made its test fail.
+/// lists one test with its control, hands a run of the golden harness's binary to the real cargo, since the golden step
+/// renders its harness cases through it (RQ-229; TASK-M1-09), and answers any other call as a run of that control which
+/// made its test fail.
 fn run_with_stand_in_cargo(case: &str, args: &[&str]) -> (bool, Vec<String>) {
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("ci_{case}"));
     let _ = fs::remove_dir_all(&dir);
@@ -216,12 +218,14 @@ if [ "$1" = metadata ]; then
   echo '{{"packages":[{{"name":"stand_in","features":{{"controls":[]}},"targets":[{{"doctest":false}}]}}]}}'
   exit 0
 fi
+case "$*" in *golden_harness*) exec '{real}' "$@";; esac
 for a in "$@"; do
   if [ "$a" = --list ]; then printf 'pairs: test\npairs::negative_control: test\n'; exit 0; fi
 done
 echo 'test pairs::negative_control - should panic ... ok'
 "#,
-            log = dir.join("calls.log").display()
+            log = dir.join("calls.log").display(),
+            real = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned())
         ),
     )
     .unwrap();

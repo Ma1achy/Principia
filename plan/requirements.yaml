@@ -5929,6 +5929,7 @@
   - R-62
   - R-72
   milestone: M2
+  note: "`rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ."
 - id: REQ-PAY-089
   area: PAY
   statement: "QuadReduction must be sized from its member list (about 80 B) and then aligned."
@@ -16673,6 +16674,42 @@
   - R-395
   milestone: M6
   note: "R-395, the routing half of REQ-TOOL-019's second half (the human's \"M5/M6\"); REQ-TOOL-158 is the path itself. Closed by TASK-M6-08, which builds DECODE_MODE's switchover (REQ-DEC-037) (applied per R-369)."
+- id: REQ-TOOL-160
+  area: TOOL
+  kind: calibration
+  statement: "The ε floor of a log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε)) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: unit test
+    detail: "the proposal gives ε with the place each log field's stored values take under it; `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with that ε; confirmed by the human at the M1 gate and recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M1
+  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal)."
+- id: REQ-TOOL-161
+  area: TOOL
+  kind: definition
+  statement: "The period of a cyclic-scaled numeric field view (rho_angle), by which RQ-231's template places raw = fract(x/period) on [0, 1] with ramp_twilight — one turn, 2π, a cyclic field being an angle in radians — must be defined in render_gui_spec §10.1 by the task that needs it and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "render_gui_spec §10.1 gives the period; `cargo test -p ledger numeric_view_template` checks that the cyclic view places raw at fract(raw / 2π) on the fixed [0, 1] with ramp_twilight; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Raised by TASK-M1-09: the ledger's cyclic scale carries no period. rho_angle's formula is REQ-PAY-088's (TASK-M2-03), which must give it in radians for this period to hold, or the period changes with it."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

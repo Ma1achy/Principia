@@ -5,5 +5,5 @@
 // `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. The colouring is a placeholder
 // (`ledger::gen::catalogue`).
 fn colour(ctx: Ctx) -> vec3<f32> {
-    return dbg_cat(ctx.sample.dmin_pair, 3u);
+    return select(dbg_cat(ctx.sample.dmin_pair, 3u), dbg_sentinel(f32(ctx.sample.dmin_pair), ctx.frag_xy), ctx.sample.dmin_pair == 3u);
 }

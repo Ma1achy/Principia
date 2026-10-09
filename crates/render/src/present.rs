@@ -123,6 +123,19 @@ pub fn debug_invalid(frag_xy: [f64; 2]) -> Rgb {
     srgb8(prelude::hatch().colours[hatch_stripe(frag_xy)])
 }
 
+/// The neutral "not yet" grey of running samples (R-96; colour_composition §1.4), which a field view draws `d_min`'s
+/// unset value in (R-280), as 8-bit sRGB: `#4E4E4E`, OKLab lightness 0.424. Proposed, R-71 (REQ-COL-053, RQ-233):
+/// among the 8-bit greys it is the one farthest in OKLab from its nearest outcome class or hatch colour: 0.230 from
+/// `#3462E0` (collision 1–2) and 0.231 from `#141418` (bounded), and 0.101 from the viridis ramp; the evidence is
+/// `render/tests/not_yet_grey.rs`'s. The human confirms it at the M1 gate. `present.wgsl`'s `DBG_NOT_YET` is its
+/// linear value.
+pub const NOT_YET_SRGB8: [u8; 3] = [0x4e, 0x4e, 0x4e];
+
+/// `DBG_NOT_YET`: [`NOT_YET_SRGB8`], decoded to linear.
+pub fn not_yet() -> Rgb {
+    srgb8(NOT_YET_SRGB8)
+}
+
 /// The canonical quiet NaN's bits (lowering Part 3a), the absence sentinel.
 pub const ABSENT_NAN_BITS: u32 = 0x7fc0_0000;
 
