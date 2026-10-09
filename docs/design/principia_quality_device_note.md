@@ -28,6 +28,9 @@ QualitySettings = {
 - **Named tiers** (Potato / Low / Medium / High / Ultra / Extreme — the canonical six, `principia_memory_tiers.md`) — fixed hardcoded knob values; skip the probe. For users who want predictability over measurement ("I know my machine, give me High"). Still clamped to hard limits.
 - **Custom** — exposes the knobs directly (N, MAX_REL_DEPTH, render_scale 0.25–2.0 with the lock-to-native toggle, E, FTLE, motion-gating). User drives each (arbiter off — §10).
 
+In every mode `N` is a power of two (R-398): auto, the named tiers and Custom choose it from the powers of two within
+the one-workgroup-per-quad thread ceiling (REQ-PERF-011), so the sample coordinates are dyadic, as the quadtree's are.
+
 Underneath it is **one struct**; the preset selector is only *how it gets populated*: auto *computes* the values, a named tier *looks them up*, custom *lets the user set them*. Drops into the existing GUI/state philosophy with no new mechanism.
 
 ---

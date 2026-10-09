@@ -69,3 +69,4 @@ grid. It also carries the M1 gate's check of R-395's first half: the absolute co
   works from `ctx.quad.centre` and the offset `h·(2·ctx.quad.uv − 1)`. REQ-TOOL-158 (M5, TASK-M5-04: the path, kernel
   and fragment) and REQ-TOOL-159 (M6, TASK-M6-08: the routing past ℓ_switch) are that half.
 - TASK-M2-25, the first task to place `ctx.chart.z` per pixel, depends on this one.
+- R-398 (9 Oct 2026) closes RQ-258: `N` is a power of two at every tier and setting. The sweep at N = 8 and N = 16 stands (a smaller power of two is exact wherever N = 8 is), and the N = 6 fixture remains a negative control of the check only, showing it can fail; N = 6 is no N the product offers. The comments in `crates/render/tests/uv_absolute_banding.rs` that call RQ-258 open are refreshed by TASK-M1-17.

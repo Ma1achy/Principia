@@ -56,3 +56,4 @@ The categorical descriptor views exist: `state` (bits 0–2, six values, in the 
 - The categorical-discipline half of dd_colouring unit test 8 (colour-per-sample then SSAA resolve) needs ensemble copies (M5) and is not claimed here.
 - PIT-9: the state/detail round-trip tests include a contaminated-bit control that must fail.
 - RQ-83 ruled: R-115 — the raw `state` debug view keeps a six-colour `dbg_cat` palette; R-77's nine-class palette governs the outcome palette (state ⊕ detail) only.
+- R-399, R-400 and R-401 (9 Oct 2026; the "not yet" stipple, the diverging ramp for a zero-spanning declared range, the per-field log floors) are applied by TASK-M1-17, not by this task, which finishes against the corpus as it was dispatched (applied per R-369).

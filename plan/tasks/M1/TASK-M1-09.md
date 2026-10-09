@@ -1,7 +1,7 @@
 # TASK-M1-09 — Numeric field views: the two-line template, raw debug fields and sentinels shown as their values
 
 - **Milestone:** M1
-- **Closes:** REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001, REQ-TOOL-137, REQ-COL-053, REQ-TOOL-160, REQ-TOOL-161
+- **Closes:** REQ-RENDER-022, REQ-RENDER-023, REQ-GEN-012, REQ-TOOL-012, REQ-TOOL-023, REQ-COL-001, REQ-TOOL-137, REQ-COL-053, REQ-TOOL-161
 - **Depends on:** TASK-M1-08
 - **Needs (earlier milestones):** REQ-GEN-001, REQ-GEN-005, REQ-PAY-011
 - **Reviewers:** code, qa, physics, gui
@@ -73,3 +73,4 @@ Every generated numeric field view takes the two-line form — the NaN guard (th
 - REQ-COL-053 is a calibration (R-71): the value is proposed with evidence here and confirmed by the human at the M1 gate; an unconfirmed calibration blocks the gate.
 - REQ-TOOL-160 and REQ-TOOL-161 were raised by this task (R-71, R-72): RQ-231's log scale names the field's floor, which only the drifts have, and the ledger's cyclic scale carries no period.
 - `meas` for `auto = true` is TASK-M1-03's: at M1, `u_range` is a `vec2<f32>` uniform filled from a CPU min/max over the synthetic buffer.
+- R-399, R-400 and R-401 (9 Oct 2026), recorded after this task merged (PR #172): the "not yet" stipple, the diverging ramp for a zero-spanning declared range and the per-field log floors are applied by TASK-M1-17, not here. REQ-TOOL-160 moved to TASK-M1-17 (applied per R-369), since R-401 replaces the single ε this task proposed and built; the acceptance lines above that name REQ-TOOL-160 record what this task built.

@@ -85,6 +85,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-394** — `ctx.chart.slice_uv` is the sample's position in the slice plane, stable under pan and zoom; a screen-relative position is a separate field *(closes RQ-257)*
 - **R-395** — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*
 - **R-397** — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*
+- **R-398** — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*
+- **R-401** — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
 
 ## Design and architecture
 
@@ -130,7 +132,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-90** — The decoder switchover trigger *(closes RQ-41)*
 - **R-91** — The temporal accumulators feed "unresolved" *(closes RQ-42)*
 - **R-92** — What the sim key holds of navigation *(closes RQ-43)*
-- **R-96** — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*. Still in force: every bullet but the last: the palette readings, pointer_channels normative only where cited, the properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`; the last bullet is withdrawn, the link ids being the chart's link functions (R-106). Withdrawn by R-106.
+- **R-96** — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*. Still in force: every bullet but the last: the palette readings, pointer_channels normative only where cited, the properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`, with `running`'s neutral grey drawn in R-399's "not yet" style, the grey with a fine dot stipple; the last bullet is withdrawn, the link ids being the chart's link functions (R-106). Amended in part by R-399; withdrawn by R-106.
 - **R-97** — Quad addresses live in the slice plane *(closes RQ-57)*
 - **R-98** — `MAX_REL_DEPTH` caps every split beyond the screen floor *(closes RQ-58)*
 - **R-99** — The latch is per footprint and lives with the resident quad *(closes RQ-59)*
@@ -182,7 +184,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-274** — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*. Still in force: gui's headless capture mode, spawned by the screenshot runner as a separate process, renders a named window offscreen and writes the PNG and the AccessKit names; no crate depends on `gui`; a case's `surface` field names the kind. Amended in part by R-390.
 - **R-275** — A control clipped out of the visible surface isn't present *(closes RQ-167)*
 - **R-278** — The f16 subnormal floor is an achievable maximum, beside `f16_finite_max` *(closes RQ-169)*
-- **R-280** — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*
+- **R-280** — An unset `d_min` renders in the neutral "not yet" grey *(closes RQ-170)*. Still in force: all of it, with the "not yet" grey drawn as R-399's style, the same for an unset `d_min` and for running samples; not the invalid hatch, not on the ramp. Amended in part by R-399.
 - **R-281** — TASK-M0-10's veto items: 1 and 7 accepted; item 2 vetoed in part
 - **R-282** — TASK-M0-17's design items accepted
 - **R-284** — `cargo xtask codegen` writes a generated file only when its content changes
@@ -224,6 +226,9 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-381** — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*
 - **R-383** — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*
 - **R-390** — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots. Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and gui, for REQ-GUI-176 and REQ-GUI-177 only. Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only).
+- **R-399** — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*
+- **R-400** — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*
+- **R-403** — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*
 
 ## Values
 

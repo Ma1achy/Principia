@@ -263,6 +263,13 @@ with dd_colouring §3.1's sRGB transfer.
   The flat magenta R-16 kept, `#FF00FF`, is 0.101 from `#E034C6`. The two colours are 0.35 apart in OKLab lightness, so
   the stripes stay visible without colour vision. `dbg_hash_u32` can
   give any colour, but never a pattern. The human confirms the pattern and colours at the M1 gate.
+- **The "not yet" stipple, `debug_not_yet(frag_xy)` (R-399; proposed at the M1 gate, R-71; REQ-COL-053,
+  REQ-COL-064):** "not yet", an unset `d_min` (R-271, R-280) and a `running` sample (R-96) alike, is the neutral grey
+  `DBG_NOT_YET` with a fine dot stipple computed from the pixel position `p = ⌊frag_xy⌋`, as the hatch is. It is dots,
+  not the hatch's diagonal stripes, so the two never read as one another, and it is never one flat colour, so no ramp
+  value, greyscale included, collides with it. The grey's value (REQ-COL-053, proposed by TASK-M1-09) and the
+  stipple's pattern (REQ-COL-064, proposed by TASK-M1-17) are confirmed by the human at the M1 gate. It lives in `present.wgsl`
+  beside `DBG_NOT_YET`; every view that shows "not yet" calls it, the outcome palette's `running` class included.
 
 ### Live-state & array inspection
 
