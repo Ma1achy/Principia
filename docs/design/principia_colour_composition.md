@@ -130,7 +130,10 @@ are only the defaults, chosen so these fields compose well as the brightness cha
 **Signed means a range that spans zero (R-400).** A field is signed, for these defaults and for the numeric debug
 views, when its declared ledger range spans zero; it then takes a diverging ramp centred at zero, the prelude's
 `ramp_coolwarm` for the debug views, and a field that can't be negative keeps its sequential ramp (viridis in the
-debug views). No signed-or-not mark is added to the ledger. **"Not yet" sits on no ramp (R-399):** an unset `d_min` and
+debug views). No signed-or-not mark is added to the ledger. **The `diverging` tag agrees with the range (R-403):** a
+field carries the ledger's `diverging` scale only when its declared range spans zero, and a field that can't be
+positive, as `V_0` can't, keeps its sequential ramp too (viridis in the debug views), mapped monotonically, its most
+negative value at the dark end. **"Not yet" sits on no ramp (R-399):** an unset `d_min` and
 a running sample are drawn in the stippled "not yet" style (§1.4), never a flat grey, so a greyscale default or a
 user's ramp never collides with it.
 
