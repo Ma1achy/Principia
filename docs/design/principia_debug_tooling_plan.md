@@ -101,7 +101,7 @@ Regenerated from the ledger's §3.4 rows (R-86); the storage column is the paylo
 | Field | Shader | Test |
 |---|---|---|
 | masses `m0 m1 m2` | ternary colour | = decode masses |
-| `q_mass`, `rho_mag`, `lambda_mag`, `virial_ratio`, `rho_ratio`(log), `rho_angle`(cyclic), `K_0`, `V_0`(div), `r_min_pair_0`(log) | scalar per scale | = f64 decode values |
+| `q_mass`, `rho_mag`, `lambda_mag`, `virial_ratio`, `rho_ratio`(log), `rho_angle`(cyclic), `K_0`(lin, [0, ∞)), `V_0`(lin, (−∞, 0]; R-403), `r_min_pair_0`(log) | scalar per scale | = f64 decode values |
 | `E₀` (derived, `K_0 + V_0`) | diverging | = `SimState.E_0` (the energy-agreement cross-check, §G) |
 | **live shape views** `u_mode` | mode 0: `½(n+1)` dir-cosines RGB of current derived `n`; mode 1: running phase `θ̃` cyclic; mode 2: `|n|−1` error | `‖n‖=1` (flat-zero — derived fresh each step); `θ̃` continuous (no 2π jumps); terminal-latched samples frozen |
 | accumulator views | FTLE-running `S/t` (live approx — the finalised read is `S_final/(step_count·dt)`, payload §5); diffusion slope `C_ty/C_tt(n)` (Welford, derived time-moments); drift max-vs-final | accumulator bookkeeping, live |
