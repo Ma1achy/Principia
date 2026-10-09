@@ -141,8 +141,28 @@ fn fixtures() -> std::path::PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/golden/debug-views")
 }
 
-/// Checks that each of `ids`, the registry's debug entries, has a `debug-views` case, each case's fixture names its
-/// scene, and no fixture is left without a case.
+/// The suite's fixtures, each by its directory's name and the scene its `case.json` renders (`None` without one).
+fn suite_fixtures() -> Vec<(String, Option<String>)> {
+    let mut out: Vec<(String, Option<String>)> = std::fs::read_dir(fixtures())
+        .expect("the suite's directory")
+        .map(|d| {
+            let name = d
+                .expect("an entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned();
+            let harness = std::fs::read_to_string(fixtures().join(&name).join("case.json"))
+                .ok()
+                .and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok())
+                .and_then(|j| j["render"]["harness"].as_str().map(str::to_owned));
+            (name, harness)
+        })
+        .collect();
+    out.sort();
+    out
+}
+
+/// Checks that each of `ids`, the registry's debug entries, has a `debug-views` case.
 fn check_coverage(ids: &[String]) {
     let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
     for id in ids {
@@ -151,28 +171,32 @@ fn check_coverage(ids: &[String]) {
             "the debug view `{id}` has no debug-views case"
         );
     }
+}
+
+/// Checks that each `debug-views` case has a fixture of `fixtures` naming its scene, and that every other fixture
+/// renders a golden scene of another task's (`golden_scene::NAMES`: TASK-M1-10's `state_view` and `detail_view`; the
+/// task's Notes say other tasks add their cases to this suite), so that no fixture is left without a case or a scene.
+fn check_fixtures(fixtures: &[(String, Option<String>)]) {
+    let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
     for c in cases {
-        let path = fixtures().join(&c.name).join("case.json");
-        let text = std::fs::read_to_string(&path)
-            .unwrap_or_else(|e| panic!("`{}` has no fixture: {}: {e}", c.name, path.display()));
-        let json: serde_json::Value = serde_json::from_str(&text).expect("case.json parses");
+        let harness = fixtures
+            .iter()
+            .find(|(name, _)| *name == c.name)
+            .unwrap_or_else(|| panic!("`{}` has no fixture", c.name))
+            .1
+            .as_deref();
         assert_eq!(
-            json["render"]["harness"].as_str(),
+            harness,
             Some(c.name.as_str()),
             "{}: the case renders another scene",
-            path.display()
+            c.name
         );
     }
-    let dirs = std::fs::read_dir(fixtures()).expect("the suite's directory");
-    for d in dirs {
-        let name = d
-            .expect("an entry")
-            .file_name()
-            .to_string_lossy()
-            .into_owned();
+    for (name, harness) in fixtures {
+        let scene = harness.as_deref().unwrap_or_default();
         assert!(
-            cases.iter().any(|c| c.name == name),
-            "the fixture `{name}` is no debug-views case"
+            cases.iter().any(|c| c.name == *name) || golden_scene::NAMES.contains(&scene),
+            "the fixture `{name}` is no debug-views case and renders no other golden scene"
         );
     }
 }
@@ -201,6 +225,7 @@ fn debug_views_cover_the_registry() {
         assert!(ids.iter().any(|i| i == id), "the registry has no `{id}`");
     }
     check_coverage(&ids);
+    check_fixtures(&suite_fixtures());
 }
 
 negative_control!(
@@ -211,6 +236,23 @@ negative_control!(
         let mut ids = debug_ids();
         ids.push("debug/word/unregistered".to_owned());
         check_coverage(&ids);
+    }
+);
+
+#[test]
+fn debug_views_fixtures_are_cases_or_scenes() {
+    check_fixtures(&suite_fixtures());
+}
+
+negative_control!(
+    debug_views_fixtures_are_cases_or_scenes,
+    "a fixture of no case that renders no golden scene",
+    expected =
+        "the fixture `word-unknown` is no debug-views case and renders no other golden scene",
+    {
+        let mut fixtures = suite_fixtures();
+        fixtures.push(("word-unknown".to_owned(), Some("word-unknown".to_owned())));
+        check_fixtures(&fixtures);
     }
 );
 
