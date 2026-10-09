@@ -400,7 +400,7 @@ fn detail_label(state: &str, d: usize, meaning: &str) -> String {
 /// sim_failed and decode_failed), in the ledger's order ([`crate::payload::detail_meanings`]): segment `k`'s classes
 /// are `4k + 1 … 4k + 4`, so no two classes of the view share a colour. `bounded`, `running` and the reserved codes
 /// 6–7 have none: `detail` is undefined there (payload §2), and the view draws them blank, black: class
-/// [`NO_DETAIL`].
+/// [`no_detail`].
 pub fn detail_segments() -> Vec<DetailSegment> {
     let states = crate::payload::states();
     crate::payload::detail_meanings()
@@ -415,7 +415,7 @@ pub fn detail_segments() -> Vec<DetailSegment> {
                     detail: d as u32,
                     meaning,
                     label: detail_label(state, d, meaning),
-                    class: NO_DETAIL + 1 + (meanings.len() * k + d) as u32,
+                    class: no_detail() + 1 + (meanings.len() * k + d) as u32,
                 })
                 .collect();
             Some(DetailSegment {
@@ -436,9 +436,11 @@ pub fn detail_segment(state: u32) -> Option<DetailSegment> {
 /// The class of a state with no `detail`, drawn blank, black, not by `dbg_cat`: class 0, so the segments' classes
 /// start at 1, whose golden-angle colours all sit at least 0.02 of an 8-bit step from a rounding tie in linear RGB,
 /// where class 0's green sits 0.005 from one (applied per R-369; `render/tests/numeric_views.rs`'s margin).
-pub const NO_DETAIL: u32 = 0;
+pub fn no_detail() -> u32 {
+    0
+}
 
-/// The number of classes the `detail` view tells apart: [`NO_DETAIL`] and four per segment, the `n` of its
+/// The number of classes the `detail` view tells apart: [`no_detail`] and four per segment, the `n` of its
 /// `dbg_cat(class, n)`.
 pub fn detail_classes() -> u32 {
     1 + detail_segments()
@@ -495,8 +497,9 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
         "Its colouring is the union's, keyed by `{UNION_KEY}` (debug_tooling_plan §B; dd_colouring §3.7; \
          `ledger::gen::catalogue::detail_segments`, the legend's data): each state's palette segment is four classes \
          of `dbg_cat(·, {n}u)`, one per code: {}. Every other state, bounded, running and the reserved codes, has no \
-         `detail` and draws blank, black, class {NO_DETAIL} (payload §2).",
-        segments.join("; ")
+         `detail` and draws blank, black, class {} (payload §2).",
+        segments.join("; "),
+        no_detail()
     );
     Some(format!(
         "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{body}}}\n",
