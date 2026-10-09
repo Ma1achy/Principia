@@ -15,6 +15,8 @@ pub const SEPARATOR: &str = " › ";
 pub const GLYPH: &str = "⌨";
 /// The ring's width, in points.
 pub const RING_WIDTH: f32 = 2.0;
+/// The ring's corner rounding, in points (a look choice, flagged for the human, R-390).
+pub const RING_ROUNDING: f32 = 2.0;
 
 /// The breadcrumb's and the ring's colour.
 pub fn colour(visuals: &egui::Visuals) -> Color32 {
@@ -46,5 +48,5 @@ pub fn ring(ctx: &egui::Context, place: Place, ring: Ring) {
         Ring::Outside => (place.rect.expand(1.0), StrokeKind::Outside),
     };
     ctx.layer_painter(LayerId::new(Order::Foreground, Id::new("focus ring")))
-        .rect_stroke(rect, 2.0, Stroke::new(RING_WIDTH, colour), kind);
+        .rect_stroke(rect, RING_ROUNDING, Stroke::new(RING_WIDTH, colour), kind);
 }
