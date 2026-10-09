@@ -33,6 +33,7 @@ their knobs from this struct.
 - `decisions.md` § "R-4 — "spec-keyed defaults" means the markdown's tier tables *(closes RQ-5)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+- `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
 
 ## Deliverables
 - `crates/engine/src/contract/quality.rs`: `QualityTier` (six variants plus Custom), `QualitySettings`, the preset table
@@ -44,6 +45,7 @@ their knobs from this struct.
 ## Acceptance tests
 - `cargo test -p engine quality_tier_enum` — the tier enum has six variants; has_ftle is false for Potato/Low and true from Medium; per tier, trajectories per pixel = (E+1) below Medium and 2(E+1) from Medium up; Potato (E = 0) runs checkerboard (R-113) (REQ-PERF-014).
 - `cargo test -p engine quality_preset_rows` — each named preset's QualitySettings matches its row; the Ultra and Extreme rows are marked provisional until REQ-PERF-086 is recorded (R-137) (REQ-PERF-026).
+- `cargo test -p engine tier_n_power_of_two` — each named tier's N is a power of two (R-398) (REQ-PERF-026).
 - `cargo test -p engine quality_ftle_flag` — tier presets' ftle flag; Custom with render_scale 0.25 accepts ftle = on (REQ-PERF-027).
 - `cargo xtask bench tier-table` — config marks the six rows as placeholders; eps strictly decreases Potato → Extreme; the calibration campaign's recorded per-device results replace them (REQ-PERF-028).
 - `cargo test -p engine frame_budget_default` — default frame_budget = 16 ms; export path does not consult it (REQ-PERF-032).
@@ -56,3 +58,4 @@ their knobs from this struct.
   values.
 - N and depth are "indicative" in §4; this task records them as given, no new values — except Ultra and Extreme, whose N is 16 (R-132); their E and render scale are REQ-PERF-086's calibrated values (TASK-M4-19). Until those are recorded the Ultra and Extreme rows are marked provisional in the config (R-137, REQ-PERF-026).
 - RQ-98 ruled: R-113 — the tier names REQ-RENDER-031 and REQ-RENDER-035 used at M4 are checked here by REQ-PERF-014.
+- R-398 (9 Oct 2026) closes RQ-258: N is a power of two at every tier and setting; the named tiers' 8 and 16 already are, and the test pins it.

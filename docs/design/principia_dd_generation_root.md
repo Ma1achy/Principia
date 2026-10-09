@@ -167,7 +167,12 @@ sample is inside the hold is not stored; a resumed march recomputes it from the 
 
 ### 3.6 `ICDescriptor` (12 × f32)
 
-`m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0`, `V_0` (diverging), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+`m0 m1 m2` (0-based body indices, R-22), `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (**cyclic**), `K_0` (lin, [0, ∞)), `V_0` (lin, (−∞, 0]), `virial_ratio`, `r_min_pair_0` (log). Provenance: decode stage, pre-integration.
+
+**`K_0` and `V_0` are one-signed (R-403).** `K_0`, the kinetic energy, is declared `[0, ∞)`, and `V_0`, the
+gravitational potential energy, `(−∞, 0]` (dd_decoder §3.6: `K₀ = Σᵢ ‖pᵢ‖²/2mᵢ`, `V₀ = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`).
+Neither range spans zero, so neither carries the `diverging` scale (§3.8): both are `lin`, on viridis, mapped
+monotonically, `V_0`'s most negative value at the dark end. `E₀ = K_0 + V_0` keeps its `diverging` scale (§3.4).
 
 **64 B with explicit padding** (R-86): the 12 × f32 fields are 48 B, and the remaining 16 B are declared padding, never
 implicit. `E₀` is **derived** (`K_0 + V_0`), not stored.
@@ -474,6 +479,11 @@ without a WGSL extension, so the counts and codes are u32 and the fractions f32.
 ```
 
 **A field without a complete entry fails generation loudly.** Coverage is enforced, not hoped for.
+
+**The `diverging` scale agrees with the range (R-403; REQ-GEN-033).** An entry carries `scale: diverging` only when
+its declared `range` spans zero (`lo < 0 < hi`, either end possibly unbounded), as R-400 derives a field's diverging
+ramp from its range. A `diverging` entry whose declared range does not span zero fails generation, naming the field
+and its range; a one-signed field is `lin` (or `log`), as `K_0` and `V_0` are (§3.6).
 
 `overflow` (R-248) states what an `f16-pair` value does past f16's finite range (±65504): `saturate` clamps to
 ±65504, `inf` rounds to ±∞. An `f16-pair` field's declared range must lie within ±65504; an unbounded end is

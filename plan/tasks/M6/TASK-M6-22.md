@@ -22,6 +22,7 @@ The quality selector and Custom fields (under "quality: Custom") edit `SimConfig
 - `decisions.md` § "R-274 — The screenshot runner reaches `gui` through a headless capture mode it spawns *(closes RQ-166)*"
 - `decisions.md` § "R-275 — A control clipped out of the visible surface isn't present *(closes RQ-167)*"
 - `docs/design/principia_systems_architecture.md` § "7.1 Crate map"
+- `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
 
 ## Deliverables
 - `crates/gui/src/windows/run_quality.rs`: selector, Custom fields (read-only display of auto's values until touched), device-ceiling maxima with tooltip.
@@ -39,3 +40,4 @@ The quality selector and Custom fields (under "quality: Custom") edit `SimConfig
 - RQ-105 ruled: R-129 — the Custom quality fields live in the Run window under "quality: Custom" and the arbiter overlay in a Profiler tab; with no artboard they are checked by presence only until the M8 dev GUI.
 - RQ-122 ruled: R-152 — a minimal Profiler window holds the Arbiter tab at M6, and TASK-M8-28 fills in the rest. Amended in part by R-390: TASK-M6-28 builds the Profiler window's frame and tabs, and this task fills its Arbiter tab.
 - R-390: REQ-GUI-162, the headless capture mode, is closed by TASK-M6-24, whose screenshots need it first; the Run window's frame and the Profiler window with its tabs are built on the mock engine by TASK-M6-28. This task depends on both: it adds the quality selector and Custom fields to that Run window and fills the Arbiter tab (R-152), keeping REQ-GUI-011, REQ-GUI-014 and REQ-TOOL-058, and re-runs REQ-GUI-162's acceptance.
+- R-398 (9 Oct 2026): Custom's N control offers powers of two only, each within the device's thread ceiling (REQ-PERF-035, REQ-PERF-054; REQ-GUI-014's note).

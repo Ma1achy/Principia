@@ -729,10 +729,12 @@ negative_control!(
     check_gate(&edited("gate.yml", "      milestone:\n", "      stage:\n"))
 );
 
-/// nightly.yml's full mutants run: `cargo mutants` over the whole workspace (no `--in-diff`, no `--file` or
-/// `--package` narrowing), with the exclusions and caps of the one `.cargo/mutants.toml` the per-PR job reads (no
-/// `--config` elsewhere, no `--exclude` or `--timeout` of its own, no `ulimit` or `prlimit` of its own), on Linux,
-/// where the memory cap binds; its report lists caught, missed, unviable and timed-out mutants and is uploaded.
+/// nightly.yml's full mutants run: `cargo mutants` over the whole workspace (no `--in-diff`, no `--file` narrowing, and
+/// `--package` only as R-402 shards it: each shard one package's matrix entry, the matrix dealt by a job listing every
+/// mutant, and the report checking that the shards' mutants add up to the listing's), with the exclusions and caps of
+/// the one `.cargo/mutants.toml` the per-PR job reads (no `--config` elsewhere, no `--exclude` or `--timeout` of its
+/// own, no `ulimit` or `prlimit` of its own), on Linux, where the memory cap binds; its report lists caught, missed,
+/// unviable and timed-out mutants and is uploaded.
 fn check_mutants(files: &[(String, String)], config: &str) {
     let nightly = workflow(files, "nightly.yml");
     let jobs = jobs(&nightly);
@@ -747,7 +749,48 @@ fn check_mutants(files: &[(String, String)], config: &str) {
         })
         .collect();
     assert!(!runs.is_empty(), "nightly.yml runs no `cargo mutants`");
+    // R-402: a shard may run one package's mutants, `--package "$PACKAGE"` with `PACKAGE` its matrix entry, only when
+    // that matrix is dealt by a job that lists every mutant, unnarrowed, and the report checks that the shards' own
+    // mutant lists add up to that listing's count; nothing else narrows the run.
+    const BY_PACKAGE: &str = "--package \"$PACKAGE\"";
+    for l in runs.iter().filter(|l| l.contains(BY_PACKAGE)) {
+        let (_, job) = jobs
+            .iter()
+            .find(|(_, j)| j.lines().any(|x| x == *l))
+            .unwrap();
+        assert!(
+            job.contains("PACKAGE: ${{ matrix.package }}"),
+            "the nightly mutants run narrows by a package that is not its matrix entry: {l}"
+        );
+        let planner = job
+            .lines()
+            .find_map(|x| x.split("fromJSON(needs.").nth(1))
+            .and_then(|r| r.split(".outputs").next())
+            .unwrap_or_else(|| {
+                panic!("the nightly mutants run narrows by package, but no job deals its matrix")
+            });
+        let (_, plan) = jobs
+            .iter()
+            .find(|(id, _)| id == planner)
+            .unwrap_or_else(|| {
+                panic!("the nightly mutants matrix names a job `{planner}` the workflow lacks")
+            });
+        assert!(
+            plan.lines().any(|x| runs.contains(&x) && x.contains("--list")),
+            "the job dealing the nightly mutants shards, `{planner}`, does not list the workspace's mutants"
+        );
+        let report = jobs
+            .iter()
+            .map(|(_, j)| j.as_str())
+            .find(|j| j.contains("download-artifact") && j.contains("mutants"))
+            .unwrap_or_else(|| panic!("nightly.yml has no job joining the mutants shards"));
+        assert!(
+            report.contains("mutants.json") && report.contains(&format!("needs.{planner}.outputs.total")),
+            "the nightly mutants report does not check that the shards' mutants add up to the workspace's"
+        );
+    }
     for l in &runs {
+        let l = &l.replace(BY_PACKAGE, "");
         for narrowing in [
             "--in-diff",
             "--file",
@@ -777,18 +820,20 @@ fn check_mutants(files: &[(String, String)], config: &str) {
             );
         }
     }
-    let (_, job) = jobs
+    // Every job that runs `cargo mutants`: R-402 adds the listing job beside the shards.
+    for (_, job) in jobs
         .iter()
-        .find(|(_, j)| j.lines().any(|l| runs.contains(&l)))
-        .unwrap();
-    assert!(
-        job.contains("runs-on: ubuntu"),
-        "the nightly mutants run is not on Linux, where the memory cap binds"
-    );
-    assert!(
-        !job.contains("ulimit") && !job.contains("prlimit"),
-        "the nightly mutants run sets a memory cap of its own, not the one list's"
-    );
+        .filter(|(_, j)| j.lines().any(|l| runs.contains(&l)))
+    {
+        assert!(
+            job.contains("runs-on: ubuntu"),
+            "the nightly mutants run is not on Linux, where the memory cap binds"
+        );
+        assert!(
+            !job.contains("ulimit") && !job.contains("prlimit"),
+            "the nightly mutants run sets a memory cap of its own, not the one list's"
+        );
+    }
     for key in [
         "exclude_globs",
         "timeout_multiplier",
@@ -877,6 +922,63 @@ negative_control!(
         &mutants_toml()
     )
 );
+
+// R-402's package sharding, each way it could narrow the run.
+mod by_package {
+    use super::*;
+
+    negative_control!(
+        qa_m019_nightly_runs_the_full_mutants_under_the_one_list,
+        "a nightly shard on a package of its own choosing must fail",
+        expected = "narrowed by `--package`",
+        check_mutants(
+            &edited("nightly.yml", "--package \"$PACKAGE\"", "--package xtask"),
+            &mutants_toml()
+        )
+    );
+
+    negative_control!(
+        qa_m019_nightly_runs_the_full_mutants_under_the_one_list_env,
+        "a nightly shard whose PACKAGE is not its matrix entry must fail",
+        expected = "not its matrix entry",
+        check_mutants(
+            &edited(
+                "nightly.yml",
+                "PACKAGE: ${{ matrix.package }}",
+                "PACKAGE: xtask"
+            ),
+            &mutants_toml()
+        )
+    );
+
+    negative_control!(
+        qa_m019_nightly_runs_the_full_mutants_under_the_one_list_listing,
+        "a nightly whose shards are dealt from one package's listing must fail",
+        expected = "narrowed by `--package`",
+        check_mutants(
+            &edited(
+                "nightly.yml",
+                "cargo mutants --list --json",
+                "cargo mutants --list --package xtask --json"
+            ),
+            &mutants_toml()
+        )
+    );
+
+    negative_control!(
+        qa_m019_nightly_runs_the_full_mutants_under_the_one_list_coverage,
+        "a nightly report that does not add the shards' mutants up to the listing's must fail",
+        expected = "does not check that the shards' mutants add up",
+        check_mutants(
+            &edited(
+                "nightly.yml",
+                "total=\"${{ needs.mutants-plan.outputs.total }}\"",
+                "total=\"$dealt\""
+            ),
+            &mutants_toml()
+        )
+    );
+}
 
 /// The report's summary counts what its lines say: on the fixture's M1, five requirements, four passing (three by
 /// their suites, one by its merged, approved PR) and one awaiting the human's run.
