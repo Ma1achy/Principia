@@ -124,6 +124,27 @@ These certify the **CPU brain** — a wrong view here exonerates the GPU and poi
 | **quadtree boundaries / leaf outlines** | overlay (post slot + `ctx.uv`) | active leaf set correct; pinned chain never evicted |
 | fallback ancestor tint / pending hatch | overlay | slippy-map fallback shown, never blank |
 
+**The structural overlays' styling (REQ-TOOL-124; R-72, written by TASK-M1-13; colours, widths and opacity proposed,
+R-71, confirmed by the human at the M1 gate).** Both are post occupants reading `ctx.quad` (RQ-239), drawn over the
+colour beneath, never in its place:
+
+- **The pending hatch** marks a quad whose `quad_state` is 1 (pending, dd_generation_root §3.7a). At pixel
+  `p = ⌊frag_xy⌋`, the pixel is on a line iff `(p.x − p.y) mod 8 < 2`: lines 2 px wide every 8 px, running along the
+  anti-diagonal, drawn in blue `#0000FF`, 8-bit sRGB; the other 6 px in 8 keep the colour beneath, so the field still
+  reads through it.
+- **The fallback ancestor tint** marks a quad whose `ancestor_gap` is above 0, drawn from an ancestor's payload: its
+  colour is mixed 0.4 of the way toward pink `#FF69FF`, 8-bit sRGB, in linear RGB. A flat tint, no pattern.
+
+Neither is `debug_invalid`'s hatch (render contract Part 5, REQ-COL-055), in pattern or in colours. That hatch runs
+across `x + y`, with stripes 4 px wide, and covers every pixel in violet `#9B00FF` and cyan `#48FFFF`. The pending
+hatch runs across `x − y`, with 2 px lines every 8 px, over the colour beneath; the fallback tint has no pattern. So a
+pending or fallback quad never reads as NaN (PIT-8, R-136). REQ-COL-055's no-collision measurement, rerun over the
+same palettes in OKLab, gives these distances. `#0000FF` is 0.137 from its nearest entry (Cool-warm, at its stop 0),
+and 0.230 and 0.546 from the hatch's violet and cyan. `#FF69FF` is 0.124 from its nearest (the outcome palette's
+`#E034C6`), and 0.235 and 0.390 from violet and cyan. Each is farther than the 0.101 that R-16's flat magenta,
+`#FF00FF`, lies from `#E034C6`. The quad boundaries and leaf outlines are render_gui_spec §12.1's Tier-1 `edge_line`
+post node.
+
 ---
 
 ## G. Cross-check views (certify a *seam*, not a field — integration tests with a display)
