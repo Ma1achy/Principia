@@ -149,6 +149,10 @@ Recorded so the contract is self-contained. **The split decision is `Policy::Tol
 
 **Resolution controls (quality = sample density, NOT viewport):** `SAMPLES_PER_QUAD_AXIS` (`N` — the sample grid inside a quad; each sample is a full simulation, so this is *the* quality/memory/compute driver — too low misclassifies a quad as coherent by undersampling itself) and `MAX_REL_DEPTH` (view-relative refinement window — how deep the quadtree subdivides below the camera). **Both are tier-gated with a Custom override.** Per-tier values in the memory-tiers table (`N` ranges 8–32 across the six tiers; rel-depth budget likewise per tier). **There is no sample↔pixel interpolation knob** — a sample rasterises directly to its screen-space footprint (a *tile*); **one sample, one tile, no interpolation**. (`render_scale` — memory-tiers §2 — is a different thing: it sets how many *render pixels exist* (internal raster scale, upscaled to display); the screen floor then pins one sample per *render* pixel exactly as stated here. A raster-scale knob, not a sample-density or interpolation one.) (sharpness comes from subdividing quads — real new samples — not from interpolating a sparse sample grid to more pixels, which would fabricate/smooth over the filamentary structure). The only sample↔pixel combining is the honest direction: SSAA ensemble resolve (many sub-pixel samples → one pixel colour, Part 9). The quality tier also gates the resident co-computations (ensemble copies + per-sample Benettin shadows).
 
+**`N` is a power of two (R-398)** at every tier and in the Custom override, and on the uniform flat grid of the
+offline/export path, which takes the same `N`: the sample coordinates are then dyadic, as the quadtree's are. The
+tiers' `N` is 8 or 16 (R-132 caps Ultra and Extreme at 16; memory-tiers §4).
+
 ---
 
 ## Part 7 — The frame loop (lockstep presentation)

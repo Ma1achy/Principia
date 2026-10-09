@@ -127,6 +127,13 @@ Replace-L)` modulates the position map's lightness by chaos (unstable brightens,
 a clean bivariate encoding (§4.1). Every default here is customisable; the greyscale and its polarity
 are only the defaults, chosen so these fields compose well as the brightness channel.
 
+**Signed means a range that spans zero (R-400).** A field is signed, for these defaults and for the numeric debug
+views, when its declared ledger range spans zero; it then takes a diverging ramp centred at zero, the prelude's
+`ramp_coolwarm` for the debug views, and a field that can't be negative keeps its sequential ramp (viridis in the
+debug views). No signed-or-not mark is added to the ledger. **"Not yet" sits on no ramp (R-399):** an unset `d_min` and
+a running sample are drawn in the stippled "not yet" style (§1.4), never a flat grey, so a greyscale default or a
+user's ramp never collides with it.
+
 ### 1.3 Combinators  →  `vec3`
 
 Compose sub-results. All are `vec3(+ctx) → vec3`.
@@ -177,6 +184,12 @@ escaping body *is* `detail | state=escape`, so “which body escaped” is alrea
 escape colours. A standalone escaper view is therefore this map **filtered to the escape classes** — a
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
 mode admits (“just collisions”, “just body-2 escape”), not a distinct render mode.
+
+**The "not yet" style (R-399).** `running`'s neutral grey is not a flat swatch: "not yet", for running samples and
+for an unset `d_min` alike, is the neutral grey (REQ-COL-053) with a fine dot stipple from the pixel position, drawn by
+`debug_not_yet(frag_xy)` (render contract, presentation layer), distinct from the invalid hatch's stripes. A ramp draws
+one flat colour per value, so no ramp, greyscale included, can collide with it. The grey's value and the stipple's
+pattern are proposed for the M1 gate (REQ-COL-053, REQ-COL-064).
 
 **The two triple outcomes (proposed; RQ-234, decided per R-369; REQ-COL-062).** Two valid outcomes have no row in
 the table either: **triple collision**, a collision with `detail = 3`, and **triple ejection**, an escape with
