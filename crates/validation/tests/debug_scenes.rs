@@ -8,7 +8,9 @@
 
 use std::path::{Path, PathBuf};
 
-use validation::golden_scene::{appended, debug_cases, debug_scene, scene, DebugCase, DEBUG_SUITE};
+use validation::golden_scene::{
+    appended, debug_cases, debug_scene, scene, shape, DebugCase, Scene, DEBUG_SUITE,
+};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
@@ -50,10 +52,7 @@ fn quantise(pixels: &[[f32; 4]]) -> Vec<u8> {
 
 /// Checks that each of `cases`, rendered as `scene_of` builds it, is its reference byte for byte, stopping at the
 /// first that is not.
-fn check_references(
-    cases: &[DebugCase],
-    scene_of: &dyn Fn(&'static DebugCase) -> validation::golden_scene::Scene,
-) {
+fn check_references(cases: &[DebugCase], scene_of: &dyn Fn(&'static DebugCase) -> Scene) {
     let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     for c in cases {
         let case: &'static DebugCase = Box::leak(Box::new(c.clone()));
@@ -199,4 +198,43 @@ negative_control!(
     "a reference that does not reduce, so `bB` keeps its `B`",
     expected = "[2, 3]: the last symbol is None",
     check_appended(|s| s.last().copied())
+);
+
+/// Checks that the showcase's samples read with their own masses: [`Scene::masses`] is each sample's `ICDescriptor`
+/// masses, the showcase's table, and [`Scene::read_own`]'s `n` is the kernel's shape of the sample's configuration
+/// with them, against `masses_of`, the reference.
+fn check_own_masses(masses_of: fn(&Scene, u32) -> [f32; 3]) {
+    let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
+    let mut s = debug_scene(case).unwrap_or_else(|e| panic!("{e}"));
+    for i in 0..8 {
+        let ic = s.set.ic(i);
+        let m = [ic.m0, ic.m1, ic.m2];
+        assert_eq!(
+            masses_of(&s, i),
+            m,
+            "sample {i}: the masses are not the ICDescriptor's"
+        );
+        assert!(
+            m.iter().all(|&x| x > 0.0),
+            "sample {i}: a mass is not positive"
+        );
+        let n = s.read_own(i).n;
+        assert_eq!(
+            n.map(f32::to_bits),
+            shape(s.set.simstate(i).r, m).map(f32::to_bits),
+            "sample {i}: `n` is not read with the sample's masses"
+        );
+    }
+}
+
+#[test]
+fn debug_scenes_read_with_their_own_masses() {
+    check_own_masses(Scene::masses);
+}
+
+negative_control!(
+    debug_scenes_read_with_their_own_masses,
+    "a reference of equal masses for every sample",
+    expected = "sample 1: the masses are not the ICDescriptor's",
+    check_own_masses(|_, _| [1.0 / 3.0; 3])
 );
