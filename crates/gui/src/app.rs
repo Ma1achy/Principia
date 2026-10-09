@@ -279,7 +279,8 @@ impl<S: EngineSide> App<S> {
         self.apply(&ctx, actions);
         if self.keyboard.shortcuts_open {
             let rows = self.keyboard.tree(self.view.mode).shortcuts();
-            crate::keyboard::overlay::show(&ctx, rows);
+            let rect = crate::keyboard::overlay::show(&ctx, rows);
+            self.keyboard.overlay_drawn(rect);
         }
     }
 

@@ -11,7 +11,7 @@ pub mod overlay;
 pub mod repeat;
 pub mod scopes;
 
-use eframe::egui::{self, Event, Id, Key, Modifiers, RawInput, Rect, Response};
+use eframe::egui::{self, Event, Id, Key, Modifiers, PointerButton, RawInput, Rect, Response};
 use engine::contract::view_ui::{Focus, Mode};
 
 use keymap::Command;
@@ -41,9 +41,12 @@ pub struct Keyboard {
     stain: ScopeTree,
     repeat: Repeat,
     pending: Vec<Press>,
+    /// The pointer buttons whose press the overlay swallowed: their releases are swallowed too.
+    swallowed: Vec<PointerButton>,
     places: Vec<(ScopeId, Place)>,
     /// Whether the `?` shortcuts overlay is open.
     pub shortcuts_open: bool,
+    overlay_rect: Option<Rect>,
     adjusted: Vec<Adjust>,
 }
 
@@ -67,8 +70,10 @@ impl Keyboard {
             stain,
             repeat: Repeat::default(),
             pending: Vec::new(),
+            swallowed: Vec::new(),
             places: Vec::new(),
             shortcuts_open: false,
+            overlay_rect: None,
             adjusted: Vec::new(),
         }
     }
@@ -91,46 +96,77 @@ impl Keyboard {
 
     /// Takes the table's keys out of `raw`, before egui's pass sees them. While an egui widget holds the keyboard or
     /// a menu is open (and the overlay is closed), it leaves them to egui, noting only the held key's release. The
-    /// system's own repeats of the table's keys are dropped: the layer repeats them itself.
+    /// system's own repeats of the table's keys are dropped: the layer repeats them itself. While the overlay is open
+    /// it takes every click: a press outside its frame closes it.
     pub fn take_keys(&mut self, ctx: &egui::Context, raw: &mut RawInput) {
         let aside = !self.shortcuts_open
             && (ctx.memory(|m| m.focused().is_some()) || egui::Popup::is_any_open(ctx));
+        let overlay = self.shortcuts_open.then_some(self.overlay_rect);
+        let mut close_overlay = false;
         let pending = &mut self.pending;
+        let swallowed = &mut self.swallowed;
         let repeat = &self.repeat;
-        raw.events.retain(|event| {
-            let Event::Key {
+        raw.events.retain(|event| match *event {
+            Event::Key {
                 key,
                 pressed,
                 repeat: system_repeat,
                 modifiers,
                 ..
-            } = *event
-            else {
-                return true;
-            };
-            let ours = keymap::command(key, modifiers).is_some() || repeat.holds(key);
-            if !ours {
-                return true;
-            }
-            if aside {
-                if !pressed {
+            } => {
+                let ours = keymap::command(key, modifiers).is_some() || repeat.holds(key);
+                if !ours {
+                    return true;
+                }
+                if aside {
+                    if !pressed {
+                        pending.push(Press {
+                            key,
+                            modifiers,
+                            pressed,
+                        });
+                    }
+                    return true;
+                }
+                if !system_repeat {
                     pending.push(Press {
                         key,
                         modifiers,
                         pressed,
                     });
                 }
-                return true;
+                false
             }
-            if !system_repeat {
-                pending.push(Press {
-                    key,
-                    modifiers,
-                    pressed,
-                });
+            Event::PointerButton {
+                pos,
+                button,
+                pressed,
+                ..
+            } => {
+                if pressed {
+                    let Some(frame) = overlay else {
+                        return true;
+                    };
+                    close_overlay |= !frame.is_some_and(|r| r.contains(pos));
+                    swallowed.push(button);
+                    false
+                } else if let Some(i) = swallowed.iter().position(|b| *b == button) {
+                    swallowed.remove(i);
+                    false
+                } else {
+                    true
+                }
             }
-            false
+            _ => true,
         });
+        if close_overlay {
+            self.shortcuts_open = false;
+        }
+    }
+
+    /// The overlay was drawn in `rect` this frame.
+    pub fn overlay_drawn(&mut self, rect: Rect) {
+        self.overlay_rect = Some(rect);
     }
 
     /// Runs the keys taken since the last frame, and the held key's repeats due by `now_s`, on `focus` in `mode`'s

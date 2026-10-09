@@ -630,6 +630,105 @@ fn mock_keyboard_shortcuts_over_everything_closed_by_esc() {
     rejects("an overlay without its rows", || check_overlay(&texts));
 }
 
+// --- The `?` overlay takes the pointer --------------------------------------------------------------------------
+
+/// While the overlay is open no click reaches beneath: a click outside its frame, on Stain or on the footer, closes
+/// it and does nothing else; a click inside it changes nothing.
+#[test]
+fn mock_keyboard_overlay_blocks_clicks() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let footer = crate::capture::footer_point(Layout::new(h.screen(), PIXELS_PER_POINT).footer);
+    let click_at = |h: &mut Headless, app: &mut crate::app::App<_>, pos| {
+        for events in crate::capture::click(pos) {
+            let _ = h.frame(app, events);
+        }
+    };
+    press(&mut h, &mut app, Key::Questionmark, SHIFT);
+    click(&mut h, &mut app, "Stain");
+    let after_stain = (app.view.mode, app.keyboard.shortcuts_open);
+    assert_eq!(after_stain, (Mode::Explore, false));
+    press(&mut h, &mut app, Key::Questionmark, SHIFT);
+    click_at(&mut h, &mut app, footer);
+    assert_eq!(
+        (app.console_open, app.keyboard.shortcuts_open),
+        (false, false)
+    );
+    press(&mut h, &mut app, Key::Questionmark, SHIFT);
+    let centre = h.screen().center();
+    click_at(&mut h, &mut app, centre);
+    assert!(
+        app.keyboard.shortcuts_open,
+        "a click on the overlay closed it"
+    );
+    // Esc still closes it, and then the clicks reach their controls again.
+    press(&mut h, &mut app, Key::Escape, NONE);
+    assert!(!app.keyboard.shortcuts_open);
+    click_at(&mut h, &mut app, footer);
+    assert!(
+        app.console_open,
+        "the footer took no click after the overlay closed"
+    );
+    click(&mut h, &mut app, "Stain");
+    let unblocked = (app.view.mode, app.keyboard.shortcuts_open);
+    rejects("a click that reached Stain", || {
+        assert_eq!(unblocked, (Mode::Explore, false))
+    });
+}
+
+/// A pointer press under the open overlay with its frame not yet drawn closes it; a release whose press the overlay
+/// did not swallow is egui's.
+#[test]
+fn mock_keyboard_overlay_pointer_edges() {
+    let ctx = egui::Context::default();
+    let mut keyboard = crate::keyboard::Keyboard::new();
+    let button = |pressed| Event::PointerButton {
+        pos: egui::pos2(10.0, 10.0),
+        button: egui::PointerButton::Primary,
+        pressed,
+        modifiers: NONE,
+    };
+    // Closed: the pointer is egui's.
+    let mut raw = egui::RawInput {
+        events: vec![button(true), button(false)],
+        ..Default::default()
+    };
+    keyboard.take_keys(&ctx, &mut raw);
+    assert_eq!(raw.events.len(), 2);
+    keyboard.shortcuts_open = true;
+    // A release with no swallowed press is egui's; a press is swallowed, and with no frame drawn it is outside.
+    let mut raw = egui::RawInput {
+        events: vec![button(false), button(true)],
+        ..Default::default()
+    };
+    keyboard.take_keys(&ctx, &mut raw);
+    assert_eq!(raw.events, vec![button(false)]);
+    assert!(!keyboard.shortcuts_open);
+    // Its release follows it, though the overlay has closed.
+    let mut raw = egui::RawInput {
+        events: vec![button(false)],
+        ..Default::default()
+    };
+    keyboard.take_keys(&ctx, &mut raw);
+    let swallowed = raw.events.clone();
+    assert!(swallowed.is_empty());
+    // A press inside the drawn frame keeps it open.
+    keyboard.shortcuts_open = true;
+    keyboard.overlay_drawn(egui::Rect::from_min_max(
+        egui::pos2(0.0, 0.0),
+        egui::pos2(20.0, 20.0),
+    ));
+    let mut raw = egui::RawInput {
+        events: vec![button(true)],
+        ..Default::default()
+    };
+    keyboard.take_keys(&ctx, &mut raw);
+    assert!(keyboard.shortcuts_open && raw.events.is_empty());
+    rejects("a swallowed release passed on", || {
+        assert_eq!(swallowed.len(), 1)
+    });
+}
+
 /// A screen adds its own rows to the `?` overlay through its tree's registration; F3 is among the global rows.
 #[test]
 fn mock_keyboard_screen_adds_shortcut_rows() {
