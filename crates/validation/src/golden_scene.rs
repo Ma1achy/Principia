@@ -292,7 +292,7 @@ impl Scene {
 
     /// The read value of the scene's field at sample `i` and its read-side validity (`ftle_valid`, `n ≥ 2`, true for
     /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: the fields the scenes
-    /// colour, `dmin_pair`, the word `length` and each f32 member of the sample's `ICDescriptor` ([`Scene::ic_member`]).
+    /// colour, `dmin_pair`, the word `length` and each f32 member of the sample's `ICDescriptor` (`Scene::ic_member`).
     /// Any other field is an error, naming it, so that no scene reads, or measures its `u_range` from, a field it does
     /// not colour (applied per R-369, qa review 5468844637).
     pub fn value(&self, i: u32) -> Result<(f32, bool), String> {
