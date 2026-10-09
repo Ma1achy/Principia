@@ -8,6 +8,7 @@
 
 use std::process::Command;
 
+use kernel::payload::SimState;
 use render::present::Rgb;
 use validation::golden_scene::{self, encode_image, scene, tie_margin, Colouring, Look, Scene};
 use validation::gpu::GpuHarness;
@@ -488,14 +489,17 @@ negative_control!(
     }
 );
 
-/// Checks that `s`'s twin reads sample 2 with the masses of its `ICDescriptor`: `energy_drift`, the read's one
-/// mass-dependent value, is the kernel's for those masses. Sample 2 is given a finite energy first.
-fn check_masses(mut s: Scene) {
+/// Checks that `s`'s twin, `read`, reads sample 2 with the masses of its `ICDescriptor`: `energy_drift`, the read's
+/// one mass-dependent value, is the kernel's for those masses. Sample 2 is given a finite energy and masses other than
+/// thirds first.
+fn check_masses(mut s: Scene, read: impl Fn(&Scene, u32) -> SimState) {
     s.set
         .sample(2)
         .r([[1.0, 0.0], [-0.5, 0.5], [-0.5, -0.5]])
         .p([[0.0, 0.3], [0.2, -0.1], [-0.2, -0.2]])
         .E_0(-1.0);
+    let ic = s.set.ic(2);
+    (ic.m0, ic.m1, ic.m2) = (0.5, 0.25, 0.25);
     let ic = *s.set.ic(2);
     let c = &s.context;
     let params = kernel::payload::ReadParams {
@@ -514,7 +518,7 @@ fn check_masses(mut s: Scene) {
         &params,
     )
     .energy_drift;
-    let got = s.read(2).energy_drift;
+    let got = read(&s, 2).energy_drift;
     assert!(
         want.is_finite(),
         "sample 2's energy drift is finite: {want}"
@@ -529,21 +533,14 @@ fn check_masses(mut s: Scene) {
 
 #[test]
 fn golden_scene_read_uses_the_sample_masses() {
-    check_masses(named("ftle"));
+    check_masses(named("ftle"), Scene::read);
 }
 
 negative_control!(
     golden_scene_read_uses_the_sample_masses,
-    "a sample whose masses are not the twin's thirds",
+    "a twin that reads with thirds, not the sample's masses",
     expected = "not the sample's masses'",
-    {
-        let mut s = named("ftle");
-        let ic = s.set.ic(2);
-        ic.m0 = 0.5;
-        ic.m1 = 0.25;
-        ic.m2 = 0.25;
-        check_masses(s);
-    }
+    check_masses(named("ftle"), |s, i| s.read_with(i, [1.0 / 3.0; 3]))
 );
 
 /// Checks that `s`, whose field `Scene::value` doesn't list, refuses to read it: its value and its look are each an

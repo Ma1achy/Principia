@@ -830,21 +830,16 @@ impl Scene {
         ["m0", "m1", "m2"].map(|m| self.ic_member(i, m).unwrap_or(f32::NAN))
     }
 
-    /// Sample `i` as the fragment reads it: [`Scene::read`]'s read with the sample's own masses ([`Scene::masses`]),
-    /// which the read's `n` and `energy_drift` take.
-    pub fn read_own(&self, i: u32) -> SimState {
+    /// Sample `i` as the kernel's read side reads it, the Rust twin of the fragment's unpack: the scene's context, a
+    /// FULL-tier read with no ensemble, with the sample's own masses ([`Scene::masses`], the fragment's `ctx.ic`),
+    /// which the read's `n` and `energy_drift` take (applied per R-369: TASK-M1-09's read took thirds).
+    pub fn read(&self, i: u32) -> SimState {
         self.read_with(i, self.masses(i))
     }
 
-    /// Sample `i` as the kernel's read side reads it, the Rust twin of the fragment's unpack: the scene's context, a
-    /// FULL-tier read with no ensemble.
-    pub fn read(&self, i: u32) -> SimState {
-        self.read_with(i, [1.0 / 3.0; 3])
-    }
-
     /// Sample `i` through the kernel's read side with the masses `masses`: the scene's context, a FULL-tier read with
-    /// no ensemble.
-    fn read_with(&self, i: u32, masses: [f32; 3]) -> SimState {
+    /// no ensemble. A test's control reads with masses not the sample's through it.
+    pub fn read_with(&self, i: u32, masses: [f32; 3]) -> SimState {
         let c = &self.context;
         let params = ReadParams {
             dt_macro: c.dt_macro,

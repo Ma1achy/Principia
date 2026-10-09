@@ -615,7 +615,7 @@ fn derived_views_match_cpu_current_drift() {
         "each sample has its own masses"
     );
     check_continuous(&s, "debug/derived/energy_drift", drift_reference, |s, i| {
-        s.read_own(i).energy_drift
+        s.read(i).energy_drift
     });
 }
 
@@ -628,9 +628,12 @@ negative_control!(
         "debug/derived/energy_drift",
         |s, i| {
             let (_, bound) = drift_reference(s, i)?;
-            Some((f64::from(s.read(i).energy_drift), bound))
+            Some((
+                f64::from(s.read_with(i, [1.0 / 3.0; 3]).energy_drift),
+                bound,
+            ))
         },
-        |s, i| s.read_own(i).energy_drift
+        |s, i| s.read(i).energy_drift
     )
 );
 
@@ -921,7 +924,7 @@ fn check_renderings(ternary: fn([f32; 3], [f64; 2]) -> Rgb) {
         let s = named(name);
         let image = render(&h, &s);
         for i in 0..8 {
-            let read = s.read_own(i);
+            let read = s.read(i);
             let want: Box<dyn Fn([f64; 2]) -> Rgb> = match field {
                 "n" => Box::new(move |f| present::dbg_dircos3(read.n, f)),
                 "r" => Box::new(move |f| present::dbg_dircos6(read.r, f)),

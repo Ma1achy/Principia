@@ -203,7 +203,7 @@ negative_control!(
 );
 
 /// Checks that the showcase's samples read with their own masses: [`Scene::masses`] is each sample's `ICDescriptor`
-/// masses, the showcase's table, and [`Scene::read_own`]'s `n` is the kernel's shape of the sample's configuration
+/// masses, the showcase's table, and [`Scene::read`]'s `n` is the kernel's shape of the sample's configuration
 /// with them, against `masses_of`, the reference.
 fn check_own_masses(masses_of: fn(&Scene, u32) -> [f32; 3]) {
     let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
@@ -220,7 +220,7 @@ fn check_own_masses(masses_of: fn(&Scene, u32) -> [f32; 3]) {
             m.iter().all(|&x| x > 0.0),
             "sample {i}: a mass is not positive"
         );
-        let n = s.read_own(i).n;
+        let n = s.read(i).n;
         assert_eq!(
             n.map(f32::to_bits),
             shape(s.set.simstate(i).r, m).map(f32::to_bits),
@@ -307,7 +307,7 @@ fn check_drift_shares(spread: f32) {
     let s = debug_scene(case).unwrap_or_else(|e| panic!("{e}"));
     let shares: Vec<f32> = (1..8)
         .map(|i| {
-            let read = s.read_own(i);
+            let read = s.read(i);
             let share = read.energy_drift.abs() / read.dE_max;
             assert!(
                 share > 0.0 && share < 1.0,
