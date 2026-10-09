@@ -4159,6 +4159,7 @@ dependencies = [
  "engine",
  "kernel",
  "ledger",
+ "png",
  "pollster",
  "proptest",
  "render",

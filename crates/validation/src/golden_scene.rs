@@ -460,17 +460,19 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             0.0
         };
         let f = i as f32 + g;
+        // Each value `a + b·f`, `a − b·f` as `a + (−b)·f`, the same f32 result.
+        let at = |a: f32, b: f32| a + b * f;
         let r = [
-            [0.6 + 0.07 * f, -0.2 + 0.05 * f],
-            [-0.45 - 0.03 * f, 0.55 - 0.09 * f],
-            [-0.15 + 0.02 * f, -0.35 + 0.08 * f],
+            [at(0.6, 0.07), at(-0.2, 0.05)],
+            [at(-0.45, -0.03), at(0.55, -0.09)],
+            [at(-0.15, 0.02), at(-0.35, 0.08)],
         ];
         let p = [
-            [0.1 - 0.04 * f, 0.3 + 0.02 * f],
-            [-0.25 + 0.06 * f, -0.05 - 0.03 * f],
-            [0.15 - 0.02 * f, -0.25 + 0.01 * f],
+            [at(0.1, -0.04), at(0.3, 0.02)],
+            [at(-0.25, 0.06), at(-0.05, -0.03)],
+            [at(0.15, -0.02), at(-0.25, 0.01)],
         ];
-        let off = 1e-6 * (5.0 + 40.0 * f);
+        let off = 1e-6 * at(5.0, 40.0);
         let mut r_sh = r;
         r_sh[0][0] += off;
         r_sh[1][1] -= 0.5 * off;
@@ -490,12 +492,12 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             .p_sh(p_sh)
             .S(S[k] + g)
             .theta(THETA[k] + g)
-            .mean_y(0.25 - 0.11 * f)
+            .mean_y(at(0.25, -0.11))
             .C_ty(1.5e-4 * (f - 2.5))
-            .E_0(-1.2 + 0.07 * f)
-            .Lz_0(0.3 - 0.06 * f)
+            .E_0(at(-1.2, 0.07))
+            .Lz_0(at(0.3, -0.06))
             .total_substeps([0, 1, 37, 1000, 65536, 3, 123_456, 999_999][k])
-            .closure_min(10f32.powf(-4.0 + 0.6 * f))
+            .closure_min(10f32.powf(at(-4.0, 0.6)))
             .closure_step([0, 7, 33, 120, 15, 2, 640, 300][k])
             .state(STATES[k])
             .detail(i % 4)
@@ -512,19 +514,19 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         if i > 0 {
             sample
                 .d_min(0.02 * f * f)
-                .drift_max(0.03 + 0.05 * f, 0.02 + 0.03 * f);
+                .drift_max(at(0.03, 0.05), at(0.02, 0.03));
         }
         let ic = set.ic(i);
         (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
-        ic.q_mass = 0.1 + 0.1 * f;
-        ic.rho_mag = 0.3 + 0.2 * f;
-        ic.lambda_mag = 0.9 - 0.08 * f;
-        ic.rho_ratio = 0.2 + 0.45 * f;
-        ic.rho_angle = 0.4 + 0.8 * f;
-        ic.K_0 = 0.15 + 0.09 * f;
-        ic.V_0 = -1.4 + 0.1 * f;
-        ic.virial_ratio = 0.3 + 0.2 * f;
-        ic.r_min_pair_0 = 0.05 + 0.12 * f;
+        ic.q_mass = at(0.1, 0.1);
+        ic.rho_mag = at(0.3, 0.2);
+        ic.lambda_mag = at(0.9, -0.08);
+        ic.rho_ratio = at(0.2, 0.45);
+        ic.rho_angle = at(0.4, 0.8);
+        ic.K_0 = at(0.15, 0.09);
+        ic.V_0 = at(-1.4, 0.1);
+        ic.virial_ratio = at(0.3, 0.2);
+        ic.r_min_pair_0 = at(0.05, 0.12);
     }
 }
 
