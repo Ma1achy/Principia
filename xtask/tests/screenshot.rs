@@ -600,3 +600,42 @@ negative_control!(
     expected = "names read",
     check_read_names([200, 50])
 );
+
+/// The keyboard's steps (TASK-M6-25) read from their names, and each step's name reads back as itself, as gui's
+/// capture mode takes it.
+fn check_keyboard_steps(names: &[(&str, screenshot::GuiStep)]) {
+    for (name, step) in names {
+        let read: screenshot::GuiStep =
+            serde_json::from_str(&format!("\"{name}\"")).expect("a step");
+        assert_eq!(read, *step, "the step `{name}`");
+        assert_eq!(step.name(), *name, "the step's name");
+    }
+}
+
+const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 13] = [
+    ("f3", screenshot::GuiStep::F3),
+    ("raise_warning", screenshot::GuiStep::RaiseWarning),
+    ("raise_error", screenshot::GuiStep::RaiseError),
+    ("click_footer", screenshot::GuiStep::ClickFooter),
+    ("tab", screenshot::GuiStep::Tab),
+    ("shift_tab", screenshot::GuiStep::ShiftTab),
+    ("enter", screenshot::GuiStep::Enter),
+    ("escape", screenshot::GuiStep::Escape),
+    ("arrow_up", screenshot::GuiStep::ArrowUp),
+    ("arrow_down", screenshot::GuiStep::ArrowDown),
+    ("arrow_left", screenshot::GuiStep::ArrowLeft),
+    ("arrow_right", screenshot::GuiStep::ArrowRight),
+    ("shortcuts", screenshot::GuiStep::Shortcuts),
+];
+
+#[test]
+fn screenshot_gui_keyboard_steps_named() {
+    check_keyboard_steps(&KEYBOARD_STEPS);
+}
+
+negative_control!(
+    screenshot_gui_keyboard_steps_named,
+    "a step under another step's name must be rejected",
+    expected = "the step `tab`",
+    check_keyboard_steps(&[("tab", screenshot::GuiStep::ShiftTab)])
+);

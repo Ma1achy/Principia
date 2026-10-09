@@ -33,8 +33,13 @@ pub struct Backdrop {}
 /// Debug category visibility (gui_state_contract §2).
 pub struct DebugCategories {}
 
-/// Keyboard focus scope (gui_state_contract §2).
-pub struct Focus {}
+/// Keyboard focus scope (gui_state_contract §2): the path of the focused scope through the GUI's tree of scopes
+/// (render_gui_spec §G3), each a scope id the GUI defines, from a big scope down; empty when no scope has focus.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Focus {
+    /// The scope ids, outermost first.
+    pub path: Vec<String>,
+}
 
 /// Selection (gui_state_contract §2).
 pub struct Selection {}

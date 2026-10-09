@@ -1,0 +1,19 @@
+{
+  "cases": [
+    {
+      "name": "mock_focus_before",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_after",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_shortcuts",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "shortcuts"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    }
+  ]
+}

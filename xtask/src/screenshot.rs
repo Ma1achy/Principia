@@ -16,7 +16,8 @@
 //!
 //! A case's `surface` names its kind (R-274; RQ-253): a path, as above, is a `data` surface; an object
 //! `{ "kind": "gui", "screen": "01_main", "steps": [...] }` is a screen of the dev GUI itself, whose steps are a closed
-//! list (`f3`, `raise_warning`, `raise_error`, `click_footer`). For a `gui` surface the runner spawns gui's headless
+//! list (`f3`, `raise_warning`, `raise_error`, `click_footer`, and the keyboard's `tab`, `shift_tab`, `enter`,
+//! `escape`, `arrow_up`, `arrow_down`, `arrow_left`, `arrow_right` and `shortcuts`). For a `gui` surface the runner spawns gui's headless
 //! capture mode, `cargo run --quiet -p gui --features mock -- capture --screen … --steps … --out <case dir>`, as `gate`
 //! spawns validation's binary (no crate depends on `gui`, systems_architecture §7.1), which runs the app on the mock
 //! engine, and reads back its `capture.png` and `names.json`, each accessible name with its rect in pixels. A layout
@@ -121,6 +122,24 @@ pub enum GuiStep {
     RaiseError,
     /// Click the footer.
     ClickFooter,
+    /// Press Tab.
+    Tab,
+    /// Press Shift+Tab.
+    ShiftTab,
+    /// Press Enter.
+    Enter,
+    /// Press Esc.
+    Escape,
+    /// Press ↑.
+    ArrowUp,
+    /// Press ↓.
+    ArrowDown,
+    /// Press ←.
+    ArrowLeft,
+    /// Press →.
+    ArrowRight,
+    /// Press `?`, the keyboard's shortcuts.
+    Shortcuts,
 }
 
 impl GuiStep {
@@ -131,6 +150,15 @@ impl GuiStep {
             GuiStep::RaiseWarning => "raise_warning",
             GuiStep::RaiseError => "raise_error",
             GuiStep::ClickFooter => "click_footer",
+            GuiStep::Tab => "tab",
+            GuiStep::ShiftTab => "shift_tab",
+            GuiStep::Enter => "enter",
+            GuiStep::Escape => "escape",
+            GuiStep::ArrowUp => "arrow_up",
+            GuiStep::ArrowDown => "arrow_down",
+            GuiStep::ArrowLeft => "arrow_left",
+            GuiStep::ArrowRight => "arrow_right",
+            GuiStep::Shortcuts => "shortcuts",
         }
     }
 }
