@@ -630,6 +630,160 @@ fn mock_keyboard_shortcuts_over_everything_closed_by_esc() {
     rejects("an overlay without its rows", || check_overlay(&texts));
 }
 
+/// A frame of a bare context showing a button and a text field, focusing `focus` (`"button"` or `"text"`) once.
+fn bare_frame(ctx: &egui::Context, raw: egui::RawInput, focus: Option<&str>) {
+    let mut text = String::new();
+    let mut output = ctx.run_ui(raw, |ui| {
+        let button = ui.button("button");
+        let field = ui.text_edit_singleline(&mut text);
+        match focus {
+            Some("button") => button.request_focus(),
+            Some("text") => field.request_focus(),
+            _ => {}
+        }
+    });
+    output.textures_delta.clear();
+}
+
+fn key_raw(key: Key, pressed: bool) -> egui::RawInput {
+    egui::RawInput {
+        events: vec![Event::Key {
+            key,
+            physical_key: None,
+            pressed,
+            repeat: false,
+            modifiers: NONE,
+        }],
+        ..Default::default()
+    }
+}
+
+/// A key's release goes to whoever saw its press: one egui saw (a text field had the keyboard) is egui's, though the
+/// field has lost the focus; one the layer took is the layer's, though a field has the focus now.
+#[test]
+fn mock_keyboard_release_goes_to_the_press_owner() {
+    let ctx = egui::Context::default();
+    let mut keyboard = crate::keyboard::Keyboard::new();
+    bare_frame(&ctx, egui::RawInput::default(), Some("text"));
+    bare_frame(&ctx, egui::RawInput::default(), None);
+    let mut raw = key_raw(Key::Tab, true);
+    keyboard.take_keys(&ctx, &mut raw);
+    assert_eq!(raw.events.len(), 1);
+    bare_frame(&ctx, raw, None);
+    assert!(ctx.input(|i| i.key_down(Key::Tab)));
+    // The field loses the focus (egui's Tab may already have moved it on).
+    if let Some(id) = ctx.memory(|m| m.focused()) {
+        ctx.memory_mut(|m| m.surrender_focus(id));
+    }
+    assert!(!ctx.text_edit_focused());
+    let mut raw = key_raw(Key::Tab, false);
+    keyboard.take_keys(&ctx, &mut raw);
+    let egui_release = raw.events.clone();
+    bare_frame(&ctx, raw, None);
+    assert_eq!(egui_release.len(), 1, "the layer took egui's release");
+    assert!(
+        !ctx.input(|i| i.key_down(Key::Tab)),
+        "egui thinks Tab is still down"
+    );
+    // The layer's press, nothing focused, then a field takes the focus: the release is still the layer's.
+    if let Some(id) = ctx.memory(|m| m.focused()) {
+        ctx.memory_mut(|m| m.surrender_focus(id));
+    }
+    let mut raw = key_raw(Key::ArrowDown, true);
+    keyboard.take_keys(&ctx, &mut raw);
+    assert!(raw.events.is_empty());
+    bare_frame(&ctx, egui::RawInput::default(), Some("text"));
+    bare_frame(&ctx, egui::RawInput::default(), None);
+    let mut raw = key_raw(Key::ArrowDown, false);
+    keyboard.take_keys(&ctx, &mut raw);
+    let layer_release = raw.events.clone();
+    assert!(layer_release.is_empty(), "egui had the layer's release");
+    // A system repeat goes with its press: egui's while the field has the keyboard.
+    let mut raw = key_raw(Key::Tab, true);
+    if let Event::Key { repeat, .. } = &mut raw.events[0] {
+        *repeat = true;
+    }
+    keyboard.take_keys(&ctx, &mut raw);
+    assert_eq!(raw.events.len(), 1);
+    rejects("the layer's release left to egui", || {
+        assert_eq!(layer_release.len(), 1)
+    });
+}
+
+/// The focus after a Tab held for two seconds, frames 0.1 s apart, with `mid` played after the press.
+fn tab_held_through(mid: Vec<Vec<Event>>) -> Vec<String> {
+    let mut app = mock_app();
+    let mut h = headless();
+    h.set_frame_step(0.1);
+    let key = |key, pressed| Event::Key {
+        key,
+        physical_key: None,
+        pressed,
+        repeat: false,
+        modifiers: NONE,
+    };
+    let _ = h.frame(&mut app, vec![key(Key::Tab, true)]);
+    for events in mid {
+        let _ = h.frame(&mut app, events);
+    }
+    for _ in 0..20 {
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    focus(&app).iter().map(|s| (*s).to_owned()).collect()
+}
+
+fn key_event(key: Key, pressed: bool) -> Event {
+    Event::Key {
+        key,
+        physical_key: None,
+        pressed,
+        repeat: false,
+        modifiers: NONE,
+    }
+}
+
+/// A held key stops repeating when the layer is hidden (F3) and when the window loses the focus, whose release
+/// never comes.
+#[test]
+fn mock_keyboard_held_key_dropped_when_hidden_or_unfocused() {
+    let only_top_bar = |path: &[String]| assert_eq!(path, ["top_bar"]);
+    // Hidden: F3, the release while hidden, F3 again.
+    let hidden = tab_held_through(vec![
+        vec![key_event(Key::F3, true)],
+        vec![key_event(Key::F3, false)],
+        vec![key_event(Key::Tab, false)],
+        vec![key_event(Key::F3, true)],
+        vec![key_event(Key::F3, false)],
+    ]);
+    only_top_bar(&hidden);
+    // Hidden with the key still held, released only after F3 shows the layer again.
+    let held = tab_held_through(vec![
+        vec![key_event(Key::F3, true)],
+        vec![key_event(Key::F3, false)],
+        vec![key_event(Key::F3, true)],
+        vec![key_event(Key::F3, false)],
+    ]);
+    only_top_bar(&held);
+    // The window loses the focus: no release comes.
+    let unfocused = tab_held_through(vec![vec![Event::WindowFocused(false)]]);
+    only_top_bar(&unfocused);
+    // The press and the loss in one frame.
+    let mut app = mock_app();
+    let mut h = headless();
+    h.set_frame_step(0.1);
+    let _ = h.frame(
+        &mut app,
+        vec![key_event(Key::Tab, true), Event::WindowFocused(false)],
+    );
+    for _ in 0..20 {
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    assert_eq!(focus(&app), ["top_bar"]);
+    // Control: held through nothing, the Tab repeats on.
+    let repeating = tab_held_through(Vec::new());
+    rejects("a held Tab that repeats", || only_top_bar(&repeating));
+}
+
 // --- The `?` overlay takes the pointer --------------------------------------------------------------------------
 
 /// While the overlay is open no click reaches beneath: a click outside its frame, on Stain or on the footer, closes

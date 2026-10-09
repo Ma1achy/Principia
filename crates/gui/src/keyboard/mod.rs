@@ -5,6 +5,7 @@
 //!
 //! The layer takes its keys from the raw input before egui sees them, so egui's own Tab and arrow focus never moves;
 //! it stands aside while an egui widget holds the keyboard (a text field) or a menu is open, which then has the keys.
+//! A key's release goes to whoever saw its press.
 
 pub mod keymap;
 pub mod overlay;
@@ -35,12 +36,23 @@ struct Press {
     pressed: bool,
 }
 
+/// What the layer took from the raw input, in order.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Taken {
+    /// One of its keys.
+    Key(Press),
+    /// The window lost the focus: no release comes for a key held then.
+    FocusLost,
+}
+
 /// The keyboard layer.
 pub struct Keyboard {
     explore: ScopeTree,
     stain: ScopeTree,
     repeat: Repeat,
-    pending: Vec<Press>,
+    pending: Vec<Taken>,
+    /// The keys whose press the layer took: their releases are its own; every other release is egui's.
+    down: Vec<Key>,
     /// The pointer buttons whose press the overlay swallowed: their releases are swallowed too.
     swallowed: Vec<PointerButton>,
     places: Vec<(ScopeId, Place)>,
@@ -70,6 +82,7 @@ impl Keyboard {
             stain,
             repeat: Repeat::default(),
             pending: Vec::new(),
+            down: Vec::new(),
             swallowed: Vec::new(),
             places: Vec::new(),
             shortcuts_open: false,
@@ -94,19 +107,29 @@ impl Keyboard {
         }
     }
 
-    /// Takes the table's keys out of `raw`, before egui's pass sees them. While an egui widget holds the keyboard or
-    /// a menu is open (and the overlay is closed), it leaves them to egui, noting only the held key's release. The
-    /// system's own repeats of the table's keys are dropped: the layer repeats them itself. While the overlay is open
-    /// it takes every click: a press outside its frame closes it.
+    /// Takes the table's keys out of `raw`, before egui's pass sees them, and the release of each key whose press it
+    /// took; the rest, and every key while an egui widget holds the keyboard or a menu is open (and the overlay is
+    /// closed), are egui's.
+    /// The system's own repeats go with their press: the layer drops its own, as it repeats them itself. A lost
+    /// window focus forgets the held keys. While the overlay is open it takes every click: a press outside its frame
+    /// closes it.
     pub fn take_keys(&mut self, ctx: &egui::Context, raw: &mut RawInput) {
         let aside = !self.shortcuts_open
             && (ctx.memory(|m| m.focused().is_some()) || egui::Popup::is_any_open(ctx));
         let overlay = self.shortcuts_open.then_some(self.overlay_rect);
         let mut close_overlay = false;
-        let pending = &mut self.pending;
-        let swallowed = &mut self.swallowed;
-        let repeat = &self.repeat;
+        let Self {
+            pending,
+            down,
+            swallowed,
+            ..
+        } = self;
         raw.events.retain(|event| match *event {
+            Event::WindowFocused(false) => {
+                down.clear();
+                pending.push(Taken::FocusLost);
+                true
+            }
             Event::Key {
                 key,
                 pressed,
@@ -114,27 +137,29 @@ impl Keyboard {
                 modifiers,
                 ..
             } => {
-                let ours = keymap::command(key, modifiers).is_some() || repeat.holds(key);
-                if !ours {
-                    return true;
-                }
-                if aside {
-                    if !pressed {
-                        pending.push(Press {
-                            key,
-                            modifiers,
-                            pressed,
-                        });
+                let layers = down.contains(&key);
+                let press = Taken::Key(Press {
+                    key,
+                    modifiers,
+                    pressed,
+                });
+                if !pressed {
+                    if layers {
+                        down.retain(|k| *k != key);
+                        pending.push(press);
                     }
+                    return !layers;
+                }
+                if system_repeat {
+                    return !layers;
+                }
+                if aside || keymap::command(key, modifiers).is_none() {
                     return true;
                 }
-                if !system_repeat {
-                    pending.push(Press {
-                        key,
-                        modifiers,
-                        pressed,
-                    });
+                if !layers {
+                    down.push(key);
                 }
+                pending.push(press);
                 false
             }
             Event::PointerButton {
@@ -164,6 +189,14 @@ impl Keyboard {
         }
     }
 
+    /// The layer is hidden (F3): it forgets the keys it took and holds, so none repeats once it is shown again.
+    pub fn stand_down(&mut self) {
+        self.pending.clear();
+        self.down.clear();
+        self.swallowed.clear();
+        self.repeat = Repeat::default();
+    }
+
     /// The overlay was drawn in `rect` this frame.
     pub fn overlay_drawn(&mut self, rect: Rect) {
         self.overlay_rect = Some(rect);
@@ -174,7 +207,14 @@ impl Keyboard {
     pub fn run(&mut self, mode: Mode, focus: &mut Focus, now_s: f64) -> Vec<ScopeId> {
         let now = repeat::millis(now_s);
         let mut fired = Vec::new();
-        for press in std::mem::take(&mut self.pending) {
+        for taken in std::mem::take(&mut self.pending) {
+            let press = match taken {
+                Taken::FocusLost => {
+                    self.repeat = Repeat::default();
+                    continue;
+                }
+                Taken::Key(press) => press,
+            };
             if !press.pressed {
                 self.repeat.release(press.key);
                 continue;

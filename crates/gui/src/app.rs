@@ -226,6 +226,8 @@ impl<S: EngineSide> App<S> {
             self.paint_figure(&ctx, layout.figure);
         }
         if !self.shown {
+            // Hidden, the layer takes no key: it forgets the ones it held, whose releases now go to egui.
+            self.keyboard.stand_down();
             return;
         }
         let mut actions = Actions::default();
