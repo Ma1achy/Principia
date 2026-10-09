@@ -89,6 +89,11 @@ pub fn twilight_stops() -> Vec<Rgb> {
     prelude::luts()[1].stops()
 }
 
+/// The published magma stops (R-122), from the ledger's data file: `s_impurity`'s ramp (colour_composition §6).
+pub fn magma_stops() -> Vec<Rgb> {
+    prelude::luts()[2].stops()
+}
+
 /// `ramp_viridis(t)`.
 pub fn ramp_viridis(t: f64) -> Rgb {
     ramp(&viridis_stops(), t)
@@ -97,6 +102,11 @@ pub fn ramp_viridis(t: f64) -> Rgb {
 /// `ramp_twilight(t)`.
 pub fn ramp_twilight(t: f64) -> Rgb {
     ramp(&twilight_stops(), t)
+}
+
+/// `ramp_magma(t)`.
+pub fn ramp_magma(t: f64) -> Rgb {
+    ramp(&magma_stops(), t)
 }
 
 /// `ramp_grey(t)`: OKLab `(t, 0, 0)`, `t` clamped to [0, 1].

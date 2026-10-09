@@ -4,7 +4,8 @@
 
 use render::present::{self, Rgb};
 
-/// The §7.1 LUTs the prelude does not carry, as published tables (R-16, R-122, R-139): each one's name, its data file
+/// The §7.1 LUTs the prelude does not carry (and Magma, which it does since TASK-M1-13, read here from the same
+/// table), as published tables (R-16, R-122, R-139): each one's name, its data file
 /// under `tests/data/lut/` (each naming its source), and the scale that takes a component to [0, 1]. Their
 /// fingerprints are checked in `tests/prelude.rs`.
 pub const TABLES: [(&str, &str, f64); 7] = [
