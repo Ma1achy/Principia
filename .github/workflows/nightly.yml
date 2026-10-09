@@ -223,7 +223,7 @@ jobs:
           save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       - uses: taiki-e/install-action@v2
         with:
-          tool: cargo-mutants@27.1.0
+          tool: cargo-mutants@27.1.0,cargo-nextest@0.9.146
       - name: cargo mutants --list (the full run's mutants, dealt into shards by package)
         id: plan
         env:
