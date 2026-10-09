@@ -1,8 +1,10 @@
 //! The debug views' scenes (`validation::golden_scene::debug_scene`; RQ-229, RQ-237; TASK-M1-12): each `debug-views`
 //! case renders, quantised to 8 bits as the golden runner's shader quantises it (clamped, `· 255`, half to even;
 //! R-287), to its checked-in reference, `fixtures/golden/debug-views/<case>/reference.png`, byte for byte; so each
-//! scene holds the samples its reference was made from; and the showcase's shadows sit off their states as documented,
-//! a displacement too small to show at 8 bits. What the renders mean is `render/tests/debug_views.rs`'s.
+//! scene holds the samples its reference was made from; the showcase's shadows sit off their states as documented;
+//! no two references are one image but the pairs that are one by definition, so a view reading a neighbouring field
+//! fails; and each stepped sample's drift lies within its latched maximum, as a march leaves it. What the renders mean
+//! is `render/tests/debug_views.rs`'s.
 //!
 //! Each test registers its negative control (R-176).
 
@@ -237,4 +239,82 @@ negative_control!(
     "a reference of equal masses for every sample",
     expected = "sample 1: the masses are not the ICDescriptor's",
     check_own_masses(|_, _| [1.0 / 3.0; 3])
+);
+
+/// The `debug-views` cases whose references are one image by definition: the derived drift view and the drift
+/// field's generated view both draw `H(r, p) − E_0` by `dbg_sentinel`, and the live shape view's mode 0 is `n`'s
+/// direction cosines.
+const SAME_BY_DEFINITION: [[&str; 2]; 2] = [
+    ["derived-energy_drift", "generated-energy_drift"],
+    ["live_shape", "reductions-n_dircos"],
+];
+
+/// Checks that no two `debug-views` references are byte-identical but the pairs of `allowed`, so that a view reading
+/// a neighbouring field cannot pass on its neighbour's image.
+fn check_distinct(allowed: &[[&str; 2]]) {
+    let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
+    let images: Vec<(&str, Vec<u8>)> = cases
+        .iter()
+        .map(|c| (c.name.as_str(), read_png(&reference(&c.name)).1))
+        .collect();
+    for (a, (name_a, image_a)) in images.iter().enumerate() {
+        for (name_b, image_b) in &images[a + 1..] {
+            let pair = [*name_a, *name_b];
+            assert!(
+                image_a != image_b || allowed.contains(&pair),
+                "the references of `{name_a}` and `{name_b}` are one image"
+            );
+        }
+    }
+}
+
+#[test]
+fn debug_scenes_references_are_distinct() {
+    check_distinct(&SAME_BY_DEFINITION);
+}
+
+negative_control!(
+    debug_scenes_references_are_distinct,
+    "no pair allowed, so the drift views' shared image fails",
+    expected =
+        "the references of `derived-energy_drift` and `generated-energy_drift` are one image",
+    check_distinct(&[])
+);
+
+/// Checks that each stepped showcase sample's current energy drift is within its latched maximum, `|ΔE|/dE_max` in
+/// (0, 1), and that the seven ratios spread over at least `spread` of the ramp, as the max-vs-final view draws them.
+fn check_drift_shares(spread: f32) {
+    let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
+    let s = debug_scene(case).unwrap_or_else(|e| panic!("{e}"));
+    let shares: Vec<f32> = (1..8)
+        .map(|i| {
+            let read = s.read_own(i);
+            let share = read.energy_drift.abs() / read.dE_max;
+            assert!(
+                share > 0.0 && share < 1.0,
+                "sample {i}: |ΔE|/dE_max is {share}"
+            );
+            share
+        })
+        .collect();
+    let (lo, hi) = shares
+        .iter()
+        .fold((f32::INFINITY, 0f32), |(l, h), &x| (l.min(x), h.max(x)));
+    assert!(
+        hi - lo >= spread,
+        "the shares {shares:?} span {} of the ramp, below {spread}",
+        hi - lo
+    );
+}
+
+#[test]
+fn debug_scenes_drifts_lie_within_their_maxima() {
+    check_drift_shares(0.5);
+}
+
+negative_control!(
+    debug_scenes_drifts_lie_within_their_maxima,
+    "a spread wider than the ramp",
+    expected = "of the ramp, below 1.5",
+    check_drift_shares(1.5)
 );

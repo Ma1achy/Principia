@@ -54,8 +54,8 @@ use render::registry::{self, Catalogue, Category, ZERO_SOURCE};
 /// dev-dependency (systems_architecture §7.1), as they reach the synthetic harness; and the word's append and symbol
 /// read (payload §3), for the word inspector's tests.
 pub use kernel::payload::{
-    f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, fgw_symbol, shape, SimState, FGW_NO_SYMBOL,
-    STATE_SIM_FAILED,
+    angular_momentum_z, f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, fgw_symbol, hamiltonian,
+    shape, SimState, FGW_NO_SYMBOL, STATE_SIM_FAILED,
 };
 pub use kernel::word::fgw_append;
 
@@ -110,27 +110,23 @@ pub struct DebugCase {
 /// render at least 0.01 of an 8-bit step from a rounding tie, so that its one reference holds on every backend (the
 /// numeric views' margin, `crates/render/tests/numeric_views.rs`). Every other case's nudge is 0.
 const NUDGES: &[(&str, u32)] = &[
-    ("derived-energy_drift", 1),
-    ("generated-E_0", 1),
-    ("generated-d_min", 2),
-    ("generated-energy_drift", 1),
-    ("generated-ftle", 2),
+    ("accumulators-drift_max_vs_final", 3),
+    ("derived-energy_drift", 3),
+    ("generated-Lz_drift", 1),
+    ("generated-dE_max", 1),
+    ("generated-energy_drift", 3),
     ("generated-m0", 1),
     ("generated-m1", 1),
     ("generated-m2", 1),
-    ("generated-p", 1),
-    ("generated-p_sh", 1),
-    ("generated-r", 3),
     ("generated-r_min_pair_0", 1),
-    ("generated-r_sh", 3),
+    ("generated-r_sh", 1),
     ("generated-rho_angle", 2),
     ("generated-rho_ratio", 2),
     ("generated-t_dmin_step", 2),
     ("generated-t_end_step", 1),
     ("generated-theta", 1),
-    ("live_shape", 1),
-    ("reductions-n_dircos", 1),
-    ("reductions-r_sh_dircos", 1),
+    ("generated-total_substeps", 3),
+    ("reductions-r_sh_dircos", 2),
 ];
 
 /// The nudge of the case `name`, from [`NUDGES`].
@@ -396,13 +392,29 @@ pub fn debug_scene(case: &'static DebugCase) -> Result<Scene, String> {
     } else {
         showcase(&mut set, case.nudge);
     }
-    Ok(Scene {
+    let mut scene = Scene {
         name: &case.name,
         set,
         context: context(grid),
         colouring,
-    })
+    };
+    if let Colouring::View(field) = scene.colouring {
+        if AUTO_RANGE.contains(&field) {
+            let mut params = vec![("RANGE_AUTO".to_owned(), vec![1.0])];
+            params.extend(scene.params()?);
+            scene.colouring = Colouring::Debug(Box::leak(Box::new(DebugCase {
+                params,
+                ..case.clone()
+            })));
+        }
+    }
+    Ok(scene)
 }
+
+/// The generated views whose `debug-views` case renders in auto range, `RANGE_AUTO` 1 over the scene's measured
+/// range: their declared ranges, all of a u32 and all of the word's 25-bit top limb, are so wide that the showcase's
+/// values would all draw the ramp's start (applied per R-369).
+const AUTO_RANGE: [&str; 2] = ["total_substeps", "payload"];
 
 /// The word of the symbols `symbols` (codes `a = 0, A = 1, b = 2, B = 3`), appended in order from the empty word
 /// through the kernel's append (payload §3), and its last symbol, `None` for the empty word.
@@ -417,16 +429,54 @@ pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
 }
 
 /// The showcase set: eight samples whose every field differs from sample to sample (debug_tooling_plan
-/// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or
-/// NaN; samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words
-/// (one empty, one truncated) and `ICDescriptor`s, the masses positive and summing to 1, `θ̃` away from every
-/// multiple of 2π. Each shadow sits `off = 10⁻⁶·(5 + 40·f)` from its state: `r_sh` ahead of `r` by `off` in body 0's
-/// x and behind by `off/2` in body 1's y, `p_sh` ahead of `p` by `off/4` in body 2's x. A nonzero `nudge`, at most 6, moves the stepped samples' values a little and unevenly, so that no
-/// auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on sample `i`'s index in the values' formulas, on `θ̃` and on
-/// `S`; `0.0011·nudge·(1 + i mod 3)` of mass from the second body to the first and third; `nudge·(i mod 3)` steps on
-/// `t_end_step`, `nudge·(i mod 2)` more on `t_dmin_step`. The states and words are unchanged, and the sample stepped 3
-/// times stays short of a completed renormalisation.
+/// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or NaN;
+/// samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words (one
+/// empty, one truncated, three long enough to set the top limb) and `ICDescriptor`s, the masses positive and summing to
+/// 1, `θ̃` away from every multiple of 2π. Each continuous field takes the samples in its own order, so no two fields'
+/// renders coincide under an auto range. Each shadow sits `off = 0.2 + 0.05·j` (`j` its order's place) from its state:
+/// `r_sh` ahead of `r` by `off` in body 0's x and behind by `off/2` in body 1's y, `p_sh` ahead of `p` by `off/4` in
+/// body 2's x. Each stepped sample's current drifts lie within its latched maxima, `E_0 = H(r, p) − e` and `Lz_0 =
+/// L_z(r, p) − l` with `|e| < dE_max`, `|l| < dLz_max`, as a march leaves them. A nonzero `nudge`, at most 6, moves the
+/// stepped samples' values a little and unevenly, so that no auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on
+/// sample `i`'s place in each order, on `θ̃` and on `S`; `0.0011·nudge·(1 + i mod 3)` of mass from the second body to
+/// the first and third; `nudge·(i mod 3)` steps on `t_end_step`, `nudge·(i mod 2)` more on `t_dmin_step`, `7919` times
+/// the first on `total_substeps`; the first amount over 8.2 on the drifts' shares. The states and words are unchanged,
+/// and the sample stepped 3 times stays short of a completed renormalisation.
 pub fn showcase(set: &mut Synthetic, nudge: u32) {
+    // Thirty orders of the eight samples, none affine in the index nor the reverse of another.
+    const ORDER: [[u8; 8]; 30] = [
+        [3, 1, 0, 6, 4, 5, 2, 7],
+        [1, 7, 4, 5, 6, 3, 2, 0],
+        [2, 7, 6, 3, 1, 4, 5, 0],
+        [2, 3, 7, 6, 4, 0, 1, 5],
+        [1, 3, 2, 4, 5, 0, 7, 6],
+        [2, 7, 4, 5, 0, 6, 3, 1],
+        [3, 6, 7, 1, 4, 0, 5, 2],
+        [0, 2, 1, 5, 7, 3, 4, 6],
+        [4, 3, 2, 1, 7, 6, 5, 0],
+        [4, 7, 0, 1, 5, 6, 2, 3],
+        [5, 3, 2, 1, 7, 4, 0, 6],
+        [5, 6, 2, 7, 4, 1, 3, 0],
+        [3, 4, 1, 6, 7, 5, 0, 2],
+        [6, 5, 1, 3, 0, 4, 2, 7],
+        [1, 6, 0, 4, 7, 3, 2, 5],
+        [3, 0, 5, 6, 1, 2, 4, 7],
+        [3, 5, 7, 4, 1, 6, 2, 0],
+        [6, 7, 5, 1, 2, 0, 4, 3],
+        [6, 2, 7, 3, 1, 0, 5, 4],
+        [2, 0, 7, 6, 1, 3, 5, 4],
+        [0, 5, 6, 1, 3, 7, 2, 4],
+        [2, 1, 3, 7, 6, 5, 0, 4],
+        [2, 0, 4, 3, 5, 7, 1, 6],
+        [1, 5, 2, 7, 3, 0, 6, 4],
+        [0, 3, 5, 2, 4, 1, 7, 6],
+        [4, 7, 3, 6, 1, 5, 0, 2],
+        [7, 5, 2, 0, 3, 1, 4, 6],
+        [1, 0, 5, 7, 4, 6, 2, 3],
+        [2, 5, 0, 1, 7, 6, 4, 3],
+        [3, 7, 4, 1, 6, 0, 2, 5],
+    ];
+    const TOTAL_SUBSTEPS: [u32; 8] = [0, 1, 37, 1000, 65536, 3, 123_456, 999_999];
     const STATES: [u32; 8] = [3, 1, 0, 2, 4, 5, 1, 0];
     const T_END: [u32; 8] = [0, 40, 100, 250, 37, 3, 999, 512];
     const THETA: [f32; 8] = [0.0, 3.5, -8.2, 15.9, -1.3, 0.4, 40.1, -22.7];
@@ -435,11 +485,11 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         &[],
         &[0],
         &[0, 2, 1],
-        &[2, 2, 0, 3, 0],
-        &[1; 10],
+        &[],
+        &[],
         &[0, 2, 0, 2, 1, 3, 1, 3, 0, 2, 0, 2, 1, 3, 1, 3, 0, 2],
         &[0; 77],
-        &[3, 0, 2, 0, 3, 1, 2],
+        &[],
     ];
     const MASSES: [[f32; 3]; 8] = [
         [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
@@ -455,25 +505,26 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         let k = i as usize;
         // Uneven over the samples, so that no auto range absorbs the nudge.
         let t_nudge = nudge * (i % 3);
-        let g = if i > 0 {
+        let g: f32 = if i > 0 {
             0.0137 * (nudge * (1 + i % 3)) as f32
         } else {
             0.0
         };
-        let f = i as f32 + g;
-        // Each value `a + b·f`, `a − b·f` as `a + (−b)·f`, the same f32 result.
-        let at = |a: f32, b: f32| a + b * f;
+        // Each continuous value `a + b·(ORDER[row][i] + g)`: its own order of the samples, so no two fields' values
+        // are affine in each other and no auto range maps two fields to one image.
+        let at = |a: f32, b: f32, row: usize| a + b * (f32::from(ORDER[row][k]) + g);
         let r = [
-            [at(0.6, 0.07), at(-0.2, 0.05)],
-            [at(-0.45, -0.03), at(0.55, -0.09)],
-            [at(-0.15, 0.02), at(-0.35, 0.08)],
+            [at(0.6, 0.07, 0), at(-0.2, 0.05, 1)],
+            [at(-0.45, -0.03, 2), at(0.55, -0.09, 3)],
+            [at(-0.15, 0.02, 4), at(-0.35, 0.08, 5)],
         ];
         let p = [
-            [at(0.1, -0.04), at(0.3, 0.02)],
-            [at(-0.25, 0.06), at(-0.05, -0.03)],
-            [at(0.15, -0.02), at(-0.25, 0.01)],
+            [at(0.1, -0.04, 6), at(0.3, 0.02, 7)],
+            [at(-0.25, 0.06, 8), at(-0.05, -0.03, 9)],
+            [at(0.15, -0.02, 10), at(-0.25, 0.01, 11)],
         ];
-        let off = 1e-6 * at(5.0, 40.0);
+        // The shadow sits far enough off its state to show at 8 bits.
+        let off = at(0.2, 0.05, 12);
         let mut r_sh = r;
         r_sh[0][0] += off;
         r_sh[1][1] -= 0.5 * off;
@@ -484,7 +535,22 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         m[0] += dm;
         m[1] -= 2.0 * dm;
         m[2] += dm;
-        let (word, last) = appended(WORDS[k]);
+        // The latched maxima, and the current drifts within them, a share of each in (0, 1), alternating in sign.
+        let de_max = at(0.03, 0.05, 13);
+        let dlz_max = at(0.02, 0.03, 14);
+        let sign = [1.0, -1.0][k % 2];
+        let e_drift = sign * de_max * (f32::from(ORDER[15][k]) + 0.5 + g) / 8.2;
+        let lz_drift = -sign * dlz_max * (f32::from(ORDER[16][k]) + 0.5 + g) / 8.2;
+        // Samples 3, 4 and 7 hold long words, 76, 76 and 74 symbols cycling from different starts, whose top limbs,
+        // `payload`, spread across its range.
+        let long = |cycle: [u32; 4], n: usize| (0..n).map(|j| cycle[j % 4]).collect::<Vec<u32>>();
+        let symbols = match k {
+            3 => long([0, 2, 1, 3], 76),
+            4 => long([2, 0, 3, 1], 76),
+            7 => long([1, 3, 0, 2], 74),
+            _ => WORDS[k].to_vec(),
+        };
+        let (word, last) = appended(&symbols);
         let mut sample = set.sample(i);
         sample
             .r(r)
@@ -493,12 +559,12 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             .p_sh(p_sh)
             .S(S[k] + g)
             .theta(THETA[k] + g)
-            .mean_y(at(0.25, -0.11))
-            .C_ty(1.5e-4 * (f - 2.5))
-            .E_0(at(-1.2, 0.07))
-            .Lz_0(at(0.3, -0.06))
-            .total_substeps([0, 1, 37, 1000, 65536, 3, 123_456, 999_999][k])
-            .closure_min(10f32.powf(at(-4.0, 0.6)))
+            .mean_y(at(0.25, -0.11, 17))
+            .C_ty(at(-3.75e-4, 1.5e-4, 18))
+            .E_0(hamiltonian(r, p, m) - e_drift)
+            .Lz_0(angular_momentum_z(r, p) - lz_drift)
+            .total_substeps(TOTAL_SUBSTEPS[k] + 7919 * t_nudge)
+            .closure_min(10f32.powf(at(-4.0, 0.6, 19)))
             .closure_step([0, 7, 33, 120, 15, 2, 640, 300][k])
             .state(STATES[k])
             .detail([0, 1, 2, 3, 0, 1, 2, 3][k])
@@ -513,21 +579,20 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             sample.last_symbol(s);
         }
         if i > 0 {
-            sample
-                .d_min(0.02 * f * f)
-                .drift_max(at(0.03, 0.05), at(0.02, 0.03));
+            let d = at(1.0, 1.0, 20);
+            sample.d_min(0.02 * d * d).drift_max(de_max, dlz_max);
         }
         let ic = set.ic(i);
         (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
-        ic.q_mass = at(0.1, 0.1);
-        ic.rho_mag = at(0.3, 0.2);
-        ic.lambda_mag = at(0.9, -0.08);
-        ic.rho_ratio = at(0.2, 0.45);
-        ic.rho_angle = at(0.4, 0.8);
-        ic.K_0 = at(0.15, 0.09);
-        ic.V_0 = at(-1.4, 0.1);
-        ic.virial_ratio = at(0.3, 0.2);
-        ic.r_min_pair_0 = at(0.05, 0.12);
+        ic.q_mass = at(0.1, 0.1, 21);
+        ic.rho_mag = at(0.3, 0.2, 22);
+        ic.lambda_mag = at(0.9, -0.08, 23);
+        ic.rho_ratio = at(0.2, 0.45, 24);
+        ic.rho_angle = at(0.4, 0.8, 25);
+        ic.K_0 = at(0.15, 0.09, 26);
+        ic.V_0 = at(-1.4, 0.1, 27);
+        ic.virial_ratio = at(0.3, 0.2, 28);
+        ic.r_min_pair_0 = at(0.05, 0.12, 29);
     }
 }
 
