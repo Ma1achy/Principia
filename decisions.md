@@ -7033,8 +7033,8 @@ list's scales; a paragraph added) and § "3.8 Metadata schema (what every entry 
 block" (the table's scales), `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" and
 `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`" (sentences added),
 R-401's note (the human's confirmation), REQ-GEN-033 (reqio, new), REQ-RENDER-084 and REQ-PAY-035 (reqio),
-TASK-M1-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-261 archived) and
-`REVIEW_QUEUE.md`; built by TASK-M1-17*
+TASK-M1-17, TASK-M2-03 (a note), `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md`
+(RQ-261 archived) and `REVIEW_QUEUE.md`; built by TASK-M1-17*
 
 The orchestrator put RQ-261 to the human, with R-401's flagged note on the drifts' floors. The human replied, in their
 own words ("This is from me."):
@@ -7072,7 +7072,8 @@ own words ("This is from me."):
   ledger's unbounded default, `crates/ledger/src/payload.rs`:7), a total energy and an angular momentum of either sign.
   None is one-sided, so nothing else changes and no RQ is filed.
 - **REQ-RENDER-084** loses `rq: RQ-261` and gains R-403, a sentence on `K_0` and `V_0`, a verify clause and a note.
-  **REQ-PAY-035**'s statement's "`K_0`, `V_0` (diverging)" becomes their `lin` scales and ranges, and it gains R-403.
+  **REQ-PAY-035**'s statement's "`K_0`, `V_0` (diverging)" becomes their `lin` scales and ranges, and it gains R-403;
+  TASK-M2-03, which closes it, gains a note.
 - **TASK-M1-17** applies it: its `K_0` and `V_0` deliverable follows R-403, it closes REQ-GEN-033 with an acceptance
   line, and its Notes line on RQ-261 holding its merge becomes R-403's outcome. Its title stays.
 - R-401's note gains the human's confirmation.
