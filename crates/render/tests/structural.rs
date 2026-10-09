@@ -12,7 +12,8 @@
 //! - REQ-RENDER-024: `edge_line`'s pixel size reads `1 / cell size` across a cell edge, where §12.1's `fwidth(d)` reads
 //!   0 (`structural_edge_*`);
 //! - colour_composition §6: `s_impurity`'s ramp, the prelude's `ramp_magma`, reads the published magma table
-//!   (`structural_impurity_*`).
+//!   (`structural_impurity_*`);
+//! - the CPU mirror the goldens hold the occupants to reads and computes as worked by hand (`structural_mirror_*`).
 //!
 //! Each test registers its negative control (R-176).
 
@@ -517,4 +518,254 @@ negative_control!(
     "viridis read as magma is not the published magma",
     expected = "the prelude's magma is not the published table",
     check_magma(&present::viridis_stops())
+);
+
+// ── The CPU mirror, against values worked by hand ───────────────────────────────────────────────────────────────────
+
+/// A quad whose members are all distinct: depth 3, pending, an ancestor gap of 2.
+fn meta() -> mirror::QuadMeta {
+    mirror::QuadMeta {
+        depth: 3,
+        state: 1,
+        coherence: 0.25,
+        impurity: 0.5,
+        spread: 0.75,
+        suspect_frac: 0.125,
+        priority: -1.5,
+        ancestor_gap: 2,
+        cache_age: 9,
+        dominant_outcome: 4,
+    }
+}
+
+/// `meta()`'s words in §3.7a's order.
+const META_WORDS: [u32; 10] = [
+    3,
+    1,
+    0x3e80_0000, // 0.25
+    0x3f00_0000, // 0.5
+    0x3f40_0000, // 0.75
+    0x3e00_0000, // 0.125
+    0xbfc0_0000, // −1.5
+    2,
+    9,
+    4,
+];
+
+/// Checks the mirror's reads and arithmetic against `words`, which must be `meta()`'s.
+fn check_mirror(words: &[u32]) {
+    let q = meta();
+    assert_eq!(
+        mirror::QuadMeta::from_words(words),
+        q,
+        "the words read back"
+    );
+    let short = mirror::QuadMeta::from_words(&words[..2]);
+    assert_eq!(
+        (short.depth, short.state),
+        (3, 1),
+        "a short record's first members"
+    );
+    assert_eq!(
+        short.ancestor_gap,
+        mirror::ABSENT_BITS,
+        "a member past a short record"
+    );
+    assert!(
+        short.coherence.is_nan(),
+        "a float member past a short record"
+    );
+
+    let want = [
+        ("s_depth", (3.0, false, Some(0.0), None)),
+        ("s_coherence", (0.25, false, Some(0.0), Some(1.0))),
+        ("s_impurity", (0.5, false, Some(0.0), Some(1.0))),
+        ("s_spread", (0.75, false, Some(0.0), Some(1.0))),
+        ("s_suspect", (0.125, false, Some(0.0), Some(1.0))),
+        ("s_priority", (-1.5, false, None, None)),
+        ("s_cache_age", (9.0, false, Some(0.0), None)),
+        ("s_ancestor_gap", (2.0, false, Some(0.0), None)),
+    ];
+    for (id, w) in want {
+        assert_eq!(mirror::scalar(id, &q), Some(w), "{id}'s scalar");
+    }
+    assert_eq!(
+        mirror::scalar("s_state", &q),
+        None,
+        "s_state is categorical"
+    );
+    assert_eq!(mirror::scalar("s_nothing", &q), None, "no view");
+    let absent = mirror::QuadMeta::from_words(&[]);
+    assert!(
+        mirror::scalar("s_depth", &absent).is_some_and(|s| s.1),
+        "an absent u32 member"
+    );
+    assert!(
+        mirror::scalar("s_impurity", &absent).is_some_and(|s| s.1),
+        "an absent f32 member"
+    );
+    let auto: Vec<&str> = mirror::VIEWS
+        .into_iter()
+        .filter(|id| mirror::range_auto(id))
+        .collect();
+    assert_eq!(
+        auto,
+        ["s_depth", "s_priority", "s_cache_age", "s_ancestor_gap"],
+        "RANGE_AUTO"
+    );
+
+    let xy = [5.0, 2.0];
+    let view = |id, ens, auto, range| mirror::view(id, &q, xy, ens, auto, range);
+    assert_eq!(
+        view("s_state", true, false, [0.0, 1.0]),
+        Some(present::dbg_cat(1, 5)),
+        "s_state"
+    );
+    let s_state_absent = mirror::view("s_state", &absent, xy, true, false, [0.0, 1.0]);
+    assert_eq!(
+        s_state_absent,
+        Some(present::debug_invalid(xy)),
+        "s_state absent"
+    );
+    assert_eq!(view("s_nothing", true, false, [0.0, 1.0]), None, "no view");
+    // Fixed: depth 3 on [0, measured high 5] is 0.6; measured: on [3, 5] it is 0.
+    assert_eq!(
+        view("s_depth", true, false, [3.0, 5.0]),
+        Some(present::ramp_viridis(0.6)),
+        "s_depth fixed"
+    );
+    assert_eq!(
+        view("s_depth", true, true, [3.0, 5.0]),
+        Some(present::ramp_viridis(0.0)),
+        "s_depth measured"
+    );
+    assert_eq!(
+        view("s_impurity", true, false, [0.0, 1.0]),
+        Some(present::ramp_magma(0.5)),
+        "s_impurity"
+    );
+    assert_eq!(
+        view("s_spread", true, false, [0.0, 1.0]),
+        Some(present::ramp_viridis(0.75)),
+        "s_spread"
+    );
+    assert_eq!(
+        view("s_spread", false, false, [0.0, 1.0]),
+        Some(present::debug_invalid(xy)),
+        "no ensemble"
+    );
+    let absent_depth = mirror::view("s_depth", &absent, xy, true, false, [0.0, 1.0]);
+    assert_eq!(
+        absent_depth,
+        Some(present::debug_invalid(xy)),
+        "s_depth absent"
+    );
+
+    assert_eq!(
+        mirror::smoothstep(0.0, 2.0, 1.0),
+        0.5,
+        "smoothstep's middle"
+    );
+    assert_eq!(
+        mirror::smoothstep(0.0, 4.0, 1.0),
+        0.15625,
+        "smoothstep at a quarter"
+    );
+    assert_eq!(
+        mirror::smoothstep(1.0, 3.0, 2.5),
+        0.84375,
+        "smoothstep at three quarters, offset"
+    );
+    assert_eq!(mirror::smoothstep(0.0, 2.0, -1.0), 0.0, "smoothstep below");
+    assert_eq!(mirror::smoothstep(0.0, 2.0, 3.0), 1.0, "smoothstep above");
+    assert_eq!(
+        mirror::edge_line([0.5, 0.015625], 64.0, 2.0),
+        0.5,
+        "1 px from the bottom edge"
+    );
+    assert_eq!(
+        mirror::edge_line([0.984375, 0.5], 64.0, 2.0),
+        0.5,
+        "1 px from the right edge"
+    );
+    assert_eq!(
+        mirror::edge_line([0.5, 0.5], 64.0, 2.0),
+        0.0,
+        "the cell's middle"
+    );
+    assert_eq!(
+        mirror::edge_line([0.0078125, 0.5], 64.0, 2.0),
+        0.84375,
+        "half a pixel from the left edge"
+    );
+    assert_eq!(
+        mirror::mix([1.0, 0.0, 2.0], [3.0, 2.0, 0.0], 0.25),
+        [1.5, 0.5, 1.5],
+        "mix"
+    );
+
+    let rgb = [0.25, 0.5, 0.125];
+    assert_eq!(mirror::fallback_tint(rgb, 0), rgb, "no gap");
+    assert_eq!(
+        mirror::fallback_tint(rgb, mirror::ABSENT_BITS),
+        rgb,
+        "an absent gap"
+    );
+    let pink = present::srgb8([0xff, 0x69, 0xff]);
+    let tinted = [0, 1, 2].map(|c| rgb[c] * 0.6 + pink[c] * 0.4);
+    let got = mirror::fallback_tint(rgb, 2);
+    assert!(
+        (0..3).all(|c| (got[c] - tinted[c]).abs() < 1e-12),
+        "a gap of 2: {got:?}, not {tinted:?}"
+    );
+    let on: Vec<bool> = [
+        [0.0, 0.0],
+        [1.5, 0.0],
+        [2.0, 0.0],
+        [0.0, 1.0],
+        [0.0, 7.0],
+        [7.9, 0.2],
+        [8.0, 0.0],
+        [-6.0, 0.0],
+    ]
+    .into_iter()
+    .map(mirror::pending_on)
+    .collect();
+    assert_eq!(
+        on,
+        [true, true, false, false, true, false, true, false],
+        "the pending hatch's lines"
+    );
+    let blue = present::srgb8([0, 0, 0xff]);
+    assert_eq!(
+        mirror::pending_hatch(rgb, 1, [0.0, 0.0]),
+        blue,
+        "a pending line pixel"
+    );
+    assert_eq!(
+        mirror::pending_hatch(rgb, 1, [3.0, 0.0]),
+        rgb,
+        "a pending pixel between lines"
+    );
+    assert_eq!(
+        mirror::pending_hatch(rgb, 0, [0.0, 0.0]),
+        rgb,
+        "a loaded quad"
+    );
+}
+
+#[test]
+fn structural_mirror_known_answers() {
+    check_mirror(&META_WORDS);
+}
+
+negative_control!(
+    structural_mirror_known_answers,
+    "words with the members swapped do not read back as the quad",
+    expected = "the words read back",
+    {
+        let mut words = META_WORDS;
+        words.swap(7, 8);
+        check_mirror(&words);
+    }
 );
