@@ -183,17 +183,28 @@ fn nudge(name: &str) -> u32 {
 /// The suite of the debug views' cases.
 pub const DEBUG_SUITE: &str = "debug-views";
 
-/// The registry id of the live shape view, which has two cases beyond its default's.
-const LIVE_SHAPE: &str = "debug/live_shape";
+/// The cases beyond each view's default: the view's registry id, the case name's suffix, and the param it sets. The
+/// live shape view at `u_mode` 1, Twilight of `θ̃`, and 2, `‖n‖ − 1`, the view expected flat zero; the drift
+/// max-vs-final view at `u_quantity` 1, the `L_z` drift (render contract Part 5).
+const EXTRA_CASES: [(&str, &str, &str, f64); 3] = [
+    ("debug/live_shape", "twilight", "u_mode", 1.0),
+    ("debug/live_shape", "norm_error", "u_mode", 2.0),
+    (
+        "debug/accumulators/drift_max_vs_final",
+        "lz",
+        "u_quantity",
+        1.0,
+    ),
+];
 
 /// The case name of the registry id `id`: the id less `debug/`, each `/` read as `-`.
 pub fn case_name(id: &str) -> String {
     id.strip_prefix("debug/").unwrap_or(id).replace('/', "-")
 }
 
-/// The `debug-views` suite's cases, in id order: one per entry of the render registry tagged debug, its header's
-/// defaults, then the live shape view at `u_mode` 1, Twilight of `θ̃`, and 2, `‖n‖ − 1`, the view expected flat zero
-/// (render contract Part 5).
+/// The `debug-views` suite's cases, in name order: one per entry of the render registry tagged debug, its header's
+/// defaults, then the [`EXTRA_CASES`]. An [`AUTO_RANGE`] case's params are `RANGE_AUTO` 1 and its `u_range` measured
+/// over its scene once, here.
 pub fn debug_cases() -> Result<&'static [DebugCase], String> {
     static CASES: OnceLock<Result<Vec<DebugCase>, String>> = OnceLock::new();
     CASES
@@ -212,14 +223,30 @@ pub fn debug_cases() -> Result<&'static [DebugCase], String> {
                     }
                 })
                 .collect();
-            for (mode, what) in [(1.0, "twilight"), (2.0, "norm_error")] {
-                let name = format!("{}-{what}", case_name(LIVE_SHAPE));
+            for (id, suffix, param, value) in EXTRA_CASES {
+                let name = format!("{}-{suffix}", case_name(id));
                 out.push(DebugCase {
                     nudge: nudge(&name),
                     name,
-                    id: LIVE_SHAPE.to_owned(),
-                    params: vec![("u_mode".to_owned(), vec![mode])],
+                    id: id.to_owned(),
+                    params: vec![(param.to_owned(), vec![value])],
                 });
+            }
+            for case in &mut out {
+                let field = case.id.strip_prefix("debug/generated/");
+                if let Some(&field) = AUTO_RANGE.iter().find(|f| Some(**f) == field) {
+                    let (grid, mut set) = row(8)?;
+                    showcase(&mut set, case.nudge);
+                    let scene = Scene {
+                        name: "an auto-range case's measure",
+                        set,
+                        context: context(grid),
+                        colouring: Colouring::View(field),
+                    };
+                    let mut params = vec![("RANGE_AUTO".to_owned(), vec![1.0])];
+                    params.extend(scene.params()?);
+                    case.params = params;
+                }
             }
             out.sort_by(|a, b| a.name.cmp(&b.name));
             Ok(out)
@@ -457,12 +484,13 @@ fn d_min_samples(set: &mut Synthetic) {
     }
 }
 
-/// The scene of the `debug-views` case `case`: a catalogue view coloured as [`Colouring::View`], any other as
-/// [`Colouring::Debug`]; the ternary masses over [`ternary_masses`], every other over [`showcase`].
+/// The scene of the `debug-views` case `case`: a catalogue view coloured as [`Colouring::View`], any other, and an
+/// [`AUTO_RANGE`] view with its case's params, as [`Colouring::Debug`]; the ternary masses over [`ternary_masses`],
+/// every other over [`showcase`].
 pub fn debug_scene(case: &'static DebugCase) -> Result<Scene, String> {
     let (grid, mut set) = row(8)?;
     let colouring = match case.id.strip_prefix("debug/generated/") {
-        Some(field) => {
+        Some(field) if !AUTO_RANGE.contains(&field) => {
             let l = ledger::payload::ledger();
             let name = l
                 .entries
@@ -472,30 +500,19 @@ pub fn debug_scene(case: &'static DebugCase) -> Result<Scene, String> {
                 .ok_or_else(|| format!("`{field}` is no ledger field"))?;
             Colouring::View(name)
         }
-        None => Colouring::Debug(case),
+        _ => Colouring::Debug(case),
     };
     if case.id.ends_with(ledger::gen::catalogue::MASSES_TERNARY) {
         ternary_masses(&mut set);
     } else {
         showcase(&mut set, case.nudge);
     }
-    let mut scene = Scene {
+    Ok(Scene {
         name: &case.name,
         set,
         context: context(grid),
         colouring,
-    };
-    if let Colouring::View(field) = scene.colouring {
-        if AUTO_RANGE.contains(&field) {
-            let mut params = vec![("RANGE_AUTO".to_owned(), vec![1.0])];
-            params.extend(scene.params()?);
-            scene.colouring = Colouring::Debug(Box::leak(Box::new(DebugCase {
-                params,
-                ..case.clone()
-            })));
-        }
-    }
-    Ok(scene)
+    })
 }
 
 /// The generated views whose `debug-views` case renders in auto range, `RANGE_AUTO` 1 over the scene's measured

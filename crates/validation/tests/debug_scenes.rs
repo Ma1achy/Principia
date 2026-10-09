@@ -81,7 +81,7 @@ fn check_references(cases: &[DebugCase], scene_of: &dyn Fn(&'static DebugCase) -
 #[test]
 fn debug_scenes_render_their_references() {
     let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
-    assert_eq!(cases.len(), 62);
+    assert_eq!(cases.len(), 63);
     for c in cases {
         let by_name = scene(&c.name).unwrap_or_else(|e| panic!("{e}"));
         assert_eq!(by_name.name, c.name, "`{}` names another scene", c.name);
