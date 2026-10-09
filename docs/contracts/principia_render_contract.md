@@ -234,6 +234,11 @@ with dd_colouring §3.1's sRGB transfer.
     body 1, blue body 2, equal shares white. The scale cancels `‖v‖²`, so the colour is `wⱼ/max(wⱼ)` with `wⱼ` body
     `j`'s squared norm. A k = 6 vector has no three-channel sign, so the signs of the cosines are not shown; the
     field's per-component views show them.
+- **Drift max-vs-final (TASK-M1-12; applied per R-369):** the accumulator view of the drift shape shows the current
+  drift's magnitude over its running maximum, `|H(r, p) − E_0| / dE_max` (`u_quantity` 0) or `|L_z(r, p) − Lz_0| /
+  dLz_max` (1), by `dbg_lin` over `[0, 1]`: near 1 the loss is secular, still at its maximum; near 0 it was a transient
+  spike that recovered (R-246). Where the maximum is not positive, before any drift is latched, the ratio is undefined
+  and `debug_invalid(frag_xy)` is drawn.
 - **`dbg_sentinel(x, frag_xy)`:** the absence NaN, tested by its exact bits against the canonical quiet NaN (`0x7FC00000`,
   lowering Part 3a), draws `debug_invalid(frag_xy)`, the hatch below. Any other value, a stored sentinel such as the word length's 127
   included, shows as its literal value on the viridis ramp at `t = 0.5 + 0.5·x/(1 + |x|)` (`dbg_literal`), with `x`
@@ -300,6 +305,11 @@ with dd_colouring §3.1's sRGB transfer.
 | `times` (t_end_step, t_dmin_step — EXACT u16 indices) + derived (orbit_count/retrograde from theta; total_substeps_log2 from the u32) | unpack/derive layer | round-trip packed fields; derived match live source; fraction via horizon_steps uniform |
 | Live shape & accumulator views: current `n` → direction cosines / running `θ̃` → cyclic / \|n\|−1 error (flat-zero expected); FTLE-running `S/t`; diffusion slope from moments; drift max-vs-final; **live current-substep count → effort heatmap (animates: close encounters propagate in time)** | live state + accumulators | the live march itself — shape derivation, phase unwrapping, accumulator bookkeeping, substepper effort |
 | Word views: `fgw_reduced_length` (invalid-styled when truncated), symbol-at-k (scrubber), truncated sentinel, **whole-word hash** (`dbg_hash` of the uint4) | `free_group_word` | symbol packing — and the hash view renders **topological basins**: word boundaries are finer than outcome boundaries, so this is the Burrau topological-boundary diagnostic, free at debug level |
+| Ensemble views (tier-gated): outcome agreement, spread — **derived at resolve** from the footprint's E+1 samples (not a stored field), consumed live & aggregated to the quad | the ensemble/SSAA machinery (E Halton-(2,3)-offset copies per nominal sample) |
+| Optional Fourier block: \|a_k\| per k, ω | quad payload | the truncated-Fourier path when enabled |
+| Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view here exonerates the GPU |
+| Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch, visible-set, locked/stale) | post node + quad + `ctx.uv` | the quad/instance render path and cache behaviour |
+| **Uniform echo** — flat swatches of `quality_tier`, `n_renorm` (R-111), thresholds *as currently bound* | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound" |
 
 **The word views' renderings (TASK-M1-12).**
 - **The invalid-styled reduced length (R-72; REQ-TOOL-156):** where `fgw_reduced_length_valid` is false, the word
@@ -311,11 +321,6 @@ with dd_colouring §3.1's sRGB transfer.
   a truncated word, holds no symbol and draws the hatch.
 - **Truncated:** `fgw_truncated` by `dbg_flag`.
 - **Whole-word hash:** `dbg_hash_word` of the word (Part 5, REQ-TOOL-155).
-| Ensemble views (tier-gated): outcome agreement, spread — **derived at resolve** from the footprint's E+1 samples (not a stored field), consumed live & aggregated to the quad | the ensemble/SSAA machinery (E Halton-(2,3)-offset copies per nominal sample) |
-| Optional Fourier block: \|a_k\| per k, ω | quad payload | the truncated-Fourier path when enabled |
-| Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view here exonerates the GPU |
-| Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch, visible-set, locked/stale) | post node + quad + `ctx.uv` | the quad/instance render path and cache behaviour |
-| **Uniform echo** — flat swatches of `quality_tier`, `n_renorm` (R-111), thresholds *as currently bound* | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound" |
 
 ### Cross-check views (the seams)
 
