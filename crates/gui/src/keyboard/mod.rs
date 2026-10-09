@@ -318,8 +318,9 @@ impl Keyboard {
                     focus.path.push((*first).to_owned());
                 }
             }
+            // While a menu is open the focus is in it: run left it there.
             None => {
-                if let Some(m) = self.open_menu.filter(|m| focus.path.iter().any(|p| p == m)) {
+                if let Some(m) = self.open_menu {
                     focus.path = tree.path_to(m);
                 }
             }

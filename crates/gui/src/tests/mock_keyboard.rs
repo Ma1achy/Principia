@@ -893,6 +893,22 @@ fn mock_keyboard_release_goes_to_the_press_owner() {
     }
     keyboard.take_keys(&ctx, &mut raw);
     assert_eq!(raw.events.len(), 1);
+    // Two of the layer's keys down, nothing focused: releasing one leaves the other's release the layer's.
+    if let Some(id) = ctx.memory(|m| m.focused()) {
+        ctx.memory_mut(|m| m.surrender_focus(id));
+    }
+    for key in [Key::ArrowUp, Key::Enter] {
+        let mut raw = key_raw(key, true);
+        keyboard.take_keys(&ctx, &mut raw);
+    }
+    let mut raw = key_raw(Key::ArrowUp, false);
+    raw.events.extend(key_raw(Key::Enter, false).events);
+    keyboard.take_keys(&ctx, &mut raw);
+    assert!(
+        raw.events.is_empty(),
+        "a release of the layer's left to egui: {:?}",
+        raw.events
+    );
     rejects("the layer's release left to egui", || {
         assert_eq!(layer_release.len(), 1)
     });
@@ -1203,6 +1219,23 @@ fn mock_keyboard_registration() {
     assert!(menu.menu && !menu.activates && !disabled.activates && !disabled.menu);
     assert!(!tree.get("a1").unwrap().menu);
     assert_eq!(tree.path_to("m1"), ["a", "m", "m1"]);
+    // Enter on a big scope that is a control acts, the focus kept on it: no menu is open to close.
+    let mut keyboard = crate::keyboard::Keyboard::new();
+    keyboard
+        .tree_mut(Mode::Explore)
+        .register(None, Scope::control("big_control", "Big"));
+    let mut big = Focus {
+        path: vec!["big_control".to_owned()],
+    };
+    let ctx = egui::Context::default();
+    let mut raw = egui::RawInput {
+        events: crate::capture::key(Key::Enter, NONE)[0].clone(),
+        ..Default::default()
+    };
+    keyboard.take_keys(&ctx, &mut raw);
+    let activated = keyboard.run(&ctx, Mode::Explore, &mut big, 0.0);
+    assert_eq!(activated, ["big_control"]);
+    assert_eq!(big.path, ["big_control"]);
     let duplicate = std::panic::catch_unwind(|| {
         let mut t = ScopeTree::new();
         t.register(None, Scope::group("a", "A"));
