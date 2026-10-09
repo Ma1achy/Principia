@@ -50,12 +50,17 @@ pub mod contract {
 pub mod stain;
 
 /// The synthetic payload harness: CPU-filled `SimState`, word, `ICDescriptor` and `RenderQuad` buffers over a flat grid
-/// of quads, for the fragment to render before any physics exists (debug tooling plan step 0b; TASK-M1-06).
+/// of quads, for the fragment to render before any physics exists (debug tooling plan step 0b; TASK-M1-06), and the
+/// structural sets of quad metadata (TASK-M1-13).
 pub mod synthetic;
 
 /// The coordinate presets: `uv_screen`, `uv_quad` and the coordinate view with its δ mode, as in-code stain graphs
 /// (colour_composition §6; TASK-M1-07).
 pub mod presets;
+
+/// The structural presets: the `ctx.quad` debug views, the boundary overlay and the fallback tint and pending hatch,
+/// as in-code stain graphs (colour_composition §6; debug_tooling_plan §F; render_gui_spec §12.1; TASK-M1-13).
+pub mod structural;
 
 /// Pointer picking: a canvas event through the convention's one flip to the post-flip UV, the picked quad and `z`
 /// (coordinate conventions note, path 2; TASK-M1-07).

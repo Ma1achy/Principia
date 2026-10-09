@@ -13,6 +13,11 @@
 //! them as f32, as deep_zoom §1's per-quad uniforms are passed; the scheduler's `QuadRequest` carries them from M5
 //! (TASK-M5-04).
 //!
+//! **The structural sets** (debug_tooling_plan §F; TASK-M1-13). [`Synthetic::structural`] fills each quad's
+//! `RenderQuad` metadata from [`structural_record`]'s table, every quad state among them, and places each quad at one of
+//! the depths it is given, at its grid column and row, with that depth's frame ([`Synthetic::place`]): what the
+//! structural views and overlays read before any scheduler fills a quad.
+//!
 //! Every write goes through the generated layout: a sample's packed words through the generated pack routines
 //! (`kernel::payload`, payload §6), its word through `fgw_pack`, and a quad's members by their names in the ledger's
 //! `RenderQuad` table (`ledger::quad`, dd_generation_root §3.7a), each at its generated offset. The bytes place each
@@ -47,8 +52,9 @@ pub struct QuadFrame {
 #[derive(Debug)]
 pub struct Synthetic {
     grid: Grid,
-    depth: u32,
-    origin: [u64; 2],
+    /// Each quad's place in the slice's quadtree, `(depth, cell)`: the depth-`ℓ` cell `(column, row)`, Y-up from the
+    /// slice's bottom-left, which gives its frame ([`Synthetic::quad_frame`]).
+    places: Vec<(u32, [u64; 2])>,
     simstate: Vec<SimStateFTLE>,
     word: Vec<[u32; 4]>,
     ic: Vec<ICDescriptor>,
@@ -112,10 +118,16 @@ impl Synthetic {
         quad[quad_slot("quad_depth")
             .expect("RenderQuad has quad_depth")
             .0] = depth;
+        let columns = grid.quads[0];
+        let places = (0..grid.quad_count())
+            .map(|q| {
+                let cell = [q % columns, q / columns];
+                (depth, [0, 1].map(|k| origin[k] + u64::from(cell[k])))
+            })
+            .collect();
         Synthetic {
             grid,
-            depth,
-            origin,
+            places,
             simstate: vec![fresh; samples],
             word: vec![fgw_pack([0; 4], 0); samples],
             ic: vec![ic; samples],
@@ -124,20 +136,64 @@ impl Synthetic {
         }
     }
 
+    /// A structural set (debug_tooling_plan §F; TASK-M1-13): `grid`'s quads, each fresh as [`Synthetic::flat`] makes
+    /// it, quad `q` holding [`structural_record`]`(q)` as its `RenderQuad` metadata and placed at depth `depths[q mod
+    /// depths.len()]`, at the cell of its grid column and row `(i, j)` ([`Synthetic::place`]), with its deep_zoom §1
+    /// frame. Its quads cover every quad state, twice in ten. Refused with no depth, or a quad whose cell lies outside
+    /// the slice at its depth (`i` or `j` at least `2^ℓ`).
+    pub fn structural(grid: Grid, depths: &[u32]) -> Result<Synthetic, String> {
+        if depths.is_empty() {
+            return Err("a structural set needs a depth".to_owned());
+        }
+        let mut set = Synthetic::flat(grid, depths[0]);
+        let columns = grid.quads[0];
+        for q in 0..grid.quad_count() {
+            let depth = depths[q as usize % depths.len()];
+            let cell = [q % columns, q / columns].map(u64::from);
+            if cell.iter().any(|&c| depth < 64 && c >> depth != 0) {
+                return Err(format!(
+                    "quad {q}'s cell {cell:?} lies outside the slice at depth {depth}"
+                ));
+            }
+            set.place(q, depth, cell);
+            let r = structural_record(q);
+            set.quad(q)
+                .u32("quad_state", r.state)?
+                .f32("coherence_score", r.coherence)?
+                .f32("outcome_impurity", r.impurity)?
+                .f32("ensemble_spread", r.spread)?
+                .f32("suspect_fraction", r.suspect)?
+                .f32("priority_score", r.priority)?
+                .u32("ancestor_gap", r.ancestor_gap)?
+                .u32("cache_age", r.cache_age)?
+                .u32("dominant_outcome", r.dominant_outcome)?;
+        }
+        Ok(set)
+    }
+
     /// The grid the set covers.
     pub fn grid(&self) -> Grid {
         self.grid
     }
 
-    /// Quad `q`'s frame (deep_zoom §1), from the grid: its grid column and row `(i, j)`, `q = j · columns + i`, place
-    /// it at the slice's depth-`ℓ` cell `origin + (i, j)`, so `c = (origin + (i, j) + ½) · 2^−ℓ` and `h = 2^−(ℓ+1)` on
-    /// each axis, in f64, Y-up.
+    /// Quad `q`'s frame (deep_zoom §1), from its place: the slice's depth-`ℓ` cell `cell`, so `c = (cell + ½) · 2^−ℓ`
+    /// and `h = 2^−(ℓ+1)` on each axis, in f64, Y-up. On a flat layout ([`Synthetic::flat_at`]) its grid column and row
+    /// `(i, j)`, `q = j · columns + i`, place it at the cell `origin + (i, j)`, so `c = (origin + (i, j) + ½) · 2^−ℓ`.
     pub fn quad_frame(&self, q: u32) -> QuadFrame {
-        let columns = self.grid.quads[0];
-        let cell = [q % columns, q / columns];
-        let h = (-f64::from(self.depth) - 1.0).exp2();
-        let c = [0, 1].map(|k| ((self.origin[k] + u64::from(cell[k])) as f64 * 2.0 + 1.0) * h);
+        let (depth, cell) = self.places[q as usize];
+        let h = (-f64::from(depth) - 1.0).exp2();
+        let c = cell.map(|x| (x as f64 * 2.0 + 1.0) * h);
         QuadFrame { c, h: [h, h] }
+    }
+
+    /// Places quad `q` at the slice's depth-`depth` cell `cell`, `(column, row)` Y-up from the slice's bottom-left,
+    /// which gives its frame ([`Synthetic::quad_frame`]), and writes `depth` as its `quad_depth`: a set whose quads
+    /// sit at different depths (TASK-M1-13). The raster still draws every quad at the grid's one pixel size (M1).
+    pub fn place(&mut self, q: u32, depth: u32, cell: [u64; 2]) -> &mut Self {
+        self.places[q as usize] = (depth, cell);
+        let (k, _) = quad_slot("quad_depth").expect("RenderQuad has quad_depth");
+        self.quad[q as usize][k] = depth;
+        self
     }
 
     /// Sample `i`'s setters (its index as `Grid::sample_index` gives it).
@@ -528,4 +584,59 @@ impl Quad<'_> {
     pub fn f32(&mut self, name: &str, v: f32) -> Result<&mut Self, String> {
         self.set(name, Storage::F32, v.to_bits())
     }
+}
+
+/// One quad's `RenderQuad` metadata in a structural set ([`Synthetic::structural`]), each member §3.7a's of the same
+/// name: `quad_state`, `coherence_score`, `outcome_impurity`, `ensemble_spread`, `suspect_fraction`, `priority_score`,
+/// `ancestor_gap`, `cache_age` and `dominant_outcome`; its depth is the set's.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct QuadRecord {
+    pub state: u32,
+    pub coherence: f32,
+    pub impurity: f32,
+    pub spread: f32,
+    pub suspect: f32,
+    pub priority: f32,
+    pub ancestor_gap: u32,
+    pub cache_age: u32,
+    pub dominant_outcome: u32,
+}
+
+const fn record(
+    state: u32,
+    [coherence, impurity, spread, suspect, priority]: [f32; 5],
+    [ancestor_gap, cache_age, dominant_outcome]: [u32; 3],
+) -> QuadRecord {
+    QuadRecord {
+        state,
+        coherence,
+        impurity,
+        spread,
+        suspect,
+        priority,
+        ancestor_gap,
+        cache_age,
+        dominant_outcome,
+    }
+}
+
+/// Quad `q`'s record in the structural sets (debug_tooling_plan §F), which repeat ten records: the quad states in their
+/// order, twice (0 loaded · 1 pending · 2 refinable · 3 terminal · 4 stale); the fractions within [0, 1]; a priority of
+/// each sign; an ancestor gap of 0 and above 0 in a pending quad and in others, so the fallback tint and the pending
+/// hatch meet; distinct cache ages and outcomes. Hand-chosen harness values, not constants of the physics, so a table in
+/// a function, not a `const` (the constants lint, REQ-SYS-001).
+pub fn structural_record(q: u32) -> QuadRecord {
+    let records = [
+        record(0, [0.92, 0.04, 0.08, 0.0, 0.35], [0, 0, 0]),
+        record(1, [0.55, 0.38, 0.42, 0.12, 2.75], [0, 4, 1]),
+        record(2, [0.18, 0.71, 0.66, 0.31, 1.1], [1, 17, 2]),
+        record(3, [0.73, 0.22, 0.27, 0.86, -0.6], [0, 2, 3]),
+        record(4, [0.31, 0.57, 0.91, 0.47, 0.05], [2, 40, 4]),
+        record(0, [0.66, 0.29, 0.15, 0.05, 1.9], [3, 9, 5]),
+        record(1, [0.08, 0.83, 0.58, 0.63, 3.4], [2, 25, 6]),
+        record(2, [0.44, 0.49, 0.36, 0.22, -1.25], [0, 1, 7]),
+        record(3, [0.97, 0.01, 0.03, 0.97, 0.8], [0, 60, 8]),
+        record(4, [0.26, 0.64, 0.77, 0.39, 2.2], [5, 33, 9]),
+    ];
+    records[q as usize % records.len()]
 }
