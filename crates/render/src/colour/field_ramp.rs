@@ -5,9 +5,11 @@
 //!
 //! **ScalarField** ([`ScalarField`]): a payload field read through `ctx` with its validity predicate, returning
 //! `(value, valid)` (colour_composition §3: "Every `ScalarField` returns `(value, valid)`"). The predicate is the
-//! ledger's, as `render::bind`'s validity lane reads it: the entry's tier gate (`ftle_valid`), the read side's own
-//! (`diffusion`'s `n ≥ 2`, R-245), a stored sentinel (the word `length`'s 127, `dmin_pair`'s 3), and, for an `f32`
-//! value, the absence NaN by its bits (lowering Part 3a). `d_min`'s f16 +∞ is no invalid value but its unset one
+//! validity lane's `<field>_valid`, taken from its one source, `render::bind::validity_over`, over `ctx` (the word's
+//! for a field of the word, as the word `length`): the entry's tier gate (`ftle_valid`), the read side's own
+//! (`diffusion`'s `n ≥ 2`, R-245; `last_symbol`'s), a stored sentinel (`dmin_pair`'s 3; the word's truncation, its
+//! `length` 127), and, for an `f32` value, the absence NaN by its bits (lowering Part 3a). A field the lane gives no
+//! validity is refused. `d_min`'s f16 +∞ is no invalid value but its unset one
 //! (R-271), tested by its bits as the validity lane tests it (R-343 item 5; RQ-233), which the ramp draws in the
 //! neutral "not yet" grey of running samples, never the invalid pattern (R-280).
 //!
@@ -36,6 +38,9 @@ fn qnan_bits() -> u32 {
 pub struct ScalarField {
     /// The ledger field.
     pub field: &'static str,
+    /// The payload-lane member whose `<lane>_valid` the validity is: the field's own, or `word` for a field read
+    /// through the word buffer (the word's `length`).
+    pub lane: &'static str,
     /// The value, a WGSL `f32` expression over `ctx`.
     pub value: String,
     /// Whether the value is valid, a WGSL `bool` expression over `ctx` and the value `v`.
@@ -70,22 +75,42 @@ impl ScalarField {
             (_, true) => read.wgsl(e.name),
             (_, false) => format!("f32({})", read.wgsl(e.name)),
         };
+        // The validity is the validity lane's, one source (colour_composition §3; `render::bind::validity_over`), over
+        // `ctx`: a field the lane gives no `<field>_valid` is refused. A field of the word reads the word's.
+        let lane = match read {
+            catalogue::Read::Word { .. } => "word",
+            _ => e.name,
+        };
+        let lanes = crate::bind::lanes()?;
+        let in_lane = lanes
+            .iter()
+            .filter(|l| l.name == "validity")
+            .flat_map(|l| &l.members)
+            .any(|m| m.name == format!("{lane}_valid"));
+        if !in_lane {
+            return Err(format!(
+                "the validity lane has no `{lane}_valid`, so `{field}` has no validity to ramp by"
+            ));
+        }
+        let lane_validity = crate::bind::validity_over(lane, &entries, "ctx");
+        let lane_valid = lane_validity.predicate;
         let mut valid = Vec::new();
         if is_float {
             valid.push(format!("bitcast<u32>(v) != {:#010x}u", qnan_bits()));
         }
-        if let Some(gate) = e.tier_gate {
-            valid.push(format!("ctx.sample.{gate}"));
+        if lane_valid != "true" || valid.is_empty() {
+            valid.push(lane_valid);
         }
-        if field == "diffusion" {
-            valid.push("ctx.sample.diffusion_slope_valid".to_owned());
-        }
+        // The CPU twin's stored sentinel (R-136), the one the lane's predicate tests (the word's truncation is its
+        // `length` 127), and `d_min`'s unset value (R-271), drawn in the "not yet" grey ahead of the validity (R-280).
+        let tested = if lane == "word" {
+            e.sentinel
+        } else {
+            lane_validity.sentinel
+        };
         let (mut sentinel, mut unset, mut unset_bits) = (None, None, None);
-        match e.sentinel {
-            Some(s) if s.is_finite() => {
-                valid.push(format!("v != {}", float(s)));
-                sentinel = Some(s);
-            }
+        match tested {
+            Some(s) if s.is_finite() => sentinel = Some(s),
             Some(s) => {
                 let bits = (s as f32).to_bits();
                 unset = Some(format!("bitcast<u32>(v) == {bits:#010x}u"));
@@ -93,11 +118,9 @@ impl ScalarField {
             }
             None => {}
         }
-        if valid.is_empty() {
-            valid.push("true".to_owned());
-        }
         Ok(ScalarField {
             field: e.name,
+            lane,
             value,
             valid: valid.join(" && "),
             unset,

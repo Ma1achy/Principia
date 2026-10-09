@@ -234,26 +234,57 @@ fn wgsl_type(storage: Storage) -> &'static str {
 /// `field`'s validity, a WGSL bool over `rc`, by the ledger: its tier gate, its sentinel, or the read side's own
 /// predicate; `true` where it has none.
 fn validity(field: &str, entries: &[Entry]) -> String {
+    validity_over(field, entries, "rc").predicate
+}
+
+/// A field's validity as the validity lane writes it ([`validity_over`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Validity {
+    /// The WGSL `bool`: `<field>_valid`'s fill, over the context root the caller names.
+    pub predicate: String,
+    /// The stored sentinel the predicate tests the field against, if that is its whole test (R-136).
+    pub sentinel: Option<f64>,
+}
+
+/// `field`'s validity, a WGSL bool over the context `root` (`rc` where the validity lane fills it, `ctx` where a
+/// colour occupant reads it), by the ledger: its tier gate, its sentinel, or the read side's own predicate; `true`
+/// where it has none. The one source of the validity lane's predicates (colour_composition §3): the field ramp's
+/// `ScalarField` takes its predicate from here.
+pub fn validity_over(field: &str, entries: &[Entry], root: &str) -> Validity {
+    let own = |predicate: String| Validity {
+        predicate,
+        sentinel: None,
+    };
     match field {
-        "diffusion" => return "rc.sample.diffusion_slope_valid".into(),
-        "ensemble_spread" => return "has_ensemble()".into(),
-        "word" => return "fgw_reduced_length_valid(rc.sample.word)".into(),
-        "last_symbol" => return "sd_last_symbol_valid(fgw_length_raw(rc.sample.word))".into(),
+        "diffusion" => return own(format!("{root}.sample.diffusion_slope_valid")),
+        "ensemble_spread" => return own("has_ensemble()".into()),
+        "word" => return own(format!("fgw_reduced_length_valid({root}.sample.word)")),
+        "last_symbol" => {
+            return own(format!(
+                "sd_last_symbol_valid(fgw_length_raw({root}.sample.word))"
+            ))
+        }
         _ => {}
     }
     let Some(e) = entries.iter().find(|e| e.name == field) else {
-        return "true".into();
+        return own("true".into());
     };
     if let Some(gate) = e.tier_gate {
-        return format!("rc.sample.{gate}");
+        return own(format!("{root}.sample.{gate}"));
     }
     match (e.sentinel, &e.ty, &e.location) {
-        (Some(s), FieldType::F16Pair, _) => format!(
-            "bitcast<u32>(rc.sample.{field}) != {:#010x}u",
-            (s as f32).to_bits()
-        ),
-        (Some(s), _, Location::Packed { .. }) => format!("rc.sample.{field} != {}u", s as u32),
-        _ => "true".into(),
+        (Some(s), FieldType::F16Pair, _) => Validity {
+            predicate: format!(
+                "bitcast<u32>({root}.sample.{field}) != {:#010x}u",
+                (s as f32).to_bits()
+            ),
+            sentinel: Some(s),
+        },
+        (Some(s), _, Location::Packed { .. }) => Validity {
+            predicate: format!("{root}.sample.{field} != {}u", s as u32),
+            sentinel: Some(s),
+        },
+        _ => own("true".into()),
     }
 }
 

@@ -15,11 +15,14 @@ fn field(name: &str) -> ScalarField {
     ScalarField::payload(name).unwrap_or_else(|e| panic!("{e}"))
 }
 
-/// Checks `length`'s validity: 127, its stored sentinel, is invalid; its neighbours and 0 are valid; a failed gate
-/// makes any value invalid.
+/// Checks `length`'s validity: the word's, the validity lane's `word_valid` (a truncated word, `length` 127, is
+/// invalid); 127, its stored sentinel, is invalid in the twin; its neighbours and 0 are valid; a failed gate makes any
+/// value invalid.
 fn check_length(f: &ScalarField) {
     assert!(
-        f.valid.contains("v != 127.0"),
+        f.lane == "word"
+            && f.valid
+                .contains("fgw_reduced_length_valid(ctx.sample.word)"),
         "`length`'s predicate: {}",
         f.valid
     );
@@ -218,4 +221,70 @@ negative_control!(
     "the length ramp has no unset value, so +inf is not grey",
     expected = "unset, even with a failed gate",
     check_shown(&FieldRamp::length().unwrap_or_else(|e| panic!("{e}")))
+);
+
+/// Checks that every field `payload` accepts takes the validity lane's predicate for its lane member, `rc` read as
+/// `ctx`, behind the absence-NaN test for an `f32`; and that a field `payload` refuses has no lane member to take it
+/// from or is no scalar.
+fn check_lane(payload: fn(&str) -> Result<ScalarField, String>) {
+    let lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
+    let lane_valid = |lane: &str| {
+        lanes
+            .iter()
+            .filter(|l| l.name == "validity")
+            .flat_map(|l| &l.members)
+            .find(|m| m.name == format!("{lane}_valid"))
+            .map(|m| m.fill.replace("rc.", "ctx."))
+    };
+    let l = ledger::payload::ledger();
+    let entries = ledger::gen::validate(&l).unwrap_or_else(|e| panic!("{e}"));
+    let mut accepted = 0;
+    for e in &entries {
+        let Ok(f) = payload(e.name) else {
+            continue;
+        };
+        accepted += 1;
+        let want = lane_valid(f.lane).unwrap_or_else(|| {
+            panic!(
+                "`{}` is accepted with no `{}_valid` in the lane",
+                e.name, f.lane
+            )
+        });
+        let nan = "bitcast<u32>(v) != 0x7fc00000u";
+        let ok = f.valid == want
+            || f.valid == format!("{nan} && {want}")
+            || (want == "true" && f.valid == nan);
+        assert!(
+            ok,
+            "`{}`'s validity `{}` is not the lane's `{want}`",
+            e.name, f.valid
+        );
+    }
+    assert!(accepted >= 3, "the ramp accepts its fields: {accepted}");
+    for refused in ["word", "r"] {
+        assert!(payload(refused).is_err(), "`{refused}` is refused");
+    }
+}
+
+#[test]
+fn field_ramp_scalar_validity_is_the_lane() {
+    check_lane(ScalarField::payload);
+    let f = field("last_symbol");
+    assert!(
+        f.valid
+            .contains("sd_last_symbol_valid(fgw_length_raw(ctx.sample.word))"),
+        "`last_symbol`'s validity is the lane's: {}",
+        f.valid
+    );
+}
+
+negative_control!(
+    field_ramp_scalar_validity_is_the_lane,
+    "a ScalarField whose validity is `true`, not the lane's, as a hand-copied predicate that drops `last_symbol`'s",
+    expected = "is not the lane's",
+    check_lane(|name| {
+        let mut f = ScalarField::payload(name)?;
+        f.valid = "true".to_owned();
+        Ok(f)
+    })
 );
