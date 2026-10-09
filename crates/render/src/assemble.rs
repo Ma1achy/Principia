@@ -53,8 +53,9 @@ const COLOUR_SPACE: &str = include_str!("../shaders/wgsl/lib/colour_space.wgsl")
 const PRESENT: &str = include_str!("../shaders/wgsl/lib/present.wgsl");
 
 /// The built-in occupants, each its slot, id and WGSL file (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): the
-/// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5).
-const BUILTINS: [(Kind, &str, &str); 3] = [
+/// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5), and the colour `outcome_state`, the
+/// outcome palette of colour_composition §1.4 (TASK-M1-10).
+const BUILTINS: [(Kind, &str, &str); 4] = [
     (
         Kind::Combiner,
         "pass_through",
@@ -69,6 +70,11 @@ const BUILTINS: [(Kind, &str, &str); 3] = [
         Kind::Combiner,
         "multiply",
         include_str!("../shaders/wgsl/frag/combiner/multiply.wgsl"),
+    ),
+    (
+        Kind::Colour,
+        crate::colour::outcome::ID,
+        crate::colour::outcome::WGSL,
     ),
 ];
 

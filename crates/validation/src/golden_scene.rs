@@ -25,6 +25,16 @@
 //!   node's override colour.
 //! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN in the invalid pattern, then in the override
 //!   colour; the unset value in the grey either way (R-280).
+//!
+//! **The scenes** (`m1-outcome` and `debug-views`; TASK-M1-10's acceptance lines):
+//! - `outcome`: the outcome palette (`render::colour::outcome`; colour_composition §1.4): one sample per class, the
+//!   collisions with `t_end_step > 0` per pair, the escapes per body, bounded, a `decode_failed` sample, a collision
+//!   with `t_end_step == 0`, a triple collision and a triple ejection (`detail = 3`), running, sim_failed, and a triple
+//!   collision at `t_end_step == 0`, which is the t = 0 collision's.
+//! - `outcome_edited`: the same samples, the body-1 escape's swatch edited: only that class changes (REQ-COL-002).
+//! - `state_view`: the raw `state` view, one sample per state, 0–5: six `dbg_cat` colours (R-115).
+//! - `detail_view`: the `detail` view, keyed by state: every `detail` code of escape, collision, sim_failed and
+//!   decode_failed, then bounded and running, which have none and draw blank.
 
 use engine::synthetic::Synthetic;
 use kernel::payload::{canonical_nan, sim_state_from_ftle, ReadParams, STATE_RUNNING};
@@ -33,6 +43,7 @@ use ledger::schema::Storage;
 use render::assemble::{self, Kind, Node, Occupant, Stain, Tier};
 use render::bind::{self, Context};
 use render::colour::field_ramp::{override_default, FieldRamp, Shown as RampShown};
+use render::colour::outcome::{self, Shown as OutcomeShown};
 use render::headless::{self, Draw, Target};
 use render::pipeline_cache::{block_layout, encode};
 use render::present::{self, Rgb};
@@ -46,7 +57,7 @@ pub use kernel::payload::{
 };
 
 /// The scenes, by name.
-pub const NAMES: [&str; 10] = [
+pub const NAMES: [&str; 14] = [
     "ftle",
     "diffusion",
     "de_max_failed",
@@ -57,6 +68,32 @@ pub const NAMES: [&str; 10] = [
     "length_ramp_override",
     "d_min_ramp",
     "d_min_ramp_override",
+    "outcome",
+    "outcome_edited",
+    "state_view",
+    "detail_view",
+];
+
+/// The swatch `outcome_edited` edits, and its edited colour, 8-bit sRGB: the body-1 escape's, to olive.
+pub const OUTCOME_EDIT: (&str, [u8; 3]) = ("escape_body_1", [0x80, 0x80, 0x20]);
+
+/// The `outcome` scene's samples, `(state, detail, t_end_step)`, by the state's name: one per class (colour_composition
+/// §1.4, R-96), then a triple collision at step 0.
+pub const OUTCOME_SAMPLES: [(&str, u32, u32); 14] = [
+    ("collision", 2, 40),
+    ("collision", 1, 40),
+    ("collision", 0, 40),
+    ("bounded", 0, 1000),
+    ("decode_failed", 1, 0),
+    ("escape", 0, 120),
+    ("escape", 1, 120),
+    ("escape", 2, 120),
+    ("collision", 2, 0),
+    ("collision", 3, 40),
+    ("escape", 3, 120),
+    ("running", 0, 20),
+    ("sim_failed", 0, 40),
+    ("collision", 3, 0),
 ];
 
 /// Each tile's side in pixels.
@@ -74,6 +111,11 @@ pub enum Colouring {
     View(&'static str),
     /// A field ramp, its invalid colour overridden when `override_on`.
     Ramp { ramp: FieldRamp, override_on: bool },
+    /// The outcome palette, the built-in colour `outcome_state`, the swatch `edit` names set to its 8-bit sRGB colour,
+    /// as the linear RGB param the node takes.
+    Outcome {
+        edit: Option<(&'static str, [u8; 3])>,
+    },
 }
 
 /// What a scene shows at one sample.
@@ -89,6 +131,9 @@ pub enum Look {
     Ramp { twilight: bool, t: f64 },
     /// A field ramp's invalid colour, overridden: R-16's magenta (`field_ramp::override_default`).
     Override,
+    /// A flat colour, linear RGB: a categorical class's (a swatch of the outcome palette, a `dbg_cat` class, or the
+    /// `detail` view's blank).
+    Flat(Rgb),
 }
 
 impl Look {
@@ -102,6 +147,7 @@ impl Look {
             Look::Ramp { twilight: true, t } => present::ramp_twilight(t),
             Look::Ramp { t, .. } => present::ramp_viridis(t),
             Look::Override => override_default(),
+            Look::Flat(c) => c,
         }
     }
 }
@@ -153,8 +199,45 @@ pub fn scene(name: &str) -> Result<Scene, String> {
             NAMES.join(", ")
         )
     })?;
-    let (grid, mut set) = row(8)?;
+    let samples = match name {
+        "outcome" | "outcome_edited" => OUTCOME_SAMPLES.len() as u32,
+        "state_view" => 6,
+        "detail_view" => 18,
+        _ => 8,
+    };
+    let (grid, mut set) = row(samples)?;
     let colouring = match name {
+        "outcome" | "outcome_edited" => {
+            for (i, &(state, detail, t)) in OUTCOME_SAMPLES.iter().enumerate() {
+                set.sample(i as u32)
+                    .state(outcome::code(state))
+                    .detail(detail)
+                    .times(t, 0);
+            }
+            Colouring::Outcome {
+                edit: (name == "outcome_edited").then_some(OUTCOME_EDIT),
+            }
+        }
+        "state_view" => {
+            for i in 0..6 {
+                set.sample(i).state(i).detail(i % 4).times(40, 0);
+            }
+            Colouring::View("state")
+        }
+        "detail_view" => {
+            let states = ["escape", "collision", "sim_failed", "decode_failed"];
+            for (k, state) in states.into_iter().enumerate() {
+                for d in 0..4 {
+                    set.sample(4 * k as u32 + d)
+                        .state(outcome::code(state))
+                        .detail(d)
+                        .times(40, 0);
+                }
+            }
+            set.sample(16).state(outcome::code("bounded")).detail(2);
+            set.sample(17).state(outcome::code("running")).detail(1);
+            Colouring::View("detail")
+        }
         "ftle" => {
             // `ftle = S/(n · dt)` with n = 100, dt = 0.01: S itself.
             set.sample(0).times(0, 0);
@@ -267,11 +350,26 @@ impl Scene {
                     .ok_or_else(|| format!("no registry entry `{id}`"))
             }
             Colouring::Ramp { ramp, .. } => Ok(ramp.wgsl()),
+            Colouring::Outcome { .. } => Ok(outcome::WGSL.to_owned()),
         }
+    }
+
+    /// The colour node's occupant: the built-in `outcome_state` for the outcome palette, else the colour's WGSL
+    /// ([`Scene::colour`]) as custom text.
+    pub fn occupant(&self) -> Result<Occupant, String> {
+        Ok(match self.colouring {
+            Colouring::Outcome { .. } => Occupant::BuiltIn(outcome::ID.to_owned()),
+            _ => Occupant::Custom(self.colour()?),
+        })
     }
 
     /// The stain: the zero source into the colour, the pass-through combiner and `OUT`, as the catalogue bakes a view.
     pub fn stain(&self) -> Result<Stain, String> {
+        self.stain_with(self.occupant()?)
+    }
+
+    /// [`Scene::stain`] with the colour node's occupant `colour`.
+    fn stain_with(&self, colour: Occupant) -> Result<Stain, String> {
         let node = |kind, occupant, inputs: &[Option<usize>]| Node {
             kind,
             occupant,
@@ -279,7 +377,7 @@ impl Scene {
         };
         Stain::new(vec![
             node(Kind::Source, Occupant::Custom(ZERO_SOURCE.to_owned()), &[]),
-            node(Kind::Colour, Occupant::Custom(self.colour()?), &[Some(0)]),
+            node(Kind::Colour, colour, &[Some(0)]),
             node(
                 Kind::Combiner,
                 Occupant::BuiltIn("pass_through".to_owned()),
@@ -304,6 +402,8 @@ impl Scene {
             "dLz_max" => (read.dLz_max, true),
             "d_min" => (read.d_min, true),
             "dmin_pair" => (read.dmin_pair as f32, true),
+            "state" => (read.state as f32, true),
+            "detail" => (read.detail as f32, true),
             "length" => (fgw_length_raw(read.word) as f32, true),
             other => match self.ic_member(i, other) {
                 Some(v) => (v, true),
@@ -361,6 +461,7 @@ impl Scene {
         match &self.colouring {
             Colouring::View(f) => f,
             Colouring::Ramp { ramp, .. } => ramp.field.field,
+            Colouring::Outcome { .. } => "state",
         }
     }
 
@@ -399,7 +500,26 @@ impl Scene {
                 "INVALID_OVERRIDE".to_owned(),
                 vec![f64::from(u32::from(*override_on))],
             )],
+            Colouring::Outcome { edit } => edit
+                .iter()
+                .map(|(param, c)| ((*param).to_owned(), present::srgb8(*c).to_vec()))
+                .collect(),
         })
+    }
+
+    /// The outcome palette's swatches as the scene sets them, 8-bit sRGB in `outcome::SWATCHES`' order: the defaults,
+    /// the edited one replaced.
+    pub fn swatches(&self) -> Vec<[u8; 3]> {
+        let mut out = outcome::defaults();
+        if let Colouring::Outcome {
+            edit: Some((param, c)),
+        } = &self.colouring
+        {
+            if let Some(k) = outcome::index(param) {
+                out[k] = *c;
+            }
+        }
+        out
     }
 
     /// What the scene shows at sample `i`, by the CPU twin of its colouring: the ledger's numeric template
@@ -407,7 +527,19 @@ impl Scene {
     /// ([`Scene::params`]); the field ramp's ([`FieldRamp::shown`]) for a ramp.
     pub fn look(&self, i: u32) -> Result<Look, String> {
         let (v, gate) = self.value(i)?;
+        let read = self.read(i);
         match &self.colouring {
+            Colouring::View("state") => Ok(Look::Flat(present::dbg_cat(read.state, 6))),
+            Colouring::View("detail") => {
+                Ok(Look::Flat(outcome::detail_view(read.state, read.detail)))
+            }
+            Colouring::Outcome { .. } => Ok(
+                match outcome::shown(read.state, read.detail, read.t_end_step) {
+                    OutcomeShown::Swatch(k) => Look::Flat(present::srgb8(self.swatches()[k])),
+                    OutcomeShown::Running => Look::NotYet,
+                    OutcomeShown::Invalid => Look::Invalid,
+                },
+            ),
             Colouring::View(f) => {
                 let n = self
                     .numeric_or_none()?
@@ -444,6 +576,31 @@ impl Scene {
             .collect()
     }
 
+    /// Whether sample `i` shows a value the fragment returns unchanged from a uniform, with no arithmetic: a swatch of
+    /// the outcome palette (`render::colour::outcome`). Its render is then the same f32 bits on every backend, so it
+    /// needs no margin from a rounding tie ([`tie_checked`](Scene::tie_checked)).
+    pub fn exact(&self, i: u32) -> Result<bool, String> {
+        Ok(matches!(self.colouring, Colouring::Outcome { .. })
+            && matches!(self.look(i)?, Look::Flat(_)))
+    }
+
+    /// The twin's pixels a backend's arithmetic may move ([`tie_margin`]'s input): each pixel's linear RGB, rows from
+    /// the top, but those of the samples shown [`exact`](Scene::exact)ly.
+    pub fn tie_checked(&self) -> Result<Vec<Rgb>, String> {
+        let (width, height) = self.size();
+        let grid = self.context.grid;
+        let exact = (0..grid.sample_count())
+            .map(|i| self.exact(i))
+            .collect::<Result<Vec<_>, _>>()?;
+        let all = self.expected()?;
+        Ok((0..height)
+            .flat_map(|y| (0..width).map(move |x| (x, y)))
+            .zip(all)
+            .filter(|((x, y), _)| !exact[grid.cell(*x, *y).sample as usize])
+            .map(|(_, c)| c)
+            .collect())
+    }
+
     /// The render's CPU twin: each pixel's linear RGB, rows from the top.
     pub fn expected(&self) -> Result<Vec<Rgb>, String> {
         let (width, height) = self.size();
@@ -468,7 +625,28 @@ impl Scene {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Result<Vec<[f32; 4]>, String> {
-        let fragment = assemble::assemble(&self.stain()?, Tier::FULL).map_err(|e| e.to_string())?;
+        self.render_with(device, queue, self.occupant()?)
+    }
+
+    /// [`Scene::render`] with the colour node's occupant the WGSL `colour` instead: a test's altered occupant.
+    pub fn render_colour(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        colour: &str,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        self.render_with(device, queue, Occupant::Custom(colour.to_owned()))
+    }
+
+    /// [`Scene::render`] with the colour node's occupant `colour`.
+    fn render_with(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        colour: Occupant,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        let fragment =
+            assemble::assemble(&self.stain_with(colour)?, Tier::FULL).map_err(|e| e.to_string())?;
         let module = bind::preset_module(&fragment.source);
         let bytes = self.set.bytes();
         let bound = bind::upload(device, &bytes.payload(), &self.context);
