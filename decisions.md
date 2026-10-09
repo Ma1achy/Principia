@@ -6848,9 +6848,9 @@ The orchestrator put RQ-258 to the human: at a non-dyadic `N` (Custom mode expos
 - RQ-258 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line.
 - R-398 is in the "physics" group of `plan/rule_groups.yaml`, with R-395.
 
-Adds no requirement; REQ-PERF-026's verify, REQ-PERF-035's statement and verify, REQ-PERF-053's and REQ-PERF-054's
-verify and rulings, REQ-PERF-038's and REQ-PERF-090's rulings and notes, REQ-GUI-014's note, REQ-TOOL-019's verify and
-rulings and REQ-TOOL-152's note, rulings and `rq` change.
+Adds no requirement; REQ-PERF-026's verify, REQ-PERF-035's statement and verify, REQ-PERF-053's verify and rulings,
+REQ-PERF-054's verify, rulings and note, REQ-PERF-038's and REQ-PERF-090's rulings and notes, REQ-GUI-014's note,
+REQ-TOOL-019's verify and rulings and REQ-TOOL-152's note, rulings and `rq` change.
 
 ## R-399 — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*
 *9 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or
