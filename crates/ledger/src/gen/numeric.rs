@@ -105,10 +105,17 @@ fn finite(b: Bound) -> Option<f64> {
     }
 }
 
-/// `x` as a WGSL f32 literal (Rust's shortest round-trip form of the f32, with a decimal point or an exponent).
+/// `x` as a WGSL f32 literal (Rust's shortest round-trip form of the f32, with a decimal point or an exponent). WGSL
+/// has no literal for an infinity or a NaN, so a value that is not finite as an f32 is refused: it panics, naming it
+/// (applied per R-369, code review 5469198081 N1).
 pub fn float(x: f64) -> String {
-    let s = format!("{:?}", x as f32);
-    if s.contains('.') || s.contains('e') || s.contains("inf") || s.contains("NaN") {
+    let f = x as f32;
+    assert!(
+        f.is_finite(),
+        "{x} is not finite as an f32, so it has no WGSL literal"
+    );
+    let s = format!("{f:?}");
+    if s.contains('.') || s.contains('e') {
         s
     } else {
         format!("{s}.0")

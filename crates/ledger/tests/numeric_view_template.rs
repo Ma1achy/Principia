@@ -570,8 +570,7 @@ fn numeric_view_template_floats_are_wgsl_literals() {
         (1e20, "1e20"),
         (numeric::log_floor(), "5.9604645e-8"),
         (numeric::cyclic_period(), "6.2831855"),
-        (f64::INFINITY, "inf"),
-        (f64::NAN, "NaN"),
+        (f64::from(f32::MAX), "3.4028235e38"),
     ]);
 }
 
@@ -580,6 +579,34 @@ negative_control!(
     "an integer-valued number written without its decimal point is no f32 literal",
     expected = "is not written as",
     check_floats(&[(76.0, "76")])
+);
+
+/// Checks that `float` refuses each of `cases`, a value with no WGSL f32 literal, by a panic naming it.
+fn check_refused(cases: &[f64]) {
+    for &x in cases {
+        let got = std::panic::catch_unwind(|| numeric::float(x));
+        match got {
+            Ok(s) => panic!("{x} is written as `{s}`, not refused"),
+            Err(e) => {
+                let msg = e.downcast_ref::<String>().cloned().unwrap_or_default();
+                assert!(msg.contains("has no WGSL literal"), "{x}: {msg}");
+            }
+        }
+    }
+}
+
+/// WGSL has no literal for an infinity or a NaN: `float` refuses a value that is not finite as an f32, an f64 past
+/// f32's range included (applied per R-369, code review 5469198081 N1).
+#[test]
+fn numeric_view_template_floats_refuse_non_finite() {
+    check_refused(&[f64::INFINITY, f64::NEG_INFINITY, f64::NAN, 1e39, -1e39]);
+}
+
+negative_control!(
+    numeric_view_template_floats_refuse_non_finite,
+    "a finite value, which has its literal",
+    expected = "not refused",
+    check_refused(&[1.5])
 );
 
 /// Checks that the diverging view `n`'s ramp line places raw on `[-r, r]`, `r` written as `want`.
