@@ -914,3 +914,112 @@ negative_control!(
         m.map(|x| f64::from(x / sum))
     })
 );
+
+/// One input of the direction-cosines and ternary helpers: the WGSL call, its CPU twin's colour at a pixel, and the
+/// colour it is expected to draw there, `None` for the hatch.
+struct Undefined {
+    call: String,
+    twin: Box<dyn Fn([f64; 2]) -> Rgb>,
+    want: Option<Rgb>,
+}
+
+/// `x` as a WGSL f32 of its exact bits.
+fn bits(x: f32) -> String {
+    format!("bitcast<f32>({:#010x}u)", x.to_bits())
+}
+
+/// The helpers' inputs at and beside their undefined cases: no positive mass, a zero vector, an absence NaN, each the
+/// hatch; a smallest positive mass, a vector along one axis, one body alone, each its colour.
+fn undefined_cases() -> Vec<Undefined> {
+    let absent = f32::from_bits(present::ABSENT_NAN_BITS);
+    let mut out = Vec::new();
+    for (m, want) in [
+        ([0.0, 0.0, 0.0], None),
+        ([-1.0, -0.5, -0.25], None),
+        ([absent, 0.5, 0.5], None),
+        ([1e-3, 0.0, 0.0], Some([1.0, 0.0, 0.0])),
+    ] {
+        out.push(Undefined {
+            call: format!(
+                "dbg_ternary(vec3<f32>({}), ctx.frag_xy)",
+                m.map(bits).join(", ")
+            ),
+            twin: Box::new(move |f| present::dbg_ternary(m, f)),
+            want,
+        });
+    }
+    for (v, want) in [
+        ([0.0, 0.0, 0.0], None),
+        ([absent, 0.0, 1.0], None),
+        ([0.0, 0.0, 2.0], Some([0.5, 0.5, 1.0])),
+    ] {
+        out.push(Undefined {
+            call: format!(
+                "dbg_dircos3(vec3<f32>({}), ctx.frag_xy)",
+                v.map(bits).join(", ")
+            ),
+            twin: Box::new(move |f| present::dbg_dircos3(v, f)),
+            want,
+        });
+    }
+    for (v, want) in [
+        ([[0.0, 0.0]; 3], None),
+        ([[0.0, 0.0], [0.0, absent], [1.0, 0.0]], None),
+        ([[0.0, 0.0], [0.0, 3.0], [0.0, 0.0]], Some([0.0, 1.0, 0.0])),
+    ] {
+        let pairs: Vec<String> = v
+            .iter()
+            .map(|b| format!("vec2<f32>({}, {})", bits(b[0]), bits(b[1])))
+            .collect();
+        out.push(Undefined {
+            call: format!(
+                "dbg_dircos6(array<vec2<f32>, 3>({}), ctx.frag_xy)",
+                pairs.join(", ")
+            ),
+            twin: Box::new(move |f| present::dbg_dircos6(v, f)),
+            want,
+        });
+    }
+    out
+}
+
+/// Checks that each of `cases` draws, on the GPU, its CPU twin's colour, and that the twin is the hatch where `want`
+/// is `None` and `want` elsewhere.
+fn check_undefined(cases: &[Undefined]) {
+    let h = gpu();
+    for c in cases {
+        let wgsl = format!(
+            "fn colour(ctx: Ctx) -> vec3<f32> {{ return {}; }}\n",
+            c.call
+        );
+        let s = row_scene(
+            "an undefined direction",
+            1,
+            Colouring::Probe(wgsl, Vec::new()),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        let image = render(&h, &s);
+        check_tile(&s, &image, 0, &*c.twin, "the CPU twin");
+        let what = format!("`{}`'s colour", c.call);
+        match c.want {
+            Some(colour) => check_tile(&s, &image, 0, &|_| colour, &what),
+            None => check_tile(&s, &image, 0, &present::debug_invalid, &what),
+        }
+    }
+}
+
+#[test]
+fn norm_n_views_undefined_directions_draw_the_hatch() {
+    check_undefined(&undefined_cases());
+}
+
+negative_control!(
+    norm_n_views_undefined_directions_draw_the_hatch,
+    "no positive mass expected to draw black rather than the hatch",
+    expected = "`dbg_ternary(vec3<f32>(bitcast<f32>(0x00000000u)",
+    {
+        let mut cases = undefined_cases();
+        cases[0].want = Some([0.0; 3]);
+        check_undefined(&cases);
+    }
+);
