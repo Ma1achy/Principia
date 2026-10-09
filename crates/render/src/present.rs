@@ -233,10 +233,11 @@ pub fn dbg_ternary(m: [f32; 3], frag_xy: [f64; 2]) -> Rgb {
 /// `dbg_dircos3(v, frag_xy)`: `½(v̂ + 1)` as linear RGB; the hatch where `‖v‖ > 0` fails or a component is the absence
 /// NaN.
 pub fn dbg_dircos3(v: [f32; 3], frag_xy: [f64; 2]) -> Rgb {
-    let any_absent = v.iter().any(|&x| absent(x));
+    // A component that is the absence NaN, or any NaN, makes the norm NaN: in f64 that needs no bit test, which the
+    // shader makes because fast math may fold its NaN test (R-343).
     let v = v.map(f64::from);
     let norm = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
-    if any_absent || norm.is_nan() || norm <= 0.0 {
+    if norm.is_nan() || norm <= 0.0 {
         return debug_invalid(frag_xy);
     }
     v.map(|x| 0.5 * (x / norm + 1.0))
