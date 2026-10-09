@@ -54,3 +54,7 @@ justification = "w & 0xffff has bits 0..16 only and F16_QNAN << 16 bits 16..32 o
 [[equivalent]]
 mutant = "crates/render/src/colour/field_ramp.rs:92:29: replace == with != in ScalarField::payload"
 justification = "every ledger field payload reaches here (a scalar SimState member, an ICDescriptor member, or the word's) has its <lane>_valid in the validity lane (field_ramp_scalar_validity_is_the_lane checks each), so the guard never refuses, and any() over != finds another member: both accept the same fields"
+
+[[equivalent]]
+mutant = "crates/validation/src/golden_scene.rs:223:49: replace % with + in scene"
+justification = "set_detail writes the low 2 bits of its value (insert(w, v, 3, 2)), and i + 4 and i % 4 share their low 2 bits for every i, so each state_view sample holds the same detail code"

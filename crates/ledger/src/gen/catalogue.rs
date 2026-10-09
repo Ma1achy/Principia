@@ -18,8 +18,10 @@
 //! ledger field appears in the catalogue or generation fails (seam 13; REQ-GEN-011).
 //!
 //! **The colouring.** A numeric field takes the two-line template ([`numeric`](super::numeric); render_gui_spec §10.1,
-//! RQ-231, TASK-M1-09), its `RANGE_AUTO` and `u_range` uniforms declared in the view's header. The rest is a
-//! placeholder (TASK-M1-10 and TASK-M1-12 own it): a categorical field `dbg_cat` with its `n`, a flag `dbg_flag`, and
+//! RQ-231, TASK-M1-09), its `RANGE_AUTO` and `u_range` uniforms declared in the view's header. `state` takes the
+//! six-colour `dbg_cat` palette (R-115), and `detail`, a union, is coloured per state, its palette segment and legend
+//! keyed by `state` ([`detail_segments`]; TASK-M1-10). The rest is a
+//! placeholder (TASK-M1-12 owns it): a categorical field `dbg_cat` with its `n`, a flag `dbg_flag`, and
 //! the drift fields, which keep R-381's `symlog` default until TASK-M3-05, the literal placement of `dbg_sentinel`,
 //! which needs no range (render contract Part 5). A vector field shows its norm, `‖·‖`, the reduction §3.8 names
 //! (applied per R-369). A categorical field's stored sentinel, `dmin_pair`'s 3, shows as its literal value on the ramp
@@ -169,6 +171,16 @@ impl View {
     pub fn test(&self) -> String {
         test_name(self.field)
     }
+
+    /// The accessor symbols the view and its test reference: its field's ([`Read::accessors`]), and, for the union
+    /// [`UNION_FIELD`], its key's member [`UNION_KEY`], which the view switches on.
+    pub fn accessors(&self) -> Vec<Accessor> {
+        let mut out = self.read.accessors(self.field);
+        if self.field == UNION_FIELD {
+            out.push(Accessor::Member(UNION_KEY.to_owned()));
+        }
+        out
+    }
 }
 
 /// The test of `field`'s view: `catalogue_view_<field>`, lowercased, as a Rust function name is.
@@ -189,7 +201,7 @@ pub fn views(words: &[Word], entries: &[Entry]) -> Vec<View> {
             Some(View {
                 field: e.name,
                 path: PathBuf::from(format!("{DIR}/{}.wgsl", e.name)),
-                wgsl: view_wgsl(e, &read),
+                wgsl: view_wgsl(words, entries, e, &read),
                 read,
             })
         })
@@ -286,9 +298,12 @@ fn ramp(e: &Entry, value: &str, wgsl: &str) -> String {
 }
 
 /// The view's WGSL: a header naming the field, its location, type, scale and range, and its accessors, then `colour`:
-/// the numeric template's ([`NumericView`]) for a numeric field, its uniforms declared after the header, else the
-/// placeholder's.
-fn view_wgsl(e: &Entry, r: &Read) -> String {
+/// the union's, keyed by its key's value, for [`UNION_FIELD`] ([`union_wgsl`]); the numeric template's
+/// ([`NumericView`]) for a numeric field, its uniforms declared after the header; else the placeholder's.
+fn view_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> String {
+    if let Some(wgsl) = union_wgsl(words, entries, e, r) {
+        return wgsl;
+    }
     let numeric = match r {
         Read::Member {
             wgsl: "f32" | "u32",
@@ -343,6 +358,155 @@ pub fn numeric_view(
     Some(numeric_wgsl(e, &r, &n))
 }
 
+// ── The `detail` union's view, keyed by `state` (REQ-COL-004, REQ-TOOL-022) ───────────────────────────────────────
+
+/// The union field, whose meaning is keyed by another field's value: `detail` (payload §2, "union keyed by state").
+pub const UNION_FIELD: &str = "detail";
+
+/// The field the union is keyed by: `state`.
+pub const UNION_KEY: &str = "state";
+
+/// One class of a state's segment of the `detail` view: the `detail` code, its meaning in that state (payload §2, as
+/// the ledger hashes it, [`crate::payload::detail_meanings`]), its legend label, 0-based (R-22), and its class, the
+/// index the view colours it by, `dbg_cat(class, detail_classes())`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DetailClass {
+    pub detail: u32,
+    pub meaning: &'static str,
+    pub label: String,
+    pub class: u32,
+}
+
+/// The `detail` view's palette segment and legend for one state (dd_colouring §3.7: "legend and palette segment
+/// switch on `state`"): the state's name and code, and its four classes, one per `detail` code.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DetailSegment {
+    pub state: &'static str,
+    pub code: u32,
+    pub classes: Vec<DetailClass>,
+}
+
+/// The legend label of `detail` code `d`, meaning `meaning`, in the state `state`: a collision's pair id names its two
+/// bodies, the lower first, as colour_composition §1.4's table does (R-22: pair `k` is the side opposite body `k`);
+/// every other meaning is the ledger's.
+fn detail_label(state: &str, d: usize, meaning: &str) -> String {
+    match (state, crate::payload::pair_bodies().get(d)) {
+        ("collision", Some(&[a, b])) => format!("{meaning}: bodies {}–{}", a.min(b), a.max(b)),
+        _ => meaning.to_owned(),
+    }
+}
+
+/// The `detail` view's segments, one per state in which `detail` has a meaning (payload §2: escape, collision,
+/// sim_failed and decode_failed), in the ledger's order ([`crate::payload::detail_meanings`]): segment `k`'s classes
+/// are `4k + 1 … 4k + 4`, so no two classes of the view share a colour. `bounded`, `running` and the reserved codes
+/// 6–7 have none: `detail` is undefined there (payload §2), and the view draws them blank, black: class
+/// [`no_detail`].
+pub fn detail_segments() -> Vec<DetailSegment> {
+    let states = crate::payload::states();
+    crate::payload::detail_meanings()
+        .iter()
+        .enumerate()
+        .filter_map(|(k, (state, meanings))| {
+            let code = states.iter().position(|s| s == state)?;
+            let classes = meanings
+                .iter()
+                .enumerate()
+                .map(|(d, meaning)| DetailClass {
+                    detail: d as u32,
+                    meaning,
+                    label: detail_label(state, d, meaning),
+                    class: no_detail() + 1 + (meanings.len() * k + d) as u32,
+                })
+                .collect();
+            Some(DetailSegment {
+                state,
+                code: code as u32,
+                classes,
+            })
+        })
+        .collect()
+}
+
+/// The segment of the state whose code is `state`, or `None` where `detail` has no meaning: `bounded`, `running` and
+/// the reserved codes (payload §2).
+pub fn detail_segment(state: u32) -> Option<DetailSegment> {
+    detail_segments().into_iter().find(|s| s.code == state)
+}
+
+/// The class of a state with no `detail`, drawn blank, black, not by `dbg_cat`: class 0, so the segments' classes
+/// start at 1, whose golden-angle colours all sit at least 0.02 of an 8-bit step from a rounding tie in linear RGB,
+/// where class 0's green sits 0.005 from one (applied per R-369; `render/tests/numeric_views.rs`'s margin).
+pub fn no_detail() -> u32 {
+    0
+}
+
+/// The number of classes the `detail` view tells apart: [`no_detail`] and four per segment, the `n` of its
+/// `dbg_cat(class, n)`.
+pub fn detail_classes() -> u32 {
+    1 + detail_segments()
+        .iter()
+        .map(|s| s.classes.len() as u32)
+        .sum::<u32>()
+}
+
+/// The view of [`UNION_FIELD`], or `None` for any other entry, or where the key is not a field the fragment reads as a
+/// `u32`: `colour` reads the key, and each state's segment colours `detail` by its class
+/// ([`detail_segments`]), a state with no segment drawing blank, black. The legend the view is keyed by is the same
+/// data, so the two cannot disagree (the three-colours-bug guard, dd_colouring §2).
+fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<String> {
+    if e.name != UNION_FIELD {
+        return None;
+    }
+    let key = entries.iter().find(|k| k.name == UNION_KEY)?;
+    let key_read = read(words, entries, key)?;
+    if key_read
+        != (Read::Member {
+            wgsl: "u32",
+            derived: false,
+        })
+    {
+        return None;
+    }
+    let n = detail_classes();
+    let mut body = format!(
+        "    let s = {};\n    let d = {};\n",
+        key_read.wgsl(key.name),
+        r.wgsl(e.name)
+    );
+    for seg in detail_segments() {
+        let first = seg.classes.first().map_or(0, |c| c.class);
+        let _ = writeln!(
+            body,
+            "    if (s == STATE_{}) {{ return dbg_cat({first}u + d, {n}u); }}",
+            seg.state.to_uppercase()
+        );
+    }
+    body.push_str("    return vec3<f32>(0.0, 0.0, 0.0);\n");
+    let segments: Vec<String> = detail_segments()
+        .iter()
+        .map(|s| {
+            let labels: Vec<String> = s
+                .classes
+                .iter()
+                .map(|c| format!("{} {}", c.detail, c.label))
+                .collect();
+            format!("{} ({})", s.state, labels.join(", "))
+        })
+        .collect();
+    let colouring = format!(
+        "Its colouring is the union's, keyed by `{UNION_KEY}` (debug_tooling_plan §B; dd_colouring §3.7; \
+         `ledger::gen::catalogue::detail_segments`, the legend's data): each state's palette segment is four classes \
+         of `dbg_cat(·, {n}u)`, one per code: {}. Every other state, bounded, running and the reserved codes, has no \
+         `detail` and draws blank, black, class {} (payload §2).",
+        segments.join("; "),
+        no_detail()
+    );
+    Some(format!(
+        "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{body}}}\n",
+        header(e, r, &colouring)
+    ))
+}
+
 /// The placeholder view of `e`, read as `r`.
 fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
     let value = r.wgsl(e.name);
@@ -355,13 +519,15 @@ fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
         Read::Ic => format!("return {};", ramp(e, &value, "f32")),
         Read::Word { .. } => format!("return {};", ramp(e, &value, "u32")),
     };
+    let colouring = if e.name == UNION_KEY {
+        "Its colouring is the six-colour `dbg_cat` palette, one colour per state, not the outcome palette (R-115; \
+         debug_tooling_plan §B)."
+    } else {
+        "The colouring is a placeholder (`ledger::gen::catalogue`)."
+    };
     format!(
         "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    {body}\n}}\n",
-        header(
-            e,
-            r,
-            "The colouring is a placeholder (`ledger::gen::catalogue`)."
-        )
+        header(e, r, colouring)
     )
 }
 
@@ -392,8 +558,11 @@ fn header(e: &Entry, r: &Read, colouring: &str) -> String {
         Scale::Categorical(n) => format!("categorical({n})"),
         Scale::Flag => "flag".to_owned(),
     };
-    let accessors: Vec<String> = r
-        .accessors(e.name)
+    let mut symbols = r.accessors(e.name);
+    if e.name == UNION_FIELD {
+        symbols.push(Accessor::Member(UNION_KEY.to_owned()));
+    }
+    let accessors: Vec<String> = symbols
         .iter()
         .map(|a| match a {
             Accessor::Member(m) => format!("`SimState.{m}`"),
@@ -582,8 +751,10 @@ const NOT_STORED: &str = "does not read back the value stored";
 const NOT_DERIVED: &str = "is not its derived accessor's value";
 
 /// The check of view `v`'s field: read through the Rust twin of its view's accessor from `p`, it is the value the
-/// probe stored, or, for a derived field, the value its derived accessor gives from an unaltered probe.
-fn check(v: &View, stored: Option<&Probe>) -> String {
+/// probe stored, or, for a derived field, the value its derived accessor gives from an unaltered probe. The union's
+/// view also reads its key, `key`, the key's name and probe: its check reads the key back too, so the view and its
+/// test reference the same members (REQ-TOOL-017).
+fn check(v: &View, stored: Option<&Probe>, key: Option<(&str, &Probe)>) -> String {
     let n = v.field;
     let got = v.read.rust(n);
     let lower = n.to_lowercase();
@@ -624,13 +795,20 @@ fn check(v: &View, stored: Option<&Probe>) -> String {
                 Read::Member { wgsl: "bool", .. } => (got, (p.value != "0").to_string()),
                 _ => (got, p.value.clone()),
             };
-            (
-                "is the value the probe stored",
-                format!(
-                    "    let read = read(p);\n{}",
-                    call(4, "", "expect", &[got, want, message(NOT_STORED)])
-                ),
-            )
+            let mut body = format!(
+                "    let read = read(p);\n{}",
+                call(4, "", "expect", &[got, want, message(NOT_STORED)])
+            );
+            if let Some((k, kp)) = key {
+                let args = [
+                    format!("read.{k}"),
+                    kp.value.clone(),
+                    format!("\"`{n}`'s key `{k}` {NOT_STORED}\""),
+                ];
+                body.push('\n');
+                body.push_str(&call(4, "", "expect", &args));
+            }
+            ("is the value the probe stored", body)
         }
         (_, None) => (
             "has no probe value",
@@ -695,7 +873,16 @@ fn tests(entries: &[Entry], views: &[View]) -> String {
         let Some((k, e)) = entries.iter().enumerate().find(|(_, e)| e.name == v.field) else {
             continue;
         };
-        out.push_str(&check(v, probes[k].as_ref()));
+        let key = (v.field == UNION_FIELD)
+            .then(|| {
+                let (kk, ke) = entries
+                    .iter()
+                    .enumerate()
+                    .find(|(_, e)| e.name == UNION_KEY)?;
+                Some((ke.name, probes[kk].as_ref()?))
+            })
+            .flatten();
+        out.push_str(&check(v, probes[k].as_ref(), key));
         let test = v.test();
         let lower = v.field.to_lowercase();
         let alter = altered_field(e);

@@ -35,3 +35,4 @@ The seamless LUT sphere: N_e = 16 LUT samples placed as equatorial poles (cos 2�
 - Calibration (R-71): REQ-COL-050.
 - RQ-101 ruled: R-122 — LUT data from the published matplotlib tables and Moreland's cool-warm table; the Principia stops from the colour explorer. This settles the Principia and Cool-warm gap.
 - RQ-121 ruled: R-151 (amending R-122) — Cubehelix's reference is the analytic form with dd_colouring §3.8's parameters; matplotlib's cubehelix function with the same parameters is a cross-check only.
+- R-400 (9 Oct 2026): Moreland's cool-warm table arrives first with TASK-M1-17, as `crates/ledger/data/lut/coolwarm.txt` read by the prelude's `ramp_coolwarm`; this task's Cool-warm LUT reads that table, not a second transcription (applied per R-369).

@@ -62,3 +62,5 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - PIT-9: the Σpᵢ = 0 check cannot catch the crossed-factor swap at equal masses — the fuzz must draw unequal masses, and a swapped-factor control must fail.
 - Closes, for gaps the corpus leaves open: REQ-PAY-088 (R-72 definition) (classification accepted by R-132).
 - `rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ.
+- R-403: `K_0` and `V_0` are `lin` over `[0, ∞)` and `(−∞, 0]`, not `diverging` (dd_generation_root §3.6); TASK-M1-17
+  changes their ledger entries, and `ic_descriptor_layout` checks those scales and ranges (REQ-PAY-035).

@@ -127,6 +127,16 @@ Replace-L)` modulates the position map's lightness by chaos (unstable brightens,
 a clean bivariate encoding (§4.1). Every default here is customisable; the greyscale and its polarity
 are only the defaults, chosen so these fields compose well as the brightness channel.
 
+**Signed means a range that spans zero (R-400).** A field is signed, for these defaults and for the numeric debug
+views, when its declared ledger range spans zero; it then takes a diverging ramp centred at zero, the prelude's
+`ramp_coolwarm` for the debug views, and a field that can't be negative keeps its sequential ramp (viridis in the
+debug views). No signed-or-not mark is added to the ledger. **The `diverging` tag agrees with the range (R-403):** a
+field carries the ledger's `diverging` scale only when its declared range spans zero, and a field that can't be
+positive, as `V_0` can't, keeps its sequential ramp too (viridis in the debug views), mapped monotonically, its most
+negative value at the dark end. **"Not yet" sits on no ramp (R-399):** an unset `d_min` and
+a running sample are drawn in the stippled "not yet" style (§1.4), never a flat grey, so a greyscale default or a
+user's ramp never collides with it.
+
 ### 1.3 Combinators  →  `vec3`
 
 Compose sub-results. All are `vec3(+ctx) → vec3`.
@@ -178,13 +188,24 @@ escape colours. A standalone escaper view is therefore this map **filtered to th
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
 mode admits (“just collisions”, “just body-2 escape”), not a distinct render mode.
 
+**The "not yet" style (R-399).** `running`'s neutral grey is not a flat swatch: "not yet", for running samples and
+for an unset `d_min` alike, is the neutral grey (REQ-COL-053) with a fine dot stipple from the pixel position, drawn by
+`debug_not_yet(frag_xy)` (render contract, presentation layer), distinct from the invalid hatch's stripes. A ramp draws
+one flat colour per value, so no ramp, greyscale included, can collide with it. The grey's value and the stipple's
+pattern are proposed for the M1 gate (REQ-COL-053, REQ-COL-064).
+
 **The two triple outcomes (proposed; RQ-234, decided per R-369; REQ-COL-062).** Two valid outcomes have no row in
 the table either: **triple collision**, a collision with `detail = 3`, and **triple ejection**, an escape with
 `detail = 3` (payload § `sample_descriptor`, "3 means all three"; R-30; REQ-EVT-006). They are neither `running` nor
 `sim_failed`, so neither takes the grey or the invalid pattern, which stays NaN's (PIT-8). Each gets a swatch of its
 own, a calibration (R-71): proposed with its evidence by TASK-M1-10 (its OKLab separation from the nine classes, the
-running grey and the invalid pattern's colours) and confirmed by the human at the M1 gate. Until then the two swatches
-have no value here.
+running grey and the invalid pattern's colours) and confirmed by the human at the M1 gate. **The proposed values
+(R-71; TASK-M1-10), until the human confirms them at the M1 gate:** triple collision, lavender `#D6A1FF`, OKLab
+lightness 0.792; triple ejection, navy `#000097`, OKLab lightness 0.306. Of the 8-bit sRGB colours, `#000097` is the
+one farthest in OKLab from its nearest of the nine classes, the running grey (`#4E4E4E`, itself proposed, REQ-COL-053)
+and the invalid pattern's two colours: 0.233, from bounded; `#D6A1FF` is the farthest from those and `#000097`: 0.204,
+from degenerate. The lighter goes to the collision and the darker to the ejection, as all three additive primaries
+mix toward white and all three subtractive primaries toward black.
 
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's
