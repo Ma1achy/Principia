@@ -19239,19 +19239,23 @@
   note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate; closes RQ-202): n = 8 shards and 300 minutes per shard, in place of R-305's provisional 120; the limit is a ceiling for unusually large diffs, not a target."
 - id: REQ-VAL-150
   area: VAL
-  statement: "A scheduled nightly workflow must run the full `cargo mutants` over the workspace, with R-196's exclusions, and write its result as a report."
+  statement: "A scheduled nightly workflow must run the full `cargo mutants` over the workspace, with R-196's exclusions, sharded across parallel jobs so that each shard finishes within GitHub's 360-minute job limit (R-402), and write its result as a report, which fails when a shard did not finish."
   source:
   - file: decisions.md
     section: R-196 — Mutation testing joins the QA gate
   - file: decisions.md
     section: "R-198 — TASK-M0-04 is split into M0-04, M0-21, M0-22 and M0-23 *(closes RQ-135)*"
+  - file: decisions.md
+    section: "R-402 — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: shards of at most 40 mutants, counted each run, sliced package by package *(amends R-376 as it applies to the nightly full run's shards)*"
   verify:
     method: review checklist
-    detail: "code: `nightly.yml` runs `cargo mutants` over the workspace with the exclusions of the per-PR job (one exclusion list, shared) and uploads the mutants report as an artifact; the report lists caught, missed, unviable and timed-out mutants"
+    detail: "code: `nightly.yml` runs `cargo mutants` over the workspace with the exclusions of the per-PR job (one exclusion list, shared) and uploads the mutants report as an artifact; the report lists caught, missed, unviable and timed-out mutants. The run counts the workspace's mutants at its commit and deals them into consecutive slices of at most 40 (`--shard k/n --sharding slice`), each shard's run step stopping at 330 minutes; the report fails when a shard did not finish or fewer shards uploaded a report than were counted (R-402)"
   rulings:
   - R-196
   - R-198
+  - R-402
   milestone: M0
+  note: "R-402 (9 Oct 2026): the nightly full run's 8 round-robin shards, REQ-VAL-149's per-PR count, never finished inside GitHub's 360-minute job limit; it now takes ⌈mutants / 40⌉ shards (168 for 6,710 mutants at `ea1921d`), sliced package by package so each shard's per-mutant timeout is its own package's, at most 16 at once, under a 330-minute step limit. REQ-VAL-149's per-PR 8 shards × 300 min (R-376) are unchanged."
 - id: REQ-VAL-151
   area: VAL
   kind: calibration
