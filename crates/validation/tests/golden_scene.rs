@@ -17,7 +17,7 @@ fn named(name: &str) -> Scene {
     scene(name).unwrap_or_else(|e| panic!("{e}"))
 }
 
-/// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride.
+/// A look's kind: `I`nvalid, `L`iteral, `N`ot yet, `R`amp, `O`verride, `F`lat.
 fn kind(l: Look) -> char {
     match l {
         Look::Invalid => 'I',
@@ -25,18 +25,19 @@ fn kind(l: Look) -> char {
         Look::NotYet => 'N',
         Look::Ramp { .. } => 'R',
         Look::Override => 'O',
+        Look::Flat(_) => 'F',
     }
 }
 
-/// The kinds of `s`'s eight samples.
+/// The kinds of `s`'s samples.
 fn kinds(s: &Scene) -> String {
-    (0..8)
+    (0..s.context.grid.sample_count())
         .map(|i| kind(s.look(i).unwrap_or_else(|e| panic!("{e}"))))
         .collect()
 }
 
 /// Each scene: its field and its samples' kinds.
-const SCENES: [(&str, &str, &str); 10] = [
+const SCENES: [(&str, &str, &str); 14] = [
     ("ftle", "ftle", "IIRRRRRR"),
     ("diffusion", "diffusion", "IIRRRRRR"),
     ("de_max_failed", "dE_max", "RRRRRRRR"),
@@ -47,6 +48,10 @@ const SCENES: [(&str, &str, &str); 10] = [
     ("length_ramp_override", "length", "RRRRRRRO"),
     ("d_min_ramp", "d_min", "NNIRRRRR"),
     ("d_min_ramp_override", "d_min", "NNORRRRR"),
+    ("outcome", "state", "FFFFFFFFFFFNIF"),
+    ("outcome_edited", "state", "FFFFFFFFFFFNIF"),
+    ("state_view", "state", "FFFFFF"),
+    ("detail_view", "detail", "FFFFFFFFFFFFFFFFFF"),
 ];
 
 /// Checks that scene `name` colours `field` and shows `want`'s kinds.
@@ -57,7 +62,7 @@ fn check_scene(name: &str, field: &str, want: &str) {
     let view = matches!(s.colouring, Colouring::View(_));
     assert_eq!(
         view,
-        !name.contains("ramp"),
+        !name.contains("ramp") && !name.starts_with("outcome"),
         "`{name}` is coloured by a view: {view}"
     );
     assert_eq!(
@@ -566,8 +571,8 @@ fn check_unlisted(s: &Scene, field: &str) {
 #[test]
 fn golden_scene_unlisted_field_is_an_error() {
     let mut s = named("ftle");
-    s.colouring = Colouring::View("state");
-    check_unlisted(&s, "state");
+    s.colouring = Colouring::View("saturated");
+    check_unlisted(&s, "saturated");
     for name in golden_scene::NAMES {
         let s = named(name);
         assert!(s.value(0).is_ok(), "`{name}` reads its own field");
@@ -624,4 +629,177 @@ negative_control!(
         let (s, want) = rho_angle_scene();
         check_ic_reads(&s, &want.iter().map(|w| w + 1.0).collect::<Vec<_>>());
     }
+);
+
+/// Checks that scene `name`'s samples shown exactly (`Scene::exact`) are those `want` marks `x`, and that
+/// `Scene::tie_checked` holds the twin's pixels of every other sample, in order, and none of theirs.
+fn check_exact(name: &str, want: &str) {
+    let s = named(name);
+    let got: String = (0..s.context.grid.sample_count())
+        .map(|i| match s.exact(i).unwrap_or_else(|e| panic!("{e}")) {
+            true => 'x',
+            false => '.',
+        })
+        .collect();
+    assert_eq!(got, want, "`{name}`'s exact samples");
+    let (width, height) = s.size();
+    let all = s.expected().unwrap_or_else(|e| panic!("{e}"));
+    let kept: Vec<Rgb> = (0..height)
+        .flat_map(|y| (0..width).map(move |x| (x, y)))
+        .zip(all)
+        .filter(|((x, y), _)| want.as_bytes()[s.context.grid.cell(*x, *y).sample as usize] != b'x')
+        .map(|(_, c)| c)
+        .collect();
+    assert_eq!(
+        s.tie_checked().unwrap_or_else(|e| panic!("{e}")),
+        kept,
+        "`{name}`'s tie-checked pixels"
+    );
+}
+
+/// The outcome scenes' swatches are exact, their running and sim_failed samples not; no other scene's sample is
+/// exact, the view scenes' flat colours included, which the fragment computes.
+#[test]
+fn golden_scene_exact_samples_are_the_swatches() {
+    for name in ["outcome", "outcome_edited"] {
+        check_exact(name, "xxxxxxxxxxx..x");
+    }
+    check_exact("state_view", "......");
+    check_exact("detail_view", "..................");
+    check_exact("ftle", "........");
+    check_exact("length_ramp_override", "........");
+}
+
+negative_control!(
+    golden_scene_exact_samples_are_the_swatches,
+    "the running sample, drawn in the computed grey, taken as exact",
+    expected = "`outcome`'s exact samples",
+    check_exact("outcome", "xxxxxxxxxxxx.x")
+);
+
+/// Checks that scene `name`'s swatches are the palette's defaults, but `edits`.
+fn check_swatches(name: &str, edits: &[(usize, [u8; 3])]) {
+    let mut want = render::colour::outcome::defaults();
+    for &(k, c) in edits {
+        want[k] = c;
+    }
+    assert_eq!(named(name).swatches(), want, "`{name}`'s swatches");
+}
+
+#[test]
+fn golden_scene_outcome_edit_sets_its_swatch() {
+    use render::colour::outcome;
+    let (param, c) = golden_scene::OUTCOME_EDIT;
+    let k = outcome::index(param).expect("the edited swatch is the palette's");
+    assert_ne!(outcome::defaults()[k], c, "the edit changes its swatch");
+    check_swatches("outcome", &[]);
+    check_swatches("outcome_edited", &[(k, c)]);
+    check_swatches("ftle", &[]);
+    let mut s = named("outcome");
+    s.colouring = Colouring::Outcome {
+        edit: Some(("no_such_swatch", c)),
+    };
+    assert_eq!(
+        s.swatches(),
+        outcome::defaults(),
+        "an edit of no swatch changes none"
+    );
+}
+
+negative_control!(
+    golden_scene_outcome_edit_sets_its_swatch,
+    "the edited scene's swatches taken for the defaults",
+    expected = "`outcome_edited`'s swatches",
+    check_swatches("outcome_edited", &[])
+);
+
+/// Checks that the outcome scene's colour node holds `want`, and a view scene's its view's text, as custom WGSL.
+fn check_occupant(want: &render::assemble::Occupant) {
+    use render::assemble::Occupant;
+    let got = named("outcome")
+        .occupant()
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(&got, want, "the outcome scene's occupant");
+    let s = named("state_view");
+    assert_eq!(
+        s.occupant().unwrap_or_else(|e| panic!("{e}")),
+        Occupant::Custom(s.colour().unwrap_or_else(|e| panic!("{e}"))),
+        "a view scene's occupant"
+    );
+}
+
+/// The outcome scene's colour is the built-in `outcome_state`; rendered instead from the same text as custom WGSL it
+/// draws the same pixels, and from that text with a swatch's name changed, other ones.
+#[test]
+fn golden_scene_outcome_is_the_built_in() {
+    use render::assemble::Occupant;
+    use render::colour::outcome;
+    check_occupant(&Occupant::BuiltIn(outcome::ID.to_owned()));
+    let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let s = named("outcome");
+    let built_in = s
+        .render(h.device(), h.queue())
+        .unwrap_or_else(|e| panic!("{e}"));
+    let custom = s
+        .render_colour(h.device(), h.queue(), outcome::WGSL)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(built_in, custom, "the outcome text rendered as custom WGSL");
+    let from = "return uniforms.escape_body_1;";
+    assert!(outcome::WGSL.contains(from));
+    let swapped = s
+        .render_colour(
+            h.device(),
+            h.queue(),
+            &outcome::WGSL.replace(from, "return uniforms.escape_body_2;"),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_ne!(built_in, swapped, "the altered text renders other pixels");
+}
+
+negative_control!(
+    golden_scene_outcome_is_the_built_in,
+    "the outcome scene's occupant taken for custom text",
+    expected = "the outcome scene's occupant",
+    check_occupant(&render::assemble::Occupant::Custom(
+        render::colour::outcome::WGSL.to_owned()
+    ))
+);
+
+/// Checks that scene `name`'s samples read `(state, detail)` as `want` gives them.
+fn check_codes(name: &str, want: &[(u32, u32)]) {
+    let s = named(name);
+    let got: Vec<(u32, u32)> = (0..s.context.grid.sample_count())
+        .map(|i| {
+            let r = s.read(i);
+            (r.state, r.detail)
+        })
+        .collect();
+    assert_eq!(got, want, "`{name}`'s states and details");
+}
+
+/// The raw `state` view's scene holds one sample per state, 0–5, each with a different `detail` code from its
+/// neighbours' (`i mod 4`), so the view's six colours are shown not to follow `detail`; the `detail` view's holds every
+/// code of each state with a meaning, then bounded and running.
+#[test]
+fn golden_scene_state_and_detail_samples() {
+    check_codes(
+        "state_view",
+        &[(0, 0), (1, 1), (2, 2), (3, 3), (4, 0), (5, 1)],
+    );
+    let mut want: Vec<(u32, u32)> = [0, 2, 4, 5]
+        .into_iter()
+        .flat_map(|s| (0..4).map(move |d| (s, d)))
+        .collect();
+    want.extend([(1, 2), (3, 1)]);
+    check_codes("detail_view", &want);
+}
+
+negative_control!(
+    golden_scene_state_and_detail_samples,
+    "the state view's samples taken to share detail code 0",
+    expected = "`state_view`'s states and details",
+    check_codes(
+        "state_view",
+        &[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0)]
+    )
 );

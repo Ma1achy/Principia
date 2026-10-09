@@ -225,7 +225,7 @@ fn ctx_reads(wgsl: &str) -> BTreeSet<(String, String)> {
 
 /// Each view of `views` is a colour occupant reading its own field, from the lane Part 6 names: `ctx.ic` for the
 /// twelve `ICDescriptor` fields, `ctx.sample.word` for a field of the word's `.w`, `ctx.sample.<field>` for every
-/// other, the shadow included; and nothing else of `ctx.sample` or `ctx.ic`.
+/// other, the shadow included; and nothing else of `ctx.sample` or `ctx.ic`, but `detail`'s key `ctx.sample.state`.
 fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
     for (field, text) in views {
         assert!(
@@ -243,7 +243,12 @@ fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
         } else {
             ("sample", field.as_str())
         };
-        let want: BTreeSet<(String, String)> = [(want.0.to_owned(), want.1.to_owned())].into();
+        let mut want: BTreeSet<(String, String)> = [(want.0.to_owned(), want.1.to_owned())].into();
+        // `detail` is the union keyed by `state` (payload §2; render contract Part 6, "`detail` (union keyed by
+        // state)"; REQ-TOOL-022, REQ-COL-004): its view also reads its key, `ctx.sample.state`, and nothing else.
+        if field == "detail" {
+            want.insert(("sample".to_owned(), "state".to_owned()));
+        }
         assert_eq!(
             reads, want,
             "`{field}`'s view does not read its own field from its lane"

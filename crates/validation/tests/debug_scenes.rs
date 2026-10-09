@@ -249,13 +249,32 @@ const SAME_BY_DEFINITION: [[&str; 2]; 2] = [
     ["live_shape", "reductions-n_dircos"],
 ];
 
-/// Checks that no two `debug-views` references are byte-identical but the pairs of `allowed`, so that a view reading
-/// a neighbouring field cannot pass on its neighbour's image.
+/// Checks that no two `debug-views` references, every case of the suite's directory, are one image but the pairs of
+/// `allowed`, so that a view reading a neighbouring field cannot pass on its neighbour's image.
 fn check_distinct(allowed: &[[&str; 2]]) {
+    let suite = reference("")
+        .parent()
+        .map(Path::to_path_buf)
+        .expect("the suite's directory");
+    let mut names: Vec<String> = std::fs::read_dir(&suite)
+        .unwrap_or_else(|e| panic!("{}: {e}", suite.display()))
+        .map(|d| {
+            d.expect("a directory entry")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|n| reference(n).is_file())
+        .collect();
+    names.sort();
     let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
-    let images: Vec<(&str, Vec<u8>)> = cases
+    assert!(
+        cases.iter().all(|c| names.contains(&c.name)),
+        "a debug case has no reference"
+    );
+    let images: Vec<_> = names
         .iter()
-        .map(|c| (c.name.as_str(), read_png(&reference(&c.name)).1))
+        .map(|n| (n.as_str(), read_png(&reference(n))))
         .collect();
     for (a, (name_a, image_a)) in images.iter().enumerate() {
         for (name_b, image_b) in &images[a + 1..] {
