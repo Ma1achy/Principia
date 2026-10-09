@@ -349,6 +349,10 @@ fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
         vec![format!("ic.{field}")]
     } else if word_fields.contains(&field) {
         vec!["word.w".to_owned()]
+    } else if field == "detail" {
+        // `detail` is the union keyed by `state` (payload §2; render contract Part 6, "`detail` (union keyed by
+        // state)"; REQ-TOOL-022, REQ-COL-004): its view reads its key too, and nothing else.
+        vec!["detail".to_owned(), "state".to_owned()]
     } else {
         vec![field.to_owned()]
     }
