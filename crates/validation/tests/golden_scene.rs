@@ -623,3 +623,137 @@ negative_control!(
         check_ic_reads(&s, &want.iter().map(|w| w + 1.0).collect::<Vec<_>>());
     }
 );
+
+/// Checks that scene `name`'s samples shown exactly (`Scene::exact`) are those `want` marks `x`, and that
+/// `Scene::tie_checked` holds the twin's pixels of every other sample, in order, and none of theirs.
+fn check_exact(name: &str, want: &str) {
+    let s = named(name);
+    let got: String = (0..s.context.grid.sample_count())
+        .map(|i| match s.exact(i).unwrap_or_else(|e| panic!("{e}")) {
+            true => 'x',
+            false => '.',
+        })
+        .collect();
+    assert_eq!(got, want, "`{name}`'s exact samples");
+    let (width, height) = s.size();
+    let all = s.expected().unwrap_or_else(|e| panic!("{e}"));
+    let kept: Vec<Rgb> = (0..height)
+        .flat_map(|y| (0..width).map(move |x| (x, y)))
+        .zip(all)
+        .filter(|((x, y), _)| want.as_bytes()[s.context.grid.cell(*x, *y).sample as usize] != b'x')
+        .map(|(_, c)| c)
+        .collect();
+    assert_eq!(
+        s.tie_checked().unwrap_or_else(|e| panic!("{e}")),
+        kept,
+        "`{name}`'s tie-checked pixels"
+    );
+}
+
+/// The outcome scenes' swatches are exact, their running and sim_failed samples not; no other scene's sample is
+/// exact, the view scenes' flat colours included, which the fragment computes.
+#[test]
+fn golden_scene_exact_samples_are_the_swatches() {
+    for name in ["outcome", "outcome_edited"] {
+        check_exact(name, "xxxxxxxxxxx..x");
+    }
+    check_exact("state_view", "......");
+    check_exact("detail_view", "..................");
+    check_exact("ftle", "........");
+    check_exact("length_ramp_override", "........");
+}
+
+negative_control!(
+    golden_scene_exact_samples_are_the_swatches,
+    "the running sample, drawn in the computed grey, taken as exact",
+    expected = "`outcome`'s exact samples",
+    check_exact("outcome", "xxxxxxxxxxxx.x")
+);
+
+/// Checks that scene `name`'s swatches are the palette's defaults, but `edits`.
+fn check_swatches(name: &str, edits: &[(usize, [u8; 3])]) {
+    let mut want = render::colour::outcome::defaults();
+    for &(k, c) in edits {
+        want[k] = c;
+    }
+    assert_eq!(named(name).swatches(), want, "`{name}`'s swatches");
+}
+
+#[test]
+fn golden_scene_outcome_edit_sets_its_swatch() {
+    use render::colour::outcome;
+    let (param, c) = golden_scene::OUTCOME_EDIT;
+    let k = outcome::index(param).expect("the edited swatch is the palette's");
+    assert_ne!(outcome::defaults()[k], c, "the edit changes its swatch");
+    check_swatches("outcome", &[]);
+    check_swatches("outcome_edited", &[(k, c)]);
+    check_swatches("ftle", &[]);
+    let mut s = named("outcome");
+    s.colouring = Colouring::Outcome {
+        edit: Some(("no_such_swatch", c)),
+    };
+    assert_eq!(
+        s.swatches(),
+        outcome::defaults(),
+        "an edit of no swatch changes none"
+    );
+}
+
+negative_control!(
+    golden_scene_outcome_edit_sets_its_swatch,
+    "the edited scene's swatches taken for the defaults",
+    expected = "`outcome_edited`'s swatches",
+    check_swatches("outcome_edited", &[])
+);
+
+/// Checks that the outcome scene's colour node holds `want`, and a view scene's its view's text, as custom WGSL.
+fn check_occupant(want: &render::assemble::Occupant) {
+    use render::assemble::Occupant;
+    let got = named("outcome")
+        .occupant()
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(&got, want, "the outcome scene's occupant");
+    let s = named("state_view");
+    assert_eq!(
+        s.occupant().unwrap_or_else(|e| panic!("{e}")),
+        Occupant::Custom(s.colour().unwrap_or_else(|e| panic!("{e}"))),
+        "a view scene's occupant"
+    );
+}
+
+/// The outcome scene's colour is the built-in `outcome_state`; rendered instead from the same text as custom WGSL it
+/// draws the same pixels, and from that text with a swatch's name changed, other ones.
+#[test]
+fn golden_scene_outcome_is_the_built_in() {
+    use render::assemble::Occupant;
+    use render::colour::outcome;
+    check_occupant(&Occupant::BuiltIn(outcome::ID.to_owned()));
+    let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
+    let s = named("outcome");
+    let built_in = s
+        .render(h.device(), h.queue())
+        .unwrap_or_else(|e| panic!("{e}"));
+    let custom = s
+        .render_colour(h.device(), h.queue(), outcome::WGSL)
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(built_in, custom, "the outcome text rendered as custom WGSL");
+    let from = "return uniforms.escape_body_1;";
+    assert!(outcome::WGSL.contains(from));
+    let swapped = s
+        .render_colour(
+            h.device(),
+            h.queue(),
+            &outcome::WGSL.replace(from, "return uniforms.escape_body_2;"),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert_ne!(built_in, swapped, "the altered text renders other pixels");
+}
+
+negative_control!(
+    golden_scene_outcome_is_the_built_in,
+    "the outcome scene's occupant taken for custom text",
+    expected = "the outcome scene's occupant",
+    check_occupant(&render::assemble::Occupant::Custom(
+        render::colour::outcome::WGSL.to_owned()
+    ))
+);
