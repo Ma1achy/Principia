@@ -70,7 +70,11 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   fractions and `|ρ|` of render_gui_spec §10.1, `virial_ratio = 2K₀/|V₀|`, and the like). `K_0` is declared `[0, ∞)`
   and `V_0` `(−∞, 0]`, each citing dd_decoder §3.6, and their scale is `lin`, no longer `diverging`
   (`crates/ledger/src/payload.rs`:174–175 at `2844365`; R-403): both on `ramp_viridis`, mapped monotonically,
-  `K_0`'s 0 and `V_0`'s most negative value at the dark end, `t = 0`.
+  increasing in the value in either mode, `V_0`'s most negative value at the dark end, `t = 0`. Neither range has two
+  finite ends, so both views' headers keep the default `RANGE_AUTO = 1` (`crates/ledger/src/gen/numeric.rs`:154–155,
+  render_gui_spec §10.1). Under auto, `t = 0` is the measured minimum (`K_0`'s minimum, `V_0`'s most negative
+  value); under fixed, `t = 0` is `K_0`'s declared 0 and `V_0`'s measured minimum, an unbounded end taking the
+  measured end, and a positive `V_0` clamps to `t = 1` (R-403's "The map is the template's own").
 - `crates/ledger`: generation refuses an entry whose scale is `diverging` and whose declared range does not span zero,
   naming the field and its range, beside the metadata gate (REQ-GEN-002); every `diverging` entry left (`energy_drift`,
   `Lz_drift`, `E_0`, `Lz_0`) spans zero (REQ-GEN-033; dd_generation_root §3.8).
@@ -102,8 +106,10 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   and auto, 0 at `t = ½`; a field with `lo ≥ 0` generates `ramp_viridis`; the cyclic field keeps `ramp_twilight` and
   the drifts R-381's view; the ledger gains no member (REQ-RENDER-084); every log view places raw at `dbg_log`'s form
   with its own field's floor, and two log fields with different floors place the same `|x|` differently (REQ-TOOL-160);
-  `K_0` and `V_0` generate `ramp_viridis`, increasing in the value, `K_0`'s 0 and `V_0`'s most negative value at
-  `t = 0` (REQ-RENDER-084, R-403).
+  `K_0` and `V_0` generate `ramp_viridis`, increasing in the value in both modes, and both headers default to
+  `RANGE_AUTO = 1`; under auto, `t = 0` is the measured minimum (`K_0`'s minimum, `V_0`'s most negative value); under
+  fixed, `t = 0` is `K_0`'s declared 0 and `V_0`'s measured minimum, and a positive `V_0` clamps to `t = 1`; `V_0`'s
+  most negative value is at `t = 0` in both modes (REQ-RENDER-084, R-403).
 - `cargo test -p ledger diverging_range` — every `diverging` entry of the payload ledger declares a range that spans
   zero, and `K_0` and `V_0` are `lin` over `[0, ∞)` and `(−∞, 0]`; negative controls: a fixture entry with scale
   `diverging` over `[0, ∞)`, and one over `(−∞, 0]`, each makes generation fail naming the field and its range; one
@@ -113,7 +119,9 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
 - `cargo test -p render ramp_coolwarm` — the ramp matches the checked-in table at its stops, interpolates between them
   as `ramp_viridis` does, and `t = ½` is the table's neutral (REQ-RENDER-084).
 - `cargo xtask golden m1-numeric` — a zero-spanning field (`E_0`, `Lz_0`, `C_ty`) shows its 0 at the neutral and its
-  two signs on the two sides; a non-negative field is on viridis (REQ-RENDER-084).
+  two signs on the two sides; a non-negative field is on viridis; `K_0` and `V_0` are on viridis, not cool-warm, in
+  the default (auto) mode, `K_0`'s minimum and `V_0`'s most negative value dark, drawn from a physical `V_0 ≤ 0`, each
+  with a `BASELINES.md` row citing R-403 (REQ-RENDER-084).
 - Review checklist (gui, qa): the REQ-COL-064 proposal gives the stipple's pattern over REQ-COL-053's grey, shows it is
   dots, not the hatch's stripes, gives its lightness contrast, and shows that no flat colour of viridis, twilight,
   grey or cool-warm reproduces a 4 × 4 block of it; it states `frag_xy`'s pixel space and shows the stipple resolved
@@ -137,6 +145,12 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
 - Synthetic payloads that give `K_0` or `V_0` an off-sign value only to tell the offsets apart (for example
   `crates/engine/tests/synthetic.rs`:146–147, `V_0: 10.0`) are layout fixtures, not ICs. Where one meets the new
   declared ranges (a test that reads the range, or a golden that draws the value), the implementer lists it in the PR.
+  Drawn, such a value is no `V_0` the physics produces: in auto mode it is placed by the measured range like any value
+  (alone, the degenerate range reads `t = 0`), and in fixed mode a positive `V_0` clamps to `t = 1`, looking the same
+  as `V_0 = 0`. So the `K_0` and `V_0` goldens use a physical `V_0 ≤ 0` (and `K_0 ≥ 0`), never such a fixture.
+- Applied per R-369 (gui review 5472865383, F1): open-ended ranges keep the auto default; the mapping is stated per
+  mode. Changing `K_0`'s or `V_0`'s default mode would change render_gui_spec §10.1's rule and is a look choice for the
+  human (R-390); R-403 does not make it.
 - The qa tests of TASK-M1-09, TASK-M1-10, TASK-M1-12 and TASK-M1-13 that pin the flat grey, viridis on a zero-spanning
   field or the single ε (for example `crates/ledger/tests/qa_TASK-M1-09.rs` and `crates/render/tests/qa_TASK-M1-09.rs`)
   are ruling-forced changes (R-399, R-400, R-401): qa makes them, and the PR lists each with the assertion it changes
