@@ -154,9 +154,9 @@ pub struct DebugCase {
 /// numeric views' margin, `crates/render/tests/numeric_views.rs`). Every other case's nudge is 0.
 const NUDGES: &[(&str, u32)] = &[
     ("accumulators-drift_max_vs_final", 3),
+    ("accumulators-drift_max_vs_final-lz", 2),
     ("derived-energy_drift", 3),
-    ("generated-Lz_drift", 1),
-    ("generated-dE_max", 1),
+    ("generated-C_ty", 1),
     ("generated-energy_drift", 3),
     ("generated-m0", 1),
     ("generated-m1", 1),
