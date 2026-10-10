@@ -847,14 +847,14 @@ impl Renderer {
         self.render_output_with(dir, config, output, None)
     }
 
-    /// [`Renderer::render_output`], a harness case taking its floats from `floats` ([`Renderer::harness_all`]) where
+    /// [`Renderer::render_output`], a harness case taking its run from `floats` ([`Renderer::harness_all`]) where
     /// given, rather than running the harness itself.
     fn render_output_with(
         &self,
         dir: &Path,
         config: &Config,
         output: Output,
-        floats: Option<Result<Vec<u8>, String>>,
+        floats: Option<HarnessRun>,
     ) -> Result<Image, String> {
         let (width, height, bytes) =
             self.render_raw(dir, config, Readback::Unorm(output), floats)?;
@@ -883,13 +883,14 @@ impl Renderer {
     }
 
     /// Renders `config` and reads the target back as `readback` says: its width, height and tightly packed pixels. A
-    /// harness case takes its floats from `floats` where given, or runs the harness here.
+    /// harness case takes its run from `floats` where given, or runs the harness here; either way the run's stderr is
+    /// written here, before the case is reported.
     fn render_raw(
         &self,
         dir: &Path,
         config: &Config,
         readback: Readback,
-        floats: Option<Result<Vec<u8>, String>>,
+        floats: Option<HarnessRun>,
     ) -> Result<(u32, u32, Vec<u8>), String> {
         let (width, height) = config.size()?;
         // A harness case's float target comes from the `golden_harness` binary: read back as floats, it is the
@@ -897,10 +898,11 @@ impl Renderer {
         let harness = match config.harness() {
             None => None,
             Some(scene) => {
-                let floats = match floats {
-                    Some(floats) => floats?,
-                    None => harness_floats(self.harness_binary()?, scene, width, height)?,
+                let run = match floats {
+                    Some(run) => run,
+                    None => harness_run(self.harness_binary()?, scene, width, height),
                 };
+                let floats = run.replay()?;
                 match readback {
                     Readback::Float => return Ok((width, height, floats)),
                     Readback::Unorm(Output::Automatic) => {
@@ -1171,11 +1173,11 @@ impl Renderer {
 }
 
 impl Renderer {
-    /// The floats of each harness case among `configs`, in their order, `None` for any other case. The harness is built
+    /// The run of each harness case among `configs` (its stderr and floats), in their order, `None` for any other case. The harness is built
     /// once ([`Renderer::harness_binary`]) and its cases render [`harness_width`] at a time, each in a process of its
     /// own; a failed build is each harness case's error. Each result is used where the case renders, so a run reports
     /// its cases, and the first that fails, in the order it did when each case ran the harness in turn.
-    fn harness_all(&self, configs: &[&Config]) -> Vec<Option<Result<Vec<u8>, String>>> {
+    fn harness_all(&self, configs: &[&Config]) -> Vec<Option<HarnessRun>> {
         let jobs: Vec<(usize, &str, u32, u32)> = configs
             .iter()
             .enumerate()
@@ -1184,16 +1186,22 @@ impl Renderer {
                 Some((k, c.harness()?, width, height))
             })
             .collect();
-        let mut out: Vec<Option<Result<Vec<u8>, String>>> = configs.iter().map(|_| None).collect();
+        let mut out: Vec<Option<HarnessRun>> = configs.iter().map(|_| None).collect();
         if jobs.is_empty() {
             return out;
         }
         let rendered = match self.harness_binary() {
             Ok(binary) => in_parallel(jobs.len(), harness_width(), |j| {
                 let (_, scene, width, height) = jobs[j];
-                harness_floats(binary, scene, width, height)
+                harness_run(binary, scene, width, height)
             }),
-            Err(e) => jobs.iter().map(|_| Err(e.clone())).collect(),
+            Err(e) => jobs
+                .iter()
+                .map(|_| HarnessRun {
+                    stderr: Vec::new(),
+                    floats: Err(e.clone()),
+                })
+                .collect(),
         };
         for ((k, ..), floats) in jobs.iter().zip(rendered) {
             out[*k] = Some(floats);
@@ -1295,22 +1303,53 @@ pub fn in_parallel<T: Send>(count: usize, width: usize, job: impl Fn(usize) -> T
         .collect()
 }
 
-/// Renders the harness scene `scene` by running the `golden_harness` binary at `binary` ([`build_harness`]) and
-/// returns its floats, tightly packed: refused unless the image is `width` × `height`.
-fn harness_floats(binary: &Path, scene: &str, width: u32, height: u32) -> Result<Vec<u8>, String> {
-    let output = std::process::Command::new(binary)
+/// One run of the `golden_harness` binary: what it wrote to stderr, and its floats or why it gave none.
+struct HarnessRun {
+    stderr: Vec<u8>,
+    floats: Result<Vec<u8>, String>,
+}
+
+impl HarnessRun {
+    /// Writes the run's stderr to xtask's, where the case renders, so a run whose cases render at once writes each
+    /// case's stderr where running them in turn wrote it; then its floats.
+    fn replay(self) -> Result<Vec<u8>, String> {
+        use std::io::Write as _;
+        let mut stderr = std::io::stderr().lock();
+        // Best effort, as inheriting the harness's stderr was: a closed stderr loses its text, not the render.
+        let _ = stderr.write_all(&self.stderr);
+        let _ = stderr.flush();
+        self.floats
+    }
+}
+
+/// Renders the harness scene `scene` by running the `golden_harness` binary at `binary` ([`build_harness`]): its
+/// stderr and its floats, tightly packed, refused unless the image is `width` × `height`.
+fn harness_run(binary: &Path, scene: &str, width: u32, height: u32) -> HarnessRun {
+    let output = match std::process::Command::new(binary)
         .args(["--scene", scene])
-        .stderr(std::process::Stdio::inherit())
         .output()
-        .map_err(|e| format!("cannot run {}: {e}", binary.display()))?;
-    if !output.status.success() {
-        return Err(format!(
+    {
+        Ok(output) => output,
+        Err(e) => {
+            return HarnessRun {
+                stderr: Vec::new(),
+                floats: Err(format!("cannot run {}: {e}", binary.display())),
+            }
+        }
+    };
+    let floats = if output.status.success() {
+        decode_harness(&output.stdout, width, height)
+            .map_err(|e| format!("golden_harness --scene {scene}: {e}"))
+    } else {
+        Err(format!(
             "golden_harness --scene {scene} failed ({})",
             output.status
-        ));
+        ))
+    };
+    HarnessRun {
+        stderr: output.stderr,
+        floats,
     }
-    decode_harness(&output.stdout, width, height)
-        .map_err(|e| format!("golden_harness --scene {scene}: {e}"))
 }
 
 /// The floats of the harness's image `bytes` ([`HARNESS_MAGIC`]'s format), tightly packed: refused unless it is

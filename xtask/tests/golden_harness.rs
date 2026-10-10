@@ -345,12 +345,12 @@ const SUITE: &str = "m1-numeric";
 /// A run of `xtask golden` on [`SUITE`] through a stand-in cargo, which answers the build with a stand-in harness,
 /// and that harness, which serves each scene's float image. The harness logs its arguments (`harness.log`), sleeps
 /// for the scene's delay (`delays/<scene>`, seconds), logs how many harness processes are running as it ends
-/// (`peaks.log`) and the scene it ended (`done.log`), and exits 1 for a scene marked in `fail/`.
+/// (`peaks.log`) and the scene it ended (`done.log`), writes `stand-in harness: <scene>` to its stderr, and exits 1
+/// for a scene marked in `fail/`. `out` is xtask's stdout and stderr, as one stream, in the order written.
 struct StandIn {
     dir: std::path::PathBuf,
     cases: Vec<HarnessCase>,
     out: String,
-    stdout: String,
     ok: bool,
 }
 
@@ -387,7 +387,7 @@ impl StandIn {
             format!(
                 "#!/bin/sh\nD='{d}'\necho \"$*\" >> \"$D/harness.log\"\ntouch \"$D/running/$2\"\n\
                  sleep \"$(cat \"$D/delays/$2\")\"\nls \"$D/running\" | wc -l | tr -d ' ' >> \"$D/peaks.log\"\n\
-                 rm \"$D/running/$2\"\necho \"$2\" >> \"$D/done.log\"\n\
+                 rm \"$D/running/$2\"\necho \"$2\" >> \"$D/done.log\"\necho \"stand-in harness: $2\" >&2\n\
                  if [ -e \"$D/fail/$2\" ]; then exit 1; fi\ncat \"$D/scenes/$2\"\n"
             ),
         )
@@ -401,16 +401,19 @@ impl StandIn {
             ),
         )
         .unwrap();
-        let output = std::process::Command::new(env!("CARGO_BIN_EXE_xtask"))
-            .args(["golden", SUITE])
+        let output = std::process::Command::new("sh")
+            .args([
+                "-c",
+                "exec \"$0\" golden \"$1\" 2>&1",
+                env!("CARGO_BIN_EXE_xtask"),
+                SUITE,
+            ])
             .env("CARGO", &cargo)
             .env("CARGO_TARGET_DIR", dir.join("target"))
             .timed_output()
             .expect("run xtask golden");
-        let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
         StandIn {
-            out: format!("{stdout}{}", String::from_utf8_lossy(&output.stderr)),
-            stdout,
+            out: String::from_utf8_lossy(&output.stdout).into_owned(),
             ok: output.status.success(),
             dir,
             cases,
@@ -422,10 +425,10 @@ impl StandIn {
         std::fs::read_to_string(self.dir.join(file)).unwrap_or_default()
     }
 
-    /// The cases the run reported on stdout, in its order.
+    /// The cases the run reported, in its order.
     fn reported(&self) -> Vec<String> {
         let prefix = format!("xtask golden: {SUITE}/");
-        self.stdout
+        self.out
             .lines()
             .filter_map(|l| l.strip_prefix(&prefix))
             .filter_map(|l| l.split_once(':'))
@@ -436,6 +439,34 @@ impl StandIn {
     /// The suite's harness cases' names, from the first to `end`.
     fn names(&self, end: usize) -> Vec<String> {
         self.cases[..end].iter().map(|c| c.name.clone()).collect()
+    }
+
+    /// The stand-in harness's stderr lines and the run's case reports, in the order the run wrote them, each as
+    /// `stderr <scene>` or `report <case>`.
+    fn stream(&self) -> Vec<String> {
+        let prefix = format!("xtask golden: {SUITE}/");
+        self.out
+            .lines()
+            .filter_map(|l| {
+                if let Some(scene) = l.strip_prefix("stand-in harness: ") {
+                    Some(format!("stderr {scene}"))
+                } else {
+                    let (name, _) = l.strip_prefix(&prefix)?.split_once(':')?;
+                    Some(format!("report {name}"))
+                }
+            })
+            .collect()
+    }
+
+    /// The stream a run reporting cases `..end` in turn writes: each case's harness stderr, then its report, and
+    /// `last`'s stderr alone after them where given.
+    fn in_turn(&self, end: usize, last: Option<usize>) -> Vec<String> {
+        let mut want: Vec<String> = self.cases[..end]
+            .iter()
+            .flat_map(|c| [format!("stderr {}", c.scene), format!("report {}", c.name)])
+            .collect();
+        want.extend(last.map(|k| format!("stderr {}", self.cases[k].scene)));
+        want
     }
 }
 
@@ -598,6 +629,12 @@ fn check_concurrent(run: &StandIn, peaks: &str, done: &str, width: usize) {
         "the run did not report its cases in case order:\n{}",
         run.out
     );
+    assert_eq!(
+        run.stream(),
+        run.in_turn(run.cases.len(), None),
+        "the harness's stderr is not where running the cases in turn wrote it:\n{}",
+        run.out
+    );
 }
 
 #[test]
@@ -625,7 +662,6 @@ negative_control!(
             dir: std::path::PathBuf::new(),
             cases: harness_cases(SUITE),
             out: String::new(),
-            stdout: String::new(),
             ok: true,
         };
         check_concurrent(&run, "1\n1\n1\n", "", 4)
@@ -658,6 +694,12 @@ fn check_first_failure(run: &StandIn, first: usize, later: usize) {
         !run.out.contains(&error(later)),
         "the run reports the later failing case `{}`:\n{}",
         error(later),
+        run.out
+    );
+    assert_eq!(
+        run.stream(),
+        run.in_turn(first, Some(first)),
+        "the harness's stderr is not what running the cases in turn wrote:\n{}",
         run.out
     );
 }
@@ -694,7 +736,6 @@ negative_control!(
                 "{names}xtask: golden_harness --scene {} failed (exit status: 1)",
                 cases[6].scene
             ),
-            stdout: names,
             ok: false,
             cases,
         };
