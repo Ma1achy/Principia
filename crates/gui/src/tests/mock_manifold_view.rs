@@ -1116,10 +1116,10 @@ fn mock_manifold_view_every_control_in_its_row_inside_the_body() {
         .filter_map(|n| n.value)
         .collect();
     assert_eq!(z0, MOCK_Z0, "z₀ in order, four to a row");
-    for n in fields(1).iter().chain(&fields(3)) {
+    for n in fields(1).iter().chain(&fields(3)).chain(&fields(4)) {
         assert!(
-            n.rect.height() >= rh - 6.0 && n.rect.height() <= rh,
-            "{:?} fills its row of {rh}",
+            (n.rect.height() - (rh - 2.0)).abs() < 0.5,
+            "{:?} fills its row of {rh}, less 2",
             n.rect
         );
     }

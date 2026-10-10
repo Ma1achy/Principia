@@ -327,6 +327,12 @@ fn check_drawing(shapes: &[egui::Shape], sq: Rect, compass: &Compass, plane: &Pl
         }
     }
     assert_eq!(edges, 12);
+    let weak = egui::Visuals::dark().weak_text_color();
+    let cube = shapes
+        .iter()
+        .filter(|s| matches!(s, egui::Shape::LineSegment { stroke, .. } if stroke.color == weak))
+        .count();
+    assert_eq!(cube, 12, "the cube's twelve edges, no more");
     let view = View::of(plane);
     let frame = plane_frame(plane, &view, true);
     let poly = corners(compass, sq, frame);
