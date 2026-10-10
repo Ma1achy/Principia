@@ -8059,9 +8059,11 @@ change REQ-GUI-096's and REQ-GUI-182's statements and REQ-GUI-178's statement an
 
 ## R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*
 *10 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "Outcome (all at joint `class ⊕ detail`
-grain)" (the type; a paragraph added) and `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by
-impact" (a paragraph added), REQ-PAY-075, REQ-PAY-077, REQ-PAY-089 and REQ-REF-001 (reqio), REQ-SCHED-098 (reqio,
-new), TASK-M5-01 (perf added to its reviewers), TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+grain)" (the type; a paragraph added) and § "3.7 `QuadReduction` — completed ledger" (the "Size" paragraph),
+`docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact" (a paragraph added),
+`docs/design/principia_systems_architecture.md` and `docs/contracts/principia_render_contract.md` § "Part 1 — The
+payload (render input)" (the ~80 B figure), `plan/reviewers/perf.md`, REQ-PAY-075, REQ-PAY-077, REQ-PAY-089,
+REQ-REF-001 and REQ-SYS-036 (reqio), REQ-SCHED-098 (reqio, new), TASK-M5-01 (perf added to its reviewers), TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
 `docs/archive/review_queue/M0.md` (RQ-266 archived) and `REVIEW_QUEUE.md`; built by TASK-M5-01 and TASK-M5-17*
 
 The orchestrator put RQ-264, RQ-265 and RQ-266 to the human, with RQ-267 (filed in PR #187), the rustup cache, early
@@ -8139,8 +8141,15 @@ This ruling's part:
 - **REQ-REF-001**'s "`class_histogram` (u8 × N)" becomes "(u32 × N, R-410)", following the source (the
   requirements.yaml rule: the source wins).
 - **Perf joins TASK-M5-01's reviewers** (code, qa, physics, perf), with a review line: the perf reviewer confirms
-  `QuadReduction`'s aligned size with u32 bins and its cost per visible quad, against §3.7's "Size" paragraph
-  (thousands of quads, ~0.3 MB at ~4k quads before this ruling) (REQ-PAY-089).
+  `QuadReduction`'s aligned size with u32 bins and its cost at memory_tiers §3–§4's quad count (render pixels / N² at
+  each tier's `N`, at the largest display, plus their ancestors) (REQ-PAY-089).
+- **The stale ~80 B is no longer stated** (perf review 5481098292 of PR #189, P1 and P2). It gives no new number: the
+  size depends on the bin count, which TASK-M5-01 defines. dd_generation_root §3.7's "Size" paragraph (its "~4k quads
+  … ~0.3 MB" too), systems_architecture's Memory and Reduction rows and its two "big data never crosses" passages,
+  render_contract Part 1's opening, `plan/reviewers/perf.md` § "3. Memory tiers and budgets", REQ-PAY-089's and
+  REQ-SYS-036's statements (reqio) now say the size follows from §3.7's members with u32 bins and that TASK-M5-01
+  defines and measures it; TASK-M5-01's Deliverables write the measured figure into each. REQ-PAY-006's "the ~80 B
+  figure is not a cap" is kept: it states no size.
 - **The placement.** TASK-M5-01's note that "`u8 × N` needs a placement" (§3.8's vector rule reads a `u-bits`
   component at a scalar index as a full u32) is settled by the width: each bin is a full u32. TASK-M5-01 still writes
   the member order and packing (REQ-PAY-077).
@@ -8151,7 +8160,8 @@ This ruling's part:
   `plan/rule_groups.yaml`.
 
 Adds REQ-SCHED-098; REQ-PAY-075's statement, verify, rulings, sources, note and `rq`, REQ-PAY-077's and REQ-PAY-089's
-rulings, sources, note and `rq`, and REQ-REF-001's statement, rulings, sources and note change.
+rulings, sources, note and `rq`, REQ-PAY-089's statement, REQ-REF-001's statement, rulings, sources and note, and
+REQ-SYS-036's statement, rulings and sources change.
 
 ## R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*
 *10 Oct 2026 · applied in `docs/design/principia_dd_colouring.md` § "3.6 Compaction (payload scalar → b ∈ [0,1]; forms
