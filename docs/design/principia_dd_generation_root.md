@@ -722,6 +722,11 @@ in the closed operator list. Each clamp keeps the inverse finite at the codomain
 saturates. In σ's units, `s = (1 + u)/2`, the tanh and softsign clamp `±(1 − ε)` is `[ε/2, 1 − ε/2]`, half the σ
 clamp `[ε, 1 − ε]`.
 
+The two simplex inverses are defined on the open simplex. At an exact corner, with two masses 0, `softmax_tanh`'s
+`log(mₖ/m₀)` and `stick_breaking`'s `u = m₂/(m₁ + m₂)` divide 0 by 0. On the host, Rust's `max` ignores the NaN, so
+the clamp returns a finite value, but SPIR-V's `FMax` with a NaN operand is undefined, so a caller passes no exact
+corner (TASK-M2-15's encode).
+
 The trees write some terms in a form equal in algebra to the table's but with no step that overflows or cancels, so
 that every log-det is finite for every finite control at f32 and f64 (canonical_spec §9, walls 7 and 9, measure
 honesty and totality): each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as

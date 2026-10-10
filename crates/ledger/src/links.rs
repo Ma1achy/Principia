@@ -592,6 +592,9 @@ fn softsign_link(name: &'static str, codomain: Codomain) -> LinkBuilder {
 /// inverse `zₖ = artanh(clamp(log(mₖ/m₀), ±(1 − ε_μ)·μ_max)/μ_max)` (inverse_encode Part 3); log-det `log √det(JᵀJ)`
 /// of its 3×2 Jacobian, `log(√3·m₀m₁m₂·μ_max²·sech² z₁·sech² z₂)` (R-368), written as a sum of logs, each
 /// `log sech²` by [`log_sech2`].
+///
+/// The inverse is defined on the open simplex: at an exact corner, with two masses 0, it divides 0 by 0, which Rust's
+/// `max` turns into a finite clamp but SPIR-V's `FMax` leaves undefined; a caller passes no exact corner (§3.9).
 fn softmax_tanh() -> LinkBuilder {
     let mu = |k| mul(vec![p(&MU_MAX), un(Op::Tanh, x(k))]);
     let (e1, e2) = (un(Op::Exp, mu(0)), un(Op::Exp, mu(1)));
@@ -630,6 +633,9 @@ fn softmax_tanh() -> LinkBuilder {
 /// `s = m₁ + m₂`, `u = m₂/s`, each `v` of them `artanh(clamp(2v − 1, ±(1 − ε_μ)²)/(1 − ε_μ))`; log-det
 /// `log √det(JᵀJ)` of its 3×2 Jacobian, `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)` (R-368), each `log sech²` by
 /// [`log_sech2`]. `s`, `1 − s`, `u` and `1 − u` are written without cancellation against 1 (below).
+///
+/// The inverse is defined on the open simplex: at an exact corner, with two masses 0, it divides 0 by 0, which Rust's
+/// `max` turns into a finite clamp but SPIR-V's `FMax` leaves undefined; a caller passes no exact corner (§3.9).
 fn stick_breaking() -> LinkBuilder {
     // `½(1 + (1 − ε_μ)·t) = σ(2z) − ½ε_μ·t` and `1 − ½(1 + (1 − ε_μ)·t) = σ(−2z) + ½ε_μ·t`, `t = tanh z`: each
     // side is written so that where it is small it is a sum of terms of one sign, with no cancellation against 1,
