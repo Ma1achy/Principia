@@ -7528,6 +7528,7 @@ first is the human's explanation of it.)
   or the hatch, outside its domain.
 
 *Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+*Accepted by R-416 (10 Oct 2026): no veto, A7 included.*
 - **A1. TASK-M8-05 closes it on the real engine.** REQ-GUI-180 (the fill with F3 off) and the axis extension types land
   in TASK-M8-05, as the ruling says. RQ-262 is ruled, so nothing waits: TASK-M8-05's note that REQ-GUI-180 "holds this
   task's merge until RQ-262" goes, and REQ-GUI-180 loses `rq: RQ-262`. TASK-M8-05 keeps the physics reviewer, now for
@@ -7611,6 +7612,7 @@ first is the human's explanation of it.)
   continuing, not an invented continuation: it is affine, and the fallback hatches what cannot be reached. Under R-408
   its primary range is unbounded, so its unreachable pixels fail validity and count as forbidden. The human may veto
   it.
+  *Accepted by R-416 (10 Oct 2026): no veto.*
 - **A8. R-406's "a view, not an edit" now holds for the real engine too.** The fill edits nothing: `(z₀, q₁, q₂)` is
   unchanged and more of the same chart is drawn, with no `SetField`. The chart-construction reading the physics review
   raised (P6: rescaling `q₁, q₂` so the window is `[0,1]²`) is moot under R-407, which extends each axis past
@@ -7674,6 +7676,7 @@ only `[0,1]²`, and how it counts the redrawn systems, was not given. The human 
 - **Inside the original square, results are unchanged.**
 
 *Applied per R-369 (mechanical consequences, readings and routine design choices; the human may veto any):*
+*Accepted by R-416 (10 Oct 2026): no veto, B1 included.*
 - **B1. A Chart-builder physical-quantity axis is affine, a correction to R-407's applied text.** R-407's port made it
   bounded by clause 1's default; the human's explanation of R-407 ("That makes physical-quantity axes safe
   automatically: energy beyond what's reachable simply hatches") expects it to continue linearly, with the fallback
@@ -7710,6 +7713,9 @@ only `[0,1]²`, and how it counts the redrawn systems, was not given. The human 
   it. TASK-M8-05 runs every line with both hemispheres, R-14's full `φ = π·(1 − t)` span, where the poles are `[0,1]`'s
   ends, and has no open RQ. (Applied per R-369, code review 5478800754, F4: the first port put the waiting line in
   TASK-M8-05, which would have held it and its dependents.)
+  *Ruled by R-412 (10 Oct 2026, RQ-264's option (a)):* with one hemisphere drawn, φ's span is remapped to end at
+  the equator, its formula continues past it into the mirror hemisphere, and its primary range is pole to equator, so
+  the continuation is not counted. TASK-M8-44 builds it.
 - **B5. The order a pixel is classified in.** Past `[0,1]²`: (1) an axis past a bounded edge makes it the domain's end
   (out of the count and the total); (2) an axis outside its primary range, the periodic or pole-crossing redraw, takes
   it out of the count and the total; (3) a pixel the chart's feasibility check rejects (R-26's `validate`, the chart's
@@ -7813,6 +7819,7 @@ is a GUI design ruling under R-390's feedback rule.)
 *Applied reading (R-369).* The orchestrator's reading of the words above, applied per R-369 and flagged to the human;
 these six points are the orchestrator's, not the human's words. The human may veto any; a veto is a GUI design ruling,
 applied by a follow-up task.
+*Accepted by R-416 (10 Oct 2026): no veto.*
 1. **The compass's view: there is no orbit.** The compass is a fixed orthographic view at its default angle. The orbit
    drag, Shift+arrows' orbit and R-404's `Orbit` base step (5°) are retired. The code's default angle
    (`crates/gui/src/explore/compass.rs`, `ORBIT`, yaw −35°, pitch 25°) stays, as a look choice under R-390.
@@ -7854,6 +7861,7 @@ applied by a follow-up task.
    left open under R-390.
 
 *Applied per R-369 (mechanical consequences and routine design choices of the reading above; the human may veto any):*
+*Accepted by R-416 (10 Oct 2026): no veto.*
 - **A1. A button acts on Enter.** Enter on a button (point 2's Tilt and Slice, R-405's console filters, copy and clear,
   a menu entry) acts as its click and leaves the focus in navigation mode on it: a button has no interaction to hold.
   Enter on a scope goes into it; Enter on an adjustable element (a slider, a value, the Figure, the compass) starts
@@ -7931,6 +7939,7 @@ slice-step slider; 7, the Tab landing against "on the first element".)
 
 *Applied reading of the follow-up answers (R-369).* The orchestrator's reading, applied per R-369 and flagged; not the
 human's words. The human may veto any; a veto is a GUI design ruling, applied by a follow-up task.
+*Accepted by R-416 (10 Oct 2026): no veto.*
 - **F1. Arrows need Enter; letters and Space are shortcuts (conflicts 1 and 2).** In navigation mode the arrows always
   move between siblings, in every scope, the Figure and Time included. A scope's arrow actions act only in interaction
   mode, after Enter: the Figure's pan, Time's ← → step and the compass's tilt and slice. A scope's letter and Space
@@ -7977,6 +7986,7 @@ code review 5480660052's C1 on PR #186 (G1 to G4), and on gui review 5480688180'
 review 5480701701's mechanical follow-ups, applied per R-369 as routine design choices and flagged; these are the
 orchestrator's, not the human's words, and the human may veto any (a veto is a GUI design ruling, applied by a
 follow-up task).
+*Accepted by R-416 (10 Oct 2026): no veto.*
 - **G1. Keys in interaction mode.** The focused element takes the arrows, with Shift ×10 and Alt ×0.1. Tab and
   Shift+Tab, Ctrl+Z and `?` keep their global meaning in both modes, except while a text field is being typed in
   (G5); Tab or Shift+Tab from interaction mode leaves it and lands in navigation mode on the next or previous big
@@ -8046,3 +8056,310 @@ REQ-GUI-178's, REQ-GUI-182's and REQ-GUI-183's statements, verify and notes, REQ
 REQ-GUI-158's note, and add no requirement. The review round (G1 to G4) changes REQ-GUI-096's, REQ-GUI-178's,
 REQ-GUI-182's and REQ-GUI-183's statements and verify and REQ-GUI-098's statement, and adds no requirement; G5 and G6
 change REQ-GUI-096's and REQ-GUI-182's statements and REQ-GUI-178's statement and verify.
+
+## R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*
+*10 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "Outcome (all at joint `class ⊕ detail`
+grain)" (the type; a paragraph added) and `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by
+impact" (a paragraph added), REQ-PAY-075, REQ-PAY-077, REQ-PAY-089 and REQ-REF-001 (reqio), REQ-SCHED-098 (reqio,
+new), TASK-M5-01 (perf added to its reviewers), TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-266 archived) and `REVIEW_QUEUE.md`; built by TASK-M5-01 and TASK-M5-17*
+
+The orchestrator put RQ-264, RQ-265 and RQ-266 to the human, with RQ-267 (filed in PR #187), the rustup cache, early
+merging and the open "veto" items. The human replied, in their own words ("This is from me."), in one message, which
+R-410 to R-416 record. The whole message, once:
+
+> This is from me.
+> RQ-266: (a) u32 bins. State the bound (overflow needs more than about
+> 4.2 M copies per footprint at N = 32, which can't be allocated) and
+> assert it at dispatch. No settings are capped. Perf to confirm the
+> size cost to QuadReduction.
+> RQ-265: (c) range-free forms everywhere: §3.6 adopts the debug views'
+> log form with its per-field ε, and the symlog diverging form. The drift
+> views and goldens are unchanged. An explicit range for a stain may come
+> later as an optional parameter, not as a second built-in map.
+> RQ-264: (a) remap the span to end at the equator, and continue the
+> formula past it (the mirror hemisphere: real, repeated systems). The
+> primary range is pole to equator, so the continuation isn't counted.
+> RQ-267: (a) density. Reword σ's note to "edge-heavy: crowds the
+> bounds".
+> ~/.rustup: leave stable at 1.99.0. RUSTUP_AUTO_INSTALL=0 in every
+> dispatch is the right prevention; toolchains change only through the
+> pin (R-349).
+> Merging early: a task may merge before an earlier milestone's gate if
+> its dependencies have merged and it relies on no value or behaviour
+> that gate calibrates or could change. Check M7-02 to M7-04 against
+> that, after the fact; M7-05 merges early only if it passes the same
+> test (it also waits on RQ-265's port).
+> Look choices (M6-26, and M6-31's when it lands): hold until I've tried
+> the M6-31 mock.
+> No vetoes on R-409, R-400's scope, R-407/R-408's consequences
+> (including B1 and A7), #182, or RQ-267's docs-only filing.
+
+(Message of 10 Oct 2026. The human numbered none of it; the orchestrator gave each part its own ruling from the next
+free number, in the message's order: R-410 RQ-266, R-411 RQ-265, R-412 RQ-264, R-413 RQ-267, R-414 the rustup cache,
+R-415 early merging, and R-416 the look choices and the vetoes, which are one act of holding and accepting.)
+
+This ruling's part:
+
+> RQ-266: (a) u32 bins. State the bound (overflow needs more than about
+> 4.2 M copies per footprint at N = 32, which can't be allocated) and
+> assert it at dispatch. No settings are capped. Perf to confirm the
+> size cost to QuadReduction.
+
+*What it decides:*
+- **RQ-266's option (a): each bin of `class_histogram` is a u32.** §3.7's `u8 × N` becomes `u32 × N`. The width is
+  fixed; it does not follow the setting (option (b) is not taken), so `QuadReduction`'s layout does not depend on the
+  sim key's `N` or `E`.
+- **The bound is stated.** A u32 bin counts at most 2³² − 1. A quad holds `N² × (E+1)` footprint copies (`N` the
+  samples per quad side, memory_tiers §4, not the bin count; `E+1` the copies per footprint), so a bin overflows only
+  if `N² × (E+1) > 2³² − 1`. At `N = 32`, Custom's largest on a 1024-invocation adapter (memory_tiers §5), that needs
+  more than about 4.2 M copies per footprint (2³²/1024 ≈ 4.19 × 10⁶), which can't be allocated. dd_generation_root
+  §3.7 states it.
+- **It is asserted at dispatch:** dispatch asserts `N² × (E+1) ≤ 2³² − 1`.
+- **No settings are capped.** Custom's `E` and `N` keep their ranges (memory_tiers §5; §7's "none blocking"); option
+  (c), refusing or clamping a setting, and option (d), saturating with a flag, are not taken.
+- **Perf confirms the size cost to `QuadReduction`.** u32 bins make the struct larger than §3.7's u8 bins would; the
+  perf reviewer confirms that cost on TASK-M5-01, which sizes it.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **The assertion is a hard assertion,** as REQ-SCHED-010's is for `horizon_steps × N_max ≤ 2³²−1` (dd_simstate_payload
+  § "8. Build-time settles", "Also assert the joint `horizon_steps × N_max ≤ 2³²−1`"): it fails loudly at dispatch,
+  naming the bound, and is never a clamp, a refusal in the settings UI or a wrap. Since no setting that can allocate
+  reaches the bound, it never fires in use; it guards against a wrong `N` or `E` reaching the kernel. It is
+  **REQ-SCHED-098 (new, M5)**, closed by **TASK-M5-17**, the resolve stage whose dispatch fills the histogram, with an
+  acceptance test and a control: a configuration at the bound passes and one past it fails the assertion. TASK-M5-17
+  already depends on TASK-M5-01, which writes the bound into §3.7.
+- **REQ-PAY-075** keeps the bin count, its definition (the joint class ⊕ detail set, TASK-M5-01's); its statement now
+  gives the width as u32 (R-410) and asks that §3.7 state the bound, and its verify asks that
+  `quad_reduction_histogram_capacity` run at Extreme's provisional 16² × 16 = 4096 (R-137, R-398) and at the bound,
+  2³² − 1, with a control: §3.7's former u8 bin fails at Medium's 16² × 2 = 512. It loses `rq: RQ-266`.
+- **REQ-PAY-077 and REQ-PAY-089** lose `rq: RQ-266`: with a fixed width, the layout and size don't follow the setting.
+  REQ-PAY-089's "(about 80 B)" is §3.7's descriptive figure, not a cap (§3.7's "Size" paragraph); TASK-M5-01 sizes the
+  struct from its member list and updates the figure, as §3.7 asks. Each gains R-410 and a note.
+- **REQ-REF-001**'s "`class_histogram` (u8 × N)" becomes "(u32 × N, R-410)", following the source (the
+  requirements.yaml rule: the source wins).
+- **Perf joins TASK-M5-01's reviewers** (code, qa, physics, perf), with a review line: the perf reviewer confirms
+  `QuadReduction`'s aligned size with u32 bins and its cost per visible quad, against §3.7's "Size" paragraph
+  (thousands of quads, ~0.3 MB at ~4k quads before this ruling) (REQ-PAY-089).
+- **The placement.** TASK-M5-01's note that "`u8 × N` needs a placement" (§3.8's vector rule reads a `u-bits`
+  component at a scalar index as a full u32) is settled by the width: each bin is a full u32. TASK-M5-01 still writes
+  the member order and packing (REQ-PAY-077).
+- **What TASK-M5-01 still holds for.** RQ-266 is ruled, so it no longer holds TASK-M5-01, TASK-M5-17 or the tasks
+  downstream of them. TASK-M5-01 is still held by the M1 gate (and the gates before M5), and by R-415's test if it is
+  to merge early.
+- RQ-266 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-410 is in the "design" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-SCHED-098; REQ-PAY-075's statement, verify, rulings, sources, note and `rq`, REQ-PAY-077's and REQ-PAY-089's
+rulings, sources, note and `rq`, and REQ-REF-001's statement, rulings, sources and note change.
+
+## R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*
+*10 Oct 2026 · applied in `docs/design/principia_dd_colouring.md` § "3.6 Compaction (payload scalar → b ∈ [0,1]; forms
+per ledger `scale`)" (the `log` and `diverging` rows; a paragraph added) and § "6. Deferred / flagged" (the symlog pin),
+REQ-COL-032, REQ-COL-039, REQ-COL-065 and REQ-COL-066 (reqio), TASK-M7-05, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-265 archived) and `REVIEW_QUEUE.md`; built by TASK-M7-05*
+
+The human's words (R-410 quotes the whole message):
+
+> RQ-265: (c) range-free forms everywhere: §3.6 adopts the debug views'
+> log form with its per-field ε, and the symlog diverging form. The drift
+> views and goldens are unchanged. An explicit range for a stain may come
+> later as an optional parameter, not as a second built-in map.
+
+*What it decides:*
+- **RQ-265's option (c), everywhere:** one form per scale serves the user-facing compaction (dd_colouring §3.6) and the
+  debug views alike, and neither form needs a range.
+- **`log`** is the debug views' form, `b = 1 − 1/(1 + ln(1 + |x|/ε_f))`, with each field's own ε: `dbg_log`'s place
+  (render contract, presentation layer; render_gui_spec §10.1). §3.6's `(ln x − ln lo)/(ln hi − ln lo)`, which needed a
+  finite positive `lo` and `hi` that the ledger does not declare, is replaced.
+- **`diverging`** is the symlog, `b = ½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`, with `x₀` the field's floor and no
+  `x_max`. With `s = sign(x)·ln(1 + |x|/x₀)` this is `½ + ½·s/(1 + |s|)`, the drift views' own `symlog` placement
+  (R-381). §3.6's ★ PIN on the symlog is confirmed by this ruling.
+- **The drift views and their goldens are unchanged** (R-381, R-401).
+- **An explicit range for a stain may come later as an optional parameter, not as a second built-in map.** No such
+  parameter is built now.
+
+*Applied per R-369 (mechanical consequences and readings; the human may veto any):*
+- **Each field's ε** is the one the debug template uses: the field's ledger `floor` where it has one (R-263, e.g. the
+  drifts' `eps_E` and `eps_L`), otherwise its per-field display floor `ε_f` (R-401, calibrated for the M1 gate).
+- **`log`'s sentinel clause.** §3.6's `x ≤ 0 → 0 with sentinel styling` becomes `x < 0 → 0 with sentinel styling`:
+  under the range-free form `x = 0` is in the domain and maps to `b = 0`, as `dbg_log` places it, and the ledger's log
+  fields declare `lo = 0` (e.g. `closure_min`). The stored −1.0 sentinel is still styled, never ramped (dd_colouring §5,
+  unit test 7). The human's words did not address the sentinel; this is a reading of "adopts the debug views' log form".
+- **REQ-COL-065** (the diverging form's definition, TASK-M7-05's) loses "what `x_max` is": there is none. It keeps how
+  `x₀` is chosen per `diverging` field, the drifts' being `eps_E` and `eps_L`, and `E_0`'s and `Lz_0`'s, which carry no
+  floor, by the rule it defines. **REQ-COL-066** (their number, a calibration for the M7 gate) loses "any fixed
+  `x_max`". **REQ-COL-039**'s statement gives the two forms. **REQ-COL-032** keeps its statement: each field's scale
+  comes from the ledger and now names one form. Each loses `rq: RQ-265` (REQ-COL-066 carried none) and gains R-411.
+- **TASK-M7-05** follows: its Goal's forms, its §3.6 deliverable and its acceptance lines lose `x_max` and "waits on
+  RQ-265"; its RQ-265 note becomes R-411's outcome. It is still held by the M1 gate (and the gates before M7), and
+  merges early only by R-415's test, once this port has merged.
+- **`compaction_forms`** (dd_colouring unit test 7) is unchanged in what it checks: each form monotone on its domain;
+  symlog `b(x) + b(−x) = 1` with `b(0) = ½` exactly; `log` styles the −1.0 sentinel instead of ramping it.
+- RQ-265 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-411 is in the "design" group of
+  `plan/rule_groups.yaml`, with R-381 and R-400.
+
+Changes REQ-COL-032's rulings, sources, note and `rq`, REQ-COL-039's statement, rulings, sources, note and `rq`,
+REQ-COL-065's statement, verify, rulings, sources, note and `rq` and REQ-COL-066's statement, verify, rulings and
+sources; adds no requirement.
+
+## R-412 — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*
+*10 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (sentences added and
+reworded) and § "5.4 Past the unit square — each axis's extension type (R-407)" (the sphere's row; a sentence
+reworded), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+(R-407)" (a sentence reworded), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (a clause added), R-408's B4 (a line added), REQ-CHART-057, REQ-CHART-054 and REQ-CHART-056 (reqio),
+TASK-M8-44, TASK-M8-05, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-264 archived) and
+`REVIEW_QUEUE.md`; built by TASK-M8-44*
+
+The human's words (R-410 quotes the whole message):
+
+> RQ-264: (a) remap the span to end at the equator, and continue the
+> formula past it (the mirror hemisphere: real, repeated systems). The
+> primary range is pole to equator, so the continuation isn't counted.
+
+*What it decides:*
+- **RQ-264's option (a).** With the hemisphere toggle drawing one hemisphere, the chart's `[0,1]` span on φ is
+  remapped to run from a pole to the equator.
+- **Past the equator, the edge that is not a pole, φ's formula continues** into the mirror hemisphere, whose pixels are
+  real systems, repeated: the other hemisphere decodes to the same systems (R-141's fold). Option (b)'s bounded equator
+  edge is not taken.
+- **φ's primary range is pole to equator,** the chart's `[0,1]` span, so the continuation past the equator is not
+  counted: it leaves the count and the total, as any redraw outside a primary range does (R-408).
+
+*Applied per R-369 (mechanical consequences; the human may veto any):*
+- **The remap.** R-14's `φ = π·(1 − t)` becomes `φ = (π/2)·(1 − t)` with one hemisphere drawn: the pole `φ = 0` at
+  `t = 1`, as with both drawn, and the equator `φ = π/2` at `t = 0`. The hemisphere drawn is the upper, `w ≥ 0`, the
+  canonical decode's (chart_reference §3.3: "the canonical decode's β ∈ [0, π] keeps w ≥ 0"); the two hemispheres
+  decode to the same systems, so the choice changes no statistic. θ is unchanged.
+- **φ stays pole-crossing at its pole edge** (`t > 1`, R-407). Past the equator (`t < 0`) the formula continues to
+  `φ > π/2`, the mirror hemisphere; past `t = −1` it reaches the far pole, `φ = π`, and φ's declared pole-crossing
+  applies there as R-407 gives it for `φ > π` (θ shifted by π). Every such pixel is outside the primary range, so none
+  is counted, and none is hatched: each is a real system.
+- **With both hemispheres drawn nothing changes** (R-407, R-408; TASK-M8-05).
+- **REQ-CHART-057** states the ruling in place of "RQ-264's ruling", and its verify names the control: a φ axis built
+  to option (b), hatching past the equator, or one counting the continuation, fails. It loses `rq: RQ-264` and gains
+  R-412. REQ-CHART-054's and REQ-CHART-056's notes now name R-412.
+- **TASK-M8-44** follows: its Goal, deliverables, acceptance line and notes give the ruling; its title keeps its
+  "(RQ-264)", which the archive still resolves. TASK-M8-05's note on the one-hemisphere case names R-412.
+- **R-407's and R-408's applied text.** R-408's B4, which filed RQ-264, gains a line pointing here. B3's "RQ-264 is that
+  case" stands as the record; chart_reference §5.4's copy of it now reads "was that case … R-412 rules it".
+- RQ-264 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-412 is in the "physics" group of
+  `plan/rule_groups.yaml`, with R-407 and R-408.
+
+Changes REQ-CHART-057's statement, verify, rulings, sources, note and `rq`, and REQ-CHART-054's and REQ-CHART-056's
+notes; adds no requirement.
+
+## R-413 — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes "edge-heavy: crowds the bounds" *(closes RQ-267)*
+*10 Oct 2026 · recorded here; applied in PR #187 (TASK-M2-01), which carries RQ-267 and edits
+`docs/design/principia_dd_generation_root.md` § "3.9 The link registry (consolidated from chart contract Part 2.5)";
+`docs/archive/review_queue/M0.md` (RQ-267 archived here)*
+
+The human's words (R-410 quotes the whole message):
+
+> RQ-267: (a) density. Reword σ's note to "edge-heavy: crowds the
+> bounds".
+
+*What it decides:*
+- **RQ-267's option (a).** "Over- and under-samples relative to uniform" (chart_decoder_contract § "Integrity: the
+  link is part of the experiment") is the density of samples drawn with uniform controls, not the link's Jacobian
+  weight. Every registry entry's sampling note reads it so.
+- **§3.9's σ row's note is reworded** from "centre-heavy vs uniform" to "edge-heavy: crowds the bounds".
+
+*Applied per R-369 (where it lands; the human may veto any):*
+- **The σ row's reword is made in PR #187,** not here. RQ-267 was filed in #187 (physics review 5480715305, F6), which
+  adds §3.9's registry text and its "RQ-267 asks which reading holds" paragraph; this PR leaving §3.9 alone keeps the
+  two from conflicting there. #187's next fix pass rewords the σ row's note to "edge-heavy: crowds the bounds", drops
+  the open-question sentence of its new paragraph in favour of R-413, and deletes its open copy of RQ-267 from
+  `REVIEW_QUEUE.md`.
+- **RQ-267 is archived here,** in `docs/archive/review_queue/M0.md`, as it stood at #187's head `8b449829`, with its
+  Ruling line: `plan/OPERATIONS.md` § "Merging" ("An RQ open only on a PR branch. When a rulings PR rules on it, the
+  rulings PR archives it …; the task PR's next fix pass deletes its open copy"), since `plan/tools/rulings.py` rejects
+  a cited RQ that is neither open nor archived. Until #187 drops its copy, merging `main` into it fails
+  `rulings.py`'s duplicate-id check, which is the reminder.
+- No requirement carries RQ-267, and no code reads a sampling note (dd_generation_root §3.9, "The hash"); TASK-M2-01
+  is not held by it (R-416 accepts its docs-only filing). R-413 is in the "physics" group of `plan/rule_groups.yaml`,
+  with the link conventions.
+
+Changes no requirement.
+
+## R-414 — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin
+*10 Oct 2026 · applied in `plan/OPERATIONS.md` § "Dispatching" (the environment every dispatch names) and §
+"Toolchain" (a bullet added)*
+
+The human's words (R-410 quotes the whole message):
+
+> ~/.rustup: leave stable at 1.99.0. RUSTUP_AUTO_INSTALL=0 in every
+> dispatch is the right prevention; toolchains change only through the
+> pin (R-349).
+
+*What it decides:*
+- **Stable is left at 1.99.0** in `~/.rustup`: nothing reinstalls, updates or removes it.
+- **Every dispatch sets `RUSTUP_AUTO_INSTALL=0`,** so rustup's proxy never installs a toolchain on its own.
+- **Toolchains change only through the pin** (`rust-toolchain.toml`; R-349's "rustup installing the toolchain
+  `rust-toolchain.toml` pins" is a build's own cache write, and anything else in `~/.rustup` asks first).
+
+*Applied per R-369:* `plan/OPERATIONS.md` § "Dispatching"'s environment line gains `RUSTUP_AUTO_INSTALL=0`, and §
+"Toolchain" gains a bullet stating the three points. R-414 is in the "process" group of `plan/rule_groups.yaml`, with
+R-349.
+
+## R-415 — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change
+*10 Oct 2026 · applied in `plan/WORKFLOW.md` § "Human checkpoints: the milestone gates" and `plan/OPERATIONS.md` §
+"Autonomy (R-369)" (paragraphs added)*
+
+The human's words (R-410 quotes the whole message):
+
+> Merging early: a task may merge before an earlier milestone's gate if
+> its dependencies have merged and it relies on no value or behaviour
+> that gate calibrates or could change. Check M7-02 to M7-04 against
+> that, after the fact; M7-05 merges early only if it passes the same
+> test (it also waits on RQ-265's port).
+
+*What it decides:*
+- **The test.** A task may merge before an earlier milestone's gate has passed if both hold: its dependencies have
+  merged, and it relies on no value or behaviour that the gate calibrates or could change. WORKFLOW's "No work in the
+  next milestone merges before the gate passes" holds for every task that fails the test.
+- **TASK-M7-02, TASK-M7-03 and TASK-M7-04,** merged before the M1 gate (#145, #148, #150), are checked against the test
+  after the fact.
+- **TASK-M7-05 merges early only if it passes the same test,** and only once RQ-265's port (R-411, this PR) has merged.
+
+*Applied per R-369 (routine process choices; the human may veto any):*
+- **Who applies the test.** The orchestrator applies it before merging, and the PR records it as "applied per R-415:
+  <the gates it passes over, and why it relies on nothing they calibrate or could change>", naming the calibration and
+  definition requirements of those gates it checked (`plan/MILESTONES.md`). The task's reviewers may challenge it; a
+  doubt is resolved by not merging early.
+- **The after-the-fact check of TASK-M7-02 to TASK-M7-04** is a separate read-only dispatch by the orchestrator; what
+  it finds goes in the next summary, and anything a merged task relies on that a gate could change is filed in
+  `REVIEW_QUEUE.md`.
+- R-390's GUI track and R-386's TASK-M7-20 keep their own rules. R-415 is in the "process" group of
+  `plan/rule_groups.yaml`.
+
+## R-416 — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing
+*10 Oct 2026 · applied in `plan/OPERATIONS.md` § "The GUI track (R-390)" (a bullet added), TASK-M6-31 and TASK-M1-17
+(notes), and R-407's, R-408's and R-409's applied text (lines added)*
+
+The human's words (R-410 quotes the whole message):
+
+> Look choices (M6-26, and M6-31's when it lands): hold until I've tried
+> the M6-31 mock.
+> No vetoes on R-409, R-400's scope, R-407/R-408's consequences
+> (including B1 and A7), #182, or RQ-267's docs-only filing.
+
+*What it decides:*
+- **The look choices hold.** TASK-M6-26's look choices (PR #183's § "Look choices (R-390, each a named constant)": the
+  lock's, the compass's, Navigate's, the panel widths, spans, panel layout and axis strips) and TASK-M6-31's, when it
+  lands, are neither confirmed nor changed until the human has tried the M6-31 mock. They stay as built meanwhile.
+- **No veto** on:
+  - R-409's applied readings and choices: points 1 to 6, A1 to A10, F1 to F6 and G1 to G6;
+  - R-400's scope over the hand-written views (TASK-M1-17's notes: the `n` view's `‖n‖` and `live_shape`'s mode 2
+    kept on viridis);
+  - R-407's and R-408's consequences, applied per R-369, B1 (the affine physical-quantity axis, a correction to
+    R-407's applied text) and R-407's A7 (the mass simplex affine) included;
+  - #182's two behaviour changes (`xtask/src/lint_constants.rs`: the `raw_string` fix for `br"…"` and `cr"…"`, and a
+    `macro_rules!` item named by a metavariable read and named `$name`);
+  - RQ-267's docs-only filing: it holds no task and no requirement.
+  Each stands as applied, accepted by R-416.
+
+*Applied per R-369:* the "the human may veto any" lines of R-407, R-408 and R-409 each gain a line naming R-416, as
+does TASK-M1-17's note; their wording is otherwise unchanged. `plan/OPERATIONS.md` § "The GUI track (R-390)" and
+TASK-M6-31's look-choice note say the look choices hold. R-416 is in the "one_off" group of `plan/rule_groups.yaml`.

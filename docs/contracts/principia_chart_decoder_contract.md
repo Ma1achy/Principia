@@ -178,8 +178,10 @@ a bounded edge, the domain's end; outside a primary range, not counted; rejected
 on what the types give, before `Φ`), forbidden; a `Φ` that fails where layer 2 accepts, the domain's end; a decoded
 state that fails layer 3, forbidden; any other, a counted system. The statistic reads the chart (the types, the
 primary ranges, `validate`, `Φ`), not the payload's `decode_failed` detail, which does not tell the two hatches apart.
-**Inside `[0,1]²` every statistic is unchanged.** What the shape sphere's φ does with one hemisphere drawn, and its
-primary range there, is RQ-264, built by TASK-M8-44 (REQ-CHART-057) once ruled.
+**Inside `[0,1]²` every statistic is unchanged.** With one hemisphere of the shape sphere drawn, φ's span is remapped
+to run from the pole to the equator; past the equator its formula continues into the mirror hemisphere (real systems,
+repeated), and its primary range is pole to equator, so that continuation is not counted (R-412, closing RQ-264;
+built by TASK-M8-44, REQ-CHART-057).
 
 ---
 

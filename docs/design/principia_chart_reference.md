@@ -353,7 +353,8 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 **Hemisphere redundancy.** The chart is a 2-to-1 cover: $(\theta, \varphi) \sim (\theta, \pi - \varphi)$, the mirror that
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
-the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
+the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). With
+one hemisphere drawn, the chart's `[0,1]` span on φ is remapped to end at the equator (R-412). The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
 hemispheres, which decode to the same system (`principia_chart_decoder_contract.md` Part 5, R-59 D5, R-141; `DoubleCover` is the full-range Burrau chart's, §4.5, R-157).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
@@ -367,8 +368,11 @@ at the poles and can be compressed to invisibility in equirectangular.
 `φ → −φ`; for `t < 0`, `φ → 2π − φ`; θ then wraps). So the sphere continues past `[0,1]²` with real neighbouring states,
 each a system `[0,1]²` already holds; area statistics count each system once, so these pixels, outside θ's or φ's
 primary range, are not counted (R-408, §5.4). The exponential map has no θ or φ axis, so its axes declare nothing and
-are bounded (§5.4). With the hemisphere toggle drawing one hemisphere, what φ does past the edge that is not a pole is
-RQ-264, built by TASK-M8-44 (REQ-CHART-057) once ruled.
+are bounded (§5.4). With the hemisphere toggle drawing one hemisphere, φ's `[0,1]` span is remapped to run from the
+pole to the equator, and φ stays pole-crossing at its pole edge; past the equator, the edge that is not a pole, its
+formula continues into the mirror hemisphere, whose pixels are real systems, repeated (the fold, R-141). Its primary
+range is pole to equator, the chart's `[0,1]` span, so that continuation is not counted (R-412, closing RQ-264; built
+by TASK-M8-44, REQ-CHART-057).
 
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
 same object. Each pixel is a starting shape $\mathbf n(0) \in S^2$, and its trajectory $\mathbf n(t)$
@@ -595,7 +599,7 @@ existing charts:
 | chart | horizontal axis | vertical axis | past `[0,1]²` | area statistics past `[0,1]²` (R-408) |
 |---|---|---|---|---|
 | `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
-| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, RQ-264 |
+| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
 | `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end) |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded | hatched on every side; the `t > 1` side is not declared (§2.1) | out of the count and the total (the domain's end) |
 | `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
@@ -615,8 +619,8 @@ declaration beyond bounded, or a new extension type, needs physics review (R-407
 **Primary ranges and area statistics (R-408).** Each type's primary range: periodic, one period of that axis (for the
 shape sphere's `θ = 2π·s`, the chart's `[0,1]` span); pole-crossing, pole to pole (for the shape sphere's φ with both
 hemispheres drawn, the chart's `[0,1]` span); affine, unbounded; bounded, its domain. A new periodic or pole-crossing
-declaration states its own primary range under physics review (R-407, clause 3); RQ-264 is that case for φ with one
-hemisphere drawn. "Forbidden in view" and the area statistics count a visible pixel only if every axis is inside its primary
+declaration states its own primary range under physics review (R-407, clause 3); RQ-264 was that case for φ with one
+hemisphere drawn, and R-412 rules it: pole to equator, the chart's `[0,1]` span. "Forbidden in view" and the area statistics count a visible pixel only if every axis is inside its primary
 range, so each system counts once; a pixel hatched where the domain ends (a bounded axis past its edge, or a `Φ` that
 fails) leaves both the count and the total; only states that fail the validity check count as forbidden; inside
 `[0,1]²` nothing changes. The classification order is `principia_chart_decoder_contract.md` Part 3's.

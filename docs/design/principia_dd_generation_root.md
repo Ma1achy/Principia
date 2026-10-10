@@ -223,10 +223,17 @@ only, never a history. Size the struct from the member list, then align, then up
 
 | member | type | note |
 |---|---|---|
-| `class_histogram[N]` | u8 × N | derives dominant *and* impurity from **one** source, so they cannot disagree |
+| `class_histogram[N]` | u32 × N | derives dominant *and* impurity from **one** source, so they cannot disagree; each bin a u32 (R-410) |
 | `dominant_outcome` | packed | `class ⊕ detail`, 5 bits |
 | `outcome_impurity` | f16 | `1 − max(class fraction)` |
 | `terminated_fraction` | f16 | **required** — without it "pure because settled" is indistinguishable from "pure because nothing has happened yet" [RC §7] |
+
+**Bin width (R-410).** Each bin of `class_histogram` is a u32, so it counts up to 2³² − 1 footprint copies. A quad
+holds `N² × (E+1)` copies, with `N` the samples per quad side (memory_tiers §4; not the bin count) and `E+1` the copies
+per footprint, so a bin overflows only if `N² × (E+1) > 2³² − 1`: at `N = 32`, the largest a 1024-invocation
+workgroup allows (memory_tiers §5), that needs more than about 4.2 M copies per footprint (2³²/1024 ≈ 4.19 × 10⁶),
+which can't be allocated. **Dispatch asserts `N² × (E+1) ≤ 2³² − 1`**; no setting is capped for it, and a bin never
+wraps or saturates silently.
 
 **One grain everywhere.** Pending change 1 asked whether `dominant_outcome` needed a class-only
 companion, since a masked accessor is unsound (argmax does not commute with masking). **Defining
