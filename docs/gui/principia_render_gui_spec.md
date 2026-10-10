@@ -44,6 +44,11 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 - **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
   onto the same surface (`principia_gui_state_contract.md` §1).
+- **With the layer hidden, the figure fills the window (R-406).** F3 hiding egui makes the figure fill the whole
+  window, showing more of the field at the same scale in every direction, never the shown view stretched: each point
+  of the field keeps the screen position it has in the shown layout, so the figure's rect there is unchanged. Hiding
+  and showing send no `SetField`; showing the layer returns the normal layout. On the real engine, how the view
+  extends past the chart's `[0,1]²` and what a chart shows outside its domain are open (RQ-262).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
@@ -154,6 +159,15 @@ read-only.
 What the user sees: a focus ring on the current scope and the breadcrumb in the top bar (e.g. "Manifold view › Navigate ›
 zoom"). Nothing else changes on screen.
 
+**The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
+after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
+console (§G12), as a click does, with the focus inside it; the console's filters, text filter, copy, clear and entry
+list are its sub-scopes, and Esc from its top level closes it and returns the focus to the footer. The console opening
+by itself on an error does not take the focus.
+
+The ring's, the breadcrumb's and the `?` overlay's look, the held-key delay and repeat (500 ms, 40 ms) and the base
+steps are confirmed as #174 built them, and recorded in R-404.
+
 ## G4. Lock — the reticle and the pin (`08_lock.png`)
 
 Locking (K, or right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre.
@@ -238,6 +252,7 @@ either file as schema v1.
   Snapshot JSON, share links and pxpack carry `SimConfig` and `RenderState` in their one canonical
   serialisation (`principia_gui_state_contract.md` §2, R-309).
 - **Present:** hide all chrome; Esc returns.
+  With the chrome hidden the figure fills the window, as with F3 (R-406).
 
 ### Display — the last stages
 
@@ -374,6 +389,8 @@ tool. The side panel shows:
 The footer, opened: severity, time, source, message; filters (all, warnings, errors, info, text); copy and clear. It is the
 same stream as the profiler's telemetry. Errors open it automatically. Sources include the stain, the integrator, the
 quadtree, the contract (each `SetField` is logged) and the app.
+
+The keyboard reaches it through the footer, big scope 8 (§G3, R-405).
 
 ## G13. Where the artboards are overridden
 

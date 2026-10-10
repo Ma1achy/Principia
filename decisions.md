@@ -7215,3 +7215,207 @@ own words ("This is from me."):
 
 Adds REQ-GEN-033; REQ-RENDER-084's statement, verify, rulings, sources, note and `rq` and REQ-PAY-035's statement,
 rulings and note change.
+
+## R-404 — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (a sentence added), REQ-GUI-146 and REQ-GUI-158 (reqio: confirmed), TASK-M6-25 and TASK-M8-13
+(notes), TASK-M6-30 (new: the code's marks), `plan/tasks.yaml` and `plan/rule_groups.yaml`; the marks built by
+TASK-M6-30*
+
+After TASK-M6-25 (PR #174, keyboard navigation on the mock engine) merged, the orchestrator asked the human about #174's
+proposals: the focus ring (its width, its 2 pt corner rounding, its colour), the `?` overlay's look with no dimming, the
+key repeat's 500 ms delay and 40 ms interval and the base steps, and whether the `?` overlay should block hover and
+scroll too or only clicks (as built: clicks only). The human tried the mock GUI and replied, in their own words:
+
+> Yeah, this is good. Just one nit, is that you can't get into the console in the keyboard nav. I would like to be a
+> thing that you can get into the console and, like the bottom bar as well as the top bar. And also when you press F3
+> to hide the rest of the GUI, the actual viewport should then fill the entire screen. I think that's, I know that's
+> like an additional feature that's, like, not really something requested, explicitly requested, but I think that
+> would be nice. Like if you hide the rest of the GUI, it then just fills the viewport available. Like the rest of the
+> viewport just becomes the entire window, if that makes sense, rather than it being limited to being square. You could
+> probably just render extra tiles around or something, rather than, like, stretching. It just renders extra tiles, so
+> you can actually see further in every direction.
+
+(Message of 10 Oct 2026. The orchestrator numbered its three parts: "Yeah, this is good" is R-404, the console and the
+bottom bar R-405, and F3 filling the window R-406.)
+
+*What it decides:* "Yeah, this is good" answers the question as asked, so #174's proposals stand as built. Each is a GUI
+design ruling (R-390's feedback rule) or, for the two calibrations, the human's confirmation that R-71 asks for.
+- **The focus ring:** 2 pt wide (`crates/gui/src/explore/breadcrumb.rs`, `RING_WIDTH`), with 2 pt corner rounding
+  (`RING_ROUNDING`). It is drawn inside the scope's rect, and outside the Figure's rect so that it covers none of the
+  figure. Its colour is egui's dark theme's `hyperlink_color`, the nearest theme colour to the artboards' blue
+  (01_main.png's breadcrumb, 07_keyboard.png's frames).
+- **The breadcrumb:** in the ring's colour, monospace, after the "⌨" glyph, just left of the status line, as 01_main.png
+  draws it.
+- **The `?` overlay:** an egui popup frame centred on the window, above every other layer (`Order::Tooltip`), titled
+  "Keys". It lists §G3's table, then F3, then the rows each screen registers, in two columns, the keys in bold
+  monospace, with "Esc, ? or a click outside closes" below. The rest of the window is not dimmed. The Ctrl+Z row is
+  shown because §G3's table has it, though the key itself is TASK-M8-13's (REQ-GUI-096).
+- **REQ-GUI-146, the repeat timing, is confirmed:** a 500 ms delay before the first repeat
+  (`crates/gui/src/keyboard/repeat.rs`, `DELAY_MS`) and a 40 ms interval between repeats, 25 a second
+  (`INTERVAL_MS`). These are the GUI's own timings: the system's key repeats are dropped, so the rate is the same on
+  every platform. The first press acts at once. Tab, Shift+Tab and the arrows repeat; Enter, Esc and `?` act once a
+  press.
+- **REQ-GUI-158, the base steps, is confirmed** (`crates/gui/src/keyboard/scopes.rs`, `StepKind::base`). Shift steps
+  ×10 and Alt ×0.1, both together ×1; ↑ and → raise a value, ↓ and ← lower it:
+
+  | kind | the fields or in-scope action | base step |
+  |---|---|---|
+  | `Bounded` | a slider: the eight `z₀` values, the slice step, the playback speed | 1/100 of the field's range |
+  | `Angle` | `τ₁`, `τ₂`, `γ` | 1° |
+  | `ZoomLog2` | Navigate's zoom (log₂) | 0.25 octave |
+  | `Pan` | Figure's arrows (in scope) | 1/20 of the view's span along the arrow's axis |
+  | `Tilt` | Compass's arrows (in scope) | 1° |
+  | `Orbit` | Compass's Shift+arrows (in scope) | 5° |
+  | `TimeStep` | Time's ← → (in scope) | 1/100 of the scrubber's range, `[0, t_max]` |
+
+  What Shift does on Compass's Shift+arrows, which already mean "orbit" (§G3), stays TASK-M8-13's, with the in-scope
+  keys (REQ-GUI-097), as #174 left it.
+- **The overlay's pointer behaviour is confirmed as built: it blocks clicks, not hover or scroll.** While the overlay is
+  open, every pointer press, and that press's release, is taken before egui's pass; a press outside its frame closes
+  it without acting on anything beneath, as egui's menus do. Hover and scroll still reach what is beneath. *Read from
+  "this is good", flagged:* the human did not answer this part of the question in words. It is read as confirmed
+  because "this is good" answers a question that listed it, and the build is what the question described. The human
+  may veto it; a veto would be a GUI design ruling, applied by a follow-up task.
+
+*Applied per R-369 (mechanical consequences):*
+- **Confirmed ahead of the M8 gate.** R-71 asks that the human confirm each calibration and that it be recorded in
+  `decisions.md`; this is that confirmation, given before the gate it was due at. The M8 gate lists REQ-GUI-146 and
+  REQ-GUI-158 as confirmed by R-404 and does not ask again, and the values are no longer provisional (R-182). Each
+  requirement gains R-404 among its rulings and sources and a note giving the confirmed values (reqio), as R-376 did for
+  M0's calibrations. Their statements, which say how a calibration is confirmed, are unchanged.
+- **The code's marks.** `crates/gui/src/keyboard/repeat.rs` and `crates/gui/src/keyboard/scopes.rs` call the values
+  "proposed … used provisionally until the human confirms them at the M8 gate", and
+  `crates/gui/src/explore/breadcrumb.rs` calls the colour and the rounding "a look choice, flagged for the human". The
+  porting rule puts the code last, so this ruling's PR changes no code: TASK-M6-30 (new, below R-406) rewords those
+  comments to "confirmed by R-404". No value changes.
+- **render_gui_spec §G3** gains a sentence: the ring's, breadcrumb's and overlay's look, the repeat timing and the base
+  steps are recorded in R-404.
+- **TASK-M6-25** (merged) and **TASK-M8-13** each gain a Notes line: the values are confirmed by R-404, and TASK-M8-13,
+  which uses them on the real engine, has no proposal of them left to put to the gate.
+- R-404 is in the "design" group of `plan/rule_groups.yaml`, with R-390 and R-399.
+
+Changes REQ-GUI-146's and REQ-GUI-158's rulings, sources and note: each is confirmed. Adds no requirement.
+
+## R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" and § "G12. Console (`12_console.png`)" (paragraphs added), REQ-GUI-095 (reqio), REQ-GUI-178
+(reqio, new), TASK-M6-28, TASK-M6-25 and TASK-M8-13, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
+TASK-M6-28*
+
+The human's words (R-404's message of 10 Oct 2026):
+
+> Just one nit, is that you can't get into the console in the keyboard nav. I would like to be a thing that you can
+> get into the console and, like the bottom bar as well as the top bar.
+
+*What it decides:*
+- **The console is reached with the keyboard**, and so is the bar at the bottom of the window, as the top bar is: both
+  are scopes in §G3's tree.
+- **"The bottom bar" is the footer** (§G2's **Footer**: the warning and error counts, the latest message, memory, "?
+  keys"; 01_main.png's bottom strip), the bar that opens the console. The bottom row's Compass, Time and Legend are big
+  scopes 5 to 7 already, so the footer is the one bar at the bottom that the keyboard cannot reach. *Flagged:* this
+  reading is the orchestrator's; the human may correct it.
+
+*Applied per R-369 (routine design choices):*
+- **The footer is big scope 8,** after Legend, so the Tab order reads top to bottom: 1 top bar · 2 Manifold view ·
+  3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer. Tab wraps from the footer to the top bar, and
+  the first Shift+Tab from no focus goes to the footer. Its ring is drawn inside its rect, as every scope's is.
+- **Enter on the footer opens the console,** as a click on the footer does (§G2), and moves the focus into it. If the
+  console is already open, Enter moves the focus into it.
+- **The console is the footer's sub-scope.** Its controls are its sub-scopes, in this order: the filters (all,
+  warnings, errors, info), the text filter, copy, clear and the entry list. The arrows move between them; Enter on a
+  filter, copy or clear acts as its click; the text filter is a text field, so the keyboard layer stands aside while it
+  holds the keyboard, as #174 built for every text field; ↑ and ↓ in the entry list scroll it. The breadcrumb names the
+  path, e.g. "footer › console › errors". Esc backs out one level; from the console's top level it closes the console
+  and returns the focus to the footer.
+- **This agrees with TASK-M6-28's window rule** (an open window is a scope that takes focus when it opens, and Esc
+  from its top level returns the focus to the scope that opened it): the console opened by Enter or a click on the
+  footer, or from Windows › Console, takes the focus. **The console opening by itself on an error does not take the
+  focus**, so a key pressed mid-navigation never lands in it unasked; Tab to the footer and Enter reach it.
+- **REQ-GUI-095** (its id permanent) reads eight big scopes, the footer last, in its statement and verify; R-405 joins
+  its rulings and sources (reqio). TASK-M8-13's acceptance line for it, re-run on the real engine, reads eight.
+  TASK-M6-25's line (merged, seven) stays as its record, with a Notes line pointing here.
+- **REQ-GUI-178 (new, M6)** is the footer and console scopes on the mock, closed by **TASK-M6-28**, which builds the
+  console's layout, filters, copy and clear (REQ-GUI-126) and puts each window into the scope tree. It is the natural
+  home: the console's sub-scopes are the controls it builds. It gains a deliverable, an acceptance line with negative
+  controls and a `07_keyboard/mock_focus_console` screenshot case.
+- **qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-25.rs`'s
+  `qa_scope_tab_order_mock_seven_big_scopes_cycle` (its `BIG` list, and the module doc quoting REQ-GUI-095's verify)
+  asserts seven big scopes with Legend last, as may lines of `qa_TASK-M6-25_recheck.rs`. Every earlier commit of both
+  files is qa's, so TASK-M6-28's qa reviewer changes them to eight in the task's qa commit; the implementer never
+  edits them. The PR lists each change with its reason, and the code reviewer confirms that no assertion was weakened
+  but the count R-405 changes.
+- R-405 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
+
+Adds REQ-GUI-178; REQ-GUI-095's statement, verify, rulings, sources and note change.
+
+## R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "Export &
+share" (sentences added), REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100 (reqio: notes), REQ-GUI-179 and REQ-GUI-180
+(reqio, new), TASK-M6-30 (new), TASK-M6-24 and TASK-M8-32 (notes), TASK-M8-05, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-248's revision line) and `REVIEW_QUEUE.md` (RQ-262,
+open); built by TASK-M6-30 on the mock and TASK-M8-05 on the real engine*
+
+The human's words (R-404's message of 10 Oct 2026):
+
+> And also when you press F3 to hide the rest of the GUI, the actual viewport should then fill the entire screen. I
+> think that's, I know that's like an additional feature that's, like, not really something requested, explicitly
+> requested, but I think that would be nice. Like if you hide the rest of the GUI, it then just fills the viewport
+> available. Like the rest of the viewport just becomes the entire window, if that makes sense, rather than it being
+> limited to being square. You could probably just render extra tiles around or something, rather than, like,
+> stretching. It just renders extra tiles, so you can actually see further in every direction.
+
+*What it decides:*
+- **With the egui layer hidden (F3), the figure fills the whole window.** It is no longer held to its rect in the shown
+  layout.
+- **It shows more of the field, not a stretched copy.** The extra area is more of the field at the same scale, more
+  tiles (quads) in every direction, so you see further; the view in the shown rect is never stretched or scaled to fill
+  the window.
+- **Showing the layer again returns the normal layout,** the figure back in its rect.
+- This revises RQ-248's decision of 7 Oct 2026 (per R-369, TASK-M6-24), which kept the figure in its shown rect with
+  F3 off and the rest of the window the clear colour; that decision said the human could change it by a GUI design
+  ruling, and this is that ruling. RQ-248's other decision, "mock engine" in the window title, stands.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **Nothing moves when F3 toggles.** Each point of the field keeps the screen position and the scale it has in the
+  shown layout; the hidden window adds the field around the shown figure's rect, in every direction. So the two states
+  are pixel-identical over the shown rect, which keeps REQ-GUI-168's and REQ-GUI-070's "the figure identical
+  underneath", read over that rect. The view is not re-centred on the window. *Flagged:* re-centring would be the other
+  reading; the human may choose it.
+- **It is a view, not an edit.** Hiding and showing the layer sends no `SetField` and adds no undo entry: `z₀`, the
+  basis and the zoom are unchanged, and only more of the same chart is drawn (gui_state_contract §2: the hidden state is
+  `ViewUI`'s, the engine never reads it).
+- **What the marks do.** The hover label, the lock reticle and the breadcrumb are the egui layer's and hide with it,
+  as before. The tile-bounds overlay (TASK-M6-27, on the mock's fake quads) is drawn by the mock into the figure, so it
+  covers the extra quads too.
+- **Present mode** (§G5, Export & share: "hide all chrome; Esc returns") hides the chrome as F3 does, so its figure
+  fills the window the same way: the human's rule is "if you hide the rest of the GUI, it then just fills the viewport
+  available". §G5's Present line gains a sentence; REQ-GUI-100 and TASK-M8-32 gain notes. *Flagged:* the human spoke of
+  F3, so this extension may be vetoed.
+- **Memory needs no new value.** The memory model already counts every display pixel of the window (memory_tiers §3:
+  `render_px = display_px × render_scale²`, and §4's table by 1080p, 1440p and 4K display), so a figure that fills the
+  window stays inside it; the screen floor (REQ-REF-011) and the frame budget govern the extra quads as they govern any
+  in-view quad, and the baseline cover (caching contract Part 4) spans the viewport, whatever its size.
+- **On the mock, nothing waits.** The stand-in is smooth noise defined everywhere, so **TASK-M6-30 (new, M6)**, "F3
+  fills the window with the figure", depending on TASK-M6-27 (the stand-in pans and zooms from TASK-M6-26, and the fake
+  quads and the tile-bounds overlay from TASK-M6-27), closes **REQ-GUI-179 (new, M6)**. Reviewers code, qa and gui: the
+  mock has no chart mapping, so no physics. TASK-M6-30 also carries R-404's comment marks. TASK-M6-26, being built now,
+  is not changed.
+- **On the real engine it waits for RQ-262 (filed, open).** The corpus defines the view only as `(s,t) ∈ [0,1]²`
+  (chart_decoder_contract Part 3; deep_zoom § "The precision split"; the coordinate note), and a nonlinear chart's
+  `Φ` only on `[0,1]²` (chart_reference §5.1). A window wider and taller than the shown rect, at the same scale, puts
+  samples at `(s,t)` outside `[0,1]²`: how the view extends there, and what a chart draws outside its domain, are not
+  given. The orchestrator does not decide them. **REQ-GUI-180 (new, M8)** is the real engine's fill, closed by
+  **TASK-M8-05** (the shell on the real engine, F3 there, REQ-GUI-070), and carries `rq: RQ-262`; TASK-M8-05 gains its
+  acceptance line, depends on TASK-M6-30, and its REQ-GUI-180 line waits for the ruling.
+- **qa's file (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-24.rs`'s
+  `qa_capture_figure_identical_under_f3_warning_and_console` asserts that with F3 off everything outside the figure's
+  rect is the clear colour, which this ruling reverses. Its every earlier commit is qa's, so TASK-M6-30's qa reviewer
+  changes that assertion in the task's qa commit; its check that the figure is identical over the shown rect stays.
+  The PR lists the change and its reason, and the code reviewer confirms that nothing else was weakened.
+- **REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100** gain R-406 and a note (reqio); their statements and verify stand, read as
+  above. TASK-M6-24 (merged) gains a Notes line on RQ-248's revision. RQ-248, archived in
+  `docs/archive/review_queue/M0.md`, gains a line naming R-406.
+- R-406 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
+
+Adds REQ-GUI-179 and REQ-GUI-180; REQ-GUI-168's, REQ-GUI-070's and REQ-GUI-100's rulings, sources and notes change.
