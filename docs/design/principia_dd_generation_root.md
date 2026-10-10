@@ -717,6 +717,12 @@ in the closed operator list. Each clamp keeps the inverse finite at the codomain
 saturates. In σ's units, `s = (1 + u)/2`, the tanh and softsign clamp `±(1 − ε)` is `[ε/2, 1 − ε/2]`, half the σ
 clamp `[ε, 1 − ε]`.
 
+The trees write some terms in a form equal in algebra to the table's but with no step that overflows or cancels, so
+that every log-det is finite for every finite control at f32 and f64 (canonical_spec §9, walls 7 and 9, measure
+honesty and totality): each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as
+`−softplus(−x)`, and stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and
+`u`, `1 − u` likewise in `z₂`).
+
 - **The edge-reaching simplex link** *(definition, R-72; REQ-GEN-026)* is the stick-breaking map above. Where
   `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of each edge and of the corner
   `m₀ = 1`, and within about `ε_μ` of the corners `m₁ = 1` and `m₂ = 1`. Its Jacobian is 3×2, so its log-det is
