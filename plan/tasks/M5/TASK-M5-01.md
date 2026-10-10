@@ -85,7 +85,10 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   say, and it changes results: **RQ-266** (physics review 5480220637 of PR #185). REQ-PAY-075's definition states the
   ruled behaviour, and the test runs at Extreme's provisional E = 15 and N = 16 (R-398, R-132), N² × (E+1) = 4096,
   and at the boundary the ruling sets. REQ-PAY-075, REQ-PAY-077 and REQ-PAY-089 carry `rq: RQ-266` (under a width
-  chosen from the setting, the layout follows it); TASK-M5-01's other lines do not wait.
+  chosen from the setting, the layout follows it). RQ-266 holds all of this task, not single lines (`plan/WORKFLOW.md`
+  § "Escalation"), and through it TASK-M5-17 and the tasks downstream of it; this task is also held by the M1 gate (and
+  the gates before M5). Not split into a leaf task (applied per R-369; code review 5480245900 of PR #185): the held
+  requirements, the struct's layout and size, are this task's substance.
 - The impurity grain chosen here is the one the impurity-mask cross-check (TASK-M5-17, REQ-VAL-083) uses.
 - The temporal-accumulator members (`running_mean_divergence`, `first_divergence_t`) are laid out here; how the
   per-footprint latch reaches the split decision is R-142's: evaluated on the GPU in the resolve pass, with only the

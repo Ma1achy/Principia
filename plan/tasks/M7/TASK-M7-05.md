@@ -32,8 +32,11 @@ Family B's mapping half: the Compaction forms lin, log (x ≤ 0 → 0 with senti
 - `crates/render/shaders/wgsl/lib/compaction.wgsl`, `lib/ramp.wgsl`.
 - `crates/render/src/colour/field_ramp.rs` — extends TASK-M1-09's minimal `FieldRamp` (one `ScalarField`, a `lin` `Compaction`, viridis and the invalid lane; RQ-232) to the `FieldRamp{field, ramp | compaction}` node for the occupant tree, its invalid colour/value (REQ-COL-001) and its codegen.
 - `crates/render/src/colour/defaults.rs` — the default-ramp registry keyed by the ledger `scale` and field role.
-- `docs/design/principia_dd_colouring.md` §3.6: `x_max` and `x₀` for each `diverging` field (REQ-COL-065, R-72), with
-  the commit's "Removed lines" note.
+- `docs/design/principia_dd_colouring.md` §3.6: the diverging form's rules for each `diverging` field, what `x_max` is
+  (which end, declared or measured, or none) and how `x₀` is chosen per field (REQ-COL-065, R-72), with the commit's
+  "Removed lines" note.
+- The REQ-COL-066 proposal: `E_0`'s and `Lz_0`'s `x₀`, each in its field's units, and any fixed `x_max` the definition
+  gives, each with its evidence, attached to the PR, for the M7 gate.
 - Tests, including the seam-5 re-style test against the dispatch counter.
 
 ## Acceptance tests
@@ -68,6 +71,9 @@ Family B's mapping half: the Compaction forms lin, log (x ≤ 0 → 0 with senti
   and confirmed by the human at the M7 gate, as R-401 classes a per-field floor (physics review 5480220637 of PR #185).
 - **RQ-265 (open).** The debug views' `symlog` and `log` placements (render contract presentation layer, R-381;
   render_gui_spec §10.1, R-401) differ from §3.6's forms, and §3.6's `log` needs `lo > 0` where the ledger declares
-  `lo = 0`. Three lines wait on the ruling, each requirement carrying `rq: RQ-265`: REQ-COL-032 (the scale the view
+  `lo = 0`. Three requirements carry `rq: RQ-265`: REQ-COL-032 (the scale the view
   re-styles from), REQ-COL-039 (the forms, §3.6's `log` not buildable as written over `lo = 0`) and REQ-COL-065
-  (whether `x_max` exists is what option (c) decides). REQ-COL-016, REQ-COL-024 and REQ-COL-066 do not wait.
+  (whether `x_max` exists is what option (c) decides). RQ-265 holds all of this task, not single lines (`plan/WORKFLOW.md`
+  § "Escalation"), and through it TASK-M7-08, TASK-M7-09 and TASK-M7-23 and the tasks downstream of them; this task is
+  also held by the M1 gate (and the gates before M7). Not split into a leaf task (applied per R-369; code review
+  5480245900 of PR #185): the held requirements, the scale each field's compaction takes, are this task's substance.

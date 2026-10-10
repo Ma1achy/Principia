@@ -93,12 +93,13 @@ milestone gets its own file after its gate. Ids never change.
     algebraically the drift views' own: with `s = sign(x)·ln(1 + |x|/x₀)`, `s/(1 + |s|) = sign(x)·(1 − 1/(1 + |s|))`,
     so under (c) R-381's `symlog` view is unchanged.
 - **Applied meanwhile:** nothing. The debug views stand as built (R-381, R-401).
-- **Waits:** three of TASK-M7-05's lines, each requirement carrying `rq: RQ-265`: REQ-COL-032 (`ledger_scale_restyle`,
-  the scale the view re-styles from), REQ-COL-039 (`compaction_forms`: §3.6's `log` cannot be built as written for the
-  ledger's log fields, whose `lo` is 0, and the forms are what the ruling picks) and REQ-COL-065 (the definition of the
-  `diverging` form, `x_max` and `x₀`: whether `x_max` exists at all is what (c) decides). TASK-M7-05's other lines
-  (REQ-COL-016, REQ-COL-024 and REQ-COL-066, the `x₀` of `E_0` and `Lz_0`, which every option needs), and every other
-  task, do not wait.
+- **Waits:** all of TASK-M7-05, not single lines (`plan/WORKFLOW.md` § "Escalation": "The task stays open, blocked,
+  until the human rules"), and through it its dependents TASK-M7-08, TASK-M7-09 and TASK-M7-23, and every task
+  downstream of them in `plan/tasks.yaml`. Three of its requirements carry `rq: RQ-265`: REQ-COL-032
+  (`ledger_scale_restyle`, the scale the view re-styles from), REQ-COL-039 (`compaction_forms`: §3.6's `log` cannot be
+  built as written for the ledger's log fields, whose `lo` is 0, and the forms are what the ruling picks) and
+  REQ-COL-065 (the `diverging` form's rules: whether `x_max` exists at all is what (c) decides). TASK-M7-05 is also held
+  by the M1 gate (and the gates before M7).
 
 ---
 
@@ -132,11 +133,16 @@ milestone gets its own file after its gate. Ids never change.
   - (b) The bin width is chosen from the setting (`⌈log₂(N²(E+1) + 1)⌉`, rounded to a packable width), so the
     `QuadReduction` layout follows the sim key's `N` and `E`.
   - (c) A setting with `N²(E+1) > 2^w − 1` is refused or clamped (Custom's `E` capped, and the internal rungs kept
-    under it), against §7's "none blocking" for Custom.
+    under it). Against it, §7's "none blocking" for Custom; for it, the corpus's precedent of refusing a configuration
+    that exceeds a stored format: `docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)",
+    `t_end_step`'s row, "**Dispatch refuses a configuration with `horizon_steps=⌈T/dt⌉ > 65535`** (R-86; single format,
+    no Q0.16 fallback; long integrations use coarser dt/epochs)".
   - (d) Bins saturate at `2^w − 1` and the quad is flagged (its `outcome_impurity` marked untrustworthy), so a
     saturated quad is never read as a clean one.
 - **Applied meanwhile:** nothing.
-- **Waits:** TASK-M5-01's REQ-PAY-075 lines (the definition's overflow clause, and `quad_reduction_histogram_capacity`
-  at Extreme's 4096 and at the boundary the ruling sets), and, because under (b) the layout follows the setting,
-  its REQ-PAY-077 and REQ-PAY-089 lines (member order, packing, aligned size); each requirement carries
-  `rq: RQ-266`. TASK-M5-01's other lines, and every other task, do not wait.
+- **Waits:** all of TASK-M5-01, not single lines (`plan/WORKFLOW.md` § "Escalation": "The task stays open, blocked,
+  until the human rules"), and through it its dependent TASK-M5-17, and every task downstream of it in
+  `plan/tasks.yaml`. Three of its requirements carry `rq: RQ-266`: REQ-PAY-075 (the definition's overflow clause, and
+  `quad_reduction_histogram_capacity` at Extreme's 4096 and at the boundary the ruling sets), and, because under (b)
+  the layout follows the setting, REQ-PAY-077 and REQ-PAY-089 (member order, packing, aligned size). TASK-M5-01 is
+  also held by the M1 gate (and the gates before M5).
