@@ -683,6 +683,72 @@ log-det are written as expression trees, never as text:
   (`add(a, b)` and `add(b, a)`) hash differently: the tree is the order of evaluation, which can change a float result's
   bits, and a needless invalidation is safe where a stale one is not.
 
+**The chart constants** *(REQ-DEC-009)*. The registry's parameters are the chart constants. Each is a
+constants-register entry in canonical units, with an exact value. The link trees read them by name (`param(name)`), and
+the generator emits them into the kernel as `crates/kernel/src/generated/constants.rs`, so that no decode or encode
+formula writes one as a literal. They are `mu_max` = 5 and `q_max` = 2 (R-10), `alpha_min` = 0 (R-21), `eps_mu` =
+`eps_z` = `eps_q` = 10⁻⁶ (chart_decoder_contract § "Three hard requirements on any registered link"), `delta_lambda` =
+10⁻¹² (R-82) and `eps_w` = 10⁻¹⁰ (chart_reference §2.2).
+
+**The registry's entries** *(TASK-M2-01; the two rows marked R-72 are definitions, REQ-GEN-026)*. Each row of the table
+above is registered once for each block codomain it serves. The codomains are:
+- the mass simplex Δ², two controls onto three masses;
+- `α ∈ (α_min, π/2 − α_min)` and `β ∈ (0, π)` (dd_decoder §3.2);
+- each free momentum `q ∈ (−q_max, q_max)` (dd_decoder §3.4), whose cap is the table's symmetric row;
+- the two lines, which no block uses.
+
+An interval `(a, b)` has width `b − a` and half-width `c = (b − a)/2`; on the symmetric cap, `a = −c`. A link is
+selected per block control, only among the entries onto that control's codomain (REQ-GEN-013). The defaults are
+`softmax_tanh` (mass), `sigmoid_alpha` and `sigmoid_beta` (config), and `sigmoid_q` (each free momentum).
+
+| Entry | Codomain | Forward | Inverse (with its ε clamp) | log-det | Sampling note |
+|---|---|---|---|---|---|
+| `softmax_tanh` | Δ² | `μₖ = μ_max·tanh zₖ`, `m = softmax(0, μ₁, μ₂)` | `zₖ = artanh(clamp(log(mₖ/m₀), ±(1−ε_μ)μ_max)/μ_max)` | `½ log 3 + Σᵢ log mᵢ + 2 log μ_max + log sech² z₁ + log sech² z₂` | under-samples simplex edges/corners |
+| `stick_breaking` (R-72) | Δ² | `s = ½(1 + (1−ε_μ) tanh z₁)`, `u = ½(1 + (1−ε_μ) tanh z₂)`, `m = (1−s, s(1−u), su)` | `s = m₁ + m₂`, `u = m₂/s`, each `v` of them to `artanh(clamp(2v−1, ±(1−ε_μ)²)/(1−ε_μ))` | `log(√3/4 · (1−ε_μ)² · s · sech² z₁ · sech² z₂)` | reaches the edges and corners that `softmax_tanh` stops short of; its area element is `4√3·m₀m₁m₂` (exactly so at `ε_μ = 0`), the plain softmax measure, so it over-samples every edge and corner, symmetrically in the bodies |
+| `sigmoid_alpha`, `sigmoid_beta`, `sigmoid_q` | α, β, q | `a + (b−a)·σ(x)` | `logit(clamp((y−a)/(b−a), ε, 1−ε))` | `log((b−a)·σ(x)·σ(−x))` | centre-heavy vs uniform |
+| `tanh_alpha`, `tanh_beta`, `tanh_q` | α, β, q | `a + c·(1 + tanh x)` | `artanh(clamp((y−a)/c − 1, ±(1−ε)))` | `log(c·sech² x)` | the bounded-alt row's note (α, β); the symmetric row's (q) |
+| `softsign_alpha`, `softsign_beta`, `softsign_q` (R-72) | α, β, q | `a + c·(1 + u)`, `u = x/(2 + abs(x))` | `x = 2u/(1 − abs(u))`, `u = clamp((y−a)/c − 1, ±(1−ε))` | `log(2c) − 2 log(2 + abs(x))` | heavier-tailed than σ: it nears each bound as `1/abs(x)`, not as `e^(−abs(x))`, so relative to σ it under-samples the bounds' immediate neighbourhoods |
+| `softplus` | (0, ∞) | `softplus x` | `inv_softplus y` | `log σ(x)` | linear for large `x`, so not heavy-tailed |
+| `exp` | (0, ∞) | `eˣ` | `log y` | `x` | exp is heavy-tailed |
+| `identity` | ℝ | `x` | `y` | 0 | neutral |
+
+The sampling notes of the R-72 rows (`stick_breaking`, `softsign_*`) read "over-" and "under-samples" as the density
+of samples drawn with uniform controls, as chart_decoder_contract § "Integrity: the link is part of the experiment"
+has it ("which region of the block it over- and under-samples relative to uniform"). The table's σ row ("centre-heavy
+vs uniform") may read it as the Jacobian's weight; RQ-267 asks which reading holds.
+
+`ε` is `ε_μ` on the simplex, `ε_z` onto α and β, and `ε_q` onto a momentum. `abs(x)` is written `clamp(x, −x, +∞)`
+in the closed operator list. Each clamp keeps the inverse finite at the codomain's boundary, where a float forward
+saturates. In σ's units, `s = (1 + u)/2`, the tanh and softsign clamp `±(1 − ε)` is `[ε/2, 1 − ε/2]`, half the σ
+clamp `[ε, 1 − ε]`.
+
+The two simplex inverses are defined on the open simplex. At an exact corner, with two masses 0, `softmax_tanh`'s
+`log(mₖ/m₀)` and `stick_breaking`'s `u = m₂/(m₁ + m₂)` divide 0 by 0. On the host, Rust's `max` ignores the NaN, so
+the clamp returns a finite value, but SPIR-V's `FMax` with a NaN operand is undefined, so a caller passes no exact
+corner (TASK-M2-15's encode).
+
+The trees write some terms in a form equal in algebra to the table's but with no step that overflows or cancels, so
+that every log-det is finite for every finite control at f32 and f64 (canonical_spec §9, walls 7 and 9, measure
+honesty and totality): each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as
+`−softplus(−x)`, and stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and
+`u`, `1 − u` likewise in `z₂`).
+
+- **The edge-reaching simplex link** *(definition, R-72; REQ-GEN-026)* is the stick-breaking map above. Where
+  `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of each edge and of the corner
+  `m₀ = 1`, and within about `ε_μ` of the corners `m₁ = 1` and `m₂ = 1`. Its Jacobian is 3×2, so its log-det is
+  `log √det(JᵀJ)` (R-368), where `det(JᵀJ) = 3·(s'u')²·s²`, with `s' = ½(1−ε_μ) sech² z₁` and
+  `u' = ½(1−ε_μ) sech² z₂`. At `ε_μ = 0`, `s' = 2s(1−s)` and `u' = 2u(1−u)`, so its area element is `4√3·m₀m₁m₂`:
+  symmetric in the bodies, and the measure of plain softmax, from which `softmax_tanh` departs only by its saturation
+  factor. With uniform controls it therefore over-samples every edge and corner. Near
+  the corner `m₂ → 1`, `m₀ + m₁` falls to about `ε_μ`, where dd_decoder's `DEGENERATE(M01_TINY)` fence (`M₀₁ < ε`) can
+  fire.
+- **The heavier-tailed bounded link** *(definition, R-72; REQ-GEN-026)* is softsign with σ's slope at the centre,
+  `u = x/(2 + abs(x))`, onto α, β and the momenta. Its tails approach the bounds as `1/abs(x)` rather than
+  exponentially. Its log-det is `log(c·u')`, with `u' = 2/(2 + abs(x))²`. Its second derivative jumps at `x = 0`, so it
+  is C¹ but not C².
+- **Temperature-softmax** is not registered. The corpus gives no formula or parameter for it, and the two definitions
+  above already give each block a second link with a different sampling note (REQ-GEN-014).
+
 ---
 
 ## 4. Seams (obligations → integration tests)

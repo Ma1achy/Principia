@@ -47,3 +47,7 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 ## Notes
 - R-133: REQ-DEC-014's "saturation flag" (R-21's "SAT flags") is read as the encode clamp flag `lookup_clamped` (inverse_encode Part 3–4, dd_encode §3.5), which fires at either exact α-pole.
 - RQ-84 ruled: R-116 — the fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL), never hand-written; REQ-SYS-015 stands and the agreement presets check the translation (TASK-M2-25).
+- TASK-M2-01 (PR #187, qa finding (c)): the registry's simplex inverses are defined on the open simplex. At an exact
+  corner, with two masses 0, `softmax_tanh`'s `log(mₖ/m₀)` and `stick_breaking`'s `u = m₂/(m₁ + m₂)` divide 0 by 0.
+  On the host, Rust's `max` ignores the NaN and the clamp returns a finite value, but SPIR-V's `FMax` with a NaN
+  operand is undefined. Encode passes the mass inverse no exact corner, or guards it before the inverse runs.
