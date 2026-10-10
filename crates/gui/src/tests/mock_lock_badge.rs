@@ -296,3 +296,44 @@ fn mock_lock_badge_open_in_inspector_requests_the_inspector() {
         assert_eq!(open, vec![Window::Inspector])
     });
 }
+
+#[test]
+fn mock_lock_badge_the_reticle_is_a_ring_with_four_ticks() {
+    let mut rig = new_rig(false);
+    rig.lock();
+    let at = rig.layout.figure.center();
+    let shapes = super::support::shapes(&mut rig.headless, &mut rig.app);
+    let check = |shapes: &[egui::Shape], at: egui::Pos2| {
+        let close = |a: egui::Pos2, b: egui::Pos2| (a - b).length() < 1e-3;
+        assert!(
+            shapes.iter().any(|s| matches!(s, egui::Shape::Circle(c)
+                if close(c.center, at) && c.radius == RETICLE_R && c.stroke.color == GOLD)),
+            "the ring at {at:?}"
+        );
+        assert!(
+            shapes.iter().any(|s| matches!(s, egui::Shape::Circle(c)
+                if close(c.center, at) && c.radius == 2.5 && c.fill == GOLD)),
+            "the dot"
+        );
+        for d in [
+            egui::vec2(1.0, 0.0),
+            egui::vec2(-1.0, 0.0),
+            egui::vec2(0.0, 1.0),
+            egui::vec2(0.0, -1.0),
+        ] {
+            let want = [
+                at + d * (RETICLE_R - 4.0),
+                at + d * (RETICLE_R + crate::explore::lock::RETICLE_TICK),
+            ];
+            assert!(
+                shapes.iter().any(|s| matches!(s, egui::Shape::LineSegment { points, stroke }
+                    if close(points[0], want[0]) && close(points[1], want[1]) && stroke.color == GOLD)),
+                "the tick {want:?}"
+            );
+        }
+    };
+    check(&shapes, at);
+    rejects("the reticle off the centre", || {
+        check(&shapes, at + egui::vec2(5.0, 0.0))
+    });
+}

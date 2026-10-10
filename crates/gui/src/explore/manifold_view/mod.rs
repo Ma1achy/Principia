@@ -632,8 +632,3 @@ pub fn header(ui: &mut Ui, section: Rect, h: f32, title: &str, note: &str) {
         row.label(RichText::new(note).weak().small());
     }
 }
-
-/// A latent value as a field shows it: three decimals.
-pub fn value_text(v: f64) -> String {
-    format!("{v:.3}")
-}

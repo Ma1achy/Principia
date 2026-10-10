@@ -38,8 +38,14 @@ pub fn slider_row(
 ) -> (Option<f64>, egui::Response) {
     let mut line = row_ui(ui, rect);
     line.add_sized([40.0, rect.height()], egui::Label::new(label));
-    let extra = if anchor.is_some() { OFFSET_W } else { 0.0 };
-    line.spacing_mut().slider_width = (line.available_width() - VALUE_W - extra - 12.0).max(40.0);
+    // The slider takes what the field, the offset while locked, and the gaps before them leave.
+    let gap = line.spacing().item_spacing.x;
+    let after = if anchor.is_some() {
+        VALUE_W + gap + OFFSET_W + gap
+    } else {
+        VALUE_W + gap
+    };
+    line.spacing_mut().slider_width = (line.available_width() - after).max(40.0);
     let (lo, hi) = span(anchor);
     let mut moved = value;
     let slider = line.add(
@@ -47,9 +53,10 @@ pub fn slider_row(
             .show_value(false)
             .clamping(egui::SliderClamping::Never),
     );
-    if let Some(anchor) = anchor {
+    if anchor.is_some() {
+        // The span is re-based about the anchor, so the anchor sits at the rail's centre.
         let rail = slider.rect;
-        let x = rail.min.x + rail.width() * ((anchor - lo) / (hi - lo)) as f32;
+        let x = rail.center().x;
         line.painter().line_segment(
             [
                 egui::pos2(x, rail.min.y + 2.0),

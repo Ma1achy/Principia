@@ -101,8 +101,9 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         let rect = row(section, h, 2 + i);
         let mut line = row_ui(ui, rect);
         line.add_sized([40.0, rect.height()], egui::Label::new(label));
+        let gap = line.spacing().item_spacing.x;
         line.spacing_mut().slider_width =
-            (line.available_width() - super::centre::VALUE_W - 12.0).max(40.0);
+            (line.available_width() - super::centre::VALUE_W - gap).max(40.0);
         let mut moved = value;
         let slider = line.add(Slider::new(&mut moved, lo..=hi).show_value(false));
         let field = line.add_sized(

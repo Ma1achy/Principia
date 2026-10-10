@@ -109,12 +109,12 @@ impl EngineInterface for Broken {
         if let (Rule::LockStaysOff, Edit::Sim(SimField::Lock(lock))) = (self.rule, &mut edit.edit) {
             lock.locked = false;
         }
-        let dropped = match (self.rule, &edit.edit) {
-            (Rule::Drop, _) => true,
-            (Rule::DropZ0, Edit::Sim(SimField::Z0(_))) => true,
-            (Rule::DropBasis, Edit::Sim(SimField::Basis { .. })) => true,
-            _ => false,
-        };
+        let dropped = matches!(
+            (self.rule, &edit.edit),
+            (Rule::Drop, _)
+                | (Rule::DropZ0, Edit::Sim(SimField::Z0(_)))
+                | (Rule::DropBasis, Edit::Sim(SimField::Basis { .. }))
+        );
         if !dropped {
             self.store.set_field(edit);
         }

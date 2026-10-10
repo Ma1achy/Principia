@@ -959,3 +959,678 @@ fn mock_manifold_view_angles_turn_within_their_spans() {
         assert_eq!(a.tau1, 90.5);
     });
 }
+
+// --- the panel's layout: rows, fields and their places ---------------------------------------------------------------
+
+use super::support::{nodes, shapes, Node};
+
+fn click_at(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2) {
+    for events in crate::capture::click(at) {
+        let _ = h.frame(app, events);
+    }
+}
+use eframe::egui::accesskit::Role;
+
+/// The panel, its body and its row height, at the capture's size.
+fn panel_geometry(h: &Headless) -> (egui::Rect, egui::Rect, f32, [egui::Rect; 4]) {
+    let panel =
+        crate::layout::Layout::new(h.screen(), crate::capture::PIXELS_PER_POINT).manifold_view;
+    (
+        panel,
+        panel.shrink(mv::MARGIN),
+        mv::row_height(panel),
+        mv::sections(panel),
+    )
+}
+
+fn in_rect(nodes: &[Node], rect: egui::Rect, role: Role) -> Vec<Node> {
+    let mut found: Vec<Node> = nodes
+        .iter()
+        .filter(|n| n.role == role && rect.contains(n.rect.center()))
+        .cloned()
+        .collect();
+    found.sort_by(|a, b| {
+        (a.rect.min.y, a.rect.min.x)
+            .partial_cmp(&(b.rect.min.y, b.rect.min.x))
+            .unwrap()
+    });
+    found
+}
+
+/// Asserts that every slider row in `section` (rows `rows`) holds its slider then its field, side by side, filling the
+/// body to its right edge, each within its row; `offset` adds the locked offset after the field.
+fn check_slider_rows(
+    all: &[Node],
+    section: egui::Rect,
+    h: f32,
+    rows: std::ops::Range<usize>,
+    body: egui::Rect,
+    offset: bool,
+) {
+    for i in rows {
+        let line = mv::row(section, h, i);
+        let sliders = in_rect(all, line, Role::Slider);
+        let fields = in_rect(all, line, Role::SpinButton);
+        assert_eq!(
+            (sliders.len(), fields.len()),
+            (1, 1),
+            "row {i} at {line:?}: one slider, one field"
+        );
+        let (s, f) = (&sliders[0].rect, &fields[0].rect);
+        assert!(
+            s.max.x <= f.min.x && f.min.x - s.max.x <= 16.0,
+            "row {i}: the field follows the slider: {s:?} {f:?}"
+        );
+        assert!(
+            s.width() > 120.0,
+            "row {i}: the slider takes the row: {s:?}"
+        );
+        let end = if offset {
+            f.max.x + 8.0 + crate::explore::manifold_view::centre::OFFSET_W
+        } else {
+            f.max.x
+        };
+        assert!(
+            (end - body.max.x).abs() <= 1.0,
+            "row {i}: the row ends at the body's edge: {f:?}, {body:?}"
+        );
+        for r in [s, f] {
+            assert!(
+                r.min.y >= line.min.y - 0.5 && r.max.y <= line.max.y + 0.5,
+                "row {i}: {r:?} in {line:?}"
+            );
+            assert!(
+                r.height() >= h - 6.0,
+                "row {i}: {r:?} fills its row's height {h}"
+            );
+        }
+    }
+}
+
+#[test]
+fn mock_manifold_view_slider_rows_fill_the_panel() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let (_, body, rh, [_, _, centre, slice]) = panel_geometry(&h);
+    let all = nodes(&mut h, &mut app);
+    check_slider_rows(&all, centre, rh, 1..9, body, false);
+    check_slider_rows(&all, slice, rh, 1..5, body, false);
+    // Locked, the offset follows each field, inside the body.
+    app.set_field(lock_edit(Lock {
+        locked: true,
+        z_locked: MOCK_Z0,
+    }));
+    let _ = h.frame(&mut app, Vec::new());
+    let locked = nodes(&mut h, &mut app);
+    check_slider_rows(&locked, centre, rh, 1..9, body, true);
+    check_slider_rows(&locked, slice, rh, 1..2, body, true);
+    check_slider_rows(&locked, slice, rh, 2..5, body, false);
+    let offsets: Vec<&Node> = locked.iter().filter(|n| n.text == "+ 0.000").collect();
+    assert_eq!(offsets.len(), 9);
+    for o in offsets {
+        assert!(
+            o.rect.max.x <= body.max.x + 0.5,
+            "the offset inside the body: {:?}",
+            o.rect
+        );
+    }
+    rejects("the Chart section, which has no sliders", || {
+        let (_, _, rh, [chart, ..]) = panel_geometry(&h);
+        check_slider_rows(&all, chart, rh, 1..2, body, false);
+    });
+}
+
+#[test]
+fn mock_manifold_view_every_control_in_its_row_inside_the_body() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let (panel, body, rh, [chart, navigate, ..]) = panel_geometry(&h);
+    let all = nodes(&mut h, &mut app);
+    let inside_panel: Vec<&Node> = all
+        .iter()
+        .filter(|n| panel.contains(n.rect.center()))
+        .collect();
+    for n in &inside_panel {
+        assert!(
+            body.expand(1.0).contains_rect(n.rect),
+            "{} at {:?} outside the body {body:?}",
+            n.text,
+            n.rect
+        );
+    }
+    // Navigate: u and v in row 1, the zoom in row 2, z₀ in rows 3 and 4, four to a row, in order.
+    let fields = |i| in_rect(&all, mv::row(navigate, rh, i), Role::SpinButton);
+    assert_eq!(fields(1).len(), 2, "u and v");
+    let zoom = in_rect(&all, mv::row(navigate, rh, 2), Role::Slider);
+    assert_eq!(zoom.len(), 1, "the zoom");
+    assert!(
+        zoom[0].rect.width() > 150.0,
+        "the zoom slider takes its row: {:?}",
+        zoom[0].rect
+    );
+    let z0: Vec<f64> = fields(3)
+        .iter()
+        .chain(&fields(4))
+        .filter_map(|n| n.value)
+        .collect();
+    assert_eq!(z0, MOCK_Z0, "z₀ in order, four to a row");
+    for n in fields(1).iter().chain(&fields(3)) {
+        assert!(
+            n.rect.height() >= rh - 6.0 && n.rect.height() <= rh,
+            "{:?} fills its row of {rh}",
+            n.rect
+        );
+    }
+    // Chart: the preset across row 1, the basis rows' edit buttons at the right, the builder in row 4.
+    let preset = all
+        .iter()
+        .find(|n| n.text == "z_α × z_β")
+        .expect("the preset");
+    assert!(
+        preset.rect.width() > 150.0 && preset.rect.max.x <= body.max.x + 0.5,
+        "{:?}",
+        preset.rect
+    );
+    for i in [2, 3] {
+        let line = mv::row(chart, rh, i);
+        let edit = all
+            .iter()
+            .find(|n| n.text == "edit…" && line.contains(n.rect.center()))
+            .expect("an edit button");
+        assert!(
+            edit.rect.max.x <= body.max.x + 0.5 && edit.rect.max.x > body.max.x - 30.0,
+            "{:?}",
+            edit.rect
+        );
+    }
+    let texts: Vec<&str> = all.iter().map(|n| n.text.as_str()).collect();
+    for text in [
+        "Chart",
+        "Navigate",
+        "Centre z₀",
+        "Slice & tilt",
+        mv::navigate::NOTE,
+        "1.00·z_α",
+        "1.00·z_β",
+        mv::chart::KIND,
+    ] {
+        assert!(texts.contains(&text), "no {text:?}");
+    }
+    assert!(mv::row(chart, rh, 4).contains(
+        all.iter()
+            .find(|n| n.text == "Chart builder…")
+            .unwrap()
+            .rect
+            .center()
+    ));
+    assert_eq!(
+        mv::row(navigate, 10.0, 2).min.y,
+        navigate.min.y + 20.0,
+        "row i starts i rows down"
+    );
+    rejects("a field outside the body", || {
+        let mut far = inside_panel[0].clone();
+        far.rect = far.rect.translate(egui::vec2(body.width(), 0.0));
+        assert!(body.expand(1.0).contains_rect(far.rect));
+    });
+}
+
+#[test]
+fn mock_manifold_view_the_zoom_slider_reaches_out_past_zero() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    app.set_field(basis_edit((
+        MOCK_Q1.map(|v| v * 4.0),
+        MOCK_Q2.map(|v| v * 4.0),
+    )));
+    let _ = h.frame(&mut app, Vec::new());
+    let (_, _, rh, [_, navigate, ..]) = panel_geometry(&h);
+    let all = nodes(&mut h, &mut app);
+    let zoom = in_rect(&all, mv::row(navigate, rh, 2), Role::Slider);
+    assert_eq!(zoom[0].value, Some(-2.0), "two octaves out reads −2");
+    assert!(all.iter().any(|n| n.text == "× 0.25"));
+    rejects("a zoom clamped at zero", || {
+        assert_eq!(zoom[0].value, Some(0.0))
+    });
+}
+
+#[test]
+fn mock_manifold_view_the_anchor_marks_each_rails_centre() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    app.set_field(lock_edit(Lock {
+        locked: true,
+        z_locked: MOCK_Z0,
+    }));
+    let _ = h.frame(&mut app, Vec::new());
+    let (_, _, rh, [_, _, centre, _]) = panel_geometry(&h);
+    let all = nodes(&mut h, &mut app);
+    let ticks: Vec<[egui::Pos2; 2]> = shapes(&mut h, &mut app)
+        .into_iter()
+        .filter_map(|s| match s {
+            egui::Shape::LineSegment { points, stroke }
+                if stroke.color == crate::explore::lock::GOLD =>
+            {
+                Some(points)
+            }
+            _ => None,
+        })
+        .collect();
+    for i in 1..9 {
+        let rail = in_rect(&all, mv::row(centre, rh, i), Role::Slider)[0].rect;
+        let tick = ticks
+            .iter()
+            .find(|[a, _]| rail.contains(*a))
+            .unwrap_or_else(|| panic!("no anchor mark on row {i}'s rail {rail:?}"));
+        assert!(
+            (tick[0].x - rail.center().x).abs() < 0.5 && tick[0].x == tick[1].x,
+            "at the centre: {tick:?}"
+        );
+        assert_eq!(
+            (tick[0].y, tick[1].y),
+            (rail.min.y + 2.0, rail.max.y - 2.0),
+            "across the rail: {tick:?}"
+        );
+    }
+    rejects("a free panel's rails", || {
+        let mut free = mock_app();
+        let mut h = headless();
+        let _ = h.frame(&mut free, Vec::new());
+        let gold = shapes(&mut h, &mut free).into_iter().any(|s| {
+            matches!(s, egui::Shape::LineSegment { stroke, .. } if stroke.color == crate::explore::lock::GOLD)
+        });
+        assert!(gold);
+    });
+}
+
+/// Clicks the field at `at`, selects its text and types `text`, then Enter.
+fn type_at(h: &mut Headless, app: &mut App<MockSide>, at: egui::Pos2, text: &str) {
+    for events in crate::capture::click(at) {
+        let _ = h.frame(app, events);
+    }
+    let select_all = Event::Key {
+        key: Key::A,
+        physical_key: None,
+        pressed: true,
+        repeat: false,
+        modifiers: Modifiers::COMMAND,
+    };
+    let [enter_down, enter_up] = crate::capture::key(Key::Enter, NONE);
+    for events in [
+        vec![select_all],
+        vec![Event::Text(text.to_owned())],
+        enter_down,
+        enter_up,
+        Vec::new(),
+        Vec::new(),
+    ] {
+        let _ = h.frame(app, events);
+    }
+}
+
+#[test]
+fn mock_manifold_view_a_typed_angle_sets_that_angle() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    // From τ₁ = 10°, typing 25 sets 25°.
+    let view = View {
+        tau1: 10f64.to_radians(),
+        ..View::of(&Plane {
+            z0: MOCK_Z0,
+            q1: MOCK_Q1,
+            q2: MOCK_Q2,
+        })
+    };
+    app.set_field(basis_edit(view.basis()));
+    let _ = h.frame(&mut app, Vec::new());
+    let (_, _, rh, [_, _, _, slice]) = panel_geometry(&h);
+    let all = nodes(&mut h, &mut app);
+    for (i, want) in [(2, 10.0), (3, 0.0), (4, 0.0)] {
+        let field = &in_rect(&all, mv::row(slice, rh, i), Role::SpinButton)[0];
+        assert!(
+            (field.value.unwrap() - want).abs() < 1e-6,
+            "row {i} reads {:?}",
+            field.value
+        );
+    }
+    let field = in_rect(&all, mv::row(slice, rh, 2), Role::SpinButton)[0]
+        .rect
+        .center();
+    type_at(&mut h, &mut app, field, "25");
+    let plane = app.snapshot().sim.plane.clone();
+    let tau1 = View::of(&plane).tau1.to_degrees();
+    assert!((tau1 - 25.0).abs() < 1e-9, "τ₁ typed to 25: {tau1}");
+    // γ typed, in its own row.
+    let all = nodes(&mut h, &mut app);
+    let field = in_rect(&all, mv::row(slice, rh, 4), Role::SpinButton)[0]
+        .rect
+        .center();
+    type_at(&mut h, &mut app, field, "-30");
+    let gamma = View::of(&app.snapshot().sim.plane).gamma.to_degrees();
+    assert!((gamma + 30.0).abs() < 1e-9, "γ typed to −30: {gamma}");
+    rejects("τ₁ turned by the typed value", || {
+        assert!((tau1 - 35.0).abs() < 1e-9)
+    });
+}
+
+#[test]
+fn mock_manifold_view_dragging_u_moves_the_centre_along_q1() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    // One octave in: the view spans half as much, and u steps half as fast.
+    app.set_field(basis_edit((
+        MOCK_Q1.map(|v| v / 2.0),
+        MOCK_Q2.map(|v| v / 2.0),
+    )));
+    let _ = h.frame(&mut app, Vec::new());
+    let u = place(&app, mv::CENTRE_U).center();
+    drag(&mut h, &mut app, u, egui::vec2(40.0, 0.0));
+    let z0 = app.snapshot().sim.plane.z0;
+    let moved = z0[0] - MOCK_Z0[0];
+    // 40 points at σ / 200 a point: 0.1 along the unit direction of q₁.
+    assert!((moved - 0.1).abs() < 0.02, "u moved z_α by {moved}");
+    assert_eq!(z0[1], MOCK_Z0[1], "v kept");
+    rejects("a step four times smaller", || {
+        assert!((moved - 0.025).abs() < 0.02)
+    });
+}
+
+#[test]
+fn mock_manifold_view_plus_zooms_only_the_focused_figure() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    // The top bar focused: + is not the figure's.
+    press(&mut h, &mut app, Key::Tab, NONE);
+    press(&mut h, &mut app, Key::Plus, NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    let q1 = app.snapshot().sim.plane.q1;
+    assert_eq!(q1, MOCK_Q1, "no zoom without the figure's focus");
+    keys(&mut h, &mut app, &[Key::Tab, Key::Tab]);
+    press(&mut h, &mut app, Key::Plus, NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    let zoomed = app.snapshot().sim.plane.q1;
+    assert_ne!(zoomed, MOCK_Q1, "the focused figure zooms");
+    rejects("the unfocused +", || assert_ne!(q1, MOCK_Q1));
+}
+
+#[test]
+fn mock_manifold_view_the_chart_rows() {
+    use crate::explore::manifold_view::chart::basis_text;
+    assert_eq!(basis_text(&MOCK_Q1), "1.00·z_α");
+    assert_eq!(basis_text(&[0.0; 8]), "0");
+    assert_eq!(
+        basis_text(&[-0.5, 0.0, 0.25, 0.0, 0.0, -0.125, 0.0, 0.0]),
+        "−0.50·z_α + 0.25·z_q0 − 0.12·z_q3"
+    );
+    assert_eq!(
+        basis_text(&[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0]),
+        "2.00·z_μ2"
+    );
+    rejects("a zero component listed", || {
+        assert_eq!(basis_text(&MOCK_Q1), "1.00·z_α + 0.00·z_β")
+    });
+    // The editor opens by its button, and by the keyboard's focus inside it, and its fields edit the basis.
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let closed = nodes(&mut h, &mut app)
+        .iter()
+        .filter(|n| n.role == Role::SpinButton)
+        .count();
+    let button = place(&app, mv::Q1_EDIT).center();
+    click_at(&mut h, &mut app, button);
+    let open = nodes(&mut h, &mut app);
+    let fields = open.iter().filter(|n| n.role == Role::SpinButton).count();
+    assert_eq!(fields, closed + 8, "q₁'s eight fields");
+    assert!(
+        app.manifold.editing[0] && !app.manifold.editing[1],
+        "{:?}",
+        app.manifold.editing
+    );
+    // Two rows of four, under the button, in order.
+    let mut editor: Vec<&Node> = open
+        .iter()
+        .filter(|n| {
+            n.role == Role::SpinButton
+                && n.value.is_some()
+                && place(&app, mv::Q1_COMPONENTS[0]).min.y <= n.rect.center().y
+        })
+        .filter(|n| {
+            mv::Q1_COMPONENTS
+                .iter()
+                .any(|id| place(&app, id).contains(n.rect.center()))
+        })
+        .collect();
+    editor.sort_by(|a, b| {
+        (a.rect.min.y, a.rect.min.x)
+            .partial_cmp(&(b.rect.min.y, b.rect.min.x))
+            .unwrap()
+    });
+    let values: Vec<f64> = editor.iter().filter_map(|n| n.value).collect();
+    assert_eq!(values, MOCK_Q1, "q₁'s components in order");
+    assert!(editor[3].rect.min.y < editor[4].rect.min.y, "four to a row");
+    assert_eq!(editor[0].rect.min.y, editor[3].rect.min.y);
+    type_at(&mut h, &mut app, editor[1].rect.center(), "0.5");
+    let q1 = app.snapshot().sim.plane.q1;
+    assert_eq!(
+        q1,
+        [1.0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        "z_β of q₁ typed"
+    );
+    // The button again closes it.
+    let button = place(&app, mv::Q1_EDIT).center();
+    click_at(&mut h, &mut app, button);
+    assert!(!app.manifold.editing[0]);
+    let after = nodes(&mut h, &mut app)
+        .iter()
+        .filter(|n| n.role == Role::SpinButton)
+        .count();
+    assert_eq!(after, closed);
+    // The keyboard inside q₂'s editor opens it.
+    let mut app = mock_app();
+    let mut h = headless();
+    keys(
+        &mut h,
+        &mut app,
+        &[
+            Key::Tab,
+            Key::Tab,
+            Key::Enter,
+            Key::Enter,
+            Key::Enter,
+            Key::ArrowDown,
+            Key::ArrowDown,
+            Key::Enter,
+        ],
+    );
+    assert_eq!(
+        focus(&app),
+        [MANIFOLD_VIEW, mv::CHART, mv::Q2_EDIT, mv::Q2_COMPONENTS[0]]
+    );
+    let n = nodes(&mut h, &mut app)
+        .iter()
+        .filter(|n| n.role == Role::SpinButton)
+        .count();
+    assert_eq!(n, closed + 8, "q₂'s editor open while the focus is in it");
+    assert!(
+        !app.manifold.editing[1],
+        "opened by the focus, not the button"
+    );
+    rejects("the editor closed", || assert_eq!(n, closed));
+}
+
+#[test]
+fn mock_manifold_view_enter_unlocks_and_opens_the_inspector() {
+    let mut locked = mock_snapshot();
+    locked.sim.lock = Lock {
+        locked: true,
+        z_locked: MOCK_Z0,
+    };
+    let mut out = Out::default();
+    activate(mv::UNLOCK, &locked, &mut Scratch::default(), &mut out);
+    assert_eq!(
+        out.edits,
+        vec![lock_edit(Lock {
+            locked: false,
+            z_locked: [0.0; 8]
+        })]
+    );
+    let mut out = Out::default();
+    activate(
+        mv::OPEN_INSPECTOR,
+        &locked,
+        &mut Scratch::default(),
+        &mut out,
+    );
+    assert_eq!(
+        out.windows,
+        vec![engine::contract::view_ui::Window::Inspector]
+    );
+    rejects("Enter on unlock doing nothing", || {
+        let mut out = Out::default();
+        activate("lock_nothing", &locked, &mut Scratch::default(), &mut out);
+        assert!(!out.edits.is_empty());
+    });
+}
+
+#[test]
+fn mock_manifold_view_reading_views_at_their_edges() {
+    // A preset's frame holds a basis whose stray components are at the floating point's noise, at any scale.
+    let mut q1 = MOCK_Q1.map(|v| v * 1e-5);
+    q1[3] = 1e-15;
+    let q2 = MOCK_Q2.map(|v| v * 1e-5);
+    assert_eq!(
+        View::of(&Plane {
+            z0: MOCK_Z0,
+            q1,
+            q2
+        })
+        .preset,
+        Some(0)
+    );
+    let mut stray = q1;
+    stray[3] = 1e-9;
+    assert_eq!(
+        View::of(&Plane {
+            z0: MOCK_Z0,
+            q1: stray,
+            q2
+        })
+        .preset,
+        None
+    );
+    // τ₁ = 90°: q₁ lies along the depth, and γ reads from the vertical axis.
+    let (s, c) = 0.5f64.sin_cos();
+    let q1 = [0.0, s, 0.0, 0.0, 0.0, c, 0.0, 0.0];
+    let q2 = [0.0, c, 0.0, 0.0, 0.0, -s, 0.0, 0.0];
+    let v = View::of(&Plane {
+        z0: MOCK_Z0,
+        q1,
+        q2,
+    });
+    assert!(
+        (v.gamma - 0.5).abs() < 1e-12 && (v.tau1 - std::f64::consts::FRAC_PI_2).abs() < 1e-12,
+        "{v:?}"
+    );
+    // τ₂ = 90°: q₂'s horizontal part reads γ.
+    let q1 = [c, 0.0, 0.0, 0.0, 0.0, s, 0.0, 0.0];
+    let q2 = [-s, 0.0, 0.0, 0.0, 0.0, c, 0.0, 0.0];
+    let v = View::of(&Plane {
+        z0: MOCK_Z0,
+        q1,
+        q2,
+    });
+    assert!(
+        (v.gamma - 0.5).abs() < 1e-12 && (v.tau2 - std::f64::consts::FRAC_PI_2).abs() < 1e-12,
+        "{v:?}"
+    );
+    // A zero angle reads +0, never −0.
+    let v = View::of(&Plane {
+        z0: MOCK_Z0,
+        q1: MOCK_Q1,
+        q2: MOCK_Q2,
+    });
+    assert!(v.gamma.is_sign_positive(), "γ {:?}", v.gamma);
+    let mut q1 = MOCK_Q1;
+    q1[SLICE_AXIS] = -0.0;
+    let mut q2 = MOCK_Q2;
+    q2[0] = -0.0;
+    let v = View::of(&Plane {
+        z0: MOCK_Z0,
+        q1,
+        q2,
+    });
+    assert!(v.tau1.is_sign_positive(), "τ₁ {:?}", v.tau1);
+    let mut q2 = MOCK_Q2;
+    q2[0] = -0.0;
+    q2[SLICE_AXIS] = -0.0;
+    let v = View::of(&Plane {
+        z0: MOCK_Z0,
+        q1,
+        q2,
+    });
+    assert!(v.tau2.is_sign_positive(), "τ₂ {:?}", v.tau2);
+    rejects("a −0 read as it is", || {
+        assert!((-0.0f64).is_sign_positive())
+    });
+}
+
+#[test]
+fn mock_manifold_view_the_stand_in_projects_the_chart() {
+    use crate::mock::canvas::{project, HIDDEN_WEIGHTS};
+    let v = [0.5, -0.25, 1.0, 2.0, 0.0, 0.0, 0.0, -1.0];
+    let hidden = HIDDEN_WEIGHTS[0] + 2.0 * HIDDEN_WEIGHTS[1] - HIDDEN_WEIGHTS[5];
+    assert_eq!(project(&v), [0.5, -0.25, hidden as f32, 0.0]);
+    rejects("the weights divided", || {
+        assert_eq!(project(&v)[2], (1.0 / 0.7 + 2.0 / 0.5 - 1.0 / 0.4) as f32)
+    });
+}
+
+#[test]
+fn mock_manifold_view_a_long_message_stops_short_of_the_footers_right_end() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    // A basis edit's message is longer than the footer.
+    let view = View {
+        tau1: 0.3,
+        gamma: 0.7,
+        ..View::of(&Plane {
+            z0: MOCK_Z0,
+            q1: MOCK_Q1,
+            q2: MOCK_Q2,
+        })
+    };
+    app.set_field(basis_edit(view.basis()));
+    let _ = h.frame(&mut app, Vec::new());
+    let all = nodes(&mut h, &mut app);
+    let footer = crate::layout::Layout::new(h.screen(), crate::capture::PIXELS_PER_POINT).footer;
+    let tag = all
+        .iter()
+        .find(|n| n.text == crate::explore::footer::MOCK_TAG)
+        .expect("the mock tag")
+        .rect;
+    let message = all
+        .iter()
+        .find(|n| n.text.starts_with("SetField Plane.q1") && footer.contains(n.rect.center()))
+        .expect("the latest message")
+        .rect;
+    assert!(
+        message.max.x <= tag.min.x - 8.0,
+        "the message {message:?} stops short of {tag:?}"
+    );
+    assert!(
+        message.max.x >= tag.min.x - 24.0,
+        "and uses the room up to it: {message:?}, {tag:?}"
+    );
+    rejects("a message running under the tag", || {
+        assert!(message.max.x > tag.min.x)
+    });
+}

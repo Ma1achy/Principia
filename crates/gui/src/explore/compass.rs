@@ -174,6 +174,16 @@ pub fn adjust(adjust: &Adjust, plane: &Plane, scratch: &mut Scratch, out: &mut O
     out.edit(tilt(plane, d1, d2), Some(Touch::Tilt), scratch);
 }
 
+/// The compass's margin, in points (a look choice, R-390).
+pub const MARGIN: f32 = 12.0;
+
+/// The cube's square in the compass's `rect`: at its top left inside the margin, as tall as the margin leaves, at most
+/// half its width.
+pub fn square(rect: Rect) -> Rect {
+    let side = (rect.height() - 2.0 * MARGIN).min(rect.width() * 0.5);
+    Rect::from_min_size(rect.min + vec2(MARGIN, MARGIN), vec2(side, side))
+}
+
 /// Draws the compass in `rect`, taking its drags.
 pub fn show(
     ui: &mut Ui,
@@ -193,9 +203,7 @@ pub fn show(
         egui::StrokeKind::Inside,
     );
     keyboard.place(crate::explore::COMPASS, rect);
-    let margin = 12.0;
-    let side = (rect.height() - 2.0 * margin).min(rect.width() * 0.5);
-    let square = Rect::from_min_size(rect.min + vec2(margin, margin), vec2(side, side));
+    let square = square(rect);
     let view = View::of(plane);
     let compass = scratch.compass;
     let tilted = plane_frame(plane, &view, true);
@@ -225,8 +233,8 @@ pub fn show(
     }
     draw(ui, square, plane, &view, &scratch.compass, locked);
     let text = Rect::from_min_max(
-        pos2(square.max.x + margin, rect.min.y + margin),
-        rect.max - vec2(margin, margin),
+        pos2(square.max.x + MARGIN, rect.min.y + MARGIN),
+        rect.max - vec2(MARGIN, MARGIN),
     );
     let mut column = ui.new_child(UiBuilder::new().max_rect(text));
     column.spacing_mut().item_spacing.y = 4.0;
