@@ -2,6 +2,7 @@
 //! `SetField`s and undo / redo requests only (gui_state_contract §1). egui is a toggleable debug layer (F3) over the
 //! figure, which keeps 01_main.png's central rect in both states, the rest of the window the clear colour while the
 //! layer is hidden (RQ-248). The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
+//! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus.
 
 use std::sync::Arc;
 
@@ -18,6 +19,7 @@ use engine::contract::view_ui::{
 
 use crate::clock::Clock;
 use crate::explore;
+use crate::keyboard::Keyboard;
 use crate::layout::Layout;
 use crate::side::EngineSide;
 
@@ -44,12 +46,13 @@ pub fn clear_colour(visuals: &egui::Visuals) -> Color32 {
     visuals.extreme_bg_color
 }
 
-/// The app's initial `ViewUI`: the Explore mode, the transport paused, and every other group empty.
+/// The app's initial `ViewUI`: the Explore mode, the transport paused, no scope focused, and every other group
+/// empty.
 pub fn initial_view() -> ViewUI {
     ViewUI {
         backdrop: Backdrop {},
         debug_categories: DebugCategories {},
-        focus: Focus {},
+        focus: Focus { path: Vec::new() },
         selection: Selection {},
         kept_orbits: KeptOrbits {},
         inspector: Inspector {},
@@ -79,6 +82,8 @@ pub struct App<S: EngineSide> {
     pub shown: bool,
     /// Whether the console is open.
     pub console_open: bool,
+    /// The keyboard layer.
+    pub keyboard: Keyboard,
     snapshot: Snapshot,
     console: Vec<LogEntry>,
     counts: Counts,
@@ -96,6 +101,8 @@ pub struct Actions {
     pub toggle_console: bool,
     /// Switch to this mode.
     pub mode: Option<Mode>,
+    /// Open the `?` shortcuts.
+    pub shortcuts: bool,
     /// Close the window.
     pub quit: bool,
 }
@@ -113,6 +120,7 @@ impl<S: EngineSide> App<S> {
             clock: Clock::new(),
             shown: true,
             console_open: false,
+            keyboard: Keyboard::new(),
             snapshot,
             console,
             counts,
@@ -171,6 +179,13 @@ impl<S: EngineSide> App<S> {
         absorb(&self.snapshot, &mut self.console, &mut self.counts);
     }
 
+    /// Before each frame's egui pass: the keyboard layer takes its keys out of `raw` while the layer is shown.
+    pub fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
+        if self.shown {
+            self.keyboard.take_keys(ctx, raw);
+        }
+    }
+
     /// One frame on the root `ui`.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
@@ -211,18 +226,39 @@ impl<S: EngineSide> App<S> {
             self.paint_figure(&ctx, layout.figure);
         }
         if !self.shown {
+            // Hidden, the layer takes no key: it forgets the ones it held, whose releases now go to egui.
+            self.keyboard.stand_down();
             return;
         }
         let mut actions = Actions::default();
+        let activated = self
+            .keyboard
+            .run(&ctx, self.view.mode, &mut self.view.focus, now);
+        for id in activated {
+            explore::top_bar::activate(id, &mut actions);
+        }
+        if let Some(due) = self.keyboard.next_repeat_s() {
+            ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
+        }
+        self.keyboard.clear_places();
+        let tree = self.keyboard.tree(self.view.mode);
+        let breadcrumb = explore::breadcrumb::text(tree, &self.view.focus);
         explore::top_bar::show(
             ui,
             layout.top_bar,
             &self.snapshot,
-            self.view.mode,
+            &explore::top_bar::TopBar {
+                mode: self.view.mode,
+                breadcrumb: &breadcrumb,
+            },
+            &mut self.keyboard,
             &mut actions,
         );
         match self.view.mode {
-            Mode::Explore => explore::regions(ui, &layout),
+            Mode::Explore => {
+                explore::regions(ui, &layout);
+                explore::place(&mut self.keyboard, &layout);
+            }
             Mode::Stain => explore::stain_page(ui, layout.page),
         }
         explore::footer::show(
@@ -242,7 +278,26 @@ impl<S: EngineSide> App<S> {
             crate::console::show(&ctx, layout.bottom_row, &self.console, &mut open);
             actions.toggle_console |= !open;
         }
+        self.draw_ring(&ctx);
         self.apply(&ctx, actions);
+        if self.keyboard.shortcuts_open {
+            let rows = self.keyboard.tree(self.view.mode).shortcuts();
+            let rect = crate::keyboard::overlay::show(&ctx, rows);
+            self.keyboard.overlay_drawn(rect);
+        }
+    }
+
+    /// Draws the focus ring on the focused scope, where it was drawn this frame.
+    fn draw_ring(&self, ctx: &egui::Context) {
+        let tree = self.keyboard.tree(self.view.mode);
+        let path = &self.view.focus.path;
+        let Some(id) = path[..tree.valid_prefix(path)].last() else {
+            return;
+        };
+        let (Some(scope), Some(place)) = (tree.get(id), self.keyboard.place_of(id)) else {
+            return;
+        };
+        explore::breadcrumb::ring(ctx, place, scope.ring);
     }
 
     fn apply(&mut self, ctx: &egui::Context, actions: Actions) {
@@ -254,6 +309,9 @@ impl<S: EngineSide> App<S> {
         }
         if let Some(mode) = actions.mode {
             self.view.mode = mode;
+        }
+        if actions.shortcuts {
+            self.keyboard.shortcuts_open = true;
         }
         if actions.quit {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
@@ -312,6 +370,10 @@ impl egui_wgpu::CallbackTrait for FigureCallback {
 impl<S: EngineSide + 'static> eframe::App for App<S> {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         App::ui(self, ui);
+    }
+
+    fn raw_input_hook(&mut self, ctx: &egui::Context, raw_input: &mut egui::RawInput) {
+        App::raw_input_hook(self, ctx, raw_input);
     }
 
     fn clear_color(&self, visuals: &egui::Visuals) -> [f32; 4] {
