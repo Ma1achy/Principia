@@ -125,7 +125,7 @@ fn initializer(rest: &str) -> Option<&str> {
         match c {
             b'(' | b'[' | b'{' => depth += 1,
             b'<' if eq.is_none() => depth += 1,
-            b'>' if eq.is_some() || (i > 0 && b[i - 1] == b'-') => {}
+            b'>' if eq.is_some() || b[..i].ends_with(b"-") => {}
             b')' | b']' | b'}' | b'>' => depth -= 1,
             b'=' if depth == 0 && eq.is_none() => eq = Some(i + 1),
             b';' if depth == 0 => return eq.map(|e| &rest[e..i]),
