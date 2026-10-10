@@ -141,8 +141,8 @@ negative_control!(
 /// Comments (nested block comments too), strings with escaped quotes, raw strings (byte and C ones too) and character
 /// literals (escaped ones too) are blanked: an item inside one is no finding, a digit inside one is no literal, and the
 /// items after each are read, on their own lines.
-const BLANKED: &str = r###"/* outer /* inner */ const HIDDEN: u8 = 1; */ const SEEN: u8 = 2;
-const SPLIT: u8 = LIMIT /* 5 */;
+const BLANKED: &str = r###"const SPLIT: u8 = LIMIT /* 5 */;
+/* outer /* inner */ const HIDDEN: u8 = 1; */ const SEEN: u8 = 2;
 const DOC: &str = r#"# heading const IN_RAW: u8 = 3; "#; const AFTER_RAW: u8 = 4;
 const BYTES: &[u8] = br"\"; const AFTER_BYTES: u8 = 5;
 const C: &core::ffi::CStr = cr"\"; const AFTER_C: u8 = 6;
@@ -159,7 +159,7 @@ fn lint_constants_blanks_comments_strings_and_characters() {
     check_scan(
         BLANKED,
         &[
-            (1, "SEEN"),
+            (2, "SEEN"),
             (3, "AFTER_RAW"),
             (4, "AFTER_BYTES"),
             (5, "AFTER_C"),
@@ -173,12 +173,12 @@ fn lint_constants_blanks_comments_strings_and_characters() {
 
 negative_control!(
     lint_constants_blanks_comments_strings_and_characters,
-    "with SPLIT's comment turned into code, line 2 adds 5, a finding the check must report",
+    "with SPLIT's comment turned into code, line 1 adds 5, a finding the check must report",
     expected = "the lint's findings are not the expected ones",
     check_scan(
         &BLANKED.replace("/* 5 */", "+ 5"),
         &[
-            (1, "SEEN"),
+            (2, "SEEN"),
             (3, "AFTER_RAW"),
             (4, "AFTER_BYTES"),
             (5, "AFTER_C"),
