@@ -2383,7 +2383,7 @@
   - R-407
   - R-408
   milestone: M8
-  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), which carries RQ-264 (applied per R-369, code review 5478800754, F4)."
+  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human; not vetoed, R-416). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4)."
 - id: REQ-CHART-055
   area: CHART
   kind: definition
@@ -2428,10 +2428,10 @@
   - R-407
   - R-408
   milestone: M8
-  note: "R-408 (closes RQ-263); closed by TASK-M8-05, physics-reviewed, applied per R-369 (R-408, B3, B5 to B7). The classification order is chart_decoder_contract Part 3's. TASK-M8-18's forbidden_fraction (REQ-GUI-109) uses it. The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), which carries RQ-264 (applied per R-369, code review 5478800754, F4). B5's order is checked per physics review 5478805963, F1."
+  note: "R-408 (closes RQ-263); closed by TASK-M8-05, physics-reviewed, applied per R-369 (R-408, B3, B5 to B7). The classification order is chart_decoder_contract Part 3's. TASK-M8-18's forbidden_fraction (REQ-GUI-109) uses it. The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). B5's order is checked per physics review 5478805963, F1."
 - id: REQ-CHART-057
   area: CHART
-  statement: "With the shape sphere's hemisphere toggle drawing one hemisphere, the view past [0,1]² must follow RQ-264's ruling: what the φ axis does past the edge of the chart's span that is not a pole, and its primary range there, for both the drawing (R-407's extension and fallback) and the area statistics (R-408's counting); with both hemispheres drawn nothing changes from REQ-CHART-054 and REQ-CHART-056."
+  statement: "With the shape sphere's hemisphere toggle drawing one hemisphere, φ's `[0,1]` span must be remapped to run from the pole to the equator (φ = (π/2)·(1 − t)); φ stays pole-crossing at its pole edge, and past the equator its formula continues into the mirror hemisphere, real and repeated systems, drawn, not hatched; its primary range is pole to equator, the chart's `[0,1]` span, so the continuation is not counted, for both the drawing (R-407's extension and fallback) and the area statistics (R-408's counting) (R-412); with both hemispheres drawn nothing changes from REQ-CHART-054 and REQ-CHART-056."
   source:
   - file: decisions.md
     section: "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
@@ -2439,16 +2439,17 @@
     section: Past the unit square — each axis's extension type (R-407)
   - file: docs/design/principia_chart_reference.md
     section: 3.3 The chart map
+  - file: decisions.md
+    section: "R-412 — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel chart_extension and cargo test -p kernel area_stats_primary_range on the shape sphere with one hemisphere drawn: past the edge that is not a pole, the drawing and the counting follow RQ-264's ruling; with both hemispheres drawn the outputs are bit-identical to TASK-M8-05's; a control built to the option the ruling rejects fails; review (physics): against RQ-264's ruling"
+    detail: "cargo test -p kernel chart_extension and cargo test -p kernel area_stats_primary_range on the shape sphere with one hemisphere drawn: t = 1 is the pole and t = 0 the equator; past the equator (t < 0) the pixels decode by the formula's continuation to the mirror hemisphere's systems, none hatched, and leave the count and the total; a window covering [0,1]² and reaching past the equator gives the same count and total as [0,1]² alone; past the pole (t > 1) φ is pole-crossing as with both drawn; with both hemispheres drawn the outputs are bit-identical to TASK-M8-05's; controls: a φ axis hatching past the equator (RQ-264's option (b)), and one counting the continuation, each fail; review (physics): against R-412"
   rulings:
   - R-407
   - R-408
+  - R-412
   milestone: M8
-  rq:
-  - RQ-264
-  note: "R-408 B4; split from TASK-M8-05 into the leaf TASK-M8-44 (applied per R-369, code review 5478800754, F4), so RQ-264 holds nothing else. Built once RQ-264 is ruled."
+  note: "R-408 B4; split from TASK-M8-05 into the leaf TASK-M8-44 (applied per R-369, code review 5478800754, F4). R-412 (RQ-264's option (a)): the remap φ = (π/2)·(1 − t), the upper hemisphere w ≥ 0 drawn, and the far pole's crossing past t = −1 are applied per R-369 in R-412's port."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -5781,7 +5782,7 @@
 - id: REQ-PAY-075
   area: PAY
   kind: definition
-  statement: "`QuadReduction`'s `class_histogram[N]` — its bin count N and its bin width, given that a u8 bin overflows at 256 samples must be defined in `principia_dd_generation_root.md` §3.7 by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "`QuadReduction`'s `class_histogram[N]` bin count N must be defined in `principia_dd_generation_root.md` §3.7 by the task that needs it and reviewed by the physics reviewer before merge; its bins are u32 (R-410), and §3.7 states the bound they hold, N² × (E+1) ≤ 2³² − 1 footprint copies per quad, with N the samples per quad side and E+1 the copies per footprint."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.7 `QuadReduction` — completed ledger
@@ -5789,15 +5790,16 @@
     section: Outcome (all at joint `class ⊕ detail` grain)
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
   verify:
     method: review checklist
-    detail: "the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint"
+    detail: "the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; each bin is a u32 (R-410); §3.7 states the bound N² × (E+1) ≤ 2³² − 1, where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint; `quad_reduction_histogram_capacity` counts Extreme's provisional 16² × 16 = 4096 and the bound 2³² − 1 in one bin without wrapping, and its control, §3.7's former u8 bin, fails at Medium's 16² × 2 = 512"
   rulings:
   - R-72
+  - R-410
   milestone: M5
-  rq:
-  - RQ-266
-  note: "Bin width is a layout value; the task records it with the definition."
+  note: "Bin width: u32, fixed (R-410, RQ-266's option (a)); no setting is capped, and dispatch asserts the bound (REQ-SCHED-098, TASK-M5-17). The bin count is the definition this task writes."
 - id: REQ-PAY-076
   area: PAY
   kind: definition
@@ -5824,15 +5826,17 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
+  - file: decisions.md
+    section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
   verify:
     method: review checklist
     detail: "the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it"
   rulings:
   - R-72
   - R-312
+  - R-410
   milestone: M5
-  rq:
-  - RQ-266
+  note: "R-410: the bins are a fixed u32, so the layout does not follow the setting's N or E; each bin is a full u32 under §3.8's vector rule."
 - id: REQ-PAY-078
   area: PAY
   kind: calibration
@@ -6036,16 +6040,17 @@
     section: "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
   verify:
     method: unit test
     detail: "size_of::<QuadReduction>() equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree"
   rulings:
   - R-86
   - R-113
+  - R-410
   milestone: M5
-  rq:
-  - RQ-266
-  note: Split from REQ-PAY-001 (R-113, RQ-93 M0-9 option b).
+  note: "Split from REQ-PAY-001 (R-113, RQ-93 M0-9 option b). R-410: with u32 bins the struct is larger than the descriptive ~80 B (§3.7's \"Size\" paragraph, not a cap); TASK-M5-01 sizes it from its member list and updates the figure, and its perf reviewer confirms the size cost (R-410)."
 - id: REQ-PAY-090
   area: PAY
   statement: "The RenderQuad field set (render contract Part 1's 9 fields) must be generated from the generation-root ledger as the single source of truth (split from REQ-PAY-002, R-256's applied note)."
@@ -8312,19 +8317,39 @@
   rulings:
   - R-297
   milestone: M4
-- id: REQ-REF-001
-  area: REF
-  statement: "`QuadReduction` outcome members must be `class_histogram` (u8 × N), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
+- id: REQ-SCHED-098
+  area: SCHED
+  statement: "Dispatch must assert `N² × (E+1) ≤ 2³² − 1`, the most footprint copies a quad's u32 `class_histogram` bin can count (N the samples per quad side, E+1 the copies per footprint); no setting is capped for it (R-410)."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: Outcome (all at joint `class ⊕ detail` grain)
+  - file: docs/design/principia_memory_tiers.md
+    section: 5. Controller levers, ranked by impact
+  - file: decisions.md
+    section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine resolve_histogram_bound: a configuration with N² × (E+1) = 2³² − 1 passes the assertion at dispatch, one with 2³² fails it, naming the bound; every tier row of memory_tiers §4 passes; a control whose assertion compares against u8's 255 fails on Medium (16² × 2 = 512)"
+  rulings:
+  - R-410
+  milestone: M5
+  note: "R-410 (RQ-266's option (a)); a hard assertion like REQ-SCHED-010's, never a clamp or a refusal in the settings UI: no setting that can allocate reaches the bound (applied per R-369). Closed by TASK-M5-17."
+- id: REQ-REF-001
+  area: REF
+  statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: Outcome (all at joint `class ⊕ detail` grain)
+  - file: decisions.md
+    section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
   verify:
     method: unit test
     detail: "fixture footprints: dominant and impurity agree with the histogram; triple events at detail 3"
   rulings:
   - R-20
+  - R-410
   milestone: M5
-  note: "N and the bin width of class_histogram, and which class fraction outcome_impurity uses: REQ-PAY-075 and REQ-PAY-076 (definition)."
+  note: "N (the bin count) and which class fraction outcome_impurity uses: REQ-PAY-075 and REQ-PAY-076 (definition). The bin width is u32 (R-410), its bound asserted at dispatch (REQ-SCHED-098)."
 - id: REQ-REF-002
   area: REF
   statement: "`QuadReduction` spread members must be `spread_shape = spread(n̂)/2.0`, `spread_event = disagreement(class⊕detail)/(1 − 1/(E+1))`, `roundtrip_error` and a 2-bit `spread_winner`, with `ensemble_spread = max(spread_shape, spread_event)`."
@@ -11022,13 +11047,15 @@
     section: 2. Consolidated contract
   - file: docs/design/principia_dd_colouring.md
     section: 4. Seams (obligations → integration tests)
+  - file: decisions.md
+    section: "R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*"
   verify:
     method: unit test
     detail: "seam 5: change a field's ledger scale; the view re-styles and the dispatch counter is unchanged"
-  rulings: []
+  rulings:
+  - R-411
   milestone: M7
-  rq:
-  - RQ-265
+  note: "R-411 (RQ-265's option (c)): each ledger scale names one range-free form, shared by the user-facing compaction (dd_colouring §3.6) and the debug views."
 - id: REQ-COL-033
   area: COL
   statement: "The sRGB transfer, linear-sRGB ↔ OKLab (M1, M2, inverse coefficients, M1⁻¹) and OKLCH polar forms must be exactly those of dd_colouring §3.1, transcription-checked against Ottosson's reference implementation before entering the shared source."
@@ -11128,7 +11155,7 @@
   milestone: M7
 - id: REQ-COL-039
   area: COL
-  statement: "Compaction must implement lin, log (x ≤ 0 → 0 with sentinel styling), cyclic (frac(x/period)), diverging symlog b = ½ + ½·sign(x)·ln(1+|x|/x0)/ln(1+x_max/x0) with the ε floor as x0, and flag."
+  statement: "Compaction must implement lin, log b = 1 − 1/(1 + ln(1 + |x|/ε_f)) with each field's ε (x < 0 → 0 with sentinel styling), cyclic (frac(x/period)), diverging symlog b = ½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x0))) with the field's floor as x0 and no x_max, and flag (R-411)."
   source:
   - file: docs/design/principia_dd_colouring.md
     section: "3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)"
@@ -11136,13 +11163,15 @@
     section: 6. Deferred / flagged
   - file: docs/design/principia_colour_composition.md
     section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
+  - file: decisions.md
+    section: "R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*"
   verify:
     method: unit test
     detail: "dd_colouring unit test 7: each form monotone on its domain; symlog b(x)+b(−x) = 1 and b(0) = ½ exactly; log styles the −1.0 sentinel instead of ramping it"
-  rulings: []
+  rulings:
+  - R-411
   milestone: M7
-  rq:
-  - RQ-265
+  note: "R-411 (RQ-265's option (c)): `log` is the debug views' `dbg_log` form and `diverging` the drift views' `symlog` (R-381), range-free; each field's ε is its ledger `floor` (R-263) or its R-401 display floor; x = 0 maps to b = 0 (applied per R-369). The drift views and goldens are unchanged."
 - id: REQ-COL-040
   area: COL
   statement: "Golden-angle categorical palettes must use θ_i = 2π·frac(i·φ_g), φ_g = (√5−1)/2, and consecutive indices must exceed a minimum OKLab hue separation up to the Fibonacci-lattice counts."
@@ -11650,7 +11679,7 @@
 - id: REQ-COL-065
   area: COL
   kind: definition
-  statement: "The diverging compaction's form and rules (dd_colouring §3.6's symlog), for each field whose ledger scale is `diverging` (`energy_drift`, `Lz_drift`, `E_0` and `Lz_0`, R-403): what `x_max` is (which end, declared or measured, or none), and how `x₀` is chosen per field, must be defined in dd_colouring §3.6 by the task that needs them and reviewed by the physics reviewer before merge (R-72)."
+  statement: "The diverging compaction's rules (dd_colouring §3.6's range-free symlog, R-411), for each field whose ledger scale is `diverging` (`energy_drift`, `Lz_drift`, `E_0` and `Lz_0`, R-403): how `x₀` is chosen per field, must be defined in dd_colouring §3.6 by the task that needs them and reviewed by the physics reviewer before merge (R-72). The form has no `x_max` (R-411)."
   source:
   - file: docs/design/principia_dd_colouring.md
     section: "3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)"
@@ -11664,22 +11693,23 @@
     section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
   - file: decisions.md
     section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
+  - file: decisions.md
+    section: "R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*"
   verify:
     method: review checklist
-    detail: "§3.6 defines, for each `diverging` field, what `x_max` is and how `x₀` is chosen, in that field's units: the drifts' `x₀` is their sim-key floor, `eps_E` or `eps_L` (§3.6's \"the ε floor as `x₀`\"; R-263; R-401 leaves both unchanged); `E_0`'s and `Lz_0`'s, which carry no floor, by the rule the definition gives, its number REQ-COL-066's; the doc change is in the PR and the physics reviewer approves it before merge"
+    detail: "§3.6 defines, for each `diverging` field, how `x₀` is chosen, in that field's units: the drifts' `x₀` is their sim-key floor, `eps_E` or `eps_L` (§3.6's \"the ε floor as `x₀`\"; R-263; R-401 leaves both unchanged); `E_0`'s and `Lz_0`'s, which carry no floor, by the rule the definition gives, its number REQ-COL-066's; no `x_max` appears (R-411); the doc change is in the PR and the physics reviewer approves it before merge"
   rulings:
   - R-72
   - R-263
   - R-401
   - R-403
+  - R-411
   milestone: M7
-  rq:
-  - RQ-265
-  note: "Pre-flight of TASK-M7-05 (R-388; physics review 5480220637 of PR #185): §3.6's symlog uses `x_max`, defined nowhere, and takes \"the ε floor as `x₀`\" for the signed drifts, which is settled: their floors are `eps_E` and `eps_L` (R-263), unchanged by R-401, which replaced the single ε only for the log-scaled views with no ledger floor. R-403 leaves `E_0` and `Lz_0` diverging with no floor (`crates/ledger/src/payload.rs`:132–133 at c683714), so their `x₀` is open; its number, and any fixed `x_max`, are REQ-COL-066 (calibration). Waits on RQ-265, which decides whether `x_max` exists."
+  note: "Pre-flight of TASK-M7-05 (R-388; physics review 5480220637 of PR #185): the drifts' floors are `eps_E` and `eps_L` (R-263), unchanged by R-401. R-403 leaves `E_0` and `Lz_0` diverging with no floor (`crates/ledger/src/payload.rs`:132–133 at c683714), so their `x₀` is open; its number is REQ-COL-066 (calibration). R-411 (RQ-265's option (c)) removes `x_max`: the form is range-free."
 - id: REQ-COL-066
   area: COL
   kind: calibration
-  statement: "The numeric `x₀` of the diverging compaction for `E_0` and `Lz_0`, which carry no floor, in each field's units, and any fixed number REQ-COL-065's definition gives `x_max`, which the corpus does not give, must be proposed with its evidence by the task that writes REQ-COL-065, checked by the physics reviewer, and confirmed by the human at the M7 gate (R-71)."
+  statement: "The numeric `x₀` of the diverging compaction for `E_0` and `Lz_0`, which carry no floor, in each field's units, which the corpus does not give, must be proposed with its evidence by the task that writes REQ-COL-065, checked by the physics reviewer, and confirmed by the human at the M7 gate (R-71); the form has no `x_max` (R-411)."
   source:
   - file: docs/design/principia_dd_colouring.md
     section: "3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)"
@@ -11689,13 +11719,16 @@
     section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
   - file: decisions.md
     section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
+  - file: decisions.md
+    section: "R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*"
   verify:
     method: review checklist
-    detail: "the PR gives `E_0`'s and `Lz_0`'s `x₀`, each in its field's units, the magnitude where compression sets in, with its evidence (where the fields' values fall on the fixtures, and why it sits there), and any fixed `x_max`; the physics reviewer checks each; the human confirms them at the M7 gate"
+    detail: "the PR gives `E_0`'s and `Lz_0`'s `x₀`, each in its field's units, the magnitude where compression sets in, with its evidence (where the fields' values fall on the fixtures, and why it sits there); the physics reviewer checks each; the human confirms them at the M7 gate"
   rulings:
   - R-71
   - R-401
   - R-403
+  - R-411
   milestone: M7
   note: "Physics review 5480220637 of PR #185: a per-field magnitude where compression sets in is a value, as R-401 classes the log floors (R-71). The drifts' `x₀` is not here: §3.6 and R-263 give `eps_E` and `eps_L`."
 - id: REQ-GUI-001

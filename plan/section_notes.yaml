@@ -831,3 +831,19 @@
   section: "R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*"
   reason: informative only
   note: "the human's ruling of 7 Oct 2026: physics reviews TASK-M6-24 for the two R-72 definitions REQ-GUI-176 and REQ-GUI-177 only, code, qa and gui everything else; settles the conflict the orchestrator flagged with R-390's reviewer list; applied in plan/tasks.yaml and TASK-M6-24's notes; amends R-390 in part; changes no requirement"
+- file: decisions.md
+  section: "R-413 — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes \"edge-heavy: crowds the bounds\" *(closes RQ-267)*"
+  reason: informative only
+  note: "the human's ruling of 10 Oct 2026 (RQ-267, option (a)): a link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note is reworded in PR #187 (TASK-M2-01), which carries the RQ and edits §3.9; wording only, so no requirement (no code reads a sampling note)"
+- file: decisions.md
+  section: "R-414 — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin"
+  reason: informative only
+  note: "the human's ruling of 10 Oct 2026: ~/.rustup's stable stays at 1.99.0, every dispatch sets RUSTUP_AUTO_INSTALL=0, and toolchains change only through the pin (R-349); a process ruling applied in plan/OPERATIONS.md § \"Dispatching\" and § \"Toolchain\""
+- file: decisions.md
+  section: "R-415 — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change"
+  reason: informative only
+  note: "the human's ruling of 10 Oct 2026: a task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change; a process ruling applied in plan/WORKFLOW.md and plan/OPERATIONS.md"
+- file: decisions.md
+  section: "R-416 — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing"
+  reason: informative only
+  note: "the human's message of 10 Oct 2026: TASK-M6-26's and TASK-M6-31's look choices hold until the human has tried the M6-31 mock, and no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing; an act, applied in notes and acceptance lines"

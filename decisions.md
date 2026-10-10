@@ -8305,7 +8305,7 @@ R-349.
 
 ## R-415 — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change
 *10 Oct 2026 · applied in `plan/WORKFLOW.md` § "Human checkpoints: the milestone gates" and `plan/OPERATIONS.md` §
-"Autonomy (R-369)" (paragraphs added)*
+"Autonomy (R-369)" (paragraphs added), and TASK-M7-05 (a note)*
 
 The human's words (R-410 quotes the whole message):
 
@@ -8335,8 +8335,8 @@ The human's words (R-410 quotes the whole message):
   `plan/rule_groups.yaml`.
 
 ## R-416 — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing
-*10 Oct 2026 · applied in `plan/OPERATIONS.md` § "The GUI track (R-390)" (a bullet added), TASK-M6-31 and TASK-M1-17
-(notes), and R-407's, R-408's and R-409's applied text (lines added)*
+*10 Oct 2026 · applied in `plan/OPERATIONS.md` § "The GUI track (R-390)" (a bullet added), TASK-M6-26, TASK-M6-31 and
+TASK-M1-17 (notes), and R-407's, R-408's and R-409's applied text (lines added)*
 
 The human's words (R-410 quotes the whole message):
 
