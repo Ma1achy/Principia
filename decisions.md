@@ -7834,8 +7834,8 @@ applied by a follow-up task.
 4. **Two keyboard modes, everywhere.**
    - **Navigation mode** has an orange focus ring. The arrows move between siblings.
    - **Interaction mode** has a blue focus ring. Input goes to the focused element. *(Read with G1 below: the
-     element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, and Esc and Enter return to
-     navigation mode.)*
+     element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, except while a text field is
+     being typed in (G5), and Esc and Enter return to navigation mode.)*
    - Entering any scope, and every Tab landing (the Figure, the Compass and, under R-405, the console's first filter
      included), lands in navigation mode on the first element. *(Read with the human's follow-up answer, F4 below: a
      Tab landing is on the big scope itself, in navigation mode, and Enter into a scope lands on its first element.)*
@@ -7972,7 +7972,8 @@ human's words. The human may veto any; a veto is a GUI design ruling, applied by
   global keys on the real engine) and `plan/reviewers/gui.md`.
 
 *Applied reading (R-369), review round.* The orchestrator's decisions on gui review 5480658825's findings 1 and 2 and
-code review 5480660052's C1 on PR #186, applied per R-369 as routine design choices and flagged; these are the
+code review 5480660052's C1 on PR #186 (G1 to G4), and on gui review 5480688180's findings A and B (G5, G6), with gui
+review 5480701701's mechanical follow-ups, applied per R-369 as routine design choices and flagged; these are the
 orchestrator's, not the human's words, and the human may veto any (a veto is a GUI design ruling, applied by a
 follow-up task).
 - **G1. Keys in interaction mode.** The focused element takes the arrows, with Shift ×10 and Alt ×0.1. Tab and
@@ -8003,7 +8004,7 @@ follow-up task).
   "Two modes" paragraph); GUI_DESIGN_NOTES § "07 Keyboard" (conformed); REQ-GUI-096 and REQ-GUI-182 (statement and
   verify), REQ-GUI-178 (the text filter), REQ-GUI-183 (the sibling order, gui finding 3) and REQ-GUI-098 (A6's
   parenthetical, gui finding 4) (reqio); TASK-M6-31's deliverables and acceptance, each with a control; TASK-M6-28 (the
-  text filter); and `plan/reviewers/gui.md`. G5 and G6 land in §G3's Ctrl+Z and `?` rows, its "In scope" sentence and
+  text filter); and `plan/reviewers/gui.md`. G5 and G6 land in §G3's Tab / Shift+Tab, Ctrl+Z and `?` rows, its "In scope" sentence and
   "Two modes" paragraph, GUI_DESIGN_NOTES § "07 Keyboard" (conformed), REQ-GUI-096's and REQ-GUI-182's statements,
   REQ-GUI-178's statement and verify (reqio), TASK-M6-31's scopes.rs deliverable, TASK-M6-28's console deliverable and
   REQ-GUI-178 line (each with a control), and `plan/reviewers/gui.md`.

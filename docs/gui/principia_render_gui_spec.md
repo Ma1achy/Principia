@@ -152,7 +152,7 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 
 | key | action |
 |---|---|
-| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing on the scope itself in navigation mode, from either mode (R-409) |
+| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing on the scope itself in navigation mode, from either mode; inside a window, its next / previous section, in navigation mode, staying in the window (R-409) |
 | Enter | in navigation mode: on a scope, into it, on its first element, but on the Figure, which has nothing inside, start interaction, and on a read-only scope with nothing inside (the Legend), nothing; on an element, start interaction; on a button, its click. In interaction mode: back to navigation mode on the same element (R-409) |
 | Esc | in interaction mode, back to navigation mode on the same element; in navigation mode, up one scope (R-409) |
 | arrows | in navigation mode, always between siblings, and on a big scope itself between the big scopes in Tab order; in interaction mode, adjust the focused element (R-409) |
