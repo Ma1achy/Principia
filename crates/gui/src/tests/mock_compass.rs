@@ -323,11 +323,12 @@ fn mock_compass_modes_slice_by_drag_follows_the_pointer_along_the_normal() {
         "a drag along the normal that moves the plane nowhere",
         || assert!(slice_by_drag(&p, SQUARE, along).abs() < 1e-6),
     );
-    // A normal pointing at the viewer, (−sin yaw, tan pitch, cos yaw), at τ₁ −35°, τ₂ ≈ −29.6°: its unit on the
-    // screen is shorter than the floor, which a drag then divides by.
+    // A normal pointing at the viewer is (−sin yaw, tan pitch, cos yaw), at τ₁ −35°, τ₂ ≈ −29.6°. Ten degrees of τ₂
+    // off it, the normal's unit on the screen is about 0.6 of the floor: shorter than the floor, which a drag then
+    // divides by, and long enough that the floored and unfloored moves differ well past rounding.
     let facing = tilted(
         -35.0,
-        -(25f64.to_radians().tan() / 35f64.to_radians().cos())
+        10.0 - (25f64.to_radians().tan() / 35f64.to_radians().cos())
             .atan()
             .to_degrees(),
         0.0,
@@ -335,13 +336,15 @@ fn mock_compass_modes_slice_by_drag_follows_the_pointer_along_the_normal() {
     let n = normal(plane_frame(&facing, &View::of(&facing), true));
     let along = project(SQUARE, n) - project(SQUARE, [0.0; 3]);
     let floor = f64::from(SQUARE.width()) * CUBE_SCALE * MIN_NORMAL_ON_SCREEN;
-    assert!(f64::from(along.length()) < floor, "{along:?}");
+    let length = f64::from(along.length());
+    assert!(0.5 * floor < length && length < floor, "{along:?}");
     let travel = egui::vec2(10.0, -4.0);
     let want = f64::from(travel.dot(along)) / (floor * floor);
-    assert!((slice_by_drag(&facing, SQUARE, travel) - want).abs() < 1e-9);
+    assert!(want.abs() > 0.1, "{want}");
+    assert!((slice_by_drag(&facing, SQUARE, travel) / want - 1.0).abs() < 1e-6);
     rejects("no floor under a normal at the viewer", || {
         let unfloored = f64::from(travel.dot(along)) / f64::from(along.length_sq());
-        assert!((slice_by_drag(&facing, SQUARE, travel) - unfloored).abs() < 1e-9)
+        assert!((slice_by_drag(&facing, SQUARE, travel) / unfloored - 1.0).abs() < 1e-6)
     });
 }
 
