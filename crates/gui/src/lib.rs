@@ -22,6 +22,7 @@ mod tests {
     mod conformance;
     mod f3_toggle_mock;
     mod mock_axis_labels;
+    mod mock_compass;
     mod mock_engine;
     mod mock_figure_navigation;
     mod mock_keyboard;

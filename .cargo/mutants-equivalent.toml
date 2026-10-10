@@ -58,3 +58,7 @@ justification = "every ledger field payload reaches here (a scalar SimState memb
 [[equivalent]]
 mutant = "crates/validation/src/golden_scene.rs:223:49: replace % with + in scene"
 justification = "set_detail writes the low 2 bits of its value (insert(w, v, 3, 2)), and i + 4 and i % 4 share their low 2 bits for every i, so each state_view sample holds the same detail code"
+
+[[equivalent]]
+mutant = "crates/engine/src/contract/conformance.rs:186:17: replace + with - in shifted"
+justification = "shifted only builds the navigation case's target values, by a non-zero offset d; x - d differs from x exactly when x + d does, so the case moves every field it edits either way and passes and fails on the same engines"

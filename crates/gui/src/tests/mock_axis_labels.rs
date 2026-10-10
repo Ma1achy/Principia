@@ -158,3 +158,119 @@ fn mock_axis_labels_end_text_signs_and_decimals() {
         assert_eq!(end_text(0.0, 2.0), "−0.00")
     });
 }
+
+/// The vertical axis's three texts as drawn: each with its bounds on the screen and its angle.
+fn vertical_texts(h: &mut Headless, app: &mut App<MockSide>) -> Vec<(String, egui::Rect, f32)> {
+    let output = h.frame(app, Vec::new());
+    output
+        .shapes
+        .iter()
+        .filter_map(|clipped| match &clipped.shape {
+            egui::Shape::Text(text) => Some((
+                text.galley.text().to_owned(),
+                egui::Shape::Text(text.clone()).visual_bounding_rect(),
+                text.angle,
+            )),
+            _ => None,
+        })
+        .collect()
+}
+
+/// Asserts that the vertical axis's texts read `texts`, turned to read upwards, in `strip`: the low end at its bottom,
+/// the name at its middle, the high end at its top, each 4 points in from its end.
+fn check_vertical(drawn: &[(String, egui::Rect, f32)], texts: &[String; 3], strip: egui::Rect) {
+    let find = |t: &str| {
+        drawn
+            .iter()
+            .find(|(s, _, _)| s == t)
+            .unwrap_or_else(|| panic!("no `{t}` drawn"))
+    };
+    let [low, name, high] = texts.each_ref().map(|t| find(t));
+    for (text, rect, angle) in [low, name, high] {
+        assert!(
+            (angle + std::f32::consts::FRAC_PI_2).abs() < 1e-6,
+            "{text} turned to read upwards: {angle}"
+        );
+        assert!(
+            rect.height() > rect.width(),
+            "{text} runs up the strip: {rect:?}"
+        );
+        assert!(
+            strip.expand(1.0).contains_rect(*rect),
+            "{text} inside the strip {strip:?}: {rect:?}"
+        );
+    }
+    assert!(
+        (low.1.max.y - (strip.max.y - 4.0)).abs() < 1.0,
+        "the low end at the bottom: {:?}",
+        low.1
+    );
+    assert!(
+        (high.1.min.y - (strip.min.y + 4.0)).abs() < 1.0,
+        "the high end at the top: {:?}",
+        high.1
+    );
+    assert!(
+        (name.1.center().y - strip.center().y).abs() < 1.0,
+        "the name at the middle: {:?}",
+        name.1
+    );
+    for (_, rect, _) in [low, name, high] {
+        assert!(
+            (rect.center().x - strip.center().x).abs() < 1.0,
+            "centred across the strip: {rect:?}"
+        );
+    }
+}
+
+#[test]
+fn mock_axis_labels_vertical_axis_reads_upwards_beside_the_figure() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let strip = Layout::new(h.screen(), PIXELS_PER_POINT).axis_y;
+    let [_, vertical] = axes(&plane(&app));
+    let want = texts(&vertical, "→");
+    assert_eq!(want, ["−0.59", "z_β →", "+1.41"]);
+    let drawn = vertical_texts(&mut h, &mut app);
+    check_vertical(&drawn, &want, strip);
+    let swapped = [want[2].clone(), want[1].clone(), want[0].clone()];
+    rejects("the ends swapped", || {
+        check_vertical(&drawn, &swapped, strip)
+    });
+}
+
+#[test]
+fn mock_axis_labels_decimals_follow_the_span() {
+    let narrow = Axis {
+        name: "z_α",
+        low: 0.5,
+        high: 0.501,
+    };
+    assert_eq!(
+        texts(&narrow, "→"),
+        ["+0.50000", "z_α →", "+0.50100"],
+        "a span of a thousandth: five decimals"
+    );
+    rejects("the ends' ratio taken for their span", || {
+        assert_eq!(texts(&narrow, "→")[0], "+0.50");
+    });
+}
+
+#[test]
+fn mock_axis_labels_start_at_01_mains_values() {
+    assert_eq!(
+        crate::mock::MOCK_Z0,
+        [0.180, 0.410, 0.0, -0.227, 0.0, 0.312, 0.333, 0.333]
+    );
+    let mut app = mock_app();
+    let mut h = headless();
+    let texts = super::support::frame_texts(&mut h, &mut app);
+    assert!(
+        texts.iter().any(|t| t == "-0.227"),
+        "z_q1 reads -0.227: {texts:?}"
+    );
+    rejects("z_q1 unsigned", || {
+        assert!(texts.iter().any(|t| t == "0.227"))
+    });
+}
