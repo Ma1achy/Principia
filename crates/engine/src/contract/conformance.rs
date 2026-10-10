@@ -7,7 +7,8 @@
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
 use crate::contract::render_state::Playhead;
-use crate::contract::set_field::{Edit, RenderField, SetField};
+use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
+use crate::contract::sim_config::{Latent, Lock};
 use crate::contract::snapshot::{History, Snapshot};
 
 /// One case: its name, and its check, which returns what failed.
@@ -35,6 +36,10 @@ pub const CASES: &[Case] = &[
     Case {
         name: "each_applied_set_field_logs_one_contract_info",
         check: each_applied_set_field_logs_one_contract_info,
+    },
+    Case {
+        name: "navigation_edits_show_and_undo",
+        check: navigation_edits_show_and_undo,
     },
 ];
 
@@ -174,4 +179,58 @@ fn each_applied_set_field_logs_one_contract_info(
         contract(&engine.snapshot()),
         vec![],
     )
+}
+
+/// `v` with `d` added to each component.
+fn shifted(v: Latent, d: f64) -> Latent {
+    v.map(|x| x + d)
+}
+
+/// The navigation paths (R-390, "Contract fields"): an edit of `z₀`, of the basis and of the lock each shows in the
+/// next snapshot and touches nothing else of the plane or the lock, and undo restores them in turn (R-69: navigation
+/// and lock are undoable).
+fn navigation_edits_show_and_undo(engine: &mut dyn EngineInterface) -> Result<(), String> {
+    let first = engine.snapshot().sim;
+    let (plane, lock) = (first.plane.clone(), first.lock.clone());
+    let z0 = shifted(plane.z0, 0.25);
+    let (q1, q2) = (plane.q1.map(|x| x * 0.5), plane.q2.map(|x| x * 0.5));
+    let anchor = Lock {
+        locked: !lock.locked,
+        z_locked: shifted(lock.z_locked, -0.5),
+    };
+    let edit = |field| SetField {
+        edit: Edit::Sim(field),
+        no_history: false,
+    };
+    engine.set_field(edit(SimField::Z0(z0)));
+    let after = engine.snapshot().sim;
+    expect("z₀ after its SetField", after.plane.z0, z0)?;
+    expect(
+        "the basis after a z₀ SetField",
+        (after.plane.q1, after.plane.q2),
+        (plane.q1, plane.q2),
+    )?;
+    engine.set_field(edit(SimField::Basis { q1, q2 }));
+    let after = engine.snapshot().sim;
+    expect(
+        "the basis after its SetField",
+        (after.plane.q1, after.plane.q2),
+        (q1, q2),
+    )?;
+    expect("z₀ after a basis SetField", after.plane.z0, z0)?;
+    engine.set_field(edit(SimField::Lock(anchor.clone())));
+    let after = engine.snapshot().sim;
+    expect("the lock after its SetField", after.lock, anchor)?;
+    expect("the plane after a lock SetField", after.plane.z0, z0)?;
+    engine.undo();
+    expect("the lock after undo", engine.snapshot().sim.lock, lock)?;
+    engine.undo();
+    let undone = engine.snapshot().sim.plane;
+    expect(
+        "the basis after undo",
+        (undone.q1, undone.q2),
+        (plane.q1, plane.q2),
+    )?;
+    engine.undo();
+    expect("z₀ after undo", engine.snapshot().sim.plane.z0, plane.z0)
 }

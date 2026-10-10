@@ -28,9 +28,16 @@ pub fn mock_app() -> App<MockSide> {
 pub fn state(t: f64) -> (SimConfig, RenderState) {
     let sim = SimConfig {
         chart: Chart {},
-        plane: Plane {},
+        plane: Plane {
+            z0: [0.0; 8],
+            q1: [0.0; 8],
+            q2: [0.0; 8],
+        },
         slice: Slice {},
-        lock: Lock {},
+        lock: Lock {
+            locked: false,
+            z_locked: [0.0; 8],
+        },
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,

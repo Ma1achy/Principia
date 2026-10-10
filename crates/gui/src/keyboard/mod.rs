@@ -63,6 +63,9 @@ pub struct Keyboard {
     overlay_rect: Option<Rect>,
     open_menu: Option<ScopeId>,
     adjusted: Vec<Adjust>,
+    /// Whether the arrows on a focused value move between its siblings rather than adjust it
+    /// ([`ScopeTree::navigate_in`]).
+    browsing: bool,
 }
 
 impl Default for Keyboard {
@@ -92,6 +95,7 @@ impl Keyboard {
             overlay_rect: None,
             open_menu: None,
             adjusted: Vec::new(),
+            browsing: false,
         }
     }
 
@@ -278,7 +282,14 @@ impl Keyboard {
                 self.open_menu = None;
                 continue;
             }
-            match tree.navigate(&mut focus.path, command, keymap::multiplier(modifiers)) {
+            let multiplier = keymap::multiplier(modifiers);
+            match tree.navigate_in(
+                &mut focus.path,
+                command,
+                multiplier,
+                modifiers.shift,
+                &mut self.browsing,
+            ) {
                 Outcome::Activate(id) => {
                     activated.push(id);
                     // An entry acts and its menu closes, the focus back on the menu, as a click on it does.

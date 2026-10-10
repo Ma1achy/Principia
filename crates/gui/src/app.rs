@@ -2,7 +2,8 @@
 //! `SetField`s and undo / redo requests only (gui_state_contract §1). egui is a toggleable debug layer (F3) over the
 //! figure, which keeps 01_main.png's central rect in both states, the rest of the window the clear colour while the
 //! layer is hidden (RQ-248). The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
-//! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus.
+//! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus. The
+//! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control.
 
 use std::sync::Arc;
 
@@ -56,7 +57,7 @@ pub fn initial_view() -> ViewUI {
         selection: Selection {},
         kept_orbits: KeptOrbits {},
         inspector: Inspector {},
-        windows: Windows {},
+        windows: Windows { open: Vec::new() },
         linked_views: LinkedViews {},
         transport: Transport { playing: false },
         mode: Mode::Explore,
@@ -84,6 +85,8 @@ pub struct App<S: EngineSide> {
     pub console_open: bool,
     /// The keyboard layer.
     pub keyboard: Keyboard,
+    /// The Manifold view's and the compass's own scratch state.
+    pub manifold: explore::manifold_view::Scratch,
     snapshot: Snapshot,
     console: Vec<LogEntry>,
     counts: Counts,
@@ -121,6 +124,7 @@ impl<S: EngineSide> App<S> {
             shown: true,
             console_open: false,
             keyboard: Keyboard::new(),
+            manifold: Default::default(),
             snapshot,
             console,
             counts,
@@ -231,11 +235,17 @@ impl<S: EngineSide> App<S> {
             return;
         }
         let mut actions = Actions::default();
+        let mut out = explore::manifold_view::Out::default();
+        explore::manifold_view::join(self.keyboard.tree_mut(Mode::Explore));
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
         for id in activated {
             explore::top_bar::activate(id, &mut actions);
+            explore::manifold_view::activate(id, &self.snapshot, &mut self.manifold, &mut out);
+        }
+        for adjust in self.keyboard.adjusted().to_vec() {
+            explore::manifold_view::adjust(&adjust, &self.snapshot, &mut self.manifold, &mut out);
         }
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
@@ -255,10 +265,7 @@ impl<S: EngineSide> App<S> {
             &mut actions,
         );
         match self.view.mode {
-            Mode::Explore => {
-                explore::regions(ui, &layout);
-                explore::place(&mut self.keyboard, &layout);
-            }
+            Mode::Explore => self.explore(ui, &layout, &mut out),
             Mode::Stain => explore::stain_page(ui, layout.page),
         }
         explore::footer::show(
@@ -280,10 +287,66 @@ impl<S: EngineSide> App<S> {
         }
         self.draw_ring(&ctx);
         self.apply(&ctx, actions);
+        for edit in out.edits {
+            self.set_field(edit);
+        }
+        for window in out.windows {
+            if !self.view.windows.open.contains(&window) {
+                self.view.windows.open.push(window);
+            }
+        }
         if self.keyboard.shortcuts_open {
             let rows = self.keyboard.tree(self.view.mode).shortcuts();
             let rect = crate::keyboard::overlay::show(&ctx, rows);
             self.keyboard.overlay_drawn(rect);
+        }
+    }
+
+    /// The Explore page below the top bar: the Manifold view, the figure's gestures, its axis labels and the lock's
+    /// reticle, the compass, and the regions later tasks fill.
+    fn explore(
+        &mut self,
+        ui: &mut egui::Ui,
+        layout: &Layout,
+        out: &mut explore::manifold_view::Out,
+    ) {
+        explore::regions(ui, layout);
+        explore::place(&mut self.keyboard, layout);
+        let focused_figure = self
+            .view
+            .focus
+            .path
+            .last()
+            .is_some_and(|f| f == explore::FIGURE);
+        explore::manifold_view::navigate::figure(
+            ui,
+            layout.figure,
+            focused_figure,
+            &self.snapshot,
+            &mut self.manifold,
+            out,
+        );
+        let mut panel = explore::manifold_view::Panel {
+            snapshot: &self.snapshot,
+            scratch: &mut self.manifold,
+            keyboard: &mut self.keyboard,
+            focus: &self.view.focus.path,
+            out,
+        };
+        explore::manifold_view::show(ui, layout.manifold_view, &mut panel);
+        let sim = &self.snapshot.sim;
+        explore::compass::show(
+            ui,
+            layout.compass,
+            &sim.plane,
+            sim.lock.locked,
+            &mut self.keyboard,
+            &mut self.manifold,
+            out,
+        );
+        explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, layout.figure, &sim.plane);
+        if let Some(at) = explore::lock::reticle_at(&sim.lock, &sim.plane, layout.figure) {
+            explore::lock::reticle(ui.ctx(), layout.figure, at);
         }
     }
 

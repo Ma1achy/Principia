@@ -21,9 +21,16 @@ fn store(t: f64) -> StateStore {
     StateStore::new(
         SimConfig {
             chart: Chart {},
-            plane: Plane {},
+            plane: Plane {
+                z0: [0.0; 8],
+                q1: [0.0; 8],
+                q2: [0.0; 8],
+            },
             slice: Slice {},
-            lock: Lock {},
+            lock: Lock {
+                locked: false,
+                z_locked: [0.0; 8],
+            },
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
@@ -58,8 +65,8 @@ fn check_conforms<E: EngineInterface>(make: impl FnMut() -> E) {
 fn conformance_real_engine_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        4,
-        "the suite's four state-semantics cases (RQ-254)"
+        5,
+        "the suite's four state-semantics cases (RQ-254) and the navigation paths' (R-390)"
     );
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.

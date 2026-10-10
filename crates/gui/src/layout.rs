@@ -1,7 +1,8 @@
 //! The Explore page's regions (render_gui_spec §G2; 01_main.png): the top bar, the left Manifold view, the figure,
 //! the right Trajectory panel, the bottom row (compass, Time, Legend) and the footer, in 01_main.png's proportions of
 //! the window. Each edge is rounded to a whole physical pixel, so the figure's rect is the same pixel rect whether the
-//! egui layer is shown or hidden (F3; RQ-248).
+//! egui layer is shown or hidden (F3; RQ-248). The figure's axis labels take a strip along the bottom of 01_main.png's
+//! figure box and one down its left side, so they sit beside the figure and never over it (render_gui_spec §G1, §G2).
 
 use eframe::egui::{pos2, Rect};
 
@@ -18,6 +19,11 @@ const FOOTER_TOP: f32 = 1315.0;
 const COMPASS_RIGHT: f32 = 531.0;
 const LEGEND_LEFT: f32 = 1463.0;
 
+/// The height of the horizontal axis labels' strip under the figure, in points (a look choice, R-390).
+pub const AXIS_X_H: f32 = 16.0;
+/// The width of the vertical axis labels' strip left of the figure, in points (a look choice, R-390).
+pub const AXIS_Y_W: f32 = 16.0;
+
 /// The regions of a window, in points.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Layout {
@@ -27,6 +33,10 @@ pub struct Layout {
     pub manifold_view: Rect,
     /// The figure's rect.
     pub figure: Rect,
+    /// The horizontal axis labels' strip, under the figure and the vertical strip.
+    pub axis_x: Rect,
+    /// The vertical axis labels' strip, left of the figure.
+    pub axis_y: Rect,
     /// The right panel, "Trajectory".
     pub trajectory: Rect,
     /// The bottom row's compass.
@@ -58,10 +68,14 @@ impl Layout {
         let (left, right) = (x(LEFT_RIGHT), x(RIGHT_LEFT));
         let (compass, legend) = (x(COMPASS_RIGHT), x(LEGEND_LEFT));
         let rect = |a: f32, b: f32, c: f32, d: f32| Rect::from_min_max(pos2(a, b), pos2(c, d));
+        let snap = |v: f32| (v * pixels_per_point).round() / pixels_per_point;
+        let (inner_left, inner_bottom) = (left + snap(AXIS_Y_W), bottom - snap(AXIS_X_H));
         Self {
             top_bar: rect(x0, y0, x1, top),
             manifold_view: rect(x0, top, left, bottom),
-            figure: rect(left, top, right, bottom),
+            figure: rect(inner_left, top, right, inner_bottom),
+            axis_x: rect(left, inner_bottom, right, bottom),
+            axis_y: rect(left, top, inner_left, inner_bottom),
             trajectory: rect(right, top, x1, bottom),
             compass: rect(x0, bottom, compass, footer),
             time: rect(compass, bottom, legend, footer),

@@ -21,8 +21,12 @@ mod tests {
     mod cli;
     mod conformance;
     mod f3_toggle_mock;
+    mod mock_axis_labels;
     mod mock_engine;
+    mod mock_figure_navigation;
     mod mock_keyboard;
+    mod mock_lock_badge;
+    mod mock_manifold_view;
     mod mock_status_line;
     mod mock_tag;
     mod scope_tab_order_mock;

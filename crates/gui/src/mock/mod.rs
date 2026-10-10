@@ -1,8 +1,10 @@
 //! The mock engine (R-390): a test double of the engine's GUI-facing interface, always compiled (RQ-252); the `mock`
 //! feature only chooses it as the binary's engine. It serves plausible GUI-sized snapshots, applies `SetField` with undo and redo (R-69), carries its
 //! log entries in its snapshots (RQ-245), supplies the fake clock's deterministic tick (RQ-246) and draws the figure's
-//! stand-in through the canvas trait (RQ-247). It earns no privilege: the app reaches it only through the interface,
-//! as it reaches the real engine (gui_state_contract §1). Its values are placeholder content, not corpus values.
+//! stand-in through the canvas trait (RQ-247), redrawn for its chart `(z₀, q₁, q₂)` as navigation edits it (R-390;
+//! REQ-GUI-171). It raises the precision events from its zoom (R-54: the GUI reads the events, never a depth). It
+//! earns no privilege: the app reaches it only through the interface, as it reaches the real engine
+//! (gui_state_contract §1). Its values are placeholder content, not corpus values.
 
 pub mod canvas;
 pub mod clock;
@@ -10,12 +12,13 @@ pub mod clock;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
-use engine::contract::set_field::{Edit, RenderField, SetField};
+use engine::contract::set_field::{Edit, SetField};
 use engine::contract::sim_config::{
-    Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
-    Slice,
+    Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
+    SimConfig, Slice,
 };
 use engine::contract::snapshot::{FrameSummary, History, LiveMemory, Precision, Snapshot, Tier};
+use engine::contract::store::{set_field_message, write};
 
 use self::clock::MockClock;
 
@@ -44,17 +47,33 @@ pub const MOCK_WARNING: &str = "mock warning (placeholder)";
 /// The error [`MockEngine::raise_error`] logs.
 pub const MOCK_ERROR: &str = "mock error (placeholder)";
 
-/// One undoable playhead change: the value before and after.
-#[derive(Clone, Copy, Debug)]
+/// The mock's initial `z₀`: 01_main.png's eight values (placeholder content).
+pub const MOCK_Z0: Latent = [0.180, 0.410, 0.0, -0.227, 0.0, 0.312, 0.333, 0.333];
+
+/// The mock's initial basis: `q₁ = 1·z_α`, `q₂ = 1·z_β`, the chart "z_α × z_β" at zoom 0, as 01_main.png's Chart
+/// rows read (placeholder content).
+pub const MOCK_Q1: Latent = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+/// See [`MOCK_Q1`].
+pub const MOCK_Q2: Latent = [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+
+/// The zoom, in octaves below the mock's initial scale, from which the mock reports `DECODE_SWITCHOVER` on the visible
+/// quads (placeholder content: the real engine raises it from its decode, deep_zoom §2).
+pub const MOCK_SWITCHOVER_OCTAVES: f64 = 20.0;
+/// The zoom from which the mock reports `AT_F32_FLOOR` (placeholder content).
+pub const MOCK_F32_FLOOR_OCTAVES: f64 = 23.0;
+
+/// One undoable change: the edit restoring the value before, and the edit itself.
+#[derive(Clone, Debug)]
 struct Change {
-    before: f64,
-    after: f64,
+    before: Edit,
+    after: Edit,
 }
 
 /// The mock engine.
 #[derive(Debug)]
 pub struct MockEngine {
-    playhead: f64,
+    sim: SimConfig,
+    render: RenderState,
     undo: Vec<Change>,
     redo: Vec<Change>,
     log: Vec<LogEntry>,
@@ -73,8 +92,10 @@ impl MockEngine {
     }
 
     fn with_clock(clock: MockClock) -> Self {
+        let (sim, render) = state(0.0);
         Self {
-            playhead: 0.0,
+            sim,
+            render,
             undo: Vec::new(),
             redo: Vec::new(),
             log: Vec::new(),
@@ -106,16 +127,17 @@ impl MockEngine {
         });
     }
 
-    /// Sets the playhead, logging the applied edit (render_gui_spec §G12).
-    fn write(&mut self, t: f64, no_history: bool) -> f64 {
-        let before = std::mem::replace(&mut self.playhead, t);
-        let marker = if no_history { " (no history)" } else { "" };
-        self.push(
-            Severity::Info,
-            Source::Contract,
-            format!("SetField Playhead.t {before} → {t}{marker}"),
-        );
-        before
+    /// The chart the stand-in is drawn for: the plane `(z₀, q₁, q₂)` as the mock holds it now.
+    pub fn plane(&self) -> &Plane {
+        &self.sim.plane
+    }
+
+    /// The zoom, in octaves below the initial scale: `−log₂` of the longer basis vector's length.
+    fn octaves(&self) -> f64 {
+        let norm = |q: &Latent| q.iter().map(|v| v * v).sum::<f64>().sqrt();
+        -norm(&self.sim.plane.q1)
+            .max(norm(&self.sim.plane.q2))
+            .log2()
     }
 }
 
@@ -125,14 +147,22 @@ impl Default for MockEngine {
     }
 }
 
-/// The mock's initial state: the surfaces' empty groups, the physics kernel and `t = 0.0` (placeholder content).
+/// The mock's initial state: the chart "z_α × z_β" at 01_main.png's `z₀`, unlocked, the other groups empty, the physics
+/// kernel and `t = 0.0` (placeholder content).
 fn state(t: f64) -> (SimConfig, RenderState) {
     (
         SimConfig {
             chart: Chart {},
-            plane: Plane {},
+            plane: Plane {
+                z0: MOCK_Z0,
+                q1: MOCK_Q1,
+                q2: MOCK_Q2,
+            },
             slice: Slice {},
-            lock: Lock {},
+            lock: Lock {
+                locked: false,
+                z_locked: [0.0; 8],
+            },
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
@@ -151,30 +181,34 @@ fn state(t: f64) -> (SimConfig, RenderState) {
 
 impl EngineInterface for MockEngine {
     fn set_field(&mut self, edit: SetField) {
-        let t = match edit.edit {
-            Edit::Sim(field) => match field {},
-            Edit::Render(RenderField::Playhead(Playhead { t })) => t,
-        };
-        let before = self.write(t, edit.no_history);
+        let before = write(&mut self.sim, &mut self.render, edit.edit.clone());
+        self.push(
+            Severity::Info,
+            Source::Contract,
+            set_field_message(&before, &edit),
+        );
         if !edit.no_history {
-            self.undo.push(Change { before, after: t });
+            self.undo.push(Change {
+                before,
+                after: edit.edit,
+            });
             self.redo.clear();
         }
     }
 
     fn snapshot(&mut self) -> Snapshot {
-        let (sim, render) = state(self.playhead);
+        let octaves = self.octaves();
         Snapshot {
-            sim,
-            render,
+            sim: self.sim.clone(),
+            render: self.render.clone(),
             tier: Tier {},
             history: History {
                 undo_depth: self.undo.len() as u32,
                 redo_depth: self.redo.len() as u32,
             },
             precision: Precision {
-                decode_switchover: false,
-                at_f32_floor: false,
+                decode_switchover: octaves >= MOCK_SWITCHOVER_OCTAVES,
+                at_f32_floor: octaves >= MOCK_F32_FLOOR_OCTAVES,
             },
             frame: MOCK_FRAME,
             log: std::mem::take(&mut self.log),
@@ -183,14 +217,14 @@ impl EngineInterface for MockEngine {
 
     fn undo(&mut self) {
         if let Some(change) = self.undo.pop() {
-            self.playhead = change.before;
+            write(&mut self.sim, &mut self.render, change.before.clone());
             self.redo.push(change);
         }
     }
 
     fn redo(&mut self) {
         if let Some(change) = self.redo.pop() {
-            self.playhead = change.after;
+            write(&mut self.sim, &mut self.render, change.after.clone());
             self.undo.push(change);
         }
     }
