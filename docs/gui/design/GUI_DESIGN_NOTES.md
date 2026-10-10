@@ -105,12 +105,17 @@ shows shortcuts. What the user sees: a focus ring and the top-bar breadcrumb, no
 Two modes *(conformed to R-409)*: every landing is in navigation mode (orange ring; arrows move between siblings); Enter on
 an element starts interaction mode (blue ring; every input goes to it); Esc returns to navigation on the same element, and
 Esc again goes up a scope. The ring's colour is the one thing the mode changes on screen.
+Arrows need Enter *(conformed to R-409's follow-up answers)*: in navigation mode they always move between siblings, and a
+scope's arrow actions (the Figure's pan, Time's step, the compass's tilt and slice, the console's entry list) act only
+in interaction mode; its letter and Space shortcuts act whenever the focus is in the scope, in either mode. Shift ×10
+and Alt ×0.1 hold on the compass too. Tab lands on the big scope itself; Enter goes in onto its first element.
 
 ## 08 Lock — the reticle and the pin
 
 Locking (K, or right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre. Every
 tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the same point
 as a gold pin. Sliders are re-based (see 01). Affine charts compute z_locked directly; nonlinear charts replay Φ and D on the CPU.
+K is the Figure's shortcut, acting with the focus in the Figure in either keyboard mode *(conformed to R-409)*.
 
 ## 09 Import picture · saved views · record a sweep
 

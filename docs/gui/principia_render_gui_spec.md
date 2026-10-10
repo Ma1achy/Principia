@@ -152,19 +152,23 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 
 | key | action |
 |---|---|
-| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing in navigation mode |
+| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing on the scope itself in navigation mode (R-409) |
 | Enter | on a scope, into it, in navigation mode on its first element; on an element, start interaction (R-409) |
 | Esc | in interaction mode, back to navigation mode on the same element; in navigation mode, up one scope (R-409) |
-| arrows | in navigation mode, between siblings; in interaction mode, adjust the focused element (R-409) |
-| Shift · Alt | ×10 · ×0.1 steps |
+| arrows | in navigation mode, always between siblings; in interaction mode, adjust the focused element (R-409) |
+| Shift · Alt | ×10 · ×0.1 steps, everywhere, the compass included (R-409) |
+| letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode (R-409) |
 | held keys | delay, then repeat (the DAS / ARR model) |
 | Ctrl+Z | undo, from the contract's history (R-52) |
 | ? | shortcuts, over everything |
 
-In scope: Figure — arrows pan, + / − zoom, Space keeps the orbit, L listens, K locks. Trajectory — Enter reaches the
+In scope: a scope's arrow actions need Enter, acting in interaction mode only, and its letter and Space keys are
+shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode (R-409).
+Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4). Trajectory — Enter reaches the
 playhead, listen and kept orbits. Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
-plane's normal in slice mode, and Shift+arrows do the same with a fine step (R-409; there is no orbit). Time — Space
-plays, ← → step. Legend is read-only.
+plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; there is no orbit, and no separate fine
+step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1). Legend is
+read-only.
 
 What the user sees: a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
 and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). Nothing else changes on screen.
@@ -173,11 +177,12 @@ and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). 
 the ring is orange and the arrows move between siblings. In **interaction mode** the ring is blue and every input goes
 to the focused element. Entering any scope lands in navigation mode on its first element, and every other landing is
 in navigation mode too: a Tab on a big scope, the Figure and the Compass included, and a window opening on its first
-section, as the console does on its first filter. Enter on an element starts interaction with it; Esc in interaction
+section, as the console does on its first filter. A Tab lands on the big scope itself, the whole scope highlighted, as
+REQ-GUI-095 has it; Enter goes in onto its first element, and Enter again on an element starts interaction (R-409). Enter on an element starts interaction with it; Esc in interaction
 mode returns to navigation mode on the same element, and Esc in navigation mode goes up one scope. Enter on a button
 acts as its click and stays in navigation mode (applied per R-369, R-409 A1). The blue is egui's dark theme's
 `hyperlink_color` (R-404); the orange is a look choice (R-390). The Compass scope holds the compass, then its Tilt and
-Slice buttons, as siblings in navigation mode (applied per R-369, R-409 A2): Tab lands on the Compass scope, Enter goes
+Slice buttons, as siblings in navigation mode (R-409, the human's follow-up answer; A2): Tab lands on the Compass scope, Enter goes
 in onto the compass, Enter on the compass starts interaction with it, and Enter on a button sets the mode. The footer
 and the console follow the same two modes (R-405, R-409).
 
@@ -185,15 +190,18 @@ and the console follow the same two modes (R-405, R-409).
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
 console (§G12), as a click does, with the focus inside it. The console is a window: opened by the footer or from
 Windows › Console, it takes the focus; Tab and Shift+Tab move between its sections (the filters, the text filter, copy
-and clear, the entry list), the arrow keys move within a section, and Esc closes it and returns the focus to whatever
-opened it, the footer or Windows › Console. The console opening by itself on an error does not take the focus.
+and clear, the entry list), the arrow keys move within a section in navigation mode, and Esc closes it and returns
+the focus to whatever opened it, the footer or Windows › Console. The entry list's ↑ and ↓ scroll it in interaction
+mode only: Enter on the list starts interaction, and Esc returns to navigation mode on it (R-409, amending R-405). The
+console opening by itself on an error does not take the focus.
 
 The ring's, the breadcrumb's and the `?` overlay's look, the held-key delay and repeat (500 ms, 40 ms) and the base
 steps are confirmed as #174 built them, and recorded in R-404.
 
 ## G4. Lock — the reticle and the pin (`08_lock.png`)
 
-Locking (K, or right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre.
+Locking (K, a shortcut with the focus in the Figure, in either keyboard mode (§G3, R-409); or right-click → lock
+here) recentres the view on that point and marks it with a gold reticle at the centre.
 Every tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the
 same point as a gold pin.
 - **Sliders are re-based, not frozen:** each shows the anchor plus an offset, and moving one is a deliberate excursion from
@@ -424,7 +432,8 @@ The footer, opened: severity, time, source, message; filters (all, warnings, err
 same stream as the profiler's telemetry. Errors open it automatically. Sources include the stain, the integrator, the
 quadtree, the contract (each `SetField` is logged) and the app.
 
-The keyboard reaches it through the footer, big scope 8 (§G3, R-405).
+The keyboard reaches it through the footer, big scope 8 (§G3, R-405). Its entry list scrolls with ↑ ↓ only after
+Enter on it, in interaction mode, and Esc returns to navigation mode on the list (§G3, R-409).
 It is reached from Windows › Console too, and Esc returns the focus to whichever opened it.
 
 ## G13. Where the artboards are overridden
