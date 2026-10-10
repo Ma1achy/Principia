@@ -41,12 +41,14 @@ pub struct SimConfig {
 #[serde(deny_unknown_fields)]
 pub struct Chart {}
 
-/// The latent dimension: the controls `z ∈ ℝ⁸` (chart_decoder_contract Part 2).
-pub const LATENT_DIM: usize = 8;
-
 /// A point or a direction of the latent space `ℝ⁸`, in chart_decoder_contract Part 2's block order: `z[0:2]`
-/// configuration, `z[2:6]` momentum, `z[6:8]` mass.
-pub type Latent = [f64; LATENT_DIM];
+/// configuration, `z[2:6]` momentum, `z[6:8]` mass. Its length is the type's own, as a struct's field widths are
+/// (`[u32; 4]`, `ICDescriptor`'s twelve floats): a structural size the corpus defines, not a register constant
+/// (dd_generation_root §3.8 registers measured or derived numbers).
+pub type Latent = [f64; 8];
+
+/// The latent dimension, `z ∈ ℝ⁸` (chart_decoder_contract Part 2): read from [`Latent`], never written again.
+pub const LATENT_DIM: usize = std::mem::size_of::<Latent>() / std::mem::size_of::<f64>();
 
 /// `z₀`, `q₁`, `q₂` (gui_state_contract §2): the affine slice `z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂`
 /// (chart_decoder_contract Part 3). The view state is this triple: navigation edits it and nothing else (Part 4).
