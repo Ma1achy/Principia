@@ -87,6 +87,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-397** — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*
 - **R-398** — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*
 - **R-401** — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
+- **R-407** — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*
 
 ## Design and architecture
 

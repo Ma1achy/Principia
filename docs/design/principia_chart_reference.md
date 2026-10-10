@@ -222,6 +222,12 @@ is infeasible by construction** — which is why the warp exists rather than cla
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
 
+**Past the unit square (R-407): both axes are bounded.** Outside `[0,1]²` the warp has no feasibility guarantee:
+`s ∉ [0,1]` gives `|L_z| = |2s − 1|·L_max(t) > L_max(t)`, so `K* < K_min`, infeasible for every `γ_K`; `t < 0` has no
+real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back onto `t > 0`). So the warp
+declares nothing beyond bounded and is hatched on every side (§5.4). Its `t > 1` side (`K > K_max`) stays feasible;
+declaring it would be a later declaration, needing physics review (R-407, clause 3), and is not made.
+
 ### 2.2 Deterministic momentum construction
 
 Given target `Lz` and `K*`, construct `pᵢ` with `Σpᵢ = 0`, `K = K*`, `Lz` as specified. Work in
@@ -355,6 +361,12 @@ distorts area near the poles but keeps coordinates readable. For quantitative ar
 equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
 section (render_gui_spec §G2, R-113). This matters because the Lagrange configurations sit
 at the poles and can be compressed to invisibility in equirectangular.
+
+**Past the unit square (R-407).** The spherical map's θ is **periodic** (it wraps, period 2π) and its φ
+**pole-crossing**: past a pole it comes back down the other side with θ shifted by π, half its period (for `t > 1`,
+`φ → −φ`; for `t < 0`, `φ → 2π − φ`; θ then wraps). So the sphere continues past `[0,1]²` with real neighbouring states,
+each a system `[0,1]²` already holds; whether area statistics count them is RQ-263. The exponential map has no θ or φ
+axis, so its axes declare nothing and are bounded (§5.4).
 
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
 same object. Each pixel is a starting shape $\mathbf n(0) \in S^2$, and its trajectory $\mathbf n(t)$
@@ -491,6 +503,11 @@ $\Phi_{\mathrm{strip},K} = \Phi_{\theta,K}$ above. For $(\theta, \delta m)$, ble
 $$\mathbf m(u,v) = (1 - v)\,\mathbf m_{\mathrm{Burrau}}(\nu(\theta(u))) + v\,\mathbf m_{\mathrm{target}}, \qquad
 \Phi_{\mathrm{strip},\delta m}(u,v) = \big(\nu(\theta(u)),\ \mathbf m(u,v),\ \mathrm{rest}\big).$$
 
+**Past the unit square (R-407).** Each Burrau-family axis's extension type is a definition (R-72, REQ-CHART-055),
+written in §5.4 by TASK-M2-11 and physics-reviewed; until it is written each axis is bounded, the default. (`ν` past
+`(0,1)` gives `a = 1 − ν² ≤ 0` or `b ≤ 0`, a zero or negative mass, and the acute angle past `(0, π/4]` the same.) The
+ternary mass plot is affine: its map continues, and the fallback hatches its negative-mass area (§5.4).
+
 ### 4.6 The central hypothesis
 
 **Hypothesis.** The fractal basin structures seen in the Burrau–Pythagorean family are cross-sections of
@@ -562,3 +579,26 @@ compare within a chart, never across.** The `alpha` distribution is the safer cr
 **And the standing caution applies with extra force here:** a chart that produces a prettier
 picture is not a better chart. The measurement is whether the criterion behaves consistently
 across charts, not which chart looks best.
+
+### 5.4 Past the unit square — each axis's extension type (R-407)
+
+The rule is `principia_chart_decoder_contract.md` Part 3's (§ "Past the unit square — each axis's extension type
+(R-407)"): each axis declares **affine** (continues), **periodic** (wraps), **pole-crossing** (continues over the pole,
+the partner axis shifted by half its period) or **bounded** (hatched past its edge, the default); outside `[0,1]²` a
+pixel whose `Φ` fails to evaluate, or whose state fails `validate(u, v)`, is hatched as forbidden and labelled
+`decode_failed`; inside `[0,1]²` nothing changes. The `Chart` trait (§5.1) declares each axis's type beside `map`. The
+existing charts:
+
+| chart | horizontal axis | vertical axis | past `[0,1]²` |
+|---|---|---|---|
+| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation |
+| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds (RQ-263) |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched |
+| `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded | hatched on every side; the `t > 1` side is not declared (§2.1) |
+| `MassSimplex`, the ternary plot (§4.5) | affine | affine | the map continues; the fallback hatches the negative-mass area (all masses positive, validation layer 3) |
+| Burrau family (§4.5) | REQ-CHART-055 (R-72, TASK-M2-11, physics-reviewed) | REQ-CHART-055 | bounded until the definition is written |
+| mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, any other bounded unless declared | as horizontal | per axis |
+
+A custom chart (the Chart builder, render_gui_spec §G7) takes its axes' types: a latent direction is affine, a
+physical-quantity axis declares nothing and is bounded, a Burrau dimension takes the Burrau family's types. A new
+declaration beyond bounded, or a new extension type, needs physics review (R-407, clause 3).

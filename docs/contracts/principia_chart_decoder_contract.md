@@ -132,6 +132,36 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 
 **Mixed-axis charts:** the two axes need not share a block. Any pair. When one axis is a configuration coordinate and the other its conjugate momentum, the render **is literally a Poincaré section** — it lifts the phase-space degeneracy (same shape, different momentum, different fate) that a config-only chart collapses.
 
+
+### Past the unit square — each axis's extension type (R-407)
+
+The figure can show more than the chart's `[0,1]²`: with the egui layer hidden (F3) or in present mode it fills the
+window at the same scale (R-406), so where the window reaches past the depth-0 root its samples take `(s,t)` beyond
+`[0,1]` on either axis. **Inside `[0,1]²` nothing changes.** Outside it, **each chart axis declares one of four
+extension types**, and the type decides what the axis does past its edge:
+
+| Type | Past the edge | Which axes |
+|---|---|---|
+| **affine** | the formula continues | basis vectors: the latent and flat slices, every latent direction |
+| **periodic** | the axis wraps | azimuthal angles: the shape sphere's θ |
+| **pole-crossing** | continues over the pole and back down the other side, the partner axis shifted by half its period | polar angles: the shape sphere's φ (its partner θ shifted by π) |
+| **bounded** | hatched as forbidden | anything with a hard edge in its domain (the invariant warp's `t^γ_K` at `t < 0`); **the default for an axis that declares nothing** |
+
+A custom chart inherits its extension from its axes; nothing is written per chart. The types are a property of each
+axis beside its kind (the four kinds above), not a fifth kind. The axes' types act first: an affine axis passes its
+coordinate through, a periodic one wraps it, a pole-crossing one reflects it over the pole and shifts its partner, and a
+bounded one past its edge hatches the pixel. `Φ` and the validity check then run on what the types give.
+
+**The universal fallback** needs no declaration: outside `[0,1]²`, a pixel whose `Φ` fails to evaluate (non-finite,
+outside its domain), or whose state fails the existing validity check (R-26's `validate`;
+`principia_inverse_encode_contract.md` § "Chart-aware validation", layers 2 and 3: outside the chart's feasible region,
+a non-positive mass), is hatched as forbidden. This covers physical-quantity axes automatically: energy beyond what is
+reachable hatches. A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload §2), it
+is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5).
+
+**No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
+needs physics review. The existing charts' types are in `principia_chart_reference.md` §5.4.
+
 ---
 
 ## Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)
@@ -150,6 +180,10 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 Pan and slice are the **same operation** — move `z₀` — decomposed by the plane. A free-mode slider sets one component of `z₀`, which is in general a pan+slice *mixture* (its basis vector is rarely exactly in or exactly orthogonal to the plane). Tilt and zoom are the **same kind** of operation — edit the basis. Because every tilted position is a full first-class chart, tilted charts serialise, save, and restore for free: ViewState already stores `(z₀, q₁, q₂)`.
 
 **What each gesture does to the keys (R-92).** The sim key holds the **slice plane**: `z₀`'s out-of-plane part, `span{q₁, q₂}`, and the in-plane orientation. **In-plane pan and zoom re-address** (the same plane, different quads asked for); **slicing out of the plane, tilting and rotating re-integrate** (a new plane changes every quad's ICs); **the lock changes neither**.
+
+**Filling the window is not a gesture (R-406, R-407).** With F3 or present mode hiding the chrome, the figure shows more
+of the same chart, each axis past `[0,1]²` by its extension type (Part 3): `(z₀, q₁, q₂)` is unchanged and nothing is
+edited.
 
 ### Tilt (basis edit)
 
@@ -225,6 +259,7 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 - **invariant?** — if so, which sector it solves into, its dependency set (must be downstream), **and whether it is `conserved_along_flow`**: `E` and `L_z` are constants of motion (a hover trace pins to a labelled dot); `K` is invariant-*constructed* but not conserved (a trace oscillates as KE↔PE exchanges). Consumers: the hover trace and any along-trajectory rendering.
 - **residual convention** — for derived-in-block axes, how the leftover within-block DOF is pinned
 - **curve?** — if so, tilt requires a lock; carries an `embed` map and its tangent `γ'`
+- **extension type** — affine, periodic, pole-crossing or bounded (the default when none is declared): what the axis does past `[0,1]²` (Part 3, R-407)
 
 **Per-chart descriptors:**
 

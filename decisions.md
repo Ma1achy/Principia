@@ -7421,3 +7421,179 @@ The human's words (R-404's message of 10 Oct 2026):
 - R-406 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
 
 Adds REQ-GUI-179 and REQ-GUI-180; REQ-GUI-168's, REQ-GUI-070's and REQ-GUI-100's rulings, sources and notes change.
+
+## R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*
+*10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 3 — Charts" (a subsection added,
+"Past the unit square — each axis's extension type (R-407)"), § "Part 4 — Navigation is chart construction (pan,
+slice, zoom, tilt, lock)" and § "Part 5 — Well-posedness and the validation contract" (sentences added),
+`docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", § "3.3 The
+chart map" and § "4.5 The Burrau-family chart maps" (paragraphs added) and § "5.4 Past the unit square — each axis's
+extension type (R-407)" (new), `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces
+(they nest; each is right for its job)", `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam,
+decode side)" and `docs/design/principia_colour_composition.md` § "3. The `ctx` contract" (A4's sentences),
+`docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "G7. Chart builder
+(`03_chartbuilder.png`)", REQ-GUI-180, REQ-GUI-179, REQ-GUI-100 and REQ-GUI-070 (reqio), REQ-CHART-054 and
+REQ-CHART-055 (reqio, new), TASK-M8-05, TASK-M8-32, TASK-M6-30, TASK-M6-28 and TASK-M2-11, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-262 archived) and `REVIEW_QUEUE.md` (RQ-263, open);
+built by TASK-M8-05 on the real engine (TASK-M6-30 on the mock)*
+
+The orchestrator put RQ-262 to the human: with F3 hiding the GUI the figure fills the window at the same scale (R-406),
+but the corpus defines the view only on `(s,t) ∈ [0,1]²` and a nonlinear chart's `Φ` only there. The human explained,
+in their own words:
+
+> Yes, and it can be made general by attaching the extension rule to each axis type, rather than writing one for each
+> chart. A custom chart built from typed axes then gets its extension automatically. A universal fallback catches
+> anything an axis can't extend.
+>
+> How it works. Every chart axis declares one of these four types, and the type decides what happens past the edge of
+> the unit square:
+>
+> Affine (basis vectors, latent dimensions, flat slices): the formula simply continues. This covers every chart built
+> from basis vectors, so those need nothing extra.
+> Periodic (azimuthal angles, such as the sphere's longitude θ): the axis wraps around.
+> Pole-crossing (polar angles, such as the sphere's φ): carrying on past a pole comes back down the other side, with
+> the partner axis shifted by half its period. That's how a sphere naturally continues, and it shows real neighbouring
+> states instead of hatching.
+> Bounded (anything with a hard edge in its domain, such as the warp's t^γ for t < 0): past the edge is hatched.
+>
+> The fallback needs no declaration. Every pixel is evaluated through the chart's map. If the map fails (NaN, outside
+> its domain), or produces an invalid state (non-positive masses, outside the allowed region, anything the existing
+> validity check rejects), the pixel is hatched. That makes physical-quantity axes safe automatically: energy beyond
+> what's reachable simply hatches.
+>
+> The rule for unknown axes is bounded. An axis gets a fancier extension only by declaring it. Nothing ever invents a
+> continuation. For example, extending the warp oddly as sign(t)·|t|^γ would give pixels a meaning nobody defined, so
+> it would need its own physics ruling first.
+
+and gave the ruling, in their own words ("This is from me."):
+
+> This is from me.
+> RQ-262: per-chart extension, made general and automatic:
+> 1. Each chart axis declares an extension type: affine (continues;
+>    covers all basis-vector and flat charts), periodic (wraps),
+>    pole-crossing (continues over the pole, partner axis shifted by
+>    half its period), or bounded (hatched past its edge). The default
+>    for an axis that declares nothing is bounded. A custom chart
+>    inherits its extension from its axes, so nothing is written per
+>    chart.
+> 2. The universal fallback: outside [0,1]², a pixel whose Φ fails to
+>    evaluate, or whose state fails the existing validity check, is
+>    hatched as forbidden. This covers physical-quantity axes (such as
+>    energy beyond what's reachable) automatically.
+> 3. No invented continuations: an axis gets anything beyond "bounded"
+>    only by declaring it, and any new extension type needs physics
+>    review. Assign types to the existing charts (flat: affine; sphere:
+>    θ periodic, φ pole-crossing; warp: bounded; Burrau: per axis, with
+>    physics review).
+> Lands in TASK-M8-05; the mock GUI (TASK-M6-30) only needs affine plus
+> the hatch fallback.
+
+(Message of 10 Oct 2026; numbered by the orchestrator, the next free number. The second block is the ruling; the
+first is the human's explanation of it.)
+
+*What it decides:*
+- **Each chart axis declares an extension type**, which decides what the axis does past the edge of the unit square:
+  **affine** (the formula continues; every basis-vector and flat chart), **periodic** (wraps), **pole-crossing**
+  (continues over the pole, the partner axis shifted by half its period), or **bounded** (hatched past its edge).
+  **An axis that declares nothing is bounded.** A custom chart inherits its extension from its axes; nothing is
+  written per chart.
+- **The universal fallback.** Outside `[0,1]²`, a pixel whose `Φ` fails to evaluate (NaN, outside its domain), or whose
+  state fails the existing validity check (non-positive masses, outside the allowed region), is hatched as forbidden.
+  It needs no declaration, and it covers physical-quantity axes (energy beyond what is reachable) automatically.
+- **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
+  needs physics review. Extending the warp as `sign(t)·|t|^γ`, for example, would give pixels a meaning nobody defined.
+- **The existing charts:** flat, affine; the shape sphere, θ periodic and φ pole-crossing; the warp, bounded; the Burrau
+  family, per axis, with physics review.
+- **Where it lands:** TASK-M8-05 on the real engine; the mock (TASK-M6-30) needs only affine plus the hatch fallback.
+- RQ-262's silences are settled: the view extends past `[0,1]²` by its axes' types, and a chart shows its extension,
+  or the hatch, outside its domain.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **A1. TASK-M8-05 closes it on the real engine.** REQ-GUI-180 (the fill with F3 off) and the axis extension types land
+  in TASK-M8-05, as the ruling says. RQ-262 is ruled, so nothing waits: TASK-M8-05's note that REQ-GUI-180 "holds this
+  task's merge until RQ-262" goes, and REQ-GUI-180 loses `rq: RQ-262`. TASK-M8-05 keeps the physics reviewer, now for
+  the extension types and the fallback (a reviewer is per task, not per line, so physics reviews the task). REQ-GUI-180's
+  statement and verify follow R-407: the window shows the extension per axis type, with the hatch fallback; every window
+  pixel carries a labelled output (canonical_spec §9 W9); "tagged, never dropped" (chart_decoder_contract Part 5) holds.
+  No quad request set is fixed beyond what R-407 implies: a hatched pixel needs no integration, so its quads need not be
+  asked for (inverse_encode_contract's quad-skip rule applies as it stands). This settles physics review 5478700157's P7
+  and code review 5478698018's F1 (the shell no longer waits on a ruling).
+- **The extension types are a chart requirement.** **REQ-CHART-054 (new, M8)**, closed by TASK-M8-05: each axis
+  declares its type (default bounded); a chart takes its extension from its axes; the fallback; the existing charts'
+  types (chart_reference §5.4); inside `[0,1]²` nothing changes. REQ-GUI-180 is the GUI's side of it.
+- **The order on an extended pixel.** The axes' types act first: an affine axis passes its coordinate through, a
+  periodic one wraps it, a pole-crossing one reflects it over the pole and shifts its partner, and a bounded one past its
+  edge hatches the pixel. `Φ` and the validity check then run on what the types give, and the fallback hatches a pixel
+  that fails either. chart_decoder_contract Part 3 states it.
+- **The hatched pixel's label.** A hatched pixel is a labelled output, never dropped and never integrated: it is
+  `decode_failed` (payload §2, "the chart/decoder could not produce a valid physical IC"), its detail the category that
+  applies (`0` non-finite, `2` invalid mass construction, `3` other, which covers a bounded axis's edge and a
+  feasibility failure; REQ-DEC-038's map). It is drawn with the render contract's hatch (`debug_invalid`, Part 5; its
+  exact pattern REQ-COL-055's calibration), the one hatch the corpus defines; §G7's Domain preview hatches the forbidden
+  region the same way. This answers physics review 5478700157's P2 (which label).
+- **The validity check is R-26's** `validate(u, v)` on the `Chart` trait, inverse_encode_contract § "Chart-aware
+  validation" layers 2 and 3 (the chart's feasibility; all masses positive), run on the extended pixel.
+- **A2. Present mode on the real engine.** Present mode hides the chrome as F3 does (R-406, applied per R-369 there), so
+  its fill on the real engine uses TASK-M8-05's extension and is built by TASK-M8-32 (REQ-GUI-100). REQ-GUI-100's
+  statement and verify gain the fill; TASK-M8-32's acceptance gains a check that Present fills the window, and its
+  reviewers gain physics for that line. TASK-M8-32 already depends on TASK-M8-05, which depends on TASK-M6-30, and
+  nothing on that chain depends on TASK-M8-32, so the chain stays acyclic. This settles physics review 5478700157's P8
+  and gui review 5478696211's G3 on the real engine.
+- **A3. The mock (TASK-M6-30, REQ-GUI-179):** affine plus the hatch fallback, as the ruling says. The stand-in continues
+  past the shown rect as an affine chart; a pixel the mock flags invalid (a test hook) is hatched as forbidden, so the
+  fallback's path is built and checked on the mock. TASK-M6-30 also builds the mock's Present fill: TASK-M6-28 builds
+  Export & share's present mode (hiding the chrome), and TASK-M6-30, now depending on TASK-M6-28, makes it fill the
+  window as F3 off does, with an acceptance check for Present. This settles gui review 5478696211's G3 on the mock.
+- **A4. The coordinate texts, as mechanical consequences** (each line that changes is recorded as "stale value,
+  replaced by R-407"). Inside the chart's `[0,1]²`, the depth-0 root, nothing changes. With the window extended:
+  - UV is taken over the shown figure's rect, which is the view's `[0,1]²`, and continues at the same scale beyond it,
+    the one flip unchanged, so the window's samples have UV outside `[0,1]` (coordinate note; deep_zoom § "The
+    precision split").
+  - Quad indices may be negative outside the depth-0 root when the window extends past `[0,1]²`; the address is still
+    taken in the slice plane's frame (R-97). The coordinate note's "You never want negative quad indices" holds within
+    the root.
+  - R-394's `ctx.chart.slice_uv` may lie outside `[0,1]²` in the extension (colour_composition §3); its formula is
+    unchanged.
+  - `ctx.screen.uv` and `ctx.screen.pixel` are taken over the window's figure area as shown: the shown figure's rect
+    with the layer shown, the full window with F3 off. A stain that reads the screen lane therefore draws differently
+    over the shown rect in the two states, so REQ-GUI-180's and REQ-GUI-179's pixel-identity checks use a stain that
+    reads no screen-lane field.
+  This settles physics review 5478700157's P5.
+- **A5. The warp is bounded on both sides, as ruled.** The physics review found its other sides infeasible or
+  undefined (`s ∉ [0,1]` gives `|L_z| > L_max(t)`, infeasible for every `γ_K`; `t < 0` has no real value for a
+  non-integer `γ_K`, while an odd integer gives `K < 0` and an even one a fold), but noted that its `t > 1` side
+  (`K > K_max`) stays feasible. Declaring the `t > 1` side would be a later declaration, needing physics review under
+  clause 3; it is not built. chart_reference §2.1 records it.
+- **A6. The Burrau family's axis types are a definition requirement (R-72).** **REQ-CHART-055 (new, M2,
+  definition)**, closed by **TASK-M2-11**, the task that completes the Burrau charts (it depends on TASK-M2-10, which
+  builds the Euclid plane and the `(ν, K)` chart, and builds the acute-angle charts and the strips itself), physics
+  reviewed: chart_reference §5.4 gives each Burrau-family axis's type. No types are given now; until they are written,
+  each Burrau axis is bounded, the default. The physics review's note that `ν` past `(0,1)` gives a zero or negative
+  mass, and `θ` past `(0, π/4]` the same, is for that task.
+- **A7. The mass simplex (the ternary plot, chart_reference §4.5) is affine**, its map continued; the fallback hatches
+  its negative-mass area (inverse_encode_contract layer 3, "all masses positive"). chart_reference §5.4 states it.
+- **The other existing charts.** The latent chart and every flat or axis-aligned slice (`Latent`, `BodyPlane`) are
+  affine; the decoder `D` takes any `z ∈ ℝ⁸`, and the fallback catches what fails. The shape sphere's spherical map is
+  θ periodic and φ pole-crossing (θ shifted by π); its exponential map (chart_reference §3.3) has no θ or φ axis, so
+  its axes declare nothing and are bounded. A mixed-axis chart's latent-coordinate axis is affine; any other axis
+  declares nothing, so bounded, until a declaration is made under physics review. The Chart builder's axis kinds
+  follow: a latent direction is affine, a physical-quantity axis declares nothing and is bounded (the fallback guards
+  any later declaration), and a Burrau dimension takes REQ-CHART-055's types (render_gui_spec §G7).
+- **A8. R-406's "a view, not an edit" now holds for the real engine too.** The fill edits nothing: `(z₀, q₁, q₂)` is
+  unchanged and more of the same chart is drawn, with no `SetField`. The chart-construction reading the physics review
+  raised (P6: rescaling `q₁, q₂` so the window is `[0,1]²`) is moot under R-407, which extends each axis past
+  `[0,1]²`, so it is not added. chart_decoder_contract Part 4 gains a sentence.
+- **Physics review 5478700157's other points on RQ-262's text** are settled by this ruling: P1 (the corpus's "tagged,
+  not dropped" rule) is the fallback's label above; P3 (the criterion is feasibility, not affine against nonlinear) is
+  the fallback, with the per-chart findings recorded in chart_reference §2.1 and §5.4 and passed to TASK-M2-11 (A6);
+  P4 (a clamped extension) does not arise, since no axis is clamped; P9 (a truncated quote) stays in RQ-262 as
+  archived, the record unchanged (R-292).
+- **Still open, filed as RQ-263:** the shape sphere's periodic and pole-crossing extension redraws systems already in
+  `[0,1]²`, so whether area statistics (W7's `system_image` multiplicity, §G7's "forbidden in view: N%") count the
+  window or only `[0,1]²` is not given. It blocks only a line that computes such a statistic on the extended window;
+  TASK-M8-05 has none, so nothing waits today.
+- RQ-262 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-407 is in the "physics" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-054 and REQ-CHART-055; REQ-GUI-180's statement, verify, rulings, sources, note and `rq`, REQ-GUI-179's
+and REQ-GUI-100's statements, verify, rulings, sources and notes, and REQ-GUI-070's note change.

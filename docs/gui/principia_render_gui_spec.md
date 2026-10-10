@@ -47,8 +47,9 @@ data. The two words name one object. The **figure** is the rendered slice.
 - **With the layer hidden, the figure fills the window (R-406).** F3 hiding egui makes the figure fill the whole
   window, showing more of the field at the same scale in every direction, never the shown view stretched: each point
   of the field keeps the screen position it has in the shown layout, so the figure's rect there is unchanged. Hiding
-  and showing send no `SetField`; showing the layer returns the normal layout. On the real engine, how the view
-  extends past the chart's `[0,1]²` and what a chart shows outside its domain are open (RQ-262).
+  and showing send no `SetField`; showing the layer returns the normal layout. Past the chart's `[0,1]²` each axis
+  extends by its declared type (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or
+  whose state fails validation is hatched as forbidden (R-407, `principia_chart_decoder_contract.md` Part 3).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
@@ -319,6 +320,9 @@ labels (R-22).
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
+- **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
+  declares nothing and is bounded, the fallback hatching what fails validation; a Burrau dimension takes the Burrau
+  family's types (`principia_chart_reference.md` §5.4). The chart inherits its extension from its axes.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
   `validate(u, v)` on the `Chart` trait).
