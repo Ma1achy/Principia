@@ -518,8 +518,8 @@ fn check_last_symbol(p: &Probe) {
         "`last_symbol` does not read back the value stored",
     );
     expect(
-        fgw_length_raw(read.word) >= 1 && fgw_reduced_length_valid(read.word),
-        true,
+        sd_last_symbol_valid(fgw_length_raw(read.word)),
+        sd_last_symbol_valid(38),
         "`last_symbol`'s gate, the word's length 38, does not read back the value stored",
     );
 }

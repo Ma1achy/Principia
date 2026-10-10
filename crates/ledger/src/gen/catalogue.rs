@@ -646,18 +646,13 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
 }
 
 /// The field whose validity gates on the word's sidecar length: `last_symbol`, which has no in-band "none" code and is
-/// meaningful iff `length ≥ 1 && length ≠ 127` (payload §2): the empty word has no last symbol, and a truncated word's
-/// is invalid, like every word-derived read (payload §3).
+/// meaningful only for a nonempty word that is not truncated (payload §2): payload §6's `sd_last_symbol_valid` of the
+/// word's `fgw_length_raw`, both generated from the ledger.
 pub const WORD_GATED: &str = "last_symbol";
 
-/// The word accessors [`WORD_GATED`]'s gate reads: the stored length, and the validity of the word's derivations.
-const WORD_GATE: [&str; 2] = ["fgw_length_raw", "fgw_reduced_length_valid"];
-
-/// Whether [`WORD_GATED`]'s gate holds for a word of stored length `length`: `length ≥ 1 && length ≠ 127`, a
-/// nonempty word that is not truncated (payload §2).
-pub fn word_gate_holds(length: u32) -> bool {
-    length >= 1 && length != 127
-}
+/// The generated accessors [`WORD_GATED`]'s gate reads (payload §6): the word's stored length, and `last_symbol`'s
+/// validity from it.
+const WORD_GATE: [&str; 2] = ["fgw_length_raw", "sd_last_symbol_valid"];
 
 /// The field whose probe sets [`WORD_GATED`]'s gate: the word's `length`.
 const GATE_FIELD: &str = "length";
@@ -667,10 +662,9 @@ fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
     let value = r.wgsl(e.name);
     let body = match r {
         Read::Member { wgsl, .. } if e.name == WORD_GATED => format!(
-            "let w = ctx.sample.word;\n    if ({}(w) == 0u || !{}(w)) {{\n        \
-             return debug_invalid(ctx.frag_xy);\n    }}\n    return {};",
-            WORD_GATE[0],
+            "if (!{}({}(ctx.sample.word))) {{\n        return debug_invalid(ctx.frag_xy);\n    }}\n    return {};",
             WORD_GATE[1],
+            WORD_GATE[0],
             ramp(e, &value, wgsl)
         ),
         Read::Vector { wgsl: VEC2X3, .. } => format!(
@@ -687,8 +681,8 @@ fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
          debug_tooling_plan §B)."
     } else if e.name == WORD_GATED {
         "The colouring is a placeholder (`ledger::gen::catalogue`), gated on the word: the field has no in-band \
-         \"none\" code and is meaningful iff `length ≥ 1 && length ≠ 127`, so the empty word and a truncated word \
-         draw the hatch (payload §2, §3; applied per R-369)."
+         \"none\" code and is meaningful where `sd_last_symbol_valid(fgw_length_raw(word))` holds, so the empty \
+         word and a truncated word draw the hatch (payload §2, §6; applied per R-369)."
     } else {
         "The colouring is a placeholder (`ledger::gen::catalogue`)."
     };
@@ -1015,13 +1009,10 @@ fn check(
                 body.push_str(&call(4, "", "expect", &args));
             }
             if let Some(g) = gate {
-                let length: u32 = g.value.parse().unwrap_or(0);
+                let length = &g.value;
                 let args = [
-                    format!(
-                        "{}(read.word) >= 1 && {}(read.word)",
-                        WORD_GATE[0], WORD_GATE[1]
-                    ),
-                    word_gate_holds(length).to_string(),
+                    format!("{}({}(read.word))", WORD_GATE[1], WORD_GATE[0]),
+                    format!("{}({length})", WORD_GATE[1]),
                     format!("\"`{n}`'s gate, the word's length {length}, {NOT_STORED}\""),
                 ];
                 body.push('\n');
