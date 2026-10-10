@@ -160,3 +160,30 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   stays TASK-M1-09's; its proposal stands, and this task's stipple is measured over it.
 - R-398 asks nothing of this task beyond the two comments above; TASK-M1-16's `N = 6` fixture stays a negative control.
 - A declared lower bound can make a field's range fully bounded (e.g. `[0, 1]`); under render_gui_spec §10.1 that field then switches from `RANGE_AUTO = 1` to its fixed range. The implementer lists each such field in the PR and the reviewers check each (code review 5472057070 of PR #175).
+- **R-400's scope over TASK-M1-12's hand-written signed views** (the R-388 pre-flight, 10 Oct 2026; grounds corrected
+  per physics review 5480220637 of PR #185). R-400's rule is keyed on "a numeric field view whose field's declared
+  ledger range spans zero", and its "What does not change" bullet keeps "the drift views … R-381's view". For each of
+  TASK-M1-12's views (at its head `bc663a1c`) whose comment says "a signed field on viridis, as the corpus stands
+  (RQ-260 open)":
+  - `crates/render/shaders/wgsl/frag/debug/derived/energy_drift.wgsl`, the current drift `H(r, p) − E_0`, is the
+    `energy_drift` field's view, a drift view, so R-400 does not move it to `ramp_coolwarm`. As built it passes the raw
+    `ΔE` to `dbg_sentinel` on viridis, with no `eps_E` compaction: that interim placement is not R-381's view, and is
+    the defect TASK-M3-05 names ("a raw drift ≪ 1 lands at the ramp's middle", TASK-M3-05.md:45). Its compaction
+    (R-381's `symlog`, `lin` and `log`) and its ramp (`f_edrift`'s `diverging(c−,c0,c+)`, viridis only through the
+    palette swap) are TASK-M3-05's to build; this task leaves the view as it is.
+  - The generated `n` view, the '‖·‖ as scalar' reduction (`crates/render/frag/debug/generated/n.wgsl`), shows `‖n‖`.
+    Read literally, R-400 would put it on `ramp_coolwarm`, since `n`'s declared range is `[−1, 1]`. Applied per
+    R-369: it keeps viridis, because the quantity shown, `‖n‖`, cannot be negative ("fields that can't be negative keep
+    viridis", applied to the quantity the view shows rather than to the vector field's range). A display-ramp scope
+    choice; it changes no result.
+  - `crates/render/shaders/wgsl/frag/debug/live_shape.wgsl`'s mode 2, `‖n‖ − 1`, is a signed error but not a ledger
+    field, so R-400's range rule does not reach it. Applied per R-369: it stays on viridis as built. Mode 0
+    (`dbg_dircos3`) and mode 1 (`ramp_twilight`) are no ramp of a declared range and do not change.
+  Only the numeric template moves fields to `ramp_coolwarm`. This task rewords those comments' "RQ-260 open" to cite
+  R-400 and the grounds above (and, for `energy_drift.wgsl`, that its R-381 view is TASK-M3-05's); no assertion
+  changes. The human may veto either choice applied per R-369; a veto would be a ruling, applied by a follow-up task.
+- **The cool-warm table already exists** (the R-388 pre-flight): `crates/render/tests/data/lut/coolwarm.txt` holds
+  Moreland's 33-stop CoolWarmFloat33 table, as matplotlib 3.8.0 transcribes it, its source and version named in the
+  file, sRGB-encoded, each stop at `k/32`, so stop 16 is at `t = ½`, the neutral. The deliverable
+  `crates/ledger/data/lut/coolwarm.txt` takes the same table (R-122), so the two copies agree, and `ramp_coolwarm(t)`
+  reads it as `ramp_viridis` reads its table, returning linear RGB.

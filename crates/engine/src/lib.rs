@@ -40,6 +40,7 @@ pub mod contract {
     mod tests {
         mod canonical;
         mod conformance;
+        mod latent;
         mod occupant;
         mod profile_v1;
     }

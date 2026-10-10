@@ -421,9 +421,16 @@ fn skeleton() -> (SimConfig, RenderState) {
     (
         SimConfig {
             chart: Chart {},
-            plane: Plane {},
+            plane: Plane {
+                z0: [0.0; 8],
+                q1: [0.0; 8],
+                q2: [0.0; 8],
+            },
             slice: Slice {},
-            lock: Lock {},
+            lock: Lock {
+                locked: false,
+                z_locked: [0.0; 8],
+            },
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
@@ -520,7 +527,7 @@ fn cases() -> Vec<(String, &'static str)> {
         ),
         (
             to(&sim),
-            r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{},"plane":{},"quality":{},"slice":{}}"#,
+            r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{}}"#,
         ),
         (
             to(&render),
@@ -661,7 +668,7 @@ validation::negative_control!(
     "a text in another key order must fail the round trip",
     expected = "the text does not round-trip",
     check_round_trip(
-        r#"{"slice":{},"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{},"plane":{},"quality":{}}"#,
+        r#"{"slice":{},"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{}}"#,
         r#"{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#
     )
 );

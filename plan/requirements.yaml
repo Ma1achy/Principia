@@ -5791,10 +5791,12 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   verify:
     method: review checklist
-    detail: "N matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad (N² × (E+1))"
+    detail: "the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint"
   rulings:
   - R-72
   milestone: M5
+  rq:
+  - RQ-266
   note: "Bin width is a layout value; the task records it with the definition."
 - id: REQ-PAY-076
   area: PAY
@@ -5820,14 +5822,17 @@
     section: 3.7 `QuadReduction` — completed ledger
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
   verify:
     method: review checklist
     detail: "the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it"
   rulings:
   - R-72
+  - R-312
   milestone: M5
   rq:
-  - RQ-182
+  - RQ-266
 - id: REQ-PAY-078
   area: PAY
   kind: calibration
@@ -6038,6 +6043,8 @@
   - R-86
   - R-113
   milestone: M5
+  rq:
+  - RQ-266
   note: Split from REQ-PAY-001 (R-113, RQ-93 M0-9 option b).
 - id: REQ-PAY-090
   area: PAY
@@ -6089,6 +6096,59 @@
   - R-288
   - R-294
   milestone: M0
+- id: REQ-PAY-093
+  area: PAY
+  kind: calibration
+  statement: "The declared §3.8 `range` of each of `QuadReduction`'s f16 members `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift`, and its `overflow` (saturate or inf) where an end is unbounded or lies beyond ±65504, which the corpus does not give, must be proposed with its evidence by the task that builds `QuadReduction`, checked by the physics reviewer, and confirmed by the human at the M5 gate (R-71)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/design/principia_dd_generation_root.md
+    section: Ensemble spread — the two bounded contributors
+  - file: docs/design/principia_dd_generation_root.md
+    section: Refinement — the scaling exponent
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
+  - file: decisions.md
+    section: "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
+  - file: decisions.md
+    section: "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
+  - file: decisions.md
+    section: "R-42 — The `alpha_area` defects: tell empty from full by `n_unresolved`; refuse the floor on a negative exponent *(RS-2 (b)+(c))*"
+  verify:
+    method: review checklist
+    detail: "the PR gives each member's range and overflow with its evidence (the values §3.7 and the refinement-criterion reports measure, e.g. `error_ratio` 204.8 and 1.8e+04, and why each end sits where it does); each range lies within ±65504 or the entry states its overflow (R-248); the physics reviewer checks each; the human confirms them at the M5 gate"
+  rulings:
+  - R-42
+  - R-71
+  - R-248
+  - R-306
+  - R-312
+  milestone: M5
+  note: "Pre-flight of TASK-M5-01 (R-388): R-306 gives TASK-M5-01 the members' §3.8 entries, and §3.8 fails generation on an incomplete entry, but the corpus gives no range for these five. Proposed provisionally until the M5 gate (R-182). Ends that follow from a member's definition are derived and cited, not calibrated (physics review 5480220637 of PR #185): `error_ratio` ≥ 0 (a ratio of spreads), `roundtrip_error` ≥ 0 (a displacement), `alpha_area` possibly negative (§3.7: the floor is refused on a negative exponent, R-42), and §3.7's \"an infinite deviation is the correct answer\" bearing on `error_ratio`'s `overflow` (inf, not saturate). Only the ends no definition gives are calibrated."
+- id: REQ-PAY-094
+  area: PAY
+  kind: definition
+  statement: "`first_divergence_t`'s sentinel (the value it holds until the crossing, §3.7's \"sentinel until crossed\"), and the §3.8 `scale` of each `QuadReduction` member whose §3.7 row gives none, must be defined in dd_generation_root §3.7 by the task that needs them and reviewed by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: Temporal accumulators (scheduler Part 8)
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
+  verify:
+    method: review checklist
+    detail: "the doc gives `first_divergence_t`'s sentinel, distinct from every crossing time and not NaN (NaN is the invalid value, R-79, R-136), and each member's scale; the ledger entries carry them; the doc change is in the PR and the physics reviewer approves it before merge"
+  rulings:
+  - R-72
+  - R-306
+  milestone: M5
+  note: "Pre-flight of TASK-M5-01 (R-388): §3.7 says `first_divergence_t` is \"sentinel until crossed\" but gives no value, and gives no member a scale; §3.8's `sentinel?` and `scale` need them."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -8969,7 +9029,7 @@
 - id: REQ-REF-046
   area: REF
   kind: definition
-  statement: "Where the diagnostics `running_mean_divergence` and `first_divergence_t` are held (they are no longer split inputs or QuadReduction members, R-99) must be defined in dd_generation_root's temporal-accumulators section by the task that needs them and reviewed by the physics reviewer before merge."
+  statement: "Where the diagnostics `running_mean_divergence` and `first_divergence_t` are held and updated (each an f32 `QuadReduction` member in §3.7's temporal-accumulators table, and a diagnostic, not a split input, R-99) must be defined in dd_generation_root's temporal-accumulators section by the task that needs them and reviewed by the physics reviewer before merge."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: Temporal accumulators (scheduler Part 8)
@@ -8979,7 +9039,7 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   verify:
     method: review checklist
-    detail: "the doc states where both diagnostics live and how the GPU→CPU crossing carries them, if at all; physics reviewer approved"
+    detail: "the doc states where both diagnostics are held and updated before the reduction, consistent with their §3.7 `QuadReduction` member rows, and how the GPU→CPU crossing carries them; physics reviewer approved"
   rulings:
   - R-72
   - R-99
@@ -10967,6 +11027,8 @@
     detail: "seam 5: change a field's ledger scale; the view re-styles and the dispatch counter is unchanged"
   rulings: []
   milestone: M7
+  rq:
+  - RQ-265
 - id: REQ-COL-033
   area: COL
   statement: "The sRGB transfer, linear-sRGB ↔ OKLab (M1, M2, inverse coefficients, M1⁻¹) and OKLCH polar forms must be exactly those of dd_colouring §3.1, transcription-checked against Ottosson's reference implementation before entering the shared source."
@@ -11079,6 +11141,8 @@
     detail: "dd_colouring unit test 7: each form monotone on its domain; symlog b(x)+b(−x) = 1 and b(0) = ½ exactly; log styles the −1.0 sentinel instead of ramping it"
   rulings: []
   milestone: M7
+  rq:
+  - RQ-265
 - id: REQ-COL-040
   area: COL
   statement: "Golden-angle categorical palettes must use θ_i = 2π·frac(i·φ_g), φ_g = (√5−1)/2, and consecutive indices must exceed a minimum OKLab hue separation up to the Fibonacci-lattice counts."
@@ -11583,6 +11647,57 @@
   - R-399
   milestone: M1
   note: "R-399 (RQ-259): proposed by TASK-M1-17, which builds debug_not_yet in present.wgsl beside DBG_NOT_YET; applied per R-369, the helper's name and file."
+- id: REQ-COL-065
+  area: COL
+  kind: definition
+  statement: "The diverging compaction's form and rules (dd_colouring §3.6's symlog), for each field whose ledger scale is `diverging` (`energy_drift`, `Lz_drift`, `E_0` and `Lz_0`, R-403): what `x_max` is (which end, declared or measured, or none), and how `x₀` is chosen per field, must be defined in dd_colouring §3.6 by the task that needs them and reviewed by the physics reviewer before merge (R-72)."
+  source:
+  - file: docs/design/principia_dd_colouring.md
+    section: "3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-263 — §3.8 gains the optional key `floor?: <sim-key parameter>` *(closes RQ-158)*"
+  - file: decisions.md
+    section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
+  - file: decisions.md
+    section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
+  verify:
+    method: review checklist
+    detail: "§3.6 defines, for each `diverging` field, what `x_max` is and how `x₀` is chosen, in that field's units: the drifts' `x₀` is their sim-key floor, `eps_E` or `eps_L` (§3.6's \"the ε floor as `x₀`\"; R-263; R-401 leaves both unchanged); `E_0`'s and `Lz_0`'s, which carry no floor, by the rule the definition gives, its number REQ-COL-066's; the doc change is in the PR and the physics reviewer approves it before merge"
+  rulings:
+  - R-72
+  - R-263
+  - R-401
+  - R-403
+  milestone: M7
+  rq:
+  - RQ-265
+  note: "Pre-flight of TASK-M7-05 (R-388; physics review 5480220637 of PR #185): §3.6's symlog uses `x_max`, defined nowhere, and takes \"the ε floor as `x₀`\" for the signed drifts, which is settled: their floors are `eps_E` and `eps_L` (R-263), unchanged by R-401, which replaced the single ε only for the log-scaled views with no ledger floor. R-403 leaves `E_0` and `Lz_0` diverging with no floor (`crates/ledger/src/payload.rs`:132–133 at c683714), so their `x₀` is open; its number, and any fixed `x_max`, are REQ-COL-066 (calibration). Waits on RQ-265, which decides whether `x_max` exists."
+- id: REQ-COL-066
+  area: COL
+  kind: calibration
+  statement: "The numeric `x₀` of the diverging compaction for `E_0` and `Lz_0`, which carry no floor, in each field's units, and any fixed number REQ-COL-065's definition gives `x_max`, which the corpus does not give, must be proposed with its evidence by the task that writes REQ-COL-065, checked by the physics reviewer, and confirmed by the human at the M7 gate (R-71)."
+  source:
+  - file: docs/design/principia_dd_colouring.md
+    section: "3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
+  - file: decisions.md
+    section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
+  verify:
+    method: review checklist
+    detail: "the PR gives `E_0`'s and `Lz_0`'s `x₀`, each in its field's units, the magnitude where compression sets in, with its evidence (where the fields' values fall on the fixtures, and why it sits there), and any fixed `x_max`; the physics reviewer checks each; the human confirms them at the M7 gate"
+  rulings:
+  - R-71
+  - R-401
+  - R-403
+  milestone: M7
+  note: "Physics review 5480220637 of PR #185: a per-field magnitude where compression sets in is a value, as R-401 classes the log floors (R-71). The drifts' `x₀` is not here: §3.6 and R-263 give `eps_E` and `eps_L`."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
