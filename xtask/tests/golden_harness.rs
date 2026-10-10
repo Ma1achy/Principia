@@ -4,7 +4,10 @@
 //! - the config's fields: a harness case has `harness`, `width` and `height` alone (`golden_harness_config_*`);
 //! - the float image's format, refused unless whole and of the case's size (`golden_harness_decode_*`);
 //! - a harness case renders through the binary, its stored levels the floats rounded half to even, and has no
-//!   automatic output (`golden_harness_renders_*`).
+//!   automatic output (`golden_harness_renders_*`);
+//! - a golden run builds the binary once, with `cargo build`, finds it in cargo's JSON messages, and spawns it per
+//!   case, so it takes cargo's build lock once, not once per case (`golden_harness_executable_*`,
+//!   `golden_harness_builds_once_per_run`).
 //!
 //! Each test registers its negative control (R-176).
 
@@ -12,7 +15,8 @@ use std::path::Path;
 
 use serde_json::json;
 use validation::negative_control;
-use xtask::golden::{decode_harness, Config, Output, Renderer, HARNESS_MAGIC};
+use validation::spawn::Spawn;
+use xtask::golden::{decode_harness, harness_executable, Config, Output, Renderer, HARNESS_MAGIC};
 
 fn config(render: serde_json::Value) -> Result<Config, String> {
     Config::from_render(&render)
@@ -225,4 +229,181 @@ negative_control!(
     "levels rounded half away from zero, not to even, at a tie, are not the quantise pass's",
     expected = "is not stored as",
     check_levels(&[[0.5 / 255.0, 0.0, 0.0, 1.0]], &[1, 0, 0])
+);
+
+/// cargo's `compiler-artifact` message for the target `name`, with `executable` (JSON `null` when `None`).
+fn artifact(name: &str, executable: Option<&str>) -> String {
+    json!({
+        "reason": "compiler-artifact",
+        "target": { "name": name, "kind": ["bin"] },
+        "executable": executable,
+    })
+    .to_string()
+}
+
+/// Checks that `messages` are refused with a message containing `why`.
+fn check_executable_refused(messages: &str, why: &str) {
+    match harness_executable(messages) {
+        Ok(path) => panic!("{} is found in {messages:?}", path.display()),
+        Err(e) => assert!(e.contains(why), "refused as `{e}`, not `{why}`"),
+    }
+}
+
+#[test]
+fn golden_harness_executable_is_the_one_artifact() {
+    let messages = [
+        "plain text, not a message".to_owned(),
+        artifact("validation", None),
+        artifact("gate", Some("/t/debug/gate")),
+        json!({ "reason": "build-script-executed", "target": { "name": "golden_harness" }, "executable": "/x" })
+            .to_string(),
+        artifact("golden_harness", Some("/t/debug/golden_harness")),
+        json!({ "reason": "build-finished", "success": true }).to_string(),
+    ]
+    .join("\n");
+    assert_eq!(
+        harness_executable(&messages),
+        Ok(std::path::PathBuf::from("/t/debug/golden_harness"))
+    );
+    check_executable_refused("", "named no golden_harness executable");
+    check_executable_refused(
+        &artifact("golden_harness", None),
+        "named no golden_harness executable",
+    );
+    check_executable_refused(
+        &artifact("gate", Some("/t/debug/gate")),
+        "named no golden_harness executable",
+    );
+    check_executable_refused(
+        &json!({ "reason": "compiler-message", "target": { "name": "golden_harness" }, "executable": "/x" })
+            .to_string(),
+        "named no golden_harness executable",
+    );
+    let twice = [
+        artifact("golden_harness", Some("/a/golden_harness")),
+        artifact("golden_harness", Some("/b/golden_harness")),
+    ]
+    .join("\n");
+    check_executable_refused(&twice, "named 2 golden_harness executables");
+    check_executable_refused("{not json", "cargo's message `{not json`");
+}
+
+negative_control!(
+    golden_harness_executable_is_the_one_artifact,
+    "the harness's one artifact is found, so expecting it refused fails",
+    expected = "is found in",
+    check_executable_refused(
+        &artifact("golden_harness", Some("/t/debug/golden_harness")),
+        "named no golden_harness executable"
+    )
+);
+
+/// The harness cases of `suite`, each with its scene, width and height.
+fn harness_cases(suite: &str) -> Vec<(String, u32, u32)> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../fixtures/golden")
+        .join(suite);
+    let mut cases = Vec::new();
+    for entry in std::fs::read_dir(&dir).unwrap() {
+        let path = entry.unwrap().path().join("case.json");
+        let Ok(text) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let case: serde_json::Value = serde_json::from_str(&text).unwrap();
+        let render = &case["render"];
+        if let Some(scene) = render["harness"].as_str() {
+            let dim = |k: &str| render[k].as_u64().unwrap() as u32;
+            cases.push((scene.to_owned(), dim("width"), dim("height")));
+        }
+    }
+    cases
+}
+
+/// Checks that the stand-in cargo was called once, to build the harness, and the harness once per case: `cargo` and
+/// `harness` are their calls, one per line, and `cases` the suite's harness cases.
+fn check_built_once(cargo: &str, harness: &str, cases: usize) {
+    let builds: Vec<&str> = cargo
+        .lines()
+        .filter(|l| l.contains("golden_harness"))
+        .collect();
+    assert_eq!(
+        builds.len(),
+        1,
+        "the harness was built {} times, not once: {builds:?}",
+        builds.len()
+    );
+    assert!(
+        builds[0].starts_with("build ") && builds[0].contains("--message-format=json"),
+        "the harness was not built with `cargo build`'s JSON messages: {}",
+        builds[0]
+    );
+    assert_eq!(
+        harness.lines().count(),
+        cases,
+        "the harness ran {} times for {cases} cases:\n{harness}",
+        harness.lines().count()
+    );
+}
+
+#[test]
+fn golden_harness_builds_once_per_run() {
+    let suite = "m1-numeric";
+    let cases = harness_cases(suite);
+    assert!(
+        cases.len() > 1,
+        "{suite} has {} harness cases, so building once is not shown",
+        cases.len()
+    );
+    let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("golden_harness_builds_once");
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(dir.join("scenes")).unwrap();
+    for (scene, width, height) in &cases {
+        std::fs::write(dir.join("scenes").join(scene), image(*width, *height, 0)).unwrap();
+    }
+    let d = dir.display();
+    let harness = dir.join("golden_harness");
+    validation::spawn::write_executable(
+        &harness,
+        format!("#!/bin/sh\necho \"$*\" >> '{d}/harness.log'\ncat '{d}/scenes/'\"$2\"\n"),
+    )
+    .unwrap();
+    let cargo = dir.join("cargo");
+    validation::spawn::write_executable(
+        &cargo,
+        format!(
+            "#!/bin/sh\necho \"$*\" >> '{d}/cargo.log'\necho '{}'\n",
+            artifact("golden_harness", Some(&harness.to_string_lossy()))
+        ),
+    )
+    .unwrap();
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_xtask"))
+        .args(["golden", suite])
+        .env("CARGO", &cargo)
+        .env("CARGO_TARGET_DIR", dir.join("target"))
+        .timed_output()
+        .expect("run xtask golden");
+    let out = format!(
+        "{}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let read = |f: &str| std::fs::read_to_string(dir.join(f)).unwrap_or_default();
+    check_built_once(&read("cargo.log"), &read("harness.log"), cases.len());
+    for (scene, _, _) in &cases {
+        assert!(
+            read("harness.log").contains(&format!("--scene {scene}\n")),
+            "the harness never rendered {scene}:\n{out}"
+        );
+    }
+}
+
+negative_control!(
+    golden_harness_builds_once_per_run,
+    "a run that builds the harness per case, through `cargo run`, is not building it once",
+    expected = "the harness was built 2 times",
+    check_built_once(
+        "run --quiet -p validation --bin golden_harness -- --scene a\nrun --quiet -p validation --bin golden_harness -- --scene b\n",
+        "",
+        2
+    )
 );

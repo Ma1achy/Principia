@@ -35,8 +35,8 @@
 //! before the shader's, so a case calls the shared library's functions from their one source rather than a copy
 //! (RQ-210: `m1-coords` takes the convention's flip from `lib/coords.wgsl`). A case of the harness kind instead names
 //! a synthetic scene, `"render": { "harness": "<scene>", "width": <w>, "height": <h> }` (RQ-229, decided per R-369;
-//! TASK-M1-09): the runner spawns validation's `golden_harness` binary, which xtask reaches only as a separate process
-//! (as it does `gate`; systems_architecture §7.1, R-187), and which renders the scene through the render harness
+//! TASK-M1-09): the runner builds validation's `golden_harness` binary once per run and spawns it per case, which
+//! xtask reaches only as a separate process (as it does `gate`; systems_architecture §7.1, R-187), and which renders the scene through the render harness
 //! (`render::bind`'s module and `upload`) into an `Rgba32Float` target and writes its floats to stdout
 //! ([`HARNESS_MAGIC`]'s format); the runner uploads them as the case's float target and quantises and compares them as
 //! for any case. The width and height must be the scene's. Its output is quantised in the runner's own shader (R-287):
@@ -794,6 +794,8 @@ pub struct Renderer {
     pub backend: &'static str,
     /// The adapter, for the summaries.
     pub adapter: String,
+    /// The `golden_harness` binary, built on the renderer's first harness case and spawned for each one after.
+    harness: std::sync::OnceLock<PathBuf>,
 }
 
 impl Renderer {
@@ -823,6 +825,7 @@ impl Renderer {
             queue,
             backend: name,
             adapter,
+            harness: std::sync::OnceLock::new(),
         })
     }
 
@@ -878,7 +881,7 @@ impl Renderer {
         let harness = match config.harness() {
             None => None,
             Some(scene) => {
-                let floats = harness_floats(scene, width, height)?;
+                let floats = harness_floats(self.harness_binary()?, scene, width, height)?;
                 match readback {
                     Readback::Float => return Ok((width, height, floats)),
                     Readback::Unorm(Output::Automatic) => {
@@ -1148,24 +1151,74 @@ impl Renderer {
     }
 }
 
-/// Renders the harness scene `scene` by running validation's `golden_harness` binary on this workspace, through the
-/// cargo that runs xtask, and returns its floats, tightly packed: refused unless the image is `width` × `height`.
-fn harness_floats(scene: &str, width: u32, height: u32) -> Result<Vec<u8>, String> {
+impl Renderer {
+    /// The `golden_harness` binary: built by [`build_harness`] on the first call, the same path after.
+    fn harness_binary(&self) -> Result<&Path, String> {
+        if let Some(path) = self.harness.get() {
+            return Ok(path);
+        }
+        let path = build_harness()?;
+        Ok(self.harness.get_or_init(|| path))
+    }
+}
+
+/// Builds validation's `golden_harness` binary on this workspace, through the cargo that runs xtask, as `cargo run`
+/// would (its profile and features, and `CARGO_TARGET_DIR`), and returns its path. A golden run builds it once and
+/// spawns it per harness case, so it takes cargo's build lock once, not once per case.
+fn build_harness() -> Result<PathBuf, String> {
     let output = std::process::Command::new(crate::deps::cargo())
-        .args(["run", "--quiet", "--manifest-path"])
-        .arg(crate::workspace_manifest())
         .args([
-            "-p",
-            "validation",
-            "--bin",
-            "golden_harness",
-            "--",
-            "--scene",
-            scene,
+            "build",
+            "--quiet",
+            "--message-format=json-render-diagnostics",
+            "--manifest-path",
         ])
+        .arg(crate::workspace_manifest())
+        .args(["-p", "validation", "--bin", "golden_harness"])
         .stderr(std::process::Stdio::inherit())
         .output()
-        .map_err(|e| format!("cannot run cargo run -p validation --bin golden_harness: {e}"))?;
+        .map_err(|e| format!("cannot run cargo build -p validation --bin golden_harness: {e}"))?;
+    if !output.status.success() {
+        return Err(format!(
+            "cargo build -p validation --bin golden_harness failed ({})",
+            output.status
+        ));
+    }
+    harness_executable(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// The path of the `golden_harness` executable in `messages`, cargo's `--message-format=json` output: its one
+/// `compiler-artifact` message for the `golden_harness` target with an executable.
+pub fn harness_executable(messages: &str) -> Result<PathBuf, String> {
+    let mut found = Vec::new();
+    for line in messages.lines().filter(|l| l.starts_with('{')) {
+        let message: Value =
+            serde_json::from_str(line).map_err(|e| format!("cargo's message `{line}`: {e}"))?;
+        if message["reason"] == "compiler-artifact" && message["target"]["name"] == "golden_harness"
+        {
+            if let Some(path) = message["executable"].as_str() {
+                found.push(PathBuf::from(path));
+            }
+        }
+    }
+    match found.as_slice() {
+        [path] => Ok(path.clone()),
+        [] => Err("cargo build named no golden_harness executable".to_owned()),
+        _ => Err(format!(
+            "cargo build named {} golden_harness executables",
+            found.len()
+        )),
+    }
+}
+
+/// Renders the harness scene `scene` by running the `golden_harness` binary at `binary` ([`build_harness`]) and
+/// returns its floats, tightly packed: refused unless the image is `width` × `height`.
+fn harness_floats(binary: &Path, scene: &str, width: u32, height: u32) -> Result<Vec<u8>, String> {
+    let output = std::process::Command::new(binary)
+        .args(["--scene", scene])
+        .stderr(std::process::Stdio::inherit())
+        .output()
+        .map_err(|e| format!("cannot run {}: {e}", binary.display()))?;
     if !output.status.success() {
         return Err(format!(
             "golden_harness --scene {scene} failed ({})",
