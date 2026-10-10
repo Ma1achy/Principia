@@ -60,9 +60,5 @@ mutant = "crates/validation/src/golden_scene.rs:223:49: replace % with + in scen
 justification = "set_detail writes the low 2 bits of its value (insert(w, v, 3, 2)), and i + 4 and i % 4 share their low 2 bits for every i, so each state_view sample holds the same detail code"
 
 [[equivalent]]
-mutant = "xtask/src/lint_constants.rs:108:28: replace || with && in scan"
-justification = "the guard skips an empty name (in stable Rust only a `const { … }` block's) or a fn qualifier's (`const fn`, `const unsafe fn`, `const extern \"C\" fn`), and each reaches `{` or `;` before any `=` at depth 0, so initializer returns None for it: the mutant, never skipping, finds nothing more"
-
-[[equivalent]]
 mutant = "xtask/src/lint_constants.rs:131:63: replace + with * in initializer"
 justification = "the initializer then starts at its `=` rather than after it; `=` is no digit, and before the next byte it is neither alphanumeric, `_` nor `.`, so has_number finds a token-starting digit exactly when it does without it"
