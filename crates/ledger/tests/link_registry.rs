@@ -579,10 +579,18 @@ fn links_rs(builders: &[LinkBuilder]) -> String {
         .contents
 }
 
-/// A literal is emitted at each float type as the shortest that reads back at that type: ⅓ at f32 and at f64.
+/// A literal is emitted at each float type as the shortest that reads back at that type: ⅓ is `0.33333334` in the
+/// `f32` impl of `Literals` and `0.3333333333333333` in the `f64` one.
 fn check_literals(text: &str) {
+    let lines: Vec<&str> = text.lines().collect();
+    let has = |ty: &str, lit: &str| {
+        lines.iter().any(|l| {
+            let l = l.trim();
+            l.starts_with("const LIT_") && l.ends_with(&format!(": {ty} = {lit};"))
+        })
+    };
     assert!(
-        text.contains("0.33333334") && text.contains("0.3333333333333333"),
+        has("f32", "0.33333334") && has("f64", "0.3333333333333333"),
         "⅓ is not emitted at both f32 and f64"
     );
 }
