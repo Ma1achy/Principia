@@ -8062,8 +8062,9 @@ change REQ-GUI-096's and REQ-GUI-182's statements and REQ-GUI-178's statement an
 grain)" (the type; a paragraph added) and § "3.7 `QuadReduction` — completed ledger" (the "Size" paragraph),
 `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact" (a paragraph added),
 `docs/design/principia_systems_architecture.md` and `docs/contracts/principia_render_contract.md` § "Part 1 — The
-payload (render input)" (the ~80 B figure), `plan/reviewers/perf.md`, REQ-PAY-075, REQ-PAY-077, REQ-PAY-089,
-REQ-REF-001 and REQ-SYS-036 (reqio), REQ-SCHED-098 (reqio, new), TASK-M5-01 (perf added to its reviewers), TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+payload (render input)" (the ~80 B figure), `docs/contracts/principia_canonical_spec.md` § "6. Memory & deployment
+model" (likewise), `plan/reviewers/perf.md`, REQ-PAY-006, REQ-PAY-075, REQ-PAY-077, REQ-PAY-089, REQ-REF-001 and
+REQ-SYS-036 (reqio), REQ-SCHED-098 (reqio, new), TASK-M5-01 (perf added to its reviewers), TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
 `docs/archive/review_queue/M0.md` (RQ-266 archived) and `REVIEW_QUEUE.md`; built by TASK-M5-01 and TASK-M5-17*
 
 The orchestrator put RQ-264, RQ-265 and RQ-266 to the human, with RQ-267 (filed in PR #187), the rustup cache, early
@@ -8136,8 +8137,8 @@ This ruling's part:
   `quad_reduction_histogram_capacity` run at Extreme's provisional 16² × 16 = 4096 (R-137, R-398) and at the bound,
   2³² − 1, with a control: §3.7's former u8 bin fails at Medium's 16² × 2 = 512. It loses `rq: RQ-266`.
 - **REQ-PAY-077 and REQ-PAY-089** lose `rq: RQ-266`: with a fixed width, the layout and size don't follow the setting.
-  REQ-PAY-089's "(about 80 B)" is §3.7's descriptive figure, not a cap (§3.7's "Size" paragraph); TASK-M5-01 sizes the
-  struct from its member list and updates the figure, as §3.7 asks. Each gains R-410 and a note.
+  REQ-PAY-089's "(about 80 B)" was §3.7's descriptive figure, not a cap, and is removed (next bullet); TASK-M5-01 sizes
+  the struct from its member list and writes in the measured figure. Each gains R-410 and a note.
 - **REQ-REF-001**'s "`class_histogram` (u8 × N)" becomes "(u32 × N, R-410)", following the source (the
   requirements.yaml rule: the source wins).
 - **Perf joins TASK-M5-01's reviewers** (code, qa, physics, perf), with a review line: the perf reviewer confirms
@@ -8149,7 +8150,8 @@ This ruling's part:
   render_contract Part 1's opening, `plan/reviewers/perf.md` § "3. Memory tiers and budgets", REQ-PAY-089's and
   REQ-SYS-036's statements (reqio) now say the size follows from §3.7's members with u32 bins and that TASK-M5-01
   defines and measures it; TASK-M5-01's Deliverables write the measured figure into each. REQ-PAY-006's "the ~80 B
-  figure is not a cap" is kept: it states no size.
+  figure is not a cap" and TASK-M5-01's matching code-review line now read "QuadReduction's size (R-410; TASK-M5-01
+  measures it) is not a cap"; canonical_spec §6's "`QuadReduction` (~80 B)" is reworded likewise.
 - **The placement.** TASK-M5-01's note that "`u8 × N` needs a placement" (§3.8's vector rule reads a `u-bits`
   component at a scalar index as a full u32) is settled by the width: each bin is a full u32. TASK-M5-01 still writes
   the member order and packing (REQ-PAY-077).
