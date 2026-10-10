@@ -271,6 +271,8 @@ change only which quads are drawn. It is not a screen or view position: screen-r
 lane's fields, `ctx.screen.uv` and `ctx.screen.pixel`. Formed in f32 it is an absolute coordinate, which R-395 keeps
 free of banding only up to the deep-zoom switchover (ℓ_switch, R-90); past it a fragment works in the quad's local
 coordinates, `ctx.quad.centre` and the offset `δ = ctx.quad.half_width · (2 · ctx.quad.uv − 1)` from it.
+Where the figure fills the window past the chart's depth-0 root (F3 off or present mode, R-406, R-407),
+`ctx.chart.slice_uv` lies outside [0, 1]² there; the formula is unchanged, and inside [0, 1]² nothing changes.
 
 **The within-cell coordinates `ctx.quad.uv` and `ctx.tile.uv` (R-72; REQ-COL-056).** Each is a vec2 in [0, 1]², with
 its origin at its cell's bottom-left corner, `u` increasing rightward and `v` upward on the slice: the post-flip, Y-up

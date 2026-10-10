@@ -114,7 +114,7 @@ Artboard → governing section:
 - [ ] `docs/gui/design/12_console.png` — Console → `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 
 <!-- list:gui-screenshots -->
-*73 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*76 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M6**
 - [ ] REQ-GUI-014 — presence only (R-129; no layout comparison until the M8 dev GUI): the Run window's 'quality: Custom' section shows each control
@@ -126,6 +126,8 @@ Artboard → governing section:
 - [ ] REQ-GUI-173 — cargo xtask screenshot 01_main (mock_tile_bounds) against 01_main.png; cargo test -p gui mock_tile_bounds: the toggle emits one SetField on the overlay set and the GUI draws nothing over the figure; after a pan the mock's drawn bounds move with the stand-in
 - [ ] REQ-GUI-174 — cargo xtask screenshot 04_windows (mock_run, mock_export, mock_display, mock_profiler), 03_chartbuilder (mock_chart_builder), 12_console (mock_console) and 05_inspectors (mock_inspector) against their artboards; the Chart builder's two previews are square for a square viewport; each window opens from its top-bar or menu entry
 - [ ] REQ-GUI-175 — cargo xtask screenshot 02_stain (mock_stain, mock_stain_selected) against 02_stain.png; cargo test -p gui mock_stain_preview: an edit to the graph is a SetField and the mock's preview changes; the preview is square for a square viewport
+- [ ] REQ-GUI-178 — cargo test -p gui mock_keyboard and scope_tab_order_mock: Tab from Legend reaches the footer and Tab from the footer the top bar; Shift+Tab from no focus starts at the footer; Enter on the footer opens the console with the focus on its first filter; Tab and Shift+Tab move between the console's sections without leaving it, the arrows move within a section and Enter on clear clears it; Esc closes the console with the focus on the footer; Windows › Console opens it with the focus on its first filter, and Esc closes it with the focus on Windows › Console; a raised error opens the console without moving the focus; controls: a tree without the footer scope (Tab from Legend wraps to the top bar), a console that does not take the focus on Enter, and an Esc that returns the menu-opened console's focus to the footer each fail; cargo xtask screenshot 07_keyboard (mock_focus_console): the ring on a console control and the breadcrumb naming the console
+- [ ] REQ-GUI-179 — cargo test -p gui f3_fills_window_mock and cargo xtask screenshot 01_main (mock_shell, mock_f3_off): with F3 off no pixel of the window is the clear colour; over the shown figure's rect the F3-off capture is pixel-identical to the F3-on one; outside it the capture equals the stand-in drawn at the same placement over the whole window; the tile-bounds overlay, on, draws the extra quads at the shown quads' size; F3 again restores the shown capture pixel for pixel; the undo depth is unchanged and no SetField is sent; cargo test -p gui f3_fallback_mock: with the mock's test hook flagging a region outside the shown rect invalid, that region is drawn hatched, never the stand-in or the clear colour; cargo test -p gui present_fills_window_mock and cargo xtask screenshot 01_main (mock_present): the present-mode capture equals the F3-off one and Esc restores the shown capture; controls: the shown view stretched to the window fails the check over the rect, a figure left in its rect fails the coverage check, and a flagged pixel drawn as the stand-in fails the fallback check
 - [ ] REQ-TOOL-058 — presence only (R-129; no layout comparison until the M8 dev GUI): the Profiler tab shows the four items
 
 **M7**
@@ -151,7 +153,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-059 — screenshot with a large and a small configuration: both fit; the stamp is present
 - [ ] REQ-GUI-066 — screenshot of the readout panel against 05_inspectors.png
 - [ ] REQ-GUI-069 — one screenshot per screen compared for layout with 01_main.png … 12_console.png (values are illustrative, R-68); the mode switch offers exactly Explore / Stain
-- [ ] REQ-GUI-070 — screenshots with F3 on and off against 01_main.png: the figure is identical underneath; review that egui-wgpu is constructed from the engine's device/queue, not a second context
+- [ ] REQ-GUI-070 — screenshots with F3 on and off against 01_main.png: the figure is identical underneath, over the shown figure's rect, with a stain that reads no screen-lane field; review that egui-wgpu is constructed from the engine's device/queue, not a second context
 - [ ] REQ-GUI-073 — screenshots of 03_chartbuilder and 02_stain layouts: both chart-builder previews and the stain preview are square for a square viewport and match the viewport aspect otherwise
 - [ ] REQ-GUI-074 — trigger a warning and an error with the figure visible: screenshot against 01_main.png shows nothing new over the plot; the footer count increments
 - [ ] REQ-GUI-075 — screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code
@@ -169,7 +171,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-094 — screenshot against 01_main.png shows none of these fields; all are in the Run window (04_windows.png)
 - [ ] REQ-GUI-098 — screenshots before and after moving focus differ only in the ring and the breadcrumb (07_keyboard.png)
 - [ ] REQ-GUI-099 — screenshot against 08_lock.png after K over a point
-- [ ] REQ-GUI-100 — screenshot in present mode shows only the figure; Esc restores 01_main.png's layout
+- [ ] REQ-GUI-100 — screenshot in present mode shows only the figure, filling the window: over the shown figure's rect, with a stain that reads no screen-lane field, it is pixel-identical to the shown layout's capture, and the window outside it is covered with the extension R-407 gives, never the clear colour or the shown view stretched; Esc restores 01_main.png's layout
 - [ ] REQ-GUI-101 — screenshot against 04_windows.png's Display window
 - [ ] REQ-GUI-103 — screenshot against 04_windows.png's Run window shows tau and window, no 'persistence' field
 - [ ] REQ-GUI-104 — screenshot against 04_windows.png; Cancel during a recompute stops it and the progress resets
@@ -192,6 +194,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-161 — with the shape-sphere chart, the Chart section shows both controls and each changes the figure; with any other chart neither is shown
 - [ ] REQ-GUI-163 — cargo xtask screenshot 04_windows (run_fast_math): the control is present in the Run window, reading off by default (presence only, no artboard, R-129); cargo test -p gui run_fast_math: toggling it emits one SetField on SimConfig, is marked re-integrating, and shows the measured-not-exact note while it is on; cargo test -p gui run_fast_math_browser: with the browser build's backend the control is shown disabled with the note that the browser chooses the mode, and toggling it emits nothing (R-303)
 - [ ] REQ-GUI-164 — cargo xtask screenshot 04_windows (profiler_fast_math): the compute setting appears in the Profiler (presence only, no artboard, R-129); cargo test -p gui profiler_fast_math: a session-header fixture with the setting on and compute compiled on shows on alone, one with the setting off shows off alone, and one with the setting on and compute compiled off (lavapipe) shows both
+- [ ] REQ-GUI-180 — cargo xtask screenshot 01_main (f3_off, f3_off_sphere, f3_off_invariant) on the real engine, with a stain that reads no screen-lane field, on the latent chart, the shape sphere's spherical map and an invariant chart: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; past [0,1]² the latent chart continues its formula, the sphere wraps in θ and crosses its poles with θ shifted by π, and the invariant chart is hatched on every side; cargo test -p gui f3_fill_labels: every window pixel carries a labelled output, each hatched one decode_failed, none dropped; F3 again restores the shown capture; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a window pixel left unlabelled fails the label check
 - [ ] REQ-TOOL-088 — presence (R-129): the Profiler switch exists; the footer indicator is visible while passive logging is on; logging is off by default
 - [ ] REQ-TOOL-098 — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113)
 <!-- /list:gui-screenshots -->

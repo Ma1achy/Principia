@@ -222,6 +222,12 @@ is infeasible by construction** — which is why the warp exists rather than cla
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
 
+**Past the unit square (R-407): both axes are bounded.** Outside `[0,1]²` the warp has no feasibility guarantee:
+`s ∉ [0,1]` gives `|L_z| = |2s − 1|·L_max(t) > L_max(t)`, so `K* < K_min`, infeasible for every `γ_K`; `t < 0` has no
+real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back onto `t > 0`). So the warp
+declares nothing beyond bounded and is hatched on every side (§5.4). Its `t > 1` side (`K > K_max`) stays feasible;
+declaring it would be a later declaration, needing physics review (R-407, clause 3), and is not made.
+
 ### 2.2 Deterministic momentum construction
 
 Given target `Lz` and `K*`, construct `pᵢ` with `Σpᵢ = 0`, `K = K*`, `Lz` as specified. Work in
@@ -355,6 +361,14 @@ distorts area near the poles but keeps coordinates readable. For quantitative ar
 equal-area alternative (Mollweide or Hammer–Aitoff), chosen with the projection selector in the Manifold view's Chart
 section (render_gui_spec §G2, R-113). This matters because the Lagrange configurations sit
 at the poles and can be compressed to invisibility in equirectangular.
+
+**Past the unit square (R-407).** The spherical map's θ is **periodic** (it wraps, period 2π) and its φ
+**pole-crossing**: past a pole it comes back down the other side with θ shifted by π, half its period (for `t > 1`,
+`φ → −φ`; for `t < 0`, `φ → 2π − φ`; θ then wraps). So the sphere continues past `[0,1]²` with real neighbouring states,
+each a system `[0,1]²` already holds; area statistics count each system once, so these pixels, outside θ's or φ's
+primary range, are not counted (R-408, §5.4). The exponential map has no θ or φ axis, so its axes declare nothing and
+are bounded (§5.4). With the hemisphere toggle drawing one hemisphere, what φ does past the edge that is not a pole is
+RQ-264, built by TASK-M8-44 (REQ-CHART-057) once ruled.
 
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
 same object. Each pixel is a starting shape $\mathbf n(0) \in S^2$, and its trajectory $\mathbf n(t)$
@@ -491,6 +505,12 @@ $\Phi_{\mathrm{strip},K} = \Phi_{\theta,K}$ above. For $(\theta, \delta m)$, ble
 $$\mathbf m(u,v) = (1 - v)\,\mathbf m_{\mathrm{Burrau}}(\nu(\theta(u))) + v\,\mathbf m_{\mathrm{target}}, \qquad
 \Phi_{\mathrm{strip},\delta m}(u,v) = \big(\nu(\theta(u)),\ \mathbf m(u,v),\ \mathrm{rest}\big).$$
 
+**Past the unit square (R-407).** Each Burrau-family axis's extension type is a definition (R-72, REQ-CHART-055),
+written in §5.4 by TASK-M2-11 and physics-reviewed; until it is written each axis is bounded, the default. (`ν` past
+`(0,1)` gives `a = 1 − ν² ≤ 0` or `b ≤ 0`, a zero or negative mass, and the acute angle past `(0, π/4]` the same.) The
+ternary mass plot's axes are affine in R-407's sense (its formula continues; the map itself, `m₁ = u`,
+`m₂ = (1−u)v`, `m₀ = (1−u)(1−v)`, is bilinear), and the fallback hatches its negative-mass area (§5.4).
+
 ### 4.6 The central hypothesis
 
 **Hypothesis.** The fractal basin structures seen in the Burrau–Pythagorean family are cross-sections of
@@ -562,3 +582,41 @@ compare within a chart, never across.** The `alpha` distribution is the safer cr
 **And the standing caution applies with extra force here:** a chart that produces a prettier
 picture is not a better chart. The measurement is whether the criterion behaves consistently
 across charts, not which chart looks best.
+
+### 5.4 Past the unit square — each axis's extension type (R-407)
+
+The rule is `principia_chart_decoder_contract.md` Part 3's (§ "Past the unit square — each axis's extension type
+(R-407)"): each axis declares **affine** (continues), **periodic** (wraps), **pole-crossing** (continues over the pole,
+the partner axis shifted by half its period) or **bounded** (hatched past its edge, the default); outside `[0,1]²` a
+pixel whose `Φ` fails to evaluate, or whose state fails `validate(u, v)`, is hatched as forbidden and labelled
+`decode_failed`; inside `[0,1]²` nothing changes. The `Chart` trait (§5.1) declares each axis's type beside `map`. The
+existing charts:
+
+| chart | horizontal axis | vertical axis | past `[0,1]²` | area statistics past `[0,1]²` (R-408) |
+|---|---|---|---|---|
+| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
+| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, RQ-264 |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end) |
+| `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded | hatched on every side; the `t > 1` side is not declared (§2.1) | out of the count and the total (the domain's end) |
+| `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
+| Burrau family (§4.5) | REQ-CHART-055 (R-72, TASK-M2-11, physics-reviewed) | REQ-CHART-055 | bounded until the definition is written | by the types REQ-CHART-055 gives; bounded until then |
+| mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
+
+A custom chart (the Chart builder, render_gui_spec §G7) takes its axes' types: a latent direction is affine, a
+physical-quantity axis mapped linearly onto its range is affine, a Burrau dimension takes the Burrau family's types.
+B1 covers §G7's non-periodic quantities (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared
+affine would redraw systems and count them again (R-408), so it is typed only by a declaration under physics review.
+Such a physical-quantity axis is linear in its quantity over its range, so past its edge its formula continues and the fallback hatches what cannot be reached
+(energy beyond what is reachable); under R-408 its primary range is unbounded, so those pixels fail validity and count
+as forbidden. (R-407's port first made it bounded, by clause 1's default; corrected in R-408's port, B1, applied per
+R-369 and flagged to the human.) A quantity behind a nonlinear warp (§1.3) declares nothing and is bounded. A new
+declaration beyond bounded, or a new extension type, needs physics review (R-407, clause 3).
+
+**Primary ranges and area statistics (R-408).** Each type's primary range: periodic, one period of that axis (for the
+shape sphere's `θ = 2π·s`, the chart's `[0,1]` span); pole-crossing, pole to pole (for the shape sphere's φ with both
+hemispheres drawn, the chart's `[0,1]` span); affine, unbounded; bounded, its domain. A new periodic or pole-crossing
+declaration states its own primary range under physics review (R-407, clause 3); RQ-264 is that case for φ with one
+hemisphere drawn. "Forbidden in view" and the area statistics count a visible pixel only if every axis is inside its primary
+range, so each system counts once; a pixel hatched where the domain ends (a bounded axis past its edge, or a `Φ` that
+fails) leaves both the count and the total; only states that fail the validity check count as forbidden; inside
+`[0,1]²` nothing changes. The classification order is `principia_chart_decoder_contract.md` Part 3's.
