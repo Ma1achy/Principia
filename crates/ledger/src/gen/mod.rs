@@ -2,13 +2,16 @@
 //! the static layout check (§5 test 1, [`crate::check`]), then run each emitter. It refuses to emit anything when an
 //! entry is incomplete, naming each field and the missing key, when the layout check finds anything, or when a
 //! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]), or when a field has
-//! no read the debug catalogue or the export decoder needs ([`catalogue::refused`], [`export::refused`]). The emitters
+//! no read the debug catalogue or the export decoder needs ([`catalogue::refused`], [`export::refused`]), or when the
+//! link registry fails its checks ([`links::refused`]). The emitters
 //! are registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
-//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); and the
-//! debug catalogue, its views and their tests ([`catalogue`]). One source generates all four artefacts (seam 13).
+//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); the
+//! debug catalogue, its views and their tests ([`catalogue`]); and the kernel's link functions and chart constants from
+//! the link registry ([`links`]; dd_generation_root §3.9). One source generates all four artefacts (seam 13).
 
 pub mod catalogue;
 pub mod export;
+pub mod links;
 pub mod numeric;
 pub mod prelude;
 pub mod read;
@@ -32,7 +35,13 @@ pub struct Generated {
 pub type Emitter = fn(&[Word], &[Entry]) -> Vec<Generated>;
 
 /// The registered emitters, run in order.
-pub const EMITTERS: &[Emitter] = &[rust::emit, wgsl::emit, export::emit, catalogue::emit];
+pub const EMITTERS: &[Emitter] = &[
+    rust::emit,
+    wgsl::emit,
+    export::emit,
+    catalogue::emit,
+    links::emit,
+];
 
 /// Why generation was refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -58,6 +67,9 @@ pub enum GenError {
     /// ([`catalogue::refused`]) and the export decoder's ([`export::refused`]), so the catalogue is exhaustive by
     /// construction (render contract Part 6; dd_generation_root §4, seam 13).
     Unread(Vec<String>),
+    /// Link registry problems, each naming the entry: a missing member, a §3.9 row without its entries, a default that
+    /// is not an entry of its slot's codomain ([`crate::links::check`]; REQ-CHART-032, REQ-GEN-013).
+    Links(Vec<String>),
 }
 
 impl fmt::Display for GenError {
@@ -67,7 +79,8 @@ impl fmt::Display for GenError {
             GenError::Malformed(lines)
             | GenError::Structs(lines)
             | GenError::Constants(lines)
-            | GenError::Unread(lines) => lines.clone(),
+            | GenError::Unread(lines)
+            | GenError::Links(lines) => lines.clone(),
             GenError::Layout(errors) => errors.iter().map(ToString::to_string).collect(),
         };
         write!(
@@ -209,10 +222,14 @@ fn is_name(s: &str) -> bool {
 /// Validates `ledger` and runs the static layout check over it; if `emitters` include a struct emitter
 /// ([`rust::emit`] or [`wgsl::emit`]) and `ledger` declares any member of the payload structs, checks every member against it
 /// ([`rust::check`], exempting [`crate::payload::PENDING`]); if they include the export decoder ([`export::emit`]) or
-/// the catalogue ([`catalogue::emit`]), refuses a field it has no read of; then runs `emitters` over it. The files they
-/// generate, or why not.
+/// the catalogue ([`catalogue::emit`]), refuses a field it has no read of; refuses a link registry that fails its checks
+/// ([`links::refused`]); then runs `emitters` over it. The files they generate, or why not.
 pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
     let entries = validate(ledger)?;
+    let refused = links::refused();
+    if !refused.is_empty() {
+        return Err(GenError::Links(refused));
+    }
     let findings = check::check(&ledger.words, &entries);
     if !findings.is_empty() {
         return Err(GenError::Layout(findings));

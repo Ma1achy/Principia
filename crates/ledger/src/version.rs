@@ -90,7 +90,7 @@ impl<'a> Hashed<'a> {
             detail_meanings: detail_meanings(),
             quad_reduction: crate::payload::QUAD_REDUCTION,
             register: crate::constants::REGISTER,
-            links: crate::links::REGISTRY,
+            links: crate::links::registry(),
             chart_constants: crate::links::CHART_CONSTANTS,
         }
     }

@@ -5,7 +5,7 @@
 
 use ledger::gen;
 use ledger::layout;
-use ledger::links::{Constraint, Expr, Link, Op, Param, CHART_CONSTANTS, REGISTRY};
+use ledger::links::{registry, Constraint, Expr, Link, Op, Param, CHART_CONSTANTS};
 use ledger::payload;
 use ledger::version::{schema_version, Hashed};
 use validation::negative_control;
@@ -329,7 +329,7 @@ fn check_emitted(expected: u64) {
 
 #[test]
 fn schema_version_links_emitted_hashes_the_ledgers_registry() {
-    check_emitted(version(REGISTRY, CHART_CONSTANTS));
+    check_emitted(version(registry(), CHART_CONSTANTS));
 }
 
 negative_control!(
