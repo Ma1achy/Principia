@@ -159,11 +159,12 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 | Shift · Alt | ×10 · ×0.1 steps, everywhere, the compass included (R-409) |
 | letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode, except while a text field is being typed in (R-409) |
 | held keys | delay, then repeat (the DAS / ARR model) |
-| Ctrl+Z | undo, from the contract's history (R-52), in either mode |
-| ? | shortcuts, over everything, in either mode |
+| Ctrl+Z | undo, from the contract's history (R-52), in either mode, except while a text field is being typed in, when it undoes the text edit (R-409) |
+| ? | shortcuts, over everything, in either mode, except while a text field is being typed in, when it types a character (R-409) |
 
 In scope: a scope's arrow actions need Enter, acting in interaction mode only, and its letter and Space keys are
-shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode (R-409).
+shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode, except while a
+text field is being typed in (R-409).
 Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4). Trajectory — Enter reaches the
 playhead, listen and kept orbits. Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
 plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; there is no orbit, and no separate fine
@@ -177,8 +178,9 @@ and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). 
 the ring is orange and the arrows move between siblings; on a big scope itself, the big scopes are the siblings, and
 the arrows move between them in Tab order. In **interaction mode** the ring is blue and the focused element takes the
 arrows, with Shift ×10 and Alt ×0.1; Tab and Shift+Tab, Ctrl+Z, `?` and the letter and Space shortcuts keep their
-meaning in both modes, and Tab or Shift+Tab from interaction mode lands in navigation mode on the next or previous big
-scope (applied per R-369, R-409 G1, G2). Every landing is in navigation mode: a Tab on a big scope lands on the scope
+meaning in both modes, except while a text field is being typed in, and Tab or Shift+Tab from interaction mode lands
+in navigation mode on the next or previous big scope, or, inside a window, on the window's next or previous section,
+staying in the window (applied per R-369, R-409 G1, G2, G5, G6). Every landing is in navigation mode: a Tab on a big scope lands on the scope
 itself, the whole scope highlighted, the Figure and the Compass included, as REQ-GUI-095 has it; Enter into a scope
 lands on its first element; and a window opens on its first section, as the console does on its first filter. Enter
 on an element starts interaction with it, and Enter on a scope goes in, with two exceptions: the Figure, which has no
@@ -190,9 +192,10 @@ is a look choice (R-390). The Compass scope holds the compass, then its Tilt and
 siblings in navigation mode (R-409, the human's follow-up answer; A2): Tab lands on the Compass scope, Enter goes in
 onto the compass, → moves to Tilt and then to Slice, Enter on the compass starts interaction with it, and Enter on a
 button sets the mode. A text field, such as the console's text filter, lands in navigation mode; Enter on it starts
-typing, which is interaction mode, and while typing every key goes to the field but Esc, Enter and Tab: Esc and Enter
-return to navigation mode on the field and keep the text, and Tab and Shift+Tab leave it and move on (applied per
-R-369, R-409 G4). The footer and the console follow the same two modes (R-405, R-409).
+typing, which is interaction mode, and while typing every key goes to the field but Esc, Enter and Tab, Ctrl+Z
+undoing the text edit and `?` typing a character: Esc and Enter return to navigation mode on the field and keep the
+text, and Tab and Shift+Tab leave it and move on, to the window's next or previous section inside a window (applied
+per R-369, R-409 G4, G5, G6). The footer and the console follow the same two modes (R-405, R-409).
 
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the

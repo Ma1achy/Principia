@@ -58,12 +58,14 @@ everywhere (R-409's follow-up answers).
   (`Arrows::Adjust`, the compass) starts interaction mode, on the Figure, which has nothing inside, starts interaction
   mode, on a read-only scope with nothing inside (the Legend) does nothing (R-409 A2, G3), and on an `activates` scope
   acts as its click and stays in navigation mode; in interaction mode the arrows adjust the element, and Tab and
-  Shift+Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, Tab or Shift+Tab leaving for the next or previous big
-  scope in navigation mode (R-409 G1); Esc or Enter in interaction mode returns to navigation mode on the same element,
-  and Esc in navigation mode pops one level. A text field lands in navigation mode; Enter on it starts typing
-  (interaction mode), in which every key goes to it but Esc and Enter (back to navigation mode, text kept) and Tab
-  (moving on) (R-409 G4); the console's text filter is built on this by TASK-M6-28. The mode is held with the focus, in
-  `ViewUI`'s keyboard focus scope (R-409 A5); a contract field added re-runs the conformance suite on both engines.
+  Shift+Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, except while a text field is being typed in (R-409 G5),
+  Tab or Shift+Tab leaving for the next or previous big scope in navigation mode, or, inside a window, for the window's
+  next or previous section, staying in the window (R-409 G1, G6); Esc or Enter in interaction mode returns to navigation
+  mode on the same element, and Esc in navigation mode pops one level. A text field lands in navigation mode; Enter on
+  it starts typing (interaction mode), in which every key goes to it, Ctrl+Z undoing the text edit and `?` typing a
+  character, but Esc and Enter (back to navigation mode, text kept) and Tab (moving on) (R-409 G4, G5); the console's
+  text filter is built on this by TASK-M6-28. The mode is held with the focus, in `ViewUI`'s keyboard focus scope (R-409
+  A5); a contract field added re-runs the conformance suite on both engines.
 - `crates/gui/src/keyboard/{keymap,mod}.rs` — the mode carried through the key handling, so a screen's arrow actions
   (the Figure's pan, the compass's tilt and slice) act in interaction mode only, and its letter and Space shortcuts
   (the Figure's + / −, Space, L and K) whenever the focus is in its scope, in either mode (R-409 F1). A Tab lands on

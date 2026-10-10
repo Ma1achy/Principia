@@ -7834,7 +7834,8 @@ applied by a follow-up task.
 4. **Two keyboard modes, everywhere.**
    - **Navigation mode** has an orange focus ring. The arrows move between siblings.
    - **Interaction mode** has a blue focus ring. Input goes to the focused element. *(Read with G1 below: the
-     element takes the arrows; Tab, Esc, Enter, Ctrl+Z, `?` and the shortcuts keep their meaning.)*
+     element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, and Esc and Enter return to
+     navigation mode.)*
    - Entering any scope, and every Tab landing (the Figure, the Compass and, under R-405, the console's first filter
      included), lands in navigation mode on the first element. *(Read with the human's follow-up answer, F4 below: a
      Tab landing is on the big scope itself, in navigation mode, and Enter into a scope lands on its first element.)*
@@ -7975,8 +7976,9 @@ code review 5480660052's C1 on PR #186, applied per R-369 as routine design choi
 orchestrator's, not the human's words, and the human may veto any (a veto is a GUI design ruling, applied by a
 follow-up task).
 - **G1. Keys in interaction mode.** The focused element takes the arrows, with Shift ×10 and Alt ×0.1. Tab and
-  Shift+Tab, Ctrl+Z and `?` keep their global meaning in both modes; Tab or Shift+Tab from interaction mode leaves it
-  and lands in navigation mode on the next or previous big scope. The letter and Space shortcuts keep their meaning in
+  Shift+Tab, Ctrl+Z and `?` keep their global meaning in both modes, except while a text field is being typed in
+  (G5); Tab or Shift+Tab from interaction mode leaves it and lands in navigation mode on the next or previous big
+  scope, or, inside a window, on the window's next or previous section (G6). The letter and Space shortcuts keep their meaning in
   both modes (a scope's shortcuts, whenever the focus is in that scope, F1), except while a text field is being typed
   in (G4). Esc in interaction mode returns to navigation mode on the same element (point 4), and so does Enter. Point
   4's "Input goes to the focused element" and point 3's "all input goes to the compass" are read this way.
@@ -7991,11 +7993,20 @@ follow-up task).
   the field except Esc, Enter and Tab. Esc and Enter return to navigation mode on the field and keep the text; Tab and
   Shift+Tab leave the field and move on, as G1 has it. F1's "A text field holding the keyboard still takes every key"
   is read this way.
+- **G5. Ctrl+Z and `?` while typing (gui review 5480688180, finding A).** While a text field is being typed in,
+  Ctrl+Z and `?` go to the field, like every other key except Esc, Enter and Tab: Ctrl+Z undoes the text edit, and
+  `?` types a character. Once typing ends, they are global again.
+- **G6. Tab from interaction mode inside a window (gui review 5480688180, finding B).** Inside a window, Tab and
+  Shift+Tab from interaction mode move to the window's next or previous section, in navigation mode, and stay in the
+  window, as the window rule has it. Outside a window, G1's rule holds: the next or previous big scope.
 - **Where it lands.** render_gui_spec §G3 (the table's Enter, Esc, arrows, letters, Tab, Ctrl+Z and `?` rows and the
   "Two modes" paragraph); GUI_DESIGN_NOTES § "07 Keyboard" (conformed); REQ-GUI-096 and REQ-GUI-182 (statement and
   verify), REQ-GUI-178 (the text filter), REQ-GUI-183 (the sibling order, gui finding 3) and REQ-GUI-098 (A6's
   parenthetical, gui finding 4) (reqio); TASK-M6-31's deliverables and acceptance, each with a control; TASK-M6-28 (the
-  text filter); and `plan/reviewers/gui.md`.
+  text filter); and `plan/reviewers/gui.md`. G5 and G6 land in §G3's Ctrl+Z and `?` rows, its "In scope" sentence and
+  "Two modes" paragraph, GUI_DESIGN_NOTES § "07 Keyboard" (conformed), REQ-GUI-096's and REQ-GUI-182's statements,
+  REQ-GUI-178's statement and verify (reqio), TASK-M6-31's scopes.rs deliverable, TASK-M6-28's console deliverable and
+  REQ-GUI-178 line (each with a control), and `plan/reviewers/gui.md`.
 
 *What it supersedes* (the line numbers are main's at `4235c3e5`, before this port, except decisions.md's, which are
 this file's):
@@ -8031,4 +8042,5 @@ REQ-GUI-170's statements, verify, rulings, sources and notes, REQ-GUI-158's stat
 statement, verify, rulings, sources and note change. The follow-up answers change REQ-GUI-096's, REQ-GUI-097's,
 REQ-GUI-178's, REQ-GUI-182's and REQ-GUI-183's statements, verify and notes, REQ-GUI-184's statement and note and
 REQ-GUI-158's note, and add no requirement. The review round (G1 to G4) changes REQ-GUI-096's, REQ-GUI-178's,
-REQ-GUI-182's and REQ-GUI-183's statements and verify and REQ-GUI-098's statement, and adds no requirement.
+REQ-GUI-182's and REQ-GUI-183's statements and verify and REQ-GUI-098's statement, and adds no requirement; G5 and G6
+change REQ-GUI-096's and REQ-GUI-182's statements and REQ-GUI-178's statement and verify.

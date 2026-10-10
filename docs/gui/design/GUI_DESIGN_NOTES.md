@@ -110,11 +110,12 @@ Arrows need Enter *(conformed to R-409's follow-up answers)*: in navigation mode
 scope's arrow actions (the Figure's pan, Time's step, the compass's tilt and slice, the console's entry list) act only
 in interaction mode; its letter and Space shortcuts act whenever the focus is in the scope, in either mode. Shift ×10
 and Alt ×0.1 hold on the compass too. Tab lands on the big scope itself; Enter goes in onto its first element, except on the Figure (below).
-In interaction mode *(conformed to R-409 G1–G4)* the element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep
-their meaning, Tab leaving for the next big scope in navigation mode, and Enter, like Esc, returns to navigation. On a big
+In interaction mode *(conformed to R-409 G1–G6)* the element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep
+their meaning, except while a text field is being typed in, Tab leaving for the next big scope in navigation mode (inside a
+window, for its next section), and Enter, like Esc, returns to navigation. On a big
 scope itself the arrows move between the big scopes. The Figure, with nothing inside, takes Enter as interaction; the
-Legend takes it as nothing. A text field starts typing on Enter; while typing it takes every key but Esc and Enter
-(back to navigation, text kept) and Tab (move on).
+Legend takes it as nothing. A text field starts typing on Enter; while typing it takes every key, Ctrl+Z (undoing the
+text edit) and `?` (a character) included, but Esc and Enter (back to navigation, text kept) and Tab (move on).
 
 ## 08 Lock — the reticle and the pin
 
