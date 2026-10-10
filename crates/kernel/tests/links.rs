@@ -8,9 +8,12 @@
 //! - `link_properties_c_log_det`: (c), the analytic log-det against the numeric Jacobian's log volume factor, `log |J|`
 //!   or, for the 3×2 simplex Jacobian, `log √det(JᵀJ)` (R-368), at f64.
 //! - `link_properties_d_c1`: (d), the central-difference derivative continuous along a fine grid through saturation.
+//! - `link_properties_log_det_finite`: every log-det finite at f32 and f64 for every finite control up to 10³⁰, far
+//!   past where `exp` and `cosh` overflow, and the two precisions agreeing to f32 round-off (walls W7, W9).
 //! - `link_selection_defaults_resolve_by_name`: the baked defaults are the named entries (REQ-GEN-013).
 //! - `chart_constants_values`: the generated constants equal REQ-DEC-009's values at f32 and f64.
-//! - `chart_constants_source_scan`: no float literal of a chart constant's value in `crates/kernel/src/{decode,encode}`.
+//! - `chart_constants_source_scan`: no float literal of a chart constant's value in `crates/kernel/src/{decode,encode}`,
+//!   in either module form (`decode.rs` or `decode/`).
 //!
 //! Each property is a check over a link behind function pointers, so its control runs the same check on a link broken
 //! for it. The step and tolerances of (c) and (d) are REQ-GEN-025's calibration: the values here are the proposal,
@@ -44,6 +47,7 @@ struct Under {
     log_det64: fn(&[f64]) -> f64,
     forward32: fn(&[f32]) -> Vec<f32>,
     inverse32: fn(&[f32]) -> Vec<f32>,
+    log_det32: fn(&[f32]) -> f32,
 }
 
 fn under<const C: usize, const P: usize, L: Link<C, P>>() -> Under {
@@ -67,6 +71,7 @@ fn under<const C: usize, const P: usize, L: Link<C, P>>() -> Under {
         log_det64: |v| L::log_det::<f64>(v.try_into().expect("the controls")),
         forward32: |v| L::forward::<f32>(v.try_into().expect("the controls")).to_vec(),
         inverse32: |v| L::inverse::<f32>(v.try_into().expect("the components")).to_vec(),
+        log_det32: |v| L::log_det::<f32>(v.try_into().expect("the controls")),
     }
 }
 
@@ -533,6 +538,139 @@ mod area_element_control {
         "a simplex log-det without the area element's √3 must fail the numeric comparison",
         expected = "(log-det)",
         check_c_over(&under::<2, 3, NoAreaElement>())
+    );
+}
+
+// ── The log-det across the whole domain ─────────────────────────────────────────────────────────────────────────
+
+/// Control magnitudes the log-det is checked at: the centre, the transition, both floats' overflow points of `exp`
+/// and `cosh` (`|x| ≈ 44`, 89 at f32; 355, 710 at f64), and far past them.
+const LD_MAGNITUDES: [f64; 17] = [
+    0.0, 0.5, 1.0, 4.0, 10.0, 20.0, 44.5, 45.0, 88.0, 89.0, 100.0, 355.0, 710.0, 1e3, 1e6, 1e10,
+    1e30,
+];
+
+/// The round-off allowance between `u`'s f32 and f64 log-dets at the same f32 control: `16·eps₃₂` of the size of the
+/// values it sums, `1 + |log-det| + Σ|xₖ|` (each `log sech²` sums terms of size `|x|`).
+fn ld_allowance(ld: f64, x: &[f64]) -> f64 {
+    16.0 * f32::EPSILON as f64 * (1.0 + ld.abs() + x.iter().map(|v| v.abs()).sum::<f64>())
+}
+
+/// `u`'s log-det at `x`, an f32 control, is finite at f32 and at f64, and the two agree within [`ld_allowance`]
+/// (walls W7 and W9: a finite control has a finite log-det at either precision).
+fn check_ld_at(u: &Under, x: &[f64]) {
+    let x32: Vec<f32> = x.iter().map(|&v| v as f32).collect();
+    let (ld32, ld64) = ((u.log_det32)(&x32) as f64, (u.log_det64)(x));
+    assert!(
+        ld64.is_finite() && ld32.is_finite(),
+        "{} at {x:?}: log-det {ld64} at f64, {ld32} at f32 (not finite)",
+        u.name
+    );
+    let allowance = ld_allowance(ld64, x);
+    assert!(
+        (ld32 - ld64).abs() <= allowance,
+        "{} at {x:?}: log-det {ld32} at f32 against {ld64} at f64: off by {} > {allowance} (precisions disagree)",
+        u.name,
+        (ld32 - ld64).abs()
+    );
+}
+
+/// [`check_ld_at`] at every signed magnitude of [`LD_MAGNITUDES`] (each pair, for two controls), and at controls
+/// fuzzed log-uniformly in magnitude up to 10³⁰, each control rounded to f32 first.
+fn check_ld_over(u: &Under) {
+    let xs: Vec<f64> = LD_MAGNITUDES
+        .iter()
+        .flat_map(|&m| [m, -m])
+        .map(|v| v as f32 as f64)
+        .collect();
+    let points: Vec<Vec<f64>> = if u.controls == 1 {
+        xs.iter().map(|&x| vec![x]).collect()
+    } else {
+        xs.iter()
+            .flat_map(|&a| xs.iter().map(move |&b| vec![a, b]))
+            .collect()
+    };
+    for x in points {
+        check_ld_at(u, &x);
+    }
+    let draws = proptest::collection::vec((-3.0f64..=30.0, any::<bool>()), u.controls);
+    prop::run(&draws, |d| {
+        let x: Vec<f64> = d
+            .iter()
+            .map(|&(e, neg)| (if neg { -1.0 } else { 1.0 } * 10f64.powf(e)) as f32 as f64)
+            .collect();
+        check_ld_at(u, &x);
+        Ok(())
+    });
+}
+
+#[test]
+fn link_properties_log_det_finite() {
+    for u in registry() {
+        check_ld_over(&u);
+    }
+}
+
+/// tanh onto `α` whose log-det is `log(c/cosh² x)`, the overflowing form: `cosh` overflows at f32 past `|x| ≈ 89`.
+#[cfg(feature = "controls")]
+struct CoshLogDet;
+
+#[cfg(feature = "controls")]
+impl Link<1, 1> for CoshLogDet {
+    const NAME: &'static str = "cosh_log_det";
+    type Codomain = Alpha;
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        TanhAlpha::forward(v)
+    }
+    fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        TanhAlpha::inverse(v)
+    }
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        let c = v[0].cosh();
+        (num::<R>(FRAC_PI_2 / 2.0) / (c * c)).ln()
+    }
+}
+
+/// tanh onto `α` whose f32 log-det is off by 10⁻³.
+#[cfg(feature = "controls")]
+struct F32Drift;
+
+#[cfg(feature = "controls")]
+impl Link<1, 1> for F32Drift {
+    const NAME: &'static str = "f32_drift";
+    type Codomain = Alpha;
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        TanhAlpha::forward(v)
+    }
+    fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        TanhAlpha::inverse(v)
+    }
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        let drift = if R::epsilon() > num::<R>(1e-10) {
+            num::<R>(1e-3)
+        } else {
+            R::zero()
+        };
+        TanhAlpha::log_det(v) + drift
+    }
+}
+
+negative_control!(
+    link_properties_log_det_finite,
+    "a log-det through 1/cosh² is −∞ at f32 past |x| ≈ 89",
+    expected = "(not finite)",
+    check_ld_over(&under::<1, 1, CoshLogDet>())
+);
+
+#[cfg(feature = "controls")]
+mod log_det_precision_control {
+    use super::*;
+
+    negative_control!(
+        link_properties_log_det_finite,
+        "an f32 log-det off by 10⁻³ must fail the agreement check",
+        expected = "(precisions disagree)",
+        check_ld_over(&under::<1, 1, F32Drift>())
     );
 }
 

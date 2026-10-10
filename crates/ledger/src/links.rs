@@ -379,6 +379,20 @@ fn abs(a: Expr) -> Expr {
     clamp(a, un(Op::Neg, a), num(f64::INFINITY))
 }
 
+/// `log sech² x`, written so that no step overflows: `sech² x = 4e^(−2|x|)/(1 + e^(−2|x|))²`, so
+/// `log sech² x = 2·(log 2 − |x| − softplus(−2|x|))`, finite for every finite `x` (1/cosh² x overflows `cosh` past
+/// `|x| ≈ 89` at f32, 710 at f64, and its log is −∞ well before, where the true value is finite).
+fn log_sech2(x: Expr) -> Expr {
+    let ax = abs(x);
+    let tail = un(Op::Softplus, un(Op::Neg, mul(vec![num(2.0), ax])));
+    mul(vec![num(2.0), sub(sub(un(Op::Log, num(2.0)), ax), tail)])
+}
+
+/// `log σ(x) = −softplus(−x)`, finite for every finite `x`.
+fn log_sigmoid(x: Expr) -> Expr {
+    un(Op::Neg, un(Op::Softplus, un(Op::Neg, x)))
+}
+
 /// The declared chart constants `ks`.
 fn declared(ks: &[&ConstantBuilder]) -> &'static [Param] {
     Vec::leak(ks.iter().map(|k| chart(k)).collect())
@@ -520,27 +534,33 @@ fn entry(
 
 /// The scaled/shifted σ onto `codomain` (§3.9's bounded row; dd_decoder §3.2, §3.4): `y = a + (b − a)·σ(x)`, or
 /// `c·(2σ(x) − 1)` on the cap; inverse `logit(clamp(s, ε, 1 − ε))` (inverse_encode Part 3); log-det
-/// `log((b − a)·σ(x)·σ(−x))`, since `σ' = σ(x)·σ(−x)`.
+/// `log((b − a)·σ(x)·σ(−x))`, since `σ' = σ(x)·σ(−x)`, written `log(b − a) + log σ(x) + log σ(−x)` with
+/// [`log_sigmoid`], finite for every finite `x`.
 fn sigmoid_link(name: &'static str, codomain: Codomain) -> LinkBuilder {
     let i = interval(codomain);
     let s = un(Op::Sigmoid, x(0));
-    let slope = mul(vec![i.width, s, un(Op::Sigmoid, un(Op::Neg, x(0)))]);
+    let log_slope = add(vec![
+        un(Op::Log, i.width),
+        log_sigmoid(x(0)),
+        log_sigmoid(un(Op::Neg, x(0))),
+    ]);
     let functions = (
         vec![i.y_of_s(s)],
         vec![un(Op::Logit, i.clamp_s(i.s_of_y(x(0))))],
-        un(Op::Log, slope),
+        log_slope,
     );
     i.declare(entry(name, codomain, functions, "centre-heavy vs uniform"))
 }
 
 /// The scaled tanh onto `codomain` (§3.9's bounded-alt and symmetric rows): `y = a + c·(1 + tanh x)`, or `c·tanh x` on
-/// the cap; inverse `artanh(clamp(u, −(1 − ε), 1 − ε))`; log-det `log(c·sech² x)`.
+/// the cap; inverse `artanh(clamp(u, −(1 − ε), 1 − ε))`; log-det `log(c·sech² x)`, written `log c + log sech² x`
+/// with [`log_sech2`].
 fn tanh_link(name: &'static str, codomain: Codomain, note: &'static str) -> LinkBuilder {
     let i = interval(codomain);
     let functions = (
         vec![i.y_of_u(un(Op::Tanh, x(0)))],
         vec![un(Op::Artanh, i.clamp_u(i.u_of_y(x(0))))],
-        un(Op::Log, mul(vec![i.half, un(Op::Sech2, x(0))])),
+        add(vec![un(Op::Log, i.half), log_sech2(x(0))]),
     );
     i.declare(entry(name, codomain, functions, note))
 }
@@ -569,7 +589,8 @@ fn softsign_link(name: &'static str, codomain: Codomain) -> LinkBuilder {
 
 /// The default simplex link (§3.9's simplex row; dd_decoder §3.1): `μₖ = μ_max·tanh(zₖ)`, `m = softmax(0, μ₁, μ₂)`;
 /// inverse `zₖ = artanh(clamp(log(mₖ/m₀), ±(1 − ε_μ)·μ_max)/μ_max)` (inverse_encode Part 3); log-det `log √det(JᵀJ)`
-/// of its 3×2 Jacobian, `log(√3·m₀m₁m₂·μ_max²·sech² z₁·sech² z₂)` (R-368), written as a sum of logs.
+/// of its 3×2 Jacobian, `log(√3·m₀m₁m₂·μ_max²·sech² z₁·sech² z₂)` (R-368), written as a sum of logs, each
+/// `log sech²` by [`log_sech2`].
 fn softmax_tanh() -> LinkBuilder {
     let mu = |k| mul(vec![p(&MU_MAX), un(Op::Tanh, x(k))]);
     let (e1, e2) = (un(Op::Exp, mu(0)), un(Op::Exp, mu(1)));
@@ -587,8 +608,8 @@ fn softmax_tanh() -> LinkBuilder {
         un(Op::Log, m[1]),
         un(Op::Log, m[2]),
         mul(vec![num(2.0), un(Op::Log, p(&MU_MAX))]),
-        un(Op::Log, un(Op::Sech2, x(0))),
-        un(Op::Log, un(Op::Sech2, x(1))),
+        log_sech2(x(0)),
+        log_sech2(x(1)),
     ]);
     let functions = (m.to_vec(), vec![z(1), z(2)], log_det);
     LinkBuilder {
@@ -606,18 +627,18 @@ fn softmax_tanh() -> LinkBuilder {
 /// The edge-reaching simplex link (§3.9's R-72 definition, REQ-GEN-026): stick-breaking,
 /// `s = ½(1 + (1 − ε_μ)·tanh z₁)`, `u = ½(1 + (1 − ε_μ)·tanh z₂)`, `m = (1 − s, s·(1 − u), s·u)`; inverse
 /// `s = m₁ + m₂`, `u = m₂/s`, each `v` of them `artanh(clamp(2v − 1, ±(1 − ε_μ)²)/(1 − ε_μ))`; log-det
-/// `log √det(JᵀJ)` of its 3×2 Jacobian, `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)` (R-368).
+/// `log √det(JᵀJ)` of its 3×2 Jacobian, `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)` (R-368), each `log sech²` by
+/// [`log_sech2`]. `s`, `1 − s`, `u` and `1 − u` are written without cancellation against 1 (below).
 fn stick_breaking() -> LinkBuilder {
-    let half = |k| {
-        let t = mul(vec![one_minus(&EPS_MU), un(Op::Tanh, x(k))]);
-        mul(vec![num(0.5), add(vec![num(1.0), t])])
-    };
+    // `½(1 + (1 − ε_μ)·t) = σ(2z) − ½ε_μ·t` and `1 − ½(1 + (1 − ε_μ)·t) = σ(−2z) + ½ε_μ·t`, `t = tanh z`: each
+    // side is written so that where it is small it is a sum of terms of one sign, with no cancellation against 1,
+    // which at f32 loses the ½ε_μ an edge rests on.
+    let half_eps = |k| mul(vec![num(0.5), p(&EPS_MU), un(Op::Tanh, x(k))]);
+    let twice = |k| mul(vec![num(2.0), x(k)]);
+    let half = |k| sub(un(Op::Sigmoid, twice(k)), half_eps(k));
+    let rest = |k| add(vec![un(Op::Sigmoid, un(Op::Neg, twice(k))), half_eps(k)]);
     let (s, u) = (half(0), half(1));
-    let m = vec![
-        sub(num(1.0), s),
-        mul(vec![s, sub(num(1.0), u)]),
-        mul(vec![s, u]),
-    ];
+    let m = vec![rest(0), mul(vec![s, rest(1)]), mul(vec![s, u])];
     let stick = add(vec![x(1), x(2)]);
     let cap = mul(vec![one_minus(&EPS_MU), one_minus(&EPS_MU)]);
     let z = |v| {
@@ -630,8 +651,8 @@ fn stick_breaking() -> LinkBuilder {
         un(Op::Neg, un(Op::Log, num(4.0))),
         mul(vec![num(2.0), un(Op::Log, one_minus(&EPS_MU))]),
         un(Op::Log, s),
-        un(Op::Log, un(Op::Sech2, x(0))),
-        un(Op::Log, un(Op::Sech2, x(1))),
+        log_sech2(x(0)),
+        log_sech2(x(1)),
     ]);
     let functions = (m, vec![z(stick), z(div(x(2), stick))], log_det);
     let note = "reaches within ε_μ/2 of every edge and corner, where softmax ∘ μ_max·tanh stops at mass ratios \
@@ -670,7 +691,7 @@ pub fn builders() -> &'static [LinkBuilder] {
                 Codomain::HalfLine,
                 un(Op::Softplus, x(0)),
                 un(Op::InvSoftplus, x(0)),
-                un(Op::Log, un(Op::Sigmoid, x(0))),
+                log_sigmoid(x(0)),
                 "linear for large x (softplus x ≈ x), so not heavy-tailed, unlike exp",
             ),
             line(
