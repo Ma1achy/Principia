@@ -68,3 +68,7 @@ it. This task proposes the repeat delay and rate and the base steps, the first t
   comments to "confirmed by R-404".
 - R-405 (10 Oct 2026): the footer becomes big scope 8 and the console a window opened from it (REQ-GUI-178, TASK-M6-28), so
   REQ-GUI-095 now reads eight scopes. This task's acceptance line for it, seven, is its record as merged.
+- R-409 (10 Oct 2026): the keyboard gains two modes, navigation (orange ring) and interaction (blue ring); the
+  `browsing` model this task built (arrows adjusting a value reached by Enter on its section) is replaced, and R-404's
+  `Orbit` step retired. REQ-GUI-096, REQ-GUI-098, REQ-GUI-158 and REQ-GUI-169 are reworded; this task's acceptance lines
+  stay as its record as merged. TASK-M6-31 builds the modes and re-checks REQ-GUI-098 and REQ-GUI-169 as now worded.

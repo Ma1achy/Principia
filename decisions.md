@@ -6171,8 +6171,11 @@ Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries
 
 ## R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots
 *Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only).*
+*Amended in part by R-409 (ORDER item 3's compass: it has no orbit, and its Tilt and Slice buttons switch its mode as
+well as the slider touched).*
 *Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and
-gui, for REQ-GUI-176 and REQ-GUI-177 only.*
+gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its
+Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409).*
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
 header (added lines), REQ-GUI-165 to REQ-GUI-175 (reqio, new), twelve requirements' notes (reqio), TASK-M6-24 to
 TASK-M6-29 (new), `plan/tasks.yaml` and twenty-three existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
@@ -7217,6 +7220,12 @@ Adds REQ-GEN-033; REQ-RENDER-084's statement, verify, rulings, sources, note and
 rulings and note change.
 
 ## R-404 — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps
+*Amended in part by R-409 (the `Orbit` base step is retired, the compass having no orbit; the ring's colour shows the
+keyboard's mode).*
+*Still in force: all of it, as its text reads, except that the `Orbit` row (Compass's Shift+arrows, 5°) and the note
+on what Shift does on Compass's Shift+arrows are retired, Shift ×10 and Alt ×0.1 applying on the compass in
+interaction mode as everywhere, with no separate fine step (R-409, the human's follow-up answer); and that the ring is `hyperlink_color` in interaction mode only, and orange in navigation mode (R-409).
+Its width, its rounding, the breadcrumb, the `?` overlay, the repeat timing and every other base step stand.*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (a sentence added), REQ-GUI-146 and REQ-GUI-158 (reqio: confirmed), TASK-M6-25 and TASK-M8-13
 (notes), TASK-M6-30 (new: the code's marks), `plan/tasks.yaml` and `plan/rule_groups.yaml`; the marks built by
@@ -7298,6 +7307,12 @@ design ruling (R-390's feedback rule) or, for the two calibrations, the human's 
 Changes REQ-GUI-146's and REQ-GUI-158's rulings, sources and note: each is confirmed. Adds no requirement.
 
 ## R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console
+*Amended in part by R-409 (the console's entry list scrolls with ↑ ↓ only after Enter on it; every landing is in
+navigation mode).*
+*Still in force: all of it, as its text reads, except that ↑ and ↓ scroll the entry list only in interaction mode,
+after Enter on the list, Esc returning to navigation mode on it (R-409, the human's follow-up answer); and that every
+landing, the console's first filter included, is in navigation mode, the arrows moving within a section in navigation
+mode (R-409).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" and § "G12. Console (`12_console.png`)" (paragraphs added), REQ-GUI-095 (reqio), REQ-GUI-178
 (reqio, new), TASK-M6-28, TASK-M6-25 and TASK-M8-13, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
@@ -7736,3 +7751,298 @@ only `[0,1]²`, and how it counts the redrawn systems, was not given. The human 
 
 Adds REQ-CHART-056 and REQ-CHART-057; REQ-CHART-054's statement, verify, rulings, sources and note, REQ-GUI-109's
 rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and REQ-GUI-100's verify change.
+
+## R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
+what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
+Settled by the notes (record)" (items 7 and 9),
+`docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" and § "07 Keyboard — design note, not a
+screen" (conformed); the follow-up answers in render_gui_spec § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (the key table, the in-scope keys, the two modes and the console), § "G4. Lock — the reticle and
+the pin (`08_lock.png`)" (K), § "G12. Console (`12_console.png`)" (the entry list), GUI_DESIGN_NOTES § "07 Keyboard —
+design note, not a screen" and § "08 Lock — the reticle and the pin", R-404's and R-405's heading blocks, REQ-GUI-091, REQ-GUI-096, REQ-GUI-097, REQ-GUI-098, REQ-GUI-158, REQ-GUI-169, REQ-GUI-170 and
+REQ-GUI-178 (reqio), REQ-GUI-181 to REQ-GUI-184 (reqio, new), TASK-M6-31 (new), TASK-M6-25, TASK-M6-26, TASK-M6-27,
+TASK-M6-28, TASK-M6-29, TASK-M6-30, TASK-M8-07 and TASK-M8-13, `plan/tasks.yaml`, `plan/reviewers/gui.md`,
+`plan/WORKFLOW.md`, `plan/OPERATIONS.md`, `plan/MILESTONES.md` and `plan/rule_groups.yaml`; built by TASK-M6-31 on the
+mock*
+
+The human tried the mock GUI after TASK-M6-26 (PR #183, the Manifold view group and the compass) merged, and wrote, in
+their own words:
+
+> Right, this is just my immediate reactions to the GUI. Mainly this is me pertaining to the compass. I'm not entirely
+> sure if the compass even needs, like, an orbit camera. I think the sort of, like, orthographic view, where you just
+> see, like, from its default angle, is good enough. And then, you know, then the default click when you have it in
+> tilt mode, as in, like when you're clicking and dragging, you're tilting, right? And then the button next to it, I
+> should be able to click on that and go into slice mode, and then when I drag, it moves slice about. Instead it doesn't
+> do that. It, like, tries to tilt. You should be able to click on this compass and slice that way. Yeah. Let's see
+> what else. Yes, this look works good. With the navigation, right? The keyboard navigation, right? So it should be
+> orange when you're navigating, and when you're interacting with an element, it turns blue. Because right now as
+> well, there's a problem where when I enter a scope that then has a slider, I can't then press down to navigate to the
+> slider below. I'm then sliding on that slider, and I can't then, like, go between each individual slider, or, like,
+> button, or thing, because immediately when I press enter into a scope, I immediately start interacting with the first
+> element within that scope. But that shouldn't be the case. Like, I should be in navigation mode, and then it's only
+> when I'm hovering over that slider and then I then press enter, I should enter interaction mode, and then, like, all
+> my inputs get, like, put into actually interacting with it. And then if I then press escape, I then exit the
+> interaction mode and I go back into navigation, and then if I press escape again, I then go up a scope. It's close,
+> what you've got here, but it's not perfect.
+>
+> Also, I, I can't get into the things to open and close the console through keyboard navigation. And also, yeah, I
+> know it's probably not implemented right now, but you can't, like, actually open the console. But also you should be
+> able to get into this through keyboard navigation, which you can't right now.
+
+The orchestrator asked four follow-up questions. The human's answers, in their own words (each option's text, which the
+human chose, in brackets):
+- *"With the orbit gone, what should Shift+arrows do on the compass? (R-404 currently gives Shift+arrows a 5° orbit
+  step.)"* — "fine step while on the compass, also allow to naviagte between the tilt or slice buttons on the keyboard
+  if that's not already a thing (obv not with shift + arrows), also maybe shift arrows is the wrong thing, should be
+  like you press enter to enter interaction mode with the compass when hovering over it on the keyboard nav cusrsor ==
+  inputs interact with compass"
+- *"Once the compass has a tilt/slice button, should touching a slice or tilt slider still switch the compass's mode by
+  itself?"* — "Yes, both" [The button switches the mode, and touching a slider still switches it to match; the button
+  always shows the current mode.]
+- *"In slice mode, what does dragging on the compass do?"* — "Move along normal" [Dragging anywhere on the compass moves
+  the slice plane along its normal; the plane's tilt stays fixed.]
+- *"Tab lands directly on the Figure and the Compass, which are themselves adjustable values. Should landing on them
+  start in navigation mode (orange; Enter to interact)?"* — "Navigation first" [Every landing is navigation mode,
+  including Figure, Compass and the console's first filter; Enter always starts interaction.]
+
+(Messages of 10 Oct 2026, given in the orchestrator's session; numbered by the orchestrator, the next free number. Each
+is a GUI design ruling under R-390's feedback rule.)
+
+*Applied reading (R-369).* The orchestrator's reading of the words above, applied per R-369 and flagged to the human;
+these six points are the orchestrator's, not the human's words. The human may veto any; a veto is a GUI design ruling,
+applied by a follow-up task.
+1. **The compass's view: there is no orbit.** The compass is a fixed orthographic view at its default angle. The orbit
+   drag, Shift+arrows' orbit and R-404's `Orbit` base step (5°) are retired. The code's default angle
+   (`crates/gui/src/explore/compass.rs`, `ORBIT`, yaw −35°, pitch 25°) stays, as a look choice under R-390.
+2. **The compass's modes.** The compass has two buttons, **Tilt** and **Slice**, which can be clicked, and which are
+   keyboard-navigable siblings in navigation mode, Enter activating one. Tilt is the default. In tilt mode, dragging
+   tilts the plane. In slice mode, dragging anywhere on the compass moves the slice plane along its normal and leaves
+   the tilt fixed. Touching a slice or tilt slider still switches the mode to match, and the buttons always show the
+   current mode. So "switches mode by itself" (render_gui_spec §G2; GUI_DESIGN_NOTES § "01 Explore"; REQ-GUI-091;
+   REQ-GUI-170; R-390's ORDER item 3) is no longer the only mechanism: it is kept, beside the buttons.
+3. **The compass from the keyboard.** In navigation mode the compass is one focusable element. Enter on it starts
+   interaction mode, and then all input goes to the compass: the arrows tilt in tilt mode and move the slice in slice
+   mode, and Shift+arrows do the same with a fine step. The fine step's size is a look choice under R-390. The human's
+   "maybe shift arrows is the wrong thing" is read as about the orbit on Shift being replaced by Enter-to-interact (the
+   human's "press enter to enter interaction mode with the compass … == inputs interact with compass"), not as removing
+   Shift+arrows' fine step, which the same answer asks for; flagged. *(Superseded in part by the human's follow-up
+   answer, F3 below: on the compass, as everywhere, Shift is ×10 and Alt ×0.1, so Alt is the fine step and there is
+   no separate one. This point's "Shift+arrows do the same with a fine step", and its reading that kept it, no longer
+   apply; the text stays as the record.)*
+4. **Two keyboard modes, everywhere.**
+   - **Navigation mode** has an orange focus ring. The arrows move between siblings.
+   - **Interaction mode** has a blue focus ring. Input goes to the focused element. *(Read with G1 below: the
+     element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, except that while a text field
+     is being typed in, Ctrl+Z, `?` and the shortcuts go to the field (G5), and Esc and Enter return to navigation
+     mode.)*
+   - Entering any scope, and every Tab landing (the Figure, the Compass and, under R-405, the console's first filter
+     included), lands in navigation mode on the first element. *(Read with the human's follow-up answer, F4 below: a
+     Tab landing is on the big scope itself, in navigation mode, and Enter into a scope lands on its first element.)*
+   - Enter on an element starts interaction. Esc in interaction mode returns to navigation mode on the same element.
+     Esc in navigation mode goes up one scope.
+   - The blue is R-404's colour, egui's dark theme's `hyperlink_color`. The exact orange is a look choice under R-390.
+   - This amends render_gui_spec §G3's key table, REQ-GUI-096, REQ-GUI-098 (its "nothing else changing" now lets the
+     ring's colour show the mode), REQ-GUI-169 and R-404's single ring colour.
+5. **The console.** The human's second paragraph is ruled already, by R-405 (the footer is big scope 8; Enter on it
+   opens the console, a window, with the focus in it), and planned, by TASK-M6-28 (REQ-GUI-178), which is not yet
+   built. R-409 restates it: the footer and the console must be reachable by keyboard, and both follow point 4's modes.
+   Nothing else about R-405 changes. *(Superseded in part by the human's follow-up answer, F2 below: the console's
+   entry list scrolls with ↑ ↓ only after Enter on it.)*
+6. **"Yes, this look works good"** is read as approving the navigation look only. It does not settle any look choice
+   left open under R-390.
+
+*Applied per R-369 (mechanical consequences and routine design choices of the reading above; the human may veto any):*
+- **A1. A button acts on Enter.** Enter on a button (point 2's Tilt and Slice, R-405's console filters, copy and clear,
+  a menu entry) acts as its click and leaves the focus in navigation mode on it: a button has no interaction to hold.
+  Enter on a scope goes into it; Enter on an adjustable element (a slider, a value, the Figure, the compass) starts
+  interaction.
+- **A2. The Compass scope's siblings.** Point 2's "siblings" and point 3's "one focusable element" are read together:
+  the Compass, big scope 5, holds three elements in navigation mode, the compass itself, then Tilt, then Slice. A Tab
+  landing is on the Compass scope, in navigation mode; Enter goes in, onto the compass; the arrows move to Tilt and
+  Slice; Enter on the compass starts interaction (point 3). A Tab landing is on the big scope itself, as REQ-GUI-095
+  has it (Enter on Manifold view enters Chart), so point 4's "on the first element" is read as an entered scope's first
+  element; the Figure, a big scope with no elements inside, takes Enter as the start of interaction. Flagged;
+  TASK-M6-31 records it. *(Confirmed by the human's follow-up answer, F4 below.)*
+- **A3. "Along its normal".** In slice mode a drag moves the centre `z₀` along the unit normal of the plane as the
+  compass draws it, the direction perpendicular to both of the plane's tilted in-plane directions in the compass's
+  frame, one `SetField` on `z₀` coalesced per drag (R-96), the tilt and `γ` unchanged; locked, it is an excursion along
+  that line through the anchor (chart_decoder_contract § "The lock (projective microscope)"). Untilted, the normal is
+  the hidden slice direction, so the drag moves the slice step.
+- **A4. The slice-mode arrows' base step is a calibration (R-71).** The arrows in slice mode move the slice along the
+  normal by a base step no ruling gives. It is REQ-GUI-184 (new, M8, calibration): TASK-M6-31 proposes it with its
+  reasoning, it is used provisionally (R-182), and the human confirms it at the M8 gate. The fine step of point 3 is a
+  look choice under R-390, as the orchestrator read it, and not part of REQ-GUI-158 or REQ-GUI-184. *(The fine step is
+  superseded by the human's follow-up answer, F3 below: there is none apart from Alt ×0.1. REQ-GUI-184 stays.)*
+- **A5. Where the mode lives.** The keyboard's mode is held with the focus, `ViewUI`'s keyboard focus scope
+  (gui_state_contract §2): it is never undoable and the engine never reads it. A field added to the contract re-runs the
+  conformance suite on both engines (R-390). The compass's mode stays the GUI's own state, as TASK-M6-26 built it.
+- **A6. The breadcrumb's colour.** R-404 put the breadcrumb in the ring's colour. Whether it follows the ring's mode or
+  keeps the blue is a look choice under R-390, made by TASK-M6-31 and recorded in its PR.
+- **A7. Where it lands.** Four new requirements, closed by **TASK-M6-31 (new, M6)**, "Compass modes and keyboard
+  navigation/interaction modes in the mock (R-409)": **REQ-GUI-181** (the compass's view and modes, M6),
+  **REQ-GUI-182** (the two keyboard modes, M6), **REQ-GUI-183** (the compass from the keyboard, M6) and
+  **REQ-GUI-184** (A4's calibration, M8). TASK-M6-31 depends on TASK-M6-26 (merged); reviewers code, qa and gui, as the
+  track's tasks are; it is a GUI-track task under R-390, merging without waiting for the gates of M1 to M5, as
+  TASK-M6-24 to TASK-M6-30 do (`plan/WORKFLOW.md`, `plan/OPERATIONS.md` and `plan/MILESTONES.md` name TASK-M6-30 and
+  TASK-M6-31 with the track). **TASK-M6-27 depends on TASK-M6-31** as well, so the later track screens build on the
+  new keyboard model; TASK-M6-28, TASK-M6-29 and TASK-M6-30 follow through TASK-M6-27, and TASK-M8-07 and TASK-M8-13,
+  which re-run the compass and the keys on the real engine, through TASK-M6-27 and TASK-M6-28.
+- **A8. The reworded requirements** keep their ids and their closing tasks (reqio): REQ-GUI-091 and REQ-GUI-170 (the
+  compass), REQ-GUI-096, REQ-GUI-097, REQ-GUI-098 and REQ-GUI-169 (the keys and the ring), REQ-GUI-158 (no `Orbit`
+  step) and REQ-GUI-178 (the console's landing is in navigation mode). TASK-M6-25's and TASK-M6-26's acceptance lines
+  (merged) stay as their record, each with a Notes line pointing here; TASK-M6-31 re-checks REQ-GUI-091, REQ-GUI-098,
+  REQ-GUI-169 and REQ-GUI-170 on the mock as now worded; TASK-M8-07 and TASK-M8-13 re-run them on the real engine.
+  The re-check lines in TASK-M6-27, TASK-M6-28 and TASK-M6-29 that restate REQ-GUI-169's old Enter and Esc read point
+  4's modes, and TASK-M6-30's check that the ring's colour is unchanged reads the interaction-mode colour.
+- **A9. qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-25.rs` (the arrows adjusting a value
+  reached by Enter on its section, with no Enter on the value; `StepKind::Orbit`), `crates/gui/tests/qa_TASK-M6-26.rs`
+  (the compass's orbit, Shift+arrows, its arrows tilting with no Enter; its default mode) and
+  `crates/gui/tests/qa_TASK-M6-25_recheck.rs` where it relies on the same, assert what this ruling changes. Every
+  earlier commit of each is qa's, so TASK-M6-31's qa reviewer changes those assertions in the task's qa commit, and
+  only those; the implementer never edits them. The PR lists each change with its reason, and the code reviewer
+  confirms that no assertion was weakened but the ones R-409 changes.
+- **A10. The artboards are not edited.** `docs/gui/design/01_main.png` (the compass's "slicing / tilting" labels and its
+  "drag the cube to orbit" hint) and `docs/gui/design/07_keyboard.png` (its single blue ring) are superseded on these
+  points by this ruling, which sits above them in R-390's source order. A screenshot compared against them is read with
+  this ruling; render_gui_spec §G13 lists both.
+- R-409 is in the "design" group of `plan/rule_groups.yaml`, with R-390 and R-404.
+
+*Follow-up answers (10 Oct 2026).* The first port of this ruling (PR #186) listed seven conflicts that the readings
+above do not settle. The orchestrator put four questions to the human, who answered in their own words, each time
+choosing an option (the option's text, which the human chose, in brackets):
+- *"Scopes like Time and the Figure have their own keys (Time: Space plays, ← → step; Figure: + / −, L, K). Under the
+  new modes, when do these act?"* — "Arrows need Enter" [In navigation mode arrows always move between siblings;
+  Time's ← → step only after Enter into interaction. Letter/Space keys (Space, +/−, L, K) still work as shortcuts
+  whenever the scope is focused, in either mode.]
+- *"The console's entry list is scrolled with ↑ ↓ (R-405). Does that need Enter first?"* — "Enter first" [Consistent
+  with everything else: land in navigation, Enter, then ↑ ↓ scroll the list; Esc back out.]
+- *"On the compass in interaction mode, what do the modifiers do? (Elsewhere Shift is ×10 and Alt is ×0.1.)"* — "Match
+  elsewhere" [Shift ×10, Alt ×0.1 on the compass too, so Alt is the fine step. Keeps one rule for the whole app.]
+- *"When you Tab onto the Compass (or any big scope), where does the cursor land?"* — "On the scope" [As REQ-GUI-095
+  has it: the whole scope is highlighted; Enter goes in onto its first element (compass, then Tilt, Slice), Enter again
+  to interact.]
+
+(Given in the orchestrator's session, 10 Oct 2026. The conflicts are numbered as PR #186's body listed them: 1, Time's
+← → against navigation-mode arrows; 2, which in-scope keys act in navigation mode; 3, the console's entry list; 4,
+the compass's Shift against Alt and REQ-GUI-158; 5, the slice-mode arrow step; 6, "along its normal" against the
+slice-step slider; 7, the Tab landing against "on the first element".)
+
+*Applied reading of the follow-up answers (R-369).* The orchestrator's reading, applied per R-369 and flagged; not the
+human's words. The human may veto any; a veto is a GUI design ruling, applied by a follow-up task.
+- **F1. Arrows need Enter; letters and Space are shortcuts (conflicts 1 and 2).** In navigation mode the arrows always
+  move between siblings, in every scope, the Figure and Time included. A scope's arrow actions act only in interaction
+  mode, after Enter: the Figure's pan, Time's ← → step and the compass's tilt and slice. A scope's letter and Space
+  keys are shortcuts that act whenever the focus is in that scope, on the scope itself or on an element inside it, in
+  either mode: the Figure's + / − (zoom), Space (keep the orbit), L (listen) and K (lock, render_gui_spec §G4), and
+  Time's Space (play). A text field holding the keyboard still takes every key, as #174 built. Time is a scope with
+  children (play, step, the scrubber, speed; TASK-M6-27): applied per R-369, its ← → step the time, by R-404's
+  `TimeStep`, in interaction mode on the scrubber, the adjustable element they step; Enter on the step button acts as
+  its click (A1).
+- **F2. The console's entry list needs Enter (conflict 3).** The entry list lands in navigation mode, where ↑ and ↓ do
+  not scroll it; Enter on it starts interaction mode, ↑ and ↓ then scroll it, and Esc returns to navigation mode on
+  the list. In the console's other sections the arrows move between siblings in navigation mode (between the filters,
+  between copy and clear), as R-405 has them. This amends R-405 in part, where it says "↑ and ↓ scroll the entry
+  list": R-405 stays, with its forward line and its "Still in force" line, and point 5's "Nothing else about R-405
+  changes" is superseded on this point.
+- **F3. The compass's modifiers match everywhere else (conflicts 4 and 5).** In interaction mode on the compass, Shift
+  is ×10 and Alt ×0.1, as REQ-GUI-096 has them everywhere: the arrows tilt by R-404's `Tilt` step in tilt mode and
+  move the slice along the normal by REQ-GUI-184's step in slice mode, each ×10 with Shift and ×0.1 with Alt. Alt is
+  the fine step, and the compass has no separate one. The earlier reading, point 3's "Shift+arrows do the same with a
+  fine step" and A4's "the fine step of point 3 is a look choice under R-390", is superseded by this later answer of
+  the human's; its text stays above, marked, as the record. Conflict 4 goes with it: Shift no longer makes the step
+  smaller, and the compass's steps are REQ-GUI-158's `Tilt` and REQ-GUI-184, with the global modifiers. Conflict 5 is
+  settled the same way: REQ-GUI-184, the base step of the slice-mode arrows, stays a calibration under R-71, proposed
+  by TASK-M6-31, used provisionally (R-182) and confirmed by the human at the M8 gate; with no fine step, nothing else
+  of the compass's keys is a value to choose.
+- **F4. A Tab lands on the scope (conflict 7).** A Tab or Shift+Tab landing is on the big scope itself, the whole
+  scope highlighted, in navigation mode, as REQ-GUI-095 has it; Enter goes in onto its first element (on the Compass,
+  the compass, then Tilt and Slice), and Enter again on an element starts interaction. A2's reading is confirmed, and
+  point 4's "every Tab landing … lands in navigation mode on the first element" reads "on the big scope" for a Tab
+  landing. The Figure, a big scope with no elements inside, takes Enter as the start of interaction (A2).
+- **F5. Left to physics (conflict 6).** Whether the slice-mode drag along the drawn plane's normal (A3) and the
+  slice-step slider's hidden slice direction, which differ once the plane is tilted, only change which slice is
+  viewed and not any result is not settled here. The physics reviewer confirms it on PR #186; if it does not, it goes
+  to `REVIEW_QUEUE.md`.
+- **F6. Where it lands.** render_gui_spec §G3 (the table's Tab, arrows and Shift · Alt rows, a row for the shortcuts,
+  the in-scope keys, the two modes and the console), §G4 (K) and §G12 (the entry list); GUI_DESIGN_NOTES § "07
+  Keyboard" and § "08 Lock" (conformed); REQ-GUI-096, REQ-GUI-097, REQ-GUI-158 (its note), REQ-GUI-178, REQ-GUI-182,
+  REQ-GUI-183 and REQ-GUI-184 (reqio, reworded, ids kept); TASK-M6-31 (the compass's modifiers, the shortcuts in
+  either mode, the Tab landing), TASK-M6-27 (Time's keys), TASK-M6-28 (the entry list), TASK-M8-13 (the in-scope and
+  global keys on the real engine) and `plan/reviewers/gui.md`.
+
+*Applied reading (R-369), review round.* The orchestrator's decisions on gui review 5480658825's findings 1 and 2 and
+code review 5480660052's C1 on PR #186 (G1 to G4), and on gui review 5480688180's findings A and B (G5, G6), with gui
+review 5480701701's mechanical follow-ups, applied per R-369 as routine design choices and flagged; these are the
+orchestrator's, not the human's words, and the human may veto any (a veto is a GUI design ruling, applied by a
+follow-up task).
+- **G1. Keys in interaction mode.** The focused element takes the arrows, with Shift ×10 and Alt ×0.1. Tab and
+  Shift+Tab, Ctrl+Z and `?` keep their global meaning in both modes, except while a text field is being typed in
+  (G5); Tab or Shift+Tab from interaction mode leaves it and lands in navigation mode on the next or previous big
+  scope, or, inside a window, on the window's next or previous section (G6). The letter and Space shortcuts keep their meaning in
+  both modes (a scope's shortcuts, whenever the focus is in that scope, F1), except while a text field is being typed
+  in (G4). Esc in interaction mode returns to navigation mode on the same element (point 4), and so does Enter. Point
+  4's "Input goes to the focused element" and point 3's "all input goes to the compass" are read this way.
+- **G2. The arrows on a big scope.** In navigation mode, with the focus on a big scope itself (after a Tab landing, or
+  after Esc up to it), the arrows move between the big scopes in Tab order: at the top level the big scopes are the
+  siblings.
+- **G3. Enter on a scope with nothing inside.** Enter on a scope goes in onto its first element (F4), with one
+  exception: the Figure, which has no elements inside, takes Enter as the start of interaction (A2). Enter on a
+  read-only scope with nothing to enter or interact with, such as the Legend, does nothing.
+- **G4. A text field (the console's text filter).** Landing on a text field is navigation mode, and the arrows move on
+  from it as from any element. Enter on it starts typing, which is interaction mode; while typing, every key goes to
+  the field except Esc, Enter and Tab. Esc and Enter return to navigation mode on the field and keep the text; Tab and
+  Shift+Tab leave the field and move on, as G1 has it. F1's "A text field holding the keyboard still takes every key"
+  is read this way.
+- **G5. Ctrl+Z and `?` while typing (gui review 5480688180, finding A).** While a text field is being typed in,
+  Ctrl+Z and `?` go to the field, like every other key except Esc, Enter and Tab: Ctrl+Z undoes the text edit, and
+  `?` types a character. Once typing ends, they are global again.
+- **G6. Tab from interaction mode inside a window (gui review 5480688180, finding B).** Inside a window, Tab and
+  Shift+Tab from interaction mode move to the window's next or previous section, in navigation mode, and stay in the
+  window, as the window rule has it. Outside a window, G1's rule holds: the next or previous big scope.
+- **Where it lands.** render_gui_spec §G3 (the table's Enter, Esc, arrows, letters, Tab, Ctrl+Z and `?` rows and the
+  "Two modes" paragraph); GUI_DESIGN_NOTES § "07 Keyboard" (conformed); REQ-GUI-096 and REQ-GUI-182 (statement and
+  verify), REQ-GUI-178 (the text filter), REQ-GUI-183 (the sibling order, gui finding 3) and REQ-GUI-098 (A6's
+  parenthetical, gui finding 4) (reqio); TASK-M6-31's deliverables and acceptance, each with a control; TASK-M6-28 (the
+  text filter); and `plan/reviewers/gui.md`. G5 and G6 land in §G3's Tab / Shift+Tab, Ctrl+Z and `?` rows, its "In scope" sentence and
+  "Two modes" paragraph, GUI_DESIGN_NOTES § "07 Keyboard" (conformed), REQ-GUI-096's and REQ-GUI-182's statements,
+  REQ-GUI-178's statement and verify (reqio), TASK-M6-31's scopes.rs deliverable, TASK-M6-28's console deliverable and
+  REQ-GUI-178 line (each with a control), and `plan/reviewers/gui.md`.
+
+*What it supersedes* (the line numbers are main's at `4235c3e5`, before this port, except decisions.md's, which are
+this file's):
+- `docs/gui/principia_render_gui_spec.md:126–129` (§G2's compass: "switches mode by itself …"; "Dragging the plane
+  tilts; dragging the cube orbits"), `:151–154` (§G3's table: Tab, Enter, Esc and arrows, now by mode), `:161` ("Compass —
+  arrows tilt, Shift+arrows orbit"), `:164–165` ("a focus ring on the current scope … Nothing else changes on screen",
+  now with the ring's colour showing the mode), `:435` (§G14 item 7, "The compass switches mode by itself") and `:437`
+  (§G14 item 9).
+- `docs/gui/design/GUI_DESIGN_NOTES.md:39–41` (the compass, "switches mode by itself"; "dragging the cube orbits") and
+  `:100–102` ("Enter drills in; Esc backs out"; "a focus ring and the top-bar breadcrumb, nothing else").
+- `decisions.md:6225–6227` (R-390's ORDER item 3, "the compass (switching slice and tilt by activity, …)": the buttons
+  added beside it), `decisions.md:7255–7256` (R-404's ring colour, now interaction mode's only) and
+  `decisions.md:7278` and `:7281–7282` (R-404's `Orbit` row and its note on Shift).
+- `plan/requirements.yaml:13050` (REQ-GUI-091), `:13143` (REQ-GUI-096), `:13159` (REQ-GUI-097), `:13170`
+  (REQ-GUI-098), `:14129` (REQ-GUI-158's "orbit" and its `Orbit` value), `:14323` (REQ-GUI-169) and `:14340`
+  (REQ-GUI-170), each reworded.
+- `crates/gui/src/explore/compass.rs:36`, `:54`, `:83–86`, `:152–167` and `:215–231` (the orbit) and `:245–256` (the
+  mode labels), `crates/gui/src/keyboard/scopes.rs:324–419` (`browsing`, the arrows adjusting a value reached by
+  Enter on its section, and Esc always popping a level) and `crates/gui/src/explore/breadcrumb.rs:22–52` (the ring's
+  single colour, point 4 and A6): the code TASK-M6-31 changes.
+- By the follow-up answers (F1 to F4; this branch's lines before they were ported, at `fb169f14`):
+  `docs/gui/principia_render_gui_spec.md:155`, `:158` and `:159` (§G3's Tab, arrows and Shift · Alt rows, now with the
+  Tab landing on the scope, the arrows always between siblings in navigation mode, and the modifiers on the compass
+  too), `:164–167` (the in-scope keys, now arrows in
+  interaction mode only and the shortcuts in either mode; the compass's fine step), `:188` (the console's arrows, now
+  with the entry list's Enter), `:196` (§G4's K) and `:427–428` (§G12, a sentence added); `decisions.md:7339` (R-405's "↑ and ↓ scroll the
+  entry list", amended in part); R-409's own point 3 and A4 (the compass's fine step), marked above; REQ-GUI-097's,
+  REQ-GUI-183's and REQ-GUI-184's fine step, REQ-GUI-158's note on it, REQ-GUI-178's arrows and REQ-GUI-182's Tab
+  landing; and TASK-M6-31's fine-step constant and its look choice.
+
+Adds REQ-GUI-181 to REQ-GUI-184; REQ-GUI-091's, REQ-GUI-096's, REQ-GUI-097's, REQ-GUI-098's, REQ-GUI-169's and
+REQ-GUI-170's statements, verify, rulings, sources and notes, REQ-GUI-158's statement and note and REQ-GUI-178's
+statement, verify, rulings, sources and note change. The follow-up answers change REQ-GUI-096's, REQ-GUI-097's,
+REQ-GUI-178's, REQ-GUI-182's and REQ-GUI-183's statements, verify and notes, REQ-GUI-184's statement and note and
+REQ-GUI-158's note, and add no requirement. The review round (G1 to G4) changes REQ-GUI-096's, REQ-GUI-178's,
+REQ-GUI-182's and REQ-GUI-183's statements and verify and REQ-GUI-098's statement, and adds no requirement; G5 and G6
+change REQ-GUI-096's and REQ-GUI-182's statements and REQ-GUI-178's statement and verify.

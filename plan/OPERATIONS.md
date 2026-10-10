@@ -321,7 +321,7 @@ summary:
 
 The human's ruling of 6 Oct 2026 (R-390): a dev GUI the human runs on the Mac with `cargo run -p gui --features mock`,
 built on a mock engine, in six tasks, TASK-M6-24 to TASK-M6-29, one per ORDER item, each its own PR, reviewed by code,
-qa and gui.
+qa and gui. The human's feedback added TASK-M6-30 (R-406) and TASK-M6-31 (R-409), track tasks like the six.
 - **Priority and resources.** The physics and renderer chain keeps priority for agent slots. A GUI-track task, its
   reviewers and its fix rounds take only a slot that no ready chain task needs, within § "Resources"' memory and disk
   limits. When slots are short, the chain's ready task gets the next free one; a running GUI-track agent is not
