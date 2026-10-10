@@ -265,7 +265,9 @@ impl Link<2, 3> for SoftmaxTanh {
 /// `stick_breaking`, onto `mass` (simplex). Sampling: reaches within ε_μ/2 of each edge and of the
 /// corner m₀ = 1, and within about ε_μ of the corners m₁ = 1 and m₂ = 1, where softmax ∘ μ_max·tanh
 /// stops at mass ratios e^(±2μ_max); its area element is 4√3·m₀m₁m₂ (exactly so at ε_μ = 0), the
-/// plain softmax measure, symmetric in the bodies, so it over-samples every edge and corner.
+/// plain softmax measure, symmetric in the bodies, so it over-samples every edge and corner (in the
+/// density of samples drawn with uniform controls, as chart_decoder_contract's "relative to
+/// uniform" reads; RQ-267).
 pub struct StickBreaking;
 
 impl Link<2, 3> for StickBreaking {
@@ -531,7 +533,9 @@ impl Link<1, 1> for TanhBeta {
 /// `softsign_alpha`, onto `alpha` (bounded). Sampling: heavier-tailed than σ: σ's slope at the
 /// centre, but it nears each bound as 1/|x|, not as e^(−|x|); where σ saturates, crowding every
 /// control beyond a few units into a sliver at each bound, it spreads that band over a wide control
-/// range, so relative to σ it under-samples the bounds' immediate neighbourhoods.
+/// range, so relative to σ it under-samples the bounds' immediate neighbourhoods (in the density of
+/// samples drawn with uniform controls, as chart_decoder_contract's "relative to uniform" reads;
+/// RQ-267).
 pub struct SoftsignAlpha;
 
 impl Link<1, 1> for SoftsignAlpha {
@@ -591,7 +595,9 @@ impl Link<1, 1> for SoftsignAlpha {
 /// `softsign_beta`, onto `beta` (bounded). Sampling: heavier-tailed than σ: σ's slope at the
 /// centre, but it nears each bound as 1/|x|, not as e^(−|x|); where σ saturates, crowding every
 /// control beyond a few units into a sliver at each bound, it spreads that band over a wide control
-/// range, so relative to σ it under-samples the bounds' immediate neighbourhoods.
+/// range, so relative to σ it under-samples the bounds' immediate neighbourhoods (in the density of
+/// samples drawn with uniform controls, as chart_decoder_contract's "relative to uniform" reads;
+/// RQ-267).
 pub struct SoftsignBeta;
 
 impl Link<1, 1> for SoftsignBeta {
@@ -721,7 +727,9 @@ impl Link<1, 1> for TanhQ {
 /// `softsign_q`, onto `momentum` (symmetric). Sampling: heavier-tailed than σ: σ's slope at the
 /// centre, but it nears each bound as 1/|x|, not as e^(−|x|); where σ saturates, crowding every
 /// control beyond a few units into a sliver at each bound, it spreads that band over a wide control
-/// range, so relative to σ it under-samples the bounds' immediate neighbourhoods.
+/// range, so relative to σ it under-samples the bounds' immediate neighbourhoods (in the density of
+/// samples drawn with uniform controls, as chart_decoder_contract's "relative to uniform" reads;
+/// RQ-267).
 pub struct SoftsignQ;
 
 impl Link<1, 1> for SoftsignQ {

@@ -9,6 +9,30 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
+## RQ-267: what "over- and under-samples relative to uniform" measures, the density of samples or the link's Jacobian weight, is read two ways *(conflict, docs wording; context: TASK-M2-01, PR #187)*
+
+*Found in physics review 5480715305 of PR #187 (TASK-M2-01), finding F6. Wording only: no decode, encode or hash reads a
+sampling note (dd_generation_root §3.9, "The hash"). Nothing is chosen, and the σ row is left as it is.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Integrity: the link is part of the experiment": "a registry
+    entry carries — beyond forward, inverse, and log-det — a note on **which region of the block it over- and
+    under-samples relative to uniform**". Read as the density of samples drawn with uniform controls, a link
+    over-samples where its Jacobian is small: σ crowds every control past a few units into a sliver at each bound.
+  - `docs/design/principia_dd_generation_root.md` § "3.9 The link registry (consolidated from chart contract Part 2.5)",
+    the table's bounded row: "`log((b−a)·σ')` | centre-heavy vs uniform". σ's slope, and so its Jacobian weight, is
+    largest at the centre; its sample density there is the smallest, so "centre-heavy" reads as the Jacobian's weight,
+    not as the density of samples.
+- **Conflict:** the two texts read "relative to uniform" one way each. The notes TASK-M2-01 adds (`stick_breaking`,
+  `softsign_*`) say they use the density-of-samples reading, citing chart_decoder_contract.
+- **Options seen:**
+  - (a) Notes describe the density of samples drawn with uniform controls; §3.9's σ note is reworded to match (for
+    example "edge-heavy: crowds the bounds").
+  - (b) Notes describe the Jacobian's weight; the new notes are reworded to match the σ row.
+  - (c) Each note names its reading.
+
+---
+
 ## RQ-264: with the shape sphere's hemisphere toggle drawing one hemisphere, what the pole-crossing φ does past the edge that is not a pole, and what its primary range is, is not given *(definition, physics, R-408, R-407, R-113, R-141, TASK-M8-44, REQ-CHART-057; context: TASK-M8-05)*
 
 - **File, section:**

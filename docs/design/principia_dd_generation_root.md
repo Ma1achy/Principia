@@ -712,6 +712,11 @@ selected per block control, only among the entries onto that control's codomain 
 | `exp` | (0, ∞) | `eˣ` | `log y` | `x` | exp is heavy-tailed |
 | `identity` | ℝ | `x` | `y` | 0 | neutral |
 
+The sampling notes of the R-72 rows (`stick_breaking`, `softsign_*`) read "over-" and "under-samples" as the density
+of samples drawn with uniform controls, as chart_decoder_contract § "Integrity: the link is part of the experiment"
+has it ("which region of the block it over- and under-samples relative to uniform"). The table's σ row ("centre-heavy
+vs uniform") may read it as the Jacobian's weight; RQ-267 asks which reading holds.
+
 `ε` is `ε_μ` on the simplex, `ε_z` onto α and β, and `ε_q` onto a momentum. `abs(x)` is written `clamp(x, −x, +∞)`
 in the closed operator list. Each clamp keeps the inverse finite at the codomain's boundary, where a float forward
 saturates. In σ's units, `s = (1 + u)/2`, the tanh and softsign clamp `±(1 − ε)` is `[ε/2, 1 − ε/2]`, half the σ
