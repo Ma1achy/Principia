@@ -773,8 +773,9 @@ fn entry_problems(l: &Link, codomain: Codomain) -> Vec<String> {
     bad
 }
 
-/// The registry `builders` builds to, or every problem: an entry missing a member, two entries of one name, an entry
-/// [`entry_problems`] refuses, a row of [`rows`] with an entry missing, a slot whose default is not an entry of its
+/// The registry `builders` builds to, or every problem: an entry missing a member, two entries of one name, a tree
+/// count or input index its codomain does not have, a clamp or parameter that is not the chart constant of its name
+/// and value or that no tree reads, a read of one it does not declare, a row of [`rows`] with an entry missing, a slot whose default is not an entry of its
 /// codomain, and a slot whose codomain has fewer than two entries with differing sampling notes (REQ-GEN-014).
 pub fn check(builders: &[LinkBuilder]) -> Result<Vec<(Link, Codomain)>, Vec<String>> {
     let mut bad = Vec::new();
