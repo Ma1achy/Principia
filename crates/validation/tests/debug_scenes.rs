@@ -3,8 +3,8 @@
 //! R-287), to its checked-in reference, `fixtures/golden/debug-views/<case>/reference.png`, byte for byte; so each
 //! scene holds the samples its reference was made from; the showcase's shadows sit off their states as documented;
 //! no two references are one image but the pairs that are one by definition, so a view reading a neighbouring field
-//! fails; and each stepped sample's drift lies within its latched maximum, as a march leaves it. What the renders mean
-//! is `render/tests/debug_views.rs`'s.
+//! fails; each stepped sample's drift lies within its latched maximum, as a march leaves it; and the nudge raises each
+//! stepped sample's `S` and `θ̃` by its documented amount. What the renders mean is `render/tests/debug_views.rs`'s.
 //!
 //! Each test registers its negative control (R-176).
 
@@ -359,4 +359,47 @@ negative_control!(
     "a spread wider than the ramp",
     expected = "of the ramp, below 1.5",
     check_drift_shares(1.5)
+);
+
+/// Checks the showcase's nudge on `S` and `θ̃` as `showcase` documents it: at nudge `k`, each stepped sample `i`'s `S`
+/// and `θ̃` sit `0.0137·k·(1 + i mod 3)` from their values at nudge 0, `sign` the sense (1 up, −1 down), and the
+/// unstepped sample 0's stay put.
+fn check_s_theta_nudge(sign: f32) {
+    let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
+    let at = |nudge: u32| {
+        let nudged: &'static DebugCase = Box::leak(Box::new(DebugCase {
+            nudge,
+            ..case.clone()
+        }));
+        debug_scene(nudged).unwrap_or_else(|e| panic!("{e}"))
+    };
+    let base = at(0);
+    for k in 1..=3u32 {
+        let nudged = at(k);
+        for i in 0..8u32 {
+            let want = match i {
+                0 => 0.0,
+                _ => sign * 0.0137 * (k * (1 + i % 3)) as f32,
+            };
+            let (b, n) = (base.set.simstate(i), nudged.set.simstate(i));
+            for (what, d) in [("S", n.S - b.S), ("θ̃", n.theta - b.theta)] {
+                assert!(
+                    (d - want).abs() < 1e-4,
+                    "nudge {k}, sample {i}: {what} moved {d}, not {want}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn debug_scenes_nudge_raises_s_and_theta() {
+    check_s_theta_nudge(1.0);
+}
+
+negative_control!(
+    debug_scenes_nudge_raises_s_and_theta,
+    "the nudge expected to lower S and θ̃",
+    expected = "nudge 1, sample 1: S moved",
+    check_s_theta_nudge(-1.0)
 );
