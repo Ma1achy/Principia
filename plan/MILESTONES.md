@@ -286,12 +286,12 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   §5's ~8 % reconciled with the 37.6 % raw low-bit error measured on random canvases (REQ-TOOL-151, TASK-M7-34).
 
 <!-- gate:M7 -->
-**Exit gate — 116 requirements** (and every earlier gate still green):
+**Exit gate — 117 requirements** (and every earlier gate still green):
 
 - GEN (4): REQ-GEN-019…022
 - SCHED (1): REQ-SCHED-072
 - RENDER (18): REQ-RENDER-057…072, REQ-RENDER-080…081
-- COL (47): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065
+- COL (48): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066
 - GUI (18): REQ-GUI-016…031, REQ-GUI-151…152
 - TOOL (22): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151
 - VAL (4): REQ-VAL-096…098, REQ-VAL-145

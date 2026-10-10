@@ -25,6 +25,8 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `docs/design/principia_dd_generation_root.md` § "Ensemble spread — the two bounded contributors"
 - `docs/design/principia_dd_generation_root.md` § "Refinement — the scaling exponent"
 - `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
+- `docs/design/principia_memory_tiers.md` § "4. The six quality tiers"
+- `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact"
 - `docs/design/principia_dd_generation_root.md` § "Conditional — not yet included"
 - `docs/design/principia_dd_generation_root.md` § "Not reduction fields"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
@@ -53,14 +55,14 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - Tests in `crates/ledger/tests/quad_reduction.rs`: member list and types, Rust/WGSL layout agreement, histogram capacity.
 
 ## Acceptance tests
-- Review checklist (physics) — the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-075).
-- `cargo test -p ledger quad_reduction_histogram_capacity` — the test that follows from the written definition: the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint (REQ-PAY-075).
+- Review checklist (physics) — the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-075; waits on RQ-266).
+- `cargo test -p ledger quad_reduction_histogram_capacity` — the test that follows from the written definition: the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint (REQ-PAY-075; waits on RQ-266).
 - Review checklist (physics) — the ledger row states the fraction; the impurity-mask cross-check (debug_tooling_plan §G) uses the same fraction; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-076).
-- Review checklist (physics) — the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-077).
-- `cargo test -p ledger quad_reduction_layout` — the test that follows from the written definition: the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it (REQ-PAY-077).
+- Review checklist (physics) — the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-077; waits on RQ-266).
+- `cargo test -p ledger quad_reduction_layout` — the test that follows from the written definition: the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it (REQ-PAY-077; waits on RQ-266).
 - `cargo test -p ledger quad_reduction_members` — generated layout member list and types (REQ-REF-006).
 - Review checklist (code) — every QuadReduction member is a fixed-size scalar; no array member grows with time or sample count; the ~80 B figure is not treated as a cap (REQ-PAY-006).
-- `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089).
+- `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089; waits on RQ-266).
 - Review checklist (code) — no spread_t_end member in v1 (REQ-REF-007).
 - Review checklist (code) — none of these in the GPU struct (REQ-REF-008).
 - Review checklist (physics) — the PR gives the declared range of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift`, each within ±65504 or with its `overflow` stated (R-248), with its evidence; the physics reviewer checks each; the human confirms them at the M5 gate (REQ-PAY-093).
@@ -74,9 +76,16 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   N² × (E+1) at the tier table's largest N and E (memory_tiers §4), not against a typical quad (pitfalls §3, "check the
   measurement can fire"). Two different N's meet here: §3.7's `class_histogram[N]` bin count, and memory_tiers' `N`,
   the samples per quad side; REQ-PAY-075's verify keeps them apart. E has no corpus bound (Extreme's E = 15 is
-  provisional, R-137, and Custom mode sets E directly), so (applied per R-369; the R-388 pre-flight) the test runs at
-  Extreme's provisional E = 15 and N = 16 (R-398, R-132's cap), N² × (E+1) = 4096, and the doc and the test state the
-  overflow condition for general N and E: a bin `w` bits wide overflows when N² × (E+1) > 2^w − 1.
+  provisional, R-137, and Custom mode sets E directly, unbounded), and N = 16 is R-132's cap for Ultra and Extreme
+  only: Custom's N is bounded by `N² ≤ maxComputeInvocationsPerWorkgroup` (memory_tiers § "5. Controller levers,
+  ranked by impact", REQ-PERF-011), so N = 32 on a 1024-invocation adapter. A bin `w` bits wide overflows when
+  N² × (E+1) > 2^w − 1 (§3.7's u8 already at Medium, 16² × 2 = 512), and a bin that wraps silently corrupts
+  `dominant_outcome` and `outcome_impurity`. What a setting past the width does (a width no allocatable setting
+  reaches, a width chosen from the setting, a refused or clamped setting, or saturation with a flag) the corpus does not
+  say, and it changes results: **RQ-266** (physics review 5480220637 of PR #185). REQ-PAY-075's definition states the
+  ruled behaviour, and the test runs at Extreme's provisional E = 15 and N = 16 (R-398, R-132), N² × (E+1) = 4096,
+  and at the boundary the ruling sets. REQ-PAY-075, REQ-PAY-077 and REQ-PAY-089 carry `rq: RQ-266` (under a width
+  chosen from the setting, the layout follows it); TASK-M5-01's other lines do not wait.
 - The impurity grain chosen here is the one the impurity-mask cross-check (TASK-M5-17, REQ-VAL-083) uses.
 - The temporal-accumulator members (`running_mean_divergence`, `first_divergence_t`) are laid out here; how the
   per-footprint latch reaches the split decision is R-142's: evaluated on the GPU in the resolve pass, with only the

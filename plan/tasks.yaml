@@ -1610,8 +1610,8 @@
   title: Compaction, ramps and the default ramp per field role
   depends_on: [TASK-M7-03, TASK-M7-04, TASK-M1-09, TASK-M1-17]  # TASK-M1-17 applied per R-369 (R-399, R-400, R-403)
   needs: [REQ-COL-001, REQ-GEN-001, REQ-GEN-002, REQ-GEN-012, REQ-RENDER-021]
-  requirements: [REQ-COL-039, REQ-COL-016, REQ-COL-032, REQ-COL-024, REQ-COL-065]
-  reviewers: [code, qa, physics]  # physics for REQ-COL-065 only, applied per R-369
+  requirements: [REQ-COL-039, REQ-COL-016, REQ-COL-032, REQ-COL-024, REQ-COL-065, REQ-COL-066]
+  reviewers: [code, qa, physics]  # physics for REQ-COL-065 and REQ-COL-066 only, applied per R-369
   pitfalls: []
 - id: TASK-M7-06
   milestone: M7

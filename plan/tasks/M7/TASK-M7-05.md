@@ -1,7 +1,7 @@
 # TASK-M7-05 — Compaction, ramps and the default ramp per field role
 
 - **Milestone:** M7
-- **Closes:** REQ-COL-039, REQ-COL-016, REQ-COL-032, REQ-COL-024, REQ-COL-065
+- **Closes:** REQ-COL-039, REQ-COL-016, REQ-COL-032, REQ-COL-024, REQ-COL-065, REQ-COL-066
 - **Depends on:** TASK-M7-03, TASK-M7-04, TASK-M1-09, TASK-M1-17
 - **Needs (earlier milestones):** REQ-COL-001, REQ-GEN-001, REQ-GEN-002, REQ-GEN-012, REQ-RENDER-021
 - **Reviewers:** code, qa, physics
@@ -37,11 +37,12 @@ Family B's mapping half: the Compaction forms lin, log (x ≤ 0 → 0 with senti
 - Tests, including the seam-5 re-style test against the dispatch counter.
 
 ## Acceptance tests
-- `cargo test -p render compaction_forms` — dd_colouring unit test 7: each form monotone on its domain; symlog b(x) + b(−x) = 1 and b(0) = ½ exactly; log styles the −1.0 sentinel instead of ramping it (REQ-COL-039).
+- `cargo test -p render compaction_forms` — dd_colouring unit test 7: each form monotone on its domain; symlog b(x) + b(−x) = 1 and b(0) = ½ exactly; log styles the −1.0 sentinel instead of ramping it (REQ-COL-039; waits on RQ-265).
 - `cargo test -p render default_ramps` — the default ramp registry returns the stated ramp and polarity per field role (REQ-COL-016).
 - `cargo test -p render ledger_scale_restyle` — seam 5: change a field's ledger scale; the view re-styles and the dispatch counter is unchanged (REQ-COL-032; waits on RQ-265).
 - `cargo test -p render field_either_role` — bind FTLE as brightness and as colour (via a ramp); both compile and render (REQ-COL-024).
-- Review checklist (physics) — dd_colouring §3.6 defines `x_max` and `x₀` for each `diverging` field (`energy_drift`, `Lz_drift`, `E_0`, `Lz_0`), in that field's units; the doc change is in this PR and the physics reviewer approves it before merge (REQ-COL-065).
+- Review checklist (physics) — dd_colouring §3.6 defines, for each `diverging` field (`energy_drift`, `Lz_drift`, `E_0`, `Lz_0`), what `x_max` is and how `x₀` is chosen, in that field's units, the drifts' `x₀` being their floors `eps_E` and `eps_L`; the doc change is in this PR and the physics reviewer approves it before merge (REQ-COL-065; waits on RQ-265).
+- Proposal: `E_0`'s and `Lz_0`'s `x₀`, each in its field's units, and any fixed `x_max` REQ-COL-065 gives, each with its evidence; the physics reviewer checks each and the human confirms them at the M7 gate (REQ-COL-066).
 
 ## Notes
 - The ScalarField sources themselves (payload, geometry-of-n̂, ctx lanes, derived operators) land in TASK-M7-09, which also closes the "every source and ramp/compaction kind constructible" check.
@@ -57,12 +58,16 @@ Family B's mapping half: the Compaction forms lin, log (x ≤ 0 → 0 with senti
   REQ-COL-016 gains R-400 and a note and loses `rq: RQ-260`." The registry keys "signed" on the declared range, with no
   signed-or-not mark; `K_0` and `V_0` are one-signed and `lin` (R-403).
 - **REQ-COL-065 (definition, R-72; the R-388 pre-flight).** dd_colouring §3.6's diverging form uses `x_max`, which the
-  corpus defines nowhere, and takes "the ε floor as `x₀`" for the signed drifts; R-401 replaced the single ε, and
-  R-403 leaves `E_0` and `Lz_0` `diverging` with no floor (`crates/ledger/src/payload.rs`:132–133 at `c683714`;
-  §3.8's `floor?` names `eps_E` and `eps_L` for the drifts only, R-263). This task writes `x_max` and `x₀` per
-  `diverging` field into §3.6, and the physics reviewer reviews that definition (applied per R-369: physics joins this
-  task's reviewers for REQ-COL-065 only).
+  corpus defines nowhere, and takes "the ε floor as `x₀`" for the signed drifts, which settles theirs: `eps_E` and
+  `eps_L` (§3.8's `floor?`, R-263), which R-401 leaves unchanged (R-401 replaced the single ε only for the log-scaled
+  views with no ledger floor). R-403 leaves `E_0` and `Lz_0` `diverging` with no floor
+  (`crates/ledger/src/payload.rs`:132–133 at `c683714`), so their `x₀` is open. This task writes the form's rules into
+  §3.6 (what `x_max` is, how `x₀` is chosen per field), the physics reviewer approving that definition (applied per
+  R-369: physics joins this task's reviewers for REQ-COL-065 and REQ-COL-066 only); the numbers the corpus does not
+  give, `E_0`'s and `Lz_0`'s `x₀` and any fixed `x_max`, are REQ-COL-066 (calibration, R-71), proposed with evidence
+  and confirmed by the human at the M7 gate, as R-401 classes a per-field floor (physics review 5480220637 of PR #185).
 - **RQ-265 (open).** The debug views' `symlog` and `log` placements (render contract presentation layer, R-381;
   render_gui_spec §10.1, R-401) differ from §3.6's forms, and §3.6's `log` needs `lo > 0` where the ledger declares
-  `lo = 0`. Only the REQ-COL-032 line waits on the ruling; REQ-COL-032 carries `rq: RQ-265`. If the ruling is (b) or
-  (c), REQ-COL-039's forms and REQ-COL-065 follow it.
+  `lo = 0`. Three lines wait on the ruling, each requirement carrying `rq: RQ-265`: REQ-COL-032 (the scale the view
+  re-styles from), REQ-COL-039 (the forms, §3.6's `log` not buildable as written over `lo = 0`) and REQ-COL-065
+  (whether `x_max` exists is what option (c) decides). REQ-COL-016, REQ-COL-024 and REQ-COL-066 do not wait.
