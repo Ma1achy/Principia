@@ -123,10 +123,14 @@ IC:
 - **Kept orbits** below, each with its fate and time, removable.
 
 **Bottom.**
-- **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart and **switches
-  mode by itself**: touching a slice slider shows slicing, and touching a tilt shows tilting. When locked it carries a gold
-  pin at the pivot, and the plane turns about the pin (§G4). Dragging the plane tilts; dragging the cube orbits. It reads
-  out the tilt and rotation angles.
+- **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
+  orthographic view at its default angle: it has **no orbit** (R-409). It has two modes, **Tilt** and **Slice**, with a
+  button for each beside it; Tilt is the default, and the buttons always show the current mode. A click on a button
+  switches the mode, and the compass still **switches mode by itself** too: touching a slice slider switches it to
+  Slice, and touching a tilt to Tilt (R-409). In tilt mode, dragging on it tilts the plane; in slice mode, dragging
+  anywhere on it moves the slice plane along its normal, the tilt fixed (R-409). When locked it carries a gold pin at the
+  pivot, and the plane turns about the pin (§G4). It reads out the tilt and rotation angles. From the keyboard it is one
+  element, beside its Tilt and Slice buttons (§G3).
 - **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
   on the sim key (R-96). The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no
   history"; a manual scrub is one coalesced undo entry (R-101). **Scrubbing back re-integrates** to that time, so the figure refines
@@ -148,21 +152,34 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 
 | key | action |
 |---|---|
-| Tab / Shift+Tab | next / previous big scope, in the numbered order |
-| Enter | into the focused scope |
-| Esc | back out one level |
-| arrows | between siblings; adjust a focused value |
+| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing in navigation mode |
+| Enter | on a scope, into it, in navigation mode on its first element; on an element, start interaction (R-409) |
+| Esc | in interaction mode, back to navigation mode on the same element; in navigation mode, up one scope (R-409) |
+| arrows | in navigation mode, between siblings; in interaction mode, adjust the focused element (R-409) |
 | Shift · Alt | ×10 · ×0.1 steps |
 | held keys | delay, then repeat (the DAS / ARR model) |
 | Ctrl+Z | undo, from the contract's history (R-52) |
 | ? | shortcuts, over everything |
 
 In scope: Figure — arrows pan, + / − zoom, Space keeps the orbit, L listens, K locks. Trajectory — Enter reaches the
-playhead, listen and kept orbits. Compass — arrows tilt, Shift+arrows orbit. Time — Space plays, ← → step. Legend is
-read-only.
+playhead, listen and kept orbits. Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
+plane's normal in slice mode, and Shift+arrows do the same with a fine step (R-409; there is no orbit). Time — Space
+plays, ← → step. Legend is read-only.
 
-What the user sees: a focus ring on the current scope and the breadcrumb in the top bar (e.g. "Manifold view › Navigate ›
-zoom"). Nothing else changes on screen.
+What the user sees: a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
+and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). Nothing else changes on screen.
+
+**Two modes: navigation and interaction (R-409).** The keyboard is always in one of two modes. In **navigation mode**
+the ring is orange and the arrows move between siblings. In **interaction mode** the ring is blue and every input goes
+to the focused element. Entering any scope lands in navigation mode on its first element, and every other landing is
+in navigation mode too: a Tab on a big scope, the Figure and the Compass included, and a window opening on its first
+section, as the console does on its first filter. Enter on an element starts interaction with it; Esc in interaction
+mode returns to navigation mode on the same element, and Esc in navigation mode goes up one scope. Enter on a button
+acts as its click and stays in navigation mode (applied per R-369, R-409 A1). The blue is egui's dark theme's
+`hyperlink_color` (R-404); the orange is a look choice (R-390). The Compass scope holds the compass, then its Tilt and
+Slice buttons, as siblings in navigation mode (applied per R-369, R-409 A2): Tab lands on the Compass scope, Enter goes
+in onto the compass, Enter on the compass starts interaction with it, and Enter on a button sets the mode. The footer
+and the console follow the same two modes (R-405, R-409).
 
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
@@ -420,6 +437,9 @@ corpus, the spec follows the authority:
 - **The profiler's top level is telemetry §2's five stages** (R-56). The donut shows other categories.
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
+- **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag
+  the cube to orbit"; the compass has Tilt and Slice buttons and no orbit. The keyboard artboard shows one blue ring; the
+  ring is orange in navigation mode and blue in interaction mode.
 - **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
   (`N_max`, default 64), and the sound mapping (`θ(t), φ(t)` → spectrum). The Run window exposes the parameters the
   contracts define, under their contract names — so the artboard's integrator "tolerance" field has no counterpart.
@@ -432,9 +452,11 @@ corpus, the spec follows the authority:
 4. Run settings live in a window, not on the page.
 5. The figure is never covered; warnings go to the footer console.
 6. Every slice preview keeps the viewport's aspect.
-7. The compass switches mode by itself; lock re-bases the sliders and pins the compass.
+7. The compass switches mode by itself, and by its Tilt and Slice buttons, with no orbit (R-409); lock re-bases the
+   sliders and pins the compass.
 8. The legend is generated by evaluating the stain, with one key per dimension.
-9. Keyboard: a tree of scopes, a focus ring and a breadcrumb, nothing else on screen.
+9. Keyboard: a tree of scopes, a focus ring and a breadcrumb, nothing else on screen; the ring is orange in navigation
+   mode and blue in interaction mode (R-409).
 10. The measurement path owns `FULL_RETENTION` (R-39).
 11. Users keep their own stains in the library (New, Rename, Import, Export) — Part II §11's "later question".
 

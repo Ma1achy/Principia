@@ -36,9 +36,11 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   side; F₂ word, substeps, min separation, |ΔE/E|; playhead; **listen** (sonification, can follow the cursor); kept orbits below.
   - **The shape sphere turns slowly, with visible x, y, z axes,** and switches to an unwrapped (equirectangular) view.
 - **Bottom:**
-  - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart and
-    **switches mode by itself**: touching a slice slider shows slicing, touching a tilt shows tilting. When locked it carries
-    a gold pin at the pivot, and the plane turns about the pin. Dragging the plane tilts; dragging the cube orbits.
+  - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
+    orthographic view at its default angle, with no orbit. Its **Tilt** and **Slice** buttons switch its mode (Tilt by
+    default) and always show it, and it still **switches mode by itself**: touching a slice slider shows slicing,
+    touching a tilt shows tilting. When locked it carries a gold pin at the pivot, and the plane turns about the pin.
+    Dragging tilts in tilt mode; in slice mode it moves the slice plane along its normal *(conformed to R-409)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It
     is not instant, and says so.
   - **Legend, generated from the stain** (see 06).
@@ -100,6 +102,9 @@ their colour square; post operations line samples. It's called "Legend", never "
 The GUI is a tree of scopes. Tab / Shift+Tab between big scopes (numbered order); Enter drills in; Esc backs out; arrows move
 within a scope or adjust the focused value; Shift ×10, Alt ×0.1; held keys use the delay-then-repeat (DAS / ARR) model; `?`
 shows shortcuts. What the user sees: a focus ring and the top-bar breadcrumb, nothing else.
+Two modes *(conformed to R-409)*: every landing is in navigation mode (orange ring; arrows move between siblings); Enter on
+an element starts interaction mode (blue ring; every input goes to it); Esc returns to navigation on the same element, and
+Esc again goes up a scope. The ring's colour is the one thing the mode changes on screen.
 
 ## 08 Lock — the reticle and the pin
 
