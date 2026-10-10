@@ -544,10 +544,11 @@ pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
 /// whose latches are the defined `0.0` and `d_min` `+inf` (R-271). Each stepped sample's `C_ty` is its own slope times
 /// `C_tt(n)`, so the diffusion slopes spread whatever the step counts. A nonzero `nudge`, at most 6, moves the
 /// stepped samples' values a little and unevenly, so that no auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on
-/// sample `i`'s place in each order, on `θ̃` and on `S`; `0.0011·nudge·(1 + i mod 3)` of mass from the second body to
-/// the first and third; `nudge·(i mod 3)` steps on `t_end_step`, `nudge·(i mod 2)` more on `t_dmin_step`, `7919` times
-/// the first on `total_substeps`; the first amount over 8.2 on the drifts' shares. The states and words are unchanged,
-/// and the sample stepped 3 times stays short of a completed renormalisation.
+/// sample `i`'s place in each order, on `θ̃` and on `S`; `nudge·(i mod 3)` steps on `t_end_step`, `nudge·(i mod 2)`
+/// more on `t_dmin_step`, `7919` times the first on `total_substeps`; the first amount over 8.2 on the drifts' shares.
+/// It moves every sample's masses, the unstepped sample 0's included: `0.0011·nudge·(1 + i mod 3)` of mass from the
+/// second body to the first and third. The states and words are unchanged, and the sample stepped 3 times stays short
+/// of a completed renormalisation.
 pub fn showcase(set: &mut Synthetic, nudge: u32) {
     // Thirty orders of the eight samples, none affine in the index nor the reverse of another.
     const ORDER: [[u8; 8]; 30] = [

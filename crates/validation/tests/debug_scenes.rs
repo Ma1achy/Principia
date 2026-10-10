@@ -406,7 +406,8 @@ negative_control!(
 );
 
 /// Checks the showcase's nudge on the masses as `showcase` documents it: at nudge `k`, `0.0011·k·(1 + i mod 3)` of
-/// sample `i`'s mass moves from the second body to the first and third, `per` the share each of those takes of it.
+/// sample `i`'s mass moves from the second body to the first and third, on every sample, the unstepped sample 0
+/// included (unlike `S` and `θ̃`, which move only on the stepped samples), `per` the share each of those takes of it.
 fn check_mass_nudge(per: f32) {
     let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
     let at = |nudge: u32| {
