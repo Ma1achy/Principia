@@ -892,21 +892,70 @@ fn sources(dir: &Path) -> Vec<(String, String)> {
     files
 }
 
+/// The decode and encode sources under `src`, in either module form: `decode.rs` and every `.rs` file under `decode/`,
+/// and the same for `encode`.
+fn scanned(src: &Path) -> Vec<(String, String)> {
+    let mut files = Vec::new();
+    for module in ["decode", "encode"] {
+        let file = src.join(format!("{module}.rs"));
+        if let Ok(source) = std::fs::read_to_string(&file) {
+            files.push((file.display().to_string(), source));
+        }
+        files.extend(sources(&src.join(module)));
+    }
+    files
+}
+
 #[test]
 fn chart_constants_source_scan() {
-    let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let mut files = sources(&src.join("decode"));
-    files.extend(sources(&src.join("encode")));
-    check_no_constant_literals(&files);
+    check_no_constant_literals(&scanned(&Path::new(env!("CARGO_MANIFEST_DIR")).join("src")));
 }
 
 negative_control!(
     chart_constants_source_scan,
-    "a decode formula with μ_max written as 5.0 must fail the scan",
+    "a decode.rs file writing μ_max as 5.0 must fail the scan",
     expected = "is a chart constant's value",
-    check_no_constant_literals(&[(
-        "decode/mass.rs".to_owned(),
-        "// mu = 5.0 * tanh(z)\nlet mu = R::from(5.0).unwrap() * z.tanh(); let n = [z; 2];\n"
-            .to_owned()
-    )])
+    check_no_constant_literals(&scan_fixture("mu_file", "decode.rs"))
+);
+
+/// A source tree with one file at `path` (relative to its `src`) writing μ_max as `5.0`, scanned.
+fn scan_fixture(name: &str, path: &str) -> Vec<(String, String)> {
+    let src = Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join("chart_constants_scan")
+        .join(name)
+        .join("src");
+    let _ = std::fs::remove_dir_all(&src);
+    let file = src.join(path);
+    std::fs::create_dir_all(file.parent().expect("a parent")).expect("the fixture's directory");
+    std::fs::write(&file, "let mu = R::from(5.0).unwrap() * z.tanh();\n")
+        .expect("the fixture writes");
+    scanned(&src)
+}
+
+/// The scan reads each module form: `decode.rs`, `decode/…`, `encode.rs` and `encode/…`.
+fn check_scans_both_forms(paths: &[&str]) {
+    for (i, path) in paths.iter().enumerate() {
+        let files = scan_fixture(&format!("form_{i}"), path);
+        assert!(
+            files.iter().any(|(p, _)| p.ends_with(path)),
+            "the scan does not read `{path}`"
+        );
+    }
+}
+
+#[test]
+fn chart_constants_source_scan_reads_both_module_forms() {
+    check_scans_both_forms(&[
+        "decode.rs",
+        "decode/mass.rs",
+        "encode.rs",
+        "encode/inverse/q.rs",
+    ]);
+}
+
+negative_control!(
+    chart_constants_source_scan_reads_both_module_forms,
+    "a file outside decode and encode is not scanned",
+    expected = "the scan does not read",
+    check_scans_both_forms(&["render.rs"])
 );
