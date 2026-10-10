@@ -2362,6 +2362,46 @@
   - R-181
   - R-182
   milestone: M2
+- id: REQ-CHART-054
+  area: CHART
+  statement: "Each chart axis must declare one of four extension types for the view past [0,1]²: affine (the formula continues), periodic (the axis wraps), pole-crossing (continues over the pole, the partner axis shifted by half its period) or bounded (hatched past its edge), bounded being the default for an axis that declares nothing; a chart must take its extension from its axes; outside [0,1]², a pixel whose Φ fails to evaluate or whose state fails the chart's validity check (validate) must be hatched as forbidden and labelled decode_failed, never integrated and never dropped; the existing charts must carry chart_reference §5.4's types (latent and flat slices affine; the shape sphere's spherical map θ periodic and φ pole-crossing; the invariant warp bounded; the mass simplex affine); and inside [0,1]² every chart's output must be unchanged."
+  source:
+  - file: decisions.md
+    section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel chart_extension: per chart, samples past each edge of [0,1]²: the latent chart's z continues z₀ + (2s−1)q₁ + (2t−1)q₂; the sphere's s and s + 1 decode equal, and t = 1 + δ decodes as t = 1 − δ with θ + π (likewise below t = 0); the invariant warp is hatched past every edge; the mass simplex continues and its negative-mass pixels are hatched; a custom chart's undeclared axis is hatched past its edge; every hatched pixel is decode_failed and none is integrated; inside [0,1]² every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, and an undeclared axis that continues each fail; review (physics): the types and the fallback against R-407"
+  rulings:
+  - R-407
+  milestone: M8
+  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. Area statistics over the extended window are RQ-263."
+- id: REQ-CHART-055
+  area: CHART
+  kind: definition
+  statement: "The extension type of each Burrau-family chart axis (chart_reference §4.5: the Euclid plane's m and ν, the (ν, K) chart's axes, the acute angle θ, and the strips' K, L_z and δm axes) must be defined in chart_reference §5.4 by the task that builds the Burrau charts and reviewed by the physics reviewer before merge; an axis given no type is bounded (R-407)."
+  source:
+  - file: decisions.md
+    section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/design/principia_chart_reference.md
+    section: 4.5 The Burrau-family chart maps
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "chart_reference §5.4's Burrau row gives each Burrau-family axis's type with its reasoning (ν past (0,1) and θ past (0, π/4] give a zero or negative mass); no axis is given more than bounded without the physics reviewer's approval; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-407
+  milestone: M2
+  note: "R-407 clause 3 (\"Burrau: per axis, with physics review\"); a definition requirement on the task that completes the Burrau charts, TASK-M2-11 (applied per R-369, R-407, A6). No types are given now."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -12497,7 +12537,7 @@
   rulings:
   - R-406
   milestone: M8
-  note: "R-406 (10 Oct 2026): with F3 off the figure fills the window, each point of the field where it is in the shown layout, so \"the figure is identical underneath\" is checked over the shown figure's rect. The fill on the real engine is REQ-GUI-180, closed by this requirement's task, TASK-M8-05, and waiting on RQ-262."
+  note: "R-406 (10 Oct 2026): with F3 off the figure fills the window, each point of the field where it is in the shown layout, so \"the figure is identical underneath\" is checked over the shown figure's rect. The fill on the real engine is REQ-GUI-180, closed by this requirement's task, TASK-M8-05, under R-407 (RQ-262 ruled)."
 - id: REQ-GUI-071
   area: GUI
   statement: "Undo and redo must be a single history of typed setField edits kept by the state contract and shared by every GUI, in which a drag coalesces into one entry; a GUI must send undo / redo as requests and keep no history of its own."
@@ -12998,7 +13038,7 @@
   note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock."
 - id: REQ-GUI-100
   area: GUI
-  statement: "Present mode must hide all chrome and Esc must return from it."
+  statement: "Present mode must hide all chrome and Esc must return from it; with the chrome hidden the figure must fill the window as with F3 (REQ-GUI-180), past the chart's [0,1]² each axis extending by its declared type with the hatch fallback (R-407)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Export & share
@@ -13006,13 +13046,16 @@
     section: 04 Windows
   - file: decisions.md
     section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
+  - file: decisions.md
+    section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
   verify:
     method: GUI screenshot
-    detail: "screenshot in present mode shows only the figure; Esc restores 01_main.png's layout"
+    detail: "screenshot in present mode shows only the figure, filling the window: over the shown figure's rect it is pixel-identical to the shown layout's capture, and the window outside it is covered with the extension R-407 gives, never the clear colour or the shown view stretched; Esc restores 01_main.png's layout"
   rulings:
   - R-406
+  - R-407
   milestone: M8
-  note: "R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the same way, each point of the field where it is in the shown layout (flagged in R-406; the human spoke of F3). On the real engine it follows RQ-262's ruling, as REQ-GUI-180 does."
+  note: "R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the same way, each point of the field where it is in the shown layout (flagged in R-406; the human spoke of F3). On the real engine the area past [0,1]² follows R-407, as REQ-GUI-180 does; TASK-M8-32 checks the fill, with the physics reviewer for that line (applied per R-369, R-407, A2)."
 - id: REQ-GUI-101
   area: GUI
   statement: "The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair."
@@ -14307,7 +14350,7 @@
   note: "R-405: \"the bottom bar\" is read as the footer (flagged in R-405). Closed by TASK-M6-28, which builds the console's controls (REQ-GUI-126) and each window's scope."
 - id: REQ-GUI-179
   area: GUI
-  statement: "On the mock engine, with the egui layer hidden by F3, the figure must fill the whole window, the stand-in showing more of the field at the same scale in every direction, each point of the field at the screen position it has in the shown layout, never the shown view stretched; showing the layer must return the figure to its rect in the shown layout; and neither must send a SetField or add an undo entry."
+  statement: "On the mock engine, with the egui layer hidden by F3 and in present mode, the figure must fill the whole window, the stand-in showing more of the field at the same scale in every direction, each point of the field at the screen position it has in the shown layout, never the shown view stretched; past the shown figure's rect the stand-in must extend as an affine chart, with R-407's hatch fallback (a pixel the mock flags invalid hatched as forbidden); showing the layer, or Esc from present mode, must return the figure to its rect in the shown layout; and neither must send a SetField or add an undo entry."
   source:
   - file: decisions.md
     section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
@@ -14315,31 +14358,37 @@
     section: G1. Rules that hold everywhere
   - file: decisions.md
     section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: decisions.md
+    section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
   verify:
     method: GUI screenshot
-    detail: "cargo test -p gui f3_fills_window_mock and cargo xtask screenshot 01_main (mock_shell, mock_f3_off): with F3 off no pixel of the window is the clear colour; over the shown figure's rect the F3-off capture is pixel-identical to the F3-on one; outside it the capture equals the stand-in drawn at the same placement over the whole window; the tile-bounds overlay, on, draws the extra quads at the shown quads' size; F3 again restores the shown capture pixel for pixel; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a figure left in its rect fails the coverage check"
+    detail: "cargo test -p gui f3_fills_window_mock and cargo xtask screenshot 01_main (mock_shell, mock_f3_off): with F3 off no pixel of the window is the clear colour; over the shown figure's rect the F3-off capture is pixel-identical to the F3-on one; outside it the capture equals the stand-in drawn at the same placement over the whole window; the tile-bounds overlay, on, draws the extra quads at the shown quads' size; F3 again restores the shown capture pixel for pixel; the undo depth is unchanged and no SetField is sent; cargo test -p gui f3_fallback_mock: with the mock's test hook flagging a region outside the shown rect invalid, that region is drawn hatched, never the stand-in or the clear colour; cargo test -p gui present_fills_window_mock and cargo xtask screenshot 01_main (mock_present): the present-mode capture equals the F3-off one and Esc restores the shown capture; controls: the shown view stretched to the window fails the check over the rect, a figure left in its rect fails the coverage check, and a flagged pixel drawn as the stand-in fails the fallback check"
   rulings:
   - R-390
   - R-406
+  - R-407
   milestone: M6
-  note: "R-406; closed by TASK-M6-30. RQ-248's decision (the figure kept in its rect with F3 off, the rest the clear colour) is revised. The real engine's fill is REQ-GUI-180."
+  note: "R-406; closed by TASK-M6-30. RQ-248's decision (the figure kept in its rect with F3 off, the rest the clear colour) is revised. R-407 (10 Oct 2026): the mock needs affine plus the hatch fallback; applied per R-369 (R-407, A3), the mock's present mode, built by TASK-M6-28, fills the window the same way, and the fallback is exercised by a test hook, the stand-in being defined everywhere. The real engine's fill is REQ-GUI-180."
 - id: REQ-GUI-180
   area: GUI
-  statement: "On the real engine, with the egui layer hidden by F3, the figure must fill the whole window, the scheduler requesting and drawing the field over the window at the same scale in every direction, each point at the screen position it has in the shown layout, never the shown view stretched; showing the layer must return the figure to its rect; and neither must send a SetField."
+  statement: "On the real engine, with the egui layer hidden by F3, the figure must fill the whole window at the same scale in every direction, each point at the screen position it has in the shown layout, never the shown view stretched: inside the chart's [0,1]² nothing must change, and past it each axis must extend by its declared extension type (REQ-CHART-054), a pixel whose Φ fails to evaluate or whose state fails the chart's validity check hatched as forbidden; every window pixel must carry a labelled output, a hatched one tagged and never dropped; showing the layer must return the figure to its rect; and neither must send a SetField or add an undo entry."
   source:
   - file: decisions.md
     section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
   - file: docs/gui/principia_render_gui_spec.md
     section: G1. Rules that hold everywhere
+  - file: decisions.md
+    section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot 01_main (f3_off) on the real engine: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; outside it the figure is drawn over the whole window, the quads requested covering the window at the shown quads' level, and the area outside the chart's domain drawn as RQ-262's ruling gives; F3 again restores the shown capture; control: the shown view stretched to the window fails"
+    detail: "cargo xtask screenshot 01_main (f3_off, f3_off_sphere, f3_off_invariant) on the real engine, with a stain that reads no screen-lane field, on the latent chart, the shape sphere's spherical map and an invariant chart: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; past [0,1]² the latent chart continues its formula, the sphere wraps in θ and crosses its poles with θ shifted by π, and the invariant chart is hatched on every side; cargo test -p gui f3_fill_labels: every window pixel carries a labelled output, each hatched one decode_failed, none dropped; F3 again restores the shown capture; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a window pixel left unlabelled fails the label check"
   rulings:
   - R-406
+  - R-407
   milestone: M8
-  rq:
-  - RQ-262
-  note: "R-406; closed by TASK-M8-05. Waits on RQ-262: how the view extends past the chart's [0,1]² and what a chart shows outside its domain."
+  note: "R-406; closed by TASK-M8-05. RQ-262 ruled by R-407 (10 Oct 2026): the extension per axis type, with the hatch fallback (REQ-CHART-054). Applied per R-369 (R-407, A1): no quad request set is fixed beyond what R-407 implies, since a hatched pixel needs no integration; the pixel-identity check uses a stain that reads no screen-lane field, since ctx.screen.uv is taken over the window with F3 off (A4). Area statistics over the extended window are RQ-263; this requirement computes none."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

@@ -129,11 +129,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 158 requirements** (and every earlier gate still green):
+**Exit gate — 159 requirements** (and every earlier gate still green):
 
 - DEC (36): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…044
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
-- CHART (46): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053
+- CHART (47): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055
 - INT (2): REQ-INT-002…003
 - PAY (3): REQ-PAY-034…035, REQ-PAY-088
 - GEN (5): REQ-GEN-013…015, REQ-GEN-025…026
@@ -313,10 +313,10 @@ canonical_spec §11: "build the browser product on top".
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 
 <!-- gate:M8 -->
-**Exit gate — 235 requirements** (and every earlier gate still green):
+**Exit gate — 236 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (1): REQ-CHART-040
+- CHART (2): REQ-CHART-040, REQ-CHART-054
 - GEN (1): REQ-GEN-023
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074

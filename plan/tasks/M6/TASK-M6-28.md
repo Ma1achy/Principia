@@ -85,6 +85,8 @@ opens the console with the focus inside, its controls its sub-scopes.
   plain rows; this task enables each entry as it builds its window, and builds the console's layout, filters, copy
   and clear and its opening on an error over that frame, re-capturing `01_main/mock_warning` to show them. The
   console's "clear" resets the footer's warning and error counts, which count from the session's start until then.
+- **Present mode (R-406, R-407).** This task builds Export & share's present mode, hiding all chrome until Esc; making its
+  figure fill the window, as F3 off does, is TASK-M6-30's, which depends on this task (applied per R-369, R-407, A3).
 - **R-405 (10 Oct 2026).** The footer is big scope 8 and the console its sub-scope (REQ-GUI-178); "the bottom bar" is
   read as the footer (flagged in R-405). What to try gains Tab to the footer, Enter, the arrows in the console and Esc.
 - **qa's files, changed under R-405 (R-290).** `crates/gui/tests/qa_TASK-M6-25.rs`'s
