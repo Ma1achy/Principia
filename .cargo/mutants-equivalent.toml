@@ -68,17 +68,17 @@ mutant = "crates/engine/src/contract/conformance.rs:186:17: replace + with - in 
 justification = "shifted only builds the navigation case's target values, by a non-zero offset d; x - d differs from x exactly when x + d does, so the case moves every field it edits either way and passes and fails on the same engines"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:100:35: replace / with * in plane_frame"
+mutant = "crates/gui/src/explore/compass.rs:103:35: replace / with * in plane_frame"
 justification = "Z0_HALF_RANGE is 1.0, so z / 1.0 and z * 1.0 are the same value for every z"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/compass.rs:274:59: replace | with ^ in draw"
+mutant = "crates/gui/src/explore/compass.rs:292:59: replace | with ^ in draw"
 justification = "the guard above has just checked i & (1 << b) == 0, and with that bit clear i ^ (1 << b) equals i | (1 << b)"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/manifold_view/mod.rs:510:20: replace * with / in adjust"
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:551:20: replace * with / in adjust"
 justification = "Z0_HALF_RANGE is 1.0, so 2.0 * 1.0 and 2.0 / 1.0 are both 2.0"
 
 [[equivalent]]
-mutant = "crates/gui/src/explore/manifold_view/mod.rs:521:57: replace * with / in adjust"
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:562:57: replace * with / in adjust"
 justification = "Q_HALF_RANGE is 1.0, so (range * 2.0) * 1.0 and (range * 2.0) / 1.0 are the same value"
