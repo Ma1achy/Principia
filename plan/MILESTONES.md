@@ -251,20 +251,21 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The integration-floor flags and the precision warnings.
 - The symbolic-dynamics per-quad quantities.
 - The refinement policy's open measurements.
-- **The GUI track on a mock engine (R-390):** TASK-M6-24 to TASK-M6-29, the dev GUI built against a mock engine with
+- **The GUI track on a mock engine (R-390):** TASK-M6-24 to TASK-M6-29, with TASK-M6-30 and TASK-M6-31 from the human's
+  feedback (R-406, R-409), the dev GUI built against a mock engine with
   one contract conformance suite for the mock and the real engine. It sits in M6 because TASK-M6-21, TASK-M6-22,
   TASK-M7-22 and TASK-M7-25 build on it and no task may depend on a later milestone's; it starts now, on spare agent
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 157 requirements** (and every earlier gate still green):
+**Exit gate — 160 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (22): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179
+- GUI (25): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090
@@ -313,7 +314,7 @@ canonical_spec §11: "build the browser product on top".
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 
 <!-- gate:M8 -->
-**Exit gate — 238 requirements** (and every earlier gate still green):
+**Exit gate — 239 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (4): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057
@@ -321,7 +322,7 @@ canonical_spec §11: "build the browser product on top".
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074
 - COL (2): REQ-COL-047…048
-- GUI (130): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180
+- GUI (131): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184
 - TOOL (42): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146
 - VAL (17): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144
 - PERF (12): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092

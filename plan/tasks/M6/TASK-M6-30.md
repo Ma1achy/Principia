@@ -29,6 +29,7 @@ forbidden. Present mode, whose frame TASK-M6-28 builds, fills the window the sam
 - `decisions.md` § "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)"
 - `docs/gui/principia_render_gui_spec.md` § "Export & share"
+- `decisions.md` § "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
 
 ## Deliverables
 - `crates/gui/src/layout.rs` and `crates/gui/src/app.rs`: while the layer is hidden the figure's rect is the window,
@@ -53,7 +54,7 @@ forbidden. Present mode, whose frame TASK-M6-28 builds, fills the window the sam
 - `cargo test -p gui present_fills_window_mock` and `cargo xtask screenshot 01_main` (mock_present) — present mode, opened from Export & share, fills the window: its capture equals the F3-off one, and Esc restores the shown capture pixel for pixel; no SetField is sent; control: a present mode left in the shown rect fails the coverage check (REQ-GUI-179, R-406, R-407).
 - `cargo test -p gui f3_toggle_mock` and `cargo xtask screenshot 01_main` (mock_shell, mock_f3_off, mock_warning) — the figure identical underneath over the shown figure's rect with F3 on and off; a raised warning and error change the footer's counts and nothing over the figure (REQ-GUI-168, closed by TASK-M6-24, re-checked here under R-406).
 - `cargo test -p gui mock_keyboard` — F3 still hides and shows the layer as TASK-M6-25 built it, the keyboard taking no key while hidden and the focus kept (REQ-GUI-169, closed by TASK-M6-25, re-checked here).
-- Review checklist (code reviewer) of the marks — the three files' comments name R-404 as confirming the values, and `DELAY_MS`, `INTERVAL_MS`, `StepKind::base`, `RING_WIDTH`, `RING_ROUNDING` and the ring's colour are unchanged (R-404; REQ-GUI-146 and REQ-GUI-158, closed by TASK-M6-25).
+- Review checklist (code reviewer) of the marks — the three files' comments name R-404 as confirming the values, and `DELAY_MS`, `INTERVAL_MS`, `StepKind::base`, `RING_WIDTH`, `RING_ROUNDING` and the ring's interaction-mode colour (`hyperlink_color`) are unchanged from R-404 and TASK-M6-31 as merged; the navigation mode's orange and the retired `Orbit` step are TASK-M6-31's (R-404, R-409; REQ-GUI-146 and REQ-GUI-158, closed by TASK-M6-25).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the app launches on the mock and the conformance suite passes on both engines (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
 
 ## Notes
@@ -81,3 +82,6 @@ forbidden. Present mode, whose frame TASK-M6-28 builds, fills the window the sam
   builds the mock's Present fill, so it depends on TASK-M6-28, which builds present mode's frame (applied per R-369,
   R-407, A3). Size: ~350 lines with the fallback and Present (applied per R-369).
 - Sources and silences as TASK-M6-24's Notes give them (R-390).
+- **R-409 (10 Oct 2026).** The ring is orange in navigation mode and `hyperlink_color` in interaction mode, and R-404's
+  `Orbit` step is retired; TASK-M6-31 builds both, and this task follows it through TASK-M6-27. The comment marks this
+  task rewords name R-404 for the values it confirmed and R-409 for what it changed; the marks checklist reads so.
