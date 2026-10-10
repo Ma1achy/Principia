@@ -44,6 +44,16 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 - **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
   onto the same surface (`principia_gui_state_contract.md` §1).
+- **With the layer hidden, the figure fills the window (R-406).** F3 hiding egui makes the figure fill the whole
+  window, showing more of the field at the same scale in every direction, never the shown view stretched: each point
+  of the field keeps the screen position it has in the shown layout, so the figure's rect there is unchanged. Hiding
+  and showing send no `SetField`; showing the layer returns the normal layout. Past the chart's `[0,1]²` each axis
+  extends by its declared type (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or
+  whose state fails validation is hatched as forbidden (R-407, `principia_chart_decoder_contract.md` Part 3). The
+  screen lane is the one exception to "nothing moves": `ctx.screen.uv` and `ctx.screen.pixel` are taken over the
+  figure area as shown, the full window with the layer hidden, so a stain that reads them (the UV-view debug preset
+  among them) draws differently over the shown rect when F3 toggles; the figure is identical over the shown rect for a
+  stain that reads no screen-lane field (R-407, A4; `principia_coordinate_conventions_note.md`).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
@@ -134,7 +144,7 @@ recompute / cancel live in the Run window (§G5).
 ## G3. Keyboard — a design note, not a screen (`07_keyboard.png`)
 
 The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory ·
-5 Compass · 6 Time · 7 Legend. Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
+5 Compass · 6 Time · 7 Legend · 8 footer (R-405). Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
 
 | key | action |
 |---|---|
@@ -153,6 +163,16 @@ read-only.
 
 What the user sees: a focus ring on the current scope and the breadcrumb in the top bar (e.g. "Manifold view › Navigate ›
 zoom"). Nothing else changes on screen.
+
+**The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
+after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
+console (§G12), as a click does, with the focus inside it. The console is a window: opened by the footer or from
+Windows › Console, it takes the focus; Tab and Shift+Tab move between its sections (the filters, the text filter, copy
+and clear, the entry list), the arrow keys move within a section, and Esc closes it and returns the focus to whatever
+opened it, the footer or Windows › Console. The console opening by itself on an error does not take the focus.
+
+The ring's, the breadcrumb's and the `?` overlay's look, the held-key delay and repeat (500 ms, 40 ms) and the base
+steps are confirmed as #174 built them, and recorded in R-404.
 
 ## G4. Lock — the reticle and the pin (`08_lock.png`)
 
@@ -238,6 +258,7 @@ either file as schema v1.
   Snapshot JSON, share links and pxpack carry `SimConfig` and `RenderState` in their one canonical
   serialisation (`principia_gui_state_contract.md` §2, R-309).
 - **Present:** hide all chrome; Esc returns.
+  With the chrome hidden the figure fills the window, as with F3 (R-406).
 
 ### Display — the last stages
 
@@ -304,9 +325,20 @@ labels (R-22).
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
+- **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
+  mapped linearly onto its range is affine, the fallback hatching what fails validation, and one behind a nonlinear
+  warp declares nothing and is bounded (R-408's port, B1: first made bounded, by R-407's default). B1 covers the
+  non-periodic quantities listed above (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared affine
+  would redraw systems and count them again, so it takes its type only by a declaration under physics review. A Burrau
+  dimension takes the Burrau family's types (`principia_chart_reference.md` §5.4). The chart inherits its extension
+  from its axes.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
-  `validate(u, v)` on the `Chart` trait).
+  `validate(u, v)` on the `Chart` trait). **"Forbidden in view" counts each system once (R-408):** a visible pixel
+  counts only if every axis is inside its type's primary range (periodic, one period; pole-crossing, pole to pole;
+  affine, unbounded; bounded, its domain); a pixel hatched where the domain ends (a bounded axis past its edge, or a
+  failed `Φ`) leaves both the count and the total; only states that fail the validity check count as forbidden. Inside
+  `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3).
 - **A quick render** (e.g. 64 × 64 at a short horizon), at the view's aspect. **Both previews are square.**
 - The footer checks `q₁ · q₂ = 0` and lists the hidden directions (and the residual). Revert / Apply.
 
@@ -374,6 +406,9 @@ tool. The side panel shows:
 The footer, opened: severity, time, source, message; filters (all, warnings, errors, info, text); copy and clear. It is the
 same stream as the profiler's telemetry. Errors open it automatically. Sources include the stain, the integrator, the
 quadtree, the contract (each `SetField` is logged) and the app.
+
+The keyboard reaches it through the footer, big scope 8 (§G3, R-405).
+It is reached from Windows › Console too, and Esc returns the focus to whichever opened it.
 
 ## G13. Where the artboards are overridden
 

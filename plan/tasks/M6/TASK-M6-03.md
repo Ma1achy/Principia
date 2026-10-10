@@ -27,7 +27,7 @@
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 
 ## Deliverables
-- Doc change: `docs/design/principia_dd_generation_root.md` § "Temporal accumulators (scheduler Part 8)" — where the two diagnostics live and whether/how they cross GPU→CPU (REQ-REF-046), under R-142: the latch is evaluated on the GPU and only its verdict crosses.
+- Doc change: `docs/design/principia_dd_generation_root.md` § "Temporal accumulators (scheduler Part 8)" — where the two diagnostics are held and updated before the reduction, consistent with their §3.7 `QuadReduction` member rows, and how the GPU→CPU crossing carries them (REQ-REF-046), under R-142: the latch is evaluated on the GPU and only its verdict crosses.
 - `crates/engine/src/refine/tolerance.rs`: `Policy::Tolerance { eps }`, `unresolved(footprint)`, `policy_splits(quad)` plugged into TASK-M6-02's gate.
 - `crates/engine/src/refine/latch.rs`: the per-footprint latch store keyed by the resident quad (fixed size per footprint, O(1) in t), max-updated from each reduction readback.
 - The ledger/generated layout (`crates/ledger`) has no `divergence_trend` and `QuadReduction` has no `running_max_divergence`.
@@ -39,7 +39,7 @@
 - `cargo test -p engine latch_per_footprint` + `cargo test -p ledger no_divergence_trend` — diverge-then-reconverge fixture: the footprint's running max stays; first_divergence_t written once; the generated layout has no divergence_trend and QuadReduction has no running_max_divergence (REQ-REF-019).
 - `cargo test -p engine metric_payload_space` (proptest) — changing the palette/colouring leaves the refined tree and its error score bit-identical (REQ-REF-030).
 - Review checklist (physics, code) — the scheduler calls the refinement policy for splits; the accumulators' size is fixed in t; no trend accumulator or θ threshold exists in code or config (REQ-REF-036).
-- Review checklist (physics) — the doc states where both diagnostics live and how the GPU→CPU crossing carries them, if at all; physics reviewer approved; the doc change is merged with the physics reviewer's approval (REQ-REF-046).
+- Review checklist (physics) — the doc states where both diagnostics are held and updated before the reduction, consistent with their §3.7 `QuadReduction` member rows, and how the GPU→CPU crossing carries them; physics reviewer approved; the doc change is merged with the physics reviewer's approval (REQ-REF-046).
 
 ## Notes
 - RQ-72 ruled: R-142 — the latch is evaluated on the GPU in the resolve pass (R-135), its state stays in GPU-resident per-quad memory, and `QuadReduction` carries only the verdict: the count of unresolved footprints, latched ones included (REQ-REF-019, REQ-REF-022, REQ-REF-045).

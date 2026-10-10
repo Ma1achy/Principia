@@ -62,3 +62,9 @@ it. This task proposes the repeat delay and rate and the base steps, the first t
   "Keys (?)" disabled; this task fills the slot and enables the entry, which opens the `?` shortcuts. The gui
   reviewer's § 8 keyboard item applies from this task on: it puts TASK-M6-24's top bar (its menus, the mode switch,
   Overlays ▾, Run…, Profiler…, Export…) into the scope tree as scope 1, and `mock_keyboard` covers them.
+- R-404 (10 Oct 2026): the human confirmed this task's look choices (the ring, the breadcrumb, the `?` overlay with no
+  dimming and its clicks-only pointer capture, the last a reading of "this is good", applied per R-369) and its two calibrations,
+  REQ-GUI-146 and REQ-GUI-158, as built, ahead of the M8 gate. TASK-M6-30 rewords the code's "proposed" and "flagged"
+  comments to "confirmed by R-404".
+- R-405 (10 Oct 2026): the footer becomes big scope 8 and the console a window opened from it (REQ-GUI-178, TASK-M6-28), so
+  REQ-GUI-095 now reads eight scopes. This task's acceptance line for it, seven, is its record as merged.

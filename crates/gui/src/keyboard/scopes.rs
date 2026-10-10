@@ -169,6 +169,10 @@ pub struct Adjust {
     pub kind: StepKind,
     /// The signed multiple of the base step: ±1, ±10 with Shift, ±0.1 with Alt.
     pub times: f64,
+    /// The arrow pressed: a value with two axes (the figure's pan, the compass's tilt) reads its axis from it.
+    pub direction: Direction,
+    /// Whether Shift was held: the compass orbits on Shift+arrows (render_gui_spec §G3).
+    pub shift: bool,
 }
 
 impl Adjust {
@@ -311,10 +315,28 @@ impl ScopeTree {
             .collect()
     }
 
-    /// Runs `command` on the focus `path`, the steps `multiplier` times the base. A path the tree no longer holds
-    /// (the mode switched) is cut back to its valid part first.
+    /// Runs `command` on the focus `path`, the steps `multiplier` times the base, a focused value adjusting. A path
+    /// the tree no longer holds (the mode switched) is cut back to its valid part first.
     pub fn navigate(&self, path: &mut Vec<String>, command: Command, multiplier: f64) -> Outcome {
+        self.navigate_in(path, command, multiplier, false, &mut false)
+    }
+
+    /// [`Self::navigate`], Shift held or not, with the state of a focused value's arrows: a value reached by Enter
+    /// from its parent adjusts with the arrows; Enter on it switches them to moving between its siblings, landing on
+    /// each in that state, and Enter on one switches it back (a choice of R-369: §G3 gives the arrows both jobs, and
+    /// a section of several values needs both). `browsing` holds that state; Tab, Esc and Enter into a scope reset it.
+    pub fn navigate_in(
+        &self,
+        path: &mut Vec<String>,
+        command: Command,
+        multiplier: f64,
+        shift: bool,
+        browsing: &mut bool,
+    ) -> Outcome {
         path.truncate(self.valid_prefix(path));
+        if matches!(command, Command::Next | Command::Previous | Command::Back) {
+            *browsing = false;
+        }
         match command {
             Command::Next | Command::Previous => {
                 let bigs = self.children(None);
@@ -341,9 +363,13 @@ impl ScopeTree {
                 let scope = *self.get(id).expect("a valid path");
                 if let Some(first) = self.children(Some(id)).first() {
                     path.push((*first).to_owned());
+                    *browsing = false;
                     Outcome::Moved
                 } else if scope.activates {
                     Outcome::Activate(scope.id)
+                } else if matches!(scope.arrows, Arrows::Adjust(_)) {
+                    *browsing = !*browsing;
+                    Outcome::None
                 } else {
                     Outcome::None
                 }
@@ -358,12 +384,14 @@ impl ScopeTree {
                 };
                 let scope = *self.get(&id).expect("a valid path");
                 match scope.arrows {
-                    Arrows::Adjust(kind) => Outcome::Adjust(Adjust {
+                    Arrows::Adjust(kind) if !*browsing => Outcome::Adjust(Adjust {
                         scope: scope.id,
                         kind,
                         times: direction.sign() * multiplier,
+                        direction,
+                        shift,
                     }),
-                    Arrows::Siblings => {
+                    _ => {
                         let parent = path.len().checked_sub(2).map(|i| path[i].as_str());
                         let siblings = self.children(parent);
                         let i = siblings
@@ -379,6 +407,7 @@ impl ScopeTree {
                         match to {
                             Some(j) => {
                                 *path.last_mut().expect("non-empty") = siblings[j].to_owned();
+                                *browsing = true;
                                 Outcome::Moved
                             }
                             None => Outcome::None,

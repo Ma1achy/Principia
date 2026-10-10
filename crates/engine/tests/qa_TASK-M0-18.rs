@@ -21,9 +21,16 @@ use serde::Serialize;
 fn sim() -> SimConfig {
     SimConfig {
         chart: Chart {},
-        plane: Plane {},
+        plane: Plane {
+            z0: [0.0; 8],
+            q1: [0.0; 8],
+            q2: [0.0; 8],
+        },
         slice: Slice {},
-        lock: Lock {},
+        lock: Lock {
+            locked: false,
+            z_locked: [0.0; 8],
+        },
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
@@ -42,10 +49,12 @@ fn render() -> RenderState {
     }
 }
 
-/// The M0 skeleton's canonical text, by §2's rules: its groups' names in byte order, each group `{}`.
+/// The M0 skeleton's canonical text, by §2's rules: its groups' names in byte order, each group `{}` but for the
+/// plane and the lock (R-390), whose members are in byte order too, all zero and unlocked.
 const SIM_TEXT: &str =
     "{\"chart\":{},\"collision\":{},\"horizon\":{},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{},\
-\"lock\":{},\"plane\":{},\"quality\":{},\"slice\":{}}";
+\"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
+\"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{}}";
 const RENDER_TEXT: &str =
     "{\"overlays\":{},\"palette\":{},\"playhead\":{\"t\":0},\"stain_graph\":{}}";
 
@@ -93,7 +102,8 @@ validation::negative_control!(
     "the declaration-order text must fail the canonical-text check",
     expected = "is not its groups in byte order",
     check_skeleton(
-        "{\"chart\":{},\"plane\":{},\"slice\":{},\"lock\":{},\"links\":{},\"integrator\":{},\
+        "{\"chart\":{},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{},\
+\"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{},\"integrator\":{},\
 \"kernel_variant\":\"physics\",\"horizon\":{},\"collision\":{},\"quality\":{}}",
         RENDER_TEXT
     )

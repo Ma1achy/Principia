@@ -28,9 +28,16 @@ pub fn mock_app() -> App<MockSide> {
 pub fn state(t: f64) -> (SimConfig, RenderState) {
     let sim = SimConfig {
         chart: Chart {},
-        plane: Plane {},
+        plane: Plane {
+            z0: [0.0; 8],
+            q1: [0.0; 8],
+            q2: [0.0; 8],
+        },
         slice: Slice {},
-        lock: Lock {},
+        lock: Lock {
+            locked: false,
+            z_locked: [0.0; 8],
+        },
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
@@ -124,4 +131,60 @@ pub fn press<S: EngineSide>(
 /// `ViewUI`'s focus path, as `&str`s.
 pub fn focus<S: EngineSide>(app: &App<S>) -> Vec<&str> {
     app.view.focus.path.iter().map(String::as_str).collect()
+}
+
+/// One AccessKit node of a frame: its role, its bounds in points, its numeric value and its text.
+#[derive(Clone, Debug)]
+pub struct Node {
+    /// Its role.
+    pub role: eframe::egui::accesskit::Role,
+    /// Its bounds, in points.
+    pub rect: eframe::egui::Rect,
+    /// Its numeric value: a slider's or a drag value's.
+    pub value: Option<f64>,
+    /// Its label or value text.
+    pub text: String,
+}
+
+/// The nodes with bounds of one more frame of `app`.
+pub fn nodes<S: EngineSide>(headless: &mut Headless, app: &mut App<S>) -> Vec<Node> {
+    let output = headless.frame(app, Vec::new());
+    let Some(update) = &output.platform_output.accesskit_update else {
+        return Vec::new();
+    };
+    update
+        .nodes
+        .iter()
+        .filter_map(|(_, node)| {
+            let b = node.bounds()?;
+            Some(Node {
+                role: node.role(),
+                rect: eframe::egui::Rect::from_min_max(
+                    eframe::egui::pos2(b.x0 as f32, b.y0 as f32),
+                    eframe::egui::pos2(b.x1 as f32, b.y1 as f32),
+                ),
+                value: node.numeric_value(),
+                text: node.label().or(node.value()).unwrap_or_default().to_owned(),
+            })
+        })
+        .collect()
+}
+
+/// The shapes of one more frame of `app`, flattened, in paint order.
+pub fn shapes<S: EngineSide>(
+    headless: &mut Headless,
+    app: &mut App<S>,
+) -> Vec<eframe::egui::Shape> {
+    let output = headless.frame(app, Vec::new());
+    let mut flat = Vec::new();
+    fn flatten(shape: &eframe::egui::Shape, out: &mut Vec<eframe::egui::Shape>) {
+        match shape {
+            eframe::egui::Shape::Vec(v) => v.iter().for_each(|s| flatten(s, out)),
+            other => out.push(other.clone()),
+        }
+    }
+    for clipped in &output.shapes {
+        flatten(&clipped.shape, &mut flat);
+    }
+    flat
 }

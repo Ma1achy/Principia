@@ -2,7 +2,7 @@
 
 - **Milestone:** M6
 - **Closes:** REQ-GUI-172, REQ-GUI-173, REQ-GUI-157
-- **Depends on:** TASK-M6-26
+- **Depends on:** TASK-M6-26, TASK-M1-17
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** none
@@ -35,6 +35,9 @@ Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Leg
 - `decisions.md` § "R-101 — Transport lives in `ViewUI`; the clock writes the playhead without history *(closes RQ-61)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-399 — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
+- `decisions.md` § "R-404 — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps"
+- `decisions.md` § "R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console"
+- `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
 ## Deliverables
 - `crates/gui/src/explore/{time,legend,trajectory}.rs`, `crates/gui/src/explore/overlays_menu.rs` and
@@ -59,7 +62,7 @@ Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Leg
 - Proposal: the shape sphere's rotation rate in degrees per second, frame-rate independent, with the reason it reads as "slowly"; the gui reviewer checks it and the human confirms it at the M8 gate (REQ-GUI-157).
 - `cargo test -p gui mock_legend_keys` and `cargo xtask screenshot 06_legend` (mock_legend) — the Legend draws exactly the keys the snapshot carries, one per dimension in the order received, and no key of its own: changing the mock's fake stain (adding a dimension, removing the brightness channel) changes the keys drawn, and an empty key list draws an empty frame; the "generated from the stain" frame against 06_legend.png (REQ-GUI-172; legend by evaluation on the mock, applied per R-369, review 5434766412 on PR #157; the real evaluation, REQ-GUI-105 and REQ-GUI-106, stays TASK-M8-22's).
 - `cargo xtask screenshot 01_main` (mock_hover) and `cargo test -p gui mock_hover` — hovering the stand-in shows the mock's hover path, drawn by the mock, solid near the slice and faint away from it, and the GUI's hover label for the fake sample, reading "undecided · still interacting at t … of …" until the sample is decided; the GUI draws no mark on the figure but the label; the Trajectory panel's "under cursor" tab shows the same sample; moving off clears both; against 01_main.png (REQ-GUI-172; the marks REQ-GUI-085 and REQ-GUI-086 require, built here on mock data, applied per R-369, review 5434766412 on PR #157; both stay closed by TASK-M8-10 on the real engine).
-- `cargo test -p gui mock_keyboard` (extended with this task's scopes) and `cargo xtask screenshot 07_keyboard` (mock_focus_time) — every control this task adds joins the scope tree: Tab and Shift+Tab reach the Figure, Trajectory, Time and Legend scopes in §G3's order, Enter reaches the Trajectory panel's playhead, listen and kept orbits, and the Overlays menu's toggles are reached from the top bar; the Legend is read-only and takes focus without changing anything; Esc backs out one level; the focus ring is drawn on the focused control and the top-bar breadcrumb names its path; arrows move between siblings and adjust a focused value by its proposed base step, ×10 with Shift and ×0.1 with Alt; the screenshot shows the ring and the breadcrumb as 07_keyboard.png draws them (REQ-GUI-169, closed by TASK-M6-25, re-checked here for this screen, applied per R-369, review 5434766412 on PR #157).
+- `cargo test -p gui mock_keyboard` (extended with this task's scopes) and `cargo xtask screenshot 07_keyboard` (mock_focus_time) — every control this task adds joins the scope tree: Tab and Shift+Tab reach the Figure, Trajectory, Time and Legend scopes in §G3's order, Enter reaches the Trajectory panel's playhead, listen and kept orbits, and the Overlays menu's toggles are reached from the top bar; the Legend is read-only and takes focus without changing anything; Esc backs out one level; the focus ring is drawn on the focused control and the top-bar breadcrumb names its path; arrows move between siblings and adjust a focused value by its confirmed base step (R-404), ×10 with Shift and ×0.1 with Alt; the screenshot shows the ring and the breadcrumb as 07_keyboard.png draws them (REQ-GUI-169, closed by TASK-M6-25, re-checked here for this screen, applied per R-369, review 5434766412 on PR #157).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the app launches on the mock and the conformance suite passes on both engines (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
 
 ## Notes
@@ -87,3 +90,22 @@ Each control joins the keyboard scope tree: the Figure, Trajectory, Time and Leg
   menu; this task fills the menu. A menu the user opens is not a toast or label in G1's sense (01_main.png shows the
   Overlays menu over the figure); nothing the app raises by itself is drawn there.
 - R-399 (9 Oct 2026; gui review 5472021685 of PR #175): this task's Legend frame draws the mock's `running` key as the "not yet" style, the neutral grey with a fine dot stipple, through `debug_not_yet` or its CPU mirror, not as one flat colour; `legend_swatches_equal_stain` (REQ-GUI-105) compares it as the style, as it compares `sim_failed`'s hatch (R-136), not as one colour.
+- **Depends on TASK-M1-17** (applied per R-369; the R-388 pre-flight, 10 Oct 2026): the R-399 line above draws the
+  `running` key through `debug_not_yet` or its CPU mirror, which TASK-M1-17 builds (`present.wgsl` and its mirror), and
+  the stipple is REQ-COL-064, the calibration TASK-M1-17 proposes. TASK-M1-17 is an M1 task, and the GUI track does not
+  wait on milestone gates (`plan/WORKFLOW.md` § "Human checkpoints: the milestone gates"), so this task starts once
+  TASK-M1-17 merges, or off its approved head (R-388).
+- **The Alt+digit shortcuts for fourteen toggles** (the R-388 pre-flight): render_gui_spec §G2 says "**Overlays ▾**
+  holds the toggles, grouped, each with an Alt+digit shortcut", and lists fourteen toggles (five, four, three and two);
+  01_main.png shows Alt+1 to Alt+9 on the first nine only, and none on the Chart and Stain groups. The ten digits cannot
+  give fourteen toggles one each. The implementer decides it per R-369, under R-390's source order (decisions.md, then
+  GUI_DESIGN_NOTES, then the artboards, then render_gui_spec, then gui_state_contract: where they disagree the higher
+  wins, where they are silent the implementer decides), and records the reading and the choice in the PR as "applied
+  per R-369: …". TASK-M8-08's `overlay_alt_digits` ("each Alt+digit toggles its overlay") inherits the decision.
+- **The playback speed's range is unstated** (the R-388 pre-flight): §G2 says only "speed", and 01_main.png shows a
+  "× 1" dropdown. Its range and its steps are a look silence under R-390: the implementer chooses them and records them
+  in the PR as "applied per R-369: …". R-404 confirms its base step as `Bounded`, 1/100 of the field's range, so the
+  step follows the range chosen.
+- **R-405 makes the footer big scope 8**, after Legend (TASK-M6-28 builds it). This task's `mock_keyboard` extension
+  must not assert Legend as the last big scope, nor a count of seven, so that TASK-M6-28's footer scope adds to it
+  without changing it; it asserts §G3's order of the scopes this task adds.

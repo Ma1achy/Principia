@@ -129,11 +129,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 158 requirements** (and every earlier gate still green):
+**Exit gate — 159 requirements** (and every earlier gate still green):
 
 - DEC (36): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…044
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
-- CHART (46): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053
+- CHART (47): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055
 - INT (2): REQ-INT-002…003
 - PAY (3): REQ-PAY-034…035, REQ-PAY-088
 - GEN (5): REQ-GEN-013…015, REQ-GEN-025…026
@@ -220,13 +220,13 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 164 requirements** (and every earlier gate still green):
+**Exit gate — 166 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
 - INT (2): REQ-INT-072, REQ-INT-075
 - EVT (1): REQ-EVT-022
-- PAY (16): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089
+- PAY (18): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089, REQ-PAY-093…094
 - GEN (2): REQ-GEN-017, REQ-GEN-030
 - SCHED (49): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088
 - REF (12): REQ-REF-001…010, REQ-REF-045, REQ-REF-052
@@ -257,14 +257,14 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 155 requirements** (and every earlier gate still green):
+**Exit gate — 157 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (20): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…177
+- GUI (22): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090
@@ -286,12 +286,12 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   §5's ~8 % reconciled with the 37.6 % raw low-bit error measured on random canvases (REQ-TOOL-151, TASK-M7-34).
 
 <!-- gate:M7 -->
-**Exit gate — 115 requirements** (and every earlier gate still green):
+**Exit gate — 117 requirements** (and every earlier gate still green):
 
 - GEN (4): REQ-GEN-019…022
 - SCHED (1): REQ-SCHED-072
 - RENDER (18): REQ-RENDER-057…072, REQ-RENDER-080…081
-- COL (46): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061
+- COL (48): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066
 - GUI (18): REQ-GUI-016…031, REQ-GUI-151…152
 - TOOL (22): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151
 - VAL (4): REQ-VAL-096…098, REQ-VAL-145
@@ -313,15 +313,15 @@ canonical_spec §11: "build the browser product on top".
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 
 <!-- gate:M8 -->
-**Exit gate — 234 requirements** (and every earlier gate still green):
+**Exit gate — 238 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (1): REQ-CHART-040
+- CHART (4): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057
 - GEN (1): REQ-GEN-023
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074
 - COL (2): REQ-COL-047…048
-- GUI (129): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164
+- GUI (130): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180
 - TOOL (42): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146
 - VAL (17): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144
 - PERF (12): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092

@@ -1,7 +1,7 @@
 # TASK-M5-01 — QuadReduction ledger: member order, packing, histogram and impurity grain
 
 - **Milestone:** M5
-- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052
+- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052, REQ-PAY-093, REQ-PAY-094
 - **Depends on:** TASK-M1-08
 - **Needs (earlier milestones):** REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010
 - **Reviewers:** code, qa, physics
@@ -21,6 +21,12 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `docs/design/principia_dd_generation_root.md` § "3.7 `QuadReduction` — completed ledger"
 - `docs/design/principia_dd_generation_root.md` § "Outcome (all at joint `class ⊕ detail` grain)"
 - `docs/design/principia_dd_generation_root.md` § "Validity and diagnostics"
+- `docs/design/principia_dd_generation_root.md` § "Temporal accumulators (scheduler Part 8)"
+- `docs/design/principia_dd_generation_root.md` § "Ensemble spread — the two bounded contributors"
+- `docs/design/principia_dd_generation_root.md` § "Refinement — the scaling exponent"
+- `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
+- `docs/design/principia_memory_tiers.md` § "4. The six quality tiers"
+- `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact"
 - `docs/design/principia_dd_generation_root.md` § "Conditional — not yet included"
 - `docs/design/principia_dd_generation_root.md` § "Not reduction fields"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
@@ -31,10 +37,17 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `decisions.md` § "R-315 — `n_unresolved` is a u16 `QuadReduction` member, like `valid_sample_count` *(closes RQ-183)*"
 - `decisions.md` § "R-317 — #98's `f16` restriction stands; `f16` is storage-only"
 - `decisions.md` § "R-248 — Float types at a packed location: exact width; an f16 range lies within f16's finite range *(amends R-242; closes RQ-156)*"
+- `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+- `decisions.md` § "R-99 — The latch is per footprint and lives with the resident quad *(closes RQ-59)*"
+- `decisions.md` § "R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*"
+- `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
+- `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
 ## Deliverables
-- `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), with
-  the commit's "Removed lines" note.
+- `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), and
+  `first_divergence_t`'s sentinel and each member's scale (REQ-PAY-094), with the commit's "Removed lines" note.
+- The REQ-PAY-093 proposal: the declared range, and `overflow` where needed, of `error_ratio`, `roundtrip_error`,
+  `alpha_area`, `alpha_energy` and `worst_energy_drift`, each with its evidence, attached to the PR.
 - `crates/ledger`: `QuadReduction` ledger rows (every §3.7 member, including the M6 refinement members `alpha_area`,
   `alpha_energy`, `worst_energy_drift`, laid out now and populated in M6), the generated Rust type in `crates/engine`
   and the generated WGSL struct and accessors for the render and kernel sides.
@@ -42,23 +55,40 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - Tests in `crates/ledger/tests/quad_reduction.rs`: member list and types, Rust/WGSL layout agreement, histogram capacity.
 
 ## Acceptance tests
-- Review checklist (physics) — N matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad (N² × (E+1)); the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-075).
-- `cargo test -p ledger quad_reduction_histogram_capacity` — the test that follows from the written definition: N matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad (N² × (E+1)) (REQ-PAY-075).
+- Review checklist (physics) — the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-075; waits on RQ-266).
+- `cargo test -p ledger quad_reduction_histogram_capacity` — the test that follows from the written definition: the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; the bin width cannot overflow at the largest footprint count per quad, N² × (E+1), where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint (REQ-PAY-075; waits on RQ-266).
 - Review checklist (physics) — the ledger row states the fraction; the impurity-mask cross-check (debug_tooling_plan §G) uses the same fraction; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-076).
-- Review checklist (physics) — the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-077).
-- `cargo test -p ledger quad_reduction_layout` — the test that follows from the written definition: the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it (REQ-PAY-077).
+- Review checklist (physics) — the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-077; waits on RQ-266).
+- `cargo test -p ledger quad_reduction_layout` — the test that follows from the written definition: the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it (REQ-PAY-077; waits on RQ-266).
 - `cargo test -p ledger quad_reduction_members` — generated layout member list and types (REQ-REF-006).
 - Review checklist (code) — every QuadReduction member is a fixed-size scalar; no array member grows with time or sample count; the ~80 B figure is not treated as a cap (REQ-PAY-006).
-- `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089).
+- `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089; waits on RQ-266).
 - Review checklist (code) — no spread_t_end member in v1 (REQ-REF-007).
 - Review checklist (code) — none of these in the GPU struct (REQ-REF-008).
-- `cargo test -p ledger layout_static_f16` — §3.8's `f16` type: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value (REQ-GEN-030).
+- Review checklist (physics) — the PR gives the declared range of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift`, each within ±65504 or with its `overflow` stated (R-248), with its evidence; the physics reviewer checks each; the human confirms them at the M5 gate (REQ-PAY-093).
+- Review checklist (physics) — §3.7 gives `first_divergence_t`'s sentinel, distinct from every crossing time and not NaN, and each member's scale; the ledger entries carry them; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-094).
+- `cargo test -p ledger layout_static_f16` — §3.8's `f16` type: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value as f32; the generated WGSL contains no `enable f16` and no `f16` type; each has a registered negative control (REQ-GEN-030).
 
 ## Notes
-- Definitions (R-72) this task writes: REQ-PAY-075, REQ-PAY-076, REQ-PAY-077.
+- Definitions (R-72) this task writes: REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-PAY-094. Calibrations (R-71) it
+  proposes: REQ-PAY-093, used provisionally until the human confirms them at the M5 gate (R-182).
 - The histogram capacity test must be able to fail: it asserts against the largest footprint count per quad,
   N² × (E+1) at the tier table's largest N and E (memory_tiers §4), not against a typical quad (pitfalls §3, "check the
-  measurement can fire").
+  measurement can fire"). Two different N's meet here: §3.7's `class_histogram[N]` bin count, and memory_tiers' `N`,
+  the samples per quad side; REQ-PAY-075's verify keeps them apart. E has no corpus bound (Extreme's E = 15 is
+  provisional, R-137, and Custom mode sets E directly, unbounded), and N = 16 is R-132's cap for Ultra and Extreme
+  only: Custom's N is bounded by `N² ≤ maxComputeInvocationsPerWorkgroup` (memory_tiers § "5. Controller levers,
+  ranked by impact", REQ-PERF-011), so N = 32 on a 1024-invocation adapter. A bin `w` bits wide overflows when
+  N² × (E+1) > 2^w − 1 (§3.7's u8 already at Medium, 16² × 2 = 512), and a bin that wraps silently corrupts
+  `dominant_outcome` and `outcome_impurity`. What a setting past the width does (a width no allocatable setting
+  reaches, a width chosen from the setting, a refused or clamped setting, or saturation with a flag) the corpus does not
+  say, and it changes results: **RQ-266** (physics review 5480220637 of PR #185). REQ-PAY-075's definition states the
+  ruled behaviour, and the test runs at Extreme's provisional E = 15 and N = 16 (R-398, R-132), N² × (E+1) = 4096,
+  and at the boundary the ruling sets. REQ-PAY-075, REQ-PAY-077 and REQ-PAY-089 carry `rq: RQ-266` (under a width
+  chosen from the setting, the layout follows it). RQ-266 holds all of this task, not single lines (`plan/WORKFLOW.md`
+  § "Escalation"), and through it TASK-M5-17 and the tasks downstream of it; this task is also held by the M1 gate (and
+  the gates before M5). Not split into a leaf task (applied per R-369; code review 5480245900 of PR #185): the held
+  requirements, the struct's layout and size, are this task's substance.
 - The impurity grain chosen here is the one the impurity-mask cross-check (TASK-M5-17, REQ-VAL-083) uses.
 - The temporal-accumulator members (`running_mean_divergence`, `first_divergence_t`) are laid out here; how the
   per-footprint latch reaches the split decision is R-142's: evaluated on the GPU in the resolve pass, with only the
@@ -73,3 +103,17 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   generated struct stores binary16 bits.
 - RQ-183 ruled: R-315 — `n_unresolved` is a u16 member (§3.7's temporal-accumulators row), the latch's verdict
   (REQ-REF-052). R-317 — `f16` is storage-only: its accessors widen to f32, and no generated WGSL uses `enable f16`.
+- **The members' §3.8 entries (R-306), where the corpus leaves them open** (the R-388 pre-flight, 10 Oct 2026): §3.8
+  says "A field without a complete entry fails generation loudly", but the corpus gives no range for the f16 members
+  `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift` (an f16 range lies within
+  ±65504 or the entry states its `overflow`, R-248, R-312), no value for `first_divergence_t`'s "sentinel until
+  crossed", and no member's scale. The ranges are REQ-PAY-093 (calibration, R-71: proposed with evidence, e.g. §3.7's
+  measured `error_ratio` of 204.8, confirmed at the M5 gate); the sentinel and the scales are REQ-PAY-094 (definition,
+  R-72: written into §3.7, the physics reviewer approving). Where §3.7 states a bound (a fraction in [0, 1],
+  `spread_shape`'s chord bound, `spread_event`'s attainable maximum, `n_unresolved` at most N²), the entry transcribes
+  it, citing the line.
+- **REQ-REF-046** (TASK-M6-03's definition) was reworded in the pre-flight (requirements.yaml's rule: the source wins):
+  §3.7's temporal-accumulators table lists `running_mean_divergence` and `first_divergence_t` as f32 `QuadReduction`
+  members, and R-99 makes them diagnostics, not split inputs; R-99 does not take them out of the struct. This task lays
+  both out as members, as §3.7 has them.
+- **REQ-PAY-077's `rq: RQ-182`** is dropped: R-312 ruled RQ-182, and R-312 joins its rulings.

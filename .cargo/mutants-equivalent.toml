@@ -16,7 +16,7 @@ mutant = "crates/engine/src/contract/canonical.rs:143:23: replace < with <= in f
 justification = "the exponent branch needs n outside (-6, 21], and e = n - 1 = 0 means n = 1, which the 0 < n <= 21 branches always take, so e is never 0 there"
 
 [[equivalent]]
-mutant = "crates/prin/src/profile/diff.rs:167:19: replace | with ^ in parts"
+mutant = "crates/prin/src/profile/diff.rs:169:19: replace | with ^ in parts"
 justification = "fraction is masked to bits 0..52, so bit 52 is always clear and fraction ^ (1 << 52) equals fraction | (1 << 52)"
 
 [[equivalent]]
@@ -58,3 +58,27 @@ justification = "every ledger field payload reaches here (a scalar SimState memb
 [[equivalent]]
 mutant = "crates/validation/src/golden_scene.rs:223:49: replace % with + in scene"
 justification = "set_detail writes the low 2 bits of its value (insert(w, v, 3, 2)), and i + 4 and i % 4 share their low 2 bits for every i, so each state_view sample holds the same detail code"
+
+[[equivalent]]
+mutant = "xtask/src/lint_constants.rs:131:63: replace + with * in initializer"
+justification = "the initializer then starts at its `=` rather than after it; `=` is no digit, and before the next byte it is neither alphanumeric, `_` nor `.`, so has_number finds a token-starting digit exactly when it does without it"
+
+[[equivalent]]
+mutant = "crates/engine/src/contract/conformance.rs:186:17: replace + with - in shifted"
+justification = "shifted only builds the navigation case's target values, by a non-zero offset d; x - d differs from x exactly when x + d does, so the case moves every field it edits either way and passes and fails on the same engines"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:103:35: replace / with * in plane_frame"
+justification = "Z0_HALF_RANGE is 1.0, so z / 1.0 and z * 1.0 are the same value for every z"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:292:59: replace | with ^ in draw"
+justification = "the guard above has just checked i & (1 << b) == 0, and with that bit clear i ^ (1 << b) equals i | (1 << b)"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:551:20: replace * with / in adjust"
+justification = "Z0_HALF_RANGE is 1.0, so 2.0 * 1.0 and 2.0 / 1.0 are both 2.0"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/manifold_view/mod.rs:562:57: replace * with / in adjust"
+justification = "Q_HALF_RANGE is 1.0, so (range * 2.0) * 1.0 and (range * 2.0) / 1.0 are the same value"

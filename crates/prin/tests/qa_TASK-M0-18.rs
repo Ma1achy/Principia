@@ -157,7 +157,8 @@ fn raw_member<'a>(object_text: &'a str, key: &str) -> &'a str {
 /// The text the canonical serialisation, JCS (R-318), gives the M0 skeleton's config for `frames` frames of
 /// `synthetic_frames`: every object's members sorted (for these ASCII keys UTF-16 order is byte order: `frames`,
 /// `render`, `scenario`, `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are
-/// gui_state_contract §2's, each named and empty at M0 (TASK-M0-16).
+/// gui_state_contract §2's, each named and empty at M0 (TASK-M0-16), but for the plane and the lock, whose
+/// fields (R-390) a scenario leaves all zero and unlocked.
 fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
@@ -166,7 +167,9 @@ fn expected_config_text(frames: u64) -> String {
             "\"scenario\":\"synthetic_frames\",",
             "\"sim\":{{\"chart\":{{}},\"collision\":{{}},\"horizon\":{{}},\"integrator\":{{}},",
             "\"kernel_variant\":\"physics\",\"links\":{{}},",
-            "\"lock\":{{}},\"plane\":{{}},\"quality\":{{}},\"slice\":{{}}}}}}"
+            "\"lock\":{{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]}},",
+            "\"plane\":{{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]}},",
+            "\"quality\":{{}},\"slice\":{{}}}}}}"
         ),
         frames
     )

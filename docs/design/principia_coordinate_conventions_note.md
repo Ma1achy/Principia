@@ -39,8 +39,21 @@ z(s,t) = z₀ + (2s−1)·q₁ + (2t−1)·q₂        # the chart placement (ch
 ```
 UV is the unsigned `[0,1]` **address**; converting it places it as a **signed offset from the chart centre**, scaled by zoom. So:
 
-- **UV stays `[0,1]` unsigned** — because "where in the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space, and quad addresses want clean non-negative integers. The addresses themselves live in the slice plane's frame, anchored at the plane anchor, not in the view (R-97). You never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index.
+- **UV stays `[0,1]` unsigned** (beyond `[0,1]` only in the window's extension, below) — because "where in the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space, and quad addresses want clean non-negative integers. The addresses themselves live in the slice plane's frame, anchored at the plane anchor, not in the view (R-97). Within the depth-0 root you never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index. Outside the root, where the window extends past `[0,1]²` (R-407, below), quad indices may be negative.
 - **IC-space is signed and centred** — the chart is a plane *centred on `z₀`*; a displacement from centre is naturally `±` (left/below negative, right/above positive). The golden IC is `z = 0`; ICs on either side are genuinely `±`. The plane has no natural corner-origin — it has a natural *centre*, and coordinates are signed offsets from it. This is the thing that "behaves like a normal graph."
+
+**Past `[0,1]²`: the window's extension (R-406, R-407).** With the egui layer hidden (F3) or in present mode, the
+figure fills the window at the same scale, each point where the shown layout puts it. UV is taken over the shown
+figure's rect, the view's `[0,1]²`, and continues at the same scale beyond it, the one flip unchanged, so the window's
+samples have UV outside `[0,1]`; where they reach past the chart's depth-0 root, each axis extends by its declared type
+(`principia_chart_decoder_contract.md` Part 3). So:
+- quad indices may be negative outside the depth-0 root; the address is still taken in the slice plane's own frame
+  (R-97);
+- `ctx.chart.slice_uv` (R-394) may lie outside `[0,1]²`; its formula is unchanged;
+- `ctx.screen.uv` and `ctx.screen.pixel` are taken over the window's figure area as shown: the shown figure's rect with
+  the layer shown, the full window with F3 off.
+
+Inside `[0,1]²` nothing changes.
 
 **So "origin bottom-left, allow negatives" decomposes as:** *Y-up orientation everywhere* (the single flip) **+** *signed values in IC-space specifically* (the placement layer) — set in **two different places** (the framebuffer flip; the UV→IC placement transform). They are not the same fact.
 

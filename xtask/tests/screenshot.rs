@@ -601,7 +601,7 @@ negative_control!(
     check_read_names([200, 50])
 );
 
-/// The keyboard's steps (TASK-M6-25) read from their names, and each step's name reads back as itself, as gui's
+/// The keyboard's steps (TASK-M6-25) and the Manifold view's (TASK-M6-26) read from their names, and each step's name reads back as itself, as gui's
 /// capture mode takes it.
 fn check_keyboard_steps(names: &[(&str, screenshot::GuiStep)]) {
     for (name, step) in names {
@@ -612,7 +612,7 @@ fn check_keyboard_steps(names: &[(&str, screenshot::GuiStep)]) {
     }
 }
 
-const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 13] = [
+const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 16] = [
     ("f3", screenshot::GuiStep::F3),
     ("raise_warning", screenshot::GuiStep::RaiseWarning),
     ("raise_error", screenshot::GuiStep::RaiseError),
@@ -626,6 +626,9 @@ const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 13] = [
     ("arrow_left", screenshot::GuiStep::ArrowLeft),
     ("arrow_right", screenshot::GuiStep::ArrowRight),
     ("shortcuts", screenshot::GuiStep::Shortcuts),
+    ("shift_arrow_up", screenshot::GuiStep::ShiftArrowUp),
+    ("shift_arrow_right", screenshot::GuiStep::ShiftArrowRight),
+    ("lock", screenshot::GuiStep::Lock),
 ];
 
 #[test]
