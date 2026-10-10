@@ -79,3 +79,5 @@ view's sub-scopes reached with Enter.
   touched, and in slice mode a drag moves the slice along the plane's normal; its keys take Enter to interact.
   REQ-GUI-091 and REQ-GUI-170 are reworded; this task's acceptance lines stay as its record as merged. TASK-M6-31 builds
   the change and re-checks both as now worded.
+- R-416 (10 Oct 2026): this task's look choices (PR #183's § "Look choices (R-390, each a named constant)") hold,
+  neither confirmed nor changed, until the human has tried the M6-31 mock.

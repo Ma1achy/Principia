@@ -101,6 +101,9 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   `chart_extension`. Every line runs with both of the shape sphere's hemispheres; the one-hemisphere case (RQ-264) is
   TASK-M8-44's, a leaf that depends on this task, so this task has no open RQ (applied per R-369, code review
   5478800754, F4). Size: ~700 lines with the counting and its tests (applied per R-369).
+- R-412 (10 Oct 2026) rules RQ-264 for TASK-M8-44: with one hemisphere drawn, φ's span runs pole to equator, its
+  formula continues past the equator, and the continuation is not counted. Nothing here changes: every line of this
+  task runs with both hemispheres. R-416 accepts B1 with no veto.
 - Round-2 review fixes, applied per R-369: the REQ-GUI-070 line reads "over the shown figure's rect, with a stain that
   reads no screen-lane field" (gui review 5478798782, G5); `area_stats_primary_range` checks B5's order (physics review
   5478805963, F1); the mass simplex is sampled past the `ε_m` buffer (F5); the physical-quantity axis carries B1's

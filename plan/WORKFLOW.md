@@ -152,7 +152,9 @@ A milestone exits only at a human checkpoint. Before it:
 - every **definition** requirement (`kind: definition`, R-72) has its doc change merged with the physics reviewer's
   approval.
 The human reviews the gate report and either passes the milestone or rules on what blocks it. No work in the next
-milestone merges before the gate passes (tasks may be prepared on branches).
+milestone merges before the gate passes (tasks may be prepared on branches), except by R-415's test: a task may merge
+before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate
+calibrates or could change; the PR records the test as applied (`plan/OPERATIONS.md` § "Autonomy (R-369)").
 R-390's GUI track (TASK-M6-24 to TASK-M6-29, with TASK-M6-30 and TASK-M6-31 from R-406 and R-409) is the exception:
 it runs now, in parallel with the physics and renderer chain, and each of its tasks merges once its reviews pass and CI
 is green, without waiting for the gates of M1 to M5.

@@ -13,7 +13,7 @@
 | EVT | 26 |
 | PAY | 92 |
 | GEN | 33 |
-| SCHED | 95 |
+| SCHED | 96 |
 | REF | 50 |
 | RENDER | 84 |
 | COL | 65 |
@@ -22,9 +22,9 @@
 | VAL | 180 |
 | PERF | 94 |
 | SYS | 80 |
-| **total** | **1365** |
+| **total** | **1366** |
 
-Of these: 115 calibration, 117 definition, 1133 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 115 calibration, 117 definition, 1134 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -35,17 +35,17 @@ Of these: 115 calibration, 117 definition, 1133 obligation. Retired (kept for th
 | M2 | 159 |
 | M3 | 199 |
 | M4 | 104 |
-| M5 | 166 |
+| M5 | 167 |
 | M6 | 160 |
 | M7 | 117 |
 | M8 | 239 |
 
 ## Sections
 
-1104 sections in 46 files: 912 yield at least one requirement; 192 yield none and are listed below with the reason.
+1111 sections in 46 files: 915 yield at least one requirement; 196 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 145 |
+| informative only | 149 |
 | out of v1 (R-125) | 1 |
 | parent heading (obligations are in its subsections) | 32 |
 | rationale | 10 |
@@ -155,6 +155,10 @@ Of these: 115 calibration, 117 definition, 1133 obligation. Retired (kept for th
 | R-391 — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)* | informative only | the human's ruling of 6 Oct 2026, a trial: at memory-pressure warning three agents unless the Mac is swapping, two while it is; swapping is more than 1000 vm_stat page-outs over the last minute (the orchestrator's proposal, applied per R-369 and logged; baseline 39/min and 2/min with 0 swap-outs at pressure 2 with two agents); R-262's cap of three stands; a daily log, and a revert to R-277 if timeouts or flakes rise; applied in CLAUDE.md and plan/OPERATIONS.md; replaces R-277's warning rule in part; changes no requirement |
 | R-393 — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)* | informative only | the human's acceptance of 6 Oct 2026 ("yeah i accept it"): R-388 item 4 is applied as nextest with cargo-mutants' own-package test selection kept; "plus genuine dependents" is not applied, since it rested on a wrong premise and would add tests (a ledger mutant ≈36 s → ≈20 min; a #149-sized shard ≈4–5 h against the 300-minute limit); implemented by the ops PR #156; amends R-388 in part; changes no requirement |
 | R-396 — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)* | informative only | the human's ruling of 7 Oct 2026: physics reviews TASK-M6-24 for the two R-72 definitions REQ-GUI-176 and REQ-GUI-177 only, code, qa and gui everything else; settles the conflict the orchestrator flagged with R-390's reviewer list; applied in plan/tasks.yaml and TASK-M6-24's notes; amends R-390 in part; changes no requirement |
+| R-413 — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes "edge-heavy: crowds the bounds" *(closes RQ-267)* | informative only | the human's ruling of 10 Oct 2026 (RQ-267, option (a)): a link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note is reworded in PR #187 (TASK-M2-01), which carries the RQ and edits §3.9; wording only, so no requirement (no code reads a sampling note) |
+| R-414 — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin | informative only | the human's ruling of 10 Oct 2026: ~/.rustup's stable stays at 1.99.0, every dispatch sets RUSTUP_AUTO_INSTALL=0, and toolchains change only through the pin (R-349); a process ruling applied in plan/OPERATIONS.md § "Dispatching" and § "Toolchain" |
+| R-415 — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change | informative only | the human's ruling of 10 Oct 2026: a task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change; a process ruling applied in plan/WORKFLOW.md and plan/OPERATIONS.md |
+| R-416 — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing | informative only | the human's message of 10 Oct 2026: TASK-M6-26's and TASK-M6-31's look choices hold until the human has tried the M6-31 mock, and no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing; an act, applied in notes and acceptance lines |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
