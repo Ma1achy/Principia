@@ -17,17 +17,19 @@ filter = """
 threads-required = "num-test-threads"
 
 # The xtask tests that run cargo, and a full golden run through it, without taking every test thread: `xtask ci --list`
-# (TASK-M0-06), which builds the workspace's tests with `--features controls`; the `ci` golden runner (TASK-M0-06); and
-# `xtask ci` against the stand-in cargo, whose golden step renders every harness case through the real one (TASK-M0-22).
-# On a cold target, as in a `ci` shard run from the archive, side by side they share the test threads' CPUs and cargo's
-# build lock, and the listing's build outlasts the test's 600 s timer on its xtask child (PR #179). In the group
-# `xtask-cargo` they run one at a time, beside the other tests. The `ci` profile inherits this override; the
-# `ci-workspace` and `gpu-kernel` profiles select none of them. Applied per R-369.
+# (TASK-M0-06), which builds the workspace's tests with `--features controls`; the `ci` golden runner (TASK-M0-06);
+# `xtask ci` against the stand-in cargo, whose golden step renders every harness case through the real one (TASK-M0-22);
+# and `xtask golden m1-outcome` through a wrapper of the real cargo (the golden harness's CI check,
+# `qa_ops_golden_harness_ci`). On a cold target, as in a `ci` shard run from the archive, side by side they share the
+# test threads' CPUs and cargo's build lock, and the listing's build outlasts the test's 600 s timer on its xtask child
+# (PR #179). In the group `xtask-cargo` they run one at a time, beside the other tests. The `ci` profile inherits this
+# override; the `ci-workspace` and `gpu-kernel` profiles select none of them. Applied per R-369.
 [[profile.default.overrides]]
 filter = """
     (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
     | (binary_id(=xtask::qa_TASK-M0-06_runner) & test(=qa_m006_ci_golden_runner_renders))
     | (binary_id(=xtask::qa_TASK-M0-22) & test(/^qa_m022_ci_(passes_when_every_control_trips|fails_on_)/))
+    | (binary_id(=xtask::qa_ops_golden_harness_ci) & test(=qa_ops_gh_real_cargo_builds_once))
 """
 test-group = "xtask-cargo"
 
