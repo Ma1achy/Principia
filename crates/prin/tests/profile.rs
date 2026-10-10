@@ -122,14 +122,22 @@ fn fixture() -> String {
     .expect("the base trace fixture is missing")
 }
 
-/// The M0 skeleton's `SimConfig` and `RenderState` (TASK-M0-16): every group named and empty.
+/// The M0 skeleton's `SimConfig` and `RenderState` (TASK-M0-16): every group named and empty, but for the plane
+/// and the lock (R-390), all zero and unlocked.
 fn skeleton() -> (SimConfig, RenderState) {
     (
         SimConfig {
             chart: Chart {},
-            plane: Plane {},
+            plane: Plane {
+                z0: [0.0; 8],
+                q1: [0.0; 8],
+                q2: [0.0; 8],
+            },
             slice: Slice {},
-            lock: Lock {},
+            lock: Lock {
+                locked: false,
+                z_locked: [0.0; 8],
+            },
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
@@ -395,7 +403,7 @@ fn profile_file_canonical_same_bytes_twice() {
     check_same_text(
         &canonical::to_string(&sim).unwrap(),
         &canonical::to_string(&sim2).unwrap(),
-        r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{},"plane":{},"quality":{},"slice":{}}"#,
+        r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{}}"#,
     );
     check_same_text(
         &canonical::to_string(&render).unwrap(),

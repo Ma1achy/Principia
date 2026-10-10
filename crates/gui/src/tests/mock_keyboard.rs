@@ -18,7 +18,7 @@ use crate::headless::{Headless, Name};
 use crate::keyboard::keymap::{self, Command, Direction, SHORTCUTS};
 use crate::keyboard::overlay::{CLOSE_HINT, TITLE};
 use crate::keyboard::repeat::{self, Repeat, DELAY_MS, INTERVAL_MS};
-use crate::keyboard::scopes::{Adjust, Base, Outcome, Scope, ScopeTree, StepKind};
+use crate::keyboard::scopes::{Adjust, Arrows, Base, Outcome, Ring, Scope, ScopeTree, StepKind};
 use crate::layout::Layout;
 use crate::mock::canvas::MockCanvas;
 
@@ -435,13 +435,10 @@ fn mock_keyboard_mouse_opened_menu_follows_the_keys() {
 
 // --- Values: arrows, Shift ×10, Alt ×0.1 -----------------------------------------------------------------------------
 
-/// The app with a zoom value registered under Navigate, as TASK-M6-26 registers it, focused.
+/// The app with Navigate's zoom focused, adjusting: Enter into Navigate lands on the centre `u`; Enter there moves
+/// the arrows to its siblings; ↓ ↓ reach the zoom; Enter makes the arrows adjust it.
 fn zoom_app() -> (crate::app::App<crate::side::MockSide>, Headless) {
     let mut app = mock_app();
-    app.keyboard.tree_mut(Mode::Explore).register(
-        Some("navigate"),
-        Scope::value("zoom", "zoom", StepKind::ZoomLog2),
-    );
     let mut h = headless();
     keys(
         &mut h,
@@ -452,8 +449,13 @@ fn zoom_app() -> (crate::app::App<crate::side::MockSide>, Headless) {
             (Key::Enter, NONE),
             (Key::ArrowDown, NONE),
             (Key::Enter, NONE),
+            (Key::Enter, NONE),
+            (Key::ArrowDown, NONE),
+            (Key::ArrowDown, NONE),
+            (Key::Enter, NONE),
         ],
     );
+    assert_eq!(focus(&app), ["manifold_view", "navigate", "zoom"]);
     (app, h)
 }
 
@@ -532,6 +534,8 @@ fn mock_keyboard_base_steps_and_multipliers() {
             scope: "x",
             kind,
             times: -10.0,
+            direction: Direction::Down,
+            shift: true,
         };
         assert_eq!(adjust.delta(), base.times(-10.0));
     }
@@ -1424,7 +1428,10 @@ fn mock_keyboard_capture_steps() {
             "arrow_down",
             "arrow_left",
             "arrow_right",
-            "shortcuts"
+            "shortcuts",
+            "shift_arrow_up",
+            "shift_arrow_right",
+            "lock"
         ]
     );
     let err = Step::parse("zoom").expect_err("an unknown step");
@@ -1510,22 +1517,37 @@ fn mock_keyboard_eframe_hook_takes_the_keys() {
     });
 }
 
-/// The Manifold view's four sections: the panel inside a 12-point margin, below a 40-point title, split evenly with
-/// 8-point gaps.
+/// The Manifold view's four sections: the panel inside a 12-point margin, below a 40-point title, each section as
+/// tall as its rows (5, 9, 9, 5), 6-point gaps between; a row is 22 points where the panel has room, and the panel's
+/// share where it has not.
 #[test]
 fn mock_keyboard_manifold_sections() {
-    let panel = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 640.0));
+    let panel = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 1000.0));
     let got = crate::explore::manifold_sections(panel);
-    let want = [52.0, 198.0, 344.0, 490.0]
-        .map(|y| egui::Rect::from_min_size(egui::pos2(12.0, y), egui::vec2(336.0, 138.0)));
+    let want = [
+        (52.0, 110.0),
+        (168.0, 198.0),
+        (372.0, 198.0),
+        (576.0, 110.0),
+    ]
+    .map(|(y, h)| egui::Rect::from_min_size(egui::pos2(12.0, y), egui::vec2(336.0, h)));
     assert_eq!(got, want);
-    let moved = egui::Rect::from_min_max(egui::pos2(100.0, 50.0), egui::pos2(460.0, 690.0));
+    let moved = panel.translate(egui::vec2(100.0, 50.0));
     assert_eq!(
         crate::explore::manifold_sections(moved),
         want.map(|r| r.translate(egui::vec2(100.0, 50.0)))
     );
+    // Short of room, the rows share what is left: 616 points, less the title and the gaps, over 28 rows.
+    let short = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(360.0, 640.0));
+    let h = crate::explore::manifold_view::row_height(short);
+    assert_eq!(h, (616.0 - 40.0 - 18.0) / 28.0);
+    let bottom = crate::explore::manifold_sections(short)[3].max.y;
+    assert!(
+        (bottom - (12.0 + 616.0)).abs() < 1e-3,
+        "the last section ends at {bottom}"
+    );
     rejects("sections without their gaps", || {
-        assert_eq!(got[1].min.y, 190.0)
+        assert_eq!(got[1].min.y, 162.0)
     });
 }
 
@@ -1622,5 +1644,326 @@ fn mock_keyboard_activate_acts_as_the_click() {
     let quit = acts(QUIT.0);
     rejects("Quit that did nothing", || {
         assert_eq!(quit, Actions::default())
+    });
+}
+
+// --- The Manifold view's scopes, the figure and the compass (TASK-M6-26) ---------------------------------------------
+
+/// Each section's scopes, in the order the panel draws them, under its sub-scope.
+#[test]
+fn mock_keyboard_manifold_view_scopes() {
+    use crate::explore::manifold_view as mv;
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let tree = app.keyboard.tree(Mode::Explore);
+    let chart = [mv::PRESET, mv::Q1_EDIT, mv::Q2_EDIT, mv::BUILDER];
+    let mut navigate = vec![mv::CENTRE_U, mv::CENTRE_V, mv::ZOOM];
+    navigate.extend(mv::NAV_Z0);
+    navigate.extend([mv::UNLOCK, mv::OPEN_INSPECTOR]);
+    let slice = [mv::SLICE_STEP, mv::TAU1, mv::TAU2, mv::GAMMA];
+    let check = |tree: &ScopeTree| {
+        assert_eq!(tree.children(Some(mv::CHART)), chart);
+        assert_eq!(tree.children(Some(mv::NAVIGATE)), navigate);
+        assert_eq!(tree.children(Some(mv::CENTRE_Z0)), mv::SLIDERS);
+        assert_eq!(tree.children(Some(mv::SLICE_TILT)), slice);
+        assert_eq!(tree.children(Some(mv::Q1_EDIT)), mv::Q1_COMPONENTS);
+        assert_eq!(tree.children(Some(mv::Q2_EDIT)), mv::Q2_COMPONENTS);
+    };
+    check(tree);
+    let kind = |id| tree.get(id).map(|s| s.arrows);
+    assert_eq!(kind(mv::ZOOM), Some(Arrows::Adjust(StepKind::ZoomLog2)));
+    assert_eq!(kind(mv::CENTRE_U), Some(Arrows::Adjust(StepKind::Pan)));
+    assert_eq!(
+        kind(mv::SLIDERS[3]),
+        Some(Arrows::Adjust(StepKind::Bounded))
+    );
+    assert_eq!(
+        kind(mv::Q2_COMPONENTS[7]),
+        Some(Arrows::Adjust(StepKind::Bounded))
+    );
+    assert_eq!(kind(mv::TAU2), Some(Arrows::Adjust(StepKind::Angle)));
+    assert_eq!(
+        kind(crate::explore::FIGURE),
+        Some(Arrows::Adjust(StepKind::Pan))
+    );
+    assert_eq!(
+        kind(crate::explore::COMPASS),
+        Some(Arrows::Adjust(StepKind::Tilt))
+    );
+    assert_eq!(
+        tree.get(crate::explore::FIGURE).map(|s| s.ring),
+        Some(Ring::Outside)
+    );
+    for id in [mv::PRESET, mv::Q1_EDIT, mv::UNLOCK, mv::OPEN_INSPECTOR] {
+        assert!(tree.get(id).is_some_and(|s| s.activates), "{id} activates");
+    }
+    assert!(
+        tree.get(mv::BUILDER).is_some_and(|s| !s.activates),
+        "the Chart builder is disabled"
+    );
+    // Joining again changes nothing, the shortcut rows included.
+    let rows = tree.shortcuts().to_vec();
+    mv::join(app.keyboard.tree_mut(Mode::Explore));
+    let again = app.keyboard.tree(Mode::Explore);
+    check(again);
+    assert_eq!(again.shortcuts(), rows);
+    for row in mv::SHORTCUTS {
+        assert_eq!(
+            rows.iter().filter(|r| **r == row).count(),
+            1,
+            "the row {row:?} once"
+        );
+    }
+    let empty = ScopeTree::new();
+    rejects("a tree the panel has not joined", || check(&empty));
+}
+
+/// The `?` overlay carries the rows the Manifold view, the figure and the compass add.
+#[test]
+fn mock_keyboard_manifold_view_shortcut_rows() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    press(&mut h, &mut app, Key::Questionmark, SHIFT);
+    let texts = frame_texts(&mut h, &mut app);
+    let check = |texts: &[String]| {
+        for (key, action) in crate::explore::manifold_view::SHORTCUTS {
+            assert!(texts.iter().any(|t| t == key), "no `{key}` in {texts:?}");
+            assert!(texts.iter().any(|t| t == action), "no `{action}`");
+        }
+    };
+    check(&texts);
+    let closed = frame_texts(&mut h, &mut app);
+    press(&mut h, &mut app, Key::Escape, NONE);
+    let closed_after = frame_texts(&mut h, &mut app);
+    assert_ne!(closed, closed_after);
+    rejects("the overlay closed", || check(&closed_after));
+}
+
+/// Enter on a value moves its arrows between its siblings; an arrow lands on a sibling still moving; Enter there
+/// adjusts again; Esc, Tab and Enter into a scope reset it.
+#[test]
+fn mock_keyboard_enter_on_a_value_browses_its_siblings() {
+    use crate::explore::manifold_view as mv;
+    let mut app = mock_app();
+    let mut h = headless();
+    keys(
+        &mut h,
+        &mut app,
+        &[
+            (Key::Tab, NONE),
+            (Key::Tab, NONE),
+            (Key::Enter, NONE),
+            (Key::ArrowDown, NONE),
+            (Key::Enter, NONE),
+        ],
+    );
+    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_U]);
+    // Reached by Enter: the arrows adjust.
+    let adjusted = adjust_of(&mut h, &mut app, Key::ArrowDown, NONE);
+    assert_eq!(
+        adjusted.iter().map(|a| a.scope).collect::<Vec<_>>(),
+        [mv::CENTRE_U]
+    );
+    assert_eq!(
+        (adjusted[0].direction, adjusted[0].shift),
+        (Direction::Down, false)
+    );
+    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_U]);
+    // Enter: the arrows move between its siblings.
+    press(&mut h, &mut app, Key::Enter, NONE);
+    let moved = adjust_of(&mut h, &mut app, Key::ArrowDown, NONE);
+    assert!(moved.is_empty(), "browsing, no adjustment: {moved:?}");
+    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_V]);
+    // Landed browsing: ↓ again moves on.
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::ZOOM]);
+    // Enter: the zoom adjusts, with Shift passed on.
+    press(&mut h, &mut app, Key::Enter, NONE);
+    let adjusted = adjust_of(&mut h, &mut app, Key::ArrowUp, SHIFT);
+    assert_eq!(adjusted.len(), 1);
+    assert_eq!(
+        (adjusted[0].scope, adjusted[0].shift, adjusted[0].times),
+        (mv::ZOOM, true, 10.0)
+    );
+    // Browsing, then Esc and Enter into Navigate: the first value adjusts again.
+    press(&mut h, &mut app, Key::Enter, NONE);
+    keys(&mut h, &mut app, &[(Key::Escape, NONE), (Key::Enter, NONE)]);
+    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_U]);
+    let adjusted = adjust_of(&mut h, &mut app, Key::ArrowRight, NONE);
+    assert_eq!(
+        adjusted.iter().map(|a| a.scope).collect::<Vec<_>>(),
+        [mv::CENTRE_U]
+    );
+    rejects("the arrows still browsing", || assert!(adjusted.is_empty()));
+}
+
+/// The state machine itself, on a tree of one group of two values and a disabled leaf.
+#[test]
+fn mock_keyboard_navigate_in_browsing_state() {
+    let mut tree = ScopeTree::new();
+    tree.register(None, Scope::group("g", "G"));
+    tree.register(Some("g"), Scope::value("a", "A", StepKind::Bounded));
+    tree.register(Some("g"), Scope::value("b", "B", StepKind::Bounded));
+    tree.register(Some("g"), Scope::disabled("c", "C"));
+    tree.register(None, Scope::group("h", "H"));
+    let mut path = vec!["g".to_owned()];
+    let mut browsing = true;
+    let run = |command, shift, path: &mut Vec<String>, browsing: &mut bool| {
+        tree.navigate_in(path, command, 1.0, shift, browsing)
+    };
+    assert_eq!(
+        run(Command::Enter, false, &mut path, &mut browsing),
+        Outcome::Moved
+    );
+    assert!(!browsing, "Enter into a scope adjusts");
+    let down = Command::Arrow(Direction::Down);
+    assert_eq!(
+        run(down, true, &mut path, &mut browsing),
+        Outcome::Adjust(Adjust {
+            scope: "a",
+            kind: StepKind::Bounded,
+            times: -1.0,
+            direction: Direction::Down,
+            shift: true
+        })
+    );
+    assert_eq!(
+        run(Command::Enter, false, &mut path, &mut browsing),
+        Outcome::None
+    );
+    assert!(browsing, "Enter on a value browses");
+    assert_eq!(run(down, false, &mut path, &mut browsing), Outcome::Moved);
+    assert_eq!(path, ["g", "b"]);
+    assert!(browsing);
+    // Onto the disabled leaf, and Enter there changes nothing.
+    assert_eq!(run(down, false, &mut path, &mut browsing), Outcome::Moved);
+    assert_eq!(path, ["g", "c"]);
+    assert_eq!(
+        run(Command::Enter, false, &mut path, &mut browsing),
+        Outcome::None
+    );
+    assert!(browsing, "Enter on a leaf that is no value keeps the state");
+    // At the end the arrows stop, still browsing.
+    assert_eq!(run(down, false, &mut path, &mut browsing), Outcome::None);
+    assert!(browsing);
+    assert_eq!(
+        run(
+            Command::Arrow(Direction::Up),
+            false,
+            &mut path,
+            &mut browsing
+        ),
+        Outcome::Moved
+    );
+    assert_eq!(
+        run(Command::Enter, false, &mut path, &mut browsing),
+        Outcome::None
+    );
+    assert!(!browsing, "Enter again adjusts");
+    for reset in [Command::Back, Command::Next, Command::Previous] {
+        let mut p = vec!["g".to_owned(), "b".to_owned()];
+        let mut b = true;
+        let _ = run(reset, false, &mut p, &mut b);
+        assert!(!b, "{reset:?} resets");
+    }
+    // `navigate` adjusts a value, never browsing.
+    let mut p = vec!["g".to_owned(), "a".to_owned()];
+    assert!(matches!(
+        tree.navigate(&mut p, down, 1.0),
+        Outcome::Adjust(_)
+    ));
+    let mut b = true;
+    let mut p = vec!["g".to_owned(), "a".to_owned()];
+    let browsed = tree.navigate_in(&mut p, down, 1.0, false, &mut b);
+    rejects("browsing adjusting", || {
+        assert!(matches!(browsed, Outcome::Adjust(_)))
+    });
+}
+
+/// The figure and the compass, Tab-focused, take the arrows: the figure pans, the compass tilts, Shift orbits it.
+#[test]
+fn mock_keyboard_figure_and_compass_arrows() {
+    let mut app = mock_app();
+    let mut h = headless();
+    keys(
+        &mut h,
+        &mut app,
+        &[(Key::Tab, NONE), (Key::Tab, NONE), (Key::Tab, NONE)],
+    );
+    assert_eq!(focus(&app), [crate::explore::FIGURE]);
+    let before = app.snapshot().sim.plane.clone();
+    press(&mut h, &mut app, Key::ArrowRight, NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    let panned = app.snapshot().sim.plane.clone();
+    assert!(
+        (panned.z0[0] - (before.z0[0] + 0.1)).abs() < 1e-12,
+        "→ pans along q₁ by a twentieth: {:?}",
+        panned.z0
+    );
+    assert_eq!(panned.z0[1], before.z0[1]);
+    // + zooms in a quarter octave, − out.
+    press(&mut h, &mut app, Key::Plus, NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    let zoomed = app.snapshot().sim.plane.q1[0];
+    assert!(
+        (zoomed - (-0.25f64).exp2()).abs() < 1e-12,
+        "+ zooms in: {zoomed}"
+    );
+    press(&mut h, &mut app, Key::Minus, SHIFT);
+    let _ = h.frame(&mut app, Vec::new());
+    let out = app.snapshot().sim.plane.q1[0];
+    assert!(
+        (out - 2.25f64.exp2()).abs() < 1e-9,
+        "Shift − zooms out 2.5 octaves: {out}"
+    );
+    // Trajectory, then the compass.
+    keys(&mut h, &mut app, &[(Key::Tab, NONE), (Key::Tab, NONE)]);
+    assert_eq!(focus(&app), [crate::explore::COMPASS]);
+    let before = app.snapshot().sim.plane.clone();
+    let orbit = app.manifold.compass;
+    press(&mut h, &mut app, Key::ArrowUp, SHIFT);
+    let _ = h.frame(&mut app, Vec::new());
+    let orbited = app.snapshot().sim.plane.clone();
+    assert_eq!(orbited, before, "Shift orbits: no edit");
+    assert_ne!(app.manifold.compass, orbit, "the cube turned");
+    press(&mut h, &mut app, Key::ArrowUp, NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    let tilted = app.snapshot().sim.plane.clone();
+    assert_ne!((tilted.q1, tilted.q2), (before.q1, before.q2), "↑ tilts");
+    assert_eq!(
+        app.manifold.compass.mode,
+        crate::explore::manifold_view::Touch::Tilt
+    );
+    rejects("Shift's orbit taken for a tilt", || {
+        assert_ne!((orbited.q1, orbited.q2), (before.q1, before.q2))
+    });
+}
+
+/// The focus ring and the breadcrumb follow a Manifold view control.
+#[test]
+fn mock_keyboard_focus_manifold_view_control() {
+    let (mut app, mut h) = zoom_app();
+    let texts = frame_texts(&mut h, &mut app);
+    assert!(
+        texts.contains(&"Manifold view › Navigate › zoom".to_owned()),
+        "{texts:?}"
+    );
+    let place = app
+        .keyboard
+        .place_of(crate::explore::manifold_view::ZOOM)
+        .expect("the zoom placed");
+    let panel = Layout::new(h.screen(), PIXELS_PER_POINT).manifold_view;
+    assert!(
+        panel.contains_rect(place.rect),
+        "the zoom's ring inside the panel: {:?}",
+        place.rect
+    );
+    assert!(place.widget.is_some(), "placed as its widget");
+    press(&mut h, &mut app, Key::Escape, NONE);
+    let texts = frame_texts(&mut h, &mut app);
+    rejects("the breadcrumb after Esc", || {
+        assert!(texts.contains(&"Manifold view › Navigate › zoom".to_owned()));
     });
 }

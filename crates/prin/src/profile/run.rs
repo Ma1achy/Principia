@@ -209,14 +209,21 @@ fn config(scenario: &str, frames: u32) -> Result<Map<String, Value>, String> {
     Ok(config)
 }
 
-/// `SimConfig` and `RenderState` at M0: each group is named and empty (TASK-M0-16), so a scenario sets nothing in
-/// them.
+/// `SimConfig` and `RenderState` as a scenario leaves them: each group named and empty (TASK-M0-16), but for the
+/// plane and the lock, whose fields (R-390) a scenario sets nothing in, all zero and unlocked.
 pub(crate) fn skeleton() -> (SimConfig, RenderState) {
     let sim = SimConfig {
         chart: Chart {},
-        plane: Plane {},
+        plane: Plane {
+            z0: [0.0; 8],
+            q1: [0.0; 8],
+            q2: [0.0; 8],
+        },
         slice: Slice {},
-        lock: Lock {},
+        lock: Lock {
+            locked: false,
+            z_locked: [0.0; 8],
+        },
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,

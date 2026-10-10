@@ -8,8 +8,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{LogEntry, Severity, Source};
 use crate::contract::render_state::RenderState;
-use crate::contract::set_field::{Edit, RenderField, SetField};
-use crate::contract::sim_config::SimConfig;
+use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
+use crate::contract::sim_config::{Latent, SimConfig};
 use crate::contract::snapshot::{FrameSummary, History, Precision, Snapshot, Tier};
 
 /// One undoable change: the field's value before the edit and the edit itself (R-52).
@@ -43,13 +43,31 @@ impl StateStore {
 
     /// Writes `edit` into the state and returns the value it replaced, as an edit restoring it.
     fn write(&mut self, edit: Edit) -> Edit {
-        match edit {
-            Edit::Sim(field) => match field {},
-            Edit::Render(RenderField::Playhead(playhead)) => Edit::Render(RenderField::Playhead(
-                std::mem::replace(&mut self.render.playhead, playhead),
-            )),
-        }
+        write(&mut self.sim, &mut self.render, edit)
     }
+}
+
+/// Writes `edit` into `sim` and `render` and returns the value it replaced, as an edit restoring it: the one write
+/// both the state store and a double holding the same state apply.
+pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit {
+    use std::mem::replace;
+    match edit {
+        Edit::Sim(SimField::Z0(z0)) => Edit::Sim(SimField::Z0(replace(&mut sim.plane.z0, z0))),
+        Edit::Sim(SimField::Basis { q1, q2 }) => Edit::Sim(SimField::Basis {
+            q1: replace(&mut sim.plane.q1, q1),
+            q2: replace(&mut sim.plane.q2, q2),
+        }),
+        Edit::Sim(SimField::Lock(lock)) => Edit::Sim(SimField::Lock(replace(&mut sim.lock, lock))),
+        Edit::Render(RenderField::Playhead(playhead)) => Edit::Render(RenderField::Playhead(
+            replace(&mut render.playhead, playhead),
+        )),
+    }
+}
+
+/// A latent vector as the log writes it: `(z_α, …, z_μ2)`, each value as Rust displays an `f64`.
+fn latent(z: &Latent) -> String {
+    let parts: Vec<String> = z.iter().map(|v| v.to_string()).collect();
+    format!("({})", parts.join(", "))
 }
 
 /// The wall-clock time now, in milliseconds since the Unix epoch (the log entry's `at`, gui_state_contract §2).
@@ -63,11 +81,18 @@ fn now_ms() -> u64 {
 /// marked (render_gui_spec §G12; 12_console.png's `SetField <path> <before> → <after>`).
 pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
     let value = |e: &Edit| match e {
-        Edit::Sim(field) => match *field {},
-        Edit::Render(RenderField::Playhead(p)) => p.t,
+        Edit::Sim(SimField::Z0(z0)) => latent(z0),
+        Edit::Sim(SimField::Basis { q1, q2 }) => format!("{} {}", latent(q1), latent(q2)),
+        Edit::Sim(SimField::Lock(lock)) if lock.locked => {
+            format!("locked at {}", latent(&lock.z_locked))
+        }
+        Edit::Sim(SimField::Lock(_)) => "unlocked".to_owned(),
+        Edit::Render(RenderField::Playhead(p)) => p.t.to_string(),
     };
     let path = match &edit.edit {
-        Edit::Sim(field) => match *field {},
+        Edit::Sim(SimField::Z0(_)) => "Plane.z0",
+        Edit::Sim(SimField::Basis { .. }) => "Plane.q1 Plane.q2",
+        Edit::Sim(SimField::Lock(_)) => "Lock",
         Edit::Render(RenderField::Playhead(_)) => "Playhead.t",
     };
     let marker = if edit.no_history { " (no history)" } else { "" };

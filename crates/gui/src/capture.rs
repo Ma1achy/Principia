@@ -55,10 +55,20 @@ pub enum Step {
     ArrowRight,
     /// Press `?` (Shift+/).
     Shortcuts,
+    /// Press Shift+↑.
+    ShiftArrowUp,
+    /// Press Shift+→.
+    ShiftArrowRight,
+    /// Press K with the pointer over the figure at [`LOCK_AT`]: lock there (render_gui_spec §G4).
+    Lock,
 }
 
-/// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25).
-pub const STEPS: [(&str, Step); 13] = [
+/// Where the `lock` step locks, `(s, t)` of the figure, `t` Y-up: off the centre, so the recentring shows.
+pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
+
+/// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25) and the Manifold view's
+/// (TASK-M6-26).
+pub const STEPS: [(&str, Step); 16] = [
     ("f3", Step::F3),
     ("raise_warning", Step::RaiseWarning),
     ("raise_error", Step::RaiseError),
@@ -72,6 +82,9 @@ pub const STEPS: [(&str, Step); 13] = [
     ("arrow_left", Step::ArrowLeft),
     ("arrow_right", Step::ArrowRight),
     ("shortcuts", Step::Shortcuts),
+    ("shift_arrow_up", Step::ShiftArrowUp),
+    ("shift_arrow_right", Step::ShiftArrowRight),
+    ("lock", Step::Lock),
 ];
 
 impl Step {
@@ -123,6 +136,14 @@ pub fn click(pos: egui::Pos2) -> [Vec<Event>; 3] {
     ]
 }
 
+/// The point the `lock` step locks at, on `figure`: [`LOCK_AT`].
+pub fn lock_point(figure: egui::Rect) -> egui::Pos2 {
+    egui::pos2(
+        figure.min.x + figure.width() * LOCK_AT.0,
+        figure.max.y - figure.height() * LOCK_AT.1,
+    )
+}
+
 /// The point a footer click lands on: the footer's left end, on its counts.
 pub fn footer_point(footer: egui::Rect) -> egui::Pos2 {
     egui::pos2(footer.min.x + 40.0, footer.center().y)
@@ -164,6 +185,12 @@ pub fn shoot(canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>, steps: &[S
             Step::ArrowLeft => frames.extend(key(Key::ArrowLeft, Modifiers::NONE)),
             Step::ArrowRight => frames.extend(key(Key::ArrowRight, Modifiers::NONE)),
             Step::Shortcuts => frames.extend(key(Key::Questionmark, Modifiers::SHIFT)),
+            Step::ShiftArrowUp => frames.extend(key(Key::ArrowUp, Modifiers::SHIFT)),
+            Step::ShiftArrowRight => frames.extend(key(Key::ArrowRight, Modifiers::SHIFT)),
+            Step::Lock => {
+                frames.push(vec![Event::PointerMoved(lock_point(layout.figure))]);
+                frames.extend(key(Key::K, Modifiers::NONE));
+            }
             Step::RaiseWarning => app.side().engine().raise_warning(),
             Step::RaiseError => app.side().engine().raise_error(),
             Step::ClickFooter => frames.extend(click(footer_point(layout.footer))),
@@ -173,11 +200,21 @@ pub fn shoot(canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>, steps: &[S
     for events in frames.drain(..) {
         let _ = headless.frame(&mut app, events);
     }
-    let output = headless.frame(&mut app, Vec::new());
+    render_frame(&canvas, &mut app, &mut headless)
+}
+
+/// Runs one more frame of `app` on `headless` (at [`SIZE`] and [`PIXELS_PER_POINT`]) with no input and renders it
+/// through `canvas`'s device: the capture of the app as it stands.
+pub fn render_frame(
+    canvas: &crate::mock::canvas::MockCanvas,
+    app: &mut crate::app::App<crate::side::MockSide>,
+    headless: &mut Headless,
+) -> Shot {
+    let output = headless.frame(app, Vec::new());
     let names = headless.names(&output);
     let primitives = headless.ctx.tessellate(output.shapes, PIXELS_PER_POINT);
     let clear = crate::app::clear_colour(&headless.ctx.global_style().visuals);
-    let rgba = render(&*canvas, &headless.textures, &primitives, clear);
+    let rgba = render(canvas, &headless.textures, &primitives, clear);
     Shot {
         size: SIZE,
         rgba,

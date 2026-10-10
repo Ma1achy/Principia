@@ -1,0 +1,9 @@
+{
+  "cases": [
+    {
+      "name": "mock_locked",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["lock", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "enter", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up"] },
+      "artboard": "docs/gui/design/08_lock.png"
+    }
+  ]
+}

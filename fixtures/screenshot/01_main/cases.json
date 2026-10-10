@@ -19,6 +19,26 @@
       "name": "mock_warning",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "raise_error", "click_footer"] },
       "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_manifold_view",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": [] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_slice",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_tilt",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "enter", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_axis_labels",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "shift_arrow_right", "escape"] },
+      "artboard": "docs/gui/design/01_main.png"
     }
   ]
 }
