@@ -7719,8 +7719,10 @@ only `[0,1]²`, and how it counts the redrawn systems, was not given. The human 
   - the pixel's validity check is inverse_encode layers 2 and 3 only; layer 1 (the hypercube bounds) is the encode
     path's, so chart_decoder_contract Part 2's "the validated region is the unit hypercube `[0,1]⁸`" is qualified for
     the extension (physics F2);
-  - the ternary plot's axes are affine in R-407's sense, its map bilinear, and its check reads the buffered masses,
-    sampled past the `ε_m` buffer's reach (physics F5);
+  - the ternary plot's axes are affine in R-407's sense, its map bilinear (physics F5); its hatch is layer 2's narrowed
+    simplex, buffered `mᵢ ≥ ε_m`, which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no
+    band, tested at a sample within `ε_m` of the edge against a "buffered `mᵢ > 0`" control (physics review 5478835029,
+    G1, round 3; it replaces round 2's "reads the buffered masses, sampled past the `ε_m` buffer's reach");
   - `area_stats_primary_range` checks B5's order: a pixel failing both layer 2 and `Φ` counts as forbidden, one where
     only `Φ` fails is the domain's end, and a classifier running `Φ` before `validate` fails (physics F1);
   - A4's screen-lane consequence is stated in render_gui_spec §G1, and the "identical underneath" checks of REQ-GUI-070

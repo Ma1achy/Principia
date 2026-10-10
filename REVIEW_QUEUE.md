@@ -9,7 +9,7 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
-## RQ-264: with the shape sphere's hemisphere toggle drawing one hemisphere, what the pole-crossing φ does past the edge that is not a pole, and what its primary range is, is not given *(definition, physics, R-408, R-407, R-113, R-141, TASK-M8-05)*
+## RQ-264: with the shape sphere's hemisphere toggle drawing one hemisphere, what the pole-crossing φ does past the edge that is not a pole, and what its primary range is, is not given *(definition, physics, R-408, R-407, R-113, R-141, TASK-M8-44, REQ-CHART-057; context: TASK-M8-05)*
 
 - **File, section:**
   - `decisions.md` § "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic,
