@@ -37,20 +37,54 @@ pub enum Step {
     RaiseError,
     /// Click the footer.
     ClickFooter,
+    /// Press Tab.
+    Tab,
+    /// Press Shift+Tab.
+    ShiftTab,
+    /// Press Enter.
+    Enter,
+    /// Press Esc.
+    Escape,
+    /// Press ↑.
+    ArrowUp,
+    /// Press ↓.
+    ArrowDown,
+    /// Press ←.
+    ArrowLeft,
+    /// Press →.
+    ArrowRight,
+    /// Press `?` (Shift+/).
+    Shortcuts,
 }
+
+/// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25).
+pub const STEPS: [(&str, Step); 13] = [
+    ("f3", Step::F3),
+    ("raise_warning", Step::RaiseWarning),
+    ("raise_error", Step::RaiseError),
+    ("click_footer", Step::ClickFooter),
+    ("tab", Step::Tab),
+    ("shift_tab", Step::ShiftTab),
+    ("enter", Step::Enter),
+    ("escape", Step::Escape),
+    ("arrow_up", Step::ArrowUp),
+    ("arrow_down", Step::ArrowDown),
+    ("arrow_left", Step::ArrowLeft),
+    ("arrow_right", Step::ArrowRight),
+    ("shortcuts", Step::Shortcuts),
+];
 
 impl Step {
     /// The step named `name`.
     pub fn parse(name: &str) -> Result<Self, String> {
-        match name {
-            "f3" => Ok(Step::F3),
-            "raise_warning" => Ok(Step::RaiseWarning),
-            "raise_error" => Ok(Step::RaiseError),
-            "click_footer" => Ok(Step::ClickFooter),
-            other => Err(format!(
-                "no step `{other}`: the steps are f3, raise_warning, raise_error and click_footer"
-            )),
-        }
+        STEPS
+            .iter()
+            .find(|(n, _)| *n == name)
+            .map(|(_, step)| *step)
+            .ok_or_else(|| {
+                let names: Vec<&str> = STEPS.iter().map(|(n, _)| *n).collect();
+                format!("no step `{name}`: the steps are {}", names.join(", "))
+            })
     }
 
     /// The steps of a comma-separated list; an empty list has none.
@@ -62,14 +96,14 @@ impl Step {
     }
 }
 
-/// A key's press and release, as two frames' events.
-fn key(key: Key) -> [Vec<Event>; 2] {
+/// A key's press and release with `modifiers`, as two frames' events.
+pub fn key(key: Key, modifiers: Modifiers) -> [Vec<Event>; 2] {
     let event = |pressed| Event::Key {
         key,
         physical_key: None,
         pressed,
         repeat: false,
-        modifiers: Modifiers::NONE,
+        modifiers,
     };
     [vec![event(true)], vec![event(false)]]
 }
@@ -120,7 +154,16 @@ pub fn shoot(canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>, steps: &[S
             let _ = headless.frame(&mut app, events);
         }
         match step {
-            Step::F3 => frames.extend(key(Key::F3)),
+            Step::F3 => frames.extend(key(Key::F3, Modifiers::NONE)),
+            Step::Tab => frames.extend(key(Key::Tab, Modifiers::NONE)),
+            Step::ShiftTab => frames.extend(key(Key::Tab, Modifiers::SHIFT)),
+            Step::Enter => frames.extend(key(Key::Enter, Modifiers::NONE)),
+            Step::Escape => frames.extend(key(Key::Escape, Modifiers::NONE)),
+            Step::ArrowUp => frames.extend(key(Key::ArrowUp, Modifiers::NONE)),
+            Step::ArrowDown => frames.extend(key(Key::ArrowDown, Modifiers::NONE)),
+            Step::ArrowLeft => frames.extend(key(Key::ArrowLeft, Modifiers::NONE)),
+            Step::ArrowRight => frames.extend(key(Key::ArrowRight, Modifiers::NONE)),
+            Step::Shortcuts => frames.extend(key(Key::Questionmark, Modifiers::SHIFT)),
             Step::RaiseWarning => app.side().engine().raise_warning(),
             Step::RaiseError => app.side().engine().raise_error(),
             Step::ClickFooter => frames.extend(click(footer_point(layout.footer))),

@@ -108,3 +108,20 @@ pub fn rejects(what: &str, check: impl FnOnce()) {
         "the check passed on {what}, which it must reject"
     );
 }
+
+/// Presses and releases `key` with `modifiers`: two frames.
+pub fn press<S: EngineSide>(
+    headless: &mut Headless,
+    app: &mut App<S>,
+    key: eframe::egui::Key,
+    modifiers: eframe::egui::Modifiers,
+) {
+    for events in crate::capture::key(key, modifiers) {
+        let _ = headless.frame(app, events);
+    }
+}
+
+/// `ViewUI`'s focus path, as `&str`s.
+pub fn focus<S: EngineSide>(app: &App<S>) -> Vec<&str> {
+    app.view.focus.path.iter().map(String::as_str).collect()
+}

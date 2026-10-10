@@ -9,6 +9,7 @@ pub mod clock;
 pub mod console;
 pub mod explore;
 pub mod headless;
+pub mod keyboard;
 pub mod layout;
 pub mod side;
 pub mod theme;
@@ -21,8 +22,10 @@ mod tests {
     mod conformance;
     mod f3_toggle_mock;
     mod mock_engine;
+    mod mock_keyboard;
     mod mock_status_line;
     mod mock_tag;
+    mod scope_tab_order_mock;
     mod support;
     mod theme;
 }
