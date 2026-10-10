@@ -206,9 +206,11 @@ pub(crate) fn strip(source: &str) -> String {
     out
 }
 
-/// The number of `#`s of the raw string literal starting at `c[i]`, if one does (`r"…"`, `r#"…"#`, never `r#ident`).
+/// The number of `#`s of the raw string literal whose `r` is `c[i]`, if one is (`r"…"`, `r#"…"#`, and the byte and C
+/// strings `br"…"` and `cr"…"`; never `r#ident`). In Rust 2021 an identifier directly followed by `"` or `#` is a
+/// reserved prefix, so an `r` before `"` or `#"` is always a raw string's.
 fn raw_string(c: &[char], i: usize) -> Option<usize> {
-    if c[i] != 'r' || (i > 0 && (c[i - 1].is_alphanumeric() || c[i - 1] == '_')) {
+    if c[i] != 'r' {
         return None;
     }
     let hashes = c[i + 1..].iter().take_while(|&&x| x == '#').count();
