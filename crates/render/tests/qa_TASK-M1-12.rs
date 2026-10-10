@@ -9,14 +9,17 @@
 //!   convention), mode 1 Twilight at `θ̃/2π mod 1`, negative `θ̃` included; the running `S/t` and the Welford slope
 //!   `C_ty/C_tt(n)`, `C_tt = h²n(n² − 1)/12`, match payload §5, NaN where undefined; the drift running-max vs final
 //!   view tells a secular drift (final = max) from recovered transients, whatever the final drift's sign
-//!   (`qa_live_shape_*`, `qa_accumulator_*`).
+//!   (`qa_live_shape_*`, `qa_accumulator_*`); each live shape mode hatches its undefined value, a coincident `n` or a
+//!   non-finite `θ̃` (`qa_live_shape_hatches_undefined_values`).
 //! - REQ-TOOL-024: orbit_count `⌊|θ̃|/2π⌋` and retrograde `θ̃ < 0` exactly; the reduced crossing count exactly, from a
 //!   free reduction done here, NaN and the hatch when truncated; `ftle = (S + ln(δ/δ₀))/(n·dt)` within
 //!   `crates/kernel/tests/derived.rs`'s derived bound, NaN when `ftle_valid` fails; `H(r, p) − E_0` within that file's
 //!   drift tolerance (`qa_derived_*`).
 //! - REQ-TOOL-025, REQ-TOOL-155: the word-hash view draws the fold `pcg(w ^ pcg(z ^ pcg(y ^ pcg(x))))` of the render
-//!   contract's PCG, its low three bytes as sRGB, and words differing in one bit of any limb take distinct colours; the
-//!   symbol at slot `k` is the freely reduced appended sequence's (`qa_word_*`).
+//!   contract's PCG, its low three bytes as sRGB, and words differing in one bit of any limb take distinct colours; a
+//!   truncated word draws the hatch (payload §3: every word derivation is invalid once truncated); the symbol at slot
+//!   `k` is the freely reduced appended sequence's (`qa_word_*`). The `last_symbol` view draws the stored symbol only
+//!   where payload §2's gate `length ≥ 1 && length ≠ 127` holds, the hatch elsewhere (`qa_last_symbol_*`).
 //! - REQ-TOOL-156: a truncated word's reduced-length view draws the hatch, its raw `length` view 127 literally on the
 //!   ramp; an untruncated one `len/76` on viridis (`qa_word_reduced_length_*`).
 //! - REQ-TOOL-154: the masses view draws `(m0, m1, m2)/max mᵢ`: equal masses white, each vertex its primary
@@ -302,6 +305,88 @@ negative_control!(
     "a norm that drops n's third component, which L⁺ (n = (0, 0, 1)) exposes",
     expected = "‖n‖ − 1 =",
     check_norm("length(ctx.sample.n.xy)")
+);
+
+/// A live shape case: whether it is coincident, its `θ̃`, its positions and its masses.
+type UndefinedCase = (bool, f32, [[f32; 2]; 3], [f32; 3]);
+
+/// Every live shape mode maps an undefined value to the invalid colour (payload §1; render contract Part 4, Part 5's
+/// live shape views): a coincident configuration (`I = 0`, `n = 0/0`) in modes 0 and 2, a NaN or infinite `θ̃` in
+/// mode 1; each defined value draws its mode's colour. `undefined(mode, coincident, θ̃)` says where the hatch is due.
+fn check_live_shape_undefined(undefined: fn(u32, bool, f32) -> bool) {
+    let third = [1.0f32 / 3.0; 3];
+    let h3 = (3f32).sqrt() / 2.0;
+    let lagrange = [[1.0f32, 0.0], [-0.5, h3], [-0.5, -h3]];
+    // Each coincident case exactly so in f32: at the origin, and at a dyadic point with dyadic masses, whose pair
+    // centre `(m0·r0 + m1·r1)/m01` is exact, so `ρ = λ = 0` and `I = 0`.
+    let cases: [UndefinedCase; 6] = [
+        (true, 1.0, [[0.0; 2]; 3], third),
+        (false, f32::NAN, lagrange, third),
+        (false, f32::INFINITY, lagrange, third),
+        (false, f32::NEG_INFINITY, lagrange, third),
+        (false, 1.0, lagrange, third),
+        (true, -2.0, [[0.5, -0.25]; 3], [0.25, 0.25, 0.5]),
+    ];
+    let h = gpu();
+    for mode in 0u32..3 {
+        let mut s = scene(
+            cases.len() as u32,
+            view("debug/live_shape", &[("u_mode", f64::from(mode))]),
+        );
+        for (i, &(_, theta, r, m)) in (0u32..).zip(&cases) {
+            s.set.sample(i).r(r).theta(theta);
+            set_masses(&mut s, i, m);
+        }
+        let img = render(&h, &s);
+        for (i, &(coincident, theta, r, m)) in (0u32..).zip(&cases) {
+            let what = format!("mode {mode}, coincident {coincident}, θ̃ {theta}");
+            if undefined(mode, coincident, theta) {
+                tile(
+                    &s,
+                    &img,
+                    i,
+                    TOL,
+                    &present::debug_invalid,
+                    &format!("the hatch ({what})"),
+                );
+                continue;
+            }
+            let (want, name) = match mode {
+                0 => (shape_f64(r, m, 1.0).map(|x| 0.5 * (x + 1.0)), "½(n + 1)"),
+                1 => (
+                    present::ramp_twilight((f64::from(theta) / TWO_PI).rem_euclid(1.0)),
+                    "Twilight",
+                ),
+                _ => (literal(0.0), "‖n‖ − 1's literal place"),
+            };
+            tile(
+                &s,
+                &img,
+                i,
+                0.5 * NORM_TOL + U + TOL,
+                &|_| want,
+                &format!("{name} ({what})"),
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_live_shape_hatches_undefined_values() {
+    check_live_shape_undefined(|mode, coincident, theta| {
+        if mode == 1 {
+            !theta.is_finite()
+        } else {
+            coincident
+        }
+    });
+}
+
+negative_control!(
+    qa_live_shape_hatches_undefined_values,
+    "Twilight expected of a NaN θ̃, as if the phase were never undefined",
+    expected = "is not Twilight (mode 1, coincident false, θ̃ NaN)",
+    check_live_shape_undefined(|mode, coincident, _| mode != 1 && coincident)
 );
 
 /// Mode 1: Twilight at `fract(θ̃/2π)`, negative `θ̃` wrapping into [0, 1).
@@ -738,26 +823,39 @@ fn hash_words() -> Vec<[u32; 4]> {
     unique
 }
 
-/// The word-hash view draws `fold`'s colour for each fixture word, and the drawn colours are pairwise distinct.
+/// The word-hash view draws `fold`'s colour for each fixture word, and the drawn colours are pairwise distinct; a
+/// truncated word (stored length 127) draws the hatch, every word derivation being invalid for it (payload §3).
 fn check_hash(fold: fn([u32; 4]) -> u32) {
     let words = hash_words();
+    let truncated = |w: &[u32; 4]| w[3] >> 25 == 127;
+    assert!(
+        words.iter().any(truncated) && !words.iter().all(truncated),
+        "the fixture holds both truncated and whole words"
+    );
     let mut s = scene(words.len() as u32, view("debug/word/hash", &[]));
     for (i, w) in (0u32..).zip(&words) {
         s.set.sample(i).word_raw(*w);
     }
     let img = render(&gpu(), &s);
     for (i, w) in (0u32..).zip(&words) {
-        tile(
-            &s,
-            &img,
-            i,
-            TOL,
-            &|_| bytes_rgb(fold(*w)),
-            &format!("the fold of {w:08x?}"),
-        );
+        if truncated(w) {
+            tile(&s, &img, i, TOL, &present::debug_invalid, "the hatch");
+        } else {
+            tile(
+                &s,
+                &img,
+                i,
+                TOL,
+                &|_| bytes_rgb(fold(*w)),
+                &format!("the fold of {w:08x?}"),
+            );
+        }
     }
-    for a in 0..words.len() {
-        for b in a + 1..words.len() {
+    let whole: Vec<usize> = (0..words.len())
+        .filter(|&i| !truncated(&words[i]))
+        .collect();
+    for (j, &a) in whole.iter().enumerate() {
+        for &b in &whole[j + 1..] {
             let (ca, cb) = (colour_at(&s, &img, a as u32), colour_at(&s, &img, b as u32));
             assert!(
                 ca.iter().zip(&cb).any(|(x, y)| (x - y).abs() > TOL),
@@ -779,6 +877,60 @@ negative_control!(
     "the fold taken from the top limb down",
     expected = "the fold of",
     check_hash(|w| pcg(w[0] ^ pcg(w[1] ^ pcg(w[2] ^ pcg(w[3])))))
+);
+
+/// The `last_symbol` view (payload §2: no in-band "none" code, meaningful iff `length ≥ 1 && length ≠ 127`): where
+/// `meaningful(len, truncated)` holds it draws the stored symbol by `dbg_cat(·, 4)` (render contract Part 6, word
+/// views), elsewhere the hatch. Each sample stores the reduced word's last symbol, or `1` (`A`) for the empty word,
+/// whose stored value "may hold any value" (payload §3) and so must not show.
+fn check_last_symbol(meaningful: fn(usize, bool) -> bool) {
+    let seqs = sequences();
+    let mut s = scene(seqs.len() as u32, Colouring::View("last_symbol"));
+    let mut want = Vec::new();
+    for (i, q) in (0u32..).zip(&seqs) {
+        let (w, truncated) = reduce(q);
+        let last = w.last().copied().unwrap_or(1);
+        s.set.sample(i).word_raw(appended(q).0).last_symbol(last);
+        want.push((meaningful(w.len(), truncated), last, w.len(), truncated));
+    }
+    assert!(
+        want.iter().any(|&(_, _, n, t)| n == 0 && !t) && want.iter().any(|&(_, _, _, t)| t),
+        "the fixture holds the empty and a truncated word"
+    );
+    let img = render(&gpu(), &s);
+    for (i, &(shown, last, n, t)) in (0u32..).zip(&want) {
+        if shown {
+            tile(
+                &s,
+                &img,
+                i,
+                TOL,
+                &|_| present::dbg_cat(last, 4),
+                &format!("last symbol {last} (length {n}, truncated {t})"),
+            );
+        } else {
+            tile(
+                &s,
+                &img,
+                i,
+                TOL,
+                &present::debug_invalid,
+                &format!("the hatch (length {n}, truncated {t})"),
+            );
+        }
+    }
+}
+
+#[test]
+fn qa_last_symbol_hatches_the_empty_and_truncated_word() {
+    check_last_symbol(|len, truncated| len >= 1 && !truncated);
+}
+
+negative_control!(
+    qa_last_symbol_hatches_the_empty_and_truncated_word,
+    "a gate on truncation alone, showing the empty word's stored symbol",
+    expected = "is not last symbol 1 (length 0",
+    check_last_symbol(|_, truncated| !truncated)
 );
 
 /// The symbol at each slot `k` is the freely reduced appended sequence's `k`-th, exactly; none (NaN) past its length
