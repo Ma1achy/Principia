@@ -442,6 +442,11 @@ negative_control!(
 /// REQ-GEN-025's proposed (c) (R-71, unconfirmed until the M2 gate): the central-difference step, the control range
 /// the comparison spans, and the tolerance on `|analytic − numeric|` of the log volume factor, beside the numeric
 /// Jacobian's own round-off ([`c_allowance`]).
+///
+/// The comparison spans `±C_RANGE`, but it resolves an error only where the round-off allowance is small: as a forward
+/// saturates its Jacobian's columns shrink, the allowance grows, and past a radius that depends on the link (about
+/// 1.3 for `softmax_tanh`, 5 for tanh, 9 for σ, all of ±20 for softsign and the lines) (c) cannot fire (PIT-3).
+/// [`resolved_radius`] measures it per link, and the evidence prints it.
 const C_STEP: f64 = 1e-5;
 const C_RANGE: f64 = 20.0;
 const C_TOL: f64 = 1e-5;
@@ -884,12 +889,15 @@ fn check_evidence(links: &[Under]) {
             .map(|g| g.0)
             .fold(0.0f64, f64::max);
         let c_share = gaps.iter().map(|g| g.0 / g.1).fold(0.0f64, f64::max);
+        let tight = resolved_radius(u, 2.0 * C_TOL);
+        let loose = resolved_radius(u, 1e-2);
         let share = d_lines(u)
             .iter()
             .map(|(b, k)| worst_kink(u, b, *k).0)
             .fold(0.0f64, f64::max);
         println!(
-            "  {:<16} (c) max resolved gap = {gap:.3e}, max gap/allowance = {c_share:.3}   \
+            "  {:<16} (c) max resolved gap = {gap:.3e}, max gap/allowance = {c_share:.3}, \
+             resolves 2·tol within |z| <= {tight:.3}, 1e-2 within |z| <= {loose:.3}   \
              (d) max change/allowance = {share:.3}",
             u.name
         );
@@ -899,6 +907,23 @@ fn check_evidence(links: &[Under]) {
             u.name
         );
     }
+}
+
+/// The radius within which (c) resolves a log-det error of `size`: the largest `r` of the (c) grid such that every
+/// grid point with `max |zₖ| ≤ r` has an allowance of at most `size`. Past it the numeric Jacobian's round-off,
+/// which grows as the forward saturates and its columns shrink, swamps an error of that size (PIT-3).
+fn resolved_radius(u: &Under, size: f64) -> f64 {
+    let radius = |x: &[f64]| x.iter().fold(0.0f64, |m, v| m.max(v.abs()));
+    let grid = c_grid(u.controls, 64);
+    let first_unresolved = grid
+        .iter()
+        .filter(|x| log_det_gap(u, x).1 > size)
+        .map(|x| radius(x))
+        .fold(f64::INFINITY, f64::min);
+    grid.iter()
+        .map(|x| radius(x))
+        .filter(|&r| r < first_unresolved)
+        .fold(0.0f64, f64::max)
 }
 
 #[test]
