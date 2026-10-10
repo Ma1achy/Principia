@@ -305,14 +305,40 @@ fn clamp_tolerance(u: &Under) -> f64 {
     }
 }
 
+/// `|xₖ·∂fᵢ/∂xₖ|` summed over the controls `k`, for each component `i` of `u`'s forward at `x`: how far one ulp of
+/// relative error in representing the control moves `yᵢ`, over `eps` (PIT-9). The derivative is a central
+/// difference at f64 of step `10⁻⁷·max(1, |xₖ|)`, backward where the forward step overflows.
+fn sensitivity(u: &Under, x: &[f64]) -> Vec<f64> {
+    let y = (u.forward64)(x);
+    let mut out = vec![0.0; y.len()];
+    for k in 0..x.len() {
+        let h = 1e-7 * x[k].abs().max(1.0);
+        let at = |d: f64| {
+            let mut v = x.to_vec();
+            v[k] += d;
+            (u.forward64)(&v)
+        };
+        let (plus, minus) = (at(h), at(-h));
+        let (plus, width) = if plus.iter().all(|v| v.is_finite()) {
+            (plus, 2.0 * h)
+        } else {
+            (y.clone(), h)
+        };
+        for (i, o) in out.iter_mut().enumerate() {
+            *o += x[k].abs() * ((plus[i] - minus[i]) / width).abs();
+        }
+    }
+    out
+}
+
 /// `f(f⁻¹(y))` against `y = f(x)`, in physical units, within the clamp's tolerance and the round-off: the
-/// computation's own, `4·eps` of its scale, and that of representing the control, which `exp` and `softplus` turn
-/// from one ulp of `x` into `|x|·eps` relative in `y`, so `4·eps·(1 + |x|)·|y|`; the smallest normal is a floor for
-/// subnormal `y`.
+/// computation's own, `4·eps` of its scale and of `|y|`, and that of representing the control, which moves `yᵢ` by
+/// `eps·Σₖ|xₖ·∂fᵢ/∂xₖ|` ([`sensitivity`]; PIT-9), so `4·eps·(scale + |yᵢ| + Σₖ|xₖ·∂fᵢ/∂xₖ|)`; the smallest normal is
+/// a floor for subnormal `y`.
 fn check_round_trip(u: &Under, x: &[f64], y: &[f64], again: &[f64], eps: f64, tiny: f64) {
-    let span = 1.0 + x.iter().fold(0.0f64, |m, v| m.max(v.abs()));
-    for (a, b) in y.iter().zip(again) {
-        let tol = clamp_tolerance(u) + 4.0 * eps * (u.scale + span * a.abs()) + tiny;
+    let moved = sensitivity(u, x);
+    for ((a, b), m) in y.iter().zip(again).zip(&moved) {
+        let tol = clamp_tolerance(u) + 4.0 * eps * (u.scale + a.abs() + m) + tiny;
         assert!(
             (a - b).abs() <= tol,
             "{} at {x:?}: f(x) = {y:?}, f(f⁻¹(f(x))) = {again:?}: off by {} > {tol} (round trip)",
@@ -334,7 +360,7 @@ fn check_b(u: &Under, x: &[f64], x_max: f64) {
         let again = (u.forward32)(&(u.inverse32)(&y));
         let widen = |v: &[f32]| v.iter().map(|&a| a as f64).collect::<Vec<_>>();
         let (eps, tiny) = (f32::EPSILON as f64, f32::MIN_POSITIVE as f64);
-        check_round_trip(u, x, &widen(&y), &widen(&again), eps, tiny);
+        check_round_trip(u, &widen(&x32), &widen(&y), &widen(&again), eps, tiny);
     }
 }
 
@@ -364,6 +390,44 @@ impl Link<1, 1> for WideClamp {
     fn log_det<R: LinkReal>(v: [R; 1]) -> R {
         SigmoidBeta::log_det(v)
     }
+}
+
+/// σ onto `β` whose inverse clamps `s` at `4·ε_z`: off by `3·ε_z·π` in saturation, beyond the clamp's tolerance but
+/// inside the `4·eps·|x|·|y|` term (b) once allowed at f32, `1.3·10⁻⁴` at `|x| = 88`.
+#[cfg(feature = "controls")]
+struct FourEpsClamp;
+
+#[cfg(feature = "controls")]
+impl Link<1, 1> for FourEpsClamp {
+    const NAME: &'static str = "four_eps_clamp";
+    type Codomain = Beta;
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        SigmoidBeta::forward(v)
+    }
+    fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        let eps = num::<R>(4.0) * R::EPS_Z;
+        let s = (v[0] / num::<R>(PI)).max(eps).min(R::one() - eps);
+        [(s / (R::one() - s)).ln()]
+    }
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        SigmoidBeta::log_det(v)
+    }
+}
+
+#[cfg(feature = "controls")]
+mod round_trip_tightness_control {
+    use super::*;
+
+    negative_control!(
+        link_properties_b_round_trip,
+        "an inverse clamping at 4·ε_z must fail (b) at f32 too, where |x|·|y| once hid it",
+        expected = "(round trip)",
+        over_domain(&under::<1, 1, FourEpsClamp>(), |u, x, x_max| {
+            if x_max == X32 {
+                check_b(u, x, x_max)
+            }
+        })
+    );
 }
 
 negative_control!(
