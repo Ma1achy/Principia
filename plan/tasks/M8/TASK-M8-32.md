@@ -32,3 +32,7 @@ The Export & share window offers image export (size in multiples of the view, fo
 
 ## Notes
 - R-390: TASK-M6-28 builds the Export & share window's frame on the mock engine; this task depends on it and wires it to the real export, keeping every requirement it closes.
+- R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the
+  same way, each point of the field where the shown layout puts it (REQ-GUI-100's note; flagged in R-406, since the
+  human spoke of F3). On the real engine the area past the chart's `[0,1]²` follows RQ-262's ruling, as TASK-M8-05's
+  REQ-GUI-180 does.

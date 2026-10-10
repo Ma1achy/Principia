@@ -7333,7 +7333,8 @@ The human's words (R-404's message of 10 Oct 2026):
   footer, or from Windows › Console, takes the focus. **The console opening by itself on an error does not take the
   focus**, so a key pressed mid-navigation never lands in it unasked; Tab to the footer and Enter reach it.
 - **REQ-GUI-095** (its id permanent) reads eight big scopes, the footer last, in its statement and verify; R-405 joins
-  its rulings and sources (reqio). TASK-M8-13's acceptance line for it, re-run on the real engine, reads eight.
+  its rulings and sources (reqio). TASK-M8-13's acceptance line for it, re-run on the real engine, reads eight, and
+  TASK-M8-13 depends on TASK-M6-28.
   TASK-M6-25's line (merged, seven) stays as its record, with a Notes line pointing here.
 - **REQ-GUI-178 (new, M6)** is the footer and console scopes on the mock, closed by **TASK-M6-28**, which builds the
   console's layout, filters, copy and clear (REQ-GUI-126) and puts each window into the scope tree. It is the natural
@@ -7407,7 +7408,8 @@ The human's words (R-404's message of 10 Oct 2026):
   samples at `(s,t)` outside `[0,1]²`: how the view extends there, and what a chart draws outside its domain, are not
   given. The orchestrator does not decide them. **REQ-GUI-180 (new, M8)** is the real engine's fill, closed by
   **TASK-M8-05** (the shell on the real engine, F3 there, REQ-GUI-070), and carries `rq: RQ-262`; TASK-M8-05 gains its
-  acceptance line, depends on TASK-M6-30, and its REQ-GUI-180 line waits for the ruling.
+  acceptance line, depends on TASK-M6-30, takes the physics reviewer for REQ-GUI-180 only (it extends the chart's view),
+  and its REQ-GUI-180 line waits for the ruling.
 - **qa's file (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-24.rs`'s
   `qa_capture_figure_identical_under_f3_warning_and_console` asserts that with F3 off everything outside the figure's
   rect is the clear colour, which this ruling reverses. Its every earlier commit is qa's, so TASK-M6-30's qa reviewer

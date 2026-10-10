@@ -12489,11 +12489,15 @@
     section: Rules that hold everywhere
   - file: docs/contracts/principia_gui_state_contract.md
     section: 1. The one-way dependency rule
+  - file: decisions.md
+    section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
   verify:
     method: GUI screenshot
     detail: "screenshots with F3 on and off against 01_main.png: the figure is identical underneath; review that egui-wgpu is constructed from the engine's device/queue, not a second context"
-  rulings: []
+  rulings:
+  - R-406
   milestone: M8
+  note: "R-406 (10 Oct 2026): with F3 off the figure fills the window, each point of the field where it is in the shown layout, so \"the figure is identical underneath\" is checked over the shown figure's rect. The fill on the real engine is REQ-GUI-180, closed by this requirement's task, TASK-M8-05, and waiting on RQ-262."
 - id: REQ-GUI-071
   area: GUI
   statement: "Undo and redo must be a single history of typed setField edits kept by the state contract and shared by every GUI, in which a drag coalesces into one entry; a GUI must send undo / redo as requests and keep no history of its own."
@@ -12913,7 +12917,7 @@
   note: "GUI_DESIGN_NOTES no longer lists an integrator 'tolerance' (conformed to R-68, R-107)."
 - id: REQ-GUI-095
   area: GUI
-  statement: "The GUI must be a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend, with Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) reached with Enter."
+  statement: "The GUI must be a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer, with Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) reached with Enter."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
@@ -12921,13 +12925,16 @@
     section: 07 Keyboard — design note, not a screen
   - file: docs/gui/principia_render_gui_spec.md
     section: G14. Settled by the notes (record)
+  - file: decisions.md
+    section: "R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console"
   verify:
     method: unit test
-    detail: "Tab / Shift+Tab cycles the seven scopes in order; Enter on Manifold view enters Chart"
+    detail: "Tab / Shift+Tab cycles the eight scopes in order, the footer last; Enter on Manifold view enters Chart"
   rulings:
   - R-390
+  - R-405
   milestone: M8
-  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25)"
+  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-405 (10 Oct 2026) adds the footer as big scope 8, after Legend: TASK-M6-25 (merged) built and checked the seven; TASK-M6-28 adds the footer and extends scope_tab_order_mock to eight under REQ-GUI-178, and TASK-M8-13 re-runs the eight on the real engine."
 - id: REQ-GUI-096
   area: GUI
   statement: "The global keys must follow §G3's table: Tab / Shift+Tab next / previous scope, Enter into the scope, Esc out one level, arrows between siblings or adjust a value, Shift ×10 and Alt ×0.1 steps, held keys delay-then-repeat (DAS / ARR), Ctrl+Z undo from the contract's history, and ? shows shortcuts over everything."
@@ -12997,11 +13004,15 @@
     section: Export & share
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 04 Windows
+  - file: decisions.md
+    section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
   verify:
     method: GUI screenshot
     detail: "screenshot in present mode shows only the figure; Esc restores 01_main.png's layout"
-  rulings: []
+  rulings:
+  - R-406
   milestone: M8
+  note: "R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the same way, each point of the field where it is in the shown layout (flagged in R-406; the human spoke of F3). On the real engine it follows RQ-262's ruling, as REQ-GUI-180 does."
 - id: REQ-GUI-101
   area: GUI
   statement: "The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair."
@@ -13700,14 +13711,17 @@
     section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-404 — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps"
   verify:
     method: review checklist
     detail: "the proposal gives the delay and rate with the reference they follow (e.g. platform defaults)"
   rulings:
   - R-71
   - R-390
+  - R-404
   milestone: M8
-  note: "R-390: proposed by TASK-M6-25, the first task to need the value (moved from TASK-M8-13, which uses it); the human confirms it at the M8 gate"
+  note: "R-390: proposed by TASK-M6-25, the first task to need the value (moved from TASK-M8-13, which uses it); the human confirms it at the M8 gate. Confirmed by R-404 (10 Oct 2026, ahead of the M8 gate, which lists it as confirmed): a 500 ms delay before the first repeat (`keyboard::repeat::DELAY_MS`) and a 40 ms interval between repeats, 25 a second (`INTERVAL_MS`), the GUI's own timing, the system's key repeats dropped."
 - id: REQ-GUI-147
   area: GUI
   kind: definition
@@ -13909,14 +13923,17 @@
     section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-404 — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps"
   verify:
     method: review checklist
     detail: "the proposal gives a table of base steps per field kind and scope (absolute or relative to the field's range or the view), with the reasoning; recorded in decisions.md"
   rulings:
   - R-71
   - R-390
+  - R-404
   milestone: M8
-  note: "R-390: proposed by TASK-M6-25, the first task to need the values (moved from TASK-M8-13, which uses them); the human confirms them at the M8 gate"
+  note: "R-390: proposed by TASK-M6-25, the first task to need the values (moved from TASK-M8-13, which uses them); the human confirms them at the M8 gate. Confirmed by R-404 (10 Oct 2026, ahead of the M8 gate, which lists them as confirmed), with Shift ×10, Alt ×0.1 and both ×1 (`keyboard::scopes::StepKind::base`): Bounded (the z₀ sliders, the slice step, the playback speed) 1/100 of the field's range; Angle (τ₁, τ₂, γ) 1°; ZoomLog2 (Navigate's zoom) 0.25 octave; Pan (Figure's arrows) 1/20 of the view's span along the arrow's axis; Tilt (Compass's arrows) 1°; Orbit (Compass's Shift+arrows) 5°; TimeStep (Time's ← →) 1/100 of [0, t_max]. What Shift does on Compass's Shift+arrows stays TASK-M8-13's (REQ-GUI-097)."
 - id: REQ-GUI-159
   area: GUI
   kind: definition
@@ -14081,12 +14098,16 @@
     section: G1. Rules that hold everywhere
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
   verify:
     method: GUI screenshot
     detail: "cargo xtask screenshot 01_main (mock_shell, mock_f3_off): against 01_main.png with F3 on and off, the stand-in figure identical underneath; a footer click opens the console; the gui reviewer checks the design notes' global rules"
   rulings:
   - R-390
+  - R-406
   milestone: M6
+  note: "R-406 (10 Oct 2026): with F3 off the figure fills the window, each point of the field where it is in the shown layout, so \"the stand-in figure identical underneath\" is checked over the shown figure's rect; RQ-248's clear colour around the figure is revised. The fill itself is REQ-GUI-179, closed by TASK-M6-30."
 - id: REQ-GUI-169
   area: GUI
   statement: "On the mock engine, keyboard navigation must behave as render_gui_spec §G3 and `07_keyboard.png` give it in every scope the GUI has: Tab and Shift+Tab between the big scopes, Enter into a scope and Esc out of it, arrows between siblings and on a focused value, Shift ×10 and Alt ×0.1 steps, the focus ring, the top-bar breadcrumb, and `?` showing the shortcuts over everything; and each later screen must join the scope tree."
@@ -14264,6 +14285,61 @@
   - R-72
   milestone: M6
   note: "RQ-245, decided per R-369, amended per code review 5438674593: the entries ride in the snapshot, since a separate channel would cross the wasm↔JS membrane that systems_architecture §6 invariant 10 closes. R-54's precision flags stay in the snapshot; schema v1 is unchanged, and carrying the entries in the profiler's telemetry stream stays TASK-M8-27's (REQ-GUI-126 on the real engine)."
+- id: REQ-GUI-178
+  area: GUI
+  statement: "On the mock engine, the footer must be big scope 8 of render_gui_spec §G3's scope tree, after Legend, and the console the footer's sub-scope: Enter on the footer opens the console, as a click does, with the focus inside it; the console's filters (all, warnings, errors, info), text filter, copy, clear and entry list are its sub-scopes, reached with the arrows, Enter acting on a filter, copy or clear as its click; Esc from the console's top level closes it and returns the focus to the footer; and the console opening by itself on an error must not take the focus."
+  source:
+  - file: decisions.md
+    section: "R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_keyboard and scope_tab_order_mock: Tab from Legend reaches the footer and Tab from the footer the top bar; Shift+Tab from no focus starts at the footer; Enter on the footer opens the console with the focus on its first filter; the arrows reach each control and Enter on clear clears it; Esc from the console's top level closes it with the focus on the footer; a raised error opens the console without moving the focus; controls: a tree without the footer scope (Tab from Legend wraps to the top bar) and a console that does not take the focus on Enter each fail; cargo xtask screenshot 07_keyboard (mock_focus_console): the ring on a console control and the breadcrumb \"footer › console › …\""
+  rulings:
+  - R-390
+  - R-405
+  milestone: M6
+  note: "R-405: \"the bottom bar\" is read as the footer (flagged in R-405). Closed by TASK-M6-28, which builds the console's controls (REQ-GUI-126) and each window's scope."
+- id: REQ-GUI-179
+  area: GUI
+  statement: "On the mock engine, with the egui layer hidden by F3, the figure must fill the whole window, the stand-in showing more of the field at the same scale in every direction, each point of the field at the screen position it has in the shown layout, never the shown view stretched; showing the layer must return the figure to its rect in the shown layout; and neither must send a SetField or add an undo entry."
+  source:
+  - file: decisions.md
+    section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  - file: decisions.md
+    section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui f3_fills_window_mock and cargo xtask screenshot 01_main (mock_shell, mock_f3_off): with F3 off no pixel of the window is the clear colour; over the shown figure's rect the F3-off capture is pixel-identical to the F3-on one; outside it the capture equals the stand-in drawn at the same placement over the whole window; the tile-bounds overlay, on, draws the extra quads at the shown quads' size; F3 again restores the shown capture pixel for pixel; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a figure left in its rect fails the coverage check"
+  rulings:
+  - R-390
+  - R-406
+  milestone: M6
+  note: "R-406; closed by TASK-M6-30. RQ-248's decision (the figure kept in its rect with F3 off, the rest the clear colour) is revised. The real engine's fill is REQ-GUI-180."
+- id: REQ-GUI-180
+  area: GUI
+  statement: "On the real engine, with the egui layer hidden by F3, the figure must fill the whole window, the scheduler requesting and drawing the field over the window at the same scale in every direction, each point at the screen position it has in the shown layout, never the shown view stretched; showing the layer must return the figure to its rect; and neither must send a SetField."
+  source:
+  - file: decisions.md
+    section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 01_main (f3_off) on the real engine: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; outside it the figure is drawn over the whole window, the quads requested covering the window at the shown quads' level, and the area outside the chart's domain drawn as RQ-262's ruling gives; F3 again restores the shown capture; control: the shown view stretched to the window fails"
+  rulings:
+  - R-406
+  milestone: M8
+  rq:
+  - RQ-262
+  note: "R-406; closed by TASK-M8-05. Waits on RQ-262: how the view extends past the chart's [0,1]² and what a chart shows outside its domain."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
