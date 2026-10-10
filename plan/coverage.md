@@ -11,20 +11,20 @@
 | CHART | 56 |
 | INT | 89 |
 | EVT | 26 |
-| PAY | 90 |
+| PAY | 92 |
 | GEN | 33 |
 | SCHED | 95 |
 | REF | 50 |
 | RENDER | 84 |
-| COL | 63 |
+| COL | 64 |
 | GUI | 179 |
 | TOOL | 161 |
 | VAL | 180 |
 | PERF | 94 |
 | SYS | 80 |
-| **total** | **1357** |
+| **total** | **1360** |
 
-Of these: 112 calibration, 115 definition, 1130 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 113 calibration, 117 definition, 1130 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -35,9 +35,9 @@ Of these: 112 calibration, 115 definition, 1130 obligation. Retired (kept for th
 | M2 | 159 |
 | M3 | 199 |
 | M4 | 104 |
-| M5 | 164 |
+| M5 | 166 |
 | M6 | 157 |
-| M7 | 115 |
+| M7 | 116 |
 | M8 | 238 |
 
 ## Sections

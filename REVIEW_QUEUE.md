@@ -47,3 +47,47 @@ milestone gets its own file after its gate. Ids never change.
 - **Waits:** only TASK-M8-44, a leaf task (nothing depends on it) that builds and checks the shape sphere's extension
   and counting with one hemisphere drawn; its REQ-CHART-057 carries `rq: RQ-264`. TASK-M8-05 runs with both
   hemispheres and does not wait.
+
+---
+
+## RQ-265: the debug views and colouring §3.6 give the `log` and `diverging` scales different forms, and §3.6's `log` needs `lo > 0` where the ledger declares `lo = 0` *(conflict, R-381, R-401, R-403, TASK-M7-05, REQ-COL-032)*
+
+*Found in the R-388 pre-flight of TASK-M7-05 (10 Oct 2026). Nothing is chosen.*
+
+- **File, section:**
+  - `docs/design/principia_dd_colouring.md` § "3.6 Compaction (payload scalar → b ∈ [0,1]; forms per ledger `scale`)":
+    "log        b = clamp( (ln x − ln lo)/(ln hi − ln lo) ),  x ≤ 0 → 0 with sentinel styling" and "diverging  b = ½ +
+    ½·sign(x)·ln(1+|x|/x₀)/ln(1+x_max/x₀)   ★ symlog — PIN, confirm/veto".
+  - `docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every debug
+    view)": the drift views' "`symlog`, the default: the compacted value takes `dbg_sentinel`'s place `t = 0.5 +
+    0.5·x/(1 + |x|)`" (R-381), and "`dbg_log(x, eps)`: `s = ln(1 + |x|/eps)`, then `ramp_viridis(1 − 1/(1 + s))`".
+  - `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library": "`raw` is the field's value compacted
+    per its ledger scale: `lin` and `diverging` the identity; `log` `1 − 1/(1 + ln(1 + |x|/ε))`, `dbg_log`'s place, on
+    the fixed `[0, 1]`".
+  - `docs/design/principia_dd_colouring.md` § "2. Consolidated contract" and § "4. Seams (obligations → integration
+    tests)", through REQ-COL-032: "Colour compaction must take each field's scale from the ledger metadata (lin | log |
+    cyclic | diverging | categorical | flag)".
+  - The ledger declares the log fields with `lo = 0` and an unbounded `hi`: e.g. `closure_min`,
+    `.range(from_zero)` (`crates/ledger/src/payload.rs`:135 at `c683714`).
+- **Conflict:** one ledger `scale` names two different maps. For `log`, the debug template places `1 − 1/(1 + ln(1 +
+  |x|/ε_f))` with a per-field floor (R-401) and needs no range; §3.6 places `(ln x − ln lo)/(ln hi − ln lo)`, which
+  needs `0 < lo < hi < ∞`, and the ledger gives `lo = 0` and no finite `hi`. For `diverging`, the drift views place
+  `0.5 + 0.5·x/(1 + |x|)` (R-381's `symlog`), with no `x₀` or `x_max`; §3.6 places `½ + ½·sign(x)·ln(1 + |x|/x₀)/ln(1 +
+  x_max/x₀)`; and the template places `E_0` and `Lz_0` (`diverging`) by the identity on `[−M, M]` (R-400). REQ-COL-032
+  asks that compaction take each field's scale from the ledger, so a view and a ramp built on the same field disagree on
+  where a value sits.
+- **Options seen:**
+  - (a) The debug views keep their own placement forms (render contract presentation layer, render_gui_spec §10.1),
+    distinct from the user-facing §3.6 compaction; the ledger `scale` names the form family, and each layer states its
+    own map. §3.6's `log` then needs its `lo` from somewhere other than the ledger range (a declared floor, or a
+    measured end).
+  - (b) Both layers use §3.6's forms: the debug template's `log` and the drift views' `symlog` move to §3.6's, which
+    changes R-381's and R-401's views and their goldens, and §3.6's `log` still needs a finite positive `lo` and `hi`.
+  - (c) §3.6 adopts the debug layer's range-free forms: `log` becomes `1 − 1/(1 + ln(1 + |x|/ε_f))` with R-401's
+    per-field floor (or the field's `floor?`, R-263), and `diverging` uses `x₀` as that floor with no `x_max` (`b = ½ +
+    ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`), so one form per scale serves both layers.
+- **Applied meanwhile:** nothing. The debug views stand as built (R-381, R-401).
+- **Waits:** only TASK-M7-05's REQ-COL-032 acceptance line (`ledger_scale_restyle`), whose requirement carries
+  `rq: RQ-265`. TASK-M7-05's other lines, and every other task, do not wait. Under (b) or (c) the ruling also
+  changes what REQ-COL-039 (the §3.6 forms) and REQ-COL-065 (`x_max` and `x₀`, the definition TASK-M7-05 writes) say
+  (under (c) `x_max` falls away), so TASK-M7-05 builds them to the ruled option once it lands.
