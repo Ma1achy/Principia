@@ -6,9 +6,11 @@
 //! - `link_codomain_compat_*`: a link whose codomain is not the block control's is refused; each default resolves to
 //!   the named entry (REQ-GEN-013).
 //! - `link_registry_chart_constants`: the registry's chart constants are REQ-DEC-009's values, register entries.
+//! - `link_registry_emitted_*`: the generator driver runs the registry's emitter and refuses a registry with problems;
+//!   the emitted literals, doc lines and codomain bounds are the registry's.
 
 use ledger::constants::{Admissibility, Value, REGISTER};
-use ledger::gen::links::{generate, CONSTANTS_PATH, LINKS_PATH};
+use ledger::gen::links::{generate, refused, CONSTANTS_PATH, LINKS_PATH};
 use ledger::links::{
     builders, check, rows, select, select_from, slots, Codomain, Expr, Link, LinkBuilder, Op,
     Param, Slot, CHART_CONSTANTS,
@@ -505,4 +507,205 @@ negative_control!(
         c[0].value = 4.0;
         check_chart_constants(&c)
     }
+);
+
+// ── What is emitted ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The driver's files (`ledger::gen::generate` over `EMITTERS`, as `cargo xtask codegen` runs it) include `files`.
+fn check_driver_emits(files: &[(String, String)]) {
+    let all = ledger::gen::generate(&ledger::layout(), ledger::gen::EMITTERS)
+        .expect("the ledger generates");
+    for (path, contents) in files {
+        assert!(
+            all.iter()
+                .any(|g| g.path.display().to_string() == *path && g.contents == *contents),
+            "the driver does not emit the registry's {path}"
+        );
+    }
+}
+
+#[test]
+fn link_registry_emitted_by_the_driver() {
+    check_driver_emits(&generated());
+}
+
+negative_control!(
+    link_registry_emitted_by_the_driver,
+    "a registry with another sampling note is not what the driver emits",
+    expected = "the driver does not emit",
+    check_driver_emits(
+        &generate(&edited("exp", |b| b.sampling_note = Some("heavy-tailed")))
+            .expect("the edited registry generates")
+            .into_iter()
+            .map(|g| (g.path.display().to_string(), g.contents))
+            .collect::<Vec<_>>()
+    )
+);
+
+/// `refused` is empty for the registry and names the problem of `broken`.
+fn check_refused_lines(broken: &[LinkBuilder], naming: &str) {
+    assert!(
+        refused(builders()).is_empty(),
+        "the registry itself is refused"
+    );
+    assert!(
+        refused(broken).iter().any(|l| l.contains(naming)),
+        "the broken registry's refusal does not name {naming:?}"
+    );
+}
+
+#[test]
+fn link_registry_emitted_refuses_a_broken_registry() {
+    check_refused_lines(
+        &edited("exp", |b| b.forward = None),
+        "link `exp` has no forward",
+    );
+}
+
+negative_control!(
+    link_registry_emitted_refuses_a_broken_registry,
+    "a whole registry has no problem to name",
+    expected = "does not name",
+    check_refused_lines(&owned(), "link `exp` has no forward")
+);
+
+/// The generated links file of `builders`.
+fn links_rs(builders: &[LinkBuilder]) -> String {
+    generate(builders)
+        .expect("the registry generates")
+        .into_iter()
+        .find(|g| g.path.display().to_string() == LINKS_PATH)
+        .expect("the links file")
+        .contents
+}
+
+/// A literal is emitted at each float type as the shortest that reads back at that type: ⅓ at f32 and at f64.
+fn check_literals(text: &str) {
+    assert!(
+        text.contains("0.33333334") && text.contains("0.3333333333333333"),
+        "⅓ is not emitted at both f32 and f64"
+    );
+}
+
+#[test]
+fn link_registry_emitted_literals_per_float_type() {
+    check_literals(&links_rs(&edited("identity", |b| {
+        b.log_det = Some(Expr::Num(1.0 / 3.0))
+    })));
+}
+
+negative_control!(
+    link_registry_emitted_literals_per_float_type,
+    "the registry as it is has no ⅓",
+    expected = "is not emitted at both",
+    check_literals(&links_rs(builders()))
+);
+
+/// `identity`'s doc, with a sampling note of `n` columns, ending in a full stop, and whether the generated file holds
+/// it on one line.
+fn note_on_one_line(n: usize) -> bool {
+    let head = "/// `identity`, onto `real_line` (unbounded). Sampling:";
+    let note: &'static str = Box::leak("n".repeat(n - 1).into_boxed_str());
+    let text = links_rs(&edited("identity", |b| b.sampling_note = Some(note)));
+    text.lines().any(|l| l == format!("{head} {note}."))
+}
+
+/// Doc lines run to 100 columns and break past them.
+fn check_doc_width(fits: usize, breaks: usize) {
+    let head = "/// `identity`, onto `real_line` (unbounded). Sampling:"
+        .chars()
+        .count();
+    assert!(
+        note_on_one_line(fits - head - 1),
+        "a doc line of {fits} columns was broken"
+    );
+    assert!(
+        !note_on_one_line(breaks - head - 1),
+        "a doc line of {breaks} columns was not broken"
+    );
+}
+
+#[test]
+fn link_registry_emitted_doc_lines_run_to_100_columns() {
+    check_doc_width(100, 101);
+}
+
+negative_control!(
+    link_registry_emitted_doc_lines_run_to_100_columns,
+    "a doc line of 101 columns must be broken",
+    expected = "was broken",
+    check_doc_width(101, 102)
+);
+
+/// An entry whose name is longer than a doc line keeps it on the doc's first line, after `///`, with no empty line.
+fn check_long_name(name: &'static str) {
+    let mut b = owned();
+    let mut long = *b.iter().find(|e| e.name == "identity").expect("identity");
+    long.name = name;
+    b.push(long);
+    let text = links_rs(&b);
+    assert!(
+        text.contains(&format!("\n/// `{name}`,")),
+        "the long name is not on the doc's first line"
+    );
+    assert!(
+        !text.contains(&format!("///\n/// `{name}`,")),
+        "an empty doc line precedes the long name"
+    );
+}
+
+#[test]
+fn link_registry_emitted_doc_lines_keep_a_long_first_word() {
+    check_long_name(Box::leak("x".repeat(120).into_boxed_str()));
+}
+
+negative_control!(
+    link_registry_emitted_doc_lines_keep_a_long_first_word,
+    "an entry absent from the file is not on its first line",
+    expected = "is not on the doc's first line",
+    {
+        let text = links_rs(builders());
+        assert!(
+            text.contains("\n/// `no_such_link`,"),
+            "the long name is not on the doc's first line"
+        )
+    }
+);
+
+/// Each codomain's bounds at the chart constants `alpha_min` = 0.25 and `q_max` = 3, so that no bound reads one as 0.
+fn check_ranges(range: impl Fn(Codomain) -> Option<(f64, f64)>) {
+    use std::f64::consts::{FRAC_PI_2, PI};
+    let want = [
+        (Codomain::Mass, None),
+        (Codomain::Alpha, Some((0.25, FRAC_PI_2 - 0.25))),
+        (Codomain::Beta, Some((0.0, PI))),
+        (Codomain::Momentum, Some((-3.0, 3.0))),
+        (Codomain::HalfLine, None),
+        (Codomain::RealLine, None),
+    ];
+    for (c, r) in want {
+        assert_eq!(range(c), r, "codomain `{}`'s bounds", c.name());
+    }
+}
+
+#[test]
+fn link_registry_emitted_codomain_bounds() {
+    check_ranges(|c| c.range_at(0.25, 3.0));
+    assert_eq!(
+        Codomain::Alpha.range(),
+        Codomain::Alpha.range_at(0.0, 2.0),
+        "α's bounds are not at the chart constants"
+    );
+    assert_eq!(
+        Codomain::Momentum.range(),
+        Some((-2.0, 2.0)),
+        "the momenta's bounds are not at q_max"
+    );
+}
+
+negative_control!(
+    link_registry_emitted_codomain_bounds,
+    "α's bounds at α_min = 0 are not those at 0.25",
+    expected = "codomain `alpha`'s bounds",
+    check_ranges(|c| c.range_at(0.0, 3.0))
 );

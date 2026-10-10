@@ -26,10 +26,10 @@ pub const LINKS_PATH: &str = "crates/kernel/src/generated/links.rs";
 /// Where the chart constants are written, relative to the workspace root.
 pub const CONSTANTS_PATH: &str = "crates/kernel/src/generated/constants.rs";
 
-/// The registry's problems, as [`crate::links::check`] finds them in [`crate::links::builders`]; empty when it
-/// generates.
-pub fn refused() -> Vec<String> {
-    links::check(links::builders()).err().unwrap_or_default()
+/// The problems [`crate::links::check`] finds in the registry `builders`; empty when it generates.
+/// [`crate::gen::generate`] refuses [`crate::links::builders`] with them.
+pub fn refused(builders: &[LinkBuilder]) -> Vec<String> {
+    links::check(builders).err().unwrap_or_default()
 }
 
 /// The emitter [`crate::gen::EMITTERS`] runs: the registry's two files. [`crate::gen::generate`] refuses a registry
@@ -84,7 +84,7 @@ fn literal(v: f64, ty: &str) -> String {
         return path.replace("{}", ty);
     }
     if v.is_infinite() {
-        let sign = if v > 0.0 { "" } else { "NEG_" };
+        let sign = if v.is_sign_positive() { "" } else { "NEG_" };
         return format!("{ty}::{sign}INFINITY");
     }
     if ty == "f32" {

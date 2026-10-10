@@ -226,7 +226,7 @@ fn is_name(s: &str) -> bool {
 /// ([`links::refused`]); then runs `emitters` over it. The files they generate, or why not.
 pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
     let entries = validate(ledger)?;
-    let refused = links::refused();
+    let refused = links::refused(crate::links::builders());
     if !refused.is_empty() {
         return Err(GenError::Links(refused));
     }

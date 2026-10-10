@@ -218,7 +218,11 @@ impl Codomain {
 
     /// The closed bounds of an interval codomain, from the chart constants; `None` for the simplex and the lines.
     pub fn range(self) -> Option<(f64, f64)> {
-        let (alpha_min, q_max) = (ALPHA_MIN.number(), Q_MAX.number());
+        self.range_at(ALPHA_MIN.number(), Q_MAX.number())
+    }
+
+    /// [`Codomain::range`] at the chart constants `alpha_min` and `q_max`.
+    pub fn range_at(self, alpha_min: f64, q_max: f64) -> Option<(f64, f64)> {
         match self {
             Codomain::Alpha => Some((alpha_min, FRAC_PI_2 - alpha_min)),
             Codomain::Beta => Some((0.0, PI)),
