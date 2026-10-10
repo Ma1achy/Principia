@@ -8163,7 +8163,7 @@ This ruling's part:
 
 Adds REQ-SCHED-098; REQ-PAY-075's statement, verify, rulings, sources, note and `rq`, REQ-PAY-077's and REQ-PAY-089's
 rulings, sources, note and `rq`, REQ-PAY-089's statement, REQ-REF-001's statement, rulings, sources and note, and
-REQ-SYS-036's statement, rulings and sources change.
+REQ-PAY-006's and REQ-SYS-036's statements, rulings and sources change.
 
 ## R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*
 *10 Oct 2026 · applied in `docs/design/principia_dd_colouring.md` § "3.6 Compaction (payload scalar → b ∈ [0,1]; forms

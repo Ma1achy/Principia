@@ -56,8 +56,9 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `QuadReduction`'s measured aligned size (R-410), written into `docs/design/principia_dd_generation_root.md` §3.7's
   "Size" paragraph and where the docs cite it: `docs/design/principia_systems_architecture.md` (the Memory and
   Reduction rows and the two "big data never crosses" passages), `docs/contracts/principia_render_contract.md`
-  (Part 1's opening), `plan/reviewers/perf.md` § "3. Memory tiers and budgets" and REQ-SYS-036 (reqio), with the
-  commit's "Removed lines" note.
+  (Part 1's opening), `docs/contracts/principia_canonical_spec.md` § "6. Memory & deployment model" (the struct
+  line), `plan/reviewers/perf.md` § "3. Memory tiers and budgets", and REQ-PAY-089's and REQ-SYS-036's statements
+  (reqio), with the commit's "Removed lines" note.
 - Tests in `crates/ledger/tests/quad_reduction.rs`: member list and types, Rust/WGSL layout agreement, histogram capacity.
 
 ## Acceptance tests
