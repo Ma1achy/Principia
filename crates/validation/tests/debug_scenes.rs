@@ -92,7 +92,7 @@ fn debug_scenes_render_their_references() {
 negative_control!(
     debug_scenes_render_their_references,
     "every case rendered at the next nudge",
-    expected = "`accumulators-diffusion_slope`'s render differs from its reference",
+    expected = "`accumulators-drift_max_vs_final`'s render differs from its reference",
     {
         let cases: Vec<DebugCase> = debug_cases()
             .unwrap_or_else(|e| panic!("{e}"))

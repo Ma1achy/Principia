@@ -661,10 +661,7 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         let n = T_END[k] + t_nudge;
         let (mean_y, c_ty) = match i {
             0 => (0.0, 0.0),
-            _ => (
-                at(0.25, -0.11, 17),
-                SLOPE[k] * diffusion_c_tt(n, DT_MACRO),
-            ),
+            _ => (at(0.25, -0.11, 17), SLOPE[k] * diffusion_c_tt(n, DT_MACRO)),
         };
         // Samples 3, 4 and 7 hold long words, 76, 76 and 74 symbols cycling from different starts, whose top limbs,
         // `payload`, spread across its range.
