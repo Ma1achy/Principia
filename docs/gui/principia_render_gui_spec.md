@@ -140,7 +140,7 @@ recompute / cancel live in the Run window (§G5).
 ## G3. Keyboard — a design note, not a screen (`07_keyboard.png`)
 
 The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory ·
-5 Compass · 6 Time · 7 Legend. Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
+5 Compass · 6 Time · 7 Legend · 8 footer (R-405). Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
 
 | key | action |
 |---|---|
@@ -162,9 +162,10 @@ zoom"). Nothing else changes on screen.
 
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
-console (§G12), as a click does, with the focus inside it; the console's filters, text filter, copy, clear and entry
-list are its sub-scopes, and Esc from its top level closes it and returns the focus to the footer. The console opening
-by itself on an error does not take the focus.
+console (§G12), as a click does, with the focus inside it. The console is a window: opened by the footer or from
+Windows › Console, it takes the focus; Tab and Shift+Tab move between its sections (the filters, the text filter, copy
+and clear, the entry list), the arrow keys move within a section, and Esc closes it and returns the focus to whatever
+opened it, the footer or Windows › Console. The console opening by itself on an error does not take the focus.
 
 The ring's, the breadcrumb's and the `?` overlay's look, the held-key delay and repeat (500 ms, 40 ms) and the base
 steps are confirmed as #174 built them, and recorded in R-404.
@@ -395,6 +396,7 @@ same stream as the profiler's telemetry. Errors open it automatically. Sources i
 quadtree, the contract (each `SetField` is logged) and the app.
 
 The keyboard reaches it through the footer, big scope 8 (§G3, R-405).
+It is reached from Windows › Console too, and Esc returns the focus to whichever opened it.
 
 ## G13. Where the artboards are overridden
 

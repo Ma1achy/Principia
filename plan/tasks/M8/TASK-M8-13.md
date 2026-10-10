@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-The GUI is a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend, and Manifold view's sub-scopes reached with Enter. The global keys follow §G3's table (Tab / Shift+Tab, Enter, Esc, arrows, Shift ×10 / Alt ×0.1, held-key delay-then-repeat with calibrated DAS / ARR, Ctrl+Z from the contract's history, ? over everything). The in-scope keys are Figure (arrows pan, + / − zoom, Space keeps, L listens, K locks), Trajectory, Compass, Time; Legend is read-only. Focus shows only as a ring and the top-bar breadcrumb; the scope lives in ViewUI.
+The GUI is a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer (R-405), and Manifold view's sub-scopes reached with Enter. The global keys follow §G3's table (Tab / Shift+Tab, Enter, Esc, arrows, Shift ×10 / Alt ×0.1, held-key delay-then-repeat with calibrated DAS / ARR, Ctrl+Z from the contract's history, ? over everything). The in-scope keys are Figure (arrows pan, + / − zoom, Space keeps, L listens, K locks), Trajectory, Compass, Time; Legend is read-only. Focus shows only as a ring and the top-bar breadcrumb; the scope lives in ViewUI.
 
 ## References
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a screen"
@@ -39,6 +39,6 @@ The GUI is a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view
 - R-404 (10 Oct 2026): the human confirmed REQ-GUI-146 (500 ms delay, 40 ms interval) and REQ-GUI-158 (the base steps)
   as TASK-M6-25 proposed them, ahead of the M8 gate. This task uses the confirmed values; its two proposal lines have
   nothing left to put to the gate, and the gate lists both as confirmed by R-404.
-- R-405 (10 Oct 2026): the footer is big scope 8, after Legend, and the console its sub-scope (REQ-GUI-178, built by
-  TASK-M6-28 on the mock, which this task depends on); REQ-GUI-095 reads eight scopes, and this task re-runs the eight
-  on the real engine.
+- R-405 (10 Oct 2026): the footer is big scope 8, after Legend, and the console a window opened from it (REQ-GUI-178,
+  built by TASK-M6-28 on the mock, which this task depends on); REQ-GUI-095 reads eight scopes, and this task re-runs
+  the eight on the real engine.

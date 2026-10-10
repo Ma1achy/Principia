@@ -7271,14 +7271,14 @@ design ruling (R-390's feedback rule) or, for the two calibrations, the human's 
 
   What Shift does on Compass's Shift+arrows, which already mean "orbit" (§G3), stays TASK-M8-13's, with the in-scope
   keys (REQ-GUI-097), as #174 left it.
-- **The overlay's pointer behaviour is confirmed as built: it blocks clicks, not hover or scroll.** While the overlay is
-  open, every pointer press, and that press's release, is taken before egui's pass; a press outside its frame closes
-  it without acting on anything beneath, as egui's menus do. Hover and scroll still reach what is beneath. *Read from
-  "this is good", flagged:* the human did not answer this part of the question in words. It is read as confirmed
-  because "this is good" answers a question that listed it, and the build is what the question described. The human
-  may veto it; a veto would be a GUI design ruling, applied by a follow-up task.
 
-*Applied per R-369 (mechanical consequences):*
+*Applied per R-369 (mechanical consequences, and one reading):*
+- **Applied per R-369, a reading of "this is good": the overlay's pointer behaviour is confirmed as built, blocking
+  clicks, not hover or scroll.** While the overlay is open, every pointer press, and that press's release, is taken
+  before egui's pass; a press outside its frame closes it without acting on anything beneath, as egui's menus do. Hover
+  and scroll still reach what is beneath. The human did not answer this part of the question in words; it is read as
+  confirmed because "this is good" answers a question that listed it, and the build is what the question described.
+  The human may veto it; a veto would be a GUI design ruling, applied by a follow-up task.
 - **Confirmed ahead of the M8 gate.** R-71 asks that the human confirm each calibration and that it be recorded in
   `decisions.md`; this is that confirmation, given before the gate it was due at. The M8 gate lists REQ-GUI-146 and
   REQ-GUI-158 as confirmed by R-404 and does not ask again, and the values are no longer provisional (R-182). Each
@@ -7311,41 +7311,45 @@ The human's words (R-404's message of 10 Oct 2026):
 *What it decides:*
 - **The console is reached with the keyboard**, and so is the bar at the bottom of the window, as the top bar is: both
   are scopes in §G3's tree.
-- **"The bottom bar" is the footer** (§G2's **Footer**: the warning and error counts, the latest message, memory, "?
-  keys"; 01_main.png's bottom strip), the bar that opens the console. The bottom row's Compass, Time and Legend are big
-  scopes 5 to 7 already, so the footer is the one bar at the bottom that the keyboard cannot reach. *Flagged:* this
-  reading is the orchestrator's; the human may correct it.
 
-*Applied per R-369 (routine design choices):*
+*Applied per R-369 (routine design choices, and one reading):*
+- **Applied per R-369, a reading of the human's words: "the bottom bar" is the footer** (§G2's **Footer**: the warning
+  and error counts, the latest message, memory, "? keys"; 01_main.png's bottom strip), the bar that opens the console.
+  The bottom row's Compass, Time and Legend are big scopes 5 to 7 already, so the footer is the one bar at the bottom
+  that the keyboard cannot reach. The human may correct it.
 - **The footer is big scope 8,** after Legend, so the Tab order reads top to bottom: 1 top bar · 2 Manifold view ·
   3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer. Tab wraps from the footer to the top bar, and
   the first Shift+Tab from no focus goes to the footer. Its ring is drawn inside its rect, as every scope's is.
 - **Enter on the footer opens the console,** as a click on the footer does (§G2), and moves the focus into it. If the
   console is already open, Enter moves the focus into it.
-- **The console is the footer's sub-scope.** Its controls are its sub-scopes, in this order: the filters (all,
-  warnings, errors, info), the text filter, copy, clear and the entry list. The arrows move between them; Enter on a
-  filter, copy or clear acts as its click; the text filter is a text field, so the keyboard layer stands aside while it
-  holds the keyboard, as #174 built for every text field; ↑ and ↓ in the entry list scroll it. The breadcrumb names the
-  path, e.g. "footer › console › errors". Esc backs out one level; from the console's top level it closes the console
-  and returns the focus to the footer.
-- **This agrees with TASK-M6-28's window rule** (an open window is a scope that takes focus when it opens, and Esc
-  from its top level returns the focus to the scope that opened it): the console opened by Enter or a click on the
-  footer, or from Windows › Console, takes the focus. **The console opening by itself on an error does not take the
-  focus**, so a key pressed mid-navigation never lands in it unasked; Tab to the footer and Enter reach it.
+- **The console is a window**, under TASK-M6-28's window rule (an open window is a scope that takes the focus when it
+  opens; Tab and Shift+Tab move between its sections; Esc returns the focus to the scope that opened it). Opened by
+  Enter or a click on the footer, or from Windows › Console, it takes the focus, on its first filter. Its sections, in
+  Tab order, are the filters (all, warnings, errors, info), the text filter, copy and clear, and the entry list; Tab
+  and Shift+Tab move between them, inside the console, and the arrow keys move within a section (between the filters,
+  between copy and clear; ↑ and ↓ scroll the entry list). Enter on a filter, copy or clear acts as its click; the text
+  filter is a text field, so the keyboard layer stands aside while it holds the keyboard, as #174 built for every text
+  field. The breadcrumb names the path, e.g. "console › errors". **Esc closes the console and returns the focus to
+  whatever opened it:** the footer, or Windows › Console. (Applied per R-369, gui review 5478696211, G2; it replaces
+  the first port's sub-scope reading, in which the arrows moved between all the console's controls and Esc always
+  returned to the footer.)
+- **The console opening by itself on an error does not take the focus**, so a key pressed mid-navigation never lands
+  in it unasked; Tab to the footer and Enter reach it.
 - **REQ-GUI-095** (its id permanent) reads eight big scopes, the footer last, in its statement and verify; R-405 joins
   its rulings and sources (reqio). TASK-M8-13's acceptance line for it, re-run on the real engine, reads eight, and
   TASK-M8-13 depends on TASK-M6-28.
   TASK-M6-25's line (merged, seven) stays as its record, with a Notes line pointing here.
 - **REQ-GUI-178 (new, M6)** is the footer and console scopes on the mock, closed by **TASK-M6-28**, which builds the
   console's layout, filters, copy and clear (REQ-GUI-126) and puts each window into the scope tree. It is the natural
-  home: the console's sub-scopes are the controls it builds. It gains a deliverable, an acceptance line with negative
+  home: the console's sections are the controls it builds. It gains a deliverable, an acceptance line with negative
   controls and a `07_keyboard/mock_focus_console` screenshot case.
 - **qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-25.rs`'s
   `qa_scope_tab_order_mock_seven_big_scopes_cycle` (its `BIG` list, and the module doc quoting REQ-GUI-095's verify)
-  asserts seven big scopes with Legend last, as may lines of `qa_TASK-M6-25_recheck.rs`. Every earlier commit of both
-  files is qa's, so TASK-M6-28's qa reviewer changes them to eight in the task's qa commit; the implementer never
-  edits them. The PR lists each change with its reason, and the code reviewer confirms that no assertion was weakened
-  but the count R-405 changes.
+  asserts seven big scopes with Legend last. Every earlier commit of the file is qa's, so TASK-M6-28's qa reviewer
+  changes it to eight in the task's qa commit; the implementer never edits it. The PR lists each change with its
+  reason, and the code reviewer confirms that no assertion was weakened but the count R-405 changes.
+  `crates/gui/tests/qa_TASK-M6-25_recheck.rs` needs no change: it asserts no scope count and does not take Legend as
+  the last big scope (gui review 5478696211).
 - R-405 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
 
 Adds REQ-GUI-178; REQ-GUI-095's statement, verify, rulings, sources and note change.
