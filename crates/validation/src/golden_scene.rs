@@ -663,7 +663,7 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
             0 => (0.0, 0.0),
             _ => (
                 at(0.25, -0.11, 17),
-                SLOPE[k] * (1.0 + 0.1 * g) * diffusion_c_tt(n, DT_MACRO),
+                SLOPE[k] * diffusion_c_tt(n, DT_MACRO),
             ),
         };
         // Samples 3, 4 and 7 hold long words, 76, 76 and 74 symbols cycling from different starts, whose top limbs,
