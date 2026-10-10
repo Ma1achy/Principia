@@ -60,8 +60,10 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         let speed = view.scale / 200.0;
         for (id, value, along) in [(CENTRE_U, u, plane.q1), (CENTRE_V, v, plane.q2)] {
             let mut edited = value;
+            // As tall as egui's controls: the rows are never taller than a control and its 2-point gap.
+            let field_h = centre.spacing().interact_size.y;
             let field = centre.add_sized(
-                [72.0, h - 2.0],
+                [72.0, field_h],
                 DragValue::new(&mut edited).speed(speed).max_decimals(6),
             );
             panel.place(id, &field, clip);
@@ -99,8 +101,9 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
                 egui::Label::new(RichText::new(AXES[i]).weak()),
             );
             let mut value = plane.z0[i];
+            let field_h = fields.spacing().interact_size.y;
             let field = fields.add_sized(
-                [FIELD_W, h - 2.0],
+                [FIELD_W, field_h],
                 DragValue::new(&mut value)
                     .speed(0.002)
                     .min_decimals(3)
