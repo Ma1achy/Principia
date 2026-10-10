@@ -99,9 +99,10 @@ pub fn scan(source: &str) -> Vec<(usize, String)> {
         if name == "mut" {
             name = words.next().unwrap_or("");
         }
+        // A `macro_rules!` body names its item by a metavariable (`const $name: u32 = 64;`): it is read too.
         let name: String = name
             .bytes()
-            .take_while(|&c| ident(c))
+            .take_while(|&c| ident(c) || c == b'$')
             .map(char::from)
             .collect();
         if name.is_empty() || ["fn", "unsafe", "extern", "async"].contains(&name.as_str()) {
