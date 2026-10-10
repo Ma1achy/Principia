@@ -7613,15 +7613,18 @@ Adds REQ-CHART-054 and REQ-CHART-055; REQ-GUI-180's statement, verify, rulings, 
 and REQ-GUI-100's statements, verify, rulings, sources and notes, and REQ-GUI-070's note change.
 
 ## R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
-*10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 3 — Charts" (§ "Past the unit
-square — each axis's extension type (R-407)": a paragraph added, the affine row's axes) and § "Part 5 — Well-posedness
-and the validation contract" (`system_image`, a sentence added), `docs/contracts/principia_canonical_spec.md` § "9. The
-load-bearing invariants (the walls — the primary comparison checklist)" (W7, a sentence added),
-`docs/design/principia_chart_reference.md` § "3.3 The chart map" and § "5.4 Past the unit square — each axis's
-extension type (R-407)" (the table's primary-range column, paragraphs added), `docs/gui/principia_render_gui_spec.md`
-§ "G7. Chart builder (`03_chartbuilder.png`)", REQ-CHART-056 (reqio, new), REQ-CHART-054, REQ-GUI-109 and REQ-GUI-180
-(reqio), TASK-M8-05, TASK-M8-18 and TASK-M8-32, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-263
-archived) and `REVIEW_QUEUE.md` (RQ-264, open); built by TASK-M8-05*
+*10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 2 — The decoder" (a sentence
+added, round 2), § "Part 3 — Charts" (§ "Past the unit square — each axis's extension type (R-407)": a paragraph
+added, the affine row's axes, the fallback's layers) and § "Part 5 — Well-posedness and the validation contract"
+(`system_image`, a sentence added), `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the
+walls — the primary comparison checklist)" (W7, a sentence added), `docs/design/principia_chart_reference.md` § "3.3
+The chart map", § "4.5 The Burrau-family chart maps" and § "5.4 Past the unit square — each axis's extension type
+(R-407)" (the table's primary-range column, paragraphs added), `docs/gui/principia_render_gui_spec.md` § "G1. Rules
+that hold everywhere" (round 2) and § "G7. Chart builder (`03_chartbuilder.png`)", REQ-CHART-056 and REQ-CHART-057
+(reqio, new), REQ-CHART-054, REQ-GUI-109, REQ-GUI-180, REQ-GUI-070 and REQ-GUI-100 (reqio), TASK-M8-05, TASK-M8-44
+(new), TASK-M8-18, TASK-M8-32 and TASK-M6-30, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-263 archived) and `REVIEW_QUEUE.md` (RQ-264, open); built by TASK-M8-05, the
+one-hemisphere case by TASK-M8-44 once RQ-264 is ruled*
 
 The orchestrator put RQ-263 to the human: past `[0,1]²` the shape sphere's periodic θ and pole-crossing φ (R-407)
 redraw systems `[0,1]²` already holds, so whether an area statistic taken over the extended window counts the window or
@@ -7662,14 +7665,20 @@ only `[0,1]²`, and how it counts the redrawn systems, was not given. The human 
   (chart_reference §1.3) declares nothing and stays bounded. Under this ruling its primary range is unbounded, so its
   unreachable pixels fail validity and count as forbidden. R-407's applied text carries the correction, flagged to the
   human; chart_decoder_contract Part 3, chart_reference §5.4 and render_gui_spec §G7 follow. TASK-M8-05 tests it.
+  B1 covers §G7's non-periodic quantities (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared
+  affine would redraw systems and count them again, so it is typed only by a declaration under physics review
+  (physics review 5478805963, F3).
 - **B2. The mass simplex's "forbidden in view" rises with F3 off.** Its axes are affine (R-407, A7), so their primary
   ranges are unbounded: past the edge every visible pixel counts, and its negative-mass states fail validity
   (inverse_encode_contract § "Chart-aware validation", layer 2: every `m_i > 0`) and count as forbidden. So the share
   forbidden in view is larger over the filled window than over `[0,1]²` alone. The orchestrator has told the human.
   chart_reference §5.4 states it.
-- **B3. The primary ranges, by type.** Periodic: one period, taken as the chart's own `[0,1]` span on that axis.
-  Pole-crossing: pole to pole, the chart's `[0,1]` span on that axis. Affine: unbounded. Bounded: its domain, the
-  chart's `[0,1]` span on that axis. **A pixel past a pole carries a partner axis shifted by half a period, and it is
+- **B3. The primary ranges, by type.** Periodic: one period of that axis (for the shape sphere's `θ = 2π·s`, the
+  chart's own `[0,1]` span). Pole-crossing: pole to pole (for the shape sphere's φ with both hemispheres drawn, the
+  chart's `[0,1]` span). Affine: unbounded. Bounded: its domain, the chart's `[0,1]` span on that axis. A new periodic
+  or pole-crossing declaration states its own primary range under clause 3's physics review; RQ-264 is that case for
+  φ with one hemisphere drawn. (Worded per physics review 5478805963, F4: the first port took "one period" as the
+  `[0,1]` span for every periodic axis, which agrees for every shipped chart.) **A pixel past a pole carries a partner axis shifted by half a period, and it is
   outside the pole-crossing axis's primary range, so it is excluded from the count** (and from the total). So the
   shape sphere's extension, past `[0,1]²` on either axis, adds nothing to any statistic, and its statistics over the
   window are those of the part of `[0,1]²` that is visible.
@@ -7677,8 +7686,12 @@ only `[0,1]²`, and how it counts the redrawn systems, was not given. The human 
   §G2, chart_reference §3.3, R-113), the corpus does not say whether the chart's `[0,1]` span on φ is remapped to end at
   the equator or the full pole-to-pole span is kept and half of it set aside; and if the span ends at the equator, what
   the pole-crossing φ does past that edge, which is not a pole, and what its primary range is. The orchestrator does
-  not decide them. It blocks only TASK-M8-05's acceptance line for the sphere with one hemisphere drawn; every other
-  line runs with both hemispheres, R-14's full `φ = π·(1 − t)` span, where the poles are `[0,1]`'s ends.
+  not decide them. It blocks only **TASK-M8-44 (new, M8)**, a leaf task that builds and checks the sphere's extension
+  and counting with one hemisphere drawn (**REQ-CHART-057**, new, carrying `rq: RQ-264`), depending on TASK-M8-05 and
+  on TASK-M8-06, which builds the hemisphere toggle (REQ-GUI-161); reviewers code, qa and physics; nothing depends on
+  it. TASK-M8-05 runs every line with both hemispheres, R-14's full `φ = π·(1 − t)` span, where the poles are `[0,1]`'s
+  ends, and has no open RQ. (Applied per R-369, code review 5478800754, F4: the first port put the waiting line in
+  TASK-M8-05, which would have held it and its dependents.)
 - **B5. The order a pixel is classified in.** Past `[0,1]²`: (1) an axis past a bounded edge makes it the domain's end
   (out of the count and the total); (2) an axis outside its primary range, the periodic or pole-crossing redraw, takes
   it out of the count and the total; (3) a pixel the chart's feasibility check rejects (R-26's `validate`, the chart's
@@ -7702,8 +7715,19 @@ only `[0,1]²`, and how it counts the redrawn systems, was not given. The human 
   (REQ-GUI-109, the Domain preview's "forbidden in view: N%") uses it; with the egui layer shown its view is `[0,1]²`,
   so its result is unchanged, and REQ-GUI-109 and TASK-M8-18 gain notes. REQ-GUI-180's and TASK-M8-32's notes that
   RQ-263 is open now name R-408.
+- **Round-2 review fixes, applied per R-369** (mechanical consequences of R-407 and R-408):
+  - the pixel's validity check is inverse_encode layers 2 and 3 only; layer 1 (the hypercube bounds) is the encode
+    path's, so chart_decoder_contract Part 2's "the validated region is the unit hypercube `[0,1]⁸`" is qualified for
+    the extension (physics F2);
+  - the ternary plot's axes are affine in R-407's sense, its map bilinear, and its check reads the buffered masses,
+    sampled past the `ε_m` buffer's reach (physics F5);
+  - `area_stats_primary_range` checks B5's order: a pixel failing both layer 2 and `Φ` counts as forbidden, one where
+    only `Φ` fails is the domain's end, and a classifier running `Φ` before `validate` fails (physics F1);
+  - A4's screen-lane consequence is stated in render_gui_spec §G1, and the "identical underneath" checks of REQ-GUI-070
+    and REQ-GUI-100 read "over the shown figure's rect, with a stain that reads no screen-lane field" (gui G5); the
+    mock's stand-in is drawn from the field placement, not the screen lane (TASK-M6-30's note).
 - RQ-263 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line; RQ-264 is filed in
   `REVIEW_QUEUE.md`. R-408 is in the "physics" group of `plan/rule_groups.yaml`, with R-407.
 
-Adds REQ-CHART-056; REQ-CHART-054's statement, verify, rulings, sources and note, REQ-GUI-109's rulings, sources and
-note, and REQ-GUI-180's note change.
+Adds REQ-CHART-056 and REQ-CHART-057; REQ-CHART-054's statement, verify, rulings, sources and note, REQ-GUI-109's
+rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and REQ-GUI-100's verify change.

@@ -44,5 +44,6 @@ milestone gets its own file after its gate. Ids never change.
 - **Applied meanwhile:** with both hemispheres drawn, R-407 and R-408 apply as written. Statistics agree under (a) and
   (b) (the pixels past the equator are out of the count and the total either way); only what is drawn there differs,
   and under (c) the primary range is pole to pole.
-- **Waits:** only TASK-M8-05's acceptance line for the shape sphere with one hemisphere drawn (REQ-CHART-054 and
-  REQ-CHART-056 carry `rq: RQ-264`). Every other line of TASK-M8-05 runs with both hemispheres and does not wait.
+- **Waits:** only TASK-M8-44, a leaf task (nothing depends on it) that builds and checks the shape sphere's extension
+  and counting with one hemisphere drawn; its REQ-CHART-057 carries `rq: RQ-264`. TASK-M8-05 runs with both
+  hemispheres and does not wait.

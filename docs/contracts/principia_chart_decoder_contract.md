@@ -31,7 +31,7 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 
 ## Part 2 — The decoder
 
-**Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
+**Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. (Past `[0,1]²`, where the figure fills the window, an extended pixel's `z` may leave `[0,1]⁸`: the hypercube bound is the encode path's check, inverse_encode layer 1 on lookup and lock, and an extended pixel is checked by layers 2 and 3 only, Part 3, R-407.) **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
 
 **Block ordering (convention — fix once, then hold):**
 
@@ -155,16 +155,20 @@ bounded one past its edge hatches the pixel. `Φ` and the validity check then ru
 **The universal fallback** needs no declaration: outside `[0,1]²`, a pixel whose `Φ` fails to evaluate (non-finite,
 outside its domain), or whose state fails the existing validity check (R-26's `validate`;
 `principia_inverse_encode_contract.md` § "Chart-aware validation", layers 2 and 3: outside the chart's feasible region,
-a non-positive mass), is hatched as forbidden. This covers physical-quantity axes automatically: energy beyond what is
-reachable hatches. A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload §2), it
+a non-positive mass), is hatched as forbidden. The pixel's check is layers 2 and 3 only: layer 1 (the hypercube bounds,
+"After encoding") is the encode path's, on lookup and lock, and never applied to a pixel inside `[0,1]²` either, so an
+affine latent axis whose `z` leaves `[0,1]⁸` past the edge is not hatched for that. This covers physical-quantity axes
+automatically: energy beyond what is reachable hatches. A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload §2), it
 is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5).
 
 **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
 needs physics review. The existing charts' types are in `principia_chart_reference.md` §5.4.
 
 **Area statistics past `[0,1]²` count each system once, through the types (R-408).** Each type has a **primary
-range**: periodic, one period (the chart's `[0,1]` span on that axis); pole-crossing, pole to pole (the chart's `[0,1]`
-span on that axis); affine, unbounded; bounded, its domain. "Forbidden in view" (render_gui_spec §G7) and the area
+range**: periodic, one period of that axis (for the shape sphere's `θ = 2π·s`, the chart's `[0,1]` span); pole-crossing,
+pole to pole (for the shape sphere's φ with both hemispheres drawn, the chart's `[0,1]` span); affine, unbounded;
+bounded, its domain. A new periodic or pole-crossing declaration states its own primary range, under clause 3's physics
+review (R-407). "Forbidden in view" (render_gui_spec §G7) and the area
 statistics (W7, `system_image` below) count a visible pixel **only if every axis is inside its primary range**, so a
 periodic or pole-crossing redraw is not counted again: a pixel past a pole carries its partner shifted by half a period
 and is outside the pole-crossing axis's primary range, so it is excluded. **Pixels hatched because the domain ends
@@ -174,7 +178,8 @@ a bounded edge, the domain's end; outside a primary range, not counted; rejected
 on what the types give, before `Φ`), forbidden; a `Φ` that fails where layer 2 accepts, the domain's end; a decoded
 state that fails layer 3, forbidden; any other, a counted system. The statistic reads the chart (the types, the
 primary ranges, `validate`, `Φ`), not the payload's `decode_failed` detail, which does not tell the two hatches apart.
-**Inside `[0,1]²` every statistic is unchanged.** What the shape sphere's φ does with one hemisphere drawn is RQ-264.
+**Inside `[0,1]²` every statistic is unchanged.** What the shape sphere's φ does with one hemisphere drawn, and its
+primary range there, is RQ-264, built by TASK-M8-44 (REQ-CHART-057) once ruled.
 
 ---
 

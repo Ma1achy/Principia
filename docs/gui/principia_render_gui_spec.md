@@ -49,7 +49,11 @@ data. The two words name one object. The **figure** is the rendered slice.
   of the field keeps the screen position it has in the shown layout, so the figure's rect there is unchanged. Hiding
   and showing send no `SetField`; showing the layer returns the normal layout. Past the chart's `[0,1]²` each axis
   extends by its declared type (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or
-  whose state fails validation is hatched as forbidden (R-407, `principia_chart_decoder_contract.md` Part 3).
+  whose state fails validation is hatched as forbidden (R-407, `principia_chart_decoder_contract.md` Part 3). The
+  screen lane is the one exception to "nothing moves": `ctx.screen.uv` and `ctx.screen.pixel` are taken over the
+  figure area as shown, the full window with the layer hidden, so a stain that reads them (the UV-view debug preset
+  among them) draws differently over the shown rect when F3 toggles; the figure is identical over the shown rect for a
+  stain that reads no screen-lane field (R-407, A4; `principia_coordinate_conventions_note.md`).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
@@ -322,9 +326,12 @@ labels (R-22).
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
-  is affine too, linear in its quantity, the fallback hatching what fails validation (R-408's port, B1: first made
-  bounded, by R-407's default); a Burrau dimension takes the Burrau family's types (`principia_chart_reference.md`
-  §5.4). The chart inherits its extension from its axes.
+  mapped linearly onto its range is affine, the fallback hatching what fails validation, and one behind a nonlinear
+  warp declares nothing and is bounded (R-408's port, B1: first made bounded, by R-407's default). B1 covers the
+  non-periodic quantities listed above (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared affine
+  would redraw systems and count them again, so it takes its type only by a declaration under physics review. A Burrau
+  dimension takes the Burrau family's types (`principia_chart_reference.md` §5.4). The chart inherits its extension
+  from its axes.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
   `validate(u, v)` on the `Chart` trait). **"Forbidden in view" counts each system once (R-408):** a visible pixel
