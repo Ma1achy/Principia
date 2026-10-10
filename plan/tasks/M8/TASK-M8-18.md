@@ -17,6 +17,7 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - `docs/gui/principia_render_gui_spec.md` § "11. Presets = whole graphs"
 - `docs/design/principia_memory_tiers.md` § "7. The "are you sure?" safety system (three severities, none blocking)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
 
 ## Deliverables
 - `crates/gui/src/windows/chart_builder/{axes,presets,domain_preview,quick_render,footer}.rs`.
@@ -35,3 +36,7 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 ## Notes
 - Closes, for gaps the corpus leaves open: REQ-GUI-160 (R-72 definition) (classification accepted by R-132).
 - R-390: TASK-M6-28 builds the Chart builder's frame on the mock engine, its previews square; this task depends on it and wires it to the real chart system, keeping every requirement it closes.
+- R-408 (10 Oct 2026): "forbidden in view" counts a visible pixel only if every axis is inside its primary range, a
+  domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden. `forbidden_fraction`
+  uses TASK-M8-05's classifier (REQ-CHART-056). With the egui layer shown the view is `[0,1]²`, where nothing changes,
+  so REQ-GUI-109's acceptance line stands. A physical-quantity axis is affine past `[0,1]²` (R-408's port, B1).

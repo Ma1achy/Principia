@@ -31,7 +31,7 @@ Planar three-body problem. Degrees of freedom, accounted honestly:
 
 ## Part 2 — The decoder
 
-**Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
+**Latent controls** `z ∈ ℝ⁸`. These are *controls*, not physical quantities — each is pushed through a smooth decoder (sigmoid / softmax / warp) to reach a physical value. Chart coordinates `(s,t) ∈ [0,1]²` map in via a chart map; the validated region is the unit hypercube `[0,1]⁸`. (Past `[0,1]²`, where the figure fills the window, an extended pixel's `z` may leave `[0,1]⁸`: the hypercube bound is the encode path's check, inverse_encode layer 1 on lookup and lock, and an extended pixel is checked by layers 2 and 3 only, Part 3, R-407.) **No latent coordinate is spent on a gauge direction** (this is why the old z₂, z₃ Cartesian-Jacobi directions were dropped in the 10D→8D cleanup).
 
 **Block ordering (convention — fix once, then hold):**
 
@@ -132,6 +132,55 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 
 **Mixed-axis charts:** the two axes need not share a block. Any pair. When one axis is a configuration coordinate and the other its conjugate momentum, the render **is literally a Poincaré section** — it lifts the phase-space degeneracy (same shape, different momentum, different fate) that a config-only chart collapses.
 
+
+### Past the unit square — each axis's extension type (R-407)
+
+The figure can show more than the chart's `[0,1]²`: with the egui layer hidden (F3) or in present mode it fills the
+window at the same scale (R-406), so where the window reaches past the depth-0 root its samples take `(s,t)` beyond
+`[0,1]` on either axis. **Inside `[0,1]²` nothing changes.** Outside it, **each chart axis declares one of four
+extension types**, and the type decides what the axis does past its edge:
+
+| Type | Past the edge | Which axes |
+|---|---|---|
+| **affine** | the formula continues | basis vectors: the latent and flat slices, every latent direction; a physical-quantity axis mapped linearly onto its range (R-408's port, B1) |
+| **periodic** | the axis wraps | azimuthal angles: the shape sphere's θ |
+| **pole-crossing** | continues over the pole and back down the other side, the partner axis shifted by half its period | polar angles: the shape sphere's φ (its partner θ shifted by π) |
+| **bounded** | hatched as forbidden | anything with a hard edge in its domain (the invariant warp's `t^γ_K` at `t < 0`); **the default for an axis that declares nothing** |
+
+A custom chart inherits its extension from its axes; nothing is written per chart. The types are a property of each
+axis beside its kind (the four kinds above), not a fifth kind. The axes' types act first: an affine axis passes its
+coordinate through, a periodic one wraps it, a pole-crossing one reflects it over the pole and shifts its partner, and a
+bounded one past its edge hatches the pixel. `Φ` and the validity check then run on what the types give.
+
+**The universal fallback** needs no declaration: outside `[0,1]²`, a pixel whose `Φ` fails to evaluate (non-finite,
+outside its domain), or whose state fails the existing validity check (R-26's `validate`;
+`principia_inverse_encode_contract.md` § "Chart-aware validation", layers 2 and 3: outside the chart's feasible region,
+a non-positive mass), is hatched as forbidden. The pixel's check is layers 2 and 3 only: layer 1 (the hypercube bounds,
+"After encoding") is the encode path's, on lookup and lock, and never applied to a pixel inside `[0,1]²` either, so an
+affine latent axis whose `z` leaves `[0,1]⁸` past the edge is not hatched for that. This covers physical-quantity axes
+automatically: energy beyond what is reachable hatches. A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload §2), it
+is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5).
+
+**No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
+needs physics review. The existing charts' types are in `principia_chart_reference.md` §5.4.
+
+**Area statistics past `[0,1]²` count each system once, through the types (R-408).** Each type has a **primary
+range**: periodic, one period of that axis (for the shape sphere's `θ = 2π·s`, the chart's `[0,1]` span); pole-crossing,
+pole to pole (for the shape sphere's φ with both hemispheres drawn, the chart's `[0,1]` span); affine, unbounded;
+bounded, its domain. A new periodic or pole-crossing declaration states its own primary range, under clause 3's physics
+review (R-407). "Forbidden in view" (render_gui_spec §G7) and the area
+statistics (W7, `system_image` below) count a visible pixel **only if every axis is inside its primary range**, so a
+periodic or pole-crossing redraw is not counted again: a pixel past a pole carries its partner shifted by half a period
+and is outside the pole-crossing axis's primary range, so it is excluded. **Pixels hatched because the domain ends
+there** (a bounded axis past its edge, or a `Φ` that fails to evaluate) are not systems: they leave both the count and
+the total. **Only states that fail the validity check count as forbidden.** A pixel is classified in this order: past
+a bounded edge, the domain's end; outside a primary range, not counted; rejected by `validate`'s feasibility (layer 2,
+on what the types give, before `Φ`), forbidden; a `Φ` that fails where layer 2 accepts, the domain's end; a decoded
+state that fails layer 3, forbidden; any other, a counted system. The statistic reads the chart (the types, the
+primary ranges, `validate`, `Φ`), not the payload's `decode_failed` detail, which does not tell the two hatches apart.
+**Inside `[0,1]²` every statistic is unchanged.** What the shape sphere's φ does with one hemisphere drawn, and its
+primary range there, is RQ-264, built by TASK-M8-44 (REQ-CHART-057) once ruled.
+
 ---
 
 ## Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)
@@ -150,6 +199,10 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 Pan and slice are the **same operation** — move `z₀` — decomposed by the plane. A free-mode slider sets one component of `z₀`, which is in general a pan+slice *mixture* (its basis vector is rarely exactly in or exactly orthogonal to the plane). Tilt and zoom are the **same kind** of operation — edit the basis. Because every tilted position is a full first-class chart, tilted charts serialise, save, and restore for free: ViewState already stores `(z₀, q₁, q₂)`.
 
 **What each gesture does to the keys (R-92).** The sim key holds the **slice plane**: `z₀`'s out-of-plane part, `span{q₁, q₂}`, and the in-plane orientation. **In-plane pan and zoom re-address** (the same plane, different quads asked for); **slicing out of the plane, tilting and rotating re-integrate** (a new plane changes every quad's ICs); **the lock changes neither**.
+
+**Filling the window is not a gesture (R-406, R-407).** With F3 or present mode hiding the chrome, the figure shows more
+of the same chart, each axis past `[0,1]²` by its extension type (Part 3): `(z₀, q₁, q₂)` is unchanged and nothing is
+edited.
 
 ### Tilt (basis edit)
 
@@ -225,6 +278,7 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 - **invariant?** — if so, which sector it solves into, its dependency set (must be downstream), **and whether it is `conserved_along_flow`**: `E` and `L_z` are constants of motion (a hover trace pins to a labelled dot); `K` is invariant-*constructed* but not conserved (a trace oscillates as KE↔PE exchanges). Consumers: the hover trace and any along-trajectory rendering.
 - **residual convention** — for derived-in-block axes, how the leftover within-block DOF is pinned
 - **curve?** — if so, tilt requires a lock; carries an `embed` map and its tangent `γ'`
+- **extension type** — affine, periodic, pole-crossing or bounded (the default when none is declared): what the axis does past `[0,1]²` (Part 3, R-407)
 
 **Per-chart descriptors:**
 
@@ -233,6 +287,10 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
   - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative. The shape sphere is n-to-1 with n = 2: 2-to-1 over the φ hemispheres, which are reflection-equivalent (the canonical decode gauges `λ̃_y → −λ̃_y`, Part 1), so both decode to the same system (R-141).
   - **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104, R-157): the full-range Burrau chart, where the leg swap relabels the bodies (`principia_chart_reference.md` §4.5). Carries the fold so downstream draws/labels one representative. *Was (R-104): the shape sphere's value too; R-141 made the shape sphere n-to-1, and R-157 keeps `DoubleCover` for the Burrau chart.*
   - **ray-degenerate** — whole lines of pixels map to the same system (the *continuous* `(m,n)` Euclid plane: rays through the origin are similarity classes, so the picture bands along rays). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
+
+  The multiplicity is `[0,1]²`'s. Past `[0,1]²` (the window's extension, Part 3) it adds none: an area statistic counts a
+  pixel only if every axis is inside its extension type's primary range, so a periodic or pole-crossing redraw is never
+  counted again, and a pixel hatched where the domain ends leaves both the count and the total (R-408).
 
   The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and the continuous plane are different instruments over the same 1D curve of shapes.
 

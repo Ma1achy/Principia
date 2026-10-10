@@ -506,7 +506,7 @@
   title: Acute-angle Burrau charts, the δm strip and the two Burrau quotients
   depends_on: [TASK-M2-10, TASK-M2-12]
   needs: []
-  requirements: [REQ-CHART-024, REQ-CHART-045, REQ-CHART-046, REQ-CHART-027, REQ-CHART-025]
+  requirements: [REQ-CHART-024, REQ-CHART-045, REQ-CHART-046, REQ-CHART-027, REQ-CHART-025, REQ-CHART-055]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M2-12
@@ -1554,7 +1554,7 @@
   title: "The GUI track (R-390), 5: the windows: Run, Chart builder, Export & share, Display, Profiler, Console, the Inspector frame"
   depends_on: [TASK-M6-27]
   needs: []
-  requirements: [REQ-GUI-174, REQ-GUI-126]
+  requirements: [REQ-GUI-174, REQ-GUI-126, REQ-GUI-178]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M6-29
@@ -1563,6 +1563,14 @@
   depends_on: [TASK-M6-28]
   needs: []
   requirements: [REQ-GUI-175, REQ-GUI-128, REQ-GUI-131]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-30
+  milestone: M6
+  title: "The GUI track (R-390), 7: F3 fills the window with the figure (R-406); #174's values marked confirmed (R-404)"
+  depends_on: [TASK-M6-27, TASK-M6-28]
+  needs: []
+  requirements: [REQ-GUI-179]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01
@@ -1872,10 +1880,10 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24]
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30]
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069]
-  requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093]
-  reviewers: [code, qa, gui]
+  requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056]
+  reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
   pitfalls: []
 - id: TASK-M8-06
   milestone: M8
@@ -1936,7 +1944,7 @@
 - id: TASK-M8-13
   milestone: M8
   title: Keyboard scopes, global and in-scope keys, focus ring and breadcrumb (07_keyboard.png)
-  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-12, TASK-M8-03, TASK-M6-25]
+  depends_on: [TASK-M8-07, TASK-M8-11, TASK-M8-12, TASK-M8-03, TASK-M6-25, TASK-M6-28]
   needs: [REQ-GUI-002, REQ-GUI-003]
   requirements: [REQ-GUI-096, REQ-GUI-097]
   reviewers: [code, qa, gui]
@@ -2091,7 +2099,7 @@
   depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28]
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146]
-  reviewers: [code, qa, gui]
+  reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)
   pitfalls: []
 - id: TASK-M8-33
   milestone: M8
@@ -2180,6 +2188,14 @@
   needs: [REQ-SCHED-097, REQ-TOOL-141]
   requirements: [REQ-GUI-163, REQ-GUI-164]
   reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-44
+  milestone: M8
+  title: "The shape sphere past [0,1]² with one hemisphere drawn: φ's extension and primary range (RQ-264)"
+  depends_on: [TASK-M8-05, TASK-M8-06]
+  needs: [REQ-CHART-002]
+  requirements: [REQ-CHART-057]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

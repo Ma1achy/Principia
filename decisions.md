@@ -7215,3 +7215,524 @@ own words ("This is from me."):
 
 Adds REQ-GEN-033; REQ-RENDER-084's statement, verify, rulings, sources, note and `rq` and REQ-PAY-035's statement,
 rulings and note change.
+
+## R-404 — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (a sentence added), REQ-GUI-146 and REQ-GUI-158 (reqio: confirmed), TASK-M6-25 and TASK-M8-13
+(notes), TASK-M6-30 (new: the code's marks), `plan/tasks.yaml` and `plan/rule_groups.yaml`; the marks built by
+TASK-M6-30*
+
+After TASK-M6-25 (PR #174, keyboard navigation on the mock engine) merged, the orchestrator asked the human about #174's
+proposals: the focus ring (its width, its 2 pt corner rounding, its colour), the `?` overlay's look with no dimming, the
+key repeat's 500 ms delay and 40 ms interval and the base steps, and whether the `?` overlay should block hover and
+scroll too or only clicks (as built: clicks only). The human tried the mock GUI and replied, in their own words:
+
+> Yeah, this is good. Just one nit, is that you can't get into the console in the keyboard nav. I would like to be a
+> thing that you can get into the console and, like the bottom bar as well as the top bar. And also when you press F3
+> to hide the rest of the GUI, the actual viewport should then fill the entire screen. I think that's, I know that's
+> like an additional feature that's, like, not really something requested, explicitly requested, but I think that
+> would be nice. Like if you hide the rest of the GUI, it then just fills the viewport available. Like the rest of the
+> viewport just becomes the entire window, if that makes sense, rather than it being limited to being square. You could
+> probably just render extra tiles around or something, rather than, like, stretching. It just renders extra tiles, so
+> you can actually see further in every direction.
+
+(Message of 10 Oct 2026. The orchestrator numbered its three parts: "Yeah, this is good" is R-404, the console and the
+bottom bar R-405, and F3 filling the window R-406.)
+
+*What it decides:* "Yeah, this is good" answers the question as asked, so #174's proposals stand as built. Each is a GUI
+design ruling (R-390's feedback rule) or, for the two calibrations, the human's confirmation that R-71 asks for.
+- **The focus ring:** 2 pt wide (`crates/gui/src/explore/breadcrumb.rs`, `RING_WIDTH`), with 2 pt corner rounding
+  (`RING_ROUNDING`). It is drawn inside the scope's rect, and outside the Figure's rect so that it covers none of the
+  figure. Its colour is egui's dark theme's `hyperlink_color`, the nearest theme colour to the artboards' blue
+  (01_main.png's breadcrumb, 07_keyboard.png's frames).
+- **The breadcrumb:** in the ring's colour, monospace, after the "⌨" glyph, just left of the status line, as 01_main.png
+  draws it.
+- **The `?` overlay:** an egui popup frame centred on the window, above every other layer (`Order::Tooltip`), titled
+  "Keys". It lists §G3's table, then F3, then the rows each screen registers, in two columns, the keys in bold
+  monospace, with "Esc, ? or a click outside closes" below. The rest of the window is not dimmed. The Ctrl+Z row is
+  shown because §G3's table has it, though the key itself is TASK-M8-13's (REQ-GUI-096).
+- **REQ-GUI-146, the repeat timing, is confirmed:** a 500 ms delay before the first repeat
+  (`crates/gui/src/keyboard/repeat.rs`, `DELAY_MS`) and a 40 ms interval between repeats, 25 a second
+  (`INTERVAL_MS`). These are the GUI's own timings: the system's key repeats are dropped, so the rate is the same on
+  every platform. The first press acts at once. Tab, Shift+Tab and the arrows repeat; Enter, Esc and `?` act once a
+  press.
+- **REQ-GUI-158, the base steps, is confirmed** (`crates/gui/src/keyboard/scopes.rs`, `StepKind::base`). Shift steps
+  ×10 and Alt ×0.1, both together ×1; ↑ and → raise a value, ↓ and ← lower it:
+
+  | kind | the fields or in-scope action | base step |
+  |---|---|---|
+  | `Bounded` | a slider: the eight `z₀` values, the slice step, the playback speed | 1/100 of the field's range |
+  | `Angle` | `τ₁`, `τ₂`, `γ` | 1° |
+  | `ZoomLog2` | Navigate's zoom (log₂) | 0.25 octave |
+  | `Pan` | Figure's arrows (in scope) | 1/20 of the view's span along the arrow's axis |
+  | `Tilt` | Compass's arrows (in scope) | 1° |
+  | `Orbit` | Compass's Shift+arrows (in scope) | 5° |
+  | `TimeStep` | Time's ← → (in scope) | 1/100 of the scrubber's range, `[0, t_max]` |
+
+  What Shift does on Compass's Shift+arrows, which already mean "orbit" (§G3), stays TASK-M8-13's, with the in-scope
+  keys (REQ-GUI-097), as #174 left it.
+
+*Applied per R-369 (mechanical consequences, and one reading):*
+- **Applied per R-369, a reading of "this is good": the overlay's pointer behaviour is confirmed as built, blocking
+  clicks, not hover or scroll.** While the overlay is open, every pointer press, and that press's release, is taken
+  before egui's pass; a press outside its frame closes it without acting on anything beneath, as egui's menus do. Hover
+  and scroll still reach what is beneath. The human did not answer this part of the question in words; it is read as
+  confirmed because "this is good" answers a question that listed it, and the build is what the question described.
+  The human may veto it; a veto would be a GUI design ruling, applied by a follow-up task.
+- **Confirmed ahead of the M8 gate.** R-71 asks that the human confirm each calibration and that it be recorded in
+  `decisions.md`; this is that confirmation, given before the gate it was due at. The M8 gate lists REQ-GUI-146 and
+  REQ-GUI-158 as confirmed by R-404 and does not ask again, and the values are no longer provisional (R-182). Each
+  requirement gains R-404 among its rulings and sources and a note giving the confirmed values (reqio), as R-376 did for
+  M0's calibrations. Their statements, which say how a calibration is confirmed, are unchanged.
+- **The code's marks.** `crates/gui/src/keyboard/repeat.rs` and `crates/gui/src/keyboard/scopes.rs` call the values
+  "proposed … used provisionally until the human confirms them at the M8 gate", and
+  `crates/gui/src/explore/breadcrumb.rs` calls the colour and the rounding "a look choice, flagged for the human". The
+  porting rule puts the code last, so this ruling's PR changes no code: TASK-M6-30 (new, below R-406) rewords those
+  comments to "confirmed by R-404". No value changes.
+- **render_gui_spec §G3** gains a sentence: the ring's, breadcrumb's and overlay's look, the repeat timing and the base
+  steps are recorded in R-404.
+- **TASK-M6-25** (merged) and **TASK-M8-13** each gain a Notes line: the values are confirmed by R-404, and TASK-M8-13,
+  which uses them on the real engine, has no proposal of them left to put to the gate.
+- R-404 is in the "design" group of `plan/rule_groups.yaml`, with R-390 and R-399.
+
+Changes REQ-GUI-146's and REQ-GUI-158's rulings, sources and note: each is confirmed. Adds no requirement.
+
+## R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" and § "G12. Console (`12_console.png`)" (paragraphs added), REQ-GUI-095 (reqio), REQ-GUI-178
+(reqio, new), TASK-M6-28, TASK-M6-25 and TASK-M8-13, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
+TASK-M6-28*
+
+The human's words (R-404's message of 10 Oct 2026):
+
+> Just one nit, is that you can't get into the console in the keyboard nav. I would like to be a thing that you can
+> get into the console and, like the bottom bar as well as the top bar.
+
+*What it decides:*
+- **The console is reached with the keyboard**, and so is the bar at the bottom of the window, as the top bar is: both
+  are scopes in §G3's tree.
+
+*Applied per R-369 (routine design choices, and one reading):*
+- **Applied per R-369, a reading of the human's words: "the bottom bar" is the footer** (§G2's **Footer**: the warning
+  and error counts, the latest message, memory, "? keys"; 01_main.png's bottom strip), the bar that opens the console.
+  The bottom row's Compass, Time and Legend are big scopes 5 to 7 already, so the footer is the one bar at the bottom
+  that the keyboard cannot reach. The human may correct it.
+- **The footer is big scope 8,** after Legend, so the Tab order reads top to bottom: 1 top bar · 2 Manifold view ·
+  3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer. Tab wraps from the footer to the top bar, and
+  the first Shift+Tab from no focus goes to the footer. Its ring is drawn inside its rect, as every scope's is.
+- **Enter on the footer opens the console,** as a click on the footer does (§G2), and moves the focus into it. If the
+  console is already open, Enter moves the focus into it.
+- **The console is a window**, under TASK-M6-28's window rule (an open window is a scope that takes the focus when it
+  opens; Tab and Shift+Tab move between its sections; Esc returns the focus to the scope that opened it). Opened by
+  Enter or a click on the footer, or from Windows › Console, it takes the focus, on its first filter. Its sections, in
+  Tab order, are the filters (all, warnings, errors, info), the text filter, copy and clear, and the entry list; Tab
+  and Shift+Tab move between them, inside the console, and the arrow keys move within a section (between the filters,
+  between copy and clear; ↑ and ↓ scroll the entry list). Enter on a filter, copy or clear acts as its click; the text
+  filter is a text field, so the keyboard layer stands aside while it holds the keyboard, as #174 built for every text
+  field. The breadcrumb names the path, e.g. "console › errors". **Esc closes the console and returns the focus to
+  whatever opened it:** the footer, or Windows › Console. (Applied per R-369, gui review 5478696211, G2; it replaces
+  the first port's sub-scope reading, in which the arrows moved between all the console's controls and Esc always
+  returned to the footer.)
+- **The console opening by itself on an error does not take the focus**, so a key pressed mid-navigation never lands
+  in it unasked; Tab to the footer and Enter reach it.
+- **REQ-GUI-095** (its id permanent) reads eight big scopes, the footer last, in its statement and verify; R-405 joins
+  its rulings and sources (reqio). TASK-M8-13's acceptance line for it, re-run on the real engine, reads eight, and
+  TASK-M8-13 depends on TASK-M6-28.
+  TASK-M6-25's line (merged, seven) stays as its record, with a Notes line pointing here.
+- **REQ-GUI-178 (new, M6)** is the footer and console scopes on the mock, closed by **TASK-M6-28**, which builds the
+  console's layout, filters, copy and clear (REQ-GUI-126) and puts each window into the scope tree. It is the natural
+  home: the console's sections are the controls it builds. It gains a deliverable, an acceptance line with negative
+  controls and a `07_keyboard/mock_focus_console` screenshot case.
+- **qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-25.rs`'s
+  `qa_scope_tab_order_mock_seven_big_scopes_cycle` (its `BIG` list, and the module doc quoting REQ-GUI-095's verify)
+  asserts seven big scopes with Legend last. Every earlier commit of the file is qa's, so TASK-M6-28's qa reviewer
+  changes it to eight in the task's qa commit; the implementer never edits it. The PR lists each change with its
+  reason, and the code reviewer confirms that no assertion was weakened but the count R-405 changes.
+  `crates/gui/tests/qa_TASK-M6-25_recheck.rs` needs no change: it asserts no scope count and does not take Legend as
+  the last big scope (gui review 5478696211).
+- R-405 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
+
+Adds REQ-GUI-178; REQ-GUI-095's statement, verify, rulings, sources and note change.
+
+## R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "Export &
+share" (sentences added), REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100 (reqio: notes), REQ-GUI-179 and REQ-GUI-180
+(reqio, new), TASK-M6-30 (new), TASK-M6-24 and TASK-M8-32 (notes), TASK-M8-05, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-248's revision line) and `REVIEW_QUEUE.md` (RQ-262,
+open); built by TASK-M6-30 on the mock and TASK-M8-05 on the real engine*
+
+The human's words (R-404's message of 10 Oct 2026):
+
+> And also when you press F3 to hide the rest of the GUI, the actual viewport should then fill the entire screen. I
+> think that's, I know that's like an additional feature that's, like, not really something requested, explicitly
+> requested, but I think that would be nice. Like if you hide the rest of the GUI, it then just fills the viewport
+> available. Like the rest of the viewport just becomes the entire window, if that makes sense, rather than it being
+> limited to being square. You could probably just render extra tiles around or something, rather than, like,
+> stretching. It just renders extra tiles, so you can actually see further in every direction.
+
+*What it decides:*
+- **With the egui layer hidden (F3), the figure fills the whole window.** It is no longer held to its rect in the shown
+  layout.
+- **It shows more of the field, not a stretched copy.** The extra area is more of the field at the same scale, more
+  tiles (quads) in every direction, so you see further; the view in the shown rect is never stretched or scaled to fill
+  the window.
+- **Showing the layer again returns the normal layout,** the figure back in its rect.
+- This revises RQ-248's decision of 7 Oct 2026 (per R-369, TASK-M6-24), which kept the figure in its shown rect with
+  F3 off and the rest of the window the clear colour; that decision said the human could change it by a GUI design
+  ruling, and this is that ruling. RQ-248's other decision, "mock engine" in the window title, stands.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **Nothing moves when F3 toggles.** Each point of the field keeps the screen position and the scale it has in the
+  shown layout; the hidden window adds the field around the shown figure's rect, in every direction. So the two states
+  are pixel-identical over the shown rect, which keeps REQ-GUI-168's and REQ-GUI-070's "the figure identical
+  underneath", read over that rect. The view is not re-centred on the window. *Flagged:* re-centring would be the other
+  reading; the human may choose it.
+- **It is a view, not an edit.** Hiding and showing the layer sends no `SetField` and adds no undo entry: `z₀`, the
+  basis and the zoom are unchanged, and only more of the same chart is drawn (gui_state_contract §2: the hidden state is
+  `ViewUI`'s, the engine never reads it).
+- **What the marks do.** The hover label, the lock reticle and the breadcrumb are the egui layer's and hide with it,
+  as before. The tile-bounds overlay (TASK-M6-27, on the mock's fake quads) is drawn by the mock into the figure, so it
+  covers the extra quads too.
+- **Present mode** (§G5, Export & share: "hide all chrome; Esc returns") hides the chrome as F3 does, so its figure
+  fills the window the same way: the human's rule is "if you hide the rest of the GUI, it then just fills the viewport
+  available". §G5's Present line gains a sentence; REQ-GUI-100 and TASK-M8-32 gain notes. *Flagged:* the human spoke of
+  F3, so this extension may be vetoed.
+- **Memory needs no new value.** The memory model already counts every display pixel of the window (memory_tiers §3:
+  `render_px = display_px × render_scale²`, and §4's table by 1080p, 1440p and 4K display), so a figure that fills the
+  window stays inside it; the screen floor (REQ-REF-011) and the frame budget govern the extra quads as they govern any
+  in-view quad, and the baseline cover (caching contract Part 4) spans the viewport, whatever its size.
+- **On the mock, nothing waits.** The stand-in is smooth noise defined everywhere, so **TASK-M6-30 (new, M6)**, "F3
+  fills the window with the figure", depending on TASK-M6-27 (the stand-in pans and zooms from TASK-M6-26, and the fake
+  quads and the tile-bounds overlay from TASK-M6-27), closes **REQ-GUI-179 (new, M6)**. Reviewers code, qa and gui: the
+  mock has no chart mapping, so no physics. TASK-M6-30 also carries R-404's comment marks. TASK-M6-26, being built now,
+  is not changed.
+- **On the real engine it waits for RQ-262 (filed, open).** The corpus defines the view only as `(s,t) ∈ [0,1]²`
+  (chart_decoder_contract Part 3; deep_zoom § "The precision split"; the coordinate note), and a nonlinear chart's
+  `Φ` only on `[0,1]²` (chart_reference §5.1). A window wider and taller than the shown rect, at the same scale, puts
+  samples at `(s,t)` outside `[0,1]²`: how the view extends there, and what a chart draws outside its domain, are not
+  given. The orchestrator does not decide them. **REQ-GUI-180 (new, M8)** is the real engine's fill, closed by
+  **TASK-M8-05** (the shell on the real engine, F3 there, REQ-GUI-070), and carries `rq: RQ-262`; TASK-M8-05 gains its
+  acceptance line, depends on TASK-M6-30, takes the physics reviewer for REQ-GUI-180 only (it extends the chart's view),
+  and its REQ-GUI-180 line waits for the ruling.
+- **qa's file (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-24.rs`'s
+  `qa_capture_figure_identical_under_f3_warning_and_console` asserts that with F3 off everything outside the figure's
+  rect is the clear colour, which this ruling reverses. Its every earlier commit is qa's, so TASK-M6-30's qa reviewer
+  changes that assertion in the task's qa commit; its check that the figure is identical over the shown rect stays.
+  The PR lists the change and its reason, and the code reviewer confirms that nothing else was weakened.
+- **REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100** gain R-406 and a note (reqio); their statements and verify stand, read as
+  above. TASK-M6-24 (merged) gains a Notes line on RQ-248's revision. RQ-248, archived in
+  `docs/archive/review_queue/M0.md`, gains a line naming R-406.
+- R-406 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
+
+Adds REQ-GUI-179 and REQ-GUI-180; REQ-GUI-168's, REQ-GUI-070's and REQ-GUI-100's rulings, sources and notes change.
+
+## R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*
+*10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 3 — Charts" (a subsection added,
+"Past the unit square — each axis's extension type (R-407)"), § "Part 4 — Navigation is chart construction (pan,
+slice, zoom, tilt, lock)" and § "Part 5 — Well-posedness and the validation contract" (sentences added),
+`docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", § "3.3 The
+chart map" and § "4.5 The Burrau-family chart maps" (paragraphs added) and § "5.4 Past the unit square — each axis's
+extension type (R-407)" (new), `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces
+(they nest; each is right for its job)", `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam,
+decode side)" and `docs/design/principia_colour_composition.md` § "3. The `ctx` contract" (A4's sentences),
+`docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "G7. Chart builder
+(`03_chartbuilder.png`)", REQ-GUI-180, REQ-GUI-179, REQ-GUI-100 and REQ-GUI-070 (reqio), REQ-CHART-054 and
+REQ-CHART-055 (reqio, new), TASK-M8-05, TASK-M8-32, TASK-M6-30, TASK-M6-28 and TASK-M2-11, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-262 archived) and `REVIEW_QUEUE.md` (RQ-263, open);
+built by TASK-M8-05 on the real engine (TASK-M6-30 on the mock)*
+
+The orchestrator put RQ-262 to the human: with F3 hiding the GUI the figure fills the window at the same scale (R-406),
+but the corpus defines the view only on `(s,t) ∈ [0,1]²` and a nonlinear chart's `Φ` only there. The human explained,
+in their own words:
+
+> Yes, and it can be made general by attaching the extension rule to each axis type, rather than writing one for each
+> chart. A custom chart built from typed axes then gets its extension automatically. A universal fallback catches
+> anything an axis can't extend.
+>
+> How it works. Every chart axis declares one of these four types, and the type decides what happens past the edge of
+> the unit square:
+>
+> Affine (basis vectors, latent dimensions, flat slices): the formula simply continues. This covers every chart built
+> from basis vectors, so those need nothing extra.
+> Periodic (azimuthal angles, such as the sphere's longitude θ): the axis wraps around.
+> Pole-crossing (polar angles, such as the sphere's φ): carrying on past a pole comes back down the other side, with
+> the partner axis shifted by half its period. That's how a sphere naturally continues, and it shows real neighbouring
+> states instead of hatching.
+> Bounded (anything with a hard edge in its domain, such as the warp's t^γ for t < 0): past the edge is hatched.
+>
+> The fallback needs no declaration. Every pixel is evaluated through the chart's map. If the map fails (NaN, outside
+> its domain), or produces an invalid state (non-positive masses, outside the allowed region, anything the existing
+> validity check rejects), the pixel is hatched. That makes physical-quantity axes safe automatically: energy beyond
+> what's reachable simply hatches.
+>
+> The rule for unknown axes is bounded. An axis gets a fancier extension only by declaring it. Nothing ever invents a
+> continuation. For example, extending the warp oddly as sign(t)·|t|^γ would give pixels a meaning nobody defined, so
+> it would need its own physics ruling first.
+
+and gave the ruling, in their own words ("This is from me."):
+
+> This is from me.
+> RQ-262: per-chart extension, made general and automatic:
+> 1. Each chart axis declares an extension type: affine (continues;
+>    covers all basis-vector and flat charts), periodic (wraps),
+>    pole-crossing (continues over the pole, partner axis shifted by
+>    half its period), or bounded (hatched past its edge). The default
+>    for an axis that declares nothing is bounded. A custom chart
+>    inherits its extension from its axes, so nothing is written per
+>    chart.
+> 2. The universal fallback: outside [0,1]², a pixel whose Φ fails to
+>    evaluate, or whose state fails the existing validity check, is
+>    hatched as forbidden. This covers physical-quantity axes (such as
+>    energy beyond what's reachable) automatically.
+> 3. No invented continuations: an axis gets anything beyond "bounded"
+>    only by declaring it, and any new extension type needs physics
+>    review. Assign types to the existing charts (flat: affine; sphere:
+>    θ periodic, φ pole-crossing; warp: bounded; Burrau: per axis, with
+>    physics review).
+> Lands in TASK-M8-05; the mock GUI (TASK-M6-30) only needs affine plus
+> the hatch fallback.
+
+(Message of 10 Oct 2026; numbered by the orchestrator, the next free number. The second block is the ruling; the
+first is the human's explanation of it.)
+
+*What it decides:*
+- **Each chart axis declares an extension type**, which decides what the axis does past the edge of the unit square:
+  **affine** (the formula continues; every basis-vector and flat chart), **periodic** (wraps), **pole-crossing**
+  (continues over the pole, the partner axis shifted by half its period), or **bounded** (hatched past its edge).
+  **An axis that declares nothing is bounded.** A custom chart inherits its extension from its axes; nothing is
+  written per chart.
+- **The universal fallback.** Outside `[0,1]²`, a pixel whose `Φ` fails to evaluate (NaN, outside its domain), or whose
+  state fails the existing validity check (non-positive masses, outside the allowed region), is hatched as forbidden.
+  It needs no declaration, and it covers physical-quantity axes (energy beyond what is reachable) automatically.
+- **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
+  needs physics review. Extending the warp as `sign(t)·|t|^γ`, for example, would give pixels a meaning nobody defined.
+- **The existing charts:** flat, affine; the shape sphere, θ periodic and φ pole-crossing; the warp, bounded; the Burrau
+  family, per axis, with physics review.
+- **Where it lands:** TASK-M8-05 on the real engine; the mock (TASK-M6-30) needs only affine plus the hatch fallback.
+- RQ-262's silences are settled: the view extends past `[0,1]²` by its axes' types, and a chart shows its extension,
+  or the hatch, outside its domain.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **A1. TASK-M8-05 closes it on the real engine.** REQ-GUI-180 (the fill with F3 off) and the axis extension types land
+  in TASK-M8-05, as the ruling says. RQ-262 is ruled, so nothing waits: TASK-M8-05's note that REQ-GUI-180 "holds this
+  task's merge until RQ-262" goes, and REQ-GUI-180 loses `rq: RQ-262`. TASK-M8-05 keeps the physics reviewer, now for
+  the extension types and the fallback (a reviewer is per task, not per line, so physics reviews the task). REQ-GUI-180's
+  statement and verify follow R-407: the window shows the extension per axis type, with the hatch fallback; every window
+  pixel carries a labelled output (canonical_spec §9 W9); "tagged, never dropped" (chart_decoder_contract Part 5) holds.
+  No quad request set is fixed beyond what R-407 implies: a hatched pixel needs no integration, so its quads need not be
+  asked for (inverse_encode_contract's quad-skip rule applies as it stands). This settles physics review 5478700157's P7
+  and code review 5478698018's F1 (the shell no longer waits on a ruling).
+- **The extension types are a chart requirement.** **REQ-CHART-054 (new, M8)**, closed by TASK-M8-05: each axis
+  declares its type (default bounded); a chart takes its extension from its axes; the fallback; the existing charts'
+  types (chart_reference §5.4); inside `[0,1]²` nothing changes. REQ-GUI-180 is the GUI's side of it.
+- **The order on an extended pixel.** The axes' types act first: an affine axis passes its coordinate through, a
+  periodic one wraps it, a pole-crossing one reflects it over the pole and shifts its partner, and a bounded one past its
+  edge hatches the pixel. `Φ` and the validity check then run on what the types give, and the fallback hatches a pixel
+  that fails either. chart_decoder_contract Part 3 states it.
+- **The hatched pixel's label.** A hatched pixel is a labelled output, never dropped and never integrated: it is
+  `decode_failed` (payload §2, "the chart/decoder could not produce a valid physical IC"), its detail the category that
+  applies (`0` non-finite, `2` invalid mass construction, `3` other, which covers a bounded axis's edge and a
+  feasibility failure; REQ-DEC-038's map). It is drawn with the render contract's hatch (`debug_invalid`, Part 5; its
+  exact pattern REQ-COL-055's calibration), the one hatch the corpus defines; §G7's Domain preview hatches the forbidden
+  region the same way. This answers physics review 5478700157's P2 (which label).
+- **The validity check is R-26's** `validate(u, v)` on the `Chart` trait, inverse_encode_contract § "Chart-aware
+  validation" layers 2 and 3 (the chart's feasibility; all masses positive), run on the extended pixel.
+- **A2. Present mode on the real engine.** Present mode hides the chrome as F3 does (R-406, applied per R-369 there), so
+  its fill on the real engine uses TASK-M8-05's extension and is built by TASK-M8-32 (REQ-GUI-100). REQ-GUI-100's
+  statement and verify gain the fill; TASK-M8-32's acceptance gains a check that Present fills the window, and its
+  reviewers gain physics for that line. TASK-M8-32 already depends on TASK-M8-05, which depends on TASK-M6-30, and
+  nothing on that chain depends on TASK-M8-32, so the chain stays acyclic. This settles physics review 5478700157's P8
+  and gui review 5478696211's G3 on the real engine.
+- **A3. The mock (TASK-M6-30, REQ-GUI-179):** affine plus the hatch fallback, as the ruling says. The stand-in continues
+  past the shown rect as an affine chart; a pixel the mock flags invalid (a test hook) is hatched as forbidden, so the
+  fallback's path is built and checked on the mock. TASK-M6-30 also builds the mock's Present fill: TASK-M6-28 builds
+  Export & share's present mode (hiding the chrome), and TASK-M6-30, now depending on TASK-M6-28, makes it fill the
+  window as F3 off does, with an acceptance check for Present. This settles gui review 5478696211's G3 on the mock.
+- **A4. The coordinate texts, as mechanical consequences** (each line that changes is recorded as "stale value,
+  replaced by R-407"). Inside the chart's `[0,1]²`, the depth-0 root, nothing changes. With the window extended:
+  - UV is taken over the shown figure's rect, which is the view's `[0,1]²`, and continues at the same scale beyond it,
+    the one flip unchanged, so the window's samples have UV outside `[0,1]` (coordinate note; deep_zoom § "The
+    precision split").
+  - Quad indices may be negative outside the depth-0 root when the window extends past `[0,1]²`; the address is still
+    taken in the slice plane's frame (R-97). The coordinate note's "You never want negative quad indices" holds within
+    the root.
+  - R-394's `ctx.chart.slice_uv` may lie outside `[0,1]²` in the extension (colour_composition §3); its formula is
+    unchanged.
+  - `ctx.screen.uv` and `ctx.screen.pixel` are taken over the window's figure area as shown: the shown figure's rect
+    with the layer shown, the full window with F3 off. A stain that reads the screen lane therefore draws differently
+    over the shown rect in the two states, so REQ-GUI-180's and REQ-GUI-179's pixel-identity checks use a stain that
+    reads no screen-lane field.
+  This settles physics review 5478700157's P5.
+- **A5. The warp is bounded on both sides, as ruled.** The physics review found its other sides infeasible or
+  undefined (`s ∉ [0,1]` gives `|L_z| > L_max(t)`, infeasible for every `γ_K`; `t < 0` has no real value for a
+  non-integer `γ_K`, while an odd integer gives `K < 0` and an even one a fold), but noted that its `t > 1` side
+  (`K > K_max`) stays feasible. Declaring the `t > 1` side would be a later declaration, needing physics review under
+  clause 3; it is not built. chart_reference §2.1 records it.
+- **A6. The Burrau family's axis types are a definition requirement (R-72).** **REQ-CHART-055 (new, M2,
+  definition)**, closed by **TASK-M2-11**, the task that completes the Burrau charts (it depends on TASK-M2-10, which
+  builds the Euclid plane and the `(ν, K)` chart, and builds the acute-angle charts and the strips itself), physics
+  reviewed: chart_reference §5.4 gives each Burrau-family axis's type. No types are given now; until they are written,
+  each Burrau axis is bounded, the default. The physics review's note that `ν` past `(0,1)` gives a zero or negative
+  mass, and `θ` past `(0, π/4]` the same, is for that task.
+- **A7. The mass simplex (the ternary plot, chart_reference §4.5) is affine**, its map continued; the fallback hatches
+  its negative-mass area (inverse_encode_contract layer 3, "all masses positive"). chart_reference §5.4 states it.
+  *Note, 10 Oct 2026, applied per R-369:* the hatch boundary is layer 2's narrowed simplex (buffered `mᵢ ≥ ε_m` ⇔ raw
+  `mᵢ ≥ 0`), so the hatch starts at the edge of `[0,1]²` with no band, as R-408's round-3 bullet and chart_reference
+  §5.4 state (physics review 5478835029, G1, on #181).
+- **The other existing charts.** The latent chart and every flat or axis-aligned slice (`Latent`, `BodyPlane`) are
+  affine; the decoder `D` takes any `z ∈ ℝ⁸`, and the fallback catches what fails. The shape sphere's spherical map is
+  θ periodic and φ pole-crossing (θ shifted by π); its exponential map (chart_reference §3.3) has no θ or φ axis, so
+  its axes declare nothing and are bounded. A mixed-axis chart's latent-coordinate axis is affine, and so is a
+  physical-quantity axis mapped linearly onto its range (the correction below); any other axis (a shape angle, or a
+  quantity behind a nonlinear warp, chart_reference §1.3's "the warp from [0,1] to its physical range") declares
+  nothing, so bounded, until a declaration is made under physics review. The Chart builder's axis kinds follow: a
+  latent direction is affine, a physical-quantity axis is affine (the correction below), and a Burrau dimension takes
+  REQ-CHART-055's types (render_gui_spec §G7).
+  *Correction, made in R-408's port (B1), applied per R-369 and flagged to the human:* this port first made a
+  physical-quantity axis bounded, by clause 1's default ("a physical-quantity axis declares nothing and is bounded (the
+  fallback guards any later declaration)"). The human's explanation expects such an axis to continue: "That makes
+  physical-quantity axes safe automatically: energy beyond what's reachable simply hatches." A physical-quantity axis
+  is linear in its quantity over its range (§G7 gives it a range and no warp), so continuing it is its formula
+  continuing, not an invented continuation: it is affine, and the fallback hatches what cannot be reached. Under R-408
+  its primary range is unbounded, so its unreachable pixels fail validity and count as forbidden. The human may veto
+  it.
+- **A8. R-406's "a view, not an edit" now holds for the real engine too.** The fill edits nothing: `(z₀, q₁, q₂)` is
+  unchanged and more of the same chart is drawn, with no `SetField`. The chart-construction reading the physics review
+  raised (P6: rescaling `q₁, q₂` so the window is `[0,1]²`) is moot under R-407, which extends each axis past
+  `[0,1]²`, so it is not added. chart_decoder_contract Part 4 gains a sentence.
+- **Physics review 5478700157's other points on RQ-262's text** are settled by this ruling: P1 (the corpus's "tagged,
+  not dropped" rule) is the fallback's label above; P3 (the criterion is feasibility, not affine against nonlinear) is
+  the fallback, with the per-chart findings recorded in chart_reference §2.1 and §5.4 and passed to TASK-M2-11 (A6);
+  P4 (a clamped extension) does not arise, since no axis is clamped; P9 (a truncated quote) stays in RQ-262 as
+  archived, the record unchanged (R-292).
+- **Still open, filed as RQ-263:** the shape sphere's periodic and pole-crossing extension redraws systems already in
+  `[0,1]²`, so whether area statistics (W7's `system_image` multiplicity, §G7's "forbidden in view: N%") count the
+  window or only `[0,1]²` is not given. It blocks only a line that computes such a statistic on the extended window;
+  TASK-M8-05 has none, so nothing waits today. Ruled by R-408 (10 Oct 2026): option (c), through the axis types.
+- RQ-262 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-407 is in the "physics" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-054 and REQ-CHART-055; REQ-GUI-180's statement, verify, rulings, sources, note and `rq`, REQ-GUI-179's
+and REQ-GUI-100's statements, verify, rulings, sources and notes, and REQ-GUI-070's note change.
+
+## R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
+*10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 2 — The decoder" (a sentence
+added, round 2), § "Part 3 — Charts" (§ "Past the unit square — each axis's extension type (R-407)": a paragraph
+added, the affine row's axes, the fallback's layers) and § "Part 5 — Well-posedness and the validation contract"
+(`system_image`, a sentence added), `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the
+walls — the primary comparison checklist)" (W7, a sentence added), `docs/design/principia_chart_reference.md` § "3.3
+The chart map", § "4.5 The Burrau-family chart maps" and § "5.4 Past the unit square — each axis's extension type
+(R-407)" (the table's primary-range column, paragraphs added), `docs/gui/principia_render_gui_spec.md` § "G1. Rules
+that hold everywhere" (round 2) and § "G7. Chart builder (`03_chartbuilder.png`)", REQ-CHART-056 and REQ-CHART-057
+(reqio, new), REQ-CHART-054, REQ-GUI-109, REQ-GUI-180, REQ-GUI-070 and REQ-GUI-100 (reqio), TASK-M8-05, TASK-M8-44
+(new), TASK-M8-18, TASK-M8-32 and TASK-M6-30, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-263 archived) and `REVIEW_QUEUE.md` (RQ-264, open); built by TASK-M8-05, the
+one-hemisphere case by TASK-M8-44 once RQ-264 is ruled*
+
+The orchestrator put RQ-263 to the human: past `[0,1]²` the shape sphere's periodic θ and pole-crossing φ (R-407)
+redraw systems `[0,1]²` already holds, so whether an area statistic taken over the extended window counts the window or
+only `[0,1]²`, and how it counts the redrawn systems, was not given. The human ruled, in their own words:
+
+> This is from me.
+> RQ-263: (c), counting each system once, done through the axis types.
+> Each type has a primary range: periodic = one period; pole-crossing =
+> pole to pole; affine = unbounded (bounded axes are only defined inside
+> their domain anyway). "Forbidden in view" and the area statistics
+> count a visible pixel only if every axis is inside its primary range.
+> Pixels hatched because the domain ends there (a bounded axis past its
+> edge, or a failed Φ) are not systems: they're excluded from both the
+> count and the total. Only states that fail the validity check count as
+> forbidden. Inside the original square, results are unchanged.
+
+(Message of 10 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **RQ-263's option (c):** a statistic taken over the window counts each system once, however many window pixels show
+  it, and it does so through the axis types, not per chart.
+- **Each extension type has a primary range:** periodic, one period; pole-crossing, pole to pole; affine, unbounded; a
+  bounded axis is defined only inside its domain.
+- **"Forbidden in view" (render_gui_spec §G7) and the area statistics (canonical_spec §9, W7) count a visible pixel only
+  if every axis is inside its primary range.**
+- **Pixels hatched because the domain ends there are not systems:** a bounded axis past its edge, or a `Φ` that fails
+  to evaluate. They leave both the count and the total.
+- **Only states that fail the validity check count as forbidden.**
+- **Inside the original square, results are unchanged.**
+
+*Applied per R-369 (mechanical consequences, readings and routine design choices; the human may veto any):*
+- **B1. A Chart-builder physical-quantity axis is affine, a correction to R-407's applied text.** R-407's port made it
+  bounded by clause 1's default; the human's explanation of R-407 ("That makes physical-quantity axes safe
+  automatically: energy beyond what's reachable simply hatches") expects it to continue linearly, with the fallback
+  hatching what cannot be reached. A physical-quantity axis is linear in its quantity over its range (render_gui_spec
+  §G7 gives it a range and no warp), so this is its formula continuing, not an invented continuation. A mixed-axis
+  chart's physical-quantity axis mapped linearly onto its range is affine likewise; one behind a nonlinear warp
+  (chart_reference §1.3) declares nothing and stays bounded. Under this ruling its primary range is unbounded, so its
+  unreachable pixels fail validity and count as forbidden. R-407's applied text carries the correction, flagged to the
+  human; chart_decoder_contract Part 3, chart_reference §5.4 and render_gui_spec §G7 follow. TASK-M8-05 tests it.
+  B1 covers §G7's non-periodic quantities (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared
+  affine would redraw systems and count them again, so it is typed only by a declaration under physics review
+  (physics review 5478805963, F3).
+- **B2. The mass simplex's "forbidden in view" rises with F3 off.** Its axes are affine (R-407, A7), so their primary
+  ranges are unbounded: past the edge every visible pixel counts, and its negative-mass states fail validity
+  (inverse_encode_contract § "Chart-aware validation", layer 2: every `m_i > 0`) and count as forbidden. So the share
+  forbidden in view is larger over the filled window than over `[0,1]²` alone. The orchestrator has told the human.
+  chart_reference §5.4 states it.
+- **B3. The primary ranges, by type.** Periodic: one period of that axis (for the shape sphere's `θ = 2π·s`, the
+  chart's own `[0,1]` span). Pole-crossing: pole to pole (for the shape sphere's φ with both hemispheres drawn, the
+  chart's `[0,1]` span). Affine: unbounded. Bounded: its domain, the chart's `[0,1]` span on that axis. A new periodic
+  or pole-crossing declaration states its own primary range under clause 3's physics review; RQ-264 is that case for
+  φ with one hemisphere drawn. (Worded per physics review 5478805963, F4: the first port took "one period" as the
+  `[0,1]` span for every periodic axis, which agrees for every shipped chart.) **A pixel past a pole carries a partner axis shifted by half a period, and it is
+  outside the pole-crossing axis's primary range, so it is excluded from the count** (and from the total). So the
+  shape sphere's extension, past `[0,1]²` on either axis, adds nothing to any statistic, and its statistics over the
+  window are those of the part of `[0,1]²` that is visible.
+- **B4. The sphere's one-hemisphere toggle is filed as RQ-264.** With the toggle drawing one hemisphere (render_gui_spec
+  §G2, chart_reference §3.3, R-113), the corpus does not say whether the chart's `[0,1]` span on φ is remapped to end at
+  the equator or the full pole-to-pole span is kept and half of it set aside; and if the span ends at the equator, what
+  the pole-crossing φ does past that edge, which is not a pole, and what its primary range is. The orchestrator does
+  not decide them. It blocks only **TASK-M8-44 (new, M8)**, a leaf task that builds and checks the sphere's extension
+  and counting with one hemisphere drawn (**REQ-CHART-057**, new, carrying `rq: RQ-264`), depending on TASK-M8-05 and
+  on TASK-M8-06, which builds the hemisphere toggle (REQ-GUI-161); reviewers code, qa and physics; nothing depends on
+  it. TASK-M8-05 runs every line with both hemispheres, R-14's full `φ = π·(1 − t)` span, where the poles are `[0,1]`'s
+  ends, and has no open RQ. (Applied per R-369, code review 5478800754, F4: the first port put the waiting line in
+  TASK-M8-05, which would have held it and its dependents.)
+- **B5. The order a pixel is classified in.** Past `[0,1]²`: (1) an axis past a bounded edge makes it the domain's end
+  (out of the count and the total); (2) an axis outside its primary range, the periodic or pole-crossing redraw, takes
+  it out of the count and the total; (3) a pixel the chart's feasibility check rejects (R-26's `validate`, the chart's
+  domain function, inverse_encode_contract layer 2, run on what the types give, before `Φ`) counts as forbidden,
+  whether or not `Φ` could evaluate there; (4) a `Φ` that fails to evaluate where layer 2 accepts makes it the domain's
+  end; (5) a decoded state that fails layer 3 (all masses positive) counts as forbidden; (6) every other visible pixel
+  counts, as a system. This is how B1's unreachable energy counts as forbidden: layer 2 rejects it first. Inside
+  `[0,1]²` only (3), (5) and (6) arise, as before: REQ-GUI-109's "the fraction of a uniform grid over the view that
+  validate rejects".
+- **B6. The statistic reads the chart, not the payload label.** Both kinds of hatched pixel are `decode_failed`, and
+  R-407 gave a bounded edge and a feasibility failure the same detail category (`3`, other), so the label cannot tell
+  them apart. The statistic classifies each pixel from the chart (its axes' types and primary ranges, `validate`, `Φ`),
+  as the Domain preview already does from `validate`. No label changes.
+- **B7. `system_image`'s multiplicity is `[0,1]²`'s.** Inside `[0,1]²` it is unchanged (the shape sphere's 2-to-1 fold
+  over its φ hemispheres, R-141); past `[0,1]²` the extension adds none, because a periodic or pole-crossing redraw is
+  outside a primary range and never counted. chart_decoder_contract Part 5 and canonical_spec W7 say so.
+- **Where it lands.** **REQ-CHART-056 (new, M8)**, closed by **TASK-M8-05** (physics-reviewed, as it already is for
+  R-407): the primary ranges, the classification and the counting, in the kernel beside the extension types, with an
+  acceptance line that a periodic duplicate is counted once and that domain-hatched pixels leave the total.
+  REQ-CHART-054's statement and verify gain B1's affine physical-quantity axis. TASK-M8-18's `forbidden_fraction`
+  (REQ-GUI-109, the Domain preview's "forbidden in view: N%") uses it; with the egui layer shown its view is `[0,1]²`,
+  so its result is unchanged, and REQ-GUI-109 and TASK-M8-18 gain notes. REQ-GUI-180's and TASK-M8-32's notes that
+  RQ-263 is open now name R-408.
+- **Round-2 review fixes, applied per R-369** (mechanical consequences of R-407 and R-408):
+  - the pixel's validity check is inverse_encode layers 2 and 3 only; layer 1 (the hypercube bounds) is the encode
+    path's, so chart_decoder_contract Part 2's "the validated region is the unit hypercube `[0,1]⁸`" is qualified for
+    the extension (physics F2);
+  - the ternary plot's axes are affine in R-407's sense, its map bilinear (physics F5); its hatch is layer 2's narrowed
+    simplex, buffered `mᵢ ≥ ε_m`, which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no
+    band, tested at a sample within `ε_m` of the edge against a "buffered `mᵢ > 0`" control (physics review 5478835029,
+    G1, round 3; it replaces round 2's "reads the buffered masses, sampled past the `ε_m` buffer's reach");
+  - `area_stats_primary_range` checks B5's order: a pixel failing both layer 2 and `Φ` counts as forbidden, one where
+    only `Φ` fails is the domain's end, and a classifier running `Φ` before `validate` fails (physics F1);
+  - A4's screen-lane consequence is stated in render_gui_spec §G1, and the "identical underneath" checks of REQ-GUI-070
+    and REQ-GUI-100 read "over the shown figure's rect, with a stain that reads no screen-lane field" (gui G5); the
+    mock's stand-in is drawn from the field placement, not the screen lane (TASK-M6-30's note).
+- RQ-263 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line; RQ-264 is filed in
+  `REVIEW_QUEUE.md`. R-408 is in the "physics" group of `plan/rule_groups.yaml`, with R-407.
+
+Adds REQ-CHART-056 and REQ-CHART-057; REQ-CHART-054's statement, verify, rulings, sources and note, REQ-GUI-109's
+rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and REQ-GUI-100's verify change.

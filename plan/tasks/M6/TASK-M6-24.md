@@ -205,3 +205,7 @@ the app on the mock, so `cargo xtask screenshot` reaches every track screen.
   acceptance lines, Notes and References.
 - Size: the mock, the suite, the shell, the capture mode and the CI edits are one reviewable step, the ruling's first
   ORDER item; it grew with the pre-flight's decisions (RQ-243 to RQ-256).
+- R-406 (10 Oct 2026) revises RQ-248's first decision: with F3 off the figure fills the window, showing more of the
+  field at the same scale, each point where the shown layout puts it, so the captures stay pixel-identical over the
+  shown figure's rect and the rest of the window is no longer the clear colour (REQ-GUI-179, TASK-M6-30). The window
+  title's "mock engine" stands.
