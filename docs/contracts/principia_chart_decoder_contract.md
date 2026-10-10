@@ -142,7 +142,7 @@ extension types**, and the type decides what the axis does past its edge:
 
 | Type | Past the edge | Which axes |
 |---|---|---|
-| **affine** | the formula continues | basis vectors: the latent and flat slices, every latent direction |
+| **affine** | the formula continues | basis vectors: the latent and flat slices, every latent direction; a physical-quantity axis mapped linearly onto its range (R-408's port, B1) |
 | **periodic** | the axis wraps | azimuthal angles: the shape sphere's θ |
 | **pole-crossing** | continues over the pole and back down the other side, the partner axis shifted by half its period | polar angles: the shape sphere's φ (its partner θ shifted by π) |
 | **bounded** | hatched as forbidden | anything with a hard edge in its domain (the invariant warp's `t^γ_K` at `t < 0`); **the default for an axis that declares nothing** |
@@ -161,6 +161,20 @@ is not integrated, and it is drawn with the render contract's hatch (`debug_inva
 
 **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
 needs physics review. The existing charts' types are in `principia_chart_reference.md` §5.4.
+
+**Area statistics past `[0,1]²` count each system once, through the types (R-408).** Each type has a **primary
+range**: periodic, one period (the chart's `[0,1]` span on that axis); pole-crossing, pole to pole (the chart's `[0,1]`
+span on that axis); affine, unbounded; bounded, its domain. "Forbidden in view" (render_gui_spec §G7) and the area
+statistics (W7, `system_image` below) count a visible pixel **only if every axis is inside its primary range**, so a
+periodic or pole-crossing redraw is not counted again: a pixel past a pole carries its partner shifted by half a period
+and is outside the pole-crossing axis's primary range, so it is excluded. **Pixels hatched because the domain ends
+there** (a bounded axis past its edge, or a `Φ` that fails to evaluate) are not systems: they leave both the count and
+the total. **Only states that fail the validity check count as forbidden.** A pixel is classified in this order: past
+a bounded edge, the domain's end; outside a primary range, not counted; rejected by `validate`'s feasibility (layer 2,
+on what the types give, before `Φ`), forbidden; a `Φ` that fails where layer 2 accepts, the domain's end; a decoded
+state that fails layer 3, forbidden; any other, a counted system. The statistic reads the chart (the types, the
+primary ranges, `validate`, `Φ`), not the payload's `decode_failed` detail, which does not tell the two hatches apart.
+**Inside `[0,1]²` every statistic is unchanged.** What the shape sphere's φ does with one hemisphere drawn is RQ-264.
 
 ---
 
@@ -268,6 +282,10 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
   - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative. The shape sphere is n-to-1 with n = 2: 2-to-1 over the φ hemispheres, which are reflection-equivalent (the canonical decode gauges `λ̃_y → −λ̃_y`, Part 1), so both decode to the same system (R-141).
   - **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104, R-157): the full-range Burrau chart, where the leg swap relabels the bodies (`principia_chart_reference.md` §4.5). Carries the fold so downstream draws/labels one representative. *Was (R-104): the shape sphere's value too; R-141 made the shape sphere n-to-1, and R-157 keeps `DoubleCover` for the Burrau chart.*
   - **ray-degenerate** — whole lines of pixels map to the same system (the *continuous* `(m,n)` Euclid plane: rays through the origin are similarity classes, so the picture bands along rays). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
+
+  The multiplicity is `[0,1]²`'s. Past `[0,1]²` (the window's extension, Part 3) it adds none: an area statistic counts a
+  pixel only if every axis is inside its extension type's primary range, so a periodic or pole-crossing redraw is never
+  counted again, and a pixel hatched where the domain ends leaves both the count and the total (R-408).
 
   The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and the continuous plane are different instruments over the same 1D curve of shapes.
 

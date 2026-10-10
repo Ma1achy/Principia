@@ -9,37 +9,40 @@ milestone gets its own file after its gate. Ids never change.
 
 ---
 
-## RQ-263: the shape sphere's extension past `[0,1]²` (R-407) redraws systems already in `[0,1]²`; whether area statistics count the window or only `[0,1]²` is not given *(physics, R-407, R-406, R-141, TASK-M8-05)*
+## RQ-264: with the shape sphere's hemisphere toggle drawing one hemisphere, what the pole-crossing φ does past the edge that is not a pole, and what its primary range is, is not given *(definition, physics, R-408, R-407, R-113, R-141, TASK-M8-05)*
 
 - **File, section:**
   - `decisions.md` § "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic,
     pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*", the human's
-    words: "periodic (wraps), pole-crossing (continues over the pole, partner axis shifted by half its period)" and
-    "sphere: θ periodic, φ pole-crossing".
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract",
-    `system_image`: "**n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream
-    draws/labels one representative. The shape sphere is n-to-1 with n = 2", and, for a ray-degenerate chart, "the
-    quantitative layer must not read areas as system fractions".
-  - `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the walls — the primary comparison
-    checklist)", W7: "**Measure honesty** — every arbitrary choice carries its Jacobian or is barred from quantitative
-    claims".
-  - `docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)": "**The Domain preview:** the
-    chart's admissible region in its own coordinates, the forbidden region hatched, the current view as a rectangle, the
-    boundary's formula, and "forbidden in view: N%"".
-- **Silence:** past `[0,1]²`, the shape sphere's θ wraps and its φ crosses the poles with θ shifted by π (R-407), so
-  every pixel past `[0,1]²` shows a system that `[0,1]²` already holds, beside the 2-to-1 hemisphere fold the
-  `system_image` descriptor records. The descriptor's multiplicity and the area statistics read from it (W7's measure
-  honesty; §G7's "forbidden in view: N%") are defined for `[0,1]²`; whether a statistic taken while the window is
-  extended counts the window or only `[0,1]²`, and how it counts the redrawn systems, is not given. The same question
-  holds for any chart with a periodic or pole-crossing axis.
+    words: "pole-crossing (continues over the pole, partner axis shifted by half its period)" and "sphere: θ periodic,
+    φ pole-crossing".
+  - `decisions.md` § "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts
+    only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity
+    failures are forbidden *(closes RQ-263)*", the human's words: "pole-crossing = pole to pole".
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map": "Draw one hemisphere and say so, or draw both and
+    flag the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113)".
+  - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)": "the **hemisphere
+    toggle** (one hemisphere, or both with the redundancy flagged)".
+  - `docs/contracts/principia_lowering_contract.md` § "Appendix — worked enumeration of the current chart set", the
+    shape-sphere row: "(s,t)→(θ,φ) by R-14's map
+    (`principia_chart_reference.md` §3.3: θ = 2π·s, φ = π·(1 − t))", the full pole-to-pole span over `t ∈ [0,1]`.
+- **Silence:** R-14's map puts a pole at each end of the chart's `[0,1]` span on φ, so R-407's pole-crossing and
+  R-408's "pole to pole" primary range fit it. With the toggle drawing one hemisphere, the corpus says neither (1)
+  whether the chart's `[0,1]` span on φ is remapped to run from a pole to the equator, or the full pole-to-pole span is
+  kept and the other hemisphere set aside (masked, or drawn and labelled), nor, if the span ends at the equator, (2)
+  what the φ axis does past that edge, which is not a pole, and (3) what its primary range is there (the chart's `[0,1]`
+  span, pole to equator, or pole to pole). Past the equator the formula's continuation shows the other hemisphere,
+  which decodes to the same systems (R-141's fold), so a reflection there would draw the same pixels.
 - **Options seen:**
-  - (a) Statistics are taken over `[0,1]²` only; the extension is drawn and never counted.
-  - (b) Statistics are taken over the window, duplicates included: a redrawn system counts once per pixel that shows
-    it.
-  - (c) Statistics are taken over the window, duplicates counted once: each system counts once however many window
-    pixels show it, as `system_image` carries the hemisphere fold.
-- **Applied meanwhile:** nothing computes an area statistic on the extended window. TASK-M8-05 has no such line, and
-  §G7's "forbidden in view" is drawn in the Chart builder, a window of the egui layer, which shows only while the figure
-  is in its rect, the view's `[0,1]²`.
-- **Waits:** only a line of TASK-M8-05 that computes such a statistic on the extended window; it has none, so nothing
-  is blocked today. A later task that computes one over the window waits.
+  - (a) The span is remapped to end at the equator; φ stays pole-crossing at its pole edge, and past the equator its
+    formula continues into the other hemisphere (the same systems as the mirror, R-141); its primary range is the
+    chart's `[0,1]` span, pole to equator, so that continuation is not counted.
+  - (b) As (a), but the equator edge is a bounded edge for this chart: past it the pixels are hatched as the domain's
+    end, out of the count and the total.
+  - (c) The toggle does not change `Φ`: the chart's `[0,1]` span stays pole to pole, one hemisphere is drawn by setting
+    the other aside, and R-407's and R-408's rules hold as for both hemispheres.
+- **Applied meanwhile:** with both hemispheres drawn, R-407 and R-408 apply as written. Statistics agree under (a) and
+  (b) (the pixels past the equator are out of the count and the total either way); only what is drawn there differs,
+  and under (c) the primary range is pole to pole.
+- **Waits:** only TASK-M8-05's acceptance line for the shape sphere with one hemisphere drawn (REQ-CHART-054 and
+  REQ-CHART-056 carry `rq: RQ-264`). Every other line of TASK-M8-05 runs with both hemispheres and does not wait.

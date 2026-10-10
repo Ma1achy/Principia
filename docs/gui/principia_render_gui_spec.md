@@ -322,11 +322,16 @@ labels (R-22).
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
-  declares nothing and is bounded, the fallback hatching what fails validation; a Burrau dimension takes the Burrau
-  family's types (`principia_chart_reference.md` §5.4). The chart inherits its extension from its axes.
+  is affine too, linear in its quantity, the fallback hatching what fails validation (R-408's port, B1: first made
+  bounded, by R-407's default); a Burrau dimension takes the Burrau family's types (`principia_chart_reference.md`
+  §5.4). The chart inherits its extension from its axes.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
-  `validate(u, v)` on the `Chart` trait).
+  `validate(u, v)` on the `Chart` trait). **"Forbidden in view" counts each system once (R-408):** a visible pixel
+  counts only if every axis is inside its type's primary range (periodic, one period; pole-crossing, pole to pole;
+  affine, unbounded; bounded, its domain); a pixel hatched where the domain ends (a bounded axis past its edge, or a
+  failed `Φ`) leaves both the count and the total; only states that fail the validity check count as forbidden. Inside
+  `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3).
 - **A quick render** (e.g. 64 × 64 at a short horizon), at the view's aspect. **Both previews are square.**
 - The footer checks `q₁ · q₂ = 0` and lists the hidden directions (and the residual). Revert / Apply.
 

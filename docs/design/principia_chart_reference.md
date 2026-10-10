@@ -365,8 +365,10 @@ at the poles and can be compressed to invisibility in equirectangular.
 **Past the unit square (R-407).** The spherical map's θ is **periodic** (it wraps, period 2π) and its φ
 **pole-crossing**: past a pole it comes back down the other side with θ shifted by π, half its period (for `t > 1`,
 `φ → −φ`; for `t < 0`, `φ → 2π − φ`; θ then wraps). So the sphere continues past `[0,1]²` with real neighbouring states,
-each a system `[0,1]²` already holds; whether area statistics count them is RQ-263. The exponential map has no θ or φ
-axis, so its axes declare nothing and are bounded (§5.4).
+each a system `[0,1]²` already holds; area statistics count each system once, so these pixels, outside θ's or φ's
+primary range, are not counted (R-408, §5.4). The exponential map has no θ or φ axis, so its axes declare nothing and
+are bounded (§5.4). With the hemisphere toggle drawing one hemisphere, what φ does past the edge that is not a pole is
+RQ-264.
 
 **The shape sphere as phase portrait.** Here the rendering surface and the configuration space are the
 same object. Each pixel is a starting shape $\mathbf n(0) \in S^2$, and its trajectory $\mathbf n(t)$
@@ -589,16 +591,27 @@ pixel whose `Φ` fails to evaluate, or whose state fails `validate(u, v)`, is ha
 `decode_failed`; inside `[0,1]²` nothing changes. The `Chart` trait (§5.1) declares each axis's type beside `map`. The
 existing charts:
 
-| chart | horizontal axis | vertical axis | past `[0,1]²` |
-|---|---|---|---|
-| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation |
-| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds (RQ-263) |
-| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched |
-| `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded | hatched on every side; the `t > 1` side is not declared (§2.1) |
-| `MassSimplex`, the ternary plot (§4.5) | affine | affine | the map continues; the fallback hatches the negative-mass area (all masses positive, validation layer 3) |
-| Burrau family (§4.5) | REQ-CHART-055 (R-72, TASK-M2-11, physics-reviewed) | REQ-CHART-055 | bounded until the definition is written |
-| mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, any other bounded unless declared | as horizontal | per axis |
+| chart | horizontal axis | vertical axis | past `[0,1]²` | area statistics past `[0,1]²` (R-408) |
+|---|---|---|---|---|
+| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
+| `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, RQ-264 |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end) |
+| `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded | hatched on every side; the `t > 1` side is not declared (§2.1) | out of the count and the total (the domain's end) |
+| `MassSimplex`, the ternary plot (§4.5) | affine | affine | the map continues; the fallback hatches the negative-mass area (all masses positive, validation layer 3) | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
+| Burrau family (§4.5) | REQ-CHART-055 (R-72, TASK-M2-11, physics-reviewed) | REQ-CHART-055 | bounded until the definition is written | by the types REQ-CHART-055 gives; bounded until then |
+| mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
 
 A custom chart (the Chart builder, render_gui_spec §G7) takes its axes' types: a latent direction is affine, a
-physical-quantity axis declares nothing and is bounded, a Burrau dimension takes the Burrau family's types. A new
+physical-quantity axis is affine, a Burrau dimension takes the Burrau family's types. A physical-quantity axis is linear
+in its quantity over its range, so past its edge its formula continues and the fallback hatches what cannot be reached
+(energy beyond what is reachable); under R-408 its primary range is unbounded, so those pixels fail validity and count
+as forbidden. (R-407's port first made it bounded, by clause 1's default; corrected in R-408's port, B1, applied per
+R-369 and flagged to the human.) A quantity behind a nonlinear warp (§1.3) declares nothing and is bounded. A new
 declaration beyond bounded, or a new extension type, needs physics review (R-407, clause 3).
+
+**Primary ranges and area statistics (R-408).** Each type's primary range: periodic, one period, the chart's own `[0,1]`
+span on that axis; pole-crossing, pole to pole, the chart's `[0,1]` span on that axis; affine, unbounded; bounded, its
+domain. "Forbidden in view" and the area statistics count a visible pixel only if every axis is inside its primary
+range, so each system counts once; a pixel hatched where the domain ends (a bounded axis past its edge, or a `Φ` that
+fails) leaves both the count and the total; only states that fail the validity check count as forbidden; inside
+`[0,1]²` nothing changes. The classification order is `principia_chart_decoder_contract.md` Part 3's.
