@@ -10,18 +10,19 @@
 
 ## Goal
 On the mock engine, the compass and the keyboard work as the human asked after trying TASK-M6-26 (R-409). The compass
-has no orbit: it is a fixed orthographic view at its default angle. It has a Tilt and a Slice button beside it, Tilt
-the default; a click on one switches the mode, touching a slice or tilt slider still switches it to match, and the
-buttons always show the current mode. In tilt mode a drag on the compass tilts the plane; in slice mode a drag anywhere
-on it moves the slice plane along its normal, the tilt fixed. The keyboard has two modes in every scope: navigation
-mode, with an orange focus ring, where the arrows move between siblings; and interaction mode, with a blue ring, where
-every input goes to the focused element. Every landing is in navigation mode: Enter into a scope lands on its first
-element, and a Tab on the big scope itself, the whole scope highlighted; Enter on an element starts interaction, Enter
-on a button acts as its click, Esc in interaction mode returns to navigation mode on the same element, and Esc in
-navigation mode goes up one scope. The arrows need Enter: in navigation mode they always move between siblings, and a
-scope's arrow actions act only in interaction mode, while its letter and Space shortcuts act in either mode. In
-navigation mode the compass is one element, beside its Tilt and Slice buttons; Enter on it starts interaction, where
-the arrows tilt or move the slice by its mode, Shift ×10 and Alt ×0.1 as everywhere (R-409's follow-up answers).
+has no orbit: it is a fixed orthographic view at its default angle. It has a Tilt and a Slice button beside it, Tilt the
+default; a click on one switches the mode, touching a slice or tilt slider still switches it to match, and the buttons
+always show the current mode. In tilt mode a drag on the compass tilts the plane; in slice mode a drag anywhere on it
+moves the slice plane along its normal, the tilt fixed. The keyboard has two modes in every scope: navigation mode, with
+an orange focus ring, where the arrows move between siblings; and interaction mode, with a blue ring, where the focused
+element takes the arrows, while Tab, Ctrl+Z, `?` and the shortcuts keep their meaning (R-409 G1). Every landing is in
+navigation mode: Enter into a scope lands on its first element, and a Tab on the big scope itself, the whole scope
+highlighted; Enter on an element starts interaction, Enter on a button acts as its click, Esc in interaction mode
+returns to navigation mode on the same element, and Esc in navigation mode goes up one scope. The arrows need Enter: in
+navigation mode they always move between siblings, and a scope's arrow actions act only in interaction mode, while its
+letter and Space shortcuts act in either mode. In navigation mode the compass is one element, beside its Tilt and Slice
+buttons; Enter on it starts interaction, where the arrows tilt or move the slice by its mode, Shift ×10 and Alt ×0.1 as
+everywhere (R-409's follow-up answers).
 
 ## References
 - `decisions.md` § "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
@@ -53,19 +54,25 @@ the arrows tilt or move the slice by its mode, Shift ×10 and Alt ×0.1 as every
   compass's mode (`Touch`), so the buttons follow it.
 - `crates/gui/src/keyboard/scopes.rs` — the two modes replacing `browsing` (today at :324–419): every Tab landing and
   every Enter into a scope lands in navigation mode on the first element; in navigation mode the arrows move between
-  siblings; Enter on an adjustable element (`Arrows::Adjust`, the Figure, the compass) starts interaction mode, and on
-  an `activates` scope acts as its click and stays in navigation mode; in interaction mode the arrows adjust the
-  element; Esc in interaction mode returns to navigation mode on the same element, and in navigation mode pops one
-  level. The mode is held with the focus, in `ViewUI`'s keyboard focus scope (R-409 A5); a contract field added re-runs
-  the conformance suite on both engines.
+  siblings, and on a big scope itself between the big scopes in Tab order (R-409 G2); Enter on an adjustable element
+  (`Arrows::Adjust`, the compass) starts interaction mode, on the Figure, which has nothing inside, starts interaction
+  mode, on a read-only scope with nothing inside (the Legend) does nothing (R-409 A2, G3), and on an `activates` scope
+  acts as its click and stays in navigation mode; in interaction mode the arrows adjust the element, and Tab and
+  Shift+Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, Tab or Shift+Tab leaving for the next or previous big
+  scope in navigation mode (R-409 G1); Esc or Enter in interaction mode returns to navigation mode on the same element,
+  and Esc in navigation mode pops one level. A text field lands in navigation mode; Enter on it starts typing
+  (interaction mode), in which every key goes to it but Esc and Enter (back to navigation mode, text kept) and Tab
+  (moving on) (R-409 G4); the console's text filter is built on this by TASK-M6-28. The mode is held with the focus, in
+  `ViewUI`'s keyboard focus scope (R-409 A5); a contract field added re-runs the conformance suite on both engines.
 - `crates/gui/src/keyboard/{keymap,mod}.rs` — the mode carried through the key handling, so a screen's arrow actions
   (the Figure's pan, the compass's tilt and slice) act in interaction mode only, and its letter and Space shortcuts
   (the Figure's + / −, Space, L and K) whenever the focus is in its scope, in either mode (R-409 F1). A Tab lands on
   the big scope itself, in navigation mode (R-409 F4).
-- The Compass scope (big scope 5) holding three siblings in navigation mode: the compass, then Tilt, then Slice
-  (R-409 A2). Enter on Tilt or Slice sets the mode; Enter on the compass starts interaction, in which the arrows tilt
-  (`StepKind::Tilt`, 1°, R-404) in tilt mode and move the slice along the normal (REQ-GUI-184's step) in slice mode,
-  Shift ×10 and Alt ×0.1 in either mode, as everywhere (R-409 F3).
+- The Compass scope (big scope 5) holding three siblings in navigation mode, in this order: the compass, then Tilt, then
+  Slice (R-409 A2, F4); from the compass → reaches Tilt and → again Slice, and ← goes back. Enter on Tilt or Slice sets
+  the mode; Enter on the compass starts interaction, in which the arrows tilt (`StepKind::Tilt`, 1°, R-404) in tilt mode
+  and move the slice along the normal (REQ-GUI-184's step) in slice mode, Shift ×10 and Alt ×0.1 in either mode, as
+  everywhere (R-409 F3).
 - `crates/gui/src/keyboard/scopes.rs`, `StepKind` — `Orbit` removed (R-404's row retired by R-409); a slice-along-the-
   normal kind added with its proposed base step, Shift ×10 and Alt ×0.1 applying to it as to every kind; no separate
   fine step (R-409 F3).
@@ -82,8 +89,8 @@ the arrows tilt or move the slice by its mode, Shift ×10 and Alt ×0.1 as every
 
 ## Acceptance tests
 - `cargo test -p gui mock_compass_modes` and `cargo xtask screenshot 01_main` (mock_compass_tilt, mock_compass_slice) — the compass opens in Tilt; a click on Slice shows Slice and a click on Tilt shows Tilt; touching a slice slider shows Slice and touching τ₁ shows Tilt, the buttons following; in tilt mode a drag on the plane and a drag off it each emit one SetField on the basis and none on z₀; in slice mode a drag anywhere on the compass emits one SetField on z₀ whose change is along the drawn plane's normal (its components along the plane's in-plane directions zero within 1e-12), the basis unchanged; locked, the slice-mode drag moves z₀ along the normal through the anchor; a drag anywhere and every key leave the compass's view angle unchanged; controls: a slice-mode drag that tilts, a drag that orbits, a slice move along the depth axis on a tilted plane, and a button that does not follow a slider each fail; the screenshots against 01_main.png, read with R-409 (render_gui_spec §G13) (REQ-GUI-181).
-- `cargo test -p gui mock_keyboard_modes` and `cargo xtask screenshot 07_keyboard` (mock_focus_navigation, mock_focus_interaction) — Tab to Manifold view lands on Manifold view itself, in navigation mode, and Enter lands on Chart in navigation mode; Enter on Centre z₀ lands on its first slider in navigation mode, ↓ moves to the second slider and changes no value; Enter on it starts interaction mode and ↑ raises it by its base step; ↓ in interaction mode adjusts it and does not move the focus; Esc returns to navigation mode on the same slider, and a second Esc goes up to Centre z₀; Tab lands on the Figure in navigation mode, where the arrows emit no SetField and + zooms, and Enter starts interaction mode, where the arrows pan and + still zooms; Tab lands on the Compass scope itself in navigation mode and Enter goes in onto the compass, still in navigation mode (R-409 A2, F4); Enter on a button (Tilt, a menu entry) acts as its click and stays in navigation mode; the ring is the orange in navigation mode and `hyperlink_color` in interaction mode; controls: an Enter into a scope that lands in interaction mode, a Tab that lands on a big scope's first element, an Esc in interaction mode that goes up a scope, a Figure shortcut that acts in interaction mode only, a ring of one colour in both modes and the pre-R-409 `browsing` model (arrows adjusting a value reached by Enter on its section) each fail; the two captures differ only in the ring's colour (and the breadcrumb's, per R-409 A6) (REQ-GUI-182).
-- `cargo test -p gui mock_compass_keys` — Tab lands on the Compass scope and Enter goes in onto the compass, in navigation mode; → and ← move to Slice and Tilt, Enter on Slice shows Slice and Enter on Tilt shows Tilt, staying in navigation mode; Enter on the compass starts interaction mode; in tilt mode ← → tilt τ₁ and ↑ ↓ τ₂ by the confirmed Tilt step (R-404), one SetField on the basis each; in slice mode each arrow emits one SetField on z₀ along the plane's normal by REQ-GUI-184's step; in each mode Shift+arrows give 10 times and Alt+arrows 0.1 times the arrow's step, and no key turns the view; Esc returns to navigation mode on the compass; controls: Shift+arrows that orbit, Shift+arrows that give a step smaller than the arrow's, an arrow on the compass in navigation mode that tilts, and a slice-mode arrow that tilts each fail (REQ-GUI-183).
+- `cargo test -p gui mock_keyboard_modes` and `cargo xtask screenshot 07_keyboard` (mock_focus_navigation, mock_focus_interaction) — Tab to Manifold view lands on Manifold view itself, in navigation mode, → there moves to the Figure and ← back to Manifold view, and Enter lands on Chart in navigation mode; Enter on Centre z₀ lands on its first slider in navigation mode, ↓ moves to the second slider and changes no value; Enter on it starts interaction mode and ↑ raises it by its base step; ↓ in interaction mode adjusts it and does not move the focus; Esc returns to navigation mode on the same slider, and a second Esc goes up to Centre z₀; Enter on the slider again and then Enter returns to navigation mode on it; in interaction mode on the slider, Tab lands on the Figure in navigation mode, and Ctrl+Z and ? act as in navigation mode; Tab lands on the Figure in navigation mode, where the arrows move to the next big scope and emit no SetField, + and − zoom and K locks, and Enter starts interaction mode, where the arrows pan and + / − and K still act; Enter on the Legend changes nothing; Tab lands on the Compass scope itself in navigation mode and Enter goes in onto the compass, still in navigation mode (R-409 A2, F4); Enter on a button (Tilt, a menu entry) acts as its click and stays in navigation mode; the ring is the orange in navigation mode and `hyperlink_color` in interaction mode; controls: an Enter into a scope that lands in interaction mode, a Tab that lands on a big scope's first element, an Esc in interaction mode that goes up a scope, an Enter in interaction mode that stays in it, a Tab in interaction mode captured by the element, Enter on the Figure landing in navigation mode, Enter on the Legend starting interaction mode, arrows on a big scope that do nothing, a Figure shortcut (+, −, K) that acts in one mode only, a ring of one colour in both modes and the pre-R-409 `browsing` model (arrows adjusting a value reached by Enter on its section) each fail; the two captures differ only in the ring's colour (and the breadcrumb's, per R-409 A6) (REQ-GUI-182).
+- `cargo test -p gui mock_compass_keys` — Tab lands on the Compass scope and Enter goes in onto the compass, in navigation mode; from the compass → moves to Tilt and → again to Slice, and ← from Slice moves back to Tilt and ← again to the compass; Enter on Slice shows Slice and Enter on Tilt shows Tilt, staying in navigation mode; Enter on the compass starts interaction mode; in tilt mode ← → tilt τ₁ and ↑ ↓ τ₂ by the confirmed Tilt step (R-404), one SetField on the basis each; in slice mode each arrow emits one SetField on z₀ along the plane's normal by REQ-GUI-184's step; in each mode Shift+arrows give 10 times and Alt+arrows 0.1 times the arrow's step, and no key turns the view; Esc returns to navigation mode on the compass; controls: Shift+arrows that orbit, Shift+arrows that give a step smaller than the arrow's, a sibling order other than compass, Tilt, Slice (→ from the compass reaching Slice), an arrow on the compass in navigation mode that tilts, and a slice-mode arrow that tilts each fail (REQ-GUI-183).
 - Review checklist (gui reviewer) of the slice-mode base-step proposal — the proposal gives the base step (absolute, or relative to the slice step's range or the view) with its reasoning; a reviewer checks it; the human confirms it at the M8 gate and it is recorded in `decisions.md` (REQ-GUI-184).
 - `cargo xtask screenshot 01_main` (mock_compass_slice, mock_compass_tilt) and `cargo xtask screenshot 08_lock` (mock_locked) — screenshots against 01_main.png after touching a slice slider, after touching a tilt and after clicking each of the Tilt and Slice buttons, and against 08_lock.png when locked, the buttons and the fixed view read with R-409 (REQ-GUI-091, closed by TASK-M6-26, re-checked here as R-409 words it).
 - `cargo test -p gui mock_manifold_view` and `cargo xtask screenshot 01_main` (mock_manifold_view) — every Manifold view control still emits a SetField on z₀ or the basis when used from the keyboard in interaction mode; after lock a slider reads anchor plus offset; the compass switches by its buttons and by the slider touched, with no orbit (REQ-GUI-170, closed by TASK-M6-26, re-checked here as R-409 words it).
@@ -93,9 +100,10 @@ the arrows tilt or move the slice by its mode, Shift ×10 and Alt ×0.1 as every
 ## Notes
 - **What to try.** The PR description has a "What to try" section: drag on the compass in Tilt, click Slice and drag
   again, touch a slice slider and a tilt and watch the buttons; Tab to Manifold view, Enter, ↓ through the sections,
-  Enter on Centre z₀, ↓ between its sliders, Enter on one and ↑ ↓, Esc, Esc; Tab to the Compass, Enter, → to Slice,
-  Enter, ← back to the compass, Enter, the arrows, Shift+arrows and Alt+arrows, Esc; on the Figure, + and − before
-  and after Enter, and the arrows only after it; watch the ring turn orange and blue; on
+  Enter on Centre z₀, ↓ between its sliders, Enter on one and ↑ ↓, Esc, Esc; Tab to the Compass, Enter (on the
+  compass), → to Tilt, → to Slice, Enter, ← to Tilt, ← back to the compass, Enter, the arrows, Shift+arrows and
+  Alt+arrows, Esc; on the Figure, + / − and K before and after Enter, and the arrows only after it; Tab out of
+  interaction mode; on the Legend, Enter does nothing; watch the ring turn orange and blue; on
   `cargo run -p gui --features mock`.
 - **Why a new task.** TASK-M6-26 (merged) built the compass with its orbit and TASK-M6-25 (merged) the `browsing`
   model; R-409 changes both. This task follows TASK-M6-26, and TASK-M6-27 depends on it, so Time, the Legend, the

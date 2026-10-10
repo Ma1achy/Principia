@@ -7833,7 +7833,8 @@ applied by a follow-up task.
    apply; the text stays as the record.)*
 4. **Two keyboard modes, everywhere.**
    - **Navigation mode** has an orange focus ring. The arrows move between siblings.
-   - **Interaction mode** has a blue focus ring. Input goes to the focused element.
+   - **Interaction mode** has a blue focus ring. Input goes to the focused element. *(Read with G1 below: the
+     element takes the arrows; Tab, Esc, Enter, Ctrl+Z, `?` and the shortcuts keep their meaning.)*
    - Entering any scope, and every Tab landing (the Figure, the Compass and, under R-405, the console's first filter
      included), lands in navigation mode on the first element. *(Read with the human's follow-up answer, F4 below: a
      Tab landing is on the big scope itself, in navigation mode, and Enter into a scope lands on its first element.)*
@@ -7969,6 +7970,33 @@ human's words. The human may veto any; a veto is a GUI design ruling, applied by
   either mode, the Tab landing), TASK-M6-27 (Time's keys), TASK-M6-28 (the entry list), TASK-M8-13 (the in-scope and
   global keys on the real engine) and `plan/reviewers/gui.md`.
 
+*Applied reading (R-369), review round.* The orchestrator's decisions on gui review 5480658825's findings 1 and 2 and
+code review 5480660052's C1 on PR #186, applied per R-369 as routine design choices and flagged; these are the
+orchestrator's, not the human's words, and the human may veto any (a veto is a GUI design ruling, applied by a
+follow-up task).
+- **G1. Keys in interaction mode.** The focused element takes the arrows, with Shift ×10 and Alt ×0.1. Tab and
+  Shift+Tab, Ctrl+Z and `?` keep their global meaning in both modes; Tab or Shift+Tab from interaction mode leaves it
+  and lands in navigation mode on the next or previous big scope. The letter and Space shortcuts keep their meaning in
+  both modes (a scope's shortcuts, whenever the focus is in that scope, F1), except while a text field is being typed
+  in (G4). Esc in interaction mode returns to navigation mode on the same element (point 4), and so does Enter. Point
+  4's "Input goes to the focused element" and point 3's "all input goes to the compass" are read this way.
+- **G2. The arrows on a big scope.** In navigation mode, with the focus on a big scope itself (after a Tab landing, or
+  after Esc up to it), the arrows move between the big scopes in Tab order: at the top level the big scopes are the
+  siblings.
+- **G3. Enter on a scope with nothing inside.** Enter on a scope goes in onto its first element (F4), with one
+  exception: the Figure, which has no elements inside, takes Enter as the start of interaction (A2). Enter on a
+  read-only scope with nothing to enter or interact with, such as the Legend, does nothing.
+- **G4. A text field (the console's text filter).** Landing on a text field is navigation mode, and the arrows move on
+  from it as from any element. Enter on it starts typing, which is interaction mode; while typing, every key goes to
+  the field except Esc, Enter and Tab. Esc and Enter return to navigation mode on the field and keep the text; Tab and
+  Shift+Tab leave the field and move on, as G1 has it. F1's "A text field holding the keyboard still takes every key"
+  is read this way.
+- **Where it lands.** render_gui_spec §G3 (the table's Enter, Esc, arrows, letters, Tab, Ctrl+Z and `?` rows and the
+  "Two modes" paragraph); GUI_DESIGN_NOTES § "07 Keyboard" (conformed); REQ-GUI-096 and REQ-GUI-182 (statement and
+  verify), REQ-GUI-178 (the text filter), REQ-GUI-183 (the sibling order, gui finding 3) and REQ-GUI-098 (A6's
+  parenthetical, gui finding 4) (reqio); TASK-M6-31's deliverables and acceptance, each with a control; TASK-M6-28 (the
+  text filter); and `plan/reviewers/gui.md`.
+
 *What it supersedes* (the line numbers are main's at `4235c3e5`, before this port, except decisions.md's, which are
 this file's):
 - `docs/gui/principia_render_gui_spec.md:126–129` (§G2's compass: "switches mode by itself …"; "Dragging the plane
@@ -7985,8 +8013,9 @@ this file's):
   (REQ-GUI-098), `:14129` (REQ-GUI-158's "orbit" and its `Orbit` value), `:14323` (REQ-GUI-169) and `:14340`
   (REQ-GUI-170), each reworded.
 - `crates/gui/src/explore/compass.rs:36`, `:54`, `:83–86`, `:152–167` and `:215–231` (the orbit) and `:245–256` (the
-  mode labels), and `crates/gui/src/keyboard/scopes.rs:324–419` (`browsing`, the arrows adjusting a value reached by
-  Enter on its section, and Esc always popping a level): the code TASK-M6-31 changes.
+  mode labels), `crates/gui/src/keyboard/scopes.rs:324–419` (`browsing`, the arrows adjusting a value reached by
+  Enter on its section, and Esc always popping a level) and `crates/gui/src/explore/breadcrumb.rs:22–52` (the ring's
+  single colour, point 4 and A6): the code TASK-M6-31 changes.
 - By the follow-up answers (F1 to F4; this branch's lines before they were ported, at `fb169f14`):
   `docs/gui/principia_render_gui_spec.md:155`, `:158` and `:159` (§G3's Tab, arrows and Shift · Alt rows, now with the
   Tab landing on the scope, the arrows always between siblings in navigation mode, and the modifiers on the compass
@@ -8001,4 +8030,5 @@ Adds REQ-GUI-181 to REQ-GUI-184; REQ-GUI-091's, REQ-GUI-096's, REQ-GUI-097's, RE
 REQ-GUI-170's statements, verify, rulings, sources and notes, REQ-GUI-158's statement and note and REQ-GUI-178's
 statement, verify, rulings, sources and note change. The follow-up answers change REQ-GUI-096's, REQ-GUI-097's,
 REQ-GUI-178's, REQ-GUI-182's and REQ-GUI-183's statements, verify and notes, REQ-GUI-184's statement and note and
-REQ-GUI-158's note, and add no requirement.
+REQ-GUI-158's note, and add no requirement. The review round (G1 to G4) changes REQ-GUI-096's, REQ-GUI-178's,
+REQ-GUI-182's and REQ-GUI-183's statements and verify and REQ-GUI-098's statement, and adds no requirement.

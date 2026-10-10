@@ -152,15 +152,15 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 
 | key | action |
 |---|---|
-| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing on the scope itself in navigation mode (R-409) |
-| Enter | on a scope, into it, in navigation mode on its first element; on an element, start interaction (R-409) |
+| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing on the scope itself in navigation mode, from either mode (R-409) |
+| Enter | in navigation mode: on a scope, into it, on its first element, but on the Figure, which has nothing inside, start interaction, and on a read-only scope with nothing inside (the Legend), nothing; on an element, start interaction; on a button, its click. In interaction mode: back to navigation mode on the same element (R-409) |
 | Esc | in interaction mode, back to navigation mode on the same element; in navigation mode, up one scope (R-409) |
-| arrows | in navigation mode, always between siblings; in interaction mode, adjust the focused element (R-409) |
+| arrows | in navigation mode, always between siblings, and on a big scope itself between the big scopes in Tab order; in interaction mode, adjust the focused element (R-409) |
 | Shift · Alt | ×10 · ×0.1 steps, everywhere, the compass included (R-409) |
-| letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode (R-409) |
+| letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode, except while a text field is being typed in (R-409) |
 | held keys | delay, then repeat (the DAS / ARR model) |
-| Ctrl+Z | undo, from the contract's history (R-52) |
-| ? | shortcuts, over everything |
+| Ctrl+Z | undo, from the contract's history (R-52), in either mode |
+| ? | shortcuts, over everything, in either mode |
 
 In scope: a scope's arrow actions need Enter, acting in interaction mode only, and its letter and Space keys are
 shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode (R-409).
@@ -174,17 +174,25 @@ What the user sees: a focus ring on the current scope, orange in navigation mode
 and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). Nothing else changes on screen.
 
 **Two modes: navigation and interaction (R-409).** The keyboard is always in one of two modes. In **navigation mode**
-the ring is orange and the arrows move between siblings. In **interaction mode** the ring is blue and every input goes
-to the focused element. Entering any scope lands in navigation mode on its first element, and every other landing is
-in navigation mode too: a Tab on a big scope, the Figure and the Compass included, and a window opening on its first
-section, as the console does on its first filter. A Tab lands on the big scope itself, the whole scope highlighted, as
-REQ-GUI-095 has it; Enter goes in onto its first element, and Enter again on an element starts interaction (R-409). Enter on an element starts interaction with it; Esc in interaction
-mode returns to navigation mode on the same element, and Esc in navigation mode goes up one scope. Enter on a button
-acts as its click and stays in navigation mode (applied per R-369, R-409 A1). The blue is egui's dark theme's
-`hyperlink_color` (R-404); the orange is a look choice (R-390). The Compass scope holds the compass, then its Tilt and
-Slice buttons, as siblings in navigation mode (R-409, the human's follow-up answer; A2): Tab lands on the Compass scope, Enter goes
-in onto the compass, Enter on the compass starts interaction with it, and Enter on a button sets the mode. The footer
-and the console follow the same two modes (R-405, R-409).
+the ring is orange and the arrows move between siblings; on a big scope itself, the big scopes are the siblings, and
+the arrows move between them in Tab order. In **interaction mode** the ring is blue and the focused element takes the
+arrows, with Shift ×10 and Alt ×0.1; Tab and Shift+Tab, Ctrl+Z, `?` and the letter and Space shortcuts keep their
+meaning in both modes, and Tab or Shift+Tab from interaction mode lands in navigation mode on the next or previous big
+scope (applied per R-369, R-409 G1, G2). Every landing is in navigation mode: a Tab on a big scope lands on the scope
+itself, the whole scope highlighted, the Figure and the Compass included, as REQ-GUI-095 has it; Enter into a scope
+lands on its first element; and a window opens on its first section, as the console does on its first filter. Enter
+on an element starts interaction with it, and Enter on a scope goes in, with two exceptions: the Figure, which has no
+elements inside, takes Enter as the start of interaction, and a read-only scope with nothing inside, such as the
+Legend, takes Enter as nothing (R-409 A2, G3). Esc or Enter in interaction mode returns to navigation mode on the same
+element, and Esc in navigation mode goes up one scope (R-409, G1). Enter on a button acts as its click and stays in
+navigation mode (applied per R-369, R-409 A1). The blue is egui's dark theme's `hyperlink_color` (R-404); the orange
+is a look choice (R-390). The Compass scope holds the compass, then its Tilt and Slice buttons, in that order, as
+siblings in navigation mode (R-409, the human's follow-up answer; A2): Tab lands on the Compass scope, Enter goes in
+onto the compass, → moves to Tilt and then to Slice, Enter on the compass starts interaction with it, and Enter on a
+button sets the mode. A text field, such as the console's text filter, lands in navigation mode; Enter on it starts
+typing, which is interaction mode, and while typing every key goes to the field but Esc, Enter and Tab: Esc and Enter
+return to navigation mode on the field and keep the text, and Tab and Shift+Tab leave it and move on (applied per
+R-369, R-409 G4). The footer and the console follow the same two modes (R-405, R-409).
 
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
