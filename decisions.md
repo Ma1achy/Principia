@@ -7576,6 +7576,9 @@ first is the human's explanation of it.)
   mass, and `θ` past `(0, π/4]` the same, is for that task.
 - **A7. The mass simplex (the ternary plot, chart_reference §4.5) is affine**, its map continued; the fallback hatches
   its negative-mass area (inverse_encode_contract layer 3, "all masses positive"). chart_reference §5.4 states it.
+  *Note, 10 Oct 2026, applied per R-369:* the hatch boundary is layer 2's narrowed simplex (buffered `mᵢ ≥ ε_m` ⇔ raw
+  `mᵢ ≥ 0`), so the hatch starts at the edge of `[0,1]²` with no band, as R-408's round-3 bullet and chart_reference
+  §5.4 state (physics review 5478835029, G1, on #181).
 - **The other existing charts.** The latent chart and every flat or axis-aligned slice (`Latent`, `BodyPlane`) are
   affine; the decoder `D` takes any `z ∈ ℝ⁸`, and the fallback catches what fails. The shape sphere's spherical map is
   θ periodic and φ pole-crossing (θ shifted by π); its exponential map (chart_reference §3.3) has no θ or φ axis, so
