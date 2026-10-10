@@ -203,7 +203,7 @@ pub fn case_name(id: &str) -> String {
 }
 
 /// The `debug-views` suite's cases, in name order: one per entry of the render registry tagged debug, its header's
-/// defaults, then the [`EXTRA_CASES`]. An [`AUTO_RANGE`] case's params are `RANGE_AUTO` 1 and its `u_range` measured
+/// defaults, then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
 /// over its scene once, here.
 pub fn debug_cases() -> Result<&'static [DebugCase], String> {
     static CASES: OnceLock<Result<Vec<DebugCase>, String>> = OnceLock::new();
@@ -485,7 +485,7 @@ fn d_min_samples(set: &mut Synthetic) {
 }
 
 /// The scene of the `debug-views` case `case`: a catalogue view coloured as [`Colouring::View`], any other, and an
-/// [`AUTO_RANGE`] view with its case's params, as [`Colouring::Debug`]; the ternary masses over [`ternary_masses`],
+/// `AUTO_RANGE` view with its case's params, as [`Colouring::Debug`]; the ternary masses over [`ternary_masses`],
 /// every other over [`showcase`].
 pub fn debug_scene(case: &'static DebugCase) -> Result<Scene, String> {
     let (grid, mut set) = row(8)?;
