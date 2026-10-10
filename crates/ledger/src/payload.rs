@@ -5,7 +5,9 @@
 //! `shadow` is the payload's `r_sh` and `p_sh`.
 //!
 //! Where §3 gives a field no scale or range, the entry is `lin` over (−∞, ∞) (or its type's full range), as §3.8's
-//! worked entries do for `n` and `ftle`; §3.6's log fields are > 0. Consumers are render, export and debug, as there.
+//! worked entries do for `ftle`; §3.6's log fields are > 0. Consumers are render, export and debug, as there. `n`, the
+//! shape-sphere point, is §3.8's worked entry: `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`, `lin` over [−1, 1]
+//! in each component (TASK-M1-12; RQ-235).
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{
@@ -75,6 +77,20 @@ fn latch(name: &'static str, location: Location, lo: Bound) -> EntryBuilder {
 fn derived(name: &'static str, from: &[&'static str], scale: Scale) -> EntryBuilder {
     let from = from.to_vec();
     entry(name, Location::Derived { from }, FieldType::F32, scale)
+}
+
+/// `n`, the current shape-sphere point (§3.8's worked entry; integrator dd §3.7): `derived(from: [r, m0, m1, m2])`,
+/// `vector(f32, 3)`, `lin` over [−1, 1] in each component.
+fn shape_point() -> EntryBuilder {
+    let ty = FieldType::Vector {
+        component: Box::new(FieldType::F32),
+        k: 3,
+    };
+    let from = vec!["r", "m0", "m1", "m2"];
+    entry("n", Location::Derived { from }, ty, Scale::Lin).range(Range {
+        lo: Bound::Closed(-1.0),
+        hi: Bound::Closed(1.0),
+    })
 }
 
 /// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode.
@@ -163,6 +179,9 @@ fn entries() -> Vec<EntryBuilder> {
         .floor("eps_E"),
         derived("Lz_drift", &["r", "p", "Lz_0"], Scale::Diverging).floor("eps_L"),
         derived("diffusion", &["C_ty", "t_end_step"], Scale::Lin),
+        // The Montgomery map, never stored (integrator dd §3.7; §3.8's worked entry): `lin` and [−1, 1] are per
+        // component; `‖n‖ = 1` is a check on the vector, not its range.
+        shape_point(),
         ic("m0", 0, Scale::Lin),
         ic("m1", 1, Scale::Lin),
         ic("m2", 2, Scale::Lin),

@@ -20,6 +20,10 @@ serde_json = "1"
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "1", features = ["process", "std"] }
 
+# `tests/debug_scenes.rs` reads the debug-views references, PNGs, with the png crate render and xtask already use.
+[dev-dependencies]
+png = "0.18"
+
 # Under `controls`, each `negative_control!` in this crate's tests compiles as a test (REQ-VAL-147, R-176).
 [features]
 controls = []

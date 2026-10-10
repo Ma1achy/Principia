@@ -7,8 +7,8 @@
 //! Its members ([`members`]) are the stored members of the full tier's `SimState` variant, each packed word expanded
 //! into its fields, then the word, then the quantities derived at read (payload §5): `ftle`, `ftle_valid`,
 //! `diffusion`, `diffusion_slope_valid`, `total_substeps_log2`, the two time fractions, `orbit_count`, `retrograde`,
-//! the four state predicates, `ensemble_spread` and the current drifts `energy_drift` and `Lz_drift`. None of the
-//! derived ones is stored (R-79). The Benettin shadow `r_sh` and `p_sh`, which only the FTLE tier stores, is a member
+//! the four state predicates, `ensemble_spread`, the current drifts `energy_drift` and `Lz_drift`, and `n`, the current
+//! shape-sphere point (payload §5; dd_generation_root §3.8's worked entry). None of the derived ones is stored (R-79). The Benettin shadow `r_sh` and `p_sh`, which only the FTLE tier stores, is a member
 //! at every tier ([`Fill::Shadow`]; RQ-228): read from the stored shadow at the FTLE tier, and the canonical quiet NaN
 //! in every component at the base tier, so the type stays one across tiers and a tier-absent feature degrades by NaN,
 //! never by struct shape (lowering Part 3a).
@@ -43,6 +43,11 @@
 //! The masses `m0 m1 m2` are the `ICDescriptor`'s (dd_generation_root §3.6, §3.8), not the stored `SimState`'s, so each
 //! read takes them as an argument, `masses` (the fragment's `ctx.ic`, render contract Part 1). Both are f32, the live
 //! f32 values, not the f16 latches (payload §1, §5).
+//!
+//! **The shape point** `n = shape(r, masses)` (payload §5; integrator dd §3.7; chart_reference §3.1; R-14) has one Rust
+//! source, `kernel::shape::shape`, the march's own, which the Rust read side re-exports and calls; the WGSL read side's
+//! `shape` is that function written in WGSL, operation for operation, and `kernel/tests/derived.rs` holds the two to
+//! each other on the GPU (`shape_twin`), as it holds the two `hamiltonian`s (`current_drift`).
 
 use std::fmt::Write as _;
 use std::path::PathBuf;
@@ -89,7 +94,7 @@ pub struct ReadMember {
 }
 
 /// The derived members, in order, each with its type as `(name, Rust, WGSL)`.
-pub const DERIVED: [(&str, &str, &str); 16] = [
+pub const DERIVED: [(&str, &str, &str); 17] = [
     ("ftle", "f32", "f32"),
     ("ftle_valid", "bool", "bool"),
     ("diffusion", "f32", "f32"),
@@ -106,6 +111,7 @@ pub const DERIVED: [(&str, &str, &str); 16] = [
     ("ensemble_spread", "f32", "f32"),
     ("energy_drift", "f32", "f32"),
     ("Lz_drift", "f32", "f32"),
+    ("n", "[f32; 3]", "vec3<f32>"),
 ];
 
 /// The `SimState` variants the stored buffer holds, one per tier (payload §1).
@@ -241,6 +247,7 @@ pub(crate) fn rust_derived(name: &str, shadow: bool) -> String {
         "orbit_count" | "retrograde" => format!("{name}(s.theta)"),
         "energy_drift" => "energy_drift(s.r, s.p, masses, s.E_0)".into(),
         "Lz_drift" => "Lz_drift(s.r, s.p, s.Lz_0)".into(),
+        "n" => "shape(s.r, masses)".into(),
         "ensemble_spread" => {
             "if has_ensemble {\n    ensemble_spread\n} else {\n    canonical_nan()\n}".into()
         }
@@ -279,6 +286,10 @@ pub fn rust(words: &[Word], entries: &[Entry]) -> Generated {
 use spirv_std::num_traits::Float;
 
 use super::*;
+
+/// The shape-sphere point `n` of a configuration (integrator dd §3.7): the march's own map, the one Rust source of the
+/// read side's `n` (payload §5), re-exported so the read and its tests call it by this name.
+pub use crate::shape::shape;
 
 /// The canonical quiet NaN's f32 bits: sign 0, exponent all ones, the quiet bit alone in the significand (lowering
 /// Part 3a; R-72, R-79). A tier-absent derived scalar and an invalid read hold exactly these bits.
@@ -727,6 +738,10 @@ fn wgsl_derived(name: &str, tier: Tier, needs: &mut Needs) -> String {
             }
             "Lz_drift(s_r, s_p, s_Lz_0)".into()
         }
+        "n" => {
+            needs.load("r");
+            "shape(s_r, masses)".into()
+        }
         "ensemble_spread" => "select(canonical_nan(), ensemble_spread, has_ensemble)".into(),
         predicate => {
             needs.load("packed_a");
@@ -1063,5 +1078,24 @@ fn energy_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, m: vec3<f32>, e_
 // The current angular-momentum drift `ΔLz = L_z(r, p) − Lz_0`, in live f32 (payload §5; dd_generation_root §3.8).
 fn Lz_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, lz_0: f32) -> f32 {
     return angular_momentum_z(r, p) - lz_0;
+}
+
+// The shape-sphere point `n = (u, v, w)/I` of the configuration `r` with masses `m`, the current `n` (payload §5;
+// integrator dd §3.7; chart_reference §3.1; R-14): `kernel::shape::shape`, operation for operation. `ρ = r₁ − r₀`,
+// `λ = r₂ − r₀₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`; `u = ‖ρ̃‖² − ‖λ̃‖²`, `v = 2ρ̃·λ̃`, `w = 2ρ̃∧λ̃`, `I = ‖ρ̃‖² + ‖λ̃‖²`.
+fn shape(r: array<vec2<f32>, 3>, m: vec3<f32>) -> vec3<f32> {
+    let m01 = m.x + m.y;
+    let mu_rho = m.x * m.y / m01;
+    let mu_lambda = m.z * m01;
+    let rho = vec2<f32>(r[1].x - r[0].x, r[1].y - r[0].y);
+    let r01 = vec2<f32>((m.x * r[0].x + m.y * r[1].x) / m01, (m.x * r[0].y + m.y * r[1].y) / m01);
+    let lambda = vec2<f32>(r[2].x - r01.x, r[2].y - r01.y);
+    let a = mu_rho * (rho.x * rho.x + rho.y * rho.y);
+    let b = mu_lambda * (lambda.x * lambda.x + lambda.y * lambda.y);
+    let s = sqrt(mu_rho * mu_lambda);
+    let p = s * (rho.x * lambda.x + rho.y * lambda.y);
+    let q = s * (rho.x * lambda.y - rho.y * lambda.x);
+    let i = a + b;
+    return vec3<f32>((a - b) / i, 2.0 * p / i, 2.0 * q / i);
 }
 ";

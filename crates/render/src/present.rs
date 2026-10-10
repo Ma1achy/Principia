@@ -193,10 +193,65 @@ pub fn pcg(v: u32) -> u32 {
     (word >> 22) ^ word
 }
 
+/// `dbg_bytes_rgb(h)`: the hash's low three bytes, low first, as 8-bit sRGB red, green, blue.
+pub fn dbg_bytes_rgb(h: u32) -> Rgb {
+    let h = h.to_le_bytes();
+    srgb8([h[0], h[1], h[2]])
+}
+
 /// `dbg_hash_u32(v)`: the hash's low three bytes as 8-bit sRGB red, green, blue.
 pub fn dbg_hash_u32(v: u32) -> Rgb {
-    let h = pcg(v).to_le_bytes();
-    srgb8([h[0], h[1], h[2]])
+    dbg_bytes_rgb(pcg(v))
+}
+
+/// The whole-word fold of `dbg_hash_word` (REQ-TOOL-155): `pcg(w ^ pcg(z ^ pcg(y ^ pcg(x))))` over the word's four
+/// limbs, `x` first.
+pub fn word_hash(w: [u32; 4]) -> u32 {
+    pcg(w[3] ^ pcg(w[2] ^ pcg(w[1] ^ pcg(w[0]))))
+}
+
+/// `dbg_hash_word(w)`: [`word_hash`], then the byte-to-RGB step.
+pub fn dbg_hash_word(w: [u32; 4]) -> Rgb {
+    dbg_bytes_rgb(word_hash(w))
+}
+
+/// Whether `x` is the absence NaN, by its exact bits.
+fn absent(x: f32) -> bool {
+    x.to_bits() == ABSENT_NAN_BITS
+}
+
+/// `dbg_ternary(m, frag_xy)` (REQ-TOOL-154): `m / max(mᵢ)` as linear RGB; the hatch where no mass is positive or one
+/// is the absence NaN.
+pub fn dbg_ternary(m: [f32; 3], frag_xy: [f64; 2]) -> Rgb {
+    let top = m[0].max(m[1]).max(m[2]);
+    if m.iter().any(|&x| absent(x)) || top.is_nan() || top <= 0.0 {
+        return debug_invalid(frag_xy);
+    }
+    m.map(|x| f64::from(x) / f64::from(top))
+}
+
+/// `dbg_dircos3(v, frag_xy)`: `½(v̂ + 1)` as linear RGB; the hatch where `‖v‖ > 0` fails or a component is the absence
+/// NaN.
+pub fn dbg_dircos3(v: [f32; 3], frag_xy: [f64; 2]) -> Rgb {
+    // A component that is the absence NaN, or any NaN, makes the norm NaN: in f64 that needs no bit test, which the
+    // shader makes because fast math may fold its NaN test (R-343).
+    let v = v.map(f64::from);
+    let norm = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if norm.is_nan() || norm <= 0.0 {
+        return debug_invalid(frag_xy);
+    }
+    v.map(|x| 0.5 * (x / norm + 1.0))
+}
+
+/// `dbg_dircos6(v, frag_xy)` (REQ-TOOL-157): each body's squared norm `wᵢ = ‖vᵢ‖²` over `max(wᵢ)`, as linear RGB; the
+/// hatch where `‖v‖ > 0` fails or a component is the absence NaN.
+pub fn dbg_dircos6(v: [[f32; 2]; 3], frag_xy: [f64; 2]) -> Rgb {
+    let w = v.map(|b| f64::from(b[0]).powi(2) + f64::from(b[1]).powi(2));
+    let top = w[0].max(w[1]).max(w[2]);
+    if v.iter().flatten().any(|&x| absent(x)) || top.is_nan() || top <= 0.0 {
+        return debug_invalid(frag_xy);
+    }
+    w.map(|x| x / top)
 }
 
 /// `dbg_literal(x)`: `0.5 + 0.5 · x/(1 + |x|)`, `x` clamped to ±1e30.

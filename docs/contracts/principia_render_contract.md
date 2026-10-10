@@ -183,6 +183,10 @@ fn dbg_lin(x: f32, lo: f32, hi: f32) -> vec3f   // scalar, viridis ramp
 fn dbg_log(x: f32, eps: f32) -> vec3f           // scalar, log-compressed
 fn dbg_flag(b: bool) -> vec3f                   // boolean: green / red
 fn dbg_hash_u32(v: u32) -> vec3f                // raw word → hashed colour ("is it changing at all")
+fn dbg_hash_word(w: vec4u) -> vec3f             // whole free_group_word → hashed colour (R-72; REQ-TOOL-155)
+fn dbg_ternary(m: vec3f, frag_xy: vec2f) -> vec3f        // the three masses → ternary colour (R-72; REQ-TOOL-154)
+fn dbg_dircos3(v: vec3f, frag_xy: vec2f) -> vec3f        // a k = 3 vector's direction cosines, ½(v̂ + 1)
+fn dbg_dircos6(v: array<vec2f, 3>, frag_xy: vec2f) -> vec3f // a k = 6 vector's direction cosines (R-72; REQ-TOOL-157)
 fn dbg_sentinel(x: f32, frag_xy: vec2f) -> vec3f // absence-NaN (exact bitcast test) → debug_invalid(frag_xy), the hatch (R-136); a stored sentinel such as the word length's 127 shows as its literal value on the ramp (R-79); suspect styling: an extension point, applied on this output by the drift views from the drift suspect predicates (TASK-M3-05, R-379)
 ```
 
@@ -207,6 +211,37 @@ with dd_colouring §3.1's sRGB transfer.
 - **`dbg_hash_u32(v)`:** the PCG hash (Jarzynski & Olano 2020, "Hash Functions for GPU Rendering", JCGT 9(3),
   `pcg_hash`): `state = v·747796405 + 2891336453`, `word = ((state >> ((state >> 28) + 4)) ^ state)·277803737`,
   `h = (word >> 22) ^ word`, all wrapping u32. Its low three bytes, low first, are the 8-bit sRGB red, green and blue.
+- **`dbg_hash_word(w)`, the whole-word hash (R-72; REQ-TOOL-155; TASK-M1-12):** the `free_group_word`, a `uint4`
+  `(x, y, z, w)` (payload §3), folds through `dbg_hash_u32`'s PCG hash, `pcg`, limb by limb from `x`:
+  `h = pcg(w ^ pcg(z ^ pcg(y ^ pcg(x))))`, all wrapping u32. `h` then takes `dbg_hash_u32`'s byte-to-RGB step: its low
+  three bytes, low first, are the 8-bit sRGB red, green and blue. Every bit of the word, its length included, enters
+  the fold, so the word-hash view (Part 6) colours whole words, not one limb. Like `dbg_hash_u32` it can give any
+  colour, never a pattern. The word-hash view draws it only where `fgw_reduced_length_valid` holds: a truncated
+  word's retained prefix is not the reduced word, and every word derivation is invalid for it (payload §3), so there
+  the view draws `debug_invalid(frag_xy)`, the hatch, as the reduced-length and symbol-at-k views do (applied per
+  R-369; the physics reviewer approves this R-72 definition).
+- **`dbg_ternary(m, frag_xy)`, the ternary masses colour (R-72; REQ-TOOL-154; TASK-M1-12):** the `ICDescriptor`'s
+  masses `(m0, m1, m2)` as linear RGB scaled by `1/max(mᵢ)`: equal masses draw white, and each vertex, one mass alone,
+  its primary, `m0` red, `m1` green, `m2` blue. Where no mass is positive, or one is the absence NaN, the colour is
+  undefined and `debug_invalid(frag_xy)` is drawn.
+- **The direction cosines of a vector field (generation-root §3.8; TASK-M1-12):** for every `vector(type, k)` field the
+  catalogue offers two views, '‖·‖ as scalar', the field's generated view of `‖v‖`, and 'as direction-cosines', drawn
+  by the helper of its `k`. Where `‖v‖ > 0` fails, or a component is the absence NaN, the direction is undefined and
+  `debug_invalid(frag_xy)` is drawn.
+  - **`k = 3`, `dbg_dircos3(v, frag_xy)`** (`n`): `½(v̂ + 1)` as linear RGB, `v̂ = v/‖v‖`, the live shape view's
+    mode 0 (below).
+  - **`k ≠ 3`, `dbg_dircos6(v, frag_xy)` (R-72; REQ-TOOL-157; RQ-235 as amended per code review 5438179638):** the
+    direction cosines `cᵢ = vᵢ/‖v‖` of the `k` components, each squared, are summed into channel `⌊3i/k⌋`; the three
+    sums, which total 1, are linear RGB scaled by `1/max`, as the ternary masses are. For `k = 6`, `r`, `p` and their
+    shadows, the components are `(x, y)` per body, so channel `j` is body `j`'s share of `‖v‖²`: red body 0, green
+    body 1, blue body 2, equal shares white. The scale cancels `‖v‖²`, so the colour is `wⱼ/max(wⱼ)` with `wⱼ` body
+    `j`'s squared norm. A k = 6 vector has no three-channel sign, so the signs of the cosines are not shown; the
+    field's per-component views show them.
+- **Drift max-vs-final (TASK-M1-12; applied per R-369):** the accumulator view of the drift shape shows the current
+  drift's magnitude over its running maximum, `|H(r, p) − E_0| / dE_max` (`u_quantity` 0) or `|L_z(r, p) − Lz_0| /
+  dLz_max` (1), by `dbg_lin` over `[0, 1]`: near 1 the loss is secular, still at its maximum; near 0 it was a transient
+  spike that recovered (R-246). Where the maximum is not positive, before any drift is latched, the ratio is undefined
+  and `debug_invalid(frag_xy)` is drawn.
 - **`dbg_sentinel(x, frag_xy)`:** the absence NaN, tested by its exact bits against the canonical quiet NaN (`0x7FC00000`,
   lowering Part 3a), draws `debug_invalid(frag_xy)`, the hatch below. Any other value, a stored sentinel such as the word length's 127
   included, shows as its literal value on the viridis ramp at `t = 0.5 + 0.5·x/(1 + |x|)` (`dbg_literal`), with `x`
@@ -247,6 +282,9 @@ with dd_colouring §3.1's sRGB transfer.
 ### Live-state & array inspection
 
 - **Live shape views** (`u_mode`): mode 0 → `0.5·(n+1)` direction cosines RGB of the *current* derived `n`; mode 1 → cyclic map (Twilight) of the running unwrapped phase `θ̃`; mode 2 → `|n|−1` as error view (normalisation damage made visible — should be flat zero, since `n` is derived fresh each step).
+  Mode 0 is `dbg_dircos3(n, frag_xy)` (Part 5). Where `n` is undefined (a coincident configuration, `I = 0`, gives
+  `0/0`) or `θ̃` is not finite, the mode reading it draws `debug_invalid(frag_xy)`, the hatch, as every colouring maps
+  NaN or a sentinel to its invalid colour (Part 4; TASK-M1-12, applied per R-369).
 - **Accumulator views**: Benettin `S/t` (FTLE-running — a live approximation; the finalised read is `S_final/(n·dt)` with the partial renorm interval closed, payload §5), diffusion slope = C_ty/C_tt from the Welford accumulators, drift running-max vs running-final.
 - **Word inspector**: `fgw_reduced_length` as scalar view (styled invalid when truncated); symbol-at-slot-k via a slot slider; `fgw_truncated` (the 127-sentinel) as flag view.
 - **ICDescriptor views**: masses as ternary colour, `virial_ratio`, `rho_ratio`, `rho_angle`, `r_min_pair_0` as scalar views — these certify the *decoder*, independent of any integration.
@@ -278,6 +316,20 @@ with dd_colouring §3.1's sRGB transfer.
 | Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view here exonerates the GPU |
 | Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch, visible-set, locked/stale) | post node + quad + `ctx.uv` | the quad/instance render path and cache behaviour |
 | **Uniform echo** — flat swatches of `quality_tier`, `n_renorm` (R-111), thresholds *as currently bound* | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound" |
+
+**The word views' renderings (TASK-M1-12).**
+- **The invalid-styled reduced length (R-72; REQ-TOOL-156):** where `fgw_reduced_length_valid` is false, the word
+  truncated, the reduced-length view draws `debug_invalid(frag_xy)`, the hatch; elsewhere it draws
+  `fgw_reduced_length` by `dbg_lin` over `[0, fgw_capacity]`, `[0, 76]`. The raw `length` view still shows the stored
+  127 literally, on the ramp by `dbg_sentinel` (R-79, R-136).
+- **Symbol-at-k:** the slot `k`, `0` to `fgw_capacity − 1`, is the view's slider uniform; the symbol there,
+  `fgw_symbol(word, k)` (payload §3), draws by `dbg_cat(s, 4)`. A slot at or past the word's length, and every slot of
+  a truncated word, holds no symbol and draws the hatch.
+- **Truncated:** `fgw_truncated` by `dbg_flag`.
+- **Whole-word hash:** `dbg_hash_word` of the word (Part 5, REQ-TOOL-155); a truncated word draws the hatch.
+- **Last symbol:** `last_symbol` has no in-band "none" code; it is meaningful iff `length ≥ 1 && length ≠ 127`
+  (payload §2), so its view draws `dbg_cat(s, 4)` there and the hatch for the empty word and a truncated word
+  (applied per R-369).
 
 ### Cross-check views (the seams)
 

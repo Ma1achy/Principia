@@ -26,6 +26,15 @@
 //! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN in the invalid pattern, then in the override
 //!   colour; the unset value in the grey either way (R-280).
 //!
+//! **The debug views' scenes** (`debug-views`; RQ-237, decided per R-369; R-153; TASK-M1-12): one per entry of the
+//! render registry tagged debug ([`debug_cases`]), named by its id less `debug/`, `/` read as `-`
+//! (`generated-theta`, `reductions-n_dircos`, `word-hash`), and two more of the live shape view, its modes 1 and 2
+//! (`live_shape-twilight`, `live_shape-norm_error`, the |n|−1 view, flat zero). A catalogue view is coloured as
+//! [`Colouring::View`], its `u_range` measured; every other debug view as [`Colouring::Debug`], its header's defaults
+//! but the params its case sets. Each renders the showcase set ([`showcase`]): eight samples whose every field differs
+//! from sample to sample, the first fresh; the ternary masses view renders its own ([`ternary_masses`]): equal masses,
+//! each vertex, and five mixes.
+//!
 //! **The scenes** (`m1-outcome` and `debug-views`; TASK-M1-10's acceptance lines):
 //! - `outcome`: the outcome palette (`render::colour::outcome`; colour_composition §1.4): one sample per class, the
 //!   collisions with `t_end_step > 0` per pair, the escapes per body, bounded, a `decode_failed` sample, a collision
@@ -35,6 +44,8 @@
 //! - `state_view`: the raw `state` view, one sample per state, 0–5: six `dbg_cat` colours (R-115).
 //! - `detail_view`: the `detail` view, keyed by state: every `detail` code of escape, collision, sim_failed and
 //!   decode_failed, then bounded and running, which have none and draw blank.
+
+use std::sync::OnceLock;
 
 use engine::synthetic::Synthetic;
 use kernel::payload::{canonical_nan, sim_state_from_ftle, ReadParams, STATE_RUNNING};
@@ -48,13 +59,17 @@ use render::headless::{self, Draw, Target};
 use render::pipeline_cache::{block_layout, encode};
 use render::present::{self, Rgb};
 use render::raster::Grid;
-use render::registry::{self, Catalogue, ZERO_SOURCE};
+use render::registry::{self, Catalogue, Category, ZERO_SOURCE};
 
+use kernel::payload::diffusion_c_tt;
 /// The kernel's read side and f16 packing, for the render crate's tests, which reach the kernel only through this
-/// dev-dependency (systems_architecture §7.1), as they reach the synthetic harness.
+/// dev-dependency (systems_architecture §7.1), as they reach the synthetic harness; and the word's append and symbol
+/// read (payload §3), for the word inspector's tests.
 pub use kernel::payload::{
-    f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, SimState, STATE_SIM_FAILED,
+    angular_momentum_z, f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, fgw_symbol, hamiltonian,
+    shape, SimState, FGW_NO_SYMBOL, STATE_DECODE_FAILED, STATE_SIM_FAILED,
 };
+pub use kernel::word::fgw_append;
 
 /// The scenes, by name.
 pub const NAMES: [&str; 14] = [
@@ -111,11 +126,134 @@ pub enum Colouring {
     View(&'static str),
     /// A field ramp, its invalid colour overridden when `override_on`.
     Ramp { ramp: FieldRamp, override_on: bool },
+    /// A debug view of the registry other than a catalogue view, by its case ([`debug_cases`]): a reduction or a
+    /// hand-written view, its params the case's over its header's defaults.
+    Debug(&'static DebugCase),
+    /// A colour occupant's WGSL as given, with the params it sets over its header's defaults: a test's probe, which
+    /// writes a view's value rather than its colour.
+    Probe(String, Vec<(String, Vec<f64>)>),
     /// The outcome palette, the built-in colour `outcome_state`, the swatch `edit` names set to its 8-bit sRGB colour,
     /// as the linear RGB param the node takes.
     Outcome {
         edit: Option<(&'static str, [u8; 3])>,
     },
+}
+
+/// A case of the `debug-views` suite: its name, the registry id of the view it renders, the params it sets, and the
+/// nudge of its [`showcase`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct DebugCase {
+    pub name: String,
+    pub id: String,
+    pub params: Vec<(String, Vec<f64>)>,
+    pub nudge: u32,
+}
+
+/// The cases whose [`showcase`] is nudged, and by how much: each the least nudge that sets every channel of the case's
+/// render at least 0.01 of an 8-bit step from a rounding tie, so that its one reference holds on every backend (the
+/// numeric views' margin, `crates/render/tests/numeric_views.rs`). Every other case's nudge is 0.
+const NUDGES: &[(&str, u32)] = &[
+    ("accumulators-drift_max_vs_final", 3),
+    ("accumulators-drift_max_vs_final-lz", 2),
+    ("derived-energy_drift", 3),
+    ("generated-C_ty", 1),
+    ("generated-energy_drift", 3),
+    ("generated-m0", 1),
+    ("generated-m1", 1),
+    ("generated-m2", 1),
+    ("generated-r_min_pair_0", 1),
+    ("generated-r_sh", 1),
+    ("generated-rho_angle", 2),
+    ("generated-rho_ratio", 2),
+    ("generated-t_dmin_step", 2),
+    ("generated-t_end_step", 1),
+    ("generated-theta", 1),
+    ("generated-total_substeps", 3),
+    ("reductions-r_sh_dircos", 2),
+];
+
+/// The nudge of the case `name`, from [`NUDGES`].
+fn nudge(name: &str) -> u32 {
+    NUDGES
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map_or(0, |&(_, k)| k)
+}
+
+/// The suite of the debug views' cases.
+pub const DEBUG_SUITE: &str = "debug-views";
+
+/// The cases beyond each view's default: the view's registry id, the case name's suffix, and the param it sets. The
+/// live shape view at `u_mode` 1, Twilight of `θ̃`, and 2, `‖n‖ − 1`, the view expected flat zero; the drift
+/// max-vs-final view at `u_quantity` 1, the `L_z` drift (render contract Part 5).
+const EXTRA_CASES: [(&str, &str, &str, f64); 3] = [
+    ("debug/live_shape", "twilight", "u_mode", 1.0),
+    ("debug/live_shape", "norm_error", "u_mode", 2.0),
+    (
+        "debug/accumulators/drift_max_vs_final",
+        "lz",
+        "u_quantity",
+        1.0,
+    ),
+];
+
+/// The case name of the registry id `id`: the id less `debug/`, each `/` read as `-`.
+pub fn case_name(id: &str) -> String {
+    id.strip_prefix("debug/").unwrap_or(id).replace('/', "-")
+}
+
+/// The `debug-views` suite's cases, in name order: one per entry of the render registry tagged debug, its header's
+/// defaults, then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
+/// over its scene once, here.
+pub fn debug_cases() -> Result<&'static [DebugCase], String> {
+    static CASES: OnceLock<Result<Vec<DebugCase>, String>> = OnceLock::new();
+    CASES
+        .get_or_init(|| {
+            let entries = registry::registry().map_err(|e| e.to_string())?;
+            let mut out: Vec<DebugCase> = entries
+                .iter()
+                .filter(|e| e.category == Category::Debug)
+                .map(|e| {
+                    let name = case_name(&e.id);
+                    DebugCase {
+                        nudge: nudge(&name),
+                        name,
+                        id: e.id.clone(),
+                        params: Vec::new(),
+                    }
+                })
+                .collect();
+            for (id, suffix, param, value) in EXTRA_CASES {
+                let name = format!("{}-{suffix}", case_name(id));
+                out.push(DebugCase {
+                    nudge: nudge(&name),
+                    name,
+                    id: id.to_owned(),
+                    params: vec![(param.to_owned(), vec![value])],
+                });
+            }
+            for case in &mut out {
+                let field = case.id.strip_prefix("debug/generated/");
+                if let Some(&field) = AUTO_RANGE.iter().find(|f| Some(**f) == field) {
+                    let (grid, mut set) = row(8)?;
+                    showcase(&mut set, case.nudge);
+                    let scene = Scene {
+                        name: "an auto-range case's measure",
+                        set,
+                        context: context(grid),
+                        colouring: Colouring::View(field),
+                    };
+                    let mut params = vec![("RANGE_AUTO".to_owned(), vec![1.0])];
+                    params.extend(scene.params()?);
+                    case.params = params;
+                }
+            }
+            out.sort_by(|a, b| a.name.cmp(&b.name));
+            Ok(out)
+        })
+        .as_ref()
+        .map(Vec::as_slice)
+        .map_err(Clone::clone)
 }
 
 /// What a scene shows at one sample.
@@ -160,11 +298,14 @@ pub struct Scene {
     pub colouring: Colouring,
 }
 
+/// The scenes' macro-step, `dt_macro`.
+const DT_MACRO: f32 = 0.01;
+
 /// The context every scene reads with: `dt_macro` 0.01, `δ₀` 10⁻⁶, a renormalisation every 16 steps, a horizon of
 /// 1000 steps, E = 0.
 fn context(grid: Grid) -> Context {
     Context {
-        dt_macro: 0.01,
+        dt_macro: DT_MACRO,
         delta_0: 1e-6,
         n_renorm: 16,
         horizon_steps: 1000,
@@ -184,6 +325,18 @@ fn row(samples: u32) -> Result<(Grid, Synthetic), String> {
     Ok((grid, Synthetic::flat(grid, 0)))
 }
 
+/// A scene of `samples` fresh samples in a row, each tile 8 px square, read with every scene's context, coloured by
+/// `colouring`: for a test that fills its own samples.
+pub fn row_scene(name: &'static str, samples: u32, colouring: Colouring) -> Result<Scene, String> {
+    let (grid, set) = row(samples)?;
+    Ok(Scene {
+        name,
+        set,
+        context: context(grid),
+        colouring,
+    })
+}
+
 /// Sample `i` stepped `n` times with the shadow `δ₀` from the state, so `ftle = S/(n · dt)` (payload §5).
 fn stepped(set: &mut Synthetic, i: u32, n: u32, s: f32) {
     let mut sh = [[0.0f32; 2]; 3];
@@ -191,12 +344,16 @@ fn stepped(set: &mut Synthetic, i: u32, n: u32, s: f32) {
     set.sample(i).times(n, 0).S(s).r_sh(sh);
 }
 
-/// `name`'s scene, or why not.
+/// `name`'s scene, `m1-numeric`'s or `debug-views`'s, or why not.
 pub fn scene(name: &str) -> Result<Scene, String> {
+    if let Some(case) = debug_cases()?.iter().find(|c| c.name == name) {
+        return debug_scene(case);
+    }
     let name: &'static str = NAMES.iter().find(|n| **n == name).ok_or_else(|| {
         format!(
-            "no golden scene `{name}`; the scenes are {}",
-            NAMES.join(", ")
+            "no golden scene `{name}`; the scenes are {} and the debug views' ({})",
+            NAMES.join(", "),
+            DEBUG_SUITE
         )
     })?;
     let samples = match name {
@@ -327,6 +484,260 @@ fn d_min_samples(set: &mut Synthetic) {
     }
 }
 
+/// The scene of the `debug-views` case `case`: a catalogue view coloured as [`Colouring::View`], any other, and an
+/// `AUTO_RANGE` view with its case's params, as [`Colouring::Debug`]; the ternary masses over [`ternary_masses`],
+/// every other over [`showcase`].
+pub fn debug_scene(case: &'static DebugCase) -> Result<Scene, String> {
+    let (grid, mut set) = row(8)?;
+    let colouring = match case.id.strip_prefix("debug/generated/") {
+        Some(field) if !AUTO_RANGE.contains(&field) => {
+            let l = ledger::payload::ledger();
+            let name = l
+                .entries
+                .iter()
+                .filter_map(|e| e.name)
+                .find(|n| *n == field)
+                .ok_or_else(|| format!("`{field}` is no ledger field"))?;
+            Colouring::View(name)
+        }
+        _ => Colouring::Debug(case),
+    };
+    if case.id.ends_with(ledger::gen::catalogue::MASSES_TERNARY) {
+        ternary_masses(&mut set);
+    } else {
+        showcase(&mut set, case.nudge);
+    }
+    Ok(Scene {
+        name: &case.name,
+        set,
+        context: context(grid),
+        colouring,
+    })
+}
+
+/// The generated views whose `debug-views` case renders in auto range, `RANGE_AUTO` 1 over the scene's measured
+/// range: their declared ranges, all of a u32 and all of the word's 25-bit top limb, are so wide that the showcase's
+/// values would all draw the ramp's start (applied per R-369).
+const AUTO_RANGE: [&str; 2] = ["total_substeps", "payload"];
+
+/// The word of the symbols `symbols` (codes `a = 0, A = 1, b = 2, B = 3`), appended in order from the empty word
+/// through the kernel's append (payload §3), and its last symbol, `None` for the empty word.
+pub fn appended(symbols: &[u32]) -> ([u32; 4], Option<u32>) {
+    let mut w = kernel::payload::fgw_pack([0; 4], 0);
+    let (mut prev, mut a) = (FGW_NO_SYMBOL, 0);
+    for &s in symbols {
+        let next = fgw_append(w, prev, a, s);
+        (w, prev, a) = (next.word, next.prev, next.packed_a);
+    }
+    (w, (fgw_length_raw(w) > 0).then_some(prev))
+}
+
+/// The showcase set: eight samples whose every field differs from sample to sample (debug_tooling_plan
+/// "Synthetic-first"). Sample 0 is fresh, running and unstepped, its `ftle`, `diffusion` and accumulators unset or NaN,
+/// its drifts and Welford sums 0; samples 1–7 are stepped, in each state, with distinct configurations, shadows, accumulators, latches, words (one
+/// empty, one truncated, three long enough to set the top limb) and `ICDescriptor`s, the masses positive and summing to
+/// 1, `θ̃` away from every multiple of 2π. Each continuous field takes the samples in its own order, so no two fields'
+/// renders coincide under an auto range. Each shadow sits `off = 0.2 + 0.05·j` (`j` its order's place) from its state:
+/// `r_sh` ahead of `r` by `off` in body 0's x and behind by `off/2` in body 1's y, `p_sh` ahead of `p` by `off/4` in
+/// body 2's x. Each stepped sample's current drifts lie within its latched maxima, `E_0 = H(r, p) − e` and `Lz_0 =
+/// L_z(r, p) − l` with `|e| < dE_max`, `|l| < dLz_max`, as a march leaves them, but the failed samples 4 and 5,
+/// whose latches are the defined `0.0` and `d_min` `+inf` (R-271). Each stepped sample's `C_ty` is its own slope times
+/// `C_tt(n)`, so the diffusion slopes spread whatever the step counts. A nonzero `nudge`, at most 6, moves the
+/// stepped samples' values a little and unevenly, so that no auto range absorbs it: `0.0137·nudge·(1 + i mod 3)` on
+/// sample `i`'s place in each order, on `θ̃` and on `S`; `nudge·(i mod 3)` steps on `t_end_step`, `nudge·(i mod 2)`
+/// more on `t_dmin_step`, `7919` times the first on `total_substeps`; the first amount over 8.2 on the drifts' shares.
+/// It moves every sample's masses, the unstepped sample 0's included: `0.0011·nudge·(1 + i mod 3)` of mass from the
+/// second body to the first and third. The states and words are unchanged, and the sample stepped 3 times stays short
+/// of a completed renormalisation.
+pub fn showcase(set: &mut Synthetic, nudge: u32) {
+    // Thirty orders of the eight samples, none affine in the index nor the reverse of another.
+    const ORDER: [[u8; 8]; 30] = [
+        [3, 1, 0, 6, 4, 5, 2, 7],
+        [1, 7, 4, 5, 6, 3, 2, 0],
+        [2, 7, 6, 3, 1, 4, 5, 0],
+        [2, 3, 7, 6, 4, 0, 1, 5],
+        [1, 3, 2, 4, 5, 0, 7, 6],
+        [2, 7, 4, 5, 0, 6, 3, 1],
+        [3, 6, 7, 1, 4, 0, 5, 2],
+        [0, 2, 1, 5, 7, 3, 4, 6],
+        [4, 3, 2, 1, 7, 6, 5, 0],
+        [4, 7, 0, 1, 5, 6, 2, 3],
+        [5, 3, 2, 1, 7, 4, 0, 6],
+        [5, 6, 2, 7, 4, 1, 3, 0],
+        [3, 4, 1, 6, 7, 5, 0, 2],
+        [6, 5, 1, 3, 0, 4, 2, 7],
+        [1, 6, 0, 4, 7, 3, 2, 5],
+        [3, 0, 5, 6, 1, 2, 4, 7],
+        [3, 5, 7, 4, 1, 6, 2, 0],
+        [6, 7, 5, 1, 2, 0, 4, 3],
+        [6, 2, 7, 3, 1, 0, 5, 4],
+        [2, 0, 7, 6, 1, 3, 5, 4],
+        [0, 5, 6, 1, 3, 7, 2, 4],
+        [2, 1, 3, 7, 6, 5, 0, 4],
+        [2, 0, 4, 3, 5, 7, 1, 6],
+        [1, 5, 2, 7, 3, 0, 6, 4],
+        [0, 3, 5, 2, 4, 1, 7, 6],
+        [4, 7, 3, 6, 1, 5, 0, 2],
+        [7, 5, 2, 0, 3, 1, 4, 6],
+        [1, 0, 5, 7, 4, 6, 2, 3],
+        [2, 5, 0, 1, 7, 6, 4, 3],
+        [3, 7, 4, 1, 6, 0, 2, 5],
+    ];
+    const TOTAL_SUBSTEPS: [u32; 8] = [0, 1, 37, 1000, 65536, 3, 123_456, 999_999];
+    const STATES: [u32; 8] = [3, 1, 0, 2, 4, 5, 1, 0];
+    const T_END: [u32; 8] = [0, 40, 100, 250, 37, 3, 999, 512];
+    const THETA: [f32; 8] = [0.0, 3.5, -8.2, 15.9, -1.3, 0.4, 40.1, -22.7];
+    const S: [f32; 8] = [0.0, 0.4, 1.7, 3.1, 0.9, 0.05, 6.2, 2.4];
+    const SLOPE: [f32; 8] = [0.0, -3.0, 1.2, -0.4, 4.0, 5.0, -0.05, 0.07];
+    const WORDS: [&[u32]; 8] = [
+        &[],
+        &[0],
+        &[0, 2, 1],
+        &[],
+        &[],
+        &[0, 2, 0, 2, 1, 3, 1, 3, 0, 2, 0, 2, 1, 3, 1, 3, 0, 2],
+        &[0; 77],
+        &[],
+    ];
+    const MASSES: [[f32; 3]; 8] = [
+        [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+        [0.5, 0.3, 0.2],
+        [0.2, 0.5, 0.3],
+        [0.3, 0.2, 0.5],
+        [0.6, 0.25, 0.15],
+        [0.15, 0.6, 0.25],
+        [0.25, 0.15, 0.6],
+        [0.4, 0.35, 0.25],
+    ];
+    for i in 0..8u32 {
+        let k = i as usize;
+        // Uneven over the samples, so that no auto range absorbs the nudge.
+        let t_nudge = nudge * (i % 3);
+        let g: f32 = if i > 0 {
+            0.0137 * (nudge * (1 + i % 3)) as f32
+        } else {
+            0.0
+        };
+        // Each continuous value `a + b·(ORDER[row][i] + g)`: its own order of the samples, so no two fields' values
+        // are affine in each other and no auto range maps two fields to one image.
+        let at = |a: f32, b: f32, row: usize| a + b * (f32::from(ORDER[row][k]) + g);
+        let r = [
+            [at(0.6, 0.07, 0), at(-0.2, 0.05, 1)],
+            [at(-0.45, -0.03, 2), at(0.55, -0.09, 3)],
+            [at(-0.15, 0.02, 4), at(-0.35, 0.08, 5)],
+        ];
+        let p = [
+            [at(0.1, -0.04, 6), at(0.3, 0.02, 7)],
+            [at(-0.25, 0.06, 8), at(-0.05, -0.03, 9)],
+            [at(0.15, -0.02, 10), at(-0.25, 0.01, 11)],
+        ];
+        // The shadow sits far enough off its state to show at 8 bits.
+        let off = at(0.2, 0.05, 12);
+        let mut r_sh = r;
+        r_sh[0][0] += off;
+        r_sh[1][1] -= 0.5 * off;
+        let mut p_sh = p;
+        p_sh[2][0] += 0.25 * off;
+        let mut m = MASSES[k];
+        let dm = 0.0011 * (nudge * (1 + i % 3)) as f32;
+        m[0] += dm;
+        m[1] -= 2.0 * dm;
+        m[2] += dm;
+        // The latched maxima, and the current drifts within them, a share of each in (0, 1), alternating in sign.
+        let de_max = at(0.03, 0.05, 13);
+        let dlz_max = at(0.03, 0.03, 14);
+        let sign = [1.0, -1.0][k % 2];
+        // Sample 0 is unstepped: its energy and angular momentum are its own, no drift yet.
+        let (e_drift, lz_drift) = match i {
+            0 => (0.0, 0.0),
+            _ => (
+                sign * de_max * (f32::from(ORDER[15][k]) + 0.5 + g) / 8.2,
+                -sign * dlz_max * (f32::from(ORDER[16][k]) + 0.5 + g) / 8.2,
+            ),
+        };
+        // The Welford fit: none on the unstepped sample (payload §4: y is sampled after each completed step); else
+        // `C_ty` the sample's slope times `C_tt(n)` (the read side's own, `n = t_end_step`), so that each sample's
+        // slope, not its step count, sets its diffusion. `C_tt` grows as `n³`, so the slopes shrink as `n` grows,
+        // which keeps both the slopes and `C_ty` spread.
+        let n = T_END[k] + t_nudge;
+        let (mean_y, c_ty) = match i {
+            0 => (0.0, 0.0),
+            _ => (at(0.25, -0.11, 17), SLOPE[k] * diffusion_c_tt(n, DT_MACRO)),
+        };
+        // Samples 3, 4 and 7 hold long words, 76, 76 and 74 symbols cycling from different starts, whose top limbs,
+        // `payload`, spread across its range.
+        let long = |cycle: [u32; 4], n: usize| (0..n).map(|j| cycle[j % 4]).collect::<Vec<u32>>();
+        let symbols = match k {
+            3 => long([0, 2, 1, 3], 76),
+            4 => long([2, 0, 3, 1], 76),
+            7 => long([1, 3, 0, 2], 74),
+            _ => WORDS[k].to_vec(),
+        };
+        let (word, last) = appended(&symbols);
+        let mut sample = set.sample(i);
+        sample
+            .r(r)
+            .p(p)
+            .r_sh(r_sh)
+            .p_sh(p_sh)
+            .S(S[k] + g)
+            .theta(THETA[k] + g)
+            .mean_y(mean_y)
+            .C_ty(c_ty)
+            .E_0(hamiltonian(r, p, m) - e_drift)
+            .Lz_0(angular_momentum_z(r, p) - lz_drift)
+            .total_substeps(TOTAL_SUBSTEPS[k] + 7919 * t_nudge)
+            .closure_min(10f32.powf(at(-4.0, 0.6, 19)))
+            .closure_step([0, 7, 33, 120, 15, 2, 640, 300][k])
+            .state(STATES[k])
+            .detail([0, 1, 2, 3, 0, 1, 2, 3][k])
+            .saturated(i % 3 == 1)
+            .dmin_pair(if i == 0 { 3 } else { i % 3 })
+            .times(n, n / 3 + nudge * (i % 2))
+            .word_raw(word);
+        if let Some(s) = last {
+            sample.last_symbol(s);
+        }
+        // A failed sample's latches are defined: `dE_max = dLz_max = 0.0`, `d_min = +inf` (payload §1, "Failed-state
+        // contents are defined"; R-271).
+        if STATES[k] == STATE_SIM_FAILED || STATES[k] == STATE_DECODE_FAILED {
+            sample.d_min(f32::INFINITY).drift_max(0.0, 0.0);
+        } else if i > 0 {
+            let d = at(1.0, 1.0, 20);
+            sample.d_min(0.02 * d * d).drift_max(de_max, dlz_max);
+        }
+        let ic = set.ic(i);
+        (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
+        ic.q_mass = at(0.1, 0.1, 21);
+        ic.rho_mag = at(0.3, 0.2, 22);
+        ic.lambda_mag = at(0.9, -0.08, 23);
+        ic.rho_ratio = at(0.2, 0.45, 24);
+        ic.rho_angle = at(0.4, 0.8, 25);
+        ic.K_0 = at(0.15, 0.09, 26);
+        ic.V_0 = at(-1.4, 0.1, 27);
+        ic.virial_ratio = at(0.3, 0.2, 28);
+        ic.r_min_pair_0 = at(0.05, 0.12, 29);
+    }
+}
+
+/// The ternary masses view's set: equal masses (white), each vertex alone (its primary), then five mixes.
+pub fn ternary_masses(set: &mut Synthetic) {
+    const MASSES: [[f32; 3]; 8] = [
+        [1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0],
+        [1.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0],
+        [0.0, 0.0, 1.0],
+        [0.5, 0.3, 0.2],
+        [0.15, 0.6, 0.25],
+        [0.25, 0.15, 0.6],
+        [0.45, 0.45, 0.1],
+    ];
+    for (i, m) in (0u32..).zip(MASSES) {
+        let ic = set.ic(i);
+        (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
+    }
+}
+
 impl Scene {
     /// The target's size.
     pub fn size(&self) -> (u32, u32) {
@@ -350,6 +761,13 @@ impl Scene {
                     .ok_or_else(|| format!("no registry entry `{id}`"))
             }
             Colouring::Ramp { ramp, .. } => Ok(ramp.wgsl()),
+            Colouring::Debug(case) => registry::registry()
+                .map_err(|e| e.to_string())?
+                .into_iter()
+                .find(|e| e.id == case.id)
+                .map(|e| e.source)
+                .ok_or_else(|| format!("no registry entry `{}`", case.id)),
+            Colouring::Probe(wgsl, _) => Ok(wgsl.clone()),
             Colouring::Outcome { .. } => Ok(outcome::WGSL.to_owned()),
         }
     }
@@ -389,10 +807,11 @@ impl Scene {
     }
 
     /// The read value of the scene's field at sample `i` and its read-side validity (`ftle_valid`, `n ≥ 2`, true for
-    /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: the fields the scenes
-    /// colour, `dmin_pair`, the word `length` and each f32 member of the sample's `ICDescriptor` (`Scene::ic_member`).
-    /// Any other field is an error, naming it, so that no scene reads, or measures its `u_range` from, a field it does
-    /// not colour (applied per R-369, qa review 5468844637).
+    /// a field with neither), through the kernel's read side, the Rust twin of the fragment's: every field a numeric
+    /// view colours (`ledger::gen::numeric`), `dmin_pair`, `state`, `detail`, and each f32 member of the sample's
+    /// `ICDescriptor` (`Scene::ic_member`). Any other field is an error, naming it, so that no scene reads, or
+    /// measures its `u_range` from, a field it does not colour (applied per R-369, qa review 5468844637); a debug
+    /// view's scene has no field and reads none.
     pub fn value(&self, i: u32) -> Result<(f32, bool), String> {
         let read = self.read(i);
         Ok(match self.field() {
@@ -405,6 +824,18 @@ impl Scene {
             "state" => (read.state as f32, true),
             "detail" => (read.detail as f32, true),
             "length" => (fgw_length_raw(read.word) as f32, true),
+            "S" => (read.S, true),
+            "theta" => (read.theta, true),
+            "mean_y" => (read.mean_y, true),
+            "C_ty" => (read.C_ty, true),
+            "E_0" => (read.E_0, true),
+            "Lz_0" => (read.Lz_0, true),
+            "total_substeps" => (read.total_substeps as f32, true),
+            "closure_min" => (read.closure_min, true),
+            "closure_step" => (read.closure_step as f32, true),
+            "t_end_step" => (read.t_end_step as f32, true),
+            "t_dmin_step" => (read.t_dmin_step as f32, true),
+            "payload" => (kernel::payload::fgw_payload(read.word) as f32, true),
             other => match self.ic_member(i, other) {
                 Some(v) => (v, true),
                 None => {
@@ -435,9 +866,21 @@ impl Scene {
         Some(f32::from_le_bytes(ic.get(at..at + 4)?.try_into().ok()?))
     }
 
+    /// Sample `i`'s `ICDescriptor` masses `m0 m1 m2`, as the set uploads them and the fragment reads them (`ctx.ic`).
+    pub fn masses(&self, i: u32) -> [f32; 3] {
+        ["m0", "m1", "m2"].map(|m| self.ic_member(i, m).unwrap_or(f32::NAN))
+    }
+
     /// Sample `i` as the kernel's read side reads it, the Rust twin of the fragment's unpack: the scene's context, a
-    /// FULL-tier read with no ensemble.
+    /// FULL-tier read with no ensemble, with the sample's own masses ([`Scene::masses`], the fragment's `ctx.ic`),
+    /// which the read's `n` and `energy_drift` take (applied per R-369: TASK-M1-09's read took thirds).
     pub fn read(&self, i: u32) -> SimState {
+        self.read_with(i, self.masses(i))
+    }
+
+    /// Sample `i` through the kernel's read side with the masses `masses`: the scene's context, a FULL-tier read with
+    /// no ensemble. A test's control reads with masses not the sample's through it.
+    pub fn read_with(&self, i: u32, masses: [f32; 3]) -> SimState {
         let c = &self.context;
         let params = ReadParams {
             dt_macro: c.dt_macro,
@@ -451,16 +894,18 @@ impl Scene {
             true,
             canonical_nan(),
             false,
-            [1.0 / 3.0; 3],
+            masses,
             &params,
         )
     }
 
-    /// The scene's field.
+    /// The scene's field; a debug view's scene names its registry id.
     pub fn field(&self) -> &'static str {
         match &self.colouring {
             Colouring::View(f) => f,
             Colouring::Ramp { ramp, .. } => ramp.field.field,
+            Colouring::Debug(case) => &case.id,
+            Colouring::Probe(..) => "probe",
             Colouring::Outcome { .. } => "state",
         }
     }
@@ -500,6 +945,8 @@ impl Scene {
                 "INVALID_OVERRIDE".to_owned(),
                 vec![f64::from(u32::from(*override_on))],
             )],
+            Colouring::Debug(case) => case.params.clone(),
+            Colouring::Probe(_, params) => params.clone(),
             Colouring::Outcome { edit } => edit
                 .iter()
                 .map(|(param, c)| ((*param).to_owned(), present::srgb8(*c).to_vec()))
@@ -563,6 +1010,9 @@ impl Scene {
                 RampShown::NotYet => Look::NotYet,
                 RampShown::Ramp(t) => Look::Ramp { twilight: false, t },
             }),
+            Colouring::Debug(_) | Colouring::Probe(..) => {
+                unreachable!("a debug view's or a probe's scene reads no value")
+            }
         }
     }
 

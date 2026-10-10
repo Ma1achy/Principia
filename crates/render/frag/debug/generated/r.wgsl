@@ -2,7 +2,9 @@
 // The debug view of `r` (render contract Part 6; debug_tooling_plan §B–E): scalar index 0, vector(·, 6), scale lin,
 // range (−∞, ∞). A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field through
 // `SimState.r`; its test, `catalogue_view_r` in `crates/kernel/tests/catalogue_views/generated.rs`, reads it through
-// their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`).
+// their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`). For a vector field it is the '‖·‖ as
+// scalar' reduction; its 'as direction-cosines' view is `<field>_dircos.wgsl` in `crates/render/frag/debug/reductions/`
+// (gui_state_contract §4).
 fn colour(ctx: Ctx) -> vec3<f32> {
     let v = ctx.sample.r;
     return dbg_sentinel(sqrt(dot(v[0], v[0]) + dot(v[1], v[1]) + dot(v[2], v[2])), ctx.frag_xy);
