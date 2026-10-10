@@ -704,7 +704,7 @@ selected per block control, only among the entries onto that control's codomain 
 | Entry | Codomain | Forward | Inverse (with its ε clamp) | log-det | Sampling note |
 |---|---|---|---|---|---|
 | `softmax_tanh` | Δ² | `μₖ = μ_max·tanh zₖ`, `m = softmax(0, μ₁, μ₂)` | `zₖ = artanh(clamp(log(mₖ/m₀), ±(1−ε_μ)μ_max)/μ_max)` | `½ log 3 + Σᵢ log mᵢ + 2 log μ_max + log sech² z₁ + log sech² z₂` | under-samples simplex edges/corners |
-| `stick_breaking` (R-72) | Δ² | `s = ½(1 + (1−ε_μ) tanh z₁)`, `u = ½(1 + (1−ε_μ) tanh z₂)`, `m = (1−s, s(1−u), su)` | `s = m₁ + m₂`, `u = m₂/s`, each `v` of them to `artanh(clamp(2v−1, ±(1−ε_μ)²)/(1−ε_μ))` | `log(√3/4 · (1−ε_μ)² · s · sech² z₁ · sech² z₂)` | reaches within `ε_μ/2` of every edge and corner; its area element is ∝ `s = 1 − m₀`, so it over-samples the corner `m₀ → 1` and under-samples the edge `m₀ → 0` |
+| `stick_breaking` (R-72) | Δ² | `s = ½(1 + (1−ε_μ) tanh z₁)`, `u = ½(1 + (1−ε_μ) tanh z₂)`, `m = (1−s, s(1−u), su)` | `s = m₁ + m₂`, `u = m₂/s`, each `v` of them to `artanh(clamp(2v−1, ±(1−ε_μ)²)/(1−ε_μ))` | `log(√3/4 · (1−ε_μ)² · s · sech² z₁ · sech² z₂)` | reaches the edges and corners that `softmax_tanh` stops short of; its area element is `4√3·m₀m₁m₂` (exactly so at `ε_μ = 0`), the plain softmax measure, so it over-samples every edge and corner, symmetrically in the bodies |
 | `sigmoid_alpha`, `sigmoid_beta`, `sigmoid_q` | α, β, q | `a + (b−a)·σ(x)` | `logit(clamp((y−a)/(b−a), ε, 1−ε))` | `log((b−a)·σ(x)·σ(−x))` | centre-heavy vs uniform |
 | `tanh_alpha`, `tanh_beta`, `tanh_q` | α, β, q | `a + c·(1 + tanh x)` | `artanh(clamp((y−a)/c − 1, ±(1−ε)))` | `log(c·sech² x)` | the bounded-alt row's note (α, β); the symmetric row's (q) |
 | `softsign_alpha`, `softsign_beta`, `softsign_q` (R-72) | α, β, q | `a + c·(1 + u)`, `u = x/(2 + abs(x))` | `x = 2u/(1 − abs(u))`, `u = clamp((y−a)/c − 1, ±(1−ε))` | `log(2c) − 2 log(2 + abs(x))` | heavier-tailed than σ: it nears each bound as `1/abs(x)`, not as `e^(−abs(x))`, so relative to σ it under-samples the bounds' immediate neighbourhoods |
@@ -714,12 +714,18 @@ selected per block control, only among the entries onto that control's codomain 
 
 `ε` is `ε_μ` on the simplex, `ε_z` onto α and β, and `ε_q` onto a momentum. `abs(x)` is written `clamp(x, −x, +∞)`
 in the closed operator list. Each clamp keeps the inverse finite at the codomain's boundary, where a float forward
-saturates.
+saturates. In σ's units, `s = (1 + u)/2`, the tanh and softsign clamp `±(1 − ε)` is `[ε/2, 1 − ε/2]`, half the σ
+clamp `[ε, 1 − ε]`.
 
 - **The edge-reaching simplex link** *(definition, R-72; REQ-GEN-026)* is the stick-breaking map above. Where
-  `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of every edge and corner. Its Jacobian
-  is 3×2, so its log-det is `log √det(JᵀJ)` (R-368), where `det(JᵀJ) = 3·(s'u')²·s²`, with `s' = ½(1−ε_μ) sech² z₁`
-  and `u' = ½(1−ε_μ) sech² z₂`.
+  `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of each edge and of the corner
+  `m₀ = 1`, and within about `ε_μ` of the corners `m₁ = 1` and `m₂ = 1`. Its Jacobian is 3×2, so its log-det is
+  `log √det(JᵀJ)` (R-368), where `det(JᵀJ) = 3·(s'u')²·s²`, with `s' = ½(1−ε_μ) sech² z₁` and
+  `u' = ½(1−ε_μ) sech² z₂`. At `ε_μ = 0`, `s' = 2s(1−s)` and `u' = 2u(1−u)`, so its area element is `4√3·m₀m₁m₂`:
+  symmetric in the bodies, and the measure of plain softmax, from which `softmax_tanh` departs only by its saturation
+  factor. With uniform controls it therefore over-samples every edge and corner. Near
+  the corner `m₂ → 1`, `m₀ + m₁` falls to about `ε_μ`, where dd_decoder's `DEGENERATE(M01_TINY)` fence (`M₀₁ < ε`) can
+  fire.
 - **The heavier-tailed bounded link** *(definition, R-72; REQ-GEN-026)* is softsign with σ's slope at the centre,
   `u = x/(2 + abs(x))`, onto α, β and the momenta. Its tails approach the bounds as `1/abs(x)` rather than
   exponentially. Its log-det is `log(c·u')`, with `u' = 2/(2 + abs(x))²`. Its second derivative jumps at `x = 0`, so it

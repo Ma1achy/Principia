@@ -262,10 +262,10 @@ impl Link<2, 3> for SoftmaxTanh {
     }
 }
 
-/// `stick_breaking`, onto `mass` (simplex). Sampling: reaches within ε_μ/2 of every edge and
-/// corner, where softmax ∘ μ_max·tanh stops at mass ratios e^(±2μ_max); its area element is ∝ s = 1
-/// − m₀, so relative to uniform it over-samples the corner m₀ → 1 and under-samples the edge m₀ →
-/// 0, evenly along each line of constant m₀; not symmetric in the bodies.
+/// `stick_breaking`, onto `mass` (simplex). Sampling: reaches within ε_μ/2 of each edge and of the
+/// corner m₀ = 1, and within about ε_μ of the corners m₁ = 1 and m₂ = 1, where softmax ∘ μ_max·tanh
+/// stops at mass ratios e^(±2μ_max); its area element is 4√3·m₀m₁m₂ (exactly so at ε_μ = 0), the
+/// plain softmax measure, symmetric in the bodies, so it over-samples every edge and corner.
 pub struct StickBreaking;
 
 impl Link<2, 3> for StickBreaking {
