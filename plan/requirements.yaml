@@ -6032,7 +6032,7 @@
   note: "`rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ."
 - id: REQ-PAY-089
   area: PAY
-  statement: "QuadReduction must be sized from its member list (about 80 B) and then aligned."
+  statement: "QuadReduction must be sized from its member list, with u32 histogram bins (R-410), and then aligned; TASK-M5-01 defines and measures the size and writes the measured figure into the docs that cite it."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.7 `QuadReduction` — completed ledger
@@ -6050,7 +6050,7 @@
   - R-113
   - R-410
   milestone: M5
-  note: "Split from REQ-PAY-001 (R-113, RQ-93 M0-9 option b). R-410: with u32 bins the struct is larger than the descriptive ~80 B (§3.7's \"Size\" paragraph, not a cap); TASK-M5-01 sizes it from its member list and updates the figure, and its perf reviewer confirms the size cost (R-410)."
+  note: "Split from REQ-PAY-001 (R-113, RQ-93 M0-9 option b). R-410: the former descriptive ~80 B (§3.7's \"Size\" paragraph, never a cap) is stale under u32 bins and no longer stated; TASK-M5-01 sizes the struct from its member list, and its perf reviewer confirms the size cost at memory_tiers §3–§4's quad count (applied per R-369, perf review 5481098292 of PR #189)."
 - id: REQ-PAY-090
   area: PAY
   statement: "The RenderQuad field set (render contract Part 1's 9 fields) must be generated from the generation-root ledger as the single source of truth (split from REQ-PAY-002, R-256's applied note)."
@@ -22327,7 +22327,7 @@
   milestone: M5
 - id: REQ-SYS-036
   area: SYS
-  statement: "The GPU↔CPU membrane must have exactly five crossings: dispatch uniforms (CPU→GPU), render config (slot uniforms, playhead t), bake (equirect texture), the QuadReduction (~80 B/quad, the sole automatic GPU→CPU return of simulation data, feeding only the Allocation ring), and sanctioned user-initiated pulls (single-IC f32 trace, columnar export decode) that are tiny, async and latest-wins. R-288's per-frame telemetry readback is not simulation data (R-332)."
+  statement: "The GPU↔CPU membrane must have exactly five crossings: dispatch uniforms (CPU→GPU), render config (slot uniforms, playhead t), bake (equirect texture), the QuadReduction (one per quad, its size following from dd_generation_root §3.7's members with u32 bins, defined and measured by TASK-M5-01, R-410; the sole automatic GPU→CPU return of simulation data, feeding only the Allocation ring), and sanctioned user-initiated pulls (single-IC f32 trace, columnar export decode) that are tiny, async and latest-wins. R-288's per-frame telemetry readback is not simulation data (R-332)."
   source:
   - file: docs/design/principia_systems_architecture.md
     section: "3. The membrane — the deployment view (demoted, not diminished)"
@@ -22337,11 +22337,14 @@
     section: 2. Component inventory, by rung
   - file: decisions.md
     section: "R-332 — `QuadReduction` is the sole automatic return of simulation data; the telemetry readback is not simulation data *(closes RQ-173)*"
+  - file: decisions.md
+    section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
   verify:
     method: review checklist
     detail: "an audit of all buffer map/read calls finds only the reduction readback, R-288's telemetry readback (not simulation data, R-332) and the two sanctioned pulls"
   rulings:
   - R-332
+  - R-410
   milestone: M5
 - id: REQ-SYS-037
   area: SYS

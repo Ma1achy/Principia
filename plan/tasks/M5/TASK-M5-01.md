@@ -53,6 +53,11 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   `alpha_energy`, `worst_energy_drift`, laid out now and populated in M6), the generated Rust type in `crates/engine`
   and the generated WGSL struct and accessors for the render and kernel sides.
 - `crates/engine/src/quad/meta.rs`: `QuadMeta` holding `priority`, `cache_age`, `lifecycle`, `compute_cost_ms`, `gentime`.
+- `QuadReduction`'s measured aligned size (R-410), written into `docs/design/principia_dd_generation_root.md` §3.7's
+  "Size" paragraph and where the docs cite it: `docs/design/principia_systems_architecture.md` (the Memory and
+  Reduction rows and the two "big data never crosses" passages), `docs/contracts/principia_render_contract.md`
+  (Part 1's opening), `plan/reviewers/perf.md` § "3. Memory tiers and budgets" and REQ-SYS-036 (reqio), with the
+  commit's "Removed lines" note.
 - Tests in `crates/ledger/tests/quad_reduction.rs`: member list and types, Rust/WGSL layout agreement, histogram capacity.
 
 ## Acceptance tests
@@ -64,7 +69,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `cargo test -p ledger quad_reduction_members` — generated layout member list and types (REQ-REF-006).
 - Review checklist (code) — every QuadReduction member is a fixed-size scalar; no array member grows with time or sample count; the ~80 B figure is not treated as a cap (REQ-PAY-006).
 - `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089).
-- Review checklist (perf) — `QuadReduction`'s aligned size with u32 bins, and its cost per visible quad (§3.7's "Size" paragraph: thousands of quads), are stated in the PR from the member list; the perf reviewer confirms the size cost (R-410; REQ-PAY-089).
+- Review checklist (perf) — `QuadReduction`'s aligned size with u32 bins, and its cost at memory_tiers §3–§4's quad count (render pixels / N² at each tier's `N`, at the largest display, plus their ancestors), are stated in the PR from the member list; the perf reviewer confirms the size cost (R-410; REQ-PAY-089).
 - Review checklist (code) — no spread_t_end member in v1 (REQ-REF-007).
 - Review checklist (code) — none of these in the GPU struct (REQ-REF-008).
 - Review checklist (physics) — the PR gives the declared range of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift`, each within ±65504 or with its `overflow` stated (R-248), with its evidence; the physics reviewer checks each; the human confirms them at the M5 gate (REQ-PAY-093).
@@ -90,8 +95,10 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   task or TASK-M5-17; this task is still held by the M1 gate (and the gates before M5), unless it passes R-415's test
   for merging early.
 - **Perf reviews this task (R-410: "Perf to confirm the size cost to QuadReduction").** u32 bins make `QuadReduction`
-  larger than §3.7's u8 bins would; the perf reviewer confirms its aligned size and its cost per visible quad against
-  §3.7's "Size" paragraph. The perf reviewer was added in R-410's port (applied per R-369).
+  larger than §3.7's u8 bins would; the perf reviewer confirms its aligned size and its cost at
+  memory_tiers §3–§4's quad count (render pixels / N² at each tier's `N`, at the largest display, plus their ancestors). The perf reviewer was added in R-410's port (applied per R-369). The
+  former descriptive ~80 B and §3.7's "~4k quads … ~0.3 MB" are no longer stated; this task writes the measured size
+  in their place (perf review 5481098292 of PR #189, applied per R-369).
 - The impurity grain chosen here is the one the impurity-mask cross-check (TASK-M5-17, REQ-VAL-083) uses.
 - The temporal-accumulator members (`running_mean_divergence`, `first_divergence_t`) are laid out here; how the
   per-footprint latch reaches the split decision is R-142's: evaluated on the GPU in the resolve pass, with only the
