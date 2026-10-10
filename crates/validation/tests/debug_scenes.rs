@@ -4,7 +4,8 @@
 //! scene holds the samples its reference was made from; the showcase's shadows sit off their states as documented;
 //! no two references are one image but the pairs that are one by definition, so a view reading a neighbouring field
 //! fails; each stepped sample's drift lies within its latched maximum, as a march leaves it; and the nudge raises each
-//! stepped sample's `S` and `θ̃` by its documented amount. What the renders mean is `render/tests/debug_views.rs`'s.
+//! stepped sample's `S` and `θ̃`, and moves mass off the second body, by its documented amounts. What the renders
+//! mean is `render/tests/debug_views.rs`'s.
 //!
 //! Each test registers its negative control (R-176).
 
@@ -402,4 +403,46 @@ negative_control!(
     "the nudge expected to lower S and θ̃",
     expected = "nudge 1, sample 1: S moved",
     check_s_theta_nudge(-1.0)
+);
+
+/// Checks the showcase's nudge on the masses as `showcase` documents it: at nudge `k`, `0.0011·k·(1 + i mod 3)` of
+/// sample `i`'s mass moves from the second body to the first and third, `per` the share each of those takes of it.
+fn check_mass_nudge(per: f32) {
+    let case = &debug_cases().unwrap_or_else(|e| panic!("{e}"))[0];
+    let at = |nudge: u32| {
+        let nudged: &'static DebugCase = Box::leak(Box::new(DebugCase {
+            nudge,
+            ..case.clone()
+        }));
+        debug_scene(nudged).unwrap_or_else(|e| panic!("{e}"))
+    };
+    let base = at(0);
+    for k in 1..=3u32 {
+        let nudged = at(k);
+        for i in 0..8u32 {
+            let dm = 0.0011 * (k * (1 + i % 3)) as f32;
+            let want = [per * dm, -2.0 * per * dm, per * dm];
+            let (b, n) = (base.masses(i), nudged.masses(i));
+            for body in 0..3 {
+                let d = n[body] - b[body];
+                assert!(
+                    (d - want[body]).abs() < 1e-6,
+                    "nudge {k}, sample {i}: body {body}'s mass moved {d}, not {}",
+                    want[body]
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn debug_scenes_nudge_moves_mass_off_the_second_body() {
+    check_mass_nudge(1.0);
+}
+
+negative_control!(
+    debug_scenes_nudge_moves_mass_off_the_second_body,
+    "the nudge expected to move twice the mass",
+    expected = "nudge 1, sample 0: body 0's mass moved",
+    check_mass_nudge(2.0)
 );
