@@ -182,21 +182,33 @@ fn softmax_tanh_log_det(z: &[f64], k: &dyn Fn(&str) -> f64) -> f64 {
     log_area([col(1), col(2)])
 }
 
+/// `(v, 1 − v)` for `v = ½(1 + (1 − ε)·tanh z)`, §3.9's stick fraction, each written as a ratio of sums of positive
+/// terms, so that neither cancels against 1. From `tanh z = (1 − w)/(1 + w)` with `w = e^(−2z)` (for `z ≥ 0`; for
+/// `z < 0`, `tanh z = −(1 − w)/(1 + w)` with `w = e^(2z)`): `v = ((1 − ε/2) + (ε/2)·w)/(1 + w)` and
+/// `1 − v = ((ε/2) + (1 − ε/2)·w)/(1 + w)` for `z ≥ 0`, and the two numerators swapped for `z < 0`. Equal in algebra
+/// to §3.9's `½(1 + (1 − ε)·tanh z)`; evaluated directly, that loses about `1e−16/v` relative to cancellation, 2e−11
+/// at `z = −6`, more than [`close`] allows on a log-det of 34.
+fn stick_half(z: f64, e: f64) -> (f64, f64) {
+    let w = (-2.0 * z.abs()).exp();
+    let big = (1.0 - e / 2.0) + e / 2.0 * w;
+    let small = e / 2.0 + (1.0 - e / 2.0) * w;
+    let (v, rest) = if z >= 0.0 { (big, small) } else { (small, big) };
+    (v / (1.0 + w), rest / (1.0 + w))
+}
+
 /// Stick-breaking (§3.9's R-72 definition): s, u = ½(1 + (1 − ε_μ) tanh zₖ), m = (1 − s, s(1 − u), su).
 fn stick_doc(z: &[f64], k: &dyn Fn(&str) -> f64) -> Vec<f64> {
     let e = k("eps_mu");
-    let s = 0.5 * (1.0 + (1.0 - e) * z[0].tanh());
-    let u = 0.5 * (1.0 + (1.0 - e) * z[1].tanh());
-    vec![1.0 - s, s * (1.0 - u), s * u]
+    let ((s, not_s), (u, not_u)) = (stick_half(z[0], e), stick_half(z[1], e));
+    vec![not_s, s * not_u, s * u]
 }
 
 fn stick_log_det(z: &[f64], k: &dyn Fn(&str) -> f64) -> f64 {
     let e = k("eps_mu");
-    let s = 0.5 * (1.0 + (1.0 - e) * z[0].tanh());
-    let u = 0.5 * (1.0 + (1.0 - e) * z[1].tanh());
+    let ((s, _), (u, not_u)) = (stick_half(z[0], e), stick_half(z[1], e));
     let ds = 0.5 * (1.0 - e) * sech2(z[0]);
     let du = 0.5 * (1.0 - e) * sech2(z[1]);
-    log_area([[-ds, ds * (1.0 - u), ds * u], [0.0, -s * du, s * du]])
+    log_area([[-ds, ds * not_u, ds * u], [0.0, -s * du, s * du]])
 }
 
 /// An interval's lower end and width at constants `k`: α's (α_min, π/2 − α_min), β's (0, π), q's (−q_max, q_max).

@@ -414,6 +414,7 @@ struct Under {
     f64_log_det: fn(&[f64]) -> f64,
     f32_forward: fn(&[f32]) -> Vec<f32>,
     f32_inverse: fn(&[f32]) -> Vec<f32>,
+    f32_log_det: fn(&[f32]) -> f32,
     dual_forward: fn(&[D]) -> Vec<D>,
 }
 
@@ -427,6 +428,7 @@ fn one<L: Link<1, 1>>() -> Under {
         f64_log_det: |x| L::log_det([x[0]]),
         f32_forward: |x| L::forward([x[0]]).to_vec(),
         f32_inverse: |y| L::inverse([y[0]]).to_vec(),
+        f32_log_det: |x| L::log_det([x[0]]),
         dual_forward: |x| L::forward([x[0]]).to_vec(),
     }
 }
@@ -441,6 +443,7 @@ fn two<L: Link<2, 3>>() -> Under {
         f64_log_det: |x| L::log_det([x[0], x[1]]),
         f32_forward: |x| L::forward([x[0], x[1]]).to_vec(),
         f32_inverse: |y| L::inverse([y[0], y[1], y[2]]).to_vec(),
+        f32_log_det: |x| L::log_det([x[0], x[1]]),
         dual_forward: |x| L::forward([x[0], x[1]]).to_vec(),
     }
 }
@@ -1318,6 +1321,171 @@ negative_control!(
     {
         check_c(&two::<NoRootSimplex>());
     }
+);
+
+// ── The log-det's value across the whole domain, at f64 and f32 ─────────────────────────────────────────────────
+
+/// `softplus t = log(1 + eᵗ)`, written so that no step overflows.
+fn softplus(t: f64) -> f64 {
+    t.max(0.0) + (-t.abs()).exp().ln_1p()
+}
+
+/// `log σ(x) = −softplus(−x)`.
+fn log_sigma(x: f64) -> f64 {
+    -softplus(-x)
+}
+
+/// `log sech² x`: `sech² x = 4/(eˣ + e⁻ˣ)² = 4e^(−2|x|)/(1 + e^(−2|x|))²`, so
+/// `log sech² x = log 4 − 2|x| − 2·log(1 + e^(−2|x|))`; it is below the float's range only where the exact value is.
+fn log_sech2(x: f64) -> f64 {
+    4f64.ln() - 2.0 * x.abs() - 2.0 * (-2.0 * x.abs()).exp().ln_1p()
+}
+
+/// `(v, 1 − v)` for §3.9's stick fraction `v = ½(1 + (1 − ε_μ)·tanh z)`, each a ratio of sums of positive terms, so
+/// that neither cancels against 1 (with `w = e^(−2|z|)`, `v = ((1 − ε/2) + (ε/2)·w)/(1 + w)` for `z ≥ 0`, and the two
+/// numerators swapped for `z < 0`).
+fn stick_half(z: f64) -> (f64, f64) {
+    let w = (-2.0 * z.abs()).exp();
+    let big = (1.0 - EPS / 2.0) + EPS / 2.0 * w;
+    let small = EPS / 2.0 + (1.0 - EPS / 2.0) * w;
+    let (v, rest) = if z >= 0.0 { (big, small) } else { (small, big) };
+    (v / (1.0 + w), rest / (1.0 + w))
+}
+
+/// §3.9's log-det column for the entry `name` at `x`, evaluated at f64 in forms that neither overflow nor cancel
+/// before the exact value does: σ's `log((b − a)·σ(x)·σ(−x))`, tanh's `log(c·sech² x)`, softsign's
+/// `log(2c) − 2 log(2 + |x|)`, softplus's `log σ(x)`, exp's `x`, identity's 0, softmax_tanh's
+/// `½ log 3 + Σᵢ log mᵢ + 2 log μ_max + log sech² z₁ + log sech² z₂` and stick-breaking's
+/// `log(√3/4·(1 − ε_μ)²·s·sech² z₁·sech² z₂)` (R-368).
+fn log_det_doc(name: &str, x: &[f64]) -> f64 {
+    let s = spec(name);
+    let width = match s.kind {
+        Kind::Interval(a, b) => b - a,
+        _ => f64::NAN,
+    };
+    match name {
+        "softmax_tanh" => {
+            let m = softmax_tanh_doc(x);
+            0.5 * 3f64.ln()
+                + m.iter().map(|v| v.ln()).sum::<f64>()
+                + 2.0 * MU_MAX.ln()
+                + log_sech2(x[0])
+                + log_sech2(x[1])
+        }
+        "stick_breaking" => {
+            (3f64.sqrt() / 4.0).ln()
+                + 2.0 * (1.0 - EPS).ln()
+                + stick_half(x[0]).0.ln()
+                + log_sech2(x[0])
+                + log_sech2(x[1])
+        }
+        "sigmoid_alpha" | "sigmoid_beta" | "sigmoid_q" => {
+            width.ln() + log_sigma(x[0]) + log_sigma(-x[0])
+        }
+        "tanh_alpha" | "tanh_beta" | "tanh_q" => (width / 2.0).ln() + log_sech2(x[0]),
+        "softsign_alpha" | "softsign_beta" | "softsign_q" => {
+            width.ln() - 2.0 * (2.0 + x[0].abs()).ln()
+        }
+        "softplus" => log_sigma(x[0]),
+        "exp" => x[0],
+        "identity" => 0.0,
+        other => panic!("`{other}` has no log-det in §3.9 (log-det value)"),
+    }
+}
+
+/// The reference [`log_det_doc`] against the plain formulae where those do not overflow or cancel (`|x| ≤ 15`): a
+/// check of the check.
+fn check_reference() {
+    for x in (-60..=60).map(|i| f64::from(i) / 4.0) {
+        let plain_sech2 = (1.0 / (x.cosh() * x.cosh())).ln();
+        let plain_sigma = (sigma(x) * sigma(-x)).ln();
+        assert!(
+            (log_sech2(x) - plain_sech2).abs() <= 1e-12 * (1.0 + plain_sech2.abs())
+                && (log_sigma(x) + log_sigma(-x) - plain_sigma).abs()
+                    <= 1e-12 * (1.0 + plain_sigma.abs()),
+            "the reference log sech² or log σ at {x} is not the plain formula (log-det value)"
+        );
+        if x.abs() <= 3.0 {
+            let (v, rest) = stick_half(x);
+            let plain = 0.5 * (1.0 + (1.0 - EPS) * x.tanh());
+            assert!(
+                (v - plain).abs() <= 1e-15 && (rest - (1.0 - plain)).abs() <= 1e-15,
+                "the reference stick fraction at {x} is not §3.9's (log-det value)"
+            );
+        }
+    }
+}
+
+/// `u`'s log-det at `x` (f64 when `wide`, else at f32 on `x` rounded to f32) against §3.9's value there, evaluated at
+/// f64 by [`log_det_doc`] (walls W7 and W9, measure honesty and totality, as §3.9's "overflow-free forms" paragraph
+/// reads them). Where the exact value is well inside the float's range (`|value| ≤ MAX/4`), the log-det is finite
+/// and within 64 ulps of the float on the size of the terms it sums, `1 + |value| + Σ|xₖ|`; where it is well beyond
+/// (`≥ 4·MAX`), it is the infinity of its sign, the float's correct rounding; between, either; never NaN.
+fn check_log_det_value(u: &Under, x: &[f64], wide: bool) {
+    let (got, x, eps, max) = if wide {
+        ((u.f64_log_det)(x), x.to_vec(), f64::EPSILON, f64::MAX)
+    } else {
+        let x32 = f32s(x);
+        (
+            f64::from((u.f32_log_det)(&x32)),
+            f64s(&x32),
+            f64::from(f32::EPSILON),
+            f64::from(f32::MAX),
+        )
+    };
+    let want = log_det_doc(u.name, &x);
+    let size = (1.0 + want.abs() + x.iter().map(|v| v.abs()).sum::<f64>()).min(f64::MAX);
+    let tol = 64.0 * eps * size;
+    let close = got.is_finite() && (got - want).abs() <= tol;
+    let overflowed = got.is_infinite() && got.signum() == want.signum();
+    let ok = if want.abs() <= max / 4.0 {
+        close
+    } else if want.abs() >= 4.0 * max {
+        overflowed
+    } else {
+        close || overflowed
+    };
+    assert!(
+        ok,
+        "{} at {x:?} ({}): log-det {got}, §3.9's {want}, allowed {tol} (log-det value)",
+        u.name,
+        if wide { "f64" } else { "f32" }
+    );
+}
+
+#[test]
+fn qa_link_log_det_value_whole_domain() {
+    check_reference();
+    for u in generated() {
+        over_inputs(&u, check_log_det_value);
+    }
+}
+
+/// tanh onto α whose log-det is floored at −80: finite at both floats, and the two agree, but it is not the volume
+/// factor's log past `|x| ≈ 40`, where `log sech² x ≈ log 4 − 2|x|`.
+#[cfg(feature = "controls")]
+struct FlooredLogDet;
+
+#[cfg(feature = "controls")]
+impl Link<1, 1> for FlooredLogDet {
+    const NAME: &'static str = "tanh_alpha";
+    type Codomain = <TanhAlpha as Link<1, 1>>::Codomain;
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        TanhAlpha::forward(v)
+    }
+    fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        TanhAlpha::inverse(v)
+    }
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        TanhAlpha::log_det(v).max(lit::<R>(-80.0))
+    }
+}
+
+negative_control!(
+    qa_link_log_det_value_whole_domain,
+    "a tanh log-det floored at −80, finite and equal at both floats, must fail past |x| ≈ 40",
+    expected = "(log-det value)",
+    over_inputs(&one::<FlooredLogDet>(), check_log_det_value)
 );
 
 // ── (d) C¹ ──────────────────────────────────────────────────────────────────────────────────────────────────────
