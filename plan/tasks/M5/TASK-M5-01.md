@@ -67,7 +67,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - Review checklist (physics) — the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-077).
 - `cargo test -p ledger quad_reduction_layout` — the test that follows from the written definition: the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it (REQ-PAY-077).
 - `cargo test -p ledger quad_reduction_members` — generated layout member list and types (REQ-REF-006).
-- Review checklist (code) — every QuadReduction member is a fixed-size scalar; no array member grows with time or sample count; the ~80 B figure is not treated as a cap (REQ-PAY-006).
+- Review checklist (code) — every QuadReduction member is a fixed-size scalar; no array member grows with time or sample count; QuadReduction's size (R-410; this task measures it) is not treated as a cap (REQ-PAY-006).
 - `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089).
 - Review checklist (perf) — `QuadReduction`'s aligned size with u32 bins, and its cost at memory_tiers §3–§4's quad count (render pixels / N² at each tier's `N`, at the largest display, plus their ancestors), are stated in the PR from the member list; the perf reviewer confirms the size cost (R-410; REQ-PAY-089).
 - Review checklist (code) — no spread_t_end member in v1 (REQ-REF-007).

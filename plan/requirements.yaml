@@ -4608,18 +4608,21 @@
   milestone: M0
 - id: REQ-PAY-006
   area: PAY
-  statement: "`QuadReduction` must contain only fixed-size scalars (never a history), sized from its member list and then aligned; the ~80 B figure is not a cap."
+  statement: "`QuadReduction` must contain only fixed-size scalars (never a history), sized from its member list and then aligned; QuadReduction's size (R-410; TASK-M5-01 measures it) is not a cap."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.7 `QuadReduction` — completed ledger
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
   verify:
     method: review checklist
     detail: no array member grows with time or sample count
   rulings:
   - R-72
   - R-113
+  - R-410
   milestone: M5
   note: "Member order, packing and final size: REQ-PAY-077 (definition). R-113 (RQ-93 M0-9, option b): moved to M5 with the QuadReduction ledger."
 - id: REQ-PAY-007
