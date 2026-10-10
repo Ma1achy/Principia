@@ -7834,8 +7834,9 @@ applied by a follow-up task.
 4. **Two keyboard modes, everywhere.**
    - **Navigation mode** has an orange focus ring. The arrows move between siblings.
    - **Interaction mode** has a blue focus ring. Input goes to the focused element. *(Read with G1 below: the
-     element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, except while a text field is
-     being typed in (G5), and Esc and Enter return to navigation mode.)*
+     element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, except that while a text field
+     is being typed in, Ctrl+Z, `?` and the shortcuts go to the field (G5), and Esc and Enter return to navigation
+     mode.)*
    - Entering any scope, and every Tab landing (the Figure, the Compass and, under R-405, the console's first filter
      included), lands in navigation mode on the first element. *(Read with the human's follow-up answer, F4 below: a
      Tab landing is on the big scope itself, in navigation mode, and Enter into a scope lands on its first element.)*
