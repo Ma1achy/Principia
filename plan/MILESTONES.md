@@ -313,10 +313,10 @@ canonical_spec §11: "build the browser product on top".
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 
 <!-- gate:M8 -->
-**Exit gate — 236 requirements** (and every earlier gate still green):
+**Exit gate — 237 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
-- CHART (2): REQ-CHART-040, REQ-CHART-054
+- CHART (3): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056
 - GEN (1): REQ-GEN-023
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074

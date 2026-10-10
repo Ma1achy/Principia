@@ -1882,8 +1882,8 @@
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
   depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30]
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069]
-  requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054]
-  reviewers: [code, qa, gui, physics]  # physics for the extension types and the fallback (R-407)
+  requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056]
+  reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
   pitfalls: []
 - id: TASK-M8-06
   milestone: M8

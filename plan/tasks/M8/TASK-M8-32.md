@@ -43,4 +43,5 @@ The Export & share window offers image export (size in multiples of the view, fo
 - R-407 (10 Oct 2026) rules RQ-262: present mode's fill on the real engine is built here, using TASK-M8-05's extension
   (this task already depends on TASK-M8-05). The acceptance line for REQ-GUI-100 checks that Present fills the window,
   and the physics reviewer joins for that line (applied per R-369, R-407, A2). Nothing here computes an area statistic
-  over the extended window (RQ-263).
+  over the extended window; R-408 (RQ-263 ruled) counts each system once, through the axis types (REQ-CHART-056,
+  TASK-M8-05).

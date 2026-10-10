@@ -2364,7 +2364,7 @@
   milestone: M2
 - id: REQ-CHART-054
   area: CHART
-  statement: "Each chart axis must declare one of four extension types for the view past [0,1]²: affine (the formula continues), periodic (the axis wraps), pole-crossing (continues over the pole, the partner axis shifted by half its period) or bounded (hatched past its edge), bounded being the default for an axis that declares nothing; a chart must take its extension from its axes; outside [0,1]², a pixel whose Φ fails to evaluate or whose state fails the chart's validity check (validate) must be hatched as forbidden and labelled decode_failed, never integrated and never dropped; the existing charts must carry chart_reference §5.4's types (latent and flat slices affine; the shape sphere's spherical map θ periodic and φ pole-crossing; the invariant warp bounded; the mass simplex affine); and inside [0,1]² every chart's output must be unchanged."
+  statement: "Each chart axis must declare one of four extension types for the view past [0,1]²: affine (the formula continues), periodic (the axis wraps), pole-crossing (continues over the pole, the partner axis shifted by half its period) or bounded (hatched past its edge), bounded being the default for an axis that declares nothing; a chart must take its extension from its axes; outside [0,1]², a pixel whose Φ fails to evaluate or whose state fails the chart's validity check (validate) must be hatched as forbidden and labelled decode_failed, never integrated and never dropped; the existing charts must carry chart_reference §5.4's types (latent and flat slices affine; the shape sphere's spherical map θ periodic and φ pole-crossing; the invariant warp bounded; the mass simplex affine; a Chart-builder physical-quantity axis, linear in its quantity over its range, affine); and inside [0,1]² every chart's output must be unchanged."
   source:
   - file: decisions.md
     section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
@@ -2374,13 +2374,18 @@
     section: "5.4 Past the unit square — each axis's extension type (R-407)"
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Part 5 — Well-posedness and the validation contract
+  - file: decisions.md
+    section: "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel chart_extension: per chart, samples past each edge of [0,1]²: the latent chart's z continues z₀ + (2s−1)q₁ + (2t−1)q₂; the sphere's s and s + 1 decode equal, and t = 1 + δ decodes as t = 1 − δ with θ + π (likewise below t = 0); the invariant warp is hatched past every edge; the mass simplex continues and its negative-mass pixels are hatched; a custom chart's undeclared axis is hatched past its edge; every hatched pixel is decode_failed and none is integrated; inside [0,1]² every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, and an undeclared axis that continues each fail; review (physics): the types and the fallback against R-407"
+    detail: "cargo test -p kernel chart_extension: per chart, samples past each edge of [0,1]²: the latent chart's z continues z₀ + (2s−1)q₁ + (2t−1)q₂; the sphere's s and s + 1 decode equal, and t = 1 + δ decodes as t = 1 − δ with θ + π (likewise below t = 0); the invariant warp is hatched past every edge; the mass simplex continues and its negative-mass pixels are hatched; a custom chart's physical-quantity axis continues linearly in its quantity, and its unreachable pixels (energy beyond what is reachable) are hatched by validate; a custom chart's undeclared axis is hatched past its edge; every hatched pixel is decode_failed and none is integrated; inside [0,1]² every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, a physical-quantity axis built as bounded, and an undeclared axis that continues each fail; review (physics): the types and the fallback against R-407 and R-408's B1; the shape sphere with one hemisphere drawn waits for RQ-264"
   rulings:
   - R-407
+  - R-408
   milestone: M8
-  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. Area statistics over the extended window are RQ-263."
+  rq:
+  - RQ-264
+  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human). Area statistics over the extended window are R-408's (REQ-CHART-056). RQ-264 (the shape sphere's one-hemisphere toggle) holds only TASK-M8-05's one-hemisphere line."
 - id: REQ-CHART-055
   area: CHART
   kind: definition
@@ -2402,6 +2407,32 @@
   - R-407
   milestone: M2
   note: "R-407 clause 3 (\"Burrau: per axis, with physics review\"); a definition requirement on the task that completes the Burrau charts, TASK-M2-11 (applied per R-369, R-407, A6). No types are given now."
+- id: REQ-CHART-056
+  area: CHART
+  statement: "Area statistics taken over a view, 'forbidden in view' (render_gui_spec §G7) and W7's area statistics, must count each system once through the axis types: each extension type has a primary range (periodic, one period, the chart's [0,1] span on that axis; pole-crossing, pole to pole, the chart's [0,1] span on that axis; affine, unbounded; bounded, its domain), and a visible pixel must be counted only if every axis is inside its primary range; a pixel hatched because the domain ends there (a bounded axis past its edge, or a Φ that fails to evaluate) must leave both the count and the total; only a pixel whose state fails the chart's validity check must count as forbidden; the classification must read the chart (its types, primary ranges, validate and Φ), not the payload's decode_failed detail; and inside [0,1]² every statistic must be unchanged."
+  source:
+  - file: decisions.md
+    section: "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  - file: docs/contracts/principia_canonical_spec.md
+    section: "9. The load-bearing invariants (the walls — the primary comparison checklist)"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel area_stats_primary_range: on the shape sphere's spherical map (both hemispheres), a window that covers [0,1]² and reaches past it in s (a periodic duplicate) and in t (past a pole, θ shifted by π) gives the same forbidden count and the same total as [0,1]² alone, so each periodic duplicate is counted once; on the invariant warp, a window reaching past an edge gives the same count and total as [0,1]², its hatched band leaving both; on the mass simplex, the window's negative-mass pixels count as forbidden and the total grows by the extended pixels, so the forbidden share rises; on a custom chart with a physical-quantity axis, its unreachable pixels count as forbidden; inside [0,1]² every chart's statistic is bit-identical to before; controls: counting the periodic duplicate, counting a pixel past a pole, counting the domain-hatched band as forbidden, and dropping it from the count but not the total each fail; review (physics): the primary ranges and the classification order against R-408; the shape sphere with one hemisphere drawn waits for RQ-264"
+  rulings:
+  - R-407
+  - R-408
+  milestone: M8
+  rq:
+  - RQ-264
+  note: "R-408 (closes RQ-263); closed by TASK-M8-05, physics-reviewed, applied per R-369 (R-408, B3, B5 to B7). The classification order is chart_decoder_contract Part 3's. TASK-M8-18's forbidden_fraction (REQ-GUI-109) uses it. RQ-264 (the one-hemisphere toggle) holds only TASK-M8-05's one-hemisphere line."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -13191,12 +13222,16 @@
     section: G7. Chart builder (`03_chartbuilder.png`)
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 03 Chart builder
+  - file: decisions.md
+    section: "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
   verify:
     method: unit test
     detail: "N% equals the fraction of a uniform grid over the view that validate rejects; screenshot against 03_chartbuilder.png"
   rulings:
   - R-26
+  - R-408
   milestone: M8
+  note: "R-408: 'forbidden in view' counts a visible pixel only if every axis is inside its primary range, a domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden (REQ-CHART-056, TASK-M8-05). With the egui layer shown the Chart builder's view is [0,1]², where nothing changes, so this requirement's statement and verify stand; TASK-M8-18's forbidden_fraction uses REQ-CHART-056's classification."
 - id: REQ-GUI-110
   area: GUI
   statement: "The chart builder must show a quick render (e.g. 64 × 64 at a short horizon) at the view's aspect."
@@ -14388,7 +14423,7 @@
   - R-406
   - R-407
   milestone: M8
-  note: "R-406; closed by TASK-M8-05. RQ-262 ruled by R-407 (10 Oct 2026): the extension per axis type, with the hatch fallback (REQ-CHART-054). Applied per R-369 (R-407, A1): no quad request set is fixed beyond what R-407 implies, since a hatched pixel needs no integration; the pixel-identity check uses a stain that reads no screen-lane field, since ctx.screen.uv is taken over the window with F3 off (A4). Area statistics over the extended window are RQ-263; this requirement computes none."
+  note: "R-406; closed by TASK-M8-05. RQ-262 ruled by R-407 (10 Oct 2026): the extension per axis type, with the hatch fallback (REQ-CHART-054). Applied per R-369 (R-407, A1): no quad request set is fixed beyond what R-407 implies, since a hatched pixel needs no integration; the pixel-identity check uses a stain that reads no screen-lane field, since ctx.screen.uv is taken over the window with F3 off (A4). Area statistics over the extended window are R-408's (RQ-263 ruled; REQ-CHART-056); this requirement computes none."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
