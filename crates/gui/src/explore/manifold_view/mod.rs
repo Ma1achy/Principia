@@ -430,6 +430,47 @@ pub fn basis_edit((q1, q2): (Latent, Latent)) -> SetField {
     sim(SimField::Basis { q1, q2 })
 }
 
+/// The edits `edits`, made against `sim`, with each basis edit turned about the pin while locked (render_gui_spec §G4:
+/// tilt, rotation, zoom and chart changes "all turn about the pin"): the anchor's chart point `(s, t)` is kept, so the
+/// basis edit `(q₁, q₂) → (q₁', q₂')` is preceded by the `SetField` on `z₀` that moves the centre to
+/// `z₀' = z₀ + (2s−1)(q₁ − q₁') + (2t−1)(q₂ − q₂')` (chart_decoder_contract Part 4: the lock is the pivot). Free, or with
+/// the anchor at the centre, or with a degenerate basis, the edits pass as they are. The edits are read in order, each
+/// against the state the earlier ones leave.
+pub fn about_the_pin(
+    edits: Vec<SetField>,
+    sim: &engine::contract::sim_config::SimConfig,
+) -> Vec<SetField> {
+    let (mut plane, mut lock) = (sim.plane.clone(), sim.lock.clone());
+    let mut out = Vec::with_capacity(edits.len());
+    for edit in edits {
+        match &edit.edit {
+            Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
+            Edit::Sim(SimField::Lock(l)) => lock = l.clone(),
+            Edit::Sim(SimField::Basis { q1, q2 }) => {
+                let pivot = lock
+                    .locked
+                    .then(|| chart_coords(&plane, &lock.z_locked))
+                    .flatten();
+                if let Some((s, t)) = pivot {
+                    let z0 = add(
+                        &add(&plane.z0, 2.0 * s - 1.0, &add(&plane.q1, -1.0, q1)),
+                        2.0 * t - 1.0,
+                        &add(&plane.q2, -1.0, q2),
+                    );
+                    if z0 != plane.z0 {
+                        out.push(z0_edit(z0));
+                        plane.z0 = z0;
+                    }
+                }
+                (plane.q1, plane.q2) = (*q1, *q2);
+            }
+            Edit::Render(_) => {}
+        }
+        out.push(edit);
+    }
+    out
+}
+
 /// A `SetField` on the lock.
 pub fn lock_edit(lock: Lock) -> SetField {
     sim(SimField::Lock(lock))

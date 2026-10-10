@@ -287,7 +287,8 @@ impl<S: EngineSide> App<S> {
         }
         self.draw_ring(&ctx);
         self.apply(&ctx, actions);
-        for edit in out.edits {
+        // Locked, every basis edit turns about the pin (render_gui_spec §G4).
+        for edit in explore::manifold_view::about_the_pin(out.edits, &self.snapshot.sim) {
             self.set_field(edit);
         }
         for window in out.windows {
@@ -339,7 +340,7 @@ impl<S: EngineSide> App<S> {
             ui,
             layout.compass,
             &sim.plane,
-            sim.lock.locked,
+            &sim.lock,
             &mut self.keyboard,
             &mut self.manifold,
             out,

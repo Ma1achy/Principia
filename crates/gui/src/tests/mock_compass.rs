@@ -561,3 +561,49 @@ fn mock_compass_shift_arrows_orbit_by_the_orbit_step() {
         assert_eq!(run(Direction::Up, 10.0), (0.0, 50.0))
     });
 }
+
+#[test]
+fn mock_compass_the_pin_stands_at_the_anchor_after_an_excursion() {
+    use crate::explore::compass::pin;
+    use crate::explore::manifold_view::{add, lock_edit, z0_edit};
+    use engine::contract::sim_config::Lock;
+    let mut app = mock_app();
+    let mut h = headless();
+    let lock = Lock {
+        locked: true,
+        z_locked: MOCK_Z0,
+    };
+    app.set_field(lock_edit(lock.clone()));
+    // Off the anchor by +0.4 q₁ − 0.2 q₂: the anchor is at the chart point (0.3, 0.6).
+    app.set_field(z0_edit(add(&add(&MOCK_Z0, 0.4, &MOCK_Q1), -0.2, &MOCK_Q2)));
+    let _ = h.frame(&mut app, Vec::new());
+    let sq = square(compass_rect(&h));
+    let plane = app.snapshot().sim.plane.clone();
+    let frame = plane_frame(&plane, &View::of(&plane), true);
+    let (c, r1, r2) = frame;
+    let want: [f64; 3] = std::array::from_fn(|i| c[i] + PLANE_HALF * (-0.4 * r1[i] + 0.2 * r2[i]));
+    let at = pin(&plane, &lock, frame).expect("locked");
+    assert!(near(at, want), "{at:?} ≠ {want:?}");
+    assert_eq!(
+        pin(
+            &plane,
+            &Lock {
+                locked: false,
+                ..lock.clone()
+            },
+            frame
+        ),
+        None,
+        "free"
+    );
+    let drawn = shapes(&mut h, &mut app);
+    let dot = |p: [f64; 3]| {
+        let at = Compass::default().project(sq, p);
+        drawn.iter().any(|s| {
+            matches!(s, egui::Shape::Circle(c)
+            if close(c.center, at) && c.radius == 3.0 && c.fill == GOLD)
+        })
+    };
+    assert!(dot(want), "the pin at the anchor");
+    rejects("the pin at the plane's centre", || assert!(dot(frame.0)));
+}

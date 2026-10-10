@@ -1,8 +1,8 @@
 //! Navigate (render_gui_spec §G2): the centre `(u, v)`, the zoom in log₂, and all eight `z₀` values, editable by drag
 //! or by typing; under them the depth readout and the lock (`depth`, `lock`). And the figure's own gestures, which are
-//! navigation too: a drag pans, the wheel zooms, and with the Figure scope focused the arrows pan and + / − zoom
-//! (§G3). Each is one `SetField`: a pan on `z₀` (`Δz₀ ∈ span(q₁, q₂)`), a zoom on the basis, scaled about the centre,
-//! which is the pin when locked (chart_decoder_contract Part 4).
+//! navigation too: a drag pans, the wheel zooms, and with the Figure scope focused the arrows pan and + / − zoom (§G3).
+//! Each is one `SetField`: a pan on `z₀` (`Δz₀ ∈ span(q₁, q₂)`), a zoom on the basis, scaled about the centre, and,
+//! locked, about the pin ([`super::about_the_pin`]; chart_decoder_contract Part 4).
 
 use eframe::egui::{self, DragValue, Key, Rect, Response, RichText, Sense, Slider, Ui};
 use engine::contract::sim_config::Plane;

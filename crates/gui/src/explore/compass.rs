@@ -3,18 +3,21 @@
 //! and the hidden slice direction; inside it, the slice plane: through the centre, at the slice step along the depth
 //! axis, tilted by `τ₁`, `τ₂` and turned by `γ`. It switches mode by itself: touching a slice slider shows slicing,
 //! touching a tilt shows tilting, and tilting draws the plane before the tilt dashed. Locked, it carries a gold pin at
-//! the pivot, the plane's centre, about which the plane turns. Dragging the plane tilts it (one `SetField` on the
-//! basis); dragging the cube orbits the cube, the GUI's own view of it, which edits nothing. It reads out the tilt and
-//! rotation angles. Its keys (§G3): the arrows tilt, Shift+arrows orbit.
+//! the anchor's point on the plane, the pivot every basis edit turns about ([`super::manifold_view::about_the_pin`]).
+//! Dragging the plane tilts it (one `SetField` on the basis); dragging the cube orbits the cube, the GUI's own view of
+//! it, which edits nothing. It reads out the tilt and rotation angles. Its keys (§G3): the arrows tilt, Shift+arrows
+//! orbit.
 
 use eframe::egui::{
     self, pos2, vec2, Color32, Pos2, Rect, RichText, Sense, Shape, Stroke, Ui, UiBuilder,
 };
-use engine::contract::sim_config::Plane;
+use engine::contract::sim_config::{Lock, Plane};
 
 use crate::explore::lock::GOLD;
 use crate::explore::manifold_view::slice_tilt::{Angles, TILT_RANGE};
-use crate::explore::manifold_view::{basis_edit, Out, Scratch, Touch, View, AXES, Z0_HALF_RANGE};
+use crate::explore::manifold_view::{
+    basis_edit, chart_coords, Out, Scratch, Touch, View, AXES, Z0_HALF_RANGE,
+};
 use crate::keyboard::keymap::Direction;
 use crate::keyboard::scopes::{Adjust, Base, StepKind};
 use crate::keyboard::Keyboard;
@@ -189,7 +192,7 @@ pub fn show(
     ui: &mut Ui,
     rect: Rect,
     plane: &Plane,
-    locked: bool,
+    lock: &Lock,
     keyboard: &mut Keyboard,
     scratch: &mut Scratch,
     out: &mut Out,
@@ -231,7 +234,7 @@ pub fn show(
     if response.drag_stopped() {
         scratch.compass.drag = None;
     }
-    draw(ui, square, plane, &view, &scratch.compass, locked);
+    draw(ui, square, plane, &view, &scratch.compass, lock);
     let text = Rect::from_min_max(
         pos2(square.max.x + MARGIN, rect.min.y + MARGIN),
         rect.max - vec2(MARGIN, MARGIN),
@@ -259,8 +262,23 @@ pub fn show(
     column.label(RichText::new(HINT).weak().small());
 }
 
-/// Draws the cube, the plane and, locked, the pin, in `square`.
-fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, locked: bool) {
+/// Where the pin goes in the cube's frame: the anchor's chart point `(s, t)` on the tilted plane, whose corners are
+/// `s, t ∈ {0, 1}`; `None` while free or for a degenerate basis.
+pub fn pin(
+    plane: &Plane,
+    lock: &Lock,
+    (c, r1, r2): ([f64; 3], [f64; 3], [f64; 3]),
+) -> Option<[f64; 3]> {
+    if !lock.locked {
+        return None;
+    }
+    let (s, t) = chart_coords(plane, &lock.z_locked)?;
+    let (a, b) = (PLANE_HALF * (2.0 * s - 1.0), PLANE_HALF * (2.0 * t - 1.0));
+    Some(std::array::from_fn(|i| c[i] + a * r1[i] + b * r2[i]))
+}
+
+/// Draws the cube, the plane and, locked, the pin at the anchor, in `square`.
+fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lock: &Lock) {
     let painter = ui.painter_at(square);
     let visuals = ui.visuals();
     let edge = Stroke::new(1.0, visuals.weak_text_color());
@@ -305,8 +323,8 @@ fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lo
     label([1.25, -1.0, -1.0], format!("W {}", AXES[view.a]));
     label([-1.0, 1.2, -1.0], format!("H {}", AXES[view.b]));
     label([-1.0, -1.0, 1.3], format!("D {}", AXES[view.d]));
-    let centre = compass.project(square, frame.0);
-    if locked {
+    if let Some(at) = pin(plane, lock, frame) {
+        let centre = compass.project(square, at);
         let head = centre - vec2(0.0, 18.0);
         painter.line_segment([centre, head], Stroke::new(2.0, GOLD));
         painter.circle_filled(centre, 3.0, GOLD);
@@ -319,6 +337,6 @@ fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lo
             GOLD,
         );
     } else {
-        painter.circle_filled(centre, 3.0, visuals.text_color());
+        painter.circle_filled(compass.project(square, frame.0), 3.0, visuals.text_color());
     }
 }

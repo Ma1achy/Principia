@@ -1634,3 +1634,195 @@ fn mock_manifold_view_a_long_message_stops_short_of_the_footers_right_end() {
         assert!(message.max.x > tag.min.x)
     });
 }
+
+// --- the pin: locked, every basis edit turns about it (render_gui_spec §G4, §G2) -----------------------------------
+
+/// The mock's state locked at its centre, then moved off the anchor by an excursion of `+0.4 q₁ − 0.2 q₂`: the anchor
+/// sits at the chart point `(0.3, 0.6)`, off the centre.
+fn after_an_excursion() -> Snapshot {
+    let mut snapshot = mock_snapshot();
+    snapshot.sim.lock = Lock {
+        locked: true,
+        z_locked: MOCK_Z0,
+    };
+    snapshot.sim.plane.z0 = add(&add(&MOCK_Z0, 0.4, &MOCK_Q1), -0.2, &MOCK_Q2);
+    snapshot
+}
+
+/// The plane `edits` leave, applied in order to `plane`.
+fn applied(plane: &Plane, edits: &[SetField]) -> Plane {
+    let mut plane = plane.clone();
+    for edit in edits {
+        match &edit.edit {
+            Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
+            Edit::Sim(SimField::Basis { q1, q2 }) => (plane.q1, plane.q2) = (*q1, *q2),
+            _ => {}
+        }
+    }
+    plane
+}
+
+/// That the anchor keeps its chart point from `before` on `after`: the pin did not move in the chart.
+fn holds_the_anchor(before: &Plane, after: &Plane, anchor: &Latent, what: &str) {
+    let (s, t) = chart_coords(before, anchor).expect("a chart");
+    assert!(
+        close(&point(after, s, t), anchor, 1e-12),
+        "{what}: the anchor left ({s}, {t})"
+    );
+}
+
+/// The basis edits of the manifold view and the compass, each made against `snapshot`: the zoom, the compass's tilt,
+/// the τ₁, τ₂ and γ sliders, and the next preset.
+fn basis_edits(snapshot: &Snapshot) -> Vec<(&'static str, Vec<SetField>)> {
+    use crate::keyboard::scopes::StepKind::{Angle, Tilt, ZoomLog2};
+    let mut all = Vec::new();
+    for (id, kind, direction) in [
+        (ZOOM, ZoomLog2, Direction::Up),
+        (COMPASS, Tilt, Direction::Right),
+        (COMPASS, Tilt, Direction::Up),
+        (TAU1, Angle, Direction::Up),
+        (mv::TAU2, Angle, Direction::Up),
+        (GAMMA, Angle, Direction::Up),
+    ] {
+        let a = Adjust {
+            scope: id,
+            kind,
+            times: 4.0,
+            direction,
+            shift: false,
+        };
+        let mut out = Out::default();
+        adjust(&a, snapshot, &mut Scratch::default(), &mut out);
+        all.push((id, out.edits));
+    }
+    let mut out = Out::default();
+    activate(mv::PRESET, snapshot, &mut Scratch::default(), &mut out);
+    all.push((mv::PRESET, out.edits));
+    all
+}
+
+#[test]
+fn mock_manifold_view_locked_every_basis_edit_turns_about_the_pin() {
+    let snapshot = after_an_excursion();
+    let (plane, anchor) = (&snapshot.sim.plane, &snapshot.sim.lock.z_locked);
+    assert_eq!(
+        chart_coords(plane, anchor).map(|(s, t)| ((s * 10.0).round(), (t * 10.0).round())),
+        Some((3.0, 6.0))
+    );
+    for (id, edits) in basis_edits(&snapshot) {
+        assert!(
+            matches!(edits.as_slice(), [e] if matches!(sim_field(e), SimField::Basis { .. })),
+            "{id}: one basis edit, {edits:?}"
+        );
+        let pinned = mv::about_the_pin(edits.clone(), &snapshot.sim);
+        assert!(
+            matches!(pinned.as_slice(), [z, b] if matches!(sim_field(z), SimField::Z0(_)) && *b == edits[0]),
+            "{id}: the centre moved first, then the basis as it was: {pinned:?}"
+        );
+        holds_the_anchor(plane, &applied(plane, &pinned), anchor, id);
+        rejects("a basis edit turned about z₀", || {
+            holds_the_anchor(plane, &applied(plane, &edits), anchor, id)
+        });
+    }
+}
+
+#[test]
+fn mock_manifold_view_free_or_at_the_centre_the_basis_edits_pass_as_they_are() {
+    // Free: no pin, every edit as it was.
+    let mut free = after_an_excursion();
+    free.sim.lock.locked = false;
+    for (id, edits) in basis_edits(&free) {
+        assert_eq!(
+            mv::about_the_pin(edits.clone(), &free.sim),
+            edits,
+            "{id} free"
+        );
+    }
+    // Locked with the anchor at the centre: z₀ is the pivot already, no edit on it.
+    let mut centred = after_an_excursion();
+    centred.sim.plane.z0 = MOCK_Z0;
+    for (id, edits) in basis_edits(&centred) {
+        assert_eq!(
+            mv::about_the_pin(edits.clone(), &centred.sim),
+            edits,
+            "{id} at the centre"
+        );
+    }
+    rejects("the pinned edits of the excursion", || {
+        let snapshot = after_an_excursion();
+        let edits = basis_edits(&snapshot).remove(0).1;
+        assert_eq!(mv::about_the_pin(edits.clone(), &snapshot.sim), edits);
+    });
+}
+
+#[test]
+fn mock_manifold_view_the_pin_follows_the_edits_before_it() {
+    let centred = {
+        let mut s = after_an_excursion();
+        s.sim.plane.z0 = MOCK_Z0;
+        s
+    };
+    let excursion = after_an_excursion();
+    let zoom = zoom_by(&excursion.sim.plane, 1.0);
+    // An excursion and a zoom in one batch: the zoom turns about the anchor where the excursion left it.
+    let edits = vec![z0_edit(excursion.sim.plane.z0), zoom.clone()];
+    let pinned = mv::about_the_pin(edits.clone(), &centred.sim);
+    assert_eq!(pinned.len(), 3, "{pinned:?}");
+    let plane = &excursion.sim.plane;
+    holds_the_anchor(
+        plane,
+        &applied(&centred.sim.plane, &pinned),
+        &MOCK_Z0,
+        "after the excursion",
+    );
+    rejects(
+        "the zoom read against the centre before the excursion",
+        || assert_eq!(mv::about_the_pin(edits.clone(), &centred.sim), edits),
+    );
+    // A lock and a zoom in one batch, from free: the zoom turns about the new anchor.
+    let mut free = excursion.clone();
+    free.sim.lock.locked = false;
+    let edits = vec![lock_edit(excursion.sim.lock.clone()), zoom];
+    let pinned = mv::about_the_pin(edits.clone(), &free.sim);
+    assert_eq!(pinned.len(), 3, "{pinned:?}");
+    holds_the_anchor(plane, &applied(plane, &pinned), &MOCK_Z0, "after the lock");
+    rejects("the zoom read as free", || {
+        assert_eq!(mv::about_the_pin(edits.clone(), &free.sim), edits)
+    });
+}
+
+#[test]
+fn mock_manifold_view_a_locked_wheel_after_an_excursion_keeps_the_pin() {
+    let mut app = mock_app();
+    let mut h = headless();
+    let excursion = after_an_excursion();
+    app.set_field(lock_edit(excursion.sim.lock.clone()));
+    app.set_field(z0_edit(excursion.sim.plane.z0));
+    let _ = h.frame(&mut app, Vec::new());
+    let before = app.snapshot().sim.plane.clone();
+    assert_eq!(before, excursion.sim.plane);
+    let at = crate::layout::Layout::new(h.screen(), crate::capture::PIXELS_PER_POINT)
+        .figure
+        .center();
+    let _ = h.frame(&mut app, vec![Event::PointerMoved(at)]);
+    let _ = h.frame(
+        &mut app,
+        vec![Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Line,
+            delta: egui::vec2(0.0, 8.0),
+            phase: egui::TouchPhase::Move,
+            modifiers: NONE,
+        }],
+    );
+    let _ = h.frame(&mut app, Vec::new());
+    let after = app.snapshot().sim.plane.clone();
+    assert_eq!(after.q1, MOCK_Q1.map(|v| v / 2.0), "one octave in");
+    holds_the_anchor(&before, &after, &MOCK_Z0, "the wheel");
+    rejects("the wheel about z₀", || {
+        let about_z0 = Plane {
+            z0: before.z0,
+            ..after.clone()
+        };
+        holds_the_anchor(&before, &about_z0, &MOCK_Z0, "the wheel")
+    });
+}
