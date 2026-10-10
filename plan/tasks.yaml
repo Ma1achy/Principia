@@ -2189,6 +2189,14 @@
   requirements: [REQ-GUI-163, REQ-GUI-164]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M8-44
+  milestone: M8
+  title: "The shape sphere past [0,1]² with one hemisphere drawn: φ's extension and primary range (RQ-264)"
+  depends_on: [TASK-M8-05, TASK-M8-06]
+  needs: [REQ-CHART-002]
+  requirements: [REQ-CHART-057]
+  reviewers: [code, qa, physics]
+  pitfalls: []
 - id: TASK-M0-35
   milestone: M0
   title: "The static layout check: overlap, coverage-or-reserved, width against range"

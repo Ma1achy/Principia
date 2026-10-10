@@ -39,8 +39,11 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   type on the `Chart` trait (`crates/kernel/src/chart/`), bounded the default; the types acting before `Φ` and
   `validate`; the fallback hatching, labelled `decode_failed`; the existing charts' types (latent and flat affine, the
   sphere's spherical map θ periodic and φ pole-crossing, its exponential map and the invariant warp bounded, the mass
-  simplex affine, a Chart-builder physical-quantity axis affine, R-408's port, B1). Tests `chart_extension`,
-  `f3_fill_labels`; screenshot cases `01_main/f3_off_sphere`, `01_main/f3_off_invariant`.
+  simplex affine in R-407's sense, its map bilinear; a Chart-builder physical-quantity axis mapped linearly onto its
+  range, one of §G7's non-periodic quantities (energy, `L_z`, virial ratio, mass ratio), affine, and one behind a
+  nonlinear warp declaring nothing, so bounded, R-408's port, B1). The pixel's validity check is inverse_encode layers 2
+  and 3 only (layer 1 is the encode path's). Tests `chart_extension`, `f3_fill_labels`; screenshot cases
+  `01_main/f3_off_sphere`, `01_main/f3_off_invariant`.
 - The area statistics' counting (REQ-CHART-056; chart_decoder_contract Part 3, R-408): each type's primary range on the
   `Chart` trait beside its type, and a classifier in `crates/kernel/src/chart/` that, for a visible pixel, gives the
   domain's end, not counted, forbidden or a counted system, in chart_decoder_contract Part 3's order, reading the chart
@@ -48,10 +51,10 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   `area_stats_primary_range`.
 
 ## Acceptance tests
-- `cargo xtask screenshot 01_main` (F3 on / off cases) and Review checklist (gui reviewer) on the egui-wgpu construction — screenshots with F3 on and off against 01_main.png: the figure is identical underneath; review that egui-wgpu is constructed from the engine's device/queue, not a second context (REQ-GUI-070).
+- `cargo xtask screenshot 01_main` (F3 on / off cases) and Review checklist (gui reviewer) on the egui-wgpu construction — screenshots with F3 on and off against 01_main.png: the figure is identical underneath, over the shown figure's rect, with a stain that reads no screen-lane field (R-406, R-407 A4); review that egui-wgpu is constructed from the engine's device/queue, not a second context (REQ-GUI-070).
 - `cargo xtask screenshot 01_main` — screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code (REQ-GUI-075). Closed by TASK-M6-24 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo xtask screenshot 01_main` (f3_off, f3_off_sphere, f3_off_invariant) on the real engine and `cargo test -p gui f3_fill_labels` — with a stain that reads no screen-lane field, on the latent chart, the shape sphere's spherical map and an invariant chart: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; past `[0,1]²` the latent chart continues its formula, the sphere wraps in θ and crosses its poles with θ shifted by π, and the invariant chart is hatched on every side; every window pixel carries a labelled output, each hatched one `decode_failed`, none dropped; F3 again restores the shown capture; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a window pixel left unlabelled fails the label check (REQ-GUI-180, R-407).
-- `cargo test -p kernel chart_extension` and Review checklist (physics reviewer) — per chart, samples past each edge of `[0,1]²`: the latent chart's z continues `z₀ + (2s−1)q₁ + (2t−1)q₂`; the sphere's `s` and `s + 1` decode equal, and `t = 1 + δ` decodes as `t = 1 − δ` with θ + π (likewise below `t = 0`); the invariant warp is hatched past every edge; the mass simplex continues and its negative-mass pixels are hatched; a custom chart's undeclared axis is hatched past its edge; every hatched pixel is `decode_failed` and none is integrated; inside `[0,1]²` every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, and an undeclared axis that continues each fail; the physics reviewer checks the types and the fallback against R-407 (REQ-CHART-054). Run with both of the
+- `cargo test -p kernel chart_extension` and Review checklist (physics reviewer) — per chart, samples past each edge of `[0,1]²`: the latent chart's z continues `z₀ + (2s−1)q₁ + (2t−1)q₂`; the sphere's `s` and `s + 1` decode equal, and `t = 1 + δ` decodes as `t = 1 − δ` with θ + π (likewise below `t = 0`); the invariant warp is hatched past every edge; the mass simplex continues and its negative-mass pixels are hatched, sampled past the `ε_m` buffer's reach (`|raw mᵢ| > ε_m`), the check reading the buffered masses `(1−3ε_m)m + ε_m`; a custom chart's undeclared axis is hatched past its edge; every hatched pixel is `decode_failed` and none is integrated; inside `[0,1]²` every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, and an undeclared axis that continues each fail; the physics reviewer checks the types and the fallback against R-407 (REQ-CHART-054). Run with both of the
   shape sphere's hemispheres drawn, R-14's full `φ = π·(1 − t)` span; a custom chart's physical-quantity axis continues
   linearly and its unreachable pixels are hatched by `validate`, with a physical-quantity axis built as bounded as a
   further control (R-408's port, B1).
@@ -61,13 +64,12 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   periodic duplicate is counted once; on the invariant warp, a window reaching past an edge gives `[0,1]²`'s count and
   total, the domain-hatched band leaving both; on the mass simplex, the window's negative-mass pixels count as forbidden
   and the forbidden share rises (R-408, B2); a custom chart's unreachable physical-quantity pixels count as forbidden;
-  inside `[0,1]²` every chart's statistic is bit-identical to before; controls: counting the periodic duplicate,
-  counting a pixel past a pole, counting the domain-hatched band as forbidden, and dropping it from the count but not
-  the total each fail; the physics reviewer checks the primary ranges and the classification order against R-408
+  B5's order, on a test chart where no shipped chart has the case: a pixel where layer 2 rejects and `Φ` fails
+  (non-finite) counts as forbidden, and a pixel where `Φ` fails and layer 2 accepts is the domain's end, out of the
+  count and the total; inside `[0,1]²` every chart's statistic is bit-identical to before; controls: counting the
+  periodic duplicate, counting a pixel past a pole, counting the domain-hatched band as forbidden, dropping it from the
+  count but not the total, and a classifier running `Φ` before `validate` each fail; the physics reviewer checks the primary ranges and the classification order against R-408
   (REQ-CHART-056).
-- **Waits for RQ-264:** `cargo test -p kernel chart_extension` and `cargo test -p kernel area_stats_primary_range` on
-  the shape sphere with one hemisphere drawn (TASK-M2-28's label): what φ does past the edge that is not a pole, and its
-  primary range there, follow the ruling (REQ-CHART-054, REQ-CHART-056). Only this line waits.
 - `cargo xtask screenshot 01_main` (warning case) — trigger a warning and an error with the figure visible: screenshot against 01_main.png shows nothing new over the plot; the footer count increments (REQ-GUI-074).
 - `cargo xtask screenshot 01_main` (top bar, budget-bound case) and `cargo test -p gui status_undo_depth` — screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2 (REQ-GUI-078).
 - `cargo xtask screenshot 01_main` (footer) and `cargo test -p gui footer_opens_console` — screenshot against 01_main.png's footer; a click opens the 12_console.png layout (REQ-GUI-093).
@@ -96,5 +98,10 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   This task closes REQ-CHART-056 (new): the primary ranges and the classifier, with the `area_stats_primary_range`
   line; the physics reviewer reviews it with the extension types. A Chart-builder physical-quantity axis is affine
   (applied per R-369, R-408's port, B1, a correction to R-407's applied text, flagged to the human), checked in
-  `chart_extension`. RQ-264 (the shape sphere's one-hemisphere toggle) holds only the line marked "Waits for RQ-264";
-  every other line runs with both hemispheres. Size: ~700 lines with the counting and its tests (applied per R-369).
+  `chart_extension`. Every line runs with both of the shape sphere's hemispheres; the one-hemisphere case (RQ-264) is
+  TASK-M8-44's, a leaf that depends on this task, so this task has no open RQ (applied per R-369, code review
+  5478800754, F4). Size: ~700 lines with the counting and its tests (applied per R-369).
+- Round-2 review fixes, applied per R-369: the REQ-GUI-070 line reads "over the shown figure's rect, with a stain that
+  reads no screen-lane field" (gui review 5478798782, G5); `area_stats_primary_range` checks B5's order (physics review
+  5478805963, F1); the mass simplex is sampled past the `ε_m` buffer (F5); the physical-quantity axis carries B1's
+  guard (F3).

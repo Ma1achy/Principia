@@ -70,9 +70,12 @@ forbidden. Present mode, whose frame TASK-M6-28 builds, fills the window the sam
   changes that assertion in the task's qa commit; its identical-over-the-rect check stays. The implementer never edits
   it, and until that commit the test fails on the implementer's head, as the PR says. The PR lists the change with its
   reason, and the code reviewer confirms that nothing else was weakened.
-- **The real engine** is REQ-GUI-180, closed by TASK-M8-05, which depends on this task and waits on RQ-262 (how the
-  view extends past the chart's `[0,1]²` and what a chart shows outside its domain). Nothing here waits on it: the
-  stand-in is noise defined everywhere, with no chart mapping, so no physics review.
+- **The real engine** is REQ-GUI-180, closed by TASK-M8-05, which depends on this task; how the view extends past the
+  chart's `[0,1]²` and what a chart shows outside its domain are R-407's (RQ-262 ruled). The stand-in is noise defined
+  everywhere, with no chart mapping, so no physics review.
+- **The screen lane (R-407, A4).** The stand-in is drawn from the field placement the canvas is given, not from the
+  screen lane (`ctx.screen.uv`, `ctx.screen.pixel`), so REQ-GUI-179's identity check over the shown rect needs no stain
+  condition: it already reads no screen-lane field (applied per R-369, gui review 5478798782, G5).
 - **R-407 (10 Oct 2026)** rules RQ-262: the mock needs only affine plus the hatch fallback. The stand-in continues as an
   affine chart; the fallback's path is built and checked through a test hook that flags pixels invalid. This task also
   builds the mock's Present fill, so it depends on TASK-M6-28, which builds present mode's frame (applied per R-369,

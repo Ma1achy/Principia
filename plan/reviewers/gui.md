@@ -153,7 +153,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-059 — screenshot with a large and a small configuration: both fit; the stamp is present
 - [ ] REQ-GUI-066 — screenshot of the readout panel against 05_inspectors.png
 - [ ] REQ-GUI-069 — one screenshot per screen compared for layout with 01_main.png … 12_console.png (values are illustrative, R-68); the mode switch offers exactly Explore / Stain
-- [ ] REQ-GUI-070 — screenshots with F3 on and off against 01_main.png: the figure is identical underneath; review that egui-wgpu is constructed from the engine's device/queue, not a second context
+- [ ] REQ-GUI-070 — screenshots with F3 on and off against 01_main.png: the figure is identical underneath, over the shown figure's rect, with a stain that reads no screen-lane field; review that egui-wgpu is constructed from the engine's device/queue, not a second context
 - [ ] REQ-GUI-073 — screenshots of 03_chartbuilder and 02_stain layouts: both chart-builder previews and the stain preview are square for a square viewport and match the viewport aspect otherwise
 - [ ] REQ-GUI-074 — trigger a warning and an error with the figure visible: screenshot against 01_main.png shows nothing new over the plot; the footer count increments
 - [ ] REQ-GUI-075 — screenshot against 01_main.png: dark theme, Ubuntu for text, Ubuntu Mono for numbers/code
@@ -171,7 +171,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-094 — screenshot against 01_main.png shows none of these fields; all are in the Run window (04_windows.png)
 - [ ] REQ-GUI-098 — screenshots before and after moving focus differ only in the ring and the breadcrumb (07_keyboard.png)
 - [ ] REQ-GUI-099 — screenshot against 08_lock.png after K over a point
-- [ ] REQ-GUI-100 — screenshot in present mode shows only the figure, filling the window: over the shown figure's rect it is pixel-identical to the shown layout's capture, and the window outside it is covered with the extension R-407 gives, never the clear colour or the shown view stretched; Esc restores 01_main.png's layout
+- [ ] REQ-GUI-100 — screenshot in present mode shows only the figure, filling the window: over the shown figure's rect, with a stain that reads no screen-lane field, it is pixel-identical to the shown layout's capture, and the window outside it is covered with the extension R-407 gives, never the clear colour or the shown view stretched; Esc restores 01_main.png's layout
 - [ ] REQ-GUI-101 — screenshot against 04_windows.png's Display window
 - [ ] REQ-GUI-103 — screenshot against 04_windows.png's Run window shows tau and window, no 'persistence' field
 - [ ] REQ-GUI-104 — screenshot against 04_windows.png; Cancel during a recompute stops it and the progress resets
