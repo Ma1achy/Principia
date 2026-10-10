@@ -193,10 +193,10 @@ fn navigation_edits_show_and_undo(engine: &mut dyn EngineInterface) -> Result<()
     let first = engine.snapshot().sim;
     let (plane, lock) = (first.plane.clone(), first.lock.clone());
     let z0 = shifted(plane.z0, 0.25);
-    let (q1, q2) = (plane.q1.map(|x| x * 0.5), plane.q2.map(|x| x * 0.5));
+    let (q1, q2) = (shifted(plane.q1, 0.5), shifted(plane.q2, 0.5));
     let anchor = Lock {
         locked: !lock.locked,
-        z_locked: shifted(lock.z_locked, -0.5),
+        z_locked: shifted(lock.z_locked, 0.5),
     };
     let edit = |field| SetField {
         edit: Edit::Sim(field),

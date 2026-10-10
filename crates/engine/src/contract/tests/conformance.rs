@@ -8,7 +8,7 @@ use crate::contract::conformance::{self, CASES};
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
 use crate::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
-use crate::contract::set_field::{Edit, RenderField, SetField};
+use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
@@ -93,6 +93,12 @@ enum Rule {
     NoLog,
     /// The log is never drained, so an entry is in every later snapshot.
     Repeat,
+    /// A SetField on `z₀` is dropped.
+    DropZ0,
+    /// A SetField on the basis is dropped.
+    DropBasis,
+    /// A SetField on the lock keeps the lock off, writing its anchor alone.
+    LockStaysOff,
 }
 
 impl EngineInterface for Broken {
@@ -100,7 +106,16 @@ impl EngineInterface for Broken {
         if matches!(self.rule, Rule::NoHistory) {
             edit.no_history = false;
         }
-        if !matches!(self.rule, Rule::Drop) {
+        if let (Rule::LockStaysOff, Edit::Sim(SimField::Lock(lock))) = (self.rule, &mut edit.edit) {
+            lock.locked = false;
+        }
+        let dropped = match (self.rule, &edit.edit) {
+            (Rule::Drop, _) => true,
+            (Rule::DropZ0, Edit::Sim(SimField::Z0(_))) => true,
+            (Rule::DropBasis, Edit::Sim(SimField::Basis { .. })) => true,
+            _ => false,
+        };
+        if !dropped {
             self.store.set_field(edit);
         }
     }
@@ -165,7 +180,59 @@ fn conformance_non_conforming_double_fails_naming_the_case() {
         Rule::Repeat,
         "each_applied_set_field_logs_one_contract_info",
     );
+    for rule in [Rule::DropZ0, Rule::DropBasis, Rule::LockStaysOff] {
+        check_names(rule, NAVIGATION);
+    }
 }
+
+/// The navigation paths' case.
+const NAVIGATION: &str = "navigation_edits_show_and_undo";
+
+/// A store whose plane and lock are not zero: the navigation case holds from any state.
+fn navigated_store() -> StateStore {
+    let mut store = store(0.0);
+    let sim = |field| SetField {
+        edit: Edit::Sim(field),
+        no_history: true,
+    };
+    store.set_field(sim(SimField::Z0([
+        0.1, -0.2, 0.3, 0.0, 0.5, -0.6, 0.7, 0.8,
+    ])));
+    store.set_field(sim(SimField::Basis {
+        q1: [1.0, 0.0, 0.0, 0.0, 0.0, 0.25, 0.0, 0.0],
+        q2: [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, -0.5],
+    }));
+    store.set_field(sim(SimField::Lock(Lock {
+        locked: true,
+        z_locked: [0.5; 8],
+    })));
+    let _ = store.snapshot();
+    store
+}
+
+#[test]
+fn conformance_navigation_case_holds_from_any_state() {
+    check_conforms(navigated_store);
+    for rule in [Rule::DropZ0, Rule::DropBasis] {
+        check_names_with(
+            || Broken {
+                store: navigated_store(),
+                rule,
+            },
+            NAVIGATION,
+        );
+    }
+}
+
+validation::negative_control!(
+    conformance_navigation_case_holds_from_any_state,
+    "a double dropping the basis edits must fail the navigation case",
+    expected = "conformance case `navigation_edits_show_and_undo` failed",
+    check_conforms(|| Broken {
+        store: navigated_store(),
+        rule: Rule::DropBasis,
+    })
+);
 
 validation::negative_control!(
     conformance_real_engine_passes_every_case,
@@ -296,6 +363,63 @@ fn store_message_names_path_values_and_marker() {
         "SetField Playhead.t 0.25 → -1 (no history)"
     );
 }
+
+#[test]
+fn store_message_names_the_navigation_paths() {
+    let sim = |field| SetField {
+        edit: Edit::Sim(field),
+        no_history: false,
+    };
+    let z = [0.5, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.25];
+    let zero = [0.0; 8];
+    assert_eq!(
+        set_field_message(&Edit::Sim(SimField::Z0(zero)), &sim(SimField::Z0(z))),
+        "SetField Plane.z0 (0, 0, 0, 0, 0, 0, 0, 0) → (0.5, -1, 0, 0, 0, 0, 0, 0.25)"
+    );
+    assert_eq!(
+        set_field_message(
+            &Edit::Sim(SimField::Basis { q1: zero, q2: zero }),
+            &sim(SimField::Basis { q1: z, q2: zero })
+        ),
+        "SetField Plane.q1 Plane.q2 (0, 0, 0, 0, 0, 0, 0, 0) (0, 0, 0, 0, 0, 0, 0, 0) → \
+         (0.5, -1, 0, 0, 0, 0, 0, 0.25) (0, 0, 0, 0, 0, 0, 0, 0)"
+    );
+    let off = Lock {
+        locked: false,
+        z_locked: z,
+    };
+    let on = Lock {
+        locked: true,
+        z_locked: z,
+    };
+    assert_eq!(
+        set_field_message(&Edit::Sim(SimField::Lock(off)), &sim(SimField::Lock(on))),
+        "SetField Lock unlocked → locked at (0.5, -1, 0, 0, 0, 0, 0, 0.25)"
+    );
+}
+
+validation::negative_control!(
+    store_message_names_the_navigation_paths,
+    "an unlocked lock must not read as locked",
+    expected = "SetField Lock",
+    assert_eq!(
+        set_field_message(
+            &Edit::Sim(SimField::Lock(Lock {
+                locked: false,
+                z_locked: [0.0; 8]
+            })),
+            &SetField {
+                edit: Edit::Sim(SimField::Lock(Lock {
+                    locked: false,
+                    z_locked: [0.0; 8]
+                })),
+                no_history: false
+            }
+        ),
+        "SetField Lock locked at (0, 0, 0, 0, 0, 0, 0, 0) → unlocked",
+        "SetField Lock reads locked while unlocked"
+    )
+);
 
 validation::negative_control!(
     store_message_names_path_values_and_marker,
