@@ -932,10 +932,11 @@ fn scan_fixture(name: &str, path: &str) -> Vec<(String, String)> {
     scanned(&src)
 }
 
-/// The scan reads each module form: `decode.rs`, `decode/…`, `encode.rs` and `encode/…`.
-fn check_scans_both_forms(paths: &[&str]) {
+/// The scan reads each module form: `decode.rs`, `decode/…`, `encode.rs` and `encode/…`. Each fixture is a tree of
+/// its own, named by `tag` and its index, so tests running side by side don't share one.
+fn check_scans_both_forms(tag: &str, paths: &[&str]) {
     for (i, path) in paths.iter().enumerate() {
-        let files = scan_fixture(&format!("form_{i}"), path);
+        let files = scan_fixture(&format!("{tag}_{i}"), path);
         assert!(
             files.iter().any(|(p, _)| p.ends_with(path)),
             "the scan does not read `{path}`"
@@ -945,17 +946,20 @@ fn check_scans_both_forms(paths: &[&str]) {
 
 #[test]
 fn chart_constants_source_scan_reads_both_module_forms() {
-    check_scans_both_forms(&[
-        "decode.rs",
-        "decode/mass.rs",
-        "encode.rs",
-        "encode/inverse/q.rs",
-    ]);
+    check_scans_both_forms(
+        "forms",
+        &[
+            "decode.rs",
+            "decode/mass.rs",
+            "encode.rs",
+            "encode/inverse/q.rs",
+        ],
+    );
 }
 
 negative_control!(
     chart_constants_source_scan_reads_both_module_forms,
     "a file outside decode and encode is not scanned",
     expected = "the scan does not read",
-    check_scans_both_forms(&["render.rs"])
+    check_scans_both_forms("outside", &["render.rs"])
 );
