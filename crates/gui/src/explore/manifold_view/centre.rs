@@ -2,7 +2,7 @@
 //! typed. A free slider spans `[−1, 1]`. Locked, the sliders are re-based to the anchor, not frozen (§G4;
 //! chart_decoder_contract Part 4, "Sliders are re-based"): each spans `anchor ± 1`, marks the anchor in gold at its
 //! centre, and reads anchor plus offset, `z_locked + δ`; moving one is an excursion, a `SetField` on `z₀`, the anchor
-//! kept. Touching one shows slicing on the compass.
+//! kept. Touching one switches the compass to Slice, its buttons following (R-409).
 
 use eframe::egui::{self, DragValue, Rect, RichText, Slider, Stroke, Ui};
 

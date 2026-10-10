@@ -210,17 +210,21 @@ pub fn join(tree: &mut ScopeTree) {
     }
 }
 
-/// The rows the Manifold view, the figure and the compass add to the `?` overlay (render_gui_spec §G3's "In scope").
+/// The rows the Manifold view, the figure and the compass add to the `?` overlay (render_gui_spec §G3's "In scope",
+/// read with R-409: the arrows need Enter; the letter shortcuts act in either mode).
 pub const SHORTCUTS: [(&str, &str); 6] = [
     (
         "Enter on a value",
-        "arrows: adjust it, or move between its siblings",
+        "interact: the arrows adjust it; Enter or Esc, back to navigating",
     ),
-    ("Figure: arrows", "pan"),
-    ("Figure: + / −", "zoom"),
-    ("K", "lock at the point under the pointer"),
-    ("Compass: arrows", "tilt"),
-    ("Compass: Shift+arrows", "orbit"),
+    ("Figure: arrows", "pan, after Enter"),
+    ("Figure: + / −", "zoom, in either mode"),
+    ("K", "lock at the point under the pointer, in either mode"),
+    (
+        "Compass: arrows",
+        "after Enter: tilt in Tilt, move the slice along the normal in Slice; Shift ×10, Alt ×0.1",
+    ),
+    ("Compass: Tilt / Slice", "Enter on one sets the mode"),
 ];
 
 // --- the chart in a preset's frame ------------------------------------------------------------------------------------
@@ -483,20 +487,20 @@ fn sim(field: SimField) -> SetField {
     }
 }
 
-/// Which the compass shows (render_gui_spec §G2: it "switches mode by itself").
+/// The compass's mode (render_gui_spec §G2, R-409): set by its Tilt and Slice buttons, and by the slider touched last.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Touch {
-    /// A slice slider was touched last: `z₀` or the slice step.
+    /// Tilt, the default: the Tilt button, or a tilt touched last: `τ₁`, `τ₂`, `γ`, or a tilt on the compass.
     #[default]
-    Slice,
-    /// A tilt was touched last: `τ₁`, `τ₂`, `γ`, or the compass's plane.
     Tilt,
+    /// Slice: the Slice button, or a slice slider touched last: `z₀`, the slice step, or a slice on the compass.
+    Slice,
 }
 
 /// The GUI's own scratch state for the panel and the compass: never the engine's, never undoable (R-69).
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Scratch {
-    /// The compass's mode, its orbit and its drag.
+    /// The compass's mode and its drag.
     pub compass: Compass,
     /// Whether `q₁`'s and `q₂`'s editors are open.
     pub editing: [bool; 2],
@@ -523,7 +527,7 @@ impl Out {
     }
 }
 
-/// Enter on control `id`, as its click.
+/// Enter on control `id`, as its click: the panel's, and the compass's Tilt and Slice.
 pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
     match id {
         PRESET => {
@@ -533,11 +537,11 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
         }
         UNLOCK => lock::unlock(&snapshot.sim.lock, out),
         OPEN_INSPECTOR => lock::open_inspector(&snapshot.sim.lock, out),
-        _ => {}
+        _ => compass::activate(id, scratch),
     }
 }
 
-/// An adjustment of the arrows on one of the panel's values, the figure or the compass.
+/// An adjustment of the arrows on one of the panel's values, the figure or the compass, in interaction mode.
 pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut Out) {
     let plane = &snapshot.sim.plane;
     let step = adjust.delta();
@@ -596,7 +600,7 @@ pub fn adjust(adjust: &Adjust, snapshot: &Snapshot, scratch: &mut Scratch, out: 
             );
         }
         crate::explore::FIGURE => navigate::pan_by_keys(adjust, plane, view_fraction, scratch, out),
-        crate::explore::COMPASS => compass::adjust(adjust, plane, scratch, out),
+        crate::explore::COMPASS_VIEW => compass::adjust(adjust, plane, scratch, out),
         _ => {}
     }
 }

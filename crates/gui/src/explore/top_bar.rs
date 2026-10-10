@@ -12,7 +12,7 @@ use eframe::egui::{
 };
 use engine::contract::render_state::Overlays;
 use engine::contract::snapshot::Snapshot;
-use engine::contract::view_ui::Mode;
+use engine::contract::view_ui::{KeyMode, Mode};
 
 use crate::app::Actions;
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
@@ -136,6 +136,8 @@ pub struct TopBar<'a> {
     pub mode: Mode,
     /// The keyboard breadcrumb.
     pub breadcrumb: &'a str,
+    /// The keyboard's mode, which the breadcrumb's colour shows (R-409 A6).
+    pub keys: KeyMode,
 }
 
 /// Draws the top bar in `rect`, recording what its controls ask for in `actions` and where they are in `keyboard`.
@@ -218,7 +220,7 @@ pub fn show(
     }
     bar.with_layout(EguiLayout::right_to_left(Align::Center), |ui| {
         ui.label(RichText::new(status_line(snapshot)).monospace());
-        crate::explore::breadcrumb::show(ui, bar_state.breadcrumb);
+        crate::explore::breadcrumb::show(ui, bar_state.breadcrumb, bar_state.keys);
     });
 }
 
