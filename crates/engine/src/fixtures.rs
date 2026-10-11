@@ -56,8 +56,8 @@ pub struct Known {
     pub length: u32,
     /// The current energy drift, `H(r, p) − E_0` (payload §5), that `E_0` is written to give.
     pub drift: f32,
-    /// The descriptor's bits 0–15 written whole into `packed_a` rather than field by field through the generated
-    /// setters: the adversarial descriptor (debug tooling plan, "Synthetic-first").
+    /// The descriptor's bits 0–15, written whole into `packed_a` rather than field by field through the generated
+    /// setters, `d_min` then through its packer: the adversarial descriptor (debug tooling plan, "Synthetic-first").
     pub descriptor: Option<u32>,
 }
 
@@ -169,19 +169,16 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
             adversarial(0x231, [1, 2, 1, 0, 2], 0x2aaa, 1000, 1),
             adversarial(0x18e, [6, 1, 0, 2, 1], 0x5555, 40, 1),
         ],
-        "forced_failure" => (0..8u32)
-            .map(|k| {
-                let (state, t_end_step) = if k < 4 {
-                    (STATE_SIM_FAILED, [37, 512, 3, 999][k as usize])
-                } else {
-                    (STATE_DECODE_FAILED, 0)
-                };
-                Known {
-                    saturated: k % 2 == 1,
-                    ..plain(state, k % 4, t_end_step, 3, UNSET)
-                }
-            })
-            .collect(),
+        "forced_failure" => vec![
+            plain(STATE_SIM_FAILED, 0, 37, 3, UNSET),
+            plain(STATE_SIM_FAILED, 1, 512, 3, UNSET),
+            plain(STATE_SIM_FAILED, 2, 3, 3, UNSET),
+            plain(STATE_SIM_FAILED, 3, 999, 3, UNSET),
+            plain(STATE_DECODE_FAILED, 0, 0, 3, UNSET),
+            plain(STATE_DECODE_FAILED, 1, 0, 3, UNSET),
+            plain(STATE_DECODE_FAILED, 2, 0, 3, UNSET),
+            plain(STATE_DECODE_FAILED, 3, 0, 3, UNSET),
+        ],
         _ => {
             return Err(format!(
                 "no synthetic fixture `{name}`; the fixtures are {}",
@@ -191,19 +188,24 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
     })
 }
 
-/// The configuration every fixture's samples share: positions and momenta in the CoM frame, each summing to zero.
-fn configuration() -> ([[f32; 2]; 3], [[f32; 2]; 3]) {
+/// Three bodies' planar vectors.
+type Bodies = [[f32; 2]; 3];
+
+/// The configuration every fixture's samples share: positions and momenta in the CoM frame, each summing to zero, and
+/// the shadow's positions, 10⁻⁶ ahead of the state in body 0's x.
+fn configuration() -> (Bodies, Bodies, Bodies) {
     (
         [[0.6, -0.2], [-0.45, 0.55], [-0.15, -0.35]],
         [[0.1, 0.3], [-0.25, -0.05], [0.15, -0.25]],
+        [[0.600_001, -0.2], [-0.45, 0.55], [-0.15, -0.35]],
     )
 }
 
 /// Writes the fixture `name` into samples `0…7` of `set`, each through the generated pack routines but the adversarial
-/// descriptor, written whole: [`known`]'s values, the shared configuration with its shadow a small offset away,
-/// `E_0 = H(r, p) − drift` with the sample's own masses and `Lz_0 = L_z(r, p)`, the drift latches of
-/// [`Known::drift_max`], `t_dmin_step` half of `t_end_step`, and the word of [`Known::word`]. Refused for an unknown
-/// name or a set of fewer than eight samples.
+/// descriptor, written whole: [`known`]'s values, the shared configuration with its shadow a small offset away, as
+/// many substeps as steps, `E_0 = H(r, p) − drift` with the sample's own masses and `Lz_0 = L_z(r, p)`, the drift
+/// latches of [`Known::drift_max`], `t_dmin_step` half of `t_end_step`, and the word of [`Known::word`]. Refused for
+/// an unknown name or a set of fewer than eight samples.
 pub fn fill(name: &str, set: &mut Synthetic) -> Result<(), String> {
     let rows = known(name)?;
     let have = set.grid().sample_count();
@@ -213,9 +215,7 @@ pub fn fill(name: &str, set: &mut Synthetic) -> Result<(), String> {
             rows.len()
         ));
     }
-    let (r, p) = configuration();
-    let mut r_sh = r;
-    r_sh[0][0] += 1e-6;
+    let (r, p, r_sh) = configuration();
     for (i, k) in (0u32..).zip(rows) {
         let ic = set.ic(i);
         let m = [ic.m0, ic.m1, ic.m2];
@@ -232,7 +232,7 @@ pub fn fill(name: &str, set: &mut Synthetic) -> Result<(), String> {
             .C_ty(0.002)
             .E_0(hamiltonian(r, p, m) - k.drift)
             .Lz_0(angular_momentum_z(r, p))
-            .total_substeps(k.t_end_step * 3)
+            .total_substeps(k.t_end_step)
             .closure_min(0.01)
             .closure_step(7)
             .times(k.t_end_step, k.t_end_step / 2)
@@ -240,7 +240,7 @@ pub fn fill(name: &str, set: &mut Synthetic) -> Result<(), String> {
             .word_raw(k.word());
         match k.descriptor {
             Some(low) => {
-                sample.packed_a(low | (u32::from(k.d_min) << 16));
+                sample.packed_a(low).d_min(f16_bits_to_f32(k.d_min));
             }
             None => {
                 sample

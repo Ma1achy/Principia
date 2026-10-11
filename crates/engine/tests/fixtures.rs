@@ -15,9 +15,9 @@ use engine::fixtures::{self, Known, NAMES, UNSET};
 use engine::synthetic::Synthetic;
 use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::{
-    canonical_nan, f16_bits_to_f32, fgw_length_raw, sd_detail, sd_dmin_pair, sd_last_symbol,
-    sd_saturated, sd_state, sim_state_from_ftle, tm_t_end_step, ReadParams, PACKED_A_RESERVED,
-    STATE_DECODE_FAILED, STATE_SIM_FAILED,
+    canonical_nan, f16_bits_to_f32, fgw_length_raw, pb_dE_max, pb_dLz_max, sd_detail, sd_dmin_pair,
+    sd_last_symbol, sd_saturated, sd_state, sim_state_from_ftle, tm_t_dmin_step, tm_t_end_step,
+    ReadParams, PACKED_A_RESERVED, STATE_DECODE_FAILED, STATE_SIM_FAILED,
 };
 use ledger::gen::rust::offsets;
 use ledger::schema::Storage;
@@ -98,6 +98,25 @@ fn check_accessors(name: &str, set: &mut Synthetic, want: &[Known]) {
             k.t_end_step,
             "`{name}` sample {i}: t_end_step"
         );
+        assert_eq!(
+            tm_t_dmin_step(s.times),
+            k.t_end_step / 2,
+            "`{name}` sample {i}: t_dmin_step, half of t_end_step"
+        );
+        let (de_max, dlz_max) = (pb_dE_max(s.packed_b), pb_dLz_max(s.packed_b));
+        if k.failed() {
+            assert_eq!(
+                (de_max, dlz_max),
+                (0.0, 0.0),
+                "`{name}` sample {i}: a failed sample's drift latches"
+            );
+        } else {
+            assert!(
+                de_max >= k.drift.abs() + 0.04 && dlz_max > 0.0,
+                "`{name}` sample {i}: the latches {de_max}, {dlz_max} are not above the current drift {}",
+                k.drift
+            );
+        }
         assert_eq!(
             fgw_length_raw(set.word(i)),
             k.length,
