@@ -7,8 +7,8 @@
 //! outcome's (REQ-COL-062); "degenerate" is `decode_failed`; "collision @ t=0" is a collision with `t_end_step == 0`,
 //! whatever its `detail`, so a triple collision at step 0 is orange like any other collision there (applied per
 //! R-369: `detail = 3` is the collision's fourth `detail` code, which the `t_end_step == 0` reading overrides as it
-//! does the pair ids). `running` shows the neutral "not yet" grey ([`crate::present::not_yet`], REQ-COL-053),
-//! `sim_failed` the invalid pattern (colour_composition §3), and so do the reserved codes 6–7, finished and untrusted
+//! does the pair ids). `running` shows the "not yet" style ([`crate::present::debug_not_yet`], R-399; REQ-COL-053,
+//! REQ-COL-064), `sim_failed` the invalid pattern (colour_composition §3), and so do the reserved codes 6–7, finished and untrusted
 //! (payload §2, §6; applied per R-369).
 //!
 //! **The swatches** ([`SWATCHES`]) are the occupant's node params, so editing one changes only its class
@@ -91,7 +91,7 @@ pub const ID: &str = "outcome_state";
 pub enum Shown {
     /// The swatch at this index of [`SWATCHES`].
     Swatch(usize),
-    /// The neutral "not yet" grey of a running sample.
+    /// The "not yet" style of a running sample, `debug_not_yet(frag_xy)` (R-399).
     Running,
     /// The invalid pattern: `sim_failed` and the reserved codes.
     Invalid,

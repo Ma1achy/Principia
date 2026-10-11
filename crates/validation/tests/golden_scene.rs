@@ -38,7 +38,7 @@ fn kinds(s: &Scene) -> String {
 }
 
 /// Each scene: its field and its samples' kinds.
-const SCENES: [(&str, &str, &str); 14] = [
+const SCENES: [(&str, &str, &str); 20] = [
     ("ftle", "ftle", "IIRRRRRR"),
     ("diffusion", "diffusion", "IIRRRRRR"),
     ("de_max_failed", "dE_max", "RRRRRRRR"),
@@ -53,6 +53,12 @@ const SCENES: [(&str, &str, &str); 14] = [
     ("outcome_edited", "state", "FFFFFFFFFFFNIF"),
     ("state_view", "state", "FFFFFF"),
     ("detail_view", "detail", "FFFFFFFFFFFFFFFFFF"),
+    ("e_0_signed", "E_0", "RRRRRRRR"),
+    ("lz_0_signed", "Lz_0", "RRRRRRRR"),
+    ("c_ty_signed", "C_ty", "RRRRRRRR"),
+    ("k_0", "K_0", "RRRRRRRR"),
+    ("v_0", "V_0", "RRRRRRRR"),
+    ("virial_ratio", "virial_ratio", "RRRRRRRR"),
 ];
 
 /// Checks that scene `name` colours `field` and shows `want`'s kinds.
@@ -428,7 +434,7 @@ fn f16(x: f32) -> f32 {
 /// negative; the f16 drifts and `d_min` are their values rounded to f16, `dLz_max` 0.6 of `dE_max`'s; the word lengths.
 #[test]
 fn golden_scene_values_are_the_scenes() {
-    check_values("ftle", 2, &[0.15, 0.4, 0.85, 1.3, 2.1, 3.05], 1e-5);
+    check_values("ftle", 2, &[0.15, 0.4, 0.85, 1.35, 2.15, 3.05], 1e-5);
     check_values("diffusion", 2, &[0.6], 1e-5);
     let slope = named("diffusion")
         .value(3)

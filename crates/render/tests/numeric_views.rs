@@ -4,20 +4,25 @@
 //!   colour (`debug_fields_raw_*`);
 //! - REQ-GEN-012: a diffusion with n < 2 reads NaN and renders the hatch, distinct from a valid slope on the ramp; the
 //!   stored sentinels `dmin_pair` 3 and `length` 127 round-trip bit-exact and render as their literal values; `d_min`'s
-//!   unset +∞ renders in the "not yet" grey (`diffusion_invalid_fit_*`);
+//!   unset +∞ renders in the "not yet" style, the grey with its dot stipple (R-399; `diffusion_invalid_fit_*`);
 //! - REQ-TOOL-023: `d_min`, `dE_max` and `dLz_max` pack and unpack within f16 eps, and their views render their CPU
-//!   twins, the unset `d_min` in the grey (`f16_scalar_views_*`);
+//!   twins, the unset `d_min` in the "not yet" style (`f16_scalar_views_*`);
 //! - REQ-COL-001: the field ramps' invalid lane, the pattern by default and the override colour changing only the
 //!   invalid pixels (`field_ramp_*`);
+//! - REQ-RENDER-084 (R-400, R-403; TASK-M1-17): `E_0`, `Lz_0` and `C_ty`, whose declared ranges span zero, render
+//!   on `ramp_coolwarm`, 0 at the neutral and the two signs on its two sides; `K_0`, `V_0` and `virial_ratio` on
+//!   `ramp_viridis`, increasing, `K_0`'s minimum and `V_0`'s most negative value at the dark end, in the views' default,
+//!   auto mode (`range_scenes_*`);
 //! - every golden scene renders its CPU twin, far enough from every rounding tie that one reference holds on every
 //!   backend (`golden_scenes_*`).
 //!
 //! Each test registers its negative control (R-176).
 
+use ledger::gen::numeric::Ramp;
 use render::present::Rgb;
 use validation::golden_scene::{
     self, f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, scene, Colouring, Look, Scene,
-    SimState, STATE_SIM_FAILED,
+    SimState, RANGE_SCENES, STATE_SIM_FAILED,
 };
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -98,7 +103,7 @@ fn painted(s: &Scene, image: &[Rgb], i: u32, look: Look) -> Vec<Rgb> {
 
 /// The ramp's look at the bottom of the measured range: the colour 0.0 takes when it is the scene's least value.
 const RAMP_AT_ZERO: Look = Look::Ramp {
-    twilight: false,
+    ramp: Ramp::Viridis,
     t: 0.0,
 };
 
@@ -155,7 +160,7 @@ fn check_d_min_failed_zero(s: &Scene, image: &[Rgb]) {
         matches!(
             shown,
             Look::Ramp {
-                twilight: false,
+                ramp: Ramp::Viridis,
                 ..
             }
         ),
@@ -220,7 +225,7 @@ negative_control!(
         let s = named("diffusion");
         let image = render(&gpu(), &s);
         let wrong = Look::Ramp {
-            twilight: false,
+            ramp: Ramp::Coolwarm,
             t: 0.5,
         };
         check_diffusion(&s, &painted(&s, &image, 1, wrong));
@@ -281,30 +286,31 @@ negative_control!(
 );
 
 /// Checks that samples 0 and 1 of a `d_min` scene, a forced failure and an unstepped sample, hold the unset f16 +∞ by
-/// its bits and render the "not yet" grey.
-fn check_unset_grey(s: &Scene, image: &[Rgb]) {
+/// its bits and render the "not yet" style, pixel by pixel (R-399).
+fn check_unset_not_yet(s: &Scene, image: &[Rgb]) {
     for i in [0, 1] {
         let packed = s.set.simstate(i).packed_a;
         assert_eq!(packed >> 16, 0x7c00, "sample {i} holds f16 +inf");
         assert_eq!(look(s, i), Look::NotYet, "sample {i}'s look");
-        check_sample(s, image, i, Look::NotYet, "the \"not yet\" grey");
+        check_sample(s, image, i, Look::NotYet, "the \"not yet\" style");
     }
 }
 
 #[test]
-fn diffusion_invalid_fit_d_min_unset_renders_the_grey() {
+fn diffusion_invalid_fit_d_min_unset_renders_not_yet() {
     let s = named("d_min");
-    check_unset_grey(&s, &render(&gpu(), &s));
+    check_unset_not_yet(&s, &render(&gpu(), &s));
 }
 
 negative_control!(
-    diffusion_invalid_fit_d_min_unset_renders_the_grey,
-    "a view hatching the unset d_min, as if it were NaN, fails the check",
-    expected = "not the \"not yet\" grey",
+    diffusion_invalid_fit_d_min_unset_renders_not_yet,
+    "a view drawing the unset d_min in the flat grey, before R-399, fails the check",
+    expected = "not the \"not yet\" style",
     {
         let s = named("d_min");
         let image = render(&gpu(), &s);
-        check_unset_grey(&s, &painted(&s, &image, 1, Look::Invalid));
+        let flat = Look::Flat(render::present::not_yet());
+        check_unset_not_yet(&s, &painted(&s, &image, 1, flat));
     }
 );
 
@@ -372,7 +378,7 @@ fn f16_scalar_views_render_their_twins() {
         let image = render(&h, &s);
         check_twin(&s, &image);
         if name == "d_min" {
-            check_unset_grey(&s, &image);
+            check_unset_not_yet(&s, &image);
             check_sample(&s, &image, 2, Look::Invalid, "the hatch");
         }
     }
@@ -451,7 +457,7 @@ negative_control!(
 );
 
 /// Checks the ramps' own legs: `length`'s 127 is invalid on its ramp and literal in its view; `d_min`'s NaN is
-/// invalid and its unset value grey, on the ramp as in the view.
+/// invalid and its unset value in the "not yet" style, on the ramp as in the view.
 fn check_ramp_legs(length: (&Scene, &[Rgb]), d_min: (&Scene, &[Rgb])) {
     let (s, image) = length;
     assert_eq!(look(s, 7), Look::Invalid, "127 on `length`'s ramp");
@@ -459,11 +465,11 @@ fn check_ramp_legs(length: (&Scene, &[Rgb]), d_min: (&Scene, &[Rgb])) {
     assert_eq!(look(&named("length_view"), 7), Look::Literal(127.0));
     let (s, image) = d_min;
     check_sample(s, image, 2, Look::Invalid, "the invalid pattern");
-    check_unset_grey(s, image);
+    check_unset_not_yet(s, image);
 }
 
 #[test]
-fn field_ramp_sentinel_and_nan_are_invalid_and_unset_grey() {
+fn field_ramp_sentinel_and_nan_are_invalid_and_unset_not_yet() {
     let h = gpu();
     let (l, d) = (named("length_ramp"), named("d_min_ramp"));
     let (a, b) = (render(&h, &l), render(&h, &d));
@@ -471,7 +477,7 @@ fn field_ramp_sentinel_and_nan_are_invalid_and_unset_grey() {
 }
 
 negative_control!(
-    field_ramp_sentinel_and_nan_are_invalid_and_unset_grey,
+    field_ramp_sentinel_and_nan_are_invalid_and_unset_not_yet,
     "a length ramp drawing 127 on the ramp, as the view does, fails the check",
     expected = "not the invalid pattern",
     {
@@ -525,4 +531,75 @@ negative_control!(
     "a pixel at 127.5 / 255 sits on a tie",
     expected = "from a rounding tie",
     check_tie_free("a tie", &[[0.0, 0.0, 127.5 / 255.0]])
+);
+
+/// Checks a scene of [`RANGE_SCENES`], `values` its field's samples, against its render `image`: a field whose
+/// declared range spans zero on `ramp_coolwarm`, 0 at `t = ½`, the neutral, a negative value below and a positive
+/// above; any other on `ramp_viridis`, `t` increasing in the value, its least value at `t = 0`, the dark end; every
+/// sample its look's colour.
+fn check_range_scene(s: &Scene, values: &[f32; 8], image: &[Rgb]) {
+    let signed = matches!(s.field(), "E_0" | "Lz_0" | "C_ty");
+    let mut placed = Vec::new();
+    for (i, &v) in (0u32..).zip(values) {
+        let shown = look(s, i);
+        let Look::Ramp { ramp, t } = shown else {
+            panic!("`{}` sample {i} is {shown:?}, not on a ramp", s.name);
+        };
+        let want = if signed {
+            Ramp::Coolwarm
+        } else {
+            Ramp::Viridis
+        };
+        assert_eq!(ramp, want, "`{}` sample {i}'s ramp", s.name);
+        if signed {
+            let side = if v == 0.0 {
+                t == 0.5
+            } else if v < 0.0 {
+                t < 0.5
+            } else {
+                t > 0.5
+            };
+            assert!(
+                side,
+                "`{}`: {v} is at t = {t}, not on its side of the neutral",
+                s.name
+            );
+        }
+        check_sample(s, image, i, shown, "its ramp colour");
+        placed.push((v, t));
+    }
+    placed.sort_by(|a, b| a.0.total_cmp(&b.0));
+    assert!(
+        placed.windows(2).all(|w| w[0].1 < w[1].1),
+        "`{}` does not increase in the value: {placed:?}",
+        s.name
+    );
+    if !signed {
+        assert_eq!(placed[0].1, 0.0, "`{}`'s least value is not dark", s.name);
+    }
+}
+
+#[test]
+fn range_scenes_follow_the_declared_range() {
+    let h = gpu();
+    for (name, _, values) in RANGE_SCENES {
+        let s = named(name);
+        check_range_scene(&s, &values, &render(&h, &s));
+    }
+}
+
+negative_control!(
+    range_scenes_follow_the_declared_range,
+    "E_0's zero drawn mid-viridis, as before R-400, is not the neutral",
+    expected = "not its ramp colour",
+    {
+        let (name, _, values) = RANGE_SCENES[0];
+        let s = named(name);
+        let image = render(&gpu(), &s);
+        let mid = Look::Ramp {
+            ramp: Ramp::Viridis,
+            t: 0.5,
+        };
+        check_range_scene(&s, &values, &painted(&s, &image, 4, mid));
+    }
 );

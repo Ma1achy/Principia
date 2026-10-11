@@ -10,5 +10,6 @@
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = ctx.sample.diffusion;
     if (bitcast<u32>(raw) == 0x7fc00000u) { return debug_invalid(ctx.frag_xy); }
-    return ramp_viridis(range_norm(raw, uniforms.u_range.x, uniforms.u_range.y, uniforms.RANGE_AUTO != 0u, uniforms.u_range));
+    let m = max(abs(uniforms.u_range.x), abs(uniforms.u_range.y));
+    return ramp_coolwarm(range_norm(raw, -m, m, uniforms.RANGE_AUTO != 0u, vec2<f32>(-m, m)));
 }
