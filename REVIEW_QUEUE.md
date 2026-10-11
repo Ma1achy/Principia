@@ -109,6 +109,10 @@ chosen.*
   - (c) Another form the corpus permits. Clamping the output is not one: REQ-DEC-028 and the note exclude "endpoint
     clamping" and "artificial guards".
 - **Applied meanwhile:** nothing.
-- **Waits:** REQ-DEC-027 carries `rq: RQ-270`, so TASK-M2-03 (`decode_ranges`) waits. Whether REQ-DEC-028
-  (TASK-M2-02, PR #192) or REQ-CHART-034 (TASK-M2-01, merged) is also held is the orchestrator's call; neither is
-  marked here.
+- **Waits:**
+  - REQ-DEC-027 carries `rq: RQ-270`, so TASK-M2-03 (`decode_ranges`) waits.
+  - REQ-DEC-028 carries `rq: RQ-270` (applied per R-369: at f32 the parametrisation reaches its endpoints by rounding,
+    which its "endpoints excluded" directly contradicts), so TASK-M2-02 (PR #192) waits.
+  - The REQ-CHART-034 tension: §3.9's "Bounded (a,b)" and test 8 (a)'s "bounded outputs in range" against TASK-M2-01's
+    merged `link_properties_a_constraint`, which reads the range as closed at the f32-rounded bounds. TASK-M2-01 has
+    merged, so the ruling may need a follow-up to that test or to the generated links. REQ-CHART-034 is not marked.

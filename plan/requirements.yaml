@@ -537,6 +537,8 @@
     detail: "decoder has no endpoint-landing or exclusion guard; degenerate configs are only approached as limits"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-270
 - id: REQ-DEC-029
   area: DEC
   statement: "Decode must not apply a per-body momentum cap with CoM re-enforcement; q_max alone bounds the Jacobi momenta, clamped and flagged at the boundary."
