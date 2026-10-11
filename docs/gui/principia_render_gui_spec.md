@@ -759,7 +759,7 @@ floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts
 which is on `ramp_coolwarm` centred at zero (R-400; TASK-M1-17). **The cyclic period is one turn, 2π:** a cyclic
 field is an angle in radians (REQ-TOOL-161). `rho_angle` is the one cyclic field; its formula is REQ-PAY-088's. **The
 log floor** of a field with no ledger `floor` is that field's own, `ε_f` in its units, a calibration proposed with its
-evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-17); TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's
+evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-18); TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's
 smallest positive subnormal, which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
 `[0, horizon_steps]`; a `diverging` field's range, and under R-400 every range that spans zero, is symmetric about 0.
 A field carries the `diverging` scale only when its declared range spans zero (R-403; dd_generation_root §3.8), so

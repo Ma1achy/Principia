@@ -2,8 +2,8 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-COL-039, REQ-COL-016, REQ-COL-032, REQ-COL-024, REQ-COL-065, REQ-COL-066
-- **Depends on:** TASK-M7-03, TASK-M7-04, TASK-M1-09, TASK-M1-17
-- **Needs (earlier milestones):** REQ-COL-001, REQ-GEN-001, REQ-GEN-002, REQ-GEN-012, REQ-RENDER-021
+- **Depends on:** TASK-M7-03, TASK-M7-04, TASK-M1-09, TASK-M1-17, TASK-M1-18
+- **Needs (earlier milestones):** REQ-COL-001, REQ-GEN-001, REQ-GEN-002, REQ-GEN-012, REQ-RENDER-021, REQ-TOOL-160
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** none
 - **Size:** ~400 lines
@@ -57,6 +57,9 @@ Family B's mapping half: the Compaction forms lin, log b = 1 − 1/(1 + ln(1 + |
   numeric debug view and the `d_min` `FieldRamp`, TASK-M1-09's), the outcome palette's `running` class (TASK-M1-10's
   occupant), and every later view that shows "not yet" (TASK-M7-05's and TASK-M7-09's extensions of `FieldRamp`
   inherit it)." So this task's `FieldRamp` draws "not yet" through `debug_not_yet(frag_xy)`, never a flat grey.
+- **Depends on TASK-M1-18** (applied per R-369; physics review 5482528309 of PR #194, which split R-401's floors out
+  of TASK-M1-17). This task's `log` compaction takes each field's ε, "its ledger `floor`, R-263, or its R-401 display
+  floor", and TASK-M1-18 builds and proposes those floors (REQ-TOOL-160, held by RQ-271).
 - **"Signed" is R-400's** (decisions.md:6969–6971): "colour_composition §1.2's default for signed fields (TASK-M7-05's
   registry, REQ-COL-016) reads "signed" the same way: a field whose declared range spans zero. §1.2 gains a sentence;
   REQ-COL-016 gains R-400 and a note and loses `rq: RQ-260`." The registry keys "signed" on the declared range, with no

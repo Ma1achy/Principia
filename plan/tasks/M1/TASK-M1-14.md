@@ -50,4 +50,7 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
 - RQ-80 ruled: R-111 — the uniform echo's `M` is `n_renorm` (render_contract conformed in step 7).
 - RQ-94 ruled: R-113 — REQ-TOOL-011 ticks the rows a synthetic payload can show; the DECODE row is held by REQ-RENDER-027 (M2), the ensemble rows by REQ-TOOL-133 (M5, TASK-M5-18) and the live effort row by REQ-TOOL-132 (M3, TASK-M3-22).
 - RQ-229, decided per R-369 (7 Oct 2026): `m1-subfields` and `m1-synthetic` read the payload, so their cases are `cargo xtask golden`'s harness case kind, which TASK-M1-09 builds (RQ-229, as amended per code review 5438179638); each case's `BASELINES.md` row cites R-369 and RQ-229, proposed and confirmed at the M1 gate.
-- Depends on TASK-M1-17 (R-399–R-401, applied per R-369), so the suite renders the views in their conformed looks.
+- Depends on TASK-M1-17 (R-399, R-400 and R-403, applied per R-369), so the suite renders the views in their conformed
+  looks. R-401's per-field log floors are TASK-M1-18's, split from TASK-M1-17 (applied per R-369; physics review
+  5482528309 of PR #194); this task does not depend on it, as it reads no floor value: if this task merges first,
+  TASK-M1-18 re-renders any of its goldens that draws one of the six log views.
