@@ -358,3 +358,83 @@ contract's starting tolerance). Nothing is chosen.*
 - **Applied meanwhile:** nothing.
 - **Waits:** REQ-PAY-034 carries `rq: RQ-272`, so TASK-M2-03 (`ic_descriptor`) waits. TASK-M3-19 and TASK-M3-22, which
   need REQ-PAY-034, wait with it. TASK-M2-03 also waits on RQ-270 (REQ-DEC-027, REQ-VAL-020) and on TASK-M2-02.
+
+---
+
+## RQ-273: REQ-TOOL-011's catalogue checklist covers two render_contract Part 6 rows the corpus gives no way to build in M1: the uniform echo (`SimUniforms`, `quality_tier`, unnamed thresholds) and the Optional Fourier block (an undefined truncated-Fourier path) *(silence and placement conflict, R-111, R-113, REQ-TOOL-011, REQ-PERF-014; context: TASK-M1-19, TASK-M1-14, TASK-M3-06, TASK-M5-02)*
+
+*Found in TASK-M1-14's read-only pre-flight. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)" (line 318), the uniform
+    echo row: "**Uniform echo** — flat swatches of `quality_tier`, `n_renorm` (R-111), thresholds *as currently bound*
+    | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound"".
+  - The same table (line 315), the Optional Fourier block row: "Optional Fourier block: \|a_k\| per k, ω | quad payload
+    | the truncated-Fourier path when enabled".
+  - `plan/requirements.yaml` REQ-TOOL-011 (`milestone: M1`, now TASK-M1-19): "The field-view catalogue must cover every
+    group in render contract Part 6's field-view table that a synthetic payload can show: … the optional Fourier block,
+    … and the uniform echo (quality_tier, n_renorm, thresholds)"; its verify: "tick each table row against the
+    generated catalogue on a synthetic payload; the DECODE row is REQ-RENDER-027's (M2), the ensemble rows and the live
+    effort heatmap are the M5 and M3 requirements R-113 split off; the uniform echo reads n_renorm, not M (R-111)".
+    `plan/tasks/M1/TASK-M1-19.md` § "Acceptance tests" (line 31; moved from `TASK-M1-14.md` line 43 by this entry's
+    PR): "… ticked against the generated catalogue on a synthetic payload, the uniform echo reading `quality_tier`,
+    `n_renorm` and thresholds".
+  - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*", as REQ-TOOL-011's
+    note records it: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5
+    requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010." It split off
+    those three rows only; the echo and Fourier rows stayed with the M1 checklist.
+  - `quality_tier`: `plan/requirements.yaml` REQ-PERF-014 (M5, TASK-M5-02): "There must be six quality tiers — Potato,
+    Low, Medium, High, Ultra, Extreme …"; `plan/tasks/M5/TASK-M5-02.md` § "Deliverables": "`QualityTier` (six variants
+    plus Custom)", and § "Acceptance tests" (line 46): "`cargo test -p engine quality_tier_enum` — the tier enum has six
+    variants".
+  - `SimUniforms`: `plan/tasks/M3/TASK-M3-06.md` § "Deliverables": "`crates/engine/src/contract/sim_uniforms.rs` —
+    `SimUniforms { t_horizon, dt_macro, n_max, r_sub, gamma_sub, r_coll, tau, escape_window, r_close, eps_e, eps_l, g,
+    m_total, epsilon, n_renorm, delta0 }`" (M3; REQ-INT-026), with no `quality_tier` field.
+  - The code at origin/main 95c74bc9: no `SimUniforms` or `quality_tier` in `crates/`. The M1 harness's uniform block,
+    `render::bind::Context` (`crates/render/src/bind.rs`, line 83), carries `n_renorm` but no tier and no thresholds.
+  - The Fourier path: no doc in `docs/` outside the archive, no requirement other than REQ-TOOL-011, and no task in
+    `plan/` builds or defines "the truncated-Fourier path", its `a_k` or its ω, or says when it is "enabled".
+    `docs/contracts/principia_render_contract.md` § "Part 1 — The payload (render input)" gives the quad payload,
+    `RenderQuad`, as nine fields, none of them Fourier. (Only `docs/archive/spec_sources/principia_spec_revised.tex`,
+    record only per R-159, describes a truncated Fourier preview.)
+- **Silence (and a placement conflict):**
+  - *The uniform echo.* The row reads two names the M1 plan does not build: `SimUniforms` is TASK-M3-06's struct (M3)
+    and `quality_tier` TASK-M5-02's enum (M5), and TASK-M3-06's `SimUniforms` holds no tier. "Thresholds *as currently
+    bound*" names no threshold: `SimUniforms` carries several candidates (`r_sub`, `r_coll`, `tau`, `escape_window`,
+    `r_close`, `eps_e`, `eps_l`), and the corpus does not say which the echo shows. An M1 checklist that ticks the row
+    "on a synthetic payload" has no tier to echo and no list of thresholds; R-113 moved the three other rows that need
+    a later milestone's machinery, but not this one.
+  - *The Optional Fourier block.* The row reads a quad-payload block that the quad payload does not have, from "the
+    truncated-Fourier path when enabled", which no doc, requirement or task defines or builds. Nothing says whether
+    the row is ticked as absent (the path is "optional" and never enabled) or must show a view.
+- **Options seen:**
+  - (a) The echo row moves, as R-113 moved the DECODE, ensemble and live-effort rows: to a task that depends on
+    TASK-M5-02 (and TASK-M3-06), whose requirement names the thresholds the echo shows (for example the `SimUniforms`
+    event thresholds, or a stated subset). REQ-TOOL-011's checklist then marks the row with that requirement. Placing
+    the row needs a new or widened requirement; naming the thresholds is an R-72 definition.
+  - (b) The echo row stays at M1, reduced to what M1 binds: `n_renorm` (in `render::bind::Context`) and a named list of
+    thresholds the harness binds, with `quality_tier` ticked "absent until TASK-M5-02". The thresholds are still to be
+    named (R-72), and the row's `SimUniforms` reads the M1 harness's block, not TASK-M3-06's struct.
+  - (c) The Fourier row is ticked "absent until <task>", once a task is named to define and build the truncated-Fourier
+    path (a new definition requirement, R-72); until then the checklist marks it with that requirement, as the DECODE
+    row is marked with REQ-RENDER-027.
+  - (d) The Fourier row is held until a task defines the path: REQ-TOOL-011 keeps it, and TASK-M1-19 waits, as now.
+  - (e) The human drops or defers either row (a ruling; render_contract Part 6 then conformed). Dropping or deferring
+    is the human's call only.
+  - Note on (a) and any option that has TASK-M1-19 wait for TASK-M5-02: TASK-M2-25 now depends on TASK-M1-19 (below),
+    and TASK-M5-02 is downstream of TASK-M2-25, so TASK-M1-19 cannot itself depend on TASK-M5-02 without a cycle; the
+    row has to move to another task, as (a) says.
+- **Applied meanwhile:** the plan split, applied per R-369 on PR #194's precedent: REQ-TOOL-011's closing moves from
+  TASK-M1-14 to a new task, TASK-M1-19 ("The render_contract Part 6 catalogue checklist (REQ-TOOL-011)"), which
+  depends on TASK-M1-14, with reviewers code, qa and physics, as TASK-M1-14's. The checklist deliverable and its qa
+  acceptance line move with it. TASK-M1-14 keeps its four other closures and is not held by this entry. TASK-M2-25,
+  which needs REQ-TOOL-011, depends on TASK-M1-19. The split settles nothing here.
+- **Waits:** REQ-TOOL-011 carries `rq: RQ-273`, so:
+  - TASK-M1-19 waits.
+  - The M1 exit waits with it, as TASK-M1-19 is an M1 task, and with it every task the M1 gate holds (all
+    later-milestone tasks, save an early merge under R-415).
+  - TASK-M2-25 depends on TASK-M1-19, and through it TASK-M2-26, TASK-M2-29, TASK-M3-19 and TASK-M4-06 and their
+    dependents, TASK-M3-22, TASK-M5-02 and TASK-M7-17 among them (152 tasks in all), a chain that is behind the M1 exit
+    anyway.
+  - Checked and not held: TASK-M1-14, and TASK-M1-15 and TASK-M3-18, which depend on TASK-M1-14 but need nothing of
+    REQ-TOOL-011.

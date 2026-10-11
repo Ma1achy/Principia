@@ -4932,10 +4932,12 @@
     section: R-79 — NaN and sentinels *(closes RQ-30)*
   verify:
     method: review checklist
-    detail: "grep generated WGSL/Rust for isnan in validity logic; every stored value of synthetic and forced-failure samples is finite"
+    detail: "grep generated WGSL/Rust for isnan in validity logic; no stored value of synthetic and forced-failure samples is NaN, and the only non-finite stored value is R-271's unset f16 +inf (0x7C00)"
   rulings:
   - R-79
+  - R-271
   milestone: M1
+  note: "Applied per R-369 (TASK-M1-14's pre-flight): the verify's 'every stored value of synthetic and forced-failure samples is finite' is conformed to R-271, which postdates it: a failed sample's d_min half, and any sample's before its first step, holds f16 +inf (bits 0x7C00). R-79 and payload §1 say only that storage never holds NaN."
 - id: REQ-PAY-025
   area: PAY
   statement: "The per-sample payload must be two physical buffers — the hot `SimState` buffer and a separate cold word buffer holding one `vec4<u32>` (16 B) free-group word per sample — and the word must never be stored inline in `SimState`."
@@ -14918,7 +14920,9 @@
   - R-111
   - R-113
   milestone: M1
-  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`."
+  rq:
+  - RQ-273
+  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`. Applied per R-369 (TASK-M1-14's pre-flight): the closing moves from TASK-M1-14 to TASK-M1-19, split from it so that RQ-273, which holds this requirement for its uniform echo and Optional Fourier block rows, holds only TASK-M1-19."
 - id: REQ-TOOL-012
   area: TOOL
   statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, an invalid diffusion fit, R-245, or `ftle` whenever `ftle_valid` is false, R-253, R-254) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
