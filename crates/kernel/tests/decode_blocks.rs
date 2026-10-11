@@ -8,7 +8,8 @@
 //!   decoder test 4. The tag fires exactly on `M₀₁ < ε` over fuzzed `z_μ`, saturation included, and nowhere else in
 //!   the mass block; tagged outputs are finite and kept; the fire branch is driven by mass inputs below ε and by
 //!   `stick_breaking`'s corner; the reachable `M₀₁` range is the checked-in measurement, `fixtures/gates/m01_tiny/`
-//!   (REQ-DEC-011, REQ-DEC-039).
+//!   (REQ-DEC-011, REQ-DEC-039). `decode_m01_tiny_contraction`: fusing `stick_breaking`'s last multiply into the tag's
+//!   add, as a contracting shader compiler may, flips no tag (R-34).
 //! - `decode_config_golden`, `decode_config_sphere`: `z = 0` gives `α = π/4`, `β = π/2`, `‖ρ̃‖ = ‖λ̃‖`;
 //!   `‖ρ̃‖² + ‖λ̃‖² = 1` and `ρ̃` on `+x` on fuzzed `z` (REQ-DEC-012).
 //! - `decode_reconstruct_identities`, `decode_reconstruct_inverse`: `r₁ − r₀ = ρ`, total CoM `= 0` and
@@ -812,6 +813,84 @@ negative_control!(
         "softmax_tanh_floor_exact = 7e-3\n",
         &[("softmax_tanh_floor_exact", 6.7e-3, "")]
     )
+);
+
+/// `stick_breaking`'s forward in the generated op order (`kernel::generated::links`), stopped before its last
+/// multiply: `(m₀, t₇, t₁₃)`, with `m₁ = t₇·t₁₃`.
+fn stick_parts<R: P>(z: [R; 2]) -> (R, R, R) {
+    let sigmoid = |x: R| R::one() / (R::one() + (-x).exp());
+    let t0 = R::LIT_3 * z[0];
+    let t4 = R::LIT_1 * R::EPS_MU * z[0].tanh();
+    let t8 = R::LIT_3 * z[1];
+    let t12 = R::LIT_1 * R::EPS_MU * z[1].tanh();
+    (sigmoid(-t0) + t4, sigmoid(t0) - t4, sigmoid(-t8) + t12)
+}
+
+/// The contraction exposure (R-34; physics F2): inlined, `M₀₁ = m₀ + m₁` under `stick_breaking` reaches a shader
+/// compiler as `m₀ + t₇·t₁₃`, which a contracting backend may fuse. Over `[3, 20]²` at a step of 1/32, through the
+/// tag's onset and the saturated corner, the tag `< eps` is the same from the separate add and from the fused
+/// `fma(t₇, t₁₃, m₀)`, at `R`. The replica is checked against the generated forward bit for bit. Returns how many
+/// points' `M₀₁` the fusion changes, the measure of the exposure.
+fn check_contraction<R: P>(eps: R) -> usize {
+    let mut differ = 0;
+    for i in 0..=544 {
+        for j in 0..=544 {
+            let z = [
+                R::of(3.0 + f64::from(i) / 32.0),
+                R::of(3.0 + f64::from(j) / 32.0),
+            ];
+            let (m0, t7, t13) = stick_parts(z);
+            let m = <StickBreaking as Link<2, 3>>::forward(z);
+            assert_eq!(
+                [m[0], m[1]],
+                [m0, t7 * t13],
+                "the replica is not the generated forward at {z:?}"
+            );
+            let (apart, fused) = (m0 + t7 * t13, t7.mul_add(t13, m0));
+            differ += usize::from(apart != fused);
+            assert_eq!(
+                apart < eps,
+                fused < eps,
+                "z_μ = {z:?}: fusing m₀ + t₇·t₁₃ flips the tag at {} ({:e} against {:e})",
+                R::NAME,
+                apart.f(),
+                fused.f()
+            );
+        }
+    }
+    differ
+}
+
+#[test]
+fn decode_m01_tiny_contraction() {
+    let d64 = check_contraction(mass::m01_epsilon::<f64>());
+    let d32 = check_contraction(mass::m01_epsilon::<f32>());
+    eprintln!("decode_m01_tiny_contraction: fusion changes M₀₁ at {d64} points at f64, {d32} at f32, of 545²; no tag flips");
+}
+
+/// A threshold set between the separate and the fused `M₀₁` of a point where they differ.
+#[cfg(feature = "controls")]
+fn straddling() -> f32 {
+    for i in 0..=544 {
+        for j in 0..=544 {
+            let z = [3.0 + i as f32 / 32.0, 3.0 + j as f32 / 32.0];
+            let (m0, t7, t13) = stick_parts(z);
+            let (apart, fused) = (m0 + t7 * t13, t7.mul_add(t13, m0));
+            if apart != fused {
+                return apart.max(fused);
+            }
+        }
+    }
+    unreachable!("fusion never changes M₀₁")
+}
+
+negative_control!(
+    decode_m01_tiny_contraction,
+    "a threshold between a point's separate and fused M₀₁ must flip",
+    expected = "flips the tag",
+    {
+        check_contraction(straddling());
+    }
 );
 
 // ── D_cfg ───────────────────────────────────────────────────────────────────────────────────────────────────────

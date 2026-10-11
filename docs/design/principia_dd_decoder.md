@@ -51,6 +51,12 @@ floor `2ε_m = 2×10⁻⁴` and `softmax_tanh`'s `(1 + e^−μ_max)/(1 + e^−μ
 corner fires with a tenfold margin at either precision, and the tag's onset falls where `M₀₁` still resolves with `z`
 at f32, so the formula, not rounding, decides it (`fixtures/gates/m01_tiny/measurement.toml`).
 
+**The branch input (R-34; test 12).** `M₀₁ = m₀ + m₁` is one add of the emitted masses, compared against the constant
+`ε_M01`. Under the edge-reaching simplex link it is a multi-op branch input: inlined, the link's last step
+`m₁ = t₇·t₁₃` meets the add as `m₀ + t₇·t₁₃`, which a contracting backend may fuse. It is enumerated here for the
+parity gate. TASK-M2-02 measured the fused and separate forms over `z_μ ∈ [3, 20]²`: they differ in about a fifth of
+the points' `M₀₁` and flip no tag at f64 or f32.
+
 ### 3.2 Configuration — hyperspherical mass-weighted Jacobi
 
 Mass-weighted Jacobi vectors and reduced masses:

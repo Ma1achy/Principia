@@ -19,11 +19,15 @@
 //! about 10⁻⁷ in `z`. (At ε = ε_μ the onset sat 2 f32 ulps above the corner's floor, so f64 and f32, or two f32
 //! backends' `tanh`, disagreed over a band of `z`.)
 //!
-//! **The branch input** (REQ-VAL-017; dd_decoder §5 test 12; gpu_determinism_note rules 1, 2 and 6): `M₀₁` is one
-//! IEEE add of the two masses the block emits, compared strictly against the compile-time constant ε: no
-//! transcendental, division, `sqrt` or contractible multiply-add at the decision. So identical masses give the
-//! identical tag on every backend, and the tag agrees with the emitted masses bit for bit; the formula's `M₀₁ < ε`
-//! and this form differ only where `|M₀₁ − ε|` is within that add's half-ulp.
+//! **The branch input** (REQ-VAL-017; dd_decoder §3.1, §5 test 12; gpu_determinism_note rules 1, 2 and 6; R-34):
+//! `M₀₁` is one IEEE add of the two masses the block emits, compared strictly against the compile-time constant ε.
+//! There is no transcendental, division or `sqrt` at the decision, and the formula's `M₀₁ < ε` and this form differ
+//! only where `|M₀₁ − ε|` is within that add's half-ulp. The add itself is not safe from contraction: with the link
+//! inlined, `stick_breaking`'s last step `m₁ = t₇·t₁₃` reaches a shader compiler as `m₀ + t₇·t₁₃`, which a contracting
+//! backend may fuse, so there the tag can read a `M₀₁` one rounding away from the emitted masses'. Measured
+//! (`decode_m01_tiny_contraction`): over `[3, 20]²` at a step of 1/32, the fused and separate forms differ in about a
+//! fifth of the points' `M₀₁` and flip no tag at f64 or f32. `M₀₁` under `stick_breaking` is one of the decoder's
+//! enumerated multi-op branch inputs for the parity gate (dd_decoder §3.1).
 
 use crate::decode::degenerate::Degenerate;
 use crate::generated::links::{Link, LinkReal, Selection};
