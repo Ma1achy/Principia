@@ -136,8 +136,11 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
     every mass positive (`μ_max·tanh` and the `(1−ε_μ)` factor), and the half-line links (`softplus`, `exp`), which
     reach 0 on underflow, serve none of the blocks ("the two lines, which no block uses").
 - **Conflict:**
-  - *Upper poles, f32 only.* At f32, `σ` rounds to 1 for `z ≳ 17`, `tanh` for `z ≳ 9`, and softsign's `x/(2 + |x|)`
-    from `x ≈ 2.2×10⁷` (at some `x`; at every `x` from about 4.5×10⁷), so a saturated control gives
+  - *Upper poles, f32 only.* At f32, `σ` rounds to 1 for `z ≳ 17` and `tanh` for `z ≳ 9`. For the softsign links,
+    `1 + x/(2 + |x|)` rounds up to 2: over most of the band `x/(2 + |x|)` rounds to `1 − 2⁻²⁴`, not to 1, and
+    `1 + (1 − 2⁻²⁴)` is a tie that rounds to even, 2. Scanning every f32 (physics review 5481985015, re-checked),
+    this first happens at the single point `x = 2²⁴ − 1 = 16777215`, then at every `x` from about 2.237×10⁷ up to 2²⁵,
+    at only some `x` up to about 4.474×10⁷, and at every `x` from there on. So a saturated control gives
     `α = fl₃₂(π/2) > π/2` and `β = fl₃₂(π) > π` (for `tanh_beta` and `softsign_beta`, `2·fl₃₂(π/2) = fl₃₂(π)`
     exactly). Then `ρ̃_x = cos α ≈ −4.4×10⁻⁸` and `λ̃_y ≈ −8.7×10⁻⁸·sin α`, past `δ_λ = 10⁻¹²`: the pole and the
     mirror seam are reached by rounding, not by the formula.
