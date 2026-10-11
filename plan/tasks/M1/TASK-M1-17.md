@@ -61,7 +61,7 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   palette's `running` class (TASK-M1-10's `outcome_state.wgsl`), and any view TASK-M1-12 or TASK-M1-13 built that
   draws the grey (REQ-TOOL-162).
 - `crates/ledger/data/lut/coolwarm.txt`: Moreland's cool-warm table (R-122), its source and version named in the file,
-  as `viridis.txt` and `twilight.txt` are; the prelude's `ramp_coolwarm(t)` reads it as `ramp_viridis` reads its
+  as `viridis.txt`, `twilight.txt` and `magma.txt` are; the prelude's `ramp_coolwarm(t)` reads it as `ramp_viridis` reads its
   table, returning linear RGB, its midpoint the table's neutral (render_gui_spec §10.1).
 - `crates/ledger`: the numeric view template takes its ramp from the field's declared range, `ramp_coolwarm` on the
   symmetric `[−M, M]` (fixed and auto) where the range spans zero, `ramp_viridis` otherwise, the cyclic field
@@ -69,7 +69,7 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   lower bound of each field the corpus or its own definition makes non-negative, citing the line for each (the mass
   fractions and `|ρ|` of render_gui_spec §10.1, `virial_ratio = 2K₀/|V₀|`, and the like). `K_0` is declared `[0, ∞)`
   and `V_0` `(−∞, 0]`, each citing dd_decoder §3.6, and their scale is `lin`, no longer `diverging`
-  (`crates/ledger/src/payload.rs`:174–175 at `2844365`; R-403): both on `ramp_viridis`, mapped monotonically,
+  (`crates/ledger/src/payload.rs`:193–194 at `ef37e5b8`; R-403): both on `ramp_viridis`, mapped monotonically,
   increasing in the value in either mode, `V_0`'s most negative value at the dark end, `t = 0`. Neither range has two
   finite ends, so both views' headers keep the default `RANGE_AUTO = 1` (`crates/ledger/src/gen/numeric.rs`:154–155,
   render_gui_spec §10.1). Under auto, `t = 0` is the measured minimum (`K_0`'s minimum, `V_0`'s most negative
@@ -116,13 +116,13 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   with a `BASELINES.md` row citing R-403 (REQ-RENDER-084).
 - Review checklist (gui, qa): the REQ-COL-064 proposal gives the stipple's pattern over REQ-COL-053's grey, shows it is
   dots, not the hatch's stripes, gives its lightness contrast, and shows that no flat colour of viridis, twilight,
-  grey or cool-warm reproduces a 4 × 4 block of it; it states `frag_xy`'s pixel space and shows the stipple resolved
+  magma, grey or cool-warm reproduces a 4 × 4 block of it; it states `frag_xy`'s pixel space and shows the stipple resolved
   at the Mac's display scale factor; the human confirms it at the M1 gate (REQ-COL-064).
 - Review checklist (physics): each declared non-negative range cites its line (REQ-RENDER-084).
 - `cargo test -p ledger`, `cargo test -p render` and `cargo xtask golden` — every other view renders as before.
 
 ## Notes
-- R-399, R-400 and R-401 (9 Oct 2026) are the rulings this task applies; applied per R-369 by the orchestrator:
+- R-399, R-400 and R-403 (9 Oct 2026) are the rulings this task applies; applied per R-369 by the orchestrator:
   TASK-M1-10, TASK-M1-12 and TASK-M1-13 finish against the corpus as dispatched, and this one task conforms every view
   after them. Kept as one task (applied per R-369): the three rulings touch the same template, presentation layer and
   goldens, and three tasks would re-render the same goldens three times. R-401's floors were later split out to
@@ -157,8 +157,9 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
 - **R-400's scope over TASK-M1-12's hand-written signed views** (the R-388 pre-flight, 10 Oct 2026; grounds corrected
   per physics review 5480220637 of PR #185). R-400's rule is keyed on "a numeric field view whose field's declared
   ledger range spans zero", and its "What does not change" bullet keeps "the drift views … R-381's view". For each of
-  TASK-M1-12's views (at its head `bc663a1c`) whose comment says "a signed field on viridis, as the corpus stands
-  (RQ-260 open)":
+  TASK-M1-12's views (at its head `bc663a1c`) that draws a signed or vector field on viridis: `energy_drift.wgsl` and
+  `live_shape.wgsl`, whose comments (`energy_drift.wgsl`:4, `live_shape.wgsl`:7) say "a signed field on viridis, as
+  the corpus stands (RQ-260 open)", and the generated `n` view, whose header carries no such comment:
   - `crates/render/shaders/wgsl/frag/debug/derived/energy_drift.wgsl`, the current drift `H(r, p) − E_0`, is the
     `energy_drift` field's view, a drift view, so R-400 does not move it to `ramp_coolwarm`. As built it passes the raw
     `ΔE` to `dbg_sentinel` on viridis, with no `eps_E` compaction: that interim placement is not R-381's view, and is
