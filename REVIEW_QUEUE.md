@@ -39,11 +39,11 @@ proposed, so the ledger generates; nothing waits on this but their confirmation.
   escape time finite, so the sentinel is distinct from every time recorded. Either sentinel lies outside a finite
   escape time; the human chooses it with the ranges, and until then §3.7 holds it open and the ledger entries carry
   none.
-  - (a) **+∞ for both** (binary16 `0x7c00`, f32 bits `0x7f80_0000` once widened). For `_min` it is the min
+  - (d) **+∞ for both** (binary16 `0x7c00`, f32 bits `0x7f80_0000` once widened). For `_min` it is the min
     reduction's identity. For `_max` it is a chosen sentinel, not the empty max, so the writer (TASK-M5-17 to M5-19)
     needs a no-escape branch that stores +∞ when no copy escaped. One test, `== +∞`, reads "no escape" on either
     member.
-  - (b) **Each its reduction's identity**: +∞ for `_min` and **−∞** for `_max` (binary16 `0xfc00`, f32 bits
+  - (e) **Each its reduction's identity**: +∞ for `_min` and **−∞** for `_max` (binary16 `0xfc00`, f32 bits
     `0xff80_0000`). Both reductions start from their identity and need no branch, and an empty range reads
     `_min > _max`. `_max`'s −∞ lies below its proposed range `[0, ∞)`, as a sentinel may.
 - **Options seen for the ranges' confirmation:**
