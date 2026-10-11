@@ -1153,7 +1153,8 @@ pub fn tm_t_dmin_fraction(w: u32, horizon_steps: u32) -> f32 {{
 
 /// The `no_std` binary16 decode as Rust source, `{vis}fn f16_bits_to_f32(h: u16) -> f32`, exact for every binary16 value
 /// (`unpack2x16float`'s conversion), reading the constant `F16_MIN_SUBNORMAL`, 2⁻²⁴: the payload's accessors read
-/// through it ([`helpers`]), and so do `QuadReduction`'s ([`crate::reduction`]), one conversion for both (R-317).
+/// through it (the helpers this module emits), and so do `QuadReduction`'s ([`crate::reduction`]), one conversion for
+/// both (R-317).
 pub fn f16_decode(vis: &str) -> String {
     format!(
         r#"/// The f32 value of the binary16 bits `h`, exact for every one of them (`unpack2x16float`'s conversion).
