@@ -1,7 +1,7 @@
 # TASK-M1-14 — The synthetic golden suite: sub-field views, adversarial fixtures and colour independence
 
 - **Milestone:** M1
-- **Closes:** REQ-TOOL-016, REQ-TOOL-018, REQ-VAL-012, REQ-PAY-024
+- **Closes:** REQ-TOOL-016, REQ-TOOL-018, REQ-VAL-012, REQ-PAY-024, REQ-COL-067, REQ-COL-068, REQ-VAL-182
 - **Depends on:** TASK-M1-07, TASK-M1-10, TASK-M1-11, TASK-M1-12, TASK-M1-13, TASK-M1-17, TASK-M0-06
 - **Needs (earlier milestones):** REQ-PAY-018, REQ-VAL-003, REQ-VAL-007
 - **Reviewers:** code, qa, physics
@@ -32,6 +32,9 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`"
+- `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
+- `docs/design/principia_debug_tooling_plan.md` § "G. Cross-check views (certify a *seam*, not a field — integration tests with a display)"
 
 ## Deliverables
 - `fixtures/golden/m1-synthetic/`: the named fixture set (set state, known escaper, energy_drift ramp, bitwise-adversarial descriptor, forced-failure sample) with expected images; `cargo xtask golden m1-synthetic`.
@@ -42,7 +45,10 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
 - `cargo xtask golden m1-subfields` — the visual bit-layout test renders each sub-field view on a fixture quad (REQ-TOOL-016).
 - `cargo xtask golden m1-synthetic` — the synthetic buffers render the expected golden images and the paired accessor tests pass (REQ-TOOL-018).
 - `cargo test -p render colour_independence` — a fixture slice rendered in event, greyscale and hue modes from the same payload has an identical edge map of the payload-derived field across modes; a control that perturbs the payload between modes must fail (REQ-VAL-012).
-- Review checklist (code): a grep of the generated WGSL/Rust finds no `isnan` in validity logic; `cargo test -p engine stored_values_no_nan` — no stored value of the synthetic and forced-failure samples is NaN, and the only non-finite stored value is R-271's unset f16 +inf (`0x7C00`) (REQ-PAY-024).
+- Review checklist (code): a grep of the generated WGSL/Rust finds no `isnan` in validity logic; `cargo test -p engine stored_values_no_nan` — no stored value of the synthetic and forced-failure samples is NaN, and the only non-finite stored value is `d_min`'s unset f16 +inf, `0x7C00` in bits 16–31 of `packed_a`, held only by a failed sample or one before its first step (R-271) (REQ-PAY-024).
+- Definition (physics): colour composition §4.1 defines greyscale mode, consistent with its None-colour truth-table row and §1.2's greyscale default and polarity, and the colour-independence test's greyscale render uses it (REQ-COL-067).
+- Definition (physics): colour composition §4.1 defines hue mode from its hue-carrier slot, and the colour-independence test's hue render uses it (REQ-COL-068).
+- Definition (physics): debug tooling plan §G defines the edge map, what it is taken on, its detector and its comparison, such that the cross-mode comparison is not identical by construction; `colour_independence` uses it (REQ-VAL-182).
 
 ## Notes
 - VAL-012 is the regression of pitfalls §1.2 (c): colouring is a pure function applied after the physics. The event mode is the outcome palette (TASK-M1-10); greyscale and hue are prelude ramps over the same field.
@@ -57,11 +63,21 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
   REQ-TOOL-011 for two rows the corpus gives no way to build in M1 (the uniform echo and the Optional Fourier block);
   it holds TASK-M1-19 only, not this task.
 - REQ-PAY-024's acceptance line is conformed to R-271, applied per R-369: a failed sample's `d_min` half, and any
-  sample's before its first step, holds f16 +inf (bits `0x7C00`), so "every stored value … is finite" was stale; R-79
-  and payload §1 say only that storage never holds NaN. The test name follows (`stored_values_no_nan`, was
-  `stored_values_finite`).
-- Two gaps are R-72 definitions, which this task writes as doc changes, reviewed by physics (R-72): "greyscale mode"
-  and "hue mode", which only `docs/read_first/principia_01_pitfalls.md` § "1.2 Four wrong theories, in order" (line 40)
-  names; and REQ-VAL-012's "edge map" (of the payload-derived field), which no doc defines.
+  sample's before its first step, holds f16 +inf (bits `0x7C00`), so "every stored value … is finite" was stale.
+  Payload §1 :154 forbids NaN (R-79) and "the non-finite values that failed it"; :153 clamps valid-state f16 values
+  to ±65504 and gives a failed sample's `dE_max`/`dLz_max` halves 0.0; R-271 adds the one exception, `d_min`'s
+  unset +inf, which readers test by its bits (`0x7C00` in bits 16–31 of `packed_a`). The test name follows
+  (`stored_values_no_nan`, was `stored_values_finite`). Worded per physics review 5484220393 (F1, F2).
+- Three R-72 definitions, which this task writes as doc changes, reviewed by physics (R-72), registered as
+  `kind: definition` requirements per R-369 (physics review 5484220393, F3), as REQ-TOOL-156 was:
+  - "greyscale mode" (REQ-COL-067), named by `docs/read_first/principia_01_pitfalls.md` § "1.2 Four wrong theories, in
+    order" (:40). It starts from colour composition §1.2 (:114), which makes greyscale the default for magnitude fields
+    with a per-field polarity, and §4.1's truth table (:335), whose None-colour row is `OKLab(L=B, 0, 0)`, "greyscale of
+    the brightness field"; it lands in §4.1.
+  - "hue mode" (REQ-COL-068), named by the same pitfalls line. It starts from colour composition §4.1's "hue-carrier"
+    colour slot (:345, :358) and lands in §4.1.
+  - REQ-VAL-012's "edge map" (of the payload-derived field) (REQ-VAL-182), which no doc defines; it lands in debug
+    tooling plan §G. It says what the map is taken on, so that the cross-mode comparison is not identical by
+    construction: on the payload field before colouring, every mode gives the same map whatever the colouring does.
 - The PR lists which of this task's cases draw one of R-401's six log views (`d_min`, `dE_max`, `dLz_max`,
   `closure_min`, `rho_ratio`, `r_min_pair_0`), since TASK-M1-18 re-renders them (REVIEW_QUEUE.md RQ-271, Waits).
