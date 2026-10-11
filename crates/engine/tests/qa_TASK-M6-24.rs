@@ -26,7 +26,7 @@ use engine::contract::conformance::{self, CASES};
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
-use engine::contract::set_field::{Edit, RenderField, SetField};
+use engine::contract::set_field::{Edit, RenderField, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
@@ -38,9 +38,16 @@ use validation::negative_control;
 fn sim() -> SimConfig {
     SimConfig {
         chart: Chart {},
-        plane: Plane {},
+        plane: Plane {
+            z0: [0.0; 8],
+            q1: [0.0; 8],
+            q2: [0.0; 8],
+        },
         slice: Slice {},
-        lock: Lock {},
+        lock: Lock {
+            locked: false,
+            z_locked: [0.0; 8],
+        },
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
@@ -152,11 +159,15 @@ enum Rule {
 }
 
 /// A double of the interface, written here from the rules (R-52, R-69, R-101; RQ-245), breaking `rule`.
+/// It holds the playhead and, since R-390's navigation paths, the plane and the lock; each history entry is the edit
+/// restoring the value before and the edit itself.
 struct Broken {
     rule: Rule,
     t: f64,
-    undo: Vec<(f64, f64)>,
-    redo: Vec<(f64, f64)>,
+    plane: Plane,
+    lock: Lock,
+    undo: Vec<(Edit, Edit)>,
+    redo: Vec<(Edit, Edit)>,
     log: Vec<LogEntry>,
     /// Every entry ever logged, for [`Rule::LogRepeated`].
     all: Vec<LogEntry>,
@@ -167,6 +178,8 @@ impl Broken {
         Self {
             rule,
             t: 0.0,
+            plane: sim().plane,
+            lock: sim().lock,
             undo: Vec::new(),
             redo: Vec::new(),
             log: Vec::new(),
@@ -174,7 +187,28 @@ impl Broken {
         }
     }
 
-    fn entry(&self, before: f64, after: f64, no_history: bool) -> LogEntry {
+    /// Writes `edit` and returns the edit restoring the value it replaced.
+    fn apply(&mut self, edit: &Edit) -> Edit {
+        match edit {
+            Edit::Render(RenderField::Playhead(p)) => {
+                let before = std::mem::replace(&mut self.t, p.t);
+                Edit::Render(RenderField::Playhead(Playhead { t: before }))
+            }
+            Edit::Sim(SimField::Z0(z0)) => {
+                Edit::Sim(SimField::Z0(std::mem::replace(&mut self.plane.z0, *z0)))
+            }
+            Edit::Sim(SimField::Basis { q1, q2 }) => Edit::Sim(SimField::Basis {
+                q1: std::mem::replace(&mut self.plane.q1, *q1),
+                q2: std::mem::replace(&mut self.plane.q2, *q2),
+            }),
+            Edit::Sim(SimField::Lock(lock)) => Edit::Sim(SimField::Lock(std::mem::replace(
+                &mut self.lock,
+                lock.clone(),
+            ))),
+        }
+    }
+
+    fn entry(&self, before: &Edit, after: &Edit, no_history: bool) -> LogEntry {
         let marker = if no_history { " (no history)" } else { "" };
         LogEntry {
             severity: if self.rule == Rule::LogWarnNotInfo {
@@ -188,7 +222,13 @@ impl Broken {
             } else {
                 Source::Contract
             },
-            message: format!("SetField Playhead.t {before} → {after}{marker}"),
+            message: match (before, after) {
+                (
+                    Edit::Render(RenderField::Playhead(b)),
+                    Edit::Render(RenderField::Playhead(a)),
+                ) => format!("SetField Playhead.t {} → {}{marker}", b.t, a.t),
+                (b, a) => format!("SetField {b:?} → {a:?}{marker}"),
+            },
         }
     }
 }
@@ -198,11 +238,8 @@ impl EngineInterface for Broken {
         if self.rule == Rule::DropsSetField {
             return;
         }
-        let after = match &e.edit {
-            Edit::Sim(f) => match *f {},
-            Edit::Render(RenderField::Playhead(p)) => p.t,
-        };
-        let before = std::mem::replace(&mut self.t, after);
+        let after = e.edit.clone();
+        let before = self.apply(&after);
         let logged = match self.rule {
             Rule::NoLog => 0,
             Rule::LogsOnlyHistoryEdits if e.no_history => 0,
@@ -210,7 +247,7 @@ impl EngineInterface for Broken {
             _ => 1,
         };
         for _ in 0..logged {
-            let entry = self.entry(before, after, e.no_history);
+            let entry = self.entry(&before, &after, e.no_history);
             self.log.push(entry);
         }
         if !e.no_history || self.rule == Rule::NoHistoryEntersHistory {
@@ -229,7 +266,11 @@ impl EngineInterface for Broken {
             std::mem::take(&mut self.log)
         };
         Snapshot {
-            sim: sim(),
+            sim: SimConfig {
+                plane: self.plane.clone(),
+                lock: self.lock.clone(),
+                ..sim()
+            },
             render: render(self.t),
             tier: Tier {},
             history: History {
@@ -255,7 +296,7 @@ impl EngineInterface for Broken {
             return;
         }
         if let Some((before, after)) = self.undo.pop() {
-            self.t = before;
+            self.apply(&before);
             self.redo.push((before, after));
         }
     }
@@ -265,7 +306,7 @@ impl EngineInterface for Broken {
             return;
         }
         if let Some((before, after)) = self.redo.pop() {
-            self.t = after;
+            self.apply(&after);
             self.undo.push((before, after));
         }
     }

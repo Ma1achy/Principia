@@ -90,6 +90,7 @@ impl Headless {
             .or_default()
             .native_pixels_per_point = Some(self.pixels_per_point);
         self.time += self.step;
+        app.raw_input_hook(&self.ctx, &mut input);
         let mut output = self.ctx.run_ui(input, |ui| app.ui(ui));
         self.textures
             .append(std::mem::take(&mut output.textures_delta));

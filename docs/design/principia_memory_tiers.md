@@ -204,6 +204,11 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 **Custom's `N` is a power of two (R-398)**, each within the one-workgroup-per-quad thread ceiling (`N² ≤`
 `maxComputeInvocationsPerWorkgroup`, REQ-PERF-011); it offers no other value.
 
+**Custom's `E` is not capped by the outcome histogram (R-410).** `QuadReduction`'s `class_histogram` bins are u32
+(dd_generation_root §3.7), so they hold every setting that can allocate: a quad's `N² × (E+1)` copies reach
+2³² − 1 only past about 4.2 M copies per footprint at `N = 32`. Dispatch asserts `N² × (E+1) ≤ 2³² − 1`; no setting
+is capped for it.
+
 ---
 
 ## 6. Auto-mode tier selection

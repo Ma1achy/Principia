@@ -116,13 +116,24 @@ fn steps(c: &Case) -> Vec<GuiStep> {
 }
 
 /// The suite holds the four named cases, each a gui surface on 01_main beside 01_main.png: `mock_shell` with no step,
-/// `mock_f3_off` pressing F3, and among them a raised warning and error and a footer click.
+/// `mock_f3_off` pressing F3, and among them a raised warning and error and a footer click; and, since TASK-M6-26,
+/// the four cases that task names, `mock_manifold_view`, `mock_compass_slice`, `mock_compass_tilt` and
+/// `mock_axis_labels`, and no other.
 fn check_01_main(cases: &[Case]) {
     let mut names: Vec<&str> = cases.iter().map(|c| c.name.as_str()).collect();
     names.sort_unstable();
     assert_eq!(
         names,
-        ["mock_f3_off", "mock_footer", "mock_shell", "mock_warning"],
+        [
+            "mock_axis_labels",
+            "mock_compass_slice",
+            "mock_compass_tilt",
+            "mock_f3_off",
+            "mock_footer",
+            "mock_manifold_view",
+            "mock_shell",
+            "mock_warning"
+        ],
         "the 01_main cases"
     );
     for c in cases {

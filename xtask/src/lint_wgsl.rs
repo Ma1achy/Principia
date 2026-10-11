@@ -6,12 +6,14 @@
 //! ([`check_fragment_after`]). The library's files are fragment-stage WGSL too, so the float rules hold there as well
 //! (applied per R-369, TASK-M1-03). A built-in occupant, a file under [`OCCUPANT_DIR`], is linted as the assembler
 //! presents it: after the prelude, the other files of [`LIB_FILES`] and its `// @uniform` block declared as the
-//! struct `uniforms` ([`occupant_context`]; applied per R-369, TASK-M7-04); an occupant that reads the stain's `Ctx`,
-//! any but a combiner, after the stain's context ([`view_context`]) and its `// @uniform` block (TASK-M1-13). The stain's context, a file under
+//! struct `uniforms` ([`occupant_context`]; applied per R-369, TASK-M7-04); one of a slot that reads the stain's
+//! context ([`CONTEXT_SLOTS`]), after [`view_context`] and its `// @uniform` block, as a generated debug view is
+//! (applied per R-369, TASK-M1-10). The stain's context, a file under
 //! [`STAIN_DIR`], is linted after the prelude, the other files of [`LIB_FILES`], the unpack layer and the read side,
-//! whose `SimState` it holds; a generated debug view, a file under [`DEBUG_VIEWS`], after all of those and the stain's
-//! context, whose `Ctx` it reads, and its `// @uniform` block, as the assembler presents it ([`view_context`],
-//! [`uniform_block`]; applied per R-369, TASK-M1-08, TASK-M1-09).
+//! whose `SimState` it holds; a debug view, a file under [`DEBUG_VIEWS`], [`REDUCTION_VIEWS`] or [`DEBUG_OCCUPANTS`],
+//! generated or written by hand, after all of those and the stain's context, whose `Ctx` it reads, and its
+//! `// @uniform` block, as the assembler presents it ([`view_context`], [`uniform_block`]; applied per R-369,
+//! TASK-M1-08, TASK-M1-09, TASK-M1-12).
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -102,6 +104,21 @@ pub const STAIN_DIR: &str = "crates/render/shaders/wgsl/stain";
 /// The debug catalogue's generated views (`ledger::gen::catalogue::DIR`, RQ-219), relative to the workspace root:
 /// each a colour occupant reading the stain's context.
 pub const DEBUG_VIEWS: &str = "crates/render/frag/debug/generated";
+
+/// The debug catalogue's generated reductions (`ledger::gen::catalogue::REDUCTIONS_DIR`): each vector field's direction
+/// cosines and the ternary masses, colour occupants that read `ctx` as the generated views do (TASK-M1-12).
+pub const REDUCTION_VIEWS: &str = "crates/render/frag/debug/reductions";
+
+/// The hand-written debug views, under the occupant directory's `debug/` (TASK-M1-12): colour occupants that read
+/// `ctx`, linted as the generated views are.
+pub const DEBUG_OCCUPANTS: &str = "crates/render/shaders/wgsl/frag/debug";
+
+/// Whether the file at `rel` is a debug view, read in the stain's context ([`view_context`]).
+fn is_view(rel: &str) -> bool {
+    [DEBUG_VIEWS, REDUCTION_VIEWS, DEBUG_OCCUPANTS]
+        .iter()
+        .any(|dir| rel.starts_with(&format!("{dir}/")))
+}
 
 /// The fix every float-rule finding names (R-343).
 pub const BIT_PATTERN_FIX: &str =
@@ -329,13 +346,16 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
             check_fragment(&source)
         } else if rel.starts_with(&format!("{STAIN_DIR}/")) {
             read_side_context(root).and_then(|context| check_fragment_after(&context, &source))
-        } else if rel.starts_with(&format!("{OCCUPANT_DIR}/combiner/")) {
-            occupant_context(&prelude, &library, &source)
-                .and_then(|context| check_fragment_after(&context, &source))
+        } else if is_view(&rel)
+            || CONTEXT_SLOTS
+                .iter()
+                .any(|slot| rel.starts_with(&format!("{OCCUPANT_DIR}/{slot}/")))
+        {
+            view_context(root).and_then(|context| {
+                check_fragment_after(&format!("{context}{}", uniform_block(&source)?), &source)
+            })
         } else if rel.starts_with(&format!("{OCCUPANT_DIR}/")) {
-            // Every other occupant reads the stain's `Ctx`, so it follows the stain's context, as a generated view does.
-            view_context(root)
-                .and_then(|view| occupant_context(&view, &[], &source))
+            occupant_context(&prelude, &library, &source)
                 .and_then(|context| check_fragment_after(&context, &source))
         } else {
             check_fragment_after(&prelude, &source)
@@ -348,6 +368,12 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
     }
     Ok(reports)
 }
+
+/// The slots whose occupants read the stain's context, `ctx` (render contract Part 1): a built-in occupant under one
+/// of these directories of [`OCCUPANT_DIR`] is linted as a generated debug view is, after [`view_context`] and its
+/// `// @uniform` block (applied per R-369, TASK-M1-10: `colour/outcome_state.wgsl` reads `ctx.sample`). A combiner
+/// reads no context, and is linted after [`occupant_context`].
+pub const CONTEXT_SLOTS: [&str; 3] = ["colour", "brightness", "post"];
 
 /// What precedes a built-in occupant's `source` when it is linted, as the assembler presents a node (render contract
 /// Part 2; gui_state_contract §3): the prelude, the `library` files after it, then the occupant's `// @uniform` block,
@@ -427,7 +453,7 @@ fn lint_frag(root: &Path) -> Result<Vec<FileReport>, String> {
             check(&source)
         } else if rel == READ_SIDE_FILE {
             check_read_side(&layer, &source)
-        } else if rel.starts_with(&format!("{DEBUG_VIEWS}/")) {
+        } else if is_view(&rel) {
             view_context(root).and_then(|context| {
                 check_fragment_after(&format!("{context}{}", uniform_block(&source)?), &source)
             })

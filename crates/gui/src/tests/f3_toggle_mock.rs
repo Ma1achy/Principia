@@ -75,8 +75,8 @@ fn f3_toggle_mock_figure_identical_underneath() {
     let rect = figure_px();
     assert_eq!(
         rect,
-        [540, 43, 1596, 1020],
-        "the figure's rect is 01_main.png's"
+        [564, 43, 1596, 996],
+        "the figure's rect is 01_main.png's figure box, less its axis strips (16 points each, at 1.5 pixels a point)"
     );
     check_same_figure(&on, &off, rect);
     let clear = clear_colour(&egui::Visuals::dark()).to_array();
@@ -221,6 +221,8 @@ fn f3_toggle_mock_layout_tiles_the_window() {
             l.top_bar,
             l.manifold_view,
             l.figure,
+            l.axis_x,
+            l.axis_y,
             l.trajectory,
             l.compass,
             l.time,
@@ -247,8 +249,12 @@ fn f3_toggle_mock_layout_tiles_the_window() {
                 );
             }
         }
-        // 01_main.png's proportions: the figure starts a quarter of the way across.
-        assert!((l.figure.min.x / screen.width() - 0.25).abs() < 0.01);
+        // 01_main.png's proportions: the figure's box, its axis strips with it, starts a quarter of the way across.
+        assert!((l.axis_y.min.x / screen.width() - 0.25).abs() < 0.01);
+        assert_eq!(
+            (l.axis_y.max.x, l.axis_x.min.y),
+            (l.figure.min.x, l.figure.max.y)
+        );
     }
 }
 

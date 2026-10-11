@@ -1,6 +1,7 @@
 //! `SimConfig`, the sim key (gui_state_contract §2): a change to it re-integrates. Each field is one group §2
 //! lists; each group's fields come from the contract that owns them, added by the requirements that need them
-//! (R-133). At M0 a group is named and empty.
+//! (R-133). At M0 a group is named and empty; the plane and the lock gained theirs with the dev GUI's Manifold view
+//! (R-390, "Contract fields").
 //!
 //! `SimConfig` and its groups serialise in the one canonical serialisation, [`canonical`](super::canonical)
 //! (gui_state_contract §2, R-309), JCS (R-318): an object keyed by its field names, an empty group as `{}`.
@@ -40,20 +41,46 @@ pub struct SimConfig {
 #[serde(deny_unknown_fields)]
 pub struct Chart {}
 
-/// `z₀`, `q₁`, `q₂` (gui_state_contract §2).
+/// A point or a direction of the latent space `ℝ⁸`, in chart_decoder_contract Part 2's block order: `z[0:2]`
+/// configuration, `z[2:6]` momentum, `z[6:8]` mass. Its length is the type's own, as a struct's field widths are
+/// (`[u32; 4]`, `ICDescriptor`'s twelve floats): a structural size the corpus defines, not a register constant
+/// (dd_generation_root §3.8 registers measured or derived numbers).
+pub type Latent = [f64; 8];
+
+/// The latent dimension, `z ∈ ℝ⁸` (chart_decoder_contract Part 2): read from [`Latent`], never written again.
+pub const LATENT_DIM: usize = std::mem::size_of::<Latent>() / std::mem::size_of::<f64>();
+
+/// `z₀`, `q₁`, `q₂` (gui_state_contract §2): the affine slice `z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂`
+/// (chart_decoder_contract Part 3). The view state is this triple: navigation edits it and nothing else (Part 4).
+/// Added for the dev GUI's Manifold view (R-390, "Contract fields"); TASK-M2-22 keeps its requirements.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Plane {}
+pub struct Plane {
+    /// `z₀`, the slice centre: pan and slice edit it.
+    pub z0: Latent,
+    /// `q₁`, the basis vector along `s`: zoom, tilt and rotation edit it with `q₂`.
+    pub q1: Latent,
+    /// `q₂`, the basis vector along `t`.
+    pub q2: Latent,
+}
 
 /// Slice values (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Slice {}
 
-/// Lock flag, `z_locked` anchor, `δ` excursion (gui_state_contract §2; R-69).
+/// Lock flag, `z_locked` anchor, `δ` excursion (gui_state_contract §2; R-69): the lock is CPU-side chart
+/// construction (chart_decoder_contract Part 4, "The lock"). The flag and the anchor are added for the dev GUI's lock
+/// (R-390, "Contract fields"); the excursion is read as `z₀ − z_locked`, the anchor stored, not re-derived, and
+/// TASK-M2-23 keeps the lock's requirements.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Lock {}
+pub struct Lock {
+    /// The lock flag.
+    pub locked: bool,
+    /// The anchor `z_locked`; meaningful while `locked`.
+    pub z_locked: Latent,
+}
 
 /// Link ids (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

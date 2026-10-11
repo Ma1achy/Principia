@@ -64,6 +64,7 @@ struct SimState {
     ensemble_spread: f32,
     energy_drift: f32,
     Lz_drift: f32,
+    n: vec3<f32>,
 }
 
 // The renormalisations completed by step `n`, `n / n_renorm` under the uniform schedule (payload §5); none when
@@ -142,6 +143,25 @@ fn Lz_drift(r: array<vec2<f32>, 3>, p: array<vec2<f32>, 3>, lz_0: f32) -> f32 {
     return angular_momentum_z(r, p) - lz_0;
 }
 
+// The shape-sphere point `n = (u, v, w)/I` of the configuration `r` with masses `m`, the current `n` (payload §5;
+// integrator dd §3.7; chart_reference §3.1; R-14): `kernel::shape::shape`, operation for operation. `ρ = r₁ − r₀`,
+// `λ = r₂ − r₀₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`; `u = ‖ρ̃‖² − ‖λ̃‖²`, `v = 2ρ̃·λ̃`, `w = 2ρ̃∧λ̃`, `I = ‖ρ̃‖² + ‖λ̃‖²`.
+fn shape(r: array<vec2<f32>, 3>, m: vec3<f32>) -> vec3<f32> {
+    let m01 = m.x + m.y;
+    let mu_rho = m.x * m.y / m01;
+    let mu_lambda = m.z * m01;
+    let rho = vec2<f32>(r[1].x - r[0].x, r[1].y - r[0].y);
+    let r01 = vec2<f32>((m.x * r[0].x + m.y * r[1].x) / m01, (m.x * r[0].y + m.y * r[1].y) / m01);
+    let lambda = vec2<f32>(r[2].x - r01.x, r[2].y - r01.y);
+    let a = mu_rho * (rho.x * rho.x + rho.y * rho.y);
+    let b = mu_lambda * (lambda.x * lambda.x + lambda.y * lambda.y);
+    let s = sqrt(mu_rho * mu_lambda);
+    let p = s * (rho.x * lambda.x + rho.y * lambda.y);
+    let q = s * (rho.x * lambda.y - rho.y * lambda.x);
+    let i = a + b;
+    return vec3<f32>((a - b) / i, 2.0 * p / i, 2.0 * q / i);
+}
+
 // Sample `i` read into the read-side `SimState` at this tier, every field filled: each stored member a field
 // needs loaded alone, `simstate_buffer[i].<member>`, never the whole stored struct, and of the word only the
 // components a field needs (R-378). A field not filled stays zero and is not read. An unbound word buffer
@@ -209,6 +229,7 @@ fn sample_read(i: u32, ensemble_spread: f32, has_ensemble: bool, masses: vec3<f3
     out.ensemble_spread = select(canonical_nan(), ensemble_spread, has_ensemble);
     out.energy_drift = energy_drift(s_r, s_p, masses, s_E_0);
     out.Lz_drift = Lz_drift(s_r, s_p, s_Lz_0);
+    out.n = shape(s_r, masses);
     return out;
 }
 

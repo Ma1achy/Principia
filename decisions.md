@@ -6171,8 +6171,11 @@ Adds REQ-INT-086; REQ-INT-001's verify detail and rulings change, and it carries
 
 ## R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots
 *Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only).*
+*Amended in part by R-409 (ORDER item 3's compass: it has no orbit, and its Tilt and Slice buttons switch its mode as
+well as the slider touched).*
 *Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and
-gui, for REQ-GUI-176 and REQ-GUI-177 only.*
+gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its
+Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409).*
 *6 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` §1 and `docs/gui/principia_render_gui_spec.md`'s
 header (added lines), REQ-GUI-165 to REQ-GUI-175 (reqio, new), twelve requirements' notes (reqio), TASK-M6-24 to
 TASK-M6-29 (new), `plan/tasks.yaml` and twenty-three existing task files, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`,
@@ -7215,3 +7218,1160 @@ own words ("This is from me."):
 
 Adds REQ-GEN-033; REQ-RENDER-084's statement, verify, rulings, sources, note and `rq` and REQ-PAY-035's statement,
 rulings and note change.
+
+## R-404 — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps
+*Amended in part by R-409 (the `Orbit` base step is retired, the compass having no orbit; the ring's colour shows the
+keyboard's mode).*
+*Still in force: all of it, as its text reads, except that the `Orbit` row (Compass's Shift+arrows, 5°) and the note
+on what Shift does on Compass's Shift+arrows are retired, Shift ×10 and Alt ×0.1 applying on the compass in
+interaction mode as everywhere, with no separate fine step (R-409, the human's follow-up answer); and that the ring is `hyperlink_color` in interaction mode only, and orange in navigation mode (R-409).
+Its width, its rounding, the breadcrumb, the `?` overlay, the repeat timing and every other base step stand.*
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (a sentence added), REQ-GUI-146 and REQ-GUI-158 (reqio: confirmed), TASK-M6-25 and TASK-M8-13
+(notes), TASK-M6-30 (new: the code's marks), `plan/tasks.yaml` and `plan/rule_groups.yaml`; the marks built by
+TASK-M6-30*
+
+After TASK-M6-25 (PR #174, keyboard navigation on the mock engine) merged, the orchestrator asked the human about #174's
+proposals: the focus ring (its width, its 2 pt corner rounding, its colour), the `?` overlay's look with no dimming, the
+key repeat's 500 ms delay and 40 ms interval and the base steps, and whether the `?` overlay should block hover and
+scroll too or only clicks (as built: clicks only). The human tried the mock GUI and replied, in their own words:
+
+> Yeah, this is good. Just one nit, is that you can't get into the console in the keyboard nav. I would like to be a
+> thing that you can get into the console and, like the bottom bar as well as the top bar. And also when you press F3
+> to hide the rest of the GUI, the actual viewport should then fill the entire screen. I think that's, I know that's
+> like an additional feature that's, like, not really something requested, explicitly requested, but I think that
+> would be nice. Like if you hide the rest of the GUI, it then just fills the viewport available. Like the rest of the
+> viewport just becomes the entire window, if that makes sense, rather than it being limited to being square. You could
+> probably just render extra tiles around or something, rather than, like, stretching. It just renders extra tiles, so
+> you can actually see further in every direction.
+
+(Message of 10 Oct 2026. The orchestrator numbered its three parts: "Yeah, this is good" is R-404, the console and the
+bottom bar R-405, and F3 filling the window R-406.)
+
+*What it decides:* "Yeah, this is good" answers the question as asked, so #174's proposals stand as built. Each is a GUI
+design ruling (R-390's feedback rule) or, for the two calibrations, the human's confirmation that R-71 asks for.
+- **The focus ring:** 2 pt wide (`crates/gui/src/explore/breadcrumb.rs`, `RING_WIDTH`), with 2 pt corner rounding
+  (`RING_ROUNDING`). It is drawn inside the scope's rect, and outside the Figure's rect so that it covers none of the
+  figure. Its colour is egui's dark theme's `hyperlink_color`, the nearest theme colour to the artboards' blue
+  (01_main.png's breadcrumb, 07_keyboard.png's frames).
+- **The breadcrumb:** in the ring's colour, monospace, after the "⌨" glyph, just left of the status line, as 01_main.png
+  draws it.
+- **The `?` overlay:** an egui popup frame centred on the window, above every other layer (`Order::Tooltip`), titled
+  "Keys". It lists §G3's table, then F3, then the rows each screen registers, in two columns, the keys in bold
+  monospace, with "Esc, ? or a click outside closes" below. The rest of the window is not dimmed. The Ctrl+Z row is
+  shown because §G3's table has it, though the key itself is TASK-M8-13's (REQ-GUI-096).
+- **REQ-GUI-146, the repeat timing, is confirmed:** a 500 ms delay before the first repeat
+  (`crates/gui/src/keyboard/repeat.rs`, `DELAY_MS`) and a 40 ms interval between repeats, 25 a second
+  (`INTERVAL_MS`). These are the GUI's own timings: the system's key repeats are dropped, so the rate is the same on
+  every platform. The first press acts at once. Tab, Shift+Tab and the arrows repeat; Enter, Esc and `?` act once a
+  press.
+- **REQ-GUI-158, the base steps, is confirmed** (`crates/gui/src/keyboard/scopes.rs`, `StepKind::base`). Shift steps
+  ×10 and Alt ×0.1, both together ×1; ↑ and → raise a value, ↓ and ← lower it:
+
+  | kind | the fields or in-scope action | base step |
+  |---|---|---|
+  | `Bounded` | a slider: the eight `z₀` values, the slice step, the playback speed | 1/100 of the field's range |
+  | `Angle` | `τ₁`, `τ₂`, `γ` | 1° |
+  | `ZoomLog2` | Navigate's zoom (log₂) | 0.25 octave |
+  | `Pan` | Figure's arrows (in scope) | 1/20 of the view's span along the arrow's axis |
+  | `Tilt` | Compass's arrows (in scope) | 1° |
+  | `Orbit` | Compass's Shift+arrows (in scope) | 5° |
+  | `TimeStep` | Time's ← → (in scope) | 1/100 of the scrubber's range, `[0, t_max]` |
+
+  What Shift does on Compass's Shift+arrows, which already mean "orbit" (§G3), stays TASK-M8-13's, with the in-scope
+  keys (REQ-GUI-097), as #174 left it.
+
+*Applied per R-369 (mechanical consequences, and one reading):*
+- **Applied per R-369, a reading of "this is good": the overlay's pointer behaviour is confirmed as built, blocking
+  clicks, not hover or scroll.** While the overlay is open, every pointer press, and that press's release, is taken
+  before egui's pass; a press outside its frame closes it without acting on anything beneath, as egui's menus do. Hover
+  and scroll still reach what is beneath. The human did not answer this part of the question in words; it is read as
+  confirmed because "this is good" answers a question that listed it, and the build is what the question described.
+  The human may veto it; a veto would be a GUI design ruling, applied by a follow-up task.
+- **Confirmed ahead of the M8 gate.** R-71 asks that the human confirm each calibration and that it be recorded in
+  `decisions.md`; this is that confirmation, given before the gate it was due at. The M8 gate lists REQ-GUI-146 and
+  REQ-GUI-158 as confirmed by R-404 and does not ask again, and the values are no longer provisional (R-182). Each
+  requirement gains R-404 among its rulings and sources and a note giving the confirmed values (reqio), as R-376 did for
+  M0's calibrations. Their statements, which say how a calibration is confirmed, are unchanged.
+- **The code's marks.** `crates/gui/src/keyboard/repeat.rs` and `crates/gui/src/keyboard/scopes.rs` call the values
+  "proposed … used provisionally until the human confirms them at the M8 gate", and
+  `crates/gui/src/explore/breadcrumb.rs` calls the colour and the rounding "a look choice, flagged for the human". The
+  porting rule puts the code last, so this ruling's PR changes no code: TASK-M6-30 (new, below R-406) rewords those
+  comments to "confirmed by R-404". No value changes.
+- **render_gui_spec §G3** gains a sentence: the ring's, breadcrumb's and overlay's look, the repeat timing and the base
+  steps are recorded in R-404.
+- **TASK-M6-25** (merged) and **TASK-M8-13** each gain a Notes line: the values are confirmed by R-404, and TASK-M8-13,
+  which uses them on the real engine, has no proposal of them left to put to the gate.
+- R-404 is in the "design" group of `plan/rule_groups.yaml`, with R-390 and R-399.
+
+Changes REQ-GUI-146's and REQ-GUI-158's rulings, sources and note: each is confirmed. Adds no requirement.
+
+## R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console
+*Amended in part by R-409 (the console's entry list scrolls with ↑ ↓ only after Enter on it; every landing is in
+navigation mode).*
+*Still in force: all of it, as its text reads, except that ↑ and ↓ scroll the entry list only in interaction mode,
+after Enter on the list, Esc returning to navigation mode on it (R-409, the human's follow-up answer); and that every
+landing, the console's first filter included, is in navigation mode, the arrows moving within a section in navigation
+mode (R-409).*
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" and § "G12. Console (`12_console.png`)" (paragraphs added), REQ-GUI-095 (reqio), REQ-GUI-178
+(reqio, new), TASK-M6-28, TASK-M6-25 and TASK-M8-13, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
+TASK-M6-28*
+
+The human's words (R-404's message of 10 Oct 2026):
+
+> Just one nit, is that you can't get into the console in the keyboard nav. I would like to be a thing that you can
+> get into the console and, like the bottom bar as well as the top bar.
+
+*What it decides:*
+- **The console is reached with the keyboard**, and so is the bar at the bottom of the window, as the top bar is: both
+  are scopes in §G3's tree.
+
+*Applied per R-369 (routine design choices, and one reading):*
+- **Applied per R-369, a reading of the human's words: "the bottom bar" is the footer** (§G2's **Footer**: the warning
+  and error counts, the latest message, memory, "? keys"; 01_main.png's bottom strip), the bar that opens the console.
+  The bottom row's Compass, Time and Legend are big scopes 5 to 7 already, so the footer is the one bar at the bottom
+  that the keyboard cannot reach. The human may correct it.
+- **The footer is big scope 8,** after Legend, so the Tab order reads top to bottom: 1 top bar · 2 Manifold view ·
+  3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer. Tab wraps from the footer to the top bar, and
+  the first Shift+Tab from no focus goes to the footer. Its ring is drawn inside its rect, as every scope's is.
+- **Enter on the footer opens the console,** as a click on the footer does (§G2), and moves the focus into it. If the
+  console is already open, Enter moves the focus into it.
+- **The console is a window**, under TASK-M6-28's window rule (an open window is a scope that takes the focus when it
+  opens; Tab and Shift+Tab move between its sections; Esc returns the focus to the scope that opened it). Opened by
+  Enter or a click on the footer, or from Windows › Console, it takes the focus, on its first filter. Its sections, in
+  Tab order, are the filters (all, warnings, errors, info), the text filter, copy and clear, and the entry list; Tab
+  and Shift+Tab move between them, inside the console, and the arrow keys move within a section (between the filters,
+  between copy and clear; ↑ and ↓ scroll the entry list). Enter on a filter, copy or clear acts as its click; the text
+  filter is a text field, so the keyboard layer stands aside while it holds the keyboard, as #174 built for every text
+  field. The breadcrumb names the path, e.g. "console › errors". **Esc closes the console and returns the focus to
+  whatever opened it:** the footer, or Windows › Console. (Applied per R-369, gui review 5478696211, G2; it replaces
+  the first port's sub-scope reading, in which the arrows moved between all the console's controls and Esc always
+  returned to the footer.)
+- **The console opening by itself on an error does not take the focus**, so a key pressed mid-navigation never lands
+  in it unasked; Tab to the footer and Enter reach it.
+- **REQ-GUI-095** (its id permanent) reads eight big scopes, the footer last, in its statement and verify; R-405 joins
+  its rulings and sources (reqio). TASK-M8-13's acceptance line for it, re-run on the real engine, reads eight, and
+  TASK-M8-13 depends on TASK-M6-28.
+  TASK-M6-25's line (merged, seven) stays as its record, with a Notes line pointing here.
+- **REQ-GUI-178 (new, M6)** is the footer and console scopes on the mock, closed by **TASK-M6-28**, which builds the
+  console's layout, filters, copy and clear (REQ-GUI-126) and puts each window into the scope tree. It is the natural
+  home: the console's sections are the controls it builds. It gains a deliverable, an acceptance line with negative
+  controls and a `07_keyboard/mock_focus_console` screenshot case.
+- **qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-25.rs`'s
+  `qa_scope_tab_order_mock_seven_big_scopes_cycle` (its `BIG` list, and the module doc quoting REQ-GUI-095's verify)
+  asserts seven big scopes with Legend last. Every earlier commit of the file is qa's, so TASK-M6-28's qa reviewer
+  changes it to eight in the task's qa commit; the implementer never edits it. The PR lists each change with its
+  reason, and the code reviewer confirms that no assertion was weakened but the count R-405 changes.
+  `crates/gui/tests/qa_TASK-M6-25_recheck.rs` needs no change: it asserts no scope count and does not take Legend as
+  the last big scope (gui review 5478696211).
+- R-405 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
+
+Adds REQ-GUI-178; REQ-GUI-095's statement, verify, rulings, sources and note change.
+
+## R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "Export &
+share" (sentences added), REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100 (reqio: notes), REQ-GUI-179 and REQ-GUI-180
+(reqio, new), TASK-M6-30 (new), TASK-M6-24 and TASK-M8-32 (notes), TASK-M8-05, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-248's revision line) and `REVIEW_QUEUE.md` (RQ-262,
+open); built by TASK-M6-30 on the mock and TASK-M8-05 on the real engine*
+
+The human's words (R-404's message of 10 Oct 2026):
+
+> And also when you press F3 to hide the rest of the GUI, the actual viewport should then fill the entire screen. I
+> think that's, I know that's like an additional feature that's, like, not really something requested, explicitly
+> requested, but I think that would be nice. Like if you hide the rest of the GUI, it then just fills the viewport
+> available. Like the rest of the viewport just becomes the entire window, if that makes sense, rather than it being
+> limited to being square. You could probably just render extra tiles around or something, rather than, like,
+> stretching. It just renders extra tiles, so you can actually see further in every direction.
+
+*What it decides:*
+- **With the egui layer hidden (F3), the figure fills the whole window.** It is no longer held to its rect in the shown
+  layout.
+- **It shows more of the field, not a stretched copy.** The extra area is more of the field at the same scale, more
+  tiles (quads) in every direction, so you see further; the view in the shown rect is never stretched or scaled to fill
+  the window.
+- **Showing the layer again returns the normal layout,** the figure back in its rect.
+- This revises RQ-248's decision of 7 Oct 2026 (per R-369, TASK-M6-24), which kept the figure in its shown rect with
+  F3 off and the rest of the window the clear colour; that decision said the human could change it by a GUI design
+  ruling, and this is that ruling. RQ-248's other decision, "mock engine" in the window title, stands.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **Nothing moves when F3 toggles.** Each point of the field keeps the screen position and the scale it has in the
+  shown layout; the hidden window adds the field around the shown figure's rect, in every direction. So the two states
+  are pixel-identical over the shown rect, which keeps REQ-GUI-168's and REQ-GUI-070's "the figure identical
+  underneath", read over that rect. The view is not re-centred on the window. *Flagged:* re-centring would be the other
+  reading; the human may choose it.
+- **It is a view, not an edit.** Hiding and showing the layer sends no `SetField` and adds no undo entry: `z₀`, the
+  basis and the zoom are unchanged, and only more of the same chart is drawn (gui_state_contract §2: the hidden state is
+  `ViewUI`'s, the engine never reads it).
+- **What the marks do.** The hover label, the lock reticle and the breadcrumb are the egui layer's and hide with it,
+  as before. The tile-bounds overlay (TASK-M6-27, on the mock's fake quads) is drawn by the mock into the figure, so it
+  covers the extra quads too.
+- **Present mode** (§G5, Export & share: "hide all chrome; Esc returns") hides the chrome as F3 does, so its figure
+  fills the window the same way: the human's rule is "if you hide the rest of the GUI, it then just fills the viewport
+  available". §G5's Present line gains a sentence; REQ-GUI-100 and TASK-M8-32 gain notes. *Flagged:* the human spoke of
+  F3, so this extension may be vetoed.
+- **Memory needs no new value.** The memory model already counts every display pixel of the window (memory_tiers §3:
+  `render_px = display_px × render_scale²`, and §4's table by 1080p, 1440p and 4K display), so a figure that fills the
+  window stays inside it; the screen floor (REQ-REF-011) and the frame budget govern the extra quads as they govern any
+  in-view quad, and the baseline cover (caching contract Part 4) spans the viewport, whatever its size.
+- **On the mock, nothing waits.** The stand-in is smooth noise defined everywhere, so **TASK-M6-30 (new, M6)**, "F3
+  fills the window with the figure", depending on TASK-M6-27 (the stand-in pans and zooms from TASK-M6-26, and the fake
+  quads and the tile-bounds overlay from TASK-M6-27), closes **REQ-GUI-179 (new, M6)**. Reviewers code, qa and gui: the
+  mock has no chart mapping, so no physics. TASK-M6-30 also carries R-404's comment marks. TASK-M6-26, being built now,
+  is not changed.
+- **On the real engine it waits for RQ-262 (filed, open).** The corpus defines the view only as `(s,t) ∈ [0,1]²`
+  (chart_decoder_contract Part 3; deep_zoom § "The precision split"; the coordinate note), and a nonlinear chart's
+  `Φ` only on `[0,1]²` (chart_reference §5.1). A window wider and taller than the shown rect, at the same scale, puts
+  samples at `(s,t)` outside `[0,1]²`: how the view extends there, and what a chart draws outside its domain, are not
+  given. The orchestrator does not decide them. **REQ-GUI-180 (new, M8)** is the real engine's fill, closed by
+  **TASK-M8-05** (the shell on the real engine, F3 there, REQ-GUI-070), and carries `rq: RQ-262`; TASK-M8-05 gains its
+  acceptance line, depends on TASK-M6-30, takes the physics reviewer for REQ-GUI-180 only (it extends the chart's view),
+  and its REQ-GUI-180 line waits for the ruling.
+- **qa's file (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-24.rs`'s
+  `qa_capture_figure_identical_under_f3_warning_and_console` asserts that with F3 off everything outside the figure's
+  rect is the clear colour, which this ruling reverses. Its every earlier commit is qa's, so TASK-M6-30's qa reviewer
+  changes that assertion in the task's qa commit; its check that the figure is identical over the shown rect stays.
+  The PR lists the change and its reason, and the code reviewer confirms that nothing else was weakened.
+- **REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100** gain R-406 and a note (reqio); their statements and verify stand, read as
+  above. TASK-M6-24 (merged) gains a Notes line on RQ-248's revision. RQ-248, archived in
+  `docs/archive/review_queue/M0.md`, gains a line naming R-406.
+- R-406 is in the "design" group of `plan/rule_groups.yaml`, with R-390.
+
+Adds REQ-GUI-179 and REQ-GUI-180; REQ-GUI-168's, REQ-GUI-070's and REQ-GUI-100's rulings, sources and notes change.
+
+## R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*
+*10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 3 — Charts" (a subsection added,
+"Past the unit square — each axis's extension type (R-407)"), § "Part 4 — Navigation is chart construction (pan,
+slice, zoom, tilt, lock)" and § "Part 5 — Well-posedness and the validation contract" (sentences added),
+`docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid", § "3.3 The
+chart map" and § "4.5 The Burrau-family chart maps" (paragraphs added) and § "5.4 Past the unit square — each axis's
+extension type (R-407)" (new), `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces
+(they nest; each is right for its job)", `docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam,
+decode side)" and `docs/design/principia_colour_composition.md` § "3. The `ctx` contract" (A4's sentences),
+`docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "G7. Chart builder
+(`03_chartbuilder.png`)", REQ-GUI-180, REQ-GUI-179, REQ-GUI-100 and REQ-GUI-070 (reqio), REQ-CHART-054 and
+REQ-CHART-055 (reqio, new), TASK-M8-05, TASK-M8-32, TASK-M6-30, TASK-M6-28 and TASK-M2-11, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-262 archived) and `REVIEW_QUEUE.md` (RQ-263, open);
+built by TASK-M8-05 on the real engine (TASK-M6-30 on the mock)*
+
+The orchestrator put RQ-262 to the human: with F3 hiding the GUI the figure fills the window at the same scale (R-406),
+but the corpus defines the view only on `(s,t) ∈ [0,1]²` and a nonlinear chart's `Φ` only there. The human explained,
+in their own words:
+
+> Yes, and it can be made general by attaching the extension rule to each axis type, rather than writing one for each
+> chart. A custom chart built from typed axes then gets its extension automatically. A universal fallback catches
+> anything an axis can't extend.
+>
+> How it works. Every chart axis declares one of these four types, and the type decides what happens past the edge of
+> the unit square:
+>
+> Affine (basis vectors, latent dimensions, flat slices): the formula simply continues. This covers every chart built
+> from basis vectors, so those need nothing extra.
+> Periodic (azimuthal angles, such as the sphere's longitude θ): the axis wraps around.
+> Pole-crossing (polar angles, such as the sphere's φ): carrying on past a pole comes back down the other side, with
+> the partner axis shifted by half its period. That's how a sphere naturally continues, and it shows real neighbouring
+> states instead of hatching.
+> Bounded (anything with a hard edge in its domain, such as the warp's t^γ for t < 0): past the edge is hatched.
+>
+> The fallback needs no declaration. Every pixel is evaluated through the chart's map. If the map fails (NaN, outside
+> its domain), or produces an invalid state (non-positive masses, outside the allowed region, anything the existing
+> validity check rejects), the pixel is hatched. That makes physical-quantity axes safe automatically: energy beyond
+> what's reachable simply hatches.
+>
+> The rule for unknown axes is bounded. An axis gets a fancier extension only by declaring it. Nothing ever invents a
+> continuation. For example, extending the warp oddly as sign(t)·|t|^γ would give pixels a meaning nobody defined, so
+> it would need its own physics ruling first.
+
+and gave the ruling, in their own words ("This is from me."):
+
+> This is from me.
+> RQ-262: per-chart extension, made general and automatic:
+> 1. Each chart axis declares an extension type: affine (continues;
+>    covers all basis-vector and flat charts), periodic (wraps),
+>    pole-crossing (continues over the pole, partner axis shifted by
+>    half its period), or bounded (hatched past its edge). The default
+>    for an axis that declares nothing is bounded. A custom chart
+>    inherits its extension from its axes, so nothing is written per
+>    chart.
+> 2. The universal fallback: outside [0,1]², a pixel whose Φ fails to
+>    evaluate, or whose state fails the existing validity check, is
+>    hatched as forbidden. This covers physical-quantity axes (such as
+>    energy beyond what's reachable) automatically.
+> 3. No invented continuations: an axis gets anything beyond "bounded"
+>    only by declaring it, and any new extension type needs physics
+>    review. Assign types to the existing charts (flat: affine; sphere:
+>    θ periodic, φ pole-crossing; warp: bounded; Burrau: per axis, with
+>    physics review).
+> Lands in TASK-M8-05; the mock GUI (TASK-M6-30) only needs affine plus
+> the hatch fallback.
+
+(Message of 10 Oct 2026; numbered by the orchestrator, the next free number. The second block is the ruling; the
+first is the human's explanation of it.)
+
+*What it decides:*
+- **Each chart axis declares an extension type**, which decides what the axis does past the edge of the unit square:
+  **affine** (the formula continues; every basis-vector and flat chart), **periodic** (wraps), **pole-crossing**
+  (continues over the pole, the partner axis shifted by half its period), or **bounded** (hatched past its edge).
+  **An axis that declares nothing is bounded.** A custom chart inherits its extension from its axes; nothing is
+  written per chart.
+- **The universal fallback.** Outside `[0,1]²`, a pixel whose `Φ` fails to evaluate (NaN, outside its domain), or whose
+  state fails the existing validity check (non-positive masses, outside the allowed region), is hatched as forbidden.
+  It needs no declaration, and it covers physical-quantity axes (energy beyond what is reachable) automatically.
+- **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
+  needs physics review. Extending the warp as `sign(t)·|t|^γ`, for example, would give pixels a meaning nobody defined.
+- **The existing charts:** flat, affine; the shape sphere, θ periodic and φ pole-crossing; the warp, bounded; the Burrau
+  family, per axis, with physics review.
+- **Where it lands:** TASK-M8-05 on the real engine; the mock (TASK-M6-30) needs only affine plus the hatch fallback.
+- RQ-262's silences are settled: the view extends past `[0,1]²` by its axes' types, and a chart shows its extension,
+  or the hatch, outside its domain.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+*Accepted by R-416 (10 Oct 2026): no veto, A7 included.*
+- **A1. TASK-M8-05 closes it on the real engine.** REQ-GUI-180 (the fill with F3 off) and the axis extension types land
+  in TASK-M8-05, as the ruling says. RQ-262 is ruled, so nothing waits: TASK-M8-05's note that REQ-GUI-180 "holds this
+  task's merge until RQ-262" goes, and REQ-GUI-180 loses `rq: RQ-262`. TASK-M8-05 keeps the physics reviewer, now for
+  the extension types and the fallback (a reviewer is per task, not per line, so physics reviews the task). REQ-GUI-180's
+  statement and verify follow R-407: the window shows the extension per axis type, with the hatch fallback; every window
+  pixel carries a labelled output (canonical_spec §9 W9); "tagged, never dropped" (chart_decoder_contract Part 5) holds.
+  No quad request set is fixed beyond what R-407 implies: a hatched pixel needs no integration, so its quads need not be
+  asked for (inverse_encode_contract's quad-skip rule applies as it stands). This settles physics review 5478700157's P7
+  and code review 5478698018's F1 (the shell no longer waits on a ruling).
+- **The extension types are a chart requirement.** **REQ-CHART-054 (new, M8)**, closed by TASK-M8-05: each axis
+  declares its type (default bounded); a chart takes its extension from its axes; the fallback; the existing charts'
+  types (chart_reference §5.4); inside `[0,1]²` nothing changes. REQ-GUI-180 is the GUI's side of it.
+- **The order on an extended pixel.** The axes' types act first: an affine axis passes its coordinate through, a
+  periodic one wraps it, a pole-crossing one reflects it over the pole and shifts its partner, and a bounded one past its
+  edge hatches the pixel. `Φ` and the validity check then run on what the types give, and the fallback hatches a pixel
+  that fails either. chart_decoder_contract Part 3 states it.
+- **The hatched pixel's label.** A hatched pixel is a labelled output, never dropped and never integrated: it is
+  `decode_failed` (payload §2, "the chart/decoder could not produce a valid physical IC"), its detail the category that
+  applies (`0` non-finite, `2` invalid mass construction, `3` other, which covers a bounded axis's edge and a
+  feasibility failure; REQ-DEC-038's map). It is drawn with the render contract's hatch (`debug_invalid`, Part 5; its
+  exact pattern REQ-COL-055's calibration), the one hatch the corpus defines; §G7's Domain preview hatches the forbidden
+  region the same way. This answers physics review 5478700157's P2 (which label).
+- **The validity check is R-26's** `validate(u, v)` on the `Chart` trait, inverse_encode_contract § "Chart-aware
+  validation" layers 2 and 3 (the chart's feasibility; all masses positive), run on the extended pixel.
+- **A2. Present mode on the real engine.** Present mode hides the chrome as F3 does (R-406, applied per R-369 there), so
+  its fill on the real engine uses TASK-M8-05's extension and is built by TASK-M8-32 (REQ-GUI-100). REQ-GUI-100's
+  statement and verify gain the fill; TASK-M8-32's acceptance gains a check that Present fills the window, and its
+  reviewers gain physics for that line. TASK-M8-32 already depends on TASK-M8-05, which depends on TASK-M6-30, and
+  nothing on that chain depends on TASK-M8-32, so the chain stays acyclic. This settles physics review 5478700157's P8
+  and gui review 5478696211's G3 on the real engine.
+- **A3. The mock (TASK-M6-30, REQ-GUI-179):** affine plus the hatch fallback, as the ruling says. The stand-in continues
+  past the shown rect as an affine chart; a pixel the mock flags invalid (a test hook) is hatched as forbidden, so the
+  fallback's path is built and checked on the mock. TASK-M6-30 also builds the mock's Present fill: TASK-M6-28 builds
+  Export & share's present mode (hiding the chrome), and TASK-M6-30, now depending on TASK-M6-28, makes it fill the
+  window as F3 off does, with an acceptance check for Present. This settles gui review 5478696211's G3 on the mock.
+- **A4. The coordinate texts, as mechanical consequences** (each line that changes is recorded as "stale value,
+  replaced by R-407"). Inside the chart's `[0,1]²`, the depth-0 root, nothing changes. With the window extended:
+  - UV is taken over the shown figure's rect, which is the view's `[0,1]²`, and continues at the same scale beyond it,
+    the one flip unchanged, so the window's samples have UV outside `[0,1]` (coordinate note; deep_zoom § "The
+    precision split").
+  - Quad indices may be negative outside the depth-0 root when the window extends past `[0,1]²`; the address is still
+    taken in the slice plane's frame (R-97). The coordinate note's "You never want negative quad indices" holds within
+    the root.
+  - R-394's `ctx.chart.slice_uv` may lie outside `[0,1]²` in the extension (colour_composition §3); its formula is
+    unchanged.
+  - `ctx.screen.uv` and `ctx.screen.pixel` are taken over the window's figure area as shown: the shown figure's rect
+    with the layer shown, the full window with F3 off. A stain that reads the screen lane therefore draws differently
+    over the shown rect in the two states, so REQ-GUI-180's and REQ-GUI-179's pixel-identity checks use a stain that
+    reads no screen-lane field.
+  This settles physics review 5478700157's P5.
+- **A5. The warp is bounded on both sides, as ruled.** The physics review found its other sides infeasible or
+  undefined (`s ∉ [0,1]` gives `|L_z| > L_max(t)`, infeasible for every `γ_K`; `t < 0` has no real value for a
+  non-integer `γ_K`, while an odd integer gives `K < 0` and an even one a fold), but noted that its `t > 1` side
+  (`K > K_max`) stays feasible. Declaring the `t > 1` side would be a later declaration, needing physics review under
+  clause 3; it is not built. chart_reference §2.1 records it.
+- **A6. The Burrau family's axis types are a definition requirement (R-72).** **REQ-CHART-055 (new, M2,
+  definition)**, closed by **TASK-M2-11**, the task that completes the Burrau charts (it depends on TASK-M2-10, which
+  builds the Euclid plane and the `(ν, K)` chart, and builds the acute-angle charts and the strips itself), physics
+  reviewed: chart_reference §5.4 gives each Burrau-family axis's type. No types are given now; until they are written,
+  each Burrau axis is bounded, the default. The physics review's note that `ν` past `(0,1)` gives a zero or negative
+  mass, and `θ` past `(0, π/4]` the same, is for that task.
+- **A7. The mass simplex (the ternary plot, chart_reference §4.5) is affine**, its map continued; the fallback hatches
+  its negative-mass area (inverse_encode_contract layer 3, "all masses positive"). chart_reference §5.4 states it.
+  *Note, 10 Oct 2026, applied per R-369:* the hatch boundary is layer 2's narrowed simplex (buffered `mᵢ ≥ ε_m` ⇔ raw
+  `mᵢ ≥ 0`), so the hatch starts at the edge of `[0,1]²` with no band, as R-408's round-3 bullet and chart_reference
+  §5.4 state (physics review 5478835029, G1, on #181).
+- **The other existing charts.** The latent chart and every flat or axis-aligned slice (`Latent`, `BodyPlane`) are
+  affine; the decoder `D` takes any `z ∈ ℝ⁸`, and the fallback catches what fails. The shape sphere's spherical map is
+  θ periodic and φ pole-crossing (θ shifted by π); its exponential map (chart_reference §3.3) has no θ or φ axis, so
+  its axes declare nothing and are bounded. A mixed-axis chart's latent-coordinate axis is affine, and so is a
+  physical-quantity axis mapped linearly onto its range (the correction below); any other axis (a shape angle, or a
+  quantity behind a nonlinear warp, chart_reference §1.3's "the warp from [0,1] to its physical range") declares
+  nothing, so bounded, until a declaration is made under physics review. The Chart builder's axis kinds follow: a
+  latent direction is affine, a physical-quantity axis is affine (the correction below), and a Burrau dimension takes
+  REQ-CHART-055's types (render_gui_spec §G7).
+  *Correction, made in R-408's port (B1), applied per R-369 and flagged to the human:* this port first made a
+  physical-quantity axis bounded, by clause 1's default ("a physical-quantity axis declares nothing and is bounded (the
+  fallback guards any later declaration)"). The human's explanation expects such an axis to continue: "That makes
+  physical-quantity axes safe automatically: energy beyond what's reachable simply hatches." A physical-quantity axis
+  is linear in its quantity over its range (§G7 gives it a range and no warp), so continuing it is its formula
+  continuing, not an invented continuation: it is affine, and the fallback hatches what cannot be reached. Under R-408
+  its primary range is unbounded, so its unreachable pixels fail validity and count as forbidden. The human may veto
+  it.
+  *Accepted by R-416 (10 Oct 2026): no veto.*
+- **A8. R-406's "a view, not an edit" now holds for the real engine too.** The fill edits nothing: `(z₀, q₁, q₂)` is
+  unchanged and more of the same chart is drawn, with no `SetField`. The chart-construction reading the physics review
+  raised (P6: rescaling `q₁, q₂` so the window is `[0,1]²`) is moot under R-407, which extends each axis past
+  `[0,1]²`, so it is not added. chart_decoder_contract Part 4 gains a sentence.
+- **Physics review 5478700157's other points on RQ-262's text** are settled by this ruling: P1 (the corpus's "tagged,
+  not dropped" rule) is the fallback's label above; P3 (the criterion is feasibility, not affine against nonlinear) is
+  the fallback, with the per-chart findings recorded in chart_reference §2.1 and §5.4 and passed to TASK-M2-11 (A6);
+  P4 (a clamped extension) does not arise, since no axis is clamped; P9 (a truncated quote) stays in RQ-262 as
+  archived, the record unchanged (R-292).
+- **Still open, filed as RQ-263:** the shape sphere's periodic and pole-crossing extension redraws systems already in
+  `[0,1]²`, so whether area statistics (W7's `system_image` multiplicity, §G7's "forbidden in view: N%") count the
+  window or only `[0,1]²` is not given. It blocks only a line that computes such a statistic on the extended window;
+  TASK-M8-05 has none, so nothing waits today. Ruled by R-408 (10 Oct 2026): option (c), through the axis types.
+- RQ-262 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-407 is in the "physics" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-CHART-054 and REQ-CHART-055; REQ-GUI-180's statement, verify, rulings, sources, note and `rq`, REQ-GUI-179's
+and REQ-GUI-100's statements, verify, rulings, sources and notes, and REQ-GUI-070's note change.
+
+## R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
+*10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 2 — The decoder" (a sentence
+added, round 2), § "Part 3 — Charts" (§ "Past the unit square — each axis's extension type (R-407)": a paragraph
+added, the affine row's axes, the fallback's layers) and § "Part 5 — Well-posedness and the validation contract"
+(`system_image`, a sentence added), `docs/contracts/principia_canonical_spec.md` § "9. The load-bearing invariants (the
+walls — the primary comparison checklist)" (W7, a sentence added), `docs/design/principia_chart_reference.md` § "3.3
+The chart map", § "4.5 The Burrau-family chart maps" and § "5.4 Past the unit square — each axis's extension type
+(R-407)" (the table's primary-range column, paragraphs added), `docs/gui/principia_render_gui_spec.md` § "G1. Rules
+that hold everywhere" (round 2) and § "G7. Chart builder (`03_chartbuilder.png`)", REQ-CHART-056 and REQ-CHART-057
+(reqio, new), REQ-CHART-054, REQ-GUI-109, REQ-GUI-180, REQ-GUI-070 and REQ-GUI-100 (reqio), TASK-M8-05, TASK-M8-44
+(new), TASK-M8-18, TASK-M8-32 and TASK-M6-30, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-263 archived) and `REVIEW_QUEUE.md` (RQ-264, open); built by TASK-M8-05, the
+one-hemisphere case by TASK-M8-44 once RQ-264 is ruled*
+
+The orchestrator put RQ-263 to the human: past `[0,1]²` the shape sphere's periodic θ and pole-crossing φ (R-407)
+redraw systems `[0,1]²` already holds, so whether an area statistic taken over the extended window counts the window or
+only `[0,1]²`, and how it counts the redrawn systems, was not given. The human ruled, in their own words:
+
+> This is from me.
+> RQ-263: (c), counting each system once, done through the axis types.
+> Each type has a primary range: periodic = one period; pole-crossing =
+> pole to pole; affine = unbounded (bounded axes are only defined inside
+> their domain anyway). "Forbidden in view" and the area statistics
+> count a visible pixel only if every axis is inside its primary range.
+> Pixels hatched because the domain ends there (a bounded axis past its
+> edge, or a failed Φ) are not systems: they're excluded from both the
+> count and the total. Only states that fail the validity check count as
+> forbidden. Inside the original square, results are unchanged.
+
+(Message of 10 Oct 2026; numbered by the orchestrator, the next free number.)
+
+*What it decides:*
+- **RQ-263's option (c):** a statistic taken over the window counts each system once, however many window pixels show
+  it, and it does so through the axis types, not per chart.
+- **Each extension type has a primary range:** periodic, one period; pole-crossing, pole to pole; affine, unbounded; a
+  bounded axis is defined only inside its domain.
+- **"Forbidden in view" (render_gui_spec §G7) and the area statistics (canonical_spec §9, W7) count a visible pixel only
+  if every axis is inside its primary range.**
+- **Pixels hatched because the domain ends there are not systems:** a bounded axis past its edge, or a `Φ` that fails
+  to evaluate. They leave both the count and the total.
+- **Only states that fail the validity check count as forbidden.**
+- **Inside the original square, results are unchanged.**
+
+*Applied per R-369 (mechanical consequences, readings and routine design choices; the human may veto any):*
+*Accepted by R-416 (10 Oct 2026): no veto, B1 included.*
+- **B1. A Chart-builder physical-quantity axis is affine, a correction to R-407's applied text.** R-407's port made it
+  bounded by clause 1's default; the human's explanation of R-407 ("That makes physical-quantity axes safe
+  automatically: energy beyond what's reachable simply hatches") expects it to continue linearly, with the fallback
+  hatching what cannot be reached. A physical-quantity axis is linear in its quantity over its range (render_gui_spec
+  §G7 gives it a range and no warp), so this is its formula continuing, not an invented continuation. A mixed-axis
+  chart's physical-quantity axis mapped linearly onto its range is affine likewise; one behind a nonlinear warp
+  (chart_reference §1.3) declares nothing and stays bounded. Under this ruling its primary range is unbounded, so its
+  unreachable pixels fail validity and count as forbidden. R-407's applied text carries the correction, flagged to the
+  human; chart_decoder_contract Part 3, chart_reference §5.4 and render_gui_spec §G7 follow. TASK-M8-05 tests it.
+  B1 covers §G7's non-periodic quantities (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared
+  affine would redraw systems and count them again, so it is typed only by a declaration under physics review
+  (physics review 5478805963, F3).
+- **B2. The mass simplex's "forbidden in view" rises with F3 off.** Its axes are affine (R-407, A7), so their primary
+  ranges are unbounded: past the edge every visible pixel counts, and its negative-mass states fail validity
+  (inverse_encode_contract § "Chart-aware validation", layer 2: every `m_i > 0`) and count as forbidden. So the share
+  forbidden in view is larger over the filled window than over `[0,1]²` alone. The orchestrator has told the human.
+  chart_reference §5.4 states it.
+- **B3. The primary ranges, by type.** Periodic: one period of that axis (for the shape sphere's `θ = 2π·s`, the
+  chart's own `[0,1]` span). Pole-crossing: pole to pole (for the shape sphere's φ with both hemispheres drawn, the
+  chart's `[0,1]` span). Affine: unbounded. Bounded: its domain, the chart's `[0,1]` span on that axis. A new periodic
+  or pole-crossing declaration states its own primary range under clause 3's physics review; RQ-264 is that case for
+  φ with one hemisphere drawn. (Worded per physics review 5478805963, F4: the first port took "one period" as the
+  `[0,1]` span for every periodic axis, which agrees for every shipped chart.) **A pixel past a pole carries a partner axis shifted by half a period, and it is
+  outside the pole-crossing axis's primary range, so it is excluded from the count** (and from the total). So the
+  shape sphere's extension, past `[0,1]²` on either axis, adds nothing to any statistic, and its statistics over the
+  window are those of the part of `[0,1]²` that is visible.
+- **B4. The sphere's one-hemisphere toggle is filed as RQ-264.** With the toggle drawing one hemisphere (render_gui_spec
+  §G2, chart_reference §3.3, R-113), the corpus does not say whether the chart's `[0,1]` span on φ is remapped to end at
+  the equator or the full pole-to-pole span is kept and half of it set aside; and if the span ends at the equator, what
+  the pole-crossing φ does past that edge, which is not a pole, and what its primary range is. The orchestrator does
+  not decide them. It blocks only **TASK-M8-44 (new, M8)**, a leaf task that builds and checks the sphere's extension
+  and counting with one hemisphere drawn (**REQ-CHART-057**, new, carrying `rq: RQ-264`), depending on TASK-M8-05 and
+  on TASK-M8-06, which builds the hemisphere toggle (REQ-GUI-161); reviewers code, qa and physics; nothing depends on
+  it. TASK-M8-05 runs every line with both hemispheres, R-14's full `φ = π·(1 − t)` span, where the poles are `[0,1]`'s
+  ends, and has no open RQ. (Applied per R-369, code review 5478800754, F4: the first port put the waiting line in
+  TASK-M8-05, which would have held it and its dependents.)
+  *Ruled by R-412 (10 Oct 2026, RQ-264's option (a)):* with one hemisphere drawn, φ's span is remapped to end at
+  the equator, its formula continues past it into the mirror hemisphere, and its primary range is pole to equator, so
+  the continuation is not counted. TASK-M8-44 builds it.
+- **B5. The order a pixel is classified in.** Past `[0,1]²`: (1) an axis past a bounded edge makes it the domain's end
+  (out of the count and the total); (2) an axis outside its primary range, the periodic or pole-crossing redraw, takes
+  it out of the count and the total; (3) a pixel the chart's feasibility check rejects (R-26's `validate`, the chart's
+  domain function, inverse_encode_contract layer 2, run on what the types give, before `Φ`) counts as forbidden,
+  whether or not `Φ` could evaluate there; (4) a `Φ` that fails to evaluate where layer 2 accepts makes it the domain's
+  end; (5) a decoded state that fails layer 3 (all masses positive) counts as forbidden; (6) every other visible pixel
+  counts, as a system. This is how B1's unreachable energy counts as forbidden: layer 2 rejects it first. Inside
+  `[0,1]²` only (3), (5) and (6) arise, as before: REQ-GUI-109's "the fraction of a uniform grid over the view that
+  validate rejects".
+- **B6. The statistic reads the chart, not the payload label.** Both kinds of hatched pixel are `decode_failed`, and
+  R-407 gave a bounded edge and a feasibility failure the same detail category (`3`, other), so the label cannot tell
+  them apart. The statistic classifies each pixel from the chart (its axes' types and primary ranges, `validate`, `Φ`),
+  as the Domain preview already does from `validate`. No label changes.
+- **B7. `system_image`'s multiplicity is `[0,1]²`'s.** Inside `[0,1]²` it is unchanged (the shape sphere's 2-to-1 fold
+  over its φ hemispheres, R-141); past `[0,1]²` the extension adds none, because a periodic or pole-crossing redraw is
+  outside a primary range and never counted. chart_decoder_contract Part 5 and canonical_spec W7 say so.
+- **Where it lands.** **REQ-CHART-056 (new, M8)**, closed by **TASK-M8-05** (physics-reviewed, as it already is for
+  R-407): the primary ranges, the classification and the counting, in the kernel beside the extension types, with an
+  acceptance line that a periodic duplicate is counted once and that domain-hatched pixels leave the total.
+  REQ-CHART-054's statement and verify gain B1's affine physical-quantity axis. TASK-M8-18's `forbidden_fraction`
+  (REQ-GUI-109, the Domain preview's "forbidden in view: N%") uses it; with the egui layer shown its view is `[0,1]²`,
+  so its result is unchanged, and REQ-GUI-109 and TASK-M8-18 gain notes. REQ-GUI-180's and TASK-M8-32's notes that
+  RQ-263 is open now name R-408.
+- **Round-2 review fixes, applied per R-369** (mechanical consequences of R-407 and R-408):
+  - the pixel's validity check is inverse_encode layers 2 and 3 only; layer 1 (the hypercube bounds) is the encode
+    path's, so chart_decoder_contract Part 2's "the validated region is the unit hypercube `[0,1]⁸`" is qualified for
+    the extension (physics F2);
+  - the ternary plot's axes are affine in R-407's sense, its map bilinear (physics F5); its hatch is layer 2's narrowed
+    simplex, buffered `mᵢ ≥ ε_m`, which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no
+    band, tested at a sample within `ε_m` of the edge against a "buffered `mᵢ > 0`" control (physics review 5478835029,
+    G1, round 3; it replaces round 2's "reads the buffered masses, sampled past the `ε_m` buffer's reach");
+  - `area_stats_primary_range` checks B5's order: a pixel failing both layer 2 and `Φ` counts as forbidden, one where
+    only `Φ` fails is the domain's end, and a classifier running `Φ` before `validate` fails (physics F1);
+  - A4's screen-lane consequence is stated in render_gui_spec §G1, and the "identical underneath" checks of REQ-GUI-070
+    and REQ-GUI-100 read "over the shown figure's rect, with a stain that reads no screen-lane field" (gui G5); the
+    mock's stand-in is drawn from the field placement, not the screen lane (TASK-M6-30's note).
+- RQ-263 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line; RQ-264 is filed in
+  `REVIEW_QUEUE.md`. R-408 is in the "physics" group of `plan/rule_groups.yaml`, with R-407.
+
+Adds REQ-CHART-056 and REQ-CHART-057; REQ-CHART-054's statement, verify, rulings, sources and note, REQ-GUI-109's
+rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and REQ-GUI-100's verify change.
+
+## R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
+*10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
+what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
+Settled by the notes (record)" (items 7 and 9),
+`docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" and § "07 Keyboard — design note, not a
+screen" (conformed); the follow-up answers in render_gui_spec § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (the key table, the in-scope keys, the two modes and the console), § "G4. Lock — the reticle and
+the pin (`08_lock.png`)" (K), § "G12. Console (`12_console.png`)" (the entry list), GUI_DESIGN_NOTES § "07 Keyboard —
+design note, not a screen" and § "08 Lock — the reticle and the pin", R-404's and R-405's heading blocks, REQ-GUI-091, REQ-GUI-096, REQ-GUI-097, REQ-GUI-098, REQ-GUI-158, REQ-GUI-169, REQ-GUI-170 and
+REQ-GUI-178 (reqio), REQ-GUI-181 to REQ-GUI-184 (reqio, new), TASK-M6-31 (new), TASK-M6-25, TASK-M6-26, TASK-M6-27,
+TASK-M6-28, TASK-M6-29, TASK-M6-30, TASK-M8-07 and TASK-M8-13, `plan/tasks.yaml`, `plan/reviewers/gui.md`,
+`plan/WORKFLOW.md`, `plan/OPERATIONS.md`, `plan/MILESTONES.md` and `plan/rule_groups.yaml`; built by TASK-M6-31 on the
+mock*
+
+The human tried the mock GUI after TASK-M6-26 (PR #183, the Manifold view group and the compass) merged, and wrote, in
+their own words:
+
+> Right, this is just my immediate reactions to the GUI. Mainly this is me pertaining to the compass. I'm not entirely
+> sure if the compass even needs, like, an orbit camera. I think the sort of, like, orthographic view, where you just
+> see, like, from its default angle, is good enough. And then, you know, then the default click when you have it in
+> tilt mode, as in, like when you're clicking and dragging, you're tilting, right? And then the button next to it, I
+> should be able to click on that and go into slice mode, and then when I drag, it moves slice about. Instead it doesn't
+> do that. It, like, tries to tilt. You should be able to click on this compass and slice that way. Yeah. Let's see
+> what else. Yes, this look works good. With the navigation, right? The keyboard navigation, right? So it should be
+> orange when you're navigating, and when you're interacting with an element, it turns blue. Because right now as
+> well, there's a problem where when I enter a scope that then has a slider, I can't then press down to navigate to the
+> slider below. I'm then sliding on that slider, and I can't then, like, go between each individual slider, or, like,
+> button, or thing, because immediately when I press enter into a scope, I immediately start interacting with the first
+> element within that scope. But that shouldn't be the case. Like, I should be in navigation mode, and then it's only
+> when I'm hovering over that slider and then I then press enter, I should enter interaction mode, and then, like, all
+> my inputs get, like, put into actually interacting with it. And then if I then press escape, I then exit the
+> interaction mode and I go back into navigation, and then if I press escape again, I then go up a scope. It's close,
+> what you've got here, but it's not perfect.
+>
+> Also, I, I can't get into the things to open and close the console through keyboard navigation. And also, yeah, I
+> know it's probably not implemented right now, but you can't, like, actually open the console. But also you should be
+> able to get into this through keyboard navigation, which you can't right now.
+
+The orchestrator asked four follow-up questions. The human's answers, in their own words (each option's text, which the
+human chose, in brackets):
+- *"With the orbit gone, what should Shift+arrows do on the compass? (R-404 currently gives Shift+arrows a 5° orbit
+  step.)"* — "fine step while on the compass, also allow to naviagte between the tilt or slice buttons on the keyboard
+  if that's not already a thing (obv not with shift + arrows), also maybe shift arrows is the wrong thing, should be
+  like you press enter to enter interaction mode with the compass when hovering over it on the keyboard nav cusrsor ==
+  inputs interact with compass"
+- *"Once the compass has a tilt/slice button, should touching a slice or tilt slider still switch the compass's mode by
+  itself?"* — "Yes, both" [The button switches the mode, and touching a slider still switches it to match; the button
+  always shows the current mode.]
+- *"In slice mode, what does dragging on the compass do?"* — "Move along normal" [Dragging anywhere on the compass moves
+  the slice plane along its normal; the plane's tilt stays fixed.]
+- *"Tab lands directly on the Figure and the Compass, which are themselves adjustable values. Should landing on them
+  start in navigation mode (orange; Enter to interact)?"* — "Navigation first" [Every landing is navigation mode,
+  including Figure, Compass and the console's first filter; Enter always starts interaction.]
+
+(Messages of 10 Oct 2026, given in the orchestrator's session; numbered by the orchestrator, the next free number. Each
+is a GUI design ruling under R-390's feedback rule.)
+
+*Applied reading (R-369).* The orchestrator's reading of the words above, applied per R-369 and flagged to the human;
+these six points are the orchestrator's, not the human's words. The human may veto any; a veto is a GUI design ruling,
+applied by a follow-up task.
+*Accepted by R-416 (10 Oct 2026): no veto.*
+1. **The compass's view: there is no orbit.** The compass is a fixed orthographic view at its default angle. The orbit
+   drag, Shift+arrows' orbit and R-404's `Orbit` base step (5°) are retired. The code's default angle
+   (`crates/gui/src/explore/compass.rs`, `ORBIT`, yaw −35°, pitch 25°) stays, as a look choice under R-390.
+2. **The compass's modes.** The compass has two buttons, **Tilt** and **Slice**, which can be clicked, and which are
+   keyboard-navigable siblings in navigation mode, Enter activating one. Tilt is the default. In tilt mode, dragging
+   tilts the plane. In slice mode, dragging anywhere on the compass moves the slice plane along its normal and leaves
+   the tilt fixed. Touching a slice or tilt slider still switches the mode to match, and the buttons always show the
+   current mode. So "switches mode by itself" (render_gui_spec §G2; GUI_DESIGN_NOTES § "01 Explore"; REQ-GUI-091;
+   REQ-GUI-170; R-390's ORDER item 3) is no longer the only mechanism: it is kept, beside the buttons.
+3. **The compass from the keyboard.** In navigation mode the compass is one focusable element. Enter on it starts
+   interaction mode, and then all input goes to the compass: the arrows tilt in tilt mode and move the slice in slice
+   mode, and Shift+arrows do the same with a fine step. The fine step's size is a look choice under R-390. The human's
+   "maybe shift arrows is the wrong thing" is read as about the orbit on Shift being replaced by Enter-to-interact (the
+   human's "press enter to enter interaction mode with the compass … == inputs interact with compass"), not as removing
+   Shift+arrows' fine step, which the same answer asks for; flagged. *(Superseded in part by the human's follow-up
+   answer, F3 below: on the compass, as everywhere, Shift is ×10 and Alt ×0.1, so Alt is the fine step and there is
+   no separate one. This point's "Shift+arrows do the same with a fine step", and its reading that kept it, no longer
+   apply; the text stays as the record.)*
+4. **Two keyboard modes, everywhere.**
+   - **Navigation mode** has an orange focus ring. The arrows move between siblings.
+   - **Interaction mode** has a blue focus ring. Input goes to the focused element. *(Read with G1 below: the
+     element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep their meaning, except that while a text field
+     is being typed in, Ctrl+Z, `?` and the shortcuts go to the field (G5), and Esc and Enter return to navigation
+     mode.)*
+   - Entering any scope, and every Tab landing (the Figure, the Compass and, under R-405, the console's first filter
+     included), lands in navigation mode on the first element. *(Read with the human's follow-up answer, F4 below: a
+     Tab landing is on the big scope itself, in navigation mode, and Enter into a scope lands on its first element.)*
+   - Enter on an element starts interaction. Esc in interaction mode returns to navigation mode on the same element.
+     Esc in navigation mode goes up one scope.
+   - The blue is R-404's colour, egui's dark theme's `hyperlink_color`. The exact orange is a look choice under R-390.
+   - This amends render_gui_spec §G3's key table, REQ-GUI-096, REQ-GUI-098 (its "nothing else changing" now lets the
+     ring's colour show the mode), REQ-GUI-169 and R-404's single ring colour.
+5. **The console.** The human's second paragraph is ruled already, by R-405 (the footer is big scope 8; Enter on it
+   opens the console, a window, with the focus in it), and planned, by TASK-M6-28 (REQ-GUI-178), which is not yet
+   built. R-409 restates it: the footer and the console must be reachable by keyboard, and both follow point 4's modes.
+   Nothing else about R-405 changes. *(Superseded in part by the human's follow-up answer, F2 below: the console's
+   entry list scrolls with ↑ ↓ only after Enter on it.)*
+6. **"Yes, this look works good"** is read as approving the navigation look only. It does not settle any look choice
+   left open under R-390.
+
+*Applied per R-369 (mechanical consequences and routine design choices of the reading above; the human may veto any):*
+*Accepted by R-416 (10 Oct 2026): no veto.*
+- **A1. A button acts on Enter.** Enter on a button (point 2's Tilt and Slice, R-405's console filters, copy and clear,
+  a menu entry) acts as its click and leaves the focus in navigation mode on it: a button has no interaction to hold.
+  Enter on a scope goes into it; Enter on an adjustable element (a slider, a value, the Figure, the compass) starts
+  interaction.
+- **A2. The Compass scope's siblings.** Point 2's "siblings" and point 3's "one focusable element" are read together:
+  the Compass, big scope 5, holds three elements in navigation mode, the compass itself, then Tilt, then Slice. A Tab
+  landing is on the Compass scope, in navigation mode; Enter goes in, onto the compass; the arrows move to Tilt and
+  Slice; Enter on the compass starts interaction (point 3). A Tab landing is on the big scope itself, as REQ-GUI-095
+  has it (Enter on Manifold view enters Chart), so point 4's "on the first element" is read as an entered scope's first
+  element; the Figure, a big scope with no elements inside, takes Enter as the start of interaction. Flagged;
+  TASK-M6-31 records it. *(Confirmed by the human's follow-up answer, F4 below.)*
+- **A3. "Along its normal".** In slice mode a drag moves the centre `z₀` along the unit normal of the plane as the
+  compass draws it, the direction perpendicular to both of the plane's tilted in-plane directions in the compass's
+  frame, one `SetField` on `z₀` coalesced per drag (R-96), the tilt and `γ` unchanged; locked, it is an excursion along
+  that line through the anchor (chart_decoder_contract § "The lock (projective microscope)"). Untilted, the normal is
+  the hidden slice direction, so the drag moves the slice step.
+- **A4. The slice-mode arrows' base step is a calibration (R-71).** The arrows in slice mode move the slice along the
+  normal by a base step no ruling gives. It is REQ-GUI-184 (new, M8, calibration): TASK-M6-31 proposes it with its
+  reasoning, it is used provisionally (R-182), and the human confirms it at the M8 gate. The fine step of point 3 is a
+  look choice under R-390, as the orchestrator read it, and not part of REQ-GUI-158 or REQ-GUI-184. *(The fine step is
+  superseded by the human's follow-up answer, F3 below: there is none apart from Alt ×0.1. REQ-GUI-184 stays.)*
+- **A5. Where the mode lives.** The keyboard's mode is held with the focus, `ViewUI`'s keyboard focus scope
+  (gui_state_contract §2): it is never undoable and the engine never reads it. A field added to the contract re-runs the
+  conformance suite on both engines (R-390). The compass's mode stays the GUI's own state, as TASK-M6-26 built it.
+- **A6. The breadcrumb's colour.** R-404 put the breadcrumb in the ring's colour. Whether it follows the ring's mode or
+  keeps the blue is a look choice under R-390, made by TASK-M6-31 and recorded in its PR.
+- **A7. Where it lands.** Four new requirements, closed by **TASK-M6-31 (new, M6)**, "Compass modes and keyboard
+  navigation/interaction modes in the mock (R-409)": **REQ-GUI-181** (the compass's view and modes, M6),
+  **REQ-GUI-182** (the two keyboard modes, M6), **REQ-GUI-183** (the compass from the keyboard, M6) and
+  **REQ-GUI-184** (A4's calibration, M8). TASK-M6-31 depends on TASK-M6-26 (merged); reviewers code, qa and gui, as the
+  track's tasks are; it is a GUI-track task under R-390, merging without waiting for the gates of M1 to M5, as
+  TASK-M6-24 to TASK-M6-30 do (`plan/WORKFLOW.md`, `plan/OPERATIONS.md` and `plan/MILESTONES.md` name TASK-M6-30 and
+  TASK-M6-31 with the track). **TASK-M6-27 depends on TASK-M6-31** as well, so the later track screens build on the
+  new keyboard model; TASK-M6-28, TASK-M6-29 and TASK-M6-30 follow through TASK-M6-27, and TASK-M8-07 and TASK-M8-13,
+  which re-run the compass and the keys on the real engine, through TASK-M6-27 and TASK-M6-28.
+- **A8. The reworded requirements** keep their ids and their closing tasks (reqio): REQ-GUI-091 and REQ-GUI-170 (the
+  compass), REQ-GUI-096, REQ-GUI-097, REQ-GUI-098 and REQ-GUI-169 (the keys and the ring), REQ-GUI-158 (no `Orbit`
+  step) and REQ-GUI-178 (the console's landing is in navigation mode). TASK-M6-25's and TASK-M6-26's acceptance lines
+  (merged) stay as their record, each with a Notes line pointing here; TASK-M6-31 re-checks REQ-GUI-091, REQ-GUI-098,
+  REQ-GUI-169 and REQ-GUI-170 on the mock as now worded; TASK-M8-07 and TASK-M8-13 re-run them on the real engine.
+  The re-check lines in TASK-M6-27, TASK-M6-28 and TASK-M6-29 that restate REQ-GUI-169's old Enter and Esc read point
+  4's modes, and TASK-M6-30's check that the ring's colour is unchanged reads the interaction-mode colour.
+- **A9. qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-25.rs` (the arrows adjusting a value
+  reached by Enter on its section, with no Enter on the value; `StepKind::Orbit`), `crates/gui/tests/qa_TASK-M6-26.rs`
+  (the compass's orbit, Shift+arrows, its arrows tilting with no Enter; its default mode) and
+  `crates/gui/tests/qa_TASK-M6-25_recheck.rs` where it relies on the same, assert what this ruling changes. Every
+  earlier commit of each is qa's, so TASK-M6-31's qa reviewer changes those assertions in the task's qa commit, and
+  only those; the implementer never edits them. The PR lists each change with its reason, and the code reviewer
+  confirms that no assertion was weakened but the ones R-409 changes.
+- **A10. The artboards are not edited.** `docs/gui/design/01_main.png` (the compass's "slicing / tilting" labels and its
+  "drag the cube to orbit" hint) and `docs/gui/design/07_keyboard.png` (its single blue ring) are superseded on these
+  points by this ruling, which sits above them in R-390's source order. A screenshot compared against them is read with
+  this ruling; render_gui_spec §G13 lists both.
+- R-409 is in the "design" group of `plan/rule_groups.yaml`, with R-390 and R-404.
+
+*Follow-up answers (10 Oct 2026).* The first port of this ruling (PR #186) listed seven conflicts that the readings
+above do not settle. The orchestrator put four questions to the human, who answered in their own words, each time
+choosing an option (the option's text, which the human chose, in brackets):
+- *"Scopes like Time and the Figure have their own keys (Time: Space plays, ← → step; Figure: + / −, L, K). Under the
+  new modes, when do these act?"* — "Arrows need Enter" [In navigation mode arrows always move between siblings;
+  Time's ← → step only after Enter into interaction. Letter/Space keys (Space, +/−, L, K) still work as shortcuts
+  whenever the scope is focused, in either mode.]
+- *"The console's entry list is scrolled with ↑ ↓ (R-405). Does that need Enter first?"* — "Enter first" [Consistent
+  with everything else: land in navigation, Enter, then ↑ ↓ scroll the list; Esc back out.]
+- *"On the compass in interaction mode, what do the modifiers do? (Elsewhere Shift is ×10 and Alt is ×0.1.)"* — "Match
+  elsewhere" [Shift ×10, Alt ×0.1 on the compass too, so Alt is the fine step. Keeps one rule for the whole app.]
+- *"When you Tab onto the Compass (or any big scope), where does the cursor land?"* — "On the scope" [As REQ-GUI-095
+  has it: the whole scope is highlighted; Enter goes in onto its first element (compass, then Tilt, Slice), Enter again
+  to interact.]
+
+(Given in the orchestrator's session, 10 Oct 2026. The conflicts are numbered as PR #186's body listed them: 1, Time's
+← → against navigation-mode arrows; 2, which in-scope keys act in navigation mode; 3, the console's entry list; 4,
+the compass's Shift against Alt and REQ-GUI-158; 5, the slice-mode arrow step; 6, "along its normal" against the
+slice-step slider; 7, the Tab landing against "on the first element".)
+
+*Applied reading of the follow-up answers (R-369).* The orchestrator's reading, applied per R-369 and flagged; not the
+human's words. The human may veto any; a veto is a GUI design ruling, applied by a follow-up task.
+*Accepted by R-416 (10 Oct 2026): no veto.*
+- **F1. Arrows need Enter; letters and Space are shortcuts (conflicts 1 and 2).** In navigation mode the arrows always
+  move between siblings, in every scope, the Figure and Time included. A scope's arrow actions act only in interaction
+  mode, after Enter: the Figure's pan, Time's ← → step and the compass's tilt and slice. A scope's letter and Space
+  keys are shortcuts that act whenever the focus is in that scope, on the scope itself or on an element inside it, in
+  either mode: the Figure's + / − (zoom), Space (keep the orbit), L (listen) and K (lock, render_gui_spec §G4), and
+  Time's Space (play). A text field holding the keyboard still takes every key, as #174 built. Time is a scope with
+  children (play, step, the scrubber, speed; TASK-M6-27): applied per R-369, its ← → step the time, by R-404's
+  `TimeStep`, in interaction mode on the scrubber, the adjustable element they step; Enter on the step button acts as
+  its click (A1).
+- **F2. The console's entry list needs Enter (conflict 3).** The entry list lands in navigation mode, where ↑ and ↓ do
+  not scroll it; Enter on it starts interaction mode, ↑ and ↓ then scroll it, and Esc returns to navigation mode on
+  the list. In the console's other sections the arrows move between siblings in navigation mode (between the filters,
+  between copy and clear), as R-405 has them. This amends R-405 in part, where it says "↑ and ↓ scroll the entry
+  list": R-405 stays, with its forward line and its "Still in force" line, and point 5's "Nothing else about R-405
+  changes" is superseded on this point.
+- **F3. The compass's modifiers match everywhere else (conflicts 4 and 5).** In interaction mode on the compass, Shift
+  is ×10 and Alt ×0.1, as REQ-GUI-096 has them everywhere: the arrows tilt by R-404's `Tilt` step in tilt mode and
+  move the slice along the normal by REQ-GUI-184's step in slice mode, each ×10 with Shift and ×0.1 with Alt. Alt is
+  the fine step, and the compass has no separate one. The earlier reading, point 3's "Shift+arrows do the same with a
+  fine step" and A4's "the fine step of point 3 is a look choice under R-390", is superseded by this later answer of
+  the human's; its text stays above, marked, as the record. Conflict 4 goes with it: Shift no longer makes the step
+  smaller, and the compass's steps are REQ-GUI-158's `Tilt` and REQ-GUI-184, with the global modifiers. Conflict 5 is
+  settled the same way: REQ-GUI-184, the base step of the slice-mode arrows, stays a calibration under R-71, proposed
+  by TASK-M6-31, used provisionally (R-182) and confirmed by the human at the M8 gate; with no fine step, nothing else
+  of the compass's keys is a value to choose.
+- **F4. A Tab lands on the scope (conflict 7).** A Tab or Shift+Tab landing is on the big scope itself, the whole
+  scope highlighted, in navigation mode, as REQ-GUI-095 has it; Enter goes in onto its first element (on the Compass,
+  the compass, then Tilt and Slice), and Enter again on an element starts interaction. A2's reading is confirmed, and
+  point 4's "every Tab landing … lands in navigation mode on the first element" reads "on the big scope" for a Tab
+  landing. The Figure, a big scope with no elements inside, takes Enter as the start of interaction (A2).
+- **F5. Left to physics (conflict 6).** Whether the slice-mode drag along the drawn plane's normal (A3) and the
+  slice-step slider's hidden slice direction, which differ once the plane is tilted, only change which slice is
+  viewed and not any result is not settled here. The physics reviewer confirms it on PR #186; if it does not, it goes
+  to `REVIEW_QUEUE.md`.
+- **F6. Where it lands.** render_gui_spec §G3 (the table's Tab, arrows and Shift · Alt rows, a row for the shortcuts,
+  the in-scope keys, the two modes and the console), §G4 (K) and §G12 (the entry list); GUI_DESIGN_NOTES § "07
+  Keyboard" and § "08 Lock" (conformed); REQ-GUI-096, REQ-GUI-097, REQ-GUI-158 (its note), REQ-GUI-178, REQ-GUI-182,
+  REQ-GUI-183 and REQ-GUI-184 (reqio, reworded, ids kept); TASK-M6-31 (the compass's modifiers, the shortcuts in
+  either mode, the Tab landing), TASK-M6-27 (Time's keys), TASK-M6-28 (the entry list), TASK-M8-13 (the in-scope and
+  global keys on the real engine) and `plan/reviewers/gui.md`.
+
+*Applied reading (R-369), review round.* The orchestrator's decisions on gui review 5480658825's findings 1 and 2 and
+code review 5480660052's C1 on PR #186 (G1 to G4), and on gui review 5480688180's findings A and B (G5, G6), with gui
+review 5480701701's mechanical follow-ups, applied per R-369 as routine design choices and flagged; these are the
+orchestrator's, not the human's words, and the human may veto any (a veto is a GUI design ruling, applied by a
+follow-up task).
+*Accepted by R-416 (10 Oct 2026): no veto.*
+- **G1. Keys in interaction mode.** The focused element takes the arrows, with Shift ×10 and Alt ×0.1. Tab and
+  Shift+Tab, Ctrl+Z and `?` keep their global meaning in both modes, except while a text field is being typed in
+  (G5); Tab or Shift+Tab from interaction mode leaves it and lands in navigation mode on the next or previous big
+  scope, or, inside a window, on the window's next or previous section (G6). The letter and Space shortcuts keep their meaning in
+  both modes (a scope's shortcuts, whenever the focus is in that scope, F1), except while a text field is being typed
+  in (G4). Esc in interaction mode returns to navigation mode on the same element (point 4), and so does Enter. Point
+  4's "Input goes to the focused element" and point 3's "all input goes to the compass" are read this way.
+- **G2. The arrows on a big scope.** In navigation mode, with the focus on a big scope itself (after a Tab landing, or
+  after Esc up to it), the arrows move between the big scopes in Tab order: at the top level the big scopes are the
+  siblings.
+- **G3. Enter on a scope with nothing inside.** Enter on a scope goes in onto its first element (F4), with one
+  exception: the Figure, which has no elements inside, takes Enter as the start of interaction (A2). Enter on a
+  read-only scope with nothing to enter or interact with, such as the Legend, does nothing.
+- **G4. A text field (the console's text filter).** Landing on a text field is navigation mode, and the arrows move on
+  from it as from any element. Enter on it starts typing, which is interaction mode; while typing, every key goes to
+  the field except Esc, Enter and Tab. Esc and Enter return to navigation mode on the field and keep the text; Tab and
+  Shift+Tab leave the field and move on, as G1 has it. F1's "A text field holding the keyboard still takes every key"
+  is read this way.
+- **G5. Ctrl+Z and `?` while typing (gui review 5480688180, finding A).** While a text field is being typed in,
+  Ctrl+Z and `?` go to the field, like every other key except Esc, Enter and Tab: Ctrl+Z undoes the text edit, and
+  `?` types a character. Once typing ends, they are global again.
+- **G6. Tab from interaction mode inside a window (gui review 5480688180, finding B).** Inside a window, Tab and
+  Shift+Tab from interaction mode move to the window's next or previous section, in navigation mode, and stay in the
+  window, as the window rule has it. Outside a window, G1's rule holds: the next or previous big scope.
+- **Where it lands.** render_gui_spec §G3 (the table's Enter, Esc, arrows, letters, Tab, Ctrl+Z and `?` rows and the
+  "Two modes" paragraph); GUI_DESIGN_NOTES § "07 Keyboard" (conformed); REQ-GUI-096 and REQ-GUI-182 (statement and
+  verify), REQ-GUI-178 (the text filter), REQ-GUI-183 (the sibling order, gui finding 3) and REQ-GUI-098 (A6's
+  parenthetical, gui finding 4) (reqio); TASK-M6-31's deliverables and acceptance, each with a control; TASK-M6-28 (the
+  text filter); and `plan/reviewers/gui.md`. G5 and G6 land in §G3's Tab / Shift+Tab, Ctrl+Z and `?` rows, its "In scope" sentence and
+  "Two modes" paragraph, GUI_DESIGN_NOTES § "07 Keyboard" (conformed), REQ-GUI-096's and REQ-GUI-182's statements,
+  REQ-GUI-178's statement and verify (reqio), TASK-M6-31's scopes.rs deliverable, TASK-M6-28's console deliverable and
+  REQ-GUI-178 line (each with a control), and `plan/reviewers/gui.md`.
+
+*What it supersedes* (the line numbers are main's at `4235c3e5`, before this port, except decisions.md's, which are
+this file's):
+- `docs/gui/principia_render_gui_spec.md:126–129` (§G2's compass: "switches mode by itself …"; "Dragging the plane
+  tilts; dragging the cube orbits"), `:151–154` (§G3's table: Tab, Enter, Esc and arrows, now by mode), `:161` ("Compass —
+  arrows tilt, Shift+arrows orbit"), `:164–165` ("a focus ring on the current scope … Nothing else changes on screen",
+  now with the ring's colour showing the mode), `:435` (§G14 item 7, "The compass switches mode by itself") and `:437`
+  (§G14 item 9).
+- `docs/gui/design/GUI_DESIGN_NOTES.md:39–41` (the compass, "switches mode by itself"; "dragging the cube orbits") and
+  `:100–102` ("Enter drills in; Esc backs out"; "a focus ring and the top-bar breadcrumb, nothing else").
+- `decisions.md:6225–6227` (R-390's ORDER item 3, "the compass (switching slice and tilt by activity, …)": the buttons
+  added beside it), `decisions.md:7255–7256` (R-404's ring colour, now interaction mode's only) and
+  `decisions.md:7278` and `:7281–7282` (R-404's `Orbit` row and its note on Shift).
+- `plan/requirements.yaml:13050` (REQ-GUI-091), `:13143` (REQ-GUI-096), `:13159` (REQ-GUI-097), `:13170`
+  (REQ-GUI-098), `:14129` (REQ-GUI-158's "orbit" and its `Orbit` value), `:14323` (REQ-GUI-169) and `:14340`
+  (REQ-GUI-170), each reworded.
+- `crates/gui/src/explore/compass.rs:36`, `:54`, `:83–86`, `:152–167` and `:215–231` (the orbit) and `:245–256` (the
+  mode labels), `crates/gui/src/keyboard/scopes.rs:324–419` (`browsing`, the arrows adjusting a value reached by
+  Enter on its section, and Esc always popping a level) and `crates/gui/src/explore/breadcrumb.rs:22–52` (the ring's
+  single colour, point 4 and A6): the code TASK-M6-31 changes.
+- By the follow-up answers (F1 to F4; this branch's lines before they were ported, at `fb169f14`):
+  `docs/gui/principia_render_gui_spec.md:155`, `:158` and `:159` (§G3's Tab, arrows and Shift · Alt rows, now with the
+  Tab landing on the scope, the arrows always between siblings in navigation mode, and the modifiers on the compass
+  too), `:164–167` (the in-scope keys, now arrows in
+  interaction mode only and the shortcuts in either mode; the compass's fine step), `:188` (the console's arrows, now
+  with the entry list's Enter), `:196` (§G4's K) and `:427–428` (§G12, a sentence added); `decisions.md:7339` (R-405's "↑ and ↓ scroll the
+  entry list", amended in part); R-409's own point 3 and A4 (the compass's fine step), marked above; REQ-GUI-097's,
+  REQ-GUI-183's and REQ-GUI-184's fine step, REQ-GUI-158's note on it, REQ-GUI-178's arrows and REQ-GUI-182's Tab
+  landing; and TASK-M6-31's fine-step constant and its look choice.
+
+Adds REQ-GUI-181 to REQ-GUI-184; REQ-GUI-091's, REQ-GUI-096's, REQ-GUI-097's, REQ-GUI-098's, REQ-GUI-169's and
+REQ-GUI-170's statements, verify, rulings, sources and notes, REQ-GUI-158's statement and note and REQ-GUI-178's
+statement, verify, rulings, sources and note change. The follow-up answers change REQ-GUI-096's, REQ-GUI-097's,
+REQ-GUI-178's, REQ-GUI-182's and REQ-GUI-183's statements, verify and notes, REQ-GUI-184's statement and note and
+REQ-GUI-158's note, and add no requirement. The review round (G1 to G4) changes REQ-GUI-096's, REQ-GUI-178's,
+REQ-GUI-182's and REQ-GUI-183's statements and verify and REQ-GUI-098's statement, and adds no requirement; G5 and G6
+change REQ-GUI-096's and REQ-GUI-182's statements and REQ-GUI-178's statement and verify.
+
+## R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*
+*10 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "Outcome (all at joint `class ⊕ detail`
+grain)" (the type; a paragraph added) and § "3.7 `QuadReduction` — completed ledger" (the "Size" paragraph),
+`docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact" (a paragraph added),
+`docs/design/principia_systems_architecture.md` and `docs/contracts/principia_render_contract.md` § "Part 1 — The
+payload (render input)" (the ~80 B figure), `docs/contracts/principia_canonical_spec.md` § "6. Memory & deployment
+model" (likewise), `plan/reviewers/perf.md`, REQ-PAY-006, REQ-PAY-075, REQ-PAY-077, REQ-PAY-089, REQ-REF-001 and
+REQ-SYS-036 (reqio), REQ-SCHED-098 (reqio, new), TASK-M5-01 (perf added to its reviewers), TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-266 archived) and `REVIEW_QUEUE.md`; built by TASK-M5-01 and TASK-M5-17*
+
+The orchestrator put RQ-264, RQ-265 and RQ-266 to the human, with RQ-267 (filed in PR #187), the rustup cache, early
+merging and the open "veto" items. The human replied, in their own words ("This is from me."), in one message, which
+R-410 to R-416 record. The whole message, once:
+
+> This is from me.
+> RQ-266: (a) u32 bins. State the bound (overflow needs more than about
+> 4.2 M copies per footprint at N = 32, which can't be allocated) and
+> assert it at dispatch. No settings are capped. Perf to confirm the
+> size cost to QuadReduction.
+> RQ-265: (c) range-free forms everywhere: §3.6 adopts the debug views'
+> log form with its per-field ε, and the symlog diverging form. The drift
+> views and goldens are unchanged. An explicit range for a stain may come
+> later as an optional parameter, not as a second built-in map.
+> RQ-264: (a) remap the span to end at the equator, and continue the
+> formula past it (the mirror hemisphere: real, repeated systems). The
+> primary range is pole to equator, so the continuation isn't counted.
+> RQ-267: (a) density. Reword σ's note to "edge-heavy: crowds the
+> bounds".
+> ~/.rustup: leave stable at 1.99.0. RUSTUP_AUTO_INSTALL=0 in every
+> dispatch is the right prevention; toolchains change only through the
+> pin (R-349).
+> Merging early: a task may merge before an earlier milestone's gate if
+> its dependencies have merged and it relies on no value or behaviour
+> that gate calibrates or could change. Check M7-02 to M7-04 against
+> that, after the fact; M7-05 merges early only if it passes the same
+> test (it also waits on RQ-265's port).
+> Look choices (M6-26, and M6-31's when it lands): hold until I've tried
+> the M6-31 mock.
+> No vetoes on R-409, R-400's scope, R-407/R-408's consequences
+> (including B1 and A7), #182, or RQ-267's docs-only filing.
+
+(Message of 10 Oct 2026. The human numbered none of it; the orchestrator gave each part its own ruling from the next
+free number, in the message's order: R-410 RQ-266, R-411 RQ-265, R-412 RQ-264, R-413 RQ-267, R-414 the rustup cache,
+R-415 early merging, and R-416 the look choices and the vetoes, which are one act of holding and accepting.)
+
+This ruling's part:
+
+> RQ-266: (a) u32 bins. State the bound (overflow needs more than about
+> 4.2 M copies per footprint at N = 32, which can't be allocated) and
+> assert it at dispatch. No settings are capped. Perf to confirm the
+> size cost to QuadReduction.
+
+*What it decides:*
+- **RQ-266's option (a): each bin of `class_histogram` is a u32.** §3.7's `u8 × N` becomes `u32 × N`. The width is
+  fixed; it does not follow the setting (option (b) is not taken), so `QuadReduction`'s layout does not depend on the
+  sim key's `N` or `E`.
+- **The bound is stated.** A u32 bin counts at most 2³² − 1. A quad holds `N² × (E+1)` footprint copies (`N` the
+  samples per quad side, memory_tiers §4, not the bin count; `E+1` the copies per footprint), so a bin overflows only
+  if `N² × (E+1) > 2³² − 1`. At `N = 32`, Custom's largest on a 1024-invocation adapter (memory_tiers §5), that needs
+  more than about 4.2 M copies per footprint (2³²/1024 ≈ 4.19 × 10⁶), which can't be allocated. dd_generation_root
+  §3.7 states it.
+- **It is asserted at dispatch:** dispatch asserts `N² × (E+1) ≤ 2³² − 1`.
+- **No settings are capped.** Custom's `E` and `N` keep their ranges (memory_tiers §5; §7's "none blocking"); option
+  (c), refusing or clamping a setting, and option (d), saturating with a flag, are not taken.
+- **Perf confirms the size cost to `QuadReduction`.** u32 bins make the struct larger than §3.7's u8 bins would; the
+  perf reviewer confirms that cost on TASK-M5-01, which sizes it.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **The assertion is a hard assertion,** as REQ-SCHED-010's is for `horizon_steps × N_max ≤ 2³²−1` (dd_simstate_payload
+  § "8. Build-time settles", "Also assert the joint `horizon_steps × N_max ≤ 2³²−1`"): it fails loudly at dispatch,
+  naming the bound, and is never a clamp, a refusal in the settings UI or a wrap. Since no setting that can allocate
+  reaches the bound, it never fires in use; it guards against a wrong `N` or `E` reaching the kernel. It is
+  **REQ-SCHED-098 (new, M5)**, closed by **TASK-M5-17**, the resolve stage whose dispatch fills the histogram, with an
+  acceptance test and a control: a configuration at the bound passes and one past it fails the assertion. TASK-M5-17
+  already depends on TASK-M5-01, which writes the bound into §3.7.
+- **REQ-PAY-075** keeps the bin count, its definition (the joint class ⊕ detail set, TASK-M5-01's); its statement now
+  gives the width as u32 (R-410) and asks that §3.7 state the bound, and its verify asks that
+  `quad_reduction_histogram_capacity` run at Extreme's provisional 16² × 16 = 4096 (R-137, R-398) and at the bound,
+  2³² − 1, with a control: §3.7's former u8 bin fails at Medium's 16² × 2 = 512. It loses `rq: RQ-266`.
+- **REQ-PAY-077 and REQ-PAY-089** lose `rq: RQ-266`: with a fixed width, the layout and size don't follow the setting.
+  REQ-PAY-089's "(about 80 B)" was §3.7's descriptive figure, not a cap, and is removed (next bullet); TASK-M5-01 sizes
+  the struct from its member list and writes in the measured figure. Each gains R-410 and a note.
+- **REQ-REF-001**'s "`class_histogram` (u8 × N)" becomes "(u32 × N, R-410)", following the source (the
+  requirements.yaml rule: the source wins).
+- **Perf joins TASK-M5-01's reviewers** (code, qa, physics, perf), with a review line: the perf reviewer confirms
+  `QuadReduction`'s aligned size with u32 bins and its cost at memory_tiers §3–§4's quad count (render pixels / N² at
+  each tier's `N`, at the largest display, plus their ancestors) (REQ-PAY-089).
+- **The stale ~80 B is no longer stated** (perf review 5481098292 of PR #189, P1 and P2). It gives no new number: the
+  size depends on the bin count, which TASK-M5-01 defines. dd_generation_root §3.7's "Size" paragraph (its "~4k quads
+  … ~0.3 MB" too), systems_architecture's Memory and Reduction rows and its two "big data never crosses" passages,
+  render_contract Part 1's opening, `plan/reviewers/perf.md` § "3. Memory tiers and budgets", REQ-PAY-089's and
+  REQ-SYS-036's statements (reqio) now say the size follows from §3.7's members with u32 bins and that TASK-M5-01
+  defines and measures it; TASK-M5-01's Deliverables write the measured figure into each. REQ-PAY-006's "the ~80 B
+  figure is not a cap" and TASK-M5-01's matching code-review line now read "QuadReduction's size (R-410; TASK-M5-01
+  measures it) is not a cap"; canonical_spec §6's "`QuadReduction` (~80 B)" is reworded likewise.
+- **The placement.** TASK-M5-01's note that "`u8 × N` needs a placement" (§3.8's vector rule reads a `u-bits`
+  component at a scalar index as a full u32) is settled by the width: each bin is a full u32. TASK-M5-01 still writes
+  the member order and packing (REQ-PAY-077).
+- **What TASK-M5-01 still holds for.** RQ-266 is ruled, so it no longer holds TASK-M5-01, TASK-M5-17 or the tasks
+  downstream of them. TASK-M5-01 is still held by the M1 gate (and the gates before M5), and by R-415's test if it is
+  to merge early.
+- RQ-266 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-410 is in the "design" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-SCHED-098; REQ-PAY-075's statement, verify, rulings, sources, note and `rq`, REQ-PAY-077's and REQ-PAY-089's
+rulings, sources, note and `rq`, REQ-PAY-089's statement, REQ-REF-001's statement, rulings, sources and note, and
+REQ-PAY-006's and REQ-SYS-036's statements, rulings and sources change.
+
+## R-411 — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*
+*10 Oct 2026 · applied in `docs/design/principia_dd_colouring.md` § "3.6 Compaction (payload scalar → b ∈ [0,1]; forms
+per ledger `scale`)" (the `log` and `diverging` rows; a paragraph added) and § "6. Deferred / flagged" (the symlog pin),
+REQ-COL-032, REQ-COL-039, REQ-COL-065 and REQ-COL-066 (reqio), TASK-M7-05, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-265 archived) and `REVIEW_QUEUE.md`; built by TASK-M7-05*
+
+The human's words (R-410 quotes the whole message):
+
+> RQ-265: (c) range-free forms everywhere: §3.6 adopts the debug views'
+> log form with its per-field ε, and the symlog diverging form. The drift
+> views and goldens are unchanged. An explicit range for a stain may come
+> later as an optional parameter, not as a second built-in map.
+
+*What it decides:*
+- **RQ-265's option (c), everywhere:** one form per scale serves the user-facing compaction (dd_colouring §3.6) and the
+  debug views alike, and neither form needs a range.
+- **`log`** is the debug views' form, `b = 1 − 1/(1 + ln(1 + |x|/ε_f))`, with each field's own ε: `dbg_log`'s place
+  (render contract, presentation layer; render_gui_spec §10.1). §3.6's `(ln x − ln lo)/(ln hi − ln lo)`, which needed a
+  finite positive `lo` and `hi` that the ledger does not declare, is replaced.
+- **`diverging`** is the symlog, `b = ½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`, with `x₀` the field's floor and no
+  `x_max`. With `s = sign(x)·ln(1 + |x|/x₀)` this is `½ + ½·s/(1 + |s|)`, the drift views' own `symlog` placement
+  (R-381). §3.6's ★ PIN on the symlog is confirmed by this ruling.
+- **The drift views and their goldens are unchanged** (R-381, R-401).
+- **An explicit range for a stain may come later as an optional parameter, not as a second built-in map.** No such
+  parameter is built now.
+
+*Applied per R-369 (mechanical consequences and readings; the human may veto any):*
+- **Each field's ε** is the one the debug template uses: the field's ledger `floor` where it has one (R-263, e.g. the
+  drifts' `eps_E` and `eps_L`), otherwise its per-field display floor `ε_f` (R-401, calibrated for the M1 gate).
+- **`log`'s sentinel clause.** §3.6's `x ≤ 0 → 0 with sentinel styling` becomes `x < 0 → 0 with sentinel styling`:
+  under the range-free form `x = 0` is in the domain and maps to `b = 0`, as `dbg_log` places it, and the ledger's log
+  fields declare `lo = 0` (e.g. `closure_min`). The stored −1.0 sentinel is still styled, never ramped (dd_colouring §5,
+  unit test 7). The human's words did not address the sentinel; this is a reading of "adopts the debug views' log form".
+- **REQ-COL-065** (the diverging form's definition, TASK-M7-05's) loses "what `x_max` is": there is none. It keeps how
+  `x₀` is chosen per `diverging` field, the drifts' being `eps_E` and `eps_L`, and `E_0`'s and `Lz_0`'s, which carry no
+  floor, by the rule it defines. **REQ-COL-066** (their number, a calibration for the M7 gate) loses "any fixed
+  `x_max`". **REQ-COL-039**'s statement gives the two forms. **REQ-COL-032** keeps its statement: each field's scale
+  comes from the ledger and now names one form. Each loses `rq: RQ-265` (REQ-COL-066 carried none) and gains R-411.
+- **TASK-M7-05** follows: its Goal's forms, its §3.6 deliverable and its acceptance lines lose `x_max` and "waits on
+  RQ-265"; its RQ-265 note becomes R-411's outcome. It is still held by the M1 gate (and the gates before M7), and
+  merges early only by R-415's test, once this port has merged.
+- **`compaction_forms`** (dd_colouring unit test 7) is unchanged in what it checks: each form monotone on its domain;
+  symlog `b(x) + b(−x) = 1` with `b(0) = ½` exactly; `log` styles the −1.0 sentinel instead of ramping it.
+- RQ-265 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-411 is in the "design" group of
+  `plan/rule_groups.yaml`, with R-381 and R-400.
+
+Changes REQ-COL-032's rulings, sources, note and `rq`, REQ-COL-039's statement, rulings, sources, note and `rq`,
+REQ-COL-065's statement, verify, rulings, sources, note and `rq` and REQ-COL-066's statement, verify, rulings and
+sources; adds no requirement.
+
+## R-412 — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*
+*10 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (sentences added and
+reworded) and § "5.4 Past the unit square — each axis's extension type (R-407)" (the sphere's row; a sentence
+reworded), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+(R-407)" (a sentence reworded), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" (a clause added), R-408's B4 (a line added), REQ-CHART-057, REQ-CHART-054 and REQ-CHART-056 (reqio),
+TASK-M8-44, TASK-M8-05, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-264 archived) and
+`REVIEW_QUEUE.md`; built by TASK-M8-44*
+
+The human's words (R-410 quotes the whole message):
+
+> RQ-264: (a) remap the span to end at the equator, and continue the
+> formula past it (the mirror hemisphere: real, repeated systems). The
+> primary range is pole to equator, so the continuation isn't counted.
+
+*What it decides:*
+- **RQ-264's option (a).** With the hemisphere toggle drawing one hemisphere, the chart's `[0,1]` span on φ is
+  remapped to run from a pole to the equator.
+- **Past the equator, the edge that is not a pole, φ's formula continues** into the mirror hemisphere, whose pixels are
+  real systems, repeated: the other hemisphere decodes to the same systems (R-141's fold). Option (b)'s bounded equator
+  edge is not taken.
+- **φ's primary range is pole to equator,** the chart's `[0,1]` span, so the continuation past the equator is not
+  counted: it leaves the count and the total, as any redraw outside a primary range does (R-408).
+
+*Applied per R-369 (mechanical consequences; the human may veto any):*
+- **The remap.** R-14's `φ = π·(1 − t)` becomes `φ = (π/2)·(1 − t)` with one hemisphere drawn: the pole `φ = 0` at
+  `t = 1`, as with both drawn, and the equator `φ = π/2` at `t = 0`. The hemisphere drawn is the upper, `w ≥ 0`, the
+  canonical decode's (chart_reference §3.3: "the canonical decode's β ∈ [0, π] keeps w ≥ 0"); the two hemispheres
+  decode to the same systems, so the choice changes no statistic. θ is unchanged.
+- **φ stays pole-crossing at its pole edge** (`t > 1`, R-407). Past the equator (`t < 0`) the formula continues to
+  `φ > π/2`, the mirror hemisphere; past `t = −1` it reaches the far pole, `φ = π`, and φ's declared pole-crossing
+  applies there as R-407 gives it for `φ > π` (θ shifted by π). Every such pixel is outside the primary range, so none
+  is counted, and none is hatched: each is a real system.
+- **With both hemispheres drawn nothing changes** (R-407, R-408; TASK-M8-05).
+- **REQ-CHART-057** states the ruling in place of "RQ-264's ruling", and its verify names the control: a φ axis built
+  to option (b), hatching past the equator, or one counting the continuation, fails. It loses `rq: RQ-264` and gains
+  R-412. REQ-CHART-054's and REQ-CHART-056's notes now name R-412.
+- **TASK-M8-44** follows: its Goal, deliverables, acceptance line and notes give the ruling; its title keeps its
+  "(RQ-264)", which the archive still resolves. TASK-M8-05's note on the one-hemisphere case names R-412.
+- **R-407's and R-408's applied text.** R-408's B4, which filed RQ-264, gains a line pointing here. B3's "RQ-264 is that
+  case" stands as the record; chart_reference §5.4's copy of it now reads "was that case … R-412 rules it".
+- RQ-264 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-412 is in the "physics" group of
+  `plan/rule_groups.yaml`, with R-407 and R-408.
+
+Changes REQ-CHART-057's statement, verify, rulings, sources, note and `rq`, and REQ-CHART-054's and REQ-CHART-056's
+notes; adds no requirement.
+
+## R-413 — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes "edge-heavy: crowds the bounds" *(closes RQ-267)*
+*10 Oct 2026 · recorded here; applied in PR #187 (TASK-M2-01), which carries RQ-267 and edits
+`docs/design/principia_dd_generation_root.md` § "3.9 The link registry (consolidated from chart contract Part 2.5)";
+`docs/archive/review_queue/M0.md` (RQ-267 archived here)*
+
+The human's words (R-410 quotes the whole message):
+
+> RQ-267: (a) density. Reword σ's note to "edge-heavy: crowds the
+> bounds".
+
+*What it decides:*
+- **RQ-267's option (a).** "Over- and under-samples relative to uniform" (chart_decoder_contract § "Integrity: the
+  link is part of the experiment") is the density of samples drawn with uniform controls, not the link's Jacobian
+  weight. Every registry entry's sampling note reads it so.
+- **§3.9's σ row's note is reworded** from "centre-heavy vs uniform" to "edge-heavy: crowds the bounds".
+
+*Applied per R-369 (where it lands; the human may veto any):*
+- **The σ row's reword is made in PR #187,** not here. RQ-267 was filed in #187 (physics review 5480715305, F6), which
+  adds §3.9's registry text and its "RQ-267 asks which reading holds" paragraph; this PR leaving §3.9 alone keeps the
+  two from conflicting there. #187's next fix pass rewords the σ row's note to "edge-heavy: crowds the bounds", drops
+  the open-question sentence of its new paragraph in favour of R-413, and deletes its open copy of RQ-267 from
+  `REVIEW_QUEUE.md`.
+- **RQ-267 is archived here,** in `docs/archive/review_queue/M0.md`, as it stood at #187's head `8b449829`, with its
+  Ruling line: `plan/OPERATIONS.md` § "Merging" ("An RQ open only on a PR branch. When a rulings PR rules on it, the
+  rulings PR archives it …; the task PR's next fix pass deletes its open copy"), since `plan/tools/rulings.py` rejects
+  a cited RQ that is neither open nor archived. Until #187 drops its copy, merging `main` into it fails
+  `rulings.py`'s duplicate-id check, which is the reminder.
+- No requirement carries RQ-267, and no code reads a sampling note (dd_generation_root §3.9, "The hash"); TASK-M2-01
+  is not held by it (R-416 accepts its docs-only filing). R-413 is in the "physics" group of `plan/rule_groups.yaml`,
+  with the link conventions.
+
+Changes no requirement.
+
+## R-414 — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin
+*10 Oct 2026 · applied in `plan/OPERATIONS.md` § "Dispatching" (the environment every dispatch names) and §
+"Toolchain" (a bullet added)*
+
+The human's words (R-410 quotes the whole message):
+
+> ~/.rustup: leave stable at 1.99.0. RUSTUP_AUTO_INSTALL=0 in every
+> dispatch is the right prevention; toolchains change only through the
+> pin (R-349).
+
+*What it decides:*
+- **Stable is left at 1.99.0** in `~/.rustup`: nothing reinstalls, updates or removes it.
+- **Every dispatch sets `RUSTUP_AUTO_INSTALL=0`,** so rustup's proxy never installs a toolchain on its own.
+- **Toolchains change only through the pin** (`rust-toolchain.toml`; R-349's "rustup installing the toolchain
+  `rust-toolchain.toml` pins" is a build's own cache write, and anything else in `~/.rustup` asks first).
+
+*Applied per R-369:* `plan/OPERATIONS.md` § "Dispatching"'s environment line gains `RUSTUP_AUTO_INSTALL=0`, and §
+"Toolchain" gains a bullet stating the three points. R-414 is in the "process" group of `plan/rule_groups.yaml`, with
+R-349.
+
+## R-415 — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change
+*10 Oct 2026 · applied in `plan/WORKFLOW.md` § "Human checkpoints: the milestone gates" and `plan/OPERATIONS.md` §
+"Autonomy (R-369)" (paragraphs added), and TASK-M7-05 (a note)*
+
+The human's words (R-410 quotes the whole message):
+
+> Merging early: a task may merge before an earlier milestone's gate if
+> its dependencies have merged and it relies on no value or behaviour
+> that gate calibrates or could change. Check M7-02 to M7-04 against
+> that, after the fact; M7-05 merges early only if it passes the same
+> test (it also waits on RQ-265's port).
+
+*What it decides:*
+- **The test.** A task may merge before an earlier milestone's gate has passed if both hold: its dependencies have
+  merged, and it relies on no value or behaviour that the gate calibrates or could change. WORKFLOW's "No work in the
+  next milestone merges before the gate passes" holds for every task that fails the test.
+- **TASK-M7-02, TASK-M7-03 and TASK-M7-04,** merged before the M1 gate (#145, #148, #150), are checked against the test
+  after the fact.
+- **TASK-M7-05 merges early only if it passes the same test,** and only once RQ-265's port (R-411, this PR) has merged.
+
+*Applied per R-369 (routine process choices; the human may veto any):*
+- **Who applies the test.** The orchestrator applies it before merging, and the PR records it as "applied per R-415:
+  <the gates it passes over, and why it relies on nothing they calibrate or could change>", naming the calibration and
+  definition requirements of those gates it checked (`plan/MILESTONES.md`). The task's reviewers may challenge it; a
+  doubt is resolved by not merging early.
+- **The after-the-fact check of TASK-M7-02 to TASK-M7-04** is a separate read-only dispatch by the orchestrator; what
+  it finds goes in the next summary, and anything a merged task relies on that a gate could change is filed in
+  `REVIEW_QUEUE.md`.
+- R-390's GUI track and R-386's TASK-M7-20 keep their own rules. R-415 is in the "process" group of
+  `plan/rule_groups.yaml`.
+
+## R-416 — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing
+*10 Oct 2026 · applied in `plan/OPERATIONS.md` § "The GUI track (R-390)" (a bullet added), TASK-M6-26, TASK-M6-31 and
+TASK-M1-17 (notes), and R-407's, R-408's and R-409's applied text (lines added)*
+
+The human's words (R-410 quotes the whole message):
+
+> Look choices (M6-26, and M6-31's when it lands): hold until I've tried
+> the M6-31 mock.
+> No vetoes on R-409, R-400's scope, R-407/R-408's consequences
+> (including B1 and A7), #182, or RQ-267's docs-only filing.
+
+*What it decides:*
+- **The look choices hold.** TASK-M6-26's look choices (PR #183's § "Look choices (R-390, each a named constant)": the
+  lock's, the compass's, Navigate's, the panel widths, spans, panel layout and axis strips) and TASK-M6-31's, when it
+  lands, are neither confirmed nor changed until the human has tried the M6-31 mock. They stay as built meanwhile.
+- **No veto** on:
+  - R-409's applied readings and choices: points 1 to 6, A1 to A10, F1 to F6 and G1 to G6;
+  - R-400's scope over the hand-written views (TASK-M1-17's notes: the `n` view's `‖n‖` and `live_shape`'s mode 2
+    kept on viridis);
+  - R-407's and R-408's consequences, applied per R-369, B1 (the affine physical-quantity axis, a correction to
+    R-407's applied text) and R-407's A7 (the mass simplex affine) included;
+  - #182's two behaviour changes (`xtask/src/lint_constants.rs`: the `raw_string` fix for `br"…"` and `cr"…"`, and a
+    `macro_rules!` item named by a metavariable read and named `$name`);
+  - RQ-267's docs-only filing: it holds no task and no requirement.
+  Each stands as applied, accepted by R-416.
+
+*Applied per R-369:* the "the human may veto any" lines of R-407, R-408 and R-409 each gain a line naming R-416, as
+does TASK-M1-17's note; their wording is otherwise unchanged. `plan/OPERATIONS.md` § "The GUI track (R-390)" and
+TASK-M6-31's look-choice note say the look choices hold. R-416 is in the "one_off" group of `plan/rule_groups.yaml`.

@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-Locking (K or right-click → lock here) recentres on the point with a SetField on z₀, draws the gold reticle and the compass's gold pin, and shows the "● locked at z_locked" badge with unlock and open in Inspector. The compass sits bottom left, shows the slice plane inside the chart, switches between slicing and tilting by itself, tilts when the plane is dragged and orbits when the cube is dragged, and reads out the angles. The time controls offer play, step, a scrubber and speed; scrubbing back sets the playhead and re-integrates progressively with a visible "refining · N%", never replaying stored frames (R-66).
+Locking (K or right-click → lock here) recentres on the point with a SetField on z₀, draws the gold reticle and the compass's gold pin, and shows the "● locked at z_locked" badge with unlock and open in Inspector. The compass sits bottom left, shows the slice plane inside the chart in a fixed view with no orbit, switches between slicing and tilting by its Tilt and Slice buttons and by itself, the slider touched (R-409), tilts when dragged in tilt mode and moves the slice along the plane's normal when dragged in slice mode, and reads out the angles. The time controls offer play, step, a scrubber and speed; scrubbing back sets the playhead and re-integrates progressively with a visible "refining · N%", never replaying stored frames (R-66).
 
 ## References
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "08 Lock — the reticle and the pin"
@@ -20,16 +20,17 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 - `docs/contracts/principia_export_animation_contract.md` § "Part 1 — Playback is the temporal mechanism"
 - `decisions.md` § "R-66 — The time scrubber stays *(closes RQ-22)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
 
 ## Deliverables
 - `crates/gui/src/explore/lock.rs`, the track's badge and reticle (TASK-M6-26, R-390) wired to the real engine — badge, unlock, open-in-Inspector (opens the window id of TASK-M8-14), reticle mark on the figure.
-- `crates/gui/src/explore/compass.rs`, extending the track's compass (TASK-M6-26, R-390) — the nav cube; mode follows the last-touched slider group.
+- `crates/gui/src/explore/compass.rs`, extending the track's compass (TASK-M6-26, R-390) — the nav cube; mode set by the Tilt and Slice buttons and following the last-touched slider group; no orbit (R-409).
 - `crates/gui/src/explore/time.rs`, extending the track's Time (TASK-M6-27, R-390) — transport in ViewUI; per-frame playhead write marked no-history; scrub = one coalesced entry; progress from the snapshot.
 - Screenshot cases `08_lock/locked`, `01_main/compass_slice`, `01_main/compass_tilt`.
 - Tests: `scrub_reintegrates`.
 
 ## Acceptance tests
-- `cargo xtask screenshot 01_main` (slice and tilt cases) and `cargo xtask screenshot 08_lock` — screenshots against 01_main.png after touching a slice slider and after touching a tilt, and against 08_lock.png when locked (REQ-GUI-091). Closed by TASK-M6-26 on the mock engine since R-390; this task re-runs it on the real engine.
+- `cargo xtask screenshot 01_main` (slice and tilt cases) and `cargo xtask screenshot 08_lock` — screenshots against 01_main.png after touching a slice slider, after touching a tilt and after clicking each of the Tilt and Slice buttons, and against 08_lock.png when locked, the buttons and the fixed view read with R-409 (REQ-GUI-091). Closed by TASK-M6-26 on the mock engine since R-390; this task re-runs it on the real engine.
 - `cargo test -p gui scrub_reintegrates` — scrub from t=40 to t=10: the playhead SetField triggers re-integration from 0 with a progress indicator; no frame store is read (REQ-GUI-092).
 - `cargo xtask screenshot 08_lock` — screenshot against 08_lock.png after K over a point (REQ-GUI-099).
 - Definition: the scrubber's progress percentage written into render_gui_spec §G2 and approved by the physics reviewer (REQ-GUI-155).
@@ -39,3 +40,7 @@ Locking (K or right-click → lock here) recentres on the point with a SetField 
 - Closes, for gaps the corpus leaves open: REQ-GUI-155 (R-72 definition) (classification accepted by R-132).
 - TASK-M6-26 also builds the lock badge and the gold reticle on mock data (applied per R-369, review 5434766412 on PR #157); this task wires them to the real engine's lock and keeps REQ-GUI-099.
 - R-390: TASK-M6-26 builds the compass and lock's re-basing on the mock engine and closes REQ-GUI-091, and TASK-M6-27 builds Time; this task depends on both, wires them to the real engine, re-runs REQ-GUI-091's acceptance there, and keeps REQ-GUI-092, REQ-GUI-099 and REQ-GUI-155.
+- R-409 (10 Oct 2026): the compass has no orbit, has Tilt and Slice buttons beside its switch by the slider touched, and
+  in slice mode a drag moves the slice along the plane's normal. TASK-M6-31 builds it on the mock (REQ-GUI-181,
+  REQ-GUI-183), and this task reaches it through TASK-M6-27; it wires the slice-mode drag's `SetField` on `z₀` to the
+  real engine and re-runs REQ-GUI-091 as R-409 words it.

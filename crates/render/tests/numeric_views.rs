@@ -27,7 +27,9 @@ use validation::negative_control;
 const TOL: f64 = 1e-5;
 
 /// The least distance, in 8-bit steps, of any golden scene's twin from a rounding tie ([`golden_scene::tie_margin`]):
-/// some sixty times the 1.5e-4 steps (6e-7 × 255) the renders sit from their twins.
+/// some sixty times the 1.5e-4 steps (6e-7 × 255) the renders sit from their twins. A pixel the fragment returns
+/// unchanged from a uniform, an outcome swatch, is the same bits on every backend and is not measured
+/// (`Scene::tie_checked`; `render/tests/outcome_state.rs` checks its bits).
 const MIN_TIE_MARGIN: f64 = 0.01;
 
 fn gpu() -> GpuHarness {
@@ -514,7 +516,7 @@ fn check_tie_free(name: &str, pixels: &[Rgb]) {
 fn golden_scenes_are_tie_free() {
     for name in golden_scene::NAMES {
         let s = named(name);
-        check_tie_free(name, &s.expected().unwrap_or_else(|e| panic!("{e}")));
+        check_tie_free(name, &s.tie_checked().unwrap_or_else(|e| panic!("{e}")));
     }
 }
 

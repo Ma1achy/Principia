@@ -69,23 +69,36 @@ pub fn show(ui: &mut Ui, rect: Rect, footer: &Footer<'_>, actions: &mut Actions)
     let clicked = ui
         .interact(rect, ui.id().with("footer"), Sense::click())
         .clicked();
+    let inner = rect.shrink2(egui::vec2(8.0, 0.0));
+    // The right end first, so the latest message stops short of it, cut with "…" when it is long.
+    let mut right = ui.new_child(
+        UiBuilder::new()
+            .max_rect(inner)
+            .layout(EguiLayout::right_to_left(Align::Center)),
+    );
+    right.label(RichText::new(KEYS_HINT).monospace());
+    right.label(RichText::new(memory_readout(footer.memory)).monospace());
+    if footer.is_mock {
+        right.label(RichText::new(MOCK_TAG).weak());
+    }
+    let right_edge = right.min_rect().min.x;
     let mut row = ui.new_child(
         UiBuilder::new()
-            .max_rect(rect.shrink2(egui::vec2(8.0, 0.0)))
+            .max_rect(inner)
             .layout(EguiLayout::left_to_right(Align::Center)),
     );
     let label = RichText::new(counts_label(footer.counts, footer.console_open)).monospace();
     let toggle = row.add(Button::new(label).frame(false)).clicked();
     if let Some(entry) = footer.latest {
         let colour = severity_colour(row.visuals(), entry.severity);
-        row.label(RichText::new(&entry.message).monospace().color(colour));
+        let room = (right_edge - row.cursor().min.x - 16.0).max(0.0);
+        row.scope(|ui| {
+            ui.set_max_width(room);
+            ui.add(
+                egui::Label::new(RichText::new(&entry.message).monospace().color(colour))
+                    .truncate(),
+            );
+        });
     }
-    row.with_layout(EguiLayout::right_to_left(Align::Center), |ui| {
-        ui.label(RichText::new(KEYS_HINT).monospace());
-        ui.label(RichText::new(memory_readout(footer.memory)).monospace());
-        if footer.is_mock {
-            ui.label(RichText::new(MOCK_TAG).weak());
-        }
-    });
     actions.toggle_console |= clicked || toggle;
 }

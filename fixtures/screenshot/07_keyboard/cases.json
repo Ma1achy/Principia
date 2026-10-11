@@ -1,0 +1,34 @@
+{
+  "cases": [
+    {
+      "name": "mock_focus_before",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_after",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_shortcuts",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "shortcuts"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_manifold_view",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "enter", "arrow_down", "arrow_down"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_navigation",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_interaction",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    }
+  ]
+}

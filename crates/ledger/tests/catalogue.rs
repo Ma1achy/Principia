@@ -772,7 +772,7 @@ fn check_shared(views: &[View], wgsl_of: &dyn Fn(&View) -> String, tests: &str) 
         let source = format!("{context}\n{}{view}", uniform_block(&view));
         let module = naga::front::wgsl::parse_str(&source)
             .unwrap_or_else(|e| panic!("`{}`'s view: {}", v.field, e.emit_to_string(&source)));
-        let want: BTreeSet<Accessor> = v.read.accessors(v.field).into_iter().collect();
+        let want: BTreeSet<Accessor> = v.accessors().into_iter().collect();
         assert!(!want.is_empty(), "`{}`'s view names no accessor", v.field);
         assert_eq!(
             wgsl_accessors(&module),

@@ -38,7 +38,11 @@ impl EngineInterface for NoRedo {
 
 #[test]
 fn conformance_mock_passes_every_case() {
-    assert_eq!(CASES.len(), 4, "the four state-semantics cases (RQ-254)");
+    assert_eq!(
+        CASES.len(),
+        5,
+        "the four state-semantics cases (RQ-254) and the navigation paths' (R-390)"
+    );
     check_conforms(MockEngine::new);
     check_conforms(MockEngine::frozen);
     rejects("a mock whose redo does nothing", || {

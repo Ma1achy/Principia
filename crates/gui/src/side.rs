@@ -91,8 +91,11 @@ impl EngineSide for MockSide {
         true
     }
 
+    /// The canvas, told the mock's chart first, so it draws the stand-in for the chart as it stands (REQ-GUI-171).
     fn canvas(&self) -> Option<Arc<dyn Canvas>> {
-        self.canvas.clone().map(|c| c as Arc<dyn Canvas>)
+        let canvas = self.canvas.clone()?;
+        canvas.set_chart(self.engine.plane());
+        Some(canvas as Arc<dyn Canvas>)
     }
 
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {

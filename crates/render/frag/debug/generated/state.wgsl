@@ -2,7 +2,8 @@
 // The debug view of `state` (render contract Part 6; debug_tooling_plan §B–E): `packed_a` bits 0–2, u-bits, scale
 // categorical(6), range [0, 5]. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field
 // through `SimState.state`; its test, `catalogue_view_state` in `crates/kernel/tests/catalogue_views/generated.rs`,
-// reads it through their Rust twins. The colouring is a placeholder (`ledger::gen::catalogue`).
+// reads it through their Rust twins. Its colouring is the six-colour `dbg_cat` palette, one colour per state, not the
+// outcome palette (R-115; debug_tooling_plan §B).
 fn colour(ctx: Ctx) -> vec3<f32> {
     return dbg_cat(ctx.sample.state, 6u);
 }

@@ -33,8 +33,26 @@ pub struct Backdrop {}
 /// Debug category visibility (gui_state_contract §2).
 pub struct DebugCategories {}
 
-/// Keyboard focus scope (gui_state_contract §2).
-pub struct Focus {}
+/// Keyboard focus scope (gui_state_contract §2): the path of the focused scope through the GUI's tree of scopes
+/// (render_gui_spec §G3), each a scope id the GUI defines, from a big scope down; empty when no scope has focus. The
+/// keyboard's mode is held with it (R-409 A5): never undoable, and never read by the engine.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Focus {
+    /// The scope ids, outermost first.
+    pub path: Vec<String>,
+    /// The keyboard's mode on the focused scope.
+    pub mode: KeyMode,
+}
+
+/// The keyboard's two modes (render_gui_spec §G3, "Two modes: navigation and interaction"; R-409).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum KeyMode {
+    /// The arrows move between siblings; the ring is orange. Every landing is in it.
+    #[default]
+    Navigation,
+    /// The focused element takes the arrows, or, a text field, every key but Esc, Enter and Tab; the ring is blue.
+    Interaction,
+}
 
 /// Selection (gui_state_contract §2).
 pub struct Selection {}
@@ -46,7 +64,17 @@ pub struct KeptOrbits {}
 pub struct Inspector {}
 
 /// Open windows (gui_state_contract §2).
-pub struct Windows {}
+pub struct Windows {
+    /// The windows open, in the order they were opened; the dev GUI's windows' frames are TASK-M6-28's.
+    pub open: Vec<Window>,
+}
+
+/// A window of the dev GUI (render_gui_spec §G5, §G8), by name.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Window {
+    /// The Inspector: one IC, its trajectory, one timeline (§G8); the lock badge's open in Inspector requests it (§G4).
+    Inspector,
+}
 
 /// Linked views for side by side (gui_state_contract §2; v2, R-106).
 pub struct LinkedViews {}

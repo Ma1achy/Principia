@@ -35,8 +35,9 @@
 //! before the shader's, so a case calls the shared library's functions from their one source rather than a copy
 //! (RQ-210: `m1-coords` takes the convention's flip from `lib/coords.wgsl`). A case of the harness kind instead names
 //! a synthetic scene, `"render": { "harness": "<scene>", "width": <w>, "height": <h> }` (RQ-229, decided per R-369;
-//! TASK-M1-09): the runner spawns validation's `golden_harness` binary, which xtask reaches only as a separate process
-//! (as it does `gate`; systems_architecture §7.1, R-187), and which renders the scene through the render harness
+//! TASK-M1-09): the runner builds validation's `golden_harness` binary once per run and spawns it per case, up to
+//! [`harness_width`] at once, reporting the cases in their order. xtask reaches the binary only as a separate process
+//! (as it does `gate`; systems_architecture §7.1, R-187); it renders the scene through the render harness
 //! (`render::bind`'s module and `upload`) into an `Rgba32Float` target and writes its floats to stdout
 //! ([`HARNESS_MAGIC`]'s format); the runner uploads them as the case's float target and quantises and compares them as
 //! for any case. The width and height must be the scene's. Its output is quantised in the runner's own shader (R-287):
@@ -794,6 +795,8 @@ pub struct Renderer {
     pub backend: &'static str,
     /// The adapter, for the summaries.
     pub adapter: String,
+    /// The `golden_harness` binary, built on the renderer's first harness case and spawned for each one after.
+    harness: std::sync::OnceLock<PathBuf>,
 }
 
 impl Renderer {
@@ -823,6 +826,7 @@ impl Renderer {
             queue,
             backend: name,
             adapter,
+            harness: std::sync::OnceLock::new(),
         })
     }
 
@@ -840,7 +844,20 @@ impl Renderer {
         config: &Config,
         output: Output,
     ) -> Result<Image, String> {
-        let (width, height, bytes) = self.render_raw(dir, config, Readback::Unorm(output))?;
+        self.render_output_with(dir, config, output, None)
+    }
+
+    /// [`Renderer::render_output`], a harness case taking its run from `floats` ([`Renderer::harness_all`]) where
+    /// given, rather than running the harness itself.
+    fn render_output_with(
+        &self,
+        dir: &Path,
+        config: &Config,
+        output: Output,
+        floats: Option<HarnessRun>,
+    ) -> Result<Image, String> {
+        let (width, height, bytes) =
+            self.render_raw(dir, config, Readback::Unorm(output), floats)?;
         let rgb = bytes
             .as_chunks::<4>()
             .0
@@ -853,7 +870,7 @@ impl Renderer {
     /// Renders `config`'s fragment alone into an `Rgba32Float` target and reads back its RGBA values, rows top to
     /// bottom: the floats the quantise pass (R-287) reads, so its rounding can be checked against them.
     pub fn render_float(&self, dir: &Path, config: &Config) -> Result<Vec<[f32; 4]>, String> {
-        let (_, _, bytes) = self.render_raw(dir, config, Readback::Float)?;
+        let (_, _, bytes) = self.render_raw(dir, config, Readback::Float, None)?;
         Ok(bytes
             .as_chunks::<16>()
             .0
@@ -865,12 +882,15 @@ impl Renderer {
             .collect())
     }
 
-    /// Renders `config` and reads the target back as `readback` says: its width, height and tightly packed pixels.
+    /// Renders `config` and reads the target back as `readback` says: its width, height and tightly packed pixels. A
+    /// harness case takes its run from `floats` where given, or runs the harness here; either way the run's stderr is
+    /// written here, before the case is reported.
     fn render_raw(
         &self,
         dir: &Path,
         config: &Config,
         readback: Readback,
+        floats: Option<HarnessRun>,
     ) -> Result<(u32, u32, Vec<u8>), String> {
         let (width, height) = config.size()?;
         // A harness case's float target comes from the `golden_harness` binary: read back as floats, it is the
@@ -878,7 +898,11 @@ impl Renderer {
         let harness = match config.harness() {
             None => None,
             Some(scene) => {
-                let floats = harness_floats(scene, width, height)?;
+                let run = match floats {
+                    Some(run) => run,
+                    None => harness_run(self.harness_binary()?, scene, width, height),
+                };
+                let floats = run.replay()?;
                 match readback {
                     Readback::Float => return Ok((width, height, floats)),
                     Readback::Unorm(Output::Automatic) => {
@@ -1148,32 +1172,184 @@ impl Renderer {
     }
 }
 
-/// Renders the harness scene `scene` by running validation's `golden_harness` binary on this workspace, through the
-/// cargo that runs xtask, and returns its floats, tightly packed: refused unless the image is `width` × `height`.
-fn harness_floats(scene: &str, width: u32, height: u32) -> Result<Vec<u8>, String> {
+impl Renderer {
+    /// The run of each harness case among `configs` (its stderr and floats), in their order, `None` for any other case. The harness is built
+    /// once ([`Renderer::harness_binary`]) and its cases render [`harness_width`] at a time, each in a process of its
+    /// own; a failed build is each harness case's error. Each result is used where the case renders, so a run reports
+    /// its cases, and the first that fails, in the order it did when each case ran the harness in turn.
+    fn harness_all(&self, configs: &[&Config]) -> Vec<Option<HarnessRun>> {
+        let jobs: Vec<(usize, &str, u32, u32)> = configs
+            .iter()
+            .enumerate()
+            .filter_map(|(k, c)| {
+                let (width, height) = c.size().ok()?;
+                Some((k, c.harness()?, width, height))
+            })
+            .collect();
+        let mut out: Vec<Option<HarnessRun>> = configs.iter().map(|_| None).collect();
+        if jobs.is_empty() {
+            return out;
+        }
+        let rendered = match self.harness_binary() {
+            Ok(binary) => in_parallel(jobs.len(), harness_width(), |j| {
+                let (_, scene, width, height) = jobs[j];
+                harness_run(binary, scene, width, height)
+            }),
+            Err(e) => jobs
+                .iter()
+                .map(|_| HarnessRun {
+                    stderr: Vec::new(),
+                    floats: Err(e.clone()),
+                })
+                .collect(),
+        };
+        for ((k, ..), floats) in jobs.iter().zip(rendered) {
+            out[*k] = Some(floats);
+        }
+        out
+    }
+
+    /// The `golden_harness` binary: built by [`build_harness`] on the first call, the same path after.
+    fn harness_binary(&self) -> Result<&Path, String> {
+        if let Some(path) = self.harness.get() {
+            return Ok(path);
+        }
+        let path = build_harness()?;
+        Ok(self.harness.get_or_init(|| path))
+    }
+}
+
+/// Builds validation's `golden_harness` binary on this workspace, through the cargo that runs xtask, as `cargo run`
+/// would (its profile and features, and `CARGO_TARGET_DIR`), and returns its path. A golden run builds it once and
+/// spawns it per harness case, so it takes cargo's build lock once, not once per case.
+fn build_harness() -> Result<PathBuf, String> {
     let output = std::process::Command::new(crate::deps::cargo())
-        .args(["run", "--quiet", "--manifest-path"])
-        .arg(crate::workspace_manifest())
         .args([
-            "-p",
-            "validation",
-            "--bin",
-            "golden_harness",
-            "--",
-            "--scene",
-            scene,
+            "build",
+            "--quiet",
+            "--message-format=json-render-diagnostics",
+            "--manifest-path",
         ])
+        .arg(crate::workspace_manifest())
+        .args(["-p", "validation", "--bin", "golden_harness"])
         .stderr(std::process::Stdio::inherit())
         .output()
-        .map_err(|e| format!("cannot run cargo run -p validation --bin golden_harness: {e}"))?;
+        .map_err(|e| format!("cannot run cargo build -p validation --bin golden_harness: {e}"))?;
     if !output.status.success() {
         return Err(format!(
-            "golden_harness --scene {scene} failed ({})",
+            "cargo build -p validation --bin golden_harness failed ({})",
             output.status
         ));
     }
-    decode_harness(&output.stdout, width, height)
-        .map_err(|e| format!("golden_harness --scene {scene}: {e}"))
+    harness_executable(&String::from_utf8_lossy(&output.stdout))
+}
+
+/// The path of the `golden_harness` executable in `messages`, cargo's `--message-format=json` output: its one
+/// `compiler-artifact` message for the `golden_harness` target with an executable.
+pub fn harness_executable(messages: &str) -> Result<PathBuf, String> {
+    let mut found = Vec::new();
+    for line in messages.lines().filter(|l| l.starts_with('{')) {
+        let message: Value =
+            serde_json::from_str(line).map_err(|e| format!("cargo's message `{line}`: {e}"))?;
+        if message["reason"] == "compiler-artifact" && message["target"]["name"] == "golden_harness"
+        {
+            if let Some(path) = message["executable"].as_str() {
+                found.push(PathBuf::from(path));
+            }
+        }
+    }
+    match found.as_slice() {
+        [path] => Ok(path.clone()),
+        [] => Err("cargo build named no golden_harness executable".to_owned()),
+        _ => Err(format!(
+            "cargo build named {} golden_harness executables",
+            found.len()
+        )),
+    }
+}
+
+/// How many harness processes a golden run keeps running at once: the parallelism the machine offers its process
+/// (`std::thread::available_parallelism`, which honours CPU affinity and cgroup quotas), at least one. Each process
+/// spends most of its time compiling the scene's shaders, on one CPU (llvmpipe on CI's lavapipe runners).
+pub fn harness_width() -> usize {
+    std::thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get)
+}
+
+/// `job(0)` … `job(count - 1)`, run on up to `width` threads at once, each thread taking the next index in turn;
+/// returned in index order, whatever order they finished in.
+pub fn in_parallel<T: Send>(count: usize, width: usize, job: impl Fn(usize) -> T + Sync) -> Vec<T> {
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let results: Vec<std::sync::Mutex<Option<T>>> =
+        (0..count).map(|_| std::sync::Mutex::new(None)).collect();
+    std::thread::scope(|scope| {
+        for _ in 0..width.clamp(1, count.max(1)) {
+            scope.spawn(|| loop {
+                let k = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                if k >= count {
+                    break;
+                }
+                let result = job(k);
+                *results[k].lock().unwrap_or_else(|e| e.into_inner()) = Some(result);
+            });
+        }
+    });
+    results
+        .into_iter()
+        .map(|r| {
+            r.into_inner()
+                .unwrap_or_else(|e| e.into_inner())
+                .expect("in_parallel: every job ran")
+        })
+        .collect()
+}
+
+/// One run of the `golden_harness` binary: what it wrote to stderr, and its floats or why it gave none.
+struct HarnessRun {
+    stderr: Vec<u8>,
+    floats: Result<Vec<u8>, String>,
+}
+
+impl HarnessRun {
+    /// Writes the run's stderr to xtask's, where the case renders, so a run whose cases render at once writes each
+    /// case's stderr where running them in turn wrote it; then its floats.
+    fn replay(self) -> Result<Vec<u8>, String> {
+        use std::io::Write as _;
+        let mut stderr = std::io::stderr().lock();
+        // Best effort, as inheriting the harness's stderr was: a closed stderr loses its text, not the render.
+        let _ = stderr.write_all(&self.stderr);
+        let _ = stderr.flush();
+        self.floats
+    }
+}
+
+/// Renders the harness scene `scene` by running the `golden_harness` binary at `binary` ([`build_harness`]): its
+/// stderr and its floats, tightly packed, refused unless the image is `width` × `height`.
+fn harness_run(binary: &Path, scene: &str, width: u32, height: u32) -> HarnessRun {
+    let output = match std::process::Command::new(binary)
+        .args(["--scene", scene])
+        .output()
+    {
+        Ok(output) => output,
+        Err(e) => {
+            return HarnessRun {
+                stderr: Vec::new(),
+                floats: Err(format!("cannot run {}: {e}", binary.display())),
+            }
+        }
+    };
+    let floats = if output.status.success() {
+        decode_harness(&output.stdout, width, height)
+            .map_err(|e| format!("golden_harness --scene {scene}: {e}"))
+    } else {
+        Err(format!(
+            "golden_harness --scene {scene} failed ({})",
+            output.status
+        ))
+    };
+    HarnessRun {
+        stderr: output.stderr,
+        floats,
+    }
 }
 
 /// The floats of the harness's image `bytes` ([`HARNESS_MAGIC`]'s format), tightly packed: refused unless it is
@@ -1393,9 +1569,11 @@ pub fn run_suite(root: &Path, suite: &str, out: &Path) -> Result<Vec<Outcome>, S
     let cases = load_suite(root, suite)?;
     let renderer = Renderer::new()?;
     println!("xtask golden: {suite}: {}", renderer.adapter);
+    let configs: Vec<&Config> = cases.iter().map(|c| &c.config).collect();
+    let harness = renderer.harness_all(&configs);
     let mut outcomes = Vec::new();
-    for case in &cases {
-        let render = renderer.render_output(&case.dir, &case.config, case.output)?;
+    for (case, floats) in cases.iter().zip(harness) {
+        let render = renderer.render_output_with(&case.dir, &case.config, case.output, floats)?;
         let outcome = judge(case, renderer.backend, &render)?;
         let diff = &outcome.diff;
         let verdict = match (case.expect_pass, outcome.within) {

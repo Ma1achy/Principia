@@ -44,6 +44,16 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 - **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
   onto the same surface (`principia_gui_state_contract.md` §1).
+- **With the layer hidden, the figure fills the window (R-406).** F3 hiding egui makes the figure fill the whole
+  window, showing more of the field at the same scale in every direction, never the shown view stretched: each point
+  of the field keeps the screen position it has in the shown layout, so the figure's rect there is unchanged. Hiding
+  and showing send no `SetField`; showing the layer returns the normal layout. Past the chart's `[0,1]²` each axis
+  extends by its declared type (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or
+  whose state fails validation is hatched as forbidden (R-407, `principia_chart_decoder_contract.md` Part 3). The
+  screen lane is the one exception to "nothing moves": `ctx.screen.uv` and `ctx.screen.pixel` are taken over the
+  figure area as shown, the full window with the layer hidden, so a stain that reads them (the UV-view debug preset
+  among them) draws differently over the shown rect when F3 toggles; the figure is identical over the shown rect for a
+  stain that reads no screen-lane field (R-407, A4; `principia_coordinate_conventions_note.md`).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
@@ -82,7 +92,8 @@ view the manifold.
 - **Chart:** the preset, named by its axes (e.g. "z_α × z_β", never a nickname); the two basis vectors `q₁`, `q₂`, each with
   an edit button; **Chart builder…** (§G7); the chart's kind (affine or nonlinear). When the chart is the shape sphere,
   the section also shows the **projection selector** (equirectangular, or an equal-area alternative) and the **hemisphere
-  toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113).
+  toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113); with one
+  hemisphere drawn, φ's span runs from the pole to the equator (R-412).
 - **Navigate:** centre `(u, v)`; zoom (log₂); all eight `z₀` values, editable by drag or by typing.
 - **Depth readout** (`2^-k`, quad level) **and a precision warning**. The warning is **raised by events** (R-54):
   `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`. It is never tied to fixed depths. The artboard's readout
@@ -113,10 +124,14 @@ IC:
 - **Kept orbits** below, each with its fate and time, removable.
 
 **Bottom.**
-- **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart and **switches
-  mode by itself**: touching a slice slider shows slicing, and touching a tilt shows tilting. When locked it carries a gold
-  pin at the pivot, and the plane turns about the pin (§G4). Dragging the plane tilts; dragging the cube orbits. It reads
-  out the tilt and rotation angles.
+- **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
+  orthographic view at its default angle: it has **no orbit** (R-409). It has two modes, **Tilt** and **Slice**, with a
+  button for each beside it; Tilt is the default, and the buttons always show the current mode. A click on a button
+  switches the mode, and the compass still **switches mode by itself** too: touching a slice slider switches it to
+  Slice, and touching a tilt to Tilt (R-409). In tilt mode, dragging on it tilts the plane; in slice mode, dragging
+  anywhere on it moves the slice plane along its normal, the tilt fixed (R-409). When locked it carries a gold pin at the
+  pivot, and the plane turns about the pin (§G4). It reads out the tilt and rotation angles. From the keyboard it is one
+  element, beside its Tilt and Slice buttons (§G3).
 - **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
   on the sim key (R-96). The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no
   history"; a manual scrub is one coalesced undo entry (R-101). **Scrubbing back re-integrates** to that time, so the figure refines
@@ -134,29 +149,71 @@ recompute / cancel live in the Run window (§G5).
 ## G3. Keyboard — a design note, not a screen (`07_keyboard.png`)
 
 The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory ·
-5 Compass · 6 Time · 7 Legend. Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
+5 Compass · 6 Time · 7 Legend · 8 footer (R-405). Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
 
 | key | action |
 |---|---|
-| Tab / Shift+Tab | next / previous big scope, in the numbered order |
-| Enter | into the focused scope |
-| Esc | back out one level |
-| arrows | between siblings; adjust a focused value |
-| Shift · Alt | ×10 · ×0.1 steps |
+| Tab / Shift+Tab | next / previous big scope, in the numbered order, landing on the scope itself in navigation mode, from either mode; inside a window, its next / previous section, in navigation mode, staying in the window (R-409) |
+| Enter | in navigation mode: on a scope, into it, on its first element, but on the Figure, which has nothing inside, start interaction, and on a read-only scope with nothing inside (the Legend), nothing; on an element, start interaction; on a button, its click. In interaction mode: back to navigation mode on the same element (R-409) |
+| Esc | in interaction mode, back to navigation mode on the same element; in navigation mode, up one scope (R-409) |
+| arrows | in navigation mode, always between siblings, and on a big scope itself between the big scopes in Tab order; in interaction mode, adjust the focused element (R-409) |
+| Shift · Alt | ×10 · ×0.1 steps, everywhere, the compass included (R-409) |
+| letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode, except while a text field is being typed in (R-409) |
 | held keys | delay, then repeat (the DAS / ARR model) |
-| Ctrl+Z | undo, from the contract's history (R-52) |
-| ? | shortcuts, over everything |
+| Ctrl+Z | undo, from the contract's history (R-52), in either mode, except while a text field is being typed in, when it undoes the text edit (R-409) |
+| ? | shortcuts, over everything, in either mode, except while a text field is being typed in, when it types a character (R-409) |
 
-In scope: Figure — arrows pan, + / − zoom, Space keeps the orbit, L listens, K locks. Trajectory — Enter reaches the
-playhead, listen and kept orbits. Compass — arrows tilt, Shift+arrows orbit. Time — Space plays, ← → step. Legend is
+In scope: a scope's arrow actions need Enter, acting in interaction mode only, and its letter and Space keys are
+shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode, except while a
+text field is being typed in (R-409).
+Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4). Trajectory — Enter reaches the
+playhead, listen and kept orbits. Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
+plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; there is no orbit, and no separate fine
+step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1). Legend is
 read-only.
 
-What the user sees: a focus ring on the current scope and the breadcrumb in the top bar (e.g. "Manifold view › Navigate ›
-zoom"). Nothing else changes on screen.
+What the user sees: a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
+and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). Nothing else changes on screen.
+
+**Two modes: navigation and interaction (R-409).** The keyboard is always in one of two modes. In **navigation mode**
+the ring is orange and the arrows move between siblings; on a big scope itself, the big scopes are the siblings, and
+the arrows move between them in Tab order. In **interaction mode** the ring is blue and the focused element takes the
+arrows, with Shift ×10 and Alt ×0.1; Tab and Shift+Tab, Ctrl+Z, `?` and the letter and Space shortcuts keep their
+meaning in both modes, except while a text field is being typed in, and Tab or Shift+Tab from interaction mode lands
+in navigation mode on the next or previous big scope, or, inside a window, on the window's next or previous section,
+staying in the window (applied per R-369, R-409 G1, G2, G5, G6). Every landing is in navigation mode: a Tab on a big scope lands on the scope
+itself, the whole scope highlighted, the Figure and the Compass included, as REQ-GUI-095 has it; Enter into a scope
+lands on its first element; and a window opens on its first section, as the console does on its first filter. Enter
+on an element starts interaction with it, and Enter on a scope goes in, with two exceptions: the Figure, which has no
+elements inside, takes Enter as the start of interaction, and a read-only scope with nothing inside, such as the
+Legend, takes Enter as nothing (R-409 A2, G3). Esc or Enter in interaction mode returns to navigation mode on the same
+element, and Esc in navigation mode goes up one scope (R-409, G1). Enter on a button acts as its click and stays in
+navigation mode (applied per R-369, R-409 A1). The blue is egui's dark theme's `hyperlink_color` (R-404); the orange
+is a look choice (R-390). The Compass scope holds the compass, then its Tilt and Slice buttons, in that order, as
+siblings in navigation mode (R-409, the human's follow-up answer; A2): Tab lands on the Compass scope, Enter goes in
+onto the compass, → moves to Tilt and then to Slice, Enter on the compass starts interaction with it, and Enter on a
+button sets the mode. A text field, such as the console's text filter, lands in navigation mode; Enter on it starts
+typing, which is interaction mode, and while typing every key goes to the field but Esc, Enter and Tab, Ctrl+Z
+undoing the text edit and `?` typing a character: Esc and Enter return to navigation mode on the field and keep the
+text, and Tab and Shift+Tab leave it and move on, to the window's next or previous section inside a window (applied
+per R-369, R-409 G4, G5, G6). The footer and the console follow the same two modes (R-405, R-409).
+
+**The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
+after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
+console (§G12), as a click does, with the focus inside it. The console is a window: opened by the footer or from
+Windows › Console, it takes the focus; Tab and Shift+Tab move between its sections (the filters, the text filter, copy
+and clear, the entry list), the arrow keys move within a section in navigation mode, and Esc closes it and returns
+the focus to whatever opened it, the footer or Windows › Console. The entry list's ↑ and ↓ scroll it in interaction
+mode only: Enter on the list starts interaction, and Esc returns to navigation mode on it (R-409, amending R-405). The
+console opening by itself on an error does not take the focus.
+
+The ring's, the breadcrumb's and the `?` overlay's look, the held-key delay and repeat (500 ms, 40 ms) and the base
+steps are confirmed as #174 built them, and recorded in R-404.
 
 ## G4. Lock — the reticle and the pin (`08_lock.png`)
 
-Locking (K, or right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre.
+Locking (K, a shortcut with the focus in the Figure, in either keyboard mode (§G3, R-409); or right-click → lock
+here) recentres the view on that point and marks it with a gold reticle at the centre.
 Every tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the
 same point as a gold pin.
 - **Sliders are re-based, not frozen:** each shows the anchor plus an offset, and moving one is a deliberate excursion from
@@ -238,6 +295,7 @@ either file as schema v1.
   Snapshot JSON, share links and pxpack carry `SimConfig` and `RenderState` in their one canonical
   serialisation (`principia_gui_state_contract.md` §2, R-309).
 - **Present:** hide all chrome; Esc returns.
+  With the chrome hidden the figure fills the window, as with F3 (R-406).
 
 ### Display — the last stages
 
@@ -304,9 +362,20 @@ labels (R-22).
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
+- **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
+  mapped linearly onto its range is affine, the fallback hatching what fails validation, and one behind a nonlinear
+  warp declares nothing and is bounded (R-408's port, B1: first made bounded, by R-407's default). B1 covers the
+  non-periodic quantities listed above (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared affine
+  would redraw systems and count them again, so it takes its type only by a declaration under physics review. A Burrau
+  dimension takes the Burrau family's types (`principia_chart_reference.md` §5.4). The chart inherits its extension
+  from its axes.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
-  `validate(u, v)` on the `Chart` trait).
+  `validate(u, v)` on the `Chart` trait). **"Forbidden in view" counts each system once (R-408):** a visible pixel
+  counts only if every axis is inside its type's primary range (periodic, one period; pole-crossing, pole to pole;
+  affine, unbounded; bounded, its domain); a pixel hatched where the domain ends (a bounded axis past its edge, or a
+  failed `Φ`) leaves both the count and the total; only states that fail the validity check count as forbidden. Inside
+  `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3).
 - **A quick render** (e.g. 64 × 64 at a short horizon), at the view's aspect. **Both previews are square.**
 - The footer checks `q₁ · q₂ = 0` and lists the hidden directions (and the residual). Revert / Apply.
 
@@ -375,6 +444,10 @@ The footer, opened: severity, time, source, message; filters (all, warnings, err
 same stream as the profiler's telemetry. Errors open it automatically. Sources include the stain, the integrator, the
 quadtree, the contract (each `SetField` is logged) and the app.
 
+The keyboard reaches it through the footer, big scope 8 (§G3, R-405). Its entry list scrolls with ↑ ↓ only after
+Enter on it, in interaction mode, and Esc returns to navigation mode on the list (§G3, R-409).
+It is reached from Windows › Console too, and Esc returns the focus to whichever opened it.
+
 ## G13. Where the artboards are overridden
 
 The pictures are layouts, and **their values are illustrative: corpus values win, and the Run window exposes the parameters
@@ -385,6 +458,9 @@ corpus, the spec follows the authority:
 - **The profiler's top level is telemetry §2's five stages** (R-56). The donut shows other categories.
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
+- **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag
+  the cube to orbit"; the compass has Tilt and Slice buttons and no orbit. The keyboard artboard shows one blue ring; the
+  ring is orange in navigation mode and blue in interaction mode.
 - **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
   (`N_max`, default 64), and the sound mapping (`θ(t), φ(t)` → spectrum). The Run window exposes the parameters the
   contracts define, under their contract names — so the artboard's integrator "tolerance" field has no counterpart.
@@ -397,9 +473,11 @@ corpus, the spec follows the authority:
 4. Run settings live in a window, not on the page.
 5. The figure is never covered; warnings go to the footer console.
 6. Every slice preview keeps the viewport's aspect.
-7. The compass switches mode by itself; lock re-bases the sliders and pins the compass.
+7. The compass switches mode by itself, and by its Tilt and Slice buttons, with no orbit (R-409); lock re-bases the
+   sliders and pins the compass.
 8. The legend is generated by evaluating the stain, with one key per dimension.
-9. Keyboard: a tree of scopes, a focus ring and a breadcrumb, nothing else on screen.
+9. Keyboard: a tree of scopes, a focus ring and a breadcrumb, nothing else on screen; the ring is orange in navigation
+   mode and blue in interaction mode (R-409).
 10. The measurement path owns `FULL_RETENTION` (R-39).
 11. Users keep their own stains in the library (New, Rename, Import, Export) — Part II §11's "later question".
 

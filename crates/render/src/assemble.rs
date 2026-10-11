@@ -54,10 +54,11 @@ const COLOUR_SPACE: &str = include_str!("../shaders/wgsl/lib/colour_space.wgsl")
 const PRESENT: &str = include_str!("../shaders/wgsl/lib/present.wgsl");
 
 /// The built-in occupants, each its slot, id and WGSL file (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): the
-/// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5); and the structural overlays, post
-/// occupants (TASK-M1-13): the Tier-1 boundary overlay `edge_line` (render_gui_spec §12.1), the fallback ancestor tint
-/// and the pending hatch (debug_tooling_plan §F; RQ-239), so a graph names them by id.
-const BUILTINS: [(Kind, &str, &str); 6] = [
+/// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5); the colour `outcome_state`, the
+/// outcome palette of colour_composition §1.4 (TASK-M1-10); and the structural overlays, post occupants
+/// (TASK-M1-13): the Tier-1 boundary overlay `edge_line` (render_gui_spec §12.1), the fallback ancestor tint and the
+/// pending hatch (debug_tooling_plan §F; RQ-239), so a graph names them by id.
+const BUILTINS: [(Kind, &str, &str); 7] = [
     (
         Kind::Combiner,
         "pass_through",
@@ -72,6 +73,11 @@ const BUILTINS: [(Kind, &str, &str); 6] = [
         Kind::Combiner,
         "multiply",
         include_str!("../shaders/wgsl/frag/combiner/multiply.wgsl"),
+    ),
+    (
+        Kind::Colour,
+        crate::colour::outcome::ID,
+        crate::colour::outcome::WGSL,
     ),
     (
         Kind::Post,

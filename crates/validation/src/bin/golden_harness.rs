@@ -5,7 +5,7 @@
 //! `golden_harness --scene <name>`: renders the synthetic scene `name` (`validation::golden_scene`, or a structural
 //! scene, `validation::structural_scene`; TASK-M1-13) on the backend `PRIN_GPU_BACKEND` names (R-206) into an
 //! `Rgba32Float` target and writes the float image (`golden_scene::MAGIC`'s format) to stdout. `golden_harness --list`
-//! prints the scenes, `golden_scene`'s then the structural ones.
+//! prints the scenes, `m1-numeric`'s, then `debug-views`'s, then the structural ones.
 
 use std::io::Write as _;
 use std::process::ExitCode;
@@ -21,7 +21,13 @@ enum Scene {
 fn run(args: &[&str]) -> Result<(), String> {
     match args {
         ["--list"] => {
-            for name in golden_scene::NAMES.iter().chain(&structural_scene::NAMES) {
+            for name in golden_scene::NAMES {
+                println!("{name}");
+            }
+            for case in golden_scene::debug_cases()? {
+                println!("{}", case.name);
+            }
+            for name in structural_scene::NAMES {
                 println!("{name}");
             }
             Ok(())

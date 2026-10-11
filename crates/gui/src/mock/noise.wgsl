@@ -1,8 +1,18 @@
 // The mock engine's stand-in for the figure (R-390): smooth procedural noise, fractal value noise over the figure's
 // rect, coloured from black through magenta and gold to cyan. Placeholder content, obvious as such; nothing from
-// workbench/. It draws one full-viewport triangle, so the noise depends only on the position within the viewport the
-// app sets to the figure's rect, and the same rect draws the same pixels. Its output is gamma-space, as egui-wgpu's own
-// output is on the targets it chooses.
+// workbench/. It draws one full-viewport triangle and evaluates a fake field of the latent space at each pixel's IC
+// through the mock's chart, z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂ (chart_decoder_contract Part 3), `t` Y-up: so a pan
+// shifts the picture and a zoom scales it about the centre, and a slice or a tilt changes it. `chart` carries z₀, q₁
+// and q₂ projected on three directions: z_α, z_β and a fixed mix of the six hidden ones. Its output is gamma-space, as
+// egui-wgpu's own output is on the targets it chooses.
+
+struct ChartUniform {
+    origin: vec4<f32>,
+    q1: vec4<f32>,
+    q2: vec4<f32>,
+};
+
+@group(0) @binding(0) var<uniform> chart: ChartUniform;
 
 struct VsOut {
     @builtin(position) position: vec4<f32>,
@@ -50,8 +60,12 @@ fn fbm(p: vec2<f32>) -> f32 {
 
 @fragment
 fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
-    let p = in.uv * vec2<f32>(6.0, 5.0);
-    let warp = vec2<f32>(fbm(p + vec2<f32>(3.1, 1.7)), fbm(p + vec2<f32>(8.3, 2.8)));
+    let x = in.uv.x * 2.0 - 1.0;
+    let y = 1.0 - in.uv.y * 2.0;
+    let z = chart.origin.xyz + x * chart.q1.xyz + y * chart.q2.xyz;
+    let p = (z.xy + vec2<f32>(1.0, 1.0)) * vec2<f32>(3.0, 2.5);
+    let phase = vec2<f32>(1.7, -1.1) * z.z;
+    let warp = vec2<f32>(fbm(p + vec2<f32>(3.1, 1.7) + phase), fbm(p + vec2<f32>(8.3, 2.8) - phase));
     let n = fbm(p + 2.5 * warp);
     let bands = fract(n * 4.0);
     let black = vec3<f32>(0.02, 0.02, 0.03);

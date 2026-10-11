@@ -87,6 +87,10 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-397** — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*
 - **R-398** — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*
 - **R-401** — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
+- **R-407** — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*
+- **R-408** — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
+- **R-412** — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*
+- **R-413** — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes "edge-heavy: crowds the bounds" *(closes RQ-267)*
 
 ## Design and architecture
 
@@ -225,10 +229,16 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-379** — `dbg_sentinel`'s suspect styling hook is an extension point; TASK-M3-05 defines the styling and applies it *(closes RQ-204)*
 - **R-381** — The drift views offer `symlog`, `lin` and `log`, with `symlog` the default; the value fed to `dbg_sentinel` is the compacted value *(closes RQ-206)*
 - **R-383** — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*
-- **R-390** — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots. Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and gui, for REQ-GUI-176 and REQ-GUI-177 only. Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only).
+- **R-390** — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots. Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409). Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only); amended in part by R-409.
 - **R-399** — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*
 - **R-400** — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*
 - **R-403** — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*
+- **R-404** — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps. Still in force: all of it, as its text reads, except that the `Orbit` row (Compass's Shift+arrows, 5°) and the note on what Shift does on Compass's Shift+arrows are retired, Shift ×10 and Alt ×0.1 applying on the compass in interaction mode as everywhere, with no separate fine step (R-409, the human's follow-up answer); and that the ring is `hyperlink_color` in interaction mode only, and orange in navigation mode (R-409). Its width, its rounding, the breadcrumb, the `?` overlay, the repeat timing and every other base step stand. Amended in part by R-409.
+- **R-405** — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console. Still in force: all of it, as its text reads, except that ↑ and ↓ scroll the entry list only in interaction mode, after Enter on the list, Esc returning to navigation mode on it (R-409, the human's follow-up answer); and that every landing, the console's first filter included, is in navigation mode, the arrows moving within a section in navigation mode (R-409). Amended in part by R-409.
+- **R-406** — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout
+- **R-409** — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
+- **R-410** — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*
+- **R-411** — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*
 
 ## Values
 
@@ -311,6 +321,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-391** — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
 - **R-393** — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)*
 - **R-396** — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*
+- **R-414** — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin
+- **R-415** — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change
 
 ## CI
 
@@ -424,3 +436,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-370** — R-366's number stands *(closes RQ-198)*
 - **R-377** — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts
 - **R-384** — TASK-M0-00 is done (R-185, PR #11), as `plan/tasks.yaml` already records; the `m0-gate` tag stands on `002576e`, #124's merge
+- **R-416** — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing

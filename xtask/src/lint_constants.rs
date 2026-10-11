@@ -99,9 +99,10 @@ pub fn scan(source: &str) -> Vec<(usize, String)> {
         if name == "mut" {
             name = words.next().unwrap_or("");
         }
+        // A `macro_rules!` body names its item by a metavariable (`const $name: u32 = 64;`): it is read too.
         let name: String = name
             .bytes()
-            .take_while(|&c| ident(c))
+            .take_while(|&c| ident(c) || c == b'$')
             .map(char::from)
             .collect();
         if name.is_empty() || ["fn", "unsafe", "extern", "async"].contains(&name.as_str()) {
@@ -125,7 +126,7 @@ fn initializer(rest: &str) -> Option<&str> {
         match c {
             b'(' | b'[' | b'{' => depth += 1,
             b'<' if eq.is_none() => depth += 1,
-            b'>' if eq.is_some() || (i > 0 && b[i - 1] == b'-') => {}
+            b'>' if eq.is_some() || b[..i].ends_with(b"-") => {}
             b')' | b']' | b'}' | b'>' => depth -= 1,
             b'=' if depth == 0 && eq.is_none() => eq = Some(i + 1),
             b';' if depth == 0 => return eq.map(|e| &rest[e..i]),
@@ -206,9 +207,11 @@ pub(crate) fn strip(source: &str) -> String {
     out
 }
 
-/// The number of `#`s of the raw string literal starting at `c[i]`, if one does (`r"…"`, `r#"…"#`, never `r#ident`).
+/// The number of `#`s of the raw string literal whose `r` is `c[i]`, if one is (`r"…"`, `r#"…"#`, and the byte and C
+/// strings `br"…"` and `cr"…"`; never `r#ident`). In Rust 2021 an identifier directly followed by `"` or `#` is a
+/// reserved prefix, so an `r` before `"` or `#"` is always a raw string's.
 fn raw_string(c: &[char], i: usize) -> Option<usize> {
-    if c[i] != 'r' || (i > 0 && (c[i - 1].is_alphanumeric() || c[i - 1] == '_')) {
+    if c[i] != 'r' {
         return None;
     }
     let hashes = c[i + 1..].iter().take_while(|&&x| x == '#').count();

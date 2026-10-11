@@ -53,6 +53,9 @@ fn t_member(s: SimState, m: u32) -> u32 {
         case 25u: { return bitcast<u32>(s.Lz_drift); }
         case 26u: { return bitcast<u32>(s.r_sh[0].x); }
         case 27u: { return bitcast<u32>(s.p_sh[2].y); }
+        case 28u: { return bitcast<u32>(s.n.x); }
+        case 29u: { return bitcast<u32>(s.n.y); }
+        case 30u: { return bitcast<u32>(s.n.z); }
         default: { return 0xffffffffu; }
     }
 }
