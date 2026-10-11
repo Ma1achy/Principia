@@ -508,11 +508,17 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
             "`{name}` is not in the register"
         );
     }
-    assert_eq!(
-        STORED_BITS.len(),
-        REGISTER.len(),
-        "§3.8: today all five register entries are hashed"
-    );
+    // §3.8 hashes the register entries that decide stored bits; every other entry is a chart constant, hashed by
+    // value through the link registry instead (§3.9, "The hash"; R-344).
+    for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
+        assert!(
+            ledger::links::CHART_CONSTANTS
+                .iter()
+                .any(|c| c.name == k.name),
+            "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
+            k.name
+        );
+    }
 }
 
 negative_control!(
