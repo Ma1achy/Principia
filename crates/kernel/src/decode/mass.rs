@@ -26,9 +26,15 @@
 //! link inlined, `stick_breaking`'s last step `m₁ = t₇·t₁₃` reaches a shader compiler as `m₀ + t₇·t₁₃`, which a
 //! contracting backend may fuse, and at the onset crossings that flips the tag (`decode_m01_tiny_contraction`: of 40 000
 //! bisected crossing points, 77 at f64 and 45 at f32). So `M₀₁` is the explicit `fma(m₁, 1, m₀)`: `m₁·1` is exact, so it
-//! is the same single rounding of `m₀ + m₁`, and no add is left to fuse, on every backend that keeps an explicit `fma`
-//! fused (rule 6's premise). It reads only the emitted masses, never the link's intermediates, so [`from_masses`] gives
-//! a chart's simplex point the same test (REQ-CHART-033).
+//! is the same single rounding of `m₀ + m₁`, and no add is left to fuse. It reads only the emitted masses, never the
+//! link's intermediates, so [`from_masses`] gives a chart's simplex point the same test (REQ-CHART-033).
+//!
+//! **Its premise** (dd_decoder §3.1): the form holds only on a backend that keeps an explicit `fma` fused and does not
+//! fold the `×1`. Folding `fma(x, 1, y)` to `x + y` is exact and standard (LLVM's InstCombine, Mesa's NIR), and after it
+//! a contracting backend can rebuild `fma(t₇, t₁₃, m₀)`. Whether the kernel's SPIR-V keeps GLSL.std.450 `Fma` fused
+//! (qa's review observes it needs the `NoContraction` decoration) and whether rust-gpu emits that decoration is a check
+//! for the second-backend parity run. `M₀₁` under `stick_breaking` at its onset crossings is a branch input for the
+//! parity gate's no-fork test (R-34, REQ-VAL-017, REQ-VAL-079), which compares tags on identical emitted masses.
 
 use crate::decode::degenerate::Degenerate;
 use crate::generated::links::{Link, LinkReal, Selection};
@@ -60,7 +66,8 @@ pub fn m01_tiny<R: LinkReal>(m01: R) -> bool {
 }
 
 /// The mass block's output for the simplex point `m`, however it was produced: `M₀₁ = m₀ + m₁` and its tag. `M₀₁` is
-/// the explicit `fma(m₁, 1, m₀)`, which no backend can contract differently (R-34; the module's note).
+/// the explicit `fma(m₁, 1, m₀)` (R-34), which no backend contracts differently provided it keeps an explicit `fma`
+/// fused and does not fold the `×1` (the module's note).
 #[inline]
 pub fn from_masses<R: LinkReal>(m: [R; 3]) -> Masses<R> {
     let m01 = Float::mul_add(m[1], R::one(), m[0]);
