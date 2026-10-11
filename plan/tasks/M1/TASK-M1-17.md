@@ -157,7 +157,7 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
 - **R-400's scope over TASK-M1-12's hand-written signed views** (the R-388 pre-flight, 10 Oct 2026; grounds corrected
   per physics review 5480220637 of PR #185). R-400's rule is keyed on "a numeric field view whose field's declared
   ledger range spans zero", and its "What does not change" bullet keeps "the drift views … R-381's view". For each of
-  TASK-M1-12's views (at its head `bc663a1c`) that draws a signed or vector field on viridis: `energy_drift.wgsl` and
+  TASK-M1-12's views (at its head `bc663a1c`) that draw a signed or vector field on viridis: `energy_drift.wgsl` and
   `live_shape.wgsl`, whose comments (`energy_drift.wgsl`:4, `live_shape.wgsl`:7) say "a signed field on viridis, as
   the corpus stands (RQ-260 open)", and the generated `n` view, whose header carries no such comment:
   - `crates/render/shaders/wgsl/frag/debug/derived/energy_drift.wgsl`, the current drift `H(r, p) − E_0`, is the
