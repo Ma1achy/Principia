@@ -80,10 +80,11 @@ perf review 5481953808 (F1, F2) and physics review 5481954814 (finding 4). Nothi
 
 ---
 
-## RQ-270: a saturated configuration control decodes onto or past the poles: at f32 to `α = fl₃₂(π/2)` and `β = fl₃₂(π)`, just past their bounds, and at f32 and f64 to `α = 0` or `β = 0`, where dd_decoder §3.2 says finite `z` never reaches the poles *(conflict, R-21, R-82, REQ-DEC-018, REQ-DEC-027, REQ-DEC-028, REQ-CHART-034; context: TASK-M2-02, PR #192)*
+## RQ-270: a saturated configuration control decodes onto or past the poles: at f32 to `α = fl₃₂(π/2)` and `β = fl₃₂(π)`, just past their bounds, and at f32 and f64 to `α = 0` or `β = 0`, for the σ, tanh and softsign links alike, where dd_decoder §3.2 says finite `z` never reaches the poles *(conflict, R-21, R-82, REQ-DEC-018, REQ-DEC-027, REQ-DEC-028, REQ-CHART-034; context: TASK-M2-02, PR #192)*
 
 *Found by TASK-M2-02's implementer, PR #192, § "Observations for the physics reviewer (not changed here)". Widened in
-PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 and the tanh links. Nothing is chosen.*
+PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 and the tanh links; and in physics review
+5481968627 (F1, the saturated-`z_α` geometry) and code review 5481971521 (F1, the softsign links). Nothing is chosen.*
 
 - **File, section:**
   - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi": "`α = (π/2) ·
@@ -125,39 +126,57 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
   - `crates/kernel/src/generated/links.rs` (main): `const LIT_6: f32 = core::f32::consts::FRAC_PI_2;` and `const
     LIT_7: f32 = core::f32::consts::PI;`, both rounded up from π/2 and π (by 4.4×10⁻⁸ and 8.7×10⁻⁸; the f64 constants
     round down); `fn sigmoid` as `R::one() / (R::one() + Float::exp(-x))`; and `TanhAlpha::forward` and
-    `TanhBeta::forward`, which read the same `LIT_6` (`(π/2)·½(1 + tanh x)` and `(π/2)(1 + tanh x)`). The softsign
-    links cap `|x|` and are not affected in the same way.
+    `TanhBeta::forward`, which read the same `LIT_6` (`(π/2)·½(1 + tanh x)` and `(π/2)(1 + tanh x)`); and
+    `SoftsignAlpha::forward` and `SoftsignBeta::forward`, which read the same `LIT_6` and cap `|x|` at `LIT_4`, which is
+    `f32::INFINITY` / `f64::INFINITY`, so the cap does nothing for finite `x` and `x/(2 + |x|)` rounds to ±1.
+  - The same generated file's `sigmoid_q`, `tanh_q` and `softsign_q`, onto dd_generation_root §3.9's "each free
+    momentum `q ∈ (−q_max, q_max)` (dd_decoder §3.4)", reach `±q_max` exactly at saturation, by the same rounding;
+    `q_max` = 2 is exact, so they never overshoot. REQ-DEC-027's "|qₖ| ≤ q_max" is closed and admits that; §3.9's open
+    codomain and test 8 (a)'s "in range" read as open do not. The mass links (`softmax_tanh`, `stick_breaking`) keep
+    every mass positive (`μ_max·tanh` and the `(1−ε_μ)` factor), and the half-line links (`softplus`, `exp`), which
+    reach 0 on underflow, serve none of the blocks ("the two lines, which no block uses").
 - **Conflict:**
-  - *Upper poles, f32 only.* At f32, `σ` rounds to 1 for `z ≳ 17` (`tanh` to 1 for `z ≳ 9`), so a saturated control
-    gives `α = fl₃₂(π/2) > π/2` and `β = fl₃₂(π) > π` (for `tanh_beta`, `2·fl₃₂(π/2) = fl₃₂(π)` exactly). Then
-    `ρ̃_x = cos α ≈ −4.4×10⁻⁸` and `λ̃_y ≈ −8.7×10⁻⁸·sin α`, past `δ_λ = 10⁻¹²`: the pole and the mirror seam are
-    reached by rounding, not by the formula.
+  - *Upper poles, f32 only.* At f32, `σ` rounds to 1 for `z ≳ 17`, `tanh` for `z ≳ 9`, and softsign's `x/(2 + |x|)`
+    from `x ≈ 2.2×10⁷` (at some `x`; at every `x` from about 4.5×10⁷), so a saturated control gives
+    `α = fl₃₂(π/2) > π/2` and `β = fl₃₂(π) > π` (for `tanh_beta` and `softsign_beta`, `2·fl₃₂(π/2) = fl₃₂(π)`
+    exactly). Then `ρ̃_x = cos α ≈ −4.4×10⁻⁸` and `λ̃_y ≈ −8.7×10⁻⁸·sin α`, past `δ_λ = 10⁻¹²`: the pole and the
+    mirror seam are reached by rounding, not by the formula.
   - *Lower poles, f32 and f64.* `α = 0` or `β = 0` exactly where the link's output underflows: for σ at `z ≲ −88.7`
     (f32) and `z ≲ −709.8` (f64), where `exp(−z)` overflows; for the tanh links at `z ≲ −9` (f32) and `z ≲ −19.1`
-    (f64), where `tanh` rounds to −1.
-  - *Canonical no-op.* At f32 with `z_α` saturated, `ρ̃ = (−4.4×10⁻⁸, 0)`, so `φ = atan2(0, −4.4×10⁻⁸) = π` and §3.3
-    turns the whole state by a half turn; with `z_β` saturated, `λ̃_y < −δ_λ`, so §3.3 takes the mirror. Decoder test
-    5 and REQ-DEC-018 do not hold there. REQ-DEC-002's own text (canonicalise's output lies on the section) still
+    (f64), where `tanh` rounds to −1; for the softsign links where `x/(2 + |x|)` rounds to −1, at some `x` from
+    `x ≈ −3.4×10⁷` and at every `x` from about `−6.7×10⁷` (f32; 2²⁵ and 2²⁶), and at some `x` from `x ≈ −1.8×10¹⁶`
+    and at every `x` from about `−3.6×10¹⁶` (f64; 2⁵⁴ and 2⁵⁵). Code review 5481971521 measured `α = fl₃₂(π/2)` at
+    `x = 6.8×10⁷` and `α = 0` at `x = −6.8×10⁷` (f32) and a lower pole at `x ≈ 10¹⁷` (f64); `softsign_beta` has the
+    same thresholds. The f64 upper images land on `fl₆₄(π/2)` and `fl₆₄(π)`, which are below π/2 and π.
+  - *Canonical no-op.* §3.3 rotates first and then runs the mirror test in the rotated frame. At f32 with `z_α`
+    saturated, `ρ̃ = (−4.4×10⁻⁸, 0)`, so `φ = atan2(0, −4.4×10⁻⁸) = π` and §3.3 turns the whole state by a half turn,
+    followed by the mirror wherever `sin β` is not ≈ 0: after `R(−π)`, `λ̃_y = −sin α·sin β < −δ_λ` (with
+    `λ̃ = sin α·(cos β, sin β)`, §3.2). With `z_β` saturated, `λ̃_y < −δ_λ`, so §3.3 takes the mirror. Decoder test 5
+    and REQ-DEC-018 do not hold there. REQ-DEC-002's own text (canonicalise's output lies on the section) still
     holds, since the half turn and the mirror put the state back on it; it is named, not marked.
   - The outputs stay finite and decode's identities hold there (PR #192). §3.2's "never reaches the exact poles …
     strictly", decoder tests 3 and 5, REQ-DEC-027, REQ-DEC-018, and the note's and REQ-DEC-028's "never lands" /
     "endpoints excluded" do not hold as written. TASK-M2-01's merged test reads test 8 (a)'s "in range" as the closed
     interval at the f32-rounded bounds, which the §3.9 row's "(a,b)" does not state.
 - **Context for weighing the options (physics review 5481954814, finding 3; not a recommendation):** the states past
-  the upper poles are valid three-body configurations. `α = fl₃₂(π/2) > π/2` with `ρ̃_x < 0` is the in-range
-  `α' = π − fl₃₂(π/2) < π/2` turned by π about the CoM; `β = fl₃₂(π) > π` is the in-range `β' = 2π − fl₃₂(π)`,
-  mirrored. Both sit at a near-collision of the inner pair (`‖ρ̃‖ ≈ 4×10⁻⁸`), which the collision and conditioning
-  flags already fence (§3.2), and the overshoot is under one f32 ulp of α near π/2 (1.19×10⁻⁷). So what (a) gives up
+  the upper poles are valid three-body configurations. With `z_α` saturated the state is the in-range configuration
+  (`α' = π − fl₃₂(π/2) < π/2`, `β' = π − β`), mirrored and turned by π about the CoM; `β = fl₃₂(π) > π` is the
+  in-range `β' = 2π − fl₃₂(π)`, mirrored. Both sit at a near-collision of the inner pair (`‖ρ̃‖ ≈ 4×10⁻⁸`), which
+  the collision and conditioning flags already fence (§3.2), and the overshoot is under one f32 ulp of α near π/2
+  (1.19×10⁻⁷). So what (a) gives up
   is the literal range statements and the canonical no-op, not physical correctness.
 - **Options seen:**
   - (a) Amend dd_decoder §3.2, tests 3 and 5, REQ-DEC-027 and REQ-DEC-018 (and the note / REQ-DEC-028) to state the
     behaviour at saturation: the range closed and the poles reachable, at f32 for the upper poles and at f32 and f64
-    for the lower poles, for the σ and tanh links (the softsign links not affected); the canonical no-op excepting
-    the saturated poles; the outputs finite and the identities holding.
+    for the lower poles, for the σ, tanh and softsign links (and, for `q`'s open codomain in §3.9, `sigmoid_q`,
+    `tanh_q` and `softsign_q` reaching `±q_max`); the canonical no-op excepting the saturated poles; the outputs
+    finite and the identities holding.
   - (b) Generate the f32 constants rounded toward zero (`fl↓(π/2)`, `fl↓(π)`) so the upper image stays inside the
     bounds (a change to the generated links, TASK-M2-01's output). It removes the upper overshoot and so the half turn
     and the mirror; it does not remove the lower poles: `α = 0` or `β = 0` would remain for σ at `z ≲ −88.7` (f32)
-    and `z ≲ −709.8` (f64), and for the tanh links at `z ≲ −9` (f32) and `z ≲ −19.1` (f64).
+    and `z ≲ −709.8` (f64), for the tanh links at `z ≲ −9` (f32) and `z ≲ −19.1` (f64), and for the softsign links
+    from `x ≈ −3.4×10⁷` (every `x` from about `−6.7×10⁷`, f32) and from `x ≈ −1.8×10¹⁶` (every `x` from about
+    `−3.6×10¹⁶`, f64). The `q` links' `±q_max` would remain as well.
   - (c) Another form the corpus permits. Clamping the output is not one: REQ-DEC-028 and the note exclude "endpoint
     clamping" and "artificial guards".
 - **Applied meanwhile:** nothing.
