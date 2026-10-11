@@ -10,6 +10,9 @@
 //! - `link_properties_d_c1`: (d), the central-difference derivative continuous along a fine grid through saturation.
 //! - `link_properties_log_det_finite`: every log-det finite at f32 and f64 for every finite control up to 10³⁰, far
 //!   past where `exp` and `cosh` overflow, and the two precisions agreeing to f32 round-off (walls W7, W9).
+//! - `link_properties_log_det_half_max`: the edge of that range, per float (§3.9): finite for one control at
+//!   `|x| ≤ MAX/2`, and for two while `2·(|z₁| + |z₂|) ≤ MAX`; one float past, −∞ for an entry with a `log sech²`
+//!   term, the correct rounding of a true value below `−MAX`, and finite up to `MAX` for the others.
 //! - `link_selection_defaults_resolve_by_name`: the baked defaults are the named entries (REQ-GEN-013).
 //! - `chart_constants_values`: the generated constants equal REQ-DEC-009's values at f32 and f64.
 //! - `chart_constants_source_scan`: no float literal of a chart constant's value in `crates/kernel/src/{decode,encode}`,
@@ -626,7 +629,8 @@ fn ld_allowance(ld: f64, x: &[f64]) -> f64 {
 }
 
 /// `u`'s log-det at `x`, an f32 control, is finite at f32 and at f64, and the two agree within [`ld_allowance`]
-/// (walls W7 and W9: a finite control has a finite log-det at either precision).
+/// (walls W7 and W9: every control here is far inside the edge [`check_ld_half_max`] checks, past which a
+/// `log sech²` entry's log-det is −∞, its correct rounding).
 fn check_ld_at(u: &Under, x: &[f64]) {
     let x32: Vec<f32> = x.iter().map(|&v| v as f32).collect();
     let (ld32, ld64) = ((u.log_det32)(&x32) as f64, (u.log_det64)(x));
@@ -740,6 +744,156 @@ mod log_det_precision_control {
         "an f32 log-det off by 10⁻³ must fail the agreement check",
         expected = "(precisions disagree)",
         check_ld_over(&under::<1, 1, F32Drift>())
+    );
+}
+
+/// The entries whose log-det has a `log sech²` term, about `log 4 − 2|x|`, so −∞ where `2·Σ|xₖ|` passes `MAX`.
+const SECH2: [&str; 5] = [
+    "softmax_tanh",
+    "stick_breaking",
+    "tanh_alpha",
+    "tanh_beta",
+    "tanh_q",
+];
+
+/// The controls at the edge of §3.9's finite range, as multiples `(sign, edge)` per control, an edge being `MAX/2`,
+/// `MAX/4` or `MAX`, or the next float above one of them (`+`); `0` is the centre. Inside: one control at `±MAX/2`, or
+/// both at `±MAX/4` (`2·Σ|xₖ| = MAX`), or one at `±MAX/2` and the other 0. Past: one control the next float above
+/// `MAX/2`, or both the next float above `MAX/4` (`2·Σ|xₖ|` one ulp of `MAX` past it), and one control at `±MAX`.
+#[derive(Clone, Copy, Debug)]
+enum Edge {
+    Zero,
+    Half,
+    Quarter,
+    AboveHalf,
+    AboveQuarter,
+    Max,
+}
+
+fn edge64(e: Edge) -> f64 {
+    let above = |v: f64| f64::from_bits(v.to_bits() + 1);
+    match e {
+        Edge::Zero => 0.0,
+        Edge::Half => f64::MAX / 2.0,
+        Edge::Quarter => f64::MAX / 4.0,
+        Edge::AboveHalf => above(f64::MAX / 2.0),
+        Edge::AboveQuarter => above(f64::MAX / 4.0),
+        Edge::Max => f64::MAX,
+    }
+}
+
+fn edge32(e: Edge) -> f32 {
+    let above = |v: f32| f32::from_bits(v.to_bits() + 1);
+    match e {
+        Edge::Zero => 0.0,
+        Edge::Half => f32::MAX / 2.0,
+        Edge::Quarter => f32::MAX / 4.0,
+        Edge::AboveHalf => above(f32::MAX / 2.0),
+        Edge::AboveQuarter => above(f32::MAX / 4.0),
+        Edge::Max => f32::MAX,
+    }
+}
+
+/// Every signing of `edges`, one edge per control.
+fn signed(edges: &[Edge]) -> Vec<Vec<(f64, Edge)>> {
+    edges.iter().fold(vec![vec![]], |acc, &e| {
+        acc.into_iter()
+            .flat_map(|p| {
+                [1.0, -1.0].map(|s| {
+                    let mut q = p.clone();
+                    q.push((s, e));
+                    q
+                })
+            })
+            .collect()
+    })
+}
+
+/// `u`'s log-det at `x` at f64 and at f32.
+fn ld_at_edge(u: &Under, x: &[(f64, Edge)]) -> (f64, f64) {
+    let x64: Vec<f64> = x.iter().map(|&(s, e)| s * edge64(e)).collect();
+    let x32: Vec<f32> = x.iter().map(|&(s, e)| s as f32 * edge32(e)).collect();
+    ((u.log_det64)(&x64), f64::from((u.log_det32)(&x32)))
+}
+
+/// `u`'s log-det at the edge of §3.9's finite range ([`Edge`]), at each float: finite inside; past it, −∞ when
+/// `sech2` (the correct rounding of a true value below `−MAX`), else finite, as it is with one control at `±MAX`.
+fn check_ld_half_max(u: &Under, sech2: bool) {
+    use Edge::*;
+    let (inside, past): (Vec<Vec<Edge>>, Vec<Vec<Edge>>) = if u.controls == 1 {
+        (vec![vec![Half]], vec![vec![AboveHalf], vec![Max]])
+    } else {
+        (
+            vec![vec![Quarter, Quarter], vec![Half, Zero], vec![Zero, Half]],
+            vec![
+                vec![AboveQuarter, AboveQuarter],
+                vec![AboveHalf, Zero],
+                vec![Zero, AboveHalf],
+                vec![Max, Zero],
+            ],
+        )
+    };
+    for x in inside.iter().flat_map(|e| signed(e)) {
+        let (l64, l32) = ld_at_edge(u, &x);
+        assert!(
+            l64.is_finite() && l32.is_finite(),
+            "{} at {x:?}: log-det {l64} at f64, {l32} at f32 (not finite inside the edge)",
+            u.name
+        );
+    }
+    for x in past.iter().flat_map(|e| signed(e)) {
+        let (l64, l32) = ld_at_edge(u, &x);
+        if sech2 {
+            assert!(
+                l64 == f64::NEG_INFINITY && l32 == f64::NEG_INFINITY,
+                "{} at {x:?}: log-det {l64} at f64, {l32} at f32 (not −∞ past the edge)",
+                u.name
+            );
+        } else {
+            assert!(
+                l64.is_finite() && l32.is_finite(),
+                "{} at {x:?}: log-det {l64} at f64, {l32} at f32 (not finite up to MAX)",
+                u.name
+            );
+        }
+    }
+}
+
+#[test]
+fn link_properties_log_det_half_max() {
+    for u in registry() {
+        check_ld_half_max(&u, SECH2.contains(&u.name));
+    }
+}
+
+negative_control!(
+    link_properties_log_det_half_max,
+    "a log-det through 1/cosh² is −∞ well inside the edge",
+    expected = "(not finite inside the edge)",
+    check_ld_half_max(&under::<1, 1, CoshLogDet>(), true)
+);
+
+#[cfg(feature = "controls")]
+mod half_max_sech2_control {
+    use super::*;
+
+    negative_control!(
+        link_properties_log_det_half_max,
+        "a log sech² entry checked as finite up to MAX must fail past the edge",
+        expected = "(not finite up to MAX)",
+        check_ld_half_max(&under::<1, 1, TanhAlpha>(), false)
+    );
+}
+
+#[cfg(feature = "controls")]
+mod half_max_finite_control {
+    use super::*;
+
+    negative_control!(
+        link_properties_log_det_half_max,
+        "an entry finite up to MAX checked as −∞ past the edge must fail",
+        expected = "(not −∞ past the edge)",
+        check_ld_half_max(&under::<1, 1, SigmoidAlpha>(), true)
     );
 }
 

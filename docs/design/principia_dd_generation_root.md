@@ -735,11 +735,15 @@ The two simplex inverses are defined on the open simplex. At an exact corner, wi
 the clamp returns a finite value, but SPIR-V's `FMax` with a NaN operand is undefined, so a caller passes no exact
 corner (TASK-M2-15's encode).
 
-The trees write some terms in a form equal in algebra to the table's but with no step that overflows or cancels, so
-that every log-det is finite for every finite control at f32 and f64 (canonical_spec §9, walls 7 and 9, measure
-honesty and totality): each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as
-`−softplus(−x)`, and stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and
-`u`, `1 − u` likewise in `z₂`).
+The trees write some terms in a form equal in algebra to the table's but with no step that overflows or cancels short
+of the float's own range (canonical_spec §9, walls 7 and 9, measure honesty and totality). At f32 and f64, with `MAX`
+the float's largest finite value, a log-det is −∞ only where its true value rounds below `−MAX`, which is then its
+correct rounding, and finite elsewhere. Each `log sech² x` is about `log 4 − 2·abs(x)`, so an entry with that term
+is finite for one control while `abs(x) ≤ MAX/2` (`tanh_*`) and for two while `2·(abs(z₁) + abs(z₂)) ≤ MAX`
+(`softmax_tanh`, `stick_breaking`), and −∞ past that. The other entries are finite for every finite control. The
+forms: each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as `−softplus(−x)`, and
+stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and `u`, `1 − u` likewise
+in `z₂`).
 
 - **The edge-reaching simplex link** *(definition, R-72; REQ-GEN-026)* is the stick-breaking map above. Where
   `softmax_tanh` stops at mass ratios `e^(±2μ_max)`, it reaches within `ε_μ/2` of each edge and of the corner
