@@ -204,13 +204,15 @@ stale — that source held only a prose sentence, not an enumeration. The member
 contract Part 6 names every field its predicates read) and **from measurement**: every inclusion and
 exclusion traces to `principia_dd_refinement_criterion.md`. Sections cited as `[RC §n]`.
 
-**Size.** The `~80 B` figure earlier docs quoted was **descriptive, not a cap**, always written with a
-tilde, and the temporal accumulators were added without changing it. With u32 histogram bins (R-410) the
-size follows from the members below; TASK-M5-01 defines it from the member list, aligns it and measures it,
-and writes the measured figure here and where the docs cite it. There is no memory pressure: `QuadReduction`
-is per *quad*, against `SimState` at per *sample* (millions). The quads to cost it at are memory_tiers §3–§4's:
-render pixels / N² at each tier's `N`, at the largest display, plus their ancestors. The real constraint is
-**categorical, not numerical** — *reduce before evaporate*: fixed-size scalars only, never a history.
+**Size.** **176 B, aligned to 4** (R-410; TASK-M5-01): the members below with u32 histogram bins, laid out as
+"Layout" (below) gives, and measured as `size_of::<QuadReduction>()` of the generated Rust struct and as naga's size
+of the generated WGSL struct. The bins are 128 B of it; §3.7's former u8 bins would have made it 80 B. The figure is
+**descriptive, not a cap**: a member added later changes it. There is no memory pressure: `QuadReduction` is per
+*quad*, against `SimState` at per *sample* (millions). At memory_tiers §3–§4's quad count (render pixels / N² at each
+tier's `N`, at the largest display, 4K's 3840 × 2160, plus their ancestors, about a third more), a tier holds at most
+43 200 quads, 7.6 MB of reductions (Low, High, Ultra and Extreme; Potato 10 800 quads, 1.9 MB; Medium 24 300, 4.3 MB),
+against the 0.36–21.43 GB those tiers' totals give at 4K. The real constraint is **categorical, not numerical** —
+*reduce before evaporate*: fixed-size scalars only, never a history.
 
 #### Identity
 
@@ -236,6 +238,22 @@ workgroup allows (memory_tiers §5), that needs more than about 4.2 M copies per
 which can't be allocated. **Dispatch asserts `N² × (E+1) ≤ 2³² − 1`**; no setting is capped for it, and a bin never
 wraps or saturates silently.
 
+**Bin count (REQ-PAY-075; definition, R-72).** The `N` of `class_histogram[N]`, the bin count (written `N_bins` to keep
+it apart from memory_tiers' `N`), is **32 = 2⁵: one bin per code of the 5-bit `class ⊕ detail` field**, `state`
+(bits 0–2 of `sample_descriptor`, §3.1) ⊕ `detail` (bits 3–4), the code `state | detail << 3` that `dominant_outcome`
+holds and `RenderQuad` copies in bits 0–4 (§3.7a). Bin `k` counts the quad's footprint copies whose descriptor bits 0–4
+read `k`: every copy of every footprint, running copies included (the uniformity invariant, below), so the bins sum to
+`N² × (E+1)`. The set is the field's whole code space, not only the codes payload §2 gives a meaning: then
+`dominant_outcome` is the index of the largest bin, with no table between bin and code, and a code no state uses (the
+reserved `state` 6–7, a `detail` its state does not read) is counted in a bin of its own, never merged into another's.
+A bin no copy reaches stays 0.
+
+**Impurity grain (REQ-PAY-076; definition, R-72).** `outcome_impurity = 1 − max_k f_k`, where
+`f_k = class_histogram[k] / Σ_j class_histogram[j]` is the fraction of the quad's copies in bin `k`: the **joint
+`class ⊕ detail` grain**, as every event-derived field here is ("One grain everywhere", below), over every copy, running
+ones included (`Σ_j = N² × (E+1)`). `dominant_outcome` is the `k` of that maximum, so the two come from one histogram
+and cannot disagree. The impurity-mask cross-check (debug_tooling_plan §G; REQ-VAL-083, TASK-M5-17) uses this fraction.
+
 **One grain everywhere.** Pending change 1 asked whether `dominant_outcome` needed a class-only
 companion, since a masked accessor is unsound (argmax does not commute with masking). **Defining
 every event-derived field at the joint grain dissolves the question** — one grain, no companion field,
@@ -250,7 +268,7 @@ no commuting problem [RC §6.5]. This also covers triple collision / triple ejec
 | `spread_event` | f16 | `disagreement(class⊕detail) / (1 − 1/(E+1))` — attainable maximum |
 | `error_ratio` | f16 | `sigma_E(t) / sigma_E(0)` — **exactly 1.0 under exact dynamics**, so any excess is integration error. Parameter-free. **Detects spread, not drift** — an ensemble whose copies drift *together* has a low ratio however badly they drift (measured: zero flagged pixels at 11% energy error). Pair with `worst_energy_drift`, which is the field to threshold on for absolute conservation. **Max-deviation internally, not MAD** — the requirement is **NaN-safe *and* sensitive**, and MAD fails the second: with 8 copies it medians 8 deviations, so a single wild copy is arithmetically invisible. Measured: a pixel at 2.9% energy drift reads **204.8** under max-deviation and **0.9018** under MAD — *quieter than at `t=0`*. Max-deviation is NaN-safe too (an infinite deviation is the correct answer, where `std` gives NaN). **`max`-aggregated over footprints** — an independent decision that happens to share the word. **Boolean flag only**; magnitude unstable [RC §7.19c, prin-rs RESULTS.md] |
 | `roundtrip_error` | f16 | time-reversal round-trip displacement. **Catches phase error, which conserves `E` exactly and is invisible to `error_ratio`** — four measured cases had every conserved quantity at 1.000000 while the trajectory had moved 0.3–4.7% of a system radius. `corr` with drift +0.186, i.e. independent [RC §7.19f] |
-| `spread_winner` | 2 bits | which contributor won the `max`; makes parent↔child switching visible [RC §7.13] |
+| `spread_winner` | 2 bits | which contributor won the `max`; makes parent↔child switching visible [RC §7.13]. Codes (REQ-PAY-094; R-72): 0 `spread_shape`, 1 `spread_event`, a tie 0, the first operand of the `max`; 2 and 3 unused |
 
 ```
 ensemble_spread = max(spread_shape, spread_event)        -- how error_ratio enters is OPEN
@@ -392,6 +410,12 @@ automatic return.
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast
 the thresholded scalars above, which are compared against `τ` and need no more precision.
 
+**`first_divergence_t`'s sentinel (REQ-PAY-094; definition, R-72) is +∞**, f32 bits `0x7f80_0000`, held until the
+first crossing: the minimum of the empty set of crossing times, as `d_min`'s unset value is f16 +∞ (R-271). It is
+distinct from every crossing time, each finite and ≥ 0, and it is not NaN, the invalid value (R-79, R-136). A minimum
+over footprints passes it by, and a quad that never crossed sorts after every quad that did. Like `d_min`'s, it is
+written and tested by its bits, never by a float comparison (R-297).
+
 Latching is empirically justified, not merely prudent: ensemble spread was observed to **fall 6×**
 between `t=6` and `t=8` in one region — diverge-then-reconverge — so an instantaneous read genuinely
 misses divergence that has already occurred [RC §5.2]. And `first_divergence_t` is the only
@@ -422,7 +446,63 @@ the *most* chaotic regions), whereas a crossing time cannot [RC §5.1].
   That comparison **is** the `alpha` estimator and should be specified as such.
 - **`priority`, `cacheAge`, `lifecycle`, `computeCostMs`, `gentime`** are CPU-computed quad metadata,
   not GPU reductions. A fragment shader cannot read them from this struct; they reach the display via
-  tile debug shaders (render GUI spec §12.1).
+  tile debug shaders (render GUI spec §12.1). The engine holds them in `QuadMeta`, one per quad beside its reduction:
+  `priority`, `cache_age`, `lifecycle`, `compute_cost_ms` and `gentime` (TASK-M5-01).
+
+#### Layout and §3.8 entries
+
+**Member order and packing (REQ-PAY-077; definition, R-72).** `QuadReduction` is 44 scalar slots of 4 bytes, 176 B,
+aligned to 4, with no padding: `class_histogram` first, bin `k` at slot `k` (slots 0–31, bytes 0–127); then nine packed
+words `qr_w0` … `qr_w8` (slots 32–40, bytes 128–163), the low half of each first: `qr_w0`'s low half holds the three
+members narrower than 16 bits, and the 16-bit members follow two to a word in §3.7's order; then the three f32 members in §3.7's order (slots 41–43, bytes 164–175). The 2-bit `spread_winner` and the
+5-bit `dominant_outcome` share `qr_w0`'s low half with the u8 `level`: `dominant_outcome` in bits 0–4, where
+`RenderQuad` and `sample_descriptor` hold `class ⊕ detail` (§3.7a, §3.1), `spread_winner` in bits 5–6, bit 7 reserved,
+`level` in bits 8–15. An f16 member is one binary16 value at a packed 16-bit location (§3.8's `f16`, R-312): bits 0–15
+are `unpack2x16float`'s `.x`, bits 16–31 its `.y`, read widened to f32 (R-317). No member is a history or grows with
+time or sample count (REQ-PAY-006); the bin count is fixed, so the layout does not follow the sim key's `N` or `E`
+(R-410).
+
+**The §3.8 entries.** Every member is `provenance: reduction` and `consumers: [scheduler, debug]`; an f16 range lies
+within ±65504 or the entry states its `overflow` (R-248). A fraction is `[0, 1]`; `spread_shape` and `spread_event`
+are `[0, 1]` by their normalisations (above); a count holds its width, `n_unresolved` and `valid_sample_count` being
+at most N² (R-315); an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are. The ranges and
+`overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift` are proposed,
+R-71 (REQ-PAY-093), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate; those of
+`escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed likewise (RQ-268).
+
+| member | location | type | scale | range | sentinel · overflow |
+|---|---|---|---|---|---|
+| `class_histogram` | scalar-index 0 | vector(u-bits, 32) | lin | [0, 4294967295] | — |
+| `dominant_outcome` | (qr_w0, 0, 5) | u-bits | categorical(32) | [0, 31] | — |
+| `spread_winner` | (qr_w0, 5, 2) | u-bits | categorical(2) | [0, 1] | — |
+| `level` | (qr_w0, 8, 8) | u-bits | lin | [0, 255] | — |
+| `outcome_impurity` | (qr_w0, 16, 16) | f16 | lin | [0, 1] | — |
+| `terminated_fraction` | (qr_w1, 0, 16) | f16 | lin | [0, 1] | — |
+| `spread_shape` | (qr_w1, 16, 16) | f16 | lin | [0, 1] | — |
+| `spread_event` | (qr_w2, 0, 16) | f16 | lin | [0, 1] | — |
+| `error_ratio` | (qr_w2, 16, 16) | f16 | log | [0, ∞) | overflow inf |
+| `roundtrip_error` | (qr_w3, 0, 16) | f16 | log | [0, ∞) | overflow inf |
+| `alpha_area` | (qr_w3, 16, 16) | f16 | diverging | (−∞, ∞) | overflow inf |
+| `alpha_energy` | (qr_w4, 0, 16) | f16 | lin | (−∞, ∞) | overflow inf |
+| `worst_energy_drift` | (qr_w4, 16, 16) | f16 | log | [0, ∞) | overflow inf |
+| `n_unresolved` | (qr_w5, 0, 16) | u-bits | lin | [0, 65535] | — |
+| `suspect_fraction` | (qr_w5, 16, 16) | f16 | lin | [0, 1] | — |
+| `saturated_fraction` | (qr_w6, 0, 16) | f16 | lin | [0, 1] | — |
+| `valid_sample_count` | (qr_w6, 16, 16) | u-bits | lin | [0, 65535] | — |
+| `escape_time_min` | (qr_w7, 0, 16) | f16 | lin | [0, ∞) | overflow saturate |
+| `escape_time_max` | (qr_w7, 16, 16) | f16 | lin | [0, ∞) | overflow saturate |
+| `retrograde_fraction` | (qr_w8, 0, 16) | f16 | lin | [0, 1] | — |
+| `mean_orbit_count_spread` | (qr_w8, 16, 16) | f16 | lin | [0, ∞) | overflow saturate |
+| `running_mean_divergence` | scalar-index 41 | f32 | lin | (−∞, ∞) | — |
+| `first_divergence_t` | scalar-index 42 | f32 | lin | [0, ∞) | sentinel +∞ |
+| `coherence` | scalar-index 43 | f32 | lin | (−∞, ∞) | — |
+
+**Scales (REQ-PAY-094).** A fraction, a spread, a count, a time and a crossing time are `lin`. `dominant_outcome` is
+`categorical(32)`, one category per bin, and `spread_winner` `categorical(2)`, its two codes. `error_ratio`,
+`roundtrip_error` and `worst_energy_drift` are `log`: each is a magnitude ≥ 0 whose values span decades (`error_ratio`
+reads 1.0 under exact dynamics and 204.8 at 2.9% drift; drift's finite tail spans ten orders of magnitude, above).
+`alpha_area` is `diverging`: its sign is load-bearing, the floor being refused on a negative exponent (R-42), and its
+range spans zero (R-403). `alpha_energy` is `lin`, centred on its analytic 1.0, not on zero.
 
 #### Open
 
