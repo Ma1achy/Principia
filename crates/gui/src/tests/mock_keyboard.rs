@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use eframe::egui::{self, Event, Key, Modifiers};
-use engine::contract::view_ui::{Focus, Mode};
+use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
 use super::support::{click, focus, frame_texts, headless, mock_app, press, rejects};
 use crate::capture::{shoot, Shot, Step, PIXELS_PER_POINT, SIZE, STEPS};
@@ -435,8 +435,8 @@ fn mock_keyboard_mouse_opened_menu_follows_the_keys() {
 
 // --- Values: arrows, Shift ×10, Alt ×0.1 -----------------------------------------------------------------------------
 
-/// The app with Navigate's zoom focused, adjusting: Enter into Navigate lands on the centre `u`; Enter there moves
-/// the arrows to its siblings; ↓ ↓ reach the zoom; Enter makes the arrows adjust it.
+/// The app with Navigate's zoom focused, adjusting: Enter into Navigate lands on the centre `u`, in navigation mode;
+/// ↓ ↓ reach the zoom; Enter starts interaction mode, in which the arrows adjust it (R-409).
 fn zoom_app() -> (crate::app::App<crate::side::MockSide>, Headless) {
     let mut app = mock_app();
     let mut h = headless();
@@ -449,13 +449,13 @@ fn zoom_app() -> (crate::app::App<crate::side::MockSide>, Headless) {
             (Key::Enter, NONE),
             (Key::ArrowDown, NONE),
             (Key::Enter, NONE),
-            (Key::Enter, NONE),
             (Key::ArrowDown, NONE),
             (Key::ArrowDown, NONE),
             (Key::Enter, NONE),
         ],
     );
     assert_eq!(focus(&app), ["manifold_view", "navigate", "zoom"]);
+    assert_eq!(app.view.focus.mode, KeyMode::Interaction);
     (app, h)
 }
 
@@ -516,7 +516,8 @@ fn mock_keyboard_arrows_adjust_with_shift_and_alt() {
     rejects("Shift not ×10", || check_steps(&got, &unscaled));
 }
 
-/// Each step kind's base step, the proposal (REQ-GUI-158), and the modifiers' multipliers.
+/// Each step kind's base step, R-404's confirmed (REQ-GUI-158) and the compass's slice-mode proposal (REQ-GUI-184),
+/// and the modifiers' multipliers.
 #[test]
 fn mock_keyboard_base_steps_and_multipliers() {
     let table = [
@@ -525,7 +526,7 @@ fn mock_keyboard_base_steps_and_multipliers() {
         (StepKind::ZoomLog2, Base::Log2(0.25)),
         (StepKind::Pan, Base::OfView(0.05)),
         (StepKind::Tilt, Base::Degrees(1.0)),
-        (StepKind::Orbit, Base::Degrees(5.0)),
+        (StepKind::SliceNormal, Base::OfRange(0.01)),
         (StepKind::TimeStep, Base::OfRange(0.01)),
     ];
     for (kind, base) in table {
@@ -535,7 +536,6 @@ fn mock_keyboard_base_steps_and_multipliers() {
             kind,
             times: -10.0,
             direction: Direction::Down,
-            shift: true,
         };
         assert_eq!(adjust.delta(), base.times(-10.0));
     }
@@ -1169,10 +1169,18 @@ fn mock_keyboard_hidden_layer_takes_no_key() {
 
 // --- The registration each later screen uses -------------------------------------------------------------------------
 
+/// A focus on `path`, in navigation mode.
+fn at(path: &[&str]) -> Focus {
+    Focus {
+        path: path.iter().map(|s| (*s).to_owned()).collect(),
+        mode: KeyMode::Navigation,
+    }
+}
+
 #[test]
 fn mock_keyboard_registration() {
     let mut tree = ScopeTree::new();
-    let mut path = Vec::new();
+    let mut path = at(&[]);
     // An empty tree: nothing to move to.
     assert_eq!(tree.navigate(&mut path, Command::Next, 1.0), Outcome::None);
     assert_eq!(
@@ -1197,7 +1205,7 @@ fn mock_keyboard_registration() {
         tree.get("b").map(|s| s.ring),
         Some(crate::keyboard::scopes::Ring::Outside)
     );
-    let mut path = vec!["a".to_owned()];
+    let mut path = at(&["a"]);
     assert_eq!(
         tree.navigate(&mut path, Command::Enter, 1.0),
         Outcome::Moved
@@ -1207,7 +1215,7 @@ fn mock_keyboard_registration() {
         Outcome::Activate("a1")
     );
     // Enter on a group with nothing under it does nothing.
-    let mut path = vec!["b".to_owned()];
+    let mut path = at(&["b"]);
     assert_eq!(tree.navigate(&mut path, Command::Enter, 1.0), Outcome::None);
     assert_eq!(
         tree.navigate(&mut path, Command::Shortcuts, 1.0),
@@ -1218,12 +1226,20 @@ fn mock_keyboard_registration() {
     assert_eq!(tree.valid_prefix(&["a".into(), "b".into()]), 1);
     assert_eq!(tree.valid_prefix(&["a1".into()]), 0);
     assert_eq!(tree.valid_prefix(&["x".into()]), 0);
-    let mut stale = vec!["a".to_owned(), "zz".to_owned()];
+    let mut stale = Focus {
+        path: vec!["a".to_owned(), "zz".to_owned()],
+        mode: KeyMode::Interaction,
+    };
     assert_eq!(
         tree.navigate(&mut stale, Command::Back, 1.0),
         Outcome::Moved
     );
-    assert!(stale.is_empty());
+    assert!(stale.path.is_empty());
+    assert_eq!(
+        stale.mode,
+        KeyMode::Navigation,
+        "a path cut back is in navigation mode"
+    );
     assert_eq!(tree.labels(&["a".into(), "a1".into()]), ["A", "A1"]);
     // Parents and paths; the menus.
     assert_eq!(tree.parent("a1"), Some("a"));
@@ -1245,9 +1261,7 @@ fn mock_keyboard_registration() {
     keyboard
         .tree_mut(Mode::Explore)
         .register(None, Scope::control("big_control", "Big"));
-    let mut big = Focus {
-        path: vec!["big_control".to_owned()],
-    };
+    let mut big = at(&["big_control"]);
     let ctx = egui::Context::default();
     let mut raw = egui::RawInput {
         events: crate::capture::key(Key::Enter, NONE)[0].clone(),
@@ -1277,18 +1291,19 @@ fn mock_keyboard_registration() {
 #[test]
 fn mock_keyboard_focus_in_view_ui() {
     let app = mock_app();
-    assert_eq!(app.view.focus, Focus { path: Vec::new() });
+    assert_eq!(app.view.focus, at(&[]));
+    assert_eq!(app.view.focus.mode, KeyMode::Navigation);
     assert_eq!(crate::app::initial_view().focus.path.len(), 0);
     rejects("a focus at start", || assert_eq!(focus(&app), ["top_bar"]));
 }
 
 // --- Before and after moving focus: only the ring and the breadcrumb change (REQ-GUI-098) ----------------------------
 
-fn canvas() -> Arc<MockCanvas> {
+pub(super) fn canvas() -> Arc<MockCanvas> {
     Arc::new(MockCanvas::new().expect("a GPU adapter for the mock's canvas"))
 }
 
-fn pixel(shot: &Shot, x: usize, y: usize) -> [u8; 4] {
+pub(super) fn pixel(shot: &Shot, x: usize, y: usize) -> [u8; 4] {
     let i = (y * shot.size[0] as usize + x) * 4;
     shot.rgba[i..i + 4].try_into().unwrap()
 }
@@ -1336,7 +1351,11 @@ fn crumb_rects(names: &[Name]) -> Vec<[f32; 4]> {
 
 /// Every pixel that differs between `a` and `b` lies on one of `rings`' bands or on a breadcrumb; returns how many
 /// differ on each ring.
-fn check_only_ring_and_breadcrumb(a: &Shot, b: &Shot, rings: &[egui::Rect]) -> Vec<usize> {
+pub(super) fn check_only_ring_and_breadcrumb(
+    a: &Shot,
+    b: &Shot,
+    rings: &[egui::Rect],
+) -> Vec<usize> {
     let mut crumbs = crumb_rects(&a.names);
     crumbs.extend(crumb_rects(&b.names));
     let mut on_ring = vec![0; rings.len()];
@@ -1687,10 +1706,22 @@ fn mock_keyboard_manifold_view_scopes() {
         kind(crate::explore::FIGURE),
         Some(Arrows::Adjust(StepKind::Pan))
     );
+    assert_eq!(kind(crate::explore::COMPASS), Some(Arrows::Siblings));
     assert_eq!(
-        kind(crate::explore::COMPASS),
+        tree.children(Some(crate::explore::COMPASS)),
+        [
+            crate::explore::COMPASS_VIEW,
+            crate::explore::COMPASS_TILT,
+            crate::explore::COMPASS_SLICE
+        ]
+    );
+    assert_eq!(
+        kind(crate::explore::COMPASS_VIEW),
         Some(Arrows::Adjust(StepKind::Tilt))
     );
+    for id in [crate::explore::COMPASS_TILT, crate::explore::COMPASS_SLICE] {
+        assert!(tree.get(id).is_some_and(|s| s.activates), "{id} activates");
+    }
     assert_eq!(
         tree.get(crate::explore::FIGURE).map(|s| s.ring),
         Some(Ring::Outside)
@@ -1741,206 +1772,6 @@ fn mock_keyboard_manifold_view_shortcut_rows() {
     rejects("the overlay closed", || check(&closed_after));
 }
 
-/// Enter on a value moves its arrows between its siblings; an arrow lands on a sibling still moving; Enter there
-/// adjusts again; Esc, Tab and Enter into a scope reset it.
-#[test]
-fn mock_keyboard_enter_on_a_value_browses_its_siblings() {
-    use crate::explore::manifold_view as mv;
-    let mut app = mock_app();
-    let mut h = headless();
-    keys(
-        &mut h,
-        &mut app,
-        &[
-            (Key::Tab, NONE),
-            (Key::Tab, NONE),
-            (Key::Enter, NONE),
-            (Key::ArrowDown, NONE),
-            (Key::Enter, NONE),
-        ],
-    );
-    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_U]);
-    // Reached by Enter: the arrows adjust.
-    let adjusted = adjust_of(&mut h, &mut app, Key::ArrowDown, NONE);
-    assert_eq!(
-        adjusted.iter().map(|a| a.scope).collect::<Vec<_>>(),
-        [mv::CENTRE_U]
-    );
-    assert_eq!(
-        (adjusted[0].direction, adjusted[0].shift),
-        (Direction::Down, false)
-    );
-    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_U]);
-    // Enter: the arrows move between its siblings.
-    press(&mut h, &mut app, Key::Enter, NONE);
-    let moved = adjust_of(&mut h, &mut app, Key::ArrowDown, NONE);
-    assert!(moved.is_empty(), "browsing, no adjustment: {moved:?}");
-    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_V]);
-    // Landed browsing: ↓ again moves on.
-    press(&mut h, &mut app, Key::ArrowDown, NONE);
-    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::ZOOM]);
-    // Enter: the zoom adjusts, with Shift passed on.
-    press(&mut h, &mut app, Key::Enter, NONE);
-    let adjusted = adjust_of(&mut h, &mut app, Key::ArrowUp, SHIFT);
-    assert_eq!(adjusted.len(), 1);
-    assert_eq!(
-        (adjusted[0].scope, adjusted[0].shift, adjusted[0].times),
-        (mv::ZOOM, true, 10.0)
-    );
-    // Browsing, then Esc and Enter into Navigate: the first value adjusts again.
-    press(&mut h, &mut app, Key::Enter, NONE);
-    keys(&mut h, &mut app, &[(Key::Escape, NONE), (Key::Enter, NONE)]);
-    assert_eq!(focus(&app), ["manifold_view", mv::NAVIGATE, mv::CENTRE_U]);
-    let adjusted = adjust_of(&mut h, &mut app, Key::ArrowRight, NONE);
-    assert_eq!(
-        adjusted.iter().map(|a| a.scope).collect::<Vec<_>>(),
-        [mv::CENTRE_U]
-    );
-    rejects("the arrows still browsing", || assert!(adjusted.is_empty()));
-}
-
-/// The state machine itself, on a tree of one group of two values and a disabled leaf.
-#[test]
-fn mock_keyboard_navigate_in_browsing_state() {
-    let mut tree = ScopeTree::new();
-    tree.register(None, Scope::group("g", "G"));
-    tree.register(Some("g"), Scope::value("a", "A", StepKind::Bounded));
-    tree.register(Some("g"), Scope::value("b", "B", StepKind::Bounded));
-    tree.register(Some("g"), Scope::disabled("c", "C"));
-    tree.register(None, Scope::group("h", "H"));
-    let mut path = vec!["g".to_owned()];
-    let mut browsing = true;
-    let run = |command, shift, path: &mut Vec<String>, browsing: &mut bool| {
-        tree.navigate_in(path, command, 1.0, shift, browsing)
-    };
-    assert_eq!(
-        run(Command::Enter, false, &mut path, &mut browsing),
-        Outcome::Moved
-    );
-    assert!(!browsing, "Enter into a scope adjusts");
-    let down = Command::Arrow(Direction::Down);
-    assert_eq!(
-        run(down, true, &mut path, &mut browsing),
-        Outcome::Adjust(Adjust {
-            scope: "a",
-            kind: StepKind::Bounded,
-            times: -1.0,
-            direction: Direction::Down,
-            shift: true
-        })
-    );
-    assert_eq!(
-        run(Command::Enter, false, &mut path, &mut browsing),
-        Outcome::None
-    );
-    assert!(browsing, "Enter on a value browses");
-    assert_eq!(run(down, false, &mut path, &mut browsing), Outcome::Moved);
-    assert_eq!(path, ["g", "b"]);
-    assert!(browsing);
-    // Onto the disabled leaf, and Enter there changes nothing.
-    assert_eq!(run(down, false, &mut path, &mut browsing), Outcome::Moved);
-    assert_eq!(path, ["g", "c"]);
-    assert_eq!(
-        run(Command::Enter, false, &mut path, &mut browsing),
-        Outcome::None
-    );
-    assert!(browsing, "Enter on a leaf that is no value keeps the state");
-    // At the end the arrows stop, still browsing.
-    assert_eq!(run(down, false, &mut path, &mut browsing), Outcome::None);
-    assert!(browsing);
-    assert_eq!(
-        run(
-            Command::Arrow(Direction::Up),
-            false,
-            &mut path,
-            &mut browsing
-        ),
-        Outcome::Moved
-    );
-    assert_eq!(
-        run(Command::Enter, false, &mut path, &mut browsing),
-        Outcome::None
-    );
-    assert!(!browsing, "Enter again adjusts");
-    for reset in [Command::Back, Command::Next, Command::Previous] {
-        let mut p = vec!["g".to_owned(), "b".to_owned()];
-        let mut b = true;
-        let _ = run(reset, false, &mut p, &mut b);
-        assert!(!b, "{reset:?} resets");
-    }
-    // `navigate` adjusts a value, never browsing.
-    let mut p = vec!["g".to_owned(), "a".to_owned()];
-    assert!(matches!(
-        tree.navigate(&mut p, down, 1.0),
-        Outcome::Adjust(_)
-    ));
-    let mut b = true;
-    let mut p = vec!["g".to_owned(), "a".to_owned()];
-    let browsed = tree.navigate_in(&mut p, down, 1.0, false, &mut b);
-    rejects("browsing adjusting", || {
-        assert!(matches!(browsed, Outcome::Adjust(_)))
-    });
-}
-
-/// The figure and the compass, Tab-focused, take the arrows: the figure pans, the compass tilts, Shift orbits it.
-#[test]
-fn mock_keyboard_figure_and_compass_arrows() {
-    let mut app = mock_app();
-    let mut h = headless();
-    keys(
-        &mut h,
-        &mut app,
-        &[(Key::Tab, NONE), (Key::Tab, NONE), (Key::Tab, NONE)],
-    );
-    assert_eq!(focus(&app), [crate::explore::FIGURE]);
-    let before = app.snapshot().sim.plane.clone();
-    press(&mut h, &mut app, Key::ArrowRight, NONE);
-    let _ = h.frame(&mut app, Vec::new());
-    let panned = app.snapshot().sim.plane.clone();
-    assert!(
-        (panned.z0[0] - (before.z0[0] + 0.1)).abs() < 1e-12,
-        "→ pans along q₁ by a twentieth: {:?}",
-        panned.z0
-    );
-    assert_eq!(panned.z0[1], before.z0[1]);
-    // + zooms in a quarter octave, − out.
-    press(&mut h, &mut app, Key::Plus, NONE);
-    let _ = h.frame(&mut app, Vec::new());
-    let zoomed = app.snapshot().sim.plane.q1[0];
-    assert!(
-        (zoomed - (-0.25f64).exp2()).abs() < 1e-12,
-        "+ zooms in: {zoomed}"
-    );
-    press(&mut h, &mut app, Key::Minus, SHIFT);
-    let _ = h.frame(&mut app, Vec::new());
-    let out = app.snapshot().sim.plane.q1[0];
-    assert!(
-        (out - 2.25f64.exp2()).abs() < 1e-9,
-        "Shift − zooms out 2.5 octaves: {out}"
-    );
-    // Trajectory, then the compass.
-    keys(&mut h, &mut app, &[(Key::Tab, NONE), (Key::Tab, NONE)]);
-    assert_eq!(focus(&app), [crate::explore::COMPASS]);
-    let before = app.snapshot().sim.plane.clone();
-    let orbit = app.manifold.compass;
-    press(&mut h, &mut app, Key::ArrowUp, SHIFT);
-    let _ = h.frame(&mut app, Vec::new());
-    let orbited = app.snapshot().sim.plane.clone();
-    assert_eq!(orbited, before, "Shift orbits: no edit");
-    assert_ne!(app.manifold.compass, orbit, "the cube turned");
-    press(&mut h, &mut app, Key::ArrowUp, NONE);
-    let _ = h.frame(&mut app, Vec::new());
-    let tilted = app.snapshot().sim.plane.clone();
-    assert_ne!((tilted.q1, tilted.q2), (before.q1, before.q2), "↑ tilts");
-    assert_eq!(
-        app.manifold.compass.mode,
-        crate::explore::manifold_view::Touch::Tilt
-    );
-    rejects("Shift's orbit taken for a tilt", || {
-        assert_ne!((orbited.q1, orbited.q2), (before.q1, before.q2))
-    });
-}
-
 /// The focus ring and the breadcrumb follow a Manifold view control.
 #[test]
 fn mock_keyboard_focus_manifold_view_control() {
@@ -1961,6 +1792,9 @@ fn mock_keyboard_focus_manifold_view_control() {
         place.rect
     );
     assert!(place.widget.is_some(), "placed as its widget");
+    // Esc ends the interaction, the breadcrumb kept; a second Esc goes up to Navigate.
+    press(&mut h, &mut app, Key::Escape, NONE);
+    assert!(frame_texts(&mut h, &mut app).contains(&"Manifold view › Navigate › zoom".to_owned()));
     press(&mut h, &mut app, Key::Escape, NONE);
     let texts = frame_texts(&mut h, &mut app);
     rejects("the breadcrumb after Esc", || {

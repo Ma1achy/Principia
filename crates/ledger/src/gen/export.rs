@@ -21,12 +21,16 @@ use crate::schema::{Entry, Word};
 pub const PATH: &str = "crates/engine/src/export/generated.rs";
 
 /// The Rust type `e` decodes to, and its value from `read`, `word` and `ic`, as [`catalogue::Read::rust`] reads it: a
-/// vector, three `vec2<f32>` (R-86), flattened to its six components.
+/// stored vector, three `vec2<f32>` (R-86), flattened to its six components; a derived one, `n`, as the read side holds
+/// it.
 fn decoded(e: &Entry, r: &Read) -> (String, String) {
     let value = r.rust(e.name);
     match r {
         Read::Member { wgsl, .. } => ((*wgsl).to_owned(), value),
-        Read::Vector => ("[f32; 6]".to_owned(), format!("flat({value})")),
+        Read::Vector { wgsl, .. } if *wgsl == catalogue::VEC2X3 => {
+            ("[f32; 6]".to_owned(), format!("flat({value})"))
+        }
+        Read::Vector { rust, .. } => ((*rust).to_owned(), value),
         Read::Word { .. } => ("u32".to_owned(), value),
         Read::Ic => ("f32".to_owned(), value),
     }

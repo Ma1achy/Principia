@@ -22,7 +22,7 @@
 use std::sync::Arc;
 
 use eframe::egui::{self, Event, Key, Modifiers};
-use engine::contract::view_ui::Mode;
+use engine::contract::view_ui::{KeyMode, Mode};
 use gui::app::App;
 use gui::capture::{self, Shot, Step, PIXELS_PER_POINT, SIZE};
 use gui::headless::{Headless, Name};
@@ -316,7 +316,8 @@ fn qa_mock_keyboard_focus_is_view_ui_state() {
 // --- REQ-GUI-169 / REQ-GUI-158: a value joined to the tree; arrows adjust it, Shift ×10, Alt ×0.1 ------------------------
 
 /// An app whose Explore tree has a value `zoom` joined under Navigate, as a later screen joins (§G3's example
-/// "Manifold view › Navigate › zoom"), focused.
+/// "Manifold view › Navigate › zoom"), focused, in interaction mode: R-409 point 4 and F1, the arrows adjust a value
+/// only after Enter on it (Enter on Navigate lands on `zoom` in navigation mode; Enter again starts interaction).
 fn zoom_app(kind: StepKind) -> (App<MockSide>, Headless) {
     let mut app = mock_app();
     let tree = app.keyboard.tree_mut(Mode::Explore);
@@ -338,9 +339,15 @@ fn zoom_app(kind: StepKind) -> (App<MockSide>, Headless) {
         (Key::Enter, NONE),
         (Key::ArrowDown, NONE),
         (Key::Enter, NONE),
+        (Key::Enter, NONE),
     ] {
         press(&mut h, &mut app, k, m);
     }
+    assert_eq!(
+        app.view.focus.mode,
+        KeyMode::Interaction,
+        "Enter on the value `zoom` did not start interaction mode (R-409 point 4)"
+    );
     (app, h)
 }
 
@@ -382,7 +389,8 @@ fn qa_mock_keyboard_arrows_adjust_a_focused_value_shift_x10_alt_x0_1() {
         StepKind::ZoomLog2,
         StepKind::Pan,
         StepKind::Tilt,
-        StepKind::Orbit,
+        // R-409 point 1 retires `Orbit`; F3 adds the compass's slice-mode step (REQ-GUI-184), Shift and Alt as everywhere.
+        StepKind::SliceNormal,
         StepKind::TimeStep,
     ];
     for kind in kinds {
@@ -430,15 +438,37 @@ fn qa_mock_keyboard_breadcrumb_reads_the_spec_example() {
     rejects("a breadcrumb one level short", || {
         check_breadcrumb(&n, top, &format!("Manifold view{SEP}Chart{SEP}zoom"))
     });
-    // Esc twice: the breadcrumb follows, one level each.
+    // Esc in interaction mode returns to navigation mode on the same value (R-409 point 4): the path is unchanged.
     press(&mut h, &mut app, Key::Escape, NONE);
+    let n = names(&mut h, &mut app);
+    check_breadcrumb(&n, top, &want);
+    assert_eq!(
+        app.view.focus.mode,
+        KeyMode::Navigation,
+        "Esc in interaction mode"
+    );
+    // Esc twice more in navigation mode: the breadcrumb follows, one level each.
+    press(&mut h, &mut app, Key::Escape, NONE);
+    let n = names(&mut h, &mut app);
+    check_breadcrumb(&n, top, &["Manifold view", "Navigate"].join(SEP));
+    assert!(
+        !n.iter().any(|x| x.name.contains(&want)),
+        "the breadcrumb still reads `{want}` after Esc in navigation mode"
+    );
     press(&mut h, &mut app, Key::Escape, NONE);
     let n = names(&mut h, &mut app);
     check_breadcrumb(&n, top, "Manifold view");
     let still_deep = n.iter().any(|x| x.name.contains(&want));
     assert!(
         !still_deep,
-        "the breadcrumb still reads `{want}` after two Esc"
+        "the breadcrumb still reads `{want}` after three Esc"
+    );
+    let navigate_deep = n
+        .iter()
+        .any(|x| x.name.contains(&["Manifold view", "Navigate"].join(SEP)));
+    assert!(
+        !navigate_deep,
+        "the breadcrumb still reads Navigate after three Esc"
     );
 }
 

@@ -343,7 +343,7 @@ negative_control!(
 
 // ── REQ-TOOL-020 / R-378: each view assembles reading only its own field ─────────────────────────────────────────
 
-/// What `field`'s view reads (R-378, RQ-227, RQ-228).
+/// What `field`'s view reads (R-378, RQ-227, RQ-228), the gates the payload names included.
 fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
     if IC.contains(&field) {
         vec![format!("ic.{field}")]
@@ -353,6 +353,10 @@ fn expected_fields(field: &str, word_fields: &[&str]) -> Vec<String> {
         // `detail` is the union keyed by `state` (payload §2; render contract Part 6, "`detail` (union keyed by
         // state)"; REQ-TOOL-022, REQ-COL-004): its view reads its key too, and nothing else.
         vec!["detail".to_owned(), "state".to_owned()]
+    } else if field == "last_symbol" {
+        // `last_symbol` has no in-band "none" code: it is meaningful iff `length ≥ 1 && length ≠ 127` (payload §2),
+        // so its view also reads the word's `.w`, where the length is, and nothing else.
+        vec!["last_symbol".to_owned(), "word.w".to_owned()]
     } else {
         vec![field.to_owned()]
     }

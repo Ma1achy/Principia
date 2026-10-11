@@ -17,6 +17,10 @@ pub mod spawn;
 /// through this dev-dependency (systems_architecture §7.1).
 pub use engine::synthetic;
 
+/// The kernel's `times` packing (payload §2, §6), for ledger's round-trip test, which reaches the kernel only through
+/// this dev-dependency.
+pub use kernel::payload::{pack_times, set_t_dmin_step, tm_t_dmin_step, tm_t_end_step};
+
 /// The coordinate presets and the stain graph they are (TASK-M1-07), re-exported for the render crate's tests, as the
 /// harness is.
 pub use engine::{presets, stain};

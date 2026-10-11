@@ -225,7 +225,8 @@ fn ctx_reads(wgsl: &str) -> BTreeSet<(String, String)> {
 
 /// Each view of `views` is a colour occupant reading its own field, from the lane Part 6 names: `ctx.ic` for the
 /// twelve `ICDescriptor` fields, `ctx.sample.word` for a field of the word's `.w`, `ctx.sample.<field>` for every
-/// other, the shadow included; and nothing else of `ctx.sample` or `ctx.ic`, but `detail`'s key `ctx.sample.state`.
+/// other, the shadow included; and nothing else of `ctx.sample` or `ctx.ic`, but `detail`'s key `ctx.sample.state`
+/// and `last_symbol`'s gate `ctx.sample.word`.
 fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
     for (field, text) in views {
         assert!(
@@ -248,6 +249,11 @@ fn check_view_lanes(views: &[(String, String)], word_fields: &[&str]) {
         // state)"; REQ-TOOL-022, REQ-COL-004): its view also reads its key, `ctx.sample.state`, and nothing else.
         if field == "detail" {
             want.insert(("sample".to_owned(), "state".to_owned()));
+        }
+        // `last_symbol` has no in-band "none" code: it is meaningful iff `length ≥ 1 && length ≠ 127` (payload §2),
+        // so its view also reads its gate, the word's length, from `ctx.sample.word`, and nothing else.
+        if field == "last_symbol" {
+            want.insert(("sample".to_owned(), "word".to_owned()));
         }
         assert_eq!(
             reads, want,

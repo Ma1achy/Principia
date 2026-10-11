@@ -82,3 +82,11 @@ justification = "Z0_HALF_RANGE is 1.0, so 2.0 * 1.0 and 2.0 / 1.0 are both 2.0"
 [[equivalent]]
 mutant = "crates/gui/src/explore/manifold_view/mod.rs:562:57: replace * with / in adjust"
 justification = "Q_HALF_RANGE is 1.0, so (range * 2.0) * 1.0 and (range * 2.0) / 1.0 are the same value"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:183:41: replace * with / in slice_by_drag"
+justification = "Z0_HALF_RANGE is 1.0 (manifold_view::Z0_HALF_RANGE, a const), and x * 1.0 == x / 1.0 for every f64, so the drag's move is the same value"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:234:41: replace * with / in adjust"
+justification = "Z0_HALF_RANGE is 1.0 (manifold_view::Z0_HALF_RANGE, a const), and 2.0 * 1.0 == 2.0 / 1.0, so the slice arrow's step is the same value"

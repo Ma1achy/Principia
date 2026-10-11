@@ -14,7 +14,7 @@ use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{
-    Backdrop, DebugCategories, Focus, Inspector, KeptOrbits, LinkedViews, Mode, Selection,
+    Backdrop, DebugCategories, Focus, Inspector, KeptOrbits, KeyMode, LinkedViews, Mode, Selection,
     Transport, ViewUI, Windows,
 };
 
@@ -47,13 +47,16 @@ pub fn clear_colour(visuals: &egui::Visuals) -> Color32 {
     visuals.extreme_bg_color
 }
 
-/// The app's initial `ViewUI`: the Explore mode, the transport paused, no scope focused, and every other group
-/// empty.
+/// The app's initial `ViewUI`: the Explore mode, the transport paused, no scope focused (the keyboard in navigation
+/// mode), and every other group empty.
 pub fn initial_view() -> ViewUI {
     ViewUI {
         backdrop: Backdrop {},
         debug_categories: DebugCategories {},
-        focus: Focus { path: Vec::new() },
+        focus: Focus {
+            path: Vec::new(),
+            mode: KeyMode::Navigation,
+        },
         selection: Selection {},
         kept_orbits: KeptOrbits {},
         inspector: Inspector {},
@@ -260,6 +263,7 @@ impl<S: EngineSide> App<S> {
             &explore::top_bar::TopBar {
                 mode: self.view.mode,
                 breadcrumb: &breadcrumb,
+                keys: self.view.focus.mode,
             },
             &mut self.keyboard,
             &mut actions,
@@ -339,8 +343,7 @@ impl<S: EngineSide> App<S> {
         explore::compass::show(
             ui,
             layout.compass,
-            &sim.plane,
-            &sim.lock,
+            sim,
             &mut self.keyboard,
             &mut self.manifold,
             out,
@@ -361,7 +364,7 @@ impl<S: EngineSide> App<S> {
         let (Some(scope), Some(place)) = (tree.get(id), self.keyboard.place_of(id)) else {
             return;
         };
-        explore::breadcrumb::ring(ctx, place, scope.ring);
+        explore::breadcrumb::ring(ctx, place, scope.ring, self.view.focus.mode);
     }
 
     fn apply(&mut self, ctx: &egui::Context, actions: Actions) {

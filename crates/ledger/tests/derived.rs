@@ -876,8 +876,8 @@ negative_control!(
     check_same_shape(
         &tier_text(Tier::FULL),
         &tier_text(BARE).replace(
-            "    Lz_drift: f32,\n}",
-            "    Lz_drift: f32,\n    shadow_only: f32,\n}"
+            "    n: vec3<f32>,\n}",
+            "    n: vec3<f32>,\n    shadow_only: f32,\n}"
         )
     )
 );

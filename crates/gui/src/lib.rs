@@ -26,6 +26,7 @@ mod tests {
     mod mock_engine;
     mod mock_figure_navigation;
     mod mock_keyboard;
+    mod mock_keyboard_modes;
     mod mock_lock_badge;
     mod mock_manifold_view;
     mod mock_status_line;
