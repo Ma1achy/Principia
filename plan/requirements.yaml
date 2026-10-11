@@ -360,6 +360,8 @@
   rulings:
   - R-82
   milestone: M2
+  rq:
+  - RQ-270
 - id: REQ-DEC-019
   area: DEC
   statement: "The free momentum block must decode qₖ = q_max·(2σ(z_qk) − 1), p_ρ = (q₀, q₁), p_λ = (q₂, q₃), and p₀ = −p_ρ − (m₀/M₀₁)p_λ, p₁ = p_ρ − (m₁/M₀₁)p_λ, p₂ = p_λ, with no √μ mass unweighting of the momenta."
@@ -20670,6 +20672,8 @@
     detail: "an adapter with small limits causes a reported tier reduction, never a failed allocation"
   rulings: []
   milestone: M5
+  rq:
+  - RQ-269
 - id: REQ-PERF-024
   area: PERF
   statement: "The GPU in-flight queue depth must be kept shallow (no queueing frames ahead)."
