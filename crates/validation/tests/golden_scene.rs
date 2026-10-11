@@ -38,7 +38,7 @@ fn kinds(s: &Scene) -> String {
 }
 
 /// Each scene: its field and its samples' kinds.
-const SCENES: [(&str, &str, &str); 20] = [
+const SCENES: [(&str, &str, &str); 29] = [
     ("ftle", "ftle", "IIRRRRRR"),
     ("diffusion", "diffusion", "IIRRRRRR"),
     ("de_max_failed", "dE_max", "RRRRRRRR"),
@@ -59,6 +59,26 @@ const SCENES: [(&str, &str, &str); 20] = [
     ("k_0", "K_0", "RRRRRRRR"),
     ("v_0", "V_0", "RRRRRRRR"),
     ("virial_ratio", "virial_ratio", "RRRRRRRR"),
+    ("set_state", "state", "FFFFFFFF"),
+    ("known_escaper", "state", "FFFFFFFN"),
+    ("energy_drift_ramp", "energy_drift", "LLLLLLLL"),
+    ("adversarial_state", "state", "FFFFFFFF"),
+    ("adversarial_detail", "detail", "FFFFFFFF"),
+    ("adversarial_saturated", "saturated", "FFFFFFFF"),
+    ("adversarial_dmin_pair", "dmin_pair", "FLFFFLFF"),
+    ("adversarial_last_symbol", "last_symbol", "FFFIIFFF"),
+    ("forced_failure", "detail", "FFFFFFFF"),
+];
+
+/// The scenes not coloured by a catalogue view: the field ramps' and the outcome palette's.
+const NOT_VIEWS: [&str; 7] = [
+    "length_ramp",
+    "length_ramp_override",
+    "d_min_ramp",
+    "d_min_ramp_override",
+    "outcome",
+    "outcome_edited",
+    "known_escaper",
 ];
 
 /// Checks that scene `name` colours `field` and shows `want`'s kinds.
@@ -69,7 +89,7 @@ fn check_scene(name: &str, field: &str, want: &str) {
     let view = matches!(s.colouring, Colouring::View(_));
     assert_eq!(
         view,
-        !name.contains("ramp") && !name.starts_with("outcome"),
+        !NOT_VIEWS.contains(&name),
         "`{name}` is coloured by a view: {view}"
     );
     assert_eq!(
@@ -120,12 +140,6 @@ fn golden_scene_unknown_is_refused() {
     let mut s = named("length_view");
     s.colouring = Colouring::View("no_such_field");
     check_colour_refused(&s, "the catalogue has no view of `no_such_field`");
-    s.colouring = Colouring::View("dmin_pair");
-    assert!(s.colour().is_ok(), "`dmin_pair` has a view");
-    match s.look(0) {
-        Ok(l) => panic!("`dmin_pair`'s view has a numeric look {l:?}"),
-        Err(e) => assert!(e.contains("`dmin_pair` has no numeric view"), "{e}"),
-    }
 }
 
 /// Checks that `s`'s colour is refused naming `why`.
@@ -613,8 +627,8 @@ fn check_unlisted(s: &Scene, field: &str) {
 #[test]
 fn golden_scene_unlisted_field_is_an_error() {
     let mut s = named("ftle");
-    s.colouring = Colouring::View("saturated");
-    check_unlisted(&s, "saturated");
+    s.colouring = Colouring::View("Lz_drift");
+    check_unlisted(&s, "Lz_drift");
     for name in golden_scene::NAMES {
         let s = named(name);
         assert!(s.value(0).is_ok(), "`{name}` reads its own field");
