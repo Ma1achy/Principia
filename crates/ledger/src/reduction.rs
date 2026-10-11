@@ -177,9 +177,10 @@ fn f32_at(name: &'static str, slot: u32, lo: Bound) -> EntryBuilder {
 /// Every member's §3.8 entry, as §3.7's "Layout and §3.8 entries" table gives it, in its order. The ranges and
 /// `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift` are REQ-PAY-093's
 /// proposal, and those of `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` RQ-268's, until the human
-/// confirms them at the M5 gate (R-71). RQ-268 also proposes a sentinel for `escape_time_min` and `escape_time_max`
-/// when no copy escaped, +∞ tested by its bits as `d_min`'s is (R-271); it is a proposal, so their entries carry none
-/// until the human confirms it.
+/// confirms them at the M5 gate (R-71). RQ-268 also holds open the sentinel `escape_time_min` and `escape_time_max`
+/// take when no copy escaped: +∞ for both (for `_max` a chosen sentinel, not the empty max), or each its reduction's
+/// identity, +∞ for `_min` and −∞ for `_max`. Either is tested by its bits, as `d_min`'s is (R-271), and their entries
+/// carry none until the human chooses.
 fn entries() -> Vec<EntryBuilder> {
     let zero = Bound::Closed(0.0);
     let histogram = FieldType::Vector {

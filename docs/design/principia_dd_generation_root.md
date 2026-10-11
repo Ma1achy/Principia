@@ -441,7 +441,7 @@ the *most* chaotic regions), whereas a crossing time cannot [RC §5.1].
 | `saturated_fraction` | f16 | substep-saturation — a **second** condition Part 6 gates on; was missing |
 | `valid_sample_count` | u16 | decoded of N² |
 | `coherence` | f32 | priority ordering (`complexity = 1 − coherence`) |
-| `escape_time_min` / `_max` | f16 × 2 | diagnostic range; with no copy escaped, sentinel +∞ (proposed, RQ-268) |
+| `escape_time_min` / `_max` | f16 × 2 | diagnostic range; with no copy escaped, a sentinel RQ-268 holds open |
 | `retrograde_fraction` | f16 | tiebreaker |
 | `mean_orbit_count_spread` | f16 | tiebreaker |
 
@@ -480,10 +480,12 @@ at most N² (R-315); an f32 member §3.7 gives no range is `(−∞, ∞)`, as �
 `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift` are proposed,
 R-71 (REQ-PAY-093), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate; those of
 `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed likewise (RQ-268). RQ-268 also
-proposes the value `escape_time_min` and `escape_time_max` hold when no copy escaped: **+∞, proposed**, the minimum
-(and maximum) of the empty set of escape times, tested by its bits as `d_min`'s is (R-271); their saturate keeps every
-escape time finite, so it is distinct from each. The table below gives no sentinel for them until the human confirms
-it with their ranges.
+holds the value `escape_time_min` and `escape_time_max` take when no copy escaped, **open, with two options**: +∞ for
+both, which is the min reduction's identity for `_min` but a chosen sentinel for `_max` (the empty max is −∞, so its
+writer needs a no-escape branch); or each its reduction's identity, +∞ for `_min` and −∞ for `_max`, so an empty range
+reads `_min > _max`. Either is tested by its bits, as `d_min`'s unset value is (R-271), and their saturate keeps every
+escape time finite, so it is distinct from each. The table below gives no sentinel for them until the human chooses
+one with their ranges.
 
 | member | location | type | scale | range | sentinel · overflow |
 |---|---|---|---|---|---|

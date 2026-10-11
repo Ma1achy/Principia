@@ -33,12 +33,20 @@ proposed, so the ledger generates; nothing waits on this but their confirmation.
 - **Proposed (TASK-M5-01's PR, as R-71 proposes a value):** each `[0, ∞)` with `overflow: saturate`. The lower ends
   follow from the definitions (a time, a spread). Saturate rather than inf: a diagnostic range or a tiebreaker past
   65504 reads "at least 65504", a finite value, where +∞ would read as a time never reached.
-- **Proposed for the no-escape case:** `escape_time_min` and `escape_time_max` hold **+∞** (binary16 `0x7c00`, f32
-  bits `0x7f80_0000` once widened) when no copy escaped, the minimum (and the maximum) over the empty set of escape
-  times, tested by its bits, as `d_min`'s unset value is (R-271) and `first_divergence_t`'s is (§3.7). Saturate keeps
-  every escape time finite, so +∞ is distinct from every time recorded. The human confirms the range and the sentinel
-  together; until then §3.7 marks the sentinel proposed and the ledger entries carry none.
-- **Options seen:**
+- **The no-escape case, options (corrected at physics's review of TASK-M5-01's PR, F3):** the minimum of the empty
+  set of escape times is +∞, but its maximum is −∞, so no one value is both reductions' identity. Either option is
+  tested by its bits, as `d_min`'s unset value is (R-271) and `first_divergence_t`'s is (§3.7), and saturate keeps every
+  escape time finite, so the sentinel is distinct from every time recorded. Either sentinel lies outside a finite
+  escape time; the human chooses it with the ranges, and until then §3.7 holds it open and the ledger entries carry
+  none.
+  - (a) **+∞ for both** (binary16 `0x7c00`, f32 bits `0x7f80_0000` once widened). For `_min` it is the min
+    reduction's identity. For `_max` it is a chosen sentinel, not the empty max, so the writer (TASK-M5-17 to M5-19)
+    needs a no-escape branch that stores +∞ when no copy escaped. One test, `== +∞`, reads "no escape" on either
+    member.
+  - (b) **Each its reduction's identity**: +∞ for `_min` and **−∞** for `_max` (binary16 `0xfc00`, f32 bits
+    `0xff80_0000`). Both reductions start from their identity and need no branch, and an empty range reads
+    `_min > _max`. `_max`'s −∞ lies below its proposed range `[0, ∞)`, as a sentinel may.
+- **Options seen for the ranges' confirmation:**
   - (a) REQ-PAY-093 names the three as well (reqio), and the human confirms the proposal with the five at the M5 gate.
   - (b) A calibration requirement of their own, confirmed at the M5 gate.
   - (c) A ruling gives their ranges now.
