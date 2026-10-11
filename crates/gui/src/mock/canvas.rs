@@ -1,6 +1,8 @@
 //! The mock's canvas (RQ-247): the `wgpu` device and queue it opens and hands the app, which builds egui-wgpu from
 //! them, and the figure's stand-in, smooth procedural noise (`noise.wgsl`), drawn into the app's pass for the mock's
-//! chart, which the engine side hands it before each draw (REQ-GUI-171). The backend is `PRIN_GPU_BACKEND`'s, or the
+//! chart, which the engine side hands it before each draw (REQ-GUI-171), and over it the marks the mock draws into its
+//! stand-in, as the real compositor draws them: the hover path and, with tile bounds on, the fake quads' bounds
+//! (`marks.wgsl`, one-pixel lines, their geometry computed in Rust by the mock). The backend is `PRIN_GPU_BACKEND`'s, or the
 //! platform's when it is unset, and the one chosen is logged (R-206).
 
 use std::sync::Mutex;
@@ -43,11 +45,35 @@ pub fn uniform(plane: &Plane) -> [[f32; 4]; 3] {
     [project(&plane.z0), project(&plane.q1), project(&plane.q2)]
 }
 
-/// The figure's pipeline and the bind group of its uniform, built for one target format.
+/// One line the mock draws into its stand-in: its ends on the figure, `(s, t)`, `t` Y-up, and its colour, straight
+/// gamma-space RGBA in `[0, 1]`, as the stand-in's own output is.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Line {
+    /// Its ends.
+    pub ends: [[f32; 2]; 2],
+    /// Its colour and opacity.
+    pub rgba: [f32; 4],
+}
+
+/// `lines` as the marks pipeline's vertices: two per line, each `[s, t, r, g, b, a]`.
+pub fn vertices(lines: &[Line]) -> Vec<[f32; 6]> {
+    lines
+        .iter()
+        .flat_map(|l| {
+            l.ends.map(|[s, t]| {
+                let [r, g, b, a] = l.rgba;
+                [s, t, r, g, b, a]
+            })
+        })
+        .collect()
+}
+
+/// The figure's pipeline and the bind group of its uniform, and the marks' pipeline, built for one target format.
 struct Built {
     format: wgpu::TextureFormat,
     pipeline: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
+    marks: wgpu::RenderPipeline,
 }
 
 /// The mock's canvas.
@@ -59,6 +85,8 @@ pub struct MockCanvas {
     buffer: wgpu::Buffer,
     /// The chart the next draw is for.
     chart: Mutex<[[f32; 4]; 3]>,
+    /// The marks the next draw draws over the stand-in.
+    marks: Mutex<Vec<Line>>,
 }
 
 impl MockCanvas {
@@ -94,6 +122,7 @@ impl MockCanvas {
             pipeline: Mutex::new(None),
             buffer,
             chart: Mutex::new([[0.0; 4]; 3]),
+            marks: Mutex::new(Vec::new()),
         })
     }
 
@@ -102,11 +131,23 @@ impl MockCanvas {
         *self.chart.lock().expect("the chart lock") = uniform(plane);
     }
 
-    fn pipeline(&self, format: wgpu::TextureFormat) -> (wgpu::RenderPipeline, wgpu::BindGroup) {
+    /// The next draws draw `marks` over the stand-in.
+    pub fn set_marks(&self, marks: Vec<Line>) {
+        *self.marks.lock().expect("the marks lock") = marks;
+    }
+
+    fn pipeline(
+        &self,
+        format: wgpu::TextureFormat,
+    ) -> (wgpu::RenderPipeline, wgpu::BindGroup, wgpu::RenderPipeline) {
         let mut cached = self.pipeline.lock().expect("the pipeline lock");
         if let Some(built) = cached.as_ref() {
             if built.format == format {
-                return (built.pipeline.clone(), built.bind_group.clone());
+                return (
+                    built.pipeline.clone(),
+                    built.bind_group.clone(),
+                    built.marks.clone(),
+                );
             }
         }
         let device = &self.context.device;
@@ -143,12 +184,14 @@ impl MockCanvas {
                 resource: self.buffer.as_entire_binding(),
             }],
         });
+        let marks = marks_pipeline(device, format);
         *cached = Some(Built {
             format,
             pipeline: pipeline.clone(),
             bind_group: bind_group.clone(),
+            marks: marks.clone(),
         });
-        (pipeline, bind_group)
+        (pipeline, bind_group, marks)
     }
 }
 
@@ -166,9 +209,69 @@ impl Canvas for MockCanvas {
             .collect();
         // Staged now, the write lands before the command buffer this pass is recorded into is submitted.
         self.context.queue.write_buffer(&self.buffer, 0, &bytes);
-        let (pipeline, bind_group) = self.pipeline(format);
+        let (pipeline, bind_group, marks) = self.pipeline(format);
         pass.set_pipeline(&pipeline);
         pass.set_bind_group(0, &bind_group, &[]);
         pass.draw(0..3, 0..1);
+        let vertices = vertices(&self.marks.lock().expect("the marks lock"));
+        if vertices.is_empty() {
+            return;
+        }
+        let bytes: Vec<u8> = vertices
+            .iter()
+            .flatten()
+            .flat_map(|v| v.to_ne_bytes())
+            .collect();
+        let buffer = self.context.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("mock marks"),
+            size: bytes.len() as u64,
+            usage: wgpu::BufferUsages::VERTEX.union(wgpu::BufferUsages::COPY_DST),
+            mapped_at_creation: false,
+        });
+        self.context.queue.write_buffer(&buffer, 0, &bytes);
+        pass.set_pipeline(&marks);
+        pass.set_vertex_buffer(0, buffer.slice(..));
+        pass.draw(0..vertices.len() as u32, 0..1);
     }
+}
+
+/// The marks' pipeline: one-pixel lines, alpha-blended over the stand-in.
+fn marks_pipeline(device: &wgpu::Device, format: wgpu::TextureFormat) -> wgpu::RenderPipeline {
+    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("mock marks"),
+        source: wgpu::ShaderSource::Wgsl(include_str!("marks.wgsl").into()),
+    });
+    let attributes = wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x4];
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("mock marks"),
+        layout: None,
+        vertex: wgpu::VertexState {
+            module: &module,
+            entry_point: Some("vs_main"),
+            compilation_options: Default::default(),
+            buffers: &[Some(wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<[f32; 6]>() as u64,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &attributes,
+            })],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: &module,
+            entry_point: Some("fs_main"),
+            compilation_options: Default::default(),
+            targets: &[Some(wgpu::ColorTargetState {
+                format,
+                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+        }),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::LineList,
+            ..Default::default()
+        },
+        depth_stencil: None,
+        multisample: Default::default(),
+        multiview_mask: None,
+        cache: None,
+    })
 }

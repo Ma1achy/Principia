@@ -55,4 +55,9 @@ impl TimeSource for MockClock {
     fn rate_hz(&self) -> f64 {
         MOCK_TICK_HZ
     }
+
+    /// The ticks' seconds at [`MOCK_TICK_HZ`]: deterministic, so what turns by it turns the same in every capture.
+    fn seconds(&self) -> f64 {
+        self.ticks as f64 / MOCK_TICK_HZ
+    }
 }

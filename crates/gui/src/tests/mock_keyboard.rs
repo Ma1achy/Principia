@@ -384,7 +384,7 @@ fn mouse(h: &mut Headless, app: &mut crate::app::App<crate::side::MockSide>, nam
 }
 
 /// A menu the mouse opens takes the focus, on its first entry, and follows §G3's keys; a click that closes it gives
-/// the focus back to its control, and the layer keeps the keys; Esc closes an open menu with no entries.
+/// the focus back to its control, and the layer keeps the keys; Esc closes an open menu.
 #[test]
 fn mock_keyboard_mouse_opened_menu_follows_the_keys() {
     let mut app = mock_app();
@@ -411,20 +411,21 @@ fn mock_keyboard_mouse_opened_menu_follows_the_keys() {
         ["top_bar", "view"],
         "egui's focus kept the keys"
     );
-    // Overlays ▾ has no entries: clicked open, the focus is on it, and Esc closes it there.
+    // Overlays ▾ (TASK-M6-27): clicked open, the focus is on its first toggle, and Esc closes it, back on Overlays ▾.
     let overlays = format!("Overlays ▾ {}", 0);
     mouse(&mut h, &mut app, &overlays);
-    assert_eq!(focus(&app), ["top_bar", "overlays"]);
+    assert_eq!(focus(&app), ["top_bar", "overlays", "ov_tile_bounds"]);
     assert_eq!(app.keyboard.open_menu(), Some("overlays"));
     press(&mut h, &mut app, Key::Escape, NONE);
     assert_eq!(focus(&app), ["top_bar", "overlays"]);
     assert_eq!(app.keyboard.open_menu(), None);
     assert!(!egui::Popup::is_any_open(&h.ctx));
-    // Enter on it finds no entry to open.
+    // Enter opens it on its first toggle, as the mouse does.
     press(&mut h, &mut app, Key::Enter, NONE);
-    assert!(!egui::Popup::is_any_open(&h.ctx));
-    // Clicked open again, → leaves it, closing it.
-    mouse(&mut h, &mut app, &overlays);
+    assert_eq!(focus(&app), ["top_bar", "overlays", "ov_tile_bounds"]);
+    assert!(egui::Popup::is_any_open(&h.ctx));
+    press(&mut h, &mut app, Key::Escape, NONE);
+    // Closed, → moves on to Run.
     press(&mut h, &mut app, Key::ArrowRight, NONE);
     assert_eq!(focus(&app), ["top_bar", "run"]);
     assert!(!egui::Popup::is_any_open(&h.ctx));
@@ -1450,7 +1451,10 @@ fn mock_keyboard_capture_steps() {
             "shortcuts",
             "shift_arrow_up",
             "shift_arrow_right",
-            "lock"
+            "lock",
+            "hover",
+            "alt_1",
+            "space"
         ]
     );
     let err = Step::parse("zoom").expect_err("an unknown step");
@@ -1659,7 +1663,12 @@ fn mock_keyboard_activate_acts_as_the_click() {
     for id in ["explore", "stain", QUIT.0, HIDE.0, KEYS.0] {
         assert!(tree.get(id).unwrap().activates, "{id} does not activate");
     }
-    assert_eq!(tree.children(Some("overlays")), Vec::<&str>::new());
+    let mut entries: Vec<&str> = crate::explore::overlays_menu::TOGGLES
+        .iter()
+        .map(|(id, _)| *id)
+        .collect();
+    entries.extend(["ov_all_off", "ov_save_default"]);
+    assert_eq!(tree.children(Some("overlays")), entries);
     let quit = acts(QUIT.0);
     rejects("Quit that did nothing", || {
         assert_eq!(quit, Actions::default())
@@ -1800,4 +1809,93 @@ fn mock_keyboard_focus_manifold_view_control() {
     rejects("the breadcrumb after Esc", || {
         assert!(texts.contains(&"Manifold view › Navigate › zoom".to_owned()));
     });
+}
+
+// --- Trajectory and Time (TASK-M6-27) --------------------------------------------------------------------------------
+
+/// The focus after Tab `tabs` times, Enter, then ↓ `downs` times: each step's path.
+fn walk_into(tabs: usize, downs: usize) -> Vec<Vec<String>> {
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let mut steps = vec![(Key::Tab, NONE); tabs];
+    steps.push((Key::Enter, NONE));
+    keys(&mut h, &mut app, &steps);
+    let mut paths = vec![app.view.focus.path.clone()];
+    for _ in 0..downs {
+        press(&mut h, &mut app, Key::ArrowDown, NONE);
+        paths.push(app.view.focus.path.clone());
+    }
+    paths
+}
+
+/// The leaf of each path.
+fn leaves(paths: &[Vec<String>]) -> Vec<&str> {
+    paths
+        .iter()
+        .map(|p| p.last().map_or("", String::as_str))
+        .collect()
+}
+
+/// Trajectory, big scope 4, and Time, big scope 6 (§G3): Enter goes in on the first element, and ↓ walks the elements in
+/// the order drawn, stopping at the last.
+#[test]
+fn mock_keyboard_trajectory_and_time_scopes_in_order() {
+    use crate::explore::{time, trajectory};
+    let into_trajectory = walk_into(4, 12);
+    assert!(into_trajectory
+        .iter()
+        .all(|p| p[0] == trajectory::TRAJECTORY));
+    assert_eq!(
+        leaves(&into_trajectory),
+        [
+            trajectory::UNDER_CURSOR,
+            trajectory::KEEP,
+            trajectory::SPHERE,
+            trajectory::UNWRAPPED,
+            trajectory::TURN,
+            trajectory::PLAY,
+            trajectory::PLAYHEAD,
+            trajectory::LISTEN,
+            trajectory::FOLLOW,
+            trajectory::VIEWER,
+            trajectory::INSPECTOR,
+            trajectory::KEPT,
+            trajectory::KEPT,
+        ]
+    );
+    let into_time = walk_into(6, 5);
+    assert!(into_time.iter().all(|p| p[0] == time::TIME));
+    assert_eq!(
+        leaves(&into_time),
+        [
+            time::BACK,
+            time::PLAY,
+            time::STEP,
+            time::SPEED,
+            time::SCRUBBER,
+            time::SCRUBBER
+        ]
+    );
+    rejects("Time entered on its scrubber", || {
+        assert_eq!(leaves(&into_time)[0], time::SCRUBBER)
+    });
+    // Their rows of the `?` overlay, with the Figure's Space and L and the overlays' Alt+digits.
+    let app = mock_app();
+    let rows: Vec<&str> = app
+        .keyboard
+        .tree(Mode::Explore)
+        .shortcuts()
+        .iter()
+        .map(|s| s.0)
+        .collect();
+    for want in [
+        "Time: Space",
+        "Time: ← →",
+        "Figure: Space",
+        "Figure: L",
+        "Alt+1 … Alt+0, Alt+Shift+1 … 4",
+    ] {
+        assert!(rows.contains(&want), "the `?` row {want:?} in {rows:?}");
+    }
 }

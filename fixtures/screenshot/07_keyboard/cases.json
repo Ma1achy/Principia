@@ -29,6 +29,11 @@
       "name": "mock_focus_interaction",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "enter"] },
       "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_time",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
     }
   ]
 }
