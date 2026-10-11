@@ -627,7 +627,7 @@ The register's entries, the constants the payload ledger uses:
 | Constraint | Link (forward) | Inverse | log-det | Sampling note |
 |---|---|---|---|---|
 | Simplex Δ² | softmax ∘ `μ_max·tanh` | log-ratio → `artanh`, clamp `(1−ε_μ)μ_max` | `log √det(JᵀJ)`, `J` the forward's 3×2 Jacobian (softmax Jacobian × sech² factors) | under-samples simplex edges/corners |
-| Bounded (a,b) | scaled/shifted `σ` | `logit`, clamp `[ε_z, 1−ε_z]` | `log((b−a)·σ')` | centre-heavy vs uniform |
+| Bounded (a,b) | scaled/shifted `σ` | `logit`, clamp `[ε_z, 1−ε_z]` | `log((b−a)·σ')` | edge-heavy: crowds the bounds |
 | Bounded alt | scaled `tanh` | `artanh` | `log(c·sech²)` | interchangeable with σ up to reparam (`tanh x = 2σ(2x)−1`) — differs in slope profile only |
 | Positive (0,∞) | softplus / exp | inverse-softplus / log | `log σ(x)` / `x` | exp is heavy-tailed |
 | Symmetric (−c,c) | `c·tanh` | `artanh` | `log(c·sech²)` | as bounded |
@@ -713,17 +713,17 @@ selected per block control, only among the entries onto that control's codomain 
 |---|---|---|---|---|---|
 | `softmax_tanh` | Δ² | `μₖ = μ_max·tanh zₖ`, `m = softmax(0, μ₁, μ₂)` | `zₖ = artanh(clamp(log(mₖ/m₀), ±(1−ε_μ)μ_max)/μ_max)` | `½ log 3 + Σᵢ log mᵢ + 2 log μ_max + log sech² z₁ + log sech² z₂` | under-samples simplex edges/corners |
 | `stick_breaking` (R-72) | Δ² | `s = ½(1 + (1−ε_μ) tanh z₁)`, `u = ½(1 + (1−ε_μ) tanh z₂)`, `m = (1−s, s(1−u), su)` | `s = m₁ + m₂`, `u = m₂/s`, each `v` of them to `artanh(clamp(2v−1, ±(1−ε_μ)²)/(1−ε_μ))` | `log(√3/4 · (1−ε_μ)² · s · sech² z₁ · sech² z₂)` | reaches the edges and corners that `softmax_tanh` stops short of; its area element is `4√3·m₀m₁m₂` (exactly so at `ε_μ = 0`), the plain softmax measure, so it over-samples every edge and corner, symmetrically in the bodies |
-| `sigmoid_alpha`, `sigmoid_beta`, `sigmoid_q` | α, β, q | `a + (b−a)·σ(x)` | `logit(clamp((y−a)/(b−a), ε, 1−ε))` | `log((b−a)·σ(x)·σ(−x))` | centre-heavy vs uniform |
+| `sigmoid_alpha`, `sigmoid_beta`, `sigmoid_q` | α, β, q | `a + (b−a)·σ(x)` | `logit(clamp((y−a)/(b−a), ε, 1−ε))` | `log((b−a)·σ(x)·σ(−x))` | edge-heavy: crowds the bounds |
 | `tanh_alpha`, `tanh_beta`, `tanh_q` | α, β, q | `a + c·(1 + tanh x)` | `artanh(clamp((y−a)/c − 1, ±(1−ε)))` | `log(c·sech² x)` | the bounded-alt row's note (α, β); the symmetric row's (q) |
 | `softsign_alpha`, `softsign_beta`, `softsign_q` (R-72) | α, β, q | `a + c·(1 + u)`, `u = x/(2 + abs(x))` | `x = 2u/(1 − abs(u))`, `u = clamp((y−a)/c − 1, ±(1−ε))` | `log(2c) − 2 log(2 + abs(x))` | heavier-tailed than σ: it nears each bound as `1/abs(x)`, not as `e^(−abs(x))`, so relative to σ it under-samples the bounds' immediate neighbourhoods |
 | `softplus` | (0, ∞) | `softplus x` | `inv_softplus y` | `log σ(x)` | linear for large `x`, so not heavy-tailed |
 | `exp` | (0, ∞) | `eˣ` | `log y` | `x` | exp is heavy-tailed |
 | `identity` | ℝ | `x` | `y` | 0 | neutral |
 
-The sampling notes of the R-72 rows (`stick_breaking`, `softsign_*`) read "over-" and "under-samples" as the density
-of samples drawn with uniform controls, as chart_decoder_contract § "Integrity: the link is part of the experiment"
-has it ("which region of the block it over- and under-samples relative to uniform"). The table's σ row ("centre-heavy
-vs uniform") may read it as the Jacobian's weight; RQ-267 asks which reading holds.
+Every sampling note reads "over-" and "under-samples" as the density of samples drawn with uniform controls, not as
+the link's Jacobian weight (R-413), as chart_decoder_contract § "Integrity: the link is part of the experiment" has it
+("which region of the block it over- and under-samples relative to uniform"). So σ's note is "edge-heavy: crowds the
+bounds": with uniform controls, every control past a few units lands in a sliver at each bound.
 
 `ε` is `ε_μ` on the simplex, `ε_z` onto α and β, and `ε_q` onto a momentum. `abs(x)` is written `clamp(x, −x, +∞)`
 in the closed operator list. Each clamp keeps the inverse finite at the codomain's boundary, where a float forward

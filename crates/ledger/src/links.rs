@@ -549,7 +549,12 @@ fn sigmoid_link(name: &'static str, codomain: Codomain) -> LinkBuilder {
         vec![un(Op::Logit, i.clamp_s(i.s_of_y(x(0))))],
         log_slope,
     );
-    i.declare(entry(name, codomain, functions, "centre-heavy vs uniform"))
+    i.declare(entry(
+        name,
+        codomain,
+        functions,
+        "edge-heavy: crowds the bounds",
+    ))
 }
 
 /// The scaled tanh onto `codomain` (§3.9's bounded-alt and symmetric rows): `y = a + c·(1 + tanh x)`, or `c·tanh x` on
@@ -583,8 +588,7 @@ fn softsign_link(name: &'static str, codomain: Codomain) -> LinkBuilder {
     let note = "heavier-tailed than σ: σ's slope at the centre, but it nears each bound as 1/|x|, not as e^(−|x|); \
                 where σ saturates, crowding every control beyond a few units into a sliver at each bound, it spreads \
                 that band over a wide control range, so relative to σ it under-samples the bounds' immediate \
-                neighbourhoods (in the density of samples drawn with uniform controls, as chart_decoder_contract's \
-                \"relative to uniform\" reads; RQ-267)";
+                neighbourhoods (in the density of samples drawn with uniform controls, R-413)";
     i.declare(entry(name, codomain, functions, note))
 }
 
@@ -665,8 +669,7 @@ fn stick_breaking() -> LinkBuilder {
     let note = "reaches within ε_μ/2 of each edge and of the corner m₀ = 1, and within about ε_μ of the corners \
                 m₁ = 1 and m₂ = 1, where softmax ∘ μ_max·tanh stops at mass ratios e^(±2μ_max); its area element \
                 is 4√3·m₀m₁m₂ (exactly so at ε_μ = 0), the plain softmax measure, symmetric in the bodies, so it \
-                over-samples every edge and corner (in the density of samples drawn with uniform controls, as \
-                chart_decoder_contract's \"relative to uniform\" reads; RQ-267)";
+                over-samples every edge and corner (in the density of samples drawn with uniform controls, R-413)";
     LinkBuilder {
         clamps: Some(declared(&[&EPS_MU])),
         ..entry("stick_breaking", Codomain::Mass, functions, note)
