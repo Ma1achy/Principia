@@ -27,9 +27,17 @@ proposed, so the ledger generates; nothing waits on this but their confirmation.
 - **Missing value:** the declared `range` of `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread`, and
   their `overflow` where an end is unbounded (R-248). An escape time is a time within the horizon `[0, T]` (§3.4's
   `t_end`), but `T` is a sim-key parameter with no corpus bound; an orbit-count spread is ≥ 0 with no upper bound.
+- **Missing value, the no-escape case (added at physics's review of TASK-M5-01's PR, F2):** `escape_time_min` and
+  `escape_time_max` have no value when no copy of the quad escaped. §3.7 gives them neither a value nor a sentinel for
+  that case, and 0 or any finite time would read as an escape that happened.
 - **Proposed (TASK-M5-01's PR, as R-71 proposes a value):** each `[0, ∞)` with `overflow: saturate`. The lower ends
   follow from the definitions (a time, a spread). Saturate rather than inf: a diagnostic range or a tiebreaker past
   65504 reads "at least 65504", a finite value, where +∞ would read as a time never reached.
+- **Proposed for the no-escape case:** `escape_time_min` and `escape_time_max` hold **+∞** (binary16 `0x7c00`, f32
+  bits `0x7f80_0000` once widened) when no copy escaped, the minimum (and the maximum) over the empty set of escape
+  times, tested by its bits, as `d_min`'s unset value is (R-271) and `first_divergence_t`'s is (§3.7). Saturate keeps
+  every escape time finite, so +∞ is distinct from every time recorded. The human confirms the range and the sentinel
+  together; until then §3.7 marks the sentinel proposed and the ledger entries carry none.
 - **Options seen:**
   - (a) REQ-PAY-093 names the three as well (reqio), and the human confirms the proposal with the five at the M5 gate.
   - (b) A calibration requirement of their own, confirmed at the M5 gate.
