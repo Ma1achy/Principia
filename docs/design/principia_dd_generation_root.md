@@ -210,8 +210,9 @@ of the generated WGSL struct. The bins are 128 B of it; §3.7's former u8 bins w
 **descriptive, not a cap**: a member added later changes it. There is no memory pressure: `QuadReduction` is per
 *quad*, against `SimState` at per *sample* (millions). At memory_tiers §3–§4's quad count (render pixels / N² at each
 tier's `N`, at the largest display, 4K's 3840 × 2160, plus their ancestors, about a third more), a tier holds at most
-43 200 quads, 7.6 MB of reductions (Low, High, Ultra and Extreme; Potato 10 800 quads, 1.9 MB; Medium 24 300, 4.3 MB),
-against the 0.36–21.43 GB those tiers' totals give at 4K. The real constraint is **categorical, not numerical** —
+43 200 quads, 7.6 MB of reductions (Low and High, and Ultra and Extreme, whose rows are provisional, R-137; Potato
+10 800 quads, 1.9 MB; Medium 24 300, 4.3 MB), against the 0.16–5.51 GB Potato's to High's totals give at 4K and the
+provisional 10.82 and 21.43 GB of Ultra and Extreme. The real constraint is **categorical, not numerical** —
 *reduce before evaporate*: fixed-size scalars only, never a history.
 
 #### Identity
