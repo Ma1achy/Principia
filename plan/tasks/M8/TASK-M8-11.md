@@ -22,7 +22,7 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 ## Deliverables
 - `crates/gui/src/widgets/shape_sphere.rs` — sphere / unwrapped toggle, landmarks, turn checkbox, view-only rotation.
 - `crates/gui/src/widgets/real_space.rs` — CoM-frame body paths.
-- `crates/gui/src/explore/trajectory_panel.rs` — tabs, summary, readouts, kept orbits (ViewUI), both Inspector buttons.
+- `crates/gui/src/explore/trajectory.rs` — tabs, summary, readouts, kept orbits (ViewUI), both Inspector buttons.
 - Tests: `sphere_unwrap_agree`; screenshot cases `01_main/trajectory_panel`, `01_main/sphere_unwrapped`, `01_main/turn_off`.
 
 ## Acceptance tests
@@ -35,3 +35,6 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - The turning rate ("slowly") is not given. The listen button's sound is TASK-M8-12.
 - For gaps the corpus leaves open: REQ-GUI-157 (R-71 calibration) (classification accepted by R-132), closed by TASK-M6-27 since R-390 and used here.
 - R-390: TASK-M6-27 builds the Trajectory panel's frame on the mock engine and proposes the rotation rate (REQ-GUI-157, the first task to need it); this task depends on it, uses that value, fills the panel from the real engine and keeps REQ-GUI-088, REQ-GUI-089 and REQ-GUI-054.
+- The Trajectory panel's file is `crates/gui/src/explore/trajectory.rs`, the one TASK-M6-27 creates for the panel's
+  frame (its Deliverables name `crates/gui/src/explore/{time,legend,trajectory}.rs`); this task fills it, applied per
+  R-369 (TASK-M1-14's pre-flight; was `trajectory_panel.rs`).
