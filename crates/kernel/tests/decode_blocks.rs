@@ -935,35 +935,54 @@ fn inertia<R: P>(m: &Masses<R>, c: &Config<R>) -> f64 {
         .sum()
 }
 
-/// `r₁ − r₀ = ρ`, CoM `= 0` and `I = 1` over the domain, for each decoder of `decs`.
+/// `r₁ − r₀ = ρ`, CoM `= 0` and `I = 1` for the positions `r` and inner Jacobi vector `rho` reconstructed with masses
+/// `m`.
+fn check_positions<R: P>(at_z: &str, m: &Masses<R>, rho: [R; 2], r: [[R; 2]; 3], worst: &Worst) {
+    let r = r.map(|ri| ri.map(P::f));
+    let mm = m.m.map(P::f);
+    let d01 = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
+    let rho = rho.map(P::f);
+    let scale = rho[0]
+        .hypot(rho[1])
+        .max(r[0][0].hypot(r[0][1]))
+        .max(r[1][0].hypot(r[1][1]));
+    let err = (d01[0] - rho[0]).hypot(d01[1] - rho[1]) / (scale * R::eps());
+    worst.see(&format!("r₁ − r₀ vs ρ at {}", R::NAME), err);
+    assert!(
+        err <= RHO_EPS,
+        "{at_z}: r₁ − r₀ − ρ = {err} eps of the operands"
+    );
+    let com = [0, 1].map(|k| (0..3).map(|i| mm[i] * r[i][k]).sum::<f64>());
+    let size: f64 = (0..3).map(|i| mm[i] * r[i][0].hypot(r[i][1])).sum();
+    let err = com[0].hypot(com[1]) / (size * R::eps());
+    worst.see(&format!("CoM at {}", R::NAME), err);
+    assert!(err <= COM_EPS, "{at_z}: the CoM is {err} eps of Σmᵢ‖rᵢ‖");
+    let i: f64 = (0..3)
+        .map(|k| mm[k] * (r[k][0].powi(2) + r[k][1].powi(2)))
+        .sum();
+    let err = (i - units::inertia::<f64>()).abs() / R::eps();
+    worst.see(&format!("I − 1 at {}", R::NAME), err);
+    assert!(err <= INERTIA_EPS, "{at_z}: I − 1 = {err} eps");
+}
+
+/// `v` rotated by 0.6 rad.
+fn rotated<R: P>(v: [R; 2]) -> [R; 2] {
+    let (s, c) = (R::of(0.6f64.sin()), R::of(0.6f64.cos()));
+    [c * v[0] - s * v[1], s * v[0] + c * v[1]]
+}
+
+/// `r₁ − r₀ = ρ`, CoM `= 0` and `I = 1` over the domain, for each decoder of `decs`; and for the reconstruction itself
+/// on `ρ̃, λ̃` rotated off the canonical frame, since §3.2's unweighting and reconstruction hold for any `ρ̃, λ̃`, and
+/// the canonical `ρ̃_y = 0` would hide the y components' terms.
 fn check_identities<R: P>(decs: &[(&str, Dec<R>)], worst: &Worst) {
     over_z(|zm, zc| {
         for (name, d) in decs {
             let m = (d.mass)(at::<R, 2>(zm));
             let c = (d.config)(at::<R, 2>(zc), &m);
-            let r = c.r.map(|ri| ri.map(P::f));
-            let mm = m.m.map(P::f);
             let at_z = format!("{name} at z_μ = {zm:?}, z_cfg = {zc:?}, {}", R::NAME);
-            let d01 = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
-            let rho = c.rho.map(P::f);
-            let scale = rho[0]
-                .hypot(rho[1])
-                .max(r[0][0].hypot(r[0][1]))
-                .max(r[1][0].hypot(r[1][1]));
-            let err = (d01[0] - rho[0]).hypot(d01[1] - rho[1]) / (scale * R::eps());
-            worst.see(&format!("r₁ − r₀ vs ρ at {}", R::NAME), err);
-            assert!(
-                err <= RHO_EPS,
-                "{at_z}: r₁ − r₀ − ρ = {err} eps of the operands"
-            );
-            let com = [0, 1].map(|k| (0..3).map(|i| mm[i] * r[i][k]).sum::<f64>());
-            let size: f64 = (0..3).map(|i| mm[i] * r[i][0].hypot(r[i][1])).sum();
-            let err = com[0].hypot(com[1]) / (size * R::eps());
-            worst.see(&format!("CoM at {}", R::NAME), err);
-            assert!(err <= COM_EPS, "{at_z}: the CoM is {err} eps of Σmᵢ‖rᵢ‖");
-            let err = (inertia(&m, &c) - units::inertia::<f64>()).abs() / R::eps();
-            worst.see(&format!("I − 1 at {}", R::NAME), err);
-            assert!(err <= INERTIA_EPS, "{at_z}: I − 1 = {err} eps");
+            check_positions(&at_z, &m, c.rho, c.r, worst);
+            let (rho, _, r) = config::reconstruct(&m, rotated(c.rho_t), rotated(c.lambda_t));
+            check_positions(&format!("{at_z}, rotated"), &m, rho, r, worst);
         }
     });
 }
