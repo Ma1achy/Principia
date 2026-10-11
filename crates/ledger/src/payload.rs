@@ -133,11 +133,12 @@ pub const NON_NEGATIVE: [(&str, &str); 13] = [
     ),
     (
         "rho_mag",
-        "render_gui_spec §10.1: `|ρ| ∈ [0,1]`; R-62: the magnitude of the Jacobi vector `ρ`",
+        "a magnitude, ≥ 0: REQ-PAY-088 (its candidates ‖ρ‖ and ‖ρ̃‖, all norms); render_gui_spec §10.1's `|ρ| ∈ [0,1]` \
+         holds only for the mass-weighted ‖ρ̃‖, the unweighted ‖ρ‖ can exceed 1, so only the lower bound is declared",
     ),
     (
         "lambda_mag",
-        "R-62: the magnitude of the Jacobi vector `λ`; dd_decoder §3.6: \"ρ-magnitudes\"",
+        "a magnitude, ≥ 0: REQ-PAY-088 (its candidates ‖λ‖ and ‖λ̃‖, all norms); dd_decoder §3.6: \"ρ-magnitudes\"",
     ),
     (
         "rho_ratio",
