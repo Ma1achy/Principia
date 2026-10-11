@@ -15,7 +15,7 @@
 #![allow(non_snake_case)]
 
 use eframe::egui::{Event, Key, Modifiers, PointerButton, Pos2};
-use engine::contract::view_ui::Mode;
+use engine::contract::view_ui::{KeyMode, Mode};
 use gui::app::App;
 use gui::capture::{PIXELS_PER_POINT, SIZE};
 use gui::headless::{Headless, Name};
@@ -355,7 +355,8 @@ fn qa_mock_keyboard_shortcuts_list_f3_and_a_later_screens_keys() {
 
 // --- REQ-GUI-146 / REQ-GUI-169: a held key stops when its release can no longer come --------------------------------
 
-/// An app with a value `zoom` joined under Navigate, focused (§G3's "Manifold view › Navigate › zoom").
+/// An app with a value `zoom` joined under Navigate, focused (§G3's "Manifold view › Navigate › zoom"), in interaction
+/// mode: R-409 point 4 and F1, the arrows adjust a value only after Enter on it.
 fn zoom_app() -> (App<MockSide>, Headless) {
     let mut app = mock_app();
     let tree = app.keyboard.tree_mut(Mode::Explore);
@@ -380,6 +381,7 @@ fn zoom_app() -> (App<MockSide>, Headless) {
         (Key::Enter, NONE),
         (Key::ArrowDown, NONE),
         (Key::Enter, NONE),
+        (Key::Enter, NONE),
     ] {
         press(&mut h, &mut app, k, m);
     }
@@ -387,6 +389,11 @@ fn zoom_app() -> (App<MockSide>, Headless) {
         &focus_labels(&app),
         &["Manifold view", "Navigate", "zoom"],
         "the zoom value",
+    );
+    assert_eq!(
+        app.view.focus.mode,
+        KeyMode::Interaction,
+        "Enter on the value `zoom` did not start interaction mode (R-409 point 4)"
     );
     h.set_frame_step(0.005);
     (app, h)
