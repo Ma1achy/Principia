@@ -210,21 +210,22 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
 
 ---
 
-## RQ-271: REQ-TOOL-160's log floors for `rho_ratio` and `r_min_pair_0` are an M1 calibration, in "that field's units", but the two fields' formulas, and so their units, are an M2 deliverable (REQ-PAY-088, TASK-M2-03) *(silence, R-71, R-72, R-401, REQ-TOOL-160, REQ-PAY-088; context: TASK-M1-17, TASK-M2-03)*
+## RQ-271: REQ-TOOL-160's log floors for `rho_ratio` and `r_min_pair_0` are an M1 calibration, in "that field's units", but the two fields' formulas are an M2 deliverable (REQ-PAY-088, TASK-M2-03): for `rho_ratio` its units with them, for `r_min_pair_0` only the formula's details and the evidence *(silence, R-71, R-72, R-401, REQ-TOOL-160, REQ-PAY-088; context: TASK-M1-18, TASK-M2-03)*
 
-*Found in TASK-M2-03's read-only pre-flight. Nothing is chosen.*
+*Found in TASK-M2-03's read-only pre-flight. Narrowed in PR #194's physics review 5482528309 (F1, the split; F3,
+`r_min_pair_0`'s units). Nothing is chosen.*
 
 - **File, section:**
-  - `plan/tasks/M1/TASK-M1-17.md` § "Deliverables" (lines 81–82): "`crates/ledger`: one log floor per log field
-    without a ledger floor (`d_min`, `dE_max`, `dLz_max`, `closure_min`, `rho_ratio`, `r_min_pair_0`), each a named
-    presentation constant in that field's units, read by the template"; and (lines 83–84) "The REQ-TOOL-160 proposal:
-    each floor, its units, and its evidence (where the field's stored values fall under it on M1's fixtures, and why
-    it sits there), attached to the PR."
-  - `plan/requirements.yaml` REQ-TOOL-160 (`kind: calibration`, `milestone: M1`, TASK-M1-17): "The log floor ε_f of
+  - `plan/tasks/M1/TASK-M1-18.md` § "Deliverables" (lines 33–34; moved from `TASK-M1-17.md` lines 81–82 by this
+    entry's PR): "`crates/ledger`: one log floor per log field without a ledger floor (`d_min`, `dE_max`, `dLz_max`,
+    `closure_min`, `rho_ratio`, `r_min_pair_0`), each a named presentation constant in that field's units, read by
+    the template"; and (lines 35–36) "The REQ-TOOL-160 proposal: each floor, its units, and its evidence (where the
+    field's stored values fall under it on M1's fixtures, and why it sits there), attached to the PR."
+  - `plan/requirements.yaml` REQ-TOOL-160 (`kind: calibration`, `milestone: M1`, TASK-M1-18): "The log floor ε_f of
     each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min,
-    rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (… a ratio for rho_ratio; R-401) … must
-    be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by
-    the human at the M1 gate and recorded in decisions.md."
+    rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, … a
+    ratio for rho_ratio; R-401) … must be calibrated: proposed with its evidence per field by the task that needs it,
+    checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
   - `decisions.md` § "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with
     evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced": "its own `ε_f`, the magnitude where its compression
     sets in, in that field's own units: a distance for the distances, … and a ratio for `rho_ratio`", and "**The
@@ -238,43 +239,65 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
     "`E₀ = K₀ + V₀ ;   virial_ratio = 2K₀ / |V₀| ;   ρ-magnitudes, ρ_ratio, ρ_angle, r_min_pair₀`", names with no
     formula. `docs/design/principia_dd_generation_root.md` § "3.6 `ICDescriptor` (12 × f32)": "`rho_ratio` (log), …
     `r_min_pair_0` (log). Provenance: decode stage, pre-integration."
+  - `docs/design/principia_dd_decoder.md` § "2. Consolidated contract (every clause that binds this component)":
+    "Output is `(m, r, p)` in the dimensionless system `G = M = I = 1`"; § "4. Seams (its side of each — the
+    integration-test list)", seam 3: "emit exactly `(m, r, p)`, canonical, `G=M=I=1`".
   - `fixtures/golden/BASELINES.md` (lines 84, 88): M1's `generated-r_min_pair_0` and `generated-rho_ratio` cases render
     each "generated view over the showcase set"; the decode stage that writes the two fields is TASK-M2-03's
     (REQ-PAY-034).
 - **Silence:** the corpus says the floor is "in that field's own units" and calibrated at the M1 gate, and that the
-  field's formula is defined by TASK-M2-03 at M2; it does not say which comes first. R-401 gives the kind of unit (a
-  ratio, a distance) but not the formula: `rho_ratio` as ‖ρ‖/‖λ‖ or as the mass-weighted ‖ρ̃‖/‖λ̃‖ differ by a
-  mass-dependent factor (REQ-PAY-088's own parenthesis), which moves the magnitude where compression should set in;
-  and M1's fixtures hold showcase values, not decoded ones, so the evidence REQ-TOOL-160 asks for ("where the field's
-  stored values fall under it") has no decoded values to fall under before M2. The other four fields are defined in
-  `docs/design/principia_dd_simstate_payload.md` (`d_min` and `closure_min` as running minima, `dE_max` and `dLz_max`
-  as absolute maxima, REQ-TOOL-160's note), so the order question is for `rho_ratio` and `r_min_pair_0` only.
-- **Options seen:**
+  field's formula is defined by TASK-M2-03 at M2; it does not say which comes first. The two fields differ in what is
+  open:
+  - *`rho_ratio`: units and evidence.* R-401 gives the kind of unit, "a ratio", but not which: ‖ρ‖/‖λ‖ and the
+    mass-weighted ‖ρ̃‖/‖λ̃‖ differ by a mass-dependent factor, √(μ_ρ/μ_λ) (REQ-PAY-088's own parenthesis), which moves
+    the magnitude where compression should set in.
+  - *`r_min_pair_0`: evidence and the formula's details, not its units.* R-401 calls it "a distance", and the decoder's
+    output gauge, `G = M = I = 1` (§2, seam 3), fixes the scale a distance is measured in. What stays open is the
+    formula's details (REQ-PAY-088) and the evidence.
+  - For both, M1's fixtures hold showcase values, not decoded ones, so the evidence REQ-TOOL-160 asks for ("where the
+    field's stored values fall under it") has no decoded values to fall under before M2.
+  - The other four fields are defined in `docs/design/principia_dd_simstate_payload.md` (`d_min` and `closure_min` as
+    running minima, `dE_max` and `dLz_max` as absolute maxima, REQ-TOOL-160's note), so the order question is for
+    `rho_ratio` and `r_min_pair_0` only.
+- **Options seen** (the field distinction above changes only (c) and (d), as marked):
   - (a) Calibrate those two floors at the M2 gate instead: REQ-TOOL-160 is split (or a new calibration requirement
-    raised) so TASK-M1-17 proposes four floors for the M1 gate and the two others are proposed with TASK-M2-03's
-    definitions, on decoded values. TASK-M1-17 still needs some constant for the two views meanwhile, which the corpus
+    raised) so TASK-M1-18 proposes four floors for the M1 gate and the two others are proposed with TASK-M2-03's
+    definitions, on decoded values. TASK-M1-18 still needs some constant for the two views meanwhile, which the corpus
     does not give, and the M1 gate confirms four floors, not six.
   - (b) Write TASK-M2-03's two definitions (part of REQ-PAY-088) first, ahead of the M1 calibration: a docs change to
-    dd_decoder §3.6 for `rho_ratio` and `r_min_pair_0`, reviewed by physics, before TASK-M1-17 proposes. It splits a
+    dd_decoder §3.6 for `rho_ratio` and `r_min_pair_0`, reviewed by physics, before TASK-M1-18 proposes. It splits a
     definition out of an M2 task into the M1 path; the evidence is then the formula, not decoded values, since the
     decode stage still lands at M2.
-  - (c) Give the two floors provisionally, in assumed units (stated in the proposal), confirmed at the M1 gate as
-    provisional and re-confirmed at M2 once TASK-M2-03 defines the formulas. Two confirmations of the same value; the
-    assumption may not match the definition, and the floor then changes at M2.
+  - (c) Give the two floors provisionally, confirmed at the M1 gate as provisional and re-confirmed at M2 once
+    TASK-M2-03 defines the formulas. For `rho_ratio` the proposal states assumed units (which ratio), and the
+    assumption may not match the definition, so the floor may change at M2. For `r_min_pair_0` the units are not
+    assumed (a distance in `G = M = I = 1`); only the evidence is provisional, so the re-confirmation at M2 is of the
+    evidence. Two confirmations of each value.
   - (d) Read R-401's unit kinds ("a ratio", "a distance") as enough to propose the floors at M1 without the formulas,
-    with TASK-M2-03's definitions then bound to be consistent with them. It settles the units before their definition
-    is written and reviewed.
-- **Applied meanwhile:** nothing.
-- **Waits:** REQ-TOOL-160 carries `rq: RQ-271`, so TASK-M1-17 waits, and through it TASK-M1-14 (which depends on
-  TASK-M1-17), TASK-M6-27 and TASK-M7-05 (both depend on TASK-M1-17); the M1 gate's confirmation of REQ-TOOL-160 waits
-  with them. TASK-M1-17 is not yet dispatched (it depends on TASK-M1-13, PR #180). REQ-PAY-088 is named, not marked:
-  TASK-M2-03 can write its definitions under any option, and under (b) only sooner.
+    with TASK-M2-03's definitions then bound to be consistent with them. For `rho_ratio` it settles which ratio before
+    its definition is written and reviewed; for `r_min_pair_0` it settles no unit the gauge leaves open, only the
+    evidence, which is then the showcase values and the gauge's scale.
+  - (c) and (d) may also be taken per field: one for `rho_ratio`, another for `r_min_pair_0`.
+- **Applied meanwhile:** the plan split, applied per R-369 (physics review 5482528309 of PR #194, F1): REQ-TOOL-160's
+  closing moves from TASK-M1-17 to a new task, TASK-M1-18 ("The per-field log floors (R-401)"), which depends on
+  TASK-M1-17. TASK-M1-17 keeps its four other closures and is not held by this entry. The split settles nothing here.
+- **Waits:** REQ-TOOL-160 carries `rq: RQ-271`, so:
+  - TASK-M1-18 waits.
+  - The M1 gate's confirmation of REQ-TOOL-160 waits, and so the M1 exit, and with it every task the M1 gate holds
+    (all later-milestone tasks, save an early merge under R-415).
+  - TASK-M7-05 depends on TASK-M1-18 (its `log` compaction reads each field's R-401 floor), and through it TASK-M7-08,
+    TASK-M7-09 and TASK-M7-23 and their dependents, a chain that is behind the M1 exit anyway.
+  - Checked and not dependent on TASK-M1-18, as none reads a floor value: TASK-M1-14 (its goldens are re-rendered by
+    TASK-M1-18 if they draw a log view), TASK-M1-15, TASK-M2-25, TASK-M3-18 and TASK-M6-27.
+  - REQ-PAY-088 is named, not marked: TASK-M2-03 can write its definitions under any option, and under (b) only
+    sooner.
 
 ---
 
-## RQ-272: REQ-PAY-034 asserts every ICDescriptor field in f32 (and f64) against hand-computed values, but the corpus gives no tolerance for that comparison *(silence, R-71, REQ-PAY-034, REQ-DEC-043, REQ-DEC-044; context: TASK-M2-03)*
+## RQ-272: REQ-PAY-034 asserts every ICDescriptor field in f32 (and f64) against hand-computed values, but the corpus gives no tolerance for that comparison *(silence, R-71, R-85, REQ-PAY-034, REQ-DEC-043, REQ-DEC-044, REQ-VAL-061; context: TASK-M2-03)*
 
-*Found in TASK-M2-03's read-only pre-flight. Nothing is chosen.*
+*Found in TASK-M2-03's read-only pre-flight. Widened in PR #194's physics review 5482528309 (F2, the parity
+contract's starting tolerance). Nothing is chosen.*
 
 - **File, section:**
   - `plan/requirements.yaml` REQ-PAY-034 (TASK-M2-03, `ic_descriptor`), verify: "golden IC (z = 0): assert every
@@ -293,9 +316,24 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
     identities …), 6 (the reconstruction inverse) and 8 (the invariant construction's L_z and K)". On PR #192's branch
     only (not on main), REQ-DEC-045 (test 1's Σpᵢ = 0) and REQ-DEC-046 (test 8's L_z and K) are split from it. None of
     the three names a descriptor field.
+  - `docs/contracts/principia_parity_contract.md` § "Tier N — tight numerical (checkable because nothing amplifies)":
+    "**decode → `(m, r, p)`, `ICDescriptor`, `E₀`**: the whole Matter rung (decoder dd §5)"; and § "4. Tolerance — and
+    the cross-backend reality": "Tier-N tolerance absorbs **two** sources of difference, not one: 1. **f32 vs f64** —
+    the intended comparison. 2. **cross-backend f32 variance**" (lines 141–144), and (line 148) "Relative tolerance,
+    per quantity class: IC/decode ~1e-5; one-step state ~1e-5 scaled by force magnitude; monitored `E₀`/`L_z` at t=0
+    ~1e-6. These are starting points to be replaced by measured values."
+  - `plan/requirements.yaml` REQ-VAL-061 (`milestone: M4`, TASK-M4-04): "Parity Tier N must compare elementwise within
+    tight tolerance: decode → `(m, r, p)`, `ICDescriptor` and `E₀`; …", verified with "starting tolerances: IC/decode
+    ~1e-5 relative; … — to be replaced by measured values". REQ-TOOL-029's note (R-133): "before REQ-VAL-064 sets Tier
+    N (M4), 'Tier-N tolerance' here is read as REQ-DEC-043's calibrated f32 decode factor."
 - **Silence:** no requirement or doc gives the tolerance at which an f32 (or f64) descriptor field matches its
-  hand-computed value. Test 12's tolerance is a cross-backend agreement (CPU-f64 against GPU-f32), not a comparison
-  with hand-computed values, and its factor (REQ-DEC-043) is proposed by TASK-M2-06, which runs after TASK-M2-03
+  hand-computed value. The nearest value is the parity contract's "IC/decode ~1e-5" relative, which covers the
+  `ICDescriptor`, but it does not settle this comparison as written: it is Tier N's, a cross-backend parity check
+  closed at M4 (REQ-VAL-061, TASK-M4-04) and set there by measurement (R-85, REQ-VAL-064); it is explicitly a
+  "starting point" to be replaced; and it compares f32 with f64, not with hand-computed values (though "f32 vs f64 —
+  the intended comparison" is one reading of REQ-PAY-034's f32 leg). It gives the f64 leg nothing, and as a relative
+  tolerance it says nothing for a field whose golden value is 0 (`K_0` and `virial_ratio` at rest). Test 12's
+  tolerance is a cross-backend agreement (CPU-f64 against GPU-f32), not a comparison with hand-computed values, and its factor (REQ-DEC-043) is proposed by TASK-M2-06, which runs after TASK-M2-03
   (TASK-M2-06 depends on TASK-M2-05, which depends on TASK-M2-03). REQ-DEC-044's tests do not include the
   descriptor. "Hand-computed" at f32 is itself open: the f32 rounding of the exact value, or the value the formula
   gives evaluated in f32.
@@ -312,6 +350,10 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
     `K_0 = 0` and `virial_ratio = 0` are exact; fields through a quotient, square root or trigonometric function (`V_0`,
     and whatever REQ-PAY-088 defines for the magnitudes and `rho_angle`) are exact only if "hand-computed" means the
     same operations in the same order at that precision, so the fields left over still need (a) or (b).
+  - (d) Take the parity contract's "IC/decode ~1e-5" relative (§4, REQ-VAL-061) as the f32 leg's provisional
+    tolerance, against the f64 value or the hand-computed one, until Tier N is measured at M4. A corpus value, no new
+    one; but it is a placeholder set for a different, cross-backend check, it leaves the golden's zero-valued fields
+    and the f64 leg to (a) or (c), and the M4 measurement may then change what TASK-M2-03's test asserts.
 - **Applied meanwhile:** nothing.
 - **Waits:** REQ-PAY-034 carries `rq: RQ-272`, so TASK-M2-03 (`ic_descriptor`) waits. TASK-M3-19 and TASK-M3-22, which
   need REQ-PAY-034, wait with it. TASK-M2-03 also waits on RQ-270 (REQ-DEC-027, REQ-VAL-020) and on TASK-M2-02.
