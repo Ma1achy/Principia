@@ -149,7 +149,7 @@ fn qa_quad_reduction_bin_index_rust_is_payload_rule() {
 }
 
 negative_control!(
-    qa_quad_reduction_bin_index_raw_code,
+    qa_quad_reduction_bin_index_rust_is_payload_rule,
     "the raw 5-bit code splits a bounded quad by its stray detail bits",
     expected = "bin(1, 1) is 9, the doc gives 1",
     check_rust_bin(|s, d| s | d << 3)
@@ -208,7 +208,7 @@ fn qa_quad_reduction_bin_index_wgsl_is_payload_rule() {
 }
 
 negative_control!(
-    qa_quad_reduction_bin_index_wgsl_running_reads_detail,
+    qa_quad_reduction_bin_index_wgsl_is_payload_rule,
     "a WGSL index that also reads running's detail is not the doc's",
     expected = "WGSL bin of code 11 is 11, the doc gives 3",
     check_wgsl_bin(&{
@@ -251,7 +251,7 @@ fn qa_quad_reduction_bin_index_doc_states_rule() {
 }
 
 negative_control!(
-    qa_quad_reduction_bin_index_doc_without_rule,
+    qa_quad_reduction_bin_index_doc_states_rule,
     "a §3.7 whose bin count reads the raw code states no bin-index rule",
     expected = "§3.7 does not state the bin index",
     check_doc_rule("the code `state | detail << 3` that `dominant_outcome` holds")
