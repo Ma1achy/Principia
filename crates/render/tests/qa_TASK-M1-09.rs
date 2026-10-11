@@ -15,12 +15,15 @@
 //! - REQ-TOOL-023 (R-136, R-280): `d_min`, `dE_max` and `dLz_max` round-trip within f16 eps, 2⁻¹⁰ relative
 //!   (`qa_f16_scalar_views_*`).
 //! - REQ-TOOL-137 / REQ-TOOL-012 (R-271, R-280, R-343 item 5): `d_min`'s unset value, f16 +∞, of a forced failure and
-//!   of an unstepped sample is drawn in the "not yet" grey, neither hatched nor on the ramp; the largest finite f16
+//!   of an unstepped sample is drawn in the "not yet" style, `debug_not_yet` (R-399: the grey with a fine dot stipple,
+//!   never one flat colour; amended by qa for TASK-M1-17), neither hatched nor on the ramp; the largest finite f16
 //!   is on the ramp; a NaN in the same view is hatched; `ftle` with `ftle_valid` false is hatched
 //!   (`qa_f16_scalar_views_d_min_*`, `qa_debug_fields_raw_ftle_*`).
 //! - REQ-COL-001 (R-132): a field ramp draws its invalid pixels (the word `length`'s sentinel 127, `d_min`'s NaN) in
 //!   the hatched pattern; the node's override changes those pixels alone, to its declared colour; `d_min`'s unset
-//!   value stays grey either way (`qa_field_ramp_*`).
+//!   value stays in the "not yet" style either way (`qa_field_ramp_*`).
+//! - R-400 (amended by qa for TASK-M1-17): `ftle` and `diffusion`, whose declared ranges are unbounded and so span
+//!   zero, sit on `ramp_coolwarm` over the symmetric `[−M, M]`, `M` the larger magnitude of the measured ends.
 //! - REQ-TOOL-161: `rho_angle`'s view places angles a whole number of turns apart, negative ones included, at one
 //!   place of `ramp_twilight` (`qa_cyclic_*`).
 //!
@@ -57,8 +60,11 @@ fn log_place(x: f64, eps: f64) -> f64 {
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Want {
     Hatch,
-    Grey,
+    /// The "not yet" style (R-399).
+    NotYet,
     Viridis(f64),
+    /// `ramp_coolwarm` (R-400).
+    Coolwarm(f64),
     Twilight(f64),
     Literal(f32),
     Flat(Rgb),
@@ -69,8 +75,9 @@ impl Want {
         let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
         match self {
             Want::Hatch => present::debug_invalid(frag),
-            Want::Grey => present::not_yet(),
+            Want::NotYet => present::debug_not_yet(frag),
             Want::Viridis(t) => present::ramp_viridis(t),
+            Want::Coolwarm(t) => present::ramp_coolwarm(t),
             Want::Twilight(t) => present::ramp_twilight(t),
             Want::Literal(v) => present::dbg_sentinel(v, frag),
             Want::Flat(c) => c,
@@ -137,6 +144,18 @@ fn auto_places(raws: &[Option<f64>]) -> Vec<Option<f64>> {
     let hi = on.iter().copied().fold(f64::NEG_INFINITY, f64::max);
     raws.iter()
         .map(|r| r.map(|r| if hi > lo { (r - lo) / (hi - lo) } else { 0.0 }))
+        .collect()
+}
+
+/// The auto-range places of `raws` for a field whose declared range spans zero (R-400): `(raw + M)/(2M)` over the
+/// symmetric `[−M, M]`, `M` the larger magnitude of the measured min and max, so 0 lands at ½.
+fn symmetric_places(raws: &[Option<f64>]) -> Vec<Option<f64>> {
+    let on: Vec<f64> = raws.iter().flatten().copied().collect();
+    let lo = on.iter().copied().fold(f64::INFINITY, f64::min);
+    let hi = on.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let m = lo.abs().max(hi.abs());
+    raws.iter()
+        .map(|r| r.map(|r| if m > 0.0 { (r + m) / (2.0 * m) } else { 0.0 }))
         .collect()
 }
 
@@ -261,11 +280,11 @@ fn check_ftle(s: &Scene, image: &[Rgb]) {
         raws[1..].iter().all(Option::is_some),
         "a stepped sample's ftle reads NaN"
     );
-    let places = auto_places(&raws);
+    let places = symmetric_places(&raws);
     for i in 0..SAMPLES {
         match places[i as usize] {
             None => check(image, i, Want::Hatch, "the hatch of a NaN"),
-            Some(t) => check(image, i, Want::Viridis(t), "the ramp colour of its value"),
+            Some(t) => check(image, i, Want::Coolwarm(t), "the ramp colour of its value"),
         }
     }
 }
@@ -282,10 +301,27 @@ negative_control!(
     expected = "is not the hatch of a NaN",
     {
         let s = ftle_scene();
-        let image = painted(&render(&gpu(), &s), 0, Want::Viridis(0.0));
+        let image = painted(&render(&gpu(), &s), 0, Want::Coolwarm(0.0));
         check_ftle(&s, &image)
     }
 );
+
+/// R-400's leg of the ftle check can fail: a valid sample drawn on viridis at its place.
+#[cfg(feature = "controls")]
+mod qa_debug_fields_raw_ftle_on_viridis {
+    use super::*;
+    negative_control!(
+        qa_debug_fields_raw_ftle_nan_is_hatched,
+        "a zero-spanning ftle drawn on viridis rather than cool-warm is caught (R-400)",
+        expected = "is not the ramp colour of its value",
+        {
+            let s = ftle_scene();
+            let image = render(&gpu(), &s);
+            let image = painted(&image, 3, Want::Viridis(0.75));
+            check_ftle(&s, &image)
+        }
+    );
+}
 
 // ── REQ-GEN-012: an invalid diffusion fit is NaN; stored sentinels show their literal value ───────────────────────
 
@@ -336,15 +372,15 @@ fn check_diffusion(s: &Scene, image: &[Rgb]) {
             }
         })
         .collect();
-    let places = auto_places(&raws);
+    let places = symmetric_places(&raws);
     for i in 0..SAMPLES {
         match places[i as usize] {
             None => check(image, i, Want::Hatch, "the hatch of an invalid fit"),
             Some(t) => {
-                check(image, i, Want::Viridis(t), "the ramp colour of its slope");
+                check(image, i, Want::Coolwarm(t), "the ramp colour of its slope");
                 let (x, y) = tile(i).next().unwrap();
                 assert!(
-                    !near(Want::Hatch.at(x, y), Want::Viridis(t).at(x, y)),
+                    !near(Want::Hatch.at(x, y), Want::Coolwarm(t).at(x, y)),
                     "sample {i}'s valid slope is indistinguishable from the hatch"
                 );
             }
@@ -512,7 +548,7 @@ negative_control!(
     check_f16(&f16_values(), F16_EPS / 100.0)
 );
 
-// ── REQ-TOOL-137 / REQ-TOOL-012: d_min's unset value is grey, NaN hatched, the rest on the ramp ────────────────────
+// ── REQ-TOOL-137 / REQ-TOOL-012: d_min's unset value is "not yet", NaN hatched, the rest on the ramp ──────────────
 
 /// `d_min`'s scene: 0 a forced failure holding +∞; 1 unstepped (fresh); 2 an f16 NaN; 3 f16's largest finite value;
 /// 4 a failed sample whose stored `d_min` is 0.0; 5–7 valid values.
@@ -575,23 +611,31 @@ fn check_d_min_view(s: &Scene, image: &[Rgb]) {
     let places = auto_places(&raws);
     for i in 0..SAMPLES {
         let want = match reads[i as usize] {
-            None => Want::Grey,
+            None => Want::NotYet,
             Some(None) => Want::Hatch,
             Some(Some(_)) => Want::Viridis(places[i as usize].unwrap()),
         };
         check(image, i, want, "d_min's look");
     }
-    // The grey is neither the hatch nor a ramp colour of this view.
-    let (x, y) = tile(0).next().unwrap();
-    let grey = Want::Grey.at(x, y);
-    for c in ledger::gen::prelude::hatch().colours.map(present::srgb8) {
-        assert!(!near(grey, c), "the grey is a hatch colour");
+    // The style is not one flat colour (R-399), and none of its colours is the hatch's or a ramp colour of this view.
+    let mut style: Vec<Rgb> = Vec::new();
+    for (x, y) in tile(0) {
+        let c = Want::NotYet.at(x, y);
+        if !style.iter().any(|s| near(*s, c)) {
+            style.push(c);
+        }
     }
-    for k in 0..=1000 {
-        assert!(
-            !near(grey, present::ramp_viridis(f64::from(k) / 1000.0)),
-            "the grey sits on the ramp"
-        );
+    assert!(style.len() >= 2, "the \"not yet\" style is one flat colour");
+    for grey in style {
+        for c in ledger::gen::prelude::hatch().colours.map(present::srgb8) {
+            assert!(!near(grey, c), "the \"not yet\" style has a hatch colour");
+        }
+        for k in 0..=1000 {
+            assert!(
+                !near(grey, present::ramp_viridis(f64::from(k) / 1000.0)),
+                "the \"not yet\" style has a colour on the ramp"
+            );
+        }
     }
 }
 
@@ -622,6 +666,22 @@ mod qa_f16_scalar_views_unset_on_ramp {
         {
             let s = d_min_scene(Colouring::View("d_min"));
             let image = painted(&render(&gpu(), &s), 0, Want::Viridis(1.0));
+            check_d_min_view(&s, &image)
+        }
+    );
+}
+
+/// R-399's leg can fail: the unset value drawn in the flat grey, as before R-399.
+#[cfg(feature = "controls")]
+mod qa_f16_scalar_views_unset_flat_grey {
+    use super::*;
+    negative_control!(
+        qa_f16_scalar_views_d_min_unset_is_grey_nan_hatched,
+        "the unset d_min drawn in the flat DBG_NOT_YET grey is caught (R-399)",
+        expected = "is not d_min's look",
+        {
+            let s = d_min_scene(Colouring::View("d_min"));
+            let image = painted(&render(&gpu(), &s), 1, Want::Flat(present::not_yet()));
             check_d_min_view(&s, &image)
         }
     );
@@ -679,7 +739,7 @@ fn ramp_wants(field: &str, s: &Scene) -> Vec<(Want, bool)> {
         _ => d_min_reads(s)
             .into_iter()
             .map(|r| match r {
-                None => (Want::Grey, false),
+                None => (Want::NotYet, false),
                 Some(None) => (Want::Hatch, true),
                 Some(Some(v)) => (Want::Viridis((v / 2.0).clamp(0.0, 1.0)), false),
             })
@@ -687,7 +747,7 @@ fn ramp_wants(field: &str, s: &Scene) -> Vec<(Want, bool)> {
     }
 }
 
-/// With the override off, the invalid pixels are hatched and the rest on the ramp (or grey); with it on, the invalid
+/// With the override off, the invalid pixels are hatched and the rest on the ramp (or "not yet"); with it on, the invalid
 /// pixels take the declared override colour, which differs from the hatch, and no other pixel changes.
 fn check_ramp(field: &str, off: (&Scene, &[Rgb]), on: (&Scene, &[Rgb])) {
     let wants = ramp_wants(field, off.0);
@@ -736,7 +796,7 @@ fn qa_field_ramp_invalid_lane_and_override() {
 
 negative_control!(
     qa_field_ramp_invalid_lane_and_override,
-    "an override that also recolours d_min's unset grey is caught",
+    "an override that also recolours d_min's unset \"not yet\" style is caught",
     expected = "the override changed valid pixel",
     {
         let h = gpu();
