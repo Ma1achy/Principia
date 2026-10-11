@@ -524,6 +524,8 @@
     detail: "decoder test 3 over fuzzed z including ±large values; mass outputs stay in the open simplex"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-270
 - id: REQ-DEC-028
   area: DEC
   statement: "The chart parametrisation must stay open on `[0,1]` with endpoints excluded, with no endpoint clamping and no artificial guards against approaching degenerate configurations."
@@ -20705,6 +20707,8 @@
   - R-73
   - R-137
   milestone: M5
+  rq:
+  - RQ-269
 - id: REQ-PERF-026
   area: PERF
   statement: "Named tiers must populate render_scale, E, FTLE and word per the §4 table (Potato 0.25×/E 0/no FTLE/no word; Low 0.5×/0/no FTLE/word on; Medium 0.75×/1/FTLE; High 1.0×/3/FTLE; Ultra 1.0×/7/FTLE; Extreme 1.0×/15/FTLE), with N and depth indicative, and the Ultra and Extreme rows provisional until REQ-PERF-086's calibration lands (R-137)."
@@ -20855,6 +20859,8 @@
   rulings:
   - R-398
   milestone: M6
+  rq:
+  - RQ-269
   note: "R-398 (RQ-258): N is a power of two wherever it is chosen, so the sample coordinates are dyadic, as the quadtree's are."
 - id: REQ-PERF-036
   area: PERF
