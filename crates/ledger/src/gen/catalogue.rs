@@ -546,6 +546,7 @@ fn header(e: &Entry, r: &Read, colouring: &str) -> String {
     let ty = match &e.ty {
         FieldType::UBits => "u-bits".to_owned(),
         FieldType::F32 => "f32".to_owned(),
+        FieldType::F16 => "f16".to_owned(),
         FieldType::F16Pair => "f16-pair".to_owned(),
         FieldType::Fixed16 => "fixed16".to_owned(),
         FieldType::Vector { k, .. } => format!("vector(·, {k})"),

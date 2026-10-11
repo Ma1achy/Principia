@@ -141,6 +141,7 @@ impl Canon {
         match ty {
             FieldType::UBits => self.str("u-bits"),
             FieldType::F32 => self.str("f32"),
+            FieldType::F16 => self.str("f16"),
             FieldType::F16Pair => self.str("f16-pair"),
             FieldType::Fixed16 => self.str("fixed16"),
             FieldType::Vector { component, k } => {
@@ -260,6 +261,10 @@ impl Canon {
                 Storage::U32x4 => c.str("u32x4"),
                 Storage::Pad(n) => {
                     c.str("pad");
+                    c.u32(n);
+                }
+                Storage::U32Array(n) => {
+                    c.str("u32-array");
                     c.u32(n);
                 }
             }
