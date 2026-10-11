@@ -1,7 +1,9 @@
 //! QA's tests for TASK-M1-10, written from the requirements it closes, not from the implementation:
 //! - REQ-COL-002: the outcome field's canonical default palette is colour_composition §1.4's nine classes, read from
 //!   `state` plus the `detail` union (R-96: "degenerate" = `decode_failed`, "collision at start" = a collision with
-//!   `t_end_step == 0`), running in the neutral grey, sim_failed in the invalid pattern, the two triple outcomes in
+//!   `t_end_step == 0`), running in the "not yet" style (R-399, amended by qa for TASK-M1-17: the neutral grey with a
+//!   fine dot stipple, every pixel the grey or the dot and both present, never one flat colour), sim_failed in the
+//!   invalid pattern, the two triple outcomes in
 //!   REQ-COL-062's swatches; editing any one swatch changes only its class (`qa_col002_*`).
 //! - REQ-COL-004: the `detail` legend and palette segment switch on `state` (dd_colouring §2, §5 test 8's legend half;
 //!   R-22's pair ids) (`qa_col004_*`).
@@ -52,13 +54,28 @@ const TRIPLE_EJECTION: u32 = 0x000097;
 /// The running grey TASK-M1-09 proposed (REQ-COL-053; colour_composition §1.4 names it `#4E4E4E`).
 const RUNNING_GREY: u32 = 0x4E4E4E;
 
+/// The "not yet" style's dot, 8-bit sRGB (R-399; REQ-COL-064, proposed by TASK-M1-17, so read from its constant).
+fn running_dot() -> [u8; 3] {
+    render::present::NOT_YET_DOT_SRGB8
+}
+
+/// Whether the pixels `seen` of a running sample are the "not yet" style: each the grey or the dot, the two distinct,
+/// and both present, so the tile is not one flat colour (R-399).
+fn is_not_yet_style(seen: &[[u8; 3]]) -> bool {
+    let (grey, dot) = (rgb8(RUNNING_GREY), running_dot());
+    grey != dot
+        && seen.iter().all(|c| *c == grey || *c == dot)
+        && seen.contains(&grey)
+        && seen.contains(&dot)
+}
+
 /// What a sample of the outcome palette must show.
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Want {
     /// A swatch, the occupant's param of that name, 8-bit sRGB.
     Swatch(&'static str, u32),
-    /// The running grey.
-    Grey,
+    /// The "not yet" style of a running sample (R-399): the grey with its dot stipple.
+    NotYet,
     /// The invalid pattern: either of the hatch's two colours, by the pixel position.
     Hatch,
     /// A reserved state code (6–7): finished and untrusted (payload §2), so neither a class's swatch nor running's grey.
@@ -119,8 +136,8 @@ const SAMPLES: [(u32, u32, u32, Want); 18] = [
         0,
         Want::Swatch("triple_ejection", TRIPLE_EJECTION),
     ),
-    (RUNNING, 2, 0, Want::Grey),
-    (RUNNING, 0, 500, Want::Grey),
+    (RUNNING, 2, 0, Want::NotYet),
+    (RUNNING, 0, 500, Want::NotYet),
     (SIM_FAILED, 1, 40, Want::Hatch),
     (
         DECODE_FAILED,
@@ -259,13 +276,25 @@ fn check_outcome(s: &Scene, image: &[[f32; 4]]) {
             let got = [p[0], p[1], p[2]].map(encode8);
             let ok = match want {
                 Want::Swatch(_, h) => got == rgb8(h),
-                Want::Grey => got == rgb8(RUNNING_GREY),
+                Want::NotYet => got == rgb8(RUNNING_GREY) || got == running_dot(),
                 Want::Hatch => hatch.contains(&got),
-                Want::Untrusted => !swatches.contains(&got) && got != rgb8(RUNNING_GREY),
+                Want::Untrusted => {
+                    !swatches.contains(&got) && got != rgb8(RUNNING_GREY) && got != running_dot()
+                }
             };
             assert!(
                 ok,
                 "sample {i} (state {state}, detail {detail}, t_end_step {t}) pixel ({x}, {y}) is {got:02X?}, not {want:?}"
+            );
+        }
+        if want == Want::NotYet {
+            let seen: Vec<[u8; 3]> = tile(s, image, i)
+                .into_iter()
+                .map(|(_, p)| [p[0], p[1], p[2]].map(encode8))
+                .collect();
+            assert!(
+                is_not_yet_style(&seen),
+                "sample {i}: running is not the \"not yet\" style, the grey stippled with its dot (R-399)"
             );
         }
         if want == Want::Hatch {
@@ -363,7 +392,7 @@ negative_control!(
     }
 );
 
-/// Checks that every RUNNING sample is drawn: alpha 1, the running grey, not black, not the clear colour.
+/// Checks that every RUNNING sample is drawn: alpha 1, the "not yet" style (R-399), not black, not the clear colour.
 fn check_running(s: &Scene, image: &[[f32; 4]]) {
     let mut n = 0;
     for (i, &(state, ..)) in SAMPLES.iter().enumerate() {
@@ -371,14 +400,21 @@ fn check_running(s: &Scene, image: &[[f32; 4]]) {
             continue;
         }
         n += 1;
+        let mut seen = Vec::new();
         for ((x, y), p) in tile(s, image, i as u32) {
+            let got = [p[0], p[1], p[2]].map(encode8);
             assert!(
                 p[3] == 1.0
                     && p[..3] != [0.0; 3]
-                    && [p[0], p[1], p[2]].map(encode8) == rgb8(RUNNING_GREY),
-                "running sample {i} pixel ({x}, {y}) is {p:?}, not drawn in the grey"
+                    && (got == rgb8(RUNNING_GREY) || got == running_dot()),
+                "running sample {i} pixel ({x}, {y}) is {p:?}, not drawn in the \"not yet\" style"
             );
+            seen.push(got);
         }
+        assert!(
+            is_not_yet_style(&seen),
+            "running sample {i} is not the \"not yet\" style, the grey stippled with its dot (R-399)"
+        );
     }
     assert_eq!(
         n, 2,
@@ -402,12 +438,56 @@ negative_control!(
         let image = render_altered(
             &h,
             &s,
-            "return DBG_NOT_YET;",
+            "return debug_not_yet(ctx.frag_xy);",
             "return vec3<f32>(0.0, 0.0, 0.0);",
         );
         check_running(&s, &image);
     }
 );
+
+/// R-399's leg can fail: running drawn in the flat grey, as before R-399.
+#[cfg(feature = "controls")]
+mod qa_render017_running_flat_grey {
+    use super::*;
+    negative_control!(
+        qa_render017_running_samples_are_coloured,
+        "an occupant that draws running in the flat DBG_NOT_YET grey is caught (R-399)",
+        expected = "is not the \"not yet\" style, the grey stippled with its dot",
+        {
+            let h = gpu();
+            let s = outcome_scene(None);
+            let image = render_altered(
+                &h,
+                &s,
+                "return debug_not_yet(ctx.frag_xy);",
+                "return DBG_NOT_YET;",
+            );
+            check_running(&s, &image);
+        }
+    );
+}
+
+/// The same leg in the class check.
+#[cfg(feature = "controls")]
+mod qa_col002_running_flat_grey {
+    use super::*;
+    negative_control!(
+        qa_col002_each_class_renders_its_section_1_4_colour,
+        "an occupant that draws running in the flat DBG_NOT_YET grey is caught (R-399)",
+        expected = "running is not the \"not yet\" style",
+        {
+            let h = gpu();
+            let s = outcome_scene(None);
+            let image = render_altered(
+                &h,
+                &s,
+                "return debug_not_yet(ctx.frag_xy);",
+                "return DBG_NOT_YET;",
+            );
+            check_outcome(&s, &image);
+        }
+    );
+}
 
 // ── REQ-TOOL-022, REQ-COL-004: the `detail` view, keyed by state ────────────────────────────────────────────────────
 

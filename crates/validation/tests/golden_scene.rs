@@ -38,7 +38,7 @@ fn kinds(s: &Scene) -> String {
 }
 
 /// Each scene: its field and its samples' kinds.
-const SCENES: [(&str, &str, &str); 14] = [
+const SCENES: [(&str, &str, &str); 20] = [
     ("ftle", "ftle", "IIRRRRRR"),
     ("diffusion", "diffusion", "IIRRRRRR"),
     ("de_max_failed", "dE_max", "RRRRRRRR"),
@@ -53,6 +53,12 @@ const SCENES: [(&str, &str, &str); 14] = [
     ("outcome_edited", "state", "FFFFFFFFFFFNIF"),
     ("state_view", "state", "FFFFFF"),
     ("detail_view", "detail", "FFFFFFFFFFFFFFFFFF"),
+    ("e_0_signed", "E_0", "RRRRRRRR"),
+    ("lz_0_signed", "Lz_0", "RRRRRRRR"),
+    ("c_ty_signed", "C_ty", "RRRRRRRR"),
+    ("k_0", "K_0", "RRRRRRRR"),
+    ("v_0", "V_0", "RRRRRRRR"),
+    ("virial_ratio", "virial_ratio", "RRRRRRRR"),
 ];
 
 /// Checks that scene `name` colours `field` and shows `want`'s kinds.
@@ -428,7 +434,7 @@ fn f16(x: f32) -> f32 {
 /// negative; the f16 drifts and `d_min` are their values rounded to f16, `dLz_max` 0.6 of `dE_max`'s; the word lengths.
 #[test]
 fn golden_scene_values_are_the_scenes() {
-    check_values("ftle", 2, &[0.15, 0.4, 0.85, 1.3, 2.1, 3.05], 1e-5);
+    check_values("ftle", 2, &[0.15, 0.4, 0.85, 1.35, 2.15, 3.05], 1e-5);
     check_values("diffusion", 2, &[0.6], 1e-5);
     let slope = named("diffusion")
         .value(3)
@@ -455,6 +461,41 @@ negative_control!(
     "a positive slope where the scene has n = 2's 0.6 is not the scene's",
     expected = "reads",
     check_values("diffusion", 2, &[-0.6], 1e-5)
+);
+
+/// The range scenes' documented values (R-400, R-403; TASK-M1-17), each sample's read of its field: the signed fields
+/// on both sides of 0 with 0 among them, `K_0` and `virial_ratio` from 0 up, `V_0` physical, every value ≤ 0. Their
+/// references and tie margins are made from these values.
+const RANGE_VALUES: [(&str, [f32; 8]); 6] = [
+    (
+        "e_0_signed",
+        [-1.3, -0.85, -0.4, -0.1, 0.0, 0.25, 0.76, 1.05],
+    ),
+    (
+        "lz_0_signed",
+        [-0.9, -0.6, -0.32, 0.0, 0.15, 0.45, 0.78, 1.2],
+    ),
+    (
+        "c_ty_signed",
+        [-2e-3, -1.2e-3, -5e-4, 0.0, 3e-4, 9e-4, 1.5e-3, 2.4e-3],
+    ),
+    ("k_0", [0.0, 0.05, 0.2, 0.36, 0.6, 0.9, 1.2, 1.6]),
+    ("v_0", [-2.4, -1.9, -1.5, -1.12, -0.8, -0.55, -0.3, -0.12]),
+    ("virial_ratio", [0.0, 0.3, 0.62, 0.9, 1.0, 1.3, 1.8, 2.5]),
+];
+
+#[test]
+fn golden_scene_range_scenes_read_their_values() {
+    for (name, values) in RANGE_VALUES {
+        check_values(name, 0, &values, 0.0);
+    }
+}
+
+negative_control!(
+    golden_scene_range_scenes_read_their_values,
+    "`V_0`'s most negative value with its sign dropped is not the scene's",
+    expected = "`v_0` sample 0 reads -2.4, not 2.4",
+    check_values("v_0", 0, &[2.4], 0.0)
 );
 
 /// Checks that `d_min`'s NaN sample, 2, holds the f16 quiet NaN in its high half and keeps the low half of its word

@@ -101,6 +101,37 @@ impl Range {
             hi: Bound::Closed(hi as f64),
         }
     }
+
+    /// Whether the range spans zero, `lo < 0 < hi`, either end possibly unbounded (R-400, R-403): a field whose
+    /// declared range does is drawn on the diverging ramp centred at zero, and only such a field carries the
+    /// `diverging` scale (dd_generation_root §3.8). An end at 0, open or closed, does not span it.
+    pub fn spans_zero(&self) -> bool {
+        let below = match self.lo {
+            Bound::Closed(v) | Bound::Open(v) => v < 0.0,
+            Bound::Unbounded => true,
+        };
+        let above = match self.hi {
+            Bound::Closed(v) | Bound::Open(v) => v > 0.0,
+            Bound::Unbounded => true,
+        };
+        below && above
+    }
+}
+
+/// The range as interval notation, `[0, 1]`, `(0, ∞)`, `(−∞, 0]`: as a view's header and a refusal name it.
+impl fmt::Display for Range {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.lo {
+            Bound::Closed(v) => write!(f, "[{v}, ")?,
+            Bound::Open(v) => write!(f, "({v}, ")?,
+            Bound::Unbounded => write!(f, "(−∞, ")?,
+        }
+        match self.hi {
+            Bound::Closed(v) => write!(f, "{v}]"),
+            Bound::Open(v) => write!(f, "{v})"),
+            Bound::Unbounded => write!(f, "∞)"),
+        }
+    }
 }
 
 /// A complete ledger entry: the §3.8 metadata of one field.

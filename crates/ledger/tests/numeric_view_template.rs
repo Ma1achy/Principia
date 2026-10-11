@@ -5,14 +5,19 @@
 //! - each ledger scale generates RQ-231's `raw`, and the CPU twin places it as the WGSL does
 //!   (`numeric_view_template_scales_*`);
 //! - a field with an unbounded ledger range defaults to `RANGE_AUTO = 1` (`numeric_view_template_unbounded_*`);
+//! - REQ-RENDER-084 (R-400, R-403; TASK-M1-17): a field whose declared range spans zero is on `ramp_coolwarm` over the
+//!   symmetric `[−M, M]`, fixed and auto, 0 at `t = ½`; a field with `lo ≥ 0` on `ramp_viridis`; the cyclic field on
+//!   `ramp_twilight`; the ledger gains no member (`numeric_view_template_zero_spanning_*`,
+//!   `numeric_view_template_ledger_*`); `K_0` and `V_0` on `ramp_viridis`, increasing in the value in both modes,
+//!   defaulting to `RANGE_AUTO = 1`, `V_0`'s most negative value at `t = 0` (`numeric_view_template_k0_v0_*`);
 //! - setting the `RANGE_AUTO` param writes the header default `@uniform RANGE_AUTO: u32 = <0|1> [0, 1]`, which the
 //!   assembler's `Declaration::parse` gives back (`numeric_view_template_range_auto_round_trips`).
 //!
 //! Each test registers its negative control (R-176).
 
 use ledger::gen::catalogue::numeric_view;
-use ledger::gen::numeric::{self, End, NumericView, Placement, Sentinel, Shown};
-use ledger::schema::{Entry, Ledger, Scale};
+use ledger::gen::numeric::{self, End, NumericView, Placement, Ramp, Sentinel, Shown};
+use ledger::schema::{Bound, Entry, EntryBuilder, FieldType, Ledger, Location, Range, Scale};
 use validation::{negative_control, Declaration, UniformType};
 
 /// The guard every numeric view opens with: the bitcast test against the canonical quiet NaN (R-114).
@@ -73,14 +78,16 @@ fn check_template(field: &str, view: &str) {
     let last = lines[lines.len() - 1];
     shape(
         (last.starts_with("    return ramp_viridis(range_norm(")
-            || last.starts_with("    return ramp_twilight(range_norm("))
+            || last.starts_with("    return ramp_twilight(range_norm(")
+            || last.starts_with("    return ramp_coolwarm(range_norm("))
             && last.contains(", uniforms.RANGE_AUTO != 0u, "),
         "the ramp last",
     );
     for line in &lines[2..lines.len() - 1] {
         let sentinel =
             line.starts_with("    if (raw == ") && line.contains("{ return dbg_sentinel(");
-        let unset = *line == "    if (bitcast<u32>(raw) == 0x7f800000u) { return DBG_NOT_YET; }";
+        let unset = *line
+            == "    if (bitcast<u32>(raw) == 0x7f800000u) { return debug_not_yet(ctx.frag_xy); }";
         let symmetric =
             *line == "    let m = max(abs(uniforms.u_range.x), abs(uniforms.u_range.y));";
         shape(sentinel || unset || symmetric, "a line between the two");
@@ -114,12 +121,17 @@ fn ramp_line(wgsl: &str) -> String {
     body(wgsl).last().map_or(String::new(), |l| (*l).to_owned())
 }
 
-/// Checks that each view's ramp places RQ-231's `raw` for its ledger scale, and that every scale is seen.
+/// Checks that each view's ramp places RQ-231's `raw` for its ledger scale, a `lin` field whose range spans zero as a
+/// diverging one is (R-400), and that every scale is seen.
 fn check_scales(views: &[(Entry, NumericView, String)]) {
     let mut seen = [false; 4];
     for (e, n, wgsl) in views {
         let ramp = ramp_line(wgsl);
-        let (k, want) = match e.scale {
+        let scale = match e.scale {
+            Scale::Lin if e.range.spans_zero() => Scale::Diverging,
+            s => s,
+        };
+        let (k, want) = match scale {
             Scale::Lin => (0, "ramp_viridis(range_norm(raw, ".to_owned()),
             Scale::Log => (
                 1,
@@ -134,9 +146,9 @@ fn check_scales(views: &[(Entry, NumericView, String)]) {
                 let want = match (n.lo, n.hi) {
                     (End::Fixed(lo), End::Fixed(hi)) => {
                         let r = numeric::float(lo.abs().max(hi.abs()));
-                        format!("ramp_viridis(range_norm(raw, -{r}, {r}, ")
+                        format!("ramp_coolwarm(range_norm(raw, -{r}, {r}, ")
                     }
-                    _ => "ramp_viridis(range_norm(raw, -m, m, ".to_owned(),
+                    _ => "ramp_coolwarm(range_norm(raw, -m, m, ".to_owned(),
                 };
                 assert!(
                     ramp.ends_with(", vec2<f32>(-m, m)));"),
@@ -272,7 +284,10 @@ fn check_twin_places(cyclic: &NumericView) {
     assert!(
         matches!(
             cyclic.shown(1.0, false, [0.0, 1.0], 1),
-            Shown::Ramp { twilight: true, .. }
+            Shown::Ramp {
+                ramp: Ramp::Twilight,
+                ..
+            }
         ),
         "cyclic is on twilight"
     );
@@ -298,7 +313,7 @@ fn check_twin_places(cyclic: &NumericView) {
     assert_eq!(
         open.shown(4.0, true, [2.0, 6.0], 1),
         Shown::Ramp {
-            twilight: false,
+            ramp: Ramp::Viridis,
             t: 0.5
         },
         "RANGE_AUTO places on the measured range"
@@ -363,7 +378,7 @@ fn numeric_view_template_guard_and_sentinels_on_the_twin() {
     check_unset(&unset);
 }
 
-/// Checks that `n` draws +∞ in the grey and the largest finite f32 and −∞ on the ramp.
+/// Checks that `n` draws +∞ in the "not yet" style and the largest finite f32 and −∞ on the ramp.
 fn check_unset(n: &NumericView) {
     assert_eq!(
         n.shown(f32::INFINITY, false, [0.0, 1.0], 1),
@@ -609,19 +624,20 @@ negative_control!(
     check_refused(&[1.5])
 );
 
-/// Checks that the diverging view `n`'s ramp line places raw on `[-r, r]`, `r` written as `want`.
+/// Checks that the diverging view `n`'s ramp line places raw on `[-r, r]`, `r` written as `want`, on `ramp_coolwarm`.
 fn check_symmetric(n: &NumericView, want: &str) {
     let wgsl = n.colour("ctx.sample.probe");
     let ramp = ramp_line(&wgsl);
     assert!(
-        ramp.contains(&format!("range_norm(raw, -{want}, {want}, ")),
+        ramp.contains(&format!("ramp_coolwarm(range_norm(raw, -{want}, {want}, ")),
         "the diverging view is not on [-{want}, {want}]: {ramp}"
     );
     assert!(ramp.ends_with(", vec2<f32>(-m, m)));"), "{ramp}");
 }
 
 /// A diverging view with both ends fixed places raw on the symmetric range of the larger magnitude, `[-2, 2]` for
-/// `[-2, 1]` and for `[-0.5, 2]`; with an end unbounded, on the measured symmetric `[-m, m]`.
+/// `[-2, 1]` and for `[-0.5, 2]`; with one end unbounded, on `[−M, M]`, `M` the larger magnitude of the fixed end and
+/// the measured one (R-400: "an unbounded end takes the measured end"); with both unbounded, on the measured `[-m, m]`.
 #[test]
 fn numeric_view_template_diverging_fixed_is_symmetric() {
     check_symmetric(
@@ -644,6 +660,14 @@ fn numeric_view_template_diverging_fixed_is_symmetric() {
     );
     check_symmetric(
         &view(Placement::Diverging, End::Fixed(-1.0), End::Measured, None),
+        "max(abs(-1.0), abs(uniforms.u_range.y))",
+    );
+    check_symmetric(
+        &view(Placement::Diverging, End::Measured, End::Fixed(3.0), None),
+        "max(abs(uniforms.u_range.x), abs(3.0))",
+    );
+    check_symmetric(
+        &view(Placement::Diverging, End::Measured, End::Measured, None),
         "m",
     );
 }
@@ -661,4 +685,320 @@ negative_control!(
         ),
         "m"
     )
+);
+
+// ── R-400 and R-403 (TASK-M1-17): the ramp follows the declared range ──────────────────────────────────────────────
+
+/// The ramp a view of `e` must draw on (R-400): twilight for the cyclic field, cool-warm where the declared range spans
+/// zero, viridis otherwise.
+fn want_ramp(e: &Entry) -> Ramp {
+    if e.scale == Scale::Cyclic {
+        Ramp::Twilight
+    } else if e.range.spans_zero() {
+        Ramp::Coolwarm
+    } else {
+        Ramp::Viridis
+    }
+}
+
+/// Checks that each view draws on the ramp its declared range gives, in the view and in its WGSL; that each on
+/// cool-warm places 0 at `t = ½`, a negative value below and a positive above, fixed and auto, on the symmetric
+/// range; and that the three ramps are all seen.
+fn check_ramps(views: &[(Entry, NumericView, String)]) {
+    let mut seen = [false; 3];
+    for (e, n, wgsl) in views {
+        let want = want_ramp(e);
+        seen[want as usize] = true;
+        let line = ramp_line(wgsl);
+        assert!(
+            n.ramp() == want && line.starts_with(&format!("    return {}(", want.wgsl())),
+            "`{}` over {} is not on {}: {line}",
+            e.name,
+            e.range,
+            want.wgsl()
+        );
+        if want != Ramp::Coolwarm {
+            continue;
+        }
+        for auto in [false, true] {
+            let at = |x: f32| match n.shown(x, auto, [-0.4, 1.6], 1) {
+                Shown::Ramp { ramp, t } => {
+                    assert_eq!(ramp, Ramp::Coolwarm, "`{}` at {x}", e.name);
+                    t
+                }
+                other => panic!("`{}` shows {x} as {other:?}", e.name),
+            };
+            let (zero, below, above) = (at(0.0), at(-0.3), at(0.3));
+            assert!(
+                zero == 0.5 && below < 0.5 && above > 0.5,
+                "`{}` (auto {auto}) does not place 0 at the neutral: −0.3 at {below}, 0 at {zero}, 0.3 at {above}",
+                e.name
+            );
+            assert!(
+                (above - 0.5 - (0.5 - below)).abs() < 1e-12,
+                "`{}` (auto {auto}) is not symmetric about 0",
+                e.name
+            );
+        }
+    }
+    assert_eq!(
+        seen, [true; 3],
+        "the ramps seen: viridis, twilight, cool-warm"
+    );
+}
+
+#[test]
+fn numeric_view_template_zero_spanning_is_coolwarm_centred_at_zero() {
+    let views = numeric_views();
+    check_ramps(&views);
+    let coolwarm: Vec<&str> = views
+        .iter()
+        .filter(|(_, n, _)| n.ramp() == Ramp::Coolwarm)
+        .map(|(e, ..)| e.name)
+        .collect();
+    for field in [
+        "E_0",
+        "Lz_0",
+        "C_ty",
+        "S",
+        "theta",
+        "mean_y",
+        "ftle",
+        "diffusion",
+    ] {
+        assert!(coolwarm.contains(&field), "`{field}` is not on cool-warm");
+    }
+}
+
+negative_control!(
+    numeric_view_template_zero_spanning_is_coolwarm_centred_at_zero,
+    "every view left on viridis, as TASK-M1-09 built it, puts E_0's zero mid-viridis",
+    expected = "is not on ramp_coolwarm",
+    check_ramps(
+        &numeric_views()
+            .into_iter()
+            .map(|(e, n, wgsl)| (e, n, wgsl.replace("ramp_coolwarm(", "ramp_viridis(")))
+            .collect::<Vec<_>>()
+    )
+);
+
+/// A one-field entry `name`: an f32 at scalar index 0, `scale` over `range`, as the payload ledger writes one.
+fn probe(name: &'static str, scale: Scale, range: Range) -> Entry {
+    EntryBuilder::new(name)
+        .location(Location::Scalar(0))
+        .ty(FieldType::F32)
+        .scale(scale)
+        .range(range)
+        .provenance(ledger::schema::Provenance::Decode)
+        .consumers(&[ledger::schema::Consumer::Debug])
+        .build()
+        .unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// The ramp the template gives a `lin` field over `[lo, hi]`.
+fn lin_ramp(lo: Bound, hi: Bound) -> Ramp {
+    let e = probe("probe", Scale::Lin, Range { lo, hi });
+    NumericView::of(&e)
+        .unwrap_or_else(|| panic!("no view of a lin field"))
+        .ramp()
+}
+
+/// Checks the ramp at the range's boundary: a `lin` field reaches cool-warm only when `lo < 0 < hi`; an end at 0,
+/// open or closed, keeps viridis, either side.
+fn check_boundary(ramp: fn(Bound, Bound) -> Ramp) {
+    use Bound::{Closed, Open, Unbounded};
+    let cases = [
+        (Unbounded, Unbounded, Ramp::Coolwarm),
+        (Closed(-1.0), Closed(1.0), Ramp::Coolwarm),
+        (Open(-1e-30), Open(1e-30), Ramp::Coolwarm),
+        (Closed(0.0), Unbounded, Ramp::Viridis),
+        (Open(0.0), Unbounded, Ramp::Viridis),
+        (Unbounded, Closed(0.0), Ramp::Viridis),
+        (Unbounded, Open(0.0), Ramp::Viridis),
+        (Closed(0.0), Closed(1.0), Ramp::Viridis),
+        (Closed(-2.0), Closed(-1.0), Ramp::Viridis),
+        (Closed(1e-30), Unbounded, Ramp::Viridis),
+    ];
+    for (lo, hi, want) in cases {
+        let got = ramp(lo, hi);
+        let range = Range { lo, hi };
+        assert_eq!(got, want, "a lin field over {range} is on {got:?}");
+    }
+}
+
+#[test]
+fn numeric_view_template_zero_spanning_boundary() {
+    check_boundary(lin_ramp);
+}
+
+negative_control!(
+    numeric_view_template_zero_spanning_boundary,
+    "a rule counting a closed end at 0 as spanning zero puts [0, ∞) on cool-warm",
+    expected = "a lin field over [0, ∞) is on Coolwarm",
+    check_boundary(|lo, hi| {
+        let below = !matches!(lo, Bound::Closed(v) | Bound::Open(v) if v > 0.0);
+        let above = !matches!(hi, Bound::Closed(v) | Bound::Open(v) if v < 0.0);
+        if below && above {
+            Ramp::Coolwarm
+        } else {
+            Ramp::Viridis
+        }
+    })
+);
+
+/// Checks that the ledger's §3.8 keys are the seven required ones, `keys`, with no signed-or-not mark (R-400: "no new
+/// ledger mark").
+fn check_keys(keys: &[&str]) {
+    assert_eq!(
+        keys,
+        [
+            "name",
+            "location",
+            "type",
+            "scale",
+            "range",
+            "provenance",
+            "consumers"
+        ],
+        "the ledger's required keys changed"
+    );
+}
+
+/// The ledger gains no member (REQ-RENDER-084): its required keys are §3.8's, and an entry is exactly §3.8's members,
+/// which the destructuring below names, each, so a new one fails to compile.
+#[test]
+fn numeric_view_template_ledger_gains_no_member() {
+    check_keys(&ledger::schema::REQUIRED_KEYS);
+    for e in entries(&ledger::layout()) {
+        let Entry {
+            name: _,
+            location: _,
+            ty: _,
+            scale: _,
+            range: _,
+            sentinel: _,
+            tier_gate: _,
+            overflow: _,
+            floor: _,
+            provenance: _,
+            consumers: _,
+        } = e;
+    }
+}
+
+negative_control!(
+    numeric_view_template_ledger_gains_no_member,
+    "a `signed` key added to the ledger's required keys",
+    expected = "the ledger's required keys changed",
+    {
+        let mut keys = ledger::schema::REQUIRED_KEYS.to_vec();
+        keys.push("signed");
+        check_keys(&keys);
+    }
+);
+
+/// `K_0`'s and `V_0`'s views and their WGSL.
+fn energies() -> [(NumericView, String); 2] {
+    let views = numeric_views();
+    ["K_0", "V_0"].map(|field| {
+        let (_, n, wgsl) = views
+            .iter()
+            .find(|(e, ..)| e.name == field)
+            .unwrap_or_else(|| panic!("no view of `{field}`"));
+        (n.clone(), wgsl.clone())
+    })
+}
+
+/// `n`'s place for `x`, with `RANGE_AUTO` `auto` and `u_range` measured over `xs`.
+fn place(n: &NumericView, x: f32, auto: bool, xs: &[f32]) -> f64 {
+    match n.shown(x, auto, n.measured(xs), 1) {
+        Shown::Ramp { ramp, t } => {
+            assert_eq!(ramp, Ramp::Viridis, "`{}` is not on ramp_viridis", n.field);
+            t
+        }
+        other => panic!("`{}` shows {x} as {other:?}", n.field),
+    }
+}
+
+/// Checks R-403's map: `K_0` and `V_0` on `ramp_viridis`, the template's `lin`, increasing in the value in both modes,
+/// their headers defaulting to `RANGE_AUTO = 1`; under auto `t = 0` at the measured minimum; under fixed, `K_0`'s
+/// `t = 0` at its declared 0 and `V_0`'s at its measured minimum, a positive `V_0` clamping to `t = 1`. `V_0`'s most
+/// negative value is at `t = 0` in both modes.
+fn check_energies([(k, kw), (v, vw)]: [(NumericView, String); 2]) {
+    for (n, wgsl) in [(&k, &kw), (&v, &vw)] {
+        let line = ramp_line(wgsl);
+        assert!(
+            n.placement == Placement::Lin && line.starts_with("    return ramp_viridis("),
+            "`{}` is not on ramp_viridis, lin: {line}",
+            n.field
+        );
+        assert!(
+            n.range_auto && wgsl.contains("// @uniform RANGE_AUTO: u32 = 1 [0, 1]"),
+            "`{}` does not default to RANGE_AUTO = 1",
+            n.field
+        );
+    }
+    let ks = [0.2f32, 0.45, 0.9, 1.3];
+    let vs = [-2.1f32, -1.4, -0.9, -0.35];
+    for auto in [false, true] {
+        for (n, xs) in [(&k, &ks[..]), (&v, &vs[..])] {
+            let ts: Vec<f64> = xs.iter().map(|&x| place(n, x, auto, xs)).collect();
+            assert!(
+                ts.windows(2).all(|w| w[0] < w[1]),
+                "`{}` (auto {auto}) does not increase in the value: {ts:?}",
+                n.field
+            );
+        }
+        assert_eq!(
+            place(&v, -2.1, auto, &vs),
+            0.0,
+            "`V_0`'s most negative value is not at t = 0 (auto {auto})"
+        );
+    }
+    assert_eq!(
+        place(&k, 0.2, true, &ks),
+        0.0,
+        "auto: `K_0`'s minimum at t = 0"
+    );
+    assert_eq!(
+        place(&k, 0.0, false, &ks),
+        0.0,
+        "fixed: `K_0`'s declared 0 at t = 0"
+    );
+    assert!(
+        place(&k, 0.2, false, &ks) > 0.0,
+        "fixed: `K_0`'s minimum above its 0"
+    );
+    assert_eq!(
+        place(&k, 1.3, false, &ks),
+        1.0,
+        "fixed: `K_0`'s top is measured"
+    );
+    let top = place(&v, -0.35, false, &vs);
+    assert!(
+        (top - (1.0 - 0.35 / 2.1)).abs() < 1e-6,
+        "fixed: `V_0`'s top is not its 0: −0.35 at {top}"
+    );
+    assert_eq!(place(&v, 0.0, false, &vs), 1.0, "fixed: `V_0`'s 0 at t = 1");
+    assert_eq!(
+        place(&v, 10.0, false, &vs),
+        1.0,
+        "fixed: a positive `V_0` clamps to t = 1"
+    );
+}
+
+#[test]
+fn numeric_view_template_k0_v0_are_viridis_increasing() {
+    check_energies(energies());
+}
+
+negative_control!(
+    numeric_view_template_k0_v0_are_viridis_increasing,
+    "`V_0` on its old `diverging` placement, before R-403, lands on cool-warm",
+    expected = "`V_0` is not on ramp_viridis, lin",
+    {
+        let [k, (mut v, vw)] = energies();
+        v.placement = Placement::Diverging;
+        check_energies([k, (v, vw.replace("ramp_viridis", "ramp_coolwarm"))]);
+    }
 );

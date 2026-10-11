@@ -1,7 +1,9 @@
 // The derived current-drift view (debug_tooling_plan §B, "DERIVED views"; payload §5): `ΔE = H(r, p) − E_0`, computed
 // in the fragment from the live f32 state through the read side's own `hamiltonian` (TASK-M1-01), with the sample's
-// `ICDescriptor` masses (`ctx.ic`; dd_generation_root §3.8). Its literal place on the viridis ramp (`dbg_sentinel`),
-// R-381's `symlog` placement; a signed field on viridis, as the corpus stands (RQ-260 open).
+// `ICDescriptor` masses (`ctx.ic`; dd_generation_root §3.8). Its literal place on the viridis ramp (`dbg_sentinel`), an
+// interim placement of the raw drift. It is the `energy_drift` field's view, a drift view, which R-400 keeps on R-381's
+// view rather than moving it to `ramp_coolwarm`; that view, its `symlog`, `lin` and `log` compactions and its
+// `diverging(c−,c0,c+)` ramp, is TASK-M3-05's to build (R-416 accepts the scope).
 
 // The value the view shows: the current energy drift.
 fn value(ctx: Ctx) -> f32 {

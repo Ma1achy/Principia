@@ -47,7 +47,7 @@ R-369; physics review 5482528309 of PR #194) so that RQ-271, which holds REQ-TOO
   floor, and two log fields with different floors place the same `|x|` differently (REQ-TOOL-160).
 - Review checklist (physics): the REQ-TOOL-160 proposal gives each floor with its units and evidence, the floors
   for `dE_max` and `dLz_max` stated as absolute; the human confirms the floors at the M1 gate (REQ-TOOL-160).
-- `cargo test -p ledger`, `cargo test -p render` and `cargo xtask golden` — every view other than the six log views
+- `cargo test -p ledger`, `cargo test -p render` and `cargo xtask golden --all` — every view other than the six log views
   renders as before.
 
 ## Notes

@@ -12,7 +12,9 @@
 //!   `oklch_to_linear` (dd_colouring §3.1);
 //! - the ramps the M1 views need, each returning linear RGB, the colour slot's space (render contract Part 2):
 //!   `ramp_viridis`, `ramp_twilight` and `ramp_magma` (the structural view `s_impurity`'s, colour_composition §6;
-//!   TASK-M1-13) from matplotlib's published tables (R-122, [`luts`]), `ramp_grey` and `hue_wheel`;
+//!   TASK-M1-13) from matplotlib's published tables, and `ramp_coolwarm` (the ramp of a numeric view whose field's
+//!   declared range spans zero, R-400; TASK-M1-17) from Moreland's cool-warm table (R-122, [`luts`]), `ramp_grey` and
+//!   `hue_wheel`;
 //! - `debug_invalid(frag_xy)`, the hatched invalid pattern (R-132, R-136), its pattern and colours [`hatch`]'s, a
 //!   calibration proposed here (REQ-COL-055, R-71).
 //!
@@ -68,9 +70,12 @@ impl Lut {
 }
 
 /// The published tables the prelude's LUT ramps read (R-122): matplotlib 3.8.0's `_viridis_data`, `_twilight_data`
-/// and `_magma_data`, transcribed verbatim into `crates/ledger/data/lut/`, each file naming its source. Magma is
-/// colour_composition §6's ramp for the structural view `s_impurity` (TASK-M1-13).
-pub fn luts() -> [Lut; 3] {
+/// and `_magma_data`, and Moreland's 33-stop cool-warm table (CoolWarmFloat33, as matplotlib 3.8.0's `_coolwarm_data`
+/// transcribes it), transcribed verbatim into `crates/ledger/data/lut/`, each file naming its source. Magma is
+/// colour_composition §6's ramp for the structural view `s_impurity` (TASK-M1-13); cool-warm the diverging ramp of a
+/// numeric view whose field's declared range spans zero, its midpoint, stop 16 at `t = ½`, the table's neutral (R-400;
+/// TASK-M1-17).
+pub fn luts() -> [Lut; 4] {
     [
         Lut {
             name: "viridis",
@@ -89,6 +94,12 @@ pub fn luts() -> [Lut; 3] {
             constant: "LUT_MAGMA",
             ramp: "ramp_magma",
             data: include_str!("../../data/lut/magma.txt"),
+        },
+        Lut {
+            name: "coolwarm",
+            constant: "LUT_COOLWARM",
+            ramp: "ramp_coolwarm",
+            data: include_str!("../../data/lut/coolwarm.txt"),
         },
     ]
 }
@@ -289,7 +300,7 @@ fn lut_wgsl(lut: &Lut) -> String {
     let stops = lut.literals();
     let n = stops.len();
     let mut out = format!(
-        "\n// matplotlib's published `{name}` table (R-122), {n} stops, sRGB-encoded: {data}.\n\
+        "\n// The published `{name}` table (R-122), {n} stops, sRGB-encoded, its source named\n// in {data}.\n\
          const {c}: array<vec3<f32>, {n}> = array<vec3<f32>, {n}>(\n",
         name = lut.name,
         data = format_args!("crates/ledger/data/lut/{}.txt", lut.name),

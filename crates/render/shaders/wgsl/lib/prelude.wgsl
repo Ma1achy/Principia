@@ -89,7 +89,8 @@ fn debug_invalid(frag_xy: vec2<f32>) -> vec3<f32> {
     return srgb_to_linear(select(a, b, stripe == 1));
 }
 
-// matplotlib's published `viridis` table (R-122), 256 stops, sRGB-encoded: crates/ledger/data/lut/viridis.txt.
+// The published `viridis` table (R-122), 256 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/viridis.txt.
 const LUT_VIRIDIS: array<vec3<f32>, 256> = array<vec3<f32>, 256>(
     vec3<f32>(0.267004, 0.004874, 0.329415),
     vec3<f32>(0.268510, 0.009605, 0.335427),
@@ -356,7 +357,8 @@ fn ramp_viridis(t: f32) -> vec3<f32> {
     return srgb_to_linear(mix(LUT_VIRIDIS[k], LUT_VIRIDIS[k + 1u], x - f32(k)));
 }
 
-// matplotlib's published `twilight` table (R-122), 510 stops, sRGB-encoded: crates/ledger/data/lut/twilight.txt.
+// The published `twilight` table (R-122), 510 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/twilight.txt.
 const LUT_TWILIGHT: array<vec3<f32>, 510> = array<vec3<f32>, 510>(
     vec3<f32>(0.88575015840754434, 0.85000924943067835, 0.8879736506427196),
     vec3<f32>(0.88378520195539056, 0.85072940540310626, 0.88723222096949894),
@@ -877,7 +879,8 @@ fn ramp_twilight(t: f32) -> vec3<f32> {
     return srgb_to_linear(mix(LUT_TWILIGHT[k], LUT_TWILIGHT[k + 1u], x - f32(k)));
 }
 
-// matplotlib's published `magma` table (R-122), 256 stops, sRGB-encoded: crates/ledger/data/lut/magma.txt.
+// The published `magma` table (R-122), 256 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/magma.txt.
 const LUT_MAGMA: array<vec3<f32>, 256> = array<vec3<f32>, 256>(
     vec3<f32>(0.001462, 0.000466, 0.013866),
     vec3<f32>(0.002258, 0.001295, 0.018331),
@@ -1142,4 +1145,49 @@ fn ramp_magma(t: f32) -> vec3<f32> {
     let x = clamp(t, 0.0, 1.0) * 255.0;
     let k = min(u32(x), 254u);
     return srgb_to_linear(mix(LUT_MAGMA[k], LUT_MAGMA[k + 1u], x - f32(k)));
+}
+
+// The published `coolwarm` table (R-122), 33 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/coolwarm.txt.
+const LUT_COOLWARM: array<vec3<f32>, 33> = array<vec3<f32>, 33>(
+    vec3<f32>(0.2298057, 0.298717966, 0.753683153),
+    vec3<f32>(0.26623388, 0.353094838, 0.801466763),
+    vec3<f32>(0.30386891, 0.406535296, 0.84495867),
+    vec3<f32>(0.342804478, 0.458757618, 0.883725899),
+    vec3<f32>(0.38301334, 0.50941904, 0.917387822),
+    vec3<f32>(0.424369608, 0.558148092, 0.945619588),
+    vec3<f32>(0.46666708, 0.604562568, 0.968154911),
+    vec3<f32>(0.509635204, 0.648280772, 0.98478814),
+    vec3<f32>(0.552953156, 0.688929332, 0.995375608),
+    vec3<f32>(0.596262162, 0.726149107, 0.999836203),
+    vec3<f32>(0.639176211, 0.759599947, 0.998151185),
+    vec3<f32>(0.681291281, 0.788964712, 0.990363227),
+    vec3<f32>(0.722193294, 0.813952739, 0.976574709),
+    vec3<f32>(0.761464949, 0.834302879, 0.956945269),
+    vec3<f32>(0.798691636, 0.849786142, 0.931688648),
+    vec3<f32>(0.833466556, 0.860207984, 0.901068838),
+    vec3<f32>(0.865395197, 0.86541021, 0.865395561),
+    vec3<f32>(0.897787179, 0.848937047, 0.820880546),
+    vec3<f32>(0.924127593, 0.827384882, 0.774508472),
+    vec3<f32>(0.944468518, 0.800927443, 0.726736146),
+    vec3<f32>(0.958852946, 0.769767752, 0.678007945),
+    vec3<f32>(0.96732803, 0.734132809, 0.628751763),
+    vec3<f32>(0.969954137, 0.694266682, 0.579375448),
+    vec3<f32>(0.966811177, 0.650421156, 0.530263762),
+    vec3<f32>(0.958003065, 0.602842431, 0.481775914),
+    vec3<f32>(0.943660866, 0.551750968, 0.434243684),
+    vec3<f32>(0.923944917, 0.49730856, 0.387970225),
+    vec3<f32>(0.89904617, 0.439559467, 0.343229596),
+    vec3<f32>(0.869186849, 0.378313092, 0.300267182),
+    vec3<f32>(0.834620542, 0.312874446, 0.259301199),
+    vec3<f32>(0.795631745, 0.24128379, 0.220525627),
+    vec3<f32>(0.752534934, 0.157246067, 0.184115123),
+    vec3<f32>(0.705673158, 0.01555616, 0.150232812),
+);
+
+// `coolwarm` at `t` in [0, 1] (clamped), the stops at k/32, interpolated in sRGB then decoded: linear RGB.
+fn ramp_coolwarm(t: f32) -> vec3<f32> {
+    let x = clamp(t, 0.0, 1.0) * 32.0;
+    let k = min(u32(x), 31u);
+    return srgb_to_linear(mix(LUT_COOLWARM[k], LUT_COOLWARM[k + 1u], x - f32(k)));
 }

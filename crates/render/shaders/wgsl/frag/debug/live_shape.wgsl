@@ -4,7 +4,8 @@
 // - 0: `dbg_dircos3(n)`, `½(n̂ + 1)` as linear RGB, the direction cosines of the current `n`;
 // - 1: Twilight, the cyclic map, at `θ̃/2π` mod 1 (R-122: the published matplotlib table);
 // - 2: `‖n‖ − 1`, the normalisation error, at its literal place on the viridis ramp (`dbg_sentinel`): flat zero is
-//   expected, since `n` is derived fresh each step. A signed field on viridis, as the corpus stands (RQ-260 open).
+//   expected, since `n` is derived fresh each step. A signed error, not a ledger field, so R-400's range rule does not
+//   reach it: it stays on viridis (applied per R-369; R-416 accepts the scope).
 // Every colouring maps NaN or a sentinel to its invalid colour (payload §1; render contract Part 4): where `n` is
 // undefined (a coincident configuration, `I = 0`, gives `0/0`) or `θ̃` is not finite, each mode draws the hatch.
 // @uniform u_mode: u32 = 0 [0, 2]
