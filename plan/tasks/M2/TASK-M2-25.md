@@ -54,4 +54,4 @@ The chart decode and encode are available to the fragment stage as WGSL generate
   stable under pan and zoom (REQ-COL-063). TASK-M1-16 conforms the lane, so this task, the first to place `ctx.chart.z`
   per pixel, depends on it.
 - Depends on TASK-M1-19, applied per R-369 (TASK-M1-14's pre-flight): REQ-TOOL-011, which this task needs, moved from
-  TASK-M1-14 to TASK-M1-19, split off so that RQ-273 holds only it. This task waits for RQ-273 through it.
+  TASK-M1-14 to TASK-M1-19, split off so that RQ-273 holds only it. R-420 ruled RQ-273, so TASK-M1-19 waits on nothing.

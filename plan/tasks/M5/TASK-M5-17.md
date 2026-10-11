@@ -1,7 +1,7 @@
 # TASK-M5-17 — Resolve stage: outcome and validity reductions, and Undetermined quads
 
 - **Milestone:** M5
-- **Closes:** REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098
+- **Closes:** REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053
 - **Depends on:** TASK-M5-01, TASK-M5-16
 - **Needs (earlier milestones):** REQ-PAY-004, REQ-PAY-014, REQ-PAY-046, REQ-SYS-019, REQ-TOOL-033
 - **Reviewers:** code, qa, physics
@@ -15,7 +15,8 @@ The data-side resolve pass fills `QuadReduction`'s outcome and validity members 
 unusable reports `Undetermined` (`footprint_undetermined`), detected from those conditions, never from the spread
 statistic; no reduction filters samples. The impurity-mask cross-check view compares each sample's class ⊕ detail with
 the quad's `dominant_outcome`, and its spatial mean equals `outcome_impurity`. Dispatch asserts the histogram's bound,
-`N² × (E+1) ≤ 2³² − 1` (R-410).
+`N² × (E+1) ≤ 2³² − 1` (R-410). `escape_time_min` and `escape_time_max` start from their reductions' identities, +∞ and −∞,
+with no no-escape branch, so a quad none of whose copies escaped stores exactly those bits (R-418).
 
 ## References
 - `docs/design/principia_dd_generation_root.md` § "Outcome (all at joint `class ⊕ detail` grain)"
@@ -26,6 +27,8 @@ the quad's `dominant_outcome`, and its spatial mean equals `outcome_impurity`. D
 - `decisions.md` § "R-20 — No `majority_class` field *(closes RQ-18)*"
 - `decisions.md` § "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
 - `docs/design/principia_memory_tiers.md` § "5. Controller levers, ranked by impact"
+- `docs/design/principia_dd_generation_root.md` § "Validity and diagnostics"
+- `decisions.md` § "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and "no escape" reads `_min > _max` *(closes RQ-268)*"
 
 ## Deliverables
 - `crates/kernel/src/reduce/outcome.rs` (shared source; the CPU reference driver runs it in f64).
@@ -41,6 +44,7 @@ the quad's `dominant_outcome`, and its spatial mean equals `outcome_impurity`. D
 - `cargo xtask gate undetermined-starved` — starved near-field fixture (64/64 budget, 512/512 non-finite) → Undetermined, although its spread_median reads 4.58e-4 (REQ-REF-009).
 - `cargo test -p kernel reduce_all_failed_undetermined` — a quad of all-failed samples reports Undetermined, not a small spread; a grep finds no filtering in reductions (REQ-VAL-080).
 - Review checklist (qa) — a quad of all-failed samples reports Undetermined, not a small spread; a grep finds no filtering in reductions (REQ-VAL-080).
+- `cargo test -p kernel reduce_escape_no_escape_bits` — a quad with no escaped copy stores `0x7c00` in `escape_time_min` and `0xfc00` in `escape_time_max`, compared by bits, and reads `_min > _max`; one escaped copy gives `_min == _max ==` its time; control: a no-escape branch storing +∞ in `_max` (RQ-268's option (d)) fails (REQ-REF-053).
 - `cargo test -p engine resolve_histogram_bound` — a configuration with N² × (E+1) = 2³² − 1 passes the assertion at dispatch, one with 2³² fails it, naming the bound; every tier row of memory_tiers §4 passes; control: an assertion against u8's 255 fails on Medium (16² × 2 = 512) (REQ-SCHED-098).
 
 ## Notes

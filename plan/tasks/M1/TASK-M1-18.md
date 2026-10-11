@@ -28,6 +28,7 @@ R-369; physics review 5482528309 of PR #194) so that RQ-271, which holds REQ-TOO
 - `docs/design/principia_dd_generation_root.md` § "3.6 `ICDescriptor` (12 × f32)"
 - `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
 - `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+- `decisions.md` § "R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*"
 
 ## Deliverables
 - `crates/ledger`: one log floor per log field without a ledger floor (`d_min`, `dE_max`, `dLz_max`, `closure_min`,
@@ -37,7 +38,9 @@ R-369; physics review 5482528309 of PR #194) so that RQ-271, which holds REQ-TOO
   The floors for `dE_max` and `dLz_max` are absolute, in the stored fields' own normalised units, since the corpus
   defines both as absolute maxima (R-401's note), and the proposal says so. `closure_min` is a dimensionless chord on
   the unit shape sphere, and its f32 precision floor of about 1e-7 (dd_simstate_payload § 1) is evidence for its
-  floor.
+  floor. `rho_ratio`'s and `r_min_pair_0`'s floors are proposed provisionally (R-419): `rho_ratio`'s assumes the
+  mass-weighted ‖ρ̃‖/‖λ̃‖, and the proposal says so; `r_min_pair_0`'s is a distance in `G = M = I = 1` and only its
+  evidence, M1's showcase values, is provisional. Both are re-confirmed at M2 by TASK-M2-03 (REQ-TOOL-163).
 - Every golden the floors change re-rendered (the log views of `m1-numeric`, and any merged task's golden that draws
   one of the six log views, TASK-M1-12's and TASK-M1-14's included), each `BASELINES.md` row citing R-401, proposed
   and confirmed at the M1 gate.
@@ -46,14 +49,17 @@ R-369; physics review 5482528309 of PR #194) so that RQ-271, which holds REQ-TOO
 - `cargo test -p ledger numeric_view_template` — every log view places raw at `dbg_log`'s form with its own field's
   floor, and two log fields with different floors place the same `|x|` differently (REQ-TOOL-160).
 - Review checklist (physics): the REQ-TOOL-160 proposal gives each floor with its units and evidence, the floors
-  for `dE_max` and `dLz_max` stated as absolute; the human confirms the floors at the M1 gate (REQ-TOOL-160).
+  for `dE_max` and `dLz_max` stated as absolute, `rho_ratio`'s stating that it assumes the mass-weighted ‖ρ̃‖/‖λ̃‖
+  and `r_min_pair_0`'s that its evidence is provisional, both marked provisional until M2 (R-419); the human confirms
+  the floors at the M1 gate (REQ-TOOL-160).
 - `cargo test -p ledger`, `cargo test -p render` and `cargo xtask golden --all` — every view other than the six log views
   renders as before.
 
 ## Notes
-- Split from TASK-M1-17 (applied per R-369; physics review 5482528309 of PR #194, F1). RQ-271 holds REQ-TOOL-160:
-  `rho_ratio`'s and `r_min_pair_0`'s formulas are REQ-PAY-088's (TASK-M2-03, M2), so this task waits for its ruling,
-  while TASK-M1-17 proceeds with its four other closures. Until this task merges, the six views keep TASK-M1-09's
+- Split from TASK-M1-17 (applied per R-369; physics review 5482528309 of PR #194, F1). RQ-271 held REQ-TOOL-160:
+  `rho_ratio`'s and `r_min_pair_0`'s formulas are REQ-PAY-088's (TASK-M2-03, M2). R-419 (11 Oct 2026) rules it,
+  option (c) for both: the two floors are proposed here provisionally and re-confirmed at M2, so this task no longer
+  waits. Until this task merges, the six views keep TASK-M1-09's
   built ε, 2⁻²⁴.
 - REQ-TOOL-160 moved from TASK-M1-09, which built the single ε R-401 replaces, to TASK-M1-17, and from there to this
   task. R-403 confirmed R-401's absolute floors for `dE_max` and `dLz_max`.
