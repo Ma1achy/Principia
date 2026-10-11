@@ -26,6 +26,7 @@ scope tree.
 - `docs/gui/principia_render_gui_spec.md` § "8. Node visuals — glyph-forward"
 - `docs/contracts/principia_gui_state_contract.md` § "5. The stain editor — a free, typed node graph (R-64)"
 - `decisions.md` § "R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*"
+- `decisions.md` § "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
 
 ## Deliverables
 - `crates/gui/src/stain/{mod,canvas,library,preview,code_view,problems}.rs`: the layout and the canvas gestures over the
@@ -44,7 +45,7 @@ scope tree.
 - `cargo xtask screenshot 02_stain` (mock_stain, mock_stain_selected) and `cargo test -p gui mock_stain_preview` — against 02_stain.png; an edit to the graph is a SetField and the mock's preview changes; the preview is square for a square viewport (REQ-GUI-175).
 - `cargo xtask screenshot 02_stain` (mock_stain) — screenshot against 02_stain.png (REQ-GUI-128).
 - `cargo test -p gui canvas_gestures_mock` — scripted pointer events for each gesture produce the stated selection / position change (REQ-GUI-131).
-- `cargo test -p gui mock_keyboard` (extended with this task's scopes) and `cargo xtask screenshot 07_keyboard` (mock_focus_stain) — every control this task adds joins the scope tree: in Stain mode, Tab and Shift+Tab reach the top bar, the library drawer, the graph canvas, the preview and node inspector, and the code and Problems pane in that order, and Enter reaches each control inside them (a library row, a node, a node inspector field, the Graph · Pipeline WGSL · Node WGSL toggle); Esc backs out one level; the focus ring is drawn on the focused control and the top-bar breadcrumb names its path; arrows move between siblings and adjust a focused value by its confirmed base step (R-404), ×10 with Shift and ×0.1 with Alt; the screenshot shows the ring and the breadcrumb as 07_keyboard.png draws them (REQ-GUI-169, closed by TASK-M6-25, re-checked here for this screen, applied per R-369, review 5434766412 on PR #157).
+- `cargo test -p gui mock_keyboard` (extended with this task's scopes) and `cargo xtask screenshot 07_keyboard` (mock_focus_stain) — every control this task adds joins the scope tree: in Stain mode, Tab and Shift+Tab reach the top bar, the library drawer, the graph canvas, the preview and node inspector, and the code and Problems pane in that order, and Enter reaches each control inside them (a library row, a node, a node inspector field, the Graph · Pipeline WGSL · Node WGSL toggle); every landing is in navigation mode, Enter on an element starts interaction mode and Enter on a button acts as its click, Esc in interaction mode returns to navigation mode on the same element, and Esc in navigation mode goes up one scope (R-409); the focus ring is drawn on the focused control, orange in navigation mode and blue in interaction mode, and the top-bar breadcrumb names its path; arrows move between siblings in navigation mode and adjust a focused value in interaction mode by its confirmed base step (R-404), ×10 with Shift and ×0.1 with Alt; the screenshot shows the ring and the breadcrumb as 07_keyboard.png draws them (REQ-GUI-169, closed by TASK-M6-25, re-checked here for this screen as R-409 words it, applied per R-369, review 5434766412 on PR #157).
 - `cargo run -p gui --features mock`, `cargo test -p engine conformance` and `cargo test -p gui conformance` — the app launches on the mock and the conformance suite passes on both engines (REQ-GUI-165, REQ-GUI-166, closed by TASK-M6-24, re-run here).
 
 ## Notes
@@ -59,3 +60,6 @@ scope tree.
 - Sources and silences as TASK-M6-24's Notes give them (R-390).
 - RQ-249, decided per R-369 (7 Oct 2026): TASK-M6-24's mode switch changes a `ViewUI` mode and shows an empty Stain
   page frame; this task fills it.
+- **R-409 (10 Oct 2026).** Stain mode's scopes follow the two keyboard modes TASK-M6-31 builds (through TASK-M6-28):
+  each landing in navigation mode, Enter starting interaction with a control, Esc returning to navigation mode and then
+  going up one scope. The `mock_keyboard` re-check line reads the modes.

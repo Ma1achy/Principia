@@ -114,13 +114,22 @@ Stability×Hue:  L = 0.25 + 0.55 · ½(1 − maxⱼ n̂·b̂ⱼ)
 
 ```
 lin        b = clamp( (x − lo)/(hi − lo) )
-log        b = clamp( (ln x − ln lo)/(ln hi − ln lo) ),  x ≤ 0 → 0 with sentinel styling
+log        b = 1 − 1/(1 + ln(1 + |x|/ε_f)),  x < 0 → 0 with sentinel styling   (R-411)
 cyclic     b = frac( x / period )                          (phase, ρ_angle)
-diverging  b = ½ + ½·sign(x)·ln(1+|x|/x₀)/ln(1+x_max/x₀)   ★ symlog — PIN, confirm/veto
+diverging  b = ½ + ½·sign(x)·(1 − 1/(1 + ln(1+|x|/x₀)))     ★ symlog — confirmed (R-411)
 flag       b ∈ {0, 1}
 ```
 
 ★ The signed drifts (`energy_drift`, `Lz_drift`) need *some* symmetric compression around 0 with the ε floor as `x₀`; symlog is the pin this drill-down introduces.
+
+**Range-free forms (R-411).** `log` and `diverging` need no range: one form per scale serves the user-facing
+compaction and the debug views alike, and neither has an `x_max` or a `lo`, `hi`. `log` is the debug views' `dbg_log`
+placement (render contract, presentation layer; render_gui_spec §10.1), with each field's own `ε_f`: its ledger
+`floor` where it has one (R-263), otherwise its per-field display floor (R-401). `0` maps to `b = 0` and `|x| → ∞` to
+`b → 1`. `diverging` is the drift views' `symlog` (R-381), `s = sign(x)·ln(1 + |x|/x₀)` placed at `½ + ½·s/(1 + |s|)`,
+which is the row above, with `x₀` the field's floor: `eps_E` or `eps_L` for the drifts (R-263); `E_0` and `Lz_0`,
+which carry no floor, take theirs by REQ-COL-065's rule, its number REQ-COL-066's. The drift views and their goldens are unchanged. An explicit range for a stain
+may come later as an optional parameter, not as a second built-in map.
 
 ### 3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)
 
@@ -223,7 +232,7 @@ orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the 
 
 ## 6. Deferred / flagged
 
-- **Symlog pin (§3.6)** — ratified (standard for signed wide-range data). **Entropy-desaturation (§3.7) — VETOED**: replaced by colour-per-sample SSAA resolve; uncertainty marking, if wanted, is an optional independent slot binding on the exposed spread/entropy field.
+- **Symlog pin (§3.6)** — ratified (standard for signed wide-range data), and confirmed in its range-free form (R-411). **Entropy-desaturation (§3.7) — VETOED**: replaced by colour-per-sample SSAA resolve; uncertainty marking, if wanted, is an optional independent slot binding on the exposed spread/entropy field.
 - **Equirect axes** — θ horizontal (azimuth), φ vertical (polar angle from +w), per R-14's one shape-sphere convention.
 - **OKLab coefficients** — transcription-check against Ottosson's reference implementation before entering the shared source (same discipline as the Yoshida-6 w's).
 - **Custom-occupant safety rails** — schema-driven uniforms, async compile, last-valid fallback: already fully specified in the render/lowering contracts; owned there, not re-stated here.

@@ -204,12 +204,13 @@ stale — that source held only a prose sentence, not an enumeration. The member
 contract Part 6 names every field its predicates read) and **from measurement**: every inclusion and
 exclusion traces to `principia_dd_refinement_criterion.md`. Sections cited as `[RC §n]`.
 
-**Size.** The `~80 B` figure quoted in earlier docs is **descriptive, not a cap** — grep confirms it
-is always written with a tilde, and the temporal accumulators were added without changing it. There
-is no memory pressure: `QuadReduction` is per *visible quad* (thousands), against `SimState` at
-per *sample* (millions). At ~4k quads the whole array is ~0.3 MB against ~140 MB of `SimState`. The
-real constraint is **categorical, not numerical** — *reduce before evaporate*: fixed-size scalars
-only, never a history. Size the struct from the member list, then align, then update the figure.
+**Size.** The `~80 B` figure earlier docs quoted was **descriptive, not a cap**, always written with a
+tilde, and the temporal accumulators were added without changing it. With u32 histogram bins (R-410) the
+size follows from the members below; TASK-M5-01 defines it from the member list, aligns it and measures it,
+and writes the measured figure here and where the docs cite it. There is no memory pressure: `QuadReduction`
+is per *quad*, against `SimState` at per *sample* (millions). The quads to cost it at are memory_tiers §3–§4's:
+render pixels / N² at each tier's `N`, at the largest display, plus their ancestors. The real constraint is
+**categorical, not numerical** — *reduce before evaporate*: fixed-size scalars only, never a history.
 
 #### Identity
 
@@ -223,10 +224,17 @@ only, never a history. Size the struct from the member list, then align, then up
 
 | member | type | note |
 |---|---|---|
-| `class_histogram[N]` | u8 × N | derives dominant *and* impurity from **one** source, so they cannot disagree |
+| `class_histogram[N]` | u32 × N | derives dominant *and* impurity from **one** source, so they cannot disagree; each bin a u32 (R-410) |
 | `dominant_outcome` | packed | `class ⊕ detail`, 5 bits |
 | `outcome_impurity` | f16 | `1 − max(class fraction)` |
 | `terminated_fraction` | f16 | **required** — without it "pure because settled" is indistinguishable from "pure because nothing has happened yet" [RC §7] |
+
+**Bin width (R-410).** Each bin of `class_histogram` is a u32, so it counts up to 2³² − 1 footprint copies. A quad
+holds `N² × (E+1)` copies, with `N` the samples per quad side (memory_tiers §4; not the bin count) and `E+1` the copies
+per footprint, so a bin overflows only if `N² × (E+1) > 2³² − 1`: at `N = 32`, the largest a 1024-invocation
+workgroup allows (memory_tiers §5), that needs more than about 4.2 M copies per footprint (2³²/1024 ≈ 4.19 × 10⁶),
+which can't be allocated. **Dispatch asserts `N² × (E+1) ≤ 2³² − 1`**; no setting is capped for it, and a bin never
+wraps or saturates silently.
 
 **One grain everywhere.** Pending change 1 asked whether `dominant_outcome` needed a class-only
 companion, since a masked accessor is unsound (argmax does not commute with masking). **Defining

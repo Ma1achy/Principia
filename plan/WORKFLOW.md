@@ -18,8 +18,9 @@ with `scripts/cloud-setup.sh`) is in `plan/OPERATIONS.md` (R-346).
   is re-checked against the merged dependency before its PR opens.
 - The PR description lists the requirement ids the task closes and, for each, the acceptance command that
   demonstrates it, with its output. It links the task file.
-- A GUI-track task's PR description (R-390; TASK-M6-24 to TASK-M6-29) also has a "What to try" section for the
-  human: the clicks and keys that show what changed, on `cargo run -p gui --features mock`.
+- A GUI-track task's PR description (R-390; TASK-M6-24 to TASK-M6-29, and TASK-M6-30 and TASK-M6-31, R-406 and
+  R-409) also has a "What to try" section for the human: the clicks and keys that show what changed, on
+  `cargo run -p gui --features mock`.
 - A task that is to be split is split **in the plan first**: new task files and manifest entries, `plan/check_plan.py`
   green, then the work. Whether to split is judgement, not a line count (§ "Task files", R-369).
 - CI runs on every push (`ci.yml`): the build, `cargo test` and `cargo xtask ci`, which includes `cargo xtask plan-check`
@@ -151,9 +152,12 @@ A milestone exits only at a human checkpoint. Before it:
 - every **definition** requirement (`kind: definition`, R-72) has its doc change merged with the physics reviewer's
   approval.
 The human reviews the gate report and either passes the milestone or rules on what blocks it. No work in the next
-milestone merges before the gate passes (tasks may be prepared on branches).
-R-390's GUI track (TASK-M6-24 to TASK-M6-29) is the exception: it runs now, in parallel with the physics and renderer
-chain, and each of its tasks merges once its reviews pass and CI is green, without waiting for the gates of M1 to M5.
+milestone merges before the gate passes (tasks may be prepared on branches), except by R-415's test: a task may merge
+before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate
+calibrates or could change; the PR records the test as applied (`plan/OPERATIONS.md` § "Autonomy (R-369)").
+R-390's GUI track (TASK-M6-24 to TASK-M6-29, with TASK-M6-30 and TASK-M6-31 from R-406 and R-409) is the exception:
+it runs now, in parallel with the physics and renderer chain, and each of its tasks merges once its reviews pass and CI
+is green, without waiting for the gates of M1 to M5.
 
 ## Escalation
 

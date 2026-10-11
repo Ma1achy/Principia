@@ -182,6 +182,7 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   Only the numeric template moves fields to `ramp_coolwarm`. This task rewords those comments' "RQ-260 open" to cite
   R-400 and the grounds above (and, for `energy_drift.wgsl`, that its R-381 view is TASK-M3-05's); no assertion
   changes. The human may veto either choice applied per R-369; a veto would be a ruling, applied by a follow-up task.
+  *Accepted by R-416 (10 Oct 2026): no veto on R-400's scope; both choices stand as applied.*
 - **The cool-warm table already exists** (the R-388 pre-flight): `crates/render/tests/data/lut/coolwarm.txt` holds
   Moreland's 33-stop CoolWarmFloat33 table, as matplotlib 3.8.0 transcribes it, its source and version named in the
   file, sRGB-encoded, each stop at `k/32`, so stop 16 is at `t = ½`, the neutral. The deliverable
