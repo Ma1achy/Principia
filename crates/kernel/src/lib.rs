@@ -3,6 +3,7 @@
 #![no_std]
 
 pub mod bringup;
+pub mod generated;
 pub mod payload;
 pub mod real;
 pub mod shape;

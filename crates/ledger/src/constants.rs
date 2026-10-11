@@ -298,12 +298,88 @@ pub const F16_MIN_SUBNORMAL: ConstantBuilder = maximum(
     },
 );
 
-/// The register: the constants the payload ledger uses (TASK-M0-08). No `diffusion` sentinel: an invalid fit reads
-/// NaN by the predicate `n ≥ 2` (R-245).
+/// A settled number of the chart (dd_decoder §3), admissible as expressed in canonical units (`G = M = I = 1`;
+/// philosophy §4.2), with its citation. The link registry reads it by name (dd_generation_root §3.9).
+const fn chart(name: &'static str, value: f64, citation: Citation) -> ConstantBuilder {
+    ConstantBuilder {
+        name,
+        value: Some(Value::Exact(value)),
+        class: Some(Admissibility::CanonicalUnits),
+        citation: Some(citation),
+        relative_basis: None,
+    }
+}
+
+const R10: Citation = Citation::Corpus {
+    file: "decisions.md",
+    section: "R-10 — μ_max and q_max are settled *(closes RQ-8, amends R-5)*",
+};
+
+const CLAMPS: Citation = Citation::Corpus {
+    file: "docs/contracts/principia_chart_decoder_contract.md",
+    section: "Three hard requirements on any registered link",
+};
+
+/// `μ_max`: the mass logits' saturation, `μₖ = μ_max·tanh(z_μk)` (dd_decoder §3.1).
+pub const MU_MAX: ConstantBuilder = chart("mu_max", 5.0, R10);
+
+/// `q_max`: the free momenta's cap, `qₖ = q_max·(2σ(z_qk) − 1)` (dd_decoder §3.4).
+pub const Q_MAX: ConstantBuilder = chart("q_max", 2.0, R10);
+
+/// `α_min`: the general `α` link's polar margin, 0 for full-sphere coverage (dd_decoder §3.2).
+pub const ALPHA_MIN: ConstantBuilder = chart(
+    "alpha_min",
+    0.0,
+    Citation::Corpus {
+        file: "decisions.md",
+        section: "R-21 — `α_min = 0` *(CD-1)*",
+    },
+);
+
+/// `ε_μ`: the mass inverse's clamp, `|μₖ| ≤ (1 − ε_μ)·μ_max` (inverse_encode Part 3).
+pub const EPS_MU: ConstantBuilder = chart("eps_mu", 1e-6, CLAMPS);
+
+/// `ε_z`: the configuration inverse's clamp, `s ∈ [ε_z, 1 − ε_z]` (inverse_encode Part 3).
+pub const EPS_Z: ConstantBuilder = chart("eps_z", 1e-6, CLAMPS);
+
+/// `ε_q`: the free momentum inverse's clamp, `s ∈ [ε_q, 1 − ε_q]` (inverse_encode Part 3).
+pub const EPS_Q: ConstantBuilder = chart("eps_q", 1e-6, CLAMPS);
+
+/// `δ_λ`: the mirror tie-break, mirror iff `λ̃_y < −δ_λ` (dd_decoder §3.3; R-82).
+pub const DELTA_LAMBDA: ConstantBuilder = chart(
+    "delta_lambda",
+    1e-12,
+    Citation::Corpus {
+        file: "decisions.md",
+        section: "R-82 — One mirror test, one seed rule *(closes RQ-33)*",
+    },
+);
+
+/// `ε_w`: the seed-selection floor on the squared mass-weighted norm `‖w⁽²⁾‖²_m` (chart_reference §2.2; R-82).
+pub const EPS_W: ConstantBuilder = chart(
+    "eps_w",
+    1e-10,
+    Citation::Corpus {
+        file: "docs/design/principia_chart_reference.md",
+        section: "2.2 Deterministic momentum construction",
+    },
+);
+
+/// The register: the constants the payload ledger uses (TASK-M0-08), and the chart constants the link registry reads
+/// (TASK-M2-01; dd_generation_root §3.9). No `diffusion` sentinel: an invalid fit reads NaN by the predicate `n ≥ 2`
+/// (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
     FGW_LENGTH_SENTINEL,
     F16_FINITE_MAX,
     F16_MIN_SUBNORMAL,
+    MU_MAX,
+    Q_MAX,
+    ALPHA_MIN,
+    EPS_MU,
+    EPS_Z,
+    EPS_Q,
+    DELTA_LAMBDA,
+    EPS_W,
 ];
