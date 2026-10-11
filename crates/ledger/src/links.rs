@@ -384,7 +384,8 @@ fn abs(a: Expr) -> Expr {
 /// value (1/cosh² x overflows `cosh` past `|x| ≈ 89` at f32, 710 at f64, and its log is −∞ there, where the true value
 /// is finite). Past `MAX/2` the doubling overflows and it is −∞; a sum of two such terms is −∞ exactly when the
 /// computed `2|z₁| + 2|z₂|` overflows, which is within half an ulp of where the true value passes `−MAX` (an exact tie
-/// rounds to −∞ by ties-to-even where the true value rounds to `−MAX`; §3.9).
+/// rounds to −∞ by ties-to-even even where the true value rounds to `−MAX`, as for `stick_breaking` with `z₁ > 0`;
+/// §3.9).
 fn log_sech2(x: Expr) -> Expr {
     let ax = abs(x);
     let tail = un(Op::Softplus, un(Op::Neg, mul(vec![num(2.0), ax])));
