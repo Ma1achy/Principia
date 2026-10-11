@@ -172,6 +172,99 @@ negative_control!(
     check_ramp(&mut filled("set_state"))
 );
 
+/// Checks that the energy-drift fixture's drifts run from negative to positive, so the ramp reads both signs of the
+/// drift.
+fn check_crosses_zero(set: &mut Synthetic) {
+    let drifts: Vec<f32> = (0..8).map(|i| read(set, i).energy_drift).collect();
+    assert!(
+        drifts[0] < 0.0 && drifts[7] > 0.0,
+        "the drift does not cross zero: {drifts:?}"
+    );
+}
+
+#[test]
+fn fixtures_accessors_energy_drift_crosses_zero() {
+    check_crosses_zero(&mut filled("energy_drift_ramp"));
+}
+
+negative_control!(
+    fixtures_accessors_energy_drift_crosses_zero,
+    "the known escaper's samples, which hold no drift, do not cross zero",
+    expected = "does not cross zero",
+    check_crosses_zero(&mut filled("known_escaper"))
+);
+
+/// Checks that `Known::failed` holds exactly for the failed codes, `sim_failed` (4) and `decode_failed` (5), of the
+/// eight `state` codes (payload §2), and for none of the reserved 6 and 7.
+fn check_failed(failed: &[u32]) {
+    let base = known("set_state")[0];
+    for state in 0..8 {
+        let k = Known { state, ..base };
+        assert_eq!(
+            k.failed(),
+            failed.contains(&state),
+            "state {state}: failed() is {}",
+            k.failed()
+        );
+    }
+}
+
+#[test]
+fn fixtures_known_failed_is_states_4_and_5() {
+    check_failed(&[STATE_SIM_FAILED, STATE_DECODE_FAILED]);
+}
+
+negative_control!(
+    fixtures_known_failed_is_states_4_and_5,
+    "a reserved code counted as failed is refused",
+    expected = "state 6: failed() is false",
+    check_failed(&[STATE_SIM_FAILED, STATE_DECODE_FAILED, 6])
+);
+
+/// Checks that every sample of every fixture holds the shared configuration in the CoM frame, positions and momenta
+/// each summing to zero within 10⁻⁶ with no body at the origin, its shadow's momenta the state's and its shadow's
+/// positions the state's but body 0's x, between 0.5 and 2 × 10⁻⁶ ahead.
+fn check_frame(name: &str, set: &Synthetic) {
+    for i in 0..8 {
+        let s = set.simstate(i);
+        for (what, v) in [("positions", s.r), ("momenta", s.p)] {
+            let sum = [0, 1].map(|c| v.iter().map(|b| b[c]).sum::<f32>());
+            assert!(
+                sum.iter().all(|x| x.abs() <= 1e-6) && v.iter().all(|b| b != &[0.0, 0.0]),
+                "`{name}` sample {i}: the {what} {v:?} are not in the CoM frame"
+            );
+        }
+        let dx = s.r_sh[0][0] - s.r[0][0];
+        let mut r_sh = s.r_sh;
+        r_sh[0][0] = s.r[0][0];
+        assert!(
+            (5e-7..=2e-6).contains(&dx) && r_sh == s.r && s.p_sh == s.p,
+            "`{name}` sample {i}: the shadow {:?}, {:?} is not the state offset in body 0's x",
+            s.r_sh,
+            s.p_sh
+        );
+    }
+}
+
+#[test]
+fn fixtures_configuration_is_in_the_com_frame() {
+    for name in NAMES {
+        check_frame(name, &filled(name));
+    }
+}
+
+negative_control!(
+    fixtures_configuration_is_in_the_com_frame,
+    "a sample whose positions are shifted off the CoM frame is refused",
+    expected = "are not in the CoM frame",
+    {
+        let mut set = filled("set_state");
+        let r = set.simstate(2).r;
+        set.sample(2).r(r.map(|b| [b[0] + 0.1, b[1]]));
+        check_frame("set_state", &set);
+    }
+);
+
 /// Checks each adversarial sample's raw `packed_a` whole against the packing of the fields it holds
 /// (`roundtrip_ctl`), and its reserved bits 10–15 clear: a raw-word comparison, which a bit the accessors mask
 /// still fails (pitfalls §9).
