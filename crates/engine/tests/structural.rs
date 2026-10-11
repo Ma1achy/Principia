@@ -3,7 +3,8 @@
 //!   render key, and the overlay's width, opacity, colour and level are its params (`boundary_overlay_roundtrip`);
 //! - REQ-TOOL-026: every structural view, and the overlays after it, is a graph that lowers and assembles
 //!   (`structural_presets_*`), whose colour node is found under the overlays; the structural sets cover every quad
-//!   state, and a priority of each sign, at depths 3 and 20 with their deep_zoom §1 frames (`structural_sets_*`).
+//!   state, and a priority of each sign, at depths 3 and 20 with their deep_zoom §1 frames (`structural_sets_*`);
+//!   each view's colour occupant is the registry's own `debug/<id>` source (`structural_presets_view_occupant_*`).
 //!
 //! Each test registers its negative control (R-176).
 
@@ -289,6 +290,41 @@ negative_control!(
             .find(|w| w.to != NodeId(0))
             .map(|w| w.from);
         check_colour_node(&g, source);
+    }
+);
+
+/// Checks that `g`'s colour node holds the registry's `debug/<id>` source, exactly.
+fn check_view_occupant(g: &StainGraph, id: &str) {
+    let entries = render::registry::registry().unwrap_or_else(|e| panic!("{e}"));
+    let want = format!("debug/{id}");
+    let source = entries
+        .into_iter()
+        .find(|e| e.id == want)
+        .map(|e| e.source)
+        .unwrap_or_else(|| panic!("the registry has no `{want}`"));
+    let node = colour_node(g).unwrap_or_else(|| panic!("{id}: no colour node"));
+    let occupant = g.node(node).map(|n| &n.occupant);
+    assert!(
+        occupant == Some(&Occupant::Custom(source)),
+        "{id}'s colour occupant is not the registry's `{want}`"
+    );
+}
+
+#[test]
+fn structural_presets_view_occupant_is_the_registrys() {
+    for id in VIEWS {
+        let g = view(id).unwrap_or_else(|e| panic!("{id}: {e}"));
+        check_view_occupant(&g, id);
+    }
+}
+
+negative_control!(
+    structural_presets_view_occupant_is_the_registrys,
+    "another view's source taken for a view's occupant fails",
+    expected = "s_state's colour occupant is not the registry's `debug/s_state`",
+    {
+        let g = view("s_depth").expect("a view");
+        check_view_occupant(&g, "s_state");
     }
 );
 
