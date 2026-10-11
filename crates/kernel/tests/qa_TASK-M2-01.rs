@@ -1419,8 +1419,12 @@ fn check_reference() {
 /// `u`'s log-det at `x` (f64 when `wide`, else at f32 on `x` rounded to f32) against §3.9's value there, evaluated at
 /// f64 by [`log_det_doc`] (walls W7 and W9, measure honesty and totality, as §3.9's "overflow-free forms" paragraph
 /// reads them). Where the exact value is well inside the float's range (`|value| ≤ MAX/4`), the log-det is finite
-/// and within 64 ulps of the float on the size of the terms it sums, `1 + |value| + Σ|xₖ|`; where it is well beyond
-/// (`≥ 4·MAX`), it is the infinity of its sign, the float's correct rounding; between, either; never NaN.
+/// and within 64 ulps of the float on the size of the terms it sums, `1 + |value| + Σ|xₖ|`; where the reference is at
+/// or beyond `4·MAX`, it is the infinity of its sign. At f32 that is the float's correct rounding of a value far past
+/// f32's range. At f64, `4·MAX` is itself infinite, so the branch is where the reference's own f64 evaluation
+/// overflows, which is within half an ulp of where the exact value leaves the range but not always on it (a rounding
+/// tie in the sum of two `log sech²` terms), and the infinity is the overflow §3.9's forms give there, not always the
+/// correct rounding. Between, either; never NaN.
 fn check_log_det_value(u: &Under, x: &[f64], wide: bool) {
     let (got, x, eps, max) = if wide {
         ((u.f64_log_det)(x), x.to_vec(), f64::EPSILON, f64::MAX)
