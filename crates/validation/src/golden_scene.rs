@@ -202,8 +202,15 @@ pub fn case_name(id: &str) -> String {
     id.strip_prefix("debug/").unwrap_or(id).replace('/', "-")
 }
 
+/// Whether the registry id `id` is a structural view's, `debug/<view>` for a view of `render::structural::VIEWS`.
+pub fn is_structural(id: &str) -> bool {
+    id.strip_prefix("debug/")
+        .is_some_and(|view| render::structural::VIEWS.contains(&view))
+}
+
 /// The `debug-views` suite's cases, in name order: one per entry of the render registry tagged debug, its header's
-/// defaults, then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
+/// defaults, but the structural views (`render::structural::VIEWS`, `debug/<view>`), which read `ctx.quad` and whose
+/// cases are the structural scenes of the same name (`crate::structural_scene`; TASK-M1-13), then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
 /// over its scene once, here.
 pub fn debug_cases() -> Result<&'static [DebugCase], String> {
     static CASES: OnceLock<Result<Vec<DebugCase>, String>> = OnceLock::new();
@@ -212,7 +219,7 @@ pub fn debug_cases() -> Result<&'static [DebugCase], String> {
             let entries = registry::registry().map_err(|e| e.to_string())?;
             let mut out: Vec<DebugCase> = entries
                 .iter()
-                .filter(|e| e.category == Category::Debug)
+                .filter(|e| e.category == Category::Debug && !is_structural(&e.id))
                 .map(|e| {
                     let name = case_name(&e.id);
                     DebugCase {

@@ -804,3 +804,53 @@ negative_control!(
         &[(0, 0), (1, 0), (2, 0), (3, 0), (4, 0), (5, 0)]
     )
 );
+
+/// Checks that `is_structural` holds of each of `ids` and of no id of `not`.
+fn check_structural(ids: &[&str], not: &[&str]) {
+    for id in ids {
+        assert!(
+            golden_scene::is_structural(id),
+            "`{id}` is a structural view's id"
+        );
+    }
+    for id in not {
+        assert!(
+            !golden_scene::is_structural(id),
+            "`{id}` is no structural view's id"
+        );
+    }
+}
+
+/// The structural views' registry ids are `debug/<view>` for each view of `render::structural::VIEWS` (TASK-M1-13),
+/// and no other id: not the view's bare name, a view under another debug directory, a structural scene that is no
+/// view, or a field view; and `debug_cases` holds none of them, their cases being the structural scenes.
+#[test]
+fn golden_scene_structural_views_leave_the_debug_cases() {
+    let ids: Vec<String> = render::structural::VIEWS
+        .iter()
+        .map(|v| format!("debug/{v}"))
+        .collect();
+    let ids: Vec<&str> = ids.iter().map(String::as_str).collect();
+    check_structural(
+        &ids,
+        &[
+            "s_depth",
+            "debug/generated/s_depth",
+            "debug/overlays",
+            "debug/s_spread_ensemble",
+            "debug/generated/theta",
+        ],
+    );
+    let cases = golden_scene::debug_cases().unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        cases.iter().all(|c| !golden_scene::is_structural(&c.id)),
+        "a structural view is a debug-views case of the showcase"
+    );
+}
+
+negative_control!(
+    golden_scene_structural_views_leave_the_debug_cases,
+    "a structural scene that is no view taken for a structural view",
+    expected = "`debug/overlays` is a structural view's id",
+    check_structural(&["debug/overlays"], &[])
+);
