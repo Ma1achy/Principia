@@ -8,8 +8,8 @@
 //!   decoder test 4. The tag fires exactly on `M₀₁ < ε` over fuzzed `z_μ`, saturation included, and nowhere else in
 //!   the mass block; tagged outputs are finite and kept; the fire branch is driven by mass inputs below ε and by
 //!   `stick_breaking`'s corner; the reachable `M₀₁` range is the checked-in measurement, `fixtures/gates/m01_tiny/`
-//!   (REQ-DEC-011, REQ-DEC-039). `decode_m01_tiny_contraction`: fusing `stick_breaking`'s last multiply into the tag's
-//!   add, as a contracting shader compiler may, flips no tag (R-34).
+//!   (REQ-DEC-011, REQ-DEC-039). `decode_m01_tiny_contraction`: at `stick_breaking`'s bisected onset crossings, the
+//!   tag reads the emitted masses' one rounded sum, which fusing `m₀ + t₇·t₁₃` would flip (R-34).
 //! - `decode_config_golden`, `decode_config_sphere`: `z = 0` gives `α = π/4`, `β = π/2`, `‖ρ̃‖ = ‖λ̃‖`;
 //!   `‖ρ̃‖² + ‖λ̃‖² = 1` and `ρ̃` on `+x` on fuzzed `z` (REQ-DEC-012).
 //! - `decode_reconstruct_identities`, `decode_reconstruct_inverse`: `r₁ − r₀ = ρ`, total CoM `= 0` and
@@ -844,19 +844,47 @@ fn stick_parts<R: P>(z: [R; 2]) -> (R, R, R) {
     (sigmoid(-t0) + t4, sigmoid(t0) - t4, sigmoid(-t8) + t12)
 }
 
-/// The contraction exposure (R-34; physics F2): inlined, `M₀₁ = m₀ + m₁` under `stick_breaking` reaches a shader
-/// compiler as `m₀ + t₇·t₁₃`, which a contracting backend may fuse. Over `[3, 20]²` at a step of 1/32, through the
-/// tag's onset and the saturated corner, the tag `< eps` is the same from the separate add and from the fused
-/// `fma(t₇, t₁₃, m₀)`, at `R`. The replica is checked against the generated forward bit for bit. Returns how many
-/// points' `M₀₁` the fusion changes, the measure of the exposure.
-fn check_contraction<R: P>(eps: R) -> usize {
-    let mut differ = 0;
-    for i in 0..=544 {
-        for j in 0..=544 {
-            let z = [
-                R::of(3.0 + f64::from(i) / 32.0),
-                R::of(3.0 + f64::from(j) / 32.0),
-            ];
+/// The tag's branch input as the block forms it, `stick_breaking` selected.
+fn block_m01<R: P>(z: [R; 2]) -> R {
+    (dec::<Stick, R>().mass)(z).m01
+}
+
+/// The lines `z₁ ∈ [6.3, 20.3]` the onset crossings are bisected on.
+const LINES: u32 = 20_000;
+
+/// The contraction exposure (R-34; qa F1): written `m₀ + m₁`, `M₀₁` under `stick_breaking` reaches a shader compiler
+/// inlined as `m₀ + t₇·t₁₃`, which a contracting backend may fuse to `fma(t₇, t₁₃, m₀)`. On each of [`LINES`] lines
+/// `z₁ ∈ [6.3, 20.3]`, `z₀ ∈ [0, 30]` is bisected at `R` to the adjacent pair where the emitted masses' one rounded
+/// sum crosses ε, where one rounding decides the tag. At both points of every pair, `form`'s tag must be that sum's.
+/// The replica `stick_parts` is checked against the generated forward bit for bit. Returns how many of the points
+/// the fused form flips: the hazard the sample reaches.
+fn check_contraction<R: P>(form: fn([R; 2]) -> R) -> usize {
+    let eps = mass::m01_epsilon::<R>();
+    let mut flips = 0;
+    for k in 0..LINES {
+        let z1 = R::of(6.3 + 14.0 * f64::from(k) / f64::from(LINES));
+        let sum_tag = |z0: R| {
+            let m = <StickBreaking as Link<2, 3>>::forward([z0, z1]);
+            m[0] + m[1] < eps
+        };
+        let (mut lo, mut hi) = (R::of(0.0), R::of(30.0));
+        assert!(
+            !sum_tag(lo) && sum_tag(hi),
+            "no onset crossing on z₁ = {}",
+            z1.f()
+        );
+        loop {
+            let mid = (lo + hi) * R::of(0.5);
+            if mid == lo || mid == hi {
+                break;
+            }
+            if sum_tag(mid) {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
+        }
+        for z in [[lo, z1], [hi, z1]] {
             let (m0, t7, t13) = stick_parts(z);
             let m = <StickBreaking as Link<2, 3>>::forward(z);
             assert_eq!(
@@ -864,50 +892,49 @@ fn check_contraction<R: P>(eps: R) -> usize {
                 [m0, t7 * t13],
                 "the replica is not the generated forward at {z:?}"
             );
-            let (apart, fused) = (m0 + t7 * t13, t7.mul_add(t13, m0));
-            differ += usize::from(apart != fused);
+            let (sum, got) = (m[0] + m[1], form(z));
+            flips += usize::from((t7.mul_add(t13, m0) < eps) != (sum < eps));
             assert_eq!(
-                apart < eps,
-                fused < eps,
-                "z_μ = {z:?}: fusing m₀ + t₇·t₁₃ flips the tag at {} ({:e} against {:e})",
+                got < eps,
+                sum < eps,
+                "z_μ = {z:?} at {}: the tag reads M₀₁ = {:e}, the emitted masses' sum is {:e}: a contracting backend \
+                 flips the tag",
                 R::NAME,
-                apart.f(),
-                fused.f()
+                got.f(),
+                sum.f()
             );
         }
     }
-    differ
+    flips
 }
 
 #[test]
 fn decode_m01_tiny_contraction() {
-    let d64 = check_contraction(mass::m01_epsilon::<f64>());
-    let d32 = check_contraction(mass::m01_epsilon::<f32>());
-    eprintln!("decode_m01_tiny_contraction: fusion changes M₀₁ at {d64} points at f64, {d32} at f32, of 545²; no tag flips");
+    let f64_flips = check_contraction::<f64>(block_m01);
+    let f32_flips = check_contraction::<f32>(block_m01);
+    assert!(
+        f64_flips > 0 && f32_flips > 0,
+        "fusion flips no crossing ({f64_flips} at f64, {f32_flips} at f32): the sample misses the hazard"
+    );
+    eprintln!(
+        "decode_m01_tiny_contraction: of {} crossing points, fusion would flip {f64_flips} at f64, {f32_flips} at f32",
+        2 * LINES
+    );
 }
 
-/// A threshold set between the separate and the fused `M₀₁` of a point where they differ.
+/// The branch input a backend contracting `m₀ + m₁` computes: `fma(t₇, t₁₃, m₀)`.
 #[cfg(feature = "controls")]
-fn straddling() -> f32 {
-    for i in 0..=544 {
-        for j in 0..=544 {
-            let z = [3.0 + i as f32 / 32.0, 3.0 + j as f32 / 32.0];
-            let (m0, t7, t13) = stick_parts(z);
-            let (apart, fused) = (m0 + t7 * t13, t7.mul_add(t13, m0));
-            if apart != fused {
-                return apart.max(fused);
-            }
-        }
-    }
-    unreachable!("fusion never changes M₀₁")
+fn contracted_m01(z: [f32; 2]) -> f32 {
+    let (m0, t7, t13) = stick_parts(z);
+    t7.mul_add(t13, m0)
 }
 
 negative_control!(
     decode_m01_tiny_contraction,
-    "a threshold between a point's separate and fused M₀₁ must flip",
-    expected = "flips the tag",
+    "a tag whose M₀₁ a backend has contracted must flip at a crossing, ε unmoved",
+    expected = "a contracting backend flips the tag",
     {
-        check_contraction(straddling());
+        check_contraction::<f32>(contracted_m01);
     }
 );
 
