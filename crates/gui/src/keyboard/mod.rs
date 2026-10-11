@@ -1,11 +1,15 @@
 //! Keyboard navigation (render_gui_spec §G3; GUI_DESIGN_NOTES § "07 Keyboard"; R-390, ORDER item 2): the tree of
 //! scopes each screen joins, the global key table, held keys' delay and repeat, and the `?` shortcuts overlay. The
-//! focus is `ViewUI`'s (gui_state_contract §2); what the user sees of it is the focus ring and the top bar's
+//! focus is `ViewUI`'s (gui_state_contract §2), with the keyboard's mode, navigation or interaction (R-409); what the
+//! user sees of it is the focus ring, orange in navigation mode and blue in interaction mode, and the top bar's
 //! breadcrumb (`explore::breadcrumb`), nothing else.
 //!
 //! The layer takes its keys from the raw input before egui sees them, so egui's own Tab and arrow focus never moves;
-//! it stands aside only while a text field holds the keyboard. A key's release goes to whoever saw its press. The
-//! menus are scopes too: the focus inside a menu opens it, and a menu the mouse opens takes the focus.
+//! it stands aside only while a text field holds the keyboard: one the mouse focused takes every key, and one typed
+//! in from the keyboard (interaction mode on a text scope) every key but Esc, Enter and Tab (R-409 G4, G5). A key's
+//! release goes to whoever saw its press. The menus are scopes too: the focus inside a menu opens it, and a menu the
+//! mouse opens takes the focus. In either mode the letter and Space shortcuts are egui's to read, Ctrl+Z is never the
+//! layer's, and `?` opens the shortcuts (R-409 F1, G1).
 
 pub mod keymap;
 pub mod overlay;
@@ -15,7 +19,7 @@ pub mod scopes;
 use eframe::egui::{
     self, Event, Id, Key, Modifiers, PointerButton, Popup, RawInput, Rect, Response,
 };
-use engine::contract::view_ui::{Focus, Mode};
+use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
 use keymap::Command;
 use repeat::Repeat;
@@ -63,9 +67,8 @@ pub struct Keyboard {
     overlay_rect: Option<Rect>,
     open_menu: Option<ScopeId>,
     adjusted: Vec<Adjust>,
-    /// Whether the arrows on a focused value move between its siblings rather than adjust it
-    /// ([`ScopeTree::navigate_in`]).
-    browsing: bool,
+    /// Whether a text scope is being typed in from the keyboard: interaction mode on it after the last run.
+    typing: Option<ScopeId>,
 }
 
 impl Default for Keyboard {
@@ -95,7 +98,7 @@ impl Keyboard {
             overlay_rect: None,
             open_menu: None,
             adjusted: Vec::new(),
-            browsing: false,
+            typing: None,
         }
     }
 
@@ -120,14 +123,21 @@ impl Keyboard {
         self.open_menu
     }
 
+    /// The text scope being typed in from the keyboard, if any (R-409 G4).
+    pub fn typing(&self) -> Option<ScopeId> {
+        self.typing
+    }
+
     /// Takes the table's keys out of `raw`, before egui's pass sees them, and the release of each key whose press it
-    /// took; the rest, and every key while a text field holds the keyboard (and the overlay is closed), are egui's.
-    /// The system's own repeats go with their press: the layer drops its own, as it repeats them itself. A lost
-    /// window focus forgets the held keys. While the overlay is open it takes every click: a press outside its frame
-    /// closes it.
+    /// took; the rest are egui's, and, while the overlay is closed, so is every key while a text field the mouse
+    /// focused holds the keyboard, and every key but Esc, Enter, Tab and Shift+Tab while a text scope is typed in
+    /// (R-409 G4, G5). The system's own repeats go with their press: the layer drops its own, as it repeats them
+    /// itself. A lost window focus forgets the held keys. While the overlay is open it takes every click: a press
+    /// outside its frame closes it.
     pub fn take_keys(&mut self, ctx: &egui::Context, raw: &mut RawInput) {
-        let aside = !self.shortcuts_open && ctx.text_edit_focused();
-        if !aside {
+        let typing = !self.shortcuts_open && self.typing.is_some();
+        let aside = !self.shortcuts_open && !typing && ctx.text_edit_focused();
+        if !aside && !typing {
             // A widget egui focused would draw itself active: the focus is the layer's alone.
             if let Some(id) = ctx.memory(|m| m.focused()) {
                 ctx.memory_mut(|m| m.surrender_focus(id));
@@ -170,7 +180,10 @@ impl Keyboard {
                 if system_repeat {
                     return !layers;
                 }
-                if aside || keymap::command(key, modifiers).is_none() {
+                let Some(command) = keymap::command(key, modifiers) else {
+                    return true;
+                };
+                if aside || (typing && !keymap::ends_typing(command)) {
                     return true;
                 }
                 if !layers {
@@ -210,6 +223,7 @@ impl Keyboard {
     /// a frame it does not run asks for no adjustment.
     pub fn stand_down(&mut self) {
         self.adjusted.clear();
+        self.typing = None;
         self.pending.clear();
         self.down.clear();
         self.swallowed.clear();
@@ -283,13 +297,7 @@ impl Keyboard {
                 continue;
             }
             let multiplier = keymap::multiplier(modifiers);
-            match tree.navigate_in(
-                &mut focus.path,
-                command,
-                multiplier,
-                modifiers.shift,
-                &mut self.browsing,
-            ) {
+            match tree.navigate(focus, command, multiplier) {
                 Outcome::Activate(id) => {
                     activated.push(id);
                     // An entry acts and its menu closes, the focus back on the menu, as a click on it does.
@@ -305,7 +313,32 @@ impl Keyboard {
                 menu_holding(tree, &focus.path).or(at_menu.filter(|m| ends_at(&focus.path, m)));
         }
         self.show_menus(ctx, mode);
+        self.follow_typing(ctx, mode, focus);
         activated
+    }
+
+    /// Starts typing in a text scope Enter put in interaction mode, giving its widget egui's focus; ends it when the
+    /// focus leaves interaction mode or the scope, taking egui's focus back from the widget, so its next key is the
+    /// layer's.
+    fn follow_typing(&mut self, ctx: &egui::Context, mode: Mode, focus: &Focus) {
+        let tree = self.tree(mode);
+        let typing = focus
+            .path
+            .last()
+            .and_then(|id| tree.get(id))
+            .filter(|s| s.text && focus.mode == KeyMode::Interaction)
+            .map(|s| s.id);
+        if typing != self.typing {
+            let widget =
+                |id: Option<ScopeId>| id.and_then(|id| self.place_of(id)).and_then(|p| p.widget);
+            if let Some(ended) = widget(self.typing) {
+                ctx.memory_mut(|m| m.surrender_focus(ended));
+            }
+            if let Some(started) = widget(typing) {
+                ctx.memory_mut(|m| m.request_focus(started));
+            }
+        }
+        self.typing = typing;
     }
 
     /// The popup of menu `id`, drawn from its widget last frame.
@@ -327,6 +360,7 @@ impl Keyboard {
         match open {
             Some(m) => {
                 focus.path = tree.path_to(m);
+                focus.mode = KeyMode::Navigation;
                 if let Some(first) = tree.children(Some(m)).first() {
                     focus.path.push((*first).to_owned());
                 }
@@ -335,6 +369,7 @@ impl Keyboard {
             None => {
                 if let Some(m) = self.open_menu {
                     focus.path = tree.path_to(m);
+                    focus.mode = KeyMode::Navigation;
                 }
             }
         }

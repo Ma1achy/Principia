@@ -2,7 +2,8 @@
 //! view (`manifold_view`), the right Trajectory panel, and the bottom row's compass (`compass`), Time and Legend, the
 //! regions later track tasks fill drawn as empty frames. The figure's rect is left to the figure: nothing is drawn
 //! over it but the lock's reticle (`lock`, §G1), and its axis labels sit beside it (`axis_labels`). Each region is a
-//! big scope of the keyboard's tree (§G3), and the Manifold view's four sub-scopes are reached with Enter.
+//! big scope of the keyboard's tree (§G3); the Manifold view's four sub-scopes, and the compass with its Tilt and
+//! Slice buttons, are reached with Enter.
 
 pub mod axis_labels;
 pub mod breadcrumb;
@@ -28,14 +29,23 @@ pub const MANIFOLD_SECTIONS: [(ScopeId, &str); 4] = [
 
 /// The Manifold view's scope.
 pub const MANIFOLD_VIEW: ScopeId = "manifold_view";
-/// The figure's scope: its arrows pan (§G3).
+/// The figure's scope: in interaction mode its arrows pan (§G3).
 pub const FIGURE: ScopeId = "figure";
-/// The compass's scope: its arrows tilt, Shift+arrows orbit (§G3).
+/// The Compass's big scope: the compass, then its Tilt and Slice buttons (§G3; R-409 A2).
 pub const COMPASS: ScopeId = "compass";
+/// The compass itself, one element in navigation mode: in interaction mode its arrows tilt in tilt mode and move the
+/// slice along the plane's normal in slice mode (§G3; R-409 F3).
+pub const COMPASS_VIEW: ScopeId = "compass_view";
+/// The compass's Tilt button.
+pub const COMPASS_TILT: ScopeId = "compass_tilt";
+/// The compass's Slice button.
+pub const COMPASS_SLICE: ScopeId = "compass_slice";
 
 /// Joins Explore's big scopes after the top bar, in §G3's Tab order: 2 Manifold view, with its sub-scopes, 3 Figure,
-/// 4 Trajectory, 5 Compass, 6 Time, 7 Legend. The figure and the compass are values the arrows adjust: the figure's
-/// pan, the compass's tilt. The Manifold view's controls join when it is first drawn ([`manifold_view::join`]).
+/// 4 Trajectory, 5 Compass, with the compass, Tilt and Slice inside, 6 Time, 7 Legend. The figure and the compass are
+/// values the arrows adjust in interaction mode: the figure's pan, the compass's tilt or slice (registered as the
+/// tilt; [`compass::adjust`] steps by the mode). The Manifold view's controls join when it is first drawn
+/// ([`manifold_view::join`]).
 pub fn register(tree: &mut ScopeTree) {
     use crate::keyboard::scopes::StepKind;
     tree.register(None, Scope::group(MANIFOLD_VIEW, "Manifold view"));
@@ -47,7 +57,19 @@ pub fn register(tree: &mut ScopeTree) {
         Scope::value(FIGURE, "Figure", StepKind::Pan).ring_outside(),
     );
     tree.register(None, Scope::group("trajectory", "Trajectory"));
-    tree.register(None, Scope::value(COMPASS, "Compass", StepKind::Tilt));
+    tree.register(None, Scope::group(COMPASS, "Compass"));
+    tree.register(
+        Some(COMPASS),
+        Scope::value(COMPASS_VIEW, "compass", StepKind::Tilt),
+    );
+    tree.register(
+        Some(COMPASS),
+        Scope::control(COMPASS_TILT, compass::TILT_BUTTON),
+    );
+    tree.register(
+        Some(COMPASS),
+        Scope::control(COMPASS_SLICE, compass::SLICE_BUTTON),
+    );
     for (id, label) in [("time", "Time"), ("legend", "Legend")] {
         tree.register(None, Scope::group(id, label));
     }

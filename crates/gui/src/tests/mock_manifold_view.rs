@@ -9,7 +9,7 @@ use engine::contract::interface::EngineInterface;
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Latent, Lock, Plane};
 use engine::contract::snapshot::{Precision, Snapshot};
-use engine::contract::view_ui::Mode;
+use engine::contract::view_ui::{KeyMode, Mode};
 
 use super::support::{focus, frame_texts, headless, mock_app, press, rejects};
 use crate::app::App;
@@ -26,7 +26,7 @@ use crate::explore::manifold_view::{
     lock_edit, point, slice_axis, z0_edit, Out, Scratch, Touch, View, CENTRE_Z0, GAMMA, NAV_Z0,
     PRESETS, SLICE_AXIS, SLIDERS, TAU1, ZOOM,
 };
-use crate::explore::{COMPASS, FIGURE, MANIFOLD_VIEW};
+use crate::explore::{COMPASS, COMPASS_VIEW, FIGURE, MANIFOLD_VIEW};
 use crate::headless::Headless;
 use crate::keyboard::keymap::Direction;
 use crate::keyboard::scopes::{Adjust, Arrows};
@@ -84,7 +84,6 @@ fn values(app: &App<MockSide>) -> Vec<Adjust> {
                 kind,
                 times: 1.0,
                 direction: Direction::Up,
-                shift: false,
             });
         }
         stack.extend(tree.children(Some(id)));
@@ -150,7 +149,7 @@ fn mock_manifold_view_every_value_emits_one_setfield_on_z0_or_the_basis() {
 fn mock_manifold_view_values_step_as_their_kind_says() {
     let snapshot = mock_snapshot();
     let plane = &snapshot.sim.plane;
-    let run = |scope, kind, times, direction, shift| {
+    let run = |scope, kind, times, direction| {
         let mut out = Out::default();
         let mut scratch = Scratch::default();
         let a = Adjust {
@@ -158,7 +157,6 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
             kind,
             times,
             direction,
-            shift,
         };
         adjust(&a, &snapshot, &mut scratch, &mut out);
         (out.edits.first().map(|e| sim_field(e).clone()), scratch)
@@ -167,7 +165,7 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
     // A z₀ value: a hundredth of its range, 2, on its own axis, in Navigate and in Centre z₀ alike.
     for ids in [NAV_Z0, SLIDERS] {
         for (i, id) in ids.iter().enumerate() {
-            let (edit, scratch) = run(id, Bounded, 1.0, Direction::Up, false);
+            let (edit, scratch) = run(id, Bounded, 1.0, Direction::Up);
             let mut want = plane.z0;
             want[i] += 0.02;
             assert_eq!(edit, Some(SimField::Z0(want)), "{id}");
@@ -175,21 +173,21 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
         }
     }
     // A basis component: a hundredth of its range, 2.
-    let (edit, _) = run(mv::Q2_COMPONENTS[3], Bounded, -1.0, Direction::Down, false);
+    let (edit, _) = run(mv::Q2_COMPONENTS[3], Bounded, -1.0, Direction::Down);
     let mut q2 = plane.q2;
     q2[3] -= 0.02;
     assert_eq!(edit, Some(SimField::Basis { q1: plane.q1, q2 }));
-    let (edit, _) = run(mv::Q1_COMPONENTS[0], Bounded, 1.0, Direction::Up, false);
+    let (edit, _) = run(mv::Q1_COMPONENTS[0], Bounded, 1.0, Direction::Up);
     let mut q1 = plane.q1;
     q1[0] += 0.02;
     assert_eq!(edit, Some(SimField::Basis { q1, q2: plane.q2 }));
     // u and v: a twentieth of the view, along q₁ and q₂.
-    let (edit, _) = run(mv::CENTRE_U, Pan, 1.0, Direction::Up, false);
+    let (edit, _) = run(mv::CENTRE_U, Pan, 1.0, Direction::Up);
     assert_eq!(edit, Some(SimField::Z0(add(&plane.z0, 0.1, &plane.q1))));
-    let (edit, _) = run(mv::CENTRE_V, Pan, -1.0, Direction::Up, false);
+    let (edit, _) = run(mv::CENTRE_V, Pan, -1.0, Direction::Up);
     assert_eq!(edit, Some(SimField::Z0(add(&plane.z0, -0.1, &plane.q2))));
     // The zoom: a quarter octave.
-    let (edit, _) = run(ZOOM, ZoomLog2, 4.0, Direction::Up, false);
+    let (edit, _) = run(ZOOM, ZoomLog2, 4.0, Direction::Up);
     let Some(SimField::Basis { q1, q2 }) = edit else {
         panic!("a basis edit")
     };
@@ -198,12 +196,12 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
             && close(&q2, &MOCK_Q2.map(|v| v / 2.0), 1e-12)
     );
     // The slice step: z₀ along the hidden slice direction.
-    let (edit, _) = run(mv::SLICE_STEP, Bounded, 1.0, Direction::Up, false);
+    let (edit, _) = run(mv::SLICE_STEP, Bounded, 1.0, Direction::Up);
     let mut want = plane.z0;
     want[SLICE_AXIS] += 0.02;
     assert_eq!(edit, Some(SimField::Z0(want)));
     // An angle: a degree, shown as tilting.
-    let (edit, scratch) = run(TAU1, Angle, 1.0, Direction::Up, false);
+    let (edit, scratch) = run(TAU1, Angle, 1.0, Direction::Up);
     let Some(SimField::Basis { q1, q2 }) = edit else {
         panic!("a basis edit")
     };
@@ -214,7 +212,7 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
     });
     assert!((view.tau1.to_degrees() - 1.0).abs() < 1e-9, "{view:?}");
     assert_eq!(scratch.compass.mode, Touch::Tilt);
-    let (edit, _) = run(GAMMA, Angle, -1.0, Direction::Up, false);
+    let (edit, _) = run(GAMMA, Angle, -1.0, Direction::Up);
     let Some(SimField::Basis { q1, q2 }) = edit else {
         panic!("a basis edit")
     };
@@ -225,27 +223,31 @@ fn mock_manifold_view_values_step_as_their_kind_says() {
     });
     assert!((view.gamma.to_degrees() + 1.0).abs() < 1e-9, "{view:?}");
     // The figure: ← → along q₁, ↑ ↓ along q₂.
-    let (edit, _) = run(FIGURE, Pan, 1.0, Direction::Right, false);
+    let (edit, _) = run(FIGURE, Pan, 1.0, Direction::Right);
     assert_eq!(edit, Some(SimField::Z0(add(&plane.z0, 0.1, &plane.q1))));
-    let (edit, _) = run(FIGURE, Pan, -1.0, Direction::Left, false);
+    let (edit, _) = run(FIGURE, Pan, -1.0, Direction::Left);
     assert_eq!(edit, Some(SimField::Z0(add(&plane.z0, -0.1, &plane.q1))));
-    let (edit, _) = run(FIGURE, Pan, 1.0, Direction::Up, false);
+    let (edit, _) = run(FIGURE, Pan, 1.0, Direction::Up);
     assert_eq!(edit, Some(SimField::Z0(add(&plane.z0, 0.1, &plane.q2))));
-    let (edit, _) = run(FIGURE, Pan, -1.0, Direction::Down, false);
+    let (edit, _) = run(FIGURE, Pan, -1.0, Direction::Down);
     assert_eq!(edit, Some(SimField::Z0(add(&plane.z0, -0.1, &plane.q2))));
-    // The compass: arrows tilt, Shift+arrows orbit the cube and edit nothing.
-    let (edit, scratch) = run(COMPASS, Tilt, 1.0, Direction::Right, false);
+    // The compass, in its default Tilt mode: the arrows tilt, Shift's ×10 a larger tilt, never an orbit (R-409).
+    let (edit, scratch) = run(COMPASS_VIEW, Tilt, 1.0, Direction::Right);
     assert!(matches!(edit, Some(SimField::Basis { .. })), "{edit:?}");
     assert_eq!(scratch.compass.mode, Touch::Tilt);
-    let (edit, scratch) = run(COMPASS, Tilt, 10.0, Direction::Right, true);
-    assert_eq!(edit, None, "Shift orbits");
-    assert_ne!(
-        scratch.compass,
-        Scratch::default().compass,
-        "the cube turned"
-    );
+    let (edit, scratch) = run(COMPASS_VIEW, Tilt, 10.0, Direction::Right);
+    let Some(SimField::Basis { q1, q2 }) = edit else {
+        panic!("a basis edit")
+    };
+    let view = View::of(&Plane {
+        z0: plane.z0,
+        q1,
+        q2,
+    });
+    assert!((view.tau1.to_degrees() - 10.0).abs() < 1e-9, "{view:?}");
+    assert_eq!(scratch.compass, Scratch::default().compass);
     rejects("a pan along the wrong axis", || {
-        let (edit, _) = run(FIGURE, Pan, 1.0, Direction::Right, false);
+        let (edit, _) = run(FIGURE, Pan, 1.0, Direction::Right);
         assert_eq!(edit, Some(SimField::Z0(add(&plane.z0, 0.1, &plane.q2))));
     });
 }
@@ -301,7 +303,7 @@ fn keys(h: &mut Headless, app: &mut App<MockSide>, keys: &[Key]) {
     }
 }
 
-/// Tab, Tab, Enter, ↓, ↓, Enter: Centre z₀'s first slider, adjusting.
+/// Tab, Tab, Enter, ↓, ↓, Enter, Enter: Centre z₀'s first slider, in interaction mode (R-409).
 fn to_first_slider(h: &mut Headless, app: &mut App<MockSide>) {
     keys(
         h,
@@ -313,9 +315,11 @@ fn to_first_slider(h: &mut Headless, app: &mut App<MockSide>) {
             Key::ArrowDown,
             Key::ArrowDown,
             Key::Enter,
+            Key::Enter,
         ],
     );
     assert_eq!(focus(app), [MANIFOLD_VIEW, CENTRE_Z0, SLIDERS[0]]);
+    assert_eq!(app.view.focus.mode, KeyMode::Interaction);
 }
 
 fn place(app: &App<MockSide>, id: &str) -> egui::Rect {
@@ -1678,8 +1682,8 @@ fn basis_edits(snapshot: &Snapshot) -> Vec<(&'static str, Vec<SetField>)> {
     let mut all = Vec::new();
     for (id, kind, direction) in [
         (ZOOM, ZoomLog2, Direction::Up),
-        (COMPASS, Tilt, Direction::Right),
-        (COMPASS, Tilt, Direction::Up),
+        (COMPASS_VIEW, Tilt, Direction::Right),
+        (COMPASS_VIEW, Tilt, Direction::Up),
         (TAU1, Angle, Direction::Up),
         (mv::TAU2, Angle, Direction::Up),
         (GAMMA, Angle, Direction::Up),
@@ -1689,7 +1693,6 @@ fn basis_edits(snapshot: &Snapshot) -> Vec<(&'static str, Vec<SetField>)> {
             kind,
             times: 4.0,
             direction,
-            shift: false,
         };
         let mut out = Out::default();
         adjust(&a, snapshot, &mut Scratch::default(), &mut out);

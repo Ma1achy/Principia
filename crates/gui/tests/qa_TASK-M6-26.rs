@@ -16,10 +16,14 @@
 //!   τ₁, τ₂, rotation γ), in that order. R-54: the precision warning is raised by events, never by a fixed depth.
 //! - REQ-GUI-091: the compass sits bottom left, shows the slice plane, switches mode by itself (slicing when a slice
 //!   slider is touched, tilting when a tilt is touched), carries a gold pin when locked, and reads out the tilt and
-//!   rotation angles. §G3: Compass — arrows tilt, Shift+arrows orbit.
+//!   rotation angles. §G3: Compass — arrows tilt, Shift+arrows orbit. *(Amended by R-409, applied by TASK-M6-31's qa
+//!   commit: the mode is shown by the Tilt and Slice buttons, which still follow the slider touched; there is no orbit,
+//!   and on the compass in interaction mode Shift is ×10 and Alt ×0.1 as everywhere, F3.)*
 //! - REQ-GUI-169, re-checked for this screen: Enter reaches Chart, Navigate, Centre z₀ and Slice & tilt and each
 //!   control inside them; Esc backs out one level; Shift ×10 and Alt ×0.1; the breadcrumb names the path, §G3's own
-//!   example "Manifold view › Navigate › zoom"; Figure — arrows pan, + / − zoom.
+//!   example "Manifold view › Navigate › zoom"; Figure — arrows pan, + / − zoom. *(Amended by R-409, applied by
+//!   TASK-M6-31's qa commit: every landing is in navigation mode, where the arrows move between siblings; the arrows
+//!   adjust a value only after Enter on it, interaction mode (point 4, F1); + / − act in either mode.)*
 //!
 //! The SetFields a gesture emits are counted from the contract's own log (gui_state_contract §2: every engine logs each
 //! SetField it applies as one `info` entry from `contract`), and what they edited is read from the snapshots before and
@@ -39,7 +43,7 @@ use engine::contract::sim_config::{
     Slice,
 };
 use engine::contract::snapshot::Snapshot;
-use engine::contract::view_ui::{Mode, Window};
+use engine::contract::view_ui::{KeyMode, Mode, Window};
 use gui::app::App;
 use gui::capture::{render_frame, Shot, FORMAT, PIXELS_PER_POINT, SIZE};
 use gui::headless::Headless;
@@ -133,11 +137,29 @@ impl<S: EngineSide> Rig<S> {
             .count()
     }
 
-    /// Puts the focus on scope `id`, by its path in the tree.
+    /// Puts the focus on scope `id`, by its path in the tree, in navigation mode: every landing is (R-409 point 4).
     fn focus(&mut self, id: &str) {
         let path = self.app.keyboard.tree(Mode::Explore).path_to(id);
         assert!(!path.is_empty(), "no scope {id} in the tree");
         self.app.view.focus.path = path;
+        self.app.view.focus.mode = KeyMode::Navigation;
+    }
+
+    /// Puts the focus on the value `id` and presses Enter on it: interaction mode, in which the arrows adjust it
+    /// (R-409 point 4 and F1: the arrows need Enter).
+    fn interact(&mut self, id: &str) {
+        self.focus(id);
+        self.key(Key::Enter, NONE);
+        assert_eq!(
+            self.app.view.focus.mode,
+            KeyMode::Interaction,
+            "Enter on {id} did not start interaction mode"
+        );
+        assert_eq!(
+            self.app.view.focus.path.last().map(String::as_str),
+            Some(id),
+            "Enter on {id} moved the focus"
+        );
     }
 
     fn labels(&self) -> Vec<String> {
@@ -359,7 +381,7 @@ fn qa_mock_manifold_view_every_value_emits_one_set_field_on_z0_or_basis() {
     for (id, label) in &values {
         for (key, modifiers) in [(Key::ArrowUp, NONE), (Key::ArrowDown, SHIFT)] {
             let mut rig = mock();
-            rig.focus(id);
+            rig.interact(id);
             check_one_set_field_on_z0_or_basis(&mut rig, &format!("{key:?} on {label}"), |r| {
                 r.key(key, modifiers)
             });
@@ -585,7 +607,7 @@ fn qa_mock_manifold_view_locked_sliders_read_anchor_plus_offset_and_move_by_excu
     assert_eq!(sliders.len(), 8, "eight sliders");
     for (i, slider) in sliders.into_iter().enumerate() {
         let before = rig.snap();
-        rig.focus(slider);
+        rig.interact(slider);
         let c =
             check_one_set_field_on_z0_or_basis(&mut rig, AXES[i], |r| r.key(Key::ArrowUp, NONE));
         assert!(c.z0 && !c.basis, "{}: an excursion is on z₀", AXES[i]);
@@ -772,7 +794,7 @@ fn qa_mock_figure_navigation_figure_keys_pan_and_zoom() {
         Key::ArrowDown,
     ] {
         let mut rig = mock();
-        rig.focus(id);
+        rig.interact(id);
         let before = rig.snap();
         let c =
             check_one_set_field_on_z0_or_basis(&mut rig, &format!("{key:?} on the figure"), |r| {
@@ -785,15 +807,27 @@ fn qa_mock_figure_navigation_figure_keys_pan_and_zoom() {
             "{key:?} left the plane"
         );
     }
-    for (key, zoom_in) in [(Key::Plus, true), (Key::Minus, false)] {
+    // + and − are shortcuts: they zoom in either mode (R-409 F1).
+    for ((key, zoom_in), interacting) in [(Key::Plus, true), (Key::Minus, false)]
+        .into_iter()
+        .flat_map(|k| [(k, false), (k, true)])
+    {
         let mut rig = mock();
-        rig.focus(id);
+        if interacting {
+            rig.interact(id);
+        } else {
+            rig.focus(id);
+        }
         let before = rig.snap();
         check_one_set_field_on_z0_or_basis(&mut rig, &format!("{key:?} on the figure"), |r| {
             r.key(key, NONE)
         });
         let k = check_zoom(&before, &rig.snap());
-        assert_eq!(k < 1.0, zoom_in, "{key:?}: scale ×{k}");
+        assert_eq!(
+            k < 1.0,
+            zoom_in,
+            "{key:?}, interacting {interacting}: scale ×{k}"
+        );
     }
     // Control: + with the figure unfocused zooms nothing.
     let mut rig = mock();
@@ -1174,20 +1208,40 @@ fn scope_by_label(rig: &Rig<MockSide>, label: &str) -> &'static str {
         .unwrap_or_else(|| panic!("no scope `{label}`"))
 }
 
-/// The compass's mode, as it draws it: the selected one of "slicing" and "tilting".
-fn compass_mode(texts: &[(String, Rect)], compass: Rect) -> Vec<String> {
-    texts
-        .iter()
-        .filter(|(t, r)| compass.contains_rect(*r) && t.starts_with('●'))
-        .map(|(t, _)| t.clone())
-        .filter(|t| t.contains("slicing") || t.contains("tilting"))
-        .collect()
+/// The compass's mode, as it draws it: the label of each of its Tilt and Slice buttons drawn selected, on a filled
+/// frame of its own (R-409 point 2: the buttons always show the current mode; egui frames a selectable button only
+/// when selected or hovered, and no pointer is over the compass here).
+fn compass_mode(shapes: &[egui::Shape], compass: Rect) -> Vec<String> {
+    let mut shown = Vec::new();
+    for label in ["Tilt", "Slice"] {
+        let text = shapes.iter().find_map(|s| match s {
+            egui::Shape::Text(t) if t.galley.text() == label => {
+                Some(s.visual_bounding_rect()).filter(|r| compass.contains_rect(*r))
+            }
+            _ => None,
+        });
+        let Some(text) = text else {
+            panic!("no {label} button drawn in the compass")
+        };
+        let framed = shapes.iter().any(|s| match s {
+            egui::Shape::Rect(r) => {
+                r.fill.a() > 0
+                    && r.rect.contains_rect(text)
+                    && r.rect.width() < 3.0 * text.width() + 40.0
+            }
+            _ => false,
+        });
+        if framed {
+            shown.push(label.to_owned());
+        }
+    }
+    shown
 }
 
-fn check_mode(texts: &[(String, Rect)], compass: Rect, want: &str) {
-    let shown = compass_mode(texts, compass);
+fn check_mode(shapes: &[egui::Shape], compass: Rect, want: &str) {
+    let shown = compass_mode(shapes, compass);
     assert!(
-        shown.len() == 1 && shown[0].contains(want),
+        shown.len() == 1 && shown[0] == want,
         "the compass shows {shown:?}, not {want}"
     );
 }
@@ -1208,20 +1262,21 @@ fn qa_mock_compass_switches_mode_by_the_slider_touched() {
         .unwrap();
     let slider = tree.children(Some(centre))[3];
     let mut seen = Vec::new();
+    // Tilt is the default (R-409 point 2), so a slice slider comes first.
     for (id, want) in [
-        (tau1, "tilting"),
-        (slider, "slicing"),
-        (tau2, "tilting"),
-        (step, "slicing"),
+        (slider, "Slice"),
+        (tau1, "Tilt"),
+        (step, "Slice"),
+        (tau2, "Tilt"),
     ] {
-        rig.focus(id);
+        rig.interact(id);
         rig.key(Key::ArrowUp, NONE);
-        let texts = rig.texts();
-        check_mode(&texts, compass, want);
-        seen.push(texts);
+        let shapes = rig.shapes();
+        check_mode(&shapes, compass, want);
+        seen.push(shapes);
     }
-    rejects("tilting read after a slice slider", || {
-        check_mode(&seen[1], compass, "tilting")
+    rejects("Tilt read after a slice slider", || {
+        check_mode(&seen[0], compass, "Tilt")
     });
 }
 
@@ -1255,7 +1310,7 @@ fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     // τ₁ turned by ten base steps, Shift: the compass reads q₁'s tilt out of the chart's plane.
     let mut rig = mock();
     let tau1 = scope_by_label(&rig, "τ₁");
-    rig.focus(tau1);
+    rig.interact(tau1);
     rig.key(Key::ArrowUp, SHIFT);
     let q1 = rig.snap().sim.plane.q1;
     let want = tilt_of(&q1);
@@ -1269,7 +1324,7 @@ fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     // γ turned: the compass reads q₁'s angle in the plane.
     let mut rig = mock();
     let gamma = scope_by_label(&rig, "γ");
-    rig.focus(gamma);
+    rig.interact(gamma);
     rig.key(Key::ArrowUp, SHIFT);
     rig.key(Key::ArrowUp, SHIFT);
     let q1 = rig.snap().sim.plane.q1;
@@ -1285,11 +1340,34 @@ fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     });
 }
 
+/// The cube's edges as the compass draws them: its line segments in the cube's own colour, the weak text colour
+/// (the plane is drawn in the selection blue, the pin in gold).
+fn cube_edges(rig: &mut Rig<MockSide>) -> Vec<[Pos2; 2]> {
+    let weak = rig.h.ctx.global_style().visuals.weak_text_color();
+    let compass = layout().compass;
+    rig.shapes()
+        .into_iter()
+        .filter_map(|s| match s {
+            egui::Shape::LineSegment { points, stroke }
+                if stroke.color == weak
+                    && compass.contains(points[0])
+                    && compass.contains(points[1]) =>
+            {
+                Some(points)
+            }
+            _ => None,
+        })
+        .collect()
+}
+
 #[test]
-fn qa_mock_compass_arrows_tilt_and_shift_arrows_orbit() {
+fn qa_mock_compass_arrows_tilt_and_shift_arrows_tilt_ten_times() {
+    // R-409 (amending §G3's "Compass — arrows tilt, Shift+arrows orbit"): the compass is one element in navigation
+    // mode; Enter on it starts interaction mode, where the arrows tilt in tilt mode, the default, Shift ×10 (F3); there
+    // is no orbit (point 1).
     let rig = mock();
-    let compass = scope_by_label(&rig, "Compass");
-    // ← → ↑ ↓ tilt: one SetField on the basis, and the compass shows tilting.
+    let compass = scope_by_label(&rig, "compass");
+    // ← → ↑ ↓ tilt: one SetField on the basis, and the compass shows Tilt.
     for key in [
         Key::ArrowLeft,
         Key::ArrowRight,
@@ -1297,70 +1375,79 @@ fn qa_mock_compass_arrows_tilt_and_shift_arrows_orbit() {
         Key::ArrowDown,
     ] {
         let mut rig = mock();
-        rig.focus(compass);
+        rig.interact(compass);
         let c =
             check_one_set_field_on_z0_or_basis(&mut rig, &format!("{key:?} on the compass"), |r| {
                 r.key(key, NONE)
             });
         assert!(c.basis && !c.z0, "{key:?} tilts the plane");
-        check_mode(&rig.texts(), layout().compass, "tilting");
+        check_mode(&rig.shapes(), layout().compass, "Tilt");
     }
-    // Shift+arrows orbit the cube: the GUI's own view of it, no edit.
+    // Shift+→ is a tilt too, ten times →'s, and does not turn the cube: there is no orbit.
+    let tilt = |modifiers: Modifiers| -> (f64, Vec<[Pos2; 2]>, Vec<[Pos2; 2]>) {
+        let mut rig = mock();
+        rig.interact(compass);
+        let before = rig.snap().sim.plane;
+        let edges_before = cube_edges(&mut rig);
+        check_one_set_field_on_z0_or_basis(&mut rig, "Shift+→ on the compass", |r| {
+            r.key(Key::ArrowRight, modifiers)
+        });
+        let after = rig.snap().sim.plane;
+        let edges_after = cube_edges(&mut rig);
+        (
+            (tilt_of(&after.q1) - tilt_of(&before.q1)).abs(),
+            edges_before,
+            edges_after,
+        )
+    };
+    let (one, _, _) = tilt(NONE);
+    let (ten, edges_before, edges_after) = tilt(SHIFT);
+    assert!(one > 0.0, "→ tilted nothing");
+    assert!(
+        (ten / one - 10.0).abs() < 1e-6,
+        "Shift+→ tilts {ten}°, → {one}°: not ten times"
+    );
+    assert_eq!(edges_before.len(), 12, "the cube's twelve edges");
+    assert_eq!(edges_before, edges_after, "Shift+→ turned the cube");
+    // Controls: the cube turned (its edges moved), and Shift's step taken as smaller than the arrow's.
+    rejects("a turned cube", || {
+        let turned: Vec<[Pos2; 2]> = edges_after
+            .iter()
+            .map(|[a, b]| [*a + egui::vec2(3.0, 0.0), *b])
+            .collect();
+        assert_eq!(edges_before, turned, "Shift+→ turned the cube");
+    });
+    rejects("a Shift step smaller than the arrow's", || {
+        assert!((one / ten - 10.0).abs() < 1e-6)
+    });
+    // Control: in navigation mode an arrow on the compass moves the focus and tilts nothing (the arrows need Enter).
     let mut rig = mock();
     rig.focus(compass);
-    let (before, n0) = (rig.snap(), rig.applied());
-    let drawn_before = rig.shapes();
-    rig.key(Key::ArrowRight, SHIFT);
-    assert_eq!(rig.applied(), n0, "an orbit applied a SetField");
-    assert_eq!(rig.snap().sim, before.sim, "an orbit edited the chart");
-    let compass_rect = layout().compass;
-    let in_compass = |shapes: &[egui::Shape]| -> Vec<egui::Shape> {
-        shapes
-            .iter()
-            .filter(|s| compass_rect.contains_rect(s.visual_bounding_rect()))
-            .cloned()
-            .collect()
-    };
-    let drawn_after = rig.shapes();
-    assert_ne!(
-        in_compass(&drawn_before),
-        in_compass(&drawn_after),
-        "Shift+→ did not turn the cube"
-    );
-    rejects("a tilt taken for an orbit", || {
-        let mut rig = mock();
-        rig.focus(compass);
-        let n0 = rig.applied();
-        rig.key(Key::ArrowRight, NONE);
-        assert_eq!(rig.applied(), n0);
+    let n0 = rig.applied();
+    rig.key(Key::ArrowRight, NONE);
+    assert_eq!(rig.applied(), n0, "→ in navigation mode tilted the plane");
+    rejects("a tilt in navigation mode", || {
+        assert_eq!(rig.applied(), n0 + 1)
     });
 }
 
 // --- REQ-GUI-169, for this screen ------------------------------------------------------------------------------------
 
-/// Walks `section`'s controls from its first: Enter into the section, then ↓ to each next sibling. §G3 gives the
-/// arrows both jobs, between siblings and on a focused value; the PR's decision (applied per R-369): a value reached by
-/// Enter adjusts, Enter on it turns its arrows to its siblings, and an arrow lands on the next in that state. Returns
-/// the labels landed on.
+/// Walks `section`'s controls from its first: Enter into the section, landing on its first control in navigation mode,
+/// then ↓ to each next sibling, still in navigation mode, editing nothing (R-409 point 4: the arrows move between
+/// siblings in navigation mode, whatever the control). Returns the labels landed on.
 fn walk(rig: &mut Rig<MockSide>, section: &str) -> Vec<String> {
     let id = scope_by_label(rig, section);
     rig.focus(id);
     rig.key(Key::Enter, NONE);
+    assert_eq!(
+        rig.app.view.focus.mode,
+        KeyMode::Navigation,
+        "Enter into {section} landed in interaction mode"
+    );
     let tree = rig.app.keyboard.tree(Mode::Explore);
     let n = tree.children(Some(id)).len();
     let mut seen = vec![rig.labels().last().unwrap().clone()];
-    let first = rig.app.view.focus.path.last().unwrap().clone();
-    if matches!(
-        rig.app
-            .keyboard
-            .tree(Mode::Explore)
-            .get(&first)
-            .unwrap()
-            .arrows,
-        Arrows::Adjust(_)
-    ) {
-        rig.key(Key::Enter, NONE);
-    }
     for _ in 1..n {
         let before = rig.snap();
         rig.key(Key::ArrowDown, NONE);
@@ -1368,6 +1455,11 @@ fn walk(rig: &mut Rig<MockSide>, section: &str) -> Vec<String> {
             rig.snap().sim,
             before.sim,
             "walking {section} edited the chart"
+        );
+        assert_eq!(
+            rig.app.view.focus.mode,
+            KeyMode::Navigation,
+            "↓ in {section} left navigation mode"
         );
         seen.push(rig.labels().last().unwrap().clone());
     }
@@ -1427,7 +1519,7 @@ fn qa_mock_keyboard_shift_and_alt_steps_on_this_screen() {
             } else {
                 scope_by_label(&rig, label)
             };
-            rig.focus(id);
+            rig.interact(id);
             let before = rig.snap().sim.plane;
             rig.key(Key::ArrowUp, modifiers);
             let after = rig.snap().sim.plane;

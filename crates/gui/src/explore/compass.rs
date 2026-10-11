@@ -1,105 +1,103 @@
-//! The compass, the nav cube (render_gui_spec §G2, §G4; GUI_DESIGN_NOTES § "01 Explore", § "08 Lock"; 01_main.png,
-//! 08_lock.png): bottom left, under the view controls. The cube is the chart's frame, its axes the preset's two axes
-//! and the hidden slice direction; inside it, the slice plane: through the centre, at the slice step along the depth
-//! axis, tilted by `τ₁`, `τ₂` and turned by `γ`. It switches mode by itself: touching a slice slider shows slicing,
-//! touching a tilt shows tilting, and tilting draws the plane before the tilt dashed. Locked, it carries a gold pin at
-//! the anchor's point on the plane, the pivot every basis edit turns about ([`super::manifold_view::about_the_pin`]).
-//! Dragging the plane tilts it (one `SetField` on the basis); dragging the cube orbits the cube, the GUI's own view of
-//! it, which edits nothing. It reads out the tilt and rotation angles. Its keys (§G3): the arrows tilt, Shift+arrows
-//! orbit.
+//! The compass, the nav cube (render_gui_spec §G2, §G3, §G4; GUI_DESIGN_NOTES § "01 Explore", § "08 Lock"; 01_main.png,
+//! 08_lock.png, read with R-409): bottom left, under the view controls. The cube is the chart's frame, its axes the
+//! preset's two axes and the hidden slice direction; inside it, the slice plane: through the centre, at the slice step
+//! along the depth axis, tilted by `τ₁`, `τ₂` and turned by `γ`. It is a fixed orthographic view at its default angle,
+//! with no orbit (R-409).
+//!
+//! It has two modes, Tilt (the default) and Slice, with a button for each beside it, which show the current mode; a
+//! click on one switches the mode, and touching a slice slider still switches it to Slice and touching a tilt to Tilt.
+//! In tilt mode a drag anywhere on the cube tilts the plane (one `SetField` on the basis); in slice mode it moves the
+//! plane along its normal as drawn, the tilt fixed (one `SetField` on `z₀`). Each drag is one edit, made when it ends
+//! (R-96), the compass drawing the plane as the drag leaves it meanwhile. Tilting draws the plane before the tilt
+//! dashed. Locked, it carries a gold pin at the anchor's point on the plane, the pivot every basis edit turns about
+//! ([`super::manifold_view::about_the_pin`]), and a slice-mode drag is an excursion along the normal through the anchor.
+//! It reads out the tilt and rotation angles.
+//!
+//! Its keys (§G3): the compass is one element in navigation mode, beside its Tilt and Slice buttons; Enter on it
+//! starts interaction mode, in which the arrows tilt in tilt mode and move the slice along the normal in slice mode,
+//! Shift ×10 and Alt ×0.1 as everywhere (R-409 F3).
 
 use eframe::egui::{
-    self, pos2, vec2, Color32, Pos2, Rect, RichText, Sense, Shape, Stroke, Ui, UiBuilder,
+    self, pos2, vec2, Color32, Pos2, Rect, RichText, Sense, Shape, Stroke, Ui, UiBuilder, Vec2,
 };
-use engine::contract::sim_config::{Lock, Plane};
+use engine::contract::set_field::{Edit, SetField, SimField};
+use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig};
 
 use crate::explore::lock::GOLD;
 use crate::explore::manifold_view::slice_tilt::{Angles, TILT_RANGE};
 use crate::explore::manifold_view::{
-    basis_edit, chart_coords, Out, Scratch, Touch, View, AXES, Z0_HALF_RANGE,
+    about_the_pin, add, axis, basis_edit, chart_coords, z0_edit, Out, Scratch, Touch, View, AXES,
+    Z0_HALF_RANGE,
 };
+use crate::explore::{COMPASS, COMPASS_SLICE, COMPASS_TILT, COMPASS_VIEW};
 use crate::keyboard::keymap::Direction;
 use crate::keyboard::scopes::{Adjust, Base, StepKind};
 use crate::keyboard::Keyboard;
 
 /// The compass's title.
 pub const TITLE: &str = "Compass";
-/// The two modes' names, as 01_main.png's.
-pub const SLICING: &str = "slicing";
-/// See [`SLICING`].
-pub const TILTING: &str = "tilting";
-/// The hint under the modes, as 01_main.png's.
-pub const HINT: &str = "drag the plane to tilt · drag the cube to orbit";
+/// The Tilt button's label (a look choice, R-390).
+pub const TILT_BUTTON: &str = "Tilt";
+/// The Slice button's label (a look choice, R-390).
+pub const SLICE_BUTTON: &str = "Slice";
+/// The hint under the buttons in tilt mode (a look choice, R-390).
+pub const HINT_TILT: &str = "drag to tilt the plane";
+/// The hint under the buttons in slice mode (a look choice, R-390).
+pub const HINT_SLICE: &str = "drag to move the plane along its normal";
 /// The pin's label, as 08_lock.png's.
 pub const PINNED: &str = "pinned";
-/// The orbit the cube opens at, yaw and pitch in degrees (a look choice, R-390).
-pub const ORBIT: (f64, f64) = (-35.0, 25.0);
-/// The degrees a point of drag turns a tilt or the orbit (a look choice, R-390).
+/// The fixed view's angle, yaw and pitch in degrees: the angle the cube opened at before R-409 removed its orbit, as
+/// 01_main.png draws the cube (a look choice, R-390; R-409 point 1).
+pub const VIEW_ANGLE: (f64, f64) = (-35.0, 25.0);
+/// The degrees a point of drag tilts (a look choice, R-390).
 pub const DEGREES_PER_POINT: f64 = 0.5;
 /// The cube's half-size on the screen, as a fraction of the compass's square (a look choice, R-390).
 pub const CUBE_SCALE: f64 = 0.26;
 /// The plane's half-size inside the cube's, which is 1 (a look choice, R-390).
 pub const PLANE_HALF: f64 = 0.7;
+/// The shortest the normal's unit is taken to be on the screen, as a fraction of the cube's half-size, so a slice-mode
+/// drag stays finite when the normal points at the viewer (a look choice, R-390).
+pub const MIN_NORMAL_ON_SCREEN: f64 = 0.25;
 /// The plane's colour: egui's dark theme's selection blue (a look choice, R-390).
 pub fn plane_colour(visuals: &egui::Visuals) -> Color32 {
     visuals.selection.stroke.color
 }
 
-/// What a drag on the compass does: decided where it starts.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Drag {
-    /// It started on the plane: it tilts.
-    Tilt,
-    /// It started on the cube off the plane: it orbits.
-    Orbit,
+/// A drag on the compass in progress.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Drag {
+    /// What it does: the mode when it started, tilting or slicing.
+    pub mode: Touch,
+    /// The pointer's travel since it started, in points.
+    pub travel: Vec2,
 }
 
-/// The compass's own state: its mode, its orbit and its drag. The GUI's, never the engine's.
-#[derive(Clone, Copy, Debug, PartialEq)]
+/// The compass's own state: its mode and its drag. The GUI's, never the engine's.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Compass {
-    /// Which it shows.
+    /// Its mode, which its buttons show: Tilt by default.
     pub mode: Touch,
-    /// The orbit's yaw, in degrees.
-    pub yaw: f64,
-    /// The orbit's pitch, in degrees, within ±89.
-    pub pitch: f64,
     /// The drag in progress.
     pub drag: Option<Drag>,
 }
 
-impl Default for Compass {
-    fn default() -> Self {
-        Self {
-            mode: Touch::Slice,
-            yaw: ORBIT.0,
-            pitch: ORBIT.1,
-            drag: None,
-        }
-    }
+/// A point of the cube's frame, `(w, h, d)` each in `[−1, 1]`, on the screen in `square`, seen from [`VIEW_ANGLE`].
+pub fn project(square: Rect, [w, h, d]: [f64; 3]) -> Pos2 {
+    let (sy, cy) = VIEW_ANGLE.0.to_radians().sin_cos();
+    let (sp, cp) = VIEW_ANGLE.1.to_radians().sin_cos();
+    let x = w * cy + d * sy;
+    let depth = -w * sy + d * cy;
+    let y = h * cp - depth * sp;
+    let r = f64::from(square.width()) * CUBE_SCALE;
+    square.center() + vec2((x * r) as f32, (-y * r) as f32)
 }
 
-impl Compass {
-    /// Orbits by `yaw` and `pitch` degrees.
-    pub fn orbit(&mut self, yaw: f64, pitch: f64) {
-        self.yaw = (self.yaw + yaw).rem_euclid(360.0);
-        self.pitch = (self.pitch + pitch).clamp(-89.0, 89.0);
-    }
-
-    /// A point of the cube's frame, `(w, h, d)` each in `[−1, 1]`, on the screen in `square`.
-    pub fn project(&self, square: Rect, [w, h, d]: [f64; 3]) -> Pos2 {
-        let (sy, cy) = self.yaw.to_radians().sin_cos();
-        let (sp, cp) = self.pitch.to_radians().sin_cos();
-        let x = w * cy + d * sy;
-        let depth = -w * sy + d * cy;
-        let y = h * cp - depth * sp;
-        let r = f64::from(square.width()) * CUBE_SCALE;
-        square.center() + vec2((x * r) as f32, (-y * r) as f32)
-    }
-}
+/// A plane's frame in the cube: its centre and its two in-plane directions.
+pub type Frame = ([f64; 3], [f64; 3], [f64; 3]);
 
 /// The slice plane's centre and in-plane directions in the cube's frame: the centre at the slice step along the depth
 /// axis, the directions `u₁`, `u₂` tilted by `τ₁`, `τ₂` and turned by `γ`.
-pub fn plane_frame(plane: &Plane, view: &View, tilted: bool) -> ([f64; 3], [f64; 3], [f64; 3]) {
+pub fn plane_frame(plane: &Plane, view: &View, tilted: bool) -> Frame {
     let depth = (plane.z0[view.d] / Z0_HALF_RANGE).clamp(-1.0, 1.0);
     let (t1, t2) = if tilted {
         (view.tau1, view.tau2)
@@ -114,17 +112,42 @@ pub fn plane_frame(plane: &Plane, view: &View, tilted: bool) -> ([f64; 3], [f64;
     ([0.0, 0.0, depth], r1, r2)
 }
 
+/// The unit normal of the plane `(_, r1, r2)` in the cube's frame, `r1 × r2`: untilted, the depth axis.
+pub fn normal((_, r1, r2): Frame) -> [f64; 3] {
+    let n = [
+        r1[1] * r2[2] - r1[2] * r2[1],
+        r1[2] * r2[0] - r1[0] * r2[2],
+        r1[0] * r2[1] - r1[1] * r2[0],
+    ];
+    let len = n.iter().map(|x| x * x).sum::<f64>().sqrt();
+    n.map(|x| x / len)
+}
+
+/// The unit normal of `plane` as the compass draws it, in the latent space: the cube's frame is the preset's
+/// `(e_a, e_b, e_d)` (R-409 A3).
+pub fn latent_normal(plane: &Plane) -> Latent {
+    let view = View::of(plane);
+    let n = normal(plane_frame(plane, &view, true));
+    add(
+        &add(&axis(view.a, n[0]), n[1], &axis(view.b, 1.0)),
+        n[2],
+        &axis(view.d, 1.0),
+    )
+}
+
+/// The edit moving `plane`'s centre `z₀` by `amount` along the drawn plane's normal; the basis, so the tilt and `γ`,
+/// unchanged. Locked, `z₀` leaves the anchor along that line: an excursion, as the slice step's is.
+pub fn slice(plane: &Plane, amount: f64) -> SetField {
+    z0_edit(add(&plane.z0, amount, &latent_normal(plane)))
+}
+
 /// The plane's four corners on the screen.
-pub fn corners(
-    compass: &Compass,
-    square: Rect,
-    (c, r1, r2): ([f64; 3], [f64; 3], [f64; 3]),
-) -> Vec<Pos2> {
+pub fn corners(square: Rect, (c, r1, r2): Frame) -> Vec<Pos2> {
     [(1.0, 1.0), (-1.0, 1.0), (-1.0, -1.0), (1.0, -1.0)]
         .iter()
         .map(|(a, b)| {
             let p = std::array::from_fn(|i| c[i] + PLANE_HALF * (a * r1[i] + b * r2[i]));
-            compass.project(square, p)
+            project(square, p)
         })
         .collect()
 }
@@ -141,7 +164,7 @@ pub fn inside(poly: &[Pos2], p: Pos2) -> bool {
 }
 
 /// The tilt edit turning `τ₁` by `d1` and `τ₂` by `d2` degrees, within their span.
-pub fn tilt(plane: &Plane, d1: f64, d2: f64) -> engine::contract::set_field::SetField {
+pub fn tilt(plane: &Plane, d1: f64, d2: f64) -> SetField {
     let view = View::of(plane);
     let mut angles = Angles::of(&view);
     angles.tau1 = (angles.tau1 + d1).clamp(TILT_RANGE.0, TILT_RANGE.1);
@@ -149,32 +172,78 @@ pub fn tilt(plane: &Plane, d1: f64, d2: f64) -> engine::contract::set_field::Set
     basis_edit(angles.apply(view).basis())
 }
 
-/// The arrows on the focused compass: ← → tilt `τ₁`, ↑ ↓ tilt `τ₂`; with Shift they orbit the cube instead, Shift's
-/// ×10 being the orbit's own ×1.
-pub fn adjust(adjust: &Adjust, plane: &Plane, scratch: &mut Scratch, out: &mut Out) {
-    let horizontal = matches!(adjust.direction, Direction::Left | Direction::Right);
-    if adjust.shift {
-        let Base::Degrees(base) = StepKind::Orbit.base() else {
-            unreachable!("the orbit's base step is in degrees")
-        };
-        let degrees = base * adjust.times / 10.0;
-        let (yaw, pitch) = if horizontal {
-            (degrees, 0.0)
-        } else {
-            (0.0, degrees)
-        };
-        scratch.compass.orbit(yaw, pitch);
-        return;
+/// How far along the normal, in `z₀`'s units, a slice-mode drag of `travel` points moves the plane in `square`: the
+/// plane follows the pointer along the normal as drawn, the normal's unit taken as at least [`MIN_NORMAL_ON_SCREEN`]
+/// of the cube's half-size on the screen.
+pub fn slice_by_drag(plane: &Plane, square: Rect, travel: Vec2) -> f64 {
+    let n = normal(plane_frame(plane, &View::of(plane), true));
+    let along = project(square, n) - project(square, [0.0; 3]);
+    let floor = f64::from(square.width()) * CUBE_SCALE * MIN_NORMAL_ON_SCREEN;
+    let unit = f64::from(along.length_sq()).max(floor * floor);
+    f64::from(travel.dot(along)) / unit * Z0_HALF_RANGE
+}
+
+/// The one edit a drag of `drag` on `plane` in `square` makes: a tilt, right raising `τ₁` and down lowering `τ₂`, or a
+/// slice along the normal; none for no travel.
+pub fn drag_edit(plane: &Plane, drag: &Drag, square: Rect) -> Option<SetField> {
+    if drag.travel == Vec2::ZERO {
+        return None;
     }
-    let Base::Degrees(degrees) = adjust.delta() else {
-        unreachable!("the compass's tilt step is in degrees")
-    };
-    let (d1, d2) = if horizontal {
-        (degrees, 0.0)
-    } else {
-        (0.0, degrees)
-    };
-    out.edit(tilt(plane, d1, d2), Some(Touch::Tilt), scratch);
+    Some(match drag.mode {
+        Touch::Tilt => tilt(
+            plane,
+            f64::from(drag.travel.x) * DEGREES_PER_POINT,
+            -f64::from(drag.travel.y) * DEGREES_PER_POINT,
+        ),
+        Touch::Slice => slice(plane, slice_by_drag(plane, square, drag.travel)),
+    })
+}
+
+/// `plane` after `edits`, each on the plane the earlier leave.
+pub fn after(plane: &Plane, edits: &[SetField]) -> Plane {
+    let mut plane = plane.clone();
+    for edit in edits {
+        match &edit.edit {
+            Edit::Sim(SimField::Z0(z0)) => plane.z0 = *z0,
+            Edit::Sim(SimField::Basis { q1, q2 }) => (plane.q1, plane.q2) = (*q1, *q2),
+            _ => {}
+        }
+    }
+    plane
+}
+
+/// The arrows on the compass in interaction mode, by its mode: in tilt mode ← → tilt `τ₁` and ↑ ↓ `τ₂` by the `Tilt`
+/// step; in slice mode ↑ and → move the slice along the normal, ↓ and ← back, by the `SliceNormal` step (REQ-GUI-184).
+/// Shift's ×10 and Alt's ×0.1 are in `adjust.times`, as everywhere (R-409 F3).
+pub fn adjust(adjust: &Adjust, plane: &Plane, scratch: &mut Scratch, out: &mut Out) {
+    match scratch.compass.mode {
+        Touch::Tilt => {
+            let Base::Degrees(degrees) = StepKind::Tilt.base().times(adjust.times) else {
+                unreachable!("the compass's tilt step is in degrees")
+            };
+            let (d1, d2) = match adjust.direction {
+                Direction::Left | Direction::Right => (degrees, 0.0),
+                Direction::Up | Direction::Down => (0.0, degrees),
+            };
+            out.edit(tilt(plane, d1, d2), Some(Touch::Tilt), scratch);
+        }
+        Touch::Slice => {
+            let Base::OfRange(fraction) = StepKind::SliceNormal.base().times(adjust.times) else {
+                unreachable!("the compass's slice step is a fraction of the slice step's range")
+            };
+            let amount = fraction * 2.0 * Z0_HALF_RANGE;
+            out.edit(slice(plane, amount), Some(Touch::Slice), scratch);
+        }
+    }
+}
+
+/// Enter on the compass's control `id`, as its click: Tilt or Slice sets the mode.
+pub fn activate(id: &str, scratch: &mut Scratch) {
+    match id {
+        COMPASS_TILT => scratch.compass.mode = Touch::Tilt,
+        COMPASS_SLICE => scratch.compass.mode = Touch::Slice,
+        _ => {}
+    }
 }
 
 /// The compass's margin, in points (a look choice, R-390).
@@ -187,12 +256,11 @@ pub fn square(rect: Rect) -> Rect {
     Rect::from_min_size(rect.min + vec2(MARGIN, MARGIN), vec2(side, side))
 }
 
-/// Draws the compass in `rect`, taking its drags.
+/// Draws the compass in `rect`, taking its drags and its buttons' clicks.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
-    plane: &Plane,
-    lock: &Lock,
+    sim: &SimConfig,
     keyboard: &mut Keyboard,
     scratch: &mut Scratch,
     out: &mut Out,
@@ -205,36 +273,37 @@ pub fn show(
         visuals.widgets.noninteractive.bg_stroke,
         egui::StrokeKind::Inside,
     );
-    keyboard.place(crate::explore::COMPASS, rect);
+    keyboard.place(COMPASS, rect);
     let square = square(rect);
-    let view = View::of(plane);
-    let compass = scratch.compass;
-    let tilted = plane_frame(plane, &view, true);
-    let poly = corners(&compass, square, tilted);
+    keyboard.place(COMPASS_VIEW, square);
+    let plane = &sim.plane;
     let response = ui.interact(square, egui::Id::new("compass cube"), Sense::drag());
     if response.drag_started() {
-        let on_plane = response
-            .interact_pointer_pos()
-            .is_some_and(|p| inside(&poly, p));
-        scratch.compass.drag = Some(if on_plane { Drag::Tilt } else { Drag::Orbit });
+        scratch.compass.drag = Some(Drag {
+            mode: scratch.compass.mode,
+            travel: Vec2::ZERO,
+        });
     }
-    if response.dragged() {
-        let d = response.drag_delta();
-        let (dx, dy) = (
-            f64::from(d.x) * DEGREES_PER_POINT,
-            f64::from(d.y) * DEGREES_PER_POINT,
-        );
-        if d != egui::Vec2::ZERO {
-            match scratch.compass.drag {
-                Some(Drag::Tilt) => out.edit(tilt(plane, dx, -dy), Some(Touch::Tilt), scratch),
-                Some(Drag::Orbit) | None => scratch.compass.orbit(dx, dy),
+    if let Some(drag) = &mut scratch.compass.drag {
+        drag.travel += response.drag_delta();
+    }
+    // The plane as the drag leaves it, turned about the pin while locked, as its edit will be.
+    let pending: Vec<SetField> = scratch
+        .compass
+        .drag
+        .and_then(|d| drag_edit(plane, &d, square))
+        .map(|edit| about_the_pin(vec![edit], sim))
+        .unwrap_or_default();
+    if response.drag_stopped() {
+        if let Some(drag) = scratch.compass.drag.take() {
+            if let Some(edit) = drag_edit(plane, &drag, square) {
+                out.edit(edit, Some(drag.mode), scratch);
             }
         }
     }
-    if response.drag_stopped() {
-        scratch.compass.drag = None;
-    }
-    draw(ui, square, plane, &view, &scratch.compass, lock);
+    let shown = after(plane, &pending);
+    let view = View::of(&shown);
+    draw(ui, square, &shown, &view, scratch.compass.mode, &sim.lock);
     let text = Rect::from_min_max(
         pos2(square.max.x + MARGIN, rect.min.y + MARGIN),
         rect.max - vec2(MARGIN, MARGIN),
@@ -243,15 +312,15 @@ pub fn show(
     column.spacing_mut().item_spacing.y = 4.0;
     column.label(RichText::new(TITLE).heading());
     column.horizontal(|ui| {
-        for (mode, name) in [(Touch::Slice, SLICING), (Touch::Tilt, TILTING)] {
-            let on = scratch.compass.mode == mode;
-            let dot = if on { "●" } else { "○" };
-            let text = RichText::new(format!("{dot} {name}")).monospace();
-            ui.label(if on {
-                text.color(plane_colour(&visuals))
-            } else {
-                text.weak()
-            });
+        for (mode, id, label) in [
+            (Touch::Tilt, COMPASS_TILT, TILT_BUTTON),
+            (Touch::Slice, COMPASS_SLICE, SLICE_BUTTON),
+        ] {
+            let button = ui.selectable_label(scratch.compass.mode == mode, label);
+            keyboard.place_widget(id, &button);
+            if button.clicked() {
+                scratch.compass.mode = mode;
+            }
         }
     });
     column.label(
@@ -259,16 +328,16 @@ pub fn show(
             .monospace()
             .small(),
     );
-    column.label(RichText::new(HINT).weak().small());
+    let hint = match scratch.compass.mode {
+        Touch::Tilt => HINT_TILT,
+        Touch::Slice => HINT_SLICE,
+    };
+    column.label(RichText::new(hint).weak().small());
 }
 
 /// Where the pin goes in the cube's frame: the anchor's chart point `(s, t)` on the tilted plane, whose corners are
 /// `s, t ∈ {0, 1}`; `None` while free or for a degenerate basis.
-pub fn pin(
-    plane: &Plane,
-    lock: &Lock,
-    (c, r1, r2): ([f64; 3], [f64; 3], [f64; 3]),
-) -> Option<[f64; 3]> {
+pub fn pin(plane: &Plane, lock: &Lock, (c, r1, r2): Frame) -> Option<[f64; 3]> {
     if !lock.locked {
         return None;
     }
@@ -278,13 +347,13 @@ pub fn pin(
 }
 
 /// Draws the cube, the plane and, locked, the pin at the anchor, in `square`.
-fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lock: &Lock) {
+fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, mode: Touch, lock: &Lock) {
     let painter = ui.painter_at(square);
     let visuals = ui.visuals();
     let edge = Stroke::new(1.0, visuals.weak_text_color());
     let corner = |i: usize| {
         let bit = |b: usize| if i & (1 << b) == 0 { -1.0 } else { 1.0 };
-        compass.project(square, [bit(0), bit(1), bit(2)])
+        project(square, [bit(0), bit(1), bit(2)])
     };
     for i in 0..8usize {
         for b in 0..3 {
@@ -294,8 +363,8 @@ fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lo
         }
     }
     let blue = plane_colour(visuals);
-    if compass.mode == Touch::Tilt {
-        let mut before = corners(compass, square, plane_frame(plane, view, false));
+    if mode == Touch::Tilt {
+        let mut before = corners(square, plane_frame(plane, view, false));
         before.push(before[0]);
         painter.extend(Shape::dashed_line(
             &before,
@@ -305,7 +374,7 @@ fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lo
         ));
     }
     let frame = plane_frame(plane, view, true);
-    let poly = corners(compass, square, frame);
+    let poly = corners(square, frame);
     painter.add(Shape::convex_polygon(
         poly,
         blue.gamma_multiply(0.35),
@@ -313,7 +382,7 @@ fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lo
     ));
     let label = |p: [f64; 3], text: String| {
         painter.text(
-            compass.project(square, p),
+            project(square, p),
             egui::Align2::CENTER_CENTER,
             text,
             egui::FontId::monospace(10.0),
@@ -324,7 +393,7 @@ fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lo
     label([-1.0, 1.2, -1.0], format!("H {}", AXES[view.b]));
     label([-1.0, -1.0, 1.3], format!("D {}", AXES[view.d]));
     if let Some(at) = pin(plane, lock, frame) {
-        let centre = compass.project(square, at);
+        let centre = project(square, at);
         let head = centre - vec2(0.0, 18.0);
         painter.line_segment([centre, head], Stroke::new(2.0, GOLD));
         painter.circle_filled(centre, 3.0, GOLD);
@@ -337,6 +406,6 @@ fn draw(ui: &Ui, square: Rect, plane: &Plane, view: &View, compass: &Compass, lo
             GOLD,
         );
     } else {
-        painter.circle_filled(compass.project(square, frame.0), 3.0, visuals.text_color());
+        painter.circle_filled(project(square, frame.0), 3.0, visuals.text_color());
     }
 }

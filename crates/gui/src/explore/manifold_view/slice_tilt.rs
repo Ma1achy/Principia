@@ -2,8 +2,8 @@
 //! `z₀`'s component along the hidden slice direction, so moving it slices, a `SetField` on `z₀` (re-based to the anchor
 //! when locked, as Centre z₀'s sliders are); each angle is one `SetField` on the basis, which turns about the centre,
 //! and, locked, about the pin: the app turns every basis edit about it ([`super::about_the_pin`], §G4). The tilts span
-//! `[−90°, 90°]` (chart_decoder_contract Part 4, "Tilt"), the rotation `[−180°, 180°]`. Touching the step shows slicing
-//! on the compass; touching an angle, tilting.
+//! `[−90°, 90°]` (chart_decoder_contract Part 4, "Tilt"), the rotation `[−180°, 180°]`. Touching the step switches the
+//! compass to Slice, and touching an angle to Tilt, its buttons following (R-409).
 
 use eframe::egui::{self, DragValue, Rect, Slider, Ui};
 

@@ -1,21 +1,25 @@
 //! The tree of keyboard scopes (render_gui_spec §G3; GUI_DESIGN_NOTES § "07 Keyboard"; R-390): the big scopes in Tab
 //! order, each with the sub-scopes Enter reaches. Each screen joins the tree through [`ScopeTree::register`], in the
-//! order it draws its scopes; the focus is a path through it, held in `ViewUI` (gui_state_contract §2).
+//! order it draws its scopes; the focus is a path through it, held in `ViewUI` (gui_state_contract §2), with the
+//! keyboard's mode, navigation or interaction (R-409; [`ScopeTree::navigate`]).
 //!
 //! The base steps (REQ-GUI-158) are calibrations proposed here (R-71), used provisionally until the human confirms
-//! them at the M8 gate (R-182): [`StepKind::base`].
+//! them at the M8 gate (R-182): [`StepKind::base`]. The compass's slice-mode step (REQ-GUI-184) is proposed by
+//! TASK-M6-31 and used provisionally until the M8 gate too.
+
+use engine::contract::view_ui::{Focus, KeyMode};
 
 use crate::keyboard::keymap::{Command, Direction};
 
 /// A scope's id: unique in its tree, and what `ViewUI`'s focus path holds.
 pub type ScopeId = &'static str;
 
-/// What the arrows do while a scope has focus.
+/// What the arrows do on a scope in interaction mode; in navigation mode they always move between siblings.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Arrows {
-    /// Move between the scope and its siblings, stopping at either end.
+    /// Nothing: the scope has no interaction that takes them.
     Siblings,
-    /// Adjust the focused value by steps of this kind.
+    /// Adjust the focused value by steps of this kind; Enter on it starts interaction mode.
     Adjust(StepKind),
 }
 
@@ -44,6 +48,9 @@ pub struct Scope {
     /// Whether it is a menu: its sub-scopes are the entries of a popup drawn from its widget, open while the focus is
     /// in it.
     pub menu: bool,
+    /// Whether it is a text field: Enter on it starts typing, interaction mode, in which every key but Esc, Enter and
+    /// Tab goes to the field (R-409 G4, G5).
+    pub text: bool,
 }
 
 impl Scope {
@@ -56,6 +63,7 @@ impl Scope {
             activates: false,
             ring: Ring::Inside,
             menu: false,
+            text: false,
         }
     }
 
@@ -80,7 +88,15 @@ impl Scope {
         }
     }
 
-    /// A value the arrows adjust by steps of `kind`.
+    /// A text field: Enter on it starts typing (R-409 G4).
+    pub const fn text(id: ScopeId, label: &'static str) -> Self {
+        Self {
+            text: true,
+            ..Self::group(id, label)
+        }
+    }
+
+    /// A value the arrows adjust by steps of `kind`, in interaction mode.
     pub const fn value(id: ScopeId, label: &'static str, kind: StepKind) -> Self {
         Self {
             arrows: Arrows::Adjust(kind),
@@ -108,10 +124,10 @@ pub enum StepKind {
     ZoomLog2,
     /// Figure's arrows: pan the view.
     Pan,
-    /// Compass's arrows: tilt the slice plane.
+    /// Compass's arrows in tilt mode: tilt the slice plane.
     Tilt,
-    /// Compass's Shift+arrows: orbit the cube.
-    Orbit,
+    /// Compass's arrows in slice mode: move the slice plane along its normal (R-409 F3; REQ-GUI-184).
+    SliceNormal,
     /// Time's ← →: step the playhead.
     TimeStep,
 }
@@ -143,19 +159,21 @@ impl Base {
 
 impl StepKind {
     /// The base step, before Shift's ×10 or Alt's ×0.1: proposed, R-71 (REQ-GUI-158), the reasoning in the PR of
-    /// TASK-M6-25 and the human's confirmation at the M8 gate to come.
+    /// TASK-M6-25 and the human's confirmation at the M8 gate to come. `SliceNormal`'s is REQ-GUI-184's, proposed by
+    /// TASK-M6-31 and used provisionally (R-182) until the human confirms it at the M8 gate.
     pub const fn base(self) -> Base {
         match self {
             // A hundredth of the range: Shift crosses a tenth, Alt a thousandth.
             StepKind::Bounded | StepKind::TimeStep => Base::OfRange(0.01),
+            // A hundredth of the slice step's range, `[−1, 1]`: untilted, one press moves the slice as far as one
+            // press on the slice step's slider does.
+            StepKind::SliceNormal => Base::OfRange(0.01),
             // A degree: Shift ten, Alt a tenth.
             StepKind::Angle | StepKind::Tilt => Base::Degrees(1.0),
             // A quarter octave: four presses double the zoom, Shift is 2.5 octaves.
             StepKind::ZoomLog2 => Base::Log2(0.25),
             // A twentieth of the view: Shift moves half a view, keeping half of it in sight.
             StepKind::Pan => Base::OfView(0.05),
-            // Five degrees: a turn of the cube in 72 presses, 7.2 with Shift.
-            StepKind::Orbit => Base::Degrees(5.0),
         }
     }
 }
@@ -171,8 +189,6 @@ pub struct Adjust {
     pub times: f64,
     /// The arrow pressed: a value with two axes (the figure's pan, the compass's tilt) reads its axis from it.
     pub direction: Direction,
-    /// Whether Shift was held: the compass orbits on Shift+arrows (render_gui_spec §G3).
-    pub shift: bool,
 }
 
 impl Adjust {
@@ -187,7 +203,7 @@ impl Adjust {
 pub enum Outcome {
     /// Nothing.
     None,
-    /// The focus moved.
+    /// The focus moved, or its mode changed.
     Moved,
     /// Enter activated this control.
     Activate(ScopeId),
@@ -315,28 +331,24 @@ impl ScopeTree {
             .collect()
     }
 
-    /// Runs `command` on the focus `path`, the steps `multiplier` times the base, a focused value adjusting. A path
-    /// the tree no longer holds (the mode switched) is cut back to its valid part first.
-    pub fn navigate(&self, path: &mut Vec<String>, command: Command, multiplier: f64) -> Outcome {
-        self.navigate_in(path, command, multiplier, false, &mut false)
-    }
-
-    /// [`Self::navigate`], Shift held or not, with the state of a focused value's arrows: a value reached by Enter
-    /// from its parent adjusts with the arrows; Enter on it switches them to moving between its siblings, landing on
-    /// each in that state, and Enter on one switches it back (a choice of R-369: §G3 gives the arrows both jobs, and
-    /// a section of several values needs both). `browsing` holds that state; Tab, Esc and Enter into a scope reset it.
-    pub fn navigate_in(
-        &self,
-        path: &mut Vec<String>,
-        command: Command,
-        multiplier: f64,
-        shift: bool,
-        browsing: &mut bool,
-    ) -> Outcome {
-        path.truncate(self.valid_prefix(path));
-        if matches!(command, Command::Next | Command::Previous | Command::Back) {
-            *browsing = false;
+    /// Runs `command` on `focus`, in its mode (render_gui_spec §G3, "Two modes"; R-409), the steps `multiplier` times
+    /// the base. A path the tree no longer holds (the mode switched) is cut back to its valid part first, in
+    /// navigation mode.
+    ///
+    /// - Tab and Shift+Tab, from either mode, land on the next or previous big scope itself, in navigation mode.
+    /// - Enter in navigation mode: on a scope, into it, on its first element; on a control, its click; on a value (the
+    ///   Figure's pan, the compass, a slider) or a text field, interaction mode; on anything else, the Legend
+    ///   among them, nothing. In interaction mode: back to navigation mode on the same element.
+    /// - Esc in interaction mode: back to navigation mode on the same element; in navigation mode, up one scope.
+    /// - The arrows in navigation mode move between siblings, stopping at either end (on a big scope, between the big
+    ///   scopes in Tab order); in interaction mode they adjust the focused value.
+    pub fn navigate(&self, focus: &mut Focus, command: Command, multiplier: f64) -> Outcome {
+        let valid = self.valid_prefix(&focus.path);
+        if valid < focus.path.len() || valid == 0 {
+            focus.path.truncate(valid);
+            focus.mode = KeyMode::Navigation;
         }
+        let interacting = focus.mode == KeyMode::Interaction;
         match command {
             Command::Next | Command::Previous => {
                 let bigs = self.children(None);
@@ -344,7 +356,8 @@ impl ScopeTree {
                 if n == 0 {
                     return Outcome::None;
                 }
-                let at = path
+                let at = focus
+                    .path
                     .first()
                     .and_then(|id| bigs.iter().position(|b| b == id));
                 let to = match (at, command) {
@@ -353,66 +366,74 @@ impl ScopeTree {
                     (Some(i), Command::Next) => (i + 1) % n,
                     (Some(i), _) => (i + n - 1) % n,
                 };
-                *path = vec![bigs[to].to_owned()];
+                focus.path = vec![bigs[to].to_owned()];
+                focus.mode = KeyMode::Navigation;
                 Outcome::Moved
             }
             Command::Enter => {
-                let Some(id) = path.last() else {
+                let Some(id) = focus.path.last() else {
                     return Outcome::None;
                 };
+                if interacting {
+                    focus.mode = KeyMode::Navigation;
+                    return Outcome::Moved;
+                }
                 let scope = *self.get(id).expect("a valid path");
                 if let Some(first) = self.children(Some(id)).first() {
-                    path.push((*first).to_owned());
-                    *browsing = false;
+                    focus.path.push((*first).to_owned());
                     Outcome::Moved
                 } else if scope.activates {
                     Outcome::Activate(scope.id)
-                } else if matches!(scope.arrows, Arrows::Adjust(_)) {
-                    *browsing = !*browsing;
-                    Outcome::None
+                } else if scope.text || matches!(scope.arrows, Arrows::Adjust(_)) {
+                    focus.mode = KeyMode::Interaction;
+                    Outcome::Moved
                 } else {
                     Outcome::None
                 }
             }
-            Command::Back => match path.pop() {
+            Command::Back if interacting => {
+                focus.mode = KeyMode::Navigation;
+                Outcome::Moved
+            }
+            Command::Back => match focus.path.pop() {
                 Some(_) => Outcome::Moved,
                 None => Outcome::None,
             },
             Command::Arrow(direction) => {
-                let Some(id) = path.last().cloned() else {
+                let Some(id) = focus.path.last().cloned() else {
                     return Outcome::None;
                 };
                 let scope = *self.get(&id).expect("a valid path");
-                match scope.arrows {
-                    Arrows::Adjust(kind) if !*browsing => Outcome::Adjust(Adjust {
-                        scope: scope.id,
-                        kind,
-                        times: direction.sign() * multiplier,
-                        direction,
-                        shift,
-                    }),
-                    _ => {
-                        let parent = path.len().checked_sub(2).map(|i| path[i].as_str());
-                        let siblings = self.children(parent);
-                        let i = siblings
-                            .iter()
-                            .position(|s| *s == id)
-                            .expect("a valid path");
-                        let to = match direction {
-                            Direction::Up | Direction::Left => i.checked_sub(1),
-                            Direction::Down | Direction::Right => {
-                                Some(i + 1).filter(|j| *j < siblings.len())
-                            }
-                        };
-                        match to {
-                            Some(j) => {
-                                *path.last_mut().expect("non-empty") = siblings[j].to_owned();
-                                *browsing = true;
-                                Outcome::Moved
-                            }
-                            None => Outcome::None,
-                        }
+                if interacting {
+                    return match scope.arrows {
+                        Arrows::Adjust(kind) => Outcome::Adjust(Adjust {
+                            scope: scope.id,
+                            kind,
+                            times: direction.sign() * multiplier,
+                            direction,
+                        }),
+                        Arrows::Siblings => Outcome::None,
+                    };
+                }
+                let path = &mut focus.path;
+                let parent = path.len().checked_sub(2).map(|i| path[i].as_str());
+                let siblings = self.children(parent);
+                let i = siblings
+                    .iter()
+                    .position(|s| *s == id)
+                    .expect("a valid path");
+                let to = match direction {
+                    Direction::Up | Direction::Left => i.checked_sub(1),
+                    Direction::Down | Direction::Right => {
+                        Some(i + 1).filter(|j| *j < siblings.len())
                     }
+                };
+                match to {
+                    Some(j) => {
+                        *path.last_mut().expect("non-empty") = siblings[j].to_owned();
+                        Outcome::Moved
+                    }
+                    None => Outcome::None,
                 }
             }
             Command::Shortcuts => Outcome::None,

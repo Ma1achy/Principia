@@ -27,17 +27,17 @@
     },
     {
       "name": "mock_compass_slice",
-      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up"] },
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "enter", "arrow_right", "enter"] },
       "artboard": "docs/gui/design/01_main.png"
     },
     {
       "name": "mock_compass_tilt",
-      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "enter", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up"] },
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "enter", "arrow_left", "enter"] },
       "artboard": "docs/gui/design/01_main.png"
     },
     {
       "name": "mock_axis_labels",
-      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "shift_arrow_right", "escape"] },
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "enter", "shift_arrow_right", "escape", "escape"] },
       "artboard": "docs/gui/design/01_main.png"
     }
   ]

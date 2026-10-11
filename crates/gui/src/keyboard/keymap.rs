@@ -29,15 +29,16 @@ impl Direction {
 /// A global command.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Command {
-    /// Tab: the next big scope.
+    /// Tab: the next big scope, in navigation mode.
     Next,
-    /// Shift+Tab: the previous big scope.
+    /// Shift+Tab: the previous big scope, in navigation mode.
     Previous,
-    /// Enter: into the focused scope.
+    /// Enter: in navigation mode, into a scope, a control's click or interaction with an element; in interaction
+    /// mode, back to navigation mode.
     Enter,
-    /// Esc: back out one level.
+    /// Esc: in interaction mode, back to navigation mode; in navigation mode, up one scope.
     Back,
-    /// An arrow: between siblings, or adjust a focused value.
+    /// An arrow: in navigation mode between siblings; in interaction mode, adjust the focused element.
     Arrow(Direction),
     /// `?`: the shortcuts, over everything.
     Shortcuts,
@@ -76,6 +77,15 @@ pub fn multiplier(modifiers: Modifiers) -> f64 {
     shift * alt
 }
 
+/// Whether `command` is one the layer keeps while a text field is typed in: Esc and Enter end the typing, back to
+/// navigation mode, and Tab and Shift+Tab move on (R-409 G4); every other key goes to the field.
+pub fn ends_typing(command: Command) -> bool {
+    matches!(
+        command,
+        Command::Back | Command::Enter | Command::Next | Command::Previous
+    )
+}
+
 /// Whether a held key repeats its command: Tab, Shift+Tab and the arrows do; Enter, Esc and `?` act once a press.
 pub fn repeats(command: Command) -> bool {
     matches!(
@@ -87,17 +97,27 @@ pub fn repeats(command: Command) -> bool {
 /// The `?` overlay's global rows: render_gui_spec §G3's table, key and action, then F3, which hides the layer
 /// (§G1, §G2's "F3 hide"). A screen adds its own rows through its tree's registration
 /// ([`ScopeTree::register_shortcut`](crate::keyboard::scopes::ScopeTree::register_shortcut)).
-pub const SHORTCUTS: [(&str, &str); 9] = [
+pub const SHORTCUTS: [(&str, &str); 10] = [
     (
         "Tab / Shift+Tab",
-        "next / previous big scope, in the numbered order",
+        "next / previous big scope, in the numbered order, in navigation mode",
     ),
-    ("Enter", "into the focused scope"),
-    ("Esc", "back out one level"),
-    ("arrows", "between siblings; adjust a focused value"),
-    ("Shift · Alt", "×10 · ×0.1 steps"),
+    (
+        "Enter",
+        "into a scope; interact with an element (blue); a button's click; again, back to navigating (orange)",
+    ),
+    ("Esc", "interacting: back to navigating; navigating: up one scope"),
+    (
+        "arrows",
+        "navigating: between siblings; interacting: adjust the element (they need Enter)",
+    ),
+    ("Shift · Alt", "×10 · ×0.1 steps, the compass included"),
+    (
+        "letters, Space",
+        "a scope's shortcuts, in either mode, whenever the focus is in it",
+    ),
     ("held keys", "delay, then repeat (the DAS / ARR model)"),
-    ("Ctrl+Z", "undo, from the contract's history"),
-    ("?", "shortcuts, over everything"),
+    ("Ctrl+Z", "undo, from the contract's history, in either mode"),
+    ("?", "shortcuts, over everything, in either mode"),
     ("F3", "hide / show the egui layer"),
 ];
