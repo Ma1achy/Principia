@@ -69,7 +69,8 @@ impl ScalarField {
             .ok_or_else(|| format!("the fragment has no read of `{field}`"))?;
         let is_float = !matches!(e.ty, FieldType::UBits);
         let value = match (&read, is_float) {
-            (catalogue::Read::Member { wgsl: "bool", .. }, _) | (catalogue::Read::Vector, _) => {
+            (catalogue::Read::Member { wgsl: "bool", .. }, _)
+            | (catalogue::Read::Vector { .. }, _) => {
                 return Err(format!("`{field}` is not a scalar field"))
             }
             (_, true) => read.wgsl(e.name),

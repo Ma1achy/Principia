@@ -1,0 +1,1 @@
+{"render": {"harness": "generated-length", "width": 64, "height": 8}, "reference": "reference.png", "tolerance": "REQ-VAL-138", "expect": "pass", "lines": {"row_4": {"from": [0, 4], "to": [63, 4]}}}

@@ -14,6 +14,9 @@
 //! - REQ-PAY-031: the current drifts `energy_drift = H(r, p) − E_0` and `Lz_drift = L_z(r, p) − Lz_0`, computed at read
 //!   (payload §5; dd_generation_root §3.8), against hand-computed configurations and an f64 host reference, and the
 //!   two targets' agreement on them on the GPU (`current_drift`).
+//! - REQ-VAL-010's `n`: the read side's shape point, `kernel::shape::shape` in Rust and its WGSL transcription, each
+//!   within a running error bound of an f64 reference of the same map, and the two within the sum on the GPU
+//!   (`shape_twin`; TASK-M1-12).
 //!
 //! Each check takes the read as a function, so its control runs the same check on a read with one fault and shows it
 //! fails (pitfalls §9).
@@ -1299,5 +1302,216 @@ negative_control!(
             })
         },
         &drift_parity_cases(1)
+    )
+);
+
+// ── shape_twin: the read side's `n`, Rust and WGSL (dd_generation_root §3.8; TASK-M1-12) ─────────────────────────
+
+/// `derived_entry.wgsl`'s selectors of `n`'s three components.
+const N_MEMBERS: [u32; 3] = [28, 29, 30];
+
+/// A value and a first-order bound on its f32 evaluation's error, propagated operation by operation (Higham, *Accuracy
+/// and Stability of Numerical Algorithms*, §3.3, a running error bound): each operation adds its inputs' errors, weighted
+/// by its partial derivatives, and its own rounding at WGSL's stated accuracy, the looser target's (WGSL § "Floating
+/// Point Accuracy", as [`U`]'s note): `+ − ×` within `U`, `x / y` within `5U` and `sqrt` within `9U`, relatively.
+#[derive(Clone, Copy, Debug)]
+struct Tracked {
+    v: f64,
+    e: f64,
+}
+
+impl Tracked {
+    /// An f32 input, exact.
+    fn exact(x: f32) -> Tracked {
+        Tracked {
+            v: f64::from(x),
+            e: 0.0,
+        }
+    }
+
+    fn add(self, o: Tracked) -> Tracked {
+        let v = self.v + o.v;
+        Tracked {
+            v,
+            e: self.e + o.e + U * v.abs(),
+        }
+    }
+
+    fn sub(self, o: Tracked) -> Tracked {
+        self.add(Tracked { v: -o.v, e: o.e })
+    }
+
+    fn mul(self, o: Tracked) -> Tracked {
+        let v = self.v * o.v;
+        Tracked {
+            v,
+            e: o.v.abs() * self.e + self.v.abs() * o.e + self.e * o.e + U * v.abs(),
+        }
+    }
+
+    /// The quotient's first-order bound, with `o`'s error well below `|o|`, as every case's is.
+    fn div(self, o: Tracked) -> Tracked {
+        let v = self.v / o.v;
+        Tracked {
+            v,
+            e: (self.e + v.abs() * o.e) / (o.v.abs() - o.e) + 5.0 * U * v.abs(),
+        }
+    }
+
+    fn sqrt(self) -> Tracked {
+        let v = self.v.sqrt();
+        Tracked {
+            v,
+            e: self.e / (2.0 * v) + 9.0 * U * v,
+        }
+    }
+}
+
+/// The shape map of `kernel::shape::shape` (integrator dd §3.7; chart_reference §3.1), operation for operation, in f64
+/// with each operation's error bound ([`Tracked`]): each component's reference value and the bound an f32 evaluation
+/// in either target keeps to it.
+fn shape_reference(r: &[[f32; 2]; 3], m: &[f32; 3]) -> [Tracked; 3] {
+    let x = |i: usize, j: usize| Tracked::exact(r[i][j]);
+    let m = m.map(Tracked::exact);
+    let two = Tracked::exact(2.0);
+    let m01 = m[0].add(m[1]);
+    let mu_rho = m[0].mul(m[1]).div(m01);
+    let mu_lambda = m[2].mul(m01);
+    let rho = [x(1, 0).sub(x(0, 0)), x(1, 1).sub(x(0, 1))];
+    let r01 = [0, 1].map(|j| m[0].mul(x(0, j)).add(m[1].mul(x(1, j))).div(m01));
+    let lambda = [x(2, 0).sub(r01[0]), x(2, 1).sub(r01[1])];
+    let a = mu_rho.mul(rho[0].mul(rho[0]).add(rho[1].mul(rho[1])));
+    let b = mu_lambda.mul(lambda[0].mul(lambda[0]).add(lambda[1].mul(lambda[1])));
+    let s = mu_rho.mul(mu_lambda).sqrt();
+    let p = s.mul(rho[0].mul(lambda[0]).add(rho[1].mul(lambda[1])));
+    let q = s.mul(rho[0].mul(lambda[1]).sub(rho[1].mul(lambda[0])));
+    let i = a.add(b);
+    [a.sub(b).div(i), two.mul(p).div(i), two.mul(q).div(i)]
+}
+
+/// Each case's `n` on the GPU, through the WGSL read side's `sample_read` at the full tier: its three components' bits.
+fn wgsl_n(gpu: &GpuHarness, cases: &[Case]) -> Vec<[u32; 3]> {
+    let (mut sel, mut ftle, mut word, mut args) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+    for (i, c) in (0u32..).zip(cases) {
+        sel.extend(N_MEMBERS.map(|m| i << 8 | m));
+        let s = &c.state;
+        ftle.extend(words!(
+            SimStateFTLE,
+            s,
+            r,
+            p,
+            r_sh,
+            p_sh,
+            S,
+            theta,
+            mean_y,
+            C_ty,
+            E_0,
+            Lz_0,
+            packed_a,
+            packed_b,
+            times,
+            total_substeps,
+            closure_min
+        ));
+        word.extend(c.word);
+        let p = &c.params;
+        args.extend([
+            0,
+            c.spread.to_bits(),
+            p.dt_macro.to_bits(),
+            p.delta_0.to_bits(),
+        ]);
+        args.extend([p.n_renorm, p.horizon_steps, 0, 0]);
+        args.extend(c.masses.map(f32::to_bits));
+        args.push(0);
+    }
+    let out = gpu.run_wgsl(&wgsl_module(), "t_derived", &[&sel, &args, &ftle, &word]);
+    out.chunks(3).map(|c| [c[0], c[1], c[2]]).collect()
+}
+
+/// Each case's `n` read through `read` and through the WGSL read side: each component of each within its bound of the
+/// f64 reference ([`shape_reference`]), and the two within the sum of their bounds. The bound is first-order; the
+/// slack, 1% and `U`, covers its second-order terms.
+fn check_shape_twin(gpu: &GpuHarness, read: Read, cases: &[Case]) {
+    for (c, gpu_n) in cases.iter().zip(wgsl_n(gpu, cases)) {
+        let cpu_n = read(c).n;
+        let want = shape_reference(&c.state.r, &c.masses);
+        for k in 0..3 {
+            let bound = 1.01 * want[k].e + U;
+            let (a, g) = (f64::from(cpu_n[k]), f64::from(f32::from_bits(gpu_n[k])));
+            assert!(
+                (a - want[k].v).abs() <= bound,
+                "n[{k}]: Rust {a} is {} from the reference {}, past its bound {bound}, for {c:?}",
+                (a - want[k].v).abs(),
+                want[k].v
+            );
+            assert!(
+                (g - want[k].v).abs() <= bound,
+                "n[{k}]: WGSL {g} is {} from the reference {}, past its bound {bound}, for {c:?}",
+                (g - want[k].v).abs(),
+                want[k].v
+            );
+            assert!(
+                (a - g).abs() <= 2.0 * bound,
+                "n[{k}]: Rust {a} and WGSL {g} differ by more than {}",
+                2.0 * bound
+            );
+        }
+    }
+}
+
+/// The random cases at the full tier, and two hand configurations: the equilateral triangle 0 → 1 → 2 anticlockwise,
+/// `L⁺` at `(0, 0, 1)`, and bodies 0 and 1 coincident, the collision `(−1, 0, 0)` (integrator dd §3.7), with equal
+/// masses.
+fn shape_cases(seed: u64) -> Vec<Case> {
+    let mut out = parity_cases(seed);
+    let h = 3f32.sqrt() / 2.0;
+    for r in [
+        [[0.0, 0.0], [1.0, 0.0], [0.5, h]],
+        [[0.25, 0.5], [0.25, 0.5], [-1.0, 0.75]],
+    ] {
+        let mut c = marching(40, 50.0);
+        c.state.r = r;
+        c.masses = [1.0 / 3.0; 3];
+        out.push(c);
+    }
+    out
+}
+
+#[test]
+fn shape_twin_rust_and_wgsl_agree() {
+    let gpu = GpuHarness::new().expect("a GPU device");
+    let hand = shape_cases(0);
+    let [.., lagrange, collision] = &hand[..] else {
+        panic!("the two hand cases");
+    };
+    for (c, want) in [(lagrange, [0.0, 0.0, 1.0]), (collision, [-1.0, 0.0, 0.0])] {
+        let n = generated_read(c).n;
+        for k in 0..3 {
+            assert!(
+                (f64::from(n[k]) - want[k]).abs() <= 1e-6,
+                "n {n:?} is not the landmark {want:?}"
+            );
+        }
+    }
+    prop::run(&any::<u64>(), |seed| {
+        check_shape_twin(&gpu, generated_read, &shape_cases(seed));
+        Ok(())
+    });
+}
+
+negative_control!(
+    shape_twin_rust_and_wgsl_agree,
+    "a Rust read whose n has its w component negated (the pre-R-14 cross) must fail",
+    expected = "n[2]: Rust",
+    check_shape_twin(
+        &GpuHarness::new().expect("a GPU device"),
+        |c| {
+            let mut s = generated_read(c);
+            s.n[2] = -s.n[2];
+            s
+        },
+        &shape_cases(1)
     )
 );
