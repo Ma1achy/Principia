@@ -21,9 +21,11 @@ pub mod contract {
     pub mod conformance;
     pub mod fast_math;
     pub mod interface;
+    pub mod legend;
     pub mod log;
     pub mod profile;
     pub mod render_state;
+    pub mod sample;
     pub mod set_field;
     pub mod sim_config;
     pub mod snapshot;

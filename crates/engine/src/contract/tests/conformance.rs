@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::contract::conformance::{self, CASES};
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
-use crate::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use crate::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
@@ -34,15 +34,16 @@ fn store(t: f64) -> StateStore {
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
-            horizon: Horizon {},
+            horizon: Horizon { t: 0.0 },
             collision: Collision {},
             quality: Quality {},
         },
         RenderState {
             stain_graph: StainGraph {},
-            overlays: Overlays {},
+            overlays: Overlays::default(),
             palette: Palette {},
             playhead: Playhead { t },
+            hover: Hover::default(),
         },
     )
 }
@@ -65,8 +66,8 @@ fn check_conforms<E: EngineInterface>(make: impl FnMut() -> E) {
 fn conformance_real_engine_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        5,
-        "the suite's four state-semantics cases (RQ-254) and the navigation paths' (R-390)"
+        6,
+        "the suite's four state-semantics cases (RQ-254), the navigation paths' and the overlay set's and hover's (R-390)"
     );
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.
@@ -99,6 +100,10 @@ enum Rule {
     DropBasis,
     /// A SetField on the lock keeps the lock off, writing its anchor alone.
     LockStaysOff,
+    /// A SetField on the overlay set is dropped.
+    DropOverlays,
+    /// A hover off the figure is dropped, so the last cursor stays.
+    HoverStays,
 }
 
 impl EngineInterface for Broken {
@@ -114,6 +119,11 @@ impl EngineInterface for Broken {
             (Rule::Drop, _)
                 | (Rule::DropZ0, Edit::Sim(SimField::Z0(_)))
                 | (Rule::DropBasis, Edit::Sim(SimField::Basis { .. }))
+                | (Rule::DropOverlays, Edit::Render(RenderField::Overlays(_)))
+                | (
+                    Rule::HoverStays,
+                    Edit::Render(RenderField::Hover(Hover { at: None }))
+                )
         );
         if !dropped {
             self.store.set_field(edit);
@@ -183,7 +193,56 @@ fn conformance_non_conforming_double_fails_naming_the_case() {
     for rule in [Rule::DropZ0, Rule::DropBasis, Rule::LockStaysOff] {
         check_names(rule, NAVIGATION);
     }
+    for rule in [Rule::DropOverlays, Rule::HoverStays, Rule::NoHistory] {
+        check_names(rule, OVERLAY_AND_HOVER);
+    }
 }
+
+/// The overlay set's and the hover's case.
+const OVERLAY_AND_HOVER: &str = "overlay_and_hover_edits_show";
+
+/// The overlay and hover case holds from a set with tile bounds on and a cursor on the figure, and a double that drops
+/// overlay edits fails it there too.
+#[test]
+fn conformance_overlay_and_hover_case_holds_from_any_state() {
+    let make = || {
+        let mut store = store(0.0);
+        store.set_field(SetField {
+            edit: Edit::Render(RenderField::Overlays(Overlays {
+                tile_bounds: true,
+                grid: true,
+                ..Overlays::default()
+            })),
+            no_history: true,
+        });
+        store.set_field(SetField {
+            edit: Edit::Render(RenderField::Hover(Hover {
+                at: Some([0.5, 0.5]),
+            })),
+            no_history: true,
+        });
+        let _ = store.snapshot();
+        store
+    };
+    check_conforms(make);
+    check_names_with(
+        || Broken {
+            store: make(),
+            rule: Rule::DropOverlays,
+        },
+        OVERLAY_AND_HOVER,
+    );
+}
+
+validation::negative_control!(
+    conformance_overlay_and_hover_case_holds_from_any_state,
+    "a double dropping overlay edits must fail the overlay and hover case",
+    expected = "conformance case `overlay_and_hover_edits_show` failed",
+    check_conforms(|| Broken {
+        store: store(0.0),
+        rule: Rule::DropOverlays,
+    })
+);
 
 /// The navigation paths' case.
 const NAVIGATION: &str = "navigation_edits_show_and_undo";
@@ -466,4 +525,100 @@ validation::negative_control!(
     "a severity named by its source's name must be rejected",
     expected = "the severities' console names",
     check_names_shown(|_| "contract", Source::name)
+);
+
+/// The `contract` messages of `edits`, applied in turn to a fresh store.
+fn messages(edits: Vec<SetField>) -> Vec<String> {
+    let mut store = store(0.0);
+    for edit in edits {
+        store.set_field(edit);
+    }
+    store
+        .snapshot()
+        .log
+        .into_iter()
+        .map(|e| e.message)
+        .collect()
+}
+
+/// The store logs an overlay edit by the overlays on, in the set's order, and a hover by its cursor or "none", marked
+/// "(no history)" (render_gui_spec §G12).
+fn check_overlay_and_hover_messages(all: Overlays, at: [f64; 2]) {
+    let render = |field, no_history| SetField {
+        edit: Edit::Render(field),
+        no_history,
+    };
+    let got = messages(vec![
+        render(RenderField::Overlays(all), false),
+        render(RenderField::Hover(Hover { at: Some(at) }), true),
+        render(RenderField::Hover(Hover { at: None }), true),
+    ]);
+    let names = "tile_bounds, depth_colouring, priority_heatmap, refine_flagged, split_merge_activity, \
+                 substep_density, substep_cap_hits, nan_invalid_pixels, energy_drift, forbidden_region, grid, \
+                 burrau_lattice, class_edges, t_end_contours";
+    assert_eq!(
+        got,
+        [
+            format!("SetField Overlays [] → [{names}]"),
+            "SetField Hover.at none → (0.25, 0.5) (no history)".to_owned(),
+            "SetField Hover.at (0.25, 0.5) → none (no history)".to_owned(),
+        ]
+    );
+}
+
+/// Every overlay on.
+fn all_on() -> Overlays {
+    Overlays {
+        tile_bounds: true,
+        depth_colouring: true,
+        priority_heatmap: true,
+        refine_flagged: true,
+        split_merge_activity: true,
+        substep_density: true,
+        substep_cap_hits: true,
+        nan_invalid_pixels: true,
+        energy_drift: true,
+        forbidden_region: true,
+        grid: true,
+        burrau_lattice: true,
+        class_edges: true,
+        t_end_contours: true,
+    }
+}
+
+#[test]
+fn store_logs_overlay_and_hover_edits() {
+    check_overlay_and_hover_messages(all_on(), [0.25, 0.5]);
+    // One overlay left off: its name is missing from the line.
+    for i in 0..14 {
+        let mut one_off = all_on();
+        let flags = [
+            &mut one_off.tile_bounds,
+            &mut one_off.depth_colouring,
+            &mut one_off.priority_heatmap,
+            &mut one_off.refine_flagged,
+            &mut one_off.split_merge_activity,
+            &mut one_off.substep_density,
+            &mut one_off.substep_cap_hits,
+            &mut one_off.nan_invalid_pixels,
+            &mut one_off.energy_drift,
+            &mut one_off.forbidden_region,
+            &mut one_off.grid,
+            &mut one_off.burrau_lattice,
+            &mut one_off.class_edges,
+            &mut one_off.t_end_contours,
+        ];
+        *flags.into_iter().nth(i).expect("fourteen") = false;
+        let failed =
+            std::panic::catch_unwind(|| check_overlay_and_hover_messages(one_off, [0.25, 0.5]))
+                .is_err();
+        assert!(failed, "overlay {i} off still logged as on");
+    }
+}
+
+validation::negative_control!(
+    store_logs_overlay_and_hover_edits,
+    "a cursor elsewhere must not log as (0.25, 0.5)",
+    expected = "assertion",
+    check_overlay_and_hover_messages(all_on(), [0.5, 0.25])
 );

@@ -6,7 +6,7 @@
 
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
-use crate::contract::render_state::Playhead;
+use crate::contract::render_state::{Hover, Overlays, Playhead};
 use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
 use crate::contract::sim_config::{Latent, Lock};
 use crate::contract::snapshot::{History, Snapshot};
@@ -40,6 +40,10 @@ pub const CASES: &[Case] = &[
     Case {
         name: "navigation_edits_show_and_undo",
         check: navigation_edits_show_and_undo,
+    },
+    Case {
+        name: "overlay_and_hover_edits_show",
+        check: overlay_and_hover_edits_show,
     },
 ];
 
@@ -233,4 +237,55 @@ fn navigation_edits_show_and_undo(engine: &mut dyn EngineInterface) -> Result<()
     )?;
     engine.undo();
     expect("z₀ after undo", engine.snapshot().sim.plane.z0, plane.z0)
+}
+
+/// The overlay set and the hover (R-390, "Contract fields"): an overlay toggle shows in the next snapshot, enters the
+/// history and is undone (R-69); a hover, marked "no history", shows and leaves the history as it was (R-101), and
+/// moving off the figure clears it.
+fn overlay_and_hover_edits_show(engine: &mut dyn EngineInterface) -> Result<(), String> {
+    let first = engine.snapshot();
+    let (overlays, h0) = (first.render.overlays.clone(), first.history);
+    let toggled = Overlays {
+        tile_bounds: !overlays.tile_bounds,
+        ..overlays.clone()
+    };
+    engine.set_field(SetField {
+        edit: Edit::Render(RenderField::Overlays(toggled.clone())),
+        no_history: false,
+    });
+    let after = engine.snapshot();
+    expect(
+        "the overlay set after its SetField",
+        &after.render.overlays,
+        &toggled,
+    )?;
+    expect(
+        "the undo depth after an overlay toggle",
+        after.history.undo_depth,
+        h0.undo_depth + 1,
+    )?;
+    let hover = |at| SetField {
+        edit: Edit::Render(RenderField::Hover(Hover { at })),
+        no_history: true,
+    };
+    engine.set_field(hover(Some([0.25, 0.75])));
+    let hovered = engine.snapshot();
+    expect(
+        "the hover after its SetField",
+        hovered.render.hover.at,
+        Some([0.25, 0.75]),
+    )?;
+    expect("the history after a hover", hovered.history, after.history)?;
+    engine.set_field(hover(None));
+    expect(
+        "the hover off the figure",
+        engine.snapshot().render.hover.at,
+        None,
+    )?;
+    engine.undo();
+    expect(
+        "the overlay set after undo",
+        &engine.snapshot().render.overlays,
+        &overlays,
+    )
 }
