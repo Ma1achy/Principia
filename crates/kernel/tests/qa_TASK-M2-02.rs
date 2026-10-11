@@ -13,6 +13,13 @@
 //!   `z_μ` with saturation, over simplex points set directly (the ternary plot, the δm strip), and at `ε` and its
 //!   neighbours; tagged outputs keep the link's masses, finite, and their configuration decodes finite with `I = 1`;
 //!   `stick_breaking`'s `m₂ → 1` corner reaches the tag from finite `z`; `softmax_tanh` stays above its `M₀₁` floor.
+//!   ε is the chart constant `ε_M01` read from dd_decoder §3.1's text (REQ-DEC-039's proposal, REQ-DEC-009), never
+//!   from the block: the block's `m01_epsilon` must equal it, and every tag is checked against it. The corner's
+//!   pile-up `ε_μ − ε_μ²/4` (dd_generation_root §3.9) sits at least tenfold below ε and outside the f32 rounding band
+//!   (§3.1, "a tenfold margin at either precision"); on the diagonal the onset of the tag, at f64 and at f32, is where
+//!   §3.9's `stick_breaking` formula, evaluated here in f64, crosses ε, within that precision's rounding band
+//!   ([`K_SB`]); and over `z_μ ∈ [3, 20]²` the f64 and f32 blocks give the same tag wherever the formula's `M₀₁` lies
+//!   outside the f32 band.
 //! - REQ-DEC-012: `α = (π/2)σ(z_α)`, `β = πσ(z_β)`, `ρ̃ = cos α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)` against the
 //!   formula in f64; `z = 0` gives `α = π/4`, `β = π/2`, `‖ρ̃‖ = ‖λ̃‖`; `‖ρ̃‖² + ‖λ̃‖² = 1`; ranges.
 //! - REQ-DEC-013: `r₁ − r₀ = ρ`, `r₂ − r₀₁ = λ`, CoM `= 0`, `I = 1`, and decoder test 6 (from the emitted `(m, rᵢ)`
@@ -53,6 +60,8 @@ trait Fp: LinkReal + Debug {
     const MAX: f64;
     /// The next value below `self`.
     fn down(self) -> Self;
+    /// The next value above `self`, for `self > 0`.
+    fn up(self) -> Self;
 }
 
 impl Fp for f64 {
@@ -67,6 +76,9 @@ impl Fp for f64 {
     fn down(self) -> Self {
         f64::from_bits(self.to_bits() - 1)
     }
+    fn up(self) -> Self {
+        f64::from_bits(self.to_bits() + 1)
+    }
 }
 
 impl Fp for f32 {
@@ -80,6 +92,9 @@ impl Fp for f32 {
     const MAX: f64 = f32::MAX as f64;
     fn down(self) -> Self {
         f32::from_bits(self.to_bits() - 1)
+    }
+    fn up(self) -> Self {
+        f32::from_bits(self.to_bits() + 1)
     }
 }
 
@@ -479,10 +494,77 @@ negative_control!(
 
 // ── REQ-DEC-011: M01_TINY ───────────────────────────────────────────────────────────────────────────────────────
 
-/// ε, REQ-DEC-039 (calibrated; the proposal ε_μ, pending the M2 gate).
-fn eps_m01<R: Fp>() -> R {
-    mass::m01_epsilon::<R>()
+/// `ε_μ`, REQ-DEC-009.
+const EPS_MU: f64 = 1e-6;
+
+/// The `ε_M01` dd_decoder §3.1 states (REQ-DEC-039's proposal, provisional until the M2 gate): the number after
+/// "`ε_M01 = 10" in §3.1's text, its exponent in superscript digits.
+fn doc_eps_m01() -> f64 {
+    static EPS: std::sync::OnceLock<f64> = std::sync::OnceLock::new();
+    *EPS.get_or_init(|| {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../docs/design/principia_dd_decoder.md");
+        let text = std::fs::read_to_string(&path).expect("dd_decoder reads");
+        let start = text.find("### 3.1 Mass").expect("dd_decoder has §3.1");
+        let end = start + text[start..].find("### 3.2").expect("dd_decoder has §3.2");
+        parse_eps_m01(&text[start..end]).expect("§3.1 states `ε_M01 = 10ⁿ`")
+    })
 }
+
+/// `10ⁿ` from the first "`ε_M01 = 10" followed by a superscript exponent in `section`.
+fn parse_eps_m01(section: &str) -> Option<f64> {
+    const KEY: &str = "ε_M01 = 10";
+    let at = section.find(KEY)? + KEY.len();
+    let mut exp = String::new();
+    for c in section[at..].chars() {
+        let d = match c {
+            '⁻' => '-',
+            '⁰' => '0',
+            '¹' => '1',
+            '²' => '2',
+            '³' => '3',
+            '⁴' => '4',
+            '⁵' => '5',
+            '⁶' => '6',
+            '⁷' => '7',
+            '⁸' => '8',
+            '⁹' => '9',
+            _ => break,
+        };
+        exp.push(d);
+    }
+    let n: i32 = exp.parse().ok()?;
+    Some(10f64.powi(n))
+}
+
+/// ε at `R`: §3.1's `ε_M01`, rounded to `R` as a compile-time constant is.
+fn eps_m01<R: Fp>() -> R {
+    R::of(doc_eps_m01())
+}
+
+/// The block's threshold is §3.1's `ε_M01` at both precisions (REQ-DEC-039, REQ-DEC-009), not `ε_μ`.
+fn check_eps(doc: f64) {
+    assert!(
+        mass::m01_epsilon::<f64>() == doc && mass::m01_epsilon::<f32>() == doc as f32,
+        "eps: the block's ε is {:e} (f64), {:e} (f32), not §3.1's ε_M01 = {doc:e}",
+        mass::m01_epsilon::<f64>(),
+        mass::m01_epsilon::<f32>()
+    );
+    assert!(doc != EPS_MU, "eps: §3.1's ε_M01 is ε_μ");
+}
+
+#[test]
+fn qa_m01_epsilon() {
+    assert_eq!(parse_eps_m01("x `ε_M01 = 10⁻¹²`, y"), Some(1e-12));
+    check_eps(doc_eps_m01());
+}
+
+negative_control!(
+    qa_m01_epsilon,
+    "the old ε = ε_μ is not §3.1's ε_M01",
+    expected = "eps: the block's ε",
+    check_eps(EPS_MU)
+);
 
 /// The tag is `Some(M01_TINY)` exactly when `m₀ + m₁ < ε`, and the masses are finite and on the simplex.
 fn check_tag<R: Fp>(out: &Masses<R>, at_z: &str) -> Result<(), String> {
@@ -673,6 +755,187 @@ negative_control!(
     "softmax_tanh in stick_breaking's place must fail to reach the tag",
     expected = "reach: stick_breaking's corner does not fire",
     check_reach(defaults::<f64>(), defaults::<f64>())
+);
+
+// ── REQ-DEC-039: ε_M01's margin, the onset, the two precisions ──────────────────────────────────────────────────
+
+/// `stick_breaking`'s `M₀₁ = m₀ + m₁ = (1 − s) + s(1 − u)` from dd_generation_root §3.9's formula, in f64, with
+/// `1 − s` and `1 − u` in §3.9's stable forms `σ(−2z) + ½ε_μ·tanh z`: no cancellation, so its relative error is a
+/// few f64 eps, far inside every band below.
+fn sb_m01_ref(z: [f64; 2]) -> f64 {
+    let one_minus = |x: f64| 1.0 / (1.0 + (2.0 * x).exp()) + 0.5 * EPS_MU * x.tanh();
+    let (ns, nu) = (one_minus(z[0]), one_minus(z[1]));
+    ns + (1.0 - ns) * nu
+}
+
+/// The relative error bound of `stick_breaking`'s emitted `M₀₁`, in the precision's eps, from §3.9's stable forms:
+/// `σ(−2z)` is an `exp`, an add and a divide (3), `½ε_μ·tanh z` a `tanh` and two products (3), their sum of two
+/// positive terms one more, so `1 − s` and `1 − u` carry 4; `s = 1 − (1 − s)` carries 4 too (its own form, likewise);
+/// the product `s(1 − u)` 4 + 4 + 1 = 9; the final add of two positive terms one more: 10. Doubled for the
+/// transcendentals' libm error, which may reach 2 ulp at f32 rather than 1: `K_SB = 20`.
+const K_SB: f64 = 20.0;
+
+/// The doc's margin: the corner's pile-up `ε_μ − ε_μ²/4` (§3.9, §3.1) lies at least tenfold below ε, so it fires
+/// "with a tenfold margin at either precision" (§3.1), and the gap between them is wider than the f32 band
+/// `K_SB·eps₃₂·ε`, so no f32 rounding decides a corner tag. At `ε = ε_μ` the pile-up sat 2.5×10⁻⁷ relative below ε,
+/// inside that band: the F1 split.
+fn check_margin(eps: f64) {
+    let floor = EPS_MU - EPS_MU * EPS_MU / 4.0;
+    assert!(
+        10.0 * floor <= eps,
+        "margin: the corner's pile-up {floor:e} is not tenfold below ε = {eps:e}"
+    );
+    assert!(
+        (eps - floor) / eps > K_SB * f32::EPS,
+        "margin: the corner's pile-up {floor:e} is inside ε = {eps:e}'s f32 band"
+    );
+    // ...and the floors that must not fire are above it (§3.1): softmax_tanh's and the ternary plot's 2ε_m.
+    let softmax = (1.0 + (-MU_MAX).exp()) / (1.0 + (-MU_MAX).exp() + MU_MAX.exp());
+    assert!(
+        softmax > eps && 2e-4 > eps,
+        "margin: a floor that must not fire is below ε = {eps:e}"
+    );
+}
+
+#[test]
+fn qa_m01_margin() {
+    check_margin(doc_eps_m01());
+}
+
+negative_control!(
+    qa_m01_margin,
+    "ε = ε_μ puts the corner's pile-up inside the band",
+    expected = "margin: the corner's pile-up",
+    check_margin(EPS_MU)
+);
+
+/// The tag a block gives at `z_μ`.
+type TagAt<R> = fn([R; 2]) -> bool;
+
+fn sb_tag<R: Fp>(z: [R; 2]) -> bool {
+    (stick::<R>().mass)(z).degenerate == Some(Degenerate::M01Tiny)
+}
+
+/// `z*` on the diagonal where §3.9's `M₀₁(z, z)` crosses `eps`, by bisection in f64 (`M₀₁` falls with `z`).
+fn onset_ref(eps: f64) -> f64 {
+    let (mut lo, mut hi) = (0.0f64, 40.0f64);
+    assert!(sb_m01_ref([lo, lo]) > eps && sb_m01_ref([hi, hi]) < eps);
+    for _ in 0..200 {
+        let mid = 0.5 * (lo + hi);
+        if sb_m01_ref([mid, mid]) < eps {
+            hi = mid;
+        } else {
+            lo = mid;
+        }
+    }
+    hi
+}
+
+/// The relative band around ε within which `R`'s rounding may decide a tag: the block's [`K_SB`]·eps plus the f64
+/// reference's own error, at most [`K_SB`] f64 eps.
+fn band<R: Fp>() -> f64 {
+    K_SB * (R::EPS + f64::EPSILON)
+}
+
+/// On the diagonal, the tag's onset at `R` is the formula's: across every `R` value of `z` from `z* − w` to
+/// `z* + w`, `w` the band's width in `z` (from the formula's slope) plus two `R` ulps of `z`, the tag is `M₀₁ < ε`
+/// of §3.9's `M₀₁` wherever that lies outside the band; it is off at the window's bottom and on at its top, so the
+/// onset is inside it. The window is narrow because the slope is: the onset is where `M₀₁` still changes with `z`.
+fn check_onset<R: Fp>(tag: TagAt<R>, eps: f64) {
+    let zs = onset_ref(eps);
+    let h = 1e-4;
+    let slope = (sb_m01_ref([zs + h, zs + h]) - sb_m01_ref([zs - h, zs - h])) / (2.0 * h);
+    let ulp = R::of(zs).up().f() - R::of(zs).f();
+    let w = band::<R>() * eps / slope.abs() + 2.0 * ulp;
+    let (lo, hi) = (R::of(zs - w), R::of(zs + w));
+    assert!(
+        !tag([lo, lo]) && tag([hi, hi]),
+        "onset: the tag at {} does not switch on within z* = {zs} ± {w:e} (ε = {eps:e})",
+        R::NAME
+    );
+    let mut z = lo;
+    let mut n = 0;
+    while z.f() <= hi.f() {
+        let m = sb_m01_ref([z.f(), z.f()]);
+        if (m - eps).abs() > band::<R>() * eps {
+            assert_eq!(
+                tag([z, z]),
+                m < eps,
+                "onset: at z = {:e}, {}, the formula's M₀₁ = {m:e} against ε = {eps:e}",
+                z.f(),
+                R::NAME
+            );
+        }
+        z = z.up();
+        n += 1;
+        assert!(n < 1_000_000, "onset: the window is not narrow");
+    }
+}
+
+#[test]
+fn qa_m01_onset() {
+    check_onset::<f64>(sb_tag::<f64>, doc_eps_m01());
+    check_onset::<f32>(sb_tag::<f32>, doc_eps_m01());
+}
+
+/// A tag at `M₀₁ < ε·(1 + 10⁻⁴)`: an onset moved by rounding-sized amounts many times over.
+#[cfg(feature = "controls")]
+fn sb_tag_shifted(z: [f32; 2]) -> bool {
+    (stick::<f32>().mass)(z).m01.f() < doc_eps_m01() * (1.0 + 1e-4)
+}
+
+negative_control!(
+    qa_m01_onset,
+    "an f32 tag whose onset is not the formula's must fail",
+    expected = "onset:",
+    check_onset::<f32>(sb_tag_shifted, doc_eps_m01())
+);
+
+/// Over `z_μ ∈ [3, 20]²` (the corner's approach; fuzzed and on a grid), the f64 and f32 blocks give the same tag at
+/// the same (f32) input wherever §3.9's `M₀₁` there lies outside the f32 band around ε.
+fn check_precisions(t64: TagAt<f64>, t32: TagAt<f32>) {
+    let eps = doc_eps_m01();
+    let check = |z: [f64; 2]| -> Result<(), String> {
+        let z32 = at::<f32, 2>(z);
+        let z = fx(z32);
+        let m = sb_m01_ref(z);
+        if (m - eps).abs() <= band::<f32>() * eps {
+            return Ok(());
+        }
+        let (a, b) = (t64(z), t32(z32));
+        if a != b || a != (m < eps) {
+            return Err(format!(
+                "precisions: at z_μ = {z:?} the f64 tag is {a}, the f32 {b}; the formula's M₀₁ = {m:e} against ε = {eps:e}"
+            ));
+        }
+        Ok(())
+    };
+    for i in 0..=17 * 32 {
+        for j in 0..=17 * 32 {
+            check([3.0 + i as f64 / 32.0, 3.0 + j as f64 / 32.0]).unwrap();
+        }
+    }
+    prop::run(&[3.0f64..=20.0, 3.0f64..=20.0], |z| {
+        check([z[0], z[1]]).map_err(TestCaseError::fail)
+    });
+}
+
+#[test]
+fn qa_m01_precisions() {
+    check_precisions(sb_tag::<f64>, sb_tag::<f32>);
+}
+
+/// An f32 tag at the old ε = ε_μ.
+#[cfg(feature = "controls")]
+fn sb_tag_eps_mu(z: [f32; 2]) -> bool {
+    (stick::<f32>().mass)(z).m01 < EPS_MU as f32
+}
+
+negative_control!(
+    qa_m01_precisions,
+    "an f32 tag at ε_μ disagrees with f64's at ε_M01",
+    expected = "precisions:",
+    check_precisions(sb_tag::<f64>, sb_tag_eps_mu)
 );
 
 // ── REQ-DEC-012: the configuration block ────────────────────────────────────────────────────────────────────────
