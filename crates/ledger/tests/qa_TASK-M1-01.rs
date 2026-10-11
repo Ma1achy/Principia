@@ -384,8 +384,8 @@ fn loads(src: &str) -> Result<Loads, String> {
 /// The stored members (payload §1) and word components each read-side field needs, from payload §2, §5 and §6:
 /// the packed words' fields read `packed_a`, `packed_b` or `times`; `ftle` the state, the shadow, `S`, and the
 /// validity's `packed_a` (state) and `times` (n); `diffusion` `C_ty` and `n`; the drifts `r`, `p` and their own
-/// reference. The shadow `r_sh`/`p_sh` is its own stored member at the FTLE tier, which stores it, and nothing at the
-/// base tier, which reads it as NaN (RQ-228). An `ICDescriptor` field `ic.<member>` loads nothing of the `SimState`
+/// reference; the shape point `n` only `r`. The shadow `r_sh`/`p_sh` is its own stored member at the FTLE tier, which
+/// stores it, and nothing at the base tier, which reads it as NaN (RQ-228). An `ICDescriptor` field `ic.<member>` loads nothing of the `SimState`
 /// or the word ([`ic_needs`] gives its `ICDescriptor` load). `None` for a field this table does not know, which fails
 /// the test until it is added.
 fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
@@ -429,6 +429,9 @@ fn needs(field: &str, tier: Tier) -> Option<(Vec<&'static str>, Vec<char>)> {
         f if ic_needs(f).is_some() => st(&[]),
         "energy_drift" => st(&["r", "p", "E_0"]),
         "Lz_drift" => st(&["r", "p", "Lz_0"]),
+        // The shape point `n = shape(r, masses)` (payload §5): the stored `r` alone; the masses are the read's
+        // `masses` argument, as the current drifts' are (TASK-M1-12).
+        "n" => st(&["r"]),
         "word" => word(&['x', 'y', 'z', 'w']),
         "word.x" => word(&['x']),
         "word.y" => word(&['y']),
