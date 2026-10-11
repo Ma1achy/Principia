@@ -4,8 +4,9 @@
 //! payload struct member the Rust or WGSL emitter would write is off the ledger ([`rust::check`]), or when a field has
 //! no read the debug catalogue or the export decoder needs ([`catalogue::refused`], [`export::refused`]). The emitters
 //! are registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
-//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); and the
-//! debug catalogue, its views and their tests ([`catalogue`]). One source generates all four artefacts (seam 13).
+//! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); the
+//! debug catalogue, its views and their tests ([`catalogue`]); and `QuadReduction`'s Rust and WGSL struct, from its own
+//! ledger ([`crate::reduction::emit`]). One source generates all four payload artefacts (seam 13).
 
 pub mod catalogue;
 pub mod export;
@@ -32,7 +33,13 @@ pub struct Generated {
 pub type Emitter = fn(&[Word], &[Entry]) -> Vec<Generated>;
 
 /// The registered emitters, run in order.
-pub const EMITTERS: &[Emitter] = &[rust::emit, wgsl::emit, export::emit, catalogue::emit];
+pub const EMITTERS: &[Emitter] = &[
+    rust::emit,
+    wgsl::emit,
+    export::emit,
+    catalogue::emit,
+    crate::reduction::emit,
+];
 
 /// Why generation was refused.
 #[derive(Clone, Debug, PartialEq, Eq)]
