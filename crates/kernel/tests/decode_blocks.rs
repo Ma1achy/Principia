@@ -452,7 +452,7 @@ negative_control!(
 
 // ── M01_TINY ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// The tag is `M01Tiny` exactly when `m₀ + m₁ < ε_μ`, `M₀₁` is that sum's bits, and the block's outputs, with the
+/// The tag is `M01Tiny` exactly when `m₀ + m₁ < ε_M01`, `M₀₁` is that sum's bits, and the block's outputs, with the
 /// config decoded from them, are finite: tagged, never NaN, never dropped.
 fn check_tag<R: P>(name: &str, d: Dec<R>, out: Masses<R>, zc: [R; 2], at_z: &str) {
     let m01 = out.m[0] + out.m[1];
@@ -502,7 +502,7 @@ fn decode_m01_tiny_iff() {
     check_iff(&both::<f32>());
 }
 
-/// The tag decided against ε_w, not ε_μ.
+/// The tag decided against ε_w, not ε_M01.
 #[cfg(feature = "controls")]
 fn tag_at_eps_w<R: P>(m: [R; 3]) -> Masses<R> {
     let m01 = m[0] + m[1];
