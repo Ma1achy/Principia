@@ -55,6 +55,11 @@ pub mod stain;
 /// structural sets of quad metadata (TASK-M1-13).
 pub mod synthetic;
 
+/// The named synthetic fixture set, written into a synthetic set for the accessor tests and the `m1-synthetic` golden
+/// suite: a set state, a known escaper, a ramp in the energy drift, a bitwise-adversarial descriptor and forced
+/// failures (debug tooling plan, "Principle"; TASK-M1-14).
+pub mod fixtures;
+
 /// The coordinate presets: `uv_screen`, `uv_quad` and the coordinate view with its δ mode, as in-code stain graphs
 /// (colour_composition §6; TASK-M1-07).
 pub mod presets;

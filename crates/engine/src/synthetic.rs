@@ -527,6 +527,13 @@ impl Sample<'_> {
         self
     }
 
+    /// `packed_b` written whole: f16 bit patterns `pack_packed_b` never writes, for a check that must refuse them
+    /// (TASK-M1-14).
+    pub fn packed_b(&mut self, v: u32) -> &mut Self {
+        self.s.packed_b = v;
+        self
+    }
+
     /// `dE_max` and `dLz_max`, through `pack_packed_b`.
     pub fn drift_max(&mut self, de_max: f32, dlz_max: f32) -> &mut Self {
         self.s.packed_b = pack_packed_b(de_max, dlz_max);
