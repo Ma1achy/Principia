@@ -19,25 +19,28 @@
 //! about 10⁻⁷ in `z`. (At ε = ε_μ the onset sat 2 f32 ulps above the corner's floor, so f64 and f32, or two f32
 //! backends' `tanh`, disagreed over a band of `z`.)
 //!
-//! **The branch input** (REQ-VAL-017; dd_decoder §3.1, §5 test 12; gpu_determinism_note rules 1, 2 and 6; R-34):
-//! `M₀₁` is one IEEE add of the two masses the block emits, compared strictly against the compile-time constant ε.
-//! There is no transcendental, division or `sqrt` at the decision, and the formula's `M₀₁ < ε` and this form differ
-//! only where `|M₀₁ − ε|` is within that add's half-ulp. The add itself is not safe from contraction: with the link
-//! inlined, `stick_breaking`'s last step `m₁ = t₇·t₁₃` reaches a shader compiler as `m₀ + t₇·t₁₃`, which a contracting
-//! backend may fuse, so there the tag can read a `M₀₁` one rounding away from the emitted masses'. Measured
-//! (`decode_m01_tiny_contraction`): over `[3, 20]²` at a step of 1/32, the fused and separate forms differ in about a
-//! fifth of the points' `M₀₁` and flip no tag at f64 or f32. `M₀₁` under `stick_breaking` is one of the decoder's
-//! enumerated multi-op branch inputs for the parity gate (dd_decoder §3.1).
+//! **The branch input** (REQ-VAL-017; dd_decoder §3.1, §5 test 12; gpu_determinism_note rules 1, 2 and 6; R-34): `M₀₁`
+//! is the one rounded sum of the two masses the block emits, compared strictly against the compile-time constant ε.
+//! There is no transcendental, division or `sqrt` at the decision, and the formula's `M₀₁ < ε` and this form differ only
+//! where `|M₀₁ − ε|` is within that sum's half-ulp. Written as an add, `m₀ + m₁` is not safe from contraction: with the
+//! link inlined, `stick_breaking`'s last step `m₁ = t₇·t₁₃` reaches a shader compiler as `m₀ + t₇·t₁₃`, which a
+//! contracting backend may fuse, and at the onset crossings that flips the tag (`decode_m01_tiny_contraction`: of 40 000
+//! bisected crossing points, 77 at f64 and 45 at f32). So `M₀₁` is the explicit `fma(m₁, 1, m₀)`: `m₁·1` is exact, so it
+//! is the same single rounding of `m₀ + m₁`, and no add is left to fuse, on every backend that keeps an explicit `fma`
+//! fused (rule 6's premise). It reads only the emitted masses, never the link's intermediates, so [`from_masses`] gives
+//! a chart's simplex point the same test (REQ-CHART-033).
 
 use crate::decode::degenerate::Degenerate;
 use crate::generated::links::{Link, LinkReal, Selection};
+use spirv_std::num_traits::Float;
 
 /// The mass block's output: the simplex point, `M₀₁`, and the block's tag.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Masses<R> {
     /// `(m₀, m₁, m₂)`, `Σmᵢ = 1`.
     pub m: [R; 3],
-    /// `M₀₁ = m₀ + m₁`, one rounded add: the tag's branch input, and the reconstruction's inner-pair mass.
+    /// `M₀₁ = m₀ + m₁`, one rounding, formed as `fma(m₁, 1, m₀)`: the tag's branch input, and the reconstruction's
+    /// inner-pair mass.
     pub m01: R,
     /// `Some(M01Tiny)` iff `M₀₁ < ε`; the block raises no other tag.
     pub degenerate: Option<Degenerate>,
@@ -56,10 +59,11 @@ pub fn m01_tiny<R: LinkReal>(m01: R) -> bool {
     m01 < m01_epsilon::<R>()
 }
 
-/// The mass block's output for the simplex point `m`, however it was produced: `M₀₁ = m₀ + m₁` and its tag.
+/// The mass block's output for the simplex point `m`, however it was produced: `M₀₁ = m₀ + m₁` and its tag. `M₀₁` is
+/// the explicit `fma(m₁, 1, m₀)`, which no backend can contract differently (R-34; the module's note).
 #[inline]
 pub fn from_masses<R: LinkReal>(m: [R; 3]) -> Masses<R> {
-    let m01 = m[0] + m[1];
+    let m01 = Float::mul_add(m[1], R::one(), m[0]);
     let degenerate = if m01_tiny(m01) {
         Some(Degenerate::M01Tiny)
     } else {
