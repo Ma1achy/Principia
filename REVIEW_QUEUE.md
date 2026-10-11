@@ -80,7 +80,7 @@ perf review 5481953808 (F1, F2) and physics review 5481954814 (finding 4). Nothi
 
 ---
 
-## RQ-270: a saturated configuration control decodes onto or past the poles: at f32 to `α = fl₃₂(π/2)` and `β = fl₃₂(π)`, just past their bounds, and at f32 and f64 to `α = 0` or `β = 0`, for the σ, tanh and softsign links alike, where dd_decoder §3.2 says finite `z` never reaches the poles *(conflict, R-21, R-82, REQ-DEC-018, REQ-DEC-027, REQ-DEC-028, REQ-CHART-034; context: TASK-M2-02, PR #192)*
+## RQ-270: a saturated configuration control decodes onto or past the poles: at f32 to `α = fl₃₂(π/2)` and `β = fl₃₂(π)`, just past their bounds, and at f32 and f64 to `α = 0` or `β = 0`, for the σ, tanh and softsign links alike, where dd_decoder §3.2 says finite `z` never reaches the poles *(conflict, R-21, R-82, REQ-DEC-018, REQ-DEC-027, REQ-DEC-028, REQ-CHART-034, REQ-VAL-020; context: TASK-M2-02, PR #192)*
 
 *Found by TASK-M2-02's implementer, PR #192, § "Observations for the physics reviewer (not changed here)". Widened in
 PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 and the tanh links; and in physics review
@@ -135,6 +135,12 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
     codomain and test 8 (a)'s "in range" read as open do not. The mass links (`softmax_tanh`, `stick_breaking`) keep
     every mass positive (`μ_max·tanh` and the `(1−ε_μ)` factor), and the half-line links (`softplus`, `exp`), which
     reach 0 on underflow, serve none of the blocks ("the two lines, which no block uses").
+  - *Added from TASK-M2-03's read-only pre-flight:* `docs/design/principia_dd_validation_orbits.md` § "1.3 Lagrange
+    and Euler central configurations — the only analytic ones": "**Euler (collinear) is at `beta → 0` and `beta →
+    pi`, the top and bottom edges.**" `plan/requirements.yaml` REQ-VAL-020 (TASK-M2-03,
+    `chart_landmarks_lagrange_euler`): "A chart-landmark test must assert the decoder places the Lagrange equilateral
+    configuration at `z = 0` and the Euler collinear configurations at `beta → 0` and `beta → pi`", verified by
+    "decode z = 0 -> equilateral; decode near beta edges -> collinear (approached as a limit)".
 - **Conflict:**
   - *Upper poles, f32 only.* At f32, `σ` rounds to 1 for `z ≳ 17` and `tanh` for `z ≳ 9`. For the softsign links,
     `1 + x/(2 + |x|)` rounds up to 2: over most of the band `x/(2 + |x|)` rounds to `1 − 2⁻²⁴`, not to 1, and
@@ -161,6 +167,12 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
     strictly", decoder tests 3 and 5, REQ-DEC-027, REQ-DEC-018, and the note's and REQ-DEC-028's "never lands" /
     "endpoints excluded" do not hold as written. TASK-M2-01's merged test reads test 8 (a)'s "in range" as the closed
     interval at the f32-rounded bounds, which the §3.9 row's "(a,b)" does not state.
+  - *Chart landmarks (REQ-VAL-020; added from TASK-M2-03's pre-flight).* The β links reach the lower edge exactly,
+    `β = 0`, at the lower-pole thresholds above (f32 and f64), and at f32 pass the upper edge, `β = fl₃₂(π) > π` (by
+    8.7×10⁻⁸). So a decode "near beta edges" at a large enough `|z_β|` lands on the edge, or at f32 past it, where
+    REQ-VAL-020's verify has the Euler configurations "approached as a limit" and validation_orbits §1.3 writes
+    `beta → 0` and `beta → pi`. The options below are unchanged by this addition; none names REQ-VAL-020's text, and
+    under each `β = 0` stays reachable at saturation ((b) keeps the lower poles).
 - **Context for weighing the options (physics review 5481954814, finding 3; not a recommendation):** the states past
   the upper poles are valid three-body configurations. With `z_α` saturated the state is the in-range configuration
   (`α' = π − fl₃₂(π/2) < π/2`, `β' = π − β`), mirrored and turned by π about the CoM; `β = fl₃₂(π) > π` is the
@@ -192,3 +204,114 @@ PR #193's physics review 5481954814 (findings 1–3): the canonical no-op, f64 a
   - The REQ-CHART-034 tension: §3.9's "Bounded (a,b)" and test 8 (a)'s "bounded outputs in range" against TASK-M2-01's
     merged `link_properties_a_constraint`, which reads the range as closed at the f32-rounded bounds. TASK-M2-01 has
     merged, so the ruling may need a follow-up to that test or to the generated links. REQ-CHART-034 is not marked.
+  - REQ-VAL-020 carries `rq: RQ-270` (added from TASK-M2-03's pre-flight: at saturation `β` reaches 0 at f32 and f64
+    and passes π at f32, against its "approached as a limit"), so TASK-M2-03 (`chart_landmarks_lagrange_euler`)
+    waits, as it already does through REQ-DEC-027. TASK-M3-28, which needs REQ-VAL-020, waits with it.
+
+---
+
+## RQ-271: REQ-TOOL-160's log floors for `rho_ratio` and `r_min_pair_0` are an M1 calibration, in "that field's units", but the two fields' formulas, and so their units, are an M2 deliverable (REQ-PAY-088, TASK-M2-03) *(silence, R-71, R-72, R-401, REQ-TOOL-160, REQ-PAY-088; context: TASK-M1-17, TASK-M2-03)*
+
+*Found in TASK-M2-03's read-only pre-flight. Nothing is chosen.*
+
+- **File, section:**
+  - `plan/tasks/M1/TASK-M1-17.md` § "Deliverables" (lines 81–82): "`crates/ledger`: one log floor per log field
+    without a ledger floor (`d_min`, `dE_max`, `dLz_max`, `closure_min`, `rho_ratio`, `r_min_pair_0`), each a named
+    presentation constant in that field's units, read by the template"; and (lines 83–84) "The REQ-TOOL-160 proposal:
+    each floor, its units, and its evidence (where the field's stored values fall under it on M1's fixtures, and why
+    it sits there), attached to the PR."
+  - `plan/requirements.yaml` REQ-TOOL-160 (`kind: calibration`, `milestone: M1`, TASK-M1-17): "The log floor ε_f of
+    each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min,
+    rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (… a ratio for rho_ratio; R-401) … must
+    be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by
+    the human at the M1 gate and recorded in decisions.md."
+  - `decisions.md` § "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with
+    evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced": "its own `ε_f`, the magnitude where its compression
+    sets in, in that field's own units: a distance for the distances, … and a ratio for `rho_ratio`", and "**The
+    floors are calibrations (R-71):** proposed with their evidence for the M1 gate".
+  - `plan/requirements.yaml` REQ-PAY-088 (`kind: definition`, `milestone: M2`, TASK-M2-03): "The formulas of the
+    ICDescriptor fields `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` (including
+    whether `rho_mag` and `lambda_mag` are ‖ρ‖, ‖λ‖ or the mass-weighted ‖ρ̃‖, ‖λ̃‖) must be defined in dd_decoder §3.6
+    by the task that needs it". `plan/tasks/M2/TASK-M2-03.md` § "Notes", Gap G7: "the ICDescriptor formulas for …
+    `rho_ratio`, `rho_angle` and `r_min_pair_0` are not in the corpus".
+  - `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time, pre-integration)":
+    "`E₀ = K₀ + V₀ ;   virial_ratio = 2K₀ / |V₀| ;   ρ-magnitudes, ρ_ratio, ρ_angle, r_min_pair₀`", names with no
+    formula. `docs/design/principia_dd_generation_root.md` § "3.6 `ICDescriptor` (12 × f32)": "`rho_ratio` (log), …
+    `r_min_pair_0` (log). Provenance: decode stage, pre-integration."
+  - `fixtures/golden/BASELINES.md` (lines 84, 88): M1's `generated-r_min_pair_0` and `generated-rho_ratio` cases render
+    each "generated view over the showcase set"; the decode stage that writes the two fields is TASK-M2-03's
+    (REQ-PAY-034).
+- **Silence:** the corpus says the floor is "in that field's own units" and calibrated at the M1 gate, and that the
+  field's formula is defined by TASK-M2-03 at M2; it does not say which comes first. R-401 gives the kind of unit (a
+  ratio, a distance) but not the formula: `rho_ratio` as ‖ρ‖/‖λ‖ or as the mass-weighted ‖ρ̃‖/‖λ̃‖ differ by a
+  mass-dependent factor (REQ-PAY-088's own parenthesis), which moves the magnitude where compression should set in;
+  and M1's fixtures hold showcase values, not decoded ones, so the evidence REQ-TOOL-160 asks for ("where the field's
+  stored values fall under it") has no decoded values to fall under before M2. The other four fields are defined in
+  `docs/design/principia_dd_simstate_payload.md` (`d_min` and `closure_min` as running minima, `dE_max` and `dLz_max`
+  as absolute maxima, REQ-TOOL-160's note), so the order question is for `rho_ratio` and `r_min_pair_0` only.
+- **Options seen:**
+  - (a) Calibrate those two floors at the M2 gate instead: REQ-TOOL-160 is split (or a new calibration requirement
+    raised) so TASK-M1-17 proposes four floors for the M1 gate and the two others are proposed with TASK-M2-03's
+    definitions, on decoded values. TASK-M1-17 still needs some constant for the two views meanwhile, which the corpus
+    does not give, and the M1 gate confirms four floors, not six.
+  - (b) Write TASK-M2-03's two definitions (part of REQ-PAY-088) first, ahead of the M1 calibration: a docs change to
+    dd_decoder §3.6 for `rho_ratio` and `r_min_pair_0`, reviewed by physics, before TASK-M1-17 proposes. It splits a
+    definition out of an M2 task into the M1 path; the evidence is then the formula, not decoded values, since the
+    decode stage still lands at M2.
+  - (c) Give the two floors provisionally, in assumed units (stated in the proposal), confirmed at the M1 gate as
+    provisional and re-confirmed at M2 once TASK-M2-03 defines the formulas. Two confirmations of the same value; the
+    assumption may not match the definition, and the floor then changes at M2.
+  - (d) Read R-401's unit kinds ("a ratio", "a distance") as enough to propose the floors at M1 without the formulas,
+    with TASK-M2-03's definitions then bound to be consistent with them. It settles the units before their definition
+    is written and reviewed.
+- **Applied meanwhile:** nothing.
+- **Waits:** REQ-TOOL-160 carries `rq: RQ-271`, so TASK-M1-17 waits, and through it TASK-M1-14 (which depends on
+  TASK-M1-17), TASK-M6-27 and TASK-M7-05 (both depend on TASK-M1-17); the M1 gate's confirmation of REQ-TOOL-160 waits
+  with them. TASK-M1-17 is not yet dispatched (it depends on TASK-M1-13, PR #180). REQ-PAY-088 is named, not marked:
+  TASK-M2-03 can write its definitions under any option, and under (b) only sooner.
+
+---
+
+## RQ-272: REQ-PAY-034 asserts every ICDescriptor field in f32 (and f64) against hand-computed values, but the corpus gives no tolerance for that comparison *(silence, R-71, REQ-PAY-034, REQ-DEC-043, REQ-DEC-044; context: TASK-M2-03)*
+
+*Found in TASK-M2-03's read-only pre-flight. Nothing is chosen.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-PAY-034 (TASK-M2-03, `ic_descriptor`), verify: "golden IC (z = 0): assert every
+    descriptor field in f64 and f32 against hand-computed values; field names match the ledger; the derived E₀ equals
+    K_0 + V_0 and the struct has no E₀ field". TASK-M2-03's acceptance line repeats it: "`cargo test -p kernel
+    ic_descriptor` — golden IC (z = 0): every descriptor field in f64 and f32 against hand-computed values".
+  - `docs/design/principia_dd_decoder.md` § "5. Unit tests", the golden anchor: "**`z = 0` decodes to the canonical
+    golden IC** — equal masses `(⅓,⅓,⅓)`, `α = π/4` (‖ρ̃‖ = ‖λ̃‖), `β = π/2`, rest (`q = 0`), `I = 1`. Assert its every
+    derived value in f64 and f32." No tolerance is given there.
+  - The same section, test 12: "the CPU-f64 and GPU-f32 instantiations (and browser-GPU-via-WGSL) agree on the golden
+    IC and fuzzed interiors to f32 eps-scaled tolerance on continuous values". `plan/requirements.yaml` REQ-DEC-043
+    (calibration, TASK-M2-06): "dd_decoder test 12's f32-eps scale factor for cross-backend agreement on continuous
+    decode values must be calibrated", its evidence "f64-vs-f32 decode differences on the golden IC and fuzzed
+    interiors".
+  - `plan/requirements.yaml` REQ-DEC-044 (calibration, TASK-M2-02): the tolerances of "dd_decoder unit tests 1 (the
+    identities …), 6 (the reconstruction inverse) and 8 (the invariant construction's L_z and K)". On PR #192's branch
+    only (not on main), REQ-DEC-045 (test 1's Σpᵢ = 0) and REQ-DEC-046 (test 8's L_z and K) are split from it. None of
+    the three names a descriptor field.
+- **Silence:** no requirement or doc gives the tolerance at which an f32 (or f64) descriptor field matches its
+  hand-computed value. Test 12's tolerance is a cross-backend agreement (CPU-f64 against GPU-f32), not a comparison
+  with hand-computed values, and its factor (REQ-DEC-043) is proposed by TASK-M2-06, which runs after TASK-M2-03
+  (TASK-M2-06 depends on TASK-M2-05, which depends on TASK-M2-03). REQ-DEC-044's tests do not include the
+  descriptor. "Hand-computed" at f32 is itself open: the f32 rounding of the exact value, or the value the formula
+  gives evaluated in f32.
+- **Options seen:**
+  - (a) A new R-71 calibration requirement for the descriptor fields' per-precision tolerances against the
+    hand-computed golden values, proposed with evidence by TASK-M2-03 and confirmed by the human at the M2 gate, as
+    REQ-DEC-044 is for tests 1, 6 and 8. One more M2-gate calibration; TASK-M2-03 can run, with its value provisional
+    until the gate.
+  - (b) Reuse test 12's "f32 eps-scaled tolerance" (REQ-DEC-043's factor) for the f32 comparison. No new value, but
+    the factor is calibrated by TASK-M2-06, after TASK-M2-03, for a different comparison (f64 against GPU-f32); either
+    TASK-M2-03 waits for it, or REQ-DEC-043's proposal moves earlier. It leaves the f64 comparison without a
+    tolerance.
+  - (c) Bit-exact f32 (and f64) where the formula allows it, a tolerance only where it does not. At rest
+    `K_0 = 0` and `virial_ratio = 0` are exact; fields through a quotient, square root or trigonometric function (`V_0`,
+    and whatever REQ-PAY-088 defines for the magnitudes and `rho_angle`) are exact only if "hand-computed" means the
+    same operations in the same order at that precision, so the fields left over still need (a) or (b).
+- **Applied meanwhile:** nothing.
+- **Waits:** REQ-PAY-034 carries `rq: RQ-272`, so TASK-M2-03 (`ic_descriptor`) waits. TASK-M3-19 and TASK-M3-22, which
+  need REQ-PAY-034, wait with it. TASK-M2-03 also waits on RQ-270 (REQ-DEC-027, REQ-VAL-020) and on TASK-M2-02.
