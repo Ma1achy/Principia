@@ -793,7 +793,7 @@
 - id: REQ-DEC-044
   area: DEC
   kind: calibration
-  statement: "The per-precision tolerances of dd_decoder unit tests 1 (the identities Σmᵢ = 1, CoM = 0, Σpᵢ = 0, I = 1, \"to precision-appropriate tolerance\"), 6 (the reconstruction inverse) and 8 (the invariant construction's L_z and K) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The per-precision tolerances of dd_decoder unit tests 1 (the identities Σmᵢ = 1, CoM = 0 and I = 1, \"to precision-appropriate tolerance\") and 6 (the reconstruction inverse) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 5. Unit tests
@@ -807,6 +807,43 @@
   rulings:
   - R-71
   milestone: M2
+  note: "Applied per R-369 (TASK-M2-02): split by the block each tolerance measures. Test 1's Σpᵢ = 0 is REQ-DEC-045 (TASK-M2-03, the momentum block) and test 8's L_z and K are REQ-DEC-046 (TASK-M2-09, the invariant construction); this requirement keeps the parts the mass and configuration blocks evidence."
+- id: REQ-DEC-045
+  area: DEC
+  kind: calibration
+  statement: "The per-precision tolerance of dd_decoder unit test 1's momentum identity Σpᵢ = 0 (\"to precision-appropriate tolerance\") must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: 5. Unit tests
+  - file: docs/design/principia_chart_reference.md
+    section: 5.2 Tests that can fail
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the tolerance in f64 and f32 with the measured residuals over fuzzed z that it covers; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+  note: "Applied per R-369 (TASK-M2-02): split from REQ-DEC-044, whose other test-1 identities the mass and configuration blocks evidence."
+- id: REQ-DEC-046
+  area: DEC
+  kind: calibration
+  statement: "The per-precision tolerances of dd_decoder unit test 8 (the invariant construction's L_z and K, \"to tolerance\") must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: 5. Unit tests
+  - file: docs/design/principia_chart_reference.md
+    section: 5.2 Tests that can fail
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states each tolerance in f64 and f32 with the measured residuals over the grid of feasible (L_z, K*) that it covers; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+  note: "Applied per R-369 (TASK-M2-02): split from REQ-DEC-044, whose test-1 and test-6 parts the mass and configuration blocks evidence."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
