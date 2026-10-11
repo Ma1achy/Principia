@@ -24,6 +24,24 @@
 //! included. Test 1's `Σmᵢ`, `CoM` and `I` and test 6 are measured here; `Σpᵢ = 0` waits for the momentum block
 //! (TASK-M2-03) and test 8 for the invariant construction (TASK-M2-09). Each test prints its worst residual, in units
 //! of `eps`, so the evidence re-measures with `--nocapture`.
+//!
+//! The evidence, 200 runs at the fixed seeds `PROPTEST_RNG_SEED` = 1 … 200 (the fixed grid in each, and 256 fuzzed
+//! `z`): each quantity's worst residual per run, as the range across runs, and the worst after 50, 100 and 200 runs.
+//!
+//! | quantity | f64: range, worst at 50/100/200 | f32: range, worst at 50/100/200 | proposed |
+//! |---|---|---|---|
+//! | test 1: \|Σmᵢ − 1\| | 1.50–2.00; 2.00/2.00/2.00 | 0.78–1.50; 1.50/1.50/1.50 | 4 |
+//! | test 1: \|CoM\|/Σmᵢ‖rᵢ‖ | 0.98–1.08; 1.07/1.07/1.08 | 0.54–0.89; 0.82/0.89/0.89 | 4 |
+//! | test 1: \|I − 1\| | 3.00–4.00; 4.00/4.00/4.00 | 2.78–4.00; 3.86/4.00/4.00 | 8 |
+//! | r₁ − r₀ = ρ | 1.45–1.59; 1.57/1.57/1.59 | 0.84–1.40; 1.20/1.20/1.40 | 4 |
+//! | test 6: \|R̃ − 1\| | 2.00–2.50; 2.50/2.50/2.50 | 1.39–2.12; 2.12/2.12/2.12 | 8 |
+//! | test 6: \|Δα\| | 1.50–2.00; 1.50/2.00/2.00 | 1.25–1.33; 1.28/1.28/1.33 | 8 |
+//! | test 6: sin α·\|Δβ\| | 0.71–2.00; 2.00/2.00/2.00 | 0.55–1.05; 0.84/0.94/1.05 | 8 |
+//! | ‖ρ̃‖² + ‖λ̃‖² − 1 | 1.00–2.00; 2.00/2.00/2.00 | 1.55–1.55; 1.55/1.55/1.55 | 4 |
+//! | Burrau masses | 0.50 (no fuzz) | 0.33 (no fuzz) | 4 |
+//!
+//! Re-measured by `for s in $(seq 1 200); do PROPTEST_RNG_SEED=$s cargo test -p kernel --test decode_blocks --
+//! --nocapture; done`.
 
 use std::cell::RefCell;
 use std::path::Path;
