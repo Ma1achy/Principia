@@ -8,6 +8,12 @@
 //! worked entries do for `ftle`; §3.6's log fields are > 0. Consumers are render, export and debug, as there. `n`, the
 //! shape-sphere point, is §3.8's worked entry: `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`, `lin` over [−1, 1]
 //! in each component (TASK-M1-12; RQ-235).
+//!
+//! **Declared lower bounds (R-400; TASK-M1-17).** A numeric view whose field's declared range spans zero is drawn on
+//! the diverging ramp, so the unbounded default must not make a field the corpus gives a non-negative domain read as
+//! signed: each such field declares its lower bound, citing the line that gives it ([`NON_NEGATIVE`]). `K_0` is
+//! `[0, ∞)` and `V_0` `(−∞, 0]`, both `lin` (R-403). Every other field takes its range as declared; `q_mass`, whose
+//! formula the corpus does not yet give (REQ-PAY-088, TASK-M2-03), keeps the unbounded default.
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{
@@ -93,14 +99,77 @@ fn shape_point() -> EntryBuilder {
     })
 }
 
+/// The fields the corpus or their own definition make non-negative, other than the unsigned bit fields, each with the
+/// line that does (R-400; TASK-M1-17): each declares a lower bound of 0, closed or open, and nothing else declares
+/// one. The physics reviewer checks each citation.
+pub const NON_NEGATIVE: [(&str, &str); 13] = [
+    (
+        "closure_min",
+        "dd_generation_root §3.4: `closure_min` | log | ≥ 0",
+    ),
+    (
+        "d_min",
+        "dd_generation_root §3.4: `d_min` | log | > 0; R-271: stored values never reach 0.0",
+    ),
+    (
+        "dE_max",
+        "dd_generation_root §3.4: `delta_E_max_abs` | log | ≥ 0",
+    ),
+    (
+        "dLz_max",
+        "dd_generation_root §3.4: `delta_Lz_max_abs` | log | ≥ 0",
+    ),
+    (
+        "m0",
+        "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
+    ),
+    (
+        "m1",
+        "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
+    ),
+    (
+        "m2",
+        "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
+    ),
+    (
+        "rho_mag",
+        "render_gui_spec §10.1: `|ρ| ∈ [0,1]`; R-62: the magnitude of the Jacobi vector `ρ`",
+    ),
+    (
+        "lambda_mag",
+        "R-62: the magnitude of the Jacobi vector `λ`; dd_decoder §3.6: \"ρ-magnitudes\"",
+    ),
+    (
+        "rho_ratio",
+        "dd_generation_root §3.6: `rho_ratio` (log), so > 0, as §3.6's log fields are; R-401: \"a ratio\"",
+    ),
+    (
+        "K_0",
+        "dd_decoder §3.6: `K₀ = Σᵢ ‖pᵢ‖² / 2mᵢ`; dd_generation_root §3.6: `K_0` (lin, [0, ∞)) (R-403)",
+    ),
+    (
+        "virial_ratio",
+        "dd_decoder §3.6: `virial_ratio = 2K₀ / |V₀|`, `K₀ ≥ 0`",
+    ),
+    (
+        "r_min_pair_0",
+        "dd_generation_root §3.6: `r_min_pair_0` (log), so > 0; R-401: \"a distance for the distances\"",
+    ),
+];
+
+/// `[lo, ∞)`.
+fn from(lo: Bound) -> Range {
+    Range {
+        lo,
+        hi: Bound::Unbounded,
+    }
+}
+
 /// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode.
 fn ic(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
     let e = f32_at(name, slot, scale).provenance(Provenance::Decode);
     match scale {
-        Scale::Log => e.range(Range {
-            lo: Bound::Open(0.0),
-            hi: Bound::Unbounded,
-        }),
+        Scale::Log => e.range(from(Bound::Open(0.0))),
         _ => e,
     }
 }
@@ -130,9 +199,10 @@ fn words() -> Vec<Word> {
 /// Every entry: `SimState`'s stored fields at their `SimStateFTLE` slots, the packed words' fields, §3.4's derived
 /// scalars, and `ICDescriptor`'s twelve fields.
 fn entries() -> Vec<EntryBuilder> {
-    let from_zero = Range {
+    let from_zero = from(Bound::Closed(0.0));
+    let fraction = Range {
         lo: Bound::Closed(0.0),
-        hi: Bound::Unbounded,
+        hi: Bound::Closed(1.0),
     };
     let u32s = Range::int(0, u32::MAX.into());
     let ubits = |name, slot| entry(name, Location::Scalar(slot), FieldType::UBits, Scale::Lin);
@@ -182,17 +252,23 @@ fn entries() -> Vec<EntryBuilder> {
         // The Montgomery map, never stored (integrator dd §3.7; §3.8's worked entry): `lin` and [−1, 1] are per
         // component; `‖n‖ = 1` is a check on the vector, not its range.
         shape_point(),
-        ic("m0", 0, Scale::Lin),
-        ic("m1", 1, Scale::Lin),
-        ic("m2", 2, Scale::Lin),
+        // The masses are mass fractions in [0, 1], and the magnitudes, `K_0` and the virial ratio ≥ 0
+        // ([`NON_NEGATIVE`]'s citations; R-400, R-403).
+        ic("m0", 0, Scale::Lin).range(fraction),
+        ic("m1", 1, Scale::Lin).range(fraction),
+        ic("m2", 2, Scale::Lin).range(fraction),
         ic("q_mass", 3, Scale::Lin),
-        ic("rho_mag", 4, Scale::Lin),
-        ic("lambda_mag", 5, Scale::Lin),
+        ic("rho_mag", 4, Scale::Lin).range(from_zero),
+        ic("lambda_mag", 5, Scale::Lin).range(from_zero),
         ic("rho_ratio", 6, Scale::Log),
         ic("rho_angle", 7, Scale::Cyclic),
-        ic("K_0", 8, Scale::Diverging),
-        ic("V_0", 9, Scale::Diverging),
-        ic("virial_ratio", 10, Scale::Lin),
+        ic("K_0", 8, Scale::Lin).range(from_zero),
+        // dd_decoder §3.6: `V₀ = − Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖`, never positive (R-403).
+        ic("V_0", 9, Scale::Lin).range(Range {
+            lo: Bound::Unbounded,
+            hi: Bound::Closed(0.0),
+        }),
+        ic("virial_ratio", 10, Scale::Lin).range(from_zero),
         ic("r_min_pair_0", 11, Scale::Log),
         // Payload §3's `.w` bit map: the high 25 bits of the mixed-radix `W` (its low 96 bits fill `x`, `y`, `z`), then
         // `length`, 0…76 valid (the register's `fgw_capacity`) with 127 the truncation sentinel (`fgw_length_sentinel`).
