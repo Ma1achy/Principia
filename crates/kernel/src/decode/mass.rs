@@ -9,12 +9,15 @@
 //! strip) enters at [`from_masses`], which applies the same test, so the tag is the block's whatever produced the
 //! simplex point.
 //!
-//! **ε = ε_μ** ([`m01_epsilon`]), the proposal of REQ-DEC-039's calibration (R-71), provisional until the human
-//! confirms it at the M2 gate. Its evidence, `fixtures/gates/m01_tiny/`: at `μ_max = 5`, `softmax_tanh` keeps
-//! `M₀₁ ≥ (1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max) ≈ 6.74×10⁻³` for every finite `z`, so it never fires there;
-//! `stick_breaking` reaches `M₀₁ → ε_μ − ε_μ²/4` in the `m₂ → 1` corner, so it fires there, where both controls sit in
-//! the link's `ε_μ/2` edge buffers; the ternary plot keeps `M₀₁ ≥ 2ε_m = 2×10⁻⁴` inside `[0,1]²`. ε_μ is the mass
-//! links' own resolution constant, and the tag marks exactly the inner-pair masses below it.
+//! **ε = ε_M01 = 10⁻⁵** ([`m01_epsilon`]), the chart constant REQ-DEC-039's calibration proposes (R-71; dd_decoder
+//! §3.1), provisional until the human confirms it at the M2 gate. It is a threshold set in a measured gap (pitfalls
+//! §3), `fixtures/gates/m01_tiny/`: at `μ_max = 5` the reachable `M₀₁` floors are `stick_breaking`'s pile-up at
+//! `ε_μ − ε_μ²/4` in the `m₂ → 1` corner, below ε; and the ternary plot's `2ε_m = 2×10⁻⁴` and `softmax_tanh`'s
+//! `(1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max) ≈ 6.74×10⁻³`, above it. So `stick_breaking`'s saturated corner fires with a
+//! tenfold margin at both precisions, `softmax_tanh` and the ternary plot never fire, and the tag's onset lies where
+//! `M₀₁` still changes with `z` at f32 resolution: the formula, not rounding, places it, and f64 and f32 agree on it to
+//! about 10⁻⁷ in `z`. (At ε = ε_μ the onset sat 2 f32 ulps above the corner's floor, so f64 and f32, or two f32
+//! backends' `tanh`, disagreed over a band of `z`.)
 //!
 //! **The branch input** (REQ-VAL-017; dd_decoder §5 test 12; gpu_determinism_note rules 1, 2 and 6): `M₀₁` is one
 //! IEEE add of the two masses the block emits, compared strictly against the compile-time constant ε: no
@@ -36,10 +39,11 @@ pub struct Masses<R> {
     pub degenerate: Option<Degenerate>,
 }
 
-/// The M01_TINY threshold ε: ε_μ (REQ-DEC-039's proposal, provisional until the M2 gate; the module's note).
+/// The M01_TINY threshold ε: the chart constant ε_M01 (REQ-DEC-039's proposal, provisional until the M2 gate; the
+/// module's note).
 #[inline]
 pub fn m01_epsilon<R: LinkReal>() -> R {
-    R::EPS_MU
+    R::EPS_M01
 }
 
 /// Whether the inner-pair mass `m01` is below ε: `m01 < ε`, strict, so `M₀₁ = ε` does not fire.

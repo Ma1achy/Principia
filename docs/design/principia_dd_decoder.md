@@ -44,6 +44,13 @@ M₀₁ = m₀ + m₁ ;   if M₀₁ < ε  →  DEGENERATE(M01_TINY)
 
 Body 0 is the softmax reference (logit 0). Equal masses ⇔ `z_μ = 0`. Burrau point: `μ₁ = log(b/c)`, `μ₂ = log(a/c)`.
 
+**ε is the chart constant `ε_M01`** (REQ-DEC-039, a calibration, R-71). TASK-M2-02 proposes `ε_M01 = 10⁻⁵`, provisional
+until the human confirms it at the M2 gate. It sits in a measured gap between the reachable `M₀₁` floors at
+`μ_max = 5`: the edge-reaching simplex link's corner `m₂ → 1` piles up at `ε_μ − ε_μ²/4`, below it; the ternary plot's
+floor `2ε_m = 2×10⁻⁴` and `softmax_tanh`'s `(1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max) ≈ 6.7×10⁻³` lie above it. So the
+corner fires with a tenfold margin at either precision, and the tag's onset falls where `M₀₁` still resolves with `z`
+at f32, so the formula, not rounding, decides it (`fixtures/gates/m01_tiny/measurement.toml`).
+
 ### 3.2 Configuration — hyperspherical mass-weighted Jacobi
 
 Mass-weighted Jacobi vectors and reduced masses:

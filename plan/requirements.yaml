@@ -166,7 +166,7 @@
   note: "The full DEGENERATE reason list and its map onto payload §2's decode_failed detail codes: REQ-DEC-038 (definition)."
 - id: REQ-DEC-009
   area: DEC
-  statement: "The chart constants must be μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹² (the mirror tie on λ̃_y) and ε_w = 10⁻¹⁰ (default, bounding the squared seed norm ‖w⁽²⁾‖²_m), held as registry data, with the formulae written in the symbols."
+  statement: "The chart constants must be μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹² (the mirror tie on λ̃_y), ε_w = 10⁻¹⁰ (default, bounding the squared seed norm ‖w⁽²⁾‖²_m) and ε_M01 (the M01_TINY threshold, its value REQ-DEC-039's calibration), held as registry data, with the formulae written in the symbols."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 3. The maths
@@ -195,7 +195,7 @@
   - R-21
   - R-82
   milestone: M2
-  note: "R-5 put the constants on the decision sheet; R-10 and R-21 settled them; R-82 fixes δ_λ's variable (λ̃ = √μ_λ·λ) and ε_w's bound on the squared norm."
+  note: "R-5 put the constants on the decision sheet; R-10 and R-21 settled them; R-82 fixes δ_λ's variable (λ̃ = √μ_λ·λ) and ε_w's bound on the squared norm. ε_M01 added by TASK-M2-02, applied per R-369, at REQ-DEC-039's proposal 10⁻⁵ (dd_decoder §3.1), provisional until the M2 gate."
 - id: REQ-DEC-010
   area: DEC
   statement: "The mass block must decode as μₖ = μ_max·tanh(z_μk) for k = 1,2 and (m₀, m₁, m₂) = softmax(0, μ₁, μ₂), with body 0 the softmax reference, so that z_μ = 0 gives equal masses."
@@ -723,6 +723,7 @@
   rulings:
   - R-71
   milestone: M2
+  note: "TASK-M2-02 proposes ε = ε_M01 = 10⁻⁵, a new chart constant (REQ-DEC-009), in the measured gap between stick_breaking's corner pile-up at ε_μ − ε_μ²/4 and the ternary plot's floor 2ε_m (dd_decoder §3.1; fixtures/gates/m01_tiny/measurement.toml); provisional until the M2 gate."
 - id: REQ-DEC-040
   area: DEC
   kind: definition

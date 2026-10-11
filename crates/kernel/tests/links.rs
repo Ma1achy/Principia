@@ -1130,15 +1130,15 @@ negative_control!(
 // ── The chart constants ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// `got`, the chart constants in `ChartConstants`' order at some float, read as f64, are REQ-DEC-009's values at
-/// that float: `μ_max = 5`, `q_max = 2`, `α_min = 0`, `ε_μ = ε_z = ε_q = 10⁻⁶`, `δ_λ = 10⁻¹²`, `ε_w = 10⁻¹⁰`, each
-/// rounded once to the float by `round`.
-fn check_chart_constants(got: [f64; 8], round: fn(f64) -> f64) {
-    let want = [5.0, 2.0, 0.0, 1e-6, 1e-6, 1e-6, 1e-12, 1e-10].map(round);
+/// that float: `μ_max = 5`, `q_max = 2`, `α_min = 0`, `ε_μ = ε_z = ε_q = 10⁻⁶`, `δ_λ = 10⁻¹²`, `ε_w = 10⁻¹⁰` and
+/// `ε_M01 = 10⁻⁵` (REQ-DEC-039's provisional proposal), each rounded once to the float by `round`.
+fn check_chart_constants(got: [f64; 9], round: fn(f64) -> f64) {
+    let want = [5.0, 2.0, 0.0, 1e-6, 1e-6, 1e-6, 1e-12, 1e-10, 1e-5].map(round);
     assert_eq!(got, want, "the chart constants are not REQ-DEC-009's");
 }
 
 /// The chart constants at `R`, as f64.
-fn chart_constants<R: ChartConstants + Into<f64>>() -> [f64; 8] {
+fn chart_constants<R: ChartConstants + Into<f64>>() -> [f64; 9] {
     [
         R::MU_MAX,
         R::Q_MAX,
@@ -1148,6 +1148,7 @@ fn chart_constants<R: ChartConstants + Into<f64>>() -> [f64; 8] {
         R::EPS_Q,
         R::DELTA_LAMBDA,
         R::EPS_W,
+        R::EPS_M01,
     ]
     .map(Into::into)
 }
@@ -1235,7 +1236,7 @@ fn float_literals(source: &str) -> Vec<(usize, String)> {
 }
 
 /// The chart constants' values.
-const CHART_VALUES: [f64; 8] = [5.0, 2.0, 0.0, 1e-6, 1e-6, 1e-6, 1e-12, 1e-10];
+const CHART_VALUES: [f64; 9] = [5.0, 2.0, 0.0, 1e-6, 1e-6, 1e-6, 1e-12, 1e-10, 1e-5];
 
 /// No float literal in `files` (path and source) equals a chart constant's value: the formulae name the constants
 /// (REQ-DEC-009).

@@ -443,7 +443,7 @@ fn check_tag<R: P>(name: &str, d: Dec<R>, out: Masses<R>, zc: [R; 2], at_z: &str
         "{name} at {at_z}: M₀₁ is not m₀ + m₁ at {}",
         R::NAME
     );
-    let want = if m01 < R::EPS_MU {
+    let want = if m01 < mass::m01_epsilon::<R>() {
         Some(Degenerate::M01Tiny)
     } else {
         None
@@ -511,7 +511,7 @@ negative_control!(
 /// exactly and one float above do not fire; one float below, far below and `M₀₁ = 0` fire; every output finite but
 /// the zero-mass pair's configuration, whose unweighting divides by the pair's mass.
 fn check_boundary<R: P>(d: Dec<R>) {
-    let eps = R::EPS_MU;
+    let eps = mass::m01_epsilon::<R>();
     let half = eps / R::of(2.0);
     let below = R::from_bits_below(eps);
     let above = R::from_bits_above(eps);
@@ -599,7 +599,7 @@ fn tag_at_or_below<R: P>(m: [R; 3]) -> Masses<R> {
     Masses {
         m,
         m01,
-        degenerate: (m01 <= R::EPS_MU).then_some(Degenerate::M01Tiny),
+        degenerate: (m01 <= mass::m01_epsilon::<R>()).then_some(Degenerate::M01Tiny),
     }
 }
 
@@ -660,11 +660,11 @@ const MEASUREMENT: &str = "fixtures/gates/m01_tiny/measurement.toml";
 /// The ternary plot's interior buffer `ε_m` (chart_reference §4.5, its default).
 const EPS_M: f64 = 1e-4;
 
-/// The smallest `z` on the diagonal `z_μ1 = z_μ2 = z` in `[10, 40]` at which `stick_breaking` fires at `R`, to
+/// The smallest `z` on the diagonal `z_μ1 = z_μ2 = z` in `[0, 40]` at which `stick_breaking` fires at `R`, to
 /// 10⁻⁶, by bisection on the tag.
 fn fire_onset<R: P>(d: Dec<R>) -> f64 {
     let fires = |z: f64| (d.mass)([R::of(z), R::of(z)]).degenerate.is_some();
-    let (mut lo, mut hi) = (10.0, 40.0);
+    let (mut lo, mut hi) = (0.0, 40.0);
     assert!(
         !fires(lo) && fires(hi),
         "the onset is not bracketed at {}",
@@ -683,16 +683,16 @@ fn fire_onset<R: P>(d: Dec<R>) -> f64 {
 
 /// The M₀₁ range reachable at μ_max = 5, each value measured, as `(key, value, what)`.
 fn measure() -> Vec<(&'static str, f64, &'static str)> {
-    let (mu, eps) = (f64::MU_MAX, f64::EPS_MU);
+    let (mu, eps_mu) = (f64::MU_MAX, f64::EPS_MU);
+    let eps = mass::m01_epsilon::<f64>();
     let soft_exact = (1.0 + (-mu).exp()) / (1.0 + (-mu).exp() + mu.exp());
     let soft64 = mass::decode::<Defaults, f64>([-40.0, 40.0]).m01;
     let soft32 = mass::decode::<Defaults, f32>([-40.0, 40.0]).m01;
     let stick64 = mass::decode::<Stick, f64>([40.0, 40.0]).m01;
     let stick32 = mass::decode::<Stick, f32>([40.0, 40.0]).m01;
-    let ulps32 = (f32::EPS_MU.to_bits() - stick32.to_bits()) as f64;
     let ternary = mass::from_masses::<f64>([EPS_M, EPS_M, 1.0 - 2.0 * EPS_M]).m01;
     vec![
-        ("eps", eps, "the proposed ε: ε_μ"),
+        ("eps", eps, "the proposed ε: ε_M01"),
         (
             "softmax_tanh_floor_exact",
             soft_exact,
@@ -710,7 +710,7 @@ fn measure() -> Vec<(&'static str, f64, &'static str)> {
         ),
         (
             "stick_breaking_floor_exact",
-            eps - eps * eps / 4.0,
+            eps_mu - eps_mu * eps_mu / 4.0,
             "ε_μ − ε_μ²/4",
         ),
         (
@@ -724,9 +724,14 @@ fn measure() -> Vec<(&'static str, f64, &'static str)> {
             "M₀₁ at z_μ = (40, 40), f32",
         ),
         (
-            "stick_breaking_floor_f32_ulps_below_eps",
-            ulps32,
-            "f32 ulps from that M₀₁ up to ε_μ",
+            "eps_over_stick_breaking_floor",
+            eps / stick32.max(stick64 as f32) as f64,
+            "ε's margin above the corner's pile-up",
+        ),
+        (
+            "ternary_floor_over_eps",
+            ternary / eps,
+            "the ternary floor's margin above ε",
         ),
         (
             "stick_breaking_onset_f64",
@@ -751,7 +756,10 @@ fn measurement_text(values: &[(&str, f64, &str)]) -> String {
     let mut s = String::from(
         "# The M01_TINY ε calibration's evidence (REQ-DEC-039; R-71): the M₀₁ range reachable at μ_max = 5.\n\
          # Measured by crates/kernel/tests/decode_blocks.rs, decode_m01_tiny_measurement; regenerate with\n\
-         # PRIN_WRITE_M01_MEASUREMENT=1. Compared at a relative 1e-6, so a platform's libm does not move it.\n",
+         # PRIN_WRITE_M01_MEASUREMENT=1. Compared at a relative 1e-6. Each value is analytic, a saturated floor, or an\n\
+         # onset where M₀₁ still changes with z at f32 resolution (ε sits in the gap above stick_breaking's floor), so\n\
+         # a few ulps of a platform's exp or tanh move it by far less than that; at ε = ε_μ the f32 onset would not be\n\
+         # (a 1-ulp tanhf moves it by 1.7%).\n",
     );
     for (k, v, what) in values {
         s.push_str(&format!("{k} = {v:e}  # {what}\n"));
