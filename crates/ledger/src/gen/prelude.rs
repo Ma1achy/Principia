@@ -300,7 +300,7 @@ fn lut_wgsl(lut: &Lut) -> String {
     let stops = lut.literals();
     let n = stops.len();
     let mut out = format!(
-        "\n// The published `{name}` table (R-122), {n} stops, sRGB-encoded, its source named in {data}.\n\
+        "\n// The published `{name}` table (R-122), {n} stops, sRGB-encoded, its source named\n// in {data}.\n\
          const {c}: array<vec3<f32>, {n}> = array<vec3<f32>, {n}>(\n",
         name = lut.name,
         data = format_args!("crates/ledger/data/lut/{}.txt", lut.name),

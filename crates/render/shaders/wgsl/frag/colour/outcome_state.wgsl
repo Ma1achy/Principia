@@ -2,9 +2,10 @@
 // built-in occupant of the `colour` slot. Each sample's class is read from `state` plus the `detail` union (payload §2)
 // and `t_end_step`: a collision's colour is its pair's, an escape's its body's (0-based, R-22), `detail = 3` the triple
 // outcome's; "degenerate" is `decode_failed`, and "collision @ t=0" is a collision with `t_end_step == 0`, whatever its
-// `detail` (R-96). `running` shows the "not yet" style, `debug_not_yet`, the neutral grey `DBG_NOT_YET` with a fine
-// dot stipple (R-399; REQ-COL-053, REQ-COL-064), and `sim_failed` the invalid pattern (colour_composition §3), as do
-// the reserved codes 6–7, which read as finished and untrusted (payload §2, §6). A RUNNING sample is coloured like any class (render contract Part 4; REQ-RENDER-017).
+// `detail` (R-96). `running` shows the "not yet" style, `debug_not_yet`, the neutral grey `DBG_NOT_YET` with a fine dot
+// stipple (R-399; REQ-COL-053, REQ-COL-064), and `sim_failed` the invalid pattern (colour_composition §3), as do the
+// reserved codes 6–7, which read as finished and untrusted (payload §2, §6). A RUNNING sample is coloured like any
+// class (render contract Part 4; REQ-RENDER-017).
 //
 // Each class's swatch is a node param, so editing one changes only its class and recompiles nothing (REQ-COL-002;
 // lowering Part 3): a linear RGB colour, the colour slot's space (render contract Part 2), as a field ramp's

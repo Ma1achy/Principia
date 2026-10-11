@@ -8,8 +8,8 @@
 //! whatever its `detail`, so a triple collision at step 0 is orange like any other collision there (applied per
 //! R-369: `detail = 3` is the collision's fourth `detail` code, which the `t_end_step == 0` reading overrides as it
 //! does the pair ids). `running` shows the "not yet" style ([`crate::present::debug_not_yet`], R-399; REQ-COL-053,
-//! REQ-COL-064), `sim_failed` the invalid pattern (colour_composition §3), and so do the reserved codes 6–7, finished and untrusted
-//! (payload §2, §6; applied per R-369).
+//! REQ-COL-064), `sim_failed` the invalid pattern (colour_composition §3), and so do the reserved codes 6–7, finished
+//! and untrusted (payload §2, §6; applied per R-369).
 //!
 //! **The swatches** ([`SWATCHES`]) are the occupant's node params, so editing one changes only its class
 //! (REQ-COL-002): linear RGB, the colour slot's space, as a field ramp's `INVALID_COLOUR` is, each default the f32

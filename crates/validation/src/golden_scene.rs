@@ -18,8 +18,8 @@
 //! - `de_max_failed`, `dlz_max_failed`: `dE_max`'s and `dLz_max`'s views: a forced-failure sample's stored 0.0 sits on
 //!   the ramp at 0.0's place (R-79), not hatched.
 //! - `d_min`: `d_min`'s view: a forced-failure sample and an unstepped one hold the unset f16 +∞ and are drawn in the
-//!   "not yet" style, the grey with its dot stipple (R-271, R-280, R-399); an f16 NaN is hatched; a failed-state stored 0.0 sits on the ramp at 0.0's place; a
-//!   valid `d_min` on the ramp.
+//!   "not yet" style, the grey with its dot stipple (R-271, R-280, R-399); an f16 NaN is hatched; a failed-state stored
+//!   0.0 sits on the ramp at 0.0's place; a valid `d_min` on the ramp.
 //! - `length_view`: the word `length`'s view: the sentinel 127 shows as its literal value on the ramp (R-136).
 //! - `length_ramp`, `length_ramp_override`: the word `length`'s field ramp: 127 in the invalid pattern, then in the
 //!   node's override colour.
@@ -29,8 +29,8 @@
 //! **The ramp follows the declared range** (`m1-numeric`; R-400, R-403; TASK-M1-17's acceptance lines), each view in
 //! its default mode, `RANGE_AUTO = 1`, over the scene's measured range:
 //! - `e_0_signed`, `lz_0_signed`, `c_ty_signed`: `E_0`, `Lz_0` and `C_ty`, whose declared ranges span zero, on
-//!   `ramp_coolwarm` over the symmetric `[−M, M]`: one sample at 0, at the table's neutral, `t = ½`, the negative values
-//!   on the cool side and the positive on the warm.
+//!   `ramp_coolwarm` over the symmetric `[−M, M]`: one sample at 0, at the table's neutral, `t = ½`, the negative
+//!   values on the cool side and the positive on the warm.
 //! - `k_0`, `v_0`: `K_0` over `[0, ∞)` and `V_0` over `(−∞, 0]` on `ramp_viridis`, increasing in the value, `K_0`'s
 //!   minimum and `V_0`'s most negative value at the dark end, `t = 0`; physical values, `K₀ ≥ 0` and `V₀ < 0`, never
 //!   a layout fixture's off-sign value.

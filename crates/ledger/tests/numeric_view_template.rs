@@ -920,8 +920,8 @@ fn place(n: &NumericView, x: f32, auto: bool, xs: &[f32]) -> f64 {
     }
 }
 
-/// Checks R-403's map: `K_0` and `V_0` on `ramp_viridis`, the template's `lin`, increasing in the value in both
-/// modes, their headers defaulting to `RANGE_AUTO = 1`; under auto `t = 0` at the measured minimum; under fixed, `K_0`'s
+/// Checks R-403's map: `K_0` and `V_0` on `ramp_viridis`, the template's `lin`, increasing in the value in both modes,
+/// their headers defaulting to `RANGE_AUTO = 1`; under auto `t = 0` at the measured minimum; under fixed, `K_0`'s
 /// `t = 0` at its declared 0 and `V_0`'s at its measured minimum, a positive `V_0` clamping to `t = 1`. `V_0`'s most
 /// negative value is at `t = 0` in both modes.
 fn check_energies([(k, kw), (v, vw)]: [(NumericView, String); 2]) {

@@ -89,7 +89,8 @@ fn debug_invalid(frag_xy: vec2<f32>) -> vec3<f32> {
     return srgb_to_linear(select(a, b, stripe == 1));
 }
 
-// The published `viridis` table (R-122), 256 stops, sRGB-encoded, its source named in crates/ledger/data/lut/viridis.txt.
+// The published `viridis` table (R-122), 256 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/viridis.txt.
 const LUT_VIRIDIS: array<vec3<f32>, 256> = array<vec3<f32>, 256>(
     vec3<f32>(0.267004, 0.004874, 0.329415),
     vec3<f32>(0.268510, 0.009605, 0.335427),
@@ -356,7 +357,8 @@ fn ramp_viridis(t: f32) -> vec3<f32> {
     return srgb_to_linear(mix(LUT_VIRIDIS[k], LUT_VIRIDIS[k + 1u], x - f32(k)));
 }
 
-// The published `twilight` table (R-122), 510 stops, sRGB-encoded, its source named in crates/ledger/data/lut/twilight.txt.
+// The published `twilight` table (R-122), 510 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/twilight.txt.
 const LUT_TWILIGHT: array<vec3<f32>, 510> = array<vec3<f32>, 510>(
     vec3<f32>(0.88575015840754434, 0.85000924943067835, 0.8879736506427196),
     vec3<f32>(0.88378520195539056, 0.85072940540310626, 0.88723222096949894),
@@ -877,7 +879,8 @@ fn ramp_twilight(t: f32) -> vec3<f32> {
     return srgb_to_linear(mix(LUT_TWILIGHT[k], LUT_TWILIGHT[k + 1u], x - f32(k)));
 }
 
-// The published `magma` table (R-122), 256 stops, sRGB-encoded, its source named in crates/ledger/data/lut/magma.txt.
+// The published `magma` table (R-122), 256 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/magma.txt.
 const LUT_MAGMA: array<vec3<f32>, 256> = array<vec3<f32>, 256>(
     vec3<f32>(0.001462, 0.000466, 0.013866),
     vec3<f32>(0.002258, 0.001295, 0.018331),
@@ -1144,7 +1147,8 @@ fn ramp_magma(t: f32) -> vec3<f32> {
     return srgb_to_linear(mix(LUT_MAGMA[k], LUT_MAGMA[k + 1u], x - f32(k)));
 }
 
-// The published `coolwarm` table (R-122), 33 stops, sRGB-encoded, its source named in crates/ledger/data/lut/coolwarm.txt.
+// The published `coolwarm` table (R-122), 33 stops, sRGB-encoded, its source named
+// in crates/ledger/data/lut/coolwarm.txt.
 const LUT_COOLWARM: array<vec3<f32>, 33> = array<vec3<f32>, 33>(
     vec3<f32>(0.2298057, 0.298717966, 0.753683153),
     vec3<f32>(0.26623388, 0.353094838, 0.801466763),

@@ -9,10 +9,10 @@
 //!   twins, the unset `d_min` in the "not yet" style (`f16_scalar_views_*`);
 //! - REQ-COL-001: the field ramps' invalid lane, the pattern by default and the override colour changing only the
 //!   invalid pixels (`field_ramp_*`);
-//! - REQ-RENDER-084 (R-400, R-403; TASK-M1-17): `E_0`, `Lz_0` and `C_ty`, whose declared ranges span zero, render
-//!   on `ramp_coolwarm`, 0 at the neutral and the two signs on its two sides; `K_0`, `V_0` and `virial_ratio` on
-//!   `ramp_viridis`, increasing, `K_0`'s minimum and `V_0`'s most negative value at the dark end, in the views' default,
-//!   auto mode (`range_scenes_*`);
+//! - REQ-RENDER-084 (R-400, R-403; TASK-M1-17): `E_0`, `Lz_0` and `C_ty`, whose declared ranges span zero, render on
+//!   `ramp_coolwarm`, 0 at the neutral and the two signs on its two sides; `K_0`, `V_0` and `virial_ratio` on
+//!   `ramp_viridis`, increasing, `K_0`'s minimum and `V_0`'s most negative value at the dark end, in the views'
+//!   default, auto mode (`range_scenes_*`);
 //! - every golden scene renders its CPU twin, far enough from every rounding tie that one reference holds on every
 //!   backend (`golden_scenes_*`).
 //!

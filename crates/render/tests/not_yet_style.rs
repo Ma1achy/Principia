@@ -1,5 +1,5 @@
-//! The "not yet" style (R-399; REQ-TOOL-162, REQ-COL-064's proposal; TASK-M1-17): an unset `d_min` and a running
-//! sample are drawn by `debug_not_yet(frag_xy)`, the grey `DBG_NOT_YET` with a fine dot stipple from the pixel position,
+//! The "not yet" style (R-399; REQ-TOOL-162, REQ-COL-064's proposal; TASK-M1-17): an unset `d_min` and a running sample
+//! are drawn by `debug_not_yet(frag_xy)`, the grey `DBG_NOT_YET` with a fine dot stipple from the pixel position,
 //! distinct from the invalid hatch's stripes, so no ramp's flat colour reads as it:
 //! - the presentation layer's dot colour is its CPU mirror's, and `debug_not_yet` on the GPU is the mirror at every
 //!   pixel (`not_yet_style_mirror_*`);
