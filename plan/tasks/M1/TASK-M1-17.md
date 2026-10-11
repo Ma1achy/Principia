@@ -119,7 +119,7 @@ scale `lin`, on viridis, mapped monotonically with `V_0`'s most negative value a
   magma, grey or cool-warm reproduces a 4 × 4 block of it; it states `frag_xy`'s pixel space and shows the stipple resolved
   at the Mac's display scale factor; the human confirms it at the M1 gate (REQ-COL-064).
 - Review checklist (physics): each declared non-negative range cites its line (REQ-RENDER-084).
-- `cargo test -p ledger`, `cargo test -p render` and `cargo xtask golden` — every other view renders as before.
+- `cargo test -p ledger`, `cargo test -p render` and `cargo xtask golden --all` — every other view renders as before.
 
 ## Notes
 - R-399, R-400 and R-403 (9 Oct 2026) are the rulings this task applies; applied per R-369 by the orchestrator:
