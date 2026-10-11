@@ -75,3 +75,7 @@ view's sub-scopes reached with Enter.
   TASK-M8-06, which wire them to the real engine's lock and chart ranges.
 - The event-driven precision warning on the real engine is TASK-M6-21's, which depends on this task.
 - Sources and silences as TASK-M6-24's Notes give them (R-390).
+- R-409 (10 Oct 2026): the compass has no orbit, its mode is set by Tilt and Slice buttons as well as by the slider
+  touched, and in slice mode a drag moves the slice along the plane's normal; its keys take Enter to interact.
+  REQ-GUI-091 and REQ-GUI-170 are reworded; this task's acceptance lines stay as its record as merged. TASK-M6-31 builds
+  the change and re-checks both as now worded.

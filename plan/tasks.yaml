@@ -1544,7 +1544,7 @@
 - id: TASK-M6-27
   milestone: M6
   title: "The GUI track (R-390), 4: Time, the Legend frame, the Trajectory panel frame and the Overlays menu"
-  depends_on: [TASK-M6-26, TASK-M1-17]  # TASK-M1-17 for debug_not_yet and its CPU mirror (R-399), applied per R-369
+  depends_on: [TASK-M6-26, TASK-M1-17, TASK-M6-31]  # TASK-M1-17 for debug_not_yet and its CPU mirror (R-399), applied per R-369; TASK-M6-31 for R-409's keyboard modes (R-409 A7)
   needs: []
   requirements: [REQ-GUI-172, REQ-GUI-173, REQ-GUI-157]
   reviewers: [code, qa, gui]
@@ -1571,6 +1571,14 @@
   depends_on: [TASK-M6-27, TASK-M6-28]
   needs: []
   requirements: [REQ-GUI-179]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-31
+  milestone: M6
+  title: "Compass modes and keyboard navigation/interaction modes in the mock (R-409)"
+  depends_on: [TASK-M6-26]
+  needs: []
+  requirements: [REQ-GUI-181, REQ-GUI-182, REQ-GUI-183, REQ-GUI-184]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-01

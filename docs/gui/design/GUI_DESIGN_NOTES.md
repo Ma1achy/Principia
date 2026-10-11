@@ -36,9 +36,11 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   side; F₂ word, substeps, min separation, |ΔE/E|; playhead; **listen** (sonification, can follow the cursor); kept orbits below.
   - **The shape sphere turns slowly, with visible x, y, z axes,** and switches to an unwrapped (equirectangular) view.
 - **Bottom:**
-  - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart and
-    **switches mode by itself**: touching a slice slider shows slicing, touching a tilt shows tilting. When locked it carries
-    a gold pin at the pivot, and the plane turns about the pin. Dragging the plane tilts; dragging the cube orbits.
+  - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
+    orthographic view at its default angle, with no orbit. Its **Tilt** and **Slice** buttons switch its mode (Tilt by
+    default) and always show it, and it still **switches mode by itself**: touching a slice slider shows slicing,
+    touching a tilt shows tilting. When locked it carries a gold pin at the pivot, and the plane turns about the pin.
+    Dragging tilts in tilt mode; in slice mode it moves the slice plane along its normal *(conformed to R-409)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It
     is not instant, and says so.
   - **Legend, generated from the stain** (see 06).
@@ -100,12 +102,27 @@ their colour square; post operations line samples. It's called "Legend", never "
 The GUI is a tree of scopes. Tab / Shift+Tab between big scopes (numbered order); Enter drills in; Esc backs out; arrows move
 within a scope or adjust the focused value; Shift ×10, Alt ×0.1; held keys use the delay-then-repeat (DAS / ARR) model; `?`
 shows shortcuts. What the user sees: a focus ring and the top-bar breadcrumb, nothing else.
+Two modes *(conformed to R-409)*: every landing is in navigation mode (orange ring; arrows move between siblings); Enter on
+an element starts interaction mode (blue ring; it takes the arrows, see below); Esc returns to navigation on the same element, and
+Esc again goes up a scope. The ring's colour is the one thing the mode changes on screen (and the breadcrumb's, per R-409
+A6).
+Arrows need Enter *(conformed to R-409's follow-up answers)*: in navigation mode they always move between siblings, and a
+scope's arrow actions (the Figure's pan, Time's step, the compass's tilt and slice, the console's entry list) act only
+in interaction mode; its letter and Space shortcuts act whenever the focus is in the scope, in either mode. Shift ×10
+and Alt ×0.1 hold on the compass too. Tab lands on the big scope itself; Enter goes in onto its first element, except on the Figure (below).
+In interaction mode *(conformed to R-409 G1–G6)* the element takes the arrows; Tab, Ctrl+Z, `?` and the shortcuts keep
+their meaning, except while a text field is being typed in, Tab leaving for the next big scope in navigation mode (inside a
+window, for its next section), and Enter, like Esc, returns to navigation. On a big
+scope itself the arrows move between the big scopes. The Figure, with nothing inside, takes Enter as interaction; the
+Legend takes it as nothing. A text field starts typing on Enter; while typing it takes every key, Ctrl+Z (undoing the
+text edit) and `?` (a character) included, but Esc and Enter (back to navigation, text kept) and Tab (move on).
 
 ## 08 Lock — the reticle and the pin
 
 Locking (K, or right-click → lock here) recentres the view on that point and marks it with a gold reticle at the centre. Every
 tilted plane passes through it, so it's the one point that stays still while the picture turns. The compass shows the same point
 as a gold pin. Sliders are re-based (see 01). Affine charts compute z_locked directly; nonlinear charts replay Φ and D on the CPU.
+K is the Figure's shortcut, acting with the focus in the Figure in either keyboard mode *(conformed to R-409)*.
 
 ## 09 Import picture · saved views · record a sweep
 
