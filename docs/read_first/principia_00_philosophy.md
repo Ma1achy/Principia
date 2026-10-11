@@ -432,6 +432,17 @@ as `keep_boundary_shapes` already is.
 12 minutes — and the matrix compares *methods*, not fine structure. Run the winner at 1024²
 afterwards.
 
+### 7.6a The truncated-Fourier block — a possible future feature (R-420)
+
+**What it buys:** a view of a truncated-Fourier block per quad, `|a_k|` per k and a frequency ω, which
+render_contract Part 6 carried as an optional field-view row read from the quad payload, certifying "the
+truncated-Fourier path when enabled".
+
+**Why it waits:** nothing current defines it. No doc, requirement or task gives the path, its `a_k`, its ω or when
+it is enabled, and the quad payload (`RenderQuad`, render_contract Part 1) has no Fourier member; only the archived
+LaTeX spec described a truncated-Fourier preview, record only (R-159). R-420 removed the row from Part 6 and
+parked it here. Building it needs its definition first (R-72).
+
 ### 7.7 The rule for this section
 
 **A parked idea earns its place by naming what it buys and why it waits.** If either is missing it is

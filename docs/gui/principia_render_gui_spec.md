@@ -757,10 +757,14 @@ floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts
 `1 − 1/(1 + ln(1 + |x|/ε))`, `dbg_log`'s place, on the fixed `[0, 1]`; `cyclic` `fract(x / period)` on the fixed
 `[0, 1]`, on `ramp_twilight`. Every other ramp is `ramp_viridis`, except for a field whose declared range spans zero,
 which is on `ramp_coolwarm` centred at zero (R-400; TASK-M1-17). **The cyclic period is one turn, 2π:** a cyclic
-field is an angle in radians (REQ-TOOL-161). `rho_angle` is the one cyclic field; its formula is REQ-PAY-088's. **The
-log floor** of a field with no ledger `floor` is that field's own, `ε_f` in its units, a calibration proposed with its
-evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-18); TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's
-smallest positive subnormal, which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
+field is an angle in radians (REQ-TOOL-161). `rho_angle` and `theta` are the cyclic fields: `rho_angle`'s formula is
+REQ-PAY-088's, and `theta`, the unwrapped longitude `θ̃` in radians, is cyclic because it is an angle, although its
+range spans zero (R-423; REQ-RENDER-085). **The log floor** of a field with no ledger `floor` is that field's own,
+`ε_f` in its units, a calibration proposed with its evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-18),
+`rho_ratio`'s and `r_min_pair_0`'s provisionally, re-confirmed at M2 once their formulas are defined (R-419,
+REQ-TOOL-163): `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for `r_min_pair_0` only the
+evidence is provisional; TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's smallest positive subnormal,
+which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
 `[0, horizon_steps]`; a `diverging` field's range, and under R-400 every range that spans zero, is symmetric about 0.
 A field carries the `diverging` scale only when its declared range spans zero (R-403; dd_generation_root §3.8), so
 the scale and the ramp agree; the one-signed `K_0` `[0, ∞)` and `V_0` `(−∞, 0]` are `lin`, on `ramp_viridis`, mapped

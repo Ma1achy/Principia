@@ -312,10 +312,16 @@ with dd_colouring §3.1's sRGB transfer.
 | Live shape & accumulator views: current `n` → direction cosines / running `θ̃` → cyclic / \|n\|−1 error (flat-zero expected); FTLE-running `S/t`; diffusion slope from moments; drift max-vs-final; **live current-substep count → effort heatmap (animates: close encounters propagate in time)** | live state + accumulators | the live march itself — shape derivation, phase unwrapping, accumulator bookkeeping, substepper effort |
 | Word views: `fgw_reduced_length` (invalid-styled when truncated), symbol-at-k (scrubber), truncated sentinel, **whole-word hash** (`dbg_hash` of the uint4) | `free_group_word` | symbol packing — and the hash view renders **topological basins**: word boundaries are finer than outcome boundaries, so this is the Burrau topological-boundary diagnostic, free at debug level |
 | Ensemble views (tier-gated): outcome agreement, spread — **derived at resolve** from the footprint's E+1 samples (not a stored field), consumed live & aggregated to the quad | the ensemble/SSAA machinery (E Halton-(2,3)-offset copies per nominal sample) |
-| Optional Fourier block: \|a_k\| per k, ω | quad payload | the truncated-Fourier path when enabled |
 | Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view here exonerates the GPU |
 | Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch, visible-set, locked/stale) | post node + quad + `ctx.uv` | the quad/instance render path and cache behaviour |
 | **Uniform echo** — flat swatches of `quality_tier`, `n_renorm` (R-111), thresholds *as currently bound* | `SimUniforms` | the CPU→GPU binding path — catches "slider moved but nothing rebound" |
+
+**The uniform echo row and the Fourier row (R-420).** The uniform echo row is not on the M1 checklist (REQ-TOOL-011):
+it is built and ticked by TASK-M5-31, after TASK-M5-02 (`quality_tier`) and TASK-M3-06 (`SimUniforms`), against a real
+binding (REQ-TOOL-164). That task names the thresholds the echo shows, and the binding it reads `quality_tier`
+from, since `SimUniforms` holds no tier (REQ-TOOL-165, R-72). The Optional Fourier block row (`|a_k|` per k and ω,
+from the quad payload, certifying "the truncated-Fourier path when enabled") is removed from this table: nothing
+current defines the path, and it is parked as a possible future feature (`principia_00_philosophy.md` §7.6a).
 
 **The word views' renderings (TASK-M1-12).**
 - **The invalid-styled reduced length (R-72; REQ-TOOL-156):** where `fgw_reduced_length_valid` is false, the word
