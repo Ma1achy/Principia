@@ -123,8 +123,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
     straight after (§ "Reviewers", its **Mutants** item; R-388);
   - for a task started early off a dependency's approved head, that head's sha, and that the PR waits for the
     dependency to merge (R-388; § "Roles and the loop");
-  - the environment: `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0`, and on the Mac the
-    PATH fix (§ "Paths and warm builds");
+  - the environment: `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0`,
+    `RUSTUP_AUTO_INSTALL=0` (R-414; § "Toolchain"), and on the Mac the PATH fix (§ "Paths and warm builds");
   - a private scratch subdirectory for PR bodies and temp files, `<scratchpad>/<pr>-<role>/`. Agents sharing one
     scratch directory overwrote each other's `body.md`, and PR #54's description briefly showed TASK-M0-09's
     (30 Sep 2026);
@@ -292,6 +292,14 @@ and check `cvd_hatch_distinct` (TASK-M7-20) green on `main`. The M1 gate report 
 earlier milestones, so it does not show REQ-COL-061, which is in M7.
 R-390 (6 Oct 2026): the GUI track, TASK-M6-24 to TASK-M6-29, starts now, in parallel with the physics and renderer
 chain, on spare agent slots only, and never holds up M1 or M2 (§ "The GUI track (R-390)").
+R-415 (10 Oct 2026): **merging before an earlier milestone's gate.** A task may merge before an earlier milestone's
+gate has passed if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could
+change (`plan/WORKFLOW.md` § "Human checkpoints: the milestone gates"). Apply the test before merging, and record it
+in the PR as "applied per R-415": the gates it passes over, the calibration and definition requirements of those
+gates checked (`plan/MILESTONES.md`), and why the task relies on none of them; when in doubt, don't merge early.
+TASK-M7-02 to TASK-M7-04, merged before the M1 gate (#145, #148, #150), get an after-the-fact check against the test,
+a separate read-only dispatch whose findings go in the next summary (and any reliance found, in `REVIEW_QUEUE.md`).
+TASK-M7-05 merges early only if it passes the same test, and only once R-411's port (RQ-265) has merged.
 
 Merge under the conditions above, and file every question for the human in `REVIEW_QUEUE.md` (R-369).
 
@@ -349,6 +357,9 @@ qa and gui. The human's feedback added TASK-M6-30 (R-406) and TASK-M6-31 (R-409)
   (`docs/gui/design/GUI_DESIGN_NOTES.md`, or render_gui_spec where the note settles a spec point), then the plan (the
   task it changes, or a new task), then the code, through a task PR reviewed like any other. A note that contradicts
   a ruling or the corpus is flagged in the PR and the next summary (CLAUDE.md § "Rulings").
+- **Look choices hold (R-416, 10 Oct 2026).** TASK-M6-26's look choices (PR #183's § "Look choices") and TASK-M6-31's,
+  when it lands, are neither confirmed nor changed until the human has tried the M6-31 mock. Don't put them to the
+  human before then; list them in TASK-M6-31's PR for that try.
 - **Contract changes.** A track task that adds to the contract surface re-runs the conformance suite on both engines,
   and the code reviewer checks the field is as the corpus names it (R-390's "Contract fields").
 
@@ -474,6 +485,10 @@ anything outside the repository and its build and scratch directories without as
 - `scripts/cloud-setup.sh` reads the toolchain from what CI reads. While `main` has no `rust-toolchain.toml`, it
   installs stable as CI's `dtolnay/rust-toolchain@stable` steps do; once #96 merges, it installs the nightly the file
   pins, and installs stable only if a Linux job still asks for it.
+- **Toolchains change only through the pin (R-414, 10 Oct 2026; R-349).** `~/.rustup`'s stable stays at 1.99.0;
+  nothing updates, reinstalls or removes it. Every dispatch sets `RUSTUP_AUTO_INSTALL=0` (§ "Dispatching"), so
+  rustup's proxy never installs a toolchain on its own; a new toolchain arrives only by a change to
+  `rust-toolchain.toml`, through a PR.
 
 ## Metal and perf (Mac only)
 

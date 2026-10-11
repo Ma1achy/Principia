@@ -113,7 +113,8 @@ everywhere (R-409's follow-up answers).
   track task (R-390): it merges once its reviews pass and CI is green, without waiting for the gates of M1 to M5.
 - **Look choices (R-390), recorded in the PR as "applied per R-369":** the navigation mode's orange; the buttons' look
   and labels; the hint's wording; the fixed view's angle (the code's default, R-409
-  point 1); and the breadcrumb's colour (R-409 A6).
+  point 1); and the breadcrumb's colour (R-409 A6). **They hold (R-416):** like TASK-M6-26's, they are neither
+  confirmed nor changed until the human has tried this task's mock; the PR lists them for that.
 - **Calibration (R-71) proposed here:** REQ-GUI-184, the slice-mode arrows' base step. It is used provisionally
   (R-182) and confirmed by the human at the M8 gate; an unconfirmed one blocks that gate. R-404's other base steps stand;
   its `Orbit` row is retired.

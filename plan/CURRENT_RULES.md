@@ -89,6 +89,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-401** — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
 - **R-407** — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*
 - **R-408** — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
+- **R-412** — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*
+- **R-413** — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes "edge-heavy: crowds the bounds" *(closes RQ-267)*
 
 ## Design and architecture
 
@@ -235,6 +237,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-405** — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console. Still in force: all of it, as its text reads, except that ↑ and ↓ scroll the entry list only in interaction mode, after Enter on the list, Esc returning to navigation mode on it (R-409, the human's follow-up answer); and that every landing, the console's first filter included, is in navigation mode, the arrows moving within a section in navigation mode (R-409). Amended in part by R-409.
 - **R-406** — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout
 - **R-409** — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
+- **R-410** — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*
+- **R-411** — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*
 
 ## Values
 
@@ -317,6 +321,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-391** — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
 - **R-393** — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)*
 - **R-396** — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*
+- **R-414** — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin
+- **R-415** — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change
 
 ## CI
 
@@ -430,3 +436,4 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-370** — R-366's number stands *(closes RQ-198)*
 - **R-377** — The M0 gate passes once #124 merges and every M0 exit requirement is green on `main`; `main` is then tagged `m0-gate` and M1 starts
 - **R-384** — TASK-M0-00 is done (R-185, PR #11), as `plan/tasks.yaml` already records; the `m0-gate` tag stands on `002576e`, #124's merge
+- **R-416** — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing
