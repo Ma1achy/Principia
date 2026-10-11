@@ -355,13 +355,13 @@ negative_control!(
     check_parses_with_values(|tier| prelude::wgsl(tier).replace(">> 2u)", ">> 3u)"))
 );
 
-/// The published tables (R-122): `luts` gives viridis then twilight, 256 and 510 stops, each parsed whole, with
-/// matplotlib's first and last stops; the WGSL constant holds each stop's literal as the source writes it.
-fn check_tables(luts: [Lut; 2]) {
-    let [viridis, twilight] = luts;
+/// The published tables (R-122): `luts` gives viridis, twilight and magma, 256, 510 and 256 stops, each parsed whole,
+/// with matplotlib's first and last stops; the WGSL constant holds each stop's literal as the source writes it.
+fn check_tables(luts: [Lut; 3]) {
+    let [viridis, twilight, magma] = luts;
     assert_eq!(
-        (viridis.name, twilight.name),
-        ("viridis", "twilight"),
+        (viridis.name, twilight.name, magma.name),
+        ("viridis", "twilight", "magma"),
         "the tables"
     );
     let want = [
@@ -376,6 +376,12 @@ fn check_tables(luts: [Lut; 2]) {
             510,
             [0.8857501584075443, 0.8500092494306783, 0.8879736506427196],
             [0.8857115512284565, 0.8500218611585632, 0.8857253899008712],
+        ),
+        (
+            magma,
+            256,
+            [0.001462, 0.000466, 0.013866],
+            [0.987053, 0.991438, 0.749504],
         ),
     ];
     let text = prelude::wgsl(Tier::FULL);
@@ -414,11 +420,11 @@ negative_control!(
     "a table missing its last stop must fail",
     expected = "viridis: the stop count",
     check_tables({
-        let [mut v, t] = prelude::luts();
+        let [mut v, t, m] = prelude::luts();
         let data = v.data;
         let cut = data.trim_end().rfind('\n').expect("a line");
         v.data = Box::leak(data[..cut].to_owned().into_boxed_str());
-        [v, t]
+        [v, t, m]
     })
 );
 

@@ -12,6 +12,7 @@ pub mod gpu;
 pub mod oklab;
 pub mod prop;
 pub mod spawn;
+pub mod structural_scene;
 
 /// The synthetic payload harness (TASK-M1-06), re-exported for the render crate's tests, which reach the engine only
 /// through this dev-dependency (systems_architecture §7.1).

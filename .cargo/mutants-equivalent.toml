@@ -56,6 +56,10 @@ mutant = "crates/render/src/colour/field_ramp.rs:92:29: replace == with != in Sc
 justification = "every ledger field payload reaches here (a scalar SimState member, an ICDescriptor member, or the word's) has its <lane>_valid in the validity lane (field_ramp_scalar_validity_is_the_lane checks each), so the guard never refuses, and any() over != finds another member: both accept the same fields"
 
 [[equivalent]]
+mutant = "crates/validation/src/structural_scene.rs:366:39: replace < with <= in StructuralScene::pixel"
+justification = "the threshold scenes' quad uv at a pixel centre is (k + 0.5)/quad_px with quad_px 16 or 64, a dyadic rational computed exactly, so d = min(uv, 1 - uv) is never the f64 0.01, which is not one, and d < 0.01 and d <= 0.01 agree at every pixel"
+
+[[equivalent]]
 mutant = "crates/validation/src/golden_scene.rs:223:49: replace % with + in scene"
 justification = "set_detail writes the low 2 bits of its value (insert(w, v, 3, 2)), and i + 4 and i % 4 share their low 2 bits for every i, so each state_view sample holds the same detail code"
 
