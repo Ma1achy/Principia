@@ -2,6 +2,8 @@
 //! (`crates/engine/src/quad/generated.rs`, included here as written) and its generated WGSL struct:
 //! - REQ-PAY-075: the bin count is the `class ⊕ detail` code space, each bin a u32 that counts Extreme's 16² × 16 copies
 //!   and the bound 2³² − 1 without wrapping (`quad_reduction_histogram_capacity`).
+//! - REQ-PAY-075: a copy's bin index reads `detail` only in a state payload §2 gives it a meaning, in the generated Rust
+//!   and WGSL alike (`quad_reduction_layout_bin_index_*`).
 //! - REQ-PAY-077: the ledger is §3.7's "Layout and §3.8 entries" table, and the generated Rust and WGSL layouts and
 //!   accessors match it (`quad_reduction_layout_*`).
 //! - REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-REF-052: the member list and types are §3.7's, with no `spread_t_end`
@@ -214,6 +216,125 @@ negative_control!(
         });
         check_capacity(&l, 32, &[EXTREME_COPIES]);
     }
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// REQ-PAY-075: a copy's bin index reads `detail` only in a state payload §2 gives it a meaning.
+
+/// Whether payload §2 gives `detail` a meaning in each `state` code 0–7, as §2 writes it ("meaningful only for
+/// `state ∈ {escape, collision, sim_failed, decode_failed}`", codes 0, 2, 4, 5), not read from the ledger.
+const DETAIL_READ: [bool; 8] = [true, false, true, false, true, true, false, false];
+
+/// `1 − max_k f_k` over `bins` (§3.7's impurity grain).
+fn impurity(bins: &[u32]) -> f64 {
+    let total: u32 = bins.iter().sum();
+    let max = bins.iter().copied().max().unwrap_or(0);
+    1.0 - f64::from(max) / f64::from(total)
+}
+
+/// `bin` is §3.7's bin index: two bounded copies whose stray `detail` bits differ share a bin, so a quad bounded
+/// everywhere is pure; and at every `state` 0–7 and `detail` 0–3 the index is `state | detail << 3` where payload §2
+/// gives `detail` a meaning, `state` elsewhere (bounded, running, reserved). The ledger's states agree, and §3.7
+/// states the rule.
+fn check_bin_index(bin: fn(u32, u32) -> u32) {
+    let mut bins = [0u32; 32];
+    for detail in [0, 2] {
+        bins[bin(1, detail) as usize] += 1;
+    }
+    assert_eq!(
+        impurity(&bins),
+        0.0,
+        "two bounded copies with different stray detail bits are split: a quad bounded everywhere reads impure"
+    );
+    for state in 0..8u32 {
+        for detail in 0..4u32 {
+            let want = if DETAIL_READ[state as usize] {
+                state | detail << 3
+            } else {
+                state
+            };
+            let got = bin(state, detail);
+            assert_eq!(
+                got, want,
+                "qr_class_histogram_bin({state}, {detail}) is {got}, not {want}"
+            );
+        }
+    }
+    let reads: Vec<u32> = (0..8).filter(|&s| DETAIL_READ[s as usize]).collect();
+    assert_eq!(
+        reduction::detail_states(),
+        reads,
+        "the ledger's detail-reading states are not payload §2's"
+    );
+    assert!(
+        generation_root().contains("**A copy's bin index is `state | d << 3`, where `d` is"),
+        "§3.7 does not state the bin index"
+    );
+}
+
+#[test]
+fn quad_reduction_layout_bin_index_zeroes_unread_detail() {
+    check_bin_index(qr_class_histogram_bin);
+}
+
+negative_control!(
+    quad_reduction_layout_bin_index_zeroes_unread_detail,
+    "the raw `state | detail << 3` splits two bounded copies whose stray detail bits differ",
+    expected = "two bounded copies with different stray detail bits are split",
+    check_bin_index(|state, detail| state | detail << 3)
+);
+
+negative_control!(
+    quad_reduction_layout_bin_index_running_reads_detail,
+    "an index that zeroes only bounded's detail splits running copies",
+    expected = "qr_class_histogram_bin(3, 1) is 11, not 3",
+    check_bin_index(|state, detail| if state == 1 {
+        state
+    } else {
+        state | detail << 3
+    })
+);
+
+/// The test kernel: the generated WGSL bin index of the code `a[i]`, its `state` in bits 0–2 and `detail` in 3–4.
+const BIN_KERNEL: &str = r"
+@group(0) @binding(0) var<storage, read> a: array<u32>;
+@group(0) @binding(1) var<storage, read_write> out: array<u32>;
+
+@compute @workgroup_size(64)
+fn t_bin(@builtin(global_invocation_id) id: vec3<u32>) {
+    let i = id.x;
+    if i >= arrayLength(&a) { return; }
+    out[i] = qr_class_histogram_bin(a[i] & 7u, a[i] >> 3u);
+}
+";
+
+/// The generated WGSL bin index of `wgsl_src`, run on the GPU at every 5-bit code, is the generated Rust one.
+fn check_wgsl_bin_index(wgsl_src: &str) {
+    let codes: Vec<u32> = (0..32).collect();
+    let gpu = GpuHarness::new().expect("a GPU device");
+    let got = gpu.run_wgsl(&format!("{wgsl_src}\n{BIN_KERNEL}"), "t_bin", &[&codes]);
+    for (&c, &g) in codes.iter().zip(&got) {
+        let want = qr_class_histogram_bin(c & 7, c >> 3);
+        assert_eq!(
+            g, want,
+            "WGSL qr_class_histogram_bin of code {c} is {g}, the Rust one {want}"
+        );
+    }
+}
+
+#[test]
+fn quad_reduction_layout_bin_index_wgsl_matches_rust() {
+    check_wgsl_bin_index(&checked_in(WGSL_PATH));
+}
+
+negative_control!(
+    quad_reduction_layout_bin_index_wgsl_matches_rust,
+    "a WGSL bin index that reads detail in every state disagrees with the Rust one",
+    expected = "WGSL qr_class_histogram_bin of code 9 is 9, the Rust one 1",
+    check_wgsl_bin_index(&checked_in(WGSL_PATH).replace(
+        "state == 0u || state == 2u || state == 4u || state == 5u",
+        "true"
+    ))
 );
 
 // ---------------------------------------------------------------------------------------------------------------

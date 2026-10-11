@@ -3,7 +3,8 @@
 //! the struct generated from it ([`quad_reduction`]), and its emitter ([`emit`]), which writes the struct as Rust for
 //! the engine and as WGSL for the render and kernel sides, each with the read accessors of its packed words. Its layout
 //! is §3.7's "Layout and §3.8 entries" (REQ-PAY-077, REQ-PAY-094): `class_histogram`'s 32 u32 bins, one per `class ⊕
-//! detail` code (REQ-PAY-075, R-410), then the words `qr_w0` … `qr_w8`, then the three f32 members; 176 B, aligned to
+//! detail` code, a copy's code reading `detail` as 0 in a state payload §2 gives it no meaning ([`detail_states`];
+//! REQ-PAY-075, R-410), then the words `qr_w0` … `qr_w8`, then the three f32 members; 176 B, aligned to
 //! 4. An f16 member is §3.8's `f16`, one binary16 value at a packed 16-bit location, read widened to f32 (R-312,
 //! R-317).
 //!
@@ -29,15 +30,32 @@ pub const WGSL_PATH: &str = "crates/render/frag/generated/quad_reduction.wgsl";
 /// The width of the `class ⊕ detail` code, from the payload ledger: `sample_descriptor`'s `state` and `detail` widths
 /// (payload §2; dd_generation_root §3.1), 3 + 2 = 5 bits, the width of `dominant_outcome` (§3.7).
 pub fn class_detail_bits() -> u32 {
+    payload_width("state") + payload_width("detail")
+}
+
+/// The width of the payload ledger's packed field `name`, 0 if it has none.
+fn payload_width(name: &str) -> u32 {
     crate::payload::ledger()
         .entries
         .iter()
-        .filter(|e| matches!(e.name, Some("state" | "detail")))
+        .filter(|e| e.name == Some(name))
         .filter_map(|e| match e.location {
             Some(Location::Packed { width, .. }) => Some(width),
             _ => None,
         })
         .sum()
+}
+
+/// The `state` codes whose `detail` a copy's bin index reads: the states payload §2 gives `detail` a meaning
+/// ([`crate::payload::detail_meanings`]), escape 0, collision 2, sim_failed 4 and decode_failed 5. In every other state,
+/// bounded, running and the reserved 6–7, the index reads `detail` as 0 (dd_generation_root §3.7, REQ-PAY-075).
+pub fn detail_states() -> Vec<u32> {
+    let states = crate::payload::states();
+    crate::payload::detail_meanings()
+        .iter()
+        .filter_map(|(s, _)| states.iter().position(|n| n == s))
+        .map(|k| k as u32)
+        .collect()
 }
 
 /// `class_histogram`'s bin count, `N_bins`: one bin per `class ⊕ detail` code, 2⁵ = 32 (REQ-PAY-075; R-72).
@@ -403,6 +421,30 @@ fn f32_bits(value: f64, sep: &str) -> String {
     format!("0x{:04x}{sep}{:04x}", b >> 16, b & 0xffff)
 }
 
+/// A copy's `class_histogram` bin index as source, in either language: `head` opens the function, `body` holds
+/// `{reads}` (whether `state` reads `detail`, a disjunction over [`detail_states`], `false` if there is none) and
+/// `{shift}` (`state`'s width), `suffix` is the language's unsigned-literal suffix and `doc` its comment marker.
+fn bin_index(head: &str, body: &str, suffix: &str, doc: &str) -> String {
+    let reads: Vec<String> = detail_states()
+        .iter()
+        .map(|s| format!("state == {s}{suffix}"))
+        .collect();
+    let reads = if reads.is_empty() {
+        "false".to_owned()
+    } else {
+        reads.join(" || ")
+    };
+    format!(
+        "{doc} The `class_histogram` bin of a copy with `state` and `detail` (`sample_descriptor` bits 0–2 and 3–4):\n\
+         {doc} `state | d << {shift}`, `d` its `detail` in a state payload §2 gives `detail` a meaning (escape, collision,\n\
+         {doc} sim_failed, decode_failed) and 0 in every other: bounded, running and the reserved 6–7. `dominant_outcome`\n\
+         {doc} holds it (dd_generation_root §3.7, REQ-PAY-075).\n{head}{}",
+        body.replace("{reads}", &reads)
+            .replace("{shift}", &payload_width("state").to_string()),
+        shift = payload_width("state"),
+    )
+}
+
 /// The Rust file: the struct, `#[repr(C)]` with its members in order; its size and bin count; per packed member an
 /// accessor `qr_<member>(w)` of its word, a `u32` for unsigned bits and an f32 for an `f16` (the binary16 value widened,
 /// R-317); per f32 member with a sentinel, `QR_<MEMBER>_SENTINEL_BITS` and `qr_<member>_is_sentinel(v)`, tested by its
@@ -427,9 +469,15 @@ fn rust_file(s: &Struct, words: &[Word], entries: &[Entry]) -> String {
         out,
         "}}\n\n/// `{name}`'s size in bytes (dd_generation_root §3.7).\npub const QUAD_REDUCTION_SIZE: usize = {size};\n\
          \n/// `class_histogram`'s bin count, one bin per `class ⊕ detail` code (dd_generation_root §3.7, REQ-PAY-075).\n\
-         pub const CLASS_HISTOGRAM_BINS: usize = {bins};\n",
+         pub const CLASS_HISTOGRAM_BINS: usize = {bins};\n\n{bin}",
         name = s.name,
         bins = bins(),
+        bin = bin_index(
+            "#[inline]\npub fn qr_class_histogram_bin(state: u32, detail: u32) -> u32 {\n",
+            "    let d = if {reads} {\n        detail\n    } else {\n        0\n    };\n    state | (d << {shift})\n}\n",
+            "",
+            "///"
+        ),
     );
     for p in packed_members(words, entries) {
         let (f, o, n) = (p.entry.name, p.offset, p.width);
@@ -506,8 +554,14 @@ fn wgsl_file(s: &Struct, words: &[Word], entries: &[Entry]) -> String {
     let _ = write!(
         out,
         "}}\n\n// `class_histogram`'s bin count, one bin per `class ⊕ detail` code (dd_generation_root §3.7).\n\
-         const QR_CLASS_HISTOGRAM_BINS: u32 = {}u;\n",
-        bins()
+         const QR_CLASS_HISTOGRAM_BINS: u32 = {}u;\n\n{}",
+        bins(),
+        bin_index(
+            "fn qr_class_histogram_bin(state: u32, detail: u32) -> u32 {\n",
+            "    let d = select(0u, detail, {reads});\n    return state | (d << {shift}u);\n}\n",
+            "u",
+            "//"
+        ),
     );
     for p in packed_members(words, entries) {
         let (f, o, n) = (p.entry.name, p.offset, p.width);

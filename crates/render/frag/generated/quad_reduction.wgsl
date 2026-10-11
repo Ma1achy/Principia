@@ -23,6 +23,15 @@ struct QuadReduction {
 // `class_histogram`'s bin count, one bin per `class ⊕ detail` code (dd_generation_root §3.7).
 const QR_CLASS_HISTOGRAM_BINS: u32 = 32u;
 
+// The `class_histogram` bin of a copy with `state` and `detail` (`sample_descriptor` bits 0–2 and 3–4):
+// `state | d << 3`, `d` its `detail` in a state payload §2 gives `detail` a meaning (escape, collision,
+// sim_failed, decode_failed) and 0 in every other: bounded, running and the reserved 6–7. `dominant_outcome`
+// holds it (dd_generation_root §3.7, REQ-PAY-075).
+fn qr_class_histogram_bin(state: u32, detail: u32) -> u32 {
+    let d = select(0u, detail, state == 0u || state == 2u || state == 4u || state == 5u);
+    return state | (d << 3u);
+}
+
 // `dominant_outcome`: bits 0–4 of `qr_w0` (dd_generation_root §3.7).
 fn qr_dominant_outcome(w: u32) -> u32 { return extractBits(w, 0u, 5u); }
 

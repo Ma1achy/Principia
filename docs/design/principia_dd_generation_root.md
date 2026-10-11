@@ -241,19 +241,26 @@ wraps or saturates silently.
 
 **Bin count (REQ-PAY-075; definition, R-72).** The `N` of `class_histogram[N]`, the bin count (written `N_bins` to keep
 it apart from memory_tiers' `N`), is **32 = 2⁵: one bin per code of the 5-bit `class ⊕ detail` field**, `state`
-(bits 0–2 of `sample_descriptor`, §3.1) ⊕ `detail` (bits 3–4), the code `state | detail << 3` that `dominant_outcome`
-holds and `RenderQuad` copies in bits 0–4 (§3.7a). Bin `k` counts the quad's footprint copies whose descriptor bits 0–4
-read `k`: every copy of every footprint, running copies included (the uniformity invariant, below), so the bins sum to
-`N² × (E+1)`. The set is the field's whole code space, not only the codes payload §2 gives a meaning: then
-`dominant_outcome` is the index of the largest bin, with no table between bin and code, and a code no state uses (the
-reserved `state` 6–7, a `detail` its state does not read) is counted in a bin of its own, never merged into another's.
-A bin no copy reaches stays 0.
+(bits 0–2 of `sample_descriptor`, §3.1) ⊕ `detail` (bits 3–4). **A copy's bin index is `state | d << 3`, where `d` is
+its `detail` in a state payload §2 gives `detail` a meaning (escape, collision, sim_failed, decode_failed), and 0 in
+every other state**: bounded and running, whose `detail` payload §2 and §3.1 leave undefined, and the reserved
+`state` 6–7. A stray `detail` never splits a class: the joint set has one bounded class and one running class
+(colour_composition §1.4), and a quad bounded everywhere reads `outcome_impurity = 0`. `dominant_outcome` holds this
+index, and `RenderQuad` copies it in bits 0–4 (§3.7a); the generated `qr_class_histogram_bin(state, detail)` computes
+it in Rust and WGSL. Bin `k` counts the quad's footprint copies whose bin index is `k`: every copy of every footprint,
+running copies included (the uniformity invariant, below), so the bins sum to `N² × (E+1)`. The set is the field's
+whole code space, not only the codes payload §2 gives a meaning: then `dominant_outcome` is the index of the largest
+bin, with no table between bin and code, and a reserved `state` (6–7) is counted in a bin of its own, never merged
+into another's. A bin no copy reaches stays 0, as the bins of a nonzero `d` under bounded, running or a reserved
+state always do.
 
 **Impurity grain (REQ-PAY-076; definition, R-72).** `outcome_impurity = 1 − max_k f_k`, where
-`f_k = class_histogram[k] / Σ_j class_histogram[j]` is the fraction of the quad's copies in bin `k`: the **joint
+`f_k = class_histogram[k] / Σ_j class_histogram[j]` is the fraction of the quad's copies whose bin index (above) is
+`k`: the **joint
 `class ⊕ detail` grain**, as every event-derived field here is ("One grain everywhere", below), over every copy, running
 ones included (`Σ_j = N² × (E+1)`). `dominant_outcome` is the `k` of that maximum, so the two come from one histogram
-and cannot disagree. The impurity-mask cross-check (debug_tooling_plan §G; REQ-VAL-083, TASK-M5-17) uses this fraction.
+and cannot disagree. The impurity mask (render contract Part 6, through `dominant_outcome`) and its cross-check
+(debug_tooling_plan §G; REQ-VAL-083, TASK-M5-17) use the same bin index and this fraction.
 
 **One grain everywhere.** Pending change 1 asked whether `dominant_outcome` needed a class-only
 companion, since a masked accessor is unsound (argmax does not commute with masking). **Defining

@@ -28,6 +28,20 @@ pub const QUAD_REDUCTION_SIZE: usize = 176;
 /// `class_histogram`'s bin count, one bin per `class ⊕ detail` code (dd_generation_root §3.7, REQ-PAY-075).
 pub const CLASS_HISTOGRAM_BINS: usize = 32;
 
+/// The `class_histogram` bin of a copy with `state` and `detail` (`sample_descriptor` bits 0–2 and 3–4):
+/// `state | d << 3`, `d` its `detail` in a state payload §2 gives `detail` a meaning (escape, collision,
+/// sim_failed, decode_failed) and 0 in every other: bounded, running and the reserved 6–7. `dominant_outcome`
+/// holds it (dd_generation_root §3.7, REQ-PAY-075).
+#[inline]
+pub fn qr_class_histogram_bin(state: u32, detail: u32) -> u32 {
+    let d = if state == 0 || state == 2 || state == 4 || state == 5 {
+        detail
+    } else {
+        0
+    };
+    state | (d << 3)
+}
+
 /// `dominant_outcome`: bits 0–4 of `qr_w0` (dd_generation_root §3.7).
 #[inline]
 pub fn qr_dominant_outcome(w: u32) -> u32 {
