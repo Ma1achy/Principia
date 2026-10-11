@@ -333,7 +333,8 @@ contract's starting tolerance). Nothing is chosen.*
   "starting point" to be replaced; and it compares f32 with f64, not with hand-computed values (though "f32 vs f64 —
   the intended comparison" is one reading of REQ-PAY-034's f32 leg). It gives the f64 leg nothing, and as a relative
   tolerance it says nothing for a field whose golden value is 0 (`K_0` and `virial_ratio` at rest). Test 12's
-  tolerance is a cross-backend agreement (CPU-f64 against GPU-f32), not a comparison with hand-computed values, and its factor (REQ-DEC-043) is proposed by TASK-M2-06, which runs after TASK-M2-03
+  tolerance is a cross-backend agreement (CPU-f64 against GPU-f32), not a comparison with hand-computed values, and
+  its factor (REQ-DEC-043) is proposed by TASK-M2-06, which runs after TASK-M2-03
   (TASK-M2-06 depends on TASK-M2-05, which depends on TASK-M2-03). REQ-DEC-044's tests do not include the
   descriptor. "Hand-computed" at f32 is itself open: the f32 rounding of the exact value, or the value the formula
   gives evaluated in f32.
