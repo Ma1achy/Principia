@@ -382,8 +382,9 @@ fn abs(a: Expr) -> Expr {
 /// `log sech² x`, written so that no step overflows: `sech² x = 4e^(−2|x|)/(1 + e^(−2|x|))²`, so
 /// `log sech² x = 2·(log 2 − |x| − softplus(−2|x|))`, finite for every `|x| ≤ MAX/2`, `MAX` the float's largest finite
 /// value (1/cosh² x overflows `cosh` past `|x| ≈ 89` at f32, 710 at f64, and its log is −∞ there, where the true value
-/// is finite). Past `MAX/2` the doubling overflows and it is −∞, the correct rounding of `log 4 − 2|x| < −MAX`; a sum
-/// of two such terms is likewise −∞ once `2·(|z₁| + |z₂|)` passes `MAX` (§3.9).
+/// is finite). Past `MAX/2` the doubling overflows and it is −∞; a sum of two such terms is −∞ exactly when the
+/// computed `2|z₁| + 2|z₂|` overflows, which is within half an ulp of where the true value passes `−MAX` (an exact tie
+/// rounds to −∞ by ties-to-even where the true value rounds to `−MAX`; §3.9).
 fn log_sech2(x: Expr) -> Expr {
     let ax = abs(x);
     let tail = un(Op::Softplus, un(Op::Neg, mul(vec![num(2.0), ax])));

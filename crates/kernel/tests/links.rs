@@ -11,8 +11,9 @@
 //! - `link_properties_log_det_finite`: every log-det finite at f32 and f64 for every finite control up to 10³⁰, far
 //!   past where `exp` and `cosh` overflow, and the two precisions agreeing to f32 round-off (walls W7, W9).
 //! - `link_properties_log_det_half_max`: the edge of that range, per float (§3.9): finite for one control at
-//!   `|x| ≤ MAX/2`, and for two while `2·(|z₁| + |z₂|) ≤ MAX`; one float past, −∞ for an entry with a `log sech²`
-//!   term, the correct rounding of a true value below `−MAX`, and finite up to `MAX` for the others.
+//!   `|x| ≤ MAX/2`, and for two at `|z₁| = |z₂| = MAX/4` and at `(MAX/2, 0)` in either order; one float past,
+//!   where the computed `2|x|` or `2|z₁| + 2|z₂|` overflows, −∞ for an entry with a `log sech²` term (within half an
+//!   ulp of where its true value passes `−MAX`), and finite up to `MAX` for the others.
 //! - `link_selection_defaults_resolve_by_name`: the baked defaults are the named entries (REQ-GEN-013).
 //! - `chart_constants_values`: the generated constants equal REQ-DEC-009's values at f32 and f64.
 //! - `chart_constants_source_scan`: no float literal of a chart constant's value in `crates/kernel/src/{decode,encode}`,
@@ -630,7 +631,7 @@ fn ld_allowance(ld: f64, x: &[f64]) -> f64 {
 
 /// `u`'s log-det at `x`, an f32 control, is finite at f32 and at f64, and the two agree within [`ld_allowance`]
 /// (walls W7 and W9: every control here is far inside the edge [`check_ld_half_max`] checks, past which a
-/// `log sech²` entry's log-det is −∞, its correct rounding).
+/// `log sech²` entry's log-det is −∞).
 fn check_ld_at(u: &Under, x: &[f64]) {
     let x32: Vec<f32> = x.iter().map(|&v| v as f32).collect();
     let (ld32, ld64) = ((u.log_det32)(&x32) as f64, (u.log_det64)(x));
@@ -817,7 +818,7 @@ fn ld_at_edge(u: &Under, x: &[(f64, Edge)]) -> (f64, f64) {
 }
 
 /// `u`'s log-det at the edge of §3.9's finite range ([`Edge`]), at each float: finite inside; past it, −∞ when
-/// `sech2` (the correct rounding of a true value below `−MAX`), else finite, as it is with one control at `±MAX`.
+/// `sech2` (the computed `2|x|` or `2|z₁| + 2|z₂|` overflows there), else finite, as it is with one control at `±MAX`.
 fn check_ld_half_max(u: &Under, sech2: bool) {
     use Edge::*;
     let (inside, past): (Vec<Vec<Edge>>, Vec<Vec<Edge>>) = if u.controls == 1 {

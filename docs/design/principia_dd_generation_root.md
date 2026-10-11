@@ -737,10 +737,12 @@ corner (TASK-M2-15's encode).
 
 The trees write some terms in a form equal in algebra to the table's but with no step that overflows or cancels short
 of the float's own range (canonical_spec §9, walls 7 and 9, measure honesty and totality). At f32 and f64, with `MAX`
-the float's largest finite value, a log-det is −∞ only where its true value rounds below `−MAX`, which is then its
-correct rounding, and finite elsewhere. Each `log sech² x` is about `log 4 − 2·abs(x)`, so an entry with that term
-is finite for one control while `abs(x) ≤ MAX/2` (`tanh_*`) and for two while `2·(abs(z₁) + abs(z₂)) ≤ MAX`
-(`softmax_tanh`, `stick_breaking`), and −∞ past that. The other entries are finite for every finite control. The
+the float's largest finite value, each `log sech² x` is about `log 4 − 2·abs(x)`, so an entry with that term has a
+log-det that is −∞ exactly when the computed `2·abs(x)` overflows, for one control (`tanh_*`: past `abs(x) = MAX/2`),
+or the computed sum `2·abs(z₁) + 2·abs(z₂)` overflows, for two (`softmax_tanh`, `stick_breaking`), and finite
+elsewhere. That edge is within half an ulp of where the true value passes `−MAX`, but not always on it: where the
+computed sum is an exact tie at `MAX` plus half an ulp, ties-to-even gives −∞ though the true value, with its constant
+terms, rounds to `−MAX`. The other entries are finite for every finite control. The
 forms: each `log sech² x` as `2·(log 2 − abs(x) − softplus(−2·abs(x)))`, each `log σ(x)` as `−softplus(−x)`, and
 stick-breaking's `s` and `1 − s` as `σ(2z₁) − ½ε_μ·tanh z₁` and `σ(−2z₁) + ½ε_μ·tanh z₁` (and `u`, `1 − u` likewise
 in `z₂`).
