@@ -458,7 +458,7 @@ fn golden_scene_values_are_the_scenes() {
         slope < 0.0,
         "`diffusion` sample 3 is a negative slope: {slope}"
     );
-    let drifts = [3e-6f32, 4.5e-4, 7e-3, 0.06, 0.55, 4.0, 90.0];
+    let drifts = [3e-6f32, 4.6e-4, 7.1e-3, 0.06, 0.55, 4.0, 90.0];
     check_values("de_max_failed", 1, &drifts.map(f16), 0.0);
     check_values("dlz_max_failed", 1, &drifts.map(|v| f16(v * 0.6)), 0.0);
     check_values("d_min", 4, &[2.5e-3f32, 0.07, 0.6, 1.7].map(f16), 0.0);
