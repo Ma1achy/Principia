@@ -213,7 +213,8 @@ fn entries() -> Vec<EntryBuilder> {
         vec6_at("r_sh", 12),
         vec6_at("p_sh", 18),
         f32_at("S", 24, Scale::Lin),
-        f32_at("theta", 25, Scale::Lin),
+        // R-423: `θ̃`, the unwrapped longitude in radians (dd_integrator §3.7), is an angle, so cyclic.
+        f32_at("theta", 25, Scale::Cyclic),
         f32_at("mean_y", 26, Scale::Lin),
         f32_at("C_ty", 27, Scale::Lin),
         f32_at("E_0", 28, Scale::Diverging),
