@@ -56,9 +56,9 @@ impl TimeSource for MockClock {
         MOCK_TICK_HZ
     }
 
-    /// Frozen, the ticks' seconds at [`MOCK_TICK_HZ`], so what turns holds and every capture is the same; running,
-    /// `None`, so what turns reads the wall clock, its ticks counting frames, not seconds.
+    /// Frozen, its time, which never moves, so what turns holds and every capture is the same; running, `None`, so
+    /// what turns reads the wall clock, its ticks counting frames, not seconds.
     fn held_seconds(&self) -> Option<f64> {
-        self.frozen.then(|| self.ticks as f64 / MOCK_TICK_HZ)
+        self.frozen.then(|| self.now())
     }
 }
