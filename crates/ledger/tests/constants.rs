@@ -463,7 +463,7 @@ negative_control!(
 
 #[test]
 fn constants_provisional_without_a_gate_fails_naming_it() {
-    for gate in ["", "M", "1", "m1", "M1a", "gate M1", "M-1"] {
+    for gate in ["", "M", "1", "m1", "M1a", "gate M1", "M-1", "M01", "M00"] {
         assert!(!is_milestone(gate), "`{gate}` read as a milestone");
         check_refused_naming(
             ConstantBuilder {

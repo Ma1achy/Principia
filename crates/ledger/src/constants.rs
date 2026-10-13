@@ -107,10 +107,11 @@ pub struct ConstantBuilder {
     pub provisional: Option<&'static str>,
 }
 
-/// Whether `gate` names a milestone's gate: `M` and its number (`plan/MILESTONES.md`).
+/// Whether `gate` names a milestone's gate: `M` and its number, written without leading zeros (`plan/MILESTONES.md`).
 pub fn is_milestone(gate: &str) -> bool {
-    gate.strip_prefix('M')
-        .is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+    gate.strip_prefix('M').is_some_and(|n| {
+        !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) && (n == "0" || !n.starts_with('0'))
+    })
 }
 
 impl ConstantBuilder {

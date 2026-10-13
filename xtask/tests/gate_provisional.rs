@@ -152,7 +152,7 @@ fn check_refused(milestone: &str) {
 
 #[test]
 fn gate_provisional_refuses_a_name_that_is_not_a_milestone() {
-    for name in ["", "M", "1", "m1", "M1a", "gate"] {
+    for name in ["", "M", "1", "m1", "M1a", "M01", "gate"] {
         check_refused(name);
     }
 }

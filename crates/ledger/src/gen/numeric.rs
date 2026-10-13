@@ -15,8 +15,7 @@
 //! ([`Placement`]): `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε_f))`, on
 //! the fixed `[0, 1]`, `ε_f` the field's own floor, its constants-register entry ([`LOG_FLOORS`]; R-401, R-427);
 //! `cyclic` `fract(x/period)` on the fixed `[0, 1]`, with `ramp_twilight`. A field whose declared range spans zero,
-//! `diverging` (R-403: only such a field
-//! carries it) or `lin`, is the identity on the symmetric
+//! `diverging` (R-403: only such a field carries it) or `lin`, is the identity on the symmetric
 //! `[−M, M]`, `M = max(|l|, |h|)` over the fixed ends (an unbounded end the measured one) or, under `RANGE_AUTO = 1`,
 //! the measured ends, so 0 lands at `t = ½`, on `ramp_coolwarm`, whose midpoint is the table's neutral (R-400). Every
 //! other ramp is `ramp_viridis`, `dbg_sentinel`'s: a field that can't be negative keeps it, as does one that can't be
