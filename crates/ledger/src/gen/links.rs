@@ -73,15 +73,23 @@ fn camel(name: &str) -> String {
         .collect()
 }
 
-/// A Rust literal of `v` at the float type `ty` (`f32` or `f64`): a `core` constant's name where `v` is one, so no
-/// approximation of π is spelt out; otherwise the shortest literal that reads back to `v` at `ty`.
+/// A Rust literal of `v` at the float type `ty` (`f32` or `f64`): the shortest literal that reads back to `v` at
+/// `ty`, except for π and π/2, whose f64 values are `core`'s constants. At f64 those are the nearest values,
+/// `core::f64::consts::PI` and `FRAC_PI_2`, which lie below π and π/2; at f32 they are the images rounded toward
+/// zero, `fl↓(π)` (bits `0x4049_0FDA`) and `fl↓(π/2)` (`0x3FC9_0FDA`), not the nearest values `0x…_0FDB`, which lie
+/// above, so no bounded link's f32 image passes its upper bound (R-417; dd_generation_root §3.9, "The closed range
+/// and the f32 images of π/2 and π"). Either way no approximation of π is spelt out as a decimal.
 fn literal(v: f64, ty: &str) -> String {
     let named = [
-        (PI, "core::{}::consts::PI"),
-        (FRAC_PI_2, "core::{}::consts::FRAC_PI_2"),
+        (PI, "PI", "0x4049_0FDA"),
+        (FRAC_PI_2, "FRAC_PI_2", "0x3FC9_0FDA"),
     ];
-    if let Some((_, path)) = named.iter().find(|(k, _)| k.to_bits() == v.to_bits()) {
-        return path.replace("{}", ty);
+    if let Some((_, name, toward_zero)) = named.iter().find(|(k, ..)| k.to_bits() == v.to_bits()) {
+        return if ty == "f32" {
+            format!("f32::from_bits({toward_zero})")
+        } else {
+            format!("core::{ty}::consts::{name}")
+        };
     }
     if v.is_infinite() {
         let sign = if v.is_sign_positive() { "" } else { "NEG_" };

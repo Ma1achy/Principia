@@ -45,8 +45,8 @@ impl Literals for f32 {
     const LIT_3: f32 = 2.0;
     const LIT_4: f32 = f32::INFINITY;
     const LIT_5: f32 = 4.0;
-    const LIT_6: f32 = core::f32::consts::FRAC_PI_2;
-    const LIT_7: f32 = core::f32::consts::PI;
+    const LIT_6: f32 = f32::from_bits(0x3FC9_0FDA);
+    const LIT_7: f32 = f32::from_bits(0x4049_0FDA);
     const LIT_8: f32 = 0.0;
 }
 
