@@ -59,3 +59,7 @@ and `diffusion`, and `q_mass` and `mean_y` are open as RQ-274, which holds the M
   `last_symbol`, `energy_drift` and the outcome palette, none of them `theta`'s generated view. TASK-M1-12's live shape
   view of `θ̃` (`u_mode` 1) is a fragment-computed view, already on Twilight, not the generated one. The PR lists any
   golden it re-renders.
+- R-426 (13 Oct 2026) rules RQ-274: `q_mass` and `mean_y` stay on `ramp_coolwarm` provisionally, recorded as
+  provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges. This task's
+  assertion that they keep `ramp_coolwarm` stands. TASK-M1-21 (R-426: an undeclared range is a ledger gap) follows
+  this task.
