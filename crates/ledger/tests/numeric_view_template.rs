@@ -10,6 +10,9 @@
 //!   `ramp_twilight`; the ledger gains no member (`numeric_view_template_zero_spanning_*`,
 //!   `numeric_view_template_ledger_*`); `K_0` and `V_0` on `ramp_viridis`, increasing in the value in both modes,
 //!   defaulting to `RANGE_AUTO = 1`, `V_0`'s most negative value at `t = 0` (`numeric_view_template_k0_v0_*`);
+//! - REQ-TOOL-160 (R-401, R-419; TASK-M1-18): every log view places raw at `dbg_log`'s form with its own field's floor,
+//!   in the WGSL and the CPU twin, each a power of two an f32 holds exactly; two log fields with different floors
+//!   place the same `|x|` differently; a log field with no floor of its own is refused (`numeric_view_template_log_*`);
 //! - setting the `RANGE_AUTO` param writes the header default `@uniform RANGE_AUTO: u32 = <0|1> [0, 1]`, which the
 //!   assembler's `Declaration::parse` gives back (`numeric_view_template_range_auto_round_trips`).
 //!
@@ -135,8 +138,10 @@ fn check_scales(views: &[(Entry, NumericView, String)]) {
             Scale::Lin => (0, "ramp_viridis(range_norm(raw, ".to_owned()),
             Scale::Log => (
                 1,
-                "ramp_viridis(range_norm(1.0 - 1.0 / (1.0 + log(1.0 + abs(raw) / 5.9604645e-8)), 0.0, 1.0, "
-                    .to_owned(),
+                format!(
+                    "ramp_viridis(range_norm(1.0 - 1.0 / (1.0 + log(1.0 + abs(raw) / {})), 0.0, 1.0, ",
+                    numeric::float(want_floor(e.name))
+                ),
             ),
             Scale::Cyclic => (
                 2,
@@ -260,7 +265,7 @@ fn check_twin_places(cyclic: &NumericView) {
     assert_eq!(t(&lin, 1.0), Some(0.25));
     assert_eq!(t(&lin, -1.0), Some(0.0), "below lo clamps to 0");
     assert_eq!(t(&lin, 9.0), Some(1.0), "above hi clamps to 1");
-    let floor = numeric::log_floor();
+    let floor = numeric::closure_min_log_floor();
     let log = view(
         Placement::Log { floor },
         End::Fixed(0.0),
@@ -583,7 +588,9 @@ fn numeric_view_template_floats_are_wgsl_literals() {
         (76.0, "76.0"),
         (1e-8, "1e-8"),
         (1e20, "1e20"),
-        (numeric::log_floor(), "5.9604645e-8"),
+        (numeric::d_min_log_floor(), "6.1035156e-5"),
+        (numeric::de_max_log_floor(), "9.536743e-7"),
+        (numeric::closure_min_log_floor(), "1.1920929e-7"),
         (numeric::cyclic_period(), "6.2831855"),
         (f64::from(f32::MAX), "3.4028235e38"),
     ]);
@@ -1001,4 +1008,234 @@ negative_control!(
         v.placement = Placement::Diverging;
         check_energies([k, (v, vw.replace("ramp_viridis", "ramp_coolwarm"))]);
     }
+);
+
+// ── R-401 and R-419 (TASK-M1-18): each log field's own floor (REQ-TOOL-160) ─────────────────────────────────────────
+
+/// The proposed floors (R-71, REQ-TOOL-160), each a power of two, `(field, log2 ε_f)`: the distances 2⁻¹⁴, binary16's
+/// smallest normal; the drift latches 2⁻²⁰, nearest `eps_E` and `eps_L`'s default 10⁻⁶; `closure_min` and `rho_ratio`
+/// 2⁻²³, f32's spacing on `[1, 2)`.
+const FLOORS: [(&str, i32); 6] = [
+    ("d_min", -14),
+    ("dE_max", -20),
+    ("dLz_max", -20),
+    ("closure_min", -23),
+    ("rho_ratio", -23),
+    ("r_min_pair_0", -14),
+];
+
+/// `field`'s proposed floor, from [`FLOORS`].
+fn want_floor(field: &str) -> f64 {
+    let (_, k) = FLOORS
+        .iter()
+        .find(|(f, _)| *f == field)
+        .unwrap_or_else(|| panic!("`{field}` is no log field of REQ-TOOL-160's"));
+    2f64.powi(*k)
+}
+
+/// `dbg_log`'s place of `x` for the floor `eps` (render contract, presentation layer).
+fn dbg_log_place(x: f64, eps: f64) -> f64 {
+    1.0 - 1.0 / (1.0 + (1.0 + x.abs() / eps).ln())
+}
+
+/// Checks that the log views are exactly `floors`' fields and that each places raw at `dbg_log`'s form with its own
+/// floor: `log_floor` gives it, the view carries it, an f32 holds it exactly, the WGSL writes it, and the CPU twin
+/// places `0`, `ε_f`, `ε_f·(e − 1)` and values about it as `dbg_log` does. A field with no log view has no floor.
+fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) {
+    let logs: Vec<&str> = views
+        .iter()
+        .filter(|(e, ..)| e.scale == Scale::Log)
+        .map(|(e, ..)| e.name)
+        .collect();
+    let mut want: Vec<&str> = floors.iter().map(|(f, _)| *f).collect();
+    let mut got = logs.clone();
+    want.sort_unstable();
+    got.sort_unstable();
+    assert_eq!(got, want, "the log views are not REQ-TOOL-160's six");
+    for &(field, k) in floors {
+        let eps = 2f64.powi(k);
+        let (_, n, wgsl) = views
+            .iter()
+            .find(|(e, ..)| e.name == field)
+            .unwrap_or_else(|| panic!("no view of `{field}`"));
+        assert_eq!(
+            numeric::log_floor(field),
+            Some(eps),
+            "`{field}`'s floor is not its own, 2^{k}"
+        );
+        assert_eq!(
+            n.placement,
+            Placement::Log { floor: eps },
+            "`{field}`'s view is not placed on its own floor, 2^{k}"
+        );
+        assert_eq!(
+            f64::from(eps as f32),
+            eps,
+            "`{field}`'s floor is not exact in f32"
+        );
+        let form = format!(
+            "1.0 - 1.0 / (1.0 + log(1.0 + abs(raw) / {})), ",
+            numeric::float(eps)
+        );
+        assert!(
+            ramp_line(wgsl).contains(&form),
+            "`{field}`'s WGSL does not place raw at dbg_log's form with its floor 2^{k}: {}",
+            ramp_line(wgsl)
+        );
+        assert_eq!(n.compact(0.0), 0.0, "`{field}` places 0 at 0");
+        assert!(
+            (n.compact(eps * (std::f64::consts::E - 1.0)) - 0.5).abs() < 1e-12,
+            "`{field}` does not place ε_f·(e − 1) at ½"
+        );
+        for x in [eps / 8.0, eps, -eps, 3.0 * eps, 1e3 * eps, 1.0] {
+            assert_eq!(
+                n.compact(x),
+                dbg_log_place(x, eps),
+                "`{field}`'s twin does not place {x} at dbg_log's form with its floor 2^{k}"
+            );
+        }
+    }
+    for field in [
+        "ftle",
+        "energy_drift",
+        "Lz_drift",
+        "K_0",
+        "theta",
+        "t_end_step",
+    ] {
+        assert_eq!(
+            numeric::log_floor(field),
+            None,
+            "`{field}` has a display floor"
+        );
+    }
+}
+
+#[test]
+fn numeric_view_template_log_floors_are_each_fields_own() {
+    check_floors(&numeric_views(), &FLOORS);
+}
+
+negative_control!(
+    numeric_view_template_log_floors_are_each_fields_own,
+    "`d_min` read against `dE_max`'s floor, the two swapped",
+    expected = "`d_min`'s floor is not its own, 2^-20",
+    {
+        let mut floors = FLOORS;
+        floors[0].1 = -20;
+        floors[1].1 = -14;
+        check_floors(&numeric_views(), &floors);
+    }
+);
+
+#[cfg(feature = "controls")]
+mod log_floors_single_eps {
+    use super::*;
+    negative_control!(
+        numeric_view_template_log_floors_are_each_fields_own,
+        "TASK-M1-09's single ε = 2⁻²⁴, which R-401 replaces, read for every field",
+        expected = "is not its own, 2^-24",
+        check_floors(&numeric_views(), &FLOORS.map(|(f, _)| (f, -24)))
+    );
+}
+
+/// Checks that, for each pair of log fields whose floors differ, the two views place the same `|x|` differently, the
+/// field with the smaller floor higher, in the CPU twin and on the ramp; and that some pair differs.
+fn check_differ(views: &[(Entry, NumericView, String)]) {
+    let logs: Vec<&NumericView> = views
+        .iter()
+        .filter(|(e, ..)| e.scale == Scale::Log)
+        .map(|(_, n, _)| n)
+        .collect();
+    let floor = |n: &NumericView| match n.placement {
+        Placement::Log { floor } => floor,
+        other => panic!("`{}` is log-scaled but placed {other:?}", n.field),
+    };
+    let mut pairs = 0;
+    for a in &logs {
+        for b in &logs {
+            if floor(a) >= floor(b) {
+                continue;
+            }
+            pairs += 1;
+            for x in [1e-6f32, 1e-3, 0.25, 4.0] {
+                let (ta, tb) = (t(a, x), t(b, x));
+                assert!(
+                    a.compact(f64::from(x)) > b.compact(f64::from(x)) && ta > tb,
+                    "`{}` and `{}`, floors {} and {}, do not place {x} apart: {ta:?}, {tb:?}",
+                    a.field,
+                    b.field,
+                    floor(a),
+                    floor(b)
+                );
+            }
+        }
+    }
+    assert!(pairs > 0, "no two log fields have different floors");
+}
+
+#[test]
+fn numeric_view_template_log_floors_place_the_same_x_differently() {
+    check_differ(&numeric_views());
+}
+
+negative_control!(
+    numeric_view_template_log_floors_place_the_same_x_differently,
+    "every log view on one floor, TASK-M1-09's single ε",
+    expected = "no two log fields have different floors",
+    check_differ(
+        &numeric_views()
+            .into_iter()
+            .map(|(e, mut n, wgsl)| {
+                if let Placement::Log { .. } = n.placement {
+                    n.placement = Placement::Log {
+                        floor: 2f64.powi(-24),
+                    };
+                }
+                (e, n, wgsl)
+            })
+            .collect::<Vec<_>>()
+    )
+);
+
+/// Checks that the view of a log field named `name` with no ledger `floor` is refused when `name` has no display floor
+/// of its own (R-401: no default), by a panic naming it, and given one otherwise.
+fn check_refused_floor(name: &'static str, refused: bool) {
+    let e = probe(
+        name,
+        Scale::Log,
+        Range {
+            lo: Bound::Open(0.0),
+            hi: Bound::Unbounded,
+        },
+    );
+    let got = std::panic::catch_unwind(|| NumericView::of(&e));
+    match got {
+        Ok(n) => assert!(
+            !refused,
+            "`{name}`, log-scaled with no floor, is not refused: {n:?}"
+        ),
+        Err(p) => {
+            let msg = p.downcast_ref::<String>().cloned().unwrap_or_default();
+            assert!(
+                refused
+                    && msg.contains(&format!("`{name}` is log-scaled"))
+                    && msg.contains("R-401"),
+                "`{name}` is refused: {msg}"
+            );
+        }
+    }
+}
+
+#[test]
+fn numeric_view_template_log_field_without_a_floor_is_refused() {
+    check_refused_floor("probe", true);
+    check_refused_floor("closure_min", false);
+}
+
+negative_control!(
+    numeric_view_template_log_field_without_a_floor_is_refused,
+    "a field with its own floor, read as one that has none",
+    expected = "is not refused",
+    check_refused_floor("rho_ratio", true)
 );

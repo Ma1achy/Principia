@@ -12,9 +12,10 @@
 //! (R-399), tested by its bits, never by a float comparison (R-271, R-280, R-343 item 5).
 //!
 //! **`raw`, `lo`, `hi`, the ramp** (RQ-231; R-400, R-403). `raw` is the field's value compacted per its ledger scale
-//! ([`Placement`]): `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε))`, on
-//! the fixed `[0, 1]`; `cyclic` `fract(x/period)` on the fixed `[0, 1]`, with `ramp_twilight`. A field whose declared
-//! range spans zero, `diverging` (R-403: only such a field carries it) or `lin`, is the identity on the symmetric
+//! ([`Placement`]): `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε_f))`, on
+//! the fixed `[0, 1]`, `ε_f` the field's own floor ([`log_floor`]; R-401); `cyclic` `fract(x/period)` on the fixed
+//! `[0, 1]`, with `ramp_twilight`. A field whose declared range spans zero, `diverging` (R-403: only such a field
+//! carries it) or `lin`, is the identity on the symmetric
 //! `[−M, M]`, `M = max(|l|, |h|)` over the fixed ends (an unbounded end the measured one) or, under `RANGE_AUTO = 1`,
 //! the measured ends, so 0 lands at `t = ½`, on `ramp_coolwarm`, whose midpoint is the table's neutral (R-400). Every
 //! other ramp is `ramp_viridis`, `dbg_sentinel`'s: a field that can't be negative keeps it, as does one that can't be
@@ -35,7 +36,7 @@
 
 use std::fmt::Write as _;
 
-use crate::constants::{F16_MIN_SUBNORMAL, HORIZON_STEPS_MAX};
+use crate::constants::HORIZON_STEPS_MAX;
 use crate::schema::{Bound, Entry, FieldType, Location, Scale};
 
 /// How a numeric view compacts its field's value before the ramp (RQ-231).
@@ -43,7 +44,8 @@ use crate::schema::{Bound, Entry, FieldType, Location, Scale};
 pub enum Placement {
     /// `raw = x`.
     Lin,
-    /// `raw = 1 − 1/(1 + ln(1 + |x|/floor))`, `dbg_log`'s place, on the fixed `[0, 1]`.
+    /// `raw = 1 − 1/(1 + ln(1 + |x|/floor))`, `dbg_log`'s place, on the fixed `[0, 1]`, `floor` the field's own
+    /// ([`log_floor`]; R-401).
     Log { floor: f64 },
     /// `raw = fract(x/period)` on the fixed `[0, 1]`, on `ramp_twilight`.
     Cyclic { period: f64 },
@@ -105,11 +107,79 @@ pub struct NumericView {
     pub range_auto: bool,
 }
 
-/// The floor `ε` of a log view whose field has no ledger `floor`, as `dbg_log` takes it: 2⁻²⁴, f16's smallest positive
-/// subnormal, the register's `f16_min_subnormal`, below which no f16 latch stores a positive value (R-271). Proposed,
-/// R-71 (REQ-TOOL-160): the human confirms it at the M1 gate.
-pub fn log_floor() -> f64 {
-    F16_MIN_SUBNORMAL.number()
+// ── The log floors (R-401, R-419; REQ-TOOL-160) ─────────────────────────────────────────────────────────────────
+//
+// Each log-scaled field with no ledger `floor` has its own display floor `ε_f`, in that field's own units, the
+// magnitude where its compression sets in: `raw = 1 − 1/(1 + ln(1 + |x|/ε_f))`, `dbg_log`'s place. Each is a named
+// presentation constant, not §3.8's `floor?` key, which R-263 gives a sim-key parameter (the drifts' `eps_E` and
+// `eps_L`, unchanged). Each is a power of two, so the f32 WGSL literal and the f64 twin hold the same value and
+// `|x|/ε_f` is exact. Proposed, R-71 (REQ-TOOL-160): the human confirms them at the M1 gate; `rho_ratio`'s and
+// `r_min_pair_0`'s provisionally there, re-confirmed at M2 (R-419, REQ-TOOL-163). They replace TASK-M1-09's single
+// ε = 2⁻²⁴.
+
+/// `d_min`'s floor, a distance in `G = M = I = 1`: 2⁻¹⁴ ≈ 6.10e-5, binary16's smallest normal. The `d_min` latch is
+/// f16 (payload §1): at and above 2⁻¹⁴ it holds a constant 11-bit relative precision, below it a linear subnormal grid
+/// of step 2⁻²⁴, so the view is logarithmic where the storage is and linear where the storage is. It sits 2.2 decades
+/// below `r_close` = 0.01, the close-encounter distance (integrator contract Part 3), so every close approach is
+/// placed in decades. Proposed, R-71 (REQ-TOOL-160): the human confirms it at the M1 gate.
+pub const fn d_min_log_floor() -> f64 {
+    6.103515625e-5
+}
+
+/// `dE_max`'s floor, an absolute energy in the stored field's normalised units (`dE_max = max_t |ΔE(t)|`, an absolute
+/// maximum, payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_E`'s default 10⁻⁶
+/// (integrator contract Part 3), the drift `energy_drift`'s view floors at, so the latch and the drift compress at the
+/// same magnitude. The f16 latch holds it as 16 subnormal steps of 2⁻²⁴. Proposed, R-71 (REQ-TOOL-160): the human
+/// confirms it at the M1 gate.
+pub const fn de_max_log_floor() -> f64 {
+    9.5367431640625e-7
+}
+
+/// `dLz_max`'s floor, an absolute angular momentum in the stored field's normalised units (`dLz_max = max_t |ΔL_z(t)|`,
+/// payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_L`'s default 10⁻⁶ (integrator
+/// contract Part 3), as [`de_max_log_floor`] is `eps_E`'s. Proposed, R-71 (REQ-TOOL-160): the human confirms it at
+/// the M1 gate.
+pub const fn dlz_max_log_floor() -> f64 {
+    9.5367431640625e-7
+}
+
+/// `closure_min`'s floor, a dimensionless chord `|n̂(t) − n̂(0)|` on the unit shape sphere: 2⁻²³ ≈ 1.19e-7, f32's
+/// spacing on `[1, 2)`, the floor of a difference of two O(1) f32 states, where closure bottoms out on the f32 GPU path
+/// ("~1e-7", payload §1). Below it a value is saturation, not an orbit's closure, so the view is linear there.
+/// Proposed, R-71 (REQ-TOOL-160): the human confirms it at the M1 gate.
+pub const fn closure_min_log_floor() -> f64 {
+    1.1920928955078125e-7
+}
+
+/// `rho_ratio`'s floor, a dimensionless ratio, provisional (R-419): 2⁻²³ ≈ 1.19e-7. It assumes the mass-weighted
+/// `‖ρ̃‖/‖λ̃‖`, which is `cot α` in the canonical-frame decode (`‖ρ̃‖ = cos α`, `‖λ̃‖ = sin α`, decoder §3.2): near
+/// `α = π/2` the ratio is `≈ π/2 − α`, and f32 holds `α ∈ [1, π/2)` in steps of 2⁻²³, so the f32 decode's ratios
+/// below 2⁻²³ are its first grid step alone. TASK-M2-03 defines the ratio (REQ-PAY-088) and may choose otherwise;
+/// the floor is re-confirmed at M2 either way (REQ-TOOL-163). Proposed, R-71 (REQ-TOOL-160).
+pub const fn rho_ratio_log_floor() -> f64 {
+    1.1920928955078125e-7
+}
+
+/// `r_min_pair_0`'s floor, a distance in `G = M = I = 1` (decoder §2, §3.6): 2⁻¹⁴ ≈ 6.10e-5, [`d_min_log_floor`]'s,
+/// the other distance view's, so the two place a shared distance alike, and 2.2 decades below `r_close` = 0.01. Its
+/// units are assumed by nothing; its evidence, M1's showcase values, is provisional, re-given on decoded values at M2
+/// (R-419, REQ-TOOL-163). Proposed, R-71 (REQ-TOOL-160).
+pub const fn r_min_pair_0_log_floor() -> f64 {
+    6.103515625e-5
+}
+
+/// The display floor `ε_f` of the log-scaled field `field` with no ledger `floor` (R-401), as `dbg_log` takes it, or
+/// `None` for a field that has none. TASK-M7-05's `log` compaction reads it ("its R-401 display floor").
+pub fn log_floor(field: &str) -> Option<f64> {
+    match field {
+        "d_min" => Some(d_min_log_floor()),
+        "dE_max" => Some(de_max_log_floor()),
+        "dLz_max" => Some(dlz_max_log_floor()),
+        "closure_min" => Some(closure_min_log_floor()),
+        "rho_ratio" => Some(rho_ratio_log_floor()),
+        "r_min_pair_0" => Some(r_min_pair_0_log_floor()),
+        _ => None,
+    }
 }
 
 /// The period of a cyclic view, in the field's unit: one turn, 2π, the period of an angle in radians (`rho_angle`).
@@ -160,7 +230,15 @@ impl NumericView {
         let placement = match e.scale {
             Scale::Lin if e.range.spans_zero() => Placement::Diverging,
             Scale::Lin => Placement::Lin,
-            Scale::Log => Placement::Log { floor: log_floor() },
+            Scale::Log => Placement::Log {
+                floor: log_floor(e.name).unwrap_or_else(|| {
+                    panic!(
+                        "`{}` is log-scaled with no ledger `floor` and no display floor: R-401 gives each such field \
+                         its own, named in `ledger::gen::numeric::log_floor`",
+                        e.name
+                    )
+                }),
+            },
             Scale::Cyclic => Placement::Cyclic {
                 period: cyclic_period(),
             },
