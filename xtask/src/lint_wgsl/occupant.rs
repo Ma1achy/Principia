@@ -5,8 +5,9 @@
 //! - [`occupant`], in a colour occupant: no payload buffer named ([`Rule::PayloadBuffer`]); the packed word,
 //!   `ctx.sample.word`, used only whole as an argument of a generated accessor ([`Rule::RawWord`]); no chart, integrator
 //!   or scheduler identifier read ([`Rule::ChartState`], [`Rule::IntegratorState`], [`Rule::SchedulerState`]: seams 5
-//!   and 6, REQ-COL-005); and, in one that is not a debug view, every use of a read of `ftle` or `ensemble_spread`
-//!   guarded by `has_ftle && s.ftle_valid` or `has_ensemble()` ([`Rule::Guard`]: REQ-RENDER-015, R-145, R-255).
+//!   and 6, REQ-COL-005); and every use of a read of `ftle` or `ensemble_spread` guarded by `has_ftle && s.ftle_valid`
+//!   or `has_ensemble()` ([`Rule::Guard`]: REQ-RENDER-015, R-145, R-255), in a debug view every read but of the
+//!   sample's own value, `ctx.sample`'s, which it shows literally (R-79), so that its aggregates are held to R-255.
 //!
 //! **The guard over naga's IR.** naga lowers `a && b` to control flow: a local set to `b` where `a` holds and to
 //! `false` where it does not, then read. So the rule asks what a condition implies: [`Guard::facts`] gives the facts a
@@ -49,6 +50,10 @@ const SHADOW: [&str; 2] = ["r_sh", "p_sh"];
 /// The stain context's quad lane (render contract Part 1) and its members that are not the scheduler's: the raster's
 /// addressing and the quad's frame in the slice plane, the chart's (render contract Part 4).
 const QUAD_LANE: &str = "CtxQuad";
+
+/// The stain context's struct (render contract Part 1), whose `sample` is the sample the occupant is given.
+const CTX: &str = "Ctx";
+const SAMPLE: &str = "sample";
 const QUAD_ADDRESSING: [&str; 3] = ["index", "uv", "sample_count"];
 const QUAD_FRAME: [&str; 3] = ["tl", "centre", "half_width"];
 
@@ -270,18 +275,25 @@ pub(super) fn shadow(
     found
 }
 
-/// Every occupant-rule finding in `module`, a colour occupant after its context: the payload-buffer, raw-word and
-/// deny-list rules, and, where `guarded`, the guard rule. `accessors` are the generated functions (the unpack layer's
-/// and the read side's).
+/// Every occupant-rule finding in `module`, a colour occupant after its context: the payload-buffer, raw-word,
+/// deny-list and guard rules. `accessors` are the generated functions (the unpack layer's and the read side's). Where
+/// `own` (a debug view's), the guard rule passes over the reads of the sample's own value, `ctx.sample`'s
+/// ([`contexts`]).
 pub(super) fn occupant(
     module: &Module,
     info: &ModuleInfo,
     source: &str,
     accessors: &BTreeSet<String>,
-    guarded: bool,
+    own: bool,
 ) -> Vec<Finding> {
     let mut found = Vec::new();
-    for (function, fi) in each_function(module, info) {
+    let contexts = if own { contexts(module) } else { HashSet::new() };
+    let handles = module
+        .functions
+        .iter()
+        .map(|(h, _)| Some(h))
+        .chain(module.entry_points.iter().map(|_| None));
+    for ((function, fi), handle) in each_function(module, info).zip(handles) {
         let fname = function.name.as_deref().unwrap_or("(unnamed)");
         let span = |h| function.expressions.get_span(h);
         for (h, e) in function.expressions.iter() {
@@ -321,11 +333,67 @@ pub(super) fn occupant(
             }
         }
         found.extend(raw_word(module, function, fi, source, accessors));
-        if guarded {
-            found.extend(Guard::new(module, function, fi).check(source));
-        }
+        let own: HashSet<u32> = contexts
+            .iter()
+            .filter(|&&(f, _)| Some(f) == handle)
+            .map(|&(_, i)| i)
+            .collect();
+        found.extend(Guard::new(module, function, fi, own).check(source));
     }
     found
+}
+
+/// The arguments, each a function and an index, that are the stain's context the assembler gives the occupant: every
+/// `Ctx` argument of a function that no call in `module` gives anything but such an argument of its caller. A read of
+/// `ftle` or `ensemble_spread` on such an argument's `sample` is the sample's own value (render contract Part 4).
+fn contexts(module: &Module) -> HashSet<(Handle<Function>, u32)> {
+    let is_ctx = |ty: Handle<naga::Type>| module.types[ty].name.as_deref() == Some(CTX);
+    let mut set: HashSet<(Handle<Function>, u32)> = HashSet::new();
+    for (h, f) in module.functions.iter() {
+        for (i, a) in (0u32..).zip(&f.arguments) {
+            if is_ctx(a.ty) {
+                set.insert((h, i));
+            }
+        }
+    }
+    let callers: Vec<(Option<Handle<Function>>, &Function)> = module
+        .functions
+        .iter()
+        .map(|(h, f)| (Some(h), f))
+        .chain(module.entry_points.iter().map(|ep| (None, &ep.function)))
+        .collect();
+    loop {
+        let mut gone = Vec::new();
+        for &(caller, f) in &callers {
+            walk(&f.body, &mut Vec::new(), &mut |s, _, _| {
+                let Statement::Call {
+                    function: callee,
+                    ref arguments,
+                    ..
+                } = *s
+                else {
+                    return;
+                };
+                for (j, &a) in (0u32..).zip(arguments) {
+                    let passed = match f.expressions[a] {
+                        Expression::FunctionArgument(i) => {
+                            caller.is_some_and(|c| set.contains(&(c, i)))
+                        }
+                        _ => false,
+                    };
+                    if set.contains(&(callee, j)) && !passed {
+                        gone.push((callee, j));
+                    }
+                }
+            });
+        }
+        if gone.is_empty() {
+            return set;
+        }
+        for g in gone {
+            set.remove(&g);
+        }
+    }
 }
 
 /// The uses of the packed word in `function` other than whole, as an argument of a generated accessor (seam 5): an
@@ -897,17 +965,26 @@ struct Guard<'a> {
     function: &'a Function,
     fi: &'a FunctionInfo,
     flow: Flow<'a>,
+    /// The arguments that are the stain's context ([`contexts`]), whose `sample`'s reads the rule passes over: none
+    /// but in a debug view.
+    own: HashSet<u32>,
     /// The loads whose facts are being found, so that a cycle of stores ends.
     busy: RefCell<Vec<(Handle<Expression>, bool)>>,
 }
 
 impl<'a> Guard<'a> {
-    fn new(module: &'a Module, function: &'a Function, fi: &'a FunctionInfo) -> Guard<'a> {
+    fn new(
+        module: &'a Module,
+        function: &'a Function,
+        fi: &'a FunctionInfo,
+        own: HashSet<u32>,
+    ) -> Guard<'a> {
         Guard {
             module,
             function,
             fi,
             flow: Flow::new(module, function, fi),
+            own,
             busy: RefCell::new(Vec::new()),
         }
     }
@@ -949,16 +1026,31 @@ impl<'a> Guard<'a> {
         }
     }
 
-    /// The read `e` is, if it reads `ftle` or `ensemble_spread` of a `SimState`.
+    /// The read `e` is, if it reads `ftle` or `ensemble_spread` of a `SimState` other than the sample's own
+    /// (`Guard::own`).
     fn read(&self, e: Handle<Expression>) -> Option<Read> {
         let Expression::AccessIndex { base, .. } = self.function.expressions[e] else {
             return None;
         };
+        if self.is_own(base) {
+            return None;
+        }
         match member(self.module, self.function, self.fi, e)? {
             (SIMSTATE, "ftle") => Some(Read::Ftle(self.key(base))),
             (SIMSTATE, "ensemble_spread") => Some(Read::Ensemble),
             _ => None,
         }
+    }
+
+    /// Whether `e` is `ctx.sample`, `ctx` an argument that is the stain's context (`Guard::own`).
+    fn is_own(&self, e: Handle<Expression>) -> bool {
+        let Expression::AccessIndex { base, .. } = self.function.expressions[e] else {
+            return false;
+        };
+        let Expression::FunctionArgument(i) = self.function.expressions[base] else {
+            return false;
+        };
+        self.own.contains(&i) && member(self.module, self.function, self.fi, e) == Some((CTX, SAMPLE))
     }
 
     /// Whether `left` and `right` are the absence test: one the `bitcast<u32>` of a value, the other the canonical quiet

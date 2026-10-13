@@ -58,3 +58,5 @@ The rules the fragment side must keep from now on are checked in CI rather than 
   line, is in the acceptance, shown on fixtures since no fragment-side aggregate over `ftle` exists yet; the runtime
   WGSL is checked in and linted by xtask, its writers out of xtask's reach (systems_architecture §7.1); the size grows
   from ~260 to match the work.
+- Applied per R-369 (physics review 5507966256 F1): a debug view is held to the FTLE guard for every sample but its
+  own, `ctx.sample`, which it shows literally (R-79), so an aggregate over `ftle` in a debug view keeps R-255.

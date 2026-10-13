@@ -18,11 +18,11 @@
 //! The occupant rules (render contract Part 4, "The occupant rules `cargo xtask lint wgsl` checks"; R-72; TASK-M1-15)
 //! are the `occupant` module's: the shadow rule in every file; in a colour occupant ([`occupancy`]), a file under
 //! [`OCCUPANT_DIR`], a debug view's directory or [`RUNTIME_DIR`], the accessor-only rule, the chart, integrator and
-//! scheduler deny-list and, in one that is not a debug view, the FTLE and ensemble guard. Each exception the
-//! definitions name is lifted for its file and its one rule only ([`EXCEPTIONS`]). [`RUNTIME_DIR`] holds the WGSL the
-//! render side writes at runtime, checked in by `crates/render/tests/runtime_wgsl.rs` so that this lint reaches it. In
-//! an occupant's context the prelude's tier constants are read as overrides ([`tier_overrides`]), so naga's folding keeps
-//! them.
+//! scheduler deny-list and the FTLE and ensemble guard, which a debug view is held to for every sample but its own.
+//! Each exception the definitions name is lifted for its file and its one rule only ([`EXCEPTIONS`]). [`RUNTIME_DIR`]
+//! holds the WGSL the render side writes at runtime, checked in by `crates/render/tests/runtime_wgsl.rs` so that this
+//! lint reaches it. In an occupant's context the prelude's tier constants are read as overrides ([`tier_overrides`]),
+//! so naga's folding keeps them.
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -711,8 +711,8 @@ pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, 
 }
 
 /// Every rule's findings in a colour occupant's `source` (render contract Part 4), after `prefix` as
-/// [`check_fragment_after`] reads it: the float rules, the shadow rule and the occupant rules, the guard rule only where
-/// `occupancy` is [`Occupancy::Guarded`]. `accessors` are the generated accessors ([`accessors`]). `prefix`'s tier
+/// [`check_fragment_after`] reads it: the float rules, the shadow rule and the occupant rules, the guard rule over the
+/// sample's own value, `ctx.sample`'s, only where `occupancy` is [`Occupancy::Guarded`]. `accessors` are the generated accessors ([`accessors`]). `prefix`'s tier
 /// constants are read as overrides ([`tier_overrides`]).
 pub fn check_occupant_after(
     prefix: &str,
@@ -720,9 +720,9 @@ pub fn check_occupant_after(
     occupancy: Occupancy,
     accessors: &BTreeSet<String>,
 ) -> Result<Vec<Finding>, String> {
-    let guarded = occupancy == Occupancy::Guarded;
+    let own = occupancy != Occupancy::Guarded;
     after(&tier_overrides(prefix), source, &|module, info, joined| {
-        occupant::occupant(module, info, joined, accessors, guarded)
+        occupant::occupant(module, info, joined, accessors, own)
     })
 }
 
