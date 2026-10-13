@@ -211,6 +211,11 @@ orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the 
 | **render key** | nothing here re-integrates | change every slot, uniform, palette, playhead → sim-buffer hash unchanged; dispatch counter static across render-mode changes at a paused playhead |
 | **13 / Observation** | debug views are ordinary occupants; catalogue generated | new ledger field → view appears (or generation fails); union-legend switching live |
 
+*Note (R-72; REQ-COL-005; TASK-M1-15):* seams 5 and 6 are checked by `cargo xtask lint wgsl` over every colour
+occupant. The render contract's Part 4 ("The occupant rules `cargo xtask lint wgsl` checks") defines a colour
+occupant, a non-accessor payload read and the chart, integrator and scheduler identifiers, and names the debug views
+Part 6 lets read them.
+
 ---
 
 ## 5. Unit tests

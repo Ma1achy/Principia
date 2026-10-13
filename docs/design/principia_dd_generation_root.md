@@ -159,6 +159,11 @@ The word lives here, not in `SimState`. Specification:
 
 Terminal latch: on termination the whole block freezes (state stops advancing, accumulators stop updating).
 
+*Note (R-72; REQ-RENDER-018; TASK-M1-15):* that the shadow is never itself a coloured sample is checked by
+`cargo xtask lint wgsl`: no fragment-stage WGSL reads `r_sh` or `p_sh` but the generated read side, which loads them
+for `ftle`, and the debug catalogue's field views of the two, which show the stored shadow as a field (render contract
+Part 4, "The occupant rules `cargo xtask lint wgsl` checks").
+
 **`θ̃`'s pole reference (R-397).** The hold of `θ̃` near the poles (integrator dd §3.7; R-389, R-392) keeps its frozen
 reference longitude in `SimState`'s `_reserved`, a u16 code in steps of `2π/65535` with 0xFFFF for "no reference"
 (payload §2). It is march state, not a field: as a `_`-named member it has no §3.8 entry and no view. Whether the
