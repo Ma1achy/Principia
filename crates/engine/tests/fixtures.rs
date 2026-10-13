@@ -17,7 +17,7 @@ use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::{
     canonical_nan, f16_bits_to_f32, fgw_length_raw, pb_dE_max, pb_dLz_max, sd_detail, sd_dmin_pair,
     sd_last_symbol, sd_saturated, sd_state, sim_state_from_ftle, tm_t_dmin_step, tm_t_end_step,
-    ReadParams, PACKED_A_RESERVED, STATE_DECODE_FAILED, STATE_SIM_FAILED,
+    ReadParams, PACKED_A_RESERVED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_SIM_FAILED,
 };
 use ledger::gen::rust::offsets;
 use ledger::schema::Storage;
@@ -100,8 +100,12 @@ fn check_accessors(name: &str, set: &mut Synthetic, want: &[Known]) {
         );
         assert_eq!(
             tm_t_dmin_step(s.times),
-            k.t_end_step / 2,
-            "`{name}` sample {i}: t_dmin_step, half of t_end_step"
+            if k.state == STATE_COLLISION {
+                k.t_end_step
+            } else {
+                k.t_end_step / 2
+            },
+            "`{name}` sample {i}: t_dmin_step, a collision's its last step, any other's half of t_end_step"
         );
         let (de_max, dlz_max) = (pb_dE_max(s.packed_b), pb_dLz_max(s.packed_b));
         if k.failed() {
@@ -192,6 +196,84 @@ negative_control!(
     "the known escaper's samples, which hold no drift, do not cross zero",
     expected = "does not cross zero",
     check_crosses_zero(&mut filled("known_escaper"))
+);
+
+/// The binary collisions of `rows`, by sample index. The adversarial descriptor, a bit pattern drawn only on the
+/// sub-field views, is not a physical sample and is left out.
+fn binary_collisions(rows: &[Known]) -> impl Iterator<Item = (u32, &Known)> {
+    (0u32..)
+        .zip(rows)
+        .filter(|(_, k)| k.state == STATE_COLLISION && k.detail != 3 && k.descriptor.is_none())
+}
+
+/// Checks that each binary collision of `rows` is one the detector could have fired: its `d_min` below the default
+/// `r_coll` = 10⁻³ (integrator contract Part 7), being the separation that crossed it (dd_integrator §3.6).
+fn check_collision_d_min(name: &str, rows: &[Known]) {
+    for (i, k) in binary_collisions(rows) {
+        let d = f16_bits_to_f32(k.d_min);
+        assert!(
+            d < 1e-3,
+            "`{name}` sample {i}: a binary collision's d_min {d} is not below r_coll = 1e-3"
+        );
+    }
+}
+
+#[test]
+fn fixtures_collisions_d_min_below_r_coll() {
+    let mut seen = 0;
+    for name in NAMES {
+        let rows = known(name);
+        seen += binary_collisions(&rows).count();
+        check_collision_d_min(name, &rows);
+    }
+    assert_eq!(
+        seen, 2,
+        "the fixtures' binary collisions are set_state's and known_escaper's"
+    );
+}
+
+negative_control!(
+    fixtures_collisions_d_min_below_r_coll,
+    "a binary collision whose d_min, 2.5e-3, is above r_coll fails the check",
+    expected = "is not below r_coll",
+    {
+        let mut rows = known("set_state");
+        rows[2].d_min = kernel::payload::f32_to_f16_bits(2.5e-3);
+        check_collision_d_min("set_state", &rows);
+    }
+);
+
+/// Checks that each binary collision of `set`, filled from `rows`, has its closest approach at the collision step,
+/// `t_dmin_step == t_end_step` (payload §2): no earlier step came within `r_coll`, or the collision would have fired
+/// then.
+fn check_collision_t_dmin(name: &str, set: &mut Synthetic, rows: &[Known]) {
+    for (i, _) in binary_collisions(rows) {
+        let times = set.simstate(i).times;
+        assert_eq!(
+            tm_t_dmin_step(times),
+            tm_t_end_step(times),
+            "`{name}` sample {i}: a binary collision's closest approach is not its collision step"
+        );
+    }
+}
+
+#[test]
+fn fixtures_collisions_closest_at_the_collision_step() {
+    for name in NAMES {
+        check_collision_t_dmin(name, &mut filled(name), &known(name));
+    }
+}
+
+negative_control!(
+    fixtures_collisions_closest_at_the_collision_step,
+    "a binary collision whose closest approach is half its collision step fails the check",
+    expected = "is not its collision step",
+    {
+        let rows = known("known_escaper");
+        let mut set = filled("known_escaper");
+        set.sample(6).times(40, 20);
+        check_collision_t_dmin("known_escaper", &mut set, &rows);
+    }
 );
 
 /// Checks that `Known::failed` holds exactly for the failed codes, `sim_failed` (4) and `decode_failed` (5), of the

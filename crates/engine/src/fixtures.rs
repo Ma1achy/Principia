@@ -50,7 +50,7 @@ pub struct Known {
     pub last_symbol: u32,
     /// `d_min`'s f16 bits, the top half of `packed_a`.
     pub d_min: u16,
-    /// `t_end_step`, the completed-step count (payload §2); `t_dmin_step` is half of it.
+    /// `t_end_step`, the completed-step count (payload §2); `t_dmin_step` is [`Known::t_dmin_step`].
     pub t_end_step: u32,
     /// The word's raw length: 0 the empty word, 1 the word of the one symbol `last_symbol`, 127 the truncation
     /// sentinel (payload §3).
@@ -66,6 +66,17 @@ impl Known {
     /// Whether the sample is failed, `sim_failed` or `decode_failed` (payload §2).
     pub fn failed(&self) -> bool {
         self.state == STATE_SIM_FAILED || self.state == STATE_DECODE_FAILED
+    }
+
+    /// Its `t_dmin_step`, the macro-step of closest approach (payload §2): a collision's is its last step, since no
+    /// earlier step came within `r_coll` or the collision would have fired then (integrator contract Part 7); every
+    /// other sample's is half its `t_end_step`.
+    pub fn t_dmin_step(&self) -> u32 {
+        if self.state == STATE_COLLISION {
+            self.t_end_step
+        } else {
+            self.t_end_step / 2
+        }
     }
 
     /// Its `dE_max` and `dLz_max`: the failed-state `0.0` on a failed sample (payload §1), else a latch above the
@@ -130,14 +141,15 @@ fn adversarial(
 
 /// The fixture `name`'s eight samples, or why not.
 pub fn known(name: &str) -> Result<Vec<Known>, String> {
-    // The f16 bits of `d_min`'s valid values.
-    let [d07, d4, d0025, d6, d17, d9, d1] =
-        [0.07, 0.4, 2.5e-3, 0.6, 1.7, 0.9, 1.0].map(f32_to_f16_bits);
+    // The f16 bits of `d_min`'s valid values. A collision's, `d0006`, is below the default `r_coll` = 10⁻³
+    // (integrator contract Part 7): its `d_min` is the separation that crossed `r_coll` (dd_integrator §3.6).
+    let [d07, d4, d0006, d6, d17, d9, d1] =
+        [0.07, 0.4, 6e-4, 0.6, 1.7, 0.9, 1.0].map(f32_to_f16_bits);
     Ok(match name {
         "set_state" => vec![
             plain(STATE_ESCAPE, 0, 120, 1, d07),
             plain(STATE_BOUNDED, 0, 1000, 2, d4),
-            plain(STATE_COLLISION, 1, 40, 1, d0025),
+            plain(STATE_COLLISION, 1, 40, 1, d0006),
             plain(STATE_RUNNING, 0, 20, 0, d6),
             plain(STATE_SIM_FAILED, 0, 37, 3, UNSET),
             plain(STATE_DECODE_FAILED, 1, 0, 3, UNSET),
@@ -151,7 +163,7 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
             plain(STATE_ESCAPE, 3, 999, 1, d9),
             plain(STATE_ESCAPE, 1, 1, 0, d17),
             plain(STATE_BOUNDED, 0, 1000, 2, d1),
-            plain(STATE_COLLISION, 0, 40, 0, d0025),
+            plain(STATE_COLLISION, 0, 40, 0, d0006),
             plain(STATE_RUNNING, 0, 20, 1, d4),
         ],
         "energy_drift_ramp" => (0..8)
@@ -205,7 +217,7 @@ fn configuration() -> (Bodies, Bodies, Bodies) {
 /// Writes the fixture `name` into samples `0…7` of `set`, each through the generated pack routines but the adversarial
 /// descriptor, written whole: [`known`]'s values, the shared configuration with its shadow a small offset away, as
 /// many substeps as steps, `E_0 = H(r, p) − drift` with the sample's own masses and `Lz_0 = L_z(r, p)`, the drift
-/// latches of [`Known::drift_max`], `t_dmin_step` half of `t_end_step`, and the word of [`Known::word`]. Refused for
+/// latches of [`Known::drift_max`], [`Known::t_dmin_step`], and the word of [`Known::word`]. Refused for
 /// an unknown name or a set of fewer than eight samples.
 pub fn fill(name: &str, set: &mut Synthetic) -> Result<(), String> {
     let rows = known(name)?;
@@ -236,7 +248,7 @@ pub fn fill(name: &str, set: &mut Synthetic) -> Result<(), String> {
             .total_substeps(k.t_end_step)
             .closure_min(0.01)
             .closure_step(7)
-            .times(k.t_end_step, k.t_end_step / 2)
+            .times(k.t_end_step, k.t_dmin_step())
             .drift_max(de_max, dlz_max)
             .word_raw(k.word());
         match k.descriptor {
