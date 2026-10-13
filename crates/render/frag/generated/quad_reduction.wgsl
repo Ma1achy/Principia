@@ -92,6 +92,18 @@ fn qr_retrograde_fraction(w: u32) -> f32 { return unpack2x16float(extractBits(w,
 // `mean_orbit_count_spread`: bits 16–31 of `qr_w8`, read widened to f32 (dd_generation_root §3.7; R-317).
 fn qr_mean_orbit_count_spread(w: u32) -> f32 { return unpack2x16float(extractBits(w, 16u, 16u)).x; }
 
+// `escape_time_min`'s sentinel as its binary16 bits (dd_generation_root §3.7, R-418).
+const QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 = 0x7c00u;
+
+// Whether `escape_time_min` in `w` is its sentinel: tested by its bits, never by a float comparison (R-297).
+fn qr_escape_time_min_is_sentinel(w: u32) -> bool { return extractBits(w, 0u, 16u) == QR_ESCAPE_TIME_MIN_SENTINEL_BITS; }
+
+// `escape_time_max`'s sentinel as its binary16 bits (dd_generation_root §3.7, R-418).
+const QR_ESCAPE_TIME_MAX_SENTINEL_BITS: u32 = 0xfc00u;
+
+// Whether `escape_time_max` in `w` is its sentinel: tested by its bits, never by a float comparison (R-297).
+fn qr_escape_time_max_is_sentinel(w: u32) -> bool { return extractBits(w, 16u, 16u) == QR_ESCAPE_TIME_MAX_SENTINEL_BITS; }
+
 // `first_divergence_t`'s sentinel as its f32 bits (dd_generation_root §3.7).
 const QR_FIRST_DIVERGENCE_T_SENTINEL_BITS: u32 = 0x7f800000u;
 

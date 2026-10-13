@@ -175,12 +175,10 @@ fn f32_at(name: &'static str, slot: u32, lo: Bound) -> EntryBuilder {
 }
 
 /// Every member's §3.8 entry, as §3.7's "Layout and §3.8 entries" table gives it, in its order. The ranges and
-/// `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift` are REQ-PAY-093's
-/// proposal, and those of `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` RQ-268's, until the human
-/// confirms them at the M5 gate (R-71). RQ-268 also holds open the sentinel `escape_time_min` and `escape_time_max`
-/// take when no copy escaped: +∞ for both (for `_max` a chosen sentinel, not the empty max), or each its reduction's
-/// identity, +∞ for `_min` and −∞ for `_max`. Either is tested by its bits, as `d_min`'s is (R-271), and their entries
-/// carry none until the human chooses.
+/// `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`,
+/// `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are REQ-PAY-093's proposal, until the human
+/// confirms them at the M5 gate (R-71, R-418). With no copy escaped, `escape_time_min` holds +∞ and `escape_time_max`
+/// −∞, each its reduction's identity, as their sentinels (§3.7's "No escape (R-418)"; REQ-REF-006).
 fn entries() -> Vec<EntryBuilder> {
     let zero = Bound::Closed(0.0);
     let histogram = FieldType::Vector {
@@ -255,6 +253,7 @@ fn entries() -> Vec<EntryBuilder> {
             Scale::Lin,
             u16::MAX.into(),
         ),
+        // With no copy escaped: +∞, the min reduction's identity, with no branch (R-418).
         unbounded(
             "escape_time_min",
             "qr_w7",
@@ -262,7 +261,9 @@ fn entries() -> Vec<EntryBuilder> {
             Scale::Lin,
             zero,
             Overflow::Saturate,
-        ),
+        )
+        .sentinel(f64::INFINITY),
+        // With no copy escaped: −∞, the max reduction's identity, with no branch (R-418).
         unbounded(
             "escape_time_max",
             "qr_w7",
@@ -270,7 +271,8 @@ fn entries() -> Vec<EntryBuilder> {
             Scale::Lin,
             zero,
             Overflow::Saturate,
-        ),
+        )
+        .sentinel(f64::NEG_INFINITY),
         fraction("retrograde_fraction", "qr_w8", 0),
         unbounded(
             "mean_orbit_count_spread",
@@ -416,10 +418,74 @@ fn packed_members<'a>(words: &[Word], entries: &'a [Entry]) -> Vec<Packed<'a>> {
     out
 }
 
-/// The f32 bits of `value`, as a hex literal with its halves split by `sep` (`_` in Rust, nothing in WGSL).
-fn f32_bits(value: f64, sep: &str) -> String {
-    let b = (value as f32).to_bits();
+/// The f32 bits `b` as a hex literal with its halves split by `sep` (`_` in Rust, nothing in WGSL).
+fn f32_bits(b: u32, sep: &str) -> String {
     format!("0x{:04x}{sep}{:04x}", b >> 16, b & 0xffff)
+}
+
+/// The value of the binary16 bits `h`, exactly, by IEEE 754's definition: sign, a 5-bit exponent biased by 15, a
+/// 10-bit significand; subnormal at exponent 0, ±∞ and NaN at 31.
+fn binary16_value(h: u16) -> f64 {
+    let sign = if h & 0x8000 == 0 { 1.0 } else { -1.0 };
+    let exp = i32::from((h >> 10) & 0x1f);
+    let man = f64::from(h & 0x3ff);
+    sign * match exp {
+        0 => man * 2f64.powi(-24),
+        31 if man == 0.0 => f64::INFINITY,
+        31 => f64::NAN,
+        _ => (1.0 + man / 1024.0) * 2f64.powi(exp - 15),
+    }
+}
+
+/// The binary16 bits of `value` where binary16 holds it exactly (±∞ and ±0 included), else `None`: NaN, which storage
+/// never holds (R-79), or a value binary16 would round.
+fn binary16_bits(value: f64) -> Option<u16> {
+    if value.is_nan() {
+        return None;
+    }
+    (0..=u16::MAX).find(|&h| binary16_value(h).to_bits() == value.to_bits())
+}
+
+/// A member's sentinel as the emitters write it.
+enum Sentinel {
+    /// An f32 member's, as its f32 bits.
+    F32 { name: &'static str, bits: u32 },
+    /// An f16 member's, as its binary16 bits at bits `offset .. offset + width` of its word.
+    F16 {
+        name: &'static str,
+        bits: u16,
+        offset: u32,
+        width: u32,
+    },
+    /// One neither emitter can write, which fails the build naming the member.
+    Refused { name: &'static str },
+}
+
+/// The sentinels of `entries`, in their order: an f32 member's, an f16 member's that binary16 holds exactly (R-418's
+/// ±∞), and any other refused.
+fn sentinels(entries: &[Entry]) -> Vec<Sentinel> {
+    entries
+        .iter()
+        .filter_map(|e| {
+            let s = e.sentinel?;
+            let name = e.name;
+            Some(match (&e.ty, &e.location, binary16_bits(s)) {
+                (FieldType::F32, _, _) => Sentinel::F32 {
+                    name,
+                    bits: (s as f32).to_bits(),
+                },
+                (FieldType::F16, &Location::Packed { offset, width, .. }, Some(bits)) => {
+                    Sentinel::F16 {
+                        name,
+                        bits,
+                        offset,
+                        width,
+                    }
+                }
+                _ => Sentinel::Refused { name },
+            })
+        })
+        .collect()
 }
 
 /// A copy's `class_histogram` bin index as source, in either language: `head` opens the function, `body` holds
@@ -498,27 +564,39 @@ fn rust_file(s: &Struct, words: &[Word], entries: &[Entry]) -> String {
             doc.1
         );
     }
-    for e in entries {
-        let Some(s) = e.sentinel else {
-            continue;
-        };
-        let f = e.name;
-        if e.ty != FieldType::F32 {
-            let _ = write!(
+    for sentinel in sentinels(entries) {
+        let _ = match sentinel {
+            Sentinel::F32 { name: f, bits } => {
+                let upper = format!("QR_{}_SENTINEL_BITS", f.to_uppercase());
+                write!(
+                    out,
+                    "\n/// `{f}`'s sentinel as its f32 bits (dd_generation_root §3.7, REQ-PAY-094).\n\
+                     pub const {upper}: u32 = {bits};\n\
+                     \n/// Whether `v` is `{f}`'s sentinel: tested by its bits, never by a float comparison (R-297).\n\
+                     #[inline]\npub fn qr_{f}_is_sentinel(v: f32) -> bool {{\n    v.to_bits() == {upper}\n}}\n",
+                    bits = f32_bits(bits, "_"),
+                )
+            }
+            Sentinel::F16 {
+                name: f,
+                bits,
+                offset: o,
+                width: n,
+            } => {
+                let upper = format!("QR_{}_SENTINEL_BITS", f.to_uppercase());
+                write!(
+                    out,
+                    "\n/// `{f}`'s sentinel as its binary16 bits (dd_generation_root §3.7, R-418).\n\
+                     pub const {upper}: u32 = {bits:#06x};\n\
+                     \n/// Whether `{f}` in `w` is its sentinel: tested by its bits, never by a float comparison (R-297).\n\
+                     #[inline]\npub fn qr_{f}_is_sentinel(w: u32) -> bool {{\n    qr_extract(w, {o}, {n}) == {upper}\n}}\n",
+                )
+            }
+            Sentinel::Refused { name: f } => write!(
                 out,
-                "\ncompile_error!(\"`{f}` has a sentinel, which only an f32 member's may be here\");\n"
-            );
-            continue;
-        }
-        let upper = format!("QR_{}_SENTINEL_BITS", f.to_uppercase());
-        let _ = write!(
-            out,
-            "\n/// `{f}`'s sentinel as its f32 bits (dd_generation_root §3.7, REQ-PAY-094).\n\
-             pub const {upper}: u32 = {bits};\n\
-             \n/// Whether `v` is `{f}`'s sentinel: tested by its bits, never by a float comparison (R-297).\n\
-             #[inline]\npub fn qr_{f}_is_sentinel(v: f32) -> bool {{\n    v.to_bits() == {upper}\n}}\n",
-            bits = f32_bits(s, "_"),
-        );
+                "\ncompile_error!(\"`{f}` has a sentinel, which only an f32 member's or an f16 member's exact binary16 value may be here\");\n"
+            ),
+        };
     }
     let floor = crate::constants::F16_MIN_SUBNORMAL.number() as f32;
     let _ = write!(
@@ -582,26 +660,37 @@ fn wgsl_file(s: &Struct, words: &[Word], entries: &[Entry]) -> String {
             doc.1
         );
     }
-    for e in entries {
-        let Some(s) = e.sentinel else {
-            continue;
-        };
-        let f = e.name;
-        if e.ty != FieldType::F32 {
-            let _ = write!(
+    for sentinel in sentinels(entries) {
+        let _ = match sentinel {
+            Sentinel::F32 { name: f, bits } => {
+                let upper = format!("QR_{}_SENTINEL_BITS", f.to_uppercase());
+                write!(
+                    out,
+                    "\n// `{f}`'s sentinel as its f32 bits (dd_generation_root §3.7).\nconst {upper}: u32 = {}u;\n\
+                     \n// Whether `v` is `{f}`'s sentinel: tested by its bits, never by a float comparison (R-297).\n\
+                     fn qr_{f}_is_sentinel(v: f32) -> bool {{ return bitcast<u32>(v) == {upper}; }}\n",
+                    f32_bits(bits, ""),
+                )
+            }
+            Sentinel::F16 {
+                name: f,
+                bits,
+                offset: o,
+                width: n,
+            } => {
+                let upper = format!("QR_{}_SENTINEL_BITS", f.to_uppercase());
+                write!(
+                    out,
+                    "\n// `{f}`'s sentinel as its binary16 bits (dd_generation_root §3.7, R-418).\nconst {upper}: u32 = {bits:#06x}u;\n\
+                     \n// Whether `{f}` in `w` is its sentinel: tested by its bits, never by a float comparison (R-297).\n\
+                     fn qr_{f}_is_sentinel(w: u32) -> bool {{ return extractBits(w, {o}u, {n}u) == {upper}; }}\n",
+                )
+            }
+            Sentinel::Refused { name: f } => write!(
                 out,
-                "\nconst_assert false; // `{f}` has a sentinel, which only an f32 member's may be here\n"
-            );
-            continue;
-        }
-        let upper = format!("QR_{}_SENTINEL_BITS", f.to_uppercase());
-        let _ = write!(
-            out,
-            "\n// `{f}`'s sentinel as its f32 bits (dd_generation_root §3.7).\nconst {upper}: u32 = {}u;\n\
-             \n// Whether `v` is `{f}`'s sentinel: tested by its bits, never by a float comparison (R-297).\n\
-             fn qr_{f}_is_sentinel(v: f32) -> bool {{ return bitcast<u32>(v) == {upper}; }}\n",
-            f32_bits(s, ""),
-        );
+                "\nconst_assert false; // `{f}` has a sentinel, which only an f32 member's or an f16 member's exact binary16 value may be here\n"
+            ),
+        };
     }
     out
 }

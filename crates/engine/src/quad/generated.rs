@@ -162,6 +162,24 @@ pub fn qr_mean_orbit_count_spread(w: u32) -> f32 {
     f16_bits_to_f32(qr_extract(w, 16, 16) as u16)
 }
 
+/// `escape_time_min`'s sentinel as its binary16 bits (dd_generation_root §3.7, R-418).
+pub const QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 = 0x7c00;
+
+/// Whether `escape_time_min` in `w` is its sentinel: tested by its bits, never by a float comparison (R-297).
+#[inline]
+pub fn qr_escape_time_min_is_sentinel(w: u32) -> bool {
+    qr_extract(w, 0, 16) == QR_ESCAPE_TIME_MIN_SENTINEL_BITS
+}
+
+/// `escape_time_max`'s sentinel as its binary16 bits (dd_generation_root §3.7, R-418).
+pub const QR_ESCAPE_TIME_MAX_SENTINEL_BITS: u32 = 0xfc00;
+
+/// Whether `escape_time_max` in `w` is its sentinel: tested by its bits, never by a float comparison (R-297).
+#[inline]
+pub fn qr_escape_time_max_is_sentinel(w: u32) -> bool {
+    qr_extract(w, 16, 16) == QR_ESCAPE_TIME_MAX_SENTINEL_BITS
+}
+
 /// `first_divergence_t`'s sentinel as its f32 bits (dd_generation_root §3.7, REQ-PAY-094).
 pub const QR_FIRST_DIVERGENCE_T_SENTINEL_BITS: u32 = 0x7f80_0000;
 

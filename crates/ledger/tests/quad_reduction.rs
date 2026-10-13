@@ -7,7 +7,8 @@
 //! - REQ-PAY-077: the ledger is §3.7's "Layout and §3.8 entries" table, and the generated Rust and WGSL layouts and
 //!   accessors match it (`quad_reduction_layout_*`).
 //! - REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-REF-052: the member list and types are §3.7's, with no `spread_t_end`
-//!   and no CPU metadata (`quad_reduction_members_*`).
+//!   and no CPU metadata, and the escape-time entries carry R-418's no-escape sentinels, +∞ and −∞, as their binary16
+//!   bits `0x7c00` and `0xfc00` (`quad_reduction_members_*`).
 //! - REQ-PAY-089: `size_of::<QuadReduction>()` is the aligned sum of its member list, and the WGSL size agrees
 //!   (`quad_reduction_size_*`).
 //! - REQ-GEN-030: the generated Rust and WGSL `f16` accessors read the same binary16 value as f32, and no generated
@@ -497,6 +498,155 @@ negative_control!(
 );
 
 // ---------------------------------------------------------------------------------------------------------------
+// REQ-REF-006, R-418: with no copy escaped, `escape_time_min` holds +∞ and `escape_time_max` −∞, each its reduction's
+// identity, as their entries' sentinels, tested by their bits in both languages; "no escape" reads `_min > _max`.
+
+/// The two escape-time entries carry +∞ and −∞; the generated Rust declares their binary16 bits `0x7c00` and `0xfc00`
+/// and tests each by its own bits only, at its own half of `qr_w7`; the stored pair reads `_min > _max`; and the WGSL
+/// `wgsl_src` declares the same bits and reads the same halves.
+fn check_escape_sentinels(ledger: &Ledger, wgsl_src: &str) {
+    let es = entries(ledger);
+    let sentinel = |name: &str| es.iter().find(|e| e.name == name).and_then(|e| e.sentinel);
+    assert_eq!(
+        (sentinel("escape_time_min"), sentinel("escape_time_max")),
+        (Some(f64::INFINITY), Some(f64::NEG_INFINITY)),
+        "the escape-time entries' sentinels are not +∞ and −∞ (R-418)"
+    );
+    assert_eq!(
+        (
+            QR_ESCAPE_TIME_MIN_SENTINEL_BITS,
+            QR_ESCAPE_TIME_MAX_SENTINEL_BITS
+        ),
+        (0x7c00, 0xfc00),
+        "the generated escape-time sentinels are not binary16 +∞ and −∞"
+    );
+    let (lo, hi) = (
+        binary16(QR_ESCAPE_TIME_MIN_SENTINEL_BITS as u16),
+        binary16(QR_ESCAPE_TIME_MAX_SENTINEL_BITS as u16),
+    );
+    assert!(lo > hi, "no escape does not read _min > _max: {lo} ≤ {hi}");
+    for (half, min, max) in [
+        (0x7c00, true, false),
+        (0xfc00, false, true),
+        (0x7bff, false, false),
+        (0xfbff, false, false),
+        (0x0000, false, false),
+        (0x7e00, false, false),
+    ] {
+        assert_eq!(
+            (
+                qr_escape_time_min_is_sentinel(half),
+                qr_escape_time_max_is_sentinel(half << 16)
+            ),
+            (min, max),
+            "the escape-time sentinel tests at bits {half:#06x}"
+        );
+        assert!(
+            !qr_escape_time_min_is_sentinel(half << 16) && !qr_escape_time_max_is_sentinel(half),
+            "an escape-time sentinel test reads the other half of qr_w7 at {half:#06x}"
+        );
+    }
+    for line in [
+        "const QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 = 0x7c00u;",
+        "const QR_ESCAPE_TIME_MAX_SENTINEL_BITS: u32 = 0xfc00u;",
+        "fn qr_escape_time_min_is_sentinel(w: u32) -> bool { return extractBits(w, 0u, 16u) == QR_ESCAPE_TIME_MIN_SENTINEL_BITS; }",
+        "fn qr_escape_time_max_is_sentinel(w: u32) -> bool { return extractBits(w, 16u, 16u) == QR_ESCAPE_TIME_MAX_SENTINEL_BITS; }",
+    ] {
+        assert!(wgsl_src.contains(line), "the WGSL does not declare `{line}`");
+    }
+}
+
+#[test]
+fn quad_reduction_members_escape_time_sentinels() {
+    check_escape_sentinels(&reduction::ledger(), &checked_in(WGSL_PATH));
+}
+
+negative_control!(
+    quad_reduction_members_escape_time_sentinels,
+    "R-418's option (d), +∞ for both, is not escape_time_max's identity",
+    expected = "the escape-time entries' sentinels are not +∞ and −∞",
+    {
+        let mut l = reduction::ledger();
+        *entry(&mut l, "escape_time_max") = entry(&mut l, "escape_time_max")
+            .clone()
+            .sentinel(f64::INFINITY);
+        check_escape_sentinels(&l, &checked_in(WGSL_PATH));
+    }
+);
+
+negative_control!(
+    quad_reduction_members_escape_time_sentinels_wgsl,
+    "a WGSL escape_time_max sentinel of +∞'s bits is not −∞",
+    expected = "the WGSL does not declare `const QR_ESCAPE_TIME_MAX_SENTINEL_BITS",
+    check_escape_sentinels(
+        &reduction::ledger(),
+        &checked_in(WGSL_PATH).replace(
+            "QR_ESCAPE_TIME_MAX_SENTINEL_BITS: u32 = 0xfc00u",
+            "QR_ESCAPE_TIME_MAX_SENTINEL_BITS: u32 = 0x7c00u"
+        )
+    )
+);
+
+/// An f16 member's sentinel `value` generates as its exact binary16 bits `bits` in both languages, or, where binary16
+/// does not hold it exactly (`None`), refuses to build, naming the member.
+fn check_f16_sentinel(value: f64, bits: Option<&str>) {
+    let mut l = reduction::ledger();
+    *entry(&mut l, "escape_time_min") = entry(&mut l, "escape_time_min").clone().sentinel(value);
+    let files = reduction::files(&l, &reduction::quad_reduction());
+    let (rust_src, wgsl_src) = (&files[0].contents, &files[1].contents);
+    match bits {
+        Some(b) => {
+            assert!(
+                rust_src.contains(&format!(
+                    "pub const QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 = {b};"
+                )) && wgsl_src.contains(&format!(
+                    "const QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 = {b}u;"
+                )),
+                "the sentinel {value:?} does not generate as {b}"
+            );
+            assert!(
+                !rust_src.contains("compile_error!") && !wgsl_src.contains("const_assert false"),
+                "the sentinel {value:?} refuses to build"
+            );
+        }
+        None => assert!(
+            rust_src.contains("compile_error!(\"`escape_time_min` has a sentinel")
+                && wgsl_src.contains("const_assert false; // `escape_time_min` has a sentinel")
+                && !rust_src.contains("QR_ESCAPE_TIME_MIN_SENTINEL_BITS"),
+            "the sentinel {value:?}, which binary16 does not hold, builds"
+        ),
+    }
+}
+
+#[test]
+fn quad_reduction_members_f16_sentinel_is_its_exact_binary16_bits() {
+    for (value, bits) in [
+        (f64::INFINITY, Some("0x7c00")),
+        (f64::NEG_INFINITY, Some("0xfc00")),
+        (1.0, Some("0x3c00")),
+        (-2.0, Some("0xc000")),
+        (0.333_251_953_125, Some("0x3555")),
+        (65504.0, Some("0x7bff")),
+        (2f64.powi(-24), Some("0x0001")),
+        (2f64.powi(-14) - 2f64.powi(-24), Some("0x03ff")),
+        (-0.0, Some("0x8000")),
+        (0.0, Some("0x0000")),
+        (0.1, None),
+        (98304.0, None),
+        (f64::NAN, None),
+    ] {
+        check_f16_sentinel(value, bits);
+    }
+}
+
+negative_control!(
+    quad_reduction_members_f16_sentinel_is_its_exact_binary16_bits,
+    "0.1, which binary16 rounds to 0x2e66, is not held exactly",
+    expected = "does not generate as 0x2e66",
+    check_f16_sentinel(0.1, Some("0x2e66"))
+);
+
+// ---------------------------------------------------------------------------------------------------------------
 // REQ-PAY-077: the ledger is §3.7's layout table, and the generated layouts and accessors match it.
 
 /// The rows of §3.7's "Layout and §3.8 entries" table in `doc`: member, location, type, scale, range, sentinel ·
@@ -565,12 +715,20 @@ fn row(e: &Entry) -> [String; 6] {
         Bound::Open(x) => format!("{x})"),
         Bound::Unbounded => "∞)".to_owned(),
     };
-    let extra = match (e.sentinel, e.overflow) {
-        (Some(s), _) if s == f64::INFINITY => "sentinel +∞".to_owned(),
-        (Some(s), _) => format!("sentinel {s}"),
-        (None, Some(Overflow::Inf)) => "overflow inf".to_owned(),
-        (None, Some(Overflow::Saturate)) => "overflow saturate".to_owned(),
-        (None, None) => "—".to_owned(),
+    let sentinel = e.sentinel.map(|s| match s {
+        f64::INFINITY => "sentinel +∞".to_owned(),
+        f64::NEG_INFINITY => "sentinel −∞".to_owned(),
+        _ => format!("sentinel {s}"),
+    });
+    let overflow = e.overflow.map(|o| match o {
+        Overflow::Inf => "overflow inf".to_owned(),
+        Overflow::Saturate => "overflow saturate".to_owned(),
+    });
+    let extra: Vec<String> = sentinel.into_iter().chain(overflow).collect();
+    let extra = if extra.is_empty() {
+        "—".to_owned()
+    } else {
+        extra.join(" · ")
     };
     [
         e.name.to_owned(),
