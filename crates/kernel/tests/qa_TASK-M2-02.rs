@@ -32,9 +32,11 @@
 //! `|R̃ − 1|`, `|Δα|`, `sin α·|Δβ|` and `|ρ̃_y|` within 8 eps, `eps` the precision's machine epsilon. The checks of
 //! the formulae against an f64 evaluation have no calibration requirement: their bounds are the round-off of the
 //! operations the formula names, each derived beside its constant, never fitted. The f32 behaviour at a saturated
-//! `α` or `β` (the rounded `π/2` and `π` past the exact poles) is an open question: no check here pins it either way;
-//! the ranges are asserted closed against the precision's own `π/2` and `π` on the whole domain, and open only on
-//! the interior.
+//! `α` or `β` is ruled by R-417 (dd_decoder §3.2): the f32 images of `π/2` and `π` are generated rounded toward
+//! zero, so the range is closed at the exact bounds. That exact-bound check lands with the rounded-down constants
+//! (TASK-M2-30, and TASK-M2-03's `decode_ranges`), not here, since this task does not depend on TASK-M2-30; the
+//! ranges here are asserted closed against the precision's own `π/2` and `π` on the whole domain, which holds under
+//! either constant, and open only on the interior.
 
 use std::fmt::Debug;
 
