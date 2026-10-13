@@ -502,6 +502,17 @@ its declared `range` spans zero (`lo < 0 < hi`, either end possibly unbounded), 
 ramp from its range. A `diverging` entry whose declared range does not span zero fails generation, naming the field
 and its range; a one-signed field is `lin` (or `log`), as `K_0` and `V_0` are (§3.6).
 
+**An undeclared range is a ledger gap, not a range that spans zero (R-426; REQ-GEN-035).** `range` is a key every
+entry carries. Where §3 gives a field no range, the (−∞, ∞) the ledger writes in its place declares nothing: it is a
+gap in the ledger, and it never makes a field diverging. A field is on the diverging ramp, or carries the `diverging`
+scale, only when its declared range spans zero (R-400, R-403). Of the fields §3 gives no range, these are declared,
+each citing its source: `S`, `ftle` and `diffusion` signed, (−∞, ∞), by R-423's physics check ("signed at finite time
+with zero a meaningful centre"); `E_0` and `Lz_0` signed, (−∞, ∞), by their `diverging` scale (§3.4). Two fields
+stay on the diverging ramp provisionally (R-426), recorded as provisional at the M1 gate: `q_mass`, until its formula
+(REQ-PAY-088) declares its range (REQ-PAY-097), and `mean_y`, until `y`'s definition (REQ-PAY-073) declares its
+(REQ-PAY-098); the physics reviewer re-checks each ramp then. A field whose range is still a gap is listed as one,
+with the requirement that fills it.
+
 `overflow` (R-248) states what an `f16-pair` value does past f16's finite range (±65504): `saturate` clamps to
 ±65504, `inf` rounds to ±∞. An `f16-pair` field's declared range must lie within ±65504; an unbounded end is
 allowed only when the entry states `overflow`. At a packed location, `f16-pair` and `fixed16` take exactly 16 bits
@@ -571,7 +582,8 @@ declared once, in the constants register beside the layout table in `crates/ledg
 { name, value: exact(v) | threshold(v) | calibration,
   class: achievable-maximum | conservation-law | canonical-units,
   citation: corpus(file, section) | prin-rs(commit, path) | calibration(requirement id),
-  relative_basis?: distribution(source, percentile, populations) | gap(source, below, above) }
+  relative_basis?: distribution(source, percentile, populations) | gap(source, below, above),
+  provisional?: gate(milestone) }
 population = { name, lo, hi, count }
 ```
 
@@ -579,6 +591,9 @@ population = { name, lo, hi, count }
   entered with a value: its value is `calibration` and its citation is its calibration requirement, until the human
   confirms the value (R-71). A value is `calibration` exactly when its citation is a calibration requirement. A
   settled number or threshold is finite.
+  **Except a provisional value (R-427):** a constant the corpus leaves open may instead be entered with its proposed
+  number or threshold, marked `provisional` until its gate (below); it still cites its calibration requirement, so for
+  it a number goes with that citation.
 - **`class`**: why the constant is admissible, one of philosophy §4.2's three: bounded by its own achievable maximum,
   fixed by a conservation law, or expressed in canonical units. `achievable-maximum` covers a format's achievable
   extreme: a value fixed by a number format's limits, its greatest finite value or its smallest positive value
@@ -598,13 +613,27 @@ population = { name, lo, hi, count }
   fails, at whatever percentile, and one between populations passes at whatever percentile (R-250). Closure's absolute
   cutoff of 2e-3, inside the bound population's range, and `tau_display` at the 0.4th percentile of its own
   distribution, inside the population of quads it was to split, both fail (pitfalls §3; philosophy §4.2).
+- **`provisional`** *(R-427; REQ-SYS-081)*: the gate, a milestone's, until which the value is a proposal (R-71, R-182):
+  proposed with its evidence by the task that needs it, checked by a reviewer and used meanwhile. It is read like any
+  other entry, its proposed number at once, and is never wrapped in a function in its place (below). Every gate can hold
+  such entries: its report lists each entry marked provisional until it, and an entry still so marked blocks the gate,
+  as an unconfirmed calibration does. When the human confirms the value at the gate, the mark comes off and the
+  citation becomes the ruling that records the confirmation (`decisions.md`); a value the human changes is entered as
+  the ruling gives it; a value confirmed provisionally, to be re-confirmed at a later gate, is marked provisional until
+  that gate (R-419's two floors, until M2).
 - **The gate:** an entry missing its value, class or citation, a non-finite value, a threshold without a relative
   basis, one whose basis names an ill-formed population, one that does not sit between its populations or whose
   recorded percentile is not the one its counts give, and a value that is `calibration` without citing its
   requirement (or the reverse) fail generation, naming the constant.
+  A `provisional` entry is the exception to "the reverse": it carries a number and cites its calibration requirement.
+  It fails generation if its value is `calibration`, if it names no gate, or if its citation is not a calibration
+  requirement (R-427).
 - **Reading a constant:** code in the physics and engine crates (`kernel`, `ledger`, `engine`) reads each number from
   the register; `cargo xtask lint constants` fails on a numeric `const` or `static` there that does not, naming file
   and line. The generated files are exempt: their numbers are emitted from the ledger.
+  A provisional entry is read the same way. **No number is wrapped in a function to get past the lint (R-427;
+  REQ-SYS-082):** a `fn` or `const fn` that returns a register constant's number in place of a register entry is the
+  `const` the lint refuses, under another form. A proposed value is entered `provisional` and read from the register.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
   the f16 pack clamp (payload §1), the f16 subnormal floor (R-271), and the step count and sentinel of `θ̃`'s pole
@@ -616,6 +645,8 @@ population = { name, lo, hi, count }
   has the blast radius caching_contract Part 2 gives its knob (render settings and
   scheduler knobs invalidate nothing; canonical_spec §9, invariant 3). The link registry's entries are hashed too, by
   their semantic content (§3.9, "The hash"; R-340).
+  The `provisional` mark and its gate are not hashed, as the citation is not: confirming a value at its gate does not
+  change the schema version; changing a hashed entry's value does (R-427).
 
 The register's entries, the constants the payload ledger uses:
 
