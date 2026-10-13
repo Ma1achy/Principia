@@ -325,6 +325,10 @@
   reason: informative only
   note: parked post-1.0 (§7); the driver.rs note concerns prin-rs
 - file: docs/read_first/principia_00_philosophy.md
+  section: 7.6a The truncated-Fourier block — a possible future feature (R-420)
+  reason: out of v1 (R-420)
+  note: "parked by R-420: render_contract Part 6's Optional Fourier block row, removed; nothing current defines the path"
+- file: docs/read_first/principia_00_philosophy.md
   section: 9. What this is not
   reason: informative only
   note: what the project is not

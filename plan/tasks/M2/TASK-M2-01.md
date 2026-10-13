@@ -71,3 +71,6 @@ The link registry of generation-root §3.9 exists as ledger data and is the root
   3×2 Jacobian, is `log √det(JᵀJ)`. The ruling converted §3.9's cells from the factors to their logs ("1" → 0); the
   physics reviewer checks that conversion in this task, which writes the entries. TASK-M0-46's canonical form hashes
   whatever tree an entry carries, so it needs no change.
+- R-417 (11 Oct 2026, closing RQ-270): the f32 images of π/2 and π are generated rounded toward zero, and this task's
+  merged `link_properties_a_constraint` checks bounded f32 outputs at the exact bounds, not their f32-rounded images.
+  Both land in TASK-M2-30, since this task has merged.

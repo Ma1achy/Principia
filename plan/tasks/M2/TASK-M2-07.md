@@ -31,6 +31,7 @@ One canonicalise function in the shared source quotients any physical state onto
 - `docs/design/principia_dd_encode.md` § "5. Unit tests"
 - `decisions.md` § "R-13 — Lookup has no coincident-bodies rejection *(closes RQ-11)*"
 - `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"
+- `decisions.md` § "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
 
 ## Deliverables
 - `crates/kernel/src/canon.rs`: `canonicalise` (the ordered steps, the three notices, λ recorded) and the scale gauge.
@@ -40,7 +41,7 @@ One canonicalise function in the shared source quotients any physical state onto
 ## Acceptance tests
 - `cargo test -p kernel canonicalise_section` — property: on random physical states the output has CoM at the origin, ρ̃ on +x, λ̃_y ≥ −δ_λ and I = 1, and canonicalise is idempotent (REQ-DEC-002).
 - `cargo test -p engine mirror_tie` — states with λ̃_y at exactly −δ_λ, at +δ_λ and straddling both: no mirror for |λ̃_y| ≤ δ_λ, mirror just below −δ_λ; the same output twice and on the CPU-f64 and GPU-f32 builds; the test reads λ̃_y, not λ_y; the T1 sweep in TASK-M2-15 includes deadband-straddling rotations (REQ-DEC-017).
-- `cargo test -p kernel canonical_noop` — decoder test 5: C applied to canonical-frame decodes of fuzzed z leaves them unchanged; at the seam the R-82 tie gives the same result twice (REQ-DEC-018).
+- `cargo test -p kernel canonical_noop` — decoder test 5: C applied to canonical-frame decodes of fuzzed z, saturated controls at f32 and f64 included, leaves them unchanged; at the seam the R-82 tie gives the same result twice; a decode where the no-op fails is allowed only as a measured case listed in test 5 with its z, precision and measurement, approved by physics (R-417) (REQ-DEC-018).
 - `cargo test -p kernel scale_gauge` — decoder test 10: applied to canonical output it is the identity; applied to a scaled input it yields I = 1 and transforms E, L_z per the encode contract's table (REQ-DEC-023).
 - `cargo test -p engine canonicalise_order` — an off-CoM, boosted, scaled, rotated state: I is computed after CoM subtraction and the result equals the canonical representative on both backends (REQ-ENC-015).
 - `cargo test -p kernel scale_step` — encode test 4: the Burrau state at 2× scale gives I_in = 4·I_canon, λ = 1/2, E_canon = 2·E_in, timing factor I_in^{3/4}; the whole table row is asserted, and `lookup_rescaled` carries λ (REQ-ENC-006).
@@ -49,3 +50,7 @@ One canonicalise function in the shared source quotients any physical state onto
 ## Notes
 - The mirror test reads λ̃_y = √μ_λ·λ_y (encode's frame), the one test R-82 kept; a λ_y test is the defect.
 - Branch inputs (the mirror comparison, the ρ = 0 guard) are comparisons against constants on single-rounded values (R-34, R-84); PIT-10 — the cross-backend claim is for identical inputs only.
+- R-417 (11 Oct 2026, closing RQ-270): with the f32 images of π/2 and π rounded toward zero (TASK-M2-30), f32
+  saturation no longer passes α = π/2 or β = π, so §3.3's half turn and mirror no longer fire there. Any exception to
+  the no-op covers only a case this task measures; it lists each in dd_decoder §5 test 5, with its z, precision and
+  measurement, for physics to approve. This task reaches TASK-M2-30 through TASK-M2-06, TASK-M2-05 and TASK-M2-03.

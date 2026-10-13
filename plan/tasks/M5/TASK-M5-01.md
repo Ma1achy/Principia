@@ -42,13 +42,17 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `decisions.md` § "R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*"
 - `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
 - `decisions.md` § "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
+- `decisions.md` § "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and "no escape" reads `_min > _max` *(closes RQ-268)*"
 - `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
 ## Deliverables
 - `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), and
   `first_divergence_t`'s sentinel and each member's scale (REQ-PAY-094), with the commit's "Removed lines" note.
 - The REQ-PAY-093 proposal: the declared range, and `overflow` where needed, of `error_ratio`, `roundtrip_error`,
-  `alpha_area`, `alpha_energy` and `worst_energy_drift`, each with its evidence, attached to the PR.
+  `alpha_area`, `alpha_energy` and `worst_energy_drift`, and of `escape_time_min`, `escape_time_max` and
+  `mean_orbit_count_spread` (R-418: proposed as `[0, ∞)` with `overflow: saturate`), each with its evidence, attached
+  to the PR. The two escape-time entries carry their no-escape values as sentinels, +∞ (`0x7c00`) and −∞ (`0xfc00`),
+  each its reduction's identity, as §3.7's "No escape (R-418)" gives them (REQ-REF-006).
 - `crates/ledger`: `QuadReduction` ledger rows (every §3.7 member, including the M6 refinement members `alpha_area`,
   `alpha_energy`, `worst_energy_drift`, laid out now and populated in M6), the generated Rust type in `crates/engine`
   and the generated WGSL struct and accessors for the render and kernel sides.
@@ -67,13 +71,13 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - Review checklist (physics) — the ledger row states the fraction; the impurity-mask cross-check (debug_tooling_plan §G) uses the same fraction; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-076).
 - Review checklist (physics) — the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-077).
 - `cargo test -p ledger quad_reduction_layout` — the test that follows from the written definition: the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it (REQ-PAY-077).
-- `cargo test -p ledger quad_reduction_members` — generated layout member list and types (REQ-REF-006).
+- `cargo test -p ledger quad_reduction_members` — generated layout member list and types; the `escape_time_min` and `escape_time_max` entries' sentinels are the bits `0x7c00` and `0xfc00` (R-418) (REQ-REF-006).
 - Review checklist (code) — every QuadReduction member is a fixed-size scalar; no array member grows with time or sample count; QuadReduction's size (R-410; this task measures it) is not treated as a cap (REQ-PAY-006).
 - `cargo test -p ledger quad_reduction_size` — `size_of::<QuadReduction>()` equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree (REQ-PAY-089).
 - Review checklist (perf) — `QuadReduction`'s aligned size with u32 bins, and its cost at memory_tiers §3–§4's quad count (render pixels / N² at each tier's `N`, at the largest display, plus their ancestors), are stated in the PR from the member list; the perf reviewer confirms the size cost (R-410; REQ-PAY-089).
 - Review checklist (code) — no spread_t_end member in v1 (REQ-REF-007).
 - Review checklist (code) — none of these in the GPU struct (REQ-REF-008).
-- Review checklist (physics) — the PR gives the declared range of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift`, each within ±65504 or with its `overflow` stated (R-248), with its evidence; the physics reviewer checks each; the human confirms them at the M5 gate (REQ-PAY-093).
+- Review checklist (physics) — the PR gives the declared range of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`, `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` (the last three added by R-418), each within ±65504 or with its `overflow` stated (R-248), with its evidence; the physics reviewer checks each; the human confirms them at the M5 gate (REQ-PAY-093).
 - Review checklist (physics) — §3.7 gives `first_divergence_t`'s sentinel, distinct from every crossing time and not NaN, and each member's scale; the ledger entries carry them; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-094).
 - `cargo test -p ledger layout_static_f16` — §3.8's `f16` type: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value as f32; the generated WGSL contains no `enable f16` and no `f16` type; each has a registered negative control (REQ-GEN-030).
 
@@ -129,3 +133,9 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   members, and R-99 makes them diagnostics, not split inputs; R-99 does not take them out of the struct. This task lays
   both out as members, as §3.7 has them.
 - **REQ-PAY-077's `rq: RQ-182`** is dropped: R-312 ruled RQ-182, and R-312 joins its rulings.
+- **R-418 (11 Oct 2026) rules RQ-268**, filed by this task (PR #191): the three ranges join REQ-PAY-093, confirmed at
+  the M5 gate with the five; with no escape `escape_time_min` is +∞ (`0x7c00`) and `escape_time_max` −∞ (`0xfc00`),
+  each its reduction's identity, with no branch, and "no escape" reads `_min > _max`. R-418's rulings PR archives
+  RQ-268 from this PR's head `fe682029`; this task's next fix pass deletes its open copy from `REVIEW_QUEUE.md` and
+  conforms §3.7 (the escape-time row's "a sentinel RQ-268 holds open", the paragraph holding the no-escape value open,
+  and the entries' sentinels) to R-418. TASK-M5-17 writes and tests the bits (REQ-REF-053).

@@ -10,13 +10,15 @@
 
 ## Goal
 Memory is budgeted before it is allocated and watched continuously. The cache's hard cap is a fraction of the
-budget device characterisation detects (never a constant); the requirement `quads × N² × (E+1) × sizeof(SimState)` is
+budget device characterisation detects (never a constant); the requirement `quads × (N² × (E+1) × sizeof(SimState) +
+sizeof(QuadReduction))`, the per-quad reduction counted at every `N` (R-422), is
 checked against adapter limits and a misfit reduces the tier and reports it; a forced setting that fails to allocate
 drops to a working tier with a message. Pressure is three states re-evaluated through the session — comfortable,
 pressured (stop growing the tree, keep serving, report cap-bound), reclaiming (evict). The low-cap path is exercised
 deliberately. The full process footprint is measured, not inferred.
 
 ## References
+- `decisions.md` § "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
 - `docs/design/principia_dd_simstate_payload.md` § "7. Memory"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "6.2 Memory pressure — CONTINUOUS, not an error condition"
 - `docs/design/principia_dd_telemetry_and_tiers.md` § "Three states, not two"
@@ -42,7 +44,7 @@ deliberately. The full process footprint is measured, not inferred.
 ## Acceptance tests
 - `cargo xtask bench process-memory` — record peak process memory for the tier configs on a 16 GB unified-memory machine (REQ-PERF-019).
 - `cargo test -p engine pressure_states` — a scripted budget drop mid-session moves the state through pressured to reclaiming (REQ-PERF-021).
-- `cargo test -p engine budget_before_allocate` — an adapter with small limits causes a reported tier reduction, never a failed allocation (REQ-PERF-023).
+- `cargo test -p engine budget_before_allocate` — an adapter with small limits causes a reported tier reduction, never a failed allocation; the requirement includes `sizeof(QuadReduction)` per quad at every `N`, and a control omitting it admits a configuration the full requirement refuses (R-422) (REQ-PERF-023).
 - `cargo test -p engine hard_cap_fraction` — hard cap scales with the reported available memory for each tier (REQ-PERF-029).
 - `cargo test -p engine forced_tier_fallback` — inject allocation failure at Extreme; app falls back to a lower tier and shows the fallback message (REQ-PERF-030).
 - `cargo test -p engine cache_cap_bytes` — cache bytes never exceed the cap; entries hold no past-t state; cap scales with the detected budget (REQ-SCHED-050).

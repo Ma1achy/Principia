@@ -3,7 +3,7 @@
 - **Milestone:** M6
 - **Closes:** REQ-PERF-084, REQ-PERF-040, REQ-PERF-044, REQ-PERF-067, REQ-PERF-037, REQ-PERF-035, REQ-PERF-045, REQ-PERF-042, REQ-PERF-043, REQ-GUI-015
 - **Depends on:** TASK-M5-11, TASK-M5-12
-- **Needs (earlier milestones):** REQ-PERF-014, REQ-PERF-016, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-029, REQ-PERF-033, REQ-GEN-017
+- **Needs (earlier milestones):** REQ-PERF-014, REQ-PERF-016, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-029, REQ-PERF-033, REQ-GEN-017, REQ-PERF-095
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** none
 - **Size:** ~420 lines
@@ -12,6 +12,7 @@
 One `QualitySettings` struct carries the knobs and the three quality axes — `eps` (convergence target), frame budget, and the mandatory hard cap — defined in the quality/device note by this task (R-72, R-40). `eps` is the user-facing knob the refinement policy reads and each tier row sets; `N` and `MAX_REL_DEPTH` are tier-gated with a Custom override, as are ensemble copies and Benettin shadows; `E` is free-valued on internal rungs and snapped only on named tiers. The preset selector (Auto / named tier / Custom) fills the one struct; tiers ship with defaults keyed on crude specs and a written rationale; memory totals come from the generated payload width.
 
 ## References
+- `decisions.md` § "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
 - `docs/design/principia_quality_device_note.md` § "The reframe: quality is a preset selector populating one settings struct"
 - `docs/design/principia_memory_tiers.md` § "4.1 The same six tiers on the three axes"
 - `decisions.md` § "R-40 — Memory tiers and the quality device key off `eps` *(PL-5)*"
@@ -47,7 +48,7 @@ One `QualitySettings` struct carries the knobs and the three quality axes — `e
 - `cargo test -p engine quality_keys_off_eps` — QualitySettings has the three axes; controller reports which binds; memory totals are computed from the generated payload width (REQ-PERF-067).
 - Review checklist (perf) — QualitySettings carries eps; the refinement policy reads eps from it; each tier row sets eps (REQ-PERF-037).
 - `cargo test -p engine tier_rows_populate` — each named tier populates N, MAX_REL_DEPTH, E and FTLE from its table row; Custom can override each (REQ-PERF-035).
-- `cargo test -p engine custom_n_power_of_two` — Custom offers N as powers of two only, each within REQ-PERF-011's thread ceiling, and rejects any other value (R-398) (REQ-PERF-035).
+- `cargo test -p engine custom_n_power_of_two` — Custom offers N as powers of two only, each within REQ-PERF-011's thread ceiling and none below REQ-PERF-095's lower bound, and rejects any other value (R-398, R-422) (REQ-PERF-035).
 - `cargo test -p engine e_free_valued` — the ladder admits E = 2, 4, 5, 6; named tiers use 0/0/1/3/7/15; every rung's N is a power of two (R-398) (REQ-PERF-045).
 - `cargo test -p engine default_tier_crude_specs` — the default-tier selector uses only the listed specs (REQ-PERF-042).
 - Review checklist (perf) — the tier config documents the rationale per default (REQ-PERF-043).
@@ -56,3 +57,5 @@ One `QualitySettings` struct carries the knobs and the three quality axes — `e
 ## Notes
 - Definition written: REQ-PERF-084. "Re-selecting Auto runs a fresh probe" (REQ-GUI-015) is asserted against a mocked probe; the probe itself is TASK-M6-16.
 - R-398 (9 Oct 2026) closes RQ-258: N is a power of two in every mode, Custom included (REQ-PERF-035's statement and verify).
+- R-422 (11 Oct 2026, closing RQ-269): Custom's `N` has a lower bound, a correctness floor, REQ-PERF-095's calibration
+  (TASK-M5-02, confirmed at the M5 gate); the Custom override offers no power of two below it.
