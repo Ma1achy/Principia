@@ -369,19 +369,32 @@ fn marked(n: f64) -> Sample {
 #[test]
 fn mock_hover_kept_orbits_and_their_tabs() {
     let mut kept = KeptOrbits::default();
-    for n in 0..=MAX_KEPT {
-        keep(&marked(n as f64), &mut kept);
+    let mut scratch = Scratch::default();
+    for n in 0..MAX_KEPT {
+        keep(&marked(n as f64), &mut kept, &mut scratch);
     }
+    assert_eq!(kept.orbits.len(), MAX_KEPT, "not yet full");
+    assert_eq!(kept.orbits[0].ftle, 0.0, "none dropped yet");
+    // Keeping one more drops the oldest, and the tab stays on the orbit it showed.
+    scratch.tab = Tab::Kept(4);
+    keep(&marked(MAX_KEPT as f64), &mut kept, &mut scratch);
     assert_eq!(kept.orbits.len(), MAX_KEPT, "the oldest dropped");
     assert_eq!(kept.orbits[0].ftle, 1.0);
+    assert_eq!(scratch.tab, Tab::Kept(3));
+    assert_eq!(shown(scratch.tab, None, &kept).map(|s| s.ftle), Some(4.0));
     rejects("a list past its most", || {
         assert_eq!(kept.orbits.len(), MAX_KEPT + 1)
     });
+    rejects("a tab left where the orbits moved under it", || {
+        assert_eq!(shown(Tab::Kept(4), None, &kept).map(|s| s.ftle), Some(4.0))
+    });
+    // A tab on the dropped orbit goes back to under cursor.
+    scratch.tab = Tab::Kept(0);
+    keep(&marked(99.0), &mut kept, &mut scratch);
+    assert_eq!(scratch.tab, Tab::UnderCursor);
+    assert_eq!(kept.orbits[0].ftle, 2.0);
     // Remove: the tab on it goes back to under cursor, one after it moves up one, one before it stays.
-    let mut scratch = Scratch {
-        tab: Tab::Kept(3),
-        ..Scratch::default()
-    };
+    scratch.tab = Tab::Kept(3);
     remove(3, &mut kept, &mut scratch);
     assert_eq!(scratch.tab, Tab::UnderCursor);
     scratch.tab = Tab::Kept(4);

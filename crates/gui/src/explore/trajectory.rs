@@ -250,10 +250,11 @@ pub fn shown<'a>(tab: Tab, sample: Option<&'a Sample>, kept: &'a KeptOrbits) -> 
     }
 }
 
-/// Keeps `sample` at the end of `kept`, dropping the oldest past [`MAX_KEPT`].
-pub fn keep(sample: &Sample, kept: &mut KeptOrbits) {
+/// Keeps `sample` at the end of `kept`, dropping the oldest past [`MAX_KEPT`] as [`remove`] does, so a tab on a kept
+/// orbit stays on that orbit, or goes back to "under cursor" if it was the one dropped.
+pub fn keep(sample: &Sample, kept: &mut KeptOrbits, scratch: &mut Scratch) {
     if kept.orbits.len() >= MAX_KEPT {
-        kept.orbits.remove(0);
+        remove(0, kept, scratch);
     }
     kept.orbits.push(sample.clone());
 }
@@ -279,7 +280,7 @@ pub fn activate(id: &str, sample: Option<&Sample>, kept: &mut KeptOrbits, scratc
         UNDER_CURSOR => scratch.tab = Tab::UnderCursor,
         KEEP => {
             if let Some(s) = sample {
-                keep(s, kept);
+                keep(s, kept, scratch);
             }
         }
         SPHERE => scratch.unwrapped = false,

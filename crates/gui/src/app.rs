@@ -535,7 +535,11 @@ impl<S: EngineSide> App<S> {
             match scope {
                 Some(explore::FIGURE) => {
                     if let Some(sample) = &self.snapshot.sample {
-                        explore::trajectory::keep(sample, &mut self.view.kept_orbits);
+                        explore::trajectory::keep(
+                            sample,
+                            &mut self.view.kept_orbits,
+                            &mut self.trajectory,
+                        );
                     }
                 }
                 Some(explore::time::TIME) => {
