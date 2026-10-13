@@ -14,7 +14,8 @@
 //! ([`Flow`]), each with the conditions it is stored under. A sample's validity holds only while what it was read from
 //! is unchanged: a store into its variable, whole, by a member, through a pointer or by a function given a pointer,
 //! after `ftle_valid` was read, ends it for every statement after the store, and in a loop for every statement of the
-//! loop. A use sits under the conditions of the `if`s whose branch holds it, and after an `if`
+//! loop; so does the sample's evaluation again, a call's result or another expression's, on a later run of a loop.
+//! A use sits under the conditions of the `if`s whose branch holds it, and after an `if`
 //! one branch of which leaves the block (`return`, `discard`, `break`, `continue`), under the other branch's. Every
 //! statement's consumed expressions are uses: a `return`'s value, a store's value, a call's arguments and a branch's
 //! condition. `has_ftle` is the prelude's tier constant, which the lint presents as an override
@@ -617,15 +618,34 @@ impl<'a> Flow<'a> {
         pointer
     }
 
-    /// The roots statement `s` itself changes, not the blocks it holds: a store's variable; and a call's pointer
-    /// arguments' variables and every global, which the callee may store into.
+    /// The roots statement `s` itself changes, not the blocks it holds: the expressions it evaluates, an `Emit`'s and a
+    /// result, each a new value on each run; a store's variable; and a call's pointer arguments' variables and every
+    /// global, which the callee may store into.
     fn effects(&self, s: &Statement) -> Roots {
         let mut out = Roots::new();
         match *s {
-            Statement::Store { pointer, .. } | Statement::Atomic { pointer, .. } => {
+            Statement::Emit(ref range) => out.extend(range.clone()),
+            Statement::Store { pointer, .. } => {
                 out.insert(self.root(pointer));
             }
-            Statement::Call { ref arguments, .. } => {
+            Statement::Atomic {
+                pointer, result, ..
+            } => {
+                out.insert(self.root(pointer));
+                out.extend(result);
+            }
+            Statement::WorkGroupUniformLoad { result, .. }
+            | Statement::SubgroupBallot { result, .. }
+            | Statement::SubgroupGather { result, .. }
+            | Statement::SubgroupCollectiveOperation { result, .. } => {
+                out.insert(result);
+            }
+            Statement::Call {
+                ref arguments,
+                result,
+                ..
+            } => {
+                out.extend(result);
                 for &a in arguments {
                     if matches!(
                         self.fi[a].ty.inner_with(&self.module.types),
@@ -740,6 +760,8 @@ impl<'a> Flow<'a> {
             match *s {
                 Statement::Emit(ref range) => {
                     for h in range.clone() {
+                        // Evaluated again: what a sample keyed by it held is gone, and its own evaluation is new.
+                        self.change(&Roots::from([h]));
                         match self.function.expressions[h] {
                             Expression::Load { pointer } => {
                                 if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
@@ -759,8 +781,10 @@ impl<'a> Flow<'a> {
                 }
                 _ => {}
             }
-            let effects = self.effects(s);
-            self.change(&effects);
+            if !matches!(s, Statement::Emit(_)) {
+                let effects = self.effects(s);
+                self.change(&effects);
+            }
             match *s {
                 Statement::Store { pointer, .. } => {
                     if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
