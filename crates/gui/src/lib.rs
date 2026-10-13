@@ -23,6 +23,8 @@ mod tests {
     mod f3_toggle_mock;
     mod mock_axis_labels;
     mod mock_compass;
+    mod mock_content;
+    mod mock_drawn;
     mod mock_engine;
     mod mock_figure_navigation;
     mod mock_hover;

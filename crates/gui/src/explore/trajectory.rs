@@ -371,7 +371,8 @@ pub fn index_at(t: f64, span: f64, n: usize) -> usize {
     ((f * (n - 1) as f64).round() as usize).min(n - 1)
 }
 
-/// The square `[x0, y0, x1, y1]` holding every point of `paths`, centred on their bounds, a little larger.
+/// The square `[x0, y0, x1, y1]` holding every point of `paths`, centred on their bounds, a little larger; the unit
+/// square about a single point, and `[−1, 1]²` for none.
 pub fn fit(paths: &[Vec<[f64; 2]>]) -> [f64; 4] {
     let mut b = [
         f64::INFINITY,
@@ -390,7 +391,9 @@ pub fn fit(paths: &[Vec<[f64; 2]>]) -> [f64; 4] {
     if !b[0].is_finite() {
         return [-1.0, -1.0, 1.0, 1.0];
     }
-    let half = ((b[2] - b[0]).max(b[3] - b[1]) / 2.0).max(f64::MIN_POSITIVE) * 1.1;
+    let half = (b[2] - b[0]).max(b[3] - b[1]) / 2.0;
+    // A set of one point has no extent: the unit square about it, so the fit never divides by zero.
+    let half = if half > 0.0 { half * 1.1 } else { 1.0 };
     let (cx, cy) = ((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0);
     [cx - half, cy - half, cx + half, cy + half]
 }

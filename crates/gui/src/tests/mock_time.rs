@@ -514,3 +514,25 @@ fn mock_time_readouts_and_ticks() {
     }
     assert!((clock.seconds() - 0.5).abs() < 1e-12);
 }
+
+/// A time source that reads its `now` as its seconds, by the trait's default.
+struct Fixed(f64);
+
+impl TimeSource for Fixed {
+    fn tick(&mut self) {}
+    fn now(&self) -> f64 {
+        self.0
+    }
+    fn rate_hz(&self) -> f64 {
+        60.0
+    }
+}
+
+#[test]
+fn mock_time_a_source_s_seconds_are_its_now_by_default() {
+    assert_eq!(Fixed(2.5).seconds(), 2.5);
+    assert_eq!(Fixed(-3.0).seconds(), -3.0);
+    rejects("seconds of another time", || {
+        assert_eq!(Fixed(2.5).seconds(), 0.0)
+    });
+}

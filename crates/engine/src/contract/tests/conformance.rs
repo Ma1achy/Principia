@@ -102,6 +102,8 @@ enum Rule {
     LockStaysOff,
     /// A SetField on the overlay set is dropped.
     DropOverlays,
+    /// A SetField on the overlay set enters the history but writes every overlay off, whatever it asked for.
+    OverlaysOff,
     /// A hover off the figure is dropped, so the last cursor stays.
     HoverStays,
 }
@@ -113,6 +115,11 @@ impl EngineInterface for Broken {
         }
         if let (Rule::LockStaysOff, Edit::Sim(SimField::Lock(lock))) = (self.rule, &mut edit.edit) {
             lock.locked = false;
+        }
+        if let (Rule::OverlaysOff, Edit::Render(RenderField::Overlays(o))) =
+            (self.rule, &mut edit.edit)
+        {
+            *o = Overlays::default();
         }
         let dropped = matches!(
             (self.rule, &edit.edit),
@@ -193,7 +200,12 @@ fn conformance_non_conforming_double_fails_naming_the_case() {
     for rule in [Rule::DropZ0, Rule::DropBasis, Rule::LockStaysOff] {
         check_names(rule, NAVIGATION);
     }
-    for rule in [Rule::DropOverlays, Rule::HoverStays, Rule::NoHistory] {
+    for rule in [
+        Rule::DropOverlays,
+        Rule::OverlaysOff,
+        Rule::HoverStays,
+        Rule::NoHistory,
+    ] {
         check_names(rule, OVERLAY_AND_HOVER);
     }
 }
