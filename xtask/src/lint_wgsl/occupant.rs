@@ -31,8 +31,8 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use naga::valid::{FunctionInfo, ModuleInfo};
 use naga::{
-    AddressSpace, BinaryOperator, Block, Expression, Function, Handle, Literal, LocalVariable, Module,
-    ScalarKind, Span, Statement, TypeInner, UnaryOperator,
+    AddressSpace, BinaryOperator, Block, Expression, Function, Handle, Literal, LocalVariable,
+    Module, ScalarKind, Span, Statement, TypeInner, UnaryOperator,
 };
 
 use super::{Finding, Rule};
@@ -334,7 +334,11 @@ pub(super) fn occupant(
 /// it: where `own` (a debug view's or a source's), passing over the reads of the sample's own value, `ctx.sample`'s
 /// ([`contexts`]).
 fn guards<'m>(module: &'m Module, info: &'m ModuleInfo, own: bool) -> Vec<Guard<'m>> {
-    let contexts = if own { contexts(module) } else { HashSet::new() };
+    let contexts = if own {
+        contexts(module)
+    } else {
+        HashSet::new()
+    };
     let handles = module
         .functions
         .iter()
@@ -377,7 +381,11 @@ pub(super) fn unguardable(
     let mut found = Vec::new();
     for g in guards(module, info, own) {
         let fname = g.function.name.as_deref().unwrap_or("(unnamed)");
-        let first = g.function.expressions.iter().find_map(|(h, _)| g.read(h).map(|r| (h, r)));
+        let first = g
+            .function
+            .expressions
+            .iter()
+            .find_map(|(h, _)| g.read(h).map(|r| (h, r)));
         if let Some((h, read)) = first {
             let what = match read {
                 Read::Ftle(_) => "`ftle`",
@@ -887,8 +895,11 @@ impl<'a> Flow<'a> {
                         self.change(&Roots::from([h]));
                         match self.function.expressions[h] {
                             Expression::Load { pointer } => {
-                                if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
-                                    let entries = self.state.reach.get(&l).cloned().unwrap_or_default();
+                                if let Expression::LocalVariable(l) =
+                                    self.function.expressions[pointer]
+                                {
+                                    let entries =
+                                        self.state.reach.get(&l).cloned().unwrap_or_default();
                                     self.loads.insert(h, entries);
                                 }
                             }
@@ -1105,7 +1116,8 @@ impl<'a> Guard<'a> {
         let Expression::FunctionArgument(i) = self.function.expressions[base] else {
             return false;
         };
-        self.own.contains(&i) && member(self.module, self.function, self.fi, e) == Some((CTX, SAMPLE))
+        self.own.contains(&i)
+            && member(self.module, self.function, self.fi, e) == Some((CTX, SAMPLE))
     }
 
     /// Whether `left` and `right` are the absence test: one the `bitcast<u32>` of a value, the other the canonical quiet
@@ -1206,7 +1218,13 @@ impl<'a> Guard<'a> {
     /// each with the conditions it is stored under, or to the local's initial value (zero, `false`, with no
     /// initialiser) where no store need have run; each without the validity of a sample whose roots changed since,
     /// before the load or after it (`evals`).
-    fn load(&self, e: Handle<Expression>, l: Handle<LocalVariable>, value: bool, evals: &Evals) -> Facts {
+    fn load(
+        &self,
+        e: Handle<Expression>,
+        l: Handle<LocalVariable>,
+        value: bool,
+        evals: &Evals,
+    ) -> Facts {
         if self.busy.borrow().contains(&(e, value)) {
             return none();
         }

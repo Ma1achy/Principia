@@ -743,7 +743,9 @@ pub fn check_occupant_after(
     // The guard reads them as overrides, which keep their names; an occupant that uses one where only a constant may
     // stand does not validate so, and its guarded reads are reported as unchecked rather than the file left unlinted.
     match joined_after(&tier_overrides(prefix), source) {
-        Ok((module, info, joined, _)) => found.extend(occupant::guard(&module, &info, &joined, own)),
+        Ok((module, info, joined, _)) => {
+            found.extend(occupant::guard(&module, &info, &joined, own))
+        }
         Err(why) => found.extend(occupant::unguardable(&module, &info, &joined, own, &why)),
     }
     Ok(relocated(found, base))

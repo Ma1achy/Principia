@@ -587,7 +587,8 @@ negative_control!(
 // ── A tier constant in a `const` declaration ─────────────────────────────────────────────────────────────────────
 
 /// A context with the prelude's tier constant, a read-side `SimState` and `Ctx`.
-const TIER_PREFIX: &str = "const has_ftle: bool = true;\nstruct SimState { ftle: f32, ftle_valid: bool }\n\
+const TIER_PREFIX: &str =
+    "const has_ftle: bool = true;\nstruct SimState { ftle: f32, ftle_valid: bool }\n\
                            struct Ctx { sample: SimState }\n";
 
 /// An occupant whose guard is `guard`, after `declarations`: with a tier constant in a `const`, it lints, and its one
