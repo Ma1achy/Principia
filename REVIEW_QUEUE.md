@@ -225,7 +225,7 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
     - The live set: `docs/contracts/principia_scheduler_contract.md` § "Part 7 — The frame loop (lockstep
       presentation)" (line 176): "BARRIER over the live set only", and its closing summary (line 223): "The frame loop
       presents only the barrier-synced live set"; `docs/design/principia_temporal_architecture_note.md` § "The frame
-      loop — the one genuinely new object (and what makes lockstep clean)" (lines 140–155): "LIVE SET     quads already
+      loop — the one genuinely new object (and what makes lockstep clean)" (lines 134–137): "LIVE SET     quads already
       at the playhead. March together, barrier-synced, presented coherently every frame", beside "CATCHING-UP"
       quads; `docs/contracts/principia_canonical_spec.md` § "5. Temporal & rendering model *(authoritative:
       `temporal_architecture_note`, `render_contract`, `scheduler_contract`, `checkerboard_contract`)*" (line 67): "every visible
