@@ -136,6 +136,8 @@ positive, as `V_0` can't, keeps its sequential ramp too (viridis in the debug vi
 negative value at the dark end. **"Not yet" sits on no ramp (R-399):** an unset `d_min` and
 a running sample are drawn in the stippled "not yet" style (§1.4), never a flat grey, so a greyscale default or a
 user's ramp never collides with it.
+**An undeclared range is not signed (R-426):** where the ledger declares no range for a field, that is a gap in the
+ledger (dd_generation_root §3.8), not a range that spans zero, so it never makes the field signed.
 
 ### 1.3 Combinators  →  `vec3`
 

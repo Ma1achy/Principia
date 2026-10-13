@@ -210,13 +210,19 @@ stale — that source held only a prose sentence, not an enumeration. The member
 contract Part 6 names every field its predicates read) and **from measurement**: every inclusion and
 exclusion traces to `principia_dd_refinement_criterion.md`. Sections cited as `[RC §n]`.
 
-**Size.** The `~80 B` figure earlier docs quoted was **descriptive, not a cap**, always written with a
-tilde, and the temporal accumulators were added without changing it. With u32 histogram bins (R-410) the
-size follows from the members below; TASK-M5-01 defines it from the member list, aligns it and measures it,
-and writes the measured figure here and where the docs cite it. There is no memory pressure: `QuadReduction`
-is per *quad*, against `SimState` at per *sample* (millions). The quads to cost it at are memory_tiers §3–§4's:
-render pixels / N² at each tier's `N`, at the largest display, plus their ancestors. The real constraint is
-**categorical, not numerical** — *reduce before evaporate*: fixed-size scalars only, never a history.
+**Size.** **176 B, aligned to 4** (R-410; TASK-M5-01): the members below with u32 histogram bins, laid out as
+"Layout" (below) gives, and measured as `size_of::<QuadReduction>()` of the generated Rust struct and as naga's size
+of the generated WGSL struct. The bins are 128 B of it; §3.7's former u8 bins would have made it 80 B. The figure is
+**descriptive, not a cap**: a member added later changes it. There is no memory pressure: `QuadReduction` is per
+*quad*, against `SimState` at per *sample* (millions). At memory_tiers §3–§4's quad count (render pixels / N² at each
+tier's `N`, at the largest display, 4K's 3840 × 2160, plus their ancestors, about a third more), at memory_tiers §4's
+indicative `N` (8 for Potato and Low, 16 above), a tier holds at most 43 200 quads, 7.6 MB of reductions (Low and
+High, and Ultra and Extreme, whose rows are provisional, R-137; Potato 10 800 quads, 1.9 MB; Medium 24 300, 4.3 MB),
+against the 0.16–5.51 GB Potato's to High's totals give at 4K and the provisional 10.82 and 21.43 GB of Ultra and
+Extreme. The count follows each tier's `N`, which REQ-PERF-011 settles for WebGPU: at `N = 8` on every tier it is
+97 200 quads, 17.1 MB for Medium and 172 800 quads, 30.4 MB for High, Ultra and Extreme, under 1.1 % of each of those
+four tiers' 4K totals. Potato and Low are at `N = 8` already, at 1.2 % and 2.1 % of theirs. The real constraint is **categorical, not numerical** —
+*reduce before evaporate*: fixed-size scalars only, never a history.
 
 #### Identity
 
@@ -242,6 +248,29 @@ workgroup allows (memory_tiers §5), that needs more than about 4.2 M copies per
 which can't be allocated. **Dispatch asserts `N² × (E+1) ≤ 2³² − 1`**; no setting is capped for it, and a bin never
 wraps or saturates silently.
 
+**Bin count (REQ-PAY-075; definition, R-72).** The `N` of `class_histogram[N]`, the bin count (written `N_bins` to keep
+it apart from memory_tiers' `N`), is **32 = 2⁵: one bin per code of the 5-bit `class ⊕ detail` field**, `state`
+(bits 0–2 of `sample_descriptor`, §3.1) ⊕ `detail` (bits 3–4). **A copy's bin index is `state | d << 3`, where `d` is
+its `detail` in a state payload §2 gives `detail` a meaning (escape, collision, sim_failed, decode_failed), and 0 in
+every other state**: bounded and running, whose `detail` payload §2 and §3.1 leave undefined, and the reserved
+`state` 6–7. A stray `detail` never splits a class: the joint set has one bounded class and one running class
+(colour_composition §1.4), and a quad bounded everywhere reads `outcome_impurity = 0`. `dominant_outcome` holds this
+index, and `RenderQuad` copies it in bits 0–4 (§3.7a); the generated `qr_class_histogram_bin(state, detail)` computes
+it in Rust and WGSL. Bin `k` counts the quad's footprint copies whose bin index is `k`: every copy of every footprint,
+running copies included (the uniformity invariant, below), so the bins sum to `N² × (E+1)`. The set is the field's
+whole code space, not only the codes payload §2 gives a meaning: then `dominant_outcome` is the index of the largest
+bin, with no table between bin and code, and a reserved `state` (6–7) is counted in a bin of its own, never merged
+into another's. A bin no copy reaches stays 0, as the bins of a nonzero `d` under bounded, running or a reserved
+state always do.
+
+**Impurity grain (REQ-PAY-076; definition, R-72).** `outcome_impurity = 1 − max_k f_k`, where
+`f_k = class_histogram[k] / Σ_j class_histogram[j]` is the fraction of the quad's copies whose bin index (above) is
+`k`: the **joint
+`class ⊕ detail` grain**, as every event-derived field here is ("One grain everywhere", below), over every copy, running
+ones included (`Σ_j = N² × (E+1)`). `dominant_outcome` is the `k` of that maximum, so the two come from one histogram
+and cannot disagree. The impurity mask (render contract Part 6, through `dominant_outcome`) and its cross-check
+(debug_tooling_plan §G; REQ-VAL-083, TASK-M5-17) use the same bin index and this fraction.
+
 **One grain everywhere.** Pending change 1 asked whether `dominant_outcome` needed a class-only
 companion, since a masked accessor is unsound (argmax does not commute with masking). **Defining
 every event-derived field at the joint grain dissolves the question** — one grain, no companion field,
@@ -256,7 +285,7 @@ no commuting problem [RC §6.5]. This also covers triple collision / triple ejec
 | `spread_event` | f16 | `disagreement(class⊕detail) / (1 − 1/(E+1))` — attainable maximum |
 | `error_ratio` | f16 | `sigma_E(t) / sigma_E(0)` — **exactly 1.0 under exact dynamics**, so any excess is integration error. Parameter-free. **Detects spread, not drift** — an ensemble whose copies drift *together* has a low ratio however badly they drift (measured: zero flagged pixels at 11% energy error). Pair with `worst_energy_drift`, which is the field to threshold on for absolute conservation. **Max-deviation internally, not MAD** — the requirement is **NaN-safe *and* sensitive**, and MAD fails the second: with 8 copies it medians 8 deviations, so a single wild copy is arithmetically invisible. Measured: a pixel at 2.9% energy drift reads **204.8** under max-deviation and **0.9018** under MAD — *quieter than at `t=0`*. Max-deviation is NaN-safe too (an infinite deviation is the correct answer, where `std` gives NaN). **`max`-aggregated over footprints** — an independent decision that happens to share the word. **Boolean flag only**; magnitude unstable [RC §7.19c, prin-rs RESULTS.md] |
 | `roundtrip_error` | f16 | time-reversal round-trip displacement. **Catches phase error, which conserves `E` exactly and is invisible to `error_ratio`** — four measured cases had every conserved quantity at 1.000000 while the trajectory had moved 0.3–4.7% of a system radius. `corr` with drift +0.186, i.e. independent [RC §7.19f] |
-| `spread_winner` | 2 bits | which contributor won the `max`; makes parent↔child switching visible [RC §7.13] |
+| `spread_winner` | 2 bits | which contributor won the `max`; makes parent↔child switching visible [RC §7.13]. Codes (REQ-PAY-094; R-72): 0 `spread_shape`, 1 `spread_event`, a tie 0, the first operand of the `max`; 2 and 3 unused |
 
 ```
 ensemble_spread = max(spread_shape, spread_event)        -- how error_ratio enters is OPEN
@@ -398,6 +427,12 @@ automatic return.
 **f32, not f16** — these accumulate in place over thousands of steps, where f16 would drift. Contrast
 the thresholded scalars above, which are compared against `τ` and need no more precision.
 
+**`first_divergence_t`'s sentinel (REQ-PAY-094; definition, R-72) is +∞**, f32 bits `0x7f80_0000`, held until the
+first crossing: the minimum of the empty set of crossing times, as `d_min`'s unset value is f16 +∞ (R-271). It is
+distinct from every crossing time, each finite and ≥ 0, and it is not NaN, the invalid value (R-79, R-136). A minimum
+over footprints passes it by, and a quad that never crossed sorts after every quad that did. Like `d_min`'s, it is
+written and tested by its bits, never by a float comparison (R-297).
+
 Latching is empirically justified, not merely prudent: ensemble spread was observed to **fall 6×**
 between `t=6` and `t=8` in one region — diverge-then-reconverge — so an instantaneous read genuinely
 misses divergence that has already occurred [RC §5.2]. And `first_divergence_t` is the only
@@ -412,7 +447,7 @@ the *most* chaotic regions), whereas a crossing time cannot [RC §5.1].
 | `saturated_fraction` | f16 | substep-saturation — a **second** condition Part 6 gates on; was missing |
 | `valid_sample_count` | u16 | decoded of N² |
 | `coherence` | f32 | priority ordering (`complexity = 1 − coherence`) |
-| `escape_time_min` / `_max` | f16 × 2 | diagnostic range |
+| `escape_time_min` / `_max` | f16 × 2 | diagnostic range; with no copy escaped, `_min` is +∞ (`0x7c00`) and `_max` −∞ (`0xfc00`), and "no escape" reads `_min > _max` (R-418) |
 | `retrograde_fraction` | f16 | tiebreaker |
 | `mean_orbit_count_spread` | f16 | tiebreaker |
 
@@ -436,7 +471,65 @@ confirmed at the M5 gate (R-418).
   That comparison **is** the `alpha` estimator and should be specified as such.
 - **`priority`, `cacheAge`, `lifecycle`, `computeCostMs`, `gentime`** are CPU-computed quad metadata,
   not GPU reductions. A fragment shader cannot read them from this struct; they reach the display via
-  tile debug shaders (render GUI spec §12.1).
+  tile debug shaders (render GUI spec §12.1). The engine holds them in `QuadMeta`, one per quad beside its reduction:
+  `priority`, `cache_age`, `lifecycle`, `compute_cost_ms` and `gentime` (TASK-M5-01).
+
+#### Layout and §3.8 entries
+
+**Member order and packing (REQ-PAY-077; definition, R-72).** `QuadReduction` is 44 scalar slots of 4 bytes, 176 B,
+aligned to 4, with no padding: `class_histogram` first, bin `k` at slot `k` (slots 0–31, bytes 0–127); then nine packed
+words `qr_w0` … `qr_w8` (slots 32–40, bytes 128–163), the low half of each first: `qr_w0`'s low half holds the three
+members narrower than 16 bits, and the 16-bit members follow two to a word in §3.7's order; then the three f32 members in §3.7's order (slots 41–43, bytes 164–175). The 2-bit `spread_winner` and the
+5-bit `dominant_outcome` share `qr_w0`'s low half with the u8 `level`: `dominant_outcome` in bits 0–4, where
+`RenderQuad` and `sample_descriptor` hold `class ⊕ detail` (§3.7a, §3.1), `spread_winner` in bits 5–6, bit 7 reserved,
+`level` in bits 8–15. An f16 member is one binary16 value at a packed 16-bit location (§3.8's `f16`, R-312): bits 0–15
+are `unpack2x16float`'s `.x`, bits 16–31 its `.y`, read widened to f32 (R-317). No member is a history or grows with
+time or sample count (REQ-PAY-006); the bin count is fixed, so the layout does not follow the sim key's `N` or `E`
+(R-410).
+
+**The §3.8 entries.** Every member is `provenance: reduction` and `consumers: [scheduler, debug]`; an f16 range lies
+within ±65504 or the entry states its `overflow` (R-248). A fraction is `[0, 1]`; `spread_shape` and `spread_event`
+are `[0, 1]` by their normalisations (above); a count holds its width, `n_unresolved` and `valid_sample_count` being
+at most N² (R-315); an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are. The ranges and
+`overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`,
+`escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed, R-71 (REQ-PAY-093; R-418 adds the
+last three), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate. The sentinels of
+`escape_time_min` and `escape_time_max` are their no-escape values, +∞ (binary16 `0x7c00`) and −∞ (`0xfc00`), each
+its reduction's identity (above, "No escape (R-418)"), tested by their bits.
+
+| member | location | type | scale | range | sentinel · overflow |
+|---|---|---|---|---|---|
+| `class_histogram` | scalar-index 0 | vector(u-bits, 32) | lin | [0, 4294967295] | — |
+| `dominant_outcome` | (qr_w0, 0, 5) | u-bits | categorical(32) | [0, 31] | — |
+| `spread_winner` | (qr_w0, 5, 2) | u-bits | categorical(2) | [0, 1] | — |
+| `level` | (qr_w0, 8, 8) | u-bits | lin | [0, 255] | — |
+| `outcome_impurity` | (qr_w0, 16, 16) | f16 | lin | [0, 1] | — |
+| `terminated_fraction` | (qr_w1, 0, 16) | f16 | lin | [0, 1] | — |
+| `spread_shape` | (qr_w1, 16, 16) | f16 | lin | [0, 1] | — |
+| `spread_event` | (qr_w2, 0, 16) | f16 | lin | [0, 1] | — |
+| `error_ratio` | (qr_w2, 16, 16) | f16 | log | [0, ∞) | overflow inf |
+| `roundtrip_error` | (qr_w3, 0, 16) | f16 | log | [0, ∞) | overflow inf |
+| `alpha_area` | (qr_w3, 16, 16) | f16 | diverging | (−∞, ∞) | overflow inf |
+| `alpha_energy` | (qr_w4, 0, 16) | f16 | lin | (−∞, ∞) | overflow inf |
+| `worst_energy_drift` | (qr_w4, 16, 16) | f16 | log | [0, ∞) | overflow inf |
+| `n_unresolved` | (qr_w5, 0, 16) | u-bits | lin | [0, 65535] | — |
+| `suspect_fraction` | (qr_w5, 16, 16) | f16 | lin | [0, 1] | — |
+| `saturated_fraction` | (qr_w6, 0, 16) | f16 | lin | [0, 1] | — |
+| `valid_sample_count` | (qr_w6, 16, 16) | u-bits | lin | [0, 65535] | — |
+| `escape_time_min` | (qr_w7, 0, 16) | f16 | lin | [0, ∞) | sentinel +∞ · overflow saturate |
+| `escape_time_max` | (qr_w7, 16, 16) | f16 | lin | [0, ∞) | sentinel −∞ · overflow saturate |
+| `retrograde_fraction` | (qr_w8, 0, 16) | f16 | lin | [0, 1] | — |
+| `mean_orbit_count_spread` | (qr_w8, 16, 16) | f16 | lin | [0, ∞) | overflow saturate |
+| `running_mean_divergence` | scalar-index 41 | f32 | lin | (−∞, ∞) | — |
+| `first_divergence_t` | scalar-index 42 | f32 | lin | [0, ∞) | sentinel +∞ |
+| `coherence` | scalar-index 43 | f32 | lin | (−∞, ∞) | — |
+
+**Scales (REQ-PAY-094).** A fraction, a spread, a count, a time and a crossing time are `lin`. `dominant_outcome` is
+`categorical(32)`, one category per bin, and `spread_winner` `categorical(2)`, its two codes. `error_ratio`,
+`roundtrip_error` and `worst_energy_drift` are `log`: each is a magnitude ≥ 0 whose values span decades (`error_ratio`
+reads 1.0 under exact dynamics and 204.8 at 2.9% drift; drift's finite tail spans ten orders of magnitude, above).
+`alpha_area` is `diverging`: its sign is load-bearing, the floor being refused on a negative exponent (R-42), and its
+range spans zero (R-403). `alpha_energy` is `lin`, centred on its analytic 1.0, not on zero.
 
 #### Open
 
@@ -495,7 +588,8 @@ without a WGSL extension, so the counts and codes are u32 and the fractions f32.
 { name, location: (word, offset, width) | scalar-index | derived(from: [field, …]),
   type: u-bits | f32 | f16 | f16-pair | fixed16 | vector(type, k),
   scale: lin | log | cyclic | diverging | categorical(n) | flag,
-  range, sentinel?, tier_gate?, overflow?: saturate | inf, floor?: <sim-key parameter>,
+  range: declared(lo, hi, citation) | gap | provisional(requirement),
+  sentinel?, tier_gate?, overflow?: saturate | inf, floor?: <sim-key parameter>,
   provenance: kernel | decode | reduction | cpu,
   consumers: [render, export, debug, scheduler] }
 ```
@@ -506,6 +600,33 @@ without a WGSL extension, so the counts and codes are u32 and the fractions f32.
 its declared `range` spans zero (`lo < 0 < hi`, either end possibly unbounded), as R-400 derives a field's diverging
 ramp from its range. A `diverging` entry whose declared range does not span zero fails generation, naming the field
 and its range; a one-signed field is `lin` (or `log`), as `K_0` and `V_0` are (§3.6).
+
+**An undeclared range is a ledger gap, not a range that spans zero (R-426; REQ-GEN-035).** `range` is a key every
+entry carries. Where §3 gives a field no range, the (−∞, ∞) the ledger writes in its place declares nothing: it is a
+gap in the ledger, and it never makes a field diverging. A field is on the diverging ramp, or carries the `diverging`
+scale, only when its declared range spans zero (R-400, R-403). Of the fields §3 gives no range, these are declared,
+each citing its source: `S`, `ftle` and `diffusion` signed, (−∞, ∞), by R-423's physics check ("signed at finite time
+with zero a meaningful centre"); `E_0` and `Lz_0` signed, (−∞, ∞), by their `diverging` scale (§3.4). Two fields
+stay on the diverging ramp provisionally (R-426), recorded as provisional at the M1 gate: `q_mass`, until its formula
+(REQ-PAY-088) declares its range (REQ-PAY-097), and `mean_y`, until `y`'s definition (REQ-PAY-073) declares its
+(REQ-PAY-098); the physics reviewer re-checks each ramp then. A field whose range is still a gap is listed as one,
+with the requirement that fills it.
+Also declared (R-426's fix round, applied per R-369): `energy_drift` and `Lz_drift` (−∞, ∞), signed, citing the
+worked entries below and §3.4, which already give them that range, so the ledger must write it; and `C_ty`
+(−∞, ∞), signed, citing R-423's check of `diffusion` and `C_ty = diffusion · C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12 > 0`
+for `n ≥ 2` (§3.4), so `C_ty` has `diffusion`'s sign whatever `y` is (RQ-277, decided per R-369).
+
+**The three range states (R-426; REQ-GEN-035).** An entry's `range` is in one of three states:
+- **`declared(lo, hi, citation)`**: the range §3, a ruling or a definition gives, with where it is given. Only a
+  declared range spans zero or not: a `lin` field whose declared range spans zero is on the diverging ramp (R-400), and
+  only such a range admits the `diverging` scale (R-403).
+- **`gap`**: no range is declared; the (−∞, ∞) the ledger once wrote by default. A gap never spans zero. A `lin` or
+  `diverging` scalar field whose range is a gap fails generation, naming the field; on any other entry (a cyclic field,
+  a vector, whose views read no range) a gap generates and is listed, with the requirement that fills it.
+- **`provisional(requirement)`**: a range the human has kept provisional until `requirement` declares it, drawn
+  meanwhile as (−∞, ∞), so spanning zero, and listed at each gate as provisional: `q_mass` (REQ-PAY-097) and `mean_y`
+  (REQ-PAY-098), R-426. It is the range's counterpart of the constants register's `provisional?` key: proposed, used,
+  and confirmed or replaced when its requirement lands.
 
 `overflow` (R-248) states what an `f16-pair` value does past f16's finite range (±65504): `saturate` clamps to
 ±65504, `inf` rounds to ±∞. An `f16-pair` field's declared range must lie within ±65504; an unbounded end is
@@ -576,7 +697,8 @@ declared once, in the constants register beside the layout table in `crates/ledg
 { name, value: exact(v) | threshold(v) | calibration,
   class: achievable-maximum | conservation-law | canonical-units,
   citation: corpus(file, section) | prin-rs(commit, path) | calibration(requirement id),
-  relative_basis?: distribution(source, percentile, populations) | gap(source, below, above) }
+  relative_basis?: distribution(source, percentile, populations) | gap(source, below, above),
+  provisional?: gate(milestone) }
 population = { name, lo, hi, count }
 ```
 
@@ -584,6 +706,9 @@ population = { name, lo, hi, count }
   entered with a value: its value is `calibration` and its citation is its calibration requirement, until the human
   confirms the value (R-71). A value is `calibration` exactly when its citation is a calibration requirement. A
   settled number or threshold is finite.
+  **Except a provisional value (R-427):** a constant the corpus leaves open may instead be entered with its proposed
+  number or threshold, marked `provisional` until its gate (below); it still cites its calibration requirement, so for
+  it a number goes with that citation.
 - **`class`**: why the constant is admissible, one of philosophy §4.2's three: bounded by its own achievable maximum,
   fixed by a conservation law, or expressed in canonical units. `achievable-maximum` covers a format's achievable
   extreme: a value fixed by a number format's limits, its greatest finite value or its smallest positive value
@@ -603,13 +728,27 @@ population = { name, lo, hi, count }
   fails, at whatever percentile, and one between populations passes at whatever percentile (R-250). Closure's absolute
   cutoff of 2e-3, inside the bound population's range, and `tau_display` at the 0.4th percentile of its own
   distribution, inside the population of quads it was to split, both fail (pitfalls §3; philosophy §4.2).
+- **`provisional`** *(R-427; REQ-SYS-081)*: the gate, a milestone's, until which the value is a proposal (R-71, R-182):
+  proposed with its evidence by the task that needs it, checked by a reviewer and used meanwhile. It is read like any
+  other entry, its proposed number at once, and is never wrapped in a function in its place (below). Every gate can hold
+  such entries: its report lists each entry marked provisional until it, and an entry still so marked blocks the gate,
+  as an unconfirmed calibration does. When the human confirms the value at the gate, the mark comes off and the
+  citation becomes the ruling that records the confirmation (`decisions.md`); a value the human changes is entered as
+  the ruling gives it; a value confirmed provisionally, to be re-confirmed at a later gate, is marked provisional until
+  that gate (R-419's two floors, until M2).
 - **The gate:** an entry missing its value, class or citation, a non-finite value, a threshold without a relative
   basis, one whose basis names an ill-formed population, one that does not sit between its populations or whose
   recorded percentile is not the one its counts give, and a value that is `calibration` without citing its
   requirement (or the reverse) fail generation, naming the constant.
+  A `provisional` entry is the exception to "the reverse": it carries a number and cites its calibration requirement.
+  It fails generation if its value is `calibration`, if it names no gate, or if its citation is not a calibration
+  requirement (R-427).
 - **Reading a constant:** code in the physics and engine crates (`kernel`, `ledger`, `engine`) reads each number from
   the register; `cargo xtask lint constants` fails on a numeric `const` or `static` there that does not, naming file
   and line. The generated files are exempt: their numbers are emitted from the ledger.
+  A provisional entry is read the same way. **No number is wrapped in a function to get past the lint (R-427;
+  REQ-SYS-082):** a `fn` or `const fn` that returns a register constant's number in place of a register entry is the
+  `const` the lint refuses, under another form. A proposed value is entered `provisional` and read from the register.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
   the f16 pack clamp (payload §1), the f16 subnormal floor (R-271), and the step count and sentinel of `θ̃`'s pole
@@ -621,6 +760,8 @@ population = { name, lo, hi, count }
   has the blast radius caching_contract Part 2 gives its knob (render settings and
   scheduler knobs invalidate nothing; canonical_spec §9, invariant 3). The link registry's entries are hashed too, by
   their semantic content (§3.9, "The hash"; R-340).
+  The `provisional` mark and its gate are not hashed, as the citation is not: confirming a value at its gate does not
+  change the schema version; changing a hashed entry's value does (R-427).
 
 The register's entries, the constants the payload ledger uses:
 

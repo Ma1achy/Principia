@@ -12,7 +12,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::contract::canonical::{self, format_f64, json_to_string};
-use crate::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use crate::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
@@ -434,15 +434,16 @@ fn skeleton() -> (SimConfig, RenderState) {
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
-            horizon: Horizon {},
+            horizon: Horizon { t: 0.0 },
             collision: Collision {},
             quality: Quality {},
         },
         RenderState {
             stain_graph: StainGraph {},
-            overlays: Overlays {},
+            overlays: Overlays::default(),
             palette: Palette {},
             playhead: Playhead { t: 0.0 },
+            hover: Hover::default(),
         },
     )
 }
@@ -527,11 +528,11 @@ fn cases() -> Vec<(String, &'static str)> {
         ),
         (
             to(&sim),
-            r#"{"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{}}"#,
+            r#"{"chart":{},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{},"slice":{}}"#,
         ),
         (
             to(&render),
-            r#"{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#,
+            r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#,
         ),
     ]
 }
@@ -668,7 +669,7 @@ validation::negative_control!(
     "a text in another key order must fail the round trip",
     expected = "the text does not round-trip",
     check_round_trip(
-        r#"{"slice":{},"chart":{},"collision":{},"horizon":{},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{}}"#,
-        r#"{"overlays":{},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#
+        r#"{"slice":{},"chart":{},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{}}"#,
+        r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#
     )
 );

@@ -36,7 +36,7 @@ use std::sync::Arc;
 
 use eframe::egui::{self, Event, Key, Modifiers, PointerButton, Pos2, Rect};
 use engine::contract::log::Source;
-use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
@@ -128,12 +128,16 @@ impl<S: EngineSide> Rig<S> {
         self.app.snapshot().clone()
     }
 
-    /// The SetFields the engine has applied so far: its `contract` log entries.
+    /// The SetFields the engine has applied so far: its `contract` log entries, less the hover's. Since TASK-M6-27 a
+    /// pointer over the figure writes the cursor, `Hover.at`, as a no-history SetField (gui_state_contract §2; R-101),
+    /// which a gesture's pointer moves add; it is no edit of z₀, the basis or the lock.
     fn applied(&self) -> usize {
         self.app
             .console()
             .iter()
-            .filter(|e| e.source == Source::Contract)
+            .filter(|e| {
+                e.source == Source::Contract && !e.message.starts_with("SetField Hover.at ")
+            })
             .count()
     }
 
@@ -296,11 +300,17 @@ struct Changed {
 }
 
 fn changed(a: &Snapshot, b: &Snapshot) -> Changed {
+    // The cursor, `Hover.at`, follows the pointer (TASK-M6-27; R-101: no history), so it is left out of the render
+    // state compared: a gesture's pointer moves write it, and it is not the gesture's edit.
+    let unhovered = |s: &Snapshot| RenderState {
+        hover: Hover::default(),
+        ..s.render.clone()
+    };
     Changed {
         z0: a.sim.plane.z0 != b.sim.plane.z0,
         basis: (a.sim.plane.q1, a.sim.plane.q2) != (b.sim.plane.q1, b.sim.plane.q2),
         lock: a.sim.lock != b.sim.lock,
-        render: a.render != b.render,
+        render: unhovered(a) != unhovered(b),
     }
 }
 
@@ -853,7 +863,11 @@ fn gpu() -> GpuRig {
 }
 
 impl GpuRig {
+    /// The frame, with the pointer gone from the window first: since TASK-M6-27 the mock draws the hover path into its
+    /// stand-in while the pointer is over the figure, and these checks read the stand-in alone.
     fn shot(&mut self) -> Shot {
+        let _ = self.rig.frame(vec![Event::PointerGone]);
+        self.rig.idle(1);
         render_frame(&self.canvas, &mut self.rig.app, &mut self.rig.h)
     }
 }
@@ -1133,13 +1147,14 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
-        horizon: Horizon {},
+        horizon: Horizon { t: 0.0 },
         collision: Collision {},
         quality: Quality {},
     };
     let render = RenderState {
         stain_graph: StainGraph {},
-        overlays: Overlays {},
+        overlays: Overlays::default(),
+        hover: Hover::default(),
         palette: Palette {},
         playhead: Playhead { t: 0.0 },
     };

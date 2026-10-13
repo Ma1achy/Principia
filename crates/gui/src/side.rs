@@ -91,10 +91,12 @@ impl EngineSide for MockSide {
         true
     }
 
-    /// The canvas, told the mock's chart first, so it draws the stand-in for the chart as it stands (REQ-GUI-171).
+    /// The canvas, told the mock's chart and marks first, so it draws the stand-in for the chart as it stands
+    /// (REQ-GUI-171), with the hover path and the tile bounds the mock draws into it.
     fn canvas(&self) -> Option<Arc<dyn Canvas>> {
         let canvas = self.canvas.clone()?;
         canvas.set_chart(self.engine.plane());
+        canvas.set_marks(self.engine.marks());
         Some(canvas as Arc<dyn Canvas>)
     }
 

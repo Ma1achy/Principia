@@ -39,6 +39,36 @@
       "name": "mock_axis_labels",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "enter", "shift_arrow_right", "escape", "escape"] },
       "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_time",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_right", "shift_arrow_right", "space"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_trajectory_sphere",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_trajectory_unwrapped",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_overlays_menu",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["alt_1", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_tile_bounds",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["alt_1"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_hover",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover"] },
+      "artboard": "docs/gui/design/01_main.png"
     }
   ]
 }

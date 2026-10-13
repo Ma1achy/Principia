@@ -281,3 +281,169 @@ negative_control!(
     expected = "generation refused",
     check_generates(&ranged("fx_half", Bound::Open(0.0), Unbounded, None))
 );
+
+// ---------------------------------------------------------------------------------------------------------------
+// REQ-GEN-030: §3.8's `f16` type (R-312), one binary16 value at a packed location of exactly 16 bits, under R-248's
+// range rules; never at a scalar index, derived, or a vector's component. The static check is the driver's, before any
+// emitter runs, so these generate with no emitter; the generated accessors are `quad_reduction.rs`'s.
+
+/// Generation from `ledger`, the static check alone (no emitter), is refused, naming each of `names`.
+fn check_f16_refused(ledger: &Ledger, names: &[&str]) {
+    let message = match ledger::gen::generate(ledger, &[]) {
+        Ok(_) => panic!("generation was not refused"),
+        Err(error) => error.to_string(),
+    };
+    for name in names {
+        assert!(
+            message.contains(name),
+            "generation refused, but its message does not name `{name}`: {message}"
+        );
+    }
+}
+
+/// Generation from `ledger`, the static check alone, succeeds.
+fn check_f16_generates(ledger: &Ledger) {
+    if let Err(error) = ledger::gen::generate(ledger, &[]) {
+        panic!("generation refused: {error}");
+    }
+}
+
+/// The fixture with `fx_half` (bits 0–15 of `fx_pair`, over (0, 1000]) typed `f16`, at `location`.
+fn f16_at(location: ledger::schema::Location) -> Ledger {
+    let mut ledger = typed("fx_half", FieldType::F16);
+    entry(&mut ledger, "fx_half").location = Some(location);
+    ledger
+}
+
+/// The fixture with `fx_half` typed `f16`, over `lo .. hi`, with `overflow`.
+fn f16_ranged(lo: Bound, hi: Bound, overflow: Option<Overflow>) -> Ledger {
+    let mut ledger = ranged("fx_half", lo, hi, overflow);
+    entry(&mut ledger, "fx_half").ty = Some(FieldType::F16);
+    ledger
+}
+
+#[test]
+fn layout_static_f16_type_takes_exactly_16_bits() {
+    // `fx_half` cut to 15 bits leaves bit 15 uncovered; widened to 17 it overlaps `fx_fixed` at bit 16.
+    check_f16_refused(
+        &f16_at(packed("fx_pair", 0, 15)),
+        &["word `fx_pair`: `fx_half` at bits 0–14 is f16, which takes exactly 16 bits, not 15"],
+    );
+    check_f16_refused(
+        &f16_at(packed("fx_pair", 0, 17)),
+        &["word `fx_pair`: `fx_half` at bits 0–16 is f16, which takes exactly 16 bits, not 17"],
+    );
+    check_f16_generates(&f16_at(packed("fx_pair", 0, 16)));
+}
+
+negative_control!(
+    layout_static_f16_type_takes_exactly_16_bits,
+    "a 16-bit f16 field generates, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_f16_refused(&f16_at(packed("fx_pair", 0, 16)), &["fx_half"])
+);
+
+#[test]
+fn layout_static_f16_type_off_a_packed_location_fails() {
+    // At a scalar index, and derived; `fx_pair`'s bits 0–15 are then uncovered, which is reported too.
+    check_f16_refused(
+        &f16_at(ledger::schema::Location::Scalar(9)),
+        &["entry `fx_half`: f16 field `fx_half` is not at a packed location"],
+    );
+    check_f16_refused(
+        &f16_at(ledger::schema::Location::Derived {
+            from: vec!["fx_u16"],
+        }),
+        &["entry `fx_half`: f16 field `fx_half` is not at a packed location"],
+    );
+}
+
+negative_control!(
+    layout_static_f16_type_off_a_packed_location_fails,
+    "an f16 at its packed location generates, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_f16_refused(&f16_at(packed("fx_pair", 0, 16)), &["fx_half"])
+);
+
+#[test]
+fn layout_static_f16_type_as_a_vector_component_fails() {
+    check_f16_refused(
+        &typed("fx_vector", vector(FieldType::F16, 3)),
+        &["entry `fx_vector`: vector field `fx_vector` has f16 components"],
+    );
+}
+
+negative_control!(
+    layout_static_f16_type_as_a_vector_component_fails,
+    "a vector of f16-pair components, the vector of halves, generates, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_f16_refused(
+        &typed("fx_vector", vector(FieldType::F16Pair, 3)),
+        &["fx_vector"]
+    )
+);
+
+#[test]
+fn layout_static_f16_type_range_beyond_65504_fails() {
+    for (lo, hi, range) in [
+        (Bound::Open(0.0), Closed(65505.0), "(0, 65505]"),
+        (Closed(-70000.0), Closed(1.0), "[-70000, 1]"),
+    ] {
+        check_f16_refused(
+            &f16_ranged(lo, hi, None),
+            &[&format!(
+                "word `fx_pair`, bits 0–15: f16 field `fx_half` has range {range}, beyond f16's finite range ±65504"
+            )],
+        );
+    }
+}
+
+negative_control!(
+    layout_static_f16_type_range_beyond_65504_fails,
+    "±65504 is f16's finite range itself, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_f16_refused(
+        &f16_ranged(Closed(-65504.0), Closed(65504.0), None),
+        &["beyond"]
+    )
+);
+
+#[test]
+fn layout_static_f16_type_unbounded_end_without_overflow_fails() {
+    for (lo, hi, range) in [
+        (Bound::Open(0.0), Unbounded, "(0, inf)"),
+        (Unbounded, Closed(1.0), "(-inf, 1]"),
+    ] {
+        check_f16_refused(
+            &f16_ranged(lo, hi, None),
+            &[&format!(
+                "word `fx_pair`, bits 0–15: f16 field `fx_half` has an unbounded end in its range {range} and states no `overflow`"
+            )],
+        );
+    }
+}
+
+negative_control!(
+    layout_static_f16_type_unbounded_end_without_overflow_fails,
+    "an unbounded end with `overflow` is allowed, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_f16_refused(
+        &f16_ranged(Bound::Open(0.0), Unbounded, Some(Overflow::Inf)),
+        &["unbounded end"]
+    )
+);
+
+#[test]
+fn layout_static_f16_type_within_range_or_with_overflow_passes() {
+    check_f16_generates(&f16_ranged(Closed(-65504.0), Closed(65504.0), None));
+    for overflow in [Overflow::Saturate, Overflow::Inf] {
+        check_f16_generates(&f16_ranged(Unbounded, Unbounded, Some(overflow)));
+    }
+}
+
+negative_control!(
+    layout_static_f16_type_within_range_or_with_overflow_passes,
+    "without `overflow` an unbounded end fails, so the passes check must fail on it",
+    expected = "generation refused",
+    check_f16_generates(&f16_ranged(Bound::Open(0.0), Unbounded, None))
+);

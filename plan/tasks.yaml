@@ -426,7 +426,7 @@
   title: "The per-field log floors (R-401)"
   depends_on: [TASK-M1-17]  # split from TASK-M1-17, applied per R-369 (physics review 5482528309 of PR #194)
   needs: []
-  requirements: [REQ-TOOL-160]
+  requirements: [REQ-TOOL-160, REQ-SYS-081, REQ-SYS-082]  # REQ-SYS-081, REQ-SYS-082: R-427, built here, applied per R-369
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3]
 - id: TASK-M1-19
@@ -444,6 +444,14 @@
   needs: []
   requirements: [REQ-RENDER-085]
   reviewers: [code, qa, physics, gui]
+  pitfalls: [PIT-3]
+- id: TASK-M1-21
+  milestone: M1
+  title: "Undeclared ranges are ledger gaps (R-426)"
+  depends_on: [TASK-M1-20]  # R-426: new M1 work, applied per R-369; after TASK-M1-20, which also changes payload.rs's entries
+  needs: []
+  requirements: [REQ-GEN-035]
+  reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M2-01
   milestone: M2
@@ -464,9 +472,9 @@
 - id: TASK-M2-03
   milestone: M2
   title: "Decoder: free momentum, the factorised join and the ICDescriptor"
-  depends_on: [TASK-M2-02, TASK-M2-30, TASK-M1-18]  # TASK-M2-30 for R-417's constants; TASK-M1-18 for R-419's floors, applied per R-369
-  needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160]
-  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163, REQ-DEC-045]
+  depends_on: [TASK-M2-02, TASK-M2-30, TASK-M1-18, TASK-M1-21]  # TASK-M2-30 for R-417's constants; TASK-M1-18 for R-419's floors; TASK-M1-21 for R-426's provisional mark on q_mass, applied per R-369
+  needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160, REQ-GEN-035]
+  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163, REQ-DEC-045, REQ-PAY-097]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-04
@@ -785,8 +793,8 @@
   milestone: M3
   title: Welford streaming diffusion and the definition of y
   depends_on: [TASK-M3-04]
-  needs: [REQ-PAY-030, REQ-GEN-012, REQ-PAY-010]
-  requirements: [REQ-INT-041, REQ-PAY-054, REQ-PAY-057, REQ-PAY-073, REQ-RENDER-028]
+  needs: [REQ-PAY-030, REQ-GEN-012, REQ-PAY-010, REQ-GEN-035]
+  requirements: [REQ-INT-041, REQ-PAY-054, REQ-PAY-057, REQ-PAY-073, REQ-RENDER-028, REQ-PAY-098]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-14

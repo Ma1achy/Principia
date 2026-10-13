@@ -294,7 +294,7 @@ fn config(v: KernelVariant) -> SimConfig {
         links: Links {},
         integrator: Integrator {},
         kernel_variant: v,
-        horizon: Horizon {},
+        horizon: Horizon { t: 0.0 },
         collision: Collision {},
         quality: Quality {},
     }

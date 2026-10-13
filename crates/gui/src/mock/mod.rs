@@ -4,14 +4,19 @@
 //! stand-in through the canvas trait (RQ-247), redrawn for its chart `(z₀, q₁, q₂)` as navigation edits it (R-390;
 //! REQ-GUI-171). It raises the precision events from its zoom (R-54: the GUI reads the events, never a depth). It
 //! earns no privilege: the app reaches it only through the interface, as it reaches the real engine
-//! (gui_state_contract §1). Its values are placeholder content, not corpus values.
+//! (gui_state_contract §1). It serves the legend's keys from its fake stain (`legend`), the sample under the cursor
+//! the hover names (`sample`), and draws into its stand-in the hover path and, with tile bounds on, its fake quads'
+//! bounds (`quads`). Its values are placeholder content, not corpus values.
 
 pub mod canvas;
 pub mod clock;
+pub mod legend;
+pub mod quads;
+pub mod sample;
 
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity, Source};
-use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::set_field::{Edit, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Latent, Links, Lock, Plane, Quality,
@@ -20,7 +25,9 @@ use engine::contract::sim_config::{
 use engine::contract::snapshot::{FrameSummary, History, LiveMemory, Precision, Snapshot, Tier};
 use engine::contract::store::{set_field_message, write};
 
+use self::canvas::Line;
 use self::clock::MockClock;
+use self::legend::FakeStain;
 
 /// The mock's wall-clock frame time, in ms: a steady 60 Hz frame (placeholder content, R-390).
 pub const MOCK_FRAME_MS: f64 = 16.7;
@@ -62,6 +69,14 @@ pub const MOCK_SWITCHOVER_OCTAVES: f64 = 20.0;
 /// The zoom from which the mock reports `AT_F32_FLOOR` (placeholder content).
 pub const MOCK_F32_FLOOR_OCTAVES: f64 = 23.0;
 
+/// The mock's horizon `T`, 01_main.png's scrubber's end, "of 50" (placeholder content).
+pub const MOCK_T_MAX: f64 = 50.0;
+
+/// The tile bounds' colour over the stand-in: white at half opacity (a look choice, R-390).
+pub const TILE_BOUNDS_RGBA: [f32; 4] = [1.0, 1.0, 1.0, 0.5];
+/// The hover path's colour, white as 01_main.png's, its opacity by its distance off the slice (a look choice, R-390).
+pub const HOVER_RGB: [f32; 3] = [1.0, 1.0, 1.0];
+
 /// One undoable change: the edit restoring the value before, and the edit itself.
 #[derive(Clone, Debug)]
 struct Change {
@@ -78,6 +93,7 @@ pub struct MockEngine {
     redo: Vec<Change>,
     log: Vec<LogEntry>,
     clock: MockClock,
+    stain: FakeStain,
 }
 
 impl MockEngine {
@@ -100,7 +116,42 @@ impl MockEngine {
             redo: Vec::new(),
             log: Vec::new(),
             clock,
+            stain: legend::default_stain(),
         }
+    }
+
+    /// The fake stain the legend is evaluated from.
+    pub fn stain(&self) -> &FakeStain {
+        &self.stain
+    }
+
+    /// Sets the fake stain, as an edit of the stain graph would (its editor is TASK-M6-29's).
+    pub fn set_stain(&mut self, stain: FakeStain) {
+        self.stain = stain;
+    }
+
+    /// The marks the mock draws into its stand-in: the hover path, while the hover is on the figure, and the fake
+    /// quads' bounds, while the overlay set has tile bounds on.
+    pub fn marks(&self) -> Vec<Line> {
+        let plane = &self.sim.plane;
+        let mut lines = Vec::new();
+        if self.render.overlays.tile_bounds {
+            lines.extend(quads::bounds(plane).into_iter().map(|[a, b]| Line {
+                ends: [a.map(|v| v as f32), b.map(|v| v as f32)],
+                rgba: TILE_BOUNDS_RGBA,
+            }));
+        }
+        if let Some(at) = self.render.hover.at {
+            let path = sample::hover_path(plane, at);
+            lines.extend(path.windows(2).map(|w| {
+                let [r, g, b] = HOVER_RGB;
+                Line {
+                    ends: [w[0].at.map(|v| v as f32), w[1].at.map(|v| v as f32)],
+                    rgba: [r, g, b, w[0].alpha.min(w[1].alpha)],
+                }
+            }));
+        }
+        lines
     }
 
     /// The fake clock's time source, which the app's clock reads (RQ-246).
@@ -147,8 +198,8 @@ impl Default for MockEngine {
     }
 }
 
-/// The mock's initial state: the chart "z_α × z_β" at 01_main.png's `z₀`, unlocked, the other groups empty, the physics
-/// kernel and `t = 0.0` (placeholder content).
+/// The mock's initial state: the chart "z_α × z_β" at 01_main.png's `z₀`, unlocked, the horizon [`MOCK_T_MAX`], every
+/// overlay off, no hover, the other groups empty, the physics kernel and `t = 0.0` (placeholder content).
 fn state(t: f64) -> (SimConfig, RenderState) {
     (
         SimConfig {
@@ -166,15 +217,16 @@ fn state(t: f64) -> (SimConfig, RenderState) {
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
-            horizon: Horizon {},
+            horizon: Horizon { t: MOCK_T_MAX },
             collision: Collision {},
             quality: Quality {},
         },
         RenderState {
             stain_graph: StainGraph {},
-            overlays: Overlays {},
+            overlays: Overlays::default(),
             palette: Palette {},
             playhead: Playhead { t },
+            hover: Hover::default(),
         },
     )
 }
@@ -212,6 +264,15 @@ impl EngineInterface for MockEngine {
             },
             frame: MOCK_FRAME,
             log: std::mem::take(&mut self.log),
+            legend: legend::evaluate(&self.stain),
+            sample: self.render.hover.at.map(|at| {
+                sample::sample(
+                    &self.sim.plane,
+                    at,
+                    self.render.playhead.t,
+                    self.sim.horizon.t,
+                )
+            }),
         }
     }
 

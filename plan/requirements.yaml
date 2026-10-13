@@ -5892,6 +5892,8 @@
     section: "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
   - file: decisions.md
     section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: Layout and §3.8 entries
   verify:
     method: review checklist
     detail: "the ledger lists member order, packed-member bit positions and the aligned size; the generated Rust and WGSL layouts match it"
@@ -6096,7 +6098,7 @@
   note: "`rho_angle` must be a full-turn angle in radians, for render_gui_spec §10.1's cyclic period of 2π (REQ-TOOL-161, TASK-M1-09; physics review 5451411491); otherwise the ledger's cyclic tag or the period changes, through an RQ."
 - id: REQ-PAY-089
   area: PAY
-  statement: "QuadReduction must be sized from its member list, with u32 histogram bins (R-410), and then aligned; TASK-M5-01 defines and measures the size and writes the measured figure into the docs that cite it."
+  statement: "QuadReduction must be sized from its member list, with u32 histogram bins (R-410), and then aligned: 176 B, aligned to 4 (dd_generation_root §3.7's \"Size\" and \"Layout and §3.8 entries\"), the figure TASK-M5-01 measured and wrote into the docs that cite it."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.7 `QuadReduction` — completed ledger
@@ -6106,6 +6108,8 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: Layout and §3.8 entries
   verify:
     method: unit test
     detail: "size_of::<QuadReduction>() equals the aligned sum of its member list as REQ-PAY-077 defines it; the generated Rust and WGSL sizes agree"
@@ -6186,6 +6190,8 @@
     section: "R-312 — §3.8 gains an `f16` type: one half-float at a packed 16-bit location, under R-248's rules *(closes RQ-182)*"
   - file: decisions.md
     section: "R-42 — The `alpha_area` defects: tell empty from full by `n_unresolved`; refuse the floor on a negative exponent *(RS-2 (b)+(c))*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: Layout and §3.8 entries
   - file: decisions.md
     section: "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and \"no escape\" reads `_min > _max` *(closes RQ-268)*"
   - file: docs/design/principia_dd_generation_root.md
@@ -6215,6 +6221,8 @@
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   - file: decisions.md
     section: "R-306 — `QuadReduction`'s member list is ledger data at M0; the struct is built at M5 *(closes RQ-178)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: Layout and §3.8 entries
   verify:
     method: review checklist
     detail: "the doc gives `first_divergence_t`'s sentinel, distinct from every crossing time and not NaN (NaN is the invalid value, R-79, R-136), and each member's scale; the ledger entries carry them; the doc change is in the PR and the physics reviewer approves it before merge"
@@ -6267,6 +6275,46 @@
   - R-424
   milestone: M5
   note: "Split from REQ-TOOL-011 by R-424 (RQ-275): \"sim-failed moves to the QuadReduction task\"; the QuadReduction task is TASK-M5-17, which builds QuadReduction's validity reductions (applied per R-369); TASK-M5-01, which builds the struct and was in review as PR #191, keeps its scope. Closed by TASK-M5-17."
+- id: REQ-PAY-097
+  area: PAY
+  statement: "`q_mass`'s ledger range must be declared from its formula (REQ-PAY-088) by the task that writes it, citing the formula, with its provisional mark (R-426) removed, and the physics reviewer must re-check its numeric view's ramp then: a declared range that spans zero keeps ramp_coolwarm, and one that does not puts the view on ramp_viridis (R-400), its goldens re-rendered."
+  source:
+  - file: decisions.md
+    section: "R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/design/principia_dd_decoder.md
+    section: "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  verify:
+    method: review checklist
+    detail: "the PR declares q_mass's range from REQ-PAY-088's formula, citing it, and removes its provisional mark; cargo test -p ledger declared_ranges and numeric_view_template pass with it (a zero-spanning range on ramp_coolwarm, otherwise ramp_viridis); any golden that changes is re-rendered with its BASELINES.md row citing R-426; the physics reviewer re-checks the ramp; the M1 gate's provisional record for q_mass is closed in the M2 gate report"
+  rulings:
+  - R-400
+  - R-426
+  milestone: M2
+  note: "R-426 (RQ-274, options (a) and (c)): q_mass stays on ramp_coolwarm provisionally from M1 until this re-check; closed by TASK-M2-03, which writes REQ-PAY-088."
+- id: REQ-PAY-098
+  area: PAY
+  statement: "`mean_y`'s ledger range must be declared from the definition of the per-sample `y` (REQ-PAY-073) by the task that writes it, citing the definition, with its provisional mark (R-426) removed, and the physics reviewer must re-check its numeric view's ramp then: a declared range that spans zero keeps ramp_coolwarm, and one that does not puts the view on ramp_viridis (R-400), its goldens re-rendered."
+  source:
+  - file: decisions.md
+    section: "R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: 4. Welford diffusion (streaming regression)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  verify:
+    method: review checklist
+    detail: "the PR declares mean_y's range from REQ-PAY-073's y, citing it, and removes its provisional mark; cargo test -p ledger declared_ranges and numeric_view_template pass with it (a zero-spanning range on ramp_coolwarm, otherwise ramp_viridis); any golden that changes is re-rendered with its BASELINES.md row citing R-426; the physics reviewer re-checks the ramp; the M1 gate's provisional record for mean_y is closed in the M3 gate report"
+  rulings:
+  - R-400
+  - R-426
+  milestone: M3
+  note: "R-426 (RQ-274, options (a) and (c)): mean_y stays on ramp_coolwarm provisionally from M1 until this re-check; closed by TASK-M3-13, which defines y (REQ-PAY-073)."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -6843,6 +6891,32 @@
   - R-417
   milestone: M2
   note: "R-417 (RQ-270, option (b)); TASK-M2-30, since TASK-M2-01 has merged. The hashed bytes are unchanged: a tree's num is the f64 value's bits."
+- id: REQ-GEN-035
+  area: GEN
+  statement: "The payload ledger must give each entry's range one of three states, declared(lo, hi, citation), gap or provisional(requirement) (R-426; dd_generation_root §3.8): where §3 gives a field no range, the (−∞, ∞) written in its place is a ledger gap, never a range that spans zero, so it never puts a field on ramp_coolwarm or lets it carry the `diverging` scale; S, ftle and diffusion must be declared (−∞, ∞), signed, citing R-423's physics check, C_ty (−∞, ∞), signed, citing R-423's check of diffusion and C_ty = diffusion · C_tt(n) with C_tt(n) > 0 for n ≥ 2 (RQ-277, decided per R-369), E_0 and Lz_0 (−∞, ∞), signed, citing their `diverging` scale (dd_generation_root §3.4), and energy_drift and Lz_drift (−∞, ∞), signed, citing dd_generation_root §3.8's worked entries and §3.4; q_mass and mean_y must be marked provisional (R-426) and keep ramp_coolwarm until REQ-PAY-097 and REQ-PAY-098 declare their ranges; a `lin` or `diverging` scalar field whose range is undeclared and not so marked must fail generation, naming it; and every remaining gap must be listed with the requirement that fills it."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*"
+  - file: decisions.md
+    section: "R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*"
+  - file: decisions.md
+    section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
+  - file: decisions.md
+    section: "R-423 — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger declared_ranges: every lin or diverging scalar entry the numeric template draws has a declared range with its citation, or is q_mass or mean_y marked provisional (R-426); S, ftle and diffusion are declared (−∞, ∞) citing R-423's check, C_ty citing R-423 and C_ty = diffusion · C_tt(n), E_0 and Lz_0 citing §3.4's diverging scale; energy_drift and Lz_drift, which the numeric template skips as floored fields, are named explicitly and declared (−∞, ∞) citing §3.8's worked entries and §3.4, so the generation gate passes on them; controls: a fixture lin entry with an undeclared range and no provisional mark fails generation naming it, and a fixture lin entry with an undeclared range is not placed on ramp_coolwarm by it; cargo test -p ledger numeric_view_template: every view that drew on ramp_coolwarm before still does, and no golden changes; the gap list names each remaining gap with the requirement that fills it and is given in the M1 gate report; physics reviewer approves each declared range's citation"
+  rulings:
+  - R-400
+  - R-403
+  - R-423
+  - R-426
+  milestone: M1
+  note: "R-426 (RQ-274): the human's \"an undeclared range is a ledger gap, not 'spans zero'\"; applied per R-369: a lin or diverging scalar field whose range is undeclared fails generation, as dd_generation_root §3.8's \"A field without a complete entry fails generation loudly\" has it, save q_mass and mean_y, which the same ruling keeps on cool-warm provisionally. C_ty was on cool-warm by the same default (RQ-277); decided per R-369 by the orchestrator, option (a), in PR #205's fix round: it is signed, as diffusion is, and stays on cool-warm. energy_drift and Lz_drift added in the same fix round (physics review 5506860821, code review 5506873900): §3.8 declares them, the ledger did not. Closed by TASK-M1-21."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -10695,6 +10769,8 @@
     section: "R-122 — The reference HTML files are the colour oracle *(closes RQ-90 and RQ-101)*"
   - file: decisions.md
     section: "R-403 — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*"
+  - file: decisions.md
+    section: "R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*"
   verify:
     method: unit test
     detail: "cargo test -p ledger numeric_view_template: a zero-spanning field generates ramp_coolwarm on the symmetric range, fixed and auto, with 0 at t = ½; a field with lo ≥ 0 generates ramp_viridis; the cyclic field keeps ramp_twilight and the drifts R-381's view; the ledger gains no member; cargo test -p ledger declared_ranges: each field the corpus or its definition makes non-negative declares lo ≥ 0, each citing its line; cargo test -p render ramp_coolwarm: the ramp matches the checked-in table at its stops and t = ½ is its neutral; cargo xtask golden m1-numeric shows a zero-spanning field's 0 at the neutral; cargo test -p ledger numeric_view_template: K_0 over [0, ∞) and V_0 over (−∞, 0] generate ramp_viridis, increasing in the value in both modes, and both headers default to RANGE_AUTO = 1; under auto, t = 0 is the measured minimum (K_0's minimum and V_0's most negative value); under fixed, t = 0 is K_0's declared 0 and V_0's measured minimum, its unbounded end taking the measured end, and a positive V_0 clamps to t = 1; V_0's most negative value is at t = 0 in both modes (R-403); cargo xtask golden m1-numeric shows K_0 and V_0 on viridis in the default (auto) mode, the minimum of each dark, from a physical V_0 ≤ 0 (R-403)"
@@ -10702,8 +10778,9 @@
   - R-122
   - R-400
   - R-403
+  - R-426
   milestone: M1
-  note: "R-400 (RQ-260) amends RQ-231 item 3 for zero-spanning fields; applied per R-369: the ramp is ramp_coolwarm (named in render_gui_spec §10.1, its data Moreland's table, R-122), the symmetric range extends RQ-231 item 1, and the non-negative lower bounds are declared because the ledger's unbounded default would read as signed. R-403 (RQ-261): K_0 and V_0 are lin over [0, ∞) and (−∞, 0], on viridis, mapped monotonically, V_0's most negative value at the dark end; their diverging tags are removed, the tag agreeing with the range (REQ-GEN-033). Applied per R-369: open-ended ranges keep the auto default (render_gui_spec §10.1), so K_0's 0 is at t = 0 only in fixed mode; the mapping is tested per mode."
+  note: "R-400 (RQ-260) amends RQ-231 item 3 for zero-spanning fields; applied per R-369: the ramp is ramp_coolwarm (named in render_gui_spec §10.1, its data Moreland's table, R-122), the symmetric range extends RQ-231 item 1, and the non-negative lower bounds are declared because the ledger's unbounded default would read as signed. R-403 (RQ-261): K_0 and V_0 are lin over [0, ∞) and (−∞, 0], on viridis, mapped monotonically, V_0's most negative value at the dark end; their diverging tags are removed, the tag agreeing with the range (REQ-GEN-033). Applied per R-369: open-ended ranges keep the auto default (render_gui_spec §10.1), so K_0's 0 is at t = 0 only in fixed mode; the mapping is tested per mode. R-426 (RQ-274): an undeclared range is a ledger gap, not a range that spans zero (REQ-GEN-035, TASK-M1-21); q_mass and mean_y stay on ramp_coolwarm provisionally until REQ-PAY-097 and REQ-PAY-098 declare their ranges."
 - id: REQ-RENDER-085
   area: RENDER
   statement: "The generated numeric field view of `theta`, the unwrapped longitude θ̃ in radians, must be cyclic, since θ̃ is an angle (R-423): the ledger gives `theta` the `cyclic` scale, and its view places raw = fract(θ̃ / 2π) on the fixed [0, 1] with ramp_twilight (the prelude's LUT index 1), not R-400's ramp_coolwarm, although its declared range spans zero. Here fract(x) = x − ⌊x⌋ (WGSL's fract, the Rust reference's rem_euclid(1.0); not Rust's f32::fract, x − trunc x), so raw ∈ [0, 1) for negative θ̃ too."
@@ -10991,14 +11068,17 @@
     section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
   - file: decisions.md
     section: "R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*"
+  - file: decisions.md
+    section: "R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*"
   verify:
     method: unit test
     detail: "the default ramp registry returns the stated ramp and polarity per field role"
   rulings:
   - R-399
   - R-400
+  - R-426
   milestone: M7
-  note: "R-400 (RQ-260): a field is signed when its declared ledger range spans zero, with no signed-or-not mark; a field that can't be negative keeps its sequential ramp. R-399 (RQ-259): \"not yet\" is drawn in its stippled style, never a flat grey, so a greyscale default can't collide with it."
+  note: "R-400 (RQ-260): a field is signed when its declared ledger range spans zero, with no signed-or-not mark; a field that can't be negative keeps its sequential ramp. R-399 (RQ-259): \"not yet\" is drawn in its stippled style, never a flat grey, so a greyscale default can't collide with it. R-426: a range the ledger does not declare is a gap, not one that spans zero, so it never makes a field signed."
 - id: REQ-COL-017
   area: COL
   statement: "The combinators mix_const, mix_field, bandmask and site_overlay must exist as vec3(+ctx) → vec3 operations, and the physics overlay must be site_overlay over a SiteBlend with physics sites, vmf(κ) kernel, per-site colours and per-blob strength s."
@@ -17472,7 +17552,7 @@
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
-  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md; rho_ratio's and r_min_pair_0's are confirmed there provisionally and re-confirmed at M2 (REQ-TOOL-163; R-419): rho_ratio's proposal assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for r_min_pair_0, a distance in G = M = I = 1, only the evidence is provisional."
+  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md; rho_ratio's and r_min_pair_0's are confirmed there provisionally and re-confirmed at M2 (REQ-TOOL-163; R-419): rho_ratio's proposal assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for r_min_pair_0, a distance in G = M = I = 1, only the evidence is provisional; each floor must be a constants-register entry marked provisional until the M1 gate and read from the register, never a function in its place (R-427), rho_ratio's and r_min_pair_0's re-marked provisional until M2 once confirmed provisionally at M1; and the proposal must state whether d_min's floor at f16's smallest normal, 2⁻¹⁴, is intended when d_min is stored down to 2⁻²⁴ (R-271), with its evidence (R-427)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -17484,15 +17564,23 @@
     section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
   - file: decisions.md
     section: "R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*"
+  - file: decisions.md
+    section: "R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*"
   verify:
     method: unit test
-    detail: "the proposal gives each field's floor with its units and evidence: where that field's stored values fall under it on M1's fixtures, and why the floor sits there in the field's units; rho_ratio's states that it assumes the mass-weighted ‖ρ̃‖/‖λ̃‖, and r_min_pair_0's that its evidence is M1's showcase values, both marked provisional until M2 (R-419); `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with its own field's floor, and that two log fields with different floors place the same |x| differently; confirmed by the human at the M1 gate and recorded in decisions.md"
+    detail: "the proposal gives each field's floor with its units and evidence: where that field's stored values fall under it on M1's fixtures, and why the floor sits there in the field's units; rho_ratio's states that it assumes the mass-weighted ‖ρ̃‖/‖λ̃‖, and r_min_pair_0's that its evidence is M1's showcase values, both marked provisional until M2 (R-419); `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with its own field's floor, and that two log fields with different floors place the same |x| differently; confirmed by the human at the M1 gate and recorded in decisions.md; each floor is read from a register entry marked provisional until the M1 gate (REQ-SYS-081, REQ-SYS-082; R-427); the proposal states whether d_min's floor at 2⁻¹⁴ is intended when d_min is stored down to 2⁻²⁴ (R-271), with evidence: where d_min's stored values in [2⁻²⁴, 2⁻¹⁴) fall on the ramp under the floor, how many of M1's fixture values lie there, and what a floor at f16's smallest subnormal (2⁻²⁴) or another proposed value would show instead; the physics reviewer checks it and the M1 gate gives it to the human (R-427)"
   rulings:
   - R-71
+  - R-271
   - R-401
   - R-419
+  - R-427
   milestone: M1
-  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note). Applied per R-369 (physics review 5482528309 of PR #194): the closing moves from TASK-M1-17 to TASK-M1-18, split from it so that RQ-271 holds only the floors. R-419 (RQ-271, option (c) for both): rho_ratio's and r_min_pair_0's floors are provisional at M1 and re-confirmed at M2 by TASK-M2-03 (REQ-TOOL-163)."
+  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note). Applied per R-369 (physics review 5482528309 of PR #194): the closing moves from TASK-M1-17 to TASK-M1-18, split from it so that RQ-271 holds only the floors. R-419 (RQ-271, option (c) for both): rho_ratio's and r_min_pair_0's floors are provisional at M1 and re-confirmed at M2 by TASK-M2-03 (REQ-TOOL-163). R-427 (veto of PR #204's floor functions): the floors are constants-register entries marked provisional until the M1 gate (REQ-SYS-081, REQ-SYS-082), and the proposal states whether d_min's floor at f16's smallest normal is intended given storage down to 2⁻²⁴."
 - id: REQ-TOOL-161
   area: TOOL
   kind: definition
@@ -22760,7 +22848,7 @@
   milestone: M5
 - id: REQ-SYS-036
   area: SYS
-  statement: "The GPU↔CPU membrane must have exactly five crossings: dispatch uniforms (CPU→GPU), render config (slot uniforms, playhead t), bake (equirect texture), the QuadReduction (one per quad, its size following from dd_generation_root §3.7's members with u32 bins, defined and measured by TASK-M5-01, R-410; the sole automatic GPU→CPU return of simulation data, feeding only the Allocation ring), and sanctioned user-initiated pulls (single-IC f32 trace, columnar export decode) that are tiny, async and latest-wins. R-288's per-frame telemetry readback is not simulation data (R-332)."
+  statement: "The GPU↔CPU membrane must have exactly five crossings: dispatch uniforms (CPU→GPU), render config (slot uniforms, playhead t), bake (equirect texture), the QuadReduction (one per quad, 176 B, aligned to 4, with u32 histogram bins: dd_generation_root §3.7, R-410, measured by TASK-M5-01; the sole automatic GPU→CPU return of simulation data, feeding only the Allocation ring), and sanctioned user-initiated pulls (single-IC f32 trace, columnar export decode) that are tiny, async and latest-wins. R-288's per-frame telemetry readback is not simulation data (R-332)."
   source:
   - file: docs/design/principia_systems_architecture.md
     section: "3. The membrane — the deployment view (demoted, not diminished)"
@@ -23133,13 +23221,17 @@
     section: R-36 — Schema version = content hash of the ledger *(PL-1)*
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7"
   verify:
     method: review checklist
     detail: "the section gives the register's entry fields (value, citation, admissibility class) and states whether it is hashed with the ledger; physics reviewer approved"
   rulings:
   - R-36
   - R-72
+  - R-427
   milestone: M0
+  note: "R-427: the register holds a value marked provisional until a named gate (dd_generation_root §3.8's `provisional` key; REQ-SYS-081, TASK-M1-18)."
 - id: REQ-SYS-064
   area: SYS
   kind: definition
@@ -23454,3 +23546,42 @@
   - R-72
   milestone: M1
   note: RQ-212, decided per R-369.
+- id: REQ-SYS-081
+  area: SYS
+  statement: "The constants register must hold a value marked provisional until a named gate (R-427): an entry may carry `provisional: gate(milestone)` with its proposed number or threshold and its calibration requirement as its citation, and is read like any other entry; generation must fail on a provisional entry whose value is `calibration`, that names no gate, or whose citation is not a calibration requirement; the register must list its provisional entries by gate, for that gate's report; and the mark and its gate must not be hashed into the schema version."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-182 — Escape fixtures are defined; proposed tolerances are provisional in CI *(closes T4, T5)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger constants_provisional: a provisional entry builds and its number reads at compile time like any other; controls: a provisional entry whose value is calibration, one that names no gate, and one citing a corpus section each fail generation naming the constant; the list by gate returns the entries marked provisional until M1; adding or removing the mark on a hashed fixture entry leaves the schema version unchanged, and changing its value changes it"
+  rulings:
+  - R-71
+  - R-182
+  - R-427
+  milestone: M1
+  note: "R-427: the human's \"if the register can't hold provisional values, fix that (every gate needs it)\"; applied per R-369: built by TASK-M1-18, its first consumer, whose six floors and the hatch's numbers are the first provisional entries."
+- id: REQ-SYS-082
+  area: SYS
+  statement: "No number in crates/{kernel,ledger,engine} that is a register constant may be wrapped in a function (`fn` or `const fn`) to get past `cargo xtask lint constants` (R-427): the six per-field log floors (REQ-TOOL-160) and `prelude::hatch()`'s proposed colours and stripe width (REQ-COL-055) must be constants-register entries marked provisional until the M1 gate and read from the register, and every other function there that returns a numeric literal must be moved into the register or named in its doc as ledger or interface data."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the PR lists every function in crates/{kernel,ledger,engine} that returns a numeric literal, each moved into the register or named in its doc as ledger or interface data, and the code reviewer checks the list; the six floors and the hatch's numbers are read from register entries marked provisional until M1, and no function returns them as literals; cargo xtask lint constants passes"
+  rulings:
+  - R-71
+  - R-427
+  milestone: M1
+  note: "R-427 vetoes TASK-M1-18's floors as `pub const fn`s (PR #204); `prelude::hatch()`, the precedent PR #204 cited, is the same pattern. Closed by TASK-M1-18."

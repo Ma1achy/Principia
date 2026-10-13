@@ -6,8 +6,9 @@
 //! link registry fails its checks ([`links::refused`]). The emitters
 //! are registered in [`EMITTERS`]: the Rust one ([`rust`]) and the WGSL one ([`wgsl`]), each also writing the read side
 //! ([`read`]); the WGSL one also writes the shared prelude ([`prelude`]); the host export decoder ([`export`]); the
-//! debug catalogue, its views and their tests ([`catalogue`]); and the kernel's link functions and chart constants from
-//! the link registry ([`links`]; dd_generation_root §3.9). One source generates all four artefacts (seam 13).
+//! debug catalogue, its views and their tests ([`catalogue`]); the kernel's link functions and chart constants from
+//! the link registry ([`links`]; dd_generation_root §3.9); and `QuadReduction`'s Rust and WGSL struct, from its own
+//! ledger ([`crate::reduction::emit`]). One source generates all four payload artefacts (seam 13).
 
 pub mod catalogue;
 pub mod export;
@@ -41,6 +42,7 @@ pub const EMITTERS: &[Emitter] = &[
     export::emit,
     catalogue::emit,
     links::emit,
+    crate::reduction::emit,
 ];
 
 /// Why generation was refused.
