@@ -276,25 +276,17 @@ pub(super) fn shadow(
     found
 }
 
-/// Every occupant-rule finding in `module`, a colour occupant after its context: the payload-buffer, raw-word,
-/// deny-list and guard rules. `accessors` are the generated functions (the unpack layer's and the read side's). Where
-/// `own` (a debug view's or a source's), the guard rule passes over the reads of the sample's own value, `ctx.sample`'s
-/// ([`contexts`]).
+/// Every occupant-rule finding in `module`, a colour occupant after its context, but the guard rule's ([`guard`]): the
+/// payload-buffer, raw-word and deny-list rules. `accessors` are the generated functions (the unpack layer's and the
+/// read side's).
 pub(super) fn occupant(
     module: &Module,
     info: &ModuleInfo,
     source: &str,
     accessors: &BTreeSet<String>,
-    own: bool,
 ) -> Vec<Finding> {
     let mut found = Vec::new();
-    let contexts = if own { contexts(module) } else { HashSet::new() };
-    let handles = module
-        .functions
-        .iter()
-        .map(|(h, _)| Some(h))
-        .chain(module.entry_points.iter().map(|_| None));
-    for ((function, fi), handle) in each_function(module, info).zip(handles) {
+    for (function, fi) in each_function(module, info) {
         let fname = function.name.as_deref().unwrap_or("(unnamed)");
         let span = |h| function.expressions.get_span(h);
         for (h, e) in function.expressions.iter() {
@@ -334,12 +326,74 @@ pub(super) fn occupant(
             }
         }
         found.extend(raw_word(module, function, fi, source, accessors));
-        let own: HashSet<u32> = contexts
-            .iter()
-            .filter(|&&(f, _)| Some(f) == handle)
-            .map(|&(_, i)| i)
-            .collect();
-        found.extend(Guard::new(module, function, fi, own).check(source));
+    }
+    found
+}
+
+/// Each function of `module` with its validation info, its handle (`None` for an entry point) and the guard rule over
+/// it: where `own` (a debug view's or a source's), passing over the reads of the sample's own value, `ctx.sample`'s
+/// ([`contexts`]).
+fn guards<'m>(module: &'m Module, info: &'m ModuleInfo, own: bool) -> Vec<Guard<'m>> {
+    let contexts = if own { contexts(module) } else { HashSet::new() };
+    let handles = module
+        .functions
+        .iter()
+        .map(|(h, _)| Some(h))
+        .chain(module.entry_points.iter().map(|_| None));
+    each_function(module, info)
+        .zip(handles)
+        .map(|((function, fi), handle)| {
+            let own: HashSet<u32> = contexts
+                .iter()
+                .filter(|&&(f, _)| Some(f) == handle)
+                .map(|&(_, i)| i)
+                .collect();
+            Guard::new(module, function, fi, own)
+        })
+        .collect()
+}
+
+/// The guard rule's findings in `module`, a colour occupant after its context with the tier constants read as
+/// overrides (`super::tier_overrides`): every use of a read of `ftle` or `ensemble_spread` outside its guard, but, where
+/// `own`, of the sample's own value.
+pub(super) fn guard(module: &Module, info: &ModuleInfo, source: &str, own: bool) -> Vec<Finding> {
+    guards(module, info, own)
+        .iter()
+        .flat_map(|g| g.check(source))
+        .collect()
+}
+
+/// The guard rule's findings in `module`, the occupant as assembled, where it does not validate with its tier constants
+/// read as overrides (`why`): it uses one where only a constant may stand, a `const` declaration's initialiser, so the
+/// rule cannot see the tier's guard. Each function's first read the rule would check is reported, unchecked.
+pub(super) fn unguardable(
+    module: &Module,
+    info: &ModuleInfo,
+    source: &str,
+    own: bool,
+    why: &str,
+) -> Vec<Finding> {
+    let why = why.lines().next().unwrap_or("").trim();
+    let mut found = Vec::new();
+    for g in guards(module, info, own) {
+        let fname = g.function.name.as_deref().unwrap_or("(unnamed)");
+        let first = g.function.expressions.iter().find_map(|(h, _)| g.read(h).map(|r| (h, r)));
+        if let Some((h, read)) = first {
+            let what = match read {
+                Read::Ftle(_) => "`ftle`",
+                Read::Ensemble => "`ensemble_spread`",
+            };
+            found.push(at(
+                Rule::Guard,
+                format!(
+                    "`{fname}` reads {what}, but its guard cannot be checked: the occupant uses a tier constant \
+                     where only a constant may stand, so the lint cannot read it as the guard does ({why}); read \
+                     `has_ftle` in the branch condition itself, not through a `const` (REQ-RENDER-015)"
+                ),
+                g.function.expressions.get_span(h),
+                source,
+            ));
+        }
     }
     found
 }

@@ -21,8 +21,10 @@
 //! scheduler deny-list and the FTLE and ensemble guard, which a debug view and a source are held to for every sample
 //! but their own. Each exception the definitions name is lifted for its file and its one rule only ([`EXCEPTIONS`]).
 //! [`RUNTIME_DIR`] holds the WGSL the render side writes at runtime, checked in by
-//! `crates/render/tests/runtime_wgsl.rs` so that this lint reaches it. In an occupant's context the prelude's tier
-//! constants are read as overrides ([`tier_overrides`]), so naga's folding keeps them.
+//! `crates/render/tests/runtime_wgsl.rs` so that this lint reaches it. Every rule reads an occupant as assembled but
+//! the guard, which reads the prelude's tier constants as overrides ([`tier_overrides`]), so naga's folding keeps them;
+//! an occupant that uses one where only a constant may stand has its guarded reads reported unchecked
+//! ([`check_occupant_after`]).
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -415,8 +417,8 @@ fn allowed(rel: &str, findings: Vec<Finding>) -> Vec<Finding> {
 }
 
 /// `prelude` with its tier constants (`const has_<feature>: bool`, lowering Part 3a) declared `override` instead, as
-/// the lint reads them before an occupant ([`check_occupant_after`]): naga folds a constant into the expressions that
-/// use it, so `!has_ftle || !s.ftle_valid` would reach the guard rule as `false || !s.ftle_valid`, the tier's name
+/// the guard rule reads them before an occupant ([`check_occupant_after`]): naga folds a constant into the expressions
+/// that use it, so `!has_ftle || !s.ftle_valid` would reach the guard rule as `false || !s.ftle_valid`, the tier's name
 /// gone; an override keeps it. Nothing else changes, lines included.
 pub fn tier_overrides(prelude: &str) -> String {
     let mut out = String::with_capacity(prelude.len());
@@ -723,8 +725,10 @@ pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, 
 /// Every rule's findings in a colour occupant's `source` (render contract Part 4), after `prefix` as
 /// [`check_fragment_after`] reads it: the float rules, the shadow rule and the occupant rules, the guard rule over the
 /// sample's own value, `ctx.sample`'s, only where `occupancy` is [`Occupancy::Guarded`]: a debug view and a source
-/// show or forward it. `accessors` are the generated accessors ([`accessors`]). `prefix`'s tier
-/// constants are read as overrides ([`tier_overrides`]).
+/// show or forward it. The guard rule reads `prefix`'s tier constants as overrides ([`tier_overrides`]); where the
+/// occupant does not validate so, using one in a `const` declaration, each function's first read the rule would check
+/// is a guard finding naming why, and every other rule still reads the module as assembled. `accessors` are the
+/// generated accessors ([`accessors`]).
 pub fn check_occupant_after(
     prefix: &str,
     source: &str,
@@ -732,9 +736,33 @@ pub fn check_occupant_after(
     accessors: &BTreeSet<String>,
 ) -> Result<Vec<Finding>, String> {
     let own = occupancy != Occupancy::Guarded;
-    after(&tier_overrides(prefix), source, &|module, info, joined| {
-        occupant::occupant(module, info, joined, accessors, own)
-    })
+    // Every rule but the guard reads the module as assembled, the tier constants `const`.
+    let (module, info, joined, base) = joined_after(prefix, source)?;
+    let mut found = fragment_checks(&module, &info, &joined);
+    found.extend(occupant::occupant(&module, &info, &joined, accessors));
+    // The guard reads them as overrides, which keep their names; an occupant that uses one where only a constant may
+    // stand does not validate so, and its guarded reads are reported as unchecked rather than the file left unlinted.
+    match joined_after(&tier_overrides(prefix), source) {
+        Ok((module, info, joined, _)) => found.extend(occupant::guard(&module, &info, &joined, own)),
+        Err(why) => found.extend(occupant::unguardable(&module, &info, &joined, own, &why)),
+    }
+    Ok(relocated(found, base))
+}
+
+/// `source` after `prefix`, joined, parsed and validated, and the number of `prefix`'s lines; or why it could not be:
+/// the two together do not parse or validate.
+fn joined_after(
+    prefix: &str,
+    source: &str,
+) -> Result<(Module, naga::valid::ModuleInfo, String, u32), String> {
+    let base = u32::try_from(prefix.lines().count()).map_err(|e| e.to_string())?;
+    let joined = if prefix.ends_with('\n') {
+        format!("{prefix}{source}")
+    } else {
+        format!("{prefix}\n{source}")
+    };
+    let (module, info) = parse(&joined)?;
+    Ok((module, info, joined, base))
 }
 
 /// `source` after `prefix`, held to the float rules, the shadow rule and `extra`, its findings at `source`'s lines.
@@ -743,16 +771,16 @@ fn after(
     source: &str,
     extra: &dyn Fn(&Module, &naga::valid::ModuleInfo, &str) -> Vec<Finding>,
 ) -> Result<Vec<Finding>, String> {
-    let base = u32::try_from(prefix.lines().count()).map_err(|e| e.to_string())?;
-    let joined = if prefix.ends_with('\n') {
-        format!("{prefix}{source}")
-    } else {
-        format!("{prefix}\n{source}")
-    };
-    let (module, info) = parse(&joined)?;
+    let (module, info, joined, base) = joined_after(prefix, source)?;
     let mut found = fragment_checks(&module, &info, &joined);
     found.extend(extra(&module, &info, &joined));
-    Ok(found
+    Ok(relocated(found, base))
+}
+
+/// `found`, findings in a file after `base` lines of what precedes it, at the file's own lines: one on a line before
+/// the file is the prefix's own, left out; one on no line is kept, so it is never lost.
+fn relocated(found: Vec<Finding>, base: u32) -> Vec<Finding> {
+    found
         .into_iter()
         .filter_map(|mut f| match f.line {
             Some(line) if line > base => {
@@ -762,7 +790,7 @@ fn after(
             Some(_) => None,
             None => Some(f),
         })
-        .collect())
+        .collect()
 }
 
 /// The float rules' and the shadow rule's findings in a fragment-stage WGSL file written by hand, or why it could not

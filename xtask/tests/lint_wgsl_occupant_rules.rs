@@ -583,3 +583,40 @@ negative_control!(
     expected = "is not linted",
     check_repository(&["crates/render/frag/runtime/field_ramp/no_such_field.wgsl"])
 );
+
+// ── A tier constant in a `const` declaration ─────────────────────────────────────────────────────────────────────
+
+/// A context with the prelude's tier constant, a read-side `SimState` and `Ctx`.
+const TIER_PREFIX: &str = "const has_ftle: bool = true;\nstruct SimState { ftle: f32, ftle_valid: bool }\n\
+                           struct Ctx { sample: SimState }\n";
+
+/// An occupant whose guard is `guard`, after `declarations`: with a tier constant in a `const`, it lints, and its one
+/// read of `ftle` is reported as a guard finding that names why it could not be checked.
+fn check_const_tier(declarations: &str, guard: &str) {
+    let source = format!(
+        "{declarations}\nfn colour(ctx: Ctx) -> f32 {{\n    if ({guard} && ctx.sample.ftle_valid) {{\n        \
+         return ctx.sample.ftle;\n    }}\n    return 0.0;\n}}\n"
+    );
+    let found = check_occupant_after(TIER_PREFIX, &source, Occupancy::Guarded, &BTreeSet::new())
+        .unwrap_or_else(|e| panic!("the occupant did not lint: {e}"));
+    assert!(
+        found.len() == 1
+            && found[0].rule == Rule::Guard
+            && found[0].line == Some(4)
+            && found[0].what.contains("its guard cannot be checked")
+            && found[0].what.contains("const"),
+        "the read under a const tier constant is not reported unchecked: {found:?}"
+    );
+}
+
+#[test]
+fn lint_wgsl_occupant_const_tier_is_reported_unchecked() {
+    check_const_tier("const USE_FTLE: bool = has_ftle;", "USE_FTLE");
+}
+
+negative_control!(
+    lint_wgsl_occupant_const_tier_is_reported_unchecked,
+    "the tier constant read in the branch condition itself, which the guard checks and finds guarded",
+    expected = "is not reported unchecked",
+    check_const_tier("", "has_ftle")
+);

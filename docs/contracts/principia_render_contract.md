@@ -134,7 +134,9 @@ Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §
   invalid colour by R-114's bitcast guard (R-79), and is not held to the guard for that value, `ctx.sample`'s, where
   `ctx` is the context the view is given; every other sample's `ftle` or `ensemble_spread` it reads, a `sample_read`
   result's among them, is held to it, so an aggregate over `ftle` in a debug view still excludes samples by `ftle_valid`
-  (R-255).
+  (R-255). The guard is read where `has_ftle` itself is read: an occupant that uses `has_ftle` in a `const` declaration
+  is not seen to be guarded, and the lint reports the first read of `ftle` or `ensemble_spread` in each of its functions
+  as unchecked.
 - **The exceptions**, each to the one rule it names, as Part 5, Part 6 or R-79's debug exception requires them: the
   field views of `r_sh` and `p_sh` and their direction-cosine reductions read the shadow (Part 6: a view per field, every
   struct); the structural views `debug/s_*` and the posts `fallback_tint` and `pending_hatch` read the scheduler's quad
