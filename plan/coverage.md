@@ -15,23 +15,23 @@
 | GEN | 34 |
 | SCHED | 96 |
 | REF | 51 |
-| RENDER | 85 |
-| COL | 67 |
+| RENDER | 86 |
+| COL | 68 |
 | GUI | 183 |
 | TOOL | 164 |
 | VAL | 181 |
 | PERF | 95 |
 | SYS | 80 |
-| **total** | **1377** |
+| **total** | **1379** |
 
-Of these: 118 calibration, 121 definition, 1138 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 118 calibration, 123 definition, 1138 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
 | M0 | 122 |
-| M1 | 103 |
+| M1 | 105 |
 | M2 | 162 |
 | M3 | 199 |
 | M4 | 104 |
