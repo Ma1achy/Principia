@@ -4,12 +4,17 @@
 //!   row by row (location, type, scale, range, sentinel or overflow); every member is `provenance: reduction` read by
 //!   the scheduler and the debug tooling; each f16 range lies within ±65504 or states its `overflow` (R-248). The
 //!   ranges of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift` (REQ-PAY-093) and
-//!   of `escape_time_min`, `escape_time_max`, `mean_orbit_count_spread` (RQ-268) are proposals awaiting the human;
-//!   the test holds the PR to what §3.7 declares, and changes with a ruling.
+//!   of `escape_time_min`, `escape_time_max`, `mean_orbit_count_spread` (added by R-418) are REQ-PAY-093's proposal,
+//!   confirmed by the human at the M5 gate; the test holds the PR to what §3.7 declares, and changes with a ruling.
+//!   R-418: the escape-time entries carry their no-escape values as sentinels, `escape_time_min` +∞ and
+//!   `escape_time_max` −∞ (each its reduction's identity), beside their `overflow: saturate`.
 //! - REQ-PAY-075 (R-410): the bin count is one bin per `class ⊕ detail` code, 2^(3+2) = 32, from `sample_descriptor`'s
 //!   `state` (bits 0–2) and `detail` (bits 3–4) (§3.1); each bin is a u32 whose range ends at 2³² − 1, holding
 //!   Extreme's provisional 16² × 16 = 4096; §3.7's former u8 bin fails at Medium's 16² × 2 = 512; §3.7 states the bound.
-//! - REQ-REF-006 / REQ-REF-052: the validity members and `n_unresolved` carry §3.7's types.
+//! - REQ-REF-006 / REQ-REF-052: the validity members and `n_unresolved` carry §3.7's types; R-418's no-escape pair
+//!   (binary16 `0x7c00` in `qr_w7`'s low half, `0xfc00` in its high half) reads +∞ and −∞ through the generated WGSL
+//!   accessors on the GPU, each its reduction's identity, "no escape" reads `_min > _max`, and the generated sentinel
+//!   tests fire on those bits only.
 //! - REQ-REF-007 / REQ-REF-008 / REQ-PAY-006: no `spread_t_end` and no CPU metadata anywhere in the ledger or the
 //!   generated WGSL struct; every WGSL member is a fixed-size scalar or the fixed 32-bin array.
 //! - REQ-PAY-089: naga lays the generated WGSL struct out at 176 B with §3.7's offsets; §3.7 and the docs citing it
@@ -88,6 +93,10 @@ enum Extra {
     Inf,
     Saturate,
     SentinelPosInf,
+    /// "sentinel +∞ · overflow saturate" (R-418).
+    SentinelPosInfSaturate,
+    /// "sentinel −∞ · overflow saturate" (R-418).
+    SentinelNegInfSaturate,
 }
 
 type Row = (&'static str, At, Ty, Scale, Bound, Bound, Extra);
@@ -261,7 +270,7 @@ fn table() -> Vec<Row> {
             Lin,
             Closed(0.0),
             Unbounded,
-            X::Saturate,
+            X::SentinelPosInfSaturate,
         ),
         (
             "escape_time_max",
@@ -270,7 +279,7 @@ fn table() -> Vec<Row> {
             Lin,
             Closed(0.0),
             Unbounded,
-            X::Saturate,
+            X::SentinelNegInfSaturate,
         ),
         (
             "retrograde_fraction",
@@ -337,6 +346,12 @@ fn as_row(e: &Entry) -> Row {
         (Some(Overflow::Inf), None) => Extra::Inf,
         (Some(Overflow::Saturate), None) => Extra::Saturate,
         (None, Some(s)) if s.to_bits() == INF.to_bits() => Extra::SentinelPosInf,
+        (Some(Overflow::Saturate), Some(s)) if s.to_bits() == INF.to_bits() => {
+            Extra::SentinelPosInfSaturate
+        }
+        (Some(Overflow::Saturate), Some(s)) if s.to_bits() == (-INF).to_bits() => {
+            Extra::SentinelNegInfSaturate
+        }
         other => panic!(
             "`{}` has sentinel · overflow {other:?}, not one §3.7's table uses",
             e.name
@@ -1271,4 +1286,283 @@ negative_control!(
         "fn qr_alpha_area(w: u32) -> f32 { return unpack2x16float(extractBits(w, 16u, 16u)).x; }",
         "fn qr_alpha_area(w: u32) -> f32 { return unpack2x16float(extractBits(w, 0u, 16u)).x; }"
     ))
+);
+
+negative_control!(
+    qa_quad_reduction_layout_escape_time_max_option_d,
+    "an escape_time_max sentinel of +∞ (RQ-268's option (d)) is not §3.7's −∞ row",
+    expected = "the ledger's `escape_time_max` is not §3.7's row",
+    {
+        let mut l = reduction::ledger();
+        let e = l
+            .entries
+            .iter_mut()
+            .find(|e| e.name == Some("escape_time_max"))
+            .unwrap();
+        *e = e.clone().sentinel(f64::INFINITY);
+        check_table(&l);
+    }
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// REQ-REF-006 / R-418 on the GPU: with no copy escaped, `qr_w7` holds binary16 +∞ (0x7c00) in its low half and −∞
+// (0xfc00) in its high half. The generated WGSL accessors read them as f32 +∞ and −∞; each is its reduction's
+// identity (min(+∞, t) = t, max(−∞, t) = t for every recorded time t, which saturation keeps finite); "no escape"
+// reads `_min > _max`, and no word holding a recorded escape does; the generated sentinel tests fire on those bits
+// only. The floats are compared on the CPU, from the bits the GPU returns: WGSL lets a shader assume no infinities,
+// so no comparison of ±∞ is made in the shader.
+
+/// binary16 `h`'s value by IEEE 754, written here from the definition, not the implementation's.
+fn half_value(h: u16) -> f64 {
+    let s = if h >> 15 == 1 { -1.0 } else { 1.0 };
+    let e = i32::from((h >> 10) & 0x1f);
+    let m = f64::from(h & 0x3ff);
+    s * match (e, m == 0.0) {
+        (0, _) => m * 2f64.powi(-24),
+        (31, true) => f64::INFINITY,
+        (31, false) => f64::NAN,
+        _ => (1.0 + m / 1024.0) * 2f64.powi(e - 15),
+    }
+}
+
+/// Recorded escape times as binary16 bits: 0, the smallest subnormal, 1, 204.75 and 65504 (an escape time past f16's
+/// range, saturated). Each is finite and ≥ 0, in `[0, ∞)` (§3.7).
+const ESCAPES: [u16; 5] = [0x0000, 0x0001, 0x3c00, 0x5a66, 0x7bff];
+
+fn escape_kernel() -> &'static str {
+    r"
+@group(0) @binding(0) var<storage, read> a: array<u32>;
+@group(0) @binding(1) var<storage, read_write> out: array<u32>;
+
+@compute @workgroup_size(64)
+fn qa_escape(@builtin(global_invocation_id) id: vec3<u32>) {
+    let i = id.x;
+    if i >= arrayLength(&a) { return; }
+    let w = a[i];
+    switch i % 4u {
+        case 0u: { out[i] = bitcast<u32>(qr_escape_time_min(w)); }
+        case 1u: { out[i] = bitcast<u32>(qr_escape_time_max(w)); }
+        case 2u: { out[i] = select(0u, 1u, qr_escape_time_min_is_sentinel(w)); }
+        default: { out[i] = select(0u, 1u, qr_escape_time_max_is_sentinel(w)); }
+    }
+}
+"
+}
+
+/// The no-escape word `none` and every word recording escapes (`_min` ≤ `_max`, both from [`ESCAPES`]) read through
+/// the WGSL `wgsl` on the GPU, checked against R-418.
+fn check_no_escape_gpu(wgsl: &str, none: u32) {
+    let mut words = vec![none];
+    for &lo in &ESCAPES {
+        for &hi in &ESCAPES {
+            if half_value(lo) <= half_value(hi) {
+                words.push(u32::from(hi) << 16 | u32::from(lo));
+            }
+        }
+    }
+    let input: Vec<u32> = words.iter().flat_map(|&w| [w; 4]).collect();
+    let gpu = GpuHarness::new().expect("a GPU device");
+    let got = gpu.run_wgsl(
+        &format!("{wgsl}\n{}", escape_kernel()),
+        "qa_escape",
+        &[&input],
+    );
+    for (k, &w) in words.iter().enumerate() {
+        let r = &got[4 * k..4 * k + 4];
+        let (min, max) = (f32::from_bits(r[0]), f32::from_bits(r[1]));
+        let (min_s, max_s) = (r[2] == 1, r[3] == 1);
+        if k == 0 {
+            assert_eq!(
+                (r[0], r[1]),
+                (0x7f80_0000, 0xff80_0000),
+                "no escape ({w:#010x}) does not read +∞ and −∞"
+            );
+            assert!(min > max, "no escape ({w:#010x}) does not read _min > _max");
+            for &t in &ESCAPES {
+                let t = half_value(t) as f32;
+                assert_eq!(
+                    (min.min(t).to_bits(), max.max(t).to_bits()),
+                    (t.to_bits(), t.to_bits()),
+                    "no escape's ({w:#010x}) pair is not the min and max reductions' identities at {t}"
+                );
+            }
+            assert!(
+                min_s && max_s,
+                "no escape ({w:#010x}) is not each escape time's sentinel"
+            );
+        } else {
+            let (lo, hi) = (half_value(w as u16), half_value((w >> 16) as u16));
+            assert_eq!(
+                (f64::from(min), f64::from(max)),
+                (lo, hi),
+                "WGSL reads {w:#010x}'s escape times as ({min}, {max})"
+            );
+            assert!(
+                min <= max,
+                "a recorded escape ({w:#010x}) reads _min > _max"
+            );
+            assert!(
+                !min_s && !max_s,
+                "a recorded escape ({w:#010x}) reads as an escape-time sentinel"
+            );
+        }
+    }
+}
+
+/// R-418's no-escape `qr_w7`: `_max`'s −∞ in the high half, `_min`'s +∞ in the low.
+const NO_ESCAPE: u32 = 0xfc00_7c00;
+
+#[test]
+fn qa_quad_reduction_members_no_escape_reads_identities_on_gpu() {
+    check_no_escape_gpu(&quad_wgsl(), NO_ESCAPE);
+}
+
+negative_control!(
+    qa_quad_reduction_members_no_escape_reads_identities_on_gpu,
+    "RQ-268's option (d), +∞ in both halves, is not escape_time_max's identity",
+    expected = "does not read +∞ and −∞",
+    check_no_escape_gpu(&quad_wgsl(), 0x7c00_7c00)
+);
+
+negative_control!(
+    qa_quad_reduction_members_no_escape_sentinel_test_bits,
+    "a WGSL escape_time_max sentinel test against +∞'s bits misses the no-escape word",
+    expected = "is not each escape time's sentinel",
+    check_no_escape_gpu(
+        &quad_wgsl().replace(
+            "const QR_ESCAPE_TIME_MAX_SENTINEL_BITS: u32 = 0xfc00u;",
+            "const QR_ESCAPE_TIME_MAX_SENTINEL_BITS: u32 = 0x7c00u;"
+        ),
+        NO_ESCAPE
+    )
+);
+
+negative_control!(
+    qa_quad_reduction_members_saturated_escape_is_no_sentinel,
+    "a WGSL escape_time_min sentinel test that reads only the exponent takes a NaN or saturated pattern for no escape",
+    expected = "reads as an escape-time sentinel",
+    check_no_escape_gpu(
+        &quad_wgsl().replace(
+            "fn qr_escape_time_min_is_sentinel(w: u32) -> bool { return extractBits(w, 0u, 16u) == QR_ESCAPE_TIME_MIN_SENTINEL_BITS; }",
+            "fn qr_escape_time_min_is_sentinel(w: u32) -> bool { return extractBits(w, 10u, 5u) >= 30u; }"
+        ),
+        NO_ESCAPE
+    )
+);
+
+// ---------------------------------------------------------------------------------------------------------------
+// REQ-REF-006 / R-418: an f16 member's sentinel is generated as its exact binary16 bits, in both languages, or the
+// build is refused naming the member. Checked over binary16 patterns across the whole range, decoded by
+// `half_value` above, not by the generator's own conversion.
+
+/// The emitted sentinel constant of `escape_time_min` in `src` after `prefix`, parsed as a hex number.
+fn emitted_bits(src: &str, prefix: &str) -> Option<u32> {
+    let rest = &src[src.find(prefix)? + prefix.len()..];
+    let hex = rest.trim_start().strip_prefix("0x")?;
+    let digits: String = hex
+        .chars()
+        .take_while(|c| c.is_ascii_hexdigit() || *c == '_')
+        .filter(|c| *c != '_')
+        .collect();
+    u32::from_str_radix(&digits, 16).ok()
+}
+
+/// `escape_time_min` given the sentinel `value` emits a constant that decodes to `value` exactly, the same in Rust and
+/// WGSL, or, where no binary16 value equals it, a refusal in both naming the member.
+fn check_sentinel_exact(value: f64) {
+    let mut l = reduction::ledger();
+    let e = l
+        .entries
+        .iter_mut()
+        .find(|e| e.name == Some("escape_time_min"))
+        .unwrap();
+    *e = e.clone().sentinel(value);
+    let files = reduction::files(&l, &reduction::quad_reduction());
+    let rust = files
+        .iter()
+        .find(|f| f.path.extension() == Some("rs".as_ref()))
+        .expect("a Rust file");
+    let wgsl = files
+        .iter()
+        .find(|f| f.path.extension() == Some("wgsl".as_ref()))
+        .expect("a WGSL file");
+    let r = emitted_bits(&rust.contents, "QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 =");
+    let w = emitted_bits(&wgsl.contents, "QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 =");
+    // NaN is never held: storage holds no NaN sentinel (R-79).
+    let held =
+        !value.is_nan() && (0..=u16::MAX).any(|h| half_value(h).to_bits() == value.to_bits());
+    if held {
+        let r = r.unwrap_or_else(|| panic!("the sentinel {value:?} emits no Rust constant"));
+        assert_eq!(
+            Some(r),
+            w,
+            "Rust and WGSL emit different bits for {value:?}"
+        );
+        assert!(
+            r <= 0xffff,
+            "the sentinel {value:?} emits {r:#x}, wider than binary16"
+        );
+        assert_eq!(
+            half_value(r as u16).to_bits(),
+            value.to_bits(),
+            "the sentinel {value:?} emits {r:#06x}, which is {}",
+            half_value(r as u16)
+        );
+    } else {
+        assert!(
+            r.is_none()
+                && w.is_none()
+                && rust.contents.contains("compile_error!(\"`escape_time_min`")
+                && wgsl.contents.contains("const_assert false; // `escape_time_min`"),
+            "the sentinel {value:?}, which binary16 does not hold, is not refused naming the member"
+        );
+    }
+}
+
+#[test]
+fn qa_quad_reduction_members_f16_sentinel_exact_binary16() {
+    // ±∞ (R-418's pair), ±0, every 997th pattern across both signs (NaN patterns skipped: R-79 stores no NaN
+    // sentinel), and values binary16 does not hold: one between two neighbours, one past 65504, one below 2⁻²⁴, NaN.
+    let mut values = vec![f64::INFINITY, f64::NEG_INFINITY, 0.0, -0.0];
+    values.extend(
+        (0..=u16::MAX)
+            .step_by(997)
+            .map(half_value)
+            .filter(|v| !v.is_nan()),
+    );
+    values.extend([1.0 + 2f64.powi(-11), 65520.0, 2f64.powi(-26), f64::NAN]);
+    for v in values {
+        check_sentinel_exact(v);
+    }
+}
+
+negative_control!(
+    qa_quad_reduction_members_f16_sentinel_exact_binary16,
+    "a generator writing the f32 bits' top half (0x3f80 for 1.0, not binary16's 0x3c00) is caught",
+    expected = "emits 0x3f80",
+    {
+        let mut l = reduction::ledger();
+        let e = l
+            .entries
+            .iter_mut()
+            .find(|e| e.name == Some("escape_time_min"))
+            .unwrap();
+        *e = e.clone().sentinel(1.0);
+        let files = reduction::files(&l, &reduction::quad_reduction());
+        let rust = files
+            .iter()
+            .find(|f| f.path.extension() == Some("rs".as_ref()))
+            .unwrap();
+        let wrong = rust.contents.replace(
+            "QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 = 0x3c00",
+            "QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 = 0x3f80",
+        );
+        let r = emitted_bits(&wrong, "QR_ESCAPE_TIME_MIN_SENTINEL_BITS: u32 =").unwrap();
+        assert_eq!(
+            half_value(r as u16).to_bits(),
+            1f64.to_bits(),
+            "the sentinel 1.0 emits {r:#06x}, which is {}",
+            half_value(r as u16)
+        );
+    }
 );
