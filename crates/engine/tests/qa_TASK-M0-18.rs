@@ -10,7 +10,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use engine::contract::canonical;
-use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
@@ -34,7 +34,7 @@ fn sim() -> SimConfig {
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
-        horizon: Horizon {},
+        horizon: Horizon { t: 0.0 },
         collision: Collision {},
         quality: Quality {},
     }
@@ -43,20 +43,26 @@ fn sim() -> SimConfig {
 fn render() -> RenderState {
     RenderState {
         stain_graph: StainGraph {},
-        overlays: Overlays {},
+        overlays: Overlays::default(),
+        hover: Hover::default(),
         palette: Palette {},
         playhead: Playhead { t: 0.0 },
     }
 }
 
 /// The M0 skeleton's canonical text, by §2's rules: its groups' names in byte order, each group `{}` but for the
-/// plane and the lock (R-390), whose members are in byte order too, all zero and unlocked.
+/// plane and the lock (R-390), whose members are in byte order too, all zero and unlocked, and, since TASK-M6-27, the
+/// horizon's `t`, the hover's `at` (null) and the overlay set's fourteen toggles, all off, each in byte order (R-390).
 const SIM_TEXT: &str =
-    "{\"chart\":{},\"collision\":{},\"horizon\":{},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{},\
+    "{\"chart\":{},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
 \"plane\":{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]},\"quality\":{},\"slice\":{}}";
-const RENDER_TEXT: &str =
-    "{\"overlays\":{},\"palette\":{},\"playhead\":{\"t\":0},\"stain_graph\":{}}";
+const RENDER_TEXT: &str = "{\"hover\":{\"at\":null},\
+\"overlays\":{\"burrau_lattice\":false,\"class_edges\":false,\"depth_colouring\":false,\"energy_drift\":false,\
+\"forbidden_region\":false,\"grid\":false,\"nan_invalid_pixels\":false,\"priority_heatmap\":false,\
+\"refine_flagged\":false,\"split_merge_activity\":false,\"substep_cap_hits\":false,\"substep_density\":false,\
+\"t_end_contours\":false,\"tile_bounds\":false},\
+\"palette\":{},\"playhead\":{\"t\":0},\"stain_graph\":{}}";
 
 fn check_skeleton(sim_text: &str, render_text: &str) {
     assert_eq!(
@@ -104,7 +110,7 @@ validation::negative_control!(
     check_skeleton(
         "{\"chart\":{},\"plane\":{\"z0\":[0,0,0,0,0,0,0,0],\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0]},\"slice\":{},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\"links\":{},\"integrator\":{},\
-\"kernel_variant\":\"physics\",\"horizon\":{},\"collision\":{},\"quality\":{}}",
+\"kernel_variant\":\"physics\",\"horizon\":{\"t\":0},\"collision\":{},\"quality\":{}}",
         RENDER_TEXT
     )
 );

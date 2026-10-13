@@ -25,7 +25,7 @@ use engine::contract::profile::{
     Event, Flush, FrameRecord, LiveMemory, PoolLive, Scope, SessionHeader, StageMs, StageSections,
     Stages, Stream,
 };
-use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
     Slice,
@@ -227,15 +227,16 @@ pub(crate) fn skeleton() -> (SimConfig, RenderState) {
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
-        horizon: Horizon {},
+        horizon: Horizon { t: 0.0 },
         collision: Collision {},
         quality: Quality {},
     };
     let render = RenderState {
         stain_graph: StainGraph {},
-        overlays: Overlays {},
+        overlays: Overlays::default(),
         palette: Palette {},
         playhead: Playhead { t: 0.0 },
+        hover: Hover::default(),
     };
     (sim, render)
 }

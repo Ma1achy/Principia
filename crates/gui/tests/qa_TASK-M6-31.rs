@@ -124,12 +124,16 @@ impl Rig {
         self.app.snapshot().clone()
     }
 
-    /// The SetFields the engine has applied so far: its `contract` log entries.
+    /// The SetFields the engine has applied so far: its `contract` log entries, less the hover's. Since TASK-M6-27 a
+    /// pointer over the figure writes the cursor, `Hover.at`, as a no-history SetField (gui_state_contract §2; R-101),
+    /// which the rig's pointer moves add to any gesture; it is no edit of the compass, the plane or the lock.
     fn applied(&self) -> usize {
         self.app
             .console()
             .iter()
-            .filter(|e| e.source == Source::Contract)
+            .filter(|e| {
+                e.source == Source::Contract && !e.message.starts_with("SetField Hover.at ")
+            })
             .count()
     }
 

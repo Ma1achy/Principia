@@ -17,8 +17,9 @@
 //! A case's `surface` names its kind (R-274; RQ-253): a path, as above, is a `data` surface; an object
 //! `{ "kind": "gui", "screen": "01_main", "steps": [...] }` is a screen of the dev GUI itself, whose steps are a closed
 //! list (`f3`, `raise_warning`, `raise_error`, `click_footer`, and the keyboard's `tab`, `shift_tab`, `enter`,
-//! `escape`, `arrow_up`, `arrow_down`, `arrow_left`, `arrow_right` and `shortcuts`, and the Manifold view's
-//! `shift_arrow_up`, `shift_arrow_right` and `lock`). For a `gui` surface the runner
+//! `escape`, `arrow_up`, `arrow_down`, `arrow_left`, `arrow_right` and `shortcuts`, the Manifold view's
+//! `shift_arrow_up`, `shift_arrow_right` and `lock`, and Time's, the Overlays menu's and the hover's `hover`, `alt_1`
+//! and `space`). For a `gui` surface the runner
 //! spawns gui's headless capture mode,
 //! `cargo run --quiet -p gui --features mock -- capture --screen … --steps … --out <case dir>`, as `gate`
 //! spawns validation's binary (no crate depends on `gui`, systems_architecture §7.1), which runs the app on the mock
@@ -148,6 +149,13 @@ pub enum GuiStep {
     ShiftArrowRight,
     /// Press K over a point of the figure: lock there.
     Lock,
+    /// Move the pointer over a point of the figure: the hover.
+    Hover,
+    /// Press Alt+1: toggle tile bounds.
+    #[serde(rename = "alt_1")]
+    Alt1,
+    /// Press Space.
+    Space,
 }
 
 impl GuiStep {
@@ -170,6 +178,9 @@ impl GuiStep {
             GuiStep::ShiftArrowUp => "shift_arrow_up",
             GuiStep::ShiftArrowRight => "shift_arrow_right",
             GuiStep::Lock => "lock",
+            GuiStep::Hover => "hover",
+            GuiStep::Alt1 => "alt_1",
+            GuiStep::Space => "space",
         }
     }
 }
