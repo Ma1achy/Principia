@@ -163,9 +163,14 @@ fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
             "{{\"frames\":{},",
-            "\"render\":{{\"overlays\":{{}},\"palette\":{{}},\"playhead\":{{\"t\":0}},\"stain_graph\":{{}}}},",
+            "\"render\":{{\"hover\":{{\"at\":null}},",
+            "\"overlays\":{{\"burrau_lattice\":false,\"class_edges\":false,\"depth_colouring\":false,",
+            "\"energy_drift\":false,\"forbidden_region\":false,\"grid\":false,\"nan_invalid_pixels\":false,",
+            "\"priority_heatmap\":false,\"refine_flagged\":false,\"split_merge_activity\":false,",
+            "\"substep_cap_hits\":false,\"substep_density\":false,\"t_end_contours\":false,\"tile_bounds\":false}},",
+            "\"palette\":{{}},\"playhead\":{{\"t\":0}},\"stain_graph\":{{}}}},",
             "\"scenario\":\"synthetic_frames\",",
-            "\"sim\":{{\"chart\":{{}},\"collision\":{{}},\"horizon\":{{}},\"integrator\":{{}},",
+            "\"sim\":{{\"chart\":{{}},\"collision\":{{}},\"horizon\":{{\"t\":0}},\"integrator\":{{}},",
             "\"kernel_variant\":\"physics\",\"links\":{{}},",
             "\"lock\":{{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]}},",
             "\"plane\":{{\"q1\":[0,0,0,0,0,0,0,0],\"q2\":[0,0,0,0,0,0,0,0],\"z0\":[0,0,0,0,0,0,0,0]}},",

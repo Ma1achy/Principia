@@ -31,7 +31,7 @@ use eframe::egui::{self, Event, FontFamily, FontId, Key, Modifiers};
 use engine::contract::conformance::{self, CASES};
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{Severity, Source};
-use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
@@ -91,13 +91,14 @@ fn state() -> (SimConfig, RenderState) {
             links: Links {},
             integrator: Integrator {},
             kernel_variant: KernelVariant::Physics,
-            horizon: Horizon {},
+            horizon: Horizon { t: 0.0 },
             collision: Collision {},
             quality: Quality {},
         },
         RenderState {
             stain_graph: StainGraph {},
-            overlays: Overlays {},
+            overlays: Overlays::default(),
+            hover: Hover::default(),
             palette: Palette {},
             playhead: Playhead { t: 0.0 },
         },
