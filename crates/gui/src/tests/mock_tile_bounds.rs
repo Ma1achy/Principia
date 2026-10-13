@@ -415,6 +415,16 @@ fn mock_tile_bounds_pixels_change_in_the_figure_only() {
     rejects("bounds that change nothing", || {
         assert!(changed(&off, &off).0 > 1000)
     });
+    // Drawn as lines, one pixel wide, they change a small part of the figure (about 4% here); filled, as triangles
+    // between their ends, they would change about a third of it.
+    let figure = (px(f.max.x) - px(f.min.x)) * (px(f.max.y) - px(f.min.y));
+    assert!(
+        inside < figure / 10,
+        "the bounds are lines: {inside} of {figure} pixels"
+    );
+    rejects("bounds filled as triangles", || {
+        assert!(321_201 < figure / 10)
+    });
 }
 
 // --- The fake quadtree ------------------------------------------------------------------------------------------------

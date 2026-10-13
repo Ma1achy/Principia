@@ -99,8 +99,9 @@ pub fn sample(plane: &Plane, at: [f64; 2], t: f64, t_max: f64) -> Sample {
             .map(|tau| {
                 let angle = omega * tau + std::f64::consts::TAU * k as f64 / 3.0;
                 let mut r = 1.0 + 0.35 * (2.3 * tau + k as f64).sin();
-                if escaping == Some(k) && tau > end * 0.7 {
-                    r += 0.4 * (tau - end * 0.7);
+                if escaping == Some(k) {
+                    // The escaping body drifts out from 70% of its end on.
+                    r += 0.4 * (tau - end * 0.7).max(0.0);
                 }
                 [r * angle.cos(), 0.7 * r * angle.sin()]
             })
@@ -152,8 +153,8 @@ pub fn alpha(distance: f64, half_span: f64) -> f32 {
 /// A unit direction out of `plane`'s span: the first axis with a part off both basis vectors, made orthogonal to them.
 pub fn out_of_plane(plane: &Plane) -> Option<Latent> {
     let (q1, q2) = (&plane.q1, &plane.q2);
-    let (n1, n2) = (norm(q1), norm(q2));
-    if n1 == 0.0 || n2 == 0.0 {
+    let n1 = norm(q1);
+    if n1 == 0.0 {
         return None;
     }
     let e1 = q1.map(|x| x / n1);
@@ -163,12 +164,19 @@ pub fn out_of_plane(plane: &Plane) -> Option<Latent> {
         return None;
     }
     let e2 = r2.map(|x| x / m2);
-    (0..8).rev().find_map(|i| {
+    // The axis whose part off the span is largest, the last of equals: of eight axes and a span of two, at least one
+    // has a part of length √(6/8) or more, so the residual is never zero.
+    let mut best = (0.0, [0.0; 8]);
+    for i in 0..8 {
         let axis: Latent = std::array::from_fn(|j| if j == i { 1.0 } else { 0.0 });
         let r = add(&add(&axis, -dot(&axis, &e1), &e1), -dot(&axis, &e2), &e2);
         let m = norm(&r);
-        (m > 1e-6).then(|| r.map(|x| x / m))
-    })
+        if m >= best.0 {
+            best = (m, r);
+        }
+    }
+    let (m, r) = best;
+    Some(r.map(|x| x / m))
 }
 
 /// The hover path of the IC at `at` on `plane`: a fake `z(τ)` through the manifold, a loop about the IC that leaves the
@@ -185,17 +193,17 @@ pub fn hover_path(plane: &Plane, at: [f64; 2]) -> Vec<PathPoint> {
     (0..HOVER_POINTS)
         .filter_map(|i| {
             let tau = std::f64::consts::TAU * i as f64 / (HOVER_POINTS - 1) as f64;
+            let distance = size * tilt * (1.0 - tau.cos());
             let z = add(
                 &add(
                     &add(&ic, size * tau.sin(), &plane.q1.map(|x| x / half_span)),
                     size * 0.6 * (2.0 * tau).sin(),
                     &plane.q2.map(|x| x / norm(&plane.q2)),
                 ),
-                size * tilt * (1.0 - tau.cos()),
+                distance,
                 &n,
             );
             let (s, t) = chart_coords(plane, &z)?;
-            let distance = size * tilt * (1.0 - tau.cos());
             Some(PathPoint {
                 at: [s, t],
                 alpha: alpha(distance, half_span),

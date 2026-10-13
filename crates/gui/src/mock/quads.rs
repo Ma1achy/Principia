@@ -27,9 +27,7 @@ pub type Quad = [f64; 4];
 /// The figure point `(s, t)` of the in-plane point `(u, v)` of `plane`, or `None` for a degenerate basis.
 pub fn on_figure(plane: &Plane, (u, v): (f64, f64)) -> Option<[f64; 2]> {
     let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
-    if n1 == 0.0 || n2 == 0.0 {
-        return None;
-    }
+    // A degenerate basis divides by zero here, and `chart_coords` gives `None` for it before reading `z`.
     let z: Latent = add(&plane.q1.map(|x| u * x / n1), v / n2, &plane.q2);
     chart_coords(plane, &z).map(|(s, t)| [s, t])
 }
@@ -51,15 +49,13 @@ pub fn near_frontier(quad: &Quad) -> bool {
 /// The figure's span in `(u, v)`: the visible square, centre `z₀`'s in-plane point and half-width `|q₁|`.
 fn view_of(plane: &Plane) -> Option<Quad> {
     let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
-    if n1 == 0.0 || n2 == 0.0 {
-        return None;
-    }
+    // `in_plane` gives `None` for a degenerate basis.
     let (u, v) = crate::explore::manifold_view::in_plane(plane, &plane.z0)?;
     Some([u - n1, v - n2, u + n1, v + n2])
 }
 
 /// Whether two quads overlap.
-fn overlaps(a: &Quad, b: &Quad) -> bool {
+pub fn overlaps(a: &Quad, b: &Quad) -> bool {
     a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
 }
 

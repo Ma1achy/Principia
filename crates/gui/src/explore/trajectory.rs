@@ -264,11 +264,13 @@ pub fn remove(i: usize, kept: &mut KeptOrbits, scratch: &mut Scratch) {
         return;
     }
     kept.orbits.remove(i);
-    scratch.tab = match scratch.tab {
-        Tab::Kept(j) if j == i => Tab::UnderCursor,
-        Tab::Kept(j) if j > i => Tab::Kept(j - 1),
-        tab => tab,
-    };
+    if let Tab::Kept(j) = scratch.tab {
+        scratch.tab = match j.cmp(&i) {
+            std::cmp::Ordering::Equal => Tab::UnderCursor,
+            std::cmp::Ordering::Greater => Tab::Kept(j - 1),
+            std::cmp::Ordering::Less => Tab::Kept(j),
+        };
+    }
 }
 
 /// Enter on the panel's control `id`, as its click.
@@ -355,6 +357,12 @@ pub fn unwrapped_point(rect: Rect, [theta, phi]: [f64; 2]) -> Pos2 {
         rect.min.x + x * rect.width(),
         rect.min.y + y * rect.height(),
     )
+}
+
+/// The orbit playhead slider's width in a row `available` points wide: the row less 70 points for its play button and
+/// time readout, but never under 40 points (a look choice, R-390).
+pub fn playhead_width(available: f32) -> f32 {
+    (available - 70.0).max(40.0)
 }
 
 /// Whether a step from `a` to `b` of the unwrapped path wraps across `θ`'s seam, and so is not drawn.
@@ -692,7 +700,7 @@ fn rows(ui: &mut Ui, rect: Rect, orbit: Option<&Sample>, panel: &mut Panel<'_>) 
         if play.clicked() {
             scratch.playing = !scratch.playing;
         }
-        row.spacing_mut().slider_width = (row.available_width() - 70.0).max(40.0);
+        row.spacing_mut().slider_width = playhead_width(row.available_width());
         let mut t = scratch.orbit_t.min(span);
         let slider =
             row.add(Slider::new(&mut t, 0.0..=span.max(f64::MIN_POSITIVE)).show_value(false));
