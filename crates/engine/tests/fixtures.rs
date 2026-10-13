@@ -17,7 +17,8 @@ use kernel::payload::roundtrip::{roundtrip_ctl, PackedA};
 use kernel::payload::{
     canonical_nan, f16_bits_to_f32, fgw_length_raw, pb_dE_max, pb_dLz_max, sd_detail, sd_dmin_pair,
     sd_last_symbol, sd_saturated, sd_state, sim_state_from_ftle, tm_t_dmin_step, tm_t_end_step,
-    ReadParams, PACKED_A_RESERVED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_SIM_FAILED,
+    ReadParams, PACKED_A_RESERVED, STATE_COLLISION, STATE_DECODE_FAILED, STATE_ESCAPE,
+    STATE_SIM_FAILED,
 };
 use ledger::gen::rust::offsets;
 use ledger::schema::Storage;
@@ -240,6 +241,39 @@ negative_control!(
         let mut rows = known("set_state");
         rows[2].d_min = kernel::payload::f32_to_f16_bits(2.5e-3);
         check_collision_d_min("set_state", &rows);
+    }
+);
+
+/// Checks that each escape of `rows` outside the adversarial descriptor comes once the settling window could complete:
+/// escape needs a full window of history (payload §2, R-29), 0.4 time units, so at least 40 steps at the harness's
+/// `dt_macro` 0.01.
+fn check_escape_window(name: &str, rows: &[Known]) {
+    for (i, k) in (0u32..).zip(rows) {
+        if k.state == STATE_ESCAPE && k.descriptor.is_none() {
+            assert!(
+                k.t_end_step >= 40,
+                "`{name}` sample {i}: an escape at step {} comes before the settling window completes",
+                k.t_end_step
+            );
+        }
+    }
+}
+
+#[test]
+fn fixtures_escapes_complete_the_settling_window() {
+    for name in NAMES {
+        check_escape_window(name, &known(name));
+    }
+}
+
+negative_control!(
+    fixtures_escapes_complete_the_settling_window,
+    "an escape at step 39, one short of the window, fails the check",
+    expected = "before the settling window completes",
+    {
+        let mut rows = known("known_escaper");
+        rows[4].t_end_step = 39;
+        check_escape_window("known_escaper", &rows);
     }
 );
 

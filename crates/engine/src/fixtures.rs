@@ -4,8 +4,9 @@
 //! samples, one row of [`Known`](crate::fixtures::Known) values each, so the tests assert on the same table the fill
 //! writes:
 //! - `set_state`: each `state` code set, 0–5 and the reserved 6 and 7 (payload §2), on samples otherwise plain;
-//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape, beside a bounded, a colliding
-//!   and a running sample;
+//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows,
+//!   at step 40 (R-29's 0.4 window at the harness's `dt_macro` 0.01), beside a bounded, a colliding and a running
+//!   sample;
 //! - `energy_drift_ramp`: one configuration whose current energy drift `H(r, p) − E_0` (payload §5) rises in even
 //!   steps across the row;
 //! - `adversarial_descriptor`: `packed_a` written whole, its descriptor bits all clear, all set and alternating, each
@@ -161,7 +162,9 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
             plain(STATE_ESCAPE, 1, 250, 2, d4),
             plain(STATE_ESCAPE, 2, 515, 0, d6),
             plain(STATE_ESCAPE, 3, 999, 1, d9),
-            plain(STATE_ESCAPE, 1, 1, 0, d17),
+            // The earliest escape: escape needs a full settling window (payload §2, R-29), 0.4 time units, 40 steps
+            // at the harness's `dt_macro` 0.01.
+            plain(STATE_ESCAPE, 1, 40, 0, d17),
             plain(STATE_BOUNDED, 0, 1000, 2, d1),
             plain(STATE_COLLISION, 0, 40, 0, d0006),
             plain(STATE_RUNNING, 0, 20, 1, d4),

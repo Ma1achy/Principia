@@ -59,8 +59,8 @@
 //! fixture of `engine::fixtures`, whose accessor tests read the same table (`engine/tests/fixtures.rs`), through a view
 //! that shows the value it sets ([`SYNTHETIC_SCENES`]):
 //! - `set_state`: each `state` code, 0–5 and the reserved 6 and 7, on the `state` view;
-//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape, beside a bounded, a colliding
-//!   and a running sample, on the outcome palette (colour_composition §1.4);
+//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows,
+//!   at step 40, beside a bounded, a colliding and a running sample, on the outcome palette (colour_composition §1.4);
 //! - `energy_drift_ramp`: a ramp in the current energy drift, on the `energy_drift` view, its values literal;
 //! - `adversarial_state`, `adversarial_detail`, `adversarial_saturated`, `adversarial_dmin_pair`,
 //!   `adversarial_last_symbol`: the bitwise-adversarial descriptor, written whole, on each sub-field view, so each
