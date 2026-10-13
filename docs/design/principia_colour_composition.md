@@ -387,11 +387,14 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   its phase in turns. A magnitude field is not a hue carrier: the bivariate family puts it in the brightness slot,
   and greyscale mode is its reading.
 - **What every mode keeps (R-399; §3).** A sample the field holds no value for keeps its own style in every mode,
-  never a place on the greyscale or the wheel: a `running` sample the "not yet" style, `debug_not_yet(frag_xy)`, and a
-  `sim_failed` sample, a reserved `state` code or a NaN the invalid pattern, `debug_invalid(frag_xy)`, as the outcome
-  palette draws them (§1.4). Hue mode's colour occupant draws them itself, as the palette does. Greyscale mode's
-  brightness slot carries a lightness and can draw neither pattern, so the mode ends in one post (§4.2) that draws
-  each style at those samples over the combiner's output and passes every other sample's colour on unchanged.
+  never a place on the greyscale or the wheel: a `running` sample of a field that holds no value for it, as the
+  outcome class holds none (R-96), the "not yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a
+  reserved `state` code or a NaN the invalid pattern, `debug_invalid(frag_xy)`, as the outcome palette draws them
+  (§1.4). A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in
+  every mode, so a progressive render shows the field as it fills. Hue mode's colour occupant draws the styles
+  itself, as the palette does. Greyscale mode's brightness slot carries a lightness and can draw neither pattern, so
+  the mode ends in one post (§4.2) that draws each style at those samples over the combiner's output and passes every
+  other sample's colour on unchanged.
 
 ### 4.2 Post chain
 
