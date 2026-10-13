@@ -386,6 +386,7 @@ impl ChartConstants for D {
     const EPS_Q: D = k(<f64 as ChartConstants>::EPS_Q);
     const DELTA_LAMBDA: D = k(<f64 as ChartConstants>::DELTA_LAMBDA);
     const EPS_W: D = k(<f64 as ChartConstants>::EPS_W);
+    const EPS_M01: D = k(<f64 as ChartConstants>::EPS_M01);
 }
 
 /// The registry's literals at the dual number: f64's, with zero derivative.
