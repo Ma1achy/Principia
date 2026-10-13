@@ -450,7 +450,7 @@ fn mock_time_drawn_ticks_under_the_scrubber() {
 
 #[test]
 fn mock_hover_drawn_geometry_in_numbers() {
-    use crate::explore::trajectory::{MARGIN, SUMMARY_H, TITLE_H, VIEW_FRACTION};
+    use crate::explore::trajectory::{MARGIN, REST_ANGLE_DEG, SUMMARY_H, TITLE_H, VIEW_FRACTION};
     // The panel's regions, for a 400 × 800 panel at (10, 20): the body 376 × 776 inside the margin, the views a quarter
     // of its height, 194.
     let a = areas(Rect::from_min_size(pos2(10.0, 20.0), vec2(400.0, 800.0)));
@@ -487,18 +487,25 @@ fn mock_hover_drawn_geometry_in_numbers() {
     rejects("views a third of the height", || {
         assert_eq!(a.real.height(), 776.0 / 3.0)
     });
-    // The sphere seen from its tilt: the axes' screen points and depths.
+    // The sphere seen from its tilt: the axes' screen points and depths, turned from its resting azimuth.
     let (st, ct) = 20f64.to_radians().sin_cos();
     let close = |(p, d): ([f64; 2], f64), (q, e): ([f64; 2], f64)| {
         (p[0] - q[0]).abs() < 1e-12 && (p[1] - q[1]).abs() < 1e-12 && (d - e).abs() < 1e-12
     };
-    assert!(close(view([1.0, 0.0, 0.0], 0.0), ([1.0, 0.0], 0.0)));
-    assert!(close(view([0.0, 1.0, 0.0], 0.0), ([0.0, st], -ct)));
-    assert!(close(view([0.0, 0.0, 1.0], 0.0), ([0.0, ct], st)));
-    assert!(close(view([1.0, 0.0, 0.0], 90.0), ([0.0, st], -ct)));
-    assert!(close(view([0.0, 1.0, 0.0], 90.0), ([-1.0, 0.0], 0.0)));
+    let r0 = -REST_ANGLE_DEG;
+    assert!(close(view([1.0, 0.0, 0.0], r0), ([1.0, 0.0], 0.0)));
+    assert!(close(view([0.0, 1.0, 0.0], r0), ([0.0, st], -ct)));
+    assert!(close(view([0.0, 0.0, 1.0], r0), ([0.0, ct], st)));
+    assert!(close(view([1.0, 0.0, 0.0], r0 + 90.0), ([0.0, st], -ct)));
+    assert!(close(view([0.0, 1.0, 0.0], r0 + 90.0), ([-1.0, 0.0], 0.0)));
     rejects("an untilted view", || {
-        assert!(close(view([0.0, 0.0, 1.0], 0.0), ([0.0, 1.0], 0.0)))
+        assert!(close(view([0.0, 0.0, 1.0], r0), ([0.0, 1.0], 0.0)))
+    });
+    // At rest the sphere sits at its resting azimuth: x at (cos 35°, sin 35° sin 20°).
+    let (sr, cr) = 35f64.to_radians().sin_cos();
+    assert!(close(view([1.0, 0.0, 0.0], 0.0), ([cr, sr * st], -sr * ct)));
+    rejects("a rest at azimuth 0", || {
+        assert!(close(view([1.0, 0.0, 0.0], 0.0), ([1.0, 0.0], 0.0)))
     });
     // The square's points: the unit square on the rect's largest centred square, y up.
     let r = Rect::from_min_size(pos2(0.0, 0.0), vec2(200.0, 100.0));

@@ -37,6 +37,9 @@ pub const TURN_DEG_PER_S: f64 = 12.0;
 /// The sphere's view: its pole tilted this far toward the viewer, in degrees, so all three axes show (a look choice,
 /// R-390).
 pub const SPHERE_TILT_DEG: f64 = 20.0;
+/// The sphere's resting azimuth, in degrees, from which it turns: oblique, as 01_main.png draws it, so neither x nor y
+/// lies on z's screen line and all three axes show apart (a look choice, R-390).
+pub const REST_ANGLE_DEG: f64 = 35.0;
 /// The most orbits kept; keeping one more drops the oldest (a look choice, R-390).
 pub const MAX_KEPT: usize = 9;
 
@@ -334,11 +337,11 @@ pub fn on_sphere([theta, phi]: [f64; 2]) -> [f64; 3] {
     [phi.sin() * theta.cos(), phi.sin() * theta.sin(), phi.cos()]
 }
 
-/// `p` of the sphere turned `angle` degrees about its pole and seen with the pole tilted [`SPHERE_TILT_DEG`] toward
-/// the viewer: its screen point `(x, y)`, `y` up, each in `[−1, 1]`, and its depth toward the viewer, ≥ 0 on the near
-/// side.
+/// `p` of the sphere turned `angle` degrees about its pole past its resting azimuth [`REST_ANGLE_DEG`], and seen with
+/// the pole tilted [`SPHERE_TILT_DEG`] toward the viewer: its screen point `(x, y)`, `y` up, each in `[−1, 1]`, and its
+/// depth toward the viewer, ≥ 0 on the near side.
 pub fn view(p: [f64; 3], angle: f64) -> ([f64; 2], f64) {
-    let (sa, ca) = angle.to_radians().sin_cos();
+    let (sa, ca) = (angle + REST_ANGLE_DEG).to_radians().sin_cos();
     let (st, ct) = SPHERE_TILT_DEG.to_radians().sin_cos();
     let x = p[0] * ca - p[1] * sa;
     let y = p[0] * sa + p[1] * ca;

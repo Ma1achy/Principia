@@ -590,6 +590,38 @@ fn mock_hover_sphere_turns_the_same_at_any_frame_rate() {
     assert_eq!(app.trajectory.angle, 0.0);
 }
 
+/// The least angle, in degrees, between the screen directions of the sphere's x, y and z axes seen at `angle`.
+fn least_axis_separation(angle: f64) -> f64 {
+    let dirs: Vec<f64> = (0..3)
+        .map(|k| {
+            let tip = std::array::from_fn(|i| if i == k { 1.0 } else { 0.0 });
+            let ([x, y], _) = view(tip, angle);
+            y.atan2(x).to_degrees()
+        })
+        .collect();
+    let mut least = f64::INFINITY;
+    for (i, a) in dirs.iter().enumerate() {
+        for b in &dirs[i + 1..] {
+            let d = (a - b).rem_euclid(360.0);
+            least = least.min(d.min(360.0 - d));
+        }
+    }
+    least
+}
+
+#[test]
+fn mock_hover_sphere_axes_show_apart_at_rest() {
+    // At rest (the turn's start, and every capture) the three axes point well apart on screen, none hidden on another.
+    assert_eq!(Scratch::default().angle, 0.0);
+    let least = least_axis_separation(0.0);
+    assert!(least > 45.0, "the axes {least}° apart at rest");
+    // The resting azimuth itself: the look choice, oblique.
+    assert_eq!(trajectory::REST_ANGLE_DEG, 35.0);
+    rejects("a rest at azimuth 0, y on z's line", || {
+        assert!(least_axis_separation(-trajectory::REST_ANGLE_DEG) > 45.0)
+    });
+}
+
 #[test]
 fn mock_hover_trajectory_geometry() {
     // The sphere: n = (sin φ cos θ, sin φ sin θ, cos φ).
