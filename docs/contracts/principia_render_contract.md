@@ -121,13 +121,13 @@ Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §
 - **Guarded** (REQ-RENDER-015; Part 2; R-255): in a colour, brightness, combiner or post occupant that is not a debug
   view, every use of a read of `ftle` (returning it, storing it, passing it to a function, branching on it, an
   aggregate's accumulation among them) sits where `has_ftle && s.ftle_valid` holds for the sample `s` it was read from:
-  in the branch an `if` on that conjunction takes, with any further conjuncts, or after an `if` on its negation that
-  returns. A read of `ensemble_spread` is guarded by the uniform, `has_ensemble()` (R-145). The one use allowed
-  unguarded is the absence test, the value's `bitcast<u32>` compared by `==` or `!=` (lowering Part 3a). So an
-  aggregate over `ftle` that excludes samples by `ftle_valid` is guarded, and one that relies on NaN propagation, or on
-  `min`, `max` or `clamp` with NaN operands, is not (R-255). A source forwards its field and is not held to the guard. A
-  debug view shows literal values, NaN to the invalid colour by R-114's bitcast guard (R-79), and is not held to it
-  either.
+  in the branch an `if` on that conjunction takes, with any further conjuncts, or after an `if` on its negation whose
+  branch leaves the block (`return`, `discard`, `break` or `continue`). A read of `ensemble_spread` is guarded by the
+  uniform, `has_ensemble()` (R-145). The one use allowed unguarded is the absence test, the value's `bitcast<u32>`
+  compared by `==` or `!=` (lowering Part 3a). So an aggregate over `ftle` that excludes samples by `ftle_valid` is
+  guarded, and one that relies on NaN propagation, or on `min`, `max` or `clamp` with NaN operands, is not (R-255). A
+  source forwards its field and is not held to the guard. A debug view shows literal values, NaN to the invalid colour
+  by R-114's bitcast guard (R-79), and is not held to it either.
 - **The exceptions**, each to the one rule it names, as Part 5, Part 6 or R-79's debug exception requires them: the
   field views of `r_sh` and `p_sh` and their direction-cosine reductions read the shadow (Part 6: a view per field, every
   struct); the structural views `debug/s_*` and the posts `fallback_tint` and `pending_hatch` read the scheduler's quad
