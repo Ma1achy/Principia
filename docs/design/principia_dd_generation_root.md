@@ -757,8 +757,8 @@ Its sampling note is not hashed: it is prose for the robustness-sweep picker, an
 Changing a hashed member of any entry, or adding or removing an entry, changes the schema version; a sampling-note-only
 edit does not. Every entry is hashed, whether or not a block uses it by default (R-344). The registry's chart
 constants are hashed too, each by value, whether or not a link reads it: those that no link reads, `δ_λ` (decode's
-mirror tie-break) and `ε_w` (its seed-selection floor), change how a chart coordinate decodes, as the links do (R-344,
-closing RQ-189).
+mirror tie-break), `ε_w` (its seed-selection floor) and `ε_M01` (the mass block's M01_TINY threshold, dd_decoder §3.1;
+added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-344, closing RQ-189).
 
 **The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
 log-det are written as expression trees, never as text:

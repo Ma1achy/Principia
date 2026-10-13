@@ -161,6 +161,34 @@ post node.
 | diffusion (Welford) | slope `C_ty/C_tt` vs reference computed identically | the streaming accumulator bookkeeping is correct |
 | **impurity mask** | per-sample `class ⊕ detail` ≠ the quad's `dominant_outcome` (joint grain; no `majority_class` field — R-20) | spatial mean = `outcome_impurity` — the grain fix is change 1's resolution: one joint `class ⊕ detail` grain, `principia_dd_generation_root.md` §3.7 |
 | drift shape | `energy_drift` (final) vs `delta_E_max_abs` (max) | distinguishes secular loss from recovered spike |
+| colour independence (pitfalls §1.2 (c)) | one slice, from one payload, in event, greyscale and hue modes (`principia_colour_composition.md` §4.1) | the three modes' edge maps agree: colouring is a pure function applied after the physics |
+
+**The edge map (R-72; REQ-VAL-182).** The colour-independence check (pitfalls §1.2 (c); REQ-VAL-012) compares the
+edge maps of one slice, rendered from one payload in the three modes colour composition §4.1 defines: event,
+greyscale and hue.
+- **What it is taken on: each mode's rendered output.** The map is taken on the linear-RGB image the stain writes,
+  before the display stage (colour composition §4.3), each pixel taken to OKLab. It is not taken on the payload field:
+  a map of the field before colouring is the same in every mode whatever the colouring does, so the comparison could
+  only pass. Taken on the render, a mode that gives two of the field's classes one colour loses the edge between them,
+  and a mode coloured by anything but the field gains edges the field does not have; either fails.
+- **Its cells are the samples' tiles.** Each sample rasterises to exactly its tile (canonical spec §8), and a tile's
+  appearance is its pixels' OKLab colours in the tile's own order. Whole tiles are compared, not single pixels, so
+  that a style drawn from the pixel position, the invalid hatch or the "not yet" stipple, is one appearance, the same
+  in every mode. Pixel by pixel, one of its colours could match a flat colour of one mode and not another's (the
+  stipple's ground is a grey, which a greyscale class can come near), and the maps would differ at a seam the field
+  does not change. The hatch repeats every 8 px across x + y and the stipple every 4 px (the proposed patterns,
+  REQ-COL-055, REQ-COL-064, awaiting the M1 gate), so on a tile whose side is a multiple of 8 px, as the golden
+  harness's are, two adjacent tiles of one style have one appearance; on any other, they differ alike in every mode,
+  and the maps still agree.
+- **The detector.** Two tiles that share a side are separated by an edge iff their appearances differ: iff a pixel of
+  one differs from the pixel at the same place in the other by more than τ = 0.01 in OKLab (Euclidean distance,
+  ΔE_OK). τ sits in a measured gap (pitfalls §3, a threshold set from a measured gap): above the render's float error,
+  under 10⁻⁵ in OKLab on the harness, and below the least distance any of the three modes puts between two different
+  appearances, which is hue mode's between two neighbouring classes of the outcome field, `2 · 0.12 · sin(π/11)` ≈
+  0.068. The check measures both ends of the gap on its slice before it reads the maps.
+- **The comparison.** Two maps agree iff they hold the same edges, the same pairs of adjacent tiles. The check passes
+  iff the event, greyscale and hue maps of the slice agree, and otherwise names a tile pair that one map holds and
+  another lacks. It is shown able to fail: a payload perturbed between two modes' renders gives maps that differ.
 
 ---
 

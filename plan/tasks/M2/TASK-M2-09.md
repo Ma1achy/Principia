@@ -1,7 +1,7 @@
 # TASK-M2-09 — Invariant-momentum construction: rigid rotation, the seed family and feasibility
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040
+- **Closes:** REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046
 - **Depends on:** TASK-M2-03, TASK-M2-06
 - **Needs (earlier milestones):** REQ-PAY-014, REQ-PAY-004
 - **Reviewers:** code, qa, physics
@@ -34,6 +34,7 @@ The momentum stage for invariant charts follows chart_reference §2.2 exactly: v
 - `cargo test -p kernel seed_selection` — a fixture where several seeds qualify selects the largest-norm one, not the first; an exact tie selects the earlier seed; forcing the primary seed to degenerate (ρ = 0) selects a fallback, not DEGENERATE; DEGENERATE fires only where no seed has ‖w⁽²⁾‖²_m > ε_w (REQ-DEC-021).
 - `cargo test -p engine invariant_infeasible` — decoder test 8: infeasible pairs are tagged exactly on K* < L_z²/2, never dropped or NaN; the feasibility comparison is branch-identical on CPU-f64 and GPU-f32 for identical inputs (REQ-DEC-022).
 - Doc review (physics): chart_reference §2.2 names the state and detail an infeasible pixel carries, consistent with payload §2's enum; physics reviewer approved (REQ-DEC-040).
+- Proposal: the f64 and f32 tolerances of dd_decoder test 8's L_z and K, with the measured residuals over the grid of feasible (L_z, K*) as evidence; the human confirms them at the M2 gate (REQ-DEC-046; split from REQ-DEC-044 by TASK-M2-02, applied per R-369).
 
 ## Notes
 - Payload §2's `decode_failed` detail codes are 0 non-finite, 1 degenerate configuration, 2 invalid mass construction, 3 other/reserved; the definition must say whether an infeasible pixel is `decode_failed` (and which code) or another label. The full DEGENERATE reason map is REQ-DEC-038 (TASK-M2-24).
