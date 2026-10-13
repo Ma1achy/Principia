@@ -375,8 +375,9 @@ pub fn index_at(t: f64, span: f64, n: usize) -> usize {
     if n == 0 || span <= 0.0 {
         return 0;
     }
+    // `f` is at most 1, so the index is at most `n − 1`.
     let f = (t / span).clamp(0.0, 1.0);
-    ((f * (n - 1) as f64).round() as usize).min(n - 1)
+    (f * (n - 1) as f64).round() as usize
 }
 
 /// The square `[x0, y0, x1, y1]` holding every point of `paths`, centred on their bounds, a little larger; the unit

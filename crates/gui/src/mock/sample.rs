@@ -150,7 +150,8 @@ pub fn alpha(distance: f64, half_span: f64) -> f32 {
     (1.0 - f * (1.0 - f64::from(FAINT))) as f32
 }
 
-/// A unit direction out of `plane`'s span: the first axis with a part off both basis vectors, made orthogonal to them.
+/// A unit direction out of `plane`'s span: the axis with the largest part off both basis vectors, made orthogonal to
+/// them.
 pub fn out_of_plane(plane: &Plane) -> Option<Latent> {
     let (q1, q2) = (&plane.q1, &plane.q2);
     let n1 = norm(q1);

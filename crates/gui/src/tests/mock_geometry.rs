@@ -47,6 +47,18 @@ fn mock_hover_geometry_out_of_plane_is_a_unit_normal() {
     check(n);
     rejects("an axis taken as it is", || check(axis(7, 1.0)));
     rejects("a direction twice too long", || check(n.map(|x| 2.0 * x)));
+    // A basis with a part on every axis, so no axis is off it whole: the residual is shorter than one, and normalised.
+    let all = [1.0; 8];
+    let alt = [1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0];
+    let n = out_of_plane(&plane(MOCK_Z0, all, alt)).expect("a direction");
+    assert!((dot(&n, &n) - 1.0).abs() < 1e-12, "{n:?} is not unit");
+    assert!(dot(&n, &all).abs() < 1e-12 && dot(&n, &alt).abs() < 1e-12);
+    // A basis with a part on every axis, so no axis is off it whole: the residual is shorter than one, and normalised.
+    let all = [1.0; 8];
+    let alt = [1.0, -1.0, 1.0, -1.0, 1.0, -1.0, 1.0, -1.0];
+    let n = out_of_plane(&plane(MOCK_Z0, all, alt)).expect("a direction");
+    assert!((dot(&n, &n) - 1.0).abs() < 1e-12, "{n:?} is not unit");
+    assert!(dot(&n, &all).abs() < 1e-12 && dot(&n, &alt).abs() < 1e-12);
     // A zero basis vector has no plane to leave.
     assert_eq!(out_of_plane(&plane(MOCK_Z0, [0.0; 8], q2)), None);
     assert_eq!(out_of_plane(&plane(MOCK_Z0, q1, [0.0; 8])), None);
@@ -134,6 +146,8 @@ fn mock_tile_bounds_geometry_off_the_unit_basis() {
             .sum();
         (leaves.len(), sum)
     };
+    // SPLIT_NEAR is met exactly: 4/2⁸ of 0.625 is 1/40.
+    assert_eq!((4.0 / 256.0) / 0.625, crate::mock::quads::SPLIT_NEAR);
     let mut on_frontier = [0.0; 8];
     on_frontier[0] = 0.65;
     on_frontier[1] = 0.45;
@@ -143,6 +157,11 @@ fn mock_tile_bounds_geometry_off_the_unit_basis() {
         (
             plane(on_frontier, axis(0, 0.01), axis(1, 0.01)),
             (12, 69.09375),
+        ),
+        // A view 0.625 wide on the frontier, where the quads of depth 8 are exactly SPLIT_NEAR of it and stay whole.
+        (
+            plane(on_frontier, axis(0, 0.3125), axis(1, 0.3125)),
+            (468, 2572.609375),
         ),
     ];
     for (p, (n, sum)) in &views {
