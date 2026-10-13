@@ -44,6 +44,31 @@ M₀₁ = m₀ + m₁ ;   if M₀₁ < ε  →  DEGENERATE(M01_TINY)
 
 Body 0 is the softmax reference (logit 0). Equal masses ⇔ `z_μ = 0`. Burrau point: `μ₁ = log(b/c)`, `μ₂ = log(a/c)`.
 
+**ε is the chart constant `ε_M01`** (REQ-DEC-039, a calibration, R-71). TASK-M2-02 proposes `ε_M01 = 10⁻⁵`, provisional
+until the human confirms it at the M2 gate. It sits in a measured gap between the reachable `M₀₁` floors at
+`μ_max = 5`: the edge-reaching simplex link's corner `m₂ → 1` piles up at `ε_μ − ε_μ²/4`, below it; the ternary plot's
+floor `2ε_m = 2×10⁻⁴` and `softmax_tanh`'s `(1 + e^−μ_max)/(1 + e^−μ_max + e^μ_max) ≈ 6.7×10⁻³` lie above it. So the
+corner fires with a tenfold margin at either precision, and the tag's onset falls where `M₀₁` still resolves with `z`
+at f32, so the formula, not rounding, decides it (`fixtures/gates/m01_tiny/measurement.toml`).
+
+**The branch input (R-34; test 12).** `M₀₁` is the one rounded sum of the emitted masses `m₀ + m₁`, compared against the
+constant `ε_M01`. Under the edge-reaching simplex link, `M₀₁ = m₀ + m₁` written as an add is a multi-op branch input:
+inlined, the link's last step `m₁ = t₇·t₁₃` meets the add as `m₀ + t₇·t₁₃`, which a contracting backend may fuse. That
+fusion flips the tag where `M₀₁` lies within one rounding of `ε_M01`: TASK-M2-02 bisected the onset crossing on 20 000
+lines `z₁ ∈ [6.3, 20.3]`, and fusion flips 77 of the 40 000 crossing points at f64 and 45 at f32. So the block forms
+`M₀₁` as the explicit `fma(m₁, 1, m₀)` (R-34; gpu_determinism_note rules 2 and 6): the product `m₁·1` is exact, so it is
+the same single rounding of `m₀ + m₁`, and no add is left for a backend to fuse. It reads only the emitted masses, so a
+chart that sets masses directly gets the same test.
+
+**Its premise.** The form holds only on a backend that keeps an explicit `fma` fused and does not fold the `×1`. Folding
+`fma(x, 1, y)` to `x + y` is exact and standard (LLVM's InstCombine and Mesa's NIR both do it); after it, a contracting
+backend can rebuild `fma(t₇, t₁₃, m₀)` and flip the tag as above. Whether the kernel's SPIR-V keeps GLSL.std.450 `Fma`
+fused, which TASK-M2-02's qa review observes needs the `NoContraction` decoration, and whether rust-gpu emits that
+decoration, is a check for the second-backend parity run, not settled here. So `M₀₁` under the edge-reaching simplex
+link, at its onset crossings, is a branch input for the parity gate's no-fork test (R-34, REQ-VAL-017, REQ-VAL-079).
+That test compares tags on identical emitted masses: a disagreement under `z` fuzz is a fork only where the two
+backends' masses are bit-identical; where the masses differ, it is precision (REQ-VAL-079).
+
 ### 3.2 Configuration — hyperspherical mass-weighted Jacobi
 
 Mass-weighted Jacobi vectors and reduced masses:
