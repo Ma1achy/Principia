@@ -1,7 +1,8 @@
 //! The session header (telemetry §2, "Per session, once"; §5; REQ-TOOL-001, REQ-TOOL-121): it holds every §2 session
 //! field; unified memory is its own field, never VRAM, and a discrete adapter records its VRAM; the f64 rate is
 //! recorded as unavailable and a headless run's display is null (§2); a run that opened no GPU gets R-308's form. Each
-//! test registers the control that must make it fail (R-176).
+//! test registers the control that must make it fail (R-176). Its helpers' numbers (the hosts' cores and memory) are
+//! test inputs, not register constants (REQ-SYS-082).
 
 use serde_json::{Map, Value};
 

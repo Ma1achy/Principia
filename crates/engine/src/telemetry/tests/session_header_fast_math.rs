@@ -2,7 +2,8 @@
 //! REQ-TOOL-141): on Metal with the default setting, setting off, compute off, vertex and fragment on; with the setting
 //! on, setting on and compute on; on lavapipe with the setting on, setting on and compute off, compiled as off, so both
 //! appear; a run that opened no GPU compiled nothing. A header missing the setting or a stage fails to parse. Each test
-//! registers the control that must make it fail (R-176).
+//! registers the control that must make it fail (R-176). Its helpers' numbers are test inputs, not register constants
+//! (REQ-SYS-082).
 
 use serde_json::{json, Map, Value};
 

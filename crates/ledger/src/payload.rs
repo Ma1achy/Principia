@@ -86,7 +86,8 @@ fn derived(name: &'static str, from: &[&'static str], scale: Scale) -> EntryBuil
 }
 
 /// `n`, the current shape-sphere point (§3.8's worked entry; integrator dd §3.7): `derived(from: [r, m0, m1, m2])`,
-/// `vector(f32, 3)`, `lin` over [−1, 1] in each component.
+/// `vector(f32, 3)`, `lin` over [−1, 1] in each component. Ledger data, the entry §3.8 gives; not a register
+/// constant (REQ-SYS-082).
 fn shape_point() -> EntryBuilder {
     let ty = FieldType::Vector {
         component: Box::new(FieldType::F32),
@@ -176,7 +177,8 @@ fn ic(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
 }
 
 /// The packed words of `SimState` (payload §1; §3.1), and `fgw_w`, the `.w` of the word buffer's `vec4<u32>` (payload
-/// §3's `.w` bit map), whose fields tile it with nothing reserved.
+/// §3's `.w` bit map), whose fields tile it with nothing reserved. Ledger data, the layout table's words; not register
+/// constants (REQ-SYS-082).
 fn words() -> Vec<Word> {
     let word = |name, reserved| Word {
         name,
@@ -198,7 +200,8 @@ fn words() -> Vec<Word> {
 }
 
 /// Every entry: `SimState`'s stored fields at their `SimStateFTLE` slots, the packed words' fields, §3.4's derived
-/// scalars, and `ICDescriptor`'s twelve fields.
+/// scalars, and `ICDescriptor`'s twelve fields. Ledger data, the layout table's entries, their offsets, widths and
+/// ranges the payload doc's and §3's; not register constants (REQ-SYS-082).
 fn entries() -> Vec<EntryBuilder> {
     let from_zero = from(Bound::Closed(0.0));
     let fraction = Range {
@@ -300,7 +303,8 @@ pub fn ledger() -> Ledger {
     }
 }
 
-/// `SimStateFTLE`, or `SimStateBase` (the same without `r_sh` and `p_sh`), as payload §1 orders them.
+/// `SimStateFTLE`, or `SimStateBase` (the same without `r_sh` and `p_sh`), as payload §1 orders them. Ledger data, the
+/// struct's layout; not a register constant (REQ-SYS-082).
 fn simstate(ftle: bool) -> Struct {
     let m = |name, storage| Member { name, storage };
     let mut members = vec![m("r", Storage::Vec2x3), m("p", Storage::Vec2x3)];
@@ -334,7 +338,8 @@ pub const PENDING: &[&str] = &["free_group_word"];
 
 /// The structs the Rust emitter writes: `SimState`'s two variants, the word buffer's element (one `vec4<u32>`, whose
 /// `.w` is the word `fgw_w`, payload §3) and `ICDescriptor` (twelve f32s and 16 B of declared padding, 64 B: its f32
-/// instantiation, R-86; its f32s widen with the `Real`, R-313).
+/// instantiation, R-86; its f32s widen with the `Real`, R-313). Ledger data, the structs' layout; not register
+/// constants (REQ-SYS-082).
 pub fn structs() -> Vec<Struct> {
     let ic = [
         "m0",
@@ -409,7 +414,8 @@ pub struct Binding {
 /// gives no number (applied per R-369, TASK-M1-06): `ICDescriptor`, one per sample, at group 1, binding 2, and
 /// `RenderQuad`, one per quad (dd_generation_root §3.7a), at group 1, binding 3. Group 0 is the assembler's per-frame
 /// uniforms. A binding number decides no stored bit's meaning, so the table is not hashed into the schema version
-/// (R-343's applied note; dd_generation_root §3.8 "The hash").
+/// (R-343's applied note; dd_generation_root §3.8 "The hash"). Interface data between the emitters and the host that
+/// binds the buffers; not register constants (REQ-SYS-082).
 pub const fn bindings() -> [Binding; 4] {
     [
         Binding {
@@ -462,13 +468,13 @@ pub const fn inverse() -> [u32; 4] {
 }
 
 /// Payload §3's frozen `cont_symbol`: `next = cont_symbol()[digit][prev]`. Each digit's map is a permutation of the
-/// symbols that never gives `inverse(prev)`, and is its own inverse.
+/// symbols that never gives `inverse(prev)`, and is its own inverse. Ledger data, as [`inverse`] is (REQ-SYS-082).
 pub const fn cont_symbol() -> [[u32; 4]; 3] {
     [[0, 1, 2, 3], [2, 3, 0, 1], [3, 2, 1, 0]]
 }
 
 /// `continuation_index`'s value where no digit continues `prev`, at `next = inverse(prev)`: 3, "invalid", as
-/// `dmin_pair`'s 3 is (R-307, payload §3).
+/// `dmin_pair`'s 3 is (R-307, payload §3). Ledger data, a code of the frozen table, as [`inverse`] is (REQ-SYS-082).
 pub const fn continuation_invalid() -> u32 {
     3
 }
@@ -537,7 +543,8 @@ pub const fn states() -> [&'static str; 6] {
 }
 
 /// The pair-id map (R-22; payload §2): pair `k` names the side opposite body `k`, `pair_bodies()[k]` its two bodies,
-/// pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). `detail` under collision and `dmin_pair` use it.
+/// pair 0 = (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). `detail` under collision and `dmin_pair` use it. Ledger data,
+/// a code assignment hashed into the schema version; not a register constant (REQ-SYS-082).
 pub const fn pair_bodies() -> [[u32; 2]; 3] {
     [[1, 2], [2, 0], [0, 1]]
 }

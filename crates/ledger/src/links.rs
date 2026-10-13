@@ -202,7 +202,8 @@ impl Codomain {
         }
     }
 
-    /// Its control count, the inverse's tree count: two for the mass simplex, one otherwise.
+    /// Its control count, the inverse's tree count: two for the mass simplex, one otherwise. Ledger data, the
+    /// codomain's dimension in the link registry (§3.9); not a register constant (REQ-SYS-082).
     pub fn controls(self) -> u32 {
         match self {
             Codomain::Mass => 2,
@@ -210,7 +211,8 @@ impl Codomain {
         }
     }
 
-    /// Its physical component count, the forward's tree count: three masses, or one value.
+    /// Its physical component count, the forward's tree count: three masses, or one value. Ledger data, as
+    /// [`Codomain::controls`] is (REQ-SYS-082).
     pub fn components(self) -> u32 {
         match self {
             Codomain::Mass => 3,
@@ -249,7 +251,8 @@ pub struct Slot {
     pub default: &'static str,
 }
 
-/// The block controls in decode order: mass, then config, then momentum (chart_decoder Part 2).
+/// The block controls in decode order: mass, then config, then momentum (chart_decoder Part 2). Interface data, the
+/// latent `z`'s block layout; not register constants (REQ-SYS-082).
 pub fn slots() -> [Slot; 7] {
     let slot = |name, block, z, codomain, default| Slot {
         name,
@@ -682,7 +685,8 @@ fn stick_breaking() -> LinkBuilder {
     }
 }
 
-/// The registry's entries as written (§3.9, "The registry's entries"), built once.
+/// The registry's entries as written (§3.9, "The registry's entries"), built once. Ledger data: the links' formulas, whose
+/// numbers are their own (`1`, `2`, `½`) and whose constants are read from the register as parameters (REQ-SYS-082).
 pub fn builders() -> &'static [LinkBuilder] {
     static BUILDERS: OnceLock<Vec<LinkBuilder>> = OnceLock::new();
     BUILDERS.get_or_init(|| {

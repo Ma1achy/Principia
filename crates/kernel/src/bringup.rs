@@ -70,7 +70,8 @@ impl PatternReal for f64 {
     }
 }
 
-/// The samples the pattern covers: below `2¹⁹`, every real slot's value is exact in f32.
+/// The samples the pattern covers: below `2¹⁹`, every real slot's value is exact in f32. Interface data of the bring-up
+/// pattern, fixed by f32's 24-bit significand (`32·2¹⁹ = 2²⁴`); not a register constant (REQ-SYS-082).
 #[inline]
 pub fn max_samples() -> u32 {
     1 << 19
@@ -93,7 +94,8 @@ pub fn packed_a(i: u32) -> u32 {
     set_d_min_unset(w)
 }
 
-/// Sample `i`'s `packed_b`: `dE_max` and `dLz_max` both +0.
+/// Sample `i`'s `packed_b`: `dE_max` and `dLz_max` both +0, the bring-up pattern's value, interface data; not a
+/// register constant (REQ-SYS-082).
 #[inline]
 pub fn packed_b(_i: u32) -> u32 {
     0
