@@ -211,11 +211,12 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 **Custom's `N` is a power of two (R-398)**, each within the one-workgroup-per-quad thread ceiling (`N² ≤`
 `maxComputeInvocationsPerWorkgroup`, REQ-PERF-011); it offers no other value.
 
-**Custom's `N` has a lower bound (R-422)**, a correctness floor, not a memory one: at `N = 1` a quad holds one sample,
-so the coherence test has nothing to compare, every quad reads as coherent and refinement never triggers (scheduler
-contract Part 6: too low an `N` "misclassifies a quad as coherent by undersampling itself"). Its value is a
-calibration (R-71), proposed with its evidence at the M5 gate (REQ-PERF-095, TASK-M5-02); Custom offers no power of
-two below it. Both memory models count the per-quad `QuadReduction` at every `N` (§3; telemetry §6.2a).
+**Custom's `N` has a lower bound (R-422)**, a correctness floor, not a memory one: at `N = 1` a quad holds one nominal
+sample, so nothing is compared across the quad (scheduler contract Part 6: too low an `N` "misclassifies a quad as
+coherent by undersampling itself"). At `E = 0` it never refines; at `E ≥ 1` only its one footprint's copy spread
+(Part 9's E+1 copies, Part 6's split test) can split it. Its value is a calibration (R-71), proposed with its
+evidence at `E = 0` and at `E ≥ 1` at the M5 gate (REQ-PERF-095, TASK-M5-02); Custom offers no power of two below it.
+Both memory models count the per-quad `QuadReduction` at every `N` (§3; telemetry §6.2a).
 
 **Custom's `E` is not capped by the outcome histogram (R-410).** `QuadReduction`'s `class_histogram` bins are u32
 (dd_generation_root §3.7), so they hold every setting that can allocate: a quad's `N² × (E+1)` copies reach

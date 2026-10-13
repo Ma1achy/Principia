@@ -8670,9 +8670,20 @@ The human's words (R-417 quotes the whole message):
 
 *What it decides:*
 - **RQ-269's option (c), both (a) and (b).**
-- **A lower bound on Custom's `N`, a correctness floor.** At `N = 1` a quad holds one sample, so the coherence test has
-  nothing to compare and the quad never refines (scheduler contract Part 6: too low an `N` "misclassifies a quad as
-  coherent by undersampling itself"). The bound is a calibration (R-71), proposed with its evidence at the M5 gate.
+- **A lower bound on Custom's `N`, a correctness floor.** At `N = 1` a quad holds one nominal sample, so nothing is
+  compared across the quad (scheduler contract Part 6: too low an `N` "misclassifies a quad as coherent by
+  undersampling itself"). At `E = 0` the quad never refines; at `E ≥ 1` only its one footprint's copy spread can split
+  it. The bound is a calibration (R-71), proposed with its evidence, at `E = 0` and at `E ≥ 1`, at the M5 gate.
+- **Flagged, and what was applied** (CLAUDE.md § "Rulings": "Where a ruling contradicts the corpus or itself, flag it
+  and record what was applied"; physics review 5484757609, F1, on PR #197). The human's "N = 1 never refines" holds
+  only at `E = 0`. With ensemble copies on, an `N = 1` quad holds E+1 copies (scheduler contract Part 9: "A nominal
+  grid sample (`SAMPLES_PER_QUAD_AXIS²` per quad) spawns E ensemble copies"), and Part 6's split test can still split
+  it on its one footprint's copy spread (the E+1-copy "data-side spread reduction", aggregated into `QuadReduction`).
+  What `N = 1` loses at every `E` is the comparison between grid positions (Part 6's "the quad's samples disagree").
+  Applied: memory_tiers §5, REQ-PERF-095's statement and this entry say one nominal sample, nothing compared across
+  the quad, never refining at `E = 0` and split only by its footprint's copy spread at `E ≥ 1`; REQ-PERF-095's verify
+  and TASK-M5-02's checklist ask for the floor's evidence at both `E = 0` and `E ≥ 1`. The floor stays a correctness
+  floor and a calibration, so nothing that gets built changes; recorded, not asked.
 - **Both memory models count the per-quad `QuadReduction`, for every `N`:** memory_tiers §3's estimate (REQ-PERF-025)
   and telemetry §6.2a's pre-allocation fit (REQ-PERF-023).
 
@@ -8699,8 +8710,8 @@ change.
 *11 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
 reworded), `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation metadata" (a
 row added), R-400 (a forward line), REQ-TOOL-161 (reqio), REQ-RENDER-085 (reqio, new), TASK-M1-20 (new),
-`plan/tasks.yaml`, `plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes" (a gate item) and
-`plan/rule_groups.yaml`; built by TASK-M1-20*
+`plan/tasks.yaml`, `plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes" (a gate item, and the check's
+result), `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-274); built by TASK-M1-20*
 
 The human's words (R-417 quotes the whole message):
 
@@ -8723,13 +8734,21 @@ principal-value step deltas, in radians: `orbit_count = ⌊|θ̃|/2π⌋`. rende
 *Applied per R-369 (mechanical consequences; the human may veto any):*
 - **The cyclic view is the template's:** the ledger gives `theta` the `cyclic` scale, and its generated view places
   `raw = fract(θ̃ / 2π)` on the fixed `[0, 1]` with `ramp_twilight` (the prelude's LUT index 1), the period one turn,
-  as for `rho_angle` (REQ-TOOL-161). The view shows the net longitude turned since the IC modulo one turn; the winding
-  count and sense stay with the derived `orbit_count` and `retrograde`.
+  as for `rho_angle` (REQ-TOOL-161). Here `fract(x) = x − ⌊x⌋`, WGSL's `fract` and the Rust reference's
+  `rem_euclid(1.0)`, not Rust's `f32::fract` (`x − trunc x`), so `raw ∈ [0, 1)` for negative `θ̃` too: `θ̃ = −π/2` gives
+  0.75 (physics review 5484757609, F2, on PR #197; REQ-RENDER-085). The view shows the net longitude turned since the
+  IC modulo one turn; the winding count and sense stay with the derived `orbit_count` and `retrograde`.
 - **New M1 work: REQ-RENDER-085 (new, M1)**, closed by **TASK-M1-20 (new)**, which depends on TASK-M1-17 and
   re-renders `debug-views/generated-theta`. The M1 gate waits on it.
 - **The physics check of the other five** is a gate item in `plan/MILESTONES.md` § "M1", run by a read-only physics
   dispatch before the gate report: for `q_mass`, `ftle`, `mean_y`, `S` and `diffusion`, that each is a signed quantity
   whose zero is a meaningful centre for a diverging ramp. A field that fails goes to `REVIEW_QUEUE.md` for the human.
+- **The five-field check's result** (run early, in physics review 5484757609 of PR #197): `S`, `ftle` and `diffusion`
+  pass, each signed at finite time with zero a meaningful centre, none an angle. `q_mass` and `mean_y` are not
+  confirmed: `q_mass`'s formula is unwritten (REQ-PAY-088, M2) and `mean_y`'s `y` undefined (REQ-PAY-073, M3), each
+  ledger range is the unbounded default (`crates/ledger/src/payload.rs`:261 and :217), and the corpus's "mass ratios"
+  and "spread `y`" would make each non-negative, so viridis. Filed as **RQ-274** for the human; it holds the M1 gate's
+  cool-warm item for those two fields, and no task. `plan/MILESTONES.md` § "M1"'s gate item records the result.
 - dd_generation_root §3.4 gains a `theta` row (`cyclic`); render_gui_spec §10.1's "`rho_angle` is the one cyclic
   field" names both; REQ-TOOL-161's statement names both. R-400 gains a forward line ("Amended in part by R-423") and a
   "Still in force" line.
