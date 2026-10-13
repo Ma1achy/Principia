@@ -8755,3 +8755,108 @@ principal-value step deltas, in radians: `orbit_count = ⌊|θ̃|/2π⌋`. rende
 - R-423 is in the "design" group of `plan/rule_groups.yaml`, with R-400.
 
 Adds REQ-RENDER-085; REQ-TOOL-161's statement, rulings and sources change.
+
+## R-424 — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*
+*13 Oct 2026 · applied in `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
+(a paragraph added), REQ-TOOL-011 (reqio), REQ-PAY-096 and REQ-SCHED-099 (reqio, new), TASK-M1-19, TASK-M5-08,
+TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-275
+archived) and `REVIEW_QUEUE.md`; built by TASK-M1-19, TASK-M5-17 and TASK-M5-08*
+
+The orchestrator put RQ-275 and RQ-276 to the human, with a recommendation for RQ-275: contains-ensemble and
+contains-FTLE ticked against the prelude's `has_ensemble()` and `has_ftle` (as RQ-239 did for REQ-TOOL-026), the schema
+version against the build's `PAYLOAD_SCHEMA_VERSION`, sim-failed split off to the task that builds `QuadReduction`,
+and cache-valid split off to the M5 cache. The human replied, in their own words ("This is from me."), in one message,
+which R-424 and R-425 record. The whole message, once:
+
+> This is from me.
+> RQ-275: as recommended. contains-ensemble and contains-FTLE are checked
+> against has_ensemble() and has_ftle (as RQ-239 did); schema version
+> against PAYLOAD_SCHEMA_VERSION for M1; sim-failed moves to the
+> QuadReduction task; cache-valid moves to the M5 cache task, which also
+> decides whether per-quad schema version belongs with cache-valid
+> (it only matters once quads can come from an older build's cache).
+> RQ-276: (b). Both overlays move to TASK-M5-29 under a new defining
+> requirement, which reuses existing corpus meanings where they exist
+> (for example, quad state 4 for "stale") rather than defining new ones.
+
+(Message of 13 Oct 2026. The human numbered none of it; the orchestrator gave each part its own ruling from the next
+free number, in the message's order: R-424 RQ-275, R-425 RQ-276.)
+
+*What it decides:*
+- **RQ-275's options taken per flag, as recommended:** three flags checked at M1 against an existing per-variant,
+  per-frame or per-build source, as RQ-275's last option listed; two split off under option (b); nothing is dropped.
+- **contains-ensemble and contains-FTLE are checked against `has_ensemble()` and `has_ftle`,** the prelude's per-frame
+  uniform and per-variant baked constant (render contract Part 2; R-145), as RQ-239 read "present iff
+  contains-ensemble" for REQ-TOOL-026's spread view. Neither becomes a `RenderQuad` member.
+- **The schema version is checked against `PAYLOAD_SCHEMA_VERSION` for M1,** the build's one generated constant.
+- **sim-failed moves to the `QuadReduction` task,** split off from the M1 checklist as R-113 split rows.
+- **cache-valid moves to the M5 cache task,** which **also decides whether a per-quad schema version belongs with
+  cache-valid**: the drawn payload's own schema version (caching contract Part 1's signature) can differ from the
+  build's only once quads can come from an older build's cache, so at M1 the build's constant is the check.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **"The `QuadReduction` task" is TASK-M5-17** ("Resolve stage: outcome and validity reductions, and Undetermined
+  quads"), which builds `QuadReduction`'s validity reductions from a quad's samples; TASK-M5-01, which builds the
+  generated struct and is in review as PR #191, keeps its scope, so that an approved PR is not reopened and held
+  behind TASK-M1-19 (the orchestrator's decision, 13 Oct 2026, on R-424's port). **REQ-PAY-096 (new, M5,
+  definition, R-72)**, closed by TASK-M5-17: what sim-failed holds per quad (from the samples whose `state` is
+  `sim_failed`, §3.1's code 4; `valid_sample_count` counts decode failures only), the `QuadReduction` member that
+  carries it or the members it derives from, and how the quad fields view reads it as `ctx.quad`, written into
+  dd_generation_root §3.7 (and §3.7a if a `RenderQuad` member is added), the physics reviewer approving; the
+  catalogue's quad fields row then shows it, ticked on a synthetic payload. TASK-M5-17 gains the catalogue
+  (REQ-TOOL-011) as a need.
+- **"The M5 cache task" is TASK-M5-08** ("The current-state cache: lookup, resume points, preview vs refined, no
+  history"), whose lookup is "identity + signature match", the check cache-valid reports; TASK-M5-06 builds the
+  signature it compares, and TASK-M5-08 depends on it. **REQ-SCHED-099 (new, M5, definition, R-72)**, closed by
+  TASK-M5-08: what cache-valid holds per drawn quad and its source, written into dd_generation_root §3.7a (with
+  caching contract Part 1 cited for the signature), and the decision whether a per-quad schema version belongs with
+  it, written in the same place with its reason, the physics reviewer approving; the catalogue's quad fields row then
+  shows cache-valid, and the per-quad schema version if it is added, ticked on a synthetic payload.
+- **How M1 ticks the three cells:** TASK-M1-19's checklist ticks contains-ensemble against the catalogue's reading of
+  `has_ensemble()` (the spread view's gate) with E toggled, contains-FTLE against the variant's `has_ftle` in both tier
+  variants, and the schema version against the generated `PAYLOAD_SCHEMA_VERSION`, each on a synthetic payload; no
+  `RenderQuad` or `CtxQuad` member is added for them.
+- **REQ-TOOL-011**'s statement and verify say where each flag is checked or placed; it loses `rq: RQ-275` and gains
+  R-424. render_contract Part 6 gains a paragraph under the table saying the same; the row itself is unchanged.
+- RQ-275 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-424 is in the "design" group of
+  `plan/rule_groups.yaml`, with R-420.
+
+Adds REQ-PAY-096 and REQ-SCHED-099; REQ-TOOL-011's statement, verify, rulings, sources, note and `rq` change.
+
+## R-425 — The visible-set and locked/stale overlays move to TASK-M5-29 under a new defining requirement, which reuses the corpus's existing meanings (`quad_state` 4 for "stale") rather than defining new ones *(closes RQ-276)*
+*13 Oct 2026 · applied in `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
+(a paragraph added), `docs/gui/principia_render_gui_spec.md` § "12.1 Structural overlays and tile debug shaders" (a
+sentence added), REQ-TOOL-011 (reqio), REQ-TOOL-166 (reqio, new), TASK-M1-19, TASK-M5-29, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-276 archived) and `REVIEW_QUEUE.md`; built by
+TASK-M5-29*
+
+The human's words (R-424 quotes the whole message):
+
+> RQ-276: (b). Both overlays move to TASK-M5-29 under a new defining
+> requirement, which reuses existing corpus meanings where they exist
+> (for example, quad state 4 for "stale") rather than defining new ones.
+
+*What it decides:*
+- **RQ-276's option (b):** the visible-set and the locked/stale overlays leave the M1 checklist (REQ-TOOL-011) for
+  TASK-M5-29's Tier 3 path (render_gui_spec §12.1 already places them in Tier 3).
+- **A new defining requirement (R-72)** holds them, and REQ-TOOL-011's checklist cites it for the two cells.
+- **The definition reuses existing corpus meanings where they exist rather than defining new ones;** for example,
+  "stale" is `quad_state` 4 (dd_generation_root §3.7a; debug_tooling_plan §F's quad-state enum).
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **The requirement is REQ-TOOL-166 (new, M5, definition)**, closed by TASK-M5-29: what each overlay marks per visible
+  quad, written into debug_tooling_plan §F, where the other structural overlays' styling is (REQ-TOOL-124), each
+  reading named from an existing corpus meaning where one exists ("stale" as `quad_state` 4), and drawn on the Tier 3
+  path; the physics reviewer approves the definition before merge. Which existing meaning "locked" and "visible-set"
+  take is the task's definition, not chosen here: RQ-276 lists the corpus's candidate readings (for "locked", the chart
+  lock or caching Part 4's pinned class; for "visible-set", the live set of scheduler Part 7), and the PR states which
+  it takes and cites it, or says that none exists.
+- Each overlay's slot in the Tier-3 per-visible-quad record counts toward REQ-PERF-079's record (TASK-M8-08), as the
+  rest of the Tier 3 path does.
+- **REQ-TOOL-011**'s statement and verify mark the two cells with REQ-TOOL-166; it loses `rq: RQ-276` and gains R-425.
+  render_contract Part 6 gains a paragraph under the table and render_gui_spec §12.1 a sentence saying so; the row
+  itself is unchanged. TASK-M1-19 now waits on nothing.
+- RQ-276 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-425 is in the "design" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-166; REQ-TOOL-011's statement, verify, rulings, sources and `rq` change.

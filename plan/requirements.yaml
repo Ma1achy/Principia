@@ -166,7 +166,7 @@
   note: "The full DEGENERATE reason list and its map onto payload §2's decode_failed detail codes: REQ-DEC-038 (definition)."
 - id: REQ-DEC-009
   area: DEC
-  statement: "The chart constants must be μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹² (the mirror tie on λ̃_y) and ε_w = 10⁻¹⁰ (default, bounding the squared seed norm ‖w⁽²⁾‖²_m), held as registry data, with the formulae written in the symbols."
+  statement: "The chart constants must be μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹² (the mirror tie on λ̃_y), ε_w = 10⁻¹⁰ (default, bounding the squared seed norm ‖w⁽²⁾‖²_m) and ε_M01 (the M01_TINY threshold, its value REQ-DEC-039's calibration), held as registry data, with the formulae written in the symbols."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 3. The maths
@@ -195,7 +195,7 @@
   - R-21
   - R-82
   milestone: M2
-  note: "R-5 put the constants on the decision sheet; R-10 and R-21 settled them; R-82 fixes δ_λ's variable (λ̃ = √μ_λ·λ) and ε_w's bound on the squared norm."
+  note: "R-5 put the constants on the decision sheet; R-10 and R-21 settled them; R-82 fixes δ_λ's variable (λ̃ = √μ_λ·λ) and ε_w's bound on the squared norm. ε_M01 added by TASK-M2-02, applied per R-369, at REQ-DEC-039's proposal 10⁻⁵ (dd_decoder §3.1), provisional until the M2 gate."
 - id: REQ-DEC-010
   area: DEC
   statement: "The mass block must decode as μₖ = μ_max·tanh(z_μk) for k = 1,2 and (m₀, m₁, m₂) = softmax(0, μ₁, μ₂), with body 0 the softmax reference, so that z_μ = 0 gives equal masses."
@@ -739,6 +739,7 @@
   rulings:
   - R-71
   milestone: M2
+  note: "TASK-M2-02 proposes ε = ε_M01 = 10⁻⁵, a new chart constant (REQ-DEC-009), in the measured gap between stick_breaking's corner pile-up at ε_μ − ε_μ²/4 and the ternary plot's floor 2ε_m (dd_decoder §3.1; fixtures/gates/m01_tiny/measurement.toml); provisional until the M2 gate."
 - id: REQ-DEC-040
   area: DEC
   kind: definition
@@ -809,7 +810,7 @@
 - id: REQ-DEC-044
   area: DEC
   kind: calibration
-  statement: "The per-precision tolerances of dd_decoder unit tests 1 (the identities Σmᵢ = 1, CoM = 0, Σpᵢ = 0, I = 1, \"to precision-appropriate tolerance\"), 6 (the reconstruction inverse) and 8 (the invariant construction's L_z and K) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The per-precision tolerances of dd_decoder unit tests 1 (the identities Σmᵢ = 1, CoM = 0 and I = 1, \"to precision-appropriate tolerance\") and 6 (the reconstruction inverse) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 5. Unit tests
@@ -823,6 +824,43 @@
   rulings:
   - R-71
   milestone: M2
+  note: "Applied per R-369 (TASK-M2-02): split by the block each tolerance measures. Test 1's Σpᵢ = 0 is REQ-DEC-045 (TASK-M2-03, the momentum block) and test 8's L_z and K are REQ-DEC-046 (TASK-M2-09, the invariant construction); this requirement keeps the parts the mass and configuration blocks evidence."
+- id: REQ-DEC-045
+  area: DEC
+  kind: calibration
+  statement: "The per-precision tolerance of dd_decoder unit test 1's momentum identity Σpᵢ = 0 (\"to precision-appropriate tolerance\") must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: 5. Unit tests
+  - file: docs/design/principia_chart_reference.md
+    section: 5.2 Tests that can fail
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states the tolerance in f64 and f32 with the measured residuals over fuzzed z that it covers; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+  note: "Applied per R-369 (TASK-M2-02): split from REQ-DEC-044, whose other test-1 identities the mass and configuration blocks evidence."
+- id: REQ-DEC-046
+  area: DEC
+  kind: calibration
+  statement: "The per-precision tolerances of dd_decoder unit test 8 (the invariant construction's L_z and K, \"to tolerance\") must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: 5. Unit tests
+  - file: docs/design/principia_chart_reference.md
+    section: 5.2 Tests that can fail
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal states each tolerance in f64 and f32 with the measured residuals over the grid of feasible (L_z, K*) that it covers; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
+  note: "Applied per R-369 (TASK-M2-02): split from REQ-DEC-044, whose test-1 and test-6 parts the mass and configuration blocks evidence."
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -6204,6 +6242,31 @@
   - R-421
   milestone: M2
   note: "R-421 (RQ-272, option (a) for the fields not 0 at rest); closed by TASK-M2-03, as REQ-DEC-044 is for dd_decoder tests 1, 6 and 8."
+- id: REQ-PAY-096
+  area: PAY
+  kind: definition
+  statement: "Render contract Part 6's quad fields sim-failed flag must be defined in dd_generation_root §3.7 by the task that builds QuadReduction's validity reductions and reviewed by the physics reviewer before merge: what it holds per quad, from the samples whose sample_descriptor state is sim_failed (§3.1's code 4; valid_sample_count counts decode failures only), the QuadReduction member that carries it or the members it derives from, and how the quad fields view reads it as ctx.quad (a RenderQuad member, §3.7a, if one is added); the field-view catalogue then shows it (R-72, R-424)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Field views (one per field, every struct)
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.7 `QuadReduction` — completed ledger
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.1 `sample_descriptor` (u32)
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.7a `RenderQuad` — the CPU-written quad record
+  - file: decisions.md
+    section: "R-424 — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "dd_generation_root §3.7 (and §3.7a if a RenderQuad member is added) defines what sim-failed holds per quad and its source; the ledger and the generated structs follow it; the quad fields row's sim-failed cell is ticked against the generated catalogue on a synthetic payload; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-424
+  milestone: M5
+  note: "Split from REQ-TOOL-011 by R-424 (RQ-275): \"sim-failed moves to the QuadReduction task\"; the QuadReduction task is TASK-M5-17, which builds QuadReduction's validity reductions (applied per R-369); TASK-M5-01, which builds the struct and was in review as PR #191, keeps its scope. Closed by TASK-M5-17."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -8401,6 +8464,29 @@
   - R-410
   milestone: M5
   note: "R-410 (RQ-266's option (a)); a hard assertion like REQ-SCHED-010's, never a clamp or a refusal in the settings UI: no setting that can allocate reaches the bound (applied per R-369). Closed by TASK-M5-17."
+- id: REQ-SCHED-099
+  area: SCHED
+  kind: definition
+  statement: "Render contract Part 6's quad fields cache-valid flag must be defined in dd_generation_root §3.7a by the M5 cache task and reviewed by the physics reviewer before merge: what it holds per drawn quad and its source (the cache lookup's identity and compatibility-signature match, caching contract Part 1, or otherwise), and how the quad fields view reads it as ctx.quad; the same task decides, and writes there with its reason, whether a per-quad schema version (the drawn payload's own, which can differ from the build's PAYLOAD_SCHEMA_VERSION only once quads can come from an older build's cache) belongs with cache-valid; the field-view catalogue then shows cache-valid, and the per-quad schema version if it is added (R-72, R-424)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Field views (one per field, every struct)
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.7a `RenderQuad` — the CPU-written quad record
+  - file: docs/contracts/principia_caching_contract.md
+    section: "Part 1 — Two-level keying: identity vs validity"
+  - file: decisions.md
+    section: "R-424 — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "dd_generation_root §3.7a defines what cache-valid holds per drawn quad and its source, and states whether a per-quad schema version belongs with it, with the reason; the quad fields row's cache-valid cell (and the per-quad schema version's, if added) is ticked against the generated catalogue on a synthetic payload; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-424
+  milestone: M5
+  note: "Split from REQ-TOOL-011 by R-424 (RQ-275): \"cache-valid moves to the M5 cache task, which also decides whether per-quad schema version belongs with cache-valid\"; the M5 cache task is TASK-M5-08, whose lookup is identity + signature match (applied per R-369). At M1 the schema version cell is checked against the build's PAYLOAD_SCHEMA_VERSION (REQ-TOOL-011)."
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -15074,7 +15160,7 @@
   note: "R-113 (RQ-94): the real-march |n|−1 check and the live effort heatmap are a separate M3 requirement. LUT data (Twilight, Viridis): the published matplotlib tables (R-122). RQ-236 and RQ-237, decided per R-369: the suite is fixtures/golden/debug-views/, rendered through RQ-229's harness case kind; its references are recorded in the PR with BASELINES rows citing R-153, proposed and confirmed at the M1 gate; 'the debug picker' is the registry's category: debug entries; the ternary masses colour and the invalid-styled reduced length are REQ-TOOL-154 and REQ-TOOL-156."
 - id: REQ-TOOL-011
   area: TOOL
-  statement: "The field-view catalogue must cover every group in render contract Part 6's field-view table that a synthetic payload can show: the UV fragment preset, all 12 ICDescriptor fields, the SimState scalars, the 10 sample_descriptor bits (including last_symbol), times and derived fields, live shape/accumulator views, word views including the whole-word hash, all 9 quad fields plus payload/status flags, and structural overlays."
+  statement: "The field-view catalogue must cover every group in render contract Part 6's field-view table that a synthetic payload can show: the UV fragment preset, all 12 ICDescriptor fields, the SimState scalars, the 10 sample_descriptor bits (including last_symbol), times and derived fields, live shape/accumulator views, word views including the whole-word hash, all 9 quad fields plus the payload/status flags contains-ensemble, contains-FTLE and schema version (checked against the prelude's has_ensemble() and has_ftle and the build's PAYLOAD_SCHEMA_VERSION, R-424), and structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch)."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Field views (one per field, every struct)
@@ -15088,9 +15174,13 @@
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
   - file: decisions.md
     section: "R-420 — The uniform echo row moves to a task after TASK-M5-02 and TASK-M3-06, which names its thresholds; the Optional Fourier block row is removed from render_contract Part 6 and parked as a possible future feature *(closes RQ-273)*"
+  - file: decisions.md
+    section: "R-424 — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*"
+  - file: decisions.md
+    section: "R-425 — The visible-set and locked/stale overlays move to TASK-M5-29 under a new defining requirement, which reuses the corpus's existing meanings (`quad_state` 4 for \"stale\") rather than defining new ones *(closes RQ-276)*"
   verify:
     method: review checklist
-    detail: "tick each table row against the generated catalogue on a synthetic payload; the DECODE row is REQ-RENDER-027's (M2), the ensemble rows and the live effort heatmap are the M5 and M3 requirements R-113 split off, and the uniform echo row is REQ-TOOL-164's (M5, R-420); the Optional Fourier block row is no longer in the table (R-420)"
+    detail: "tick each table row against the generated catalogue on a synthetic payload; the DECODE row is REQ-RENDER-027's (M2), the ensemble rows and the live effort heatmap are the M5 and M3 requirements R-113 split off, and the uniform echo row is REQ-TOOL-164's (M5, R-420); in the quad fields row, contains-ensemble is ticked against the prelude's has_ensemble() with E toggled, contains-FTLE against has_ftle in both tier variants, and the schema version against the generated PAYLOAD_SCHEMA_VERSION (R-424), while sim-failed is REQ-PAY-096's (M5) and cache-valid REQ-SCHED-099's (M5); in the structural overlays row, visible-set and locked/stale are REQ-TOOL-166's (M5, R-425); the Optional Fourier block row is no longer in the table (R-420)"
   rulings:
   - R-62
   - R-75
@@ -15098,8 +15188,10 @@
   - R-111
   - R-113
   - R-420
+  - R-424
+  - R-425
   milestone: M1
-  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`. Applied per R-369 (TASK-M1-14's pre-flight): the closing moves from TASK-M1-14 to TASK-M1-19, split from it so that RQ-273, which holds this requirement for its uniform echo and Optional Fourier block rows, holds only TASK-M1-19. R-420 (RQ-273): the uniform echo row moves to REQ-TOOL-164 (TASK-M5-31, after TASK-M5-02 and TASK-M3-06), and the Optional Fourier block row is removed from Part 6 and parked (philosophy §7.6a); TASK-M1-19 waits on nothing."
+  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`. Applied per R-369 (TASK-M1-14's pre-flight): the closing moves from TASK-M1-14 to TASK-M1-19, split from it so that RQ-273, which holds this requirement for its uniform echo and Optional Fourier block rows, holds only TASK-M1-19. R-420 (RQ-273): the uniform echo row moves to REQ-TOOL-164 (TASK-M5-31, after TASK-M5-02 and TASK-M3-06), and the Optional Fourier block row is removed from Part 6 and parked (philosophy §7.6a); TASK-M1-19 waits on nothing. RQ-275 and RQ-276 (TASK-M1-19's pre-flight) held it for two cells only: the quad fields row's payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version), which no contract defined, and the structural overlays row's visible-set and locked/stale overlays, which nothing defined or built. R-424 (RQ-275): contains-ensemble, contains-FTLE and the schema version are checked at M1 against has_ensemble(), has_ftle and PAYLOAD_SCHEMA_VERSION; sim-failed moves to REQ-PAY-096 (TASK-M5-17, the QuadReduction task) and cache-valid to REQ-SCHED-099 (TASK-M5-08, the M5 cache task). R-425 (RQ-276): visible-set and locked/stale move to REQ-TOOL-166 (TASK-M5-29). TASK-M1-19 waits on nothing."
 - id: REQ-TOOL-012
   area: TOOL
   statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, an invalid diffusion fit, R-245, or `ftle` whenever `ftle_valid` is false, R-253, R-254) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
@@ -17512,6 +17604,31 @@
   - R-420
   milestone: M5
   note: "R-420 (RQ-273): \"that task names its thresholds\"; SimUniforms' candidates include r_sub, r_coll, tau, escape_window, r_close, eps_e and eps_l (TASK-M3-06). Closed by TASK-M5-31."
+- id: REQ-TOOL-166
+  area: TOOL
+  kind: definition
+  statement: "Render contract Part 6's visible-set and locked/stale structural overlays must be defined in debug_tooling_plan §F by the task that builds the Tier 3 tile debug path and reviewed by the physics reviewer before merge: what each marks per visible quad, reusing the corpus's existing meanings where they exist (for example quad_state 4, dd_generation_root §3.7a, for \"stale\") rather than defining new ones, each reading cited; both are drawn on the Tier 3 path (render_gui_spec §12.1), and the field-view catalogue then shows them (R-72, R-425)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Field views (one per field, every struct)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 12.1 Structural overlays and tile debug shaders
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "F. Structural views — `RenderQuad` / quadtree (read quad metadata, not payload)"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.7a `RenderQuad` — the CPU-written quad record
+  - file: decisions.md
+    section: "R-425 — The visible-set and locked/stale overlays move to TASK-M5-29 under a new defining requirement, which reuses the corpus's existing meanings (`quad_state` 4 for \"stale\") rather than defining new ones *(closes RQ-276)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "debug_tooling_plan §F defines what the visible-set and locked/stale overlays mark per visible quad, each from an existing corpus meaning where one exists (\"stale\" as quad_state 4), cited, or saying none exists; both are drawn on the Tier 3 path; the structural overlays row's two cells are ticked against the generated catalogue; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-425
+  milestone: M5
+  note: "Split from REQ-TOOL-011 by R-425 (RQ-276, option (b)). The candidate readings RQ-276 lists (for \"locked\", the chart lock or caching Part 4's pinned class; for \"visible-set\", scheduler Part 7's live set) are the task's to choose from, not chosen here. Each overlay's slot in the per-visible-quad record counts toward REQ-PERF-079's record (TASK-M8-08). Closed by TASK-M5-29."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

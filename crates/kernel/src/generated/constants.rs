@@ -27,6 +27,9 @@ pub trait ChartConstants: Copy {
 
     /// `eps_w` = 1e-10.
     const EPS_W: Self;
+
+    /// `eps_m01` = 1e-5.
+    const EPS_M01: Self;
 }
 
 impl ChartConstants for f32 {
@@ -38,6 +41,7 @@ impl ChartConstants for f32 {
     const EPS_Q: f32 = 1e-6;
     const DELTA_LAMBDA: f32 = 1e-12;
     const EPS_W: f32 = 1e-10;
+    const EPS_M01: f32 = 1e-5;
 }
 
 impl ChartConstants for f64 {
@@ -49,4 +53,5 @@ impl ChartConstants for f64 {
     const EPS_Q: f64 = 1e-6;
     const DELTA_LAMBDA: f64 = 1e-12;
     const EPS_W: f64 = 1e-10;
+    const EPS_M01: f64 = 1e-5;
 }
