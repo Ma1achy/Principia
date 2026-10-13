@@ -442,7 +442,7 @@ the *most* chaotic regions), whereas a crossing time cannot [RC §5.1].
 | `saturated_fraction` | f16 | substep-saturation — a **second** condition Part 6 gates on; was missing |
 | `valid_sample_count` | u16 | decoded of N² |
 | `coherence` | f32 | priority ordering (`complexity = 1 − coherence`) |
-| `escape_time_min` / `_max` | f16 × 2 | diagnostic range; with no copy escaped, a sentinel RQ-268 holds open |
+| `escape_time_min` / `_max` | f16 × 2 | diagnostic range; with no copy escaped, `_min` is +∞ (`0x7c00`) and `_max` −∞ (`0xfc00`), and "no escape" reads `_min > _max` (R-418) |
 | `retrograde_fraction` | f16 | tiebreaker |
 | `mean_orbit_count_spread` | f16 | tiebreaker |
 
@@ -486,15 +486,11 @@ time or sample count (REQ-PAY-006); the bin count is fixed, so the layout does n
 within ±65504 or the entry states its `overflow` (R-248). A fraction is `[0, 1]`; `spread_shape` and `spread_event`
 are `[0, 1]` by their normalisations (above); a count holds its width, `n_unresolved` and `valid_sample_count` being
 at most N² (R-315); an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are. The ranges and
-`overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift` are proposed,
-R-71 (REQ-PAY-093), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate; those of
-`escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed likewise (RQ-268). RQ-268 also
-holds the value `escape_time_min` and `escape_time_max` take when no copy escaped, **open, with two options**: +∞ for
-both, which is the min reduction's identity for `_min` but a chosen sentinel for `_max` (the empty max is −∞, so its
-writer needs a no-escape branch); or each its reduction's identity, +∞ for `_min` and −∞ for `_max`, so an empty range
-reads `_min > _max`. Either is tested by its bits, as `d_min`'s unset value is (R-271), and their saturate keeps every
-escape time finite, so it is distinct from each. The table below gives no sentinel for them until the human chooses
-one with their ranges.
+`overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`,
+`escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are proposed, R-71 (REQ-PAY-093; R-418 adds the
+last three), with their evidence in TASK-M5-01's PR, until the human confirms them at the M5 gate. The sentinels of
+`escape_time_min` and `escape_time_max` are their no-escape values, +∞ (binary16 `0x7c00`) and −∞ (`0xfc00`), each
+its reduction's identity (above, "No escape (R-418)"), tested by their bits.
 
 | member | location | type | scale | range | sentinel · overflow |
 |---|---|---|---|---|---|
@@ -515,8 +511,8 @@ one with their ranges.
 | `suspect_fraction` | (qr_w5, 16, 16) | f16 | lin | [0, 1] | — |
 | `saturated_fraction` | (qr_w6, 0, 16) | f16 | lin | [0, 1] | — |
 | `valid_sample_count` | (qr_w6, 16, 16) | u-bits | lin | [0, 65535] | — |
-| `escape_time_min` | (qr_w7, 0, 16) | f16 | lin | [0, ∞) | overflow saturate |
-| `escape_time_max` | (qr_w7, 16, 16) | f16 | lin | [0, ∞) | overflow saturate |
+| `escape_time_min` | (qr_w7, 0, 16) | f16 | lin | [0, ∞) | sentinel +∞ · overflow saturate |
+| `escape_time_max` | (qr_w7, 16, 16) | f16 | lin | [0, ∞) | sentinel −∞ · overflow saturate |
 | `retrograde_fraction` | (qr_w8, 0, 16) | f16 | lin | [0, 1] | — |
 | `mean_orbit_count_spread` | (qr_w8, 16, 16) | f16 | lin | [0, ∞) | overflow saturate |
 | `running_mean_divergence` | scalar-index 41 | f32 | lin | (−∞, ∞) | — |
