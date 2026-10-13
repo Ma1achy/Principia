@@ -450,42 +450,72 @@ fn mock_time_drawn_ticks_under_the_scrubber() {
 
 #[test]
 fn mock_hover_drawn_geometry_in_numbers() {
-    use crate::explore::trajectory::{MARGIN, REST_ANGLE_DEG, SUMMARY_H, TITLE_H, VIEW_FRACTION};
-    // The panel's regions, for a 400 × 800 panel at (10, 20): the body 376 × 776 inside the margin, the views a quarter
-    // of its height, 194.
-    let a = areas(Rect::from_min_size(pos2(10.0, 20.0), vec2(400.0, 800.0)));
-    let body = Rect::from_min_size(pos2(10.0 + MARGIN, 20.0 + MARGIN), vec2(376.0, 776.0));
-    let side = 776.0 * VIEW_FRACTION;
-    assert_eq!(side, 194.0);
+    use crate::explore::trajectory::{
+        MARGIN, REST_ANGLE_DEG, STATS_H, SUMMARY_H, TITLE_H, VIEW_FRACTION, VIEW_GAP,
+    };
+    // The panel's regions, for a 400 × 1000 panel at (10, 20): the body 376 × 976 inside the margin, the two views side
+    // by side, each the body's half less the gap, 182, under a quarter of its height, 244.
+    let a = areas(Rect::from_min_size(pos2(10.0, 20.0), vec2(400.0, 1000.0)));
+    let body = Rect::from_min_size(pos2(10.0 + MARGIN, 20.0 + MARGIN), vec2(376.0, 976.0));
+    let side = (376.0 - VIEW_GAP) / 2.0;
+    assert_eq!(side, 182.0);
+    assert!(side < 976.0 * VIEW_FRACTION);
     assert_eq!(a.title, Rect::from_min_size(body.min, vec2(376.0, TITLE_H)));
     assert_eq!(
         a.summary,
         Rect::from_min_size(pos2(22.0, 32.0 + TITLE_H), vec2(376.0, SUMMARY_H))
     );
+    // Real space and the sphere side by side (GUI_DESIGN_NOTES, render_gui_spec §G2), at the same height.
     assert_eq!(
         a.real,
-        Rect::from_min_size(pos2(22.0, 32.0 + 46.0 + 4.0), vec2(376.0, side))
+        Rect::from_min_size(pos2(22.0, 32.0 + 46.0 + 4.0), vec2(side, side))
     );
     assert_eq!(
         a.sphere,
-        Rect::from_min_size(pos2(22.0, 82.0 + side + 6.0), vec2(side, side))
+        Rect::from_min_size(pos2(22.0 + side + VIEW_GAP, 82.0), vec2(side, side))
     );
+    assert_eq!(a.sphere.max.x, body.max.x, "the two fill the body's width");
     assert_eq!(
         a.stats,
-        Rect::from_min_max(
-            pos2(22.0 + side + 12.0, a.sphere.min.y),
-            pos2(398.0, a.sphere.max.y)
-        )
+        Rect::from_min_size(pos2(22.0, 82.0 + side + 6.0), vec2(376.0, STATS_H))
     );
     assert_eq!(
         a.rows,
-        Rect::from_min_max(pos2(22.0, a.sphere.max.y + 6.0), body.max)
+        Rect::from_min_max(pos2(22.0, a.stats.max.y + 6.0), body.max)
     );
-    // A narrow panel: the views no wider than the body.
-    let narrow = areas(Rect::from_min_size(pos2(0.0, 0.0), vec2(100.0, 2000.0)));
-    assert_eq!(narrow.sphere.width(), 76.0);
+    // The stats' cells: the F₂ word two fifths of the row, the other three a fifth each, edge to edge.
+    let cells = crate::explore::trajectory::stat_cells(a.stats);
+    let fifth = 376.0 / 5.0;
+    assert_eq!(
+        cells[0],
+        Rect::from_min_size(a.stats.min, vec2(2.0 * fifth, STATS_H))
+    );
+    for (k, cell) in cells.iter().enumerate().skip(1) {
+        assert_eq!(
+            *cell,
+            Rect::from_min_size(
+                a.stats.min + vec2((k as f32 + 1.0) * fifth, 0.0),
+                vec2(fifth, STATS_H)
+            )
+        );
+    }
+    assert_eq!(cells[3].max.x, a.stats.max.x);
+    rejects("four equal cells", || {
+        assert_eq!(cells[0].width(), cells[1].width())
+    });
+    rejects("the views stacked", || {
+        assert!(a.sphere.min.y >= a.real.max.y)
+    });
+    // A short panel: the views a quarter of its height, 194 of a 776 body, side by side still.
+    let short = areas(Rect::from_min_size(pos2(10.0, 20.0), vec2(500.0, 800.0)));
+    assert_eq!(short.real.height(), 776.0 * VIEW_FRACTION);
+    assert_eq!(short.sphere.width(), 194.0);
+    assert_eq!(
+        short.sphere.min,
+        short.real.right_top() + vec2(VIEW_GAP, 0.0)
+    );
     rejects("views a third of the height", || {
-        assert_eq!(a.real.height(), 776.0 / 3.0)
+        assert_eq!(short.real.height(), 776.0 / 3.0)
     });
     // The sphere seen from its tilt: the axes' screen points and depths, turned from its resting azimuth.
     let (st, ct) = 20f64.to_radians().sin_cos();

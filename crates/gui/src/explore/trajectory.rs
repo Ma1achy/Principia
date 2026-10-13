@@ -1,9 +1,10 @@
 //! The Trajectory panel (render_gui_spec §G2, §G3; GUI_DESIGN_NOTES § "01 Explore"; 01_main.png; R-390, ORDER item 4):
 //! right of the figure, for the IC under the cursor or a kept orbit, by its tabs ("under cursor", `#1`, `#2`, …, `+`).
 //! Its frame and controls are real; its content is the mock's plausible fake sample, read from the snapshot. Under the
-//! tabs: a one-line summary (fate, `t_end`, FTLE, `E₀`); real space, in the centre-of-mass frame, above the shape
-//! sphere, which turns slowly with visible x, y, z axes and switches to an unwrapped (equirectangular) view, its
-//! "turn" checkbox stopping it; beside the sphere the F₂ word, substeps, minimum separation and `|ΔE/E|`; a playhead for
+//! tabs: a one-line summary (fate, `t_end`, FTLE, `E₀`); real space, in the centre-of-mass frame, and the shape sphere
+//! side by side, as GUI_DESIGN_NOTES and render_gui_spec §G2 say over 01_main.png's stacked views (applied per R-369);
+//! the sphere turns slowly with visible x, y, z axes and switches to an unwrapped (equirectangular) view, its "turn"
+//! checkbox stopping it; below them the F₂ word, substeps, minimum separation and `|ΔE/E|`; a playhead for
 //! this orbit; **listen** (its sound is TASK-M8-12's, so here it is a state only) and "follow cursor"; **Open full
 //! viewer…** and **IC Inspector…**, drawn disabled until TASK-M6-28 builds the Inspector window, as the top bar's
 //! windows are (applied per R-369); and the kept orbits below, each with its fate and time, removable.
@@ -412,8 +413,8 @@ pub fn fit(paths: &[Vec<[f64; 2]>]) -> [f64; 4] {
     [cx - half, cy - half, cx + half, cy + half]
 }
 
-/// The panel's regions in `rect`: the title row, the summary, real space, the sphere square and the stats beside it,
-/// and the rows under them.
+/// The panel's regions in `rect`: the title row, the summary, real space and the sphere side by side, two squares, the
+/// stats below them, and the rows under those.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Areas {
     /// The title and tabs.
@@ -424,7 +425,7 @@ pub struct Areas {
     pub real: Rect,
     /// The sphere, or the unwrapped view.
     pub sphere: Rect,
-    /// The stats beside the sphere.
+    /// The stats below the two views.
     pub stats: Rect,
     /// Everything below: the view toggles, the playhead, listen, the buttons and the kept orbits.
     pub rows: Rect,
@@ -434,25 +435,27 @@ pub struct Areas {
 pub const TITLE_H: f32 = 28.0;
 /// See [`TITLE_H`].
 pub const SUMMARY_H: f32 = 18.0;
-/// Real space's height, and the sphere's side, as a fraction of the body's height (a look choice, R-390).
+/// The side of real space's and the sphere's squares, as a fraction of the body's height, unless the two side by side
+/// would be wider than the body (a look choice, R-390).
 pub const VIEW_FRACTION: f32 = 0.25;
+/// The gap between real space and the sphere, in points (a look choice, R-390).
+pub const VIEW_GAP: f32 = 12.0;
+/// The stats' height below the views, in points: one row of four, each a name over its value (a look choice, R-390).
+pub const STATS_H: f32 = 34.0;
 
 /// The regions of a panel in `rect`.
 pub fn areas(rect: Rect) -> Areas {
     let body = rect.shrink(MARGIN);
-    let side = (body.height() * VIEW_FRACTION).min(body.width());
+    let side = (body.height() * VIEW_FRACTION).min((body.width() - VIEW_GAP) / 2.0);
     let title = Rect::from_min_size(body.min, vec2(body.width(), TITLE_H));
     let summary = Rect::from_min_size(title.left_bottom(), vec2(body.width(), SUMMARY_H));
-    let real = Rect::from_min_size(
-        summary.left_bottom() + vec2(0.0, 4.0),
-        vec2(body.width(), side),
+    let real = Rect::from_min_size(summary.left_bottom() + vec2(0.0, 4.0), vec2(side, side));
+    let sphere = Rect::from_min_size(real.right_top() + vec2(VIEW_GAP, 0.0), vec2(side, side));
+    let stats = Rect::from_min_size(
+        real.left_bottom() + vec2(0.0, 6.0),
+        vec2(body.width(), STATS_H),
     );
-    let sphere = Rect::from_min_size(real.left_bottom() + vec2(0.0, 6.0), vec2(side, side));
-    let stats = Rect::from_min_max(
-        pos2(sphere.max.x + 12.0, sphere.min.y),
-        pos2(body.max.x, sphere.max.y),
-    );
-    let rows = Rect::from_min_max(pos2(body.min.x, sphere.max.y + 6.0), body.max);
+    let rows = Rect::from_min_max(pos2(body.min.x, stats.max.y + 6.0), body.max);
     Areas {
         title,
         summary,
@@ -666,17 +669,36 @@ fn unwrapped(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
 
 /// The stats beside the sphere: the F₂ word, substeps, minimum separation and `|ΔE/E|`.
 fn stats(ui: &mut Ui, rect: Rect, orbit: &Sample) {
-    let mut column = ui.new_child(UiBuilder::new().max_rect(rect));
-    column.spacing_mut().item_spacing.y = 1.0;
-    for (name, value) in [
+    for (cell, (name, value)) in stat_cells(rect).into_iter().zip([
         ("F₂ word", orbit.f2_word.clone()),
         ("substeps", crate::explore::top_bar::grouped(orbit.substeps)),
         ("min sep", format!("{:.1e}", orbit.min_separation)),
         ("|ΔE/E|", format!("{:.1e}", orbit.energy_drift)),
-    ] {
+    ]) {
+        let mut column = ui.new_child(UiBuilder::new().max_rect(cell));
+        column.spacing_mut().item_spacing.y = 1.0;
         column.label(RichText::new(name).weak().small().monospace());
-        column.label(RichText::new(value).monospace());
+        // A word longer than its cell is cut with "…", never drawn over the next.
+        column.add(egui::Label::new(RichText::new(value).monospace()).truncate());
     }
+}
+
+/// The stats' four cells in `rect`, left to right: the F₂ word's two fifths of the width, as the longest value, then
+/// substeps, minimum separation and `|ΔE/E|` a fifth each (a look choice, R-390).
+pub fn stat_cells(rect: Rect) -> [Rect; 4] {
+    let fifth = rect.width() / 5.0;
+    let cell = |from: f32, fifths: f32| {
+        Rect::from_min_size(
+            rect.min + vec2(from * fifth, 0.0),
+            vec2(fifths * fifth, rect.height()),
+        )
+    };
+    [
+        cell(0.0, 2.0),
+        cell(2.0, 1.0),
+        cell(3.0, 1.0),
+        cell(4.0, 1.0),
+    ]
 }
 
 fn rows(ui: &mut Ui, rect: Rect, orbit: Option<&Sample>, panel: &mut Panel<'_>) {
