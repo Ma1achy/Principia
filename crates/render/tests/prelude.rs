@@ -19,6 +19,7 @@
 
 use std::path::Path;
 
+use ledger::constants::{HUE_WHEEL_C, HUE_WHEEL_L};
 use ledger::gen::{self, prelude};
 use render::present::{self, Rgb};
 use validation::gpu::{BindingKind, GpuHarness};
@@ -684,7 +685,7 @@ fn check_grey_and_wheel(gpu: &GpuHarness, text: Text) {
     cases.extend(ts.iter().map(|&t| case(HUE_WHEEL, &[f(t)])));
     cases.extend([1.25f32, -0.3].map(|t| case(HUE_WHEEL, &[f(t)])));
     let got = run(gpu, text, &cases);
-    let (l, c) = prelude::hue_wheel_lc();
+    let (l, c) = (HUE_WHEEL_L.number(), HUE_WHEEL_C.number());
     for (k, p) in got.into_iter().enumerate() {
         let t = f64::from(f32::from_bits(cases[k].args[0]));
         if cases[k].op == RAMP_GREY {
@@ -847,7 +848,7 @@ fn check_helpers_gpu(gpu: &GpuHarness, text: Text) {
         cases.push(c);
         want.push((what, w, b));
     };
-    let (gl, gc) = prelude::hue_wheel_lc();
+    let (gl, gc) = (HUE_WHEEL_L.number(), HUE_WHEEL_C.number());
     for (i, n) in [
         (0u32, 6u32),
         (5, 6),

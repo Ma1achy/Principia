@@ -21,6 +21,7 @@
 //!
 //! Each test registers its negative control (R-176).
 
+use ledger::constants::{LOG_FLOORS, LOG_FLOOR_CLOSURE_MIN, LOG_FLOOR_DE_MAX, LOG_FLOOR_D_MIN};
 use ledger::gen::catalogue::numeric_view;
 use ledger::gen::numeric::{self, End, NumericView, Placement, Ramp, Sentinel, Shown};
 use ledger::schema::{Bound, Entry, EntryBuilder, FieldType, Ledger, Location, Range, Scale};
@@ -268,7 +269,7 @@ fn check_twin_places(cyclic: &NumericView) {
     assert_eq!(t(&lin, 1.0), Some(0.25));
     assert_eq!(t(&lin, -1.0), Some(0.0), "below lo clamps to 0");
     assert_eq!(t(&lin, 9.0), Some(1.0), "above hi clamps to 1");
-    let floor = numeric::closure_min_log_floor();
+    let floor = LOG_FLOOR_CLOSURE_MIN.number();
     let log = view(
         Placement::Log { floor },
         End::Fixed(0.0),
@@ -591,9 +592,9 @@ fn numeric_view_template_floats_are_wgsl_literals() {
         (76.0, "76.0"),
         (1e-8, "1e-8"),
         (1e20, "1e20"),
-        (numeric::d_min_log_floor(), "6.1035156e-5"),
-        (numeric::de_max_log_floor(), "9.536743e-7"),
-        (numeric::closure_min_log_floor(), "1.1920929e-7"),
+        (LOG_FLOOR_D_MIN.number(), "6.1035156e-5"),
+        (LOG_FLOOR_DE_MAX.number(), "9.536743e-7"),
+        (LOG_FLOOR_CLOSURE_MIN.number(), "1.1920929e-7"),
         (numeric::cyclic_period(), "6.2831855"),
         (f64::from(f32::MAX), "3.4028235e38"),
     ]);
@@ -1171,9 +1172,18 @@ fn dbg_log_place(x: f64, eps: f64) -> f64 {
     1.0 - 1.0 / (1.0 + (1.0 + x.abs() / eps).ln())
 }
 
+/// `field`'s floor as the constants register gives it ([`LOG_FLOORS`]; R-427), or `None` for a field with none.
+fn register_floor(field: &str) -> Option<f64> {
+    LOG_FLOORS
+        .iter()
+        .find(|(f, _)| *f == field)
+        .map(|(_, k)| k.number())
+}
+
 /// Checks that the log views are exactly `floors`' fields and that each places raw at `dbg_log`'s form with its own
-/// floor: `log_floor` gives it, the view carries it, an f32 holds it exactly, the WGSL writes it, and the CPU twin
-/// places `0`, `ε_f`, `ε_f·(e − 1)` and values about it as `dbg_log` does. A field with no log view has no floor.
+/// floor: its register entry gives it, provisional until the M1 gate (R-427), the view carries it, an f32 holds it
+/// exactly, the WGSL writes it, and the CPU twin places `0`, `ε_f`, `ε_f·(e − 1)` and values about it as `dbg_log`
+/// does. A field with no log view has no floor.
 fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) {
     let logs: Vec<&str> = views
         .iter()
@@ -1192,9 +1202,18 @@ fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) 
             .find(|(e, ..)| e.name == field)
             .unwrap_or_else(|| panic!("no view of `{field}`"));
         assert_eq!(
-            numeric::log_floor(field),
+            register_floor(field),
             Some(eps),
             "`{field}`'s floor is not its own, 2^{k}"
+        );
+        let (_, entry) = LOG_FLOORS
+            .iter()
+            .find(|(f, _)| *f == field)
+            .unwrap_or_else(|| panic!("no register entry for `{field}`'s floor"));
+        assert_eq!(
+            entry.provisional,
+            Some("M1"),
+            "`{field}`'s floor is not provisional until M1"
         );
         assert_eq!(
             n.placement,
@@ -1236,11 +1255,7 @@ fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) 
         "theta",
         "t_end_step",
     ] {
-        assert_eq!(
-            numeric::log_floor(field),
-            None,
-            "`{field}` has a display floor"
-        );
+        assert_eq!(register_floor(field), None, "`{field}` has a display floor");
     }
 }
 
