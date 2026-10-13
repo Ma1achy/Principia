@@ -80,3 +80,140 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
   - TASK-M2-03 (REQ-PAY-088) and TASK-M3-13 (REQ-PAY-073) do not wait: each writes its definition under every option,
     and (c) needs them to run. They are named, not marked, as RQ-271 named REQ-PAY-088.
   - REQ-RENDER-084 is closed by TASK-M1-17, merged; a mark would hold nothing.
+
+---
+
+## RQ-275: render_contract Part 6's quad-fields row lists five payload/status flags read from `ctx.quad` that no contract defines: `RenderQuad` and the stain's `CtxQuad` carry none, contains-ensemble and contains-FTLE exist only as the prelude's per-variant and per-frame guards, the schema version only as a WGSL constant, and per-quad sim-failed and cache-valid have no source *(silence and placement, R-72, R-113, R-145, REQ-TOOL-011, REQ-TOOL-026; context: TASK-M1-19, TASK-M1-13)*
+
+*Found in TASK-M1-19's read-only pre-flight. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)" (line 315), the quad
+    fields row: "Quad fields — all 9 (depth, state enum, coherence, impurity, spread, suspect fraction, priority, cache
+    age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema
+    version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view
+    here exonerates the GPU".
+  - `docs/design/principia_dd_generation_root.md` § "3.7a `RenderQuad` — the CPU-written quad record" (lines 462–485):
+    "it is the ledger table the generated `RenderQuad` follows, member for member … the fragment reads it as
+    `ctx.quad` (render contract Part 1; Part 6's "Quad fields" view)", with ten members, `quad_depth`, `quad_state`,
+    `coherence_score`, `outcome_impurity`, `ensemble_spread`, `suspect_fraction`, `priority_score`, `ancestor_gap`,
+    `cache_age` and `dominant_outcome`, and no flag. It adds: "It is scheduler state, not payload, and the payload
+    compatibility signature excludes scheduler state … so it is not hashed into the schema version."
+  - The code at origin/main 55513b7b: `crates/render/shaders/wgsl/stain/context.wgsl`, `struct CtxQuad` (lines 19–36),
+    holds `index`, `tl`, `centre`, `half_width`, `uv`, `sample_count` and the `RenderQuad` members, and no flag.
+  - contains-FTLE and contains-ensemble: `docs/contracts/principia_render_contract.md` § "Part 2 — Fixed pipeline,
+    swappable slots" (line 46): "`has_ftle`/`has_word` are baked consts; `has_ensemble` is a uniform, read the same
+    way, so toggling E never re-bakes (R-145 …)". `crates/render/shaders/wgsl/lib/prelude.wgsl` (lines 6–25): "This
+    variant's tier (lowering Part 3a): baked … `has_ftle` is whether the stored variant is `SimStateFTLE`",
+    `const has_ftle: bool = true;`, and the `PreludeUniforms` member `has_ensemble`, read by `fn has_ensemble()`.
+    `docs/design/principia_dd_generation_root.md` § "3.5 The live-state block (replaces the checkpoint array —
+    lockstep, ratified)" (line 167): "ensemble-on/off is a quad/tier flag (`contains-ensemble`)", and (line 156) "Tier gates
+    existence; `contains-ensemble` / `contains-FTLE` advertise it". Each is per variant or per frame, not a
+    `RenderQuad` member. RQ-239 (archived, `docs/archive/review_queue/M0.md`) decided for REQ-TOOL-026's spread view
+    only that "Present iff contains-ensemble" reads `has_ensemble()`.
+  - The schema version: `crates/render/frag/generated/payload_unpack.wgsl` (line 7), `const PAYLOAD_SCHEMA_VERSION:
+    vec2<u32> = …`, one constant per build, which `RenderQuad` is "not hashed into" (above).
+  - sim-failed: the per-sample `state` code 4, `sim_failed` (`docs/design/principia_dd_generation_root.md` § "3.1
+    `sample_descriptor` (u32)", line 37; render contract Part 5's `sd_is_failed`). No quad-level failed flag or count is defined: `QuadReduction`
+    (§ "3.7 `QuadReduction` — completed ledger") carries `terminated_fraction`, `class_histogram[N]` and
+    `dominant_outcome`, and `RenderQuad` none of these but `dominant_outcome`.
+  - cache-valid: `docs/contracts/principia_caching_contract.md` § "Part 1 — Two-level keying: identity vs validity"
+    (line 14): "**Validity — *computed under which physics config*.** The payload compatibility signature: … payload
+    schema version (a content hash of the ledger, R-36)". No per-quad valid flag is defined, and no M1 cache exists.
+  - `plan/requirements.yaml` REQ-TOOL-011 (`milestone: M1`, TASK-M1-19): "The field-view catalogue must cover every
+    group in render contract Part 6's field-view table that a synthetic payload can show: … all 9 quad fields plus
+    payload/status flags, and structural overlays". REQ-TOOL-026 (M1, TASK-M1-13, merged), the quad views: "quad-depth,
+    quad-state …, coherence/impurity …, ensemble spread (present iff contains-ensemble), suspect fraction, priority
+    score, cache age / ancestor gap, leaf outlines, fallback tint and pending hatch", with no status flag.
+  - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*", as REQ-TOOL-011's
+    note records it, split off the DECODE, ensemble and live-effort rows; § "R-420 — The uniform echo row moves …
+    *(closes RQ-273)*" moved the uniform echo row and removed the Fourier row. Neither split off the flags.
+- **Silence (and a placement question):** the row reads five flags from `ctx.quad`, but no contract makes any of them a
+  `RenderQuad` member or says what each holds per quad. Two have a per-variant or per-frame reading in the prelude
+  (`has_ftle`, `has_ensemble()`) and one a per-build constant (`PAYLOAD_SCHEMA_VERSION`), none of them quad data; and
+  generation_root §3.7a says `RenderQuad` is "not hashed into the schema version". Per-quad sim-failed and
+  cache-valid have no data source at all: no quad-level failure flag is defined, and cache validity is the M5 cache's
+  signature. An M1 checklist that ticks the row "on a synthetic payload" has nothing to tick for the flags; R-113 and
+  R-420 placed other rows that need later machinery, but not these.
+- **Options seen:**
+  - (a) Define them now (R-72, a definition requirement): each flag's meaning per quad and its source (a `RenderQuad`
+    member, the prelude guard, or the schema constant), written into dd_generation_root §3.7a or render_contract Part
+    6, as a TASK-M1-19 deliverable or a new task's.
+  - (b) Split them off to the task that builds their source, as R-113 split the DECODE, ensemble and live-effort rows:
+    cache-valid with the M5 cache, per-quad sim-failed with the reduction (`QuadReduction`), and so on, each under a
+    named requirement that REQ-TOOL-011's checklist then cites for the cell.
+  - (c) Drop the flags from Part 6's row (a ruling; render_contract Part 6 then conformed). Dropping is the human's
+    call only.
+  - The options may be taken per flag: for example contains-ensemble and contains-FTLE ticked against the prelude's
+    `has_ensemble()` and `has_ftle` (as RQ-239 read contains-ensemble for REQ-TOOL-026), and the rest split or dropped.
+- **Applied meanwhile:** TASK-M1-19 is built with every other row of Part 6's table; its PR's checklist marks the five
+  flag cells of the quad fields row as waiting on RQ-275. The row's nine quad fields are ticked as usual. This settles
+  nothing here.
+- **Waits:** REQ-TOOL-011 carries `rq: RQ-275`, for the quad fields row's five flags only, so TASK-M1-19's PR, which
+  closes REQ-TOOL-011, does not merge until this entry is ruled (`plan/OPERATIONS.md` § "Autonomy (R-369)": a PR
+  merges once "it waits on no open `REVIEW_QUEUE.md` entry"). With it wait the M1 exit and the chain behind
+  TASK-M1-19 that RQ-273 listed (TASK-M2-25 and its dependents), which is behind the M1 exit anyway. TASK-M1-13
+  (REQ-TOOL-026), merged, is not reopened.
+
+---
+
+## RQ-276: render_contract Part 6's structural-overlays row lists a "visible-set" and a "locked/stale" overlay that nothing defines or builds; render_gui_spec §12.1 calls them Tier 3, and TASK-M5-29, which builds Tier 3, names neither *(silence and placement, R-72, REQ-TOOL-011, REQ-TOOL-026, REQ-RENDER-055, REQ-PERF-079; context: TASK-M1-19, TASK-M1-13, TASK-M5-29, TASK-M8-08)*
+
+*Found in TASK-M1-19's read-only pre-flight. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)" (line 316), the
+    structural overlays row: "Structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending
+    hatch, visible-set, locked/stale) | post node + quad + `ctx.uv` | the quad/instance render path and cache
+    behaviour".
+  - `docs/gui/principia_render_gui_spec.md` § "12.1 Structural overlays and tile debug shaders" (lines 893–895): "The
+    rest of that render-contract list (**fallback tint**, **pending hatch**, **visible-set**, **locked/stale**) is
+    Tier 3 by this test: those are *values attached to a quad*, not functions of position within it." Its tier table's
+    Tier 3 examples are "refine-decision, dirty, resident, generation, budget, ancestor gap", neither overlay among
+    them.
+  - `plan/tasks/M5/TASK-M5-29.md` ("Tier 3 tile debug shaders and the quad-state transition table"; REQ-RENDER-055,
+    REQ-RENDER-056, REQ-TOOL-116) builds the Tier 3 path and names no overlay; its note: "Its per-visible-quad record is
+    REQ-PERF-079's (TASK-M8-08)", whose statement is "The Tier-3 tile-debug buffer's per-visible-quad record must be
+    defined in render_gui_spec §12.1 by the task that needs it".
+  - `docs/design/principia_debug_tooling_plan.md` § "F. Structural views — `RenderQuad` / quadtree (read quad metadata,
+    not payload)" lists the overlays "quadtree boundaries / leaf outlines" ("active leaf set correct; pinned chain never
+    evicted") and "fallback ancestor tint / pending hatch", and no visible-set or locked overlay. REQ-TOOL-026 (M1,
+    TASK-M1-13, merged) names "leaf outlines, fallback tint and pending hatch", which TASK-M1-13 built as post
+    occupants reading `ctx.quad` (RQ-239); REQ-TOOL-011 (M1, TASK-M1-19) covers "structural overlays".
+  - "stale": `docs/design/principia_dd_generation_root.md` § "3.7a `RenderQuad` — the CPU-written quad record":
+    "`quad_state` | u32 | 0 loaded · 1 pending · 2 refinable · 3 terminal · 4 stale", which the quad-state view
+    `s_state` (`crates/render/shaders/wgsl/frag/debug/s_state.wgsl`, REQ-TOOL-026) already draws as a discrete colour.
+  - "locked": defined nowhere as a quad property. Elsewhere the corpus's "locked" is the chart lock
+    (`docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)", "locked mode") and locked debug presets
+    (`docs/gui/principia_render_gui_spec.md` § "11. Presets = whole graphs"); the caching contract's per-quad
+    exemption is "pinned" (`docs/contracts/principia_caching_contract.md` § "Part 4 — Baseline-first: an absolute
+    tier, not a priority weight": "the baseline cover and its ancestor chain for the visible region, **plus the
+    backdrop identity's leaf cover (Part 5)**, are pinned"), and no text links it to "locked".
+  - "visible-set": defined nowhere as an overlay. `RenderQuad` is written "one per visible quad" (§3.7a), and the
+    caching contract speaks of "the visible region"; no text says what a visible-set overlay draws.
+  - Search at origin/main 55513b7b: "visible-set" occurs only at render_contract:316 and render_gui_spec:894, and
+    "locked/stale" only there; no requirement in `plan/requirements.yaml` and no task file in `plan/tasks/` names either
+    (outside `docs/archive/`, `docs/reference/` and `workbench/`, record only per R-159).
+- **Silence (and a placement question):** the row lists two overlays that no doc defines (what a visible-set overlay
+  marks, what "locked" means for a quad), no requirement names, and no task builds. render_gui_spec §12.1 places them in
+  Tier 3, which TASK-M5-29 builds at M5 with its record defined at M8 (REQ-PERF-079), but neither task names them; the
+  other two overlays that sentence placed in Tier 3, the fallback tint and the pending hatch, were built at M1 as post
+  occupants under RQ-239. "stale" already has a reading as `quad_state` 4, drawn by `s_state`; "locked" has none. The
+  row's other overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch) exist.
+- **Options seen:**
+  - (a) Define both now (R-72, a definition requirement) and build them in M1, as TASK-M1-19's deliverable or a new
+    task's, reading `ctx.quad` as the fallback tint and pending hatch do.
+  - (b) Move both to TASK-M5-29's Tier 3 path, under a named requirement that defines them (R-72); REQ-TOOL-011's
+    checklist then cites that requirement for the two cells, as it cites REQ-RENDER-027 for the DECODE row.
+  - (c) "stale" is covered by `s_state`'s `quad_state` 4, ticked against it; "locked" is dropped (a ruling) or defined
+    (R-72, under (a) or (b)).
+  - (d) Drop both from Part 6's row (a ruling; render_contract Part 6 and render_gui_spec §12.1 then conformed).
+    Dropping is the human's call only.
+  - The options may be taken per overlay.
+- **Applied meanwhile:** TASK-M1-19 is built with every other row of Part 6's table; its PR's checklist marks the
+  visible-set and locked/stale cells of the structural overlays row as waiting on RQ-276. The row's other four
+  overlays are ticked as usual. This settles nothing here.
+- **Waits:** REQ-TOOL-011 carries `rq: RQ-276`, for those two overlays only, so TASK-M1-19's PR does not merge until
+  this entry is ruled (`plan/OPERATIONS.md` § "Autonomy (R-369)"), with the M1 exit and the chain behind TASK-M1-19, as
+  under RQ-275. TASK-M5-29 does not wait: it builds the Tier 3 path under every option, and (b) needs it to run; it is
+  named, not marked. TASK-M1-13 (REQ-TOOL-026), merged, is not reopened.
