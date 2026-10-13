@@ -17,7 +17,8 @@
 //! condition. `has_ftle` is the prelude's tier constant, which the lint presents as an override
 //! (`super::tier_overrides`), so that naga does not fold `!has_ftle` into a literal. An expression carries the reads its
 //! operands carry, but a local's load carries none, since every store into it was checked as a use, and the absence
-//! test, a `bitcast<u32>` compared by `==` or `!=`, carries none (lowering Part 3a).
+//! test, a `bitcast<u32>` compared by `==` or `!=` with the canonical quiet NaN's bits, carries none (lowering Part
+//! 3a).
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
@@ -29,6 +30,10 @@ use naga::{
 };
 
 use super::{Finding, Rule};
+
+/// The canonical quiet NaN's f32 bits, which the absence test compares against (lowering Part 3a, "The sentinels'
+/// values"), the ledger's.
+const QNAN_BITS: u32 = ledger::payload::canonical_qnan_bits();
 
 /// The read-side `SimState` (lowering Part 3a), whose `ftle`, `ftle_valid`, `ensemble_spread` and `word` the rules
 /// read, and the prefix of every `SimState*` struct, stored or read-side, whose shadow the shadow rule reads.
@@ -598,7 +603,8 @@ impl<'a> Guard<'a> {
         }
     }
 
-    /// Whether `left` and `right` are the absence test: one the `bitcast<u32>` of a value, the other no guarded read.
+    /// Whether `left` and `right` are the absence test: one the `bitcast<u32>` of a value, the other the canonical quiet
+    /// NaN's bits, `0x7fc00000u` or `CANONICAL_QNAN_BITS` (lowering Part 3a, "The sentinels' values").
     fn absence_test(&self, left: Handle<Expression>, right: Handle<Expression>) -> bool {
         let bitcast = |h: Handle<Expression>| {
             matches!(
@@ -610,8 +616,18 @@ impl<'a> Guard<'a> {
                 }
             )
         };
-        (bitcast(left) && self.reads(right).is_empty())
-            || (bitcast(right) && self.reads(left).is_empty())
+        (bitcast(left) && self.qnan_bits(right)) || (bitcast(right) && self.qnan_bits(left))
+    }
+
+    /// Whether `e` is the canonical quiet NaN's bits: the literal, or a constant whose value is it.
+    fn qnan_bits(&self, e: Handle<Expression>) -> bool {
+        let literal = |e: &Expression| matches!(*e, Expression::Literal(Literal::U32(QNAN_BITS)));
+        match self.function.expressions[e] {
+            Expression::Constant(c) => {
+                literal(&self.module.global_expressions[self.module.constants[c].init])
+            }
+            ref other => literal(other),
+        }
     }
 
     /// The guarded reads `e` carries: its own, and its operands'; none through a local's load, a call's result or the

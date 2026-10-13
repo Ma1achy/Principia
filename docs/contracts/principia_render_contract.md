@@ -124,10 +124,11 @@ Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §
   in the branch an `if` on that conjunction takes, with any further conjuncts, or after an `if` on its negation whose
   branch leaves the block (`return`, `discard`, `break` or `continue`). A read of `ensemble_spread` is guarded by the
   uniform, `has_ensemble()` (R-145). The one use allowed unguarded is the absence test, the value's `bitcast<u32>`
-  compared by `==` or `!=` (lowering Part 3a). So an aggregate over `ftle` that excludes samples by `ftle_valid` is
-  guarded, and one that relies on NaN propagation, or on `min`, `max` or `clamp` with NaN operands, is not (R-255). A
-  source forwards its field and is not held to the guard. A debug view shows literal values, NaN to the invalid colour
-  by R-114's bitcast guard (R-79), and is not held to it either.
+  compared by `==` or `!=` with the canonical quiet NaN's bits, `0x7FC00000` (`CANONICAL_QNAN_BITS`; lowering Part 3a,
+  "The sentinels' values"). So an aggregate over `ftle` that excludes samples by `ftle_valid` is guarded, and one that
+  relies on NaN propagation, or on `min`, `max` or `clamp` with NaN operands, is not (R-255). A source forwards its
+  field and is not held to the guard. A debug view shows literal values, NaN to the invalid colour by R-114's bitcast
+  guard (R-79), and is not held to it either.
 - **The exceptions**, each to the one rule it names, as Part 5, Part 6 or R-79's debug exception requires them: the
   field views of `r_sh` and `p_sh` and their direction-cosine reductions read the shadow (Part 6: a view per field, every
   struct); the structural views `debug/s_*` and the posts `fallback_tint` and `pending_hatch` read the scheduler's quad
