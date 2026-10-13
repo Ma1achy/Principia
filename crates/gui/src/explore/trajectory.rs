@@ -667,7 +667,7 @@ fn unwrapped(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
     painter.text(rect.left_top(), egui::Align2::LEFT_TOP, "φ 0", font, weak);
 }
 
-/// The stats beside the sphere: the F₂ word, substeps, minimum separation and `|ΔE/E|`.
+/// The stats in one row below the two views: the F₂ word, substeps, minimum separation and `|ΔE/E|`, each in its cell.
 fn stats(ui: &mut Ui, rect: Rect, orbit: &Sample) {
     for (cell, (name, value)) in stat_cells(rect).into_iter().zip([
         ("F₂ word", orbit.f2_word.clone()),
