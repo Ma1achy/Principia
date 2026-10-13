@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-VAL-007
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-3
-- **Size:** ~1,300 lines
+- **Size:** ~2,600 lines (414 of them the checked-in runtime WGSL)
 
 ## Goal
 The rules the fragment side must keep from now on are checked in CI rather than by eye: no `isnan`/`isNan` and no NaN self-comparison (`x != x`) in generated or built-in WGSL — the debug NaN guard is the bitcast test (R-114) (validity via `has_<feature>` and the descriptor predicates; FTLE views guard with `has_ftle && ftle_valid`, and every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation, R-255); colour occupants read payload fields only through the generated accessors and reference no chart, integrator or scheduler identifier; no render path reads the Benettin shadow (`r_sh`, `p_sh`) as a sample. And observation taps are proven passive: payload bytes are identical with every debug view and telemetry on versus off. The terms the lint checks are R-72 definitions, written in the render contract's Part 4 and reviewed by physics.
