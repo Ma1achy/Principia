@@ -424,21 +424,21 @@ fn f32_bits(b: u32, sep: &str) -> String {
 }
 
 /// The value of the binary16 bits `h`, exactly, by IEEE 754's definition: sign, a 5-bit exponent biased by 15, a
-/// 10-bit significand; subnormal at exponent 0, ±∞ and NaN at 31.
+/// 10-bit significand; subnormal at exponent 0, ±∞ at 31. A NaN pattern (exponent 31, significand not 0) reads ±∞
+/// here too: [`binary16_bits`] never looks NaN up, and meets ±∞'s own patterns, `0x7c00` and `0xfc00`, first.
 fn binary16_value(h: u16) -> f64 {
     let sign = if h & 0x8000 == 0 { 1.0 } else { -1.0 };
     let exp = i32::from((h >> 10) & 0x1f);
     let man = f64::from(h & 0x3ff);
     sign * match exp {
         0 => man * 2f64.powi(-24),
-        31 if man == 0.0 => f64::INFINITY,
-        31 => f64::NAN,
+        31 => f64::INFINITY,
         _ => (1.0 + man / 1024.0) * 2f64.powi(exp - 15),
     }
 }
 
 /// The binary16 bits of `value` where binary16 holds it exactly (±∞ and ±0 included), else `None`: NaN, which storage
-/// never holds (R-79), or a value binary16 would round.
+/// never holds (R-79), or a value binary16 would round. The search runs up from 0, so ±∞ is found at its own pattern.
 fn binary16_bits(value: f64) -> Option<u16> {
     if value.is_nan() {
         return None;
