@@ -57,6 +57,11 @@ Commands:
                                   run `cargo test <build> -- --list` for every build the hosted requirements of <Mn>'s
                                   gate and every earlier one name a test of, and write the listing to <file>, for
                                   gate-report's --test-list (REQ-SYS-079)
+  gate-provisional --milestone <Mn>
+                                  list each constants-register entry marked provisional until <Mn>'s gate or an
+                                  earlier one, with its calibration requirement (R-427; dd_generation_root §3.8);
+                                  writes target/gate-report/<Mn>-provisional.txt; fails while any is listed, since
+                                  each blocks the gate until the human confirms it
   golden (<suite> | --all | --list)
                                   render each case of fixtures/golden/<suite>/ (or of every suite) with native wgpu
                                   offscreen, compare it with its reference to the tolerance its requirement id
@@ -131,6 +136,9 @@ fn main() -> ExitCode {
             )
         }
         ["gate-report", rest @ ..] => gate_report(rest),
+        ["gate-provisional", "--milestone", milestone] => {
+            xtask::gate_report::run_provisional(&workspace_root(), milestone)
+        }
         ["build-kernel"] => xtask::build_kernel::run(&workspace_manifest()),
         ["ci"] => xtask::ci::run(xtask::ci::RUNNERS),
         ["ci", "--list"] => xtask::ci::list(xtask::ci::RUNNERS),

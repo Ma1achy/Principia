@@ -1,0 +1,165 @@
+//! `cargo xtask gate-provisional --milestone <Mn>` (R-427; REQ-SYS-081; dd_generation_root §3.8): the gate report's
+//! list of the constants-register entries marked provisional until `<Mn>`'s gate or an earlier one, each with its
+//! gate and calibration requirement; it fails while any is listed, since each blocks its gate until the human
+//! confirms it, passes when none is, and refuses a name that is not a milestone. Each test registers the control that
+//! must make it fail (R-176).
+
+use ledger::constants::{Admissibility, Citation, ConstantBuilder, Value, REGISTER};
+use validation::negative_control;
+use xtask::gate_report::provisional;
+
+/// A settled fixture entry.
+const SETTLED: ConstantBuilder = ConstantBuilder {
+    name: "fx_settled",
+    value: Some(Value::Exact(1.0)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(Citation::Corpus {
+        file: "docs/design/principia_dd_generation_root.md",
+        section: "3.8 Metadata schema (what every entry must carry)",
+    }),
+    relative_basis: None,
+    provisional: None,
+};
+
+/// A fixture entry `name` marked provisional until `gate`, citing `requirement`.
+const fn proposed(
+    name: &'static str,
+    gate: &'static str,
+    requirement: &'static str,
+) -> ConstantBuilder {
+    ConstantBuilder {
+        name,
+        citation: Some(Citation::Calibration(requirement)),
+        provisional: Some(gate),
+        ..SETTLED
+    }
+}
+
+/// A register with entries provisional until M1 and M3 beside a settled one.
+const FIXTURE: [ConstantBuilder; 3] = [
+    SETTLED,
+    proposed("fx_until_m1", "M1", "REQ-FX-001"),
+    proposed("fx_until_m3", "M3", "REQ-FX-003"),
+];
+
+/// Checks that the list for `milestone` over `register` names exactly `listed`, each line with its gate and
+/// requirement, and fails exactly when it lists any.
+fn check_lists(milestone: &str, register: &[ConstantBuilder], listed: &[(&str, &str, &str)]) {
+    let got = provisional(milestone, register);
+    let text = got.as_ref().unwrap_or_else(|t| t);
+    assert_eq!(
+        got.is_err(),
+        !listed.is_empty(),
+        "the {milestone} list fails exactly when it lists an entry: {text}"
+    );
+    let lines: Vec<&str> = text
+        .lines()
+        .filter(|l| l.contains("provisional until"))
+        .collect();
+    assert_eq!(lines.len(), listed.len(), "the {milestone} list: {text}");
+    for (line, (name, gate, requirement)) in lines.iter().zip(listed) {
+        assert!(
+            line.starts_with(name)
+                && line.contains(&format!("provisional until {gate}"))
+                && line.contains(requirement),
+            "`{name}` is not listed until {gate} with {requirement}: {line}"
+        );
+    }
+    assert!(
+        text.contains(&format!(
+            "{} provisional entries block the gate",
+            listed.len()
+        )),
+        "the {milestone} summary: {text}"
+    );
+}
+
+#[test]
+fn gate_provisional_lists_the_entries_until_each_gate_and_earlier() {
+    check_lists("M0", &FIXTURE, &[]);
+    check_lists("M1", &FIXTURE, &[("fx_until_m1", "M1", "REQ-FX-001")]);
+    check_lists("M2", &FIXTURE, &[("fx_until_m1", "M1", "REQ-FX-001")]);
+    check_lists(
+        "M3",
+        &FIXTURE,
+        &[
+            ("fx_until_m1", "M1", "REQ-FX-001"),
+            ("fx_until_m3", "M3", "REQ-FX-003"),
+        ],
+    );
+    check_lists("M8", &[SETTLED], &[]);
+}
+
+negative_control!(
+    gate_provisional_lists_the_entries_until_each_gate_and_earlier,
+    "M2's list read as M3's: the entry provisional until M3 is not listed yet",
+    expected = "the M2 list",
+    check_lists(
+        "M2",
+        &FIXTURE,
+        &[
+            ("fx_until_m1", "M1", "REQ-FX-001"),
+            ("fx_until_m3", "M3", "REQ-FX-003"),
+        ]
+    )
+);
+
+/// The register's own M1 list: the six log floors and the hatch's three numbers (R-427), the floors citing
+/// REQ-TOOL-160 and the hatch's REQ-COL-055.
+fn check_register_m1(register: &[ConstantBuilder]) {
+    check_lists(
+        "M1",
+        register,
+        &[
+            ("log_floor_d_min", "M1", "REQ-TOOL-160"),
+            ("log_floor_dE_max", "M1", "REQ-TOOL-160"),
+            ("log_floor_dLz_max", "M1", "REQ-TOOL-160"),
+            ("log_floor_closure_min", "M1", "REQ-TOOL-160"),
+            ("log_floor_rho_ratio", "M1", "REQ-TOOL-160"),
+            ("log_floor_r_min_pair_0", "M1", "REQ-TOOL-160"),
+            ("hatch_violet", "M1", "REQ-COL-055"),
+            ("hatch_cyan", "M1", "REQ-COL-055"),
+            ("hatch_half_period", "M1", "REQ-COL-055"),
+        ],
+    );
+}
+
+#[test]
+fn gate_provisional_the_registers_m1_entries_block_the_m1_gate() {
+    check_register_m1(REGISTER);
+}
+
+negative_control!(
+    gate_provisional_the_registers_m1_entries_block_the_m1_gate,
+    "a register whose floors are all confirmed lists only the hatch at M1",
+    expected = "the M1 list",
+    check_register_m1(
+        &REGISTER
+            .iter()
+            .filter(|k| !k.name.starts_with("log_floor_"))
+            .copied()
+            .collect::<Vec<_>>()
+    )
+);
+
+/// Checks that `milestone` is refused as no milestone, naming it.
+fn check_refused(milestone: &str) {
+    match provisional(milestone, &FIXTURE) {
+        Err(e) if e.contains(&format!("`{milestone}` is not a milestone")) => {}
+        other => panic!("`{milestone}` is not refused: {other:?}"),
+    }
+}
+
+#[test]
+fn gate_provisional_refuses_a_name_that_is_not_a_milestone() {
+    for name in ["", "M", "1", "m1", "M1a", "gate"] {
+        check_refused(name);
+    }
+}
+
+negative_control!(
+    gate_provisional_refuses_a_name_that_is_not_a_milestone,
+    "M1 is a milestone, so the refusal check must fail on it",
+    expected = "is not refused",
+    check_refused("M1")
+);

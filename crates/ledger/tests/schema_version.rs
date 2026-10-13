@@ -4,7 +4,8 @@
 //! same version on every run, in any source order; the emitted `PAYLOAD_SCHEMA_VERSION` equals the computed hash
 //! (REQ-GEN-008). A hashed register entry's value, type or class changes it, its citation does not, and a register
 //! entry that does not decide stored bits leaves it unchanged (dd_generation_root §3.8, "The hash"; REQ-SYS-063,
-//! R-251).
+//! R-251). The `provisional` mark and its gate are not hashed: marking or unmarking a hashed entry leaves the version,
+//! and changing a marked entry's value changes it (R-427; REQ-SYS-081; `constants_provisional_*`).
 
 use ledger::constants::{Admissibility, Citation, ConstantBuilder, Value, REGISTER};
 use ledger::gen;
@@ -86,6 +87,7 @@ const RENDER_KNOB: ConstantBuilder = ConstantBuilder {
         section: "fixture",
     }),
     relative_basis: None,
+    provisional: None,
 };
 
 // --- REQ-GEN-008: the ledger, the continuation table, stability, the emitted constant -------------------------------
@@ -500,6 +502,22 @@ negative_control!(
     check_missing_refused("fx_render_knob")
 );
 
+/// The register's presentation constants (TASK-M1-18; R-427): the six log floors, the hatch's numbers and the hue
+/// wheel's. None decides a stored bit, so none is hashed (dd_generation_root §3.8, "The hash").
+const PRESENTATION: [&str; 11] = [
+    "log_floor_d_min",
+    "log_floor_dE_max",
+    "log_floor_dLz_max",
+    "log_floor_closure_min",
+    "log_floor_rho_ratio",
+    "log_floor_r_min_pair_0",
+    "hatch_violet",
+    "hatch_cyan",
+    "hatch_half_period",
+    "hue_wheel_l",
+    "hue_wheel_c",
+];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -509,14 +527,23 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         );
     }
     // §3.8 hashes the register entries that decide stored bits; every other entry is a chart constant, hashed by
-    // value through the link registry instead (§3.9, "The hash"; R-344).
+    // value through the link registry instead (§3.9, "The hash"; R-344), or a presentation constant the generated
+    // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
+    // register"; R-427, TASK-M1-18).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
                 .iter()
-                .any(|c| c.name == k.name),
+                .any(|c| c.name == k.name)
+                || PRESENTATION.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
+        );
+    }
+    for name in PRESENTATION {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the presentation constant `{name}` is not an unhashed register entry"
         );
     }
 }
@@ -532,4 +559,58 @@ negative_control!(
             "`{name}` is not in the register"
         );
     }
+);
+
+// --- REQ-SYS-081: the `provisional` mark is not hashed (R-427) ------------------------------------------------------
+
+/// `k` marked provisional until `gate`, citing a calibration requirement as a provisional entry does.
+fn marked(k: ConstantBuilder, gate: &'static str) -> ConstantBuilder {
+    ConstantBuilder {
+        citation: Some(Citation::Calibration("REQ-FX-000")),
+        provisional: Some(gate),
+        ..k
+    }
+}
+
+/// Checks that marking the hashed entry `fgw_capacity` provisional, under any gate, then removing the mark, leaves the
+/// version; and that changing the marked entry's value by `nudge` changes it, unless `nudge` is 0.
+fn check_mark_unhashed(nudge: f64) {
+    for gate in ["M1", "M2", "M8"] {
+        check_unchanged(&with_capacity(|k| marked(k, gate)).hashed());
+        check_unchanged(
+            &with_capacity(|k| ConstantBuilder {
+                provisional: None,
+                ..marked(k, gate)
+            })
+            .hashed(),
+        );
+    }
+    let moved = with_capacity(|k| ConstantBuilder {
+        value: Some(Value::Exact(k.number() + nudge)),
+        ..marked(k, "M1")
+    });
+    if nudge == 0.0 {
+        check_unchanged(&moved.hashed());
+    } else {
+        check_changes(&moved.hashed());
+    }
+}
+
+#[test]
+fn constants_provisional_mark_is_not_hashed_but_its_value_is() {
+    check_mark_unhashed(0.0);
+    check_mark_unhashed(1.0);
+}
+
+negative_control!(
+    constants_provisional_mark_is_not_hashed_but_its_value_is,
+    "a marked entry's value edit is hashed, so the unchanged check must fail on it",
+    expected = "the schema version changed",
+    check_unchanged(
+        &with_capacity(|k| ConstantBuilder {
+            value: Some(Value::Exact(75.0)),
+            ..marked(k, "M1")
+        })
+        .hashed()
+    )
 );

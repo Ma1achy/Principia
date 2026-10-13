@@ -31,6 +31,11 @@
 //!   hosted runner (R-186). Each is "awaiting the human's run" until its `prin profile` file, `<dir>/<REQ-id>.jsonl`
 //!   under `--bench-results <dir>`, is supplied; a supplied file must open with a profiler schema v1 header line. An
 //!   awaiting requirement is listed, and doesn't fail the report (decided per R-369, RQ-201).
+//! - Provisional register entries (R-427; REQ-SYS-081): `cargo xtask gate-provisional --milestone <Mn>` lists each
+//!   constants-register entry marked provisional until `<Mn>`'s gate or an earlier one ([`provisional`]), writes the
+//!   list to `target/gate-report/<Mn>-provisional.txt` beside the report, and fails while any is listed: an entry
+//!   still so marked blocks its gate, as an unconfirmed calibration does (dd_generation_root §3.8). It is its own
+//!   command, run beside the report by `gate.yml`, so the requirement lines above keep their form.
 
 use std::cell::OnceCell;
 use std::collections::{BTreeMap, BTreeSet};
@@ -1058,4 +1063,68 @@ pub fn run_listed(
     report
         .map(|_| ())
         .map_err(|_| "gate-report: a requirement failed or has no result".to_owned())
+}
+
+// ---- Provisional register entries (R-427; REQ-SYS-081) -------------------------------------------------------------
+
+/// The milestone number of `gate`, `M<n>`, or `None` for a name that is not a milestone's.
+fn milestone_number(gate: &str) -> Option<u32> {
+    if !ledger::constants::is_milestone(gate) {
+        return None;
+    }
+    gate[1..].parse().ok()
+}
+
+/// The provisional entries' part of `milestone`'s gate report: each entry of `register` marked provisional until
+/// `milestone`'s gate or an earlier one, with its gate and its calibration requirement (dd_generation_root §3.8). `Ok`
+/// with the text when there is none; `Err` with it when any is listed, since each blocks the gate until the human
+/// confirms or changes it (R-427).
+pub fn provisional(
+    milestone: &str,
+    register: &[ledger::constants::ConstantBuilder],
+) -> Result<String, String> {
+    use ledger::constants::Citation;
+    let n = milestone_number(milestone)
+        .ok_or_else(|| format!("gate-provisional: `{milestone}` is not a milestone, M0 …"))?;
+    let mut text = format!(
+        "Provisional register entries: {milestone} and every earlier gate (R-427; dd_generation_root §3.8)\n\n"
+    );
+    let mut listed = 0;
+    for gate in (0..=n).map(|k| format!("M{k}")) {
+        for name in ledger::constants::provisional_until(register, &gate) {
+            let k = register.iter().find(|k| k.name == name);
+            let requirement = match k.and_then(|k| k.citation) {
+                Some(Citation::Calibration(id)) => id,
+                _ => "no calibration requirement",
+            };
+            text.push_str(&format!(
+                "{name}  provisional until {gate}  {requirement}  blocks the gate until confirmed\n"
+            ));
+            listed += 1;
+        }
+    }
+    text.push_str(&format!("\n{listed} provisional entries block the gate\n"));
+    if listed == 0 {
+        Ok(text)
+    } else {
+        Err(text)
+    }
+}
+
+/// `cargo xtask gate-provisional --milestone <Mn>`: [`provisional`] over the constants register, written to
+/// `target/gate-report/<Mn>-provisional.txt` under `root` and printed; fails while an entry is listed.
+pub fn run_provisional(root: &Path, milestone: &str) -> Result<(), String> {
+    let report = provisional(milestone, ledger::constants::REGISTER);
+    let text = report.as_ref().unwrap_or_else(|text| text);
+    let out = root
+        .join("target/gate-report")
+        .join(format!("{milestone}-provisional.txt"));
+    std::fs::create_dir_all(out.parent().unwrap_or(root))
+        .and_then(|()| std::fs::write(&out, text))
+        .map_err(|e| format!("{}: {e}", out.display()))?;
+    print!("{text}");
+    println!("written to {}", out.display());
+    report.map(|_| ()).map_err(|_| {
+        "gate-provisional: a register entry is still provisional until this gate".to_owned()
+    })
 }
