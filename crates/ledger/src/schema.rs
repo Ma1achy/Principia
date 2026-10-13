@@ -27,6 +27,9 @@ pub enum FieldType {
     /// Unsigned bits; the width is the location's.
     UBits,
     F32,
+    /// One binary16 value at a packed location of exactly 16 bits (§3.8 `f16`, R-312): never at a scalar index or
+    /// as a vector component, and storage-only, read widened to f32 (R-317).
+    F16,
     F16Pair,
     Fixed16,
     /// `vector(type, k)`: `k ≥ 2` components of the scalar `component` type, such as `n`; [`crate::gen::validate`]
@@ -327,6 +330,9 @@ pub enum Storage {
     Vec2x3,
     /// One `vec4<u32>`.
     U32x4,
+    /// `n` u32s holding data, as `[u32; n]` and WGSL's `array<u32, n>`: a `vector(u-bits, n)` field at a scalar index,
+    /// such as `QuadReduction`'s `class_histogram` (dd_generation_root §3.7).
+    U32Array(u32),
     /// `n` u32s of declared padding, never implicit (R-86).
     Pad(u32),
 }
@@ -340,7 +346,7 @@ impl Storage {
             Storage::U32 => "u32".to_owned(),
             Storage::Vec2x3 => "[[f32; 2]; 3]".to_owned(),
             Storage::U32x4 => "[u32; 4]".to_owned(),
-            Storage::Pad(n) => format!("[u32; {n}]"),
+            Storage::Pad(n) | Storage::U32Array(n) => format!("[u32; {n}]"),
         }
     }
 
@@ -351,7 +357,7 @@ impl Storage {
             Storage::F32 | Storage::U32 => 4,
             Storage::Vec2x3 => 24,
             Storage::U32x4 => 16,
-            Storage::Pad(n) => 4 * n,
+            Storage::Pad(n) | Storage::U32Array(n) => 4 * n,
         }
     }
 }

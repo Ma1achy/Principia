@@ -322,7 +322,7 @@ fn ledger_fields(s: &Struct) -> Vec<Field> {
             Storage::U32 => "u32".to_owned(),
             Storage::Vec2x3 => "array<vec2<f32>, 3>".to_owned(),
             Storage::U32x4 => "vec4<u32>".to_owned(),
-            Storage::Pad(n) => format!("array<u32, {n}>"),
+            Storage::Pad(n) | Storage::U32Array(n) => format!("array<u32, {n}>"),
             Storage::U16 => panic!("`{}.{}`: a u16 with no u16 beside it", s.name, m.name),
         };
         out.push(Field {

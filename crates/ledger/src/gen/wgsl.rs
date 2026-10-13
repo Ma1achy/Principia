@@ -132,7 +132,7 @@ pub fn members(s: &Struct) -> Vec<WgslMember> {
             Storage::U32 => "u32".to_owned(),
             Storage::Vec2x3 => "array<vec2<f32>, 3>".to_owned(),
             Storage::U32x4 => "vec4<u32>".to_owned(),
-            Storage::Pad(n) => format!("array<u32, {n}>"),
+            Storage::Pad(n) | Storage::U32Array(n) => format!("array<u32, {n}>"),
         };
         out.push(WgslMember {
             name: m.name.to_owned(),
