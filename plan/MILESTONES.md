@@ -115,7 +115,9 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   (REQ-PAY-098) declare their ranges, and physics re-checks each ramp then. R-426 also makes an undeclared range a
   ledger gap, not one that spans zero: TASK-M1-21 (REQ-GEN-035), an M1 task the gate waits on, declares the ranges the
   corpus settles, and the gate report gives its list of the gaps that remain. `C_ty`, on cool-warm by the same
-  default and not among the six, is **RQ-277**, which this item waits on for that field.
+  default and not among the six, was **RQ-277**, decided per R-369 (option (a), PR #205): signed, as `diffusion` is,
+  since `C_ty = diffusion · C_tt(n)` with `C_tt(n) > 0`; it stays on `ramp_coolwarm`, and the gate report gives it
+  as confirmed with the human's veto open.
 - **Also at the M1 gate (R-427): the constants register's provisional entries.** The gate report lists each register
   entry marked provisional until M1 (TASK-M1-18's six per-field log floors, and the hatch's colours and stripe width),
   and the human confirms or changes each; an entry still so marked blocks the gate. At their confirmation
