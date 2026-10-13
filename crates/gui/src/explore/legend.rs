@@ -211,8 +211,9 @@ fn categorical(ui: &mut Ui, area: Rect, title: &str, entries: &[LegendEntry]) {
             egui::Label::new(RichText::new(&entry.label).small()),
             egui::Align::Min,
         );
+        // The share takes the room right of the label's, ending 8 points short of the cell.
         let value = Rect::from_min_max(
-            pos2(cell.max.x - 44.0, cell.min.y),
+            pos2(text.max.x, cell.min.y),
             pos2(cell.max.x - 8.0, cell.max.y),
         );
         put(
