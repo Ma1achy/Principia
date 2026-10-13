@@ -6,8 +6,9 @@
 //!   `ctx.sample.word`, used only whole as an argument of a generated accessor ([`Rule::RawWord`]); no chart, integrator
 //!   or scheduler identifier read ([`Rule::ChartState`], [`Rule::IntegratorState`], [`Rule::SchedulerState`]: seams 5
 //!   and 6, REQ-COL-005); and every use of a read of `ftle` or `ensemble_spread` guarded by `has_ftle && s.ftle_valid`
-//!   or `has_ensemble()` ([`Rule::Guard`]: REQ-RENDER-015, R-145, R-255), in a debug view every read but of the
-//!   sample's own value, `ctx.sample`'s, which it shows literally (R-79), so that its aggregates are held to R-255.
+//!   or `has_ensemble()` ([`Rule::Guard`]: REQ-RENDER-015, R-145, R-255), in a debug view or a source every read but
+//!   of the sample's own value, `ctx.sample`'s, which it shows literally (R-79) or forwards, so that its aggregates are
+//!   held to R-255.
 //!
 //! **The guard over naga's IR.** naga lowers `a && b` to control flow: a local set to `b` where `a` holds and to
 //! `false` where it does not, then read. So the rule asks what a condition implies: [`Guard::facts`] gives the facts a
@@ -277,7 +278,7 @@ pub(super) fn shadow(
 
 /// Every occupant-rule finding in `module`, a colour occupant after its context: the payload-buffer, raw-word,
 /// deny-list and guard rules. `accessors` are the generated functions (the unpack layer's and the read side's). Where
-/// `own` (a debug view's), the guard rule passes over the reads of the sample's own value, `ctx.sample`'s
+/// `own` (a debug view's or a source's), the guard rule passes over the reads of the sample's own value, `ctx.sample`'s
 /// ([`contexts`]).
 pub(super) fn occupant(
     module: &Module,
@@ -966,7 +967,7 @@ struct Guard<'a> {
     fi: &'a FunctionInfo,
     flow: Flow<'a>,
     /// The arguments that are the stain's context ([`contexts`]), whose `sample`'s reads the rule passes over: none
-    /// but in a debug view.
+    /// but in a debug view or a source.
     own: HashSet<u32>,
     /// The loads whose facts are being found, so that a cycle of stores ends.
     busy: RefCell<Vec<(Handle<Expression>, bool)>>,

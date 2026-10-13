@@ -60,3 +60,6 @@ The rules the fragment side must keep from now on are checked in CI rather than 
   from ~260 to match the work.
 - Applied per R-369 (physics review 5507966256 F1): a debug view is held to the FTLE guard for every sample but its
   own, `ctx.sample`, which it shows literally (R-79), so an aggregate over `ftle` in a debug view keeps R-255.
+- Applied per R-369 (qa review 5508436106): a source, a file under `shaders/wgsl/frag/source/`, is linted in the
+  stain's context, as the other slots that read `ctx` are, and held to the guard as a debug view is, for every sample
+  but the own one it forwards.

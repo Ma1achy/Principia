@@ -18,11 +18,11 @@
 //! The occupant rules (render contract Part 4, "The occupant rules `cargo xtask lint wgsl` checks"; R-72; TASK-M1-15)
 //! are the `occupant` module's: the shadow rule in every file; in a colour occupant ([`occupancy`]), a file under
 //! [`OCCUPANT_DIR`], a debug view's directory or [`RUNTIME_DIR`], the accessor-only rule, the chart, integrator and
-//! scheduler deny-list and the FTLE and ensemble guard, which a debug view is held to for every sample but its own.
-//! Each exception the definitions name is lifted for its file and its one rule only ([`EXCEPTIONS`]). [`RUNTIME_DIR`]
-//! holds the WGSL the render side writes at runtime, checked in by `crates/render/tests/runtime_wgsl.rs` so that this
-//! lint reaches it. In an occupant's context the prelude's tier constants are read as overrides ([`tier_overrides`]),
-//! so naga's folding keeps them.
+//! scheduler deny-list and the FTLE and ensemble guard, which a debug view and a source are held to for every sample
+//! but their own. Each exception the definitions name is lifted for its file and its one rule only ([`EXCEPTIONS`]).
+//! [`RUNTIME_DIR`] holds the WGSL the render side writes at runtime, checked in by
+//! `crates/render/tests/runtime_wgsl.rs` so that this lint reaches it. In an occupant's context the prelude's tier
+//! constants are read as overrides ([`tier_overrides`]), so naga's folding keeps them.
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -145,18 +145,27 @@ fn is_view(rel: &str) -> bool {
 }
 
 /// What the file at `rel` is to the occupant rules (render contract Part 4, "The occupant rules `cargo xtask lint
-/// wgsl` checks"): a debug view, another colour occupant, which the guard rule binds, or no occupant.
+/// wgsl` checks"): a debug view or a source, which the guard rule binds for every sample but its own, `ctx.sample`;
+/// another colour occupant, which it binds for every sample; or no occupant.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Occupancy {
     Debug,
+    Source,
     Guarded,
 }
 
-/// The file at `rel` as an occupant: a debug view (`is_view`), or any other file under [`OCCUPANT_DIR`] or
-/// [`RUNTIME_DIR`]; `None` for the unpack layer, the read side, the stain's context, the library and the compositor.
+/// The built-in sources (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): every `.wgsl` file under this
+/// directory, relative to the workspace root, forwards a field of its sample (render contract Part 4).
+pub const SOURCE_DIR: &str = "crates/render/shaders/wgsl/frag/source";
+
+/// The file at `rel` as an occupant: a debug view (`is_view`), a source (under [`SOURCE_DIR`]), or any other file
+/// under [`OCCUPANT_DIR`] or [`RUNTIME_DIR`]; `None` for the unpack layer, the read side, the stain's context, the
+/// library and the compositor.
 pub fn occupancy(rel: &str) -> Option<Occupancy> {
     if is_view(rel) {
         Some(Occupancy::Debug)
+    } else if under(rel, SOURCE_DIR) {
+        Some(Occupancy::Source)
     } else if under(rel, OCCUPANT_DIR) || under(rel, RUNTIME_DIR) {
         Some(Occupancy::Guarded)
     } else {
@@ -548,9 +557,10 @@ fn lint_lib(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport>
 
 /// The slots whose occupants read the stain's context, `ctx` (render contract Part 1): a built-in occupant under one
 /// of these directories of [`OCCUPANT_DIR`] is linted as a generated debug view is, after [`view_context`] and its
-/// `// @uniform` block (applied per R-369, TASK-M1-10: `colour/outcome_state.wgsl` reads `ctx.sample`). A combiner
-/// reads no context, and is linted after [`occupant_context`].
-pub const CONTEXT_SLOTS: [&str; 3] = ["colour", "brightness", "post"];
+/// `// @uniform` block (applied per R-369, TASK-M1-10: `colour/outcome_state.wgsl` reads `ctx.sample`; and per
+/// R-369, TASK-M1-15: a source, `fn source(ctx: Ctx) -> Field`, reads it too). A combiner reads no context, and is
+/// linted after [`occupant_context`].
+pub const CONTEXT_SLOTS: [&str; 4] = ["colour", "brightness", "post", "source"];
 
 /// What precedes a built-in occupant's `source` when it is linted, as the assembler presents a node (render contract
 /// Part 2; gui_state_contract §3): the prelude, the `library` files after it, then the occupant's `// @uniform` block,
@@ -712,7 +722,8 @@ pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, 
 
 /// Every rule's findings in a colour occupant's `source` (render contract Part 4), after `prefix` as
 /// [`check_fragment_after`] reads it: the float rules, the shadow rule and the occupant rules, the guard rule over the
-/// sample's own value, `ctx.sample`'s, only where `occupancy` is [`Occupancy::Guarded`]. `accessors` are the generated accessors ([`accessors`]). `prefix`'s tier
+/// sample's own value, `ctx.sample`'s, only where `occupancy` is [`Occupancy::Guarded`]: a debug view and a source
+/// show or forward it. `accessors` are the generated accessors ([`accessors`]). `prefix`'s tier
 /// constants are read as overrides ([`tier_overrides`]).
 pub fn check_occupant_after(
     prefix: &str,

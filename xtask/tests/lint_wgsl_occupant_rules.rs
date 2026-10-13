@@ -24,7 +24,7 @@ use xtask::lint_wgsl::{
     accessors, check, check_fragment, check_fragment_after, check_occupant_after, excepted, lint,
     occupancy, uniform_block, view_context, Occupancy, Rule, DEBUG_OCCUPANTS, DEBUG_VIEWS,
     EXCEPTIONS, GENERATED, LIB_FILES, OCCUPANT_DIR, PRELUDE, READ_SIDE_FILE, REDUCTION_VIEWS,
-    RUNTIME_DEBUG, RUNTIME_DIR, STAIN_DIR,
+    RUNTIME_DEBUG, RUNTIME_DIR, SOURCE_DIR, STAIN_DIR,
 };
 
 /// The fixtures' directory.
@@ -111,10 +111,13 @@ fn marks(text: &str) -> BTreeSet<(u32, String)> {
     out
 }
 
-/// Where a fixture is placed: a `debug_` fixture as a hand-written debug view, any other as a colour occupant.
+/// Where a fixture is placed: a `debug_` fixture as a hand-written debug view, a `source_` fixture as a built-in
+/// source, any other as a colour occupant.
 fn placed(name: &str) -> String {
     if name.starts_with("debug_") {
         format!("{DEBUG_OCCUPANTS}/test.wgsl")
+    } else if name.starts_with("source_") {
+        format!("{SOURCE_DIR}/test.wgsl")
     } else {
         format!("{OCCUPANT_DIR}/colour/test.wgsl")
     }
@@ -411,6 +414,11 @@ fn occupancy_table() -> Vec<(String, Option<Occupancy>)> {
         ),
         (
             format!("{OCCUPANT_DIR}/combiner/multiply.wgsl"),
+            Some(Occupancy::Guarded),
+        ),
+        (format!("{SOURCE_DIR}/ftle.wgsl"), Some(Occupancy::Source)),
+        (
+            format!("{OCCUPANT_DIR}/sources/ftle.wgsl"),
             Some(Occupancy::Guarded),
         ),
         (GENERATED.to_owned(), None),
