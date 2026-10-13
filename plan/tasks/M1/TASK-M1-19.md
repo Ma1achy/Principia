@@ -24,6 +24,7 @@ M5 requirements that hold them; this task waits on nothing.
 ## References
 - `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
 - `docs/contracts/principia_render_contract.md` § "Part 6 — The debug catalogue (first build target)"
+- `decisions.md` § "R-62 — `rho_mag` and `lambda_mag` *(amends R-22)*"
 - `decisions.md` § "R-75 — The kernel keeps one debug mode *(closes RQ-26)*"
 - `decisions.md` § "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
 - `decisions.md` § "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
