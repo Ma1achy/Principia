@@ -1,7 +1,7 @@
 # TASK-M2-03 — Decoder: free momentum, the factorised join and the ICDescriptor
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163
+- **Closes:** REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163, REQ-DEC-045
 - **Depends on:** TASK-M2-02, TASK-M2-30, TASK-M1-18
 - **Needs (earlier milestones):** REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160
 - **Reviewers:** code, qa, physics
@@ -67,6 +67,7 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - `cargo test -p kernel golden_ic` — z = 0 → masses (⅓, ⅓, ⅓), α = π/4, β = π/2, q = 0, I = 1, every derived value asserted in f64 and f32 (REQ-VAL-018; encode's golden pair is asserted in TASK-M2-16).
 - `cargo test -p kernel chart_landmarks_lagrange_euler` — z = 0 decodes to the Lagrange equilateral configuration; z_β past the underflow threshold decodes to β = 0 exactly, collinear, at f32 and f64; z_β → +large decodes toward the Euler collinear configuration at β → π, approached from below, β ≤ π (R-417) (REQ-VAL-020).
 - Definition: the formulas of `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` written into dd_decoder §3.6 and approved by the physics reviewer (REQ-PAY-088).
+- Proposal: the f64 and f32 tolerance of dd_decoder test 1's Σpᵢ = 0, with the measured residuals over fuzzed z as evidence; the human confirms it at the M2 gate (REQ-DEC-045; split from REQ-DEC-044 by TASK-M2-02, applied per R-369).
 
 ## Notes
 - Gap G7: the ICDescriptor formulas for `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` are not in the corpus (dd_decoder §3.6 names "ρ-magnitudes, ρ_ratio, ρ_angle, r_min_pair₀"; ledger §3.6 lists the fields; neither gives a formula, nor whether `rho_mag` is ‖ρ‖ or ‖ρ̃‖). REQ-PAY-034's hand-computed values can't be written for those fields until this is ruled.

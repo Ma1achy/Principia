@@ -466,7 +466,7 @@
   title: "Decoder: free momentum, the factorised join and the ICDescriptor"
   depends_on: [TASK-M2-02, TASK-M2-30, TASK-M1-18]  # TASK-M2-30 for R-417's constants; TASK-M1-18 for R-419's floors, applied per R-369
   needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160]
-  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163]
+  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163, REQ-DEC-045]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-04
@@ -514,7 +514,7 @@
   title: "Invariant-momentum construction: rigid rotation, the seed family and feasibility"
   depends_on: [TASK-M2-03, TASK-M2-06]
   needs: [REQ-PAY-014, REQ-PAY-004]
-  requirements: [REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040]
+  requirements: [REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10, PIT-9]
 - id: TASK-M2-10

@@ -3,8 +3,8 @@
 // f64, f16 pairs through core `unpack2x16float` (no `enable f16`).
 
 // The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger (R-36, R-63; the Rust
-// PAYLOAD_SCHEMA_VERSION, 0xffc5ef5cd8e8b90b). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
-const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0xd8e8b90bu, 0xffc5ef5cu);
+// PAYLOAD_SCHEMA_VERSION, 0xe75b6e7b394e3cdf). WGSL has no u64: .x is its low 32 bits, .y its high 32 (R-343).
+const PAYLOAD_SCHEMA_VERSION: vec2<u32> = vec2<u32>(0x394e3cdfu, 0xe75b6e7bu);
 
 // `SimStateFTLE`: 144 B, aligned to 8 (payload §1; dd_generation_root §3.3a, §3.6).
 struct SimStateFTLE {
