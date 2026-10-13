@@ -606,6 +606,7 @@ fn check_unhashed(names: &[&'static str]) {
                 section: "qa",
             }),
             relative_basis: None,
+            provisional: None,
         };
         for k in [
             knob,
@@ -660,6 +661,7 @@ negative_control!(
             class: Some(Admissibility::CanonicalUnits),
             citation: None,
             relative_basis: None,
+            provisional: None,
         });
         assert_eq!(o.version(), b, "the unhashed entry `fgw_capacity` changed the version");
     }
