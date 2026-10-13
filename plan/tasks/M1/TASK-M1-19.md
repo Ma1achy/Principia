@@ -15,6 +15,8 @@ marked with the requirement that holds them. Split from TASK-M1-14 (applied per 
 that RQ-273, which held REQ-TOOL-011 for its uniform echo and Optional Fourier block rows, held only this task. R-420
 ruled it: the echo row is REQ-TOOL-164's (TASK-M5-31) and the Fourier row is removed from Part 6, so this task waits
 on nothing.
+RQ-275 and RQ-276, from this task's pre-flight, now hold two cells of the checklist: the quad fields row's
+payload/status flags and the structural overlays row's visible-set and locked/stale overlays (Notes).
 
 ## References
 - `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
@@ -42,5 +44,11 @@ on nothing.
   waits on nothing.
 - RQ-80 ruled: R-111 — the uniform echo's `M` is `n_renorm` (render_contract conformed in step 7).
 - RQ-94 ruled: R-113 — REQ-TOOL-011 ticks the rows a synthetic payload can show; the DECODE row is held by REQ-RENDER-027 (M2), the ensemble rows by REQ-TOOL-133 (M5, TASK-M5-18) and the live effort row by REQ-TOOL-132 (M3, TASK-M3-22).
+- RQ-275 and RQ-276 (this task's read-only pre-flight; REQ-TOOL-011 carries `rq: RQ-275` and `rq: RQ-276`): the quad
+  fields row's payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema version) are
+  read from `ctx.quad`, but neither `RenderQuad` (dd_generation_root §3.7a) nor the stain's `CtxQuad` carries them and
+  no contract defines them (RQ-275); the structural overlays row's visible-set and locked/stale overlays are defined
+  and built nowhere (RQ-276). The checklist is built for every other cell and marks these as waiting on the RQ; the PR
+  does not merge until both are ruled (`plan/OPERATIONS.md` § "Autonomy (R-369)").
 - TASK-M2-25 depends on this task, since it needs REQ-TOOL-011 (its DECODE row is REQ-RENDER-027, R-113); TASK-M3-22
   and TASK-M7-17, which need REQ-TOOL-011 too, reach this task through TASK-M2-25.
