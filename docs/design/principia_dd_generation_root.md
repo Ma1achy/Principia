@@ -490,7 +490,8 @@ without a WGSL extension, so the counts and codes are u32 and the fractions f32.
 { name, location: (word, offset, width) | scalar-index | derived(from: [field, …]),
   type: u-bits | f32 | f16 | f16-pair | fixed16 | vector(type, k),
   scale: lin | log | cyclic | diverging | categorical(n) | flag,
-  range, sentinel?, tier_gate?, overflow?: saturate | inf, floor?: <sim-key parameter>,
+  range: declared(lo, hi, citation) | gap | provisional(requirement),
+  sentinel?, tier_gate?, overflow?: saturate | inf, floor?: <sim-key parameter>,
   provenance: kernel | decode | reduction | cpu,
   consumers: [render, export, debug, scheduler] }
 ```
@@ -512,6 +513,22 @@ stay on the diverging ramp provisionally (R-426), recorded as provisional at the
 (REQ-PAY-088) declares its range (REQ-PAY-097), and `mean_y`, until `y`'s definition (REQ-PAY-073) declares its
 (REQ-PAY-098); the physics reviewer re-checks each ramp then. A field whose range is still a gap is listed as one,
 with the requirement that fills it.
+Also declared (R-426's fix round, applied per R-369): `energy_drift` and `Lz_drift` (−∞, ∞), signed, citing the
+worked entries below and §3.4, which already give them that range, so the ledger must write it; and `C_ty`
+(−∞, ∞), signed, citing R-423's check of `diffusion` and `C_ty = diffusion · C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12 > 0`
+for `n ≥ 2` (§3.4), so `C_ty` has `diffusion`'s sign whatever `y` is (RQ-277, decided per R-369).
+
+**The three range states (R-426; REQ-GEN-035).** An entry's `range` is in one of three states:
+- **`declared(lo, hi, citation)`**: the range §3, a ruling or a definition gives, with where it is given. Only a
+  declared range spans zero or not: a `lin` field whose declared range spans zero is on the diverging ramp (R-400), and
+  only such a range admits the `diverging` scale (R-403).
+- **`gap`**: no range is declared; the (−∞, ∞) the ledger once wrote by default. A gap never spans zero. A `lin` or
+  `diverging` scalar field whose range is a gap fails generation, naming the field; on any other entry (a cyclic field,
+  a vector, whose views read no range) a gap generates and is listed, with the requirement that fills it.
+- **`provisional(requirement)`**: a range the human has kept provisional until `requirement` declares it, drawn
+  meanwhile as (−∞, ∞), so spanning zero, and listed at each gate as provisional: `q_mass` (REQ-PAY-097) and `mean_y`
+  (REQ-PAY-098), R-426. It is the range's counterpart of the constants register's `provisional?` key: proposed, used,
+  and confirmed or replaced when its requirement lands.
 
 `overflow` (R-248) states what an `f16-pair` value does past f16's finite range (±65504): `saturate` clamps to
 ±65504, `inf` rounds to ±∞. An `f16-pair` field's declared range must lie within ±65504; an unbounded end is

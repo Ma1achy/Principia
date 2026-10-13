@@ -8956,6 +8956,22 @@ the "no veto" on the rest, which are one act on the veto list.)
 - RQ-274 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-426 is in the "design" group of
   `plan/rule_groups.yaml`, with R-400 and R-423.
 
+*Fix round (PR #205: physics review 5506860821, code review 5506873900), applied per R-369; the human may veto
+any:*
+- **`energy_drift` and `Lz_drift` must be declared in the ledger.** The survey's "None changes" holds for their views,
+  but not for the ledger: `crates/ledger/src/payload.rs`:245–252 gives them `Scale::Diverging` and a `floor`, with no
+  `.range(…)`, so the unbounded default, which TASK-M1-21's gate would refuse. §3.8's worked entries already declare
+  them "(−∞, ∞), signed (§3.4)"; REQ-GEN-035 and TASK-M1-21 declare them so, citing §3.8 and §3.4, and name them in
+  the acceptance, since the template, which skips floored fields, would not reach them.
+- **§3.8's grammar gains the range states** (docs before the plan): `range: declared(lo, hi, citation) | gap |
+  provisional(requirement)`, with a bullet for each state; a `gap` on a `lin` or `diverging` scalar fails generation.
+- **RQ-277 is decided, option (a), by the orchestrator per R-369** (not a ruling): `C_ty = diffusion · C_tt(n)` with
+  `C_tt(n) = h²·n(n²−1)/12 > 0` for `n ≥ 2` (§3.4), so `C_ty` has `diffusion`'s sign whatever `y` is, and R-423's
+  check confirmed `diffusion` signed; the corpus and R-423 settle it, and R-369 decides what the docs settle. `C_ty` is
+  declared (−∞, ∞), signed, citing R-423 and that derivation, and stays on `ramp_coolwarm`, so no golden changes.
+  RQ-277 moves to `docs/archive/review_queue/M0.md` with a "Decided" line; REQ-GEN-035 loses `rq: RQ-277`, and
+  TASK-M1-21 waits on nothing.
+
 Adds REQ-GEN-035, REQ-PAY-097 and REQ-PAY-098; REQ-RENDER-084's and REQ-COL-016's rulings and notes change.
 
 ## R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7
