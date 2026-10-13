@@ -10,8 +10,11 @@
 //!
 //! **The guard over naga's IR.** naga lowers `a && b` to control flow: a local set to `b` where `a` holds and to
 //! `false` where it does not, then read. So the rule asks what a condition implies: [`Guard::facts`] gives the facts a
-//! boolean expression implies when it is true, or false, following a local through every store to it, each with the
-//! conditions it is stored under. A use sits under the conditions of the `if`s whose branch holds it, and after an `if`
+//! boolean expression implies when it is true, or false, following a local through every store that may reach the load
+//! ([`Flow`]), each with the conditions it is stored under. A sample's validity holds only while what it was read from
+//! is unchanged: a store into its variable, whole, by a member, through a pointer or by a function given a pointer,
+//! after `ftle_valid` was read, ends it for every statement after the store, and in a loop for every statement of the
+//! loop. A use sits under the conditions of the `if`s whose branch holds it, and after an `if`
 //! one branch of which leaves the block (`return`, `discard`, `break`, `continue`), under the other branch's. Every
 //! statement's consumed expressions are uses: a `return`'s value, a store's value, a call's arguments and a branch's
 //! condition. `has_ftle` is the prelude's tier constant, which the lint presents as an override
@@ -25,8 +28,8 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 
 use naga::valid::{FunctionInfo, ModuleInfo};
 use naga::{
-    AddressSpace, BinaryOperator, Block, Expression, Function, Handle, Literal, Module, ScalarKind,
-    Span, Statement, TypeInner, UnaryOperator,
+    AddressSpace, BinaryOperator, Block, Expression, Function, Handle, Literal, LocalVariable, Module,
+    ScalarKind, Span, Statement, TypeInner, UnaryOperator,
 };
 
 use super::{Finding, Rule};
@@ -420,68 +423,15 @@ fn raw_word(
     found
 }
 
-/// For each load of a local in `block`, whether a store has certainly overwritten the local's initial value there:
-/// `stored` holds the locals stored on every path to the statement; an `if` keeps those both its branches store, or
-/// those of the one that does not leave; a loop's or a switch's stores count inside it only.
-fn definitely_assigned(
-    function: &Function,
-    block: &Block,
-    stored: &mut BTreeSet<Handle<naga::LocalVariable>>,
-    out: &mut HashMap<Handle<Expression>, bool>,
-) {
-    let local = |h: Handle<Expression>| match function.expressions[h] {
-        Expression::LocalVariable(l) => Some(l),
-        _ => None,
-    };
-    for s in block.iter() {
-        match *s {
-            Statement::Emit(ref range) => {
-                for h in range.clone() {
-                    if let Expression::Load { pointer } = function.expressions[h] {
-                        if let Some(l) = local(pointer) {
-                            out.insert(h, stored.contains(&l));
-                        }
-                    }
-                }
-            }
-            Statement::Store { pointer, .. } => {
-                if let Some(l) = local(pointer) {
-                    stored.insert(l);
-                }
-            }
-            Statement::Block(ref b) => definitely_assigned(function, b, stored, out),
-            Statement::If {
-                ref accept,
-                ref reject,
-                ..
-            } => {
-                let mut a = stored.clone();
-                definitely_assigned(function, accept, &mut a, out);
-                let mut r = stored.clone();
-                definitely_assigned(function, reject, &mut r, out);
-                *stored = match (leaves(accept), leaves(reject)) {
-                    (true, false) => r,
-                    (false, true) => a,
-                    _ => a.intersection(&r).copied().collect(),
-                };
-            }
-            Statement::Switch { ref cases, .. } => {
-                for case in cases {
-                    definitely_assigned(function, &case.body, &mut stored.clone(), out);
-                }
-            }
-            Statement::Loop {
-                ref body,
-                ref continuing,
-                ..
-            } => {
-                let mut inside = stored.clone();
-                definitely_assigned(function, body, &mut inside, out);
-                definitely_assigned(function, continuing, &mut inside, out);
-            }
-            _ => {}
-        }
-    }
+/// The roots a sample's key is read from ([`Guard::key`]): the variables, arguments, call results and other evaluated
+/// expressions at the bottom of its accesses. A store into one changes what the key reads.
+type Roots = BTreeSet<Handle<Expression>>;
+
+/// A sample's identity ([`Guard::key`]): its text, and the roots it is read from.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+struct Key {
+    text: String,
+    roots: Roots,
 }
 
 /// What a boolean implies: that this tier has FTLE (`has_ftle`) or an ensemble (`has_ensemble()`), or that the sample
@@ -490,7 +440,7 @@ fn definitely_assigned(
 enum Fact {
     HasFtle,
     HasEnsemble,
-    FtleValid(String),
+    FtleValid(Key),
 }
 
 /// The facts that hold somewhere; `None` for every fact, where nothing runs (a `false` taken as true).
@@ -518,10 +468,19 @@ fn intersection(a: Facts, b: Facts) -> Facts {
     }
 }
 
+/// `facts` without the validity of any sample read from a root in `changed`: a store into it since the facts were
+/// taken may have made it another sample.
+fn without(facts: Facts, changed: &Roots) -> Facts {
+    facts.map(|mut facts| {
+        facts.retain(|f| !matches!(f, Fact::FtleValid(k) if !k.roots.is_disjoint(changed)));
+        facts
+    })
+}
+
 /// A read a use of which needs a guard: `ftle` of the sample keyed so, or `ensemble_spread`.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Read {
-    Ftle(String),
+    Ftle(Key),
     Ensemble,
 }
 
@@ -540,54 +499,429 @@ impl Read {
     }
 }
 
+/// A store that may reach a local's load (`None`: the local's initial value), and the roots changed since it ran.
+#[derive(Clone, Debug)]
+struct Reach {
+    store: Option<usize>,
+    changed: Roots,
+}
+
+/// Roots changed since each evaluated load and member access in scope was last evaluated: a fact a read implies
+/// about a sample read from one of them no longer holds.
+type Evals = HashMap<Handle<Expression>, Roots>;
+
+/// Where a statement runs: the conditions it runs under; for each local, the stores that may reach it; and the roots
+/// changed since each load and member access in scope was evaluated.
+#[derive(Clone, Debug, Default)]
+struct State {
+    path: Path,
+    reach: HashMap<Handle<LocalVariable>, Vec<Reach>>,
+    evals: Evals,
+}
+
+/// `entry` added to `entries`, or its changed roots to the entry for the same store.
+fn reach_into(entries: &mut Vec<Reach>, entry: Reach) {
+    match entries.iter_mut().find(|r| r.store == entry.store) {
+        Some(r) => r.changed.extend(entry.changed),
+        None => entries.push(entry),
+    }
+}
+
+/// The state where control from each of `states` meets: the conditions, which are the same on each, every store
+/// reaching on any, and every evaluation in scope on all, with the roots any of them changed; `None` where none
+/// reaches.
+fn merge(states: Vec<State>) -> Option<State> {
+    let mut states = states.into_iter();
+    let mut out = states.next()?;
+    for s in states {
+        out.evals.retain(|h, _| s.evals.contains_key(h));
+        for (h, changed) in s.evals {
+            if let Some(mine) = out.evals.get_mut(&h) {
+                mine.extend(changed);
+            }
+        }
+        for (l, entries) in s.reach {
+            let mine = out.reach.entry(l).or_default();
+            for e in entries {
+                reach_into(mine, e);
+            }
+        }
+    }
+    Some(out)
+}
+
+/// A statement's identity, while the function is borrowed.
+fn id(s: &Statement) -> usize {
+    std::ptr::from_ref(s) as usize
+}
+
+/// Whether `s` leaves the switch case it ends, so control does not reach the statement after the switch: a `break`
+/// ends the case and reaches it.
+fn leaves_case(s: Option<&Statement>) -> bool {
+    matches!(
+        s,
+        Some(Statement::Return { .. } | Statement::Kill | Statement::Continue)
+    )
+}
+
+/// One function's control flow as the guard rule reads it ([`Guard::check`]): each statement, and each store into a
+/// local, with the conditions it runs under and the roots changed since each evaluation in scope; and each load of a
+/// local with the stores that may reach it, each with the roots changed since it ran.
+struct Flow<'a> {
+    module: &'a Module,
+    function: &'a Function,
+    fi: &'a FunctionInfo,
+    state: State,
+    visits: Vec<(&'a Statement, Span, Path, Evals)>,
+    stores: HashMap<usize, (Path, Handle<Expression>, Evals)>,
+    loads: HashMap<Handle<Expression>, Vec<Reach>>,
+}
+
+impl<'a> Flow<'a> {
+    fn new(module: &'a Module, function: &'a Function, fi: &'a FunctionInfo) -> Flow<'a> {
+        let reach = function
+            .local_variables
+            .iter()
+            .map(|(l, _)| {
+                let initial = Reach {
+                    store: None,
+                    changed: Roots::new(),
+                };
+                (l, vec![initial])
+            })
+            .collect();
+        let mut flow = Flow {
+            module,
+            function,
+            fi,
+            state: State {
+                path: Vec::new(),
+                reach,
+                evals: Evals::new(),
+            },
+            visits: Vec::new(),
+            stores: HashMap::new(),
+            loads: HashMap::new(),
+        };
+        flow.block(&function.body);
+        flow
+    }
+
+    /// The variable or argument `pointer` points into.
+    fn root(&self, mut pointer: Handle<Expression>) -> Handle<Expression> {
+        while let Expression::AccessIndex { base, .. } | Expression::Access { base, .. } =
+            self.function.expressions[pointer]
+        {
+            pointer = base;
+        }
+        pointer
+    }
+
+    /// The roots statement `s` itself changes, not the blocks it holds: a store's variable; and a call's pointer
+    /// arguments' variables and every global, which the callee may store into.
+    fn effects(&self, s: &Statement) -> Roots {
+        let mut out = Roots::new();
+        match *s {
+            Statement::Store { pointer, .. } | Statement::Atomic { pointer, .. } => {
+                out.insert(self.root(pointer));
+            }
+            Statement::Call { ref arguments, .. } => {
+                for &a in arguments {
+                    if matches!(
+                        self.fi[a].ty.inner_with(&self.module.types),
+                        TypeInner::Pointer { .. } | TypeInner::ValuePointer { .. }
+                    ) {
+                        out.insert(self.root(a));
+                    }
+                }
+                out.extend(
+                    self.function
+                        .expressions
+                        .iter()
+                        .filter(|(_, e)| matches!(e, Expression::GlobalVariable(_)))
+                        .map(|(h, _)| h),
+                );
+            }
+            _ => {}
+        }
+        out
+    }
+
+    /// The roots `block` changes anywhere.
+    fn changed(&self, block: &Block) -> Roots {
+        let mut out = Roots::new();
+        for s in block.iter() {
+            out.extend(self.effects(s));
+            match *s {
+                Statement::Block(ref b) => out.extend(self.changed(b)),
+                Statement::If {
+                    ref accept,
+                    ref reject,
+                    ..
+                } => {
+                    out.extend(self.changed(accept));
+                    out.extend(self.changed(reject));
+                }
+                Statement::Switch { ref cases, .. } => {
+                    for case in cases {
+                        out.extend(self.changed(&case.body));
+                    }
+                }
+                Statement::Loop {
+                    ref body,
+                    ref continuing,
+                    ..
+                } => {
+                    out.extend(self.changed(body));
+                    out.extend(self.changed(continuing));
+                }
+                _ => {}
+            }
+        }
+        out
+    }
+
+    /// Every store into a local in `block`, anywhere: the local and the store.
+    fn stores_in(&self, block: &'a Block, out: &mut Vec<(Handle<LocalVariable>, usize)>) {
+        for s in block.iter() {
+            match *s {
+                Statement::Store { pointer, .. } => {
+                    if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
+                        out.push((l, id(s)));
+                    }
+                }
+                Statement::Block(ref b) => self.stores_in(b, out),
+                Statement::If {
+                    ref accept,
+                    ref reject,
+                    ..
+                } => {
+                    self.stores_in(accept, out);
+                    self.stores_in(reject, out);
+                }
+                Statement::Switch { ref cases, .. } => {
+                    for case in cases {
+                        self.stores_in(&case.body, out);
+                    }
+                }
+                Statement::Loop {
+                    ref body,
+                    ref continuing,
+                    ..
+                } => {
+                    self.stores_in(body, out);
+                    self.stores_in(continuing, out);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    /// `roots` changed here: every evaluation in scope and every store reaching here was before the change.
+    fn change(&mut self, roots: &Roots) {
+        for changed in self.state.evals.values_mut() {
+            changed.extend(roots.iter().copied());
+        }
+        for entries in self.state.reach.values_mut() {
+            for r in entries {
+                r.changed.extend(roots.iter().copied());
+            }
+        }
+    }
+
+    /// Each statement of `block`, recursively, in the order it runs: the conditions of the `if`s whose branch holds
+    /// it, and, after an `if` one branch of which leaves the block, the other branch's.
+    fn block(&mut self, block: &'a Block) {
+        let depth = self.state.path.len();
+        for (s, span) in block.span_iter() {
+            if !matches!(s, Statement::Loop { .. }) {
+                self.visit(s, *span);
+            }
+            match *s {
+                Statement::Emit(ref range) => {
+                    for h in range.clone() {
+                        match self.function.expressions[h] {
+                            Expression::Load { pointer } => {
+                                if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
+                                    let entries = self.state.reach.get(&l).cloned().unwrap_or_default();
+                                    self.loads.insert(h, entries);
+                                }
+                            }
+                            Expression::AccessIndex { .. } => {}
+                            _ => continue,
+                        }
+                        self.state.evals.insert(h, Roots::new());
+                    }
+                }
+                Statement::Store { value, .. } => {
+                    let at = (self.state.path.clone(), value, self.state.evals.clone());
+                    self.stores.insert(id(s), at);
+                }
+                _ => {}
+            }
+            let effects = self.effects(s);
+            self.change(&effects);
+            match *s {
+                Statement::Store { pointer, .. } => {
+                    if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
+                        let entry = Reach {
+                            store: Some(id(s)),
+                            changed: Roots::new(),
+                        };
+                        self.state.reach.insert(l, vec![entry]);
+                    }
+                }
+                Statement::Block(ref b) => self.block(b),
+                Statement::If {
+                    condition,
+                    ref accept,
+                    ref reject,
+                } => self.branch(condition, accept, reject),
+                Statement::Switch { ref cases, .. } => self.switch(cases),
+                Statement::Loop {
+                    ref body,
+                    ref continuing,
+                    ..
+                } => self.looped(s, *span, body, continuing),
+                _ => {}
+            }
+        }
+        self.state.path.truncate(depth);
+    }
+
+    /// `s`, at `span`, runs here.
+    fn visit(&mut self, s: &'a Statement, span: Span) {
+        let at = (s, span, self.state.path.clone(), self.state.evals.clone());
+        self.visits.push(at);
+    }
+
+    /// An `if`: each branch under its condition; after it, the state where the branches that do not leave meet, and,
+    /// where one leaves, the other's condition.
+    fn branch(&mut self, condition: Handle<Expression>, accept: &'a Block, reject: &'a Block) {
+        let before = self.state.clone();
+        let mut ends = Vec::new();
+        for (branch, value) in [(accept, true), (reject, false)] {
+            self.state = before.clone();
+            self.state.path.push((condition, value));
+            self.block(branch);
+            self.state.path.pop();
+            if !leaves(branch) {
+                ends.push(self.state.clone());
+            }
+        }
+        self.state = merge(ends).unwrap_or(before);
+        if leaves(accept) {
+            self.state.path.push((condition, false));
+        } else if leaves(reject) {
+            self.state.path.push((condition, true));
+        }
+    }
+
+    /// A `switch`: each case from the state before it, and the one before that where it falls through; after it, the
+    /// state where the cases that reach it meet.
+    fn switch(&mut self, cases: &'a [naga::SwitchCase]) {
+        let before = self.state.clone();
+        let mut ends = Vec::new();
+        let mut fall: Option<State> = None;
+        for case in cases {
+            let start = match fall.take() {
+                Some(f) => merge(vec![before.clone(), f]),
+                None => None,
+            };
+            self.state = start.unwrap_or_else(|| before.clone());
+            self.block(&case.body);
+            if case.fall_through {
+                fall = Some(self.state.clone());
+            } else if !leaves_case(case.body.last()) {
+                ends.push(self.state.clone());
+            }
+        }
+        ends.extend(fall);
+        self.state = merge(ends).unwrap_or(before);
+    }
+
+    /// A loop: its head is reached again after any of its statements ran, so there every root the loop changes has
+    /// changed since each evaluation and each store before it, and every store into a local in it may reach, with all
+    /// those roots changed. The body, the continuing block and the code after the loop each start from the
+    /// head; the loop's `break if` is visited there.
+    fn looped(&mut self, s: &'a Statement, span: Span, body: &'a Block, continuing: &'a Block) {
+        let mut changed = self.changed(body);
+        changed.extend(self.changed(continuing));
+        self.change(&changed);
+        let mut stores = Vec::new();
+        self.stores_in(body, &mut stores);
+        self.stores_in(continuing, &mut stores);
+        for (l, store) in stores {
+            let entry = Reach {
+                store: Some(store),
+                changed: changed.clone(),
+            };
+            reach_into(self.state.reach.entry(l).or_default(), entry);
+        }
+        self.visit(s, span);
+        let head = self.state.clone();
+        self.block(body);
+        self.state = head.clone();
+        self.block(continuing);
+        self.state = head;
+    }
+}
+
 /// The guard rule over one function.
 struct Guard<'a> {
     module: &'a Module,
     function: &'a Function,
     fi: &'a FunctionInfo,
-    /// Each local's stores: the value and the conditions it is stored under.
-    stores: HashMap<Handle<naga::LocalVariable>, Vec<(Path, Handle<Expression>)>>,
-    /// Each load of a local: whether a store has certainly overwritten its initial value where it is loaded.
-    assigned: HashMap<Handle<Expression>, bool>,
-    /// The locals whose facts are being found, so that a cycle of stores ends.
-    busy: RefCell<Vec<(Handle<naga::LocalVariable>, bool)>>,
+    flow: Flow<'a>,
+    /// The loads whose facts are being found, so that a cycle of stores ends.
+    busy: RefCell<Vec<(Handle<Expression>, bool)>>,
 }
 
 impl<'a> Guard<'a> {
     fn new(module: &'a Module, function: &'a Function, fi: &'a FunctionInfo) -> Guard<'a> {
-        let mut stores: HashMap<_, Vec<_>> = HashMap::new();
-        walk(&function.body, &mut Vec::new(), &mut |s, _, path| {
-            if let Statement::Store { pointer, value } = *s {
-                if let Expression::LocalVariable(l) = function.expressions[pointer] {
-                    stores.entry(l).or_default().push((path.to_vec(), value));
-                }
-            }
-        });
-        let mut assigned = HashMap::new();
-        definitely_assigned(
-            function,
-            &function.body,
-            &mut BTreeSet::new(),
-            &mut assigned,
-        );
         Guard {
             module,
             function,
             fi,
-            stores,
-            assigned,
+            flow: Flow::new(module, function, fi),
             busy: RefCell::new(Vec::new()),
         }
     }
 
-    /// `e`'s identity as a sample: the same argument, variable or call result and the same member path give the same
-    /// key, so `ctx.sample.ftle` and `ctx.sample.ftle_valid` read one sample, and so do two loads of one pointer. naga
-    /// makes one expression per argument and per local variable, so its handle keys either.
-    fn key(&self, e: Handle<Expression>) -> String {
+    /// `e`'s identity as a sample: the same argument, variable or call result and the same member and index path give
+    /// the same key, so `ctx.sample.ftle` and `ctx.sample.ftle_valid` read one sample, and so do two loads of one
+    /// pointer. naga makes one expression per argument and per local variable, so its handle keys either. The key's
+    /// roots are those it is read from: a store into one, after a fact about the key was taken, ends the fact.
+    fn key(&self, e: Handle<Expression>) -> Key {
         match self.function.expressions[e] {
-            Expression::AccessIndex { base, index } => format!("{}.{index}", self.key(base)),
-            Expression::Load { pointer } => format!("*{}", self.key(pointer)),
-            _ => format!("e{}", e.index()),
+            Expression::AccessIndex { base, index } => {
+                let base = self.key(base);
+                Key {
+                    text: format!("{}.{index}", base.text),
+                    roots: base.roots,
+                }
+            }
+            Expression::Access { base, index } => {
+                let base = self.key(base);
+                let index = self.key(index);
+                let mut roots = base.roots;
+                roots.extend(index.roots);
+                Key {
+                    text: format!("{}[{}]", base.text, index.text),
+                    roots,
+                }
+            }
+            Expression::Load { pointer } => {
+                let pointer = self.key(pointer);
+                Key {
+                    text: format!("*{}", pointer.text),
+                    roots: pointer.roots,
+                }
+            }
+            _ => Key {
+                text: format!("e{}", e.index()),
+                roots: Roots::from([e]),
+            },
         }
     }
 
@@ -650,8 +984,9 @@ impl<'a> Guard<'a> {
         }
     }
 
-    /// The facts `e`, a boolean, implies where it is `value`.
-    fn facts(&self, e: Handle<Expression>, value: bool) -> Facts {
+    /// The facts `e`, a boolean, implies where it is `value`, at a point where `evals` gives the roots changed since
+    /// each evaluation in scope.
+    fn facts(&self, e: Handle<Expression>, value: bool, evals: &Evals) -> Facts {
         match self.function.expressions[e] {
             Expression::Literal(Literal::Bool(b)) if b != value => None,
             Expression::Override(o)
@@ -667,78 +1002,87 @@ impl<'a> Guard<'a> {
             Expression::Unary {
                 op: UnaryOperator::LogicalNot,
                 expr,
-            } => self.facts(expr, !value),
+            } => self.facts(expr, !value, evals),
             Expression::Load { pointer } => match self.function.expressions[pointer] {
-                Expression::LocalVariable(l) => {
-                    let assigned = self.assigned.get(&e).copied().unwrap_or(false);
-                    self.local(l, value, assigned)
-                }
-                _ if value => self.valid(pointer),
+                Expression::LocalVariable(l) => self.load(e, l, value, evals),
+                _ if value => self.valid(pointer, e, evals),
                 _ => none(),
             },
-            Expression::AccessIndex { .. } if value => self.valid(e),
+            Expression::AccessIndex { .. } if value => self.valid(e, e, evals),
             _ => none(),
         }
     }
 
-    /// `{FtleValid}` where `e` reads `ftle_valid` of a `SimState`, keyed by its sample.
-    fn valid(&self, e: Handle<Expression>) -> Facts {
-        let Expression::AccessIndex { base, .. } = self.function.expressions[e] else {
+    /// `{FtleValid}` where `access` reads `ftle_valid` of a `SimState`, keyed by its sample, read by `read`, unless a
+    /// root of the sample changed since (`evals`).
+    fn valid(&self, access: Handle<Expression>, read: Handle<Expression>, evals: &Evals) -> Facts {
+        let Expression::AccessIndex { base, .. } = self.function.expressions[access] else {
             return none();
         };
-        match member(self.module, self.function, self.fi, e) {
+        let facts = match member(self.module, self.function, self.fi, access) {
             Some((SIMSTATE, "ftle_valid")) => {
                 Some(BTreeSet::from([Fact::FtleValid(self.key(base))]))
             }
             _ => none(),
+        };
+        match evals.get(&read) {
+            Some(changed) => without(facts, changed),
+            None => facts,
         }
     }
 
-    /// The facts local `l` implies where its load is `value`: those common to every store into it, each with the
-    /// conditions it is stored under, and, unless a store has certainly overwritten it (`assigned`), to its initial
-    /// value (zero, `false`, with no initialiser).
-    fn local(&self, l: Handle<naga::LocalVariable>, value: bool, assigned: bool) -> Facts {
-        if self.busy.borrow().contains(&(l, value)) {
+    /// The facts `e`, a load of local `l`, implies where it is `value`: those common to every store that may reach it,
+    /// each with the conditions it is stored under, or to the local's initial value (zero, `false`, with no
+    /// initialiser) where no store need have run; each without the validity of a sample whose roots changed since,
+    /// before the load or after it (`evals`).
+    fn load(&self, e: Handle<Expression>, l: Handle<LocalVariable>, value: bool, evals: &Evals) -> Facts {
+        if self.busy.borrow().contains(&(e, value)) {
             return none();
         }
-        self.busy.borrow_mut().push((l, value));
-        let mut out = match self.function.local_variables[l].init {
-            _ if assigned => None,
-            Some(init) => self.facts(init, value),
-            None if value => None,
-            None => none(),
-        };
-        for (path, stored) in self.stores.get(&l).into_iter().flatten() {
-            out = intersection(out, union(self.path(path), self.facts(*stored, value)));
+        self.busy.borrow_mut().push((e, value));
+        let mut out = None;
+        for r in self.flow.loads.get(&e).into_iter().flatten() {
+            let facts = match r.store {
+                Some(store) => {
+                    let (path, stored, at) = &self.flow.stores[&store];
+                    union(self.path(path, at), self.facts(*stored, value, at))
+                }
+                None => match self.function.local_variables[l].init {
+                    Some(init) => self.facts(init, value, evals),
+                    None if value => None,
+                    None => none(),
+                },
+            };
+            out = intersection(out, without(facts, &r.changed));
         }
         self.busy.borrow_mut().pop();
-        out
+        match evals.get(&e) {
+            Some(changed) => without(out, changed),
+            None => out,
+        }
     }
 
-    /// The facts the conditions `path` imply.
-    fn path(&self, path: &[(Handle<Expression>, bool)]) -> Facts {
+    /// The facts the conditions `path` imply, at a point where `evals` gives the roots changed since each evaluation.
+    fn path(&self, path: &[(Handle<Expression>, bool)], evals: &Evals) -> Facts {
         path.iter()
-            .fold(none(), |acc, &(c, v)| union(acc, self.facts(c, v)))
+            .fold(none(), |acc, &(c, v)| union(acc, self.facts(c, v, evals)))
     }
 
     /// Every unguarded use of a guarded read in the function.
     fn check(&self, source: &str) -> Vec<Finding> {
         let fname = self.function.name.as_deref().unwrap_or("(unnamed)");
         let mut found = Vec::new();
-        walk(
-            &self.function.body,
-            &mut Vec::new(),
-            &mut |s, span, path| {
-                let reads: BTreeSet<Read> = consumed(s)
-                    .into_iter()
-                    .flat_map(|c| self.reads(c))
-                    .collect();
-                if reads.is_empty() {
-                    return;
-                }
-                let facts = self.path(path);
-                for read in reads.iter().filter(|r| !r.guarded_by(&facts)) {
-                    let what = match read {
+        for (s, span, path, evals) in &self.flow.visits {
+            let reads: BTreeSet<Read> = consumed(s)
+                .into_iter()
+                .flat_map(|c| self.reads(c))
+                .collect();
+            if reads.is_empty() {
+                continue;
+            }
+            let facts = self.path(path, evals);
+            for read in reads.iter().filter(|r| !r.guarded_by(&facts)) {
+                let what = match read {
                     Read::Ftle(_) => {
                         "a read of `ftle` outside `has_ftle && s.ftle_valid` for its sample `s`: FTLE views guard \
                          with both, and an aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN \
@@ -749,16 +1093,14 @@ impl<'a> Guard<'a> {
                          R-145)"
                     }
                 };
-                    let span = consumed_at(self.function, s, span);
-                    found.push(at(
-                        Rule::Guard,
-                        format!("`{fname}` uses {what}"),
-                        span,
-                        source,
-                    ));
-                }
-            },
-        );
+                found.push(at(
+                    Rule::Guard,
+                    format!("`{fname}` uses {what}"),
+                    consumed_at(self.function, s, *span),
+                    source,
+                ));
+            }
+        }
         found
     }
 }
