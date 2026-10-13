@@ -18,10 +18,43 @@ fn plane() -> Plane {
     }
 }
 
-/// `a` within a relative 1e-12 of `b`.
-fn same(a: f64, b: f64) -> bool {
-    (a - b).abs() <= 1e-12 * b.abs().max(1.0)
+/// The most one fake hash may differ between two platforms (applied per R-369: the pins hold on macOS and on Linux,
+/// where CI's mutants run). `hash` is `fract(sin(x)·C)`, `C` = 43 758.5453, its argument IEEE-exact arithmetic on the
+/// fixed points; `sin` is its one step that is not, and two libms' `sin`, each within 1 ulp of the true value, differ
+/// by at most 2 ulp of a value in [-1, 1], 2·2⁻⁵³ = 2⁻⁵². The product, below 2¹⁶, then differs by at most C·2⁻⁵² plus
+/// one ulp of it, 2⁻³⁷; `fract` is exact; the `+ 1` of a negative fraction adds at most half an ulp of 1, 2⁻⁵³. That
+/// is 1.70e-11, held here at 2e-11 (macOS and glibc gave E₀ 2.2e-12 apart at the first pin, 3.6e-12 in its hash).
+/// The bound holds only off a jump: at the pinned points every hash's product is at least 2.2e-3 from an integer,
+/// every class, word letter and substep count at least 8.8e-3 of a step from a floor, and every shape angle at least
+/// 1.5e-3 from a wrap of 2π, all far beyond the most they move (8e-7), so the fates, words and counts are exact.
+const EPS_H: f64 = 2e-11;
+
+/// `a` within `k` hash errors of `b`, `k` the most `b` moves per unit change of the hashes it is made of (each change
+/// at most [`EPS_H`]), plus a relative 1e-12 for the roundings after them (under an ulp each on a scalar) and the
+/// paths' own `sin` and `cos` (under 1e-9 on a fingerprint, far below its `k` term).
+fn near(a: f64, b: f64, k: f64) -> bool {
+    (a - b).abs() <= k * EPS_H + 1e-12 * b.abs().max(1.0)
 }
+
+/// `t_end` and the path span, `t_max·(0.1 + 0.8h)`, `t_max` = 50: 40 per unit of `h`.
+const K_T: f64 = 40.0;
+/// FTLE, `0.02 + 0.1h`.
+const K_FTLE: f64 = 0.1;
+/// `E₀`, `-0.2 - 0.6h`.
+const K_E0: f64 = 0.6;
+/// The minimum separation, `1e-4·(1 + 9h)`.
+const K_MIN_SEP: f64 = 9e-4;
+/// `|ΔE/E|`, `1e-10·(1 + 9h)`.
+const K_DRIFT: f64 = 9e-10;
+/// The shape path's fingerprint, `Σ θ + 2φ` over 240 points, `τ` up to 50 and moving 40 per unit of the span's hash.
+/// `θ = θ₀ + ωτ` mod 2π, `θ₀ = 2πh`, `ω = 0.6 + h'` below 1.6: 2π + 50 + 1.6·40 = 120.3. `φ = π/2 + 1.1 sin(0.37τ +
+/// θ₀)`: 1.1·(0.37·40 + 2π) = 23.2. So 120.3 + 2·23.2 = 166.7 a point, 167 here.
+const K_SHAPE: f64 = 240.0 * 167.0;
+/// A body path's fingerprint, `Σ x - 3y` over 240 points, `x = r cos a`, `y = 0.7 r sin a`. The angle `ωτ + 2πk/3`:
+/// 50 + 1.6·40 = 114. The radius `1 + 0.35 sin(2.3τ + k)`, plus `0.4·(τ - 0.7 t_end)` past 70% for an escaping body:
+/// 0.35·2.3·40 + 0.4·(40 + 0.7·40) = 59.4, and at most 1.35 + 0.4·0.3·45 = 6.75. A point moves at most (1 + 2.1)·
+/// (59.4 + 6.75·114) = 2569.6, 2570 here.
+const K_BODY: f64 = 240.0 * 2570.0;
 
 /// A sample's values at `at`, the playhead at the horizon 50: its fate, `t_end`, FTLE, `E₀`, F₂ word, substeps,
 /// minimum separation, `|ΔE/E|`, path span, and fingerprints of its shape path and its three bodies' paths.
@@ -175,31 +208,31 @@ fn check_pin(plane: &Plane, pin: &Pin) {
     let s = sample(plane, at, 50.0, 50.0);
     assert_eq!(s.fate.as_deref(), Some(fate), "{at:?}");
     assert!(
-        same(s.t_end.unwrap(), t_end),
+        near(s.t_end.unwrap(), t_end, K_T),
         "t_end {:?} at {at:?}",
         s.t_end
     );
     assert!(
-        same(s.ftle, ftle) && same(s.e0, e0),
+        near(s.ftle, ftle, K_FTLE) && near(s.e0, e0, K_E0),
         "FTLE {} E₀ {} at {at:?}",
         s.ftle,
         s.e0
     );
     assert_eq!((s.f2_word.as_str(), s.substeps), (word, substeps), "{at:?}");
     assert!(
-        same(s.min_separation, min_sep) && same(s.energy_drift, drift),
+        near(s.min_separation, min_sep, K_MIN_SEP) && near(s.energy_drift, drift, K_DRIFT),
         "{at:?}"
     );
-    assert!(same(s.path_t, path_t), "path_t {} at {at:?}", s.path_t);
+    assert!(near(s.path_t, path_t, K_T), "path_t {} at {at:?}", s.path_t);
     let got: f64 = s.shape.iter().map(|q| q[0] + 2.0 * q[1]).sum();
     assert!(
-        same(got, shape),
+        near(got, shape, K_SHAPE),
         "the shape path's fingerprint {got} at {at:?}"
     );
     for (k, body) in s.bodies.iter().enumerate() {
         let got: f64 = body.iter().map(|q| q[0] - 3.0 * q[1]).sum();
         assert!(
-            same(got, bodies[k]),
+            near(got, bodies[k], K_BODY),
             "body {k}'s fingerprint {got} at {at:?}"
         );
     }
@@ -216,13 +249,34 @@ fn mock_hover_content_samples_are_pinned() {
         moved.0 = [0.5, 0.5];
         check_pin(&p, &moved)
     });
+    // Each tolerance still catches a value moved ten times past it.
+    type Nudge = fn(&mut Pin);
+    let nudges: [(&str, Nudge); 8] = [
+        ("t_end", |m| m.2 += 10.0 * K_T * EPS_H),
+        ("FTLE", |m| m.3 += 10.0 * K_FTLE * EPS_H),
+        ("E₀", |m| m.4 += 10.0 * K_E0 * EPS_H),
+        ("the minimum separation", |m| {
+            m.7 += 10.0 * K_MIN_SEP * EPS_H + 1e-11
+        }),
+        ("|ΔE/E|", |m| m.8 += 1e-11),
+        ("the path span", |m| m.9 += 10.0 * K_T * EPS_H),
+        ("the shape path", |m| m.10 += 10.0 * K_SHAPE * EPS_H),
+        ("a body path", |m| m.11[2] += 10.0 * K_BODY * EPS_H),
+    ];
+    for (what, nudge) in nudges {
+        rejects(&format!("{what} moved past its tolerance"), || {
+            let mut moved = PINS[0];
+            nudge(&mut moved);
+            check_pin(&p, &moved)
+        });
+    }
     for (x, h) in [
         (0.0, 0.0),
         (1.0, 0.5462073519520345),
         (-2.5, 0.729571438896528),
         (100.0, 0.17615513507917058),
     ] {
-        assert!(same(hash(x), h), "hash({x}) = {}", hash(x));
+        assert!(near(hash(x), h, 1.0), "hash({x}) = {}", hash(x));
     }
     // A negative sine's fraction is brought into [0, 1).
     assert!((0..200)
