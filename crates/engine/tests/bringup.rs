@@ -44,7 +44,7 @@ fn config(kernel_variant: KernelVariant) -> SimConfig {
         links: Links {},
         integrator: Integrator {},
         kernel_variant,
-        horizon: Horizon {},
+        horizon: Horizon { t: 0.0 },
         collision: Collision {},
         quality: Quality {},
     }

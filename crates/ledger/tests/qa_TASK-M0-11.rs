@@ -17,7 +17,7 @@ use validation::negative_control;
 /// f16 members. `n_unresolved` is the temporal-accumulators table's u16 row (R-315, closing RQ-183).
 const SECTION_3_7: [(&str, &str); 24] = [
     ("level", "u8"),
-    ("class_histogram[N]", "u8 × N"),
+    ("class_histogram[N]", "u32 × N"),
     ("dominant_outcome", "packed"),
     ("outcome_impurity", "f16"),
     ("terminated_fraction", "f16"),

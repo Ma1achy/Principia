@@ -1,9 +1,9 @@
 # TASK-M2-03 — Decoder: free momentum, the factorised join and the ICDescriptor
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163, REQ-DEC-045
-- **Depends on:** TASK-M2-02, TASK-M2-30, TASK-M1-18
-- **Needs (earlier milestones):** REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160
+- **Closes:** REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163, REQ-DEC-045, REQ-PAY-097
+- **Depends on:** TASK-M2-02, TASK-M2-30, TASK-M1-18, TASK-M1-21
+- **Needs (earlier milestones):** REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160, REQ-GEN-035
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-3
 - **Size:** ~480 lines
@@ -38,6 +38,8 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library"
 - `decisions.md` § "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
 - `decisions.md` § "R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*"
+- `decisions.md` § "R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*"
+- `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must carry)"
 - `decisions.md` § "R-421 — The ICDescriptor golden: fields that are 0 at rest are compared bit-exact, the others within per-precision tolerances proposed by TASK-M2-03 and confirmed at the M2 gate; "hand-computed at f32" is the exact value rounded to f32 *(closes RQ-272)*"
 
 ## Deliverables
@@ -51,6 +53,9 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - The REQ-TOOL-163 re-confirmation: which ratio REQ-PAY-088 defines for `rho_ratio`, its floor re-proposed in that
   ratio's units if it is not the mass-weighted ‖ρ̃‖/‖λ̃‖ TASK-M1-18 assumed (the ledger constant and any golden it
   changes updated), and `r_min_pair_0`'s floor's evidence on decoded values (R-419).
+- `q_mass`'s ledger range declared from REQ-PAY-088's formula, citing it, its provisional mark (R-426) removed in
+  `crates/ledger/src/payload.rs`; its view's ramp follows the declared range (R-400), and any golden that changes is
+  re-rendered with its `BASELINES.md` row citing R-426 (REQ-PAY-097).
 
 ## Acceptance tests
 - `cargo test -p kernel decode_factorised` — each block depends only on its z slice (and earlier blocks); the call order mass → config → momentum → invariants is asserted (REQ-DEC-001).
@@ -67,6 +72,7 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - `cargo test -p kernel golden_ic` — z = 0 → masses (⅓, ⅓, ⅓), α = π/4, β = π/2, q = 0, I = 1, every derived value asserted in f64 and f32 (REQ-VAL-018; encode's golden pair is asserted in TASK-M2-16).
 - `cargo test -p kernel chart_landmarks_lagrange_euler` — z = 0 decodes to the Lagrange equilateral configuration; z_β past the underflow threshold decodes to β = 0 exactly, collinear, at f32 and f64; z_β → +large decodes toward the Euler collinear configuration at β → π, approached from below, β ≤ π (R-417) (REQ-VAL-020).
 - Definition: the formulas of `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio`, `rho_angle` and `r_min_pair_0` written into dd_decoder §3.6 and approved by the physics reviewer (REQ-PAY-088).
+- Review checklist (physics): `q_mass`'s ledger range is declared from REQ-PAY-088's formula, citing it, its provisional mark removed; `cargo test -p ledger declared_ranges` and `cargo test -p ledger numeric_view_template` pass with it (a range that spans zero on `ramp_coolwarm`, otherwise `ramp_viridis`); the physics reviewer re-checks the ramp, and the M2 gate report closes the M1 gate's provisional record for `q_mass` (REQ-PAY-097; R-426).
 - Proposal: the f64 and f32 tolerance of dd_decoder test 1's Σpᵢ = 0, with the measured residuals over fuzzed z as evidence; the human confirms it at the M2 gate (REQ-DEC-045; split from REQ-DEC-044 by TASK-M2-02, applied per R-369).
 
 ## Notes
@@ -85,3 +91,6 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - R-419 (11 Oct 2026, closing RQ-271): `rho_ratio`'s and `r_min_pair_0`'s log floors, provisional at M1
   (TASK-M1-18), are re-confirmed at M2 here (REQ-TOOL-163). This task depends on TASK-M1-18, whose floor constant it
   may change (applied per R-369).
+- R-426 (13 Oct 2026, closing RQ-274): `q_mass` stays on `ramp_coolwarm` provisionally from M1, recorded as provisional
+  at the M1 gate; this task declares its range from the formula it writes, and the physics reviewer re-checks the ramp
+  (REQ-PAY-097). This task depends on TASK-M1-21, which marks `q_mass`'s range provisional (applied per R-369).

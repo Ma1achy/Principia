@@ -1069,21 +1069,7 @@ pub fn f32_to_f16_bits(x: f32) -> u16 {{
     sign | h as u16
 }}
 
-/// The f32 value of the binary16 bits `h`, exact for every one of them (`unpack2x16float`'s conversion).
-pub fn f16_bits_to_f32(h: u16) -> f32 {{
-    let sign = u32::from(h & 0x8000) << 16;
-    let exp = u32::from((h >> 10) & 0x1f);
-    let man = u32::from(h & 0x03ff);
-    if exp == 0 {{
-        let magnitude = man as f32 * F16_MIN_SUBNORMAL;
-        return f32::from_bits(sign | magnitude.to_bits());
-    }}
-    if exp == 0x1f {{
-        return f32::from_bits(sign | 0x7f80_0000 | (man << 13));
-    }}
-    f32::from_bits(sign | ((exp + 112) << 23) | (man << 13))
-}}
-
+{f16_decode}
 /// WGSL's `pack2x16float`: `v[0]` in bits 0–15, `v[1]` in bits 16–31. No clamp: callers clamp first (payload §1).
 #[inline]
 pub fn pack2x16float(v: [f32; 2]) -> u32 {{
@@ -1161,6 +1147,31 @@ pub fn tm_t_dmin_fraction(w: u32, horizon_steps: u32) -> f32 {{
 }}
 "#,
         truncated = truncated as u32,
+        f16_decode = f16_decode("pub "),
+    )
+}
+
+/// The `no_std` binary16 decode as Rust source, `{vis}fn f16_bits_to_f32(h: u16) -> f32`, exact for every binary16 value
+/// (`unpack2x16float`'s conversion), reading the constant `F16_MIN_SUBNORMAL`, 2⁻²⁴: the payload's accessors read
+/// through it (the helpers this module emits), and so do `QuadReduction`'s ([`crate::reduction`]), one conversion for
+/// both (R-317).
+pub fn f16_decode(vis: &str) -> String {
+    format!(
+        r#"/// The f32 value of the binary16 bits `h`, exact for every one of them (`unpack2x16float`'s conversion).
+{vis}fn f16_bits_to_f32(h: u16) -> f32 {{
+    let sign = u32::from(h & 0x8000) << 16;
+    let exp = u32::from((h >> 10) & 0x1f);
+    let man = u32::from(h & 0x03ff);
+    if exp == 0 {{
+        let magnitude = man as f32 * F16_MIN_SUBNORMAL;
+        return f32::from_bits(sign | magnitude.to_bits());
+    }}
+    if exp == 0x1f {{
+        return f32::from_bits(sign | 0x7f80_0000 | (man << 13));
+    }}
+    f32::from_bits(sign | ((exp + 112) << 23) | (man << 13))
+}}
+"#
     )
 }
 

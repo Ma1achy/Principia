@@ -57,8 +57,14 @@ pub enum KeyMode {
 /// Selection (gui_state_contract §2).
 pub struct Selection {}
 
-/// Kept orbits (gui_state_contract §2).
-pub struct KeptOrbits {}
+/// Kept orbits (gui_state_contract §2): the samples the user kept, in the order kept, each a tab of the Trajectory
+/// panel (render_gui_spec §G2, `#1`, `#2`, …). A kept orbit is the snapshot's sample under the cursor when it was kept,
+/// GUI-sized plain data the snapshot carried, so the engine, which never reads `ViewUI`, needs no list of them.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct KeptOrbits {
+    /// The kept samples, oldest first.
+    pub orbits: Vec<crate::contract::sample::Sample>,
+}
 
 /// Inspector `t_cursor` (gui_state_contract §2).
 pub struct Inspector {}
@@ -84,6 +90,8 @@ pub struct LinkedViews {}
 pub struct Transport {
     /// Play (`true`) or pause (`false`).
     pub playing: bool,
+    /// The playback speed: the playhead moves this many units of `t` for each unit its clock's time source moves.
+    pub speed: f64,
 }
 
 /// The mode switch's mode (render_gui_spec §G2, "the mode switch **Explore / Stain**"; RQ-249).

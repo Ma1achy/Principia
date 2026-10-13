@@ -1,7 +1,8 @@
 //! The static layout check (dd_generation_root §5 test 1): within each packed word no two fields overlap, every
 //! declared bit is covered by a field or explicitly reserved, and every field's width fits its range, under R-242's
 //! width rules as R-247 and R-248 amend them (§3.8). An `f16-pair` field's range, wherever it sits, lies within
-//! f16's finite range (R-248).
+//! f16's finite range (R-248). An `f16` field is one binary16 value at a packed location of exactly 16 bits, never at a
+//! scalar index, derived, or a vector's component, and its range follows the same rule (R-312).
 
 use std::fmt;
 
@@ -21,8 +22,8 @@ impl fmt::Display for LayoutError {
     }
 }
 
-/// Checks every packed word of `words` against the fields `entries` place in it, and every `f16-pair` field's range;
-/// every finding (empty when the layout passes).
+/// Checks every packed word of `words` against the fields `entries` place in it, every `f16` and `f16-pair` field's
+/// range, and where each `f16` field sits; every finding (empty when the layout passes).
 pub fn check(words: &[Word], entries: &[Entry]) -> Vec<LayoutError> {
     let mut found = Vec::new();
     for entry in entries {
@@ -35,6 +36,7 @@ pub fn check(words: &[Word], entries: &[Entry]) -> Vec<LayoutError> {
             }
         }
         check_f16(entry, &mut found);
+        check_f16_place(entry, &mut found);
     }
     for word in words {
         check_word(word, entries, &mut found);
@@ -108,9 +110,9 @@ fn check_word(word: &Word, entries: &[Entry], found: &mut Vec<String>) {
     }
 }
 
-/// The width rule for `entry` at bits `offset .. offset + width` of `word` (R-242, R-248): a u-bits field holds its
-/// range, and an unbounded end fits no width; `f16-pair` and `fixed16` take exactly 16 bits and `f32` exactly 32;
-/// any other type there, a vector included, fails.
+/// The width rule for `entry` at bits `offset .. offset + width` of `word` (R-242, R-248, R-312): a u-bits field holds
+/// its range, and an unbounded end fits no width; `f16`, `f16-pair` and `fixed16` take exactly 16 bits and `f32` exactly
+/// 32; any other type there, a vector included, fails.
 fn check_width(word: &str, entry: &Entry, offset: u32, width: u32, found: &mut Vec<String>) {
     let at = format!(
         "word `{word}`: `{}` at bits {}",
@@ -127,7 +129,7 @@ fn check_width(word: &str, entry: &Entry, offset: u32, width: u32, found: &mut V
             return;
         }
         FieldType::UBits => return,
-        FieldType::F16Pair | FieldType::Fixed16 => 16,
+        FieldType::F16 | FieldType::F16Pair | FieldType::Fixed16 => 16,
         FieldType::F32 => 32,
         _ => {
             found.push(format!(
@@ -143,17 +145,16 @@ fn check_width(word: &str, entry: &Entry, offset: u32, width: u32, found: &mut V
     }
 }
 
-/// The f16 range rule (R-248) for an `f16-pair` field, or a vector of `f16-pair` components (the range applies per
-/// component, §3.8), wherever it sits: each end lies within ±65504, and an unbounded end needs `overflow`.
+/// The f16 range rule (R-248, R-312) for an `f16` or `f16-pair` field, or a vector of `f16-pair` components (the
+/// range applies per component, §3.8), wherever it sits: each end lies within ±65504, and an unbounded end needs
+/// `overflow`.
 fn check_f16(entry: &Entry, found: &mut Vec<String>) {
-    let f16 = match &entry.ty {
-        FieldType::F16Pair => true,
-        FieldType::Vector { component, .. } => **component == FieldType::F16Pair,
-        _ => false,
+    let kind = match &entry.ty {
+        FieldType::F16 => "f16",
+        FieldType::F16Pair => "f16-pair",
+        FieldType::Vector { component, .. } if **component == FieldType::F16Pair => "f16-pair",
+        _ => return,
     };
-    if !f16 {
-        return;
-    }
     let at = match entry.location {
         Location::Packed {
             word,
@@ -166,7 +167,7 @@ fn check_f16(entry: &Entry, found: &mut Vec<String>) {
     let ends = [entry.range.lo, entry.range.hi];
     if ends.contains(&Bound::Unbounded) && entry.overflow.is_none() {
         found.push(format!(
-            "{at}: f16-pair field `{field}` has an unbounded end in its range {range} and states no `overflow` (saturate or inf)"
+            "{at}: {kind} field `{field}` has an unbounded end in its range {range} and states no `overflow` (saturate or inf)"
         ));
     }
     let beyond = ends.iter().any(|end| match end {
@@ -175,8 +176,27 @@ fn check_f16(entry: &Entry, found: &mut Vec<String>) {
     });
     if beyond {
         found.push(format!(
-            "{at}: f16-pair field `{field}` has range {range}, beyond f16's finite range ±65504"
+            "{at}: {kind} field `{field}` has range {range}, beyond f16's finite range ±65504"
         ));
+    }
+}
+
+/// Where an `f16` field sits (R-312, R-317): `f16` is one binary16 value at a packed location only, so an `f16` field
+/// at a scalar index or derived fails, and so does a vector with `f16` components (a vector of halves is
+/// `vector(f16-pair, k)`), each naming the field.
+fn check_f16_place(entry: &Entry, found: &mut Vec<String>) {
+    let field = entry.name;
+    match (&entry.ty, &entry.location) {
+        (FieldType::F16, Location::Packed { .. }) => {}
+        (FieldType::F16, _) => found.push(format!(
+            "entry `{field}`: f16 field `{field}` is not at a packed location; f16 is one binary16 value at a packed \
+             16-bit location only (R-312)"
+        )),
+        (FieldType::Vector { component, .. }, _) if **component == FieldType::F16 => found.push(format!(
+            "entry `{field}`: vector field `{field}` has f16 components; f16 is not a vector component type, a vector \
+             of halves is vector(f16-pair, k) (R-312)"
+        )),
+        _ => {}
     }
 }
 
@@ -207,6 +227,7 @@ fn type_name(ty: &FieldType) -> String {
     match ty {
         FieldType::UBits => "u-bits".to_owned(),
         FieldType::F32 => "f32".to_owned(),
+        FieldType::F16 => "f16".to_owned(),
         FieldType::F16Pair => "f16-pair".to_owned(),
         FieldType::Fixed16 => "fixed16".to_owned(),
         FieldType::Vector { component, k } => format!("vector({}, {k})", type_name(component)),

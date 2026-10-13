@@ -170,7 +170,7 @@ pub fn members(words: &[Word], entries: &[Entry]) -> Vec<ReadMember> {
                     .map_or_else(|| format!("{}_has_no_wgsl_member", m.name), |w| w.name);
                 out.push(member("u32", "u32", Fill::Widen { pair }));
             }
-            Storage::U32x4 | Storage::Pad(_) => {}
+            Storage::U32x4 | Storage::Pad(_) | Storage::U32Array(_) => {}
         }
     }
     out.push(ReadMember {

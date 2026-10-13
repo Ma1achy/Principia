@@ -3,7 +3,7 @@
 //! validation, and `cargo xtask controls` skips it), so each check is also run, in its test, on an input it must
 //! reject, through [`rejects`].
 
-use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
@@ -41,15 +41,16 @@ pub fn state(t: f64) -> (SimConfig, RenderState) {
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
-        horizon: Horizon {},
+        horizon: Horizon { t: 0.0 },
         collision: Collision {},
         quality: Quality {},
     };
     let render = RenderState {
         stain_graph: StainGraph {},
-        overlays: Overlays {},
+        overlays: Overlays::default(),
         palette: Palette {},
         playhead: Playhead { t },
+        hover: Hover::default(),
     };
     (sim, render)
 }

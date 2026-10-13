@@ -76,8 +76,15 @@ impl Rig {
         self.app
             .console()
             .iter()
-            .filter(|e| e.source == Source::Contract)
+            .filter(|e| e.source == Source::Contract && !e.message.starts_with("SetField Hover.at"))
             .count()
+    }
+
+    /// The pointer leaves the window, so the hover, its path and its label clear (TASK-M6-27): the picture is the
+    /// stand-in's alone.
+    fn leave(&mut self) {
+        self.frame(vec![Event::PointerGone]);
+        self.frame(Vec::new());
     }
 
     /// A primary drag by `delta` from the figure's centre: move, press, move, release, one frame each.
@@ -198,10 +205,10 @@ fn only_the_plane_changed(before: &Snapshot, after: &Snapshot, pan: bool) {
     }
     a.plane = b.plane.clone();
     assert_eq!(a, b, "nothing else in the simulation config changed");
-    assert_eq!(
-        before.render, after.render,
-        "nothing in the render state changed"
-    );
+    // The hover follows the pointer, which the gesture moved (TASK-M6-27): it is not the gesture's edit.
+    let (mut r, mut s) = (before.render.clone(), after.render.clone());
+    (r.hover, s.hover) = (Default::default(), Default::default());
+    assert_eq!(r, s, "nothing in the render state changed");
 }
 
 #[test]
@@ -262,6 +269,7 @@ fn mock_figure_navigation_a_pan_shifts_the_picture() {
     let figure = rig.figure_px();
     let before = rig.shot();
     rig.drag(DRAG);
+    rig.leave();
     let after = rig.shot();
     // The picture follows the pointer.
     let (dx, dy) = (DRAG_PX.0 as f64, DRAG_PX.1 as f64);
@@ -285,6 +293,7 @@ fn mock_figure_navigation_a_zoom_scales_the_picture_about_the_centre() {
     );
     let before = rig.shot();
     rig.wheel(8.0);
+    rig.leave();
     let after = rig.shot();
     // One octave in: each pixel shows what was half as far from the centre.
     matches_within_one_pixel(&before, &after, figure, |x, y| {
