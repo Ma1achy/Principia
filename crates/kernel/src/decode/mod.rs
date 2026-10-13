@@ -11,8 +11,10 @@
 //! - [`units`]: the dimensionless system `G = M = I = 1`.
 //!
 //! **No guard** (REQ-DEC-028; validation ground-truth note, "Degenerate configs"): the decoder accepts any finite `z`
-//! (R-407) and lands on no endpoint; degenerate configurations are approached as limits, and the only tag is the
-//! narrow, enumerated `DEGENERATE` cause.
+//! (R-407), and nothing in it clamps, lands on or excludes an endpoint. In exact arithmetic degenerate configurations
+//! are approached as limits; in floating point the range is closed (R-417, dd_decoder §3.2), the lower poles reached
+//! only by the links' own rounding where their output underflows. The only tag is the narrow, enumerated
+//! `DEGENERATE` cause.
 
 pub mod config;
 pub mod degenerate;

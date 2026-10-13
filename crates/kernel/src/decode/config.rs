@@ -18,9 +18,11 @@
 //! registry links: they map no control onto a constrained parameter, and no link entry or inverse is re-derived by
 //! them.
 //!
-//! **No guard** (REQ-DEC-028): finite `z` keeps `α` off the exact poles in exact arithmetic; nothing here clamps,
-//! excludes or lands on them, and the poles are fenced downstream (the collision detector, the conditioning readout,
-//! the saturation flags; R-21).
+//! **No guard** (REQ-DEC-028): finite `z` keeps `α` off the exact poles in exact arithmetic. In floating point the
+//! range is closed, `α ∈ [0, π/2]` and `β ∈ [0, π]` (R-417, dd_decoder §3.2): `α = 0` and `β = 0` are reached where
+//! the link's output underflows, at f32 and f64, by the link's own rounding. Nothing here clamps, excludes or lands
+//! on a pole, and the poles are fenced downstream (the collision detector, the conditioning readout, the saturation
+//! flags; R-21).
 
 use spirv_std::num_traits::Float;
 

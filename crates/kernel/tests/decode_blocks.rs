@@ -1201,8 +1201,10 @@ fn decode_reconstruct_inverse() {
     worst.print("decode_reconstruct_inverse");
 }
 
-/// `|d|` for an angle difference `d`, wrapped into `[0, π]`: β's recovered value is `atan2`'s, in `(−π, π]`, and at
-/// f32's saturated `β = fl(π)`, past π, `λ̃_y` is negative and `atan2` gives a value near `−π`.
+/// `|d|` for an angle difference `d`, wrapped into `[0, π]`: β's recovered value is `atan2`'s, in `(−π, π]`. With
+/// R-417's f32 image of π rounded toward zero (TASK-M2-30), a saturated `β` stays at or below π and the wrap changes
+/// nothing; with the round-to-nearest image, f32's saturated `β = fl(π)` lies past π, `λ̃_y` is negative and `atan2`
+/// gives a value near `−π`, which the wrap folds back. So the check holds under either constant.
 fn wrapped(d: f64) -> f64 {
     d.sin().atan2(d.cos()).abs()
 }
