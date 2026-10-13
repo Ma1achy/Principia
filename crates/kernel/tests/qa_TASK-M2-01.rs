@@ -880,9 +880,10 @@ negative_control!(
 
 /// `y = f(x)` satisfies `u`'s constraint at a float of epsilon `eps` and largest finite value `max`: on the simplex,
 /// finite, strictly positive, summing to 1 within the sum's round-off (each of three quotients within 3 ulps, and
-/// two additions: 16 ulps); on an interval, within the closed bounds as the float rounds them; on the half-line,
-/// finite and not negative; on the line, finite.
-fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64, wide: bool) {
+/// two additions: 16 ulps); on an interval, within the closed bounds at their exact values, at f32 as at f64, not
+/// their f32-rounded images (R-417: the f32 images of π/2 and π are rounded toward zero, so a saturated control may
+/// reach a bound but never pass it); on the half-line, finite and not negative; on the line, finite.
+fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64) {
     let s = spec(u.name);
     let fail = |why: &str| -> ! { panic!("{} at {x:?}: {y:?} {why} (constraint)", u.name) };
     if y.iter().any(|v| !v.is_finite()) {
@@ -897,12 +898,7 @@ fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64, wide: bool) {
                 fail("does not sum to 1");
             }
         }
-        Kind::Interval(a, b) => {
-            let (lo, hi) = if wide {
-                (a, b)
-            } else {
-                (f64::from(a as f32), f64::from(b as f32))
-            };
+        Kind::Interval(lo, hi) => {
             if y[0] < lo || y[0] > hi {
                 fail(&format!("leaves [{lo}, {hi}]"));
             }
@@ -921,10 +917,10 @@ fn check_a(u: &Under, x: &[f64], wide: bool) {
         return;
     }
     if wide {
-        check_constraint(u, x, &(u.f64_forward)(x), f64::EPSILON, wide);
+        check_constraint(u, x, &(u.f64_forward)(x), f64::EPSILON);
     } else {
         let y = f64s(&(u.f32_forward)(&f32s(x)));
-        check_constraint(u, x, &y, f64::from(f32::EPSILON), wide);
+        check_constraint(u, x, &y, f64::from(f32::EPSILON));
     }
 }
 
@@ -990,6 +986,39 @@ negative_control!(
     expected = "(constraint)",
     over_inputs(&one::<EscapingBeta>(), check_a)
 );
+
+/// σ onto α with the round-to-nearest f32 image of π/2 as its width, `fl(π/2)·σ(x)`: `fl(π/2)` (bits `0x3FC9_0FDB`)
+/// lies above π/2, so a saturated f32 control passes the exact bound (R-417).
+#[cfg(feature = "controls")]
+struct NearestHalfPiAlpha;
+
+#[cfg(feature = "controls")]
+impl Link<1, 1> for NearestHalfPiAlpha {
+    const NAME: &'static str = "sigmoid_alpha";
+    type Codomain = <SigmoidAlpha as Link<1, 1>>::Codomain;
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        let one = R::one();
+        [lit::<R>(HALF_PI) * (one / (one + (-v[0]).exp()))]
+    }
+    fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        SigmoidAlpha::inverse(v)
+    }
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        SigmoidAlpha::log_det(v)
+    }
+}
+
+#[cfg(feature = "controls")]
+mod nearest_half_pi {
+    use super::*;
+
+    negative_control!(
+        qa_link_properties_a_constraint,
+        "the round-to-nearest f32 image of π/2 passes α's exact upper bound at saturation and must fail (a) (R-417)",
+        expected = "leaves [0, 1.5707963267948966]",
+        over_inputs(&one::<NearestHalfPiAlpha>(), check_a)
+    );
+}
 
 negative_control!(
     qa_link_properties_a_constraint_simplex,
@@ -1175,7 +1204,7 @@ fn check_simplex_encode(u: &Under, exact: bool) {
             u.name
         );
         let again = (u.f64_forward)(&z);
-        check_constraint(u, &z, &again, f64::EPSILON, true);
+        check_constraint(u, &z, &again, f64::EPSILON);
         if exact {
             for (a, b) in m.iter().zip(&again) {
                 let tol = s.clamp + 16.0 * f64::EPSILON;

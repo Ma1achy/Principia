@@ -244,11 +244,12 @@ negative_control!(
 );
 
 /// The `debug-views` cases whose references are one image by definition: the derived drift view and the drift
-/// field's generated view both draw `H(r, p) − E_0` by `dbg_sentinel`, and the live shape view's mode 0 is `n`'s
-/// direction cosines.
-const SAME_BY_DEFINITION: [[&str; 2]; 2] = [
+/// field's generated view both draw `H(r, p) − E_0` by `dbg_sentinel`, the live shape view's mode 0 is `n`'s
+/// direction cosines, and its mode 1 and `theta`'s generated view both draw `ramp_twilight` at `fract(θ̃ / 2π)` (R-423).
+const SAME_BY_DEFINITION: [[&str; 2]; 3] = [
     ["derived-energy_drift", "generated-energy_drift"],
     ["live_shape", "reductions-n_dircos"],
+    ["generated-theta", "live_shape-twilight"],
 ];
 
 /// Checks that no two `debug-views` references, every case of the suite's directory, are one image but the pairs of

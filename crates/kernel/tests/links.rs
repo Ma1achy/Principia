@@ -181,11 +181,11 @@ fn over_domain(u: &Under, check: impl Fn(&Under, &[f64], f64)) {
 
 // ── (a) Constraint preservation ─────────────────────────────────────────────────────────────────────────────────
 
-/// `y` satisfies `u`'s constraint at a float of machine epsilon `eps` whose bounds are `lo` and `hi`: simplex
-/// outputs finite, positive and summing to 1 within the sum's round-off, `4·eps`; interval outputs finite and in
-/// `[lo, hi]`, which a saturated control reaches exactly, as `σ(x)` rounds to 1; half-line outputs finite and
-/// positive; real-line outputs finite.
-fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64, (lo, hi): (f64, f64)) {
+/// `y` satisfies `u`'s constraint at a float of machine epsilon `eps`: simplex outputs finite, positive and summing to
+/// 1 within the sum's round-off, `4·eps`; interval outputs finite and in the closed `[u.lo, u.hi]`, compared at the
+/// exact bounds in f64, not their rounded images, at f32 as at f64 (R-417; §5 test 8 (a)), which a saturated control
+/// may reach but never pass; half-line outputs finite and positive; real-line outputs finite.
+fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64) {
     let at = |what: &str| {
         format!(
             "{} at {x:?} gives {y:?}, {what} (constraint not preserved)",
@@ -205,7 +205,7 @@ fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64, (lo, hi): (f64, f
         }
         Constraint::Bounded | Constraint::Symmetric => {
             assert!(
-                y.iter().all(|&v| lo <= v && v <= hi),
+                y.iter().all(|&v| u.lo <= v && v <= u.hi),
                 "{}",
                 at("out of range")
             );
@@ -218,12 +218,11 @@ fn check_constraint(u: &Under, x: &[f64], y: &[f64], eps: f64, (lo, hi): (f64, f
 /// (a) at f64 and, where `x` is within f32's domain, at f32.
 fn check_a(u: &Under, x: &[f64], x_max: f64) {
     if x_max == X64 {
-        check_constraint(u, x, &(u.forward64)(x), f64::EPSILON, (u.lo, u.hi));
+        check_constraint(u, x, &(u.forward64)(x), f64::EPSILON);
     } else {
         let x32: Vec<f32> = x.iter().map(|&v| v as f32).collect();
         let y: Vec<f64> = (u.forward32)(&x32).iter().map(|&v| v as f64).collect();
-        let bounds = (u.lo as f32 as f64, u.hi as f32 as f64);
-        check_constraint(u, x, &y, f32::EPSILON as f64, bounds);
+        check_constraint(u, x, &y, f32::EPSILON as f64);
     }
 }
 
@@ -281,6 +280,39 @@ negative_control!(
     expected = "out of range",
     over_domain(&under::<1, 1, Overshoot>(), check_a)
 );
+
+/// `sigmoid_alpha` with the round-to-nearest f32 image of π/2, `num(FRAC_PI_2)·σ(x)`: at f32 `num` rounds π/2 to the
+/// nearest, `0x3FC9_0FDB`, above π/2, which a saturated control reaches (R-417).
+#[cfg(feature = "controls")]
+struct NearestPi;
+
+#[cfg(feature = "controls")]
+impl Link<1, 1> for NearestPi {
+    const NAME: &'static str = "nearest_pi";
+    type Codomain = Alpha;
+    fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        let s = R::one() / (R::one() + (-v[0]).exp());
+        [num::<R>(FRAC_PI_2) * s]
+    }
+    fn inverse<R: LinkReal>(v: [R; 1]) -> [R; 1] {
+        SigmoidAlpha::inverse(v)
+    }
+    fn log_det<R: LinkReal>(v: [R; 1]) -> R {
+        SigmoidAlpha::log_det(v)
+    }
+}
+
+#[cfg(feature = "controls")]
+mod nearest_pi_constraint_control {
+    use super::*;
+
+    negative_control!(
+        link_properties_a_constraint,
+        "the round-to-nearest f32 image of π/2 passes the exact bound and must fail the constraint check",
+        expected = "out of range",
+        over_domain(&under::<1, 1, NearestPi>(), check_a)
+    );
+}
 
 #[cfg(feature = "controls")]
 mod simplex_constraint_control {

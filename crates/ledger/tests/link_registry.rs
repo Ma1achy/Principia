@@ -8,6 +8,8 @@
 //! - `link_registry_chart_constants`: the registry's chart constants are REQ-DEC-009's values, register entries.
 //! - `link_registry_emitted_*`: the generator driver runs the registry's emitter and refuses a registry with problems;
 //!   the emitted literals, doc lines and codomain bounds are the registry's.
+//! - `link_f32_pi_toward_zero`: the f32 literals of π/2 and π are emitted rounded toward zero, below their exact
+//!   values, and the f64 ones are the nearest values (R-417; REQ-GEN-034).
 
 use ledger::constants::{Admissibility, Value, REGISTER};
 use ledger::gen::links::{generate, refused, CONSTANTS_PATH, LINKS_PATH};
@@ -614,6 +616,83 @@ negative_control!(
     "the registry as it is has no ⅓",
     expected = "is not emitted at both",
     check_literals(&links_rs(builders()))
+);
+
+/// The right-hand side of `const LIT_i: {ty} = …;` in `text`, for the literal whose doc is `` `num({v:?})` ``.
+fn emitted(text: &str, v: f64, ty: &str) -> String {
+    let lines: Vec<&str> = text.lines().map(str::trim).collect();
+    let doc = format!("/// `num({v:?})`.");
+    let at = lines
+        .iter()
+        .position(|l| *l == doc)
+        .unwrap_or_else(|| panic!("no literal num({v:?})"));
+    let name = lines[at + 1]
+        .strip_prefix("const ")
+        .and_then(|l| l.strip_suffix(": Self;"))
+        .expect("the literal's declaration follows its doc");
+    let head = format!("const {name}: {ty} = ");
+    lines
+        .iter()
+        .find_map(|l| l.strip_prefix(&head)?.strip_suffix(';'))
+        .unwrap_or_else(|| panic!("no {ty} value of {name}"))
+        .to_string()
+}
+
+/// The f32 value of the emitted expression `e`: `f32::from_bits(0x…)` or `core::f32::consts`'s π or π/2.
+fn f32_of(e: &str) -> f32 {
+    if let Some(hex) = e
+        .strip_prefix("f32::from_bits(0x")
+        .and_then(|h| h.strip_suffix(')'))
+    {
+        return f32::from_bits(u32::from_str_radix(&hex.replace('_', ""), 16).expect("hex bits"));
+    }
+    match e {
+        "core::f32::consts::PI" => std::f32::consts::PI,
+        "core::f32::consts::FRAC_PI_2" => std::f32::consts::FRAC_PI_2,
+        _ => panic!("not an f32 image of π or π/2: {e}"),
+    }
+}
+
+/// R-417: in `text`, the f32 literals of π/2 and π are `fl↓(π/2)` (bits `0x3FC9_0FDA`) and `fl↓(π)` (`0x4049_0FDA`),
+/// each below its exact value (checked below the f64 nearest value, which itself lies below the exact one), and the
+/// f64 literals are the nearest values, `core::f64::consts`'s.
+fn check_pi_toward_zero(text: &str) {
+    use std::f64::consts::{FRAC_PI_2, PI};
+    for (v, name, bits) in [
+        (FRAC_PI_2, "FRAC_PI_2", 0x3FC9_0FDA_u32),
+        (PI, "PI", 0x4049_0FDA),
+    ] {
+        let x = f32_of(&emitted(text, v, "f32"));
+        assert!(
+            x.to_bits() == bits && (x as f64) < v,
+            "the f32 literal of {name} has bits {:#010X}, not fl↓({name}) = {bits:#010X} below it (R-417)",
+            x.to_bits()
+        );
+        assert_eq!(
+            emitted(text, v, "f64"),
+            format!("core::f64::consts::{name}"),
+            "the f64 literal of {name} is not the nearest value"
+        );
+    }
+}
+
+#[test]
+fn link_f32_pi_toward_zero() {
+    check_pi_toward_zero(&links_rs(builders()));
+}
+
+negative_control!(
+    link_f32_pi_toward_zero,
+    "the round-to-nearest f32 images of π/2 and π lie above them and must fail",
+    expected = "not fl↓(FRAC_PI_2)",
+    check_pi_toward_zero(
+        &links_rs(builders())
+            .replace(
+                "f32::from_bits(0x3FC9_0FDA)",
+                "core::f32::consts::FRAC_PI_2"
+            )
+            .replace("f32::from_bits(0x4049_0FDA)", "core::f32::consts::PI")
+    )
 );
 
 /// `identity`'s doc, with a sampling note of `n` columns, ending in a full stop, and whether the generated file holds
