@@ -638,12 +638,12 @@ struct Reach {
     changed: Roots,
 }
 
-/// Roots changed since each evaluated load and member access in scope was last evaluated: a fact a read implies
-/// about a sample read from one of them no longer holds.
+/// Roots changed since each load in scope was evaluated: a fact a read through it implies about a sample read from one
+/// of them no longer holds.
 type Evals = HashMap<Handle<Expression>, Roots>;
 
 /// Where a statement runs: the conditions it runs under; for each local, the stores that may reach it; and the roots
-/// changed since each load and member access in scope was evaluated.
+/// changed since each load in scope was evaluated.
 #[derive(Clone, Debug, Default)]
 struct State {
     path: Path,
@@ -739,37 +739,39 @@ impl<'a> Flow<'a> {
         flow
     }
 
-    /// The variable or argument `pointer` points into.
+    /// The variable or argument `pointer` points into ([`Flow::canonical`]).
     fn root(&self, mut pointer: Handle<Expression>) -> Handle<Expression> {
         while let Expression::AccessIndex { base, .. } | Expression::Access { base, .. } =
             self.function.expressions[pointer]
         {
             pointer = base;
         }
-        pointer
+        self.canonical(pointer)
     }
 
-    /// The roots statement `s` itself changes, not the blocks it holds: the expressions it evaluates, an `Emit`'s and a
-    /// result, each a new value on each run; a store's variable; and a call's pointer arguments' variables and every
-    /// global, which the callee may store into.
+    /// `e`, or, where it names a global, the first expression naming it: naga makes one expression per local variable
+    /// and per argument, but one per use of a global.
+    fn canonical(&self, e: Handle<Expression>) -> Handle<Expression> {
+        let Expression::GlobalVariable(g) = self.function.expressions[e] else {
+            return e;
+        };
+        self.function
+            .expressions
+            .iter()
+            .find(|(_, x)| matches!(x, Expression::GlobalVariable(h) if *h == g))
+            .map_or(e, |(h, _)| h)
+    }
+
+    /// The roots statement `s` itself changes, not the blocks it holds: the expressions it evaluates, an `Emit`'s, a
+    /// new value on each run; a store's variable; a call's result, its pointer arguments' variables and every global,
+    /// which the callee may store into. Control flow changes nothing itself; any other statement (an atomic, an image
+    /// store, a subgroup operation, which no occupant needs) is taken to change every root.
     fn effects(&self, s: &Statement) -> Roots {
         let mut out = Roots::new();
         match *s {
             Statement::Emit(ref range) => out.extend(range.clone()),
             Statement::Store { pointer, .. } => {
                 out.insert(self.root(pointer));
-            }
-            Statement::Atomic {
-                pointer, result, ..
-            } => {
-                out.insert(self.root(pointer));
-                out.extend(result);
-            }
-            Statement::WorkGroupUniformLoad { result, .. }
-            | Statement::SubgroupBallot { result, .. }
-            | Statement::SubgroupGather { result, .. }
-            | Statement::SubgroupCollectiveOperation { result, .. } => {
-                out.insert(result);
             }
             Statement::Call {
                 ref arguments,
@@ -793,79 +795,39 @@ impl<'a> Flow<'a> {
                         .map(|(h, _)| h),
                 );
             }
-            _ => {}
+            Statement::Block(_)
+            | Statement::If { .. }
+            | Statement::Switch { .. }
+            | Statement::Loop { .. }
+            | Statement::Break
+            | Statement::Continue
+            | Statement::Return { .. }
+            | Statement::Kill
+            | Statement::ControlBarrier(_)
+            | Statement::MemoryBarrier(_) => {}
+            _ => out.extend(self.function.expressions.iter().map(|(h, _)| h)),
         }
         out
     }
 
     /// The roots `block` changes anywhere.
-    fn changed(&self, block: &Block) -> Roots {
+    fn changed(&self, block: &'a Block) -> Roots {
         let mut out = Roots::new();
-        for s in block.iter() {
-            out.extend(self.effects(s));
-            match *s {
-                Statement::Block(ref b) => out.extend(self.changed(b)),
-                Statement::If {
-                    ref accept,
-                    ref reject,
-                    ..
-                } => {
-                    out.extend(self.changed(accept));
-                    out.extend(self.changed(reject));
-                }
-                Statement::Switch { ref cases, .. } => {
-                    for case in cases {
-                        out.extend(self.changed(&case.body));
-                    }
-                }
-                Statement::Loop {
-                    ref body,
-                    ref continuing,
-                    ..
-                } => {
-                    out.extend(self.changed(body));
-                    out.extend(self.changed(continuing));
-                }
-                _ => {}
-            }
-        }
+        walk(block, &mut Vec::new(), &mut |s, _, _| {
+            out.extend(self.effects(s))
+        });
         out
     }
 
     /// Every store into a local in `block`, anywhere: the local and the store.
     fn stores_in(&self, block: &'a Block, out: &mut Vec<(Handle<LocalVariable>, usize)>) {
-        for s in block.iter() {
-            match *s {
-                Statement::Store { pointer, .. } => {
-                    if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
-                        out.push((l, id(s)));
-                    }
+        walk(block, &mut Vec::new(), &mut |s, _, _| {
+            if let Statement::Store { pointer, .. } = *s {
+                if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
+                    out.push((l, id(s)));
                 }
-                Statement::Block(ref b) => self.stores_in(b, out),
-                Statement::If {
-                    ref accept,
-                    ref reject,
-                    ..
-                } => {
-                    self.stores_in(accept, out);
-                    self.stores_in(reject, out);
-                }
-                Statement::Switch { ref cases, .. } => {
-                    for case in cases {
-                        self.stores_in(&case.body, out);
-                    }
-                }
-                Statement::Loop {
-                    ref body,
-                    ref continuing,
-                    ..
-                } => {
-                    self.stores_in(body, out);
-                    self.stores_in(continuing, out);
-                }
-                _ => {}
             }
-        }
+        });
     }
 
     /// `roots` changed here: every evaluation in scope and every store reaching here was before the change.
@@ -893,18 +855,12 @@ impl<'a> Flow<'a> {
                     for h in range.clone() {
                         // Evaluated again: what a sample keyed by it held is gone, and its own evaluation is new.
                         self.change(&Roots::from([h]));
-                        match self.function.expressions[h] {
-                            Expression::Load { pointer } => {
-                                if let Expression::LocalVariable(l) =
-                                    self.function.expressions[pointer]
-                                {
-                                    let entries =
-                                        self.state.reach.get(&l).cloned().unwrap_or_default();
-                                    self.loads.insert(h, entries);
-                                }
-                            }
-                            Expression::AccessIndex { .. } => {}
-                            _ => continue,
+                        let Expression::Load { pointer } = self.function.expressions[h] else {
+                            continue;
+                        };
+                        if let Expression::LocalVariable(l) = self.function.expressions[pointer] {
+                            let entries = self.state.reach.get(&l).cloned().unwrap_or_default();
+                            self.loads.insert(h, entries);
                         }
                         self.state.evals.insert(h, Roots::new());
                     }
@@ -1057,8 +1013,9 @@ impl<'a> Guard<'a> {
 
     /// `e`'s identity as a sample: the same argument, variable or call result and the same member and index path give
     /// the same key, so `ctx.sample.ftle` and `ctx.sample.ftle_valid` read one sample, and so do two loads of one
-    /// pointer. naga makes one expression per argument and per local variable, so its handle keys either. The key's
-    /// roots are those it is read from: a store into one, after a fact about the key was taken, ends the fact.
+    /// pointer. naga makes one expression per argument and per local variable, so its handle keys either, and one per
+    /// use of a global, so the first keys it ([`Flow::canonical`]). The key's roots are those it is read from: a store
+    /// into one, after a fact about the key was taken, ends the fact.
     fn key(&self, e: Handle<Expression>) -> Key {
         match self.function.expressions[e] {
             Expression::AccessIndex { base, index } => {
@@ -1085,10 +1042,13 @@ impl<'a> Guard<'a> {
                     roots: pointer.roots,
                 }
             }
-            _ => Key {
-                text: format!("e{}", e.index()),
-                roots: Roots::from([e]),
-            },
+            _ => {
+                let e = self.flow.canonical(e);
+                Key {
+                    text: format!("e{}", e.index()),
+                    roots: Roots::from([e]),
+                }
+            }
         }
     }
 
@@ -1196,8 +1156,8 @@ impl<'a> Guard<'a> {
         }
     }
 
-    /// `{FtleValid}` where `access` reads `ftle_valid` of a `SimState`, keyed by its sample, read by `read`, unless a
-    /// root of the sample changed since (`evals`).
+    /// `{FtleValid}` where `access` reads `ftle_valid` of a `SimState`, keyed by its sample, unless a root of the sample
+    /// changed since a load the read `read` goes through was evaluated (`evals`).
     fn valid(&self, access: Handle<Expression>, read: Handle<Expression>, evals: &Evals) -> Facts {
         let Expression::AccessIndex { base, .. } = self.function.expressions[access] else {
             return none();
@@ -1208,9 +1168,28 @@ impl<'a> Guard<'a> {
             }
             _ => none(),
         };
-        match evals.get(&read) {
-            Some(changed) => without(facts, changed),
-            None => facts,
+        let mut changed = Roots::new();
+        for load in self.loads_in(read) {
+            changed.extend(evals.get(&load).into_iter().flatten().copied());
+        }
+        without(facts, &changed)
+    }
+
+    /// The loads `e` goes through: itself, if it is one, and those of its accesses' bases and indices.
+    fn loads_in(&self, e: Handle<Expression>) -> Vec<Handle<Expression>> {
+        match self.function.expressions[e] {
+            Expression::AccessIndex { base, .. } => self.loads_in(base),
+            Expression::Access { base, index } => {
+                let mut out = self.loads_in(base);
+                out.extend(self.loads_in(index));
+                out
+            }
+            Expression::Load { pointer } => {
+                let mut out = self.loads_in(pointer);
+                out.push(e);
+                out
+            }
+            _ => Vec::new(),
         }
     }
 
