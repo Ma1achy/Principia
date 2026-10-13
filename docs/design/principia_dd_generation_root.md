@@ -679,10 +679,10 @@ render it (§3.4 gives `n` none); export because seam 13 generates the export de
 | name | location | value | type | scale | range | sentinel · tier_gate |
 |---|---|---|---|---|---|---|
 | `t_end` | `derived(from: [t_end_step])` | `T · t_end_step / horizon_steps`, the fraction of the horizon (§3.1, §3.4) | f32 | lin | [0, T] (§3.4; render contract Part 6) | — |
-| `ftle` | `derived(from: [S, shadow, r, p, t_end_step])` | `S_final/(step_count·dt)`, the partial renorm interval closed from the shadow's separation (§3.1, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | tier_gate `ftle_valid` (§3.4); tier-absent it reads NaN (R-79); it reads NaN whenever `ftle_valid` is false, `step_count = 0` included (R-253, R-254) |
+| `ftle` | `derived(from: [S, shadow, r, p, t_end_step])` | `S_final/(step_count·dt)`, the partial renorm interval closed from the shadow's separation (§3.1, §3.5) | f32 | lin | (−∞, ∞), signed: §3.4 gives no bound; declared by R-423's physics check (R-426) | tier_gate `ftle_valid` (§3.4); tier-absent it reads NaN (R-79); it reads NaN whenever `ftle_valid` is false, `step_count = 0` included (R-253, R-254) |
 | `energy_drift` | `derived(from: [r, p, m0, m1, m2, E_0])` (R-246) | `H(r,p) − E_0` (§3.1) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
 | `Lz_drift` | `derived(from: [r, p, Lz_0])` (R-246) | `L_z(r,p) − Lz_0` (§3.1's current drifts) | f32 | diverging | (−∞, ∞), signed (§3.4) | — |
-| `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞): §3.4 gives no bound | — (an invalid fit, `n < 2`, reads NaN by the predicate `n ≥ 2`, R-245) |
+| `diffusion` | `derived(from: [C_ty, t_end_step])` | `C_ty/C_tt(n)`, `n = step_count`, `C_tt(n) = h²·n(n²−1)/12` (§3.4, §3.5) | f32 | lin | (−∞, ∞), signed: §3.4 gives no bound; declared by R-423's physics check (R-426) | — (an invalid fit, `n < 2`, reads NaN by the predicate `n ≥ 2`, R-245) |
 | `n` | `derived(from: [r, m0, m1, m2])` | the Montgomery map, never stored (§3.5; integrator dd §3.7) | vector(f32, 3) | lin, per component | [−1, 1] per component | — |
 
 **The constants register** *(definition, R-72; REQ-SYS-063)*. Every settled constant, default or threshold is
