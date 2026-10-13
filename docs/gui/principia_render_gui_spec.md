@@ -893,6 +893,8 @@ opacity / colour / level, chains in post order, and composes over any field — 
 special case and no bespoke pass. The rest of that render-contract list (**fallback tint**, **pending
 hatch**, **visible-set**, **locked/stale**) is Tier 3 by this test: those are *values attached to a
 quad*, not functions of position within it.
+The visible-set and locked/stale overlays are TASK-M5-29's, defined there in debug_tooling_plan §F with the
+corpus's existing meanings where they exist (`quad_state` 4 for "stale") (R-425; REQ-TOOL-166).
 
 **Tier 3 — tile debug shaders.** Scheduler verdicts exist only on the CPU. When such an overlay is
 active the **CPU packs per-visible-quad data into a small buffer (~16 KB for a typical viewport)** and

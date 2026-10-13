@@ -323,6 +323,19 @@ from, since `SimUniforms` holds no tier (REQ-TOOL-165, R-72). The Optional Fouri
 from the quad payload, certifying "the truncated-Fourier path when enabled") is removed from this table: nothing
 current defines the path, and it is parked as a possible future feature (`principia_00_philosophy.md` §7.6a).
 
+**The quad fields row's flags (R-424).** At M1 no flag is a `RenderQuad` member (dd_generation_root §3.7a), and
+the checklist (REQ-TOOL-011) checks contains-ensemble against the prelude's `has_ensemble()` (Part 2; R-145), as the
+spread view reads "present iff contains-ensemble", contains-FTLE against `has_ftle`, and the schema version against
+the build's generated `PAYLOAD_SCHEMA_VERSION`. sim-failed is defined and shown by TASK-M5-17, the `QuadReduction` task
+(REQ-PAY-096, R-72), and cache-valid by TASK-M5-08, the M5 cache task (REQ-SCHED-099, R-72), which also decides
+whether a per-quad schema version, the drawn payload's own (caching contract Part 1), belongs with cache-valid: it
+can differ from the build's only once quads can come from an older build's cache.
+
+**The visible-set and locked/stale overlays (R-425).** The structural overlays row's visible-set and locked/stale
+overlays are not on the M1 checklist: TASK-M5-29 defines them (REQ-TOOL-166, R-72), in debug_tooling_plan §F,
+reusing the corpus's existing meanings where they exist (for example, `quad_state` 4, dd_generation_root §3.7a, for
+"stale") rather than defining new ones, and draws them on the Tier 3 path (render_gui_spec §12.1).
+
 **The word views' renderings (TASK-M1-12).**
 - **The invalid-styled reduced length (R-72; REQ-TOOL-156):** where `fgw_reduced_length_valid` is false, the word
   truncated, the reduced-length view draws `debug_invalid(frag_xy)`, the hatch; elsewhere it draws
