@@ -699,7 +699,7 @@ pub fn upload_with(
         })
     };
     let uniform = wgpu::BufferUsages::UNIFORM;
-    let storage = wgpu::BufferUsages::STORAGE;
+    let stored_usage = wgpu::BufferUsages::STORAGE.union(usage);
     let words = |w: &[u32]| -> Vec<u8> { w.iter().flat_map(|x| x.to_le_bytes()).collect() };
     let prelude_block = buffer(
         "prelude uniforms",
@@ -713,10 +713,10 @@ pub fn upload_with(
         wgpu::BufferUsages::STORAGE,
     );
     let stored = [
-        buffer("simstate", payload.simstate, storage | usage),
-        buffer("word", payload.word, storage | usage),
-        buffer("ic", payload.ic, storage | usage),
-        buffer("quad", payload.quad, storage | usage),
+        buffer("simstate", payload.simstate, stored_usage),
+        buffer("word", payload.word, stored_usage),
+        buffer("ic", payload.ic, stored_usage),
+        buffer("quad", payload.quad, stored_usage),
     ];
     let read_only = wgpu::BufferBindingType::Storage { read_only: true };
     let layout = |label: &str, entries: &[wgpu::BindGroupLayoutEntry]| {
