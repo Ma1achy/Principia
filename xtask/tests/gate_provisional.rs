@@ -43,7 +43,7 @@ const FIXTURE: [ConstantBuilder; 3] = [
 ];
 
 /// Checks that the list for `milestone` over `register` names exactly `listed`, each line with its gate and
-/// requirement, and fails exactly when it lists any.
+/// requirement, its summary line giving exactly their count, and fails exactly when it lists any.
 fn check_lists(milestone: &str, register: &[ConstantBuilder], listed: &[(&str, &str, &str)]) {
     let got = provisional(milestone, register);
     let text = got.as_ref().unwrap_or_else(|t| t);
@@ -66,10 +66,8 @@ fn check_lists(milestone: &str, register: &[ConstantBuilder], listed: &[(&str, &
         );
     }
     assert!(
-        text.contains(&format!(
-            "{} provisional entries block the gate",
-            listed.len()
-        )),
+        text.lines()
+            .any(|l| l == format!("{} provisional entries block the gate", listed.len())),
         "the {milestone} summary: {text}"
     );
 }
