@@ -4932,10 +4932,12 @@
     section: R-79 — NaN and sentinels *(closes RQ-30)*
   verify:
     method: review checklist
-    detail: "grep generated WGSL/Rust for isnan in validity logic; every stored value of synthetic and forced-failure samples is finite"
+    detail: "grep generated WGSL/Rust for isnan in validity logic; no stored value of synthetic and forced-failure samples is NaN, and the only non-finite stored value is d_min's unset f16 +inf, 0x7C00 in bits 16–31 of packed_a, held only by a failed sample or one before its first step (R-271)"
   rulings:
   - R-79
+  - R-271
   milestone: M1
+  note: "Applied per R-369 (TASK-M1-14's pre-flight): the verify's 'every stored value of synthetic and forced-failure samples is finite' is conformed to R-271, which postdates it: a failed sample's d_min half, and any sample's before its first step, holds f16 +inf (bits 0x7C00), which readers test by its bits (0x7C00 in bits 16–31 of packed_a). Payload §1 forbids NaN (R-79) and 'the non-finite values that failed it', as this statement does, clamps valid-state f16 values to ±65504 and gives a failed sample's dE_max and dLz_max halves 0.0; R-271 adds the one exception, d_min's unset +inf, a defined value, not one that failed the sample. Worded per physics review 5484220393 (F1, F2)."
 - id: REQ-PAY-025
   area: PAY
   statement: "The per-sample payload must be two physical buffers — the hot `SimState` buffer and a separate cold word buffer holding one `vec4<u32>` (16 B) free-group word per sample — and the word must never be stored inline in `SimState`."
@@ -11742,6 +11744,44 @@
   - R-411
   milestone: M7
   note: "Physics review 5480220637 of PR #185: a per-field magnitude where compression sets in is a value, as R-401 classes the log floors (R-71). The drifts' `x₀` is not here: §3.6 and R-263 give `eps_E` and `eps_L`."
+- id: REQ-COL-067
+  area: COL
+  kind: definition
+  statement: "The \"greyscale mode\" in which pitfalls §1.2 (c) renders a slice — a payload field in the brightness slot with the colour slot None, which colour composition §4.1's truth table gives as `OKLab(L=B, 0, 0)`, \"greyscale of the brightness field\", under §1.2's greyscale default for magnitude fields with its per-field polarity — must be defined in colour composition §4.1 by the task that needs it, starting from those texts and contradicting neither, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 1.2 Four wrong theories, in order
+  - file: docs/design/principia_colour_composition.md
+    section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "colour composition §4.1 defines greyscale mode, consistent with its None-colour truth-table row and §1.2's greyscale default and polarity; REQ-VAL-012's greyscale render uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: pitfalls §1.2 (c) names the mode, and REQ-VAL-012 renders in it."
+- id: REQ-COL-068
+  area: COL
+  kind: definition
+  statement: "The \"hue mode\" in which pitfalls §1.2 (c) renders a slice — the payload field carried in the colour slot as colour composition §4.1's \"hue-carrier\" — must be defined in colour composition §4.1 by the task that needs it, starting from §4.1's hue-carrier slot and its truth table and contradicting neither, saying which hue ramp carries the field and what the brightness slot holds, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 1.2 Four wrong theories, in order
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "colour composition §4.1 defines hue mode from its hue-carrier slot; REQ-VAL-012's hue render uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: pitfalls §1.2 (c) names the mode, and REQ-VAL-012 renders in it."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -14918,7 +14958,9 @@
   - R-111
   - R-113
   milestone: M1
-  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`."
+  rq:
+  - RQ-273
+  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`. Applied per R-369 (TASK-M1-14's pre-flight): the closing moves from TASK-M1-14 to TASK-M1-19, split from it so that RQ-273, which holds this requirement for its uniform echo and Optional Fourier block rows, holds only TASK-M1-19."
 - id: REQ-TOOL-012
   area: TOOL
   statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, an invalid diffusion fit, R-245, or `ftle` whenever `ftle_valid` is false, R-253, R-254) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
@@ -20335,6 +20377,24 @@
   - R-376
   milestone: M0
   note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 8 GiB (8589934592 bytes) of virtual memory, set by `prlimit --as` with `--core=1` on Linux. CI runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures it."
+- id: REQ-VAL-182
+  area: VAL
+  kind: definition
+  statement: "REQ-VAL-012's \"edge map of the payload-derived field\" must be defined in debug tooling plan §G (cross-check views) by the task that needs it, and reviewed by the physics reviewer before merge. The definition must say what the edge map is taken on (for instance, each mode's rendered output) so that the cross-mode comparison is not identical by construction: an edge map taken on the payload field before colouring is the same in every mode whatever the colouring does, and only the perturbation control could then fail. It must also say how edges are detected and how two maps are compared."
+  source:
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 1.2 Four wrong theories, in order
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "G. Cross-check views (certify a *seam*, not a field — integration tests with a display)"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "debug tooling plan §G defines the edge map, what it is taken on, its detector and its comparison; the cross-mode comparison is not identical by construction; REQ-VAL-012's test uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: no doc defines the edge map REQ-VAL-012's verify compares."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
