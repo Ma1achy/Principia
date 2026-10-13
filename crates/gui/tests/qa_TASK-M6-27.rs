@@ -1656,16 +1656,20 @@ fn qa_sphere_turns_in_degrees_per_second_frame_rate_independent() {
             "{what}: the sphere turned {a}° in one second, not {rate}°"
         );
     }
-    // In the app, on the mock's running clock: with an orbit shown, N frames turn it by N ticks' seconds times the rate.
-    let mut rig = running();
-    rig.pointer_to(figure_pos(layout().figure, 0.4, 0.4));
-    assert!(rig.snap().sample.is_some(), "no orbit under the cursor");
-    rig.idle(2);
-    let a0 = rig.app.trajectory.angle;
-    rig.idle(45);
-    let a1 = rig.app.trajectory.angle;
-    check_turned(a0, a1, rate, 45.0 / gui::mock::clock::MOCK_TICK_HZ);
-    // Clearing "turn" stops it.
+    // In the app, on the live mock: the turn reads the wall clock (egui's frame time, the headless frames' `step`), so
+    // the same wall span turns the sphere the same at two frame steps, by the span times the rate (REQ-GUI-157).
+    let span = 0.75;
+    let (slow, slow_frames) = wall_turn(0.125, span);
+    let (fast, fast_frames) = wall_turn(1.0 / 60.0, span);
+    assert_ne!(
+        slow_frames, fast_frames,
+        "the two runs are at one frame rate"
+    );
+    for (a0, a1) in [slow, fast] {
+        check_turned(a0, a1, rate, span);
+    }
+    // Clearing "turn" stops it, while wall time runs on.
+    let mut rig = hovered(1.0 / 60.0);
     rig.focus(gui::explore::trajectory::TURN);
     rig.key(Key::Enter, NONE);
     assert!(!rig.app.trajectory.turn, "Enter on turn did not clear it");
@@ -1675,7 +1679,134 @@ fn qa_sphere_turns_in_degrees_per_second_frame_rate_independent() {
         rig.app.trajectory.angle, a2,
         "with turn cleared, the sphere turned"
     );
-    rejects("a turn counted per frame", || {
-        check_turned(a0, a1, rate, 45.0 / 30.0)
+    // Capture mode's frozen clock holds it, so a capture is the same every run.
+    let mut rig = frozen();
+    rig.pointer_to(figure_pos(layout().figure, 0.4, 0.4));
+    assert!(rig.snap().sample.is_some(), "no orbit under the cursor");
+    let a3 = rig.app.trajectory.angle;
+    rig.idle(30);
+    assert_eq!(
+        rig.app.trajectory.angle, a3,
+        "on the frozen clock, the sphere turned"
+    );
+    // Controls: the turn read per frame (the mock's 60 Hz tick), and a span that is not the one run.
+    rejects("a turn counted per tick at 1/8 s frames", || {
+        check_turned(
+            slow.0,
+            slow.1,
+            rate,
+            slow_frames as f64 / gui::mock::clock::MOCK_TICK_HZ,
+        )
     });
+    rejects("a turn over half the span", || {
+        check_turned(fast.0, fast.1, rate, span / 2.0)
+    });
+}
+
+/// The live mock with an orbit under the cursor, its headless frames `step` seconds apart.
+fn hovered(step: f64) -> Rig {
+    let mut rig = running();
+    rig.h.set_frame_step(step);
+    let _ = rig.frame(vec![Event::PointerMoved(figure_pos(
+        layout().figure,
+        0.4,
+        0.4,
+    ))]);
+    // The snapshot is read every `SNAPSHOT_INTERVAL_S` of frame time: run frames until it carries the sample.
+    let mut n = 0;
+    while rig.snap().sample.is_none() {
+        n += 1;
+        assert!(n < 1000, "no orbit under the cursor");
+        rig.idle(1);
+    }
+    rig.idle(2);
+    rig
+}
+
+/// The sphere's angle before and after `span` seconds of frames `step` apart, with how many frames that was.
+fn wall_turn(step: f64, span: f64) -> ((f64, f64), usize) {
+    let mut rig = hovered(step);
+    let frames = (span / step).round() as usize;
+    assert!(
+        (frames as f64 * step - span).abs() <= 1e-12,
+        "{span} s is not a whole number of {step} s frames"
+    );
+    let a0 = rig.app.trajectory.angle;
+    rig.idle(frames);
+    ((a0, rig.app.trajectory.angle), frames)
+}
+
+// --- REQ-GUI-172: the kept orbits' tabs -----------------------------------------------------------------------------
+
+/// The orbit the Trajectory panel shows: the sample under the cursor or a kept one, by its tab.
+fn shown(rig: &Rig) -> Option<engine::contract::sample::Sample> {
+    gui::explore::trajectory::shown(
+        rig.app.trajectory.tab,
+        rig.app.snapshot().sample.as_ref(),
+        &rig.app.view.kept_orbits,
+    )
+    .cloned()
+}
+
+/// A tab on a kept orbit still shows that orbit after another is kept (§G2: the panel is "for the IC under the cursor
+/// or a kept orbit (tabs)"), or goes back to "under cursor" if its orbit was the one let go.
+fn check_tab_kept(
+    before: &engine::contract::sample::Sample,
+    kept: &[engine::contract::sample::Sample],
+    after: Option<&engine::contract::sample::Sample>,
+    under: Option<&engine::contract::sample::Sample>,
+) {
+    if kept.contains(before) {
+        assert_eq!(
+            after,
+            Some(before),
+            "keeping another orbit moved the tab off its orbit"
+        );
+    } else {
+        assert_eq!(
+            after, under,
+            "the tab's orbit went, and the tab is not back on \"under cursor\""
+        );
+    }
+}
+
+#[test]
+fn qa_kept_orbit_tabs_stay_on_their_orbit_when_another_is_kept() {
+    use gui::explore::trajectory::{KEEP, KEPT_IDS, MAX_KEPT};
+    let figure = layout().figure;
+    let mut rig = frozen();
+    // Keep more orbits than the list holds, each from its own point, the panel's tab on one of them meanwhile.
+    for i in 0..MAX_KEPT + 3 {
+        let at = 0.1 + 0.8 * i as f32 / (MAX_KEPT + 3) as f32;
+        rig.pointer_to(figure_pos(figure, at, 1.0 - at));
+        assert!(
+            rig.snap().sample.is_some(),
+            "no orbit under the cursor at {at}"
+        );
+        let n = rig.app.view.kept_orbits.orbits.len();
+        if n >= 3 {
+            rig.focus(KEPT_IDS[2].1);
+            rig.key(Key::Enter, NONE);
+        }
+        let before = shown(&rig);
+        rig.focus(KEEP);
+        rig.key(Key::Enter, NONE);
+        let kept = rig.app.view.kept_orbits.orbits.clone();
+        assert_eq!(
+            kept.len(),
+            (n + 1).min(MAX_KEPT),
+            "keeping did not keep the orbit"
+        );
+        if let (Some(before), true) = (before, n >= 3) {
+            check_tab_kept(
+                &before,
+                &kept,
+                shown(&rig).as_ref(),
+                rig.app.snapshot().sample.as_ref(),
+            );
+            rejects("a tab moved to the next orbit", || {
+                check_tab_kept(&before, &kept, kept.get(3), None)
+            });
+        }
+    }
 }
