@@ -7,6 +7,8 @@
 //!   `ftle` and the current drift `H(r, p) − E_0`, each computed in the fragment, match a CPU reference on synthetic
 //!   states: the integers and booleans exactly, `ftle` and the drift within the derived WGSL-accuracy bounds of
 //!   `crates/kernel/tests/derived.rs` (`derived_views_match_cpu_*`);
+//! - REQ-TOOL-011 (TASK-M1-19): the `times` row's derived `total_substeps_log2` view draws `⌊log₂ total_substeps⌋`, 0
+//!   for a total ≤ 1 (R-86), exactly at each edge of the proxy (`derived_views_match_cpu_total_substeps_log2`);
 //! - REQ-TOOL-025, REQ-TOOL-155, REQ-TOOL-156: distinct words hash to distinct colours by the whole-word fold; the
 //!   symbol at slot `k` is the appended sequence's; the reduced length of a truncated word draws the hatch
 //!   (`word_hash_and_symbol_at_k_*`);
@@ -551,6 +553,83 @@ negative_control!(
             )
         }
     )
+);
+
+/// The complexity proxy's edges (R-86, render contract Part 5): 0 and 1, both 0; each power of two named here and
+/// the total one below it, on either side of a step; past f32's 2²⁴; and the top of the u32.
+const TOTALS: [u32; 16] = [
+    0,
+    1,
+    2,
+    3,
+    4,
+    7,
+    8,
+    1023,
+    1024,
+    65_535,
+    65_536,
+    (1 << 24) - 1,
+    1 << 24,
+    (1 << 24) + 1,
+    1 << 31,
+    u32::MAX,
+];
+
+/// `⌊log₂ t⌋`, 0 for `t ≤ 1` (R-86), in integers: the place of the top set bit.
+fn log2_reference(t: u32) -> u32 {
+    if t <= 1 {
+        0
+    } else {
+        31 - t.leading_zeros()
+    }
+}
+
+/// Checks the derived `total_substeps_log2` view (render contract Part 6, the `times` row) over [`TOTALS`], one
+/// sample each: its probe writes `reference` of the stored total exactly, and the view draws it on the ramp over
+/// [0, 31].
+fn check_total_substeps_log2(reference: fn(u32) -> u32) {
+    let h = gpu();
+    let id = "debug/derived/total_substeps_log2";
+    let filled = |colouring| {
+        let mut s = row_scene("total_substeps_log2", TOTALS.len() as u32, colouring)
+            .unwrap_or_else(|e| panic!("{e}"));
+        for (i, &t) in TOTALS.iter().enumerate() {
+            s.set.sample(i as u32).total_substeps(t);
+        }
+        s
+    };
+    let (probe, view) = (filled(probe_of(id, &[])), filled(debug(id)));
+    let (probe_image, view_image) = (render(&h, &probe), render(&h, &view));
+    for (i, &t) in TOTALS.iter().enumerate() {
+        let i = i as u32;
+        let want = reference(t) as f32;
+        let got = probed(&probe, &probe_image, i);
+        assert_eq!(
+            got.to_bits(),
+            want.to_bits(),
+            "total_substeps_log2({t}) reads {got}, not {want}"
+        );
+        check_tile(
+            &view,
+            &view_image,
+            i,
+            &|_| present::dbg_lin(f64::from(want), 0.0, 31.0),
+            "the proxy on [0, 31]",
+        );
+    }
+}
+
+#[test]
+fn derived_views_match_cpu_total_substeps_log2() {
+    check_total_substeps_log2(log2_reference);
+}
+
+negative_control!(
+    derived_views_match_cpu_total_substeps_log2,
+    "a reference that takes the bit length, ⌊log₂ t⌋ + 1, so a total of 1 reads 1",
+    expected = "total_substeps_log2(1) reads 0, not 1",
+    check_total_substeps_log2(|t| 32 - t.leading_zeros())
 );
 
 /// Checks the reduced crossing count on `s`: where the word is not truncated the probe writes `fgw_reduced_length`
