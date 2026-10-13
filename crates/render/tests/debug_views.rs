@@ -586,7 +586,8 @@ fn log2_reference(t: u32) -> u32 {
 }
 
 /// Checks the derived `total_substeps_log2` view (render contract Part 6, the `times` row) over [`TOTALS`], one
-/// sample each: its probe writes `reference` of the stored total exactly, and the view draws it at its literal place.
+/// sample each: its probe writes `reference` of the stored total exactly, and the view draws it on the ramp over
+/// [0, 31].
 fn check_total_substeps_log2(reference: fn(u32) -> u32) {
     let h = gpu();
     let id = "debug/derived/total_substeps_log2";
@@ -613,8 +614,8 @@ fn check_total_substeps_log2(reference: fn(u32) -> u32) {
             &view,
             &view_image,
             i,
-            &|f| present::dbg_sentinel(want, f),
-            "the proxy",
+            &|_| present::dbg_lin(f64::from(want), 0.0, 31.0),
+            "the proxy on [0, 31]",
         );
     }
 }
