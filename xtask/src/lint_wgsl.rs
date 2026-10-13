@@ -406,9 +406,9 @@ fn allowed(rel: &str, findings: Vec<Finding>) -> Vec<Finding> {
 }
 
 /// `prelude` with its tier constants (`const has_<feature>: bool`, lowering Part 3a) declared `override` instead, as
-/// the lint reads them before an occupant ([`check_occupant_after`]): naga folds a constant into the expressions that use it, so `!has_ftle ||
-/// !s.ftle_valid` would reach the guard rule as `false || !s.ftle_valid`, the tier's name gone; an override keeps it.
-/// Nothing else changes, lines included.
+/// the lint reads them before an occupant ([`check_occupant_after`]): naga folds a constant into the expressions that
+/// use it, so `!has_ftle || !s.ftle_valid` would reach the guard rule as `false || !s.ftle_valid`, the tier's name
+/// gone; an override keeps it. Nothing else changes, lines included.
 pub fn tier_overrides(prelude: &str) -> String {
     let mut out = String::with_capacity(prelude.len());
     for line in prelude.split_inclusive('\n') {

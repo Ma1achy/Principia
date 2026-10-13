@@ -15,9 +15,9 @@
 //! one branch of which leaves the block (`return`, `discard`, `break`, `continue`), under the other branch's. Every
 //! statement's consumed expressions are uses: a `return`'s value, a store's value, a call's arguments and a branch's
 //! condition. `has_ftle` is the prelude's tier constant, which the lint presents as an override
-//! (`super::tier_overrides`), so that naga does not fold `!has_ftle` into a literal. An expression carries the reads its operands carry, but a local's load carries none, since every store
-//! into it was checked as a use, and the absence test, a `bitcast<u32>` compared by `==` or `!=`, carries none (lowering
-//! Part 3a).
+//! (`super::tier_overrides`), so that naga does not fold `!has_ftle` into a literal. An expression carries the reads its
+//! operands carry, but a local's load carries none, since every store into it was checked as a use, and the absence
+//! test, a `bitcast<u32>` compared by `==` or `!=`, carries none (lowering Part 3a).
 
 use std::cell::RefCell;
 use std::collections::{BTreeSet, HashMap, HashSet};
