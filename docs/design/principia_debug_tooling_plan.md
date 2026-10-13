@@ -176,9 +176,10 @@ greyscale and hue.
   that a style drawn from the pixel position, the invalid hatch or the "not yet" stipple, is one appearance, the same
   in every mode. Pixel by pixel, one of its colours could match a flat colour of one mode and not another's (the
   stipple's ground is a grey, which a greyscale class can come near), and the maps would differ at a seam the field
-  does not change. The hatch repeats every 8 px across x + y and the stipple every 4 px, so on a tile whose side is a
-  multiple of 8 px, as the golden harness's are, two adjacent tiles of one style have one appearance; on any other,
-  they differ alike in every mode, and the maps still agree.
+  does not change. The hatch repeats every 8 px across x + y and the stipple every 4 px (the proposed patterns,
+  REQ-COL-055, REQ-COL-064, awaiting the M1 gate), so on a tile whose side is a multiple of 8 px, as the golden
+  harness's are, two adjacent tiles of one style have one appearance; on any other, they differ alike in every mode,
+  and the maps still agree.
 - **The detector.** Two tiles that share a side are separated by an edge iff their appearances differ: iff a pixel of
   one differs from the pixel at the same place in the other by more than τ = 0.01 in OKLab (Euclidean distance,
   ΔE_OK). τ sits in a measured gap (pitfalls §3, a threshold set from a measured gap): above the render's float error,
