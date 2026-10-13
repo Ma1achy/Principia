@@ -54,11 +54,25 @@
 //! - `state_view`: the raw `state` view, one sample per state, 0–5: six `dbg_cat` colours (R-115).
 //! - `detail_view`: the `detail` view, keyed by state: every `detail` code of escape, collision, sim_failed and
 //!   decode_failed, then bounded and running, which have none and draw blank.
+//!
+//! **The synthetic fixtures' scenes** (`m1-synthetic`; TASK-M1-14; debug tooling plan, "Principle"): each renders one
+//! fixture of `engine::fixtures`, whose accessor tests read the same table (`engine/tests/fixtures.rs`), through a view
+//! that shows the value it sets ([`SYNTHETIC_SCENES`]):
+//! - `set_state`: each `state` code, 0–5 and the reserved 6 and 7, on the `state` view;
+//! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows,
+//!   at step 40, beside a bounded, a colliding and a running sample, on the outcome palette (colour_composition §1.4);
+//! - `energy_drift_ramp`: a ramp in the current energy drift, on the `energy_drift` view, its values literal;
+//! - `adversarial_state`, `adversarial_detail`, `adversarial_saturated`, `adversarial_dmin_pair`,
+//!   `adversarial_last_symbol`: the bitwise-adversarial descriptor, written whole, on each sub-field view, so each
+//!   field reads true beside neighbours at their extremes;
+//! - `forced_failure`: `sim_failed` and `decode_failed` samples of each failure category, on the `detail` view.
 
 use std::sync::OnceLock;
 
 use engine::synthetic::Synthetic;
-use kernel::payload::{canonical_nan, sim_state_from_ftle, ReadParams, STATE_RUNNING};
+use kernel::payload::{
+    canonical_nan, sim_state_from_ftle, ReadParams, SD_DMIN_PAIR_SENTINEL, STATE_RUNNING,
+};
 use ledger::gen::numeric::{NumericView, Ramp, Shown as ViewShown};
 use ledger::schema::Storage;
 use render::assemble::{self, Kind, Node, Occupant, Stain, Tier};
@@ -82,7 +96,7 @@ pub use kernel::payload::{
 pub use kernel::word::fgw_append;
 
 /// The scenes, by name.
-pub const NAMES: [&str; 20] = [
+pub const NAMES: [&str; 29] = [
     "ftle",
     "diffusion",
     "de_max_failed",
@@ -103,6 +117,49 @@ pub const NAMES: [&str; 20] = [
     "k_0",
     "v_0",
     "virial_ratio",
+    "set_state",
+    "known_escaper",
+    "energy_drift_ramp",
+    "adversarial_state",
+    "adversarial_detail",
+    "adversarial_saturated",
+    "adversarial_dmin_pair",
+    "adversarial_last_symbol",
+    "forced_failure",
+];
+
+/// The `m1-synthetic` scenes (TASK-M1-14): each scene, the fixture of `engine::fixtures` it renders, and the field
+/// whose catalogue view colours it, `None` for the outcome palette.
+pub const SYNTHETIC_SCENES: [(&str, &str, Option<&str>); 9] = [
+    ("set_state", "set_state", Some("state")),
+    ("known_escaper", "known_escaper", None),
+    (
+        "energy_drift_ramp",
+        "energy_drift_ramp",
+        Some("energy_drift"),
+    ),
+    ("adversarial_state", "adversarial_descriptor", Some("state")),
+    (
+        "adversarial_detail",
+        "adversarial_descriptor",
+        Some("detail"),
+    ),
+    (
+        "adversarial_saturated",
+        "adversarial_descriptor",
+        Some("saturated"),
+    ),
+    (
+        "adversarial_dmin_pair",
+        "adversarial_descriptor",
+        Some("dmin_pair"),
+    ),
+    (
+        "adversarial_last_symbol",
+        "adversarial_descriptor",
+        Some("last_symbol"),
+    ),
+    ("forced_failure", "forced_failure", Some("detail")),
 ];
 
 /// The values of the scenes whose view's ramp follows the declared range, by scene: each set apart from every rounding
@@ -445,6 +502,15 @@ pub fn scene(name: &str) -> Result<Scene, String> {
             set,
             context: context(grid),
             colouring: Colouring::View(field),
+        });
+    }
+    if let Some(&(_, fixture, view)) = SYNTHETIC_SCENES.iter().find(|(n, ..)| *n == name) {
+        engine::fixtures::fill(fixture, &mut set)?;
+        return Ok(Scene {
+            name,
+            set,
+            context: context(grid),
+            colouring: view.map_or(Colouring::Outcome { edit: None }, Colouring::View),
         });
     }
     let colouring = match name {
@@ -908,6 +974,12 @@ impl Scene {
             "dLz_max" => (read.dLz_max, true),
             "d_min" => (read.d_min, true),
             "dmin_pair" => (read.dmin_pair as f32, true),
+            "saturated" => (f32::from(u8::from(read.saturated)), true),
+            "last_symbol" => (
+                read.last_symbol as f32,
+                kernel::payload::sd_last_symbol_valid(fgw_length_raw(read.word)),
+            ),
+            "energy_drift" => (read.energy_drift, true),
             "state" => (read.state as f32, true),
             "detail" => (read.detail as f32, true),
             "length" => (fgw_length_raw(read.word) as f32, true),
@@ -1067,6 +1139,27 @@ impl Scene {
             Colouring::View("detail") => {
                 Ok(Look::Flat(outcome::detail_view(read.state, read.detail)))
             }
+            // The sub-field views (debug tooling plan §B), as the catalogue generates them: `saturated` a flag;
+            // `dmin_pair` categorical, its sentinel 3 its literal value; `last_symbol` categorical where the word gives
+            // it one, else the hatch (payload §2).
+            Colouring::View("saturated") => Ok(Look::Flat(present::dbg_flag(read.saturated))),
+            Colouring::View("dmin_pair") => Ok(if read.dmin_pair == SD_DMIN_PAIR_SENTINEL {
+                Look::Literal(f64::from(SD_DMIN_PAIR_SENTINEL))
+            } else {
+                Look::Flat(present::dbg_cat(read.dmin_pair, 3))
+            }),
+            Colouring::View("last_symbol") => Ok(if gate {
+                Look::Flat(present::dbg_cat(read.last_symbol, 4))
+            } else {
+                Look::Invalid
+            }),
+            // The current energy drift, a derived field with a ledger floor and no numeric view: its literal value,
+            // `dbg_sentinel`, the absence NaN hatched.
+            Colouring::View("energy_drift") => Ok(if v.to_bits() == present::ABSENT_NAN_BITS {
+                Look::Invalid
+            } else {
+                Look::Literal(f64::from(v))
+            }),
             Colouring::Outcome { .. } => Ok(
                 match outcome::shown(read.state, read.detail, read.t_end_step) {
                     OutcomeShown::Swatch(k) => Look::Flat(present::srgb8(self.swatches()[k])),
