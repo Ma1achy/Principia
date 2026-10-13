@@ -6,7 +6,7 @@
 
 use ledger::constants::{Admissibility, Citation, ConstantBuilder, Value, REGISTER};
 use validation::negative_control;
-use xtask::gate_report::provisional;
+use xtask::gate_report::{provisional, run_provisional};
 
 /// A settled fixture entry.
 const SETTLED: ConstantBuilder = ConstantBuilder {
@@ -162,4 +162,37 @@ negative_control!(
     "M1 is a milestone, so the refusal check must fail on it",
     expected = "is not refused",
     check_refused("M1")
+);
+
+/// Checks that `cargo xtask gate-provisional --milestone <milestone>` over the register, under a fresh root `case`,
+/// writes its list to `target/gate-report/<milestone>-provisional.txt` and fails exactly when it lists an entry.
+fn check_run(case: &str, milestone: &str, fails: bool) {
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(case);
+    let _ = std::fs::remove_dir_all(&root);
+    let got = run_provisional(&root, milestone);
+    assert_eq!(got.is_err(), fails, "the {milestone} run's result: {got:?}");
+    let file = root
+        .join("target/gate-report")
+        .join(format!("{milestone}-provisional.txt"));
+    let text = std::fs::read_to_string(&file)
+        .unwrap_or_else(|e| panic!("the list was not written to {}: {e}", file.display()));
+    let want = provisional(milestone, REGISTER);
+    assert_eq!(
+        &text,
+        want.as_ref().unwrap_or_else(|t| t),
+        "the written list"
+    );
+}
+
+#[test]
+fn gate_provisional_run_writes_the_list_and_fails_while_any_is_listed() {
+    check_run("gate_provisional_m1", "M1", true);
+    check_run("gate_provisional_m0", "M0", false);
+}
+
+negative_control!(
+    gate_provisional_run_writes_the_list_and_fails_while_any_is_listed,
+    "M0's run lists nothing, so it passes",
+    expected = "the M0 run's result",
+    check_run("gate_provisional_m0_control", "M0", true)
 );

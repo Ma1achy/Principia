@@ -437,6 +437,31 @@ negative_control!(
 );
 
 #[test]
+fn constants_provisional_unmarked_number_citing_calibration_fails_naming_it() {
+    check_refused_naming(
+        ConstantBuilder {
+            name: "fx_unmarked",
+            provisional: None,
+            ..FX_PROPOSED
+        },
+        &["fx_unmarked", "R-71"],
+    );
+}
+
+negative_control!(
+    constants_provisional_unmarked_number_citing_calibration_fails_naming_it,
+    "the same number marked provisional is well formed, so the refusal check must fail on it",
+    expected = "generation was not refused",
+    check_refused_naming(
+        ConstantBuilder {
+            name: "fx_unmarked",
+            ..FX_PROPOSED
+        },
+        &["fx_unmarked"]
+    )
+);
+
+#[test]
 fn constants_provisional_calibration_value_fails_naming_it() {
     check_refused_naming(
         ConstantBuilder {
