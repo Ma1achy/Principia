@@ -772,6 +772,22 @@ The register's entries, the constants the payload ledger uses:
 
 `diffusion` has no sentinel in the register: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 
+The register's provisional entries (R-427; REQ-SYS-081), each a proposed value marked `provisional` until its gate,
+citing its calibration requirement, and read from the register like any other; none is hashed:
+
+| name | proposed value | class | gate | requirement |
+|---|---|---|---|---|
+| `log_floor_d_min` | 2⁻¹⁴ ≈ 6.10e-5, `d_min`'s log floor, a distance (binary16's smallest normal) | canonical-units | M1 | REQ-TOOL-160 |
+| `log_floor_dE_max` | 2⁻²⁰ ≈ 9.54e-7, `dE_max`'s log floor, absolute, in the stored field's normalised units | canonical-units | M1 | REQ-TOOL-160 |
+| `log_floor_dLz_max` | 2⁻²⁰ ≈ 9.54e-7, `dLz_max`'s log floor, absolute, in the stored field's normalised units | canonical-units | M1 | REQ-TOOL-160 |
+| `log_floor_closure_min` | 2⁻²³ ≈ 1.19e-7, `closure_min`'s log floor, a dimensionless chord | canonical-units | M1 | REQ-TOOL-160 |
+| `log_floor_rho_ratio` | 2⁻²³ ≈ 1.19e-7, `rho_ratio`'s log floor, assuming the mass-weighted ‖ρ̃‖/‖λ̃‖; re-marked provisional until M2 when confirmed at M1 (R-419) | canonical-units | M1 | REQ-TOOL-160 |
+| `log_floor_r_min_pair_0` | 2⁻¹⁴ ≈ 6.10e-5, `r_min_pair_0`'s log floor, a distance; re-marked provisional until M2 when confirmed at M1 (R-419) | canonical-units | M1 | REQ-TOOL-160 |
+| `hatch_violet` | `0x9B00FF`, the invalid hatch's first colour, 8-bit sRGB | canonical-units | M1 | REQ-COL-055 |
+| `hatch_cyan` | `0x48FFFF`, the invalid hatch's second colour, 8-bit sRGB | canonical-units | M1 | REQ-COL-055 |
+| `hatch_half_period` | 4, the hatch's stripe width in pixels | canonical-units | M1 | REQ-COL-055 |
+| `eps_m01` | 10⁻⁵, the `DEGENERATE(M01_TINY)` threshold (dd_decoder §3.1), a threshold with its measured gap | canonical-units | M2 | REQ-DEC-039 |
+
 ### 3.9 The link registry (consolidated from chart contract Part 2.5)
 
 | Constraint | Link (forward) | Inverse | log-det | Sampling note |
