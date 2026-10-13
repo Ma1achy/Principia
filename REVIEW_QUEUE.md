@@ -83,7 +83,7 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
 
 ---
 
-## RQ-275: render_contract Part 6's quad-fields row lists five payload/status flags read from `ctx.quad` that no contract defines: `RenderQuad` and the stain's `CtxQuad` carry none, contains-ensemble and contains-FTLE exist only as the prelude's per-variant and per-frame guards, the schema version only as a WGSL constant, and per-quad sim-failed and cache-valid have no source *(silence and placement, R-72, R-113, R-145, REQ-TOOL-011, REQ-TOOL-026; context: TASK-M1-19, TASK-M1-13)*
+## RQ-275: render_contract Part 6's quad-fields row lists five payload/status flags read from `ctx.quad` that no contract defines: `RenderQuad` and the stain's `CtxQuad` carry none; the corpus offers per-variant and per-frame guards, a per-build constant and each cached payload's compatibility signature as candidate sources for some of them, and no quad-level sim_failed flag or count *(silence and placement, R-72, R-89, R-113, R-145, REQ-TOOL-011, REQ-TOOL-026; context: TASK-M1-19, TASK-M1-13)*
 
 *Found in TASK-M1-19's read-only pre-flight. Nothing is chosen.*
 
@@ -93,12 +93,17 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
     age, ancestor gap) + payload/status flags (sim-failed, cache-valid, contains-ensemble, contains-FTLE, schema
     version) | `ctx.quad` | the **CPU scheduler** and the payload compatibility signature — CPU-written, so a wrong view
     here exonerates the GPU".
+  - `docs/contracts/principia_render_contract.md` § "Part 1 — The payload (render input)" (line 15): "**`RenderQuad`**
+    (CPU-written): `quad_depth, quad_state, coherence_score, outcome_impurity, ensemble_spread, suspect_fraction,
+    priority_score, ancestor_gap, cache_age`", with no flag.
   - `docs/design/principia_dd_generation_root.md` § "3.7a `RenderQuad` — the CPU-written quad record" (lines 462–485):
     "it is the ledger table the generated `RenderQuad` follows, member for member … the fragment reads it as
     `ctx.quad` (render contract Part 1; Part 6's "Quad fields" view)", with ten members, `quad_depth`, `quad_state`,
     `coherence_score`, `outcome_impurity`, `ensemble_spread`, `suspect_fraction`, `priority_score`, `ancestor_gap`,
     `cache_age` and `dominant_outcome`, and no flag. It adds: "It is scheduler state, not payload, and the payload
-    compatibility signature excludes scheduler state … so it is not hashed into the schema version."
+    compatibility signature excludes scheduler state … so it is not hashed into the schema version." That sentence
+    says `RenderQuad`'s own bytes are not hashed into the version; it does not say whether `RenderQuad` may report the
+    version of the payload it describes.
   - The code at origin/main 55513b7b: `crates/render/shaders/wgsl/stain/context.wgsl`, `struct CtxQuad` (lines 19–36),
     holds `index`, `tl`, `centre`, `half_width`, `uv`, `sample_count` and the `RenderQuad` members, and no flag.
   - contains-FTLE and contains-ensemble: `docs/contracts/principia_render_contract.md` § "Part 2 — Fixed pipeline,
@@ -111,15 +116,30 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
     existence; `contains-ensemble` / `contains-FTLE` advertise it". Each is per variant or per frame, not a
     `RenderQuad` member. RQ-239 (archived, `docs/archive/review_queue/M0.md`) decided for REQ-TOOL-026's spread view
     only that "Present iff contains-ensemble" reads `has_ensemble()`.
+  - `docs/contracts/principia_render_contract.md` § "Part 3 — Cache tiers and the recompute rule" (line 74),
+    "Field-availability gating": "ensemble spread (footprint-derived at resolve) exists only when `contains-ensemble` —
+    but it is not a per-sample field, so "availability" means the resolve stage runs the spread reduction, gated on
+    the tier flag."
   - The schema version: `crates/render/frag/generated/payload_unpack.wgsl` (line 7), `const PAYLOAD_SCHEMA_VERSION:
-    vec2<u32> = …`, one constant per build, which `RenderQuad` is "not hashed into" (above).
+    vec2<u32> = …`, one constant per build.
   - sim-failed: the per-sample `state` code 4, `sim_failed` (`docs/design/principia_dd_generation_root.md` § "3.1
-    `sample_descriptor` (u32)", line 37; render contract Part 5's `sd_is_failed`). No quad-level failed flag or count is defined: `QuadReduction`
-    (§ "3.7 `QuadReduction` — completed ledger") carries `terminated_fraction`, `class_histogram[N]` and
-    `dominant_outcome`, and `RenderQuad` none of these but `dominant_outcome`.
-  - cache-valid: `docs/contracts/principia_caching_contract.md` § "Part 1 — Two-level keying: identity vs validity"
-    (line 14): "**Validity — *computed under which physics config*.** The payload compatibility signature: … payload
-    schema version (a content hash of the ledger, R-36)". No per-quad valid flag is defined, and no M1 cache exists.
+    `sample_descriptor` (u32)", line 37; render contract Part 5's `sd_is_failed`). `QuadReduction` (§ "3.7
+    `QuadReduction` — completed ledger") carries `terminated_fraction`, `class_histogram[N]` and `dominant_outcome`,
+    and, under "Validity and diagnostics" (line 408), "`valid_sample_count` | u16 | decoded of N²", a quad-level count
+    of the samples that decoded, so of decode failures only. No quad-level sim_failed flag or count is defined.
+    `RenderQuad` carries none of these but `dominant_outcome`.
+  - The payload compatibility signature, which the row says it certifies: `docs/contracts/principia_caching_contract.md`
+    § "Part 1 — Two-level keying: identity vs validity" (line 10): "every cached payload carries a compact
+    compatibility signature that is stricter than the quad key, because it governs whether a payload can be reused
+    without recomputation", and (line 14): "**Validity — *computed under which physics config*.** The payload
+    compatibility signature: … enabled metrics (tier flags), event thresholds, `copy_index` for an ensemble copy (the
+    nominal's signature excludes `E`, R-89), payload schema version (a content hash of the ledger, R-36)". Each drawn
+    quad's payload so carries its own tier flags and schema version, which can differ from the current variant's
+    `has_ftle` and `PAYLOAD_SCHEMA_VERSION` (a quad drawn from an ancestor's payload, or one computed at another
+    tier); and "cache-valid" can read as that payload's signature matching the current config. `decisions.md` §
+    "R-89 — Depth and E are not on the sim key *(closes RQ-40)*": "E changes live: copies are cached per
+    `copy_index`, and the nominal's key excludes E", which bears on whether contains-ensemble is in it. No per-quad
+    flag is defined from the signature, and no M1 cache exists.
   - `plan/requirements.yaml` REQ-TOOL-011 (`milestone: M1`, TASK-M1-19): "The field-view catalogue must cover every
     group in render contract Part 6's field-view table that a synthetic payload can show: … all 9 quad fields plus
     payload/status flags, and structural overlays". REQ-TOOL-026 (M1, TASK-M1-13, merged), the quad views: "quad-depth,
@@ -129,16 +149,17 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
     note records it, split off the DECODE, ensemble and live-effort rows; § "R-420 — The uniform echo row moves …
     *(closes RQ-273)*" moved the uniform echo row and removed the Fourier row. Neither split off the flags.
 - **Silence (and a placement question):** the row reads five flags from `ctx.quad`, but no contract makes any of them a
-  `RenderQuad` member or says what each holds per quad. Two have a per-variant or per-frame reading in the prelude
-  (`has_ftle`, `has_ensemble()`) and one a per-build constant (`PAYLOAD_SCHEMA_VERSION`), none of them quad data; and
-  generation_root §3.7a says `RenderQuad` is "not hashed into the schema version". Per-quad sim-failed and
-  cache-valid have no data source at all: no quad-level failure flag is defined, and cache validity is the M5 cache's
-  signature. An M1 checklist that ticks the row "on a synthetic payload" has nothing to tick for the flags; R-113 and
-  R-420 placed other rows that need later machinery, but not these.
+  `RenderQuad` member or says what each holds per quad. The corpus offers more than one candidate source and does not
+  choose: contains-FTLE and contains-ensemble have a per-variant or per-frame reading in the prelude (`has_ftle`,
+  `has_ensemble()`) and render_contract :74's "tier flag"; the schema version a per-build constant
+  (`PAYLOAD_SCHEMA_VERSION`); and contains-FTLE, the schema version and cache-valid (and, R-89 aside, contains-ensemble)
+  a per-quad reading in the drawn payload's compatibility signature (caching Part 1). sim-failed has no quad-level
+  source: `valid_sample_count` counts decode failures only. An M1 checklist that ticks the row "on a synthetic payload"
+  has nothing defined to tick for the flags; R-113 and R-420 placed other rows that need later machinery, but not these.
 - **Options seen:**
   - (a) Define them now (R-72, a definition requirement): each flag's meaning per quad and its source (a `RenderQuad`
-    member, the prelude guard, or the schema constant), written into dd_generation_root §3.7a or render_contract Part
-    6, as a TASK-M1-19 deliverable or a new task's.
+    member, the prelude guard, the schema constant, or the drawn payload's compatibility signature, caching Part 1),
+    written into dd_generation_root §3.7a or render_contract Part 6, as a TASK-M1-19 deliverable or a new task's.
   - (b) Split them off to the task that builds their source, as R-113 split the DECODE, ensemble and live-effort rows:
     cache-valid with the M5 cache, per-quad sim-failed with the reduction (`QuadReduction`), and so on, each under a
     named requirement that REQ-TOOL-011's checklist then cites for the cell.
@@ -172,7 +193,8 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
     Tier 3 examples are "refine-decision, dirty, resident, generation, budget, ancestor gap", neither overlay among
     them.
   - `plan/tasks/M5/TASK-M5-29.md` ("Tier 3 tile debug shaders and the quad-state transition table"; REQ-RENDER-055,
-    REQ-RENDER-056, REQ-TOOL-116) builds the Tier 3 path and names no overlay; its note: "Its per-visible-quad record is
+    REQ-RENDER-056, REQ-TOOL-116) builds the Tier 3 path and names neither visible-set nor locked/stale (its RQ-239
+    note, line 40, names the fallback tint and the pending hatch, as M1 post occupants); its note: "Its per-visible-quad record is
     REQ-PERF-079's (TASK-M8-08)", whose statement is "The Tier-3 tile-debug buffer's per-visible-quad record must be
     defined in render_gui_spec §12.1 by the task that needs it".
   - `docs/design/principia_debug_tooling_plan.md` § "F. Structural views — `RenderQuad` / quadtree (read quad metadata,
@@ -180,33 +202,57 @@ goes to `REVIEW_QUEUE.md` for the human". Nothing is chosen.*
     evicted") and "fallback ancestor tint / pending hatch", and no visible-set or locked overlay. REQ-TOOL-026 (M1,
     TASK-M1-13, merged) names "leaf outlines, fallback tint and pending hatch", which TASK-M1-13 built as post
     occupants reading `ctx.quad` (RQ-239); REQ-TOOL-011 (M1, TASK-M1-19) covers "structural overlays".
-  - "stale": `docs/design/principia_dd_generation_root.md` § "3.7a `RenderQuad` — the CPU-written quad record":
-    "`quad_state` | u32 | 0 loaded · 1 pending · 2 refinable · 3 terminal · 4 stale", which the quad-state view
-    `s_state` (`crates/render/shaders/wgsl/frag/debug/s_state.wgsl`, REQ-TOOL-026) already draws as a discrete colour.
-  - "locked": defined nowhere as a quad property. Elsewhere the corpus's "locked" is the chart lock
-    (`docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)", "locked mode") and locked debug presets
-    (`docs/gui/principia_render_gui_spec.md` § "11. Presets = whole graphs"); the caching contract's per-quad
-    exemption is "pinned" (`docs/contracts/principia_caching_contract.md` § "Part 4 — Baseline-first: an absolute
-    tier, not a priority weight": "the baseline cover and its ancestor chain for the visible region, **plus the
-    backdrop identity's leaf cover (Part 5)**, are pinned"), and no text links it to "locked".
-  - "visible-set": defined nowhere as an overlay. `RenderQuad` is written "one per visible quad" (§3.7a), and the
-    caching contract speaks of "the visible region"; no text says what a visible-set overlay draws.
-  - Search at origin/main 55513b7b: "visible-set" occurs only at render_contract:316 and render_gui_spec:894, and
-    "locked/stale" only there; no requirement in `plan/requirements.yaml` and no task file in `plan/tasks/` names either
-    (outside `docs/archive/`, `docs/reference/` and `workbench/`, record only per R-159).
+  - "stale", two readings in the corpus:
+    - `docs/design/principia_dd_generation_root.md` § "3.7a `RenderQuad` — the CPU-written quad record": "`quad_state` |
+      u32 | 0 loaded · 1 pending · 2 refinable · 3 terminal · 4 stale", which the quad-state view `s_state`
+      (`crates/render/shaders/wgsl/frag/debug/s_state.wgsl`, REQ-TOOL-026) already draws as a discrete colour.
+    - `docs/contracts/principia_caching_contract.md` § "Part 5 — The stale backdrop: blur means loading": "The stale
+      quads render through the normal pipeline from their cached `SimState`s — but under lockstep those states are
+      **frozen at whatever `t` each had reached** when it left the live set (stale quads do not march; only the live
+      set does — scheduler Part 7)", composited, blurred, under the fresh-identity quads as "the live stale layer".
+  - "locked", no definition as a quad property; readings in the corpus:
+    - The chart (tilt) lock: `docs/contracts/principia_chart_decoder_contract.md` § "The lock (projective microscope)"
+      ("locked mode"); and caching Part 5 (line 98), which pairs the two words: "under a *locked* tilt, the anchor
+      pixel's stale value is exactly correct (the lock is the fixed point of a basis edit) and staleness grows with
+      distance from centre — so the honest stale rendering is a radially graded blur".
+    - The pinned class: `docs/contracts/principia_caching_contract.md` § "Part 4 — Baseline-first: an absolute tier,
+      not a priority weight" (line 62): "the baseline cover and its ancestor chain for the visible region, **plus the
+      backdrop identity's leaf cover (Part 5)**, are pinned"; debug_tooling_plan §F's boundary overlay asserts "pinned
+      chain never evicted".
+    - The corpus also uses "locked" for locked debug presets (`docs/gui/principia_render_gui_spec.md` § "11. Presets =
+      whole graphs"), not a quad property.
+  - "visible-set", no definition as an overlay; readings in the corpus:
+    - The live set: `docs/contracts/principia_scheduler_contract.md` § "Part 7 — The frame loop (lockstep
+      presentation)" (line 176): "BARRIER over the live set only", and its closing summary (line 223): "The frame loop
+      presents only the barrier-synced live set"; `docs/design/principia_temporal_architecture_note.md` § "The frame
+      loop — the one genuinely new object (and what makes lockstep clean)" (lines 140–155): "LIVE SET     quads already
+      at the playhead. March together, barrier-synced, presented coherently every frame", beside "CATCHING-UP"
+      quads; `docs/contracts/principia_canonical_spec.md` § "5. Temporal & rendering model *(authoritative:
+      `temporal_architecture_note`, `render_contract`, `scheduler_contract`, `checkerboard_contract`)*" (line 67): "every visible
+      sample's `SimState` marches with it under a **barrier over the live set**".
+    - `docs/contracts/principia_export_animation_contract.md` § "Part 2 — The two playback types and their costs"
+      (line 30): "one full integration of the visible set".
+    - `RenderQuad` is written "one per visible quad" (§3.7a), and the caching contract speaks of "the visible region".
+  - Search at origin/main 55513b7b: the hyphenated "visible-set" occurs only at render_contract:316 and
+    render_gui_spec:894, and "locked/stale" only there (the unhyphenated "visible set" and "live set" are above); no
+    requirement in `plan/requirements.yaml` and no task file in `plan/tasks/` names either (outside `docs/archive/`,
+    `docs/reference/` and `workbench/`, record only per R-159).
 - **Silence (and a placement question):** the row lists two overlays that no doc defines (what a visible-set overlay
-  marks, what "locked" means for a quad), no requirement names, and no task builds. render_gui_spec §12.1 places them in
-  Tier 3, which TASK-M5-29 builds at M5 with its record defined at M8 (REQ-PERF-079), but neither task names them; the
-  other two overlays that sentence placed in Tier 3, the fallback tint and the pending hatch, were built at M1 as post
-  occupants under RQ-239. "stale" already has a reading as `quad_state` 4, drawn by `s_state`; "locked" has none. The
-  row's other overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch) exist.
+  marks, what "locked/stale" marks for a quad), no requirement names, and no task builds; the corpus offers competing
+  readings for each word (above) and does not choose. render_gui_spec §12.1 places them in Tier 3, which TASK-M5-29
+  builds at M5 with its record defined at M8 (REQ-PERF-079), but neither task names them; the other two overlays that
+  sentence placed in Tier 3, the fallback tint and the pending hatch, were built at M1 as post occupants under RQ-239.
+  The row's other overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch) exist.
 - **Options seen:**
   - (a) Define both now (R-72, a definition requirement) and build them in M1, as TASK-M1-19's deliverable or a new
     task's, reading `ctx.quad` as the fallback tint and pending hatch do.
   - (b) Move both to TASK-M5-29's Tier 3 path, under a named requirement that defines them (R-72); REQ-TOOL-011's
     checklist then cites that requirement for the two cells, as it cites REQ-RENDER-027 for the DECODE row.
-  - (c) "stale" is covered by `s_state`'s `quad_state` 4, ticked against it; "locked" is dropped (a ruling) or defined
-    (R-72, under (a) or (b)).
+  - (c) Name a reading from the corpus for each word, the overlay then defined (R-72) and placed under (a) or (b), or
+    ticked against an existing view: "stale" as `quad_state` 4 (ticked against `s_state`) or as caching Part 5's stale
+    layer (frozen quads off the live set, with Part 5's locked-tilt grading); "locked" as the chart (tilt) lock or as
+    Part 4's pinned class; "visible-set" as the live set (scheduler Part 7; temporal note), or another reading; or
+    either overlay dropped (a ruling).
   - (d) Drop both from Part 6's row (a ruling; render_contract Part 6 and render_gui_spec §12.1 then conformed).
     Dropping is the human's call only.
   - The options may be taken per overlay.
