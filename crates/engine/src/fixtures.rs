@@ -1,7 +1,8 @@
 //! The named synthetic fixture set (debug tooling plan, "Principle": "Synthetic-first"; TASK-M1-14): CPU-filled
-//! samples with known values, written into a [`Synthetic`] set for the accessor tests to read back and the golden suite
-//! `m1-synthetic` to render (`validation::golden_scene`). Each fixture is eight samples, one row of [`Known`] values
-//! each, so the tests assert on the same table the fill writes:
+//! samples with known values, written into a [`Synthetic`](crate::synthetic::Synthetic) set for the accessor tests to
+//! read back and the golden suite `m1-synthetic` to render (`validation::golden_scene`). Each fixture is eight
+//! samples, one row of [`Known`](crate::fixtures::Known) values each, so the tests assert on the same table the fill
+//! writes:
 //! - `set_state`: each `state` code set, 0–5 and the reserved 6 and 7 (payload §2), on samples otherwise plain;
 //! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape, beside a bounded, a colliding
 //!   and a running sample;
