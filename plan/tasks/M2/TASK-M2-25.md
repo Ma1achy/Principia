@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057
-- **Depends on:** TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16
+- **Depends on:** TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16, TASK-M1-19
 - **Needs (earlier milestones):** REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001, REQ-COL-063
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-1.7, PIT-9, PIT-5
@@ -53,3 +53,5 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - R-394 (RQ-257): `ctx.chart.slice_uv` is the sample's position in the slice plane, `c + h·(2·ctx.quad.uv − 1)`,
   stable under pan and zoom (REQ-COL-063). TASK-M1-16 conforms the lane, so this task, the first to place `ctx.chart.z`
   per pixel, depends on it.
+- Depends on TASK-M1-19, applied per R-369 (TASK-M1-14's pre-flight): REQ-TOOL-011, which this task needs, moved from
+  TASK-M1-14 to TASK-M1-19, split off so that RQ-273 holds only it. R-420 ruled RQ-273, so TASK-M1-19 waits on nothing.

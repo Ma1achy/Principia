@@ -6927,6 +6927,10 @@ Adds REQ-COL-064 and REQ-TOOL-162; REQ-COL-053's rulings, note and `rq`, REQ-COL
 REQ-TOOL-012's, REQ-TOOL-023's, REQ-TOOL-137's, REQ-COL-002's and REQ-GUI-105's notes change.
 
 ## R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*
+*Amended in part by R-423 (a field that is an angle takes the cyclic ramp: `theta`).*
+*Still in force: all of it, but for a field that is an angle: a numeric field view whose declared range spans zero is
+on `ramp_coolwarm` centred at zero, and one that can't be negative keeps viridis; an angle (`theta`, R-423) is on the
+cyclic ramp whatever its range.*
 *9 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" and
 `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`" (added sentences),
 REQ-RENDER-022 and REQ-COL-016 (reqio), REQ-RENDER-084 (reqio, new), TASK-M1-17 (new), TASK-M7-07,
@@ -6984,6 +6988,10 @@ diverging-through-neutral. The human replied, in their own words ("This is from 
 Adds REQ-RENDER-084; REQ-RENDER-022's note and `rq` and REQ-COL-016's rulings and note change.
 
 ## R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
+*Amended in part by R-419 (`rho_ratio`'s and `r_min_pair_0`'s floors are confirmed provisionally at M1 and
+re-confirmed at M2).*
+*Still in force: all of it; for `rho_ratio` and `r_min_pair_0` the M1 gate's confirmation is provisional, and the
+two floors are re-confirmed at M2 (R-419, REQ-TOOL-163).*
 *9 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
 reworded), REQ-TOOL-160 (reqio), TASK-M1-17 (new), TASK-M1-09, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built
 by TASK-M1-17*
@@ -8375,3 +8383,375 @@ The human's words (R-410 quotes the whole message):
 *Applied per R-369:* the "the human may veto any" lines of R-407, R-408 and R-409 each gain a line naming R-416, as
 does TASK-M1-17's note; their wording is otherwise unchanged. `plan/OPERATIONS.md` § "The GUI track (R-390)" and
 TASK-M6-31's look-choice note say the look choices hold. R-416 is in the "one_off" group of `plan/rule_groups.yaml`.
+
+## R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*
+*11 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted
+Jacobi" (a paragraph reworded) and § "5. Unit tests" (tests 3 and 5), `docs/notes/principia_validation_ground_truth_note.md`
+§ "Degenerate configs: open & unguarded, approach as a limit" (a sentence qualified, the collision pole corrected; a
+paragraph added),
+`docs/design/principia_dd_generation_root.md` § "3.9 The link registry (consolidated from chart contract Part 2.5)"
+(the bounded and symmetric rows, the codomains; a paragraph added) and § "5. Tests (properties any generator must
+satisfy)" (test 8 (a)), REQ-DEC-018, REQ-DEC-027, REQ-DEC-028 and REQ-VAL-020 (reqio), REQ-GEN-034 (reqio, new),
+TASK-M2-30 (new), TASK-M2-01, TASK-M2-02, TASK-M2-03, TASK-M2-07, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-270 archived) and `REVIEW_QUEUE.md`; built by TASK-M2-30*
+
+The orchestrator put RQ-268 to RQ-273 to the human, with the fields the M1 gate sees move to cool-warm under R-400. The
+human replied, in their own words ("This is from me."), in one message, which R-417 to R-423 record. The whole
+message, once:
+
+> This is from me.
+> RQ-270: (b) and (a). Generate the f32 constants rounded toward zero
+> (removes the upper overshoot, the π turn and the mirror). Amend
+> dd_decoder §3.2, its tests and REQ-DEC-018/027/028 for what remains:
+> the lower poles are reached at underflow (f32 and f64), q reaches
+> ±q_max, and the range is closed. Any exception to the canonical no-op
+> covers only measured cases. Follow up TASK-M2-01's merged test.
+> RQ-268: (a) and (e). The three ranges join REQ-PAY-093, confirmed at
+> the M5 gate. "No escape": _min = +∞ and _max = −∞ (each reduction's
+> identity, no branch); "no escape" reads as _min > _max.
+> RQ-271: (c) for both. rho_ratio's provisional floor assumes the
+> mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; M2-03 may choose otherwise and the
+> floor is re-confirmed at M2. For r_min_pair_0 only the evidence is
+> provisional.
+> RQ-273: the echo row: (a), moved after M5-02 and M3-06; that task names
+> its thresholds. The Fourier row: (e), removed from Part 6 and parked as
+> a possible future feature (nothing current defines it). M1 doesn't wait
+> on it.
+> RQ-272: (c) and (a). Bit-exact for fields that are 0 at rest;
+> per-precision tolerances proposed by M2-03, confirmed at the M2 gate.
+> "Hand-computed at f32" means the exact value rounded to f32.
+> RQ-269: (c). A lower bound on Custom N (a correctness floor: N = 1
+> never refines), proposed with evidence at the M5 gate. Both memory
+> models count the per-quad QuadReduction for every N.
+> For the M1 gate: physics to check the six fields moving to cool-warm.
+> If theta is an angle it needs a cyclic ramp, not a diverging one.
+
+(Message of 11 Oct 2026. The human numbered none of it; the orchestrator gave each part its own ruling from the next
+free number, in the message's order: R-417 RQ-270, R-418 RQ-268, R-419 RQ-271, R-420 RQ-273, R-421 RQ-272, R-422
+RQ-269, and R-423 the M1 gate's cool-warm check and `theta`.)
+
+This ruling's part:
+
+> RQ-270: (b) and (a). Generate the f32 constants rounded toward zero
+> (removes the upper overshoot, the π turn and the mirror). Amend
+> dd_decoder §3.2, its tests and REQ-DEC-018/027/028 for what remains:
+> the lower poles are reached at underflow (f32 and f64), q reaches
+> ±q_max, and the range is closed. Any exception to the canonical no-op
+> covers only measured cases. Follow up TASK-M2-01's merged test.
+
+*What it decides:*
+- **RQ-270's options (b) and (a), together.** (b) removes the upper overshoot; (a) amends the text for what is left.
+- **(b): the f32 constants are generated rounded toward zero.** The link generator emits the f32 images of π/2 and π
+  as `fl↓(π/2)` (bits `0x3FC9_0FDA`, 1.5707962…) and `fl↓(π)` (`0x4049_0FDA`, 3.1415925…), not the nearest values
+  `0x3FC9_0FDB` and `0x4049_0FDB`, which lie above π/2 and π. So no bounded link's f32 image passes its upper bound,
+  and the f32 saturation that reached `α = fl₃₂(π/2) > π/2` or `β = fl₃₂(π) > π` no longer occurs; with it go §3.3's
+  half turn (`φ = atan2(0, cos α < 0) = π`) and the mirror (`λ̃_y < −δ_λ`) that it forced. The f64 nearest values
+  already lie below π/2 and π and are unchanged.
+- **(a), for what remains:** dd_decoder §3.2, its tests 3 and 5, and REQ-DEC-018, REQ-DEC-027 and REQ-DEC-028 are
+  amended to state the decode at saturation as it is:
+  - **the lower poles are reached at underflow, at f32 and f64:** `α = 0` or `β = 0` exactly where the link's output
+    underflows (σ where `exp(−z)` overflows, the tanh links where `tanh` rounds to −1, the softsign links where
+    `x/(2 + |x|)` rounds to −1; RQ-270 lists the thresholds measured);
+  - **`q` reaches `±q_max`** at saturation (`q_max` = 2 is exact, so it never overshoots);
+  - **the range is closed:** `α ∈ [0, π/2]`, `β ∈ [0, π]`, `|qₖ| ≤ q_max`.
+- **The canonical no-op's exceptions cover only measured cases.** dd_decoder test 5 and REQ-DEC-018 hold the no-op
+  for every canonical-frame decode, saturated controls included. A case where it fails is an exception only once the
+  task that measures the no-op (TASK-M2-07) has measured it and listed it, with its `z`, precision and measurement, in
+  test 5; there is no blanket exception for the poles.
+- **TASK-M2-01's merged test is followed up.** `link_properties_a_constraint` (`crates/kernel/tests/links.rs`) checks
+  bounded f32 outputs against the f32-rounded bounds (`u.hi as f32`), which a saturated control reached by rounding up;
+  it now checks them against the exact bounds, which the f32 outputs no longer pass.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **A new task, TASK-M2-30**, since TASK-M2-01 has merged: the generator change (`crates/ledger/src/gen/links.rs`),
+  the regenerated links (`crates/kernel/src/generated/links.rs`) and the follow-up to `link_properties_a_constraint`,
+  with a control: the round-to-nearest constants fail the exact-bound check. It closes **REQ-GEN-034 (new, M2)** and
+  depends on TASK-M2-01 only. Reviewers code, qa and physics, as TASK-M2-01's.
+- **Which tasks depend on it, by what each asserts:**
+  - **TASK-M2-03 depends on it.** Its `decode_ranges` (REQ-DEC-027) asserts `α ≤ π/2` and `β ≤ π` at f32 saturation,
+    and its `chart_landmarks_lagrange_euler` (REQ-VAL-020) has β approach π from below; both need the rounded-down
+    constants.
+  - **TASK-M2-07 depends on it** through TASK-M2-06, TASK-M2-05 and TASK-M2-03: its `canonical_noop` (REQ-DEC-018)
+    asserts the no-op at f32 saturation, which holds only without the overshoot. No direct edge is added.
+  - **TASK-M2-02 does not.** Its REQ-DEC-028 is a review checklist (no endpoint clamping, no guard), and its
+    configuration-block tests (PR #192) wrap β's recovered angle rather than assert the upper bound, so they pass with
+    either constant. Its fix round conforms REQ-DEC-028's checklist line to R-417.
+- **The hash.** An entry's hashed bytes are unchanged: a tree's `num` is the f64 value's bits (dd_generation_root §3.9,
+  "The bytes"), and the f32 rounding is the emitter's. No cached or saved result predates the change, since caching is
+  M5's.
+- **Where the rule is written.** dd_generation_root §3.9 gains a paragraph, "The closed range and the f32 images of
+  π/2 and π (R-417)", and its
+  "Bounded (a,b)" and "Symmetric (−c,c)" rows and its codomain list read the closed intervals; test 8 (a)'s "bounded
+  outputs in range" reads the closed range at the exact bounds. The validation ground-truth note's "never lands" is
+  qualified as exact arithmetic's, with a paragraph on what floating point reaches; "no endpoint clamping" and "no
+  artificial guards" are unchanged.
+- **The note's collision pole.** The note's "Singular configs (collision `α→0`; …)" and "`E → −∞` as `α → 0`" had
+  the α orientation backwards against dd_decoder §3.2's (`‖ρ̃‖ = cos α`: `α → π/2` collapses the inner pair; `α = 0`
+  puts body 2 at the inner pair's CoM, a regular configuration), which test 9 pins. Since `α = 0` is now reached, both
+  are corrected to `α → π/2`, the pole that stays unreached; dd_decoder is the authority for the decoder.
+- **REQ-VAL-020**, which carried `rq: RQ-270` from TASK-M2-03's pre-flight, follows: the Euler collinear configuration
+  at `β = 0` is reached at underflow, at f32 and f64, and `β → π` is approached from below.
+- REQ-DEC-018, REQ-DEC-027, REQ-DEC-028 and REQ-VAL-020 lose `rq: RQ-270` and gain R-417. REQ-DEC-002 and
+  REQ-CHART-034, named by RQ-270 but not marked, are unchanged.
+- RQ-270 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-417 is in the "physics" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-GEN-034; REQ-DEC-018's, REQ-DEC-027's, REQ-DEC-028's and REQ-VAL-020's statements, verifies, rulings, sources,
+notes and `rq` change.
+
+## R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and "no escape" reads `_min > _max` *(closes RQ-268)*
+*11 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "Validity and diagnostics" (a paragraph
+added), REQ-PAY-093 and REQ-REF-006 (reqio), REQ-REF-053 (reqio, new), TASK-M5-01, TASK-M5-17, `plan/tasks.yaml`,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-268 archived from PR #191's head); built by
+TASK-M5-01 and TASK-M5-17*
+
+The human's words (R-417 quotes the whole message):
+
+> RQ-268: (a) and (e). The three ranges join REQ-PAY-093, confirmed at
+> the M5 gate. "No escape": _min = +∞ and _max = −∞ (each reduction's
+> identity, no branch); "no escape" reads as _min > _max.
+
+*What it decides:*
+- **RQ-268's option (a) for the ranges.** The declared ranges of `escape_time_min`, `escape_time_max` and
+  `mean_orbit_count_spread` join REQ-PAY-093 with its five members, and the human confirms them at the M5 gate. Their
+  proposal is TASK-M5-01's: each `[0, ∞)` with `overflow: saturate`.
+- **Option (e) for no escape.** `escape_time_min` starts from +∞ (binary16 `0x7c00`) and `escape_time_max` from −∞
+  (`0xfc00`), each its reduction's identity, so neither reduction needs a branch: a quad none of whose copies escaped
+  stores exactly those bits.
+- **"No escape" reads as `_min > _max`.**
+
+*Applied per R-369 (mechanical consequences; the human may veto any):*
+- **dd_generation_root §3.7** gains a "No escape (R-418)" paragraph under "Validity and diagnostics". `_max`'s −∞
+  lies below its range `[0, ∞)`, as a sentinel may; saturation keeps every recorded escape time finite, so neither
+  identity is ever a recorded time.
+- **The ledger entries carry the two values** as their sentinels: REQ-REF-006 (TASK-M5-01, the validity members)
+  gains them, and TASK-M5-01's layout test checks the bits.
+- **The writer tests the bits.** TASK-M5-17 fills the validity members (its Goal); TASK-M5-18 (the ensemble spread)
+  and TASK-M5-19 (`roundtrip_error` and the temporal accumulators) write neither escape time. **REQ-REF-053 (new, M5)**,
+  closed by TASK-M5-17: each reduction starts from its identity with no no-escape branch, a quad with no escaped copy
+  stores `0x7c00` and `0xfc00` exactly, and "no escape" reads `_min > _max`; its control is option (d)'s branch storing
+  +∞ in `_max`, which fails it.
+- **The record of RQ-268.** RQ-268 was filed on PR #191's branch (TASK-M5-01) and is not on `main`. It is archived here
+  in `docs/archive/review_queue/M0.md`, as it stood at #191's head `fe682029`, with its Ruling line, by the rule of
+  `plan/OPERATIONS.md` § "Merging" ("An RQ open only on a PR branch"), as R-413 archived RQ-267; `rulings.py` rejects
+  a cited RQ that is neither open nor archived. #191's next fix pass deletes its open copy from `REVIEW_QUEUE.md`,
+  else merging `main` into it fails `rulings.py`'s duplicate-id check.
+- R-418 is in the "design" group of `plan/rule_groups.yaml`, with R-410.
+
+Adds REQ-REF-053; REQ-PAY-093's statement, verify, rulings, sources and note and REQ-REF-006's statement, verify,
+rulings and sources change.
+
+## R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*
+*11 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
+added), R-401 (a forward line), REQ-TOOL-160 (reqio), REQ-TOOL-163 (reqio, new), TASK-M1-18, TASK-M2-03, TASK-M7-05,
+`plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-271 archived) and
+`REVIEW_QUEUE.md`; built by TASK-M1-18 and TASK-M2-03*
+
+The human's words (R-417 quotes the whole message):
+
+> RQ-271: (c) for both. rho_ratio's provisional floor assumes the
+> mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; M2-03 may choose otherwise and the
+> floor is re-confirmed at M2. For r_min_pair_0 only the evidence is
+> provisional.
+
+*What it decides:*
+- **RQ-271's option (c), for both fields.** TASK-M1-18 proposes the floors of `rho_ratio` and `r_min_pair_0` for the
+  M1 gate with the other four; the human confirms the two as provisional there, and they are re-confirmed at M2, once
+  TASK-M2-03 has defined the two fields' formulas (REQ-PAY-088).
+- **`rho_ratio`'s provisional floor assumes the mass-weighted ratio ‖ρ̃‖/‖λ̃‖, and the proposal says so.** TASK-M2-03
+  may define `rho_ratio` otherwise; the floor is then re-proposed in the defined ratio's units, and re-confirmed at M2
+  either way.
+- **For `r_min_pair_0` only the evidence is provisional.** Its units are a distance in `G = M = I = 1` (dd_decoder §2),
+  assumed by nothing; its evidence, on M1's showcase values, is re-given on decoded values for the M2 re-confirmation.
+- So R-419 amends R-401 in part: R-401's M1 confirmation is, for these two floors, provisional.
+
+*Applied per R-369 (mechanical consequences; the human may veto any):*
+- **The re-confirmation is a requirement: REQ-TOOL-163 (new, M2, calibration)**, closed by TASK-M2-03, which writes
+  REQ-PAY-088's formulas. Its PR states which ratio it defines for `rho_ratio`, and re-proposes the floor if it is not
+  the mass-weighted one; it gives `r_min_pair_0`'s evidence on decoded values; the physics reviewer checks both, and
+  the human re-confirms them at the M2 gate. TASK-M2-03 now depends on TASK-M1-18, whose floor constants it may change,
+  and needs REQ-TOOL-160.
+- **REQ-TOOL-160** keeps all six floors and their M1 confirmation, the two marked provisional; it loses `rq: RQ-271`
+  and gains R-419. TASK-M1-18 no longer waits; its deliverables and physics checklist say what the proposal states for
+  the two fields.
+- R-401 gains a forward line ("Amended in part by R-419") and a "Still in force" line. render_gui_spec §10.1's
+  log-floor sentence gains R-419's clause; TASK-M7-05's note on the floors names it.
+- RQ-271 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-419 is in the "physics" group of
+  `plan/rule_groups.yaml`, with R-401.
+
+Adds REQ-TOOL-163; REQ-TOOL-160's statement, verify, rulings, sources, note and `rq` change.
+
+## R-420 — The uniform echo row moves to a task after TASK-M5-02 and TASK-M3-06, which names its thresholds; the Optional Fourier block row is removed from render_contract Part 6 and parked as a possible future feature *(closes RQ-273)*
+*11 Oct 2026 · applied in `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
+(the Fourier row removed; a paragraph added), `docs/read_first/principia_00_philosophy.md` § "7. Parked — deliberate
+post-1.0" (§7.6a added), REQ-TOOL-011 (reqio), REQ-TOOL-164 and REQ-TOOL-165 (reqio, new), TASK-M5-31 (new),
+TASK-M1-19, TASK-M2-25, `plan/tasks.yaml`, `plan/section_notes.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-273 archived) and `REVIEW_QUEUE.md`; built by TASK-M5-31 and TASK-M1-19*
+
+The human's words (R-417 quotes the whole message):
+
+> RQ-273: the echo row: (a), moved after M5-02 and M3-06; that task names
+> its thresholds. The Fourier row: (e), removed from Part 6 and parked as
+> a possible future feature (nothing current defines it). M1 doesn't wait
+> on it.
+
+*What it decides:*
+- **The uniform echo row: RQ-273's option (a).** The row moves out of the M1 checklist (REQ-TOOL-011) to a task that
+  comes after TASK-M5-02 (`quality_tier`) and TASK-M3-06 (`SimUniforms`), as R-113 moved the DECODE, ensemble and
+  live-effort rows. That task names the thresholds the echo shows.
+- **The Optional Fourier block row: option (e).** It is removed from render_contract Part 6's field-view table and
+  parked as a possible future feature: nothing current defines the truncated-Fourier path, its `a_k`, its ω or when it
+  is enabled.
+- **M1 doesn't wait on it.** REQ-TOOL-011 drops both rows, and TASK-M1-19 waits on nothing.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **The echo row's requirements, split off as R-113 split rows:** **REQ-TOOL-164 (new, M5)**, the catalogue covers the
+  uniform echo row on a real binding, catching a slider moved but nothing rebound; and **REQ-TOOL-165 (new, M5,
+  definition, R-72)**, the thresholds the echo shows, and the binding it reads `quality_tier` from (TASK-M3-06's
+  `SimUniforms` holds no tier), defined in render_contract Part 6 by the task and approved by physics.
+- **A new task, TASK-M5-31** ("The uniform echo view"), closes both. It depends on TASK-M5-02 and TASK-M3-06; it is a
+  new task rather than a line on TASK-M5-12, whose knobs and blast radii are a different deliverable. Reviewers code,
+  qa and physics (the definition), as TASK-M1-19's.
+- **Where the Fourier row is parked:** `docs/read_first/principia_00_philosophy.md` § "7. Parked — deliberate
+  post-1.0", the corpus's list of parked features, as a new §7.6a giving what it buys and why it waits (§7.7's rule).
+  `plan/section_notes.yaml` records §7.6a as parked, as §7.2 to §7.6 are. Its removal from the table is a "Removed
+  lines" entry against R-420.
+- **REQ-TOOL-011** drops "the optional Fourier block" and "the uniform echo (quality_tier, n_renorm, thresholds)" from
+  its statement; its verify marks the echo row with REQ-TOOL-164 and records the Fourier row's removal. It loses
+  `rq: RQ-273` and gains R-420. TASK-M1-19's checklist line and notes, and TASK-M2-25's note, follow.
+- RQ-273 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-420 is in the "design" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-164 and REQ-TOOL-165; REQ-TOOL-011's statement, verify, rulings, sources, note and `rq` change.
+
+## R-421 — The ICDescriptor golden: fields that are 0 at rest are compared bit-exact, the others within per-precision tolerances proposed by TASK-M2-03 and confirmed at the M2 gate; "hand-computed at f32" is the exact value rounded to f32 *(closes RQ-272)*
+*11 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "5. Unit tests" (the golden anchor; a sentence
+added), REQ-PAY-034 (reqio), REQ-PAY-095 (reqio, new), TASK-M2-03, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-272 archived) and `REVIEW_QUEUE.md`; built by TASK-M2-03*
+
+The human's words (R-417 quotes the whole message):
+
+> RQ-272: (c) and (a). Bit-exact for fields that are 0 at rest;
+> per-precision tolerances proposed by M2-03, confirmed at the M2 gate.
+> "Hand-computed at f32" means the exact value rounded to f32.
+
+*What it decides:*
+- **RQ-272's option (c): bit-exact for the fields that are 0 at rest.** At the golden IC (`z = 0`, rest) `K_0 = 0` and
+  `virial_ratio = 2K₀/|V₀| = 0` exactly; each is compared bit-exact, at f64 and f32.
+- **Option (a) for the others:** per-precision tolerances (f64 and f32) against the hand-computed golden values,
+  proposed with evidence by TASK-M2-03 and confirmed by the human at the M2 gate (R-71).
+- **"Hand-computed at f32" means the exact value rounded to f32,** not the formula evaluated in f32.
+
+*Applied per R-369 (mechanical consequences and readings; the human may veto any):*
+- **The calibration is REQ-PAY-095 (new, M2)**, closed by TASK-M2-03, as REQ-DEC-044 is for tests 1, 6 and 8.
+- **"0 at rest"** is read as the fields whose golden value is 0 because the golden IC is at rest: `K_0` and
+  `virial_ratio`, and any field REQ-PAY-088's definitions make 0 there, which TASK-M2-03 names in its PR.
+- **The f64 leg's hand-computed value** is read the same way, the exact value rounded to f64; the human's words
+  addressed f32 only.
+- **REQ-PAY-034**'s verify and dd_decoder §5's golden anchor say so; REQ-PAY-034 loses `rq: RQ-272` and gains R-421.
+- RQ-272 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-421 is in the "values" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-PAY-095; REQ-PAY-034's verify, rulings, sources, note and `rq` change.
+
+## R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*
+*11 Oct 2026 · applied in `docs/design/principia_memory_tiers.md` § "3. Memory model — payload + render targets" (the
+model; a bullet added) and § "5. Controller levers, ranked by impact" (a paragraph added),
+`docs/design/principia_dd_telemetry_and_tiers.md` § "6.2a Budgeting before allocating" (the requirement reworded),
+REQ-PERF-023, REQ-PERF-025 and REQ-PERF-035 (reqio), REQ-PERF-095 (reqio, new), TASK-M5-02, TASK-M5-10, TASK-M5-11,
+TASK-M6-15, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-269 archived) and
+`REVIEW_QUEUE.md`; built by TASK-M5-02, TASK-M5-10, TASK-M5-11 and TASK-M6-15*
+
+The human's words (R-417 quotes the whole message):
+
+> RQ-269: (c). A lower bound on Custom N (a correctness floor: N = 1
+> never refines), proposed with evidence at the M5 gate. Both memory
+> models count the per-quad QuadReduction for every N.
+
+*What it decides:*
+- **RQ-269's option (c), both (a) and (b).**
+- **A lower bound on Custom's `N`, a correctness floor.** At `N = 1` a quad holds one nominal sample, so nothing is
+  compared across the quad (scheduler contract Part 6: too low an `N` "misclassifies a quad as coherent by
+  undersampling itself"). At `E = 0` the quad never refines; at `E ≥ 1` only its one footprint's copy spread can split
+  it. The bound is a calibration (R-71), proposed with its evidence, at `E = 0` and at `E ≥ 1`, at the M5 gate.
+- **Flagged, and what was applied** (CLAUDE.md § "Rulings": "Where a ruling contradicts the corpus or itself, flag it
+  and record what was applied"; physics review 5484757609, F1, on PR #197). The human's "N = 1 never refines" holds
+  only at `E = 0`. With ensemble copies on, an `N = 1` quad holds E+1 copies (scheduler contract Part 9: "A nominal
+  grid sample (`SAMPLES_PER_QUAD_AXIS²` per quad) spawns E ensemble copies"), and Part 6's split test can still split
+  it on its one footprint's copy spread (the E+1-copy "data-side spread reduction", aggregated into `QuadReduction`).
+  What `N = 1` loses at every `E` is the comparison between grid positions (Part 6's "the quad's samples disagree").
+  Applied: memory_tiers §5, REQ-PERF-095's statement and this entry say one nominal sample, nothing compared across
+  the quad, never refining at `E = 0` and split only by its footprint's copy spread at `E ≥ 1`; REQ-PERF-095's verify
+  and TASK-M5-02's checklist ask for the floor's evidence at both `E = 0` and `E ≥ 1`. The floor stays a correctness
+  floor and a calibration, so nothing that gets built changes; recorded, not asked.
+- **Both memory models count the per-quad `QuadReduction`, for every `N`:** memory_tiers §3's estimate (REQ-PERF-025)
+  and telemetry §6.2a's pre-allocation fit (REQ-PERF-023).
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **The calibration is REQ-PERF-095 (new, M5)**, closed by **TASK-M5-02**, which builds `QualitySettings` and its Custom
+  override, as a named constant proposed with its evidence; the perf reviewer checks it. An M5 task closes it because
+  the human confirms it at the M5 gate. **REQ-PERF-035** (TASK-M6-15, M6) enforces it: Custom offers no power of two
+  below it. TASK-M6-15 needs REQ-PERF-095, reached through TASK-M5-11 and TASK-M5-10.
+- **The term.** memory_tiers §3 gains `reduction_mem = size_of(QuadReduction) × quads`, one per quad, over the leaves
+  (`render_px / N²` at the floor) and their ancestors (at most 4/3 of the leaves in a full quadtree), added to the total;
+  telemetry §6.2a's requirement becomes `quads × (N² × (E+1) × sizeof(SimState) + sizeof(QuadReduction))`. The size is
+  §3.7's, which TASK-M5-01 measures (R-410).
+- **memory_tiers §4's totals** predate the term. TASK-M5-10, whose estimator reproduces the table, recomputes it with
+  the term and writes it in, as it already recomputes the Ultra and Extreme rows (R-137).
+- REQ-PERF-023, REQ-PERF-025 and REQ-PERF-035 lose `rq: RQ-269` and gain R-422; TASK-M5-10's, TASK-M5-11's and
+  TASK-M6-15's acceptance lines follow.
+- RQ-269 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-422 is in the "design" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-PERF-095; REQ-PERF-023's, REQ-PERF-025's and REQ-PERF-035's statements, verifies, rulings, sources and `rq`
+change.
+
+## R-423 — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*
+*11 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
+reworded), `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation metadata" (a
+row added), R-400 (a forward line), REQ-TOOL-161 (reqio), REQ-RENDER-085 (reqio, new), TASK-M1-20 (new),
+`plan/tasks.yaml`, `plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes" (a gate item, and the check's
+result), `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-274); built by TASK-M1-20*
+
+The human's words (R-417 quotes the whole message):
+
+> For the M1 gate: physics to check the six fields moving to cool-warm.
+> If theta is an angle it needs a cyclic ramp, not a diverging one.
+
+*What it decides:*
+- **At the M1 gate, physics checks the six fields moving to cool-warm** under R-400 (PR #195, TASK-M1-17): `q_mass`,
+  `ftle`, `mean_y`, `S`, `theta` and `diffusion`, each drawn on `ramp_coolwarm` because its declared range spans zero.
+- **If `theta` is an angle, it takes a cyclic ramp, not a diverging one.** This narrows R-400's scope: a field that is
+  an angle is cyclic, whatever its range. So R-423 amends R-400 in part; R-416's "no veto on R-400's scope" stands for
+  the rest.
+
+*The check of `theta` (applied per R-369, a reading of the corpus):* **`theta` is an angle.** It is the unwrapped phase
+`θ̃` (dd_simstate_payload §1: "unwrapped phase → orbit_count, retrograde"), defined in dd_integrator § "3.7 The shape
+readout and winding" as the shape sphere's equatorial longitude, `atan2` of two components of `n`, accumulated by its
+principal-value step deltas, in radians: `orbit_count = ⌊|θ̃|/2π⌋`. render_contract Part 6's live views already draw
+"running `θ̃` → cyclic". So `theta`'s view moves to the cyclic ramp.
+
+*Applied per R-369 (mechanical consequences; the human may veto any):*
+- **The cyclic view is the template's:** the ledger gives `theta` the `cyclic` scale, and its generated view places
+  `raw = fract(θ̃ / 2π)` on the fixed `[0, 1]` with `ramp_twilight` (the prelude's LUT index 1), the period one turn,
+  as for `rho_angle` (REQ-TOOL-161). Here `fract(x) = x − ⌊x⌋`, WGSL's `fract` and the Rust reference's
+  `rem_euclid(1.0)`, not Rust's `f32::fract` (`x − trunc x`), so `raw ∈ [0, 1)` for negative `θ̃` too: `θ̃ = −π/2` gives
+  0.75 (physics review 5484757609, F2, on PR #197; REQ-RENDER-085). The view shows the net longitude turned since the
+  IC modulo one turn; the winding count and sense stay with the derived `orbit_count` and `retrograde`.
+- **New M1 work: REQ-RENDER-085 (new, M1)**, closed by **TASK-M1-20 (new)**, which depends on TASK-M1-17 and
+  re-renders `debug-views/generated-theta`. The M1 gate waits on it.
+- **The physics check of the other five** is a gate item in `plan/MILESTONES.md` § "M1", run by a read-only physics
+  dispatch before the gate report: for `q_mass`, `ftle`, `mean_y`, `S` and `diffusion`, that each is a signed quantity
+  whose zero is a meaningful centre for a diverging ramp. A field that fails goes to `REVIEW_QUEUE.md` for the human.
+- **The five-field check's result** (run early, in physics review 5484757609 of PR #197): `S`, `ftle` and `diffusion`
+  pass, each signed at finite time with zero a meaningful centre, none an angle. `q_mass` and `mean_y` are not
+  confirmed: `q_mass`'s formula is unwritten (REQ-PAY-088, M2) and `mean_y`'s `y` undefined (REQ-PAY-073, M3), each
+  ledger range is the unbounded default (`crates/ledger/src/payload.rs`:261 and :217), and the corpus's "mass ratios"
+  and "spread `y`" would make each non-negative, so viridis. Filed as **RQ-274** for the human; it holds the M1 gate's
+  cool-warm item for those two fields, and no task. `plan/MILESTONES.md` § "M1"'s gate item records the result.
+- dd_generation_root §3.4 gains a `theta` row (`cyclic`); render_gui_spec §10.1's "`rho_angle` is the one cyclic
+  field" names both; REQ-TOOL-161's statement names both. R-400 gains a forward line ("Amended in part by R-423") and a
+  "Still in force" line.
+- R-423 is in the "design" group of `plan/rule_groups.yaml`, with R-400.
+
+Adds REQ-RENDER-085; REQ-TOOL-161's statement, rulings and sources change.

@@ -162,20 +162,25 @@ fn suite_fixtures() -> Vec<(String, Option<String>)> {
     out
 }
 
-/// Checks that each of `ids`, the registry's debug entries, has a `debug-views` case.
+/// Checks that each of `ids`, the registry's debug entries, has a `debug-views` case: a case of
+/// [`debug_cases`], or, for a structural view (`golden_scene::is_structural`; TASK-M1-13), the structural scene of its
+/// case name (`validation::structural_scene::NAMES`).
 fn check_coverage(ids: &[String]) {
     let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
     for id in ids {
+        let structural = golden_scene::is_structural(id)
+            && validation::structural_scene::NAMES.contains(&golden_scene::case_name(id).as_str());
         assert!(
-            cases.iter().any(|c| &c.id == id),
+            structural || cases.iter().any(|c| &c.id == id),
             "the debug view `{id}` has no debug-views case"
         );
     }
 }
 
 /// Checks that each `debug-views` case has a fixture of `fixtures` naming its scene, and that every other fixture
-/// renders a golden scene of another task's (`golden_scene::NAMES`: TASK-M1-10's `state_view` and `detail_view`; the
-/// task's Notes say other tasks add their cases to this suite), so that no fixture is left without a case or a scene.
+/// renders a golden scene of another task's (`golden_scene::NAMES`: TASK-M1-10's `state_view` and `detail_view`;
+/// `structural_scene::NAMES`: TASK-M1-13's structural views; the task's Notes say other tasks add their cases to this
+/// suite), so that no fixture is left without a case or a scene.
 fn check_fixtures(fixtures: &[(String, Option<String>)]) {
     let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
     for c in cases {
@@ -195,7 +200,9 @@ fn check_fixtures(fixtures: &[(String, Option<String>)]) {
     for (name, harness) in fixtures {
         let scene = harness.as_deref().unwrap_or_default();
         assert!(
-            cases.iter().any(|c| c.name == *name) || golden_scene::NAMES.contains(&scene),
+            cases.iter().any(|c| c.name == *name)
+                || golden_scene::NAMES.contains(&scene)
+                || validation::structural_scene::NAMES.contains(&scene),
             "the fixture `{name}` is no debug-views case and renders no other golden scene"
         );
     }
@@ -237,6 +244,29 @@ negative_control!(
         ids.push("debug/word/unregistered".to_owned());
         check_coverage(&ids);
     }
+);
+
+/// Each structural view (`render::structural::VIEWS`; TASK-M1-13) is covered by the structural scene of its name,
+/// not a case of the showcase; a structural scene that is no view (`overlays`) covers no registry id.
+#[test]
+fn debug_views_structural_views_are_their_scenes() {
+    let ids: Vec<String> = render::structural::VIEWS
+        .iter()
+        .map(|v| format!("debug/{v}"))
+        .collect();
+    let cases = debug_cases().unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        ids.iter().all(|id| cases.iter().all(|c| &c.id != id)),
+        "a structural view is a case of the showcase"
+    );
+    check_coverage(&ids);
+}
+
+negative_control!(
+    debug_views_structural_views_are_their_scenes,
+    "a structural scene that is no view registered as a debug view",
+    expected = "the debug view `debug/overlays` has no debug-views case",
+    check_coverage(&["debug/overlays".to_owned()])
 );
 
 #[test]

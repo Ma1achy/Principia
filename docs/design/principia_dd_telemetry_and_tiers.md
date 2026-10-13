@@ -478,7 +478,8 @@ work** — this project has already found a sticky bit nothing read and a diagno
 ### 6.2a Budgeting before allocating
 
 **This is the one that must not be handled by crashing, because it is predictable.** The payload
-size is known in advance: `quads x N^2 x (E+1) x sizeof(SimState)`. So:
+size is known in advance: `quads x (N^2 x (E+1) x sizeof(SimState) + sizeof(QuadReduction))`, the
+per-quad `QuadReduction` counted at every `N` (R-422; memory_tiers §3). So:
 
 - **Budget before allocating.** Query the adapter's reported limits, compute the requirement, and if
   it does not fit, **reduce the tier and report it** rather than attempting the allocation.

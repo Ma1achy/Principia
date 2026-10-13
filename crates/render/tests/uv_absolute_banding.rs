@@ -11,8 +11,8 @@
 //!   at ℓ = 20 (R-395), and the test holds the sweep to it, so no collapse can stand in for a pass.
 //!
 //! Its negative control (R-176) is the non-dyadic fixture R-395 names, N = 6 at ℓ = 19, whose departure exceeds the
-//! proposed bound before any collapse: the check can fail. It only shows that; RQ-258, open, asks what the bound should
-//! be at a non-dyadic N, and the sweep covers N = 8 and N = 16 until it is ruled.
+//! proposed bound before any collapse: the check can fail. It only shows that; R-398 makes every `N` the product offers
+//! a power of two, so no offered `N` is non-dyadic, and the sweep covers N = 8 and N = 16, the named tiers' `N`.
 
 use render::bind::{self, Context, ViewOutput};
 use render::coords::{banded, banding_departure, BANDING_BOUND};
@@ -174,7 +174,7 @@ fn uv_absolute_no_banding_to_l_switch() {
 
 negative_control!(
     uv_absolute_no_banding_to_l_switch,
-    "the non-dyadic fixture, N = 6 at ℓ = 19, departs past the proposed bound before any collapse (RQ-258, open)",
+    "the non-dyadic fixture, N = 6 at ℓ = 19, an N R-398 rules out, departs past the bound before any collapse",
     expected = "banded before ℓ_switch",
     {
         let (n, depth) = (6, 19);

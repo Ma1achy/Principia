@@ -101,18 +101,29 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   because TASK-M7-20, the M7 task that builds the simulation, closes it, and no task closes an earlier milestone's
   requirement. The M1 gate does not pass until REQ-COL-061 is green on `main`, so **TASK-M7-20 merges before the M1
   gate**.
+- **Also at the M1 gate (R-423): physics checks the six fields R-400 moved to cool-warm** (PR #195, TASK-M1-17):
+  `q_mass`, `ftle`, `mean_y`, `S`, `theta` and `diffusion`. Before the gate report, the orchestrator dispatches a
+  read-only physics check of `q_mass`, `ftle`, `mean_y`, `S` and `diffusion`: that each is a signed quantity whose
+  zero is a meaningful centre for a diverging ramp centred at zero. A field that fails goes to `REVIEW_QUEUE.md` for
+  the human, and the gate report gives the result for each. `theta` is an angle, so it moves to the cyclic ramp
+  (TASK-M1-20, REQ-RENDER-085), an M1 task the gate waits on.
+  **The check's result** (run early, in physics review 5484757609 of PR #197): `S`, `ftle` and `diffusion` pass, each
+  signed at finite time with zero a meaningful centre, none an angle. `q_mass` and `mean_y` are not confirmed:
+  `q_mass`'s formula (REQ-PAY-088, M2) and `mean_y`'s `y` (REQ-PAY-073, M3) are undefined, and each ledger range is
+  the unbounded default. They are **RQ-274**, which this item waits on for those two fields; the gate report gives
+  the human's ruling on it.
 
 <!-- gate:M1 -->
-**Exit gate — 99 requirements** (and every earlier gate still green):
+**Exit gate — 103 requirements** (and every earlier gate still green):
 
 - INT (2): REQ-INT-001, REQ-INT-086
 - PAY (14): REQ-PAY-021…033, REQ-PAY-090
 - GEN (6): REQ-GEN-009…012, REQ-GEN-027, REQ-GEN-033
-- RENDER (25): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077, REQ-RENDER-084
-- COL (11): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056, REQ-COL-062…064
+- RENDER (26): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077, REQ-RENDER-084…085
+- COL (13): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056, REQ-COL-062…064, REQ-COL-067…068
 - GUI (1): REQ-GUI-001
 - TOOL (34): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137, REQ-TOOL-152…157, REQ-TOOL-160…162
-- VAL (4): REQ-VAL-010…012, REQ-VAL-122
+- VAL (5): REQ-VAL-010…012, REQ-VAL-122, REQ-VAL-182
 - SYS (2): REQ-SYS-009, REQ-SYS-080
 <!-- /gate:M1 -->
 
@@ -129,18 +140,18 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 161 requirements** (and every earlier gate still green):
+**Exit gate — 164 requirements** (and every earlier gate still green):
 
 - DEC (38): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…046
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
 - CHART (47): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055
 - INT (2): REQ-INT-002…003
-- PAY (3): REQ-PAY-034…035, REQ-PAY-088
-- GEN (5): REQ-GEN-013…015, REQ-GEN-025…026
+- PAY (4): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095
+- GEN (6): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034
 - RENDER (3): REQ-RENDER-025…027
 - COL (3): REQ-COL-006, REQ-COL-057, REQ-COL-060
 - GUI (6): REQ-GUI-002…007
-- TOOL (2): REQ-TOOL-029…030
+- TOOL (3): REQ-TOOL-029…030, REQ-TOOL-163
 - VAL (16): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174
 - SYS (7): REQ-SYS-010…016
 <!-- /gate:M2 -->
@@ -220,7 +231,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 167 requirements** (and every earlier gate still green):
+**Exit gate — 171 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
@@ -229,13 +240,13 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - PAY (18): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089, REQ-PAY-093…094
 - GEN (2): REQ-GEN-017, REQ-GEN-030
 - SCHED (50): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088, REQ-SCHED-098
-- REF (12): REQ-REF-001…010, REQ-REF-045, REQ-REF-052
+- REF (13): REQ-REF-001…010, REQ-REF-045, REQ-REF-052…053
 - RENDER (22): REQ-RENDER-037…056, REQ-RENDER-076, REQ-RENDER-079
 - COL (1): REQ-COL-007
 - GUI (1): REQ-GUI-009
-- TOOL (15): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158
+- TOOL (17): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158, REQ-TOOL-164…165
 - VAL (6): REQ-VAL-080…083, REQ-VAL-172…173
-- PERF (23): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093
+- PERF (24): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093, REQ-PERF-095
 - SYS (8): REQ-SYS-030…037
 <!-- /gate:M5 -->
 

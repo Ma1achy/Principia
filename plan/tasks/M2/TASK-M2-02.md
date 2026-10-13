@@ -31,6 +31,7 @@ The first two blocks of the shared decoder exist in the one Rust source, generic
 - `docs/design/principia_systems_architecture.md` § "2. Component inventory, by rung"
 - `docs/design/principia_systems_architecture.md` § "5. The seam catalogue"
 - `docs/design/principia_chart_reference.md` § "5.2 Tests that can fail"
+- `decisions.md` § "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
 
 ## Deliverables
 - `crates/kernel/src/decode/latent.rs` (the `Latent<R>` type, exactly 8 components, block accessors).
@@ -46,7 +47,7 @@ The first two blocks of the shared decoder exist in the one Rust source, generic
 - `cargo test -p kernel decode_config` — z = 0 → α = π/4, β = π/2, ‖ρ̃‖ = ‖λ̃‖; ‖ρ̃‖² + ‖λ̃‖² = 1 on fuzzed z (REQ-DEC-012).
 - `cargo test -p kernel decode_reconstruct` — r₁ − r₀ = ρ, total CoM = 0 and I = Σmᵢ‖rᵢ‖² = 1 on fuzzed z; decoder test 6: recompute ρ̃, λ̃ from the emitted (m, rᵢ) and recover (α, β, R̃ = 1) (REQ-DEC-013).
 - `cargo test -p kernel decode_alpha_orientation` — decoder test 9: α → 0 ⇒ ‖r₁ − r₀‖ maximal and ‖λ‖ minimal; monotone crossover at π/4 (REQ-DEC-015).
-- Review (physics): the decoder has no endpoint-landing or exclusion guard; degenerate configurations are only approached as limits (REQ-DEC-028).
+- Review (physics): the decoder has no endpoint-clamping, landing or exclusion guard; the endpoints it reaches (the lower poles where a link underflows, f32 and f64) it reaches by the links' own rounding, as dd_decoder §3.2 states, and in exact arithmetic degenerate configurations are only approached as limits (R-417) (REQ-DEC-028).
 - Review (physics): no global mass/physics parameter exists outside z and the chart; rotation and scale are fixed by the canonical-frame decode (ρ̃ on +x, R̃ = 1), not by latent coordinates; the latent type has exactly 8 components (REQ-SYS-010).
 - `cargo test -p kernel units_dimensionless` — decoded ICs have total mass 1 and I = 1; G is the constant 1 (REQ-INT-002).
 - Proposal: the f64 and f32 tolerances of dd_decoder test 1's Σmᵢ = 1, CoM = 0 and I = 1 and of test 6, with the measured residuals over fuzzed z as evidence; the human confirms them at the M2 gate (REQ-DEC-044; test 1's Σpᵢ = 0 is REQ-DEC-045, TASK-M2-03, and test 8 is REQ-DEC-046, TASK-M2-09, split per R-369).
@@ -56,3 +57,7 @@ The first two blocks of the shared decoder exist in the one Rust source, generic
 - Gap G9: decoder §5 tests 1 and 6 say "precision-appropriate tolerance" / "to tolerance" with no value; only the cross-backend factor (REQ-DEC-043) is a calibration requirement.
 - REQ-DEC-014 (exact-pole ingestion) is closed with encode in TASK-M2-15, because "ingest" is the encode path.
 - Closes, for gaps the corpus leaves open: REQ-DEC-044 (R-71 calibration) (classification accepted by R-132).
+- R-417 (11 Oct 2026, closing RQ-270, filed from this task's PR #192): REQ-DEC-028 is amended (the range closed in
+  floating point, no clamping, no guard) and loses `rq: RQ-270`. This task does not depend on TASK-M2-30 (the f32
+  images of π/2 and π rounded toward zero): REQ-DEC-028 is a review checklist, and the configuration-block tests wrap
+  β's recovered angle rather than assert the upper bound, so they pass with either constant (applied per R-369).

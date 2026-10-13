@@ -11,7 +11,7 @@
 //! `length` 127), and, for an `f32` value, the absence NaN by its bits (lowering Part 3a). A field the lane gives no
 //! validity is refused. `d_min`'s f16 +∞ is no invalid value but its unset one
 //! (R-271), tested by its bits as the validity lane tests it (R-343 item 5; RQ-233), which the ramp draws in the
-//! neutral "not yet" grey of running samples, never the invalid pattern (R-280).
+//! "not yet" style of running samples, `debug_not_yet(frag_xy)`, never the invalid pattern (R-280, R-399).
 //!
 //! **The invalid lane.** A field ramp is not a debug view, so it masks (render_gui_spec §13, validity first): an
 //! invalid pixel, NaN or a stored sentinel, takes the ramp's invalid treatment, by default the hatched invalid pattern
@@ -45,7 +45,8 @@ pub struct ScalarField {
     pub value: String,
     /// Whether the value is valid, a WGSL `bool` expression over `ctx` and the value `v`.
     pub valid: String,
-    /// Whether the value is the field's unset one (R-271), drawn in the "not yet" grey (R-280): a WGSL `bool` over `v`.
+    /// Whether the value is the field's unset one (R-271), drawn in the "not yet" style (R-280, R-399): a WGSL `bool`
+    /// over `v`.
     pub unset: Option<String>,
     /// The stored sentinel, if any (R-136): the CPU twin's.
     sentinel: Option<f64>,
@@ -106,7 +107,8 @@ impl ScalarField {
             valid.push(lane_valid);
         }
         // The CPU twin's stored sentinel (R-136), the one the lane's predicate tests (the word's truncation is its
-        // `length` 127), and `d_min`'s unset value (R-271), drawn in the "not yet" grey ahead of the validity (R-280).
+        // `length` 127), and `d_min`'s unset value (R-271), drawn in the "not yet" style ahead of the validity (R-280,
+        // R-399).
         let tested = if lane == "word" {
             e.sentinel
         } else {
@@ -201,7 +203,7 @@ pub struct FieldRamp {
 pub enum Shown {
     /// The invalid treatment: NaN or a stored sentinel.
     Invalid,
-    /// The "not yet" grey, `DBG_NOT_YET` (R-280).
+    /// The "not yet" style, `debug_not_yet(frag_xy)` (R-280, R-399).
     NotYet,
     /// `ramp_viridis(t)`.
     Ramp(f64),
@@ -219,7 +221,7 @@ impl FieldRamp {
     }
 
     /// `d_min`'s ramp, `lin` over `[0, 2]`, render_gui_spec §10.1's declared domain (`d_min ∈ [0, ~2]`): its NaN is
-    /// invalid, its unset value drawn in the "not yet" grey (R-280).
+    /// invalid, its unset value drawn in the "not yet" style (R-280, R-399).
     pub fn d_min() -> Result<FieldRamp, String> {
         Ok(FieldRamp {
             field: ScalarField::payload("d_min")?,
@@ -228,8 +230,8 @@ impl FieldRamp {
     }
 
     /// The ramp as a colour occupant: its invalid lane's uniforms in the header (`INVALID_OVERRIDE`, 0 for the
-    /// pattern, and `INVALID_COLOUR`, the override's colour), then `colour`: the unset value's grey where the field has
-    /// one, the invalid treatment where the value is not valid, else the ramp.
+    /// pattern, and `INVALID_COLOUR`, the override's colour), then `colour`: the unset value's "not yet" style where
+    /// the field has one, the invalid treatment where the value is not valid, else the ramp.
     pub fn wgsl(&self) -> String {
         let [r, g, b] = override_default();
         let mut out = format!(
@@ -245,7 +247,10 @@ impl FieldRamp {
             self.field.value
         );
         if let Some(unset) = &self.field.unset {
-            let _ = writeln!(out, "    if ({unset}) {{ return DBG_NOT_YET; }}");
+            let _ = writeln!(
+                out,
+                "    if ({unset}) {{ return debug_not_yet(ctx.frag_xy); }}"
+            );
         }
         let _ = write!(
             out,

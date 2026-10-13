@@ -4,6 +4,8 @@
 //! - REQ-RENDER-020: the prelude is the layout build step's output, not a hand file, and a custom node calling
 //!   `ramp_viridis` compiles and runs (`prelude_generated_*`); the LUT ramps match matplotlib's published tables at
 //!   their stops (R-122), and the grey ramp and hue wheel their definitions (`prelude_luts_*`).
+//! - REQ-RENDER-084 (R-400; TASK-M1-17): `ramp_coolwarm` matches Moreland's checked-in table at its stops, interpolates
+//!   between them as `ramp_viridis` does, and `t = ½` is the table's neutral (`ramp_coolwarm_*`).
 //! - REQ-RENDER-021: `range_norm` against the CPU reference, in and out of range, with `auto_range` on and off; out of
 //!   range clamps under the fixed range (`range_norm_*`).
 //! - REQ-TOOL-009, REQ-TOOL-122: each `dbg_*` helper returns its defined colour for fixture inputs; `dbg_sentinel(-1.0,
@@ -149,6 +151,7 @@ const DBG_HASH: u32 = 11;
 const DBG_SENTINEL: u32 = 12;
 const SRGB_TO_LINEAR: u32 = 13;
 const LINEAR_TO_SRGB: u32 = 14;
+const RAMP_COOLWARM: u32 = 15;
 
 fn f(x: f32) -> u32 {
     x.to_bits()
@@ -1405,4 +1408,132 @@ negative_control!(
             .filter(|(name, _)| !name.starts_with("turbo "))
             .collect::<Vec<_>>()
     )
+);
+
+// ── ramp_coolwarm (REQ-RENDER-084; R-400, R-122; TASK-M1-17) ─────────────────────────────────────────────────────────
+
+/// Moreland's cool-warm table, CoolWarmFloat33, as matplotlib 3.8.0's `_coolwarm_data` (`_cm.py`) transcribes it.
+const COOLWARM: Published = Published {
+    source: "Moreland's published table",
+    len: 33,
+    first: [0.2298057, 0.298717966, 0.753683153],
+    middle: (16, [0.865395197, 0.86541021, 0.865395561]),
+    last: [0.705673158, 0.01555616, 0.150232812],
+    sum: 66.45168609999999,
+};
+
+/// The render tests' copy of the table, `tests/data/lut/coolwarm.txt`, which the hatch's measurement reads.
+fn coolwarm_test_copy() -> Vec<Rgb> {
+    palettes::table_stops(include_str!("data/lut/coolwarm.txt"))
+}
+
+#[test]
+fn ramp_coolwarm_matches_the_published_table_at_its_stops() {
+    let stops = present::coolwarm_stops();
+    check_published("cool-warm", &stops, &COOLWARM);
+    assert_eq!(
+        stops,
+        coolwarm_test_copy(),
+        "the ledger's cool-warm table is not the render tests' copy"
+    );
+    check_lut_stops(&gpu(), as_is(), RAMP_COOLWARM, &stops, "cool-warm");
+}
+
+negative_control!(
+    ramp_coolwarm_matches_the_published_table_at_its_stops,
+    "a cool-warm ramp reading 32 intervals as 31 misses the table",
+    expected = "cool-warm at stop",
+    check_lut_stops(
+        &gpu(),
+        mutated(
+            "let x = clamp(t, 0.0, 1.0) * 32.0;",
+            "let x = clamp(t, 0.0, 1.0) * 31.0;"
+        ),
+        RAMP_COOLWARM,
+        &present::coolwarm_stops(),
+        "cool-warm"
+    )
+);
+
+/// `ramp_coolwarm` on the GPU, `text` applied, midway between each pair of neighbouring stops and at a quarter past
+/// stops 3 and 20: within the decode's bound of the CPU mirror's ramp there, which interpolates in sRGB and then
+/// decodes, as `ramp_viridis` does; and the mirror's `ramp_coolwarm` is that ramp over the cool-warm table.
+fn check_coolwarm_between(gpu: &GpuHarness, text: Text) {
+    let stops = present::coolwarm_stops();
+    let last = (stops.len() - 1) as f64;
+    let mut ts: Vec<f32> = (0..stops.len() - 1)
+        .map(|k| ((k as f64 + 0.5) / last) as f32)
+        .collect();
+    ts.extend([3.25 / last, 20.25 / last].map(|t| t as f32));
+    let cases: Vec<Case> = ts.iter().map(|&t| case(RAMP_COOLWARM, &[f(t)])).collect();
+    let got = run(gpu, text, &cases);
+    let slope = ramp_slope(&stops);
+    for (&t, p) in ts.iter().zip(got) {
+        let t = f64::from(t);
+        let want = present::ramp(&stops, t);
+        assert!(
+            close(present::ramp_coolwarm(t), want),
+            "the mirror's ramp_coolwarm({t}) does not read the cool-warm table"
+        );
+        check_rgb(
+            &format!("cool-warm between stops at {t}"),
+            p,
+            want,
+            same(SRGB_DECODE_BOUND + slope * 2.0 * U * last),
+        );
+    }
+}
+
+#[test]
+fn ramp_coolwarm_interpolates_as_ramp_viridis() {
+    check_coolwarm_between(&gpu(), as_is());
+}
+
+negative_control!(
+    ramp_coolwarm_interpolates_as_ramp_viridis,
+    "a cool-warm ramp that snaps to the stop below misses the midpoints",
+    expected = "cool-warm between stops",
+    check_coolwarm_between(
+        &gpu(),
+        mutated(
+            "return srgb_to_linear(mix(LUT_COOLWARM[k], LUT_COOLWARM[k + 1u], x - f32(k)));",
+            "return srgb_to_linear(LUT_COOLWARM[k]);"
+        )
+    )
+);
+
+/// Checks that `ramp(½)` is the table's neutral, stop 16, decoded, a grey whose OKLab chroma is below `1e-4`, on the
+/// GPU (`text` applied) and in the mirror.
+fn check_neutral(gpu: &GpuHarness, text: Text, ramp: fn(f64) -> Rgb) {
+    let stops = present::coolwarm_stops();
+    let neutral = present::srgb_to_linear3(stops[16]);
+    let lab = present::linear_to_oklab(neutral);
+    let chroma = lab[1].hypot(lab[2]);
+    assert!(
+        chroma < 1e-4,
+        "stop 16 is not neutral: OKLab chroma {chroma}"
+    );
+    assert!(
+        close(ramp(0.5), neutral),
+        "the mirror's t = ½ is not the table's neutral"
+    );
+    let got = run(gpu, text, &[case(RAMP_COOLWARM, &[f(0.5)])]);
+    check_rgb(
+        "cool-warm at t = ½, the neutral",
+        got[0],
+        neutral,
+        same(SRGB_DECODE_BOUND),
+    );
+}
+
+#[test]
+fn ramp_coolwarm_midpoint_is_the_tables_neutral() {
+    check_neutral(&gpu(), as_is(), present::ramp_coolwarm);
+}
+
+negative_control!(
+    ramp_coolwarm_midpoint_is_the_tables_neutral,
+    "a mirror placing ½ a stop off the neutral",
+    expected = "is not the table's neutral",
+    check_neutral(&gpu(), as_is(), |t| present::ramp_coolwarm(t + 0.5 / 32.0))
 );

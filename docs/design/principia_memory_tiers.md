@@ -84,12 +84,19 @@ render_px      = display_px × render_scale²
 payload_mem    = (E+1) × bytes × render_px                       (the SimState samples — one per render pixel at the floor)
 render_targets = k_d × display_px × 4  +  k_r × render_px × 4    (k_d ≈ 3 display-res: swap chain + final composite;
                                                                   k_r ≈ 3 render-res: backdrop + compositing intermediates)
-total          ≈ payload_mem + render_targets + fixed            (fixed = bake texture, staging)
+reduction_mem  = size_of(QuadReduction) × quads                  (one per quad at every N, R-422: the leaves,
+                                                                  render_px / N² at the floor, plus their ancestors)
+total          ≈ payload_mem + reduction_mem + render_targets + fixed   (fixed = bake texture, staging)
 ```
 
 > **Why the split matters:** the swap chain / final composite are *necessarily display-sized* (that's what is presented), so they do **not** shrink with `render_scale` — only the render-res intermediates do. An all-at-render-resolution model undercounts targets exactly where the term matters (low `render_scale` on big displays). Corrected here; only the sub-native tiers' totals move.
 
 - **`payload_mem`** — the sample memory. `(E+1)` (shadow is inside `SimState`), `bytes` = 144/96, `render_px` = live sample count (one per render pixel — the screen floor, not a separate spp factor).
+- **`reduction_mem`** (R-422) — one `QuadReduction` per quad, at every `N`, Custom's included: its size is dd_generation_root
+  §3.7's, which TASK-M5-01 measures (R-410), and `quads` counts the leaves (`render_px / N²`) and their ancestors (at
+  most 4/3 of the leaves in a full quadtree). It falls as `1/N²` per render pixel, so at a small Custom `N` it is of the
+  order of `SimState`'s, and the model counts it at every `N`. §4's totals predate the term; TASK-M5-10 recomputes
+  them with it.
 - **`render_targets`** — the **rasterised image itself uses VRAM**: ~3 buffers at **display** resolution (swap chain + final composite — fixed regardless of tier) + ~3 at **render** resolution (backdrop + intermediates — scale with `render_scale²`). At native (`render_scale = 1`) the six together ≈ 0.05 GB @1080p / 0.09 @1440p / 0.20 @4K; below native only the render-res half shrinks.
 - **`render_scale` is the quadratic lever** — it changes `render_px`, so it cuts payload, render targets, *and* per-frame compute **all at once**. The single most effective performance knob (this is why games lean on dynamic resolution).
 
@@ -203,6 +210,13 @@ Under memory/compute pressure, auto-mode pulls in this order (top levers cut **b
 
 **Custom's `N` is a power of two (R-398)**, each within the one-workgroup-per-quad thread ceiling (`N² ≤`
 `maxComputeInvocationsPerWorkgroup`, REQ-PERF-011); it offers no other value.
+
+**Custom's `N` has a lower bound (R-422)**, a correctness floor, not a memory one: at `N = 1` a quad holds one nominal
+sample, so nothing is compared across the quad (scheduler contract Part 6: too low an `N` "misclassifies a quad as
+coherent by undersampling itself"). At `E = 0` it never refines; at `E ≥ 1` only its one footprint's copy spread
+(Part 9's E+1 copies, Part 6's split test) can split it. Its value is a calibration (R-71), proposed with its
+evidence at `E = 0` and at `E ≥ 1` at the M5 gate (REQ-PERF-095, TASK-M5-02); Custom offers no power of two below it.
+Both memory models count the per-quad `QuadReduction` at every `N` (§3; telemetry §6.2a).
 
 **Custom's `E` is not capped by the outcome histogram (R-410).** `QuadReduction`'s `class_histogram` bins are u32
 (dd_generation_root §3.7), so they hold every setting that can allocate: a quad's `N² × (E+1)` copies reach
