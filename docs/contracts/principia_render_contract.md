@@ -138,12 +138,18 @@ Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §
   is not seen to be guarded, and the lint reports the first read of `ftle` or `ensemble_spread` in each of its functions
   as unchecked.
 - **The exceptions**, each to the one rule it names, as Part 5, Part 6 or R-79's debug exception requires them: the
-  field views of `r_sh` and `p_sh` and their direction-cosine reductions read the shadow (Part 6: a view per field, every
-  struct); the structural views `debug/s_*` and the posts `fallback_tint` and `pending_hatch` read the scheduler's quad
-  fields (Part 6: the quad fields and the structural overlays); the FTLE-running and diffusion-slope views read
+  field views of `r_sh` and `p_sh` and their direction-cosine reductions read the shadow (Part 6: a view per field,
+  every struct); the structural views `debug/s_*` and the posts `fallback_tint` and `pending_hatch` read the scheduler's
+  quad fields (Part 6: the quad fields and the structural overlays); the FTLE-running and diffusion-slope views read
   `ctx.params.dt_macro` (Part 5, "Live-state & array inspection": `S/t` and `C_ty/C_tt`); the whole-word hash view hands
   the word to `dbg_hash_word` (Part 6's word views: `dbg_hash` of the uint4); and the coordinate presets read the quad's
-  frame (Part 6's UV view; debug tooling plan §F's UV passthrough).
+  frame (Part 6's UV view; debug tooling plan §F's UV passthrough). These are the views built so far. A later view that
+  Part 5, Part 6 or R-79's debug exception lets read what a rule forbids is excepted by the task that builds it, which
+  adds it here, to the one rule it reads past, with the reason, and to the lint's list, as these were: so, when they are
+  built, the DECODE view, its agreement presets and ROUNDTRIP, which read `ctx.chart.z` (the chart's; Part 6's field
+  views), the impurity-mask cross-check, which reads the quad's `dominant_outcome` (the scheduler's; Part 6's
+  cross-checks), and the diffusion (Welford) cross-check, which reads `ctx.params.dt_macro` to recompute `C_tt(n)` (the
+  integrator's; dd_generation_root §3.5).
 
 ---
 

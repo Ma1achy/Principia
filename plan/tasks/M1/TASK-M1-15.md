@@ -63,3 +63,6 @@ The rules the fragment side must keep from now on are checked in CI rather than 
 - Applied per R-369 (qa review 5508436106): a source, a file under `shaders/wgsl/frag/source/`, is linted in the
   stain's context, as the other slots that read `ctx` are, and held to the guard as a debug view is, for every sample
   but the own one it forwards.
+- Applied per R-369 (physics review 5507966256 F2): Part 4 names the exceptions of the views built so far, and the
+  task that builds a later one (DECODE and its agreement presets, ROUNDTRIP, the impurity-mask and Welford
+  cross-checks) adds its own exception, to its one rule (REQ-COL-069).
