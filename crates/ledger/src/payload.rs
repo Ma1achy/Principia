@@ -4,34 +4,40 @@
 //! (R-70, R-86): §3.4's `delta_E_max_abs` and `delta_Lz_max_abs` are the payload's `dE_max` and `dLz_max`, and §3.8's
 //! `shadow` is the payload's `r_sh` and `p_sh`.
 //!
-//! Where §3 gives a field no scale or range, the entry is `lin` over (−∞, ∞) (or its type's full range), as §3.8's
-//! worked entries do for `ftle`; §3.6's log fields are > 0. Consumers are render, export and debug, as there. `n`, the
-//! shape-sphere point, is §3.8's worked entry: `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`, `lin` over [−1, 1]
-//! in each component (TASK-M1-12; RQ-235).
+//! Where §3 gives a field no scale, the entry is `lin`; where it gives no range, the entry writes (−∞, ∞), which
+//! declares nothing: the range is a gap (R-426), unless the ledger declares it with its citation or marks it
+//! provisional, below. §3.6's log fields are > 0. Consumers are render, export and debug, as §3.8's worked entries
+//! have them. `n`, the shape-sphere point, is §3.8's worked entry: `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`,
+//! `lin` over [−1, 1] in each component (TASK-M1-12; RQ-235).
 //!
 //! **Declared lower bounds (R-400; TASK-M1-17).** A numeric view whose field's declared range spans zero is drawn on
-//! the diverging ramp, so the unbounded default must not make a field the corpus gives a non-negative domain read as
-//! signed: each such field declares its lower bound, citing the line that gives it ([`NON_NEGATIVE`]). `K_0` is
-//! `[0, ∞)` and `V_0` `(−∞, 0]`, both `lin` (R-403). Every other field takes its range as declared; `q_mass`, whose
-//! formula the corpus does not yet give (REQ-PAY-088, TASK-M2-03), keeps the unbounded default.
+//! the diverging ramp, so a field the corpus gives a non-negative domain must not read as signed: each such field
+//! declares its lower bound, citing the line that gives it ([`NON_NEGATIVE`]). `K_0` is `[0, ∞)` and `V_0` `(−∞, 0]`,
+//! both `lin` (R-403).
+//!
+//! **Range states (R-426; dd_generation_root §3.8).** Each field's range is one of §3.8's three states
+//! ([`range_state`]): `declared(lo, hi, citation)`, with its citation in [`SIGNED`], [`NON_NEGATIVE`] or
+//! [`DECLARED`]; `provisional(requirement)`, `q_mass` and `mean_y` ([`PROVISIONAL`]), drawn as (−∞, ∞) on
+//! `ramp_coolwarm` until their requirements declare them; or `gap`, a range written and never cited, which never spans
+//! zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or `diverging` scalar field whose
+//! range is a gap fails generation ([`crate::gen::numeric::undeclared`]).
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{
-    Bound, Consumer, EntryBuilder, FieldType, Ledger, Location, Member, Overflow, Provenance,
-    Range, Scale, Span, Storage, Struct, Word,
+    Bound, Consumer, Entry, EntryBuilder, FieldType, Ledger, Location, Member, Overflow,
+    Provenance, Range, RangeState, Scale, Span, Storage, Struct, Word,
 };
 
 const SHOWN: &[Consumer] = &[Consumer::Render, Consumer::Export, Consumer::Debug];
 
+/// An entry over (−∞, ∞): a gap until the ledger declares the range, with its citation, or marks it provisional
+/// ([`range_state`]; R-426).
 fn entry(name: &'static str, location: Location, ty: FieldType, scale: Scale) -> EntryBuilder {
     EntryBuilder::new(name)
         .location(location)
         .ty(ty)
         .scale(scale)
-        .range(Range {
-            lo: Bound::Unbounded,
-            hi: Bound::Unbounded,
-        })
+        .range(Range::UNBOUNDED)
         .provenance(Provenance::Kernel)
         .consumers(SHOWN)
 }
@@ -158,6 +164,187 @@ pub const NON_NEGATIVE: [(&str, &str); 13] = [
     ),
 ];
 
+/// The fields declared signed over (−∞, ∞), each with its citation (R-426; dd_generation_root §3.8): §3 gives none of
+/// them a range, so without its citation each would be a gap. The physics reviewer checks each citation.
+pub const SIGNED: [(&str, &str); 8] = [
+    (
+        "S",
+        "R-423: physics review 5484757609 found `S` signed at finite time, with zero a meaningful centre (R-426)",
+    ),
+    (
+        "ftle",
+        "R-423: physics review 5484757609 found `ftle` signed at finite time, with zero a meaningful centre (R-426)",
+    ),
+    (
+        "diffusion",
+        "R-423: physics review 5484757609 found `diffusion` signed at finite time, with zero a meaningful centre \
+         (R-426)",
+    ),
+    (
+        "C_ty",
+        "R-423's check of `diffusion`, and `C_ty = diffusion · C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12 > 0` for `n ≥ 2` \
+         (dd_generation_root §3.4), so `C_ty` has `diffusion`'s sign (RQ-277, decided per R-369; R-426)",
+    ),
+    (
+        "E_0",
+        "dd_generation_root §3.4: `E_0` | diverging; §3.6: `E₀ = K_0 + V_0` keeps its `diverging` scale, which agrees \
+         only with a range spanning zero (R-403, R-426)",
+    ),
+    (
+        "Lz_0",
+        "dd_generation_root §3.4: `Lz_0` | diverging, a scale that agrees only with a range spanning zero (R-403, \
+         R-426)",
+    ),
+    (
+        "energy_drift",
+        "dd_generation_root §3.8's worked entry: `energy_drift`, (−∞, ∞), signed; §3.4: `energy_drift` | diverging \
+         (signed) (R-426)",
+    ),
+    (
+        "Lz_drift",
+        "dd_generation_root §3.8's worked entry: `Lz_drift`, (−∞, ∞), signed; §3.4: `Lz_drift` | diverging (signed) \
+         (R-426)",
+    ),
+];
+
+/// The fields whose range is provisional, each with the requirement that declares it (R-426): they stay on
+/// `ramp_coolwarm`, drawn as (−∞, ∞), until TASK-M2-03 declares `q_mass`'s from its formula (REQ-PAY-088) and
+/// TASK-M3-13 `mean_y`'s from `y`'s definition (REQ-PAY-073), and the physics reviewer re-checks each ramp then.
+pub const PROVISIONAL: [(&str, &str); 2] = [("q_mass", "REQ-PAY-097"), ("mean_y", "REQ-PAY-098")];
+
+/// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0` and `n`.
+pub const DECLARED: [(&str, &str); 13] = [
+    (
+        "V_0",
+        "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
+    ),
+    (
+        "n",
+        "dd_generation_root §3.8's worked entry: `n`, `lin` over [−1, 1] in each component",
+    ),
+    (
+        "total_substeps",
+        "its type's full range, [0, 2³² − 1]: unsigned bits in a u32 (dd_simstate_payload §1)",
+    ),
+    (
+        "closure_step",
+        "dd_generation_root §3.4: `closure_step`, an exact u16 step index, as `t_dmin_step`; at most \
+         `horizon_steps_max` (§3.1, R-86)",
+    ),
+    (
+        "t_end_step",
+        "dd_generation_root §3.4: `t_end_step`, [0, T] via `/horizon_steps`, an exact u16; at most \
+         `horizon_steps_max` (§3.1, R-86)",
+    ),
+    (
+        "t_dmin_step",
+        "an exact u16 step index, at most `horizon_steps_max` (dd_generation_root §3.1, R-86)",
+    ),
+    (
+        "state",
+        "dd_simstate_payload §2: `state`'s codes 0–5, 6 and 7 reserved",
+    ),
+    ("detail", "dd_simstate_payload §2: `detail`'s codes 0–3"),
+    ("saturated", "dd_simstate_payload §2: `saturated`, a flag, 0 or 1"),
+    (
+        "dmin_pair",
+        "R-22; dd_simstate_payload §2: pair ids 0–2, the code 3 \"unset/invalid\" its sentinel",
+    ),
+    (
+        "last_symbol",
+        "dd_simstate_payload §3: the symbol codes `a = 0, A = 1, b = 2, B = 3`",
+    ),
+    (
+        "payload",
+        "dd_simstate_payload §3's `.w` bit map: the high 25 bits of the mixed-radix `W`, [0, 2²⁵ − 1]",
+    ),
+    (
+        "length",
+        "dd_simstate_payload §3's `.w` bit map: 0…76 valid (`fgw_capacity`), 127 the truncation sentinel \
+         (`fgw_length_sentinel`)",
+    ),
+];
+
+/// The payload's ledger gaps for the gate report, in ledger order (R-426; dd_generation_root §3.8): each field whose
+/// range no line declares, with the requirement that fills it (`None`: none does) and why no ramp reads it. None is a
+/// `lin` or `diverging` scalar, so each generates.
+pub const GAPS: [(&str, Option<&str>, &str); 6] = [
+    (
+        "r",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "p",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "r_sh",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "p_sh",
+        None,
+        "a vector: the template draws none, and its `‖·‖` and direction-cosine views read no range",
+    ),
+    (
+        "theta",
+        None,
+        "cyclic, an angle (R-423): its view places `fract(θ̃ / 2π)` on the fixed [0, 1]; the unwrapped `θ̃` has no \
+         bound",
+    ),
+    (
+        "rho_angle",
+        Some("REQ-PAY-088"),
+        "cyclic: its view places `fract(x / 2π)` on the fixed [0, 1]; its formula is REQ-PAY-088's",
+    ),
+];
+
+/// The state of `e`'s range in the payload ledger (dd_generation_root §3.8; R-426), or `None` when `e` is no payload
+/// field (another ledger's, whose ranges are its own). A field in [`PROVISIONAL`] is provisional while it writes
+/// (−∞, ∞); a range written in its place is its requirement's declaration. A field cited in [`SIGNED`],
+/// [`NON_NEGATIVE`] or [`DECLARED`] is declared over the range it writes. Any other field's range is a gap: written,
+/// never declared.
+pub fn range_state(e: &Entry) -> Option<RangeState> {
+    if !entries().iter().any(|b| b.name == Some(e.name)) {
+        return None;
+    }
+    let cited = |table: &[(&'static str, &'static str)]| {
+        table
+            .iter()
+            .find(|(field, _)| *field == e.name)
+            .map(|&(_, citation)| citation)
+    };
+    let range = e.range;
+    if let Some(requirement) = cited(&PROVISIONAL) {
+        return Some(if range == Range::UNBOUNDED {
+            RangeState::Provisional { requirement }
+        } else {
+            RangeState::Declared {
+                range,
+                citation: requirement,
+            }
+        });
+    }
+    let citation = cited(&SIGNED)
+        .or_else(|| cited(&NON_NEGATIVE))
+        .or_else(|| cited(&DECLARED));
+    Some(
+        citation.map_or(RangeState::Gap, |citation| RangeState::Declared {
+            range,
+            citation,
+        }),
+    )
+}
+
+/// Whether `e`'s range spans zero (R-400, R-426): by its state where it is a payload field ([`range_state`]), a gap
+/// never; else by the bounds it writes.
+pub fn spans_zero(e: &Entry) -> bool {
+    range_state(e).map_or(e.range.spans_zero(), |state| state.spans_zero())
+}
+
 /// `[lo, ∞)`.
 fn from(lo: Bound) -> Range {
     Range {
@@ -215,6 +402,7 @@ fn entries() -> Vec<EntryBuilder> {
         f32_at("S", 24, Scale::Lin),
         // R-423: `θ̃`, the unwrapped longitude in radians (dd_integrator §3.7), is an angle, so cyclic.
         f32_at("theta", 25, Scale::Cyclic),
+        // Provisional until REQ-PAY-098 declares its range ([`PROVISIONAL`]; R-426).
         f32_at("mean_y", 26, Scale::Lin),
         f32_at("C_ty", 27, Scale::Lin),
         f32_at("E_0", 28, Scale::Diverging),
@@ -259,6 +447,7 @@ fn entries() -> Vec<EntryBuilder> {
         ic("m0", 0, Scale::Lin).range(fraction),
         ic("m1", 1, Scale::Lin).range(fraction),
         ic("m2", 2, Scale::Lin).range(fraction),
+        // Provisional until REQ-PAY-097 declares its range ([`PROVISIONAL`]; R-426).
         ic("q_mass", 3, Scale::Lin),
         ic("rho_mag", 4, Scale::Lin).range(from_zero),
         ic("lambda_mag", 5, Scale::Lin).range(from_zero),

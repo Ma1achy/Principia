@@ -97,6 +97,13 @@ pub struct Range {
 }
 
 impl Range {
+    /// (−∞, ∞): the bounds an entry writes where its range is a gap or provisional (dd_generation_root §3.8; R-426),
+    /// and a declared (−∞, ∞)'s, with its citation.
+    pub const UNBOUNDED: Range = Range {
+        lo: Bound::Unbounded,
+        hi: Bound::Unbounded,
+    };
+
     /// The closed integer range `[lo, hi]`.
     pub fn int(lo: i64, hi: i64) -> Self {
         Range {
@@ -107,7 +114,8 @@ impl Range {
 
     /// Whether the range spans zero, `lo < 0 < hi`, either end possibly unbounded (R-400, R-403): a field whose
     /// declared range does is drawn on the diverging ramp centred at zero, and only such a field carries the
-    /// `diverging` scale (dd_generation_root §3.8). An end at 0, open or closed, does not span it.
+    /// `diverging` scale (dd_generation_root §3.8). An end at 0, open or closed, does not span it. These are the
+    /// bounds alone: a field whose range is a gap writes (−∞, ∞) and yet does not span zero ([`RangeState`], R-426).
     pub fn spans_zero(&self) -> bool {
         let below = match self.lo {
             Bound::Closed(v) | Bound::Open(v) => v < 0.0,
@@ -133,6 +141,36 @@ impl fmt::Display for Range {
             Bound::Closed(v) => write!(f, "{v}]"),
             Bound::Open(v) => write!(f, "{v})"),
             Bound::Unbounded => write!(f, "∞)"),
+        }
+    }
+}
+
+/// The state of a field's range, one of §3.8's three: `declared(lo, hi, citation) | gap | provisional(requirement)`
+/// (dd_generation_root §3.8; R-426). An entry's `range` holds the bounds it writes; its ledger gives the state (the
+/// payload's, [`crate::payload::range_state`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RangeState {
+    /// The range §3, a ruling or a definition gives, with where it is given.
+    Declared {
+        range: Range,
+        citation: &'static str,
+    },
+    /// No range is declared: the (−∞, ∞) the ledger once wrote by default declares nothing, and never spans zero
+    /// (R-426, amending R-400's reading).
+    Gap,
+    /// A range the human has kept provisional until `requirement` declares it, drawn meanwhile as (−∞, ∞), so
+    /// spanning zero (R-426: `q_mass` and `mean_y`).
+    Provisional { requirement: &'static str },
+}
+
+impl RangeState {
+    /// Whether the range spans zero, `lo < 0 < hi`: a declared range by its bounds ([`Range::spans_zero`]); a
+    /// provisional one, drawn as (−∞, ∞), always; a gap never (R-400, R-426).
+    pub fn spans_zero(&self) -> bool {
+        match self {
+            RangeState::Declared { range, .. } => range.spans_zero(),
+            RangeState::Gap => false,
+            RangeState::Provisional { .. } => true,
         }
     }
 }

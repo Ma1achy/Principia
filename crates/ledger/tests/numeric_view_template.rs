@@ -10,6 +10,8 @@
 //!   `ramp_twilight`; the ledger gains no member (`numeric_view_template_zero_spanning_*`,
 //!   `numeric_view_template_ledger_*`); `K_0` and `V_0` on `ramp_viridis`, increasing in the value in both modes,
 //!   defaulting to `RANGE_AUTO = 1`, `V_0`'s most negative value at `t = 0` (`numeric_view_template_k0_v0_*`);
+//! - REQ-GEN-035 (R-426; TASK-M1-21): the views on `ramp_coolwarm` are the eight that were before, `q_mass` and
+//!   `mean_y` provisionally; a gap never spans zero (`numeric_view_template_coolwarm_views_kept_r426`);
 //! - REQ-RENDER-085 (R-423; TASK-M1-20): `theta`, an angle, is cyclic: raw = fract(θ̃ / 2π), `fract(x) = x − ⌊x⌋`, on
 //!   the fixed `[0, 1]` with `ramp_twilight`, defaulting to `RANGE_AUTO = 0`, one turn apart giving the same raw for
 //!   either sign of `θ̃` (`numeric_view_template_theta_*`);
@@ -692,12 +694,12 @@ negative_control!(
 
 // ── R-400 and R-403 (TASK-M1-17): the ramp follows the declared range ──────────────────────────────────────────────
 
-/// The ramp a view of `e` must draw on (R-400, R-423): twilight for a cyclic field, cool-warm where the declared range
-/// spans zero, viridis otherwise.
+/// The ramp a view of `e` must draw on (R-400, R-423, R-426): twilight for a cyclic field, cool-warm where the
+/// declared (or provisional) range spans zero, viridis otherwise; a gap never spans zero.
 fn want_ramp(e: &Entry) -> Ramp {
     if e.scale == Scale::Cyclic {
         Ramp::Twilight
-    } else if e.range.spans_zero() {
+    } else if ledger::payload::spans_zero(e) {
         Ramp::Coolwarm
     } else {
         Ramp::Viridis
@@ -781,6 +783,50 @@ negative_control!(
         &numeric_views()
             .into_iter()
             .map(|(e, n, wgsl)| (e, n, wgsl.replace("ramp_coolwarm(", "ramp_viridis(")))
+            .collect::<Vec<_>>()
+    )
+);
+
+/// The fields on `ramp_coolwarm` before R-426 (TASK-M1-17, TASK-M1-20): R-426 moves none (REQ-GEN-035).
+const COOLWARM: [&str; 8] = [
+    "S",
+    "mean_y",
+    "C_ty",
+    "E_0",
+    "Lz_0",
+    "ftle",
+    "diffusion",
+    "q_mass",
+];
+
+/// Checks that the views on `ramp_coolwarm`, in `views`, are exactly [`COOLWARM`].
+fn check_coolwarm_kept(views: &[(Entry, NumericView, String)]) {
+    let mut coolwarm: Vec<&str> = views
+        .iter()
+        .filter(|(_, n, wgsl)| {
+            n.ramp() == Ramp::Coolwarm || ramp_line(wgsl).contains("ramp_coolwarm(")
+        })
+        .map(|(e, ..)| e.name)
+        .collect();
+    let mut want = COOLWARM.to_vec();
+    coolwarm.sort_unstable();
+    want.sort_unstable();
+    assert_eq!(coolwarm, want, "the views on cool-warm changed (R-426)");
+}
+
+#[test]
+fn numeric_view_template_coolwarm_views_kept_r426() {
+    check_coolwarm_kept(&numeric_views());
+}
+
+negative_control!(
+    numeric_view_template_coolwarm_views_kept_r426,
+    "`q_mass` read as a gap leaves cool-warm, which R-426 keeps it on provisionally",
+    expected = "the views on cool-warm changed",
+    check_coolwarm_kept(
+        &numeric_views()
+            .into_iter()
+            .filter(|(e, ..)| e.name != "q_mass")
             .collect::<Vec<_>>()
     )
 );
