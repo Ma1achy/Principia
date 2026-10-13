@@ -24,8 +24,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use engine::contract::conformance::{self, CASES};
 use engine::contract::interface::EngineInterface;
+use engine::contract::legend::Legend;
 use engine::contract::log::{LogEntry, Severity, Source};
-use engine::contract::render_state::{Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
 use engine::contract::set_field::{Edit, RenderField, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
@@ -51,7 +52,7 @@ fn sim() -> SimConfig {
         links: Links {},
         integrator: Integrator {},
         kernel_variant: KernelVariant::Physics,
-        horizon: Horizon {},
+        horizon: Horizon { t: 0.0 },
         collision: Collision {},
         quality: Quality {},
     }
@@ -60,7 +61,8 @@ fn sim() -> SimConfig {
 fn render(t: f64) -> RenderState {
     RenderState {
         stain_graph: StainGraph {},
-        overlays: Overlays {},
+        overlays: Overlays::default(),
+        hover: Hover::default(),
         palette: Palette {},
         playhead: Playhead { t },
     }
@@ -159,13 +161,15 @@ enum Rule {
 }
 
 /// A double of the interface, written here from the rules (R-52, R-69, R-101; RQ-245), breaking `rule`.
-/// It holds the playhead and, since R-390's navigation paths, the plane and the lock; each history entry is the edit
-/// restoring the value before and the edit itself.
+/// It holds the playhead and, since R-390's navigation paths, the plane and the lock, and, since its overlay set and
+/// hover, those two; each history entry is the edit restoring the value before and the edit itself.
 struct Broken {
     rule: Rule,
     t: f64,
     plane: Plane,
     lock: Lock,
+    overlays: Overlays,
+    hover: Hover,
     undo: Vec<(Edit, Edit)>,
     redo: Vec<(Edit, Edit)>,
     log: Vec<LogEntry>,
@@ -180,6 +184,8 @@ impl Broken {
             t: 0.0,
             plane: sim().plane,
             lock: sim().lock,
+            overlays: Overlays::default(),
+            hover: Hover::default(),
             undo: Vec::new(),
             redo: Vec::new(),
             log: Vec::new(),
@@ -205,6 +211,12 @@ impl Broken {
                 &mut self.lock,
                 lock.clone(),
             ))),
+            Edit::Render(RenderField::Overlays(o)) => Edit::Render(RenderField::Overlays(
+                std::mem::replace(&mut self.overlays, o.clone()),
+            )),
+            Edit::Render(RenderField::Hover(h)) => Edit::Render(RenderField::Hover(
+                std::mem::replace(&mut self.hover, h.clone()),
+            )),
         }
     }
 
@@ -271,7 +283,11 @@ impl EngineInterface for Broken {
                 lock: self.lock.clone(),
                 ..sim()
             },
-            render: render(self.t),
+            render: RenderState {
+                overlays: self.overlays.clone(),
+                hover: self.hover.clone(),
+                ..render(self.t)
+            },
             tier: Tier {},
             history: History {
                 undo_depth: self.undo.len() as u32,
@@ -288,6 +304,8 @@ impl EngineInterface for Broken {
                 live_memory: None,
             },
             log,
+            legend: Legend::default(),
+            sample: None,
         }
     }
 

@@ -12,13 +12,14 @@ use eframe::egui_wgpu;
 use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity};
+use engine::contract::set_field::{Edit, RenderField};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{
     Backdrop, DebugCategories, Focus, Inspector, KeptOrbits, KeyMode, LinkedViews, Mode, Selection,
     Transport, ViewUI, Windows,
 };
 
-use crate::clock::Clock;
+use crate::clock::{Clock, Playback};
 use crate::explore;
 use crate::keyboard::Keyboard;
 use crate::layout::Layout;
@@ -58,11 +59,14 @@ pub fn initial_view() -> ViewUI {
             mode: KeyMode::Navigation,
         },
         selection: Selection {},
-        kept_orbits: KeptOrbits {},
+        kept_orbits: KeptOrbits::default(),
         inspector: Inspector {},
         windows: Windows { open: Vec::new() },
         linked_views: LinkedViews {},
-        transport: Transport { playing: false },
+        transport: Transport {
+            playing: false,
+            speed: explore::time::SPEED_DEFAULT,
+        },
         mode: Mode::Explore,
     }
 }
@@ -90,6 +94,15 @@ pub struct App<S: EngineSide> {
     pub keyboard: Keyboard,
     /// The Manifold view's and the compass's own scratch state.
     pub manifold: explore::manifold_view::Scratch,
+    /// Time's own scratch state: the scrub in progress.
+    pub time: explore::time::Scratch,
+    /// The Trajectory panel's own state.
+    pub trajectory: explore::trajectory::Scratch,
+    /// The overlay set Overlays ▾'s save as default kept, for the session (applied per R-369: the mock has no settings
+    /// store; every launch starts with every overlay off).
+    pub overlay_default: engine::contract::render_state::Overlays,
+    /// The hover last sent: the cursor's figure point, or none.
+    hover_sent: Option<[f64; 2]>,
     snapshot: Snapshot,
     console: Vec<LogEntry>,
     counts: Counts,
@@ -111,6 +124,10 @@ pub struct Actions {
     pub shortcuts: bool,
     /// Close the window.
     pub quit: bool,
+    /// Set the overlay set to this: a toggle, or all off, one `SetField` (Overlays ▾).
+    pub overlays: Option<engine::contract::render_state::Overlays>,
+    /// Keep the overlay set as the default (Overlays ▾'s save as default).
+    pub save_overlays: bool,
 }
 
 impl<S: EngineSide> App<S> {
@@ -128,6 +145,10 @@ impl<S: EngineSide> App<S> {
             console_open: false,
             keyboard: Keyboard::new(),
             manifold: Default::default(),
+            time: Default::default(),
+            trajectory: Default::default(),
+            overlay_default: Default::default(),
+            hover_sent: None,
             snapshot,
             console,
             counts,
@@ -203,21 +224,46 @@ impl<S: EngineSide> App<S> {
         if std::mem::take(&mut self.reread) {
             self.read();
         }
-        let playing = self.view.transport.playing;
-        let t = self.snapshot.render.playhead.t;
-        let ticked = self
-            .side
-            .time_source()
-            .map(|source| (self.clock.frame(source, playing, t), source.rate_hz()));
-        if let Some((edit, rate_hz)) = ticked {
-            if playing {
+        let playback = Playback {
+            playing: self.view.transport.playing,
+            speed: self.view.transport.speed,
+            t: self.snapshot.render.playhead.t,
+            t_max: self.snapshot.sim.horizon.t,
+        };
+        let orbit = explore::trajectory::shown(
+            self.trajectory.tab,
+            self.snapshot.sample.as_ref(),
+            &self.view.kept_orbits,
+        );
+        let span = orbit.map_or(0.0, |o| o.path_t);
+        let moving = self.trajectory.moving(orbit.is_some());
+        let ticked = self.side.time_source().map(|source| {
+            (
+                self.clock.frame(source, playback),
+                source.rate_hz(),
+                source.held_seconds(),
+            )
+        });
+        let now = ctx.input(|i| i.time);
+        // What turns reads the wall clock, unless the source holds it (capture mode's frozen clock).
+        let mut seconds = now;
+        if let Some((edit, rate_hz, held)) = ticked {
+            seconds = held.unwrap_or(now);
+            if playback.playing || moving {
                 ctx.request_repaint_after(std::time::Duration::from_secs_f64(1.0 / rate_hz));
             }
             if let Some(edit) = edit {
+                if let Edit::Render(RenderField::Playhead(p)) = &edit.edit {
+                    // At the horizon the clock stops, and so does the transport.
+                    if p.t >= playback.t_max {
+                        self.view.transport.playing = false;
+                    }
+                }
                 self.side.engine().set_field(edit);
             }
+        } else if moving {
+            ctx.request_repaint();
         }
-        let now = ctx.input(|i| i.time);
         let due = self
             .last_read
             .is_none_or(|last| now - last >= SNAPSHOT_INTERVAL_S);
@@ -228,28 +274,52 @@ impl<S: EngineSide> App<S> {
         if !due {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64(SNAPSHOT_INTERVAL_S));
         }
+        self.trajectory.advance(seconds, span);
         let layout = Layout::new(ui.max_rect(), ctx.pixels_per_point());
         if self.view.mode == Mode::Explore {
             self.paint_figure(&ctx, layout.figure);
         }
         if !self.shown {
-            // Hidden, the layer takes no key: it forgets the ones it held, whose releases now go to egui.
+            // Hidden, the layer takes no key: it forgets the ones it held, whose releases now go to egui. The hover,
+            // the layer's, goes with it.
             self.keyboard.stand_down();
+            self.send_hover(None);
             return;
         }
         let mut actions = Actions::default();
         let mut out = explore::manifold_view::Out::default();
+        let mut edits = Vec::new();
         explore::manifold_view::join(self.keyboard.tree_mut(Mode::Explore));
+        explore::trajectory::join_kept(
+            self.keyboard.tree_mut(Mode::Explore),
+            self.view.kept_orbits.orbits.len(),
+        );
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
         for id in activated {
             explore::top_bar::activate(id, &mut actions);
+            explore::overlays_menu::activate(id, &self.snapshot.render.overlays, &mut actions);
             explore::manifold_view::activate(id, &self.snapshot, &mut self.manifold, &mut out);
+            explore::time::activate(id, &self.snapshot, &mut self.view.transport, &mut edits);
+            explore::trajectory::activate(
+                id,
+                self.snapshot.sample.as_ref(),
+                &mut self.view.kept_orbits,
+                &mut self.trajectory,
+            );
         }
         for adjust in self.keyboard.adjusted().to_vec() {
             explore::manifold_view::adjust(&adjust, &self.snapshot, &mut self.manifold, &mut out);
+            explore::time::adjust(
+                &adjust,
+                &self.snapshot,
+                &mut self.view.transport,
+                &mut edits,
+            );
+            explore::trajectory::adjust(&adjust, span, &mut self.trajectory);
         }
+        self.shortcuts(&ctx, &mut actions, &mut edits);
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
         }
@@ -269,8 +339,11 @@ impl<S: EngineSide> App<S> {
             &mut actions,
         );
         match self.view.mode {
-            Mode::Explore => self.explore(ui, &layout, &mut out),
-            Mode::Stain => explore::stain_page(ui, layout.page),
+            Mode::Explore => self.explore(ui, &layout, &mut out, &mut edits),
+            Mode::Stain => {
+                explore::stain_page(ui, layout.page);
+                self.send_hover(None);
+            }
         }
         explore::footer::show(
             ui,
@@ -290,7 +363,19 @@ impl<S: EngineSide> App<S> {
             actions.toggle_console |= !open;
         }
         self.draw_ring(&ctx);
+        if let Some(overlays) = actions.overlays.take() {
+            edits.push(engine::contract::set_field::SetField {
+                edit: Edit::Render(RenderField::Overlays(overlays)),
+                no_history: false,
+            });
+        }
+        if std::mem::take(&mut actions.save_overlays) {
+            self.overlay_default = self.snapshot.render.overlays.clone();
+        }
         self.apply(&ctx, actions);
+        for edit in edits {
+            self.set_field(edit);
+        }
         // Locked, every basis edit turns about the pin (render_gui_spec §G4).
         for edit in explore::manifold_view::about_the_pin(out.edits, &self.snapshot.sim) {
             self.set_field(edit);
@@ -314,9 +399,41 @@ impl<S: EngineSide> App<S> {
         ui: &mut egui::Ui,
         layout: &Layout,
         out: &mut explore::manifold_view::Out,
+        edits: &mut Vec<engine::contract::set_field::SetField>,
     ) {
-        explore::regions(ui, layout);
         explore::place(&mut self.keyboard, layout);
+        // Each panel draws in a child of its own, so how many widgets it draws (the trajectory panel's change with the
+        // orbit shown) never moves the ids of the widgets drawn after it, and a click that lands as the panel changes
+        // still reaches its widget.
+        let mut own =
+            |salt: &str| ui.new_child(egui::UiBuilder::new().id_salt(salt).max_rect(ui.max_rect()));
+        explore::trajectory::show(
+            &mut own("trajectory"),
+            layout.trajectory,
+            &mut explore::trajectory::Panel {
+                sample: self.snapshot.sample.as_ref(),
+                kept: &mut self.view.kept_orbits,
+                scratch: &mut self.trajectory,
+                keyboard: &mut self.keyboard,
+            },
+        );
+        explore::time::show(
+            &mut own("time"),
+            layout.time,
+            &mut explore::time::Panel {
+                snapshot: &self.snapshot,
+                transport: &mut self.view.transport,
+                scratch: &mut self.time,
+                keyboard: &mut self.keyboard,
+                edits,
+            },
+        );
+        explore::legend::show(
+            &mut own("legend"),
+            layout.legend,
+            &self.snapshot.legend,
+            &mut self.keyboard,
+        );
         let focused_figure = self
             .view
             .focus
@@ -351,6 +468,89 @@ impl<S: EngineSide> App<S> {
         explore::axis_labels::show(ui, layout.axis_x, layout.axis_y, layout.figure, &sim.plane);
         if let Some(at) = explore::lock::reticle_at(&sim.lock, &sim.plane, layout.figure) {
             explore::lock::reticle(ui.ctx(), layout.figure, at);
+        }
+        let ctx = ui.ctx().clone();
+        let pointer = ctx.pointer_hover_pos();
+        let over_figure = pointer
+            .and_then(|p| ctx.layer_id_at(p))
+            .is_none_or(|layer| layer == ui.layer_id());
+        self.send_hover(explore::hover_label::figure_point(
+            layout.figure,
+            pointer,
+            over_figure,
+        ));
+        if let (Some(sample), Some(cursor), Some(_)) =
+            (&self.snapshot.sample, pointer, self.hover_sent)
+        {
+            let text = explore::hover_label::text(
+                sample,
+                self.snapshot.render.playhead.t,
+                self.snapshot.sim.horizon.t,
+            );
+            explore::hover_label::show(&ctx, layout.figure, cursor, text);
+        }
+    }
+
+    /// Sends the hover `at` when it differs from the one last sent: one no-history `SetField` (R-101).
+    fn send_hover(&mut self, at: Option<[f64; 2]>) {
+        if at != self.hover_sent {
+            self.hover_sent = at;
+            self.side
+                .engine()
+                .set_field(explore::hover_label::hover_edit(at));
+        }
+    }
+
+    /// The letter, Space and Alt+digit shortcuts (render_gui_spec §G2, §G3; R-409 F1): with the focus in the Figure,
+    /// Space keeps the orbit under the cursor and L toggles listen; in Time, Space plays; anywhere, Alt+digit toggles
+    /// an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?` overlay is open.
+    fn shortcuts(
+        &mut self,
+        ctx: &egui::Context,
+        actions: &mut Actions,
+        edits: &mut Vec<engine::contract::set_field::SetField>,
+    ) {
+        if ctx.text_edit_focused()
+            || self.keyboard.shortcuts_open
+            || self.view.mode != Mode::Explore
+        {
+            return;
+        }
+        let events = ctx.input(|i| i.events.clone());
+        let mut overlays = self.snapshot.render.overlays.clone();
+        let presses = explore::overlays_menu::shortcut_presses(&events);
+        for i in &presses {
+            overlays = explore::overlays_menu::toggled(&overlays, *i);
+        }
+        if !presses.is_empty() {
+            actions.overlays = Some(overlays);
+        }
+        let pressed = |key: Key| {
+            events.iter().any(|e| {
+                matches!(e, egui::Event::Key { key: k, pressed: true, repeat: false, modifiers, .. }
+                    if *k == key && modifiers.is_none())
+            })
+        };
+        let scope = self.view.focus.path.first().map(String::as_str);
+        if pressed(Key::Space) {
+            match scope {
+                Some(explore::FIGURE) => {
+                    if let Some(sample) = &self.snapshot.sample {
+                        explore::trajectory::keep(
+                            sample,
+                            &mut self.view.kept_orbits,
+                            &mut self.trajectory,
+                        );
+                    }
+                }
+                Some(explore::time::TIME) => {
+                    explore::time::toggle_play(&self.snapshot, &mut self.view.transport, edits)
+                }
+                _ => {}
+            }
+        }
+        if pressed(Key::L) && scope == Some(explore::FIGURE) {
+            self.trajectory.listen = !self.trajectory.listen;
         }
     }
 

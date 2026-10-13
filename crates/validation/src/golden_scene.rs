@@ -266,7 +266,6 @@ const NUDGES: &[(&str, u32)] = &[
     ("generated-rho_angle", 2),
     ("generated-t_dmin_step", 2),
     ("generated-t_end_step", 1),
-    ("generated-theta", 1),
     ("generated-total_substeps", 3),
     ("reductions-r_sh_dircos", 2),
 ];

@@ -213,7 +213,8 @@ fn entries() -> Vec<EntryBuilder> {
         vec6_at("r_sh", 12),
         vec6_at("p_sh", 18),
         f32_at("S", 24, Scale::Lin),
-        f32_at("theta", 25, Scale::Lin),
+        // R-423: `θ̃`, the unwrapped longitude in radians (dd_integrator §3.7), is an angle, so cyclic.
+        f32_at("theta", 25, Scale::Cyclic),
         f32_at("mean_y", 26, Scale::Lin),
         f32_at("C_ty", 27, Scale::Lin),
         f32_at("E_0", 28, Scale::Diverging),
@@ -576,7 +577,7 @@ pub const fn detail_meanings() -> [(&'static str, [&'static str; 4]); 4] {
 
 /// One member of generation-root §3.7's `QuadReduction`: its name, its §3.7 type as written there, and the §3.7
 /// subsection that gives it. Ledger data, not a §3.8 entry, and not emitted: the struct, its members' §3.8 entries and
-/// their placement are TASK-M5-01's (R-306, R-113).
+/// their placement are [`crate::reduction`]'s (R-306, R-113).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ReductionMember {
     pub name: &'static str,
@@ -590,10 +591,10 @@ pub struct ReductionMember {
 /// positional), the latch `running_max_divergence` (per footprint, R-99) and the conditional `spread_t_end` ("not yet
 /// included"). §3.7's one row `` `escape_time_min` / `_max` ``, typed `f16 × 2`, is its two members, each f16.
 /// `n_unresolved`, the count of the quad's unresolved footprints, latched ones included (the latch's verdict, R-142),
-/// is u16 like `valid_sample_count` (R-315).
+/// is u16 like `valid_sample_count` (R-315). `class_histogram`'s bins are u32 (R-410).
 pub const QUAD_REDUCTION: &[ReductionMember] = &[
     reduction("level", "u8", "Identity"),
-    reduction("class_histogram[N]", "u8 × N", "Outcome"),
+    reduction("class_histogram[N]", "u32 × N", "Outcome"),
     reduction("dominant_outcome", "packed", "Outcome"),
     reduction("outcome_impurity", "f16", "Outcome"),
     reduction("terminated_fraction", "f16", "Outcome"),

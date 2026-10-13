@@ -17,7 +17,7 @@ Physical structs (the generation-root ledger is the single source of truth):
 
 **Physical vs logical — no unpack pass.** The render design doc's `RenderSample` with loose fields (`outcome_class: u32, …`) is the *logical* view. It is realised as **accessor functions over the physical structs**, not as a materialised unpacked struct. Never build an unpack-copy compute pass — it doubles memory for nothing. "Stable logical context" = the accessor layer (Part 5).
 
-`SimState` and `ICDescriptor` never leave the GPU in normal operation; `QuadReduction` (one per quad; its size follows from dd_generation_root §3.7's members with u32 bins, defined and measured by TASK-M5-01, R-410) is the sole **automatic** GPU→CPU return of simulation data (the adaptive layer). R-288's per-frame telemetry readback is not simulation data (R-332). User-initiated pulls — the decoded export, and the click inspector's optional **on-demand single-IC f32 GPU trace** for the divergence overlay (`trajectory_viewing.md` §5: a one-pixel dispatch of the survey kernel writing a dense n(t) series) — are sanctioned, tiny, async operations outside that loop. (The hover/click **trace** is *not* a payload pull: it re-integrates the IC on the CPU via `computeIC`, touching no GPU buffer — Part 7.)
+`SimState` and `ICDescriptor` never leave the GPU in normal operation; `QuadReduction` (one per quad; 176 B, aligned to 4, with u32 histogram bins: dd_generation_root §3.7, R-410) is the sole **automatic** GPU→CPU return of simulation data (the adaptive layer). R-288's per-frame telemetry readback is not simulation data (R-332). User-initiated pulls — the decoded export, and the click inspector's optional **on-demand single-IC f32 GPU trace** for the divergence overlay (`trajectory_viewing.md` §5: a one-pixel dispatch of the survey kernel writing a dense n(t) series) — are sanctioned, tiny, async operations outside that loop. (The hover/click **trace** is *not* a payload pull: it re-integrates the IC on the CPU via `computeIC`, touching no GPU buffer — Part 7.)
 
 ---
 
@@ -322,6 +322,19 @@ binding (REQ-TOOL-164). That task names the thresholds the echo shows, and the b
 from, since `SimUniforms` holds no tier (REQ-TOOL-165, R-72). The Optional Fourier block row (`|a_k|` per k and ω,
 from the quad payload, certifying "the truncated-Fourier path when enabled") is removed from this table: nothing
 current defines the path, and it is parked as a possible future feature (`principia_00_philosophy.md` §7.6a).
+
+**The quad fields row's flags (R-424).** At M1 no flag is a `RenderQuad` member (dd_generation_root §3.7a), and
+the checklist (REQ-TOOL-011) checks contains-ensemble against the prelude's `has_ensemble()` (Part 2; R-145), as the
+spread view reads "present iff contains-ensemble", contains-FTLE against `has_ftle`, and the schema version against
+the build's generated `PAYLOAD_SCHEMA_VERSION`. sim-failed is defined and shown by TASK-M5-17, the `QuadReduction` task
+(REQ-PAY-096, R-72), and cache-valid by TASK-M5-08, the M5 cache task (REQ-SCHED-099, R-72), which also decides
+whether a per-quad schema version, the drawn payload's own (caching contract Part 1), belongs with cache-valid: it
+can differ from the build's only once quads can come from an older build's cache.
+
+**The visible-set and locked/stale overlays (R-425).** The structural overlays row's visible-set and locked/stale
+overlays are not on the M1 checklist: TASK-M5-29 defines them (REQ-TOOL-166, R-72), in debug_tooling_plan §F,
+reusing the corpus's existing meanings where they exist (for example, `quad_state` 4, dd_generation_root §3.7a, for
+"stale") rather than defining new ones, and draws them on the Tier 3 path (render_gui_spec §12.1).
 
 **The word views' renderings (TASK-M1-12).**
 - **The invalid-styled reduced length (R-72; REQ-TOOL-156):** where `fgw_reduced_length_valid` is false, the word

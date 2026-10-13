@@ -6,10 +6,13 @@
 //!   (`numeric_view_template_scales_*`);
 //! - a field with an unbounded ledger range defaults to `RANGE_AUTO = 1` (`numeric_view_template_unbounded_*`);
 //! - REQ-RENDER-084 (R-400, R-403; TASK-M1-17): a field whose declared range spans zero is on `ramp_coolwarm` over the
-//!   symmetric `[−M, M]`, fixed and auto, 0 at `t = ½`; a field with `lo ≥ 0` on `ramp_viridis`; the cyclic field on
+//!   symmetric `[−M, M]`, fixed and auto, 0 at `t = ½`; a field with `lo ≥ 0` on `ramp_viridis`; the cyclic fields on
 //!   `ramp_twilight`; the ledger gains no member (`numeric_view_template_zero_spanning_*`,
 //!   `numeric_view_template_ledger_*`); `K_0` and `V_0` on `ramp_viridis`, increasing in the value in both modes,
 //!   defaulting to `RANGE_AUTO = 1`, `V_0`'s most negative value at `t = 0` (`numeric_view_template_k0_v0_*`);
+//! - REQ-RENDER-085 (R-423; TASK-M1-20): `theta`, an angle, is cyclic: raw = fract(θ̃ / 2π), `fract(x) = x − ⌊x⌋`, on
+//!   the fixed `[0, 1]` with `ramp_twilight`, defaulting to `RANGE_AUTO = 0`, one turn apart giving the same raw for
+//!   either sign of `θ̃` (`numeric_view_template_theta_*`);
 //! - REQ-TOOL-160 (R-401, R-419; TASK-M1-18): every log view places raw at `dbg_log`'s form with its own field's floor,
 //!   in the WGSL and the CPU twin, each a power of two an f32 holds exactly; two log fields with different floors
 //!   place the same `|x|` differently; a log field with no floor of its own is refused (`numeric_view_template_log_*`);
@@ -696,8 +699,8 @@ negative_control!(
 
 // ── R-400 and R-403 (TASK-M1-17): the ramp follows the declared range ──────────────────────────────────────────────
 
-/// The ramp a view of `e` must draw on (R-400): twilight for the cyclic field, cool-warm where the declared range spans
-/// zero, viridis otherwise.
+/// The ramp a view of `e` must draw on (R-400, R-423): twilight for a cyclic field, cool-warm where the declared range
+/// spans zero, viridis otherwise.
 fn want_ramp(e: &Entry) -> Ramp {
     if e.scale == Scale::Cyclic {
         Ramp::Twilight
@@ -768,7 +771,7 @@ fn numeric_view_template_zero_spanning_is_coolwarm_centred_at_zero() {
         "Lz_0",
         "C_ty",
         "S",
-        "theta",
+        "q_mass",
         "mean_y",
         "ftle",
         "diffusion",
@@ -1008,6 +1011,136 @@ negative_control!(
         v.placement = Placement::Diverging;
         check_energies([k, (v, vw.replace("ramp_viridis", "ramp_coolwarm"))]);
     }
+);
+
+// ── R-423 (TASK-M1-20): `theta`, an angle, on the cyclic ramp ────────────────────────────────────────────────────────
+
+/// Checks that `wgsl`, the generated view of `theta` (`n`), is cyclic (REQ-RENDER-085): one turn, 2π, its period;
+/// `raw = fract(θ̃ / 2π)` on the fixed `[0, 1]` with `ramp_twilight`; its header defaulting to `RANGE_AUTO = 0`.
+fn check_theta_view(n: &NumericView, wgsl: &str) {
+    let line = ramp_line(wgsl);
+    assert!(
+        n.ramp() == Ramp::Twilight
+            && line.starts_with(
+                "    return ramp_twilight(range_norm(fract(raw / 6.2831855), 0.0, 1.0, "
+            ),
+        "`theta` is not on ramp_twilight at fract(θ̃ / 2π): {line}"
+    );
+    assert_eq!(
+        n.placement,
+        Placement::Cyclic {
+            period: std::f64::consts::TAU
+        },
+        "`theta`'s period"
+    );
+    assert_eq!(
+        (n.lo, n.hi),
+        (End::Fixed(0.0), End::Fixed(1.0)),
+        "`theta`'s range"
+    );
+    assert!(!n.range_auto, "`theta` defaults to RANGE_AUTO = 1");
+    check_round_trip(wgsl, false);
+}
+
+/// `theta`'s view and generated WGSL, `RANGE_AUTO` at its default, from the ledger `entries`.
+fn theta_view(entries: &[Entry]) -> (NumericView, String) {
+    let l = ledger::layout();
+    let e = entries
+        .iter()
+        .find(|e| e.name == "theta")
+        .unwrap_or_else(|| panic!("no `theta` in the ledger"));
+    let n = NumericView::of(e).unwrap_or_else(|| panic!("`theta` has no numeric view"));
+    let wgsl = numeric_view(&l.words, entries, "theta", None)
+        .unwrap_or_else(|| panic!("`theta` has a numeric view but no WGSL"));
+    (n, wgsl)
+}
+
+#[test]
+fn numeric_view_template_theta_is_cyclic_on_twilight() {
+    let (n, wgsl) = theta_view(&entries(&ledger::layout()));
+    check_theta_view(&n, &wgsl);
+}
+
+negative_control!(
+    numeric_view_template_theta_is_cyclic_on_twilight,
+    "`theta` as R-400 left it, lin over (−∞, ∞), is on ramp_coolwarm",
+    expected = "is not on ramp_twilight",
+    {
+        let mut entries = entries(&ledger::layout());
+        for e in entries.iter_mut().filter(|e| e.name == "theta") {
+            e.scale = Scale::Lin;
+        }
+        let (n, wgsl) = theta_view(&entries);
+        check_theta_view(&n, &wgsl);
+    }
+);
+
+/// The distance between `a` and `b` modulo one turn of raw, 1: the shorter way round the cyclic ramp, so a raw of 1.0
+/// (`fract` of a negative value rounding up to 1, which WGSL's `fract` allows) reads as 0.
+fn turn_distance(a: f64, b: f64) -> f64 {
+    let d = (a - b).rem_euclid(1.0);
+    d.min(1.0 - d)
+}
+
+/// Checks that `raw`, the raw a cyclic view gives `θ̃`, is `fract(θ̃ / 2π)` with `fract(x) = x − ⌊x⌋`
+/// (REQ-RENDER-085): `θ̃ = −π/2` gives 0.75; each `θ̃` gives its raw on `[0, 1]`, `x − ⌊x⌋` in f64; and `θ̃`, `θ̃ + 2π`
+/// and `θ̃ − 2π` give the same raw modulo 1, for negative `θ̃` as for positive.
+fn check_fract(raw: impl Fn(f32) -> f64) {
+    use std::f64::consts::{FRAC_PI_2, PI, TAU};
+    let quarter = raw(-FRAC_PI_2 as f32);
+    assert!(
+        (quarter - 0.75).abs() < 1e-6,
+        "θ̃ = −π/2 gives raw {quarter}, not 0.75"
+    );
+    for x in [
+        0.0, 1e-30, -1e-30, 0.5, -0.5, 1.0, -1.0, FRAC_PI_2, PI, -PI, 3.0, -3.0, 6.0, -6.0, 7.5,
+        -7.5, 20.0, -20.0, 100.25, -100.25,
+    ] {
+        let theta = x as f32;
+        let r = raw(theta);
+        let y = f64::from(theta) / TAU;
+        assert!(
+            (0.0..=1.0).contains(&r),
+            "θ̃ = {theta} gives raw {r}, off [0, 1]"
+        );
+        assert!(
+            r == y - y.floor(),
+            "θ̃ = {theta} gives raw {r}, not x − ⌊x⌋ = {}",
+            y - y.floor()
+        );
+        for turn in [TAU, -TAU] {
+            let other = (f64::from(theta) + turn) as f32;
+            let d = turn_distance(r, raw(other));
+            assert!(
+                d < 1e-6,
+                "θ̃ = {theta} and {other}, one turn apart, give raws {d} apart"
+            );
+        }
+    }
+}
+
+/// The raw `theta`'s view gives `x`: its `t` on the fixed `[0, 1]`, on `ramp_twilight`.
+fn theta_raw(n: &NumericView, x: f32) -> f64 {
+    match n.shown(x, false, [0.0, 1.0], 1) {
+        Shown::Ramp {
+            ramp: Ramp::Twilight,
+            t,
+        } => t,
+        other => panic!("`theta` shows {x} as {other:?}"),
+    }
+}
+
+#[test]
+fn numeric_view_template_theta_raw_is_fract_of_a_turn() {
+    let (n, _) = theta_view(&entries(&ledger::layout()));
+    check_fract(|x| theta_raw(&n, x));
+}
+
+negative_control!(
+    numeric_view_template_theta_raw_is_fract_of_a_turn,
+    "a trunc-based fract, Rust's f64::fract (x − trunc x), gives −0.25 at θ̃ = −π/2",
+    expected = "not 0.75",
+    check_fract(|x| (f64::from(x) / std::f64::consts::TAU).fract())
 );
 
 // ── R-401 and R-419 (TASK-M1-18): each log field's own floor (REQ-TOOL-160) ─────────────────────────────────────────

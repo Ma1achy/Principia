@@ -61,14 +61,32 @@ pub enum Step {
     ShiftArrowRight,
     /// Press K with the pointer over the figure at [`LOCK_AT`]: lock there (render_gui_spec §G4).
     Lock,
+    /// Move the pointer over the figure at [`HOVER_AT`]: the hover path and label (render_gui_spec §G2).
+    Hover,
+    /// Press Alt+1: toggle tile bounds (Overlays ▾).
+    Alt1,
+    /// Press Space: play in Time, keep the orbit in the Figure.
+    Space,
+}
+
+/// Where the `hover` step puts the pointer, `(s, t)` of the figure, `t` Y-up: left of the centre, as 01_main.png's
+/// cursor.
+pub const HOVER_AT: (f32, f32) = (0.57, 0.55);
+
+/// The point the `hover` step moves to, on `figure`: [`HOVER_AT`].
+pub fn hover_point(figure: egui::Rect) -> egui::Pos2 {
+    egui::pos2(
+        figure.min.x + figure.width() * HOVER_AT.0,
+        figure.max.y - figure.height() * HOVER_AT.1,
+    )
 }
 
 /// Where the `lock` step locks, `(s, t)` of the figure, `t` Y-up: off the centre, so the recentring shows.
 pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
 
-/// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25) and the Manifold view's
-/// (TASK-M6-26).
-pub const STEPS: [(&str, Step); 16] = [
+/// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25), the Manifold view's
+/// (TASK-M6-26), and the hover, Alt+1 and Space (TASK-M6-27).
+pub const STEPS: [(&str, Step); 19] = [
     ("f3", Step::F3),
     ("raise_warning", Step::RaiseWarning),
     ("raise_error", Step::RaiseError),
@@ -85,6 +103,9 @@ pub const STEPS: [(&str, Step); 16] = [
     ("shift_arrow_up", Step::ShiftArrowUp),
     ("shift_arrow_right", Step::ShiftArrowRight),
     ("lock", Step::Lock),
+    ("hover", Step::Hover),
+    ("alt_1", Step::Alt1),
+    ("space", Step::Space),
 ];
 
 impl Step {
@@ -191,6 +212,9 @@ pub fn shoot(canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>, steps: &[S
                 frames.push(vec![Event::PointerMoved(lock_point(layout.figure))]);
                 frames.extend(key(Key::K, Modifiers::NONE));
             }
+            Step::Hover => frames.push(vec![Event::PointerMoved(hover_point(layout.figure))]),
+            Step::Alt1 => frames.extend(key(Key::Num1, Modifiers::ALT)),
+            Step::Space => frames.extend(key(Key::Space, Modifiers::NONE)),
             Step::RaiseWarning => app.side().engine().raise_warning(),
             Step::RaiseError => app.side().engine().raise_error(),
             Step::ClickFooter => frames.extend(click(footer_point(layout.footer))),

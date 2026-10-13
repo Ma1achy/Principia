@@ -365,6 +365,39 @@ pub const EPS_W: ConstantBuilder = chart(
     },
 );
 
+/// The section `ε_M01` is proposed in (dd_decoder §3.1).
+const M01_SECTION: Citation = Citation::Corpus {
+    file: "docs/design/principia_dd_decoder.md",
+    section: "3.1 Mass",
+};
+
+/// `ε_M01`: the mass block's `DEGENERATE(M01_TINY)` threshold, `M₀₁ < ε_M01` (dd_decoder §3.1). REQ-DEC-039's
+/// proposal (R-71), provisional until the M2 gate: a threshold in the measured gap at `μ_max = 5` between the
+/// `stick_breaking` corner's pile-up at `ε_μ − ε_μ²/4` and the ternary plot's floor `2ε_m` (TASK-M2-02,
+/// `fixtures/gates/m01_tiny/measurement.toml`; pitfalls §3).
+pub const EPS_M01: ConstantBuilder = ConstantBuilder {
+    name: "eps_m01",
+    value: Some(Value::Threshold(1e-5)),
+    class: Some(Admissibility::CanonicalUnits),
+    citation: Some(M01_SECTION),
+    relative_basis: Some(RelativeBasis::Gap {
+        source: M01_SECTION,
+        below: Population {
+            name:
+                "stick_breaking's saturated corner: M₀₁ at z_μ in {16, 40, 1e3, 1e38}², f64 and f32",
+            lo: 9.9999975e-7,
+            hi: 1e-6,
+            count: 32,
+        },
+        above: Population {
+            name: "the ternary plot's floor, the buffered vertex m₂ = 1: M₀₁ = 2ε_m",
+            lo: 2e-4,
+            hi: 2e-4,
+            count: 1,
+        },
+    }),
+};
+
 /// The register: the constants the payload ledger uses (TASK-M0-08), and the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9). No `diffusion` sentinel: an invalid fit reads NaN by the predicate `n ≥ 2`
 /// (R-245).
@@ -382,4 +415,5 @@ pub const REGISTER: &[ConstantBuilder] = &[
     EPS_Q,
     DELTA_LAMBDA,
     EPS_W,
+    EPS_M01,
 ];

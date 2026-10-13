@@ -9,7 +9,7 @@ use engine::contract::log::{Severity, Source};
 use engine::contract::snapshot::History;
 
 use super::support::{headless, mock_app, playhead, rejects};
-use crate::clock::{Clock, TimeSource};
+use crate::clock::{Clock, Playback, TimeSource};
 use crate::mock::clock::{MockClock, MOCK_DT, MOCK_TICK_HZ};
 use crate::mock::{MockEngine, MOCK_ERROR, MOCK_FRAME, MOCK_START_MS, MOCK_WARNING};
 use crate::side::EngineSide;
@@ -243,6 +243,16 @@ fn mock_engine_app_clock_resyncs_after_undo() {
     assert!(app.snapshot().render.playhead.t >= 10.0);
 }
 
+/// A transport at speed 1, `playing` or not, the snapshot's playhead `t`, the horizon far off.
+fn play(playing: bool, t: f64) -> Playback {
+    Playback {
+        playing,
+        speed: 1.0,
+        t,
+        t_max: 1e9,
+    }
+}
+
 /// A time source that moves only when told to.
 struct Manual(f64);
 
@@ -263,38 +273,38 @@ fn mock_engine_clock_frames() {
     let mut clock = Clock::new();
     let mut source = Manual(5.0);
     assert_eq!(
-        clock.frame(&mut source, true, 0.0),
+        clock.frame(&mut source, play(true, 0.0)),
         None,
         "no tick to measure from"
     );
     assert_eq!(
-        clock.frame(&mut source, true, 0.0),
+        clock.frame(&mut source, play(true, 0.0)),
         None,
         "the source did not move"
     );
     source.0 = 5.5;
     assert_eq!(
-        clock.frame(&mut source, true, 2.0),
+        clock.frame(&mut source, play(true, 2.0)),
         Some(playhead(2.5, true))
     );
     source.0 = 6.0;
     assert_eq!(
-        clock.frame(&mut source, true, 2.0),
+        clock.frame(&mut source, play(true, 2.0)),
         Some(playhead(3.0, true)),
         "from its own playhead"
     );
     clock.resync();
     source.0 = 6.25;
     assert_eq!(
-        clock.frame(&mut source, true, 8.0),
+        clock.frame(&mut source, play(true, 8.0)),
         Some(playhead(8.25, true)),
         "from the snapshot's"
     );
     source.0 = 7.0;
-    assert_eq!(clock.frame(&mut source, false, 8.0), None, "paused");
+    assert_eq!(clock.frame(&mut source, play(false, 8.0)), None, "paused");
     source.0 = 7.5;
     assert_eq!(
-        clock.frame(&mut source, true, 1.0),
+        clock.frame(&mut source, play(true, 1.0)),
         Some(playhead(1.5, true)),
         "a pause resyncs"
     );

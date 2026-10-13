@@ -3,6 +3,7 @@
 #![no_std]
 
 pub mod bringup;
+pub mod decode;
 pub mod generated;
 pub mod payload;
 pub mod real;

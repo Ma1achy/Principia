@@ -536,7 +536,9 @@ fn check_stored(set: &Synthetic, n: u32) {
                         0
                     }
                     Storage::U16 | Storage::Pad(_) => 0,
-                    Storage::U32x4 => panic!("`{name}.{}`: no rule for this member", m.name),
+                    Storage::U32x4 | Storage::U32Array(_) => {
+                        panic!("`{name}.{}`: no rule for this member", m.name)
+                    }
                 };
                 for k in 0..floats {
                     let v = f32_at(data, o + 4 * k);

@@ -766,6 +766,11 @@ REQ-TOOL-163): `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and
 evidence is provisional; TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's smallest positive subnormal,
 which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
 `[0, horizon_steps]`; a `diverging` field's range, and under R-400 every range that spans zero, is symmetric about 0.
+**An undeclared range is a ledger gap, not one that spans zero (R-426; dd_generation_root §3.8):** a field is on
+`ramp_coolwarm` only when its declared range spans zero; `q_mass` and `mean_y` stay there provisionally, recorded as
+provisional at the M1 gate, until TASK-M2-03 and TASK-M3-13 declare their ranges and the physics reviewer re-checks
+each ramp. **Each log floor is a constants-register entry** (dd_generation_root §3.8), marked provisional until the M1
+gate and read from the register like any other, never a function in its place (R-427).
 A field carries the `diverging` scale only when its declared range spans zero (R-403; dd_generation_root §3.8), so
 the scale and the ramp agree; the one-signed `K_0` `[0, ∞)` and `V_0` `(−∞, 0]` are `lin`, on `ramp_viridis`, mapped
 monotonically, `V_0`'s most negative value at the dark end.
@@ -893,6 +898,8 @@ opacity / colour / level, chains in post order, and composes over any field — 
 special case and no bespoke pass. The rest of that render-contract list (**fallback tint**, **pending
 hatch**, **visible-set**, **locked/stale**) is Tier 3 by this test: those are *values attached to a
 quad*, not functions of position within it.
+The visible-set and locked/stale overlays are TASK-M5-29's, defined there in debug_tooling_plan §F with the
+corpus's existing meanings where they exist (`quad_state` 4 for "stale") (R-425; REQ-TOOL-166).
 
 **Tier 3 — tile debug shaders.** Scheduler verdicts exist only on the CPU. When such an overlay is
 active the **CPU packs per-visible-quad data into a small buffer (~16 KB for a typical viewport)** and

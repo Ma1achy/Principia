@@ -110,21 +110,33 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   **The check's result** (run early, in physics review 5484757609 of PR #197): `S`, `ftle` and `diffusion` pass, each
   signed at finite time with zero a meaningful centre, none an angle. `q_mass` and `mean_y` are not confirmed:
   `q_mass`'s formula (REQ-PAY-088, M2) and `mean_y`'s `y` (REQ-PAY-073, M3) are undefined, and each ledger range is
-  the unbounded default. They are **RQ-274**, which this item waits on for those two fields; the gate report gives
-  the human's ruling on it.
+  the unbounded default. They were **RQ-274**, ruled by **R-426**: both stay on `ramp_coolwarm` provisionally, and
+  the gate report gives them as provisional, neither confirmed nor failed; TASK-M2-03 (REQ-PAY-097) and TASK-M3-13
+  (REQ-PAY-098) declare their ranges, and physics re-checks each ramp then. R-426 also makes an undeclared range a
+  ledger gap, not one that spans zero: TASK-M1-21 (REQ-GEN-035), an M1 task the gate waits on, declares the ranges the
+  corpus settles, and the gate report gives its list of the gaps that remain. `C_ty`, on cool-warm by the same
+  default and not among the six, was **RQ-277**, decided per R-369 (option (a), PR #205): signed, as `diffusion` is,
+  since `C_ty = diffusion · C_tt(n)` with `C_tt(n) > 0`; it stays on `ramp_coolwarm`, and the gate report gives it
+  as confirmed with the human's veto open.
+- **Also at the M1 gate (R-427): the constants register's provisional entries.** The gate report lists each register
+  entry marked provisional until M1 (TASK-M1-18's six per-field log floors, and the hatch's colours and stripe width),
+  and the human confirms or changes each; an entry still so marked blocks the gate. At their confirmation
+  `rho_ratio`'s and `r_min_pair_0`'s floors are re-marked provisional until M2 (R-419, REQ-TOOL-163). The report also
+  gives TASK-M1-18's statement of whether `d_min`'s floor at 2⁻¹⁴, f16's smallest normal, is intended when `d_min` is
+  stored down to 2⁻²⁴ (R-271), so that the closest approaches land at the bottom of the ramp, with its evidence.
 
 <!-- gate:M1 -->
-**Exit gate — 103 requirements** (and every earlier gate still green):
+**Exit gate — 106 requirements** (and every earlier gate still green):
 
 - INT (2): REQ-INT-001, REQ-INT-086
 - PAY (14): REQ-PAY-021…033, REQ-PAY-090
-- GEN (6): REQ-GEN-009…012, REQ-GEN-027, REQ-GEN-033
+- GEN (7): REQ-GEN-009…012, REQ-GEN-027, REQ-GEN-033, REQ-GEN-035
 - RENDER (26): REQ-RENDER-003…024, REQ-RENDER-075, REQ-RENDER-077, REQ-RENDER-084…085
 - COL (13): REQ-COL-001…005, REQ-COL-053, REQ-COL-055…056, REQ-COL-062…064, REQ-COL-067…068
 - GUI (1): REQ-GUI-001
 - TOOL (34): REQ-TOOL-009…028, REQ-TOOL-122…124, REQ-TOOL-131, REQ-TOOL-137, REQ-TOOL-152…157, REQ-TOOL-160…162
 - VAL (5): REQ-VAL-010…012, REQ-VAL-122, REQ-VAL-182
-- SYS (2): REQ-SYS-009, REQ-SYS-080
+- SYS (4): REQ-SYS-009, REQ-SYS-080…082
 <!-- /gate:M1 -->
 
 ## M2 — Charts, decode and encode
@@ -140,13 +152,13 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 162 requirements** (and every earlier gate still green):
+**Exit gate — 165 requirements** (and every earlier gate still green):
 
-- DEC (36): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…044
+- DEC (38): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…046
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
 - CHART (47): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055
 - INT (2): REQ-INT-002…003
-- PAY (4): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095
+- PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
 - GEN (6): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034
 - RENDER (3): REQ-RENDER-025…027
 - COL (3): REQ-COL-006, REQ-COL-057, REQ-COL-060
@@ -176,12 +188,12 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 199 requirements** (and every earlier gate still green):
+**Exit gate — 200 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - INT (67): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…089
 - EVT (24): REQ-EVT-001…020, REQ-EVT-023…026
-- PAY (28): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086
+- PAY (29): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098
 - GEN (1): REQ-GEN-016
 - SCHED (2): REQ-SCHED-002…003
 - RENDER (1): REQ-RENDER-028
@@ -231,20 +243,20 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 171 requirements** (and every earlier gate still green):
+**Exit gate — 174 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
 - INT (2): REQ-INT-072, REQ-INT-075
 - EVT (1): REQ-EVT-022
-- PAY (18): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089, REQ-PAY-093…094
+- PAY (19): REQ-PAY-006, REQ-PAY-060…068, REQ-PAY-075…079, REQ-PAY-089, REQ-PAY-093…094, REQ-PAY-096
 - GEN (2): REQ-GEN-017, REQ-GEN-030
-- SCHED (50): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088, REQ-SCHED-098
+- SCHED (51): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088, REQ-SCHED-098…099
 - REF (13): REQ-REF-001…010, REQ-REF-045, REQ-REF-052…053
 - RENDER (22): REQ-RENDER-037…056, REQ-RENDER-076, REQ-RENDER-079
 - COL (1): REQ-COL-007
 - GUI (1): REQ-GUI-009
-- TOOL (17): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158, REQ-TOOL-164…165
+- TOOL (18): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158, REQ-TOOL-164…166
 - VAL (6): REQ-VAL-080…083, REQ-VAL-172…173
 - PERF (24): REQ-PERF-014…033, REQ-PERF-082, REQ-PERF-087, REQ-PERF-093, REQ-PERF-095
 - SYS (8): REQ-SYS-030…037

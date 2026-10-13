@@ -54,8 +54,8 @@ pub const WINDOW_ENTRIES: [ScopeId; 5] = [
     "windows_console",
 ];
 
-/// Joins the top bar to `tree` as big scope 1, its controls under it, and each menu's entries under the menu.
-/// Overlays ▾ has no entry until the overlay set has its toggles, so Enter on it finds nothing to open.
+/// Joins the top bar to `tree` as big scope 1, its controls under it, and each menu's entries under the menu,
+/// Overlays ▾'s toggles, all off and save as default among them (`overlays_menu`).
 pub fn register(tree: &mut ScopeTree) {
     tree.register(None, Scope::group("top_bar", "Top bar"));
     for (id, label) in CONTROLS {
@@ -74,6 +74,7 @@ pub fn register(tree: &mut ScopeTree) {
         tree.register(Some("windows"), Scope::disabled(id, name));
     }
     tree.register(Some("help"), Scope::control(KEYS.0, KEYS.1));
+    crate::explore::overlays_menu::register(tree);
 }
 
 /// Enter on control `id`, as its click: the mode switch switches, and a menu's entry acts.
@@ -95,10 +96,9 @@ pub const WINDOWS: [&str; 5] = ["Run", "Profiler", "Export & share", "Display", 
 /// What an absent value reads (RQ-243).
 pub const ABSENT: &str = "—";
 
-/// How many overlays are on: the overlay set has no toggle yet, so none is (the mock's count is 0, RQ-249).
+/// How many overlays are on: Overlays ▾'s count (§G2).
 pub fn overlays_on(overlays: &Overlays) -> u32 {
-    let Overlays {} = overlays;
-    0
+    crate::explore::overlays_menu::count_on(overlays)
 }
 
 /// `n` with its thousands grouped by spaces, as 01_main.png's "1 842 quads".
@@ -187,8 +187,16 @@ pub fn show(
         }
     });
     keyboard.place_widget("windows", &windows);
-    let overlays = format!("Overlays ▾ {}", overlays_on(&snapshot.render.overlays));
-    let (overlays, _) = MenuButton::from_button(Button::new(overlays)).ui(&mut bar, |_| {});
+    let set = &snapshot.render.overlays;
+    let overlays = format!("Overlays ▾ {}", overlays_on(set));
+    // The toggles keep the menu open; a click outside closes it.
+    let config = egui::containers::menu::MenuConfig::new()
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside);
+    let (overlays, _) = MenuButton::from_button(Button::new(overlays))
+        .config(config)
+        .ui(&mut bar, |ui| {
+            crate::explore::overlays_menu::show(ui, set, keyboard, actions)
+        });
     keyboard.place_widget("overlays", &overlays);
     for (id, name) in [
         ("run", "Run…"),

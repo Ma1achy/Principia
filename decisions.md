@@ -6928,9 +6928,12 @@ REQ-TOOL-012's, REQ-TOOL-023's, REQ-TOOL-137's, REQ-COL-002's and REQ-GUI-105's 
 
 ## R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*
 *Amended in part by R-423 (a field that is an angle takes the cyclic ramp: `theta`).*
-*Still in force: all of it, but for a field that is an angle: a numeric field view whose declared range spans zero is
-on `ramp_coolwarm` centred at zero, and one that can't be negative keeps viridis; an angle (`theta`, R-423) is on the
-cyclic ramp whatever its range.*
+*Amended in part by R-426 (an undeclared range is a ledger gap, not a range that spans zero).*
+*Still in force: all of it, but for a field that is an angle and for an undeclared range: a numeric field view whose
+declared range spans zero is on `ramp_coolwarm` centred at zero, and one that can't be negative keeps viridis; an angle
+(`theta`, R-423) is on the cyclic ramp whatever its range; a range the ledger does not declare is a gap, not one that
+spans zero, save that `q_mass` and `mean_y` stay on `ramp_coolwarm` provisionally until their ranges are declared
+(R-426).*
 *9 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" and
 `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`" (added sentences),
 REQ-RENDER-022 and REQ-COL-016 (reqio), REQ-RENDER-084 (reqio, new), TASK-M1-17 (new), TASK-M7-07,
@@ -8755,3 +8758,304 @@ principal-value step deltas, in radians: `orbit_count = ⌊|θ̃|/2π⌋`. rende
 - R-423 is in the "design" group of `plan/rule_groups.yaml`, with R-400.
 
 Adds REQ-RENDER-085; REQ-TOOL-161's statement, rulings and sources change.
+
+## R-424 — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*
+*13 Oct 2026 · applied in `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
+(a paragraph added), REQ-TOOL-011 (reqio), REQ-PAY-096 and REQ-SCHED-099 (reqio, new), TASK-M1-19, TASK-M5-08,
+TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-275
+archived) and `REVIEW_QUEUE.md`; built by TASK-M1-19, TASK-M5-17 and TASK-M5-08*
+
+The orchestrator put RQ-275 and RQ-276 to the human, with a recommendation for RQ-275: contains-ensemble and
+contains-FTLE ticked against the prelude's `has_ensemble()` and `has_ftle` (as RQ-239 did for REQ-TOOL-026), the schema
+version against the build's `PAYLOAD_SCHEMA_VERSION`, sim-failed split off to the task that builds `QuadReduction`,
+and cache-valid split off to the M5 cache. The human replied, in their own words ("This is from me."), in one message,
+which R-424 and R-425 record. The whole message, once:
+
+> This is from me.
+> RQ-275: as recommended. contains-ensemble and contains-FTLE are checked
+> against has_ensemble() and has_ftle (as RQ-239 did); schema version
+> against PAYLOAD_SCHEMA_VERSION for M1; sim-failed moves to the
+> QuadReduction task; cache-valid moves to the M5 cache task, which also
+> decides whether per-quad schema version belongs with cache-valid
+> (it only matters once quads can come from an older build's cache).
+> RQ-276: (b). Both overlays move to TASK-M5-29 under a new defining
+> requirement, which reuses existing corpus meanings where they exist
+> (for example, quad state 4 for "stale") rather than defining new ones.
+
+(Message of 13 Oct 2026. The human numbered none of it; the orchestrator gave each part its own ruling from the next
+free number, in the message's order: R-424 RQ-275, R-425 RQ-276.)
+
+*What it decides:*
+- **RQ-275's options taken per flag, as recommended:** three flags checked at M1 against an existing per-variant,
+  per-frame or per-build source, as RQ-275's last option listed; two split off under option (b); nothing is dropped.
+- **contains-ensemble and contains-FTLE are checked against `has_ensemble()` and `has_ftle`,** the prelude's per-frame
+  uniform and per-variant baked constant (render contract Part 2; R-145), as RQ-239 read "present iff
+  contains-ensemble" for REQ-TOOL-026's spread view. Neither becomes a `RenderQuad` member.
+- **The schema version is checked against `PAYLOAD_SCHEMA_VERSION` for M1,** the build's one generated constant.
+- **sim-failed moves to the `QuadReduction` task,** split off from the M1 checklist as R-113 split rows.
+- **cache-valid moves to the M5 cache task,** which **also decides whether a per-quad schema version belongs with
+  cache-valid**: the drawn payload's own schema version (caching contract Part 1's signature) can differ from the
+  build's only once quads can come from an older build's cache, so at M1 the build's constant is the check.
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **"The `QuadReduction` task" is TASK-M5-17** ("Resolve stage: outcome and validity reductions, and Undetermined
+  quads"), which builds `QuadReduction`'s validity reductions from a quad's samples; TASK-M5-01, which builds the
+  generated struct and is in review as PR #191, keeps its scope, so that an approved PR is not reopened and held
+  behind TASK-M1-19 (the orchestrator's decision, 13 Oct 2026, on R-424's port). **REQ-PAY-096 (new, M5,
+  definition, R-72)**, closed by TASK-M5-17: what sim-failed holds per quad (from the samples whose `state` is
+  `sim_failed`, §3.1's code 4; `valid_sample_count` counts decode failures only), the `QuadReduction` member that
+  carries it or the members it derives from, and how the quad fields view reads it as `ctx.quad`, written into
+  dd_generation_root §3.7 (and §3.7a if a `RenderQuad` member is added), the physics reviewer approving; the
+  catalogue's quad fields row then shows it, ticked on a synthetic payload. TASK-M5-17 gains the catalogue
+  (REQ-TOOL-011) as a need.
+- **"The M5 cache task" is TASK-M5-08** ("The current-state cache: lookup, resume points, preview vs refined, no
+  history"), whose lookup is "identity + signature match", the check cache-valid reports; TASK-M5-06 builds the
+  signature it compares, and TASK-M5-08 depends on it. **REQ-SCHED-099 (new, M5, definition, R-72)**, closed by
+  TASK-M5-08: what cache-valid holds per drawn quad and its source, written into dd_generation_root §3.7a (with
+  caching contract Part 1 cited for the signature), and the decision whether a per-quad schema version belongs with
+  it, written in the same place with its reason, the physics reviewer approving; the catalogue's quad fields row then
+  shows cache-valid, and the per-quad schema version if it is added, ticked on a synthetic payload.
+- **How M1 ticks the three cells:** TASK-M1-19's checklist ticks contains-ensemble against the catalogue's reading of
+  `has_ensemble()` (the spread view's gate) with E toggled, contains-FTLE against the variant's `has_ftle` in both tier
+  variants, and the schema version against the generated `PAYLOAD_SCHEMA_VERSION`, each on a synthetic payload; no
+  `RenderQuad` or `CtxQuad` member is added for them.
+- **REQ-TOOL-011**'s statement and verify say where each flag is checked or placed; it loses `rq: RQ-275` and gains
+  R-424. render_contract Part 6 gains a paragraph under the table saying the same; the row itself is unchanged.
+- RQ-275 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-424 is in the "design" group of
+  `plan/rule_groups.yaml`, with R-420.
+
+*Accepted by R-427 (13 Oct 2026): no veto on "the `QuadReduction` task" as TASK-M5-17 and "the M5 cache task" as
+TASK-M5-08.*
+
+Adds REQ-PAY-096 and REQ-SCHED-099; REQ-TOOL-011's statement, verify, rulings, sources, note and `rq` change.
+
+## R-425 — The visible-set and locked/stale overlays move to TASK-M5-29 under a new defining requirement, which reuses the corpus's existing meanings (`quad_state` 4 for "stale") rather than defining new ones *(closes RQ-276)*
+*13 Oct 2026 · applied in `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
+(a paragraph added), `docs/gui/principia_render_gui_spec.md` § "12.1 Structural overlays and tile debug shaders" (a
+sentence added), REQ-TOOL-011 (reqio), REQ-TOOL-166 (reqio, new), TASK-M1-19, TASK-M5-29, `plan/tasks.yaml`,
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-276 archived) and `REVIEW_QUEUE.md`; built by
+TASK-M5-29*
+
+The human's words (R-424 quotes the whole message):
+
+> RQ-276: (b). Both overlays move to TASK-M5-29 under a new defining
+> requirement, which reuses existing corpus meanings where they exist
+> (for example, quad state 4 for "stale") rather than defining new ones.
+
+*What it decides:*
+- **RQ-276's option (b):** the visible-set and the locked/stale overlays leave the M1 checklist (REQ-TOOL-011) for
+  TASK-M5-29's Tier 3 path (render_gui_spec §12.1 already places them in Tier 3).
+- **A new defining requirement (R-72)** holds them, and REQ-TOOL-011's checklist cites it for the two cells.
+- **The definition reuses existing corpus meanings where they exist rather than defining new ones;** for example,
+  "stale" is `quad_state` 4 (dd_generation_root §3.7a; debug_tooling_plan §F's quad-state enum).
+
+*Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
+- **The requirement is REQ-TOOL-166 (new, M5, definition)**, closed by TASK-M5-29: what each overlay marks per visible
+  quad, written into debug_tooling_plan §F, where the other structural overlays' styling is (REQ-TOOL-124), each
+  reading named from an existing corpus meaning where one exists ("stale" as `quad_state` 4), and drawn on the Tier 3
+  path; the physics reviewer approves the definition before merge. Which existing meaning "locked" and "visible-set"
+  take is the task's definition, not chosen here: RQ-276 lists the corpus's candidate readings (for "locked", the chart
+  lock or caching Part 4's pinned class; for "visible-set", the live set of scheduler Part 7), and the PR states which
+  it takes and cites it, or says that none exists.
+- Each overlay's slot in the Tier-3 per-visible-quad record counts toward REQ-PERF-079's record (TASK-M8-08), as the
+  rest of the Tier 3 path does.
+- **REQ-TOOL-011**'s statement and verify mark the two cells with REQ-TOOL-166; it loses `rq: RQ-276` and gains R-425.
+  render_contract Part 6 gains a paragraph under the table and render_gui_spec §12.1 a sentence saying so; the row
+  itself is unchanged. TASK-M1-19 now waits on nothing.
+- RQ-276 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-425 is in the "design" group of
+  `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-166; REQ-TOOL-011's statement, verify, rulings, sources and `rq` change.
+
+## R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*
+*13 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
+carry)" (a paragraph added), `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" and
+`docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`" (sentences added),
+R-400 (a forward line), REQ-RENDER-084 and REQ-COL-016 (reqio), REQ-GEN-035, REQ-PAY-097 and REQ-PAY-098 (reqio,
+new), TASK-M1-20, TASK-M1-21 (new), TASK-M2-03, TASK-M3-13, `plan/tasks.yaml`, `plan/MILESTONES.md` § "M1 — The
+synthetic payload and the eyes" (the R-423 gate item), `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md`
+(RQ-274 archived) and `REVIEW_QUEUE.md` (RQ-277, open); built by TASK-M1-21, TASK-M2-03 and TASK-M3-13*
+
+The orchestrator put RQ-274 to the human, with the seven choices it had made per R-369 since R-416, numbered for a
+veto. The human replied, in their own words ("This is from me."), in one message, which R-426 and R-427 record. The
+whole message, once:
+
+> This is from me.
+> RQ-274: (a) and (c). q_mass and mean_y stay on cool-warm provisionally,
+> recorded as provisional at the gate; TASK-M2-03 and TASK-M3-13 each
+> declare the range and physics re-checks the ramp then. Also correct
+> R-400's reading: an undeclared range is a ledger gap, not "spans zero";
+> a field is diverging only when its declared range spans zero (RQ-260).
+> Veto of #3: the floors must not become functions to get past the
+> constants lint. Put them in the confirmed register, marked provisional
+> until the M1 gate, and read them from there; if the register can't hold
+> provisional values, fix that (every gate needs it).
+> For the gate evidence: d_min's floor of 2⁻¹⁴ is f16's smallest normal,
+> but d_min is stored down to 2⁻²⁴ (R-271), so the closest approaches
+> all land at the bottom of the ramp. State whether that's intended.
+> Decisions 1, 2 and 4–7: no veto.
+
+(Message of 13 Oct 2026. "#3" and "Decisions 1, 2 and 4–7" are the orchestrator's numbering of its seven choices,
+listed in R-427. The orchestrator gave each part its own ruling from the next free number, in the message's order:
+R-426 RQ-274 and R-400's reading, which the message joins; R-427 the veto of #3, the register, `d_min`'s floor and
+the "no veto" on the rest, which are one act on the veto list.)
+
+*What it decides:*
+- **RQ-274's options (a) and (c), for both fields.** `q_mass` and `mean_y` stay on `ramp_coolwarm` provisionally, and
+  the M1 gate records them as provisional: neither confirmed nor failed by R-423's check. TASK-M2-03, which writes
+  `q_mass`'s formula (REQ-PAY-088, M2), and TASK-M3-13, which defines the per-sample `y` (REQ-PAY-073, M3), each
+  declare the field's ledger range from its definition, and the physics reviewer re-checks the field's ramp then.
+- **R-400's reading is amended: an undeclared range is a ledger gap, not "spans zero".** A field is diverging only
+  when its declared range spans zero, RQ-260's own words ("every field whose declared ledger range spans zero"). R-400's
+  applied text read the (−∞, ∞) the ledger writes where §3 gives no range as one that "spans zero"; that reading no
+  longer holds. So R-426 amends R-400 in part.
+
+*Applied per R-369 (mechanical consequences, readings and routine design choices):*
+- **Specific over general.** By the general clause `q_mass` and `mean_y`, whose ranges are undeclared, would leave the
+  diverging ramp; the same message keeps them on it provisionally. The specific clause governs those two until their
+  ranges are declared; no other field is kept on it by this ruling.
+- **The survey** (`crates/ledger/src/payload.rs` at 7063e004, and the corpus). The ledger's `entry()` (:26–37) writes
+  (−∞, ∞) for every field it is given no range for. The numeric fields the template draws (scalars that are not
+  categorical, flags, vectors or the floored drifts) and that sit on `ramp_coolwarm` with no range declared in §3 or the
+  ledger are `S` (:215), `mean_y` (:217), `C_ty` (:218), `q_mass` (:261), and the derived `ftle` and `diffusion`, whose
+  §3.8 worked entries read "(−∞, ∞): §3.4 gives no bound". Each falls as follows:
+  - `q_mass` and `mean_y`: kept on `ramp_coolwarm` provisionally, by this ruling.
+  - `S`, `ftle` and `diffusion`: R-423's physics check found each "signed at finite time with zero a meaningful
+    centre", as R-423 and `plan/MILESTONES.md` § "M1" record, so each is declared (−∞, ∞), signed, citing that check.
+    The view is unchanged.
+  - `C_ty`: on `ramp_coolwarm` only by the default. §3 gives it no scale or range, and R-423's check, of the six
+    fields TASK-M1-17's PR listed as moved, did not cover it. The corpus does not say what its view shows meanwhile,
+    so it is not chosen here: **filed as RQ-277**.
+  - `E_0` and `Lz_0` have no range in §3 either, but carry the `diverging` scale (§3.4; §3.6: "`E₀ = K_0 + V_0` keeps
+    its `diverging` scale"), which agrees only with a range spanning zero (R-403); so they are declared (−∞, ∞),
+    signed, citing §3.4. `energy_drift` and `Lz_drift` are already declared "(−∞, ∞), signed (§3.4)" in §3.8's worked
+    entries. None changes.
+  - Undeclared but not drawn by their range: `theta` (cyclic, R-423), `rho_angle` (cyclic; its formula REQ-PAY-088's)
+    and the vectors `r`, `p`, `r_sh`, `p_sh` (the template draws no vector; their `‖·‖` and direction-cosine views
+    read no range). Each is a gap the check lists; no ramp changes.
+- **The code consequence is new M1 work: REQ-GEN-035 (new, M1)**, closed by **TASK-M1-21 (new)**, "Undeclared ranges
+  are ledger gaps (R-426)": the ledger tells a declared range from an undeclared one, and the default no longer reads
+  as spanning zero; the fields above are declared, each citing its source; `q_mass` and `mean_y` are marked
+  provisional (R-426) and keep `ramp_coolwarm`; a `lin` or `diverging` scalar field whose range is undeclared and not
+  so marked fails generation, naming it, as §3.8's "A field without a complete entry fails generation loudly" has it,
+  `range` being a key every entry carries; and a check lists every remaining gap with the requirement that fills it,
+  which the M1 gate report gives. REQ-GEN-035 carries `rq: RQ-277` for `C_ty`, so TASK-M1-21's PR does not merge
+  until RQ-277 is ruled. TASK-M1-21 depends on TASK-M1-20 (both change `payload.rs`'s entries); its reviewers are
+  code, qa and physics.
+- **The re-checks are requirements: REQ-PAY-097 (new, M2)**, closed by TASK-M2-03: `q_mass`'s ledger range declared
+  from REQ-PAY-088's formula, citing it, its provisional mark removed, and the physics reviewer re-checking its ramp
+  (a range that does not span zero moves the view to viridis, its goldens re-rendered); and **REQ-PAY-098 (new, M3)**,
+  closed by TASK-M3-13, the same for `mean_y` from REQ-PAY-073's `y`. TASK-M2-03 depends on TASK-M1-21; TASK-M3-13
+  needs REQ-GEN-035.
+- `plan/MILESTONES.md` § "M1"'s R-423 gate item records the ruling: `S`, `ftle` and `diffusion` confirmed, `theta`
+  cyclic, `q_mass` and `mean_y` provisional (R-426), re-checked at M2 and M3. TASK-M1-20's assertion that they keep
+  `ramp_coolwarm` stands; its note names R-426.
+- dd_generation_root §3.8 gains a paragraph, and render_gui_spec §10.1 and colour_composition §1.2 a sentence each,
+  saying so. REQ-RENDER-084 and REQ-COL-016 gain R-426 and a note. R-400 gains a forward line ("Amended in part by
+  R-426") and its "Still in force" line names the gap.
+- RQ-274 moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line. R-426 is in the "design" group of
+  `plan/rule_groups.yaml`, with R-400 and R-423.
+
+*Fix round (PR #205: physics review 5506860821, code review 5506873900), applied per R-369; the human may veto
+any:*
+- **`energy_drift` and `Lz_drift` must be declared in the ledger.** The survey's "None changes" holds for their views,
+  but not for the ledger: `crates/ledger/src/payload.rs`:245–252 gives them `Scale::Diverging` and a `floor`, with no
+  `.range(…)`, so the unbounded default, which TASK-M1-21's gate would refuse. §3.8's worked entries already declare
+  them "(−∞, ∞), signed (§3.4)"; REQ-GEN-035 and TASK-M1-21 declare them so, citing §3.8 and §3.4, and name them in
+  the acceptance, since the template, which skips floored fields, would not reach them.
+- **§3.8's grammar gains the range states** (docs before the plan): `range: declared(lo, hi, citation) | gap |
+  provisional(requirement)`, with a bullet for each state; a `gap` on a `lin` or `diverging` scalar fails generation.
+- **RQ-277 is decided, option (a), by the orchestrator per R-369** (not a ruling): `C_ty = diffusion · C_tt(n)` with
+  `C_tt(n) = h²·n(n²−1)/12 > 0` for `n ≥ 2` (§3.4), so `C_ty` has `diffusion`'s sign whatever `y` is, and R-423's
+  check confirmed `diffusion` signed; the corpus and R-423 settle it, and R-369 decides what the docs settle. `C_ty` is
+  declared (−∞, ∞), signed, citing R-423 and that derivation, and stays on `ramp_coolwarm`, so no golden changes.
+  RQ-277 moves to `docs/archive/review_queue/M0.md` with a "Decided" line; REQ-GEN-035 loses `rq: RQ-277`, and
+  TASK-M1-21 waits on nothing.
+
+Adds REQ-GEN-035, REQ-PAY-097 and REQ-PAY-098; REQ-RENDER-084's and REQ-COL-016's rulings and notes change.
+
+## R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7
+*13 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
+carry)" (the register's `provisional` key: a line reworded, lines added), `docs/gui/principia_render_gui_spec.md` §
+"10.1 The shared prelude library" (a sentence added), R-424 (an acceptance line), REQ-TOOL-160 and REQ-SYS-063
+(reqio), REQ-SYS-081 and REQ-SYS-082 (reqio, new), TASK-M1-18, `plan/tasks.yaml`, `plan/MILESTONES.md` § "M1 — The
+synthetic payload and the eyes" (a gate item), `plan/WORKFLOW.md` § "Human checkpoints: the milestone gates" (a
+sentence) and `plan/rule_groups.yaml`; built by TASK-M1-18*
+
+The human's words (R-426 quotes the whole message):
+
+> Veto of #3: the floors must not become functions to get past the
+> constants lint. Put them in the confirmed register, marked provisional
+> until the M1 gate, and read them from there; if the register can't hold
+> provisional values, fix that (every gate needs it).
+> For the gate evidence: d_min's floor of 2⁻¹⁴ is f16's smallest normal,
+> but d_min is stored down to 2⁻²⁴ (R-271), so the closest approaches
+> all land at the bottom of the ramp. State whether that's intended.
+> Decisions 1, 2 and 4–7: no veto.
+
+The seven choices put to the human, each the orchestrator's per R-369:
+1. "The `QuadReduction` task" of R-424 is TASK-M5-17.
+2. "The M5 cache task" of R-424 is TASK-M5-08.
+3. TASK-M1-18 (PR #204, open, not yet reviewed) made its six per-field log floors `pub const fn`s in
+   `crates/ledger/src/gen/numeric.rs`, because `cargo xtask lint constants` (dd_generation_root §3.8, "Reading a
+   constant") fails on a numeric `const` in `crates/ledger` not read from the register, and the register could not
+   hold an unconfirmed number.
+4. TASK-M1-20's nudge 0 and its `SAME_BY_DEFINITION` pair (PR #202).
+5. A later docs PR adding a "[0,1) is exact arithmetic" sentence, and "(cyclic)" after `theta`, in render_contract
+   Part 6.
+6. Reviewers code, physics and gui on the R-424/R-425 port (PR #203).
+7. #202's hash conflict resolved by `cargo xtask codegen`, and #204's reviews held until #202 lands.
+
+*What it decides:*
+- **Choice 3 is vetoed.** The floors must not become functions to get past the constants lint.
+- **The floors go in the constants register**, the "confirmed register", marked provisional until the M1 gate, and
+  are read from there.
+- **The register holds provisional values, for every gate.** It held none: a constant the corpus leaves open "is not
+  entered with a value: its value is `calibration`" until the human confirms it (dd_generation_root §3.8). That is
+  fixed, since every gate needs it.
+- **Gate evidence:** `d_min`'s proposed floor, 2⁻¹⁴, is f16's smallest normal, but `d_min` is stored down to 2⁻²⁴
+  (R-271), so the closest approaches all land at the bottom of the ramp. TASK-M1-18 states whether that is intended.
+  The port does not choose the floor.
+- **Choices 1, 2 and 4 to 7: no veto.** Each stands as applied, accepted by R-427.
+
+*Applied per R-369 (mechanical consequences, readings and routine design choices):*
+- **The `provisional` key** (dd_generation_root §3.8): `provisional?: gate(milestone)` on a register entry whose value
+  is a number or threshold and whose citation is its calibration requirement. It is read like any other entry, its
+  proposed number at once, as R-182 has CI use a proposed value "provisionally until its gate confirms it" and
+  `plan/WORKFLOW.md` has the gate report mark it. Generation fails on a provisional entry whose value is
+  `calibration`, that names no gate, or whose citation is not a calibration requirement. At the gate the human
+  confirms the value (the mark comes off and the citation becomes the confirming ruling) or changes it (entered as the
+  ruling gives it). The gate report lists each entry marked provisional until that gate, and an entry still so marked
+  blocks the gate, as an unconfirmed calibration does. The mark and its gate are not hashed, as the citation is not
+  (R-251): confirming a value does not change what stored bits mean.
+- **TASK-M1-18 builds it**, its scope grown, not a separate task: it is the first consumer, and the M1 gate needs it.
+  **REQ-SYS-081 (new, M1)**, closed by TASK-M1-18: the register's `provisional` key, its generation checks, and the
+  list of provisional entries by gate. REQ-SYS-063, the register's definition, gains R-427 and a note.
+- **Nothing is wrapped in a function to get past the lint: REQ-SYS-082 (new, M1)**, closed by TASK-M1-18. A `fn` or
+  `const fn` that returns a register constant's number in place of a register entry is the `const` the lint refuses,
+  under another form; §3.8's "Reading a constant" says so. Found at 7063e004: `prelude::hatch()`
+  (`crates/ledger/src/gen/prelude.rs`:146), REQ-COL-055's proposed hatch colours and stripe width (R-71, confirmed at
+  the M1 gate), the `const fn` #204 cited as its precedent. It moves into the register with the floors, marked
+  provisional until the M1 gate. TASK-M1-18's PR lists every other function in `crates/{kernel,ledger,engine}` that
+  returns a numeric literal, each either moved into the register or named, in its doc, as ledger or interface data, as
+  `payload.rs`'s continuation tables and `canonical_qnan_bits()` are; the code reviewer checks the list.
+- **The six floors:** each a register entry, provisional until the M1 gate, citing REQ-TOOL-160. **A reading of two
+  rulings together, flagged to the human:** R-419 has `rho_ratio`'s and `r_min_pair_0`'s floors "confirmed
+  provisionally at M1 and re-confirmed at M2". So all six are marked provisional until the M1 gate now; at the M1 gate
+  the four others are confirmed and their mark comes off, and these two, confirmed provisionally, are marked
+  provisional until the M2 gate (REQ-TOOL-163). The human's "until the M1 gate" is read as their first gate and
+  R-419's M2 as their second.
+- **`d_min`'s floor:** TASK-M1-18's PR states whether the floor at 2⁻¹⁴ is intended given storage down to 2⁻²⁴, with
+  evidence: where `d_min`'s stored values in [2⁻²⁴, 2⁻¹⁴) fall on the ramp under the proposed floor, how many of M1's
+  fixture values lie there, and what a floor at f16's smallest subnormal (2⁻²⁴, the register's `f16_min_subnormal`)
+  or another proposed value would show instead. The physics reviewer checks it, and the M1 gate item gives it to the
+  human. REQ-TOOL-160's verify and statement name the register and this statement.
+- **Recording the "no veto":** R-424 gains an acceptance line for choices 1 and 2, as R-416 recorded its; choices 4
+  to 7 are PR-level and stand as applied, recorded here.
+- render_gui_spec §10.1 gains a sentence (the floors are register entries); `plan/WORKFLOW.md`'s gate checkpoint gains
+  a sentence (a proposed value in the register's crates is a provisional entry). `plan/MILESTONES.md` § "M1" gains a
+  gate item: the provisional entries naming M1, and `d_min`'s statement.
+- R-427 is in the "values" group of `plan/rule_groups.yaml`.
+
+Adds REQ-SYS-081 and REQ-SYS-082; REQ-TOOL-160's statement, verify, rulings, sources and note, and REQ-SYS-063's
+rulings and note, change.

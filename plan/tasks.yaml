@@ -426,7 +426,7 @@
   title: "The per-field log floors (R-401)"
   depends_on: [TASK-M1-17]  # split from TASK-M1-17, applied per R-369 (physics review 5482528309 of PR #194)
   needs: []
-  requirements: [REQ-TOOL-160]
+  requirements: [REQ-TOOL-160, REQ-SYS-081, REQ-SYS-082]  # REQ-SYS-081, REQ-SYS-082: R-427, built here, applied per R-369
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3]
 - id: TASK-M1-19
@@ -444,6 +444,14 @@
   needs: []
   requirements: [REQ-RENDER-085]
   reviewers: [code, qa, physics, gui]
+  pitfalls: [PIT-3]
+- id: TASK-M1-21
+  milestone: M1
+  title: "Undeclared ranges are ledger gaps (R-426)"
+  depends_on: [TASK-M1-20]  # R-426: new M1 work, applied per R-369; after TASK-M1-20, which also changes payload.rs's entries
+  needs: []
+  requirements: [REQ-GEN-035]
+  reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M2-01
   milestone: M2
@@ -464,9 +472,9 @@
 - id: TASK-M2-03
   milestone: M2
   title: "Decoder: free momentum, the factorised join and the ICDescriptor"
-  depends_on: [TASK-M2-02, TASK-M2-30, TASK-M1-18]  # TASK-M2-30 for R-417's constants; TASK-M1-18 for R-419's floors, applied per R-369
-  needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160]
-  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163]
+  depends_on: [TASK-M2-02, TASK-M2-30, TASK-M1-18, TASK-M1-21]  # TASK-M2-30 for R-417's constants; TASK-M1-18 for R-419's floors; TASK-M1-21 for R-426's provisional mark on q_mass, applied per R-369
+  needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160, REQ-GEN-035]
+  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163, REQ-DEC-045, REQ-PAY-097]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-04
@@ -514,7 +522,7 @@
   title: "Invariant-momentum construction: rigid rotation, the seed family and feasibility"
   depends_on: [TASK-M2-03, TASK-M2-06]
   needs: [REQ-PAY-014, REQ-PAY-004]
-  requirements: [REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040]
+  requirements: [REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-040, REQ-DEC-046]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-10, PIT-9]
 - id: TASK-M2-10
@@ -785,8 +793,8 @@
   milestone: M3
   title: Welford streaming diffusion and the definition of y
   depends_on: [TASK-M3-04]
-  needs: [REQ-PAY-030, REQ-GEN-012, REQ-PAY-010]
-  requirements: [REQ-INT-041, REQ-PAY-054, REQ-PAY-057, REQ-PAY-073, REQ-RENDER-028]
+  needs: [REQ-PAY-030, REQ-GEN-012, REQ-PAY-010, REQ-GEN-035]
+  requirements: [REQ-INT-041, REQ-PAY-054, REQ-PAY-057, REQ-PAY-073, REQ-RENDER-028, REQ-PAY-098]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-14
@@ -1193,8 +1201,8 @@
   milestone: M5
   title: "The current-state cache: lookup, resume points, preview vs refined, no history"
   depends_on: [TASK-M5-06, TASK-M5-07, TASK-M4-10]
-  needs: [REQ-SCHED-002, REQ-SCHED-004, REQ-SCHED-009, REQ-PAY-005, REQ-PAY-057]
-  requirements: [REQ-SCHED-016, REQ-SCHED-029, REQ-SCHED-030, REQ-SCHED-049, REQ-PAY-060]
+  needs: [REQ-SCHED-002, REQ-SCHED-004, REQ-SCHED-009, REQ-PAY-005, REQ-PAY-057, REQ-TOOL-011]
+  requirements: [REQ-SCHED-016, REQ-SCHED-029, REQ-SCHED-030, REQ-SCHED-049, REQ-PAY-060, REQ-SCHED-099]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1, PIT-10]
 - id: TASK-M5-09
@@ -1265,8 +1273,8 @@
   milestone: M5
   title: "Resolve stage: outcome and validity reductions, and Undetermined quads"
   depends_on: [TASK-M5-01, TASK-M5-16]
-  needs: [REQ-PAY-004, REQ-PAY-014, REQ-PAY-046, REQ-SYS-019, REQ-TOOL-033]
-  requirements: [REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053]
+  needs: [REQ-PAY-004, REQ-PAY-014, REQ-PAY-046, REQ-SYS-019, REQ-TOOL-033, REQ-TOOL-011]
+  requirements: [REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053, REQ-PAY-096]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M5-18
@@ -1361,8 +1369,8 @@
   milestone: M5
   title: Tier 3 tile debug shaders and the quad-state transition table
   depends_on: [TASK-M5-15, TASK-M1-15]
-  needs: [REQ-TOOL-026, REQ-TOOL-028, REQ-RENDER-024, REQ-RENDER-020]
-  requirements: [REQ-RENDER-055, REQ-RENDER-056, REQ-TOOL-116]
+  needs: [REQ-TOOL-026, REQ-TOOL-028, REQ-RENDER-024, REQ-RENDER-020, REQ-TOOL-011]
+  requirements: [REQ-RENDER-055, REQ-RENDER-056, REQ-TOOL-116, REQ-TOOL-166]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
 - id: TASK-M5-30

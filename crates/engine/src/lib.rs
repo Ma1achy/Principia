@@ -21,9 +21,11 @@ pub mod contract {
     pub mod conformance;
     pub mod fast_math;
     pub mod interface;
+    pub mod legend;
     pub mod log;
     pub mod profile;
     pub mod render_state;
+    pub mod sample;
     pub mod set_field;
     pub mod sim_config;
     pub mod snapshot;
@@ -86,6 +88,18 @@ pub mod export {
     mod generated;
 
     pub use generated::*;
+}
+
+/// The quad's two records beside the scheduler (dd_generation_root §3.7; TASK-M5-01): `QuadReduction`, the per-quad
+/// summary the GPU returns, generated with its read accessors from its ledger by `cargo xtask codegen`
+/// (`ledger::reduction`), and [`QuadMeta`](quad::meta::QuadMeta), the CPU-side quad metadata, which is never a reduction
+/// member (§3.7, "Not reduction fields").
+pub mod quad {
+    mod generated;
+    pub mod meta;
+
+    pub use generated::*;
+    pub use meta::QuadMeta;
 }
 
 /// The compute-pipeline entry point: every compute pipeline is created through it, under an explicit fast-math setting

@@ -40,8 +40,8 @@ impl EngineInterface for NoRedo {
 fn conformance_mock_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        5,
-        "the four state-semantics cases (RQ-254) and the navigation paths' (R-390)"
+        6,
+        "the four state-semantics cases (RQ-254), the navigation paths' (R-390) and the overlay and hover edits'"
     );
     check_conforms(MockEngine::new);
     check_conforms(MockEngine::frozen);

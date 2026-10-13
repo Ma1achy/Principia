@@ -56,9 +56,9 @@ pub enum Placement {
 /// The ramp a numeric view draws on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Ramp {
-    /// `ramp_viridis`: every field whose range does not span zero, but the cyclic one.
+    /// `ramp_viridis`: every field whose range does not span zero, but the cyclic ones.
     Viridis,
-    /// `ramp_twilight`: the cyclic field.
+    /// `ramp_twilight`: the cyclic fields, `rho_angle` and `theta` (R-423).
     Twilight,
     /// `ramp_coolwarm`: a field whose declared range spans zero, centred at zero (R-400).
     Coolwarm,
@@ -182,8 +182,8 @@ pub fn log_floor(field: &str) -> Option<f64> {
     }
 }
 
-/// The period of a cyclic view, in the field's unit: one turn, 2π, the period of an angle in radians (`rho_angle`).
-/// Defined, R-72 (REQ-TOOL-161), in render_gui_spec §10.1: the physics reviewer approves it.
+/// The period of a cyclic view, in the field's unit: one turn, 2π, the period of an angle in radians (`rho_angle`,
+/// `theta`). Defined, R-72 (REQ-TOOL-161), in render_gui_spec §10.1: the physics reviewer approves it.
 pub fn cyclic_period() -> f64 {
     std::f64::consts::TAU
 }
@@ -324,7 +324,7 @@ impl NumericView {
         }
     }
 
-    /// The ramp the view draws on: twilight for the cyclic field, cool-warm for a field whose range spans zero, else
+    /// The ramp the view draws on: twilight for a cyclic field, cool-warm for a field whose range spans zero, else
     /// viridis.
     pub fn ramp(&self) -> Ramp {
         match self.placement {

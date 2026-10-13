@@ -253,6 +253,43 @@ impl ScopeTree {
         self.nodes.push(Node { scope, parent });
     }
 
+    /// Removes every scope below `parent`, keeping `parent`: for a screen whose elements come and go (the kept
+    /// orbits), which registers them again. A focus path into a removed scope is cut back at the next command.
+    pub fn remove_children(&mut self, parent: &str) {
+        let Some(root) = self.index(parent) else {
+            return;
+        };
+        let below = |mut i: usize, nodes: &[Node]| loop {
+            match nodes[i].parent {
+                Some(p) if p == root => return true,
+                Some(p) => i = p,
+                None => return false,
+            }
+        };
+        let keep: Vec<bool> = (0..self.nodes.len())
+            .map(|i| !below(i, &self.nodes))
+            .collect();
+        let mut new_index = vec![None; self.nodes.len()];
+        let mut next = 0;
+        for (i, k) in keep.iter().enumerate() {
+            if *k {
+                new_index[i] = Some(next);
+                next += 1;
+            }
+        }
+        let nodes = std::mem::take(&mut self.nodes);
+        self.nodes = nodes
+            .into_iter()
+            .zip(keep)
+            .filter_map(|(node, k)| {
+                k.then(|| Node {
+                    scope: node.scope,
+                    parent: node.parent.and_then(|p| new_index[p]),
+                })
+            })
+            .collect();
+    }
+
     /// Adds a row to the `?` overlay, after the global table's: a screen's own keys, registered with its scopes.
     pub fn register_shortcut(&mut self, key: &'static str, action: &'static str) {
         self.shortcuts.push((key, action));

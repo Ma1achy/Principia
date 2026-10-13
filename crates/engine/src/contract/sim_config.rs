@@ -103,10 +103,16 @@ pub enum KernelVariant {
     BringUp,
 }
 
-/// `T`/`dt`/thresholds/`eps` (gui_state_contract §2).
+/// `T`/`dt`/thresholds/`eps` (gui_state_contract §2). The horizon `T` was added for the dev GUI's Time, whose scrubber
+/// spans `[0, T]` (R-404's `TimeStep`), and its hover label, "at t of t_max" (render_gui_spec §G2) (R-390, "Contract
+/// fields"); `dt`, the thresholds and `eps` join with the requirements that need them (R-133).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Horizon {}
+pub struct Horizon {
+    /// The single global horizon `T` (canonical_spec; dd_simstate_payload §2): reaching it without escape or collision
+    /// is `bounded`. The GUI's `t_max`.
+    pub t: f64,
+}
 
 /// Collision radius `r_coll` (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
