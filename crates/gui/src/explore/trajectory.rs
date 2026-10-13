@@ -10,8 +10,9 @@
 //!
 //! **The turn rate (REQ-GUI-157, proposed, R-71; used provisionally until the human confirms it at the M8 gate,
 //! R-182):** [`TURN_DEG_PER_S`]. The angle is advanced by the rate times the seconds its time source moved, never by
-//! a step per frame, so it turns at the same rate at any frame rate; on the mock the source is the deterministic tick,
-//! frozen in capture mode, so a capture is the same every run.
+//! a step per frame, so it turns at the same rate at any frame rate. The seconds are the wall clock's (egui's frame
+//! time), the mock's tick counting frames; only capture mode's frozen clock holds them, so a capture is the same every
+//! run.
 //!
 //! Its keys (§G3): Trajectory is big scope 4; Enter goes in, onto its elements in the order drawn, the playhead,
 //! listen and the kept orbits among them; Enter on a button acts as its click, on the playhead starts interaction, in
@@ -217,7 +218,7 @@ pub fn turned(angle: f64, rate: f64, dt: f64) -> f64 {
 }
 
 impl Scratch {
-    /// One frame at the time source's `seconds`: the sphere turns, while "turn" is on and the sphere shown, by the rate
+    /// One frame at `seconds`, the wall clock's or a frozen source's: the sphere turns, while "turn" is on and the sphere shown, by the rate
     /// times the seconds since the last frame, and the orbit's playhead plays on, up to `span`.
     pub fn advance(&mut self, seconds: f64, span: f64) {
         let dt = self

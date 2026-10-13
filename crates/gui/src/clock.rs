@@ -15,10 +15,11 @@ pub trait TimeSource {
     fn now(&self) -> f64;
     /// How many ticks a second the source expects while playing: the app asks for a frame that often.
     fn rate_hz(&self) -> f64;
-    /// The source's time now in seconds, which what turns at a rate in degrees per second reads (the shape sphere,
-    /// REQ-GUI-157): the playhead's units of `t` unless the source says otherwise.
-    fn seconds(&self) -> f64 {
-        self.now()
+    /// The seconds what turns at a rate in degrees per second (the shape sphere, REQ-GUI-157) is held at, for a source
+    /// frozen as capture mode runs it; `None`, by default, for a running source, and what turns then reads the wall
+    /// clock, so it turns at its rate in real time whatever the frame rate.
+    fn held_seconds(&self) -> Option<f64> {
+        None
     }
 }
 

@@ -3,7 +3,7 @@
 //! reads it; the mock draws the hover path into its stand-in, solid near the slice and faint away from it; the
 //! Trajectory panel's "under cursor" tab shows the same sample; moving off the figure clears them all. The Figure's
 //! Space keeps the orbit and L toggles listen; the panel's sphere turns at its proposed rate by the time source's
-//! seconds, never by frames. Each check also runs on an input it must reject (R-176, through `rejects`).
+//! seconds, the wall clock's, never by frames. Each check also runs on an input it must reject (R-176, through `rejects`).
 
 use eframe::egui::{self, pos2, vec2, Event, Key, Modifiers, Rect};
 use engine::contract::sample::Sample;
@@ -19,7 +19,7 @@ use crate::explore::trajectory::{
     MAX_KEPT, NO_SAMPLE, PLAYHEAD, TRAJECTORY, TURN_DEG_PER_S, UNDER_CURSOR,
 };
 use crate::explore::FIGURE;
-use crate::headless::Headless;
+use crate::headless::{Headless, FRAME_S};
 use crate::keyboard::keymap::Direction;
 use crate::keyboard::scopes::{Adjust, ScopeTree, StepKind};
 use crate::layout::Layout;
@@ -524,7 +524,8 @@ fn mock_hover_sphere_turns_by_seconds_not_frames() {
         ..Scratch::default()
     };
     assert!(playing_flat.moving(true));
-    // In the app: the turn follows the mock's tick, so it turns with an orbit shown and holds in a frozen capture.
+    // In the app: the turn reads the wall clock (the frame's time), so on the running mock it turns with an orbit shown
+    // by the frames' seconds times the rate, never by the mock's ticks.
     let (mut app, mut h, _) = hovering();
     let a0 = app.trajectory.angle;
     for _ in 0..30 {
@@ -532,9 +533,61 @@ fn mock_hover_sphere_turns_by_seconds_not_frames() {
     }
     let a1 = app.trajectory.angle;
     assert!(
-        (a1 - a0 - 30.0 / 60.0 * TURN_DEG_PER_S).abs() < 1e-6,
+        (a1 - a0 - 30.0 * FRAME_S * TURN_DEG_PER_S).abs() < 1e-6,
         "{a0} → {a1}"
     );
+    rejects("a turn by the mock's ticks", || {
+        assert!((a1 - a0 - 30.0 / 60.0 * TURN_DEG_PER_S).abs() < 1e-6)
+    });
+}
+
+/// The angle the sphere turns through on the running mock, the pointer over the figure, in one second of wall time
+/// run as `frames` frames.
+fn turn_in_one_second(frames: u32) -> f64 {
+    let mut app = mock_app();
+    let mut h = headless();
+    h.set_frame_step(1.0 / f64::from(frames));
+    let _ = h.frame(&mut app, Vec::new());
+    let at = hover_point(Layout::new(h.screen(), PIXELS_PER_POINT).figure);
+    let _ = h.frame(&mut app, vec![Event::PointerMoved(at)]);
+    // Frames until the snapshot, read every snapshot interval, carries the sample under the cursor.
+    for _ in 0..frames {
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    assert!(app.snapshot().sample.is_some(), "no orbit under the cursor");
+    let a0 = app.trajectory.angle;
+    for _ in 0..frames {
+        let _ = h.frame(&mut app, Vec::new());
+    }
+    (app.trajectory.angle - a0).rem_euclid(360.0)
+}
+
+#[test]
+fn mock_hover_sphere_turns_the_same_at_any_frame_rate() {
+    // One second of wall time at 30 and at 120 frames a second turns the sphere by the rate, the same both ways.
+    let slow = turn_in_one_second(30);
+    let fast = turn_in_one_second(120);
+    assert!((slow - TURN_DEG_PER_S).abs() < 1e-6, "30 fps: {slow}");
+    assert!((fast - TURN_DEG_PER_S).abs() < 1e-6, "120 fps: {fast}");
+    rejects("a turn that counts frames", || {
+        assert!(
+            (fast - 120.0 / 60.0 * TURN_DEG_PER_S).abs() < 1e-6,
+            "{fast}"
+        )
+    });
+    // Capture mode's frozen clock holds the sphere whatever the frames' time.
+    let mut app = App::new(
+        MockSide::new(MockEngine::frozen(), None),
+        crate::capture::FORMAT,
+    );
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    let at = hover_point(Layout::new(h.screen(), PIXELS_PER_POINT).figure);
+    for _ in 0..10 {
+        let _ = h.frame(&mut app, vec![Event::PointerMoved(at)]);
+    }
+    assert!(app.snapshot().sample.is_some(), "no orbit under the cursor");
+    assert_eq!(app.trajectory.angle, 0.0);
 }
 
 #[test]

@@ -241,13 +241,14 @@ impl<S: EngineSide> App<S> {
             (
                 self.clock.frame(source, playback),
                 source.rate_hz(),
-                source.seconds(),
+                source.held_seconds(),
             )
         });
         let now = ctx.input(|i| i.time);
+        // What turns reads the wall clock, unless the source holds it (capture mode's frozen clock).
         let mut seconds = now;
-        if let Some((edit, rate_hz, source_seconds)) = ticked {
-            seconds = source_seconds;
+        if let Some((edit, rate_hz, held)) = ticked {
+            seconds = held.unwrap_or(now);
             if playback.playing || moving {
                 ctx.request_repaint_after(std::time::Duration::from_secs_f64(1.0 / rate_hz));
             }

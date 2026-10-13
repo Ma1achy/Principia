@@ -505,17 +505,26 @@ fn mock_time_readouts_and_ticks() {
         let t: Vec<String> = time::ticks(40.0).into_iter().map(|(_, s)| s).collect();
         assert_eq!(t, ["0", "10", "20", "30", "40", "50"])
     });
-    // The mock's horizon is 01_main.png's 50, and the source's seconds are its ticks at its rate.
+    // The mock's horizon is 01_main.png's 50. Running, its clock holds no seconds, so what turns reads the wall clock;
+    // frozen, it holds them at its start.
     let mut engine = MockEngine::new();
     assert_eq!(engine.snapshot().sim.horizon.t, MOCK_T_MAX);
     let clock = engine.clock();
     for _ in 0..30 {
         clock.tick();
     }
-    assert!((clock.seconds() - 0.5).abs() < 1e-12);
+    assert_eq!(clock.held_seconds(), None);
+    rejects("a running clock's ticks as seconds", || {
+        assert_eq!(clock.held_seconds(), Some(0.5))
+    });
+    let mut frozen = MockClock::frozen();
+    for _ in 0..30 {
+        frozen.tick();
+    }
+    assert_eq!(frozen.held_seconds(), Some(0.0));
 }
 
-/// A time source that reads its `now` as its seconds, by the trait's default.
+/// A time source that holds no seconds, by the trait's default.
 struct Fixed(f64);
 
 impl TimeSource for Fixed {
@@ -529,10 +538,9 @@ impl TimeSource for Fixed {
 }
 
 #[test]
-fn mock_time_a_source_s_seconds_are_its_now_by_default() {
-    assert_eq!(Fixed(2.5).seconds(), 2.5);
-    assert_eq!(Fixed(-3.0).seconds(), -3.0);
-    rejects("seconds of another time", || {
-        assert_eq!(Fixed(2.5).seconds(), 0.0)
+fn mock_time_a_source_holds_no_seconds_by_default() {
+    assert_eq!(Fixed(2.5).held_seconds(), None);
+    rejects("its now held as its seconds", || {
+        assert_eq!(Fixed(2.5).held_seconds(), Some(2.5))
     });
 }
