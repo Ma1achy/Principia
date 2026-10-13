@@ -121,7 +121,8 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         Edit::Render(RenderField::Playhead(p)) => p.t.to_string(),
         Edit::Render(RenderField::Overlays(o)) => overlays(o),
         Edit::Render(RenderField::Hover(h)) => match h.at {
-            Some([s, t]) => format!("({s}, {t})"),
+            // At four decimals: the pointer's f32, widened, would print its noise ("0.5700000524520874").
+            Some([s, t]) => format!("({s:.4}, {t:.4})"),
             None => "none".to_owned(),
         },
     };

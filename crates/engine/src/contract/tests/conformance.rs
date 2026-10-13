@@ -572,8 +572,8 @@ fn check_overlay_and_hover_messages(all: Overlays, at: [f64; 2]) {
         got,
         [
             format!("SetField Overlays [] → [{names}]"),
-            "SetField Hover.at none → (0.25, 0.5) (no history)".to_owned(),
-            "SetField Hover.at (0.25, 0.5) → none (no history)".to_owned(),
+            "SetField Hover.at none → (0.2500, 0.5000) (no history)".to_owned(),
+            "SetField Hover.at (0.2500, 0.5000) → none (no history)".to_owned(),
         ]
     );
 }
@@ -633,4 +633,38 @@ validation::negative_control!(
     "a cursor elsewhere must not log as (0.25, 0.5)",
     expected = "assertion",
     check_overlay_and_hover_messages(all_on(), [0.5, 0.25])
+);
+
+/// The hover's log line for a cursor at `at`.
+fn hover_message(at: [f64; 2]) -> String {
+    messages(vec![SetField {
+        edit: Edit::Render(RenderField::Hover(Hover { at: Some(at) })),
+        no_history: true,
+    }])
+    .remove(0)
+}
+
+/// The hover's line for a pointer's f32 cursor, widened, reads four decimals, never the widening's noise.
+fn check_hover_at_four_decimals(at: [f32; 2]) {
+    assert_eq!(
+        hover_message([f64::from(at[0]), f64::from(at[1])]),
+        "SetField Hover.at none → (0.5700, 0.5500) (no history)"
+    );
+}
+
+#[test]
+fn store_logs_the_hover_at_four_decimals() {
+    check_hover_at_four_decimals([0.57, 0.55]);
+    // Rounded, not cut: 0.12346 reads 0.1235 and 0.99996 reads 1.0000.
+    assert_eq!(
+        hover_message([0.123_46, 0.999_96]),
+        "SetField Hover.at none → (0.1235, 1.0000) (no history)"
+    );
+}
+
+validation::negative_control!(
+    store_logs_the_hover_at_four_decimals,
+    "another cursor must not log as (0.5700, 0.5500)",
+    expected = "assertion",
+    check_hover_at_four_decimals([0.57, 0.56])
 );
