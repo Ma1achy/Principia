@@ -18,13 +18,23 @@
 //! - `de_max_failed`, `dlz_max_failed`: `dE_max`'s and `dLz_max`'s views: a forced-failure sample's stored 0.0 sits on
 //!   the ramp at 0.0's place (R-79), not hatched.
 //! - `d_min`: `d_min`'s view: a forced-failure sample and an unstepped one hold the unset f16 +∞ and are drawn in the
-//!   "not yet" grey (R-271, R-280); an f16 NaN is hatched; a failed-state stored 0.0 sits on the ramp at 0.0's place; a
-//!   valid `d_min` on the ramp.
+//!   "not yet" style, the grey with its dot stipple (R-271, R-280, R-399); an f16 NaN is hatched; a failed-state stored
+//!   0.0 sits on the ramp at 0.0's place; a valid `d_min` on the ramp.
 //! - `length_view`: the word `length`'s view: the sentinel 127 shows as its literal value on the ramp (R-136).
 //! - `length_ramp`, `length_ramp_override`: the word `length`'s field ramp: 127 in the invalid pattern, then in the
 //!   node's override colour.
 //! - `d_min_ramp`, `d_min_ramp_override`: `d_min`'s field ramp: NaN in the invalid pattern, then in the override
-//!   colour; the unset value in the grey either way (R-280).
+//!   colour; the unset value in the "not yet" style either way (R-280, R-399).
+//!
+//! **The ramp follows the declared range** (`m1-numeric`; R-400, R-403; TASK-M1-17's acceptance lines), each view in
+//! its default mode, `RANGE_AUTO = 1`, over the scene's measured range:
+//! - `e_0_signed`, `lz_0_signed`, `c_ty_signed`: `E_0`, `Lz_0` and `C_ty`, whose declared ranges span zero, on
+//!   `ramp_coolwarm` over the symmetric `[−M, M]`: one sample at 0, at the table's neutral, `t = ½`, the negative
+//!   values on the cool side and the positive on the warm.
+//! - `k_0`, `v_0`: `K_0` over `[0, ∞)` and `V_0` over `(−∞, 0]` on `ramp_viridis`, increasing in the value, `K_0`'s
+//!   minimum and `V_0`'s most negative value at the dark end, `t = 0`; physical values, `K₀ ≥ 0` and `V₀ < 0`, never
+//!   a layout fixture's off-sign value.
+//! - `virial_ratio`: a non-negative field, `[0, ∞)`, on `ramp_viridis`.
 //!
 //! **The debug views' scenes** (`debug-views`; RQ-237, decided per R-369; R-153; TASK-M1-12): one per entry of the
 //! render registry tagged debug ([`debug_cases`]), named by its id less `debug/`, `/` read as `-`
@@ -49,7 +59,7 @@ use std::sync::OnceLock;
 
 use engine::synthetic::Synthetic;
 use kernel::payload::{canonical_nan, sim_state_from_ftle, ReadParams, STATE_RUNNING};
-use ledger::gen::numeric::{NumericView, Shown as ViewShown};
+use ledger::gen::numeric::{NumericView, Ramp, Shown as ViewShown};
 use ledger::schema::Storage;
 use render::assemble::{self, Kind, Node, Occupant, Stain, Tier};
 use render::bind::{self, Context};
@@ -72,7 +82,7 @@ pub use kernel::payload::{
 pub use kernel::word::fgw_append;
 
 /// The scenes, by name.
-pub const NAMES: [&str; 14] = [
+pub const NAMES: [&str; 20] = [
     "ftle",
     "diffusion",
     "de_max_failed",
@@ -87,6 +97,43 @@ pub const NAMES: [&str; 14] = [
     "outcome_edited",
     "state_view",
     "detail_view",
+    "e_0_signed",
+    "lz_0_signed",
+    "c_ty_signed",
+    "k_0",
+    "v_0",
+    "virial_ratio",
+];
+
+/// The values of the scenes whose view's ramp follows the declared range, by scene: each set apart from every rounding
+/// tie by at least 0.01 of an 8-bit step, as every scene's render is (`render/tests/numeric_views.rs`).
+pub const RANGE_SCENES: [(&str, &str, [f32; 8]); 6] = [
+    (
+        "e_0_signed",
+        "E_0",
+        [-1.3, -0.85, -0.4, -0.1, 0.0, 0.25, 0.76, 1.05],
+    ),
+    (
+        "lz_0_signed",
+        "Lz_0",
+        [-0.9, -0.6, -0.32, 0.0, 0.15, 0.45, 0.78, 1.2],
+    ),
+    (
+        "c_ty_signed",
+        "C_ty",
+        [-2e-3, -1.2e-3, -5e-4, 0.0, 3e-4, 9e-4, 1.5e-3, 2.4e-3],
+    ),
+    ("k_0", "K_0", [0.0, 0.05, 0.2, 0.36, 0.6, 0.9, 1.2, 1.6]),
+    (
+        "v_0",
+        "V_0",
+        [-2.4, -1.9, -1.5, -1.12, -0.8, -0.55, -0.3, -0.12],
+    ),
+    (
+        "virial_ratio",
+        "virial_ratio",
+        [0.0, 0.3, 0.62, 0.9, 1.0, 1.3, 1.8, 2.5],
+    ),
 ];
 
 /// The swatch `outcome_edited` edits, and its edited colour, 8-bit sRGB: the body-1 escape's, to olive.
@@ -156,11 +203,7 @@ const NUDGES: &[(&str, u32)] = &[
     ("accumulators-drift_max_vs_final", 3),
     ("accumulators-drift_max_vs_final-lz", 2),
     ("derived-energy_drift", 3),
-    ("generated-C_ty", 1),
     ("generated-energy_drift", 3),
-    ("generated-m0", 1),
-    ("generated-m1", 1),
-    ("generated-m2", 1),
     ("generated-r_min_pair_0", 1),
     ("generated-r_sh", 1),
     ("generated-rho_angle", 2),
@@ -202,8 +245,15 @@ pub fn case_name(id: &str) -> String {
     id.strip_prefix("debug/").unwrap_or(id).replace('/', "-")
 }
 
+/// Whether the registry id `id` is a structural view's, `debug/<view>` for a view of `render::structural::VIEWS`.
+pub fn is_structural(id: &str) -> bool {
+    id.strip_prefix("debug/")
+        .is_some_and(|view| render::structural::VIEWS.contains(&view))
+}
+
 /// The `debug-views` suite's cases, in name order: one per entry of the render registry tagged debug, its header's
-/// defaults, then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
+/// defaults, but the structural views (`render::structural::VIEWS`, `debug/<view>`), which read `ctx.quad` and whose
+/// cases are the structural scenes of the same name (`crate::structural_scene`; TASK-M1-13), then the `EXTRA_CASES`. An `AUTO_RANGE` case's params are `RANGE_AUTO` 1 and its `u_range` measured
 /// over its scene once, here.
 pub fn debug_cases() -> Result<&'static [DebugCase], String> {
     static CASES: OnceLock<Result<Vec<DebugCase>, String>> = OnceLock::new();
@@ -212,7 +262,7 @@ pub fn debug_cases() -> Result<&'static [DebugCase], String> {
             let entries = registry::registry().map_err(|e| e.to_string())?;
             let mut out: Vec<DebugCase> = entries
                 .iter()
-                .filter(|e| e.category == Category::Debug)
+                .filter(|e| e.category == Category::Debug && !is_structural(&e.id))
                 .map(|e| {
                     let name = case_name(&e.id);
                     DebugCase {
@@ -263,10 +313,10 @@ pub enum Look {
     Invalid,
     /// A stored sentinel's literal value, compacted, on the ramp: `dbg_sentinel(raw, frag_xy)` (R-136, R-381).
     Literal(f64),
-    /// The neutral "not yet" grey, `DBG_NOT_YET` (R-280).
+    /// The "not yet" style, `debug_not_yet(frag_xy)`: the grey with a fine dot stipple (R-280, R-399).
     NotYet,
-    /// The ramp at `t`, twilight for a cyclic field, else viridis.
-    Ramp { twilight: bool, t: f64 },
+    /// The ramp `ramp` at `t`: twilight for a cyclic field, cool-warm for one whose range spans zero, else viridis.
+    Ramp { ramp: Ramp, t: f64 },
     /// A field ramp's invalid colour, overridden: R-16's magenta (`field_ramp::override_default`).
     Override,
     /// A flat colour, linear RGB: a categorical class's (a swatch of the outcome palette, a `dbg_cat` class, or the
@@ -281,9 +331,19 @@ impl Look {
         match self {
             Look::Invalid => present::debug_invalid(frag),
             Look::Literal(s) => present::dbg_sentinel(s as f32, frag),
-            Look::NotYet => present::not_yet(),
-            Look::Ramp { twilight: true, t } => present::ramp_twilight(t),
-            Look::Ramp { t, .. } => present::ramp_viridis(t),
+            Look::NotYet => present::debug_not_yet(frag),
+            Look::Ramp {
+                ramp: Ramp::Viridis,
+                t,
+            } => present::ramp_viridis(t),
+            Look::Ramp {
+                ramp: Ramp::Twilight,
+                t,
+            } => present::ramp_twilight(t),
+            Look::Ramp {
+                ramp: Ramp::Coolwarm,
+                t,
+            } => present::ramp_coolwarm(t),
             Look::Override => override_default(),
             Look::Flat(c) => c,
         }
@@ -363,6 +423,30 @@ pub fn scene(name: &str) -> Result<Scene, String> {
         _ => 8,
     };
     let (grid, mut set) = row(samples)?;
+    if let Some(&(_, field, values)) = RANGE_SCENES.iter().find(|(n, ..)| *n == name) {
+        for (i, v) in (0u32..).zip(values) {
+            match field {
+                "E_0" => {
+                    set.sample(i).E_0(v);
+                }
+                "Lz_0" => {
+                    set.sample(i).Lz_0(v);
+                }
+                "C_ty" => {
+                    set.sample(i).C_ty(v);
+                }
+                "K_0" => set.ic(i).K_0 = v,
+                "V_0" => set.ic(i).V_0 = v,
+                _ => set.ic(i).virial_ratio = v,
+            }
+        }
+        return Ok(Scene {
+            name,
+            set,
+            context: context(grid),
+            colouring: Colouring::View(field),
+        });
+    }
     let colouring = match name {
         "outcome" | "outcome_edited" => {
             for (i, &(state, detail, t)) in OUTCOME_SAMPLES.iter().enumerate() {
@@ -400,7 +484,10 @@ pub fn scene(name: &str) -> Result<Scene, String> {
             set.sample(0).times(0, 0);
             stepped(&mut set, 1, 100, 1.0);
             set.sample(1).state(STATE_SIM_FAILED);
-            for (k, s) in [0.15f32, 0.4, 0.85, 1.3, 2.1, 3.05].into_iter().enumerate() {
+            for (k, s) in [0.15f32, 0.4, 0.85, 1.35, 2.15, 3.05]
+                .into_iter()
+                .enumerate()
+            {
                 stepped(&mut set, 2 + k as u32, 100, s);
             }
             Colouring::View("ftle")
@@ -1000,7 +1087,7 @@ impl Scene {
                         ViewShown::Invalid => Look::Invalid,
                         ViewShown::Literal(s) => Look::Literal(s),
                         ViewShown::NotYet => Look::NotYet,
-                        ViewShown::Ramp { twilight, t } => Look::Ramp { twilight, t },
+                        ViewShown::Ramp { ramp, t } => Look::Ramp { ramp, t },
                     },
                 )
             }
@@ -1008,7 +1095,10 @@ impl Scene {
                 RampShown::Invalid if *override_on => Look::Override,
                 RampShown::Invalid => Look::Invalid,
                 RampShown::NotYet => Look::NotYet,
-                RampShown::Ramp(t) => Look::Ramp { twilight: false, t },
+                RampShown::Ramp(t) => Look::Ramp {
+                    ramp: Ramp::Viridis,
+                    t,
+                },
             }),
             Colouring::Debug(_) | Colouring::Probe(..) => {
                 unreachable!("a debug view's or a probe's scene reads no value")
@@ -1095,100 +1185,124 @@ impl Scene {
         queue: &wgpu::Queue,
         colour: Occupant,
     ) -> Result<Vec<[f32; 4]>, String> {
-        let fragment =
-            assemble::assemble(&self.stain_with(colour)?, Tier::FULL).map_err(|e| e.to_string())?;
-        let module = bind::preset_module(&fragment.source);
-        let bytes = self.set.bytes();
-        let bound = bind::upload(device, &bytes.payload(), &self.context);
         let params = self.params()?;
-        use wgpu::util::DeviceExt;
-        let buffer = |bytes: &[u8]| {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("golden scene uniforms"),
-                contents: bytes,
-                usage: wgpu::BufferUsages::UNIFORM,
-            })
-        };
-        let words: Vec<u8> = ledger::gen::prelude::uniform_words(self.context.grid.e)
-            .iter()
-            .flat_map(|w| w.to_le_bytes())
-            .collect();
-        let first = ledger::gen::prelude::uniforms_binding();
-        let mut buffers = vec![(first.binding, buffer(&words))];
-        for block in &fragment.uniforms {
-            let (offsets, size) = block_layout(&block.uniforms);
-            let mut contents = vec![0u8; size as usize];
-            for (u, &at) in block.uniforms.iter().zip(&offsets) {
-                let value = params
-                    .iter()
-                    .find(|(name, _)| *name == u.name)
-                    .map_or(&u.default, |(_, v)| v);
-                if !u.admits(value) {
-                    return Err(format!("{value:?} is not a value of `{}`", u.name));
-                }
-                let v = encode(u.ty, value);
-                contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
-            }
-            buffers.push((block.binding, buffer(&contents)));
-        }
-        let entries: Vec<wgpu::BindGroupLayoutEntry> = buffers
-            .iter()
-            .map(|(binding, _)| wgpu::BindGroupLayoutEntry {
-                binding: *binding,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            })
-            .collect();
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("golden scene uniforms"),
-            entries: &entries,
-        });
-        let group_entries: Vec<wgpu::BindGroupEntry> = buffers
-            .iter()
-            .map(|(binding, b)| wgpu::BindGroupEntry {
-                binding: *binding,
-                resource: b.as_entire_binding(),
-            })
-            .collect();
-        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("golden scene uniforms"),
-            layout: &layout,
-            entries: &group_entries,
-        });
-        let [_, l1, l2] = bound.layout_refs();
-        let [_, g1, g2] = bound.group_refs();
-        let (width, height) = self.size();
-        let image = headless::render(
+        render_stain(
             device,
             queue,
-            &Draw {
-                module: &module,
-                entry: bind::PRESET_ENTRY,
-                layouts: &[&layout, l1, l2],
-                groups: &[&group, g1, g2],
+            &self.stain_with(colour)?,
+            &self.set,
+            &self.context,
+            &|_, name| {
+                params
+                    .iter()
+                    .find(|(n, _)| n == name)
+                    .map(|(_, v)| v.clone())
             },
-            Target {
-                width,
-                height,
-                format: wgpu::TextureFormat::Rgba32Float,
-            },
-        )?;
-        Ok(image
-            .bytes
-            .as_chunks::<16>()
-            .0
-            .iter()
-            .map(|p| {
-                let (c, _) = p.as_chunks::<4>();
-                [0, 1, 2, 3].map(|k| f32::from_le_bytes(c[k]))
-            })
-            .collect())
+        )
     }
+}
+
+/// Renders `stain` over `set` with `context` through the render harness (`render::bind::preset_module` and `upload`)
+/// into an `Rgba32Float` target the size of `context`'s grid, and returns each pixel's RGBA, rows from the top. Each
+/// node's uniform block holds `param(node, name)` for each of its uniforms, `node` its place in the canonical stain
+/// (`render::assemble::UniformBlock::node`), or the uniform's declared default where that is `None`; a value the
+/// uniform does not admit is refused.
+pub fn render_stain(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+) -> Result<Vec<[f32; 4]>, String> {
+    let fragment = assemble::assemble(stain, Tier::FULL).map_err(|e| e.to_string())?;
+    let module = bind::preset_module(&fragment.source);
+    let bytes = set.bytes();
+    let bound = bind::upload(device, &bytes.payload(), context);
+    use wgpu::util::DeviceExt;
+    let buffer = |bytes: &[u8]| {
+        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("golden scene uniforms"),
+            contents: bytes,
+            usage: wgpu::BufferUsages::UNIFORM,
+        })
+    };
+    let words: Vec<u8> = ledger::gen::prelude::uniform_words(context.grid.e)
+        .iter()
+        .flat_map(|w| w.to_le_bytes())
+        .collect();
+    let first = ledger::gen::prelude::uniforms_binding();
+    let mut buffers = vec![(first.binding, buffer(&words))];
+    for block in &fragment.uniforms {
+        let (offsets, size) = block_layout(&block.uniforms);
+        let mut contents = vec![0u8; size as usize];
+        for (u, &at) in block.uniforms.iter().zip(&offsets) {
+            let value = param(block.node, &u.name).unwrap_or_else(|| u.default.clone());
+            if !u.admits(&value) {
+                return Err(format!("{value:?} is not a value of `{}`", u.name));
+            }
+            let v = encode(u.ty, &value);
+            contents[at as usize..at as usize + v.len()].copy_from_slice(&v);
+        }
+        buffers.push((block.binding, buffer(&contents)));
+    }
+    let entries: Vec<wgpu::BindGroupLayoutEntry> = buffers
+        .iter()
+        .map(|(binding, _)| wgpu::BindGroupLayoutEntry {
+            binding: *binding,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        })
+        .collect();
+    let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("golden scene uniforms"),
+        entries: &entries,
+    });
+    let group_entries: Vec<wgpu::BindGroupEntry> = buffers
+        .iter()
+        .map(|(binding, b)| wgpu::BindGroupEntry {
+            binding: *binding,
+            resource: b.as_entire_binding(),
+        })
+        .collect();
+    let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("golden scene uniforms"),
+        layout: &layout,
+        entries: &group_entries,
+    });
+    let [_, l1, l2] = bound.layout_refs();
+    let [_, g1, g2] = bound.group_refs();
+    let (width, height) = context.grid.target();
+    let image = headless::render(
+        device,
+        queue,
+        &Draw {
+            module: &module,
+            entry: bind::PRESET_ENTRY,
+            layouts: &[&layout, l1, l2],
+            groups: &[&group, g1, g2],
+        },
+        Target {
+            width,
+            height,
+            format: wgpu::TextureFormat::Rgba32Float,
+        },
+    )?;
+    Ok(image
+        .bytes
+        .as_chunks::<16>()
+        .0
+        .iter()
+        .map(|p| {
+            let (c, _) = p.as_chunks::<4>();
+            [0, 1, 2, 3].map(|k| f32::from_le_bytes(c[k]))
+        })
+        .collect())
 }
 
 /// The smallest distance, in 8-bit steps, of any channel of `pixels` scaled to 0…255 from a rounding tie (`k + ½`):

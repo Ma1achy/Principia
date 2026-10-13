@@ -142,6 +142,7 @@ The word lives here, not in `SimState`. Specification:
 | `Lz_0` | diverging | invariant-chart gradient view input |
 | `closure_min` | log | ≥ 0, f32; the running minimum of `|n̂(t) − n̂(0)|` once the shape has departed by `δ_dep` (R-37, payload §1) |
 | `closure_step` | lin | exact u16 step index of the minimum (the period label); binary-parity surface, same convention as `t_dmin_step` |
+| `theta` | **cyclic** | the unwrapped phase `θ̃`, the shape sphere's equatorial longitude accumulated in radians (dd_integrator §3.7); an angle, so its view is cyclic, period 2π, on `ramp_twilight`, not a diverging ramp (R-423); `orbit_count` and `retrograde` derive from it |
 
 > Metadata nuance the catalogue generator needs: **the two drift fields are signed** → *diverging* colour scale, not sequential-log. (Finding, §6.)
 
@@ -445,6 +446,14 @@ the *most* chaotic regions), whereas a crossing time cannot [RC §5.1].
 | `retrograde_fraction` | f16 | tiebreaker |
 | `mean_orbit_count_spread` | f16 | tiebreaker |
 
+**No escape (R-418).** `escape_time_min` and `escape_time_max` are the min and max reductions of the escape times of
+the quad's copies that escaped, each starting from its reduction's identity: `_min` from +∞ (binary16 `0x7c00`) and
+`_max` from −∞ (`0xfc00`). There is no no-escape branch: a quad none of whose copies escaped stores exactly those
+bits, and "no escape" reads `_min > _max`. `_max`'s −∞ lies below its range, as a sentinel may; an escape time past
+f16's range saturates, so every recorded time is finite and neither identity is ever a recorded time. Their ranges and
+`mean_orbit_count_spread`'s, each proposed as `[0, ∞)` with `overflow: saturate`, join REQ-PAY-093's five and are
+confirmed at the M5 gate (R-418).
+
 #### Conditional — not yet included
 
 | member | condition |
@@ -724,10 +733,10 @@ The register's entries, the constants the payload ledger uses:
 | Constraint | Link (forward) | Inverse | log-det | Sampling note |
 |---|---|---|---|---|
 | Simplex Δ² | softmax ∘ `μ_max·tanh` | log-ratio → `artanh`, clamp `(1−ε_μ)μ_max` | `log √det(JᵀJ)`, `J` the forward's 3×2 Jacobian (softmax Jacobian × sech² factors) | under-samples simplex edges/corners |
-| Bounded (a,b) | scaled/shifted `σ` | `logit`, clamp `[ε_z, 1−ε_z]` | `log((b−a)·σ')` | edge-heavy: crowds the bounds |
+| Bounded [a,b] (R-417) | scaled/shifted `σ` | `logit`, clamp `[ε_z, 1−ε_z]` | `log((b−a)·σ')` | edge-heavy: crowds the bounds |
 | Bounded alt | scaled `tanh` | `artanh` | `log(c·sech²)` | interchangeable with σ up to reparam (`tanh x = 2σ(2x)−1`) — differs in slope profile only |
 | Positive (0,∞) | softplus / exp | inverse-softplus / log | `log σ(x)` / `x` | exp is heavy-tailed |
-| Symmetric (−c,c) | `c·tanh` | `artanh` | `log(c·sech²)` | as bounded |
+| Symmetric [−c,c] (R-417) | `c·tanh` | `artanh` | `log(c·sech²)` | as bounded |
 | Unbounded ℝ | identity | identity | 0 | neutral |
 
 Each entry ships **forward, inverse, log-det, ε clamps, and the sampling note** — the robustness-sweep picker uses the last to choose alternatives that *disagree where it matters*.
@@ -798,13 +807,22 @@ formula writes one as a literal. They are `mu_max` = 5 and `q_max` = 2 (R-10), `
 **The registry's entries** *(TASK-M2-01; the two rows marked R-72 are definitions, REQ-GEN-026)*. Each row of the table
 above is registered once for each block codomain it serves. The codomains are:
 - the mass simplex Δ², two controls onto three masses;
-- `α ∈ (α_min, π/2 − α_min)` and `β ∈ (0, π)` (dd_decoder §3.2);
-- each free momentum `q ∈ (−q_max, q_max)` (dd_decoder §3.4), whose cap is the table's symmetric row;
+- `α ∈ [α_min, π/2 − α_min]` and `β ∈ [0, π]` (dd_decoder §3.2), closed (R-417);
+- each free momentum `q ∈ [−q_max, q_max]` (dd_decoder §3.4), closed (R-417), whose cap is the table's symmetric row;
 - the two lines, which no block uses.
 
 An interval `(a, b)` has width `b − a` and half-width `c = (b − a)/2`; on the symmetric cap, `a = −c`. A link is
 selected per block control, only among the entries onto that control's codomain (REQ-GEN-013). The defaults are
 `softmax_tanh` (mass), `sigmoid_alpha` and `sigmoid_beta` (config), and `sigmoid_q` (each free momentum).
+
+**The closed range and the f32 images of π/2 and π (R-417).** In exact arithmetic a bounded link's forward never
+reaches its bounds; in floating point it does, by its own rounding, so each codomain above is closed. A saturated
+control reaches each lower end where the link's output underflows or its `tanh` or softsign rounds to −1 (`α = 0`,
+`β = 0`, `q = −q_max`), at f32 and f64, and `q`'s upper end `q_max`, which is exact (2). The upper ends `π/2` and `π` are irrational, so the generator emits their f32
+images rounded toward zero, `fl↓(π/2)` (bits `0x3FC9_0FDA`) and `fl↓(π)` (`0x4049_0FDA`), not the nearest values, which
+lie above them; the f64 nearest values already lie below. So no bounded link's image passes its upper bound at either
+precision. The rounding is the emitter's: a tree's `num` is the f64 value's bits, so the hashed bytes do not change.
+No link clamps its output (validation ground-truth note: no endpoint clamping, no artificial guards).
 
 | Entry | Codomain | Forward | Inverse (with its ε clamp) | log-det | Sampling note |
 |---|---|---|---|---|---|
@@ -884,7 +902,7 @@ in `z₂`).
 5. **Sentinels:** a stored sentinel survives pack/unpack bit-exact; catalogue styles it, never scales it. (`diffusion` is no longer one: an invalid fit reads NaN, R-245.)
 6. **Metadata gate:** delete any entry's `scale` → generation fails with the field named.
 7. **Schema-version discipline:** the version is the hash of the canonicalised §3 table (R-36), §3.9's link registry included (R-340), so flipping one bit-offset changes it and the signature, with no number to forget to bump; the cache test then proves zero stale-schema payloads are ever served.
-8. **Registry properties, per link:** (a) constraint preservation ∀ inputs incl. saturation (simplex outputs sum to 1 and stay positive; bounded outputs in range); (b) inverse round-trip within ε-clamp tolerance, asserted in *physical* units; (c) analytic log-det matches a numeric Jacobian to tolerance across the domain; (d) C¹: central-difference derivative continuous across the range (no kinks).
+8. **Registry properties, per link:** (a) constraint preservation ∀ inputs incl. saturation (simplex outputs sum to 1 and stay positive; bounded outputs in the closed range `[a, b]`, compared at the exact bounds, not their rounded images: R-417); (b) inverse round-trip within ε-clamp tolerance, asserted in *physical* units; (c) analytic log-det matches a numeric Jacobian to tolerance across the domain; (d) C¹: central-difference derivative continuous across the range (no kinks).
 9. **Union-field semantics:** `detail` renders/decodes per `state` — an escape's detail is a body id, a collision's a pair id; the catalogue's detail view switches legend accordingly.
 
 ---

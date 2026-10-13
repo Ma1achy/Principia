@@ -106,8 +106,8 @@ fn encode8(c: f32) -> u8 {
 enum Want {
     /// A swatch: every pixel exactly the f32 nearest the sRGB decode of this 8-bit code, so it encodes back to it.
     Srgb(u32),
-    /// The neutral "not yet" grey, `DBG_NOT_YET`.
-    Grey,
+    /// The "not yet" style, `debug_not_yet`: the grey `DBG_NOT_YET` stippled with its dot (R-399).
+    NotYet,
     /// The hatched invalid pattern.
     Hatch,
 }
@@ -129,7 +129,7 @@ fn outcome_wants() -> Vec<Want> {
         c(8),
         Want::Srgb(TRIPLE_COLLISION),
         Want::Srgb(TRIPLE_EJECTION),
-        Want::Grey,
+        Want::NotYet,
         Want::Hatch,
         c(8),
     ]
@@ -150,7 +150,7 @@ fn check_outcome(s: &Scene, image: &[[f32; 4]], wants: &[Want]) {
                     [got[0], got[1], got[2]] == exact
                         && [got[0], got[1], got[2]].map(encode8) == hex(h)
                 }
-                Want::Grey => near(got, present::not_yet()),
+                Want::NotYet => near(got, present::debug_not_yet(frag)),
                 Want::Hatch => near(got, present::debug_invalid(frag)),
             };
             assert!(
@@ -306,8 +306,8 @@ fn running_sample() -> u32 {
         .unwrap_or_else(|| panic!("the outcome scene has no running sample"))
 }
 
-/// Checks that the running sample of `image` is drawn, alpha 1, in the "not yet" grey: neither blank (black, or the
-/// clear colour) nor any other class's colour.
+/// Checks that the running sample of `image` is drawn, alpha 1, in the "not yet" style (R-399): neither blank (black,
+/// or the clear colour) nor any other class's colour.
 fn check_running(s: &Scene, image: &[[f32; 4]]) {
     let i = running_sample();
     assert_eq!(
@@ -316,10 +316,10 @@ fn check_running(s: &Scene, image: &[[f32; 4]]) {
         "a RUNNING sample"
     );
     for ((x, y), got) in tile(s, image, i) {
+        let want = present::debug_not_yet([f64::from(x) + 0.5, f64::from(y) + 0.5]);
         assert!(
-            got[3] == 1.0 && near(got, present::not_yet()) && got[..3] != [0.0; 3],
-            "the running sample's pixel ({x}, {y}) is {got:?}, not the grey {:?}",
-            present::not_yet()
+            got[3] == 1.0 && near(got, want) && got[..3] != [0.0; 3],
+            "the running sample's pixel ({x}, {y}) is {got:?}, not the \"not yet\" style's {want:?}"
         );
     }
 }
@@ -340,7 +340,7 @@ negative_control!(
             &gpu(),
             &s,
             outcome::WGSL,
-            "return DBG_NOT_YET;",
+            "return debug_not_yet(ctx.frag_xy);",
             "return vec3<f32>(0.0, 0.0, 0.0);",
         );
         check_running(&s, &image);
@@ -585,8 +585,8 @@ negative_control!(
 
 // ── REQ-COL-062: the proposal's evidence ─────────────────────────────────────────────────────────────────────────────
 
-/// The colours the triple swatches must stand apart from: §1.4's nine classes, the running grey (REQ-COL-053) and the
-/// hatch's two colours (REQ-COL-055), by name, as OKLab.
+/// The colours the triple swatches must stand apart from: §1.4's nine classes, the running grey (REQ-COL-053) and its
+/// dot (R-399), and the hatch's two colours (REQ-COL-055), by name, as OKLab.
 fn neighbours() -> Vec<(String, Rgb)> {
     let mut out: Vec<(String, Rgb)> = SECTION_1_4
         .iter()
@@ -596,6 +596,11 @@ fn neighbours() -> Vec<(String, Rgb)> {
     out.push((
         format!("running grey #{g:02X}{g:02X}{g:02X}"),
         present::not_yet(),
+    ));
+    let [d, ..] = present::NOT_YET_DOT_SRGB8;
+    out.push((
+        format!("running dot #{d:02X}{d:02X}{d:02X}"),
+        present::not_yet_dot(),
     ));
     for c in ledger::gen::prelude::hatch().colours {
         out.push((

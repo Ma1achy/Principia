@@ -344,7 +344,7 @@
   milestone: M2
 - id: REQ-DEC-018
   area: DEC
-  statement: "The canonicaliser must be implemented for charts that bypass the canonical-frame decode, and for canonical-frame decodes it must be a no-op (rotation angle ≈ 0, mirror not taken) away from the λ̃_y = 0 seam."
+  statement: "The canonicaliser must be implemented for charts that bypass the canonical-frame decode, and for canonical-frame decodes, saturated controls included, it must be a no-op (rotation angle ≈ 0, mirror not taken) away from the λ̃_y = 0 seam; an exception covers only a case the task measuring the no-op has measured and listed in dd_decoder §5 test 5, with its z, precision and measurement (R-417)."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 3.3 Canonicalise
@@ -354,12 +354,16 @@
     section: 5. Unit tests
   - file: decisions.md
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
+  - file: decisions.md
+    section: "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
   verify:
     method: unit test
-    detail: "decoder test 5: apply C to canonical-frame decodes of fuzzed z, assert unchanged; at the seam the R-82 tie (|λ̃_y| ≤ δ_λ → no mirror) gives the same result twice"
+    detail: "decoder test 5: apply C to canonical-frame decodes of fuzzed z, saturated controls at f32 and f64 included, assert unchanged; at the seam the R-82 tie (|λ̃_y| ≤ δ_λ → no mirror) gives the same result twice; a decode where the no-op fails is allowed only if it is a measured case listed in test 5 and approved by physics (R-417)"
   rulings:
   - R-82
+  - R-417
   milestone: M2
+  note: "R-417 (RQ-270): the f32 images of π/2 and π are generated rounded toward zero (TASK-M2-30, REQ-GEN-034), so f32 saturation no longer passes α = π/2 or β = π, and §3.3's half turn and mirror no longer fire there; no blanket exception at the poles. This task reaches TASK-M2-30 through TASK-M2-06, TASK-M2-05 and TASK-M2-03."
 - id: REQ-DEC-019
   area: DEC
   statement: "The free momentum block must decode qₖ = q_max·(2σ(z_qk) − 1), p_ρ = (q₀, q₁), p_λ = (q₂, q₃), and p₀ = −p_ρ − (m₀/M₀₁)p_λ, p₁ = p_ρ − (m₁/M₀₁)p_λ, p₂ = p_λ, with no √μ mass unweighting of the momenta."
@@ -511,7 +515,7 @@
   milestone: M2
 - id: REQ-DEC-027
   area: DEC
-  statement: "For all finite z, including saturation, the decode must respect its ranges α ∈ (0, π/2), β ∈ [0, π], |qₖ| ≤ q_max, mapping signed chart coordinates onto each physical axis's actual domain."
+  statement: "For all finite z, including saturation, the decode must respect its closed ranges α ∈ [0, π/2], β ∈ [0, π], |qₖ| ≤ q_max (R-417): the lower poles α = 0 and β = 0 are reached where the link's output underflows, at f32 and f64; qₖ reaches ±q_max at saturation; the upper images stay inside π/2 and π, whose f32 images are generated rounded toward zero; and the signed chart coordinates map onto each physical axis's actual domain."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 5. Unit tests
@@ -519,22 +523,34 @@
     section: "Per-axis signedness: \"if it makes sense for that axis\""
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Part 3 — Charts
+  - file: decisions.md
+    section: "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.2 Configuration — hyperspherical mass-weighted Jacobi
   verify:
     method: property test
-    detail: "decoder test 3 over fuzzed z including ±large values; mass outputs stay in the open simplex"
-  rulings: []
+    detail: "decoder test 3 over fuzzed z including ±large values, at f32 and f64: every output in the closed range, α and β compared in f64 at the exact bounds π/2 and π; α = 0 and β = 0 reached past the underflow thresholds and |qₖ| = q_max at saturation; mass outputs stay in the open simplex (R-417)"
+  rulings:
+  - R-417
   milestone: M2
+  note: "R-417 (RQ-270): options (b) and (a); the upper bound at f32 needs TASK-M2-30's rounded-down constants, so TASK-M2-03 depends on it."
 - id: REQ-DEC-028
   area: DEC
-  statement: "The chart parametrisation must stay open on `[0,1]` with endpoints excluded, with no endpoint clamping and no artificial guards against approaching degenerate configurations."
+  statement: "The chart parametrisation must have no endpoint clamping and no artificial guards against approaching degenerate configurations; it is open in exact arithmetic, and in floating point its image is closed (R-417): the lower poles are reached where a link's output underflows and qₖ reaches ±q_max, by the links' own rounding, the upper images staying inside the bounds."
   source:
   - file: docs/notes/principia_validation_ground_truth_note.md
     section: "Degenerate configs: open & unguarded, approach as a limit"
+  - file: decisions.md
+    section: "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
+  - file: docs/design/principia_dd_decoder.md
+    section: 3.2 Configuration — hyperspherical mass-weighted Jacobi
   verify:
     method: review checklist
-    detail: "decoder has no endpoint-landing or exclusion guard; degenerate configs are only approached as limits"
-  rulings: []
+    detail: "decoder has no endpoint-clamping, landing or exclusion guard; the endpoints it reaches it reaches by the links' own rounding, as dd_decoder §3.2 and the ground-truth note state (R-417)"
+  rulings:
+  - R-417
   milestone: M2
+  note: "R-417 (RQ-270): \"endpoints excluded\" holds in exact arithmetic only; at f32 and f64 the lower poles and ±q_max are reached by rounding, never by clamping."
 - id: REQ-DEC-029
   area: DEC
   statement: "Decode must not apply a per-body momentum cap with CoM re-enforcement; q_max alone bounds the Jacobi momenta, clamped and flagged at the boundary."
@@ -4926,10 +4942,12 @@
     section: R-79 — NaN and sentinels *(closes RQ-30)*
   verify:
     method: review checklist
-    detail: "grep generated WGSL/Rust for isnan in validity logic; every stored value of synthetic and forced-failure samples is finite"
+    detail: "grep generated WGSL/Rust for isnan in validity logic; no stored value of synthetic and forced-failure samples is NaN, and the only non-finite stored value is d_min's unset f16 +inf, 0x7C00 in bits 16–31 of packed_a, held only by a failed sample or one before its first step (R-271)"
   rulings:
   - R-79
+  - R-271
   milestone: M1
+  note: "Applied per R-369 (TASK-M1-14's pre-flight): the verify's 'every stored value of synthetic and forced-failure samples is finite' is conformed to R-271, which postdates it: a failed sample's d_min half, and any sample's before its first step, holds f16 +inf (bits 0x7C00), which readers test by its bits (0x7C00 in bits 16–31 of packed_a). Payload §1 forbids NaN (R-79) and 'the non-finite values that failed it', as this statement does, clamps valid-state f16 values to ±65504 and gives a failed sample's dE_max and dLz_max halves 0.0; R-271 adds the one exception, d_min's unset +inf, a defined value, not one that failed the sample. Worded per physics review 5484220393 (F1, F2)."
 - id: REQ-PAY-025
   area: PAY
   statement: "The per-sample payload must be two physical buffers — the hot `SimState` buffer and a separate cold word buffer holding one `vec4<u32>` (16 B) free-group word per sample — and the word must never be stored inline in `SimState`."
@@ -5110,15 +5128,20 @@
     section: R-62 — `rho_mag` and `lambda_mag` *(amends R-22)*
   - file: decisions.md
     section: "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
+  - file: decisions.md
+    section: "R-421 — The ICDescriptor golden: fields that are 0 at rest are compared bit-exact, the others within per-precision tolerances proposed by TASK-M2-03 and confirmed at the M2 gate; \"hand-computed at f32\" is the exact value rounded to f32 *(closes RQ-272)*"
+  - file: docs/design/principia_dd_decoder.md
+    section: 5. Unit tests
   verify:
     method: unit test
-    detail: "golden IC (z = 0): assert every descriptor field in f64 and f32 against hand-computed values; field names match the ledger; the derived E₀ equals K_0 + V_0 and the struct has no E₀ field"
+    detail: "golden IC (z = 0): assert every descriptor field in f64 and f32 against its hand-computed value, the exact value rounded to that precision (R-421): the fields that are 0 at rest (K_0 and virial_ratio) bit-exact, the others within REQ-PAY-095's per-precision tolerances; field names match the ledger; the derived E₀ equals K_0 + V_0 and the struct has no E₀ field"
   rulings:
   - R-22
   - R-62
   - R-86
+  - R-421
   milestone: M2
-  note: "R-62 names the Jacobi magnitude fields rho_mag / lambda_mag; dd_decoder §3.6 says only 'ρ-magnitudes'"
+  note: "R-62 names the Jacobi magnitude fields rho_mag / lambda_mag; dd_decoder §3.6 says only 'ρ-magnitudes'. R-421 (RQ-272, options (c) and (a)): bit-exact for the fields that are 0 at rest; per-precision tolerances for the others (REQ-PAY-095); \"hand-computed at f32\" is the exact value rounded to f32, and, applied per R-369, at f64 the exact value rounded to f64."
 - id: REQ-PAY-035
   area: PAY
   statement: "`ICDescriptor` must hold the 12 f32 fields `m0 m1 m2`, `q_mass`, `rho_mag`, `lambda_mag`, `rho_ratio` (log), `rho_angle` (cyclic), `K_0` (lin, [0, ∞)), `V_0` (lin, (−∞, 0]), `virial_ratio`, `r_min_pair_0` (log), produced at decode, plus 16 B of explicit padding to 64 B, and must not store E₀."
@@ -6111,7 +6134,7 @@
 - id: REQ-PAY-093
   area: PAY
   kind: calibration
-  statement: "The declared §3.8 `range` of each of `QuadReduction`'s f16 members `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy` and `worst_energy_drift`, and its `overflow` (saturate or inf) where an end is unbounded or lies beyond ±65504, which the corpus does not give, must be proposed with its evidence by the task that builds `QuadReduction`, checked by the physics reviewer, and confirmed by the human at the M5 gate (R-71)."
+  statement: "The declared §3.8 `range` of each of `QuadReduction`'s f16 members `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`, `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread`, and its `overflow` (saturate or inf) where an end is unbounded or lies beyond ±65504, which the corpus does not give, must be proposed with its evidence by the task that builds `QuadReduction`, checked by the physics reviewer, and confirmed by the human at the M5 gate (R-71; R-418 adds the last three, proposed as [0, ∞) with overflow saturate)."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: 3.8 Metadata schema (what every entry must carry)
@@ -6131,17 +6154,22 @@
     section: "R-42 — The `alpha_area` defects: tell empty from full by `n_unresolved`; refuse the floor on a negative exponent *(RS-2 (b)+(c))*"
   - file: docs/design/principia_dd_generation_root.md
     section: Layout and §3.8 entries
+  - file: decisions.md
+    section: "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and \"no escape\" reads `_min > _max` *(closes RQ-268)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: Validity and diagnostics
   verify:
     method: review checklist
-    detail: "the PR gives each member's range and overflow with its evidence (the values §3.7 and the refinement-criterion reports measure, e.g. `error_ratio` 204.8 and 1.8e+04, and why each end sits where it does); each range lies within ±65504 or the entry states its overflow (R-248); the physics reviewer checks each; the human confirms them at the M5 gate"
+    detail: "the PR gives each member's range and overflow with its evidence (the values §3.7 and the refinement-criterion reports measure, e.g. `error_ratio` 204.8 and 1.8e+04, and why each end sits where it does); each range lies within ±65504 or the entry states its overflow (R-248); the three R-418 adds are proposed as [0, ∞) with overflow saturate; the physics reviewer checks each; the human confirms all eight at the M5 gate"
   rulings:
   - R-42
   - R-71
   - R-248
   - R-306
   - R-312
+  - R-418
   milestone: M5
-  note: "Pre-flight of TASK-M5-01 (R-388): R-306 gives TASK-M5-01 the members' §3.8 entries, and §3.8 fails generation on an incomplete entry, but the corpus gives no range for these five. Proposed provisionally until the M5 gate (R-182). Ends that follow from a member's definition are derived and cited, not calibrated (physics review 5480220637 of PR #185): `error_ratio` ≥ 0 (a ratio of spreads), `roundtrip_error` ≥ 0 (a displacement), `alpha_area` possibly negative (§3.7: the floor is refused on a negative exponent, R-42), and §3.7's \"an infinite deviation is the correct answer\" bearing on `error_ratio`'s `overflow` (inf, not saturate). Only the ends no definition gives are calibrated."
+  note: "Pre-flight of TASK-M5-01 (R-388): R-306 gives TASK-M5-01 the members' §3.8 entries, and §3.8 fails generation on an incomplete entry, but the corpus gives no range for these five. Proposed provisionally until the M5 gate (R-182). Ends that follow from a member's definition are derived and cited, not calibrated (physics review 5480220637 of PR #185): `error_ratio` ≥ 0 (a ratio of spreads), `roundtrip_error` ≥ 0 (a displacement), `alpha_area` possibly negative (§3.7: the floor is refused on a negative exponent, R-42), and §3.7's \"an infinite deviation is the correct answer\" bearing on `error_ratio`'s `overflow` (inf, not saturate). Only the ends no definition gives are calibrated. R-418 (RQ-268, option (a)): `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join, TASK-M5-01 proposing each [0, ∞) with overflow saturate; their no-escape values are REQ-REF-006's and REQ-REF-053's."
 - id: REQ-PAY-094
   area: PAY
   kind: definition
@@ -6165,6 +6193,25 @@
   - R-306
   milestone: M5
   note: "Pre-flight of TASK-M5-01 (R-388): §3.7 says `first_divergence_t` is \"sentinel until crossed\" but gives no value, and gives no member a scale; §3.8's `sentinel?` and `scale` need them."
+- id: REQ-PAY-095
+  area: PAY
+  kind: calibration
+  statement: "The per-precision tolerances (f64 and f32) at which the golden IC's ICDescriptor fields that are not 0 at rest are compared with their hand-computed values, the exact values rounded to that precision, must be calibrated: proposed with its evidence by the task that needs it, checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md; the fields that are 0 at rest are compared bit-exact and take no tolerance (R-421)."
+  source:
+  - file: docs/design/principia_dd_decoder.md
+    section: 5. Unit tests
+  - file: decisions.md
+    section: "R-421 — The ICDescriptor golden: fields that are 0 at rest are compared bit-exact, the others within per-precision tolerances proposed by TASK-M2-03 and confirmed at the M2 gate; \"hand-computed at f32\" is the exact value rounded to f32 *(closes RQ-272)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the proposal names the fields that are 0 at rest (K_0, virial_ratio, and any REQ-PAY-088's definitions make 0 there) and states, for each other field, its tolerance in f64 and f32 with the measured difference from the exact value rounded to that precision; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-421
+  milestone: M2
+  note: "R-421 (RQ-272, option (a) for the fields not 0 at rest); closed by TASK-M2-03, as REQ-DEC-044 is for dd_decoder tests 1, 6 and 8."
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -6724,6 +6771,23 @@
   - R-403
   milestone: M1
   note: "R-403: the human's \"the tag must agree with the range\", a standing consistency rule on every ledger entry; applied per R-369 as a generation gate beside REQ-GEN-002's metadata gate. Every diverging entry but K_0 and V_0 already spans zero."
+- id: REQ-GEN-034
+  area: GEN
+  statement: "The link generator must emit the f32 images of π/2 and π rounded toward zero, fl↓(π/2) (bits 0x3FC9_0FDA) and fl↓(π) (bits 0x4049_0FDA), not the nearest values, which lie above π/2 and π, so that no bounded link's f32 image passes its upper bound; the f64 images stay the nearest values, which lie below (R-417)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 5. Tests (properties any generator must satisfy)
+  - file: decisions.md
+    section: "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger link_f32_pi_toward_zero: the emitted f32 literals of π/2 and π have bits 0x3FC9_0FDA and 0x4049_0FDA and lie below π/2 and π; cargo test -p kernel link_properties_a_constraint: every bounded link's f32 output, saturated controls included, lies in the closed [a, b] at the exact bounds (TASK-M2-01's test followed up); control: the round-to-nearest literals fail the exact-bound check"
+  rulings:
+  - R-417
+  milestone: M2
+  note: "R-417 (RQ-270, option (b)); TASK-M2-30, since TASK-M2-01 has merged. The hashed bytes are unchanged: a tree's num is the f64 value's bits."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -8411,14 +8475,17 @@
   milestone: M5
 - id: REQ-REF-006
   area: REF
-  statement: "`QuadReduction` validity members must be `suspect_fraction` (f16), `saturated_fraction` (f16), `valid_sample_count` (u16), `coherence` (f32), `escape_time_min`/`_max` (f16), `retrograde_fraction` (f16) and `mean_orbit_count_spread` (f16)."
+  statement: "`QuadReduction` validity members must be `suspect_fraction` (f16), `saturated_fraction` (f16), `valid_sample_count` (u16), `coherence` (f32), `escape_time_min`/`_max` (f16), `retrograde_fraction` (f16) and `mean_orbit_count_spread` (f16), and the §3.8 entries of `escape_time_min` and `escape_time_max` must carry their no-escape values, +∞ (binary16 0x7c00) and −∞ (0xfc00), each its reduction's identity (R-418)."
   source:
   - file: docs/design/principia_dd_generation_root.md
     section: Validity and diagnostics
+  - file: decisions.md
+    section: "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and \"no escape\" reads `_min > _max` *(closes RQ-268)*"
   verify:
     method: unit test
-    detail: generated layout member list and types
-  rulings: []
+    detail: "generated layout member list and types; the escape_time_min and escape_time_max entries' sentinels are the bits 0x7c00 and 0xfc00 (R-418)"
+  rulings:
+  - R-418
   milestone: M5
 - id: REQ-REF-007
   area: REF
@@ -9187,6 +9254,21 @@
   - R-142
   - R-315
   milestone: M5
+- id: REQ-REF-053
+  area: REF
+  statement: "The resolve stage must reduce `escape_time_min` and `escape_time_max` as the min and max of the escape times of the quad's copies that escaped, each starting from its reduction's identity, +∞ (binary16 0x7c00) for `_min` and −∞ (0xfc00) for `_max`, with no no-escape branch, so that a quad none of whose copies escaped stores exactly those bits and \"no escape\" reads `_min > _max` (R-418)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: Validity and diagnostics
+  - file: decisions.md
+    section: "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and \"no escape\" reads `_min > _max` *(closes RQ-268)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel reduce_escape_no_escape_bits: a quad with no escaped copy stores 0x7c00 in escape_time_min and 0xfc00 in escape_time_max, compared by bits, and reads _min > _max; one escaped copy gives _min == _max == its time; control: a no-escape branch storing +∞ in _max (RQ-268's option (d)) fails"
+  rulings:
+  - R-418
+  milestone: M5
+  note: "R-418 (RQ-268, option (e)); TASK-M5-17 fills the validity members, TASK-M5-18 and TASK-M5-19 write neither escape time."
 - id: REQ-RENDER-001
   area: RENDER
   statement: "Generated WGSL must use the u32 overload of extractBits, use no f64, read f16 pairs via unpack2x16float (no shader-f16 feature), group r, p and shadow in vec2 members, and bind the word buffer separately with per-copy indexing. It must bind SimStateFTLE at @group(1) @binding(0) and the word buffer at @group(1) @binding(1), leaving group 0 to the assembler's per-frame uniforms, with the group and binding numbers generated constants from one ledger table; read either buffer only in the generated unpack layer, at the same sample index i for both, loading only the stored members each field needs, never the whole stored struct in one load (R-378); emit no setter; and test an unset value by its bit pattern (pa_d_min_is_unset against PA_D_MIN_UNSET = 0x7c00u), never by isinf, isnan or a float comparison standing in for them, which fast-math (R-297) may optimise away (R-343)."
@@ -10544,6 +10626,28 @@
   - R-403
   milestone: M1
   note: "R-400 (RQ-260) amends RQ-231 item 3 for zero-spanning fields; applied per R-369: the ramp is ramp_coolwarm (named in render_gui_spec §10.1, its data Moreland's table, R-122), the symmetric range extends RQ-231 item 1, and the non-negative lower bounds are declared because the ledger's unbounded default would read as signed. R-403 (RQ-261): K_0 and V_0 are lin over [0, ∞) and (−∞, 0], on viridis, mapped monotonically, V_0's most negative value at the dark end; their diverging tags are removed, the tag agreeing with the range (REQ-GEN-033). Applied per R-369: open-ended ranges keep the auto default (render_gui_spec §10.1), so K_0's 0 is at t = 0 only in fixed mode; the mapping is tested per mode."
+- id: REQ-RENDER-085
+  area: RENDER
+  statement: "The generated numeric field view of `theta`, the unwrapped longitude θ̃ in radians, must be cyclic, since θ̃ is an angle (R-423): the ledger gives `theta` the `cyclic` scale, and its view places raw = fract(θ̃ / 2π) on the fixed [0, 1] with ramp_twilight (the prelude's LUT index 1), not R-400's ramp_coolwarm, although its declared range spans zero. Here fract(x) = x − ⌊x⌋ (WGSL's fract, the Rust reference's rem_euclid(1.0); not Rust's f32::fract, x − trunc x), so raw ∈ [0, 1) for negative θ̃ too."
+  source:
+  - file: decisions.md
+    section: "R-423 — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*"
+  - file: decisions.md
+    section: "R-400 — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.4 `SimState` scalars — with presentation metadata
+  - file: docs/design/principia_dd_integrator.md
+    section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger numeric_view_template: theta's view places raw at fract(θ̃ / 2π) on the fixed [0, 1] with ramp_twilight, θ̃ and θ̃ + 2π giving the same raw; for negative θ̃, θ̃ = −π/2 gives raw 0.75, and θ̃ and θ̃ − 2π give the same raw; q_mass, ftle, mean_y, S and diffusion keep ramp_coolwarm; controls: theta on ramp_coolwarm fails, and a trunc-based fract (Rust's f32::fract, giving −0.25 at θ̃ = −π/2) fails; cargo xtask golden debug-views: generated-theta re-rendered on twilight; physics reviewer approved"
+  rulings:
+  - R-400
+  - R-423
+  milestone: M1
+  note: "R-423: the human's \"If theta is an angle it needs a cyclic ramp\"; theta is the unwrapped phase θ̃, the shape sphere's equatorial longitude accumulated in radians (dd_integrator §3.7; dd_simstate_payload §1), so it is an angle. Closed by TASK-M1-20."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -11742,6 +11846,44 @@
   - R-411
   milestone: M7
   note: "Physics review 5480220637 of PR #185: a per-field magnitude where compression sets in is a value, as R-401 classes the log floors (R-71). The drifts' `x₀` is not here: §3.6 and R-263 give `eps_E` and `eps_L`."
+- id: REQ-COL-067
+  area: COL
+  kind: definition
+  statement: "The \"greyscale mode\" in which pitfalls §1.2 (c) renders a slice — a payload field in the brightness slot with the colour slot None, which colour composition §4.1's truth table gives as `OKLab(L=B, 0, 0)`, \"greyscale of the brightness field\", under §1.2's greyscale default for magnitude fields with its per-field polarity — must be defined in colour composition §4.1 by the task that needs it, starting from those texts and contradicting neither, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 1.2 Four wrong theories, in order
+  - file: docs/design/principia_colour_composition.md
+    section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "colour composition §4.1 defines greyscale mode, consistent with its None-colour truth-table row and §1.2's greyscale default and polarity; REQ-VAL-012's greyscale render uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: pitfalls §1.2 (c) names the mode, and REQ-VAL-012 renders in it."
+- id: REQ-COL-068
+  area: COL
+  kind: definition
+  statement: "The \"hue mode\" in which pitfalls §1.2 (c) renders a slice — the payload field carried in the colour slot as colour composition §4.1's \"hue-carrier\" — must be defined in colour composition §4.1 by the task that needs it, starting from §4.1's hue-carrier slot and its truth table and contradicting neither, saying which hue ramp carries the field and what the brightness slot holds, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 1.2 Four wrong theories, in order
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "colour composition §4.1 defines hue mode from its hue-carrier slot; REQ-VAL-012's hue render uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: pitfalls §1.2 (c) names the mode, and REQ-VAL-012 renders in it."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -14896,7 +15038,7 @@
   note: "R-113 (RQ-94): the real-march |n|−1 check and the live effort heatmap are a separate M3 requirement. LUT data (Twilight, Viridis): the published matplotlib tables (R-122). RQ-236 and RQ-237, decided per R-369: the suite is fixtures/golden/debug-views/, rendered through RQ-229's harness case kind; its references are recorded in the PR with BASELINES rows citing R-153, proposed and confirmed at the M1 gate; 'the debug picker' is the registry's category: debug entries; the ternary masses colour and the invalid-styled reduced length are REQ-TOOL-154 and REQ-TOOL-156."
 - id: REQ-TOOL-011
   area: TOOL
-  statement: "The field-view catalogue must cover every group in render contract Part 6's field-view table that a synthetic payload can show: the UV fragment preset, all 12 ICDescriptor fields, the SimState scalars, the 10 sample_descriptor bits (including last_symbol), times and derived fields, live shape/accumulator views, word views including the whole-word hash, the optional Fourier block, all 9 quad fields plus payload/status flags, structural overlays and the uniform echo (quality_tier, n_renorm, thresholds)."
+  statement: "The field-view catalogue must cover every group in render contract Part 6's field-view table that a synthetic payload can show: the UV fragment preset, all 12 ICDescriptor fields, the SimState scalars, the 10 sample_descriptor bits (including last_symbol), times and derived fields, live shape/accumulator views, word views including the whole-word hash, all 9 quad fields plus payload/status flags, and structural overlays."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: Field views (one per field, every struct)
@@ -14908,17 +15050,20 @@
     section: "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-420 — The uniform echo row moves to a task after TASK-M5-02 and TASK-M3-06, which names its thresholds; the Optional Fourier block row is removed from render_contract Part 6 and parked as a possible future feature *(closes RQ-273)*"
   verify:
     method: review checklist
-    detail: "tick each table row against the generated catalogue on a synthetic payload; the DECODE row is REQ-RENDER-027's (M2), the ensemble rows and the live effort heatmap are the M5 and M3 requirements R-113 split off; the uniform echo reads n_renorm, not M (R-111)"
+    detail: "tick each table row against the generated catalogue on a synthetic payload; the DECODE row is REQ-RENDER-027's (M2), the ensemble rows and the live effort heatmap are the M5 and M3 requirements R-113 split off, and the uniform echo row is REQ-TOOL-164's (M5, R-420); the Optional Fourier block row is no longer in the table (R-420)"
   rulings:
   - R-62
   - R-75
   - R-86
   - R-111
   - R-113
+  - R-420
   milestone: M1
-  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`."
+  note: "R-113 (RQ-94): DECODE row → REQ-RENDER-027 (M2); tier-gated ensemble views → a separate M5 requirement; the live current-substep effort heatmap → the M3 requirement split from REQ-TOOL-010. R-111: the uniform echo's `M` is `n_renorm`. Applied per R-369 (TASK-M1-14's pre-flight): the closing moves from TASK-M1-14 to TASK-M1-19, split from it so that RQ-273, which holds this requirement for its uniform echo and Optional Fourier block rows, holds only TASK-M1-19. R-420 (RQ-273): the uniform echo row moves to REQ-TOOL-164 (TASK-M5-31, after TASK-M5-02 and TASK-M3-06), and the Optional Fourier block row is removed from Part 6 and parked (philosophy §7.6a); TASK-M1-19 waits on nothing."
 - id: REQ-TOOL-012
   area: TOOL
   statement: "Field views must keep NaN and stored sentinels distinct — NaN (a tier-absent field, an invalid diffusion fit, R-245, or `ftle` whenever `ftle_valid` is false, R-253, R-254) hatched by debug_invalid(frag_xy), a stored sentinel shown as its literal value on the ramp (R-136) — so a NaN pixel reads as 'unavailable', not as data, and must otherwise show literal stored values (a failed-state 0.0 reads as 0.0, cross-checked against state), with NaN always mapped to the invalid colour."
@@ -17199,7 +17344,7 @@
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
-  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md; rho_ratio's and r_min_pair_0's are confirmed there provisionally and re-confirmed at M2 (REQ-TOOL-163; R-419): rho_ratio's proposal assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for r_min_pair_0, a distance in G = M = I = 1, only the evidence is provisional."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -17209,18 +17354,21 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
+  - file: decisions.md
+    section: "R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*"
   verify:
     method: unit test
-    detail: "the proposal gives each field's floor with its units and evidence: where that field's stored values fall under it on M1's fixtures, and why the floor sits there in the field's units; `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with its own field's floor, and that two log fields with different floors place the same |x| differently; confirmed by the human at the M1 gate and recorded in decisions.md"
+    detail: "the proposal gives each field's floor with its units and evidence: where that field's stored values fall under it on M1's fixtures, and why the floor sits there in the field's units; rho_ratio's states that it assumes the mass-weighted ‖ρ̃‖/‖λ̃‖, and r_min_pair_0's that its evidence is M1's showcase values, both marked provisional until M2 (R-419); `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with its own field's floor, and that two log fields with different floors place the same |x| differently; confirmed by the human at the M1 gate and recorded in decisions.md"
   rulings:
   - R-71
   - R-401
+  - R-419
   milestone: M1
-  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note)."
+  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note). Applied per R-369 (physics review 5482528309 of PR #194): the closing moves from TASK-M1-17 to TASK-M1-18, split from it so that RQ-271 holds only the floors. R-419 (RQ-271, option (c) for both): rho_ratio's and r_min_pair_0's floors are provisional at M1 and re-confirmed at M2 by TASK-M2-03 (REQ-TOOL-163)."
 - id: REQ-TOOL-161
   area: TOOL
   kind: definition
-  statement: "The period of a cyclic-scaled numeric field view (rho_angle), by which RQ-231's template places raw = fract(x/period) on [0, 1] with ramp_twilight — one turn, 2π, a cyclic field being an angle in radians — must be defined in render_gui_spec §10.1 by the task that needs it and reviewed by the physics reviewer before merge."
+  statement: "The period of a cyclic-scaled numeric field view (rho_angle, and theta, R-423), by which RQ-231's template places raw = fract(x/period) on [0, 1] with ramp_twilight — one turn, 2π, a cyclic field being an angle in radians — must be defined in render_gui_spec §10.1 by the task that needs it and reviewed by the physics reviewer before merge."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -17228,11 +17376,14 @@
     section: 3.8 Metadata schema (what every entry must carry)
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-423 — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*"
   verify:
     method: review checklist
     detail: "render_gui_spec §10.1 gives the period; `cargo test -p ledger numeric_view_template` checks that the cyclic view places raw at fract(raw / 2π) on the fixed [0, 1] with ramp_twilight; physics reviewer approved"
   rulings:
   - R-72
+  - R-423
   milestone: M1
   note: "Raised by TASK-M1-09: the ledger's cyclic scale carries no period. rho_angle's formula is REQ-PAY-088's (TASK-M2-03), which must give it in radians for this period to hold, or the period changes with it."
 - id: REQ-TOOL-162
@@ -17261,6 +17412,70 @@
   - R-399
   milestone: M1
   note: "R-399 (RQ-259), applied by TASK-M1-17 to the views TASK-M1-09 and TASK-M1-10 built flat; TASK-M7-05's and TASK-M7-09's extensions of FieldRamp inherit it. The Legend's running swatch is drawn as the style too (TASK-M6-27, TASK-M8-22; REQ-GUI-105)."
+- id: REQ-TOOL-163
+  area: TOOL
+  kind: calibration
+  statement: "The log floors of rho_ratio and r_min_pair_0, confirmed provisionally at the M1 gate (REQ-TOOL-160), must be re-confirmed at the M2 gate once REQ-PAY-088 defines the two fields' formulas (R-419): rho_ratio's floor, proposed at M1 assuming the mass-weighted ‖ρ̃‖/‖λ̃‖, is re-proposed with its evidence in the defined ratio's units if the definition chooses another ratio; r_min_pair_0's floor, a distance in G = M = I = 1, has its evidence re-given on decoded values; each checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*"
+  - file: decisions.md
+    section: "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_dd_decoder.md
+    section: "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: review checklist
+    detail: "the PR states which ratio REQ-PAY-088 defines for rho_ratio; if it is not the mass-weighted ‖ρ̃‖/‖λ̃‖, rho_ratio's floor is re-proposed in the defined ratio's units with its evidence on decoded values and `cargo test -p ledger numeric_view_template` passes with it; if it is, the floor stands with that evidence; r_min_pair_0's evidence is given on decoded values; the physics reviewer checks both; the human re-confirms both at the M2 gate, recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-401
+  - R-419
+  milestone: M2
+  note: "R-419 (RQ-271, option (c) for both fields); closed by TASK-M2-03, which writes REQ-PAY-088's formulas."
+- id: REQ-TOOL-164
+  area: TOOL
+  statement: "The field-view catalogue must cover render contract Part 6's uniform echo row: flat swatches of quality_tier, n_renorm (R-111) and the thresholds REQ-TOOL-165 names, as currently bound, so that a slider moved but not rebound shows (R-420)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Field views (one per field, every struct)
+  - file: decisions.md
+    section: "R-420 — The uniform echo row moves to a task after TASK-M5-02 and TASK-M3-06, which names its thresholds; the Optional Fourier block row is removed from render_contract Part 6 and parked as a possible future feature *(closes RQ-273)*"
+  - file: decisions.md
+    section: "R-111 — `SimResult` → `SimState`, `M` → `n_renorm`; the vocabulary lint covers the docs *(closes RQ-80)*"
+  - file: decisions.md
+    section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  verify:
+    method: unit test
+    detail: "tick the uniform echo row against the generated catalogue on a real binding; cargo test -p render uniform_echo_rebinds: changing each echoed value and rebinding changes its swatch; control: a change that is not rebound leaves the swatch as it was, and the check fails"
+  rulings:
+  - R-111
+  - R-113
+  - R-420
+  milestone: M5
+  note: "Split from REQ-TOOL-011 by R-420 (RQ-273, option (a)), as R-113 split the DECODE, ensemble and live-effort rows; closed by TASK-M5-31."
+- id: REQ-TOOL-165
+  area: TOOL
+  kind: definition
+  statement: "The thresholds the uniform echo shows (render contract Part 6's \"thresholds as currently bound\", which names none) and the binding the echo reads quality_tier from (TASK-M3-06's SimUniforms holds no tier) must be defined in render contract Part 6 by the task that needs it and reviewed by the physics reviewer before merge (R-72, R-420)."
+  source:
+  - file: docs/contracts/principia_render_contract.md
+    section: Field views (one per field, every struct)
+  - file: decisions.md
+    section: "R-420 — The uniform echo row moves to a task after TASK-M5-02 and TASK-M3-06, which names its thresholds; the Optional Fourier block row is removed from render_contract Part 6 and parked as a possible future feature *(closes RQ-273)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "render contract Part 6 names each threshold the echo shows and where quality_tier is read from; the echo reads exactly those; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-420
+  milestone: M5
+  note: "R-420 (RQ-273): \"that task names its thresholds\"; SimUniforms' candidates include r_sub, r_coll, tau, escape_window, r_close, eps_e and eps_l (TASK-M3-06). Closed by TASK-M5-31."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -17567,7 +17782,7 @@
   note: "The papers' reference values and the tolerance: REQ-VAL-120 (calibration)."
 - id: REQ-VAL-020
   area: VAL
-  statement: "A chart-landmark test must assert the decoder places the Lagrange equilateral configuration at `z = 0` and the Euler collinear configurations at `beta → 0` and `beta → pi`."
+  statement: "A chart-landmark test must assert the decoder places the Lagrange equilateral configuration at `z = 0` and the Euler collinear configurations at the β edges: at `beta = 0`, reached exactly where the β link underflows (f32 and f64), and toward `beta = pi`, approached from below, the upper image staying inside π (R-417)."
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 3. Proposed suite
@@ -17575,11 +17790,15 @@
     section: "1.3 Lagrange and Euler central configurations — the only analytic ones"
   - file: docs/design/principia_dd_validation_orbits.md
     section: 5. Immediate action
+  - file: decisions.md
+    section: "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
   verify:
     method: unit test
-    detail: "decode z = 0 -> equilateral; decode near beta edges -> collinear (approached as a limit)"
-  rulings: []
+    detail: "decode z = 0 -> equilateral; decode at z_β past the underflow threshold -> β = 0 exactly, collinear; decode toward z_β → +large -> collinear approached as a limit, β ≤ π at f32 and f64 (R-417)"
+  rulings:
+  - R-417
   milestone: M2
+  note: "R-417 (RQ-270), filed from TASK-M2-03's pre-flight: β = 0 is reached at underflow, and with the f32 images of π rounded toward zero β no longer passes π."
 - id: REQ-VAL-021
   area: VAL
   statement: "Translate-all, boost-all, rotate-all and scale-all must each leave z fixed, to the bound verified in the reference tool (1.6×10⁻¹⁴)."
@@ -20331,6 +20550,24 @@
   - R-376
   milestone: M0
   note: "Confirmed by R-376 (3 Oct 2026, at the M0 gate): 8 GiB (8589934592 bytes) of virtual memory, set by `prlimit --as` with `--core=1` on Linux. CI runs on ubuntu-24.04, pinned (R-375); moving to Ubuntu 26 re-measures it."
+- id: REQ-VAL-182
+  area: VAL
+  kind: definition
+  statement: "REQ-VAL-012's \"edge map of the payload-derived field\" must be defined in debug tooling plan §G (cross-check views) by the task that needs it, and reviewed by the physics reviewer before merge. The definition must say what the edge map is taken on (for instance, each mode's rendered output) so that the cross-mode comparison is not identical by construction: an edge map taken on the payload field before colouring is the same in every mode whatever the colouring does, and only the perturbation control could then fail. It must also say how edges are detected and how two maps are compared."
+  source:
+  - file: docs/read_first/principia_01_pitfalls.md
+    section: 1.2 Four wrong theories, in order
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "G. Cross-check views (certify a *seam*, not a field — integration tests with a display)"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "debug tooling plan §G defines the edge map, what it is taken on, its detector and its comparison; the cross-mode comparison is not identical by construction; REQ-VAL-012's test uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: no doc defines the edge map REQ-VAL-012's verify compares."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -20665,14 +20902,17 @@
   note: "R-120: telemetry's 'deepest first' passages are conformed to scheduler Part 6 and caching Part 7."
 - id: REQ-PERF-023
   area: PERF
-  statement: "Before allocating, the requirement quads × N² × (E+1) × sizeof(SimState) must be checked against the adapter's reported limits, and if it does not fit the tier must be reduced and reported instead of attempting the allocation, with OOM treated as expected on unified memory."
+  statement: "Before allocating, the requirement quads × (N² × (E+1) × sizeof(SimState) + sizeof(QuadReduction)), the per-quad QuadReduction counted at every N (R-422), must be checked against the adapter's reported limits, and if it does not fit the tier must be reduced and reported instead of attempting the allocation, with OOM treated as expected on unified memory."
   source:
   - file: docs/design/principia_dd_telemetry_and_tiers.md
     section: 6.2a Budgeting before allocating
+  - file: decisions.md
+    section: "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
   verify:
     method: unit test
-    detail: "an adapter with small limits causes a reported tier reduction, never a failed allocation"
-  rulings: []
+    detail: "an adapter with small limits causes a reported tier reduction, never a failed allocation; the requirement includes sizeof(QuadReduction) per quad at every N, and a control omitting it admits a configuration the full requirement refuses (R-422)"
+  rulings:
+  - R-422
   milestone: M5
 - id: REQ-PERF-024
   area: PERF
@@ -20688,7 +20928,7 @@
   note: "The depth: REQ-PERF-082 (calibration)."
 - id: REQ-PERF-025
   area: PERF
-  statement: "The memory estimate must be payload_mem = (E+1) × bytes × render_px plus render_targets = k_d × display_px × 4 + k_r × render_px × 4 (k_d ≈ 3, k_r ≈ 3) plus fixed, using the payload's current SimState widths (144 B FTLE-on / 96 B FTLE-off), and reproduce memory_tiers §4's recomputed table."
+  statement: "The memory estimate must be payload_mem = (E+1) × bytes × render_px plus reduction_mem = size_of(QuadReduction) × quads, one per quad at every N over the leaves render_px / N² and their ancestors (R-422), plus render_targets = k_d × display_px × 4 + k_r × render_px × 4 (k_d ≈ 3, k_r ≈ 3) plus fixed, using the payload's current SimState widths (144 B FTLE-on / 96 B FTLE-off), and reproduce memory_tiers §4's recomputed table, recomputed with the reduction term."
   source:
   - file: docs/design/principia_memory_tiers.md
     section: 3. Memory model — payload + render targets
@@ -20704,14 +20944,17 @@
     section: "R-73 — Apply the whole ruling-follow-up checklist now *(closes RQ-56)*"
   - file: decisions.md
     section: "R-137 — The Ultra and Extreme rows are provisional *(closes RQ-115)*"
+  - file: decisions.md
+    section: "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
   verify:
     method: unit test
-    detail: "estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 144/96 B; the Ultra and Extreme rows and the totals that depend on them are provisional and are recomputed when REQ-PERF-086 lands (R-137)"
+    detail: "estimator output for each tier × {1080p, 1440p, 4K} equals the formula at 144/96 B with the reduction term; the term is counted at every N, Custom's included, and a control omitting it differs at small N (R-422); §4's totals are recomputed with it; the Ultra and Extreme rows and the totals that depend on them are provisional and are recomputed when REQ-PERF-086 lands (R-137)"
   rulings:
   - R-40
   - R-59
   - R-73
   - R-137
+  - R-422
   milestone: M5
 - id: REQ-PERF-026
   area: PERF
@@ -20845,7 +21088,7 @@
   milestone: M6
 - id: REQ-PERF-035
   area: PERF
-  statement: "SAMPLES_PER_QUAD_AXIS (N) and MAX_REL_DEPTH must both be tier-gated with a Custom override, and the quality tier must also gate the resident co-computations (ensemble copies and per-sample Benettin shadows), and N must be a power of two at every tier and in the Custom override, which offers no other value (R-398)."
+  statement: "SAMPLES_PER_QUAD_AXIS (N) and MAX_REL_DEPTH must both be tier-gated with a Custom override, and the quality tier must also gate the resident co-computations (ensemble copies and per-sample Benettin shadows), and N must be a power of two at every tier and in the Custom override, which offers no other value (R-398), and none below Custom's lower bound, a correctness floor (REQ-PERF-095; R-422)."
   source:
   - file: docs/contracts/principia_scheduler_contract.md
     section: Part 6 — The settled policy
@@ -20857,13 +21100,16 @@
     section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
   - file: docs/design/principia_quality_device_note.md
     section: "The reframe: quality is a preset selector populating one settings struct"
+  - file: decisions.md
+    section: "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
   verify:
     method: unit test
-    detail: "each named tier populates N, MAX_REL_DEPTH, E and FTLE from its table row; Custom can override each; N is a power of two at every tier, and Custom offers powers of two only, each within REQ-PERF-011's thread ceiling (R-398)"
+    detail: "each named tier populates N, MAX_REL_DEPTH, E and FTLE from its table row; Custom can override each; N is a power of two at every tier, and Custom offers powers of two only, each within REQ-PERF-011's thread ceiling (R-398) and none below REQ-PERF-095's lower bound, which it refuses (R-422)"
   rulings:
   - R-398
+  - R-422
   milestone: M6
-  note: "R-398 (RQ-258): N is a power of two wherever it is chosen, so the sample coordinates are dyadic, as the quadtree's are."
+  note: "R-398 (RQ-258): N is a power of two wherever it is chosen, so the sample coordinates are dyadic, as the quadtree's are. R-422 (RQ-269): Custom's N has a lower bound, REQ-PERF-095's calibration (TASK-M5-02, confirmed at the M5 gate)."
 - id: REQ-PERF-036
   area: PERF
   statement: "E must be motion-gated by the quality controller via e_motion_gating: reduced (→0/1) during an active live march when the cost model says 2(E+1) trajectories per pixel is unaffordable, and full at rest and in export, with the gating threshold set by measurement on a working system."
@@ -21754,6 +22000,29 @@
   rulings:
   - R-297
   milestone: M4
+- id: REQ-PERF-095
+  area: PERF
+  kind: calibration
+  statement: "The lower bound on Custom's N, a correctness floor (at N = 1 a quad holds one nominal sample, so nothing is compared across the quad: at E = 0 the quad never refines, and at E ≥ 1 only its one footprint's copy spread can split it), must be calibrated: proposed with its evidence by the task that builds QualitySettings and its Custom override, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md (R-422)."
+  source:
+  - file: docs/design/principia_memory_tiers.md
+    section: 5. Controller levers, ranked by impact
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 6 — The settled policy
+  - file: decisions.md
+    section: "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 9 — Ensemble / SSAA sampling (dispatch rules)
+  verify:
+    method: review checklist
+    detail: "the proposal gives the bound, a power of two, with its evidence at both E = 0 and E ≥ 1: at each small N, how many nominal samples the coherence test compares across the quad and whether it can tell a coherent quad from an incoherent one (scheduler contract Part 6's undersampling), and at E ≥ 1 what the one footprint's copy spread alone can split (Part 9's E+1 copies); the bound is a named constant in QualitySettings, provisional until the M5 gate (R-182); the perf reviewer checks it; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-422
+  milestone: M5
+  note: "R-422 (RQ-269, option (a) of (c)); closed by TASK-M5-02 and enforced by REQ-PERF-035 (TASK-M6-15). The human's \"N = 1 never refines\" holds only at E = 0; at E ≥ 1 an N = 1 quad holds E+1 copies and Part 6's split test can still split it on its footprint's copy spread, so the statement and verify cover both (flagged and recorded in R-422; physics review 5484757609, F1, on PR #197)."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."

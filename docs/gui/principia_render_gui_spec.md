@@ -757,10 +757,14 @@ floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts
 `1 − 1/(1 + ln(1 + |x|/ε))`, `dbg_log`'s place, on the fixed `[0, 1]`; `cyclic` `fract(x / period)` on the fixed
 `[0, 1]`, on `ramp_twilight`. Every other ramp is `ramp_viridis`, except for a field whose declared range spans zero,
 which is on `ramp_coolwarm` centred at zero (R-400; TASK-M1-17). **The cyclic period is one turn, 2π:** a cyclic
-field is an angle in radians (REQ-TOOL-161). `rho_angle` is the one cyclic field; its formula is REQ-PAY-088's. **The
-log floor** of a field with no ledger `floor` is that field's own, `ε_f` in its units, a calibration proposed with its
-evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-17); TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's
-smallest positive subnormal, which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
+field is an angle in radians (REQ-TOOL-161). `rho_angle` and `theta` are the cyclic fields: `rho_angle`'s formula is
+REQ-PAY-088's, and `theta`, the unwrapped longitude `θ̃` in radians, is cyclic because it is an angle, although its
+range spans zero (R-423; REQ-RENDER-085). **The log floor** of a field with no ledger `floor` is that field's own,
+`ε_f` in its units, a calibration proposed with its evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-18),
+`rho_ratio`'s and `r_min_pair_0`'s provisionally, re-confirmed at M2 once their formulas are defined (R-419,
+REQ-TOOL-163): `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for `r_min_pair_0` only the
+evidence is provisional; TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's smallest positive subnormal,
+which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
 `[0, horizon_steps]`; a `diverging` field's range, and under R-400 every range that spans zero, is symmetric about 0.
 A field carries the `diverging` scale only when its declared range spans zero (R-403; dd_generation_root §3.8), so
 the scale and the ramp agree; the one-signed `K_0` `[0, ∞)` and `V_0` `(−∞, 0]` are `lin`, on `ramp_viridis`, mapped
@@ -796,7 +800,9 @@ R-280, R-399; REQ-COL-053, REQ-COL-064).
   `ramp_twilight(t)` read matplotlib's published tables (R-122), checked in under `crates/ledger/data/lut/` with their
   source named: matplotlib 3.8.0, `_cm_listed.py`, 256 and 510 stops. Stop `k` sits at `t = k/(N − 1)`, with `t`
   clamped to [0, 1]. The ramp interpolates linearly between stops in the tables' sRGB encoding, then decodes. A cyclic
-  caller passes `fract(·)` to `ramp_twilight`. `ramp_grey(t)` is OKLab `(t, 0, 0)`, `t` clamped: the colour slot's
+  caller passes `fract(·)` to `ramp_twilight`. `ramp_magma(t)` reads the same release's `_magma_data` table, 256
+  stops, under the same rules: the ramp of the `s_impurity` view (colour_composition §6; TASK-M1-13).
+  `ramp_grey(t)` is OKLab `(t, 0, 0)`, `t` clamped: the colour slot's
   None grey (colour_composition §4.1). `hue_wheel(t)` is OKLCH with L = 0.75 and C = 0.12 at hue `t` turns, periodic
   in `t`, and in gamut at every hue.
 - **`debug_invalid(frag_xy)`** draws the hatch defined in the render contract's presentation layer (Part 5;
@@ -872,6 +878,15 @@ so a line is the same width at any quad size, any depth, any zoom — and it ant
 Thresholding UV directly (`u < 0.01`) would instead give fat borders on coarse quads and hairlines on
 deep ones. The same expression on `ctx.tile.uv` gives tile boundaries; one node can composite both at
 different widths and opacities.
+
+*As built (TASK-M1-13; REQ-RENDER-024; applied per R-369):* the occupant
+`crates/render/shaders/wgsl/frag/post/edge_line.wgsl` converts to pixels with `fwidth(uv)` rather than `fwidth(d)`, each
+derivative taken modulo the cell (`dpdx(uv) − round(dpdx(uv))`, and so for `dpdy`), and divides each axis's edge
+distance by its own pixel size before taking the nearer. `fwidth(d)` reads 0 where a 2 × 2 pixel block straddles a cell
+edge, since `d` is equal on both sides, and so draws no line there. The wrapped derivative reads the pixel's size
+wherever a cell is at least 2 px wide. The width, `width_px`, is the line's full width across the edge at half
+coverage. The fallback tint and the pending hatch are post occupants reading `ctx.quad` at M1 (RQ-239); their styling
+is debug_tooling_plan §F's (REQ-TOOL-124), and the Tier-3 path below is TASK-M5-29's.
 
 Being an ordinary post node, the boundary overlay **serialises with the graph**, has editable width /
 opacity / colour / level, chains in post order, and composes over any field — with no display-bar

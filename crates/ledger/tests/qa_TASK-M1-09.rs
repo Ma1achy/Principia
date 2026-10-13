@@ -7,7 +7,9 @@
 //!   `debug_invalid(ctx.frag_xy)`, only a stored sentinel's line between, then `ramp(range_norm(raw', lo, hi,
 //!   RANGE_AUTO, u_range))`; no self-comparison and no `isnan` anywhere; `[lo, hi]` the ledger range's finite ends, a
 //!   step index's `[0, horizon_steps]`, symmetric for a diverging field; the ramp `ramp_twilight` for a cyclic field,
-//!   else `ramp_viridis`; `RANGE_AUTO` defaults to 1 exactly for an unbounded range (a cyclic field on its fixed
+//!   `ramp_coolwarm` on a range symmetric about 0 for a `lin` or `diverging` field whose declared range spans zero
+//!   (R-400, R-403; amended by qa for TASK-M1-17), else `ramp_viridis`; `RANGE_AUTO` defaults to 1 exactly for an
+//!   unbounded range (a cyclic field on its fixed
 //!   [0, 1] aside); setting the node's `RANGE_AUTO` param writes `@uniform RANGE_AUTO: u32 = <0|1> [0, 1]`, which
 //!   `Declaration::parse` gives back, and nothing else in the view changes.
 //! - REQ-TOOL-160 (R-71): the log fields without a ledger `floor` are exactly the statement's six, and each view
@@ -15,8 +17,9 @@
 //! - REQ-TOOL-161 (R-72): render_gui_spec §10.1 gives the cyclic period, 2π, and the cyclic view places raw at
 //!   `fract(raw / 2π)` on the fixed [0, 1] with `ramp_twilight`.
 //! - REQ-GEN-012 / REQ-TOOL-137 (R-136, R-271, R-280, R-343 item 5): a stored sentinel's line shows the compacted
-//!   value through `dbg_sentinel` (R-381); `d_min`'s unset value, f16 +∞, is tested by its bits and drawn in
-//!   `DBG_NOT_YET`, and no other view draws the grey.
+//!   value through `dbg_sentinel` (R-381); `d_min`'s unset value, f16 +∞, is tested by its bits and drawn in the
+//!   "not yet" style, `debug_not_yet(ctx.frag_xy)`, never the flat `DBG_NOT_YET` (R-399; amended by qa for
+//!   TASK-M1-17), and no other view draws the style or the grey.
 //!
 //! Each test has a registered negative control (R-176).
 
@@ -67,6 +70,26 @@ fn finite(b: Bound) -> Option<f64> {
         Bound::Closed(v) | Bound::Open(v) if v.is_finite() => Some(v),
         _ => None,
     }
+}
+
+/// Whether `e`'s declared range spans zero, `lo < 0 < hi`, either end possibly unbounded (R-400, R-403): an end at 0,
+/// open or closed, does not.
+fn spans_zero(e: &Entry) -> bool {
+    let below = match e.range.lo {
+        Bound::Closed(v) | Bound::Open(v) => v < 0.0,
+        Bound::Unbounded => true,
+    };
+    let above = match e.range.hi {
+        Bound::Closed(v) | Bound::Open(v) => v > 0.0,
+        Bound::Unbounded => true,
+    };
+    below && above
+}
+
+/// Whether `e`'s view is on `ramp_coolwarm`, symmetric about 0: a `lin` or `diverging` field whose declared range
+/// spans zero (R-400; R-403: only such a field is `diverging`).
+fn is_coolwarm(e: &Entry) -> bool {
+    matches!(e.scale, Scale::Lin | Scale::Diverging) && spans_zero(e)
 }
 
 /// A step index (render_gui_spec §10.1: "a `u16` step index `[0, horizon_steps]`").
@@ -236,6 +259,8 @@ fn check_template(e: &Entry, wgsl: &str) {
     let last = lines.last().unwrap();
     let ramp = if e.scale == Scale::Cyclic {
         "ramp_twilight"
+    } else if is_coolwarm(e) {
+        "ramp_coolwarm"
     } else {
         "ramp_viridis"
     };
@@ -293,7 +318,13 @@ fn check_template(e: &Entry, wgsl: &str) {
         }
         Scale::Lin => {
             assert_eq!(raw, "raw", "`{f}`'s lin view compacts raw");
-            if is_step_index(e) {
+            if spans_zero(e) {
+                let (lo, hi) = (squash(&args[1]), squash(&args[2]));
+                assert!(
+                    lo == format!("-{hi}") || lo == format!("-({hi})"),
+                    "`{f}`'s zero-spanning range is not symmetric about 0 (R-400): {args:?}"
+                );
+            } else if is_step_index(e) {
                 assert!(
                     lit(&args[1]) == 0.0 && squash(&args[2]).contains("horizon_steps"),
                     "`{f}`, a step index, is not on [0, horizon_steps]: {args:?}"
@@ -354,14 +385,14 @@ fn check_template(e: &Entry, wgsl: &str) {
             want_middle += 1;
             let line = middle
                 .iter()
-                .find(|l| l.contains("DBG_NOT_YET"))
+                .find(|l| l.contains("debug_not_yet"))
                 .unwrap_or_else(|| {
-                    panic!("`{f}`'s unset value is not drawn in the grey: {lines:?}")
+                    panic!("`{f}`'s unset value is not drawn in the \"not yet\" style: {lines:?}")
                 });
             assert_eq!(
                 squash(line),
                 squash(&format!(
-                    "if (bitcast<u32>(raw) == {F32_INF:#010x}u) {{ return DBG_NOT_YET; }}"
+                    "if (bitcast<u32>(raw) == {F32_INF:#010x}u) {{ return debug_not_yet(ctx.frag_xy); }}"
                 )),
                 "`{f}`'s unset value is not tested by its bits (R-343 item 5)"
             );
@@ -374,10 +405,15 @@ fn check_template(e: &Entry, wgsl: &str) {
         want_middle,
         "`{f}`'s colour() has lines beyond the template's: {lines:?}"
     );
+    // R-399: "not yet" is never the flat grey, in any view.
+    assert!(
+        !wgsl.contains("DBG_NOT_YET"),
+        "`{f}`'s view draws the flat \"not yet\" grey (R-399)"
+    );
     if f != "d_min" {
         assert!(
-            !wgsl.contains("DBG_NOT_YET"),
-            "`{f}`'s view draws the grey, which is d_min's unset value's alone"
+            !wgsl.contains("debug_not_yet"),
+            "`{f}`'s view draws the \"not yet\" style, which is d_min's unset value's alone"
         );
     }
 }
@@ -491,6 +527,54 @@ mod qa_numeric_view_template_controls {
             "a cyclic view on viridis is caught",
             expected = "is not `return ramp_twilight",
             check_all(&mutated("rho_angle", "ramp_twilight", "ramp_viridis"))
+        );
+    }
+
+    mod zero_spanning_on_viridis {
+        use super::*;
+        negative_control!(
+            qa_numeric_view_template_every_numeric_view_is_the_template,
+            "a zero-spanning field (E_0) on viridis is caught (R-400)",
+            expected = "is not `return ramp_coolwarm",
+            check_all(&mutated("E_0", "ramp_coolwarm", "ramp_viridis"))
+        );
+    }
+
+    mod one_signed_on_coolwarm {
+        use super::*;
+        negative_control!(
+            qa_numeric_view_template_every_numeric_view_is_the_template,
+            "a one-signed field (V_0) on cool-warm is caught (R-403)",
+            expected = "is not `return ramp_viridis",
+            check_all(&mutated("V_0", "ramp_viridis", "ramp_coolwarm"))
+        );
+    }
+
+    mod zero_spanning_asymmetric {
+        use super::*;
+        negative_control!(
+            qa_numeric_view_template_every_numeric_view_is_the_template,
+            "a zero-spanning lin field (C_ty) on its measured, asymmetric range is caught (R-400)",
+            expected = "is not symmetric about 0",
+            check_all(&mutated(
+                "C_ty",
+                "raw, -m, m,",
+                "raw, uniforms.u_range.x, m,"
+            ))
+        );
+    }
+
+    mod unset_flat_grey {
+        use super::*;
+        negative_control!(
+            qa_numeric_view_template_every_numeric_view_is_the_template,
+            "d_min's unset value drawn in the flat grey is caught (R-399)",
+            expected = "is not drawn in the \"not yet\" style",
+            check_all(&mutated(
+                "d_min",
+                "debug_not_yet(ctx.frag_xy)",
+                "DBG_NOT_YET"
+            ))
         );
     }
 

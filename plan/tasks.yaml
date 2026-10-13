@@ -394,7 +394,7 @@
   title: "The synthetic golden suite: sub-field views, adversarial fixtures and colour independence"
   depends_on: [TASK-M1-07, TASK-M1-10, TASK-M1-11, TASK-M1-12, TASK-M1-13, TASK-M1-17, TASK-M0-06]
   needs: [REQ-PAY-018, REQ-VAL-003, REQ-VAL-007]
-  requirements: [REQ-TOOL-016, REQ-TOOL-018, REQ-TOOL-011, REQ-VAL-012, REQ-PAY-024]
+  requirements: [REQ-TOOL-016, REQ-TOOL-018, REQ-VAL-012, REQ-PAY-024, REQ-COL-067, REQ-COL-068, REQ-VAL-182]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.2, PIT-1.7, PIT-3, PIT-9]
 - id: TASK-M1-15
@@ -415,12 +415,36 @@
   pitfalls: [PIT-3]
 - id: TASK-M1-17
   milestone: M1
-  title: "Conform the debug views to R-399–R-401"
+  title: "Conform the debug views to R-399, R-400 and R-403"
   depends_on: [TASK-M1-10, TASK-M1-12, TASK-M1-13]
   needs: []
-  requirements: [REQ-TOOL-162, REQ-COL-064, REQ-RENDER-084, REQ-TOOL-160, REQ-GEN-033]
+  requirements: [REQ-TOOL-162, REQ-COL-064, REQ-RENDER-084, REQ-GEN-033]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-8, PIT-3]
+- id: TASK-M1-18
+  milestone: M1
+  title: "The per-field log floors (R-401)"
+  depends_on: [TASK-M1-17]  # split from TASK-M1-17, applied per R-369 (physics review 5482528309 of PR #194)
+  needs: []
+  requirements: [REQ-TOOL-160]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: [PIT-3]
+- id: TASK-M1-19
+  milestone: M1
+  title: "The render_contract Part 6 catalogue checklist (REQ-TOOL-011)"
+  depends_on: [TASK-M1-14]  # split from TASK-M1-14, applied per R-369 (RQ-273)
+  needs: []
+  requirements: [REQ-TOOL-011]
+  reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M1-20
+  milestone: M1
+  title: "`theta`'s view on the cyclic ramp (R-423)"
+  depends_on: [TASK-M1-17]  # R-423: theta is an angle; new M1 work, applied per R-369
+  needs: []
+  requirements: [REQ-RENDER-085]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: [PIT-3]
 - id: TASK-M2-01
   milestone: M2
   title: "Link registry: generated links with inverses, log-det, ε clamps and the chart constants"
@@ -440,9 +464,9 @@
 - id: TASK-M2-03
   milestone: M2
   title: "Decoder: free momentum, the factorised join and the ICDescriptor"
-  depends_on: [TASK-M2-02]
-  needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017]
-  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088]
+  depends_on: [TASK-M2-02, TASK-M2-30, TASK-M1-18]  # TASK-M2-30 for R-417's constants; TASK-M1-18 for R-419's floors, applied per R-369
+  needs: [REQ-PAY-001, REQ-PAY-002, REQ-PAY-020, REQ-PAY-017, REQ-TOOL-160]
+  requirements: [REQ-DEC-001, REQ-DEC-003, REQ-DEC-004, REQ-DEC-019, REQ-DEC-030, REQ-DEC-026, REQ-DEC-027, REQ-PAY-034, REQ-PAY-035, REQ-VAL-018, REQ-VAL-020, REQ-PAY-088, REQ-PAY-095, REQ-TOOL-163]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-3]
 - id: TASK-M2-04
@@ -616,7 +640,7 @@
 - id: TASK-M2-25
   milestone: M2
   title: Portable WGSL decode and encode, the DECODE preset and the agreement preset
-  depends_on: [TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16]
+  depends_on: [TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16, TASK-M1-19]  # TASK-M1-19 for REQ-TOOL-011, split from TASK-M1-14, applied per R-369 (RQ-273)
   needs: [REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001, REQ-COL-063]
   requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057]
   reviewers: [code, qa, physics]
@@ -651,6 +675,14 @@
   depends_on: [TASK-M2-25, TASK-M0-44]
   needs: [REQ-SYS-074]
   requirements: [REQ-COL-060]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M2-30
+  milestone: M2
+  title: "The f32 images of π/2 and π rounded toward zero, and the link test's exact bounds (R-417)"
+  depends_on: [TASK-M2-01]  # R-417: TASK-M2-01 has merged; applied per R-369
+  needs: []
+  requirements: [REQ-GEN-034]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M3-01
@@ -1114,7 +1146,7 @@
   title: Quality tiers and the one settings struct
   depends_on: [TASK-M4-19]
   needs: [REQ-SYS-001, REQ-SYS-005, REQ-SYS-029, REQ-INT-065, REQ-RENDER-014, REQ-PERF-086]
-  requirements: [REQ-PERF-014, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-032, REQ-PERF-033, REQ-RENDER-052]
+  requirements: [REQ-PERF-014, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-032, REQ-PERF-033, REQ-RENDER-052, REQ-PERF-095]
   reviewers: [code, qa, perf]
   pitfalls: []
 - id: TASK-M5-03
@@ -1234,7 +1266,7 @@
   title: "Resolve stage: outcome and validity reductions, and Undetermined quads"
   depends_on: [TASK-M5-01, TASK-M5-16]
   needs: [REQ-PAY-004, REQ-PAY-014, REQ-PAY-046, REQ-SYS-019, REQ-TOOL-033]
-  requirements: [REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098]
+  requirements: [REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M5-18
@@ -1341,6 +1373,14 @@
   requirements: [REQ-SYS-033, REQ-SYS-036, REQ-SCHED-047]
   reviewers: [code, qa]
   pitfalls: [PIT-9]
+- id: TASK-M5-31
+  milestone: M5
+  title: "The uniform echo view (R-420)"
+  depends_on: [TASK-M5-02, TASK-M3-06]  # R-420: the echo row moved after TASK-M5-02 and TASK-M3-06
+  needs: [REQ-INT-026, REQ-TOOL-011]
+  requirements: [REQ-TOOL-164, REQ-TOOL-165]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
 - id: TASK-M6-01
   milestone: M6
   title: "The refinement decision and the quad lifecycle: terminal vs refinable"
@@ -1449,7 +1489,7 @@
   milestone: M6
   title: QualitySettings on three axes, the tiers keyed off eps, and the preset selector
   depends_on: [TASK-M5-11, TASK-M5-12]
-  needs: [REQ-PERF-014, REQ-PERF-016, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-029, REQ-PERF-033, REQ-GEN-017]
+  needs: [REQ-PERF-014, REQ-PERF-016, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-029, REQ-PERF-033, REQ-GEN-017, REQ-PERF-095]
   requirements: [REQ-PERF-084, REQ-PERF-040, REQ-PERF-044, REQ-PERF-067, REQ-PERF-037, REQ-PERF-035, REQ-PERF-045, REQ-PERF-042, REQ-PERF-043, REQ-GUI-015]
   reviewers: [code, qa, physics, perf]
   pitfalls: []
@@ -1616,8 +1656,8 @@
 - id: TASK-M7-05
   milestone: M7
   title: Compaction, ramps and the default ramp per field role
-  depends_on: [TASK-M7-03, TASK-M7-04, TASK-M1-09, TASK-M1-17]  # TASK-M1-17 applied per R-369 (R-399, R-400, R-403)
-  needs: [REQ-COL-001, REQ-GEN-001, REQ-GEN-002, REQ-GEN-012, REQ-RENDER-021]
+  depends_on: [TASK-M7-03, TASK-M7-04, TASK-M1-09, TASK-M1-17, TASK-M1-18]  # TASK-M1-17 applied per R-369 (R-399, R-400, R-403); TASK-M1-18 for R-401's floors, applied per R-369 (PR #194)
+  needs: [REQ-COL-001, REQ-GEN-001, REQ-GEN-002, REQ-GEN-012, REQ-RENDER-021, REQ-TOOL-160]
   requirements: [REQ-COL-039, REQ-COL-016, REQ-COL-032, REQ-COL-024, REQ-COL-065, REQ-COL-066]
   reviewers: [code, qa, physics]  # physics for REQ-COL-065 and REQ-COL-066 only, applied per R-369
   pitfalls: []

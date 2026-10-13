@@ -8,16 +8,20 @@
 //! Between the two, a field with a stored sentinel has one more line: the sentinel shows as its literal value on the
 //! ramp, through the presentation layer's `dbg_sentinel`, fed the compacted value (R-381) and never scaled by the
 //! range (R-136); `d_min`'s unset value, f16 +∞, is
-//! drawn in the neutral "not yet" grey of running samples, `DBG_NOT_YET`, tested by its bits, never by a float
-//! comparison (R-271, R-280, R-343 item 5).
+//! drawn in the "not yet" style of running samples, `debug_not_yet(frag_xy)`, the neutral grey with a fine dot stipple
+//! (R-399), tested by its bits, never by a float comparison (R-271, R-280, R-343 item 5).
 //!
-//! **`raw`, `lo`, `hi`, the ramp** (RQ-231). `raw` is the field's value compacted per its ledger scale ([`Placement`]):
-//! `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε))`, on the fixed
-//! `[0, 1]`; `cyclic` `fract(x/period)` on the fixed `[0, 1]`, with `ramp_twilight`; `diverging` the identity on a
-//! range symmetric about 0. Every other ramp is `ramp_viridis`, `dbg_sentinel`'s. The fixed `[lo, hi]` is the ledger
-//! range's finite ends, a step index's `[0, horizon_steps]` (§10.1); an end with no finite bound takes the measured end
-//! (applied per R-369: the fixed mode has no bound there to use). A field whose ledger range is unbounded defaults to
-//! `RANGE_AUTO = 1`; a cyclic one, placed on its fixed `[0, 1]`, to 0.
+//! **`raw`, `lo`, `hi`, the ramp** (RQ-231; R-400, R-403). `raw` is the field's value compacted per its ledger scale
+//! ([`Placement`]): `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε))`, on
+//! the fixed `[0, 1]`; `cyclic` `fract(x/period)` on the fixed `[0, 1]`, with `ramp_twilight`. A field whose declared
+//! range spans zero, `diverging` (R-403: only such a field carries it) or `lin`, is the identity on the symmetric
+//! `[−M, M]`, `M = max(|l|, |h|)` over the fixed ends (an unbounded end the measured one) or, under `RANGE_AUTO = 1`,
+//! the measured ends, so 0 lands at `t = ½`, on `ramp_coolwarm`, whose midpoint is the table's neutral (R-400). Every
+//! other ramp is `ramp_viridis`, `dbg_sentinel`'s: a field that can't be negative keeps it, as does one that can't be
+//! positive, `V_0` (R-403), whose most negative value is then at the dark end in either mode. The fixed `[lo, hi]` is
+//! the ledger range's finite ends, a step index's `[0, horizon_steps]` (§10.1); an end with no finite bound takes the
+//! measured end (applied per R-369: the fixed mode has no bound there to use). A field whose ledger range is unbounded
+//! defaults to `RANGE_AUTO = 1`; a cyclic one, placed on its fixed `[0, 1]`, to 0.
 //!
 //! **`RANGE_AUTO` and `u_range`** are the view's uniforms, declared in its header (gui_state_contract §3):
 //! `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`, the node's param, whose default the generator writes from the param
@@ -43,8 +47,30 @@ pub enum Placement {
     Log { floor: f64 },
     /// `raw = fract(x/period)` on the fixed `[0, 1]`, on `ramp_twilight`.
     Cyclic { period: f64 },
-    /// `raw = x`, on a range symmetric about 0.
+    /// `raw = x`, on a range symmetric about 0, on `ramp_coolwarm`: a field whose declared range spans zero (R-400).
     Diverging,
+}
+
+/// The ramp a numeric view draws on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Ramp {
+    /// `ramp_viridis`: every field whose range does not span zero, but the cyclic one.
+    Viridis,
+    /// `ramp_twilight`: the cyclic field.
+    Twilight,
+    /// `ramp_coolwarm`: a field whose declared range spans zero, centred at zero (R-400).
+    Coolwarm,
+}
+
+impl Ramp {
+    /// The prelude's function.
+    pub fn wgsl(self) -> &'static str {
+        match self {
+            Ramp::Viridis => "ramp_viridis",
+            Ramp::Twilight => "ramp_twilight",
+            Ramp::Coolwarm => "ramp_coolwarm",
+        }
+    }
 }
 
 /// One end of a numeric view's fixed range.
@@ -63,7 +89,7 @@ pub enum End {
 pub enum Sentinel {
     /// A stored sentinel, shown as its literal value through `dbg_sentinel` (R-136).
     Literal(f64),
-    /// An unset value, f32 bits `bits`, drawn in the "not yet" grey (R-280): `d_min`'s f16 +∞, widened.
+    /// An unset value, f32 bits `bits`, drawn in the "not yet" style (R-280, R-399): `d_min`'s f16 +∞, widened.
     Unset { bits: u32 },
 }
 
@@ -124,12 +150,15 @@ pub fn float(x: f64) -> String {
 
 impl NumericView {
     /// The numeric view of `e`, or `None` for a field the template does not colour: categorical, flag, a vector, or
-    /// a field with a ledger `floor` (the drifts, R-381).
+    /// a field with a ledger `floor` (the drifts, R-381). A `lin` or `diverging` field whose declared range spans zero
+    /// is placed symmetrically on `ramp_coolwarm` (R-400); generation has refused a `diverging` one that does not
+    /// (R-403).
     pub fn of(e: &Entry) -> Option<NumericView> {
         if matches!(e.ty, FieldType::Vector { .. }) || e.floor.is_some() {
             return None;
         }
         let placement = match e.scale {
+            Scale::Lin if e.range.spans_zero() => Placement::Diverging,
             Scale::Lin => Placement::Lin,
             Scale::Log => Placement::Log { floor: log_floor() },
             Scale::Cyclic => Placement::Cyclic {
@@ -217,6 +246,16 @@ impl NumericView {
         }
     }
 
+    /// The ramp the view draws on: twilight for the cyclic field, cool-warm for a field whose range spans zero, else
+    /// viridis.
+    pub fn ramp(&self) -> Ramp {
+        match self.placement {
+            Placement::Cyclic { .. } => Ramp::Twilight,
+            Placement::Diverging => Ramp::Coolwarm,
+            Placement::Lin | Placement::Log { .. } => Ramp::Viridis,
+        }
+    }
+
     /// The `colour()` body after `raw`'s binding: the NaN guard, the sentinel's line where the field has one, and the
     /// ramp.
     fn body(&self) -> String {
@@ -236,23 +275,30 @@ impl NumericView {
             Some(Sentinel::Unset { bits }) => {
                 let _ = writeln!(
                     out,
-                    "    if (bitcast<u32>(raw) == {bits:#010x}u) {{ return DBG_NOT_YET; }}"
+                    "    if (bitcast<u32>(raw) == {bits:#010x}u) {{ return debug_not_yet(ctx.frag_xy); }}"
                 );
             }
             None => {}
         }
         let auto = "uniforms.RANGE_AUTO != 0u";
-        let ramp = match self.placement {
-            Placement::Cyclic { .. } => "ramp_twilight",
-            _ => "ramp_viridis",
-        };
+        let ramp = self.ramp().wgsl();
         if self.placement == Placement::Diverging {
+            // The fixed `[−M, M]`: `M` the larger magnitude of the two ends, an unbounded end the measured one; with
+            // both ends measured, `m`, the measured range's own.
             let (lo, hi) = match (self.lo, self.hi) {
                 (End::Fixed(lo), End::Fixed(hi)) => {
                     let r = float(lo.abs().max(hi.abs()));
                     (format!("-{r}"), r)
                 }
-                _ => ("-m".to_owned(), "m".to_owned()),
+                (End::Measured, End::Measured) => ("-m".to_owned(), "m".to_owned()),
+                (lo, hi) => {
+                    let r = format!(
+                        "max(abs({}), abs({}))",
+                        Self::end(lo, "uniforms.u_range.x"),
+                        Self::end(hi, "uniforms.u_range.y")
+                    );
+                    (format!("-{r}"), r)
+                }
             };
             out.push_str("    let m = max(abs(uniforms.u_range.x), abs(uniforms.u_range.y));\n");
             let _ = writeln!(
@@ -300,10 +346,9 @@ impl NumericView {
         };
         if self.placement == Placement::Diverging {
             let m = u_range[0].abs().max(u_range[1].abs());
-            let r = match (self.lo, self.hi) {
-                (End::Fixed(lo), End::Fixed(hi)) => lo.abs().max(hi.abs()),
-                _ => m,
-            };
+            let r = end(self.lo, u_range[0])
+                .abs()
+                .max(end(self.hi, u_range[1]).abs());
             return ([-r, r], [-m, m]);
         }
         (
@@ -333,7 +378,7 @@ impl NumericView {
             ((raw - l) / (h - l)).clamp(0.0, 1.0)
         };
         Shown::Ramp {
-            twilight: matches!(self.placement, Placement::Cyclic { .. }),
+            ramp: self.ramp(),
             t,
         }
     }
@@ -368,8 +413,8 @@ pub enum Shown {
     Invalid,
     /// The stored sentinel's literal value, compacted, through `dbg_sentinel` (R-136, R-381).
     Literal(f64),
-    /// The "not yet" grey, `DBG_NOT_YET` (R-280).
+    /// The "not yet" style, `debug_not_yet(frag_xy)` (R-280, R-399).
     NotYet,
-    /// The ramp at `t`: `ramp_twilight` when `twilight`, else `ramp_viridis`.
-    Ramp { twilight: bool, t: f64 },
+    /// The ramp `ramp` at `t`.
+    Ramp { ramp: Ramp, t: f64 },
 }

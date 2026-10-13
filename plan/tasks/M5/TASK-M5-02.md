@@ -1,7 +1,7 @@
 # TASK-M5-02 — Quality tiers and the one settings struct
 
 - **Milestone:** M5
-- **Closes:** REQ-PERF-014, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-032, REQ-PERF-033, REQ-RENDER-052
+- **Closes:** REQ-PERF-014, REQ-PERF-026, REQ-PERF-027, REQ-PERF-028, REQ-PERF-032, REQ-PERF-033, REQ-RENDER-052, REQ-PERF-095
 - **Depends on:** TASK-M4-19
 - **Needs (earlier milestones):** REQ-SYS-001, REQ-SYS-005, REQ-SYS-029, REQ-INT-065, REQ-RENDER-014, REQ-PERF-086
 - **Reviewers:** code, qa, perf
@@ -13,7 +13,9 @@ The six quality tiers exist as named presets populating one `QualitySettings` st
 word, N and depth per memory_tiers §4, eps / frame budget / hard cap per §4.1 as labelled placeholders (eps tightening
 monotonically), FTLE from Medium up with a Custom override, E free-valued 0–15, render_scale restricted to the four tier
 values with a Custom slider over 0.25–2.0, the interactive frame budget 16 ms and export ignoring it. Later M5 tasks read
-their knobs from this struct.
+their knobs from this struct. Custom's `N` has a lower bound, a correctness floor (at `N` = 1 a quad holds one nominal
+sample, so nothing is compared across it: at `E = 0` it never refines, and at `E ≥ 1` only its one footprint's copy
+spread can split it), proposed here with its evidence as a named constant, confirmed at the M5 gate (R-422).
 
 ## References
 - `docs/contracts/principia_canonical_spec.md` § "5. Temporal & rendering model *(authoritative: `temporal_architecture_note`, `render_contract`, `scheduler_contract`, `checkerboard_contract`)*"
@@ -34,10 +36,14 @@ their knobs from this struct.
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
 - `decisions.md` § "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
 - `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
+- `decisions.md` § "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
+- `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy"
 
 ## Deliverables
 - `crates/engine/src/contract/quality.rs`: `QualityTier` (six variants plus Custom), `QualitySettings`, the preset table
-  (placeholder rows marked as such, each value traced to its memory_tiers row).
+  (placeholder rows marked as such, each value traced to its memory_tiers row); Custom's lower bound on `N`, a named
+  constant, provisional until the M5 gate (REQ-PERF-095).
+- The REQ-PERF-095 proposal: the bound, a power of two, with its evidence, attached to the PR.
 - `crates/engine/src/quality.rs`: render-target size from display size × render_scale; frame-budget accessor that the
   export path does not consult.
 - Unit tests `crates/engine/src/contract/tests/quality.rs`; `xtask bench tier-table` reports the placeholder rows and the eps order.
@@ -50,6 +56,7 @@ their knobs from this struct.
 - `cargo xtask bench tier-table` — config marks the six rows as placeholders; eps strictly decreases Potato → Extreme; the calibration campaign's recorded per-device results replace them (REQ-PERF-028).
 - `cargo test -p engine frame_budget_default` — default frame_budget = 16 ms; export path does not consult it (REQ-PERF-032).
 - `cargo test -p engine quality_e_values` — tier table E values; E = 0 renders with no copies (REQ-PERF-033).
+- Review checklist (perf): the REQ-PERF-095 proposal gives Custom's lower bound on `N` with its evidence at both `E = 0` and `E ≥ 1`: at each small `N`, how many nominal samples the coherence test compares across the quad and whether it can tell a coherent quad from an incoherent one (scheduler contract Part 6), and at `E ≥ 1` what the one footprint's copy spread alone can split (Part 9's E+1 copies); the bound is a named constant marked provisional; the human confirms it at the M5 gate (REQ-PERF-095).
 - `cargo test -p engine render_scale_target` — tier presets only produce the four values; Custom accepts 0.25–2.0; render target size equals display × render_scale (REQ-RENDER-052).
 
 ## Notes
@@ -59,3 +66,8 @@ their knobs from this struct.
 - N and depth are "indicative" in §4; this task records them as given, no new values — except Ultra and Extreme, whose N is 16 (R-132); their E and render scale are REQ-PERF-086's calibrated values (TASK-M4-19). Until those are recorded the Ultra and Extreme rows are marked provisional in the config (R-137, REQ-PERF-026).
 - RQ-98 ruled: R-113 — the tier names REQ-RENDER-031 and REQ-RENDER-035 used at M4 are checked here by REQ-PERF-014.
 - R-398 (9 Oct 2026) closes RQ-258: N is a power of two at every tier and setting; the named tiers' 8 and 16 already are, and the test pins it.
+- R-422 (11 Oct 2026, closing RQ-269): Custom's `N` has a lower bound, a correctness floor, proposed here (REQ-PERF-095)
+  and enforced in the Custom override by TASK-M6-15 (REQ-PERF-035). An M5 task proposes it because the human confirms
+  it at the M5 gate (applied per R-369). The human's "N = 1 never refines" holds only at `E = 0`: at `E ≥ 1` an `N = 1`
+  quad holds E+1 copies, and Part 6's split test can still split it on its footprint's copy spread, so the evidence
+  covers both (flagged and recorded in R-422; physics review 5484757609, F1, on PR #197).

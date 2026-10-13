@@ -86,11 +86,13 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-395** — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*
 - **R-397** — `θ̃`'s frozen pole reference is stored in `_reserved` as a u16, with 0xFFFF for none; `SimState`'s size is unchanged *(closes RQ-226)*
 - **R-398** — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*
-- **R-401** — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
+- **R-401** — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced. Still in force: all of it; for `rho_ratio` and `r_min_pair_0` the M1 gate's confirmation is provisional, and the two floors are re-confirmed at M2 (R-419, REQ-TOOL-163). Amended in part by R-419.
 - **R-407** — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*
 - **R-408** — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*
 - **R-412** — With one hemisphere of the shape sphere drawn, φ's span is remapped to end at the equator and its formula continues past it; the primary range is pole to equator *(closes RQ-264)*
 - **R-413** — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes "edge-heavy: crowds the bounds" *(closes RQ-267)*
+- **R-417** — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*
+- **R-419** — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*
 
 ## Design and architecture
 
@@ -231,7 +233,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-383** — The colour-vision reference is DaltonLens-Python at commit `3cba5e6`: its Viénot 1999 and Brettel 1997 simulators, on its Smith–Pokorny LMS model, generate TASK-M7-20's goldens *(closes RQ-209)*
 - **R-390** — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots. Still in force: all of it, as its text reads, except that TASK-M6-24 is reviewed by physics as well as code, qa and gui, for REQ-GUI-176 and REQ-GUI-177 only; and that ORDER item 3's compass switches between slicing and tilting by its Tilt and Slice buttons as well as by activity, in a fixed view with no orbit (R-409). Amended in part by R-396 (TASK-M6-24's reviewers: physics too, for REQ-GUI-176 and REQ-GUI-177 only); amended in part by R-409.
 - **R-399** — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*
-- **R-400** — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*
+- **R-400** — A numeric field view whose declared ledger range spans zero is on a diverging ramp centred at zero; fields that can't be negative keep viridis *(closes RQ-260)*. Still in force: all of it, but for a field that is an angle: a numeric field view whose declared range spans zero is on `ramp_coolwarm` centred at zero, and one that can't be negative keeps viridis; an angle (`theta`, R-423) is on the cyclic ramp whatever its range. Amended in part by R-423 (a field that is an angle takes the cyclic ramp: `theta`).
 - **R-403** — `K_0` and `V_0` are `lin` on viridis over `[0, ∞)` and `(−∞, 0]`; a field carries the `diverging` scale only when its declared range spans zero *(closes RQ-261)*
 - **R-404** — #174's look choices and key-repeat timings are confirmed as built: the focus ring, the breadcrumb, the `?` overlay, the 500 ms delay and 40 ms interval, and the base steps. Still in force: all of it, as its text reads, except that the `Orbit` row (Compass's Shift+arrows, 5°) and the note on what Shift does on Compass's Shift+arrows are retired, Shift ×10 and Alt ×0.1 applying on the compass in interaction mode as everywhere, with no separate fine step (R-409, the human's follow-up answer); and that the ring is `hyperlink_color` in interaction mode only, and orange in navigation mode (R-409). Its width, its rounding, the breadcrumb, the `?` overlay, the repeat timing and every other base step stand. Amended in part by R-409.
 - **R-405** — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console. Still in force: all of it, as its text reads, except that ↑ and ↓ scroll the entry list only in interaction mode, after Enter on the list, Esc returning to navigation mode on it (R-409, the human's follow-up answer); and that every landing, the console's first filter included, is in navigation mode, the arrows moving within a section in navigation mode (R-409). Amended in part by R-409.
@@ -239,6 +241,10 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-409** — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
 - **R-410** — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*
 - **R-411** — §3.6's `log` and `diverging` compactions take the debug views' range-free forms, `log` with each field's ε and `diverging` the symlog; the drift views and goldens are unchanged *(closes RQ-265)*
+- **R-418** — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and "no escape" reads `_min > _max` *(closes RQ-268)*
+- **R-420** — The uniform echo row moves to a task after TASK-M5-02 and TASK-M3-06, which names its thresholds; the Optional Fourier block row is removed from render_contract Part 6 and parked as a possible future feature *(closes RQ-273)*
+- **R-422** — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*
+- **R-423** — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*
 
 ## Values
 
@@ -262,6 +268,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-385** — Before the M7 gate, the hybrid embedding (`k = 25`) is re-measured on real rendered figures, and the 37.6 % raw low-bit error is reconciled with §5's ~8 %
 - **R-386** — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate
 - **R-402** — The nightly full mutants run is sharded to fit GitHub's 6-hour job limit: each package's mutants dealt round-robin into shards sized on their measured cost, counted each run *(amends R-376 as it applies to the nightly full run's shards)*
+- **R-421** — The ICDescriptor golden: fields that are 0 at rest are compared bit-exact, the others within per-precision tolerances proposed by TASK-M2-03 and confirmed at the M2 gate; "hand-computed at f32" is the exact value rounded to f32 *(closes RQ-272)*
 
 ## Process
 

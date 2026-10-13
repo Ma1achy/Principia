@@ -393,18 +393,6 @@ fn closed(b: Bound) -> Option<f64> {
     }
 }
 
-/// `b` as text for a view's header.
-fn bound(b: Bound, lo: bool) -> String {
-    match (b, lo) {
-        (Bound::Closed(v), true) => format!("[{v}"),
-        (Bound::Closed(v), false) => format!("{v}]"),
-        (Bound::Open(v), true) => format!("({v}"),
-        (Bound::Open(v), false) => format!("{v})"),
-        (Bound::Unbounded, true) => "(−∞".to_owned(),
-        (Bound::Unbounded, false) => "∞)".to_owned(),
-    }
-}
-
 /// `x` as a WGSL f32 literal.
 fn float(x: f64) -> String {
     format!("{x:?}")
@@ -740,11 +728,10 @@ fn header(e: &Entry, r: &Read, colouring: &str) -> String {
     };
     let text = format!(
         "The debug view of `{name}` (render contract Part 6; debug_tooling_plan §B–E): {location}, {ty}, scale {scale}, \
-         range {lo}, {hi}. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field \
+         range {range}. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field \
          through {acc}; its test, `{test}` in `{TESTS_PATH}`, reads it through their Rust twins. {colouring}{reduction}",
         name = e.name,
-        lo = bound(e.range.lo, true),
-        hi = bound(e.range.hi, false),
+        range = e.range,
         acc = accessors.join(" and "),
         test = test_name(e.name),
     );

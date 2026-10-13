@@ -11,42 +11,43 @@
 | CHART | 56 |
 | INT | 89 |
 | EVT | 26 |
-| PAY | 92 |
-| GEN | 33 |
+| PAY | 93 |
+| GEN | 34 |
 | SCHED | 96 |
-| REF | 50 |
-| RENDER | 84 |
-| COL | 65 |
+| REF | 51 |
+| RENDER | 85 |
+| COL | 67 |
 | GUI | 183 |
-| TOOL | 161 |
-| VAL | 180 |
-| PERF | 94 |
+| TOOL | 164 |
+| VAL | 181 |
+| PERF | 95 |
 | SYS | 80 |
-| **total** | **1366** |
+| **total** | **1377** |
 
-Of these: 115 calibration, 117 definition, 1134 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 118 calibration, 121 definition, 1138 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
 | M0 | 122 |
-| M1 | 99 |
-| M2 | 159 |
+| M1 | 103 |
+| M2 | 162 |
 | M3 | 199 |
 | M4 | 104 |
-| M5 | 167 |
+| M5 | 171 |
 | M6 | 160 |
 | M7 | 117 |
 | M8 | 239 |
 
 ## Sections
 
-1111 sections in 46 files: 915 yield at least one requirement; 196 yield none and are listed below with the reason.
+1119 sections in 46 files: 922 yield at least one requirement; 197 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | informative only | 149 |
 | out of v1 (R-125) | 1 |
+| out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 32 |
 | rationale | 10 |
 | superseded (kept for the record) | 4 |
@@ -434,6 +435,7 @@ Of these: 115 calibration, 117 definition, 1134 obligation. Retired (kept for th
 | 7.3 Dump tiers — and the default is not an image | informative only | parked post-1.0 (§7); reduced-tier field-list contract applies when dump tiers are built; not flagged DECIDE NOW |
 | 7.4 Headless dataset generation | informative only | parked post-1.0 (§7); out of scope |
 | 7.6 GPU port — the only lever that changes the category | informative only | parked post-1.0 (§7); the driver.rs note concerns prin-rs |
+| 7.6a The truncated-Fourier block — a possible future feature (R-420) | out of v1 (R-420) | parked by R-420: render_contract Part 6's Optional Fourier block row, removed; nothing current defines the path |
 | 9. What this is not | informative only | what the project is not |
 
 ### `docs/read_first/principia_01_pitfalls.md`
