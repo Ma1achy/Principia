@@ -289,7 +289,8 @@ pub struct Validity {
 /// `field`'s validity, a WGSL bool over the context `root` (`rc` where the validity lane fills it, `ctx` where a
 /// colour occupant reads it), by the ledger: its tier gate, its sentinel, or the read side's own predicate; `true`
 /// where it has none. The one source of the validity lane's predicates (colour_composition §3): the field ramp's
-/// `ScalarField` takes its predicate from here.
+/// `ScalarField` takes its predicate from here. A tier gate is read beside its tier's baked `has_<feature>`, the gate
+/// `<feature>_valid`: full correctness is `has_ftle && ftle_valid` (render contract Part 2; REQ-RENDER-015).
 pub fn validity_over(field: &str, entries: &[Entry], root: &str) -> Validity {
     let own = |predicate: String| Validity {
         predicate,
@@ -310,7 +311,8 @@ pub fn validity_over(field: &str, entries: &[Entry], root: &str) -> Validity {
         return own("true".into());
     };
     if let Some(gate) = e.tier_gate {
-        return own(format!("{root}.sample.{gate}"));
+        let feature = gate.strip_suffix("_valid").unwrap_or(gate);
+        return own(format!("has_{feature} && {root}.sample.{gate}"));
     }
     match (e.sentinel, &e.ty, &e.location) {
         (Some(s), FieldType::F16Pair, _) => Validity {
@@ -640,10 +642,12 @@ pub struct Payload<'a> {
     pub quad_frame: &'a [u8],
 }
 
-/// The three bind groups a harness draw reads, and their layouts, by group number.
+/// The three bind groups a harness draw reads, and their layouts, by group number, and the four buffers group 1 binds.
 pub struct Bound {
     pub layouts: [wgpu::BindGroupLayout; 3],
     pub groups: [wgpu::BindGroup; 3],
+    /// The `SimState`, word, `ICDescriptor` and `RenderQuad` buffers, in [`buffers`]' order.
+    pub stored: [wgpu::Buffer; 4],
 }
 
 impl Bound {
@@ -675,6 +679,17 @@ fn entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
 /// 0 the prelude's block, group 1 the four buffers at [`buffers`]' bindings, group 2 the context's block and the
 /// per-quad frames ([`FRAME_BINDING`]).
 pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -> Bound {
+    upload_with(device, payload, context, wgpu::BufferUsages::empty())
+}
+
+/// [`upload`], the four group-1 buffers made with `usage` beside `STORAGE`: `COPY_SRC` for a test that reads them back
+/// (REQ-TOOL-028's observation taps).
+pub fn upload_with(
+    device: &wgpu::Device,
+    payload: &Payload<'_>,
+    context: &Context,
+    usage: wgpu::BufferUsages,
+) -> Bound {
     use wgpu::util::DeviceExt;
     let buffer = |label: &str, bytes: &[u8], usage| {
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -698,10 +713,10 @@ pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -
         wgpu::BufferUsages::STORAGE,
     );
     let stored = [
-        buffer("simstate", payload.simstate, storage),
-        buffer("word", payload.word, storage),
-        buffer("ic", payload.ic, storage),
-        buffer("quad", payload.quad, storage),
+        buffer("simstate", payload.simstate, storage | usage),
+        buffer("word", payload.word, storage | usage),
+        buffer("ic", payload.ic, storage | usage),
+        buffer("quad", payload.quad, storage | usage),
     ];
     let read_only = wgpu::BufferBindingType::Storage { read_only: true };
     let layout = |label: &str, entries: &[wgpu::BindGroupLayoutEntry]| {
@@ -771,5 +786,9 @@ pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -
             ],
         ),
     ];
-    Bound { layouts, groups }
+    Bound {
+        layouts,
+        groups,
+        stored,
+    }
 }
