@@ -21,7 +21,8 @@
 //! scheduler deny-list and, in one that is not a debug view, the FTLE and ensemble guard. Each exception the
 //! definitions name is lifted for its file and its one rule only ([`EXCEPTIONS`]). [`RUNTIME_DIR`] holds the WGSL the
 //! render side writes at runtime, checked in by `crates/render/tests/runtime_wgsl.rs` so that this lint reaches it. In
-//! a context the prelude's tier constants are read as overrides ([`tier_overrides`]), so naga's folding keeps them.
+//! an occupant's context the prelude's tier constants are read as overrides ([`tier_overrides`]), so naga's folding keeps
+//! them.
 //!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
@@ -405,7 +406,7 @@ fn allowed(rel: &str, findings: Vec<Finding>) -> Vec<Finding> {
 }
 
 /// `prelude` with its tier constants (`const has_<feature>: bool`, lowering Part 3a) declared `override` instead, as
-/// the lint reads them in a context: naga folds a constant into the expressions that use it, so `!has_ftle ||
+/// the lint reads them before an occupant ([`check_occupant_after`]): naga folds a constant into the expressions that use it, so `!has_ftle ||
 /// !s.ftle_valid` would reach the guard rule as `false || !s.ftle_valid`, the tier's name gone; an override keeps it.
 /// Nothing else changes, lines included.
 pub fn tier_overrides(prelude: &str) -> String {
@@ -443,7 +444,7 @@ fn joined(parts: &[&str]) -> String {
 /// What precedes the stain's context at assembly (render contract Part 2; TASK-M1-04): the prelude, the other files of
 /// [`LIB_FILES`] in sorted order, the unpack layer ([`GENERATED`]) and the read side ([`READ_SIDE_FILE`]).
 fn read_side_context(root: &Path) -> Result<String, String> {
-    let mut parts = vec![tier_overrides(&read(root, PRELUDE)?)];
+    let mut parts = vec![read(root, PRELUDE)?];
     let mut library = Vec::new();
     wgsl_files(&root.join(LIB_FILES), &mut library)?;
     library.sort();
@@ -559,7 +560,7 @@ pub const CONTEXT_SLOTS: [&str; 3] = ["colour", "brightness", "post"];
 /// that renaming changes no float expression, so the lint reads the text as written. A `// @uniform` line without a
 /// name before `:` and a type between `:` and `=` is an error.
 pub fn occupant_context(prelude: &str, library: &[String], source: &str) -> Result<String, String> {
-    let mut out = tier_overrides(prelude);
+    let mut out = String::from(prelude);
     for file in library {
         if !out.ends_with('\n') {
             out.push('\n');
@@ -711,7 +712,8 @@ pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, 
 
 /// Every rule's findings in a colour occupant's `source` (render contract Part 4), after `prefix` as
 /// [`check_fragment_after`] reads it: the float rules, the shadow rule and the occupant rules, the guard rule only where
-/// `occupancy` is [`Occupancy::Guarded`]. `accessors` are the generated accessors ([`accessors`]).
+/// `occupancy` is [`Occupancy::Guarded`]. `accessors` are the generated accessors ([`accessors`]). `prefix`'s tier
+/// constants are read as overrides ([`tier_overrides`]).
 pub fn check_occupant_after(
     prefix: &str,
     source: &str,
@@ -719,7 +721,7 @@ pub fn check_occupant_after(
     accessors: &BTreeSet<String>,
 ) -> Result<Vec<Finding>, String> {
     let guarded = occupancy == Occupancy::Guarded;
-    after(prefix, source, &|module, info, joined| {
+    after(&tier_overrides(prefix), source, &|module, info, joined| {
         occupant::occupant(module, info, joined, accessors, guarded)
     })
 }

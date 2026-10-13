@@ -143,7 +143,8 @@ fn operands(e: &Expression) -> Vec<Handle<Expression>> {
             .into_iter()
             .flatten()
             .collect(),
-        Expression::ArrayLength(e) => vec![e],
+        // `arrayLength`'s operand, a pointer to a storage buffer's runtime-sized array, is never a `SimState` member
+        // nor the word: none of the others reads one.
         _ => Vec::new(),
     }
 }
@@ -575,13 +576,12 @@ impl<'a> Guard<'a> {
     }
 
     /// `e`'s identity as a sample: the same argument, variable or call result and the same member path give the same
-    /// key, so `ctx.sample.ftle` and `ctx.sample.ftle_valid` read one sample.
+    /// key, so `ctx.sample.ftle` and `ctx.sample.ftle_valid` read one sample, and so do two loads of one pointer. naga
+    /// makes one expression per argument and per local variable, so its handle keys either.
     fn key(&self, e: Handle<Expression>) -> String {
         match self.function.expressions[e] {
-            Expression::FunctionArgument(i) => format!("a{i}"),
             Expression::AccessIndex { base, index } => format!("{}.{index}", self.key(base)),
             Expression::Load { pointer } => format!("*{}", self.key(pointer)),
-            Expression::LocalVariable(l) => format!("l{}", l.index()),
             _ => format!("e{}", e.index()),
         }
     }
@@ -638,11 +638,6 @@ impl<'a> Guard<'a> {
     fn facts(&self, e: Handle<Expression>, value: bool) -> Facts {
         match self.function.expressions[e] {
             Expression::Literal(Literal::Bool(b)) if b != value => None,
-            Expression::Constant(c)
-                if value && self.module.constants[c].name.as_deref() == Some("has_ftle") =>
-            {
-                Some(BTreeSet::from([Fact::HasFtle]))
-            }
             Expression::Override(o)
                 if value && self.module.overrides[o].name.as_deref() == Some("has_ftle") =>
             {

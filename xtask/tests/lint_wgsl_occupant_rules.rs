@@ -294,6 +294,34 @@ negative_control!(
     check_chart_lane("ctx.x", Some(Rule::ChartState))
 );
 
+/// The deny-list finding for `read_member`, under a context with a chart lane, a `RenderQuad` and the read params,
+/// names `whose` state it reads.
+fn check_whose(read_member: &str, whose: &str) {
+    let prefix = "struct Chart { z: f32 }\nstruct RenderQuad { quad_depth: u32 }\nstruct ReadParams { dt_macro: f32 }\n\
+                  struct Ctx { chart: Chart, quad: RenderQuad, params: ReadParams }\n";
+    let source = format!("fn colour(ctx: Ctx) -> f32 {{\n    return f32({read_member});\n}}\n");
+    let found = check_occupant_after(prefix, &source, Occupancy::Guarded, &BTreeSet::new())
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        found.len() == 1 && found[0].what.contains(&format!("{whose} state")),
+        "{read_member} is not named {whose} state: {found:?}"
+    );
+}
+
+#[test]
+fn lint_wgsl_occupant_deny_list_names_whose_state() {
+    check_whose("ctx.chart.z", "the chart's");
+    check_whose("ctx.params.dt_macro", "the integrator's");
+    check_whose("ctx.quad.quad_depth", "the scheduler's");
+}
+
+negative_control!(
+    lint_wgsl_occupant_deny_list_names_whose_state,
+    "the chart's state named the scheduler's",
+    expected = "is not named the scheduler's state",
+    check_whose("ctx.chart.z", "the scheduler's")
+);
+
 // ── The shadow rule outside the occupants ─────────────────────────────────────────────────────────────────────────
 
 /// A hand-written fragment file with a stored `SimState*` holding the shadow, its function `f` reading `r_sh`.

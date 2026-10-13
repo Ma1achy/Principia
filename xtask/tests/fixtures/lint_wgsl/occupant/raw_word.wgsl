@@ -13,3 +13,15 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     let x = s.word.x; // fires raw-word
     return hash + vec3<f32>(f32(len), f32(fgw_length_raw(w)), f32(x + word(ctx).y));
 }
+
+// A limb indexed at runtime.
+fn limb(ctx: Ctx, i: u32) -> u32 {
+    return ctx.sample.word[i]; // fires raw-word
+}
+
+// The whole word loaded through a local, then a limb taken of it.
+fn whole_through_local(ctx: Ctx) -> u32 {
+    var t = ctx.sample;
+    let whole = t.word;
+    return whole.y; // fires raw-word
+}
