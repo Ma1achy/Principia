@@ -8758,9 +8758,9 @@ Adds REQ-RENDER-085; REQ-TOOL-161's statement, rulings and sources change.
 
 ## R-424 — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*
 *13 Oct 2026 · applied in `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
-(a paragraph added), REQ-TOOL-011 (reqio), REQ-PAY-096 and REQ-SCHED-099 (reqio, new), TASK-M1-19, TASK-M5-01,
-TASK-M5-08, TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-275
-archived) and `REVIEW_QUEUE.md`; built by TASK-M1-19, TASK-M5-01 and TASK-M5-08*
+(a paragraph added), REQ-TOOL-011 (reqio), REQ-PAY-096 and REQ-SCHED-099 (reqio, new), TASK-M1-19, TASK-M5-08,
+TASK-M5-17, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-275
+archived) and `REVIEW_QUEUE.md`; built by TASK-M1-19, TASK-M5-17 and TASK-M5-08*
 
 The orchestrator put RQ-275 and RQ-276 to the human, with a recommendation for RQ-275: contains-ensemble and
 contains-FTLE ticked against the prelude's `has_ensemble()` and `has_ftle` (as RQ-239 did for REQ-TOOL-026), the schema
@@ -8795,15 +8795,16 @@ free number, in the message's order: R-424 RQ-275, R-425 RQ-276.)
   build's only once quads can come from an older build's cache, so at M1 the build's constant is the check.
 
 *Applied per R-369 (mechanical consequences and routine design choices; the human may veto any):*
-- **"The `QuadReduction` task" is TASK-M5-01** ("QuadReduction ledger: member order, packing, histogram and impurity
-  grain"), which builds the generated struct and writes §3.7's open definitions; TASK-M5-17, which fills the validity
-  members from a quad's samples, fills sim-failed's member if the definition makes it one. **REQ-PAY-096 (new, M5,
-  definition, R-72)**, closed by TASK-M5-01: what sim-failed holds per quad (from the samples whose `state` is
+- **"The `QuadReduction` task" is TASK-M5-17** ("Resolve stage: outcome and validity reductions, and Undetermined
+  quads"), which builds `QuadReduction`'s validity reductions from a quad's samples; TASK-M5-01, which builds the
+  generated struct and is in review as PR #191, keeps its scope, so that an approved PR is not reopened and held
+  behind TASK-M1-19 (the orchestrator's decision, 13 Oct 2026, on R-424's port). **REQ-PAY-096 (new, M5,
+  definition, R-72)**, closed by TASK-M5-17: what sim-failed holds per quad (from the samples whose `state` is
   `sim_failed`, §3.1's code 4; `valid_sample_count` counts decode failures only), the `QuadReduction` member that
   carries it or the members it derives from, and how the quad fields view reads it as `ctx.quad`, written into
   dd_generation_root §3.7 (and §3.7a if a `RenderQuad` member is added), the physics reviewer approving; the
-  catalogue's quad fields row then shows it, ticked on a synthetic payload. TASK-M5-01 gains the catalogue
-  (REQ-TOOL-011, TASK-M1-19) as a need.
+  catalogue's quad fields row then shows it, ticked on a synthetic payload. TASK-M5-17 gains the catalogue
+  (REQ-TOOL-011) as a need.
 - **"The M5 cache task" is TASK-M5-08** ("The current-state cache: lookup, resume points, preview vs refined, no
   history"), whose lookup is "identity + signature match", the check cache-valid reports; TASK-M5-06 builds the
   signature it compares, and TASK-M5-08 depends on it. **REQ-SCHED-099 (new, M5, definition, R-72)**, closed by

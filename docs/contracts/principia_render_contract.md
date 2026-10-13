@@ -326,7 +326,7 @@ current defines the path, and it is parked as a possible future feature (`princi
 **The quad fields row's flags (R-424).** At M1 no flag is a `RenderQuad` member (dd_generation_root §3.7a), and
 the checklist (REQ-TOOL-011) checks contains-ensemble against the prelude's `has_ensemble()` (Part 2; R-145), as the
 spread view reads "present iff contains-ensemble", contains-FTLE against `has_ftle`, and the schema version against
-the build's generated `PAYLOAD_SCHEMA_VERSION`. sim-failed is defined and shown by TASK-M5-01, the `QuadReduction` task
+the build's generated `PAYLOAD_SCHEMA_VERSION`. sim-failed is defined and shown by TASK-M5-17, the `QuadReduction` task
 (REQ-PAY-096, R-72), and cache-valid by TASK-M5-08, the M5 cache task (REQ-SCHED-099, R-72), which also decides
 whether a per-quad schema version, the drawn payload's own (caching contract Part 1), belongs with cache-valid: it
 can differ from the build's only once quads can come from an older build's cache.
