@@ -55,3 +55,5 @@ with no no-escape branch, so a quad none of whose copies escaped stores exactly 
   here, the task whose dispatch fills the histogram, applied per R-369 in R-410's port.
 - Fractions over N² footprints take at most N²+1 values: tests must not assert a resolution the quantity cannot have
   (pitfalls §3).
+- R-424 (13 Oct 2026): TASK-M5-01 defines render_contract Part 6's quad fields sim-failed flag (REQ-PAY-096). If the
+  definition makes it a `QuadReduction` validity member, this task fills it with the others.

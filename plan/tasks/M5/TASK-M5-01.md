@@ -1,9 +1,9 @@
 # TASK-M5-01 — QuadReduction ledger: member order, packing, histogram and impurity grain
 
 - **Milestone:** M5
-- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052, REQ-PAY-093, REQ-PAY-094
-- **Depends on:** TASK-M1-08
-- **Needs (earlier milestones):** REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010
+- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052, REQ-PAY-093, REQ-PAY-094, REQ-PAY-096
+- **Depends on:** TASK-M1-08, TASK-M1-19
+- **Needs (earlier milestones):** REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010, REQ-TOOL-011
 - **Reviewers:** code, qa, physics, perf
 - **Pitfalls:** PIT-3, PIT-9
 - **Size:** ~380 lines
@@ -16,6 +16,8 @@ which class fraction `outcome_impurity` takes, and the member order, the packing
 final aligned size. The validity members carry their §3.7 types, `spread_t_end` is absent, and the CPU-side quad
 metadata (`priority`, `cacheAge`, `lifecycle`, `computeCostMs`, `gentime`) lives in an engine struct, never in the GPU
 struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this PR fixes its shape.
+It also defines render_contract Part 6's quad fields sim-failed flag, which R-424 moved here from the M1 checklist,
+and adds it to the field-view catalogue (REQ-PAY-096, R-72).
 
 ## References
 - `docs/design/principia_dd_generation_root.md` § "3.7 `QuadReduction` — completed ledger"
@@ -43,6 +45,10 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `decisions.md` § "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
 - `decisions.md` § "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
 - `decisions.md` § "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and "no escape" reads `_min > _max` *(closes RQ-268)*"
+- `decisions.md` § "R-424 — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*"
+- `docs/contracts/principia_render_contract.md` § "Field views (one per field, every struct)"
+- `docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)"
+- `docs/design/principia_dd_generation_root.md` § "3.7a `RenderQuad` — the CPU-written quad record"
 - `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
 
 ## Deliverables
@@ -64,6 +70,9 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   line), `plan/reviewers/perf.md` § "3. Memory tiers and budgets", and REQ-PAY-089's and REQ-SYS-036's statements
   (reqio), with the commit's "Removed lines" note.
 - Tests in `crates/ledger/tests/quad_reduction.rs`: member list and types, Rust/WGSL layout agreement, histogram capacity.
+- The sim-failed definition (REQ-PAY-096, R-424) in `docs/design/principia_dd_generation_root.md` §3.7 (and §3.7a if a
+  `RenderQuad` member is added), with the commit's "Removed lines" note; its ledger rows, and the quad fields view's
+  sim-failed cell in the generated catalogue.
 
 ## Acceptance tests
 - Review checklist (physics) — the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; each bin is a u32 (R-410); §3.7 states the bound N² × (E+1) ≤ 2³² − 1, where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-075).
@@ -80,9 +89,11 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - Review checklist (physics) — the PR gives the declared range of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`, `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` (the last three added by R-418), each within ±65504 or with its `overflow` stated (R-248), with its evidence; the physics reviewer checks each; the human confirms them at the M5 gate (REQ-PAY-093).
 - Review checklist (physics) — §3.7 gives `first_divergence_t`'s sentinel, distinct from every crossing time and not NaN, and each member's scale; the ledger entries carry them; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-094).
 - `cargo test -p ledger layout_static_f16` — §3.8's `f16` type: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value as f32; the generated WGSL contains no `enable f16` and no `f16` type; each has a registered negative control (REQ-GEN-030).
+- Review checklist (physics) — dd_generation_root §3.7 (and §3.7a if a `RenderQuad` member is added) defines what sim-failed holds per quad, from the samples whose `state` is `sim_failed` (§3.1's code 4; `valid_sample_count` counts decode failures only), and the member that carries it or the members it derives from; the ledger and the generated structs follow it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-096).
+- Review checklist (qa) — render_contract Part 6's quad fields row's sim-failed cell is ticked against the generated catalogue on a synthetic payload, a quad with sim_failed samples and one without drawing differently (REQ-PAY-096).
 
 ## Notes
-- Definitions (R-72) this task writes: REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-PAY-094. Calibrations (R-71) it
+- Definitions (R-72) this task writes: REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-PAY-094, REQ-PAY-096. Calibrations (R-71) it
   proposes: REQ-PAY-093, used provisionally until the human confirms them at the M5 gate (R-182).
 - The histogram capacity test must be able to fail: it asserts against the largest footprint count per quad,
   N² × (E+1), not against a typical quad (pitfalls §3, "check the measurement can fire"). Two different N's meet here:
@@ -139,3 +150,8 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   RQ-268 from this PR's head `fe682029`; this task's next fix pass deletes its open copy from `REVIEW_QUEUE.md` and
   conforms §3.7 (the escape-time row's "a sentinel RQ-268 holds open", the paragraph holding the no-escape value open,
   and the entries' sentinels) to R-418. TASK-M5-17 writes and tests the bits (REQ-REF-053).
+- **R-424 (13 Oct 2026) rules RQ-275** (TASK-M1-19's pre-flight): render_contract Part 6's quad fields row read five
+  payload/status flags from `ctx.quad` that no contract defined. "sim-failed moves to the QuadReduction task": this
+  task, which builds `QuadReduction` (applied per R-369; TASK-M5-17, which fills the validity members, fills the
+  member if the definition makes it one). No quad-level sim_failed flag or count exists yet, so this task defines one
+  (REQ-PAY-096, R-72). It depends on TASK-M1-19 for the catalogue (REQ-TOOL-011) the cell extends.

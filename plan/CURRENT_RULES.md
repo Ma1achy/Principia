@@ -245,6 +245,8 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-420** — The uniform echo row moves to a task after TASK-M5-02 and TASK-M3-06, which names its thresholds; the Optional Fourier block row is removed from render_contract Part 6 and parked as a possible future feature *(closes RQ-273)*
 - **R-422** — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*
 - **R-423** — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*
+- **R-424** — The quad fields row's flags: contains-ensemble, contains-FTLE and the schema version are checked at M1 against `has_ensemble()`, `has_ftle` and `PAYLOAD_SCHEMA_VERSION`; sim-failed moves to the `QuadReduction` task and cache-valid to the M5 cache task *(closes RQ-275)*
+- **R-425** — The visible-set and locked/stale overlays move to TASK-M5-29 under a new defining requirement, which reuses the corpus's existing meanings (`quad_state` 4 for "stale") rather than defining new ones *(closes RQ-276)*
 
 ## Values
 
