@@ -34,10 +34,10 @@ on nothing.
 - Review checklist (qa): each row of render_contract Part 6's field-view table that a synthetic payload can show is ticked against the generated catalogue on a synthetic payload; the DECODE row is REQ-RENDER-027's (M2), the ensemble rows REQ-TOOL-133's (M5), the live effort heatmap REQ-TOOL-132's (M3) and the uniform echo row REQ-TOOL-164's (M5, R-420); the table has no Optional Fourier block row (removed by R-420) (REQ-TOOL-011).
 
 ## Notes
-- Split from TASK-M1-14, applied per R-369 (TASK-M1-14's pre-flight). RQ-273 holds REQ-TOOL-011: the uniform echo row
-  reads `SimUniforms` and `quality_tier` (TASK-M3-06's struct and TASK-M5-02's enum) and "thresholds *as currently
-  bound*", which names none; and the Optional Fourier block row reads "the truncated-Fourier path when enabled", which
-  nothing in the corpus or the plan builds or defines. R-420 (11 Oct 2026) rules it: the echo row moves to TASK-M5-31
+- Split from TASK-M1-14, applied per R-369 (TASK-M1-14's pre-flight). RQ-273 held REQ-TOOL-011: the uniform echo row
+  read `SimUniforms` and `quality_tier` (TASK-M3-06's struct and TASK-M5-02's enum) and "thresholds *as currently
+  bound*", which named none; and the Optional Fourier block row read "the truncated-Fourier path when enabled", which
+  nothing in the corpus or the plan built or defined. R-420 (11 Oct 2026) rules it: the echo row moves to TASK-M5-31
   (REQ-TOOL-164, REQ-TOOL-165) and the Fourier row is removed from Part 6 and parked (philosophy §7.6a); this task
   waits on nothing.
 - RQ-80 ruled: R-111 — the uniform echo's `M` is `n_renorm` (render_contract conformed in step 7).

@@ -59,9 +59,10 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
   5482528309 of PR #194); this task does not depend on it, as it reads no floor value: if this task merges first,
   TASK-M1-18 re-renders any of its goldens that draws one of the six log views.
 - Split, applied per R-369 (TASK-M1-14's pre-flight): REQ-TOOL-011, the render_contract Part 6 catalogue checklist,
-  moves to TASK-M1-19, which depends on this task, with its deliverable and its qa checklist line. RQ-273 holds
-  REQ-TOOL-011 for two rows the corpus gives no way to build in M1 (the uniform echo and the Optional Fourier block);
-  it holds TASK-M1-19 only, not this task.
+  moves to TASK-M1-19, which depends on this task, with its deliverable and its qa checklist line. RQ-273 held
+  REQ-TOOL-011 for two rows the corpus gave no way to build in M1 (the uniform echo and the Optional Fourier block);
+  it held TASK-M1-19 only, not this task. R-420 ruled it: the echo row moves to TASK-M5-31 and the Fourier row is
+  removed from Part 6, so neither task waits.
 - REQ-PAY-024's acceptance line is conformed to R-271, applied per R-369: a failed sample's `d_min` half, and any
   sample's before its first step, holds f16 +inf (bits `0x7C00`), so "every stored value … is finite" was stale.
   Payload §1 :154 forbids NaN (R-79) and "the non-finite values that failed it"; :153 clamps valid-state f16 values
@@ -80,4 +81,5 @@ Step 0b's exit: every payload surface is validated against CPU-filled synthetic 
     tooling plan §G. It says what the map is taken on, so that the cross-mode comparison is not identical by
     construction: on the payload field before colouring, every mode gives the same map whatever the colouring does.
 - The PR lists which of this task's cases draw one of R-401's six log views (`d_min`, `dE_max`, `dLz_max`,
-  `closure_min`, `rho_ratio`, `r_min_pair_0`), since TASK-M1-18 re-renders them (REVIEW_QUEUE.md RQ-271, Waits).
+  `closure_min`, `rho_ratio`, `r_min_pair_0`), since TASK-M1-18 re-renders them (TASK-M1-18 § "Deliverables"; R-401,
+  R-419).

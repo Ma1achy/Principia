@@ -53,17 +53,17 @@ Family B's mapping half: the Compaction forms lin, log b = 1 − 1/(1 + ln(1 + |
 - **Depends on TASK-M1-17** (applied per R-369; the R-388 pre-flight, 10 Oct 2026). TASK-M1-17 builds
   `debug_not_yet` (R-399), declares the non-negative lower bounds that make R-400's "spans zero" readable from the
   ledger, and moves `K_0` and `V_0` to `lin` (R-403); both tasks edit `crates/render/src/colour/field_ramp.rs`. R-399
-  (decisions.md:6900–6903): "**Where it is drawn:** every field view that shows `d_min`'s unset value (the generated
-  numeric debug view and the `d_min` `FieldRamp`, TASK-M1-09's), the outcome palette's `running` class (TASK-M1-10's
-  occupant), and every later view that shows "not yet" (TASK-M7-05's and TASK-M7-09's extensions of `FieldRamp`
-  inherit it)." So this task's `FieldRamp` draws "not yet" through `debug_not_yet(frag_xy)`, never a flat grey.
+  (decisions.md § "R-399", *Applied per R-369*): "**Where it is drawn:** every field view that shows `d_min`'s unset
+  value (the generated numeric debug view and the `d_min` `FieldRamp`, TASK-M1-09's), the outcome palette's `running`
+  class (TASK-M1-10's occupant), and every later view that shows "not yet" (TASK-M7-05's and TASK-M7-09's extensions
+  of `FieldRamp` inherit it)." So this task's `FieldRamp` draws "not yet" through `debug_not_yet(frag_xy)`, never a flat grey.
 - **Depends on TASK-M1-18** (applied per R-369; physics review 5482528309 of PR #194, which split R-401's floors out
   of TASK-M1-17). This task's `log` compaction takes each field's ε, "its ledger `floor`, R-263, or its R-401 display
   floor", and TASK-M1-18 builds and proposes those floors (REQ-TOOL-160; R-419: `rho_ratio`'s and `r_min_pair_0`'s
   provisional until TASK-M2-03 re-confirms them at M2, REQ-TOOL-163).
-- **"Signed" is R-400's** (decisions.md:6969–6971): "colour_composition §1.2's default for signed fields (TASK-M7-05's
-  registry, REQ-COL-016) reads "signed" the same way: a field whose declared range spans zero. §1.2 gains a sentence;
-  REQ-COL-016 gains R-400 and a note and loses `rq: RQ-260`." The registry keys "signed" on the declared range, with no
+- **"Signed" is R-400's** (decisions.md § "R-400", *Applied per R-369*): "colour_composition §1.2's default for
+  signed fields (TASK-M7-05's registry, REQ-COL-016) reads "signed" the same way: a field whose declared range spans
+  zero. §1.2 gains a sentence; REQ-COL-016 gains R-400 and a note and loses `rq: RQ-260`." The registry keys "signed" on the declared range, with no
   signed-or-not mark; `K_0` and `V_0` are one-signed and `lin` (R-403).
 - **REQ-COL-065 (definition, R-72; the R-388 pre-flight).** dd_colouring §3.6's diverging form used `x_max`, which the
   corpus defined nowhere (R-411 removes it), and takes "the ε floor as `x₀`" for the signed drifts, which settles theirs: `eps_E` and

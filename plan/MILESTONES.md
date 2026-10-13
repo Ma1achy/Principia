@@ -107,6 +107,11 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   zero is a meaningful centre for a diverging ramp centred at zero. A field that fails goes to `REVIEW_QUEUE.md` for
   the human, and the gate report gives the result for each. `theta` is an angle, so it moves to the cyclic ramp
   (TASK-M1-20, REQ-RENDER-085), an M1 task the gate waits on.
+  **The check's result** (run early, in physics review 5484757609 of PR #197): `S`, `ftle` and `diffusion` pass, each
+  signed at finite time with zero a meaningful centre, none an angle. `q_mass` and `mean_y` are not confirmed:
+  `q_mass`'s formula (REQ-PAY-088, M2) and `mean_y`'s `y` (REQ-PAY-073, M3) are undefined, and each ledger range is
+  the unbounded default. They are **RQ-274**, which this item waits on for those two fields; the gate report gives
+  the human's ruling on it.
 
 <!-- gate:M1 -->
 **Exit gate — 103 requirements** (and every earlier gate still green):

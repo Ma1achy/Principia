@@ -13,7 +13,8 @@
 with evidence for the M1 gate, replacing the single ε = 2⁻²⁴ that TASK-M1-09 built. The six fields are `d_min`,
 `dE_max`, `dLz_max`, `closure_min`, `rho_ratio` and `r_min_pair_0`. Each floor is a named presentation constant, read
 by the numeric view template that TASK-M1-17 conforms to R-399, R-400 and R-403. Split from TASK-M1-17 (applied per
-R-369; physics review 5482528309 of PR #194) so that RQ-271, which holds REQ-TOOL-160, holds only this task.
+R-369; physics review 5482528309 of PR #194) so that RQ-271, which held REQ-TOOL-160, held only this task. R-419
+ruled it (option (c) for both fields), so this task waits on nothing.
 
 ## References
 - `decisions.md` § "R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced"

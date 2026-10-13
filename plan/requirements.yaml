@@ -10620,7 +10620,7 @@
   note: "R-400 (RQ-260) amends RQ-231 item 3 for zero-spanning fields; applied per R-369: the ramp is ramp_coolwarm (named in render_gui_spec §10.1, its data Moreland's table, R-122), the symmetric range extends RQ-231 item 1, and the non-negative lower bounds are declared because the ledger's unbounded default would read as signed. R-403 (RQ-261): K_0 and V_0 are lin over [0, ∞) and (−∞, 0], on viridis, mapped monotonically, V_0's most negative value at the dark end; their diverging tags are removed, the tag agreeing with the range (REQ-GEN-033). Applied per R-369: open-ended ranges keep the auto default (render_gui_spec §10.1), so K_0's 0 is at t = 0 only in fixed mode; the mapping is tested per mode."
 - id: REQ-RENDER-085
   area: RENDER
-  statement: "The generated numeric field view of `theta`, the unwrapped longitude θ̃ in radians, must be cyclic, since θ̃ is an angle (R-423): the ledger gives `theta` the `cyclic` scale, and its view places raw = fract(θ̃ / 2π) on the fixed [0, 1] with ramp_twilight (the prelude's LUT index 1), not R-400's ramp_coolwarm, although its declared range spans zero."
+  statement: "The generated numeric field view of `theta`, the unwrapped longitude θ̃ in radians, must be cyclic, since θ̃ is an angle (R-423): the ledger gives `theta` the `cyclic` scale, and its view places raw = fract(θ̃ / 2π) on the fixed [0, 1] with ramp_twilight (the prelude's LUT index 1), not R-400's ramp_coolwarm, although its declared range spans zero. Here fract(x) = x − ⌊x⌋ (WGSL's fract, the Rust reference's rem_euclid(1.0); not Rust's f32::fract, x − trunc x), so raw ∈ [0, 1) for negative θ̃ too."
   source:
   - file: decisions.md
     section: "R-423 — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*"
@@ -10634,7 +10634,7 @@
     section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
   verify:
     method: unit test
-    detail: "cargo test -p ledger numeric_view_template: theta's view places raw at fract(θ̃ / 2π) on the fixed [0, 1] with ramp_twilight, θ̃ and θ̃ + 2π giving the same raw; q_mass, ftle, mean_y, S and diffusion keep ramp_coolwarm; control: theta on ramp_coolwarm fails; cargo xtask golden debug-views: generated-theta re-rendered on twilight; physics reviewer approved"
+    detail: "cargo test -p ledger numeric_view_template: theta's view places raw at fract(θ̃ / 2π) on the fixed [0, 1] with ramp_twilight, θ̃ and θ̃ + 2π giving the same raw; for negative θ̃, θ̃ = −π/2 gives raw 0.75, and θ̃ and θ̃ − 2π give the same raw; q_mass, ftle, mean_y, S and diffusion keep ramp_coolwarm; controls: theta on ramp_coolwarm fails, and a trunc-based fract (Rust's f32::fract, giving −0.25 at θ̃ = −π/2) fails; cargo xtask golden debug-views: generated-theta re-rendered on twilight; physics reviewer approved"
   rulings:
   - R-400
   - R-423
@@ -21995,7 +21995,7 @@
 - id: REQ-PERF-095
   area: PERF
   kind: calibration
-  statement: "The lower bound on Custom's N, a correctness floor (at N = 1 a quad holds one sample, so the coherence test has nothing to compare and the quad never refines), must be calibrated: proposed with its evidence by the task that builds QualitySettings and its Custom override, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md (R-422)."
+  statement: "The lower bound on Custom's N, a correctness floor (at N = 1 a quad holds one nominal sample, so nothing is compared across the quad: at E = 0 the quad never refines, and at E ≥ 1 only its one footprint's copy spread can split it), must be calibrated: proposed with its evidence by the task that builds QualitySettings and its Custom override, checked by a reviewer, confirmed by the human at the M5 gate and recorded in decisions.md (R-422)."
   source:
   - file: docs/design/principia_memory_tiers.md
     section: 5. Controller levers, ranked by impact
@@ -22005,14 +22005,16 @@
     section: "R-422 — Custom's `N` has a lower bound, a correctness floor proposed with evidence at the M5 gate; both memory models count the per-quad `QuadReduction` at every `N` *(closes RQ-269)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_scheduler_contract.md
+    section: Part 9 — Ensemble / SSAA sampling (dispatch rules)
   verify:
     method: review checklist
-    detail: "the proposal gives the bound, a power of two, with its evidence: at each small N, how many samples the coherence test compares and whether it can tell a coherent quad from an incoherent one (scheduler contract Part 6's undersampling); the bound is a named constant in QualitySettings, provisional until the M5 gate (R-182); the perf reviewer checks it; recorded in decisions.md"
+    detail: "the proposal gives the bound, a power of two, with its evidence at both E = 0 and E ≥ 1: at each small N, how many nominal samples the coherence test compares across the quad and whether it can tell a coherent quad from an incoherent one (scheduler contract Part 6's undersampling), and at E ≥ 1 what the one footprint's copy spread alone can split (Part 9's E+1 copies); the bound is a named constant in QualitySettings, provisional until the M5 gate (R-182); the perf reviewer checks it; recorded in decisions.md"
   rulings:
   - R-71
   - R-422
   milestone: M5
-  note: "R-422 (RQ-269, option (a) of (c)); closed by TASK-M5-02 and enforced by REQ-PERF-035 (TASK-M6-15)."
+  note: "R-422 (RQ-269, option (a) of (c)); closed by TASK-M5-02 and enforced by REQ-PERF-035 (TASK-M6-15). The human's \"N = 1 never refines\" holds only at E = 0; at E ≥ 1 an N = 1 quad holds E+1 copies and Part 6's split test can still split it on its footprint's copy spread, so the statement and verify cover both (flagged and recorded in R-422; physics review 5484757609, F1, on PR #197)."
 - id: REQ-SYS-001
   area: SYS
   statement: "Every settled default constant must be traceable to a citation of where it was measured."
