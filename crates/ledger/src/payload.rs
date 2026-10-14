@@ -16,11 +16,11 @@
 //! both `lin` (R-403).
 //!
 //! **Range states (R-426; dd_generation_root §3.8).** Each field's range is one of §3.8's three states
-//! ([`range_state`]): `declared(lo, hi, citation)`, with its citation in [`SIGNED`], [`NON_NEGATIVE`] or
-//! [`DECLARED`]; `provisional(requirement)`, `q_mass` and `mean_y` ([`PROVISIONAL`]), drawn as (−∞, ∞) on
-//! `ramp_coolwarm` until their requirements declare them; or `gap`, a range written and never cited, which never spans
-//! zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or `diverging` scalar field whose
-//! range is a gap fails generation ([`crate::gen::numeric::undeclared`]).
+//! ([`Entry::range_state`], each entry marked by [`declared`]): `declared(lo, hi, citation)`, with its citation in
+//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `q_mass` and `mean_y` ([`PROVISIONAL`]),
+//! drawn as (−∞, ∞) on `ramp_coolwarm` until their requirements declare them; or `gap`, a (−∞, ∞) written and never
+//! cited, which never spans zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or
+//! `diverging` scalar field whose range is a gap fails generation ([`crate::gen::numeric::undeclared`]).
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{
@@ -31,7 +31,7 @@ use crate::schema::{
 const SHOWN: &[Consumer] = &[Consumer::Render, Consumer::Export, Consumer::Debug];
 
 /// An entry over (−∞, ∞): a gap until the ledger declares the range, with its citation, or marks it provisional
-/// ([`range_state`]; R-426).
+/// ([`declared`]; R-426).
 fn entry(name: &'static str, location: Location, ty: FieldType, scale: Scale) -> EntryBuilder {
     EntryBuilder::new(name)
         .location(location)
@@ -302,47 +302,37 @@ pub const GAPS: [(&str, Option<&str>, &str); 6] = [
     ),
 ];
 
-/// The state of `e`'s range in the payload ledger (dd_generation_root §3.8; R-426), or `None` when `e` is no payload
-/// field (another ledger's, whose ranges are its own). A field in [`PROVISIONAL`] is provisional while it writes
-/// (−∞, ∞); a range written in its place is its requirement's declaration. A field cited in [`SIGNED`],
-/// [`NON_NEGATIVE`] or [`DECLARED`] is declared over the range it writes. Any other field's range is a gap: written,
-/// never declared.
+/// The state of `e`'s range (dd_generation_root §3.8; R-426): the entry's own, [`Entry::range_state`], which reads
+/// the mark the ledger gives it. Always `Some`.
 pub fn range_state(e: &Entry) -> Option<RangeState> {
-    if !entries().iter().any(|b| b.name == Some(e.name)) {
-        return None;
-    }
+    Some(e.range_state())
+}
+
+/// Whether `e`'s range spans zero by its state (R-400, R-426; [`RangeState::spans_zero`]): a gap never does.
+pub fn spans_zero(e: &Entry) -> bool {
+    e.range_state().spans_zero()
+}
+
+/// `b` with its range's mark from the tables (R-426): provisional where [`PROVISIONAL`] names it, else cited where
+/// [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`] does, else unmarked.
+fn declared(b: EntryBuilder) -> EntryBuilder {
+    let Some(name) = b.name else { return b };
     let cited = |table: &[(&'static str, &'static str)]| {
         table
             .iter()
-            .find(|(field, _)| *field == e.name)
+            .find(|(field, _)| *field == name)
             .map(|&(_, citation)| citation)
     };
-    let range = e.range;
     if let Some(requirement) = cited(&PROVISIONAL) {
-        return Some(if range == Range::UNBOUNDED {
-            RangeState::Provisional { requirement }
-        } else {
-            RangeState::Declared {
-                range,
-                citation: requirement,
-            }
-        });
+        return b.provisional(requirement);
     }
-    let citation = cited(&SIGNED)
+    match cited(&SIGNED)
         .or_else(|| cited(&NON_NEGATIVE))
-        .or_else(|| cited(&DECLARED));
-    Some(
-        citation.map_or(RangeState::Gap, |citation| RangeState::Declared {
-            range,
-            citation,
-        }),
-    )
-}
-
-/// Whether `e`'s range spans zero (R-400, R-426): by its state where it is a payload field ([`range_state`]), a gap
-/// never; else by the bounds it writes.
-pub fn spans_zero(e: &Entry) -> bool {
-    range_state(e).map_or(e.range.spans_zero(), |state| state.spans_zero())
+        .or_else(|| cited(&DECLARED))
+    {
+        Some(citation) => b.cited(citation),
+        None => b,
+    }
 }
 
 /// `[lo, ∞)`.
@@ -385,7 +375,7 @@ fn words() -> Vec<Word> {
 }
 
 /// Every entry: `SimState`'s stored fields at their `SimStateFTLE` slots, the packed words' fields, §3.4's derived
-/// scalars, and `ICDescriptor`'s twelve fields.
+/// scalars, and `ICDescriptor`'s twelve fields, each with its range's mark ([`declared`]).
 fn entries() -> Vec<EntryBuilder> {
     let from_zero = from(Bound::Closed(0.0));
     let fraction = Range {
@@ -479,6 +469,9 @@ fn entries() -> Vec<EntryBuilder> {
         .range(Range::int(0, FGW_CAPACITY.number() as i64))
         .sentinel(FGW_LENGTH_SENTINEL.number()),
     ]
+    .into_iter()
+    .map(declared)
+    .collect()
 }
 
 /// The payload ledger's words and entries.

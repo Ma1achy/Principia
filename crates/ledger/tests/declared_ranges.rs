@@ -18,7 +18,10 @@
 
 use ledger::gen::numeric::{self, NumericView, Ramp};
 use ledger::payload::{self, GAPS, NON_NEGATIVE, PROVISIONAL, SIGNED};
-use ledger::schema::{Bound, Entry, FieldType, Ledger, Range, RangeState, Scale};
+use ledger::schema::{
+    Bound, Consumer, Entry, EntryBuilder, FieldType, Ledger, Location, Provenance, Range,
+    RangeState, Scale,
+};
 use validation::negative_control;
 
 /// The payload ledger's entries.
@@ -415,14 +418,32 @@ fn check_gap_refused(l: &Ledger, field: &str, scale: &str) {
     );
 }
 
+/// The payload ledger plus a fixture field `fx_gap`, an f32 derived from `S`, with `scale` over (−∞, ∞) and no mark:
+/// a field new to the ledger, cited nowhere, so its range is a gap whatever its name.
+fn with_fixture(scale: Scale) -> Ledger {
+    let mut l = ledger::layout();
+    l.entries.push(
+        EntryBuilder::new("fx_gap")
+            .location(Location::Derived { from: vec!["S"] })
+            .ty(FieldType::F32)
+            .scale(scale)
+            .range(Range::UNBOUNDED)
+            .provenance(Provenance::Kernel)
+            .consumers(&[Consumer::Debug]),
+    );
+    l
+}
+
 /// A `lin` or `diverging` scalar whose range is a gap fails generation naming it (R-426): `theta` and `rho_angle`,
-/// gaps, retagged `lin` and `diverging`.
+/// gaps, retagged `lin` and `diverging`, and a fixture field with no mark.
 #[test]
 fn declared_ranges_gap_lin_or_diverging_is_refused() {
     for field in ["theta", "rho_angle"] {
         check_gap_refused(&rescaled(field, Scale::Lin), field, "lin");
         check_gap_refused(&rescaled(field, Scale::Diverging), field, "diverging");
     }
+    check_gap_refused(&with_fixture(Scale::Lin), "fx_gap", "lin");
+    check_gap_refused(&with_fixture(Scale::Diverging), "fx_gap", "diverging");
 }
 
 negative_control!(
@@ -483,6 +504,19 @@ fn check_gap_not_coolwarm(fields: &[&str]) {
 #[test]
 fn declared_ranges_gap_is_not_coolwarm() {
     check_gap_not_coolwarm(&["theta", "rho_angle"]);
+    let fixture = with_fixture(Scale::Lin);
+    let e = fixture
+        .entries
+        .last()
+        .expect("the fixture")
+        .build()
+        .expect("complete");
+    let ramp = NumericView::of(&e).expect("a numeric view").ramp();
+    assert_ne!(
+        ramp,
+        Ramp::Coolwarm,
+        "the fixture gap `fx_gap` is drawn on cool-warm"
+    );
 }
 
 negative_control!(
@@ -569,6 +603,48 @@ negative_control!(
     "the payload ledger's own fields have range states",
     expected = "has a payload range state",
     check_other_ledger(&ledger::layout())
+);
+
+/// The payload stays strict (R-426): every payload entry's range is cited or provisional, or the entry is one of
+/// [`GAPS`]; none is declared by its bounds alone.
+#[test]
+fn declared_ranges_payload_entries_are_marked() {
+    check_marked(&payload());
+}
+
+fn check_marked(entries: &[Entry]) {
+    for e in entries {
+        let gap = GAPS.iter().any(|(f, ..)| *f == e.name);
+        assert!(
+            e.declaration.is_some() || gap,
+            "`{}` is neither cited, provisional nor a listed gap",
+            e.name
+        );
+        assert_ne!(
+            e.range_state(),
+            RangeState::Declared {
+                range: e.range,
+                citation: ledger::schema::WRITTEN_BOUNDS
+            },
+            "`{}` is declared by its bounds alone",
+            e.name
+        );
+    }
+}
+
+negative_control!(
+    declared_ranges_payload_entries_are_marked,
+    "`K_0` with its citation dropped is declared by its bounds alone",
+    expected = "`K_0` is neither cited, provisional nor a listed gap",
+    {
+        let mut entries = payload();
+        entries
+            .iter_mut()
+            .find(|e| e.name == "K_0")
+            .expect("K_0")
+            .declaration = None;
+        check_marked(&entries);
+    }
 );
 
 /// Checks that the payload fields whose range is a gap are exactly `gaps`, each with the requirement that fills it,
