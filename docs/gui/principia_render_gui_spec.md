@@ -740,7 +740,8 @@ shaders share them:
   not comparable). `range_norm` is a general helper, not debug-specific.
 - **`debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`** — the reserved invalid-pixel treatment (the validity-first
   invariant, §13): it draws the hatch from the pixel position (R-136), a pattern that collides with no palette entry, its
-  exact pattern a calibration (REQ-COL-055, R-71; R-132). Only NaN gets it: a stored sentinel such as −1.0 shows as its
+  exact pattern a calibration (REQ-COL-055, R-71; R-132), confirmed at the M1 gate as proposed (R-428). Only NaN gets
+  it: a stored sentinel such as −1.0 shows as its
   literal value on the ramp (R-79's exception, R-136). A NaN reads as "no data", never as a value.
 
 Each numeric debug field therefore generates a two-line `colour()` — the NaN guard, an exact **bitcast comparison** of
@@ -764,13 +765,16 @@ range spans zero (R-423; REQ-RENDER-085). **The log floor** of a field with no l
 `rho_ratio`'s and `r_min_pair_0`'s provisionally, re-confirmed at M2 once their formulas are defined (R-419,
 REQ-TOOL-163): `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for `r_min_pair_0` only the
 evidence is provisional; TASK-M1-09 built one ε for every such field, 2⁻²⁴, f16's smallest positive subnormal,
-which R-401 replaces. `[lo, hi]` is the ledger range's finite ends; a step index's is
+which R-401 replaces. The M1 gate confirmed the six as proposed (R-428): `d_min` 2⁻¹⁴, intended, `dE_max` and
+`dLz_max` 2⁻²⁰, `closure_min` 2⁻²³, and, provisionally until M2, `rho_ratio` 2⁻²³ and `r_min_pair_0` 2⁻¹⁴.
+`[lo, hi]` is the ledger range's finite ends; a step index's is
 `[0, horizon_steps]`; a `diverging` field's range, and under R-400 every range that spans zero, is symmetric about 0.
 **An undeclared range is a ledger gap, not one that spans zero (R-426; dd_generation_root §3.8):** a field is on
 `ramp_coolwarm` only when its declared range spans zero; `q_mass` and `mean_y` stay there provisionally, recorded as
 provisional at the M1 gate, until TASK-M2-03 and TASK-M3-13 declare their ranges and the physics reviewer re-checks
 each ramp. **Each log floor is a constants-register entry** (dd_generation_root §3.8), marked provisional until the M1
-gate and read from the register like any other, never a function in its place (R-427).
+gate and read from the register like any other, never a function in its place (R-427). Since the M1 gate, four are
+confirmed entries citing R-428, and `rho_ratio`'s and `r_min_pair_0`'s are marked provisional until M2 (R-419, R-428).
 A field carries the `diverging` scale only when its declared range spans zero (R-403; dd_generation_root §3.8), so
 the scale and the ramp agree; the one-signed `K_0` `[0, ∞)` and `V_0` `(−∞, 0]` are `lin`, on `ramp_viridis`, mapped
 monotonically, `V_0`'s most negative value at the dark end.
@@ -811,7 +815,7 @@ R-280, R-399; REQ-COL-053, REQ-COL-064).
   None grey (colour_composition §4.1). `hue_wheel(t)` is OKLCH with L = 0.75 and C = 0.12 at hue `t` turns, periodic
   in `t`, and in gamut at every hue.
 - **`debug_invalid(frag_xy)`** draws the hatch defined in the render contract's presentation layer (Part 5;
-  proposed, R-71, REQ-COL-055).
+  proposed, R-71, REQ-COL-055; confirmed at the M1 gate, R-428).
 
 **Added by R-399 and R-400 (TASK-M1-17).** `ramp_coolwarm(t)` reads Moreland's cool-warm table (R-122), checked in
 under `crates/ledger/data/lut/` with its source named, as `ramp_viridis` and `ramp_twilight` read theirs, and returns

@@ -294,7 +294,7 @@ mode do (debug_tooling_plan §F).
 has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the
 pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). Invalid pixels
 render in a **hatched pattern** that collides with no palette entry; its exact pattern is a calibration (REQ-COL-055,
-R-71; R-132). Overridable per node.
+R-71; R-132), confirmed at the M1 gate as proposed (R-428). Overridable per node.
 
 **Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are available in
 WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode

@@ -199,6 +199,14 @@ The reference's file and lines are DaltonLens-Python's, at that commit.
 Under deuteranopia the full-OKLab map loses the red–green distinction (two poles collapse to near-identical
 orange-brown). The Okabe–Ito scheme keeps all six poles because it avoids the red–green axis.
 
+**The invalid hatch under the simulations (R-429; REQ-COL-061, R-386).** Under each simulation (deuteranopia,
+protanopia, tritanopia, achromatopsia) the hatch (render contract Part 5; violet `#9B00FF` and cyan `#48FFFF`, 4 px
+stripes, R-428) stays distinguishable from every palette entry REQ-COL-055 measures against. τ is the OKLab distance
+from `#FF00FF` to `#E034C6`, 0.101, the distance R-132 ruled a collision; the hatch passes by colour, each stripe
+colour farther than τ from every palette entry, both simulated, or by the pattern, when the two simulated stripes are
+more than τ apart. The pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a
+flat colour, which under achromatopsia sits on the grey ramp.
+
 ---
 
 ## 4. Seams (obligations → integration tests)

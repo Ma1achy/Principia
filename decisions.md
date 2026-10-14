@@ -5960,6 +5960,9 @@ random canvas, whose neighbouring low bits are independent; a real figure's are 
 Adds REQ-TOOL-151; REQ-TOOL-111's note changes.
 
 ## R-386 — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate
+*Amended in part by R-429 (REQ-COL-061's criterion confirmed: τ = 0.101, pass by colour or by the pattern; the
+pattern argument holds at 1:1 device pixels only).*
+*Still in force: all of it; the check it asks for is calibrated by R-429's criterion, confirmed at the M1 gate.*
 *6 Oct 2026 · applied in REQ-COL-061 (reqio, new), REQ-COL-055's note (reqio), TASK-M7-20, `plan/MILESTONES.md` § "M1
 — The synthetic payload and the eyes", `plan/OPERATIONS.md` § "Order of work" and `plan/rule_groups.yaml`; built by
 TASK-M7-20*
@@ -6993,8 +6996,12 @@ Adds REQ-RENDER-084; REQ-RENDER-022's note and `rq` and REQ-COL-016's rulings an
 ## R-401 — Each log-scaled field view has its own floor, in that field's units, proposed with evidence for the M1 gate; the single ε = 2⁻²⁴ is replaced
 *Amended in part by R-419 (`rho_ratio`'s and `r_min_pair_0`'s floors are confirmed provisionally at M1 and
 re-confirmed at M2).*
+*Amended in part by R-428 (the six floors confirmed at the M1 gate as proposed, `rho_ratio`'s and `r_min_pair_0`'s
+provisionally, until M2).*
 *Still in force: all of it; for `rho_ratio` and `r_min_pair_0` the M1 gate's confirmation is provisional, and the
-two floors are re-confirmed at M2 (R-419, REQ-TOOL-163).*
+two floors are re-confirmed at M2 (R-419, REQ-TOOL-163). R-428 confirmed the six at the M1 gate: `d_min` 2⁻¹⁴,
+`dE_max` and `dLz_max` 2⁻²⁰, `closure_min` 2⁻²³, and, provisionally until M2, `rho_ratio` 2⁻²³ and `r_min_pair_0`
+2⁻¹⁴.*
 *9 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
 reworded), REQ-TOOL-160 (reqio), TASK-M1-17 (new), TASK-M1-09, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built
 by TASK-M1-17*
@@ -8545,6 +8552,10 @@ Adds REQ-REF-053; REQ-PAY-093's statement, verify, rulings, sources and note and
 rulings and sources change.
 
 ## R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*
+*Amended in part by R-428 (the M1 gate confirmed the two floors provisionally, as proposed: `rho_ratio` 2⁻²³ and
+`r_min_pair_0` 2⁻¹⁴, marked provisional until M2).*
+*Still in force: all of it; its M1 step is done (R-428), and the two floors are re-confirmed at the M2 gate
+(REQ-TOOL-163).*
 *11 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
 added), R-401 (a forward line), REQ-TOOL-160 (reqio), REQ-TOOL-163 (reqio, new), TASK-M1-18, TASK-M2-03, TASK-M7-05,
 `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-271 archived) and
@@ -8710,6 +8721,8 @@ Adds REQ-PERF-095; REQ-PERF-023's, REQ-PERF-025's and REQ-PERF-035's statements,
 change.
 
 ## R-423 — At the M1 gate physics checks the six fields R-400 moved to cool-warm; `theta`, an angle, takes the cyclic ramp, not the diverging one *(amends R-400)*
+*Amended in part by R-430 (the check's result confirmed as reported at the M1 gate).*
+*Still in force: all of it; its M1 check is done: `S`, `ftle` and `diffusion` pass, `theta` is cyclic (R-430).*
 *11 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a sentence
 reworded), `docs/design/principia_dd_generation_root.md` § "3.4 `SimState` scalars — with presentation metadata" (a
 row added), R-400 (a forward line), REQ-TOOL-161 (reqio), REQ-RENDER-085 (reqio, new), TASK-M1-20 (new),
@@ -8868,6 +8881,10 @@ The human's words (R-424 quotes the whole message):
 Adds REQ-TOOL-166; REQ-TOOL-011's statement, verify, rulings, sources and `rq` change.
 
 ## R-426 — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*
+*Amended in part by R-430 (`q_mass` and `mean_y` recorded provisional at the M1 gate; RQ-277's decision for `C_ty`
+accepted).*
+*Still in force: all of it; `q_mass` and `mean_y` stay on `ramp_coolwarm` provisionally until TASK-M2-03 and
+TASK-M3-13 declare their ranges, and `C_ty` is signed, on `ramp_coolwarm` (R-430).*
 *13 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
 carry)" (a paragraph added), `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" and
 `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or `f32`" (sentences added),
@@ -8971,10 +8988,16 @@ any:*
   declared (−∞, ∞), signed, citing R-423 and that derivation, and stays on `ramp_coolwarm`, so no golden changes.
   RQ-277 moves to `docs/archive/review_queue/M0.md` with a "Decided" line; REQ-GEN-035 loses `rq: RQ-277`, and
   TASK-M1-21 waits on nothing.
+  *Accepted by R-430 (14 Oct 2026): no veto.*
 
 Adds REQ-GEN-035, REQ-PAY-097 and REQ-PAY-098; REQ-RENDER-084's and REQ-COL-016's rulings and notes change.
 
 ## R-427 — Veto of TASK-M1-18's floor functions: the floors are constants-register entries, marked provisional until the M1 gate and read from there, and the register holds provisional values for every gate; TASK-M1-18 states whether `d_min`'s floor at f16's smallest normal is intended; no veto on decisions 1, 2 and 4–7
+*Amended in part by R-428 (the nine register entries provisional until M1 confirmed as proposed; `d_min`'s floor at
+2⁻¹⁴ intended).*
+*Still in force: all of it; the register holds provisional values for every gate. Its M1 entries are settled by R-428:
+seven confirmed and cited to R-428, `rho_ratio`'s and `r_min_pair_0`'s floors marked provisional until M2; `d_min`'s
+question is answered (the floor at 2⁻¹⁴ is intended).*
 *13 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
 carry)" (the register's `provisional` key: a line reworded, lines added), `docs/gui/principia_render_gui_spec.md` §
 "10.1 The shared prelude library" (a sentence added), R-424 (an acceptance line), REQ-TOOL-160 and REQ-SYS-063
@@ -9059,3 +9082,183 @@ The seven choices put to the human, each the orchestrator's per R-369:
 
 Adds REQ-SYS-081 and REQ-SYS-082; REQ-TOOL-160's statement, verify, rulings, sources and note, and REQ-SYS-063's
 rulings and note, change.
+
+## R-428 — The M1 gate's nine provisional register entries are confirmed as proposed: the six log floors and the hatch's colours and stripe width; `d_min`'s floor at 2⁻¹⁴ is intended; `rho_ratio`'s and `r_min_pair_0`'s floors stay provisional until M2 *(amends R-401, R-419 and R-427 as they apply to these values)*
+*14 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
+carry)" (the provisional entries' table re-marked, a table of the entries confirmed at M1 added),
+`docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (sentences added),
+`docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every debug
+view)" (a sentence added), `docs/design/principia_debug_tooling_plan.md` § "G. Cross-check views (certify a *seam*,
+not a field — integration tests with a display)" (a parenthesis added), `docs/design/principia_colour_composition.md`
+§ "3. The `ctx` contract" (a clause added), REQ-TOOL-160, REQ-TOOL-163 and REQ-COL-055 (reqio), `plan/MILESTONES.md` §
+"M1 — The synthetic payload and the eyes", `plan/OPERATIONS.md` § "Order of work", the forward lines of R-401, R-419
+and R-427, `REVIEW_QUEUE.md` (RQ-279, open), `crates/ledger/src/constants.rs` and `plan/rule_groups.yaml`*
+
+The human's message of 14 Oct 2026, in reply to the M1 gate report, quoted whole here; R-429 to R-432 quote their
+own sentences from it:
+
+"Gate M1 passes.
+Calibrations confirmed as proposed: log_floor_d_min 2⁻¹⁴ (intended, keep it — 2⁻²⁰ compresses d_min ∈ [6e-5, 1] from half the ramp to an eighth of it), log_floor_dE_max 2⁻²⁰, log_floor_dLz_max 2⁻²⁰, log_floor_closure_min 2⁻²³, log_floor_rho_ratio 2⁻²³ (provisional to M2), log_floor_r_min_pair_0 2⁻¹⁴ (provisional to M2), hatch_violet #9B00FF, hatch_cyan #48FFFF, hatch_half_period 4 px.
+REQ-COL-061's criterion confirmed beside REQ-COL-055: τ = OKLab distance #FF00FF→#E034C6 (0.101); pass by colour, or by the pattern when the two simulated stripes are more than τ apart. Record with it: the pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a flat colour, which under achromatopsia sits on the grey ramp.
+Ramps as reported (S, ftle, diffusion pass; q_mass and mean_y provisional on cool-warm; theta cyclic; C_ty per R-369). No veto on #209, the lint's test-code skip, milestone names or the mutation narrowing. Tag m1-gate and start M2."
+
+(The gate run: `gate.yml` run 38629476853 on `main` at ab65c273, 230 of 230 requirements passing and only
+`gate-provisional` red, listing these nine entries. Numbered by the orchestrator, applied per R-369: the message's
+parts each take a ruling, R-428 to R-432, the calibrations first and the gate's passing last, as R-376 and R-377 did
+at M0.)
+
+This ruling holds the message's second line.
+
+*What it decides:*
+- **The nine entries the M1 gate report listed as provisional until M1 are confirmed as proposed** (R-71, R-427): the
+  log floors `log_floor_d_min` 2⁻¹⁴, `log_floor_dE_max` 2⁻²⁰, `log_floor_dLz_max` 2⁻²⁰, `log_floor_closure_min` 2⁻²³,
+  `log_floor_rho_ratio` 2⁻²³ and `log_floor_r_min_pair_0` 2⁻¹⁴ (REQ-TOOL-160), and the invalid hatch's
+  `hatch_violet` `#9B00FF`, `hatch_cyan` `#48FFFF` and `hatch_half_period` 4 px (REQ-COL-055).
+- **`d_min`'s floor at 2⁻¹⁴ is intended**, in the human's words "intended, keep it — 2⁻²⁰ compresses d_min ∈ [6e-5, 1]
+  from half the ramp to an eighth of it". This answers the question R-427 put to the M1 gate: whether a floor at f16's
+  smallest normal is intended when `d_min` is stored down to 2⁻²⁴ (R-271), so that the closest approaches, below
+  2⁻¹⁴, land at the bottom of the ramp. It is: a lower floor would spend the ramp on the subnormal band and leave the
+  decades above it, where close approaches are placed, a fraction of it.
+- **`rho_ratio`'s and `r_min_pair_0`'s floors are confirmed provisionally, "provisional to M2"**, as R-419 has them:
+  they are re-confirmed at the M2 gate once TASK-M2-03 defines their fields' formulas (REQ-TOOL-163).
+
+*Applied:* each value is confirmed at the M1 gate, as R-71 asks, and recorded here, as R-376 recorded M0's.
+- **The register (dd_generation_root §3.8, R-427).** The seven entries confirmed outright lose their `provisional`
+  mark, and each one's citation becomes this ruling, as §3.8 says a confirmation does; their values do not change. In
+  `crates/ledger/src/constants.rs` they are confirmed entries, `Value::Exact`, citing `decisions.md` § "R-428 — …".
+  `log_floor_rho_ratio` and `log_floor_r_min_pair_0` stay at their values, marked provisional until M2. *Applied per
+  R-369:* each now cites REQ-TOOL-163, the M2 calibration that re-confirms it, in place of REQ-TOOL-160, which this
+  ruling closes; a provisional entry cites the calibration requirement that will settle it (§3.8). None of the nine is
+  hashed (§3.8, "The hash"), so the schema version does not change, and no generated file changes.
+- **The gate list.** `cargo xtask gate-provisional --milestone M1` lists no entry and exits 0; at M2 it lists the two
+  floors, citing REQ-TOOL-163, and `eps_m01` (REQ-DEC-039).
+- **§3.8's tables.** The provisional entries' table keeps the entries still provisional: the two floors, now until
+  M2 and citing REQ-TOOL-163, and `eps_m01`. A table of the register's entries confirmed at the M1 gate is added after
+  it, the seven at their values, each citing R-428. render_gui_spec §10.1's log-floor sentences, render_contract's
+  hatch bullet and debug_tooling_plan's edge-map item record the confirmation.
+- **The requirements (reqio).** REQ-TOOL-160 and REQ-COL-055 gain R-428 among their rulings and sources, and a note
+  giving the confirmed values; REQ-TOOL-160's note also records `d_min`'s statement. REQ-TOOL-163 gains R-428: its two
+  floors are the ones confirmed provisionally.
+- **The rulings these values touch** carry forward and "Still in force" lines: R-401 (the floors proposed for the
+  M1 gate), R-419 (the two floors confirmed provisionally at M1) and R-427 (the register's provisional entries and
+  `d_min`'s question).
+- **The M1 calibrations this message does not name.** `plan/MILESTONES.md`'s M1 exit gate also holds six
+  calibrations that are not register entries, each "confirmed by the human at the M1 gate": REQ-INT-086 (`r_pole`),
+  REQ-COL-053 (the "not yet" grey), REQ-COL-062 (the triple-outcome swatches), REQ-COL-064 (the "not yet" stipple),
+  REQ-TOOL-152 (the UV preset's banding criterion) and REQ-VAL-122 (the ‖n‖ = 1 tolerance). The message confirms
+  none of them by name. They are not recorded as confirmed here; **RQ-279** asks the human. Their proposed values
+  stand as built meanwhile (R-182), and nothing waits on it.
+- R-428 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-160, REQ-TOOL-163 and REQ-COL-055: the values are confirmed.
+
+## R-429 — REQ-COL-061's criterion is confirmed beside REQ-COL-055: τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101; the hatch passes by colour, or by its pattern when its two simulated stripes are more than τ apart; the pattern argument holds at 1:1 device pixels only *(amends R-386)*
+*14 Oct 2026 · applied in `docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small,
+reused by every debug view)" (sentences added), `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD" (a
+paragraph added), REQ-COL-061 and REQ-COL-055 (reqio), R-386 (a forward line), `crates/render/tests/cvd.rs` (doc
+comments) and `plan/rule_groups.yaml`*
+
+The human's words (R-428 quotes the whole message):
+
+"REQ-COL-061's criterion confirmed beside REQ-COL-055: τ = OKLab distance #FF00FF→#E034C6 (0.101); pass by colour, or by the pattern when the two simulated stripes are more than τ apart. Record with it: the pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a flat colour, which under achromatopsia sits on the grey ramp."
+
+*What it decides:*
+- **REQ-COL-061's criterion, as TASK-M7-20 proposed it, is confirmed** at the M1 gate beside REQ-COL-055 (R-386).
+  **τ** is the OKLab distance from R-16's flat magenta `#FF00FF` to body-1 escape's `#E034C6`, 0.101, the distance
+  R-132 ruled a collision, taken unsimulated. Under each simulation (deuteranopia, protanopia, tritanopia,
+  achromatopsia) the hatch passes **by colour**, when each stripe colour, simulated, is farther than τ from every
+  palette entry REQ-COL-055 measures against, simulated; **or by the pattern**, when the two simulated stripes are
+  more than τ apart, since it then shows as diagonal stripes, which no palette entry draws.
+- **Recorded with it, in the human's words: "the pattern argument holds at 1:1 device pixels only; a downscaled export
+  blends the stripes to a flat colour, which under achromatopsia sits on the grey ramp."**
+
+*Applied:*
+- The render contract's hatch bullet states the criterion and the caveat; dd_colouring §3.8 gains a paragraph giving
+  them beside the simulation they apply to.
+- **REQ-COL-061** (reqio): its statement and verify give τ, the two ways to pass and the caveat, and it gains R-429
+  among its rulings and sources. REQ-COL-055's note names R-429.
+- **`crates/render/tests/cvd.rs`** (TASK-M7-20's, not a qa file): the doc comments of `tau()` and
+  `check_hatch_distinct` read "confirmed, R-429" in place of "proposed", and the latter gains the caveat. No assertion
+  and no value changes: the test is the criterion confirmed.
+- **R-386** carries a forward line and a "Still in force" line.
+- *Applied per R-369:* the caveat constrains no current output. Nothing in M1 downscales a view with the hatch, and
+  the criterion is about the screen at device pixels; an export that downscales is a later feature's, which states
+  the caveat where it does so. Nothing is built for it now.
+- R-429 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-061 (statement, verify, rulings, sources, note) and REQ-COL-055 (note).
+
+## R-430 — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)*
+*14 Oct 2026 · applied in R-423 and R-426 (forward lines; an acceptance line on R-426's RQ-277 decision),
+`plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes" (the R-423 gate item) and `plan/rule_groups.yaml`*
+
+The human's words (R-428 quotes the whole message):
+
+"Ramps as reported (S, ftle, diffusion pass; q_mass and mean_y provisional on cool-warm; theta cyclic; C_ty per R-369)."
+
+*What it decides:*
+- **R-423's check stands as reported** (physics review 5484757609 of PR #197): `S`, `ftle` and `diffusion` pass, each
+  signed at finite time with zero a meaningful centre, on `ramp_coolwarm`.
+- **`q_mass` and `mean_y` are provisional on cool-warm** (R-426): recorded at the M1 gate as provisional, neither
+  confirmed nor failed. They are re-checked when TASK-M2-03 (REQ-PAY-097) and TASK-M3-13 (REQ-PAY-098) declare their
+  ranges, as R-426 has it.
+- **`theta` is cyclic** (R-423; TASK-M1-20, REQ-RENDER-085).
+- **`C_ty` per R-369**: RQ-277's option (a), decided by the orchestrator in PR #205 (R-426's fix-round note), stands:
+  `C_ty` is signed, as `diffusion` is, and stays on `ramp_coolwarm`. The human's veto, left open there, is not used.
+
+*Applied:* R-423 and R-426 carry forward and "Still in force" lines; R-426's RQ-277 bullet gains "*Accepted by R-430
+(14 Oct 2026): no veto.*"; `plan/MILESTONES.md`'s R-423 gate item records the result. No requirement changes: the
+re-checks at M2 and M3 are REQ-PAY-097's and REQ-PAY-098's already. R-430 is in the "design" group of
+`plan/rule_groups.yaml`, with R-423 and R-426.
+
+Changes no requirement.
+
+## R-431 — No veto on #209's alias test, the constants lint's skip of test code, `constants::MILESTONES`'s names or the narrowed local mutants runs
+*14 Oct 2026 · applied in `plan/rule_groups.yaml`*
+
+The human's words (R-428 quotes the whole message):
+
+"No veto on #209, the lint's test-code skip, milestone names or the mutation narrowing."
+
+*What it decides:* four of the orchestrator's choices, each applied per R-369 and listed in the M1 gate report, stand
+as applied, accepted by R-431:
+- **#209** (ops/nextest-alias-group): `qa_cargo_xtask_alias_runs_deps` runs on the workspace's own target, alone, in
+  `ci-workspace`, and `gate.yml` gains a `cpu-workspace` job.
+- **The constants lint's test-code skip** (#204, TASK-M1-18): `cargo xtask lint constants` does not read an item
+  under `#[cfg(test)]`, as it does not read the crates' `tests/` directories (`xtask/src/lint_constants.rs`).
+- **The milestone names** (#204): `constants::MILESTONES` is `M0` … `M8`, held to `plan/MILESTONES.md`'s gate blocks
+  by xtask's `milestones_are_the_plans_gate_blocks` test.
+- **The mutation narrowing:** the implementers' local mutants runs before review (R-388) were narrowed, as the M1
+  gate report gave them, and CI's full `mutants` run on the PR stays the gate (R-302, R-388).
+
+*Applied:* these were PR-level decisions, recorded nowhere else in `decisions.md`, so they are recorded here. Nothing
+changes. R-431 is in the "one_off" group of `plan/rule_groups.yaml`, as R-416 is.
+
+Changes no requirement.
+
+## R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts
+*14 Oct 2026 · applied in `plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes" (a line added),
+`plan/OPERATIONS.md` § "Order of work" (a line added) and `plan/rule_groups.yaml`*
+
+The human's words (R-428 quotes the whole message):
+
+"Gate M1 passes."
+"Tag m1-gate and start M2."
+
+*What it decides:* the M1 gate passes, on the gate run 38629476853 on `main` at ab65c273 (230 of 230 requirements
+passing, `gate-provisional` red only for the nine entries R-428 confirms) and on R-428 to R-431. `main` is tagged
+`m1-gate`, and M2's tasks start under `plan/WORKFLOW.md` and R-369, as R-377 had it for M0.
+
+*Applied:*
+- **The tag.** *Applied per R-369:* the orchestrator tags `m1-gate` on `main` once this rulings PR has merged, so that
+  the tagged commit carries the confirmed register: `cargo xtask gate-provisional --milestone M1` exits 0 there, and
+  every M1 exit requirement is green on it, as on ab65c273. The orchestrator confirms it in its next summary, naming
+  the commit.
+- `plan/MILESTONES.md` § "M1" notes the gate's pass, and `plan/OPERATIONS.md` § "Order of work" gains R-428 to
+  R-432's line after R-386's.
+- REQ-COL-061 is green on `main` (`cvd_hatch_distinct_under_each_simulation`, TASK-M7-20), as R-386 requires before
+  the M1 gate passes.
+- RQ-279 (R-428) does not hold the gate: the human has passed it.
+- R-432 is in the "one_off" group of `plan/rule_groups.yaml`, as R-377 is.
+
+Changes no requirement.

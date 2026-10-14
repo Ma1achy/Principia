@@ -59,3 +59,28 @@ Nothing is chosen.*
   payload's), so no ramp follows from it yet.
 - **Waits:** nothing in M1; TASK-M1-21's PR does not wait. REQ-PAY-093's confirmation at the M5 gate is where
   `alpha_energy`'s range is settled; it is named, not marked.
+
+## RQ-279: the M1 gate's message confirms nine calibrations by name; six other M1 calibrations, each "confirmed by the human at the M1 gate", are not named *(silence, R-71, R-428, R-432; REQ-INT-086, REQ-COL-053, REQ-COL-062, REQ-COL-064, REQ-TOOL-152, REQ-VAL-122; context: the M1 gate)*
+
+*Found in porting the human's message of 14 Oct 2026 (R-428 to R-432). Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md` § "R-428 — …", the human's words: "Gate M1 passes. Calibrations confirmed as proposed:
+    log_floor_d_min 2⁻¹⁴ …, hatch_half_period 4 px." The list is the nine constants-register entries the gate report's
+    `gate-provisional` job listed.
+  - `plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes", the exit gate, holds six more calibration
+    requirements (R-71), none a register entry, each of whose statements ends "confirmed by the human at the M1 gate
+    and recorded in decisions.md": **REQ-INT-086** (`r_pole`, the unwrapped phase's pole radius), **REQ-COL-053** (the
+    "not yet" neutral grey, PR #172's `#4E4E4E`), **REQ-COL-062** (the two triple-outcome swatches), **REQ-COL-064**
+    (the "not yet" dot stipple), **REQ-TOOL-152** (the UV preset's banding criterion, PR #160's bound) and
+    **REQ-VAL-122** (the ‖n‖ = 1 paired test's tolerance).
+- **Silence:** the message passes the gate and confirms nine values by name. Whether passing the gate confirms the
+  six others as proposed, or whether they are still to be confirmed, it does not say, and no other ruling records
+  their confirmation.
+- **Options seen:**
+  - (a) The gate's passing confirms the six as proposed; each is recorded confirmed, citing the ruling.
+  - (b) The human confirms or changes each, one by one, as at M0 (R-376).
+  - (c) Some are confirmed now and the rest carried to a later gate, as R-419 did for two floors.
+- **Applied meanwhile:** none is recorded as confirmed (R-428). Each proposed value stands as built and is used
+  provisionally (R-182); the gate has passed (R-432) and is not reopened.
+- **Waits:** nothing. M2 does not read these values; a change to one, if the human makes it, is a follow-up PR.
