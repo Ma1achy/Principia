@@ -17,8 +17,8 @@
 //!
 //! No stored value of the set is NaN, and its only non-finite stored value is `d_min`'s unset `+inf`, held only by a
 //! failed sample or one before its first step (R-271; `engine/tests/fixtures.rs`, `stored_values_no_nan`). Every
-//! value here is a hand-chosen harness value, not a constant of the physics, so the tables are functions, not `const`s
-//! (the constants lint, REQ-SYS-001).
+//! value here is fixture data: a hand-chosen harness value the tests assert on (debug_tooling_plan §F; the M1
+//! fixtures), not a register constant (REQ-SYS-082).
 
 use kernel::payload::{
     angular_momentum_z, f16_bits_to_f32, f32_to_f16_bits, fgw_pack, hamiltonian,

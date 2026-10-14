@@ -653,8 +653,8 @@ const fn record(
 /// Quad `q`'s record in the structural sets (debug_tooling_plan §F), which repeat ten records: the quad states in their
 /// order, twice (0 loaded · 1 pending · 2 refinable · 3 terminal · 4 stale); the fractions within [0, 1]; a priority of
 /// each sign; an ancestor gap of 0 and above 0 in a pending quad and in others, so the fallback tint and the pending
-/// hatch meet; distinct cache ages and outcomes. Hand-chosen harness values, not constants of the physics, so a table in
-/// a function, not a `const` (the constants lint, REQ-SYS-001).
+/// hatch meet; distinct cache ages and outcomes. Fixture data: hand-chosen harness values the structural views' tests
+/// assert on (debug_tooling_plan §F; TASK-M1-13), not register constants (REQ-SYS-082).
 pub fn structural_record(q: u32) -> QuadRecord {
     let records = [
         record(0, [0.92, 0.04, 0.08, 0.0, 0.35], [0, 0, 0]),
