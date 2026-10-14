@@ -566,43 +566,74 @@ negative_control!(
     })
 );
 
-/// A field of another ledger has no payload range state; its written bounds decide whether it spans zero.
+/// `QuadReduction`'s members are declared (R-426, applied per R-369): its four (−∞, ∞) members cite §3.7's "The §3.8
+/// entries", `alpha_area` and `alpha_energy` also REQ-PAY-093's proposal, and every other member is declared by the
+/// bounds it writes; so none is a gap, and the reduction ledger generates.
 #[test]
-fn declared_ranges_other_ledgers_keep_their_bounds() {
-    check_other_ledger(&ledger::reduction::ledger());
+fn declared_ranges_reduction_members_are_declared() {
+    check_reduction(&ledger::reduction::ledger());
 }
 
-fn check_other_ledger(l: &Ledger) {
+/// The reduction members declared (−∞, ∞), each with what its citation names.
+const REDUCTION_UNBOUNDED: [(&str, &[&str]); 4] = [
+    ("alpha_area", &["§3.7", "The §3.8 entries", "REQ-PAY-093"]),
+    ("alpha_energy", &["§3.7", "The §3.8 entries", "REQ-PAY-093"]),
+    ("running_mean_divergence", &["§3.7", "The §3.8 entries"]),
+    ("coherence", &["§3.7", "The §3.8 entries"]),
+];
+
+fn check_reduction(l: &Ledger) {
     let entries = ledger::gen::validate(l).unwrap_or_else(|e| panic!("{e}"));
-    let mut seen = [false; 2];
     for e in &entries {
+        let state = e.range_state();
+        let RangeState::Declared { range, citation } = state else {
+            panic!("`{}`'s range is not declared: {state:?}", e.name);
+        };
         assert_eq!(
-            payload::range_state(e),
-            None,
-            "`{}` has a payload range state",
+            range, e.range,
+            "`{}` is declared over another range",
             e.name
         );
-        let spans = payload::spans_zero(e);
-        assert_eq!(
-            spans,
-            e.range.spans_zero(),
-            "`{}` over {} spans zero: {spans}",
-            e.name,
-            e.range
-        );
-        seen[usize::from(spans)] = true;
+        match REDUCTION_UNBOUNDED.iter().find(|(f, _)| *f == e.name) {
+            Some((_, phrases)) => {
+                assert_eq!(range, Range::UNBOUNDED, "`{}` is not (−∞, ∞)", e.name);
+                for phrase in *phrases {
+                    assert!(
+                        citation.contains(phrase),
+                        "`{}`'s citation does not cite {phrase}: `{citation}`",
+                        e.name
+                    );
+                }
+            }
+            None => assert_eq!(
+                citation,
+                ledger::schema::WRITTEN_BOUNDS,
+                "`{}` is cited, not declared by its bounds",
+                e.name
+            ),
+        }
     }
-    assert_eq!(
-        seen, [true; 2],
-        "the reduction ledger has ranges either side"
-    );
+    for (field, _) in REDUCTION_UNBOUNDED {
+        assert!(
+            entries.iter().any(|e| e.name == field),
+            "no reduction member `{field}`"
+        );
+    }
 }
 
 negative_control!(
-    declared_ranges_other_ledgers_keep_their_bounds,
-    "the payload ledger's own fields have range states",
-    expected = "has a payload range state",
-    check_other_ledger(&ledger::layout())
+    declared_ranges_reduction_members_are_declared,
+    "`coherence` with its citation dropped is a gap, and generation refuses it",
+    expected = "`coherence` has scale `lin` and no declared range",
+    {
+        let mut l = ledger::reduction::ledger();
+        l.entries
+            .iter_mut()
+            .find(|e| e.name == Some("coherence"))
+            .expect("coherence")
+            .declaration = None;
+        check_reduction(&l);
+    }
 );
 
 /// The payload stays strict (R-426): every payload entry's range is cited or provisional, or the entry is one of
