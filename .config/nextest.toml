@@ -24,12 +24,19 @@ threads-required = "num-test-threads"
 # test threads' CPUs and cargo's build lock, and the listing's build outlasts the test's 600 s timer on its xtask child
 # (PR #179). In the group `xtask-cargo` they run one at a time, beside the other tests. The `ci` profile inherits this
 # override; the `ci-workspace` and `gpu-kernel` profiles select none of them. Applied per R-369.
+# Two more join them: the alias test's `cargo xtask ci --list` (TASK-M0-01), the same listing built in a target
+# directory of its own, cold in every run; and `xtask screenshot --all` (TASK-M0-20), whose `gui` suites run gui's
+# capture mode through `cargo run -p gui --features mock` on the workspace's target. In the M1 gate's unsharded `cpu`
+# job (gate.yml run 38568739206) the alias test's listing ran beside the `qa_TASK-M0-06_list` test's and beside
+# `screenshot --all`, and its child outlasted the 600 s timer (697 s). Applied per R-369.
 [[profile.default.overrides]]
 filter = """
     (binary_id(=xtask::qa_TASK-M0-06_list) & test(=qa_m006_ci_list_lists_golden_cases_without_a_device))
     | (binary_id(=xtask::qa_TASK-M0-06_runner) & test(=qa_m006_ci_golden_runner_renders))
     | (binary_id(=xtask::qa_TASK-M0-22) & test(/^qa_m022_ci_(passes_when_every_control_trips|fails_on_)/))
     | (binary_id(=xtask::qa_ops_golden_harness_ci) & test(=qa_ops_gh_real_cargo_builds_once))
+    | (binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))
+    | (binary_id(=xtask::qa_TASK-M0-20) & test(=qa_cli_screenshot_all_runs_selftest))
 """
 test-group = "xtask-cargo"
 
