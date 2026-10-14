@@ -501,8 +501,10 @@ const fn proposed(
 /// of step 2⁻²⁴, down to the stored floor 2⁻²⁴ (R-271), so the view is logarithmic where the storage is and linear
 /// where the storage is. It sits 2.2 decades below `r_close` = 0.01 and 1.2 below the default `r_coll` = 10⁻³
 /// (integrator contract Part 3, Part 7), so every close approach above the default collision radius is placed in
-/// decades; the subnormal band below it holds a value only when `r_coll` is set under 2⁻¹⁴. Whether that is intended
-/// is stated, with its evidence, for the M1 gate (R-427; TASK-M1-18's PR).
+/// decades; the subnormal band below it holds a value chiefly when `r_coll` is set under 2⁻¹⁴, or when a saturated,
+/// under-resolved substep undershoots the default `r_coll` that far. The view reads the band through
+/// `unpack2x16float`, which a GPU may flush to 0 (payload §1; R-271): there it draws at raw 0 under any floor. Whether
+/// the floor is intended is stated, with its evidence, for the M1 gate (R-427; TASK-M1-18's PR).
 pub const LOG_FLOOR_D_MIN: ConstantBuilder = proposed(
     "log_floor_d_min",
     1.0 / 16_384.0,
@@ -514,7 +516,8 @@ pub const LOG_FLOOR_D_MIN: ConstantBuilder = proposed(
 /// `dE_max`'s floor, an absolute energy in the stored field's normalised units (`dE_max = max_t |ΔE(t)|`, an absolute
 /// maximum, payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_E`'s default 10⁻⁶
 /// (integrator contract Part 3), the floor the drift `energy_drift`'s view takes, so the latch and the drift compress
-/// at the same magnitude. The f16 latch holds it as 16 subnormal steps of 2⁻²⁴.
+/// at the same magnitude. The f16 latch holds it as 16 subnormal steps of 2⁻²⁴: the floor and the values below
+/// 2⁻¹⁴ are f16 subnormals, which a GPU that flushes them on unpack draws at raw 0 (payload §1; R-271).
 pub const LOG_FLOOR_DE_MAX: ConstantBuilder = proposed(
     "log_floor_dE_max",
     1.0 / 1_048_576.0,
@@ -525,7 +528,8 @@ pub const LOG_FLOOR_DE_MAX: ConstantBuilder = proposed(
 
 /// `dLz_max`'s floor, an absolute angular momentum in the stored field's normalised units
 /// (`dLz_max = max_t |ΔL_z(t)|`, payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_L`'s
-/// default 10⁻⁶ (integrator contract Part 3), as [`LOG_FLOOR_DE_MAX`] is `eps_E`'s.
+/// default 10⁻⁶ (integrator contract Part 3), as [`LOG_FLOOR_DE_MAX`] is `eps_E`'s, and subnormal in the f16 latch
+/// as that floor is.
 pub const LOG_FLOOR_DLZ_MAX: ConstantBuilder = proposed(
     "log_floor_dLz_max",
     1.0 / 1_048_576.0,
@@ -536,7 +540,9 @@ pub const LOG_FLOOR_DLZ_MAX: ConstantBuilder = proposed(
 
 /// `closure_min`'s floor, a dimensionless chord `|n̂(t) − n̂(0)|` on the unit shape sphere: 2⁻²³ ≈ 1.19e-7, f32's
 /// spacing on `[1, 2)`, the floor of a difference of two O(1) f32 states, where closure bottoms out on the f32 GPU
-/// path ("~1e-7", payload §1). Below it a value is saturation, not an orbit's closure, so the view is linear there.
+/// path ("~1e-7", payload §1). On that path a value below it is saturation, not an orbit's closure, so the view is
+/// linear there. It is the f32 path's floor: the f64 CPU path resolves closures to ~1e-16 (payload §1), and under
+/// 2⁻²³ those below about 5e-10 draw within one viridis step (1/255) of 0.
 pub const LOG_FLOOR_CLOSURE_MIN: ConstantBuilder = proposed(
     "log_floor_closure_min",
     1.0 / 8_388_608.0,
@@ -548,7 +554,8 @@ pub const LOG_FLOOR_CLOSURE_MIN: ConstantBuilder = proposed(
 /// `rho_ratio`'s floor, a dimensionless ratio, provisional (R-419): 2⁻²³ ≈ 1.19e-7. It assumes the mass-weighted
 /// `‖ρ̃‖/‖λ̃‖`, which is `cot α` in the canonical-frame decode (`‖ρ̃‖ = cos α`, `‖λ̃‖ = sin α`, decoder §3.2): near
 /// `α = π/2` the ratio is `≈ π/2 − α`, and f32 holds `α ∈ [1, π/2)` in steps of 2⁻²³, so the f32 decode's ratios
-/// below 2⁻²³ are its first grid step alone. TASK-M2-03 defines the ratio (REQ-PAY-088) and may choose otherwise; the
+/// below 2⁻²³ are its first grid step alone. That is the f32 decode's floor: an f64 decode, stored to f32, holds
+/// `cot α` far below it. TASK-M2-03 defines the ratio (REQ-PAY-088) and may choose otherwise; the
 /// floor is re-confirmed at M2 either way (REQ-TOOL-163): confirmed provisionally at the M1 gate, it is then marked
 /// provisional until M2.
 pub const LOG_FLOOR_RHO_RATIO: ConstantBuilder = proposed(
