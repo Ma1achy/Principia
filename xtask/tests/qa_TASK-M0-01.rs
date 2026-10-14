@@ -148,19 +148,32 @@ fn qa_xtask_deps_passes_on_the_live_workspace() {
     check_xtask_deps_passes_on_the_workspace(&out);
 }
 
+/// Runs `cargo <args>` in the workspace root on the workspace's own target directory, the one the running tests were
+/// built in, whose `--features controls` build `ci --list` reuses, as `qa_TASK-M0-06_list`'s listing does. A target
+/// directory of its own was cold in every CI run, and its full `--features controls` build outlasted the child's 600 s
+/// timer (R-214, REQ-VAL-156; gate.yml run 38598243202). `cargo xtask` is `cargo run -p xtask`, which replaces the
+/// workspace's `xtask` binary while other tests spawn it (REQ-VAL-164), so `.config/nextest.toml` runs this test alone,
+/// in the `ci-workspace` profile (R-372, REQ-SYS-078).
+fn run_cargo_on_the_workspace_target(args: &[&str]) -> std::process::Output {
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
+    Command::new(&cargo)
+        .args(args)
+        .current_dir(workspace_root())
+        .timed_output()
+        .expect("run cargo xtask")
+}
+
 #[test]
 fn qa_cargo_xtask_alias_runs_deps() {
-    // The acceptance command itself, through the `.cargo/config.toml` alias. A separate target dir avoids
-    // the lock held by the running `cargo test`. Its `cargo xtask deps` run is the test below, split out so that
+    // The acceptance command itself, through the `.cargo/config.toml` alias, on the workspace's own target directory
+    // (`run_cargo_on_the_workspace_target`). Its `cargo xtask deps` run is the test below, split out so that
     // neither holds a CI shard over its target (R-336, REQ-SYS-077); this one keeps the listing-only
     // `cargo xtask ci --list` (R-235, REQ-VAL-166).
     // Control, run first: the alias reaches xtask's own argument handling, which refuses an unknown command. Run
-    // first, its child builds xtask (or waits on the lock of `qa_cargo_xtask_alias_runs_the_deps_check`'s child,
-    // building it beside this in the same target dir), so the `ci --list` child below, under its own timeout (R-214),
-    // only lists.
-    let out = run_cargo_in_the_workspace(&["xtask", "qa-no-such-command"]);
+    // first, its child builds xtask, so the `ci --list` child below, under its own timeout (R-214), only lists.
+    let out = run_cargo_on_the_workspace_target(&["xtask", "qa-no-such-command"]);
     check_the_alias_refuses_an_unknown_command(&out);
-    let out = run_cargo_in_the_workspace(&["xtask", "ci", "--list"]);
+    let out = run_cargo_on_the_workspace_target(&["xtask", "ci", "--list"]);
     check_the_alias_runs_ci(&out);
 }
 

@@ -1,5 +1,6 @@
 # The milestone gate (R-177, R-186; REQ-SYS-067; TASK-M0-19): dispatched by hand with the milestone, it runs every
-# hosted suite, the CPU suites (the workspace's tests and `cargo xtask ci`), the GPU suites on `macos-15` (Metal) and on
+# hosted suite, the CPU suites (the workspace's tests, under nextest's `ci` and `ci-workspace` profiles, and `cargo
+# xtask ci`), the GPU suites on `macos-15` (Metal) and on
 # lavapipe, and `cargo xtask screenshot --all`, then writes the gate report: `cargo xtask gate-report --milestone <Mn>`
 # lists every requirement in that milestone's gate block and every earlier one (`plan/MILESTONES.md`) with its result,
 # and the report is uploaded as an artifact. Benchmarks and performance gates never run here: they run on the human's
@@ -105,6 +106,50 @@ jobs:
           name: gate-test-list
           path: target/gate-test-list/
           if-no-files-found: ignore
+
+  # The xtask tests that run cargo on the workspace's own target directory, each alone, as `ci.yml`'s `ci-workspace` job
+  # runs them (`.config/nextest.toml`'s `ci-workspace` profile; R-372, REQ-SYS-078): the `cpu` job's `ci` profile
+  # selects none of them, so without this job the gate would not run them (REQ-SYS-067). Their packages' doctests run in
+  # the `cpu` job's `cargo test --workspace --doc`. Applied per R-369.
+  cpu-workspace:
+    runs-on: ubuntu-24.04
+    env:
+      PRIN_GPU_BACKEND: vulkan
+    steps:
+      - uses: actions/checkout@v4
+      - name: Free runner disk
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache
+          sudo docker image prune --all --force > /dev/null
+          df -h /
+      # The toolchain rust-toolchain.toml pins, with its components: rust-gpu's nightly, on which the whole workspace
+      # builds (R-169).
+      - name: rustup toolchain install (rust-toolchain.toml)
+        run: rustup toolchain install
+      # The cargo registry `ci.yml`'s `ci` job saves on a push to `main`, restored read-only under its key (R-337).
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: cargo-registry
+          shared-key: ci
+          cache-targets: "false"
+          cache-bin: "false"
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      # qa02's `cargo xtask ci` runs `cargo xtask plan-check`, which needs Python and PyYAML (REQ-SYS-007).
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      - name: Install Mesa (lavapipe)
+        run: sudo apt-get update && sudo apt-get install -y mesa-vulkan-drivers
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9.146
+      - name: cargo nextest run -p xtask
+        env:
+          NEXTEST_PROFILE: ci-workspace
+        run: cargo nextest run -p xtask
 
   # `cargo xtask ci`, every registered per-push runner (R-177).
   xtask-ci:
@@ -284,7 +329,7 @@ jobs:
   # (REQ-SYS-079); the report fails when any requirement failed or has no result, and is uploaded either way.
   gate-report:
     if: always()
-    needs: [cpu, xtask-ci, gpu-metal, gpu-lavapipe, screenshot]
+    needs: [cpu, cpu-workspace, xtask-ci, gpu-metal, gpu-lavapipe, screenshot]
     runs-on: ubuntu-24.04
     permissions:
       contents: read
@@ -310,7 +355,7 @@ jobs:
         run: python3 -m pip install pyyaml
       - name: The suites' results, by requirement
         env:
-          CPU: ${{ needs.cpu.result == 'success' && needs.xtask-ci.result == 'success' }}
+          CPU: ${{ needs.cpu.result == 'success' && needs.cpu-workspace.result == 'success' && needs.xtask-ci.result == 'success' }}
           GPU: ${{ needs.gpu-metal.result == 'success' && needs.gpu-lavapipe.result == 'success' }}
           SCREENSHOT: ${{ needs.screenshot.result == 'success' }}
         run: |
