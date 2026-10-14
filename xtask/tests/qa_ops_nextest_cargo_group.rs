@@ -14,6 +14,10 @@
 //!
 //! Each test has its negative control (R-176): the same check on the config with the one property it turns on
 //! removed.
+//!
+//! Ops PR #209 (branch `ops/nextest-alias-group`) adds, by the same rule, `xtask screenshot --all`
+//! (`qa_TASK-M0-20`), whose `gui` suites run `cargo run -p gui --features mock` on the workspace's target, which the
+//! survey above missed.
 
 use std::path::{Path, PathBuf};
 
@@ -50,6 +54,11 @@ const ON_THE_WORKSPACE_TARGET: &[(&str, &str)] = &[
     (
         "xtask::qa_ops_golden_harness_ci",
         "qa_ops_gh_real_cargo_builds_once",
+    ),
+    // `xtask screenshot --all`: its `gui` suites spawn `cargo run -p gui --features mock` on the workspace's target.
+    (
+        "xtask::qa_TASK-M0-20",
+        "qa_cli_screenshot_all_runs_selftest",
     ),
 ];
 
@@ -406,11 +415,11 @@ negative_control!(
     ))
 );
 
-/// The filter reader agrees with nextest on the config's own filters: each of the five tests nextest put in the group
-/// (`cargo nextest show-config test-groups --profile ci`, in this review) is read as in it, and their neighbours in
-/// the same binaries, which nextest left out, are read as out.
+/// The filter reader agrees with nextest on the config's own filters: each test of [`ON_THE_WORKSPACE_TARGET`],
+/// all of which nextest put in the group (`cargo nextest show-config test-groups --profile ci`, in PR #209's review),
+/// is read as in it, and their neighbours in the same binaries, which nextest left out, are read as out.
 fn check_the_reader_agrees_with_nextest(text: &str) {
-    for (binary, test) in &ON_THE_WORKSPACE_TARGET[..5] {
+    for (binary, test) in ON_THE_WORKSPACE_TARGET {
         assert!(
             group_of(text, "ci", binary, test).as_deref() == Some("xtask-cargo"),
             "qa-ops-ncg: the filter reader disagrees with nextest on {binary} {test}"
@@ -425,6 +434,10 @@ fn check_the_reader_agrees_with_nextest(text: &str) {
         (
             "xtask::qa_TASK-M0-06_list",
             "qa_m006_ci_list_lists_golden_cases_without_a_device_x",
+        ),
+        (
+            "xtask::qa_TASK-M0-20",
+            "qa_cli_screenshot_selftest_passes_and_writes_capture",
         ),
     ] {
         assert!(
@@ -446,6 +459,22 @@ negative_control!(
     check_the_reader_agrees_with_nextest(&the_config().replacen(
         "test(/^qa_m022_ci_(passes_when_every_control_trips|fails_on_)/)",
         "test(/^qa_m022_/)",
+        1
+    ))
+);
+
+#[test]
+fn qa_ops_ncg_screenshot_all_is_grouped() {
+    check_every_workspace_cargo_test_is_grouped(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_screenshot_all_is_grouped,
+    "the config with `xtask screenshot --all`'s test taken out of the group's filter",
+    expected = "in no test group, so run beside the others: [\"xtask::qa_TASK-M0-20 qa_cli_screenshot_all_runs_selftest\"]",
+    check_every_workspace_cargo_test_is_grouped(&the_config().replacen(
+        "binary_id(=xtask::qa_TASK-M0-20)",
+        "binary_id(=xtask::qa_TASK-M0-20_nothing)",
         1
     ))
 );
