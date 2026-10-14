@@ -195,6 +195,32 @@ negative_control!(
     check_run("gate_provisional_m0_control", "M0", true)
 );
 
+/// Checks that the run at `milestone`, under a fresh root `case`, is refused as no milestone and writes nothing.
+fn check_run_refused(case: &str, milestone: &str) {
+    let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(case);
+    let _ = std::fs::remove_dir_all(&root);
+    match run_provisional(&root, milestone) {
+        Err(e) if e.contains(&format!("`{milestone}` is not a milestone, M0 … M8")) => {}
+        other => panic!("the {milestone} run is not refused: {other:?}"),
+    }
+    assert!(
+        !root.join("target/gate-report").exists(),
+        "the {milestone} run wrote a list"
+    );
+}
+
+#[test]
+fn gate_provisional_run_refuses_a_gate_that_does_not_exist_writing_nothing() {
+    check_run_refused("gate_provisional_m9", "M9");
+}
+
+negative_control!(
+    gate_provisional_run_refuses_a_gate_that_does_not_exist_writing_nothing,
+    "M8 is the last milestone's gate, so its run is not refused",
+    expected = "the M8 run is not refused",
+    check_run_refused("gate_provisional_m8_control", "M8")
+);
+
 /// The milestones whose gate blocks `milestones` (a `plan/MILESTONES.md` text) opens, `<!-- gate:Mn -->`, in order.
 fn gate_blocks(milestones: &str) -> Vec<String> {
     milestones

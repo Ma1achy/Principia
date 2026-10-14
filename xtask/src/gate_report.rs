@@ -1084,8 +1084,7 @@ pub fn provisional(
     register: &[ledger::constants::ConstantBuilder],
 ) -> Result<String, String> {
     use ledger::constants::Citation;
-    let n = milestone_number(milestone)
-        .ok_or_else(|| format!("gate-provisional: `{milestone}` is not a milestone, M0 …"))?;
+    let n = milestone_number(milestone).ok_or_else(|| not_a_milestone(milestone))?;
     let mut text = format!(
         "Provisional register entries: {milestone} and every earlier gate (R-427; dd_generation_root §3.8)\n\n"
     );
@@ -1111,9 +1110,23 @@ pub fn provisional(
     }
 }
 
+/// The refusal of `milestone`, which names no milestone of the plan.
+fn not_a_milestone(milestone: &str) -> String {
+    let m = ledger::constants::MILESTONES;
+    format!(
+        "gate-provisional: `{milestone}` is not a milestone, {} … {}",
+        m[0],
+        m[m.len() - 1]
+    )
+}
+
 /// `cargo xtask gate-provisional --milestone <Mn>`: [`provisional`] over the constants register, written to
-/// `target/gate-report/<Mn>-provisional.txt` under `root` and printed; fails while an entry is listed.
+/// `target/gate-report/<Mn>-provisional.txt` under `root` and printed; fails while an entry is listed. A name that is
+/// no milestone is refused before anything is written.
 pub fn run_provisional(root: &Path, milestone: &str) -> Result<(), String> {
+    if milestone_number(milestone).is_none() {
+        return Err(not_a_milestone(milestone));
+    }
     let report = provisional(milestone, ledger::constants::REGISTER);
     let text = report.as_ref().unwrap_or_else(|text| text);
     let out = root
