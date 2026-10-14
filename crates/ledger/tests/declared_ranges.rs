@@ -11,7 +11,8 @@
 //! (`declared_ranges_signed_fields_cite_their_sources`); `q_mass` and `mean_y` are provisional, naming REQ-PAY-097 and
 //! REQ-PAY-098, and on `ramp_coolwarm` (`declared_ranges_provisional_*`); a `lin` or `diverging` scalar whose range is
 //! a gap fails generation naming it and R-426, and is not placed on `ramp_coolwarm`, while a gap on a cyclic field or
-//! a vector generates (`declared_ranges_gap_*`); and the gap list names each remaining gap with the requirement that
+//! a vector not tagged `diverging` generates, and a `diverging` vector over a gap fails naming it, R-426 and R-403
+//! (`declared_ranges_gap_*`); and the gap list names each remaining gap with the requirement that
 //! fills it, for the M1 gate report (`declared_ranges_gap_list`, printed with `--nocapture`).
 //!
 //! Each test registers its negative control (R-176).
@@ -19,8 +20,8 @@
 use ledger::gen::numeric::{self, NumericView, Ramp};
 use ledger::payload::{self, GAPS, NON_NEGATIVE, PROVISIONAL, SIGNED};
 use ledger::schema::{
-    Bound, Consumer, Entry, EntryBuilder, FieldType, Ledger, Location, Provenance, Range,
-    RangeState, Scale,
+    Bound, Consumer, Declaration, Entry, EntryBuilder, FieldType, Ledger, Location, Provenance,
+    Range, RangeState, Scale,
 };
 use validation::negative_control;
 
@@ -453,15 +454,17 @@ negative_control!(
     check_gap_refused(&ledger::layout(), "theta", "cyclic")
 );
 
-/// A gap on an entry no ramp reads the range of generates (§3.8): a cyclic field, a vector (even `lin`), and a gap
-/// retagged `log`, whose view is on the fixed `[0, 1]`; so does a provisional range and a declared one.
+/// A gap on an entry no ramp reads the range of generates (§3.8): a cyclic field, a vector (`lin` or `cyclic`), and
+/// a gap retagged `log`, whose view is on the fixed `[0, 1]`; so does a provisional range and a declared one. A vector
+/// tagged `diverging` over a gap does not (`declared_ranges_gap_diverging_vector_is_refused`).
 #[test]
 fn declared_ranges_gap_elsewhere_generates() {
     let fine = [
         ("theta", Scale::Cyclic),
         ("theta", Scale::Log),
         ("r", Scale::Lin),
-        ("p_sh", Scale::Diverging),
+        ("p_sh", Scale::Lin),
+        ("p_sh", Scale::Cyclic),
         ("q_mass", Scale::Lin),
         ("S", Scale::Lin),
     ];
@@ -481,6 +484,88 @@ negative_control!(
     "`rho_angle` retagged lin is a gap the gate refuses",
     expected = "`rho_angle` as Lin was refused",
     check_generates(&[("rho_angle", Scale::Lin)])
+);
+
+/// Checks that generation of `l` is refused in exactly one line naming `field`, the vector's `diverging` scale over a
+/// gap, R-426 and R-403.
+fn check_vector_gap_refused(l: &Ledger, field: &str) {
+    let err = match ledger::gen::validate(l) {
+        Ok(_) => panic!("generation was not refused for the diverging vector gap `{field}`"),
+        Err(e) => e.to_string(),
+    };
+    let lines: Vec<&str> = err
+        .lines()
+        .filter(|l| l.contains(&format!("`{field}`")))
+        .collect();
+    assert!(
+        lines.len() == 1
+            && lines[0].contains("scale `diverging`")
+            && lines[0].contains("gap")
+            && lines[0].contains("R-426")
+            && lines[0].contains("R-403"),
+        "the refusal of `{field}` is not one line naming its gap, R-426 and R-403: {err}"
+    );
+}
+
+/// The payload ledger plus a fixture vector `fx_vec` (3 × f32, derived from `S`) with `scale` over (−∞, ∞) and the
+/// declaration `mark`.
+fn with_vector_fixture(scale: Scale, mark: Option<Declaration>) -> Ledger {
+    let mut l = ledger::layout();
+    let mut b = EntryBuilder::new("fx_vec")
+        .location(Location::Derived { from: vec!["S"] })
+        .ty(FieldType::Vector {
+            component: Box::new(FieldType::F32),
+            k: 3,
+        })
+        .scale(scale)
+        .range(Range::UNBOUNDED)
+        .provenance(Provenance::Kernel)
+        .consumers(&[Consumer::Debug]);
+    b.declaration = mark;
+    l.entries.push(b);
+    l
+}
+
+/// A vector carries `diverging` only over a declared range that spans zero (R-403, §3.8), and a gap declares nothing
+/// (R-426): `p_sh`, a gap, retagged `diverging`, and a fresh vector with no mark each fail generation in one line.
+#[test]
+fn declared_ranges_gap_diverging_vector_is_refused() {
+    check_vector_gap_refused(&rescaled("p_sh", Scale::Diverging), "p_sh");
+    check_vector_gap_refused(&with_vector_fixture(Scale::Diverging, None), "fx_vec");
+}
+
+negative_control!(
+    declared_ranges_gap_diverging_vector_is_refused,
+    "the fresh vector with its (−∞, ∞) cited declares a range that spans zero, and generates",
+    expected = "generation was not refused for the diverging vector gap `fx_vec`",
+    check_vector_gap_refused(
+        &with_vector_fixture(
+            Scale::Diverging,
+            Some(Declaration::Cited("dd_generation_root §3.8"))
+        ),
+        "fx_vec"
+    )
+);
+
+/// A fresh vector over a gap with no `diverging` tag generates: §3.8's undeclared-range check exempts a vector.
+#[test]
+fn declared_ranges_gap_vector_not_diverging_generates() {
+    check_vector_generates(&[Scale::Lin, Scale::Cyclic, Scale::Log]);
+}
+
+fn check_vector_generates(scales: &[Scale]) {
+    for scale in scales {
+        if let Err(e) = ledger::gen::validate(&with_vector_fixture(*scale, None)) {
+            panic!("`fx_vec` as {scale:?} was refused: {e}");
+        }
+    }
+}
+
+negative_control!(
+    declared_ranges_gap_vector_not_diverging_generates,
+    "the same vector tagged `diverging` over its gap is refused",
+    expected = "`fx_vec` as Diverging was refused",
+    check_vector_generates(&[Scale::Diverging])
 );
 
 /// Checks that a `lin` view of each field of `fields`, gaps, is not on `ramp_coolwarm`: a gap never spans zero.

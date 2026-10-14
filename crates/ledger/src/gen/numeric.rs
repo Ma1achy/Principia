@@ -127,7 +127,8 @@ pub fn cyclic_period() -> f64 {
 /// The generation gate on undeclared ranges (R-426; REQ-GEN-035; dd_generation_root §3.8: "A `lin` or `diverging`
 /// scalar field whose range is a gap fails generation, naming the field"): a line naming `e` if it is a `lin` or
 /// `diverging` scalar whose range is a gap ([`Entry::range_state`]), whose ramp the template would choose
-/// from a range never declared. A provisional range, and a gap on any other entry (a cyclic field, a vector), pass.
+/// from a range never declared. A provisional range, and a gap on any other entry (a cyclic field, a vector), pass
+/// here; a `diverging` vector's gap is refused by R-403's check instead (`bad_diverging`, qa F1 on PR #208).
 pub fn undeclared(e: &Entry) -> Option<String> {
     let scale = match e.scale {
         Scale::Lin => "lin",

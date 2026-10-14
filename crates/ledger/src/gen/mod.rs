@@ -188,17 +188,30 @@ fn bad_vector(e: &Entry) -> Option<String> {
 /// (R-403; REQ-GEN-033; dd_generation_root §3.8: "A `diverging` entry whose declared range does not span zero fails
 /// generation, naming the field and its range"), the tag agreeing with the range R-400 derives the diverging ramp from.
 ///
-/// A gap is [`numeric::undeclared`]'s to refuse: its (−∞, ∞) declares nothing, so it is not named as a range here
-/// (R-426).
+/// A gap declares nothing, so it never spans zero (R-426), and no entry carries `diverging` over one (§3.8: an entry
+/// carries `diverging` "only when its declared range spans zero"). A scalar's gap is [`numeric::undeclared`]'s to
+/// refuse, so it is not named twice; a vector's is refused here, since §3.8's carve-out for a vector, whose views
+/// read no range, exempts it from the undeclared-range check but not from the `diverging` rule (applied per R-369,
+/// qa F1 on PR #208).
 fn bad_diverging(e: &Entry) -> Option<String> {
-    let state = e.range_state();
-    (e.scale == Scale::Diverging && state != RangeState::Gap && !state.spans_zero()).then(|| {
-        format!(
+    if e.scale != Scale::Diverging {
+        return None;
+    }
+    match e.range_state() {
+        RangeState::Gap if matches!(e.ty, FieldType::Vector { .. }) => Some(format!(
+            "vector field `{}` has scale `diverging` and no declared range: the (−∞, ∞) it writes is a ledger gap, \
+             not a range that spans zero, and a field is `diverging` only when its declared range spans zero; declare \
+             its range with its citation (dd_generation_root §3.8, R-426, R-403)",
+            e.name
+        )),
+        RangeState::Gap => None,
+        state if !state.spans_zero() => Some(format!(
             "field `{}` has scale `diverging` over {}, a range that does not span zero: a field is `diverging` only \
              when its declared range spans zero (dd_generation_root §3.8, R-403)",
             e.name, e.range
-        )
-    })
+        )),
+        _ => None,
+    }
 }
 
 /// Each entry whose `floor` is not a sim-key parameter name, as a line naming it: §3.8's `floor` names a sim-key
