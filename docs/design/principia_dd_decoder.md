@@ -178,9 +178,9 @@ M₀₁ = m₀ + m₁        μ_ρ = m₀m₁ / M₀₁        μ_λ = m₂ · M
 q_mass       = min(m₀, m₁) / max(m₀, m₁)                      ∈ (0, 1]
 rho_mag      = ‖ρ̃‖ = √μ_ρ · ‖ρ‖                               ∈ [0, 1]
 lambda_mag   = ‖λ̃‖ = √μ_λ · ‖λ‖                               ∈ [0, 1]
-rho_ratio    = ‖ρ̃‖ / ‖λ̃‖                                      ∈ (0, ∞]
+rho_ratio    = ‖ρ̃‖ / ‖λ̃‖                                      ∈ [0, ∞]
 rho_angle    = atan2(ρ × λ, ρ · λ)                             ∈ (−π, π]
-r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖)             ∈ (0, ∞)
+r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖)             ∈ [0, ∞)
 ```
 
 - **`rho_mag` and `lambda_mag` are the mass-weighted magnitudes** `‖ρ̃‖` and `‖λ̃‖`, not the unweighted `‖ρ‖` and `‖λ‖`
@@ -200,6 +200,12 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
 - **`r_min_pair_0` is the closest pair's separation at `t = 0`**, a distance in `G = M = I = 1`. The `_0` is the
   initial-time subscript of `K_0`, `V_0` and `E_0`, not a pair id (R-22's pair ids name a side; this field names
   none).
+- **The collision pole reaches 0** (measured by TASK-M2-03). In exact arithmetic `α < π/2` keeps `‖ρ̃‖ > 0`, so
+  `rho_ratio` and `r_min_pair_0` stay above 0. In floating point, where `α` saturates at the image of π/2 (§3.2),
+  `‖ρ‖ = cos α/√μ_ρ` can fall under the rounding of `r₀₁` in the reconstruction. At f64, `cos α ≈ 6×10⁻¹⁷` there, so
+  the emitted `r₀` and `r₁` can be equal: then `rho_mag`, `rho_ratio` and `r_min_pair_0` read 0, `V_0` reads `−∞`
+  and `virial_ratio` 0. This is §3.2's binary collision, `U → −∞`, which the pipeline fences; the two log fields'
+  ranges are `[0, ∞]` and `[0, ∞)`, and their views place 0 at the bottom of the ramp.
 - **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
   `1/√2`, 1, `π/2` and `√3`.
 
