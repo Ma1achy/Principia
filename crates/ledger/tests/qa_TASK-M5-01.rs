@@ -859,7 +859,10 @@ fn half_ledger(
     rest: Vec<EntryBuilder>,
     reserved: Vec<Span>,
 ) -> Ledger {
-    let mut half = ent("qa_half", half_at, half_ty, range);
+    // The range under test is declared, so (−∞, ∞) is not a gap (dd_generation_root §3.8; R-426).
+    let mut half = ent("qa_half", half_at, half_ty, range).cited(
+        "qa fixture: the range under test (dd_generation_root §3.8 `declared(lo, hi, citation)`)",
+    );
     if let Some(o) = overflow {
         half = half.overflow(o);
     }

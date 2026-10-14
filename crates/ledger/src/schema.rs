@@ -97,6 +97,13 @@ pub struct Range {
 }
 
 impl Range {
+    /// (−∞, ∞): the bounds an entry writes where its range is a gap or provisional (dd_generation_root §3.8; R-426),
+    /// and a declared (−∞, ∞)'s, with its citation.
+    pub const UNBOUNDED: Range = Range {
+        lo: Bound::Unbounded,
+        hi: Bound::Unbounded,
+    };
+
     /// The closed integer range `[lo, hi]`.
     pub fn int(lo: i64, hi: i64) -> Self {
         Range {
@@ -107,7 +114,8 @@ impl Range {
 
     /// Whether the range spans zero, `lo < 0 < hi`, either end possibly unbounded (R-400, R-403): a field whose
     /// declared range does is drawn on the diverging ramp centred at zero, and only such a field carries the
-    /// `diverging` scale (dd_generation_root §3.8). An end at 0, open or closed, does not span it.
+    /// `diverging` scale (dd_generation_root §3.8). An end at 0, open or closed, does not span it. These are the
+    /// bounds alone: a field whose range is a gap writes (−∞, ∞) and yet does not span zero ([`RangeState`], R-426).
     pub fn spans_zero(&self) -> bool {
         let below = match self.lo {
             Bound::Closed(v) | Bound::Open(v) => v < 0.0,
@@ -137,6 +145,51 @@ impl fmt::Display for Range {
     }
 }
 
+/// The state of a field's range, one of §3.8's three: `declared(lo, hi, citation) | gap | provisional(requirement)`
+/// (dd_generation_root §3.8; R-426). An entry's `range` holds the bounds it writes and its `declaration` the mark that
+/// gives them their state ([`Entry::range_state`]).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum RangeState {
+    /// The range §3, a ruling or a definition gives, with where it is given.
+    Declared {
+        range: Range,
+        citation: &'static str,
+    },
+    /// No range is declared: the (−∞, ∞) the ledger once wrote by default declares nothing, and never spans zero
+    /// (R-426, amending R-400's reading).
+    Gap,
+    /// A range the human has kept provisional until `requirement` declares it, drawn meanwhile as (−∞, ∞), so
+    /// spanning zero (R-426: `q_mass` and `mean_y`).
+    Provisional { requirement: &'static str },
+}
+
+impl RangeState {
+    /// Whether the range spans zero, `lo < 0 < hi`: a declared range by its bounds ([`Range::spans_zero`]); a
+    /// provisional one, drawn as (−∞, ∞), always; a gap never (R-400, R-426).
+    pub fn spans_zero(&self) -> bool {
+        match self {
+            RangeState::Declared { range, .. } => range.spans_zero(),
+            RangeState::Gap => false,
+            RangeState::Provisional { .. } => true,
+        }
+    }
+}
+
+/// How an entry's written bounds are declared, the state half of §3.8's `range` key (dd_generation_root §3.8; R-426):
+/// with no mark, an entry's (−∞, ∞) is a gap ([`Entry::range_state`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Declaration {
+    /// The bounds the entry writes are declared, with where they are given: a §3 line, a ruling or a definition.
+    Cited(&'static str),
+    /// The range is provisional until the named requirement declares it (R-426: `q_mass` and `mean_y`).
+    Provisional(&'static str),
+}
+
+/// The citation of bounds an entry writes with no [`Declaration`]: a range other than (−∞, ∞) is written on purpose,
+/// so it declares itself; only the (−∞, ∞) once written by default declares nothing (dd_generation_root §3.8: "`gap`:
+/// … the (−∞, ∞) the ledger once wrote by default"; R-426; applied per R-369).
+pub const WRITTEN_BOUNDS: &str = "the bounds the entry writes, uncited (dd_generation_root §3.8)";
+
 /// A complete ledger entry: the §3.8 metadata of one field.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Entry {
@@ -153,6 +206,33 @@ pub struct Entry {
     pub floor: Option<&'static str>,
     pub provenance: Provenance,
     pub consumers: Vec<Consumer>,
+    /// The state half of the `range` key (§3.8, R-426): `None` leaves (−∞, ∞) a gap ([`Entry::range_state`]). It
+    /// changes no stored bit, so the schema version does not hash it (applied per R-369).
+    pub declaration: Option<Declaration>,
+}
+
+impl Entry {
+    /// The state of the entry's range (dd_generation_root §3.8; R-426):
+    /// - provisional while it writes (−∞, ∞), and declared by its requirement once it writes a range;
+    /// - declared with its citation where it is cited;
+    /// - with no mark, a gap where it writes (−∞, ∞), and otherwise declared by the bounds it writes
+    ///   ([`WRITTEN_BOUNDS`]).
+    pub fn range_state(&self) -> RangeState {
+        let range = self.range;
+        match self.declaration {
+            Some(Declaration::Provisional(requirement)) if range == Range::UNBOUNDED => {
+                RangeState::Provisional { requirement }
+            }
+            Some(Declaration::Provisional(citation)) | Some(Declaration::Cited(citation)) => {
+                RangeState::Declared { range, citation }
+            }
+            None if range == Range::UNBOUNDED => RangeState::Gap,
+            None => RangeState::Declared {
+                range,
+                citation: WRITTEN_BOUNDS,
+            },
+        }
+    }
 }
 
 /// The required §3.8 keys, in the order [`EntryBuilder::build`] checks them; `sentinel`, `tier_gate`, `overflow` and
@@ -181,6 +261,7 @@ pub struct EntryBuilder {
     pub floor: Option<&'static str>,
     pub provenance: Option<Provenance>,
     pub consumers: Option<Vec<Consumer>>,
+    pub declaration: Option<Declaration>,
 }
 
 /// An entry missing a required §3.8 key: `field` is the entry's name, `missing` the key.
@@ -259,6 +340,18 @@ impl EntryBuilder {
         self
     }
 
+    /// Declares the bounds the entry writes, citing where they are given (§3.8 `declared(lo, hi, citation)`, R-426).
+    pub fn cited(mut self, citation: &'static str) -> Self {
+        self.declaration = Some(Declaration::Cited(citation));
+        self
+    }
+
+    /// Marks the range provisional until `requirement` declares it (§3.8 `provisional(requirement)`, R-426).
+    pub fn provisional(mut self, requirement: &'static str) -> Self {
+        self.declaration = Some(Declaration::Provisional(requirement));
+        self
+    }
+
     /// Removes the required key `key` (one of [`REQUIRED_KEYS`]); an unknown key changes nothing.
     pub fn without(mut self, key: &str) -> Self {
         match key {
@@ -293,6 +386,7 @@ impl EntryBuilder {
             floor: self.floor,
             provenance: self.provenance.ok_or_else(|| missing("provenance"))?,
             consumers: self.consumers.clone().ok_or_else(|| missing("consumers"))?,
+            declaration: self.declaration,
         })
     }
 }

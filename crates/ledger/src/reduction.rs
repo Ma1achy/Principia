@@ -159,6 +159,17 @@ fn unbounded(
     member(name, packed(word, offset, 16), FieldType::F16, scale, range).overflow(overflow)
 }
 
+/// §3.7's declaration of the (−∞, ∞) members' ranges (R-426, applied per R-369): its "§3.8 entries" table gives each
+/// `(−∞, ∞)`.
+const SECTION_3_7: &str =
+    "dd_generation_root §3.7 \"The §3.8 entries\": the member's row gives it (−∞, ∞)";
+
+/// [`SECTION_3_7`] for `alpha_area` and `alpha_energy`, whose range is REQ-PAY-093's proposal (R-71, R-418) until the
+/// human confirms it at the M5 gate.
+const PROPOSED_3_7: &str =
+    "dd_generation_root §3.7 \"The §3.8 entries\": the member's row gives it (−∞, ∞), \
+                            proposed by REQ-PAY-093 (R-71, R-418) until the M5 gate";
+
 /// An f32 at scalar slot `slot`, from `lo`, unbounded above.
 fn f32_at(name: &'static str, slot: u32, lo: Bound) -> EntryBuilder {
     let range = Range {
@@ -226,7 +237,8 @@ fn entries() -> Vec<EntryBuilder> {
             Scale::Diverging,
             Bound::Unbounded,
             Overflow::Inf,
-        ),
+        )
+        .cited(PROPOSED_3_7),
         unbounded(
             "alpha_energy",
             "qr_w4",
@@ -234,7 +246,8 @@ fn entries() -> Vec<EntryBuilder> {
             Scale::Lin,
             Bound::Unbounded,
             Overflow::Inf,
-        ),
+        )
+        .cited(PROPOSED_3_7),
         unbounded(
             "worst_energy_drift",
             "qr_w4",
@@ -283,10 +296,10 @@ fn entries() -> Vec<EntryBuilder> {
             zero,
             Overflow::Saturate,
         ),
-        f32_at("running_mean_divergence", 41, Bound::Unbounded),
+        f32_at("running_mean_divergence", 41, Bound::Unbounded).cited(SECTION_3_7),
         // Held until the first crossing: +∞, the minimum of the empty set of crossing times (§3.7, REQ-PAY-094).
         f32_at("first_divergence_t", 42, zero).sentinel(f64::INFINITY),
-        f32_at("coherence", 43, Bound::Unbounded),
+        f32_at("coherence", 43, Bound::Unbounded).cited(SECTION_3_7),
     ]
 }
 

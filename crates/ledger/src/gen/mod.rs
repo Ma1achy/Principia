@@ -23,7 +23,7 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 
 use crate::check::{self, LayoutError};
-use crate::schema::{Entry, FieldType, IncompleteEntry, Ledger, Location, Scale, Word};
+use crate::schema::{Entry, FieldType, IncompleteEntry, Ledger, Location, RangeState, Scale, Word};
 
 /// One generated file: its path, relative to the workspace root, and its contents.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -53,7 +53,8 @@ pub enum GenError {
     /// Names given to more than one entry, derived fields whose `from` is empty or names something other than exactly
     /// one stored entry, vectors whose component is not a scalar type or whose `k` is below 2, and a `floor` that is
     /// empty or names a ledger entry or a register constant (§3.8 `location`, `type`, `floor`), a `diverging` scale
-    /// over a range that does not span zero (§3.8, R-403), and a word buffer `.w`
+    /// over a range that does not span zero (§3.8, R-403), a `lin` or `diverging` scalar whose range is a gap (§3.8,
+    /// R-426; [`numeric::undeclared`]), and a word buffer `.w`
     /// whose `length` entry is missing or has no closed greatest value or no sentinel, or whose `payload` entry is
     /// missing ([`rust::fgw_problem`]).
     Malformed(Vec<String>),
@@ -128,6 +129,7 @@ pub fn validate(ledger: &Ledger) -> Result<Vec<Entry>, GenError> {
     bad.extend(bad_derived(&entries));
     bad.extend(entries.iter().filter_map(bad_vector));
     bad.extend(entries.iter().filter_map(bad_diverging));
+    bad.extend(entries.iter().filter_map(numeric::undeclared));
     bad.extend(bad_floor(&ledger.words, &entries));
     bad.extend(rust::fgw_problem(&ledger.words, &entries));
     if bad.is_empty() {
@@ -185,14 +187,31 @@ fn bad_vector(e: &Entry) -> Option<String> {
 /// A line naming `e` and its range if it carries the `diverging` scale over a declared range that does not span zero
 /// (R-403; REQ-GEN-033; dd_generation_root §3.8: "A `diverging` entry whose declared range does not span zero fails
 /// generation, naming the field and its range"), the tag agreeing with the range R-400 derives the diverging ramp from.
+///
+/// A gap declares nothing, so it never spans zero (R-426), and no entry carries `diverging` over one (§3.8: an entry
+/// carries `diverging` "only when its declared range spans zero"). A scalar's gap is [`numeric::undeclared`]'s to
+/// refuse, so it is not named twice; a vector's is refused here, since §3.8's carve-out for a vector, whose views
+/// read no range, exempts it from the undeclared-range check but not from the `diverging` rule (applied per R-369,
+/// qa F1 on PR #208).
 fn bad_diverging(e: &Entry) -> Option<String> {
-    (e.scale == Scale::Diverging && !e.range.spans_zero()).then(|| {
-        format!(
+    if e.scale != Scale::Diverging {
+        return None;
+    }
+    match e.range_state() {
+        RangeState::Gap if matches!(e.ty, FieldType::Vector { .. }) => Some(format!(
+            "vector field `{}` has scale `diverging` and no declared range: the (−∞, ∞) it writes is a ledger gap, \
+             not a range that spans zero, and a field is `diverging` only when its declared range spans zero; declare \
+             its range with its citation (dd_generation_root §3.8, R-426, R-403)",
+            e.name
+        )),
+        RangeState::Gap => None,
+        state if !state.spans_zero() => Some(format!(
             "field `{}` has scale `diverging` over {}, a range that does not span zero: a field is `diverging` only \
              when its declared range spans zero (dd_generation_root §3.8, R-403)",
             e.name, e.range
-        )
-    })
+        )),
+        _ => None,
+    }
 }
 
 /// Each entry whose `floor` is not a sim-key parameter name, as a line naming it: §3.8's `floor` names a sim-key
