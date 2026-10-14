@@ -6,8 +6,8 @@
 //! - `ic_descriptor_names`: the generated struct's fields are dd_generation_root §3.6's twelve, in order, with no `E₀`;
 //!   the derived `E₀` is `K_0 + V_0` (REQ-PAY-034, R-86).
 //! - `ic_descriptor_definitions`: on fuzzed `z`, every field is dd_decoder §3.6's formula of the decoded `(m, r, p)`,
-//!   evaluated again here in f64, and in the canonical frame `rho_mag = cos α`, `lambda_mag = sin α` and
-//!   `rho_angle = β` (REQ-PAY-088).
+//!   evaluated again here in f64, in the canonical frame and rotated out of it; and in the canonical frame
+//!   `rho_mag = cos α`, `lambda_mag = sin α` and `rho_angle = β` (REQ-PAY-088).
 //! - `ic_descriptor_floors`: REQ-TOOL-163's evidence on decoded values, `rho_ratio` and `r_min_pair_0` against their
 //!   log floors (R-419).
 //!
@@ -37,6 +37,7 @@ use kernel::decode::descriptor;
 use kernel::decode::{self, Decoded};
 use kernel::generated::links::*;
 use kernel::payload::{ICDescriptor, ICDescriptorOf};
+use std::f64::consts::{PI, TAU};
 use validation::negative_control;
 
 /// A decode entry at `R`, behind a function pointer, so a control runs the same check on a broken one.
@@ -217,7 +218,8 @@ negative_control!(
 
 /// The definitions' tolerance, in `eps` of each field's scale (below): REQ-DEC-044's neighbour, the formula's few
 /// roundings at `R` against the same formula in f64 on the same `(m, r, p)`. Over 200 runs at the seeds 1 … 200 the
-/// worst was 2.0 `eps` for a field and 5.2 for the canonical frame's `rho_mag² + lambda_mag² = 1`, at f32.
+/// worst was 2.3 `eps` for a field, the rotated IC included, and 5.2 for the canonical frame's
+/// `rho_mag² + lambda_mag² = 1`, at f32.
 const DEFINITION_EPS: f64 = 16.0;
 
 /// A descriptor computed at `R`, behind a function pointer, so a control runs the same check on a broken one.
@@ -228,16 +230,34 @@ fn norm(a: [f64; 2]) -> f64 {
     a[0].hypot(a[1])
 }
 
-/// Checks `describe` at `z` (the defaults' decode) against dd_decoder §3.6's formulas, evaluated here in f64 on the
-/// decoded `(m, r, p)`: each field within [`DEFINITION_EPS`] of its scale, the derived fields `rho_ratio` and
-/// `virial_ratio` exactly the stored fields' quotients; and, where `z` is in the interior (`|zₖ| ≤ 2`), the canonical
-/// frame's `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`.
-fn check_definitions<R: P>(describe: Describe<R>, z: [f64; 8], worst: &Worst) {
-    let dec = decode::decode::<Defaults, R>(&latent::<R>(z));
-    let d = describe(&dec.ic);
-    let m = dec.ic.m.map(|x| x.f());
-    let r = dec.ic.r.map(|v| v.map(|x| x.f()));
-    let p = dec.ic.p.map(|v| v.map(|x| x.f()));
+/// The angle, in radians, [`turned`] rotates an IC by: off every axis, so `ρ` has both components.
+const TURN: f64 = 2.0;
+
+/// `ic` rotated by [`TURN`] about the origin, at `R`: out of the canonical frame (`ρ̃` on `+x`), where every term of
+/// `ρ × λ` and `ρ · λ` is non-zero. §3.6's fields are rotation invariants, and §3.6's formulas hold in any frame.
+fn turned<R: P>(ic: &kernel::decode::Ic<R>) -> kernel::decode::Ic<R> {
+    let (c, s) = (R::of(TURN.cos()), R::of(TURN.sin()));
+    let turn = |v: [R; 2]| [c * v[0] - s * v[1], s * v[0] + c * v[1]];
+    kernel::decode::Ic {
+        m: ic.m,
+        r: ic.r.map(turn),
+        p: ic.p.map(turn),
+    }
+}
+
+/// Checks `describe` on `ic` against dd_decoder §3.6's formulas, evaluated here in f64 on the same `(m, r, p)`: each
+/// field within [`DEFINITION_EPS`] of its scale, the derived fields `rho_ratio` and `virial_ratio` exactly the stored
+/// fields' quotients, `q_mass` in `[0, 1]` and `rho_angle` in `[−π, π]`.
+fn check_formulas<R: P>(
+    describe: Describe<R>,
+    ic: &kernel::decode::Ic<R>,
+    at: &str,
+    worst: &Worst,
+) {
+    let d = describe(ic);
+    let m = ic.m.map(|x| x.f());
+    let r = ic.r.map(|v| v.map(|x| x.f()));
+    let p = ic.p.map(|v| v.map(|x| x.f()));
     let sub = |a: [f64; 2], b: [f64; 2]| [a[0] - b[0], a[1] - b[1]];
     let m01 = m[0] + m[1];
     let rho = sub(r[1], r[0]);
@@ -281,13 +301,17 @@ fn check_definitions<R: P>(describe: Describe<R>, z: [f64; 8], worst: &Worst) {
         ("m1", m[1], m[1]),
         ("m2", m[2], m[2]),
     ];
-    let at = format!("z = {z:?}, {}", R::NAME);
     for (f, w, scale) in want {
         let got = field(&d, f).f();
+        let mut diff = got - w;
+        if f == "rho_angle" {
+            // A cyclic field: −π and π are one angle, and a rounding of `ρ × λ` near 0 can pick either.
+            diff = (diff + PI).rem_euclid(TAU) - PI;
+        }
         let err = if scale == 0.0 {
-            (got - w).abs()
+            diff.abs()
         } else {
-            (got - w).abs() / scale / R::eps()
+            diff.abs() / scale / R::eps()
         };
         worst.see(&format!("{f} at {}", R::NAME), err);
         assert!(
@@ -311,12 +335,29 @@ fn check_definitions<R: P>(describe: Describe<R>, z: [f64; 8], worst: &Worst) {
         "q_mass = {q} is outside [0, 1] at {at}"
     );
     let angle = d.rho_angle.f();
-    let pi = R::of(std::f64::consts::PI).f();
+    let pi = R::of(PI).f();
     assert!(
         angle.abs() <= pi,
         "rho_angle = {angle} is outside [−π, π], π rounded to {}, at {at}",
         R::NAME
     );
+}
+
+/// Checks `describe` at `z` (the defaults' decode) against dd_decoder §3.6's formulas, on the decoded `(m, r, p)` and
+/// on it [`turned`] out of the canonical frame (`check_formulas`); and, where `z` is in the interior (`|zₖ| ≤ 2`), the
+/// canonical frame's `rho_mag = cos α`, `lambda_mag = sin α`, `rho_angle = β`.
+fn check_definitions<R: P>(describe: Describe<R>, z: [f64; 8], worst: &Worst) {
+    let dec = decode::decode::<Defaults, R>(&latent::<R>(z));
+    let at = format!("z = {z:?}, {}", R::NAME);
+    check_formulas(describe, &dec.ic, &at, worst);
+    check_formulas(
+        describe,
+        &turned(&dec.ic),
+        &format!("{at}, turned by {TURN} rad"),
+        worst,
+    );
+    let d = describe(&dec.ic);
+    let angle = d.rho_angle.f();
     if z.iter().all(|x| x.abs() <= 2.0) {
         let (alpha, beta) = (dec.config.alpha.f(), dec.config.beta.f());
         let canon = [
