@@ -116,16 +116,17 @@ negative_control!(
 
 /// A kernel whose `lib.rs` holds an inline module with a nested block, then a test module inline, with a numeric
 /// `const` and an out-of-line module of its own (`src/tests/deep.rs`), and declares another out of line (`src/probe.rs`,
-/// with `src/probe/inner.rs` beneath it), each holding a numeric `const` or `static`, under `attribute`; then a numeric
-/// `const` of its own. Beside them two modules that are not test code: `src/real.rs`, with one numeric `const`, and
-/// `src/nest/mod.rs`, which declares the test module `src/nest/t.rs` under `attribute`, with a numeric `const`.
+/// with `src/probe/inner.rs` beneath it), each holding a numeric `const` or `static`, under `attribute`; between the
+/// two, right after the inline test module's `}`, a numeric `const` of its own. Beside them two modules that are not
+/// test code: `src/real.rs`, with one numeric `const`, and `src/nest/mod.rs`, which declares the test module
+/// `src/nest/t.rs` under `attribute`, with a numeric `const`.
 fn test_tree(name: &str, attribute: &str) -> PathBuf {
     let root = tree(
         name,
         &format!(
             "pub mod real;\npub mod nest;\npub mod outer {{\n    pub fn f() {{}}\n}}\n{attribute}\nmod tests {{\n    \
-             const N: usize = 3;\n    mod deep;\n}}\n{attribute}\n#[allow(dead_code)]\nmod probe;\n\
-             pub const AFTER: u32 = 6;\n"
+             const N: usize = 3;\n    mod deep;\n}}\npub const AFTER: u32 = 6;\n{attribute}\n\
+             #[allow(dead_code)]\nmod probe;\n"
         ),
     );
     let src = root.join("crates/kernel/src");
@@ -157,7 +158,7 @@ fn check_finds(root: &Path, want: &[&str]) {
 
 /// The findings of [`test_tree`]: the two numeric constants outside test code.
 const NOT_TEST_CODE: [&str; 2] = [
-    "crates/kernel/src/lib.rs:14: AFTER",
+    "crates/kernel/src/lib.rs:11: AFTER",
     "crates/kernel/src/real.rs:1: REAL",
 ];
 
