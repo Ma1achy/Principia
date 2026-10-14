@@ -442,6 +442,9 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, trace: Option<&
             })
             .response;
         keys.place_rect(TABS, tabs.rect);
+    });
+    // The transport on its own row: beside the tabs it would be squeezed into what the row has left.
+    ui.horizontal_wrapped(|ui| {
         let transport = ui
             .scope(|ui| {
                 for (id, label, on) in [

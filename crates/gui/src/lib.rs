@@ -31,6 +31,7 @@ mod tests {
     mod mock_hover;
     mod mock_keyboard;
     mod mock_keyboard_modes;
+    mod mock_keyboard_windows;
     mod mock_legend_keys;
     mod mock_lock_badge;
     mod mock_manifold_view;
@@ -38,6 +39,7 @@ mod tests {
     mod mock_tag;
     mod mock_tile_bounds;
     mod mock_time;
+    mod mock_windows_open;
     mod scope_tab_order_mock;
     mod support;
     mod theme;

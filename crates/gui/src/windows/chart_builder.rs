@@ -64,6 +64,10 @@ pub const PRESET_IDS: [ScopeId; MAX_PRESETS] = [
     "cb_preset_6",
     "cb_preset_7",
 ];
+/// The presets' labels in the breadcrumb, by slot (the scope tree's labels are static; the names are the draft's).
+pub const PRESET_LABELS: [&str; MAX_PRESETS] = [
+    "preset 1", "preset 2", "preset 3", "preset 4", "preset 5", "preset 6", "preset 7", "preset 8",
+];
 
 /// Each axis's scopes: its section, its three kinds, its eight components and normalise.
 pub struct AxisIds {
@@ -255,8 +259,12 @@ pub fn forbidden_share() -> f64 {
 /// Joins the window's sections and elements to `tree`, with `n` presets, again each frame (the presets come and go).
 pub fn join_presets(tree: &mut ScopeTree, n: usize) {
     tree.remove_children(PRESETS_SECTION);
-    for id in PRESET_IDS.iter().take(n.min(MAX_PRESETS)) {
-        tree.register(Some(PRESETS_SECTION), Scope::control(id, "preset"));
+    for (id, label) in PRESET_IDS
+        .iter()
+        .zip(PRESET_LABELS)
+        .take(n.min(MAX_PRESETS))
+    {
+        tree.register(Some(PRESETS_SECTION), Scope::control(id, label));
     }
     for (id, label) in [(SAVE, "Save"), (DUPLICATE, "Duplicate"), (DELETE, "Delete")] {
         tree.register(Some(PRESETS_SECTION), Scope::control(id, label));

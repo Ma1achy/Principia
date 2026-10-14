@@ -11,7 +11,7 @@
 //!
 //! (The file is `export.rs`, as TASK-M6-28's deliverables name it; TASK-M8-32 expects `export_share.rs`.)
 
-use eframe::egui::{Button, Checkbox, RichText, Ui};
+use eframe::egui::{self, Button, Checkbox, RichText, Ui};
 use engine::contract::canonical;
 use engine::contract::render_state::RenderState;
 use engine::contract::sim_config::SimConfig;
@@ -212,7 +212,8 @@ pub fn show(
         });
         ui.horizontal(|ui| {
             form_label(ui, "share link");
-            ui.label(RichText::new(share_link(sim)).monospace());
+            // Wrapped: on one line the link is wider than the window.
+            ui.add(egui::Label::new(RichText::new(share_link(sim)).monospace()).wrap());
         });
         let copy = ui.button("Copy");
         if copy.clicked() {

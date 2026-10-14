@@ -1,0 +1,9 @@
+{
+  "cases": [
+    {
+      "name": "mock_chart_builder",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/03_chartbuilder.png"
+    }
+  ]
+}

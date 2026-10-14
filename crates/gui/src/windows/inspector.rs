@@ -387,7 +387,11 @@ pub fn show(
         egui::Grid::new("inspector readouts").show(ui, |ui| {
             let z: Vec<String> = s.ic.iter().map(|v| format!("{v:+.3}")).collect();
             for (name, value) in [
-                ("latent z", z.join(" ")),
+                // Four to a line: the eight in one line are wider than the window.
+                (
+                    "latent z",
+                    format!("{}\n{}", z[..4].join(" "), z[4..].join(" ")),
+                ),
                 (
                     "outcome",
                     s.fate.clone().unwrap_or_else(|| "undecided".into()),
