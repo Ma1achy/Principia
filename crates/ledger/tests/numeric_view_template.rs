@@ -831,13 +831,15 @@ negative_control!(
     )
 );
 
-/// A one-field entry `name`: an f32 at scalar index 0, `scale` over `range`, as the payload ledger writes one.
+/// A one-field entry `name`: an f32 at scalar index 0, `scale` over `range`, declared, as the payload ledger writes
+/// one (R-426: an uncited (−∞, ∞) would be a gap).
 fn probe(name: &'static str, scale: Scale, range: Range) -> Entry {
     EntryBuilder::new(name)
         .location(Location::Scalar(0))
         .ty(FieldType::F32)
         .scale(scale)
         .range(range)
+        .cited("a probe's declared range, R-400's boundary cases (dd_generation_root §3.8, R-426)")
         .provenance(ledger::schema::Provenance::Decode)
         .consumers(&[ledger::schema::Consumer::Debug])
         .build()
