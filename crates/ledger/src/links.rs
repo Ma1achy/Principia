@@ -686,7 +686,8 @@ fn stick_breaking() -> LinkBuilder {
 }
 
 /// The registry's entries as written (§3.9, "The registry's entries"), built once. Ledger data: the links' formulas, whose
-/// numbers are their own (`1`, `2`, `½`) and whose constants are read from the register as parameters (REQ-SYS-082).
+/// numbers are their own exact ones (0, ½, 1, 2, 3, 4) and whose constants are read from the register as parameters
+/// (REQ-SYS-082).
 pub fn builders() -> &'static [LinkBuilder] {
     static BUILDERS: OnceLock<Vec<LinkBuilder>> = OnceLock::new();
     BUILDERS.get_or_init(|| {
