@@ -88,7 +88,7 @@ fn check_lints_clean(slot: &str) {
 
 #[test]
 fn lint_wgsl_context_occupant_lints_after_the_stain_context() {
-    assert_eq!(CONTEXT_SLOTS, ["colour", "brightness", "post"]);
+    assert_eq!(CONTEXT_SLOTS, ["colour", "brightness", "post", "source"]);
     for slot in CONTEXT_SLOTS {
         check_lints_clean(slot);
     }

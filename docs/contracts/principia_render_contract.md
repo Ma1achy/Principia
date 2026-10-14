@@ -87,6 +87,70 @@ The bake is an *implementation strategy* for the f(n̂) subset, not a contract c
 
 **Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default the hatched invalid pattern (R-79, R-132). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
 
+**The occupant rules `cargo xtask lint wgsl` checks (R-72; REQ-RENDER-015, REQ-RENDER-018, REQ-COL-005; TASK-M1-15).**
+Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §3.5 and the colouring's seams 5 and 6
+(`principia_dd_colouring.md` §4) are checked by the WGSL lint (Part 5, "Unpack layer"), in these terms:
+- **A colour occupant** is the occupant of any stain node but `OUT` (Part 2): a source, colour, brightness, combiner or
+  post, built in, generated or written at runtime. That is every file under `crates/render/shaders/wgsl/frag/`, the
+  debug catalogue's views and reductions under `crates/render/frag/debug/`, and the WGSL the render side and the presets
+  write at runtime (a field ramp's, a preset's), whose output is checked in under `crates/render/frag/runtime/` and kept
+  equal to its writers by a test. A **debug view** is a colour occupant under a `debug/` directory (Part 6: every debug
+  view is an ordinary slot occupant). A **source** is a source node's occupant; a built-in one is a file under
+  `crates/render/shaders/wgsl/frag/source/`. The unpack layer, the read side, the stain's context, the shared library
+  and the compositor are not occupants.
+- **The generated accessors** are the read side's `SimState` and `ICDescriptor` members as `ctx.sample` and `ctx.ic` hold
+  them, filled by the generated `sample_read` and `ic_read` (lowering Part 3a: plain member access, no getters), and the
+  functions of the generated unpack layer and read side (`crates/render/frag/generated/`). **A non-accessor payload
+  read** (seam 5) is a colour occupant's use of a payload buffer, any `var<storage>` global (the `SimState`, word,
+  `ICDescriptor` and `RenderQuad` buffers), or a use of the packed word, `ctx.sample.word`, other than whole as an
+  argument of a generated accessor (`fgw_length_raw(ctx.sample.word)`): indexing, masking or shifting it, or handing it
+  to any other function, decodes the payload by hand.
+- **Chart, integrator and scheduler identifiers** (seam 6) are, in the fragment's context: the chart's, the chart lane
+  (`ctx.chart`; colour composition §3: the chart id, `z` and the position in the slice plane) and the quad's frame in
+  the slice plane, `ctx.quad.tl`, `ctx.quad.centre` and `ctx.quad.half_width` (deep zoom §1's per-quad `c` and `h`); the
+  integrator's, the read side's integrator parameters `ctx.params.dt_macro`, `ctx.params.delta_0` and
+  `ctx.params.n_renorm` (the macro-step, and Benettin's δ₀ and renormalisation interval, which the read side derives
+  `ftle` and `diffusion` from); and the scheduler's, `ctx.quad`'s `RenderQuad` members, every one but the frame and the
+  raster's own addressing (depth, state, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor
+  gap and dominant outcome: what the CPU scheduler writes, Part 6's quad fields). They are not the payload's fields and
+  predicates, `ctx.params.horizon_steps` (the step scale the display fractions are derived with, Part 5), the raster's
+  addressing (`ctx.frag_xy`, `ctx.screen.uv`, `ctx.tile.uv`, and `ctx.quad`'s `index`, `uv` and `sample_count`), the
+  prelude's tier constants and `has_ensemble()`, or a node's own uniforms.
+- **Reading `r_sh` or `p_sh` as a sample** (REQ-RENDER-018) is any read of the `r_sh` or `p_sh` member of a stored or
+  read-side `SimState` in fragment-stage WGSL but the generated read side's `sample_read`, which loads the shadow for
+  `ftle`'s `benettin_delta` (the shadow as `ftle`'s ingredient, dd_generation_root §3.5) and fills the read side.
+- **Guarded** (REQ-RENDER-015; Part 2; R-255): in a colour, brightness, combiner, post or source occupant, a debug view
+  among them, every use of a read of `ftle` (returning it, storing it, passing it to a function, branching on it, an
+  aggregate's accumulation among them) sits where `has_ftle && s.ftle_valid` holds for the sample `s` it was read from:
+  in the branch an `if` on that conjunction takes, with any further conjuncts, or after an `if` on its negation whose
+  branch leaves the block (`return`, `discard`, `break` or `continue`). A read of `ensemble_spread` is guarded by the
+  uniform, `has_ensemble()` (R-145). The one use allowed unguarded is the absence test, the value's `bitcast<u32>`
+  compared by `==` or `!=` with the canonical quiet NaN's bits, `0x7FC00000` (`CANONICAL_QNAN_BITS`; lowering Part 3a,
+  "The sentinels' values"). So an aggregate over `ftle` that excludes samples by `ftle_valid` is guarded, and one that
+  relies on NaN propagation, or on `min`, `max` or `clamp` with NaN operands, is not (R-255). A source forwards its own
+  sample's field and is not held to the guard for that value, `ctx.sample`'s, where `ctx` is the context the source is
+  given; every other sample's `ftle` or `ensemble_spread` it reads is held to it, so an aggregate over `ftle` in a
+  source still excludes samples by `ftle_valid` (R-255). A debug view shows its own sample's value literally, NaN to the
+  invalid colour by R-114's bitcast guard (R-79), and is not held to the guard for that value, `ctx.sample`'s, where
+  `ctx` is the context the view is given; every other sample's `ftle` or `ensemble_spread` it reads, a `sample_read`
+  result's among them, is held to it, so an aggregate over `ftle` in a debug view still excludes samples by `ftle_valid`
+  (R-255). The guard is read where `has_ftle` itself is read: an occupant that uses `has_ftle` in a `const` declaration
+  is not seen to be guarded, and the lint reports the first read of `ftle` or `ensemble_spread` in each of its functions
+  as unchecked.
+- **The exceptions**, each to the one rule it names, as Part 5, Part 6 or R-79's debug exception requires them: the
+  field views of `r_sh` and `p_sh` and their direction-cosine reductions read the shadow (Part 6: a view per field,
+  every struct); the structural views `debug/s_*` and the posts `fallback_tint` and `pending_hatch` read the scheduler's
+  quad fields (Part 6: the quad fields and the structural overlays); the FTLE-running and diffusion-slope views read
+  `ctx.params.dt_macro` (Part 5, "Live-state & array inspection": `S/t` and `C_ty/C_tt`); the whole-word hash view hands
+  the word to `dbg_hash_word` (Part 6's word views: `dbg_hash` of the uint4); and the coordinate presets read the quad's
+  frame (Part 6's UV view; debug tooling plan §F's UV passthrough). These are the views built so far. A later view that
+  Part 5, Part 6 or R-79's debug exception lets read what a rule forbids is excepted by the task that builds it, which
+  adds it here, to the one rule it reads past, with the reason, and to the lint's list, as these were: so, when they are
+  built, the DECODE view, its agreement presets and ROUNDTRIP, which read `ctx.chart.z` (the chart's; Part 6's field
+  views), the impurity-mask cross-check, which reads the quad's `dominant_outcome` (the scheduler's; Part 6's
+  cross-checks), and the diffusion (Welford) cross-check, which reads `ctx.params.dt_macro` to recompute `C_tt(n)` (the
+  integrator's; dd_generation_root §3.5).
+
 ---
 
 ## Part 5 — Struct inspection SDK

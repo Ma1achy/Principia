@@ -402,8 +402,8 @@
   title: "The catalogue's standing checks: WGSL lints and the observation-tap property"
   depends_on: [TASK-M1-14]
   needs: [REQ-VAL-007]
-  requirements: [REQ-RENDER-015, REQ-RENDER-018, REQ-COL-005, REQ-TOOL-028]
-  reviewers: [code, qa]
+  requirements: [REQ-RENDER-015, REQ-RENDER-018, REQ-COL-005, REQ-TOOL-028, REQ-RENDER-086, REQ-COL-069]
+  reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M1-16
   milestone: M1

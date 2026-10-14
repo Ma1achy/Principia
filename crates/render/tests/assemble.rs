@@ -8,6 +8,8 @@
 //!   entry point (`one_path_*`);
 //! - REQ-RENDER-012: a custom occupant reading `ctx.sample.ftle`, `ctx.sample.ensemble_spread` and `ctx.sample.word`
 //!   compiles and runs on the GPU at every tier variant, E = 0 and E ≥ 1 (`custom_reads_any_tier`);
+//! - R-254, lowering Part 3a: as the assembler builds each tier, a sample valid at the FTLE tier reads `ftle_valid`
+//!   false and `ftle` as the canonical quiet NaN without it (`custom_reads_ftle_invalid_and_nan_without_the_tier`);
 //! - R-378: the stain's field set is its IR's reads; a stain whose set misses a field it reads is refused; and an
 //!   assembled stain reading one field loads only that field's stored members and word components in naga's MSL,
 //!   HLSL and SPIR-V (`assemble_field_set_*`, the method of `crates/ledger/tests/per_member_loads.rs`);
@@ -630,6 +632,76 @@ negative_control!(
         &GpuHarness::new().expect("a GPU device"),
         &READS_ANY_TIER.replace("ctx.sample.ensemble_spread", "0.25"),
     )
+);
+
+// ── `ftle` without the FTLE tier (lowering Part 3a; R-254) ─────────────────────────────────────────────────────────
+
+/// A colour that returns `ftle` and `ftle_valid` (1 or 0) as the assembled read side fills them.
+const READS_FTLE_VALIDITY: &str = r"
+fn colour(ctx: Ctx) -> vec3<f32> {
+    return vec3<f32>(ctx.sample.ftle, select(0.0, 1.0, ctx.sample.ftle_valid), 0.0);
+}
+";
+
+/// The colour above, assembled at every tier (its source edited by `edit`) and drawn over [`stored`]'s sample, every
+/// other clause of `ftle_valid` true: at the FTLE tier `ftle_valid` is true and `ftle` 2; without the tier
+/// `ftle_valid` is false and `ftle` the canonical quiet NaN's bits (R-254, R-79).
+fn check_ftle_validity(h: &GpuHarness, edit: fn(String) -> String) {
+    let g = graph(Occupant::Field("ftle".into()), READS_FTLE_VALIDITY);
+    for tier in Tier::ALL {
+        let source = edit(assembled(&g, tier)) + ENTRY;
+        let group1: &[BindingKind] = if tier.has_word {
+            &[BindingKind::Storage, BindingKind::Storage]
+        } else {
+            &[BindingKind::Storage]
+        };
+        let kernel = h
+            .fragment(&source, "t_stain", &[&[BindingKind::Uniform], group1], 1, 1)
+            .unwrap_or_else(|e| panic!("{tier:?}: {e}"));
+        let state = stored(tier);
+        let uniforms = prelude::uniform_words(1);
+        let g0: &[&[u32]] = &[&uniforms];
+        let g1: Vec<&[u32]> = if tier.has_word {
+            vec![&state, &WORD]
+        } else {
+            vec![&state]
+        };
+        let got = kernel
+            .draw(&[g0, &g1])
+            .unwrap_or_else(|err| panic!("{tier:?}: {err}"))[0];
+        if tier.has_ftle {
+            let ftle = f32::from_bits(got[0]);
+            assert!(
+                got[1] == 1.0f32.to_bits() && (ftle - 2.0).abs() < 1e-5,
+                "{tier:?}: a valid sample reads ftle_valid {:#x} and ftle {ftle}",
+                got[1]
+            );
+        } else {
+            assert_eq!(
+                got[1],
+                0.0f32.to_bits(),
+                "{tier:?}: ftle_valid is true without FTLE"
+            );
+            assert_eq!(
+                got[0], QNAN,
+                "{tier:?}: ftle reads {:#010x} without FTLE, not the canonical quiet NaN",
+                got[0]
+            );
+        }
+    }
+}
+
+#[test]
+fn custom_reads_ftle_invalid_and_nan_without_the_tier() {
+    check_ftle_validity(&GpuHarness::new().expect("a GPU device"), |s| s);
+}
+
+negative_control!(
+    custom_reads_ftle_invalid_and_nan_without_the_tier,
+    "a read side that fills ftle_valid true without the FTLE tier",
+    expected = "ftle_valid is true without FTLE",
+    check_ftle_validity(&GpuHarness::new().expect("a GPU device"), |s| s
+        .replace("out.ftle_valid = false;", "out.ftle_valid = true;"))
 );
 
 // ── The field set (R-378) ─────────────────────────────────────────────────────────────────────────────────────────

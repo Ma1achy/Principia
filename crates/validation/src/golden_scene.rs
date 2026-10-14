@@ -1339,10 +1339,50 @@ pub fn render_stain_at(
     context: &Context,
     param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
 ) -> Result<Vec<[f32; 4]>, String> {
+    render_stain_bound_at(
+        device,
+        queue,
+        stain,
+        tier,
+        set,
+        context,
+        param,
+        wgpu::BufferUsages::empty(),
+    )
+    .map(|(image, _)| image)
+}
+
+/// [`render_stain`], the four buffers the draw binds made with `usage` beside `STORAGE` (`render::bind::upload_with`)
+/// and returned with the image: `COPY_SRC` for a test that reads them back after the draw (REQ-TOOL-028's observation
+/// taps).
+pub fn render_stain_bound(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    usage: wgpu::BufferUsages,
+) -> Result<(Vec<[f32; 4]>, bind::Bound), String> {
+    render_stain_bound_at(device, queue, stain, Tier::FULL, set, context, param, usage)
+}
+
+/// [`render_stain_bound`] at the tier `tier`, as [`render_stain_at`].
+#[allow(clippy::too_many_arguments)] // the draw's seven inputs and the buffers' usage; a struct would only rename them
+fn render_stain_bound_at(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    usage: wgpu::BufferUsages,
+) -> Result<(Vec<[f32; 4]>, bind::Bound), String> {
     let fragment = assemble::assemble(stain, tier).map_err(|e| e.to_string())?;
     let module = bind::preset_module(&fragment.source);
     let bytes = set.bytes_at(tier.has_ftle);
-    let bound = bind::upload(device, &bytes.payload(), context);
+    let bound = bind::upload_with(device, &bytes.payload(), context, usage);
     use wgpu::util::DeviceExt;
     let buffer = |bytes: &[u8]| {
         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -1417,7 +1457,7 @@ pub fn render_stain_at(
             format: wgpu::TextureFormat::Rgba32Float,
         },
     )?;
-    Ok(image
+    let pixels = image
         .bytes
         .as_chunks::<16>()
         .0
@@ -1426,7 +1466,8 @@ pub fn render_stain_at(
             let (c, _) = p.as_chunks::<4>();
             [0, 1, 2, 3].map(|k| f32::from_le_bytes(c[k]))
         })
-        .collect())
+        .collect();
+    Ok((pixels, bound))
 }
 
 /// The smallest distance, in 8-bit steps, of any channel of `pixels` scaled to 0…255 from a rounding tie (`k + ½`):

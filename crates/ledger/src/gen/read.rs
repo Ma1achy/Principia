@@ -883,8 +883,11 @@ fn sample_read(members: &[ReadMember], tier: Tier, fields: &[&str]) -> Result<St
         out.push_str("    let n = tm_t_end_step(s_times);\n");
     }
     if needs.ftle_ok {
-        out.push_str(
-            "    let ftle_ok = ftle_valid(s_packed_a, true, n, completed_renorms(n, params.n_renorm));\n",
+        // The tier as the assembler bakes it, `has_ftle` (lowering Part 3a): `ftle_valid`'s tier clause.
+        let _ = writeln!(
+            out,
+            "    let ftle_ok = ftle_valid(s_packed_a, {}, n, completed_renorms(n, params.n_renorm));",
+            tier.has_ftle
         );
     }
     if needs.delta {

@@ -10803,6 +10803,26 @@
   - R-423
   milestone: M1
   note: "R-423: the human's \"If theta is an angle it needs a cyclic ramp\"; theta is the unwrapped phase θ̃, the shape sphere's equatorial longitude accumulated in radians (dd_integrator §3.7; dd_simstate_payload §1), so it is an angle. Closed by TASK-M1-20."
+- id: REQ-RENDER-086
+  area: RENDER
+  kind: definition
+  statement: "What it is for a render path to read the Benettin shadow (`r_sh`, `p_sh`) as a sample, REQ-RENDER-018's check, must be defined in the render contract's Part 4 by the task that needs it, saying which reads of the shadow are the generated read side's (the shadow as `ftle`'s ingredient, dd_generation_root §3.5) and which debug views Part 6 lets show it, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.5 The live-state block (replaces the checkpoint array — lockstep, ratified)"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 6 — The debug catalogue (first build target)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "render contract Part 4 defines reading r_sh/p_sh as a sample and names the debug views that show the shadow; cargo xtask lint wgsl's shadow rule follows it; physics reviewer approved"
+  rulings:
+  - R-72
+  milestone: M1
+  note: "Registered per R-369 (TASK-M1-15), as REQ-COL-067 was for TASK-M1-14: REQ-RENDER-018's 'reads r_sh/p_sh as a sample' had no definition the lint could check."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -12042,6 +12062,30 @@
   - R-72
   milestone: M1
   note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: pitfalls §1.2 (c) names the mode, and REQ-VAL-012 renders in it."
+- id: REQ-COL-069
+  area: COL
+  kind: definition
+  statement: "The terms of REQ-COL-005's and REQ-RENDER-015's checks must be defined in the render contract's Part 4 by the task that needs them, and reviewed by the physics reviewer before merge: what a colour occupant and a debug view are; the generated accessors, and a non-accessor payload read; which identifiers in the fragment's context are chart, integrator or scheduler state; and what guarding a read of `ftle` (`has_ftle && ftle_valid`) or of `ensemble_spread` (`has_ensemble()`, R-145) means, every aggregate over `ftle` included (R-255). The definition must name each debug view or post that Part 5, Part 6 or R-79's debug exception lets read what the rules otherwise forbid, and the one rule it is excepted from. The definition names those built when it is written; the task that builds a later such view adds its exception to the definition, to the one rule, and to the lint's list."
+  source:
+  - file: docs/design/principia_dd_colouring.md
+    section: 4. Seams (obligations → integration tests)
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 2 — Fixed pipeline, swappable slots
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 6 — The debug catalogue (first build target)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "render contract Part 4 defines a colour occupant, a debug view, the generated accessors, a non-accessor payload read, the chart, integrator and scheduler identifiers and a guarded read, and names each exception with its rule; cargo xtask lint wgsl's occupant rules follow it; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-145
+  - R-255
+  milestone: M1
+  note: "Registered per R-369 (TASK-M1-15), as REQ-COL-067 was for TASK-M1-14: REQ-COL-005's 'non-accessor payload reads' and 'chart/integrator/scheduler identifiers', and REQ-RENDER-015's 'guard', had no definition the lint could check."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."

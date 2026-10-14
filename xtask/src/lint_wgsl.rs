@@ -15,6 +15,17 @@
 //! `// @uniform` block, as the assembler presents it ([`view_context`], [`uniform_block`]; applied per R-369,
 //! TASK-M1-08, TASK-M1-09, TASK-M1-12).
 //!
+//! The occupant rules (render contract Part 4, "The occupant rules `cargo xtask lint wgsl` checks"; R-72; TASK-M1-15)
+//! are the `occupant` module's: the shadow rule in every file; in a colour occupant ([`occupancy`]), a file under
+//! [`OCCUPANT_DIR`], a debug view's directory or [`RUNTIME_DIR`], the accessor-only rule, the chart, integrator and
+//! scheduler deny-list and the FTLE and ensemble guard, which a debug view and a source are held to for every sample
+//! but their own. Each exception the definitions name is lifted for its file and its one rule only ([`EXCEPTIONS`]).
+//! [`RUNTIME_DIR`] holds the WGSL the render side writes at runtime, checked in by
+//! `crates/render/tests/runtime_wgsl.rs` so that this lint reaches it. Every rule reads an occupant as assembled but
+//! the guard, which reads the prelude's tier constants as overrides ([`tier_overrides`]), so naga's folding keeps them;
+//! an occupant that uses one where only a constant may stand has its guarded reads reported unchecked
+//! ([`check_occupant_after`]).
+//!
 //! In every one of those files it fails, naming the file, the line and the rule, and naming a bit-pattern test (R-343)
 //! as the fix, on the float checks fast-math (R-297) may optimise away, fold or break (R-351, R-352):
 //! - any use of `isinf` or `isnan`: naga's `IsInf` and `IsNan`, or a call to a function of either name
@@ -61,9 +72,11 @@
 //! any constant expression over one (arithmetic, a math call, a component), so the float rules evaluate an operand's
 //! constant expression themselves, in f32 for f32 ([`constant_floats`]).
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt;
 use std::path::{Path, PathBuf};
+
+mod occupant;
 
 use naga::{
     AddressSpace, Arena, ArraySize, BinaryOperator, Block, Expression, Function, Handle, Literal,
@@ -113,11 +126,121 @@ pub const REDUCTION_VIEWS: &str = "crates/render/frag/debug/reductions";
 /// `ctx`, linted as the generated views are.
 pub const DEBUG_OCCUPANTS: &str = "crates/render/shaders/wgsl/frag/debug";
 
+/// The WGSL written at runtime, checked in (TASK-M1-15): colour occupants, the field ramps
+/// (`render::colour::field_ramp`) and the presets' occupants (`engine::presets`), kept equal to their writers by
+/// `crates/render/tests/runtime_wgsl.rs`, each read in the stain's context ([`view_context`]).
+pub const RUNTIME_DIR: &str = "crates/render/frag/runtime";
+
+/// The runtime WGSL's debug views (the presets: render contract Part 6's UV view, debug_tooling_plan §F).
+pub const RUNTIME_DEBUG: &str = "crates/render/frag/runtime/debug";
+
+/// Whether `rel` is a file under `dir`.
+fn under(rel: &str, dir: &str) -> bool {
+    rel.starts_with(&format!("{dir}/"))
+}
+
 /// Whether the file at `rel` is a debug view, read in the stain's context ([`view_context`]).
 fn is_view(rel: &str) -> bool {
-    [DEBUG_VIEWS, REDUCTION_VIEWS, DEBUG_OCCUPANTS]
+    [DEBUG_VIEWS, REDUCTION_VIEWS, DEBUG_OCCUPANTS, RUNTIME_DEBUG]
         .iter()
-        .any(|dir| rel.starts_with(&format!("{dir}/")))
+        .any(|dir| under(rel, dir))
+}
+
+/// What the file at `rel` is to the occupant rules (render contract Part 4, "The occupant rules `cargo xtask lint
+/// wgsl` checks"): a debug view or a source, which the guard rule binds for every sample but its own, `ctx.sample`;
+/// another colour occupant, which it binds for every sample; or no occupant.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Occupancy {
+    Debug,
+    Source,
+    Guarded,
+}
+
+/// The built-in sources (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): every `.wgsl` file under this
+/// directory, relative to the workspace root, forwards a field of its sample (render contract Part 4).
+pub const SOURCE_DIR: &str = "crates/render/shaders/wgsl/frag/source";
+
+/// The file at `rel` as an occupant: a debug view (`is_view`), a source (under [`SOURCE_DIR`]), or any other file
+/// under [`OCCUPANT_DIR`] or [`RUNTIME_DIR`]; `None` for the unpack layer, the read side, the stain's context, the
+/// library and the compositor.
+pub fn occupancy(rel: &str) -> Option<Occupancy> {
+    if is_view(rel) {
+        Some(Occupancy::Debug)
+    } else if under(rel, SOURCE_DIR) {
+        Some(Occupancy::Source)
+    } else if under(rel, OCCUPANT_DIR) || under(rel, RUNTIME_DIR) {
+        Some(Occupancy::Guarded)
+    } else {
+        None
+    }
+}
+
+/// The exceptions (render contract Part 4), each a file, or every file whose path begins so, excepted from one rule:
+/// the shadow's field views and direction-cosine reductions read it (Part 6: a view per field, every struct); the
+/// structural views and the fallback tint and pending hatch read the scheduler's quad fields (Part 6: the quad fields
+/// and the structural overlays); the FTLE-running and diffusion-slope views read `dt_macro` (Part 5, "Live-state &
+/// array inspection"); the whole-word hash hands the word to `dbg_hash_word` (Part 6's word views); and the coordinate
+/// presets read the quad's frame (Part 6's UV view; debug_tooling_plan §F).
+pub const EXCEPTIONS: [(&str, Rule); 13] = [
+    (
+        "crates/render/frag/debug/generated/r_sh.wgsl",
+        Rule::ShadowRead,
+    ),
+    (
+        "crates/render/frag/debug/generated/p_sh.wgsl",
+        Rule::ShadowRead,
+    ),
+    (
+        "crates/render/frag/debug/reductions/r_sh_dircos.wgsl",
+        Rule::ShadowRead,
+    ),
+    (
+        "crates/render/frag/debug/reductions/p_sh_dircos.wgsl",
+        Rule::ShadowRead,
+    ),
+    (
+        "crates/render/shaders/wgsl/frag/debug/s_",
+        Rule::SchedulerState,
+    ),
+    (
+        "crates/render/shaders/wgsl/frag/post/fallback_tint.wgsl",
+        Rule::SchedulerState,
+    ),
+    (
+        "crates/render/shaders/wgsl/frag/post/pending_hatch.wgsl",
+        Rule::SchedulerState,
+    ),
+    (
+        "crates/render/shaders/wgsl/frag/debug/accumulators/ftle_running.wgsl",
+        Rule::IntegratorState,
+    ),
+    (
+        "crates/render/shaders/wgsl/frag/debug/accumulators/diffusion_slope.wgsl",
+        Rule::IntegratorState,
+    ),
+    (
+        "crates/render/shaders/wgsl/frag/debug/word/hash.wgsl",
+        Rule::RawWord,
+    ),
+    (
+        "crates/render/frag/runtime/debug/presets/coordinate_uv_source.wgsl",
+        Rule::ChartState,
+    ),
+    (
+        "crates/render/frag/runtime/debug/presets/coordinate_delta_source.wgsl",
+        Rule::ChartState,
+    ),
+    (
+        "crates/render/frag/runtime/debug/presets/coordinate_delta_colour.wgsl",
+        Rule::ChartState,
+    ),
+];
+
+/// Whether the file at `rel` is excepted from `rule` ([`EXCEPTIONS`]).
+pub fn excepted(rel: &str, rule: Rule) -> bool {
+    EXCEPTIONS
+        .iter()
+        .any(|&(prefix, r)| r == rule && rel.starts_with(prefix))
 }
 
 /// The fix every float-rule finding names (R-343).
@@ -153,6 +276,13 @@ pub enum Rule {
     InfNanConstant,
     SelfCompare,
     FiniteMax,
+    ShadowRead,
+    PayloadBuffer,
+    RawWord,
+    ChartState,
+    IntegratorState,
+    SchedulerState,
+    Guard,
 }
 
 impl fmt::Display for Rule {
@@ -170,6 +300,13 @@ impl fmt::Display for Rule {
             Rule::InfNanConstant => "inf-nan-constant",
             Rule::SelfCompare => "self-compare",
             Rule::FiniteMax => "finite-max",
+            Rule::ShadowRead => "shadow-read",
+            Rule::PayloadBuffer => "payload-buffer",
+            Rule::RawWord => "raw-word",
+            Rule::ChartState => "chart-state",
+            Rule::IntegratorState => "integrator-state",
+            Rule::SchedulerState => "scheduler-state",
+            Rule::Guard => "guard",
         })
     }
 }
@@ -244,9 +381,57 @@ pub fn run(manifest: &Path) -> Result<(), String> {
 /// by [`check_fragment`], and every other file as its continuation by [`check_fragment_after`]. A file that does not
 /// parse or validate is an error naming it.
 pub fn lint(root: &Path) -> Result<Vec<FileReport>, String> {
-    let mut reports = lint_frag(root)?;
-    reports.extend(lint_lib(root)?);
+    let generated = root.join(GENERATED);
+    if !generated.is_file() {
+        return Err(format!("{}: no such file", generated.display()));
+    }
+    let read_side = root.join(READ_SIDE_FILE);
+    let read_side = if read_side.is_file() {
+        read(root, READ_SIDE_FILE)?
+    } else {
+        String::new()
+    };
+    let accessors = accessors(&read(root, GENERATED)?, &read_side)?;
+    let mut reports = lint_frag(root, &accessors)?;
+    reports.extend(lint_lib(root, &accessors)?);
     Ok(reports)
+}
+
+/// The generated accessors (render contract Part 4): every function of the unpack layer `layer` and of the read side
+/// `read_side` that follows it, or why they could not be read: the two together do not parse or validate.
+pub fn accessors(layer: &str, read_side: &str) -> Result<BTreeSet<String>, String> {
+    let (module, _) = parse(&joined(&[layer, read_side]))?;
+    Ok(module
+        .functions
+        .iter()
+        .filter_map(|(_, f)| f.name.clone())
+        .collect())
+}
+
+/// `findings` of the file at `rel` without those its exceptions allow ([`excepted`]).
+fn allowed(rel: &str, findings: Vec<Finding>) -> Vec<Finding> {
+    findings
+        .into_iter()
+        .filter(|f| !excepted(rel, f.rule))
+        .collect()
+}
+
+/// `prelude` with its tier constants (`const has_<feature>: bool`, lowering Part 3a) declared `override` instead, as
+/// the guard rule reads them before an occupant ([`check_occupant_after`]): naga folds a constant into the expressions
+/// that use it, so `!has_ftle || !s.ftle_valid` would reach the guard rule as `false || !s.ftle_valid`, the tier's name
+/// gone; an override keeps it. Nothing else changes, lines included.
+pub fn tier_overrides(prelude: &str) -> String {
+    let mut out = String::with_capacity(prelude.len());
+    for line in prelude.split_inclusive('\n') {
+        match line.strip_prefix("const has_") {
+            Some(rest) => {
+                out.push_str("override has_");
+                out.push_str(rest);
+            }
+            None => out.push_str(line),
+        }
+    }
+    out
 }
 
 /// `path` under `root`, read.
@@ -315,7 +500,7 @@ fn relative(root: &Path, path: &Path) -> String {
 }
 
 /// [`lint`]'s reports for [`LIB_DIR`]: none when it does not exist.
-fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
+fn lint_lib(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport>, String> {
     let dir = root.join(LIB_DIR);
     if !dir.is_dir() {
         return Ok(Vec::new());
@@ -342,28 +527,31 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
         let rel = relative(root, &path);
         let source =
             std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
+        let occupancy = occupancy(&rel);
         let findings = if rel == PRELUDE {
             check_fragment(&source)
         } else if rel.starts_with(&format!("{STAIN_DIR}/")) {
             read_side_context(root).and_then(|context| check_fragment_after(&context, &source))
-        } else if is_view(&rel)
-            || CONTEXT_SLOTS
-                .iter()
-                .any(|slot| rel.starts_with(&format!("{OCCUPANT_DIR}/{slot}/")))
-        {
+        } else if let Some(occupancy) = occupancy.filter(|_| {
+            is_view(&rel)
+                || CONTEXT_SLOTS
+                    .iter()
+                    .any(|slot| rel.starts_with(&format!("{OCCUPANT_DIR}/{slot}/")))
+        }) {
             view_context(root).and_then(|context| {
-                check_fragment_after(&format!("{context}{}", uniform_block(&source)?), &source)
+                let context = format!("{context}{}", uniform_block(&source)?);
+                check_occupant_after(&context, &source, occupancy, accessors)
             })
-        } else if rel.starts_with(&format!("{OCCUPANT_DIR}/")) {
+        } else if let Some(occupancy) = occupancy {
             occupant_context(&prelude, &library, &source)
-                .and_then(|context| check_fragment_after(&context, &source))
+                .and_then(|context| check_occupant_after(&context, &source, occupancy, accessors))
         } else {
             check_fragment_after(&prelude, &source)
         }
         .map_err(|e| format!("{rel}: {e}"))?;
         reports.push(FileReport {
+            findings: allowed(&rel, findings),
             file: rel,
-            findings,
         });
     }
     Ok(reports)
@@ -371,9 +559,10 @@ fn lint_lib(root: &Path) -> Result<Vec<FileReport>, String> {
 
 /// The slots whose occupants read the stain's context, `ctx` (render contract Part 1): a built-in occupant under one
 /// of these directories of [`OCCUPANT_DIR`] is linted as a generated debug view is, after [`view_context`] and its
-/// `// @uniform` block (applied per R-369, TASK-M1-10: `colour/outcome_state.wgsl` reads `ctx.sample`). A combiner
-/// reads no context, and is linted after [`occupant_context`].
-pub const CONTEXT_SLOTS: [&str; 3] = ["colour", "brightness", "post"];
+/// `// @uniform` block (applied per R-369, TASK-M1-10: `colour/outcome_state.wgsl` reads `ctx.sample`; and per
+/// R-369, TASK-M1-15: a source, `fn source(ctx: Ctx) -> Field`, reads it too). A combiner reads no context, and is
+/// linted after [`occupant_context`].
+pub const CONTEXT_SLOTS: [&str; 4] = ["colour", "brightness", "post", "source"];
 
 /// What precedes a built-in occupant's `source` when it is linted, as the assembler presents a node (render contract
 /// Part 2; gui_state_contract §3): the prelude, the `library` files after it, then the occupant's `// @uniform` block,
@@ -434,11 +623,8 @@ pub fn uniform_block(source: &str) -> Result<String, String> {
 }
 
 /// [`lint`]'s reports for [`FRAG_DIR`].
-fn lint_frag(root: &Path) -> Result<Vec<FileReport>, String> {
+fn lint_frag(root: &Path, accessors: &BTreeSet<String>) -> Result<Vec<FileReport>, String> {
     let generated = root.join(GENERATED);
-    if !generated.is_file() {
-        return Err(format!("{}: no such file", generated.display()));
-    }
     let layer =
         std::fs::read_to_string(&generated).map_err(|e| format!("{}: {e}", generated.display()))?;
     let mut files = Vec::new();
@@ -453,17 +639,18 @@ fn lint_frag(root: &Path) -> Result<Vec<FileReport>, String> {
             check(&source)
         } else if rel == READ_SIDE_FILE {
             check_read_side(&layer, &source)
-        } else if is_view(&rel) {
+        } else if let Some(occupancy) = occupancy(&rel) {
             view_context(root).and_then(|context| {
-                check_fragment_after(&format!("{context}{}", uniform_block(&source)?), &source)
+                let context = format!("{context}{}", uniform_block(&source)?);
+                check_occupant_after(&context, &source, occupancy, accessors)
             })
         } else {
             check_fragment(&source)
         }
         .map_err(|e| format!("{rel}: {e}"))?;
         reports.push(FileReport {
+            findings: allowed(&rel, findings),
             file: rel,
-            findings,
         });
     }
     Ok(reports)
@@ -526,18 +713,76 @@ pub fn check_read_side(layer: &str, source: &str) -> Result<Vec<Finding>, String
         .collect())
 }
 
-/// The float rules' findings in `source`, a fragment-stage WGSL file that follows `prefix` at assembly, linted as
-/// `prefix`'s continuation; or why it could not be checked: the two together do not parse or validate. A finding on
-/// a line of `source` is reported at that line of it; one on a line of `prefix` is `prefix`'s own, reported on it, and
-/// left out here. One on no line (naga gives a synthesised expression no span) is kept, so it is never lost.
+/// The float rules' and the shadow rule's findings in `source`, a fragment-stage WGSL file that follows `prefix` at
+/// assembly, linted as `prefix`'s continuation; or why it could not be checked: the two together do not parse or
+/// validate. A finding on a line of `source` is reported at that line of it; one on a line of `prefix` is `prefix`'s
+/// own, reported on it, and left out here. One on no line (naga gives a synthesised expression no span) is kept, so it
+/// is never lost.
 pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, String> {
+    after(prefix, source, &|_, _, _| Vec::new())
+}
+
+/// Every rule's findings in a colour occupant's `source` (render contract Part 4), after `prefix` as
+/// [`check_fragment_after`] reads it: the float rules, the shadow rule and the occupant rules, the guard rule over the
+/// sample's own value, `ctx.sample`'s, only where `occupancy` is [`Occupancy::Guarded`]: a debug view and a source
+/// show or forward it. The guard rule reads `prefix`'s tier constants as overrides ([`tier_overrides`]); where the
+/// occupant does not validate so, using one in a `const` declaration, each function's first read the rule would check
+/// is a guard finding naming why, and every other rule still reads the module as assembled. `accessors` are the
+/// generated accessors ([`accessors`]).
+pub fn check_occupant_after(
+    prefix: &str,
+    source: &str,
+    occupancy: Occupancy,
+    accessors: &BTreeSet<String>,
+) -> Result<Vec<Finding>, String> {
+    let own = occupancy != Occupancy::Guarded;
+    // Every rule but the guard reads the module as assembled, the tier constants `const`.
+    let (module, info, joined, base) = joined_after(prefix, source)?;
+    let mut found = fragment_checks(&module, &info, &joined);
+    found.extend(occupant::occupant(&module, &info, &joined, accessors));
+    // The guard reads them as overrides, which keep their names; an occupant that uses one where only a constant may
+    // stand does not validate so, and its guarded reads are reported as unchecked rather than the file left unlinted.
+    match joined_after(&tier_overrides(prefix), source) {
+        Ok((module, info, joined, _)) => {
+            found.extend(occupant::guard(&module, &info, &joined, own))
+        }
+        Err(why) => found.extend(occupant::unguardable(&module, &info, &joined, own, &why)),
+    }
+    Ok(relocated(found, base))
+}
+
+/// `source` after `prefix`, joined, parsed and validated, and the number of `prefix`'s lines; or why it could not be:
+/// the two together do not parse or validate.
+fn joined_after(
+    prefix: &str,
+    source: &str,
+) -> Result<(Module, naga::valid::ModuleInfo, String, u32), String> {
     let base = u32::try_from(prefix.lines().count()).map_err(|e| e.to_string())?;
     let joined = if prefix.ends_with('\n') {
         format!("{prefix}{source}")
     } else {
         format!("{prefix}\n{source}")
     };
-    Ok(check_fragment(&joined)?
+    let (module, info) = parse(&joined)?;
+    Ok((module, info, joined, base))
+}
+
+/// `source` after `prefix`, held to the float rules, the shadow rule and `extra`, its findings at `source`'s lines.
+fn after(
+    prefix: &str,
+    source: &str,
+    extra: &dyn Fn(&Module, &naga::valid::ModuleInfo, &str) -> Vec<Finding>,
+) -> Result<Vec<Finding>, String> {
+    let (module, info, joined, base) = joined_after(prefix, source)?;
+    let mut found = fragment_checks(&module, &info, &joined);
+    found.extend(extra(&module, &info, &joined));
+    Ok(relocated(found, base))
+}
+
+/// `found`, findings in a file after `base` lines of what precedes it, at the file's own lines: one on a line before
+/// the file is the prefix's own, left out; one on no line is kept, so it is never lost.
+fn relocated(found: Vec<Finding>, base: u32) -> Vec<Finding> {
+    found
         .into_iter()
         .filter_map(|mut f| match f.line {
             Some(line) if line > base => {
@@ -547,14 +792,21 @@ pub fn check_fragment_after(prefix: &str, source: &str) -> Result<Vec<Finding>, 
             Some(_) => None,
             None => Some(f),
         })
-        .collect())
+        .collect()
 }
 
-/// The float rules' findings in a fragment-stage WGSL file written by hand, or why it could not be checked: it does
-/// not parse or validate as WGSL.
+/// The float rules' and the shadow rule's findings in a fragment-stage WGSL file written by hand, or why it could not
+/// be checked: it does not parse or validate as WGSL.
 pub fn check_fragment(source: &str) -> Result<Vec<Finding>, String> {
     let (module, info) = parse(source)?;
-    Ok(float_checks(&module, &info, source))
+    Ok(fragment_checks(&module, &info, source))
+}
+
+/// The float rules' and the shadow rule's findings in `module`, no function exempt from the shadow rule.
+fn fragment_checks(module: &Module, info: &naga::valid::ModuleInfo, source: &str) -> Vec<Finding> {
+    let mut found = float_checks(module, info, source);
+    found.extend(occupant::shadow(module, info, source, None));
+    found
 }
 
 /// The float rules' findings in `module`, IR from any front end, whose spans index `source`; or why it could not be
@@ -578,6 +830,13 @@ pub fn check(source: &str) -> Result<Vec<Finding>, String> {
     found.extend(sample_only(&module));
     found.extend(per_member(&module));
     found.extend(float_checks(&module, &info, source));
+    let [simstate, _] = ledger::payload::unpack_bindings();
+    found.extend(occupant::shadow(
+        &module,
+        &info,
+        source,
+        Some(simstate.reader),
+    ));
     Ok(found)
 }
 
