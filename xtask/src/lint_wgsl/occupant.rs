@@ -425,7 +425,8 @@ fn contexts(module: &Module) -> HashSet<(Handle<Function>, u32)> {
         .map(|(h, f)| (Some(h), f))
         .chain(module.entry_points.iter().map(|ep| (None, &ep.function)))
         .collect();
-    loop {
+    // Each round but the last removes an argument, so the set's size bounds the rounds.
+    for _ in 0..=set.len() {
         let mut gone = Vec::new();
         for &(caller, f) in &callers {
             walk(&f.body, &mut Vec::new(), &mut |s, _, _| {
@@ -451,12 +452,13 @@ fn contexts(module: &Module) -> HashSet<(Handle<Function>, u32)> {
             });
         }
         if gone.is_empty() {
-            return set;
+            break;
         }
         for g in gone {
             set.remove(&g);
         }
     }
+    set
 }
 
 /// The uses of the packed word in `function` other than whole, as an argument of a generated accessor (seam 5): an

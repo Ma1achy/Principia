@@ -10,5 +10,8 @@ fn colour(ctx: Ctx) -> vec3<f32> {
     if (bitcast<u32>(ctx.sample.ftle) == 0x3f800000u) { // fires guard
         return vec3<f32>(1.0, 0.0, 0.0);
     }
+    if (0x3f800000u != bitcast<u32>(ctx.sample.ftle)) { // fires guard
+        return vec3<f32>(0.0, 1.0, 0.0);
+    }
     return vec3<f32>(1.0);
 }

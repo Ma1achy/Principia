@@ -155,7 +155,7 @@ fn element(ctx: Ctx, k: u32) -> f32 {
     var arr = array<SimState, 2>(ctx.sample, ctx.sample);
     var i = k;
     if (!(has_ftle && arr[i].ftle_valid)) { return 0.0; }
-    let same = arr[i].ftle;
+    var same = arr[i].ftle;
     i = i + 1u;
     return same + arr[i].ftle; // fires guard
 }
