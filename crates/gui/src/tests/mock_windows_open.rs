@@ -1137,3 +1137,34 @@ fn mock_windows_open_chart_builder_presets_join_the_tree() {
         )
     });
 }
+
+/// A window's × closes it: with the focus in it, the focus goes back to its opener; with the focus elsewhere, it stays.
+#[test]
+fn mock_windows_open_the_close_button_closes_and_returns_the_focus() {
+    let (mut app, mut h) = fresh();
+    click(&mut h, &mut app, "Run…");
+    settle(&mut h, &mut app);
+    assert!(app.is_open(Window::Run));
+    click(&mut h, &mut app, "Close window");
+    settle(&mut h, &mut app);
+    assert!(!app.is_open(Window::Run), "× left the window open");
+    let opener = app.keyboard.tree(app.view.mode).path_to("run");
+    assert_eq!(app.view.focus.path, opener, "the focus back on Run…");
+    // The console opened by an error, the focus elsewhere: its × leaves the focus where it is.
+    let (mut app, mut h) = fresh();
+    press(&mut h, &mut app, Key::Tab, Modifiers::NONE);
+    app.side().engine().raise_error();
+    settle(&mut h, &mut app);
+    assert!(app.is_open(Window::Console));
+    click(&mut h, &mut app, "Close window");
+    settle(&mut h, &mut app);
+    assert!(!app.is_open(Window::Console));
+    assert_eq!(focus(&app), ["top_bar"], "the focus moved");
+    let got = focus(&app)
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect::<Vec<_>>();
+    rejects("a focus sent to the console's opener", || {
+        assert_eq!(got, ["footer"])
+    });
+}

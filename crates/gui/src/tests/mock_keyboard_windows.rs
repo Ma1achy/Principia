@@ -163,6 +163,17 @@ fn walk(entry: &Entry) -> Vec<At> {
         press(h, app, Key::Escape, NONE);
         check_at(&at(app), &last[..2], NAV, "Esc up to the section");
         assert!(app.is_open(entry.window));
+        // The ring has the section's rect, and the window's, to be drawn on.
+        let _ = h.frame(app, Vec::new());
+        let place = |id: &str| app.keyboard.place_of(id).map(|p| p.rect);
+        let (section, window) = (
+            place(&last[1]).expect("the section placed"),
+            place(entry.scope).expect("the window placed"),
+        );
+        assert!(
+            window.contains_rect(section),
+            "{section:?} outside {window:?}"
+        );
     }
     press(h, app, Key::Escape, NONE);
     settle(h, app);
@@ -582,4 +593,93 @@ fn mock_keyboard_windows_a_raised_error_opens_the_console_without_moving_the_foc
     press(&mut h, &mut app, Key::Tab, NONE);
     assert_eq!(focus(&app).len(), 1);
     assert_ne!(focus(&app)[0], console::WINDOW);
+}
+
+// --- The window rule on the tree itself ------------------------------------------------------------------------------
+
+/// A tree of a big scope `a`, a window `w` of sections `s1` (elements `e1`, `e2`) and `s2` (no element), and a window
+/// `bare` with no section.
+fn window_tree() -> ScopeTree {
+    use crate::keyboard::scopes::Scope;
+    let mut tree = ScopeTree::new();
+    tree.register(None, Scope::group("a", "A"));
+    tree.register(None, Scope::window("w", "W"));
+    tree.register(Some("w"), Scope::group("s1", "S1"));
+    tree.register(Some("s1"), Scope::control("e1", "E1"));
+    tree.register(Some("s1"), Scope::control("e2", "E2"));
+    tree.register(Some("w"), Scope::group("s2", "S2"));
+    tree.register(None, Scope::window("bare", "Bare"));
+    tree
+}
+
+fn nav(
+    tree: &ScopeTree,
+    path: &[&str],
+    command: crate::keyboard::keymap::Command,
+) -> (Vec<String>, crate::keyboard::scopes::Outcome) {
+    let mut f = engine::contract::view_ui::Focus {
+        path: owned(path),
+        mode: NAV,
+    };
+    let outcome = tree.navigate(&mut f, command, 1.0);
+    (f.path, outcome)
+}
+
+#[test]
+fn mock_keyboard_windows_the_tree_keeps_tab_and_esc_in_a_window() {
+    use crate::keyboard::keymap::{Command, Direction};
+    use crate::keyboard::scopes::Outcome;
+    let tree = window_tree();
+    assert_eq!(tree.bigs(), ["a"], "the windows are not big scopes");
+    assert_eq!(tree.window_of(&owned(&["w", "s1"])), Some("w"));
+    assert_eq!(tree.window_of(&owned(&["a"])), None);
+    assert_eq!(tree.window_of(&[]), None);
+    assert_eq!(tree.window_landing("w"), ["w", "s1", "e1"]);
+    assert_eq!(tree.window_landing("bare"), ["bare"]);
+    assert_eq!(tree.section_landing("w", "s2"), ["w", "s2"]);
+    // Tab and Shift+Tab: from the window itself, to its first or last section; between sections, wrapping.
+    assert_eq!(nav(&tree, &["w"], Command::Next).0, ["w", "s1", "e1"]);
+    assert_eq!(nav(&tree, &["w"], Command::Previous).0, ["w", "s2"]);
+    assert_eq!(nav(&tree, &["w", "s1", "e2"], Command::Next).0, ["w", "s2"]);
+    assert_eq!(nav(&tree, &["w", "s2"], Command::Next).0, ["w", "s1", "e1"]);
+    assert_eq!(
+        nav(&tree, &["w", "s1", "e1"], Command::Previous).0,
+        ["w", "s2"]
+    );
+    assert_eq!(
+        nav(&tree, &["w", "s2"], Command::Previous).0,
+        ["w", "s1", "e1"]
+    );
+    // A window with no section: Tab does nothing.
+    assert_eq!(
+        nav(&tree, &["bare"], Command::Next),
+        (owned(&["bare"]), Outcome::None)
+    );
+    // Esc: up from an element; from a section or the window, leave it.
+    assert_eq!(
+        nav(&tree, &["w", "s1", "e2"], Command::Back),
+        (owned(&["w", "s1"]), Outcome::Moved)
+    );
+    assert_eq!(
+        nav(&tree, &["w", "s1"], Command::Back).1,
+        Outcome::Leave("w")
+    );
+    assert_eq!(nav(&tree, &["w"], Command::Back).1, Outcome::Leave("w"));
+    assert_eq!(
+        nav(&tree, &["a"], Command::Back),
+        (Vec::new(), Outcome::Moved)
+    );
+    // The arrows: a window has no siblings; a big scope's are the big scopes alone.
+    assert_eq!(
+        nav(&tree, &["w"], Command::Arrow(Direction::Down)),
+        (owned(&["w"]), Outcome::None)
+    );
+    assert_eq!(nav(&tree, &["a"], Command::Arrow(Direction::Down)).0, ["a"]);
+    assert_eq!(
+        nav(&tree, &["w", "s1"], Command::Arrow(Direction::Down)).0,
+        ["w", "s2"]
+    );
+    rejects("Shift+Tab from the window to its first section", || {
+        assert_eq!(nav(&tree, &["w"], Command::Previous).0, ["w", "s1", "e1"])
+    });
 }

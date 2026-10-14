@@ -459,14 +459,6 @@ impl Keyboard {
         self.show_menus(ctx, mode);
     }
 
-    /// The path the focus goes back to when window `window` closes, while it is open.
-    pub fn opener_of(&self, window: &str) -> Option<&[String]> {
-        self.openers
-            .iter()
-            .find(|(w, _)| *w == window)
-            .map(|(_, p)| p.as_slice())
-    }
-
     /// The adjustments the arrows asked for this frame, in order, for the screens that own the values.
     pub fn adjusted(&self) -> &[Adjust] {
         &self.adjusted

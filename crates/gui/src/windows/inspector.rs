@@ -293,7 +293,7 @@ fn row(
             }
         })
         .response;
-    keys.place_rect(section, response.rect);
+    keys.place_rect(ui, section, response.rect);
 }
 
 /// Draws the window's content; its clicks act as Enter does. `turn` is the sphere's angle, in degrees, as the
@@ -361,7 +361,7 @@ pub fn show(
             });
         })
         .response;
-    keys.place_rect(PANES, panes.rect);
+    keys.place_rect(ui, PANES, panes.rect);
     if state.sample.is_none() {
         note(ui, NO_IC);
     }
@@ -381,7 +381,7 @@ pub fn show(
             keys.place(LISTEN, &listen);
         })
         .response;
-    keys.place_rect(TIMELINE_SECTION, timeline.rect);
+    keys.place_rect(ui, TIMELINE_SECTION, timeline.rect);
     note(ui, TIMELINE_NOTE);
     if let Some(s) = &state.sample {
         egui::Grid::new("inspector readouts").show(ui, |ui| {

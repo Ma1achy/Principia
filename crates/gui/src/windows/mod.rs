@@ -187,9 +187,13 @@ impl Keys<'_> {
         }
     }
 
-    /// Scope `id` was drawn in `rect`.
-    pub fn place_rect(&mut self, id: ScopeId, rect: Rect) {
-        self.keyboard.place(id, rect);
+    /// Scope `id` was drawn in `rect`, in `ui`: placed on the part of it `ui` shows; focused, the window scrolls to it,
+    /// so the ring is drawn on the section, never past the window's edge.
+    pub fn place_rect(&mut self, ui: &Ui, id: ScopeId, rect: Rect) {
+        if self.focused.as_deref() == Some(id) {
+            ui.scroll_to_rect(rect, None);
+        }
+        self.keyboard.place(id, rect.intersect(ui.clip_rect()));
     }
 }
 
@@ -225,7 +229,7 @@ pub fn frame(
             }
         });
     if let Some(shown) = shown {
-        keys.place_rect(scope, shown.response.rect);
+        keys.keyboard.place(scope, shown.response.rect);
     }
     open
 }
@@ -245,7 +249,7 @@ pub fn section(
             add(ui, keys);
         })
         .response;
-    keys.place_rect(id, response.rect);
+    keys.place_rect(ui, id, response.rect);
     ui.add_space(8.0);
 }
 

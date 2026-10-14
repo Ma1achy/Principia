@@ -230,7 +230,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
                 }
             })
             .response;
-        keys.place_rect(FILTERS, filters.rect);
+        keys.place_rect(ui, FILTERS, filters.rect);
         let text = ui.add(
             TextEdit::singleline(&mut state.text)
                 .hint_text(TEXT_HINT)
@@ -251,7 +251,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
                 }
             })
             .response;
-        keys.place_rect(COPY_CLEAR, pair.rect);
+        keys.place_rect(ui, COPY_CLEAR, pair.rect);
     });
     ui.separator();
     let rows = shown(view.entries, state);
@@ -280,7 +280,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
             }
         });
     });
-    keys.place_rect(LIST, list.inner_rect);
+    keys.place_rect(ui, LIST, list.inner_rect);
     note(ui, FOOT);
     act
 }

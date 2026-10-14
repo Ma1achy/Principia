@@ -441,7 +441,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, trace: Option<&
                 }
             })
             .response;
-        keys.place_rect(TABS, tabs.rect);
+        keys.place_rect(ui, TABS, tabs.rect);
     });
     // The transport on its own row: beside the tabs it would be squeezed into what the row has left.
     ui.horizontal_wrapped(|ui| {
@@ -460,7 +460,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, trace: Option<&
                 }
             })
             .response;
-        keys.place_rect(TRANSPORT, transport.rect);
+        keys.place_rect(ui, TRANSPORT, transport.rect);
     });
     match trace.filter(|t| !t.frames.is_empty()) {
         None => note(ui, NO_TRACE),

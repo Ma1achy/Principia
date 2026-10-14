@@ -482,7 +482,7 @@ fn axis_ui(
             });
         })
         .response;
-    keys.place_rect(ids.section, response.rect);
+    keys.place_rect(ui, ids.section, response.rect);
     ui.add_space(8.0);
 }
 
@@ -517,7 +517,7 @@ pub fn show(
             });
         })
         .response;
-    keys.place_rect(PRESETS_SECTION, presets.rect);
+    keys.place_rect(ui, PRESETS_SECTION, presets.rect);
     ui.add_space(8.0);
     for a in 0..2 {
         axis_ui(ui, keys, draft, a, &mut clicked);
@@ -578,7 +578,7 @@ pub fn show(
             }
         })
         .response;
-    keys.place_rect(APPLY_SECTION, apply.rect);
+    keys.place_rect(ui, APPLY_SECTION, apply.rect);
     for id in clicked {
         activate(id, draft, view.plane, edits);
     }
