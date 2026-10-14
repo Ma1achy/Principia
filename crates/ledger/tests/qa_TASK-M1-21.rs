@@ -11,7 +11,15 @@
 //! - the gap list is exactly the payload's gaps, none a `lin` or `diverging` scalar, each with a requirement or none
 //!   (`qa_m1_21_gap_list`);
 //! - no view changes ramp: the cool-warm set is R-423's six fields less `theta` (cyclic), with `C_ty` and the
-//!   `diverging` `E_0` and `Lz_0` (`qa_m1_21_coolwarm_set_unchanged`).
+//!   `diverging` `E_0` and `Lz_0` (`qa_m1_21_coolwarm_set_unchanged`);
+//! - an entry's range is in one of §3.8's three states, by its own mark (`qa_m1_21_state_*`): unmarked (−∞, ∞) is a
+//!   gap; other written bounds are not; a cited (−∞, ∞) is declared with its citation and spans zero; a provisional
+//!   (−∞, ∞) is provisional with its requirement and spans zero; a provisional mark on other bounds is no gap;
+//! - a fresh field cited or marked provisional generates and is drawn on `ramp_coolwarm`
+//!   (`qa_m1_21_marked_fresh_*`);
+//! - a gap never lets a field carry the `diverging` scale, a vector included (`qa_m1_21_gap_diverging_vector_refused`);
+//! - every `lin` or `diverging` scalar the numeric template draws cites a source, or is provisional
+//!   (`qa_m1_21_drawn_fields_cite_a_source`).
 //!
 //! Each test has its negative control (R-176).
 
@@ -20,7 +28,7 @@ use std::collections::BTreeSet;
 use ledger::gen::numeric::{NumericView, Ramp};
 use ledger::payload::{self, GAPS};
 use ledger::schema::{
-    Bound, Entry, EntryBuilder, FieldType, Ledger, Location, Range, RangeState, Scale,
+    Bound, Declaration, Entry, EntryBuilder, FieldType, Ledger, Location, Range, RangeState, Scale,
 };
 use validation::negative_control;
 
@@ -261,7 +269,11 @@ fn check_declared(es: &[Entry], want: &[(&str, &[&str])]) {
             panic!("`{name}` is not declared");
         };
         assert_eq!(range, UNBOUNDED, "`{name}` is not declared (−∞, ∞)");
-        assert_eq!(entry(es, name).range, UNBOUNDED, "`{name}` writes another range");
+        assert_eq!(
+            entry(es, name).range,
+            UNBOUNDED,
+            "`{name}` writes another range"
+        );
         for p in *phrases {
             assert!(
                 citation.contains(p),
@@ -310,13 +322,17 @@ fn check_gap_list(es: &[Entry], gaps: &[(&str, Option<&str>, &str)]) {
     assert_eq!(listed, actual, "the gap list is not the ledger's gaps");
     for (name, req, _) in gaps {
         let e = entry(es, name);
+        let ramp_scale = matches!(e.scale, Scale::Lin | Scale::Diverging);
+        let scalar = !matches!(e.ty, FieldType::Vector { .. });
         assert!(
-            !(matches!(e.scale, Scale::Lin | Scale::Diverging)
-                && !matches!(e.ty, FieldType::Vector { .. })),
+            !(ramp_scale && scalar),
             "the gap `{name}` is a lin or diverging scalar"
         );
         if let Some(r) = req {
-            assert!(r.starts_with("REQ-"), "`{name}`'s filler is no requirement: {r}");
+            assert!(
+                r.starts_with("REQ-"),
+                "`{name}`'s filler is no requirement: {r}"
+            );
         }
     }
     for name in ["theta", "rho_angle", "r", "p", "r_sh", "p_sh"] {
@@ -377,4 +393,318 @@ negative_control!(
     "`mean_y` taken off the expected set",
     expected = "the cool-warm views changed",
     check_coolwarm(&payload(), &COOLWARM[..2])
+);
+
+// ── The three range states, by the entry's own mark (§3.8; R-426) ────────────────────────────────────────────────
+
+/// A complete scalar `qa_state` entry, `lin` over `range`, with the range mark `mark`.
+fn marked(range: Range, mark: Option<Declaration>) -> Entry {
+    let mut b = EntryBuilder::new("qa_state")
+        .location(Location::Scalar(0))
+        .ty(FieldType::F32)
+        .scale(Scale::Lin)
+        .range(range)
+        .provenance(ledger::schema::Provenance::Kernel)
+        .consumers(&[ledger::schema::Consumer::Render]);
+    b.declaration = mark;
+    b.build().unwrap_or_else(|e| panic!("{e}"))
+}
+
+const QA_CITATION: &str = "qa fixture: dd_generation_root §3.8 `declared(lo, hi, citation)`";
+const QA_REQUIREMENT: &str = "REQ-QA-FIXTURE";
+
+fn from_zero() -> Range {
+    Range {
+        lo: Bound::Closed(0.0),
+        hi: Bound::Unbounded,
+    }
+}
+
+fn signed_finite() -> Range {
+    Range {
+        lo: Bound::Open(-1.0),
+        hi: Bound::Closed(1.0),
+    }
+}
+
+fn check_gap(e: &Entry) {
+    assert_eq!(e.range_state(), RangeState::Gap, "the range is not a gap");
+    assert!(!e.range_state().spans_zero(), "the gap spans zero");
+}
+
+#[test]
+fn qa_m1_21_state_unmarked_unbounded_is_gap() {
+    // §3.8 `gap`: "no range is declared; the (−∞, ∞) the ledger once wrote by default. A gap never spans zero."
+    check_gap(&marked(UNBOUNDED, None));
+}
+
+negative_control!(
+    qa_m1_21_state_unmarked_unbounded_is_gap,
+    "the same (−∞, ∞) with a citation is declared, not a gap",
+    expected = "the range is not a gap",
+    check_gap(&marked(UNBOUNDED, Some(Declaration::Cited(QA_CITATION))))
+);
+
+/// An unmarked entry over `range` is no gap, and spans zero exactly when `range` does (`lo < 0 < hi`).
+fn check_written_not_gap(range: Range, spans: bool) {
+    let state = marked(range, None).range_state();
+    match state {
+        RangeState::Declared { range: r, .. } => {
+            assert_eq!(r, range, "the declared range is not the written one")
+        }
+        other => panic!("the written range {range} is not declared: {other:?}"),
+    }
+    assert_eq!(
+        state.spans_zero(),
+        spans,
+        "{range} spans zero: {}",
+        state.spans_zero()
+    );
+}
+
+#[test]
+fn qa_m1_21_state_unmarked_written_bounds_are_no_gap() {
+    // Only the (−∞, ∞) written by default declares nothing (§3.8 `gap`); a range written with a bound is not that.
+    check_written_not_gap(from_zero(), false);
+    check_written_not_gap(signed_finite(), true);
+    check_written_not_gap(
+        Range {
+            lo: Bound::Unbounded,
+            hi: Bound::Closed(0.0),
+        },
+        false,
+    );
+}
+
+negative_control!(
+    qa_m1_21_state_unmarked_written_bounds_are_no_gap,
+    "the unmarked (−∞, ∞) is a gap, not declared",
+    expected = "is not declared",
+    check_written_not_gap(UNBOUNDED, true)
+);
+
+fn check_cited(e: &Entry) {
+    match e.range_state() {
+        RangeState::Declared { range, citation } => {
+            assert_eq!(range, UNBOUNDED, "the cited range is not (−∞, ∞)");
+            assert_eq!(citation, QA_CITATION, "the citation is not the one given");
+        }
+        other => panic!("the cited (−∞, ∞) is not declared: {other:?}"),
+    }
+    assert!(
+        e.range_state().spans_zero(),
+        "a declared (−∞, ∞) does not span zero"
+    );
+}
+
+#[test]
+fn qa_m1_21_state_cited_unbounded_is_declared() {
+    // §3.8 `declared(lo, hi, citation)`: "Only a declared range spans zero or not"; (−∞, ∞) does (R-400).
+    check_cited(&marked(UNBOUNDED, Some(Declaration::Cited(QA_CITATION))));
+}
+
+negative_control!(
+    qa_m1_21_state_cited_unbounded_is_declared,
+    "the same (−∞, ∞) uncited is a gap",
+    expected = "the cited (−∞, ∞) is not declared",
+    check_cited(&marked(UNBOUNDED, None))
+);
+
+fn check_provisional_state(e: &Entry) {
+    match e.range_state() {
+        RangeState::Provisional { requirement } => {
+            assert_eq!(
+                requirement, QA_REQUIREMENT,
+                "the provisional mark names another requirement"
+            )
+        }
+        other => panic!("the provisional (−∞, ∞) is not provisional: {other:?}"),
+    }
+    // §3.8 `provisional(requirement)`: "drawn meanwhile as (−∞, ∞), so spanning zero".
+    assert!(
+        e.range_state().spans_zero(),
+        "a provisional range does not span zero"
+    );
+}
+
+#[test]
+fn qa_m1_21_state_provisional_unbounded() {
+    check_provisional_state(&marked(
+        UNBOUNDED,
+        Some(Declaration::Provisional(QA_REQUIREMENT)),
+    ));
+}
+
+negative_control!(
+    qa_m1_21_state_provisional_unbounded,
+    "a cited (−∞, ∞) is declared, not provisional",
+    expected = "the provisional (−∞, ∞) is not provisional",
+    check_provisional_state(&marked(UNBOUNDED, Some(Declaration::Cited(QA_CITATION))))
+);
+
+fn check_marked_not_gap(e: &Entry) {
+    assert_ne!(e.range_state(), RangeState::Gap, "a marked range is a gap");
+}
+
+#[test]
+fn qa_m1_21_state_provisional_written_bounds_are_no_gap() {
+    // A range the human has marked is not one "no range is declared" for (§3.8 `gap`), whatever bounds it writes.
+    for range in [from_zero(), signed_finite(), UNBOUNDED] {
+        check_marked_not_gap(&marked(
+            range,
+            Some(Declaration::Provisional(QA_REQUIREMENT)),
+        ));
+    }
+}
+
+negative_control!(
+    qa_m1_21_state_provisional_written_bounds_are_no_gap,
+    "the unmarked (−∞, ∞) is a gap",
+    expected = "a marked range is a gap",
+    check_marked_not_gap(&marked(UNBOUNDED, None))
+);
+
+// ── A marked fresh field generates on cool-warm; a gap never carries `diverging` ─────────────────────────────────
+
+/// The payload ledger plus a fresh `qa_fixture` of type `ty`, derived from `S`, `scale` over (−∞, ∞) with `mark`.
+fn with_marked_fixture(ty: FieldType, scale: Scale, mark: Option<Declaration>) -> Ledger {
+    let mut l = payload::ledger();
+    let mut b = EntryBuilder::new("qa_fixture")
+        .location(Location::Derived { from: vec!["S"] })
+        .ty(ty)
+        .scale(scale)
+        .range(UNBOUNDED)
+        .provenance(ledger::schema::Provenance::Kernel)
+        .consumers(&[ledger::schema::Consumer::Render]);
+    b.declaration = mark;
+    l.entries.push(b);
+    l
+}
+
+/// Generation of `l` passes and draws `qa_fixture` on `ramp_coolwarm`.
+fn check_generates_coolwarm(l: &Ledger) {
+    let es = ledger::gen::validate(l).unwrap_or_else(|e| panic!("generation refused: {e}"));
+    assert_eq!(
+        NumericView::of(entry(&es, "qa_fixture")).map(|v| v.ramp()),
+        Some(Ramp::Coolwarm),
+        "the fixture is not on ramp_coolwarm"
+    );
+}
+
+#[test]
+fn qa_m1_21_marked_fresh_cited_generates_on_coolwarm() {
+    // R-400: a `lin` field whose declared range spans zero is on the diverging ramp.
+    check_generates_coolwarm(&with_marked_fixture(
+        FieldType::F32,
+        Scale::Lin,
+        Some(Declaration::Cited(QA_CITATION)),
+    ));
+}
+
+negative_control!(
+    qa_m1_21_marked_fresh_cited_generates_on_coolwarm,
+    "the same fixture uncited is a gap, refused",
+    expected = "generation refused",
+    check_generates_coolwarm(&with_marked_fixture(FieldType::F32, Scale::Lin, None))
+);
+
+#[test]
+fn qa_m1_21_marked_fresh_provisional_generates_on_coolwarm() {
+    // R-426: a provisional range is kept on cool-warm.
+    check_generates_coolwarm(&with_marked_fixture(
+        FieldType::F32,
+        Scale::Lin,
+        Some(Declaration::Provisional(QA_REQUIREMENT)),
+    ));
+}
+
+negative_control!(
+    qa_m1_21_marked_fresh_provisional_generates_on_coolwarm,
+    "the same fixture unmarked is a gap, refused",
+    expected = "generation refused",
+    check_generates_coolwarm(&with_marked_fixture(FieldType::F32, Scale::Lin, None))
+);
+
+fn f32_vector() -> FieldType {
+    FieldType::Vector {
+        component: Box::new(FieldType::F32),
+        k: 3,
+    }
+}
+
+#[test]
+fn qa_m1_21_gap_diverging_vector_refused() {
+    // REQ-GEN-035: the (−∞, ∞) written where §3 gives no range "never ... lets it carry the `diverging` scale";
+    // §3.8: an entry carries `diverging` "only when its declared range spans zero". A vector is no exception.
+    check_refused(
+        &with_marked_fixture(f32_vector(), Scale::Diverging, None),
+        "qa_fixture",
+    );
+}
+
+negative_control!(
+    qa_m1_21_gap_diverging_vector_refused,
+    "the same vector with its (−∞, ∞) cited carries `diverging` by a declared range, and generates",
+    expected = "generation was not refused for the undeclared `qa_fixture`",
+    check_refused(
+        &with_marked_fixture(
+            f32_vector(),
+            Scale::Diverging,
+            Some(Declaration::Cited(QA_CITATION))
+        ),
+        "qa_fixture"
+    )
+);
+
+// ── Every drawn `lin` or `diverging` scalar cites a source ──────────────────────────────────────────────────────
+
+/// Each `lin` or `diverging` scalar in `es` the numeric template draws is declared with a citation naming a source
+/// (a section or a ruling), or is one of R-426's two provisional fields.
+fn check_drawn_cited(es: &[Entry]) {
+    for e in es {
+        let ramp_scale = matches!(e.scale, Scale::Lin | Scale::Diverging);
+        if !ramp_scale || NumericView::of(e).is_none() {
+            continue;
+        }
+        match e.range_state() {
+            RangeState::Declared { citation, .. } => assert!(
+                citation != ledger::schema::WRITTEN_BOUNDS
+                    && (citation.contains('§') || citation.contains("R-")),
+                "`{}`'s range cites no source: {citation}",
+                e.name
+            ),
+            RangeState::Provisional { .. } => assert!(
+                ["q_mass", "mean_y"].contains(&e.name),
+                "`{}` is provisional, which only R-426's two fields are",
+                e.name
+            ),
+            RangeState::Gap => panic!("`{}` is drawn from a gap", e.name),
+        }
+    }
+}
+
+#[test]
+fn qa_m1_21_drawn_fields_cite_a_source() {
+    check_drawn_cited(&payload());
+}
+
+negative_control!(
+    qa_m1_21_drawn_fields_cite_a_source,
+    "`S` with a bounded range and its citation dropped cites no source",
+    expected = "`S`'s range cites no source",
+    {
+        let mut l = payload::ledger();
+        let s = l
+            .entries
+            .iter_mut()
+            .find(|e| e.name == Some("S"))
+            .expect("`S`");
+        s.range = Some(Range {
+            lo: Bound::Closed(-1.0),
+            hi: Bound::Closed(1.0),
+        });
+        s.declaration = None;
+        let es = ledger::gen::validate(&l).unwrap_or_else(|e| panic!("{e}"));
+        check_drawn_cited(&es);
+    }
 );
