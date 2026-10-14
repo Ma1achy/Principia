@@ -3,7 +3,7 @@
 //! pack routines, so the generated accessors read back what was set (REQ-TOOL-014). Each test registers its negative
 //! control (R-176).
 
-use engine::synthetic::{ic_words, simstate_words, Synthetic, QUAD_WORDS};
+use engine::synthetic::{ic_words, simstate_base_words, simstate_words, Synthetic, QUAD_WORDS};
 use kernel::payload::{
     fgw_reduced_length, pa_d_min, pa_d_min_is_unset, pb_dE_max, sd_detail, sd_dmin_pair,
     sd_saturated, sd_state, tm_t_dmin_step, tm_t_end_step, ICDescriptor, SimStateFTLE,
@@ -131,6 +131,58 @@ negative_control!(
         w.swap(24, 25);
         check_layout(&ledger_struct("SimStateFTLE"), &w, simstate_marker)
     }
+);
+
+/// The no-FTLE tier's stored variant (lowering Part 3a; TASK-M1-19): `SimStateBase`, the sample less its shadow.
+#[test]
+fn synthetic_base_bytes_match_the_generated_base_layout() {
+    check_layout(
+        &ledger_struct("SimStateBase"),
+        &simstate_base_words(&marked_simstate()),
+        simstate_marker,
+    );
+}
+
+negative_control!(
+    synthetic_base_bytes_match_the_generated_base_layout,
+    "the full tier's words, shadow and all, read as SimStateBase",
+    expected = "the uploaded `SimStateBase` is not the ledger's size",
+    check_layout(
+        &ledger_struct("SimStateBase"),
+        &simstate_words(&marked_simstate()),
+        simstate_marker,
+    )
+);
+
+/// Checks that `set`'s `SimState` bytes at the tier with FTLE `has_ftle` are each sample's `words`, in sample order.
+fn check_tier_bytes(set: &Synthetic, has_ftle: bool, words: fn(&SimStateFTLE) -> Vec<u32>) {
+    let want: Vec<u8> = (0..set.grid().sample_count())
+        .flat_map(|i| words(set.simstate(i)))
+        .flat_map(u32::to_le_bytes)
+        .collect();
+    assert!(
+        set.bytes_at(has_ftle).simstate == want,
+        "bytes_at({has_ftle}) is not each sample's words in its tier's variant"
+    );
+}
+
+#[test]
+fn synthetic_bytes_at_each_tier_are_its_variant() {
+    let mut set = Synthetic::flat(grid(), 0);
+    set.sample(1).theta(2.5).total_substeps(9);
+    check_tier_bytes(&set, true, simstate_words);
+    check_tier_bytes(&set, false, simstate_base_words);
+    assert!(
+        set.bytes() == set.bytes_at(true),
+        "bytes() is not the full tier's"
+    );
+}
+
+negative_control!(
+    synthetic_bytes_at_each_tier_are_its_variant,
+    "the no-FTLE tier's bytes expected in the full tier's variant",
+    expected = "bytes_at(false) is not each sample's words",
+    check_tier_bytes(&Synthetic::flat(grid(), 0), false, simstate_words)
 );
 
 fn marked_ic() -> ICDescriptor {

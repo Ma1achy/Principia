@@ -240,8 +240,20 @@ impl Synthetic {
         &self.counters
     }
 
-    /// The four buffers' bytes.
+    /// The four buffers' bytes, the `SimState` buffer as `SimStateFTLE`, the full tier's stored variant.
     pub fn bytes(&self) -> Bytes {
+        self.bytes_at(true)
+    }
+
+    /// The four buffers' bytes at a tier with the FTLE feature (`has_ftle`) or without it, the `SimState` buffer as
+    /// that tier's stored variant (lowering Part 3a): `SimStateFTLE`, or `SimStateBase`, each sample less its shadow
+    /// ([`simstate_base_words`]).
+    pub fn bytes_at(&self, has_ftle: bool) -> Bytes {
+        let words = if has_ftle {
+            simstate_words
+        } else {
+            simstate_base_words
+        };
         let mut out = Bytes {
             simstate: Vec::new(),
             word: Vec::new(),
@@ -251,7 +263,7 @@ impl Synthetic {
         };
         for s in &self.simstate {
             out.simstate
-                .extend(simstate_words(s).iter().flat_map(|w| w.to_le_bytes()));
+                .extend(words(s).iter().flat_map(|w| w.to_le_bytes()));
         }
         for w in &self.word {
             out.word.extend(w.iter().flat_map(|w| w.to_le_bytes()));
@@ -320,27 +332,36 @@ fn f32s(v: impl IntoIterator<Item = f32>) -> Vec<u8> {
 
 /// `SimStateFTLE` as the words it uploads as: each member at its ledger offset, by name (`place`); the ledger's size.
 pub fn simstate_words(s: &SimStateFTLE) -> Vec<u32> {
-    place("SimStateFTLE", |member| {
-        Some(match member {
-            "r" => f32s(s.r.into_iter().flatten()),
-            "p" => f32s(s.p.into_iter().flatten()),
-            "r_sh" => f32s(s.r_sh.into_iter().flatten()),
-            "p_sh" => f32s(s.p_sh.into_iter().flatten()),
-            "S" => f32s([s.S]),
-            "theta" => f32s([s.theta]),
-            "mean_y" => f32s([s.mean_y]),
-            "C_ty" => f32s([s.C_ty]),
-            "E_0" => f32s([s.E_0]),
-            "Lz_0" => f32s([s.Lz_0]),
-            "packed_a" => le([s.packed_a]),
-            "packed_b" => le([s.packed_b]),
-            "times" => le([s.times]),
-            "total_substeps" => le([s.total_substeps]),
-            "closure_min" => f32s([s.closure_min]),
-            "closure_step" => s.closure_step.to_le_bytes().to_vec(),
-            "_reserved" => s._reserved.to_le_bytes().to_vec(),
-            _ => return None,
-        })
+    place("SimStateFTLE", |member| simstate_member(s, member))
+}
+
+/// `s` as the words of `SimStateBase`, the stored variant of a tier without the FTLE feature (lowering Part 3a): each
+/// of its members at its ledger offset, by name (`place`), the shadow `r_sh`, `p_sh` not among them; the ledger's size.
+pub fn simstate_base_words(s: &SimStateFTLE) -> Vec<u32> {
+    place("SimStateBase", |member| simstate_member(s, member))
+}
+
+/// The little-endian bytes of `s`'s member `member`, by its ledger name; `None` for a name `SimStateFTLE` lacks.
+fn simstate_member(s: &SimStateFTLE, member: &str) -> Option<Vec<u8>> {
+    Some(match member {
+        "r" => f32s(s.r.into_iter().flatten()),
+        "p" => f32s(s.p.into_iter().flatten()),
+        "r_sh" => f32s(s.r_sh.into_iter().flatten()),
+        "p_sh" => f32s(s.p_sh.into_iter().flatten()),
+        "S" => f32s([s.S]),
+        "theta" => f32s([s.theta]),
+        "mean_y" => f32s([s.mean_y]),
+        "C_ty" => f32s([s.C_ty]),
+        "E_0" => f32s([s.E_0]),
+        "Lz_0" => f32s([s.Lz_0]),
+        "packed_a" => le([s.packed_a]),
+        "packed_b" => le([s.packed_b]),
+        "times" => le([s.times]),
+        "total_substeps" => le([s.total_substeps]),
+        "closure_min" => f32s([s.closure_min]),
+        "closure_step" => s.closure_step.to_le_bytes().to_vec(),
+        "_reserved" => s._reserved.to_le_bytes().to_vec(),
+        _ => return None,
     })
 }
 

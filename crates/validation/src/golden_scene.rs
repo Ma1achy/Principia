@@ -1257,7 +1257,18 @@ impl Scene {
         device: &wgpu::Device,
         queue: &wgpu::Queue,
     ) -> Result<Vec<[f32; 4]>, String> {
-        self.render_with(device, queue, self.occupant()?)
+        self.render_with(device, queue, self.occupant()?, Tier::FULL)
+    }
+
+    /// [`Scene::render`] at the tier `tier` (lowering Part 3a): the stain assembled at `tier`, its baked `has_ftle`
+    /// and `has_word`, over the set's bytes in `tier`'s stored variant (`Synthetic::bytes_at`).
+    pub fn render_at(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        tier: Tier,
+    ) -> Result<Vec<[f32; 4]>, String> {
+        self.render_with(device, queue, self.occupant()?, tier)
     }
 
     /// [`Scene::render`] with the colour node's occupant the WGSL `colour` instead: a test's altered occupant.
@@ -1267,21 +1278,28 @@ impl Scene {
         queue: &wgpu::Queue,
         colour: &str,
     ) -> Result<Vec<[f32; 4]>, String> {
-        self.render_with(device, queue, Occupant::Custom(colour.to_owned()))
+        self.render_with(
+            device,
+            queue,
+            Occupant::Custom(colour.to_owned()),
+            Tier::FULL,
+        )
     }
 
-    /// [`Scene::render`] with the colour node's occupant `colour`.
+    /// [`Scene::render_at`] with the colour node's occupant `colour`.
     fn render_with(
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         colour: Occupant,
+        tier: Tier,
     ) -> Result<Vec<[f32; 4]>, String> {
         let params = self.params()?;
-        render_stain(
+        render_stain_at(
             device,
             queue,
             &self.stain_with(colour)?,
+            tier,
             &self.set,
             &self.context,
             &|_, name| {
@@ -1307,10 +1325,25 @@ pub fn render_stain(
     context: &Context,
     param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
 ) -> Result<Vec<[f32; 4]>, String> {
-    render_stain_bound(
+    render_stain_at(device, queue, stain, Tier::FULL, set, context, param)
+}
+
+/// [`render_stain`] at the tier `tier` (lowering Part 3a): `stain` assembled at `tier`, over `set`'s bytes in `tier`'s
+/// stored variant, `SimStateFTLE` or `SimStateBase` (`Synthetic::bytes_at`).
+pub fn render_stain_at(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+) -> Result<Vec<[f32; 4]>, String> {
+    render_stain_bound_at(
         device,
         queue,
         stain,
+        tier,
         set,
         context,
         param,
@@ -1331,9 +1364,24 @@ pub fn render_stain_bound(
     param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
     usage: wgpu::BufferUsages,
 ) -> Result<(Vec<[f32; 4]>, bind::Bound), String> {
-    let fragment = assemble::assemble(stain, Tier::FULL).map_err(|e| e.to_string())?;
+    render_stain_bound_at(device, queue, stain, Tier::FULL, set, context, param, usage)
+}
+
+/// [`render_stain_bound`] at the tier `tier`, as [`render_stain_at`].
+#[allow(clippy::too_many_arguments)] // the draw's seven inputs and the buffers' usage; a struct would only rename them
+fn render_stain_bound_at(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    stain: &Stain,
+    tier: Tier,
+    set: &Synthetic,
+    context: &Context,
+    param: &dyn Fn(usize, &str) -> Option<Vec<f64>>,
+    usage: wgpu::BufferUsages,
+) -> Result<(Vec<[f32; 4]>, bind::Bound), String> {
+    let fragment = assemble::assemble(stain, tier).map_err(|e| e.to_string())?;
     let module = bind::preset_module(&fragment.source);
-    let bytes = set.bytes();
+    let bytes = set.bytes_at(tier.has_ftle);
     let bound = bind::upload_with(device, &bytes.payload(), context, usage);
     use wgpu::util::DeviceExt;
     let buffer = |bytes: &[u8]| {
