@@ -1,5 +1,6 @@
 //! The top bar (render_gui_spec §G2; 01_main.png; RQ-249, RQ-255): the "principia · dev" wordmark; the menus File,
-//! View, Windows and Help; Overlays ▾ with its count; Run…, Profiler… and Export…, drawn disabled until their tasks;
+//! View, Windows and Help; Overlays ▾ with its count; Run…, Profiler… and Export…, each opening its window (§G5); the
+//! Windows menu listing the registry's seven windows (`crate::windows`);
 //! the mode switch Explore / Stain; the keyboard breadcrumb (§G3); and the status line, in the artboard's format and
 //! order, filled from the snapshot, in egui's `Monospace` (Ubuntu Mono, RQ-251). The top bar is the keyboard's big
 //! scope 1, its controls the sub-scopes Enter reaches, in the order they are drawn; Enter on one acts as its click.
@@ -36,23 +37,22 @@ pub const CONTROLS: [(ScopeId, &str); 10] = [
 /// The controls that open a menu.
 const MENUS: [ScopeId; 5] = ["file", "view", "windows", "overlays", "help"];
 
-/// The controls drawn disabled until their tasks: Enter does nothing on them.
-const DISABLED: [ScopeId; 3] = ["run", "profiler", "export"];
-
 /// File's Quit.
 pub const QUIT: (ScopeId, &str) = ("file_quit", "Quit");
 /// View's entry that hides the layer, as F3 does.
 pub const HIDE: (ScopeId, &str) = ("view_hide", "F3 hide");
 /// Help's entry that opens the `?` shortcuts (RQ-250).
 pub const KEYS: (ScopeId, &str) = ("help_keys", KEYS_ENTRY);
-/// The Windows menu's entries' scopes, one per [`WINDOWS`] name, each disabled until its task.
-pub const WINDOW_ENTRIES: [ScopeId; 5] = [
-    "windows_run",
-    "windows_profiler",
-    "windows_export",
-    "windows_display",
-    "windows_console",
-];
+/// The Windows menu's entries' scopes, one per [`WINDOWS`] name: the registry's, in its order.
+pub const WINDOW_ENTRIES: [ScopeId; 7] = {
+    let mut ids = [""; 7];
+    let mut i = 0;
+    while i < 7 {
+        ids[i] = crate::windows::REGISTRY[i].menu_entry;
+        i += 1;
+    }
+    ids
+};
 
 /// Joins the top bar to `tree` as big scope 1, its controls under it, and each menu's entries under the menu,
 /// Overlays ▾'s toggles, all off and save as default among them (`overlays_menu`).
@@ -61,8 +61,6 @@ pub fn register(tree: &mut ScopeTree) {
     for (id, label) in CONTROLS {
         let scope = if MENUS.contains(&id) {
             Scope::menu(id, label)
-        } else if DISABLED.contains(&id) {
-            Scope::disabled(id, label)
         } else {
             Scope::control(id, label)
         };
@@ -71,13 +69,14 @@ pub fn register(tree: &mut ScopeTree) {
     tree.register(Some("file"), Scope::control(QUIT.0, QUIT.1));
     tree.register(Some("view"), Scope::control(HIDE.0, HIDE.1));
     for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
-        tree.register(Some("windows"), Scope::disabled(id, name));
+        tree.register(Some("windows"), Scope::control(id, name));
     }
     tree.register(Some("help"), Scope::control(KEYS.0, KEYS.1));
     crate::explore::overlays_menu::register(tree);
 }
 
-/// Enter on control `id`, as its click: the mode switch switches, and a menu's entry acts.
+/// Enter on control `id`, as its click: the mode switch switches, and a menu's entry acts. A window's opener is the
+/// app's to act on (`crate::windows::opened_by`).
 pub fn activate(id: &str, actions: &mut Actions) {
     match id {
         "explore" => actions.mode = Some(Mode::Explore),
@@ -89,9 +88,16 @@ pub fn activate(id: &str, actions: &mut Actions) {
     }
 }
 
-/// The Windows menu: render_gui_spec §G5's windows and the console, by their spec names, each disabled until its
-/// task (RQ-249).
-pub const WINDOWS: [&str; 5] = ["Run", "Profiler", "Export & share", "Display", "Console"];
+/// The Windows menu: the registry's seven windows by their spec names (§G5, §G7, §G8, §G12), each opening its window.
+pub const WINDOWS: [&str; 7] = {
+    let mut names = [""; 7];
+    let mut i = 0;
+    while i < 7 {
+        names[i] = crate::windows::REGISTRY[i].name;
+        i += 1;
+    }
+    names
+};
 
 /// What an absent value reads (RQ-243).
 pub const ABSENT: &str = "—";
@@ -182,7 +188,11 @@ pub fn show(
     keyboard.place_widget("view", &view);
     let windows = menu(&mut bar, "Windows", &mut |ui| {
         for (id, name) in WINDOW_ENTRIES.into_iter().zip(WINDOWS) {
-            let entry = ui.add_enabled(false, Button::new(name));
+            let entry = ui.button(name);
+            if entry.clicked() {
+                actions.open.push(id);
+                ui.close();
+            }
             keyboard.place_widget(id, &entry);
         }
     });
@@ -203,7 +213,10 @@ pub fn show(
         ("profiler", "Profiler…"),
         ("export", "Export…"),
     ] {
-        let response = bar.add_enabled(false, Button::new(name));
+        let response = bar.button(name);
+        if response.clicked() {
+            actions.open.push(id);
+        }
         keyboard.place_widget(id, &response);
     }
     let help = menu(&mut bar, "Help", &mut |ui| {

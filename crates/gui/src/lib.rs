@@ -6,13 +6,13 @@ pub mod app;
 pub mod capture;
 pub mod cli;
 pub mod clock;
-pub mod console;
 pub mod explore;
 pub mod headless;
 pub mod keyboard;
 pub mod layout;
 pub mod side;
 pub mod theme;
+pub mod windows;
 
 pub mod mock;
 

@@ -70,7 +70,7 @@ pub const PRESET: ScopeId = "chart_preset";
 pub const Q1_EDIT: ScopeId = "chart_q1";
 /// `q₂`'s edit button.
 pub const Q2_EDIT: ScopeId = "chart_q2";
-/// Chart builder…, drawn disabled until TASK-M6-28 builds its window.
+/// Chart builder…, which opens its window (render_gui_spec §G7).
 pub const BUILDER: ScopeId = "chart_builder";
 /// `q₁`'s eight components, under its edit button.
 pub const Q1_COMPONENTS: [ScopeId; LATENT_DIM] = [
@@ -183,7 +183,7 @@ pub fn join(tree: &mut ScopeTree) {
             tree.register(Some(edit), Scope::value(id, name, Bounded));
         }
     }
-    tree.register(Some(CHART), Scope::disabled(BUILDER, "Chart builder…"));
+    tree.register(Some(CHART), Scope::control(BUILDER, "Chart builder…"));
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_U, "centre u", Pan));
     tree.register(Some(NAVIGATE), Scope::value(CENTRE_V, "centre v", Pan));
     tree.register(Some(NAVIGATE), Scope::value(ZOOM, "zoom", ZoomLog2));
@@ -537,6 +537,7 @@ pub fn activate(id: &str, snapshot: &Snapshot, scratch: &mut Scratch, out: &mut 
         }
         UNLOCK => lock::unlock(&snapshot.sim.lock, out),
         OPEN_INSPECTOR => lock::open_inspector(&snapshot.sim.lock, out),
+        BUILDER => out.windows.push(Window::ChartBuilder),
         _ => compass::activate(id, scratch),
     }
 }

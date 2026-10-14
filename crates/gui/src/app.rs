@@ -4,6 +4,9 @@
 //! layer is hidden (RQ-248). The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
 //! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus. The
 //! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control.
+//! The windows (`crate::windows`; §G5, §G7, §G8, §G12) open from their entries and take the focus, which goes back to
+//! their opener when they close; an error opens the console by itself, taking no focus (R-405). Export & share's
+//! present mode hides all chrome until Esc, which returns the focus to Present (applied per R-369).
 
 use std::sync::Arc;
 
@@ -12,18 +15,20 @@ use eframe::egui_wgpu;
 use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity};
-use engine::contract::set_field::{Edit, RenderField};
+use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::{
     Backdrop, DebugCategories, Focus, Inspector, KeptOrbits, KeyMode, LinkedViews, Mode, Selection,
-    Transport, ViewUI, Windows,
+    Transport, ViewUI, Window, Windows,
 };
 
 use crate::clock::{Clock, Playback};
 use crate::explore;
+use crate::keyboard::scopes::ScopeId;
 use crate::keyboard::Keyboard;
 use crate::layout::Layout;
 use crate::side::EngineSide;
+use crate::windows;
 
 /// How often the app reads a snapshot: the engine posts it throttled to ~10 Hz, never per frame (caching contract
 /// Part 6a; gui_state_contract §1).
@@ -71,7 +76,7 @@ pub fn initial_view() -> ViewUI {
     }
 }
 
-/// The warnings and errors logged since the session began (gui_state_contract §2), until TASK-M6-28's "clear".
+/// The warnings and errors logged since the session began (gui_state_contract §2), until the console's clear.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Counts {
     /// `warn` entries.
@@ -90,6 +95,10 @@ pub struct App<S: EngineSide> {
     pub shown: bool,
     /// Whether the console is open.
     pub console_open: bool,
+    /// The windows' own state: their drafts and choices.
+    pub windows: windows::State,
+    /// Whether Export & share's present mode hides all chrome (render_gui_spec §G5); Esc returns.
+    pub present: bool,
     /// The keyboard layer.
     pub keyboard: Keyboard,
     /// The Manifold view's and the compass's own scratch state.
@@ -116,8 +125,8 @@ pub struct App<S: EngineSide> {
 pub struct Actions {
     /// Toggle the egui layer, as F3 does.
     pub toggle_layer: bool,
-    /// Toggle the console.
-    pub toggle_console: bool,
+    /// Open the window each of these controls opens, as their clicks did (`windows::opened_by`).
+    pub open: Vec<ScopeId>,
     /// Switch to this mode.
     pub mode: Option<Mode>,
     /// Open the `?` shortcuts.
@@ -136,13 +145,15 @@ impl<S: EngineSide> App<S> {
         let mut console = Vec::new();
         let mut counts = Counts::default();
         let snapshot = side.engine().snapshot();
-        absorb(&snapshot, &mut console, &mut counts);
+        let errored = absorb(&snapshot, &mut console, &mut counts);
         Self {
             side,
             view: initial_view(),
             clock: Clock::new(),
             shown: true,
-            console_open: false,
+            console_open: errored,
+            windows: windows::State::default(),
+            present: false,
             keyboard: Keyboard::new(),
             manifold: Default::default(),
             time: Default::default(),
@@ -201,23 +212,91 @@ impl<S: EngineSide> App<S> {
         self.reread = true;
     }
 
-    /// Reads a snapshot: its entries join the console and the counts.
+    /// Reads a snapshot: its entries join the console and the counts; an error among them opens the console, taking
+    /// no focus (§G12; R-405).
     fn read(&mut self) {
         self.snapshot = self.side.engine().snapshot();
-        absorb(&self.snapshot, &mut self.console, &mut self.counts);
+        if absorb(&self.snapshot, &mut self.console, &mut self.counts) {
+            self.console_open = true;
+        }
     }
 
-    /// Before each frame's egui pass: the keyboard layer takes its keys out of `raw` while the layer is shown.
+    /// Whether `window` is open.
+    pub fn is_open(&self, window: Window) -> bool {
+        match window {
+            Window::Console => self.console_open,
+            w => self.view.windows.open.contains(&w),
+        }
+    }
+
+    /// Opens `window`, opened by control `opener`, and gives it the focus on its first section (render_gui_spec §G3;
+    /// R-405); the focus goes back to `opener` when it closes. A window newly open is seeded: the Chart builder from
+    /// the chart, the Inspector from the orbit the Trajectory panel shows.
+    pub fn open_window(&mut self, ctx: &egui::Context, window: Window, opener: Option<ScopeId>) {
+        if !self.is_open(window) {
+            match window {
+                Window::ChartBuilder => self.windows.chart.seed(&self.snapshot.sim.plane),
+                Window::Inspector => {
+                    let shown = explore::trajectory::shown(
+                        self.trajectory.tab,
+                        self.snapshot.sample.as_ref(),
+                        &self.view.kept_orbits,
+                    );
+                    self.windows.inspector.seed(shown);
+                }
+                _ => {}
+            }
+            match window {
+                Window::Console => self.console_open = true,
+                w => self.view.windows.open.push(w),
+            }
+        }
+        let tree = self.keyboard.tree(self.view.mode);
+        let opener = opener.map(|id| tree.path_to(id)).unwrap_or_default();
+        let scope = windows::entry(window).scope;
+        self.keyboard
+            .open_window(ctx, self.view.mode, &mut self.view.focus, scope, opener);
+    }
+
+    /// Closes `window`: with the focus in it, the focus goes back to the scope that opened it.
+    pub fn close_window(&mut self, ctx: &egui::Context, window: Window) {
+        match window {
+            Window::Console => self.console_open = false,
+            w => self.view.windows.open.retain(|o| *o != w),
+        }
+        let scope = windows::entry(window).scope;
+        self.keyboard
+            .close_window(ctx, self.view.mode, &mut self.view.focus, scope);
+    }
+
+    /// Before each frame's egui pass: the keyboard layer takes its keys out of `raw` while the layer is shown, and not
+    /// in present mode, whose Esc is egui's to read.
     pub fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
-        if self.shown {
+        if self.shown && !self.present {
             self.keyboard.take_keys(ctx, raw);
+        }
+    }
+
+    /// Present mode: the figure only, every chrome hidden (render_gui_spec §G5); Esc returns, the focus on Present, in
+    /// navigation mode (applied per R-369).
+    fn presenting(&mut self, ctx: &egui::Context, layout: &Layout) {
+        self.keyboard.stand_down();
+        self.send_hover(None);
+        if self.view.mode == Mode::Explore {
+            self.paint_figure(ctx, layout.figure);
+        }
+        if ctx.input(|i| i.key_pressed(Key::Escape)) {
+            self.present = false;
+            let tree = self.keyboard.tree(self.view.mode);
+            self.view.focus.path = tree.path_to(windows::export::PRESENT);
+            self.view.focus.mode = KeyMode::Navigation;
         }
     }
 
     /// One frame on the root `ui`.
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         let ctx = ui.ctx().clone();
-        if ctx.input(|i| i.key_pressed(Key::F3)) {
+        if !self.present && ctx.input(|i| i.key_pressed(Key::F3)) {
             self.shown = !self.shown;
         }
         // A request of the GUI's own moved the state: read it before the clock advances from it.
@@ -276,6 +355,10 @@ impl<S: EngineSide> App<S> {
         }
         self.trajectory.advance(seconds, span);
         let layout = Layout::new(ui.max_rect(), ctx.pixels_per_point());
+        if self.present {
+            self.presenting(&ctx, &layout);
+            return;
+        }
         if self.view.mode == Mode::Explore {
             self.paint_figure(&ctx, layout.figure);
         }
@@ -294,9 +377,26 @@ impl<S: EngineSide> App<S> {
             self.keyboard.tree_mut(Mode::Explore),
             self.view.kept_orbits.orbits.len(),
         );
+        windows::chart_builder::join_presets(
+            self.keyboard.tree_mut(self.view.mode),
+            self.windows.chart.presets.len(),
+        );
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
+        let mut window_edits = Vec::new();
+        let mut acts = Acts::default();
+        for scope in self.keyboard.left().to_vec() {
+            if let Some(e) = windows::REGISTRY.iter().find(|e| e.scope == scope) {
+                self.close_window(&ctx, e.window);
+            }
+        }
+        for id in &activated {
+            self.activate_in_window(id, &mut window_edits, &mut acts);
+            if windows::opened_by(id).is_some() {
+                actions.open.push(id);
+            }
+        }
         for id in activated {
             explore::top_bar::activate(id, &mut actions);
             explore::overlays_menu::activate(id, &self.snapshot.render.overlays, &mut actions);
@@ -318,6 +418,10 @@ impl<S: EngineSide> App<S> {
                 &mut edits,
             );
             explore::trajectory::adjust(&adjust, span, &mut self.trajectory);
+            windows::run::adjust(&adjust, &mut self.windows.run);
+            windows::chart_builder::adjust(&adjust, &mut self.windows.chart);
+            windows::console::adjust(&adjust, &mut self.windows.console, &self.console);
+            windows::inspector::adjust(&adjust, &mut self.windows.inspector);
         }
         self.shortcuts(&ctx, &mut actions, &mut edits);
         if let Some(due) = self.keyboard.next_repeat_s() {
@@ -355,13 +459,14 @@ impl<S: EngineSide> App<S> {
                 is_mock: self.side.is_mock(),
                 console_open: self.console_open,
             },
+            &mut self.keyboard,
             &mut actions,
         );
-        if self.console_open {
-            let mut open = true;
-            crate::console::show(&ctx, layout.bottom_row, &self.console, &mut open);
-            actions.toggle_console |= !open;
+        let closed = self.draw_windows(&ctx, &layout, &mut window_edits, &mut acts);
+        for window in closed {
+            self.close_window(&ctx, window);
         }
+        self.act(&ctx, acts);
         self.draw_ring(&ctx);
         if let Some(overlays) = actions.overlays.take() {
             edits.push(engine::contract::set_field::SetField {
@@ -372,18 +477,36 @@ impl<S: EngineSide> App<S> {
         if std::mem::take(&mut actions.save_overlays) {
             self.overlay_default = self.snapshot.render.overlays.clone();
         }
+        let asked = std::mem::take(&mut actions.open);
         self.apply(&ctx, actions);
         for edit in edits {
             self.set_field(edit);
         }
-        // Locked, every basis edit turns about the pin (render_gui_spec §G4).
+        // Locked, every basis edit turns about the pin (render_gui_spec §G4): the Manifold view's and the windows'.
+        out.edits.extend(window_edits);
         for edit in explore::manifold_view::about_the_pin(out.edits, &self.snapshot.sim) {
             self.set_field(edit);
         }
-        for window in out.windows {
-            if !self.view.windows.open.contains(&window) {
-                self.view.windows.open.push(window);
+        // The windows asked for, each with the control that opened it: a click, Enter, or the Manifold view's and the
+        // Trajectory panel's own openers.
+        let mut opens: Vec<(Window, Option<ScopeId>)> = Vec::new();
+        for id in asked {
+            if let Some(w) = windows::opened_by(id) {
+                opens.push((w, Some(id)));
             }
+        }
+        for window in std::mem::take(&mut out.windows) {
+            let opener = match window {
+                Window::ChartBuilder => explore::manifold_view::BUILDER,
+                _ => explore::manifold_view::OPEN_INSPECTOR,
+            };
+            opens.push((window, Some(opener)));
+        }
+        if std::mem::take(&mut self.trajectory.open_inspector) {
+            opens.push((Window::Inspector, Some(explore::trajectory::INSPECTOR)));
+        }
+        for (window, opener) in opens {
+            self.open_window(&ctx, window, opener);
         }
         if self.keyboard.shortcuts_open {
             let rows = self.keyboard.tree(self.view.mode).shortcuts();
@@ -554,6 +677,128 @@ impl<S: EngineSide> App<S> {
         }
     }
 
+    /// Enter on control `id` of a window, as its click: each window acts on its own ids.
+    fn activate_in_window(&mut self, id: &str, edits: &mut Vec<SetField>, acts: &mut Acts) {
+        let w = &mut self.windows;
+        windows::run::activate(id, &mut w.run);
+        windows::profiler::activate(id, &mut w.profiler);
+        windows::display::activate(id, &mut w.display, &self.snapshot.render.overlays, edits);
+        let plane = &self.snapshot.sim.plane;
+        windows::chart_builder::activate(id, &mut w.chart, plane, edits);
+        windows::inspector::activate(id, &mut w.inspector, &mut self.view.kept_orbits, edits);
+        let (sim, render) = (&self.snapshot.sim, &self.snapshot.render);
+        if let Some(act) = windows::export::activate(id, &mut w.export, sim, render) {
+            acts.export.push(act);
+        }
+        if let Some(act) = windows::console::activate(id, &mut w.console, &self.console) {
+            acts.console.push(act);
+        }
+    }
+
+    /// Draws the open windows, the console last; returns those closed by their ×.
+    fn draw_windows(
+        &mut self,
+        ctx: &egui::Context,
+        layout: &Layout,
+        edits: &mut Vec<SetField>,
+        acts: &mut Acts,
+    ) -> Vec<Window> {
+        let mut closed = Vec::new();
+        let mut open = self.view.windows.open.clone();
+        if self.console_open {
+            open.push(Window::Console);
+        }
+        let ppp = ctx.pixels_per_point();
+        let view_px =
+            [layout.figure.width(), layout.figure.height()].map(|v| (v * ppp).round() as u32);
+        let quick = self.side.canvas().map(|c| (c, self.format));
+        let mut keys = windows::Keys {
+            keyboard: &mut self.keyboard,
+            focused: self.view.focus.path.last().cloned(),
+        };
+        for window in open {
+            let e = windows::entry(window);
+            let rect = windows::rect(window, layout);
+            let w = &mut self.windows;
+            let snapshot = &self.snapshot;
+            let still = windows::frame(
+                ctx,
+                e.scope,
+                e.title,
+                rect,
+                &mut keys,
+                window != Window::Console,
+                |ui, keys| match window {
+                    Window::Run => windows::run::show(ui, keys, &mut w.run),
+                    Window::Profiler => {
+                        windows::profiler::show(ui, keys, &mut w.profiler, self.side.trace())
+                    }
+                    Window::Export => {
+                        let state = (&snapshot.sim, &snapshot.render);
+                        if let Some(act) =
+                            windows::export::show(ui, keys, &mut w.export, state, view_px)
+                        {
+                            acts.export.push(act);
+                        }
+                    }
+                    Window::Display => windows::display::show(
+                        ui,
+                        keys,
+                        &mut w.display,
+                        &snapshot.render.overlays,
+                        edits,
+                    ),
+                    Window::ChartBuilder => {
+                        let view = windows::chart_builder::View {
+                            plane: &snapshot.sim.plane,
+                            quick: quick.clone(),
+                        };
+                        windows::chart_builder::show(ui, keys, &mut w.chart, &view, edits)
+                    }
+                    Window::Inspector => windows::inspector::show(
+                        ui,
+                        keys,
+                        &mut w.inspector,
+                        self.trajectory.angle,
+                        (&mut self.view.kept_orbits, edits),
+                    ),
+                    Window::Console => {
+                        let view = windows::console::View {
+                            entries: &self.console,
+                            counts: self.counts,
+                        };
+                        if let Some(act) = windows::console::show(ui, keys, &mut w.console, &view) {
+                            acts.console.push(act);
+                        }
+                    }
+                },
+            );
+            if !still {
+                closed.push(window);
+            }
+        }
+        closed
+    }
+
+    /// Carries out what the windows' controls asked: a copy to the clipboard, the console's clear, present mode.
+    fn act(&mut self, ctx: &egui::Context, acts: Acts) {
+        for act in acts.console {
+            match act {
+                windows::console::Act::Copy(text) => ctx.copy_text(text),
+                windows::console::Act::Clear => {
+                    self.console.clear();
+                    self.counts = Counts::default();
+                }
+            }
+        }
+        for act in acts.export {
+            match act {
+                windows::export::Act::Copy(text) => ctx.copy_text(text),
+                windows::export::Act::Present => self.present = true,
+            }
+        }
+    }
+
     /// Draws the focus ring on the focused scope, where it was drawn this frame.
     fn draw_ring(&self, ctx: &egui::Context) {
         let tree = self.keyboard.tree(self.view.mode);
@@ -570,9 +815,6 @@ impl<S: EngineSide> App<S> {
     fn apply(&mut self, ctx: &egui::Context, actions: Actions) {
         if actions.toggle_layer {
             self.shown = !self.shown;
-        }
-        if actions.toggle_console {
-            self.console_open = !self.console_open;
         }
         if let Some(mode) = actions.mode {
             self.view.mode = mode;
@@ -603,8 +845,15 @@ impl<S: EngineSide> App<S> {
     }
 }
 
-/// Adds `snapshot`'s log entries to the console and the counts.
-fn absorb(snapshot: &Snapshot, console: &mut Vec<LogEntry>, counts: &mut Counts) {
+/// What the windows' controls asked of the app this frame.
+#[derive(Debug, Default)]
+struct Acts {
+    console: Vec<windows::console::Act>,
+    export: Vec<windows::export::Act>,
+}
+
+/// Adds `snapshot`'s log entries to the console and the counts; returns whether an error was among them.
+fn absorb(snapshot: &Snapshot, console: &mut Vec<LogEntry>, counts: &mut Counts) -> bool {
     for entry in &snapshot.log {
         match entry.severity {
             Severity::Warn => counts.warnings = counts.warnings.saturating_add(1),
@@ -615,12 +864,14 @@ fn absorb(snapshot: &Snapshot, console: &mut Vec<LogEntry>, counts: &mut Counts)
     console.extend(snapshot.log.iter().cloned());
     let excess = console.len().saturating_sub(CONSOLE_ROWS);
     console.drain(..excess);
+    snapshot.log.iter().any(|e| e.severity == Severity::Error)
 }
 
-/// The figure, drawn by the canvas into egui-wgpu's pass with its viewport set to the figure's rect.
-struct FigureCallback {
-    canvas: Arc<dyn Canvas>,
-    format: wgpu::TextureFormat,
+/// The figure, drawn by the canvas into egui-wgpu's pass with its viewport set to the callback's rect: the figure's,
+/// or the Chart builder's quick render's.
+pub(crate) struct FigureCallback {
+    pub(crate) canvas: Arc<dyn Canvas>,
+    pub(crate) format: wgpu::TextureFormat,
 }
 
 impl egui_wgpu::CallbackTrait for FigureCallback {

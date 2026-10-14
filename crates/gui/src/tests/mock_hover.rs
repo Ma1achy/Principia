@@ -696,9 +696,14 @@ fn mock_hover_trajectory_scopes_and_the_playhead() {
             KEPT
         ]
     );
-    for id in [trajectory::VIEWER, trajectory::INSPECTOR] {
-        assert!(!tree.get(id).unwrap().activates, "{id} is drawn disabled");
-    }
+    assert!(
+        !tree.get(trajectory::VIEWER).unwrap().activates,
+        "Open full viewer… is drawn disabled"
+    );
+    assert!(
+        tree.get(trajectory::INSPECTOR).unwrap().activates,
+        "IC Inspector… opens the Inspector (TASK-M6-28)"
+    );
     // The kept orbits come and go; a second join with the same count changes nothing.
     join_kept(&mut tree, 3);
     assert_eq!(tree.children(Some(KEPT)).len(), 3);
