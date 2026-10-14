@@ -160,6 +160,18 @@ fn element(ctx: Ctx, k: u32) -> f32 {
     return same + arr[i].ftle; // fires guard
 }
 
+fn element_of_a_value(ctx: Ctx, k: u32) -> f32 {
+    let arr = array<SimState, 2>(ctx.sample, ctx.sample);
+    var i = k;
+    if (has_ftle) {
+        if (arr[i].ftle_valid) {
+            i = i + 1u;
+            return arr[i].ftle; // fires guard
+        }
+    }
+    return 0.0;
+}
+
 fn two_loads(ctx: Ctx) -> f32 {
     var s = ctx.sample;
     let a = s;
