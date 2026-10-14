@@ -76,12 +76,13 @@ pub fn check(root: &Path, excluded: &[PathBuf]) -> Result<Vec<Finding>, String> 
     Ok(found)
 }
 
-/// The directory that holds the files of the modules `path` declares: its own directory for a crate root or a
-/// `mod.rs`, else the directory named for it.
+/// The directory that holds the files of the modules `path` declares: its own directory for the crate root, `lib.rs`,
+/// or a `mod.rs`, else the directory named for it. (The linted crates have no `main.rs`, and a module `build.rs`
+/// declares is not read.)
 fn module_dir(path: &Path) -> PathBuf {
     let parent = path.parent().unwrap_or(Path::new(""));
     match path.file_stem().and_then(|s| s.to_str()) {
-        Some("lib" | "main" | "mod" | "build") | None => parent.to_path_buf(),
+        Some("lib" | "mod") | None => parent.to_path_buf(),
         Some(stem) => parent.join(stem),
     }
 }
@@ -105,14 +106,40 @@ fn ident(c: u8) -> bool {
     c.is_ascii_alphanumeric() || c == b'_'
 }
 
-/// Each out-of-line module declaration `mod name;` in `code` (comments and strings blanked): its offset, and the
-/// names of the inline modules (`mod outer { … }`) that enclose it, then its own.
+/// Each out-of-line module declaration `mod name;` in `code` (comments and strings blanked): the offset of its `mod`,
+/// and the names of the inline modules (`mod outer { … }`) that enclose it, then its own. One pass over the bytes: a
+/// word ends at the first byte that is not an identifier's; `mod` then a name is a declaration, ended by `;` (out of
+/// line) or `{` (inline, its body closed by the `}` that returns to the depth it opened at).
 fn out_of_line_modules(code: &str) -> Vec<(usize, Vec<String>)> {
-    let b = code.as_bytes();
-    let (mut found, mut inline, mut depth) = (Vec::new(), Vec::<(String, usize)>::new(), 0);
-    let mut i = 0;
-    while i < b.len() {
-        match b[i] {
+    let (mut found, mut inline) = (Vec::new(), Vec::<(String, i64)>::new());
+    let (mut depth, mut word, mut keyword, mut named) = (0, None, None, None);
+    for (k, c) in code.bytes().chain(std::iter::once(b' ')).enumerate() {
+        if ident(c) {
+            word = word.or(Some(k));
+            continue;
+        }
+        if let Some(start) = word.take() {
+            let text = &code[start..k];
+            match keyword.take() {
+                Some(at) => named = Some((at, text.to_owned())),
+                None if text == "mod" => keyword = Some(start),
+                None => named = None,
+            }
+        }
+        if c.is_ascii_whitespace() {
+            continue;
+        }
+        keyword = None;
+        match (c, named.take()) {
+            (b';', Some((at, name))) => {
+                let mut names: Vec<String> = inline.iter().map(|(n, _)| n.clone()).collect();
+                names.push(name);
+                found.push((at, names));
+            }
+            (b'{', Some((_, name))) => inline.push((name, depth + 1)),
+            _ => {}
+        }
+        match c {
             b'{' => depth += 1,
             b'}' => {
                 if inline.last().is_some_and(|&(_, d)| d == depth) {
@@ -120,62 +147,34 @@ fn out_of_line_modules(code: &str) -> Vec<(usize, Vec<String>)> {
                 }
                 depth -= 1;
             }
-            c if ident(c) && (i == 0 || !ident(b[i - 1])) => {
-                let start = i;
-                while i < b.len() && ident(b[i]) {
-                    i += 1;
-                }
-                if &code[start..i] != "mod" {
-                    continue;
-                }
-                let rest = code[i..].trim_start();
-                let len = rest.bytes().take_while(|&c| ident(c)).count();
-                let after = rest[len..].trim_start();
-                let name = rest[..len].to_owned();
-                if len == 0 {
-                    continue;
-                }
-                if after.starts_with(';') {
-                    let mut names: Vec<String> = inline.iter().map(|(n, _)| n.clone()).collect();
-                    names.push(name);
-                    found.push((start, names));
-                } else if after.starts_with('{') {
-                    inline.push((name, depth + 1));
-                }
-                continue;
-            }
             _ => {}
         }
-        i += 1;
     }
     found
 }
 
 /// The byte ranges of `code` (comments and strings blanked) that are items under `#[cfg(test)]`: each from the
-/// attribute to its item's `;`, or to the `}` that closes its body.
-fn test_items(code: &str) -> Vec<std::ops::Range<usize>> {
+/// attribute to its item's `;`, or to the `}` that closes its body, both included.
+fn test_items(code: &str) -> Vec<std::ops::RangeInclusive<usize>> {
     const ATTRIBUTE: &str = "#[cfg(test)]";
     let b = code.as_bytes();
     code.match_indices(ATTRIBUTE)
         .map(|(at, _)| {
             let mut depth = 0;
-            let mut j = at + ATTRIBUTE.len();
-            while j < b.len() {
+            let end = (at + ATTRIBUTE.len()..b.len()).find(|&j| {
                 match b[j] {
                     b'(' | b'[' | b'{' => depth += 1,
                     b')' | b']' => depth -= 1,
                     b'}' => {
                         depth -= 1;
-                        if depth == 0 {
-                            break;
-                        }
+                        return depth == 0;
                     }
-                    b';' if depth == 0 => break,
+                    b';' => return depth == 0,
                     _ => {}
                 }
-                j += 1;
-            }
-            at..(j + 1).min(b.len())
+                false
+            });
+            at..=end.unwrap_or(b.len())
         })
         .collect()
 }

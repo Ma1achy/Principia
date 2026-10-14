@@ -114,25 +114,34 @@ negative_control!(
     }
 );
 
-/// A kernel whose `lib.rs` holds a test module inline, with a numeric `const` and an out-of-line module of its own
-/// (`src/tests/deep.rs`), and declares another out of line (`src/probe.rs`, with `src/probe/inner.rs` beneath it), each
-/// holding a numeric `const` or `static`, under `attribute`; beside them a module that is not test code, `src/real.rs`,
-/// with one numeric `const`.
+/// A kernel whose `lib.rs` holds an inline module with a nested block, then a test module inline, with a numeric
+/// `const` and an out-of-line module of its own (`src/tests/deep.rs`), and declares another out of line (`src/probe.rs`,
+/// with `src/probe/inner.rs` beneath it), each holding a numeric `const` or `static`, under `attribute`; then a numeric
+/// `const` of its own. Beside them two modules that are not test code: `src/real.rs`, with one numeric `const`, and
+/// `src/nest/mod.rs`, which declares the test module `src/nest/t.rs` under `attribute`, with a numeric `const`.
 fn test_tree(name: &str, attribute: &str) -> PathBuf {
     let root = tree(
         name,
         &format!(
-            "pub mod real;\n{attribute}\nmod tests {{\n    const N: usize = 3;\n    mod deep;\n}}\n{attribute}\n\
-             #[allow(dead_code)]\nmod probe;\n"
+            "pub mod real;\npub mod nest;\npub mod outer {{\n    pub fn f() {{}}\n}}\n{attribute}\nmod tests {{\n    \
+             const N: usize = 3;\n    mod deep;\n}}\n{attribute}\n#[allow(dead_code)]\nmod probe;\n\
+             pub const AFTER: u32 = 6;\n"
         ),
     );
     let src = root.join("crates/kernel/src");
-    fs::create_dir_all(src.join("tests")).expect("tests dir created");
-    fs::create_dir_all(src.join("probe")).expect("probe dir created");
-    fs::write(src.join("real.rs"), "pub const REAL: u32 = 5;\n").expect("real.rs written");
-    fs::write(src.join("tests/deep.rs"), "static Z: u8 = 1;\n").expect("deep.rs written");
-    fs::write(src.join("probe.rs"), "mod inner;\nconst M: u32 = 4;\n").expect("probe.rs written");
-    fs::write(src.join("probe/inner.rs"), "const I: f64 = 0.5;\n").expect("inner.rs written");
+    for dir in ["tests", "probe", "nest"] {
+        fs::create_dir_all(src.join(dir)).expect("module dir created");
+    }
+    for (file, text) in [
+        ("real.rs", "pub const REAL: u32 = 5;\n".to_owned()),
+        ("tests/deep.rs", "static Z: u8 = 1;\n".to_owned()),
+        ("probe.rs", "mod inner;\nconst M: u32 = 4;\n".to_owned()),
+        ("probe/inner.rs", "const I: f64 = 0.5;\n".to_owned()),
+        ("nest/mod.rs", format!("{attribute}\nmod t;\n")),
+        ("nest/t.rs", "const T: u32 = 7;\n".to_owned()),
+    ] {
+        fs::write(src.join(file), text).expect("module written");
+    }
     root
 }
 
@@ -146,12 +155,15 @@ fn check_finds(root: &Path, want: &[&str]) {
     assert_eq!(found, want, "the lint's findings are not the expected ones");
 }
 
+/// The findings of [`test_tree`]: the two numeric constants outside test code.
+const NOT_TEST_CODE: [&str; 2] = [
+    "crates/kernel/src/lib.rs:14: AFTER",
+    "crates/kernel/src/real.rs:1: REAL",
+];
+
 #[test]
 fn lint_constants_skips_test_code() {
-    check_finds(
-        &test_tree("lint_test_code", "#[cfg(test)]"),
-        &["crates/kernel/src/real.rs:1: REAL"],
-    );
+    check_finds(&test_tree("lint_test_code", "#[cfg(test)]"), &NOT_TEST_CODE);
 }
 
 negative_control!(
@@ -160,6 +172,6 @@ negative_control!(
     expected = "the lint's findings are not the expected ones",
     check_finds(
         &test_tree("lint_control_test_code", "#[cfg(feature = \"x\")]"),
-        &["crates/kernel/src/real.rs:1: REAL"]
+        &NOT_TEST_CODE
     )
 );
