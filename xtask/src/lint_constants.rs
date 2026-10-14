@@ -154,7 +154,10 @@ fn out_of_line_modules(code: &str) -> Vec<(usize, Vec<String>)> {
 }
 
 /// The byte ranges of `code` (comments and strings blanked) that are items under `#[cfg(test)]`: each from the
-/// attribute to its item's `;`, or to the `}` that closes its body, both included.
+/// attribute to its item's `;`, or to the `}` that closes its body, both included. On a field, a variant, a match arm
+/// or a parameter, the range ends at the `,` after it, or at the bracket that closes its list; with neither, a `;` nor
+/// a `}`, it is the attribute's `#` alone, never the rest of the file. A `,` inside a generic argument list (`<A, B>`)
+/// ends it early: the skip then reaches less than the item, never more.
 fn test_items(code: &str) -> Vec<std::ops::RangeInclusive<usize>> {
     const ATTRIBUTE: &str = "#[cfg(test)]";
     let b = code.as_bytes();
@@ -164,17 +167,20 @@ fn test_items(code: &str) -> Vec<std::ops::RangeInclusive<usize>> {
             let end = (at + ATTRIBUTE.len()..b.len()).find(|&j| {
                 match b[j] {
                     b'(' | b'[' | b'{' => depth += 1,
-                    b')' | b']' => depth -= 1,
+                    b')' | b']' => {
+                        depth -= 1;
+                        return depth < 0;
+                    }
                     b'}' => {
                         depth -= 1;
-                        return depth == 0;
+                        return depth <= 0;
                     }
-                    b';' => return depth == 0,
+                    b';' | b',' => return depth == 0,
                     _ => {}
                 }
                 false
             });
-            at..=end.unwrap_or(b.len())
+            at..=end.unwrap_or(at)
         })
         .collect()
 }
