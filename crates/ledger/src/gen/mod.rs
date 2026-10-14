@@ -191,8 +191,8 @@ fn bad_vector(e: &Entry) -> Option<String> {
 /// A gap is [`numeric::undeclared`]'s to refuse: its (−∞, ∞) declares nothing, so it is not named as a range here
 /// (R-426).
 fn bad_diverging(e: &Entry) -> Option<String> {
-    let gap = crate::payload::range_state(e) == Some(RangeState::Gap);
-    (e.scale == Scale::Diverging && !gap && !crate::payload::spans_zero(e)).then(|| {
+    let state = e.range_state();
+    (e.scale == Scale::Diverging && state != RangeState::Gap && !state.spans_zero()).then(|| {
         format!(
             "field `{}` has scale `diverging` over {}, a range that does not span zero: a field is `diverging` only \
              when its declared range spans zero (dd_generation_root §3.8, R-403)",

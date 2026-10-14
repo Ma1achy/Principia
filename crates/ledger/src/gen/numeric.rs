@@ -24,7 +24,7 @@
 //! defaults to `RANGE_AUTO = 1`; a cyclic one, placed on its fixed `[0, 1]`, to 0.
 //!
 //! **An undeclared range is a ledger gap, not one that spans zero (R-426; dd_generation_root §3.8).** "Declared" is
-//! the range's state ([`crate::payload::range_state`]): a gap never spans zero, so it never puts a `lin` field on
+//! the range's state ([`Entry::range_state`]): a gap never spans zero, so it never puts a `lin` field on
 //! `ramp_coolwarm`, and a `lin` or `diverging` scalar field whose range is a gap fails generation, naming it
 //! ([`undeclared`]). A provisional range, `q_mass`'s and `mean_y`'s, is drawn as (−∞, ∞), so on `ramp_coolwarm`, as
 //! R-426 keeps them.
@@ -126,7 +126,7 @@ pub fn cyclic_period() -> f64 {
 
 /// The generation gate on undeclared ranges (R-426; REQ-GEN-035; dd_generation_root §3.8: "A `lin` or `diverging`
 /// scalar field whose range is a gap fails generation, naming the field"): a line naming `e` if it is a `lin` or
-/// `diverging` scalar whose range is a gap ([`crate::payload::range_state`]), whose ramp the template would choose
+/// `diverging` scalar whose range is a gap ([`Entry::range_state`]), whose ramp the template would choose
 /// from a range never declared. A provisional range, and a gap on any other entry (a cyclic field, a vector), pass.
 pub fn undeclared(e: &Entry) -> Option<String> {
     let scale = match e.scale {
@@ -135,7 +135,7 @@ pub fn undeclared(e: &Entry) -> Option<String> {
         _ => return None,
     };
     let scalar = !matches!(e.ty, FieldType::Vector { .. });
-    (scalar && crate::payload::range_state(e) == Some(RangeState::Gap)).then(|| {
+    (scalar && e.range_state() == RangeState::Gap).then(|| {
         format!(
             "field `{}` has scale `{scale}` and no declared range: the (−∞, ∞) it writes is a ledger gap, not a range \
              that spans zero; declare its range with its citation, or mark it provisional (dd_generation_root §3.8, \
@@ -179,14 +179,14 @@ impl NumericView {
     /// The numeric view of `e`, or `None` for a field the template does not colour: categorical, flag, a vector, or
     /// a field with a ledger `floor` (the drifts, R-381). A `lin` or `diverging` field whose declared range spans zero
     /// is placed symmetrically on `ramp_coolwarm` (R-400), and a provisional one too (R-426); a gap does not span zero
-    /// ([`crate::payload::spans_zero`]); generation has refused a `diverging` one that does not (R-403) and a `lin` or
+    /// ([`RangeState::spans_zero`]); generation has refused a `diverging` one that does not (R-403) and a `lin` or
     /// `diverging` gap ([`undeclared`]).
     pub fn of(e: &Entry) -> Option<NumericView> {
         if matches!(e.ty, FieldType::Vector { .. }) || e.floor.is_some() {
             return None;
         }
         let placement = match e.scale {
-            Scale::Lin if crate::payload::spans_zero(e) => Placement::Diverging,
+            Scale::Lin if e.range_state().spans_zero() => Placement::Diverging,
             Scale::Lin => Placement::Lin,
             Scale::Log => Placement::Log { floor: log_floor() },
             Scale::Cyclic => Placement::Cyclic {
