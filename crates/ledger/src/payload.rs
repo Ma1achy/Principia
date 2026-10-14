@@ -16,7 +16,7 @@
 //! both `lin` (R-403).
 //!
 //! **Range states (R-426; dd_generation_root §3.8).** Each field's range is one of §3.8's three states
-//! ([`Entry::range_state`], each entry marked by [`declared`]): `declared(lo, hi, citation)`, with its citation in
+//! ([`Entry::range_state`], each entry marked by `declared`): `declared(lo, hi, citation)`, with its citation in
 //! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `q_mass` and `mean_y` ([`PROVISIONAL`]),
 //! drawn as (−∞, ∞) on `ramp_coolwarm` until their requirements declare them; or `gap`, a (−∞, ∞) written and never
 //! cited, which never spans zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or
