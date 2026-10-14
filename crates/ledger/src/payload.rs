@@ -6,7 +6,7 @@
 //!
 //! Where §3 gives a field no scale, the entry is `lin`; where it gives no range, the entry writes (−∞, ∞), which
 //! declares nothing: the range is a gap (R-426), unless the ledger declares it with its citation or marks it
-//! provisional, below. §3.6's log fields are > 0. Consumers are render, export and debug, as §3.8's worked entries
+//! provisional, below. §3.6's log fields are ≥ 0, 0 at the collision pole (dd_decoder §3.6). Consumers are render, export and debug, as §3.8's worked entries
 //! have them. `n`, the shape-sphere point, is §3.8's worked entry: `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`,
 //! `lin` over [−1, 1] in each component (TASK-M1-12; RQ-235).
 //!
@@ -17,9 +17,9 @@
 //!
 //! **Range states (R-426; dd_generation_root §3.8).** Each field's range is one of §3.8's three states
 //! ([`Entry::range_state`], each entry marked by `declared`): `declared(lo, hi, citation)`, with its citation in
-//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `q_mass` and `mean_y` ([`PROVISIONAL`]),
-//! drawn as (−∞, ∞) on `ramp_coolwarm` until their requirements declare them; or `gap`, a (−∞, ∞) written and never
-//! cited, which never spans zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or
+//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `mean_y` ([`PROVISIONAL`]), drawn as
+//! (−∞, ∞) on `ramp_coolwarm` until its requirement declares it (`q_mass`'s, declared [0, 1] by REQ-PAY-097, no longer
+//! is); or `gap`, a (−∞, ∞) written and never cited, which never spans zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or
 //! `diverging` scalar field whose range is a gap fails generation ([`crate::gen::numeric::undeclared`]).
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
@@ -109,7 +109,7 @@ fn shape_point() -> EntryBuilder {
 /// The fields the corpus or their own definition make non-negative, other than the unsigned bit fields, each with the
 /// line that does (R-400; TASK-M1-17): each declares a lower bound of 0, closed or open, and nothing else declares
 /// one. The physics reviewer checks each citation.
-pub const NON_NEGATIVE: [(&str, &str); 13] = [
+pub const NON_NEGATIVE: [(&str, &str); 14] = [
     (
         "closure_min",
         "dd_generation_root §3.4: `closure_min` | log | ≥ 0",
@@ -139,17 +139,24 @@ pub const NON_NEGATIVE: [(&str, &str); 13] = [
         "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
     ),
     (
+        "q_mass",
+        "dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, the inner pair's mass ratio, in [0, 1] (REQ-PAY-088); \
+         declared from its formula by REQ-PAY-097 (R-426)",
+    ),
+    (
         "rho_mag",
-        "a magnitude, ≥ 0: REQ-PAY-088 (its candidates ‖ρ‖ and ‖ρ̃‖, all norms); render_gui_spec §10.1's `|ρ| ∈ [0,1]` \
-         holds only for the mass-weighted ‖ρ̃‖, the unweighted ‖ρ‖ can exceed 1, so only the lower bound is declared",
+        "a magnitude, ≥ 0: dd_decoder §3.6: `rho_mag = ‖ρ̃‖`, the mass-weighted norm (REQ-PAY-088); only the lower \
+         bound is declared",
     ),
     (
         "lambda_mag",
-        "a magnitude, ≥ 0: REQ-PAY-088 (its candidates ‖λ‖ and ‖λ̃‖, all norms); dd_decoder §3.6: \"ρ-magnitudes\"",
+        "a magnitude, ≥ 0: dd_decoder §3.6: `lambda_mag = ‖λ̃‖`, the mass-weighted norm (REQ-PAY-088); only the lower \
+         bound is declared",
     ),
     (
         "rho_ratio",
-        "dd_generation_root §3.6: `rho_ratio` (log), so > 0, as §3.6's log fields are; R-401: \"a ratio\"",
+        "dd_decoder §3.6: `rho_ratio = ‖ρ̃‖/‖λ̃‖` ∈ [0, ∞], 0 at the collision pole (REQ-PAY-088); dd_generation_root \
+         §3.6: `rho_ratio` (log); R-401: \"a ratio\"",
     ),
     (
         "K_0",
@@ -161,7 +168,8 @@ pub const NON_NEGATIVE: [(&str, &str); 13] = [
     ),
     (
         "r_min_pair_0",
-        "dd_generation_root §3.6: `r_min_pair_0` (log), so > 0; R-401: \"a distance for the distances\"",
+        "dd_decoder §3.6: `r_min_pair_0 = min_{i<j} ‖rᵢ − rⱼ‖` ∈ [0, ∞), 0 at the collision pole (REQ-PAY-088); \
+         dd_generation_root §3.6: `r_min_pair_0` (log); R-401: \"a distance for the distances\"",
     ),
 ];
 
@@ -208,10 +216,12 @@ pub const SIGNED: [(&str, &str); 8] = [
     ),
 ];
 
-/// The fields whose range is provisional, each with the requirement that declares it (R-426): they stay on
-/// `ramp_coolwarm`, drawn as (−∞, ∞), until TASK-M2-03 declares `q_mass`'s from its formula (REQ-PAY-088) and
-/// TASK-M3-13 `mean_y`'s from `y`'s definition (REQ-PAY-073), and the physics reviewer re-checks each ramp then.
-pub const PROVISIONAL: [(&str, &str); 2] = [("q_mass", "REQ-PAY-097"), ("mean_y", "REQ-PAY-098")];
+/// The fields whose range is provisional, each with the requirement that declares it (R-426): each stays on
+/// `ramp_coolwarm`, drawn as (−∞, ∞), until its requirement declares it, and the physics reviewer re-checks the ramp
+/// then. `mean_y` waits for TASK-M3-13 to declare its range from `y`'s definition (REQ-PAY-073). `q_mass`'s was
+/// declared [0, 1] by TASK-M2-03 from its formula (REQ-PAY-088, REQ-PAY-097), in [`NON_NEGATIVE`], so it is on
+/// `ramp_viridis`.
+pub const PROVISIONAL: [(&str, &str); 1] = [("mean_y", "REQ-PAY-098")];
 
 /// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0` and `n`.
 pub const DECLARED: [(&str, &str); 13] = [
@@ -344,11 +354,12 @@ fn from(lo: Bound) -> Range {
     }
 }
 
-/// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode.
+/// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode. A log field is `[0, ∞)`: dd_decoder §3.6's two,
+/// `rho_ratio` and `r_min_pair_0`, are > 0 but at the collision pole, where they read 0.
 fn ic(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
     let e = f32_at(name, slot, scale).provenance(Provenance::Decode);
     match scale {
-        Scale::Log => e.range(from(Bound::Open(0.0))),
+        Scale::Log => e.range(from(Bound::Closed(0.0))),
         _ => e,
     }
 }
@@ -440,8 +451,8 @@ fn entries() -> Vec<EntryBuilder> {
         ic("m0", 0, Scale::Lin).range(fraction),
         ic("m1", 1, Scale::Lin).range(fraction),
         ic("m2", 2, Scale::Lin).range(fraction),
-        // Provisional until REQ-PAY-097 declares its range ([`PROVISIONAL`]; R-426).
-        ic("q_mass", 3, Scale::Lin),
+        // dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, declared [0, 1] from its formula (REQ-PAY-097; R-426).
+        ic("q_mass", 3, Scale::Lin).range(fraction),
         ic("rho_mag", 4, Scale::Lin).range(from_zero),
         ic("lambda_mag", 5, Scale::Lin).range(from_zero),
         ic("rho_ratio", 6, Scale::Log),
