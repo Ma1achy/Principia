@@ -290,6 +290,11 @@ and start M1.
 R-386 (6 Oct 2026, applied per R-369): before the M1 gate passes, lay out REQ-COL-061's proposal beside REQ-COL-055's
 and check `cvd_hatch_distinct` (TASK-M7-20) green on `main`. The M1 gate report lists only the gate blocks of M1 and
 earlier milestones, so it does not show REQ-COL-061, which is in M7.
+R-428 to R-432 (14 Oct 2026): the M1 gate passes. R-428 confirms the nine register entries provisional until M1 (the
+six log floors, `rho_ratio`'s and `r_min_pair_0`'s provisionally until M2, and the hatch's colours and stripe width),
+R-429 REQ-COL-061's criterion, R-430 the ramps as reported, and R-431 four R-369 choices; R-432 passes the gate. Once
+the rulings PR has merged, tag that commit of `main` `m1-gate`, confirm it in the summary, and start M2. RQ-279 (six
+M1 calibrations the message does not name) does not hold the gate.
 R-390 (6 Oct 2026): the GUI track, TASK-M6-24 to TASK-M6-29, starts now, in parallel with the physics and renderer
 chain, on spare agent slots only, and never holds up M1 or M2 (§ "The GUI track (R-390)").
 R-415 (10 Oct 2026): **merging before an earlier milestone's gate.** A task may merge before an earlier milestone's

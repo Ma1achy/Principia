@@ -101,6 +101,10 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   because TASK-M7-20, the M7 task that builds the simulation, closes it, and no task closes an earlier milestone's
   requirement. The M1 gate does not pass until REQ-COL-061 is green on `main`, so **TASK-M7-20 merges before the M1
   gate**.
+  **At the gate (R-429):** the criterion is confirmed beside REQ-COL-055: τ is the OKLab distance from `#FF00FF` to
+  `#E034C6`, 0.101; the hatch passes by colour, or by its pattern when the two simulated stripes are more than τ apart.
+  The pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a flat colour, which
+  under achromatopsia sits on the grey ramp.
 - **Also at the M1 gate (R-423): physics checks the six fields R-400 moved to cool-warm** (PR #195, TASK-M1-17):
   `q_mass`, `ftle`, `mean_y`, `S`, `theta` and `diffusion`. Before the gate report, the orchestrator dispatches a
   read-only physics check of `q_mass`, `ftle`, `mean_y`, `S` and `diffusion`: that each is a signed quantity whose
@@ -118,12 +122,23 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   default and not among the six, was **RQ-277**, decided per R-369 (option (a), PR #205): signed, as `diffusion` is,
   since `C_ty = diffusion · C_tt(n)` with `C_tt(n) > 0`; it stays on `ramp_coolwarm`, and the gate report gives it
   as confirmed with the human's veto open.
+  **At the gate (R-430):** the ramps are as reported: `S`, `ftle` and `diffusion` pass; `q_mass` and `mean_y` are
+  provisional on cool-warm, re-checked at M2 and M3; `theta` is cyclic; `C_ty` stands as decided per R-369, no veto.
 - **Also at the M1 gate (R-427): the constants register's provisional entries.** The gate report lists each register
   entry marked provisional until M1 (TASK-M1-18's six per-field log floors, and the hatch's colours and stripe width),
   and the human confirms or changes each; an entry still so marked blocks the gate. At their confirmation
   `rho_ratio`'s and `r_min_pair_0`'s floors are re-marked provisional until M2 (R-419, REQ-TOOL-163). The report also
   gives TASK-M1-18's statement of whether `d_min`'s floor at 2⁻¹⁴, f16's smallest normal, is intended when `d_min` is
   stored down to 2⁻²⁴ (R-271), so that the closest approaches land at the bottom of the ramp, with its evidence.
+  **At the gate (R-428):** the nine are confirmed as proposed. Seven are confirmed register entries citing R-428:
+  `log_floor_d_min` 2⁻¹⁴, `log_floor_dE_max` and `log_floor_dLz_max` 2⁻²⁰, `log_floor_closure_min` 2⁻²³,
+  `hatch_violet` `#9B00FF`, `hatch_cyan` `#48FFFF` and `hatch_half_period` 4 px. `log_floor_rho_ratio` 2⁻²³ and
+  `log_floor_r_min_pair_0` 2⁻¹⁴ are marked provisional until M2, citing REQ-TOOL-163. `d_min`'s floor at 2⁻¹⁴ is
+  intended: 2⁻²⁰ would compress `d_min` ∈ [6e-5, 1] from half the ramp to an eighth of it. The six M1 calibrations
+  that are not register entries, which the message does not name, are RQ-279.
+- **The M1 gate passed (R-432, 14 Oct 2026)** on gate run 38629476853 on `main` at ab65c273 (230 of 230 requirements
+  passing, `gate-provisional` red only for the nine entries R-428 confirms) and R-428 to R-431. `main` is tagged
+  `m1-gate` once R-428's rulings PR has merged, and M2 starts.
 
 <!-- gate:M1 -->
 **Exit gate — 108 requirements** (and every earlier gate still green):

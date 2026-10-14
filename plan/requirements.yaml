@@ -11761,7 +11761,7 @@
 - id: REQ-COL-055
   area: COL
   kind: calibration
-  statement: "The default invalid-pixel rendering (colour_composition §3's invalid colour, the prelude's debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>, which draws the hatch from the pixel position, R-136) must collide with no palette entry, as a hatched pattern rather than a flat colour, and its pattern and colours must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The default invalid-pixel rendering (colour_composition §3's invalid colour, the prelude's debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>, which draws the hatch from the pixel position, R-136) must collide with no palette entry, as a hatched pattern rather than a flat colour, and its pattern and colours must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md. Confirmed at the M1 gate as proposed (R-428): diagonal stripes 4 px wide across x + y, violet #9B00FF and cyan #48FFFF, 8-bit sRGB, each a confirmed register entry citing R-428 (hatch_violet, hatch_cyan, hatch_half_period)."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 3. The `ctx` contract
@@ -11777,6 +11777,10 @@
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
   - file: decisions.md
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
+  - file: decisions.md
+    section: "R-428 — The M1 gate's nine provisional register entries are confirmed as proposed: the six log floors and the hatch's colours and stripe width; `d_min`'s floor at 2⁻¹⁴ is intended; `rho_ratio`'s and `r_min_pair_0`'s floors stay provisional until M2 *(amends R-401, R-419 and R-427 as they apply to these values)*"
+  - file: decisions.md
+    section: "R-429 — REQ-COL-061's criterion is confirmed beside REQ-COL-055: τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101; the hatch passes by colour, or by its pattern when its two simulated stripes are more than τ apart; the pattern argument holds at 1:1 device pixels only *(amends R-386)*"
   verify:
     method: review checklist
     detail: "the proposal gives the hatch pattern and its colours and shows it collides with no palette entry (the outcome palette incl. body-1 escape #E034C6, the dbg_* palettes, the LUTs); recorded in decisions.md"
@@ -11785,8 +11789,10 @@
   - R-71
   - R-132
   - R-136
+  - R-428
+  - R-429
   milestone: M1
-  note: "R-132: a hatched pattern, not a flat colour (the corpus's 'fixed magenta' collides with #E034C6). R-386: at the M1 gate the hatch colours are also checked distinguishable from the palette under each colour-vision simulation (REQ-COL-061, TASK-M7-20). RQ-234 and RQ-240, decided per R-369: the no-collision measurement is rerun with REQ-COL-062's two triple-outcome swatches (TASK-M1-10) and with REQ-TOOL-124's pending hatch and fallback tint (TASK-M1-13)."
+  note: "R-132: a hatched pattern, not a flat colour (the corpus's 'fixed magenta' collides with #E034C6). R-386: at the M1 gate the hatch colours are also checked distinguishable from the palette under each colour-vision simulation (REQ-COL-061, TASK-M7-20). RQ-234 and RQ-240, decided per R-369: the no-collision measurement is rerun with REQ-COL-062's two triple-outcome swatches (TASK-M1-10) and with REQ-TOOL-124's pending hatch and fallback tint (TASK-M1-13). R-428 (the M1 gate): the pattern and colours confirmed as proposed; R-429: REQ-COL-061's criterion confirmed beside it."
 - id: REQ-COL-056
   area: COL
   kind: definition
@@ -11882,7 +11888,7 @@
 - id: REQ-COL-061
   area: COL
   kind: calibration
-  statement: "Under each colour-vision simulation (deuteranopia, protanopia, tritanopia, achromatopsia), the invalid-pixel hatch's colours (debug_invalid(frag_xy), REQ-COL-055, R-136) must stay distinguishable from every palette entry REQ-COL-055 measures against, by a criterion — each hatch colour's OKLab distance to its nearest palette entry, both simulated, its threshold, and how the two-stripe pattern counts where a single stripe colour falls within it (as under achromatopsia against the grey ramp) — that must be calibrated: proposed with its evidence by TASK-M7-20, checked by a reviewer, confirmed by the human at the M1 gate beside REQ-COL-055 and recorded in decisions.md (R-386)."
+  statement: "Under each colour-vision simulation (deuteranopia, protanopia, tritanopia, achromatopsia), the invalid-pixel hatch's colours (debug_invalid(frag_xy), REQ-COL-055, R-136) must stay distinguishable from every palette entry REQ-COL-055 measures against, by a criterion — each hatch colour's OKLab distance to its nearest palette entry, both simulated, its threshold, and how the two-stripe pattern counts where a single stripe colour falls within it (as under achromatopsia against the grey ramp) — that must be calibrated: proposed with its evidence by TASK-M7-20, checked by a reviewer, confirmed by the human at the M1 gate beside REQ-COL-055 and recorded in decisions.md (R-386). The criterion, confirmed at the M1 gate beside REQ-COL-055 (R-429): τ is the OKLab distance from #FF00FF to #E034C6, 0.101; under each simulation the hatch passes by colour, each stripe colour farther than τ from every palette entry, both simulated, or by the pattern, when the two simulated stripes are more than τ apart. The pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a flat colour, which under achromatopsia sits on the grey ramp."
   source:
   - file: docs/contracts/principia_render_contract.md
     section: "Presentation layer (hand-written, small, reused by every debug view)"
@@ -11894,15 +11900,18 @@
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   - file: decisions.md
     section: "R-386 — At the M1 gate, the hatch colours are checked distinguishable from the palette under each colour-vision simulation, so TASK-M7-20 merges before the M1 gate"
+  - file: decisions.md
+    section: "R-429 — REQ-COL-061's criterion is confirmed beside REQ-COL-055: τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101; the hatch passes by colour, or by its pattern when its two simulated stripes are more than τ apart; the pattern argument holds at 1:1 device pixels only *(amends R-386)*"
   verify:
     method: unit test
-    detail: "cargo test -p render cvd_hatch_distinct: for each simulation mode, simulates the hatch's violet #9B00FF and cyan #48FFFF and every palette entry REQ-COL-055 lists (the outcome palette with #E034C6, the dbg_* palettes, every §7.1 LUT between its stops, the grey ramp, the OKLCH hue circle at L 0.75, C 0.12), prints each hatch colour's least OKLab distance to a simulated entry, and fails if the calibrated criterion fails; review (code, qa): the proposal gives the criterion and threshold with the measured distances, and the human confirms it at the M1 gate"
+    detail: "cargo test -p render cvd_hatch_distinct: for each simulation mode, simulates the hatch's violet #9B00FF and cyan #48FFFF and every palette entry REQ-COL-055 lists (the outcome palette with #E034C6, the dbg_* palettes, every §7.1 LUT between its stops, the grey ramp, the OKLCH hue circle at L 0.75, C 0.12), prints each hatch colour's least OKLab distance to a simulated entry, and fails if the criterion R-429 confirmed fails (τ = OKLab distance #FF00FF→#E034C6, 0.101; pass by colour, or by the pattern when the two simulated stripes are more than τ apart; at 1:1 device pixels); review (code, qa): the proposal gives the criterion and threshold with the measured distances, and the human confirms it at the M1 gate"
   rulings:
   - R-71
   - R-136
   - R-386
+  - R-429
   milestone: M7
-  note: "R-386, applied per R-369: the milestone is M7 because the simulation is TASK-M7-20's and no task may close a requirement of an earlier milestone than its own (plan/check_plan.py); plan/MILESTONES.md § M1 names it beside the M1 gate, which does not pass until it is green on main, so TASK-M7-20 merges before the M1 gate."
+  note: "R-386, applied per R-369: the milestone is M7 because the simulation is TASK-M7-20's and no task may close a requirement of an earlier milestone than its own (plan/check_plan.py); plan/MILESTONES.md § M1 names it beside the M1 gate, which does not pass until it is green on main, so TASK-M7-20 merges before the M1 gate. R-429 (the M1 gate, 14 Oct 2026): the criterion TASK-M7-20 proposed is confirmed, with the human's caveat that the pattern argument holds at 1:1 device pixels only, a downscaled export blending the stripes to a flat colour that under achromatopsia sits on the grey ramp."
 - id: REQ-COL-062
   area: COL
   kind: calibration
@@ -17552,7 +17561,7 @@
 - id: REQ-TOOL-160
   area: TOOL
   kind: calibration
-  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md; rho_ratio's and r_min_pair_0's are confirmed there provisionally and re-confirmed at M2 (REQ-TOOL-163; R-419): rho_ratio's proposal assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for r_min_pair_0, a distance in G = M = I = 1, only the evidence is provisional; each floor must be a constants-register entry marked provisional until the M1 gate and read from the register, never a function in its place (R-427), rho_ratio's and r_min_pair_0's re-marked provisional until M2 once confirmed provisionally at M1; and the proposal must state whether d_min's floor at f16's smallest normal, 2⁻¹⁴, is intended when d_min is stored down to 2⁻²⁴ (R-271), with its evidence (R-427)."
+  statement: "The log floor ε_f of each log-scaled numeric field view whose field has no ledger `floor` (d_min, dE_max, dLz_max, closure_min, rho_ratio, r_min_pair_0) — one floor per field, in that field's own units (a distance for the distances, absolute, in the stored fields' own normalised units, for dE_max and dLz_max, the absolute maxima max_t |ΔE| and max_t |ΔL_z|, a ratio for rho_ratio; R-401), the magnitude where dbg_log's compression sets in, at which RQ-231's template places raw = 1 − 1/(1 + ln(1 + |x|/ε_f)) — must be calibrated: proposed with its evidence per field by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md; rho_ratio's and r_min_pair_0's are confirmed there provisionally and re-confirmed at M2 (REQ-TOOL-163; R-419): rho_ratio's proposal assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for r_min_pair_0, a distance in G = M = I = 1, only the evidence is provisional; each floor must be a constants-register entry marked provisional until the M1 gate and read from the register, never a function in its place (R-427), rho_ratio's and r_min_pair_0's re-marked provisional until M2 once confirmed provisionally at M1; and the proposal must state whether d_min's floor at f16's smallest normal, 2⁻¹⁴, is intended when d_min is stored down to 2⁻²⁴ (R-271), with its evidence (R-427). Confirmed at the M1 gate as proposed (R-428): d_min 2⁻¹⁴, intended, dE_max and dLz_max 2⁻²⁰, closure_min 2⁻²³, each a confirmed register entry citing R-428; rho_ratio 2⁻²³ and r_min_pair_0 2⁻¹⁴ provisionally, each marked provisional until M2 and citing REQ-TOOL-163."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -17570,17 +17579,20 @@
     section: 3.8 Metadata schema (what every entry must carry)
   - file: decisions.md
     section: "R-271 — `d_min`'s unset value is +inf; stored values never reach 0.0 *(closes RQ-163, amends payload §1)*"
+  - file: decisions.md
+    section: "R-428 — The M1 gate's nine provisional register entries are confirmed as proposed: the six log floors and the hatch's colours and stripe width; `d_min`'s floor at 2⁻¹⁴ is intended; `rho_ratio`'s and `r_min_pair_0`'s floors stay provisional until M2 *(amends R-401, R-419 and R-427 as they apply to these values)*"
   verify:
     method: unit test
-    detail: "the proposal gives each field's floor with its units and evidence: where that field's stored values fall under it on M1's fixtures, and why the floor sits there in the field's units; rho_ratio's states that it assumes the mass-weighted ‖ρ̃‖/‖λ̃‖, and r_min_pair_0's that its evidence is M1's showcase values, both marked provisional until M2 (R-419); `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with its own field's floor, and that two log fields with different floors place the same |x| differently; confirmed by the human at the M1 gate and recorded in decisions.md; each floor is read from a register entry marked provisional until the M1 gate (REQ-SYS-081, REQ-SYS-082; R-427); the proposal states whether d_min's floor at 2⁻¹⁴ is intended when d_min is stored down to 2⁻²⁴ (R-271), with evidence: where d_min's stored values in [2⁻²⁴, 2⁻¹⁴) fall on the ramp under the floor, how many of M1's fixture values lie there, and what a floor at f16's smallest subnormal (2⁻²⁴) or another proposed value would show instead; the physics reviewer checks it and the M1 gate gives it to the human (R-427)"
+    detail: "the proposal gives each field's floor with its units and evidence: where that field's stored values fall under it on M1's fixtures, and why the floor sits there in the field's units; rho_ratio's states that it assumes the mass-weighted ‖ρ̃‖/‖λ̃‖, and r_min_pair_0's that its evidence is M1's showcase values, both marked provisional until M2 (R-419); `cargo test -p ledger numeric_view_template` checks that every log view places raw at dbg_log's form with its own field's floor, and that two log fields with different floors place the same |x| differently; confirmed by the human at the M1 gate and recorded in decisions.md; each floor is read from a register entry marked provisional until the M1 gate (REQ-SYS-081, REQ-SYS-082; R-427); the proposal states whether d_min's floor at 2⁻¹⁴ is intended when d_min is stored down to 2⁻²⁴ (R-271), with evidence: where d_min's stored values in [2⁻²⁴, 2⁻¹⁴) fall on the ramp under the floor, how many of M1's fixture values lie there, and what a floor at f16's smallest subnormal (2⁻²⁴) or another proposed value would show instead; the physics reviewer checks it and the M1 gate gives it to the human (R-427); confirmed by R-428: the four confirmed floors are register entries citing R-428 with no provisional mark, rho_ratio's and r_min_pair_0's are marked provisional until M2 citing REQ-TOOL-163, and `cargo xtask gate-provisional --milestone M1` lists no entry"
   rulings:
   - R-71
   - R-271
   - R-401
   - R-419
   - R-427
+  - R-428
   milestone: M1
-  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note). Applied per R-369 (physics review 5482528309 of PR #194): the closing moves from TASK-M1-17 to TASK-M1-18, split from it so that RQ-271 holds only the floors. R-419 (RQ-271, option (c) for both): rho_ratio's and r_min_pair_0's floors are provisional at M1 and re-confirmed at M2 by TASK-M2-03 (REQ-TOOL-163). R-427 (veto of PR #204's floor functions): the floors are constants-register entries marked provisional until the M1 gate (REQ-SYS-081, REQ-SYS-082), and the proposal states whether d_min's floor at f16's smallest normal is intended given storage down to 2⁻²⁴."
+  note: "Raised by TASK-M1-09: RQ-231's log scale is 'the field's floor form as dbg_log places it', and only the drifts, which keep R-381's symlog view, have a ledger floor; dbg_log's ε is the caller's argument with no default (render contract Part 5). Proposed: 2⁻²⁴, f16's smallest positive subnormal (the register's f16_min_subnormal). R-401: the single ε is replaced by one floor per field, in its own units, proposed with evidence for the M1 gate; the closing moves from TASK-M1-09, which built the single 2⁻²⁴, to TASK-M1-17. The drifts' floors eps_E and eps_L are unchanged. The human's words call the drifts' units relative errors; the corpus defines dE_max and dLz_max as absolute maxima (dd_simstate_payload §1, §2; generation_root §3.4), so their floors are absolute, in the stored fields' units, flagged to the human (R-401's note). Applied per R-369 (physics review 5482528309 of PR #194): the closing moves from TASK-M1-17 to TASK-M1-18, split from it so that RQ-271 holds only the floors. R-419 (RQ-271, option (c) for both): rho_ratio's and r_min_pair_0's floors are provisional at M1 and re-confirmed at M2 by TASK-M2-03 (REQ-TOOL-163). R-427 (veto of PR #204's floor functions): the floors are constants-register entries marked provisional until the M1 gate (REQ-SYS-081, REQ-SYS-082), and the proposal states whether d_min's floor at f16's smallest normal is intended given storage down to 2⁻²⁴. R-428 (the M1 gate, 14 Oct 2026): the six floors confirmed as proposed, rho_ratio's and r_min_pair_0's provisionally until M2 (REQ-TOOL-163, which they now cite); d_min's floor at 2⁻¹⁴ is intended, in the human's words \"2⁻²⁰ compresses d_min ∈ [6e-5, 1] from half the ramp to an eighth of it\"."
 - id: REQ-TOOL-161
   area: TOOL
   kind: definition
@@ -17631,7 +17643,7 @@
 - id: REQ-TOOL-163
   area: TOOL
   kind: calibration
-  statement: "The log floors of rho_ratio and r_min_pair_0, confirmed provisionally at the M1 gate (REQ-TOOL-160), must be re-confirmed at the M2 gate once REQ-PAY-088 defines the two fields' formulas (R-419): rho_ratio's floor, proposed at M1 assuming the mass-weighted ‖ρ̃‖/‖λ̃‖, is re-proposed with its evidence in the defined ratio's units if the definition chooses another ratio; r_min_pair_0's floor, a distance in G = M = I = 1, has its evidence re-given on decoded values; each checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The log floors of rho_ratio and r_min_pair_0, confirmed provisionally at the M1 gate (REQ-TOOL-160; R-428: rho_ratio 2⁻²³, r_min_pair_0 2⁻¹⁴, each a register entry marked provisional until M2 and citing this requirement), must be re-confirmed at the M2 gate once REQ-PAY-088 defines the two fields' formulas (R-419): rho_ratio's floor, proposed at M1 assuming the mass-weighted ‖ρ̃‖/‖λ̃‖, is re-proposed with its evidence in the defined ratio's units if the definition chooses another ratio; r_min_pair_0's floor, a distance in G = M = I = 1, has its evidence re-given on decoded values; each checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-419 — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*"
@@ -17643,15 +17655,18 @@
     section: "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-428 — The M1 gate's nine provisional register entries are confirmed as proposed: the six log floors and the hatch's colours and stripe width; `d_min`'s floor at 2⁻¹⁴ is intended; `rho_ratio`'s and `r_min_pair_0`'s floors stay provisional until M2 *(amends R-401, R-419 and R-427 as they apply to these values)*"
   verify:
     method: review checklist
-    detail: "the PR states which ratio REQ-PAY-088 defines for rho_ratio; if it is not the mass-weighted ‖ρ̃‖/‖λ̃‖, rho_ratio's floor is re-proposed in the defined ratio's units with its evidence on decoded values and `cargo test -p ledger numeric_view_template` passes with it; if it is, the floor stands with that evidence; r_min_pair_0's evidence is given on decoded values; the physics reviewer checks both; the human re-confirms both at the M2 gate, recorded in decisions.md"
+    detail: "the PR states which ratio REQ-PAY-088 defines for rho_ratio; if it is not the mass-weighted ‖ρ̃‖/‖λ̃‖, rho_ratio's floor is re-proposed in the defined ratio's units with its evidence on decoded values and `cargo test -p ledger numeric_view_template` passes with it; if it is, the floor stands with that evidence; r_min_pair_0's evidence is given on decoded values; the physics reviewer checks both; the human re-confirms both at the M2 gate, recorded in decisions.md; until then both register entries are marked provisional until M2 and cite REQ-TOOL-163, and `cargo xtask gate-provisional --milestone M2` lists them; at the re-confirmation the mark comes off and each cites the ruling"
   rulings:
   - R-71
   - R-401
   - R-419
+  - R-428
   milestone: M2
-  note: "R-419 (RQ-271, option (c) for both fields); closed by TASK-M2-03, which writes REQ-PAY-088's formulas."
+  note: "R-419 (RQ-271, option (c) for both fields); closed by TASK-M2-03, which writes REQ-PAY-088's formulas. R-428 (the M1 gate): both confirmed provisionally as proposed, rho_ratio 2⁻²³ and r_min_pair_0 2⁻¹⁴; applied per R-369, the two register entries cite this requirement in place of REQ-TOOL-160."
 - id: REQ-TOOL-164
   area: TOOL
   statement: "The field-view catalogue must cover render contract Part 6's uniform echo row: flat swatches of quality_tier, n_renorm (R-111) and the thresholds REQ-TOOL-165 names, as currently bound, so that a slider moved but not rebound shows (R-420)."
