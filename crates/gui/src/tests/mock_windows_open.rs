@@ -1168,3 +1168,51 @@ fn mock_windows_open_the_close_button_closes_and_returns_the_focus() {
         assert_eq!(got, ["footer"])
     });
 }
+
+/// Seeding reads the chart: its directions, latent, the preset that matches them chosen; Apply keeps each axis's
+/// length (the zoom).
+#[test]
+fn mock_windows_open_chart_builder_seed_reads_the_chart() {
+    use engine::contract::sim_config::LATENT_DIM;
+    let mut plane = crate::mock::MockEngine::new().plane().clone();
+    let presets = chart_builder::builtin();
+    // The chart on preset 2's axes, at lengths 2 and 0.5.
+    plane.q1 = presets[2].q1.map(|x| 2.0 * x);
+    plane.q2 = presets[2].q2.map(|x| 0.5 * x);
+    let mut d = chart_builder::Draft::default();
+    d.kind[1] = chart_builder::Kind::Burrau;
+    d.note = Some("old");
+    d.seed(&plane);
+    assert_eq!(d.q, [presets[2].q1, presets[2].q2]);
+    assert_eq!(d.kind, [chart_builder::Kind::Latent; 2]);
+    assert_eq!(d.preset, Some(2));
+    assert_eq!(d.note, None);
+    // Only q₁ matching a preset, or only q₂, chooses none.
+    for (q1, q2) in [
+        (presets[2].q1, presets[3].q2),
+        (presets[3].q1, presets[2].q2),
+    ] {
+        let mut p = plane.clone();
+        p.q1 = q1;
+        p.q2 = q2;
+        d.seed(&p);
+        assert_eq!(d.preset, None, "a half match");
+    }
+    d.seed(&plane);
+    let Some(edit) = d.applied(&plane) else {
+        panic!("latent axes apply")
+    };
+    let want = crate::explore::manifold_view::basis_edit((plane.q1, plane.q2));
+    assert_eq!(edit, want, "the lengths kept");
+    // A tilted pair: q₁ · q₂ of the unit axes.
+    let mut q = [[0.0; LATENT_DIM]; 2];
+    q[0][0] = 3.0;
+    q[1][0] = 3.0;
+    q[1][1] = 4.0;
+    assert!((chart_builder::cross_dot(&q) - 0.6).abs() < 1e-12);
+    rejects("a seed that kept the old axes", || {
+        let mut d = chart_builder::Draft::default();
+        d.seed(&plane);
+        assert_eq!(d.q, chart_builder::Draft::default().q)
+    });
+}

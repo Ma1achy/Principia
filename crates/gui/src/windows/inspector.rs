@@ -206,7 +206,7 @@ pub fn adjust(adjust: &Adjust, state: &mut State) {
 
 /// Pane 1: the IC, its three bodies at `t = 0` under the gauge transform, joined, each with its velocity arrow and a
 /// ghost marker at the playhead's index `i`.
-fn ic_pane(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f64), i: usize) {
+pub(crate) fn ic_pane(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f64), i: usize) {
     let painter = ui.painter_at(rect);
     let [x0, y0, x1, y1] = fit(&sample.bodies);
     let (sa, ca) = gauge.0.to_radians().sin_cos();
@@ -248,7 +248,7 @@ fn ic_pane(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f64), i: usiz
 }
 
 /// The pair separations over the orbit, each pair in its first body's colour.
-fn separations(ui: &mut Ui, sample: &Sample) {
+pub(crate) fn separations(ui: &mut Ui, sample: &Sample) {
     let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 40.0), Sense::hover());
     let painter = ui.painter_at(rect);
     painter.rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);

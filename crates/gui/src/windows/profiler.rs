@@ -183,7 +183,7 @@ fn plot(ui: &mut Ui, height: f32) -> Rect {
 }
 
 /// The frame-time trace.
-fn frame_trace(ui: &mut Ui, frames: &[FrameRecord]) {
+pub(crate) fn frame_trace(ui: &mut Ui, frames: &[FrameRecord]) {
     let rect = plot(ui, 48.0);
     let top = frames.iter().map(|f| f.frame_ms).fold(1.0, f64::max);
     let n = frames.len().max(2) - 1;
@@ -201,7 +201,7 @@ fn frame_trace(ui: &mut Ui, frames: &[FrameRecord]) {
 }
 
 /// Where the frame goes: a donut over the five stages of `frame`, the frame's ms inside, with its legend.
-fn donut(ui: &mut Ui, frame: &FrameRecord) {
+pub(crate) fn donut(ui: &mut Ui, frame: &FrameRecord) {
     ui.horizontal(|ui| {
         let (rect, _) = ui.allocate_exact_size(vec2(96.0, 96.0), Sense::hover());
         let (centre, r) = (rect.center(), 38.0);
@@ -240,7 +240,7 @@ fn donut(ui: &mut Ui, frame: &FrameRecord) {
 }
 
 /// The last [`BARS`] frames' stages, stacked.
-fn stacked(ui: &mut Ui, frames: &[FrameRecord]) {
+pub(crate) fn stacked(ui: &mut Ui, frames: &[FrameRecord]) {
     let rect = plot(ui, 64.0);
     let last = &frames[frames.len().saturating_sub(BARS)..];
     let top = last.iter().map(|f| f.frame_ms).fold(1.0, f64::max) as f32;
@@ -258,7 +258,7 @@ fn stacked(ui: &mut Ui, frames: &[FrameRecord]) {
 }
 
 /// The last frame's nested scopes, a row per depth, the stages laid end to end.
-fn flame(ui: &mut Ui, frame: &FrameRecord) {
+pub(crate) fn flame(ui: &mut Ui, frame: &FrameRecord) {
     let rect = plot(ui, 72.0);
     let row = 18.0;
     let scale = rect.width() / frame.frame_ms.max(f64::MIN_POSITIVE) as f32;
@@ -319,7 +319,7 @@ fn mb(bytes: u64) -> String {
 }
 
 /// Memory over the trace, the live allocations by type with their change over it, and the leak flags.
-fn memory(ui: &mut Ui, trace: &Trace) {
+pub(crate) fn memory(ui: &mut Ui, trace: &Trace) {
     let (first, last) = (&trace.frames[0], &trace.frames[trace.frames.len() - 1]);
     fn pools(f: &FrameRecord) -> [&engine::contract::profile::PoolLive; 3] {
         [

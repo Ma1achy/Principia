@@ -362,53 +362,71 @@ pub fn adjust(adjust: &Adjust, draft: &mut Draft) {
     }
 }
 
+/// The cells across the domain preview's hatch grid (a look choice, R-390).
+pub const HATCH_CELLS: usize = 48;
+/// The samples along each edge of the boundary (a look choice, R-390).
+pub const BOUNDARY_SAMPLES: usize = 64;
+/// The forbidden region's hatch colour (a look choice, R-390, 03_chartbuilder.png's).
+pub const FORBIDDEN: Color32 = Color32::from_rgb(150, 60, 70);
+
+/// Where chart point `(s, t)` falls on the domain preview `rect`: the chart's `[−½, 1½]²` across it, `t` up.
+pub fn on_preview(rect: Rect, s: f64, t: f64) -> egui::Pos2 {
+    pos2(
+        rect.min.x + rect.width() * ((s + 0.5) / 2.0) as f32,
+        rect.max.y - rect.height() * ((t + 0.5) / 2.0) as f32,
+    )
+}
+
+/// The hatch: the centres `(s, t)` of the forbidden cells of a [`HATCH_CELLS`]² grid over `[−½, 1½]²`, every third
+/// diagonal, row by row from the bottom.
+pub fn hatched() -> Vec<[f64; 2]> {
+    let n = HATCH_CELLS;
+    (0..n * n)
+        .filter_map(|k| {
+            let (i, j) = (k % n, k / n);
+            let centre = |c: usize| -0.5 + 2.0 * (c as f64 + 0.5) / n as f64;
+            let (s, t) = (centre(i), centre(j));
+            (!admissible(s, t) && (i + j) % 3 == 0).then_some([s, t])
+        })
+        .collect()
+}
+
+/// The boundary's edge on `sign`'s side of `t = ½` (+1 the top, −1 the bottom), sampled across `[−½, 1½]`.
+pub fn boundary(sign: f64) -> Vec<[f64; 2]> {
+    (0..=BOUNDARY_SAMPLES)
+        .map(|k| {
+            let s = -0.5 + 2.0 * k as f64 / BOUNDARY_SAMPLES as f64;
+            [
+                s,
+                0.5 + sign * (0.35 + 0.15 * (std::f64::consts::PI * s).sin()),
+            ]
+        })
+        .collect()
+}
+
 /// The domain preview in the square `rect`: the chart's `[−½, 1½]²`, the forbidden region hatched, the boundary
 /// stroked, the view `[0, 1]²` dashed.
-fn domain(ui: &Ui, rect: Rect) {
+pub(crate) fn domain(ui: &Ui, rect: Rect) {
     let painter = ui.painter_at(rect);
     let visuals = ui.visuals();
     painter.rect_filled(rect, 0.0, visuals.extreme_bg_color);
-    let to = |s: f64, t: f64| {
-        pos2(
-            rect.min.x + rect.width() * ((s + 0.5) / 2.0) as f32,
-            rect.max.y - rect.height() * ((t + 0.5) / 2.0) as f32,
-        )
-    };
-    let forbidden = Color32::from_rgb(150, 60, 70);
-    let cells = 48;
-    let side = rect.width() / cells as f32;
-    for k in 0..cells * cells {
-        let (i, j) = (k % cells, k / cells);
-        let (s, t) = (
-            -0.5 + 2.0 * (i as f64 + 0.5) / cells as f64,
-            -0.5 + 2.0 * (j as f64 + 0.5) / cells as f64,
+    let half = rect.width() / HATCH_CELLS as f32 / 2.0;
+    for [s, t] in hatched() {
+        let at = on_preview(rect, s, t);
+        painter.line_segment(
+            [at + vec2(-half, half), at + vec2(half, -half)],
+            Stroke::new(1.0, FORBIDDEN),
         );
-        if !admissible(s, t) && (i + j) % 3 == 0 {
-            let at = to(s, t);
-            painter.line_segment(
-                [
-                    at + vec2(-side / 2.0, side / 2.0),
-                    at + vec2(side / 2.0, -side / 2.0),
-                ],
-                Stroke::new(1.0, forbidden),
-            );
-        }
     }
-    let boundary = |sign: f64| -> Vec<egui::Pos2> {
-        (0..=64)
-            .map(|k| {
-                let s = -0.5 + 2.0 * k as f64 / 64.0;
-                to(
-                    s,
-                    0.5 + sign * (0.35 + 0.15 * (std::f64::consts::PI * s).sin()),
-                )
-            })
-            .collect()
-    };
     let edge = Stroke::new(1.5, visuals.hyperlink_color);
-    painter.add(Shape::line(boundary(1.0), edge));
-    painter.add(Shape::line(boundary(-1.0), edge));
-    let view = Rect::from_two_pos(to(0.0, 0.0), to(1.0, 1.0));
+    for sign in [1.0, -1.0] {
+        let points = boundary(sign)
+            .iter()
+            .map(|&[s, t]| on_preview(rect, s, t))
+            .collect();
+        painter.add(Shape::line(points, edge));
+    }
+    let view = Rect::from_two_pos(on_preview(rect, 0.0, 0.0), on_preview(rect, 1.0, 1.0));
     let dash = Stroke::new(1.0, visuals.text_color());
     for (a, b) in [
         (view.left_top(), view.right_top()),

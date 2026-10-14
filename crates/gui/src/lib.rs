@@ -39,6 +39,7 @@ mod tests {
     mod mock_tag;
     mod mock_tile_bounds;
     mod mock_time;
+    mod mock_windows_drawn;
     mod mock_windows_open;
     mod scope_tab_order_mock;
     mod support;
