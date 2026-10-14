@@ -19,6 +19,7 @@
 //! table fixes.
 
 use ledger::gen;
+use ledger::payload;
 use ledger::schema::{
     Bound, Consumer, EntryBuilder, FieldType, Ledger, Location, Provenance, Range, Scale,
 };
@@ -32,6 +33,22 @@ fn range(lo: Bound, hi: Bound) -> Range {
 
 fn unbounded() -> Range {
     range(Bound::Unbounded, Bound::Unbounded)
+}
+
+/// The citation of a qa fixture's own (−∞, ∞), which declares it, so it is no gap (dd_generation_root §3.8; R-426).
+const QA_DECLARED: &str =
+    "qa fixture: the range under test (dd_generation_root §3.8 `declared(lo, hi, citation)`)";
+
+/// The citation of §3.8's worked entries' (−∞, ∞) and their stored inputs': the payload ledger's own where it
+/// declares the field (−∞, ∞), else §3.8's table, which names it (dd_generation_root §3.8; R-426).
+fn worked_citation(name: &str) -> &'static str {
+    payload::SIGNED
+        .iter()
+        .find(|(field, _)| *field == name)
+        .map(|&(_, citation)| citation)
+        .unwrap_or(
+            "dd_generation_root §3.8's worked entries: the field the table names, its range here qa's stand-in for §3's",
+        )
 }
 
 /// A complete entry: `name` at `location`, of type `ty`, `scale` over `range`, provenance `kernel`, consumers
@@ -55,6 +72,7 @@ fn entry(
         floor: None,
         provenance: Some(Provenance::Kernel),
         consumers: Some(ALL.to_vec()),
+        declaration: None,
     }
 }
 
@@ -192,14 +210,16 @@ fn derived_ledger(from: &[&'static str]) -> Ledger {
                 FieldType::F32,
                 Scale::Lin,
                 unbounded(),
-            ),
+            )
+            .cited(QA_DECLARED),
             entry(
                 "qa_late",
                 derived(&["qa_steps"]),
                 FieldType::F32,
                 Scale::Lin,
                 unbounded(),
-            ),
+            )
+            .cited(QA_DECLARED),
         ],
     }
 }
@@ -274,13 +294,10 @@ fn worked_ledger(omit: &[&str]) -> Ledger {
             _ => 1,
         };
         if !omit.contains(&name) {
-            entries.push(entry(
-                name,
-                Location::Scalar(slot),
-                ty,
-                Scale::Lin,
-                unbounded(),
-            ));
+            entries.push(
+                entry(name, Location::Scalar(slot), ty, Scale::Lin, unbounded())
+                    .cited(worked_citation(name)),
+            );
         }
         slot += width;
     }
@@ -299,30 +316,38 @@ fn worked_ledger(omit: &[&str]) -> Ledger {
         f32(),
         Scale::Lin,
         unbounded(),
-    );
+    )
+    .cited(worked_citation("ftle"));
     ftle.tier_gate = Some("ftle_valid");
     entries.push(ftle);
-    entries.push(entry(
-        "energy_drift",
-        derived(&["r", "p", "m0", "m1", "m2", "E_0"]),
-        f32(),
-        Scale::Diverging,
-        unbounded(),
-    ));
-    entries.push(entry(
-        "Lz_drift",
-        derived(&["r", "p", "Lz_0"]),
-        f32(),
-        Scale::Diverging,
-        unbounded(),
-    ));
+    entries.push(
+        entry(
+            "energy_drift",
+            derived(&["r", "p", "m0", "m1", "m2", "E_0"]),
+            f32(),
+            Scale::Diverging,
+            unbounded(),
+        )
+        .cited(worked_citation("energy_drift")),
+    );
+    entries.push(
+        entry(
+            "Lz_drift",
+            derived(&["r", "p", "Lz_0"]),
+            f32(),
+            Scale::Diverging,
+            unbounded(),
+        )
+        .cited(worked_citation("Lz_drift")),
+    );
     let mut diffusion = entry(
         "diffusion",
         derived(&["C_ty", "t_end_step"]),
         f32(),
         Scale::Lin,
         unbounded(),
-    );
+    )
+    .cited(worked_citation("diffusion"));
     diffusion.sentinel = Some(-1.0);
     entries.push(diffusion);
     entries.push(entry(

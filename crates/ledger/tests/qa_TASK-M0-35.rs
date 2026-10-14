@@ -12,6 +12,10 @@ use validation::negative_control;
 
 const F16_MAX: f64 = 65504.0;
 
+/// The citation of a qa fixture's own range, which declares it (dd_generation_root §3.8; R-426).
+const QA_DECLARED: &str =
+    "qa fixture: the range under test (dd_generation_root §3.8 `declared(lo, hi, citation)`)";
+
 fn word(name: &'static str, bits: u32, reserved: &[(u32, u32)]) -> Word {
     Word {
         name,
@@ -222,7 +226,8 @@ negative_control!(
 
 /// A 64-bit word with a field of type `ty` over `range` at bits 0..width, the rest reserved.
 fn typed_in_64(ty: FieldType, width: u32, range: Range) -> Ledger {
-    let mut e = field("qa_f", at("qa_64", 0, width), ty, range);
+    // The range under test is declared, so (−∞, ∞) is not a gap (dd_generation_root §3.8; R-426).
+    let mut e = field("qa_f", at("qa_64", 0, width), ty, range).cited(QA_DECLARED);
     e.overflow = Some(Overflow::Saturate);
     ledger(vec![word("qa_64", 64, &[(width, 64 - width)])], vec![e])
 }
@@ -327,7 +332,8 @@ fn f16_at(place: u8, ty: FieldType, range: Range, overflow: Option<Overflow>) ->
             )],
         ),
     };
-    let mut e = field("qa_h", location, ty, range);
+    // The range under test is declared, so (−∞, ∞) is not a gap (dd_generation_root §3.8; R-426).
+    let mut e = field("qa_h", location, ty, range).cited(QA_DECLARED);
     e.overflow = overflow;
     entries.push(e);
     ledger(words, entries)

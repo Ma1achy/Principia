@@ -20,8 +20,8 @@ use std::cell::Cell;
 
 use ledger::gen::{self, Generated};
 use ledger::schema::{
-    Bound, Consumer, Entry, EntryBuilder, FieldType, Ledger, Location, Provenance, Range, Scale,
-    Span, Word,
+    Bound, Consumer, Declaration, Entry, EntryBuilder, FieldType, Ledger, Location, Provenance,
+    Range, Scale, Span, Word,
 };
 use validation::negative_control;
 
@@ -65,6 +65,7 @@ fn complete(
         floor: None,
         provenance: Some(provenance),
         consumers: Some(consumers.to_vec()),
+        declaration: None,
     }
 }
 
@@ -493,6 +494,7 @@ fn check_each_kind_carried(mangle: fn(&mut Entry)) {
             floor: None,
             provenance,
             consumers: who.to_vec(),
+            declaration: None,
         };
         assert_eq!(got, want, "qa: the entry does not carry what was written");
     }
@@ -520,6 +522,10 @@ fn check_range_ends_accepted(ends: &[Bound]) {
         for hi in ends {
             let mut ledger = qa_ledger();
             ledger.entries[3].range = Some(Range { lo: *lo, hi: *hi });
+            // The range under test is declared, so (−∞, ∞) is not a gap (dd_generation_root §3.8; R-426).
+            ledger.entries[3].declaration = Some(Declaration::Cited(
+                "qa fixture: the range under test (dd_generation_root §3.8 `declared(lo, hi, citation)`)",
+            ));
             let got = generates(&ledger);
             assert_eq!(
                 got[3].range,

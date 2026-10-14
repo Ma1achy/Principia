@@ -110,6 +110,7 @@ pub fn fixture() -> Ledger {
                 Scale::Lin,
                 Range::int(0, 1),
             ),
+            // A fixture's own (−∞, ∞), declared, so it is no gap (R-426).
             field(
                 "fx_f32",
                 packed("fx_float", 0, 32),
@@ -119,7 +120,8 @@ pub fn fixture() -> Ledger {
                     lo: Bound::Unbounded,
                     hi: Bound::Unbounded,
                 },
-            ),
+            )
+            .cited("a fixture's signed f32, declared (−∞, ∞) (dd_generation_root §3.8, R-426)"),
             field(
                 "fx_scalar",
                 Location::Scalar(0),
