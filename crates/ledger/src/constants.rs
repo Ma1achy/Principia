@@ -485,16 +485,38 @@ const fn proposed(
     }
 }
 
-// ── The log floors (R-401, R-419, R-427; REQ-TOOL-160) ──────────────────────────────────────────────────────────
+/// The ruling that confirmed the M1 gate's provisional entries as proposed (dd_generation_root §3.8, `provisional`):
+/// a value confirmed at its gate cites the ruling that records the confirmation, in place of its calibration
+/// requirement.
+const R428: Citation = Citation::Corpus {
+    file: "decisions.md",
+    section: "R-428 — The M1 gate's nine provisional register entries are confirmed as proposed: the six log floors and the hatch's colours and stripe width; `d_min`'s floor at 2⁻¹⁴ is intended; `rho_ratio`'s and `r_min_pair_0`'s floors stay provisional until M2 *(amends R-401, R-419 and R-427 as they apply to these values)*",
+};
+
+/// A number the human confirmed at its gate (R-71), admissible as expressed in canonical units, citing the ruling that
+/// confirmed it: a provisional entry whose mark has come off (R-427; dd_generation_root §3.8).
+const fn confirmed(name: &'static str, value: f64, ruling: Citation) -> ConstantBuilder {
+    ConstantBuilder {
+        name,
+        value: Some(Value::Exact(value)),
+        class: Some(Admissibility::CanonicalUnits),
+        citation: Some(ruling),
+        relative_basis: None,
+        provisional: None,
+    }
+}
+
+// ── The log floors (R-401, R-419, R-427, R-428; REQ-TOOL-160, REQ-TOOL-163) ─────────────────────────────────────
 //
 // Each log-scaled field with no ledger `floor` has its own display floor `ε_f`, in that field's own units, the
 // magnitude where its compression sets in: the numeric view places `raw = 1 − 1/(1 + ln(1 + |x|/ε_f))`, `dbg_log`'s
 // place (`crate::gen::numeric`). Each is a presentation constant, not §3.8's `floor?` key, which R-263 gives a sim-key
 // parameter (the drifts' `eps_E` and `eps_L`, unchanged). Each is a power of two, so the f32 WGSL literal and the f64
 // twin hold the same value and `|x|/ε_f` is exact. Each is admissible as expressed in its field's canonical units.
-// Proposed, R-71: each is provisional until the M1 gate, where the human confirms it; `rho_ratio`'s and
-// `r_min_pair_0`'s are confirmed there provisionally and then marked provisional until the M2 gate, where they are
-// re-confirmed (R-419, R-427; REQ-TOOL-163). They replace TASK-M1-09's single ε = 2⁻²⁴.
+// Proposed, R-71, each provisional until the M1 gate (R-427), where the human confirmed all six as proposed (R-428):
+// four are confirmed entries citing R-428; `rho_ratio`'s and `r_min_pair_0`'s, confirmed there provisionally, are
+// marked provisional until the M2 gate, where they are re-confirmed, and cite REQ-TOOL-163 (R-419, R-428). They replace
+// TASK-M1-09's single ε = 2⁻²⁴.
 
 /// `d_min`'s floor, a distance in `G = M = I = 1`: 2⁻¹⁴ ≈ 6.10e-5, binary16's smallest normal. The `d_min` latch is
 /// f16 (payload §1): at and above 2⁻¹⁴ it holds a constant 11-bit relative precision, below it a linear subnormal grid
@@ -504,78 +526,59 @@ const fn proposed(
 /// decades; the subnormal band below it holds a value chiefly when `r_coll` is set under 2⁻¹⁴, or when a saturated,
 /// under-resolved substep undershoots the default `r_coll` that far. The view reads the band through
 /// `unpack2x16float`, which a GPU may flush to 0 (payload §1; R-271): there it draws at raw 0 under any floor. Whether
-/// the floor is intended is stated, with its evidence, for the M1 gate (R-427; TASK-M1-18's PR).
-pub const LOG_FLOOR_D_MIN: ConstantBuilder = proposed(
-    "log_floor_d_min",
-    1.0 / 16_384.0,
-    Admissibility::CanonicalUnits,
-    "REQ-TOOL-160",
-    "M1",
-);
+/// the floor is intended was stated, with its evidence, for the M1 gate (R-427; TASK-M1-18's PR), and the human
+/// confirmed it: intended, since 2⁻²⁰ would compress `d_min` ∈ [6e-5, 1] from half the ramp to an eighth of it (R-428).
+pub const LOG_FLOOR_D_MIN: ConstantBuilder = confirmed("log_floor_d_min", 1.0 / 16_384.0, R428);
 
 /// `dE_max`'s floor, an absolute energy in the stored field's normalised units (`dE_max = max_t |ΔE(t)|`, an absolute
 /// maximum, payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_E`'s default 10⁻⁶
 /// (integrator contract Part 3), the floor the drift `energy_drift`'s view takes, so the latch and the drift compress
 /// at the same magnitude. The f16 latch holds it as 16 subnormal steps of 2⁻²⁴: the floor and the values below
 /// 2⁻¹⁴ are f16 subnormals, which a GPU that flushes them on unpack draws at raw 0 (payload §1; R-271).
-pub const LOG_FLOOR_DE_MAX: ConstantBuilder = proposed(
-    "log_floor_dE_max",
-    1.0 / 1_048_576.0,
-    Admissibility::CanonicalUnits,
-    "REQ-TOOL-160",
-    "M1",
-);
+pub const LOG_FLOOR_DE_MAX: ConstantBuilder =
+    confirmed("log_floor_dE_max", 1.0 / 1_048_576.0, R428);
 
 /// `dLz_max`'s floor, an absolute angular momentum in the stored field's normalised units
 /// (`dLz_max = max_t |ΔL_z(t)|`, payload §2; R-401's note, R-403): 2⁻²⁰ ≈ 9.54e-7, the power of two nearest `eps_L`'s
 /// default 10⁻⁶ (integrator contract Part 3), as [`LOG_FLOOR_DE_MAX`] is `eps_E`'s, and subnormal in the f16 latch
 /// as that floor is.
-pub const LOG_FLOOR_DLZ_MAX: ConstantBuilder = proposed(
-    "log_floor_dLz_max",
-    1.0 / 1_048_576.0,
-    Admissibility::CanonicalUnits,
-    "REQ-TOOL-160",
-    "M1",
-);
+pub const LOG_FLOOR_DLZ_MAX: ConstantBuilder =
+    confirmed("log_floor_dLz_max", 1.0 / 1_048_576.0, R428);
 
 /// `closure_min`'s floor, a dimensionless chord `|n̂(t) − n̂(0)|` on the unit shape sphere: 2⁻²³ ≈ 1.19e-7, f32's
 /// spacing on `[1, 2)`, the floor of a difference of two O(1) f32 states, where closure bottoms out on the f32 GPU
 /// path ("~1e-7", payload §1). On that path a value below it is saturation, not an orbit's closure, so the view is
 /// linear there. It is the f32 path's floor: the f64 CPU path resolves closures to ~1e-16 (payload §1), and under
 /// 2⁻²³ those below about 5e-10 draw within one viridis step (1/255) of 0.
-pub const LOG_FLOOR_CLOSURE_MIN: ConstantBuilder = proposed(
-    "log_floor_closure_min",
-    1.0 / 8_388_608.0,
-    Admissibility::CanonicalUnits,
-    "REQ-TOOL-160",
-    "M1",
-);
+pub const LOG_FLOOR_CLOSURE_MIN: ConstantBuilder =
+    confirmed("log_floor_closure_min", 1.0 / 8_388_608.0, R428);
 
 /// `rho_ratio`'s floor, a dimensionless ratio, provisional (R-419): 2⁻²³ ≈ 1.19e-7. It assumes the mass-weighted
 /// `‖ρ̃‖/‖λ̃‖`, which is `cot α` in the canonical-frame decode (`‖ρ̃‖ = cos α`, `‖λ̃‖ = sin α`, decoder §3.2): near
 /// `α = π/2` the ratio is `≈ π/2 − α`, and f32 holds `α ∈ [1, π/2)` in steps of 2⁻²³, so the f32 decode's ratios
 /// below 2⁻²³ are its first grid step alone. That is the f32 decode's floor: an f64 decode, stored to f32, holds
 /// `cot α` far below it. TASK-M2-03 defines the ratio (REQ-PAY-088) and may choose otherwise; the
-/// floor is re-confirmed at M2 either way (REQ-TOOL-163): confirmed provisionally at the M1 gate, it is then marked
-/// provisional until M2.
+/// floor is re-confirmed at M2 either way (REQ-TOOL-163): confirmed provisionally at the M1 gate (R-428), it is marked
+/// provisional until M2, citing REQ-TOOL-163.
 pub const LOG_FLOOR_RHO_RATIO: ConstantBuilder = proposed(
     "log_floor_rho_ratio",
     1.0 / 8_388_608.0,
     Admissibility::CanonicalUnits,
-    "REQ-TOOL-160",
-    "M1",
+    "REQ-TOOL-163",
+    "M2",
 );
 
 /// `r_min_pair_0`'s floor, a distance in `G = M = I = 1` (decoder §2, §3.6): 2⁻¹⁴ ≈ 6.10e-5, [`LOG_FLOOR_D_MIN`]'s, the
 /// other distance view's, so the two place a shared distance alike, 2.2 decades below `r_close` = 0.01. Its units are
 /// assumed by nothing; its evidence, M1's showcase values, is provisional, re-given on decoded values at M2 (R-419,
-/// REQ-TOOL-163): confirmed provisionally at the M1 gate, it is then marked provisional until M2.
+/// REQ-TOOL-163): confirmed provisionally at the M1 gate (R-428), it is marked provisional until M2, citing
+/// REQ-TOOL-163.
 pub const LOG_FLOOR_R_MIN_PAIR_0: ConstantBuilder = proposed(
     "log_floor_r_min_pair_0",
     1.0 / 16_384.0,
     Admissibility::CanonicalUnits,
-    "REQ-TOOL-160",
-    "M1",
+    "REQ-TOOL-163",
+    "M2",
 );
 
 /// Each log-scaled field with no ledger `floor`, by its ledger name, with its floor's register entry: the numeric view
@@ -590,43 +593,26 @@ pub const LOG_FLOORS: [(&str, ConstantBuilder); 6] = [
     ("r_min_pair_0", LOG_FLOOR_R_MIN_PAIR_0),
 ];
 
-// ── The invalid hatch (REQ-COL-055; R-71, R-132, R-136, R-427) ─────────────────────────────────────────────────
+// ── The invalid hatch (REQ-COL-055; R-71, R-132, R-136, R-427, R-428) ───────────────────────────────────────────
 //
 // `debug_invalid(frag_xy)`'s diagonal stripes (render contract, presentation layer): `half_period` pixels wide across
-// `x + y`, alternating violet and cyan. Proposed, R-71: provisional until the M1 gate, where the human confirms the
-// pattern and its colours. Each colour is a packed 8-bit sRGB triple, `0xRRGGBB`, and with the stripe width is
-// admissible as expressed in the display's canonical units, 8-bit sRGB codes and device pixels. Each colour is farther
+// `x + y`, alternating violet and cyan. Proposed, R-71, provisional until the M1 gate (R-427), where the human
+// confirmed the pattern and its colours as proposed (R-428): each entry cites R-428. Each colour is a packed 8-bit
+// sRGB triple, `0xRRGGBB`, and with the stripe width is admissible as expressed in the display's canonical units,
+// 8-bit sRGB codes and device pixels. Each colour is farther
 // in OKLab from every palette entry (the outcome palette, the `dbg_*` palettes, every LUT of colour_composition §7.1
 // as its ramp draws it, the grey ramp and the OKLCH hue circle at L 0.75, C 0.12) than the flat magenta R-16 kept is
 // from `#E034C6`, 0.101: violet is 0.142 from plasma near its stop 71, and cyan 0.112 from Turbo between its stops 83
 // and 84 (`render/tests/prelude.rs`). `crate::gen::prelude::hatch` reads the three.
 
 /// The hatch's first colour, violet `#9B00FF`, at `((p.x + p.y) >> 2) & 1 = 0`.
-pub const HATCH_VIOLET: ConstantBuilder = proposed(
-    "hatch_violet",
-    0x9b00ff as f64,
-    Admissibility::CanonicalUnits,
-    "REQ-COL-055",
-    "M1",
-);
+pub const HATCH_VIOLET: ConstantBuilder = confirmed("hatch_violet", 0x9b00ff as f64, R428);
 
 /// The hatch's second colour, cyan `#48FFFF`, at `((p.x + p.y) >> 2) & 1 = 1`.
-pub const HATCH_CYAN: ConstantBuilder = proposed(
-    "hatch_cyan",
-    0x48ffff as f64,
-    Admissibility::CanonicalUnits,
-    "REQ-COL-055",
-    "M1",
-);
+pub const HATCH_CYAN: ConstantBuilder = confirmed("hatch_cyan", 0x48ffff as f64, R428);
 
 /// The hatch's stripe width in pixels, 4, a power of two: the pattern shifts `x + y` right by its log2.
-pub const HATCH_HALF_PERIOD: ConstantBuilder = proposed(
-    "hatch_half_period",
-    4.0,
-    Admissibility::CanonicalUnits,
-    "REQ-COL-055",
-    "M1",
-);
+pub const HATCH_HALF_PERIOD: ConstantBuilder = confirmed("hatch_half_period", 4.0, R428);
 
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
