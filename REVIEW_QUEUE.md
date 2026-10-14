@@ -28,6 +28,20 @@ Nothing is chosen.*
   - `alpha_energy`'s row declares (−∞, ∞) and its scale is `lin`, so under R-400 its view would be on the diverging ramp
     centred at zero; line 527 says it is centred on 1.0, not on zero. `alpha_area` (`diverging`, its range spanning
     zero by R-403) does not conflict.
+  - The same holds in kind for `running_mean_divergence` and `coherence`. Option (a), applied to the ledger meanwhile
+    (`crates/ledger/src/reduction.rs`, the two `.cited(SECTION_3_7)` members at the end of `entries()`), makes both
+    `lin` over a declared (−∞, ∞) that spans zero, so under R-400 any view of them is drawn on cool-warm centred at
+    zero. The corpus points to both being one-signed:
+    - `coherence`: dd_generation_root.md:444 reads "| `coherence` | f32 | priority ordering
+      (`complexity = 1 − coherence`) |"; `docs/contracts/principia_scheduler_contract.md` § "Priority" (:133) reads
+      "complexity (`1 − coherence`) drives adaptive refinement". `docs/design/principia_debug_tooling_plan.md`:121
+      draws it as "| coherence / impurity | scalar heatmap | = reduction output; high where boundaries |";
+      the render contract's `RenderQuad` (:15) carries it as `coherence_score`.
+    - `running_mean_divergence`: dd_generation_root.md:406 reads "| `running_mean_divergence` | f32 | diagnostic, not
+      a split input (R-99) |": the running mean of the per-footprint divergence whose latched running maximum (:410,
+      "`running_max_divergence` (f32, max-updated,") is compared with `eps` as a spread (:413, "a footprint is
+      unresolved if its spread exceeds `eps` now, or its latched"). A spread is ≥ 0.
+    - Neither has a formula in the corpus, so no line fixes either range.
 - **Options seen:**
   - (a) Keep the table's rows as declarations: the four are declared (−∞, ∞) citing §3.7's table, and line 488 is
     reworded to cite the rows, not a default; `alpha_energy`'s view is then on cool-warm centred at zero, and line 527
@@ -36,9 +50,12 @@ Nothing is chosen.*
     `running_mean_divergence` and `coherence`, `lin` scalars, then fail generation until it does.
   - (c) For `alpha_energy`, declare a range that does not span zero, or define a placement centred on 1.0 (R-72),
     with REQ-PAY-093's proposal at the M5 gate.
+  - (d) For `running_mean_divergence` and `coherence`, make their ranges a definition requirement (R-72): it gives
+    each a formula and declares a range, with its citation, that does not span zero.
 - **Applied meanwhile:** applied per R-369 in TASK-M1-21's PR (#208): option (a)'s ledger half. The four members cite
   §3.7's "The §3.8 entries" (`crates/ledger/src/reduction.rs`, `SECTION_3_7`), `alpha_area` and `alpha_energy` also
   REQ-PAY-093's proposal (R-71, R-418) until the M5 gate; line 488 and line 527 are unchanged. No numeric view draws
-  a `QuadReduction` member in M1 (`ledger::layout()` is the payload's), so no ramp follows from it yet.
+  a `QuadReduction` member in M1, `running_mean_divergence` and `coherence` included (`ledger::layout()` is the
+  payload's), so no ramp follows from it yet.
 - **Waits:** nothing in M1; TASK-M1-21's PR does not wait. REQ-PAY-093's confirmation at the M5 gate is where
   `alpha_energy`'s range is settled; it is named, not marked.
