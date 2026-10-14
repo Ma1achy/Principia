@@ -179,6 +179,22 @@ fn mock_windows_open_the_chart_builders_previews_are_square() {
         square(r);
     }
     assert!(!previews[0].intersects(previews[1]), "the previews overlap");
+    // Side by side, level, an item's spacing apart, filling the window's width between them.
+    let spacing = egui::Context::default()
+        .global_style()
+        .spacing
+        .item_spacing
+        .x;
+    assert_eq!(previews[0].min.y, previews[1].min.y);
+    assert!(
+        (previews[1].min.x - previews[0].max.x - spacing).abs() < 0.01,
+        "{previews:?}"
+    );
+    let window = windows::rect(Window::ChartBuilder, &layout(&h));
+    assert!(
+        previews[0].width() > window.width() / 3.0,
+        "{previews:?} in {window:?}"
+    );
     rejects("a preview wider than tall", || {
         square(egui::Rect::from_min_size(
             egui::pos2(0.0, 0.0),
