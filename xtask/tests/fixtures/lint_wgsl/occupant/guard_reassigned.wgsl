@@ -1,5 +1,6 @@
 // REQ-RENDER-015: the guard holds for the sample it tested. A sample variable stored again after its guard, whole, by
-// a member, through a pointer or by a function given one, is another sample; one stored only before it is not.
+// a member, through a pointer or by a function given one, is another sample; one stored only before it, or kept from a
+// call not given it, is not.
 fn colour(ctx: Ctx) -> vec3<f32> {
     var s = ctx.sample;
     if (!(has_ftle && s.ftle_valid)) { return vec3<f32>(0.0); }
@@ -69,5 +70,24 @@ fn stored_before(ctx: Ctx) -> f32 {
     var s = sample_read(6u, 0.0, false, vec3<f32>(1.0), ctx.params);
     s = sample_read(7u, 0.0, false, vec3<f32>(1.0), ctx.params);
     if (!(has_ftle && s.ftle_valid)) { return 0.0; }
+    return s.ftle;
+}
+
+fn next(k: u32) -> u32 {
+    return k + 1u;
+}
+
+fn after_a_call_not_given_it(ctx: Ctx) -> f32 {
+    var s = ctx.sample;
+    if (!(has_ftle && s.ftle_valid)) { return 0.0; }
+    let k = next(ctx.params.horizon_steps);
+    return s.ftle + f32(k);
+}
+
+fn after_a_call_given_another(ctx: Ctx) -> f32 {
+    var s = ctx.sample;
+    var t = ctx.sample;
+    if (!(has_ftle && s.ftle_valid)) { return 0.0; }
+    refill(&t, ctx);
     return s.ftle;
 }
