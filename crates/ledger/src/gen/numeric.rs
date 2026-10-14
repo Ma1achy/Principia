@@ -12,9 +12,10 @@
 //! (R-399), tested by its bits, never by a float comparison (R-271, R-280, R-343 item 5).
 //!
 //! **`raw`, `lo`, `hi`, the ramp** (RQ-231; R-400, R-403). `raw` is the field's value compacted per its ledger scale
-//! ([`Placement`]): `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε))`, on
-//! the fixed `[0, 1]`; `cyclic` `fract(x/period)` on the fixed `[0, 1]`, with `ramp_twilight`. A field whose declared
-//! range spans zero, `diverging` (R-403: only such a field carries it) or `lin`, is the identity on the symmetric
+//! ([`Placement`]): `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε_f))`, on
+//! the fixed `[0, 1]`, `ε_f` the field's own floor, its constants-register entry ([`LOG_FLOORS`]; R-401, R-427);
+//! `cyclic` `fract(x/period)` on the fixed `[0, 1]`, with `ramp_twilight`. A field whose declared range spans zero,
+//! `diverging` (R-403: only such a field carries it) or `lin`, is the identity on the symmetric
 //! `[−M, M]`, `M = max(|l|, |h|)` over the fixed ends (an unbounded end the measured one) or, under `RANGE_AUTO = 1`,
 //! the measured ends, so 0 lands at `t = ½`, on `ramp_coolwarm`, whose midpoint is the table's neutral (R-400). Every
 //! other ramp is `ramp_viridis`, `dbg_sentinel`'s: a field that can't be negative keeps it, as does one that can't be
@@ -41,7 +42,7 @@
 
 use std::fmt::Write as _;
 
-use crate::constants::{F16_MIN_SUBNORMAL, HORIZON_STEPS_MAX};
+use crate::constants::{HORIZON_STEPS_MAX, LOG_FLOORS};
 use crate::schema::{Bound, Entry, FieldType, Location, RangeState, Scale};
 
 /// How a numeric view compacts its field's value before the ramp (RQ-231).
@@ -49,7 +50,8 @@ use crate::schema::{Bound, Entry, FieldType, Location, RangeState, Scale};
 pub enum Placement {
     /// `raw = x`.
     Lin,
-    /// `raw = 1 − 1/(1 + ln(1 + |x|/floor))`, `dbg_log`'s place, on the fixed `[0, 1]`.
+    /// `raw = 1 − 1/(1 + ln(1 + |x|/floor))`, `dbg_log`'s place, on the fixed `[0, 1]`, `floor` the field's own
+    /// ([`LOG_FLOORS`]; R-401, R-427).
     Log { floor: f64 },
     /// `raw = fract(x/period)` on the fixed `[0, 1]`, on `ramp_twilight`.
     Cyclic { period: f64 },
@@ -109,13 +111,6 @@ pub struct NumericView {
     pub sentinel: Option<Sentinel>,
     /// The `RANGE_AUTO` param: the header's default.
     pub range_auto: bool,
-}
-
-/// The floor `ε` of a log view whose field has no ledger `floor`, as `dbg_log` takes it: 2⁻²⁴, f16's smallest positive
-/// subnormal, the register's `f16_min_subnormal`, below which no f16 latch stores a positive value (R-271). Proposed,
-/// R-71 (REQ-TOOL-160): the human confirms it at the M1 gate.
-pub fn log_floor() -> f64 {
-    F16_MIN_SUBNORMAL.number()
 }
 
 /// The period of a cyclic view, in the field's unit: one turn, 2π, the period of an angle in radians (`rho_angle`,
@@ -189,7 +184,19 @@ impl NumericView {
         let placement = match e.scale {
             Scale::Lin if e.range_state().spans_zero() => Placement::Diverging,
             Scale::Lin => Placement::Lin,
-            Scale::Log => Placement::Log { floor: log_floor() },
+            Scale::Log => Placement::Log {
+                floor: LOG_FLOORS
+                    .iter()
+                    .find(|(f, _)| *f == e.name)
+                    .map(|(_, k)| k.number())
+                    .unwrap_or_else(|| {
+                    panic!(
+                        "`{}` is log-scaled with no ledger `floor` and no display floor: R-401 gives each such field \
+                         its own, a register entry in `ledger::constants::LOG_FLOORS`",
+                        e.name
+                    )
+                }),
+            },
             Scale::Cyclic => Placement::Cyclic {
                 period: cyclic_period(),
             },
@@ -236,7 +243,8 @@ impl NumericView {
         self
     }
 
-    /// `u_range`'s default: the fixed `(lo, hi)` where both are finite, else `(0, 1)`.
+    /// `u_range`'s default: the fixed `(lo, hi)` where both are finite, else `(0, 1)`, `range_norm`'s unit interval:
+    /// interface data, not a register constant (REQ-SYS-082).
     pub fn u_range_default(&self) -> [f64; 2] {
         match (self.lo, self.hi) {
             (End::Fixed(lo), End::Fixed(hi)) => [lo, hi],
@@ -418,7 +426,7 @@ impl NumericView {
     }
 
     /// `u_range` for the stored values `xs`: the min and max of `raw` over those that reach the ramp, `(0, 1)` when
-    /// none does (TASK-M1-03: at M1, a CPU min/max over the synthetic buffer).
+    /// none does (TASK-M1-03: at M1, a CPU min/max over the synthetic buffer), as [`NumericView::u_range_default`].
     pub fn measured(&self, xs: &[f32]) -> [f64; 2] {
         let raws: Vec<f64> = xs
             .iter()

@@ -21,6 +21,7 @@ fn complete(name: &'static str) -> ConstantBuilder {
         class: Some(Admissibility::CanonicalUnits),
         citation: Some(PITFALLS),
         relative_basis: None,
+        provisional: None,
     }
 }
 

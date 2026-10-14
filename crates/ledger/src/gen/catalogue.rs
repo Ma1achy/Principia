@@ -561,7 +561,8 @@ pub fn detail_segment(state: u32) -> Option<DetailSegment> {
 
 /// The class of a state with no `detail`, drawn blank, black, not by `dbg_cat`: class 0, so the segments' classes
 /// start at 1, whose golden-angle colours all sit at least 0.02 of an 8-bit step from a rounding tie in linear RGB,
-/// where class 0's green sits 0.005 from one (applied per R-369; `render/tests/numeric_views.rs`'s margin).
+/// where class 0's green sits 0.005 from one (applied per R-369; `render/tests/numeric_views.rs`'s margin). Interface
+/// data, a class code of the `detail` view; not a register constant (REQ-SYS-082).
 pub fn no_detail() -> u32 {
     0
 }

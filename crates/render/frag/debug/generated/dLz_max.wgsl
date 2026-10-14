@@ -10,5 +10,5 @@
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = ctx.sample.dLz_max;
     if (bitcast<u32>(raw) == 0x7fc00000u) { return debug_invalid(ctx.frag_xy); }
-    return ramp_viridis(range_norm(1.0 - 1.0 / (1.0 + log(1.0 + abs(raw) / 5.9604645e-8)), 0.0, 1.0, uniforms.RANGE_AUTO != 0u, uniforms.u_range));
+    return ramp_viridis(range_norm(1.0 - 1.0 / (1.0 + log(1.0 + abs(raw) / 9.536743e-7)), 0.0, 1.0, uniforms.RANGE_AUTO != 0u, uniforms.u_range));
 }

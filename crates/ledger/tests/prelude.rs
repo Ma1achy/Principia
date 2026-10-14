@@ -11,6 +11,7 @@
 
 use std::path::Path;
 
+use ledger::constants::{HUE_WHEEL_C, HUE_WHEEL_L};
 use ledger::gen::prelude::{self, Lut};
 use ledger::gen::read::{self, Tier};
 use ledger::gen::{self, wgsl};
@@ -315,7 +316,7 @@ negative_control!(
 /// The prelude parses with naga at every tier, and the hatch and hue wheel it writes are the ledger's.
 fn check_parses_with_values(prelude_at: fn(Tier) -> String) {
     let h = prelude::hatch();
-    let (l, c) = prelude::hue_wheel_lc();
+    let (l, c) = (HUE_WHEEL_L.number(), HUE_WHEEL_C.number());
     for tier in Tier::ALL {
         let text = prelude_at(tier);
         parse(&text);

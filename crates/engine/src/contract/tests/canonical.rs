@@ -5,7 +5,7 @@
 //!
 //! The vectors in `jcs/` are RFC 8785's published test data (its Appendix I, the JCS development portal's
 //! `testdata/input` and `testdata/output`), each output the canonical form of its input. The number samples are RFC 8785
-//! Appendix B, Table 1.
+//! Appendix B, Table 1. Its helpers' numbers are test inputs, not register constants (REQ-SYS-082).
 
 use serde::ser::{SerializeMap, Serializer};
 use serde::Serialize;

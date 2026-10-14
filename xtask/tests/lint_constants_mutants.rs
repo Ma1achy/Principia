@@ -222,3 +222,56 @@ negative_control!(
     expected = "the lint's findings are not the expected ones",
     check_scan(&OPEN_COMMENT.replace("/* ", ""), &[(1, "A")])
 );
+
+/// `#[cfg(test)]` on a struct field, an enum variant, a match arm or a tuple struct's field skips that alone: its range
+/// ends at the `,` after it or at the bracket that closes its list, and the numeric constants after it are read
+/// (REQ-SYS-082). One whose `{` never closes, at the start of the file, skips the attribute alone, not the rest of the
+/// file.
+const TEST_PARTS: &str = "struct S {
+    #[cfg(test)]
+    probe: u8,
+}
+pub const LIMIT: f64 = 0.5;
+enum E {
+    #[cfg(test)]
+    Probe
+}
+const VARIANT: u8 = 2;
+fn f(x: u8) -> u8 {
+    match x {
+        #[cfg(test)]
+        0 => 1,
+        _ => { const ARM: u8 = 3; ARM }
+    }
+}
+struct T(#[cfg(test)] u8);
+const FIELD: u8 = 4;
+fn g() -> u32 { let x = 1; x }
+";
+const OPEN_TEST_PART: &str = "#[cfg(test)]{const TAIL: u8 = 2;";
+
+#[test]
+fn lint_constants_a_test_field_variant_or_arm_hides_no_constant() {
+    check_scan(
+        TEST_PARTS,
+        &[(5, "LIMIT"), (10, "VARIANT"), (15, "ARM"), (19, "FIELD")],
+    );
+    check_scan(OPEN_TEST_PART, &[(1, "TAIL")]);
+}
+
+negative_control!(
+    lint_constants_a_test_field_variant_or_arm_hides_no_constant,
+    "with the field a test module, its constant holding 7, line 3 is under `#[cfg(test)]` and no finding, so the \
+     check must fail",
+    expected = "the lint's findings are not the expected ones",
+    check_scan(
+        &TEST_PARTS.replace("probe: u8,", "mod probe { const P: u8 = 7; }"),
+        &[
+            (3, "P"),
+            (5, "LIMIT"),
+            (10, "VARIANT"),
+            (15, "ARM"),
+            (19, "FIELD")
+        ]
+    )
+);

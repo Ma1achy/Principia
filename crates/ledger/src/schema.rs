@@ -444,7 +444,8 @@ impl Storage {
         }
     }
 
-    /// Size in bytes; each storage is aligned to its scalar, 2 bytes for `U16` and 4 for the rest.
+    /// Size in bytes; each storage is aligned to its scalar, 2 bytes for `U16` and 4 for the rest. Ledger data, each
+    /// storage's byte size, fixed by its type; not register constants (REQ-SYS-082).
     pub fn size(self) -> u32 {
         match self {
             Storage::U16 => 2,

@@ -6,7 +6,8 @@
 //! reads, its summaries absent with "session incomplete" (R-298); a last line cut off before its newline is dropped,
 //! and the bytes dropped are stated (R-299); after the summary line, the session is complete, with its bytes dropped
 //! (R-356, R-358). Each test registers the control that must make it
-//! fail (R-176).
+//! fail (R-176). Its helpers' numbers (the traces' timings, counts and display) are test inputs, not register constants
+//! (REQ-SYS-082).
 
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::cell::Cell;
@@ -1819,8 +1820,7 @@ validation::negative_control!(
 struct CountingAlloc;
 
 thread_local! {
-    // A count from zero, not a physical constant (`usize::MIN` rather than a literal, for `xtask lint constants`).
-    static ALLOCATIONS: Cell<usize> = const { Cell::new(usize::MIN) };
+    static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
 }
 
 fn count_allocation() {

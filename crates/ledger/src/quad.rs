@@ -39,7 +39,8 @@ pub const fn quad_states() -> [&'static str; 5] {
 }
 
 /// The `RenderQuad` struct generated from `table`: its members in the table's order, aligned to 4. Its buffer is the
-/// quad buffer, one element per visible quad, indexed by the quad.
+/// quad buffer, one element per visible quad, indexed by the quad. Ledger data, the struct's layout; not a register
+/// constant (REQ-SYS-082).
 pub fn generate(table: &[QuadField]) -> Struct {
     Struct {
         name: "RenderQuad",

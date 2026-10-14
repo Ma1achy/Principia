@@ -9,6 +9,7 @@
 //! and its stipple (REQ-COL-053, REQ-COL-064), are written here again, and the tests compare them. Colours are linear
 //! RGB unless a name says sRGB.
 
+use ledger::constants::{HUE_WHEEL_C, HUE_WHEEL_L};
 use ledger::gen::prelude;
 
 use crate::colour::space;
@@ -127,9 +128,9 @@ pub fn ramp_grey(t: f64) -> Rgb {
     oklab_to_linear([t.clamp(0.0, 1.0), 0.0, 0.0])
 }
 
-/// `hue_wheel(t)`: OKLCH at the ledger's `(L, C)`, hue `t` turns.
+/// `hue_wheel(t)`: OKLCH at the register's `(L, C)`, hue `t` turns.
 pub fn hue_wheel(t: f64) -> Rgb {
-    let (l, c) = prelude::hue_wheel_lc();
+    let (l, c) = (HUE_WHEEL_L.number(), HUE_WHEEL_C.number());
     oklch_to_linear(l, c, t)
 }
 

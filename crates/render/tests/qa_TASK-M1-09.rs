@@ -2,8 +2,8 @@
 //! implementation. Each draws a scene of its own (eight samples in a row, one 8 px tile each) through the render
 //! harness (`validation::golden_scene::Scene::render`, `render::bind::preset_module` and `upload`) and checks every
 //! pixel against a colour computed here from the requirement: the ramp place from the field's stored value by RQ-231's
-//! compaction (log `1 − 1/(1 + ln(1 + |x|/ε))` with REQ-TOOL-160's proposed ε = 2⁻²⁴; cyclic `fract(x/2π)`,
-//! REQ-TOOL-161; lin the identity), normalised by the ledger's fixed range or, under `RANGE_AUTO = 1`, by the min and
+//! compaction (log `1 − 1/(1 + ln(1 + |x|/ε))` with REQ-TOOL-160's per-field floor ε_f, its register entry
+//! (R-401, R-427); cyclic `fract(x/2π)`, REQ-TOOL-161; lin the identity), normalised by the ledger's fixed range or, under `RANGE_AUTO = 1`, by the min and
 //! max of the compacted values that reach the ramp (render_gui_spec §10.1's `meas`), drawn through the presentation
 //! layer's CPU mirrors (`render::present`, TASK-M1-03's). The emitter's own CPU twin (`NumericView::shown`,
 //! `Scene::look`) is never used.
@@ -46,9 +46,15 @@ const QNAN: u32 = 0x7FC0_0000;
 const F16_INF: u32 = 0x7C00;
 const F16_QNAN: u32 = 0x7E00;
 
-/// REQ-TOOL-160's proposed ε.
-fn eps() -> f64 {
-    2f64.powi(-24)
+/// REQ-TOOL-160's floor of the log field `f`, `ε_f`: its own constants-register entry, `log_floor_<f>` (R-401
+/// replaces the single ε = 2⁻²⁴; R-427; amended by qa for TASK-M1-18).
+fn eps(f: &str) -> f64 {
+    let name = format!("log_floor_{f}");
+    ledger::constants::REGISTER
+        .iter()
+        .find(|k| k.name == name)
+        .unwrap_or_else(|| panic!("the register holds no `{name}`"))
+        .number()
 }
 
 /// RQ-231's log compaction, `dbg_log`'s place.
@@ -213,7 +219,7 @@ fn qa_debug_fields_raw_failed_zero_is_the_ramp_colour_of_zero() {
     for f in ["dE_max", "dLz_max"] {
         let s = drift_scene(f);
         assert_eq!(s.read(0).dE_max.to_bits(), 0, "sample 0 stores 0.0");
-        check_drift(&s, &render(&h, &s), eps());
+        check_drift(&s, &render(&h, &s), eps(f));
     }
 }
 
@@ -224,7 +230,7 @@ negative_control!(
     {
         let s = drift_scene("dE_max");
         let image = painted(&render(&gpu(), &s), 0, Want::Hatch);
-        check_drift(&s, &image, eps())
+        check_drift(&s, &image, eps("dE_max"))
     }
 );
 
@@ -606,7 +612,7 @@ fn check_d_min_view(s: &Scene, image: &[Rgb]) {
     assert_eq!(reads[4], Some(Some(0.0)), "sample 4 does not read 0.0");
     let raws: Vec<Option<f64>> = reads
         .iter()
-        .map(|r| r.flatten().map(|v| log_place(v, eps())))
+        .map(|r| r.flatten().map(|v| log_place(v, eps("d_min"))))
         .collect();
     let places = auto_places(&raws);
     for i in 0..SAMPLES {

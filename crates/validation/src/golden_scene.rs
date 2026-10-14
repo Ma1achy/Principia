@@ -260,11 +260,10 @@ const NUDGES: &[(&str, u32)] = &[
     ("accumulators-drift_max_vs_final", 3),
     ("accumulators-drift_max_vs_final-lz", 2),
     ("derived-energy_drift", 3),
+    ("generated-closure_min", 1),
     ("generated-energy_drift", 3),
-    ("generated-r_min_pair_0", 1),
     ("generated-r_sh", 1),
     ("generated-rho_angle", 2),
-    ("generated-rho_ratio", 2),
     ("generated-t_dmin_step", 2),
     ("generated-t_end_step", 1),
     ("generated-total_substeps", 3),
@@ -573,7 +572,7 @@ pub fn scene(name: &str) -> Result<Scene, String> {
         }
         "de_max_failed" | "dlz_max_failed" => {
             set.sample(0).state(STATE_SIM_FAILED).drift_max(0.0, 0.0);
-            for (k, v) in [3e-6f32, 4.5e-4, 7e-3, 0.06, 0.55, 4.0, 90.0]
+            for (k, v) in [3e-6f32, 4.6e-4, 7.1e-3, 0.06, 0.55, 4.0, 90.0]
                 .into_iter()
                 .enumerate()
             {

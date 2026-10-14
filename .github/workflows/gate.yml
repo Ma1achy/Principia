@@ -341,6 +341,13 @@ jobs:
         run: >-
           cargo xtask gate-report --milestone "$MILESTONE" --results "$RUNNER_TEMP/results.json"
           --test-list "$RUNNER_TEMP/gate-test-list/tests.txt"
+      # The constants register's entries still provisional until this gate or an earlier one (R-427): each blocks the
+      # gate until the human confirms it, so the step fails while any is listed, beside the report.
+      - name: cargo xtask gate-provisional --milestone <Mn>
+        if: always()
+        env:
+          MILESTONE: ${{ inputs.milestone }}
+        run: cargo xtask gate-provisional --milestone "$MILESTONE"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -13,7 +13,9 @@
 //!   [0, 1] aside); setting the node's `RANGE_AUTO` param writes `@uniform RANGE_AUTO: u32 = <0|1> [0, 1]`, which
 //!   `Declaration::parse` gives back, and nothing else in the view changes.
 //! - REQ-TOOL-160 (R-71): the log fields without a ledger `floor` are exactly the statement's six, and each view
-//!   places raw at `dbg_log`'s form `1 − 1/(1 + ln(1 + |x|/ε))` on the fixed [0, 1], with the proposed ε = 2⁻²⁴.
+//!   places raw at `dbg_log`'s form `1 − 1/(1 + ln(1 + |x|/ε_f))` on the fixed [0, 1], with its own field's floor
+//!   `ε_f`, the constants-register entry `log_floor_<field>` (R-401 replaces the single ε = 2⁻²⁴; R-427 puts each
+//!   floor in the register; amended by qa for TASK-M1-18).
 //! - REQ-TOOL-161 (R-72): render_gui_spec §10.1 gives the cyclic period, 2π, and the cyclic view places raw at
 //!   `fract(raw / 2π)` on the fixed [0, 1] with `ramp_twilight`.
 //! - REQ-GEN-012 / REQ-TOOL-137 (R-136, R-271, R-280, R-343 item 5): a stored sentinel's line shows the compacted
@@ -46,9 +48,15 @@ const LOG_FIELDS: [&str; 6] = [
     "r_min_pair_0",
 ];
 
-/// REQ-TOOL-160's proposed ε: 2⁻²⁴.
-fn eps() -> f32 {
-    2f32.powi(-24)
+/// REQ-TOOL-160's floor of the log field `f`, `ε_f`: its own constants-register entry, `log_floor_<f>`
+/// (R-401, R-427; dd_generation_root §3.8's provisional entries).
+fn eps(f: &str) -> f32 {
+    let name = format!("log_floor_{f}");
+    ledger::constants::REGISTER
+        .iter()
+        .find(|k| k.name == name)
+        .unwrap_or_else(|| panic!("the register holds no `{name}`"))
+        .number() as f32
 }
 
 fn entries() -> Vec<Entry> {
@@ -291,8 +299,8 @@ fn check_template(e: &Entry, wgsl: &str) {
             let e_lit = &raw[want.len()..raw.len() - 2];
             assert_eq!(
                 lit(e_lit).to_bits(),
-                eps().to_bits(),
-                "`{f}`'s log floor ε is {e_lit}, not the proposed 2^-24"
+                eps(f).to_bits(),
+                "`{f}`'s log floor ε is {e_lit}, not its register entry `log_floor_{f}`"
             );
             assert!(
                 lit(&args[1]) == 0.0 && lit(&args[2]) == 1.0,
@@ -504,9 +512,9 @@ mod qa_numeric_view_template_controls {
         use super::*;
         negative_control!(
             qa_numeric_view_template_every_numeric_view_is_the_template,
-            "a log view with ε = 2^-23 is caught",
-            expected = "not the proposed 2^-24",
-            check_all(&mutated("closure_min", "5.9604645e-8", "1.1920929e-7"))
+            "a log view with the replaced single ε = 2^-24 in place of its own floor 2^-23 is caught",
+            expected = "not its register entry",
+            check_all(&mutated("closure_min", "1.1920929e-7", "5.9604645e-8"))
         );
     }
 

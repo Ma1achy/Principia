@@ -17,8 +17,8 @@
 //!
 //! No stored value of the set is NaN, and its only non-finite stored value is `d_min`'s unset `+inf`, held only by a
 //! failed sample or one before its first step (R-271; `engine/tests/fixtures.rs`, `stored_values_no_nan`). Every
-//! value here is a hand-chosen harness value, not a constant of the physics, so the tables are functions, not `const`s
-//! (the constants lint, REQ-SYS-001).
+//! value here is fixture data: a hand-chosen harness value the tests assert on (debug_tooling_plan §F; the M1
+//! fixtures), not a register constant (REQ-SYS-082).
 
 use kernel::payload::{
     angular_momentum_z, f16_bits_to_f32, f32_to_f16_bits, fgw_pack, hamiltonian,
@@ -81,7 +81,7 @@ impl Known {
     }
 
     /// Its `dE_max` and `dLz_max`: the failed-state `0.0` on a failed sample (payload §1), else a latch above the
-    /// current drift, as a march leaves it.
+    /// current drift, as a march leaves it. Fixture data, as [`known`]'s table is (REQ-SYS-082).
     pub fn drift_max(&self) -> (f32, f32) {
         if self.failed() {
             (0.0, 0.0)
@@ -140,7 +140,8 @@ fn adversarial(
     }
 }
 
-/// The fixture `name`'s eight samples, or why not.
+/// The fixture `name`'s eight samples, or why not. Fixture data, the known values the tests assert on: interface data
+/// between the fill and its readers, not register constants (REQ-SYS-082).
 pub fn known(name: &str) -> Result<Vec<Known>, String> {
     // The f16 bits of `d_min`'s valid values. A collision's, `d0006`, is below the default `r_coll` = 10⁻³
     // (integrator contract Part 7): its `d_min` is the separation that crossed `r_coll` (dd_integrator §3.6).
@@ -208,7 +209,7 @@ pub fn known(name: &str) -> Result<Vec<Known>, String> {
 type Bodies = [[f32; 2]; 3];
 
 /// The configuration every fixture's samples share: positions and momenta in the CoM frame, each summing to zero, and
-/// the shadow's positions, 10⁻⁶ ahead of the state in body 0's x.
+/// the shadow's positions, 10⁻⁶ ahead of the state in body 0's x. Fixture data, as [`known`]'s table is (REQ-SYS-082).
 fn configuration() -> (Bodies, Bodies, Bodies) {
     (
         [[0.6, -0.2], [-0.45, 0.55], [-0.15, -0.35]],

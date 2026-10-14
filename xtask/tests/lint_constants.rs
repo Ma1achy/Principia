@@ -1,6 +1,7 @@
 //! `cargo xtask lint constants` (dd_generation_root §3.8; REQ-SYS-001, REQ-SYS-005): it passes on this tree, and a
 //! bare numeric `const` in `crates/kernel` fails it, naming the file and line; comments, strings, `const fn` and
-//! constants read from the register are not findings; the register and the generated files are exempt.
+//! constants read from the register are not findings; the register and the generated files are exempt; test code, an
+//! item under `#[cfg(test)]` and every file of a module declared under it, is not read.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -111,4 +112,67 @@ negative_control!(
             "numeric constant(s) not read from the register: {found:?}"
         );
     }
+);
+
+/// A kernel whose `lib.rs` holds an inline module with a nested block, then a test module inline, with a numeric
+/// `const` and an out-of-line module of its own (`src/tests/deep.rs`), and declares another out of line (`src/probe.rs`,
+/// with `src/probe/inner.rs` beneath it), each holding a numeric `const` or `static`, under `attribute`; between the
+/// two, right after the inline test module's `}`, a numeric `const` of its own. Beside them two modules that are not
+/// test code: `src/real.rs`, with one numeric `const`, and `src/nest/mod.rs`, which declares the test module
+/// `src/nest/t.rs` under `attribute`, with a numeric `const`.
+fn test_tree(name: &str, attribute: &str) -> PathBuf {
+    let root = tree(
+        name,
+        &format!(
+            "pub mod real;\npub mod nest;\npub mod outer {{\n    pub fn f() {{}}\n}}\n{attribute}\nmod tests {{\n    \
+             const N: usize = 3;\n    mod deep;\n}}\npub const AFTER: u32 = 6;\n{attribute}\n\
+             #[allow(dead_code)]\nmod probe;\n"
+        ),
+    );
+    let src = root.join("crates/kernel/src");
+    for dir in ["tests", "probe", "nest"] {
+        fs::create_dir_all(src.join(dir)).expect("module dir created");
+    }
+    for (file, text) in [
+        ("real.rs", "pub const REAL: u32 = 5;\n".to_owned()),
+        ("tests/deep.rs", "static Z: u8 = 1;\n".to_owned()),
+        ("probe.rs", "mod inner;\nconst M: u32 = 4;\n".to_owned()),
+        ("probe/inner.rs", "const I: f64 = 0.5;\n".to_owned()),
+        ("nest/mod.rs", format!("{attribute}\nmod t;\n")),
+        ("nest/t.rs", "const T: u32 = 7;\n".to_owned()),
+    ] {
+        fs::write(src.join(file), text).expect("module written");
+    }
+    root
+}
+
+/// Checks that the lint over `root` finds exactly `want`, as `file:line: name`.
+fn check_finds(root: &Path, want: &[&str]) {
+    let found: Vec<String> = check(root, &[])
+        .expect("lint ran")
+        .iter()
+        .map(|f| format!("{}:{}: {}", f.path.display(), f.line, f.name))
+        .collect();
+    assert_eq!(found, want, "the lint's findings are not the expected ones");
+}
+
+/// The findings of [`test_tree`]: the two numeric constants outside test code.
+const NOT_TEST_CODE: [&str; 2] = [
+    "crates/kernel/src/lib.rs:11: AFTER",
+    "crates/kernel/src/real.rs:1: REAL",
+];
+
+#[test]
+fn lint_constants_skips_test_code() {
+    check_finds(&test_tree("lint_test_code", "#[cfg(test)]"), &NOT_TEST_CODE);
+}
+
+negative_control!(
+    lint_constants_skips_test_code,
+    "the same modules under another attribute are not test code, so their numbers must be findings",
+    expected = "the lint's findings are not the expected ones",
+    check_finds(
+        &test_tree("lint_control_test_code", "#[cfg(feature = \"x\")]"),
+        &NOT_TEST_CODE
+    )
 );

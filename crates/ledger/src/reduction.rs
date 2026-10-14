@@ -189,7 +189,8 @@ fn f32_at(name: &'static str, slot: u32, lo: Bound) -> EntryBuilder {
 /// `overflow` of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`,
 /// `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` are REQ-PAY-093's proposal, until the human
 /// confirms them at the M5 gate (R-71, R-418). With no copy escaped, `escape_time_min` holds +∞ and `escape_time_max`
-/// −∞, each its reduction's identity, as their sentinels (§3.7's "No escape (R-418)"; REQ-REF-006).
+/// −∞, each its reduction's identity, as their sentinels (§3.7's "No escape (R-418)"; REQ-REF-006). Ledger data, the
+/// members' §3.8 entries; not register constants (REQ-SYS-082).
 fn entries() -> Vec<EntryBuilder> {
     let zero = Bound::Closed(0.0);
     let histogram = FieldType::Vector {
@@ -312,7 +313,7 @@ pub fn ledger() -> Ledger {
 
 /// The `QuadReduction` struct generated from [`ledger`]: `class_histogram`'s bins, then the packed words in order,
 /// then the three f32 members, each a 4-byte slot, aligned to 4, with no padding (§3.7, REQ-PAY-077). Its buffer is
-/// the reduction buffer, one element per quad.
+/// the reduction buffer, one element per quad. Ledger data, the struct's layout (REQ-SYS-082).
 pub fn quad_reduction() -> Struct {
     let mut members = vec![Member {
         name: "class_histogram",
