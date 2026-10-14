@@ -167,6 +167,42 @@ The stored `ICDescriptor` is the ledger's field list (`principia_dd_generation_r
 
 `E₀` here must agree with the kernel's `E_0` at t=0 — that agreement is a cross-check view, not an assumption.
 
+**The six other fields** *(definition, R-72; REQ-PAY-088, written by TASK-M2-03)*. Each is read from the decoded
+`(m, r, p)` alone, after the blocks and before integration, so it is the same for every chart (§2: the integrator's
+input is `(m, r, p)` and nothing else). With §3.2's reduced masses and Jacobi vectors, written from the positions:
+
+```
+M₀₁ = m₀ + m₁        μ_ρ = m₀m₁ / M₀₁        μ_λ = m₂ · M₀₁
+ρ = r₁ − r₀          λ = r₂ − (m₀r₀ + m₁r₁) / M₀₁          ρ × λ = ρ_x λ_y − ρ_y λ_x
+
+q_mass       = min(m₀, m₁) / max(m₀, m₁)                      ∈ (0, 1]
+rho_mag      = ‖ρ̃‖ = √μ_ρ · ‖ρ‖                               ∈ [0, 1]
+lambda_mag   = ‖λ̃‖ = √μ_λ · ‖λ‖                               ∈ [0, 1]
+rho_ratio    = ‖ρ̃‖ / ‖λ̃‖                                      ∈ (0, ∞]
+rho_angle    = atan2(ρ × λ, ρ · λ)                             ∈ (−π, π]
+r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖)             ∈ (0, ∞)
+```
+
+- **`rho_mag` and `lambda_mag` are the mass-weighted magnitudes** `‖ρ̃‖` and `‖λ̃‖`, not the unweighted `‖ρ‖` and `‖λ‖`
+  (R-62 names the fields; this settles which norms). So `rho_mag² + lambda_mag² = I = 1`, each lies in `[0, 1]` (the
+  `|ρ| ∈ [0,1]` of render_gui_spec §10.1), and in the canonical frame `rho_mag = cos α` and `lambda_mag = sin α`.
+- **`rho_ratio` is the mass-weighted ratio** `‖ρ̃‖/‖λ̃‖`, `cot α` in the canonical frame and 1 at the golden IC: the
+  ratio that `rho_ratio`'s provisional log floor assumes (R-419), so the floor stands in its units (REQ-TOOL-163). It
+  reads `+∞` only where `‖λ̃‖` is exactly 0. Where `α = 0` is reached at underflow (§3.2), `‖λ̃‖` is the rounding left
+  in the reconstruction or 0. `rho_mag = 1` there, so the ratio is never `0/0`.
+- **`rho_angle` is the signed angle from `ρ` to `λ`**, in radians on `(−π, π]`: a full-turn angle, for the cyclic view's
+  period of 2π (render_gui_spec §10.1; REQ-TOOL-161). The mass weights are positive scalars, so `ρ̃` and `λ̃` give the
+  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0`) it is `β ∈ [0, π]`; at a pole, `atan2(0, 0) = 0`, a
+  deterministic value (§3.2).
+- **`q_mass` is the inner pair's mass ratio**, lighter over heavier: 1 at equal masses, unchanged when bodies 0 and 1
+  swap labels, and greater than 0 wherever `m₀` and `m₁` both are. Its ledger range is declared `[0, 1]` from this
+  formula (REQ-PAY-097, R-426), a range that does not span zero, so its numeric view is on `ramp_viridis` (R-400).
+- **`r_min_pair_0` is the closest pair's separation at `t = 0`**, a distance in `G = M = I = 1`. The `_0` is the
+  initial-time subscript of `K_0`, `V_0` and `E_0`, not a pair id (R-22's pair ids name a side; this field names
+  none).
+- **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
+  `1/√2`, 1, `π/2` and `√3`.
+
 ### 3.7 Energy normalisation (optional; keep-or-drop is decision B9)
 
 A post-momentum rescale that enforces a target energy $E^*$. Compute $K_0$, check feasibility $E^* \ge U$, then
