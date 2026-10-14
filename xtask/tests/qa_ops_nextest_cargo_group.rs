@@ -14,6 +14,10 @@
 //!
 //! Each test has its negative control (R-176): the same check on the config with the one property it turns on
 //! removed.
+//!
+//! Ops PR #209 (branch `ops/nextest-alias-group`) adds, by the same rule, `xtask screenshot --all`
+//! (`qa_TASK-M0-20`), whose `gui` suites run `cargo run -p gui --features mock` on the workspace's target, which the
+//! survey above missed.
 
 use std::path::{Path, PathBuf};
 
@@ -50,6 +54,11 @@ const ON_THE_WORKSPACE_TARGET: &[(&str, &str)] = &[
     (
         "xtask::qa_ops_golden_harness_ci",
         "qa_ops_gh_real_cargo_builds_once",
+    ),
+    // `xtask screenshot --all`: its `gui` suites spawn `cargo run -p gui --features mock` on the workspace's target.
+    (
+        "xtask::qa_TASK-M0-20",
+        "qa_cli_screenshot_all_runs_selftest",
     ),
 ];
 
@@ -406,11 +415,11 @@ negative_control!(
     ))
 );
 
-/// The filter reader agrees with nextest on the config's own filters: each of the five tests nextest put in the group
-/// (`cargo nextest show-config test-groups --profile ci`, in this review) is read as in it, and their neighbours in
-/// the same binaries, which nextest left out, are read as out.
+/// The filter reader agrees with nextest on the config's own filters: each test of [`ON_THE_WORKSPACE_TARGET`],
+/// all of which nextest put in the group (`cargo nextest show-config test-groups --profile ci`, in PR #209's review),
+/// is read as in it, and their neighbours in the same binaries, which nextest left out, are read as out.
 fn check_the_reader_agrees_with_nextest(text: &str) {
-    for (binary, test) in &ON_THE_WORKSPACE_TARGET[..5] {
+    for (binary, test) in ON_THE_WORKSPACE_TARGET {
         assert!(
             group_of(text, "ci", binary, test).as_deref() == Some("xtask-cargo"),
             "qa-ops-ncg: the filter reader disagrees with nextest on {binary} {test}"
@@ -425,6 +434,10 @@ fn check_the_reader_agrees_with_nextest(text: &str) {
         (
             "xtask::qa_TASK-M0-06_list",
             "qa_m006_ci_list_lists_golden_cases_without_a_device_x",
+        ),
+        (
+            "xtask::qa_TASK-M0-20",
+            "qa_cli_screenshot_selftest_passes_and_writes_capture",
         ),
     ] {
         assert!(
@@ -448,4 +461,319 @@ negative_control!(
         "test(/^qa_m022_/)",
         1
     ))
+);
+
+#[test]
+fn qa_ops_ncg_screenshot_all_is_grouped() {
+    check_every_workspace_cargo_test_is_grouped(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_screenshot_all_is_grouped,
+    "the config with `xtask screenshot --all`'s test taken out of the group's filter",
+    expected = "in no test group, so run beside the others: [\"xtask::qa_TASK-M0-20 qa_cli_screenshot_all_runs_selftest\"]",
+    check_every_workspace_cargo_test_is_grouped(&the_config().replacen(
+        "binary_id(=xtask::qa_TASK-M0-20)",
+        "binary_id(=xtask::qa_TASK-M0-20_nothing)",
+        1
+    ))
+);
+
+// --- Ops PR #209, re-check: the alias test on the workspace's target, alone, and the gate's `ci-workspace` run ------
+//
+// `qa_cargo_xtask_alias_runs_deps` (TASK-M0-01) now runs `cargo xtask`, which is `cargo run -p xtask`, on the
+// workspace's own target directory: it rebuilds and replaces the workspace's `xtask` binary while other tests spawn it
+// (REQ-VAL-164), so it must run alone, taking every test thread, in every profile that runs it, as the other tests that
+// run cargo on that target do (`.config/nextest.toml`'s first override). The `ci` job's shards run from an archive with
+// no cargo build state, so it runs in `ci-workspace`, not `ci` (R-372, REQ-SYS-078). And the gate runs every hosted suite
+// (REQ-SYS-067): every nextest profile `ci.yml` runs, `gate.yml` runs too, over every package that profile selects, in
+// a job whose result the gate report reads.
+
+/// The alias test: `(binary id, test name)`.
+const THE_ALIAS_TEST: (&str, &str) = ("xtask::qa_TASK-M0-01", "qa_cargo_xtask_alias_runs_deps");
+
+/// The `threads-required` of `(binary, test)` under `profile` in the config `text`: from the first override that
+/// matches it and sets one, the profile's own overrides before the default profile's; `None` for the default of 1.
+fn threads_required_of(text: &str, profile: &str, binary: &str, test: &str) -> Option<String> {
+    let doc: toml_edit::DocumentMut = text.parse().expect("qa-ops-ncg: nextest.toml is not TOML");
+    let overrides = |p: &str| -> Vec<(String, Option<String>)> {
+        doc.get("profile")
+            .and_then(|t| t.get(p))
+            .and_then(|t| t.get("overrides"))
+            .and_then(|o| o.as_array_of_tables())
+            .map(|a| {
+                a.iter()
+                    .map(|t| {
+                        (
+                            t.get("filter")
+                                .and_then(|f| f.as_str())
+                                .unwrap_or("all()")
+                                .to_owned(),
+                            t.get("threads-required").map(|v| {
+                                v.as_str()
+                                    .map(str::to_owned)
+                                    .unwrap_or_else(|| v.to_string().trim().to_owned())
+                            }),
+                        )
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let mut order = Vec::new();
+    if profile != "default" {
+        order.extend(overrides(profile));
+    }
+    order.extend(overrides("default"));
+    order
+        .into_iter()
+        .find(|(filter, threads)| threads.is_some() && parse(filter).matches(binary, test))
+        .and_then(|(_, threads)| threads)
+}
+
+/// Whether `profile`'s `default-filter` in the config `text` selects `(binary, test)`; a profile without one selects
+/// every test.
+fn selected_by(text: &str, profile: &str, binary: &str, test: &str) -> bool {
+    let doc: toml_edit::DocumentMut = text.parse().expect("qa-ops-ncg: nextest.toml is not TOML");
+    let filter = doc
+        .get("profile")
+        .and_then(|t| t.get(profile))
+        .and_then(|t| t.get("default-filter"))
+        .and_then(|f| f.as_str())
+        .unwrap_or("all()")
+        .to_owned();
+    parse(&filter).matches(binary, test)
+}
+
+/// The alias test runs alone, taking every test thread, in every profile that selects it, and `ci-workspace` selects it
+/// while the archive-run `ci` profile does not.
+fn check_the_alias_test_runs_alone_in_ci_workspace(text: &str) {
+    let (binary, test) = THE_ALIAS_TEST;
+    assert!(
+        selected_by(text, "ci-workspace", binary, test),
+        "qa-ops-ncg: the `ci-workspace` profile does not select the alias test"
+    );
+    assert!(
+        !selected_by(text, "ci", binary, test),
+        "qa-ops-ncg: the `ci` profile, whose shards run from an archive with no build state, selects the alias test"
+    );
+    for profile in ["default", "ci-workspace"] {
+        assert!(
+            threads_required_of(text, profile, binary, test).as_deref() == Some("num-test-threads"),
+            "qa-ops-ncg: under profile `{profile}`, the alias test does not take every test thread: threads-required {:?}",
+            threads_required_of(text, profile, binary, test)
+        );
+    }
+}
+
+#[test]
+fn qa_ops_ncg_the_alias_test_runs_alone_in_ci_workspace() {
+    check_the_alias_test_runs_alone_in_ci_workspace(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_the_alias_test_runs_alone_in_ci_workspace,
+    "the config with the alias test taken out of the every-thread override's filter",
+    expected = "under profile `default`, the alias test does not take every test thread: threads-required None",
+    check_the_alias_test_runs_alone_in_ci_workspace(&the_config().replacen(
+        "(binary_id(xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))",
+        "(binary_id(xtask::qa_TASK-M0-01) & test(=qa_nothing))",
+        1
+    ))
+);
+
+#[test]
+fn qa_ops_ncg_ci_workspace_selects_the_alias_test() {
+    check_the_alias_test_runs_alone_in_ci_workspace(&the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_ci_workspace_selects_the_alias_test,
+    "the config with the alias test taken out of the `ci-workspace` profile's filter",
+    expected = "the `ci-workspace` profile does not select the alias test",
+    check_the_alias_test_runs_alone_in_ci_workspace(&{
+        let text = the_config();
+        let at = text
+            .find("[profile.ci-workspace]")
+            .expect("qa-ops-ncg: premise: a `ci-workspace` profile");
+        let (head, tail) = text.split_at(at);
+        format!(
+            "{head}{}",
+            tail.replacen(
+                "(binary_id(=xtask::qa_TASK-M0-01) & test(=qa_cargo_xtask_alias_runs_deps))",
+                "(binary_id(=xtask::qa_TASK-M0-01) & test(=qa_nothing))",
+                1
+            )
+        )
+    })
+);
+
+// --- The workflows, read as text --------------------------------------------------------------------------------------
+
+fn workflow(name: &str) -> String {
+    std::fs::read_to_string(repo().join(".github/workflows").join(name))
+        .unwrap_or_else(|e| panic!("qa-ops-ncg: .github/workflows/{name}: {e}"))
+}
+
+/// The workflow `text`'s jobs: `(job id, the job's text)`, each job a two-space-indented key under `jobs:`.
+fn jobs(text: &str) -> Vec<(String, String)> {
+    let body = text
+        .split_once("\njobs:\n")
+        .expect("qa-ops-ncg: a workflow without `jobs:`")
+        .1;
+    let mut out: Vec<(String, String)> = Vec::new();
+    for line in body.lines() {
+        let key = line
+            .strip_prefix("  ")
+            .filter(|r| !r.starts_with(' ') && !r.starts_with('#'))
+            .and_then(|r| r.strip_suffix(':'));
+        match key {
+            Some(k) if !k.is_empty() && !k.contains(' ') => out.push((k.to_owned(), String::new())),
+            _ => {
+                if let Some((_, job)) = out.last_mut() {
+                    job.push_str(line);
+                    job.push('\n');
+                }
+            }
+        }
+    }
+    out
+}
+
+/// The nextest profiles the workflow `text` runs: each `NEXTEST_PROFILE: <p>` value.
+fn profiles_run(text: &str) -> Vec<String> {
+    let mut out: Vec<String> = text
+        .lines()
+        .filter_map(|l| l.trim().strip_prefix("NEXTEST_PROFILE:"))
+        .map(|p| p.trim().to_owned())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// The packages `profile`'s `default-filter` in the config `text` names, by its `binary_id(=<package>::…)` terms.
+fn packages_of(text: &str, profile: &str) -> Vec<String> {
+    let doc: toml_edit::DocumentMut = text.parse().expect("qa-ops-ncg: nextest.toml is not TOML");
+    let filter = doc
+        .get("profile")
+        .and_then(|t| t.get(profile))
+        .and_then(|t| t.get("default-filter"))
+        .and_then(|f| f.as_str())
+        .unwrap_or("")
+        .to_owned();
+    let mut out: Vec<String> = filter
+        .split("binary_id(")
+        .skip(1)
+        .filter_map(|s| s.trim_start_matches('=').split_once("::"))
+        .map(|(p, _)| p.to_owned())
+        .collect();
+    out.sort();
+    out.dedup();
+    out
+}
+
+/// Each nextest profile `ci.yml` runs, `gate.yml` runs too: in a job that sets it on a `cargo nextest run` covering
+/// every package the profile selects (`--workspace`, or `-p <package>` each), whose result the gate report needs and
+/// reads into a suite's result.
+fn check_the_gate_runs_every_ci_profile(ci: &str, gate: &str, config: &str) {
+    let gate_jobs = jobs(gate);
+    let report = &gate_jobs
+        .iter()
+        .find(|(id, _)| id == "gate-report")
+        .expect("qa-ops-ncg: premise: gate.yml has a `gate-report` job")
+        .1;
+    let needs = report
+        .lines()
+        .find_map(|l| l.trim().strip_prefix("needs:"))
+        .expect("qa-ops-ncg: premise: the `gate-report` job needs the suites");
+    let needs: Vec<&str> = needs
+        .trim()
+        .trim_matches(|c| c == '[' || c == ']')
+        .split(',')
+        .map(str::trim)
+        .collect();
+    let profiles = profiles_run(ci);
+    assert!(
+        profiles.iter().any(|p| p == "ci-workspace"),
+        "qa-ops-ncg: premise: ci.yml runs the `ci-workspace` profile: {profiles:?}"
+    );
+    for profile in &profiles {
+        let packages = packages_of(config, profile);
+        let runner = gate_jobs.iter().find(|(_, job)| {
+            job.lines()
+                .any(|l| l.trim() == format!("NEXTEST_PROFILE: {profile}"))
+                && job.lines().any(|l| {
+                    let run = l.trim();
+                    run.starts_with("run: cargo nextest run")
+                        && (run.contains("--workspace")
+                            || packages.iter().all(|p| run.contains(&format!("-p {p}"))))
+                })
+        });
+        let Some((id, _)) = runner else {
+            panic!(
+                "qa-ops-ncg: gate.yml runs no `cargo nextest run` under profile `{profile}` over its packages {packages:?}, which ci.yml runs"
+            );
+        };
+        assert!(
+            needs.contains(&id.as_str()),
+            "qa-ops-ncg: the gate report does not need `{id}`, which runs profile `{profile}`: needs {needs:?}"
+        );
+        assert!(
+            report.contains(&format!("needs.{id}.result == 'success'")),
+            "qa-ops-ncg: the gate report reads no suite result from `{id}`, which runs profile `{profile}`"
+        );
+    }
+}
+
+#[test]
+fn qa_ops_ncg_the_gate_runs_every_ci_profile() {
+    check_the_gate_runs_every_ci_profile(&workflow("ci.yml"), &workflow("gate.yml"), &the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_the_gate_runs_every_ci_profile,
+    "gate.yml with its `ci-workspace` run's profile renamed",
+    expected = "gate.yml runs no `cargo nextest run` under profile `ci-workspace`",
+    check_the_gate_runs_every_ci_profile(
+        &workflow("ci.yml"),
+        &workflow("gate.yml").replacen(
+            "NEXTEST_PROFILE: ci-workspace",
+            "NEXTEST_PROFILE: ci-nothing",
+            1
+        ),
+        &the_config(),
+    )
+);
+
+#[test]
+fn qa_ops_ncg_the_gate_report_needs_every_profile_run() {
+    check_the_gate_runs_every_ci_profile(&workflow("ci.yml"), &workflow("gate.yml"), &the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_the_gate_report_needs_every_profile_run,
+    "gate.yml with `cpu-workspace` taken out of the gate report's needs",
+    expected = "the gate report does not need `cpu-workspace`",
+    check_the_gate_runs_every_ci_profile(
+        &workflow("ci.yml"),
+        &workflow("gate.yml").replacen("cpu, cpu-workspace, ", "cpu, ", 1),
+        &the_config(),
+    )
+);
+
+#[test]
+fn qa_ops_ncg_the_gate_report_reads_every_profile_run() {
+    check_the_gate_runs_every_ci_profile(&workflow("ci.yml"), &workflow("gate.yml"), &the_config());
+}
+
+negative_control!(
+    qa_ops_ncg_the_gate_report_reads_every_profile_run,
+    "gate.yml with `cpu-workspace`'s result taken out of the CPU suites' result",
+    expected = "the gate report reads no suite result from `cpu-workspace`",
+    check_the_gate_runs_every_ci_profile(
+        &workflow("ci.yml"),
+        &workflow("gate.yml").replacen(" && needs.cpu-workspace.result == 'success'", "", 1),
+        &the_config(),
+    )
 );
