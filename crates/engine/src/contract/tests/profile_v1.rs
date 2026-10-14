@@ -1820,8 +1820,7 @@ validation::negative_control!(
 struct CountingAlloc;
 
 thread_local! {
-    // A count from zero, not a physical constant (`usize::MIN` rather than a literal, for `xtask lint constants`).
-    static ALLOCATIONS: Cell<usize> = const { Cell::new(usize::MIN) };
+    static ALLOCATIONS: Cell<usize> = const { Cell::new(0) };
 }
 
 fn count_allocation() {

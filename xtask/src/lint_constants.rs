@@ -3,6 +3,11 @@
 //! `crates/{kernel,ledger,engine}`'s `src/` and `build.rs`, and fails on one whose initializer holds a numeric literal,
 //! naming the file and line. The register itself is where the numbers are declared, and the generated files are
 //! excluded: their numbers are emitted from the ledger.
+//!
+//! Test code is not read, as the crates' `tests/` directories are not: an item under `#[cfg(test)]`, written so, and
+//! every file of a module declared under it. The register holds the crates' settled defaults and thresholds
+//! (REQ-SYS-001's "settled default constant", REQ-SYS-005's "ledger constant"); a test's inputs are neither, and are
+//! never compiled into the crate.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -44,10 +49,24 @@ pub fn check(root: &Path, excluded: &[PathBuf]) -> Result<Vec<Finding>, String> 
         }
     }
     files.sort();
-    let mut found = Vec::new();
-    for path in files.into_iter().filter(|p| !excluded.contains(p)) {
+    let mut sources = Vec::new();
+    for path in files {
         let source =
             fs::read_to_string(root.join(&path)).map_err(|e| format!("{}: {e}", path.display()))?;
+        sources.push((path, source));
+    }
+    let tests: Vec<PathBuf> = sources
+        .iter()
+        .flat_map(|(path, source)| test_modules(path, source))
+        .collect();
+    let mut found = Vec::new();
+    for (path, source) in sources {
+        let test = tests
+            .iter()
+            .any(|m| path == m.with_extension("rs") || path.starts_with(m));
+        if excluded.contains(&path) || test {
+            continue;
+        }
         found.extend(scan(&source).into_iter().map(|(line, name)| Finding {
             path: path.clone(),
             line,
@@ -55,6 +74,110 @@ pub fn check(root: &Path, excluded: &[PathBuf]) -> Result<Vec<Finding>, String> 
         }));
     }
     Ok(found)
+}
+
+/// The directory that holds the files of the modules `path` declares: its own directory for a crate root or a
+/// `mod.rs`, else the directory named for it.
+fn module_dir(path: &Path) -> PathBuf {
+    let parent = path.parent().unwrap_or(Path::new(""));
+    match path.file_stem().and_then(|s| s.to_str()) {
+        Some("lib" | "main" | "mod" | "build") | None => parent.to_path_buf(),
+        Some(stem) => parent.join(stem),
+    }
+}
+
+/// The test-only modules `source`, the file `path`, declares out of line: each `mod name;` inside an item under
+/// `#[cfg(test)]`, as the path of its module without extension (`src/a/tests/b` for `src/a/tests/b.rs`, or the
+/// directory of `src/a/tests/b/mod.rs`), with the inline modules that enclose it.
+fn test_modules(path: &Path, source: &str) -> Vec<PathBuf> {
+    let code = strip(source);
+    let tests = test_items(&code);
+    let dir = module_dir(path);
+    out_of_line_modules(&code)
+        .into_iter()
+        .filter(|(at, _)| tests.iter().any(|r| r.contains(at)))
+        .map(|(_, names)| names.iter().fold(dir.clone(), |d, n| d.join(n)))
+        .collect()
+}
+
+/// Whether `c` may be part of an identifier.
+fn ident(c: u8) -> bool {
+    c.is_ascii_alphanumeric() || c == b'_'
+}
+
+/// Each out-of-line module declaration `mod name;` in `code` (comments and strings blanked): its offset, and the
+/// names of the inline modules (`mod outer { … }`) that enclose it, then its own.
+fn out_of_line_modules(code: &str) -> Vec<(usize, Vec<String>)> {
+    let b = code.as_bytes();
+    let (mut found, mut inline, mut depth) = (Vec::new(), Vec::<(String, usize)>::new(), 0);
+    let mut i = 0;
+    while i < b.len() {
+        match b[i] {
+            b'{' => depth += 1,
+            b'}' => {
+                if inline.last().is_some_and(|&(_, d)| d == depth) {
+                    inline.pop();
+                }
+                depth -= 1;
+            }
+            c if ident(c) && (i == 0 || !ident(b[i - 1])) => {
+                let start = i;
+                while i < b.len() && ident(b[i]) {
+                    i += 1;
+                }
+                if &code[start..i] != "mod" {
+                    continue;
+                }
+                let rest = code[i..].trim_start();
+                let len = rest.bytes().take_while(|&c| ident(c)).count();
+                let after = rest[len..].trim_start();
+                let name = rest[..len].to_owned();
+                if len == 0 {
+                    continue;
+                }
+                if after.starts_with(';') {
+                    let mut names: Vec<String> = inline.iter().map(|(n, _)| n.clone()).collect();
+                    names.push(name);
+                    found.push((start, names));
+                } else if after.starts_with('{') {
+                    inline.push((name, depth + 1));
+                }
+                continue;
+            }
+            _ => {}
+        }
+        i += 1;
+    }
+    found
+}
+
+/// The byte ranges of `code` (comments and strings blanked) that are items under `#[cfg(test)]`: each from the
+/// attribute to its item's `;`, or to the `}` that closes its body.
+fn test_items(code: &str) -> Vec<std::ops::Range<usize>> {
+    const ATTRIBUTE: &str = "#[cfg(test)]";
+    let b = code.as_bytes();
+    code.match_indices(ATTRIBUTE)
+        .map(|(at, _)| {
+            let mut depth = 0;
+            let mut j = at + ATTRIBUTE.len();
+            while j < b.len() {
+                match b[j] {
+                    b'(' | b'[' | b'{' => depth += 1,
+                    b')' | b']' => depth -= 1,
+                    b'}' => {
+                        depth -= 1;
+                        if depth == 0 {
+                            break;
+                        }
+                    }
+                    b';' if depth == 0 => break,
+                    _ => {}
+                }
+                j += 1;
+            }
+            at..(j + 1).min(b.len())
+        })
+        .collect()
 }
 
 /// The `.rs` files under `root/dir`, relative to `root`, into `files`; a missing directory holds none.
@@ -74,11 +197,12 @@ fn collect(root: &Path, dir: &Path, files: &mut Vec<PathBuf>) -> Result<(), Stri
     Ok(())
 }
 
-/// The line and name of each `const` or `static` item in `source` whose initializer holds a numeric literal.
+/// The line and name of each `const` or `static` item in `source` whose initializer holds a numeric literal, outside
+/// the items under `#[cfg(test)]`.
 pub fn scan(source: &str) -> Vec<(usize, String)> {
     let code = strip(source);
     let b = code.as_bytes();
-    let ident = |c: u8| c.is_ascii_alphanumeric() || c == b'_';
+    let tests = test_items(&code);
     let mut found = Vec::new();
     let mut i = 0;
     while i < b.len() {
@@ -106,6 +230,9 @@ pub fn scan(source: &str) -> Vec<(usize, String)> {
             .map(char::from)
             .collect();
         if name.is_empty() || ["fn", "unsafe", "extern", "async"].contains(&name.as_str()) {
+            continue;
+        }
+        if tests.iter().any(|r| r.contains(&start)) {
             continue;
         }
         if let Some(init) = initializer(&code[i..]) {
