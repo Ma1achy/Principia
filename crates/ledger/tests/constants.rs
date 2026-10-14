@@ -415,7 +415,7 @@ fn constants_provisional_entry_builds_and_reads_its_number() {
             population("below", 0.1, 0.2, 3),
             population("above", 1.0, 2.0, 4),
         ),
-        provisional: Some("M12"),
+        provisional: Some("M8"),
         ..FX_PROPOSED
     });
     assert_eq!(FX_PROPOSED_NUMBER, 0.25, "the compile-time read");
@@ -488,7 +488,9 @@ negative_control!(
 
 #[test]
 fn constants_provisional_without_a_gate_fails_naming_it() {
-    for gate in ["", "M", "1", "m1", "M1a", "gate M1", "M-1", "M01", "M00"] {
+    for gate in [
+        "", "M", "1", "m1", "M1a", "gate M1", "M-1", "M01", "M00", "M9", "M10",
+    ] {
         assert!(!is_milestone(gate), "`{gate}` read as a milestone");
         check_refused_naming(
             ConstantBuilder {
@@ -499,7 +501,7 @@ fn constants_provisional_without_a_gate_fails_naming_it() {
             &["fx_proposed_ungated", "names no gate"],
         );
     }
-    for gate in ["M0", "M1", "M8", "M10"] {
+    for gate in ["M0", "M1", "M8"] {
         assert!(is_milestone(gate), "`{gate}` not read as a milestone");
     }
 }

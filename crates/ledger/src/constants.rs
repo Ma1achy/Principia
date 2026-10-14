@@ -107,11 +107,15 @@ pub struct ConstantBuilder {
     pub provisional: Option<&'static str>,
 }
 
-/// Whether `gate` names a milestone's gate: `M` and its number, written without leading zeros (`plan/MILESTONES.md`).
+/// The milestones whose gates exist, in order: `plan/MILESTONES.md`'s gate blocks, `<!-- gate:M0 -->` to
+/// `<!-- gate:M8 -->`. xtask's `milestones_are_the_plans_gate_blocks` test holds this list to that file, so the plan
+/// stays its one source.
+pub const MILESTONES: &[&str] = &["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8"];
+
+/// Whether `gate` names an existing milestone's gate: one of [`MILESTONES`], exactly (no leading zeros, no case
+/// change, no milestone past the plan's last).
 pub fn is_milestone(gate: &str) -> bool {
-    gate.strip_prefix('M').is_some_and(|n| {
-        !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()) && (n == "0" || !n.starts_with('0'))
-    })
+    MILESTONES.contains(&gate)
 }
 
 impl ConstantBuilder {

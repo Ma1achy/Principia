@@ -1067,12 +1067,12 @@ pub fn run_listed(
 
 // ---- Provisional register entries (R-427; REQ-SYS-081) -------------------------------------------------------------
 
-/// The milestone number of `gate`, `M<n>`, or `None` for a name that is not a milestone's.
-fn milestone_number(gate: &str) -> Option<u32> {
-    if !ledger::constants::is_milestone(gate) {
-        return None;
-    }
-    gate[1..].parse().ok()
+/// The position of `gate` in the plan's milestones ([`ledger::constants::MILESTONES`]), or `None` for a name that is
+/// not an existing milestone's.
+fn milestone_number(gate: &str) -> Option<usize> {
+    ledger::constants::MILESTONES
+        .iter()
+        .position(|&m| m == gate)
 }
 
 /// The provisional entries' part of `milestone`'s gate report: each entry of `register` marked provisional until
@@ -1090,8 +1090,8 @@ pub fn provisional(
         "Provisional register entries: {milestone} and every earlier gate (R-427; dd_generation_root §3.8)\n\n"
     );
     let mut listed = 0;
-    for gate in (0..=n).map(|k| format!("M{k}")) {
-        for name in ledger::constants::provisional_until(register, &gate) {
+    for &gate in &ledger::constants::MILESTONES[..=n] {
+        for name in ledger::constants::provisional_until(register, gate) {
             let k = register.iter().find(|k| k.name == name);
             let requirement = match k.and_then(|k| k.citation) {
                 Some(Citation::Calibration(id)) => id,

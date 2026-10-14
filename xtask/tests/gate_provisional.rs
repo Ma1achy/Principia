@@ -150,7 +150,7 @@ fn check_refused(milestone: &str) {
 
 #[test]
 fn gate_provisional_refuses_a_name_that_is_not_a_milestone() {
-    for name in ["", "M", "1", "m1", "M1a", "M01", "gate"] {
+    for name in ["", "M", "1", "m1", "M1a", "M01", "gate", "M9", "M10"] {
         check_refused(name);
     }
 }
@@ -193,4 +193,37 @@ negative_control!(
     "M0's run lists nothing, so it passes",
     expected = "the M0 run's result",
     check_run("gate_provisional_m0_control", "M0", true)
+);
+
+/// The milestones whose gate blocks `milestones` (a `plan/MILESTONES.md` text) opens, `<!-- gate:Mn -->`, in order.
+fn gate_blocks(milestones: &str) -> Vec<String> {
+    milestones
+        .split("<!-- gate:")
+        .skip(1)
+        .filter_map(|rest| rest.split_once(" -->").map(|(m, _)| m.to_owned()))
+        .collect()
+}
+
+/// Checks that `list` is exactly the plan's milestones, its gate blocks in `plan/MILESTONES.md`, in order.
+fn check_milestones(list: &[&str]) {
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../plan/MILESTONES.md");
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    assert_eq!(
+        gate_blocks(&text),
+        list,
+        "the milestone list is not plan/MILESTONES.md's gate blocks"
+    );
+}
+
+/// The register's milestones are the plan's: a gate the plan does not have names no gate (REQ-SYS-081).
+#[test]
+fn milestones_are_the_plans_gate_blocks() {
+    check_milestones(ledger::constants::MILESTONES);
+}
+
+negative_control!(
+    milestones_are_the_plans_gate_blocks,
+    "a list with a milestone past the plan's last is not the plan's, so the check must fail on it",
+    expected = "the milestone list is not plan/MILESTONES.md's gate blocks",
+    check_milestones(&["M0", "M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9"])
 );
