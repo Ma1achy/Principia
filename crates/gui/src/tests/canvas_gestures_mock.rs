@@ -669,3 +669,41 @@ fn canvas_gestures_mock_the_inspector_follows_the_selection() {
         assert!(none.iter().any(|t| t.ends_with("nodes selected")))
     });
 }
+
+/// While the pointer moves, before the release, the node follows it and a marquee is drawn: each move is fed.
+#[test]
+fn canvas_gestures_mock_moves_are_live() {
+    let (mut app, mut h) = stain_app();
+    let at = app_title(&app, &h, PALETTE);
+    let start = app.stain.canvas.positions[&PALETTE];
+    for events in [
+        vec![Event::PointerMoved(at)],
+        vec![button(at, PointerButton::Primary, true)],
+        vec![Event::PointerMoved(at + vec2(20.0, 10.0))],
+    ] {
+        let _ = h.frame(&mut app, events);
+    }
+    let mid = app.stain.canvas.positions[&PALETTE] - start;
+    assert_eq!(mid, vec2(20.0, 10.0), "the node follows before the release");
+    let _ = h.frame(
+        &mut app,
+        vec![button(at + vec2(20.0, 10.0), PointerButton::Primary, false)],
+    );
+    // A marquee from empty canvas, drawn while dragging.
+    let rect = canvas_rect(&h);
+    let blank = pos2(rect.max.x - 120.0, rect.min.y + 80.0);
+    for events in [
+        vec![Event::PointerMoved(blank)],
+        vec![button(blank, PointerButton::Primary, true)],
+        vec![Event::PointerMoved(blank + vec2(40.0, 30.0))],
+    ] {
+        let _ = h.frame(&mut app, events);
+    }
+    assert_eq!(
+        app.stain.canvas.marquee,
+        Some(Rect::from_two_pos(blank, blank + vec2(40.0, 30.0)))
+    );
+    rejects("a node still until the release", || {
+        assert_eq!(mid, vec2(0.0, 0.0))
+    });
+}

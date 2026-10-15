@@ -622,3 +622,34 @@ fn mock_stain_drawn_click_node_point() {
         assert!(title.shrink(1.0).contains(p + vec2(0.0, TITLE_H)))
     });
 }
+
+/// The toggle's code views: Pipeline WGSL the whole pipeline's; Node WGSL the one selected node's, else a prompt.
+#[test]
+fn mock_stain_drawn_code_views() {
+    use crate::side::EngineSide;
+    use crate::stain::View;
+    let (mut app, mut h) = stain_app();
+    let content = app.side().stain_content().expect("the mock's content");
+    // The code view ends each line with a newline.
+    let prompt = "// select one node to see its WGSL\n";
+    let shown = |app: &mut App<MockSide>, h: &mut Headless, view: View, ids: &[NodeId]| {
+        app.stain.view = view;
+        app.stain.canvas.selection = ids.iter().copied().collect();
+        super::support::frame_texts(h, app)
+    };
+    let pipeline = shown(&mut app, &mut h, View::Pipeline, &[]);
+    assert!(pipeline.contains(&content.pipeline), "{pipeline:?}");
+    let one = shown(&mut app, &mut h, View::Node, &[NodeId(5)]);
+    assert!(one.contains(&content.node_code[&NodeId(5)]), "{one:?}");
+    assert!(!one.iter().any(|t| t == prompt));
+    for ids in [&[][..], &[NodeId(2), NodeId(5)][..]] {
+        let none = shown(&mut app, &mut h, View::Node, ids);
+        assert!(none.iter().any(|t| t == prompt), "{ids:?}: {none:?}");
+        assert!(!none.contains(&content.node_code[&NodeId(5)]));
+    }
+    let graph = shown(&mut app, &mut h, View::Graph, &[]);
+    assert!(!graph.contains(&content.pipeline));
+    rejects("the pipeline in the graph view", || {
+        assert!(graph.contains(&content.pipeline))
+    });
+}
