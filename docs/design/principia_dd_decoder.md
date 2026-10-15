@@ -218,7 +218,8 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   ranges are `[0, ∞]` and `[0, ∞)`, and their views place 0 at the bottom of the ramp.
 - **The ledger declares the log fields' lower bound only.** Its `[0, ∞)`, in the payload ledger and the headers of the
   views generated from it, means that no upper bound is declared, not that `+∞` is excluded: `rho_ratio` reaches `+∞`
-  at the `α = 0` pole, where `‖λ̃‖` is 0, and its log view reads it as raw 1, the top of the ramp.
+  at the `α = 0` pole, where `‖λ̃‖` is 0. On the CPU its log view reads it as raw 1, the top of the ramp; the GPU's
+  reading is open (RQ-284), since WGSL lets an implementation assume no infinities.
 - **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
   `1/√2`, 1, `π/2` and `√3`.
 

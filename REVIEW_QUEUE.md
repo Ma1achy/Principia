@@ -105,10 +105,16 @@ does not wait.*
     value rather than a NaN", which also speaks only to NaN.
   - `docs/notes/principia_gpu_determinism_note.md` § "The discipline", rule 4: "WGSL cannot express it" (an infinite
     literal). The WGSL specification lets an implementation assume no infinities in floating-point evaluation.
+  - The generated debug views that read a stored ±∞ (render_gui_spec §10.1's numeric template; physics review
+    5529362163 F3): `crates/render/frag/debug/generated/rho_ratio.wgsl`, whose log compaction
+    `1 − 1/(1 + log(1 + abs(raw)/ε))` reads `+∞` at `α = 0` (raw 1 on the CPU);
+    `crates/render/frag/debug/generated/V_0.wgsl`, `lin` with `RANGE_AUTO = 1`, whose measured range takes `−∞` as
+    its lower end at the collision pole; and by extension `crates/render/frag/debug/generated/E_0.wgsl` (`E₀ = K_0 + V_0`, also `RANGE_AUTO = 1`).
 - **The silence:** at such a pixel `|E − E₀|` and `|E_0 − (K_0 + V_0)|` are `(−∞) − (−∞) = NaN` on the CPU, and on the
   GPU the result is not pinned at all, so the agreement presets' and the energy-agreement view's parity on those
   pixels is undefined. Nothing says whether an infinite descriptor value may be stored, whether it is a sentinel, or
-  how a difference against it is coloured.
+  how a difference against it is coloured. The same holds for the debug views above: their GPU result at a stored ±∞,
+  and an auto range whose measured end is infinite, are unpinned.
 - **Options seen:**
   - (a) Allow ±∞ in storage at the poles, and have each consumer of a difference against `E₀` route a non-finite
     operand to the invalid colour (R-79's NaN rule extended to ±∞), on the CPU and the GPU alike.
@@ -117,7 +123,8 @@ does not wait.*
 - **Applied meanwhile:** TASK-M2-03 records the infinite values in §3.6 and stores them as computed; no consumer of a
   difference against `E₀` exists yet.
 - **Waits:** the tasks of REQ-COL-006, REQ-COL-060 and REQ-VAL-027, at the point where they consume `E₀` or
-  `K_0 + V_0`. TASK-M2-03 does not wait.
+  `K_0 + V_0`; and the debug views of `rho_ratio`, `V_0` and `E_0` (generated now; their goldens' showcase values are
+  finite, so nothing renders ±∞ yet), whose GPU reading of a stored ±∞ waits on the ruling. TASK-M2-03 does not wait.
 
 ## RQ-285: dd_decoder §3.2 calls the exact-pole `atan2(0,0)=0` "a deterministic canonical value", which holds on the CPU only: GLSL.std.450 `Atan2` is undefined at (0, 0) *(conflict, R-116, R-417, REQ-COL-006; context: TASK-M2-03, the encode and canonicalisation tasks, the fragment-side decode/encode)*
 
