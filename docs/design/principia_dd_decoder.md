@@ -167,6 +167,62 @@ The stored `ICDescriptor` is the ledger's field list (`principia_dd_generation_r
 
 `E₀` here must agree with the kernel's `E_0` at t=0 — that agreement is a cross-check view, not an assumption.
 
+**The six other fields** *(definition, R-72; REQ-PAY-088, written by TASK-M2-03)*. Each is read from the decoded
+`(m, r, p)` alone, after the blocks and before integration, so it is the same for every chart (§2: the integrator's
+input is `(m, r, p)` and nothing else). With §3.2's reduced masses and Jacobi vectors, written from the positions:
+
+```
+M₀₁ = m₀ + m₁        μ_ρ = m₀m₁ / M₀₁        μ_λ = m₂ · M₀₁
+ρ = r₁ − r₀          λ = r₂ − (m₀r₀ + m₁r₁) / M₀₁          ρ × λ = ρ_x λ_y − ρ_y λ_x
+
+q_mass       = min(m₀, m₁) / max(m₀, m₁)                      ∈ (0, 1]
+rho_mag      = ‖ρ̃‖ = √μ_ρ · ‖ρ‖                               ∈ [0, 1]
+lambda_mag   = ‖λ̃‖ = √μ_λ · ‖λ‖                               ∈ [0, 1]
+rho_ratio    = ‖ρ̃‖ / ‖λ̃‖                                      ∈ [0, ∞]
+rho_angle    = atan2(ρ × λ, ρ · λ)                             ∈ (−π, π]
+r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖)             ∈ [0, ∞)
+```
+
+- **`rho_mag` and `lambda_mag` are the mass-weighted magnitudes** `‖ρ̃‖` and `‖λ̃‖`, not the unweighted `‖ρ‖` and `‖λ‖`
+  (R-62 names the fields; this settles which norms). So `rho_mag² + lambda_mag² = I = 1`, each lies in `[0, 1]` (the
+  `|ρ| ∈ [0,1]` of render_gui_spec §10.1), and in the canonical frame `rho_mag = cos α` and `lambda_mag = sin α`.
+- **`rho_ratio` is the mass-weighted ratio** `‖ρ̃‖/‖λ̃‖`, `cot α` in the canonical frame and 1 at the golden IC: the
+  ratio that `rho_ratio`'s provisional log floor assumes (R-419), so the floor stands in its units (REQ-TOOL-163). It
+  reads `+∞` only where `‖λ̃‖` is exactly 0. Where `α = 0` is reached at underflow (§3.2), `‖λ̃‖` is the rounding left
+  in the reconstruction or 0. `rho_mag = 1` there, so the ratio is never `0/0`.
+- **`rho_angle` is the signed angle from `ρ` to `λ`**, in radians on `(−π, π]`: a full-turn angle, for the cyclic view's
+  period of 2π (render_gui_spec §10.1; REQ-TOOL-161). The mass weights are positive scalars, so `ρ̃` and `λ̃` give the
+  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0`) it is `β ∈ [0, π]`. Its value is defined case by case,
+  not left to `atan2` (measured by TASK-M2-03), with `π̂` §3.2's image of π (rounded toward zero at f32, the nearest
+  value at f64; R-417), so that the range is `(−π̂, π̂]` at each precision:
+  - **Antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): `π̂`, whatever the sign of a zero `ρ × λ`. Collinear bodies whose `y`
+    are exact zeros give `ρ × λ = −0`, and `atan2(−0, x < 0) = −π`, outside the range.
+  - **Parallel, or the pole** (`ρ × λ = 0`, `ρ · λ ≥ 0`): 0. At the pole, `ρ × λ = ρ · λ = 0`, GLSL.std.450 `Atan2`
+    is undefined, so the CPU's `atan2(0, 0) = 0` (§3.2) does not carry to the GPU: the value is the constant 0.
+  - **Elsewhere:** `atan2(ρ × λ, ρ · λ)`, a value above `π̂` taken down to `π̂` (f32's nearest π lies above π), and a
+    value at or below `−π̂`, which stands for the half turn `−π`, read as `π̂`, the half turn the range includes.
+
+  Each case is chosen by a comparison against the constant 0 or `±π̂`, selecting a value already computed: no branch
+  (the GPU determinism note's discipline).
+- **`q_mass` is the inner pair's mass ratio**, lighter over heavier: 1 at equal masses, unchanged when bodies 0 and 1
+  swap labels, and greater than 0 wherever `m₀` and `m₁` both are. Its ledger range is declared `[0, 1]` from this
+  formula (REQ-PAY-097, R-426), a range that does not span zero, so its numeric view is on `ramp_viridis` (R-400).
+- **`r_min_pair_0` is the closest pair's separation at `t = 0`**, a distance in `G = M = I = 1`. The `_0` is the
+  initial-time subscript of `K_0`, `V_0` and `E_0`, not a pair id (R-22's pair ids name a side; this field names
+  none).
+- **The collision pole reaches 0** (measured by TASK-M2-03). In exact arithmetic `α < π/2` keeps `‖ρ̃‖ > 0`, so
+  `rho_ratio` and `r_min_pair_0` stay above 0. In floating point, where `α` saturates at the image of π/2 (§3.2),
+  `‖ρ‖ = cos α/√μ_ρ` can fall under the rounding of `r₀₁` in the reconstruction. At f64, `cos α ≈ 6×10⁻¹⁷` there, so
+  the emitted `r₀` and `r₁` can be equal: then `rho_mag`, `rho_ratio` and `r_min_pair_0` read 0, `V_0` reads `−∞`
+  and `virial_ratio` 0. This is §3.2's binary collision, `U → −∞`, which the pipeline fences; the two log fields'
+  ranges are `[0, ∞]` and `[0, ∞)`, and their views place 0 at the bottom of the ramp.
+- **The ledger declares the log fields' lower bound only.** Its `[0, ∞)`, in the payload ledger and the headers of the
+  views generated from it, means that no upper bound is declared, not that `+∞` is excluded: `rho_ratio` reaches `+∞`
+  at the `α = 0` pole, where `‖λ̃‖` is 0. On the CPU its log view reads it as raw 1, the top of the ramp; the GPU's
+  reading is open (RQ-284), since WGSL lets an implementation assume no infinities.
+- **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
+  `1/√2`, 1, `π/2` and `√3`.
+
 ### 3.7 Energy normalisation (optional; keep-or-drop is decision B9)
 
 A post-momentum rescale that enforces a target energy $E^*$. Compute $K_0$, check feasibility $E^* \ge U$, then

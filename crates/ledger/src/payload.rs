@@ -6,9 +6,9 @@
 //!
 //! Where §3 gives a field no scale, the entry is `lin`; where it gives no range, the entry writes (−∞, ∞), which
 //! declares nothing: the range is a gap (R-426), unless the ledger declares it with its citation or marks it
-//! provisional, below. §3.6's log fields are > 0. Consumers are render, export and debug, as §3.8's worked entries
-//! have them. `n`, the shape-sphere point, is §3.8's worked entry: `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`,
-//! `lin` over [−1, 1] in each component (TASK-M1-12; RQ-235).
+//! provisional, below. §3.6's log fields are ≥ 0, 0 at the collision pole (dd_decoder §3.6). Consumers are render,
+//! export and debug, as §3.8's worked entries have them. `n`, the shape-sphere point, is §3.8's worked entry:
+//! `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`, `lin` over [−1, 1] in each component (TASK-M1-12; RQ-235).
 //!
 //! **Declared lower bounds (R-400; TASK-M1-17).** A numeric view whose field's declared range spans zero is drawn on
 //! the diverging ramp, so a field the corpus gives a non-negative domain must not read as signed: each such field
@@ -17,10 +17,11 @@
 //!
 //! **Range states (R-426; dd_generation_root §3.8).** Each field's range is one of §3.8's three states
 //! ([`Entry::range_state`], each entry marked by `declared`): `declared(lo, hi, citation)`, with its citation in
-//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `q_mass` and `mean_y` ([`PROVISIONAL`]),
-//! drawn as (−∞, ∞) on `ramp_coolwarm` until their requirements declare them; or `gap`, a (−∞, ∞) written and never
-//! cited, which never spans zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or
-//! `diverging` scalar field whose range is a gap fails generation ([`crate::gen::numeric::undeclared`]).
+//! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `mean_y` ([`PROVISIONAL`]), drawn as
+//! (−∞, ∞) on `ramp_coolwarm` until its requirement declares it (`q_mass`'s, declared [0, 1] by REQ-PAY-097, no longer
+//! is); or `gap`, a (−∞, ∞) written and never cited, which never spans zero. The gaps, each with the requirement that
+//! fills it, are [`GAPS`]; a `lin` or `diverging` scalar field whose range is a gap fails generation
+//! ([`crate::gen::numeric::undeclared`]).
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{
@@ -109,7 +110,7 @@ fn shape_point() -> EntryBuilder {
 /// The fields the corpus or their own definition make non-negative, other than the unsigned bit fields, each with the
 /// line that does (R-400; TASK-M1-17): each declares a lower bound of 0, closed or open, and nothing else declares
 /// one. The physics reviewer checks each citation.
-pub const NON_NEGATIVE: [(&str, &str); 13] = [
+pub const NON_NEGATIVE: [(&str, &str); 14] = [
     (
         "closure_min",
         "dd_generation_root §3.4: `closure_min` | log | ≥ 0",
@@ -139,17 +140,24 @@ pub const NON_NEGATIVE: [(&str, &str); 13] = [
         "render_gui_spec §10.1: mass fraction `mᵢ ∈ [0,1]`; dd_decoder §3.1: `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`",
     ),
     (
+        "q_mass",
+        "dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, the inner pair's mass ratio, in [0, 1] (REQ-PAY-088); \
+         declared from its formula by REQ-PAY-097 (R-426)",
+    ),
+    (
         "rho_mag",
-        "a magnitude, ≥ 0: REQ-PAY-088 (its candidates ‖ρ‖ and ‖ρ̃‖, all norms); render_gui_spec §10.1's `|ρ| ∈ [0,1]` \
-         holds only for the mass-weighted ‖ρ̃‖, the unweighted ‖ρ‖ can exceed 1, so only the lower bound is declared",
+        "dd_decoder §3.6: `rho_mag = ‖ρ̃‖` ∈ [0, 1], the mass-weighted norm, `rho_mag² + lambda_mag² = I = 1` \
+         (REQ-PAY-088)",
     ),
     (
         "lambda_mag",
-        "a magnitude, ≥ 0: REQ-PAY-088 (its candidates ‖λ‖ and ‖λ̃‖, all norms); dd_decoder §3.6: \"ρ-magnitudes\"",
+        "dd_decoder §3.6: `lambda_mag = ‖λ̃‖` ∈ [0, 1], the mass-weighted norm, `rho_mag² + lambda_mag² = I = 1` \
+         (REQ-PAY-088)",
     ),
     (
         "rho_ratio",
-        "dd_generation_root §3.6: `rho_ratio` (log), so > 0, as §3.6's log fields are; R-401: \"a ratio\"",
+        "dd_decoder §3.6: `rho_ratio = ‖ρ̃‖/‖λ̃‖` ∈ [0, ∞], 0 at the collision pole (REQ-PAY-088); dd_generation_root \
+         §3.6: `rho_ratio` (log); R-401: \"a ratio\"",
     ),
     (
         "K_0",
@@ -161,7 +169,8 @@ pub const NON_NEGATIVE: [(&str, &str); 13] = [
     ),
     (
         "r_min_pair_0",
-        "dd_generation_root §3.6: `r_min_pair_0` (log), so > 0; R-401: \"a distance for the distances\"",
+        "dd_decoder §3.6: `r_min_pair_0 = min_{i<j} ‖rᵢ − rⱼ‖` ∈ [0, ∞), 0 at the collision pole (REQ-PAY-088); \
+         dd_generation_root §3.6: `r_min_pair_0` (log); R-401: \"a distance for the distances\"",
     ),
 ];
 
@@ -208,16 +217,25 @@ pub const SIGNED: [(&str, &str); 8] = [
     ),
 ];
 
-/// The fields whose range is provisional, each with the requirement that declares it (R-426): they stay on
-/// `ramp_coolwarm`, drawn as (−∞, ∞), until TASK-M2-03 declares `q_mass`'s from its formula (REQ-PAY-088) and
-/// TASK-M3-13 `mean_y`'s from `y`'s definition (REQ-PAY-073), and the physics reviewer re-checks each ramp then.
-pub const PROVISIONAL: [(&str, &str); 2] = [("q_mass", "REQ-PAY-097"), ("mean_y", "REQ-PAY-098")];
+/// The fields whose range is provisional, each with the requirement that declares it (R-426): each stays on
+/// `ramp_coolwarm`, drawn as (−∞, ∞), until its requirement declares it, and the physics reviewer re-checks the ramp
+/// then. `mean_y` waits for TASK-M3-13 to declare its range from `y`'s definition (REQ-PAY-073). `q_mass`'s was
+/// declared [0, 1] by TASK-M2-03 from its formula (REQ-PAY-088, REQ-PAY-097), in [`NON_NEGATIVE`], so it is on
+/// `ramp_viridis`.
+pub const PROVISIONAL: [(&str, &str); 1] = [("mean_y", "REQ-PAY-098")];
 
-/// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0` and `n`.
-pub const DECLARED: [(&str, &str); 13] = [
+/// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
+/// `rho_angle` and `n`.
+pub const DECLARED: [(&str, &str); 14] = [
     (
         "V_0",
         "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
+    ),
+    (
+        "rho_angle",
+        "dd_decoder §3.6: `rho_angle = atan2(ρ × λ, ρ · λ)` ∈ (−π, π], the signed angle from `ρ` to `λ`, π on the \
+         antiparallel axis and 0 at the pole (REQ-PAY-088); cyclic, its view on the fixed [0, 1] (render_gui_spec \
+         §10.1)",
     ),
     (
         "n",
@@ -269,7 +287,7 @@ pub const DECLARED: [(&str, &str); 13] = [
 /// The payload's ledger gaps for the gate report, in ledger order (R-426; dd_generation_root §3.8): each field whose
 /// range no line declares, with the requirement that fills it (`None`: none does) and why no ramp reads it. None is a
 /// `lin` or `diverging` scalar, so each generates.
-pub const GAPS: [(&str, Option<&str>, &str); 6] = [
+pub const GAPS: [(&str, Option<&str>, &str); 5] = [
     (
         "r",
         None,
@@ -295,11 +313,6 @@ pub const GAPS: [(&str, Option<&str>, &str); 6] = [
         None,
         "cyclic, an angle (R-423): its view places `fract(θ̃ / 2π)` on the fixed [0, 1]; the unwrapped `θ̃` has no \
          bound",
-    ),
-    (
-        "rho_angle",
-        Some("REQ-PAY-088"),
-        "cyclic: its view places `fract(x / 2π)` on the fixed [0, 1]; its formula is REQ-PAY-088's",
     ),
 ];
 
@@ -344,11 +357,14 @@ fn from(lo: Bound) -> Range {
     }
 }
 
-/// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode.
+/// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode. A log field declares its lower bound only, written
+/// `[0, ∞)`: no upper bound is declared, `+∞` is not excluded. dd_decoder §3.6's two are `rho_ratio` ∈ `[0, ∞]`, which
+/// reaches `+∞` at the `α = 0` pole, and `r_min_pair_0` ∈ `[0, ∞)`; each is > 0 but at the collision pole, where it
+/// reads 0.
 fn ic(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
     let e = f32_at(name, slot, scale).provenance(Provenance::Decode);
     match scale {
-        Scale::Log => e.range(from(Bound::Open(0.0))),
+        Scale::Log => e.range(from(Bound::Closed(0.0))),
         _ => e,
     }
 }
@@ -435,17 +451,22 @@ fn entries() -> Vec<EntryBuilder> {
         // The Montgomery map, never stored (integrator dd §3.7; §3.8's worked entry): `lin` and [−1, 1] are per
         // component; `‖n‖ = 1` is a check on the vector, not its range.
         shape_point(),
-        // The masses are mass fractions in [0, 1], and the magnitudes, `K_0` and the virial ratio ≥ 0
+        // The masses are mass fractions in [0, 1], the magnitudes in [0, 1], and `K_0` and the virial ratio ≥ 0
         // ([`NON_NEGATIVE`]'s citations; R-400, R-403).
         ic("m0", 0, Scale::Lin).range(fraction),
         ic("m1", 1, Scale::Lin).range(fraction),
         ic("m2", 2, Scale::Lin).range(fraction),
-        // Provisional until REQ-PAY-097 declares its range ([`PROVISIONAL`]; R-426).
-        ic("q_mass", 3, Scale::Lin),
-        ic("rho_mag", 4, Scale::Lin).range(from_zero),
-        ic("lambda_mag", 5, Scale::Lin).range(from_zero),
+        // dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, declared [0, 1] from its formula (REQ-PAY-097; R-426).
+        ic("q_mass", 3, Scale::Lin).range(fraction),
+        // dd_decoder §3.6: the mass-weighted magnitudes, `rho_mag² + lambda_mag² = I = 1`, each in [0, 1].
+        ic("rho_mag", 4, Scale::Lin).range(fraction),
+        ic("lambda_mag", 5, Scale::Lin).range(fraction),
         ic("rho_ratio", 6, Scale::Log),
-        ic("rho_angle", 7, Scale::Cyclic),
+        // dd_decoder §3.6: the signed angle from `ρ` to `λ`, on (−π, π].
+        ic("rho_angle", 7, Scale::Cyclic).range(Range {
+            lo: Bound::Open(-core::f64::consts::PI),
+            hi: Bound::Closed(core::f64::consts::PI),
+        }),
         ic("K_0", 8, Scale::Lin).range(from_zero),
         // dd_decoder §3.6: `V₀ = − Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖`, never positive (R-403).
         ic("V_0", 9, Scale::Lin).range(Range {

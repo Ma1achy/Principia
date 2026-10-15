@@ -1,0 +1,483 @@
+{
+ "about": "The golden IC, z = 0 (dd_decoder §5; REQ-VAL-018, REQ-PAY-034): equal masses, α = π/4, β = π/2, rest, I = 1, the equilateral triangle of side √3 on the unit circle. Each value is hand-computed: `exact` is its closed form, `decimal` that form to 60 significant digits, and `f64` and `f32` the bits of the exact value rounded once, to nearest, to that precision (R-421). `zero_at_rest` marks the descriptor fields that are 0 because the IC is at rest, compared bit-exact; the rest are compared within REQ-PAY-095's proposed tolerances.",
+ "z": [
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0,
+  0.0
+ ],
+ "values": [
+  {
+   "name": "m0",
+   "group": "mass",
+   "exact": "1/3",
+   "decimal": "0.333333333333333333333333333333333333333333333333333333333333",
+   "f64": "0x3FD5555555555555",
+   "f32": "0x3EAAAAAB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "m1",
+   "group": "mass",
+   "exact": "1/3",
+   "decimal": "0.333333333333333333333333333333333333333333333333333333333333",
+   "f64": "0x3FD5555555555555",
+   "f32": "0x3EAAAAAB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "m2",
+   "group": "mass",
+   "exact": "1/3",
+   "decimal": "0.333333333333333333333333333333333333333333333333333333333333",
+   "f64": "0x3FD5555555555555",
+   "f32": "0x3EAAAAAB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "M01",
+   "group": "mass",
+   "exact": "2/3",
+   "decimal": "0.666666666666666666666666666666666666666666666666666666666667",
+   "f64": "0x3FE5555555555555",
+   "f32": "0x3F2AAAAB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "alpha",
+   "group": "config",
+   "exact": "π/4",
+   "decimal": "0.785398163397448309615660845819875721049292349843776455243736",
+   "f64": "0x3FE921FB54442D18",
+   "f32": "0x3F490FDB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "beta",
+   "group": "config",
+   "exact": "π/2",
+   "decimal": "1.57079632679489661923132169163975144209858469968755291048747",
+   "f64": "0x3FF921FB54442D18",
+   "f32": "0x3FC90FDB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "rho_t_x",
+   "group": "config",
+   "exact": "1/√2",
+   "decimal": "0.70710678118654752440084436210484903928483593768847403658834",
+   "f64": "0x3FE6A09E667F3BCD",
+   "f32": "0x3F3504F3",
+   "zero_at_rest": false
+  },
+  {
+   "name": "rho_t_y",
+   "group": "config",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "lambda_t_x",
+   "group": "config",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "lambda_t_y",
+   "group": "config",
+   "exact": "1/√2",
+   "decimal": "0.70710678118654752440084436210484903928483593768847403658834",
+   "f64": "0x3FE6A09E667F3BCD",
+   "f32": "0x3F3504F3",
+   "zero_at_rest": false
+  },
+  {
+   "name": "rho_x",
+   "group": "config",
+   "exact": "√3",
+   "decimal": "1.73205080756887729352744634150587236694280525381038062805581",
+   "f64": "0x3FFBB67AE8584CAA",
+   "f32": "0x3FDDB3D7",
+   "zero_at_rest": false
+  },
+  {
+   "name": "rho_y",
+   "group": "config",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "lambda_x",
+   "group": "config",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "lambda_y",
+   "group": "config",
+   "exact": "3/2",
+   "decimal": "1.5",
+   "f64": "0x3FF8000000000000",
+   "f32": "0x3FC00000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "r0_x",
+   "group": "position",
+   "exact": "−√3/2",
+   "decimal": "-0.866025403784438646763723170752936183471402626905190314027903",
+   "f64": "0xBFEBB67AE8584CAA",
+   "f32": "0xBF5DB3D7",
+   "zero_at_rest": false
+  },
+  {
+   "name": "r0_y",
+   "group": "position",
+   "exact": "−1/2",
+   "decimal": "-0.5",
+   "f64": "0xBFE0000000000000",
+   "f32": "0xBF000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "r1_x",
+   "group": "position",
+   "exact": "√3/2",
+   "decimal": "0.866025403784438646763723170752936183471402626905190314027903",
+   "f64": "0x3FEBB67AE8584CAA",
+   "f32": "0x3F5DB3D7",
+   "zero_at_rest": false
+  },
+  {
+   "name": "r1_y",
+   "group": "position",
+   "exact": "−1/2",
+   "decimal": "-0.5",
+   "f64": "0xBFE0000000000000",
+   "f32": "0xBF000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "r2_x",
+   "group": "position",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "r2_y",
+   "group": "position",
+   "exact": "1",
+   "decimal": "1.0",
+   "f64": "0x3FF0000000000000",
+   "f32": "0x3F800000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "q0",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "q1",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "q2",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "q3",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "p0_x",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "p0_y",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "p1_x",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "p1_y",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "p2_x",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "p2_y",
+   "group": "momentum",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "I",
+   "group": "identity",
+   "exact": "Σmᵢ‖rᵢ‖² = 1",
+   "decimal": "1.0",
+   "f64": "0x3FF0000000000000",
+   "f32": "0x3F800000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "M",
+   "group": "identity",
+   "exact": "Σmᵢ = 1",
+   "decimal": "1.0",
+   "f64": "0x3FF0000000000000",
+   "f32": "0x3F800000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "com_x",
+   "group": "identity",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "com_y",
+   "group": "identity",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "ptot_x",
+   "group": "identity",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "ptot_y",
+   "group": "identity",
+   "exact": "0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "pair_01",
+   "group": "landmark",
+   "exact": "‖r₀ − r₁‖ = √3",
+   "decimal": "1.73205080756887729352744634150587236694280525381038062805581",
+   "f64": "0x3FFBB67AE8584CAA",
+   "f32": "0x3FDDB3D7",
+   "zero_at_rest": false
+  },
+  {
+   "name": "pair_12",
+   "group": "landmark",
+   "exact": "‖r₁ − r₂‖ = √3",
+   "decimal": "1.73205080756887729352744634150587236694280525381038062805581",
+   "f64": "0x3FFBB67AE8584CAA",
+   "f32": "0x3FDDB3D7",
+   "zero_at_rest": false
+  },
+  {
+   "name": "pair_20",
+   "group": "landmark",
+   "exact": "‖r₂ − r₀‖ = √3",
+   "decimal": "1.73205080756887729352744634150587236694280525381038062805581",
+   "f64": "0x3FFBB67AE8584CAA",
+   "f32": "0x3FDDB3D7",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.m0",
+   "group": "descriptor",
+   "exact": "1/3",
+   "decimal": "0.333333333333333333333333333333333333333333333333333333333333",
+   "f64": "0x3FD5555555555555",
+   "f32": "0x3EAAAAAB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.m1",
+   "group": "descriptor",
+   "exact": "1/3",
+   "decimal": "0.333333333333333333333333333333333333333333333333333333333333",
+   "f64": "0x3FD5555555555555",
+   "f32": "0x3EAAAAAB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.m2",
+   "group": "descriptor",
+   "exact": "1/3",
+   "decimal": "0.333333333333333333333333333333333333333333333333333333333333",
+   "f64": "0x3FD5555555555555",
+   "f32": "0x3EAAAAAB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.q_mass",
+   "group": "descriptor",
+   "exact": "min(m₀, m₁)/max(m₀, m₁) = 1",
+   "decimal": "1.0",
+   "f64": "0x3FF0000000000000",
+   "f32": "0x3F800000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.rho_mag",
+   "group": "descriptor",
+   "exact": "‖ρ̃‖ = 1/√2",
+   "decimal": "0.70710678118654752440084436210484903928483593768847403658834",
+   "f64": "0x3FE6A09E667F3BCD",
+   "f32": "0x3F3504F3",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.lambda_mag",
+   "group": "descriptor",
+   "exact": "‖λ̃‖ = 1/√2",
+   "decimal": "0.70710678118654752440084436210484903928483593768847403658834",
+   "f64": "0x3FE6A09E667F3BCD",
+   "f32": "0x3F3504F3",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.rho_ratio",
+   "group": "descriptor",
+   "exact": "‖ρ̃‖/‖λ̃‖ = 1",
+   "decimal": "1.0",
+   "f64": "0x3FF0000000000000",
+   "f32": "0x3F800000",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.rho_angle",
+   "group": "descriptor",
+   "exact": "atan2(ρ × λ, ρ · λ) = π/2",
+   "decimal": "1.57079632679489661923132169163975144209858469968755291048747",
+   "f64": "0x3FF921FB54442D18",
+   "f32": "0x3FC90FDB",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.K_0",
+   "group": "descriptor",
+   "exact": "Σ‖pᵢ‖²/2mᵢ = 0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": true
+  },
+  {
+   "name": "descriptor.V_0",
+   "group": "descriptor",
+   "exact": "−3·(1/9)/√3 = −√3/9",
+   "decimal": "-0.192450089729875254836382926833985818549200583756708958672867",
+   "f64": "0xBFC8A2345CC04426",
+   "f32": "0xBE4511A3",
+   "zero_at_rest": false
+  },
+  {
+   "name": "descriptor.virial_ratio",
+   "group": "descriptor",
+   "exact": "2K₀/|V₀| = 0",
+   "decimal": "0",
+   "f64": "0x0000000000000000",
+   "f32": "0x00000000",
+   "zero_at_rest": true
+  },
+  {
+   "name": "descriptor.r_min_pair_0",
+   "group": "descriptor",
+   "exact": "√3",
+   "decimal": "1.73205080756887729352744634150587236694280525381038062805581",
+   "f64": "0x3FFBB67AE8584CAA",
+   "f32": "0x3FDDB3D7",
+   "zero_at_rest": false
+  },
+  {
+   "name": "E_0",
+   "group": "derived",
+   "exact": "K₀ + V₀ = −√3/9",
+   "decimal": "-0.192450089729875254836382926833985818549200583756708958672867",
+   "f64": "0xBFC8A2345CC04426",
+   "f32": "0xBE4511A3",
+   "zero_at_rest": false
+  }
+ ]
+}
