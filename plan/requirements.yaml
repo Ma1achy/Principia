@@ -16605,6 +16605,8 @@
   - R-68
   - R-113
   milestone: M8
+  rq:
+  - RQ-286
 - id: REQ-TOOL-099
   area: TOOL
   statement: "The profiler's leak detector must flag steady memory growth while idle."

@@ -116,7 +116,8 @@ fn f3_toggle_mock_warning_and_error_reach_the_footer_only() {
     check_same_figure(&shell, &raised, rect);
     let raised_texts = texts(&raised.names);
     assert!(
-        raised_texts.iter().any(|t| t == "⚠ 1 · × 1 · console ▴"),
+        // The error opened the console by itself (render_gui_spec §G12): its arrow reads open.
+        raised_texts.iter().any(|t| t == "⚠ 1 · × 1 · console ▾"),
         "{raised_texts:?}"
     );
     assert!(

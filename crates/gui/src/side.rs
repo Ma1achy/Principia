@@ -1,11 +1,13 @@
 //! The engine-side adapter (RQ-247): it constructs the engine the app runs on and says whether it is the mock, which
 //! the footer's "mock engine" tag and the window title read (REQ-GUI-167; RQ-248). It hands the app the canvas, §1's
-//! sanctioned exception, when the engine side has one, and the time source the app's clock reads (RQ-246).
+//! sanctioned exception, when the engine side has one, the time source the app's clock reads (RQ-246), and the
+//! profiler trace the Profiler window reads, in profiler schema v1's shape (R-56; render_gui_spec §G5).
 
 use std::sync::Arc;
 
 use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
+use engine::contract::profile::Trace;
 use engine::contract::render_state::RenderState;
 use engine::contract::sim_config::SimConfig;
 use engine::contract::store::StateStore;
@@ -28,9 +30,13 @@ pub trait EngineSide {
 
     /// The time source the app's clock reads; `None` holds the clock.
     fn time_source(&mut self) -> Option<&mut dyn TimeSource>;
+
+    /// The profiler trace, schema v1 (R-56), the Profiler window shows; `None` when the engine side has none.
+    fn trace(&self) -> Option<&Trace>;
 }
 
-/// The real engine's data contract, with no figure and no time source: its frame loop and canvas are TASK-M8-05's.
+/// The real engine's data contract, with no figure, no time source and no trace: its frame loop and canvas are
+/// TASK-M8-05's, its telemetry stream TASK-M8-27's and TASK-M8-28's.
 pub struct RealSide {
     store: StateStore,
 }
@@ -62,12 +68,17 @@ impl EngineSide for RealSide {
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {
         None
     }
+
+    fn trace(&self) -> Option<&Trace> {
+        None
+    }
 }
 
-/// The mock engine, with its canvas when one is open (R-390).
+/// The mock engine, with its canvas when one is open, and its canned profiler trace (R-390).
 pub struct MockSide {
     engine: crate::mock::MockEngine,
     canvas: Option<Arc<crate::mock::canvas::MockCanvas>>,
+    trace: Trace,
 }
 
 impl MockSide {
@@ -76,7 +87,11 @@ impl MockSide {
         engine: crate::mock::MockEngine,
         canvas: Option<Arc<crate::mock::canvas::MockCanvas>>,
     ) -> Self {
-        Self { engine, canvas }
+        Self {
+            engine,
+            canvas,
+            trace: crate::mock::profile::trace(),
+        }
     }
 }
 
@@ -102,5 +117,9 @@ impl EngineSide for MockSide {
 
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {
         Some(self.engine.clock())
+    }
+
+    fn trace(&self) -> Option<&Trace> {
+        Some(&self.trace)
     }
 }

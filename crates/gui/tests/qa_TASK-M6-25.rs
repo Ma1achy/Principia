@@ -1,9 +1,10 @@
 //! QA tests for TASK-M6-25, written from the requirements and render_gui_spec §G3, not from the implementation:
 //!
 //! - REQ-GUI-095: "The GUI must be a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure ·
-//!   4 Trajectory · 5 Compass · 6 Time · 7 Legend, with Manifold view's sub-scopes (Chart, Navigate, Centre z₀,
-//!   Slice & tilt) reached with Enter"; verify: "Tab / Shift+Tab cycles the seven scopes in order; Enter on Manifold
-//!   view enters Chart".
+//!   4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer, with Manifold view's sub-scopes (Chart, Navigate,
+//!   Centre z₀, Slice & tilt) reached with Enter"; verify: "Tab / Shift+Tab cycles the eight scopes in order, the
+//!   footer last; Enter on Manifold view enters Chart" (R-405 added the footer, big scope 8; TASK-M6-28's qa commit
+//!   changed this file from seven to eight, R-290).
 //! - REQ-GUI-169: on the mock, Tab and Shift+Tab between the big scopes, Enter into a scope and Esc out of it, arrows
 //!   between siblings and on a focused value, Shift ×10 and Alt ×0.1 steps, the focus ring, the breadcrumb, `?`
 //!   showing the shortcuts over everything (Esc closes it), and each later screen joining the scope tree.
@@ -38,8 +39,8 @@ const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;
 const ALT: Modifiers = Modifiers::ALT;
 
-/// §G3's big scopes, in Tab order.
-const BIG: [&str; 7] = [
+/// §G3's big scopes, in Tab order, the footer last (R-405).
+const BIG: [&str; 8] = [
     "top bar",
     "Manifold view",
     "Figure",
@@ -47,6 +48,7 @@ const BIG: [&str; 7] = [
     "Compass",
     "Time",
     "Legend",
+    "Footer",
 ];
 /// §G3's Manifold view sub-scopes, in order.
 const MANIFOLD: [&str; 4] = ["Chart", "Navigate", "Centre z₀", "Slice & tilt"];
@@ -138,7 +140,7 @@ fn check_breadcrumb(names: &[Name], top_bar: [f64; 4], want: &str) {
     assert!(found, "no breadcrumb `{want}` drawn in the top bar");
 }
 
-// --- REQ-GUI-095: the seven big scopes, in order; Enter on Manifold view enters Chart ---------------------------------
+// --- REQ-GUI-095: the eight big scopes, in order; Enter on Manifold view enters Chart ---------------------------------
 
 /// The focus after each of `n` presses of `key` with `modifiers`, from no focus.
 fn cycle(key: Key, modifiers: Modifiers, n: usize) -> Vec<Vec<String>> {
@@ -164,14 +166,14 @@ fn check_cycle(seen: &[Vec<String>], order: &[&str], what: &str) {
 }
 
 #[test]
-fn qa_scope_tab_order_mock_seven_big_scopes_cycle() {
-    // Two full turns: Tab wraps from Legend to the top bar.
-    let tabs = cycle(Key::Tab, NONE, 14);
+fn qa_scope_tab_order_mock_eight_big_scopes_cycle() {
+    // Two full turns: Tab wraps from the footer to the top bar.
+    let tabs = cycle(Key::Tab, NONE, 16);
     check_cycle(&tabs, &BIG, "Tab");
-    // Shift+Tab: the same seven, backwards, wrapping too. From no focus it starts at Legend, the last.
+    // Shift+Tab: the same eight, backwards, wrapping too. From no focus it starts at the footer, the last.
     let mut back = BIG;
     back.reverse();
-    let shift_tabs = cycle(Key::Tab, SHIFT, 14);
+    let shift_tabs = cycle(Key::Tab, SHIFT, 16);
     check_cycle(&shift_tabs, &back, "Shift+Tab");
     // Controls: a swapped order, and Shift+Tab read as Tab.
     let mut swapped = BIG;
@@ -223,7 +225,8 @@ fn qa_scope_tab_order_mock_enter_on_manifold_view_enters_chart() {
     }
     // The tree holds exactly these four under Manifold view.
     let tree = app.keyboard.tree(Mode::Explore);
-    let bigs = tree.children(None);
+    // The big scopes, in Tab order: the top level holds the windows too, outside the Tab order (R-405).
+    let bigs = tree.bigs();
     let mv = bigs
         .iter()
         .find(|id| {
@@ -239,7 +242,7 @@ fn qa_scope_tab_order_mock_enter_on_manifold_view_enters_chart() {
     assert_eq!(subs, MANIFOLD, "Manifold view's sub-scopes");
     let labels: Vec<&str> = bigs.iter().map(|id| tree.get(id).unwrap().label).collect();
     assert!(
-        labels.len() == 7 && labels.iter().zip(BIG).all(|(a, b)| same_label(a, b)),
+        labels.len() == 8 && labels.iter().zip(BIG).all(|(a, b)| same_label(a, b)),
         "the big scopes are {labels:?}"
     );
 }
@@ -482,7 +485,8 @@ fn qa_mock_keyboard_a_later_screen_joins_the_tab_order() {
         .register(None, Scope::group("qa_later", "Later"));
     let mut h = headless();
     let mut seen = Vec::new();
-    for _ in 0..9 {
+    // One full turn and a wrap: the joined screen comes after the footer.
+    for _ in 0..10 {
         press(&mut h, &mut app, Key::Tab, NONE);
         seen.push(focus_labels(&app));
     }
@@ -608,7 +612,7 @@ fn qa_mock_keyboard_held_tab_repeats_too() {
     let presses = das_arr(end);
     check_path(
         &focus_labels(&app),
-        &[BIG[(presses - 1) % 7]],
+        &[BIG[(presses - 1) % BIG.len()]],
         "Tab held past the delay and two intervals",
     );
 }

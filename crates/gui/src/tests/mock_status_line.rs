@@ -7,9 +7,9 @@ use engine::contract::snapshot::LiveMemory;
 
 use super::support::{click, frame_texts, headless, mock_app, playhead, real_app, rejects};
 use crate::app::Counts;
-use crate::console::time_of_day;
 use crate::explore::footer::{counts_label, megabytes, memory_readout};
 use crate::explore::top_bar::{grouped, status_line, WINDOWS};
+use crate::windows::console::time_of_day;
 
 /// `texts` holds `line`.
 fn check_has(texts: &[String], line: &str) {
@@ -213,7 +213,7 @@ fn check_console(texts: &[String], open: bool) {
     let arrow = if open { "▾" } else { "▴" };
     check_has(texts, &format!("⚠ 0 · × 0 · console {arrow}"));
     assert_eq!(
-        texts.iter().any(|t| t == crate::console::TITLE),
+        texts.iter().any(|t| t == crate::windows::console::TITLE),
         open,
         "the console window's presence: {texts:?}"
     );

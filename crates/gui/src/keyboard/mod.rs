@@ -69,6 +69,11 @@ pub struct Keyboard {
     adjusted: Vec<Adjust>,
     /// Whether a text scope is being typed in from the keyboard: interaction mode on it after the last run.
     typing: Option<ScopeId>,
+    /// Each open window that took the focus, with the path of the scope that opened it: where the focus goes back to
+    /// when it closes (render_gui_spec §G3; R-405). GUI-local, never `ViewUI`'s (applied per R-369).
+    openers: Vec<(ScopeId, Vec<String>)>,
+    /// The windows Esc left in the last run, for the app to close.
+    left: Vec<ScopeId>,
 }
 
 impl Default for Keyboard {
@@ -78,14 +83,19 @@ impl Default for Keyboard {
 }
 
 impl Keyboard {
-    /// The layer, each mode's screens registered: Explore's seven big scopes in §G3's Tab order; on the Stain page,
-    /// the top bar, until TASK-M6-29 adds Stain's scopes.
+    /// The layer, each mode's screens registered: Explore's eight big scopes in §G3's Tab order, the footer last
+    /// (R-405); on the Stain page, the top bar and the footer, until TASK-M6-29 adds Stain's scopes. The windows join
+    /// both trees, outside the Tab order (§G5).
     pub fn new() -> Self {
         let mut explore = ScopeTree::new();
         crate::explore::top_bar::register(&mut explore);
         crate::explore::register(&mut explore);
+        crate::explore::footer::register(&mut explore);
+        crate::windows::register(&mut explore);
         let mut stain = ScopeTree::new();
         crate::explore::top_bar::register(&mut stain);
+        crate::explore::footer::register(&mut stain);
+        crate::windows::register(&mut stain);
         Self {
             explore,
             stain,
@@ -99,6 +109,8 @@ impl Keyboard {
             open_menu: None,
             adjusted: Vec::new(),
             typing: None,
+            openers: Vec::new(),
+            left: Vec::new(),
         }
     }
 
@@ -273,6 +285,7 @@ impl Keyboard {
             }
         }
         self.adjusted.clear();
+        self.left.clear();
         let mut activated = Vec::new();
         for (command, modifiers) in fired {
             if self.shortcuts_open {
@@ -307,6 +320,11 @@ impl Keyboard {
                     }
                 }
                 Outcome::Adjust(adjust) => self.adjusted.push(adjust),
+                Outcome::Leave(window) => {
+                    if !self.left.contains(&window) {
+                        self.left.push(window);
+                    }
+                }
                 Outcome::None | Outcome::Moved => {}
             }
             self.open_menu =
@@ -391,6 +409,54 @@ impl Keyboard {
                 }
             }
         }
+    }
+
+    /// The windows Esc left in the last run, for the app to close ([`Self::close_window`] moves the focus).
+    pub fn left(&self) -> &[ScopeId] {
+        &self.left
+    }
+
+    /// Window `window` opened and takes the focus, in navigation mode, on its landing (its first section's first
+    /// element, §G3), `opener` recorded as the path the focus goes back to when it closes. A menu the focus leaves
+    /// closes now, so egui's popup never pulls the focus back into it.
+    pub fn open_window(
+        &mut self,
+        ctx: &egui::Context,
+        mode: Mode,
+        focus: &mut Focus,
+        window: ScopeId,
+        opener: Vec<String>,
+    ) {
+        self.openers.retain(|(w, _)| *w != window);
+        self.openers.push((window, opener));
+        focus.path = self.tree(mode).window_landing(window);
+        focus.mode = KeyMode::Navigation;
+        self.open_menu = None;
+        self.show_menus(ctx, mode);
+    }
+
+    /// Window `window` closed: with the focus in it, the focus goes back to the scope that opened it, in navigation
+    /// mode, a menu on that path opened again (Windows › Console); otherwise the focus stays where it is.
+    pub fn close_window(
+        &mut self,
+        ctx: &egui::Context,
+        mode: Mode,
+        focus: &mut Focus,
+        window: ScopeId,
+    ) {
+        let opener = self
+            .openers
+            .iter()
+            .position(|(w, _)| *w == window)
+            .map(|i| self.openers.remove(i).1);
+        if self.tree(mode).window_of(&focus.path) != Some(window) {
+            return;
+        }
+        focus.path = opener.unwrap_or_default();
+        focus.mode = KeyMode::Navigation;
+        let tree = self.tree(mode);
+        self.open_menu = menu_holding(tree, &focus.path);
+        self.show_menus(ctx, mode);
     }
 
     /// The adjustments the arrows asked for this frame, in order, for the screens that own the values.

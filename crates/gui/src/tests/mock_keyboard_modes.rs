@@ -365,7 +365,8 @@ fn mock_keyboard_modes_the_figure_shortcuts_act_in_either_mode_and_its_arrows_ne
 #[test]
 fn mock_keyboard_modes_enter_on_the_legend_does_nothing_and_on_a_button_clicks() {
     let (mut app, mut h) = app();
-    // Legend, big scope 7: Shift+Tab from no focus lands on the last big scope.
+    // Legend, big scope 7: Shift+Tab from no focus lands on the last big scope, the footer (R-405), and again on it.
+    press(&mut h, &mut app, Key::Tab, SHIFT);
     press(&mut h, &mut app, Key::Tab, SHIFT);
     check_at(at(&app), &["legend"], NAV, "the Legend");
     press(&mut h, &mut app, Key::Enter, NONE);
@@ -379,12 +380,13 @@ fn mock_keyboard_modes_enter_on_the_legend_does_nothing_and_on_a_button_clicks()
     rejects("Enter on the Legend starting interaction mode", || {
         check_at(st(&["legend"], INTERACT), &["legend"], NAV, "Enter")
     });
-    // Enter on Tilt: its click, in navigation mode.
+    // Enter on Tilt: its click, in navigation mode. From the Legend, Tab passes the footer first (R-405).
     app.manifold.compass.mode = crate::explore::manifold_view::Touch::Slice;
     keys(
         &mut h,
         &mut app,
         &[
+            Key::Tab,
             Key::Tab,
             Key::Tab,
             Key::Tab,
@@ -406,11 +408,12 @@ fn mock_keyboard_modes_enter_on_the_legend_does_nothing_and_on_a_button_clicks()
         app.manifold.compass.mode,
         crate::explore::manifold_view::Touch::Tilt
     );
-    // A menu entry: Help › Keys (?) opens the shortcuts, the focus back on Help, navigating.
+    // A menu entry: Help › Keys (?) opens the shortcuts, the focus back on Help, navigating. From the Compass, Tab
+    // passes the Time, the Legend and the footer (R-405) to the top bar.
     keys(
         &mut h,
         &mut app,
-        &[Key::Tab, Key::Tab, Key::Tab, Key::Enter],
+        &[Key::Tab, Key::Tab, Key::Tab, Key::Tab, Key::Enter],
     );
     for _ in 0..7 {
         press(&mut h, &mut app, Key::ArrowRight, NONE);

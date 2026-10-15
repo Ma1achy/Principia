@@ -179,3 +179,33 @@ does not wait.*
 - **Applied meanwhile:** TASK-M2-03's tests assert both `Σpᵢ = 0` and the conjugacy, with a control for each swap; no
   doc line is changed.
 - **Waits:** nothing.
+
+## RQ-286: profiler schema v1's frame record has no per-pixel substep field, so nothing records what the Profiler's substeps-per-pixel histogram draws *(silence, REQ-TOOL-098; context: TASK-M8-28, TASK-M6-28)*
+
+*Found by TASK-M6-28's fix round (gui review 5529720235, finding 3 of PR #212), drawing the histogram on the mock.
+Nothing is chosen.*
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § "G5" › "Profiler", line 237: "a substeps-per-pixel histogram, with the
+    cap marked (the long tail near close encounters is the GPU divergence);". GUI_DESIGN_NOTES § "04 Windows" (:69)
+    lists it too, and REQ-TOOL-098 asks for it.
+  - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the
+    sender", "The frame record" (:340–354): "**The frame record** is §2's, key for key, followed by the five stages'
+    nested sections and the memory live at the frame's end"; its one substep key is line 346's
+    "quads_computed  quads_reused  samples  substeps_total". § "2. What to record" (:46) reads "substeps_total     the
+    honest cost measure; steps are not comparable across steppers": a frame's total only.
+- **Silence:** the histogram needs a distribution of substeps over pixels, but the frame record carries only the
+  frame's total, and no other field of schema v1 (header, stages, events) carries per-pixel substeps. The corpus
+  does not say whether the histogram is a new frame-record field (its bins, their width or edges, and whether the cap
+  is its own bin), a stage section's payload, or something the GUI reads elsewhere (`total_substeps` per pixel,
+  render contract :384), nor what readback carries it (R-288 keeps `QuadReduction` unchanged).
+- **Options seen:**
+  - (a) Add a frame-record field, e.g. `substep_histogram: [u32; n]` with fixed bin edges up to `N_max` and the cap
+    hits as the last bin, read back with the telemetry counters (R-288), a schema v1 change by ruling.
+  - (b) Compute it on demand from the per-pixel `total_substeps` (a sanctioned pull), outside the trace, so a saved
+    trace does not carry it.
+  - (c) Drop the histogram from §G5 and REQ-TOOL-098.
+- **Applied meanwhile:** applied per R-369 in TASK-M6-28's PR (#212): the mock's Profiler draws placeholder bins of
+  4 substeps up to `N_max` 64 (`crates/gui/src/mock/profile.rs`, `SUBSTEPS_PER_PIXEL`), the cap marked at 64, with a
+  note naming this entry; the real engine's side has no trace, so draws nothing.
+- **Waits:** TASK-M8-28 (REQ-TOOL-098's histogram on real data). TASK-M6-28 does not wait.

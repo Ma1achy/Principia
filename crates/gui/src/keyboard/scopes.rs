@@ -51,6 +51,10 @@ pub struct Scope {
     /// Whether it is a text field: Enter on it starts typing, interaction mode, in which every key but Esc, Enter and
     /// Tab goes to the field (R-409 G4, G5).
     pub text: bool,
+    /// Whether it is a window (render_gui_spec §G3, §G5; R-405): registered at the top level but outside the big
+    /// scopes' Tab order, reached only by opening it. With the focus inside it, Tab and Shift+Tab move between its
+    /// sections and stay in it, and Esc in navigation mode on a section leaves it ([`Outcome::Leave`]).
+    pub window: bool,
 }
 
 impl Scope {
@@ -64,6 +68,7 @@ impl Scope {
             ring: Ring::Inside,
             menu: false,
             text: false,
+            window: false,
         }
     }
 
@@ -84,6 +89,14 @@ impl Scope {
     pub const fn control(id: ScopeId, label: &'static str) -> Self {
         Self {
             activates: true,
+            ..Self::group(id, label)
+        }
+    }
+
+    /// A window: its sections are registered under it, and its elements under them (render_gui_spec §G3, §G5).
+    pub const fn window(id: ScopeId, label: &'static str) -> Self {
+        Self {
+            window: true,
             ..Self::group(id, label)
         }
     }
@@ -209,6 +222,10 @@ pub enum Outcome {
     Activate(ScopeId),
     /// The arrows adjusted a value.
     Adjust(Adjust),
+    /// Esc in navigation mode at this window's top level, on one of its sections: the window is left, closed, and the
+    /// focus goes back to the scope that opened it (render_gui_spec §G3, §G5; R-405). The focus is left as it was for
+    /// the layer to move.
+    Leave(ScopeId),
 }
 
 struct Node {
@@ -332,7 +349,42 @@ impl ScopeTree {
         self.index(id).map(|i| &self.nodes[i].scope)
     }
 
-    /// The children of `parent`, or the big scopes for `None`, in order.
+    /// The big scopes, in Tab order: the top level, its windows left out (§G3).
+    pub fn bigs(&self) -> Vec<ScopeId> {
+        self.nodes
+            .iter()
+            .filter(|n| n.parent.is_none() && !n.scope.window)
+            .map(|n| n.scope.id)
+            .collect()
+    }
+
+    /// The window `path` is in: its first scope, when that is a window.
+    pub fn window_of(&self, path: &[String]) -> Option<ScopeId> {
+        let first = self.get(path.first()?)?;
+        first.window.then_some(first.id)
+    }
+
+    /// Where the focus lands on section `section` of a window: on the section's first element, or on the section
+    /// itself when it is one element (applied per R-369: a Tab lands on a section's first element, and the arrows
+    /// move among its siblings).
+    pub fn section_landing(&self, window: ScopeId, section: ScopeId) -> Vec<String> {
+        let mut path = vec![window.to_owned(), section.to_owned()];
+        if let Some(first) = self.children(Some(section)).first() {
+            path.push((*first).to_owned());
+        }
+        path
+    }
+
+    /// Where the focus lands when window `id` opens: its first section's landing; the window itself when it has no
+    /// section.
+    pub fn window_landing(&self, id: ScopeId) -> Vec<String> {
+        match self.children(Some(id)).first() {
+            Some(section) => self.section_landing(id, section),
+            None => vec![id.to_owned()],
+        }
+    }
+
+    /// The children of `parent`, or every top-level scope for `None` (the big scopes and the windows), in order.
     pub fn children(&self, parent: Option<&str>) -> Vec<ScopeId> {
         let parent = match parent {
             Some(p) => match self.index(p) {
@@ -372,11 +424,13 @@ impl ScopeTree {
     /// the base. A path the tree no longer holds (the mode switched) is cut back to its valid part first, in
     /// navigation mode.
     ///
-    /// - Tab and Shift+Tab, from either mode, land on the next or previous big scope itself, in navigation mode.
+    /// - Tab and Shift+Tab, from either mode, land on the next or previous big scope itself, in navigation mode; inside a
+    ///   window, on its next or previous section's landing, staying in the window (R-409 G6).
     /// - Enter in navigation mode: on a scope, into it, on its first element; on a control, its click; on a value (the
     ///   Figure's pan, the compass, a slider) or a text field, interaction mode; on anything else, the Legend
     ///   among them, nothing. In interaction mode: back to navigation mode on the same element.
-    /// - Esc in interaction mode: back to navigation mode on the same element; in navigation mode, up one scope.
+    /// - Esc in interaction mode: back to navigation mode on the same element; in navigation mode, up one scope, or,
+    ///   on a window's section or the window itself, [`Outcome::Leave`].
     /// - The arrows in navigation mode move between siblings, stopping at either end (on a big scope, between the big
     ///   scopes in Tab order); in interaction mode they adjust the focused value.
     pub fn navigate(&self, focus: &mut Focus, command: Command, multiplier: f64) -> Outcome {
@@ -388,7 +442,27 @@ impl ScopeTree {
         let interacting = focus.mode == KeyMode::Interaction;
         match command {
             Command::Next | Command::Previous => {
-                let bigs = self.children(None);
+                if let Some(window) = self.window_of(&focus.path) {
+                    let sections = self.children(Some(window));
+                    let n = sections.len();
+                    if n == 0 {
+                        return Outcome::None;
+                    }
+                    let at = focus
+                        .path
+                        .get(1)
+                        .and_then(|id| sections.iter().position(|s| s == id));
+                    let to = match (at, command) {
+                        (None, Command::Next) => 0,
+                        (None, _) => n - 1,
+                        (Some(i), Command::Next) => (i + 1) % n,
+                        (Some(i), _) => (i + n - 1) % n,
+                    };
+                    focus.path = self.section_landing(window, sections[to]);
+                    focus.mode = KeyMode::Navigation;
+                    return Outcome::Moved;
+                }
+                let bigs = self.bigs();
                 let n = bigs.len();
                 if n == 0 {
                     return Outcome::None;
@@ -432,9 +506,12 @@ impl ScopeTree {
                 focus.mode = KeyMode::Navigation;
                 Outcome::Moved
             }
-            Command::Back => match focus.path.pop() {
-                Some(_) => Outcome::Moved,
-                None => Outcome::None,
+            Command::Back => match self.window_of(&focus.path) {
+                Some(window) if focus.path.len() <= 2 => Outcome::Leave(window),
+                _ => match focus.path.pop() {
+                    Some(_) => Outcome::Moved,
+                    None => Outcome::None,
+                },
             },
             Command::Arrow(direction) => {
                 let Some(id) = focus.path.last().cloned() else {
@@ -454,11 +531,14 @@ impl ScopeTree {
                 }
                 let path = &mut focus.path;
                 let parent = path.len().checked_sub(2).map(|i| path[i].as_str());
-                let siblings = self.children(parent);
-                let i = siblings
-                    .iter()
-                    .position(|s| *s == id)
-                    .expect("a valid path");
+                let siblings = match parent {
+                    Some(p) => self.children(Some(p)),
+                    None => self.bigs(),
+                };
+                // A window itself has no siblings: the big scopes are not its.
+                let Some(i) = siblings.iter().position(|s| *s == id) else {
+                    return Outcome::None;
+                };
                 let to = match direction {
                     Direction::Up | Direction::Left => i.checked_sub(1),
                     Direction::Down | Direction::Right => {

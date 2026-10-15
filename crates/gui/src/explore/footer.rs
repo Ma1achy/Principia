@@ -1,7 +1,8 @@
 //! The footer (render_gui_spec §G2; 01_main.png; RQ-255, RQ-249): the warning and error counts since the session
 //! began, the latest message, and, in the right group, the "mock engine" tag on the mock (REQ-GUI-167), in egui's
 //! weak text colour, before the memory readout (GPU, heap) and the "? keys" hint. No passive-logging indicator: logging
-//! is off (R-129). A click on it opens the console (§G12).
+//! is off (R-129). A click on it opens the console (§G12), and so does Enter on it: the footer is the keyboard's big
+//! scope 8, after Legend (§G3; R-405). It opens, never toggles, the console (applied per R-369); × or Esc closes it.
 
 use eframe::egui::{
     self, Align, Button, Color32, Layout as EguiLayout, Rect, RichText, Sense, Ui, UiBuilder,
@@ -11,6 +12,16 @@ use engine::contract::snapshot::LiveMemory;
 
 use crate::app::{Actions, Counts};
 use crate::explore::top_bar::ABSENT;
+use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
+use crate::keyboard::Keyboard;
+
+/// The footer's scope: big scope 8, after Legend (§G3; R-405). Enter on it opens the console, as its click does.
+pub const FOOTER: ScopeId = "footer";
+
+/// Joins the footer to `tree` as the last big scope.
+pub fn register(tree: &mut ScopeTree) {
+    tree.register(None, Scope::control(FOOTER, "Footer"));
+}
 
 /// The tag the footer carries on the mock (R-390; REQ-GUI-167).
 pub const MOCK_TAG: &str = "mock engine";
@@ -63,8 +74,15 @@ pub fn severity_colour(visuals: &egui::Visuals, severity: Severity) -> Color32 {
     }
 }
 
-/// Draws the footer in `rect`; a click on it toggles the console.
-pub fn show(ui: &mut Ui, rect: Rect, footer: &Footer<'_>, actions: &mut Actions) {
+/// Draws the footer in `rect`; a click on it opens the console.
+pub fn show(
+    ui: &mut Ui,
+    rect: Rect,
+    footer: &Footer<'_>,
+    keyboard: &mut Keyboard,
+    actions: &mut Actions,
+) {
+    keyboard.place(FOOTER, rect);
     ui.painter().rect_filled(rect, 0.0, ui.visuals().panel_fill);
     let clicked = ui
         .interact(rect, ui.id().with("footer"), Sense::click())
@@ -100,5 +118,7 @@ pub fn show(ui: &mut Ui, rect: Rect, footer: &Footer<'_>, actions: &mut Actions)
             );
         });
     }
-    actions.toggle_console |= clicked || toggle;
+    if clicked || toggle {
+        actions.open.push(FOOTER);
+    }
 }
