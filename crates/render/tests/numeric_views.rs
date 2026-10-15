@@ -709,7 +709,8 @@ fn non_finite_poles_draw_the_hatch_as_nan_does() {
     check_poles(None);
 }
 
-/// The non-finite guard as the views write it, and the NaN-alone guard TASK-M1-09 built.
+/// The non-finite guard as the views write it, and the NaN-alone guard TASK-M1-09 built: the controls' edit.
+#[cfg(feature = "controls")]
 const GUARD_TEST: (&str, &str) = (
     "(bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u",
     "bitcast<u32>(raw) == 0x7fc00000u",
