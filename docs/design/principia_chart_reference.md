@@ -102,6 +102,10 @@ if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)
 so the rotation is the identity there: a select on `ρ_x = 0` and `ρ_y = 0`, not `atan2(0, 0)`, which GLSL.std.450 and
 WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
 
+**After the mirror test, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0` (R-438).** The deadband is left unmirrored (R-82), so the
+encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`, and `β ∈ [0, π]` holds because it does, not by the mirror alone
+(`principia_dd_encode.md` §3.1).
+
 ### 0.5 Scale gauge
 
 ```

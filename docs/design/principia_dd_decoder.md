@@ -99,8 +99,8 @@ defined, not left to `atan2`: the `atan2` term is 0, the CPU's `atan2(+0, +0)`, 
 zeros, so that `−0` operands, whose `atan2(±0, −0) = ±π` on the CPU, give it too. The test is a comparison of each
 operand with the constant 0 (true for `+0` and `−0` alike), and the value a select between 0 and the `atan2` already
 computed, never a branch (the GPU determinism note's discipline). Its places: §3.3's rotation angle `φ` at `ρ = 0`
-(the `α = π/2` collision pole), so `R(−φ)` is the identity there; the encode's `β = atan2(λ̃_y, λ̃_x)` at `λ̃ = 0`
-(the `α = 0` pole; `principia_dd_encode.md` §3.1, `principia_inverse_encode_contract.md` Part 3); the shape-sphere
+(the `α = π/2` collision pole), so `R(−φ)` is the identity there; the encode's `β = atan2(|λ̃_y|, λ̃_x)` (R-438)
+at `λ̃ = 0` (the `α = 0` pole; `principia_dd_encode.md` §3.1, `principia_inverse_encode_contract.md` Part 3); the shape-sphere
 inverse's `atan2(q, p)` at `p = q = 0` (`principia_chart_reference.md` §3.2), so `ψ = φ_f` there; and §3.6's
 `rho_angle`, defined case by case. The encode's `α = atan2(‖λ̃‖, ‖ρ̃‖)` is not among them: after the scale gauge
 `‖ρ̃‖² + ‖λ̃‖² = I = 1`, so its operands are never both 0.
@@ -207,7 +207,8 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   in the reconstruction or 0. `rho_mag = 1` there, so the ratio is never `0/0`.
 - **`rho_angle` is the signed angle from `ρ` to `λ`**, in radians on `(−π, π]`: a full-turn angle, for the cyclic view's
   period of 2π (render_gui_spec §10.1; REQ-TOOL-161). The mass weights are positive scalars, so `ρ̃` and `λ̃` give the
-  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0`) it is `β ∈ [0, π]`. Its value is defined case by case,
+  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0` on the decode's output; after the encode's
+  canonicalisation `λ̃_y ≥ −δ_λ`, R-82's deadband, which is why the encode's `β` reads `|λ̃_y|`, R-438) it is `β ∈ [0, π]`. Its value is defined case by case,
   not left to `atan2` (measured by TASK-M2-03), with `π̂` §3.2's image of π (rounded toward zero at f32, the nearest
   value at f64; R-417), so that the range is `(−π̂, π̂]` at each precision:
   - **Antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): `π̂`, whatever the sign of a zero `ρ × λ`. Collinear bodies whose `y`
@@ -236,7 +237,8 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   at the `α = 0` pole, where `‖λ̃‖` is 0. Its view draws that `+∞` in the invalid colour, on the CPU and the GPU
   alike, not at the top of the ramp (R-436, below).
 - **The poles' infinite values are stored as computed (R-436).** `rho_ratio`'s `+∞` at `α = 0`, and `V_0`'s `−∞` at
-  the f64 collision pole, with `E₀ = K₀ + V₀ = −∞` there, are the true values: storage holds them, as it never holds
+  the collision pole (measured at f64; at f32 too, wherever the reconstruction makes a pair coincide), with
+  `E₀ = K₀ + V₀ = −∞` there, are the true values: storage holds them, as it never holds
   NaN (R-79). Every consumer, on the CPU and the GPU alike, colours a non-finite input as invalid: each view that reads
   a stored `±∞` (`rho_ratio`'s, `V_0`'s, `E_0`'s), each agreement preset that differences against `E₀`
   (`principia_colour_composition.md` §6) and the energy-agreement view (`principia_render_contract.md` § "Cross-check
@@ -244,6 +246,22 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   arithmetic, `K_0 + V_0` included; it never does arithmetic on `±∞` and never writes an infinite literal, since WGSL
   lets an implementation assume there are no infinities (`principia_gpu_determinism_note.md` § "The discipline", rule
   4). A declared sentinel or unset value keeps the style its own ruling gives it (`d_min`'s unset `+∞`, R-280, R-399).
+- **Each producer selects its pole value (R-436).** The descriptor follows `Real` (R-313), so on the GPU path the
+  decode stage computes it at f32, and the fragment decode (R-116) forms its own `V` and `E`; the poles are reached at
+  f32 as at f64 (§3.2, R-417). WGSL lets an implementation assume there are no infinities, so a GPU-computed `1/0`, or
+  arithmetic on `∞`, is not pinned to `±∞`, and a finite indeterminate result would pass the consumers' bit test. So
+  each pole value is chosen by comparing its divisor with 0 and a select, as §3.2's `atan2` poles and `rho_angle` are,
+  never by the arithmetic:
+  - `rho_ratio = ‖ρ̃‖/‖λ̃‖`: the `+∞` bits where `‖λ̃‖ = 0`;
+  - `V_0`: the `−∞` bits wherever a pair separation `‖rᵢ − rⱼ‖` is 0, for the whole sum, not a sum with an infinite
+    term;
+  - `virial_ratio = 2K₀/|V₀|`: 0 where `V_0` is non-finite, tested on its bits.
+
+  The bits are written by a bitcast of the integer pattern (`0x7F80_0000` and `0xFF80_0000` at f32,
+  `0x7FF0_0000_0000_0000` and `0xFFF0_0000_0000_0000` at f64), as R-271's packer writes `d_min`'s `+inf`, never by an
+  infinite literal or by `1/0`; the quotient the select discards is never read. The CPU path runs the same source and
+  stores the same bits. The fragment-side agreement preset tests the fragment decode's `V` on its bits before it
+  forms `E` (`principia_colour_composition.md` §6).
 - **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
   `1/√2`, 1, `π/2` and `√3`.
 

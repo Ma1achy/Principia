@@ -29,15 +29,25 @@ From **navigation (Part 4)**: the lock on nonlinear charts prefers CPU forward r
 | Block | Forward (decoder dd §3) | Inverse (encode) | Closure check |
 |---|---|---|---|
 | **Mass** | `mₖ = e^{μₖ}/(1+e^{μ₁}+e^{μ₂})`, `μ₀ = 0`; `μₖ = μ_max·tanh(z)` | `μₖ = log(mₖ/m₀)`; `z = artanh(μₖ/μ_max)`, clamp `(1−ε_μ)μ_max` | `m₁/m₀ = e^{μ₁}` ⟹ log-ratio recovers `μ₁` exactly ✓ |
-| **Config** | `ρ̃ = cos α (1,0)`, `λ̃ = sin α (cos β, sin β)`; `α = (π/2)σ(z_α)`, `β = πσ(z_β)` | `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(λ̃_y, λ̃_x)`; `z = logit(s)` with the range maps inverted | `atan2(sin α, cos α) = α` on `(0, π/2)` ✓; `β ∈ [0,π]` guaranteed by the mirror ✓ |
+| **Config** | `ρ̃ = cos α (1,0)`, `λ̃ = sin α (cos β, sin β)`; `α = (π/2)σ(z_α)`, `β = πσ(z_β)` | `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(|λ̃_y|, λ̃_x)` (R-438); `z = logit(s)` with the range maps inverted | `atan2(sin α, cos α) = α` on `(0, π/2)` ✓; `β ∈ [0,π]` because `β` reads `|λ̃_y|`, not by the mirror alone (R-438) ✓ |
 | **Momentum** | `p₀ = −p_ρ − (m₀/M₀₁)p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₂ = p_λ`; `qₖ = q_max(2σ(z)−1)` | `p_λ = p₂`; `p_ρ = p₁ + (m₁/M₀₁)p₂`; `s = ½(q/q_max + 1)`, `z = logit(s)`, clamp | substitute forward into inverse: `p₁ + (m₁/M₀₁)p₂ = p_ρ` identically ✓; `Σpᵢ = 0` consumed, not assumed |
 | **Invariant fibre** *(momentum stage of (L_z,E)/(L_z,K) charts)* | `v = L_z·Jr + a·w`, `a = √(2(K*−L_z²/2))` (I = 1) | chart coords = evaluate `L_z(x)`, `E(x)` directly; latent = **run the same construction**, then free-momentum-invert the constructed `p = m·v` | closure is *by construction* — one code path, so lookup and clicked pixel land on the same z |
 | **Curve (Burrau)** | `γ: ν ↦ (α, β, μ₁, μ₂)`; `θ(ν)` monotone | on-curve: `ν(θ) = sec θ − tan θ` from the canonical leg ratio; masses cross-check `μ₁ = log(b/c)`, `μ₂ = log(a/c)` | `sec θ − tan θ` inverts `θ(ν)` in closed form on `θ ∈ (0, π/2)` ✓ |
 
-**`β` at the `α = 0` pole (R-437).** At `λ̃ = 0`, `β = atan2(λ̃_y, λ̃_x)` is at its pole: there `β` is 0, whatever the
+**`β` at the `α = 0` pole (R-437).** At `λ̃ = 0`, `β = atan2(|λ̃_y|, λ̃_x)` is at its pole: there `β` is 0, whatever the
 signs of the zeros, chosen by a select on `λ̃_x = 0` and `λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450
 and WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole"). `α = atan2(‖λ̃‖, ‖ρ̃‖)`
 has no pole: after step 0, `‖ρ̃‖² + ‖λ̃‖² = I = 1`.
+
+**`β` reads `|λ̃_y|` (R-438).** `β = atan2(|λ̃_y|, λ̃_x)` reads the mirror's quotient for `β` only; R-82's mirror
+test and deadband are unchanged. `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`, not by the mirror alone: after §3.2's
+step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`, and with `λ̃_y` read as it is, a deadband `λ̃_y ≤ 0` with body 2 on the `−x` side
+gives `β` near `−π` (`atan2(−0, x < 0) = −π` exactly), which `s_β` would clamp to the `β = 0` end. `β ≈ 0` and
+`β ≈ π` are different collinear shapes, not mirror images: the mirror fixes the x-axis. Near `α = 0`, where
+`‖λ̃‖ ≲ δ_λ`, the whole lower half of the `λ̃` disc lies inside the deadband, and `|λ̃_y|` still gives a `β` in range,
+continuous across the deadband's edge. The code reads `|λ̃_y|` by `abs`, which clears the sign bit, never by `max`:
+GLSL.std.450 `FMax` returns `−0` for `max(−0, +0)`, and Rust's `f64::max` may return either zero. At `λ̃ = 0` the
+select above gives `β = 0`.
 
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
@@ -62,6 +72,9 @@ Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is
 identity, on CPU-f64 and GPU-f32 alike: a select on `ρ_x = 0` and `ρ_y = 0`, not `atan2(0, 0)`
 (`principia_dd_decoder.md` §3.2, §3.3). The guard (`lookup_clamped`, R-13) still catches the pixel; the defined `φ`
 makes the rotation there the same on both, the identity.
+
+**After step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`.** The deadband `|λ̃_y| ≤ δ_λ` is left unmirrored (R-82), so a state can
+leave `C` with `λ̃_y ∈ [−δ_λ, 0]`, `−0` included. §3.1's `β` reads `|λ̃_y|` for that reason (R-438).
 
 The order is normative (R-23): **1a** subtract CoM → **0** rescale → **1b** subtract boost → **2** rotate → **3** mirror. These steps commute with nothing; *CoM subtraction precedes the `I` computation* because `I` is CoM-frame-defined. The inverse-encode contract (Part 6) uses the same numbering.
 
@@ -117,6 +130,9 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 7. **Curve projection consistency:** exact on-curve input — argmin and closed form agree on `ν` to tolerance; off-curve input — `d(ν*)` reported, latent fallback taken beyond tolerance, and `E ∘` fallback still satisfies T2.
 8. **Conditioning formulation:** a near-clamp input where the z-residual is ~10⁵× the physical residual — asserting that the *physical* tolerance passes while a naive z-tolerance would fail (the test that keeps future contributors honest about §3.5).
 9. **Coincident-pair rejection:** `ρ → 0` inputs reject at step 2 with the correct reason, both precisions, same branch.
+10. **Collinear `β` in the deadband (R-438):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2
+    on either side and at each Euler landmark, requiring `β = π` (body 2 on the `−x` side) or 0 (on the `+x` side) as
+    appropriate, never near `−π`, and a round trip within the deadband.
 
 ---
 

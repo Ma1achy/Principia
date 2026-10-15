@@ -505,7 +505,9 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   unpinned on the GPU. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
   bits before any arithmetic, `K₀ + V₀` included, and draws a pixel with a non-finite operand in the invalid colour,
   on the CPU and the GPU alike; it never does arithmetic on `±∞`, since WGSL lets an implementation assume there are
-  no infinities.
+  no infinities. The fragment decode's own `V`, whose pole value it selects as the decode stage does
+  (`principia_dd_decoder.md` §3.6, "Each producer selects its pole value"), is tested on its bits too, before the
+  preset forms `E(fragment-decode) = K + V`.
 
 **Discipline 1 — debug presets ship locked.** Their diagnostic value is that ROUNDTRIP-red means the
 same thing every time. Editing a debug preset **forks it to custom** via the same one-way eject; it
