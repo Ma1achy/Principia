@@ -50,6 +50,8 @@ pub const ZOOM_PER_POINT: f32 = 0.002;
 pub const LINE_POINTS: f32 = 40.0;
 /// The grid's spacing at zoom 1.
 pub const GRID: f32 = 24.0;
+/// The most dots the grid draws along an axis: more than any screen holds at the least spacing.
+pub const MAX_DOTS_PER_AXIS: f32 = 4096.0;
 /// The canvas's hint line along its foot: the gestures it takes and the types' colours.
 pub const HINT: &str = "drag: marquee · space- or middle-drag: pan · scroll: zoom · types:";
 /// The darkest of a brightness node's ramp glyph, as a fraction of full (a look choice, R-390).
@@ -627,14 +629,14 @@ pub fn grid_dots(rect: Rect, view: Zoom) -> Vec<Pos2> {
         return dots;
     }
     let start = rect.min + vec2(view.pan.x.rem_euclid(step), view.pan.y.rem_euclid(step));
-    let mut y = start.y;
-    while y < rect.max.y {
-        let mut x = start.x;
-        while x < rect.max.x {
-            dots.push(pos2(x, y));
-            x += step;
+    // Counted, not walked to the edge: each axis's dots up to the edge, never more than a screen could hold, so no
+    // step can run away (a walked loop whose step went the wrong way grew without end under the mutants run).
+    let count =
+        |from: f32, to: f32| ((to - from) / step).ceil().clamp(0.0, MAX_DOTS_PER_AXIS) as usize;
+    for j in 0..count(start.y, rect.max.y) {
+        for i in 0..count(start.x, rect.max.x) {
+            dots.push(pos2(start.x + i as f32 * step, start.y + j as f32 * step));
         }
-        y += step;
     }
     dots
 }
