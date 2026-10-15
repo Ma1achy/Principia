@@ -426,7 +426,7 @@ fn mock_windows_open_export_display_chart_builder_and_inspector_draw_their_conte
             export::PRESENT_LABEL,
             "pxpack",
             "share link",
-            "principia://view?v=1&z0=",
+            export::LINK_PREFIX,
             "Copy snapshot (JSON)",
         ],
         "Export",
@@ -573,11 +573,57 @@ fn mock_windows_open_export_controls() {
     assert!(parsed.get("render").is_some() && parsed.get("sim").is_some());
     assert_eq!(
         export::activate(export::COPY_SNAPSHOT, &mut s, &sim, &render),
-        Some(export::Act::Copy(json))
+        Some(export::Act::Copy(json.clone()))
     );
-    let link = export::share_link(&sim);
-    assert!(link.starts_with("principia://view?v=1&z0="), "{link}");
-    assert_eq!(link.matches(',').count(), sim.plane.z0.len() - 1);
+    // The share link carries the snapshot JSON, the canonical serialisation, percent-encoded (§G5, R-309).
+    let link = export::share_link(&sim, &render).unwrap();
+    assert!(link.starts_with(export::LINK_PREFIX), "{link}");
+    let query = &link[export::LINK_PREFIX.len()..];
+    assert!(
+        query
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-._~%".contains(&b)),
+        "{query}"
+    );
+    assert_eq!(export::link_snapshot(&link).as_deref(), Some(json.as_str()));
+    assert!(query.starts_with("%7B%22render%22%3A%7B"), "{query}");
+    assert_eq!(export::link_snapshot("principia://view?v=1&z0=0.1"), None);
+    assert_eq!(
+        export::link_snapshot(&format!("{}%ZZ", export::LINK_PREFIX)),
+        None
+    );
+    assert_eq!(
+        export::link_snapshot(&format!("{}%E2%82", export::LINK_PREFIX)),
+        None
+    );
+    assert_eq!(
+        export::link_snapshot(&format!("{}%4", export::LINK_PREFIX)),
+        None
+    );
+    assert_eq!(
+        export::link_snapshot(&format!("{}a%20b~", export::LINK_PREFIX)).as_deref(),
+        Some("a b~")
+    );
+    // The window shows the head and the length; a short link whole.
+    let shown = export::link_shown(&link);
+    assert_eq!(
+        shown,
+        format!(
+            "{}… ({} characters)",
+            &link[..export::LINK_SHOWN],
+            link.len()
+        )
+    );
+    let short = "x".repeat(export::LINK_SHOWN);
+    assert_eq!(export::link_shown(&short), short);
+    let long = "x".repeat(export::LINK_SHOWN + 1);
+    assert_eq!(
+        export::link_shown(&long),
+        format!("{short}… ({} characters)", export::LINK_SHOWN + 1)
+    );
+    rejects("a z₀-only link", || {
+        assert!(export::link_snapshot("principia://view?v=1&z0=0.1,0.2").is_some())
+    });
     assert_eq!(
         export::activate(export::COPY_LINK, &mut s, &sim, &render),
         Some(export::Act::Copy(link))

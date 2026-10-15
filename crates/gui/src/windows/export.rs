@@ -4,8 +4,8 @@
 //! which hides all chrome until Esc.
 //!
 //! On the mock (applied per R-369): copy puts `SimConfig` and `RenderState` on the clipboard in their one canonical
-//! serialisation, JCS (gui_state_contract §2, R-309; `engine::contract::canonical`); the share link is illustrative,
-//! its `principia://view?…` form carrying the view's `z₀` only; Save PNG…, Save snapshot… and Load… write and read no
+//! serialisation, JCS (gui_state_contract §2, R-309; `engine::contract::canonical`), and the share link carries the
+//! same JSON percent-encoded, `principia://view?v=1&s=…` (§G5); Save PNG…, Save snapshot… and Load… write and read no
 //! file, which TASK-M8-32 builds. Present hides the chrome and Esc returns, the focus on Present (applied per R-369);
 //! making the figure fill the window is TASK-M6-30's (R-407, A3).
 //!
@@ -109,10 +109,65 @@ pub fn snapshot_json(sim: &SimConfig, render: &RenderState) -> Result<String, ca
     ))
 }
 
-/// The share link: illustrative (applied per R-369), the view's `z₀` at three decimals.
-pub fn share_link(sim: &SimConfig) -> String {
-    let z0: Vec<String> = sim.plane.z0.iter().map(|v| format!("{v:.3}")).collect();
-    format!("principia://view?v=1&z0={}", z0.join(","))
+/// The share link's form up to its state: version 1, then `s=`, the snapshot JSON percent-encoded.
+pub const LINK_PREFIX: &str = "principia://view?v=1&s=";
+/// How much of the share link the window shows; Copy takes the whole link (a look choice, R-390).
+pub const LINK_SHOWN: usize = 72;
+
+/// The share link: `SimConfig` and `RenderState` in their one canonical serialisation, the snapshot JSON, carried in
+/// the query percent-encoded (render_gui_spec §G5 "Export & share", gui_state_contract §2, R-309).
+pub fn share_link(sim: &SimConfig, render: &RenderState) -> Result<String, canonical::Error> {
+    Ok(format!(
+        "{LINK_PREFIX}{}",
+        percent_encode(&snapshot_json(sim, render)?)
+    ))
+}
+
+/// The snapshot JSON a share link carries, or `None` if `link` is not one (what TASK-M8-32 reads back).
+pub fn link_snapshot(link: &str) -> Option<String> {
+    percent_decode(link.strip_prefix(LINK_PREFIX)?)
+}
+
+/// What the window shows of `link`: its first [`LINK_SHOWN`] characters, then its length.
+pub fn link_shown(link: &str) -> String {
+    let n = link.chars().count();
+    if n <= LINK_SHOWN {
+        link.to_owned()
+    } else {
+        let head: String = link.chars().take(LINK_SHOWN).collect();
+        format!("{head}… ({n} characters)")
+    }
+}
+
+/// `text` percent-encoded (RFC 3986 §2.1): every UTF-8 byte but the unreserved characters (§2.3) as `%XX`.
+fn percent_encode(text: &str) -> String {
+    let mut out = String::with_capacity(text.len() * 3);
+    for b in text.bytes() {
+        if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
+            out.push(char::from(b));
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
+/// The inverse of [`percent_encode`]: `None` for a malformed escape or bytes that are not UTF-8.
+fn percent_decode(text: &str) -> Option<String> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'%' {
+            let hex = std::str::from_utf8(bytes.get(i + 1..i + 3)?).ok()?;
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
 }
 
 /// The image's size in pixels at `multiple` times a view of `view` pixels.
@@ -153,7 +208,7 @@ pub fn activate(id: &str, state: &mut State, sim: &SimConfig, render: &RenderSta
         WGSL => state.wgsl = !state.wgsl,
         SAVE_PNG | SAVE_SNAPSHOT | LOAD => state.note = Some(NO_FILE),
         COPY_SNAPSHOT => return snapshot_json(sim, render).ok().map(Act::Copy),
-        COPY_LINK => return Some(Act::Copy(share_link(sim))),
+        COPY_LINK => return share_link(sim, render).ok().map(Act::Copy),
         PRESENT => return Some(Act::Present),
         _ => {}
     }
@@ -212,8 +267,9 @@ pub fn show(
         });
         ui.horizontal(|ui| {
             form_label(ui, "share link");
-            // Wrapped: on one line the link is wider than the window.
-            ui.add(egui::Label::new(RichText::new(share_link(sim)).monospace()).wrap());
+            // The link's head and its length: the whole state is longer than the window; Copy takes all of it.
+            let link = share_link(sim, render).unwrap_or_default();
+            ui.add(egui::Label::new(RichText::new(link_shown(&link)).monospace()).wrap());
         });
         let copy = ui.button("Copy");
         if copy.clicked() {
