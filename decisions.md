@@ -9680,6 +9680,8 @@ Option (d) is the form physics review 5531809281 (P2) found missing from RQ-287'
     case is tested on its own.
   - **On the `−x` half-axis** (P1), at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by a select, on CPU-f64 and GPU-f32 alike.
   - **"A round trip within the deadband"** is defined under "Contradiction flagged, applied" below.
+    It compares mass-weighted Jacobi coordinates (masses, `ρ̃`, `λ̃`, `p_ρ`, `p_λ`), with `λ̃_x` and `λ̃_y` each given
+    its own bound (physics review 5532166783 P1, applied per R-369).
 
 *Why, from physics review 5531809281 (P2), recorded here because it explains the form:*
 - **`abs` and a select, never `max`.** `abs` clears the sign bit and is pinned in WGSL. RQ-287's option (b),
@@ -9709,19 +9711,28 @@ to `ε_z` or `1 − ε_z` (`ε_z = 10⁻⁶`, inverse-encode Part 3) with `looku
 distance `π·ε_z` from its end, so `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about 10⁶ × `δ_λ` (`δ_λ = 10⁻¹²`): a `λ̃_y` within the
 deadband cannot come back. The inverse-encode contract already says so
 (`docs/contracts/principia_inverse_encode_contract.md` § "Part 7 — Ground-truth ingestion (the validation programme's
-demand)", :226: "The chart cannot cleanly reach an *exactly*-degenerate config"). Per CLAUDE.md "Rulings", this is
+demand)", :234: "The chart cannot cleanly reach an *exactly*-degenerate config"). Per CLAUDE.md "Rulings", this is
 flagged and what is applied is recorded. Applied as an R-72 definition of what the round trip compares, chosen by the
-orchestrator per R-369 (the human may veto it), for each landmark off the pole:
+orchestrator per R-369 (the human may veto it), for each landmark off the pole, compared in mass-weighted Jacobi
+coordinates: the masses, `ρ̃`, `λ̃`, `p_ρ` and `p_λ` (physics review 5532166783 P1):
 - the four `λ̃_y` inputs of one landmark encode to the same `z`, since the deadband is invisible to the encode;
 - `decode(encode(x))` keeps the input's side (the sign of `λ̃_x`), with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own
   `|λ̃_y|` (at most `δ_λ`) and rounding;
-- the other components are within `ε_phys`;
+- `|Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z))` plus rounding, about `4.9×10⁻¹²·‖λ̃‖`: the clamp moves `β` by `π·ε_z`, so it moves
+  `λ̃_x` too, on either side, since `cos(π(1 − ε_z)) = −cos(π·ε_z)`;
+- the remaining components (the masses, `ρ̃`, `p_ρ`, `p_λ`) are within `ε_phys`;
 - `lookup_clamped` is set.
 
 At the pole landmark the four inputs do not share a `z` (`±0` give `β = 0`, `±1e-13` give `π/2`), and `s_α` clamps
 too, so the test asserts `β` and `lookup_clamped` there, and the pole's round trip is REQ-DEC-014's exact-pole ingest
 (`encode_exact_poles`: no NaN, deterministic, `lookup_clamped` set). The bound's term for the input's own `|λ̃_y|` is
 the porter's, applied per R-369: an input of `−1e-13` decodes to a `λ̃_y ≥ 0`, so the difference includes it.
+
+The coordinates and `λ̃_x`'s bound are physics review 5532166783 P1's, applied per R-369. `ε_phys` is REQ-ENC-024's
+calibration of the round-trip residual over interior `z` (inverse-encode Part 4), so it cannot absorb a clamp's
+displacement: that is why `λ̃_x` and `λ̃_y` carry their own bounds. In physical `(m, r, p)` the shift in `λ̃_y` would move
+every body's `r_y` once the centre of mass is re-centred, which is why the comparison is in Jacobi coordinates. `p_ρ`
+and `p_λ` are unaffected, since the canonical rotation depends on `ρ̃` only.
 
 *Applied:*
 - **The docs.** dd_encode §3.1's Config row and its pole paragraph read `β = atan2(|λ̃_y|, λ̃_x)` and give the reason

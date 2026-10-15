@@ -159,9 +159,12 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
     - **What the round trip compares** (P3; R-72, applied per R-369; R-438, "Contradiction flagged, applied"). An
       exactly collinear input clamps `s_β` to `ε_z` or `1 − ε_z`, so the decode returns `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about
       10⁶ × `δ_λ`: a deadband `λ̃_y` cannot come back (inverse-encode Part 7: the chart cannot cleanly reach an exactly
-      degenerate configuration). So, at each landmark off the pole: the four `λ̃_y` inputs encode to the same `z`;
+      degenerate configuration). So, at each landmark off the pole, compared in mass-weighted Jacobi coordinates (the
+      masses, `ρ̃`, `λ̃`, `p_ρ`, `p_λ`; physics review 5532166783 P1): the four `λ̃_y` inputs encode to the same `z`;
       `decode(encode(x))` keeps the input's side, with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own `|λ̃_y|` and rounding;
-      the other components are within `ε_phys`; `lookup_clamped` is set. At the pole landmark the test asserts `β` and
+      `|Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z))` plus rounding, since the clamp moves `β` by `π·ε_z` and so moves `λ̃_x` too, which
+      `ε_phys`, calibrated over interior `z`, does not cover; the remaining components (the masses, `ρ̃`, `p_ρ`, `p_λ`)
+      are within `ε_phys`; `lookup_clamped` is set. At the pole landmark the test asserts `β` and
       `lookup_clamped`; its round trip is REQ-DEC-014's exact-pole ingest (no NaN, deterministic,
       `lookup_clamped` set).
 
