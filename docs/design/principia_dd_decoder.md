@@ -192,8 +192,18 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   in the reconstruction or 0. `rho_mag = 1` there, so the ratio is never `0/0`.
 - **`rho_angle` is the signed angle from `ρ` to `λ`**, in radians on `(−π, π]`: a full-turn angle, for the cyclic view's
   period of 2π (render_gui_spec §10.1; REQ-TOOL-161). The mass weights are positive scalars, so `ρ̃` and `λ̃` give the
-  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0`) it is `β ∈ [0, π]`; at a pole, `atan2(0, 0) = 0`, a
-  deterministic value (§3.2).
+  same angle. In the canonical frame (`ρ̃` on `+x`, `λ̃_y ≥ 0`) it is `β ∈ [0, π]`. Its value is defined case by case,
+  not left to `atan2` (measured by TASK-M2-03), with `π̂` §3.2's image of π (rounded toward zero at f32, the nearest
+  value at f64; R-417), so that the range is `(−π̂, π̂]` at each precision:
+  - **Antiparallel** (`ρ × λ = 0`, `ρ · λ < 0`): `π̂`, whatever the sign of a zero `ρ × λ`. Collinear bodies whose `y`
+    are exact zeros give `ρ × λ = −0`, and `atan2(−0, x < 0) = −π`, outside the range.
+  - **Parallel, or the pole** (`ρ × λ = 0`, `ρ · λ ≥ 0`): 0. At the pole, `ρ × λ = ρ · λ = 0`, GLSL.std.450 `Atan2`
+    is undefined, so the CPU's `atan2(0, 0) = 0` (§3.2) does not carry to the GPU: the value is the constant 0.
+  - **Elsewhere:** `atan2(ρ × λ, ρ · λ)`, a value above `π̂` taken down to `π̂` (f32's nearest π lies above π), and a
+    value at or below `−π̂`, which stands for the half turn `−π`, read as `π̂`, the half turn the range includes.
+
+  Each case is chosen by a comparison against the constant 0 or `±π̂`, selecting a value already computed: no branch
+  (the GPU determinism note's discipline).
 - **`q_mass` is the inner pair's mass ratio**, lighter over heavier: 1 at equal masses, unchanged when bodies 0 and 1
   swap labels, and greater than 0 wherever `m₀` and `m₁` both are. Its ledger range is declared `[0, 1]` from this
   formula (REQ-PAY-097, R-426), a range that does not span zero, so its numeric view is on `ramp_viridis` (R-400).
@@ -206,6 +216,9 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   the emitted `r₀` and `r₁` can be equal: then `rho_mag`, `rho_ratio` and `r_min_pair_0` read 0, `V_0` reads `−∞`
   and `virial_ratio` 0. This is §3.2's binary collision, `U → −∞`, which the pipeline fences; the two log fields'
   ranges are `[0, ∞]` and `[0, ∞)`, and their views place 0 at the bottom of the ramp.
+- **The ledger declares the log fields' lower bound only.** Its `[0, ∞)`, in the payload ledger and the headers of the
+  views generated from it, means that no upper bound is declared, not that `+∞` is excluded: `rho_ratio` reaches `+∞`
+  at the `α = 0` pole, where `‖λ̃‖` is 0, and its log view reads it as raw 1, the top of the ramp.
 - **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
   `1/√2`, 1, `π/2` and `√3`.
 
