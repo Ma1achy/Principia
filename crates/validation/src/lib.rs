@@ -26,6 +26,10 @@ pub use kernel::payload::{pack_times, set_t_dmin_step, tm_t_dmin_step, tm_t_end_
 /// harness is.
 pub use engine::{presets, stain};
 
+/// `r_pole`'s register entry (REQ-INT-086, R-433), for the kernel crate's tests, which reach the ledger only through
+/// this dev-dependency: the kernel takes the ledger as a build-dependency alone (systems_architecture §7.1, R-185).
+pub use ledger::constants::R_POLE;
+
 /// The assembler's declaration parser, re-exported for the ledger crate's tests, which reach render only through this
 /// dev-dependency: the numeric view template's `RANGE_AUTO` header round-trips through it (TASK-M1-09).
 pub use render::assemble::{Declaration, UniformType};

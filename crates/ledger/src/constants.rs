@@ -494,7 +494,8 @@ const R428: Citation = Citation::Corpus {
 };
 
 /// A number the human confirmed at its gate (R-71), admissible as expressed in canonical units, citing the ruling that
-/// confirmed it: a provisional entry whose mark has come off (R-427; dd_generation_root §3.8).
+/// confirmed it: a provisional entry whose mark has come off (R-427; dd_generation_root §3.8), or a calibration
+/// entered once confirmed (R-433).
 const fn confirmed(name: &'static str, value: f64, ruling: Citation) -> ConstantBuilder {
     ConstantBuilder {
         name,
@@ -614,6 +615,43 @@ pub const HATCH_CYAN: ConstantBuilder = confirmed("hatch_cyan", 0x48ffff as f64,
 /// The hatch's stripe width in pixels, 4, a power of two: the pattern shifts `x + y` right by its log2.
 pub const HATCH_HALF_PERIOD: ConstantBuilder = confirmed("hatch_half_period", 4.0, R428);
 
+// ── The M1 gate's other calibrations (R-433; REQ-INT-086, REQ-VAL-122) ─────────────────────────────────────────────
+//
+// Two calibrations the human confirmed at the M1 gate (R-433) that had been held outside the register: `r_pole`, a
+// parameter of `kernel::shape`, and the ‖n‖ = 1 test's tolerance, a definition in two test files. Each is a register
+// entry, read from here.
+
+/// The ruling that confirmed the M1 gate's other calibrations (dd_generation_root §3.8, `provisional`): `n_norm_tol`
+/// cites it.
+const R433: Citation = Citation::Corpus {
+    file: "decisions.md",
+    section: "R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*",
+};
+
+/// `r_pole`, the pole radius of the unwrapped phase `θ̃` (dd_integrator §3.7; R-389): below it, in
+/// `√(n_u² + n_v²)` on the unit shape sphere, the longitude is not trusted and `θ̃` holds with a frozen reference.
+/// 0.01, TASK-M1-11's proposal (REQ-INT-086; PR #158, physics review 5436669140): the longitude's round-off from `n`'s
+/// grows as `1/√(n_u² + n_v²)`, so outside 0.01 a step's longitude delta is trustworthy at f32 and f64, and the parity
+/// contract's one-code allowance for the stored pole reference needs it above about 2e-3 (REQ-INT-087). Confirmed by
+/// the human at the M1 gate and marked provisional until M3 (R-433, R-427's principle), where it is re-confirmed
+/// against real orbits' near-pole arcs (TASK-M3-11, which reports them against `π·r_pole` and `(π/2)·r_pole`); it cites
+/// REQ-INT-086 until then. `kernel::shape`'s `theta_step` and `in_disc` take it as a parameter; no product code passes
+/// it yet, and the kernel's tests read it from here.
+pub const R_POLE: ConstantBuilder = proposed(
+    "r_pole",
+    0.01,
+    Admissibility::CanonicalUnits,
+    "REQ-INT-086",
+    "M3",
+);
+
+/// The tolerance on `‖n‖ − 1` at f32 of the paired test asserting `‖n‖ = 1` for vector fields (REQ-VAL-122;
+/// gui_state_contract §4): 64 U = 2⁻¹⁸ ≈ 3.81e-6, U = 2⁻²⁴ the f32 unit roundoff. `n = (a − b, 2p, 2q)/I` is exactly
+/// unit for any `ρ̃`, `λ̃`, so only the rounding of `a`, `b`, `p`, `q`, `I`, the three divisions and the fragment's
+/// `length` departs from it, about 30 U to first order, rounded up (TASK-M1-12, PR #179). Confirmed by the human at the
+/// M1 gate (R-433), one entry in place of two test files' definitions.
+pub const N_NORM_TOL: ConstantBuilder = confirmed("n_norm_tol", 1.0 / 262_144.0, R433);
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -643,9 +681,9 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 };
 
 /// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
-/// (TASK-M2-01; dd_generation_root §3.9), and the presentation constants the generated views and the prelude read: the
-/// log floors, the hatch and the hue wheel (TASK-M1-18; R-427). No `diffusion` sentinel: an invalid fit reads NaN by
-/// the predicate `n ≥ 2` (R-245).
+/// (TASK-M2-01; dd_generation_root §3.9), the presentation constants the generated views and the prelude read: the
+/// log floors, the hatch and the hue wheel (TASK-M1-18; R-427), and `r_pole` and the ‖n‖ = 1 tolerance (R-433). No
+/// `diffusion` sentinel: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -672,4 +710,6 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HATCH_HALF_PERIOD,
     HUE_WHEEL_L,
     HUE_WHEEL_C,
+    R_POLE,
+    N_NORM_TOL,
 ];

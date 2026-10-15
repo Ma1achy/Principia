@@ -20,9 +20,9 @@
 //!   f32 and f64, measured against an exact reference, and the proposed `r_pole`'s error.
 //! - `shape_landmarks`: the shape map's landmarks (R-14; dd_integrator §3.7).
 //!
-//! Each runs at f64 and, where its path is exact at f32, at f32 too. `r_pole` is REQ-INT-086's calibration: the value
-//! here is the proposal, unconfirmed until the M1 gate (R-71). Each check takes the step it tests as an argument, so
-//! its control runs the same check on a faulty one.
+//! Each runs at f64 and, where its path is exact at f32, at f32 too. `r_pole` is REQ-INT-086's calibration, read from
+//! the constants register: confirmed at the M1 gate and provisional until M3 (R-433). Each check takes the step it
+//! tests as an argument, so its control runs the same check on a faulty one.
 
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
@@ -35,8 +35,9 @@ use kernel::Real;
 use spirv_std::num_traits::{Float, FloatConst};
 use validation::negative_control;
 
-/// The proposed pole radius (REQ-INT-086; proposed, R-71; unconfirmed until the M1 gate).
-const R_POLE: f64 = 1e-2;
+/// The pole radius, the constants register's `r_pole` (REQ-INT-086; confirmed at the M1 gate, provisional until M3,
+/// R-433), read from there rather than defined here.
+const R_POLE: f64 = validation::R_POLE.number();
 
 /// The step arc on the sphere of every synthetic path here stays below `π·r_pole`, about 0.031 rad, where it passes
 /// near the disc: past that, a step's longitude change near the disc's edge can exceed π, and the principal value picks

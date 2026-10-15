@@ -151,7 +151,7 @@ pub fn debug_invalid(frag_xy: [f64; 2]) -> Rgb {
 /// the ground of the "not yet" style ([`debug_not_yet`], R-399), as 8-bit sRGB: `#4E4E4E`, OKLab lightness 0.424.
 /// Proposed, R-71 (REQ-COL-053, RQ-233): among the 8-bit greys it is the one farthest in OKLab from its nearest outcome
 /// class or hatch colour: 0.230 from `#3462E0` (collision 1–2) and 0.231 from `#141418` (bounded), and 0.101 from the
-/// viridis ramp; the evidence is `render/tests/not_yet_grey.rs`'s. The human confirms it at the M1 gate.
+/// viridis ramp; the evidence is `render/tests/not_yet_grey.rs`'s. Confirmed by the human at the M1 gate (R-433).
 /// `present.wgsl`'s `DBG_NOT_YET` is its linear value.
 pub const NOT_YET_SRGB8: [u8; 3] = [0x4e, 0x4e, 0x4e];
 
@@ -160,14 +160,18 @@ pub fn not_yet() -> Rgb {
     srgb8(NOT_YET_SRGB8)
 }
 
-/// The "not yet" style's dots (R-399), as 8-bit sRGB: `#808080`, OKLab lightness 0.600, 0.176 above the grey. Proposed,
-/// R-71 (REQ-COL-064): the human confirms it at the M1 gate. `present.wgsl`'s `DBG_NOT_YET_DOT` is its linear value.
-pub const NOT_YET_DOT_SRGB8: [u8; 3] = [0x80, 0x80, 0x80];
+/// The "not yet" style's dots (R-399), as 8-bit sRGB: `#909090`, OKLab lightness 0.653, 0.229 above the grey. Proposed,
+/// R-71 (REQ-COL-064), as `#808080`; confirmed by the human at the M1 gate with the dots changed to `#909090` (R-434),
+/// so that no flat palette colour comes within the hatch's τ = 0.101 (R-429) of every pixel of a 4 × 4 block: the
+/// nearest is 0.115 from its farthest pixel (`render/tests/not_yet_style.rs`). `present.wgsl`'s `DBG_NOT_YET_DOT` is
+/// its linear value.
+pub const NOT_YET_DOT_SRGB8: [u8; 3] = [0x90, 0x90, 0x90];
 
-/// The stipple's cell, in pixels: one dot in each `NOT_YET_CELL` × `NOT_YET_CELL` cell, at its corner.
+/// The stipple's cell, in pixels: one dot in each `NOT_YET_CELL` × `NOT_YET_CELL` cell, at its corner. Confirmed at
+/// the M1 gate (R-434).
 pub const NOT_YET_CELL: i64 = 4;
 
-/// The stipple's dot, in pixels: `NOT_YET_DOT` × `NOT_YET_DOT`.
+/// The stipple's dot, in pixels: `NOT_YET_DOT` × `NOT_YET_DOT`. Confirmed at the M1 gate (R-434).
 pub const NOT_YET_DOT: i64 = 2;
 
 /// `DBG_NOT_YET_DOT`: [`NOT_YET_DOT_SRGB8`], decoded to linear.
@@ -175,7 +179,7 @@ pub fn not_yet_dot() -> Rgb {
     srgb8(NOT_YET_DOT_SRGB8)
 }
 
-/// Whether `debug_not_yet` draws a dot at the pixel `frag_xy` (proposed, R-71; REQ-COL-064): `p = ⌊frag_xy⌋` in the
+/// Whether `debug_not_yet` draws a dot at the pixel `frag_xy` (REQ-COL-064; confirmed, R-434): `p = ⌊frag_xy⌋` in the
 /// first [`NOT_YET_DOT`] pixels of its [`NOT_YET_CELL`]-pixel cell along both axes.
 pub fn not_yet_dot_at(frag_xy: [f64; 2]) -> bool {
     frag_xy
