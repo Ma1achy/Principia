@@ -41,7 +41,8 @@ use validation::{negative_control, Declaration, UniformType};
 const GUARD: &str =
     "    if ((bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u) { return debug_invalid(ctx.frag_xy); }";
 
-/// The guard's condition, as the views write it.
+/// The guard's condition, as the views write it: the controls' edit.
+#[cfg(feature = "controls")]
 const GUARD_TEST: &str = "(bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u";
 
 /// `d_min`'s unset line: its f16 +∞, widened, by its bits (R-271, R-280, R-399).
@@ -683,6 +684,7 @@ fn twin(n: &NumericView, x: f32, auto: bool) -> Shown {
 }
 
 /// A twin whose guard tests the canonical quiet NaN alone, as TASK-M1-09 built it: the controls' wrong twin.
+#[cfg(feature = "controls")]
 fn nan_alone(n: &NumericView, x: f32, auto: bool) -> Shown {
     if x.to_bits() == 0x7fc0_0000 {
         return Shown::Invalid;
