@@ -5,8 +5,8 @@
 //!   `tanh_beta`, `softmax_tanh`) gives, past the bound, the bits it gives at the bound, a NaN control giving NaN.
 //!   (`stick_breaking` also reads its control through `σ(2z)`, so its value moves past the bound; its `tanh` terms are
 //!   the first check's.)
-//! - `tanh_sat_below_metal`: the bound lies below 44, where Metal's GPU `tanh` was measured to give 0 (and NaN from
-//!   44.5, TASK-M2-06's probe), so the GPU never evaluates `tanh` where it fails.
+//! - `tanh_sat_below_metal`: the bound lies below 43.671875, from which Metal's GPU `tanh` was measured to fail (0, then
+//!   NaN; TASK-M2-06's probe), so the GPU never evaluates `tanh` where it fails.
 //!
 //! The decode stage on the GPU at saturated controls is `engine`'s `decode_stage_identities`.
 
@@ -140,11 +140,14 @@ negative_control!(
     check_bound::<f64>(9.0)
 );
 
-/// `t` lies below the first argument at which Metal's GPU `tanh` was measured to fail, 44 (0 there, NaN from 44.5).
+/// The first argument at which Metal's GPU `tanh` was measured to fail (0 there, NaN further on).
+const METAL_ONSET: f64 = 43.671875;
+
+/// `t` lies below [`METAL_ONSET`].
 fn check_below_metal(t: f64) {
     assert!(
-        t < 44.0,
-        "tanh_sat = {t} is not below 44, where Metal's GPU tanh gives 0"
+        t < METAL_ONSET,
+        "tanh_sat = {t} is not below 43.671875, where Metal's GPU tanh fails"
     );
 }
 
@@ -156,7 +159,7 @@ fn tanh_sat_below_metal() {
 
 negative_control!(
     tanh_sat_below_metal,
-    "a bound of 44 must fail",
-    expected = "is not below 44",
-    check_below_metal(44.0)
+    "a bound at Metal's onset must fail",
+    expected = "is not below 43.671875",
+    check_below_metal(METAL_ONSET)
 );

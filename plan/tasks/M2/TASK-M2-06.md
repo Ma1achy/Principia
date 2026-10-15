@@ -64,7 +64,7 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
   selects go in the shared source, `crates/kernel/src/decode/descriptor.rs`, which TASK-M2-03 wrote with plain
   quotients, so the CPU-f64 path stores the same bits. `decode_stage_descriptor` includes pole inputs at f32
   (REQ-TOOL-030).
-- **Metal's `tanh` (applied per R-369, the orchestrator's decision, recorded in the PR):** Metal's GPU `tanh` is 0 at 44 and NaN from 44.5, so
-  the decode stage clamps `tanh`'s argument to `±tanh_sat` (dd_generation_root §3.9's `tanh` operator, an R-72
+- **Metal's `tanh` (applied per R-369, the orchestrator's decision, recorded in the PR):** Metal's GPU `tanh` fails from 43.671875, 0 and then
+  NaN, so the decode stage clamps `tanh`'s argument to `±tanh_sat` (dd_generation_root §3.9's `tanh` operator, an R-72
   definition), through the generator; `tanh_sat` is a provisional register entry, its value REQ-DEC-047's calibration
   (R-71), proposed here.

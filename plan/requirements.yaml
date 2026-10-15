@@ -884,7 +884,7 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: numerical gate
-    detail: "the proposal shows the bound at or above where tanh rounds to ±1 at f32 and f64 (no CPU value changes at either width, the goldens unchanged) and below where the measured GPU tanh fails (Metal: 0 at 44, NaN from 44.5), with the decode stage's range and identities holding on the GPU at saturated controls; recorded in decisions.md"
+    detail: "the proposal shows the bound at or above where tanh rounds to ±1 at f32 and f64 (no CPU value changes at either width, the goldens unchanged) and below where the measured GPU tanh fails (Metal: from 43.671875, 0 and then NaN), with the decode stage's range and identities holding on the GPU at saturated controls; recorded in decisions.md"
   rulings:
   - R-71
   milestone: M2

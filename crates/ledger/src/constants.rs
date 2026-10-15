@@ -469,7 +469,7 @@ pub const EPS_M01: ConstantBuilder = ConstantBuilder {
 /// `tanh_sat`: the bound dd_generation_root §3.9's `tanh` operator clamps its argument to, `tanh(clamp(x, ±tanh_sat))`,
 /// a NaN kept (an R-72 definition, TASK-M2-06). REQ-DEC-047's proposal (R-71), provisional until the M2 gate (R-427):
 /// `tanh` rounds to ±1 from `|x|` ≈ 9.01 at f32 and ≈ 19.06 at f64, so 20 changes no CPU value at either width, and it
-/// lies below 44, where Metal's GPU `tanh` gives 0, and 44.5, from which it gives NaN.
+/// lies below 43.671875, from which Metal's GPU `tanh` fails, 0 and then NaN.
 pub const TANH_SAT: ConstantBuilder = proposed(
     "tanh_sat",
     20.0,

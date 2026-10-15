@@ -788,7 +788,7 @@ citing its calibration requirement, and read from the register like any other; n
 | `log_floor_rho_ratio` | 2⁻²³ ≈ 1.19e-7, `rho_ratio`'s log floor, assuming the mass-weighted ‖ρ̃‖/‖λ̃‖; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `log_floor_r_min_pair_0` | 2⁻¹⁴ ≈ 6.10e-5, `r_min_pair_0`'s log floor, a distance; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `eps_m01` | 10⁻⁵, the `DEGENERATE(M01_TINY)` threshold (dd_decoder §3.1), a threshold with its measured gap | canonical-units | M2 | REQ-DEC-039 |
-| `tanh_sat` | 20, the bound §3.9's `tanh` operator clamps its argument to: `tanh` rounds to ±1 from `abs(x)` ≈ 9.01 at f32 and ≈ 19.06 at f64, so the clamp changes no CPU value at either width, while Metal's GPU `tanh` is 0 at 44 and NaN from 44.5 (TASK-M2-06) | canonical-units | M2 | REQ-DEC-047 |
+| `tanh_sat` | 20, the bound §3.9's `tanh` operator clamps its argument to: `tanh` rounds to ±1 from `abs(x)` ≈ 9.01 at f32 and ≈ 19.06 at f64, so the clamp changes no CPU value at either width, while Metal's GPU `tanh` fails from 43.671875, 0 and then NaN (TASK-M2-06) | canonical-units | M2 | REQ-DEC-047 |
 | `r_pole` | 0.01, the pole radius of the unwrapped phase `θ̃` on the unit shape sphere (dd_integrator §3.7, R-389); confirmed at the M1 gate and marked provisional until M3, where it is re-confirmed against real orbits' near-pole arcs (R-433) | canonical-units | M3 | REQ-INT-086 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
