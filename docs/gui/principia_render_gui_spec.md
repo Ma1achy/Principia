@@ -994,8 +994,11 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
 - **Preview** — sphere vs illustrative-slice toggle; which is default.
 - ~~**The GUI questions RQ-20 to RQ-24**~~ **ruled by R-64 to R-68** (step 6): the stain is a graph, one Inspector
   window, the scrubber stays, the display chain and its controls, and artboard values are illustrative.
-- **Standing composition-spec gaps** (to reconcile on that doc's next pass, tracked in
+- ~~**Standing composition-spec gaps** (to reconcile on that doc's next pass, tracked in
   `principia_colour_composition.md`): colour-source-as-axis, overlays-as-post-chain-over-configured-
   base, physics-as-overlay-op, gradient-unifies-the-ramp, per-footprint vs quad-aggregate spread,
   the debug taxonomy, the addressing channel convention (UV=RG / TL=RB / centre=BG / index=grey), and
-  boundaries-as-overlay. This GUI spec assumes those resolutions.
+  boundaries-as-overlay. This GUI spec assumes those resolutions.~~ **Closed (R-72; REQ-COL-054; TASK-M7-01):** each
+  resolution is written in `principia_colour_composition.md` §9, "The stain editor's composition resolutions". Its open
+  parts are in `REVIEW_QUEUE.md`: RQ-280 (the addressing convention's unnamed channel and index), RQ-281 (the
+  diagnostic and profiling groups' membership) and RQ-282 (a ramp of custom stops).
