@@ -1890,3 +1890,84 @@ fn mock_windows_open_run_fields_show_their_own_text_and_marks() {
         own(&last)
     });
 }
+
+/// Display: the stages in order, an arrow between each two; the chosen style and simulation alone marked; each check
+/// box showing its own setting.
+#[test]
+fn mock_windows_open_display_draws_its_order_and_marks() {
+    use egui::accesskit::{Role, Toggled};
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Display, None);
+    settle(&mut h, &mut app);
+    let output = h.frame(&mut app, Vec::new());
+    // The order line: each stage, then an arrow, in reading order (it wraps), the stages alone at the ends.
+    let mut line: Vec<(egui::Pos2, String)> = display::ORDER
+        .iter()
+        .chain(["→"].iter())
+        .flat_map(|s| {
+            nodes(&output, s)
+                .into_iter()
+                .map(|n| (n.0.left_center(), s.to_string()))
+        })
+        .collect();
+    let row = |p: egui::Pos2| (p.y / 4.0).round();
+    line.sort_by(|a, b| row(a.0).total_cmp(&row(b.0)).then(a.0.x.total_cmp(&b.0.x)));
+    let got: Vec<&str> = line.iter().map(|(_, s)| s.as_str()).collect();
+    let mut want = Vec::new();
+    for (i, s) in display::ORDER.iter().enumerate() {
+        if i > 0 {
+            want.push("→");
+        }
+        want.push(*s);
+    }
+    assert_eq!(got, want, "the order line");
+    let ticked = |n: &egui::accesskit::Node| n.toggled() == Some(Toggled::True);
+    let focus_on = |app: &mut App<MockSide>, section: &str, id: &str| {
+        app.view.focus.path = vec![
+            windows::entry(Window::Display).scope.to_owned(),
+            section.to_owned(),
+            id.to_owned(),
+        ];
+    };
+    for (style, simulation, flags) in [(3, 2, [true, false, true]), (0, 4, [false, true, false])] {
+        let s = &mut app.windows.display;
+        (s.style, s.simulation) = (style, simulation);
+        (s.paper, s.misregistration, s.crosshair) = (flags[0], flags[1], flags[2]);
+        focus_on(&mut app, display::STYLE, display::STYLES[0].0);
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let styles: Vec<bool> = display::STYLES
+            .iter()
+            .map(|(id, _)| ticked(&node_at(&app, &output, id, Role::Button)))
+            .collect();
+        let want: Vec<bool> = (0..display::STYLES.len()).map(|i| i == style).collect();
+        assert_eq!(styles, want, "style {style}");
+        let boxes = [display::PAPER, display::MISREGISTRATION]
+            .map(|id| ticked(&node_at(&app, &output, id, Role::CheckBox)));
+        assert_eq!(boxes, [flags[0], flags[1]]);
+        focus_on(&mut app, display::OVERLAYS, display::OVERLAY_IDS[0].0);
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let sims: Vec<bool> = display::SIMULATIONS
+            .iter()
+            .map(|(id, _)| ticked(&node_at(&app, &output, id, Role::Button)))
+            .collect();
+        let want: Vec<bool> = (0..display::SIMULATIONS.len())
+            .map(|i| i == simulation)
+            .collect();
+        assert_eq!(sims, want, "simulation {simulation}");
+        let o = app.snapshot().render.overlays.clone();
+        let overlays =
+            display::OVERLAY_IDS.map(|(id, _)| ticked(&node_at(&app, &output, id, Role::CheckBox)));
+        assert_eq!(
+            overlays,
+            [o.grid, o.class_edges, o.t_end_contours, flags[2]]
+        );
+    }
+    rejects("an arrow before the first stage", || {
+        let mut w = want.clone();
+        w.insert(0, "→");
+        assert_eq!(got, w)
+    });
+}
