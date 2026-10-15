@@ -283,6 +283,8 @@
   - R-21
   - R-133
   milestone: M2
+  rq:
+  - RQ-285
   note: "R-133: R-21's 'SAT flags' is read as the encode clamp flag lookup_clamped (inverse_encode Part 3–4, dd_encode §3.5)."
 - id: REQ-DEC-015
   area: DEC
@@ -320,6 +322,8 @@
     detail: "T3 with the half-mirror catch: random-gauge x → E → D equals C(x) with |L_z| sign consistent with lookup_mirrored; a config-only mirror must fail this check"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-285
 - id: REQ-DEC-017
   area: DEC
   statement: "The mirror must be the one test in encode's frame — mirror iff λ̃_y < −δ_λ, with λ̃ = √μ_λ·λ and δ_λ = 10⁻¹² — and |λ̃_y| ≤ δ_λ must resolve to no mirror, deterministically, on every backend."
@@ -10949,6 +10953,9 @@
   - R-297
   - R-358
   milestone: M2
+  rq:
+  - RQ-284
+  - RQ-285
   note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says."
 - id: REQ-COL-007
   area: COL
@@ -11891,6 +11898,8 @@
   - R-355
   - R-358
   milestone: M2
+  rq:
+  - RQ-284
   note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note)."
 - id: REQ-COL-061
   area: COL
@@ -18201,6 +18210,8 @@
   - R-71
   - R-86
   milestone: M3
+  rq:
+  - RQ-284
   note: "Tolerance: REQ-VAL-117 (calibration)."
 - id: REQ-VAL-028
   area: VAL
