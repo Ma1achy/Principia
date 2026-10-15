@@ -9438,11 +9438,12 @@ The human's words (R-433 quotes the whole message):
   evidence check is R-433's.
 - **The goldens.** The seven cases that draw "not yet" are re-rendered on Metal: `debug-views/generated-d_min`,
   `m1-numeric/d_min`, `m1-numeric/d_min_ramp`, `m1-numeric/d_min_ramp_override`, `m1-outcome/outcome`,
-  `m1-outcome/outcome_edited` and `m1-synthetic/known_escaper`. Only the dot pixels change, each by 16 8-bit steps
-  (`#80` to `#90`), and no other pixel. Each row of `fixtures/golden/BASELINES.md` gives the new hash and leads with
-  R-434, the gate decision that set it (R-110), and is confirmed at it: re-rendered under a confirmed value, it is
-  not a proposal. The dot's 144 is an exact 8-bit level, far from a rounding tie, so each keeps one reference across
-  backends.
+  `m1-outcome/outcome_edited` and `m1-synthetic/known_escaper`. Only the dot pixels change, and no other pixel. The
+  golden target is `Rgba8Unorm` holding linear values, so each dot channel's stored byte goes from 55 to 71 (sRGB
+  `#80` to `#90`), 16 steps. Each row of `fixtures/golden/BASELINES.md` gives the new hash and leads with R-434, the
+  gate decision that set it (R-110), and is confirmed at it: re-rendered under a confirmed value, it is not a
+  proposal. The stored value, 255 × 0.27889428 = 71.118, is 0.382 of a step from the nearest rounding tie (71.5), so
+  each keeps one reference across backends.
 - **The docs** record the confirmed pattern, its dot and its bar: colour_composition §1.4, the render contract's
   stipple bullet, render_gui_spec §10.1, debug_tooling_plan §G and dd_colouring §3.8.
 - **REQ-COL-064** (reqio) gains R-434 among its rulings and sources, and a note giving the confirmed pattern, the dot

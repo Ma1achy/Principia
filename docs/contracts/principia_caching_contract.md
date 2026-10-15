@@ -40,6 +40,8 @@ Every knob has a blast radius. Consolidated from the render, integrator, and sch
 | `MAX_REL_DEPTH`, frame budget, in-flight limit | **Nothing.** Scheduler knobs — change what gets *scheduled*, never what anything computed *to* |
 | `render_scale`, lock-to-native | **Nothing.** Not sim-key (payload purity — render resolution is not in the sim key): it moves the *refinement target* (screen floor at render-pixel size). Lowering leaves existing deep quads valid-but-deeper-than-needed; raising computes new deeper quads, masked by blur (quality/device note) |
 
+`r_pole` (integrator contract Part 3, "2. Wrapper config"; R-433) is one of the row's thresholds: it shapes the stored `θ̃`, `_reserved`, `orbit_count` and `retrograde`, so changing it invalidates all sim buffers, and payloads computed under an earlier value are never served (applied per R-369, PR #210).
+
 The navigation rows are the subtle ones and follow from Part 4 of the chart contract and R-92: **in-plane pan and zoom re-address; slicing out of the plane, tilting and rotating re-integrate — and neither invalidates.** A tilt gesture is a stream of new slice planes, each a new identity integrated fresh; the cache grows, nothing in it becomes wrong.
 
 **The bake cache is a different animal entirely.** The equirect texture keys on `(colour occupant + params)` only — chart-independent, IC-independent, quad-independent. One texture serves every quad of every chart. It does not participate in the quad cache or its eviction; it has its own trivial lifecycle (rebake on param change, debounced).
