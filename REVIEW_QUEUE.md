@@ -60,7 +60,7 @@ Nothing is chosen.*
 - **Waits:** nothing in M1; TASK-M1-21's PR does not wait. REQ-PAY-093's confirmation at the M5 gate is where
   `alpha_energy`'s range is settled; it is named, not marked.
 
-## RQ-280: The addressing channel convention names two channels per position and "grey" for an index, but not the third channel, which index, or how it maps to [0, 1] *(silence, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-17, TASK-M7-18)*
+## RQ-280: The addressing channel convention names two channels per position and "grey" for an index, but not the third channel of TL = RB and centre = BG, which index, or how it maps to [0, 1] *(silence, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-17, TASK-M7-18)*
 
 *Found by TASK-M7-01, writing render GUI spec §16's standing gaps into colour_composition §9. Nothing is chosen.*
 
@@ -69,19 +69,23 @@ Nothing is chosen.*
     centre=BG / index=grey)".
   - `docs/design/principia_colour_composition.md` § "6. Debug views as presets": "**UV view** = `colour =
     ctx.screen.uv → RG` (fragment addressing) or `ctx.quad.uv → RG` (structural addressing)".
-  - `docs/design/principia_debug_tooling_plan.md` §F, "UV passthrough": "raw post-flip `(u,v)` as a gradient (`u→red,
-    v→green`)".
+  - `docs/design/principia_debug_tooling_plan.md` § "F. Structural views", the "UV passthrough" row: "raw post-flip
+    `(u,v)` as a gradient (`u→red, v→green`), + quad-local `δ` as a second mode: … `u`'s in red and `v`'s in green,
+    blue 0 (REQ-TOOL-153; R-72, written by TASK-M1-07; in exact arithmetic it draws `t`, as `ctx.quad.uv → RG` does,
+    so the two agree unless the δ path is wrong)".
   - `docs/design/principia_colour_composition.md` § "3. The `ctx` contract", the quad lane: "`index`, `depth`, `tl`
     (slice coords), `centre` (slice coords), …"; the tile/sample lane: "`tile_index` (within quad), `sample_index`".
 - **Silence:**
-  - For each pair (UV = RG, TL = RB, centre = BG) the passages name two channels; the value of the third (0, or
-    something else) is not written. colour_composition §9.7 writes the pairs' order (`x` → first, `y` → second) by
-    the pattern of `u → red, v → green`.
+  - UV = RG's third channel is written: §F's δ mode draws blue 0 and agrees with `ctx.quad.uv → RG`, which holds
+    only with that view's blue 0 too, so colour_composition §9.7 writes B = 0 for UV = RG (both sources, §6's one UV
+    view). For TL = RB and centre = BG the passages name two channels; the third (G and R; 0, or something else) is
+    not written. colour_composition §9.7 writes the pairs' order (`x` → first, `y` → second) by the pattern of
+    `u → red, v → green`.
   - "index = grey" does not say which index: `ctx.quad.index`, `ctx.tile.tile_index` or `ctx.tile.sample_index`.
   - An index is an integer, and grey takes a value in [0, 1]; no mapping is written (divided by a count, a hash, or
     a cyclic modulus).
 - **Options seen:**
-  - (a) The unnamed channel is 0.
+  - (a) TL = RB's G and centre = BG's R are 0, as UV = RG's B is.
   - (b) "index" is `ctx.quad.index`, mapped by a stated normalisation (for example over the visible quads), or a
     hash to grey as `word`-hash's categorical view.
   - (c) One preset per index (quad, tile, sample), each with its own mapping.

@@ -683,13 +683,16 @@ payload field views and §E's live-shape and accumulator views, is RQ-281.
 
 **9.7 The addressing channel convention.** An addressing preset writes a position into colour channels as render GUI
 spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v` → green (§6; debug tooling plan §F):
-- **UV = RG**: `ctx.screen.uv` or `ctx.quad.uv`, `u` → R, `v` → G;
+- **UV = RG**: `ctx.screen.uv` or `ctx.quad.uv`, `u` → R, `v` → G, B = 0. The UV passthrough's quad-local δ mode
+  draws "`u`'s in red and `v`'s in green, blue 0", and "in exact arithmetic it draws `t`, as `ctx.quad.uv → RG` does,
+  so the two agree unless the δ path is wrong" (debug tooling plan §F), which holds only with the RG view's blue 0
+  too; §6's UV view is one preset over either source, so `ctx.screen.uv → RG` takes the same;
 - **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B;
 - **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G;
 - **index = grey**: an index written as one value on all three channels.
 
-The channel each pair leaves unnamed, which index "index" is (`ctx.quad.index`, `ctx.tile.tile_index` or
-`ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280.
+The channel TL = RB and centre = BG leave unnamed (G and R), which index "index" is (`ctx.quad.index`,
+`ctx.tile.tile_index` or `ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280.
 
 **9.8 Boundaries are an overlay.** Quad and tile boundaries are Tier-1 overlays (render GUI spec §12.1): a function of
 the position within the cell, drawn by an ordinary post node from `ctx.quad.uv` or `ctx.tile.uv`, with no data
