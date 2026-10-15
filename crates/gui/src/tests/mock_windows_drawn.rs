@@ -435,6 +435,17 @@ fn mock_windows_drawn_the_flame_graph() {
     tiny.stages.reduce.scopes[0].ms = 0.0;
     let shapes = painted(|ui| profiler::flame(ui, &tiny));
     assert_eq!(fills(&shapes, STAGE_COLOURS[1])[0].width(), 1.0);
+    // A child starts its own start in from its parent's: a parent moved later moves its child with it.
+    let mut later = canned::frame(1);
+    later.stages.integrate.scopes[0].start_ms = 0.5;
+    let shapes = painted(|ui| profiler::flame(ui, &later));
+    let moved = fills(&shapes, STAGE_COLOURS[0]);
+    let want = bar(0.5 + child.start_ms, child.ms, 1.0);
+    assert!(
+        close(moved[1].min, want.min) && close(moved[1].max, want.max),
+        "{:?} against {want:?}",
+        moved[1]
+    );
     let got = reduce[0];
     rejects("reduce drawn from the frame's start", || {
         assert!(close(got.min, pos2(rect.min.x, rect.min.y)))
