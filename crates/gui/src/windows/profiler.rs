@@ -2,15 +2,16 @@
 //! the window and its tabs, Timeline, Flame, GPU, Memory, Counters and Arbiter, with live / pause / Capture, drawn from
 //! the engine side's trace in profiler schema v1's shape (the mock's canned one). Timeline: the frame-time trace with
 //! frame ms, p50, p95, p99 and the worst frame (nearest rank, `engine::contract::profile::percentile`, the one
-//! percentile code, telemetry §5.5), where the frame goes over the five stages (a donut), and stacked per-frame bars for
-//! the last 60. Flame: the last frame's nested scopes under the five stages. GPU: its passes. Memory: heap, GPU and
-//! tile cache over the trace, the live allocations by type with their change, and the leak detector's flags. Counters:
-//! the frame record's counters. Arbiter: empty, TASK-M6-22's to fill (R-152).
+//! percentile code, telemetry §5.5), where the frame goes over the five stages (a donut), stacked per-frame bars
+//! for the last 60, and the substeps-per-pixel histogram with the cap marked at `N_max`. Flame: the last frame's nested
+//! scopes under the five stages. GPU: its passes. Memory: heap, GPU and tile cache over the trace, the live allocations
+//! by type with their change, and the leak detector's flags. Counters: the frame record's counters. Arbiter: empty,
+//! TASK-M6-22's to fill (R-152).
 //!
 //! The passive-logging switch, the compute fast-math line and the agents' commands are shown as frames (applied per
-//! R-369; R-129 checks them by presence until the M8 dev GUI); the substeps-per-pixel histogram has no field in
-//! schema v1's frame record, so it is not drawn here. Export trace, Open in Tracy and Headless render… write nothing
-//! on the mock; TASK-M8-28 fills the rest.
+//! R-369; R-129 checks them by presence until the M8 dev GUI). Schema v1's frame record has no per-pixel substep field
+//! (RQ-286), so the histogram draws the mock's own placeholder bins, and says so. Export trace, Open in Tracy and
+//! Headless render… write nothing on the mock; TASK-M8-28 fills the rest.
 
 use eframe::egui::{
     self, pos2, vec2, Button, Color32, Grid, Rect, RichText, Sense, Shape, Stroke, Ui,
@@ -75,6 +76,11 @@ pub const NO_FILE: &str = "the mock writes no file";
 pub const NO_TRACE: &str = "no trace";
 /// How many frames the stacked bars show (§G5).
 pub const BARS: usize = 60;
+
+/// `N_max`'s default, where the histogram marks the cap (§G5, R-68; Run's `N_max`).
+pub const N_MAX: u32 = 64;
+/// What the histogram says of its data.
+pub const HISTOGRAM_NOTE: &str = "mock bins: schema v1 records no substeps per pixel (RQ-286)";
 
 /// Each stage's colour, in [`Stage::ALL`]'s order (a look choice, R-390, 04_windows.png's donut).
 pub const STAGE_COLOURS: [Color32; 5] = [
@@ -255,6 +261,38 @@ pub(crate) fn stacked(ui: &mut Ui, frames: &[FrameRecord]) {
             y -= h;
         }
     }
+}
+
+/// The substeps-per-pixel histogram: a bar per bin of `width` substeps from the left, in the integrate stage's colour,
+/// its height the log of its pixel count against the fullest bin's (the long tail would vanish on a linear scale), and
+/// the cap `n_max` marked by a line labelled "N_max n". The axis spans the bins or the cap, whichever is further.
+pub(crate) fn substep_histogram(ui: &mut Ui, bins: &[u64], width: u32, n_max: u32) {
+    let rect = plot(ui, 56.0);
+    let span = (bins.len() as u32 * width).max(n_max).max(1) as f32;
+    let x = |substeps: u32| rect.min.x + rect.width() * substeps as f32 / span;
+    let top = bins.iter().map(|&c| (c as f32).ln_1p()).fold(0.0, f32::max);
+    for (k, &count) in bins.iter().enumerate() {
+        let h = rect.height() * (count as f32).ln_1p() / top.max(f32::MIN_POSITIVE);
+        let k = k as u32;
+        let bar = Rect::from_min_max(
+            pos2(x(k * width) + 1.0, rect.max.y - h),
+            pos2(x((k + 1) * width) - 1.0, rect.max.y),
+        );
+        ui.painter().rect_filled(bar, 0.0, STAGE_COLOURS[0]);
+    }
+    let cap = x(n_max);
+    let warn = ui.visuals().warn_fg_color;
+    ui.painter().line_segment(
+        [pos2(cap, rect.min.y), pos2(cap, rect.max.y)],
+        Stroke::new(1.5, warn),
+    );
+    ui.painter().text(
+        pos2(cap - 3.0, rect.min.y + 2.0),
+        egui::Align2::RIGHT_TOP,
+        format!("N_max {n_max}"),
+        egui::FontId::monospace(11.0),
+        warn,
+    );
 }
 
 /// The last frame's nested scopes, a row per depth, the stages laid end to end.
@@ -494,6 +532,17 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, trace: Option<&
                     donut(ui, last);
                     ui.label(RichText::new(format!("▾ Per frame · stacked, last {BARS}")).strong());
                     stacked(ui, &trace.frames);
+                    ui.label(
+                        RichText::new(format!("▾ Substeps per pixel · cap at N_max {N_MAX}"))
+                            .strong(),
+                    );
+                    substep_histogram(
+                        ui,
+                        &crate::mock::profile::SUBSTEPS_PER_PIXEL,
+                        crate::mock::profile::SUBSTEP_BIN,
+                        N_MAX,
+                    );
+                    note(ui, HISTOGRAM_NOTE);
                 }
                 "pf_flame" => {
                     ui.label(RichText::new("▾ Flame · main thread").strong());

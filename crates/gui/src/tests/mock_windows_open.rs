@@ -311,6 +311,15 @@ fn mock_windows_open_profiler_tabs_read_the_canned_trace() {
         check_has(&names, &[want, "worst"], id);
         seen.push(names);
     }
+    // The histogram under the stacked bars, with its cap and its note (gui review 5529720235, finding 3).
+    check_has(
+        &seen[0],
+        &[
+            "▾ Substeps per pixel · cap at N_max 64",
+            profiler::HISTOGRAM_NOTE,
+        ],
+        "Timeline",
+    );
     rejects("the Timeline tab read as the Memory tab", || {
         check_has(&seen[0], &[canned::LEAK], "Timeline")
     });

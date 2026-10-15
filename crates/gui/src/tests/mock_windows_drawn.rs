@@ -382,6 +382,76 @@ fn mock_windows_drawn_the_stacked_bars() {
     });
 }
 
+/// The substeps-per-pixel histogram (§G5; gui review 5529720235, finding 3): a bar per bin from the left, its height
+/// the log of its count against the fullest bin's, and the cap marked by a line and "N_max n" where `n_max` falls.
+#[test]
+fn mock_windows_drawn_the_substep_histogram() {
+    let v = visuals();
+    let cap_line = |shapes: &[Shape]| {
+        shapes
+            .iter()
+            .find_map(|s| match s {
+                Shape::LineSegment { points, stroke } if stroke.color == v.warn_fg_color => {
+                    Some(*points)
+                }
+                _ => None,
+            })
+            .expect("the cap's line")
+    };
+    let bins = canned::SUBSTEPS_PER_PIXEL;
+    let shapes =
+        painted(|ui| profiler::substep_histogram(ui, &bins, canned::SUBSTEP_BIN, profiler::N_MAX));
+    let rect = plot_rect(&shapes, v.extreme_bg_color);
+    assert_eq!(rect.height(), 56.0);
+    let bars = fills(&shapes, STAGE_COLOURS[0]);
+    assert_eq!(bars.len(), bins.len());
+    let top = (bins.iter().copied().max().unwrap() as f32).ln_1p();
+    let w = rect.width() / bins.len() as f32;
+    for (k, (bar, count)) in bars.iter().zip(bins).enumerate() {
+        let h = rect.height() * (count as f32).ln_1p() / top;
+        let want = Rect::from_min_max(
+            pos2(rect.min.x + w * k as f32 + 1.0, rect.max.y - h),
+            pos2(rect.min.x + w * (k + 1) as f32 - 1.0, rect.max.y),
+        );
+        assert!(
+            close(bar.min, want.min) && close(bar.max, want.max),
+            "bin {k}: {bar:?} against {want:?}"
+        );
+    }
+    // 16 bins of 4 end at 64: the cap at the right edge, the full height, labelled.
+    let [a, b] = cap_line(&shapes);
+    assert!(
+        close(a, pos2(rect.max.x, rect.min.y)) && close(b, rect.max),
+        "{a:?} {b:?}"
+    );
+    assert!(texts(&shapes).iter().any(|(t, _)| t == "N_max 64"));
+    // A cap inside the bins falls where its substeps are; a cap past them stretches the axis to it.
+    let shapes = painted(|ui| profiler::substep_histogram(ui, &[1, 1, 1, 1], 4, 8));
+    let rect = plot_rect(&shapes, v.extreme_bg_color);
+    assert!((cap_line(&shapes)[0].x - rect.center().x).abs() < 1e-3);
+    assert!(texts(&shapes).iter().any(|(t, _)| t == "N_max 8"));
+    let shapes = painted(|ui| profiler::substep_histogram(ui, &[1, 1], 4, 16));
+    let rect = plot_rect(&shapes, v.extreme_bg_color);
+    assert!((cap_line(&shapes)[0].x - rect.max.x).abs() < 1e-3);
+    let bars = fills(&shapes, STAGE_COLOURS[0]);
+    assert!(
+        (bars[1].max.x - (rect.center().x - 1.0)).abs() < 1e-3,
+        "{bars:?}"
+    );
+    // An empty bin has no height; no bins at all draw no bar and still mark the cap.
+    let shapes = painted(|ui| profiler::substep_histogram(ui, &[0, 9], 4, 8));
+    assert_eq!(fills(&shapes, STAGE_COLOURS[0])[0].height(), 0.0);
+    let shapes = painted(|ui| profiler::substep_histogram(ui, &[], 4, 8));
+    assert!(fills(&shapes, STAGE_COLOURS[0]).is_empty());
+    assert!(texts(&shapes).iter().any(|(t, _)| t == "N_max 8"));
+    rejects("bars on a linear count scale", || {
+        let shapes = painted(|ui| profiler::substep_histogram(ui, &[1, 1000], 4, 8));
+        let rect = plot_rect(&shapes, v.extreme_bg_color);
+        let low = fills(&shapes, STAGE_COLOURS[0])[0];
+        assert!(low.height() < rect.height() * 2.0 / 1000.0, "{low:?}")
+    });
+}
+
 #[test]
 fn mock_windows_drawn_the_flame_graph() {
     let frame = canned::frame(1);

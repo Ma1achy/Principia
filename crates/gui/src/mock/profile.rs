@@ -20,6 +20,16 @@ pub const SLOW_FRAME: u64 = 37;
 /// The leak flag's message (placeholder content, as 04_windows.png's).
 pub const LEAK: &str = "wgpu::Buffer +18 while idle — first seen after stain recompile";
 
+/// The substeps-per-pixel histogram's bin width, in substeps: bins 1–4, 5–8, …, 61–64.
+pub const SUBSTEP_BIN: u32 = 4;
+/// The substeps-per-pixel histogram, placeholder content: schema v1's frame record has no per-pixel substep field
+/// (RQ-286), so this is the mock's own. Pixels per bin of [`SUBSTEP_BIN`] substeps up to `N_max` 64: most pixels
+/// cheap, the long tail near close encounters, and the last bin swollen by the pixels at the cap.
+pub const SUBSTEPS_PER_PIXEL: [u64; 16] = [
+    182_000, 64_000, 21_000, 9_400, 4_100, 2_300, 1_400, 900, 620, 430, 310, 240, 180, 150, 130,
+    1_900,
+];
+
 /// A scope with no children.
 fn leaf(name: &str, start_ms: f64, ms: f64) -> Scope {
     Scope {
