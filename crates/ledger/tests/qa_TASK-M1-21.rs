@@ -191,9 +191,9 @@ fn qa_m1_21_gap_not_coolwarm_fresh() {
 
 negative_control!(
     qa_m1_21_gap_not_coolwarm_fresh,
-    "a provisional field, `q_mass`, is on ramp_coolwarm",
-    expected = "the undeclared `q_mass` is placed on ramp_coolwarm",
-    check_not_coolwarm(&payload::ledger(), "q_mass")
+    "a provisional field, `mean_y`, is on ramp_coolwarm",
+    expected = "the undeclared `mean_y` is placed on ramp_coolwarm",
+    check_not_coolwarm(&payload::ledger(), "mean_y")
 );
 
 #[test]
@@ -211,14 +211,14 @@ fn qa_m1_21_gap_state_never_spans_zero() {
 negative_control!(
     qa_m1_21_gap_state_never_spans_zero,
     "a provisional range spans zero",
-    expected = "q_mass spans zero",
+    expected = "mean_y spans zero",
     assert!(
-        !payload::spans_zero(entry(&payload(), "q_mass")),
-        "q_mass spans zero"
+        !payload::spans_zero(entry(&payload(), "mean_y")),
+        "mean_y spans zero"
     )
 );
 
-// ── q_mass and mean_y: provisional, on cool-warm ───────────────────────────────────────────────────────────────────
+// ── mean_y: provisional, on cool-warm (q_mass declared by TASK-M2-03, R-426) ───────────────────────────────────────────────────────────────────
 
 fn check_provisional(es: &[Entry], want: &[(&str, &str)]) {
     for (name, requirement) in want {
@@ -236,9 +236,11 @@ fn check_provisional(es: &[Entry], want: &[(&str, &str)]) {
 
 #[test]
 fn qa_m1_21_provisional() {
-    check_provisional(
-        &payload(),
-        &[("q_mass", "REQ-PAY-097"), ("mean_y", "REQ-PAY-098")],
+    check_provisional(&payload(), &[("mean_y", "REQ-PAY-098")]);
+    // REQ-PAY-097 (R-426): `q_mass` is no longer provisional once declared.
+    assert!(
+        !matches!(state(&payload(), "q_mass"), RangeState::Provisional { .. }),
+        "`q_mass` is still provisional"
     );
 }
 
@@ -361,17 +363,8 @@ negative_control!(
 // ── No view changes ramp ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// The views on cool-warm before R-426: R-423's six less `theta` (now cyclic), `C_ty` (RQ-277), and the `diverging`
-/// `E_0` and `Lz_0`.
-const COOLWARM: [&str; 8] = [
-    "q_mass",
-    "ftle",
-    "mean_y",
-    "S",
-    "diffusion",
-    "C_ty",
-    "E_0",
-    "Lz_0",
-];
+/// `E_0` and `Lz_0`; less `q_mass`, whose range TASK-M2-03 declared [0, 1] (REQ-PAY-097, R-426).
+const COOLWARM: [&str; 7] = ["ftle", "mean_y", "S", "diffusion", "C_ty", "E_0", "Lz_0"];
 
 fn check_coolwarm(es: &[Entry], want: &[&str]) {
     let got: BTreeSet<&str> = es
@@ -392,7 +385,7 @@ negative_control!(
     qa_m1_21_coolwarm_set_unchanged,
     "`mean_y` taken off the expected set",
     expected = "the cool-warm views changed",
-    check_coolwarm(&payload(), &COOLWARM[..2])
+    check_coolwarm(&payload(), &COOLWARM[..1])
 );
 
 // ── The three range states, by the entry's own mark (§3.8; R-426) ────────────────────────────────────────────────

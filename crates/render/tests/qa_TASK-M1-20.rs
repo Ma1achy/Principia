@@ -419,13 +419,20 @@ fn check_theta_header(theta: &str) {
         "`theta`'s view does not default to RANGE_AUTO = 0"
     );
     assert_eq!(ramp_of(theta), "ramp_twilight", "`theta`'s ramp");
-    for f in ["q_mass", "ftle", "mean_y", "S", "diffusion"] {
+    for f in ["ftle", "mean_y", "S", "diffusion"] {
         assert_eq!(
             ramp_of(&generated(f)),
             "ramp_coolwarm",
             "`{f}` left ramp_coolwarm"
         );
     }
+    // R-426, REQ-PAY-097: `q_mass`'s range, declared [0, 1] by TASK-M2-03, does not span zero, so its view is on
+    // ramp_viridis (R-400).
+    assert_eq!(
+        ramp_of(&generated("q_mass")),
+        "ramp_viridis",
+        "`q_mass` is not on ramp_viridis"
+    );
 }
 
 #[test]
