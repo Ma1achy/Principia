@@ -463,10 +463,10 @@ fn mock_keyboard_windows_question_mark_and_ctrl_z_are_the_fields_while_typing() 
     press(&mut h, &mut app, Key::Enter, NONE);
     type_text(&mut h, &mut app, "x?");
     assert_eq!(app.windows.console.text, "x?", "? typed");
-    assert!(!app.keyboard.shortcuts_open, "? opened the overlay");
-    let typed = app.windows.console.text.clone();
+    let check_no_overlay = |open: bool| assert!(!open, "? opened the overlay");
+    check_no_overlay(app.keyboard.shortcuts_open);
     rejects("a ? while typing that opens the overlay", || {
-        assert!(typed.is_empty() || !typed.contains('?'))
+        check_no_overlay(true)
     });
     // Ctrl+Z (the command key) undoes the text edit, not the contract's history.
     let command = Modifiers {
@@ -476,7 +476,15 @@ fn mock_keyboard_windows_question_mark_and_ctrl_z_are_the_fields_while_typing() 
     };
     press(&mut h, &mut app, Key::Z, command);
     let _ = h.frame(&mut app, Vec::new());
-    assert_ne!(app.windows.console.text, "x?", "Ctrl+Z left the text");
+    // egui's undo takes the field back a step: a strict prefix of what was typed.
+    let check_undone = |text: &str| {
+        assert!(
+            text.len() < "x?".len() && "x?".starts_with(text),
+            "Ctrl+Z left {text:?}, not a strict prefix of \"x?\""
+        )
+    };
+    check_undone(&app.windows.console.text);
+    rejects("a Ctrl+Z that types a z", || check_undone("x?z"));
     check_no_undo(app.snapshot().history.undo_depth, depth);
     check_at(&at(&app), &sections()[1], INTERACT, "still typing");
     rejects("a field whose Ctrl+Z goes to the contract's undo", || {
