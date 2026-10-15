@@ -1483,3 +1483,75 @@ fn mock_windows_open_profiler_marks_its_tab_and_transport() {
         assert!(marked(&output, "Timeline"))
     });
 }
+
+/// The console's filters: warnings and errors carry their counts, as the footer counts them; all and info do not.
+#[test]
+fn mock_windows_open_console_filters_carry_their_counts() {
+    let names = drawn(Window::Console, |app| {
+        let engine = app.side().engine();
+        engine.raise_warning();
+        engine.raise_warning();
+        engine.raise_error();
+    });
+    check_has(
+        &names,
+        &["⚠ warnings 2", "× errors 1"],
+        "the counted filters",
+    );
+    let exact = |want: &str| assert!(names.iter().any(|n| n == want), "no `{want}` in {names:?}");
+    exact("all");
+    exact("info");
+    rejects("a warnings filter without its count", || exact("warnings"));
+}
+
+/// The Inspector marks its tab and its sphere or unwrapped view: one of each pair selected.
+#[test]
+fn mock_windows_open_inspector_marks_its_tab_and_view() {
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Inspector, None);
+    let marked = |output: &egui::FullOutput, label: &str| -> bool {
+        let t = toggled_all(output, label);
+        assert_eq!(t.len(), 1, "{label}: {t:?}");
+        t[0]
+    };
+    // The Trajectory panel has its own sphere and unwrapped: the window's are the ones at its places.
+    let at = |app: &App<MockSide>, output: &egui::FullOutput, id: &str, label: &str| -> bool {
+        let c = app.keyboard.place_of(id).expect("placed").rect.center();
+        let update = output
+            .platform_output
+            .accesskit_update
+            .as_ref()
+            .expect("AccessKit is on");
+        let hits: Vec<bool> = update
+            .nodes
+            .iter()
+            .filter(|(_, n)| n.label() == Some(label))
+            .filter(|(_, n)| {
+                n.bounds().is_some_and(|b| {
+                    b.contains(egui::accesskit::Point::new(c.x as f64, c.y as f64))
+                })
+            })
+            .map(|(_, n)| n.toggled() == Some(egui::accesskit::Toggled::True))
+            .collect();
+        assert_eq!(hits.len(), 1, "{label} at {c:?}: {hits:?}");
+        hits[0]
+    };
+    for (create, unwrapped) in [(false, true), (true, false)] {
+        app.windows.inspector.create = create;
+        app.windows.inspector.unwrapped = unwrapped;
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let got = [
+            marked(&output, "Inspect"),
+            marked(&output, "Create & locate"),
+            at(&app, &output, inspector::SPHERE, "sphere"),
+            at(&app, &output, inspector::UNWRAPPED, "unwrapped"),
+        ];
+        assert_eq!(got, [!create, create, !unwrapped, unwrapped]);
+    }
+    rejects("both views selected", || {
+        let output = h.frame(&mut app, Vec::new());
+        assert!(at(&app, &output, inspector::UNWRAPPED, "unwrapped"))
+    });
+}
