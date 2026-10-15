@@ -12192,7 +12192,7 @@
   - R-418
   - R-436
   milestone: M5
-  note: "Gui review 5533020211 G3 of PR #214, applied per R-369: §10.1's literal-sentinel line `if (raw == <literal>)` would need an infinite literal for these two, which naga rejects (gpu_determinism_note rule 4), and the compaction would do arithmetic on ±∞; the corpus defines no other style. TASK-M5-01 builds these fields' ledger entries, and so their generated views."
+  note: "Gui review 5533020211 G3 of PR #214, applied per R-369: §10.1's literal-sentinel line `if (raw == <literal>)` would need an infinite literal for these two, which naga rejects (gpu_determinism_note rule 4), and the compaction would do arithmetic on ±∞; the corpus defines no other style. TASK-M5-17, the resolve stage, first stores these bits (REQ-REF-053) and adds quad fields to the field-view catalogue (REQ-PAY-096), so it writes the style (round 6; TASK-M5-01, which built the ledger entries, merged before R-436)."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
