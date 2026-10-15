@@ -229,12 +229,13 @@ pub fn cross_dot(q: &[Latent; 2]) -> f64 {
     dot(&unit(&q[0]), &unit(&q[1]))
 }
 
-/// The check against `q₁ · q₂ = d`: "✓" while the axes are orthogonal, `|d|` within [`ORTHOGONAL`], else "✗".
+/// The check against `q₁ · q₂ = d`: "✔" while the axes are orthogonal, `|d|` within [`ORTHOGONAL`], else "✖" (the
+/// heavy marks, which the monospace font draws; its fonts have no light ✓ or ✗).
 pub fn mark(d: f64) -> &'static str {
     if d.abs() <= ORTHOGONAL {
-        "✓"
+        "✔"
     } else {
-        "✗"
+        "✖"
     }
 }
 

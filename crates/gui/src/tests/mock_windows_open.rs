@@ -1432,27 +1432,37 @@ fn mock_windows_open_each_window_keeps_its_opener() {
     rejects("an opener lost", || back(&Vec::new()));
 }
 
-/// q₁ · q₂'s check: ✓ within ORTHOGONAL either side of zero, the bound itself included, ✗ past it; the window draws it.
+/// q₁ · q₂'s check: ✔ within ORTHOGONAL either side of zero, the bound itself included, ✖ past it; the window draws it.
 #[test]
 fn mock_windows_open_chart_builder_marks_orthogonal_axes() {
     use chart_builder::{mark, ORTHOGONAL};
     for d in [0.0, ORTHOGONAL, -ORTHOGONAL] {
-        assert_eq!(mark(d), "✓", "{d}");
+        assert_eq!(mark(d), "✔", "{d}");
     }
     for d in [ORTHOGONAL.next_up(), -ORTHOGONAL.next_up(), 0.5] {
-        assert_eq!(mark(d), "✗", "{d}");
+        assert_eq!(mark(d), "✖", "{d}");
     }
     let mut q = [[0.0; engine::contract::sim_config::LATENT_DIM]; 2];
     q[0][0] = 1.0;
     q[1][0] = 1.0;
     q[1][1] = 1.0;
     let tilted = drawn(Window::ChartBuilder, |app| app.windows.chart.q = q);
-    check_has(&tilted, &["0.707 ✗"], "a tilted pair");
+    check_has(&tilted, &["0.707 ✖"], "a tilted pair");
     q[1][0] = 0.0;
     let square = drawn(Window::ChartBuilder, |app| app.windows.chart.q = q);
-    check_has(&square, &["0.000 ✓"], "an orthogonal pair");
+    check_has(&square, &["0.000 ✔"], "an orthogonal pair");
+    // Both marks have a glyph in the monospace font the line is drawn in, so neither draws as a box.
+    let ctx = egui::Context::default();
+    crate::theme::install(&ctx);
+    let mut out = ctx.run_ui(Default::default(), |_| {});
+    out.textures_delta.clear();
+    let drawn = |c: char| ctx.fonts_mut(|f| f.has_glyph(&egui::FontId::monospace(12.0), c));
+    for c in ['✔', '✖'] {
+        assert!(drawn(c), "{c} has no glyph");
+    }
+    rejects("a light ✓, which the font lacks", || assert!(drawn('✓')));
     rejects("a tilted pair marked orthogonal", || {
-        check_has(&tilted, &["✓"], "a tilted pair")
+        check_has(&tilted, &["✔"], "a tilted pair")
     });
 }
 
