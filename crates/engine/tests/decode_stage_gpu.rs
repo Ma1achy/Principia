@@ -11,6 +11,9 @@
 //!   (REQ-DEC-007).
 //! - `decode_only_sim_key`: `decode_only` is the stage's source at f64, from the chart's parameters widened, and only
 //!   the physics kernel decodes.
+//! - `decode_stage_tanh_range`: dd_generation_root §3.9's `tanh` operator as the GPU evaluates it
+//!   (`stage_decode_link_tanh`) stays in `[−1, 1]`, never NaN, at every f32 of `±[9, tanh_sat]`, where Metal's own
+//!   `tanh` returns 1 + 2⁻²³ at about 1.5% of them, and past the bound, where Metal's fails (R-72; REQ-DEC-047).
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -698,4 +701,107 @@ negative_control!(
             degenerate: o.degenerate,
         })
     })
+);
+
+// ── decode_stage_tanh_range ─────────────────────────────────────────────────────────────────────────────────────
+
+/// The operator at each of `xs` as the GPU evaluates it: the kernel's `stage_decode_link_tanh`, dispatched in chunks of
+/// at most 65535 workgroups of 64.
+fn gpu_link_tanh(h: &GpuHarness, wgsl: &str, xs: &[f32]) -> Vec<f32> {
+    use wgpu::util::DeviceExt;
+    let d = h.device();
+    let kernel = engine::compute::pipeline(
+        d,
+        &engine::compute::ComputeShader {
+            label: "link tanh",
+            wgsl,
+            entry: "stage_decode_link_tanh",
+        },
+        FastMath::default(),
+    )
+    .expect("the operator's pipeline");
+    let bytes = |v: &[f32]| v.iter().flat_map(|x| x.to_le_bytes()).collect::<Vec<u8>>();
+    let mut out = Vec::with_capacity(xs.len());
+    for chunk in xs.chunks(65535 * 64) {
+        let n = chunk.len();
+        let input = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("link tanh input"),
+            contents: &bytes(chunk),
+            usage: wgpu::BufferUsages::STORAGE,
+        });
+        let output = d.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("link tanh output"),
+            contents: &bytes(&vec![f32::NAN; n]),
+            usage: wgpu::BufferUsages::STORAGE.union(wgpu::BufferUsages::COPY_SRC),
+        });
+        let read = d.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("link tanh readback"),
+            size: (n * 4) as u64,
+            usage: wgpu::BufferUsages::MAP_READ.union(wgpu::BufferUsages::COPY_DST),
+            mapped_at_creation: false,
+        });
+        let bindings = kernel.bind(d, &[&[&input, &output]]).expect("the bindings");
+        let mut encoder = d.create_command_encoder(&Default::default());
+        {
+            let mut pass = encoder.begin_compute_pass(&Default::default());
+            kernel.set(&mut pass, &bindings);
+            pass.dispatch_workgroups((n as u32).div_ceil(64), 1, 1);
+        }
+        encoder.copy_buffer_to_buffer(&output, 0, &read, 0, (n * 4) as u64);
+        h.queue().submit([encoder.finish()]);
+        let slice = read.slice(..);
+        slice.map_async(wgpu::MapMode::Read, |r| r.expect("readback map"));
+        d.poll(wgpu::PollType::wait_indefinitely())
+            .expect("device poll");
+        let view = slice.get_mapped_range().expect("readback range");
+        out.extend(
+            view.as_chunks::<4>()
+                .0
+                .iter()
+                .map(|b| f32::from_le_bytes(*b)),
+        );
+        drop(view);
+        read.unmap();
+    }
+    out
+}
+
+/// Every f32 of `[9, t]`, each negated too, and a few past `t`: 20.5, 43.671875, 44.5, 1e3, 1e30 and `MAX`, signed.
+fn tanh_arguments(t: f32) -> Vec<f32> {
+    let window = (9.0f32.to_bits()..=t.to_bits()).map(f32::from_bits);
+    let past = [20.5f32, 43.671_875, 44.5, 1e3, 1e30, f32::MAX];
+    window.chain(past).flat_map(|x| [x, -x]).collect()
+}
+
+/// Each of `ys`, the operator at `xs`, is in `[−1, 1]` and not NaN.
+fn check_tanh_range(xs: &[f32], ys: &[f32]) {
+    assert_eq!(xs.len(), ys.len(), "the operator's outputs");
+    for (x, y) in xs.iter().zip(ys) {
+        assert!(
+            !y.is_nan() && y.abs() <= 1.0,
+            "the GPU's tanh operator at {x:e} is {y:e} (bits {:#x}), outside [-1, 1]",
+            y.to_bits()
+        );
+    }
+}
+
+#[test]
+fn decode_stage_tanh_range() {
+    let h = harness();
+    let xs = tanh_arguments(kernel::generated::constants::tanh_sat::<f32>());
+    let ys = gpu_link_tanh(&h, &wgsl(), &xs);
+    check_tanh_range(&xs, &ys);
+}
+
+negative_control!(
+    decode_stage_tanh_range,
+    "an operator one ulp past 1 at an argument must fail",
+    expected = "outside [-1, 1]",
+    {
+        let h = harness();
+        let xs = tanh_arguments(kernel::generated::constants::tanh_sat::<f32>());
+        let mut ys = gpu_link_tanh(&h, &wgsl(), &xs);
+        ys[0] = f32::from_bits(1.0f32.to_bits() + 1);
+        check_tanh_range(&xs, &ys)
+    }
 );

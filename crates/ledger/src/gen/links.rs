@@ -409,10 +409,13 @@ fn selection(
 const HELPERS: [(&str, &str); 6] = [
     (
         "tanh_sat",
-        "/// `tanh`, §3.9's operator: `tanh(clamp(x, −tanh_sat, tanh_sat))`, a NaN kept (R-72; REQ-DEC-047). The clamp acts\n\
-         /// only where `tanh` already rounds to ±1 at f32 and f64, and gives ±1 where a GPU's `tanh` fails at large\n\
-         /// arguments, as Metal's does.\n#[inline]\nfn tanh_sat<R: LinkReal>(x: R) -> R {\n    let t = super::constants::tanh_sat::<R>();\n    \
-         let lo = if x < -t { -t } else { x };\n    Float::tanh(if lo > t { t } else { lo })\n}\n",
+        "/// `tanh`, §3.9's operator: `tanh(clamp(x, −tanh_sat, tanh_sat))`, then ±1 where its magnitude exceeds 1, by\n\
+         /// comparison, a NaN kept (R-72; REQ-DEC-047). The clamp acts only where `tanh` already rounds to ±1 at f32 and\n\
+         /// f64, and gives ±1 where a GPU's `tanh` fails at large arguments, as Metal's does; the select keeps the result\n\
+         /// in `tanh`'s own range where a backend's accuracy bound lets it pass 1, and never acts on the CPU.\n\
+         #[inline]\npub fn tanh_sat<R: LinkReal>(x: R) -> R {\n    let t = super::constants::tanh_sat::<R>();\n    \
+         let lo = if x < -t { -t } else { x };\n    let y = Float::tanh(if lo > t { t } else { lo });\n    \
+         let one = R::one();\n    let hi = if y > one { one } else { y };\n    if hi < -one {\n        -one\n    } else {\n        hi\n    }\n}\n",
     ),
     (
         "sigmoid",

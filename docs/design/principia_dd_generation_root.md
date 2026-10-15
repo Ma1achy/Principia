@@ -863,9 +863,15 @@ log-det are written as expression trees, never as text:
   so a tree naming one the entry does not declare fails generation. `num(v)` is a literal number. An operator node
   applies one of a closed list to its arguments, in order: `add`, `mul` (two or more, `x_0 + x_1 + …`,
   `x_0 · x_1 · …`); `sub`, `div` (two, `x_0 − x_1`, `x_0 / x_1`); `clamp` (three, `min(max(x_0, x_1), x_2)`); and,
-  of one, `neg`, `exp`, `log` (natural), `tanh` (evaluated as `tanh(clamp(x, −tanh_sat, tanh_sat))`, a NaN kept;
-  definition, R-72, TASK-M2-06: the clamp acts only where `tanh` already rounds to ±1 at f32 and f64, and gives ±1
-  where a GPU's `tanh` fails at large arguments, as Metal's does, 0 at 44 and NaN from 44.5), `artanh`, `sigmoid` (`σ(x) = 1/(1 + e⁻ˣ)`), `logit` (`log(x/(1 − x))`,
+  of one, `neg`, `exp`, `log` (natural), `tanh` (evaluated as `tanh(clamp(x, −tanh_sat, tanh_sat))`, its result then
+  selected to ±1 where its magnitude exceeds 1, by comparison, a NaN kept; definition, R-72, TASK-M2-06: the clamp acts
+  only where `tanh` already rounds to ±1 at f32 and f64, and gives ±1 where a GPU's `tanh` fails at large arguments, as
+  Metal's does from 43.671875, 0 and then NaN; the select keeps the operator in `tanh`'s own range, `[−1, 1]`, where a
+  backend's accuracy bound lets its result pass 1, as Metal's `tanh` returns 1 + 2⁻²³ at about 1.5% of arguments in
+  `[9, 20]`, and never acts on the CPU, whose `tanh` stays in `[−1, 1]`. Both are an operator-level correction to the
+  backend, distinct from the link-level rule below that no link clamps its output: neither lands a link on an endpoint
+  nor guards against a degenerate configuration (validation ground-truth note), and `qₖ` reaches `±q_max` by
+  saturation, as R-417 has it), `artanh`, `sigmoid` (`σ(x) = 1/(1 + e⁻ˣ)`), `logit` (`log(x/(1 − x))`,
   σ's inverse), `softplus` (`log(1 + eˣ)`), `inv_softplus` (`log(eˣ − 1)`) and `sech2` (`1/cosh² x`). An operator given
   another number of arguments fails generation; one outside the list cannot be written, and adding one is an edit to
   this list.

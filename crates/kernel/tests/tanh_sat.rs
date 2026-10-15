@@ -5,6 +5,9 @@
 //!   `tanh_beta`, `softmax_tanh`) gives, past the bound, the bits it gives at the bound, a NaN control giving NaN.
 //!   (`stick_breaking` also reads its control through `σ(2z)`, so its value moves past the bound; its `tanh` terms are
 //!   the first check's.)
+//! - `tanh_sat_operator_is_tanh`: the operator itself, the clamp and then the select to ±1 where `|tanh| > 1`, is `tanh`
+//!   bit for bit at every f32 (strided over the bit patterns, the signs, zeros, subnormals, `±∞` and NaN included) and
+//!   over an f64 sweep from 10⁻³⁰⁰ to `MAX`: the CPU's `tanh` stays in `[−1, 1]`, so the select never acts there.
 //! - `tanh_sat_below_metal`: the bound lies below 43.671875, from which Metal's GPU `tanh` was measured to fail (0, then
 //!   NaN; TASK-M2-06's probe), so the GPU never evaluates `tanh` where it fails.
 //!
@@ -162,4 +165,69 @@ negative_control!(
     "a bound at Metal's onset must fail",
     expected = "is not below 43.671875",
     check_below_metal(METAL_ONSET)
+);
+
+/// `op` is `tanh` bit for bit, a NaN for a NaN, at every f32 in steps of 211 bit patterns (both signs, with `±0`, the
+/// smallest subnormal, `±MAX`, `±∞` and NaN) and over an f64 sweep from 10⁻³⁰⁰ to `MAX` and its negation, and `tanh`
+/// itself stays in `[−1, 1]` there.
+fn check_operator(op32: fn(f32) -> f32, op64: fn(f64) -> f64) {
+    let mut xs32: Vec<f32> = (0..=u32::MAX).step_by(211).map(f32::from_bits).collect();
+    xs32.extend([
+        0.0,
+        -0.0,
+        f32::from_bits(1),
+        f32::MAX,
+        -f32::MAX,
+        f32::INFINITY,
+        f32::NEG_INFINITY,
+        f32::NAN,
+    ]);
+    for x in xs32 {
+        let (got, want) = (op32(x), x.tanh());
+        assert!(
+            got.to_bits() == want.to_bits() || (got.is_nan() && want.is_nan()),
+            "the operator at {x:e} is {got:e}, not tanh's {want:e}, at f32"
+        );
+        assert!(
+            want.is_nan() || want.abs() <= 1.0,
+            "tanh({x:e}) = {want:e} at f32"
+        );
+    }
+    let count = 400_000;
+    let (lo, hi) = (1e-300f64.ln(), f64::MAX.ln());
+    for i in 0..=count {
+        let x = (lo + (hi - lo) * f64::from(i) / f64::from(count))
+            .exp()
+            .min(f64::MAX);
+        for x in [x, -x] {
+            let (got, want) = (op64(x), x.tanh());
+            assert_eq!(
+                got.to_bits(),
+                want.to_bits(),
+                "the operator at {x:e} is {got:e}, not tanh's {want:e}, at f64"
+            );
+            assert!(want.abs() <= 1.0, "tanh({x:e}) = {want:e} at f64");
+        }
+    }
+    assert!(
+        op64(f64::NAN).is_nan(),
+        "the operator of NaN is not NaN at f64"
+    );
+}
+
+#[test]
+fn tanh_sat_operator_is_tanh() {
+    check_operator(
+        kernel::generated::links::tanh_sat::<f32>,
+        kernel::generated::links::tanh_sat::<f64>,
+    );
+}
+
+negative_control!(
+    tanh_sat_operator_is_tanh,
+    "an operator clamping at 9, where f64's tanh is not yet 1, must fail",
+    expected = "not tanh's",
+    check_operator(kernel::generated::links::tanh_sat::<f32>, |x| x
+        .clamp(-9.0, 9.0)
+        .tanh())
 );

@@ -35,7 +35,8 @@ use spirv_std::spirv;
 use crate::chart::{self, Chart, Latent};
 use crate::decode::{descriptor, Degenerate, Ic};
 use crate::generated::links::{
-    Defaults, LinkReal, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ, StickBreaking,
+    tanh_sat, Defaults, LinkReal, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
+    StickBreaking,
 };
 use crate::payload::{ICDescriptor, ICDescriptorOf, PayloadReal};
 
@@ -396,5 +397,21 @@ pub fn describe(
     let i = id.x as usize;
     if i < ic.len() / ic_words() {
         write_descriptor(descriptors, i, &descriptor::describe(&read_ic(ic, i)));
+    }
+}
+
+/// dd_generation_root §3.9's `tanh` operator alone ([`tanh_sat`]), one invocation per word: `output[i]` is the
+/// operator at the f32 `input[i]`, and an invocation past the input writes nothing. It is not a decode: it lets a test
+/// read the operator as the GPU evaluates it, its range included, at arguments the decode reaches only through the
+/// links that use it (R-72; REQ-DEC-047).
+#[spirv(compute(threads(64)))]
+pub fn link_tanh(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 0)] input: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] output: &mut [f32],
+) {
+    let i = id.x as usize;
+    if i < input.len() {
+        output[i] = tanh_sat(input[i]);
     }
 }

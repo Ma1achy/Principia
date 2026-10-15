@@ -158,14 +158,22 @@ pub trait Link<const C: usize, const P: usize> {
     fn log_det<R: LinkReal>(v: [R; C]) -> R;
 }
 
-/// `tanh`, §3.9's operator: `tanh(clamp(x, −tanh_sat, tanh_sat))`, a NaN kept (R-72; REQ-DEC-047). The clamp acts
-/// only where `tanh` already rounds to ±1 at f32 and f64, and gives ±1 where a GPU's `tanh` fails at large
-/// arguments, as Metal's does.
+/// `tanh`, §3.9's operator: `tanh(clamp(x, −tanh_sat, tanh_sat))`, then ±1 where its magnitude exceeds 1, by
+/// comparison, a NaN kept (R-72; REQ-DEC-047). The clamp acts only where `tanh` already rounds to ±1 at f32 and
+/// f64, and gives ±1 where a GPU's `tanh` fails at large arguments, as Metal's does; the select keeps the result
+/// in `tanh`'s own range where a backend's accuracy bound lets it pass 1, and never acts on the CPU.
 #[inline]
-fn tanh_sat<R: LinkReal>(x: R) -> R {
+pub fn tanh_sat<R: LinkReal>(x: R) -> R {
     let t = super::constants::tanh_sat::<R>();
     let lo = if x < -t { -t } else { x };
-    Float::tanh(if lo > t { t } else { lo })
+    let y = Float::tanh(if lo > t { t } else { lo });
+    let one = R::one();
+    let hi = if y > one { one } else { y };
+    if hi < -one {
+        -one
+    } else {
+        hi
+    }
 }
 
 /// `σ(x) = 1/(1 + e⁻ˣ)`.

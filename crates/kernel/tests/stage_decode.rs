@@ -11,6 +11,7 @@
 //!   the uniform; under `DECODE_MODE` linearised, and past the last sample, it writes nothing (REQ-DEC-005, REQ-DEC-007).
 //! - `stage_entry_points`: the three compute entry points, called natively, write each sample's decode under their link
 //!   set, or its descriptor, and nothing at the sample count.
+//! - `stage_link_tanh`: the §3.9 `tanh` operator's entry point, called natively, writes the operator at each word.
 
 use kernel::chart::{self, Latent};
 use kernel::decode::{Degenerate, Ic};
@@ -447,4 +448,41 @@ negative_control!(
         kernel::stage::decode::latent_defaults,
         kernel::stage::decode::describe,
     ))
+);
+
+// ── stage_link_tanh ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// `entry`, the operator's compute entry point called natively, writes the operator at each input word and nothing at
+/// the input's length.
+fn check_link_tanh(entry: fn(UVec3, &[f32], &mut [f32])) {
+    let input = [0.5f32, -3.0, 25.0];
+    let mut output = [f32::MAX; 4];
+    for i in 0..4 {
+        entry(UVec3::new(i, 0, 0), &input, &mut output);
+    }
+    for (i, x) in input.iter().enumerate() {
+        assert_eq!(
+            output[i].to_bits(),
+            kernel::generated::links::tanh_sat(*x).to_bits(),
+            "word {i}"
+        );
+    }
+    assert_eq!(output[3], f32::MAX, "the entry wrote past its input");
+}
+
+#[test]
+fn stage_link_tanh() {
+    check_link_tanh(kernel::stage::decode::link_tanh);
+}
+
+negative_control!(
+    stage_link_tanh,
+    "an entry writing the input unchanged must fail",
+    expected = "word 0",
+    check_link_tanh(|id, i, o| {
+        let k = id.x as usize;
+        if k < i.len() {
+            o[k] = i[k];
+        }
+    })
 );
