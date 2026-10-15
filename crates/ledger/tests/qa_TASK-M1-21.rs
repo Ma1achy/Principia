@@ -4,8 +4,8 @@
 //!   it: an existing payload field retagged, and a fresh fixture field added to the payload ledger
 //!   (`qa_m1_21_gap_*`);
 //! - an undeclared range never spans zero, so it never puts a field on `ramp_coolwarm` (`qa_m1_21_gap_not_coolwarm*`);
-//! - `q_mass` and `mean_y` are provisional, naming REQ-PAY-097 and REQ-PAY-098, and keep `ramp_coolwarm`
-//!   (`qa_m1_21_provisional`);
+//! - `mean_y` is provisional, naming REQ-PAY-098, and keeps `ramp_coolwarm`; `q_mass`, declared by TASK-M2-03
+//!   (REQ-PAY-097), no longer is (`qa_m1_21_provisional`);
 //! - `S`, `ftle`, `diffusion`, `C_ty`, `E_0`, `Lz_0`, `energy_drift` and `Lz_drift` are declared (−∞, ∞) with the
 //!   citation the requirement names (`qa_m1_21_declared_citations`);
 //! - the gap list is exactly the payload's gaps, none a `lin` or `diverging` scalar, each with a requirement or none
@@ -100,10 +100,9 @@ fn check_refused(l: &Ledger, field: &str) {
 
 #[test]
 fn qa_m1_21_gap_existing_field_refused() {
-    // `theta` (cyclic) and `rho_angle` (cyclic) have no declared range; as `lin` or `diverging` scalars their gap
-    // would choose the ramp, so generation must refuse them.
+    // `theta` (cyclic) has no declared range; as a `lin` or `diverging` scalar its gap would choose the ramp, so
+    // generation must refuse it. (`rho_angle`, declared (−π, π] by TASK-M2-03 per REQ-PAY-088, is no gap.)
     check_refused(&retagged("theta", Scale::Lin), "theta");
-    check_refused(&retagged("rho_angle", Scale::Lin), "rho_angle");
     check_refused(&retagged("theta", Scale::Diverging), "theta");
 }
 
@@ -174,7 +173,6 @@ fn check_not_coolwarm(l: &Ledger, name: &str) {
 #[test]
 fn qa_m1_21_gap_not_coolwarm_existing() {
     check_not_coolwarm(&retagged("theta", Scale::Lin), "theta");
-    check_not_coolwarm(&retagged("rho_angle", Scale::Lin), "rho_angle");
 }
 
 negative_control!(
@@ -218,7 +216,7 @@ negative_control!(
     )
 );
 
-// ── mean_y: provisional, on cool-warm (q_mass declared by TASK-M2-03, R-426) ───────────────────────────────────────────────────────────────────
+// ── mean_y: provisional, on cool-warm (q_mass declared by TASK-M2-03, R-426) ─────────────────────────────────────
 
 fn check_provisional(es: &[Entry], want: &[(&str, &str)]) {
     for (name, requirement) in want {
@@ -337,7 +335,8 @@ fn check_gap_list(es: &[Entry], gaps: &[(&str, Option<&str>, &str)]) {
             );
         }
     }
-    for name in ["theta", "rho_angle", "r", "p", "r_sh", "p_sh"] {
+    // `rho_angle` left the list when TASK-M2-03 declared it (−π, π] (REQ-PAY-088).
+    for name in ["theta", "r", "p", "r_sh", "p_sh"] {
         assert!(listed.contains(name), "`{name}` is not listed as a gap");
     }
 }
