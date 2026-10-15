@@ -129,6 +129,14 @@ fn walk(entry: &Entry) -> Vec<At> {
             // The ring is drawn on it, and the breadcrumb names its path.
             let _ = h.frame(app, Vec::new());
             assert!(app.keyboard.place_of(element).is_some(), "{element} drawn");
+            // Scrolled into view: drawn inside the window.
+            let _ = h.frame(app, Vec::new());
+            let place = |id: &str| app.keyboard.place_of(id).map(|p| p.rect);
+            let (drawn, window) = (place(element).unwrap(), place(entry.scope).unwrap());
+            assert!(
+                window.contains_rect(drawn),
+                "{element}: {drawn:?} outside {window:?}"
+            );
             let crumb = breadcrumb(h, app, entry.title).unwrap_or_default();
             assert!(
                 crumb.ends_with(tree(app).get(element).unwrap().label),
