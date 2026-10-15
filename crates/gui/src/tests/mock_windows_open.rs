@@ -1555,3 +1555,145 @@ fn mock_windows_open_inspector_marks_its_tab_and_view() {
         assert!(at(&app, &output, inspector::UNWRAPPED, "unwrapped"))
     });
 }
+
+/// Each shape's geometry, colours aside: circles, segments and paths.
+fn geometry(shapes: &[egui::Shape]) -> Vec<String> {
+    shapes
+        .iter()
+        .filter_map(|s| match s {
+            egui::Shape::Circle(c) => Some(format!("circle {:?} {}", c.center, c.radius)),
+            egui::Shape::LineSegment { points, .. } => Some(format!("segment {points:?}")),
+            egui::Shape::Path(p) => Some(format!("path {:?}", p.points)),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The Inspector's three panes: square, side by side a spacing apart, a third of the window each; pane 1 the IC, pane
+/// 2 the sphere or its unwrapping, pane 3 real space, each drawn by its function on its rect.
+#[test]
+fn mock_windows_open_inspector_panes_drawn_by_their_functions() {
+    use crate::explore::trajectory;
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Inspector, None);
+    let (sim, _) = state(0.0);
+    let sample = crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0);
+    app.windows.inspector.seed(Some(&sample));
+    app.windows.inspector.t = 0.3 * sample.path_t;
+    // The sphere held at its angle, so the frame and the function draw it alike.
+    app.trajectory.turn = false;
+    let window = windows::rect(Window::Inspector, &layout(&h));
+    let spacing = egui::Context::default()
+        .global_style()
+        .spacing
+        .item_spacing
+        .x;
+    for unwrapped in [false, true] {
+        app.windows.inspector.unwrapped = unwrapped;
+        settle(&mut h, &mut app);
+        let angle = app.trajectory.angle;
+        let drawn = geometry(&super::support::shapes(&mut h, &mut app));
+        assert_eq!(app.trajectory.angle, angle, "the sphere held still");
+        let pane = |k: usize| {
+            app.keyboard
+                .place_of(inspector::PANE_IDS[k].0)
+                .expect("a pane placed")
+                .rect
+        };
+        let panes = [pane(0), pane(1), pane(2)];
+        for (k, r) in panes.iter().enumerate() {
+            assert!((r.width() - r.height()).abs() < 0.01, "pane {k}: {r:?}");
+            assert!(
+                r.width() > window.width() / 4.0,
+                "pane {k}: {r:?} in {window:?}"
+            );
+            if k > 0 {
+                assert_eq!(r.min.y, panes[0].min.y);
+                assert!(
+                    (r.min.x - panes[k - 1].max.x - spacing).abs() < 0.01,
+                    "{panes:?}"
+                );
+            }
+        }
+        let s = app.windows.inspector.sample.clone().expect("seeded");
+        let st = &app.windows.inspector;
+        let i = trajectory::index_at(st.t, s.path_t, s.shape.len());
+        let want = [
+            geometry(&super::mock_windows_drawn::painted(|ui| {
+                inspector::ic_pane(ui, panes[0], &s, st.gauge, i)
+            })),
+            geometry(&super::mock_windows_drawn::painted(|ui| {
+                if unwrapped {
+                    trajectory::unwrapped(ui, panes[1], &s, i)
+                } else {
+                    trajectory::sphere(ui, panes[1], &s, angle, i)
+                }
+            })),
+            geometry(&super::mock_windows_drawn::painted(|ui| {
+                trajectory::real_space(ui, panes[2], &s, i)
+            })),
+        ];
+        let check = |k: usize, want: &[String]| {
+            assert!(!want.is_empty(), "pane {k} draws nothing");
+            for g in want {
+                assert!(
+                    drawn.contains(g),
+                    "pane {k} (unwrapped {unwrapped}): {g} not drawn"
+                );
+            }
+        };
+        for (k, w) in want.iter().enumerate() {
+            check(k, w);
+        }
+        rejects("pane 1 drawn as real space", || {
+            let other = geometry(&super::mock_windows_drawn::painted(|ui| {
+                trajectory::real_space(ui, panes[0], &s, i)
+            }));
+            check(0, &other)
+        });
+    }
+}
+
+/// The Inspector's Locate row: each that acts is enabled with an IC, and none without one.
+#[test]
+fn mock_windows_open_inspector_locate_enabled_with_an_ic() {
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Inspector, None);
+    let enabled = |app: &App<MockSide>, output: &egui::FullOutput, id: &str, label: &str| -> bool {
+        let c = app.keyboard.place_of(id).expect("placed").rect.center();
+        let update = output
+            .platform_output
+            .accesskit_update
+            .as_ref()
+            .expect("AccessKit is on");
+        let hits: Vec<bool> = update
+            .nodes
+            .iter()
+            .filter(|(_, n)| n.label() == Some(label))
+            .filter(|(_, n)| {
+                n.bounds().is_some_and(|b| {
+                    b.contains(egui::accesskit::Point::new(c.x as f64, c.y as f64))
+                })
+            })
+            .map(|(_, n)| !n.is_disabled())
+            .collect();
+        assert_eq!(hits.len(), 1, "{label} at {c:?}: {hits:?}");
+        hits[0]
+    };
+    let mut rows = Vec::new();
+    for ic in [None, Some(a_sample())] {
+        app.windows.inspector.seed(ic.as_ref());
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let row: Vec<bool> = inspector::LOCATE_IDS
+            .iter()
+            .map(|(id, label, _)| enabled(&app, &output, id, label))
+            .collect();
+        rows.push(row);
+    }
+    let acts: Vec<bool> = inspector::LOCATE_IDS.iter().map(|l| l.2).collect();
+    assert_eq!(rows, [vec![false; acts.len()], acts.clone()]);
+    rejects("Locate enabled with no IC", || assert_eq!(rows[0], acts));
+}
