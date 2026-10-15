@@ -425,6 +425,21 @@ fn mock_windows_drawn_the_substep_histogram() {
         "{a:?} {b:?}"
     );
     assert!(texts(&shapes).iter().any(|(t, _)| t == "N_max 64"));
+    // The label just inside the cap, at the plot's top: its right edge 3 points left of the line, 2 below the top.
+    let label = shapes
+        .iter()
+        .find_map(|s| match s {
+            Shape::Text(t) if t.galley.text() == "N_max 64" => {
+                Some(t.galley.rect.translate(t.pos.to_vec2()))
+            }
+            _ => None,
+        })
+        .expect("the cap's label");
+    assert!(
+        (label.max.x - (rect.max.x - 3.0)).abs() < 0.5
+            && (label.min.y - (rect.min.y + 2.0)).abs() < 0.5,
+        "{label:?} in {rect:?}"
+    );
     // A cap inside the bins falls where its substeps are; a cap past them stretches the axis to it.
     let shapes = painted(|ui| profiler::substep_histogram(ui, &[1, 1, 1, 1], 4, 8));
     let rect = plot_rect(&shapes, v.extreme_bg_color);
