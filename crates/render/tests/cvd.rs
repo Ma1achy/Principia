@@ -8,7 +8,8 @@
 //! - REQ-COL-045 (`cvd_modes_*`): the Display window's five modes, and the pass transforming a test colour set under
 //!   each, by the mode's uniform: Viénot or Brettel matching the goldens, `M_achrom` grey, off the identity.
 //! - REQ-COL-061 (`cvd_hatch_distinct_*`): under each simulation, the hatch stays distinguishable from every palette
-//!   entry REQ-COL-055 measured against, by the criterion proposed (R-71; R-386), the distances printed.
+//!   entry REQ-COL-055 measured against, by the criterion proposed (R-71; R-386) and confirmed at the M1 gate (R-429),
+//!   the distances printed.
 //!
 //! Each GPU check takes the WGSL as text, so its control runs it on the text with one mutation; each CPU check takes the
 //! function or the data it checks, so its control runs it on a wrong one.
@@ -828,7 +829,7 @@ negative_control!(
     })
 );
 
-// ── REQ-COL-061: the hatch under each simulation (R-386; R-71, proposed) ───────────────────────────────────────────
+// ── REQ-COL-061: the hatch under each simulation (R-386; R-71, confirmed by R-429) ──────────────────────────────────
 
 /// The OKLab distance between two linear colours.
 fn oklab_distance(a: Rgb, b: Rgb) -> f64 {
@@ -841,8 +842,9 @@ fn seen(mode: CvdMode, c: Rgb) -> Rgb {
     cvd::simulate(mode, c).map(|x| x.clamp(0.0, 1.0))
 }
 
-/// REQ-COL-061's threshold (proposed, R-71; R-386): the OKLab distance from R-16's flat magenta `#FF00FF` to body-1
-/// escape's `#E034C6`, 0.101, the distance R-132 ruled a collision and REQ-COL-055's bound, taken unsimulated.
+/// REQ-COL-061's threshold τ (proposed, R-71; R-386; confirmed at the M1 gate, R-429): the OKLab distance from R-16's
+/// flat magenta `#FF00FF` to body-1 escape's `#E034C6`, 0.101, the distance R-132 ruled a collision and REQ-COL-055's
+/// bound, taken unsimulated.
 fn tau() -> f64 {
     oklab_distance(hex(0xFF00FF), hex(0xE034C6))
 }
@@ -882,12 +884,15 @@ fn measure(mode: CvdMode, hatch: [Rgb; 2], entries: &[(String, Rgb)]) -> Seen {
     }
 }
 
-/// REQ-COL-061's criterion (proposed, R-71; R-386), under each simulation: the hatch is distinguishable from the
-/// palette if each stripe colour is farther than [`tau`] from every palette entry, both simulated; and where a stripe
-/// colour falls within it, the pattern counts: the hatch is still distinguishable if its two stripes, simulated, are
-/// farther than [`tau`] apart, since it then shows as diagonal stripes, which no palette entry draws, each drawing one
-/// flat colour. Under achromatopsia every stripe colour falls within it (the grey ramp), and the pattern's contrast is
-/// its lightness step under `M_achrom`. Each mode's distances are printed, the proposal's evidence.
+/// REQ-COL-061's criterion (proposed, R-71; R-386; confirmed at the M1 gate, R-429), under each simulation: the hatch
+/// is distinguishable from the palette if each stripe colour is farther than [`tau`] from every palette entry, both
+/// simulated; and where a stripe colour falls within it, the pattern counts: the hatch is still distinguishable if its
+/// two stripes, simulated, are farther than [`tau`] apart, since it then shows as diagonal stripes, which no palette
+/// entry draws, each drawing one flat colour. Under achromatopsia every stripe colour falls within it (the grey ramp),
+/// and the pattern's contrast is its lightness step under `M_achrom`. Each mode's distances are printed, the proposal's
+/// evidence. The pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a flat
+/// colour, which under achromatopsia sits on the grey ramp (R-429), so this check is of the screen at device pixels,
+/// not of an export.
 fn check_hatch_distinct(colours: [[u8; 3]; 2]) {
     let entries = palettes::entries();
     let hatch = colours.map(present::srgb8);

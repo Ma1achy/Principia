@@ -1,8 +1,11 @@
 //! QA tests for TASK-M1-18's `cargo xtask gate-provisional --milestone <Mn>`, written from REQ-SYS-081 and
 //! dd_generation_root §3.8 (`provisional`: "its report lists each entry marked provisional until it, and an entry
 //! still so marked blocks the gate, as an unconfirmed calibration does"), not from the implementation:
-//! - the command, run as the binary, exits non-zero at the M1 gate, listing each of §3.8's nine M1 entries with its
-//!   calibration requirement, and at M2 adds `eps_m01`; at M0, where nothing is provisional, it exits zero;
+//! - the command, run as the binary, lists each entry still provisional until the gate or earlier with its calibration
+//!   requirement, and exits non-zero exactly when it lists one. After R-428 confirmed §3.8's nine M1 entries, seven
+//!   outright and `log_floor_rho_ratio` and `log_floor_r_min_pair_0` provisionally, now marked until M2 citing
+//!   REQ-TOOL-163, the M0 and M1 runs list nothing and exit zero, and the M2 run lists those two and `eps_m01`; a
+//!   confirmed entry is listed at no gate;
 //! - it refuses a name that is no milestone's gate, M9 included (`plan/MILESTONES.md` has M0 … M8), rather than
 //!   reporting a gate that does not exist as passing or blocked.
 //!
@@ -12,18 +15,19 @@ use std::process::Command;
 
 use validation::negative_control;
 
-/// §3.8's provisional entries, with gate and calibration requirement.
-const TABLE: [(&str, u32, &str); 10] = [
-    ("log_floor_d_min", 1, "REQ-TOOL-160"),
-    ("log_floor_dE_max", 1, "REQ-TOOL-160"),
-    ("log_floor_dLz_max", 1, "REQ-TOOL-160"),
-    ("log_floor_closure_min", 1, "REQ-TOOL-160"),
-    ("log_floor_rho_ratio", 1, "REQ-TOOL-160"),
-    ("log_floor_r_min_pair_0", 1, "REQ-TOOL-160"),
-    ("hatch_violet", 1, "REQ-COL-055"),
-    ("hatch_cyan", 1, "REQ-COL-055"),
-    ("hatch_half_period", 1, "REQ-COL-055"),
-    ("eps_m01", 2, "REQ-DEC-039"),
+/// §3.8's provisional entries as R-428 leaves them: the gate each is still provisional until, with its calibration
+/// requirement, or `None` for an entry confirmed at M1 (citing R-428, so no requirement is listed for it).
+const TABLE: [(&str, Option<u32>, &str); 10] = [
+    ("log_floor_d_min", None, ""),
+    ("log_floor_dE_max", None, ""),
+    ("log_floor_dLz_max", None, ""),
+    ("log_floor_closure_min", None, ""),
+    ("log_floor_rho_ratio", Some(2), "REQ-TOOL-163"),
+    ("log_floor_r_min_pair_0", Some(2), "REQ-TOOL-163"),
+    ("hatch_violet", None, ""),
+    ("hatch_cyan", None, ""),
+    ("hatch_half_period", None, ""),
+    ("eps_m01", Some(2), "REQ-DEC-039"),
 ];
 
 /// Runs `cargo xtask gate-provisional --milestone <milestone>`: whether it succeeded, and its stdout and stderr.
@@ -41,10 +45,13 @@ fn run(milestone: &str) -> (bool, String) {
 }
 
 /// The gate `n`'s run fails exactly when §3.8's table has an entry provisional until `n` or earlier, and names each
-/// such entry on a line with its requirement, and no entry provisional until a later gate.
+/// such entry on a line with its requirement, and no entry provisional until a later gate or confirmed.
 fn check_gate(n: u32) {
     let (ok, text) = run(&format!("M{n}"));
-    let due: Vec<_> = TABLE.iter().filter(|t| t.1 <= n).collect();
+    let due: Vec<_> = TABLE
+        .iter()
+        .filter(|t| t.1.is_some_and(|g| g <= n))
+        .collect();
     assert_eq!(ok, due.is_empty(), "the M{n} run's exit: {text}");
     for (name, _, req) in TABLE {
         let line = text

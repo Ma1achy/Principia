@@ -47,14 +47,16 @@ const BOUNDED_BLACK: u32 = 0x141418;
 const DEGENERATE_WHITE: u32 = 0xECECF0;
 const AT_START_ORANGE: u32 = 0xF29620;
 
-/// REQ-COL-062's proposed swatches (colour_composition §1.4, "The two triple outcomes (proposed …)").
+/// REQ-COL-062's swatches (colour_composition §1.4, "The two triple outcomes (proposed …)"), confirmed at the M1 gate
+/// as proposed (R-433).
 const TRIPLE_COLLISION: u32 = 0xD6A1FF;
 const TRIPLE_EJECTION: u32 = 0x000097;
 
 /// The running grey TASK-M1-09 proposed (REQ-COL-053; colour_composition §1.4 names it `#4E4E4E`).
 const RUNNING_GREY: u32 = 0x4E4E4E;
 
-/// The "not yet" style's dot, 8-bit sRGB (R-399; REQ-COL-064, proposed by TASK-M1-17, so read from its constant).
+/// The "not yet" style's dot, 8-bit sRGB (R-399; REQ-COL-064, proposed by TASK-M1-17 and confirmed at the M1 gate as
+/// `#909090`, R-434; read from its constant).
 fn running_dot() -> [u8; 3] {
     render::present::NOT_YET_DOT_SRGB8
 }
@@ -842,7 +844,7 @@ fn qa_col062_proposed_swatches_match_section_1_4s_figures() {
             );
         }
     }
-    // The values are proposed in the corpus, pending the human's confirmation at the M1 gate (R-71).
+    // The values were proposed in the corpus for the human's confirmation at the M1 gate (R-71), which R-433 gives.
     let doc = std::fs::read_to_string(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../docs/design/principia_colour_composition.md"

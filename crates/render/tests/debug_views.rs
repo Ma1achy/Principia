@@ -13,8 +13,8 @@
 //!   symbol at slot `k` is the appended sequence's; the reduced length of a truncated word draws the hatch
 //!   (`word_hash_and_symbol_at_k_*`);
 //! - REQ-VAL-010, REQ-VAL-122, REQ-TOOL-154, REQ-TOOL-157: the registry lists both reductions of every vector field;
-//!   `‖n‖ − 1` over a test render at f32 is within the proposed tolerance; the direction cosines of `n`, `r` and `p`
-//!   and the ternary masses draw their renderings (`norm_n_views_*`).
+//!   `‖n‖ − 1` over a test render at f32 is within the tolerance confirmed at the M1 gate (R-433); the direction
+//!   cosines of `n`, `r` and `p` and the ternary masses draw their renderings (`norm_n_views_*`).
 //!
 //! A view's value is read exactly through a probe: the view's own WGSL with its `colour` renamed and a `colour` that
 //! writes its `value` into the red channel of the float target. Each test registers its negative control (R-176).
@@ -43,14 +43,14 @@ const MIN_TIE_MARGIN: f64 = 0.01;
 /// The f32 unit roundoff, `2⁻²⁴`, as `crates/kernel/tests/derived.rs` takes it.
 const U: f64 = f32::EPSILON as f64 / 2.0;
 
-/// The proposed tolerance on `‖n‖ − 1` at f32 (REQ-VAL-122, a calibration: proposed, R-71; the human confirms it at
-/// the M1 gate). `n = (a − b, 2p, 2q)/I` is exactly unit for any `ρ̃`, `λ̃` (Lagrange's identity, `p² + q² = ab`), so
-/// only the rounding of `a`, `b`, `p`, `q`, `I`, the three divisions and the fragment's `length` departs from it: to
-/// first order `‖n‖² − 1` within `3U` each for `(a − b)²` and `I²` from `a` and `b`, `4U` each from `p` and `q` (their
-/// cancellation bounded by `√(ab) ≤ I/2`), `2·5U` for the divisions, then `length`'s `dot` and `sqrt` (`3U`, `9U`):
-/// about `30U` on `‖n‖`, rounded up to `64U = 2⁻¹⁸ ≈ 3.8e-6`. The measured worst over the test render is printed with
-/// the test's output and recorded in the PR.
-const NORM_TOL: f64 = 64.0 * U;
+/// The tolerance on `‖n‖ − 1` at f32 (REQ-VAL-122, a calibration: proposed, R-71, and confirmed at the M1 gate, R-433),
+/// the constants register's `n_norm_tol`, read from there. `n = (a − b, 2p, 2q)/I` is exactly unit for any `ρ̃`, `λ̃`
+/// (Lagrange's identity, `p² + q² = ab`), so only the rounding of `a`, `b`, `p`, `q`, `I`, the three divisions and the
+/// fragment's `length` departs from it: to first order `‖n‖² − 1` within `3U` each for `(a − b)²` and `I²` from `a` and
+/// `b`, `4U` each from `p` and `q` (their cancellation bounded by `√(ab) ≤ I/2`), `2·5U` for the divisions, then
+/// `length`'s `dot` and `sqrt` (`3U`, `9U`): about `30U` on `‖n‖`, rounded up to `64U = 2⁻¹⁸ ≈ 3.8e-6`. The measured
+/// worst over the test render is printed with the test's output and recorded in the PR.
+const NORM_TOL: f64 = ledger::constants::N_NORM_TOL.number();
 
 fn gpu() -> GpuHarness {
     GpuHarness::new().unwrap_or_else(|e| panic!("{e}"))
@@ -1113,10 +1113,12 @@ fn check_norm(s: &Scene, tol: f64) -> (f64, f64) {
 
 #[test]
 fn norm_n_views_norm_within_tolerance() {
+    assert_eq!(NORM_TOL, 64.0 * U, "the register's n_norm_tol is 64 U");
     let (gpu_worst, cpu_worst) = check_norm(&norm_scene(), NORM_TOL);
     println!(
         "REQ-VAL-122 evidence: over 512 random configurations, max |‖n‖ − 1| is {gpu_worst:e} rendered at f32 \
-         ({:.2} U) and {cpu_worst:e} from the Rust read side at f32 ({:.2} U); proposed tolerance {NORM_TOL:e} (64 U)",
+         ({:.2} U) and {cpu_worst:e} from the Rust read side at f32 ({:.2} U); confirmed tolerance {NORM_TOL:e} \
+         (64 U, R-433)",
         gpu_worst / U,
         cpu_worst / U
     );

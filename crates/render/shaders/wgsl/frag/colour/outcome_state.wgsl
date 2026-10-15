@@ -31,9 +31,10 @@
 // @uniform escape_body_2: vec3<f32> = (0.029556835, 0.57758045, 0.7156935)
 // collision at t = 0 (t_end_step == 0), orange: #F29620.
 // @uniform collision_at_start: vec3<f32> = (0.8879231, 0.3049873, 0.014443844)
-// triple collision (a collision, detail = 3), lavender: #D6A1FF. Proposed, R-71 (REQ-COL-062, RQ-234).
+// triple collision (a collision, detail = 3), lavender: #D6A1FF. Proposed, R-71 (REQ-COL-062, RQ-234);
+// confirmed, R-433.
 // @uniform triple_collision: vec3<f32> = (0.67244315, 0.35640013, 1.0)
-// triple ejection (an escape, detail = 3), navy: #000097. Proposed, R-71 (REQ-COL-062, RQ-234).
+// triple ejection (an escape, detail = 3), navy: #000097. Proposed, R-71 (REQ-COL-062, RQ-234); confirmed, R-433.
 // @uniform triple_ejection: vec3<f32> = (0.0, 0.0, 0.30946892)
 
 fn colour(ctx: Ctx) -> vec3<f32> {

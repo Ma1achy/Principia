@@ -518,6 +518,11 @@ const PRESENTATION: [&str; 11] = [
     "hue_wheel_c",
 ];
 
+/// The M1 gate's calibrations the register holds (R-433): `r_pole`, the pole hold's radius, a march parameter that
+/// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance.
+/// Neither is among the entries §3.8 hashes ("The hash"), so neither is hashed.
+const CALIBRATIONS: [&str; 2] = ["r_pole", "n_norm_tol"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -529,13 +534,14 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // §3.8 hashes the register entries that decide stored bits; every other entry is a chart constant, hashed by
     // value through the link registry instead (§3.9, "The hash"; R-344), or a presentation constant the generated
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
-    // register"; R-427, TASK-M1-18).
+    // register"; R-427, TASK-M1-18), or one of the M1 gate's calibrations (R-433).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
                 .iter()
                 .any(|c| c.name == k.name)
-                || PRESENTATION.contains(&k.name),
+                || PRESENTATION.contains(&k.name)
+                || CALIBRATIONS.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -544,6 +550,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the presentation constant `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in CALIBRATIONS {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the calibration `{name}` is not an unhashed register entry"
         );
     }
 }

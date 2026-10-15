@@ -48,10 +48,11 @@ const TOL: f64 = 1e-5;
 /// The f32 unit roundoff, `2⁻²⁴`, as `crates/kernel/tests/derived.rs` takes it.
 const U: f64 = f32::EPSILON as f64 / 2.0;
 
-/// REQ-VAL-122's proposed tolerance on `‖n‖ − 1` at f32, 64 U (a calibration, R-71: pending the human's confirmation
-/// at the M1 gate). Its derivation (first-order rounding of `a`, `b`, `p`, `q`, `I` and the divisions) bounds each
-/// component of `n` as well, so the same figure holds `n` against its f64 reference.
-const NORM_TOL: f64 = 64.0 * U;
+/// REQ-VAL-122's tolerance on `‖n‖ − 1` at f32, 64 U = 2⁻¹⁸, confirmed by the human at the M1 gate (R-433) and read
+/// from the constants register's `n_norm_tol` (`qa_TASK-M1-18_r433.rs` holds the entry to 64 U). Its derivation
+/// (first-order rounding of `a`, `b`, `p`, `q`, `I` and the divisions) bounds each component of `n` as well, so the
+/// same figure holds `n` against its f64 reference.
+const NORM_TOL: f64 = ledger::constants::N_NORM_TOL.number();
 
 /// `crates/kernel/tests/derived.rs`'s drift tolerance: 1e-6 relative to `|K| + |V| + |E_0|`.
 const DRIFT_TOL: f64 = 1e-6;

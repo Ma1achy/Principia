@@ -335,6 +335,13 @@ with dd_colouring §3.1's sRGB transfer.
   The flat magenta R-16 kept, `#FF00FF`, is 0.101 from `#E034C6`. The two colours are 0.35 apart in OKLab lightness, so
   the stripes stay visible without colour vision. `dbg_hash_u32` can
   give any colour, but never a pattern. The human confirms the pattern and colours at the M1 gate.
+  **Confirmed at the M1 gate as proposed (R-428):** violet `#9B00FF`, cyan `#48FFFF`, stripes 4 px wide.
+  **Under each colour-vision simulation (R-429; REQ-COL-061, R-386)** the hatch stays distinguishable from every
+  palette entry above, by the criterion confirmed beside it: τ is the OKLab distance from `#FF00FF` to `#E034C6`,
+  0.101; under each simulation it passes by colour, each stripe colour farther than τ from every palette entry, both
+  simulated, or by the pattern, when the two simulated stripes are more than τ apart. The pattern argument holds at
+  1:1 device pixels only; a downscaled export blends the stripes to a flat colour, which under achromatopsia sits on
+  the grey ramp (R-429).
 - **The "not yet" stipple, `debug_not_yet(frag_xy)` (R-399; proposed at the M1 gate, R-71; REQ-COL-053,
   REQ-COL-064):** "not yet", an unset `d_min` (R-271, R-280) and a `running` sample (R-96) alike, is the neutral grey
   `DBG_NOT_YET` with a fine dot stipple computed from the pixel position `p = ⌊frag_xy⌋`, as the hatch is. It is dots,
@@ -342,6 +349,10 @@ with dd_colouring §3.1's sRGB transfer.
   value, greyscale included, collides with it. The grey's value (REQ-COL-053, proposed by TASK-M1-09) and the
   stipple's pattern (REQ-COL-064, proposed by TASK-M1-17) are confirmed by the human at the M1 gate. It lives in `present.wgsl`
   beside `DBG_NOT_YET`; every view that shows "not yet" calls it, the outcome palette's `running` class included.
+  **Confirmed at the M1 gate:** the grey `#4E4E4E` (R-433), and the stipple as a 2 × 2 px dot of `#909090` in each
+  4 × 4 physical-pixel cell, where bit 1 of `p.x` and of `p.y` are both 0, its dots changed from the proposed `#808080`
+  (R-434). No flat colour of any palette comes within the hatch's τ = 0.101 of every pixel of a 4 × 4 block (the
+  nearest, 0.115), and the dots are 0.229 lighter than the grey in OKLab, visible without colour vision.
 
 ### Live-state & array inspection
 

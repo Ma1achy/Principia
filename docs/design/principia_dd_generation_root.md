@@ -785,16 +785,34 @@ citing its calibration requirement, and read from the register like any other; n
 
 | name | proposed value | class | gate | requirement |
 |---|---|---|---|---|
-| `log_floor_d_min` | 2⁻¹⁴ ≈ 6.10e-5, `d_min`'s log floor, a distance (binary16's smallest normal) | canonical-units | M1 | REQ-TOOL-160 |
-| `log_floor_dE_max` | 2⁻²⁰ ≈ 9.54e-7, `dE_max`'s log floor, absolute, in the stored field's normalised units | canonical-units | M1 | REQ-TOOL-160 |
-| `log_floor_dLz_max` | 2⁻²⁰ ≈ 9.54e-7, `dLz_max`'s log floor, absolute, in the stored field's normalised units | canonical-units | M1 | REQ-TOOL-160 |
-| `log_floor_closure_min` | 2⁻²³ ≈ 1.19e-7, `closure_min`'s log floor, a dimensionless chord | canonical-units | M1 | REQ-TOOL-160 |
-| `log_floor_rho_ratio` | 2⁻²³ ≈ 1.19e-7, `rho_ratio`'s log floor, assuming the mass-weighted ‖ρ̃‖/‖λ̃‖; re-marked provisional until M2 when confirmed at M1 (R-419) | canonical-units | M1 | REQ-TOOL-160 |
-| `log_floor_r_min_pair_0` | 2⁻¹⁴ ≈ 6.10e-5, `r_min_pair_0`'s log floor, a distance; re-marked provisional until M2 when confirmed at M1 (R-419) | canonical-units | M1 | REQ-TOOL-160 |
-| `hatch_violet` | `0x9B00FF`, the invalid hatch's first colour, 8-bit sRGB | canonical-units | M1 | REQ-COL-055 |
-| `hatch_cyan` | `0x48FFFF`, the invalid hatch's second colour, 8-bit sRGB | canonical-units | M1 | REQ-COL-055 |
-| `hatch_half_period` | 4, the hatch's stripe width in pixels | canonical-units | M1 | REQ-COL-055 |
+| `log_floor_rho_ratio` | 2⁻²³ ≈ 1.19e-7, `rho_ratio`'s log floor, assuming the mass-weighted ‖ρ̃‖/‖λ̃‖; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
+| `log_floor_r_min_pair_0` | 2⁻¹⁴ ≈ 6.10e-5, `r_min_pair_0`'s log floor, a distance; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `eps_m01` | 10⁻⁵, the `DEGENERATE(M01_TINY)` threshold (dd_decoder §3.1), a threshold with its measured gap | canonical-units | M2 | REQ-DEC-039 |
+| `r_pole` | 0.01, the pole radius of the unwrapped phase `θ̃` on the unit shape sphere (dd_integrator §3.7, R-389); confirmed at the M1 gate and marked provisional until M3, where it is re-confirmed against real orbits' near-pole arcs (R-433) | canonical-units | M3 | REQ-INT-086 |
+
+The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
+proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the
+hatch); none is hashed. `d_min`'s floor at binary16's smallest normal is intended: a floor at 2⁻²⁰ would compress
+`d_min` ∈ [6e-5, 1] from half the ramp to an eighth of it (R-428, answering R-427's question). `rho_ratio`'s and
+`r_min_pair_0`'s floors, confirmed there provisionally, are in the table above, provisional until M2.
+
+| name | value | class | citation |
+|---|---|---|---|
+| `log_floor_d_min` | 2⁻¹⁴ ≈ 6.10e-5, `d_min`'s log floor, a distance (binary16's smallest normal) | canonical-units | R-428 |
+| `log_floor_dE_max` | 2⁻²⁰ ≈ 9.54e-7, `dE_max`'s log floor, absolute, in the stored field's normalised units | canonical-units | R-428 |
+| `log_floor_dLz_max` | 2⁻²⁰ ≈ 9.54e-7, `dLz_max`'s log floor, absolute, in the stored field's normalised units | canonical-units | R-428 |
+| `log_floor_closure_min` | 2⁻²³ ≈ 1.19e-7, `closure_min`'s log floor, a dimensionless chord | canonical-units | R-428 |
+| `hatch_violet` | `0x9B00FF`, the invalid hatch's first colour, 8-bit sRGB | canonical-units | R-428 |
+| `hatch_cyan` | `0x48FFFF`, the invalid hatch's second colour, 8-bit sRGB | canonical-units | R-428 |
+| `hatch_half_period` | 4, the hatch's stripe width in pixels | canonical-units | R-428 |
+
+The register's entry R-433 confirms at the M1 gate: a calibration the task that needed it proposed as a test's
+definition (REQ-VAL-122, TASK-M1-12), entered confirmed, citing R-433, so that its tests read it from here rather than
+each defining it; it is not hashed. `r_pole`, which R-433 confirms too, is in the provisional table above, until M3.
+
+| name | value | class | citation |
+|---|---|---|---|
+| `n_norm_tol` | 2⁻¹⁸ ≈ 3.81e-6, 64 U with U = 2⁻²⁴ the f32 unit roundoff: the tolerance on `‖n‖ − 1` at f32 of the paired test asserting `‖n‖ = 1` (gui_state_contract §4) | canonical-units | R-433 |
 
 ### 3.9 The link registry (consolidated from chart contract Part 2.5)
 
