@@ -743,16 +743,18 @@ shaders share them:
   exact pattern a calibration (REQ-COL-055, R-71; R-132), confirmed at the M1 gate as proposed (R-428). Only NaN, and
   a stored `±∞` (below), get it: a stored sentinel such as −1.0 shows as its
   literal value on the ramp (R-79's exception, R-136). A NaN reads as "no data", never as a value. A stored `±∞` that
-  is no declared sentinel gets it too, on the CPU and the GPU alike (R-436): `rho_ratio`'s `+∞` at the `α = 0` pole,
+  is no declared sentinel or unset value gets it too, on the CPU and the GPU alike (R-436): `rho_ratio`'s `+∞` at the `α = 0` pole,
   `V_0`'s and `E_0`'s `−∞` at the collision pole (`principia_dd_decoder.md` §3.6).
 
 Each numeric debug field therefore generates a two-line `colour()` — the NaN guard, an exact **bitcast comparison** of
-`raw` against the canonical quiet-NaN bits that returns `debug_invalid(frag_xy)` (`principia_render_contract.md` Part 2's rule; never a
+`raw` against the canonical quiet-NaN bits that returns `debug_invalid(frag_xy)` (since R-436, the non-finite guard: an
+exponent of all ones, which also masks a `±∞` that is no declared sentinel or unset value, below) (`principia_render_contract.md` Part 2's rule; never a
 self-comparison or `isnan()`, which fast-math may fold away — R-114), then `ramp( range_norm(raw, lo, hi, RANGE_AUTO, u_range) )` — where `RANGE_AUTO` is the
 fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in the
 code (§9, §10). **Debug fields are raw** — the stated exception to §13's validity-first rule (R-79): apart from the NaN
-guard there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
-against the raw `state` field, not silently recoloured. NaN still goes to the invalid pattern.
+guard (the non-finite guard, R-436) there is no validity masking — a failed-state sentinel (e.g. `0.0`) is shown as its literal value, cross-checked
+against the raw `state` field, not silently recoloured. NaN still goes to the invalid pattern, and so does a stored `±∞`
+that is no declared sentinel or unset value (R-436).
 
 **The template as built (TASK-M1-09; RQ-231, decided per R-369; R-72 for the cyclic period, R-71 for the log
 floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts, which keep R-381's `symlog` view.
@@ -785,16 +787,32 @@ is unbounded defaults to `RANGE_AUTO = 1`, except a cyclic one, on its fixed `[0
 the view's uniforms, declared in its header (gui_state_contract §3): `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`,
 whose default the generator writes from the node's param and the assembler's declaration parser reads back, and
 `// @uniform u_range: vec2<f32> = (lo, hi)`, the measured `(min, max)` of `raw`.
-**A non-finite value is invalid (R-436).** The guard sends a stored `±∞` that is no declared sentinel to
+**A non-finite value is invalid (R-436).** The guard sends a stored `±∞` that is no declared sentinel or unset value to
 `debug_invalid(frag_xy)` as it sends NaN, on the CPU twin and in the WGSL alike, by a comparison on the value's bits
 before any arithmetic (an exponent of all ones; never `isinf`, an infinite literal or arithmetic on `±∞`, which WGSL
 lets an implementation assume away; R-114, gpu_determinism_note rule 4); and the measured range is taken over the
-samples whose stored value is finite, since the others are not on the ramp. Between the guard and the ramp, a
+samples whose stored value is finite, since the others are not on the ramp. Before the guard (the order below), a
 stored sentinel shows as its literal value through `dbg_sentinel`, fed the compacted value (R-136, R-381), and
 `d_min`'s unset value, f16 +∞ tested by its bits, is drawn in the "not yet" style of running samples,
 `debug_not_yet(frag_xy)`: the neutral grey `DBG_NOT_YET` with a fine dot stipple from the pixel position (R-271,
 R-280, R-399; REQ-COL-053, REQ-COL-064; the grey `#4E4E4E` confirmed at the M1 gate, R-433, and the stipple, its dots
 `#909090`, R-434).
+
+**The order of a view's lines (R-436; applied per R-369).** The generator emits a view's lines in the order this
+section gives them, and the widened guard, an exponent of all ones, would catch `d_min`'s unset `+∞` if it came
+first. So a numeric view's `colour()` tests, in this order:
+1. a declared sentinel's or unset value's own bit test (`d_min`'s unset `+∞`, drawn "not yet"; a finite sentinel,
+   shown through `dbg_sentinel`; a `±∞` sentinel, below);
+2. the non-finite guard: NaN, and every stored `±∞` that is no declared sentinel or unset value, to `debug_invalid`;
+3. the ramp.
+
+**A `±∞` sentinel is tested on its bits (R-436; applied per R-369).** R-418's identities, `escape_time_min`'s `+∞`
+(binary16 `0x7c00`) and `escape_time_max`'s `−∞` (`0xfc00`), "no escape", are declared sentinels. Such a sentinel is
+tested on its bits, never against a literal: the literal-sentinel line `if (raw == <literal>)` would need an infinite
+literal, which naga rejects (gpu_determinism_note rule 4), and it is tested before the guard and before any
+arithmetic, never through the compaction or `range_norm`, which would do arithmetic on `±∞`. Its drawn style is not
+defined by the corpus: it is a definition requirement (R-72), REQ-COL-071, written here by TASK-M5-01, which builds
+those fields' ledger entries, and reviewed by the gui reviewer.
 
 **The prelude as built (TASK-M1-03; R-72 for the definitions, R-369 for the rest).** The ledger emits it into
 `crates/render/shaders/wgsl/lib/prelude.wgsl`, the full tier's. The assembler emits it per variant
@@ -956,7 +974,7 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
 - **Validity-first.** Every field carries its validity lane; every colouring has an explicit
   invalid-pixel treatment, by default the hatched invalid pattern (R-132) — a NaN / sentinel must read as "no data", not as a value (composition spec
   §3, §6; R-79). Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
-  invalid pattern (§10.1).
+  invalid pattern (§10.1), as does a stored `±∞` that is no declared sentinel or unset value (R-436).
 
 ---
 

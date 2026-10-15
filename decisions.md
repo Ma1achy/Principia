@@ -9525,6 +9525,17 @@ answered by choosing one of the options offered; R-437 holds the second. The cho
   values, not a ledger sentinel). `d_min`'s unset `+∞` is still drawn in the "not yet" style (R-271, R-280, R-399),
   and R-418's `+∞` and `−∞` identities stay the sentinels the ledger declares them. Every other stored `±∞` is
   invalid.
+- **The order, and a `±∞` sentinel's test** (round 5, gui review 5533020211 G1 and G3; applied per R-369). The
+  generator emits a view's lines in the order render_gui_spec §10.1 gives them, so §10.1 now states it: first a
+  declared sentinel's or unset value's own bit test, then the non-finite guard, then the ramp; the guard's exclusion
+  reads "no declared sentinel or unset value". Otherwise the widened guard would catch `d_min`'s unset `+∞` first. A
+  `±∞` sentinel, R-418's `escape_time_min` `+∞` and `escape_time_max` `−∞`, is tested on its bits, never against a
+  literal (the literal-sentinel line `if (raw == <literal>)` would need an infinite literal, which naga rejects, rule
+  4), before the guard and before any arithmetic. The corpus defines no drawn style for it, so its style is a
+  definition requirement (R-72), REQ-COL-071 (reqio, new), on TASK-M5-01, which builds those fields' ledger entries
+  and so their generated views; TASK-M5-01 gains the gui reviewer. render_gui_spec §10.1 and §13 (gui review G2) also
+  carry R-436 in their older NaN-guard sentences, their wording kept. TASK-M2-31's wording matches, and its GPU case
+  draws `d_min`'s unset `+∞` too, so the order is checked on the GPU.
 - **A view's measured range** (`u_range`, `RANGE_AUTO = 1`) is taken over the samples whose stored value is finite,
   since the others are not on the ramp (applied per R-369: `V_0`'s and `E_0`'s auto range would otherwise take `−∞`
   as an end, which RQ-284 named).
@@ -9568,6 +9579,8 @@ answered by choosing one of the options offered; R-437 holds the second. The cho
 
 Changes REQ-COL-006, REQ-COL-060 and REQ-VAL-027 (holds, rulings, verify, notes) and REQ-TOOL-030 (rulings, source,
 verify); adds REQ-COL-070 and TASK-M2-31.
+Round 5 (gui review 5533020211) changes REQ-COL-070 (statement, verify) and TASK-M5-01 (a requirement, the gui
+reviewer); adds REQ-COL-071; also applied in render_gui_spec §10.1 and § "13. Invariants".
 
 ## R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*
 *15 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted
