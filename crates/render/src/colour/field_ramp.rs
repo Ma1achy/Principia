@@ -10,7 +10,9 @@
 //! validity lane's `<field>_valid`, taken from its one source, `render::bind::validity_over`, over `ctx` (the word's
 //! for a field of the word, as the word `length`): the entry's tier gate (`ftle_valid`), the read side's own
 //! (`diffusion`'s `n ≥ 2`, R-245; `last_symbol`'s), a stored sentinel (`dmin_pair`'s 3; the word's truncation, its
-//! `length` 127), and, for an `f32` value, the absence NaN by its bits (lowering Part 3a). A field the lane gives no
+//! `length` 127), and, for an `f32` value, a non-finite value by its bits, an exponent field of all ones: the absence
+//! NaN (lowering Part 3a) and every stored `±∞` that is no unset value (R-436, extending R-79; tested on the bits before
+//! any arithmetic, never by `isinf` or an infinite literal, gpu_determinism_note rule 4). A field the lane gives no
 //! validity is refused. `d_min`'s f16 +∞ is no invalid value but its unset one
 //! (R-271), tested by its bits as the validity lane tests it (R-343 item 5; RQ-233), which the ramp draws in the
 //! "not yet" style of running samples, `debug_not_yet(frag_xy)`, never the invalid pattern (R-280, R-399).
@@ -25,10 +27,10 @@
 //! the node carries it). Their WGSL is `shaders/wgsl/lib/ramp.wgsl` ([`RAMP_WGSL`]). **Polarity** ([`Polarity`]) is
 //! per field: `low` reverses the compacted value, `1 − b`, so the field's low end is bright (colour_composition §1.2).
 //!
-//! **The order of the tests** (render_gui_spec §10.1's, R-436): first the unset value's own bit test, then the
-//! invalid lane: the field's validity, then a non-finite value, tested by its bits (an exponent of all ones, R-114,
-//! R-436), never by arithmetic on `±∞`, then the compaction's styled values; then the compaction and the ramp. So no
-//! compaction and no comparison ever takes a non-finite value.
+//! **The order of the tests** (render_gui_spec §10.1's, R-436): first the unset value's own bit test (`d_min`'s `+∞`,
+//! "not yet"), then the invalid lane: the field's validity, a stored sentinel's own test among it, then the non-finite
+//! guard, both in [`ScalarField`]'s predicate, then the compaction's styled values (`log`'s `x < 0`); then the
+//! compaction and the ramp. So no compaction and no comparison ever takes a non-finite value.
 //!
 //! **The invalid lane.** A field ramp is not a debug view, so it masks (render_gui_spec §13, validity first): an
 //! invalid pixel, NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value (R-436), takes the ramp's
@@ -61,13 +63,15 @@ pub const COMPACTION_WGSL: &str = include_str!("../../shaders/wgsl/lib/compactio
 /// The ramps' WGSL (colour_composition §1.2), placed after the prelude at assembly.
 pub const RAMP_WGSL: &str = include_str!("../../shaders/wgsl/lib/ramp.wgsl");
 
-/// The canonical quiet NaN's bits (lowering Part 3a).
-fn qnan_bits() -> u32 {
-    ledger::payload::canonical_qnan_bits()
-}
+/// An f32's exponent field, all ones: the bits of every non-finite value, NaN and `±∞`, and of no finite one (IEEE 754
+/// binary32). The guard tests `bits & NON_FINITE == NON_FINITE` (R-436). TASK-M2-31 gives it, and [`non_finite`], one
+/// home in `ledger::gen::numeric`, which this module then reads.
+const NON_FINITE: u32 = 0x7F80_0000;
 
-/// An f32's exponent field, all ones for `±∞` and every NaN (R-436: tested by the bits, never by arithmetic).
-const EXPONENT_BITS: u32 = 0x7f80_0000;
+/// Whether `x` is not finite, NaN or `±∞`, by its bits: the guard's test, the CPU twin of the WGSL line (R-436).
+fn non_finite(x: f32) -> bool {
+    x.to_bits() & NON_FINITE == NON_FINITE
+}
 
 /// A payload field read through `ctx` with its validity (colour_composition §3).
 #[derive(Clone, Debug, PartialEq)]
@@ -135,12 +139,17 @@ impl ScalarField {
         }
         let lane_validity = crate::bind::validity_over(lane, &entries, "ctx");
         let lane_valid = lane_validity.predicate;
+        // The lane's predicate first, then the non-finite test: the bit test reads the value, so it stands behind the
+        // tier gate's guard (`has_ftle && ctx.sample.ftle_valid`, REQ-RENDER-015, R-255), which the canonical-NaN test
+        // it replaces did not need (the absence test reads nothing, lowering Part 3a; R-436).
         let mut valid = Vec::new();
-        if is_float {
-            valid.push(format!("bitcast<u32>(v) != {:#010x}u", qnan_bits()));
-        }
-        if lane_valid != "true" || valid.is_empty() {
+        if lane_valid != "true" || !is_float {
             valid.push(lane_valid);
+        }
+        if is_float {
+            valid.push(format!(
+                "(bitcast<u32>(v) & {NON_FINITE:#010x}u) != {NON_FINITE:#010x}u"
+            ));
         }
         // The CPU twin's stored sentinel (R-136), the one the lane's predicate tests (the word's truncation is its
         // `length` 127), and `d_min`'s unset value (R-271), drawn in the "not yet" style ahead of the validity (R-280,
@@ -175,9 +184,9 @@ impl ScalarField {
     /// `(value, valid)` (colour_composition §3): the CPU twin of the read, for the stored value `x` and the read
     /// side's validity `gate` (the tier gate's or the read side's own predicate, true for a field with none).
     pub fn read(&self, x: f32, gate: bool) -> (f32, bool) {
-        let nan = self.float && x.to_bits() == qnan_bits();
+        let not_finite = self.float && non_finite(x);
         let sentinel = self.sentinel.is_some_and(|s| f64::from(x) == s);
-        (x, gate && !nan && !sentinel)
+        (x, gate && !not_finite && !sentinel)
     }
 
     /// Whether `x` is the field's unset value (R-271), by its bits.
@@ -543,17 +552,12 @@ impl FieldRamp {
         (self.slot().kind(), Occupant::Custom(self.wgsl()))
     }
 
-    /// The WGSL `bool` that is true where the value `v` takes the invalid treatment: the field's validity first, so
-    /// that, short-circuited, nothing else reads a value its tier gate excludes (`has_ftle && ftle_valid`,
-    /// REQ-RENDER-015); then a non-finite `f32`, by its exponent's bits (R-436); then the compaction's styled values,
-    /// the last, so no comparison takes a non-finite value.
+    /// The WGSL `bool` that is true where the value `v` takes the invalid treatment: the field's validity first, its
+    /// non-finite guard among it ([`ScalarField`]; R-436), so that, short-circuited, nothing else reads a value its
+    /// tier gate excludes (`has_ftle && ftle_valid`, REQ-RENDER-015) and no comparison takes a non-finite value; then
+    /// the compaction's styled values.
     fn invalid_wgsl(&self) -> String {
         let mut terms = vec![format!("!({})", self.field.valid)];
-        if self.field.float {
-            terms.push(format!(
-                "(bitcast<u32>(v) & {EXPONENT_BITS:#010x}u) == {EXPONENT_BITS:#010x}u"
-            ));
-        }
         terms.extend(self.compaction.styles_wgsl("v"));
         terms.join(" || ")
     }
@@ -651,7 +655,7 @@ impl FieldRamp {
             return Shown::NotYet;
         }
         match self.field.read(x, gate) {
-            (v, true) if v.is_finite() && !self.compaction.styles(f64::from(v)) => {
+            (v, true) if !self.compaction.styles(f64::from(v)) => {
                 Shown::Ramp(self.polarity.apply(self.compaction.place(f64::from(v))))
             }
             _ => Shown::Invalid,
