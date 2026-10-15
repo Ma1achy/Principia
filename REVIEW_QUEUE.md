@@ -141,13 +141,14 @@ chosen.*
     editor** (greyscale + polarity)".
   - `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp": "**Ramp** (scalar → colour):
     `lut(name)`, `lerp(c0,c1)`, `diverging(c−,c0,c+)` (through a neutral), `bands(…)`".
-- **Silence:** the item's name fits two readings. The task file's, written in §9.4: gradient magnitude is a ramp over a
-  derived field, distinct from the map's post-occupant gradient. The other: one "gradient" (a stop list) is the GUI's
+- **Silence:** the item's name fits two readings. The task file's, written in colour_composition §9.4: gradient
+  magnitude is a ramp over a derived field, distinct from the map's post-occupant gradient. The other: one "gradient" (a stop list) is the GUI's
   single form of §1.2's `lut`, `lerp` and `diverging`. Under the second, §1.2 has no ramp of custom stops: their
   interpolation space (OKLab or sRGB), the stops' positions, and how `cyclic` (a compaction in §1.2, a gradient
-  flag in §9) applies are not written.
+  flag in render GUI spec §9) applies are not written.
 - **Options seen:**
-  - (a) The task file's reading alone; §9's custom stops are a separate definition, written by the task that needs it (R-72).
+  - (a) The task file's reading alone; render GUI spec §9's custom stops are a separate definition, written by the
+    task that needs it (R-72).
   - (b) Both: §1.2 gains `stops([(t_i, c_i)], space)`, with `lut`, `lerp` and `diverging` as its named instances.
 - **Applied meanwhile:** colour_composition §9.4 writes the task file's reading and points here.
 - **Waits:** TASK-M7-11's graph model, for the gradient editor's ramp type. TASK-M7-01 does not wait.

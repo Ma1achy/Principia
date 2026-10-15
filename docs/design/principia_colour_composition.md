@@ -639,9 +639,9 @@ fields⟩ (§4.1). The concrete list a node palette shows stays render GUI spec 
 from the combinators of §1.3. In the post chain its `base` is the colour arriving at it: the output of `combine` over
 the user's configured occupants, or of the post before it. The order is the render contract's (Part 4, "Composite
 order"): baked base → `combine` → the post chain, the physics overlay and the structural and debug overlays → `OUT`, and
-the display stage after it, outside the graph (§4.3). So grid, contours, the checker over the vMF map, the physics
-overlay and the quad boundaries lie over whatever stain is configured, not over a fixed base map, and are inserted and
-reordered as data, at most 8 (§4.2). A combinator may still sit inside an occupant's expression tree (§1), where its
+the display stage after it, outside the graph (§4.3). So grid, contours, the checker (the overlay of §7.1's "Checker +
+VMF"), the physics overlay and the quad boundaries lie over whatever stain is configured, not over a fixed base map, and
+are inserted and reordered as data, at most 8 (§4.2). A combinator may still sit inside an occupant's expression tree (§1), where its
 `base` is the sub-tree wired to it.
 
 **9.3 Physics is an overlay op.** The physics overlay is `site_overlay(base, SiteBlend{ sites = physics(m), kernel =
