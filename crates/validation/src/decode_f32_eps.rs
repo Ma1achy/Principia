@@ -23,7 +23,8 @@
 //! tolerances; this is decoder test 12's own factor, not those).
 //!
 //! **The proposal** (REQ-DEC-043, R-71): **256 eps** (≈ 3.05e-5), `gate.json`'s threshold, provisional until the human
-//! confirms it at the M2 gate. Measured on an Apple M3 Pro, Metal, fast-math off (R-84), by this gate's measure:
+//! confirms it at the M2 gate. **Its domain:** the defaults link set, every `|zₖ| ≤ 2`, Metal with fast-math off (R-84),
+//! the decode alone (no trajectory). Measured on an Apple M3 Pro by this gate's measure:
 //!
 //! | input | samples | worst (eps) | at | median | p99 |
 //! |---|---|---|---|---|---|
@@ -31,6 +32,13 @@
 //! | `interior.json` (seed 1, 64 × 256) | 16 384 | 42.55 | `r2x` | 3.21 | 12.18 |
 //! | sweep: seeds 1 to 16, 256 charts × 256 points each | 1 048 576 | 175.21 | `virial_ratio` (seed 7) | ≈ 3.1 | ≈ 12 |
 //! | the same sweep, f32 on the CPU (native), not the GPU | 1 048 576 | 188.27 | | | |
+//! | outside the domain: the defaults at saturated controls | | 188.62 | | | |
+//! | outside the domain: `stick_breaking` at saturated controls | | 2.53e6 | light bodies at `‖r‖` of 10³ to 2·10⁶ | | |
+//!
+//! The two saturated rows are physics review 5539636118's measurement, against f64. They lie outside the proposal's
+//! domain. At `stick_breaking`'s saturation the gap is f32's own: the GPU is 16.5 and 7 eps from the native f32 decode,
+//! not 2.53e6, so the backend adds nothing there; a factor for saturated controls, or for another link set, would be
+//! measured on its own domain.
 //!
 //! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
 //! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
