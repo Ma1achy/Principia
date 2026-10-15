@@ -65,4 +65,4 @@ over the samples whose stored value is finite. A declared sentinel or unset valu
 - **The order (R-436 round 5, gui review 5533020211 G1, applied per R-369):** a view's `colour()` tests a declared
   sentinel's or unset value's own bit test first, then the non-finite guard, then the ramp (render_gui_spec §10.1), so
   the widened guard never catches `d_min`'s unset `+∞`; the GPU case checks it. A `±∞` sentinel (R-418's identities)
-  is tested on its bits too; its style is TASK-M5-01's definition (REQ-COL-071), not this task's.
+  is tested on its bits too; its style is TASK-M5-17's definition (REQ-COL-071), not this task's.
