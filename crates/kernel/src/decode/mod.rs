@@ -1,7 +1,6 @@
 //! The shared decoder `D`, the Matter rung (dd_decoder §1, §3): `z → mass × config × momentum → (m, r, p)`, one
 //! source for the f32 kernel and the f64 CPU path (R-265), generic over the kernel's `Real` and over the link
-//! [`Selection`](crate::generated::links::Selection), so each selection is a monomorphised variant (REQ-GEN-013;
-//! lowering Part 2).
+//! [`Selection`], so each selection is a monomorphised variant (REQ-GEN-013; lowering Part 2).
 //!
 //! The blocks, in the decode order mass → config → momentum → derived invariants (chart_decoder_contract Part 2):
 //! - [`latent`]: the 8-component control vector and its fixed block layout.
