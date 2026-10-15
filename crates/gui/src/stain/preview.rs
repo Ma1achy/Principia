@@ -11,7 +11,7 @@ use eframe::egui::{
     self, pos2, vec2, Button, Color32, Rect, RichText, Slider, Ui, UiBuilder, Vec2,
 };
 use eframe::egui_wgpu;
-use engine::contract::legend::{OUTCOME_OCCUPANT, SWATCHES};
+use engine::contract::legend::SWATCHES;
 use engine::contract::render_state::{NodeKind, Occupant};
 
 use super::{
@@ -41,11 +41,11 @@ pub fn fit(area: Rect, viewport: Vec2) -> Rect {
 
 /// What node `kind` with `occupant` maps, as the inspector's second line reads.
 pub fn maps(kind: NodeKind, occupant: &Occupant) -> String {
+    if canvas::outcome_palette(kind, occupant) {
+        return "maps outcome class [categorical] → vec3".to_owned();
+    }
     match (kind, occupant) {
         (NodeKind::Source, Occupant::Field(f)) => format!("reads ctx.{f} → field"),
-        (NodeKind::Colour, Occupant::Builtin(id)) if id == OUTCOME_OCCUPANT => {
-            "maps outcome class [categorical] → vec3".to_owned()
-        }
         (NodeKind::Colour, _) => "maps its field → vec3".to_owned(),
         (NodeKind::Brightness, _) => "maps its field → f32".to_owned(),
         (NodeKind::Combiner, _) => "colour · brightness → vec3".to_owned(),
@@ -179,7 +179,7 @@ fn inspector(
         }
         ui.add_space(6.0);
     }
-    if matches!(&n.occupant, Occupant::Builtin(b) if b == OUTCOME_OCCUPANT) {
+    if canvas::outcome_palette(n.kind, &n.occupant) {
         ui.label(RichText::new("▾ Palette").strong());
         for swatch in SWATCHES {
             let [r, gr, b] = swatch.srgb8;

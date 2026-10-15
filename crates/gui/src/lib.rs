@@ -38,6 +38,7 @@ mod tests {
     mod mock_legend_keys;
     mod mock_lock_badge;
     mod mock_manifold_view;
+    mod mock_stain_drawn;
     mod mock_stain_preview;
     mod mock_status_line;
     mod mock_tag;

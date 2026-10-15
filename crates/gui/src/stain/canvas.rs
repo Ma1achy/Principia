@@ -567,23 +567,9 @@ fn graph(ui: &mut Ui, rect: Rect, toggles: Rect, frame: &mut Frame<'_>, keys: &m
     let painter = ui.painter().clone();
     let visuals = ui.visuals().clone();
     // The grid: dots every GRID points of the canvas.
-    let step = GRID * zoom;
-    if step >= 6.0 {
-        let start = rect.min
-            + vec2(
-                (canvas.view.pan.x).rem_euclid(step),
-                (canvas.view.pan.y).rem_euclid(step),
-            );
-        let dot = visuals.widgets.noninteractive.bg_stroke.color;
-        let mut y = start.y;
-        while y < rect.max.y {
-            let mut x = start.x;
-            while x < rect.max.x {
-                painter.circle_filled(pos2(x, y), 1.0, dot);
-                x += step;
-            }
-            y += step;
-        }
+    let dot = visuals.widgets.noninteractive.bg_stroke.color;
+    for p in grid_dots(rect, canvas.view) {
+        painter.circle_filled(p, 1.0, dot);
     }
     // The wires, under the nodes, from each out-port to the in-port it feeds, in its type's colour.
     for w in g.wires() {
@@ -597,14 +583,12 @@ fn graph(ui: &mut Ui, rect: Rect, toggles: Rect, frame: &mut Frame<'_>, keys: &m
         let Some(&t) = to.ins.get(port) else {
             continue;
         };
-        let (a, b) = (from.out_port(zoom), to.in_port(port, zoom));
-        let bend = ((b.x - a.x).abs() * 0.5).max(30.0 * zoom);
         painter.add(Shape::CubicBezier(
             egui::epaint::CubicBezierShape::from_points_stroke(
-                [a, a + vec2(bend, 0.0), b - vec2(bend, 0.0), b],
+                wire(from.out_port(zoom), to.in_port(port, zoom), zoom),
                 false,
                 Color32::TRANSPARENT,
-                Stroke::new(2.0 * zoom.max(0.5), type_colour(t)),
+                Stroke::new(wire_width(zoom), type_colour(t)),
             ),
         ));
     }
@@ -632,6 +616,39 @@ fn graph(ui: &mut Ui, rect: Rect, toggles: Rect, frame: &mut Frame<'_>, keys: &m
         );
     }
     hint(&painter, &visuals, rect);
+}
+
+/// The grid's dots on `rect` under `view`: every [`GRID`] points of the canvas, from the pan's offset, each inside
+/// `rect`'s right and bottom edges; none once they would be closer than 6 points.
+pub fn grid_dots(rect: Rect, view: Zoom) -> Vec<Pos2> {
+    let step = GRID * view.zoom;
+    let mut dots = Vec::new();
+    if step < 6.0 {
+        return dots;
+    }
+    let start = rect.min + vec2(view.pan.x.rem_euclid(step), view.pan.y.rem_euclid(step));
+    let mut y = start.y;
+    while y < rect.max.y {
+        let mut x = start.x;
+        while x < rect.max.x {
+            dots.push(pos2(x, y));
+            x += step;
+        }
+        y += step;
+    }
+    dots
+}
+
+/// A wire's Bézier from the out-port at `a` to the in-port at `b`: out and in horizontally, bent by half their
+/// horizontal distance, at least 30 points of the canvas.
+pub fn wire(a: Pos2, b: Pos2, zoom: f32) -> [Pos2; 4] {
+    let bend = ((b.x - a.x).abs() * 0.5).max(30.0 * zoom);
+    [a, a + vec2(bend, 0.0), b - vec2(bend, 0.0), b]
+}
+
+/// A wire's width at `zoom`: 2 points of the canvas, never under 1.
+pub fn wire_width(zoom: f32) -> f32 {
+    2.0 * zoom.max(0.5)
 }
 
 /// Node `id`'s keyboard scope, while the pool holds one for it.
@@ -754,6 +771,11 @@ fn node(
     }
 }
 
+/// Whether a node of `kind` with `occupant` is the outcome palette, drawn as its swatches.
+pub fn outcome_palette(kind: NodeKind, occupant: &Occupant) -> bool {
+    kind == NodeKind::Colour && *occupant == Occupant::Builtin(OUTCOME_OCCUPANT.to_owned())
+}
+
 /// The state glyph (§8): a source's field and a combiner's occupant as a dropdown's face, the outcome palette's
 /// swatches as chips, a brightness as its ramp from full to its darkest, anything else as its occupant's name.
 fn state_glyph(
@@ -783,7 +805,7 @@ fn state_glyph(
     };
     match (&n.kind, &n.occupant) {
         (NodeKind::Source, _) | (NodeKind::Combiner, _) => face(&title(n.kind, &n.occupant).1),
-        (NodeKind::Colour, Occupant::Builtin(id)) if id == OUTCOME_OCCUPANT => {
+        (kind, occupant) if outcome_palette(*kind, occupant) => {
             let w = rect.width() / SWATCHES.len() as f32;
             for (i, s) in SWATCHES.iter().enumerate() {
                 let [r, gr, b] = s.srgb8;
