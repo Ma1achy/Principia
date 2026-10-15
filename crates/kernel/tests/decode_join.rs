@@ -14,10 +14,10 @@
 //!   past the underflow threshold and approached at `β → π` from below (REQ-VAL-020, R-417).
 //!
 //! **REQ-DEC-045's proposal** (R-71; unconfirmed until the M2 gate): dd_decoder test 1's `Σpᵢ = 0` holds to
-//! [`SUM_P_EPS`] = 4 `eps`, relative to `Σᵢ‖pᵢ‖`, at both precisions (`eps` = 2.2×10⁻¹⁶ at f64, 1.2×10⁻⁷ at f32), over
-//! every `z` of the domain, saturation included, every registered link. The evidence, 200 runs at the fixed seeds
-//! `PROPTEST_RNG_SEED` = 1 … 200 (the fixed grid in each, and 256 fuzzed `z` drawn with unequal masses), as the range
-//! of each run's worst residual and the worst after 50, 100 and 200 runs:
+//! [`SUM_P_EPS`] = 4 `eps`, componentwise, relative to `Σᵢ‖pᵢ‖`, at both precisions (`eps` = 2.2×10⁻¹⁶ at f64, 1.2×10⁻⁷
+//! at f32), over every `z` of the domain, saturation included, every registered link. The evidence, 200 runs at the
+//! fixed seeds `PROPTEST_RNG_SEED` = 1 … 200 (the fixed grid in each, and 256 fuzzed `z` drawn with unequal masses), as
+//! the range of each run's worst residual and the worst after 50, 100 and 200 runs:
 //!
 //! | quantity | f64: range, worst at 50/100/200 | f32: range, worst at 50/100/200 | proposed |
 //! |---|---|---|---|
