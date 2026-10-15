@@ -691,3 +691,41 @@ fn mock_keyboard_windows_the_tree_keeps_tab_and_esc_in_a_window() {
         assert_eq!(nav(&tree, &["w"], Command::Previous).0, ["w", "s1", "e1"])
     });
 }
+
+/// A focused section scrolls into its window's view: the Chart builder, taller than its window, focused on each section
+/// from the far end, places each on a part it shows.
+#[test]
+fn mock_keyboard_windows_a_focused_section_scrolls_into_view() {
+    let (mut app, mut h) = fresh();
+    let entry = crate::windows::entry(Window::ChartBuilder);
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::ChartBuilder, None);
+    settle(&mut h, &mut app);
+    let sections: Vec<String> = app
+        .keyboard
+        .tree(app.view.mode)
+        .children(Some(entry.scope))
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect();
+    assert!(sections.len() > 2, "{sections:?}");
+    let shown = |r: eframe::egui::Rect| r.is_positive();
+    let mut order = sections.clone();
+    order.reverse();
+    order.extend(sections.iter().cloned());
+    for section in &order {
+        app.view.focus.path = vec![entry.scope.to_owned(), section.clone()];
+        // egui animates the scroll; the far end takes some frames to reach.
+        for _ in 0..6 {
+            settle(&mut h, &mut app);
+        }
+        let placed = app.keyboard.place_of(section).expect("placed").rect;
+        assert!(shown(placed), "{section}: {placed:?} out of view");
+    }
+    rejects("a section scrolled out of view", || {
+        assert!(shown(eframe::egui::Rect::from_min_max(
+            eframe::egui::pos2(0.0, 30.0),
+            eframe::egui::pos2(100.0, 10.0)
+        )))
+    });
+}
