@@ -1,7 +1,13 @@
 //! The numeric field view's template (`ledger::gen::numeric`; render_gui_spec §10.1; R-114, R-136; RQ-231;
 //! TASK-M1-09), REQ-RENDER-022:
-//! - every generated numeric view is the two-line template, the bitcast NaN guard then the `range_norm` ramp, with no
-//!   self-comparison (`numeric_view_template_is_the_two_lines`);
+//! - every generated numeric view is the two-line template, the non-finite guard then the `range_norm` ramp, a
+//!   sentinel's or unset value's line before the guard, with no self-comparison
+//!   (`numeric_view_template_is_the_two_lines`);
+//! - REQ-COL-070 (R-436; TASK-M2-31): the guard is the bit test on an exponent field of all ones, after a sentinel's or
+//!   unset value's line, with no `isinf` and no infinite literal (`numeric_view_template_non_finite_guard_*`); every
+//!   generated numeric view draws `+∞` and `−∞` (f32 bits `0x7F80_0000`, `0xFF80_0000`) and every NaN invalid on its
+//!   CPU twin, before any compaction, and `d_min`'s unset `+∞` "not yet" (`numeric_view_template_non_finite_*`); the
+//!   measured range is taken over the finite values (`numeric_view_template_measures_the_ramp_values_only`);
 //! - each ledger scale generates RQ-231's `raw`, and the CPU twin places it as the WGSL does
 //!   (`numeric_view_template_scales_*`);
 //! - a field with an unbounded ledger range defaults to `RANGE_AUTO = 1` (`numeric_view_template_unbounded_*`);
@@ -30,9 +36,23 @@ use ledger::gen::numeric::{self, End, NumericView, Placement, Ramp, Sentinel, Sh
 use ledger::schema::{Bound, Entry, EntryBuilder, FieldType, Ledger, Location, Range, Scale};
 use validation::{negative_control, Declaration, UniformType};
 
-/// The guard every numeric view opens with: the bitcast test against the canonical quiet NaN (R-114).
+/// The guard every numeric view carries: the bit test of an exponent field of all ones, a non-finite value, NaN or
+/// `±∞` (R-114, R-436).
 const GUARD: &str =
-    "    if (bitcast<u32>(raw) == 0x7fc00000u) { return debug_invalid(ctx.frag_xy); }";
+    "    if ((bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u) { return debug_invalid(ctx.frag_xy); }";
+
+/// The guard's condition, as the views write it.
+const GUARD_TEST: &str = "(bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u";
+
+/// `d_min`'s unset line: its f16 +∞, widened, by its bits (R-271, R-280, R-399).
+const UNSET: &str =
+    "    if (bitcast<u32>(raw) == 0x7f800000u) { return debug_not_yet(ctx.frag_xy); }";
+
+/// Whether `line` is a sentinel's or unset value's line: shown literally through `dbg_sentinel`, or "not yet".
+fn sentinel_line(line: &str) -> bool {
+    (line.starts_with("    if (raw == ") && line.contains("{ return dbg_sentinel("))
+        || line == UNSET
+}
 
 fn entries(l: &Ledger) -> Vec<Entry> {
     ledger::gen::validate(l).unwrap_or_else(|e| panic!("{e}"))
@@ -62,8 +82,9 @@ fn body(view: &str) -> Vec<&str> {
         .collect()
 }
 
-/// Checks that `view` (of `field`) is the two-line template: `raw`'s binding, the guard, at most the sentinel's line
-/// (and a diverging view's symmetric bound), then the ramp; and that nothing compares `raw` with itself.
+/// Checks that `view` (of `field`) is the two-line template: `raw`'s binding, at most the sentinel's or unset value's
+/// line, the guard (render_gui_spec §10.1's order, R-436), at most a diverging view's symmetric bound, then the ramp;
+/// and that nothing compares `raw` with itself.
 fn check_template(field: &str, view: &str) {
     for bad in ["raw != raw", "raw == raw", "isnan"] {
         assert!(
@@ -84,7 +105,11 @@ fn check_template(field: &str, view: &str) {
         lines[0].starts_with("    let raw = "),
         "`raw`'s binding first",
     );
-    shape(lines[1] == GUARD, "the bitcast guard second");
+    let at = lines.iter().position(|l| *l == GUARD).unwrap_or(0);
+    shape(
+        at == 1 || (at == 2 && sentinel_line(lines[1])),
+        "the bit-test guard after `raw` and at most a sentinel's line",
+    );
     let last = lines[lines.len() - 1];
     shape(
         (last.starts_with("    return ramp_viridis(range_norm(")
@@ -93,14 +118,10 @@ fn check_template(field: &str, view: &str) {
             && last.contains(", uniforms.RANGE_AUTO != 0u, "),
         "the ramp last",
     );
-    for line in &lines[2..lines.len() - 1] {
-        let sentinel =
-            line.starts_with("    if (raw == ") && line.contains("{ return dbg_sentinel(");
-        let unset = *line
-            == "    if (bitcast<u32>(raw) == 0x7f800000u) { return debug_not_yet(ctx.frag_xy); }";
+    for line in &lines[at + 1..lines.len() - 1] {
         let symmetric =
             *line == "    let m = max(abs(uniforms.u_range.x), abs(uniforms.u_range.y));";
-        shape(sentinel || unset || symmetric, "a line between the two");
+        shape(symmetric, "a line between the two");
     }
 }
 
@@ -119,10 +140,7 @@ negative_control!(
     expected = "by a self-comparison",
     {
         let (e, _, wgsl) = numeric_views().remove(0);
-        check_template(
-            e.name,
-            &wgsl.replace("bitcast<u32>(raw) == 0x7fc00000u", "raw != raw"),
-        );
+        check_template(e.name, &wgsl.replace(GUARD_TEST, "raw != raw"));
     }
 );
 
@@ -366,12 +384,14 @@ fn numeric_view_template_guard_and_sentinels_on_the_twin() {
     );
     let qnan = f32::from_bits(0x7fc0_0000);
     assert_eq!(literal.shown(qnan, false, [0.0, 1.0], 1), Shown::Invalid);
-    let other_nan = f32::from_bits(0x7fc0_0001);
-    assert_ne!(
-        literal.shown(other_nan, false, [0.0, 1.0], 1),
-        Shown::Invalid,
-        "the guard is the canonical NaN's bits alone"
-    );
+    // R-436: the guard is an exponent field of all ones, so every NaN, not the canonical quiet NaN's bits alone.
+    for bits in [0x7fc0_0001, 0xffc0_0000, 0x7f80_0001, 0xffff_ffff] {
+        assert_eq!(
+            literal.shown(f32::from_bits(bits), false, [0.0, 1.0], 1),
+            Shown::Invalid,
+            "the NaN {bits:#010x} is not invalid"
+        );
+    }
     assert_eq!(
         literal.shown(127.0, false, [0.0, 1.0], 1),
         Shown::Literal(127.0)
@@ -390,16 +410,22 @@ fn numeric_view_template_guard_and_sentinels_on_the_twin() {
     check_unset(&unset);
 }
 
-/// Checks that `n` draws +∞ in the "not yet" style and the largest finite f32 and −∞ on the ramp.
+/// Checks that `n` draws +∞ in the "not yet" style, the largest finite f32 either side on the ramp, and −∞, which is
+/// no unset value, invalid (R-436).
 fn check_unset(n: &NumericView) {
     assert_eq!(
         n.shown(f32::INFINITY, false, [0.0, 1.0], 1),
         Shown::NotYet,
         "+inf is not the grey"
     );
-    for x in [f32::MAX, f32::NEG_INFINITY] {
+    for x in [f32::MAX, -f32::MAX] {
         assert!(t(n, x).is_some(), "{x} is on the ramp");
     }
+    assert_eq!(
+        n.shown(f32::NEG_INFINITY, false, [0.0, 1.0], 1),
+        Shown::Invalid,
+        "-inf is not invalid"
+    );
 }
 
 negative_control!(
@@ -426,6 +452,23 @@ fn numeric_view_template_measures_the_ramp_values_only() {
     check_measured(&n, &[3.0, qnan, 127.0, -1.0, 9.0], [-1.0, 9.0]);
     check_measured(&n, &[qnan, 127.0], [0.0, 1.0]);
     check_measured(&n, &[5.0], [5.0, 5.0]);
+    // R-436: over the finite values. `V_0`'s `−∞` at the collision pole, and `E_0`'s, are no end of the range.
+    let (inf, neg) = (f32::from_bits(0x7f80_0000), f32::from_bits(0xff80_0000));
+    for field in ["V_0", "E_0"] {
+        let n = generated(field);
+        check_measured(&n, &[-1.5, neg, -0.25, qnan, -2.0, inf], [-2.0, -0.25]);
+        check_measured(&n, &[neg, -f32::MAX, -0.25], [-f64::from(f32::MAX), -0.25]);
+        check_measured(&n, &[neg, inf, qnan], [0.0, 1.0]);
+    }
+}
+
+/// The generated numeric view of `field`.
+fn generated(field: &str) -> NumericView {
+    numeric_views()
+        .into_iter()
+        .find(|(e, ..)| e.name == field)
+        .map(|(_, n, _)| n)
+        .unwrap_or_else(|| panic!("no view of `{field}`"))
 }
 
 /// Checks that `n` measures `xs` as `want`.
@@ -444,6 +487,271 @@ negative_control!(
         [-1.0, 9.0]
     )
 );
+
+// ── R-436 (TASK-M2-31): a non-finite value is invalid, tested on its bits (REQ-COL-070) ─────────────────────────────
+
+/// Checks that `field`'s view `view` carries the non-finite guard, the bit test of an exponent field of all ones, after
+/// its sentinel's or unset value's line where it has one (render_gui_spec §10.1's order), with no `isinf` and no
+/// float literal that is not finite as an f32, which naga rejects (gpu_determinism_note rule 4).
+fn check_guard(field: &str, view: &str) {
+    let lines = body(view);
+    let guard = lines.iter().position(|l| *l == GUARD);
+    let Some(guard) = guard else {
+        panic!("`{field}`'s view does not test a non-finite value on its bits:\n{view}");
+    };
+    if let Some(s) = lines.iter().position(|l| sentinel_line(l)) {
+        assert!(
+            s < guard,
+            "`{field}`'s guard comes before its sentinel's or unset value's line:\n{view}"
+        );
+    }
+    assert!(!view.contains("isinf"), "`{field}`'s view tests `isinf`");
+    for line in view.lines().filter(|l| !l.trim_start().starts_with("//")) {
+        for literal in float_literals(line) {
+            let x: f32 = literal
+                .trim_end_matches('f')
+                .parse()
+                .unwrap_or_else(|e| panic!("`{field}`: `{literal}`: {e}"));
+            assert!(
+                x.is_finite(),
+                "`{field}`'s view writes an infinite literal `{literal}`"
+            );
+        }
+    }
+}
+
+/// The decimal float literals of the WGSL `line`: a run of digits, `.` and an exponent, not inside a name or a hex
+/// literal, holding a `.` or an exponent.
+fn float_literals(line: &str) -> Vec<String> {
+    let chars: Vec<char> = line.chars().collect();
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < chars.len() {
+        let starts = (chars[i].is_ascii_digit()
+            || (chars[i] == '.' && chars.get(i + 1).is_some_and(char::is_ascii_digit)))
+            && (i == 0 || !(chars[i - 1].is_ascii_alphanumeric() || chars[i - 1] == '_'));
+        if !starts {
+            i += 1;
+            continue;
+        }
+        let mut j = i;
+        let mut token = String::new();
+        while j < chars.len() {
+            let c = chars[j];
+            let sign = (c == '-' || c == '+') && matches!(chars[j - 1], 'e' | 'E');
+            if c.is_ascii_alphanumeric() || c == '.' || sign {
+                token.push(c);
+                j += 1;
+            } else {
+                break;
+            }
+        }
+        let hex = token.starts_with("0x") || token.starts_with("0X");
+        let float = token.contains('.') || token.contains(['e', 'E']);
+        if !hex && float {
+            out.push(token);
+        }
+        i = j;
+    }
+    out
+}
+
+#[test]
+fn numeric_view_template_non_finite_guard_on_bits() {
+    let views = numeric_views();
+    for (e, _, wgsl) in &views {
+        check_guard(e.name, wgsl);
+    }
+    assert!(
+        views.iter().any(|(e, ..)| e.name == "d_min"),
+        "no view of `d_min`, whose unset line the order is for"
+    );
+    let literals = float_literals("x(1.0, 2e-3, -3.5e+2, 0x7f800000u, f32(9), a1.5, .25)");
+    assert_eq!(
+        literals,
+        ["1.0", "2e-3", "3.5e+2", ".25"],
+        "the literals read"
+    );
+}
+
+negative_control!(
+    numeric_view_template_non_finite_guard_on_bits,
+    "`rho_ratio`'s view guarding NaN alone, as TASK-M1-09 built it, does not test its +∞",
+    expected = "`rho_ratio`'s view does not test a non-finite value on its bits",
+    {
+        let (e, _, wgsl) = numeric_views()
+            .into_iter()
+            .find(|(e, ..)| e.name == "rho_ratio")
+            .unwrap_or_else(|| panic!("no view of `rho_ratio`"));
+        check_guard(
+            e.name,
+            &wgsl.replace(GUARD_TEST, "bitcast<u32>(raw) == 0x7fc00000u"),
+        );
+    }
+);
+
+#[cfg(feature = "controls")]
+mod non_finite_guard_order {
+    use super::*;
+    negative_control!(
+        numeric_view_template_non_finite_guard_on_bits,
+        "`d_min`'s guard before its unset line would draw the unset +∞ invalid",
+        expected = "`d_min`'s guard comes before its sentinel's or unset value's line",
+        {
+            let (e, _, wgsl) = numeric_views()
+                .into_iter()
+                .find(|(e, ..)| e.name == "d_min")
+                .unwrap_or_else(|| panic!("no view of `d_min`"));
+            let swapped = wgsl
+                .replace(UNSET, "@@")
+                .replace(GUARD, UNSET)
+                .replace("@@", GUARD);
+            check_guard(e.name, &swapped);
+        }
+    );
+}
+
+#[cfg(feature = "controls")]
+mod non_finite_guard_literal {
+    use super::*;
+    negative_control!(
+        numeric_view_template_non_finite_guard_on_bits,
+        "a view comparing with an infinite literal, past f32's range",
+        expected = "writes an infinite literal `1e39`",
+        check_guard(
+            "probe",
+            &format!(
+                "fn colour(ctx: Ctx) -> vec3<f32> {{\n    let raw = 0.0;\n{GUARD}\n    \
+                 if (raw > 1e39) {{ return vec3<f32>(0.0); }}\n}}\n"
+            )
+        )
+    );
+}
+
+/// The pole values and every NaN: f32 `+∞` and `−∞` by their bits, the canonical quiet NaN, a quiet NaN of other
+/// bits, a negative NaN and a signalling one.
+const NON_FINITE: [u32; 6] = [
+    0x7f80_0000,
+    0xff80_0000,
+    0x7fc0_0000,
+    0x7fc0_0001,
+    0xffc0_0000,
+    0x7f80_0001,
+];
+
+/// Checks that each of `views`, through `shown` (its CPU twin), draws every [`NON_FINITE`] value invalid, but its
+/// unset value "not yet"; and the largest finite f32, either sign, and 0 off the hatch; in both `RANGE_AUTO` modes.
+fn check_non_finite(
+    views: &[(Entry, NumericView, String)],
+    shown: impl Fn(&NumericView, f32, bool) -> Shown,
+) {
+    for (e, n, _) in views {
+        let unset = match n.sentinel {
+            Some(Sentinel::Unset { bits }) => Some(bits),
+            _ => None,
+        };
+        for auto in [false, true] {
+            for bits in NON_FINITE {
+                let x = f32::from_bits(bits);
+                let got = shown(n, x, auto);
+                let want = if unset == Some(bits) {
+                    Shown::NotYet
+                } else {
+                    Shown::Invalid
+                };
+                assert_eq!(
+                    got, want,
+                    "`{}` draws {x} ({bits:#010x}) as {got:?}",
+                    e.name
+                );
+            }
+            for x in [f32::MAX, -f32::MAX, 0.0] {
+                let got = shown(n, x, auto);
+                assert!(
+                    !matches!(got, Shown::Invalid | Shown::NotYet),
+                    "`{}` draws the finite {x} as {got:?}",
+                    e.name
+                );
+            }
+        }
+    }
+}
+
+/// The views' twin, `RANGE_AUTO` `auto`, over a measured `[−1, 1]` and a horizon of 1000.
+fn twin(n: &NumericView, x: f32, auto: bool) -> Shown {
+    n.shown(x, auto, [-1.0, 1.0], 1000)
+}
+
+/// A twin whose guard tests the canonical quiet NaN alone, as TASK-M1-09 built it: the controls' wrong twin.
+fn nan_alone(n: &NumericView, x: f32, auto: bool) -> Shown {
+    if x.to_bits() == 0x7fc0_0000 {
+        return Shown::Invalid;
+    }
+    match n.sentinel {
+        Some(Sentinel::Unset { bits }) if x.to_bits() == bits => return Shown::NotYet,
+        Some(Sentinel::Literal(s)) if f64::from(x) == s => {
+            return Shown::Literal(n.compact(f64::from(x)))
+        }
+        _ => {}
+    }
+    let ([lo, hi], meas) = n.range([-1.0, 1.0], 1000);
+    let (l, h) = if auto { (meas[0], meas[1]) } else { (lo, hi) };
+    let raw = n.compact(f64::from(x));
+    let t = if h == l {
+        0.0
+    } else {
+        ((raw - l) / (h - l)).clamp(0.0, 1.0)
+    };
+    Shown::Ramp { ramp: n.ramp(), t }
+}
+
+#[test]
+fn numeric_view_template_non_finite_is_invalid_on_the_twin() {
+    let views = numeric_views();
+    for field in ["rho_ratio", "V_0", "E_0", "d_min"] {
+        assert!(
+            views.iter().any(|(e, ..)| e.name == field),
+            "no view of `{field}`"
+        );
+    }
+    check_non_finite(&views, twin);
+}
+
+negative_control!(
+    numeric_view_template_non_finite_is_invalid_on_the_twin,
+    "a guard that tests NaN alone draws `rho_ratio`'s +∞ at the top of the ramp",
+    expected = "`rho_ratio` draws inf (0x7f800000) as Ramp { ramp: Viridis, t: 1.0 }",
+    check_non_finite(
+        &numeric_views()
+            .into_iter()
+            .filter(|(e, ..)| e.name == "rho_ratio")
+            .collect::<Vec<_>>(),
+        nan_alone
+    )
+);
+
+#[cfg(feature = "controls")]
+mod non_finite_twin_order {
+    use super::*;
+    negative_control!(
+        numeric_view_template_non_finite_is_invalid_on_the_twin,
+        "a twin testing the guard before `d_min`'s unset value draws the unset +∞ invalid",
+        expected = "`d_min` draws inf (0x7f800000) as Invalid",
+        check_non_finite(
+            &numeric_views()
+                .into_iter()
+                .filter(|(e, ..)| e.name == "d_min")
+                .collect::<Vec<_>>(),
+            |n, x, auto| {
+                if numeric::non_finite(x) {
+                    Shown::Invalid
+                } else {
+                    twin(n, x, auto)
+                }
+            }
+        )
+    );
+}
 
 /// Checks that each view defaults `RANGE_AUTO` to 1 exactly where its ledger range is unbounded and it is not cyclic,
 /// in the view and in its header.

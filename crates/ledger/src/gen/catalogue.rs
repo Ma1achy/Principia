@@ -457,9 +457,9 @@ pub fn numeric_wgsl(e: &Entry, r: &Read, n: &NumericView) -> String {
         header(
             e,
             r,
-            "Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec §10.1, RQ-231): the NaN \
-             guard, the stored sentinel's line where the field has one, and the ramp, with `RANGE_AUTO` and `u_range` its \
-             uniforms."
+            "Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec §10.1, RQ-231): the stored \
+             sentinel's or unset value's line where the field has one, the non-finite guard (R-436), and the ramp, with \
+             `RANGE_AUTO` and `u_range` its uniforms."
         ),
         n.header(),
         n.colour(&as_f32)

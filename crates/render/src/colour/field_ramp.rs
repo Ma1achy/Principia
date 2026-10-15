@@ -8,30 +8,28 @@
 //! validity lane's `<field>_valid`, taken from its one source, `render::bind::validity_over`, over `ctx` (the word's
 //! for a field of the word, as the word `length`): the entry's tier gate (`ftle_valid`), the read side's own
 //! (`diffusion`'s `n ≥ 2`, R-245; `last_symbol`'s), a stored sentinel (`dmin_pair`'s 3; the word's truncation, its
-//! `length` 127), and, for an `f32` value, the absence NaN by its bits (lowering Part 3a). A field the lane gives no
+//! `length` 127), and, for an `f32` value, a non-finite value by its bits, an exponent field of all ones: the absence
+//! NaN (lowering Part 3a) and every stored `±∞` that is no unset value (R-436, extending R-79; tested on the bits before
+//! any arithmetic, never by `isinf` or an infinite literal, gpu_determinism_note rule 4). A field the lane gives no
 //! validity is refused. `d_min`'s f16 +∞ is no invalid value but its unset one
 //! (R-271), tested by its bits as the validity lane tests it (R-343 item 5; RQ-233), which the ramp draws in the
 //! "not yet" style of running samples, `debug_not_yet(frag_xy)`, never the invalid pattern (R-280, R-399).
 //!
 //! **The invalid lane.** A field ramp is not a debug view, so it masks (render_gui_spec §13, validity first): an
-//! invalid pixel, NaN or a stored sentinel, takes the ramp's invalid treatment, by default the hatched invalid pattern
-//! (`debug_invalid(frag_xy)`, REQ-COL-055; R-132), overridable per node: the node's `INVALID_OVERRIDE` param, 1 to
-//! draw its `INVALID_COLOUR` instead, both declared in the occupant's header (gui_state_contract §3), so an override
-//! is a uniform edit that recompiles nothing (lowering Part 3). `INVALID_COLOUR` defaults to R-16's plain magenta,
-//! `#FF00FF`, as linear RGB.
+//! invalid pixel, NaN, a stored `±∞` (R-436) or a stored sentinel, takes the ramp's invalid treatment, by default the
+//! hatched invalid pattern (`debug_invalid(frag_xy)`, REQ-COL-055; R-132), overridable per node: the node's
+//! `INVALID_OVERRIDE` param, 1 to draw its `INVALID_COLOUR` instead, both declared in the occupant's header
+//! (gui_state_contract §3), so an override is a uniform edit that recompiles nothing (lowering Part 3).
+//! `INVALID_COLOUR` defaults to R-16's plain magenta, `#FF00FF`, as linear RGB.
 //!
 //! **Its WGSL** ([`FieldRamp::wgsl`]) is a colour occupant, `fn colour(ctx: Ctx) -> vec3<f32>`, through the one
 //! assembler like any; [`FieldRamp::shown`] is its CPU twin.
 
 use std::fmt::Write as _;
 
-use ledger::gen::{self as generate, catalogue, numeric::float};
+use ledger::gen::numeric::{float, non_finite, NON_FINITE};
+use ledger::gen::{self as generate, catalogue};
 use ledger::schema::{Entry, FieldType};
-
-/// The canonical quiet NaN's bits (lowering Part 3a).
-fn qnan_bits() -> u32 {
-    ledger::payload::canonical_qnan_bits()
-}
 
 /// A payload field read through `ctx` with its validity (colour_composition §3).
 #[derive(Clone, Debug, PartialEq)]
@@ -52,7 +50,8 @@ pub struct ScalarField {
     sentinel: Option<f64>,
     /// The unset value's f32 bits: the CPU twin's.
     unset_bits: Option<u32>,
-    /// The field is an `f32`, so the absence NaN is one of its invalid values.
+    /// The field is an `f32`, so a non-finite value, the absence NaN or a stored `±∞`, is one of its invalid values
+    /// (R-436).
     float: bool,
 }
 
@@ -99,12 +98,17 @@ impl ScalarField {
         }
         let lane_validity = crate::bind::validity_over(lane, &entries, "ctx");
         let lane_valid = lane_validity.predicate;
+        // The lane's predicate first, then the non-finite test: the bit test reads the value, so it stands behind the
+        // tier gate's guard (`has_ftle && ctx.sample.ftle_valid`, REQ-RENDER-015, R-255), which the canonical-NaN test
+        // it replaces did not need (the absence test reads nothing, lowering Part 3a; R-436).
         let mut valid = Vec::new();
-        if is_float {
-            valid.push(format!("bitcast<u32>(v) != {:#010x}u", qnan_bits()));
-        }
-        if lane_valid != "true" || valid.is_empty() {
+        if lane_valid != "true" || !is_float {
             valid.push(lane_valid);
+        }
+        if is_float {
+            valid.push(format!(
+                "(bitcast<u32>(v) & {NON_FINITE:#010x}u) != {NON_FINITE:#010x}u"
+            ));
         }
         // The CPU twin's stored sentinel (R-136), the one the lane's predicate tests (the word's truncation is its
         // `length` 127), and `d_min`'s unset value (R-271), drawn in the "not yet" style ahead of the validity (R-280,
@@ -139,9 +143,9 @@ impl ScalarField {
     /// `(value, valid)` (colour_composition §3): the CPU twin of the read, for the stored value `x` and the read
     /// side's validity `gate` (the tier gate's or the read side's own predicate, true for a field with none).
     pub fn read(&self, x: f32, gate: bool) -> (f32, bool) {
-        let nan = self.float && x.to_bits() == qnan_bits();
+        let not_finite = self.float && non_finite(x);
         let sentinel = self.sentinel.is_some_and(|s| f64::from(x) == s);
-        (x, gate && !nan && !sentinel)
+        (x, gate && !not_finite && !sentinel)
     }
 
     /// Whether `x` is the field's unset value (R-271), by its bits.
@@ -201,7 +205,7 @@ pub struct FieldRamp {
 /// What a field ramp shows for one value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shown {
-    /// The invalid treatment: NaN or a stored sentinel.
+    /// The invalid treatment: NaN, a stored `±∞` that is no unset value (R-436), or a stored sentinel.
     Invalid,
     /// The "not yet" style, `debug_not_yet(frag_xy)` (R-280, R-399).
     NotYet,
