@@ -145,13 +145,13 @@ pub const NON_NEGATIVE: [(&str, &str); 14] = [
     ),
     (
         "rho_mag",
-        "a magnitude, ≥ 0: dd_decoder §3.6: `rho_mag = ‖ρ̃‖`, the mass-weighted norm (REQ-PAY-088); only the lower \
-         bound is declared",
+        "dd_decoder §3.6: `rho_mag = ‖ρ̃‖` ∈ [0, 1], the mass-weighted norm, `rho_mag² + lambda_mag² = I = 1` \
+         (REQ-PAY-088)",
     ),
     (
         "lambda_mag",
-        "a magnitude, ≥ 0: dd_decoder §3.6: `lambda_mag = ‖λ̃‖`, the mass-weighted norm (REQ-PAY-088); only the lower \
-         bound is declared",
+        "dd_decoder §3.6: `lambda_mag = ‖λ̃‖` ∈ [0, 1], the mass-weighted norm, `rho_mag² + lambda_mag² = I = 1` \
+         (REQ-PAY-088)",
     ),
     (
         "rho_ratio",
@@ -448,15 +448,16 @@ fn entries() -> Vec<EntryBuilder> {
         // The Montgomery map, never stored (integrator dd §3.7; §3.8's worked entry): `lin` and [−1, 1] are per
         // component; `‖n‖ = 1` is a check on the vector, not its range.
         shape_point(),
-        // The masses are mass fractions in [0, 1], and the magnitudes, `K_0` and the virial ratio ≥ 0
+        // The masses are mass fractions in [0, 1], the magnitudes in [0, 1], and `K_0` and the virial ratio ≥ 0
         // ([`NON_NEGATIVE`]'s citations; R-400, R-403).
         ic("m0", 0, Scale::Lin).range(fraction),
         ic("m1", 1, Scale::Lin).range(fraction),
         ic("m2", 2, Scale::Lin).range(fraction),
         // dd_decoder §3.6: `q_mass = min(m₀, m₁)/max(m₀, m₁)`, declared [0, 1] from its formula (REQ-PAY-097; R-426).
         ic("q_mass", 3, Scale::Lin).range(fraction),
-        ic("rho_mag", 4, Scale::Lin).range(from_zero),
-        ic("lambda_mag", 5, Scale::Lin).range(from_zero),
+        // dd_decoder §3.6: the mass-weighted magnitudes, `rho_mag² + lambda_mag² = I = 1`, each in [0, 1].
+        ic("rho_mag", 4, Scale::Lin).range(fraction),
+        ic("lambda_mag", 5, Scale::Lin).range(fraction),
         ic("rho_ratio", 6, Scale::Log),
         // dd_decoder §3.6: the signed angle from `ρ` to `λ`, on (−π, π].
         ic("rho_angle", 7, Scale::Cyclic).range(Range {
