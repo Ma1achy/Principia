@@ -1356,8 +1356,32 @@ fn mock_windows_open_the_chart_builder_is_seeded_when_it_opens() {
     app.open_window(&ctx, Window::ChartBuilder, None);
     assert_eq!(app.windows.chart.note, Some("kept"));
     rejects("an unseeded draft", || {
-        let mut d = chart_builder::Draft::default();
-        d.note = Some("old");
-        seeded(&d)
+        seeded(&chart_builder::Draft {
+            note: Some("old"),
+            ..Default::default()
+        })
     });
+}
+
+#[test]
+fn mock_windows_open_present_mode_paints_the_figure_on_explore_only() {
+    use engine::contract::view_ui::Mode;
+    let side = MockSide::new(
+        crate::mock::MockEngine::new(),
+        Some(super::mock_keyboard::canvas()),
+    );
+    let mut app = App::new(side, super::support::FORMAT);
+    let mut h = headless();
+    app.present = true;
+    let callbacks = |h: &mut Headless, app: &mut App<MockSide>| {
+        super::support::shapes(h, app)
+            .iter()
+            .filter(|s| matches!(s, egui::Shape::Callback(_)))
+            .count()
+    };
+    assert_eq!(callbacks(&mut h, &mut app), 1, "Explore: the figure");
+    app.view.mode = Mode::Stain;
+    let none = |n: usize| assert_eq!(n, 0, "Stain: no figure");
+    none(callbacks(&mut h, &mut app));
+    rejects("a figure on Stain", || none(1));
 }
