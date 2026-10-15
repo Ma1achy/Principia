@@ -98,7 +98,7 @@ impl fmt::Display for SurfaceRef {
 pub struct GuiSurface {
     /// Always `gui`.
     pub kind: GuiKind,
-    /// The screen, by its artboard's stem: `01_main`.
+    /// The screen, by its artboard's stem: `01_main` or `02_stain`.
     pub screen: String,
     /// The steps played before the capture, in order.
     #[serde(default)]
@@ -156,6 +156,8 @@ pub enum GuiStep {
     Alt1,
     /// Press Space.
     Space,
+    /// Click a node on the Stain page's canvas: select it.
+    ClickNode,
 }
 
 impl GuiStep {
@@ -181,6 +183,7 @@ impl GuiStep {
             GuiStep::Hover => "hover",
             GuiStep::Alt1 => "alt_1",
             GuiStep::Space => "space",
+            GuiStep::ClickNode => "click_node",
         }
     }
 }

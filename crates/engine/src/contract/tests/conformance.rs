@@ -146,7 +146,10 @@ impl EngineInterface for Broken {
                 | (Rule::DropBasis, Edit::Sim(SimField::Basis { .. }))
                 | (Rule::DropOverlays, Edit::Render(RenderField::Overlays(_)))
                 | (Rule::DropHorizon, Edit::Sim(SimField::Horizon(_)))
-                | (Rule::DropStainGraph, Edit::Render(RenderField::StainGraph(_)))
+                | (
+                    Rule::DropStainGraph,
+                    Edit::Render(RenderField::StainGraph(_))
+                )
                 | (
                     Rule::HoverStays,
                     Edit::Render(RenderField::Hover(Hover { at: None }))

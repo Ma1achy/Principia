@@ -1,0 +1,14 @@
+{
+  "cases": [
+    {
+      "name": "mock_stain",
+      "surface": { "kind": "gui", "screen": "02_stain", "steps": [] },
+      "artboard": "docs/gui/design/02_stain.png"
+    },
+    {
+      "name": "mock_stain_selected",
+      "surface": { "kind": "gui", "screen": "02_stain", "steps": ["click_node"] },
+      "artboard": "docs/gui/design/02_stain.png"
+    }
+  ]
+}

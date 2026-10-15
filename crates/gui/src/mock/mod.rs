@@ -6,8 +6,10 @@
 //! earns no privilege: the app reaches it only through the interface, as it reaches the real engine
 //! (gui_state_contract §1). It serves the legend's keys from its fake stain (`legend`), the sample under the cursor
 //! the hover names (`sample`), and draws into its stand-in the hover path and, with tile bounds on, its fake quads'
-//! bounds (`quads`), and gives the Profiler window a canned trace in profiler schema v1's shape (`profile`). Its values
-//! are placeholder content, not corpus values.
+//! bounds (`quads`), and gives the Profiler window a canned trace in profiler schema v1's shape (`profile`). It holds
+//! 02_stain.png's stain graph, serves the Stain editor's library, code and Problems, and draws its preview in a look
+//! taken from the graph, so an edit of the graph shows there (`stain`). Its values are placeholder content, not
+//! corpus values.
 
 pub mod canvas;
 pub mod clock;
@@ -15,6 +17,7 @@ pub mod legend;
 pub mod profile;
 pub mod quads;
 pub mod sample;
+pub mod stain;
 
 use engine::contract::interface::EngineInterface;
 use engine::contract::log::{LogEntry, Severity, Source};
@@ -180,6 +183,16 @@ impl MockEngine {
         });
     }
 
+    /// The stain graph as the mock holds it now, which its preview is drawn from.
+    pub fn graph(&self) -> &StainGraph {
+        &self.render.stain_graph
+    }
+
+    /// Recompiles the stain, as the Problems pane's Recompile asks: logs [`stain::RECOMPILED`] from the stain.
+    pub fn recompile(&mut self) {
+        self.push(Severity::Info, Source::Stain, stain::RECOMPILED.to_owned());
+    }
+
     /// The chart the stand-in is drawn for: the plane `(z₀, q₁, q₂)` as the mock holds it now.
     pub fn plane(&self) -> &Plane {
         &self.sim.plane
@@ -201,7 +214,8 @@ impl Default for MockEngine {
 }
 
 /// The mock's initial state: the chart "z_α × z_β" at 01_main.png's `z₀`, unlocked, the horizon [`MOCK_T_MAX`], every
-/// overlay off, no hover, the other groups empty, the physics kernel and `t = 0.0` (placeholder content).
+/// overlay off, no hover, the stain graph 02_stain.png's (`stain`), the other groups empty, the physics kernel and
+/// `t = 0.0` (placeholder content).
 fn state(t: f64) -> (SimConfig, RenderState) {
     (
         SimConfig {
@@ -224,7 +238,7 @@ fn state(t: f64) -> (SimConfig, RenderState) {
             quality: Quality {},
         },
         RenderState {
-            stain_graph: StainGraph {},
+            stain_graph: stain::default_graph(),
             overlays: Overlays::default(),
             palette: Palette {},
             playhead: Playhead { t },

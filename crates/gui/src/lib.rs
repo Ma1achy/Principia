@@ -11,6 +11,7 @@ pub mod headless;
 pub mod keyboard;
 pub mod layout;
 pub mod side;
+pub mod stain;
 pub mod theme;
 pub mod windows;
 
@@ -18,6 +19,7 @@ pub mod mock;
 
 #[cfg(test)]
 mod tests {
+    mod canvas_gestures_mock;
     mod cli;
     mod conformance;
     mod f3_toggle_mock;
@@ -31,10 +33,12 @@ mod tests {
     mod mock_hover;
     mod mock_keyboard;
     mod mock_keyboard_modes;
+    mod mock_keyboard_stain;
     mod mock_keyboard_windows;
     mod mock_legend_keys;
     mod mock_lock_badge;
     mod mock_manifold_view;
+    mod mock_stain_preview;
     mod mock_status_line;
     mod mock_tag;
     mod mock_tile_bounds;
