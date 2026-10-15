@@ -223,11 +223,18 @@ pub const SIGNED: [(&str, &str); 8] = [
 /// `ramp_viridis`.
 pub const PROVISIONAL: [(&str, &str); 1] = [("mean_y", "REQ-PAY-098")];
 
-/// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0` and `n`.
-pub const DECLARED: [(&str, &str); 13] = [
+/// The other declared ranges, each with where it is given: the payload's packed and integer fields, `V_0`,
+/// `rho_angle` and `n`.
+pub const DECLARED: [(&str, &str); 14] = [
     (
         "V_0",
         "dd_generation_root §3.6: `V_0` (lin, (−∞, 0]); dd_decoder §3.6: `V₀ = −Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖` (R-403)",
+    ),
+    (
+        "rho_angle",
+        "dd_decoder §3.6: `rho_angle = atan2(ρ × λ, ρ · λ)` ∈ (−π, π], the signed angle from `ρ` to `λ`, π on the \
+         antiparallel axis and 0 at the pole (REQ-PAY-088); cyclic, its view on the fixed [0, 1] (render_gui_spec \
+         §10.1)",
     ),
     (
         "n",
@@ -279,7 +286,7 @@ pub const DECLARED: [(&str, &str); 13] = [
 /// The payload's ledger gaps for the gate report, in ledger order (R-426; dd_generation_root §3.8): each field whose
 /// range no line declares, with the requirement that fills it (`None`: none does) and why no ramp reads it. None is a
 /// `lin` or `diverging` scalar, so each generates.
-pub const GAPS: [(&str, Option<&str>, &str); 6] = [
+pub const GAPS: [(&str, Option<&str>, &str); 5] = [
     (
         "r",
         None,
@@ -305,11 +312,6 @@ pub const GAPS: [(&str, Option<&str>, &str); 6] = [
         None,
         "cyclic, an angle (R-423): its view places `fract(θ̃ / 2π)` on the fixed [0, 1]; the unwrapped `θ̃` has no \
          bound",
-    ),
-    (
-        "rho_angle",
-        Some("REQ-PAY-088"),
-        "cyclic: its view places `fract(x / 2π)` on the fixed [0, 1]; its formula is REQ-PAY-088's",
     ),
 ];
 
@@ -456,7 +458,11 @@ fn entries() -> Vec<EntryBuilder> {
         ic("rho_mag", 4, Scale::Lin).range(from_zero),
         ic("lambda_mag", 5, Scale::Lin).range(from_zero),
         ic("rho_ratio", 6, Scale::Log),
-        ic("rho_angle", 7, Scale::Cyclic),
+        // dd_decoder §3.6: the signed angle from `ρ` to `λ`, on (−π, π].
+        ic("rho_angle", 7, Scale::Cyclic).range(Range {
+            lo: Bound::Open(-core::f64::consts::PI),
+            hi: Bound::Closed(core::f64::consts::PI),
+        }),
         ic("K_0", 8, Scale::Lin).range(from_zero),
         // dd_decoder §3.6: `V₀ = − Σ_{i<j} mᵢmⱼ / ‖rᵢ − rⱼ‖`, never positive (R-403).
         ic("V_0", 9, Scale::Lin).range(Range {
