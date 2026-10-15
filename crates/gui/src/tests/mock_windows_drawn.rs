@@ -666,6 +666,12 @@ fn mock_windows_drawn_the_canned_frames_keep_their_arithmetic() {
         // The counters' jitter: 64 quads computed and 0 to 31 more, by the hash of the index.
         let jitter = (crate::mock::sample::hash(i as f64) * 32.0) as u64;
         assert_eq!(f.quads_computed, 64 + jitter, "frame {i}'s quads");
+        let substeps = (crate::mock::sample::hash(i as f64 + 0.5) * 200_000.0) as u64;
+        assert_eq!(
+            f.substeps_total,
+            2_400_000 + substeps,
+            "frame {i}'s substeps"
+        );
         assert!(
             near(s.integrate, 9.84 + 3.0 * fifth + slow),
             "frame {i}'s integrate"
