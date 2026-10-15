@@ -544,6 +544,13 @@ pub trait Chart {
 f64 CPU reference. `validate(u, v)` stays a CPU-side f64 check (`principia_inverse_encode_contract.md`, chart-aware
 validation).
 
+**The chart's parameter type** (refining R-118; applied per R-369, TASK-M2-05). Each chart declares an associated
+`type Param: Copy`, the float type its parameters are held at (f32 in the kernel's uniform, f64 on the CPU), and `map`'s
+bound is `F: Float + From<Self::Param>`: `map` is generic over every float type the parameters widen into, so a chart
+held at f32 maps at f32 in the kernel and one held at f64 maps at f64 on the CPU, from the one source. Narrowing f64
+parameters to f32 is the CPU's own step, never `map`'s; the bound has no fallible conversion (as `NumCast`'s
+`Option` would be) in the kernel. Every chart implements the trait so.
+
 **`ValidationResult`** (R-26; defined per R-72, REQ-CHART-043). `validate(u, v)` checks the chart point against
 `principia_inverse_encode_contract.md` § "Chart-aware validation"'s layers 2 (chart feasibility) and 3 (decode sanity);
 layer 1, the hypercube bounds, is the encode path's, on lookup and lock, never `validate`'s
