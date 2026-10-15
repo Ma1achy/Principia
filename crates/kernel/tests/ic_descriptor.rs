@@ -8,6 +8,9 @@
 //! - `ic_descriptor_definitions`: on fuzzed `z`, every field is dd_decoder §3.6's formula of the decoded `(m, r, p)`,
 //!   evaluated again here in f64, in the canonical frame and rotated out of it; and in the canonical frame
 //!   `rho_mag = cos α`, `lambda_mag = sin α` and `rho_angle = β` (REQ-PAY-088).
+//! - `ic_descriptor_rho_angle_axis`: `rho_angle` on the axis `ρ × λ = 0` and next to it, at f64 and f32: `π̂` when
+//!   antiparallel, whatever the sign of a zero `ρ × λ`; 0 when parallel and at the pole; `atan2`'s value taken down to
+//!   `π̂`, or read as `π̂` at or below `−π̂`, elsewhere (dd_decoder §3.6; REQ-PAY-088).
 //! - `ic_descriptor_floors`: REQ-TOOL-163's evidence on decoded values, `rho_ratio` and `r_min_pair_0` against their
 //!   log floors (R-419).
 //!
@@ -247,7 +250,7 @@ fn turned<R: P>(ic: &kernel::decode::Ic<R>) -> kernel::decode::Ic<R> {
 
 /// Checks `describe` on `ic` against dd_decoder §3.6's formulas, evaluated here in f64 on the same `(m, r, p)`: each
 /// field within [`DEFINITION_EPS`] of its scale, the derived fields `rho_ratio` and `virial_ratio` exactly the stored
-/// fields' quotients, `q_mass` in `[0, 1]` and `rho_angle` in `[−π, π]`.
+/// fields' quotients, `q_mass` in `[0, 1]` and `rho_angle` in `(−π̂, π̂]`, `π̂` the image of π (dd_decoder §3.6).
 fn check_formulas<R: P>(
     describe: Describe<R>,
     ic: &kernel::decode::Ic<R>,
@@ -335,10 +338,10 @@ fn check_formulas<R: P>(
         "q_mass = {q} is outside [0, 1] at {at}"
     );
     let angle = d.rho_angle.f();
-    let pi = R::of(PI).f();
+    let pi = descriptor::pi_image::<R>().f();
     assert!(
-        angle.abs() <= pi,
-        "rho_angle = {angle} is outside [−π, π], π rounded to {}, at {at}",
+        angle > -pi && angle <= pi,
+        "rho_angle = {angle} is outside (−π̂, π̂], π̂ = {pi} at {}, at {at}",
         R::NAME
     );
 }
@@ -425,6 +428,83 @@ negative_control!(
     "rho_angle measured from λ to ρ must fail",
     expected = "rho_angle = ",
     check_definitions_both(reversed_angle::<f64>, reversed_angle::<f32>)
+);
+
+// ── ic_descriptor_rho_angle_axis (REQ-PAY-088) ─────────────────────────────────────────────────────────────────
+
+/// `rho_angle` from `ρ × λ` and `ρ · λ`, behind a function pointer, so a control runs the same check on a broken one.
+type Angle<R> = fn(R, R) -> R;
+
+/// Checks `angle` against dd_decoder §3.6's cases at `R`, `pi_bits` the bits of `π̂`, the image of π: each result's
+/// bits, and each within `(−π̂, π̂]`. `tiny` is far below an ulp of π at `R`, so `atan2(±tiny, −1)` rounds to `±π`'s
+/// nearest value: above `π̂` at f32, `π̂` itself at f64.
+fn check_axis<R: P>(angle: Angle<R>, pi_bits: u64, tiny: f64) {
+    let pi = descriptor::pi_image::<R>();
+    assert_eq!(pi.bits(), pi_bits, "π̂ is not the image of π at {}", R::NAME);
+    assert!(pi.f() <= PI, "π̂ = {} lies above π at {}", pi.f(), R::NAME);
+    let atan2 = |y: f64, x: f64| R::of(y).atan2(R::of(x));
+    let cases = [
+        // Antiparallel: π̂, whatever the sign of the zero.
+        (0.0, -1.0, pi),
+        (-0.0, -1.0, pi),
+        // Parallel: 0.
+        (0.0, 1.0, R::zero()),
+        (-0.0, 1.0, R::zero()),
+        // The pole, `ρ × λ = ρ · λ = 0`, every sign of zero: 0.
+        (0.0, 0.0, R::zero()),
+        (-0.0, 0.0, R::zero()),
+        (0.0, -0.0, R::zero()),
+        (-0.0, -0.0, R::zero()),
+        // Next to the antiparallel axis: `atan2` gives π's nearest value or its negative; both read `π̂`.
+        (tiny, -1.0, pi),
+        (-tiny, -1.0, pi),
+        // Elsewhere, `atan2`'s own value.
+        (1.0, 0.0, atan2(1.0, 0.0)),
+        (-1.0, 0.0, atan2(-1.0, 0.0)),
+        (1.0, -1.0, atan2(1.0, -1.0)),
+        (-1.0, -1.0, atan2(-1.0, -1.0)),
+        (1.0, 1.0, atan2(1.0, 1.0)),
+    ];
+    for (cross, dot, want) in cases {
+        let got = angle(R::of(cross), R::of(dot));
+        assert_eq!(
+            got.bits(),
+            want.bits(),
+            "rho_angle({cross:?}, {dot:?}) = {:?}, not {:?}, at {}",
+            got.f(),
+            want.f(),
+            R::NAME
+        );
+        assert!(
+            got.f() > -pi.f() && got.f() <= pi.f(),
+            "rho_angle({cross:?}, {dot:?}) = {:?} is outside (−π̂, π̂] at {}",
+            got.f(),
+            R::NAME
+        );
+    }
+}
+
+fn check_axis_both(a64: Angle<f64>, a32: Angle<f32>) {
+    check_axis(a64, PI.to_bits(), 1e-300);
+    check_axis(a32, 0x4049_0FDA, 1e-10);
+}
+
+#[test]
+fn ic_descriptor_rho_angle_axis() {
+    check_axis_both(descriptor::angle::<f64>, descriptor::angle::<f32>);
+}
+
+/// `atan2(ρ × λ, ρ · λ)` alone, with no case chosen: −π at `ρ × λ = −0`.
+#[cfg(feature = "controls")]
+fn bare_atan2<R: P>(cross: R, dot: R) -> R {
+    cross.atan2(dot)
+}
+
+negative_control!(
+    ic_descriptor_rho_angle_axis,
+    "rho_angle as atan2 alone must fail",
+    expected = "rho_angle(-0.0, -1.0) = ",
+    check_axis_both(bare_atan2::<f64>, bare_atan2::<f32>)
 );
 
 // ── ic_descriptor_floors (REQ-TOOL-163) ─────────────────────────────────────────────────────────────────────────

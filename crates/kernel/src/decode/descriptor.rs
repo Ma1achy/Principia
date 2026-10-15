@@ -20,6 +20,13 @@
 //! f32 instantiation is the GPU's 64 B, the f64 the CPU's 112 B; `_pad` is declared padding, written zero.
 //!
 //! `2mᵢ` and `2K₀` are formed as the sums `mᵢ + mᵢ` and `K₀ + K₀`, which are exact at any `Real`.
+//!
+//! **`rho_angle` on the axis** ([`angle`]; dd_decoder §3.6). On `ρ × λ = 0` the value is chosen, not `atan2`'s: the
+//! image of π when `ρ · λ < 0`, whatever the sign of a zero `ρ × λ` (`atan2(−0, x < 0)` is −π), and 0 otherwise, the
+//! pole `ρ × λ = ρ · λ = 0` included, where GLSL.std.450 `Atan2` is undefined. Off the axis `atan2`'s value is taken
+//! down to the image of π, and one at or below its negative is read as the image, so the range is `(−π̂, π̂]`. Each
+//! choice is [`select`] on a comparison with a constant, between values already computed: no branch (the GPU
+//! determinism note's discipline). `x + 0.0` is not used to clear a −0, since a shader compiler may fold it to `x`.
 
 use spirv_std::num_traits::Float;
 
@@ -61,6 +68,36 @@ pub fn energy<R: LinkReal + PayloadReal>(d: &ICDescriptorOf<R>) -> R {
     d.K_0 + d.V_0
 }
 
+/// `π̂`, dd_decoder §3.2's image of π: the β link's generated literal, π rounded toward zero at f32 and π's nearest
+/// value at f64 (R-417), so `π̂ ≤ π` at each precision.
+#[inline]
+pub fn pi_image<R: LinkReal>() -> R {
+    R::LIT_7
+}
+
+/// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
+#[inline]
+fn select<R: Copy>(c: bool, t: R, f: R) -> R {
+    if c {
+        t
+    } else {
+        f
+    }
+}
+
+/// `rho_angle` from `ρ × λ` and `ρ · λ` (dd_decoder §3.6), on `(−π̂, π̂]`: on the axis `ρ × λ = 0`, `π̂` where
+/// `ρ · λ < 0` and 0 otherwise, the pole included; elsewhere `atan2(cross, dot)` taken down to `π̂`, a value at or
+/// below `−π̂` read as `π̂`.
+#[inline]
+pub fn angle<R: LinkReal>(cross: R, dot: R) -> R {
+    let zero = R::zero();
+    let pi = pi_image::<R>();
+    let off_axis = Float::min(Float::atan2(cross, dot), pi);
+    let off_axis = select(off_axis <= -pi, pi, off_axis);
+    let on_axis = select(dot < zero, pi, zero);
+    select(cross == zero, on_axis, off_axis)
+}
+
 /// The `ICDescriptor` of the decoded IC `ic` (dd_decoder §3.6).
 #[inline]
 pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
@@ -91,7 +128,7 @@ pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
         rho_mag,
         lambda_mag,
         rho_ratio: rho_mag / lambda_mag,
-        rho_angle: Float::atan2(cross, dot),
+        rho_angle: angle(cross, dot),
         K_0: k,
         V_0: v,
         virial_ratio: (k + k) / Float::abs(v),
