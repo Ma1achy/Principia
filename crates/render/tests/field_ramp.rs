@@ -32,6 +32,12 @@ fn check_length(f: &ScalarField) {
         assert_eq!(f.read(x, true), (x, true), "{x} is valid");
     }
     assert_eq!(f.read(3.0, false), (3.0, false), "a failed gate is invalid");
+    // A u-bits field's value is never non-finite, so, as in its WGSL, it has no non-finite test (R-436).
+    assert!(
+        !f.valid.contains("0x7f800000u") && f.read(f32::INFINITY, true).1,
+        "`length` tests a non-finite value: {}",
+        f.valid
+    );
     assert!(
         f.unset.is_none() && !f.is_unset(f32::INFINITY),
         "`length` has no unset value"
