@@ -102,40 +102,43 @@ negative_control!(
     )
 );
 
-/// The register's own M1 list: the six log floors and the hatch's three numbers (R-427), the floors citing
-/// REQ-TOOL-160 and the hatch's REQ-COL-055.
-fn check_register_m1(register: &[ConstantBuilder]) {
+/// The register's own lists at M1 and M2. The M1 gate confirmed its nine provisional entries as proposed (R-428): the
+/// six log floors and the hatch's three numbers (R-427), so the M1 list is empty. `rho_ratio`'s and `r_min_pair_0`'s
+/// floors, confirmed provisionally, are provisional until M2, citing REQ-TOOL-163 (R-419), and are listed at M2 with
+/// `eps_m01` (REQ-DEC-039).
+fn check_register_m1_m2(register: &[ConstantBuilder]) {
+    check_lists("M1", register, &[]);
     check_lists(
-        "M1",
+        "M2",
         register,
         &[
-            ("log_floor_d_min", "M1", "REQ-TOOL-160"),
-            ("log_floor_dE_max", "M1", "REQ-TOOL-160"),
-            ("log_floor_dLz_max", "M1", "REQ-TOOL-160"),
-            ("log_floor_closure_min", "M1", "REQ-TOOL-160"),
-            ("log_floor_rho_ratio", "M1", "REQ-TOOL-160"),
-            ("log_floor_r_min_pair_0", "M1", "REQ-TOOL-160"),
-            ("hatch_violet", "M1", "REQ-COL-055"),
-            ("hatch_cyan", "M1", "REQ-COL-055"),
-            ("hatch_half_period", "M1", "REQ-COL-055"),
+            ("eps_m01", "M2", "REQ-DEC-039"),
+            ("log_floor_rho_ratio", "M2", "REQ-TOOL-163"),
+            ("log_floor_r_min_pair_0", "M2", "REQ-TOOL-163"),
         ],
     );
 }
 
 #[test]
-fn gate_provisional_the_registers_m1_entries_block_the_m1_gate() {
-    check_register_m1(REGISTER);
+fn gate_provisional_no_register_entry_blocks_the_m1_gate() {
+    check_register_m1_m2(REGISTER);
 }
 
 negative_control!(
-    gate_provisional_the_registers_m1_entries_block_the_m1_gate,
-    "a register whose floors are all confirmed lists only the hatch at M1",
+    gate_provisional_no_register_entry_blocks_the_m1_gate,
+    "a register whose hatch stripe width is still provisional until M1 lists it at M1",
     expected = "the M1 list",
-    check_register_m1(
+    check_register_m1_m2(
         &REGISTER
             .iter()
-            .filter(|k| !k.name.starts_with("log_floor_"))
-            .copied()
+            .map(|k| match k.name {
+                "hatch_half_period" => ConstantBuilder {
+                    citation: Some(Citation::Calibration("REQ-COL-055")),
+                    provisional: Some("M1"),
+                    ..*k
+                },
+                _ => *k,
+            })
             .collect::<Vec<_>>()
     )
 );
@@ -184,7 +187,8 @@ fn check_run(case: &str, milestone: &str, fails: bool) {
 
 #[test]
 fn gate_provisional_run_writes_the_list_and_fails_while_any_is_listed() {
-    check_run("gate_provisional_m1", "M1", true);
+    check_run("gate_provisional_m2", "M2", true);
+    check_run("gate_provisional_m1", "M1", false);
     check_run("gate_provisional_m0", "M0", false);
 }
 

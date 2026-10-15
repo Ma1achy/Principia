@@ -1231,7 +1231,8 @@ fn register_floor(field: &str) -> Option<f64> {
 }
 
 /// Checks that the log views are exactly `floors`' fields and that each places raw at `dbg_log`'s form with its own
-/// floor: its register entry gives it, provisional until the M1 gate (R-427), the view carries it, an f32 holds it
+/// floor: its register entry gives it, confirmed at the M1 gate (R-428), `rho_ratio`'s and `r_min_pair_0`'s
+/// provisionally, marked provisional until M2 (R-419), the view carries it, an f32 holds it
 /// exactly, the WGSL writes it, and the CPU twin places `0`, `ε_f`, `ε_f·(e − 1)` and values about it as `dbg_log`
 /// does. A field with no log view has no floor.
 fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) {
@@ -1260,10 +1261,13 @@ fn check_floors(views: &[(Entry, NumericView, String)], floors: &[(&str, i32)]) 
             .iter()
             .find(|(f, _)| *f == field)
             .unwrap_or_else(|| panic!("no register entry for `{field}`'s floor"));
+        let gate = match field {
+            "rho_ratio" | "r_min_pair_0" => Some("M2"),
+            _ => None,
+        };
         assert_eq!(
-            entry.provisional,
-            Some("M1"),
-            "`{field}`'s floor is not provisional until M1"
+            entry.provisional, gate,
+            "`{field}`'s floor is not marked as R-428 left it"
         );
         assert_eq!(
             n.placement,

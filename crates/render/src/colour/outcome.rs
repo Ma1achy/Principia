@@ -15,8 +15,9 @@
 //! (REQ-COL-002): linear RGB, the colour slot's space, as a field ramp's `INVALID_COLOUR` is, each default the f32
 //! nearest the sRGB decode of its 8-bit code. The fragment returns a swatch unchanged, with no arithmetic, so it
 //! renders the same bits on every backend, however near a rounding tie its 8-bit level falls (applied per R-369:
-//! `#30C8DC`'s blue, 220, decodes to 182.5018 of 255, 0.0018 of a step from a tie). Nine are §1.4's table; the two triple outcomes' are proposed
-//! (R-71; REQ-COL-062, RQ-234) and confirmed by the human at the M1 gate.
+//! `#30C8DC`'s blue, 220, decodes to 182.5018 of 255, 0.0018 of a step from a tie). Nine are §1.4's table; the two
+//! triple outcomes' were proposed (R-71; REQ-COL-062, RQ-234) and are confirmed by the human at the M1 gate (R-433),
+//! with no veto on a first-step triple collision drawn in the t=0 orange.
 //!
 //! **The legends.** Each is keyed by `state` (dd_colouring §3.7; render_gui_spec G6): [`segment`] gives the outcome
 //! palette's swatches a state's samples may take, and [`detail_view`] the `detail` view's colour, from the ledger's
@@ -27,7 +28,8 @@ use ledger::gen::catalogue;
 use crate::present::{self, Rgb};
 
 /// One swatch of the outcome palette: the occupant's param, its class's legend label (0-based, R-22) and its 8-bit
-/// sRGB colour, and whether the value is proposed (R-71) rather than colour_composition §1.4's.
+/// sRGB colour, and whether the value is still a proposal awaiting the human's confirmation (R-71). None is: the nine
+/// are colour_composition §1.4's table, and the two triple outcomes' were confirmed at the M1 gate (R-433).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Swatch {
     pub param: &'static str,
@@ -46,11 +48,13 @@ const fn swatch(param: &'static str, label: &'static str, hex: u32, proposed: bo
 }
 
 /// The swatches, in the occupant's declaration order: colour_composition §1.4's nine classes, then the two triple
-/// outcomes, proposed (REQ-COL-062): triple collision `#D6A1FF` and triple ejection `#000097`. Of the 8-bit sRGB
-/// colours, `#000097` is the one farthest in OKLab from its nearest of the nine classes, the running grey and the
-/// hatch's two colours (0.233); `#D6A1FF` the farthest from those and `#000097` (0.204). The lighter goes to the
-/// collision, the darker to the ejection, as all three additive primaries mix toward white and all three subtractive
-/// toward black, the collisions' and escapes' families (§1.4); the evidence is `render/tests/outcome_state.rs`'s.
+/// outcomes, proposed (REQ-COL-062) and confirmed at the M1 gate (R-433): triple collision `#D6A1FF` and triple
+/// ejection `#000097`. Of the 8-bit sRGB colours, `#000097` is the one farthest in OKLab from its nearest of the nine
+/// classes, the running grey and the hatch's two colours (0.233); `#D6A1FF` the farthest from those and `#000097`
+/// (0.204). The lighter goes to the collision, the darker to the ejection, as all three additive primaries mix toward
+/// white and all three subtractive toward black, the collisions' and escapes' families (§1.4); the evidence is
+/// `render/tests/outcome_state.rs`'s. Each is farther than τ = 0.101 from the stipple's dot `#909090` (R-434): 0.197
+/// and 0.407.
 pub const SWATCHES: [Swatch; 11] = [
     swatch(
         "collision_pair_2",
@@ -76,8 +80,8 @@ pub const SWATCHES: [Swatch; 11] = [
     swatch("escape_body_1", "body 1 escape", 0xE034C6, false),
     swatch("escape_body_2", "body 2 escape", 0x30C8DC, false),
     swatch("collision_at_start", "collision @ t=0", 0xF29620, false),
-    swatch("triple_collision", "triple collision", 0xD6A1FF, true),
-    swatch("triple_ejection", "triple ejection", 0x000097, true),
+    swatch("triple_collision", "triple collision", 0xD6A1FF, false),
+    swatch("triple_ejection", "triple ejection", 0x000097, false),
 ];
 
 /// The occupant's WGSL, as the registry scans it and the assembler's built-in `outcome_state` holds it.

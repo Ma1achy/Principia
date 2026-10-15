@@ -5,9 +5,9 @@
 //!
 //! The register's `provisional` key (R-427; REQ-SYS-081; `constants_provisional_*`): a provisional entry builds and
 //! its number reads at compile time like any other; one whose value is `calibration`, one that names no gate and one
-//! citing a corpus section each fail generation naming the constant; the list by gate gives the six log floors and
-//! the hatch's numbers for M1 (REQ-SYS-082), and the hatch is read from its entries. The mark is not hashed: see
-//! `schema_version.rs`'s `constants_provisional_*`.
+//! citing a corpus section each fail generation naming the constant; the list by gate gives what the M1 gate left
+//! marked (R-428, R-433): none for M1, the two floors and `eps_m01` for M2, `r_pole` for M3 (REQ-SYS-082), and the
+//! hatch is read from its entries. The mark is not hashed: see `schema_version.rs`'s `constants_provisional_*`.
 
 use ledger::constants::{
     gate, is_milestone, provisional_until, Admissibility, Citation, ConstantBuilder, Population,
@@ -387,7 +387,8 @@ const FX_PROPOSED: ConstantBuilder = ConstantBuilder {
 /// Its number, read at compile time as any entry's is.
 const FX_PROPOSED_NUMBER: f64 = FX_PROPOSED.number();
 
-/// `d_min`'s log floor, read at compile time from its provisional register entry.
+/// `d_min`'s log floor, read at compile time from its register entry, provisional until the M1 gate and confirmed there
+/// (R-428).
 const D_MIN_FLOOR: f64 = LOG_FLOOR_D_MIN.number();
 
 /// Checks that `entry`, marked provisional, passes the gate beside a settled entry and keeps its mark and number.
@@ -556,8 +557,9 @@ negative_control!(
     )
 );
 
-/// The entries R-427 marks provisional until the M1 gate: the six log floors and the hatch's numbers.
-const M1_PROVISIONAL: [&str; 9] = [
+/// The entries R-427 marked provisional until the M1 gate: the six log floors and the hatch's numbers. The human
+/// confirmed all nine there as proposed (R-428).
+const M1_PROPOSED: [&str; 9] = [
     "log_floor_d_min",
     "log_floor_dE_max",
     "log_floor_dLz_max",
@@ -569,54 +571,98 @@ const M1_PROVISIONAL: [&str; 9] = [
     "hatch_half_period",
 ];
 
-/// Checks that `register` passes the gate and lists, by gate, exactly the entries R-427 marks: [`M1_PROVISIONAL`] for
-/// M1, `eps_m01` (REQ-DEC-039) for M2, none for M0 or M3; that each M1 entry cites REQ-TOOL-160 or REQ-COL-055; and
-/// that [`LOG_FLOORS`] names the six floors' entries.
+/// The two of [`M1_PROPOSED`] confirmed provisionally at the M1 gate and marked provisional until M2 (R-419, R-428).
+const UNTIL_M2: [&str; 2] = ["log_floor_rho_ratio", "log_floor_r_min_pair_0"];
+
+/// The ruling that confirmed the M1 gate's entries (R-428), which each entry confirmed outright cites
+/// (dd_generation_root §3.8, `provisional`).
+const R428: &str = "R-428 — ";
+
+/// The ruling that confirmed the M1 gate's other calibrations (R-433): `r_pole`, marked provisional until M3 citing
+/// REQ-INT-086, and `n_norm_tol`, a confirmed entry citing R-433.
+const R433: &str = "R-433 — ";
+
+/// Checks that `register` passes the gate and lists, by gate, exactly the entries still provisional after the M1
+/// gate (R-428, R-433): none for M1; `eps_m01` (REQ-DEC-039) and [`UNTIL_M2`], citing REQ-TOOL-163, for M2; `r_pole`,
+/// citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`] confirmed outright are unmarked and cite
+/// R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`] names the six floors' entries.
 fn check_list_by_gate(register: &[ConstantBuilder]) {
     if let Err(e) = gate(register) {
         panic!("the register is refused: {e}");
     }
-    assert_eq!(
-        provisional_until(register, "M1"),
-        M1_PROVISIONAL,
-        "the entries provisional until M1"
+    assert!(
+        provisional_until(register, "M1").is_empty(),
+        "the entries provisional until M1: {:?}",
+        provisional_until(register, "M1")
     );
     assert_eq!(
         provisional_until(register, "M2"),
-        ["eps_m01"],
+        ["eps_m01", UNTIL_M2[0], UNTIL_M2[1]],
         "the entries provisional until M2"
     );
-    for gate in ["M0", "M3", "M8", ""] {
+    assert_eq!(
+        provisional_until(register, "M3"),
+        ["r_pole"],
+        "the entries provisional until M3"
+    );
+    let r_pole = register.iter().find(|k| k.name == "r_pole");
+    assert_eq!(
+        r_pole.and_then(|k| k.citation),
+        Some(Citation::Calibration("REQ-INT-086")),
+        "`r_pole`'s citation"
+    );
+    let tol = register.iter().find(|k| k.name == "n_norm_tol");
+    assert!(
+        tol.is_some_and(|k| k.provisional.is_none()
+            && matches!(
+                k.citation,
+                Some(Citation::Corpus { file: "decisions.md", section }) if section.starts_with(R433)
+            )),
+        "`n_norm_tol` is not a confirmed entry citing R-433: {tol:?}"
+    );
+    for gate in ["M0", "M8", ""] {
         assert!(
             provisional_until(register, gate).is_empty(),
             "entries provisional until `{gate}`"
         );
     }
-    for k in register.iter().filter(|k| k.provisional == Some("M1")) {
-        let floor = k.name.starts_with("log_floor_");
-        let want = if floor { "REQ-TOOL-160" } else { "REQ-COL-055" };
-        assert_eq!(
-            k.citation,
-            Some(Citation::Calibration(want)),
-            "`{}`'s citation",
-            k.name
-        );
+    for name in M1_PROPOSED {
+        let k = register
+            .iter()
+            .find(|k| k.name == name)
+            .unwrap_or_else(|| panic!("`{name}` is not in the register"));
+        if UNTIL_M2.contains(&name) {
+            assert_eq!(
+                k.citation,
+                Some(Citation::Calibration("REQ-TOOL-163")),
+                "`{name}`'s citation"
+            );
+        } else {
+            assert!(
+                matches!(
+                    k.citation,
+                    Some(Citation::Corpus { file: "decisions.md", section }) if section.starts_with(R428)
+                ),
+                "`{name}`'s citation is not R-428: {:?}",
+                k.citation
+            );
+        }
     }
     let floors: Vec<&str> = LOG_FLOORS.iter().map(|(_, k)| k.name).collect();
-    assert_eq!(floors, M1_PROVISIONAL[..6], "the floors' entries");
+    assert_eq!(floors, M1_PROPOSED[..6], "the floors' entries");
     for (field, k) in LOG_FLOORS {
         assert_eq!(k.name, format!("log_floor_{field}"), "`{field}`'s entry");
     }
 }
 
 #[test]
-fn constants_provisional_the_list_by_gate_gives_m1s_entries() {
+fn constants_provisional_the_list_by_gate_lists_none_at_m1() {
     check_list_by_gate(REGISTER);
 }
 
 negative_control!(
-    constants_provisional_the_list_by_gate_gives_m1s_entries,
-    "a register whose hatch stripe width is confirmed, not provisional, lists eight entries for M1",
+    constants_provisional_the_list_by_gate_lists_none_at_m1,
+    "a register whose hatch stripe width is still provisional until M1 lists it for M1",
     expected = "the entries provisional until M1",
     {
         let mut register = REGISTER.to_vec();
@@ -624,15 +670,15 @@ negative_control!(
             .iter_mut()
             .filter(|k| k.name == "hatch_half_period")
         {
-            k.provisional = None;
-            k.citation = Some(SOURCE);
+            k.provisional = Some("M1");
+            k.citation = Some(Citation::Calibration("REQ-COL-055"));
         }
         check_list_by_gate(&register);
     }
 );
 
-/// Checks that `hatch` is the proposed hatch (REQ-COL-055), violet `#9B00FF` and cyan `#48FFFF` in 4 px stripes, and
-/// that the register's entries hold those numbers.
+/// Checks that `hatch` is the confirmed hatch (REQ-COL-055, R-428), violet `#9B00FF` and cyan `#48FFFF` in 4 px
+/// stripes, and that the register's entries hold those numbers.
 fn check_hatch(hatch: Hatch) {
     assert_eq!(
         hatch,

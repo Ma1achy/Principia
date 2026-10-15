@@ -91,6 +91,10 @@ The decoder is complete for the free path: D_mom decodes qₖ = q_max·(2σ(z_qk
 - R-419 (11 Oct 2026, closing RQ-271): `rho_ratio`'s and `r_min_pair_0`'s log floors, provisional at M1
   (TASK-M1-18), are re-confirmed at M2 here (REQ-TOOL-163). This task depends on TASK-M1-18, whose floor constant it
   may change (applied per R-369).
+- R-428 (14 Oct 2026, the M1 gate): the two floors are confirmed provisionally as proposed, `rho_ratio` 2⁻²³ and
+  `r_min_pair_0` 2⁻¹⁴. In `crates/ledger/src/constants.rs` each is marked provisional until M2 and cites REQ-TOOL-163
+  (applied per R-369); at the M2 gate's confirmation the mark comes off and each cites that ruling (dd_generation_root
+  §3.8).
 - R-426 (13 Oct 2026, closing RQ-274): `q_mass` stays on `ramp_coolwarm` provisionally from M1, recorded as provisional
   at the M1 gate; this task declares its range from the formula it writes, and the physics reviewer re-checks the ramp
   (REQ-PAY-097). This task depends on TASK-M1-21, which marks `q_mass`'s range provisional (applied per R-369).

@@ -185,7 +185,7 @@ The **only** constraint is the slot's output signature:
 
 Legibility guidance (5 hues usually beat 5 brightness levels for classes) is **advice surfaced in the GUI**, never an enforced constraint.
 
-**Debugging payoff (the case that proves the freedom matters):** `‖n‖` as a Viridis map should render **flat uniform colour** if normalisation is correct; any deviation lights up instantly — a normalisation check impossible to express under "vectors must be colour." This is a *generated* debug occupant (the ledger knows `n` is a vector → auto-offers "‖·‖ as scalar" beside "as direction-cosines"), paired with the test asserting `‖n‖ = 1` to tolerance. Same four-surface pattern, one more reduction offered.
+**Debugging payoff (the case that proves the freedom matters):** `‖n‖` as a Viridis map should render **flat uniform colour** if normalisation is correct; any deviation lights up instantly — a normalisation check impossible to express under "vectors must be colour." This is a *generated* debug occupant (the ledger knows `n` is a vector → auto-offers "‖·‖ as scalar" beside "as direction-cosines"), paired with the test asserting `‖n‖ = 1` to tolerance. Same four-surface pattern, one more reduction offered. The tolerance is 64 U = 2⁻¹⁸ ≈ 3.81e-6 on `‖n‖ − 1` at f32, U = 2⁻²⁴ the f32 unit roundoff, confirmed at the M1 gate and held as the constants register's `n_norm_tol` (R-433; REQ-VAL-122).
 
 ---
 

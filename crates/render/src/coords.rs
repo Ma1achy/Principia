@@ -40,16 +40,16 @@ pub fn frag_uv<T: Copy + Sub<Output = T> + Div<Output = T>>(frag: [T; 2], dims: 
     [frag[0] / dims[0], flip_y(frag[1], dims[1]) / dims[1]]
 }
 
-/// The UV preset's banding criterion's bound (REQ-TOOL-152, an R-71 calibration): a run of reconstructed UV
-/// coordinates is smooth, not step-quantised, when every adjacent-sample delta departs from the exact step `2h/N` by
-/// at most this fraction of it ([`banding_departure`]). **Proposed, R-71**: confirmed by the human at the M1 gate and
-/// recorded in decisions.md. Each reconstructed f32 coordinate is within half an ulp of its value, so a delta departs
-/// by at most one ulp, and the criterion holds while the step spans at least `1 / BANDING_BOUND` = 16 ulps.
+/// The UV preset's banding criterion's bound (REQ-TOOL-152, an R-71 calibration): a run of reconstructed UV coordinates
+/// is smooth, not step-quantised, when every adjacent-sample delta departs from the exact step `2h/N` by at most this
+/// fraction of it ([`banding_departure`]). **Proposed, R-71** (PR #160), and **confirmed by the human at the M1 gate**
+/// (R-433): 1/16 of a step. Each reconstructed f32 coordinate is within half an ulp of its value, so a delta departs by
+/// at most one ulp, and the criterion holds while the step spans at least `1 / BANDING_BOUND` = 16 ulps.
 pub const BANDING_BOUND: f64 = 0.0625;
 
 /// Where [`BANDING_BOUND`] stands.
 pub const BANDING_BOUND_STATUS: &str =
-    "proposed, R-71 (REQ-TOOL-152), awaiting the human's confirmation at the M1 gate";
+    "proposed, R-71 (REQ-TOOL-152); confirmed by the human at the M1 gate (R-433)";
 
 /// The largest departure of `values`' adjacent deltas from the exact step `step`, as a fraction of it: the maximum over
 /// adjacent pairs of `|(values[k + 1] − values[k]) − step| / |step|`; 0 for fewer than two values. A run is banded,

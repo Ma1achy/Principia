@@ -308,7 +308,8 @@ precision row (it is "u16, fixed", §1). No descriptor bit is used; `sample_desc
   or a code follows from the comparison-only disc test (`ρ² < r_pole²·I²`), formed at the kernel's `Real`, not
   position-quantised to f32: on identical stored state at the same `Real` it is Tier B across backends and must match
   exactly; across precisions (CPU-f64 against GPU-f32) it is a branch decision at the disc edge that may differ. The
-  one-code allowance needs REQ-INT-086's `r_pole` above about 2e-3; the proposed 1e-2 satisfies it. Within one
+  one-code allowance needs REQ-INT-086's `r_pole` above about 2e-3; the proposed 1e-2 satisfies it. R-433 confirmed
+  1e-2 at the M1 gate, a constants-register entry provisional until M3. Within one
   backend and precision the field is deterministic, so a resumed march is
   bit-identical to an unbroken one (above).
 - **The read side does not read it.** As a `_`-named member it has no ledger field entry: no read-side field, export
