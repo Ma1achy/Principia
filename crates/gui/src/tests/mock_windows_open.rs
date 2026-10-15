@@ -415,6 +415,11 @@ fn mock_windows_open_profiler_controls() {
 #[test]
 fn mock_windows_open_export_display_chart_builder_and_inspector_draw_their_content() {
     let export = drawn(Window::Export, |_| {});
+    // The image's size: the figure's, in pixels, twice over by default.
+    let figure = layout(&headless()).figure;
+    let px = |v: f32| (v * PIXELS_PER_POINT).round() as u32 * 2;
+    let size = format!("{} × {} (2×)", px(figure.width()), px(figure.height()));
+    check_has(&export, &[&size], "Export's size");
     check_has(
         &export,
         &[
@@ -765,6 +770,9 @@ fn mock_windows_open_chart_builder_presets() {
     assert!(d.presets[n].name.ends_with("(copy)"));
     chart_builder::activate(chart_builder::SAVE, &mut d, plane, &mut edits);
     assert_eq!(d.presets.len(), n + 2);
+    assert_eq!(d.preset, Some(n + 1), "the saved preset chosen");
+    assert_eq!(d.presets[n + 1].name, format!("my {}", d.presets[n].name));
+    assert_eq!([d.presets[n + 1].q1, d.presets[n + 1].q2], d.q);
     // At most MAX_PRESETS: Save and Duplicate stop there.
     while d.presets.len() < chart_builder::MAX_PRESETS {
         chart_builder::activate(chart_builder::SAVE, &mut d, plane, &mut edits);
