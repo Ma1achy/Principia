@@ -2,8 +2,10 @@
 //! its trajectory, one timeline. The tabs Inspect and Create & locate; the gauge buttons (Reset, Randomise, Burrau-ish,
 //! Rotate 15°, Scale × 1.25, Boost →); the three panes, 1 the IC (the bodies 0, 1, 2 with their velocity arrows and
 //! ghost markers at the playhead), 2 the canonical representative (the shape sphere, turning with its axes, or
-//! unwrapped), 3 the trajectory in real space; one timeline scrubbing all three, with listen; the readouts; the pair
-//! separations; and Create & locate's lock the view on it, centre a slice through it, mark it, keep it.
+//! unwrapped, with "ghost the gauge transform"), 3 the trajectory in real space; one timeline scrubbing all three, with
+//! play, step and listen; the readouts (latent `z`, `α, β`, masses, `E · L_z`, outcome, F₂ word, round trip, gauge,
+//! as trajectory_viewing §4's readout row); the energy error and pair separation plots; and Create & locate's lock the
+//! view on it, centre a slice through it, mark it, keep it.
 //!
 //! On the mock (applied per R-369): the IC is the sample the Trajectory panel shows when the window opens (under the
 //! cursor, or a kept orbit), copied in; with none, the panes are empty. Rotate, Scale and Boost move pane 1's drawing
@@ -11,14 +13,21 @@
 //! lock the view on it and mark it are frames, the IC's editing and its re-integration (`computeIC`) being
 //! TASK-M8-14's onward. Centre a slice through it sends one `SetField` on `z₀`; keep it keeps the orbit, as the
 //! Trajectory panel's keep does. The panes' and the timeline's arrows scrub the one timeline by `TimeStep`, in
-//! interaction mode.
+//! interaction mode; play runs it at one `t` a second, as the Trajectory panel's play does, and step moves it a point of
+//! the orbit's path. turn turns the sphere at the panel's rate. Ghost draws, faint over pane 2, the IC as the gauge
+//! buttons left it, beside the canonical pane that has not moved. The readouts are the sample's where it has them
+//! (`z`, outcome, word, `E₀`, `α, β` as its shape-sphere point at `t = 0`, chart_decoder_contract Part 1), and
+//! placeholder content where it does not: the masses as a softmax of `z[6:8]` and a pinned 0, `L_z` from the paths'
+//! first step under them, the round trip a hash of the IC under 10⁻¹⁴, and the gauge error 0, the mock's canonical
+//! pane ignoring the gauge exactly; the energy error grows to the sample's `|ΔE/E|` as the pairs close, the real
+//! readouts being `computeIC`'s (TASK-M8-14).
 
 use eframe::egui::{self, vec2, Button, Pos2, Rect, RichText, Sense, Slider, Stroke, Ui};
 use engine::contract::sample::Sample;
 use engine::contract::set_field::SetField;
 use engine::contract::view_ui::KeptOrbits;
 
-use crate::explore::trajectory::{self, fit, index_at, on_square, BODY_COLOURS};
+use crate::explore::trajectory::{self, fit, index_at, on_square, turned, BODY_COLOURS};
 use crate::keyboard::scopes::{Adjust, Base, Scope, ScopeId, ScopeTree, StepKind};
 use crate::windows::{note, Keys};
 
@@ -41,6 +50,16 @@ pub const PANES: ScopeId = "in_panes";
 pub const TIMELINE_SECTION: ScopeId = "in_timeline_section";
 /// The timeline.
 pub const TIMELINE: ScopeId = "in_timeline";
+/// Play, on the timeline.
+pub const PLAY: ScopeId = "in_play";
+/// Step back a point of the path.
+pub const STEP_BACK: ScopeId = "in_step_back";
+/// Step on a point of the path.
+pub const STEP: ScopeId = "in_step";
+/// turn: the sphere turning.
+pub const TURN: ScopeId = "in_turn";
+/// Ghost the gauge transform.
+pub const GHOST: ScopeId = "in_ghost";
 /// Listen.
 pub const LISTEN: ScopeId = "in_listen";
 /// Locate's section.
@@ -103,6 +122,16 @@ pub struct State {
     pub listen: bool,
     /// Pane 1's gauge transform: the rotation, in degrees, the scale and the boost.
     pub gauge: (f64, f64, f64),
+    /// turn: the sphere turning.
+    pub turn: bool,
+    /// The sphere's turn so far, in degrees, in `[0, 360)`.
+    pub angle: f64,
+    /// Ghost the gauge transform.
+    pub ghost: bool,
+    /// Whether the timeline plays.
+    pub playing: bool,
+    /// The time source's seconds at the last frame.
+    pub last_seconds: Option<f64>,
 }
 
 impl Default for State {
@@ -114,6 +143,11 @@ impl Default for State {
             unwrapped: false,
             listen: false,
             gauge: (0.0, 1.0, 0.0),
+            turn: true,
+            angle: 0.0,
+            ghost: false,
+            playing: false,
+            last_seconds: None,
         }
     }
 }
@@ -125,6 +159,46 @@ impl State {
             sample: sample.cloned(),
             ..Self::default()
         };
+    }
+
+    /// One frame at `seconds`, as the Trajectory panel's: the sphere turns while turn is on and the sphere shown, and
+    /// the timeline plays on at one `t` a second, stopping at the orbit's end.
+    pub fn advance(&mut self, seconds: f64) {
+        let dt = self
+            .last_seconds
+            .map_or(0.0, |last| (seconds - last).max(0.0));
+        self.last_seconds = Some(seconds);
+        if self.turn && !self.unwrapped {
+            self.angle = turned(self.angle, trajectory::TURN_DEG_PER_S, dt);
+        }
+        let span = self.sample.as_ref().map_or(0.0, |s| s.path_t);
+        if self.playing {
+            self.t = (self.t + dt).min(span);
+            if self.t >= span {
+                self.playing = false;
+            }
+        }
+    }
+
+    /// Whether the window moves by itself, so the app asks for frames: with an IC, the sphere turning or the timeline
+    /// playing.
+    pub fn moving(&self) -> bool {
+        self.sample.is_some() && ((self.turn && !self.unwrapped) || self.playing)
+    }
+
+    /// The timeline moved `by` points of the orbit's path, kept on it, and paused.
+    pub fn step(&mut self, by: i64) {
+        let Some(sample) = &self.sample else {
+            return;
+        };
+        let n = sample.shape.len();
+        if n < 2 {
+            return;
+        }
+        let i = index_at(self.t, sample.path_t, n) as i64;
+        let j = (i + by).clamp(0, n as i64 - 1);
+        self.t = sample.path_t * j as f64 / (n - 1) as f64;
+        self.playing = false;
     }
 }
 
@@ -148,11 +222,22 @@ pub fn register(tree: &mut ScopeTree) {
     }
     tree.register(Some(PANES), Scope::control(SPHERE, "sphere"));
     tree.register(Some(PANES), Scope::control(UNWRAPPED, "unwrapped"));
+    tree.register(Some(PANES), Scope::control(TURN, "turn"));
+    tree.register(
+        Some(PANES),
+        Scope::control(GHOST, "ghost the gauge transform"),
+    );
     tree.register(Some(WINDOW), Scope::group(TIMELINE_SECTION, "timeline"));
     tree.register(
         Some(TIMELINE_SECTION),
         Scope::value(TIMELINE, "timeline", StepKind::TimeStep),
     );
+    tree.register(Some(TIMELINE_SECTION), Scope::control(PLAY, "play"));
+    tree.register(
+        Some(TIMELINE_SECTION),
+        Scope::control(STEP_BACK, "step back"),
+    );
+    tree.register(Some(TIMELINE_SECTION), Scope::control(STEP, "step"));
     tree.register(Some(TIMELINE_SECTION), Scope::control(LISTEN, "listen"));
     tree.register(Some(WINDOW), Scope::group(LOCATE, "Locate"));
     for (id, label, acts) in LOCATE_IDS {
@@ -174,6 +259,19 @@ pub fn activate(id: &str, state: &mut State, kept: &mut KeptOrbits, edits: &mut 
         SPHERE => state.unwrapped = false,
         UNWRAPPED => state.unwrapped = true,
         LISTEN => state.listen = !state.listen,
+        TURN => state.turn = !state.turn,
+        GHOST => state.ghost = !state.ghost,
+        PLAY => {
+            if let Some(s) = &state.sample {
+                // Play at the end starts over.
+                if !state.playing && state.t >= s.path_t {
+                    state.t = 0.0;
+                }
+                state.playing = !state.playing;
+            }
+        }
+        STEP_BACK => state.step(-1),
+        STEP => state.step(1),
         "in_reset" => state.gauge = (0.0, 1.0, 0.0),
         "in_rotate" => *angle += ROTATE_DEG,
         "in_scale" => *scale *= SCALE,
@@ -208,19 +306,12 @@ pub fn adjust(adjust: &Adjust, state: &mut State) {
 /// ghost marker at the playhead's index `i`.
 pub(crate) fn ic_pane(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f64), i: usize) {
     let painter = ui.painter_at(rect);
-    let [x0, y0, x1, y1] = fit(&sample.bodies);
-    let (sa, ca) = gauge.0.to_radians().sin_cos();
-    let to = |p: &[f64; 2]| -> Pos2 {
-        let x = 2.0 * (p[0] - x0) / (x1 - x0) - 1.0;
-        let y = 2.0 * (p[1] - y0) / (y1 - y0) - 1.0;
-        let (x, y) = (x * ca - y * sa, x * sa + y * ca);
-        on_square(rect, [x * gauge.1 * 0.6 + gauge.2, y * gauge.1 * 0.6])
-    };
+    let to = ic_to(rect, sample, gauge);
     let weak = ui.visuals().weak_text_color();
     let starts: Vec<Pos2> = sample
         .bodies
         .iter()
-        .filter_map(|b| b.first().map(to))
+        .filter_map(|b| b.first().map(&to))
         .collect();
     if starts.len() == 3 {
         for k in 0..3 {
@@ -245,6 +336,158 @@ pub(crate) fn ic_pane(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f6
             painter.circle_stroke(to(g), 5.0, Stroke::new(1.0, colour));
         }
     }
+}
+
+/// Where pane 1 draws a point of `sample`'s paths in `rect` under `gauge`: fitted to the paths, then rotated, scaled
+/// and boosted.
+fn ic_to(rect: Rect, sample: &Sample, gauge: (f64, f64, f64)) -> impl Fn(&[f64; 2]) -> Pos2 {
+    let [x0, y0, x1, y1] = fit(&sample.bodies);
+    let (sa, ca) = gauge.0.to_radians().sin_cos();
+    move |p: &[f64; 2]| -> Pos2 {
+        let x = 2.0 * (p[0] - x0) / (x1 - x0) - 1.0;
+        let y = 2.0 * (p[1] - y0) / (y1 - y0) - 1.0;
+        let (x, y) = (x * ca - y * sa, x * sa + y * ca);
+        on_square(rect, [x * gauge.1 * 0.6 + gauge.2, y * gauge.1 * 0.6])
+    }
+}
+
+/// The ghost of the gauge transform over pane 2's `rect`: the IC's three bodies at `t = 0` as pane 1 draws them under
+/// `gauge`, faint rings joined, so what the gauge buttons did shows beside the canonical pane that does not move.
+pub(crate) fn gauge_ghost(ui: &Ui, rect: Rect, sample: &Sample, gauge: (f64, f64, f64)) {
+    let painter = ui.painter_at(rect);
+    let to = ic_to(rect, sample, gauge);
+    let starts: Vec<Pos2> = sample
+        .bodies
+        .iter()
+        .filter_map(|b| b.first().map(&to))
+        .collect();
+    let faint = ui.visuals().weak_text_color().gamma_multiply(GHOST_ALPHA);
+    if starts.len() == 3 {
+        for k in 0..3 {
+            painter.line_segment([starts[k], starts[(k + 1) % 3]], Stroke::new(1.0, faint));
+        }
+    }
+    for (a, colour) in starts.iter().zip(BODY_COLOURS) {
+        painter.circle_stroke(
+            *a,
+            8.0,
+            Stroke::new(1.0, colour.gamma_multiply(GHOST_ALPHA)),
+        );
+    }
+}
+
+/// The ghost's opacity (a look choice, R-390).
+pub const GHOST_ALPHA: f32 = 0.45;
+
+/// The minimum pair separation at each point of `sample`'s paths.
+fn closest(sample: &Sample) -> Vec<f64> {
+    let b = &sample.bodies;
+    let n = b.iter().map(Vec::len).min().unwrap_or(0);
+    (0..n)
+        .map(|k| {
+            [(0, 1), (1, 2), (0, 2)]
+                .map(|(p, q): (usize, usize)| {
+                    let (a, c) = (b[p][k], b[q][k]);
+                    ((a[0] - c[0]).powi(2) + (a[1] - c[1]).powi(2)).sqrt()
+                })
+                .into_iter()
+                .fold(f64::INFINITY, f64::min)
+        })
+        .collect()
+}
+
+/// The energy error over the orbit (placeholder content): growing from 0 to the sample's `|ΔE/E|`, each step by the
+/// inverse of the pairs' closest separation there, so it climbs at the close encounters, as an integrator's does.
+pub fn energy_error(sample: &Sample) -> Vec<f64> {
+    let weights: Vec<f64> = closest(sample).iter().map(|d| 1.0 / d.max(1e-9)).collect();
+    let total: f64 = weights.iter().sum::<f64>().max(f64::MIN_POSITIVE);
+    let mut sum = 0.0;
+    weights
+        .iter()
+        .map(|w| {
+            sum += w;
+            sample.energy_drift * sum / total
+        })
+        .collect()
+}
+
+/// The energy error plot: [`energy_error`] over the orbit, against its largest, in the hyperlink colour.
+pub(crate) fn energy_plot(ui: &mut Ui, sample: &Sample) {
+    let (rect, _) = ui.allocate_exact_size(vec2(ui.available_width(), 32.0), Sense::hover());
+    let painter = ui.painter_at(rect);
+    painter.rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
+    let e = energy_error(sample);
+    let top = e.iter().copied().fold(f64::MIN_POSITIVE, f64::max);
+    let n = e.len();
+    let points: Vec<Pos2> = e
+        .iter()
+        .enumerate()
+        .map(|(k, v)| {
+            let x = rect.min.x + rect.width() * k as f32 / (n.max(2) - 1) as f32;
+            egui::pos2(x, rect.max.y - rect.height() * (v / top) as f32)
+        })
+        .collect();
+    painter.add(egui::Shape::line(
+        points,
+        Stroke::new(1.0, ui.visuals().hyperlink_color),
+    ));
+}
+
+/// The masses (placeholder content): a softmax of `z[6]`, `z[7]` and a pinned 0, the mass block's two controls onto the
+/// simplex (chart_decoder_contract Part 1, `D_mass`).
+pub fn masses(sample: &Sample) -> [f64; 3] {
+    let e = [sample.ic[6].exp(), sample.ic[7].exp(), 1.0];
+    let sum: f64 = e.iter().sum();
+    e.map(|x| x / sum)
+}
+
+/// `L_z` (placeholder content): `Σ m (x v_y − y v_x)` over the bodies under [`masses`], their velocities the paths'
+/// first step over its `t`; 0 for a path under two points.
+pub fn l_z(sample: &Sample) -> f64 {
+    let m = masses(sample);
+    let n = sample.bodies.iter().map(Vec::len).min().unwrap_or(0);
+    if n < 2 {
+        return 0.0;
+    }
+    let dt = sample.path_t / (n - 1) as f64;
+    sample
+        .bodies
+        .iter()
+        .zip(m)
+        .map(|(path, m)| {
+            let (a, b) = (path[0], path[1]);
+            let v = [(b[0] - a[0]) / dt, (b[1] - a[1]) / dt];
+            m * (a[0] * v[1] - a[1] * v[0])
+        })
+        .sum()
+}
+
+/// The readouts, in trajectory_viewing §4's order, each `(name, value)`, for the sample's IC.
+pub fn readouts(s: &Sample) -> Vec<(&'static str, String)> {
+    let z: Vec<String> = s.ic.iter().map(|v| format!("{v:+.3}")).collect();
+    let [alpha, beta] = s.shape.first().copied().unwrap_or([f64::NAN; 2]);
+    let m = masses(s);
+    // A placeholder round trip, under 10⁻¹⁴ (the IC Inspector's verified bound, its scratchpad).
+    let round_trip = 1e-15 * (1.0 + 9.0 * crate::mock::sample::hash(s.ic.iter().sum::<f64>()));
+    vec![
+        // Four to a line: the eight in one line are wider than the window.
+        (
+            "latent z",
+            format!("{}\n{}", z[..4].join(" "), z[4..].join(" ")),
+        ),
+        ("α, β", format!("{alpha:.3} · {beta:.3}")),
+        ("masses", format!("{:.3} · {:.3} · {:.3}", m[0], m[1], m[2])),
+        ("E · L_z", format!("{:.3} · {:+.3}", s.e0, l_z(s))),
+        (
+            "outcome",
+            s.fate.clone().unwrap_or_else(|| "undecided".into()),
+        ),
+        ("F₂ word", s.f2_word.clone()),
+        ("round trip", format!("{round_trip:.1e}")),
+        ("gauge", format!("{:.1e}", 0.0)),
+        ("|ΔE/E|", format!("{:.1e}", s.energy_drift)),
+        ("min separation", format!("{:.1e}", s.min_separation)),
+    ]
 }
 
 /// The pair separations over the orbit, each pair in its first body's colour.
@@ -296,13 +539,11 @@ fn row(
     keys.place_rect(ui, section, response.rect);
 }
 
-/// Draws the window's content; its clicks act as Enter does. `turn` is the sphere's angle, in degrees, as the
-/// Trajectory panel turns it.
+/// Draws the window's content; its clicks act as Enter does.
 pub fn show(
     ui: &mut Ui,
     keys: &mut Keys<'_>,
     state: &mut State,
-    turn: f64,
     (kept, edits): (&mut KeptOrbits, &mut Vec<SetField>),
 ) {
     let mut clicked: Vec<ScopeId> = Vec::new();
@@ -341,9 +582,12 @@ pub fn show(
                     };
                     match (k, state.unwrapped) {
                         (0, _) => ic_pane(ui, rect, sample, state.gauge, i),
-                        (1, false) => trajectory::sphere(ui, rect, sample, turn, i),
+                        (1, false) => trajectory::sphere(ui, rect, sample, state.angle, i),
                         (1, true) => trajectory::unwrapped(ui, rect, sample, i),
                         _ => trajectory::real_space(ui, rect, sample, i),
+                    }
+                    if k == 1 && state.ghost {
+                        gauge_ghost(ui, rect, sample, state.gauge);
                     }
                 }
             });
@@ -358,6 +602,10 @@ pub fn show(
                     }
                     keys.place(id, &button);
                 }
+                let turn = ui.checkbox(&mut state.turn, "turn");
+                keys.place(TURN, &turn);
+                let ghost = ui.checkbox(&mut state.ghost, "ghost the gauge transform");
+                keys.place(GHOST, &ghost);
             });
         })
         .response;
@@ -367,45 +615,49 @@ pub fn show(
     }
     let span = state.sample.as_ref().map_or(0.0, |s| s.path_t);
     let timeline = ui
-        .horizontal(|ui| {
+        .scope(|ui| {
+            let has = state.sample.is_some();
+            // The scrubber on its own row, across the window; the transport, the time and listen under it.
+            ui.spacing_mut().slider_width = ui.available_width();
             let scrub = ui.add_enabled(
-                state.sample.is_some(),
+                has,
                 Slider::new(&mut state.t, 0.0..=span.max(f64::MIN_POSITIVE)).show_value(false),
             );
             keys.place(TIMELINE, &scrub);
-            ui.label(RichText::new(format!("t {:.2} / {span:.2}", state.t)).monospace());
-            let listen = ui.add(Button::selectable(state.listen, "listen"));
-            if listen.clicked() {
-                clicked.push(LISTEN);
-            }
-            keys.place(LISTEN, &listen);
+            ui.horizontal(|ui| {
+                for (id, label, on) in [
+                    // ⏵ and ⏴, a pair the font has both of.
+                    (PLAY, if state.playing { "⏸" } else { "⏵" }, state.playing),
+                    (STEP_BACK, "⏴ step", false),
+                    (STEP, "step ⏵", false),
+                ] {
+                    let button = ui.add_enabled(has, Button::selectable(on, label));
+                    if button.clicked() {
+                        clicked.push(id);
+                    }
+                    keys.place(id, &button);
+                }
+                ui.label(RichText::new(format!("t {:.2} / {span:.2}", state.t)).monospace());
+                let listen = ui.add(Button::selectable(state.listen, "listen"));
+                if listen.clicked() {
+                    clicked.push(LISTEN);
+                }
+                keys.place(LISTEN, &listen);
+            });
         })
         .response;
     keys.place_rect(ui, TIMELINE_SECTION, timeline.rect);
     note(ui, TIMELINE_NOTE);
     if let Some(s) = &state.sample {
         egui::Grid::new("inspector readouts").show(ui, |ui| {
-            let z: Vec<String> = s.ic.iter().map(|v| format!("{v:+.3}")).collect();
-            for (name, value) in [
-                // Four to a line: the eight in one line are wider than the window.
-                (
-                    "latent z",
-                    format!("{}\n{}", z[..4].join(" "), z[4..].join(" ")),
-                ),
-                (
-                    "outcome",
-                    s.fate.clone().unwrap_or_else(|| "undecided".into()),
-                ),
-                ("F₂ word", s.f2_word.clone()),
-                ("E₀", format!("{:.3}", s.e0)),
-                ("|ΔE/E|", format!("{:.1e}", s.energy_drift)),
-                ("min separation", format!("{:.3}", s.min_separation)),
-            ] {
+            for (name, value) in readouts(s) {
                 ui.label(RichText::new(name).monospace().weak());
                 ui.label(RichText::new(value).monospace());
                 ui.end_row();
             }
         });
+        ui.label(RichText::new("▾ Energy error |ΔE/E|").strong());
+        energy_plot(ui, s);
         ui.label(RichText::new("▾ Pair separations").strong());
         separations(ui, s);
     }

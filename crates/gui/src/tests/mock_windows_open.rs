@@ -1653,7 +1653,8 @@ fn mock_windows_open_inspector_panes_drawn_by_their_functions() {
     app.windows.inspector.seed(Some(&sample));
     app.windows.inspector.t = 0.3 * sample.path_t;
     // The sphere held at its angle, so the frame and the function draw it alike.
-    app.trajectory.turn = false;
+    app.windows.inspector.turn = false;
+    app.windows.inspector.angle = 40.0;
     let window = windows::rect(Window::Inspector, &layout(&h));
     let spacing = egui::Context::default()
         .global_style()
@@ -1663,9 +1664,9 @@ fn mock_windows_open_inspector_panes_drawn_by_their_functions() {
     for unwrapped in [false, true] {
         app.windows.inspector.unwrapped = unwrapped;
         settle(&mut h, &mut app);
-        let angle = app.trajectory.angle;
+        let angle = app.windows.inspector.angle;
         let drawn = geometry(&super::support::shapes(&mut h, &mut app));
-        assert_eq!(app.trajectory.angle, angle, "the sphere held still");
+        assert_eq!(app.windows.inspector.angle, angle, "the sphere held still");
         let pane = |k: usize| {
             app.keyboard
                 .place_of(inspector::PANE_IDS[k].0)
@@ -2214,4 +2215,282 @@ fn mock_windows_open_run_t_horizon_is_the_contracts_horizon() {
     sent(snap.sim.horizon.t);
     assert_eq!(snap.history.undo_depth, depth + 1, "one undoable edit");
     rejects("a Recompute that sends nothing", || sent(t0));
+}
+
+/// The Inspector's own turn, play and step (§G8; gui review 5529720235, finding 4): turn turns its sphere at the
+/// panel's rate, unwrapped or off holds it; play runs the timeline at one `t` a second to the orbit's end and stops,
+/// play at the end starting over; step moves a point of the path, kept on it, and pauses; with no IC none acts.
+#[test]
+fn mock_windows_open_inspector_turn_play_and_step() {
+    use crate::explore::trajectory::TURN_DEG_PER_S;
+    let (sim, _) = state(0.0);
+    let sample = crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0);
+    let (span, n) = (sample.path_t, sample.shape.len());
+    let dt = span / (n - 1) as f64;
+    let mut s = inspector::State::default();
+    s.seed(Some(&sample));
+    let (mut kept, mut edits) = (Default::default(), Vec::new());
+    // turn: on by default, the sphere turning with the seconds.
+    assert!(s.turn && s.moving());
+    s.advance(10.0);
+    s.advance(11.5);
+    assert!((s.angle - 1.5 * TURN_DEG_PER_S).abs() < 1e-9, "{}", s.angle);
+    let turned = s.angle;
+    inspector::activate(inspector::TURN, &mut s, &mut kept, &mut edits);
+    assert!(!s.turn && !s.moving());
+    s.advance(13.0);
+    assert_eq!(s.angle, turned, "turn off holds the sphere");
+    inspector::activate(inspector::TURN, &mut s, &mut kept, &mut edits);
+    s.unwrapped = true;
+    assert!(!s.moving(), "unwrapped, nothing turns");
+    s.advance(14.0);
+    assert_eq!(s.angle, turned, "unwrapped holds the sphere");
+    // Ghost toggles.
+    inspector::activate(inspector::GHOST, &mut s, &mut kept, &mut edits);
+    assert!(s.ghost);
+    inspector::activate(inspector::GHOST, &mut s, &mut kept, &mut edits);
+    assert!(!s.ghost);
+    // Play to the end, then stop; play at the end starts over.
+    inspector::activate(inspector::PLAY, &mut s, &mut kept, &mut edits);
+    assert!(s.playing && s.moving());
+    s.advance(14.5);
+    assert!((s.t - 0.5).abs() < 1e-12, "{}", s.t);
+    s.advance(14.5 + span);
+    assert_eq!((s.t, s.playing), (span, false));
+    inspector::activate(inspector::PLAY, &mut s, &mut kept, &mut edits);
+    assert_eq!((s.t, s.playing), (0.0, true));
+    inspector::activate(inspector::PLAY, &mut s, &mut kept, &mut edits);
+    assert!(!s.playing, "play again pauses");
+    // Pausing short of the end keeps the time; play resumes from it.
+    s.t = span / 2.0;
+    inspector::activate(inspector::PLAY, &mut s, &mut kept, &mut edits);
+    assert_eq!((s.t, s.playing), (span / 2.0, true));
+    // Step: a point of the path on and back, pausing; kept on the path at its ends.
+    s.t = 3.0 * dt;
+    inspector::activate(inspector::STEP, &mut s, &mut kept, &mut edits);
+    assert!((s.t - 4.0 * dt).abs() < 1e-12 && !s.playing, "{}", s.t);
+    inspector::activate(inspector::STEP_BACK, &mut s, &mut kept, &mut edits);
+    inspector::activate(inspector::STEP_BACK, &mut s, &mut kept, &mut edits);
+    assert!((s.t - 2.0 * dt).abs() < 1e-12, "{}", s.t);
+    s.t = 0.0;
+    inspector::activate(inspector::STEP_BACK, &mut s, &mut kept, &mut edits);
+    assert_eq!(s.t, 0.0);
+    s.t = span;
+    inspector::activate(inspector::STEP, &mut s, &mut kept, &mut edits);
+    assert_eq!(s.t, span);
+    // A path of one point: step holds.
+    let mut one = inspector::State::default();
+    let mut short = sample.clone();
+    short.shape.truncate(1);
+    one.seed(Some(&short));
+    one.t = 0.25;
+    one.step(1);
+    assert_eq!(one.t, 0.25);
+    // No IC: play and step do nothing, and nothing moves.
+    let mut none = inspector::State::default();
+    for id in [inspector::PLAY, inspector::STEP, inspector::STEP_BACK] {
+        inspector::activate(id, &mut none, &mut kept, &mut edits);
+    }
+    assert_eq!(none, inspector::State::default());
+    assert!(!none.moving());
+    none.advance(1.0);
+    none.advance(2.0);
+    assert_eq!(none.t, 0.0);
+    rejects("a step of two points", || {
+        let mut s = inspector::State::default();
+        s.seed(Some(&sample));
+        s.step(1);
+        assert!((s.t - 2.0 * dt).abs() < 1e-12)
+    });
+}
+
+/// In the app, the open Inspector plays and turns by the frames' seconds, and asks for frames while it moves; closed,
+/// it asks for none.
+#[test]
+fn mock_windows_open_inspector_plays_in_the_app() {
+    use std::time::Duration;
+    let delay = |out: &egui::FullOutput| out.viewport_output[&egui::ViewportId::ROOT].repaint_delay;
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    let (sim, _) = state(0.0);
+    let sample = crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0);
+    app.open_window(&ctx, Window::Inspector, None);
+    app.windows.inspector.seed(Some(&sample));
+    app.windows.inspector.turn = false;
+    app.windows.inspector.playing = true;
+    // The Trajectory panel shows no orbit (the pointer is off the figure), so only the Inspector moves.
+    app.trajectory.turn = false;
+    let mut last = h.frame(&mut app, Vec::new());
+    for _ in 0..4 {
+        last = h.frame(&mut app, Vec::new());
+    }
+    let t = app.windows.inspector.t;
+    assert!((t - 4.0 * crate::headless::FRAME_S).abs() < 1e-9, "{t}");
+    let fast = Duration::from_secs_f64(1.0 / crate::mock::clock::MOCK_TICK_HZ);
+    assert!(delay(&last) <= fast, "{:?}", delay(&last));
+    app.windows.inspector.playing = false;
+    let still = h.frame(&mut app, Vec::new());
+    let check_idle = |out: &egui::FullOutput| assert!(delay(out) > fast, "{:?}", delay(out));
+    check_idle(&still);
+    app.windows.inspector.playing = true;
+    let playing = h.frame(&mut app, Vec::new());
+    rejects("the playing Inspector asking for no frames", || {
+        check_idle(&playing)
+    });
+}
+
+/// The Inspector's readouts (§G8, trajectory_viewing §4's row, in order), min separation in the Trajectory panel's
+/// format; the masses on the simplex; `L_z` from the paths' first step; the gauge error 0 and the round trip under
+/// 10⁻¹⁴; the energy error climbing to the sample's `|ΔE/E|`.
+#[test]
+fn mock_windows_open_inspector_readouts_and_energy_error() {
+    let (sim, _) = state(0.0);
+    let mut s = crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0);
+    s.min_separation = 4.3e-4;
+    let r = inspector::readouts(&s);
+    let names: Vec<&str> = r.iter().map(|(n, _)| *n).collect();
+    assert_eq!(
+        names,
+        [
+            "latent z",
+            "α, β",
+            "masses",
+            "E · L_z",
+            "outcome",
+            "F₂ word",
+            "round trip",
+            "gauge",
+            "|ΔE/E|",
+            "min separation"
+        ]
+    );
+    let value = |name: &str| r.iter().find(|(n, _)| *n == name).unwrap().1.clone();
+    assert_eq!(value("min separation"), "4.3e-4", "the panel's format");
+    assert_eq!(
+        value("α, β"),
+        format!("{:.3} · {:.3}", s.shape[0][0], s.shape[0][1])
+    );
+    assert_eq!(value("gauge"), "0.0e0");
+    let round_trip: f64 = value("round trip").parse().unwrap();
+    assert!((1e-15..1e-14).contains(&round_trip), "{round_trip}");
+    assert_eq!(
+        value("E · L_z"),
+        format!("{:.3} · {:+.3}", s.e0, inspector::l_z(&s))
+    );
+    assert!(value("latent z").contains('\n'));
+    // Masses: a softmax of z[6], z[7] and 0.
+    s.ic[6] = 0.0;
+    s.ic[7] = 0.0;
+    let m = inspector::masses(&s);
+    assert!(m.iter().all(|x| (x - 1.0 / 3.0).abs() < 1e-12), "{m:?}");
+    s.ic[6] = 2f64.ln();
+    let m = inspector::masses(&s);
+    assert!(
+        (m[0] - 0.5).abs() < 1e-12 && (m[1] - 0.25).abs() < 1e-12 && (m[2] - 0.25).abs() < 1e-12
+    );
+    assert_eq!(value("masses").matches(" · ").count(), 2);
+    // L_z: one body at (1, 0) moving +y at speed 1, the others still at the origin.
+    let mut one = s.clone();
+    one.path_t = 1.0;
+    one.ic[6] = 0.0;
+    one.ic[7] = 0.0;
+    one.bodies = [
+        vec![[1.0, 0.0], [1.0, 1.0]],
+        vec![[0.0, 0.0], [0.0, 0.0]],
+        vec![[0.0, 0.0], [0.0, 0.0]],
+    ];
+    assert!((inspector::l_z(&one) - 1.0 / 3.0).abs() < 1e-12);
+    one.bodies[0].truncate(1);
+    assert_eq!(inspector::l_z(&one), 0.0, "a path of one point");
+    // The energy error: from above 0, never falling, to |ΔE/E|, steepest where the pairs are closest.
+    let e = inspector::energy_error(&s);
+    assert_eq!(e.len(), s.shape.len());
+    assert!(e[0] > 0.0);
+    assert!(e.windows(2).all(|w| w[1] >= w[0]));
+    assert!((e[e.len() - 1] - s.energy_drift).abs() < 1e-12 * s.energy_drift.max(1.0));
+    let mut close = one.clone();
+    close.energy_drift = 3.0;
+    close.bodies = [
+        vec![[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+        vec![[1.0, 0.0], [0.5, 0.0], [1.0, 0.0]],
+        vec![[3.0, 0.0], [3.0, 0.0], [3.0, 0.0]],
+    ];
+    let e = inspector::energy_error(&close);
+    assert!(
+        (e[0] - 0.75).abs() < 1e-12 && (e[1] - 2.25).abs() < 1e-12 && (e[2] - 3.0).abs() < 1e-12,
+        "{e:?}"
+    );
+    rejects("min separation to three decimals", || {
+        assert_eq!(format!("{:.3}", s.min_separation), value("min separation"))
+    });
+}
+
+/// Ghost the gauge transform (§G8 pane 2): on, pane 2 carries the IC as the gauge buttons left it, drawn by
+/// `gauge_ghost` on its rect, over the canonical sphere; off, none of it.
+#[test]
+fn mock_windows_open_inspector_ghosts_the_gauge_on_pane_2() {
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Inspector, None);
+    let (sim, _) = state(0.0);
+    let sample = crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0);
+    app.windows.inspector.seed(Some(&sample));
+    app.windows.inspector.turn = false;
+    app.windows.inspector.gauge = (inspector::ROTATE_DEG, inspector::SCALE, inspector::BOOST);
+    let mut ghost_of = |on: bool| {
+        app.windows.inspector.ghost = on;
+        settle(&mut h, &mut app);
+        let drawn = geometry(&super::support::shapes(&mut h, &mut app));
+        let pane = app
+            .keyboard
+            .place_of(inspector::PANE_IDS[1].0)
+            .expect("pane 2 placed")
+            .rect;
+        let gauge = app.windows.inspector.gauge;
+        let want = geometry(&super::mock_windows_drawn::painted(|ui| {
+            inspector::gauge_ghost(ui, pane, &sample, gauge)
+        }));
+        assert_eq!(want.len(), 6, "three rings and three edges");
+        want.iter().filter(|g| drawn.contains(g)).count()
+    };
+    assert_eq!(ghost_of(true), 6, "the ghost on pane 2");
+    assert_eq!(ghost_of(false), 0, "no ghost while off");
+    rejects("a ghost drawn while off", || assert_eq!(ghost_of(false), 6));
+}
+
+/// The Inspector with an IC draws §G8's controls and readouts: turn and the ghost toggle by the panes, play and step on
+/// the timeline, every readout of `readouts`, and the energy error and pair separation plots' headings; the transport's
+/// glyphs are in the font its buttons use.
+#[test]
+fn mock_windows_open_inspector_draws_its_controls_and_readouts() {
+    let (sim, _) = state(0.0);
+    let sample = crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0);
+    let names = drawn(Window::Inspector, |app| {
+        app.windows.inspector.seed(Some(&sample))
+    });
+    let mut wants = vec![
+        "turn",
+        "ghost the gauge transform",
+        "⏵",
+        "⏴ step",
+        "step ⏵",
+        "listen",
+        "▾ Energy error |ΔE/E|",
+        "▾ Pair separations",
+    ];
+    let readouts = inspector::readouts(&sample);
+    wants.extend(readouts.iter().map(|(n, _)| *n));
+    check_has(&names, &wants, "the Inspector with an IC");
+    let ctx = egui::Context::default();
+    crate::theme::install(&ctx);
+    let mut out = ctx.run_ui(Default::default(), |_| {});
+    out.textures_delta.clear();
+    let glyph = |c: char| ctx.fonts_mut(|f| f.has_glyph(&egui::FontId::proportional(14.0), c));
+    for c in ['⏵', '⏴', '⏸'] {
+        assert!(glyph(c), "{c} has no glyph");
+    }
+    rejects("a light ✓, which the font lacks", || assert!(glyph('✓')));
+    rejects("an Inspector with no energy plot", || {
+        check_has(&names, &["▾ Energy error, drawn elsewhere"], "")
+    });
 }

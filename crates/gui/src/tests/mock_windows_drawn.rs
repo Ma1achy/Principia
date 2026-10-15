@@ -673,6 +673,107 @@ fn mock_windows_drawn_the_ic_pane() {
     });
 }
 
+/// The gauge ghost (§G8 pane 2): pane 1's three starts under the gauge, as faint rings of 8 in the bodies' colours,
+/// joined by faint edges; nothing filled.
+#[test]
+fn mock_windows_drawn_the_gauge_ghost() {
+    let sample = a_sample();
+    let rect = Rect::from_min_size(pos2(50.0, 60.0), vec2(160.0, 160.0));
+    let bounds = fit(&sample.bodies);
+    let faint = visuals()
+        .weak_text_color()
+        .gamma_multiply(inspector::GHOST_ALPHA);
+    for gauge in [
+        (0.0, 1.0, 0.0),
+        (inspector::ROTATE_DEG, inspector::SCALE, inspector::BOOST),
+    ] {
+        let shapes = painted(|ui| inspector::gauge_ghost(ui, rect, &sample, gauge));
+        let starts: Vec<Pos2> = sample
+            .bodies
+            .iter()
+            .map(|b| pane_point(rect, bounds, gauge, b[0]))
+            .collect();
+        let edges = segments(&shapes, faint);
+        assert_eq!(edges.len(), 3);
+        for (k, e) in edges.iter().enumerate() {
+            assert!(
+                close(e[0], starts[k]) && close(e[1], starts[(k + 1) % 3]),
+                "edge {k}"
+            );
+        }
+        let rings = circles(&shapes);
+        assert_eq!(rings.len(), 3);
+        for (b, colour) in BODY_COLOURS.iter().enumerate() {
+            let ring = rings[b];
+            assert!(
+                close(ring.0, starts[b]) && ring.1 == 8.0,
+                "ring {b}: {ring:?}"
+            );
+            assert_eq!(ring.2, Color32::TRANSPARENT, "ring {b} unfilled");
+            assert_eq!(ring.3, colour.gamma_multiply(inspector::GHOST_ALPHA));
+        }
+    }
+    // Under two bodies, no triangle: the rings alone.
+    let mut two = sample.clone();
+    two.bodies[2].clear();
+    let shapes = painted(|ui| inspector::gauge_ghost(ui, rect, &two, (0.0, 1.0, 0.0)));
+    assert!(segments(&shapes, faint).is_empty());
+    assert_eq!(circles(&shapes).len(), 2);
+    rejects("the ghost at full strength", || {
+        let shapes = painted(|ui| inspector::gauge_ghost(ui, rect, &sample, (0.0, 1.0, 0.0)));
+        assert_eq!(circles(&shapes)[0].3, BODY_COLOURS[0])
+    });
+}
+
+/// The energy error plot: `energy_error` over the orbit, a point per path point across the plot, against its largest.
+#[test]
+fn mock_windows_drawn_the_energy_error() {
+    let sample = a_sample();
+    let shapes = painted(|ui| inspector::energy_plot(ui, &sample));
+    let v = visuals();
+    let rect = plot_rect(&shapes, v.extreme_bg_color);
+    assert_eq!(rect.height(), 32.0);
+    let e = inspector::energy_error(&sample);
+    let top = e.iter().copied().fold(0.0, f64::max);
+    let line = &paths(&shapes, v.hyperlink_color)[0];
+    assert_eq!(line.len(), e.len());
+    let n = e.len();
+    for (k, pt) in line.iter().enumerate() {
+        let want = pos2(
+            rect.min.x + rect.width() * k as f32 / (n - 1) as f32,
+            rect.max.y - rect.height() * (e[k] / top) as f32,
+        );
+        assert!(close(*pt, want), "point {k}: {pt:?} against {want:?}");
+    }
+    assert!(
+        close(line[n - 1], pos2(rect.max.x, rect.min.y)),
+        "ends at the top right"
+    );
+    // A one-point path: its point at the left; no drift, the line on the floor.
+    let mut one = sample.clone();
+    for b in &mut one.bodies {
+        b.truncate(1);
+    }
+    one.energy_drift = 0.0;
+    let shapes = painted(|ui| inspector::energy_plot(ui, &one));
+    let rect = plot_rect(&shapes, v.extreme_bg_color);
+    let line = &paths(&shapes, v.hyperlink_color);
+    let pts: Vec<Pos2> = line.iter().flatten().copied().collect();
+    assert!(
+        pts.iter().all(|p| (p.y - rect.max.y).abs() < 1e-3),
+        "{pts:?}"
+    );
+    rejects("the energy error drawn against 1", || {
+        let shapes = painted(|ui| inspector::energy_plot(ui, &sample));
+        let line = &paths(&shapes, v.hyperlink_color)[0];
+        let r = plot_rect(&shapes, v.extreme_bg_color);
+        assert!(close(
+            line[n - 1],
+            pos2(r.max.x, r.max.y - r.height() * top as f32)
+        ))
+    });
+}
+
 #[test]
 fn mock_windows_drawn_the_pair_separations() {
     let sample = a_sample();

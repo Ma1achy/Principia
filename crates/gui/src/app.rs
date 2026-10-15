@@ -320,7 +320,8 @@ impl<S: EngineSide> App<S> {
             &self.view.kept_orbits,
         );
         let span = orbit.map_or(0.0, |o| o.path_t);
-        let moving = self.trajectory.moving(orbit.is_some());
+        let moving = self.trajectory.moving(orbit.is_some())
+            || (self.is_open(Window::Inspector) && self.windows.inspector.moving());
         let ticked = self.side.time_source().map(|source| {
             (
                 self.clock.frame(source, playback),
@@ -359,6 +360,7 @@ impl<S: EngineSide> App<S> {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64(SNAPSHOT_INTERVAL_S));
         }
         self.trajectory.advance(seconds, span);
+        self.windows.inspector.advance(seconds);
         let layout = Layout::new(ui.max_rect(), ctx.pixels_per_point());
         if self.present {
             self.presenting(&ctx, &layout);
@@ -773,7 +775,6 @@ impl<S: EngineSide> App<S> {
                         ui,
                         keys,
                         &mut w.inspector,
-                        self.trajectory.angle,
                         (&mut self.view.kept_orbits, edits),
                     ),
                     Window::Console => {
