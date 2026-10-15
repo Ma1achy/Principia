@@ -249,4 +249,6 @@ does not wait.*
   - (b) Keep `atan2` and restrict §3.2:95 to the CPU path, with the GPU parity checks excluding the poles by the flags
     that already catch them.
 - **Applied meanwhile:** nothing outside `rho_angle`; no canonicalisation or encode code exists yet.
-- **Waits:** the tasks that implement §3.3's canonicalisation and the encode (and their WGSL generation, REQ-COL-006).
+- **Waits:** the tasks that implement §3.3's canonicalisation and the encode (and their WGSL generation, REQ-COL-006):
+  REQ-DEC-002 and REQ-ENC-016 (TASK-M2-07, the canonicaliser; REQ-ENC-016's `coincident_inner_pair` reaches `ρ̃ = 0`),
+  REQ-DEC-014 (TASK-M2-15), REQ-DEC-016 (TASK-M2-16) and REQ-COL-006 (TASK-M2-25) carry `rq: RQ-285`.

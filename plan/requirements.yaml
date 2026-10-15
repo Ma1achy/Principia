@@ -54,6 +54,8 @@
   rulings:
   - R-82
   milestone: M2
+  rq:
+  - RQ-285
 - id: REQ-DEC-003
   area: DEC
   statement: "The latent vector must be ordered z[0:2] = configuration controls (z_α, z_β), z[2:6] = momentum controls (z_q0..z_q3), z[6:8] = mass controls (z_μ1, z_μ2), and this block ordering must be fixed once and held."
@@ -1183,6 +1185,8 @@
   rulings:
   - R-13
   milestone: M2
+  rq:
+  - RQ-285
   note: R-13 overrides dd_encode §3.2 / test 9's 'reject' wording
 - id: REQ-ENC-017
   area: ENC
