@@ -395,3 +395,29 @@ fn mock_stain_preview_recompile() {
         assert_eq!(recompiled(&app, rows), 1)
     });
 }
+
+/// A click on the fade's slider, no drag, is one `SetField` at the value clicked.
+#[test]
+fn mock_stain_preview_a_slider_click_is_one_set_field() {
+    let (mut app, mut h) = on_stain(mock_app());
+    select(&mut app, &mut h, LATE_FADE);
+    let r = nodes(&mut h, &mut app)
+        .into_iter()
+        .find(|n| n.role == Role::Slider)
+        .expect("the fade's slider")
+        .rect;
+    let at = pos2(r.min.x + 0.8 * r.width(), r.center().y);
+    let (g0, d0, rows) = (graph(&app).clone(), depth(&app), app.console().len());
+    for events in crate::capture::click(at) {
+        let _ = h.frame(&mut app, events);
+    }
+    let _ = h.frame(&mut app, Vec::new());
+    let fade = |g: &StainGraph| g.node(LATE_FADE).and_then(|n| n.params.get(FADE).cloned());
+    check_one_edit((&g0, d0, rows), &app, |g| {
+        fade(g).is_some_and(|v| (v[0] - 0.8).abs() < 0.05)
+    });
+    assert_eq!(app.stain.param_drag, None);
+    rejects("the fade unchanged", || {
+        check_one_edit((&g0, d0, rows), &app, |g| fade(g).is_none())
+    });
+}

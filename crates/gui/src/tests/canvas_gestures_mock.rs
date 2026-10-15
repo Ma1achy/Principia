@@ -19,7 +19,7 @@ use crate::layout::Layout;
 use crate::mock::stain::{default_graph, COMBINER, OUT};
 use crate::side::MockSide;
 use crate::stain::canvas::{
-    Button, Canvas, Drawn, DRAG_THRESHOLD, TITLE_H, ZOOM_MAX, ZOOM_MIN, ZOOM_PER_POINT,
+    Button, Canvas, Drawn, DRAG_THRESHOLD, LINE_POINTS, TITLE_H, ZOOM_MAX, ZOOM_MIN, ZOOM_PER_POINT,
 };
 use crate::stain::Regions;
 
@@ -337,6 +337,20 @@ fn canvas_gestures_mock_scroll_zooms_about_the_pointer() {
     );
     c.scroll(ORIGIN, p, -100.0);
     assert!((c.view.zoom - 1.0).abs() < 1e-6, "zooming back");
+    // From a panned view, at another point: that point stays too.
+    c.view.pan = vec2(-35.0, 20.0);
+    let q = ORIGIN + vec2(300.0, 140.0);
+    let under = |c: &Canvas| (q - ORIGIN - c.view.pan) / c.view.zoom;
+    let was = under(&c);
+    c.scroll(ORIGIN, q, -150.0);
+    assert!(
+        (under(&c) - was).length() < 1e-3,
+        "{:?} from {was:?}",
+        under(&c)
+    );
+    assert!(c.view.pan != vec2(-35.0, 20.0));
+    c.scroll(ORIGIN, q, 150.0);
+    assert!((c.view.pan - vec2(-35.0, 20.0)).length() < 1e-3);
     // The zoom stays within its bounds.
     c.scroll(ORIGIN, p, 1e6);
     assert_eq!(c.view.zoom, ZOOM_MAX);
@@ -561,5 +575,97 @@ fn canvas_gestures_mock_the_toggle_takes_its_press() {
     assert_eq!(app.stain.view, crate::stain::View::Graph);
     rejects("the toggle unmoved", || {
         assert_eq!(app.stain.view, crate::stain::View::Pipeline)
+    });
+}
+
+fn wheel(at: Pos2, unit: MouseWheelUnit, dy: f32) -> Vec<Event> {
+    vec![
+        Event::PointerMoved(at),
+        Event::MouseWheel {
+            unit,
+            delta: vec2(0.0, dy),
+            phase: egui::TouchPhase::Move,
+            modifiers: Modifiers::NONE,
+        },
+    ]
+}
+
+/// The wheel by lines and by pages, as by points; off the canvas it zooms nothing.
+#[test]
+fn canvas_gestures_mock_wheel_units() {
+    let (mut app, mut h) = stain_app();
+    let rect = canvas_rect(&h);
+    let blank = pos2(rect.max.x - 40.0, rect.min.y + 80.0);
+    let zoom_after = |app: &mut App<MockSide>, h: &mut Headless, events: Vec<Event>| {
+        app.stain.canvas.view = Default::default();
+        let _ = h.frame(app, events);
+        app.stain.canvas.view.zoom
+    };
+    let lines = zoom_after(&mut app, &mut h, wheel(blank, MouseWheelUnit::Line, 1.0));
+    assert!(
+        (lines - (LINE_POINTS * ZOOM_PER_POINT).exp()).abs() < 1e-6,
+        "{lines}"
+    );
+    let pages = zoom_after(&mut app, &mut h, wheel(blank, MouseWheelUnit::Page, 0.1));
+    let want = (0.1 * rect.height() * ZOOM_PER_POINT).exp();
+    assert!((pages - want).abs() < 1e-5, "{pages} for {want}");
+    // Over the drawer: no zoom.
+    let drawer = pos2(rect.min.x - 100.0, rect.min.y + 300.0);
+    let off = zoom_after(&mut app, &mut h, wheel(drawer, MouseWheelUnit::Point, 50.0));
+    assert_eq!(off, 1.0);
+    rejects("a zoom from the drawer", || assert!(off > 1.0));
+}
+
+/// A press off the canvas, or by another button, starts nothing: the selection stays.
+#[test]
+fn canvas_gestures_mock_only_its_presses() {
+    let (mut app, mut h) = stain_app();
+    app.stain.canvas.selection = [PALETTE].into();
+    let rect = canvas_rect(&h);
+    // On the drawer, below its rows.
+    let drawer = pos2(rect.min.x - 30.0, rect.max.y - 20.0);
+    for events in crate::capture::click(drawer) {
+        let _ = h.frame(&mut app, events);
+    }
+    check_selected(&app.stain.canvas, &[PALETTE]);
+    // The secondary button on another node.
+    let at = app_title(&app, &h, OUTCOME);
+    for pressed in [true, false] {
+        let event = Event::PointerButton {
+            pos: at,
+            button: PointerButton::Secondary,
+            pressed,
+            modifiers: Modifiers::NONE,
+        };
+        let _ = h.frame(&mut app, vec![Event::PointerMoved(at), event]);
+    }
+    check_selected(&app.stain.canvas, &[PALETTE]);
+    assert!(!app.stain.canvas.busy());
+    rejects("the secondary click taken", || {
+        check_selected(&app.stain.canvas, &[OUTCOME])
+    });
+}
+
+/// The inspector's heading: the graph's with nothing selected, the node's with one, the count with more.
+#[test]
+fn canvas_gestures_mock_the_inspector_follows_the_selection() {
+    let (mut app, mut h) = stain_app();
+    let heading = |app: &mut App<MockSide>, h: &mut Headless, ids: &[NodeId]| {
+        app.stain.canvas.selection = selection(ids);
+        frame_texts(h, app)
+    };
+    let none = heading(&mut app, &mut h, &[]);
+    assert!(none.iter().any(|t| t == "6 nodes · 5 wires"), "{none:?}");
+    let one = heading(&mut app, &mut h, &[FATE]);
+    assert!(
+        one.iter().any(|t| t == "Source · ctx.t_end_step"),
+        "{one:?}"
+    );
+    assert!(one.iter().any(|t| t == "reads ctx.t_end_step → field"));
+    let two = heading(&mut app, &mut h, &[FATE, PALETTE]);
+    assert!(two.iter().any(|t| t == "2 nodes selected"), "{two:?}");
+    assert!(!none.iter().any(|t| t.ends_with("nodes selected")));
+    rejects("no selection read as a multi-selection", || {
+        assert!(none.iter().any(|t| t.ends_with("nodes selected")))
     });
 }

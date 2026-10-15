@@ -3,7 +3,9 @@
 //! render contract Part 3; REQ-RENDER-075). The assembler's own tests (`crates/render/tests/assemble.rs`) cover the
 //! lowering; these cover the graph type the engine defines. Each test registers its negative control (R-176).
 
-use engine::stain::{Canonical, GraphError, NodeId, NodeKind, Occupant, StainGraph, Wire};
+use engine::stain::{
+    Canonical, GraphError, NodeId, NodeKind, Occupant, PortType, StainGraph, UniformType, Wire,
+};
 use validation::negative_control;
 
 const SHOW_INPUT: &str = "fn colour(ctx: Ctx) -> vec3<f32> { return vec3<f32>(ctx.inputs[0].x); }";
@@ -690,4 +692,78 @@ negative_control!(
     "another colour's text is another text",
     expected = "is not the JCS of the form",
     check_jcs(&escaped(), SHOW_INPUT)
+);
+
+// ── What an editor draws ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// Each node's ports and uniforms on [`full`] with the colour given a uniform: `kinds` the out-port types by kind in
+/// [`NodeKind`]'s order, `ins` the in-ports by node id.
+fn check_ports(g: &StainGraph, outs: &[Option<PortType>], ins: &[(NodeId, Vec<PortType>)]) {
+    let kinds = [
+        NodeKind::Source,
+        NodeKind::Colour,
+        NodeKind::Brightness,
+        NodeKind::Combiner,
+        NodeKind::Post,
+        NodeKind::Out,
+    ];
+    let got: Vec<_> = kinds.iter().map(|k| k.output()).collect();
+    assert_eq!(got, outs, "the out-ports");
+    for (id, want) in ins {
+        assert_eq!(g.in_ports(*id).as_ref(), Ok(want), "node {id:?}'s in-ports");
+    }
+}
+
+#[test]
+fn stain_graph_ports_and_uniforms_are_the_editors() {
+    use PortType::{Field, Vec3, F32};
+    let mut g = full();
+    check_ports(
+        &g,
+        &[
+            Some(Field),
+            Some(Vec3),
+            Some(F32),
+            Some(Vec3),
+            Some(Vec3),
+            None,
+        ],
+        &[
+            (NodeId(2), vec![]),
+            (NodeId(3), vec![Field]),
+            (NodeId(4), vec![Field]),
+            (COMBINER, vec![Vec3, F32]),
+            (NodeId(5), vec![Vec3]),
+            (OUT, vec![Vec3]),
+        ],
+    );
+    assert!(g.in_ports(NodeId(99)).is_err(), "no node 99");
+    // The uniforms the occupant declares, with default and range; none for a node without.
+    g.set_occupant(
+        NodeId(3),
+        custom(&format!(
+            "// @uniform gain: f32 = 1.5 [0.0, 4.0]\n{SHOW_INPUT}"
+        )),
+    )
+    .expect("a schema");
+    let us = g.uniforms(NodeId(3)).expect("the colour's uniforms");
+    assert_eq!(us.len(), 1);
+    assert_eq!(
+        (
+            us[0].name.as_str(),
+            us[0].ty,
+            us[0].default.clone(),
+            us[0].range
+        ),
+        ("gain", UniformType::F32, vec![1.5], Some((0.0, 4.0)))
+    );
+    assert_eq!(g.uniforms(NodeId(4)), Ok(vec![]));
+    assert!(g.uniforms(NodeId(99)).is_err(), "no node 99");
+}
+
+negative_control!(
+    stain_graph_ports_and_uniforms_are_the_editors,
+    "OUT given an out-port",
+    expected = "the out-ports",
+    check_ports(&full(), &[None; 6], &[])
 );

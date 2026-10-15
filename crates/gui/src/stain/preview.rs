@@ -113,11 +113,11 @@ fn inspector(
 ) {
     let g = page.graph;
     let Some(n) = s.selected().and_then(|id| g.node(id)) else {
-        let selected = s.canvas.selection.len();
-        let heading = if selected > 1 {
-            format!("{selected} nodes selected")
-        } else {
+        // No node, or several: the one-node case is the node's.
+        let heading = if s.canvas.selection.is_empty() {
             "Graph".to_owned()
+        } else {
+            format!("{} nodes selected", s.canvas.selection.len())
         };
         ui.label(RichText::new(heading).heading());
         let nodes = g.nodes().count();
