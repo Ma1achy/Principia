@@ -2389,17 +2389,18 @@ fn mock_windows_open_inspector_readouts_and_energy_error() {
         (m[0] - 0.5).abs() < 1e-12 && (m[1] - 0.25).abs() < 1e-12 && (m[2] - 0.25).abs() < 1e-12
     );
     assert_eq!(value("masses").matches(" · ").count(), 2);
-    // L_z: one body at (1, 0) moving +y at speed 1, the others still at the origin.
+    // L_z: one body at (1, 0) moving +y and one at (½, 1) moving −x, each at speed 1 (half a unit in each step of half
+    // a `t`), the third still at the origin: each adds a third.
     let mut one = s.clone();
     one.path_t = 1.0;
     one.ic[6] = 0.0;
     one.ic[7] = 0.0;
     one.bodies = [
-        vec![[1.0, 0.0], [1.0, 1.0]],
-        vec![[0.0, 0.0], [0.0, 0.0]],
-        vec![[0.0, 0.0], [0.0, 0.0]],
+        vec![[1.0, 0.0], [1.0, 0.5], [1.0, 1.0]],
+        vec![[0.5, 1.0], [0.0, 1.0], [-0.5, 1.0]],
+        vec![[0.0, 0.0]; 3],
     ];
-    assert!((inspector::l_z(&one) - 1.0 / 3.0).abs() < 1e-12);
+    assert!((inspector::l_z(&one) - 2.0 / 3.0).abs() < 1e-12);
     one.bodies[0].truncate(1);
     assert_eq!(inspector::l_z(&one), 0.0, "a path of one point");
     // The energy error: from above 0, never falling, to |ΔE/E|, steepest where the pairs are closest.
