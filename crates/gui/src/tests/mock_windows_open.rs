@@ -1240,3 +1240,96 @@ fn mock_windows_open_chart_builder_seed_reads_the_chart() {
         assert_eq!(d.q, chart_builder::Draft::default().q)
     });
 }
+
+/// The AccessKit toggled state of each node labelled `label`, top to bottom.
+fn toggled_all(output: &egui::FullOutput, label: &str) -> Vec<bool> {
+    let update = output
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .expect("AccessKit is on");
+    let mut found: Vec<(f64, bool)> = update
+        .nodes
+        .iter()
+        .filter(|(_, n)| n.label() == Some(label))
+        .map(|(_, n)| {
+            let y = n.bounds().expect("a drawn button").y0;
+            (y, n.toggled() == Some(egui::accesskit::Toggled::True))
+        })
+        .collect();
+    found.sort_by(|a, b| a.0.total_cmp(&b.0));
+    found.into_iter().map(|(_, t)| t).collect()
+}
+
+#[test]
+fn mock_windows_open_chart_builder_marks_the_chosen_preset_and_kinds() {
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::ChartBuilder, None);
+    app.windows.chart.preset = Some(1);
+    app.windows.chart.kind = [chart_builder::KINDS[1].0, chart_builder::KINDS[2].0];
+    settle(&mut h, &mut app);
+    let output = h.frame(&mut app, Vec::new());
+    let names: Vec<String> = app
+        .windows
+        .chart
+        .presets
+        .iter()
+        .map(|p| p.name.clone())
+        .collect();
+    let marked = |output: &egui::FullOutput, names: &[String]| -> Vec<bool> {
+        names
+            .iter()
+            .map(|n| {
+                let t = toggled_all(output, n);
+                assert_eq!(t.len(), 1, "{n}: {t:?}");
+                t[0]
+            })
+            .collect()
+    };
+    let want: Vec<bool> = (0..names.len()).map(|i| i == 1).collect();
+    assert_eq!(
+        marked(&output, &names),
+        want,
+        "the chosen preset alone selected"
+    );
+    // Each kind's button, axis 1 then axis 2: axis 1 Physical, axis 2 Burrau.
+    let kinds: Vec<Vec<bool>> = chart_builder::KINDS
+        .iter()
+        .map(|(_, label)| toggled_all(&output, label))
+        .collect();
+    assert_eq!(
+        kinds,
+        vec![vec![false, false], vec![true, false], vec![false, true]],
+        "each axis's kind alone selected"
+    );
+    // A latent axis's eight components are enabled, any other kind's disabled.
+    let latent = chart_builder::KINDS[0].0;
+    let mut disabled = |kind: [chart_builder::Kind; 2]| -> usize {
+        app.windows.chart.kind = kind;
+        let output = h.frame(&mut app, Vec::new());
+        let update = output
+            .platform_output
+            .accesskit_update
+            .expect("AccessKit is on");
+        update
+            .nodes
+            .iter()
+            .filter(|(_, n)| n.role() == egui::accesskit::Role::Slider && n.is_disabled())
+            .count()
+    };
+    let base = disabled([latent, latent]);
+    assert_eq!(
+        [
+            disabled([latent, chart_builder::KINDS[1].0]),
+            disabled([chart_builder::KINDS[2].0, latent])
+        ],
+        [base + chart_builder::AXIS_IDS[0].components.len(); 2],
+        "a non-latent axis's components disabled"
+    );
+    rejects("no preset chosen", || {
+        app.windows.chart.preset = None;
+        let output = h.frame(&mut app, Vec::new());
+        assert_eq!(marked(&output, &names), want);
+    });
+}
