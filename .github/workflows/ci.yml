@@ -464,6 +464,18 @@ jobs:
         run: cargo nextest run -p engine --features controls compute_entry --no-capture
       - name: cargo test -p engine --features controls compute_entry --doc
         run: cargo test -p engine --features controls compute_entry --doc
+      # The decode stage on Metal, its controls included (TASK-M2-06): Metal's GPU `tanh` fails from 43.671875, 0 and
+      # then NaN, which no other backend CI runs shows, so only here does removing the operator's `tanh_sat` clamp fail
+      # a test (R-186; dd_generation_root §3.9). `decode_` selects `decode_stage_gpu`'s tests (and `decode_dispatch`'s),
+      # `qa_m206_` qa's `qa_TASK-M2-06_gpu`; each has its doctest step over the same filter.
+      - name: cargo nextest run -p engine --features controls decode_
+        run: cargo nextest run -p engine --features controls decode_ --no-capture
+      - name: cargo test -p engine --features controls decode_ --doc
+        run: cargo test -p engine --features controls decode_ --doc
+      - name: cargo nextest run -p engine --features controls qa_m206_
+        run: cargo nextest run -p engine --features controls qa_m206_ --no-capture
+      - name: cargo test -p engine --features controls qa_m206_ --doc
+        run: cargo test -p engine --features controls qa_m206_ --doc
       # The codegen self-test on Metal, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
