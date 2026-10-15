@@ -561,8 +561,11 @@ order of preference). **The failed constraint** `failed` names one of the contra
 3: the `(Lz,E)` parabola `|Lz| ≤ √(2I(E − U))`; `(Lz,K)`'s `K ≥ 0` and `K ≥ Lz²/2I`; the mass simplex's `mᵢ > 0`,
 `Σmᵢ = 1` and interior buffer `ε_m`; the shape sphere's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`; the Burrau charts' `ν ∈ (0,1)`;
 then decode sanity's decoded masses positive, CoM at the origin and total momentum zero. A mixed-axis chart names its
-axes' constraints; a chart that adds a constraint adds it to this list. The latent chart (§1.1) adds no layer-2
-constraint, so its layer-2 check returns `Valid` at every `(u, v)`.
+axes' constraints; a chart that adds a constraint adds it to this list. Every chart's `validate` checks both layers.
+The latent chart (§1.1) adds no layer-2 constraint, and layer 3 holds for it by the shared decoder's construction: the
+masses are positive under every registered mass link (§0.1), the CoM is at the origin (§0.2) and `Σpᵢ = 0` (§0.3),
+the residuals rounding within REQ-ENC-027's tolerance. So its `validate` returns `Valid` at every `(u, v)`. A chart
+that bypasses the canonical-frame decode can fail layer 3, and its `validate` checks it.
 
 `ChartOut` is whatever `D` consumes — masses, `(α,β)` or an explicit `(ρ,λ)`, and momenta or a
 `(Lz,K)` request. **`D` and `C` are shared and written once.** The integrator never sees a chart.

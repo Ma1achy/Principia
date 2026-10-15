@@ -18,10 +18,11 @@
 //!
 //! **Validation** (R-26): the latent chart adds no constraint beyond the hypercube (inverse_encode_contract §
 //! "Chart-aware validation", layer 2 lists none for it), and layer 1 is the encode path's, never a pixel's
-//! (chart_decoder_contract Part 3, R-407), so its layer-2 check accepts every `(u, v)`. Layer 3, decode sanity, reads
-//! the decoded state, not the chart, and its CoM and momentum tolerance is REQ-ENC-027's calibration: it is the
-//! shared check of REQ-ENC-013, not written per chart. Both axes are affine past `[0,1]²` (chart_reference §5.4): the
-//! formula continues.
+//! (chart_decoder_contract Part 3, R-407), so its layer-2 check accepts every `(u, v)`. Layer 3, decode sanity, holds
+//! by the shared decoder's construction (chart_reference §5.1): the masses are positive under every registered mass
+//! link (§0.1), the CoM is at the origin (§0.2) and `Σpᵢ = 0` (§0.3), the residuals rounding within REQ-ENC-027's
+//! tolerance. So `validate` is `Valid` at every `(u, v)`. Both axes are affine past `[0,1]²` (chart_reference §5.4):
+//! the formula continues.
 
 use spirv_std::num_traits::Float;
 
@@ -84,8 +85,8 @@ impl<P: Copy> Chart for Latent<P> {
         "Latent"
     }
 
-    /// [`ValidationResult::Valid`] at every `(u, v)`: the chart has no layer-2 constraint, and layer 3 is the shared
-    /// decode-sanity check (the module's header).
+    /// [`ValidationResult::Valid`] at every `(u, v)`: the chart has no layer-2 constraint, and layer 3 holds by the
+    /// shared decoder's construction (the module's header).
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
         ValidationResult::Valid
     }
