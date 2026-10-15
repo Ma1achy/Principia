@@ -1792,6 +1792,21 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
         "the foot {:?} in {window:?}",
         foot[0].0
     );
+    // The list ends a foot's reserve above the window's foot: the foot line's height and a spacing either side, then
+    // the window's margin and stroke.
+    let list = app.keyboard.place_of(console::LIST).expect("placed").rect;
+    let style = h.ctx.global_style();
+    let body = h
+        .ctx
+        .fonts_mut(|f| f.row_height(&egui::TextStyle::Body.resolve(&style)));
+    let reserve = body
+        + 2.0 * style.spacing.item_spacing.y
+        + style.spacing.window_margin.bottom as f32
+        + style.visuals.window_stroke.width;
+    assert!(
+        (window.max.y - list.max.y - reserve).abs() < 0.5,
+        "the list {list:?} in {window:?}, a reserve of {reserve}"
+    );
     rejects("a foot line well above the window's foot", || {
         assert!((0.0..16.0).contains(&(gap + 40.0)))
     });
