@@ -136,6 +136,13 @@ debug_tooling_plan steps 0b and 0c (first half); render_contract "contract + SDK
   `log_floor_r_min_pair_0` 2⁻¹⁴ are marked provisional until M2, citing REQ-TOOL-163. `d_min`'s floor at 2⁻¹⁴ is
   intended: 2⁻²⁰ would compress `d_min` ∈ [6e-5, 1] from half the ramp to an eighth of it. The six M1 calibrations
   that are not register entries, which the message does not name, are RQ-279.
+  **At the gate (R-433 to R-435, 15 Oct 2026; RQ-279 closed):** `r_pole` = 0.01 (REQ-INT-086), now a register entry
+  marked provisional until M3; the running grey `#4E4E4E` (REQ-COL-053); the triple swatches `#D6A1FF` and `#000097`
+  (REQ-COL-062), with no veto on a first-step triple collision in the t=0 orange; the banding bound, 1/16 of a step
+  (REQ-TOOL-152); the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸ (REQ-VAL-122), the register's `n_norm_tol`; all confirmed as
+  proposed (R-433). The stipple (REQ-COL-064) is confirmed with its dots changed to `#909090`, so that a 4 × 4 block
+  clears τ = 0.101 (0.115), and the seven goldens that draw it are re-rendered (R-434). The 131 baselines recorded
+  for the gate are confirmed (R-435).
 - **The M1 gate passed (R-432, 14 Oct 2026)** on gate run 38629476853 on `main` at ab65c273 (230 of 230 requirements
   passing, `gate-provisional` red only for the nine entries R-428 confirms) and R-428 to R-431. `main` is tagged
   `m1-gate` once R-428's rulings PR has merged, and M2 starts.
@@ -196,6 +203,9 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The physics measurements the corpus leaves to the build:
   - re-validating escape precision and recall against check 2's independent ground truth, with the legacy
     t = 30 set as a comparison (R-95);
+  - re-confirming `r_pole` (REQ-INT-086) against real orbits' near-pole arcs: confirmed at 0.01 at the M1 gate and
+    marked provisional until M3, it blocks the M3 gate's `gate-provisional` job until the human re-confirms it
+    (R-433; TASK-M3-11);
   - the logH falsification check of the re-registration mechanism (R-74);
   - δ_dep;
   - the tau gap;

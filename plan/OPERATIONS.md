@@ -295,6 +295,10 @@ six log floors, `rho_ratio`'s and `r_min_pair_0`'s provisionally until M2, and t
 R-429 REQ-COL-061's criterion, R-430 the ramps as reported, and R-431 four R-369 choices; R-432 passes the gate. Once
 the rulings PR has merged, tag that commit of `main` `m1-gate`, confirm it in the summary, and start M2. RQ-279 (six
 M1 calibrations the message does not name) does not hold the gate.
+R-433 to R-435 (15 Oct 2026): RQ-279 is closed and the M1 gate's other calibrations are confirmed: R-433 `r_pole`
+(a register entry provisional until M3), the running grey, the triple swatches, the banding bound and the ‖n‖ = 1
+tolerance (a register entry); R-434 the stipple, its dots changed to `#909090` and its goldens re-rendered; R-435 the
+131 baselines. They ride the same rulings PR, so `m1-gate` is tagged on its merge as R-432 has it.
 R-390 (6 Oct 2026): the GUI track, TASK-M6-24 to TASK-M6-29, starts now, in parallel with the physics and renderer
 chain, on spare agent slots only, and never holds up M1 or M2 (§ "The GUI track (R-390)").
 R-415 (10 Oct 2026): **merging before an earlier milestone's gate.** A task may merge before an earlier milestone's

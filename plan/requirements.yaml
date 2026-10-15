@@ -3990,7 +3990,7 @@
 - id: REQ-INT-086
   area: INT
   kind: calibration
-  statement: "The pole radius r_pole of the unwrapped phase θ̃ — below which, in √(n_u² + n_v²), θ̃ holds with a frozen reference, adding no delta while inside and the wrapped exit-minus-stored longitude on exit (dd_integrator §3.7, R-389) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The pole radius r_pole of the unwrapped phase θ̃ — below which, in √(n_u² + n_v²), θ̃ holds with a frozen reference, adding no delta while inside and the wrapped exit-minus-stored longitude on exit (dd_integrator §3.7, R-389) — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md. Confirmed at the M1 gate (R-433): r_pole = 0.01, a constants-register entry (r_pole, dd_generation_root §3.8) marked provisional until M3 and citing this requirement, read from the register rather than a test constant; M3 re-confirms it against real orbits' near-pole arcs."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)"
@@ -3998,13 +3998,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*"
+  - file: decisions.md
+    section: "R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*"
   verify:
     method: review checklist
-    detail: "the proposal gives r_pole with its evidence: the error of the longitude atan2(n_v, n_u) from n's round-off, which grows as 1/√(n_u² + n_v²), at f32 and f64, the shared kernel's precisions (R-265), so that outside r_pole a step's longitude delta is trustworthy; and, on TASK-M1-11's synthetic paths, that the hold fires on a pole passage and never on a path circulating the w axis away from the poles; reviewed, confirmed by the human at the M1 gate and recorded in decisions.md"
+    detail: "the proposal gives r_pole with its evidence: the error of the longitude atan2(n_v, n_u) from n's round-off, which grows as 1/√(n_u² + n_v²), at f32 and f64, the shared kernel's precisions (R-265), so that outside r_pole a step's longitude delta is trustworthy; and, on TASK-M1-11's synthetic paths, that the hold fires on a pole passage and never on a path circulating the w axis away from the poles; reviewed, confirmed by the human at the M1 gate and recorded in decisions.md; confirmed by R-433: r_pole is the register entry r_pole = 0.01, marked provisional until M3, which the kernel's tests read; `cargo xtask gate-provisional --milestone M3` lists it until the human re-confirms it at the M3 gate, against real orbits' near-pole arcs (TASK-M3-11)"
   rulings:
   - R-71
   - R-389
+  - R-433
   milestone: M1
+  note: "R-433 (the M1 gate, 15 Oct 2026; closes RQ-279): r_pole = 0.01 confirmed, in the human's words \"made a constants-register entry marked provisional until M3 (R-427's principle), read from there rather than a test constant; M3 re-confirms against real orbits' near-pole arcs\". The entry is r_pole in crates/ledger/src/constants.rs, citing this requirement until M3; TASK-M3-11, which marches the real orbits (REQ-INT-082), reports their near-pole arcs against π·r_pole and (π/2)·r_pole (physics review 5436669140 of PR #158) for the M3 gate."
 - id: REQ-INT-087
   area: INT
   statement: "θ̃'s frozen pole reference must be stored in SimState's `_reserved`, in both stored variants and at every precision row, as a u16 code: a longitude λ ∈ [−π, π] encodes as c = ⌊λ'·65535/(2π) + ½⌋, λ' = λ or λ + 2π when λ < 0, with c = 65535 mapped to 0; code c decodes to c·2π/65535, less 2π when above π; 0xFFFF means no reference and is never an encode's result; the step count and the sentinel are the constants-register entries `theta_ref_steps` and `theta_ref_none`, hashed into the schema version."
@@ -11722,7 +11726,7 @@
 - id: REQ-COL-053
   area: COL
   kind: calibration
-  statement: "The sRGB value of the neutral grey the outcome palette shows for the running state must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The sRGB value of the neutral grey the outcome palette shows for the running state must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md. Confirmed at the M1 gate as proposed (R-433): #4E4E4E, OKLab lightness 0.424."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -11732,6 +11736,8 @@
     section: "R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*"
   - file: decisions.md
     section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
+  - file: decisions.md
+    section: "R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*"
   verify:
     method: review checklist
     detail: "the proposal shows the grey's OKLab lightness and its separation from bounded #141418, degenerate #ECECF0 and the other seven classes, from the invalid pattern's two colours (REQ-COL-055) and from REQ-COL-062's two triple-outcome swatches once proposed"
@@ -11739,8 +11745,9 @@
   - R-71
   - R-96
   - R-399
+  - R-433
   milestone: M1
-  note: "RQ-233, decided per R-369: proposed by TASK-M1-09, the first task that needs the grey (R-280's d_min view), as one named constant in the presentation layer (present.wgsl and its CPU mirror); TASK-M1-10 reads it. R-399 (RQ-259): the grey is the \"not yet\" style's grey, drawn with a fine dot stipple from the pixel position (REQ-COL-064, the stipple's pattern; REQ-TOOL-162, the drawing; TASK-M1-17); PR #172's proposal of the grey stands for the M1 gate."
+  note: "RQ-233, decided per R-369: proposed by TASK-M1-09, the first task that needs the grey (R-280's d_min view), as one named constant in the presentation layer (present.wgsl and its CPU mirror); TASK-M1-10 reads it. R-399 (RQ-259): the grey is the \"not yet\" style's grey, drawn with a fine dot stipple from the pixel position (REQ-COL-064, the stipple's pattern; REQ-TOOL-162, the drawing; TASK-M1-17); PR #172's proposal of the grey stands for the M1 gate. R-433 (the M1 gate, 15 Oct 2026; closes RQ-279): the grey #4E4E4E confirmed as proposed; its stipple's dots are R-434's #909090 (REQ-COL-064)."
 - id: REQ-COL-054
   area: COL
   kind: definition
@@ -11915,7 +11922,7 @@
 - id: REQ-COL-062
   area: COL
   kind: calibration
-  statement: "The sRGB swatches of the outcome-state default palette's two triple outcomes — triple collision (a collision with detail = 3) and triple ejection (an escape with detail = 3) — must be calibrated: proposed with their evidence by the task that needs them, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The sRGB swatches of the outcome-state default palette's two triple outcomes — triple collision (a collision with detail = 3) and triple ejection (an escape with detail = 3) — must be calibrated: proposed with their evidence by the task that needs them, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md. Confirmed at the M1 gate as proposed (R-433): triple collision #D6A1FF and triple ejection #000097."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -11925,13 +11932,16 @@
     section: R-30 — Event precedence is by time *(IE-2)*
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*"
   verify:
     method: review checklist
     detail: "the proposal gives both swatches with their OKLab lightness and their separation from the nine classes, the running grey (REQ-COL-053) and the invalid pattern's colours (REQ-COL-055); m1-outcome renders a triple-collision and a triple-ejection sample in them; confirmed by the human at the M1 gate and recorded in decisions.md"
   rulings:
   - R-71
+  - R-433
   milestone: M1
-  note: "RQ-234, decided per R-369: no value is chosen; the proposal decides, and the human confirms it at the M1 gate."
+  note: "RQ-234, decided per R-369: no value is chosen; the proposal decides, and the human confirms it at the M1 gate. R-433 (the M1 gate, 15 Oct 2026; closes RQ-279): #D6A1FF and #000097 confirmed as proposed, with no veto on a first-step triple collision drawing in the t=0 orange (PR #178's decision per R-369: \"collision @ t=0\" is a collision with t_end_step == 0 whatever its detail). Applied per R-369: the evidence's farthest-colour check counts §1.4's set (the nine classes, the running grey, the hatch's colours); with R-434's #909090 dot counted #FD9CFF would edge out #D6A1FF, which is 0.197 from the dot, and each swatch is checked farther than τ = 0.101 from the dot (0.197 and 0.407)."
 - id: REQ-COL-063
   area: COL
   statement: "ctx.chart.slice_uv must be the sample's position in the slice plane's own frame, relative to the plane anchor (R-97): c + h·(2·ctx.quad.uv − 1), with c the quad's centre and h its half-width as the CPU computes them in f64 (deep_zoom §1's u = c + h·(2t − 1)), a vec2 in [0, 1]², post-flip Y-up, unchanged by in-plane pan and zoom; it is never a screen-relative position, those being the screen lane's separate fields, ctx.screen.uv and ctx.screen.pixel (R-394)."
@@ -11957,7 +11967,7 @@
 - id: REQ-COL-064
   area: COL
   kind: calibration
-  statement: "The \"not yet\" style's stipple (R-399) — the fine dot pattern from the pixel position that debug_not_yet(frag_xy: vec2<f32>) -> vec3<f32> draws over REQ-COL-053's neutral grey, for an unset d_min and for running samples alike, distinct from the invalid hatch's stripes and never one flat colour, so that it collides with no ramp — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The \"not yet\" style's stipple (R-399) — the fine dot pattern from the pixel position that debug_not_yet(frag_xy: vec2<f32>) -> vec3<f32> draws over REQ-COL-053's neutral grey, for an unset d_min and for running samples alike, distinct from the invalid hatch's stripes and never one flat colour, so that it collides with no ramp — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md. Confirmed at the M1 gate (R-434): a 2 × 2 px dot in each 4 × 4 physical-pixel cell over #4E4E4E, the dots changed from the proposed #808080 to #909090, so that no flat colour of any palette comes within the hatch's τ = 0.101 of every pixel of a 4 × 4 block (the nearest, 0.115)."
   source:
   - file: decisions.md
     section: "R-399 — \"Not yet\" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*"
@@ -11969,15 +11979,18 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
+  - file: decisions.md
+    section: "R-434 — REQ-COL-064's stipple is confirmed as 2 × 2 px dots in each 4 × 4 physical-pixel cell over `#4E4E4E`, with the dots changed from `#808080` to `#909090`, so that a 4 × 4 block clears the hatch's τ = 0.101 (0.115); the goldens it changes are re-rendered *(amends R-399 as it applies to the stipple)*"
   verify:
     method: review checklist
-    detail: "the proposal gives the stipple's pattern (its dot spacing and the dots' colour) over REQ-COL-053's grey, shows it is dots, not the hatch's diagonal stripes, gives the lightness contrast that keeps it visible without colour vision, and shows that no flat colour of any prelude ramp (viridis, twilight, grey, cool-warm) reproduces a 4 × 4 block of it; confirmed by the human at the M1 gate and recorded in decisions.md; the proposal states the pixel space of frag_xy (physical or logical pixels) and shows the stipple resolved at the Mac's display scale factor"
+    detail: "the proposal gives the stipple's pattern (its dot spacing and the dots' colour) over REQ-COL-053's grey, shows it is dots, not the hatch's diagonal stripes, gives the lightness contrast that keeps it visible without colour vision, and shows that no flat colour of any prelude ramp (viridis, twilight, grey, cool-warm) reproduces a 4 × 4 block of it; confirmed by the human at the M1 gate and recorded in decisions.md; the proposal states the pixel space of frag_xy (physical or logical pixels) and shows the stipple resolved at the Mac's display scale factor; confirmed by R-434: the dots #909090, 0.229 lighter than the grey in OKLab (contrast ratio 2.61:1), and `cargo test -p render not_yet_style` holds every flat palette colour farther than τ = 0.101 from some pixel of a 4 × 4 block (the nearest, cividis near stop 109.19, 0.115); the goldens that draw \"not yet\" are re-rendered"
   rulings:
   - R-71
   - R-390
   - R-399
+  - R-434
   milestone: M1
-  note: "R-399 (RQ-259): proposed by TASK-M1-17, which builds debug_not_yet in present.wgsl beside DBG_NOT_YET; applied per R-369, the helper's name and file."
+  note: "R-399 (RQ-259): proposed by TASK-M1-17, which builds debug_not_yet in present.wgsl beside DBG_NOT_YET; applied per R-369, the helper's name and file. R-434 (the M1 gate, 15 Oct 2026; closes RQ-279 with R-433): the pattern confirmed, the dots changed to #909090 so that a 4 × 4 block clears the hatch's τ = 0.101 rather than the proposal's 0.08 (with #808080 the nearest flat colour, the grey ramp's, was 0.088 away); seven goldens re-rendered, only the dot pixels changing."
 - id: REQ-COL-065
   area: COL
   kind: definition
@@ -15237,6 +15250,8 @@
     section: "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
   - file: decisions.md
     section: R-158 — The six readings are accepted *(closes RQ-128)*
+  - file: decisions.md
+    section: "R-435 — The golden baselines recorded as proposed for the M1 gate are confirmed: the 131 rows of `fixtures/golden/BASELINES.md` so marked *(amends R-153 as it applies to the M1 gate's baselines)*"
   verify:
     method: golden image
     detail: "each view selectable in the debug picker renders on a synthetic payload and matches its own golden image, recorded at the M1 gate (R-153)"
@@ -15245,8 +15260,9 @@
   - R-122
   - R-153
   - R-158
+  - R-435
   milestone: M1
-  note: "R-113 (RQ-94): the real-march |n|−1 check and the live effort heatmap are a separate M3 requirement. LUT data (Twilight, Viridis): the published matplotlib tables (R-122). RQ-236 and RQ-237, decided per R-369: the suite is fixtures/golden/debug-views/, rendered through RQ-229's harness case kind; its references are recorded in the PR with BASELINES rows citing R-153, proposed and confirmed at the M1 gate; 'the debug picker' is the registry's category: debug entries; the ternary masses colour and the invalid-styled reduced length are REQ-TOOL-154 and REQ-TOOL-156."
+  note: "R-113 (RQ-94): the real-march |n|−1 check and the live effort heatmap are a separate M3 requirement. LUT data (Twilight, Viridis): the published matplotlib tables (R-122). RQ-236 and RQ-237, decided per R-369: the suite is fixtures/golden/debug-views/, rendered through RQ-229's harness case kind; its references are recorded in the PR with BASELINES rows citing R-153, proposed and confirmed at the M1 gate; 'the debug picker' is the registry's category: debug entries; the ternary masses colour and the invalid-styled reduced length are REQ-TOOL-154 and REQ-TOOL-156. R-435 (the M1 gate, 15 Oct 2026): the 131 rows of fixtures/golden/BASELINES.md recorded for the M1 gate are confirmed, the debug views' among them: 124 unchanged rows gain \"confirmed, R-435\"; the seven R-434 re-renders lead with R-434 and are confirmed at it."
 - id: REQ-TOOL-011
   area: TOOL
   statement: "The field-view catalogue must cover every group in render contract Part 6's field-view table that a synthetic payload can show: the UV fragment preset, all 12 ICDescriptor fields, the SimState scalars, the 10 sample_descriptor bits (including last_symbol), times and derived fields, live shape/accumulator views, word views including the whole-word hash, all 9 quad fields plus the payload/status flags contains-ensemble, contains-FTLE and schema version (checked against the prelude's has_ensemble() and has_ftle and the build's PAYLOAD_SCHEMA_VERSION, R-424), and structural overlays (quadtree boundaries, active leaf outlines, fallback tint, pending hatch)."
@@ -17391,7 +17407,7 @@
 - id: REQ-TOOL-152
   area: TOOL
   kind: calibration
-  statement: "The UV preset's banding criterion (REQ-TOOL-019) — the bound on how far the adjacent-sample deltas of the reconstructed UV coordinate may depart from the exact step 2h/N before the reconstruction counts as step-quantised — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The UV preset's banding criterion (REQ-TOOL-019) — the bound on how far the adjacent-sample deltas of the reconstructed UV coordinate may depart from the exact step 2h/N before the reconstruction counts as step-quantised — must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md. Confirmed at the M1 gate as proposed (R-433): a delta departing from 2h/N by more than 1/16 of the step is banded."
   source:
   - file: docs/design/principia_deep_zoom.md
     section: 1. Quad-local coordinates — UV precision
@@ -17403,6 +17419,8 @@
     section: "R-395 — REQ-TOOL-019's \"no banding\" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*"
   - file: decisions.md
     section: "R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*"
+  - file: decisions.md
+    section: "R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*"
   verify:
     method: unit test
     detail: "the proposal gives the criterion and its bound with the measured adjacent-sample deltas on M1's flat grid; `cargo test -p render uv_preset_reconstruction` applies it, and a negative fixture, a quad deep enough that deep_zoom §1's global form u_min + (u_max − u_min)·t bands in f32, fails it; confirmed by the human at the M1 gate and recorded in decisions.md"
@@ -17410,8 +17428,9 @@
   - R-71
   - R-395
   - R-398
+  - R-433
   milestone: M1
-  note: "RQ-214, decided per R-369. R-395: the bound the human confirms is the one REQ-TOOL-019's absolute-coordinate check applies up to ℓ_switch (R-90) and REQ-TOOL-158 applies past it; at a non-dyadic N the proposed 1/16 is exceeded before ℓ_switch (RQ-258, for the M1 gate). R-398 (RQ-258): N is a power of two at every tier and setting, so no N the product offers departs before its samples collapse; the bound itself stays a calibration for the M1 gate."
+  note: "RQ-214, decided per R-369. R-395: the bound the human confirms is the one REQ-TOOL-019's absolute-coordinate check applies up to ℓ_switch (R-90) and REQ-TOOL-158 applies past it; at a non-dyadic N the proposed 1/16 is exceeded before ℓ_switch (RQ-258, for the M1 gate). R-398 (RQ-258): N is a power of two at every tier and setting, so no N the product offers departs before its samples collapse; the bound itself stays a calibration for the M1 gate. R-433 (the M1 gate, 15 Oct 2026; closes RQ-279): the bound 1/16 of a step confirmed as proposed (PR #160); render::coords::BANDING_BOUND_STATUS reads confirmed."
 - id: REQ-TOOL-153
   area: TOOL
   kind: definition
@@ -19750,18 +19769,22 @@
 - id: REQ-VAL-122
   area: VAL
   kind: calibration
-  statement: "The tolerance of the paired test asserting ‖n‖ = 1 for vector fields must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md."
+  statement: "The tolerance of the paired test asserting ‖n‖ = 1 for vector fields must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M1 gate and recorded in decisions.md. Confirmed at the M1 gate as proposed (R-433): 64 U = 2⁻¹⁸ ≈ 3.81e-6 on ‖n‖ − 1 at f32, U = 2⁻²⁴, held as the constants register's n_norm_tol."
   source:
   - file: docs/contracts/principia_gui_state_contract.md
     section: 4. The occupant model — typed by signature, free inside
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*"
   verify:
     method: review checklist
-    detail: "the proposal measures ‖n‖ − 1 over a test render at f32 and states the tolerance; recorded in decisions.md"
+    detail: "the proposal measures ‖n‖ − 1 over a test render at f32 and states the tolerance; recorded in decisions.md; confirmed by the human at the M1 gate (R-433): 64 U = 2⁻¹⁸, the register entry n_norm_tol citing R-433, which the paired test reads"
   rulings:
   - R-71
+  - R-433
   milestone: M1
+  note: "R-433 (the M1 gate, 15 Oct 2026; closes RQ-279): 64 U = 2⁻¹⁸ confirmed as proposed (TASK-M1-12, PR #179), \"as one register entry instead of two test-file definitions\": n_norm_tol in crates/ledger/src/constants.rs; crates/render/tests/debug_views.rs reads it, and qa's qa_TASK-M1-12.rs keeps its own NORM_TOL, the same value, until qa changes it (R-290). The verify gains \"confirmed by the human at the M1 gate\", which the statement already said."
 - id: REQ-VAL-123
   area: VAL
   kind: calibration
