@@ -1,10 +1,10 @@
 # TASK-M5-01 — QuadReduction ledger: member order, packing, histogram and impurity grain
 
 - **Milestone:** M5
-- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052, REQ-PAY-093, REQ-PAY-094
+- **Closes:** REQ-PAY-075, REQ-PAY-076, REQ-PAY-077, REQ-REF-006, REQ-REF-007, REQ-REF-008, REQ-PAY-006, REQ-PAY-089, REQ-GEN-030, REQ-REF-052, REQ-PAY-093, REQ-PAY-094, REQ-COL-071
 - **Depends on:** TASK-M1-08
 - **Needs (earlier milestones):** REQ-PAY-001, REQ-GEN-002, REQ-GEN-003, REQ-GEN-007, REQ-GEN-008, REQ-GEN-010
-- **Reviewers:** code, qa, physics, perf
+- **Reviewers:** code, qa, physics, perf, gui
 - **Pitfalls:** PIT-3, PIT-9
 - **Size:** ~380 lines
 
@@ -44,6 +44,8 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - `decisions.md` § "R-410 — `class_histogram`'s bins are u32: the bound `N² × (E+1) ≤ 2³² − 1` is stated and asserted at dispatch, and no setting is capped *(closes RQ-266)*"
 - `decisions.md` § "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and "no escape" reads `_min > _max` *(closes RQ-268)*"
 - `decisions.md` § "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
+- `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library"
+- `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
 
 ## Deliverables
 - `docs/design/principia_dd_generation_root.md` §3.7: the three definitions (REQ-PAY-075, REQ-PAY-076, REQ-PAY-077), and
@@ -64,6 +66,9 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   line), `plan/reviewers/perf.md` § "3. Memory tiers and budgets", and REQ-PAY-089's and REQ-SYS-036's statements
   (reqio), with the commit's "Removed lines" note.
 - Tests in `crates/ledger/tests/quad_reduction.rs`: member list and types, Rust/WGSL layout agreement, histogram capacity.
+- `docs/gui/principia_render_gui_spec.md` §10.1: the drawn style of a declared `±∞` sentinel in a numeric view
+  (`escape_time_min`'s `+∞`, `escape_time_max`'s `−∞`), and the generator's bit test for it, before the non-finite
+  guard and before any arithmetic, with no infinite literal (REQ-COL-071), with the commit's "Removed lines" note.
 
 ## Acceptance tests
 - Review checklist (physics) — the bin count (§3.7's `N` in `class_histogram[N]`, written N_bins here) matches the joint class ⊕ detail set; each bin is a u32 (R-410); §3.7 states the bound N² × (E+1) ≤ 2³² − 1, where N is the samples per quad side (memory_tiers §4; not the bin count) and E+1 the copies per footprint; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-075).
@@ -79,6 +84,7 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
 - Review checklist (code) — none of these in the GPU struct (REQ-REF-008).
 - Review checklist (physics) — the PR gives the declared range of `error_ratio`, `roundtrip_error`, `alpha_area`, `alpha_energy`, `worst_energy_drift`, `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` (the last three added by R-418), each within ±65504 or with its `overflow` stated (R-248), with its evidence; the physics reviewer checks each; the human confirms them at the M5 gate (REQ-PAY-093).
 - Review checklist (physics) — §3.7 gives `first_divergence_t`'s sentinel, distinct from every crossing time and not NaN, and each member's scale; the ledger entries carry them; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-094).
+- Review checklist (gui) — render_gui_spec §10.1 gives the drawn style of a declared `±∞` sentinel; the generated `escape_time_min` and `escape_time_max` views test `0x7c00` and `0xfc00` on their bits before the non-finite guard, with no infinite literal and no compaction or `range_norm` of `±∞`; the doc change is in this PR and the gui reviewer approves it before merge (REQ-COL-071).
 - `cargo test -p ledger layout_static_f16` — §3.8's `f16` type: an f16 field 15 or 17 bits wide, at a scalar index, as a vector component, with a range beyond ±65504, and with an unbounded end and no `overflow` each fail, naming the field; a 16-bit f16 field within range passes, and one with an unbounded end and `overflow` passes; the generated Rust and WGSL accessors read the same binary16 value as f32; the generated WGSL contains no `enable f16` and no `f16` type; each has a registered negative control (REQ-GEN-030).
 
 ## Notes
@@ -139,3 +145,9 @@ struct. Nothing populates the reduction yet (TASK-M5-17 to TASK-M5-19 do); this 
   RQ-268 from this PR's head `fe682029`; this task's next fix pass deletes its open copy from `REVIEW_QUEUE.md` and
   conforms §3.7 (the escape-time row's "a sentinel RQ-268 holds open", the paragraph holding the no-escape value open,
   and the entries' sentinels) to R-418. TASK-M5-17 writes and tests the bits (REQ-REF-053).
+- **R-436, round 5 of its PR (gui review 5533020211 G3, applied per R-369):** the generator's numeric views test a
+  declared sentinel or unset value first, then the non-finite guard, then the ramp (render_gui_spec §10.1). A `±∞`
+  sentinel such as R-418's identities can't use the literal-sentinel line `if (raw == <literal>)`, which would need an
+  infinite literal (naga rejects it, the GPU determinism note's rule 4) and would do arithmetic on `±∞`. So it is
+  tested on its bits, and its drawn style, which the corpus doesn't define, is this task's definition (REQ-COL-071,
+  R-72), reviewed by gui, who joins the reviewers for it.

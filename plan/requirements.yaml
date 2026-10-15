@@ -12152,7 +12152,7 @@
   note: "Registered per R-369 (TASK-M1-15), as REQ-COL-067 was for TASK-M1-14: REQ-COL-005's 'non-accessor payload reads' and 'chart/integrator/scheduler identifiers', and REQ-RENDER-015's 'guard', had no definition the lint could check."
 - id: REQ-COL-070
   area: COL
-  statement: "A numeric debug view must draw a stored non-finite value (±∞) that is no declared sentinel in the invalid colour, debug_invalid(frag_xy), on the CPU twin and in the generated WGSL alike, tested by a comparison on the stored value's bits before any arithmetic (an exponent of all ones), never by arithmetic on ±∞, isinf, a float comparison or an infinite literal; its measured range (u_range) must be taken over the samples whose stored value is finite; a declared sentinel or unset value keeps its own style (d_min's unset +∞, R-280, R-399)."
+  statement: "A numeric debug view must draw a stored non-finite value (±∞) that is no declared sentinel or unset value in the invalid colour, debug_invalid(frag_xy), on the CPU twin and in the generated WGSL alike, tested by a comparison on the stored value's bits before any arithmetic (an exponent of all ones), never by arithmetic on ±∞, isinf, a float comparison or an infinite literal; its measured range (u_range) must be taken over the samples whose stored value is finite; a declared sentinel or unset value keeps its own style (d_min's unset +∞, R-280, R-399), its own bit test coming before the non-finite guard, which comes before the ramp (render_gui_spec §10.1's order)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: 10.1 The shared prelude library
@@ -12165,12 +12165,34 @@
   - file: decisions.md
     section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
   verify:
+    detail: "cargo test -p ledger numeric_view_template: every generated numeric view with no declared sentinel draws +∞ and −∞ (f32 bits 0x7F800000, 0xFF800000) invalid on its CPU twin, d_min's unset +∞ still in the not-yet style; the WGSL carries the bit test before the compaction and no infinite literal; a GPU render on gpu-metal and gpu-lavapipe of rho_ratio at +∞ and of V_0 and E_0 at −∞ draws the hatch, and of d_min at its unset +∞ the not-yet style, so the order is checked on the GPU; the measured range skips them"
     method: unit test
-    detail: "cargo test -p ledger numeric_view_template: every generated numeric view with no declared sentinel draws +∞ and −∞ (f32 bits 0x7F800000, 0xFF800000) invalid on its CPU twin, d_min's unset +∞ still in the not-yet style; the WGSL carries the bit test before the compaction and no infinite literal; a GPU render on gpu-metal and gpu-lavapipe of rho_ratio at +∞ and of V_0 and E_0 at −∞ draws the hatch; the measured range skips them"
   rulings:
   - R-79
   - R-436
   milestone: M2
+- id: REQ-COL-071
+  area: COL
+  kind: definition
+  statement: "The drawn style of a declared ±∞ sentinel in a numeric debug view (R-418's no-escape identities, escape_time_min +∞, binary16 0x7c00, and escape_time_max −∞, 0xfc00) must be defined in render_gui_spec §10.1 by the task that needs it and reviewed by the gui reviewer before merge (R-72); the sentinel is tested on its bits, never against a literal, before the non-finite guard and before any arithmetic (R-436)."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+  - file: decisions.md
+    section: "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and \"no escape\" reads `_min > _max` *(closes RQ-268)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    detail: "render_gui_spec §10.1 gives the style, distinct from debug_invalid's hatch and from the not-yet style or saying why it shares one, and the generator emits it; the generated view tests 0x7c00 and 0xfc00 on their bits before the non-finite guard, with no infinite literal and no compaction or range_norm of ±∞; the doc change is in the PR and the gui reviewer approves it before merge"
+    method: review checklist
+  rulings:
+  - R-72
+  - R-418
+  - R-436
+  milestone: M5
+  note: "Gui review 5533020211 G3 of PR #214, applied per R-369: §10.1's literal-sentinel line `if (raw == <literal>)` would need an infinite literal for these two, which naga rejects (gpu_determinism_note rule 4), and the compaction would do arithmetic on ±∞; the corpus defines no other style. TASK-M5-01 builds these fields' ledger entries, and so their generated views."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."

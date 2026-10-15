@@ -268,7 +268,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - Sampling, MSAA and ensemble copies.
 
 <!-- gate:M5 -->
-**Exit gate — 174 requirements** (and every earlier gate still green):
+**Exit gate — 175 requirements** (and every earlier gate still green):
 
 - DEC (3): REQ-DEC-031…032, REQ-DEC-036
 - CHART (3): REQ-CHART-038…039, REQ-CHART-041
@@ -279,7 +279,7 @@ render_contract "→ quads"; deep_zoom §3 layer 1: "panning never blanks".
 - SCHED (51): REQ-SCHED-014…052, REQ-SCHED-054…055, REQ-SCHED-074…076, REQ-SCHED-079, REQ-SCHED-083, REQ-SCHED-086…088, REQ-SCHED-098…099
 - REF (13): REQ-REF-001…010, REQ-REF-045, REQ-REF-052…053
 - RENDER (22): REQ-RENDER-037…056, REQ-RENDER-076, REQ-RENDER-079
-- COL (1): REQ-COL-007
+- COL (2): REQ-COL-007, REQ-COL-071
 - GUI (1): REQ-GUI-009
 - TOOL (18): REQ-TOOL-046…054, REQ-TOOL-116…117, REQ-TOOL-130, REQ-TOOL-133, REQ-TOOL-140, REQ-TOOL-158, REQ-TOOL-164…166
 - VAL (6): REQ-VAL-080…083, REQ-VAL-172…173

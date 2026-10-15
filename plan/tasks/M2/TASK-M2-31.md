@@ -15,7 +15,7 @@ generated `rho_ratio` view reads `+∞` at the `α = 0` pole, and `V_0`'s and `E
 pole (dd_decoder §3.6). Today the template's guard sends only NaN to `debug_invalid(frag_xy)`: on the CPU twin `+∞`
 compacts to raw 1, the top of the ramp, and on the GPU the result is unpinned, since WGSL lets an implementation assume
 no infinities; and under `RANGE_AUTO = 1` the measured range takes `−∞` as an end. This task extends the guard to a
-stored `±∞` that is no declared sentinel, tested on the value's bits before any arithmetic, and takes the measured range
+stored `±∞` that is no declared sentinel or unset value, tested on the value's bits before any arithmetic, and takes the measured range
 over the samples whose stored value is finite. A declared sentinel or unset value keeps its own style: `d_min`'s unset
 `+∞` stays "not yet" (R-280, R-399), tested first.
 
@@ -48,8 +48,8 @@ over the samples whose stored value is finite. A declared sentinel or unset valu
 
 ## Acceptance tests
 - `cargo test -p ledger numeric_view_template` — every generated numeric view with no declared sentinel draws `+∞` and `−∞` (f32 bits `0x7F80_0000`, `0xFF80_0000`) invalid on its CPU twin, before any compaction; `d_min`'s unset `+∞` is still drawn "not yet"; the generated WGSL carries the bit test and no infinite literal; control: a guard that tests NaN alone draws `rho_ratio`'s `+∞` at the top of the ramp (REQ-COL-070).
-- `cargo test -p render` with a GPU render on gpu-metal and gpu-lavapipe — `rho_ratio` at `+∞` and `V_0` and `E_0` at `−∞` draw the hatch, pixel-identical to a NaN's, on both backends (REQ-COL-070).
-- The measured range of `V_0` over a buffer holding `−∞` and finite values is the finite values' `(min, max)` (REQ-COL-070).
+- `cargo test -p render` with a GPU render on gpu-metal and gpu-lavapipe — `rho_ratio` at `+∞` and `V_0` and `E_0` at `−∞` draw the hatch, pixel-identical to a NaN's, on both backends, and `d_min` at its unset `+∞` draws the not-yet style, pixel-identical to the existing not-yet output, so the order is checked on the GPU (REQ-COL-070).
+- `cargo test -p ledger numeric_view_template` — the measured range of `V_0` over a buffer holding `−∞` and finite values is the finite values' `(min, max)` (`NumericView::measured`; the existing `numeric_view_template_measures_the_ramp_values_only`) (REQ-COL-070).
 - `cargo xtask codegen` leaves the tree clean, and `cargo xtask golden debug-views` and `cargo xtask golden m1-numeric` pass; a golden whose reference changes is re-rendered and its `BASELINES.md` row cites R-436 (REQ-COL-070).
 
 ## Notes
@@ -62,3 +62,7 @@ over the samples whose stored value is finite. A declared sentinel or unset valu
   assertion it changes (R-290, R-369).
 - TASK-M2-25's agreement preset needs the same bit test on its operands; a shared WGSL helper in the presentation layer
   is this task's to offer, if it is the first to merge.
+- **The order (R-436 round 5, gui review 5533020211 G1, applied per R-369):** a view's `colour()` tests a declared
+  sentinel's or unset value's own bit test first, then the non-finite guard, then the ramp (render_gui_spec §10.1), so
+  the widened guard never catches `d_min`'s unset `+∞`; the GPU case checks it. A `±∞` sentinel (R-418's identities)
+  is tested on its bits too; its style is TASK-M5-01's definition (REQ-COL-071), not this task's.
