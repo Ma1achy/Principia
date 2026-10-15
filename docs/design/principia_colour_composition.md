@@ -618,6 +618,88 @@ $(\hat{\mathbf n}, \text{params}, \text{palette}) \mapsto [R, G, B]$.
 
 ---
 
+## 9. The stain editor's composition resolutions (R-72; REQ-COL-054)
+
+Render GUI spec §16 lists eight "standing composition-spec gaps" whose resolutions the stain editor assumes. Each is
+written here from the passages that already carry it. The open parts are raised in `REVIEW_QUEUE.md`, not written in:
+RQ-280 (the addressing convention's unnamed channel and its index), RQ-281 (the debug groups' membership past the four
+the passages settle) and RQ-282 (a ramp of custom stops).
+
+**9.1 Colour source as an axis.** Where a value comes from is one axis, independent of the slot it fills and of the
+mapping that colours it. In the graph a source is a `source` node with one parameter, the ctx field it reads; picking
+the field sets its out-port's subtype, `scalar`, `vector` or `categorical` (render GUI spec §3.1, §5). The fields it
+offers are §1.2's `ScalarField` sources and the shape position `n̂`, all read through `ctx` (§3), each with its
+validity lane. A `vector` source (`n̂`) feeds Family A (§1.1); a `scalar` or `categorical` source feeds Family B (§1.2)
+or a categorical palette (§1.4). Any source may feed either slot, since the channel is independent of the source and the
+only constraint is the output signature, `vec3` or `f32` (§4.1); one source may feed both, as one visible fan-out wire
+(render GUI spec §5). The bivariate space is the product of the two slots' sources, ⟨hue carriers⟩ × ⟨brightness
+fields⟩ (§4.1). The concrete list a node palette shows stays render GUI spec §16's "Node palette contents" item.
+
+**9.2 Overlays are a post chain over a configured base.** An overlay is a post node, `vec3(+ctx) → vec3` (§4.2), drawn
+from the combinators of §1.3. In the post chain its `base` is the colour arriving at it: the output of `combine` over
+the user's configured occupants, or of the post before it. The order is the render contract's (Part 4, "Composite
+order"): baked base → `combine` → the post chain, the physics overlay and the structural and debug overlays → `OUT`, and
+the display stage after it, outside the graph (§4.3). So grid, contours, the checker over the vMF map, the physics
+overlay and the quad boundaries lie over whatever stain is configured, not over a fixed base map, and are inserted and
+reordered as data, at most 8 (§4.2). A combinator may still sit inside an occupant's expression tree (§1), where its
+`base` is the sub-tree wired to it.
+
+**9.3 Physics is an overlay op.** The physics overlay is `site_overlay(base, SiteBlend{ sites = physics(m), kernel =
+vmf(κ), colours = per-site })` with per-blob strength `s` (§1.3): Family A used as a combinator, not a distinct node.
+Its sites are §2's physics generators, `BC(m)`, `Euler(m)` and `Lagrange(m)`, evaluated per pixel from the decoded
+IC's masses and hoisted to uniforms only when no slice axis or tilt touches a mass dimension (§2). Its preset is the
+post step with κ = 11 for the binary collisions and 9 for the Euler and Lagrange points (§7, §7.1), blended as a
+sequential clamped mix (§1.3, R-122). It is evaluated per fragment, never baked (render contract Part 4, R-121).
+
+**9.4 Gradient magnitude is a ramp over a derived field.** The "Gradient magnitude" map is
+`FieldRamp{ gradient_magnitude(map), lerp }` (§7): `gradient_magnitude` is §1.2's derived operator, the finite
+difference of another colour node from three evaluations at ±ε on the sphere, and the ramp is an ordinary §1.2 ramp,
+so it is a field through a ramp, not a mode of its own. The gradient magnitude of the rendered *map* is a different
+thing: a post occupant, a screen-space finite difference over the colour buffer, distinct from the |∇c| evaluated on
+the sphere (render contract Part 4). Whether the item also means that the GUI's gradient editor, "built-in LUT or
+custom stops, cyclic" (render GUI spec §9), unifies §1.2's ramps, and so what a ramp of custom stops is, is RQ-282.
+
+**9.5 Spread per footprint and per quad.** Ensemble spread is a footprint quantity: the resolve stage reduces a
+footprint's E + 1 samples to one spread, one value per nominal sample shared by its copies for display, and no
+`SimState` field holds it (sampling note, "Stability metrics"). It is therefore not anti-aliased, and that is what it
+means: there is nothing within the footprint to resolve. That per-footprint value is the ensemble-spread field of §1.2
+(white = high) and of the bivariate `ensemble-spread × n̂` (§4.1). `ctx.quad.spread` (§3) is a different field: the
+footprints' spreads aggregated into the quad reduction for refinement (sampling note), one value
+per quad, as `ctx.quad.impurity` is.
+
+**9.6 The debug taxonomy.** The library's debug section is the six groups of render GUI spec §11: addressing,
+quad-structure, decoded-IC, validity, diagnostic and profiling. Every entry is a locked debug preset over the one
+colouring system, reading `ctx` from one of §6's three data sources (§6, Discipline 1). The passages settle four:
+- **addressing**: the presets that colour a position, `ctx.screen.uv → RG` (fragment addressing) and `ctx.quad.uv →
+  RG` (structural addressing) (§6), in the channel convention of §9.7;
+- **quad-structure**: §6's `ctx.quad` presets, `s_depth`, `s_impurity` and `s_state`;
+- **decoded-IC**: the decoded-IC payload quantities (§1.2) and the DECODE view, the fragment-side decode of
+  `ctx.chart.z` (§6);
+- **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2).
+
+Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets and the
+§B–§E payload field views, is RQ-281.
+
+**9.7 The addressing channel convention.** An addressing preset writes a position into colour channels as render GUI
+spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v` → green (§6; debug tooling plan §F):
+- **UV = RG**: `ctx.screen.uv` or `ctx.quad.uv`, `u` → R, `v` → G;
+- **TL = RB**: `ctx.quad.tl` (slice coords), `x` → R, `y` → B;
+- **centre = BG**: `ctx.quad.centre`, `x` → B, `y` → G;
+- **index = grey**: an index written as one value on all three channels.
+
+The channel each pair leaves unnamed, which index "index" is (`ctx.quad.index`, `ctx.tile.tile_index` or
+`ctx.tile.sample_index`), and how it maps to [0, 1] are RQ-280.
+
+**9.8 Boundaries are an overlay.** Quad and tile boundaries are Tier-1 overlays (render GUI spec §12.1): a function of
+the position within the cell, drawn by an ordinary post node from `ctx.quad.uv` or `ctx.tile.uv`, with no data
+source, no buffer, no separate pass and no CPU work. It is §1.3's `bandmask` on the distance to the cell's edge, as
+§6 says, with that distance taken in pixels, so that a line is the same width at any quad size, depth and zoom and is
+antialiased, as `edge_line` draws it (render GUI spec §12.1, as built by TASK-M1-13). Being a post node it serialises
+with the graph, has editable width, opacity, colour and level, chains in post order, and lies over any stain; it is not
+a display-stage setting (render GUI spec §15, item 11).
+
+---
+
 ## Appendix A — kernel-side bring-up mode
 
 The **only** debug item that is *not* a render-key preset and *does* touch the kernel. A single
