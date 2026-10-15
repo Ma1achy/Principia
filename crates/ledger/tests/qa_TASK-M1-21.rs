@@ -4,8 +4,8 @@
 //!   it: an existing payload field retagged, and a fresh fixture field added to the payload ledger
 //!   (`qa_m1_21_gap_*`);
 //! - an undeclared range never spans zero, so it never puts a field on `ramp_coolwarm` (`qa_m1_21_gap_not_coolwarm*`);
-//! - `q_mass` and `mean_y` are provisional, naming REQ-PAY-097 and REQ-PAY-098, and keep `ramp_coolwarm`
-//!   (`qa_m1_21_provisional`);
+//! - `mean_y` is provisional, naming REQ-PAY-098, and keeps `ramp_coolwarm`; `q_mass`, declared by TASK-M2-03
+//!   (REQ-PAY-097), no longer is (`qa_m1_21_provisional`);
 //! - `S`, `ftle`, `diffusion`, `C_ty`, `E_0`, `Lz_0`, `energy_drift` and `Lz_drift` are declared (−∞, ∞) with the
 //!   citation the requirement names (`qa_m1_21_declared_citations`);
 //! - the gap list is exactly the payload's gaps, none a `lin` or `diverging` scalar, each with a requirement or none
@@ -100,10 +100,9 @@ fn check_refused(l: &Ledger, field: &str) {
 
 #[test]
 fn qa_m1_21_gap_existing_field_refused() {
-    // `theta` (cyclic) and `rho_angle` (cyclic) have no declared range; as `lin` or `diverging` scalars their gap
-    // would choose the ramp, so generation must refuse them.
+    // `theta` (cyclic) has no declared range; as a `lin` or `diverging` scalar its gap would choose the ramp, so
+    // generation must refuse it. (`rho_angle`, declared (−π, π] by TASK-M2-03 per REQ-PAY-088, is no gap.)
     check_refused(&retagged("theta", Scale::Lin), "theta");
-    check_refused(&retagged("rho_angle", Scale::Lin), "rho_angle");
     check_refused(&retagged("theta", Scale::Diverging), "theta");
 }
 
@@ -174,7 +173,6 @@ fn check_not_coolwarm(l: &Ledger, name: &str) {
 #[test]
 fn qa_m1_21_gap_not_coolwarm_existing() {
     check_not_coolwarm(&retagged("theta", Scale::Lin), "theta");
-    check_not_coolwarm(&retagged("rho_angle", Scale::Lin), "rho_angle");
 }
 
 negative_control!(
@@ -191,9 +189,9 @@ fn qa_m1_21_gap_not_coolwarm_fresh() {
 
 negative_control!(
     qa_m1_21_gap_not_coolwarm_fresh,
-    "a provisional field, `q_mass`, is on ramp_coolwarm",
-    expected = "the undeclared `q_mass` is placed on ramp_coolwarm",
-    check_not_coolwarm(&payload::ledger(), "q_mass")
+    "a provisional field, `mean_y`, is on ramp_coolwarm",
+    expected = "the undeclared `mean_y` is placed on ramp_coolwarm",
+    check_not_coolwarm(&payload::ledger(), "mean_y")
 );
 
 #[test]
@@ -211,14 +209,14 @@ fn qa_m1_21_gap_state_never_spans_zero() {
 negative_control!(
     qa_m1_21_gap_state_never_spans_zero,
     "a provisional range spans zero",
-    expected = "q_mass spans zero",
+    expected = "mean_y spans zero",
     assert!(
-        !payload::spans_zero(entry(&payload(), "q_mass")),
-        "q_mass spans zero"
+        !payload::spans_zero(entry(&payload(), "mean_y")),
+        "mean_y spans zero"
     )
 );
 
-// ── q_mass and mean_y: provisional, on cool-warm ───────────────────────────────────────────────────────────────────
+// ── mean_y: provisional, on cool-warm (q_mass declared by TASK-M2-03, R-426) ─────────────────────────────────────
 
 fn check_provisional(es: &[Entry], want: &[(&str, &str)]) {
     for (name, requirement) in want {
@@ -236,9 +234,11 @@ fn check_provisional(es: &[Entry], want: &[(&str, &str)]) {
 
 #[test]
 fn qa_m1_21_provisional() {
-    check_provisional(
-        &payload(),
-        &[("q_mass", "REQ-PAY-097"), ("mean_y", "REQ-PAY-098")],
+    check_provisional(&payload(), &[("mean_y", "REQ-PAY-098")]);
+    // REQ-PAY-097 (R-426): `q_mass` is no longer provisional once declared.
+    assert!(
+        !matches!(state(&payload(), "q_mass"), RangeState::Provisional { .. }),
+        "`q_mass` is still provisional"
     );
 }
 
@@ -335,7 +335,8 @@ fn check_gap_list(es: &[Entry], gaps: &[(&str, Option<&str>, &str)]) {
             );
         }
     }
-    for name in ["theta", "rho_angle", "r", "p", "r_sh", "p_sh"] {
+    // `rho_angle` left the list when TASK-M2-03 declared it (−π, π] (REQ-PAY-088).
+    for name in ["theta", "r", "p", "r_sh", "p_sh"] {
         assert!(listed.contains(name), "`{name}` is not listed as a gap");
     }
 }
@@ -361,17 +362,8 @@ negative_control!(
 // ── No view changes ramp ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// The views on cool-warm before R-426: R-423's six less `theta` (now cyclic), `C_ty` (RQ-277), and the `diverging`
-/// `E_0` and `Lz_0`.
-const COOLWARM: [&str; 8] = [
-    "q_mass",
-    "ftle",
-    "mean_y",
-    "S",
-    "diffusion",
-    "C_ty",
-    "E_0",
-    "Lz_0",
-];
+/// `E_0` and `Lz_0`; less `q_mass`, whose range TASK-M2-03 declared [0, 1] (REQ-PAY-097, R-426).
+const COOLWARM: [&str; 7] = ["ftle", "mean_y", "S", "diffusion", "C_ty", "E_0", "Lz_0"];
 
 fn check_coolwarm(es: &[Entry], want: &[&str]) {
     let got: BTreeSet<&str> = es
@@ -392,7 +384,7 @@ negative_control!(
     qa_m1_21_coolwarm_set_unchanged,
     "`mean_y` taken off the expected set",
     expected = "the cool-warm views changed",
-    check_coolwarm(&payload(), &COOLWARM[..2])
+    check_coolwarm(&payload(), &COOLWARM[..1])
 );
 
 // ── The three range states, by the entry's own mark (§3.8; R-426) ────────────────────────────────────────────────

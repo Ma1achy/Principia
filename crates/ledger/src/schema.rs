@@ -159,7 +159,7 @@ pub enum RangeState {
     /// (R-426, amending R-400's reading).
     Gap,
     /// A range the human has kept provisional until `requirement` declares it, drawn meanwhile as (−∞, ∞), so
-    /// spanning zero (R-426: `q_mass` and `mean_y`).
+    /// spanning zero (R-426: `mean_y`, and `q_mass` until REQ-PAY-097 declared it).
     Provisional { requirement: &'static str },
 }
 
@@ -181,7 +181,7 @@ impl RangeState {
 pub enum Declaration {
     /// The bounds the entry writes are declared, with where they are given: a §3 line, a ruling or a definition.
     Cited(&'static str),
-    /// The range is provisional until the named requirement declares it (R-426: `q_mass` and `mean_y`).
+    /// The range is provisional until the named requirement declares it (R-426: `mean_y`; `q_mass` until REQ-PAY-097).
     Provisional(&'static str),
 }
 

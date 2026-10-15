@@ -611,6 +611,9 @@ stay on the diverging ramp provisionally (R-426), recorded as provisional at the
 (REQ-PAY-088) declares its range (REQ-PAY-097), and `mean_y`, until `y`'s definition (REQ-PAY-073) declares its
 (REQ-PAY-098); the physics reviewer re-checks each ramp then. A field whose range is still a gap is listed as one,
 with the requirement that fills it.
+`q_mass`'s range is declared by TASK-M2-03 (REQ-PAY-097): `[0, 1]`, from its formula, `min(m₀, m₁)/max(m₀, m₁)`
+(dd_decoder §3.6; REQ-PAY-088). It does not span zero, so the field leaves `ramp_coolwarm` for `ramp_viridis`, and
+`mean_y` is the one provisional range left.
 Also declared (R-426's fix round, applied per R-369): `energy_drift` and `Lz_drift` (−∞, ∞), signed, citing the
 worked entries below and §3.4, which already give them that range, so the ledger must write it; and `C_ty`
 (−∞, ∞), signed, citing R-423's check of `diffusion` and `C_ty = diffusion · C_tt(n)`, `C_tt(n) = h²·n(n²−1)/12 > 0`

@@ -6,10 +6,12 @@
 //!
 //! The range states (REQ-GEN-035; R-426; dd_generation_root §3.8): an undeclared range is a ledger gap, not one that
 //! spans zero. Every `lin` or `diverging` scalar field the numeric template draws has a declared range with its
-//! citation, or is `q_mass` or `mean_y`, provisional (`declared_ranges_drawn_fields_are_declared`); `S`, `ftle`,
+//! citation, or is `mean_y`, provisional (`declared_ranges_drawn_fields_are_declared`); `S`, `ftle`,
 //! `diffusion`, `E_0`, `Lz_0`, `C_ty`, `energy_drift` and `Lz_drift` are declared (−∞, ∞), each citing its source
-//! (`declared_ranges_signed_fields_cite_their_sources`); `q_mass` and `mean_y` are provisional, naming REQ-PAY-097 and
-//! REQ-PAY-098, and on `ramp_coolwarm` (`declared_ranges_provisional_*`); a `lin` or `diverging` scalar whose range is
+//! (`declared_ranges_signed_fields_cite_their_sources`); `mean_y` is provisional, naming REQ-PAY-098, and on
+//! `ramp_coolwarm` (`declared_ranges_provisional_*`); `q_mass` is declared [0, 1] from its formula, citing dd_decoder
+//! §3.6 and REQ-PAY-097, and on `ramp_viridis` at the fixed range (`declared_ranges_q_mass_declared`; REQ-PAY-097,
+//! R-426, TASK-M2-03); a `lin` or `diverging` scalar whose range is
 //! a gap fails generation naming it and R-426, and is not placed on `ramp_coolwarm`, while a gap on a cyclic field or
 //! a vector not tagged `diverging` generates, and a `diverging` vector over a gap fails naming it, R-426 and R-403
 //! (`declared_ranges_gap_*`); and the gap list names each remaining gap with the requirement that
@@ -184,7 +186,7 @@ fn names_a_line(citation: &str) -> bool {
 }
 
 /// Checks that every `lin` or `diverging` scalar field the numeric template draws, and the floored drifts it skips,
-/// has a declared range citing a line, or is `q_mass` or `mean_y` marked provisional; and that the drifts are among
+/// has a declared range citing a line, or is `mean_y` marked provisional; and that the drifts are among
 /// them.
 fn check_drawn(states: &[(Entry, RangeState)]) {
     let mut drifts = 0;
@@ -201,8 +203,8 @@ fn check_drawn(states: &[(Entry, RangeState)]) {
                 e.name
             ),
             RangeState::Provisional { .. } => assert!(
-                ["q_mass", "mean_y"].contains(&e.name),
-                "`{}` is provisional, but R-426 keeps only `q_mass` and `mean_y` so",
+                e.name == "mean_y",
+                "`{}` is provisional, but R-426 keeps only `mean_y` so once REQ-PAY-097 declared `q_mass`",
                 e.name
             ),
             RangeState::Gap => panic!("`{}` is drawn from a range it does not declare", e.name),
@@ -300,42 +302,38 @@ negative_control!(
     }
 );
 
-/// Checks that `q_mass` and `mean_y` are provisional, naming REQ-PAY-097 and REQ-PAY-098, write (−∞, ∞) and are
-/// drawn on `ramp_coolwarm` (R-426); and that no other field is provisional.
+/// Checks that `mean_y` is provisional, naming REQ-PAY-098, writes (−∞, ∞) and is drawn on `ramp_coolwarm` (R-426);
+/// and that no other field is provisional (`q_mass`'s range is declared by REQ-PAY-097).
 fn check_provisional(states: &[(Entry, RangeState)]) {
-    for (field, requirement) in [("q_mass", "REQ-PAY-097"), ("mean_y", "REQ-PAY-098")] {
-        let (e, state) = states.iter().find(|(e, _)| e.name == field).expect(field);
-        assert_eq!(
-            *state,
-            RangeState::Provisional { requirement },
-            "`{field}` is not provisional until {requirement}"
-        );
-        assert_eq!(
-            e.range,
-            Range::UNBOUNDED,
-            "`{field}` does not write (−∞, ∞)"
-        );
-        let view = NumericView::of(e).expect("a numeric view");
-        assert_eq!(view.ramp(), Ramp::Coolwarm, "`{field}` left cool-warm");
-    }
+    let (field, requirement) = ("mean_y", "REQ-PAY-098");
+    let (e, state) = states.iter().find(|(e, _)| e.name == field).expect(field);
+    assert_eq!(
+        *state,
+        RangeState::Provisional { requirement },
+        "`{field}` is not provisional until {requirement}"
+    );
+    assert_eq!(
+        e.range,
+        Range::UNBOUNDED,
+        "`{field}` does not write (−∞, ∞)"
+    );
+    let view = NumericView::of(e).expect("a numeric view");
+    assert_eq!(view.ramp(), Ramp::Coolwarm, "`{field}` left cool-warm");
     let provisional = states
         .iter()
         .filter(|(_, s)| matches!(s, RangeState::Provisional { .. }))
         .count();
-    assert_eq!(
-        provisional, 2,
-        "fields other than q_mass and mean_y are provisional"
-    );
+    assert_eq!(provisional, 1, "fields other than mean_y are provisional");
 }
 
 #[test]
-fn declared_ranges_provisional_q_mass_and_mean_y() {
+fn declared_ranges_provisional_mean_y() {
     check_provisional(&states());
-    assert_eq!(PROVISIONAL.len(), 2);
+    assert_eq!(PROVISIONAL.len(), 1);
 }
 
 negative_control!(
-    declared_ranges_provisional_q_mass_and_mean_y,
+    declared_ranges_provisional_mean_y,
     "`mean_y` read as a gap leaves cool-warm",
     expected = "`mean_y` is not provisional until REQ-PAY-098",
     {
@@ -350,7 +348,7 @@ negative_control!(
 );
 
 /// A range written in place of a provisional (−∞, ∞) is its requirement's declaration, and its bounds decide the
-/// ramp: `q_mass` written `[0, 1]` is declared, citing REQ-PAY-097, and on viridis, as REQ-PAY-097's range would put it.
+/// ramp: `mean_y` written `[0, 1]` is declared, citing REQ-PAY-098, and on viridis.
 #[test]
 fn declared_ranges_provisional_written_range_is_declared() {
     check_written_provisional(Range {
@@ -362,30 +360,84 @@ fn declared_ranges_provisional_written_range_is_declared() {
 fn check_written_provisional(range: Range) {
     let mut e = payload()
         .into_iter()
-        .find(|e| e.name == "q_mass")
-        .expect("q_mass");
+        .find(|e| e.name == "mean_y")
+        .expect("mean_y");
     e.range = range;
     assert_eq!(
         payload::range_state(&e),
         Some(RangeState::Declared {
             range,
-            citation: "REQ-PAY-097"
+            citation: "REQ-PAY-098"
         }),
-        "`q_mass` written {range} is not declared by REQ-PAY-097"
+        "`mean_y` written {range} is not declared by REQ-PAY-098"
     );
     let ramp = NumericView::of(&e).expect("a numeric view").ramp();
     assert_eq!(
         ramp,
         Ramp::Viridis,
-        "`q_mass` written {range} is on {ramp:?}"
+        "`mean_y` written {range} is on {ramp:?}"
     );
 }
 
 negative_control!(
     declared_ranges_provisional_written_range_is_declared,
-    "`q_mass` written (−∞, ∞) is still provisional",
-    expected = "`q_mass` written (−∞, ∞) is not declared by REQ-PAY-097",
+    "`mean_y` written (−∞, ∞) is still provisional",
+    expected = "`mean_y` written (−∞, ∞) is not declared by REQ-PAY-098",
     check_written_provisional(Range::UNBOUNDED)
+);
+
+/// Checks that `q_mass`, in `states`, is declared `[0, 1]`, citing dd_decoder §3.6's formula and REQ-PAY-097, and that
+/// its view is on `ramp_viridis` at that fixed range, `RANGE_AUTO = 0` (REQ-PAY-097; R-400, R-426).
+fn check_q_mass(states: &[(Entry, RangeState)]) {
+    let (e, state) = states
+        .iter()
+        .find(|(e, _)| e.name == "q_mass")
+        .expect("q_mass");
+    let RangeState::Declared { range, citation } = state else {
+        panic!("`q_mass`'s range is not declared: {state:?}");
+    };
+    assert_eq!(
+        *range,
+        Range {
+            lo: Bound::Closed(0.0),
+            hi: Bound::Closed(1.0)
+        },
+        "`q_mass` is not declared [0, 1]"
+    );
+    for phrase in ["dd_decoder §3.6", "min(m₀, m₁)/max(m₀, m₁)", "REQ-PAY-097"] {
+        assert!(
+            citation.contains(phrase),
+            "`q_mass`'s citation does not cite {phrase}: `{citation}`"
+        );
+    }
+    let view = NumericView::of(e).expect("a numeric view");
+    assert_eq!(view.ramp(), Ramp::Viridis, "`q_mass` is not on viridis");
+    assert!(
+        !view.range_auto,
+        "`q_mass` does not default to its fixed range"
+    );
+}
+
+#[test]
+fn declared_ranges_q_mass_declared() {
+    check_q_mass(&states());
+}
+
+negative_control!(
+    declared_ranges_q_mass_declared,
+    "`q_mass` left provisional, as R-426 had it at M1",
+    expected = "`q_mass`'s range is not declared",
+    {
+        let mut states = states();
+        states
+            .iter_mut()
+            .find(|(e, _)| e.name == "q_mass")
+            .expect("q_mass")
+            .1 = RangeState::Provisional {
+            requirement: "REQ-PAY-097",
+        };
+        check_q_mass(&states);
+    }
 );
 
 /// The payload ledger with entry `name` given `scale`.
@@ -435,14 +487,13 @@ fn with_fixture(scale: Scale) -> Ledger {
     l
 }
 
-/// A `lin` or `diverging` scalar whose range is a gap fails generation naming it (R-426): `theta` and `rho_angle`,
-/// gaps, retagged `lin` and `diverging`, and a fixture field with no mark.
+/// A `lin` or `diverging` scalar whose range is a gap fails generation naming it (R-426): `theta`, the payload's one
+/// scalar gap (`rho_angle`'s range is declared, dd_decoder §3.6), retagged `lin` and `diverging`, and a fixture field
+/// with no mark.
 #[test]
 fn declared_ranges_gap_lin_or_diverging_is_refused() {
-    for field in ["theta", "rho_angle"] {
-        check_gap_refused(&rescaled(field, Scale::Lin), field, "lin");
-        check_gap_refused(&rescaled(field, Scale::Diverging), field, "diverging");
-    }
+    check_gap_refused(&rescaled("theta", Scale::Lin), "theta", "lin");
+    check_gap_refused(&rescaled("theta", Scale::Diverging), "theta", "diverging");
     check_gap_refused(&with_fixture(Scale::Lin), "fx_gap", "lin");
     check_gap_refused(&with_fixture(Scale::Diverging), "fx_gap", "diverging");
 }
@@ -465,7 +516,7 @@ fn declared_ranges_gap_elsewhere_generates() {
         ("r", Scale::Lin),
         ("p_sh", Scale::Lin),
         ("p_sh", Scale::Cyclic),
-        ("q_mass", Scale::Lin),
+        ("mean_y", Scale::Lin),
         ("S", Scale::Lin),
     ];
     check_generates(&fine);
@@ -481,9 +532,9 @@ fn check_generates(cases: &[(&str, Scale)]) {
 
 negative_control!(
     declared_ranges_gap_elsewhere_generates,
-    "`rho_angle` retagged lin is a gap the gate refuses",
-    expected = "`rho_angle` as Lin was refused",
-    check_generates(&[("rho_angle", Scale::Lin)])
+    "`theta` retagged lin is a gap the gate refuses",
+    expected = "`theta` as Lin was refused",
+    check_generates(&[("theta", Scale::Lin)])
 );
 
 /// Checks that generation of `l` is refused in exactly one line naming `field`, the vector's `diverging` scale over a
@@ -588,7 +639,7 @@ fn check_gap_not_coolwarm(fields: &[&str]) {
 
 #[test]
 fn declared_ranges_gap_is_not_coolwarm() {
-    check_gap_not_coolwarm(&["theta", "rho_angle"]);
+    check_gap_not_coolwarm(&["theta"]);
     let fixture = with_fixture(Scale::Lin);
     let e = fixture
         .entries
