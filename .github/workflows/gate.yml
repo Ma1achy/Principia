@@ -276,12 +276,12 @@ jobs:
           tool: cargo-nextest@0.9.146
       - name: cargo xtask build-kernel
         run: cargo xtask build-kernel
-      - name: cargo nextest run -p validation -p xtask
+      - name: cargo nextest run -p validation -p xtask -p engine
         env:
           NEXTEST_PROFILE: gpu-kernel
-        run: cargo nextest run -p validation -p xtask
-      - name: cargo test -p validation -p xtask --doc
-        run: cargo test -p validation -p xtask --doc
+        run: cargo nextest run -p validation -p xtask -p engine
+      - name: cargo test -p validation -p xtask -p engine --doc
+        run: cargo test -p validation -p xtask -p engine --doc
       - name: cargo nextest run -p validation --features controls gpu_harness
         run: cargo nextest run -p validation --features controls gpu_harness --no-capture
       - name: cargo test -p validation --features controls gpu_harness --doc

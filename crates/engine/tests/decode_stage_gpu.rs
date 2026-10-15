@@ -148,8 +148,7 @@ fn check_identities(ic: &Ic<f32>, at: &str) {
     let err = com[0].hypot(com[1]) / (size * EPS);
     assert!(err <= COM_EPS, "the CoM is {err} eps of Σm‖r‖ at {at}");
     let scale: f64 = p.iter().map(|v| v[0].hypot(v[1])).sum();
-    for k in 0..2 {
-        let s = (p[0][k] + p[1][k] + p[2][k]).abs();
+    for s in [0, 1].map(|k| (p[0][k] + p[1][k] + p[2][k]).abs()) {
         let err = if scale == 0.0 { s } else { s / (scale * EPS) };
         assert!(err <= SUM_P_EPS, "Σp = {s} ({err} eps of Σ‖p‖) at {at}");
     }
@@ -643,15 +642,13 @@ negative_control!(
 
 // ── decode_only_sim_key ─────────────────────────────────────────────────────────────────────────────────────────
 
+/// A `decode_only` on the latent chart: the chart, the point and the sim key, to the f64 decode or none.
+type DecodeOnly =
+    fn(&Latent<f32>, [f64; 2], &engine::contract::sim_config::SimConfig) -> Option<DecodeOut<f64>>;
+
 /// `decode` is the stage's source at f64 on the chart's f32 parameters widened, under the physics kernel, and
 /// refuses the bring-up mode.
-fn check_decode_only(
-    decode: fn(
-        &Latent<f32>,
-        [f64; 2],
-        &engine::contract::sim_config::SimConfig,
-    ) -> Option<DecodeOut<f64>>,
-) {
+fn check_decode_only(decode: DecodeOnly) {
     let chart = Latent {
         z0: [0.3, 0.1, -0.2, 0.4, 0.0, -0.3, 0.5, 0.2],
         q1: [0.1; 8],

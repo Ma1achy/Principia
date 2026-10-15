@@ -22,6 +22,21 @@
 //! about a trajectory, and another backend is measured by running the gate there (R-85: native wgpu sets the Tier-N
 //! tolerances; this is decoder test 12's own factor, not those).
 //!
+//! **The proposal** (REQ-DEC-043, R-71): **256 eps** (≈ 3.05e-5), `gate.json`'s threshold, provisional until the human
+//! confirms it at the M2 gate. Measured on an Apple M3 Pro, Metal, fast-math off (R-84), by this gate's measure:
+//!
+//! | input | samples | worst (eps) | at | median | p99 |
+//! |---|---|---|---|---|---|
+//! | `golden.json` | 1 | 0.87 | `r0x` | — | — |
+//! | `interior.json` (seed 1, 64 × 256) | 16 384 | 42.55 | `r2x` | 3.21 | 12.18 |
+//! | sweep: seeds 1 to 16, 256 charts × 256 points each | 1 048 576 | 175.21 | `virial_ratio` (seed 7) | ≈ 3.1 | ≈ 12 |
+//! | the same sweep, f32 on the CPU (native), not the GPU | 1 048 576 | 188.27 | | | |
+//!
+//! Each seed's worst but seed 7's lay between 38 and 129. The tail is f32's conditioning, not the backend: the CPU's own
+//! f32 decode is as far from f64 as the GPU's; the worst values are a small component of a large vector (`r2x`) and a
+//! small `K_0` over cancelling momenta (`virial_ratio`). 256 covers the sweep's worst by a factor of 1.46; the perturbed
+//! input (`perturbed.json`, 10⁻⁴ on the first latent component) measures ≈ 2235 eps and fails.
+//!
 //! An input may perturb one latent component of the f64 reference by `perturb` before measuring, so the gate shows that
 //! a decode that is not the kernel's fails it (pitfalls §3: check the measurement can fire); and record a measurement
 //! made on that input (`recorded`), set beside the one made here in the report.
@@ -272,13 +287,16 @@ fn perturbed(chart: &Latent<f32>, p: Option<Perturb>) -> Latent<f64> {
     wide
 }
 
+/// The GPU's decodes of a list of samples and the f64 decodes of the same samples, in order.
+pub type Decodes = (Vec<DecodeOut<f32>>, Vec<DecodeOut<f64>>);
+
 /// The GPU's and the f64 decodes of `batches` under the defaults, the f64 reference's `z₀` perturbed by `perturb`.
 pub fn decode_both(
     h: &GpuHarness,
     wgsl: &str,
     batches: &[Batch],
     perturb: Option<Perturb>,
-) -> Result<(Vec<DecodeOut<f32>>, Vec<DecodeOut<f64>>), String> {
+) -> Result<Decodes, String> {
     let stage = DecodeStage::<LatentDefaults>::new(h.device(), wgsl, FastMath::default())
         .map_err(|e| e.to_string())?;
     let key = physics_key();

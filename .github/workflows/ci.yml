@@ -316,15 +316,15 @@ jobs:
         with:
           path: ~/.cache/rust-gpu
           key: rust-gpu-gpu-kernel-${{ runner.os }}-${{ steps.toolchain.outputs.channel }}
-      # The tests that need the built kernel, all in validation and xtask: the `gpu-kernel` profile's default filter
-      # (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. Their packages' doctests beside them, as beside every
-      # nextest step (R-231).
-      - name: cargo nextest run -p validation -p xtask
+      # The tests that need the built kernel, in validation, xtask and engine (the decode stage's, TASK-M2-06): the
+      # `gpu-kernel` profile's default filter (`.config/nextest.toml`), chosen by NEXTEST_PROFILE. Their packages'
+      # doctests beside them, as beside every nextest step (R-231).
+      - name: cargo nextest run -p validation -p xtask -p engine
         env:
           NEXTEST_PROFILE: gpu-kernel
-        run: cargo nextest run -p validation -p xtask
-      - name: cargo test -p validation -p xtask --doc
-        run: cargo test -p validation -p xtask --doc
+        run: cargo nextest run -p validation -p xtask -p engine
+      - name: cargo test -p validation -p xtask -p engine --doc
+        run: cargo test -p validation -p xtask -p engine --doc
 
   # `cargo xtask ci` in jobs of their own, beside the tests (R-235), as 4 parallel shards (R-360, REQ-SYS-077):
   # `cargo xtask ci --partition <k>/4` runs `cargo xtask build-kernel`, whose WGSL the kernel tests' controls dispatch,

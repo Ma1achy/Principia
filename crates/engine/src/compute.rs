@@ -373,8 +373,10 @@ pub struct Bindings {
 }
 
 thread_local! {
-    /// The calls of [`pipeline`] on this thread.
-    static CREATED: Cell<u64> = const { Cell::new(0) };
+    /// The calls of [`pipeline`] on this thread, from none: a count, not a number the constants register holds
+    /// (dd_generation_root §3.8 reads the crates' settled defaults and thresholds from it), so it starts at the count's
+    /// default.
+    static CREATED: Cell<u64> = Cell::default();
 }
 
 /// The compute pipelines [`pipeline`] has been asked to create on this thread, each a shader module and its pipeline,

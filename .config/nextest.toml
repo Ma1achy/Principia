@@ -46,7 +46,8 @@ xtask-cargo = { max-threads = 1 }
 
 # The CI split (R-325, REQ-SYS-076): the tests that need the built kernel, `target/spirv/kernel.spv` and `kernel.wgsl`,
 # which `cargo xtask build-kernel` writes, run in CI's `gpu-kernel` job under the `gpu-kernel` profile, the codegen
-# self-test (TASK-M0-15) and the bring-up mode's GPU readback (TASK-M1-11, RQ-222) among them; the xtask tests that run
+# self-test (TASK-M0-15), the bring-up mode's GPU readback (TASK-M1-11, RQ-222) and the decode stage's GPU tests
+# (`engine`'s `decode_stage_gpu`, TASK-M2-06) among them; the xtask tests that run
 # cargo on the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile (R-372,
 # REQ-SYS-078; below); every other test runs in the `ci` job under the `ci` profile. Each CI step names its profile in
 # NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test once, as
@@ -60,6 +61,7 @@ default-filter = """
         | binary_id(=validation::qa_TASK-M0-14)
         | binary_id(=validation::codegen_selftest)
         | binary_id(=validation::bringup)
+        | binary_id(=engine::decode_stage_gpu)
         | binary_id(=xtask::build_kernel)
         | binary_id(=xtask::qa_TASK-M0-14)
         | binary_id(=xtask::nextest)
@@ -90,6 +92,7 @@ default-filter = """
     | binary_id(=validation::qa_TASK-M0-14)
     | binary_id(=validation::codegen_selftest)
     | binary_id(=validation::bringup)
+    | binary_id(=engine::decode_stage_gpu)
     | binary_id(=xtask::build_kernel)
     | binary_id(=xtask::qa_TASK-M0-14)
 """

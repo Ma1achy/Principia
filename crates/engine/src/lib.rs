@@ -106,8 +106,8 @@ pub mod quad {
 /// (R-297; TASK-M0-44).
 pub mod compute;
 
-/// The kernel's decode stage dispatched natively over a list of `(u, v)` points, reading back `(m, r, p)`, the
-/// `DEGENERATE` tag and the `ICDescriptor`, and its CPU-f64 counterpart `decode_only` (parity_contract §1; TASK-M2-06).
+// The kernel's decode stage dispatched natively, and its CPU-f64 counterpart `decode_only` (TASK-M2-06): documented in
+// the module itself, whose links resolve there.
 pub mod decode_dispatch;
 
 /// Telemetry (dd_telemetry_and_tiers): the session-header probe that `prin profile` and the benchmark runner share

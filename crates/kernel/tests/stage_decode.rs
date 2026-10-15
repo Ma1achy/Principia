@@ -236,7 +236,7 @@ negative_control!(
 // ── stage_entry_native ──────────────────────────────────────────────────────────────────────────────────────────
 
 /// Buffers for `n` samples, every word `u32::MAX`.
-fn buffers(n: usize) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
+fn buffers(n: usize) -> Written {
     (
         vec![u32::MAX; n * ic_words()],
         vec![u32::MAX; n],
@@ -246,7 +246,7 @@ fn buffers(n: usize) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
 
 /// The stage's body for the defaults over three points with `chart` and `flags`, invocations 0 to 4: the two past the
 /// last sample must write nothing.
-fn run_entry(chart: &Latent<f32>, flag: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
+fn run_entry(chart: &Latent<f32>, flag: u32) -> Written {
     let uniforms = DecodeUniforms {
         chart: chart.uniform(),
         flags: UVec4::new(flag, 0, 0, 0),
@@ -259,9 +259,12 @@ fn run_entry(chart: &Latent<f32>, flag: u32) -> (Vec<u32>, Vec<u32>, Vec<u32>) {
     (ic, tags, d)
 }
 
+/// The words an entry writes: `(m, r, p)`, the tags and the descriptors.
+type Written = (Vec<u32>, Vec<u32>, Vec<u32>);
+
 /// Under the full decoder each sample's words are `sample` at its `(u, v)`, the chart read from the uniform; under the
 /// linearised one every word is untouched.
-fn check_entry(run: fn(&Latent<f32>, u32) -> (Vec<u32>, Vec<u32>, Vec<u32>)) {
+fn check_entry(run: fn(&Latent<f32>, u32) -> Written) {
     let chart = Latent {
         z0: [0.3, -0.4, 0.2, 0.1, -0.2, 0.3, 0.5, -0.6],
         q1: [0.1, 0.0, 0.2, 0.0, 0.0, 0.1, 0.0, 0.3],
