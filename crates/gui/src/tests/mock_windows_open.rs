@@ -2125,3 +2125,41 @@ fn mock_windows_open_profiler_fast_math_line_uses_the_wire_names() {
     let got = line(&record(FastMath::On, Some(StageMode::On)));
     rejects("a Debug name on the line", || assert!(got.contains("On")));
 }
+
+/// Run's Refinement: frame budget, max depth, E and the ceiling directly under Refinement, before the "quality: Custom"
+/// frame, which heads its own fields only (§G5; gui review 5529720235, finding 6).
+#[test]
+fn mock_windows_open_run_refinement_items_come_before_the_custom_frame() {
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Run, None);
+    // Focused on the last field, the Refinement section is in view.
+    app.view.focus.path = vec![
+        windows::entry(Window::Run).scope.to_owned(),
+        run::REFINEMENT.to_owned(),
+        run::CEILING.id.to_owned(),
+    ];
+    settle(&mut h, &mut app);
+    let output = h.frame(&mut app, Vec::new());
+    let top = |name: &str| {
+        let found = nodes(&output, name);
+        assert_eq!(found.len(), 1, "{name}: {found:?}");
+        found[0].0.min.y
+    };
+    let custom = top(run::CUSTOM_HEADING);
+    let fields: Vec<&str> = run::FIELDS
+        .iter()
+        .filter(|f| f.section == run::REFINEMENT)
+        .chain([&run::CEILING])
+        .map(|f| f.name)
+        .collect();
+    assert_eq!(fields.len(), 4);
+    let above = |field: f32, custom: f32| assert!(field < custom, "{field} not above {custom}");
+    for f in &fields {
+        above(top(f), custom);
+    }
+    assert!(top(run::CUSTOM_FIELDS) > custom);
+    rejects("a field under quality: Custom", || {
+        above(custom + 1.0, custom)
+    });
+}

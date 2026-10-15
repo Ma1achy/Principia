@@ -303,6 +303,11 @@ fn text_row(ui: &mut Ui, keys: &mut Keys<'_>, field: &Field, text: &mut String) 
     });
 }
 
+/// The heading of the Custom quality fields' frame (§G5, R-129).
+pub const CUSTOM_HEADING: &str = "quality: Custom";
+/// The Custom quality fields' frame, empty here: the fields are gui_state_contract §6's struct, TASK-M6-22's.
+pub const CUSTOM_FIELDS: &str = "the Custom quality fields — (gui_state_contract §6)";
+
 /// Draws the window's content.
 pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, draft: &mut Draft) {
     note(ui, SUBTITLE);
@@ -380,7 +385,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, draft: &mut Draft) {
                 keys.place(id, &button);
             }
         });
-        note(ui, "quality: Custom");
+        // §G5's Refinement items, directly under Refinement; the Custom quality fields head a frame of their own.
         for f in FIELDS
             .iter()
             .filter(|f| f.section == REFINEMENT)
@@ -388,6 +393,10 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, draft: &mut Draft) {
         {
             text_row(ui, keys, f, &mut draft.text[index(f.id)]);
         }
+        ui.group(|ui| {
+            ui.label(RichText::new(CUSTOM_HEADING).weak());
+            note(ui, CUSTOM_FIELDS);
+        });
     });
     section(ui, keys, ACTIONS, "Recompute", |ui, keys| {
         ui.horizontal(|ui| {
