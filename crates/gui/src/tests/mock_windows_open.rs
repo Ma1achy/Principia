@@ -1410,3 +1410,19 @@ fn mock_windows_open_the_manifold_views_builder_is_the_chart_builders_opener() {
         back(mv::OPEN_INSPECTOR)
     });
 }
+
+/// Each open window keeps its own opener: a second window opened does not lose the first's.
+#[test]
+fn mock_windows_open_each_window_keeps_its_opener() {
+    let (mut app, h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Run, Some("run"));
+    app.open_window(&ctx, Window::Export, Some("export"));
+    let tree = app.keyboard.tree(app.view.mode);
+    let run = tree.path_to("run");
+    app.view.focus.path = tree.window_landing(windows::entry(Window::Run).scope);
+    app.close_window(&ctx, Window::Run);
+    let back = |got: &Vec<String>| assert_eq!(*got, run, "the focus back on Run…");
+    back(&app.view.focus.path);
+    rejects("an opener lost", || back(&Vec::new()));
+}
