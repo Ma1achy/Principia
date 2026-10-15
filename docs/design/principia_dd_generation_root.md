@@ -789,6 +789,8 @@ citing its calibration requirement, and read from the register like any other; n
 | `log_floor_r_min_pair_0` | 2⁻¹⁴ ≈ 6.10e-5, `r_min_pair_0`'s log floor, a distance; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `eps_m01` | 10⁻⁵, the `DEGENERATE(M01_TINY)` threshold (dd_decoder §3.1), a threshold with its measured gap | canonical-units | M2 | REQ-DEC-039 |
 | `r_pole` | 0.01, the pole radius of the unwrapped phase `θ̃` on the unit shape sphere (dd_integrator §3.7, R-389); confirmed at the M1 gate and marked provisional until M3, where it is re-confirmed against real orbits' near-pole arcs (R-433) | canonical-units | M3 | REQ-INT-086 |
+| `diverging_x0_E_0` | 1, `E_0`'s `x₀`, an energy: the magnitude where its `diverging` symlog's compression sets in (dd_colouring §3.6, REQ-COL-065), one unit of the normalised system's binding energy (TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
+| `diverging_x0_Lz_0` | 1, `Lz_0`'s `x₀`, an angular momentum, as `E_0`'s (dd_colouring §3.6, REQ-COL-065; TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the

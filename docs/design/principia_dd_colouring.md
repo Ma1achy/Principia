@@ -147,6 +147,8 @@ chooses its `x₀` in one of two ways:
   around zero. `E_0`'s is an energy and `Lz_0`'s an angular momentum. Each is a value (R-71): proposed with its
   evidence (where the field's values fall on the fixtures, and why `x₀` sits there) by REQ-COL-066 and confirmed by
   the human at the M7 gate, as R-401's display floors are for the `log` fields.
+  Each is held in the constants register, marked `provisional` until the M7 gate (dd_generation_root §3.8,
+  R-427): `diverging_x0_E_0` and `diverging_x0_Lz_0`.
 
 A `diverging` field with neither a `floor` nor an `x₀` of its own has no compaction, and its ramp is refused, naming the
 field, as a `log` field with no floor is (R-401).
