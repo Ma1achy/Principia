@@ -60,7 +60,7 @@ Nothing is chosen.*
 - **Waits:** nothing in M1; TASK-M1-21's PR does not wait. REQ-PAY-093's confirmation at the M5 gate is where
   `alpha_energy`'s range is settled; it is named, not marked.
 
-## RQ-280: chart_reference §0.3 names `Σpᵢ = 0` "the test that catches a swap", but the full swap of the crossed factors keeps `Σpᵢ = 0` at every mass *(corpus error, REQ-DEC-019, PIT-9; context: TASK-M2-03)*
+## RQ-283: chart_reference §0.3 names `Σpᵢ = 0` "the test that catches a swap", but the full swap of the crossed factors keeps `Σpᵢ = 0` at every mass *(corpus error, REQ-DEC-019, PIT-9; context: TASK-M2-03)*
 
 *Found by TASK-M2-03's review (physics review 5526305435 E1; qa review 5527243917). Nothing is chosen; TASK-M2-03's PR
 does not wait.*
@@ -87,7 +87,7 @@ does not wait.*
   doc line is changed.
 - **Waits:** nothing.
 
-## RQ-281: the corpus does not say how the descriptor's infinite values at the poles are stored or consumed, and differences against `E₀ = −∞` read NaN *(silence, R-79, REQ-COL-006, REQ-COL-060, REQ-VAL-027; context: TASK-M2-03 and the tasks of those requirements)*
+## RQ-284: the corpus does not say how the descriptor's infinite values at the poles are stored or consumed, and differences against `E₀ = −∞` read NaN *(silence, R-79, REQ-COL-006, REQ-COL-060, REQ-VAL-027; context: TASK-M2-03 and the tasks of those requirements)*
 
 *Found by TASK-M2-03's review (physics review 5526305435 E2). Nothing is chosen; TASK-M2-03's PR does not wait.*
 
@@ -118,3 +118,35 @@ does not wait.*
   difference against `E₀` exists yet.
 - **Waits:** the tasks of REQ-COL-006, REQ-COL-060 and REQ-VAL-027, at the point where they consume `E₀` or
   `K_0 + V_0`. TASK-M2-03 does not wait.
+
+## RQ-285: dd_decoder §3.2 calls the exact-pole `atan2(0,0)=0` "a deterministic canonical value", which holds on the CPU only: GLSL.std.450 `Atan2` is undefined at (0, 0) *(conflict, R-116, R-417, REQ-COL-006; context: TASK-M2-03, the encode and canonicalisation tasks, the fragment-side decode/encode)*
+
+*Found by TASK-M2-03's fix round (code review 5527358480 C2). Nothing is chosen; TASK-M2-03's PR does not wait: its
+`rho_angle` defines the pole value without `atan2` (dd_decoder §3.6).*
+
+- **File, section:**
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi" (:95): "A config
+    at a pole, reached at underflow or ingested there, is caught by those flags, and exact-pole `atan2(0,0)=0` yields
+    a deterministic canonical value rather than a NaN."
+  - The same doc, § "3.3 Canonicalise" (:114): "rotate all rᵢ, pᵢ by R(−φ),  φ = atan2(ρ_y, ρ_x)", which reads
+    `atan2(0, 0)` at the `α = π/2` collision pole (`ρ = 0`); and `docs/design/principia_chart_reference.md` § "0.4
+    Canonicalisation `C`" (:96), the same line.
+  - REQ-COL-006 (`docs/design/principia_colour_composition.md` § "3. The `ctx` contract", § "6. Debug views as
+    presets"; R-116): the chart decode and encode are generated as WGSL from the one Rust source, so fragment presets
+    recompute `encode(decode(z))` on the GPU.
+  - `docs/notes/principia_gpu_determinism_note.md` § "The discipline": "a branch is frozen or a comparison, never
+    backend-elective floating point".
+- **The conflict:** `atan2(0, 0) = 0` is the CPU libm's value (IEEE 754's recommended `atan2(±0, +0) = ±0`). On the
+  GPU, GLSL.std.450 `Atan2` (what SPIR-V and naga lower `atan2` to) gives an undefined result when both operands are
+  0, and WGSL's `atan2` inherits it. §3.2's "deterministic canonical value rather than a NaN" therefore holds on the
+  CPU-f64 path only; on the fragment-side encode, and on any GPU-compiled canonicalisation, the pole's `φ` (and the
+  rotation and mirror test that follow it) is backend-elective, possibly NaN, so the two paths need not agree there.
+  The sign of a zero also matters: `atan2(−0, x < 0) = −π` (TASK-M2-03 measured it for `rho_angle`).
+- **Options seen:**
+  - (a) Define the pole's value in the corpus and have every `atan2` at a possible pole chosen branch-free by a select
+    on its operands against 0, as dd_decoder §3.6 now does for `rho_angle`; reword §3.2:95 to say the value is
+    defined, not obtained from `atan2`.
+  - (b) Keep `atan2` and restrict §3.2:95 to the CPU path, with the GPU parity checks excluding the poles by the flags
+    that already catch them.
+- **Applied meanwhile:** nothing outside `rho_angle`; no canonicalisation or encode code exists yet.
+- **Waits:** the tasks that implement §3.3's canonicalisation and the encode (and their WGSL generation, REQ-COL-006).
