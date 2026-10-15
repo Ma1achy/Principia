@@ -1697,3 +1697,106 @@ fn mock_windows_open_inspector_locate_enabled_with_an_ic() {
     assert_eq!(rows, [vec![false; acts.len()], acts.clone()]);
     rejects("Locate enabled with no IC", || assert_eq!(rows[0], acts));
 }
+
+/// The AccessKit nodes named `name` (a label or a value), top to bottom: each node's bounds (in points) and whether it
+/// is selected.
+fn nodes(output: &egui::FullOutput, name: &str) -> Vec<(egui::Rect, bool)> {
+    let update = output
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .expect("AccessKit is on");
+    let mut found: Vec<(egui::Rect, bool)> = update
+        .nodes
+        .iter()
+        .filter(|(_, n)| n.label() == Some(name) || n.value() == Some(name))
+        .filter_map(|(_, n)| {
+            let b = n.bounds()?;
+            let rect = egui::Rect::from_min_max(
+                egui::pos2(b.x0 as f32, b.y0 as f32),
+                egui::pos2(b.x1 as f32, b.y1 as f32),
+            );
+            Some((rect, n.toggled() == Some(egui::accesskit::Toggled::True)))
+        })
+        .collect();
+    found.sort_by(|a, b| a.0.min.y.total_cmp(&b.0.min.y));
+    found
+}
+
+/// The console: its chosen filter alone selected; its rows a row's height apart, so the list scrolls to a row by its
+/// index; and its foot line at the window's foot, under a list that takes the rest.
+#[test]
+fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
+    use crate::mock::MOCK_WARNING;
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    for _ in 0..40 {
+        app.side().engine().raise_warning();
+    }
+    app.open_window(&ctx, Window::Console, None);
+    settle(&mut h, &mut app);
+    // The filters, by their places.
+    for (k, (_, filter, _)) in console::FILTER_IDS.iter().enumerate() {
+        app.windows.console.filter = *filter;
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let marks: Vec<bool> = console::FILTER_IDS
+            .iter()
+            .map(|(id, _, _)| {
+                let c = app.keyboard.place_of(id).expect("placed").rect.center();
+                let update = output.platform_output.accesskit_update.as_ref().unwrap();
+                let hits: Vec<bool> = update
+                    .nodes
+                    .iter()
+                    .filter(|(_, n)| {
+                        n.bounds().is_some_and(|b| {
+                            b.contains(egui::accesskit::Point::new(c.x as f64, c.y as f64))
+                        }) && n.role() == egui::accesskit::Role::Button
+                    })
+                    .map(|(_, n)| n.toggled() == Some(egui::accesskit::Toggled::True))
+                    .collect();
+                assert_eq!(hits.len(), 1, "{id}: {hits:?}");
+                hits[0]
+            })
+            .collect();
+        let want: Vec<bool> = (0..console::FILTER_IDS.len()).map(|i| i == k).collect();
+        assert_eq!(marks, want, "{filter:?}");
+    }
+    app.windows.console.filter = console::Filter::All;
+    // Scrolled to row k, row k's message tops the list, as row 0 does unscrolled.
+    let mut tops = Vec::new();
+    for k in [0, 3, 7] {
+        app.windows.console.top_row = k;
+        app.windows.console.scroll_pending = true;
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let list = app.keyboard.place_of(console::LIST).expect("placed").rect;
+        let rows = nodes(&output, MOCK_WARNING);
+        assert!(rows.len() > k, "{rows:?}");
+        tops.push(rows[k].0.min.y - list.min.y);
+    }
+    for top in &tops {
+        assert!(
+            (top - tops[0]).abs() < 0.5,
+            "row k's top below the list's: {tops:?}"
+        );
+    }
+    // The foot line sits at the window's foot.
+    let output = h.frame(&mut app, Vec::new());
+    let window = app
+        .keyboard
+        .place_of(windows::entry(Window::Console).scope)
+        .unwrap()
+        .rect;
+    let foot = nodes(&output, console::FOOT);
+    assert_eq!(foot.len(), 1);
+    let gap = window.max.y - foot[0].0.max.y;
+    assert!(
+        (0.0..16.0).contains(&gap),
+        "the foot {:?} in {window:?}",
+        foot[0].0
+    );
+    rejects("a foot line well above the window's foot", || {
+        assert!((0.0..16.0).contains(&(gap + 40.0)))
+    });
+}

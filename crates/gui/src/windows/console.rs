@@ -255,7 +255,11 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
     });
     ui.separator();
     let rows = shown(view.entries, state);
-    let row_h = ui.text_style_height(&egui::TextStyle::Monospace) + ui.spacing().item_spacing.y;
+    // A row is the grid's line, at least a control's height, as egui's grid makes it, and its spacing below.
+    let line = ui
+        .text_style_height(&egui::TextStyle::Monospace)
+        .max(ui.spacing().interact_size.y);
+    let row_h = line + ui.spacing().item_spacing.y;
     let foot_h = ui.text_style_height(&egui::TextStyle::Body) + 2.0 * ui.spacing().item_spacing.y;
     let mut area = ScrollArea::vertical()
         .id_salt("console rows")
@@ -265,20 +269,24 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
         area = area.vertical_scroll_offset(state.top_row as f32 * row_h);
     }
     let list = area.show(ui, |ui| {
-        Grid::new("console rows").striped(false).show(ui, |ui| {
-            for entry in rows {
-                let colour = severity_colour(ui.visuals(), entry.severity);
-                ui.label(
-                    RichText::new(entry.severity.name())
-                        .monospace()
-                        .color(colour),
-                );
-                ui.label(RichText::new(time_of_day(entry.at)).monospace().weak());
-                ui.label(RichText::new(entry.source.name()).monospace());
-                ui.label(RichText::new(&entry.message).monospace().color(colour));
-                ui.end_row();
-            }
-        });
+        Grid::new("console rows")
+            .striped(false)
+            .min_row_height(line)
+            .spacing(ui.spacing().item_spacing)
+            .show(ui, |ui| {
+                for entry in rows {
+                    let colour = severity_colour(ui.visuals(), entry.severity);
+                    ui.label(
+                        RichText::new(entry.severity.name())
+                            .monospace()
+                            .color(colour),
+                    );
+                    ui.label(RichText::new(time_of_day(entry.at)).monospace().weak());
+                    ui.label(RichText::new(entry.source.name()).monospace());
+                    ui.label(RichText::new(&entry.message).monospace().color(colour));
+                    ui.end_row();
+                }
+            });
     });
     keys.place_rect(ui, LIST, list.inner_rect);
     note(ui, FOOT);
