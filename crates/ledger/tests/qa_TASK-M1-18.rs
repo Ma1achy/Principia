@@ -265,7 +265,7 @@ enum Stand {
 
 /// dd_generation_root §3.8's provisional entries, each as R-428 leaves it, and `r_pole`, which R-433 confirms at the
 /// M1 gate and marks provisional until M3, citing REQ-INT-086.
-const TABLE: [(&str, Stand); 11] = [
+const TABLE: [(&str, Stand); 12] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -277,6 +277,7 @@ const TABLE: [(&str, Stand); 11] = [
     ("hatch_half_period", Stand::Confirmed),
     ("eps_m01", Stand::Until("M2", "REQ-DEC-039")),
     ("r_pole", Stand::Until("M3", "REQ-INT-086")),
+    ("tanh_sat", Stand::Until("M2", "REQ-DEC-047")),
 ];
 
 /// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.
