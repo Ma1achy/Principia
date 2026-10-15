@@ -25,7 +25,7 @@
 //! image of π when `ρ · λ < 0`, whatever the sign of a zero `ρ × λ` (`atan2(−0, x < 0)` is −π), and 0 otherwise, the
 //! pole `ρ × λ = ρ · λ = 0` included, where GLSL.std.450 `Atan2` is undefined. Off the axis `atan2`'s value is taken
 //! down to the image of π, and one at or below its negative is read as the image, so the range is `(−π̂, π̂]`. Each
-//! choice is [`select`] on a comparison with a constant, between values already computed: no branch (the GPU
+//! choice is a `select` on a comparison with a constant, between values already computed: no branch (the GPU
 //! determinism note's discipline). `x + 0.0` is not used to clear a −0, since a shader compiler may fold it to `x`.
 
 use spirv_std::num_traits::Float;
