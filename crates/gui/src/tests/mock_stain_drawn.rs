@@ -653,3 +653,25 @@ fn mock_stain_drawn_code_views() {
         assert!(graph.contains(&content.pipeline))
     });
 }
+
+/// The capture's `02_stain` screen opens on the Stain page; any other on Explore.
+#[test]
+fn mock_stain_drawn_capture_screens() {
+    let canvas = std::sync::Arc::new(
+        crate::mock::canvas::MockCanvas::new().expect("a GPU adapter for the mock's canvas"),
+    );
+    let names = |screen: &str| -> Vec<String> {
+        crate::capture::shoot_screen(canvas.clone(), screen, &[])
+            .names
+            .into_iter()
+            .map(|n| n.name)
+            .collect()
+    };
+    let stain = names("02_stain");
+    assert!(stain.iter().any(|n| n == "Library"), "{stain:?}");
+    let main = names("01_main");
+    assert!(!main.iter().any(|n| n == "Library"));
+    rejects("the Stain page on 01_main", || {
+        assert!(main.iter().any(|n| n == "Library"))
+    });
+}
