@@ -9644,6 +9644,11 @@ sentence added), `docs/contracts/principia_canonical_spec.md` § "3. The physics
 statement, rulings, verify, note, the hold RQ-287 removed), TASK-M2-15 (goal, an acceptance test, notes),
 `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-287 archived) and `REVIEW_QUEUE.md`; built by
 TASK-M2-15*
+*Round 3 (physics review 5532062124) is also applied in `docs/design/principia_dd_encode.md` § "3.1 Forward ↔
+inverse pairing table — closures verified" (a paragraph added) and § "5. Unit tests" (test 10, items added),
+`docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward
+mates)" (a paragraph added), REQ-ENC-007 (reqio: verify, note), REQ-COL-006 (reqio: rulings, source, verify), TASK-M2-15 (acceptance
+tests, a note) and TASK-M2-25 (a note)*
 
 The human's ruling of 15 Oct 2026 on RQ-287, in their own words:
 
@@ -9667,12 +9672,27 @@ Option (d) is the form physics review 5531809281 (P2) found missing from RQ-287'
 - **The test.** Collinear shapes are encoded with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2 on either side and at each
   Euler landmark: `β` is π (body 2 on the `−x` side) or 0 (on the `+x` side), as appropriate, and the round trip is
   within the deadband.
+  - **The pole landmark** (physics review 5532062124 P2, applied per R-369). With `m₀ = m₁`, the landmark with body 2
+    in the middle has body 2 exactly at the inner pair's centre of mass, so `λ̃ = 0` and `α = 0`: body 2 is on neither
+    side. There, at `λ̃_y = ±0`, `β = 0` by condition (1)'s select. At `λ̃_y = ±1e-13` with `λ̃_x = 0`, the ruling's
+    formula gives `β = π/2` (`π̂/2` as computed), and the test asserts that value. The side rule applies to the
+    landmarks with `λ̃_x ≠ 0`; the test's masses are chosen so that no other landmark sits on the pole, and the pole
+    case is tested on its own.
+  - **On the `−x` half-axis** (P1), at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by a select, on CPU-f64 and GPU-f32 alike.
+  - **"A round trip within the deadband"** is defined under "Contradiction flagged, applied" below.
 
 *Why, from physics review 5531809281 (P2), recorded here because it explains the form:*
 - **`abs` and a select, never `max`.** `abs` clears the sign bit and is pinned in WGSL. RQ-287's option (b),
   `max(λ̃_y, 0)`, fails on the case it targets: GLSL.std.450 `FMax` is "y if x < y, otherwise x", so `max(−0, +0)`
   returns `−0`, and Rust's `f64::max` may return either zero; `atan2(−0, x < 0) = −π` then comes back. So the code
   reads `|λ̃_y|` by `abs` and the pole by a select, never by `max`.
+  But `abs` pins the sign of the zero only as far as `atan2`'s operand (physics review 5532062124 P1): the zero's sign
+  is not pinned through `atan2` on the GPU. WGSL may ignore the sign of a zero, under the same IEEE-754 deviations
+  that let it assume there are no infinities (R-436), and so may Vulkan without `SignedZeroInfNanPreserve` and Metal's
+  fast-math. The generated encode's `atan2(+0, x < 0)` can then evaluate as `atan2(−0, x < 0) = −π`, which `s_β`
+  clamps to the `β = 0` end: RQ-287's error, back on the fragment-side encode, at every exactly collinear input with
+  body 2 on the `−x` side. So `β` selects `π̂` there too (Applied, below), as `rho_angle`'s antiparallel case does
+  (`docs/design/principia_dd_decoder.md` §3.6).
 - **`β ≈ 0` and `β ≈ π` are different collinear shapes, not mirror images.** The mirror fixes the x-axis, so it maps a
   collinear shape to itself; RQ-287's clamp to the `β = 0` end returned a different shape (body 2 on the other side of
   the inner pair), not the mirror-opposite of the same one.
@@ -9682,6 +9702,26 @@ Option (d) is the form physics review 5531809281 (P2) found missing from RQ-287'
   The physical error there stays at most `‖λ̃‖`, so the cost is in `z`, not in the physics. `|λ̃_y|` is also
   continuous across the deadband's edge, `λ̃_y = −δ_λ`, where the mirror begins, and it is the only one of the forms
   considered that stays right near `α = 0`.
+
+*Contradiction flagged, applied (physics review 5532062124 P3):* the ruling's "a round trip within the deadband"
+contradicts the corpus for an exactly collinear input. There `β` is 0 or π, so `s_β` is 0 or 1, which the clamp sets
+to `ε_z` or `1 − ε_z` (`ε_z = 10⁻⁶`, inverse-encode Part 3) with `lookup_clamped`. The decode then returns `β` a
+distance `π·ε_z` from its end, so `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about 10⁶ × `δ_λ` (`δ_λ = 10⁻¹²`): a `λ̃_y` within the
+deadband cannot come back. The inverse-encode contract already says so
+(`docs/contracts/principia_inverse_encode_contract.md` § "Part 7 — Ground-truth ingestion (the validation programme's
+demand)", :226: "The chart cannot cleanly reach an *exactly*-degenerate config"). Per CLAUDE.md "Rulings", this is
+flagged and what is applied is recorded. Applied as an R-72 definition of what the round trip compares, chosen by the
+orchestrator per R-369 (the human may veto it), for each landmark off the pole:
+- the four `λ̃_y` inputs of one landmark encode to the same `z`, since the deadband is invisible to the encode;
+- `decode(encode(x))` keeps the input's side (the sign of `λ̃_x`), with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own
+  `|λ̃_y|` (at most `δ_λ`) and rounding;
+- the other components are within `ε_phys`;
+- `lookup_clamped` is set.
+
+At the pole landmark the four inputs do not share a `z` (`±0` give `β = 0`, `±1e-13` give `π/2`), and `s_α` clamps
+too, so the test asserts `β` and `lookup_clamped` there, and the pole's round trip is REQ-DEC-014's exact-pole ingest
+(`encode_exact_poles`: no NaN, deterministic, `lookup_clamped` set). The bound's term for the input's own `|λ̃_y|` is
+the porter's, applied per R-369: an input of `−1e-13` decodes to a `λ̃_y ≥ 0`, so the difference includes it.
 
 *Applied:*
 - **The docs.** dd_encode §3.1's Config row and its pole paragraph read `β = atan2(|λ̃_y|, λ̃_x)` and give the reason
@@ -9699,5 +9739,21 @@ Option (d) is the form physics review 5531809281 (P2) found missing from RQ-287'
 - **RQ-287** moves to `docs/archive/review_queue/M0.md` with its Ruling line.
 - No code changes: no encode code exists yet (TASK-M2-15).
 - R-438 is in the "physics" group of `plan/rule_groups.yaml`, with R-82 and R-437.
+- **`β` selects `π̂` on the `−x` half-axis** (round 3, physics review 5532062124 P1; applied per R-369 as a mechanical
+  consequence of R-438, following `rho_angle`'s precedent in dd_decoder §3.6). `π̂` is R-417's image of π (rounded
+  toward zero at f32, the nearest value at f64). `β` is, case by case, each case chosen by a comparison with the
+  constant 0, selecting a value already computed:
+  - `λ̃_x = 0` and `λ̃_y = 0` (the `α = 0` pole): 0 (condition (1); R-437);
+  - `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`: `π̂`;
+  - elsewhere: `atan2(|λ̃_y|, λ̃_x)`.
+
+  At f64 `π̂` is the value the CPU's `atan2(+0, x < 0)` already returns, so the select pins the GPU to the CPU's value.
+  Landed in dd_encode §3.1 and inverse-encode Part 3 (a paragraph each). REQ-ENC-007's verify and REQ-COL-006's
+  generated-WGSL clause require CPU/GPU agreement on that half-axis with `±0` operands (REQ-COL-006 gains R-438
+  among its rulings and sources); TASK-M2-15 gains the acceptance
+  test `cargo test -p engine encode_beta_half_axis`, and TASK-M2-25 a note.
+- **Test 10's pole landmark and its round trip** (round 3, P2 and P3): above, under "The test" and "Contradiction
+  flagged, applied". Landed in dd_encode §5 test 10, TASK-M2-15's `encode_collinear_beta` and REQ-ENC-007's verify.
 
 Changes REQ-ENC-007 (statement, rulings, source, verify, note, the hold RQ-287).
+Round 3 changes REQ-ENC-007 (verify, note) and REQ-COL-006 (rulings, source, verify).

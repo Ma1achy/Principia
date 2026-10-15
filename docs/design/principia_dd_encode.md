@@ -49,6 +49,22 @@ continuous across the deadband's edge. The code reads `|λ̃_y|` by `abs`, which
 GLSL.std.450 `FMax` returns `−0` for `max(−0, +0)`, and Rust's `f64::max` may return either zero. At `λ̃ = 0` the
 select above gives `β = 0`.
 
+**`β` on the `−x` half-axis selects `π̂` (R-438; physics review 5532062124 P1, applied per R-369).** `abs` pins the
+zero's sign only as far as `atan2`'s operand. WGSL may ignore the sign of a zero, under the same IEEE-754 deviations
+that let it assume there are no infinities (R-436), and so may Vulkan without `SignedZeroInfNanPreserve` and Metal's
+fast-math. So the generated encode's `atan2(+0, x < 0)` can evaluate as `atan2(−0, x < 0) = −π`, which `s_β` would
+clamp to the `β = 0` end, at every exactly collinear input with body 2 on the `−x` side. As `rho_angle`'s antiparallel
+case does (`principia_dd_decoder.md` §3.6), `β` is defined case by case, each case chosen by a comparison with the
+constant 0, selecting a value already computed, with no branch:
+- `λ̃_x = 0` and `λ̃_y = 0` (the `α = 0` pole): 0, above (R-437);
+- `λ̃_y` compares equal to 0, true for `+0` and `−0` alike, and `λ̃_x < 0`: `π̂`, the image of π in
+  `principia_dd_decoder.md` §3.2 (rounded toward zero at f32, the nearest value at f64; R-417);
+- elsewhere: `atan2(|λ̃_y|, λ̃_x)`.
+
+At f64, `π̂` is what the CPU's `atan2(+0, x < 0)` returns, so the select pins the GPU to the CPU's value, and CPU-f64 and
+GPU-f32 agree on the half-axis, `±0` operands included. `λ̃_y = 0` with `λ̃_x > 0` needs no select: either zero gives
+`β = ±0`, and the clamp sets `s_β` to `ε_z` for both.
+
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
 Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is load-bearing.
@@ -133,6 +149,21 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 10. **Collinear `β` in the deadband (R-438):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2
     on either side and at each Euler landmark, requiring `β = π` (body 2 on the `−x` side) or 0 (on the `+x` side) as
     appropriate, never near `−π`, and a round trip within the deadband.
+    - **The pole landmark** (physics review 5532062124 P2, applied per R-369). With `m₀ = m₁`, the landmark with body 2
+      in the middle has body 2 exactly at the inner pair's centre of mass, so `λ̃ = 0` and `α = 0`: body 2 is on
+      neither side. There, at `λ̃_y = ±0`, `β = 0` by R-437's select (R-438 condition (1)), never `atan2(0, 0)`. At
+      `λ̃_y = ±1e-13` with `λ̃_x = 0`, the ruling's formula gives `β = π/2` (`π̂/2` as computed), and the test asserts
+      that value. The side rule applies to the landmarks with `λ̃_x ≠ 0`. The test's masses are chosen so that no other
+      landmark sits on the pole, and the pole case is tested on its own.
+    - **The `−x` half-axis** (P1): at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by §3.1's select, on CPU-f64 and GPU-f32 alike.
+    - **What the round trip compares** (P3; R-72, applied per R-369; R-438, "Contradiction flagged, applied"). An
+      exactly collinear input clamps `s_β` to `ε_z` or `1 − ε_z`, so the decode returns `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about
+      10⁶ × `δ_λ`: a deadband `λ̃_y` cannot come back (inverse-encode Part 7: the chart cannot cleanly reach an exactly
+      degenerate configuration). So, at each landmark off the pole: the four `λ̃_y` inputs encode to the same `z`;
+      `decode(encode(x))` keeps the input's side, with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own `|λ̃_y|` and rounding;
+      the other components are within `ε_phys`; `lookup_clamped` is set. At the pole landmark the test asserts `β` and
+      `lookup_clamped`; its round trip is REQ-DEC-014's exact-pole ingest (no NaN, deterministic,
+      `lookup_clamped` set).
 
 ---
 
