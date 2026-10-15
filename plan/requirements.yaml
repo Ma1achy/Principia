@@ -11282,6 +11282,9 @@
     detail: "no separate debug render path exists; quad boundaries can be overlaid on a normal preset"
   rulings: []
   milestone: M7
+  rq:
+  - RQ-280
+  - RQ-281
 - id: REQ-COL-029
   area: COL
   statement: "Every currently-specified map in colour_composition §7.1 and every debug view must be recreated as a composition preset."
@@ -11298,6 +11301,8 @@
   rulings:
   - R-16
   milestone: M7
+  rq:
+  - RQ-280
 - id: REQ-COL-030
   area: COL
   statement: "Each §7.1 map must implement the definition given in its row (vMF, LUT spheres incl. analytic Cubehelix, Turbo, direction cosines, Octant, Voronoi 6, Hemispheres, Icosahedral, Soft Voronoi, Fibonacci and dot lattices, checkerboard, latitude/longitude stripes, Truchet, grid overlay ε=0.04, iso-hue contours, gradient magnitude, 4-octave value noise, checker+VMF, real spherical harmonics ℓ≤3, Turing standing waves, custom N-pole, basin blend, physics overlay κ=11 BC / 9 Euler-Lagrange), with LUT data from the published matplotlib tables (viridis, cividis, plasma, magma, inferno, twilight; Cubehelix analytic, R-151) Google's published Turbo table (Mikhailov 2019, Apache-2.0; R-139) for Turbo, and Moreland's table for cool-warm and the Principia palette's stops from the colour explorer, and Stability × Hue must not be among them."
@@ -11766,6 +11771,8 @@
     section: 8. Amendments to other docs
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_colour_composition.md
+    section: "9. The stain editor's composition resolutions (R-72; REQ-COL-054)"
   verify:
     method: review checklist
     detail: "colour_composition states each resolution the GUI spec assumes, and §16's item is closed"
@@ -12369,6 +12376,8 @@
   rulings:
   - R-64
   milestone: M7
+  rq:
+  - RQ-282
 - id: REQ-GUI-017
   area: GUI
   statement: "Binding brightness (or any occupant) to a field the current tier does not populate must not trigger a recompute: the UI must grey out unavailable sources, reading anyway must read NaN at unpack and show the invalid colour, and the only path to recompute must be an explicit user quality-tier change."

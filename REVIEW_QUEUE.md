@@ -60,6 +60,99 @@ Nothing is chosen.*
 - **Waits:** nothing in M1; TASK-M1-21's PR does not wait. REQ-PAY-093's confirmation at the M5 gate is where
   `alpha_energy`'s range is settled; it is named, not marked.
 
+## RQ-280: The addressing channel convention names two channels per position and "grey" for an index, but not the third channel of TL = RB and centre = BG, which index, or how it maps to [0, 1] *(silence, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-17, TASK-M7-18)*
+
+*Found by TASK-M7-01, writing render GUI spec §16's standing gaps into colour_composition §9. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § "16. Open / next": "the addressing channel convention (UV=RG / TL=RB /
+    centre=BG / index=grey)".
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets": "**UV view** = `colour =
+    ctx.screen.uv → RG` (fragment addressing) or `ctx.quad.uv → RG` (structural addressing)".
+  - `docs/design/principia_debug_tooling_plan.md` § "F. Structural views", the "UV passthrough" row: "raw post-flip
+    `(u,v)` as a gradient (`u→red, v→green`), + quad-local `δ` as a second mode: … `u`'s in red and `v`'s in green,
+    blue 0 (REQ-TOOL-153; R-72, written by TASK-M1-07; in exact arithmetic it draws `t`, as `ctx.quad.uv → RG` does,
+    so the two agree unless the δ path is wrong)".
+  - `docs/design/principia_colour_composition.md` § "3. The `ctx` contract", the quad lane: "`index`, `depth`, `tl`
+    (slice coords), `centre` (slice coords), …"; the tile/sample lane: "`tile_index` (within quad), `sample_index`".
+- **Silence:**
+  - UV = RG's third channel is written: §F's δ mode draws blue 0 and agrees with `ctx.quad.uv → RG`, which holds
+    only with that view's blue 0 too, so colour_composition §9.7 writes B = 0 for UV = RG (both sources, §6's one UV
+    view). For TL = RB and centre = BG the passages name two channels; the third (G and R; 0, or something else) is
+    not written. colour_composition §9.7 writes the pairs' order (`x` → first, `y` → second) by the pattern of
+    `u → red, v → green`.
+  - "index = grey" does not say which index: `ctx.quad.index`, `ctx.tile.tile_index` or `ctx.tile.sample_index`.
+  - An index is an integer, and grey takes a value in [0, 1]; no mapping is written (divided by a count, a hash, or
+    a cyclic modulus).
+- **Options seen:**
+  - (a) TL = RB's G and centre = BG's R are 0, as UV = RG's B is.
+  - (b) "index" is `ctx.quad.index`, mapped by a stated normalisation (for example over the visible quads), or a
+    hash to grey as `word`-hash's categorical view.
+  - (c) One preset per index (quad, tile, sample), each with its own mapping.
+- **Applied meanwhile:** nothing; colour_composition §9.7 writes only what the passages name.
+- **Waits:** the addressing presets' payloads in TASK-M7-17's preset library, and any map preset that uses the
+  convention (TASK-M7-18). TASK-M7-01 does not wait.
+
+## RQ-281: Render GUI spec §11 names six debug groups, but the passages settle the membership of four; diagnostic's and profiling's, and where ROUNDTRIP, the agreement presets, the §B–§D payload field views and §E's live-shape and accumulator views go, are not written, and the telemetry doc says profiling is "not a debug mode" *(silence and possible conflict, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-17)*
+
+*Found by TASK-M7-01, writing render GUI spec §16's "the debug taxonomy" into colour_composition §9.6. Nothing is
+chosen.*
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § "11. Presets = whole graphs": "the debug groups — addressing /
+    quad-structure / decoded-IC / validity / diagnostic / profiling — below".
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets": the §B–§E payload field views
+    (`f_edrift`, `f_wordhash`, `f_state`), the §F `ctx.quad` presets (`s_depth`, `s_impurity`, `s_state`), and the §A
+    views (UV, DECODE, ROUNDTRIP, "Agreement presets").
+  - `docs/design/principia_debug_tooling_plan.md` § "E. Payload field views — `ICDescriptor` (64 B) & the live-state
+    block": "*ICDescriptor views certify the **decoder**, independent of any integration.*" Its table also holds the
+    "**live shape views** `u_mode`" and "accumulator views" rows, which are live state, not the `ICDescriptor`.
+  - `docs/design/principia_dd_telemetry_and_tiers.md` § "5.5 Profiling is FIRST-CLASS, not a debug mode":
+    "`stage_ms` and the frame record are part of the render loop's contract, always present, with the *reporting*
+    toggleable rather than the *measurement*."
+- **Silence:** addressing (§6's UV views), quad-structure (§6's `ctx.quad` presets), decoded-IC (the decoded-IC payload
+  quantities, §E's `ICDescriptor` views by §E's line above, and DECODE) and validity (§3's validity lane) follow from
+  the passages, and colour_composition §9.6 writes them. No passage names a preset of the diagnostic or the
+  profiling group, or places ROUNDTRIP, the agreement presets, the §B–§D payload field views (such as `f_edrift`,
+  `f_wordhash` and `f_state`), or §E's live-shape and accumulator views.
+- **Possible conflict:** a "profiling" group of locked debug colour presets beside §5.5's "Profiling is FIRST-CLASS, not
+  a debug mode". The two may not disagree (§5.5 is about measurement always being on, not about how a view of it is
+  filed), but no passage says what a profiling preset colours.
+- **Options seen:**
+  - (a) diagnostic holds the §B–§D payload field views, §E's live-shape and accumulator views, and the cross-checks
+    (ROUNDTRIP, agreement); profiling holds views of per-sample cost (`total_substeps`, the substep-log proxy) and
+    quad cache age.
+  - (b) ROUNDTRIP and the agreement presets go in decoded-IC, as checks of the decode; diagnostic holds the §B–§D
+    payload field views and §E's live-shape and accumulator views.
+  - (c) The membership is the render-modes prototype's grouping, transcribed into a contract by a ruling (R-159).
+- **Applied meanwhile:** nothing; colour_composition §9.6 writes the four groups the passages settle and points here.
+- **Waits:** TASK-M7-17's preset library, for the diagnostic and profiling rows. TASK-M7-01 does not wait.
+
+## RQ-282: "Gradient-unifies-the-ramp" may mean the GUI's gradient editor ("built-in LUT or custom stops") unifies §1.2's ramps, and colour_composition has no ramp of custom stops *(silence, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-11)*
+
+*Found by TASK-M7-01. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § "16. Open / next": "gradient-unifies-the-ramp".
+  - `plan/tasks/M7/TASK-M7-01.md`, Deliverables: "`FieldRamp{gradient_magnitude}` vs the map post node (§1.2,
+    render_contract Part 4)" — the reading colour_composition §9.4 writes.
+  - `docs/gui/principia_render_gui_spec.md` § "9. Node inspector — morphing editors": "`colour` ← `scalar` |
+    **gradient editor** (built-in LUT or custom stops, cyclic)"; "`brightness` ← any | **gradient / compaction
+    editor** (greyscale + polarity)".
+  - `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp": "**Ramp** (scalar → colour):
+    `lut(name)`, `lerp(c0,c1)`, `diverging(c−,c0,c+)` (through a neutral), `bands(…)`".
+- **Silence:** the item's name fits two readings. The task file's, written in colour_composition §9.4: gradient
+  magnitude is a ramp over a derived field, distinct from the map's post-occupant gradient. The other: one "gradient" (a stop list) is the GUI's
+  single form of §1.2's `lut`, `lerp` and `diverging`. Under the second, §1.2 has no ramp of custom stops: their
+  interpolation space (OKLab or sRGB), the stops' positions, and how `cyclic` (a compaction in §1.2, a gradient
+  flag in render GUI spec §9) applies are not written.
+- **Options seen:**
+  - (a) The task file's reading alone; render GUI spec §9's custom stops are a separate definition, written by the
+    task that needs it (R-72).
+  - (b) Both: §1.2 gains `stops([(t_i, c_i)], space)`, with `lut`, `lerp` and `diverging` as its named instances.
+- **Applied meanwhile:** colour_composition §9.4 writes the task file's reading and points here.
+- **Waits:** TASK-M7-11's graph model, for the gradient editor's ramp type. TASK-M7-01 does not wait.
+
 ## RQ-283: chart_reference §0.3 names `Σpᵢ = 0` "the test that catches a swap", but the full swap of the crossed factors keeps `Σpᵢ = 0` at every mass *(corpus error, REQ-DEC-019, PIT-9; context: TASK-M2-03)*
 
 *Found by TASK-M2-03's review (physics review 5526305435 E1; qa review 5527243917). Nothing is chosen; TASK-M2-03's PR
