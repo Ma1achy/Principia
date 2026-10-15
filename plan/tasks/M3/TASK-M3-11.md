@@ -70,4 +70,7 @@ Each macro-step the shape vector `n = (u, v, w)/I` is derived live from position
   `(π/2)·r_pole`, as physics review 5436669140 of PR #158 asked, and the M3 gate gives the human that evidence;
   `cargo xtask gate-provisional --milestone M3` lists `r_pole` until the human re-confirms it. `r_pole` is not hashed
   (it decides which value `θ̃` and `_reserved` take, not what their bits mean, dd_generation_root §3.8 "The hash").
+  Applied per R-369: `r_pole` is a payload-shaping wrapper parameter (integrator contract Part 3, "2. Wrapper
+  config"; caching contract Part 2), so it is on the sim key whatever form this task gives it, and a change at the M3
+  gate re-integrates and never serves payloads computed under the old value; the §3.8 hash text stands.
 - The lagged `n̂` register (REQ-PAY-059) is a new SimState member after R-397's recheck: it costs 8 B per 8 B or less of its width (no free tail remains at f32), and the departed bit's placement does not use `_reserved`.
