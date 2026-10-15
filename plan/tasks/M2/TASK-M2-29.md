@@ -24,6 +24,7 @@ fragment, and keeps its own stated tolerance, ε_phys (REQ-RENDER-025, TASK-M2-2
 - `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)"
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `docs/design/principia_debug_tooling_plan.md` § "A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)"
+- `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
 
 ## Deliverables
 - A measurement in `gpu-metal` and `gpu-lavapipe`: over the M2 charts, the agreement presets' fragment-against-compute
@@ -41,3 +42,5 @@ fragment, and keeps its own stated tolerance, ε_phys (REQ-RENDER-025, TASK-M2-2
   `decodeOnly()` (TASK-M2-25's `decode_preset_vs_decode_only`, R-133). This task's tolerance is the fragment, compiled
   with fast-math, against the compute kernel, compiled without it; the agreement gate moves to it.
 - ROUNDTRIP is not this task's: its residual is fragment-only, `encode(decode(z))` with nothing from the compute shader, and its stated tolerance is ε_phys (REQ-ENC-024), checked by TASK-M2-26's golden on both backends (applied per R-204, accepted by R-358).
+- **R-436 (RQ-284):** a pixel with a non-finite operand draws the invalid colour (TASK-M2-25) and is no sample of the
+  tolerance: the measurement excludes it, and says how many pixels it excluded. The hold RQ-284 is gone.

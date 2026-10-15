@@ -9,7 +9,7 @@
 - **Size:** ~460 lines
 
 ## Goal
-Encode exists in the same shared source as decode, inverted: the closed-form block inverses of inverse-encode Part 3 (μₖ = log(mₖ/m₀), z = artanh(μₖ/μ_max) clamped; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(λ̃_y, λ̃_x), z = logit(s) clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, z = logit(clamp(s, ε_q, 1−ε_q)), |q| > q_max clamped and flagged) through the registry inverses, composed as E = (block inverses) ∘ C. Every discard is reported: `lookup_rescaled`, `lookup_mirrored`, `lookup_clamped` fire iff their operation did. E is constant on gauge orbits (T1). A configuration ingested exactly at an α-pole gives a deterministic value, never NaN, and sets `lookup_clamped` (R-133). The fragment WGSL decode and encode are never hand-written: they are generated from this source by the rust-gpu → SPIR-V → WGSL translation (R-116; the fragment snippets are built in TASK-M2-25).
+Encode exists in the same shared source as decode, inverted: the closed-form block inverses of inverse-encode Part 3 (μₖ = log(mₖ/m₀), z = artanh(μₖ/μ_max) clamped; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(|λ̃_y|, λ̃_x) (R-438), z = logit(s) clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, z = logit(clamp(s, ε_q, 1−ε_q)), |q| > q_max clamped and flagged) through the registry inverses, composed as E = (block inverses) ∘ C. Every discard is reported: `lookup_rescaled`, `lookup_mirrored`, `lookup_clamped` fire iff their operation did. E is constant on gauge orbits (T1). A configuration ingested exactly at an α-pole gives a deterministic value, never NaN, and sets `lookup_clamped` (R-133). The fragment WGSL decode and encode are never hand-written: they are generated from this source by the rust-gpu → SPIR-V → WGSL translation (R-116; the fragment snippets are built in TASK-M2-25).
 
 ## References
 - `docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward mates)"
@@ -31,6 +31,9 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 - `docs/design/principia_chart_reference.md` § "0.2 Configuration — hyperspherical mass-weighted Jacobi"
 - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+- `decisions.md` § "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
+- `docs/design/principia_dd_encode.md` § "3.2 Canonicalisation `C` — the exact ordered procedure"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
 - `crates/kernel/src/encode/{mod.rs, blocks.rs, report.rs}` (the one encode entry, the discard report).
@@ -39,6 +42,8 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 
 ## Acceptance tests
 - `cargo test -p kernel encode_block_inverses` — forward substituted into inverse for fuzzed z: each block recovers z to tolerance; a |q| > q_max input sets `lookup_clamped` (REQ-ENC-007).
+- `cargo test -p kernel encode_collinear_beta` — dd_encode test 10: collinear shapes encoded with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2 on either side and at each Euler landmark, give `β = π` (body 2 on the `−x` side, `π̂` by the select at `λ̃_y = ±0`) or 0 (on the `+x` side) as appropriate, never near `−π`, and a round trip within the deadband, which compares, at each landmark off the pole, in mass-weighted Jacobi coordinates (the masses, `ρ̃`, `λ̃`, `p_ρ`, `p_λ`): the four `λ̃_y` inputs encode to the same z; `decode(encode(x))` keeps the input's side, with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖` plus the input's own `|λ̃_y|` and rounding; `|Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z))` plus rounding; the remaining components (the masses, `ρ̃`, `p_ρ`, `p_λ`) within `ε_phys`; `lookup_clamped` set (R-438, "Contradiction flagged, applied"). The pole landmark (`m₀ = m₁`, body 2 in the middle, `λ̃ = 0` exactly) is tested on its own: `λ̃_y = ±0` gives `β = 0` by the select, never `atan2(0, 0)`; `λ̃_y = ±1e-13` with `λ̃_x = 0` gives `β = π/2` (`π̂/2` as computed); `lookup_clamped` is set. The side rule applies to the landmarks with `λ̃_x ≠ 0`, the masses chosen so that no other landmark sits on the pole. `β` reads `|λ̃_y|` by `abs`, never `max` (REQ-ENC-007).
+- `cargo test -p engine encode_beta_half_axis` — collinear inputs on the `−x` half-axis (`λ̃_y = ±0`, `λ̃_x < 0`): `β = π̂` by the select, never `atan2`'s value, and CPU-f64 and GPU-f32 agree there, `±0` operands included (R-438; REQ-ENC-007).
 - `cargo test -p kernel encode_t1_gauge` — encode test 2: random g per dd_encode §3.3, including deadband-straddling rotations (λ̃_y within ±δ_λ); outputs equal after float tolerance; the mirror tie |λ̃_y| ≤ δ_λ gives no mirror, identically twice (REQ-ENC-003).
 - `cargo test -p kernel encode_notices` — canonical inputs raise no notice; each operation forced individually raises exactly its notice (REQ-ENC-014).
 - Review (code + physics): one decode module is referenced by the kernel stage, the CPU path and encode; a scan (including `.wgsl` files) finds no second implementation of any dd_decoder §3 formula outside the shared source, so any fragment decode/encode can only be the translation's output (REQ-SYS-015).
@@ -51,3 +56,16 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
   corner, with two masses 0, `softmax_tanh`'s `log(mₖ/m₀)` and `stick_breaking`'s `u = m₂/(m₁ + m₂)` divide 0 by 0.
   On the host, Rust's `max` ignores the NaN and the clamp returns a finite value, but SPIR-V's `FMax` with a NaN
   operand is undefined. Encode passes the mass inverse no exact corner, or guards it before the inverse runs.
+- **R-437 (RQ-285):** `β = atan2(|λ̃_y|, λ̃_x)` (R-438) takes the defined 0 at `λ̃ = 0` (the `α = 0` pole), whatever the
+  signs of the zeros, by a select on `λ̃_x = 0` and `λ̃_y = 0`, never `atan2(0, 0)`; `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole
+  once `I = 1` (dd_encode §3.1; inverse-encode Part 3). REQ-DEC-014's ingest test covers `±0` components at both poles
+  on both precisions. The hold RQ-285 is gone.
+- **R-438 (RQ-287):** `β = atan2(|λ̃_y|, λ̃_x)` reads the mirror's quotient for `β` only; R-82's mirror test and
+  deadband are unchanged, so `C` leaves `λ̃_y ≥ −δ_λ`, and `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`. Read it by
+  `abs`, never `max` (`max(−0, +0)` can return `−0`); at `λ̃ = 0`, R-437's select gives 0. `β ≈ 0` and `β ≈ π` are
+  different collinear shapes, so the test checks which. The hold RQ-287 is gone.
+- **R-438, round 3 (physics review 5532062124, applied per R-369):** `β` selects `π̂` (R-417) where `λ̃_y` compares
+  equal to 0 and `λ̃_x < 0`, beside R-437's 0 at `λ̃ = 0`, because WGSL, Vulkan without `SignedZeroInfNanPreserve` and
+  Metal fast-math may ignore a zero's sign through `atan2` (dd_encode §3.1, `rho_angle`'s precedent in dd_decoder
+  §3.6). Test 10 names the pole landmark and defines the round trip it compares, since the `ε_z` clamp keeps an exactly
+  collinear `λ̃_y` from coming back (inverse-encode Part 7; R-438 "Contradiction flagged, applied").

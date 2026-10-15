@@ -32,6 +32,7 @@ The encode contract's three theorems are asserted per chart, in physical units: 
 - `decisions.md` § "R-11 — The per-body momentum cap is rejected *(closes RQ-9)*"
 - `docs/read_first/principia_01_pitfalls.md` § "5. MEASURING IN THE WRONG SPACE — `error(B)` in OKLab"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
 - `crates/kernel/tests/roundtrip.rs` (T2 per registered chart, T3, the controls), generated per chart from the chart registry so a new chart gets its T2 test automatically.
@@ -53,3 +54,5 @@ The encode contract's three theorems are asserted per chart, in physical units: 
 - Gap G15: ‖·‖_phys (inverse_encode Part 4) isn't defined — which components of (m, r, p) and with what weighting. ε_phys's calibration presupposes it.
 - PIT-5: every round-trip tolerance is in physical space; a z-space residual near saturation is not a criterion.
 - Closes, for gaps the corpus leaves open: REQ-ENC-029 (R-72 definition) (classification accepted by R-132).
+- **R-437 (RQ-285):** T3's inputs include `ρ = 0` with `±0` components, where `φ` is the defined 0 on both
+  precisions, so the full-state rotation is the identity there (dd_decoder §3.3). The hold RQ-285 is gone.

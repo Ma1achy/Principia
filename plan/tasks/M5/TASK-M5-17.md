@@ -1,10 +1,10 @@
 # TASK-M5-17 — Resolve stage: outcome and validity reductions, and Undetermined quads
 
 - **Milestone:** M5
-- **Closes:** REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053, REQ-PAY-096
+- **Closes:** REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053, REQ-PAY-096, REQ-COL-071
 - **Depends on:** TASK-M5-01, TASK-M5-16
 - **Needs (earlier milestones):** REQ-PAY-004, REQ-PAY-014, REQ-PAY-046, REQ-SYS-019, REQ-TOOL-033, REQ-TOOL-011
-- **Reviewers:** code, qa, physics
+- **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-3, PIT-9
 - **Size:** ~420 lines
 
@@ -36,10 +36,16 @@ fills it with the validity members, and adds it to the field-view catalogue (REQ
 - `docs/design/principia_dd_generation_root.md` § "3.7a `RenderQuad` — the CPU-written quad record"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and "no escape" reads `_min > _max` *(closes RQ-268)*"
+- `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library"
+- `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
 
 ## Deliverables
 - `crates/kernel/src/reduce/outcome.rs` (shared source; the CPU reference driver runs it in f64).
 - `crates/render`: the impurity-mask cross-check view (debug_tooling_plan §G).
+- `docs/gui/principia_render_gui_spec.md` §10.1: the drawn style of a declared `±∞` sentinel in a numeric view
+  (`escape_time_min`'s `+∞`, `escape_time_max`'s `−∞`), and the generator's bit test for it, before the non-finite
+  guard and before any arithmetic, with no infinite literal; the regenerated `escape_time_min` and `escape_time_max`
+  views (REQ-COL-071), with the commit's "Removed lines" note.
 - The dispatch assertion `N² × (E+1) ≤ 2³² − 1` in `crates/engine`, where the resolve stage is dispatched, with its test
   `resolve_histogram_bound` (REQ-SCHED-098).
 - Tests `crates/kernel/tests/reduce_outcome.rs` (fixture footprints, triple events at detail 3, all-failed quad);
@@ -58,6 +64,7 @@ fills it with the validity members, and adds it to the field-view catalogue (REQ
 - `cargo test -p engine resolve_histogram_bound` — a configuration with N² × (E+1) = 2³² − 1 passes the assertion at dispatch, one with 2³² fails it, naming the bound; every tier row of memory_tiers §4 passes; control: an assertion against u8's 255 fails on Medium (16² × 2 = 512) (REQ-SCHED-098).
 - Review checklist (physics) — dd_generation_root §3.7 (and §3.7a if a `RenderQuad` member is added) defines what sim-failed holds per quad, from the samples whose `state` is `sim_failed` (§3.1's code 4; `valid_sample_count` counts decode failures only), and the member that carries it or the members it derives from; the ledger, the generated structs and the reduction follow it; the doc change is in this PR and the physics reviewer approves it before merge (REQ-PAY-096).
 - Review checklist (qa) — render_contract Part 6's quad fields row's sim-failed cell is ticked against the generated catalogue on a synthetic payload, a quad with sim_failed samples and one without drawing differently (REQ-PAY-096).
+- Review checklist (gui) — render_gui_spec §10.1 gives the drawn style of a declared `±∞` sentinel, distinct from `debug_invalid`'s hatch and from the not-yet style or saying why it shares one; the generated `escape_time_min` and `escape_time_max` views test `0x7c00` and `0xfc00` on their bits before the non-finite guard, with no infinite literal and no compaction or `range_norm` of `±∞`, and a quad with no escaped copy draws in that style; the doc change is in this PR and the gui reviewer approves it before merge (REQ-COL-071).
 
 ## Notes
 - The "no filtering in reductions" grep (REQ-VAL-080) is a CI lint in this PR, not a one-off search.
@@ -73,3 +80,11 @@ fills it with the validity members, and adds it to the field-view catalogue (REQ
   task, which builds `QuadReduction`'s validity reductions (applied per R-369; TASK-M5-01, which builds the struct and
   was in review as PR #191, keeps its scope). No quad-level sim_failed flag or count exists yet, so this task defines
   one (REQ-PAY-096, R-72); a member it adds to `QuadReduction` goes into TASK-M5-01's ledger rows here.
+- **R-436, rounds 5 and 6 of its PR (gui review 5533020211 G3, applied per R-369):** the generator's numeric views test
+  a declared sentinel or unset value first, then the non-finite guard, then the ramp (render_gui_spec §10.1). A `±∞`
+  sentinel such as R-418's identities can't use the literal-sentinel line `if (raw == <literal>)`, which would need an
+  infinite literal (naga rejects it, the GPU determinism note's rule 4) and would do arithmetic on `±∞`. So it is
+  tested on its bits, and its drawn style, which the corpus doesn't define, is this task's definition (REQ-COL-071,
+  R-72), reviewed by gui, who joins the reviewers for it. This task is its home because it is the first to store
+  those bits (REQ-REF-053) and it adds quad fields to the field-view catalogue (REQ-PAY-096); TASK-M5-01, which built
+  the fields' ledger entries, merged as PR #191 before R-436.

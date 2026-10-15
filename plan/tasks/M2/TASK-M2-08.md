@@ -36,6 +36,7 @@
 - `decisions.md` § "R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*"
 - `decisions.md` § "R-181 — The shape-sphere round-trip bound *(closes T1)*"
 - `decisions.md` § "R-184 — The minor fixes *(closes G5, G7, G8, A6, A7, A8, C5, C7)*"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
 - `crates/kernel/src/shape.rs` (`shape_vec`, landmarks) and `crates/kernel/src/chart/shape_sphere.rs` (spherical and exponential maps, the closed-form inverse).
@@ -62,3 +63,7 @@
 - RQ-85 ruled: R-117 — the lowering appendix's shape-sphere row is conformed to R-14's (θ, φ) map, the one built here.
 - RQ-92 ruled: R-124 — R-50 is applied: dd_integrator §3.7 no longer calls B18 open; the landmarks are mass-weighted, as this task builds them.
 - Closes, for gaps the corpus leaves open: REQ-CHART-048 (R-72 definition), REQ-CHART-049 (R-71 calibration) (classification accepted by R-132).
+- **R-437 (RQ-285):** the inverse's `ψ = φ_f + atan2(q, p)` meets its pole at `n₀ = ±1`, where `p = q = 0`: the
+  `atan2` term is the defined 0, whatever the signs of the zeros, chosen by a select, never `atan2(0, 0)`, so `ψ = φ_f`
+  (chart_reference §3.2; dd_decoder §3.2 "Every `atan2` at a possible pole"). The round trip's inputs include both
+  poles, with `±0` in `n₁` and `n₂`.

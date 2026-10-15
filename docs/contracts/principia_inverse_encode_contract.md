@@ -12,7 +12,7 @@ The forward decode `D: z → (m, r, p)` lands on a **canonical section** of phys
 E  =  (block/chart inverses)  ∘  C
 ```
 
-where `C` is **canonicalisation**: the quotient map from an arbitrary physical state onto that section. The gauge group being quotiented:
+where `C` is **canonicalisation**: the quotient map from an arbitrary physical state onto that section. (`C`'s mirror test leaves its deadband unmirrored, so `C` lands on `λ̃_y ≥ −δ_λ`, R-82; Part 3's `β` reads `|λ̃_y|` for that reason, R-438.) The gauge group being quotiented:
 
 ```
 G  =  T(2) translations × T(2) boosts (CoM frame) × SO(2) rotation × ℝ₊ scale × Z₂ mirror-convention
@@ -67,9 +67,25 @@ form $\boldsymbol\rho = \mathbf r_1 - \mathbf r_0$ and $\boldsymbol\lambda = \ma
 canonicalise, then
 
 ```
-α = atan2(‖λ̃‖, ‖ρ̃‖),   β = atan2(λ̃_y, λ̃_x) ∈ [0, π]
+α = atan2(‖λ̃‖, ‖ρ̃‖),   β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π]
 s_α = 2α/π,   s_β = β/π,   z = logit(s)
 ```
+
+At `λ̃ = 0`, the `α = 0` pole, `β` is 0, whatever the signs of the zeros, chosen by a select on `λ̃_x = 0` and
+`λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450 and WGSL leave undefined; `α`'s operands are never both
+0, since `‖ρ̃‖² + ‖λ̃‖² = I = 1` (R-437; `principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
+
+`β` reads `|λ̃_y|`, the mirror's quotient, for `β` only (R-438): `β ∈ [0, π]` holds because it does, not by the mirror
+alone, since the mirror's deadband leaves `λ̃_y ∈ [−δ_λ, 0]` unmirrored (R-82, unchanged). `|λ̃_y|` is read by `abs`,
+never by `max`, whose `max(−0, +0)` can return `−0` (`principia_dd_encode.md` §3.1).
+
+On the `−x` half-axis, where `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`, `β` is `π̂`, R-417's image of π,
+chosen by a select, not taken from `atan2` (R-438; physics review 5532062124 P1, applied per R-369). `abs` pins the
+zero's sign only as far as `atan2`'s operand: WGSL may ignore the sign of a zero, as may Vulkan without
+`SignedZeroInfNanPreserve` and Metal's fast-math, so the generated encode's `atan2(+0, x < 0)` can return `−π`, which
+`s_β` would clamp to the `β = 0` end. With the pole's select above, `β` is 0 at `λ̃ = 0`, `π̂` on the `−x` half-axis and
+`atan2(|λ̃_y|, λ̃_x)` elsewhere, each case chosen by a comparison with 0, as `rho_angle`'s antiparallel case is
+(`principia_dd_decoder.md` §3.6); CPU and GPU agree there, `±0` operands included (`principia_dd_encode.md` §3.1).
 
 `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
 $s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. $\alpha_{\min} = 0$
