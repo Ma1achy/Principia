@@ -660,6 +660,9 @@ fn mock_windows_drawn_the_canned_frames_keep_their_arithmetic() {
         // swing / 5 = frame_ms − 16.7 − slow.
         let fifth = f.frame_ms - 16.7 - slow;
         assert!(fifth.abs() <= 0.1 + 1e-9, "frame {i}'s swing");
+        // The swing: the fixed hash of 1.7 times the frame's index, centred on zero.
+        let swing = crate::mock::sample::hash(i as f64 * 1.7) - 0.5;
+        assert!(near(fifth, swing / 5.0), "frame {i}'s swing from its hash");
         assert!(
             near(s.integrate, 9.84 + 3.0 * fifth + slow),
             "frame {i}'s integrate"
