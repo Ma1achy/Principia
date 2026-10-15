@@ -6,8 +6,7 @@
 //! the sphere turns slowly with visible x, y, z axes and switches to an unwrapped (equirectangular) view, its "turn"
 //! checkbox stopping it; below them the F₂ word, substeps, minimum separation and `|ΔE/E|`; a playhead for
 //! this orbit; **listen** (its sound is TASK-M8-12's, so here it is a state only) and "follow cursor"; **Open full
-//! viewer…** and **IC Inspector…**, drawn disabled until TASK-M6-28 builds the Inspector window, as the top bar's
-//! windows are (applied per R-369); and the kept orbits below, each with its fate and time, removable.
+//! viewer…** and **IC Inspector…**, both of which open the Inspector window on the orbit shown (§G2, §G8; TASK-M6-28); and the kept orbits below, each with its fate and time, removable.
 //!
 //! **The turn rate (REQ-GUI-157, proposed, R-71; used provisionally until the human confirms it at the M8 gate,
 //! R-182):** [`TURN_DEG_PER_S`]. The angle is advanced by the rate times the seconds its time source moved, never by
@@ -64,9 +63,10 @@ pub const PLAYHEAD: ScopeId = "traj_playhead";
 pub const LISTEN: ScopeId = "traj_listen";
 /// "follow cursor".
 pub const FOLLOW: ScopeId = "traj_follow";
-/// Open full viewer…, disabled until TASK-M6-28.
+/// Open full viewer…, which opens the Inspector window on the orbit shown, as IC Inspector… does (render_gui_spec §G2:
+/// "both open §G8").
 pub const VIEWER: ScopeId = "traj_viewer";
-/// IC Inspector…, disabled until TASK-M6-28.
+/// IC Inspector…, which opens the Inspector on the orbit shown (render_gui_spec §G8).
 pub const INSPECTOR: ScopeId = "traj_inspector";
 /// The kept orbits.
 pub const KEPT: ScopeId = "traj_kept";
@@ -129,12 +129,9 @@ pub fn register(tree: &mut ScopeTree) {
     tree.register(Some(TRAJECTORY), Scope::control(FOLLOW, "follow cursor"));
     tree.register(
         Some(TRAJECTORY),
-        Scope::disabled(VIEWER, "Open full viewer…"),
+        Scope::control(VIEWER, "Open full viewer…"),
     );
-    tree.register(
-        Some(TRAJECTORY),
-        Scope::disabled(INSPECTOR, "IC Inspector…"),
-    );
+    tree.register(Some(TRAJECTORY), Scope::control(INSPECTOR, "IC Inspector…"));
     tree.register(Some(TRAJECTORY), Scope::group(KEPT, "Kept orbits"));
     for (key, action) in SHORTCUTS {
         tree.register_shortcut(key, action);
@@ -198,6 +195,9 @@ pub struct Scratch {
     pub orbit_t: f64,
     /// Whether the orbit's playhead plays.
     pub playing: bool,
+    /// The control that asked for the Inspector this frame (IC Inspector… or Open full viewer…, a click or Enter),
+    /// for the app to open it on the orbit shown, that control its opener.
+    pub open_inspector: Option<ScopeId>,
 }
 
 impl Default for Scratch {
@@ -212,6 +212,7 @@ impl Default for Scratch {
             follow: true,
             orbit_t: 0.0,
             playing: false,
+            open_inspector: None,
         }
     }
 }
@@ -294,6 +295,8 @@ pub fn activate(id: &str, sample: Option<&Sample>, kept: &mut KeptOrbits, scratc
         PLAY => scratch.playing = !scratch.playing,
         LISTEN => scratch.listen = !scratch.listen,
         FOLLOW => scratch.follow = !scratch.follow,
+        VIEWER => scratch.open_inspector = Some(VIEWER),
+        INSPECTOR => scratch.open_inspector = Some(INSPECTOR),
         _ => {
             for (i, (_, show, remove_id, _)) in KEPT_IDS.iter().enumerate() {
                 if id == *show && i < kept.orbits.len() {
@@ -566,7 +569,7 @@ fn tabs(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
 }
 
 /// Real space: the three bodies' paths, fitted to `rect`, each with its position at the playhead.
-fn real_space(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
+pub fn real_space(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
     let painter = ui.painter_at(rect);
     let [x0, y0, x1, y1] = fit(&orbit.bodies);
     let to = |p: &[f64; 2]| {
@@ -587,7 +590,7 @@ fn real_space(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
 }
 
 /// The shape sphere turned `angle` degrees: its outline, its x, y, z axes, and the path, its far side faint.
-fn sphere(ui: &Ui, rect: Rect, orbit: &Sample, angle: f64, i: usize) {
+pub fn sphere(ui: &Ui, rect: Rect, orbit: &Sample, angle: f64, i: usize) {
     let painter = ui.painter_at(rect);
     let weak = ui.visuals().weak_text_color();
     let r = rect.width().min(rect.height()) / 2.0;
@@ -633,7 +636,7 @@ fn sphere(ui: &Ui, rect: Rect, orbit: &Sample, angle: f64, i: usize) {
 }
 
 /// The unwrapped (equirectangular) view: `θ` across, `φ` down, the path broken where it wraps.
-fn unwrapped(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
+pub fn unwrapped(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
     let painter = ui.painter_at(rect);
     let weak = ui.visuals().weak_text_color();
     painter.rect_stroke(rect, 0.0, Stroke::new(1.0, weak), egui::StrokeKind::Inside);
@@ -749,9 +752,15 @@ fn rows(ui: &mut Ui, rect: Rect, orbit: Option<&Sample>, panel: &mut Panel<'_>) 
         keyboard.place_widget(FOLLOW, &follow);
     });
     column.horizontal(|row| {
-        let viewer = row.add_enabled(false, Button::new("Open full viewer…"));
+        let viewer = row.add(Button::new("Open full viewer…"));
+        if viewer.clicked() {
+            scratch.open_inspector = Some(VIEWER);
+        }
         keyboard.place_widget(VIEWER, &viewer);
-        let inspector = row.add_enabled(false, Button::new("IC Inspector…"));
+        let inspector = row.add(Button::new("IC Inspector…"));
+        if inspector.clicked() {
+            scratch.open_inspector = Some(INSPECTOR);
+        }
         keyboard.place_widget(INSPECTOR, &inspector);
     });
     let header = column.label(RichText::new("Kept orbits").strong());

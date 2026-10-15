@@ -71,13 +71,26 @@ pub struct Inspector {}
 
 /// Open windows (gui_state_contract §2).
 pub struct Windows {
-    /// The windows open, in the order they were opened; the dev GUI's windows' frames are TASK-M6-28's.
+    /// The windows open, in the order they were opened (gui_state_contract §2); the console's open state is the GUI's
+    /// own, beside them.
     pub open: Vec<Window>,
 }
 
-/// A window of the dev GUI (render_gui_spec §G5, §G8), by name.
+/// A window of the dev GUI (render_gui_spec §G5, §G7, §G8, §G12), by name.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Window {
+    /// Run, from the top bar (§G5).
+    Run,
+    /// The Chart builder, from the Manifold view's Chart (§G7).
+    ChartBuilder,
+    /// Export & share (§G5).
+    Export,
+    /// Display, the last stages (§G5).
+    Display,
+    /// The Profiler (§G5).
+    Profiler,
+    /// The console, the footer opened (§G12).
+    Console,
     /// The Inspector: one IC, its trajectory, one timeline (§G8); the lock badge's open in Inspector requests it (§G4).
     Inspector,
 }

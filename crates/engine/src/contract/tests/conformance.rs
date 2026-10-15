@@ -66,12 +66,24 @@ fn check_conforms<E: EngineInterface>(make: impl FnMut() -> E) {
 fn conformance_real_engine_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        6,
-        "the suite's four state-semantics cases (RQ-254), the navigation paths' and the overlay set's and hover's (R-390)"
+        7,
+        "the suite's four state-semantics cases (RQ-254), the navigation paths', the overlay set's and hover's, and the \
+         horizon's (R-390)"
     );
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.
     check_conforms(|| store(-7.25));
+    // The horizon's case picks another value from a horizon at its own first pick.
+    check_conforms(|| {
+        let mut s = store(0.0);
+        s.set_field(SetField {
+            edit: Edit::Sim(SimField::Horizon(Horizon { t: 120.0 })),
+            no_history: true,
+        });
+        // Its log line read, as the GUI's next snapshot reads it.
+        let _ = s.snapshot();
+        s
+    });
 }
 
 /// A double breaking one rule of the contract, wrapping the real store.
@@ -106,6 +118,8 @@ enum Rule {
     OverlaysOff,
     /// A hover off the figure is dropped, so the last cursor stays.
     HoverStays,
+    /// A SetField on the horizon is dropped.
+    DropHorizon,
 }
 
 impl EngineInterface for Broken {
@@ -127,6 +141,7 @@ impl EngineInterface for Broken {
                 | (Rule::DropZ0, Edit::Sim(SimField::Z0(_)))
                 | (Rule::DropBasis, Edit::Sim(SimField::Basis { .. }))
                 | (Rule::DropOverlays, Edit::Render(RenderField::Overlays(_)))
+                | (Rule::DropHorizon, Edit::Sim(SimField::Horizon(_)))
                 | (
                     Rule::HoverStays,
                     Edit::Render(RenderField::Hover(Hover { at: None }))
@@ -207,6 +222,9 @@ fn conformance_non_conforming_double_fails_naming_the_case() {
         Rule::NoHistory,
     ] {
         check_names(rule, OVERLAY_AND_HOVER);
+    }
+    for rule in [Rule::DropHorizon, Rule::NoLog, Rule::Undo] {
+        check_names(rule, "horizon_edit_shows_and_undoes");
     }
 }
 

@@ -1,14 +1,15 @@
-//! `scope_tab_order_mock` (REQ-GUI-095; render_gui_spec §G3): on the mock, Tab and Shift+Tab cycle the seven big
-//! scopes in the numbered order, 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time ·
-//! 7 Legend, and Enter on Manifold view enters Chart, its first sub-scope. Each check also runs on an order it must
-//! reject (R-176, through `rejects`).
+//! `scope_tab_order_mock` (REQ-GUI-095, REQ-GUI-178; render_gui_spec §G3; R-405): on the mock, Tab and Shift+Tab
+//! cycle the eight big scopes in the numbered order, 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass
+//! · 6 Time · 7 Legend · 8 footer, Tab wrapping from the footer to the top bar and Shift+Tab from no focus starting at
+//! the footer; and Enter on Manifold view enters Chart, its first sub-scope. Each check also runs on an order it must
+//! reject (R-176, through `rejects`), a tree without the footer among them.
 
 use eframe::egui::{Key, Modifiers};
 
 use super::support::{focus, frame_texts, headless, mock_app, press, rejects};
 
 /// The big scopes' ids in §G3's Tab order.
-const ORDER: [&str; 7] = [
+const ORDER: [&str; 8] = [
     "top_bar",
     "manifold_view",
     "figure",
@@ -16,10 +17,11 @@ const ORDER: [&str; 7] = [
     "compass",
     "time",
     "legend",
+    "footer",
 ];
 
 /// Their breadcrumbs.
-const LABELS: [&str; 7] = [
+const LABELS: [&str; 8] = [
     "Top bar",
     "Manifold view",
     "Figure",
@@ -27,6 +29,7 @@ const LABELS: [&str; 7] = [
     "Compass",
     "Time",
     "Legend",
+    "Footer",
 ];
 
 /// The focus paths and breadcrumbs `presses` of `key` with `modifiers` walk through, from no focus.
@@ -54,8 +57,8 @@ fn check_walk(walked: &[(Vec<String>, bool)], expected: &[&str]) {
 }
 
 #[test]
-fn scope_tab_order_mock_tab_cycles_the_seven() {
-    let walked = walk(Key::Tab, Modifiers::NONE, 8);
+fn scope_tab_order_mock_tab_cycles_the_eight() {
+    let walked = walk(Key::Tab, Modifiers::NONE, 9);
     let mut expected = ORDER.to_vec();
     expected.push("top_bar");
     check_walk(&walked, &expected);
@@ -68,9 +71,9 @@ fn scope_tab_order_mock_tab_cycles_the_seven() {
 
 #[test]
 fn scope_tab_order_mock_shift_tab_cycles_back() {
-    let walked = walk(Key::Tab, Modifiers::SHIFT, 8);
+    let walked = walk(Key::Tab, Modifiers::SHIFT, 9);
     let mut expected: Vec<&str> = ORDER.iter().rev().copied().collect();
-    expected.push("legend");
+    expected.push("footer");
     check_walk(&walked, &expected);
     rejects("the forward order", || {
         let mut forward = ORDER.to_vec();
@@ -118,4 +121,46 @@ fn scope_tab_order_mock_enter_manifold_view_enters_chart() {
             &after_back,
         )
     });
+}
+
+/// The big scopes of `tree`, in Tab order, are §G3's eight, the footer last (R-405).
+fn check_eight(tree: &crate::keyboard::scopes::ScopeTree) {
+    assert_eq!(tree.bigs(), ORDER, "the big scopes in Tab order");
+}
+
+/// Tab from Legend reaches the footer and Tab from the footer the top bar; Shift+Tab from no focus starts at the
+/// footer; the windows are not big scopes. Control: a tree without the footer scope, in which Tab from Legend wraps to
+/// the top bar, fails.
+#[test]
+fn scope_tab_order_mock_footer_is_big_scope_eight() {
+    use crate::keyboard::scopes::ScopeTree;
+    let app = mock_app();
+    let tree = app.keyboard.tree(engine::contract::view_ui::Mode::Explore);
+    check_eight(tree);
+    let mut without = ScopeTree::new();
+    crate::explore::top_bar::register(&mut without);
+    crate::explore::register(&mut without);
+    crate::windows::register(&mut without);
+    rejects("a tree without the footer scope", || check_eight(&without));
+    // In that tree, Tab from Legend wraps to the top bar: the order the footer must break.
+    let mut focus = engine::contract::view_ui::Focus {
+        path: vec!["legend".to_owned()],
+        mode: engine::contract::view_ui::KeyMode::Navigation,
+    };
+    without.navigate(&mut focus, crate::keyboard::keymap::Command::Next, 1.0);
+    assert_eq!(focus.path, ["top_bar"]);
+    let mut focus = engine::contract::view_ui::Focus {
+        path: vec!["legend".to_owned()],
+        mode: engine::contract::view_ui::KeyMode::Navigation,
+    };
+    tree.navigate(&mut focus, crate::keyboard::keymap::Command::Next, 1.0);
+    assert_eq!(focus.path, ["footer"], "Tab from Legend");
+    tree.navigate(&mut focus, crate::keyboard::keymap::Command::Next, 1.0);
+    assert_eq!(focus.path, ["top_bar"], "Tab from the footer");
+    let mut none = engine::contract::view_ui::Focus {
+        path: Vec::new(),
+        mode: engine::contract::view_ui::KeyMode::Navigation,
+    };
+    tree.navigate(&mut none, crate::keyboard::keymap::Command::Previous, 1.0);
+    assert_eq!(none.path, ["footer"], "Shift+Tab from no focus");
 }

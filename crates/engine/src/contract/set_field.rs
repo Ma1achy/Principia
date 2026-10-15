@@ -2,11 +2,11 @@
 //! as plain data and never mutates engine state directly. Every `SimConfig` and `RenderState` edit is undoable
 //! (R-69); `ViewUI` is never read by the engine, so no edit reaches it. The paths are added with the fields they
 //! name (R-133): the first is the playhead's, `RenderField::Playhead` (RQ-243); the navigation paths, `z₀`, the basis
-//! and the lock, came with the dev GUI's Manifold view, and the overlay set and the hover with its Overlays menu and
-//! hover label (R-390, "Contract fields").
+//! and the lock, came with the dev GUI's Manifold view, the overlay set and the hover with its Overlays menu and
+//! hover label, and the horizon with its Run window (R-390, "Contract fields").
 
 use crate::contract::render_state::{Hover, Overlays, Playhead};
-use crate::contract::sim_config::{Latent, Lock};
+use crate::contract::sim_config::{Horizon, Latent, Lock};
 
 /// One typed edit: a field path with its value (gui_state_contract §2).
 #[derive(Clone, Debug, PartialEq)]
@@ -41,6 +41,9 @@ pub enum SimField {
     },
     /// The lock group: locking and unlocking, undoable (R-69).
     Lock(Lock),
+    /// The horizon `T`, a sim key, undoable (R-69): the Run window's `T_horizon`, in `[50, 200]` (render_gui_spec §G5,
+    /// R-132; gui_state_contract §2).
+    Horizon(Horizon),
 }
 
 /// A `RenderState` field with its value (gui_state_contract §2; R-133).
