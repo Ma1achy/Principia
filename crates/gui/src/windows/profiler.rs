@@ -313,6 +313,26 @@ impl FlameBars<'_> {
     }
 }
 
+/// The name a value has on the wire, the trace's own (serde's snake_case), from its JSON; "—" if it is not a string.
+fn wire_name(value: Result<serde_json::Value, serde_json::Error>) -> String {
+    match value {
+        Ok(serde_json::Value::String(name)) => name,
+        _ => "—".to_owned(),
+    }
+}
+
+/// The fast-math line: the compute shaders' setting from the session header, and the compute stage's mode as compiled,
+/// each by the name the trace records (telemetry §5, R-297).
+pub(crate) fn fast_math_line(fast: &engine::contract::profile::FastMathRecord) -> String {
+    let compiled = fast.compiled.map_or("—".to_owned(), |c| {
+        wire_name(serde_json::to_value(c.compute))
+    });
+    format!(
+        "compute fast-math: {} · compiled {compiled}",
+        wire_name(serde_json::to_value(fast.setting))
+    )
+}
+
 /// `bytes` in MB, as the footer's readout.
 fn mb(bytes: u64) -> String {
     crate::explore::footer::megabytes(bytes)
@@ -491,17 +511,10 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, trace: Option<&
                     }
                 }
             }
-            let fast = &trace.header.fast_math;
-            let compiled = fast.compiled.map_or("—".to_owned(), |c| {
-                format!("{:?}", c.compute).to_lowercase()
-            });
             ui.label(
-                RichText::new(format!(
-                    "compute fast-math: {} · compiled {compiled}",
-                    format!("{:?}", fast.setting).to_lowercase()
-                ))
-                .monospace()
-                .weak(),
+                RichText::new(fast_math_line(&trace.header.fast_math))
+                    .monospace()
+                    .weak(),
             );
         }
     }

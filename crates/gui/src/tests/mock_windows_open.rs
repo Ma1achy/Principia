@@ -2038,3 +2038,34 @@ fn mock_windows_open_the_trajectory_panels_two_openers() {
         rejects("the focus back on the other opener", || back(&wrong));
     }
 }
+
+/// The Profiler's fast-math line names the setting and the compute stage's compiled mode as the trace records them
+/// (serde's snake_case; code review 5529823383, finding 7).
+#[test]
+fn mock_windows_open_profiler_fast_math_line_uses_the_wire_names() {
+    use engine::contract::profile::{CompiledModes, FastMath, FastMathRecord, StageMode};
+    let record = |setting, compute: Option<StageMode>| FastMathRecord {
+        setting,
+        compiled: compute.map(|c| CompiledModes {
+            compute: c,
+            vertex: StageMode::Off,
+            fragment: StageMode::Off,
+        }),
+    };
+    let line = profiler::fast_math_line;
+    assert_eq!(
+        line(&record(FastMath::On, Some(StageMode::Unknown))),
+        "compute fast-math: on · compiled unknown"
+    );
+    assert_eq!(
+        line(&record(FastMath::Off, None)),
+        "compute fast-math: off · compiled —"
+    );
+    for mode in [StageMode::Off, StageMode::On, StageMode::Unknown] {
+        let wire = serde_json::to_value(mode).unwrap();
+        let got = line(&record(FastMath::Off, Some(mode)));
+        assert!(got.ends_with(wire.as_str().unwrap()), "{got}");
+    }
+    let got = line(&record(FastMath::On, Some(StageMode::On)));
+    rejects("a Debug name on the line", || assert!(got.contains("On")));
+}
