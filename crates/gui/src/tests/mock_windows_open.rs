@@ -1333,3 +1333,31 @@ fn mock_windows_open_chart_builder_marks_the_chosen_preset_and_kinds() {
         assert_eq!(marked(&output, &names), want);
     });
 }
+
+#[test]
+fn mock_windows_open_the_chart_builder_is_seeded_when_it_opens() {
+    let (mut app, h) = fresh();
+    let ctx = h.ctx.clone();
+    let plane = app.snapshot().sim.plane.clone();
+    let mut want = chart_builder::Draft::default();
+    want.seed(&plane);
+    app.windows.chart.kind[1] = chart_builder::Kind::Burrau;
+    app.windows.chart.note = Some("old");
+    app.windows.chart.q = [[0.5; engine::contract::sim_config::LATENT_DIM]; 2];
+    let seeded = |d: &chart_builder::Draft| {
+        assert_eq!(d.q, want.q, "the chart's unit axes");
+        assert_eq!(d.kind, [chart_builder::Kind::Latent; 2]);
+        assert_eq!(d.note, None);
+    };
+    app.open_window(&ctx, Window::ChartBuilder, None);
+    seeded(&app.windows.chart);
+    // Opened again while open, the draft is kept.
+    app.windows.chart.note = Some("kept");
+    app.open_window(&ctx, Window::ChartBuilder, None);
+    assert_eq!(app.windows.chart.note, Some("kept"));
+    rejects("an unseeded draft", || {
+        let mut d = chart_builder::Draft::default();
+        d.note = Some("old");
+        seeded(&d)
+    });
+}
