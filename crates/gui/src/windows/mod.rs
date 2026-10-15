@@ -170,11 +170,16 @@ pub struct State {
     pub inspector: inspector::State,
 }
 
+/// The frames a window keeps scrolling to its focused element after the focus moves there: egui lays a new window
+/// out in an invisible sizing pass first, so the first frame's scroll can be lost (a look choice, R-390).
+pub const SCROLL_FRAMES: u8 = 3;
+
 /// What a frame's drawing of the windows needs from the keyboard: where to place each scope, and which is focused.
 pub struct Keys<'a> {
     /// The keyboard layer, which records where each scope is drawn.
     pub keyboard: &'a mut Keyboard,
-    /// The focused scope, the last of the focus path.
+    /// The focused scope, the last of the focus path, while the window is to scroll to it: for
+    /// [`SCROLL_FRAMES`] frames after the focus moved.
     pub focused: Option<String>,
 }
 

@@ -112,6 +112,9 @@ pub struct App<S: EngineSide> {
     pub overlay_default: engine::contract::render_state::Overlays,
     /// The hover last sent: the cursor's figure point, or none.
     hover_sent: Option<[f64; 2]>,
+    /// The focus path the windows last scrolled to, and the frames left to keep scrolling to it: a window scrolls to
+    /// its focused element only for a few frames after the focus moves there, so the wheel can scroll it away after.
+    scrolled_to: (Vec<String>, u8),
     snapshot: Snapshot,
     console: Vec<LogEntry>,
     counts: Counts,
@@ -154,6 +157,7 @@ impl<S: EngineSide> App<S> {
             console_open: errored,
             windows: windows::State::default(),
             present: false,
+            scrolled_to: (Vec::new(), 0),
             keyboard: Keyboard::new(),
             manifold: Default::default(),
             time: Default::default(),
@@ -712,9 +716,16 @@ impl<S: EngineSide> App<S> {
         let view_px =
             [layout.figure.width(), layout.figure.height()].map(|v| (v * ppp).round() as u32);
         let quick = self.side.canvas().map(|c| (c, self.format));
+        // A focus that moved is scrolled to for SCROLL_FRAMES frames (a new window's first frame is egui's sizing
+        // pass, and its scroll target is lost); after that the wheel is the user's.
+        if self.scrolled_to.0 != self.view.focus.path {
+            self.scrolled_to = (self.view.focus.path.clone(), windows::SCROLL_FRAMES);
+        }
+        let scrolling = self.scrolled_to.1 > 0;
+        self.scrolled_to.1 = self.scrolled_to.1.saturating_sub(1);
         let mut keys = windows::Keys {
             keyboard: &mut self.keyboard,
-            focused: self.view.focus.path.last().cloned(),
+            focused: self.view.focus.path.last().filter(|_| scrolling).cloned(),
         };
         for window in open {
             let e = windows::entry(window);

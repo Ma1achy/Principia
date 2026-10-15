@@ -729,3 +729,41 @@ fn mock_keyboard_windows_a_focused_section_scrolls_into_view() {
         )))
     });
 }
+
+/// The focus scrolls its window only as it moves there: the wheel then scrolls the window away from the focused element,
+/// and the window stays where the wheel left it (code review 5529823383, finding 1).
+#[test]
+fn mock_keyboard_windows_the_wheel_scrolls_a_window_away_from_its_focus() {
+    let (mut app, mut h) = fresh();
+    let entry = crate::windows::entry(Window::ChartBuilder);
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::ChartBuilder, None);
+    settle(&mut h, &mut app);
+    let landing = app.view.focus.path.clone();
+    let element = landing.last().cloned().expect("a landing");
+    let top = |app: &App<MockSide>| app.keyboard.place_of(&element).expect("placed").rect.min.y;
+    let before = top(&app);
+    let window = app.keyboard.place_of(entry.scope).expect("placed").rect;
+    let _ = h.frame(&mut app, vec![Event::PointerMoved(window.center())]);
+    for _ in 0..3 {
+        let _ = h.frame(
+            &mut app,
+            vec![Event::MouseWheel {
+                unit: eframe::egui::MouseWheelUnit::Line,
+                delta: eframe::egui::vec2(0.0, -5.0),
+                phase: eframe::egui::TouchPhase::Move,
+                modifiers: Modifiers::NONE,
+            }],
+        );
+    }
+    for _ in 0..4 {
+        settle(&mut h, &mut app);
+    }
+    assert_eq!(app.view.focus.path, landing, "the focus stays");
+    let after = top(&app);
+    let scrolled = |before: f32, after: f32| assert!(after < before - 50.0, "{before} → {after}");
+    scrolled(before, after);
+    rejects("a window snapped back to its focus", || {
+        scrolled(before, before)
+    });
+}
