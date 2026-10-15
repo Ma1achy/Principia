@@ -922,8 +922,10 @@ fn mock_windows_open_inspector_controls() {
 
 #[test]
 fn mock_windows_open_inspector_one_timeline() {
-    let sample = a_sample();
+    let (sim, _) = state(0.0);
+    let sample = crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0);
     let span = sample.path_t;
+    assert!(span > 0.0, "an orbit of some length");
     let mut s = inspector::State::default();
     // No IC: nothing scrubs.
     inspector::adjust(
