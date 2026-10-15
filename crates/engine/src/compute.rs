@@ -20,6 +20,7 @@
 //! [`FastMath`]: crate::contract::fast_math::FastMath
 //! [`compiled_modes`]: crate::compute::compiled_modes
 
+use std::cell::Cell;
 use std::fmt;
 
 use naga::back::msl;
@@ -371,6 +372,18 @@ pub struct Bindings {
     groups: Vec<wgpu::BindGroup>,
 }
 
+thread_local! {
+    /// The calls of [`pipeline`] on this thread.
+    static CREATED: Cell<u64> = const { Cell::new(0) };
+}
+
+/// The compute pipelines [`pipeline`] has been asked to create on this thread, each a shader module and its pipeline,
+/// whether or not the creation succeeded: what a caller reads to show that an edit created none (REQ-DEC-007, a
+/// uniform edit recompiles nothing). Per thread, so that tests running side by side do not count each other's.
+pub fn pipelines_created() -> u64 {
+    CREATED.with(Cell::get)
+}
+
 /// Creates the compute pipeline for `shader` on `device` under the fast-math `setting` (R-297). On Metal with the
 /// setting off, the module is compiled from our own MSL with fast-math off and loaded through wgpu's passthrough; the
 /// device must have [`required_features`]. Otherwise wgpu's own path builds it. Either way wgpu validates the WGSL as
@@ -382,6 +395,7 @@ pub fn pipeline(
     shader: &ComputeShader<'_>,
     setting: FastMath,
 ) -> Result<ComputeKernel, ComputeError> {
+    CREATED.with(|n| n.set(n.get() + 1));
     let (path, mode) = path(device.adapter_info().backend, setting)?;
     let ComputeShader { label, wgsl, entry } = *shader;
     // wgpu validates the module first, against the device's features, as it does any module; only a module it accepts

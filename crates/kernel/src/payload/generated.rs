@@ -90,8 +90,8 @@ pub struct ICDescriptorOf<R: PayloadReal> {
 pub type ICDescriptor = ICDescriptorOf<f32>;
 
 /// A `Real` the payload is instantiated at (R-265), with the declared tail padding (R-86) of each struct generic
-/// over it at its width (dd_simstate_payload §1).
-pub trait PayloadReal: crate::Real {
+/// over it at its width (dd_simstate_payload §1), and the IEEE bit patterns a producer selects at a pole (R-436).
+pub trait PayloadReal: crate::Real + crate::real::IeeeBits {
     type SimStateFTLETail: Copy + Default + core::fmt::Debug + PartialEq;
     type SimStateBaseTail: Copy + Default + core::fmt::Debug + PartialEq;
     type ICDescriptorTail: Copy + Default + core::fmt::Debug + PartialEq;

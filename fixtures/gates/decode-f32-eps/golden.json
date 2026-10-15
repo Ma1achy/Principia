@@ -1,0 +1,5 @@
+{
+  "description": "The golden IC: the latent chart at z0 = q1 = q2 = 0, (u, v) = (1/2, 1/2), so z = 0 (dd_decoder §5).",
+  "points": "golden",
+  "expected": "pass"
+}
