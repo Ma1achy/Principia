@@ -663,6 +663,9 @@ fn mock_windows_drawn_the_canned_frames_keep_their_arithmetic() {
         // The swing: the fixed hash of 1.7 times the frame's index, centred on zero.
         let swing = crate::mock::sample::hash(i as f64 * 1.7) - 0.5;
         assert!(near(fifth, swing / 5.0), "frame {i}'s swing from its hash");
+        // The counters' jitter: 64 quads computed and 0 to 31 more, by the hash of the index.
+        let jitter = (crate::mock::sample::hash(i as f64) * 32.0) as u64;
+        assert_eq!(f.quads_computed, 64 + jitter, "frame {i}'s quads");
         assert!(
             near(s.integrate, 9.84 + 3.0 * fifth + slow),
             "frame {i}'s integrate"
