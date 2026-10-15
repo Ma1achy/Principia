@@ -42,7 +42,8 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 
 ## Acceptance tests
 - `cargo test -p kernel encode_block_inverses` — forward substituted into inverse for fuzzed z: each block recovers z to tolerance; a |q| > q_max input sets `lookup_clamped` (REQ-ENC-007).
-- `cargo test -p kernel encode_collinear_beta` — dd_encode test 10: collinear shapes encoded with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2 on either side and at each Euler landmark, give `β = π` (body 2 on the `−x` side) or 0 (on the `+x` side) as appropriate, never near `−π`, and a round trip within the deadband; `β` reads `|λ̃_y|` by `abs`, never `max` (REQ-ENC-007).
+- `cargo test -p kernel encode_collinear_beta` — dd_encode test 10: collinear shapes encoded with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2 on either side and at each Euler landmark, give `β = π` (body 2 on the `−x` side, `π̂` by the select at `λ̃_y = ±0`) or 0 (on the `+x` side) as appropriate, never near `−π`, and a round trip within the deadband, which compares, at each landmark off the pole: the four `λ̃_y` inputs encode to the same z; `decode(encode(x))` keeps the input's side, with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖` plus the input's own `|λ̃_y|` and rounding; the other components within `ε_phys`; `lookup_clamped` set (R-438, "Contradiction flagged, applied"). The pole landmark (`m₀ = m₁`, body 2 in the middle, `λ̃ = 0` exactly) is tested on its own: `λ̃_y = ±0` gives `β = 0` by the select, never `atan2(0, 0)`; `λ̃_y = ±1e-13` with `λ̃_x = 0` gives `β = π/2` (`π̂/2` as computed); `lookup_clamped` is set. The side rule applies to the landmarks with `λ̃_x ≠ 0`, the masses chosen so that no other landmark sits on the pole. `β` reads `|λ̃_y|` by `abs`, never `max` (REQ-ENC-007).
+- `cargo test -p engine encode_beta_half_axis` — collinear inputs on the `−x` half-axis (`λ̃_y = ±0`, `λ̃_x < 0`): `β = π̂` by the select, never `atan2`'s value, and CPU-f64 and GPU-f32 agree there, `±0` operands included (R-438; REQ-ENC-007).
 - `cargo test -p kernel encode_t1_gauge` — encode test 2: random g per dd_encode §3.3, including deadband-straddling rotations (λ̃_y within ±δ_λ); outputs equal after float tolerance; the mirror tie |λ̃_y| ≤ δ_λ gives no mirror, identically twice (REQ-ENC-003).
 - `cargo test -p kernel encode_notices` — canonical inputs raise no notice; each operation forced individually raises exactly its notice (REQ-ENC-014).
 - Review (code + physics): one decode module is referenced by the kernel stage, the CPU path and encode; a scan (including `.wgsl` files) finds no second implementation of any dd_decoder §3 formula outside the shared source, so any fragment decode/encode can only be the translation's output (REQ-SYS-015).
@@ -63,3 +64,8 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
   deadband are unchanged, so `C` leaves `λ̃_y ≥ −δ_λ`, and `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`. Read it by
   `abs`, never `max` (`max(−0, +0)` can return `−0`); at `λ̃ = 0`, R-437's select gives 0. `β ≈ 0` and `β ≈ π` are
   different collinear shapes, so the test checks which. The hold RQ-287 is gone.
+- **R-438, round 3 (physics review 5532062124, applied per R-369):** `β` selects `π̂` (R-417) where `λ̃_y` compares
+  equal to 0 and `λ̃_x < 0`, beside R-437's 0 at `λ̃ = 0`, because WGSL, Vulkan without `SignedZeroInfNanPreserve` and
+  Metal fast-math may ignore a zero's sign through `atan2` (dd_encode §3.1, `rho_angle`'s precedent in dd_decoder
+  §3.6). Test 10 names the pole landmark and defines the round trip it compares, since the `ε_z` clamp keeps an exactly
+  collinear `λ̃_y` from coming back (inverse-encode Part 7; R-438 "Contradiction flagged, applied").

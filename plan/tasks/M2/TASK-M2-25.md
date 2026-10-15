@@ -70,3 +70,7 @@ The chart decode and encode are available to the fragment stage as WGSL generate
   and `E`, so its `V` takes the decode stage's select (`−∞` bits wherever a pair separation is 0, written by bitcast,
   never `1/0`), inherited from the shared source (TASK-M2-06), and the agreement preset tests that `V` on its bits
   before it forms `E(fragment-decode) = K + V` (colour_composition §6; REQ-COL-006).
+- **R-438, the `−x` half-axis (physics review 5532062124 P1, applied per R-369):** the generated WGSL encode inherits
+  the Rust source's select of `β = π̂` where `λ̃_y` compares equal to 0 and `λ̃_x < 0` (TASK-M2-15; dd_encode §3.1),
+  since WGSL may ignore a zero's sign through `atan2`; the ROUNDTRIP and agreement checks include that half-axis with
+  `±0` operands, where CPU and GPU agree (REQ-COL-006).

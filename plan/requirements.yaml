@@ -1011,15 +1011,15 @@
   - file: decisions.md
     section: "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
   verify:
+    detail: "substitute forward into inverse for fuzzed z: each block recovers z to tolerance; |q| > q_max input sets lookup_clamped; at λ̃ = 0, ±0 components included, β = atan2(|λ̃_y|, λ̃_x) is R-437's defined 0, chosen by a select on λ̃_x = 0 and λ̃_y = 0, never atan2(0, 0); collinear shapes encoded with λ̃_y ∈ {−1e-13, −0, +0, +1e-13}, body 2 on either side and at each Euler landmark, give β = π (body 2 on the −x side) or 0 (on the +x side) as appropriate, never near −π, and a round trip within the deadband (R-438), which compares, at each landmark off the pole: the four λ̃_y inputs of one landmark encode to the same z; decode(encode(x)) keeps the input's side, with |Δλ̃_y| ≤ π·ε_z·‖λ̃‖ plus the input's own |λ̃_y| and rounding; the other components within ε_phys; lookup_clamped set (R-72 definition, R-438 \"Contradiction flagged, applied\"); the pole landmark (m₀ = m₁, body 2 in the middle, λ̃ = 0 exactly) is tested on its own: λ̃_y = ±0 gives β = 0 by the select, λ̃_y = ±1e-13 with λ̃_x = 0 gives β = π/2 (π̂/2 as computed), lookup_clamped set; the side rule applies to the landmarks with λ̃_x ≠ 0, the masses chosen so that no other landmark sits on the pole; on the −x half-axis (λ̃_y compares equal to 0, λ̃_x < 0) β is π̂ (R-417) by a select, never atan2's value, and CPU-f64 and GPU-f32 agree there with ±0 operands (R-438, physics review 5532062124 P1)"
     method: unit test
-    detail: "substitute forward into inverse for fuzzed z: each block recovers z to tolerance; |q| > q_max input sets lookup_clamped; at λ̃ = 0, ±0 components included, β = atan2(|λ̃_y|, λ̃_x) is R-437's defined 0, chosen by a select on λ̃_x = 0 and λ̃_y = 0, never atan2(0, 0); collinear shapes encoded with λ̃_y ∈ {−1e-13, −0, +0, +1e-13}, body 2 on either side and at each Euler landmark, give β = π (body 2 on the −x side) or 0 (on the +x side) as appropriate, never near −π, and a round trip within the deadband (R-438)"
   rulings:
   - R-10
   - R-21
   - R-437
   - R-438
   milestone: M2
-  note: "R-437: β takes the defined 0 at λ̃ = 0; α = atan2(‖λ̃‖, ‖ρ̃‖) has no pole once I = 1. R-438 (RQ-287): β reads |λ̃_y|, the mirror's quotient for β only, so a deadband λ̃_y ∈ [−δ_λ, 0] with λ̃_x < 0 gives β near π, not −π; R-82's mirror test and deadband are unchanged."
+  note: "R-437: β takes the defined 0 at λ̃ = 0; α = atan2(‖λ̃‖, ‖ρ̃‖) has no pole once I = 1. R-438 (RQ-287): β reads |λ̃_y|, the mirror's quotient for β only, so a deadband λ̃_y ∈ [−δ_λ, 0] with λ̃_x < 0 gives β near π, not −π; R-82's mirror test and deadband are unchanged. Round 3 (physics review 5532062124): β selects π̂ on the −x half-axis, since WGSL may ignore a zero's sign through atan2; the ruling's round trip within the deadband is defined as the verify detail states (R-72), because the ε_z clamp keeps an exactly collinear λ̃_y from coming back."
 - id: REQ-ENC-008
   area: ENC
   statement: "Encode into the active chart must dispatch by axis kind: kind 1 reads the component exactly; kind 2 applies the block inverse plus the axis's own residual convention; kind 3 evaluates L_z(x), E(x), K(x) directly for chart coordinates; annotation axes have nothing to invert; otherwise encode falls back to latent z, which is always available."
@@ -10966,9 +10966,11 @@
     section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
   - file: decisions.md
     section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
+  - file: decisions.md
+    section: "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
   verify:
+    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the collision pole, at f32 or f64) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included, and the fragment decode's own V tested on its bits before it forms E; the generated fragment decode selects V's −∞ bits where a pair separation is 0, written by bitcast, never 1/0 or an infinite literal (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included; the generated WGSL encode selects β = π̂ on the −x half-axis (λ̃_y compares equal to 0, λ̃_x < 0) and agrees with the CPU there, ±0 operands included (R-438)"
     method: numerical gate
-    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the collision pole, at f32 or f64) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included, and the fragment decode's own V tested on its bits before it forms E; the generated fragment decode selects V's −∞ bits where a pair separation is 0, written by bitcast, never 1/0 or an infinite literal (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included"
   rulings:
   - R-75
   - R-116
@@ -10977,6 +10979,7 @@
   - R-358
   - R-436
   - R-437
+  - R-438
   milestone: M2
   note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them."
 - id: REQ-COL-007
