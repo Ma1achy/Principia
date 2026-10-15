@@ -152,8 +152,10 @@ pub fn undeclared(e: &Entry) -> Option<String> {
 }
 
 /// An f32's exponent field, all ones: the bits of every non-finite value, NaN and `±∞`, and of no finite one (IEEE 754
-/// binary32). The guard tests `bits & NON_FINITE == NON_FINITE` (R-436).
-pub const NON_FINITE: u32 = 0x7F80_0000;
+/// binary32). The guard tests `bits & NON_FINITE == NON_FINITE` (R-436). It is +∞'s bit pattern, written from its std
+/// name: an IEEE-754 format constant, not a value the constants register holds (applied per R-369, qa review
+/// 5540671570 Q1).
+pub const NON_FINITE: u32 = f32::INFINITY.to_bits();
 
 /// Whether `x` is not finite, NaN or `±∞`, by its bits: the guard's test, the CPU twin of the WGSL line (R-436).
 pub fn non_finite(x: f32) -> bool {
