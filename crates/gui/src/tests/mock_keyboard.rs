@@ -199,6 +199,9 @@ fn mock_keyboard_enter_switches_mode() {
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(app.view.mode, Mode::Stain);
     assert_eq!(focus(&app), ["top_bar", "stain"]);
+    // The Stain page's big scopes: the top bar and the footer (R-405), until TASK-M6-29 adds Stain's.
+    press(&mut h, &mut app, Key::Tab, NONE);
+    assert_eq!(focus(&app), ["footer"]);
     press(&mut h, &mut app, Key::Tab, NONE);
     assert_eq!(focus(&app), ["top_bar"]);
     keys(&mut h, &mut app, &[(Key::Enter, NONE)]);
@@ -228,8 +231,9 @@ fn mock_keyboard_mode_switch_drops_explore_focus() {
     assert!(focus(&app).is_empty(), "{:?}", focus(&app));
     let texts = frame_texts(&mut h, &mut app);
     assert!(!texts.iter().any(|t| t.starts_with("Manifold view ›")));
+    // Shift+Tab from no focus starts at the last big scope, the footer (R-405).
     press(&mut h, &mut app, Key::Tab, SHIFT);
-    assert_eq!(focus(&app), ["top_bar"]);
+    assert_eq!(focus(&app), ["footer"]);
     rejects("an Explore scope kept", || {
         assert_eq!(focus(&app), ["manifold_view", "chart"])
     });
@@ -262,8 +266,7 @@ fn state(path: &[&str], open: Option<&'static str>, display: bool) -> MenuState 
 }
 
 /// Enter on a menu opens it on its first entry, with its breadcrumb and ring; the arrows move between its entries,
-/// stopping at either end; Enter on a disabled entry does nothing; Esc closes the menu, back to its control; and the
-/// layer keeps the keys after.
+/// stopping at either end; Esc closes the menu, back to its control; and the layer keeps the keys after.
 #[test]
 fn mock_keyboard_menu_entries_are_scopes() {
     let mut app = mock_app();
@@ -290,7 +293,7 @@ fn mock_keyboard_menu_entries_are_scopes() {
         (Key::ArrowDown, 1),
         (Key::ArrowDown, 4),
         (Key::ArrowUp, 1),
-        (Key::Enter, 1),
+        (Key::ArrowDown, 3),
     ] {
         for _ in 0..n {
             press(&mut h, &mut app, key, NONE);
@@ -307,11 +310,10 @@ fn mock_keyboard_menu_entries_are_scopes() {
         state(&["top_bar", "windows"], None, false),
         state(&["top_bar", "windows", "windows_run"], w, true),
         state(&["top_bar", "windows", "windows_profiler"], w, true),
-        // The arrows stop at the last entry.
+        state(&["top_bar", "windows", "windows_chart_builder"], w, true),
         state(&["top_bar", "windows", "windows_console"], w, true),
-        state(&["top_bar", "windows", "windows_display"], w, true),
-        // Display is disabled: Enter does nothing, the menu stays open.
-        state(&["top_bar", "windows", "windows_display"], w, true),
+        // The arrows stop at the last entry, the seventh.
+        state(&["top_bar", "windows", "windows_inspector"], w, true),
         state(&["top_bar", "windows"], None, false),
         state(&["top_bar", "overlays"], None, false),
     ];
@@ -1590,8 +1592,8 @@ fn mock_keyboard_places_are_the_frames() {
     });
 }
 
-/// Enter on a control acts as its click: the mode switch and the menus' entries act; a menu, a disabled control or
-/// entry, or an unknown id does nothing.
+/// Enter on a control acts as its click: the mode switch and the menus' entries act; a menu, a window's opener (the
+/// app's to act on) or an unknown id does nothing here.
 #[test]
 fn mock_keyboard_activate_acts_as_the_click() {
     use crate::app::Actions;
@@ -1644,21 +1646,18 @@ fn mock_keyboard_activate_acts_as_the_click() {
     for id in ["file", "help", "run", "windows_run", "nowhere"] {
         assert_eq!(acts(id), Actions::default(), "{id}");
     }
-    // The top bar's scopes: the menus, the disabled controls and entries that Enter does not activate.
+    // The top bar's scopes: the menus; Run…, Profiler…, Export… and the Windows menu's seven entries activate.
     let mut tree = ScopeTree::new();
     crate::explore::top_bar::register(&mut tree);
     assert_eq!(
         tree.menus(),
         ["file", "view", "windows", "overlays", "help"]
     );
-    for id in [
-        "run",
-        "profiler",
-        "export",
-        "windows_run",
-        "windows_console",
-    ] {
-        assert!(!tree.get(id).unwrap().activates, "{id} activates");
+    for id in ["run", "profiler", "export"]
+        .into_iter()
+        .chain(crate::explore::top_bar::WINDOW_ENTRIES)
+    {
+        assert!(tree.get(id).unwrap().activates, "{id} does not activate");
     }
     for id in ["explore", "stain", QUIT.0, HIDE.0, KEYS.0] {
         assert!(tree.get(id).unwrap().activates, "{id} does not activate");
@@ -1739,8 +1738,8 @@ fn mock_keyboard_manifold_view_scopes() {
         assert!(tree.get(id).is_some_and(|s| s.activates), "{id} activates");
     }
     assert!(
-        tree.get(mv::BUILDER).is_some_and(|s| !s.activates),
-        "the Chart builder is disabled"
+        tree.get(mv::BUILDER).is_some_and(|s| s.activates),
+        "Chart builder… opens its window (TASK-M6-28)"
     );
     // Joining again changes nothing, the shortcut rows included.
     let rows = tree.shortcuts().to_vec();

@@ -6,11 +6,13 @@
 //! earns no privilege: the app reaches it only through the interface, as it reaches the real engine
 //! (gui_state_contract §1). It serves the legend's keys from its fake stain (`legend`), the sample under the cursor
 //! the hover names (`sample`), and draws into its stand-in the hover path and, with tile bounds on, its fake quads'
-//! bounds (`quads`). Its values are placeholder content, not corpus values.
+//! bounds (`quads`), and gives the Profiler window a canned trace in profiler schema v1's shape (`profile`). Its values
+//! are placeholder content, not corpus values.
 
 pub mod canvas;
 pub mod clock;
 pub mod legend;
+pub mod profile;
 pub mod quads;
 pub mod sample;
 

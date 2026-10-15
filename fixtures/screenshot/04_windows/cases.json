@@ -1,0 +1,24 @@
+{
+  "cases": [
+    {
+      "name": "mock_run",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/04_windows.png"
+    },
+    {
+      "name": "mock_export",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/04_windows.png"
+    },
+    {
+      "name": "mock_display",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "enter", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/04_windows.png"
+    },
+    {
+      "name": "mock_profiler",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/04_windows.png"
+    }
+  ]
+}

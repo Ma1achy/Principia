@@ -6,13 +6,13 @@ pub mod app;
 pub mod capture;
 pub mod cli;
 pub mod clock;
-pub mod console;
 pub mod explore;
 pub mod headless;
 pub mod keyboard;
 pub mod layout;
 pub mod side;
 pub mod theme;
+pub mod windows;
 
 pub mod mock;
 
@@ -31,6 +31,7 @@ mod tests {
     mod mock_hover;
     mod mock_keyboard;
     mod mock_keyboard_modes;
+    mod mock_keyboard_windows;
     mod mock_legend_keys;
     mod mock_lock_badge;
     mod mock_manifold_view;
@@ -38,6 +39,8 @@ mod tests {
     mod mock_tag;
     mod mock_tile_bounds;
     mod mock_time;
+    mod mock_windows_drawn;
+    mod mock_windows_open;
     mod scope_tab_order_mock;
     mod support;
     mod theme;

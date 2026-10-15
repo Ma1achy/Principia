@@ -337,3 +337,35 @@ fn mock_lock_badge_the_reticle_is_a_ring_with_four_ticks() {
         check(&shapes, at + egui::vec2(5.0, 0.0))
     });
 }
+
+/// Enter on open in Inspector acts as its click: free, the button is disabled and Enter opens nothing; locked, Enter
+/// opens the Inspector (code review 5529823383, finding 2).
+#[test]
+fn mock_lock_badge_enter_on_open_in_inspector_respects_the_lock() {
+    let enter_on = |rig: &mut Rig| {
+        let tree = rig.app.keyboard.tree(rig.app.view.mode);
+        rig.app.view.focus.path = tree.path_to(crate::explore::manifold_view::OPEN_INSPECTOR);
+        rig.app.view.focus.mode = engine::contract::view_ui::KeyMode::Navigation;
+        let press = |down| eframe::egui::Event::Key {
+            key: eframe::egui::Key::Enter,
+            physical_key: None,
+            pressed: down,
+            repeat: false,
+            modifiers: eframe::egui::Modifiers::NONE,
+        };
+        let _ = rig.headless.frame(&mut rig.app, vec![press(true)]);
+        let _ = rig.headless.frame(&mut rig.app, vec![press(false)]);
+        let _ = rig.headless.frame(&mut rig.app, Vec::new());
+        rig.app.view.windows.open.clone()
+    };
+    let mut free = new_rig(false);
+    let none = enter_on(&mut free);
+    let closed = |open: &[Window]| assert!(open.is_empty(), "free: {open:?}");
+    closed(&none);
+    let mut locked = new_rig(false);
+    locked.lock();
+    assert_eq!(enter_on(&mut locked), vec![Window::Inspector], "locked");
+    rejects("Enter opening the Inspector while free", || {
+        closed(&[Window::Inspector])
+    });
+}
