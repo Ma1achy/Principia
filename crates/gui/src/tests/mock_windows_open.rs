@@ -1385,3 +1385,28 @@ fn mock_windows_open_present_mode_paints_the_figure_on_explore_only() {
     none(callbacks(&mut h, &mut app));
     rejects("a figure on Stain", || none(1));
 }
+
+/// The Manifold view's Chart builder… opens the window with itself as the opener: × returns the focus to it.
+#[test]
+fn mock_windows_open_the_manifold_views_builder_is_the_chart_builders_opener() {
+    use crate::explore::manifold_view as mv;
+    let (mut app, mut h) = fresh();
+    click(&mut h, &mut app, "Chart builder…");
+    settle(&mut h, &mut app);
+    assert!(app.is_open(Window::ChartBuilder));
+    click(&mut h, &mut app, "Close window");
+    settle(&mut h, &mut app);
+    assert!(!app.is_open(Window::ChartBuilder));
+    let tree = app.keyboard.tree(app.view.mode);
+    let back = |want: &str| {
+        assert_eq!(
+            app.view.focus.path,
+            tree.path_to(want),
+            "the focus back on {want}"
+        )
+    };
+    back(mv::BUILDER);
+    rejects("the focus back on Open inspector", || {
+        back(mv::OPEN_INSPECTOR)
+    });
+}
