@@ -2286,6 +2286,11 @@ fn mock_windows_open_inspector_turn_play_and_step() {
     one.t = 0.25;
     one.step(1);
     assert_eq!(one.t, 0.25);
+    // A path of two points: step goes from one end to the other.
+    short.shape = sample.shape[..2].to_vec();
+    one.seed(Some(&short));
+    one.step(1);
+    assert_eq!(one.t, span);
     // No IC: play and step do nothing, and nothing moves.
     let mut none = inspector::State::default();
     for id in [inspector::PLAY, inspector::STEP, inspector::STEP_BACK] {
@@ -2373,6 +2378,25 @@ fn mock_windows_open_inspector_readouts_and_energy_error() {
     assert_eq!(value("gauge"), "0.0e0");
     let round_trip: f64 = value("round trip").parse().unwrap();
     assert!((1e-15..1e-14).contains(&round_trip), "{round_trip}");
+    // 10⁻¹⁵ to 10⁻¹⁴ by the IC's hash: across ICs, it spans the range.
+    let trips: Vec<f64> = (0..8)
+        .map(|k| {
+            let mut other = s.clone();
+            other.ic[0] += 0.37 * k as f64;
+            let r = inspector::readouts(&other);
+            r.iter()
+                .find(|(n, _)| *n == "round trip")
+                .unwrap()
+                .1
+                .parse()
+                .unwrap()
+        })
+        .collect();
+    assert!(
+        trips.iter().all(|t| (1e-15..1e-14).contains(t)),
+        "{trips:?}"
+    );
+    assert!(trips.iter().any(|t| *t > 5e-15), "{trips:?}");
     assert_eq!(
         value("E · L_z"),
         format!("{:.3} · {:+.3}", s.e0, inspector::l_z(&s))
