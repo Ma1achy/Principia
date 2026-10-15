@@ -811,8 +811,8 @@ first. So a numeric view's `colour()` tests, in this order:
 tested on its bits, never against a literal: the literal-sentinel line `if (raw == <literal>)` would need an infinite
 literal, which naga rejects (gpu_determinism_note rule 4), and it is tested before the guard and before any
 arithmetic, never through the compaction or `range_norm`, which would do arithmetic on `±∞`. Its drawn style is not
-defined by the corpus: it is a definition requirement (R-72), REQ-COL-071, written here by TASK-M5-01, which builds
-those fields' ledger entries, and reviewed by the gui reviewer.
+defined by the corpus: it is a definition requirement (R-72), REQ-COL-071, written here by TASK-M5-17, the resolve
+stage that first stores those bits and adds quad fields to the field-view catalogue, and reviewed by the gui reviewer.
 
 **The prelude as built (TASK-M1-03; R-72 for the definitions, R-369 for the rest).** The ledger emits it into
 `crates/render/shaders/wgsl/lib/prelude.wgsl`, the full tier's. The assembler emits it per variant

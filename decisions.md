@@ -9532,8 +9532,10 @@ answered by choosing one of the options offered; R-437 holds the second. The cho
   `±∞` sentinel, R-418's `escape_time_min` `+∞` and `escape_time_max` `−∞`, is tested on its bits, never against a
   literal (the literal-sentinel line `if (raw == <literal>)` would need an infinite literal, which naga rejects, rule
   4), before the guard and before any arithmetic. The corpus defines no drawn style for it, so its style is a
-  definition requirement (R-72), REQ-COL-071 (reqio, new), on TASK-M5-01, which builds those fields' ledger entries
-  and so their generated views; TASK-M5-01 gains the gui reviewer. render_gui_spec §10.1 and §13 (gui review G2) also
+  definition requirement (R-72), REQ-COL-071 (reqio, new), on TASK-M5-17, the resolve stage that first stores those
+  bits (REQ-REF-053) and adds quad fields to the field-view catalogue (REQ-PAY-096); TASK-M5-17 gains the gui reviewer
+  (round 6, applied per R-369: round 5 had put it on TASK-M5-01, which merged as PR #191 on 13 Oct and is done, so the
+  requirement would never have been built). render_gui_spec §10.1 and §13 (gui review G2) also
   carry R-436 in their older NaN-guard sentences, their wording kept. TASK-M2-31's wording matches, and its GPU case
   draws `d_min`'s unset `+∞` too, so the order is checked on the GPU.
 - **A view's measured range** (`u_range`, `RANGE_AUTO = 1`) is taken over the samples whose stored value is finite,
@@ -9579,8 +9581,8 @@ answered by choosing one of the options offered; R-437 holds the second. The cho
 
 Changes REQ-COL-006, REQ-COL-060 and REQ-VAL-027 (holds, rulings, verify, notes) and REQ-TOOL-030 (rulings, source,
 verify); adds REQ-COL-070 and TASK-M2-31.
-Round 5 (gui review 5533020211) changes REQ-COL-070 (statement, verify) and TASK-M5-01 (a requirement, the gui
-reviewer); adds REQ-COL-071; also applied in render_gui_spec §10.1 and § "13. Invariants".
+Round 5 (gui review 5533020211) changes REQ-COL-070 (statement, verify) and, from round 6, TASK-M5-17 (a requirement,
+the gui reviewer); adds REQ-COL-071; also applied in render_gui_spec §10.1 and § "13. Invariants".
 
 ## R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*
 *15 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted
