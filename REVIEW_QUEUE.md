@@ -89,7 +89,7 @@ Nothing is chosen.*
 - **Waits:** the addressing presets' payloads in TASK-M7-17's preset library, and any map preset that uses the
   convention (TASK-M7-18). TASK-M7-01 does not wait.
 
-## RQ-281: Render GUI spec §11 names six debug groups, but the passages settle the membership of four; diagnostic's and profiling's, and where ROUNDTRIP, the agreement presets and the payload field views go, are not written, and the telemetry doc says profiling is "not a debug mode" *(silence and possible conflict, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-17)*
+## RQ-281: Render GUI spec §11 names six debug groups, but the passages settle the membership of four; diagnostic's and profiling's, and where ROUNDTRIP, the agreement presets, the §B–§D payload field views and §E's live-shape and accumulator views go, are not written, and the telemetry doc says profiling is "not a debug mode" *(silence and possible conflict, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-17)*
 
 *Found by TASK-M7-01, writing render GUI spec §16's "the debug taxonomy" into colour_composition §9.6. Nothing is
 chosen.*
@@ -100,21 +100,26 @@ chosen.*
   - `docs/design/principia_colour_composition.md` § "6. Debug views as presets": the §B–§E payload field views
     (`f_edrift`, `f_wordhash`, `f_state`), the §F `ctx.quad` presets (`s_depth`, `s_impurity`, `s_state`), and the §A
     views (UV, DECODE, ROUNDTRIP, "Agreement presets").
+  - `docs/design/principia_debug_tooling_plan.md` § "E. Payload field views — `ICDescriptor` (64 B) & the live-state
+    block": "*ICDescriptor views certify the **decoder**, independent of any integration.*" Its table also holds the
+    "**live shape views** `u_mode`" and "accumulator views" rows, which are live state, not the `ICDescriptor`.
   - `docs/design/principia_dd_telemetry_and_tiers.md` § "5.5 Profiling is FIRST-CLASS, not a debug mode":
     "`stage_ms` and the frame record are part of the render loop's contract, always present, with the *reporting*
     toggleable rather than the *measurement*."
 - **Silence:** addressing (§6's UV views), quad-structure (§6's `ctx.quad` presets), decoded-IC (the decoded-IC payload
-  quantities and DECODE) and validity (§3's validity lane) follow from the passages, and colour_composition §9.6
-  writes them. No passage names a preset of the diagnostic or the profiling group, or places ROUNDTRIP, the agreement
-  presets, or payload field views such as `f_edrift`, `f_wordhash` and `f_state`.
+  quantities, §E's `ICDescriptor` views by §E's line above, and DECODE) and validity (§3's validity lane) follow from
+  the passages, and colour_composition §9.6 writes them. No passage names a preset of the diagnostic or the
+  profiling group, or places ROUNDTRIP, the agreement presets, the §B–§D payload field views (such as `f_edrift`,
+  `f_wordhash` and `f_state`), or §E's live-shape and accumulator views.
 - **Possible conflict:** a "profiling" group of locked debug colour presets beside §5.5's "Profiling is FIRST-CLASS, not
   a debug mode". The two may not disagree (§5.5 is about measurement always being on, not about how a view of it is
   filed), but no passage says what a profiling preset colours.
 - **Options seen:**
-  - (a) diagnostic holds the §B–§E payload field views and the cross-checks (ROUNDTRIP, agreement); profiling holds
-    views of per-sample cost (`total_substeps`, the substep-log proxy) and quad cache age.
-  - (b) ROUNDTRIP and the agreement presets go in decoded-IC, as checks of the decode; diagnostic holds the payload
-    field views.
+  - (a) diagnostic holds the §B–§D payload field views, §E's live-shape and accumulator views, and the cross-checks
+    (ROUNDTRIP, agreement); profiling holds views of per-sample cost (`total_substeps`, the substep-log proxy) and
+    quad cache age.
+  - (b) ROUNDTRIP and the agreement presets go in decoded-IC, as checks of the decode; diagnostic holds the §B–§D
+    payload field views and §E's live-shape and accumulator views.
   - (c) The membership is the render-modes prototype's grouping, transcribed into a contract by a ruling (R-159).
 - **Applied meanwhile:** nothing; colour_composition §9.6 writes the four groups the passages settle and points here.
 - **Waits:** TASK-M7-17's preset library, for the diagnostic and profiling rows. TASK-M7-01 does not wait.

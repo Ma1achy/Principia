@@ -673,12 +673,13 @@ colouring system, reading `ctx` from one of §6's three data sources (§6, Disci
 - **addressing**: the presets that colour a position, `ctx.screen.uv → RG` (fragment addressing) and `ctx.quad.uv →
   RG` (structural addressing) (§6), in the channel convention of §9.7;
 - **quad-structure**: §6's `ctx.quad` presets, `s_depth`, `s_impurity` and `s_state`;
-- **decoded-IC**: the decoded-IC payload quantities (§1.2) and the DECODE view, the fragment-side decode of
-  `ctx.chart.z` (§6);
+- **decoded-IC**: the decoded-IC payload quantities (§1.2), the `ICDescriptor` views of debug tooling plan §E (its
+  masses, scalar and `E₀` rows), which "certify the **decoder**, independent of any integration" (debug tooling plan
+  §E), and the DECODE view, the fragment-side decode of `ctx.chart.z` (§6);
 - **validity**: the validity lane of §3, every field's sentinel or predicate (§6, Discipline 2).
 
-Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets and the
-§B–§E payload field views, is RQ-281.
+Which presets the diagnostic and profiling groups hold, and the groups of ROUNDTRIP, the agreement presets, the §B–§D
+payload field views and §E's live-shape and accumulator views, is RQ-281.
 
 **9.7 The addressing channel convention.** An addressing preset writes a position into colour channels as render GUI
 spec §16 names them, each pair read in order as `UV=RG` is, `u` → red and `v` → green (§6; debug tooling plan §F):
