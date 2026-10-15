@@ -11759,6 +11759,8 @@
     section: 8. Amendments to other docs
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_colour_composition.md
+    section: "9. The stain editor's composition resolutions (R-72; REQ-COL-054)"
   verify:
     method: review checklist
     detail: "colour_composition states each resolution the GUI spec assumes, and §16's item is closed"
