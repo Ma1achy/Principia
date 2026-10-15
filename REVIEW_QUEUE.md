@@ -59,3 +59,62 @@ Nothing is chosen.*
   payload's), so no ramp follows from it yet.
 - **Waits:** nothing in M1; TASK-M1-21's PR does not wait. REQ-PAY-093's confirmation at the M5 gate is where
   `alpha_energy`'s range is settled; it is named, not marked.
+
+## RQ-280: chart_reference §0.3 names `Σpᵢ = 0` "the test that catches a swap", but the full swap of the crossed factors keeps `Σpᵢ = 0` at every mass *(corpus error, REQ-DEC-019, PIT-9; context: TASK-M2-03)*
+
+*Found by TASK-M2-03's review (physics review 5526305435 E1; qa review 5527243917). Nothing is chosen; TASK-M2-03's PR
+does not wait.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "0.3 Momentum — free Jacobi momenta", the "Transcription hazard"
+    note (:85–88): "Transcribe it, then verify by asserting `Σpᵢ = 0` to machine precision — the test that catches a
+    swap."
+  - `plan/tasks/M2/TASK-M2-03.md` § "Acceptance tests", `decode_momentum`: "Σpᵢ = 0 to machine precision on fuzzed z
+    with unequal masses (catches the crossed m₀/m₁ factors)"; `plan/requirements.yaml` REQ-DEC-019's acceptance
+    detail (:383) repeats it.
+- **Why it is wrong:** the map is `p₀ = −p_ρ − w₀p_λ`, `p₁ = p_ρ − w₁p_λ`, `p₂ = p_λ` with `w₀ = m₀/M₀₁`,
+  `w₁ = m₁/M₀₁`. Swapping both factors (`p₀` taking `w₁`, `p₁` taking `w₀`, the positions' form) gives
+  `Σp = −(w₁ + w₀)p_λ + p_λ = 0` at every mass. `Σpᵢ = 0` catches only a one-sided swap, so PIT-9's "draw unequal
+  masses" is necessary but not sufficient.
+- **What catches it:** the conjugacy of the map, `μ_ρ(p₁/m₁ − p₀/m₀) = p_ρ` (TASK-M2-03's `decode_momentum`, its
+  `swapped_factors` control), or the kinetic-energy identity `Σ‖pᵢ‖²/2mᵢ = ‖p_ρ‖²/2μ_ρ + ‖p_λ‖²/2μ_λ` (qa's
+  `qa_m2_03_momentum`). Both fail under the full swap at unequal masses.
+- **Options seen:**
+  - (a) Reword §0.3's note, and REQ-DEC-019's detail and the task line with it, to name the conjugacy check (or the
+    kinetic-energy identity) as the test that catches the swap, `Σpᵢ = 0` as the one that catches a one-sided swap.
+  - (b) Keep the note and add the conjugacy check beside it as a second required assertion.
+- **Applied meanwhile:** TASK-M2-03's tests assert both `Σpᵢ = 0` and the conjugacy, with a control for each swap; no
+  doc line is changed.
+- **Waits:** nothing.
+
+## RQ-281: the corpus does not say how the descriptor's infinite values at the poles are stored or consumed, and differences against `E₀ = −∞` read NaN *(silence, R-79, REQ-COL-006, REQ-COL-060, REQ-VAL-027; context: TASK-M2-03 and the tasks of those requirements)*
+
+*Found by TASK-M2-03's review (physics review 5526305435 E2). Nothing is chosen; TASK-M2-03's PR does not wait.*
+
+- **File, section:**
+  - `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities", "The collision pole reaches 0"
+    (written by TASK-M2-03): "`V_0` reads `−∞` and `virial_ratio` 0"; and `rho_ratio` "reads `+∞` only where `‖λ̃‖`
+    is exactly 0", which TASK-M2-03 measures at `α = 0`. So `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole.
+  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets" (:489): "**Agreement presets** (new,
+    and better than the originals) = `|E(fragment-decode) − ctx.payload.E₀|`" (REQ-COL-006; its tolerance
+    REQ-COL-060).
+  - `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)" (:424): "| Energy agreement |
+    `E_0` (SimState) vs `K_0 + V_0` (ICDescriptor), log \|Δ\| |" (REQ-VAL-027).
+  - `decisions.md` § "R-79 — NaN and sentinels": "Storage never holds NaN." It says nothing of ±∞.
+  - `docs/design/principia_dd_decoder.md` § 3.2 (:95): "exact-pole `atan2(0,0)=0` yields a deterministic canonical
+    value rather than a NaN", which also speaks only to NaN.
+  - `docs/notes/principia_gpu_determinism_note.md` § "The discipline", rule 4: "WGSL cannot express it" (an infinite
+    literal). The WGSL specification lets an implementation assume no infinities in floating-point evaluation.
+- **The silence:** at such a pixel `|E − E₀|` and `|E_0 − (K_0 + V_0)|` are `(−∞) − (−∞) = NaN` on the CPU, and on the
+  GPU the result is not pinned at all, so the agreement presets' and the energy-agreement view's parity on those
+  pixels is undefined. Nothing says whether an infinite descriptor value may be stored, whether it is a sentinel, or
+  how a difference against it is coloured.
+- **Options seen:**
+  - (a) Allow ±∞ in storage at the poles, and have each consumer of a difference against `E₀` route a non-finite
+    operand to the invalid colour (R-79's NaN rule extended to ±∞), on the CPU and the GPU alike.
+  - (b) Store a finite sentinel for an infinite descriptor value, declared in the ledger, and have consumers test it.
+  - (c) Exclude the poles from the agreement checks by the collision flag the pipeline already raises there.
+- **Applied meanwhile:** TASK-M2-03 records the infinite values in §3.6 and stores them as computed; no consumer of a
+  difference against `E₀` exists yet.
+- **Waits:** the tasks of REQ-COL-006, REQ-COL-060 and REQ-VAL-027, at the point where they consume `E₀` or
+  `K_0 + V_0`. TASK-M2-03 does not wait.
