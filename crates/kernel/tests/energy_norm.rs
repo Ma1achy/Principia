@@ -3,7 +3,10 @@
 //! - `energy_normalisation_sets_target`: with `E*` set and `η_E` applied, the decoded energy `K_0 + V_0` equals `E*`,
 //!   over fuzzed `z` and every registered link; every decode takes dd_decoder §3.7's outcome for its `E*`, `V_0`, rest
 //!   and separation; an untouched outcome leaves the momenta bit for bit; no outcome stores NaN.
-//! - `energy_normalisation_off`: `None`, or a chart that forbids it, leaves the decode bit for bit (R-25).
+//! - `energy_normalisation_off`: `None`, or a chart that forbids it, leaves the decode bit for bit (R-25); through a
+//!   chart, its own flag decides.
+//! - `energy_normalisation_chart_flag`: through [`energy_norm::decode_chart`], a chart's own
+//!   `forbids_energy_normalisation` decides whether `η_E` applies (chart_reference §0.6).
 //! - `energy_normalisation_zero_target`: `E* = 0` is a target, the energy set to 0, never "off" (R-25).
 //! - `energy_normalisation_rest_start`: at `K₀ = 0`, `E* = U` is at the target, untagged; `E* > U` is
 //!   `DEGENERATE(ENERGY_UNSCALABLE)`; `E* < U` is `DEGENERATE(ENERGY_INFEASIBLE)`; the momenta stay 0.
@@ -25,6 +28,7 @@
 mod decode_support;
 
 use decode_support::*;
+use kernel::chart::{self, Chart, ChartOut, ValidationResult};
 use kernel::decode::degenerate::Degenerate;
 use kernel::decode::descriptor;
 use kernel::decode::energy_norm::{self, Normalised, Outcome};
@@ -354,6 +358,91 @@ mod off_flag {
         )
     );
 }
+
+/// The latent chart pinned at `z₀` (`q₁ = q₂ = 0`), with its flag set as `forbids`.
+struct Pinned {
+    latent: chart::Latent<f32>,
+    forbids: bool,
+}
+
+impl Pinned {
+    fn at(z: [f64; 8], forbids: bool) -> Self {
+        Pinned {
+            latent: chart::Latent {
+                z0: z.map(|x| x as f32),
+                q1: [0.0; 8],
+                q2: [0.0; 8],
+            },
+            forbids,
+        }
+    }
+}
+
+impl Chart for Pinned {
+    type Param = f32;
+    fn map<F: spirv_std::num_traits::Float + From<f32>>(&self, u: F, v: F) -> ChartOut<F> {
+        self.latent.map(u, v)
+    }
+    fn forbids_energy_normalisation(&self) -> bool {
+        self.forbids
+    }
+    fn name(&self) -> &str {
+        "Pinned"
+    }
+    fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
+        ValidationResult::Valid
+    }
+}
+
+/// A chart entry: the chart's own flag decides.
+type ChartEntry<R> = fn(&Pinned, R, R, Option<R>) -> (Decoded<R>, Outcome);
+
+/// Checks that through `entry` a chart that forbids `η_E` leaves the decode bit for bit, `Off`, and one that allows it
+/// scales.
+fn check_chart_flag<R: P + From<f32>>(entry: ChartEntry<R>) {
+    let (u, v) = (R::of(0.5), R::of(0.5));
+    let plain = chart::decode::<Defaults, R, _>(&Pinned::at(MOVING, true), u, v);
+    // Above every `U`, which is negative: feasible wherever the IC moves.
+    let e = Some(R::of(0.5));
+    let (forbidden, o) = entry(&Pinned::at(MOVING, true), u, v, e);
+    assert_eq!(
+        (o, p_bits(&forbidden.ic.p)),
+        (Outcome::Off, p_bits(&plain.ic.p)),
+        "a chart that forbids η_E was rescaled at {}",
+        R::NAME
+    );
+    let (_, o) = entry(&Pinned::at(MOVING, false), u, v, e);
+    assert_eq!(
+        o,
+        Outcome::Scaled,
+        "a chart that allows η_E was not rescaled at {}",
+        R::NAME
+    );
+}
+
+#[test]
+fn energy_normalisation_chart_flag() {
+    check_chart_flag::<f64>(energy_norm::decode_chart::<Defaults, f64, Pinned>);
+    check_chart_flag::<f32>(energy_norm::decode_chart::<Defaults, f32, Pinned>);
+}
+
+/// The chart's flag ignored.
+#[cfg(feature = "controls")]
+fn chart_flag_ignored<R: P + From<f32>>(
+    c: &Pinned,
+    u: R,
+    v: R,
+    e: Option<R>,
+) -> (Decoded<R>, Outcome) {
+    energy_norm::decode_with(&mut Free::<Defaults>::new(), &c.map(u, v).z, e, false)
+}
+
+negative_control!(
+    energy_normalisation_chart_flag,
+    "a chart entry that ignores the chart's flag must fail",
+    expected = "a chart that forbids η_E was rescaled",
+    check_chart_flag::<f64>(chart_flag_ignored::<f64>)
+);
 
 // ── energy_normalisation_zero_target (REQ-DEC-024, R-25) ────────────────────────────────────────────────────────
 

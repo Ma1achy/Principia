@@ -11,7 +11,7 @@
 //! `Some(0)` is a real target, the energy set to zero, never "off". On a chart whose `forbids_energy_normalisation` is
 //! set, the invariant-momentum charts, the rescale is never applied: chart-aware validation refuses such a view with
 //! any `Some(E*)` before anything decodes (R-124; inverse_encode_contract's flag table), so the decoder reads the
-//! target there as `None`.
+//! target there as `None`. [`decode_chart`] reads the flag from the chart itself ([`Chart::forbids_energy_normalisation`]).
 //!
 //! **The outcomes** (dd_decoder §3.7, in its order; [`Outcome`]): the collision pole `U = −∞`, where a pair separation
 //! is 0, and the rest start `K₀ = 0` at `E* > U`, are tagged `DEGENERATE(ENERGY_UNSCALABLE)`; `E* < U` is tagged
@@ -32,6 +32,7 @@
 
 use spirv_std::num_traits::Float;
 
+use crate::chart::Chart;
 use crate::decode::degenerate::Degenerate;
 use crate::decode::descriptor::kinetic;
 use crate::decode::{decode_with as decode_free_with, Blocks, Decoded, Free, Ic, Latent};
@@ -187,4 +188,21 @@ pub fn decode<S: Selection, R: LinkReal + PayloadReal>(
     e_star: Option<R>,
 ) -> (Decoded<R>, Outcome) {
     decode_with(&mut Free::<S>::new(), z, e_star, false)
+}
+
+/// `D ∘ Φ` at `(u, v)` under the selection `S` with `η_E` toward `e_star`, applied only where the chart allows it: its
+/// own [`Chart::forbids_energy_normalisation`] (chart_reference §0.6).
+#[inline]
+pub fn decode_chart<S, R, C>(chart: &C, u: R, v: R, e_star: Option<R>) -> (Decoded<R>, Outcome)
+where
+    S: Selection,
+    R: LinkReal + PayloadReal + From<C::Param>,
+    C: Chart,
+{
+    decode_with(
+        &mut Free::<S>::new(),
+        &chart.map(u, v).z,
+        e_star,
+        chart.forbids_energy_normalisation(),
+    )
 }
