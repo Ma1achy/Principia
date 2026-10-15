@@ -21,6 +21,7 @@ use std::sync::OnceLock;
 
 use crate::constants::{
     ConstantBuilder, ALPHA_MIN, DELTA_LAMBDA, EPS_M01, EPS_MU, EPS_Q, EPS_W, EPS_Z, MU_MAX, Q_MAX,
+    TANH_SAT,
 };
 
 /// A link's constraint, the block codomain it maps onto (§3.9's first column).
@@ -135,8 +136,9 @@ const fn chart(k: &ConstantBuilder) -> Param {
     }
 }
 
-/// The registry's chart constants (REQ-DEC-009): `μ_max`, `q_max`, `α_min`, `ε_μ`, `ε_z`, `ε_q`, `δ_λ`, `ε_w` and
-/// `ε_M01` (the M01_TINY threshold, REQ-DEC-039's provisional proposal), each the register's value. All are hashed
+/// The registry's chart constants (REQ-DEC-009): `μ_max`, `q_max`, `α_min`, `ε_μ`, `ε_z`, `ε_q`, `δ_λ`, `ε_w`,
+/// `ε_M01` (the M01_TINY threshold, REQ-DEC-039's provisional proposal) and `tanh_sat` (the `tanh` operator's argument
+/// bound, REQ-DEC-047's), each the register's value. All are hashed
 /// by value, whether or not a link reads them (R-344).
 pub const CHART_CONSTANTS: &[Param] = &[
     chart(&MU_MAX),
@@ -148,6 +150,7 @@ pub const CHART_CONSTANTS: &[Param] = &[
     chart(&DELTA_LAMBDA),
     chart(&EPS_W),
     chart(&EPS_M01),
+    chart(&TANH_SAT),
 ];
 
 /// What a link maps onto: a block control's constrained range, or a line no block uses (chart_decoder Part 2.5's
