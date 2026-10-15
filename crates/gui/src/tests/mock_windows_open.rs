@@ -1452,3 +1452,34 @@ fn mock_windows_open_chart_builder_marks_orthogonal_axes() {
         check_has(&tilted, &["✓"], "a tilted pair")
     });
 }
+
+/// The Profiler marks its tab and its transport: the chosen tab alone selected; live or pause, never both; Capture never.
+#[test]
+fn mock_windows_open_profiler_marks_its_tab_and_transport() {
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Profiler, None);
+    let marked = |output: &egui::FullOutput, label: &str| -> bool {
+        let t = toggled_all(output, label);
+        assert_eq!(t.len(), 1, "{label}: {t:?}");
+        t[0]
+    };
+    for (tab, live) in [(2, true), (4, false)] {
+        app.windows.profiler.tab = tab;
+        app.windows.profiler.live = live;
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let tabs: Vec<bool> = profiler::TAB_IDS
+            .iter()
+            .map(|(_, label)| marked(&output, label))
+            .collect();
+        let want: Vec<bool> = (0..profiler::TAB_IDS.len()).map(|i| i == tab).collect();
+        assert_eq!(tabs, want, "tab {tab}");
+        let transport = ["live", "pause", "Capture"].map(|l| marked(&output, l));
+        assert_eq!(transport, [live, !live, false], "live {live}");
+    }
+    rejects("two tabs selected", || {
+        let output = h.frame(&mut app, Vec::new());
+        assert!(marked(&output, "Timeline"))
+    });
+}
