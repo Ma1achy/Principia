@@ -120,8 +120,6 @@
     detail: "the integrator entry point takes only (m, r, p); no chart id or chart parameter is reachable from integrator code; identity suite 5.1–5.4 run on the kernel's actual input"
   rulings: []
   milestone: M2
-  rq:
-  - RQ-289
 - id: REQ-DEC-006
   area: DEC
   statement: "Masses must always be produced by the decode, SimUniforms.m[3] must be advisory only, and every chart must declare requires_per_pixel_mass (true for the ternary mass plot, the Burrau family and mixed-axis charts with a mass axis), under which the integrator must not read SimUniforms.m[3]."
@@ -873,6 +871,23 @@
   - R-71
   milestone: M2
   note: "Applied per R-369 (TASK-M2-02): split from REQ-DEC-044, whose test-1 and test-6 parts the mass and configuration blocks evidence."
+- id: REQ-DEC-047
+  area: DEC
+  kind: calibration
+  statement: "The bound tanh_sat to which dd_generation_root §3.9's tanh operator clamps its argument, tanh(clamp(x, −tanh_sat, tanh_sat)), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate and recorded in decisions.md; until then it is a provisional register entry (R-71, R-427)."
+  source:
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "the proposal shows the bound at or above where tanh rounds to ±1 at f32 and f64 (no CPU value changes at either width, the goldens unchanged) and below where the measured GPU tanh fails (Metal: 0 at 44, NaN from 44.5), with the decode stage's range and identities holding on the GPU at saturated controls; recorded in decisions.md"
+  rulings:
+  - R-71
+  milestone: M2
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."

@@ -498,7 +498,7 @@
   title: "The kernel decode stage: monomorphised per chart, uniforms, GPU ICDescriptor"
   depends_on: [TASK-M2-05, TASK-M1-11]
   needs: [REQ-GEN-004, REQ-PAY-002, REQ-TOOL-013, REQ-RENDER-001, REQ-SYS-004]
-  requirements: [REQ-DEC-005, REQ-DEC-007, REQ-CHART-001, REQ-TOOL-030, REQ-DEC-043]
+  requirements: [REQ-DEC-005, REQ-DEC-007, REQ-CHART-001, REQ-TOOL-030, REQ-DEC-043, REQ-DEC-047]
   reviewers: [code, qa, physics, perf]
   pitfalls: [PIT-10, PIT-9]
 - id: TASK-M2-07
