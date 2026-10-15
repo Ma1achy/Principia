@@ -613,6 +613,10 @@ Implement real Viénot (protan, deutan) and Brettel (tritan) through LMS, with g
 implementation. dd_colouring §3.8's matrices are replaced.
 
 ## R-79 — NaN and sentinels *(closes RQ-30)*
+*Extended by R-436 (a stored `±∞` that is no declared sentinel goes to the invalid colour in every consumer, CPU and
+GPU alike).*
+*Still in force: all of it; storage still never holds NaN, and R-436 adds that a stored non-finite value, other than a
+declared sentinel, goes to the invalid colour as NaN does.*
 *25 Sep 2026 · applied in step 7*
 
 Storage never holds NaN. A blown-up sample stores the defined failed-state values. A tier-absent (derived) field reads NaN
@@ -9475,3 +9479,307 @@ gate", the debug views' (REQ-TOOL-010, R-153) and the other M1 suites' (`m1-nume
 - R-435 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-010 (rulings, sources, note).
+
+## R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*
+*15 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time,
+pre-integration)" (a sentence reworded, a bullet added), `docs/design/principia_colour_composition.md` § "6. Debug views
+as presets", `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)",
+`docs/design/principia_debug_tooling_plan.md` § "G. Cross-check views (certify a *seam*, not a field — integration
+tests with a display)" (a cell), `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a
+sentence reworded, sentences added) and `docs/notes/principia_gpu_determinism_note.md` § "The discipline" (rule 4, a
+sentence), R-79 (a forward line), REQ-COL-006, REQ-COL-060 and REQ-VAL-027 (reqio, holds removed), REQ-COL-070 (reqio,
+new), TASK-M2-31 (new), TASK-M2-25, TASK-M2-29 and TASK-M3-22 (notes), `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-284 archived) and `REVIEW_QUEUE.md`, and, for the producers' selects,
+REQ-TOOL-030 (reqio) and TASK-M2-06 (a note); built by TASK-M2-31, TASK-M2-06, TASK-M2-25, TASK-M2-29 and
+TASK-M3-22*
+
+The human's answer of 15 Oct 2026 to the orchestrator's two-question prompt on RQ-284 and RQ-285, each question
+answered by choosing one of the options offered; R-437 holds the second. The choice, and the option as it was offered:
+
+> RQ-284 → "(a) Store ±∞, flag (Recommended)". The option as offered: "Store the true value. Every consumer, CPU and
+> GPU alike, colours a non-finite input as invalid, extending R-79's NaN rule. The test compares the stored value and
+> never does arithmetic on ∞, since WGSL may assume there are no infinities. Physics's recommendation."
+
+*What it decides:*
+- **RQ-284 is closed, option (a).** The descriptor's infinite values at the poles are the true values and are stored
+  as computed: `rho_ratio`'s `+∞` at the `α = 0` pole, where `‖λ̃‖` is 0, and `V_0`'s `−∞` at the f64 collision pole,
+  where the emitted `r₀` and `r₁` coincide, so `E₀ = K₀ + V₀ = −∞` there (dd_decoder §3.6, as TASK-M2-03 measured).
+  No finite sentinel stands in for them (option (b)), and no consumer leans on the collision flag to skip them
+  (option (c)).
+- **Every consumer, on the CPU and the GPU alike, colours a non-finite input as invalid.** R-79's NaN rule, "every
+  colouring maps NaN or a sentinel to its invalid colour", now holds for `±∞` too. The consumers are each agreement
+  preset that differences against `E₀` (REQ-COL-006, with its tolerance REQ-COL-060), the energy-agreement view
+  `log|E_0 − (K_0 + V_0)|` (REQ-VAL-027), and each debug view that reads a stored `±∞`: `rho_ratio`'s at `+∞`,
+  `V_0`'s and `E_0`'s at `−∞`. R-79's debug exception does not reach them: a debug field shows its literal stored
+  value, and `±∞`, like NaN, has no place on a ramp.
+- **The test compares the stored value and never does arithmetic on `∞`.** WGSL lets an implementation assume there
+  are no infinities, so `(−∞) − (−∞)`, `K_0 + V_0` at `V_0 = −∞` and a compaction of `+∞` are each unpinned on the
+  GPU. Each operand is tested before any arithmetic that uses it.
+
+*Applied:*
+- **The test's form** (applied per R-369: the mechanical consequence of R-114 and the GPU determinism note's rule 4).
+  The comparison is on the stored value's bits, an exponent field of all ones, as R-114's NaN guard compares bits:
+  never `isinf`, a float comparison against the largest finite value, or an infinite literal, each of which an
+  implementation that assumes no infinities may fold away or reject (rule 4: naga rejects an infinite literal).
+- **Declared sentinels keep their own style** (applied per R-369: the ruling's subject is the descriptor's computed
+  values, not a ledger sentinel). `d_min`'s unset `+∞` is still drawn in the "not yet" style (R-271, R-280, R-399),
+  and R-418's `+∞` and `−∞` identities stay the sentinels the ledger declares them. Every other stored `±∞` is
+  invalid.
+- **The order, and a `±∞` sentinel's test** (round 5, gui review 5533020211 G1 and G3; applied per R-369). The
+  generator emits a view's lines in the order render_gui_spec §10.1 gives them, so §10.1 now states it: first a
+  declared sentinel's or unset value's own bit test, then the non-finite guard, then the ramp; the guard's exclusion
+  reads "no declared sentinel or unset value". Otherwise the widened guard would catch `d_min`'s unset `+∞` first. A
+  `±∞` sentinel, R-418's `escape_time_min` `+∞` and `escape_time_max` `−∞`, is tested on its bits, never against a
+  literal (the literal-sentinel line `if (raw == <literal>)` would need an infinite literal, which naga rejects, rule
+  4), before the guard and before any arithmetic. The corpus defines no drawn style for it, so its style is a
+  definition requirement (R-72), REQ-COL-071 (reqio, new), on TASK-M5-17, the resolve stage that first stores those
+  bits (REQ-REF-053) and adds quad fields to the field-view catalogue (REQ-PAY-096); TASK-M5-17 gains the gui reviewer
+  (round 6, applied per R-369: round 5 had put it on TASK-M5-01, which merged as PR #191 on 13 Oct and is done, so the
+  requirement would never have been built). render_gui_spec §10.1 and §13 (gui review G2) also
+  carry R-436 in their older NaN-guard sentences, their wording kept. TASK-M2-31's wording matches, and its GPU case
+  draws `d_min`'s unset `+∞` too, so the order is checked on the GPU.
+- **A view's measured range** (`u_range`, `RANGE_AUTO = 1`) is taken over the samples whose stored value is finite,
+  since the others are not on the ramp (applied per R-369: `V_0`'s and `E_0`'s auto range would otherwise take `−∞`
+  as an end, which RQ-284 named).
+- **The docs.** dd_decoder §3.6's "On the CPU its log view reads it as raw 1, the top of the ramp; the GPU's reading
+  is open (RQ-284)" becomes the view drawing `+∞` invalid, and a bullet records the stored values and the rule;
+  colour_composition §6 gives the agreement presets' rule and its debug exception's limit; the render contract's
+  cross-check views and debug_tooling_plan §G the energy-agreement view's; render_gui_spec §10.1 the numeric
+  template's guard and the measured range; the GPU determinism note's rule 4 a sentence.
+- **The numeric views are built by a new task, TASK-M2-31**, closing REQ-COL-070 (new, reqio): TASK-M1-09 built the
+  template and has merged, so the change to the generator, its CPU twin, the regenerated views and the tests that
+  pinned `±∞` on the ramp need their own PR (applied per R-369, as R-417 added TASK-M2-30). It depends on TASK-M2-03,
+  which wrote the descriptor's fields, and TASK-M1-09.
+- **The holds come off.** REQ-COL-006, REQ-COL-060 and REQ-VAL-027 lose `rq: RQ-284` and gain R-436 among their
+  rulings, a sentence in their verify detail and a note; TASK-M2-25, TASK-M2-29 and TASK-M3-22 gain a note.
+- **The producers select the pole values** (applied per R-369, physics review 5531809281 P1: the mechanical consequence
+  of "store the true value … CPU and GPU alike", with R-271's packer, which writes `d_min`'s `+inf` bits itself, as
+  the precedent, and R-437's selects as the form). The descriptor follows `Real` (R-313), so on the GPU path the decode
+  stage computes it at f32, and the fragment decode (R-116) forms its own `V` and `E`; the poles are reached at f32 as
+  at f64 (R-417). The ruling's own premise, that WGSL lets an implementation assume there are no infinities, holds for
+  the producers as much as for the consumers: a GPU-computed `1/0` is not pinned to `±∞`, and a finite indeterminate
+  result would pass the consumers' bit test. So each producer of a pole value chooses it by comparing its divisor with
+  0 and a select, never relying on WGSL arithmetic on 0 or `∞`:
+  - `rho_ratio = ‖ρ̃‖/‖λ̃‖` gives the `+∞` bits where `‖λ̃‖ = 0`;
+  - `V_0` gives the `−∞` bits wherever a pair separation `‖rᵢ − rⱼ‖` is 0, for the whole sum, not a sum with an
+    infinite term;
+  - `virial_ratio = 2K₀/|V₀|` gives 0 where `V_0` is non-finite, tested on its bits.
+
+  The `±∞` bits are written by a bitcast of the integer pattern (`0x7F80_0000` and `0xFF80_0000` at f32,
+  `0x7FF0_0000_0000_0000` and `0xFFF0_0000_0000_0000` at f64), never by an infinite literal (rule 4) or by `1/0`; the
+  quotient the select discards is never read. The CPU path runs the same source, so it stores the same bits. The
+  fragment-side agreement preset tests the fragment decode's `V` on its bits before it forms `E`. The corpus already
+  gave these values (dd_decoder §3.6: `V_0` reads `−∞` and `virial_ratio` 0 at the collision pole, `rho_ratio` `+∞`
+  at `α = 0`), so only their production is settled here. dd_decoder §3.6 gains a bullet, colour_composition §6 a
+  sentence and the GPU determinism note's rule 4 a sentence. REQ-TOOL-030 (TASK-M2-06, which writes the GPU
+  `ICDescriptor` from the kernel's decode stage) gains R-436 and a verify clause; REQ-COL-006 (TASK-M2-25, the
+  fragment decode and the agreement preset) and REQ-VAL-027 gain one each; TASK-M2-06 and TASK-M2-25 gain a note.
+  REQ-PAY-088, which defined the formulas and closed with TASK-M2-03, is unchanged.
+- **R-79** carries the forward line and a "Still in force" line.
+- **RQ-284** moves to `docs/archive/review_queue/M0.md` with its Ruling line, as RQ-279 did.
+- R-436 is in the "design" group of `plan/rule_groups.yaml`, with R-79.
+
+Changes REQ-COL-006, REQ-COL-060 and REQ-VAL-027 (holds, rulings, verify, notes) and REQ-TOOL-030 (rulings, source,
+verify); adds REQ-COL-070 and TASK-M2-31.
+Round 5 (gui review 5533020211) changes REQ-COL-070 (statement, verify) and, from round 6, TASK-M5-17 (a requirement,
+the gui reviewer); adds REQ-COL-071; also applied in render_gui_spec §10.1 and § "13. Invariants".
+
+## R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*
+*15 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted
+Jacobi" (a sentence reworded, a paragraph added) and § "3.3 Canonicalise", `docs/design/principia_chart_reference.md`
+§ "0.4 Canonicalisation `C`" and § "3.2 Inverse — closed form", `docs/design/principia_dd_encode.md` § "3.1 Forward ↔
+inverse pairing table — closures verified" and § "3.2 Canonicalisation `C` — the exact ordered procedure",
+`docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward mates)"
+and `docs/notes/principia_gpu_determinism_note.md` § "The discipline" (a pointer), REQ-COL-006, REQ-DEC-002,
+REQ-DEC-014, REQ-DEC-016, REQ-ENC-016 (reqio, holds removed), REQ-ENC-007 and REQ-CHART-020 (reqio), TASK-M2-07,
+TASK-M2-08, TASK-M2-15, TASK-M2-16, TASK-M2-25 and TASK-M2-26 (notes), `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-285 archived) and `REVIEW_QUEUE.md` (RQ-287 filed); built by TASK-M2-07,
+TASK-M2-08, TASK-M2-15, TASK-M2-16 and TASK-M2-25*
+
+The human's answer (R-436 gives the message):
+
+> RQ-285 → "(a) Define, select (Recommended)". The option as offered: "Define the pole's value in the docs and choose
+> it branch-free by comparing the operands with 0, as rho_angle already does. CPU and GPU then agree everywhere, at
+> the cost of one comparison. Physics's recommendation."
+
+*What it decides:*
+- **RQ-285 is closed, option (a).** The value of an `atan2` at a pole, where both its operands are 0, is defined in
+  the corpus, not obtained from `atan2(0, 0)`: the CPU's libm gives 0 there, but GLSL.std.450 `Atan2`, to which SPIR-V
+  and naga lower `atan2`, and so WGSL's, is undefined. dd_decoder §3.2:95 is reworded to say so.
+- **The value is chosen branch-free by a select**: each operand is compared with the constant 0 and the value is a
+  select between the defined one and the `atan2` already computed, as dd_decoder §3.6 does for `rho_angle` (the GPU
+  determinism note's discipline: a comparison, never backend-elective floating point). CPU and GPU then agree at the
+  pole as everywhere else.
+
+*Applied:*
+- **The value is 0 at every pole** (applied per R-369: the corpus fixes it). dd_decoder §3.2:95 already gave the
+  exact pole's value as `atan2(0,0) = 0`, the CPU's `atan2(+0, +0) = +0`, and `rho_angle`'s pole case is 0 (§3.6). No
+  pole is left for the human: each `atan2` that can reach one is given 0 there.
+- **Signed zeros give the same 0** (applied per R-369): the comparison with 0 is true for `+0` and `−0` alike, so the
+  CPU's `atan2(±0, −0) = ±π` is not reached at the pole, and the select also clears a `−0` result.
+- **The places.** dd_decoder §3.2 gains a paragraph, "Every `atan2` at a possible pole", listing them:
+  - §3.3's and chart_reference §0.4's `φ = atan2(ρ_y, ρ_x)` at `ρ = 0`, the `α = π/2` collision pole: `φ = 0`, so
+    `R(−φ)` is the identity; dd_encode §3.2's step 2 is the same `φ`, where `lookup_clamped` still catches the pixel
+    (R-13).
+  - The encode's `β = atan2(λ̃_y, λ̃_x)` at `λ̃ = 0`, the `α = 0` pole: `β = 0` (dd_encode §3.1, inverse-encode
+    contract Part 3).
+  - The shape-sphere inverse's `atan2(q, p)` at `p = q = 0` (`n₀ = ±1`; chart_reference §3.2): the term is 0, so
+    `ψ = φ_f`.
+  - `rho_angle` (§3.6), already defined case by case by TASK-M2-03.
+  - Not a pole: the encode's `α = atan2(‖λ̃‖, ‖ρ̃‖)`, whose operands are never both 0 once `I = 1`.
+- **Out of scope** (applied per R-369): the integrator's `θ̃ = atan2(n_v, n_u)` is read only outside the `r_pole`
+  disc (R-389), and the colour-side `atan2`s (colour_composition's stripes and contours) are display colourings
+  outside RQ-285's decode, encode and canonicalisation chain; the OKLCH hue already takes 0 at `C = 0` by a select
+  (dd_colouring §3.1).
+- **The holds come off.** REQ-COL-006, REQ-DEC-002, REQ-DEC-014, REQ-DEC-016 and REQ-ENC-016 lose `rq: RQ-285` and
+  gain R-437 among their rulings and a sentence in their verify detail; REQ-ENC-007 (`β`) and REQ-CHART-020 (`ψ`)
+  gain the same. REQ-DEC-014's and REQ-DEC-016's statements keep their `atan2(0,0) = 0` and `φ = atan2(ρ_y, ρ_x)`;
+  their notes say the pole value is R-437's defined 0, chosen by a select. TASK-M2-07, TASK-M2-08, TASK-M2-15,
+  TASK-M2-16, TASK-M2-25 and TASK-M2-26 gain a note.
+- **RQ-287 is filed** (applied per R-369, nothing chosen): checking the encode's `atan2`s for signed zeros found that
+  the mirror's deadband leaves `λ̃_y ∈ [−δ_λ, 0]`, where a body 2 on the `−x` side gives `β` near `−π`, which `s_β`
+  clamps to the `β = 0` end. It is not a pole, so this ruling does not settle it. REQ-ENC-007 carries `rq: RQ-287`,
+  so TASK-M2-15 waits on it.
+- **RQ-285** moves to `docs/archive/review_queue/M0.md` with its Ruling line, as RQ-279 did.
+- No code changes: `rho_angle` already follows this ruling, and no other `atan2` at a pole exists in the code yet.
+- R-437 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-006, REQ-DEC-002, REQ-DEC-014, REQ-DEC-016, REQ-ENC-016 (holds, rulings, verify), REQ-ENC-007
+(rulings, verify, the hold RQ-287) and REQ-CHART-020 (rulings, verify).
+
+## R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*
+*15 Oct 2026 · applied in `docs/design/principia_dd_encode.md` § "3.1 Forward ↔ inverse pairing table — closures
+verified" (the Config row's cells and a paragraph reworded, a paragraph added), § "3.2 Canonicalisation `C` — the exact ordered
+procedure" (a paragraph added) and § "5. Unit tests" (test 10), `docs/contracts/principia_inverse_encode_contract.md`
+§ "Part 1 — What encode is: a quotient map onto a section" (a sentence added) and § "Part 3 — Block inverses (closed
+forms, with their forward mates)" (a line reworded, a paragraph added), `docs/design/principia_dd_decoder.md` § "3.2
+Configuration — hyperspherical mass-weighted Jacobi" (a line reworded) and § "3.6 ICDescriptor derived quantities
+(decode-time, pre-integration)" (a clause), `docs/design/principia_chart_reference.md` § "0.4 Canonicalisation `C`" (a
+sentence added), `docs/contracts/principia_canonical_spec.md` § "3. The physics & manifold model" (a clause), REQ-ENC-007 (reqio:
+statement, rulings, verify, note, the hold RQ-287 removed), TASK-M2-15 (goal, an acceptance test, notes),
+`plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-287 archived) and `REVIEW_QUEUE.md`; built by
+TASK-M2-15*
+*Round 3 (physics review 5532062124) is also applied in `docs/design/principia_dd_encode.md` § "3.1 Forward ↔
+inverse pairing table — closures verified" (a paragraph added) and § "5. Unit tests" (test 10, items added),
+`docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward
+mates)" (a paragraph added), REQ-ENC-007 (reqio: verify, note), REQ-COL-006 (reqio: rulings, source, verify), TASK-M2-15 (acceptance
+tests, a note) and TASK-M2-25 (a note)*
+
+The human's ruling of 15 Oct 2026 on RQ-287, in their own words:
+
+> "RQ-287: (d). β = atan2(|λ̃_y|, λ̃_x), reading the mirror's quotient for β only; R-82 unchanged. Conditions: (1) at
+> λ̃ = 0 (α = 0) β takes RQ-285's defined pole value by select, not atan2(0, 0); (2) the docs state that β ∈ [0, π]
+> holds because β reads |λ̃_y|, not by the mirror alone, and a test encodes collinear shapes with
+> λ̃_y ∈ {−1e-13, −0, +0, +1e-13}, body 2 on either side and each Euler landmark, requiring β = π or 0 as appropriate
+> and a round trip within the deadband"
+
+Option (d) is the form physics review 5531809281 (P2) found missing from RQ-287's options (a) to (c).
+
+*What it decides:*
+- **RQ-287 is closed, option (d).** The encode's `β` is `atan2(|λ̃_y|, λ̃_x)`: it reads the mirror's quotient, `|λ̃_y|`,
+  for `β` only. R-82's mirror test and its deadband are unchanged: after step 3 of `C`, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`,
+  and `β` no longer depends on which side of 0 a deadband `λ̃_y` lies.
+- **`β ∈ [0, π]` holds because `β` reads `|λ̃_y|`**, whose sign is never negative, not by the mirror alone, which leaves
+  `λ̃_y ∈ [−δ_λ, 0]` unmirrored. With `λ̃_y` read as it was, a body 2 on the `−x` side gave `β` near `−π`
+  (`atan2(−0, x < 0) = −π` exactly), which `s_β` clamped to the `β = 0` end.
+- **At `λ̃ = 0` (`α = 0`), `β` takes R-437's defined pole value, 0, by a select** on `λ̃_x = 0` and `λ̃_y = 0`, not
+  `atan2(0, 0)`.
+- **The test.** Collinear shapes are encoded with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2 on either side and at each
+  Euler landmark: `β` is π (body 2 on the `−x` side) or 0 (on the `+x` side), as appropriate, and the round trip is
+  within the deadband.
+  - **The pole landmark** (physics review 5532062124 P2, applied per R-369). With `m₀ = m₁`, the landmark with body 2
+    in the middle has body 2 exactly at the inner pair's centre of mass, so `λ̃ = 0` and `α = 0`: body 2 is on neither
+    side. There, at `λ̃_y = ±0`, `β = 0` by condition (1)'s select. At `λ̃_y = ±1e-13` with `λ̃_x = 0`, the ruling's
+    formula gives `β = π/2` (`π̂/2` as computed), and the test asserts that value. The side rule applies to the
+    landmarks with `λ̃_x ≠ 0`; the test's masses are chosen so that no other landmark sits on the pole, and the pole
+    case is tested on its own.
+  - **On the `−x` half-axis** (P1), at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by a select, on CPU-f64 and GPU-f32 alike.
+  - **"A round trip within the deadband"** is defined under "Contradiction flagged, applied" below.
+    It compares mass-weighted Jacobi coordinates (masses, `ρ̃`, `λ̃`, `p_ρ`, `p_λ`), with `λ̃_x` and `λ̃_y` each given
+    its own bound (physics review 5532166783 P1, applied per R-369).
+
+*Why, from physics review 5531809281 (P2), recorded here because it explains the form:*
+- **`abs` and a select, never `max`.** `abs` clears the sign bit and is pinned in WGSL. RQ-287's option (b),
+  `max(λ̃_y, 0)`, fails on the case it targets: GLSL.std.450 `FMax` is "y if x < y, otherwise x", so `max(−0, +0)`
+  returns `−0`, and Rust's `f64::max` may return either zero; `atan2(−0, x < 0) = −π` then comes back. So the code
+  reads `|λ̃_y|` by `abs` and the pole by a select, never by `max`.
+  But `abs` pins the sign of the zero only as far as `atan2`'s operand (physics review 5532062124 P1): the zero's sign
+  is not pinned through `atan2` on the GPU. WGSL may ignore the sign of a zero, under the same IEEE-754 deviations
+  that let it assume there are no infinities (R-436), and so may Vulkan without `SignedZeroInfNanPreserve` and Metal's
+  fast-math. The generated encode's `atan2(+0, x < 0)` can then evaluate as `atan2(−0, x < 0) = −π`, which `s_β`
+  clamps to the `β = 0` end: RQ-287's error, back on the fragment-side encode, at every exactly collinear input with
+  body 2 on the `−x` side. So `β` selects `π̂` there too (Applied, below), as `rho_angle`'s antiparallel case does
+  (`docs/design/principia_dd_decoder.md` §3.6).
+- **`β ≈ 0` and `β ≈ π` are different collinear shapes, not mirror images.** The mirror fixes the x-axis, so it maps a
+  collinear shape to itself; RQ-287's clamp to the `β = 0` end returned a different shape (body 2 on the other side of
+  the inner pair), not the mirror-opposite of the same one.
+- **Near `α = 0` the whole `λ̃` disc lies inside the deadband.** Where `‖λ̃‖ ≲ δ_λ`, the whole lower half of the `λ̃`
+  disc is unmirrored, so a true `β` anywhere in `(−π, 0)`, `−π/2` for one, reaches the encode. Options (a) and (b)
+  mapped it to 0 or π, an O(1) error in `z_β`; `|λ̃_y|` gives `π/2` for `−π/2`, the value the review judged correct.
+  The physical error there stays at most `‖λ̃‖`, so the cost is in `z`, not in the physics. `|λ̃_y|` is also
+  continuous across the deadband's edge, `λ̃_y = −δ_λ`, where the mirror begins, and it is the only one of the forms
+  considered that stays right near `α = 0`.
+
+*Contradiction flagged, applied (physics review 5532062124 P3):* the ruling's "a round trip within the deadband"
+contradicts the corpus for an exactly collinear input. There `β` is 0 or π, so `s_β` is 0 or 1, which the clamp sets
+to `ε_z` or `1 − ε_z` (`ε_z = 10⁻⁶`, inverse-encode Part 3) with `lookup_clamped`. The decode then returns `β` a
+distance `π·ε_z` from its end, so `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about 10⁶ × `δ_λ` (`δ_λ = 10⁻¹²`): a `λ̃_y` within the
+deadband cannot come back. The inverse-encode contract already says so
+(`docs/contracts/principia_inverse_encode_contract.md` § "Part 7 — Ground-truth ingestion (the validation programme's
+demand)", :234: "The chart cannot cleanly reach an *exactly*-degenerate config"). Per CLAUDE.md "Rulings", this is
+flagged and what is applied is recorded. Applied as an R-72 definition of what the round trip compares, chosen by the
+orchestrator per R-369 (the human may veto it), for each landmark off the pole, compared in mass-weighted Jacobi
+coordinates: the masses, `ρ̃`, `λ̃`, `p_ρ` and `p_λ` (physics review 5532166783 P1):
+- the four `λ̃_y` inputs of one landmark encode to the same `z`, since the deadband is invisible to the encode;
+- `decode(encode(x))` keeps the input's side (the sign of `λ̃_x`), with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own
+  `|λ̃_y|` (at most `δ_λ`) and rounding;
+- `|Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z))` plus rounding, about `4.9×10⁻¹²·‖λ̃‖`: the clamp moves `β` by `π·ε_z`, so it moves
+  `λ̃_x` too, on either side, since `cos(π(1 − ε_z)) = −cos(π·ε_z)`;
+- the remaining components (the masses, `ρ̃`, `p_ρ`, `p_λ`) are within `ε_phys`;
+- `lookup_clamped` is set.
+
+At the pole landmark the four inputs do not share a `z` (`±0` give `β = 0`, `±1e-13` give `π/2`), and `s_α` clamps
+too, so the test asserts `β` and `lookup_clamped` there, and the pole's round trip is REQ-DEC-014's exact-pole ingest
+(`encode_exact_poles`: no NaN, deterministic, `lookup_clamped` set). The bound's term for the input's own `|λ̃_y|` is
+the porter's, applied per R-369: an input of `−1e-13` decodes to a `λ̃_y ≥ 0`, so the difference includes it.
+
+The coordinates and `λ̃_x`'s bound are physics review 5532166783 P1's, applied per R-369. `ε_phys` is REQ-ENC-024's
+calibration of the round-trip residual over interior `z` (inverse-encode Part 4), so it cannot absorb a clamp's
+displacement: that is why `λ̃_x` and `λ̃_y` carry their own bounds. In physical `(m, r, p)` the shift in `λ̃_y` would move
+every body's `r_y` once the centre of mass is re-centred, which is why the comparison is in Jacobi coordinates. `p_ρ`
+and `p_λ` are unaffected, since the canonical rotation depends on `ρ̃` only.
+
+*Applied:*
+- **The docs.** dd_encode §3.1's Config row and its pole paragraph read `β = atan2(|λ̃_y|, λ̃_x)` and give the reason
+  for the range; a paragraph after it records R-438. dd_encode §3.2 gains a paragraph after step 2's: after step 3,
+  `λ̃_y ≥ −δ_λ`. dd_encode §5 gains test 10, the ruling's test. The inverse-encode contract's Part 3 reads the same `β`,
+  and Part 1 gains a sentence: `C` lands on `λ̃_y ≥ −δ_λ`. dd_decoder §3.2's list of the `atan2`s at a pole reads the
+  same `β`; §3.6's canonical frame for `rho_angle` names the deadband (physics review 5531809281 P2 (d)).
+  chart_reference §0.4 gains a sentence, and the canonical spec's section a clause. The decode-side statements,
+  `β ∈ [0, π]` (mirror fixed) of the forward map, are true of the decode's output and are unchanged.
+- **R-437's `β` at `λ̃ = 0`** stands, the select on `λ̃_x = 0` and `λ̃_y = 0` giving 0; R-437 quoted `β` as
+  `atan2(λ̃_y, λ̃_x)`, which R-438 now reads with `|λ̃_y|`. The comparison with 0 is the same for `|λ̃_y|`.
+- **REQ-ENC-007** (reqio) loses `rq: RQ-287`; its statement reads the new `β`; it gains R-438 among its rulings and
+  sources, the ruling's test in its verify detail and a note. TASK-M2-15 gains the test in its acceptance tests, the
+  new `β` in its goal and a note, and loses its wait on RQ-287.
+- **RQ-287** moves to `docs/archive/review_queue/M0.md` with its Ruling line.
+- No code changes: no encode code exists yet (TASK-M2-15).
+- R-438 is in the "physics" group of `plan/rule_groups.yaml`, with R-82 and R-437.
+- **`β` selects `π̂` on the `−x` half-axis** (round 3, physics review 5532062124 P1; applied per R-369 as a mechanical
+  consequence of R-438, following `rho_angle`'s precedent in dd_decoder §3.6). `π̂` is R-417's image of π (rounded
+  toward zero at f32, the nearest value at f64). `β` is, case by case, each case chosen by a comparison with the
+  constant 0, selecting a value already computed:
+  - `λ̃_x = 0` and `λ̃_y = 0` (the `α = 0` pole): 0 (condition (1); R-437);
+  - `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`: `π̂`;
+  - elsewhere: `atan2(|λ̃_y|, λ̃_x)`.
+
+  At f64 `π̂` is the value the CPU's `atan2(+0, x < 0)` already returns, so the select pins the GPU to the CPU's value.
+  Landed in dd_encode §3.1 and inverse-encode Part 3 (a paragraph each). REQ-ENC-007's verify and REQ-COL-006's
+  generated-WGSL clause require CPU/GPU agreement on that half-axis with `±0` operands (REQ-COL-006 gains R-438
+  among its rulings and sources); TASK-M2-15 gains the acceptance
+  test `cargo test -p engine encode_beta_half_axis`, and TASK-M2-25 a note.
+- **Test 10's pole landmark and its round trip** (round 3, P2 and P3): above, under "The test" and "Contradiction
+  flagged, applied". Landed in dd_encode §5 test 10, TASK-M2-15's `encode_collinear_beta` and REQ-ENC-007's verify.
+
+Changes REQ-ENC-007 (statement, rulings, source, verify, note, the hold RQ-287).
+Round 3 changes REQ-ENC-007 (verify, note) and REQ-COL-006 (rulings, source, verify).

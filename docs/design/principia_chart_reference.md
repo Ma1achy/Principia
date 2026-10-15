@@ -98,6 +98,14 @@ if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)
 |λ̃_y| ≤ δ_λ:            no mirror (deterministic tie-break — R-82)
 ```
 
+**`φ` at the pole (R-437).** At `ρ = 0` (the collision of bodies 0 and 1) `φ` is 0, whatever the signs of the zeros,
+so the rotation is the identity there: a select on `ρ_x = 0` and `ρ_y = 0`, not `atan2(0, 0)`, which GLSL.std.450 and
+WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
+
+**After the mirror test, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0` (R-438).** The deadband is left unmirrored (R-82), so the
+encode's `β = atan2(|λ̃_y|, λ̃_x)` reads `|λ̃_y|`, and `β ∈ [0, π]` holds because it does, not by the mirror alone
+(`principia_dd_encode.md` §3.1).
+
 ### 0.5 Scale gauge
 
 ```
@@ -319,6 +327,11 @@ a = I(1 + n₀)/2      b = I(1 − n₀)/2      p = I·n₁/2      q = I·n₂/2
 was `atan2(−q, p)`. Verified to machine precision (round trip over 2,000 random masses and shapes, max error 3e−15).
 `φ_f` is the fibre phase, not the polar angle `φ` of §3.3.
 
+**`ψ` at the poles (R-437).** At `n₀ = ±1`, `ab = 0`, so `p = q = 0` and `atan2(q, p)` is at its pole: there the term is
+0, whatever the signs of the zeros, so `ψ = φ_f`, chosen by a select on `p = 0` and `q = 0`, not obtained from
+`atan2(0, 0)` (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole"). At `n₀ = 1` (`b = 0`) `ψ` does not
+reach the positions; at `n₀ = −1` (`a = 0`, the collision `ρ̃ = 0`) it sets `λ̃`'s direction.
+
 Then unweight (`ρ = ρ̃/√μ_ρ`, `λ = λ̃/√μ_λ`) and reconstruct positions per §0.2.
 
 **Round-trip test that can fail:** `shape_vec(decode(u,v)) == n(u,v)` to ~1e−14.
@@ -536,12 +549,43 @@ pub trait Chart {
     fn map<F: Float>(&self, u: F, v: F) -> ChartOut<F>; // Φ : [0,1]² → chart space, generic over the float type
     fn forbids_energy_normalisation(&self) -> bool { false }
     fn name(&self) -> &str;                          // goes in every dump header
+    fn validate(&self, u: f64, v: f64) -> ValidationResult; // the domain function (R-26), CPU-side f64
 }
 ```
 
 Φ is generic over the float type (lowering Part 2, R-118): the one source is monomorphised as the f32 kernel and the
 f64 CPU reference. `validate(u, v)` stays a CPU-side f64 check (`principia_inverse_encode_contract.md`, chart-aware
 validation).
+
+**The chart's parameter type** (refining R-118; applied per R-369, TASK-M2-05). Each chart declares an associated
+`type Param: Copy`, the float type its parameters are held at (f32 in the kernel's uniform, f64 on the CPU), and `map`'s
+bound is `F: Float + From<Self::Param>`: `map` is generic over every float type the parameters widen into, so a chart
+held at f32 maps at f32 in the kernel and one held at f64 maps at f64 on the CPU, from the one source. Narrowing f64
+parameters to f32 is the CPU's own step, never `map`'s; the bound has no fallible conversion (as `NumCast`'s
+`Option` would be) in the kernel. Every chart implements the trait so.
+
+**`ValidationResult`** (R-26; defined per R-72, REQ-CHART-043). `validate(u, v)` checks the chart point against
+`principia_inverse_encode_contract.md` § "Chart-aware validation"'s layers 2 (chart feasibility) and 3 (decode sanity);
+layer 1, the hypercube bounds, is the encode path's, on lookup and lock, never `validate`'s
+(`principia_chart_decoder_contract.md` Part 3, R-407). It returns one of four variants:
+
+| variant | meaning |
+|---|---|
+| `Valid` | `(u, v)` passes every layer-2 and layer-3 constraint of the chart |
+| `Project { u, v, failed }` | `(u, v)` fails the constraint `failed`; the `(u, v)` returned is the nearest point of the chart's feasible region (for `(Lz,E)`, on the parabola), where lookup and lock commit, and notify |
+| `Clamp { u, v, moved, failed }` | `(u, v)` fails `failed`; each out-of-range coordinate is snapped to its boundary, giving the `(u, v)` returned, and `moved` says which of `u`, `v` moved, for `lookup_clamped` and the display of the moved coordinates |
+| `Reject { failed }` | `(u, v)` is refused with an error naming `failed`, only where projecting or clamping would give a qualitatively different IC from the one intended |
+
+On a failure the chart returns the first of project, clamp, reject that keeps the IC the one intended (the contract's
+order of preference). **The failed constraint** `failed` names one of the contract's constraints, layer 2 then layer
+3: the `(Lz,E)` parabola `|Lz| ≤ √(2I(E − U))`; `(Lz,K)`'s `K ≥ 0` and `K ≥ Lz²/2I`; the mass simplex's `mᵢ > 0`,
+`Σmᵢ = 1` and interior buffer `ε_m`; the shape sphere's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`; the Burrau charts' `ν ∈ (0,1)`;
+then decode sanity's decoded masses positive, CoM at the origin and total momentum zero. A mixed-axis chart names its
+axes' constraints; a chart that adds a constraint adds it to this list. Every chart's `validate` checks both layers.
+The latent chart (§1.1) adds no layer-2 constraint, and layer 3 holds for it by the shared decoder's construction: the
+masses are positive under every registered mass link (§0.1), the CoM is at the origin (§0.2) and `Σpᵢ = 0` (§0.3),
+the residuals rounding within REQ-ENC-027's tolerance. So its `validate` returns `Valid` at every `(u, v)`. A chart
+that bypasses the canonical-frame decode can fail layer 3, and its `validate` checks it.
 
 `ChartOut` is whatever `D` consumes — masses, `(α,β)` or an explicit `(ρ,λ)`, and momenta or a
 `(Lz,K)` request. **`D` and `C` are shared and written once.** The integrator never sees a chart.
@@ -576,6 +620,16 @@ Python cross-check's anchor.
 - **`forbids_energy_normalisation`** is enforced — a config combining `(Lz,E)` with any
   `Some(E*)`, including `Some(0)`, is **refused** (R-25), and a test asserts the refusal
 - **Axis-aligned latent slice with `q1 = ê_α, q2 = ê_β`** equals a direct `(α,β)` sweep
+  (defined per R-72, REQ-CHART-050). The **direct `(α,β)` sweep** about the slice centre `z0` maps pixel `(u, v)` to `α
+  = α-link(z0_α + (2u − 1))` and `β = β-link(z0_β + (2v − 1))`, through the selection's α and β links (§0.2's `α = α_min
+  + (π/2 − 2α_min)·σ(z_α)` and `β = π·σ(z_β)` under the defaults), and builds the IC from `(α, β)` by §0.2: `ρ̃ = cos
+  α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)`, unweighted and reconstructed with the masses of `z0`'s mass block (§0.1), and
+  the momenta of `z0`'s momentum block (§0.3). The comparison is per pixel (REQ-CHART-030), so the sweep is the one
+  whose `(u, v) → (α, β)` map is the slice's own; a sweep linear in angle has the same `(α, β)` set at other pixels and
+  is not it. The equality asserted: at each pixel, inside `[0,1]²` and past it, at f64 and at f32 and under every
+  registered link, the slice's decode `D(z(u, v))` and the direct sweep give bitwise-equal `α`, `β` and `(m, r, p)`
+  (`==`, so `+0 = −0`): the slice's `z(u, v)` is `z0` with `z_α = z0_α + (2u − 1)` and `z_β = z0_β + (2v − 1)`, exactly,
+  up to the sign of a zero.
 - **`BodyPlane` bitwise unchanged**, and the Python cross-check green
 
 ### 5.3 What to report per chart

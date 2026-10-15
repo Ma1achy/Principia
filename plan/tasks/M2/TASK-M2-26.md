@@ -32,6 +32,7 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*"
 - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
 - `decisions.md` § "R-297 — Fast-math per shader stage: off for compute by default, an explicit and recorded opt-in; display may keep it *(amends R-84, R-116)*"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
 - The ROUNDTRIP preset (`crates/render/src/presets/roundtrip.rs` + WGSL), locked, with the tagged-expected mask (clamp, feasibility edge, mirror tie).
@@ -45,3 +46,5 @@ The ROUNDTRIP fragment preset renders per pixel the z → D → E → D physical
 - Gaps G2 and G15 apply (nonlinear charts, ‖·‖_phys).
 - RQ-84 ruled: R-116 — the WGSL encode the ROUNDTRIP preset calls is generated from the one Rust source (TASK-M2-25), never hand-written; this settles Gap G1 here.
 - R-297: ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys, which R-297's "stated tolerance" names for it; REQ-COL-060 (TASK-M2-29) is the agreement presets' tolerance, fragment against compute, and doesn't apply here. If the residual under fragment fast-math exceeds ε_phys, that is a REVIEW_QUEUE entry, not a second tolerance (applied per R-204, accepted by R-358).
+- **R-437 (RQ-285):** ROUNDTRIP's fragment-side `encode(decode(z))` runs the generated encode, whose `atan2`s take
+  their defined pole values by a select (TASK-M2-25), so the residual at a pole is the same on both backends.

@@ -48,14 +48,15 @@
     section: 2. Component inventory, by rung
   - file: decisions.md
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
+  - file: decisions.md
+    section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   verify:
     method: property test
-    detail: "on random physical states the output satisfies all four section conditions and canonicalise is idempotent"
+    detail: "on random physical states the output satisfies all four section conditions and canonicalise is idempotent; at ρ = 0, with each component +0 or −0, φ is 0 and R(−φ) the identity on CPU-f64 and GPU-f32, chosen by a select on ρ_x = 0 and ρ_y = 0, never atan2(0, 0) (R-437)"
   rulings:
   - R-82
+  - R-437
   milestone: M2
-  rq:
-  - RQ-285
 - id: REQ-DEC-003
   area: DEC
   statement: "The latent vector must be ordered z[0:2] = configuration controls (z_α, z_β), z[2:6] = momentum controls (z_q0..z_q3), z[6:8] = mass controls (z_μ1, z_μ2), and this block ordering must be fixed once and held."
@@ -278,16 +279,17 @@
     section: R-21 — `α_min = 0` *(CD-1)*
   - file: decisions.md
     section: "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+  - file: decisions.md
+    section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   verify:
     method: unit test
-    detail: "ingest configs with ‖λ̃‖ = 0 and ‖ρ̃‖ = 0 exactly: no NaN, deterministic output identical on repeat and across backends, `lookup_clamped` set (the encode clamp flag, not the payload's `saturated` bit; R-133)"
+    detail: "ingest configs with ‖λ̃‖ = 0 and ‖ρ̃‖ = 0 exactly: no NaN, deterministic output identical on repeat and across backends, `lookup_clamped` set (the encode clamp flag, not the payload's `saturated` bit; R-133); each atan2 at the pole (φ at ρ̃ = 0, β at λ̃ = 0) takes R-437's defined 0 by a select on its operands against 0, never atan2(0, 0), and ±0 operands give the same 0"
   rulings:
   - R-21
   - R-133
+  - R-437
   milestone: M2
-  rq:
-  - RQ-285
-  note: "R-133: R-21's 'SAT flags' is read as the encode clamp flag lookup_clamped (inverse_encode Part 3–4, dd_encode §3.5)."
+  note: "R-133: R-21's 'SAT flags' is read as the encode clamp flag lookup_clamped (inverse_encode Part 3–4, dd_encode §3.5). R-437: the statement's 'atan2(0,0) = 0' is the defined value 0, chosen by a select on the operands against 0, not obtained from atan2, which GLSL.std.450 leaves undefined at (0, 0)."
 - id: REQ-DEC-015
   area: DEC
   statement: "The decode must honour the α orientation ‖ρ̃‖ = cos α, so small α is a large inner-pair separation and α → π/2 is a tight inner binary with a distant third body."
@@ -319,13 +321,15 @@
     section: 3.2 Canonicalisation `C` — the exact ordered procedure
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: Part 6 — The canonical inverse policy, completed
+  - file: decisions.md
+    section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   verify:
     method: property test
-    detail: "T3 with the half-mirror catch: random-gauge x → E → D equals C(x) with |L_z| sign consistent with lookup_mirrored; a config-only mirror must fail this check"
-  rulings: []
+    detail: "T3 with the half-mirror catch: random-gauge x → E → D equals C(x) with |L_z| sign consistent with lookup_mirrored; a config-only mirror must fail this check; T3's inputs include ρ = 0 with ±0 components, where φ is R-437's defined 0 on both precisions"
+  rulings:
+  - R-437
   milestone: M2
-  rq:
-  - RQ-285
+  note: "R-437: φ = atan2(ρ_y, ρ_x) takes the defined 0 at ρ = 0, chosen by a select, not obtained from atan2."
 - id: REQ-DEC-017
   area: DEC
   statement: "The mirror must be the one test in encode's frame — mirror iff λ̃_y < −δ_λ, with λ̃ = √μ_λ·λ and δ_λ = 10⁻¹² — and |λ̃_y| ≤ δ_λ must resolve to no mirror, deterministically, on every backend."
@@ -992,7 +996,7 @@
   milestone: M2
 - id: REQ-ENC-007
   area: ENC
-  statement: "The block inverses must be the closed forms of inverse-encode Part 3: μₖ = log(mₖ/m₀), z_μk = artanh(μₖ/μ_max) with |μₖ| ≤ (1−ε_μ)μ_max; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(λ̃_y, λ̃_x) ∈ [0, π], s_α = 2α/π, s_β = β/π, z = logit(s) with s clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, s = ½(q/q_max + 1), z = logit(clamp(s, ε_q, 1−ε_q)), with |qₖ| > q_max clamped and flagged lookup_clamped."
+  statement: "The block inverses must be the closed forms of inverse-encode Part 3: μₖ = log(mₖ/m₀), z_μk = artanh(μₖ/μ_max) with |μₖ| ≤ (1−ε_μ)μ_max; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π] (|λ̃_y| read by abs, never max; the range holds because β reads |λ̃_y|, not by the mirror alone, R-438), s_α = 2α/π, s_β = β/π, z = logit(s) with s clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, s = ½(q/q_max + 1), z = logit(clamp(s, ε_q, 1−ε_q)), with |qₖ| > q_max clamped and flagged lookup_clamped."
   source:
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: "Part 3 — Block inverses (closed forms, with their forward mates)"
@@ -1002,13 +1006,20 @@
     section: "R-10 — μ_max and q_max are settled *(closes RQ-8, amends R-5)*"
   - file: decisions.md
     section: R-21 — `α_min = 0` *(CD-1)*
+  - file: decisions.md
+    section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
+  - file: decisions.md
+    section: "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
   verify:
+    detail: "substitute forward into inverse for fuzzed z: each block recovers z to tolerance; |q| > q_max input sets lookup_clamped; at λ̃ = 0, ±0 components included, β = atan2(|λ̃_y|, λ̃_x) is R-437's defined 0, chosen by a select on λ̃_x = 0 and λ̃_y = 0, never atan2(0, 0); collinear shapes encoded with λ̃_y ∈ {−1e-13, −0, +0, +1e-13}, body 2 on either side and at each Euler landmark, give β = π (body 2 on the −x side) or 0 (on the +x side) as appropriate, never near −π, and a round trip within the deadband (R-438), which compares, at each landmark off the pole, in mass-weighted Jacobi coordinates (the masses, ρ̃, λ̃, p_ρ, p_λ): the four λ̃_y inputs of one landmark encode to the same z; decode(encode(x)) keeps the input's side, with |Δλ̃_y| ≤ π·ε_z·‖λ̃‖ plus the input's own |λ̃_y| and rounding; |Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z)) plus rounding; the remaining components (the masses, ρ̃, p_ρ, p_λ) within ε_phys; lookup_clamped set (R-72 definition, R-438 \"Contradiction flagged, applied\"); the pole landmark (m₀ = m₁, body 2 in the middle, λ̃ = 0 exactly) is tested on its own: λ̃_y = ±0 gives β = 0 by the select, λ̃_y = ±1e-13 with λ̃_x = 0 gives β = π/2 (π̂/2 as computed), lookup_clamped set; the side rule applies to the landmarks with λ̃_x ≠ 0, the masses chosen so that no other landmark sits on the pole; on the −x half-axis (λ̃_y compares equal to 0, λ̃_x < 0) β is π̂ (R-417) by a select, never atan2's value, and CPU-f64 and GPU-f32 agree there with ±0 operands (R-438, physics review 5532062124 P1)"
     method: unit test
-    detail: "substitute forward into inverse for fuzzed z: each block recovers z to tolerance; |q| > q_max input sets lookup_clamped"
   rulings:
   - R-10
   - R-21
+  - R-437
+  - R-438
   milestone: M2
+  note: "R-437: β takes the defined 0 at λ̃ = 0; α = atan2(‖λ̃‖, ‖ρ̃‖) has no pole once I = 1. R-438 (RQ-287): β reads |λ̃_y|, the mirror's quotient for β only, so a deadband λ̃_y ∈ [−δ_λ, 0] with λ̃_x < 0 gives β near π, not −π; R-82's mirror test and deadband are unchanged. Round 3 (physics review 5532062124): β selects π̂ on the −x half-axis, since WGSL may ignore a zero's sign through atan2; the ruling's round trip within the deadband is defined as the verify detail states (R-72), because the ε_z clamp keeps an exactly collinear λ̃_y from coming back."
 - id: REQ-ENC-008
   area: ENC
   statement: "Encode into the active chart must dispatch by axis kind: kind 1 reads the component exactly; kind 2 applies the block inverse plus the axis's own residual convention; kind 3 evaluates L_z(x), E(x), K(x) directly for chart coordinates; annotation axes have nothing to invert; otherwise encode falls back to latent z, which is always available."
@@ -1179,14 +1190,15 @@
     section: Part 6 — The canonical inverse policy, completed
   - file: decisions.md
     section: "R-13 — Lookup has no coincident-bodies rejection *(closes RQ-11)*"
+  - file: decisions.md
+    section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   verify:
     method: unit test
-    detail: "encode test 9: ρ → 0 inputs hit the step-2 guard with the lookup_clamped reason on CPU-f64 and GPU-f32"
+    detail: "encode test 9: ρ → 0 inputs hit the step-2 guard with the lookup_clamped reason on CPU-f64 and GPU-f32; at ρ̃ = 0 exactly, ±0 components included, φ is R-437's defined 0 on both, so the rotation is the identity"
   rulings:
   - R-13
+  - R-437
   milestone: M2
-  rq:
-  - RQ-285
   note: R-13 overrides dd_encode §3.2 / test 9's 'reject' wording
 - id: REQ-ENC-017
   area: ENC
@@ -1814,13 +1826,16 @@
     section: "R-178 — The shape-sphere round trip composes Φ alone *(closes A3)*"
   - file: decisions.md
     section: R-181 — The shape-sphere round-trip bound *(closes T1)*
+  - file: decisions.md
+    section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   verify:
     method: numerical gate
-    detail: "Φ alone (R-178): shape_vec(Φ(u,v)) == n(u,v) over random masses and shapes on both hemispheres, max |Δn| ≤ 1e−13 absolute (REQ-CHART-053, R-181); the canonical fold (Φ then C) checked separately on the upper hemisphere (R-141)"
+    detail: "Φ alone (R-178): shape_vec(Φ(u,v)) == n(u,v) over random masses and shapes on both hemispheres, max |Δn| ≤ 1e−13 absolute (REQ-CHART-053, R-181); the canonical fold (Φ then C) checked separately on the upper hemisphere (R-141); at n₀ = ±1, where p = q = 0 (±0 included), the atan2(q, p) term is R-437's defined 0 by a select, so ψ = φ_f"
   rulings:
   - R-14
   - R-178
   - R-181
+  - R-437
   milestone: M2
 - id: REQ-CHART-021
   area: CHART
@@ -10947,20 +10962,26 @@
     section: "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
   - file: decisions.md
     section: "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+  - file: decisions.md
+    section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
+  - file: decisions.md
+    section: "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
   verify:
+    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the collision pole, at f32 or f64) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included, and the fragment decode's own V tested on its bits before it forms E; the generated fragment decode selects V's −∞ bits where a pair separation is 0, written by bitcast, never 1/0 or an infinite literal (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included; the generated WGSL encode selects β = π̂ on the −x half-axis (λ̃_y compares equal to 0, λ̃_x < 0) and agrees with the CPU there, ±0 operands included (R-438)"
     method: numerical gate
-    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement"
   rulings:
   - R-75
   - R-116
   - R-133
   - R-297
   - R-358
+  - R-436
+  - R-437
+  - R-438
   milestone: M2
-  rq:
-  - RQ-284
-  - RQ-285
-  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says."
+  note: "R-133, as R-297 amends it: 'f32 noise' is read as REQ-DEC-043's calibrated f32 decode factor until TASK-M2-29 calibrates REQ-COL-060, the agreement presets' tolerance under fragment fast-math; from then on the agreement gate uses REQ-COL-060's tolerance, as the verify detail says. R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞. R-437: the pole values are defined and selected, as dd_decoder §3.2 lists them."
 - id: REQ-COL-007
   area: COL
   statement: "A category must never be interpolated: mixed categorical pixels must be resolved by per-sample colour then SSAA resolve, never by averaging state indices or by majority + desaturation."
@@ -11900,18 +11921,19 @@
     section: Cross-check views (the seams)
   - file: docs/design/principia_debug_tooling_plan.md
     section: "A. Kernel debug dispatch modes (skip integration; reuse payload slots as scratch)"
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
   verify:
     method: numerical gate
-    detail: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and states the tolerance that covers them; cargo xtask gate decode-agreement uses it; recorded in decisions.md"
+    detail: "the proposal measures, in gpu-metal and gpu-lavapipe, the agreement presets' fragment-against-compute differences (|E(fragment-decode) − E₀| and the like) over the M2 charts, and states the tolerance that covers them; cargo xtask gate decode-agreement uses it; recorded in decisions.md; pixels with a non-finite operand draw the invalid colour and are excluded from the measured differences (R-436)"
   rulings:
   - R-297
   - R-354
   - R-355
   - R-358
+  - R-436
   milestone: M2
-  rq:
-  - RQ-284
-  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note)."
+  note: "ROUNDTRIP's residual is computed wholly in the fragment, and its stated tolerance is ε_phys (REQ-ENC-024, REQ-RENDER-025), not this one (applied per R-204, accepted by R-358, R-297's Applied note). R-436: a pixel with a non-finite operand is invalid, so it is no sample of the tolerance."
 - id: REQ-COL-061
   area: COL
   kind: calibration
@@ -12128,6 +12150,49 @@
   - R-255
   milestone: M1
   note: "Registered per R-369 (TASK-M1-15), as REQ-COL-067 was for TASK-M1-14: REQ-COL-005's 'non-accessor payload reads' and 'chart/integrator/scheduler identifiers', and REQ-RENDER-015's 'guard', had no definition the lint could check."
+- id: REQ-COL-070
+  area: COL
+  statement: "A numeric debug view must draw a stored non-finite value (±∞) that is no declared sentinel or unset value in the invalid colour, debug_invalid(frag_xy), on the CPU twin and in the generated WGSL alike, tested by a comparison on the stored value's bits before any arithmetic (an exponent of all ones), never by arithmetic on ±∞, isinf, a float comparison or an infinite literal; its measured range (u_range) must be taken over the samples whose stored value is finite; a declared sentinel or unset value keeps its own style (d_min's unset +∞, R-280, R-399), its own bit test coming before the non-finite guard, which comes before the ramp (render_gui_spec §10.1's order)."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: docs/design/principia_dd_decoder.md
+    section: "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
+  - file: decisions.md
+    section: R-79 — NaN and sentinels *(closes RQ-30)*
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+  verify:
+    detail: "cargo test -p ledger numeric_view_template: every generated numeric view with no declared sentinel draws +∞ and −∞ (f32 bits 0x7F800000, 0xFF800000) invalid on its CPU twin, d_min's unset +∞ still in the not-yet style; the WGSL carries the bit test before the compaction and no infinite literal; a GPU render on gpu-metal and gpu-lavapipe of rho_ratio at +∞ and of V_0 and E_0 at −∞ draws the hatch, and of d_min at its unset +∞ the not-yet style, so the order is checked on the GPU; the measured range skips them"
+    method: unit test
+  rulings:
+  - R-79
+  - R-436
+  milestone: M2
+- id: REQ-COL-071
+  area: COL
+  kind: definition
+  statement: "The drawn style of a declared ±∞ sentinel in a numeric debug view (R-418's no-escape identities, escape_time_min +∞, binary16 0x7c00, and escape_time_max −∞, 0xfc00) must be defined in render_gui_spec §10.1 by the task that needs it and reviewed by the gui reviewer before merge (R-72); the sentinel is tested on its bits, never against a literal, before the non-finite guard and before any arithmetic (R-436)."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: 10.1 The shared prelude library
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+  - file: decisions.md
+    section: "R-418 — `escape_time_min`, `escape_time_max` and `mean_orbit_count_spread` join REQ-PAY-093, confirmed at the M5 gate; with no escape `_min` is +∞ and `_max` −∞, each its reduction's identity, and \"no escape\" reads `_min > _max` *(closes RQ-268)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    detail: "render_gui_spec §10.1 gives the style, distinct from debug_invalid's hatch and from the not-yet style or saying why it shares one, and the generator emits it; the generated view tests 0x7c00 and 0xfc00 on their bits before the non-finite guard, with no infinite literal and no compaction or range_norm of ±∞; the doc change is in the PR and the gui reviewer approves it before merge"
+    method: review checklist
+  rulings:
+  - R-72
+  - R-418
+  - R-436
+  milestone: M5
+  note: "Gui review 5533020211 G3 of PR #214, applied per R-369: §10.1's literal-sentinel line `if (raw == <literal>)` would need an infinite literal for these two, which naga rejects (gpu_determinism_note rule 4), and the compaction would do arithmetic on ±∞; the corpus defines no other style. TASK-M5-17, the resolve stage, first stores these bits (REQ-REF-053) and adds quad fields to the field-view catalogue (REQ-PAY-096), so it writes the style (round 6; TASK-M5-01, which built the ledger entries, merged before R-436)."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -15640,11 +15705,17 @@
   source:
   - file: docs/design/principia_debug_tooling_plan.md
     section: "E. Payload field views — `ICDescriptor` (64 B) & the live-state block"
+  - file: docs/design/principia_dd_decoder.md
+    section: "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
   verify:
     method: unit test
-    detail: GPU descriptor fields vs f64 decode within tolerance
-  rulings: []
+    detail: "GPU descriptor fields vs f64 decode within tolerance; at the poles (‖λ̃‖ = 0, a pair separation 0), at f32 and f64, the GPU descriptor stores the bits the f64 decode does: rho_ratio +∞, V_0 −∞, virial_ratio 0, each selected by comparing its divisor with 0 (virial_ratio: V_0 tested on its bits) and the ±∞ written by a bitcast of the integer pattern, never 1/0 or an infinite literal (R-436; dd_decoder §3.6)"
+  rulings:
+  - R-436
   milestone: M2
+  note: "R-436 (physics review 5531809281 P1, applied per R-369): the producers select the pole values, so the bits the consumers test are pinned on the GPU too."
 - id: REQ-TOOL-031
   area: TOOL
   statement: "The occupant-comparison harness must refuse to run arms that differ in stepper or step control."
@@ -18218,16 +18289,17 @@
     section: "R-86 — The payload doc governs the eight payload items *(closes RQ-37)*"
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
   verify:
     method: numerical gate
-    detail: "on a synthetic and a real survey, |E_0 − (K_0+V_0)| is within the calibrated E₀ agreement tolerance everywhere; the ICDescriptor stores no E₀ field"
+    detail: "on a synthetic and a real survey, |E_0 − (K_0+V_0)| is within the calibrated E₀ agreement tolerance everywhere; the ICDescriptor stores no E₀ field; a pixel whose stored E_0, K_0 or V_0 is non-finite (V_0 = −∞ at the collision pole, at f32 or f64, its bits selected by the decode stage, never 1/0, dd_decoder §3.6) draws the invalid colour on the CPU and the GPU, each operand tested on its bits before any arithmetic, K_0 + V_0 included, and is excluded from the tolerance check (R-436)"
   rulings:
   - R-71
   - R-86
+  - R-436
   milestone: M3
-  rq:
-  - RQ-284
-  note: "Tolerance: REQ-VAL-117 (calibration)."
+  note: "Tolerance: REQ-VAL-117 (calibration). R-436: a non-finite operand is invalid, tested on its bits, never by arithmetic on ±∞."
 - id: REQ-VAL-028
   area: VAL
   statement: "The BodyPlane chart (today's slice) must be kept and reproduce the recorded reference, the Python reference's output: bit-exact where the operation order is identical (parity_contract), otherwise within a calibrated tolerance (R-71), with the Python cross-check green (R-166)."

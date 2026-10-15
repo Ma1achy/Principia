@@ -693,6 +693,14 @@
   requirements: [REQ-GEN-034]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M2-31
+  milestone: M2
+  title: "Non-finite values in the numeric views: the invalid colour on the CPU twin and in WGSL, and the measured range over finite values (R-436)"
+  depends_on: [TASK-M2-03, TASK-M1-09]  # R-436: TASK-M1-09 has merged; applied per R-369
+  needs: [REQ-RENDER-022]
+  requirements: [REQ-COL-070]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: [PIT-3]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -1274,8 +1282,8 @@
   title: "Resolve stage: outcome and validity reductions, and Undetermined quads"
   depends_on: [TASK-M5-01, TASK-M5-16]
   needs: [REQ-PAY-004, REQ-PAY-014, REQ-PAY-046, REQ-SYS-019, REQ-TOOL-033, REQ-TOOL-011]
-  requirements: [REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053, REQ-PAY-096]
-  reviewers: [code, qa, physics]
+  requirements: [REQ-REF-001, REQ-VAL-083, REQ-REF-009, REQ-VAL-080, REQ-SCHED-098, REQ-REF-053, REQ-PAY-096, REQ-COL-071]
+  reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M5-18
   milestone: M5

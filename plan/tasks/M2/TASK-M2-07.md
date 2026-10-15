@@ -32,6 +32,7 @@ One canonicalise function in the shared source quotients any physical state onto
 - `decisions.md` § "R-13 — Lookup has no coincident-bodies rejection *(closes RQ-11)*"
 - `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"
 - `decisions.md` § "R-417 — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
 - `crates/kernel/src/canon.rs`: `canonicalise` (the ordered steps, the three notices, λ recorded) and the scale gauge.
@@ -54,3 +55,9 @@ One canonicalise function in the shared source quotients any physical state onto
   saturation no longer passes α = π/2 or β = π, so §3.3's half turn and mirror no longer fire there. Any exception to
   the no-op covers only a case this task measures; it lists each in dd_decoder §5 test 5, with its z, precision and
   measurement, for physics to approve. This task reaches TASK-M2-30 through TASK-M2-06, TASK-M2-05 and TASK-M2-03.
+- **R-437 (RQ-285):** step 2's `φ = atan2(ρ_y, ρ_x)` takes the defined 0 at `ρ = 0`, whatever the signs of the
+  zeros, chosen by a select on `ρ_x = 0` and `ρ_y = 0`, never `atan2(0, 0)`, which GLSL.std.450 leaves undefined; so
+  `R(−φ)` is the identity there on CPU-f64 and GPU-f32 alike (dd_decoder §3.2 "Every `atan2` at a possible pole",
+  §3.3; dd_encode §3.2). `coincident_inner_pair` and the GPU-f32 branch (`canon_gpu.rs`) cover `ρ = (±0, ±0)`, with a
+  control that uses `atan2` at the pole and gives `±π` for a `−0` `ρ_x` on the CPU. `rho_angle` (TASK-M2-03) is the
+  precedent. The hold RQ-285 is gone.

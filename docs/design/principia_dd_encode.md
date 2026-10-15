@@ -29,10 +29,41 @@ From **navigation (Part 4)**: the lock on nonlinear charts prefers CPU forward r
 | Block | Forward (decoder dd §3) | Inverse (encode) | Closure check |
 |---|---|---|---|
 | **Mass** | `mₖ = e^{μₖ}/(1+e^{μ₁}+e^{μ₂})`, `μ₀ = 0`; `μₖ = μ_max·tanh(z)` | `μₖ = log(mₖ/m₀)`; `z = artanh(μₖ/μ_max)`, clamp `(1−ε_μ)μ_max` | `m₁/m₀ = e^{μ₁}` ⟹ log-ratio recovers `μ₁` exactly ✓ |
-| **Config** | `ρ̃ = cos α (1,0)`, `λ̃ = sin α (cos β, sin β)`; `α = (π/2)σ(z_α)`, `β = πσ(z_β)` | `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(λ̃_y, λ̃_x)`; `z = logit(s)` with the range maps inverted | `atan2(sin α, cos α) = α` on `(0, π/2)` ✓; `β ∈ [0,π]` guaranteed by the mirror ✓ |
+| **Config** | `ρ̃ = cos α (1,0)`, `λ̃ = sin α (cos β, sin β)`; `α = (π/2)σ(z_α)`, `β = πσ(z_β)` | `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(|λ̃_y|, λ̃_x)` (R-438); `z = logit(s)` with the range maps inverted | `atan2(sin α, cos α) = α` on `(0, π/2)` ✓; `β ∈ [0,π]` because `β` reads `|λ̃_y|`, not by the mirror alone (R-438) ✓ |
 | **Momentum** | `p₀ = −p_ρ − (m₀/M₀₁)p_λ`, `p₁ = p_ρ − (m₁/M₀₁)p_λ`, `p₂ = p_λ`; `qₖ = q_max(2σ(z)−1)` | `p_λ = p₂`; `p_ρ = p₁ + (m₁/M₀₁)p₂`; `s = ½(q/q_max + 1)`, `z = logit(s)`, clamp | substitute forward into inverse: `p₁ + (m₁/M₀₁)p₂ = p_ρ` identically ✓; `Σpᵢ = 0` consumed, not assumed |
 | **Invariant fibre** *(momentum stage of (L_z,E)/(L_z,K) charts)* | `v = L_z·Jr + a·w`, `a = √(2(K*−L_z²/2))` (I = 1) | chart coords = evaluate `L_z(x)`, `E(x)` directly; latent = **run the same construction**, then free-momentum-invert the constructed `p = m·v` | closure is *by construction* — one code path, so lookup and clicked pixel land on the same z |
 | **Curve (Burrau)** | `γ: ν ↦ (α, β, μ₁, μ₂)`; `θ(ν)` monotone | on-curve: `ν(θ) = sec θ − tan θ` from the canonical leg ratio; masses cross-check `μ₁ = log(b/c)`, `μ₂ = log(a/c)` | `sec θ − tan θ` inverts `θ(ν)` in closed form on `θ ∈ (0, π/2)` ✓ |
+
+**`β` at the `α = 0` pole (R-437).** At `λ̃ = 0`, `β = atan2(|λ̃_y|, λ̃_x)` is at its pole: there `β` is 0, whatever the
+signs of the zeros, chosen by a select on `λ̃_x = 0` and `λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450
+and WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole"). `α = atan2(‖λ̃‖, ‖ρ̃‖)`
+has no pole: after step 0, `‖ρ̃‖² + ‖λ̃‖² = I = 1`.
+
+**`β` reads `|λ̃_y|` (R-438).** `β = atan2(|λ̃_y|, λ̃_x)` reads the mirror's quotient for `β` only; R-82's mirror
+test and deadband are unchanged. `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`, not by the mirror alone: after §3.2's
+step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`, and with `λ̃_y` read as it is, a deadband `λ̃_y ≤ 0` with body 2 on the `−x` side
+gives `β` near `−π` (`atan2(−0, x < 0) = −π` exactly), which `s_β` would clamp to the `β = 0` end. `β ≈ 0` and
+`β ≈ π` are different collinear shapes, not mirror images: the mirror fixes the x-axis. Near `α = 0`, where
+`‖λ̃‖ ≲ δ_λ`, the whole lower half of the `λ̃` disc lies inside the deadband, and `|λ̃_y|` still gives a `β` in range,
+continuous across the deadband's edge. The code reads `|λ̃_y|` by `abs`, which clears the sign bit, never by `max`:
+GLSL.std.450 `FMax` returns `−0` for `max(−0, +0)`, and Rust's `f64::max` may return either zero. At `λ̃ = 0` the
+select above gives `β = 0`.
+
+**`β` on the `−x` half-axis selects `π̂` (R-438; physics review 5532062124 P1, applied per R-369).** `abs` pins the
+zero's sign only as far as `atan2`'s operand. WGSL may ignore the sign of a zero, under the same IEEE-754 deviations
+that let it assume there are no infinities (R-436), and so may Vulkan without `SignedZeroInfNanPreserve` and Metal's
+fast-math. So the generated encode's `atan2(+0, x < 0)` can evaluate as `atan2(−0, x < 0) = −π`, which `s_β` would
+clamp to the `β = 0` end, at every exactly collinear input with body 2 on the `−x` side. As `rho_angle`'s antiparallel
+case does (`principia_dd_decoder.md` §3.6), `β` is defined case by case, each case chosen by a comparison with the
+constant 0, selecting a value already computed, with no branch:
+- `λ̃_x = 0` and `λ̃_y = 0` (the `α = 0` pole): 0, above (R-437);
+- `λ̃_y` compares equal to 0, true for `+0` and `−0` alike, and `λ̃_x < 0`: `π̂`, the image of π in
+  `principia_dd_decoder.md` §3.2 (rounded toward zero at f32, the nearest value at f64; R-417);
+- elsewhere: `atan2(|λ̃_y|, λ̃_x)`.
+
+At f64, `π̂` is what the CPU's `atan2(+0, x < 0)` returns, so the select pins the GPU to the CPU's value, and CPU-f64 and
+GPU-f32 agree on the half-axis, `±0` operands included. `λ̃_y = 0` with `λ̃_x > 0` needs no select: either zero gives
+`β = ±0`, and the clamp sets `s_β` to `ε_z` for both.
 
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
@@ -52,6 +83,14 @@ Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is
 5  FIBRE      chart's own construction first ; smallest-latent-norm only where none exists
 6  VALIDATE   hypercube → chart feasibility → decode sanity ; project / clamp / reject ; surface flags
 ```
+
+**Step 2's `φ` at the pole (R-437).** At `ρ = 0`, `φ` is 0, whatever the signs of the zeros, so `R(−φ)` is the
+identity, on CPU-f64 and GPU-f32 alike: a select on `ρ_x = 0` and `ρ_y = 0`, not `atan2(0, 0)`
+(`principia_dd_decoder.md` §3.2, §3.3). The guard (`lookup_clamped`, R-13) still catches the pixel; the defined `φ`
+makes the rotation there the same on both, the identity.
+
+**After step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`.** The deadband `|λ̃_y| ≤ δ_λ` is left unmirrored (R-82), so a state can
+leave `C` with `λ̃_y ∈ [−δ_λ, 0]`, `−0` included. §3.1's `β` reads `|λ̃_y|` for that reason (R-438).
 
 The order is normative (R-23): **1a** subtract CoM → **0** rescale → **1b** subtract boost → **2** rotate → **3** mirror. These steps commute with nothing; *CoM subtraction precedes the `I` computation* because `I` is CoM-frame-defined. The inverse-encode contract (Part 6) uses the same numbering.
 
@@ -107,6 +146,27 @@ Golden pairs: **z = 0** (equal-mass golden IC) and **Burrau** (physical `(3,4,5)
 7. **Curve projection consistency:** exact on-curve input — argmin and closed form agree on `ν` to tolerance; off-curve input — `d(ν*)` reported, latent fallback taken beyond tolerance, and `E ∘` fallback still satisfies T2.
 8. **Conditioning formulation:** a near-clamp input where the z-residual is ~10⁵× the physical residual — asserting that the *physical* tolerance passes while a naive z-tolerance would fail (the test that keeps future contributors honest about §3.5).
 9. **Coincident-pair rejection:** `ρ → 0` inputs reject at step 2 with the correct reason, both precisions, same branch.
+10. **Collinear `β` in the deadband (R-438):** encode collinear shapes with `λ̃_y ∈ {−1e-13, −0, +0, +1e-13}`, body 2
+    on either side and at each Euler landmark, requiring `β = π` (body 2 on the `−x` side) or 0 (on the `+x` side) as
+    appropriate, never near `−π`, and a round trip within the deadband.
+    - **The pole landmark** (physics review 5532062124 P2, applied per R-369). With `m₀ = m₁`, the landmark with body 2
+      in the middle has body 2 exactly at the inner pair's centre of mass, so `λ̃ = 0` and `α = 0`: body 2 is on
+      neither side. There, at `λ̃_y = ±0`, `β = 0` by R-437's select (R-438 condition (1)), never `atan2(0, 0)`. At
+      `λ̃_y = ±1e-13` with `λ̃_x = 0`, the ruling's formula gives `β = π/2` (`π̂/2` as computed), and the test asserts
+      that value. The side rule applies to the landmarks with `λ̃_x ≠ 0`. The test's masses are chosen so that no other
+      landmark sits on the pole, and the pole case is tested on its own.
+    - **The `−x` half-axis** (P1): at `λ̃_y = ±0` with `λ̃_x < 0`, `β = π̂` by §3.1's select, on CPU-f64 and GPU-f32 alike.
+    - **What the round trip compares** (P3; R-72, applied per R-369; R-438, "Contradiction flagged, applied"). An
+      exactly collinear input clamps `s_β` to `ε_z` or `1 − ε_z`, so the decode returns `|λ̃_y| ≈ π·ε_z·‖λ̃‖`, about
+      10⁶ × `δ_λ`: a deadband `λ̃_y` cannot come back (inverse-encode Part 7: the chart cannot cleanly reach an exactly
+      degenerate configuration). So, at each landmark off the pole, compared in mass-weighted Jacobi coordinates (the
+      masses, `ρ̃`, `λ̃`, `p_ρ`, `p_λ`; physics review 5532166783 P1): the four `λ̃_y` inputs encode to the same `z`;
+      `decode(encode(x))` keeps the input's side, with `|Δλ̃_y| ≤ π·ε_z·‖λ̃‖`, plus the input's own `|λ̃_y|` and rounding;
+      `|Δλ̃_x| ≤ ‖λ̃‖(1 − cos(π·ε_z))` plus rounding, since the clamp moves `β` by `π·ε_z` and so moves `λ̃_x` too, which
+      `ε_phys`, calibrated over interior `z`, does not cover; the remaining components (the masses, `ρ̃`, `p_ρ`, `p_λ`)
+      are within `ε_phys`; `lookup_clamped` is set. At the pole landmark the test asserts `β` and
+      `lookup_clamped`; its round trip is REQ-DEC-014's exact-pole ingest (no NaN, deterministic,
+      `lookup_clamped` set).
 
 ---
 
