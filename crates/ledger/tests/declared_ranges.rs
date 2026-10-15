@@ -487,14 +487,13 @@ fn with_fixture(scale: Scale) -> Ledger {
     l
 }
 
-/// A `lin` or `diverging` scalar whose range is a gap fails generation naming it (R-426): `theta` and `rho_angle`,
-/// gaps, retagged `lin` and `diverging`, and a fixture field with no mark.
+/// A `lin` or `diverging` scalar whose range is a gap fails generation naming it (R-426): `theta`, the payload's one
+/// scalar gap (`rho_angle`'s range is declared, dd_decoder §3.6), retagged `lin` and `diverging`, and a fixture field
+/// with no mark.
 #[test]
 fn declared_ranges_gap_lin_or_diverging_is_refused() {
-    for field in ["theta", "rho_angle"] {
-        check_gap_refused(&rescaled(field, Scale::Lin), field, "lin");
-        check_gap_refused(&rescaled(field, Scale::Diverging), field, "diverging");
-    }
+    check_gap_refused(&rescaled("theta", Scale::Lin), "theta", "lin");
+    check_gap_refused(&rescaled("theta", Scale::Diverging), "theta", "diverging");
     check_gap_refused(&with_fixture(Scale::Lin), "fx_gap", "lin");
     check_gap_refused(&with_fixture(Scale::Diverging), "fx_gap", "diverging");
 }
@@ -533,9 +532,9 @@ fn check_generates(cases: &[(&str, Scale)]) {
 
 negative_control!(
     declared_ranges_gap_elsewhere_generates,
-    "`rho_angle` retagged lin is a gap the gate refuses",
-    expected = "`rho_angle` as Lin was refused",
-    check_generates(&[("rho_angle", Scale::Lin)])
+    "`theta` retagged lin is a gap the gate refuses",
+    expected = "`theta` as Lin was refused",
+    check_generates(&[("theta", Scale::Lin)])
 );
 
 /// Checks that generation of `l` is refused in exactly one line naming `field`, the vector's `diverging` scale over a
@@ -640,7 +639,7 @@ fn check_gap_not_coolwarm(fields: &[&str]) {
 
 #[test]
 fn declared_ranges_gap_is_not_coolwarm() {
-    check_gap_not_coolwarm(&["theta", "rho_angle"]);
+    check_gap_not_coolwarm(&["theta"]);
     let fixture = with_fixture(Scale::Lin);
     let e = fixture
         .entries
