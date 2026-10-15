@@ -12,7 +12,7 @@
 //!   antiparallel, whatever the sign of a zero `ρ × λ`; 0 when parallel and at the pole; `atan2`'s value taken down to
 //!   `π̂`, or read as `π̂` at or below `−π̂`, elsewhere (dd_decoder §3.6; REQ-PAY-088).
 //! - `ic_descriptor_floors`: REQ-TOOL-163's evidence on decoded values, `rho_ratio` and `r_min_pair_0` against their
-//!   log floors (R-419).
+//!   log floors (R-419), and where they place the decoded values on the log view's ramp.
 //!
 //! **REQ-PAY-095's proposal** (R-71, R-421; unconfirmed until the M2 gate). At the golden IC the fields 0 at rest are
 //! `K_0` and `virial_ratio` (R-421), compared bit-exact; none of the six fields REQ-PAY-088 defines is 0 there. Each
@@ -533,17 +533,37 @@ impl Spread {
         self.values.iter().filter(|&&x| x < floor).count()
     }
     fn report(&self, what: &str, floor: f64) -> String {
+        let q = [0.0, 0.01, 0.5, 0.99, 1.0].map(|p| self.quantile(p));
+        let raw = q.map(|x| raw(x, floor));
         format!(
-            "{what}: n = {}, min = {:.3e}, 1% = {:.3e}, 50% = {:.3e}, 99% = {:.3e}, below the floor {:.3e}: {}",
+            "{what}: n = {}, min = {:.3e}, 1% = {:.3e}, 50% = {:.3e}, 99% = {:.3e}, max = {:.3e}, below the floor \
+             {:.3e}: {}\n  raw on the ramp: min = {:.4}, 1% = {:.4}, 50% = {:.4}, 99% = {:.4}, max = {:.4}; 8-bit \
+             levels (255·raw) {:.1} to {:.1}, spanning {:.1} levels, the 1%–99% span {:.1}",
             self.values.len(),
-            self.quantile(0.0),
-            self.quantile(0.01),
-            self.quantile(0.5),
-            self.quantile(0.99),
+            q[0],
+            q[1],
+            q[2],
+            q[3],
+            q[4],
             floor,
-            self.below(floor)
+            self.below(floor),
+            raw[0],
+            raw[1],
+            raw[2],
+            raw[3],
+            raw[4],
+            255.0 * raw[0],
+            255.0 * raw[4],
+            255.0 * (raw[4] - raw[0]),
+            255.0 * (raw[3] - raw[1])
         )
     }
+}
+
+/// Where the log view places `x` on its ramp (render_gui_spec §10.1): `raw = 1 − 1/(1 + ln(1 + |x|/ε))` on the fixed
+/// `[0, 1]`, `ε` the field's floor; `+∞` reads 1, 0 reads 0.
+fn raw(x: f64, floor: f64) -> f64 {
+    1.0 - 1.0 / (1.0 + (x.abs() / floor).ln_1p())
 }
 
 /// The two fields' decoded values at `R` over the validated hypercube `[0, 1]⁸` (chart_decoder_contract Part 2) and
@@ -597,16 +617,21 @@ fn spreads<R: P>(run: Run<R>) -> [(&'static str, Spread, Spread); 2] {
 /// Checks that over the validated hypercube every decoded `rho_ratio` and `r_min_pair_0` lies above its floor (the
 /// population the view resolves is wholly above it), and that over the whole domain each is > 0, or 0 only where two
 /// emitted bodies coincide (the collision pole, dd_decoder §3.6); and reports both fields over the hypercube and the
-/// whole domain.
-fn check_floors<R: P>(run: Run<R>, floors: [f64; 2]) {
+/// whole domain, with where their values land on the log view's ramp ([`raw`]). "None below the floor" bounds the
+/// floor from above only: a floor far below the population passes it too, and squeezes the population into a sliver
+/// of the ramp, which the report's 8-bit levels show for the human to weigh at the M2 gate (R-419).
+fn check_floors<R: P>(links: &str, run: Run<R>, floors: [f64; 2]) {
     for ((what, hyper, domain), floor) in spreads(run).into_iter().zip(floors) {
         eprintln!(
             "{}",
-            hyper.report(&format!("{what} at {}, [0, 1]⁸", R::NAME), floor)
+            hyper.report(&format!("{what} at {}, {links}, [0, 1]⁸", R::NAME), floor)
         );
         eprintln!(
             "{}",
-            domain.report(&format!("{what} at {}, the domain", R::NAME), floor)
+            domain.report(
+                &format!("{what} at {}, {links}, the domain", R::NAME),
+                floor
+            )
         );
         assert_eq!(
             hyper.below(floor),
@@ -636,15 +661,19 @@ fn check_floors<R: P>(run: Run<R>, floors: [f64; 2]) {
 #[test]
 fn ic_descriptor_floors() {
     let floors = [RHO_RATIO_FLOOR, R_MIN_FLOOR];
-    check_floors(decode::decode::<Defaults, f64>, floors);
-    check_floors(decode::decode::<Defaults, f32>, floors);
-    check_floors(decode::decode::<Stick, f64>, floors);
-    check_floors(decode::decode::<Stick, f32>, floors);
+    check_floors("Defaults", decode::decode::<Defaults, f64>, floors);
+    check_floors("Defaults", decode::decode::<Defaults, f32>, floors);
+    check_floors("Stick", decode::decode::<Stick, f64>, floors);
+    check_floors("Stick", decode::decode::<Stick, f32>, floors);
 }
 
 negative_control!(
     ic_descriptor_floors,
     "a floor above the hypercube's smallest r_min_pair_0 must fail",
     expected = "r_min_pair_0 at f64: a decoded value over [0, 1]⁸ is below its floor",
-    check_floors(decode::decode::<Defaults, f64>, [RHO_RATIO_FLOOR, 2.0])
+    check_floors(
+        "Defaults",
+        decode::decode::<Defaults, f64>,
+        [RHO_RATIO_FLOOR, 2.0]
+    )
 );
