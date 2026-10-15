@@ -860,7 +860,7 @@ pub fn showcase(set: &mut Synthetic, nudge: u32) {
         let ic = set.ic(i);
         (ic.m0, ic.m1, ic.m2) = (m[0], m[1], m[2]);
         ic.q_mass = at(0.12, 0.1, 21);
-        ic.rho_mag = at(0.3, 0.2, 22);
+        ic.rho_mag = at(0.05, 0.12, 22);
         ic.lambda_mag = at(0.91, -0.08, 23);
         ic.rho_ratio = at(0.2, 0.45, 24);
         ic.rho_angle = at(0.4, 0.8, 25);
