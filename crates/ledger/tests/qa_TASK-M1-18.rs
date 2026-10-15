@@ -254,7 +254,7 @@ negative_control!(
 
 // ── REQ-SYS-081: the list by gate ────────────────────────────────────────────────────────────────────────────────
 
-/// How a §3.8 provisional entry stands after the M1 gate's ruling (R-428).
+/// How a §3.8 provisional entry stands after the M1 gate's rulings (R-428, R-433).
 #[derive(Clone, Copy, Debug)]
 enum Stand {
     /// Confirmed at its gate: unmarked, citing R-428's heading in `decisions.md`.
@@ -263,8 +263,9 @@ enum Stand {
     Until(&'static str, &'static str),
 }
 
-/// dd_generation_root §3.8's provisional entries, each as R-428 leaves it.
-const TABLE: [(&str, Stand); 10] = [
+/// dd_generation_root §3.8's provisional entries, each as R-428 leaves it, and `r_pole`, which R-433 confirms at the
+/// M1 gate and marks provisional until M3, citing REQ-INT-086.
+const TABLE: [(&str, Stand); 11] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -275,9 +276,10 @@ const TABLE: [(&str, Stand); 10] = [
     ("hatch_cyan", Stand::Confirmed),
     ("hatch_half_period", Stand::Confirmed),
     ("eps_m01", Stand::Until("M2", "REQ-DEC-039")),
+    ("r_pole", Stand::Until("M3", "REQ-INT-086")),
 ];
 
-/// The stand §3.8's table, as R-428 leaves it, gives `name`.
+/// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.
 fn stand(name: &str) -> Stand {
     TABLE
         .iter()
@@ -360,7 +362,7 @@ fn check_lists_by_gate(register: &[ConstantBuilder]) {
 #[test]
 fn constants_provisional_qa_the_register_lists_its_entries_by_gate() {
     check_lists_by_gate(REGISTER);
-    // Each entry stands as R-428 leaves it, and the whole register passes the gate.
+    // Each entry stands as R-428 and R-433 leave it, and the whole register passes the gate.
     for (name, want) in TABLE {
         check_stand(&register_entry(name), want);
     }
