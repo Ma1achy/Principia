@@ -1781,13 +1781,9 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
             "row k's top below the list's: {tops:?}"
         );
     }
-    // The foot line sits at the window's foot.
+    // The foot line sits at the foot of the window's rect: the list takes the rest.
     let output = h.frame(&mut app, Vec::new());
-    let window = app
-        .keyboard
-        .place_of(windows::entry(Window::Console).scope)
-        .unwrap()
-        .rect;
+    let window = windows::rect(Window::Console, &layout(&h));
     let foot = nodes(&output, console::FOOT);
     assert_eq!(foot.len(), 1);
     let gap = window.max.y - foot[0].0.max.y;
