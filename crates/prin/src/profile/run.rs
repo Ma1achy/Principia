@@ -210,7 +210,8 @@ fn config(scenario: &str, frames: u32) -> Result<Map<String, Value>, String> {
 }
 
 /// `SimConfig` and `RenderState` as a scenario leaves them: each group named and empty (TASK-M0-16), but for the
-/// plane and the lock, whose fields (R-390) a scenario sets nothing in, all zero and unlocked.
+/// plane and the lock, whose fields (R-390) a scenario sets nothing in, all zero and unlocked, and the stain graph,
+/// the backbone alone (gui_state_contract §2).
 pub(crate) fn skeleton() -> (SimConfig, RenderState) {
     let sim = SimConfig {
         chart: Chart {},
@@ -232,7 +233,7 @@ pub(crate) fn skeleton() -> (SimConfig, RenderState) {
         quality: Quality {},
     };
     let render = RenderState {
-        stain_graph: StainGraph {},
+        stain_graph: StainGraph::new(),
         overlays: Overlays::default(),
         palette: Palette {},
         playhead: Playhead { t: 0.0 },

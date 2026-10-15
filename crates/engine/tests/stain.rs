@@ -269,7 +269,7 @@ fn stain_graph_edits_keep_the_graph() {
         .add(NodeKind::Source, custom(SOURCE))
         .expect("second source");
     g.connect(t, NodeId(3), 0).expect("last write wins");
-    let into = |g: &StainGraph, to: NodeId| -> Vec<(NodeId, usize)> {
+    let into = |g: &StainGraph, to: NodeId| -> Vec<(NodeId, u32)> {
         g.wires()
             .iter()
             .filter(|w| w.to == to)
