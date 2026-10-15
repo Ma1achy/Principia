@@ -1158,6 +1158,8 @@ rest.*
 TASK-M6-22 builds a minimal Profiler window shell holding the Arbiter tab; TASK-M8-28 fills in the rest.
 
 ## R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*
+*Amended in part by R-435 (the M1 gate's golden baselines, recorded as proposed, are confirmed).*
+*Still in force: all of it; the M1 gate's baselines, its debug views' among them, are recorded and confirmed (R-435).*
 *25 Sep 2026 · applied in step 7*
 
 The debug views (TASK-M1-12) and live-march views (TASK-M3-22) are checked against golden images of their own, recorded
@@ -6115,6 +6117,9 @@ of ready-next tasks, starting a task off its approved dependency's head, and fas
 Changes no requirement.
 
 ## R-389 — `θ̃` starts at 0, and below a pole radius `r_pole` it holds with a frozen reference, adding the wrapped exit-minus-entry longitude on exit *(closes RQ-223)*
+*Amended in part by R-433 (`r_pole` confirmed at the M1 gate at 0.01, a constants-register entry marked
+provisional until M3, where it is re-confirmed against real orbits' near-pole arcs).*
+*Still in force: all of it; `r_pole` = 0.01, read from the constants register and provisional until M3 (R-433).*
 *6 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7", REQ-INT-086 (reqio, new), REQ-INT-001
 (reqio), TASK-M1-11, `plan/tasks.yaml`, `plan/rule_groups.yaml`, `docs/archive/review_queue/M0.md` (RQ-223 archived)
 and `REVIEW_QUEUE.md` (RQ-225, open); built by TASK-M1-11*
@@ -6571,6 +6576,8 @@ plane, deep_zoom §1's `u = c + h·(2t − 1)`. The human replied, in their own 
 Adds REQ-COL-063.
 
 ## R-395 — REQ-TOOL-019's "no banding" holds with absolute coordinates up to ℓ_switch, checked at the M1 gate, and through the per-quad local coordinates beyond it, at M5 and M6 *(closes RQ-242)*
+*Amended in part by R-433 (REQ-TOOL-152's bound confirmed at the M1 gate: 1/16 of the step).*
+*Still in force: all of it; the criterion's bound is 1/16 of the step 2h/N (R-433).*
 *7 Oct 2026 · applied in `docs/design/principia_deep_zoom.md` § "1. Quad-local coordinates — UV precision" (added
 paragraph), REQ-TOOL-019, REQ-DEC-031 and REQ-TOOL-152 (reqio), REQ-TOOL-158 and REQ-TOOL-159 (reqio, new),
 TASK-M1-07, TASK-M1-16, TASK-M5-04, TASK-M6-08, `plan/tasks.yaml`, `plan/rule_groups.yaml`,
@@ -6795,6 +6802,8 @@ carries the recheck (below).
 Adds REQ-INT-087, REQ-INT-088 and REQ-INT-089; REQ-PAY-009's statement and verify and REQ-INT-082's rulings change.
 
 ## R-398 — `N` is a power of two at every tier and setting, so the sample coordinates are dyadic, as the quadtree's are *(closes RQ-258)*
+*Amended in part by R-433 (REQ-TOOL-152's bound confirmed at the M1 gate: 1/16 of the step).*
+*Still in force: all of it; the bound it left a calibration is confirmed at 1/16 (R-433).*
 *9 Oct 2026 · applied in `docs/design/principia_memory_tiers.md` § "4. The six quality tiers" and § "5. Controller
 levers, ranked by impact", `docs/design/principia_quality_device_note.md` § "The reframe: quality is a preset selector
 populating one settings struct", `docs/contracts/principia_scheduler_contract.md` § "Part 6 — The settled policy" and
@@ -6864,6 +6873,11 @@ REQ-PERF-054's verify, rulings and note, REQ-PERF-038's and REQ-PERF-090's rulin
 REQ-TOOL-019's verify and rulings and REQ-TOOL-152's note, rulings and `rq` change.
 
 ## R-399 — "Not yet" is a non-flat style: the neutral grey with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes *(closes RQ-259; amends R-96 and R-280)*
+*Amended in part by R-433 (the grey confirmed at the M1 gate: `#4E4E4E`).*
+*Amended in part by R-434 (the stipple confirmed at the M1 gate: 2 × 2 px dots in each 4 × 4 physical-pixel cell, the
+dots changed to `#909090`, so that no flat palette colour comes within τ = 0.101 of every pixel of a 4 × 4 block).*
+*Still in force: all of it; the grey and the stipple it left calibrations are confirmed: `#4E4E4E` (R-433), and
+`#909090` dots, 2 × 2 px in each 4 × 4 px cell (R-434).*
 *9 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or
 `f32`" and § "1.4 Categorical colour-assignment — the outcome-state default palette",
 `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library",
@@ -9084,6 +9098,10 @@ Adds REQ-SYS-081 and REQ-SYS-082; REQ-TOOL-160's statement, verify, rulings, sou
 rulings and note, change.
 
 ## R-428 — The M1 gate's nine provisional register entries are confirmed as proposed: the six log floors and the hatch's colours and stripe width; `d_min`'s floor at 2⁻¹⁴ is intended; `rho_ratio`'s and `r_min_pair_0`'s floors stay provisional until M2 *(amends R-401, R-419 and R-427 as they apply to these values)*
+*Amended in part by R-433 (the six M1 calibrations it did not confirm, RQ-279's, are confirmed: five as proposed, the
+stipple with its dots changed, R-434; `r_pole` a register entry provisional until M3).*
+*Still in force: all of it but its note that the six other M1 calibrations are not confirmed: R-433 and R-434
+confirm them, and RQ-279 is closed.*
 *14 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
 carry)" (the provisional entries' table re-marked, a table of the entries confirmed at M1 added),
 `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (sentences added),
@@ -9262,3 +9280,196 @@ passing, `gate-provisional` red only for the nine entries R-428 confirms) and on
 - R-432 is in the "one_off" group of `plan/rule_groups.yaml`, as R-377 is.
 
 Changes no requirement.
+
+## R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*
+*15 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per
+macro-step — lockstep, ratified)", `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the
+same branch decisions* (integer & packed fields)", `docs/design/principia_dd_simstate_payload.md` § "`_reserved` (u16) —
+`θ̃`'s frozen pole reference (R-397)", `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every
+entry must carry)" (a row in the provisional entries' table, a table of the entries confirmed at the M1 gate by R-433),
+`docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default palette",
+`docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every debug view)",
+`docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library", `docs/design/principia_deep_zoom.md` § "1.
+Quad-local coordinates — UV precision" and `docs/contracts/principia_gui_state_contract.md` § "4. The occupant model —
+typed by signature, free inside" (sentences added), REQ-INT-086, REQ-COL-053, REQ-COL-062, REQ-TOOL-152 and REQ-VAL-122
+(reqio), TASK-M3-11 (a note), `plan/MILESTONES.md` § "M1 — The synthetic payload and the eyes" and § "M3 — The
+integrator, events and physics validation (CPU, native)", the forward lines of R-389, R-395, R-398, R-399 and R-428,
+`docs/archive/review_queue/M0.md` (RQ-279 archived), `REVIEW_QUEUE.md`, `crates/ledger/src/constants.rs`,
+`crates/ledger/tests/constants.rs`, `crates/ledger/tests/schema_version.rs`, `crates/render/tests/outcome_state.rs`,
+`crates/validation/src/lib.rs`, `crates/kernel/tests/theta.rs`, `crates/render/tests/debug_views.rs`,
+`crates/render/src/present.rs`, `crates/render/shaders/wgsl/lib/present.wgsl`, `crates/render/src/colour/outcome.rs`,
+`crates/render/shaders/wgsl/frag/colour/outcome_state.wgsl`, `crates/render/src/coords.rs` and `plan/rule_groups.yaml`*
+
+The human's message of 15 Oct 2026, in reply to the orchestrator's table of the seven confirmations owed at the M1
+gate (RQ-279's six and REQ-TOOL-010's baselines), quoted whole here (its items' tab indents dropped); R-434 and R-435
+quote their own items from it:
+
+"Confirmed for M1, closing RQ-279:
+1. REQ-INT-086 r_pole = 0.01, made a constants-register entry marked provisional until M3 (R-427's principle), read from there rather than a test constant; M3 re-confirms against real orbits' near-pole arcs.
+2. REQ-COL-053 running grey #4E4E4E.
+3. REQ-COL-062 triple collision #D6A1FF, triple ejection #000097; no veto on a first-step triple collision drawing in the t=0 orange.
+4. REQ-COL-064 stipple confirmed as 2×2 dots on a 4×4 physical-pixel cell over #4E4E4E, with the dots changed to #909090 so the 4×4 block clears the hatch's 0.101 bar (0.115) rather than 0.08; regenerate the affected goldens.
+5. REQ-TOOL-152 banding criterion 1/16 of a step.
+6. REQ-VAL-122 tolerance 64 U = 2⁻¹⁸, as one register entry instead of two test-file definitions.
+7. REQ-TOOL-010 the 131 BASELINES.md rows marked for the M1 gate."
+
+(Numbered by the orchestrator, applied per R-369: the message takes three rulings, as R-428 to R-432 split the gate's
+first message. R-433 holds items 1, 2, 3, 5 and 6, the values confirmed as proposed; R-434 item 4, the one value the
+message changes, with the goldens it re-renders; R-435 item 7, the baselines.)
+
+This ruling holds the message's first line and items 1, 2, 3, 5 and 6.
+
+*What it decides:*
+- **RQ-279 is closed**: the six M1 calibrations R-428 left unconfirmed are confirmed, five here as proposed and the
+  stipple by R-434, with its dots changed.
+- **REQ-INT-086: `r_pole` = 0.01** (dd_integrator §3.7, R-389), TASK-M1-11's proposal (PR #158, physics review
+  5436669140), is confirmed at the M1 gate, and, in the human's words, "made a constants-register entry marked
+  provisional until M3 (R-427's principle), read from there rather than a test constant; M3 re-confirms against real
+  orbits' near-pole arcs." The parity contract's one-code allowance for `θ̃`'s pole reference needs `r_pole` above
+  about 2e-3 (REQ-INT-087); 0.01 satisfies it.
+- **REQ-COL-053: the running grey `#4E4E4E`** (OKLab L 0.424), TASK-M1-09's proposal (PR #172), the "not yet" style's
+  ground (R-399), is confirmed.
+- **REQ-COL-062: triple collision `#D6A1FF`, triple ejection `#000097`**, TASK-M1-10's proposal (PR #178), are
+  confirmed. **"No veto on a first-step triple collision drawing in the t=0 orange"**: PR #178's decision per R-369,
+  that "collision @ t=0" is a collision with `t_end_step == 0` whatever its `detail`, so a triple collision at step 0
+  is orange like any other collision there (`crates/render/src/colour/outcome.rs`), stands, accepted.
+- **REQ-TOOL-152: the UV preset's banding criterion is 1/16 of a step**, TASK-M1-07's proposal (PR #160): a run of
+  reconstructed UV coordinates is banded, step-quantised, when an adjacent-sample delta departs from the exact step
+  `2h/N` by more than 1/16 of it. It is the bound R-395 applies with absolute coordinates up to ℓ_switch and
+  REQ-TOOL-158 past it, at every `N` the product offers, each a power of two (R-398).
+- **REQ-VAL-122: the tolerance of the paired test asserting ‖n‖ = 1 is 64 U = 2⁻¹⁸ ≈ 3.81e-6** at f32, U = 2⁻²⁴ the
+  f32 unit roundoff, TASK-M1-12's proposal (PR #179): a first-order bound of about 30 U on the rounding of `a`, `b`,
+  `p`, `q`, `I`, the divisions and the fragment's `length`, rounded up. It is held "as one register entry instead of
+  two test-file definitions".
+
+*Applied:*
+- **The register** (dd_generation_root §3.8; `crates/ledger/src/constants.rs`).
+  - `r_pole` is an entry: 0.01, canonical units (a radius on the unit shape sphere), marked provisional until M3 and
+    citing REQ-INT-086, R-427's principle as R-428 applied it to the two floors provisional until M2. `cargo xtask
+    gate-provisional --milestone M3` lists it, and the M3 gate is blocked until the human re-confirms it there; the M1
+    and M2 runs do not list it. *Applied per R-369:* it cites REQ-INT-086, the calibration requirement that set it,
+    since no M3 requirement holds its re-confirmation; TASK-M3-11, which marches the real orbits (REQ-INT-082), gains a
+    note to report their near-pole arcs against both `π·r_pole` and `(π/2)·r_pole`, as physics review 5436669140
+    asked, for the M3 gate.
+  - `n_norm_tol` is a confirmed entry: 2⁻¹⁸, canonical units (a dimensionless deviation of a unit vector's length),
+    citing this ruling.
+  - Neither is hashed (§3.8, "The hash", hashes the entries that decide what the stored bits mean): `r_pole`
+    decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol` is a test's tolerance.
+    `crates/ledger/tests/schema_version.rs` lists both among the unhashed entries, and no generated file changes.
+- **Read from there.** No product code reads `r_pole` yet: `kernel::shape`'s `theta_step` and `in_disc` take it as a
+  parameter, and the real march that passes it is M3's (TASK-M3-11). The kernel's tests read it from the register in
+  place of `crates/kernel/tests/theta.rs`'s constant, through `validation`, kernel's dev-dependency, which re-exports
+  the entry (kernel reaches `ledger` only as a build-dependency, systems_architecture §7.1, R-185). The render tests
+  read `n_norm_tol` from the register in place of `crates/render/tests/debug_views.rs`'s definition; qa's
+  `crates/render/tests/qa_TASK-M1-12.rs` keeps its own `NORM_TOL`, the same 64 U, until qa changes it (R-290).
+- **The code's marks.** The grey's comments (`present.rs`, `present.wgsl`) read confirmed, R-433; the triple swatches
+  are `proposed: false` in `SWATCHES`, their comments citing R-433; `BANDING_BOUND`'s doc and
+  `BANDING_BOUND_STATUS` read confirmed by R-433. No value changes. `crates/render/tests/outcome_state.rs` expects the
+  swatches unmarked.
+- **The triple swatches' evidence, with R-434's dot** (applied per R-369; a contradiction flagged, which changes
+  nothing built). `outcome_triple_swatches_proposal` checked that `#000097` is the 8-bit colour farthest from its
+  nearest neighbour and `#D6A1FF` the next, counting the stipple's dot among the neighbours. With R-434's `#909090`
+  dot counted, `#FD9CFF` (0.2036 from its nearest) edges out `#D6A1FF`, which is 0.197 from the new dot. The human
+  confirmed both values, and colour_composition §1.4 and REQ-COL-062's verify measure the swatches against the nine
+  classes, the running grey and the hatch's colours, not the dot: so the check counts §1.4's set, under which both
+  stand as proposed, and a new check holds each swatch farther than τ = 0.101 from the dot (0.197 and 0.407), so a
+  triple outcome never reads as a dot of the "not yet" style.
+- **The docs.** dd_integrator §3.7, the parity contract's Tier B paragraph and the payload doc's `_reserved` bullet
+  record `r_pole`'s confirmation; §3.8's provisional table gains `r_pole` (gate M3, REQ-INT-086) and a table of the
+  entry R-433 confirms, `n_norm_tol`; colour_composition §1.4, the render contract's stipple bullet and render_gui_spec
+  §10.1 record the grey's and the swatches' confirmation; deep_zoom §1 records the bound; gui_state_contract §4 the
+  tolerance.
+- **The requirements (reqio).** REQ-INT-086, REQ-COL-053, REQ-COL-062, REQ-TOOL-152 and REQ-VAL-122 each gain R-433
+  among their rulings and sources, and a note giving the confirmed value. REQ-INT-086's note names the register entry
+  and M3's re-confirmation. REQ-VAL-122's verify gains "confirmed by the human at the M1 gate", which its statement
+  already said; nothing is removed.
+- **The rulings these values touch** carry forward and "Still in force" lines: R-389 (`r_pole`), R-395 and R-398 (the
+  bound), R-399 (the grey) and R-428 (RQ-279).
+- `plan/MILESTONES.md` § M1 records the confirmations under R-427's item, and § M3 gains `r_pole`'s re-confirmation.
+- **RQ-279** moves to `docs/archive/review_queue/M0.md` (R-292) with its Ruling line, as RQ-270 to RQ-277, filed in
+  the M1 build, did.
+- R-433 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-INT-086, REQ-COL-053, REQ-COL-062, REQ-TOOL-152 and REQ-VAL-122: each is confirmed.
+
+## R-434 — REQ-COL-064's stipple is confirmed as 2 × 2 px dots in each 4 × 4 physical-pixel cell over `#4E4E4E`, with the dots changed from `#808080` to `#909090`, so that a 4 × 4 block clears the hatch's τ = 0.101 (0.115); the goldens it changes are re-rendered *(amends R-399 as it applies to the stipple)*
+*15 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette", `docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written,
+small, reused by every debug view)", `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library",
+`docs/design/principia_debug_tooling_plan.md` § "G. Cross-check views (certify a *seam*, not a field — integration
+tests with a display)" and `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD" (sentences added),
+REQ-COL-064 (reqio), R-399 (a forward line), `crates/render/src/present.rs`,
+`crates/render/shaders/wgsl/lib/present.wgsl`, `crates/render/tests/not_yet_style.rs`,
+`crates/render/tests/outcome_state.rs`, seven references under `fixtures/golden/` with their
+`fixtures/golden/BASELINES.md` rows, and `plan/rule_groups.yaml`*
+
+The human's words (R-433 quotes the whole message):
+
+"4. REQ-COL-064 stipple confirmed as 2×2 dots on a 4×4 physical-pixel cell over #4E4E4E, with the dots changed to #909090 so the 4×4 block clears the hatch's 0.101 bar (0.115) rather than 0.08; regenerate the affected goldens."
+
+*What it decides:*
+- **The stipple's pattern is confirmed** (R-399, REQ-COL-064), as TASK-M1-17 proposed it (PR #195): a 2 × 2 px dot in
+  each 4 × 4 px cell, at `p = ⌊frag_xy⌋` in framebuffer (physical) pixels, where bit 1 of `p.x` and of `p.y` are both
+  0, over the grey `#4E4E4E` (R-433).
+- **The dots are `#909090`**, in place of the proposal's `#808080`.
+- **The bar is the hatch's τ = 0.101** (R-429), in place of the proposal's 0.08: no flat colour of any palette may come
+  within τ of every pixel of a 4 × 4 block. With `#808080` dots the nearest flat colour, the grey ramp's, was 0.088 from
+  the block's farthest pixel, clear of 0.08 but not of τ; with `#909090` it is 0.115, the human's figure.
+- **The goldens the change affects are re-rendered.**
+
+*Applied:*
+- **Recomputed** (`crates/render/tests/not_yet_style.rs`, `not_yet_style_proposal_evidence`, over 50171 palette
+  colours: the outcome palette, the `dbg_*` palettes, every LUT of colour_composition §7.1, the grey ramp, the hue
+  circle, and cool-warm and magma sampled at 4097 points): the nearest flat colour to a 4 × 4 block is cividis near
+  its stop 109.19, **0.115** from the block's farthest pixel, above τ = 0.101 (0.1006 unrounded). Nothing is chosen
+  in its place: the value is the human's, and it clears the bar.
+- **Lightness and visibility, re-derived:** OKLab lightness, grey 0.424 and dot 0.653, a contrast of **0.229** (0.176
+  with `#808080`), two-thirds of the 0.350 between the hatch's stripes; relative luminance 0.0762 against 0.2789, a
+  contrast ratio of 2.61:1 (2.11:1 before). The two are neutral greys, so the dots show by lightness alone, without
+  colour vision. A 4 × 4 block's mean, in linear light, is 0.079 from the grey (0.057 before). The dot stays far from
+  the hatch, 0.310 from `#9B00FF` and 0.295 from `#48FFFF`, and 0.372 from the pending hatch's `#0000FF`.
+- **The code.** `NOT_YET_DOT_SRGB8` is `#909090` and `present.wgsl`'s `DBG_NOT_YET_DOT` its linear decode, each
+  channel `0.27889428`, the f32 nearest `(144/255)`'s; their comments cite R-434. `NOT_YET_CELL` and `NOT_YET_DOT`
+  are unchanged, their comments citing R-434. The Legend (TASK-M6-27) draws the dot through `NOT_YET_DOT_SRGB8`, so it
+  follows.
+- **The tests** (TASK-M1-17's `not_yet_style.rs`, not a qa file): `FLAT_BOUND` is τ, 0.101, and the evidence test
+  asserts the 0.229 contrast, the 0.079 mean and the 0.115 reach. *Applied per R-369:* `MEAN_BOUND`, the proposal's
+  own bound on a block's mean, follows the dot from 0.06 to 0.08; it is not a calibration. The triple swatches'
+  evidence check is R-433's.
+- **The goldens.** The seven cases that draw "not yet" are re-rendered on Metal: `debug-views/generated-d_min`,
+  `m1-numeric/d_min`, `m1-numeric/d_min_ramp`, `m1-numeric/d_min_ramp_override`, `m1-outcome/outcome`,
+  `m1-outcome/outcome_edited` and `m1-synthetic/known_escaper`. Only the dot pixels change, each by 16 8-bit steps
+  (`#80` to `#90`), and no other pixel. Each row of `fixtures/golden/BASELINES.md` gives the new hash and leads with
+  R-434, the gate decision that set it (R-110), and is confirmed at it: re-rendered under a confirmed value, it is
+  not a proposal. The dot's 144 is an exact 8-bit level, far from a rounding tie, so each keeps one reference across
+  backends.
+- **The docs** record the confirmed pattern, its dot and its bar: colour_composition §1.4, the render contract's
+  stipple bullet, render_gui_spec §10.1, debug_tooling_plan §G and dd_colouring §3.8.
+- **REQ-COL-064** (reqio) gains R-434 among its rulings and sources, and a note giving the confirmed pattern, the dot
+  and the bar. R-399 carries the forward line.
+- R-434 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-064: confirmed, its dots changed.
+
+## R-435 — The golden baselines recorded as proposed for the M1 gate are confirmed: the 131 rows of `fixtures/golden/BASELINES.md` so marked *(amends R-153 as it applies to the M1 gate's baselines)*
+*15 Oct 2026 · applied in `fixtures/golden/BASELINES.md`, REQ-TOOL-010 (reqio), R-153 (a forward line) and
+`plan/rule_groups.yaml`*
+
+The human's words (R-433 quotes the whole message):
+
+"7. REQ-TOOL-010 the 131 BASELINES.md rows marked for the M1 gate."
+
+*What it decides:* the 131 rows of `fixtures/golden/BASELINES.md` whose decision reads "proposed, confirmed at the M1
+gate", the debug views' (REQ-TOOL-010, R-153) and the other M1 suites' (`m1-numeric`, `m1-outcome`, `m1-structural`,
+`m1-subfields`, `m1-synthetic`, `debug-views`), are confirmed at the M1 gate.
+
+*Applied:*
+- **The 124 rows whose reference does not change** gain "; confirmed, R-435" at the end of their decision, as R-376
+  marked M0's `quantise/` rows "confirmed, R-376". No hash and no image changes, so no baseline changes (R-110).
+- **The seven rows R-434 re-renders** give their new hashes, lead with R-434 and are confirmed at it (R-434); their
+  earlier history, "proposed, confirmed at the M1 gate" included, stays in the row.
+- **REQ-TOOL-010** (reqio) gains R-435 among its rulings and sources, and a note.
+- R-153 carries the forward line.
+- R-435 is in the "values" group of `plan/rule_groups.yaml`.
+
+Changes REQ-TOOL-010 (rulings, sources, note).

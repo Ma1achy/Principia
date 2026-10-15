@@ -194,7 +194,10 @@ mode admits (“just collisions”, “just body-2 escape”), not a distinct re
 for an unset `d_min` alike, is the neutral grey (REQ-COL-053) with a fine dot stipple from the pixel position, drawn by
 `debug_not_yet(frag_xy)` (render contract, presentation layer), distinct from the invalid hatch's stripes. A ramp draws
 one flat colour per value, so no ramp, greyscale included, can collide with it. The grey's value and the stipple's
-pattern are proposed for the M1 gate (REQ-COL-053, REQ-COL-064).
+pattern are proposed for the M1 gate (REQ-COL-053, REQ-COL-064). **Confirmed at the M1 gate:** the grey `#4E4E4E`
+(R-433), and the stipple as a 2 × 2 px dot in each 4 × 4 physical-pixel cell over it, its dots changed from the proposed
+`#808080` to `#909090`, so that no flat palette colour comes within the hatch's τ = 0.101 of every pixel of a 4 × 4
+block: the nearest is 0.115 from its farthest pixel (R-434).
 
 **The two triple outcomes (proposed; RQ-234, decided per R-369; REQ-COL-062).** Two valid outcomes have no row in
 the table either: **triple collision**, a collision with `detail = 3`, and **triple ejection**, an escape with
@@ -207,7 +210,10 @@ lightness 0.792; triple ejection, navy `#000097`, OKLab lightness 0.306. Of the 
 one farthest in OKLab from its nearest of the nine classes, the running grey (`#4E4E4E`, itself proposed, REQ-COL-053)
 and the invalid pattern's two colours: 0.233, from bounded; `#D6A1FF` is the farthest from those and `#000097`: 0.204,
 from degenerate. The lighter goes to the collision and the darker to the ejection, as all three additive primaries
-mix toward white and all three subtractive primaries toward black.
+mix toward white and all three subtractive primaries toward black. **Confirmed at the M1 gate as proposed (R-433):**
+triple collision `#D6A1FF` and triple ejection `#000097`, with no veto on a triple collision at `t_end_step == 0`
+drawing in the t=0 orange, as every collision there does. Each is farther than τ = 0.101 from the stipple's `#909090`
+dot (R-434): 0.197 and 0.407.
 
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's

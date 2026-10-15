@@ -207,6 +207,11 @@ colour farther than τ from every palette entry, both simulated, or by the patte
 more than τ apart. The pattern argument holds at 1:1 device pixels only; a downscaled export blends the stripes to a
 flat colour, which under achromatopsia sits on the grey ramp.
 
+**The "not yet" stipple and τ (R-434; REQ-COL-064).** The stipple (render contract Part 5) is held to the same τ,
+unsimulated: no flat colour of any palette comes within τ of every pixel of a 4 × 4 block of it. Its two colours are
+neutral greys, `#4E4E4E` and `#909090` dots, 0.229 apart in OKLab lightness, so it keeps its dots without colour
+vision.
+
 ---
 
 ## 4. Seams (obligations → integration tests)

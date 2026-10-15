@@ -786,7 +786,8 @@ whose default the generator writes from the node's param and the assembler's dec
 stored sentinel shows as its literal value through `dbg_sentinel`, fed the compacted value (R-136, R-381), and
 `d_min`'s unset value, f16 +∞ tested by its bits, is drawn in the "not yet" style of running samples,
 `debug_not_yet(frag_xy)`: the neutral grey `DBG_NOT_YET` with a fine dot stipple from the pixel position (R-271,
-R-280, R-399; REQ-COL-053, REQ-COL-064).
+R-280, R-399; REQ-COL-053, REQ-COL-064; the grey `#4E4E4E` confirmed at the M1 gate, R-433, and the stipple, its dots
+`#909090`, R-434).
 
 **The prelude as built (TASK-M1-03; R-72 for the definitions, R-369 for the rest).** The ledger emits it into
 `crates/render/shaders/wgsl/lib/prelude.wgsl`, the full tier's. The assembler emits it per variant
@@ -821,7 +822,8 @@ R-280, R-399; REQ-COL-053, REQ-COL-064).
 under `crates/ledger/data/lut/` with its source named, as `ramp_viridis` and `ramp_twilight` read theirs, and returns
 linear RGB; its midpoint, `t = ½`, is the table's neutral, where a zero-spanning field's 0 lands.
 `debug_not_yet(frag_xy)` draws the "not yet" style, `DBG_NOT_YET` with a fine dot stipple from the pixel position,
-defined beside the hatch in the render contract's presentation layer (proposed, R-71; REQ-COL-053, REQ-COL-064).
+defined beside the hatch in the render contract's presentation layer (proposed, R-71; REQ-COL-053, REQ-COL-064;
+confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of `#909090` in each 4 × 4 px cell).
 
 ---
 

@@ -349,6 +349,10 @@ with dd_colouring §3.1's sRGB transfer.
   value, greyscale included, collides with it. The grey's value (REQ-COL-053, proposed by TASK-M1-09) and the
   stipple's pattern (REQ-COL-064, proposed by TASK-M1-17) are confirmed by the human at the M1 gate. It lives in `present.wgsl`
   beside `DBG_NOT_YET`; every view that shows "not yet" calls it, the outcome palette's `running` class included.
+  **Confirmed at the M1 gate:** the grey `#4E4E4E` (R-433), and the stipple as a 2 × 2 px dot of `#909090` in each
+  4 × 4 physical-pixel cell, where bit 1 of `p.x` and of `p.y` are both 0, its dots changed from the proposed `#808080`
+  (R-434). No flat colour of any palette comes within the hatch's τ = 0.101 of every pixel of a 4 × 4 block (the
+  nearest, 0.115), and the dots are 0.229 lighter than the grey in OKLab, visible without colour vision.
 
 ### Live-state & array inspection
 
