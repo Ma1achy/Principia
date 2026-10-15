@@ -809,6 +809,30 @@ fn wants() -> Vec<(Entry, Want)> {
             ),
         ));
     }
+    // An infinite declared end is no end: the measured one stands in, as for an unbounded end.
+    out.push((
+        edited(
+            "infinite_hi",
+            Scale::Lin,
+            Closed(0.0),
+            Bound::Open(f64::INFINITY),
+        ),
+        (
+            Role::Sequential,
+            Lut::Viridis,
+            Polarity::High,
+            Compaction::Lin { lo: 0.0, hi: 5.0 },
+        ),
+    ));
+    out.push((
+        edited(
+            "infinite_ends",
+            Scale::Lin,
+            Closed(f64::NEG_INFINITY),
+            Closed(f64::INFINITY),
+        ),
+        (Role::Signed, Lut::Coolwarm, Polarity::High, sym),
+    ));
     out
 }
 
