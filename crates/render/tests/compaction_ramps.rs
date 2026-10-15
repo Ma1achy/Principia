@@ -13,13 +13,13 @@
 //!
 //! Each test registers its negative control (R-176).
 
-use ledger::constants::LOG_FLOORS;
+use ledger::constants::{DIVERGING_X0, LOG_FLOORS};
 use ledger::gen::numeric::cyclic_period;
 use ledger::schema::{Bound, Declaration, Entry, Range, Scale};
 use render::assemble::{Kind, Node, Occupant, Stain, Tier};
 use render::codegen::Slot;
 use render::colour::combine::{combine, Combiner, LRange};
-use render::colour::defaults::{self, DefaultRamp, Resolve, Role, DIVERGING_X0};
+use render::colour::defaults::{self, DefaultRamp, Resolve, Role};
 use render::colour::field_ramp::{
     Compaction, FieldRamp, Invalid, Lut, Map, Polarity, Ramp, ScalarField, Shown, COMPACTION_WGSL,
     RAMP_WGSL,
@@ -620,7 +620,13 @@ fn wants() -> Vec<(Entry, Want)> {
             .expect("a floor")
     };
     let sym = Compaction::Lin { lo: -5.0, hi: 5.0 };
-    let x0 = |n: &str| DIVERGING_X0.iter().find(|(f, _)| *f == n).expect("x₀").1;
+    let x0 = |n: &str| {
+        DIVERGING_X0
+            .iter()
+            .find(|(f, _)| *f == n)
+            .map(|(_, k)| k.number())
+            .expect("x₀")
+    };
     let tau = cyclic_period();
     let mut out = vec![
         // magnitude / diagnostic: the greyscale, FTLE and diffusion white = high, t_end white = low.

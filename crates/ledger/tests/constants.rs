@@ -7,12 +7,12 @@
 //! its number reads at compile time like any other; one whose value is `calibration`, one that names no gate and one
 //! citing a corpus section each fail generation naming the constant; the list by gate gives what the M1 gate left
 //! marked (R-428, R-433): none for M1, the two floors and `eps_m01` for M2, `r_pole` for M3 (REQ-SYS-082), and the
-//! hatch is read from its entries. The mark is not hashed: see `schema_version.rs`'s `constants_provisional_*`.
+//! hatch is read from its entries; the diverging fields' `x₀` are listed for M7 (REQ-COL-066). The mark is not hashed: see `schema_version.rs`'s `constants_provisional_*`.
 
 use ledger::constants::{
     gate, is_milestone, provisional_until, Admissibility, Citation, ConstantBuilder, Population,
-    RelativeBasis, Value, HATCH_CYAN, HATCH_HALF_PERIOD, HATCH_VIOLET, LOG_FLOORS, LOG_FLOOR_D_MIN,
-    REGISTER,
+    RelativeBasis, Value, DIVERGING_X0, HATCH_CYAN, HATCH_HALF_PERIOD, HATCH_VIOLET, LOG_FLOORS,
+    LOG_FLOOR_D_MIN, REGISTER,
 };
 use ledger::gen::prelude::{self, Hatch};
 use validation::negative_control;
@@ -674,6 +674,68 @@ negative_control!(
             k.citation = Some(Citation::Calibration("REQ-COL-055"));
         }
         check_list_by_gate(&register);
+    }
+);
+
+/// Checks that `register` lists, for the M7 gate, exactly the diverging fields' `x₀`, `E_0`'s and `Lz_0`'s, each 1,
+/// canonical-units, citing REQ-COL-066 (TASK-M7-05; dd_generation_root §3.8), and that [`DIVERGING_X0`] names each
+/// field's entry, `diverging_x0_<field>`.
+fn check_diverging_x0(register: &[ConstantBuilder]) {
+    if let Err(e) = gate(register) {
+        panic!("the register is refused: {e}");
+    }
+    assert_eq!(
+        provisional_until(register, "M7"),
+        ["diverging_x0_E_0", "diverging_x0_Lz_0"],
+        "the entries provisional until M7"
+    );
+    for name in ["diverging_x0_E_0", "diverging_x0_Lz_0"] {
+        let k = register
+            .iter()
+            .find(|k| k.name == name)
+            .unwrap_or_else(|| panic!("`{name}` is not in the register"));
+        assert_eq!(k.value, Some(Value::Exact(1.0)), "`{name}`'s value");
+        assert_eq!(
+            k.class,
+            Some(Admissibility::CanonicalUnits),
+            "`{name}`'s class"
+        );
+        assert_eq!(
+            k.citation,
+            Some(Citation::Calibration("REQ-COL-066")),
+            "`{name}`'s citation"
+        );
+    }
+    for (field, k) in DIVERGING_X0 {
+        assert_eq!(k.name, format!("diverging_x0_{field}"), "`{field}`'s entry");
+    }
+    let fields: Vec<&str> = DIVERGING_X0.iter().map(|(f, _)| *f).collect();
+    assert_eq!(
+        fields,
+        ["E_0", "Lz_0"],
+        "the fields with an x₀ of their own"
+    );
+}
+
+#[test]
+fn constants_provisional_the_diverging_x0_wait_for_m7() {
+    check_diverging_x0(REGISTER);
+}
+
+negative_control!(
+    constants_provisional_the_diverging_x0_wait_for_m7,
+    "a register whose `Lz_0` x₀ has lost its mark lists only `E_0`'s for M7",
+    expected = "the entries provisional until M7",
+    {
+        let mut register = REGISTER.to_vec();
+        for k in register
+            .iter_mut()
+            .filter(|k| k.name == "diverging_x0_Lz_0")
+        {
+            k.provisional = None;
+            k.citation = Some(SOURCE);
+        }
+        check_diverging_x0(&register);
     }
 );
 

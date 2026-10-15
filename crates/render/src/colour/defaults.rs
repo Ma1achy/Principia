@@ -25,12 +25,13 @@
 //! (R-400); `log` with the field's ledger `floor` (R-263, a sim-key parameter, read from the sim key) or its display
 //! floor (R-401, the register's [`ledger::constants::LOG_FLOORS`]); `cyclic` over one turn
 //! ([`ledger::gen::numeric::cyclic_period`]); `diverging`, the symlog, with `x₀` its ledger `floor` (the drifts'
-//! `eps_E` and `eps_L`, R-263) or its own ([`DIVERGING_X0`]; dd_colouring §3.6, REQ-COL-065); `flag`. A categorical
+//! `eps_E` and `eps_L`, R-263) or its own (the register's [`ledger::constants::DIVERGING_X0`], provisional until
+//! the M7 gate; dd_colouring §3.6, REQ-COL-065, REQ-COL-066); `flag`. A categorical
 //! field takes the categorical palette, never a ramp (colour_composition §1.4; gui_state_contract §4: a category is
 //! never interpolated), a vector a reduction first (TASK-M7-09), and a `lin` or `diverging` scalar whose range is a
 //! ledger gap is refused, as generation refuses it (R-426); each is refused here, naming the field.
 
-use ledger::constants::LOG_FLOORS;
+use ledger::constants::{DIVERGING_X0, LOG_FLOORS};
 use ledger::gen::numeric::{cyclic_period, undeclared};
 use ledger::schema::{Bound, Entry, FieldType, Location, Scale};
 
@@ -45,12 +46,6 @@ pub const MAGNITUDE: [(&str, Polarity); 4] = [
     ("ensemble_spread", Polarity::High),
     ("t_end", Polarity::Low),
 ];
-
-/// The own `x₀` of each `diverging` field with no ledger `floor` (dd_colouring §3.6; REQ-COL-065's rule), in that
-/// field's units, `G = M = I = 1`: `E_0`'s an energy and `Lz_0`'s an angular momentum, each 1, the canonical unit, the
-/// magnitude where the symlog's compression sets in. Proposed, R-71 (REQ-COL-066), with its evidence in TASK-M7-05's
-/// PR, for the M7 gate, where the human confirms or replaces each; until then the proposal is used.
-pub const DIVERGING_X0: [(&str, f64); 2] = [("E_0", 1.0), ("Lz_0", 1.0)];
 
 /// A field's role (colour_composition §1.2), which picks its default ramp.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -203,7 +198,12 @@ pub fn compaction(e: &Entry, role: Role, resolve: &Resolve) -> Result<Compaction
             period: cyclic_period(),
         },
         Scale::Diverging => Compaction::Diverging {
-            x0: scale_of(e, DIVERGING_X0.into_iter(), resolve, "x₀")?,
+            x0: scale_of(
+                e,
+                DIVERGING_X0.iter().map(|(n, k)| (*n, k.number())),
+                resolve,
+                "x₀",
+            )?,
         },
         Scale::Flag => Compaction::Flag,
         Scale::Categorical(_) => {
