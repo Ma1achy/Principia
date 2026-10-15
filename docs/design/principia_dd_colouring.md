@@ -131,6 +131,26 @@ which is the row above, with `x₀` the field's floor: `eps_E` or `eps_L` for th
 which carry no floor, take theirs by REQ-COL-065's rule, its number REQ-COL-066's. The drift views and their goldens are unchanged. An explicit range for a stain
 may come later as an optional parameter, not as a second built-in map.
 
+**How `x₀` is chosen for each `diverging` field (definition, R-72; REQ-COL-065).** `x₀` is the magnitude where the
+symlog's compression sets in, in the field's own units: for `|x| ≪ x₀` the placement is linear, `b ≈ ½ + ½·x/x₀`, so
+the zero crossing is drawn at full resolution; for `|x| ≫ x₀` it is logarithmic, each decade a shrinking step toward
+`b = 0` or `1`. It is a property of the field, fixed for every sample of it, never a range of the draw, and no field
+takes an `x_max` (R-411). The `diverging` fields are `energy_drift`, `Lz_drift`, `E_0` and `Lz_0` (R-403), and each
+chooses its `x₀` in one of two ways:
+- **A field with a ledger `floor` (R-263) takes that sim-key parameter as `x₀`**, its value the sample's sim key's:
+  `energy_drift` takes `eps_E`, an energy, and `Lz_drift` takes `eps_L`, an angular momentum, each absolute and in the
+  stored field's normalised units, the drifts' own (R-401's note, R-403). R-401 leaves both unchanged. A drift at the
+  integrator's own tolerance then sits where compression sets in, and a drift many decades above it still has a
+  place.
+- **A `diverging` field with no `floor` takes an `x₀` of its own**, a presentation constant in its field's units,
+  `G = M = I = 1`: the magnitude, on the field's own distribution, below which its values keep linear resolution
+  around zero. `E_0`'s is an energy and `Lz_0`'s an angular momentum. Each is a value (R-71): proposed with its
+  evidence (where the field's values fall on the fixtures, and why `x₀` sits there) by REQ-COL-066 and confirmed by
+  the human at the M7 gate, as R-401's display floors are for the `log` fields.
+
+A `diverging` field with neither a `floor` nor an `x₀` of its own has no compaction, and its ramp is refused, naming the
+field, as a `log` field with no floor is (R-401).
+
 ### 3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)
 
 The outcome `state` takes `principia_colour_composition.md` §1.4's canonical nine-class palette (R-77) — the outcome palette (`state ⊕ detail`) only; the raw `state` debug view keeps its six-colour `dbg_cat` palette (R-115). Other categorical fields → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 2π·frac(i·φ_g)`, `φ_g = (√5−1)/2` — adjacent indices ≈ 137.5° apart). `detail` is a **union field**: legend and palette segment switch on `state` (escape → body id; collision → pair id; ids per payload §2, R-22).
