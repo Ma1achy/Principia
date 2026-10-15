@@ -26,20 +26,21 @@ fn dbg_srgb8(c: vec3<u32>) -> vec3<f32> { return srgb_to_linear(vec3<f32>(c) / 2
 
 // The neutral "not yet" grey of running samples (R-96; colour_composition §1.4) and of `d_min`'s unset value (R-280),
 // the ground of the "not yet" style, `debug_not_yet` (R-399): 8-bit sRGB #4E4E4E, OKLab L 0.424, as linear RGB, each
-// channel the f32 nearest sRGB's decode of 78/255. Proposed, R-71 (REQ-COL-053, RQ-233): the human confirms it at the
-// M1 gate. The CPU mirror is `crate::present::NOT_YET_SRGB8`.
+// channel the f32 nearest sRGB's decode of 78/255. Proposed, R-71 (REQ-COL-053, RQ-233), and confirmed by the human
+// at the M1 gate (R-433). The CPU mirror is `crate::present::NOT_YET_SRGB8`.
 const DBG_NOT_YET: vec3<f32> = vec3<f32>(0.07618538, 0.07618538, 0.07618538);
 
-// The "not yet" style's dots (R-399): 8-bit sRGB #808080, OKLab L 0.600, 0.176 lighter than the grey, as linear RGB,
-// each channel the f32 nearest sRGB's decode of 128/255. Proposed, R-71 (REQ-COL-064): the human confirms it at the
-// M1 gate. The CPU mirror is `crate::present::NOT_YET_DOT_SRGB8`.
-const DBG_NOT_YET_DOT: vec3<f32> = vec3<f32>(0.2158605, 0.2158605, 0.2158605);
+// The "not yet" style's dots (R-399): 8-bit sRGB #909090, OKLab L 0.653, 0.229 lighter than the grey, as linear RGB,
+// each channel the f32 nearest sRGB's decode of 144/255. Proposed, R-71 (REQ-COL-064), as #808080; confirmed by the
+// human at the M1 gate with the dots changed to #909090, so that no flat palette colour comes within the hatch's
+// τ = 0.101 of every pixel of a 4 × 4 block (0.115) (R-434). The CPU mirror is `crate::present::NOT_YET_DOT_SRGB8`.
+const DBG_NOT_YET_DOT: vec3<f32> = vec3<f32>(0.27889428, 0.27889428, 0.27889428);
 
-// "Not yet", an unset `d_min` (R-271, R-280) and a running sample (R-96) alike (R-399; REQ-COL-064, proposed, R-71):
-// the grey `DBG_NOT_YET` with a fine dot stipple from the pixel `p = ⌊frag_xy⌋`, in framebuffer (physical) pixels, as
-// the hatch's is: a 2 × 2 px dot of `DBG_NOT_YET_DOT` in each 4 × 4 px cell, where bit 1 of `p.x` and of `p.y` are
-// both 0. Dots, not `debug_invalid`'s diagonal stripes, in two neutral greys, not its violet and cyan; never one flat
-// colour, so no ramp value reads as it. Linear RGB.
+// "Not yet", an unset `d_min` (R-271, R-280) and a running sample (R-96) alike (R-399; REQ-COL-064, proposed, R-71,
+// confirmed at the M1 gate, R-434): the grey `DBG_NOT_YET` with a fine dot stipple from the pixel `p = ⌊frag_xy⌋`, in
+// framebuffer (physical) pixels, as the hatch's is: a 2 × 2 px dot of `DBG_NOT_YET_DOT` in each 4 × 4 px cell, where
+// bit 1 of `p.x` and of `p.y` are both 0. Dots, not `debug_invalid`'s diagonal stripes, in two neutral greys, not its
+// violet and cyan; never one flat colour, so no ramp value reads as it. Linear RGB.
 fn debug_not_yet(frag_xy: vec2<f32>) -> vec3<f32> {
     let p = vec2<i32>(floor(frag_xy));
     return select(DBG_NOT_YET, DBG_NOT_YET_DOT, ((p.x | p.y) & 2) == 0);

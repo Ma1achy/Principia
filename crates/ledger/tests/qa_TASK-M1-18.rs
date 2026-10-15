@@ -4,16 +4,18 @@
 //!   compile time like any other entry's. Generation fails, naming the constant, on a provisional entry whose value is
 //!   `calibration`, that names no gate (no milestone of `plan/MILESTONES.md`, M0 … M8), or whose citation is not a
 //!   calibration requirement; the other gate rules still bind it (a threshold needs its relative basis; a value is
-//!   finite). The register lists its provisional entries by gate: for M1, exactly §3.8's table's nine (the six log
-//!   floors and the hatch's three numbers); for M2, `eps_m01`. The mark and its gate are not hashed into the schema
-//!   version; a marked hashed entry's value is (`constants_provisional_qa_*`).
-//! - REQ-TOOL-160 (R-401, R-419, R-427): each of the six log fields' floors is its own register entry
-//!   `log_floor_<field>`, marked provisional until M1 and citing REQ-TOOL-160, at §3.8's proposed value; the numeric
+//!   finite). The register lists its provisional entries by gate. §3.8's table's nine M1 entries (the six log floors
+//!   and the hatch's three numbers) were confirmed as proposed at the M1 gate (R-428): seven are unmarked and cite
+//!   R-428's heading in `decisions.md`; `log_floor_rho_ratio` and `log_floor_r_min_pair_0` are provisional until M2,
+//!   citing REQ-TOOL-163. So M1 lists none, and M2 lists those two and `eps_m01`. The mark and its gate are not hashed
+//!   into the schema version; a marked hashed entry's value is (`constants_provisional_qa_*`).
+//! - REQ-TOOL-160 (R-401, R-419, R-427, R-428): each of the six log fields' floors is its own register entry
+//!   `log_floor_<field>`, in the state R-428 left it, at §3.8's proposed value; the numeric
 //!   view places raw at `1 − 1/(1 + ln(1 + |x|/ε_f))` with that entry's number, in the CPU twin and in the generated
 //!   WGSL's literal; two log fields with different floors place the same `|x|` differently
 //!   (`numeric_view_template_qa_*`).
-//! - REQ-SYS-082 / REQ-COL-055 (R-427): the hatch's colours and stripe width are register entries provisional until
-//!   M1 at §3.8's values, and `prelude::hatch()` decodes them, `0xRRGGBB` to its bytes (`constants_provisional_qa_hatch_*`).
+//! - REQ-SYS-082 / REQ-COL-055 (R-427, R-428): the hatch's colours and stripe width are register entries, confirmed at
+//!   M1 citing R-428, at §3.8's values, and `prelude::hatch()` decodes them, `0xRRGGBB` to its bytes (`constants_provisional_qa_hatch_*`).
 //!
 //! Each test has a registered negative control (R-176).
 
@@ -252,19 +254,89 @@ negative_control!(
 
 // ── REQ-SYS-081: the list by gate ────────────────────────────────────────────────────────────────────────────────
 
-/// dd_generation_root §3.8's provisional entries, each with its gate and calibration requirement.
-const TABLE: [(&str, &str, &str); 10] = [
-    ("log_floor_d_min", "M1", "REQ-TOOL-160"),
-    ("log_floor_dE_max", "M1", "REQ-TOOL-160"),
-    ("log_floor_dLz_max", "M1", "REQ-TOOL-160"),
-    ("log_floor_closure_min", "M1", "REQ-TOOL-160"),
-    ("log_floor_rho_ratio", "M1", "REQ-TOOL-160"),
-    ("log_floor_r_min_pair_0", "M1", "REQ-TOOL-160"),
-    ("hatch_violet", "M1", "REQ-COL-055"),
-    ("hatch_cyan", "M1", "REQ-COL-055"),
-    ("hatch_half_period", "M1", "REQ-COL-055"),
-    ("eps_m01", "M2", "REQ-DEC-039"),
+/// How a §3.8 provisional entry stands after the M1 gate's rulings (R-428, R-433).
+#[derive(Clone, Copy, Debug)]
+enum Stand {
+    /// Confirmed at its gate: unmarked, citing R-428's heading in `decisions.md`.
+    Confirmed,
+    /// Provisional until the gate, citing the calibration requirement.
+    Until(&'static str, &'static str),
+}
+
+/// dd_generation_root §3.8's provisional entries, each as R-428 leaves it, and `r_pole`, which R-433 confirms at the
+/// M1 gate and marks provisional until M3, citing REQ-INT-086.
+const TABLE: [(&str, Stand); 11] = [
+    ("log_floor_d_min", Stand::Confirmed),
+    ("log_floor_dE_max", Stand::Confirmed),
+    ("log_floor_dLz_max", Stand::Confirmed),
+    ("log_floor_closure_min", Stand::Confirmed),
+    ("log_floor_rho_ratio", Stand::Until("M2", "REQ-TOOL-163")),
+    ("log_floor_r_min_pair_0", Stand::Until("M2", "REQ-TOOL-163")),
+    ("hatch_violet", Stand::Confirmed),
+    ("hatch_cyan", Stand::Confirmed),
+    ("hatch_half_period", Stand::Confirmed),
+    ("eps_m01", Stand::Until("M2", "REQ-DEC-039")),
+    ("r_pole", Stand::Until("M3", "REQ-INT-086")),
 ];
+
+/// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.
+fn stand(name: &str) -> Stand {
+    TABLE
+        .iter()
+        .find(|t| t.0 == name)
+        .unwrap_or_else(|| panic!("`{name}` is not in §3.8's table"))
+        .1
+}
+
+/// The register entry `name`.
+fn register_entry(name: &str) -> ConstantBuilder {
+    *REGISTER
+        .iter()
+        .find(|k| k.name == name)
+        .unwrap_or_else(|| panic!("the register holds no `{name}`"))
+}
+
+/// `k` stands as `want`: confirmed, it is unmarked and cites a heading of `decisions.md` that is R-428's; provisional,
+/// it is marked until the gate and cites the calibration requirement.
+fn check_stand(k: &ConstantBuilder, want: Stand) {
+    let name = k.name;
+    match want {
+        Stand::Confirmed => {
+            assert_eq!(k.provisional, None, "`{name}` is still provisional");
+            let Some(Citation::Corpus {
+                file: "decisions.md",
+                section,
+            }) = k.citation
+            else {
+                panic!(
+                    "`{name}` does not cite R-428 in decisions.md: {:?}",
+                    k.citation
+                )
+            };
+            let decisions = std::fs::read_to_string(
+                std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../decisions.md"),
+            )
+            .expect("read decisions.md");
+            assert!(
+                section.starts_with("R-428 ")
+                    && decisions.lines().any(|l| l == format!("## {section}")),
+                "`{name}` does not cite R-428's heading in decisions.md: {section}"
+            );
+        }
+        Stand::Until(gate, req) => {
+            assert_eq!(
+                k.provisional,
+                Some(gate),
+                "`{name}` is not provisional until {gate}"
+            );
+            assert_eq!(
+                k.citation,
+                Some(Citation::Calibration(req)),
+                "`{name}` does not cite {req}"
+            );
+        }
+    }
+}
 
 fn sorted(mut v: Vec<&str>) -> Vec<&str> {
     v.sort_unstable();
@@ -275,7 +347,13 @@ fn sorted(mut v: Vec<&str>) -> Vec<&str> {
 fn check_lists_by_gate(register: &[ConstantBuilder]) {
     for n in 0..=8 {
         let g = format!("M{n}");
-        let want = sorted(TABLE.iter().filter(|t| t.1 == g).map(|t| t.0).collect());
+        let want = sorted(
+            TABLE
+                .iter()
+                .filter(|t| matches!(t.1, Stand::Until(u, _) if u == g))
+                .map(|t| t.0)
+                .collect(),
+        );
         let got = sorted(provisional_until(register, &g));
         assert_eq!(got, want, "the register's entries provisional until {g}");
     }
@@ -284,29 +362,53 @@ fn check_lists_by_gate(register: &[ConstantBuilder]) {
 #[test]
 fn constants_provisional_qa_the_register_lists_its_entries_by_gate() {
     check_lists_by_gate(REGISTER);
-    // Each listed entry cites its calibration requirement, and the whole register passes the gate.
-    for (name, _, req) in TABLE {
-        let k = REGISTER.iter().find(|k| k.name == name).expect("listed");
-        assert_eq!(
-            k.citation,
-            Some(Citation::Calibration(req)),
-            "`{name}` does not cite {req}"
-        );
+    // Each entry stands as R-428 and R-433 leave it, and the whole register passes the gate.
+    for (name, want) in TABLE {
+        check_stand(&register_entry(name), want);
     }
     gate(REGISTER).unwrap_or_else(|e| panic!("the register is refused: {e:?}"));
 }
 
 negative_control!(
     constants_provisional_qa_the_register_lists_its_entries_by_gate,
-    "a register with one M1 floor's mark removed lists eight for M1, so the list check must fail on it",
-    expected = "the register's entries provisional until M1",
+    "a register with one M2 floor's mark removed lists two for M2, so the list check must fail on it",
+    expected = "the register's entries provisional until M2",
     {
         let mut r = REGISTER.to_vec();
-        let k = r.iter_mut().find(|k| k.name == "log_floor_d_min").expect("listed");
+        let k = r.iter_mut().find(|k| k.name == "log_floor_rho_ratio").expect("listed");
         k.provisional = None;
         check_lists_by_gate(&r);
     }
 );
+
+mod confirmed_remarked {
+    use super::*;
+    negative_control!(
+        constants_provisional_qa_the_register_lists_its_entries_by_gate,
+        "a register with a confirmed floor marked provisional until M1 again lists it for M1, so the list check must fail",
+        expected = "the register's entries provisional until M1",
+        {
+            let mut r = REGISTER.to_vec();
+            let k = r.iter_mut().find(|k| k.name == "log_floor_d_min").expect("listed");
+            k.provisional = Some("M1");
+            check_lists_by_gate(&r);
+        }
+    );
+}
+
+mod confirmed_cites_the_ruling {
+    use super::*;
+    negative_control!(
+        constants_provisional_qa_the_register_lists_its_entries_by_gate,
+        "a confirmed entry citing its old calibration requirement does not cite R-428, so the stand check must fail",
+        expected = "does not cite R-428",
+        {
+            let mut k = register_entry("hatch_violet");
+            k.citation = Some(Citation::Calibration("REQ-COL-055"));
+            check_stand(&k, Stand::Confirmed);
+        }
+    );
+}
 
 #[test]
 fn constants_provisional_qa_the_list_is_exact_on_a_fixture() {
@@ -434,11 +536,7 @@ const FLOORS: [(&str, f64); 6] = [
 ];
 
 fn register_floor(field: &str) -> ConstantBuilder {
-    let name = format!("log_floor_{field}");
-    *REGISTER
-        .iter()
-        .find(|k| k.name == name)
-        .unwrap_or_else(|| panic!("the register holds no `{name}`"))
+    register_entry(&format!("log_floor_{field}"))
 }
 
 fn entry(field: &str) -> Entry {
@@ -506,16 +604,7 @@ fn numeric_view_template_qa_each_log_view_reads_its_register_floor() {
             proposed,
             "`log_floor_{field}` is not §3.8's proposed value"
         );
-        assert_eq!(
-            k.provisional,
-            Some("M1"),
-            "`log_floor_{field}` is not provisional until M1"
-        );
-        assert_eq!(
-            k.citation,
-            Some(Citation::Calibration("REQ-TOOL-160")),
-            "`log_floor_{field}` does not cite REQ-TOOL-160"
-        );
+        check_stand(&k, stand(k.name));
         check_view_floor(field, k.number());
     }
 }
@@ -566,22 +655,10 @@ negative_control!(
 
 // ── REQ-SYS-082 / REQ-COL-055: the hatch from the register ───────────────────────────────────────────────────
 
-/// The number of the register entry `name`, checked provisional until M1 and citing REQ-COL-055.
+/// The number of the register entry `name`, checked confirmed at M1, unmarked and citing R-428.
 fn hatch_number(name: &str) -> f64 {
-    let k = REGISTER
-        .iter()
-        .find(|k| k.name == name)
-        .unwrap_or_else(|| panic!("the register holds no `{name}`"));
-    assert_eq!(
-        k.provisional,
-        Some("M1"),
-        "`{name}` is not provisional until M1"
-    );
-    assert_eq!(
-        k.citation,
-        Some(Citation::Calibration("REQ-COL-055")),
-        "`{name}`'s citation"
-    );
+    let k = register_entry(name);
+    check_stand(&k, Stand::Confirmed);
     k.number()
 }
 

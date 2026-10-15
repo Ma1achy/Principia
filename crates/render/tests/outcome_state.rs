@@ -15,8 +15,8 @@
 //!   (`running_is_coloured`).
 //! - REQ-COL-062: the proposal's evidence: the two triple-outcome swatches' OKLab lightness and their separation from
 //!   the nine classes, the running grey and the hatch's two colours, and that each is the 8-bit colour farthest from
-//!   its nearest such colour (`outcome_triple_swatches_proposal`). Run with `--nocapture` for the table the PR
-//!   attaches.
+//!   its nearest such colour; and each, confirmed (R-433), farther than τ from the stipple's dot (R-434)
+//!   (`outcome_triple_swatches_proposal`). Run with `--nocapture` for the table the PR attaches.
 //!
 //! Each GPU check takes a render, so its control runs it on the render of an altered occupant and shows it fails
 //! (pitfalls §9). Each test registers its negative control (R-176).
@@ -46,7 +46,7 @@ const SECTION_1_4: [(&str, u32); 9] = [
     ("collision @ t=0", 0xF29620),
 ];
 
-/// REQ-COL-062's proposed swatches: triple collision and triple ejection.
+/// REQ-COL-062's swatches, proposed and confirmed at the M1 gate (R-433): triple collision and triple ejection.
 const TRIPLE_COLLISION: u32 = 0xD6A1FF;
 const TRIPLE_EJECTION: u32 = 0x000097;
 
@@ -242,7 +242,8 @@ negative_control!(
 );
 
 /// Checks that `swatches` are the occupant's declared params in order, each default the f32 nearest its sRGB decode,
-/// and that the first nine are §1.4's table, the last two the proposal.
+/// and that the first nine are §1.4's table, the last two the triple swatches, confirmed (R-433): none is still a
+/// proposal.
 fn check_declared(swatches: &[outcome::Swatch]) {
     let d = Declaration::parse(outcome::WGSL).unwrap_or_else(|e| panic!("{e:?}"));
     let names: Vec<&str> = d.uniforms.iter().map(|u| u.name.as_str()).collect();
@@ -267,8 +268,8 @@ fn check_declared(swatches: &[outcome::Swatch]) {
     assert_eq!(
         triples,
         [
-            ("triple collision", hex(TRIPLE_COLLISION), true),
-            ("triple ejection", hex(TRIPLE_EJECTION), true)
+            ("triple collision", hex(TRIPLE_COLLISION), false),
+            ("triple ejection", hex(TRIPLE_EJECTION), false)
         ]
     );
 }
@@ -672,9 +673,17 @@ fn farthest(nearest: &[f64]) -> (u32, f64) {
 }
 
 /// Checks that `first` is the 8-bit colour farthest from its nearest neighbour, and `second` the farthest once `first`
-/// is a neighbour too.
+/// is a neighbour too. The neighbours are the set REQ-COL-062's proposal was measured against, as §1.4 states it: the
+/// nine classes, the running grey and the hatch's two colours. The stipple's dot is not among them: R-434 changed it
+/// to `#909090` after the swatches were confirmed (R-433), and with it counted `#FD9CFF`, 0.2036 from its nearest,
+/// would edge out `#D6A1FF`, 0.197 from the dot; [`check_dot_apart`] holds the swatches apart from it instead
+/// (applied per R-369).
 fn check_farthest(cube: &[Rgb], first: u32, second: u32) {
-    let from: Vec<Rgb> = neighbours().into_iter().map(|(_, c)| c).collect();
+    let from: Vec<Rgb> = neighbours()
+        .into_iter()
+        .filter(|(name, _)| !name.starts_with("running dot"))
+        .map(|(_, c)| c)
+        .collect();
     let mut nearest = vec![f64::INFINITY; cube.len()];
     lower(&mut nearest, cube, &from);
     let (a, da) = farthest(&nearest);
@@ -723,6 +732,28 @@ fn outcome_triple_swatches_proposal() {
         "the collision's swatch is the lighter: the additive primaries mix toward white"
     );
     check_farthest(&cube, TRIPLE_EJECTION, TRIPLE_COLLISION);
+    check_dot_apart(&[TRIPLE_COLLISION, TRIPLE_EJECTION]);
+}
+
+/// τ, the OKLab distance from R-16's flat magenta `#FF00FF` to body-1 escape's `#E034C6`, 0.101: the distance R-132
+/// ruled a collision, the bar R-429 confirmed and R-434 holds the stipple to.
+fn tau() -> f64 {
+    let lab = |h: u32| present::linear_to_oklab(present::srgb8(hex(h)));
+    distance(lab(0xFF00FF), lab(0xE034C6))
+}
+
+/// Checks that each swatch of `swatches` is farther than τ from the stipple's dot (R-434), so a triple outcome never
+/// reads as a dot of the "not yet" style.
+fn check_dot_apart(swatches: &[u32]) {
+    let dot = present::linear_to_oklab(present::not_yet_dot());
+    for &h in swatches {
+        let d = distance(present::linear_to_oklab(present::srgb8(hex(h))), dot);
+        assert!(
+            d > tau(),
+            "#{h:06X} is {d:.3} from the stipple's dot, within τ = {:.3}",
+            tau()
+        );
+    }
 }
 
 negative_control!(
@@ -731,3 +762,14 @@ negative_control!(
     expected = "#808080 is not the farthest colour",
     check_farthest(&cube(), 0x808080, TRIPLE_COLLISION)
 );
+
+#[cfg(feature = "controls")]
+mod outcome_triple_swatches_dot {
+    use super::*;
+    negative_control!(
+        outcome_triple_swatches_proposal,
+        "a swatch the stipple's own dot colour is within τ of it",
+        expected = "from the stipple's dot, within",
+        check_dot_apart(&[0x909090])
+    );
+}

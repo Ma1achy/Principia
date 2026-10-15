@@ -177,7 +177,9 @@ greyscale and hue.
   in every mode. Pixel by pixel, one of its colours could match a flat colour of one mode and not another's (the
   stipple's ground is a grey, which a greyscale class can come near), and the maps would differ at a seam the field
   does not change. The hatch repeats every 8 px across x + y and the stipple every 4 px (the proposed patterns,
-  REQ-COL-055, REQ-COL-064, awaiting the M1 gate), so on a tile whose side is a multiple of 8 px, as the golden
+  REQ-COL-055, REQ-COL-064, awaiting the M1 gate; the hatch's confirmed there, R-428, and the stipple's, its period
+  unchanged, R-434), so on a tile whose side is a
+  multiple of 8 px, as the golden
   harness's are, two adjacent tiles of one style have one appearance; on any other, they differ alike in every mode,
   and the maps still agree.
 - **The detector.** Two tiles that share a side are separated by an edge iff their appearances differ: iff a pixel of

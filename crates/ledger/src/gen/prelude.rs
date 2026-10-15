@@ -152,9 +152,9 @@ const fn srgb8(packed: f64) -> [u8; 3] {
     [(v >> 16) as u8, (v >> 8) as u8, v as u8]
 }
 
-/// The proposed hatch (REQ-COL-055), read from its three register entries, each provisional until the M1 gate (R-71,
-/// R-427): `HATCH_VIOLET`, `HATCH_CYAN` and `HATCH_HALF_PERIOD` (`crate::constants`, where their evidence is). It holds
-/// no number of its own (REQ-SYS-082).
+/// The hatch (REQ-COL-055), read from its three register entries, each proposed (R-71), provisional until the M1 gate
+/// (R-427) and confirmed there (R-428): `HATCH_VIOLET`, `HATCH_CYAN` and `HATCH_HALF_PERIOD` (`crate::constants`, where
+/// their evidence is). It holds no number of its own (REQ-SYS-082).
 pub const fn hatch() -> Hatch {
     Hatch {
         colours: [srgb8(HATCH_VIOLET.number()), srgb8(HATCH_CYAN.number())],

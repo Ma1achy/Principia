@@ -1,16 +1,17 @@
-//! The "not yet" style (R-399; REQ-TOOL-162, REQ-COL-064's proposal; TASK-M1-17): an unset `d_min` and a running sample
-//! are drawn by `debug_not_yet(frag_xy)`, the grey `DBG_NOT_YET` with a fine dot stipple from the pixel position,
-//! distinct from the invalid hatch's stripes, so no ramp's flat colour reads as it:
+//! The "not yet" style (R-399; REQ-TOOL-162, REQ-COL-064's proposal, confirmed with its dots at `#909090`, R-434;
+//! TASK-M1-17): an unset `d_min` and a running sample are drawn by `debug_not_yet(frag_xy)`, the grey `DBG_NOT_YET`
+//! with a fine dot stipple from the pixel position, distinct from the invalid hatch's stripes, so no ramp's flat colour
+//! reads as it:
 //! - the presentation layer's dot colour is its CPU mirror's, and `debug_not_yet` on the GPU is the mirror at every
 //!   pixel (`not_yet_style_mirror_*`);
 //! - over any 4 × 4 pixel block, at every phase, the style takes at least two colours, its mean, in linear light, is
 //!   within [`MEAN_BOUND`] of `DBG_NOT_YET` in OKLab, and it differs from `debug_invalid` at every pixel
 //!   (`not_yet_style_blocks_*`);
-//! - the REQ-COL-064 proposal's evidence: the pattern, its lightness contrast over the grey, its distance from the
-//!   hatch's two colours and from the pending hatch's blue, and that no flat colour of any palette (the outcome
+//! - REQ-COL-064's evidence, as confirmed (R-434): the pattern, its lightness contrast over the grey, its distance from
+//!   the hatch's two colours and from the pending hatch's blue, and that no flat colour of any palette (the outcome
 //!   palette, the `dbg_*` palettes, every LUT of colour_composition §7.1, viridis, twilight, magma and cool-warm among
-//!   them, the grey ramp and the hue circle) comes within [`FLAT_BOUND`] of every pixel of a 4 × 4 block
-//!   (`not_yet_style_proposal_*`). Run with `--nocapture` for the table the PR attaches.
+//!   them, the grey ramp and the hue circle) comes within [`FLAT_BOUND`], the hatch's τ, of every pixel of a 4 × 4
+//!   block (`not_yet_style_proposal_*`). Run with `--nocapture` for the table the PR attaches.
 //!
 //! Each test registers its negative control (R-176).
 
@@ -24,13 +25,15 @@ use validation::negative_control;
 #[path = "support/palettes.rs"]
 mod palettes;
 
-/// The proposal's bound on the OKLab distance between a 4 × 4 block's mean colour, averaged in linear light, and
-/// `DBG_NOT_YET`: a quarter of each block is the lighter dot, which lifts the mean 0.057 in OKLab lightness.
-const MEAN_BOUND: f64 = 0.06;
+/// The bound on the OKLab distance between a 4 × 4 block's mean colour, averaged in linear light, and `DBG_NOT_YET`: a
+/// quarter of each block is the lighter dot, which lifts the mean 0.079 in OKLab lightness with R-434's `#909090` dots
+/// (0.057 with the proposal's `#808080`, under its bound of 0.06; applied per R-369, the bound follows the dot).
+const MEAN_BOUND: f64 = 0.08;
 
-/// The proposal's bound below which no flat colour may come of every pixel of a 4 × 4 block: half the OKLab distance
-/// between the grey and the dot (0.176), less a margin, so a flat colour within it of one is beyond it from the other.
-const FLAT_BOUND: f64 = 0.08;
+/// The bound below which no flat colour may come of every pixel of a 4 × 4 block: τ, 0.101, the OKLab distance from
+/// `#FF00FF` to `#E034C6` that the hatch is held to (R-429), the bar R-434 sets for the stipple, in place of the
+/// proposal's 0.08 (half the OKLab distance between the grey and the `#808080` dot, 0.176, less a margin).
+const FLAT_BOUND: f64 = 0.101;
 
 /// The rendered square's side, in pixels: four of the stipple's 4 px cells, so every phase of a 4 × 4 block fits.
 const SIDE: u32 = 16;
@@ -281,13 +284,18 @@ fn not_yet_style_proposal_evidence() {
     );
     assert_eq!(
         format!("{contrast:.3}"),
-        "0.176",
+        "0.229",
         "the contrast the docs give"
     );
     assert_eq!(
         format!("{:.3}", distance(mean, grey)),
-        "0.057",
+        "0.079",
         "the mean the docs give"
+    );
+    assert_eq!(
+        format!("{reach:.3}"),
+        "0.115",
+        "the nearest flat colour's reach R-434 gives"
     );
 }
 

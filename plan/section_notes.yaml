@@ -851,3 +851,15 @@
   section: "R-416 — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing"
   reason: informative only
   note: "the human's message of 10 Oct 2026: TASK-M6-26's and TASK-M6-31's look choices hold until the human has tried the M6-31 mock, and no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing; an act, applied in notes and acceptance lines"
+- file: decisions.md
+  section: "R-430 — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)*"
+  reason: informative only
+  note: "the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate's ramp results stand as reported, S, ftle and diffusion passing, q_mass and mean_y provisional on cool-warm (R-426), theta cyclic (R-423), C_ty per R-369 (RQ-277's option (a), no veto); applied in forward lines, an acceptance line and plan/MILESTONES.md; the re-checks are REQ-PAY-097's and REQ-PAY-098's already; amends R-423 and R-426 in part; changes no requirement"
+- file: decisions.md
+  section: "R-431 — No veto on #209's alias test, the constants lint's skip of test code, `constants::MILESTONES`'s names or the narrowed local mutants runs"
+  reason: informative only
+  note: "the human's message of 14 Oct 2026 (R-428 quotes it): no veto on #209 (the alias test on the workspace target in ci-workspace, gate.yml's cpu-workspace job), the constants lint's skip of #[cfg(test)] code, constants::MILESTONES's names M0 … M8, or the narrowed local mutants runs with CI's full run as the gate; an act, recorded only; changes no requirement"
+- file: decisions.md
+  section: "R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts"
+  reason: informative only
+  note: "the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate passes on gate run 38629476853 on main ab65c273 and R-428 to R-431; main is tagged m1-gate once the rulings PR has merged, and M2 starts; plan/OPERATIONS.md's order of work and plan/MILESTONES.md's M1 block gain it; changes no requirement"

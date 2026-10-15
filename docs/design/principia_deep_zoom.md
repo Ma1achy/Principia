@@ -47,6 +47,11 @@ u = c_u + h_u · (2t − 1)        t = (i + 0.5)/N   (quad-local sample coord)
 and the f32 sum is exact until adjacent samples collapse together, where R-90's switchover fires on their
 bitwise-identical ICs. Near `u ≈ 0.6` that is through `ℓ = 20` for every `N ≤ 8`, and to `ℓ = 19` for `N = 16`.
 
+**The banding criterion (R-433; REQ-TOOL-152).** A run of reconstructed coordinates is banded, step-quantised, when an
+adjacent-sample delta departs from the exact step `2h/N` by more than **1/16 of the step**, the bound the human
+confirmed at the M1 gate. Each f32 coordinate is within half an ulp of its value, so a delta departs by at most one
+ulp, and the criterion holds while the step spans at least 16 ulps.
+
 ---
 
 ## 2. Linearised decoder — IC precision

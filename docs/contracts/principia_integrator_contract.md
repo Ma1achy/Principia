@@ -333,6 +333,7 @@ Mikkola–Tanikawa form is required, not optional."* **A reversible occupant exi
 | `r_coll` | — | collision threshold — **user-exposed sim-key** (Part 7, collision: definitional regularisation choice, not precision) | wrapper detector |
 | `tau`, escape window | —, 0.4 (provisional) | escape settling threshold (not tuned; to re-measure) and the window `|Δn̂|` is taken over, in time units, sampled at macro-step boundaries (unregularised occupants) or sync boundaries (regularised ones) (R-29, R-95) | wrapper detector |
 | `r_close` | 0.01 | close-encounter counting | wrapper detector |
+| `r_pole` | 0.01 (R-433; the constants register's `r_pole`, provisional until M3, REQ-INT-086) | the pole disc of the unwrapped phase `θ̃` (dd_integrator §3.7): it decides the stored `θ̃`, `_reserved`, `orbit_count` and `retrograde` for the same IC, so it is on the sim key whatever form TASK-M3-11 gives it, and a change at the M3 gate re-integrates (applied per R-369, PR #210). It is not hashed (dd_generation_root §3.8 "The hash"): it changes values, not what the bits mean | wrapper march |
 | `eps_E`, `eps_L` | 10⁻⁶ | relative-drift floors (rest starts) | wrapper monitor |
 | `G`, `M_total` | 1, 1 | constants | wrapper |
 

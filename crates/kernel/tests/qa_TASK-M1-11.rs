@@ -12,8 +12,8 @@
 //!   colour_composition Appendix A's pattern (REQ-TOOL-123), written here from Appendix A's table.
 //!
 //! Every test whose name holds `theta_unwrap` or `debug_variants` runs under the task's acceptance commands. `r_pole`
-//! is REQ-INT-086's calibration, unconfirmed until the M1 gate (R-71): the rule's tests run at several radii, the
-//! proposal among them, since R-389's rule holds whatever its value. Each test has its negative control (R-176).
+//! is REQ-INT-086's calibration, 0.01, confirmed at the M1 gate and provisional until M3 (R-433): the rule's tests run
+//! at several radii, that value among them, since R-389's rule holds whatever its value. Each test has its negative control (R-176).
 // The file name `qa_TASK-M1-11` gives a crate name that is not snake case.
 #![allow(non_snake_case)]
 
@@ -33,8 +33,8 @@ use validation::negative_control;
 /// One macro-step of `θ̃` at f64: `kernel::shape::theta_step`, or a control's faulty one.
 type Step = fn(Theta<f64>, [f64; 3], [f64; 3], f64) -> Theta<f64>;
 
-/// REQ-INT-086's proposed `r_pole` (unconfirmed, R-71), and two radii either side of it: R-389's rule is stated for
-/// any radius, so each passage test runs at each.
+/// REQ-INT-086's `r_pole`, 0.01 (confirmed at the M1 gate, provisional until M3, R-433), and two radii either side of
+/// it: R-389's rule is stated for any radius, so each passage test runs at each.
 const RADII: [f64; 3] = [1e-3, 1e-2, 0.1];
 
 /// R-389's wrap, written from its words: `d − 2πk` in (−π, π], closed at +π, open at −π.
