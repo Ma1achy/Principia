@@ -730,3 +730,27 @@ fn qa_inspector_l_z_and_masses_on_a_known_answer() {
     assert!(reversed.abs() < 1e-12, "the reversed L_z {reversed}");
     rejects("L_z of the reversed orbit", || check(reversed));
 }
+
+#[test]
+fn qa_inspector_l_z_on_a_two_point_path() {
+    use gui::windows::inspector::l_z;
+    // Two points are one step, enough for a velocity: body 0 at (0, 1) moving +x at 1, body 1 at (0, −1) moving −x
+    // at 1, body 2 at rest, masses equal; L_z = Σ m (x v_y − y v_x) = −2/3, as on the three-point path.
+    let two = sample_with(
+        [
+            vec![[0.0, 1.0], [1.0, 1.0]],
+            vec![[0.0, -1.0], [-1.0, -1.0]],
+            vec![[0.0, 0.0]; 2],
+        ],
+        1.0,
+    );
+    let check = |got: f64| {
+        assert!(
+            (got + 2.0 / 3.0).abs() < 1e-12,
+            "L_z on a two-point path {got}, expected −2/3"
+        )
+    };
+    check(l_z(&two));
+    // Control: an L_z that takes two points as too few (0) fails the check.
+    rejects("an L_z of 0 on a two-point path", || check(0.0));
+}
