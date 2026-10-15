@@ -122,9 +122,14 @@ negative_control!(
 
 // ── stage_tag_words ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// Each reason round-trips through its word, the words are 0 and 1, and every other word is refused.
+/// Each reason round-trips through its word, the words are 0 to 3, and every other word is refused.
 fn check_tags(write: fn(Option<Degenerate>) -> u32) {
-    for (reason, word) in [(None, 0), (Some(Degenerate::M01Tiny), 1)] {
+    for (reason, word) in [
+        (None, 0),
+        (Some(Degenerate::M01Tiny), 1),
+        (Some(Degenerate::EnergyInfeasible), 2),
+        (Some(Degenerate::EnergyUnscalable), 3),
+    ] {
         assert_eq!(
             write(reason),
             word,
@@ -137,7 +142,7 @@ fn check_tags(write: fn(Option<Degenerate>) -> u32) {
             "the word {word} reads back otherwise"
         );
     }
-    for word in [2, 3, u32::MAX] {
+    for word in [4, 5, u32::MAX] {
         assert_eq!(
             untag(word),
             Err(word),
@@ -153,9 +158,13 @@ fn stage_tag_words() {
 
 negative_control!(
     stage_tag_words,
-    "a writer that gives M01_TINY the word 2 must fail",
-    expected = "Some(M01Tiny) is written as 2",
-    check_tags(|d| if d.is_some() { 2 } else { 0 })
+    "a writer that swaps the two energy words must fail",
+    expected = "Some(EnergyInfeasible) is written as 3",
+    check_tags(|d| match tag(d) {
+        2 => 3,
+        3 => 2,
+        w => w,
+    })
 );
 
 // ── stage_words_roundtrip ───────────────────────────────────────────────────────────────────────────────────────

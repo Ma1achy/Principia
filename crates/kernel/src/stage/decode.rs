@@ -197,13 +197,15 @@ pub fn descriptor_words() -> usize {
     core::mem::size_of::<ICDescriptor>() / 4
 }
 
-/// The tag word of `degenerate`: 0 for none, 1 for `M01_TINY`. It is this dispatch's readback, not payload §2's
-/// `decode_failed` detail code, whose map is REQ-DEC-038's.
+/// The tag word of `degenerate`: 0 for none, 1 for `M01_TINY`, 2 for `ENERGY_INFEASIBLE`, 3 for `ENERGY_UNSCALABLE`.
+/// It is this dispatch's readback, not payload §2's `decode_failed` detail code, whose map is REQ-DEC-038's.
 #[inline]
 pub fn tag(degenerate: Option<Degenerate>) -> u32 {
     match degenerate {
         None => 0,
         Some(Degenerate::M01Tiny) => 1,
+        Some(Degenerate::EnergyInfeasible) => 2,
+        Some(Degenerate::EnergyUnscalable) => 3,
     }
 }
 
@@ -213,6 +215,8 @@ pub fn untag(word: u32) -> Result<Option<Degenerate>, u32> {
     match word {
         0 => Ok(None),
         1 => Ok(Some(Degenerate::M01Tiny)),
+        2 => Ok(Some(Degenerate::EnergyInfeasible)),
+        3 => Ok(Some(Degenerate::EnergyUnscalable)),
         other => Err(other),
     }
 }
