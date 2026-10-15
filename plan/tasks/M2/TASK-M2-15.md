@@ -31,6 +31,7 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
 - `docs/design/principia_chart_reference.md` § "0.2 Configuration — hyperspherical mass-weighted Jacobi"
 - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*"
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
 
 ## Deliverables
 - `crates/kernel/src/encode/{mod.rs, blocks.rs, report.rs}` (the one encode entry, the discard report).
@@ -51,3 +52,9 @@ Encode exists in the same shared source as decode, inverted: the closed-form blo
   corner, with two masses 0, `softmax_tanh`'s `log(mₖ/m₀)` and `stick_breaking`'s `u = m₂/(m₁ + m₂)` divide 0 by 0.
   On the host, Rust's `max` ignores the NaN and the clamp returns a finite value, but SPIR-V's `FMax` with a NaN
   operand is undefined. Encode passes the mass inverse no exact corner, or guards it before the inverse runs.
+- **R-437 (RQ-285):** `β = atan2(λ̃_y, λ̃_x)` takes the defined 0 at `λ̃ = 0` (the `α = 0` pole), whatever the
+  signs of the zeros, by a select on `λ̃_x = 0` and `λ̃_y = 0`, never `atan2(0, 0)`; `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole
+  once `I = 1` (dd_encode §3.1; inverse-encode Part 3). REQ-DEC-014's ingest test covers `±0` components at both poles
+  on both precisions. The hold RQ-285 is gone.
+- **Waits on RQ-287** (REQ-ENC-007's `rq:`): `β` in the mirror's deadband with `λ̃_x < 0` reads near `−π`, which
+  `s_β` clamps to the `β = 0` end. Nothing is chosen until it is ruled.

@@ -24,6 +24,7 @@ The integrator is certified as the payload's producer: every generation-root led
 - `decisions.md` § "R-153 — The debug and live-march views have golden images of their own *(closes RQ-123)*"
 - `decisions.md` § "R-158 — The six readings are accepted *(closes RQ-128)*"
 - `decisions.md` § "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+- `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
 
 ## Deliverables
 - `xtask golden producer-fields` — a CPU-computed payload over a fixture slice rendered through every generated field view, with golden images in `fixtures/golden/producer-fields/`.
@@ -46,3 +47,7 @@ The integrator is certified as the payload's producer: every generation-root led
 - Calibrations proposed here (R-71; human confirmation at the M3 gate, then recorded in decisions.md): REQ-VAL-117.
 - RQ-123 ruled: R-153 — the live-march views are checked against golden images of their own, recorded at the M3 gate, not against artboards.
 - RQ-128 ruled: R-158 — the readings taken while applying R-141 to R-156 are accepted.
+- **R-436 (RQ-284):** the energy-agreement view tests `E_0`, `K_0` and `V_0` on their bits before any arithmetic,
+  `K_0 + V_0` included, and draws a pixel with a non-finite one in the invalid colour on the CPU and the GPU; such a
+  pixel is excluded from the tolerance check (render contract § "Cross-check views (the seams)"; debug_tooling_plan
+  §G). The hold RQ-284 is gone.

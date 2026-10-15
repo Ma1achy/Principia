@@ -93,6 +93,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-413** — A link's sampling note describes the density of samples drawn with uniform controls; §3.9's σ note becomes "edge-heavy: crowds the bounds" *(closes RQ-267)*
 - **R-417** — The f32 images of π/2 and π are generated rounded toward zero; the decode's range is closed: the lower poles are reached at underflow and `q` reaches `±q_max` *(closes RQ-270)*
 - **R-419** — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*. Still in force: all of it; its M1 step is done (R-428), and the two floors are re-confirmed at the M2 gate (REQ-TOOL-163). Amended in part by R-428.
+- **R-437** — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*
 
 ## Design and architecture
 
@@ -128,7 +129,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-76** — Stability × Hue is deleted *(closes RQ-27)*
 - **R-77** — Replace-L, and the state palette *(closes RQ-28)*
 - **R-78** — Real Viénot and Brettel colour-vision simulation *(closes RQ-29)*
-- **R-79** — NaN and sentinels *(closes RQ-30)*
+- **R-79** — NaN and sentinels *(closes RQ-30)*. Still in force: all of it; storage still never holds NaN, and R-436 adds that a stored non-finite value, other than a declared sentinel, goes to the invalid colour as NaN does. Extended by R-436.
 - **R-80** — Samples per footprint *(closes RQ-31)*
 - **R-81** — The embedded record uses the contract names *(closes RQ-32)*
 - **R-86** — The payload doc governs the eight payload items *(closes RQ-37)*. Still in force: all eight items; `ICDescriptor`'s 64 B with explicit padding is its f32 instantiation, and its width follows `Real` (R-313). Amended by R-313.
@@ -249,6 +250,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-425** — The visible-set and locked/stale overlays move to TASK-M5-29 under a new defining requirement, which reuses the corpus's existing meanings (`quad_state` 4 for "stale") rather than defining new ones *(closes RQ-276)*
 - **R-426** — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*. Still in force: all of it; `q_mass` and `mean_y` stay on `ramp_coolwarm` provisionally until TASK-M2-03 and TASK-M3-13 declare their ranges, and `C_ty` is signed, on `ramp_coolwarm` (R-430). Amended in part by R-430.
 - **R-430** — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)*
+- **R-436** — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*
 
 ## Values
 

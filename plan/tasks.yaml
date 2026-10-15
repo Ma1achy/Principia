@@ -693,6 +693,14 @@
   requirements: [REQ-GEN-034]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
+- id: TASK-M2-31
+  milestone: M2
+  title: "Non-finite values in the numeric views: the invalid colour on the CPU twin and in WGSL, and the measured range over finite values (R-436)"
+  depends_on: [TASK-M2-03, TASK-M1-09]  # R-436: TASK-M1-09 has merged; applied per R-369
+  needs: [REQ-RENDER-022]
+  requirements: [REQ-COL-070]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: [PIT-3]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"

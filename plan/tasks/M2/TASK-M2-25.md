@@ -30,6 +30,9 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - `decisions.md` § "R-133 — The seven checkpoint-B interpretations are accepted *(closes RQ-111)*"
 
 - `decisions.md` § "R-394 — `ctx.chart.slice_uv` is the sample's position in the slice plane, stable under pan and zoom; a screen-relative position is a separate field *(closes RQ-257)*"
+- `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+- `decisions.md` § "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
+
 ## Deliverables
 - `crates/render/wgsl/decode.wgsl` and `crates/render/wgsl/encode.wgsl` as snippets for the fragment assembler, emitted by the rust-gpu → SPIR-V → WGSL translation of the shared decode source (R-116); the build fails if either is edited by hand.
 - The DECODE and agreement presets in the preset library (`crates/render/src/presets/`), locked.
@@ -55,3 +58,11 @@ The chart decode and encode are available to the fragment stage as WGSL generate
   per pixel, depends on it.
 - Depends on TASK-M1-19, applied per R-369 (TASK-M1-14's pre-flight): REQ-TOOL-011, which this task needs, moved from
   TASK-M1-14 to TASK-M1-19, split off so that RQ-273 holds only it. R-420 ruled RQ-273, so TASK-M1-19 waits on nothing.
+- **R-436 (RQ-284):** the agreement preset tests each stored operand, `K_0` and `V_0` (and any other it reads), on
+  its bits before any arithmetic, `K₀ + V₀` included, and draws a pixel with a non-finite one in the invalid colour on
+  the GPU and the CPU twin alike; `E₀ = K₀ + V₀` is `−∞` at the f64 collision pole (dd_decoder §3.6). No arithmetic on
+  `±∞` and no infinite literal (colour_composition §6; the GPU determinism note's rule 4). TASK-M2-31 builds the same
+  test for the numeric views; this task may share its WGSL helper.
+- **R-437 (RQ-285):** the generated WGSL decode and encode inherit the Rust source's selects at every `atan2` pole
+  (dd_decoder §3.2 "Every `atan2` at a possible pole"); the agreement and DECODE checks include pole inputs with `±0`
+  operands, where CPU and GPU agree. The holds RQ-284 and RQ-285 are gone.

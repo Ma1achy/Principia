@@ -11,29 +11,29 @@
 | CHART | 56 |
 | INT | 89 |
 | EVT | 26 |
-| PAY | 94 |
-| GEN | 34 |
+| PAY | 96 |
+| GEN | 35 |
 | SCHED | 97 |
 | REF | 51 |
 | RENDER | 86 |
-| COL | 68 |
+| COL | 69 |
 | GUI | 183 |
 | TOOL | 165 |
 | VAL | 181 |
 | PERF | 95 |
-| SYS | 80 |
-| **total** | **1384** |
+| SYS | 82 |
+| **total** | **1390** |
 
-Of these: 120 calibration, 126 definition, 1138 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 120 calibration, 126 definition, 1144 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
 | milestone | count |
 |---|---|
 | M0 | 122 |
-| M1 | 105 |
-| M2 | 164 |
-| M3 | 199 |
+| M1 | 108 |
+| M2 | 166 |
+| M3 | 200 |
 | M4 | 104 |
 | M5 | 174 |
 | M6 | 160 |
@@ -42,10 +42,10 @@ Of these: 120 calibration, 126 definition, 1138 obligation. Retired (kept for th
 
 ## Sections
 
-1121 sections in 46 files: 924 yield at least one requirement; 197 yield none and are listed below with the reason.
+1135 sections in 46 files: 935 yield at least one requirement; 200 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 149 |
+| informative only | 152 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 32 |
@@ -160,6 +160,9 @@ Of these: 120 calibration, 126 definition, 1138 obligation. Retired (kept for th
 | R-414 — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin | informative only | the human's ruling of 10 Oct 2026: ~/.rustup's stable stays at 1.99.0, every dispatch sets RUSTUP_AUTO_INSTALL=0, and toolchains change only through the pin (R-349); a process ruling applied in plan/OPERATIONS.md § "Dispatching" and § "Toolchain" |
 | R-415 — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change | informative only | the human's ruling of 10 Oct 2026: a task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change; a process ruling applied in plan/WORKFLOW.md and plan/OPERATIONS.md |
 | R-416 — The look choices hold until the human has tried the M6-31 mock; no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing | informative only | the human's message of 10 Oct 2026: TASK-M6-26's and TASK-M6-31's look choices hold until the human has tried the M6-31 mock, and no veto on R-409, R-400's scope, R-407's and R-408's consequences, #182 or RQ-267's docs-only filing; an act, applied in notes and acceptance lines |
+| R-430 — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)* | informative only | the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate's ramp results stand as reported, S, ftle and diffusion passing, q_mass and mean_y provisional on cool-warm (R-426), theta cyclic (R-423), C_ty per R-369 (RQ-277's option (a), no veto); applied in forward lines, an acceptance line and plan/MILESTONES.md; the re-checks are REQ-PAY-097's and REQ-PAY-098's already; amends R-423 and R-426 in part; changes no requirement |
+| R-431 — No veto on #209's alias test, the constants lint's skip of test code, `constants::MILESTONES`'s names or the narrowed local mutants runs | informative only | the human's message of 14 Oct 2026 (R-428 quotes it): no veto on #209 (the alias test on the workspace target in ci-workspace, gate.yml's cpu-workspace job), the constants lint's skip of #[cfg(test)] code, constants::MILESTONES's names M0 … M8, or the narrowed local mutants runs with CI's full run as the gate; an act, recorded only; changes no requirement |
+| R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts | informative only | the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate passes on gate run 38629476853 on main ab65c273 and R-428 to R-431; main is tagged m1-gate once the rulings PR has merged, and M2 starts; plan/OPERATIONS.md's order of work and plan/MILESTONES.md's M1 block gain it; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
