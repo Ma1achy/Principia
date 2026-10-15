@@ -996,7 +996,7 @@
   milestone: M2
 - id: REQ-ENC-007
   area: ENC
-  statement: "The block inverses must be the closed forms of inverse-encode Part 3: μₖ = log(mₖ/m₀), z_μk = artanh(μₖ/μ_max) with |μₖ| ≤ (1−ε_μ)μ_max; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(λ̃_y, λ̃_x) ∈ [0, π], s_α = 2α/π, s_β = β/π, z = logit(s) with s clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, s = ½(q/q_max + 1), z = logit(clamp(s, ε_q, 1−ε_q)), with |qₖ| > q_max clamped and flagged lookup_clamped."
+  statement: "The block inverses must be the closed forms of inverse-encode Part 3: μₖ = log(mₖ/m₀), z_μk = artanh(μₖ/μ_max) with |μₖ| ≤ (1−ε_μ)μ_max; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π] (|λ̃_y| read by abs, never max; the range holds because β reads |λ̃_y|, not by the mirror alone, R-438), s_α = 2α/π, s_β = β/π, z = logit(s) with s clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, s = ½(q/q_max + 1), z = logit(clamp(s, ε_q, 1−ε_q)), with |qₖ| > q_max clamped and flagged lookup_clamped."
   source:
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: "Part 3 — Block inverses (closed forms, with their forward mates)"
@@ -1008,17 +1008,18 @@
     section: R-21 — `α_min = 0` *(CD-1)*
   - file: decisions.md
     section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
+  - file: decisions.md
+    section: "R-438 — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*"
   verify:
     method: unit test
-    detail: "substitute forward into inverse for fuzzed z: each block recovers z to tolerance; |q| > q_max input sets lookup_clamped; at λ̃ = 0, ±0 components included, β is R-437's defined 0, chosen by a select on λ̃_x = 0 and λ̃_y = 0, never atan2(0, 0)"
+    detail: "substitute forward into inverse for fuzzed z: each block recovers z to tolerance; |q| > q_max input sets lookup_clamped; at λ̃ = 0, ±0 components included, β = atan2(|λ̃_y|, λ̃_x) is R-437's defined 0, chosen by a select on λ̃_x = 0 and λ̃_y = 0, never atan2(0, 0); collinear shapes encoded with λ̃_y ∈ {−1e-13, −0, +0, +1e-13}, body 2 on either side and at each Euler landmark, give β = π (body 2 on the −x side) or 0 (on the +x side) as appropriate, never near −π, and a round trip within the deadband (R-438)"
   rulings:
   - R-10
   - R-21
   - R-437
+  - R-438
   milestone: M2
-  rq:
-  - RQ-287
-  note: "R-437: β takes the defined 0 at λ̃ = 0; α = atan2(‖λ̃‖, ‖ρ̃‖) has no pole once I = 1. RQ-287: β's value in the mirror's deadband with λ̃_x < 0."
+  note: "R-437: β takes the defined 0 at λ̃ = 0; α = atan2(‖λ̃‖, ‖ρ̃‖) has no pole once I = 1. R-438 (RQ-287): β reads |λ̃_y|, the mirror's quotient for β only, so a deadband λ̃_y ∈ [−δ_λ, 0] with λ̃_x < 0 gives β near π, not −π; R-82's mirror test and deadband are unchanged."
 - id: REQ-ENC-008
   area: ENC
   statement: "Encode into the active chart must dispatch by axis kind: kind 1 reads the component exactly; kind 2 applies the block inverse plus the axis's own residual convention; kind 3 evaluates L_z(x), E(x), K(x) directly for chart coordinates; annotation axes have nothing to invert; otherwise encode falls back to latent z, which is always available."
@@ -10967,7 +10968,7 @@
     section: "R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*"
   verify:
     method: numerical gate
-    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the f64 collision pole) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included"
+    detail: "agreement preset |E(fragment-decode) − E₀| is within REQ-DEC-043's calibrated f32 decode factor on a healthy survey (from TASK-M2-29 on, within REQ-COL-060's calibrated tolerance instead, R-297), with E₀ the decode stage's K₀ + V₀ (R-86), not SimState.E_0 (R-133); a deliberate dispatch scramble shows spatial disagreement; a pixel with a non-finite operand (E₀ = K₀ + V₀ = −∞ at the collision pole, at f32 or f64) draws the invalid colour on gpu-metal, gpu-lavapipe and the CPU twin, each operand tested on its bits before any arithmetic, K₀ + V₀ included, and the fragment decode's own V tested on its bits before it forms E; the generated fragment decode selects V's −∞ bits where a pair separation is 0, written by bitcast, never 1/0 or an infinite literal (R-436); the generated WGSL decode and encode take R-437's defined 0 at every atan2 pole by a select on the operands against 0, never atan2(0, 0), and agree with the CPU there, ±0 operands included"
   rulings:
   - R-75
   - R-116
@@ -15679,11 +15680,17 @@
   source:
   - file: docs/design/principia_debug_tooling_plan.md
     section: "E. Payload field views — `ICDescriptor` (64 B) & the live-state block"
+  - file: docs/design/principia_dd_decoder.md
+    section: "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
+  - file: decisions.md
+    section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
   verify:
     method: unit test
-    detail: GPU descriptor fields vs f64 decode within tolerance
-  rulings: []
+    detail: "GPU descriptor fields vs f64 decode within tolerance; at the poles (‖λ̃‖ = 0, a pair separation 0), at f32 and f64, the GPU descriptor stores the bits the f64 decode does: rho_ratio +∞, V_0 −∞, virial_ratio 0, each selected by comparing its divisor with 0 (virial_ratio: V_0 tested on its bits) and the ±∞ written by a bitcast of the integer pattern, never 1/0 or an infinite literal (R-436; dd_decoder §3.6)"
+  rulings:
+  - R-436
   milestone: M2
+  note: "R-436 (physics review 5531809281 P1, applied per R-369): the producers select the pole values, so the bits the consumers test are pinned on the GPU too."
 - id: REQ-TOOL-031
   area: TOOL
   statement: "The occupant-comparison harness must refuse to run arms that differ in stepper or step control."
@@ -18259,7 +18266,7 @@
     section: "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
   verify:
     method: numerical gate
-    detail: "on a synthetic and a real survey, |E_0 − (K_0+V_0)| is within the calibrated E₀ agreement tolerance everywhere; the ICDescriptor stores no E₀ field; a pixel whose stored E_0, K_0 or V_0 is non-finite (V_0 = −∞ at the f64 collision pole) draws the invalid colour on the CPU and the GPU, each operand tested on its bits before any arithmetic, K_0 + V_0 included, and is excluded from the tolerance check (R-436)"
+    detail: "on a synthetic and a real survey, |E_0 − (K_0+V_0)| is within the calibrated E₀ agreement tolerance everywhere; the ICDescriptor stores no E₀ field; a pixel whose stored E_0, K_0 or V_0 is non-finite (V_0 = −∞ at the collision pole, at f32 or f64, its bits selected by the decode stage, never 1/0, dd_decoder §3.6) draws the invalid colour on the CPU and the GPU, each operand tested on its bits before any arithmetic, K_0 + V_0 included, and is excluded from the tolerance check (R-436)"
   rulings:
   - R-71
   - R-86

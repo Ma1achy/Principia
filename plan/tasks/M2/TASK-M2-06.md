@@ -35,6 +35,8 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
 - `docs/contracts/principia_parity_contract.md` § "4. Tolerance — and the cross-backend reality"
 - `decisions.md` § "R-85 — Native wgpu sets the Tier-N tolerances *(closes RQ-36)*"
 - `decisions.md` § "R-118 — Φ is generic over the float type *(closes RQ-86)*"
+- `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+- `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
 
 ## Deliverables
 - `crates/kernel/src/stage/decode.rs`: the decode-stage entry generic over `Chart` and links; the (m, r, p) seam type as its only output to the integrator side; the per-quad DECODE_MODE flag (full path only — the linearised path lands in M6).
@@ -53,3 +55,11 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
 - The Tier-N tolerances are set later by the M4 measurement (REQ-VAL-064); REQ-DEC-043 is decoder test 12's own factor. The CPU-f64 Precision-ring surface as a whole (`computeIC` etc.) is REQ-SYS-017 (M3); this task delivers only `decodeOnly`.
 - PIT-10: the measurement holds inputs fixed; state its domain (decode only, no trajectory).
 - RQ-86 ruled: R-118 — the chart map is generic over the float type, so the decode stage instantiates each chart's `map` at f32 in the kernel and at f64 in `decode_only`.
+- **R-436 (physics review 5531809281 P1, applied per R-369):** the decode stage computes the `ICDescriptor` at f32,
+  where WGSL may assume there are no infinities, so each pole value is selected, not divided: `rho_ratio`'s `+∞` bits
+  where `‖λ̃‖ = 0`, `V_0`'s `−∞` bits wherever a pair separation is 0 (the whole sum), and `virial_ratio` 0 where
+  `V_0` is non-finite, tested on its bits; the bits by a bitcast of the integer pattern, never `1/0` or an infinite
+  literal (dd_decoder §3.6, "Each producer selects its pole value"; R-271's `d_min` packer is the precedent). The
+  selects go in the shared source, `crates/kernel/src/decode/descriptor.rs`, which TASK-M2-03 wrote with plain
+  quotients, so the CPU-f64 path stores the same bits. `decode_stage_descriptor` includes pole inputs at f32
+  (REQ-TOOL-030).

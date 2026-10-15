@@ -66,3 +66,7 @@ The chart decode and encode are available to the fragment stage as WGSL generate
 - **R-437 (RQ-285):** the generated WGSL decode and encode inherit the Rust source's selects at every `atan2` pole
   (dd_decoder §3.2 "Every `atan2` at a possible pole"); the agreement and DECODE checks include pole inputs with `±0`
   operands, where CPU and GPU agree. The holds RQ-284 and RQ-285 are gone.
+- **R-436, the producers (physics review 5531809281 P1, applied per R-369):** the fragment decode forms its own `V`
+  and `E`, so its `V` takes the decode stage's select (`−∞` bits wherever a pair separation is 0, written by bitcast,
+  never `1/0`), inherited from the shared source (TASK-M2-06), and the agreement preset tests that `V` on its bits
+  before it forms `E(fragment-decode) = K + V` (colour_composition §6; REQ-COL-006).
