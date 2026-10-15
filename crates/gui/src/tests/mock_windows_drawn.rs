@@ -494,9 +494,10 @@ fn mock_windows_drawn_the_memory_tab() {
 use crate::explore::trajectory::{fit, on_square, BODY_COLOURS};
 use crate::windows::inspector;
 
+/// An orbit of some length: its bodies move, so each arrow and each separation has a size.
 fn a_sample() -> engine::contract::sample::Sample {
     let (sim, _) = super::support::state(0.0);
-    crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, sim.horizon.t)
+    crate::mock::sample::sample(&sim.plane, [0.4, 0.6], 0.0, 10.0)
 }
 
 /// The circles painted: centre, radius, fill and stroke colour.
@@ -550,6 +551,7 @@ fn mock_windows_drawn_the_ic_pane() {
             let path = &sample.bodies[b];
             // The velocity arrow: from the start, three times its step to the fifth point.
             let (a, v) = (at(path[0]), at(path[4]));
+            assert!((v - a).length() > 1.0, "body {b} moves");
             let arrow = segments(&shapes, *colour);
             assert!(
                 close(arrow[0][0], a) && close(arrow[0][1], a + (v - a) * 3.0),
