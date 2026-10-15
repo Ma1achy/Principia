@@ -308,6 +308,12 @@ fn horizon_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(),
         no_history: false,
     });
     let after = engine.snapshot();
+    // From any horizon, the edit moves it, so a write that is lost cannot pass as one that wrote the same value.
+    expect(
+        "a horizon SetField that moves the horizon",
+        after.sim.horizon != sim.horizon,
+        true,
+    )?;
     expect(
         "the horizon after its SetField",
         after.sim.horizon.clone(),

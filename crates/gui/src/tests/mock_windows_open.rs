@@ -2412,7 +2412,7 @@ fn mock_windows_open_inspector_readouts_and_energy_error() {
     close.energy_drift = 3.0;
     close.bodies = [
         vec![[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
-        vec![[1.0, 0.0], [0.5, 0.0], [1.0, 0.0]],
+        vec![[0.6, 0.8], [0.3, 0.4], [0.6, 0.8]],
         vec![[3.0, 0.0], [3.0, 0.0], [3.0, 0.0]],
     ];
     let e = inspector::energy_error(&close);

@@ -73,6 +73,17 @@ fn conformance_real_engine_passes_every_case() {
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.
     check_conforms(|| store(-7.25));
+    // The horizon's case picks another value from a horizon at its own first pick.
+    check_conforms(|| {
+        let mut s = store(0.0);
+        s.set_field(SetField {
+            edit: Edit::Sim(SimField::Horizon(Horizon { t: 120.0 })),
+            no_history: true,
+        });
+        // Its log line read, as the GUI's next snapshot reads it.
+        let _ = s.snapshot();
+        s
+    });
 }
 
 /// A double breaking one rule of the contract, wrapping the real store.
