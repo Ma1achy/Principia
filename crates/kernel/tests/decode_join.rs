@@ -22,8 +22,8 @@
 //! | quantity | f64: range, worst at 50/100/200 | f32: range, worst at 50/100/200 | proposed |
 //! |---|---|---|---|
 //! | \|Σpᵢ\|/Σ‖pᵢ‖ | 0.30–0.65; 0.65/0.65/0.65 | 0.25–0.48; 0.46/0.48/0.48 | 4 |
-//! | conjugacy: μ_ρ(p₁/m₁ − p₀/m₀) − p_ρ | 0.57–1.35; 1.28/1.28/1.35 | 0.20–0.38; 0.37/0.37/0.38 | 4 (not a calibration) |
-//! | conjugacy: p₀ + p₁ + p_λ | 0.55–0.89; 0.89/0.89/0.89 | 0.43–0.87; 0.87/0.87/0.87 | 4 (not a calibration) |
+//! | conjugacy: μ_ρ(p₁/m₁ − p₀/m₀) − p_ρ | 0.57–1.35; 1.28/1.28/1.35 | 0.20–0.38; 0.37/0.37/0.38 | 4, not calibrated |
+//! | conjugacy: p₀ + p₁ + p_λ | 0.55–0.89; 0.89/0.89/0.89 | 0.43–0.87; 0.87/0.87/0.87 | 4, not calibrated |
 //!
 //! Re-measured by `for s in $(seq 1 200); do PROPTEST_RNG_SEED=$s cargo test -p kernel --test decode_join --
 //! decode_momentum --nocapture; done`.

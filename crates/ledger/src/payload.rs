@@ -6,9 +6,9 @@
 //!
 //! Where §3 gives a field no scale, the entry is `lin`; where it gives no range, the entry writes (−∞, ∞), which
 //! declares nothing: the range is a gap (R-426), unless the ledger declares it with its citation or marks it
-//! provisional, below. §3.6's log fields are ≥ 0, 0 at the collision pole (dd_decoder §3.6). Consumers are render, export and debug, as §3.8's worked entries
-//! have them. `n`, the shape-sphere point, is §3.8's worked entry: `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`,
-//! `lin` over [−1, 1] in each component (TASK-M1-12; RQ-235).
+//! provisional, below. §3.6's log fields are ≥ 0, 0 at the collision pole (dd_decoder §3.6). Consumers are render,
+//! export and debug, as §3.8's worked entries have them. `n`, the shape-sphere point, is §3.8's worked entry:
+//! `derived(from: [r, m0, m1, m2])`, `vector(f32, 3)`, `lin` over [−1, 1] in each component (TASK-M1-12; RQ-235).
 //!
 //! **Declared lower bounds (R-400; TASK-M1-17).** A numeric view whose field's declared range spans zero is drawn on
 //! the diverging ramp, so a field the corpus gives a non-negative domain must not read as signed: each such field
@@ -19,8 +19,9 @@
 //! ([`Entry::range_state`], each entry marked by `declared`): `declared(lo, hi, citation)`, with its citation in
 //! [`SIGNED`], [`NON_NEGATIVE`] or [`DECLARED`]; `provisional(requirement)`, `mean_y` ([`PROVISIONAL`]), drawn as
 //! (−∞, ∞) on `ramp_coolwarm` until its requirement declares it (`q_mass`'s, declared [0, 1] by REQ-PAY-097, no longer
-//! is); or `gap`, a (−∞, ∞) written and never cited, which never spans zero. The gaps, each with the requirement that fills it, are [`GAPS`]; a `lin` or
-//! `diverging` scalar field whose range is a gap fails generation ([`crate::gen::numeric::undeclared`]).
+//! is); or `gap`, a (−∞, ∞) written and never cited, which never spans zero. The gaps, each with the requirement that
+//! fills it, are [`GAPS`]; a `lin` or `diverging` scalar field whose range is a gap fails generation
+//! ([`crate::gen::numeric::undeclared`]).
 
 use crate::constants::{FGW_CAPACITY, FGW_LENGTH_SENTINEL, HORIZON_STEPS_MAX};
 use crate::schema::{

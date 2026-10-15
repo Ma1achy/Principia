@@ -1,6 +1,7 @@
 //! `D_mom`, the free momentum block (dd_decoder §3.4; chart_reference §0.3; REQ-DEC-019, REQ-DEC-030): the four
-//! controls `z[2:6]` through the selection's momentum links onto the physical Jacobi momenta, then the Jacobi-to-particle
-//! map. Under the default links, `qₖ = q_max·(2σ(z_qk) − 1)`, `k = 0..3`; `p_ρ = (q₀, q₁)` and `p_λ = (q₂, q₃)`.
+//! controls `z[2:6]` through the selection's momentum links onto the physical Jacobi momenta, then the
+//! Jacobi-to-particle map. Under the default links, `qₖ = q_max·(2σ(z_qk) − 1)`, `k = 0..3`; `p_ρ = (q₀, q₁)` and
+//! `p_λ = (q₂, q₃)`.
 //!
 //! **Jacobi-to-particle** (`Σpᵢ = 0` identically):
 //!
