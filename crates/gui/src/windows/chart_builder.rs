@@ -229,6 +229,15 @@ pub fn cross_dot(q: &[Latent; 2]) -> f64 {
     dot(&unit(&q[0]), &unit(&q[1]))
 }
 
+/// The check against `q₁ · q₂ = d`: "✓" while the axes are orthogonal, `|d|` within [`ORTHOGONAL`], else "✗".
+pub fn mark(d: f64) -> &'static str {
+    if d.abs() <= ORTHOGONAL {
+        "✓"
+    } else {
+        "✗"
+    }
+}
+
 /// The hidden directions: the axes neither `q₁` nor `q₂` touches, by name.
 pub fn hidden(q: &[Latent; 2]) -> Vec<&'static str> {
     (0..LATENT_DIM)
@@ -572,7 +581,7 @@ pub fn show(
     note(ui, QUICK);
     ui.separator();
     let d = cross_dot(&draft.q);
-    let check = if d.abs() <= ORTHOGONAL { "✓" } else { "✗" };
+    let check = mark(d);
     ui.label(
         RichText::new(format!(
             "q₁ · q₂ = {d:.3} {check} hidden directions: {}",

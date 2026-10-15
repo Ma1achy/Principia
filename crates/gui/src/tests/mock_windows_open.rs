@@ -1428,3 +1428,27 @@ fn mock_windows_open_each_window_keeps_its_opener() {
     back(&app.view.focus.path);
     rejects("an opener lost", || back(&Vec::new()));
 }
+
+/// q₁ · q₂'s check: ✓ within ORTHOGONAL either side of zero, the bound itself included, ✗ past it; the window draws it.
+#[test]
+fn mock_windows_open_chart_builder_marks_orthogonal_axes() {
+    use chart_builder::{mark, ORTHOGONAL};
+    for d in [0.0, ORTHOGONAL, -ORTHOGONAL] {
+        assert_eq!(mark(d), "✓", "{d}");
+    }
+    for d in [ORTHOGONAL.next_up(), -ORTHOGONAL.next_up(), 0.5] {
+        assert_eq!(mark(d), "✗", "{d}");
+    }
+    let mut q = [[0.0; engine::contract::sim_config::LATENT_DIM]; 2];
+    q[0][0] = 1.0;
+    q[1][0] = 1.0;
+    q[1][1] = 1.0;
+    let tilted = drawn(Window::ChartBuilder, |app| app.windows.chart.q = q);
+    check_has(&tilted, &["0.707 ✗"], "a tilted pair");
+    q[1][0] = 0.0;
+    let square = drawn(Window::ChartBuilder, |app| app.windows.chart.q = q);
+    check_has(&square, &["0.000 ✓"], "an orthogonal pair");
+    rejects("a tilted pair marked orthogonal", || {
+        check_has(&tilted, &["✓"], "a tilted pair")
+    });
+}
