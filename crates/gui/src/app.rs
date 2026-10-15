@@ -506,8 +506,8 @@ impl<S: EngineSide> App<S> {
             };
             opens.push((window, Some(opener)));
         }
-        if std::mem::take(&mut self.trajectory.open_inspector) {
-            opens.push((Window::Inspector, Some(explore::trajectory::INSPECTOR)));
+        if let Some(opener) = self.trajectory.open_inspector.take() {
+            opens.push((Window::Inspector, Some(opener)));
         }
         for (window, opener) in opens {
             self.open_window(&ctx, window, opener);

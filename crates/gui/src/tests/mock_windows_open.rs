@@ -1111,14 +1111,17 @@ fn mock_windows_open_the_registry_and_its_openers() {
         ("profiler", Window::Profiler),
         ("export", Window::Export),
         (crate::explore::footer::FOOTER, Window::Console),
-        (crate::explore::manifold_view::BUILDER, Window::ChartBuilder),
-        (crate::explore::trajectory::INSPECTOR, Window::Inspector),
-        (
-            crate::explore::manifold_view::OPEN_INSPECTOR,
-            Window::Inspector,
-        ),
     ] {
         assert_eq!(windows::opened_by(id), Some(window), "{id}");
+    }
+    // The panels' own openers ask through their panels, one path for click and Enter, the lock's guard kept.
+    for id in [
+        crate::explore::manifold_view::BUILDER,
+        crate::explore::manifold_view::OPEN_INSPECTOR,
+        crate::explore::trajectory::INSPECTOR,
+        crate::explore::trajectory::VIEWER,
+    ] {
+        assert_eq!(windows::opened_by(id), None, "{id}");
     }
     assert_eq!(windows::opened_by("file"), None);
     assert_eq!(windows::opened_by("windows"), None);
@@ -1985,4 +1988,53 @@ fn mock_windows_open_display_draws_its_order_and_marks() {
         w.insert(0, "→");
         assert_eq!(got, w)
     });
+}
+
+/// The Trajectory panel's Open full viewer… and IC Inspector… open the Inspector, by click or Enter, each its opener
+/// (render_gui_spec §G2: "both open §G8"; code review 5529823383, finding 3).
+#[test]
+fn mock_windows_open_the_trajectory_panels_two_openers() {
+    use crate::explore::trajectory;
+    for (id, label) in [
+        (trajectory::VIEWER, "Open full viewer…"),
+        (trajectory::INSPECTOR, "IC Inspector…"),
+    ] {
+        // A click.
+        let (mut app, mut h) = fresh();
+        click(&mut h, &mut app, label);
+        settle(&mut h, &mut app);
+        assert!(app.is_open(Window::Inspector), "{label} clicked");
+        click(&mut h, &mut app, "Close window");
+        settle(&mut h, &mut app);
+        let tree = app.keyboard.tree(app.view.mode);
+        assert_eq!(
+            app.view.focus.path,
+            tree.path_to(id),
+            "{label}: × back on it"
+        );
+        // Enter.
+        let (mut app, mut h) = fresh();
+        let other = if id == trajectory::VIEWER {
+            trajectory::INSPECTOR
+        } else {
+            trajectory::VIEWER
+        };
+        let (want, wrong) = {
+            let tree = app.keyboard.tree(app.view.mode);
+            (tree.path_to(id), tree.path_to(other))
+        };
+        app.view.focus.path = want.clone();
+        press(&mut h, &mut app, Key::Enter, Modifiers::NONE);
+        settle(&mut h, &mut app);
+        assert!(app.is_open(Window::Inspector), "Enter on {label}");
+        // Esc goes up from the landing to its section, then closes the window.
+        for _ in 0..2 {
+            press(&mut h, &mut app, Key::Escape, Modifiers::NONE);
+        }
+        settle(&mut h, &mut app);
+        assert!(!app.is_open(Window::Inspector));
+        let back = |path: &[String]| assert_eq!(path, want.as_slice(), "{label}: Esc back on it");
+        back(&app.view.focus.path);
+        rejects("the focus back on the other opener", || back(&wrong));
+    }
 }

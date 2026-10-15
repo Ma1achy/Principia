@@ -697,8 +697,8 @@ fn mock_hover_trajectory_scopes_and_the_playhead() {
         ]
     );
     assert!(
-        !tree.get(trajectory::VIEWER).unwrap().activates,
-        "Open full viewer… is drawn disabled"
+        tree.get(trajectory::VIEWER).unwrap().activates,
+        "Open full viewer… opens the Inspector (render_gui_spec §G2)"
     );
     assert!(
         tree.get(trajectory::INSPECTOR).unwrap().activates,

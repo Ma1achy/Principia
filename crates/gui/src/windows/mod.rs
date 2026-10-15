@@ -109,8 +109,9 @@ pub fn entry(window: Window) -> &'static Entry {
 }
 
 /// The window control `id` opens, as its click or Enter: a Windows menu entry, the top bar's Run…, Profiler… and
-/// Export…, the footer (the console, §G12), the Manifold view's Chart builder… (§G7), and the Trajectory panel's IC
-/// Inspector… and the lock badge's open in Inspector (§G8, §G4).
+/// Export…, and the footer (the console, §G12). The Manifold view's Chart builder… and open in Inspector, and the
+/// Trajectory panel's IC Inspector… and Open full viewer…, ask through their own panels instead, the one path for their
+/// click and their Enter, so the lock badge's guard holds (open in Inspector acts only while locked, §G4).
 pub fn opened_by(id: &str) -> Option<Window> {
     if let Some(e) = REGISTRY.iter().find(|e| e.menu_entry == id) {
         return Some(e.window);
@@ -120,10 +121,6 @@ pub fn opened_by(id: &str) -> Option<Window> {
         "profiler" => Some(Window::Profiler),
         "export" => Some(Window::Export),
         crate::explore::footer::FOOTER => Some(Window::Console),
-        crate::explore::manifold_view::BUILDER => Some(Window::ChartBuilder),
-        crate::explore::trajectory::INSPECTOR | crate::explore::manifold_view::OPEN_INSPECTOR => {
-            Some(Window::Inspector)
-        }
         _ => None,
     }
 }
