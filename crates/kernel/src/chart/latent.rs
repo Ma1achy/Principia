@@ -52,31 +52,32 @@ impl<P: Float> Latent<P> {
     }
 }
 
-/// Component `k` of `z₀ + a·q₁ + b·q₂`.
+/// One component of `z₀ + a·q₁ + b·q₂`, from that component of `z₀`, `q₁` and `q₂`.
 #[inline]
-fn place<P: Copy, F: Float + From<P>>(chart: &Latent<P>, k: usize, a: F, b: F) -> F {
+fn place<P, F: Float + From<P>>(z0: P, q1: P, q2: P, a: F, b: F) -> F {
     let wide = <F as From<P>>::from;
-    wide(chart.z0[k]) + a * wide(chart.q1[k]) + b * wide(chart.q2[k])
+    wide(z0) + a * wide(q1) + b * wide(q2)
 }
 
 impl<P: Copy> Chart for Latent<P> {
     type Param = P;
 
-    /// `z(u, v) = z₀ + (2u − 1)·q₁ + (2v − 1)·q₂`, each component by its constant index (gpu_determinism_note rule 5).
+    /// `z(u, v) = z₀ + (2u − 1)·q₁ + (2v − 1)·q₂`, each component read by a literal index in this source, so no
+    /// runtime index reaches the GPU build (gpu_determinism_note rule 5).
     #[inline]
     fn map<F: Float + From<P>>(&self, u: F, v: F) -> ChartOut<F> {
         let a = u + u - F::one();
         let b = v + v - F::one();
         ChartOut {
             z: decode::Latent::new([
-                place(self, 0, a, b),
-                place(self, 1, a, b),
-                place(self, 2, a, b),
-                place(self, 3, a, b),
-                place(self, 4, a, b),
-                place(self, 5, a, b),
-                place(self, 6, a, b),
-                place(self, 7, a, b),
+                place(self.z0[0], self.q1[0], self.q2[0], a, b),
+                place(self.z0[1], self.q1[1], self.q2[1], a, b),
+                place(self.z0[2], self.q1[2], self.q2[2], a, b),
+                place(self.z0[3], self.q1[3], self.q2[3], a, b),
+                place(self.z0[4], self.q1[4], self.q2[4], a, b),
+                place(self.z0[5], self.q1[5], self.q2[5], a, b),
+                place(self.z0[6], self.q1[6], self.q2[6], a, b),
+                place(self.z0[7], self.q1[7], self.q2[7], a, b),
             ]),
         }
     }
