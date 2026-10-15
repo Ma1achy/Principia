@@ -120,6 +120,8 @@
     detail: "the integrator entry point takes only (m, r, p); no chart id or chart parameter is reachable from integrator code; identity suite 5.1–5.4 run on the kernel's actual input"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-289
 - id: REQ-DEC-006
   area: DEC
   statement: "Masses must always be produced by the decode, SimUniforms.m[3] must be advisory only, and every chart must declare requires_per_pixel_mass (true for the ternary mass plot, the Burrau family and mixed-axis charts with a mass axis), under which the integrator must not read SimUniforms.m[3]."
