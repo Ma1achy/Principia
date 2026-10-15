@@ -613,6 +613,10 @@ Implement real Viénot (protan, deutan) and Brettel (tritan) through LMS, with g
 implementation. dd_colouring §3.8's matrices are replaced.
 
 ## R-79 — NaN and sentinels *(closes RQ-30)*
+*Extended by R-436 (a stored `±∞` that is no declared sentinel goes to the invalid colour in every consumer, CPU and
+GPU alike).*
+*Still in force: all of it; storage still never holds NaN, and R-436 adds that a stored non-finite value, other than a
+declared sentinel, goes to the invalid colour as NaN does.*
 *25 Sep 2026 · applied in step 7*
 
 Storage never holds NaN. A blown-up sample stores the defined failed-state values. A tier-absent (derived) field reads NaN
@@ -9475,3 +9479,130 @@ gate", the debug views' (REQ-TOOL-010, R-153) and the other M1 suites' (`m1-nume
 - R-435 is in the "values" group of `plan/rule_groups.yaml`.
 
 Changes REQ-TOOL-010 (rulings, sources, note).
+
+## R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*
+*15 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time,
+pre-integration)" (a sentence reworded, a bullet added), `docs/design/principia_colour_composition.md` § "6. Debug views
+as presets", `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)",
+`docs/design/principia_debug_tooling_plan.md` § "G. Cross-check views (certify a *seam*, not a field — integration
+tests with a display)" (a cell), `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library" (a
+sentence reworded, sentences added) and `docs/notes/principia_gpu_determinism_note.md` § "The discipline" (rule 4, a
+sentence), R-79 (a forward line), REQ-COL-006, REQ-COL-060 and REQ-VAL-027 (reqio, holds removed), REQ-COL-070 (reqio,
+new), TASK-M2-31 (new), TASK-M2-25, TASK-M2-29 and TASK-M3-22 (notes), `plan/tasks.yaml`, `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-284 archived) and `REVIEW_QUEUE.md`; built by TASK-M2-31, TASK-M2-25,
+TASK-M2-29 and TASK-M3-22*
+
+The human's answer of 15 Oct 2026 to the orchestrator's two-question prompt on RQ-284 and RQ-285, each question
+answered by choosing one of the options offered; R-437 holds the second. The choice, and the option as it was offered:
+
+> RQ-284 → "(a) Store ±∞, flag (Recommended)". The option as offered: "Store the true value. Every consumer, CPU and
+> GPU alike, colours a non-finite input as invalid, extending R-79's NaN rule. The test compares the stored value and
+> never does arithmetic on ∞, since WGSL may assume there are no infinities. Physics's recommendation."
+
+*What it decides:*
+- **RQ-284 is closed, option (a).** The descriptor's infinite values at the poles are the true values and are stored
+  as computed: `rho_ratio`'s `+∞` at the `α = 0` pole, where `‖λ̃‖` is 0, and `V_0`'s `−∞` at the f64 collision pole,
+  where the emitted `r₀` and `r₁` coincide, so `E₀ = K₀ + V₀ = −∞` there (dd_decoder §3.6, as TASK-M2-03 measured).
+  No finite sentinel stands in for them (option (b)), and no consumer leans on the collision flag to skip them
+  (option (c)).
+- **Every consumer, on the CPU and the GPU alike, colours a non-finite input as invalid.** R-79's NaN rule, "every
+  colouring maps NaN or a sentinel to its invalid colour", now holds for `±∞` too. The consumers are each agreement
+  preset that differences against `E₀` (REQ-COL-006, with its tolerance REQ-COL-060), the energy-agreement view
+  `log|E_0 − (K_0 + V_0)|` (REQ-VAL-027), and each debug view that reads a stored `±∞`: `rho_ratio`'s at `+∞`,
+  `V_0`'s and `E_0`'s at `−∞`. R-79's debug exception does not reach them: a debug field shows its literal stored
+  value, and `±∞`, like NaN, has no place on a ramp.
+- **The test compares the stored value and never does arithmetic on `∞`.** WGSL lets an implementation assume there
+  are no infinities, so `(−∞) − (−∞)`, `K_0 + V_0` at `V_0 = −∞` and a compaction of `+∞` are each unpinned on the
+  GPU. Each operand is tested before any arithmetic that uses it.
+
+*Applied:*
+- **The test's form** (applied per R-369: the mechanical consequence of R-114 and the GPU determinism note's rule 4).
+  The comparison is on the stored value's bits, an exponent field of all ones, as R-114's NaN guard compares bits:
+  never `isinf`, a float comparison against the largest finite value, or an infinite literal, each of which an
+  implementation that assumes no infinities may fold away or reject (rule 4: naga rejects an infinite literal).
+- **Declared sentinels keep their own style** (applied per R-369: the ruling's subject is the descriptor's computed
+  values, not a ledger sentinel). `d_min`'s unset `+∞` is still drawn in the "not yet" style (R-271, R-280, R-399),
+  and R-418's `+∞` and `−∞` identities stay the sentinels the ledger declares them. Every other stored `±∞` is
+  invalid.
+- **A view's measured range** (`u_range`, `RANGE_AUTO = 1`) is taken over the samples whose stored value is finite,
+  since the others are not on the ramp (applied per R-369: `V_0`'s and `E_0`'s auto range would otherwise take `−∞`
+  as an end, which RQ-284 named).
+- **The docs.** dd_decoder §3.6's "On the CPU its log view reads it as raw 1, the top of the ramp; the GPU's reading
+  is open (RQ-284)" becomes the view drawing `+∞` invalid, and a bullet records the stored values and the rule;
+  colour_composition §6 gives the agreement presets' rule and its debug exception's limit; the render contract's
+  cross-check views and debug_tooling_plan §G the energy-agreement view's; render_gui_spec §10.1 the numeric
+  template's guard and the measured range; the GPU determinism note's rule 4 a sentence.
+- **The numeric views are built by a new task, TASK-M2-31**, closing REQ-COL-070 (new, reqio): TASK-M1-09 built the
+  template and has merged, so the change to the generator, its CPU twin, the regenerated views and the tests that
+  pinned `±∞` on the ramp need their own PR (applied per R-369, as R-417 added TASK-M2-30). It depends on TASK-M2-03,
+  which wrote the descriptor's fields, and TASK-M1-09.
+- **The holds come off.** REQ-COL-006, REQ-COL-060 and REQ-VAL-027 lose `rq: RQ-284` and gain R-436 among their
+  rulings, a sentence in their verify detail and a note; TASK-M2-25, TASK-M2-29 and TASK-M3-22 gain a note.
+- **R-79** carries the forward line and a "Still in force" line.
+- **RQ-284** moves to `docs/archive/review_queue/M0.md` with its Ruling line, as RQ-279 did.
+- R-436 is in the "design" group of `plan/rule_groups.yaml`, with R-79.
+
+Changes REQ-COL-006, REQ-COL-060 and REQ-VAL-027 (holds, rulings, verify, notes); adds REQ-COL-070 and TASK-M2-31.
+
+## R-437 — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*
+*15 Oct 2026 · applied in `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted
+Jacobi" (a sentence reworded, a paragraph added) and § "3.3 Canonicalise", `docs/design/principia_chart_reference.md`
+§ "0.4 Canonicalisation `C`" and § "3.2 Inverse — closed form", `docs/design/principia_dd_encode.md` § "3.1 Forward ↔
+inverse pairing table — closures verified" and § "3.2 Canonicalisation `C` — the exact ordered procedure",
+`docs/contracts/principia_inverse_encode_contract.md` § "Part 3 — Block inverses (closed forms, with their forward mates)"
+and `docs/notes/principia_gpu_determinism_note.md` § "The discipline" (a pointer), REQ-COL-006, REQ-DEC-002,
+REQ-DEC-014, REQ-DEC-016, REQ-ENC-016 (reqio, holds removed), REQ-ENC-007 and REQ-CHART-020 (reqio), TASK-M2-07,
+TASK-M2-08, TASK-M2-15, TASK-M2-16, TASK-M2-25 and TASK-M2-26 (notes), `plan/rule_groups.yaml`,
+`docs/archive/review_queue/M0.md` (RQ-285 archived) and `REVIEW_QUEUE.md` (RQ-287 filed); built by TASK-M2-07,
+TASK-M2-08, TASK-M2-15, TASK-M2-16 and TASK-M2-25*
+
+The human's answer (R-436 gives the message):
+
+> RQ-285 → "(a) Define, select (Recommended)". The option as offered: "Define the pole's value in the docs and choose
+> it branch-free by comparing the operands with 0, as rho_angle already does. CPU and GPU then agree everywhere, at
+> the cost of one comparison. Physics's recommendation."
+
+*What it decides:*
+- **RQ-285 is closed, option (a).** The value of an `atan2` at a pole, where both its operands are 0, is defined in
+  the corpus, not obtained from `atan2(0, 0)`: the CPU's libm gives 0 there, but GLSL.std.450 `Atan2`, to which SPIR-V
+  and naga lower `atan2`, and so WGSL's, is undefined. dd_decoder §3.2:95 is reworded to say so.
+- **The value is chosen branch-free by a select**: each operand is compared with the constant 0 and the value is a
+  select between the defined one and the `atan2` already computed, as dd_decoder §3.6 does for `rho_angle` (the GPU
+  determinism note's discipline: a comparison, never backend-elective floating point). CPU and GPU then agree at the
+  pole as everywhere else.
+
+*Applied:*
+- **The value is 0 at every pole** (applied per R-369: the corpus fixes it). dd_decoder §3.2:95 already gave the
+  exact pole's value as `atan2(0,0) = 0`, the CPU's `atan2(+0, +0) = +0`, and `rho_angle`'s pole case is 0 (§3.6). No
+  pole is left for the human: each `atan2` that can reach one is given 0 there.
+- **Signed zeros give the same 0** (applied per R-369): the comparison with 0 is true for `+0` and `−0` alike, so the
+  CPU's `atan2(±0, −0) = ±π` is not reached at the pole, and the select also clears a `−0` result.
+- **The places.** dd_decoder §3.2 gains a paragraph, "Every `atan2` at a possible pole", listing them:
+  - §3.3's and chart_reference §0.4's `φ = atan2(ρ_y, ρ_x)` at `ρ = 0`, the `α = π/2` collision pole: `φ = 0`, so
+    `R(−φ)` is the identity; dd_encode §3.2's step 2 is the same `φ`, where `lookup_clamped` still catches the pixel
+    (R-13).
+  - The encode's `β = atan2(λ̃_y, λ̃_x)` at `λ̃ = 0`, the `α = 0` pole: `β = 0` (dd_encode §3.1, inverse-encode
+    contract Part 3).
+  - The shape-sphere inverse's `atan2(q, p)` at `p = q = 0` (`n₀ = ±1`; chart_reference §3.2): the term is 0, so
+    `ψ = φ_f`.
+  - `rho_angle` (§3.6), already defined case by case by TASK-M2-03.
+  - Not a pole: the encode's `α = atan2(‖λ̃‖, ‖ρ̃‖)`, whose operands are never both 0 once `I = 1`.
+- **Out of scope** (applied per R-369): the integrator's `θ̃ = atan2(n_v, n_u)` is read only outside the `r_pole`
+  disc (R-389), and the colour-side `atan2`s (colour_composition's stripes and contours) are display colourings
+  outside RQ-285's decode, encode and canonicalisation chain; the OKLCH hue already takes 0 at `C = 0` by a select
+  (dd_colouring §3.1).
+- **The holds come off.** REQ-COL-006, REQ-DEC-002, REQ-DEC-014, REQ-DEC-016 and REQ-ENC-016 lose `rq: RQ-285` and
+  gain R-437 among their rulings and a sentence in their verify detail; REQ-ENC-007 (`β`) and REQ-CHART-020 (`ψ`)
+  gain the same. REQ-DEC-014's and REQ-DEC-016's statements keep their `atan2(0,0) = 0` and `φ = atan2(ρ_y, ρ_x)`;
+  their notes say the pole value is R-437's defined 0, chosen by a select. TASK-M2-07, TASK-M2-08, TASK-M2-15,
+  TASK-M2-16, TASK-M2-25 and TASK-M2-26 gain a note.
+- **RQ-287 is filed** (applied per R-369, nothing chosen): checking the encode's `atan2`s for signed zeros found that
+  the mirror's deadband leaves `λ̃_y ∈ [−δ_λ, 0]`, where a body 2 on the `−x` side gives `β` near `−π`, which `s_β`
+  clamps to the `β = 0` end. It is not a pole, so this ruling does not settle it. REQ-ENC-007 carries `rq: RQ-287`,
+  so TASK-M2-15 waits on it.
+- **RQ-285** moves to `docs/archive/review_queue/M0.md` with its Ruling line, as RQ-279 did.
+- No code changes: `rho_angle` already follows this ruling, and no other `atan2` at a pole exists in the code yet.
+- R-437 is in the "physics" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-006, REQ-DEC-002, REQ-DEC-014, REQ-DEC-016, REQ-ENC-016 (holds, rulings, verify), REQ-ENC-007
+(rulings, verify, the hold RQ-287) and REQ-CHART-020 (rulings, verify).

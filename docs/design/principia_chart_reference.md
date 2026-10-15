@@ -98,6 +98,10 @@ if λ̃_y < −δ_λ:          mirror (δ_λ = 1e−12; λ̃ = √μ_λ·λ)
 |λ̃_y| ≤ δ_λ:            no mirror (deterministic tie-break — R-82)
 ```
 
+**`φ` at the pole (R-437).** At `ρ = 0` (the collision of bodies 0 and 1) `φ` is 0, whatever the signs of the zeros,
+so the rotation is the identity there: a select on `ρ_x = 0` and `ρ_y = 0`, not `atan2(0, 0)`, which GLSL.std.450 and
+WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
+
 ### 0.5 Scale gauge
 
 ```
@@ -318,6 +322,11 @@ a = I(1 + n₀)/2      b = I(1 − n₀)/2      p = I·n₁/2      q = I·n₂/2
 **The `atan2(q, p)` sign is correct given §3.1's `q`** (the standard cross). Under the earlier negative-cross `q` it
 was `atan2(−q, p)`. Verified to machine precision (round trip over 2,000 random masses and shapes, max error 3e−15).
 `φ_f` is the fibre phase, not the polar angle `φ` of §3.3.
+
+**`ψ` at the poles (R-437).** At `n₀ = ±1`, `ab = 0`, so `p = q = 0` and `atan2(q, p)` is at its pole: there the term is
+0, whatever the signs of the zeros, so `ψ = φ_f`, chosen by a select on `p = 0` and `q = 0`, not obtained from
+`atan2(0, 0)` (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole"). At `n₀ = 1` (`b = 0`) `ψ` does not
+reach the positions; at `n₀ = −1` (`a = 0`, the collision `ρ̃ = 0`) it sets `λ̃`'s direction.
 
 Then unweight (`ρ = ρ̃/√μ_ρ`, `λ = λ̃/√μ_λ`) and reconstruct positions per §0.2.
 

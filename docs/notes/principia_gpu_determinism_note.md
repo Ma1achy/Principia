@@ -45,11 +45,13 @@ The spike's as-briefed rule (`N_sub` = f32 evaluation of `⌈(r_sub/r_min)^1.5�
 
 3. **Clamp in f32 *before* any float→int cast.** Out-of-range `OpConvertFToU` is **undefined behaviour on the GPU** (Rust's `as` saturates instead) — a fork source independent of rounding. Clamp the value/index into range in f32 first. (Pre-empted from day one in the spike; never fired — remains a discipline rule, not an observed bug.)
 
-4. **No non-finite literals.** `f32::INFINITY` (e.g. as a min-fold seed) compiles to SPIR-V but is **rejected by naga validation** ("Float literal is infinite" — WGSL cannot express it). Seed folds with the first element.
+4. **No non-finite literals.** `f32::INFINITY` (e.g. as a min-fold seed) compiles to SPIR-V but is **rejected by naga validation** ("Float literal is infinite" — WGSL cannot express it). Seed folds with the first element. A stored `±∞` is tested by a comparison on its bits, never by arithmetic on it or an infinite literal, and a consumer colours it invalid (R-436).
 
 5. **Loop shape is load-bearing, not stylistic — the wgpu#4449 hazard.** Terminal/early exit is via a **flag tested in the loop condition, zero `break` statements**, and loops are `while`, never a counted `for s in 0..N_sub` with a mid-body exit. A counted loop with an interior exit lowers, through rust-gpu → SPIR-V → naga → WGSL, to a multi-level-exit shape that **miscompiles** (wgpu#4449). Relatedly, **implicit bounds checks are compiler-injected multi-level exits**: rust-gpu lowers every runtime-indexed `a[i]` to `if in_bounds {…} else {break-to-panic}`, reintroducing the same shape. Measured consequence: a **triangular nested loop silently truncated through naga→MSL — the GPU summed one body-pair of three** (H = −0.577 vs −1.732), a *wrong answer with no error and no crash*. **Fix:** constant indices / unrolled pairs where the iteration count is small (elides the checks); the flag-in-`while`-condition shape for the adaptive wrapper (spike-validated at 100 macro-steps through SPIR-V→MSL *and* SPIR-V→WGSL→Tint). This is the canonical wrapper shape in integrator contract Part 1.
 
 6. **Explicit `fma` wherever the fused path must be identical across backends** (see rule 2). Written as `a*b + c`, one compiler contracts and another does not; written as `fma(a, b, c)`, every backend takes the fused path.
+
+*Pointer (R-437):* an `atan2` whose operands can both be 0 takes the value the corpus defines there, chosen by a select on the operands against 0, never `atan2(0, 0)`, which GLSL.std.450 leaves undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
 
 ---
 

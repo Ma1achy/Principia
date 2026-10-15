@@ -180,75 +180,32 @@ does not wait.*
   doc line is changed.
 - **Waits:** nothing.
 
-## RQ-284: the corpus does not say how the descriptor's infinite values at the poles are stored or consumed, and differences against `E₀ = −∞` read NaN *(silence, R-79, REQ-COL-006, REQ-COL-060, REQ-VAL-027; context: TASK-M2-03 and the tasks of those requirements)*
+## RQ-287: the encode's `β = atan2(λ̃_y, λ̃_x)` is said to lie in `[0, π]` "guaranteed by the mirror", but the mirror's deadband leaves `λ̃_y ∈ [−δ_λ, 0]`, where a body 2 on the `−x` side gives `β` near `−π`, which `s_β` clamps to the `β = 0` end *(corpus error, R-82, R-437, REQ-ENC-007; context: TASK-M2-15, the fragment-side encode)*
 
-*Found by TASK-M2-03's review (physics review 5526305435 E2). Nothing is chosen; TASK-M2-03's PR does not wait.*
-
-- **File, section:**
-  - `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities", "The collision pole reaches 0"
-    (written by TASK-M2-03): "`V_0` reads `−∞` and `virial_ratio` 0"; and `rho_ratio` "reads `+∞` only where `‖λ̃‖`
-    is exactly 0", which TASK-M2-03 measures at `α = 0`. So `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole.
-  - `docs/design/principia_colour_composition.md` § "6. Debug views as presets" (:489): "**Agreement presets** (new,
-    and better than the originals) = `|E(fragment-decode) − ctx.payload.E₀|`" (REQ-COL-006; its tolerance
-    REQ-COL-060).
-  - `docs/contracts/principia_render_contract.md` § "Cross-check views (the seams)" (:424): "| Energy agreement |
-    `E_0` (SimState) vs `K_0 + V_0` (ICDescriptor), log \|Δ\| |" (REQ-VAL-027).
-  - `decisions.md` § "R-79 — NaN and sentinels": "Storage never holds NaN." It says nothing of ±∞.
-  - `docs/design/principia_dd_decoder.md` § 3.2 (:95): "exact-pole `atan2(0,0)=0` yields a deterministic canonical
-    value rather than a NaN", which also speaks only to NaN.
-  - `docs/notes/principia_gpu_determinism_note.md` § "The discipline", rule 4: "WGSL cannot express it" (an infinite
-    literal). The WGSL specification lets an implementation assume no infinities in floating-point evaluation.
-  - The generated debug views that read a stored ±∞ (render_gui_spec §10.1's numeric template; physics review
-    5529362163 F3): `crates/render/frag/debug/generated/rho_ratio.wgsl`, whose log compaction
-    `1 − 1/(1 + log(1 + abs(raw)/ε))` reads `+∞` at `α = 0` (raw 1 on the CPU);
-    `crates/render/frag/debug/generated/V_0.wgsl`, `lin` with `RANGE_AUTO = 1`, whose measured range takes `−∞` as
-    its lower end at the collision pole; and by extension `crates/render/frag/debug/generated/E_0.wgsl` (`E₀ = K_0 + V_0`, also `RANGE_AUTO = 1`).
-- **The silence:** at such a pixel `|E − E₀|` and `|E_0 − (K_0 + V_0)|` are `(−∞) − (−∞) = NaN` on the CPU, and on the
-  GPU the result is not pinned at all, so the agreement presets' and the energy-agreement view's parity on those
-  pixels is undefined. Nothing says whether an infinite descriptor value may be stored, whether it is a sentinel, or
-  how a difference against it is coloured. The same holds for the debug views above: their GPU result at a stored ±∞,
-  and an auto range whose measured end is infinite, are unpinned.
-- **Options seen:**
-  - (a) Allow ±∞ in storage at the poles, and have each consumer of a difference against `E₀` route a non-finite
-    operand to the invalid colour (R-79's NaN rule extended to ±∞), on the CPU and the GPU alike.
-  - (b) Store a finite sentinel for an infinite descriptor value, declared in the ledger, and have consumers test it.
-  - (c) Exclude the poles from the agreement checks by the collision flag the pipeline already raises there.
-- **Applied meanwhile:** TASK-M2-03 records the infinite values in §3.6 and stores them as computed; no consumer of a
-  difference against `E₀` exists yet.
-- **Waits:** the tasks of REQ-COL-006, REQ-COL-060 and REQ-VAL-027, at the point where they consume `E₀` or
-  `K_0 + V_0`; and the debug views of `rho_ratio`, `V_0` and `E_0` (generated now; their goldens' showcase values are
-  finite, so nothing renders ±∞ yet), whose GPU reading of a stored ±∞ waits on the ruling. TASK-M2-03 does not wait.
-
-## RQ-285: dd_decoder §3.2 calls the exact-pole `atan2(0,0)=0` "a deterministic canonical value", which holds on the CPU only: GLSL.std.450 `Atan2` is undefined at (0, 0) *(conflict, R-116, R-417, REQ-COL-006; context: TASK-M2-03, the encode and canonicalisation tasks, the fragment-side decode/encode)*
-
-*Found by TASK-M2-03's fix round (code review 5527358480 C2). Nothing is chosen; TASK-M2-03's PR does not wait: its
-`rho_angle` defines the pole value without `atan2` (dd_decoder §3.6).*
+*Found in porting R-437 (RQ-285), in checking the encode's `atan2`s for signed zeros. Nothing is chosen.*
 
 - **File, section:**
-  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi" (:95): "A config
-    at a pole, reached at underflow or ingested there, is caught by those flags, and exact-pole `atan2(0,0)=0` yields
-    a deterministic canonical value rather than a NaN."
-  - The same doc, § "3.3 Canonicalise" (:114): "rotate all rᵢ, pᵢ by R(−φ),  φ = atan2(ρ_y, ρ_x)", which reads
-    `atan2(0, 0)` at the `α = π/2` collision pole (`ρ = 0`); and `docs/design/principia_chart_reference.md` § "0.4
-    Canonicalisation `C`" (:96), the same line.
-  - REQ-COL-006 (`docs/design/principia_colour_composition.md` § "3. The `ctx` contract", § "6. Debug views as
-    presets"; R-116): the chart decode and encode are generated as WGSL from the one Rust source, so fragment presets
-    recompute `encode(decode(z))` on the GPU.
-  - `docs/notes/principia_gpu_determinism_note.md` § "The discipline": "a branch is frozen or a comparison, never
-    backend-elective floating point".
-- **The conflict:** `atan2(0, 0) = 0` is the CPU libm's value (IEEE 754's recommended `atan2(±0, +0) = ±0`). On the
-  GPU, GLSL.std.450 `Atan2` (what SPIR-V and naga lower `atan2` to) gives an undefined result when both operands are
-  0, and WGSL's `atan2` inherits it. §3.2's "deterministic canonical value rather than a NaN" therefore holds on the
-  CPU-f64 path only; on the fragment-side encode, and on any GPU-compiled canonicalisation, the pole's `φ` (and the
-  rotation and mirror test that follow it) is backend-elective, possibly NaN, so the two paths need not agree there.
-  The sign of a zero also matters: `atan2(−0, x < 0) = −π` (TASK-M2-03 measured it for `rho_angle`).
+  - `docs/design/principia_dd_encode.md` § "3.1 Forward ↔ inverse pairing table — closures verified", the Config row:
+    "`β = atan2(λ̃_y, λ̃_x)`" and "`β ∈ [0,π]` guaranteed by the mirror ✓".
+  - `docs/contracts/principia_inverse_encode_contract.md` Part 3, "Configuration": "`β = atan2(λ̃_y, λ̃_x) ∈ [0, π]`",
+    then "`s_β = β/π`, `z = logit(s)`", `s` "clamped into `[ε_z, 1−ε_z]`".
+  - `docs/design/principia_dd_encode.md` § "3.2 Canonicalisation `C` — the exact ordered procedure", step 3: "if
+    `λ̃_y < −δ_λ`: … mirror"; "`|λ̃_y| ≤ δ_λ = 10⁻¹²`: deterministic no-mirror" (R-82).
+- **The error:** after step 3, `λ̃_y ≥ −δ_λ`, not `λ̃_y ≥ 0`. For `λ̃_y ∈ [−δ_λ, 0)`, or `λ̃_y = −0`, with `λ̃_x < 0`
+  (body 2 on the far side of the inner pair, a collinear configuration such as an Euler landmark),
+  `atan2(λ̃_y, λ̃_x)` lies in `[−π, −π + ~δ_λ/‖λ̃‖)`, not near `π`: `atan2(−0, x < 0) = −π` exactly on the CPU. Then
+  `s_β = β/π ≈ −1` clamps to `ε_z`, the `β = 0` end, so the encode returns the mirror-opposite collinear
+  configuration's `z_β`, not the input's. With `λ̃_x > 0` the same deadband gives `β` a tiny negative, which the clamp
+  takes to `ε_z`, the nearby end, harmlessly. T1's sweep of gauges that land `λ̃_y` in the deadband (§3.3) can reach
+  the case. It is not R-437's pole (`λ̃ ≠ 0`). The descriptor's analogue, `rho_angle`, already reads its half turn as
+  `π̂` (`principia_dd_decoder.md` §3.6).
 - **Options seen:**
-  - (a) Define the pole's value in the corpus and have every `atan2` at a possible pole chosen branch-free by a select
-    on its operands against 0, as dd_decoder §3.6 now does for `rho_angle`; reword §3.2:95 to say the value is
-    defined, not obtained from `atan2`.
-  - (b) Keep `atan2` and restrict §3.2:95 to the CPU path, with the GPU parity checks excluding the poles by the flags
-    that already catch them.
-- **Applied meanwhile:** nothing outside `rho_angle`; no canonicalisation or encode code exists yet.
-- **Waits:** the tasks that implement §3.3's canonicalisation and the encode (and their WGSL generation, REQ-COL-006):
-  REQ-DEC-002 and REQ-ENC-016 (TASK-M2-07, the canonicaliser; REQ-ENC-016's `coincident_inner_pair` reaches `ρ̃ = 0`),
-  REQ-DEC-014 (TASK-M2-15), REQ-DEC-016 (TASK-M2-16) and REQ-COL-006 (TASK-M2-25) carry `rq: RQ-285`.
+  - (a) Read `β`'s half turn into the range as `rho_angle` does: a value at or below `−π̂` (or, in the deadband, any
+    `β < 0` with `λ̃_x < 0`) is taken as `π̂`, chosen by a select, and a tiny negative `β` with `λ̃_x > 0` as 0.
+  - (b) Treat the deadband's `λ̃_y` as 0 for `β`: `β = atan2(max(λ̃_y, 0), λ̃_x)`, with `max` choosing `+0`, so a
+    deadband `λ̃_y` gives exactly `0` or `π̂`.
+  - (c) Change the mirror's tie (R-82) so that the canonical section has `λ̃_y ≥ 0` exactly, which is a physics
+    convention change.
+- **Applied meanwhile:** nothing; no encode code exists yet.
+- **Waits:** REQ-ENC-007 (TASK-M2-15, the block inverses) carries `rq: RQ-287`; the fragment-side encode
+  (TASK-M2-25, TASK-M2-26) follows it through TASK-M2-16.

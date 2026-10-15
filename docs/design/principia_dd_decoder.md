@@ -92,7 +92,18 @@ R̃ = 1  (scale gauge = I = 1)      β ∈ [0, π]  (mirror fixed by constructio
 It is not a numerical guard: nothing divides by α, and a non-zero value would only excise a polar cap. The form above is
 its $\alpha_{\min} = 0$ case, the one in force. The paragraph below describes it.
 
-Both `α`-poles are **represented, not excised** — the old `α_min` cap is removed for full-sphere coverage. `α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β` undefined *at the point*); `α→π/2` collapses the inner pair (`‖ρ̃‖→0` — a binary collision, `U→−∞`, and the rotation pin undefined). These are *coordinate/collision* degeneracies the pipeline already fences — the collision detector, the conditioning readout, and the saturation flags — not a range the chart carves out. In exact arithmetic finite `z` never reaches the poles (`(π/2)σ(z_α) ∈ (0, π/2)`); in floating point the range is closed, `α ∈ [0, π/2]` and `β ∈ [0, π]` (R-417). The lower poles, `α = 0` and `β = 0`, are reached where the link's output underflows, at f32 and f64 (σ where `exp(−z)` overflows, the tanh links where `tanh` rounds to −1, the softsign links where `x/(2 + |x|)` rounds to −1). The upper images stay inside the bounds: the f32 images of π/2 and π are generated rounded toward zero (dd_generation_root §3.9), and the f64 nearest values already lie below them, so no saturated control passes `π/2` or `π`. A config at a pole, reached at underflow or ingested there, is caught by those flags, and exact-pole `atan2(0,0)=0` yields a deterministic canonical value rather than a NaN.
+Both `α`-poles are **represented, not excised** — the old `α_min` cap is removed for full-sphere coverage. `α→0` puts body 2 at the inner-pair CoM (`‖λ̃‖→0`, azimuth `β` undefined *at the point*); `α→π/2` collapses the inner pair (`‖ρ̃‖→0` — a binary collision, `U→−∞`, and the rotation pin undefined). These are *coordinate/collision* degeneracies the pipeline already fences — the collision detector, the conditioning readout, and the saturation flags — not a range the chart carves out. In exact arithmetic finite `z` never reaches the poles (`(π/2)σ(z_α) ∈ (0, π/2)`); in floating point the range is closed, `α ∈ [0, π/2]` and `β ∈ [0, π]` (R-417). The lower poles, `α = 0` and `β = 0`, are reached where the link's output underflows, at f32 and f64 (σ where `exp(−z)` overflows, the tanh links where `tanh` rounds to −1, the softsign links where `x/(2 + |x|)` rounds to −1). The upper images stay inside the bounds: the f32 images of π/2 and π are generated rounded toward zero (dd_generation_root §3.9), and the f64 nearest values already lie below them, so no saturated control passes `π/2` or `π`. A config at a pole, reached at underflow or ingested there, is caught by those flags, and an angle at an exact pole has a defined value, 0, rather than a NaN: it is not obtained from `atan2(0, 0)`, which is the CPU's 0 but undefined in GLSL.std.450 `Atan2` and so in WGSL, but chosen branch-free by a select on the operands against 0, so that CPU and GPU agree (R-437; §3.3, §3.6 and the encode's inverses).
+
+**Every `atan2` at a possible pole (R-437).** Where both operands of an `atan2` can be 0 together, the value there is
+defined, not left to `atan2`: the `atan2` term is 0, the CPU's `atan2(+0, +0)`, and the same 0 for every sign of the
+zeros, so that `−0` operands, whose `atan2(±0, −0) = ±π` on the CPU, give it too. The test is a comparison of each
+operand with the constant 0 (true for `+0` and `−0` alike), and the value a select between 0 and the `atan2` already
+computed, never a branch (the GPU determinism note's discipline). Its places: §3.3's rotation angle `φ` at `ρ = 0`
+(the `α = π/2` collision pole), so `R(−φ)` is the identity there; the encode's `β = atan2(λ̃_y, λ̃_x)` at `λ̃ = 0`
+(the `α = 0` pole; `principia_dd_encode.md` §3.1, `principia_inverse_encode_contract.md` Part 3); the shape-sphere
+inverse's `atan2(q, p)` at `p = q = 0` (`principia_chart_reference.md` §3.2), so `ψ = φ_f` there; and §3.6's
+`rho_angle`, defined case by case. The encode's `α = atan2(‖λ̃‖, ‖ρ̃‖)` is not among them: after the scale gauge
+`‖ρ̃‖² + ‖λ̃‖² = I = 1`, so its operands are never both 0.
 
 > **⚠ Orientation gotcha (agents will assume the opposite):** `‖ρ̃‖ = cos α`, so **small α = LARGE inner-pair separation**; `α → π/2` = tight inner binary + distant third body (hierarchical). The α-sphere colouring depends on this. Test 5.9 pins it.
 
@@ -117,6 +128,10 @@ mirror (full state: every rᵢ AND every pᵢ, y → −y)  iff λ̃_y < −δ_�
 ```
 
 With the canonical-frame decode both are no-ops away from the seam — and **that no-op property is a test** (5.5).
+
+**`φ` at the pole (R-437).** At `ρ = 0`, the `α = π/2` collision pole, `φ` is 0, whatever the signs of the zeros, so
+the rotation is the identity there; it is chosen by a select on `ρ_x = 0` and `ρ_y = 0`, not obtained from
+`atan2(0, 0)` (§3.2, "Every `atan2` at a possible pole").
 
 ### 3.4 Momentum
 
@@ -218,8 +233,17 @@ r_min_pair_0 = min(‖r₁ − r₂‖, ‖r₂ − r₀‖, ‖r₀ − r₁‖
   ranges are `[0, ∞]` and `[0, ∞)`, and their views place 0 at the bottom of the ramp.
 - **The ledger declares the log fields' lower bound only.** Its `[0, ∞)`, in the payload ledger and the headers of the
   views generated from it, means that no upper bound is declared, not that `+∞` is excluded: `rho_ratio` reaches `+∞`
-  at the `α = 0` pole, where `‖λ̃‖` is 0. On the CPU its log view reads it as raw 1, the top of the ramp; the GPU's
-  reading is open (RQ-284), since WGSL lets an implementation assume no infinities.
+  at the `α = 0` pole, where `‖λ̃‖` is 0. Its view draws that `+∞` in the invalid colour, on the CPU and the GPU
+  alike, not at the top of the ramp (R-436, below).
+- **The poles' infinite values are stored as computed (R-436).** `rho_ratio`'s `+∞` at `α = 0`, and `V_0`'s `−∞` at
+  the f64 collision pole, with `E₀ = K₀ + V₀ = −∞` there, are the true values: storage holds them, as it never holds
+  NaN (R-79). Every consumer, on the CPU and the GPU alike, colours a non-finite input as invalid: each view that reads
+  a stored `±∞` (`rho_ratio`'s, `V_0`'s, `E_0`'s), each agreement preset that differences against `E₀`
+  (`principia_colour_composition.md` §6) and the energy-agreement view (`principia_render_contract.md` § "Cross-check
+  views (the seams)"). The test compares the stored value, on its bits, as R-114's NaN guard does, before any
+  arithmetic, `K_0 + V_0` included; it never does arithmetic on `±∞` and never writes an infinite literal, since WGSL
+  lets an implementation assume there are no infinities (`principia_gpu_determinism_note.md` § "The discipline", rule
+  4). A declared sentinel or unset value keeps the style its own ruling gives it (`d_min`'s unset `+∞`, R-280, R-399).
 - **At rest only `K_0` and `virial_ratio` are 0** (R-421): at the golden IC (§5) the six fields above read 1, `1/√2`,
   `1/√2`, 1, `π/2` and `√3`.
 

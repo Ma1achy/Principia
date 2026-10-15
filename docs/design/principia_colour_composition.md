@@ -500,6 +500,12 @@ and the decode/encode translated to WGSL from the one Rust source (R-116):
   compute shaders don't, by default (R-297), so an agreement preset compares within a stated tolerance, a calibration
   requirement (R-71), not bit-exactly. ROUNDTRIP's residual is computed wholly in the fragment, and its stated
   tolerance is ε_phys (`principia_inverse_encode_contract.md` Part 4; `principia_debug_tooling_plan.md` §A).
+  **A non-finite operand is invalid (R-436).** `E₀ = K₀ + V₀` reads `−∞` at the f64 collision pole, as computed
+  and stored (`principia_dd_decoder.md` §3.6), where the difference would be `(−∞) − (−∞)`, NaN on the CPU and
+  unpinned on the GPU. An agreement preset tests each stored operand (`K_0`, `V_0`, and any other it reads) on its
+  bits before any arithmetic, `K₀ + V₀` included, and draws a pixel with a non-finite operand in the invalid colour,
+  on the CPU and the GPU alike; it never does arithmetic on `±∞`, since WGSL lets an implementation assume there are
+  no infinities.
 
 **Discipline 1 — debug presets ship locked.** Their diagnostic value is that ROUNDTRIP-red means the
 same thing every time. Editing a debug preset **forks it to custom** via the same one-way eject; it
@@ -508,7 +514,9 @@ never mutates the named preset.
 **Discipline 2 — validity first (see §3).** Every debug field carries its validity lane and every
 ramp an explicit invalid-pixel treatment (the hatched invalid pattern, R-132), or the views lie at the pixels they exist to expose. Debug fields are the
 stated exception to masking (R-79): they show literal stored values (a failed-state `0.0` reads as `0.0`, cross-checked
-against `state`), and NaN still goes to the invalid pattern.
+against `state`), and NaN still goes to the invalid pattern. So does a stored `±∞` that is no declared sentinel, on
+the CPU and the GPU alike, tested on its bits, never by arithmetic on it (R-436, extending R-79); a declared sentinel
+or unset value keeps its own style (`d_min`'s unset `+∞`, R-280, R-399).
 
 **Net:** one colouring system · three data sources (sample payload · quad attributes · fragment
 recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-expressed as a preset table

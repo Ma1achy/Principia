@@ -441,6 +441,12 @@ Field views are unit tests; these are the integration tests. Each compares a val
 | Drift shape | `energy_drift` (final) vs `delta_E_max_abs` (max); same pair for L_z | secular loss vs a transient spike that recovered — the *reason* both are kept (the final derived at read, §3.1; the max an accumulator; R-246) |
 | Round-trip residual | `z → D → E → D`, physical-space `‖x − x′‖` log-scaled — a fragment preset, `encode(decode(z))` recomputed in the fragment (R-75) | the **encode path** (inverse-encode contract): block inverses, numerics, encode-reuses-decode on invariant charts — the encode-side sibling of the invariant-chart gradient. Bright at clamps/feasibility edges/mirror tie = *expected*, tagged |
 
+**A non-finite operand is invalid (R-436).** The energy agreement's operands reach `±∞` at the poles:
+`K_0 + V_0` is `−∞` where `V_0` is (the f64 collision pole, `principia_dd_decoder.md` §3.6). The view tests each
+stored operand, `E_0`, `K_0` and `V_0`, on its bits before any arithmetic, `K_0 + V_0` included, and draws a pixel
+with a non-finite one in the invalid colour, on the CPU and the GPU alike, never `log|(−∞) − (−∞)|`; every
+cross-check view and agreement preset that reads a stored value does the same.
+
 **The kernel keeps one debug mode (R-75)** — `principia_colour_composition.md` Appendix A's bring-up mode: the kernel writes a known pattern instead of physics, for when payload writes are too broken for the fragment-recompute presets to run. It is a baked kernel variant (lowering contract Part 3), not a dispatch flag (R-41). It skips integration and writes into the **existing payload slots** — no new buffers. UV, DECODE and ROUNDTRIP are fragment presets (the rows above), not kernel modes.
 
 **Why first, concretely:** (1) you cannot write the quad-depth heatmap until `RenderContext.quad` is plumbed — building debug first *forces the contract into existence*; (2) the whole substrate is testable with **synthetic CPU-filled payloads** before one line of physics exists — the direct fix for the original black-screen failure; (3) the sub-field views are the visual unit test of the bit layout. Build order stands: contract + SDK → debug catalogue → flat compute → quads → adaptive.

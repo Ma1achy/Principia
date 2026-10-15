@@ -71,6 +71,10 @@ canonicalise, then
 s_α = 2α/π,   s_β = β/π,   z = logit(s)
 ```
 
+At `λ̃ = 0`, the `α = 0` pole, `β` is 0, whatever the signs of the zeros, chosen by a select on `λ̃_x = 0` and
+`λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450 and WGSL leave undefined; `α`'s operands are never both
+0, since `‖ρ̃‖² + ‖λ̃‖² = I = 1` (R-437; `principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole").
+
 `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
 $s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. $\alpha_{\min} = 0$
 (R-21). `μ_max = 5` and `q_max = 2` are settled (R-10).

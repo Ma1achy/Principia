@@ -156,7 +156,7 @@ post node.
 | View | Shader shows | Test asserts |
 |---|---|---|
 | **invariant-chart gradient** | `E_0` / `L_z_0` on an (L_z,E)/(L_z,K) chart | **perfect axis-aligned gradient** — one glance certifies the invariant downstream solve (the strongest single test) |
-| energy agreement | `|E_0 − (K_0+V_0)|` log | ≤ tol (decode-time vs kernel-time) |
+| energy agreement | `|E_0 − (K_0+V_0)|` log; a non-finite operand, tested on its bits before any arithmetic, in the invalid colour (R-436) | ≤ tol (decode-time vs kernel-time) |
 | winding consistency | derived `orbit_count = ⌊|θ̃|/2π⌋`, `retrograde = θ̃<0` vs the running `θ̃` accumulator | derivation = live source; terminal-latch respected |
 | diffusion (Welford) | slope `C_ty/C_tt` vs reference computed identically | the streaming accumulator bookkeeping is correct |
 | **impurity mask** | per-sample `class ⊕ detail` ≠ the quad's `dominant_outcome` (joint grain; no `majority_class` field — R-20) | spatial mean = `outcome_impurity` — the grain fix is change 1's resolution: one joint `class ⊕ detail` grain, `principia_dd_generation_root.md` §3.7 |

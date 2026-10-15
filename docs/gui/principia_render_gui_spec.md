@@ -740,9 +740,11 @@ shaders share them:
   not comparable). `range_norm` is a general helper, not debug-specific.
 - **`debug_invalid(frag_xy: vec2<f32>) -> vec3<f32>`** — the reserved invalid-pixel treatment (the validity-first
   invariant, §13): it draws the hatch from the pixel position (R-136), a pattern that collides with no palette entry, its
-  exact pattern a calibration (REQ-COL-055, R-71; R-132), confirmed at the M1 gate as proposed (R-428). Only NaN gets
-  it: a stored sentinel such as −1.0 shows as its
-  literal value on the ramp (R-79's exception, R-136). A NaN reads as "no data", never as a value.
+  exact pattern a calibration (REQ-COL-055, R-71; R-132), confirmed at the M1 gate as proposed (R-428). Only NaN, and
+  a stored `±∞` (below), get it: a stored sentinel such as −1.0 shows as its
+  literal value on the ramp (R-79's exception, R-136). A NaN reads as "no data", never as a value. A stored `±∞` that
+  is no declared sentinel gets it too, on the CPU and the GPU alike (R-436): `rho_ratio`'s `+∞` at the `α = 0` pole,
+  `V_0`'s and `E_0`'s `−∞` at the collision pole (`principia_dd_decoder.md` §3.6).
 
 Each numeric debug field therefore generates a two-line `colour()` — the NaN guard, an exact **bitcast comparison** of
 `raw` against the canonical quiet-NaN bits that returns `debug_invalid(frag_xy)` (`principia_render_contract.md` Part 2's rule; never a
@@ -782,7 +784,12 @@ An end with no finite bound takes the measured end, and a field whose ledger ran
 is unbounded defaults to `RANGE_AUTO = 1`, except a cyclic one, on its fixed `[0, 1]`. `RANGE_AUTO` and `u_range` are
 the view's uniforms, declared in its header (gui_state_contract §3): `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`,
 whose default the generator writes from the node's param and the assembler's declaration parser reads back, and
-`// @uniform u_range: vec2<f32> = (lo, hi)`, the measured `(min, max)` of `raw`. Between the guard and the ramp, a
+`// @uniform u_range: vec2<f32> = (lo, hi)`, the measured `(min, max)` of `raw`.
+**A non-finite value is invalid (R-436).** The guard sends a stored `±∞` that is no declared sentinel to
+`debug_invalid(frag_xy)` as it sends NaN, on the CPU twin and in the WGSL alike, by a comparison on the value's bits
+before any arithmetic (an exponent of all ones; never `isinf`, an infinite literal or arithmetic on `±∞`, which WGSL
+lets an implementation assume away; R-114, gpu_determinism_note rule 4); and the measured range is taken over the
+samples whose stored value is finite, since the others are not on the ramp. Between the guard and the ramp, a
 stored sentinel shows as its literal value through `dbg_sentinel`, fed the compacted value (R-136, R-381), and
 `d_min`'s unset value, f16 +∞ tested by its bits, is drawn in the "not yet" style of running samples,
 `debug_not_yet(frag_xy)`: the neutral grey `DBG_NOT_YET` with a fine dot stipple from the pixel position (R-271,

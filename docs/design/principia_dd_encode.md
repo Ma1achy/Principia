@@ -34,6 +34,11 @@ From **navigation (Part 4)**: the lock on nonlinear charts prefers CPU forward r
 | **Invariant fibre** *(momentum stage of (L_z,E)/(L_z,K) charts)* | `v = L_z·Jr + a·w`, `a = √(2(K*−L_z²/2))` (I = 1) | chart coords = evaluate `L_z(x)`, `E(x)` directly; latent = **run the same construction**, then free-momentum-invert the constructed `p = m·v` | closure is *by construction* — one code path, so lookup and clicked pixel land on the same z |
 | **Curve (Burrau)** | `γ: ν ↦ (α, β, μ₁, μ₂)`; `θ(ν)` monotone | on-curve: `ν(θ) = sec θ − tan θ` from the canonical leg ratio; masses cross-check `μ₁ = log(b/c)`, `μ₂ = log(a/c)` | `sec θ − tan θ` inverts `θ(ν)` in closed form on `θ ∈ (0, π/2)` ✓ |
 
+**`β` at the `α = 0` pole (R-437).** At `λ̃ = 0`, `β = atan2(λ̃_y, λ̃_x)` is at its pole: there `β` is 0, whatever the
+signs of the zeros, chosen by a select on `λ̃_x = 0` and `λ̃_y = 0`, not obtained from `atan2(0, 0)`, which GLSL.std.450
+and WGSL leave undefined (`principia_dd_decoder.md` §3.2, "Every `atan2` at a possible pole"). `α = atan2(‖λ̃‖, ‖ρ̃‖)`
+has no pole: after step 0, `‖ρ̃‖² + ‖λ̃‖² = I = 1`.
+
 ### 3.2 Canonicalisation `C` — the exact ordered procedure
 
 Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is load-bearing.
@@ -52,6 +57,11 @@ Every operation acts on the **full state** (all `rᵢ` and all `pᵢ`). Order is
 5  FIBRE      chart's own construction first ; smallest-latent-norm only where none exists
 6  VALIDATE   hypercube → chart feasibility → decode sanity ; project / clamp / reject ; surface flags
 ```
+
+**Step 2's `φ` at the pole (R-437).** At `ρ = 0`, `φ` is 0, whatever the signs of the zeros, so `R(−φ)` is the
+identity, on CPU-f64 and GPU-f32 alike: a select on `ρ_x = 0` and `ρ_y = 0`, not `atan2(0, 0)`
+(`principia_dd_decoder.md` §3.2, §3.3). The guard (`lookup_clamped`, R-13) still catches the pixel; the defined `φ`
+makes the rotation there the same on both, the identity.
 
 The order is normative (R-23): **1a** subtract CoM → **0** rescale → **1b** subtract boost → **2** rotate → **3** mirror. These steps commute with nothing; *CoM subtraction precedes the `I` computation* because `I` is CoM-frame-defined. The inverse-encode contract (Part 6) uses the same numbering.
 
