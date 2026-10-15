@@ -788,6 +788,7 @@ citing its calibration requirement, and read from the register like any other; n
 | `log_floor_rho_ratio` | 2⁻²³ ≈ 1.19e-7, `rho_ratio`'s log floor, assuming the mass-weighted ‖ρ̃‖/‖λ̃‖; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `log_floor_r_min_pair_0` | 2⁻¹⁴ ≈ 6.10e-5, `r_min_pair_0`'s log floor, a distance; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `eps_m01` | 10⁻⁵, the `DEGENERATE(M01_TINY)` threshold (dd_decoder §3.1), a threshold with its measured gap | canonical-units | M2 | REQ-DEC-039 |
+| `tanh_sat` | 20, the bound §3.9's `tanh` operator clamps its argument to: `tanh` rounds to ±1 from `abs(x)` ≈ 9.01 at f32 and ≈ 19.06 at f64, so the clamp changes no CPU value at either width, while Metal's GPU `tanh` is 0 at 44 and NaN from 44.5 (TASK-M2-06) | canonical-units | M2 | REQ-DEC-047 |
 | `r_pole` | 0.01, the pole radius of the unwrapped phase `θ̃` on the unit shape sphere (dd_integrator §3.7, R-389); confirmed at the M1 gate and marked provisional until M3, where it is re-confirmed against real orbits' near-pole arcs (R-433) | canonical-units | M3 | REQ-INT-086 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
@@ -848,7 +849,8 @@ Changing a hashed member of any entry, or adding or removing an entry, changes t
 edit does not. Every entry is hashed, whether or not a block uses it by default (R-344). The registry's chart
 constants are hashed too, each by value, whether or not a link reads it: those that no link reads, `δ_λ` (decode's
 mirror tie-break), `ε_w` (its seed-selection floor) and `ε_M01` (the mass block's M01_TINY threshold, dd_decoder §3.1;
-added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-344, closing RQ-189).
+added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-344, closing RQ-189). `tanh_sat`, the
+`tanh` operator's argument bound (added by TASK-M2-06), is read by the operator, not by a tree, and is hashed likewise.
 
 **The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
 log-det are written as expression trees, never as text:
@@ -861,7 +863,9 @@ log-det are written as expression trees, never as text:
   so a tree naming one the entry does not declare fails generation. `num(v)` is a literal number. An operator node
   applies one of a closed list to its arguments, in order: `add`, `mul` (two or more, `x_0 + x_1 + …`,
   `x_0 · x_1 · …`); `sub`, `div` (two, `x_0 − x_1`, `x_0 / x_1`); `clamp` (three, `min(max(x_0, x_1), x_2)`); and,
-  of one, `neg`, `exp`, `log` (natural), `tanh`, `artanh`, `sigmoid` (`σ(x) = 1/(1 + e⁻ˣ)`), `logit` (`log(x/(1 − x))`,
+  of one, `neg`, `exp`, `log` (natural), `tanh` (evaluated as `tanh(clamp(x, −tanh_sat, tanh_sat))`, a NaN kept;
+  definition, R-72, TASK-M2-06: the clamp acts only where `tanh` already rounds to ±1 at f32 and f64, and gives ±1
+  where a GPU's `tanh` fails at large arguments, as Metal's does, 0 at 44 and NaN from 44.5), `artanh`, `sigmoid` (`σ(x) = 1/(1 + e⁻ˣ)`), `logit` (`log(x/(1 − x))`,
   σ's inverse), `softplus` (`log(1 + eˣ)`), `inv_softplus` (`log(eˣ − 1)`) and `sech2` (`1/cosh² x`). An operator given
   another number of arguments fails generation; one outside the list cannot be written, and adding one is an edit to
   this list.
