@@ -9361,7 +9361,8 @@ This ruling holds the message's first line and items 1, 2, 3, 5 and 6.
   place of `crates/kernel/tests/theta.rs`'s constant, through `validation`, kernel's dev-dependency, which re-exports
   the entry (kernel reaches `ledger` only as a build-dependency, systems_architecture §7.1, R-185). The render tests
   read `n_norm_tol` from the register in place of `crates/render/tests/debug_views.rs`'s definition; qa's
-  `crates/render/tests/qa_TASK-M1-12.rs` keeps its own `NORM_TOL`, the same 64 U, until qa changes it (R-290).
+  `crates/render/tests/qa_TASK-M1-12.rs` kept its own `NORM_TOL`, the same 64 U, until qa changed it (R-290); qa's
+  `e526f336` did, and its `NORM_TOL` (`:55`) now reads `ledger::constants::N_NORM_TOL.number()`.
 - **The code's marks.** The grey's comments (`present.rs`, `present.wgsl`) read confirmed, R-433; the triple swatches
   are `proposed: false` in `SWATCHES`, their comments citing R-433; `BANDING_BOUND`'s doc and
   `BANDING_BOUND_STATUS` read confirmed by R-433. No value changes. `crates/render/tests/outcome_state.rs` expects the
