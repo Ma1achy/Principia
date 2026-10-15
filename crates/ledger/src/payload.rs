@@ -356,8 +356,10 @@ fn from(lo: Bound) -> Range {
     }
 }
 
-/// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode. A log field is `[0, ∞)`: dd_decoder §3.6's two,
-/// `rho_ratio` and `r_min_pair_0`, are > 0 but at the collision pole, where they read 0.
+/// `ICDescriptor`'s field at slot `slot` (§3.6); provenance decode. A log field declares its lower bound only, written
+/// `[0, ∞)`: no upper bound is declared, `+∞` is not excluded. dd_decoder §3.6's two are `rho_ratio` ∈ `[0, ∞]`, which
+/// reaches `+∞` at the `α = 0` pole, and `r_min_pair_0` ∈ `[0, ∞)`; each is > 0 but at the collision pole, where it
+/// reads 0.
 fn ic(name: &'static str, slot: u32, scale: Scale) -> EntryBuilder {
     let e = f32_at(name, slot, scale).provenance(Provenance::Decode);
     match scale {
