@@ -271,6 +271,42 @@ A post-momentum rescale that enforces a target energy $E^*$. Compute $K_0$, chec
 
 $$\mathbf p_i \leftarrow \eta_E\,\mathbf p_i, \qquad \eta_E = \sqrt{\frac{E^* - U}{K_0}}.$$
 
+"Off" is an explicit `None`; $E^* = 0$ is a real target, the energy set to zero (R-25). The rescale follows the
+momentum block and precedes the derived invariants, so the `ICDescriptor` describes the rescaled IC ($K_0 = E^* - U$
+to rounding).
+
+**The outcome at $K_0 = 0$ and on $E^* < U$ (R-72; REQ-DEC-041): a label, never a refusal.** $U$ is the decoded
+configuration's potential, so whether $E^*$ is reachable is known only after the decode, pixel by pixel; the outcome
+is a label on that decode. The one refusal is the view-level one below, a forbidding chart with any `Some(E*)`. Here
+$U = V_0$ and $K_0$ are §3.6's, of the decoded $(m, r, p)$, and $E^*$ is the view's finite value. In order:
+
+- **The collision pole, $U = -\infty$** (a pair separation is 0, §3.6, R-436): $E^* - U$ is infinite and no finite
+  $\eta_E$ exists. The decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`.
+- **$E^* < U$:** $\eta_E$ is not real, since the kinetic energy would be negative. The decode is tagged
+  `DEGENERATE(ENERGY_INFEASIBLE)`. As $U < 0$, only a bound target $E^* < 0$ can be infeasible; every $E^* \ge 0$,
+  $E^* = 0$ included, is feasible.
+- **$K_0 = 0$, the rest start** (every $\mathbf p_i = 0$): there is no direction to scale. At $E^* = U$ the IC is
+  already at the target: $\eta_E$ is not applied, the momenta stay 0, and the decode is not tagged. At $E^* > U$ the
+  decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`; the golden IC, `z = 0` at rest, is so tagged under any $E^* > U$.
+- **Otherwise** ($E^* \ge U$, some $\mathbf p_i \ne 0$, every separation $> 0$) $\eta_E$ is applied; $E^* = U$ gives
+  $\eta_E = 0$, a rest start.
+
+A tagged decode keeps its momenta as decoded: it is kept, never dropped and never NaN, and, as every `DEGENERATE`, it
+is terminal (§2). A decode the mass block has already tagged keeps that tag. `ENERGY_INFEASIBLE` and
+`ENERGY_UNSCALABLE` belong to `DEGENERATE`'s enumerated cause set (§2).
+
+**$K_0 = 0$ means every $\mathbf p_i$ is 0**, not that the rounded $K_0$ is 0: a non-zero momentum whose squares
+underflow is scaled. The rescale is formed on $\hat{\mathbf p}_i = \mathbf p_i / s$, with $s$ the largest
+$|p_{i,x}|, |p_{i,y}|$:
+$\eta_E\,\mathbf p_i = \sqrt{(E^* - U)/\hat K}\;\hat{\mathbf p}_i$, with $\hat K = K_0/s^2 \ge \tfrac12$ the
+kinetic energy of the $\hat{\mathbf p}_i$ (one component is 1 and every $m_i \le 1$). The two are equal in exact
+arithmetic, and the second stays finite where $(E^* - U)/K_0$ overflows or $K_0$ rounds to 0.
+
+**The branch inputs** (§2's comparison-only rule; R-436): $E^* < V_0$, $E^* = V_0$, $s = 0$ and
+`r_min_pair_0` $= 0$, each a comparison of the emitted values with no arithmetic at the decision, as $M_{01}$'s
+test reads the emitted masses (§3.1). The collision pole is tested on the separation, never by arithmetic or a
+comparison on $\infty$.
+
 **Where it is allowed.** Only on charts that decode arbitrary momenta without enforcing an energy: the
 free-Jacobi-momentum chart and the latent chart. **It must be disabled** on the invariant-momentum charts
 $(L_z, E)$ and $(L_z, K)$, where energy is a chart coordinate or is fixed by the momentum construction.
@@ -315,7 +351,8 @@ Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `
 ## 6. Deferred / flagged
 
 - **Body indexing — settled, 0-based (R-22).** The decode uses bodies **0, 1, 2** (softmax reference = body 0), and `ICDescriptor` names `m0, m1, m2`; pair id `k` is the side opposite body `k` (payload §2). The flag was raised because this is exactly the off-by-one that survives until a collision-pair label is wrong on screen.
-- **Energy normalisation `η_E`**: specified in §3.7. Whether to keep it (flag-gated) or drop it is audit decision B9.
+- **Energy normalisation `η_E`**: specified in §3.7, its outcomes at `K₀ = 0` and on `E* < U` included (REQ-DEC-041).
+  It is kept, with an explicit `Option` off switch (R-25), which settles audit decision B9.
 - **Quantised checkpoint storage** — moot under lockstep (no stored trajectory; temporal note, ratified).
 - **KS-regularised state representation (v2)** — changes the decoder's output type; explicitly out of scope until then.
 

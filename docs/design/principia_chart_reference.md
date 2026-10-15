@@ -125,7 +125,8 @@ momenta multiply by `√ℓ`. That is what makes the transformation canonical.
 `(Lz,K)`, where energy is a chart coordinate or is enforced by the momentum construction — applying
 it there would collapse the energy axis. **Enforce in code, not prose:** the validation pass
 refuses a chart with the flag set combined with any `E*` override — every `Some(E*)`, including
-`Some(0)` (R-25).
+`Some(0)` (R-25). On a chart that allows it, the outcome at `K0 = 0` and on `E* < U` is a label on the
+decode, never a refusal (`principia_dd_decoder.md` §3.7).
 
 ### 0.7 Degeneracy — every pixel gets a label
 
