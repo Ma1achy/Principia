@@ -88,7 +88,7 @@ impl EngineInterface for NoHorizon {
 fn conformance_a_mock_dropping_the_horizon_fails_its_case() {
     let err = conformance::run(|| NoHorizon(MockEngine::new())).expect_err("NoHorizon passed");
     assert!(
-        err.starts_with("conformance case `horizon_edit_shows_and_undoes` failed: the horizon after its SetField"),
+        err.starts_with("conformance case `horizon_edit_shows_and_undoes` failed: a horizon SetField that moves the horizon"),
         "{err}"
     );
     assert_eq!(err.matches("conformance case").count(), 1, "{err}");
