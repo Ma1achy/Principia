@@ -34,6 +34,16 @@
       "name": "mock_focus_time",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter"] },
       "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_window",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "tab", "arrow_down"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_console",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter", "arrow_right"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
     }
   ]
 }

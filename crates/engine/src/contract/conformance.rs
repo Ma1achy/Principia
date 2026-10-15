@@ -8,7 +8,7 @@ use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
 use crate::contract::render_state::{Hover, Overlays, Playhead};
 use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
-use crate::contract::sim_config::{Latent, Lock};
+use crate::contract::sim_config::{Horizon, Latent, Lock};
 use crate::contract::snapshot::{History, Snapshot};
 
 /// One case: its name, and its check, which returns what failed.
@@ -44,6 +44,10 @@ pub const CASES: &[Case] = &[
     Case {
         name: "overlay_and_hover_edits_show",
         check: overlay_and_hover_edits_show,
+    },
+    Case {
+        name: "horizon_edit_shows_and_undoes",
+        check: horizon_edit_shows_and_undoes,
     },
 ];
 
@@ -287,5 +291,59 @@ fn overlay_and_hover_edits_show(engine: &mut dyn EngineInterface) -> Result<(), 
         "the overlay set after undo",
         &engine.snapshot().render.overlays,
         &overlays,
+    )
+}
+
+/// The horizon's path (R-390, "Contract fields"; gui_state_contract §2): an edit of `T` shows in the next snapshot,
+/// touches nothing else of the `SimConfig`, enters the history, logs "SetField Horizon.t before → after", and undo
+/// restores it.
+fn horizon_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(), String> {
+    let first = engine.snapshot();
+    let (sim, h0) = (first.sim.clone(), first.history);
+    let horizon = Horizon {
+        t: if sim.horizon.t == 120.0 { 150.0 } else { 120.0 },
+    };
+    engine.set_field(SetField {
+        edit: Edit::Sim(SimField::Horizon(horizon.clone())),
+        no_history: false,
+    });
+    let after = engine.snapshot();
+    // From any horizon, the edit moves it, so a write that is lost cannot pass as one that wrote the same value.
+    expect(
+        "a horizon SetField that moves the horizon",
+        after.sim.horizon != sim.horizon,
+        true,
+    )?;
+    expect(
+        "the horizon after its SetField",
+        after.sim.horizon.clone(),
+        horizon.clone(),
+    )?;
+    expect(
+        "the plane after a horizon SetField",
+        after.sim.plane.clone(),
+        sim.plane.clone(),
+    )?;
+    expect(
+        "the lock after a horizon SetField",
+        after.sim.lock.clone(),
+        sim.lock.clone(),
+    )?;
+    expect(
+        "the undo depth after a horizon SetField",
+        after.history.undo_depth,
+        h0.undo_depth + 1,
+    )?;
+    let logged = format!("SetField Horizon.t {} → {}", sim.horizon.t, horizon.t);
+    expect(
+        "the horizon SetField's log line",
+        after.log.iter().any(|e| e.message == logged),
+        true,
+    )?;
+    engine.undo();
+    expect(
+        "the horizon after undo",
+        engine.snapshot().sim.horizon,
+        sim.horizon,
     )
 }

@@ -66,7 +66,9 @@ fn one_setfield_moving(out: &Out, plane: &Plane, what: &str) {
         SimField::Basis { q1, q2 } => {
             assert_ne!((q1, q2), (&plane.q1, &plane.q2), "{what}: the basis moved")
         }
-        SimField::Lock(_) => unreachable!("sim_field passes z₀ and the basis only"),
+        SimField::Lock(_) | SimField::Horizon(_) => {
+            unreachable!("sim_field passes z₀ and the basis only")
+        }
     }
 }
 
@@ -283,11 +285,21 @@ fn mock_manifold_view_the_preset_cycles_the_basis() {
         "at its scale"
     );
     // Enter on a value, or on a control of another screen's, activates nothing here.
-    for id in [ZOOM, "time_play", mv::BUILDER] {
+    for id in [ZOOM, "time_play"] {
         let mut out = Out::default();
         activate(id, &snapshot, &mut Scratch::default(), &mut out);
         assert_eq!(out, Out::default(), "{id}");
     }
+    // Chart builder… asks for its window, and nothing else (TASK-M6-28).
+    let mut out = Out::default();
+    activate(mv::BUILDER, &snapshot, &mut Scratch::default(), &mut out);
+    assert_eq!(
+        out,
+        Out {
+            windows: vec![engine::contract::view_ui::Window::ChartBuilder],
+            ..Default::default()
+        }
+    );
     rejects("the preset left as it was", || {
         let mut out = Out::default();
         activate(mv::PRESET, &snapshot, &mut Scratch::default(), &mut out);

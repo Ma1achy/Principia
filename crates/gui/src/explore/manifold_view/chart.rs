@@ -1,6 +1,6 @@
 //! Chart (render_gui_spec §G2): the preset, named by its axes; the two basis vectors `q₁`, `q₂`, each with an edit
-//! button, which opens its eight components for drag or typing; Chart builder…, drawn disabled until TASK-M6-28 builds
-//! its window; and the chart's kind. A preset keeps the zoom; locked, it turns about the pin, as every basis edit does
+//! button, which opens its eight components for drag or typing; Chart builder…, which opens its window
+//! (TASK-M6-28); and the chart's kind. A preset keeps the zoom; locked, it turns about the pin, as every basis edit does
 //! ([`super::about_the_pin`], §G4). The shape sphere's projection selector and hemisphere toggle are REQ-GUI-161's,
 //! TASK-M8-06's: the mock's charts are all affine.
 
@@ -95,7 +95,13 @@ pub fn show(ui: &mut Ui, section: Rect, h: f32, clip: Rect, panel: &mut Panel<'_
         }
     }
     let mut last = row_ui(ui, row(section, h, 4));
-    let builder = last.add_enabled(false, Button::new("Chart builder…"));
+    let builder = last.add(Button::new("Chart builder…"));
+    if builder.clicked() {
+        panel
+            .out
+            .windows
+            .push(engine::contract::view_ui::Window::ChartBuilder);
+    }
     panel.place(BUILDER, &builder, clip);
     last.add_space(8.0);
     last.label(RichText::new(KIND).monospace().weak());
