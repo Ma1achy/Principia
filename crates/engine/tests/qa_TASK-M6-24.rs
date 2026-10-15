@@ -162,7 +162,8 @@ enum Rule {
 
 /// A double of the interface, written here from the rules (R-52, R-69, R-101; RQ-245), breaking `rule`.
 /// It holds the playhead and, since R-390's navigation paths, the plane and the lock, and, since its overlay set and
-/// hover, those two; each history entry is the edit restoring the value before and the edit itself.
+/// hover, those two, and, since its Run window's horizon (TASK-M6-28), the horizon; each history entry is the edit
+/// restoring the value before and the edit itself.
 struct Broken {
     rule: Rule,
     t: f64,
@@ -170,6 +171,7 @@ struct Broken {
     lock: Lock,
     overlays: Overlays,
     hover: Hover,
+    horizon: Horizon,
     undo: Vec<(Edit, Edit)>,
     redo: Vec<(Edit, Edit)>,
     log: Vec<LogEntry>,
@@ -186,6 +188,7 @@ impl Broken {
             lock: sim().lock,
             overlays: Overlays::default(),
             hover: Hover::default(),
+            horizon: sim().horizon,
             undo: Vec::new(),
             redo: Vec::new(),
             log: Vec::new(),
@@ -217,6 +220,10 @@ impl Broken {
             Edit::Render(RenderField::Hover(h)) => Edit::Render(RenderField::Hover(
                 std::mem::replace(&mut self.hover, h.clone()),
             )),
+            Edit::Sim(SimField::Horizon(h)) => Edit::Sim(SimField::Horizon(std::mem::replace(
+                &mut self.horizon,
+                h.clone(),
+            ))),
         }
     }
 
@@ -239,6 +246,10 @@ impl Broken {
                     Edit::Render(RenderField::Playhead(b)),
                     Edit::Render(RenderField::Playhead(a)),
                 ) => format!("SetField Playhead.t {} → {}{marker}", b.t, a.t),
+                // gui_state_contract §2: "logged as \"SetField Horizon.t before → after\"".
+                (Edit::Sim(SimField::Horizon(b)), Edit::Sim(SimField::Horizon(a))) => {
+                    format!("SetField Horizon.t {} → {}{marker}", b.t, a.t)
+                }
                 (b, a) => format!("SetField {b:?} → {a:?}{marker}"),
             },
         }
@@ -281,6 +292,7 @@ impl EngineInterface for Broken {
             sim: SimConfig {
                 plane: self.plane.clone(),
                 lock: self.lock.clone(),
+                horizon: self.horizon.clone(),
                 ..sim()
             },
             render: RenderState {
