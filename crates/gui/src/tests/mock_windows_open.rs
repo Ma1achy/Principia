@@ -2411,9 +2411,10 @@ fn mock_windows_open_inspector_readouts_and_energy_error() {
     let mut close = one.clone();
     close.energy_drift = 3.0;
     close.bodies = [
-        vec![[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
-        vec![[0.6, 0.8], [0.3, 0.4], [0.6, 0.8]],
-        vec![[3.0, 0.0], [3.0, 0.0], [3.0, 0.0]],
+        // Off the origin in both axes, so a separation is a difference of positions.
+        vec![[1.0, 1.0], [1.0, 1.0], [1.0, 1.0]],
+        vec![[1.6, 1.8], [1.3, 1.4], [1.6, 1.8]],
+        vec![[4.0, 1.0], [4.0, 1.0], [4.0, 1.0]],
     ];
     let e = inspector::energy_error(&close);
     assert!(
