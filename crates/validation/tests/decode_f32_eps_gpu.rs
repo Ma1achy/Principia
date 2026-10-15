@@ -105,11 +105,33 @@ fn check_verdict(judge: Judge) {
         "the report lacks `{line}`: {:?}",
         fail.negative_results
     );
-    // A perturbed reference fails at 256 eps and says so.
+    // A perturbed reference is the f64 decode with z₀[2] raised by 1e-4; it fails at 256 eps and says so.
     let p = Perturb {
         component: 2,
         by: 1e-4,
     };
+    let batches = interior(FUZZ);
+    let (_, shifted) = decode_both(&h, &wgsl, &batches[..1], Some(p)).expect("the decodes");
+    let (chart, points) = &batches[0];
+    let mut wide = kernel::chart::Latent {
+        z0: chart.z0.map(f64::from),
+        q1: chart.q1.map(f64::from),
+        q2: chart.q2.map(f64::from),
+    };
+    wide.z0[2] += 1e-4;
+    let want = engine::decode_dispatch::decode_only::<
+        _,
+        <kernel::stage::decode::LatentDefaults as kernel::stage::decode::DecodeVariant>::Links,
+    >(
+        &wide,
+        points[0].map(f64::from),
+        &validation::decode_f32_eps::physics_key(),
+    )
+    .expect("the f64 decode");
+    assert_eq!(
+        shifted[0], want,
+        "the perturbed reference is not z₀[2] + 1e-4's decode"
+    );
     let perturbed = judge(&config(256.0), "x.json", &input(Some(p), None), &wgsl).unwrap();
     assert_eq!(
         perturbed.verdict,

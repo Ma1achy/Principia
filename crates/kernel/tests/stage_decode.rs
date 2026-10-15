@@ -3,11 +3,14 @@
 //!   its slot (REQ-DEC-007: the chart's parameters are the uniform).
 //! - `stage_decode_mode_bits`: `DECODE_MODE` is bit 0 of the flags word, full 0 and linearised 1, and no other bit
 //!   moves it (scheduler_contract Part 5).
-//! - `stage_tag_words`: the readback's tag words, none 0 and `M01_TINY` 1, and every other word refused.
+//! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2 and `ENERGY_UNSCALABLE`
+//!   3, and every other word refused.
 //! - `stage_words_roundtrip`: a sample's `(m, r, p)` and `ICDescriptor` written as words and read back, at its index,
 //!   every other sample's words untouched.
 //! - `stage_entry_native`: the stage's body, compiled natively at f32, writes each sample's decode, the chart read from
 //!   the uniform; under `DECODE_MODE` linearised, and past the last sample, it writes nothing (REQ-DEC-005, REQ-DEC-007).
+//! - `stage_entry_points`: the three compute entry points, called natively, write each sample's decode under their link
+//!   set, or its descriptor, and nothing at the sample count.
 
 use kernel::chart::{self, Latent};
 use kernel::decode::{Degenerate, Ic};
@@ -18,7 +21,7 @@ use kernel::stage::decode::{
     untag, write_descriptor, write_ic, DecodeMode, DecodeUniforms, LatentDefaults,
     LatentStickBreaking, UniformChart,
 };
-use spirv_std::glam::UVec4;
+use spirv_std::glam::{UVec3, UVec4};
 use validation::negative_control;
 
 /// A latent chart whose 24 parameters are distinct: `z₀[k] = k + 1`, `q₁[k] = −(k + 1)/8`, `q₂[k] = (k + 1)/16`.
@@ -338,4 +341,110 @@ negative_control!(
     "a body that writes under the linearised flag too must fail",
     expected = "a linearised quad wrote words",
     check_entry(|chart, _| run_entry(chart, flags(DecodeMode::Full)))
+);
+
+// ── stage_entry_points ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// The three compute entry points, called natively: invocation `i` of `latent_defaults` and `latent_stick_breaking`
+/// writes `sample` under its link set at point `i`, and of `describe` the descriptor of sample `i`'s `(m, r, p)`; the
+/// invocation at the sample count writes nothing.
+type Entries = (
+    fn(UVec3, &DecodeUniforms, &[f32], &mut [u32], &mut [u32], &mut [u32]),
+    fn(UVec3, &DecodeUniforms, &[f32], &mut [u32], &mut [u32], &mut [u32]),
+    fn(UVec3, &[u32], &mut [u32]),
+);
+
+fn check_entry_points((defaults, stick, describe_entry): Entries) {
+    let chart = Latent {
+        z0: [0.3, -0.4, 0.2, 0.1, -0.2, 0.3, 0.5, -0.6],
+        q1: [0.1; 8],
+        q2: [-0.2; 8],
+    };
+    let uniforms = DecodeUniforms {
+        chart: chart.uniform(),
+        flags: UVec4::new(flags(DecodeMode::Full), 0, 0, 0),
+    };
+    let uv = [0.2f32, 0.7, 0.6, 0.3];
+    for (name, run, want) in
+        [
+            (
+                "latent_defaults",
+                defaults,
+                [0, 1].map(|i| sample::<_, Defaults, f32>(&chart, uv[2 * i], uv[2 * i + 1])),
+            ),
+            (
+                "latent_stick_breaking",
+                stick,
+                [0, 1].map(|i| {
+                    sample::<
+                        _,
+                        <LatentStickBreaking as kernel::stage::decode::DecodeVariant>::Links,
+                        f32,
+                    >(&chart, uv[2 * i], uv[2 * i + 1])
+                }),
+            ),
+        ]
+    {
+        let (mut ic, mut tags, mut d) = buffers(2);
+        for i in 0..3 {
+            run(
+                UVec3::new(i, 0, 0),
+                &uniforms,
+                &uv,
+                &mut ic,
+                &mut tags,
+                &mut d,
+            );
+        }
+        for (i, w) in want.iter().enumerate() {
+            assert_eq!(read_ic(&ic, i), w.ic, "{name} sample {i}'s (m, r, p)");
+            assert_eq!(untag(tags[i]), Ok(w.degenerate), "{name} sample {i}'s tag");
+            assert_eq!(
+                read_descriptor(&d, i),
+                w.descriptor,
+                "{name} sample {i}'s descriptor"
+            );
+        }
+    }
+    // describe: two samples' (m, r, p) in, their descriptors out; the third invocation writes nothing.
+    let ics = [0, 1].map(|i| sample::<_, Defaults, f32>(&chart, uv[2 * i], uv[2 * i + 1]).ic);
+    let mut words = vec![0; 2 * ic_words()];
+    for (i, ic) in ics.iter().enumerate() {
+        write_ic(&mut words, i, ic);
+    }
+    let mut d = vec![u32::MAX; 3 * descriptor_words()];
+    for i in 0..3 {
+        describe_entry(UVec3::new(i, 0, 0), &words, &mut d);
+    }
+    for (i, ic) in ics.iter().enumerate() {
+        assert_eq!(
+            read_descriptor(&d, i),
+            kernel::decode::descriptor::describe(ic),
+            "describe sample {i}'s descriptor"
+        );
+    }
+    assert!(
+        d[2 * descriptor_words()..].iter().all(|&w| w == u32::MAX),
+        "describe wrote past the last sample"
+    );
+}
+
+#[test]
+fn stage_entry_points() {
+    check_entry_points((
+        kernel::stage::decode::latent_defaults,
+        kernel::stage::decode::latent_stick_breaking,
+        kernel::stage::decode::describe,
+    ));
+}
+
+negative_control!(
+    stage_entry_points,
+    "entry points with the link sets swapped must fail",
+    expected = "latent_defaults sample 0's (m, r, p)",
+    check_entry_points((
+        kernel::stage::decode::latent_stick_breaking,
+        kernel::stage::decode::latent_defaults,
+        kernel::stage::decode::describe,
+    ))
 );
