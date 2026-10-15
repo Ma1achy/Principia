@@ -23,7 +23,8 @@
 //! square and the sum of each body's components, the division by `2mᵢ`, the sum over bodies, `Δ/K̂`, the `sqrt` and
 //! `η·p̂`), and `K + U` in one more, so `|E − E*| ≤` [`ENERGY_EPS`]` · eps · (K + |U| + |E*|)`, nine. The same bound
 //! holds each scaled component to one factor `η` (three roundings, plus `η`'s own read-off), relative to the largest.
-//! The worst seen of each is printed: for the energy 1.3 eps at f64 and at f32, for the one factor 1.0 and 0.7.
+//! The worst seen of each is printed: over runs, under 2 eps for the energy and under 1 for the one factor, at f64
+//! and f32.
 
 mod decode_support;
 
