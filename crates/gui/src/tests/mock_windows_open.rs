@@ -483,31 +483,34 @@ fn mock_windows_open_run_draft_and_its_controls() {
     );
     assert!(!d.fast_math, "compute fast-math off by default (R-297)");
     let mut d = run::Draft::default();
+    let horizon = engine::contract::sim_config::Horizon { t: run::T_DEFAULT };
+    let mut edits = Vec::new();
     for (id, check) in [
         (run::AARSETH, run::Occupant::AarsethZare),
         (run::HEGGIE, run::Occupant::Heggie),
     ] {
-        run::activate(id, &mut d);
+        run::activate(id, &mut d, &horizon, &mut edits);
         assert_eq!(d.occupant, check);
     }
-    run::activate(run::QUALITY_CUSTOM, &mut d);
+    run::activate(run::QUALITY_CUSTOM, &mut d, &horizon, &mut edits);
     assert_eq!(d.quality, run::Quality::Custom);
-    run::activate(run::QUALITY_AUTO, &mut d);
+    run::activate(run::QUALITY_AUTO, &mut d, &horizon, &mut edits);
     assert_eq!(d.quality, run::Quality::Auto);
-    run::activate(run::FAST_MATH, &mut d);
+    run::activate(run::FAST_MATH, &mut d, &horizon, &mut edits);
     assert!(d.fast_math);
-    run::activate(run::FAST_MATH, &mut d);
+    run::activate(run::FAST_MATH, &mut d, &horizon, &mut edits);
     assert!(!d.fast_math);
-    run::activate(run::RECOMPUTE, &mut d);
+    run::activate(run::RECOMPUTE, &mut d, &horizon, &mut edits);
     assert_eq!(d.progress, Some(1.0));
-    run::activate(run::CANCEL, &mut d);
+    run::activate(run::CANCEL, &mut d, &horizon, &mut edits);
     assert_eq!(d.progress, None);
     let before = d.clone();
-    run::activate("elsewhere", &mut d);
+    run::activate("elsewhere", &mut d, &horizon, &mut edits);
     assert_eq!(d, before);
+    assert!(edits.is_empty(), "the draft's T unchanged: no SetField");
     rejects("Cancel that keeps the progress", || {
         let mut d = run::Draft::default();
-        run::activate(run::RECOMPUTE, &mut d);
+        run::activate(run::RECOMPUTE, &mut d, &horizon, &mut Vec::new());
         assert_eq!(d.progress, None)
     });
 }
@@ -2162,4 +2165,44 @@ fn mock_windows_open_run_refinement_items_come_before_the_custom_frame() {
     rejects("a field under quality: Custom", || {
         above(custom + 1.0, custom)
     });
+}
+
+/// Run's T_horizon is SimConfig's horizon: seeded from the snapshot when the window opens, sent on Recompute as one
+/// undoable SimField::Horizon (gui review 5529720235, finding 5).
+#[test]
+fn mock_windows_open_run_t_horizon_is_the_contracts_horizon() {
+    use engine::contract::set_field::{Edit, SimField};
+    use engine::contract::sim_config::Horizon;
+    // The edit: none while the draft is the horizon, one undoable Horizon edit once it differs.
+    let mut d = run::Draft::default();
+    d.seed(&Horizon { t: 80.0 });
+    assert_eq!(d.t_horizon, 80.0);
+    assert_eq!(run::horizon_edit(&d, &Horizon { t: 80.0 }), None);
+    let edit = run::horizon_edit(&d, &Horizon { t: 50.0 }).expect("an edit");
+    assert_eq!(edit.edit, Edit::Sim(SimField::Horizon(Horizon { t: 80.0 })));
+    assert!(!edit.no_history, "undoable (R-69)");
+    // On the mock: the window opens on the snapshot's T; the arrows move the draft; Recompute sends it.
+    let (mut app, mut h) = fresh();
+    let t0 = app.snapshot().sim.horizon.t;
+    app.windows.run.t_horizon = 123.0;
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Run, None);
+    assert_eq!(app.windows.run.t_horizon, t0, "seeded from the snapshot");
+    settle(&mut h, &mut app);
+    let depth = app.snapshot().history.undo_depth;
+    app.windows.run.t_horizon = 100.0;
+    // Recompute, scrolled into view by the focus, then clicked.
+    app.view.focus.path = vec![
+        windows::entry(Window::Run).scope.to_owned(),
+        run::ACTIONS.to_owned(),
+        run::RECOMPUTE.to_owned(),
+    ];
+    settle(&mut h, &mut app);
+    click(&mut h, &mut app, "Recompute");
+    settle(&mut h, &mut app);
+    let snap = app.snapshot().clone();
+    let sent = |t: f64| assert_eq!(t, 100.0, "the horizon after Recompute");
+    sent(snap.sim.horizon.t);
+    assert_eq!(snap.history.undo_depth, depth + 1, "one undoable edit");
+    rejects("a Recompute that sends nothing", || sent(t0));
 }

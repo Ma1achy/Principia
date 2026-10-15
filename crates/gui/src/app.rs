@@ -235,11 +235,12 @@ impl<S: EngineSide> App<S> {
 
     /// Opens `window`, opened by control `opener`, and gives it the focus on its first section (render_gui_spec §G3;
     /// R-405); the focus goes back to `opener` when it closes. A window newly open is seeded: the Chart builder from
-    /// the chart, the Inspector from the orbit the Trajectory panel shows.
+    /// the chart, Run's `T_horizon` from the horizon, the Inspector from the orbit the Trajectory panel shows.
     pub fn open_window(&mut self, ctx: &egui::Context, window: Window, opener: Option<ScopeId>) {
         if !self.is_open(window) {
             match window {
                 Window::ChartBuilder => self.windows.chart.seed(&self.snapshot.sim.plane),
+                Window::Run => self.windows.run.seed(&self.snapshot.sim.horizon),
                 Window::Inspector => {
                     let shown = explore::trajectory::shown(
                         self.trajectory.tab,
@@ -684,7 +685,7 @@ impl<S: EngineSide> App<S> {
     /// Enter on control `id` of a window, as its click: each window acts on its own ids.
     fn activate_in_window(&mut self, id: &str, edits: &mut Vec<SetField>, acts: &mut Acts) {
         let w = &mut self.windows;
-        windows::run::activate(id, &mut w.run);
+        windows::run::activate(id, &mut w.run, &self.snapshot.sim.horizon, edits);
         windows::profiler::activate(id, &mut w.profiler);
         windows::display::activate(id, &mut w.display, &self.snapshot.render.overlays, edits);
         let plane = &self.snapshot.sim.plane;
@@ -740,7 +741,9 @@ impl<S: EngineSide> App<S> {
                 &mut keys,
                 window != Window::Console,
                 |ui, keys| match window {
-                    Window::Run => windows::run::show(ui, keys, &mut w.run),
+                    Window::Run => {
+                        windows::run::show(ui, keys, &mut w.run, &snapshot.sim.horizon, edits)
+                    }
                     Window::Profiler => {
                         windows::profiler::show(ui, keys, &mut w.profiler, self.side.trace())
                     }

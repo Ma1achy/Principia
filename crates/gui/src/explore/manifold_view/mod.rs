@@ -468,7 +468,8 @@ pub fn about_the_pin(
                 }
                 (plane.q1, plane.q2) = (*q1, *q2);
             }
-            Edit::Render(_) => {}
+            // The horizon, and the render fields, leave the plane and the lock as they are.
+            Edit::Sim(SimField::Horizon(_)) | Edit::Render(_) => {}
         }
         out.push(edit);
     }

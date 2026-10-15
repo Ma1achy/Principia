@@ -5,13 +5,18 @@
 //! Escape: the criterion, `tau` and the escape window; Refinement: quality (Auto, Custom), with the Custom fields, the
 //! frame budget, max depth, ensemble `E` and the target-utilisation ceiling; Recompute and Cancel, with progress.
 //!
-//! On the mock the window is a GUI-local draft seeded from the contract's defaults as §G5 lists them, with no
-//! `SimConfig` field behind it (applied per R-369): the contract fields and their behaviour are TASK-M8-24's
+//! `T_horizon` is `SimConfig`'s `Horizon { t }` (gui_state_contract §2): the window seeds it from the snapshot when it
+//! opens, and Recompute sends it as one `SetField`, `SimField::Horizon`, undoable (R-390, "Contract fields"; the
+//! Time scrubber then ends at the new `T`). It is the one field with a range, `[50, 200]`, a slider the arrows step
+//! by `Bounded`. The other fields are a GUI-local draft seeded from the contract's defaults as §G5 lists them, with no
+//! `SimConfig` field behind them yet (applied per R-369): their contract fields and behaviour are TASK-M8-24's
 //! (REQ-GUI-102), quality is TASK-M6-22's. A default §G5 does not give shows "—" (RQ-243), and nothing is invented
-//! (R-68, R-71). `T_horizon`, the one field with a range, `[50, 200]`, is a slider the arrows step by `Bounded`; every
-//! other field is a text field.
+//! (R-68, R-71); every other field is a text field.
 
 use eframe::egui::{Button, Checkbox, ProgressBar, RichText, Slider, TextEdit, Ui};
+
+use engine::contract::set_field::{Edit, SetField, SimField};
+use engine::contract::sim_config::Horizon;
 
 use crate::keyboard::scopes::{Adjust, Base, Scope, ScopeId, ScopeTree, StepKind};
 use crate::windows::{form_label, note, section, Keys};
@@ -263,16 +268,36 @@ pub fn register(tree: &mut ScopeTree) {
     tree.register(Some(ACTIONS), Scope::control(CANCEL, "Cancel"));
 }
 
-/// Enter on control `id`, as its click.
-pub fn activate(id: &str, draft: &mut Draft) {
+/// The edit Recompute sends: `T_horizon` as `SimField::Horizon`, undoable; `None` while the draft's `T` is the
+/// snapshot's `horizon`, so a Recompute that changes nothing adds nothing to undo.
+pub fn horizon_edit(draft: &Draft, horizon: &Horizon) -> Option<SetField> {
+    (draft.t_horizon != horizon.t).then_some(SetField {
+        edit: Edit::Sim(SimField::Horizon(Horizon { t: draft.t_horizon })),
+        no_history: false,
+    })
+}
+
+impl Draft {
+    /// Seeds the draft's `T_horizon` from the snapshot's `horizon`, when the window opens.
+    pub fn seed(&mut self, horizon: &Horizon) {
+        self.t_horizon = horizon.t;
+    }
+}
+
+/// Enter on control `id`, as its click, against the snapshot's `horizon`; Recompute's edit is pushed to `edits`.
+pub fn activate(id: &str, draft: &mut Draft, horizon: &Horizon, edits: &mut Vec<SetField>) {
     match id {
         HEGGIE => draft.occupant = Occupant::Heggie,
         AARSETH => draft.occupant = Occupant::AarsethZare,
         FAST_MATH => draft.fast_math = !draft.fast_math,
         QUALITY_AUTO => draft.quality = Quality::Auto,
         QUALITY_CUSTOM => draft.quality = Quality::Custom,
-        // The mock integrates nothing: the recompute is done at once (applied per R-369).
-        RECOMPUTE => draft.progress = Some(1.0),
+        // The horizon goes to the contract; the mock integrates nothing, so the recompute is done at once (applied
+        // per R-369).
+        RECOMPUTE => {
+            edits.extend(horizon_edit(draft, horizon));
+            draft.progress = Some(1.0);
+        }
         CANCEL => draft.progress = None,
         _ => {}
     }
@@ -308,8 +333,14 @@ pub const CUSTOM_HEADING: &str = "quality: Custom";
 /// The Custom quality fields' frame, empty here: the fields are gui_state_contract §6's struct, TASK-M6-22's.
 pub const CUSTOM_FIELDS: &str = "the Custom quality fields — (gui_state_contract §6)";
 
-/// Draws the window's content.
-pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, draft: &mut Draft) {
+/// Draws the window's content, against the snapshot's `horizon`; Recompute's edit is pushed to `edits`.
+pub fn show(
+    ui: &mut Ui,
+    keys: &mut Keys<'_>,
+    draft: &mut Draft,
+    horizon: &Horizon,
+    edits: &mut Vec<SetField>,
+) {
     note(ui, SUBTITLE);
     ui.add_space(6.0);
     let index = |id: ScopeId| {
@@ -402,12 +433,12 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, draft: &mut Draft) {
         ui.horizontal(|ui| {
             let recompute = ui.button("Recompute");
             if recompute.clicked() {
-                activate(RECOMPUTE, draft);
+                activate(RECOMPUTE, draft, horizon, edits);
             }
             keys.place(RECOMPUTE, &recompute);
             let cancel = ui.button("Cancel");
             if cancel.clicked() {
-                activate(CANCEL, draft);
+                activate(CANCEL, draft, horizon, edits);
             }
             keys.place(CANCEL, &cancel);
         });

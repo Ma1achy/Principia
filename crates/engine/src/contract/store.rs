@@ -59,6 +59,9 @@ pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit 
             q2: replace(&mut sim.plane.q2, q2),
         }),
         Edit::Sim(SimField::Lock(lock)) => Edit::Sim(SimField::Lock(replace(&mut sim.lock, lock))),
+        Edit::Sim(SimField::Horizon(horizon)) => {
+            Edit::Sim(SimField::Horizon(replace(&mut sim.horizon, horizon)))
+        }
         Edit::Render(RenderField::Playhead(playhead)) => Edit::Render(RenderField::Playhead(
             replace(&mut render.playhead, playhead),
         )),
@@ -118,6 +121,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
             format!("locked at {}", latent(&lock.z_locked))
         }
         Edit::Sim(SimField::Lock(_)) => "unlocked".to_owned(),
+        Edit::Sim(SimField::Horizon(h)) => h.t.to_string(),
         Edit::Render(RenderField::Playhead(p)) => p.t.to_string(),
         Edit::Render(RenderField::Overlays(o)) => overlays(o),
         Edit::Render(RenderField::Hover(h)) => match h.at {
@@ -130,6 +134,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         Edit::Sim(SimField::Z0(_)) => "Plane.z0",
         Edit::Sim(SimField::Basis { .. }) => "Plane.q1 Plane.q2",
         Edit::Sim(SimField::Lock(_)) => "Lock",
+        Edit::Sim(SimField::Horizon(_)) => "Horizon.t",
         Edit::Render(RenderField::Playhead(_)) => "Playhead.t",
         Edit::Render(RenderField::Overlays(_)) => "Overlays",
         Edit::Render(RenderField::Hover(_)) => "Hover.at",
