@@ -1796,3 +1796,97 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
         assert!((0.0..16.0).contains(&(gap + 40.0)))
     });
 }
+
+/// The smallest AccessKit node of `role` under the centre of scope `id`'s place.
+fn node_at(
+    app: &App<MockSide>,
+    output: &egui::FullOutput,
+    id: &str,
+    role: egui::accesskit::Role,
+) -> egui::accesskit::Node {
+    let c = app.keyboard.place_of(id).expect("placed").rect.center();
+    let p = egui::accesskit::Point::new(c.x as f64, c.y as f64);
+    let update = output
+        .platform_output
+        .accesskit_update
+        .as_ref()
+        .expect("AccessKit is on");
+    update
+        .nodes
+        .iter()
+        .filter(|(_, n)| n.role() == role && n.bounds().is_some_and(|b| b.contains(p)))
+        .min_by(|a, b| {
+            let area = |n: &egui::accesskit::Node| n.bounds().map_or(f64::MAX, |b| b.area());
+            area(&a.1).total_cmp(&area(&b.1))
+        })
+        .map(|(_, n)| n.clone())
+        .unwrap_or_else(|| panic!("no {role:?} at {id}"))
+}
+
+/// The Run window: each text field shows its own draft text; the occupant and the quality chosen are marked.
+#[test]
+fn mock_windows_open_run_fields_show_their_own_text_and_marks() {
+    use egui::accesskit::Role;
+    let (mut app, mut h) = fresh();
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Run, None);
+    let fields: Vec<&run::Field> = run::FIELDS.iter().chain([&run::CEILING]).collect();
+    for (k, t) in app.windows.run.text.iter_mut().enumerate() {
+        *t = format!("v{k}");
+    }
+    let selected = |n: &egui::accesskit::Node| n.toggled() == Some(egui::accesskit::Toggled::True);
+    let want: Vec<Option<String>> = (0..fields.len()).map(|k| Some(format!("v{k}"))).collect();
+    let own = |shown: &[Option<String>]| assert_eq!(shown, want, "each field its own text");
+    let mut last = Vec::new();
+    for (occupant, quality) in [
+        (run::Occupant::AarsethZare, run::Quality::Auto),
+        (run::Occupant::Heggie, run::Quality::Custom),
+    ] {
+        app.windows.run.occupant = occupant;
+        app.windows.run.quality = quality;
+        let mut shown = Vec::new();
+        for f in &fields {
+            // Each field scrolled into view in turn, its text read where it is drawn.
+            app.view.focus.path = vec![
+                windows::entry(Window::Run).scope.to_owned(),
+                f.section.to_owned(),
+                f.id.to_owned(),
+            ];
+            settle(&mut h, &mut app);
+            let output = h.frame(&mut app, Vec::new());
+            shown.push(
+                node_at(&app, &output, f.id, Role::TextInput)
+                    .value()
+                    .map(str::to_owned),
+            );
+        }
+        own(&shown);
+        last = shown;
+        app.view.focus.path = vec![
+            windows::entry(Window::Run).scope.to_owned(),
+            run::INTEGRATION.to_owned(),
+            run::HEGGIE.to_owned(),
+        ];
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let heggie = [run::HEGGIE, run::AARSETH]
+            .map(|id| selected(&node_at(&app, &output, id, Role::Button)));
+        app.view.focus.path = vec![
+            windows::entry(Window::Run).scope.to_owned(),
+            run::REFINEMENT.to_owned(),
+            run::QUALITY_AUTO.to_owned(),
+        ];
+        settle(&mut h, &mut app);
+        let output = h.frame(&mut app, Vec::new());
+        let auto = [run::QUALITY_AUTO, run::QUALITY_CUSTOM]
+            .map(|id| selected(&node_at(&app, &output, id, Role::Button)));
+        let is_heggie = occupant == run::Occupant::Heggie;
+        let is_auto = quality == run::Quality::Auto;
+        assert_eq!(heggie, [is_heggie, !is_heggie], "{occupant:?}");
+        assert_eq!(auto, [is_auto, !is_auto], "{quality:?}");
+    }
+    rejects("a field showing another's text", || {
+        last.swap(0, 1);
+        own(&last)
+    });
+}
