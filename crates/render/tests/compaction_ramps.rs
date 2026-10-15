@@ -1,0 +1,1615 @@
+//! The field ramp's compactions, ramps and defaults (`render::colour::field_ramp`, `render::colour::defaults`;
+//! colour_composition §1.2, §4.1; dd_colouring §3.6, §4 seam 5, §5 test 7; TASK-M7-05):
+//! - REQ-COL-039: each compaction form is monotone on its domain; the symlog has `b(x) + b(−x) = 1` and `b(0) = ½`
+//!   exactly; `log` styles the −1.0 sentinel instead of ramping it; the forms are R-411's, the debug views' `dbg_log`
+//!   and the drift views' symlog; and `compaction.wgsl` computes them on the GPU (`compaction_forms_*`); the ramp kinds
+//!   on the GPU agree with their CPU twins (`ramp_kinds_*`);
+//! - REQ-COL-016: the default ramp registry returns the stated ramp and polarity per field role, "signed" read from the
+//!   declared range as R-400 reads it (`default_ramps_*`);
+//! - REQ-COL-032: a field's ledger scale changes, and the view re-styles while the dispatch counter and the sim buffer
+//!   stay as they were (`ledger_scale_restyle_*`);
+//! - REQ-COL-024: FTLE bound as the colour, through a ramp, and as the brightness, each compiles and renders as its CPU
+//!   twin has it (`field_either_role_*`).
+//!
+//! Each test registers its negative control (R-176).
+
+use ledger::constants::LOG_FLOORS;
+use ledger::gen::numeric::cyclic_period;
+use ledger::schema::{Bound, Declaration, Entry, Range, Scale};
+use render::assemble::{Kind, Node, Occupant, Stain, Tier};
+use render::codegen::Slot;
+use render::colour::combine::{combine, Combiner, LRange};
+use render::colour::defaults::{self, DefaultRamp, Resolve, Role, DIVERGING_X0};
+use render::colour::field_ramp::{
+    Compaction, FieldRamp, Invalid, Lut, Map, Polarity, Ramp, ScalarField, Shown, COMPACTION_WGSL,
+    RAMP_WGSL,
+};
+use render::compositor::LAYER_FORMAT;
+use render::frame_record::{FrameRecord, RenderLoop};
+use render::pipeline_cache::FrameInputs;
+use render::present::{self, Rgb};
+use render::registry::ZERO_SOURCE;
+use validation::golden_scene::{render_stain, row_scene, scene, Colouring, Scene};
+use validation::gpu::{BindingKind, GpuHarness};
+use validation::negative_control;
+
+fn gpu() -> GpuHarness {
+    GpuHarness::new().expect("a GPU device")
+}
+
+/// The ledger's validated entries.
+fn entries() -> Vec<Entry> {
+    let l = ledger::payload::ledger();
+    ledger::gen::validate(&l).unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// The entry `name`.
+fn entry(name: &str) -> Entry {
+    entries()
+        .into_iter()
+        .find(|e| e.name == name)
+        .unwrap_or_else(|| panic!("no ledger entry `{name}`"))
+}
+
+/// The sim key the tests read with: `eps_E` and `eps_L` at 2⁻²⁰, a value of the tests' own.
+fn sim_key(name: &str) -> Option<f64> {
+    match name {
+        "eps_E" | "eps_L" => Some(EPS),
+        _ => None,
+    }
+}
+
+const EPS: f64 = 1.0 / 1_048_576.0;
+
+fn resolve(measured: [f64; 2]) -> Resolve<'static> {
+    Resolve {
+        sim_key: &sim_key,
+        measured,
+        horizon_steps: 1000,
+    }
+}
+
+// ── REQ-COL-039: the forms ───────────────────────────────────────────────────────────────────────────────────────
+
+/// `n + 1` points from `-hi` to `hi`, logarithmically spaced in magnitude from `lo`, with 0 and both signs.
+fn symmetric(lo: f64, hi: f64, n: usize) -> Vec<f64> {
+    let mut xs = vec![0.0];
+    for k in 0..=n {
+        let m = lo * (hi / lo).powf(k as f64 / n as f64);
+        xs.push(m);
+        xs.push(-m);
+    }
+    xs.sort_by(f64::total_cmp);
+    xs
+}
+
+/// `n + 1` points from `lo` to `hi`, evenly spaced.
+fn even(lo: f64, hi: f64, n: usize) -> Vec<f64> {
+    (0..=n)
+        .map(|k| lo + (hi - lo) * k as f64 / n as f64)
+        .collect()
+}
+
+/// Each form's domain, as dd_colouring §3.6 places it, and whether it is strictly increasing there.
+fn forms() -> Vec<(Compaction, Vec<f64>, bool)> {
+    let period = cyclic_period();
+    let mut log = vec![0.0];
+    log.extend(symmetric(1e-9, 1e9, 400).into_iter().filter(|x| *x > 0.0));
+    vec![
+        // lin: increasing on [lo, hi], clamped beyond, so non-decreasing on ℝ.
+        (
+            Compaction::Lin { lo: -1.0, hi: 3.0 },
+            even(-1.0, 3.0, 400),
+            true,
+        ),
+        (
+            Compaction::Lin { lo: -1.0, hi: 3.0 },
+            even(-9.0, 9.0, 400),
+            false,
+        ),
+        // log: its domain is x ≥ 0, x < 0 being the styled sentinel.
+        (
+            Compaction::Log {
+                eps: 1.0 / 16_384.0,
+            },
+            log,
+            true,
+        ),
+        // cyclic: one period, [0, period).
+        (
+            Compaction::Cyclic { period },
+            even(0.0, period * (1.0 - 1e-9), 400),
+            true,
+        ),
+        // diverging: ℝ, at two scales.
+        (
+            Compaction::Diverging { x0: EPS },
+            symmetric(1e-12, 1e9, 400),
+            true,
+        ),
+        (
+            Compaction::Diverging { x0: 1.0 },
+            symmetric(1e-9, 1e9, 400),
+            true,
+        ),
+        // flag: {0, 1}.
+        (Compaction::Flag, vec![0.0, 1.0], true),
+    ]
+}
+
+/// Each form `place` gives is monotone on its domain, within [0, 1], strictly where `strict`.
+fn check_monotone(place: impl Fn(&Compaction, f64) -> f64) {
+    for (c, xs, strict) in forms() {
+        let bs: Vec<f64> = xs.iter().map(|&x| place(&c, x)).collect();
+        for (k, w) in bs.windows(2).enumerate() {
+            let ok = if strict { w[1] > w[0] } else { w[1] >= w[0] };
+            assert!(
+                ok,
+                "{c:?} is not monotone at {} → {}: {} then {}",
+                xs[k],
+                xs[k + 1],
+                w[0],
+                w[1]
+            );
+        }
+        for (x, b) in xs.iter().zip(&bs) {
+            assert!((0.0..=1.0).contains(b), "{c:?} places {x} at {b}");
+        }
+    }
+}
+
+#[test]
+fn compaction_forms_monotone_on_their_domains() {
+    check_monotone(Compaction::place);
+}
+
+negative_control!(
+    compaction_forms_monotone_on_their_domains,
+    "a form reversed, 1 − b, is caught",
+    expected = "is not monotone",
+    check_monotone(|c, x| 1.0 - c.place(x))
+);
+
+/// The ends and the boundaries of each form: `lin` 0 at `lo` and 1 at `hi`, clamped beyond; `log` 0 at 0 and below
+/// its top; `cyclic` 0 at 0 and again at one period; `flag` 1 for any non-zero value.
+fn check_ends(c: impl Fn(Compaction, f64) -> f64) {
+    let lin = Compaction::Lin { lo: -1.0, hi: 3.0 };
+    for (x, b) in [(-1.0, 0.0), (3.0, 1.0), (-2.0, 0.0), (4.0, 1.0), (1.0, 0.5)] {
+        assert_eq!(c(lin, x), b, "lin places {x}");
+    }
+    let log = Compaction::Log { eps: 0.5 };
+    assert_eq!(c(log, 0.0), 0.0, "log places 0 at 0");
+    assert_eq!(c(log, -0.0), 0.0, "log places −0 at 0");
+    assert_eq!(c(log, -1.0), 0.0, "log's x < 0 maps to 0");
+    assert!(c(log, 1e300) < 1.0, "log stays below 1");
+    let cyclic = Compaction::Cyclic { period: 4.0 };
+    for (x, b) in [
+        (0.0, 0.0),
+        (4.0, 0.0),
+        (1.0, 0.25),
+        (-1.0, 0.75),
+        (9.0, 0.25),
+    ] {
+        assert_eq!(c(cyclic, x), b, "cyclic places {x}");
+    }
+    for (x, b) in [
+        (0.0, 0.0),
+        (-0.0, 0.0),
+        (1.0, 1.0),
+        (-1.0, 1.0),
+        (1e-30, 1.0),
+    ] {
+        assert_eq!(c(Compaction::Flag, x), b, "flag places {x}");
+    }
+}
+
+#[test]
+fn compaction_forms_ends_and_boundaries() {
+    check_ends(|c, x| c.place(x));
+}
+
+negative_control!(
+    compaction_forms_ends_and_boundaries,
+    "a cyclic form that truncates, Rust's `fract` (x − trunc x), places −1 at −0.25",
+    expected = "cyclic places -1",
+    check_ends(|c, x| match c {
+        Compaction::Cyclic { period } => (x / period).fract(),
+        _ => c.place(x),
+    })
+);
+
+/// The symlog's `b(x) + b(−x)` is 1 and `b(0)` ½, both exactly, at each scale and over every magnitude.
+fn check_symmetric(place: impl Fn(f64, f64) -> f64) {
+    for x0 in [EPS, 1.0, 3.0] {
+        assert_eq!(place(x0, 0.0), 0.5, "b(0) at x₀ = {x0}");
+        assert_eq!(place(x0, -0.0), 0.5, "b(−0) at x₀ = {x0}");
+        for x in symmetric(1e-30, 1e30, 600) {
+            let (a, b) = (place(x0, x), place(x0, -x));
+            assert_eq!(a + b, 1.0, "b({x}) + b({}) = {a} + {b} at x₀ = {x0}", -x);
+        }
+    }
+}
+
+#[test]
+fn compaction_forms_symlog_symmetric_and_centred() {
+    check_symmetric(|x0, x| Compaction::Diverging { x0 }.place(x));
+}
+
+negative_control!(
+    compaction_forms_symlog_symmetric_and_centred,
+    "a symlog centred off ½ (½ + ½·g without the sign) is caught",
+    expected = "b(",
+    check_symmetric(|x0, x| {
+        let s = (1.0 + f64::abs(x) / x0).ln();
+        0.5 + 0.5 * (1.0 - 1.0 / (1.0 + s)) * if x == 0.0 { 0.0 } else { 1.0 }
+    })
+);
+
+/// The forms are R-411's: `log` is the debug views' `dbg_log` placement, `1 − 1/(1 + ln(1 + |x|/ε))`, with the
+/// field's own ε; `diverging` the drift views' symlog, `s = sign(x)·ln(1 + |x|/x₀)` at `½ + ½·s/(1 + |s|)`, which
+/// [`Compaction::place`] forms as `1 − u` below zero, the same value to the last bit or one rounding of 1.
+fn check_r411(log: impl Fn(f64, f64) -> f64) {
+    for eps in [1.0 / 16_384.0, 1.0 / 1_048_576.0, 0.5] {
+        for x in even(0.0, 4.0, 200)
+            .into_iter()
+            .chain(symmetric(1e-9, 1e9, 100))
+        {
+            let x = x.abs();
+            assert_eq!(
+                log(eps, x),
+                present::dbg_log_t(x, eps),
+                "log at {x}, ε = {eps}: not the debug views' placement"
+            );
+        }
+    }
+    for x0 in [EPS, 1.0] {
+        for x in symmetric(1e-9, 1e9, 200) {
+            let s = x.signum() * (1.0 + x.abs() / x0).ln();
+            let want = if x == 0.0 {
+                0.5
+            } else {
+                0.5 + 0.5 * s / (1.0 + s.abs())
+            };
+            let got = Compaction::Diverging { x0 }.place(x);
+            assert!(
+                (got - want).abs() <= f64::EPSILON,
+                "symlog at {x}, x₀ = {x0}: {got}, the drift views' {want}"
+            );
+        }
+    }
+}
+
+#[test]
+fn compaction_forms_are_r411s() {
+    check_r411(|eps, x| Compaction::Log { eps }.place(x));
+}
+
+negative_control!(
+    compaction_forms_are_r411s,
+    "§3.6's old ranged log, (ln x − ln lo)/(ln hi − ln lo) over [ε, 10⁶], is not R-411's",
+    expected = "not the debug views' placement",
+    check_r411(|eps, x| ((x.max(eps).ln() - eps.ln()) / (1e6f64.ln() - eps.ln())).clamp(0.0, 1.0))
+);
+
+/// The `closure_min` ramp `log` over the given values: −1.0, the sentinel, then the values of [`LOG_VALUES`].
+fn log_ramp(c: Compaction) -> FieldRamp {
+    FieldRamp::new(
+        ScalarField::payload("closure_min").unwrap_or_else(|e| panic!("{e}")),
+        c,
+        Map::ramp(Ramp::Lut(Lut::Viridis)),
+    )
+}
+
+/// `closure_min`'s stored values in the sentinel scene: the −1.0 sentinel first, then 0, the floor, and above.
+const LOG_VALUES: [f32; 8] = [-1.0, 0.0, 1.1920929e-7, 1e-5, 1e-3, 0.1, 1.0, 2.0];
+
+/// `closure_min`'s floor, its register entry.
+fn closure_floor() -> f64 {
+    LOG_FLOORS
+        .iter()
+        .find(|(n, _)| *n == "closure_min")
+        .map(|(_, k)| k.number())
+        .expect("closure_min's floor")
+}
+
+/// The ramp styles the −1.0 sentinel, in its WGSL's invalid test and in its CPU twin, and on the GPU draws it as the
+/// hatch while every other value is on the ramp.
+fn check_sentinel(h: &GpuHarness, ramp: &FieldRamp) {
+    let wgsl = ramp.wgsl();
+    assert!(
+        wgsl.contains("|| v < 0.0) {"),
+        "the ramp's invalid test does not style a negative value:\n{wgsl}"
+    );
+    assert_eq!(ramp.shown(-1.0, true), Shown::Invalid, "−1.0 is ramped");
+    let mut s = row_scene(
+        "log_sentinel",
+        LOG_VALUES.len() as u32,
+        Colouring::View("closure_min"),
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    for (i, v) in LOG_VALUES.into_iter().enumerate() {
+        s.set.sample(i as u32).closure_min(v);
+    }
+    let image = render_with(h, &s, ramp, None);
+    check_image(&s, &image, ramp, "the log ramp");
+}
+
+#[test]
+fn compaction_forms_log_styles_the_sentinel() {
+    let ramp = log_ramp(Compaction::Log {
+        eps: closure_floor(),
+    });
+    assert_eq!(
+        ramp.shown(0.0, true),
+        Shown::Ramp(0.0),
+        "0 is the ramp's start"
+    );
+    check_sentinel(&gpu(), &ramp);
+}
+
+negative_control!(
+    compaction_forms_log_styles_the_sentinel,
+    "a lin compaction, which ramps −1.0 to its start, is caught",
+    expected = "the ramp's invalid test does not style a negative value",
+    check_sentinel(&gpu(), &log_ramp(Compaction::Lin { lo: 0.0, hi: 2.0 }))
+);
+
+// ── The forms and ramps on the GPU ───────────────────────────────────────────────────────────────────────────────
+
+/// The entry the GPU checks append to the prelude, the compactions and the ramps: each pixel of a `CASE_WIDTH`-wide
+/// target evaluates case `i`, `(op, x, k, 0)`, and returns its result's bits.
+const ENTRY: &str = r"
+@group(2) @binding(0) var<storage, read> cases: array<vec4<u32>>;
+
+const CASE_WIDTH: u32 = 64u;
+
+fn rgb(c: vec3<f32>) -> vec4<u32> { return vec4<u32>(bitcast<vec3<u32>>(c), 0u); }
+
+const C0: vec3<f32> = vec3<f32>(0.1, 0.2, 0.3);
+const C1: vec3<f32> = vec3<f32>(0.9, 0.5, 0.0);
+const C2: vec3<f32> = vec3<f32>(0.25, 0.75, 1.0);
+
+@fragment
+fn t_compaction(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<u32> {
+    let a = cases[u32(pos.y) * CASE_WIDTH + u32(pos.x)];
+    let x = bitcast<f32>(a.y);
+    let k = bitcast<f32>(a.z);
+    switch a.x {
+        case 1u: { return vec4<u32>(bitcast<u32>(compact_log(x, k)), 0u, 0u, 0u); }
+        case 2u: { return vec4<u32>(bitcast<u32>(compact_cyclic(x, k)), 0u, 0u, 0u); }
+        case 3u: {
+            let b = compact_symlog(x, k);
+            let c = compact_symlog(-x, k);
+            return vec4<u32>(bitcast<u32>(b), bitcast<u32>(c), bitcast<u32>(b + c), 0u);
+        }
+        case 4u: { return vec4<u32>(bitcast<u32>(compact_flag(x)), 0u, 0u, 0u); }
+        case 5u: { return rgb(ramp_lerp(x, C0, C1)); }
+        case 6u: { return rgb(ramp_diverging(x, C0, C2, C1)); }
+        case 7u: { return rgb(ramp_bands(x, k, 0.25, C1, C0)); }
+        default: { return vec4<u32>(0xffffffffu); }
+    }
+}
+";
+
+const CASE_WIDTH: usize = 64;
+const LOG: u32 = 1;
+const CYCLIC: u32 = 2;
+const SYMLOG: u32 = 3;
+const FLAG: u32 = 4;
+const LERP: u32 = 5;
+const DIVERGING: u32 = 6;
+const BANDS: u32 = 7;
+
+/// The colours the entry's ramps take, as f32 values.
+const C0: Rgb = [0.1f32 as f64, 0.2f32 as f64, 0.3f32 as f64];
+const C1: Rgb = [0.9f32 as f64, 0.5, 0.0];
+const C2: Rgb = [0.25, 0.75, 1.0];
+
+/// Each case `(op, x, k)` evaluated on the GPU after the prelude, `compaction` and the ramps: its four result words.
+fn run(h: &GpuHarness, compaction: &str, cases: &[(u32, f32, f32)]) -> Vec<[u32; 4]> {
+    let module = format!(
+        "{}\n{compaction}\n{RAMP_WGSL}\n{ENTRY}",
+        ledger::gen::prelude::wgsl(Tier::FULL)
+    );
+    let words: Vec<u32> = cases
+        .iter()
+        .flat_map(|&(op, x, k)| [op, x.to_bits(), k.to_bits(), 0])
+        .collect();
+    let rows = cases.len().div_ceil(CASE_WIDTH);
+    let kernel = h
+        .fragment(
+            &module,
+            "t_compaction",
+            &[&[], &[], &[BindingKind::Storage]],
+            CASE_WIDTH as u32,
+            rows as u32,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+    let pixels = kernel
+        .draw(&[&[], &[], &[&words]])
+        .unwrap_or_else(|e| panic!("{e}"));
+    pixels[..cases.len()].to_vec()
+}
+
+/// The bound on a GPU form's difference from its f64 twin at f32: WGSL's `log` is within 2⁻²¹ absolute on
+/// [0.5, 2] and 3 ULP relative elsewhere (WGSL § "Floating Point Accuracy"), and `b = 1 − 1/(1 + s)` has
+/// `|db/ds| ≤ 1`, so the form's error is the log's, a few f32 roundings of `|x|/k` and of the division, each at most
+/// 2⁻²⁴ relative: 2⁻¹⁸ covers them with room.
+const FORM_BOUND: f64 = 1.0 / 262_144.0;
+
+/// The forms on the GPU: within [`FORM_BOUND`] of their CPU twins; the symlog's `b(x) + b(−x)` exactly 1 and `b(0)`
+/// exactly ½ in f32 too.
+fn check_gpu_forms(h: &GpuHarness, compaction: &str) {
+    let mut cases = Vec::new();
+    for x in symmetric(1e-7, 1e7, 60) {
+        let x = x as f32;
+        cases.push((SYMLOG, x, 1.0));
+        cases.push((SYMLOG, x, EPS as f32));
+        if x >= 0.0 {
+            cases.push((LOG, x, 1.0 / 16_384.0));
+        }
+        // `x/period` at f32 has a spacing of 2⁻²⁴ of its own size, so `fract` is placed to FORM_BOUND only while
+        // the quotient stays within 2⁶, some sixty turns: beyond, the f32 quotient, not the form, decides.
+        if x.abs() <= 400.0 {
+            cases.push((CYCLIC, x, cyclic_period() as f32));
+        }
+        cases.push((FLAG, x, 0.0));
+    }
+    let got = run(h, compaction, &cases);
+    for (&(op, x, k), p) in cases.iter().zip(&got) {
+        let b = f64::from(f32::from_bits(p[0]));
+        let (x, k) = (f64::from(x), f64::from(k));
+        let want = match op {
+            LOG => Compaction::Log { eps: k }.place(x),
+            CYCLIC => Compaction::Cyclic { period: k }.place(x),
+            SYMLOG => {
+                let (lo, sum) = (f32::from_bits(p[1]), f32::from_bits(p[2]));
+                assert_eq!(sum, 1.0, "on the GPU, b({x}) + b({}) = {b} + {lo}", -x);
+                if x == 0.0 {
+                    assert_eq!(b, 0.5, "on the GPU, b(0) = {b}");
+                }
+                Compaction::Diverging { x0: k }.place(x)
+            }
+            _ => Compaction::Flag.place(x),
+        };
+        // `cyclic` wraps at the period: a value one rounding from it may land at either end.
+        let d = (b - want).abs();
+        let d = if op == CYCLIC { d.min(1.0 - d) } else { d };
+        assert!(
+            d <= FORM_BOUND,
+            "op {op} at x = {x}, k = {k}: the GPU's {b}, the twin's {want}"
+        );
+    }
+}
+
+#[test]
+fn compaction_forms_on_the_gpu_match_the_twins() {
+    check_gpu_forms(&gpu(), COMPACTION_WGSL);
+}
+
+negative_control!(
+    compaction_forms_on_the_gpu_match_the_twins,
+    "a GPU symlog formed as ½ + ½·sign(x)·g, not 1 − u below zero, does not sum to 1 exactly",
+    expected = "on the GPU, b(",
+    check_gpu_forms(
+        &gpu(),
+        &COMPACTION_WGSL.replace(
+            "return select(1.0 - u, u, x >= 0.0);",
+            "return 0.5 + sign(x) * (u - 0.5) + 1e-7;"
+        )
+    )
+);
+
+/// The ramp kinds on the GPU agree with their CPU twins (`Ramp::colour`) within f32 rounding of a mix, including at
+/// the ends, the diverging ramp's neutral at ½ and the bands' edges.
+fn check_gpu_ramps(h: &GpuHarness, ramp: &str) {
+    let mut cases = Vec::new();
+    for t in even(-0.25, 1.25, 120)
+        .into_iter()
+        .chain([0.0, 0.5, 1.0, 0.24, 0.26, 0.49])
+    {
+        let t = t as f32;
+        cases.push((LERP, t, 0.0));
+        cases.push((DIVERGING, t, 0.0));
+        cases.push((BANDS, t, 4.0));
+    }
+    let module_cases = run_ramps(h, ramp, &cases);
+    for (&(op, t, k), p) in cases.iter().zip(&module_cases) {
+        let got = [0, 1, 2].map(|c| f64::from(f32::from_bits(p[c])));
+        let r = match op {
+            LERP => Ramp::Lerp { c0: C0, c1: C1 },
+            DIVERGING => Ramp::Diverging {
+                lo: C0,
+                mid: C2,
+                hi: C1,
+            },
+            _ => Ramp::Bands {
+                n: f64::from(k),
+                width: 0.25,
+                line: C1,
+                base: C0,
+            },
+        };
+        let want = r.colour(f64::from(t));
+        for c in 0..3 {
+            assert!(
+                (got[c] - want[c]).abs() <= 1e-6,
+                "{} at t = {t}: the GPU's {got:?}, the twin's {want:?}",
+                r.name()
+            );
+        }
+    }
+    let neutral = run_ramps(h, ramp, &[(DIVERGING, 0.5, 0.0)])[0];
+    assert_eq!(
+        [0, 1, 2].map(|c| f64::from(f32::from_bits(neutral[c]))),
+        C2,
+        "the diverging ramp is not its neutral at ½"
+    );
+}
+
+/// [`run`] with the ramps' WGSL `ramp` in place of `ramp.wgsl`.
+fn run_ramps(h: &GpuHarness, ramp: &str, cases: &[(u32, f32, f32)]) -> Vec<[u32; 4]> {
+    let module = format!(
+        "{}\n{COMPACTION_WGSL}\n{ramp}\n{ENTRY}",
+        ledger::gen::prelude::wgsl(Tier::FULL)
+    );
+    let words: Vec<u32> = cases
+        .iter()
+        .flat_map(|&(op, x, k)| [op, x.to_bits(), k.to_bits(), 0])
+        .collect();
+    let rows = cases.len().div_ceil(CASE_WIDTH);
+    let kernel = h
+        .fragment(
+            &module,
+            "t_compaction",
+            &[&[], &[], &[BindingKind::Storage]],
+            CASE_WIDTH as u32,
+            rows as u32,
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+    let pixels = kernel
+        .draw(&[&[], &[], &[&words]])
+        .unwrap_or_else(|e| panic!("{e}"));
+    pixels[..cases.len()].to_vec()
+}
+
+#[test]
+fn ramp_kinds_on_the_gpu_match_the_twins() {
+    check_gpu_ramps(&gpu(), RAMP_WGSL);
+}
+
+negative_control!(
+    ramp_kinds_on_the_gpu_match_the_twins,
+    "a diverging ramp whose halves meet at ⅓, not ½, is caught",
+    expected = "diverging at t",
+    check_gpu_ramps(
+        &gpu(),
+        &RAMP_WGSL
+            .replace("mix(mid, hi, 2.0 * u - 1.0)", "mix(mid, hi, 1.5 * u - 0.5)")
+            .replace("mix(lo, mid, 2.0 * u)", "mix(lo, mid, 3.0 * u)")
+            .replace("u < 0.5", "u < 0.33333334")
+    )
+);
+
+// ── REQ-COL-016: the default ramp per field role ─────────────────────────────────────────────────────────────────
+
+/// A field's expected default: its role, ramp, polarity and compaction.
+type Want = (Role, Lut, Polarity, Compaction);
+
+/// The measured range the default registry is given: `(−3, 5)`.
+const MEASURED: [f64; 2] = [-3.0, 5.0];
+
+/// `e` with its name, scale and range replaced: a test's ledger entry.
+fn edited(name: &'static str, scale: Scale, lo: Bound, hi: Bound) -> Entry {
+    let mut e = entry("ftle");
+    e.name = name;
+    e.scale = scale;
+    e.range = Range { lo, hi };
+    e.declaration = Some(Declaration::Cited("a test's range"));
+    e
+}
+
+/// The defaults the registry must give, by field.
+fn wants() -> Vec<(Entry, Want)> {
+    use Bound::{Closed, Unbounded};
+    let floor = |n: &str| {
+        LOG_FLOORS
+            .iter()
+            .find(|(f, _)| *f == n)
+            .map(|(_, k)| k.number())
+            .expect("a floor")
+    };
+    let sym = Compaction::Lin { lo: -5.0, hi: 5.0 };
+    let x0 = |n: &str| DIVERGING_X0.iter().find(|(f, _)| *f == n).expect("x₀").1;
+    let tau = cyclic_period();
+    let mut out = vec![
+        // magnitude / diagnostic: the greyscale, FTLE and diffusion white = high, t_end white = low.
+        (
+            entry("ftle"),
+            (
+                Role::Magnitude(Polarity::High),
+                Lut::Grey,
+                Polarity::High,
+                Compaction::Lin { lo: -3.0, hi: 5.0 },
+            ),
+        ),
+        (
+            entry("diffusion"),
+            (
+                Role::Magnitude(Polarity::High),
+                Lut::Grey,
+                Polarity::High,
+                Compaction::Lin { lo: -3.0, hi: 5.0 },
+            ),
+        ),
+        (
+            edited("ensemble_spread", Scale::Lin, Closed(0.0), Unbounded),
+            (
+                Role::Magnitude(Polarity::High),
+                Lut::Grey,
+                Polarity::High,
+                Compaction::Lin { lo: 0.0, hi: 5.0 },
+            ),
+        ),
+        (
+            edited("t_end", Scale::Lin, Closed(0.0), Closed(50.0)),
+            (
+                Role::Magnitude(Polarity::Low),
+                Lut::Grey,
+                Polarity::Low,
+                Compaction::Lin { lo: 0.0, hi: 50.0 },
+            ),
+        ),
+        // signed: diverging through the neutral; the drifts' x₀ their sim-key floors, E_0's and Lz_0's their own.
+        (
+            entry("energy_drift"),
+            (
+                Role::Signed,
+                Lut::Coolwarm,
+                Polarity::High,
+                Compaction::Diverging { x0: EPS },
+            ),
+        ),
+        (
+            entry("Lz_drift"),
+            (
+                Role::Signed,
+                Lut::Coolwarm,
+                Polarity::High,
+                Compaction::Diverging { x0: EPS },
+            ),
+        ),
+        (
+            entry("E_0"),
+            (
+                Role::Signed,
+                Lut::Coolwarm,
+                Polarity::High,
+                Compaction::Diverging { x0: x0("E_0") },
+            ),
+        ),
+        (
+            entry("Lz_0"),
+            (
+                Role::Signed,
+                Lut::Coolwarm,
+                Polarity::High,
+                Compaction::Diverging { x0: x0("Lz_0") },
+            ),
+        ),
+        (
+            entry("S"),
+            (Role::Signed, Lut::Coolwarm, Polarity::High, sym),
+        ),
+        (
+            entry("C_ty"),
+            (Role::Signed, Lut::Coolwarm, Polarity::High, sym),
+        ),
+        // provisional (R-426): drawn as (−∞, ∞), so signed.
+        (
+            entry("mean_y"),
+            (Role::Signed, Lut::Coolwarm, Polarity::High, sym),
+        ),
+        // angles: cyclic, whatever the range (R-423).
+        (
+            entry("theta"),
+            (
+                Role::Angle,
+                Lut::Twilight,
+                Polarity::High,
+                Compaction::Cyclic { period: tau },
+            ),
+        ),
+        (
+            entry("rho_angle"),
+            (
+                Role::Angle,
+                Lut::Twilight,
+                Polarity::High,
+                Compaction::Cyclic { period: tau },
+            ),
+        ),
+        // one-signed: sequential, V_0 included (R-403).
+        (
+            entry("K_0"),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Lin { lo: 0.0, hi: 5.0 },
+            ),
+        ),
+        (
+            entry("V_0"),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Lin { lo: -3.0, hi: 0.0 },
+            ),
+        ),
+        (
+            entry("q_mass"),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Lin { lo: 0.0, hi: 1.0 },
+            ),
+        ),
+        (
+            entry("t_end_step"),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Lin {
+                    lo: 0.0,
+                    hi: 1000.0,
+                },
+            ),
+        ),
+        (
+            entry("total_substeps"),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Lin {
+                    lo: 0.0,
+                    hi: 4_294_967_295.0,
+                },
+            ),
+        ),
+        (
+            entry("saturated"),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Flag,
+            ),
+        ),
+    ];
+    for f in [
+        "d_min",
+        "dE_max",
+        "dLz_max",
+        "closure_min",
+        "rho_ratio",
+        "r_min_pair_0",
+    ] {
+        out.push((
+            entry(f),
+            (
+                Role::Sequential,
+                Lut::Viridis,
+                Polarity::High,
+                Compaction::Log { eps: floor(f) },
+            ),
+        ));
+    }
+    out
+}
+
+/// The registry `registry` gives each field its stated default.
+fn check_defaults(registry: impl Fn(&Entry, &Resolve) -> Result<DefaultRamp, String>) {
+    for (e, (role, lut, polarity, compaction)) in wants() {
+        let d =
+            registry(&e, &resolve(MEASURED)).unwrap_or_else(|why| panic!("`{}`: {why}", e.name));
+        let got = (d.role, d.ramp, d.polarity, d.compaction);
+        let want = (role, Ramp::Lut(lut), polarity, compaction);
+        assert!(
+            got == want,
+            "`{}`'s default is {got:?}, not {want:?}",
+            e.name
+        );
+    }
+}
+
+#[test]
+fn default_ramps_follow_field_role() {
+    check_defaults(defaults::default_ramp);
+}
+
+negative_control!(
+    default_ramps_follow_field_role,
+    "a registry that reads every field's role from its range alone puts FTLE on the diverging ramp",
+    expected = "`ftle`'s default is",
+    check_defaults(|e, r| {
+        let mut e = e.clone();
+        if e.name == "ftle" {
+            e.name = "ftle_unnamed";
+        }
+        defaults::default_ramp(&e, r)
+    })
+);
+
+/// "Signed" is R-400's: a declared range that spans zero, `lo < 0 < hi`, either end possibly unbounded; an end at 0,
+/// open or closed, does not span it; a gap is no range and is refused.
+fn check_signed(role: impl Fn(&Entry) -> Role) {
+    use Bound::{Closed, Open, Unbounded};
+    for (lo, hi, want) in [
+        (Closed(-1.0), Closed(1.0), Role::Signed),
+        (Unbounded, Unbounded, Role::Signed),
+        (Unbounded, Closed(1e-30), Role::Signed),
+        (Open(-1e-30), Unbounded, Role::Signed),
+        (Closed(0.0), Unbounded, Role::Sequential),
+        (Open(0.0), Closed(1.0), Role::Sequential),
+        (Unbounded, Closed(0.0), Role::Sequential),
+        (Unbounded, Open(0.0), Role::Sequential),
+        (Closed(1.0), Closed(2.0), Role::Sequential),
+    ] {
+        let e = edited("signed_probe", Scale::Lin, lo, hi);
+        assert_eq!(role(&e), want, "the range {}", e.range);
+    }
+    let mut gap = edited("gap_probe", Scale::Lin, Unbounded, Unbounded);
+    gap.declaration = None;
+    assert_eq!(role(&gap), Role::Sequential, "a gap does not span zero");
+    let why = defaults::default_ramp(&gap, &resolve(MEASURED)).expect_err("a gap is refused");
+    assert!(why.contains("`gap_probe`"), "{why}");
+}
+
+#[test]
+fn default_ramps_signed_is_the_declared_range() {
+    check_signed(defaults::role);
+}
+
+negative_control!(
+    default_ramps_signed_is_the_declared_range,
+    "a role that reads a range ending at 0 as signed is caught",
+    expected = "the range",
+    check_signed(|e| {
+        let touches = |b: Bound| matches!(b, Bound::Closed(v) | Bound::Open(v) if v == 0.0);
+        if touches(e.range.lo) || touches(e.range.hi) {
+            Role::Signed
+        } else {
+            defaults::role(e)
+        }
+    })
+);
+
+/// The registry refuses a field it can't place, naming it: a categorical field, a vector, a `diverging` field whose
+/// sim-key floor the sim key does not give or with no `x₀`, a `log` field with no floor, and an unbounded `lin` end with
+/// no finite measured end.
+fn check_refusals(sim: &'static dyn Fn(&str) -> Option<f64>) {
+    let r = Resolve {
+        sim_key: sim,
+        measured: MEASURED,
+        horizon_steps: 1000,
+    };
+    let refused = |e: &Entry, r: &Resolve, why: &str| {
+        let got = defaults::default_ramp(e, r)
+            .err()
+            .unwrap_or_else(|| panic!("`{}` was given a default", e.name));
+        assert!(
+            got.contains(&format!("`{}`", e.name)) && got.contains(why),
+            "`{}` refused for {got}, not {why}",
+            e.name
+        );
+    };
+    refused(&entry("state"), &r, "categorical");
+    refused(&entry("n"), &r, "vector");
+    let mut drift = entry("energy_drift");
+    drift.floor = Some("eps_unknown");
+    refused(&drift, &r, "sim key does not give");
+    refused(
+        &edited(
+            "no_x0",
+            Scale::Diverging,
+            Bound::Unbounded,
+            Bound::Unbounded,
+        ),
+        &r,
+        "no x₀ of its own",
+    );
+    refused(
+        &edited("no_floor", Scale::Log, Bound::Closed(0.0), Bound::Unbounded),
+        &r,
+        "no log floor of its own",
+    );
+    let nan = Resolve {
+        sim_key: sim,
+        measured: [f64::NAN, 1.0],
+        horizon_steps: 1000,
+    };
+    refused(&entry("ftle"), &nan, "not a finite range");
+    let mut zero = entry("energy_drift");
+    zero.floor = Some("eps_zero");
+    refused(&zero, &r, "not a finite positive value");
+    let mut inf = entry("energy_drift");
+    inf.floor = Some("eps_inf");
+    refused(&inf, &r, "not a finite positive value");
+    for m in [[3.0, -3.0], [0.0, f64::INFINITY]] {
+        let bad = Resolve {
+            sim_key: sim,
+            measured: m,
+            horizon_steps: 1000,
+        };
+        refused(&entry("ftle"), &bad, "not a finite range");
+    }
+    // A degenerate measured range is a range: `range_norm` reads it as 0 (R-72).
+    let one = Resolve {
+        sim_key: sim,
+        measured: [2.0, 2.0],
+        horizon_steps: 1000,
+    };
+    let d = defaults::default_ramp(&entry("ftle"), &one).unwrap_or_else(|why| panic!("{why}"));
+    assert_eq!(d.compaction, Compaction::Lin { lo: 2.0, hi: 2.0 });
+}
+
+/// The sim key of [`check_refusals`]: `eps_zero` is 0, `eps_inf` +∞.
+fn refusing_key(name: &str) -> Option<f64> {
+    match name {
+        "eps_zero" => Some(0.0),
+        "eps_inf" => Some(f64::INFINITY),
+        _ => None,
+    }
+}
+
+/// A sim key that gives every parameter, 1: the refusals' control.
+#[cfg(feature = "controls")]
+fn knows_everything(_: &str) -> Option<f64> {
+    Some(1.0)
+}
+
+#[test]
+fn default_ramps_refuse_what_they_cannot_place() {
+    check_refusals(&refusing_key);
+}
+
+negative_control!(
+    default_ramps_refuse_what_they_cannot_place,
+    "a sim key that gives every parameter places the drift whose floor it should not know",
+    expected = "`energy_drift` was given a default",
+    check_refusals(&knows_everything)
+);
+
+// ── Rendering a field ramp ───────────────────────────────────────────────────────────────────────────────────────
+
+/// The stain of `ramp` in its slot: the zero source → the ramp → Replace-L → its style post, if a brightness ramp
+/// and `post`, → `OUT`.
+fn ramp_stain(ramp: &FieldRamp, post: bool) -> Stain {
+    let (kind, occupant) = ramp.occupant();
+    let post = (post && ramp.slot() == Slot::Brightness).then(|| ramp.style_post());
+    custom_stain(kind, occupant, post)
+}
+
+/// `ramp` rendered over `s`'s payload with its style post where `post` is `Some(true)` (a colour ramp has none).
+fn render_with(h: &GpuHarness, s: &Scene, ramp: &FieldRamp, post: Option<bool>) -> Vec<[f32; 4]> {
+    render_stain(
+        h.device(),
+        h.queue(),
+        &ramp_stain(ramp, post.unwrap_or(true)),
+        &s.set,
+        &s.context,
+        &|_, _| None,
+    )
+    .unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// The colour `ramp` shows for sample `i` of `s` at the pixel `(x, y)`: a colour ramp's twin, or, for a brightness
+/// ramp, Replace-L on white at its lightness (colour_composition §4.1's None-colour row), its styles its post's.
+fn want_at(s: &Scene, i: u32, ramp: &FieldRamp, (x, y): (u32, u32)) -> Rgb {
+    let (v, gate) = s.value(i).unwrap_or_else(|e| panic!("{e}"));
+    let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
+    ramp.colour_at(v, gate, frag, Invalid::Pattern)
+        .unwrap_or_else(|| {
+            let Shown::Ramp(b) = ramp.shown(v, gate) else {
+                unreachable!("a placed sample")
+            };
+            combine(Combiner::ReplaceL(LRange::DEFAULT), None, Some(b))
+        })
+}
+
+/// The tolerance of a render against its CPU twin, per linear channel: the LUTs' and OKLab's f32 evaluation against
+/// f64, a few 10⁻⁵ (render/tests/prelude.rs bounds each), and the field's own f32 read; 10⁻³ is far below the 1/255
+/// step that would show.
+const RENDER_TOL: f64 = 1e-3;
+
+/// Each pixel of `image` is `ramp`'s twin for its sample, a styled sample's style included.
+fn check_image(s: &Scene, image: &[[f32; 4]], ramp: &FieldRamp, what: &str) {
+    let (w, _) = s.size();
+    let n = s.set.grid().sample_count();
+    let mut checked = 0;
+    for i in 0..n {
+        for (x, y) in s.pixels(i) {
+            let got = image[(y * w + x) as usize];
+            let want = want_at(s, i, ramp, (x, y));
+            for c in 0..3 {
+                assert!(
+                    (f64::from(got[c]) - want[c]).abs() <= RENDER_TOL,
+                    "{what}: sample {i} ({:?}) at ({x}, {y}) is {got:?}, its twin {want:?}",
+                    s.value(i),
+                );
+            }
+            checked += 1;
+        }
+    }
+    assert!(checked > 0, "{what}: no pixel checked");
+}
+
+// ── REQ-COL-024: FTLE in either role ─────────────────────────────────────────────────────────────────────────────
+
+/// The FTLE scene: an unstepped sample (NaN), a failed one and six on the field (golden_scene's `ftle`).
+fn ftle_scene() -> Scene {
+    scene("ftle").unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// The measured range of `s`'s valid, finite FTLE values.
+fn measured(s: &Scene) -> [f64; 2] {
+    let n = s.set.grid().sample_count();
+    (0..n)
+        .filter_map(|i| s.value(i).ok())
+        .filter(|(v, g)| *g && v.is_finite())
+        .fold([f64::INFINITY, f64::NEG_INFINITY], |[lo, hi], (v, _)| {
+            [lo.min(f64::from(v)), hi.max(f64::from(v))]
+        })
+}
+
+/// FTLE bound as the colour, by its default (the greyscale) and through viridis, and as the brightness, with its
+/// style post when `post`: each assembles, compiles, renders, and is its CPU twin at every pixel, the invalid samples
+/// hatched in both roles.
+fn check_either_role(h: &GpuHarness, post: bool) {
+    let s = ftle_scene();
+    let e = entry("ftle");
+    let r = resolve(measured(&s));
+    let grey = defaults::field_ramp(&e, Slot::Colour, &r).unwrap_or_else(|why| panic!("{why}"));
+    assert_eq!(
+        grey.map,
+        Map::ramp(Ramp::Lut(Lut::Grey)),
+        "FTLE's default colour is the greyscale"
+    );
+    let viridis = FieldRamp::new(
+        grey.field.clone(),
+        grey.compaction,
+        Map::ramp(Ramp::Lut(Lut::Viridis)),
+    );
+    let bright =
+        defaults::field_ramp(&e, Slot::Brightness, &r).unwrap_or_else(|why| panic!("{why}"));
+    assert_eq!(bright.map, Map::Lightness);
+    assert!(
+        bright.wgsl().contains("fn brightness(ctx: Ctx) -> f32 {"),
+        "{}",
+        bright.wgsl()
+    );
+    let invalid = (0..s.set.grid().sample_count())
+        .filter(|&i| {
+            bright.shown(
+                s.value(i).expect("a value").0,
+                s.value(i).expect("a value").1,
+            ) == Shown::Invalid
+        })
+        .count();
+    assert!(invalid > 0, "the scene has no invalid FTLE sample");
+    for (ramp, what) in [
+        (&grey, "FTLE as colour, grey"),
+        (&viridis, "FTLE as colour, viridis"),
+    ] {
+        check_image(&s, &render_with(h, &s, ramp, None), ramp, what);
+    }
+    check_image(
+        &s,
+        &render_with(h, &s, &bright, Some(post)),
+        &bright,
+        "FTLE as brightness",
+    );
+}
+
+#[test]
+fn field_either_role_ftle_as_colour_and_brightness() {
+    check_either_role(&gpu(), true);
+}
+
+negative_control!(
+    field_either_role_ftle_as_colour_and_brightness,
+    "the brightness without its style post draws an invalid FTLE as black, not the hatch",
+    expected = "FTLE as brightness: sample 0",
+    check_either_role(&gpu(), false)
+);
+
+// ── REQ-COL-032: a ledger scale change re-styles the view with zero recompute (seam 5) ───────────────────────────
+
+/// The re-style scene's `E_0` values, one sample per pixel, a NaN among them.
+const E0: [f32; 8] = [-4.0, -1.0, -0.25, 0.0, 0.25, 1.0, 4.0, f32::NAN];
+
+/// The layer's width, one pixel per sample.
+const W: u32 = E0.len() as u32;
+
+/// The frame's uniforms.
+const INPUTS: FrameInputs = FrameInputs {
+    ensemble: 0,
+    ensemble_spread: 0.0,
+    masses: [1.0, 1.0, 1.0],
+    dt_macro: 0.01,
+    delta_0: 1e-6,
+    n_renorm: 16,
+    horizon_steps: 1000,
+};
+
+/// The dispatch counter: the integration work the render loop's frame record counts (telemetry §2: new quads, samples,
+/// substeps) and the GPU passes of the integrate and reduce stages, the compute side of a frame.
+fn dispatches(r: &FrameRecord) -> u64 {
+    r.quads_computed
+        + r.samples
+        + r.substeps_total
+        + (r.stages.integrate.gpu_passes.len() + r.stages.reduce.gpu_passes.len()) as u64
+}
+
+/// The render loop's rig: the loop, its target, and the sim buffers it reads.
+struct Rig {
+    h: GpuHarness,
+    rl: RenderLoop,
+    target: wgpu::Texture,
+    view: wgpu::TextureView,
+    simstate: wgpu::Buffer,
+    bytes: Vec<u8>,
+}
+
+fn rig(s: &Scene) -> Rig {
+    use wgpu::util::DeviceExt;
+    let h = gpu();
+    let mut rl = RenderLoop::new(h.device(), h.queue(), LAYER_FORMAT, W, 1)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let target = h.device().create_texture(&wgpu::TextureDescriptor {
+        label: Some("target"),
+        size: wgpu::Extent3d {
+            width: W,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: LAYER_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let view = target.create_view(&Default::default());
+    let bytes = s.set.bytes();
+    let buffer = |label: &str, contents: &[u8]| {
+        h.device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(label),
+                contents,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_SRC
+                    | wgpu::BufferUsages::COPY_DST,
+            })
+    };
+    let simstate = buffer("simstate", &bytes.simstate);
+    let word = buffer("word", &bytes.word);
+    rl.set_sim(simstate.clone(), Some(word.clone()));
+    Rig {
+        h,
+        rl,
+        target,
+        view,
+        simstate,
+        bytes: bytes.simstate,
+    }
+}
+
+impl Rig {
+    /// `ramp`'s stain requested and compiled, then one frame: its pixels, 8-bit sRGB, and its dispatch count.
+    fn frame(&mut self, ramp: &FieldRamp) -> (Vec<[u8; 4]>, u64) {
+        let stain = ramp_stain(ramp, true);
+        let keys: Vec<u64> = (0..stain.nodes().len() as u64).collect();
+        self.rl
+            .cache()
+            .request(&stain, &keys, Tier::FULL)
+            .unwrap_or_else(|e| panic!("{e}"));
+        self.rl.cache().wait();
+        assert!(
+            self.rl.cache().errors().is_empty(),
+            "{:?}",
+            self.rl.cache().errors()
+        );
+        let n = dispatches(self.rl.frame(&INPUTS, &self.view));
+        (read_texture(&self.h, &self.target), n)
+    }
+}
+
+/// `buffer`'s bytes, read back.
+fn read_buffer(h: &GpuHarness, buffer: &wgpu::Buffer) -> Vec<u8> {
+    let staging = h.device().create_buffer(&wgpu::BufferDescriptor {
+        label: Some("readback"),
+        size: buffer.size(),
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let mut encoder = h.device().create_command_encoder(&Default::default());
+    encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, buffer.size());
+    h.queue().submit([encoder.finish()]);
+    map(h, &staging)
+}
+
+fn map(h: &GpuHarness, staging: &wgpu::Buffer) -> Vec<u8> {
+    let slice = staging.slice(..);
+    slice.map_async(wgpu::MapMode::Read, |r| r.expect("map"));
+    h.device()
+        .poll(wgpu::PollType::wait_indefinitely())
+        .expect("poll");
+    let out = slice.get_mapped_range().expect("range").to_vec();
+    staging.unmap();
+    out
+}
+
+/// The target's pixels, 8-bit sRGB.
+fn read_texture(h: &GpuHarness, texture: &wgpu::Texture) -> Vec<[u8; 4]> {
+    let row = 256u32;
+    let staging = h.device().create_buffer(&wgpu::BufferDescriptor {
+        label: Some("texture readback"),
+        size: u64::from(row),
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let mut encoder = h.device().create_command_encoder(&Default::default());
+    encoder.copy_texture_to_buffer(
+        texture.as_image_copy(),
+        wgpu::TexelCopyBufferInfo {
+            buffer: &staging,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(row),
+                rows_per_image: Some(1),
+            },
+        },
+        wgpu::Extent3d {
+            width: W,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+    );
+    h.queue().submit([encoder.finish()]);
+    let bytes = map(h, &staging);
+    (0..W as usize)
+        .map(|x| {
+            [
+                bytes[x * 4],
+                bytes[x * 4 + 1],
+                bytes[x * 4 + 2],
+                bytes[x * 4 + 3],
+            ]
+        })
+        .collect()
+}
+
+/// The 8-bit sRGB encoding of linear `v`.
+fn srgb8(v: f64) -> i32 {
+    (present::linear_to_srgb(v.clamp(0.0, 1.0)) * 255.0).round() as i32
+}
+
+/// `pixels` are `ramp`'s twin for [`E0`], one sample per pixel, to one 8-bit step (the layer and the target are 8-bit
+/// sRGB).
+fn check_pixels(pixels: &[[u8; 4]], ramp: &FieldRamp, what: &str) {
+    for (i, (&v, p)) in E0.iter().zip(pixels).enumerate() {
+        let frag = [i as f64 + 0.5, 0.5];
+        let want = ramp
+            .colour_at(v, true, frag, Invalid::Pattern)
+            .expect("a colour ramp");
+        for c in 0..3 {
+            assert!(
+                (i32::from(p[c]) - srgb8(want[c])).abs() <= 1,
+                "{what}: E_0 = {v} draws {p:?}, its twin {want:?}"
+            );
+        }
+    }
+}
+
+/// The `E_0` view built from `e`, its ledger entry, by the default registry.
+fn e0_view(e: &Entry) -> FieldRamp {
+    let finite: Vec<f64> = E0
+        .iter()
+        .filter(|v| v.is_finite())
+        .map(|&v| f64::from(v))
+        .collect();
+    let m = [
+        finite.iter().copied().fold(f64::INFINITY, f64::min),
+        finite.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+    ];
+    defaults::field_ramp(e, Slot::Colour, &resolve(m)).unwrap_or_else(|why| panic!("{why}"))
+}
+
+/// Seam 5: `E_0`'s ledger scale changes from `diverging` to `to`, which R-403 admits for its range (−∞, ∞); the view
+/// built from the changed entry re-styles (another compaction, other pixels, each its twin), while the dispatch
+/// counter and the sim buffer stay as they were: nothing re-integrates. With `recompute`, the change also rewrites
+/// the sim buffer, as a re-integration would.
+fn check_restyle(to: Scale, recompute: bool) {
+    let mut s = row_scene("restyle", W, Colouring::View("E_0")).unwrap_or_else(|e| panic!("{e}"));
+    for (i, v) in E0.into_iter().enumerate() {
+        s.set.sample(i as u32).E_0(v);
+    }
+    let mut rig = rig(&s);
+    let before = entry("E_0");
+    assert_eq!(before.scale, Scale::Diverging);
+    let a = e0_view(&before);
+    let (pa, na) = rig.frame(&a);
+    check_pixels(&pa, &a, "before");
+
+    let mut after = before.clone();
+    after.scale = to;
+    let b = e0_view(&after);
+    if recompute {
+        let fresh: Vec<u8> = rig.bytes.iter().map(|b| b.wrapping_add(1)).collect();
+        rig.h.queue().write_buffer(&rig.simstate, 0, &fresh);
+    }
+    let (pb, nb) = rig.frame(&b);
+    assert!(
+        a.compaction != b.compaction && pa != pb,
+        "the view did not re-style: {:?} → {:?}",
+        a.compaction,
+        b.compaction
+    );
+    assert_eq!(
+        (na, nb),
+        (0, 0),
+        "the dispatch counter moved across the re-style"
+    );
+    assert!(
+        read_buffer(&rig.h, &rig.simstate) == rig.bytes,
+        "the sim buffer changed across the re-style"
+    );
+    check_pixels(&pb, &b, "after");
+    assert_eq!(
+        rig.rl.cache().compiles(),
+        2,
+        "the re-style compiled other than its one fragment"
+    );
+}
+
+#[test]
+fn ledger_scale_restyle_zero_recompute() {
+    check_restyle(Scale::Lin, false);
+}
+
+negative_control!(
+    ledger_scale_restyle_zero_recompute,
+    "a re-style that rewrites the sim buffer, as a re-integration does, is caught",
+    expected = "the sim buffer changed across the re-style",
+    check_restyle(Scale::Lin, true)
+);
+
+#[cfg(feature = "controls")]
+mod ledger_scale_restyle_unchanged {
+    use super::*;
+    negative_control!(
+        ledger_scale_restyle_zero_recompute,
+        "a scale \"change\" to the scale it had does not re-style the view",
+        expected = "the view did not re-style",
+        check_restyle(Scale::Diverging, false)
+    );
+}
+
+// ── The twins at their edges, and every form and ramp assembled in either slot ──────────────────────────────────
+
+/// `closure_min`'s ramp by `c`, mapped by `map`, at `polarity`: a float field with no unset value.
+fn closure_ramp(c: Compaction, map: Map, polarity: Polarity) -> FieldRamp {
+    FieldRamp::new(
+        ScalarField::payload("closure_min").unwrap_or_else(|e| panic!("{e}")),
+        c,
+        map,
+    )
+    .with_polarity(polarity)
+}
+
+/// The CPU twins at their edges: a non-finite value is invalid, both signs; `lin` does not style a negative value,
+/// only `log` does; low polarity reverses the value, in the twin and the WGSL; the bands' edges; the override colour
+/// and a lightness's placed sample.
+fn check_twin_edges(bands: Ramp) {
+    let grey = Map::ramp(Ramp::Lut(Lut::Grey));
+    let lin = closure_ramp(
+        Compaction::Lin { lo: -2.0, hi: 2.0 },
+        grey.clone(),
+        Polarity::High,
+    );
+    for x in [f32::INFINITY, f32::NEG_INFINITY] {
+        assert_eq!(lin.shown(x, true), Shown::Invalid, "{x} is invalid");
+    }
+    assert_eq!(lin.shown(-1.0, true), Shown::Ramp(0.25), "lin places −1.0");
+    let low = closure_ramp(Compaction::Lin { lo: -2.0, hi: 2.0 }, grey, Polarity::Low);
+    assert_eq!(low.polarity, Polarity::Low);
+    assert_eq!(
+        low.shown(-1.0, true),
+        Shown::Ramp(0.75),
+        "low polarity reverses −1.0"
+    );
+    assert!(
+        low.wgsl().contains(
+            "return ramp_grey(1.0 - range_norm(v, -2.0, 2.0, false, vec2<f32>(0.0, 0.0)));"
+        ),
+        "{}",
+        low.wgsl()
+    );
+    for (t, want, what) in [
+        (0.0, [1.0, 0.0, 0.0], "a band's start"),
+        (0.0624, [1.0, 0.0, 0.0], "inside a band"),
+        (0.0625, [0.0, 0.0, 1.0], "a band's end, fract(n·t) = width"),
+        (0.2, [0.0, 0.0, 1.0], "between bands"),
+        (0.25, [1.0, 0.0, 0.0], "the next band's start"),
+        (1.0, [1.0, 0.0, 0.0], "t = 1, fract 0"),
+        (-1.0, [1.0, 0.0, 0.0], "t clamped to 0"),
+    ] {
+        assert_eq!(bands.colour(t), want, "bands at t = {t}, {what}");
+    }
+    let magenta = [1.0, 0.0, 1.0];
+    let nan = f32::from_bits(0x7fc0_0000);
+    assert_eq!(
+        lin.colour_at(nan, true, [0.5, 0.5], Invalid::Colour(magenta)),
+        Some(magenta),
+        "the override colour"
+    );
+    assert_eq!(
+        lin.colour_at(nan, true, [0.5, 0.5], Invalid::Pattern),
+        Some(present::debug_invalid([0.5, 0.5])),
+        "the hatch"
+    );
+    let light = closure_ramp(
+        Compaction::Lin { lo: -2.0, hi: 2.0 },
+        Map::Lightness,
+        Polarity::High,
+    );
+    assert_eq!(
+        light.colour_at(1.0, true, [0.5, 0.5], Invalid::Pattern),
+        None
+    );
+    assert_eq!(light.slot(), Slot::Brightness);
+}
+
+/// Four bands over [0, 1], each the first quarter of its period: red on blue.
+const BANDS_4: Ramp = Ramp::Bands {
+    n: 4.0,
+    width: 0.25,
+    line: [1.0, 0.0, 0.0],
+    base: [0.0, 0.0, 1.0],
+};
+
+#[test]
+fn field_ramp_twins_at_their_edges() {
+    check_twin_edges(BANDS_4);
+}
+
+negative_control!(
+    field_ramp_twins_at_their_edges,
+    "bands whose width is a third of the period draw the band's end as line",
+    expected = "a band's end",
+    check_twin_edges(Ramp::Bands {
+        n: 4.0,
+        width: 0.3,
+        line: [1.0, 0.0, 0.0],
+        base: [0.0, 0.0, 1.0],
+    })
+);
+
+/// Every compaction, every ramp kind and the lightness, each polarity: the ramp's WGSL names its form, its ramp and
+/// its polarity in its header, and assembles through the one assembler, a lightness with its style post, its text
+/// changed by `edit` first.
+fn check_every_kind(edit: impl Fn(String) -> String) {
+    let compactions = [
+        Compaction::Lin { lo: 0.0, hi: 1.0 },
+        Compaction::Log { eps: 0.5 },
+        Compaction::Cyclic { period: 2.0 },
+        Compaction::Diverging { x0: 0.25 },
+        Compaction::Flag,
+    ];
+    let maps = [
+        Map::ramp(Ramp::Lut(Lut::Viridis)),
+        Map::ramp(Ramp::Lut(Lut::Magma)),
+        Map::ramp(Ramp::Lut(Lut::Twilight)),
+        Map::ramp(Ramp::Lut(Lut::Coolwarm)),
+        Map::ramp(Ramp::Lut(Lut::Grey)),
+        Map::ramp(Ramp::Lerp { c0: C0, c1: C1 }),
+        Map::ramp(Ramp::Diverging {
+            lo: C0,
+            mid: C2,
+            hi: C1,
+        }),
+        Map::ramp(BANDS_4),
+        Map::Lightness,
+    ];
+    for c in compactions {
+        for map in &maps {
+            for p in [Polarity::High, Polarity::Low] {
+                let ramp = closure_ramp(c, map.clone(), p);
+                let text = ramp.wgsl();
+                let head: String = text.lines().take(2).collect::<Vec<_>>().join("\n");
+                let polarity = if p == Polarity::High { "high" } else { "low" };
+                assert!(
+                    head.contains(&format!("the `{}`", c.name()))
+                        && head.contains(&format!("polarity {polarity}")),
+                    "the header does not name the form {} and polarity {polarity}:\n{head}",
+                    c.name()
+                );
+                if let Map::Ramp(r) = map {
+                    assert!(
+                        head.contains(&format!("`{}`", r.name())),
+                        "the header does not name {}:\n{head}",
+                        r.name()
+                    );
+                }
+                let (kind, _) = ramp.occupant();
+                let occupant = Occupant::Custom(edit(text));
+                let stain = custom_stain(
+                    kind,
+                    occupant,
+                    (kind == Kind::Brightness).then(|| ramp.style_post()),
+                );
+                render::assemble::assemble(&stain, Tier::FULL).unwrap_or_else(|e| {
+                    panic!(
+                        "{} · {:?} · {polarity} did not assemble: {e}",
+                        c.name(),
+                        map
+                    )
+                });
+            }
+        }
+    }
+}
+
+/// The stain of a colour or brightness `occupant` of `kind`, with `post` after Replace-L.
+fn custom_stain(kind: Kind, occupant: Occupant, post: Option<String>) -> Stain {
+    let node = |kind, occupant, inputs: Vec<Option<usize>>| Node {
+        kind,
+        occupant,
+        inputs,
+    };
+    let (colour, brightness) = match kind {
+        Kind::Colour => (occupant, Occupant::None),
+        _ => (Occupant::None, occupant),
+    };
+    let mut nodes = vec![
+        node(
+            Kind::Source,
+            Occupant::Custom(ZERO_SOURCE.to_owned()),
+            vec![],
+        ),
+        node(Kind::Colour, colour, vec![Some(0)]),
+        node(Kind::Brightness, brightness, vec![Some(0)]),
+        node(
+            Kind::Combiner,
+            Occupant::BuiltIn("replace_l".into()),
+            vec![Some(1), Some(2)],
+        ),
+    ];
+    let last = match post {
+        Some(p) => {
+            nodes.push(node(Kind::Post, Occupant::Custom(p), vec![Some(3)]));
+            4
+        }
+        None => 3,
+    };
+    nodes.push(node(Kind::Out, Occupant::None, vec![Some(last)]));
+    Stain::new(nodes).unwrap_or_else(|e| panic!("{e}"))
+}
+
+#[test]
+fn field_either_role_every_form_and_ramp_assembles() {
+    check_every_kind(|t| t);
+}
+
+negative_control!(
+    field_either_role_every_form_and_ramp_assembles,
+    "a ramp calling a library function that does not exist does not assemble",
+    expected = "did not assemble",
+    check_every_kind(|t| t.replace("compact_symlog(", "compact_symlg("))
+);
