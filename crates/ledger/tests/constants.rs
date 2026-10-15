@@ -656,12 +656,12 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
 }
 
 #[test]
-fn constants_provisional_the_list_by_gate_gives_m1s_entries() {
+fn constants_provisional_the_list_by_gate_lists_none_at_m1() {
     check_list_by_gate(REGISTER);
 }
 
 negative_control!(
-    constants_provisional_the_list_by_gate_gives_m1s_entries,
+    constants_provisional_the_list_by_gate_lists_none_at_m1,
     "a register whose hatch stripe width is still provisional until M1 lists it for M1",
     expected = "the entries provisional until M1",
     {

@@ -120,12 +120,12 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
 }
 
 #[test]
-fn gate_provisional_the_registers_m1_entries_block_the_m1_gate() {
+fn gate_provisional_no_register_entry_blocks_the_m1_gate() {
     check_register_m1_m2(REGISTER);
 }
 
 negative_control!(
-    gate_provisional_the_registers_m1_entries_block_the_m1_gate,
+    gate_provisional_no_register_entry_blocks_the_m1_gate,
     "a register whose hatch stripe width is still provisional until M1 lists it at M1",
     expected = "the M1 list",
     check_register_m1_m2(
