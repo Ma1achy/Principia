@@ -704,3 +704,65 @@ fn mock_stain_drawn_titles() {
         assert_eq!(title(NodeKind::Source, &Occupant::None).1, "to the style")
     });
 }
+
+/// The code's colouring: each word a keyword, a type or plain, the rest plain, a comment to the line's end; runs of
+/// one class joined.
+#[test]
+fn mock_stain_drawn_code_classes() {
+    use crate::stain::code_view::{classify, colour, Class};
+    let runs = classify("fn shade(ctx: SampleCtx) -> vec3<f32> { return my_x1; } // the end");
+    let want: Vec<(String, Class)> = [
+        ("fn", Class::Keyword),
+        (" shade(ctx: ", Class::Plain),
+        ("SampleCtx", Class::Type),
+        (") -> ", Class::Plain),
+        ("vec3<f32>", Class::Type),
+        (" { ", Class::Plain),
+        ("return", Class::Keyword),
+        (" my_x1; } ", Class::Plain),
+        ("// the end", Class::Comment),
+    ]
+    .into_iter()
+    .map(|(t, c)| (t.to_owned(), c))
+    .collect();
+    assert_eq!(runs, want);
+    assert_eq!(
+        classify("let f32"),
+        [
+            ("let".to_owned(), Class::Keyword),
+            (" ".to_owned(), Class::Plain),
+            ("f32".to_owned(), Class::Type)
+        ]
+    );
+    let visuals = egui::Visuals::dark();
+    let colours: Vec<Color32> = [Class::Plain, Class::Comment, Class::Keyword, Class::Type]
+        .into_iter()
+        .map(|c| colour(c, &visuals))
+        .collect();
+    assert_eq!(colours[0], visuals.text_color());
+    for i in 0..4 {
+        for j in i + 1..4 {
+            assert_ne!(colours[i], colours[j], "classes {i} and {j}");
+        }
+    }
+    rejects("an identifier split at its underscore", || {
+        assert_eq!(classify("my_x1"), [("my".to_owned(), Class::Plain)])
+    });
+}
+
+/// The code pane under the canvas shows the assembled code; the drawer's filter passes the rows holding its text.
+#[test]
+fn mock_stain_drawn_code_pane_and_filter() {
+    use crate::side::EngineSide;
+    use crate::stain::library::passes;
+    let (mut app, mut h) = stain_app();
+    let code = app.side().stain_content().expect("content").code;
+    let texts = super::support::frame_texts(&mut h, &mut app);
+    assert!(texts.contains(&code), "{texts:?}");
+    assert!(passes("FTLE (Lyapunov)", " ftle "));
+    assert!(passes("anything", ""));
+    assert!(!passes("Total energy E₀", "ftle"));
+    rejects("a row without the text passing", || {
+        assert!(passes("Total energy E₀", "ftle"))
+    });
+}
