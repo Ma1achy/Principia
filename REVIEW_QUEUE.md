@@ -309,7 +309,7 @@ Nothing is chosen.*
 - **Waits:** REQ-DEC-002 (`rq: RQ-296`), TASK-M2-07's closing of it. TASK-M2-07's PR does not wait: it merges with
   REQ-DEC-002 held, not closed.
 
-## RQ-298: An explicit `fma` is not fused on every backend: lavapipe evaluates it as a rounded product and an add, against the determinism note's rule 6 *(conflict: corpus premise against measurement, R-34, R-84; context: TASK-M2-07)*
+## RQ-298: An explicit `fma` is not fused on every backend: lavapipe evaluates it as a rounded product and an add, against the determinism note's rule 6; and a GPU that flushes subnormals rounds differently from one that keeps them, which the corpus does not address *(conflict and silence: corpus premise against measurement, R-34, R-84, REQ-INT-064; context: TASK-M2-07)*
 
 *Found by TASK-M2-07's CI (qa review 5543656052 R1). TASK-M2-07 no longer relies on the premise; other branch inputs do.*
 
@@ -322,6 +322,8 @@ Nothing is chosen.*
     explicit `fma` fused and does not fold the `×1`. … Whether the kernel's SPIR-V keeps GLSL.std.450 `Fma` fused, which
     TASK-M2-02's qa review observes needs the `NoContraction` decoration, and whether rust-gpu emits that decoration, is
     a check for the second-backend parity run, not settled here."
+  - `decisions.md` § R-34: "Rule 6 extends to every branch input that consumes multi-op arithmetic", and
+    REQ-INT-064: "must use explicit `fma` in a fixed written form".
 - **Conflict:** CI's `gpu-lavapipe` and mutants shards (Mesa 25.2.8 lavapipe, Vulkan, `PRIN_GPU_BACKEND=vulkan`; run
   38857393629, jobs 116831834076 and 116831834067) failed `canonicaliser_seam_sweep` at 1c1037ae: "the backends'
   mirror branches differ at seam state 3". At that head the decision was built from explicit `fma`s. qa recomputed it
@@ -332,17 +334,48 @@ Nothing is chosen.*
   already leaves it open.) Every
   branch input built on rule 6's premise can therefore fork between Metal and lavapipe at its rounding edges:
   dd_decoder §3.1's `M₀₁ = fma(m₁, 1, m₀)` and rule 2's quantised `d²` among them.
+- **Silence (a second hazard): subnormal flushing.** Metal flushes subnormal results; the CPU keeps them. A branch
+  input with an intermediate below the smallest normal (f32: about `1.2e-38`) can therefore fork on identical inputs,
+  fused or not. The six rules in the note do not mention it. Measured on this PR (physics review 5544295057 P3): at
+  66974583 the mirror decision's products, with `δ_λ² ≈ 2^−80` among their factors, went subnormal in their low parts on
+  hierarchical states, and over 20 000 states per ratio CPU-f32 and Metal forked on 16 at an inner/outer ratio of
+  `1e-3`, 482 at `1e-4` and 10 262 at `1e-6`. At `λ̃_y = −2δ_λ` Metal missed the mirror on 8 093 at `1e-7` and on all
+  at `1e-8`.
 - **Options seen:**
-  - (a) Correct rule 6 and rule 2: an explicit `fma` pins the operation only where the backend fuses it; a branch
-    input that must agree everywhere is built from operations every IEEE backend rounds alike, whatever it fuses. The
-    pattern is TASK-M2-07's `IeeeBits::product`: operands split at their bits into halves whose partial products are
-    exact, so fusing or contracting any site rounds the same sum.
-  - (b) Require `NoContraction` and a fused `Fma` of the toolchain (rust-gpu → naga → each driver), checked per
-    backend at the parity gate, and treat a backend that does not fuse as out of scope for branch parity.
-  - (c) Keep rule 6 for Metal, and record lavapipe as a CI-only backend whose branch parity is not claimed.
-- **Applied meanwhile (TASK-M2-07, per R-369 on qa R1):** `C`'s mirror decision and guard use no `fma`. The guard is a
-  lone subtraction, and the decision's products are `IeeeBits::product` (`kernel::canon`, "The branch inputs, read
-  before step 0"). Nothing else is changed: `M₀₁` and the other `fma`-based branch inputs stay as they are, pending a
-  ruling.
-- **Waits:** nothing in TASK-M2-07, whose branches no longer rest on the premise. Which requirements this holds
-  (REQ-VAL-017's no-fork test, the `M₀₁` tag's parity) is the orchestrator's to set.
+  - (a) Correct rules 2 and 6, R-34 and REQ-INT-064. A branch input that must agree everywhere is built only from
+    operations every IEEE backend rounds alike, whether it fuses or flushes. For example, TASK-M2-07's
+    `IeeeBits::product` (operands split at their bits so the partial products are exact) is used on mantissas kept in
+    `[1, 2)` with integer exponents, so no intermediate is subnormal. This costs more operations per branch input, and
+    each input's form has to be rewritten and re-proved.
+  - (b) Keep rule 6 and require it of the toolchain: `NoContraction` and a fused `Fma` through rust-gpu → naga → each
+    driver, and subnormals kept (or flushed) alike, checked per backend at the parity gate. A backend that fails the
+    check is out of scope for branch parity. The existing forms stay, and the cost moves into toolchain checks; whether
+    every target driver can meet it is unknown.
+  - (c) Keep rule 6 for Metal, the build machine's backend, and record lavapipe, and any backend that flushes or does
+    not fuse differently from Metal, as one whose branch parity is not claimed. Nothing in the code changes, and the
+    parity claim narrows.
+- **Applied meanwhile (TASK-M2-07, per R-369 on qa R1 and physics P3):** `C`'s mirror decision and guard use no
+  `fma`. The guard is a lone subtraction. The decision carries mantissas in `[1, 2)` with integer exponents, and its
+  products are `IeeeBits::product` (`kernel::canon`, "The branch inputs, read before step 0"). **This departs from
+  R-34's letter and from REQ-INT-064** ("explicit `fma` in a fixed written form"), and option (b) would undo it, so
+  REQ-DEC-017's form is among what this entry holds. Nothing else changes: `M₀₁` and the other `fma`-built branch
+  inputs stay as they are, pending a ruling.
+- **Holds** (`rq: RQ-298`, applied per R-369 from physics review 5544295057; every branch input built with an explicit
+  `fma`, or this PR's departure from that):
+
+  | Requirement | Why |
+  |---|---|
+  | REQ-DEC-011 | `crates/kernel/src/decode/mass.rs:73`: `M₀₁ = fma(m₁, 1, m₀)` feeds `DEGENERATE(M01_TINY)` |
+  | REQ-VAL-017 | the tags must be bit-identical across backends, `M01_TINY` among them |
+  | REQ-VAL-079 | the no-fork test's domain |
+  | REQ-INT-087 | `crates/kernel/src/shape.rs` `disc_input` (every term an explicit `fma`) feeds `in_disc`; the result must match exactly across backends |
+  | REQ-INT-088 | the march's disc test, through `point_disc_input` |
+  | REQ-EVT-021 | collision `d² < r_coll²`, specified with an explicit `fma`, not yet built (TASK-M3-11) |
+  | REQ-INT-066 | the `N_sub` bucket's `d² = fma(dy, dy, dx·dx)`, not yet built (TASK-M4-01) |
+  | REQ-INT-064 | every integrator branch input in explicit `fma`, not yet built (TASK-M4-03) |
+  | REQ-INT-058 | the compile-discipline checklist's "explicit `fma`" |
+  | REQ-DEC-017 | this PR's mirror decision, which departs from R-34's letter (above) |
+  | REQ-DEC-002 | `crates/kernel/src/canon.rs`'s `fma` CoM and `I_in` feed `similarity`'s `I_in = 0` select (also held by RQ-296) |
+
+  REQ-INT-089 is not held: it is same-backend, split dispatches.
+- **Waits:** the eleven requirements above. TASK-M2-07's PR does not wait.

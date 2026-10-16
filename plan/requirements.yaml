@@ -59,6 +59,7 @@
   milestone: M2
   rq:
   - RQ-296
+  - RQ-298
 - id: REQ-DEC-003
   area: DEC
   statement: "The latent vector must be ordered z[0:2] = configuration controls (z_α, z_β), z[2:6] = momentum controls (z_q0..z_q3), z[6:8] = mass controls (z_μ1, z_μ2), and this block ordering must be fixed once and held."
@@ -237,6 +238,8 @@
   rulings:
   - R-71
   milestone: M2
+  rq:
+  - RQ-298
   note: "Value of ε: REQ-DEC-039 (calibration)."
 - id: REQ-DEC-012
   area: DEC
@@ -354,6 +357,8 @@
   rulings:
   - R-82
   milestone: M2
+  rq:
+  - RQ-298
 - id: REQ-DEC-018
   area: DEC
   statement: "The canonicaliser must be implemented for charts that bypass the canonical-frame decode, and for canonical-frame decodes, saturated controls included, it must be a no-op (rotation angle ≈ 0, mirror not taken) away from the λ̃_y = 0 seam; an exception covers only a case the task measuring the no-op has measured and listed in dd_decoder §5 test 5, with its z, precision and measurement (R-417)."
@@ -3569,6 +3574,8 @@
     detail: "naga validation passes; a lint over the kernel finds no break, no f32::INFINITY/NaN literal, no dynamic index, no unclamped float→int cast"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-298
 - id: REQ-INT-059
   area: INT
   statement: "Terminal exit from the integration loops must be via a `done` flag, set by detect_terminal on collision or escape, tested in each `while` loop condition, with zero `break` statements and no counted `for` loop with a mid-body exit."
@@ -3670,6 +3677,8 @@
   rulings:
   - R-34
   milestone: M4
+  rq:
+  - RQ-298
   note: "R-34 (recorded; applied before the parity gate on a second backend) settles Part 2c's open 'check whether contraction is controllable per backend' in favour of explicit fma everywhere. Recorded; applied before the parity gate on a second backend."
 - id: REQ-INT-065
   area: INT
@@ -3707,6 +3716,8 @@
     detail: "d² computed on every backend is bit-identical for fuzzed position pairs"
   rulings: []
   milestone: M4
+  rq:
+  - RQ-298
 - id: REQ-INT-067
   area: INT
   statement: "Any float-to-int cast in the kernel must be preceded by a clamp in f32 into the target range."
@@ -4075,6 +4086,8 @@
   - R-392
   - R-397
   milestone: M3
+  rq:
+  - RQ-298
   note: "R-397 (RQ-226); built by TASK-M3-11. The quantisation is at most π/65535 ≈ 4.8e-5 rad per pole passage (the ruling's \"≤ ~5e-5\"); the round-off bound and the parity tier follow physics reviews 5441087488 and 5441219965 of #168, applied per R-369."
 - id: REQ-INT-088
   area: INT
@@ -4094,6 +4107,8 @@
   - R-392
   - R-397
   milestone: M3
+  rq:
+  - RQ-298
   note: "R-397 (RQ-226); the lifecycle (0xFFFF outside the disc, written back on exit) is applied per R-369 and changes no θ̃; built by TASK-M3-11."
 - id: REQ-INT-089
   area: INT
@@ -4513,6 +4528,8 @@
   rulings:
   - R-34
   milestone: M4
+  rq:
+  - RQ-298
 - id: REQ-EVT-022
   area: EVT
   statement: "`r_coll` must be a user-exposed sim-key parameter (default `1e-3` of `R`) with the same value on both pipelines, and changing it must invalidate and re-boot affected payloads."
@@ -18144,6 +18161,8 @@
   - R-71
   - R-84
   milestone: M2
+  rq:
+  - RQ-298
   note: "R-34 extends explicit fma to every multi-op branch input; R-84: branch decisions are identical on identical inputs. The eps scale factor: REQ-DEC-043 (calibration)."
 - id: REQ-VAL-018
   area: VAL
@@ -19219,6 +19238,8 @@
   - R-110
   - R-186
   milestone: M4
+  rq:
+  - RQ-298
   note: "pitfall: \"10. GENERALISING A STATELESS RESULT TO A TRAJECTORY\" — 10. GENERALISING A STATELESS RESULT TO A TRAJECTORY."
 - id: REQ-VAL-080
   area: VAL
