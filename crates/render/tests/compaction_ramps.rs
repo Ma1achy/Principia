@@ -1526,6 +1526,11 @@ fn e0_view(e: &Entry) -> FieldRamp {
 /// `recompute`, the change also rewrites the sim buffer, as a re-integration would. Then a pan or zoom, a new measured
 /// range: a `u_range` write re-places the `lin` view with no compile (lowering contract Part 3); with `bake`, the view
 /// carries the measured range as literals instead, and the write cannot move it.
+///
+/// This shows the render side only: the changed entry is a clone of `E_0`'s, built into a view without regenerating
+/// the ledger, so the payload schema version, which hashes each entry's `scale` (`ledger::version`), is not consulted.
+/// Whether a real ledger scale edit moves that version, and so invalidates every cached payload (caching contract
+/// Part 1, "Validity"), against seam 5's "zero recompute", is RQ-297's open question.
 fn check_restyle(to: Scale, recompute: bool, bake: bool) {
     let mut s = row_scene("restyle", W, Colouring::View("E_0")).unwrap_or_else(|e| panic!("{e}"));
     for (i, v) in E0.into_iter().enumerate() {
