@@ -480,3 +480,46 @@ Nothing is chosen.*
     release profile, so a miscompile a test covers is seen. Code no test covers stays exposed.
 - **Applied meanwhile:** nothing. `stage_canon_native` is unchanged, not restructured around the fault.
 - **Waits:** nothing held: no shipped code was found with the pattern. TASK-M2-07's PR does not wait.
+
+## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
+
+*Found by TASK-M2-15, building T1's sweep. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 1 — What encode is: a quotient map onto a section"
+    (:23): "**T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This
+    *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no
+    mirror, R-82; …)"; and (:27): "the mirror reflects every `p_i` through the x-axis".
+  - `docs/design/principia_dd_encode.md` § "3.3 The gauge group action, explicit (this is what T1 sweeps)" (:106):
+    "**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the
+    tie-break sweep)."
+  - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*": "mirror iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ),
+    δ_λ = 1e-12; |λ̃_y| ≤ δ_λ → no mirror".
+  - REQ-ENC-003's statement: "E(g·x) = E(x) for every g = (translation a, boost u, rotation θ, scale s, mirror Π)".
+- **Conflict:** `Π = diag(1, −1)` is in `G`, and the mirror acts on the full state, positions and momenta (Part 1).
+  Take `x` canonical with `|λ̃_y| ≤ δ_λ`. Then `Π·x` is canonical too, with `λ̃_y` of the other sign, inside the
+  deadband, so `C` mirrors neither: `C(Π·x) = Π·C(x)`. The two configurations agree to `2δ_λ`, and `β` reads `|λ̃_y|`
+  (R-438), so `z_α` and `z_β` agree; but `p_ρ,y` and `p_λ,y` change sign, so `z_q1` and `z_q3` do, and `L_z` flips.
+  `E(Π·x) ≠ E(x)` unless both `y` momenta are 0. Exactly collinear states (`λ̃_y = 0`) are such states for any
+  momenta: there `Π` fixes the configuration, and nothing in `C` reads which of `x`, `Π·x` was given. A deterministic
+  tie-break makes `E` a function, as T1's sentence asks, but not one constant on the orbit `{x, Π·x}`. Measured at
+  f64 on the collinear Euler landmark `ρ̃ = (0.8, 0)`, `λ̃ = (−0.6, 0)`, masses `(0.2, 0.3, 0.5)`, `p_ρ = (0.3, −0.2)`,
+  `p_λ = (−0.4, 0.25)`: `E(x)` has `z_q1 = −0.2007`, `z_q3 = 0.2513`; `E(Π·x)` has `+0.2007`, `−0.2513`; the other six
+  controls are equal bit for bit, and neither encode mirrors.
+- **Options seen:**
+  - (a) Restrict T1 and REQ-ENC-003 to `g` that do not mirror where `|λ̃_y| ≤ δ_λ`: on that band (collinear states
+    included) `E` is a deterministic function constant on the orbit's turns, translations, boosts and scalings, and
+    the mirror's two sides are both kept, as two `z`. The docs say so; the code is unchanged.
+  - (b) Break the tie on the band by the momenta, so `E` is constant on the whole orbit: inside the deadband, mirror
+    iff a mirror-odd momentum quantity is negative (for one, `L_z`, or `p_λ,y`, then `p_ρ,y` where it is 0), and no
+    mirror where it too is 0, the state being then `Π`-invariant. R-82 changes (a ruling), `C`'s decision changes
+    (`kernel::canon`, TASK-M2-07's), and that quantity's own tie needs the cross-backend discipline R-82's has (R-34,
+    RQ-298).
+  - (c) Keep R-82 and read T1 on the band as holding "after float tolerance" in configuration only, the momenta's
+    `y` sign left to the input: weaker than T1's sentence, and REQ-ENC-003 reworded.
+- **Applied meanwhile:** `encode_t1_gauge` (`crates/kernel/tests/encode_core.rs`) sweeps random `g` per §3.3, mirror
+  included, on states off the band (`|λ̃_y| ≥ about 1.5e-3`), and the band with `g` that turn, move, boost and rescale
+  but do not mirror, which is what REQ-ENC-003's verify detail names ("deadband-straddling rotations"). The mirror tie
+  is encoded twice, with the same bits. No state on the band is swept under `Π`.
+- **Waits:** REQ-ENC-003 (`rq: RQ-360`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
+  REQ-ENC-003 held, not closed.
