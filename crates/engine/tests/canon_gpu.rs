@@ -1,9 +1,14 @@
 //! Canonicalisation `C` on the GPU (`kernel::stage::canon`, `engine::decode_dispatch::canonicalise_gpu`; TASK-M2-07): the
 //! kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively, read back and checked against the same source on
 //! the CPU at f64 and f32. CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`, and on Metal.
-//! - `canonicaliser_mirror_tie`: states whose steps 1a, 0, 1b and 2 are exact no-ops, so `λ̃_y` is exactly `±δ_λ` and
-//!   its neighbours at each precision: no mirror for `|λ̃_y| ≤ δ_λ`, a mirror just below `−δ_λ`, the same output twice,
-//!   and the same branch on CPU-f64, CPU-f32 and GPU-f32; the test reads `λ̃_y`, not `λ_y` (REQ-DEC-017).
+//! - `canonicaliser_mirror_tie`: states whose steps 1a, 0, 1b and 2 are exact no-ops and on which the mirror decision's
+//!   arithmetic is exact, so `λ̃_y` is exactly `±δ_λ` and its neighbours at each precision: no mirror for
+//!   `|λ̃_y| ≤ δ_λ`, a mirror just below `−δ_λ`, the same output twice, and the same branch on CPU-f64, CPU-f32 and
+//!   GPU-f32; the test reads `λ̃_y`, not `λ_y`. Turned, translated and boosted ties take the same branch on CPU-f32 and
+//!   GPU-f32, every one (REQ-DEC-017).
+//! - `canonicaliser_seam_sweep`: collinear f32 states at random angles, all at the `λ̃_y = 0` seam, some with `ρ = 0`:
+//!   CPU-f32 and GPU-f32 take the same mirror branch and raise the same `lookup_clamped` on every one (REQ-DEC-017,
+//!   REQ-ENC-016).
 //! - `canonicaliser_canonicalise_order`: an off-CoM, boosted, scaled, rotated state, mirrored or not: `I` is the
 //!   CoM-frame one, and the output is the canonical representative on both backends (REQ-ENC-015).
 //! - `canonicaliser_coincident_inner_pair`: `ρ = 0` raises `lookup_clamped` with `φ = +0` and the identity rotation on
@@ -12,7 +17,8 @@
 //!   controls included, takes no mirror, turns by 0 and moves nothing beyond rounding (REQ-DEC-018).
 //!
 //! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory. **PIT-10:** the cross-backend branch claim
-//! is for identical inputs; where the backends' `λ̃_y` differ, so may their branches.
+//! is for identical inputs. The backends' recorded `λ̃_y` and `φ` can differ in their last bits (WGSL's `√`, `/` and
+//! `atan2` are not correctly rounded); the branches are decided before them (`kernel::canon`'s note) and do not.
 
 use std::path::{Path, PathBuf};
 
@@ -106,35 +112,37 @@ const EPS32: f64 = f32::EPSILON as f64;
 
 // ── canonicaliser_mirror_tie (REQ-DEC-017) ──────────────────────────────────────────────────────────────────────
 
-/// A state with masses `(¼, ¼, ½)`, `r₀ = (−d, a)`, `r₁ = (d, a)`, `r₂ = (0, −a)`, at rest: its CoM is exactly 0, `ρ`
-/// is on `+x` with `ρ_y = 0`, and `λ_y = −2a`, so `λ̃_y = √(m₂M₀₁)·λ_y = ½·(−2a) = −a`, each exact. `d` makes `I` round
-/// to a value whose square root is 1 ([`unit_d`]), so step 0 is the identity too.
+/// A state with masses `(¼, ¼, ½)`, `r₀ = (−d, a)`, `r₁ = (2 − d, a)`, `r₂ = (d − 1, −a)`, at rest, `d` in `[1, 2]`:
+/// its CoM is exactly 0, `ρ = (2, 0)`, `Λ = M₀₁r₂ − m₀r₀ − m₁r₁ = (d − 1, −a)` and `λ_y = Λ_y/M₀₁ = −2a`, so
+/// `λ̃_y = √(m₂M₀₁)·λ_y = ½·(−2a) = −a`, each exact. `d` makes `I` round to 1 exactly ([`unit_d`]), so step 0 is the
+/// identity too, and the mirror decision's sides compare `2a²` with `2δ_λ²`, each one rounding: `C`'s branch at the
+/// deadband's edge is the same comparison on every backend.
 fn tie<R: LinkReal>(a: R, d: R) -> Ic<R> {
     let (q, h, z) = (R::from(0.25).unwrap(), R::from(0.5).unwrap(), R::zero());
+    let (one, two) = (R::one(), R::from(2.0).unwrap());
     Ic {
         m: [q, q, h],
-        r: [[-d, a], [d, a], [z, -a]],
+        r: [[-d, a], [two - d, a], [d - one, -a]],
         p: [[z; 2]; 3],
     }
 }
 
-/// The `d` nearest `√2` for which [`tie`]'s state has `√I = 1` exactly at the precision of `R`, found by stepping
-/// from `√2` one representable value at a time.
+/// The `d` nearest `1 + 1/√2` for which [`tie`]'s state has `I = 1` exactly at the precision of `R`
+/// (`I = (d − 1)² + ½` in the reals), found by stepping one representable value at a time.
 fn unit_d<R: LinkReal>(up: fn(R) -> R, down: fn(R) -> R) -> R {
     let a = R::DELTA_LAMBDA;
-    let start = R::from(2f64.sqrt()).unwrap();
+    let start = R::from(1.0 + 0.5f64.sqrt()).unwrap();
     let (mut lo, mut hi) = (start, start);
     for _ in 0..64 {
         for d in [lo, hi] {
-            let c = canonicalise(&tie(a, d));
-            if c.i_in.sqrt() == R::one() {
+            if canonicalise(&tie(a, d)).i_in == R::one() {
                 return d;
             }
         }
         lo = down(lo);
         hi = up(hi);
     }
-    panic!("no d near √2 gives √I = 1 at {}", R::NAME)
+    panic!("no d near 1 + 1/√2 gives I = 1 at {}", R::NAME)
 }
 
 /// The tie's `a` values, so `λ̃_y = −a`: `±δ_λ`, one step either side of each, `±2δ_λ`, and `±0`; and whether each
@@ -253,38 +261,48 @@ fn canonicaliser_mirror_tie() {
         f32::DELTA_LAMBDA
     );
     // Turned, translated and boosted ties: λ̃_y within rounding of the deadband's edges. Each backend gives the same
-    // output twice, and its mirror is its own λ̃_y's test; CPU-f32 and GPU-f32 take the same branch where they read the
-    // same λ̃_y (PIT-10).
+    // output twice, and CPU-f32 and GPU-f32 take the same branch on every one, on identical inputs (PIT-10).
     let turns: Vec<Ic<f64>> = cases64
         .iter()
-        .flat_map(|(a, _)| [0.3, 1.9, -2.6].map(|t| turned(&tie(*a, 2f64.sqrt()), t)))
+        .flat_map(|(a, _)| [0.3, 1.9, -2.6].map(|t| turned(&tie(*a, d64), t)))
         .collect();
     let narrow_turns: Vec<Ic<f32>> = turns.iter().map(narrow).collect();
     let (first, second) = (gpu(&h, &narrow_turns), gpu(&h, &narrow_turns));
-    let mut same = 0;
+    let cpu_turns: Vec<Canonical<f32>> = narrow_turns.iter().map(canonicalise).collect();
     for (k, x) in turns.iter().enumerate() {
-        let c64 = canonicalise(x);
-        assert_eq!(canonicalise(x), c64, "CPU-f64 gave two results at turn {k}");
-        assert_eq!(c64.mirrored, c64.lambda_t_y < -f64::DELTA_LAMBDA);
-        let c32 = canonicalise(&narrow_turns[k]);
+        assert_eq!(
+            canonicalise(x),
+            canonicalise(x),
+            "CPU-f64 gave two results at turn {k}"
+        );
         assert_eq!(
             bits(&first[k]),
             bits(&second[k]),
             "GPU-f32 gave two results at turn {k}"
         );
-        assert_eq!(first[k].mirrored, first[k].lambda_t_y < -f32::DELTA_LAMBDA);
-        if first[k].lambda_t_y.to_bits() == c32.lambda_t_y.to_bits() {
-            same += 1;
-            assert_eq!(
-                first[k].mirrored, c32.mirrored,
-                "the backends' branches differ at turn {k}"
-            );
-        }
     }
+    let mirrors = check_branches(&first, &cpu_turns, "turn");
     eprintln!(
-        "canonicaliser_mirror_tie: {same} of {} turned ties read the same λ̃_y on CPU-f32 and GPU-f32",
+        "canonicaliser_mirror_tie: {} turned ties, {mirrors} mirrored, the same branch on CPU-f32 and GPU-f32",
         turns.len()
     );
+}
+
+/// The backends' branches agree on every state: `lookup_mirrored` and `lookup_clamped` of GPU-f32's `gpu` against
+/// CPU-f32's `cpu`, the same inputs; the number mirrored.
+fn check_branches(gpu: &[Canonical<f32>], cpu: &[Canonical<f32>], what: &str) -> usize {
+    assert_eq!(gpu.len(), cpu.len());
+    for (k, (g, c)) in gpu.iter().zip(cpu).enumerate() {
+        assert_eq!(
+            g.mirrored, c.mirrored,
+            "the backends' mirror branches differ at {what} {k}: GPU-f32 {g:?}, CPU-f32 {c:?}"
+        );
+        assert_eq!(
+            g.clamped, c.clamped,
+            "the backends' lookup_clamped differ at {what} {k}: GPU-f32 {g:?}, CPU-f32 {c:?}"
+        );
+    }
+    cpu.iter().filter(|c| c.mirrored).count()
 }
 
 negative_control!(
@@ -304,6 +322,80 @@ negative_control!(
             })
             .collect();
         check_tie(&cases, &outs, "CPU-f64")
+    }
+);
+
+// ── canonicaliser_seam_sweep (REQ-DEC-017, REQ-ENC-016) ─────────────────────────────────────────────────────────
+
+/// The sweep's size.
+const SWEEP: usize = 20_000;
+
+/// Collinear f32 states through a random point at a random angle, so `λ̃_y` is 0 in the reals and its computed value is
+/// rounding: the `λ̃_y = 0` seam, at random masses and momenta. Every eighth has `r₁ = r₀` bit for bit, `ρ = 0`.
+fn seam_states() -> Vec<Ic<f32>> {
+    let mut rng = SplitMix::new(41);
+    (0..SWEEP)
+        .map(|n| {
+            let w = [0; 3].map(|_| f64::from(rng.uniform(0.2, 1.2)));
+            let total: f64 = w.iter().sum();
+            let theta = f64::from(rng.uniform(0.0, 1.0)) * std::f64::consts::TAU;
+            let (sn, cs) = theta.sin_cos();
+            let origin = [0; 2].map(|_| f64::from(rng.uniform(-0.5, 0.5)));
+            let mut t = [0; 3].map(|_| f64::from(rng.uniform(-1.0, 1.0)));
+            if n % 8 == 0 {
+                t[1] = t[0];
+            }
+            Ic {
+                m: w.map(|x| (x / total) as f32),
+                r: t.map(|ti| [(origin[0] + ti * cs) as f32, (origin[1] + ti * sn) as f32]),
+                p: [0; 3].map(|_| [rng.uniform(-0.5, 0.5), rng.uniform(-0.5, 0.5)]),
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn canonicaliser_seam_sweep() {
+    let h = harness();
+    let states = seam_states();
+    let g = gpu(&h, &states);
+    let c: Vec<Canonical<f32>> = states.iter().map(canonicalise).collect();
+    let mirrors = check_branches(&g, &c, "seam state");
+    let clamped = c.iter().filter(|x| x.clamped).count();
+    let lambda_bits = g
+        .iter()
+        .zip(&c)
+        .filter(|(a, b)| a.lambda_t_y.to_bits() != b.lambda_t_y.to_bits())
+        .count();
+    let phi_bits = g
+        .iter()
+        .zip(&c)
+        .filter(|(a, b)| a.phi.to_bits() != b.phi.to_bits())
+        .count();
+    assert!(
+        mirrors > 0 && mirrors < SWEEP,
+        "the sweep reached one branch only ({mirrors} of {SWEEP} mirrored)"
+    );
+    assert!(clamped >= SWEEP / 8, "only {clamped} states at ρ = 0");
+    eprintln!(
+        "canonicaliser_seam_sweep: {SWEEP} seam states, {mirrors} mirrored, {clamped} at ρ = 0, the same branches on \
+         CPU-f32 and GPU-f32; the recorded λ̃_y differs in {lambda_bits} and φ in {phi_bits} (not branched on)"
+    );
+}
+
+negative_control!(
+    canonicaliser_seam_sweep,
+    "branching on each backend's own recorded λ̃_y, formed through √, / and the rotation, must fail",
+    expected = "the backends' mirror branches differ",
+    {
+        let h = harness();
+        let states = seam_states();
+        let mut g = gpu(&h, &states);
+        let mut c: Vec<Canonical<f32>> = states.iter().map(canonicalise).collect();
+        for x in g.iter_mut().chain(c.iter_mut()) {
+            x.mirrored = x.lambda_t_y < -f32::DELTA_LAMBDA;
+        }
+        check_branches(&g, &c, "seam state");
     }
 );
 

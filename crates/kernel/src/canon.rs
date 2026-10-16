@@ -39,14 +39,32 @@
 //!   unflagged.
 //! - **`I_in` rounding to `+∞`** (f64 above about `1e154` per coordinate, f32 above about `1e19`): `√I_in = +∞`, so
 //!   `r/√I_in` is `±0`, `λ = 1/∞ = 0`, and `I_in^{1/4}·p` is `±∞`, or NaN for a zero component; step 1b's sums and the
-//!   rotation then make every momentum NaN on the CPU. `ρ` is then 0, so `lookup_clamped` is raised and `φ = 0`. On the
-//!   GPU this arithmetic on `∞` is not pinned (WGSL may assume there are no infinities; R-436).
+//!   rotation then make every momentum NaN on the CPU. `ρ` and the mirror are read before the division (below), so
+//!   `lookup_clamped` is raised iff the CoM-frame `ρ` is 0, `φ` is that `ρ`'s angle, and the mirror is never taken (the
+//!   test's right side is `+∞`). On the GPU this arithmetic on `∞` is not pinned (WGSL may assume there are no
+//!   infinities; R-436).
 //!
-//! **The branch inputs** (R-34, R-84; gpu_determinism_note rules 1, 2 and 6): the guard compares `ρ_x` and `ρ_y`, each
-//! one lone subtraction, with 0; the mirror compares `λ̃_y` with the constant `−δ_λ` (`ChartConstants::DELTA_LAMBDA`,
-//! per precision). Every multiply feeding an add on their way is an explicit `fma`, so no backend contracts it
-//! differently, on the premise dd_decoder §3.1 states (a backend keeps an explicit `fma` fused). The cross-backend claim
-//! is for identical inputs only (PIT-10).
+//! **The branch inputs, read before step 0** (R-34, R-84; gpu_determinism_note rules 1, 2 and 6). Step 2's guard and
+//! angle and step 3's decision are computed from the CoM-frame positions `x`, before step 0's division, in arithmetic
+//! every backend rounds alike: correctly rounded differences and products and explicit `fma`s, with no `√`, division
+//! or trigonometry, whose WGSL results carry ulp bounds, not correct rounding, so that a branch fed through them can
+//! differ between backends on one input. Each is R-23's step in exact arithmetic, `d > 0` being step 0's divisor:
+//! - **The guard and `φ`.** `ρ = x₁ − x₀` is 0 iff the scaled `r₁ − r₀ = ρ/d` is, and `atan2` is unchanged by the
+//!   positive factor `1/d`.
+//! - **The mirror** ([`mirror_decision`]). `R(−φ)` puts `ρ̂ = ρ/‖ρ‖` on `+x` and keeps cross products, so a vector's `y`
+//!   after it is its cross product with `ρ̂`, `a × b = a_xb_y − a_yb_x`. In the scaled frame `λ = Λ/(M₀₁d)`, with
+//!   `Λ = M₀₁x₂ − m₀x₀ − m₁x₁`; hence `λ̃_y = √(m₂M₀₁)·c/(‖ρ‖·M₀₁·d)`, `c = ρ × Λ`. The factor of `c` is positive, so
+//!   `λ̃_y < −δ_λ` iff `c < 0` and `c² > δ_λ²·‖ρ‖²·d²·M₀₁/m₂`, that is `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`: `δ_λ` carried into the
+//!   units of `c²`. At `ρ = 0` step 2 is the identity and `λ̃_y = √(m₂M₀₁)·Λ_y/(M₀₁d)`, the same with `ρ` read as
+//!   `(1, 0)`. `d² = I_in`, or 1 where `I_in = 0` (step 0's select, below). `M₀₁` is the one rounding of `m₀ + m₁`
+//!   ([`lambda_t_y`]'s).
+//!
+//! So `|λ̃_y| ≤ δ_λ`, `−δ_λ` itself included, is no mirror, and one input takes one branch on every backend that keeps
+//! an explicit `fma` fused (dd_decoder §3.1's premise) and keeps subnormals; a GPU that flushes them can differ only
+//! where a difference or product in these tests is below the smallest normal (f32: about `1.2e-38`; `δ_λ² = 1e-24`, so
+//! for `M₀₁‖ρ‖²` or `M₀₁‖ρ‖²I_in` below about `1e-14`). [`Canonical::lambda_t_y`] is formed after the rotation and
+//! read, not branched on; within rounding of `−δ_λ` it may disagree with the flag. The cross-backend claim is for
+//! identical inputs only (PIT-10).
 //!
 //! **The scale gauge** ([`scale_gauge`]; dd_decoder §3.5, chart_reference §0.5): `ℓ = √I`, `rᵢ ← rᵢ/ℓ`,
 //! `pᵢ ← √ℓ·pᵢ`, the same similarity map as step 0 ([`similarity`]); a no-op, to rounding, on canonical output.
@@ -67,11 +85,11 @@ pub struct Canonical<R> {
     pub lambda: R,
     /// Step 2's rotation angle `φ`, the rotation applied being `R(−φ)`.
     pub phi: R,
-    /// Step 3's branch input, `λ̃_y = √μ_λ·λ_y` after the rotation.
+    /// `λ̃_y = √μ_λ·λ_y` after the rotation, before the mirror ([`lambda_t_y`]): recorded, not branched on.
     pub lambda_t_y: R,
-    /// `lookup_clamped`: `ρ = 0` exactly at step 2 (R-13).
+    /// `lookup_clamped`: `ρ = 0` exactly at step 2 (R-13), read before step 0's division.
     pub clamped: bool,
-    /// `lookup_mirrored`: step 3 mirrored the state, `λ̃_y < −δ_λ` (R-82).
+    /// `lookup_mirrored`: step 3 mirrored the state, `λ̃_y < −δ_λ` (R-82), by [`mirror_decision`].
     pub mirrored: bool,
 }
 
@@ -167,8 +185,9 @@ fn rotate<R: LinkReal>(v: [R; 2], c: R, s: R) -> [R; 2] {
     ]
 }
 
-/// Step 3's branch input, `λ̃_y = √μ_λ·λ_y` of `r` under `m`, `μ_λ = m₂M₀₁`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, `M₀₁` the one
-/// rounding of `m₀ + m₁` (`fma(m₁, 1, m₀)`, as the mass block forms it).
+/// `λ̃_y = √μ_λ·λ_y` of `r` under `m`, `μ_λ = m₂M₀₁`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, `M₀₁` the one rounding of
+/// `m₀ + m₁` (`fma(m₁, 1, m₀)`, as the mass block forms it): step 3's quantity, read on `C`'s rotated output and
+/// recorded in [`Canonical::lambda_t_y`]. `C` does not branch on it ([`mirror_decision`] does the branching).
 #[inline]
 pub fn lambda_t_y<R: LinkReal>(m: [R; 3], r: [[R; 2]; 3]) -> R {
     let m01 = Float::mul_add(m[1], R::one(), m[0]);
@@ -176,10 +195,32 @@ pub fn lambda_t_y<R: LinkReal>(m: [R; 3], r: [[R; 2]; 3]) -> R {
     Float::sqrt(m[2] * m01) * (r[2][1] - inner)
 }
 
-/// Step 3's test: mirror iff `λ̃_y < −δ_λ`; `|λ̃_y| ≤ δ_λ` is no mirror (R-82).
+/// R-82's test as it reads, on a given `λ̃_y`: mirror iff `λ̃_y < −δ_λ`; `|λ̃_y| ≤ δ_λ` is no mirror. The reference
+/// [`mirror_decision`] equals in exact arithmetic.
 #[inline]
 pub fn mirror_taken<R: LinkReal>(lambda_t_y: R) -> bool {
     lambda_t_y < -R::DELTA_LAMBDA
+}
+
+/// Step 3's decision (R-82), on the CoM-frame positions `x` before step 0 and `d2`, the square of step 0's divisor
+/// (`I_in`, or 1 where `I_in = 0`): with `ρ = x₁ − x₀` (`(1, 0)` where `ρ = 0`, step 2's identity rotation),
+/// `Λ = M₀₁x₂ − m₀x₀ − m₁x₁` and `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x`, mirror iff `c < 0` and `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d2`.
+/// Every operation is a correctly rounded `fma`, product or difference, with no `√`, division or trigonometry, so
+/// every backend that keeps an explicit `fma` fused takes the same branch on the same input (the module's note).
+#[inline]
+pub fn mirror_decision<R: LinkReal>(m: [R; 3], x: [[R; 2]; 3], d2: R) -> bool {
+    let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
+    let pole = coincident(rho);
+    let axis = [
+        select(pole, R::one(), rho[0]),
+        select(pole, R::zero(), rho[1]),
+    ];
+    let m01 = Float::mul_add(m[1], R::one(), m[0]);
+    let big =
+        |k: usize| Float::mul_add(m01, x[2][k], -Float::mul_add(m[1], x[1][k], m[0] * x[0][k]));
+    let c = Float::mul_add(axis[0], big(1), -(axis[1] * big(0)));
+    let delta = R::DELTA_LAMBDA;
+    (c < R::zero()) & (c * c * m[2] > delta * delta * m01 * norm2(axis) * d2)
 }
 
 /// `(v_x, −v_y)` where `flip` holds, else `v`, selected.
@@ -201,6 +242,12 @@ pub fn canonicalise<R: LinkReal>(ic: &Ic<R>) -> Canonical<R> {
     ];
     // 0: I = 1, from the CoM-frame I.
     let i_in = inertia(m, centred);
+    // Step 2's guard and angle and step 3's decision, read off the CoM-frame state before step 0's division (the
+    // module's note): `ρ = 0`, `φ` and the mirror test are scale-free in exact arithmetic.
+    let rho = [centred[1][0] - centred[0][0], centred[1][1] - centred[0][1]];
+    let clamped = coincident(rho);
+    let phi = rotation_angle(rho);
+    let mirrored = mirror_decision(m, centred, select(i_in == R::zero(), R::one(), i_in));
     let (r, p, lambda) = similarity(centred, ic.p, i_in);
     // 1b: zero total momentum.
     let total = [p[0][0] + p[1][0] + p[2][0], p[0][1] + p[1][1] + p[2][1]];
@@ -216,15 +263,11 @@ pub fn canonicalise<R: LinkReal>(ic: &Ic<R>) -> Canonical<R> {
         unboost(p[2], m[2]),
     ];
     // 2: ρ onto +x.
-    let rho = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
-    let clamped = coincident(rho);
-    let phi = rotation_angle(rho);
     let (s, c) = (Float::sin(phi), Float::cos(phi));
     let r = [rotate(r[0], c, s), rotate(r[1], c, s), rotate(r[2], c, s)];
     let p = [rotate(p[0], c, s), rotate(p[1], c, s), rotate(p[2], c, s)];
-    // 3: the mirror, in encode's frame.
+    // 3: the mirror, in encode's frame, as decided above; λ̃_y recorded.
     let lambda_t_y = lambda_t_y(m, r);
-    let mirrored = mirror_taken(lambda_t_y);
     Canonical {
         ic: Ic {
             m,

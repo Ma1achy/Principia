@@ -10,6 +10,11 @@
 //!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}` (REQ-ENC-006).
 //! - `canon_mirror_deadband`: the mirror test at the deadband's edge, `λ̃_y = −δ_λ` and one step below it, at each
 //!   precision; and `λ̃_y` is the decoder's own `λ̃_y` on canonical decodes.
+//! - `canon_mirror_decision_edges`: `C`'s decision ([`mirror_decision`], R-82's test without `√`, division or trig) on
+//!   states where its arithmetic is exact: no mirror at `|λ̃_y| ≤ δ_λ`, a mirror one step below `−δ_λ`, at each precision,
+//!   `ρ = 0` included (REQ-DEC-017).
+//! - `canon_mirror_decision_near`: the decision against `λ̃_y < −δ_λ` at f64 on turned, scaled, translated and mirrored
+//!   states `1%` of `δ_λ` either side of the deadband's edges (REQ-DEC-017).
 //! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
 //!   (RQ-296 holds the outputs).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
@@ -22,7 +27,9 @@
 
 use std::path::Path;
 
-use kernel::canon::{self, canonicalise, inertia, lambda_t_y, mirror_taken, Canonical};
+use kernel::canon::{
+    self, canonicalise, inertia, lambda_t_y, mirror_decision, mirror_taken, Canonical,
+};
 use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::{decode, Ic, Latent};
 use kernel::generated::constants::ChartConstants;
@@ -730,6 +737,102 @@ fn check_deadband<R: Precision>(test: fn([R; 3], [[R; 2]; 3]) -> R, down: fn(R) 
     }
 }
 
+/// [`mirror_decision`]'s signature: masses, CoM-frame positions before step 0, `d²`; whether to mirror.
+type Decide<R> = fn([R; 3], [[R; 2]; 3], R) -> bool;
+
+/// An edge state: masses `(¼, ¼, ½)`, `x₀ = (−u, a)`, `x₁ = (u, a)`, `x₂ = (0, −a)`, `u` 1 or 0. Its CoM is 0,
+/// `ρ = (2u, 0)` and `Λ = (0, −a)`, so at `d² = 1`, `λ̃_y = ½·λ_y = −a`, through step 2's identity at `u = 0` (`ρ = 0`).
+/// Every operation of the decision is exact on it but `a²` and `δ_λ²`, so its sides compare `2a²` with `2δ_λ²` (`a²/2`
+/// with `δ_λ²/2` at `u = 0`), each one rounding: the deadband's edges at each precision.
+fn edge<R: Precision>(u: R, a: R) -> ([R; 3], [[R; 2]; 3]) {
+    let (q, h, z) = (cast::<R>(0.25), cast::<R>(0.5), R::zero());
+    ([q, q, h], [[-u, a], [u, a], [z, -a]])
+}
+
+/// The decision at the deadband's edges, `λ̃_y = −a`: no mirror at `a = ±δ_λ`, one step inside, `±0`, and `−2δ_λ`; a
+/// mirror one step outside `−δ_λ` and at `2δ_λ`; with `ρ` on `+x` and with `ρ = 0`.
+fn check_decision_edges<R: Precision + std::fmt::LowerExp>(
+    decide: Decide<R>,
+    up: fn(R) -> R,
+    down: fn(R) -> R,
+) {
+    let d = <R as ChartConstants>::DELTA_LAMBDA;
+    let cases = [
+        (d, false),
+        (up(d), true),
+        (down(d), false),
+        (d + d, true),
+        (-d, false),
+        (-up(d), false),
+        (-(d + d), false),
+        (R::zero(), false),
+        (-R::zero(), false),
+    ];
+    for u in [R::one(), R::zero()] {
+        for (a, want) in cases {
+            let (m, x) = edge(u, a);
+            assert_eq!(
+                decide(m, x, R::one()),
+                want,
+                "{}: the decision at λ̃_y = −({a:e}), ρ_x = {}, against λ̃_y < −δ_λ",
+                R::NAME,
+                Into::<f64>::into(u + u)
+            );
+        }
+    }
+}
+
+/// A state whose `λ̃_y` is `t` exactly in the reals, under masses `m`: built on the section (`ρ̃ = (√(1 − 0.36 − t²), 0)`,
+/// `λ̃ = (0.6, t)`, `I = 1`), then mirrored or not, turned by `θ`, scaled by `s` and translated by `(2s, −s)`, at f64; its
+/// CoM-frame positions as the test forms them, and their `I`. `λ̃_y` of the gauged state is `t`, or `−t` where mirrored.
+fn gauged(m: [f64; 3], t: f64, mirror: bool, theta: f64, s: f64) -> [[f64; 2]; 3] {
+    let m01 = m[0] + m[1];
+    let (mu_rho, mu_lambda) = (m[0] * m[1] / m01, m[2] * m01);
+    let rho = [(1.0 - 0.36 - t * t).sqrt() / mu_rho.sqrt(), 0.0];
+    let lam = [0.6 / mu_lambda.sqrt(), t / mu_lambda.sqrt()];
+    let place = |a: f64, b: f64| [a * rho[0] + b * lam[0], a * rho[1] + b * lam[1]];
+    let r = [
+        place(-m[1] / m01, -m[2]),
+        place(m[0] / m01, -m[2]),
+        place(0.0, m01),
+    ];
+    let (sn, cs) = theta.sin_cos();
+    r.map(|v| {
+        let y = if mirror { -v[1] } else { v[1] };
+        [
+            s * (cs * v[0] - sn * y) + 2.0 * s,
+            s * (sn * v[0] + cs * y) - s,
+        ]
+    })
+}
+
+/// The decision against R-82's `λ̃_y < −δ_λ` on f64 states whose `λ̃_y` is a set fraction of `δ_λ` off the deadband's
+/// edges, `±1%` and more, under masses with `m₂/M₀₁` of 1.5 and of 3/7, turned, scaled, translated and mirrored.
+fn check_decision_near(decide: Decide<f64>) {
+    let d = f64::DELTA_LAMBDA;
+    for m in [[0.15, 0.25, 0.6], [0.35, 0.35, 0.3]] {
+        for k in [-2.0, -1.01, -0.99, -0.5, 0.0, 0.5, 0.99, 1.01, 2.0] {
+            for mirror in [false, true] {
+                for theta in [0.4, 2.2, -1.7] {
+                    for s in [0.5, 3.0] {
+                        let y = gauged(m, k * d, mirror, theta, s);
+                        let com = canon::centre_of_mass(m, y);
+                        let x = y.map(|v| [v[0] - com[0], v[1] - com[1]]);
+                        let want = if mirror { -k } else { k } < -1.0;
+                        assert_eq!(
+                            decide(m, x, inertia(m, x)),
+                            want,
+                            "the decision at λ̃_y = {}δ_λ, masses {m:?}, θ {theta}, s {s}, mirrored {mirror}, \
+                             against λ̃_y < −δ_λ",
+                            if mirror { -k } else { k }
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[test]
 fn canon_mirror_deadband() {
     check_deadband::<f64>(lambda_t_y, f64::next_down);
@@ -742,6 +845,51 @@ negative_control!(
     expected = "the decoder's",
     check_deadband::<f64>(
         |m, r| lambda_t_y(m, r) / (m[2] * (m[0] + m[1])).sqrt(),
+        f64::next_down
+    )
+);
+
+/// The decision at f64 in plain arithmetic, for the controls: `m₂` and `M₀₁` exchanged where `swap` (R-82's threshold
+/// scaled by `m₂/M₀₁`), and the tie `m₂c² = δ_λ²M₀₁‖ρ‖²d²` taken as a mirror where `tie`.
+#[cfg(feature = "controls")]
+fn defective(m: [f64; 3], x: [[f64; 2]; 3], d2: f64, swap: bool, tie: bool) -> bool {
+    let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
+    let m01 = m[0] + m[1];
+    let big = |k: usize| m01 * x[2][k] - m[0] * x[0][k] - m[1] * x[1][k];
+    let c = rho[0] * big(1) - rho[1] * big(0);
+    let (lhs, rhs) = if swap { (m01, m[2]) } else { (m[2], m01) };
+    let (left, right) = (
+        c * c * lhs,
+        f64::DELTA_LAMBDA * f64::DELTA_LAMBDA * rhs * (rho[0] * rho[0] + rho[1] * rho[1]) * d2,
+    );
+    c < 0.0 && if tie { left >= right } else { left > right }
+}
+
+#[test]
+fn canon_mirror_decision_near() {
+    check_decision_near(mirror_decision);
+}
+
+negative_control!(
+    canon_mirror_decision_near,
+    "a decision with m₂ and M₀₁ exchanged, R-82's threshold scaled by m₂/M₀₁, must fail near the edge",
+    expected = "against λ̃_y < −δ_λ",
+    check_decision_near(|m, x, d2| defective(m, x, d2, true, false))
+);
+
+#[test]
+fn canon_mirror_decision_edges() {
+    check_decision_edges::<f64>(mirror_decision, f64::next_up, f64::next_down);
+    check_decision_edges::<f32>(mirror_decision, f32::next_up, f32::next_down);
+}
+
+negative_control!(
+    canon_mirror_decision_edges,
+    "a decision that mirrors at |λ̃_y| = δ_λ, the deadband's tie taken as a mirror, must fail",
+    expected = "the decision at λ̃_y = −(1e-12), ρ_x = 2",
+    check_decision_edges::<f64>(
+        |m, x, d2| defective(m, x, d2, false, true),
+        f64::next_up,
         f64::next_down
     )
 );
