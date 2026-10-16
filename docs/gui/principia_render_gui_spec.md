@@ -110,7 +110,8 @@ IC:
   shape-sphere `(θ, φ)` chart, where the chart's coordinates are the shape itself.
 - **The hover label names a fate only once it's decided.** Before that it reads "undecided · still interacting at `t` of
   `t_max`". A decided fate is a terminal `state` (escape, collision) or `bounded` at the horizon (payload §2); its labels
-  use 0-based bodies and pairs (R-22).
+  name the bodies 1, 2, 3 and a pair by its two bodies, "collision 1–2", never a pair id, from the one display function
+  (R-449; payload §2, "What a person reads").
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - a one-line summary (fate, `t_end`, FTLE, `E₀`);
@@ -350,21 +351,42 @@ dimension gets its own key:**
 - coordinate maps: their colour square (e.g. `u → red`, `v → green`);
 - post operations: line samples (quad boundaries, grid).
 
-It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and 0-based
-labels (R-22).
+It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and
+its 1-based class names (R-449, superseding R-22's 0-based display labels): "collision 1–2", "collision 1–3", "collision
+2–3", "triple collision", "escape body 1", "escape body 2", "escape body 3", "triple ejection", each from the one display
+function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Its keys are the nine classes,
+physical outcomes only (R-444), each a flat swatch: the black key reads "bounded / nothing yet", which `running` and
+every failure share in the outcome view (R-446); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
+key. **Each key's name is the outcome class's name from the same display module** (applied per R-369): the black
+class's is "bounded / nothing yet", the other eight's the function's names for their `state` and `detail`.
+**The forbidden-region key (R-446; applied per R-369).** A forbidden chart region keeps the hatch, and the outcome
+legend keys it with one more key after the nine, labelled "forbidden region", drawn in the hatch style
+(`debug_invalid`) and compared as the style, not as one colour (R-136); it is drawn always, its share 0 where the view
+holds no forbidden pixel. It covers every pixel REQ-COL-102's lane marks forbidden, both of the chart contract's
+hatches (the domain's end and the universal fallback; colour_composition §1.4). **Its share and the nine classes'
+shares are area statistics over the view, so they count as R-408 counts** (chart_decoder_contract Part 3; §G7): a
+visible pixel counts only if every axis is inside its primary range; a pixel hatched because the domain ends there (a
+bounded axis past its edge, or a failed `Φ`) is drawn with the key's hatch but leaves every share and the total; the
+forbidden key's share is that of the states that fail the validity check, §G7's "forbidden in view". Inside `[0,1]²`
+the shares are unchanged.
 
-**A free-fall slice under `η_E` is almost all degenerate, and that is expected (R-441; dd_decoder §3.7).** Energy
+**A free-fall slice under `η_E` is almost all `decode_failed`, drawn black, and that is expected (R-441, reworded by
+R-446; dd_decoder §3.7).** Energy
 normalisation scales the momenta, `pᵢ ← η_E·pᵢ`; with zero momenta it cannot reach any `E*` above the potential, since
 scaling zero momenta cannot raise the kinetic energy. So with `η_E` on, every pixel of a zero-momentum (free-fall)
 slice whose `E*` is above its potential `U = V₀` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
-below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn degenerate's white in the outcome legend
-(colour_composition §1.4; R-96). A pixel the mass block has already tagged, such as `DEGENERATE(M01_TINY)`, keeps
-that tag rather than an energy one, but it is `decode_failed` too and drawn the same white. The one exception to the
-colour is where `E* = V₀` exactly: the IC is already at the target, the decode is untouched and untagged, and the pixel
-integrates. `V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
+below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn black `#141418` in the outcome view, the
+bounded / nothing yet key of the outcome legend (colour_composition §1.4; R-446). A pixel the mass block has already
+tagged, such as `DEGENERATE(M01_TINY)`, keeps that tag rather than an energy one, but it is `decode_failed` too and
+drawn the same black. The one exception to the colour is where `E* = V₀` exactly: the IC is already at the target, the
+decode is untouched and untagged, and the pixel integrates, drawn in its outcome's colour once its event fires.
+`V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
 `V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
 scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E` is then a no-op on every free-fall
-preset, and the near-uniform white, with that contour its only exception, is expected, not a bug.
+preset, and the near-uniform black, with that contour its only exception, is expected, not a bug. The tags show in the
+η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today the `state` view
+shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view the ruling's
+"η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's white `#ECECF0`.
 
 ## G7. Chart builder (`03_chartbuilder.png`)
 
@@ -398,7 +420,7 @@ preset, and the near-uniform white, with that contour its only exception, is exp
 Explore's Trajectory panel (§G2); trajectory_viewing §4 says where each lives. The standalone IC Inspector tool is absorbed;
 its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 
-- **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead. **Right-click a
+- **Pane 1, the IC:** drag bodies 1, 2, 3 (internally 0, 1, 2; R-449) and their velocity arrows, with ghost markers at the playhead. **Right-click a
   body** for its properties popover (mass, position, velocity, momentum, distances, per-body share of P / L / E — all
   editable, in sync with dragging); each body's disc radius is ∝ ∛m (R-96; `ic_inspector_scratchpad.md`).
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
@@ -466,7 +488,10 @@ It is reached from Windows › Console too, and Esc returns the focus to whichev
 The pictures are layouts, and **their values are illustrative: corpus values win, and the Run window exposes the parameters
 the contracts define, under their contract names (R-68).** Where a detail in one differs from a ruling, the notes or the
 corpus, the spec follows the authority:
-- **Body and pair labels** are 0-based (R-22). The artboards show "body 1 escapes", "collision 1–2", "body 3 crosses".
+- **Body and pair labels** are 1-based, as the artboards show them ("body 1 escapes", "collision 1–2", "body 3
+  crosses"): R-449 supersedes R-22's 0-based display labels, which overrode the artboards here. A pair is named by its
+  two bodies, smaller first, never by its pair id; storage, computation and machine-readable exports stay 0-based
+  (payload §2, "What a person reads").
 - **Escape has no persistence count** (R-29, change 11). The Run artboard shows "persistence 8".
 - **The profiler's top level is telemetry §2's five stages** (R-56). The donut shows other categories.
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
@@ -474,6 +499,10 @@ corpus, the spec follows the authority:
 - **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag
   the cube to orbit"; the compass has Tilt and Slice buttons and no orbit. The keyboard artboard shows one blue ring; the
   ring is orange in navigation mode and blue in interaction mode.
+- **The reference HTML files' event palette** (R-444 to R-446). `principia_render_modes.html` and
+  `principia_dev_gui.html` label the outcome classes "coll @ t=0" and "degenerate", and the render-mode catalogue's
+  outcome row gives "t=0 orange, degenerate white"; the outcome view has neither class, and its classes and colours are
+  colour_composition §1.4's.
 - **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
   (`N_max`, default 64), and the sound mapping (`θ(t), φ(t)` → spectrum). The Run window exposes the parameters the
   contracts define, under their contract names — so the artboard's integrator "tolerance" field has no counterpart.

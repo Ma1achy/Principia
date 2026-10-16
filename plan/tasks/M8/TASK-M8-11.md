@@ -2,8 +2,8 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-088, REQ-GUI-089, REQ-GUI-054
-- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27
-- **Needs (earlier milestones):** REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047
+- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33
+- **Needs (earlier milestones):** REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
 - **Size:** ~450 lines
@@ -38,3 +38,4 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
 - The Trajectory panel's file is `crates/gui/src/explore/trajectory.rs`, the one TASK-M6-27 creates for the panel's
   frame (its Deliverables name `crates/gui/src/explore/{time,legend,trajectory}.rs`); this task fills it, applied per
   R-369 (TASK-M1-14's pre-flight; was `trajectory_panel.rs`).
+- R-449 (16 Oct 2026): the shape sphere's landmark labels, the kept orbits' rows and the summary name the bodies 1-based through TASK-M2-33's conversion function: `BC₀₁`, `BC₁₂`, `BC₂₀` are shown `BC₁₂`, `BC₂₃`, `BC₁₃` (dd_integrator §3.7). The Euler landmarks' index is not defined; this task writes how they are shown (R-72), its reviewers deciding per R-369: RQ-334.

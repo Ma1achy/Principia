@@ -237,6 +237,9 @@ task that builds the landmarks, physics-reviewed and confirmed at the gate (R-12
 The table's labels are 0-based (R-22): `BC₀₁` is bodies 0 and 1, i.e. $\hat{\mathbf b}_{01}$, which is pair 2 in the payload's
 pair-id map (pair `k` is the side opposite body `k`). Axis assignment follows this convention: the form of `n` above is
 fixed, and the component→axis order is R-14's, the same as the IC Inspector's (`principia_chart_reference.md` §3.1, §3.3).
+These labels are internal. Shown on the overlay, they name the bodies 1-based (R-449): `BC₀₁`, `BC₁₂` and `BC₂₀` read
+`BC₁₂`, `BC₂₃` and `BC₁₃`, a pair's bodies smaller first. The table's `E₀, E₁, E₂` index is not defined beyond
+`ê_j = −b̂_j`; how they are shown is RQ-334.
 
 **Unwrapped phase** `θ̃`: the equatorial longitude `atan2(n_v-axis, n_u-axis)` accumulated continuously — per step, add the principal-value delta (∈ (−π, π]) so no 2π jumps enter; `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` are **derived at read from the running accumulator**, at any playhead. **Terminal latch:** on termination the state stops advancing and all accumulators freeze at their terminal values (the latch policy the winding cross-check certifies).
 
