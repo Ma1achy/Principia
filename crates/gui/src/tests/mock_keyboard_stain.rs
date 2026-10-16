@@ -436,3 +436,47 @@ fn ring_colours(h: &mut Headless, app: &mut App<MockSide>) -> Vec<egui::Color32>
         })
         .collect()
 }
+
+/// A param's step is a share of its own range, here [2, 6], and is kept in it: one `SetField` with the new value.
+#[test]
+fn mock_keyboard_stain_param_step_is_a_share_of_its_range() {
+    use crate::keyboard::keymap::Direction;
+    use crate::keyboard::scopes::{Adjust, StepKind};
+    use engine::contract::set_field::{Edit, RenderField};
+    let mut g = crate::mock::stain::default_graph();
+    g.set_occupant(
+        LATE_FADE,
+        Occupant::Custom(
+            "// @input t_end [0, 50]\n// @uniform gain: f32 = 3.0 [2, 6]\n\
+             fn brightness(ctx: Ctx) -> f32 { return gain * ctx.inputs[0].x; }\n"
+                .into(),
+        ),
+    )
+    .expect("a brightness with a gain");
+    let mut s = crate::stain::Scratch::default();
+    s.canvas.selection = [LATE_FADE].into();
+    let step = |times: f64| {
+        let mut out = crate::stain::Out::default();
+        let a = Adjust {
+            scope: crate::stain::PARAM_IDS[0],
+            kind: StepKind::Bounded,
+            times,
+            direction: Direction::Right,
+        };
+        crate::stain::adjust(&a, &s, &g, &mut out);
+        assert_eq!(out.edits.len(), 1, "one SetField");
+        match &out.edits[0].edit {
+            Edit::Render(RenderField::StainGraph(next)) => {
+                next.node(LATE_FADE).unwrap().params["gain"][0]
+            }
+            other => panic!("{other:?}"),
+        }
+    };
+    assert!((step(1.0) - 3.04).abs() < 1e-9, "{}", step(1.0));
+    assert!((step(-10.0) - 2.6).abs() < 1e-9, "{}", step(-10.0));
+    assert_eq!(step(-1000.0), 2.0);
+    assert_eq!(step(1000.0), 6.0);
+    rejects("a step of the unit range", || {
+        assert!((step(1.0) - 3.01).abs() < 1e-9)
+    });
+}
