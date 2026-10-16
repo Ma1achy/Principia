@@ -472,13 +472,14 @@ jobs:
         run: cargo nextest run -p engine --features controls decode_ --no-capture
       - name: cargo test -p engine --features controls decode_ --doc
         run: cargo test -p engine --features controls decode_ --doc
-      # The invariant-momentum construction's feasibility branch on Metal, its controls included (TASK-M2-09): the GPU
-      # takes the exact branch of `2·I·K* < L_z²` that CPU-f32 and CPU-f64 take, the tiny triples whose unnormalised limb
-      # products a flushing GPU would drop among them. `invariant_infeasible_` selects `invariant_gpu`'s tests.
-      - name: cargo nextest run -p engine --features controls invariant_infeasible_
-        run: cargo nextest run -p engine --features controls invariant_infeasible_ --no-capture
-      - name: cargo test -p engine --features controls invariant_infeasible_ --doc
-        run: cargo test -p engine --features controls invariant_infeasible_ --doc
+      # The invariant-momentum construction's branches on Metal, its controls included (TASK-M2-09): the GPU takes the
+      # exact branch of `2·I·K* < L_z²` that CPU-f32 and CPU-f64 take, the tiny triples whose unnormalised limb products
+      # a flushing GPU would drop among them, and CPU-f64's seed, decided on `z_α`. `invariant_` selects `invariant_gpu`'s
+      # tests.
+      - name: cargo nextest run -p engine --features controls invariant_
+        run: cargo nextest run -p engine --features controls invariant_ --no-capture
+      - name: cargo test -p engine --features controls invariant_ --doc
+        run: cargo test -p engine --features controls invariant_ --doc
       - name: cargo nextest run -p engine --features controls qa_m206_
         run: cargo nextest run -p engine --features controls qa_m206_ --no-capture
       - name: cargo test -p engine --features controls qa_m206_ --doc

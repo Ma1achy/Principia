@@ -1,4 +1,4 @@
-//! The invariant-momentum construction's feasibility branch on the GPU (`kernel::decode::invariant`; TASK-M2-09): the
+//! The invariant-momentum construction's branches on the GPU, feasibility and seed (`kernel::decode::invariant`; TASK-M2-09): the
 //! kernel's f32 build, `target/spirv/kernel.wgsl`, its entry points `decode_invariant_feasibility` and
 //! `decode_invariant_construct_defaults` dispatched natively, read back and checked against the same source on the CPU
 //! at f32 and at f64 and against an exact integer reference. CI runs this file in the `gpu-kernel` job (lavapipe) and on
@@ -8,9 +8,13 @@
 //!   triples whose difference lands in each limb column; those scaled by powers of two from `2⁻⁶³` to `2⁶⁰` and by
 //!   `1e-18` to `1e18`; and the tiny triples, where the limb products of operands not normalised to `[1, 2)` would be
 //!   subnormal, which a GPU that flushes subnormals drops (REQ-DEC-022; dd_decoder §5 test 12).
-//! - `invariant_infeasible_construct`: the construction on the GPU, over decoded configurations and `(L_z, K*)` pairs on
-//!   both sides of `K* = L_z²/2`, the boundary itself included: tagged infeasible exactly where the CPU at f32 and f64
-//!   tags it, which is exactly `K* < L_z²/2`; every momentum finite, none NaN, none dropped (REQ-DEC-022).
+//! - `invariant_infeasible_construct`: the decoder's construction on the GPU, over decoded configurations and
+//!   `(L_z, K*)` pairs on both sides of `K* = L_z²/2`, the boundary itself included: tagged infeasible exactly where the
+//!   CPU at f32 and f64 tags it, which is exactly `K* < L_z²/2`; every momentum finite, none NaN, none dropped
+//!   (REQ-DEC-022).
+//! - `invariant_seed_parity`: the decoder's seed on the GPU is R-82's decided on `z_α`, CPU-f64's, at `z_α = 0` and
+//!   either side of it to where `cos²α` and `sin²α` are equal to rounding, with unequal masses (PIT-9), and the momenta
+//!   agree to f32's rounding (REQ-DEC-021; dd_decoder §5 test 12).
 //!
 //! **Domain** (pitfalls §10): the construction alone, its inputs held fixed; no trajectory. **PIT-10:** the claim is for
 //! identical inputs; the GPU's continuous values (`a`, `w`, `p`) may differ from the CPU's in their last bits.
@@ -434,12 +438,13 @@ fn samples() -> Vec<[f32; 6]> {
         .collect()
 }
 
-/// The CPU's construction at `R` on a sample, its masses and configuration decoded at `R`.
+/// The CPU's decoder construction at `R` on a sample, its masses and configuration decoded at `R`, its seed decided on
+/// `z_α` (`construct`).
 fn cpu<R: ExactSign + From<f32>>(s: &[f32; 6]) -> kernel::decode::invariant::Construction<R> {
     let w = s.map(<R as From<f32>>::from);
     let masses = mass::decode::<Defaults, R>([w[0], w[1]]);
     let config = config::decode::<Defaults, R>([w[2], w[3]], &masses);
-    construct(&masses, &config, w[4], w[5])
+    construct(&masses, &config, w[2], w[4], w[5])
 }
 
 /// `out`, the GPU's words for `samples`: each tag is CPU-f32's and CPU-f64's and the exact `K* < L_z²/2`'s, and every
@@ -544,3 +549,103 @@ mod construct_nan {
         }
     );
 }
+
+// ── invariant_seed_parity ───────────────────────────────────────────────────────────────────────────────────────
+
+/// The seed check's samples: `z_α` at 0, either side of it to `3e-7` (where `cos²α` and `sin²α` are equal to f32's
+/// rounding) and beyond, each with random unequal masses and `β`, at a feasible `(L_z, K*)`.
+fn seed_samples() -> Vec<[f32; 6]> {
+    let mut g = SplitMix::new(43);
+    let mut unit = || (g.next_u64() >> 40) as f32 / (1u32 << 24) as f32;
+    let mut alphas = vec![0.0f32, -0.0, f32::from_bits(1), -f32::from_bits(1)];
+    for x in [
+        1e-30f32, 1e-12, 1e-9, 1e-8, 3e-8, 1e-7, 3e-7, 1e-6, 1e-2, 0.5, 2.0, 6.0,
+    ] {
+        alphas.extend([x, -x]);
+    }
+    let mut zs: Vec<f32> = alphas.iter().flat_map(|&a| [a; 40]).collect();
+    zs.extend((0..8000).map(|_| (2.0 * unit() - 1.0) * 3e-7));
+    zs.into_iter()
+        .map(|a| {
+            let lz = 2.0 * unit() - 1.0;
+            let k = lz * lz / 2.0 + 0.05 + unit();
+            [
+                8.0 * unit() - 4.0,
+                8.0 * unit() - 4.0,
+                a,
+                8.0 * unit() - 4.0,
+                lz,
+                k,
+            ]
+        })
+        .collect()
+}
+
+/// `out`, the GPU's words for `samples`: each seed is R-82's decided on `z_α`, `(ρ, 0)` (word 0) where `z_α ≤ 0` and
+/// `(0, λ)` (word 1) elsewhere, CPU-f64's; and the momenta are CPU-f64's to f32's rounding, not a fork's O(1)
+/// (dd_decoder §5 test 12).
+fn check_seeds(samples: &[[f32; 6]], out: &[u32]) {
+    let n = invariant::construct_out_words();
+    assert_eq!(out.len(), samples.len() * n, "the GPU's words");
+    for (s, w) in samples.iter().zip(out.chunks(n)) {
+        let at = format!("at z = {:?}, (L_z, K*) = ({:e}, {:e})", &s[..4], s[4], s[5]);
+        let want = u32::from(s[2] > 0.0);
+        let c64 = cpu::<f64>(s);
+        assert!(
+            w[7] == want && invariant::seed_word(c64.seed) == want,
+            "the seed {at}: GPU-f32 {}, CPU-f64 {}, R-82 on z_α {want}",
+            w[7],
+            invariant::seed_word(c64.seed)
+        );
+        let size: f64 = c64.p.iter().flatten().map(|x| x.abs()).sum();
+        let apart: f64 = w[..6]
+            .iter()
+            .zip(c64.p.iter().flatten())
+            .map(|(b, x)| (f64::from(f32::from_bits(*b)) - x).abs())
+            .sum();
+        assert!(
+            apart <= 1e-4 * size,
+            "the momenta {at} differ by {apart:e} of {size:e}, GPU-f32 against CPU-f64"
+        );
+    }
+}
+
+/// The GPU's construction words for `samples`.
+fn gpu_construct(samples: &[[f32; 6]]) -> Vec<u32> {
+    let h = harness();
+    let input: Vec<u32> = samples.iter().flatten().map(|x| x.to_bits()).collect();
+    gpu(
+        &h,
+        "decode_invariant_construct_defaults",
+        &input,
+        invariant::construct_in_words(),
+        invariant::construct_out_words(),
+    )
+}
+
+#[test]
+fn invariant_seed_parity() {
+    let s = seed_samples();
+    check_seeds(&s, &gpu_construct(&s));
+}
+
+negative_control!(
+    invariant_seed_parity,
+    "seeds and momenta from the rule on the computed norms, at f32, must fork from z_α's near z_α = 0",
+    expected = "the seed",
+    {
+        let s = seed_samples();
+        let n = invariant::construct_out_words();
+        let mut out = gpu_construct(&s);
+        for (x, w) in s.iter().zip(out.chunks_mut(n)) {
+            let masses = mass::decode::<Defaults, f32>([x[0], x[1]]);
+            let config = config::decode::<Defaults, f32>([x[2], x[3]], &masses);
+            let c = invariant::construct_by_norms(&masses, &config, x[4], x[5]);
+            for (o, p) in w.iter_mut().zip(c.p.iter().flatten()) {
+                *o = p.to_bits();
+            }
+            w[7] = invariant::seed_word(c.seed);
+        }
+        check_seeds(&s, &out)
+    }
+);

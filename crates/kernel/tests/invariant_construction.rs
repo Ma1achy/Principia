@@ -1,9 +1,9 @@
 //! The invariant-momentum construction (`kernel::decode::invariant`; chart_reference §2.2; dd_decoder §3.4, §5 test 8;
 //! REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-046), each check at the f64 and the f32 instantiation natively (R-265):
-//! - `invariant_construction_targets`: over random `(u, v)` through §2.1's warp and a grid of `(L_z, K*)`, near
-//!   `K* → K_min` included, at fixed decoded configurations with unequal masses (PIT-9): `Σpᵢ = 0`, `L_z(p) = L_z` and
-//!   `K(p) = K*`, within the proposed tolerances ([`TOL_P`], [`TOL_L`], [`TOL_K`]; REQ-DEC-046), whose worst residuals
-//!   it prints (decoder test 8; chart_reference §5.2).
+//! - `invariant_construction_targets`: the decoder's `construct`, over random `(u, v)` through §2.1's warp and a grid
+//!   of `(L_z, K*)`, near `K* → K_min` included, at fixed decoded configurations with unequal masses (PIT-9):
+//!   `Σpᵢ = 0`, `L_z(p) = L_z` and `K(p) = K*`, within the proposed tolerances ([`TOL_P`], [`TOL_L`], [`TOL_K`];
+//!   REQ-DEC-046), whose worst residuals it prints (decoder test 8; chart_reference §5.2).
 //! - `invariant_construction_feasibility_exact`: `infeasible(I, K*, L_z)` is `2·I·K* < L_z²` in exact arithmetic, against
 //!   an integer reference, over near-boundary triples at every scale, subnormals included, sparse-bit triples whose
 //!   difference lands in each limb column, the exponent cases `E = −4 … 4`, zeros and signs; an f32 triple widened to
@@ -22,6 +22,14 @@
 //! - `seed_selection_fallback`: with the primary seed degenerate (`ρ = 0`) a fallback is taken, not `DEGENERATE`.
 //! - `seed_selection_degenerate`: `DEGENERATE` fires only where no seed has `‖w⁽²⁾‖²_m > ε_w`, `ε_w` itself not
 //!   qualifying and the next float above it qualifying, at every seed position.
+//! - `seed_selection_decoded`: on decoded configurations the decoder's seed is R-82's decided on `z_α`, the same at f32
+//!   and f64 for one input at `z_α = 0` and either side of it, subnormals included, never `DEGENERATE`, the rule on
+//!   §2.2's norms wherever they are apart, the momenta agreeing across the precisions; every registered α link maps
+//!   `z_α = 0` to `π/4` and each sign to its side (REQ-DEC-021; dd_decoder §5 test 12).
+//!
+//! The seed rule's own tests (`seed_selection_largest`, `_tie`, `_fallback`, `_degenerate`) run `choose` and
+//! `construct_by_norms` on fixtures, configurations not from the canonical decode, where `ρ = 0` and the coincident
+//! configuration are reachable.
 //!
 //! **The tolerances** (REQ-DEC-046, proposed per R-71, for the human to confirm at the M2 gate): each residual is in
 //! units of the precision's `eps` times its scale: `|Σpᵢ|` of `Σ|pᵢ|`, `|L_z(p) − L_z|` of `|L_z| + √(2K*)` (the rigid
@@ -35,8 +43,8 @@ mod decode_support;
 use decode_support::*;
 use kernel::decode::config::Config;
 use kernel::decode::invariant::{
-    self, choose, construct, infeasible, infeasible_label, Binade, Construction, ExactSign,
-    Outcome, Seed,
+    self, choose, construct, construct_by_norms, infeasible, infeasible_label, Binade,
+    Construction, ExactSign, Outcome, Seed,
 };
 use kernel::decode::mass::{self, Masses};
 use kernel::decode::{self as dec, Latent};
@@ -345,19 +353,7 @@ fn dyadic<R: Q>(m: [f64; 3], rho: [f64; 2], lambda: [f64; 2]) -> (Masses<R>, Con
 /// The decoded configurations at fixed controls: the golden IC's `z = 0`, then unequal masses under the defaults
 /// (PIT-9) over the configuration controls' range, a tight inner pair and a wide one among them.
 fn decoded<R: Q>() -> Vec<(Masses<R>, Config<R>)> {
-    let zs: [[f64; 4]; 10] = [
-        [0.0; 4],
-        [0.3, -0.7, 0.8, -0.4],
-        [-1.2, 1.9, -0.6, 1.1],
-        [2.5, 0.2, 1.5, 0.3],
-        [-2.0, -2.5, -1.3, -0.9],
-        [0.9, 3.0, 0.4, 2.0],
-        [5.0, -1.0, 0.2, -3.0],
-        [-5.0, 4.0, -2.5, 0.7],
-        [1.0, -6.0, 3.0, 3.0],
-        [-3.5, 0.5, -3.0, -3.0],
-    ];
-    zs.iter()
+    ZS.iter()
         .map(|z| {
             let full = [z[0], z[1], 0.0, 0.0, 0.0, 0.0, z[2], z[3]];
             let d = dec::decode::<Defaults, R>(&Latent::new(full.map(R::of)));
@@ -366,10 +362,36 @@ fn decoded<R: Q>() -> Vec<(Masses<R>, Config<R>)> {
         .collect()
 }
 
+/// The fixed decoded configurations' controls, `z_α z_β z_μ₁ z_μ₂` (the latent's config block, then its mass block).
+const ZS: [[f64; 4]; 10] = [
+    [0.0; 4],
+    [0.3, -0.7, 0.8, -0.4],
+    [-1.2, 1.9, -0.6, 1.1],
+    [2.5, 0.2, 1.5, 0.3],
+    [-2.0, -2.5, -1.3, -0.9],
+    [0.9, 3.0, 0.4, 2.0],
+    [5.0, -1.0, 0.2, -3.0],
+    [-5.0, 4.0, -2.5, 0.7],
+    [1.0, -6.0, 3.0, 3.0],
+    [-3.5, 0.5, -3.0, -3.0],
+];
+
+/// The masses and configuration decoded at `R` from controls `z_α z_β z_μ₁ z_μ₂`, given at f32 and widened, as the
+/// GPU and the CPU read one input.
+fn decode_at<R: Q>(z: [f32; 4]) -> (Masses<R>, Config<R>) {
+    let z = z.map(|x| R::of(f64::from(x)));
+    let masses = mass::decode::<Defaults, R>([z[2], z[3]]);
+    let config = kernel::decode::config::decode::<Defaults, R>([z[0], z[1]], &masses);
+    (masses, config)
+}
+
 // ── invariant_construction_targets ──────────────────────────────────────────────────────────────────────────────
 
 /// A construction under check.
 type Construct<R> = fn(&Masses<R>, &Config<R>, R, R) -> Construction<R>;
+
+/// A decoder construction under check: `(masses, config, z_α, L_z, K*)`.
+type Decoded<R> = fn(&Masses<R>, &Config<R>, R, R, R) -> Construction<R>;
 
 /// The `(L_z, K*)` pairs: §2.1's warp `K = K_max·t^γ`, `L_z = (2s − 1)·√(2IK)` at random `(s, t)` and at `s` near 0 and
 /// 1, and a grid of `K*` and `L_z/√(2K*)`, both edges of the parabola included.
@@ -424,13 +446,15 @@ fn residuals<R: Q>(
     ]
 }
 
-/// Every pair at every decoded configuration: the outcome is the exact test's, and a feasible construction meets its
-/// targets within the tolerances.
-fn check_targets<R: Q>(build: Construct<R>, worst: &Worst) {
-    for (masses, config) in decoded::<R>() {
-        for (lz, k) in pairs(9) {
+/// Every pair at every fixed decoded configuration: the outcome is the exact test's, and a feasible construction meets
+/// its targets within the tolerances.
+fn check_targets<R: Q>(build: Decoded<R>, worst: &Worst) {
+    let grid = pairs(9);
+    for z in ZS.iter().map(|z| z.map(|x| x as f32)) {
+        let (masses, config) = decode_at::<R>(z);
+        for &(lz, k) in &grid {
             let (lz, k) = (R::of(lz), R::of(k));
-            let c = build(&masses, &config, lz, k);
+            let c = build(&masses, &config, R::of(f64::from(z[0])), lz, k);
             let feasible = !reference(1.0, k.f(), lz.f());
             assert_eq!(
                 c.outcome == Outcome::Feasible,
@@ -448,10 +472,9 @@ fn check_targets<R: Q>(build: Construct<R>, worst: &Worst) {
             worst.see(&format!("{} L_z", R::NAME), rl);
             worst.see(&format!("{} K", R::NAME), rk);
             let at = format!(
-                "at (L_z, K*) = ({:e}, {:e}), m = {:?} ({})",
+                "at (L_z, K*) = ({:e}, {:e}), z = {z:?} ({})",
                 lz.f(),
                 k.f(),
-                masses.m,
                 R::NAME
             );
             assert!(rp <= TOL_P, "Σp is {rp} eps of Σ|p| {at}");
@@ -482,8 +505,8 @@ negative_control!(
     "a construction whose a is 1e-4 too large must miss K*",
     expected = "misses K*",
     check_targets::<f64>(
-        |m, c, lz, k| {
-            let out = construct(m, c, lz, k);
+        |m, c, z_alpha, lz, k| {
+            let out = construct(m, c, z_alpha, lz, k);
             Construction {
                 p: assemble(m.m, &c.r, lz, out.a * 1.0001, &out.w),
                 ..out
@@ -501,8 +524,8 @@ mod targets_pit9 {
         "a projection whose CoM drift is taken with m₀ and m₁ swapped must fail Σp = 0 at unequal masses (PIT-9)",
         expected = "Σp is",
         check_targets::<f64>(
-            |m, c, lz, k| {
-                let out = construct(m, c, lz, k);
+            |m, c, z_alpha, lz, k| {
+                let out = construct(m, c, z_alpha, lz, k);
                 let swapped = [m.m[1], m.m[0], m.m[2]];
                 let v = invariant::velocities(m, c.rho, [0.0; 2]);
                 let w = invariant::project(swapped, &c.r, &v);
@@ -592,8 +615,8 @@ fn check_tagged<R: Q>(build: Construct<R>) {
 
 #[test]
 fn invariant_construction_infeasible_tagged() {
-    check_tagged::<f64>(construct::<f64>);
-    check_tagged::<f32>(construct::<f32>);
+    check_tagged::<f64>(construct_by_norms::<f64>);
+    check_tagged::<f32>(construct_by_norms::<f32>);
 }
 
 negative_control!(
@@ -601,7 +624,7 @@ negative_control!(
     "a construction that tests K* ≤ L_z²/2 must fail at the boundary",
     expected = "the tag",
     check_tagged::<f64>(|m, c, lz, k| {
-        let out = construct(m, c, lz, k);
+        let out = construct_by_norms(m, c, lz, k);
         if k == lz * lz / 2.0 && out.outcome == Outcome::Feasible {
             Construction {
                 outcome: Outcome::Infeasible,
@@ -621,7 +644,7 @@ mod tagged_nan {
         "a construction that takes √(2(K* − K_min)) where infeasible must fail on its NaN",
         expected = "a non-finite momentum",
         check_tagged::<f64>(|m, c, lz, k| {
-            let out = construct(m, c, lz, k);
+            let out = construct_by_norms(m, c, lz, k);
             let a = f64::sqrt(2.0 * k - lz * lz);
             Construction {
                 p: assemble(m.m, &c.r, lz, a, &out.w),
@@ -811,7 +834,7 @@ fn check_entries(feasibility: FeasibilityEntry, construct_entry: FeasibilityEntr
     for (n, s) in samples.iter().enumerate() {
         let masses = mass::decode::<Defaults, f32>([s[0], s[1]]);
         let config = kernel::decode::config::decode::<Defaults, f32>([s[2], s[3]], &masses);
-        let c = construct(&masses, &config, s[4], s[5]);
+        let c = construct(&masses, &config, s[2], s[4], s[5]);
         let want: Vec<u32> =
             c.p.iter()
                 .flatten()
@@ -937,7 +960,7 @@ fn rule(norms: [f64; 4], eps: f64) -> Option<Seed> {
 
 /// The norms of a fixture as the construction computes them, checked against the reference.
 fn fixture_norms<R: Q>(masses: &Masses<R>, config: &Config<R>) -> [R; 4] {
-    let c = construct(masses, config, R::zero(), R::one());
+    let c = construct_by_norms(masses, config, R::zero(), R::one());
     let want = reference_norms(
         masses.m.map(|x| x.f()),
         config.r.map(|v| v.map(|x| x.f())),
@@ -1070,7 +1093,7 @@ fn check_fallback<R: Q>(chooser: Chooser<R>) {
         "the fallback at ρ = 0 ({})",
         R::NAME
     );
-    let c = construct(&masses, &config, R::of(0.5), R::one());
+    let c = construct_by_norms(&masses, &config, R::of(0.5), R::one());
     assert_eq!(
         (c.seed, c.outcome),
         (Some(Seed::Lambda), Outcome::Feasible),
@@ -1138,3 +1161,149 @@ negative_control!(
     expected = "a norm of exactly ε_w qualifies",
     check_degenerate::<f64>(|n| rule(n, eps_w::<f64>() * (1.0 - 1e-12)))
 );
+
+// ── seed_selection_decoded ──────────────────────────────────────────────────────────────────────────────────────
+
+/// One registered α link's forward at f64.
+type AlphaForward = fn([f64; 1]) -> [f64; 1];
+
+/// Each registered α link maps `z_α = 0` to `π/4`, to rounding, and every `z_α` to its side of `π/4`: the property
+/// that makes `z_α ≤ 0` the rule's `α ≤ π/4` (the module note of `kernel::decode::invariant`).
+fn check_alpha_links(links: &[(&str, AlphaForward)]) {
+    let quarter = std::f64::consts::FRAC_PI_4;
+    for (name, forward) in links {
+        let [mid] = forward([0.0]);
+        assert!(
+            (mid - quarter).abs() <= 4.0 * f64::EPSILON * quarter,
+            "{name} maps z_α = 0 to {mid}, not π/4"
+        );
+        for x in [1e-12, 1e-9, 1e-6, 1e-3, 0.1, 1.0, 5.0] {
+            let ([up], [down]) = (forward([x]), forward([-x]));
+            assert!(
+                down < quarter && quarter < up,
+                "{name} maps ±{x:e} to {down} and {up}, not either side of π/4"
+            );
+        }
+    }
+}
+
+/// The controls of the decoded seed check: `z_α` at 0, either side of it to `3e-7` (where the norms `cos²α` and
+/// `sin²α` are equal to rounding) and beyond, each with fuzzed unequal masses and `β`.
+fn seed_controls() -> Vec<[f32; 4]> {
+    let mut g = SplitMix::new(41);
+    let mut unit = || (g.next_u64() >> 40) as f32 / (1u32 << 24) as f32;
+    let mut alphas = vec![0.0f32, -0.0, f32::from_bits(1), -f32::from_bits(1)];
+    for x in [
+        1e-30f32, 1e-12, 1e-9, 1e-8, 3e-8, 1e-7, 3e-7, 1e-6, 1e-2, 0.5, 2.0, 6.0,
+    ] {
+        alphas.extend([x, -x]);
+    }
+    let mut out = Vec::new();
+    for &a in &alphas {
+        for _ in 0..40 {
+            out.push([
+                a,
+                8.0 * unit() - 4.0,
+                8.0 * unit() - 4.0,
+                8.0 * unit() - 4.0,
+            ]);
+        }
+    }
+    for _ in 0..4000 {
+        let a = (2.0 * unit() - 1.0) * 3e-7;
+        out.push([
+            a,
+            8.0 * unit() - 4.0,
+            8.0 * unit() - 4.0,
+            8.0 * unit() - 4.0,
+        ]);
+    }
+    out
+}
+
+/// On decoded configurations, `b32` and `b64` take R-82's seed decided on `z_α`, `(ρ, 0)` where `z_α ≤ 0`, the same at
+/// f32 and f64 for one input, never `DEGENERATE`; it is the rule on §2.2's independently transcribed norms wherever
+/// those are apart; and the momenta agree across the precisions to f32's rounding, not at a fork's O(1).
+fn check_decoded(b32: Decoded<f32>, b64: Decoded<f64>) {
+    let (lz, k) = (0.375, 0.75);
+    for z in seed_controls() {
+        let want = if z[0] <= 0.0 { Seed::Rho } else { Seed::Lambda };
+        let (m32, c32) = decode_at::<f32>(z);
+        let (m64, c64) = decode_at::<f64>(z);
+        let x32 = b32(&m32, &c32, z[0], lz as f32, k as f32);
+        let x64 = b64(&m64, &c64, f64::from(z[0]), lz, k);
+        let at = format!("at z = {z:?}");
+        assert!(
+            x32.seed == Some(want) && x64.seed == Some(want),
+            "the seed {at}: f32 {:?}, f64 {:?}, R-82 on z_α {want:?}",
+            x32.seed,
+            x64.seed
+        );
+        assert!(
+            x32.outcome == Outcome::Feasible && x64.outcome == Outcome::Feasible,
+            "the outcome {at}: f32 {:?}, f64 {:?}",
+            x32.outcome,
+            x64.outcome
+        );
+        let norms = reference_norms(m64.m, c64.r, c64.rho, c64.lambda);
+        if (norms[0] - norms[1]).abs() > 1e-9 {
+            assert_eq!(
+                rule(norms, 1e-10),
+                Some(want),
+                "R-82 on the norms {norms:?} {at}"
+            );
+        }
+        let size: f64 = x64.p.iter().flatten().map(|x| x.abs()).sum();
+        let apart: f64 = x32
+            .p
+            .iter()
+            .flatten()
+            .zip(x64.p.iter().flatten())
+            .map(|(a, b)| (f64::from(*a) - b).abs())
+            .sum();
+        assert!(
+            apart <= 1e-4 * size,
+            "the momenta {at} differ by {apart:e} of {size:e} across the precisions"
+        );
+    }
+}
+
+#[test]
+fn seed_selection_decoded() {
+    check_alpha_links(&[
+        (
+            "sigmoid_alpha",
+            <SigmoidAlpha as Link<1, 1>>::forward::<f64>,
+        ),
+        ("tanh_alpha", <TanhAlpha as Link<1, 1>>::forward::<f64>),
+        (
+            "softsign_alpha",
+            <SoftsignAlpha as Link<1, 1>>::forward::<f64>,
+        ),
+    ]);
+    check_decoded(construct::<f32>, construct::<f64>);
+}
+
+negative_control!(
+    seed_selection_decoded,
+    "the rule on the computed norms must fork from z_α's seed near z_α = 0",
+    expected = "the seed",
+    check_decoded(
+        |m, c, _, lz, k| construct_by_norms(m, c, lz, k),
+        |m, c, _, lz, k| construct_by_norms(m, c, lz, k)
+    )
+);
+
+mod decoded_link {
+    use super::*;
+
+    negative_control!(
+        seed_selection_decoded,
+        "an α link centred off π/4 must fail",
+        expected = "not π/4",
+        check_alpha_links(&[("shifted", |z| {
+            let [a] = <SigmoidAlpha as Link<1, 1>>::forward::<f64>(z);
+            [a + 1e-9]
+        })])
+    );
+}

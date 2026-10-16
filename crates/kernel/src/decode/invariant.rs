@@ -18,9 +18,34 @@
 //! configuration's own `I` is 1 to rounding, so `L_z(p)` and `K(p)` meet their targets to rounding, and the feasibility
 //! branch reads only the pixel's own `(L_z, K*)`.
 //!
-//! **The seed rule** ([`choose`]; R-82): the largest `‖w⁽²⁾‖²_m`, compared squared, the order of the norms; a seed is
-//! taken over the one held only if its norm is strictly larger, so an exact tie keeps the earlier seed. `DEGENERATE` is
-//! raised only where no seed's `‖w⁽²⁾‖²_m` exceeds `ε_w` (the chart constant `eps_w`, [`crate::generated::constants`]).
+//! **The seed rule** (R-82): among the seeds with `‖w⁽²⁾‖²_m > ε_w` (the chart constant `eps_w`,
+//! [`crate::generated::constants`]) the largest, ties by seed order; none → `DEGENERATE`. [`choose`] is the rule on given
+//! norms, compared squared, the order of the norms: a seed is taken over the one held only if its norm is strictly
+//! larger, so an exact tie keeps the earlier seed.
+//!
+//! **The rule on a decoded configuration is decided on `z_α`** ([`decoded_seed`], [`construct`]; dd_decoder §2,
+//! "branch decisions … bit-identical across backends", §5 test 12; R-34, R-84). The canonical-frame decode
+//! (chart_reference §0.2) has `ρ̃ = cos α·(1, 0)`, `λ̃ = sin α·(cos β, sin β)`, `I = M = 1`. The Jacobi velocities
+//! `(ρ̇, λ̇)` carry no CoM drift and `‖v‖²_m = μ_ρ‖ρ̇‖² + μ_λ‖λ̇‖²`, `L(v) = μ_ρ ρ×ρ̇ + μ_λ λ×λ̇`, so in exact arithmetic
+//! the four norms are
+//!
+//! ```text
+//! (ρ, 0):   ‖ρ̃‖² = cos²α          L = 0, nothing projected
+//! (0, λ):   ‖λ̃‖² = sin²α          L = 0
+//! (Jρ, 0):  cos²α·sin²α           L = cos²α:  w⁽²⁾ = (sin²α·Jρ, −cos²α·Jλ)
+//! (0, Jλ):  cos²α·sin²α           L = sin²α:  w⁽²⁾ = (−sin²α·Jρ, cos²α·Jλ)
+//! ```
+//!
+//! `cos²α·sin²α ≤ min(cos²α, sin²α)`, and where one of them is 0 the other is 1, so the last two seeds are never the
+//! largest, and the largest is at least ½ > `ε_w`: a decoded configuration is never `DEGENERATE` by the seed rule. The
+//! rule takes `(ρ, 0)` exactly where `cos²α ≥ sin²α`, `α ≤ π/4` (a tie keeps the earlier), else `(0, λ)`. Every
+//! registered α link is `α_min + c·(1 + u(z_α))`, `c = π/4 − α_min`, `u` odd and strictly increasing (`σ(x) =
+//! (1 + tanh(x/2))/2`; dd_generation_root §3.9's table), so `α ≤ π/4` exactly where `z_α ≤ 0`. That comparison reads
+//! the control itself, an input, on its bits (subnormals included, as [`ExactSign::binade`] reads them), so one control
+//! takes one seed at f32 and f64 and on every backend; comparing the
+//! computed `cos²α` and `sin²α` would fork where they differ in their last bits, near `z_α = 0`, and the seeds there
+//! are orthogonal, so the momenta would differ at O(1). [`construct_by_norms`], the rule on computed norms, serves a configuration not from the canonical decode, and its
+//! choice near a tie is not claimed branch-identical.
 //!
 //! **The infeasible pixel** (chart_reference §2.2, R-72; REQ-DEC-040): `K* < K_min` is labelled `decode_failed`,
 //! detail 3 (other) ([`infeasible_label`]), and takes precedence over the seed rule's `DEGENERATE`. It is kept, never
@@ -54,10 +79,7 @@
 //! finite inputs (PIT-10); non-finite inputs are the decode's non-finite case, not this test's.
 //!
 //! **What is not a branch here.** `a` (formed as `√max(fma(−L_z, L_z, 2K*), 0)`), `w` and the seeds' norms are
-//! continuous values. The seed choice compares computed norms, so backends agree on it away from exact ties; its
-//! cross-backend parity is not claimed here. The first two seeds carry no CoM drift and no angular momentum, so their
-//! norms are `μ_ρ‖ρ‖² = ‖ρ̃‖²` and `μ_λ‖λ‖² = ‖λ̃‖²`, which sum to `I`: the largest is at least `I/2`, so `DEGENERATE`
-//! fires only where `I < 2ε_w`, never on a canonical configuration (`I = 1`, the norms `cos²α` and `sin²α`).
+//! continuous values; the branches are the feasibility test and, on a decoded configuration, `z_α ≤ 0`.
 
 use spirv_std::glam::UVec3;
 use spirv_std::num_traits::Float;
@@ -339,33 +361,51 @@ pub fn choose<R: LinkReal>(norms: [R; 4]) -> Option<Seed> {
     select(found, Some(best), None)
 }
 
-/// The invariant-momentum construction (chart_reference §2.2): the momenta realising `L_z = lz` and `K = k_star` on the
-/// decoded masses and configuration (the module's note).
+/// The seed R-82's rule takes on a configuration of the canonical-frame decode, from its configuration control `z_α`:
+/// `(ρ, 0)` where `z_α ≤ 0`, else `(0, λ)` (the module's note). `z_α ≤ 0` is read on its bits, the sign bit set or every
+/// other bit clear, as the feasibility test reads its signs: a GPU that flushes a subnormal `z_α` to 0 in its float
+/// comparisons reads the same input.
 #[inline]
-pub fn construct<R: ExactSign>(
-    masses: &Masses<R>,
-    config: &Config<R>,
-    lz: R,
-    k_star: R,
-) -> Construction<R> {
-    let m = masses.m;
-    let r = config.r;
-    let zero = R::zero();
+pub fn decoded_seed<R: ExactSign>(z_alpha: R) -> Seed {
+    let b = z_alpha.binade();
+    select(b.negative | b.zero, Seed::Rho, Seed::Lambda)
+}
+
+/// The seeds' `w⁽²⁾`, in seed order, and their `‖w⁽²⁾‖²_m`.
+#[inline]
+fn seeds<R: LinkReal>(masses: &Masses<R>, config: &Config<R>) -> ([[[R; 2]; 3]; 4], [R; 4]) {
+    let (m, r) = (masses.m, config.r);
+    let none = [R::zero(); 2];
     let (rho, lambda) = (config.rho, config.lambda);
-    let none = [zero, zero];
-    let seeds = [
+    let w = [
         project(m, &r, &velocities(masses, rho, none)),
         project(m, &r, &velocities(masses, none, lambda)),
         project(m, &r, &velocities(masses, j(rho), none)),
         project(m, &r, &velocities(masses, none, j(lambda))),
     ];
     let norms = [
-        mass_norm2(m, &seeds[0]),
-        mass_norm2(m, &seeds[1]),
-        mass_norm2(m, &seeds[2]),
-        mass_norm2(m, &seeds[3]),
+        mass_norm2(m, &w[0]),
+        mass_norm2(m, &w[1]),
+        mass_norm2(m, &w[2]),
+        mass_norm2(m, &w[3]),
     ];
-    let seed = choose(norms);
+    (w, norms)
+}
+
+/// The construction with the seed taken (`None`: none qualified), from the seeds' fields and norms.
+#[inline]
+fn finish<R: ExactSign>(
+    masses: &Masses<R>,
+    config: &Config<R>,
+    (seeds, norms): ([[[R; 2]; 3]; 4], [R; 4]),
+    seed: Option<Seed>,
+    lz: R,
+    k_star: R,
+) -> Construction<R> {
+    let m = masses.m;
+    let r = config.r;
+    let zero = R::zero();
+    let none = [zero, zero];
     let (w, n2) = match seed {
         Some(Seed::Rho) => (seeds[0], norms[0]),
         Some(Seed::Lambda) => (seeds[1], norms[1]),
@@ -404,6 +444,37 @@ pub fn construct<R: ExactSign>(
         seed,
         outcome,
     }
+}
+
+/// The invariant-momentum construction (chart_reference §2.2), the decoder's, on a configuration of the canonical-frame
+/// decode from the configuration control `z_alpha`: the momenta realising `L_z = lz` and `K = k_star`, the seed R-82's,
+/// decided on `z_α` ([`decoded_seed`]), so one input takes one seed on every backend (the module's note).
+#[inline]
+pub fn construct<R: ExactSign>(
+    masses: &Masses<R>,
+    config: &Config<R>,
+    z_alpha: R,
+    lz: R,
+    k_star: R,
+) -> Construction<R> {
+    let fields = seeds(masses, config);
+    let seed = Some(decoded_seed(z_alpha));
+    finish(masses, config, fields, seed, lz, k_star)
+}
+
+/// The invariant-momentum construction (chart_reference §2.2) on a configuration not from the canonical-frame decode:
+/// the seed R-82's rule ([`choose`]) on the computed norms, `DEGENERATE` where none qualifies. Its choice near a tie is
+/// not claimed branch-identical; a decoded configuration takes [`construct`] (the module's note).
+#[inline]
+pub fn construct_by_norms<R: ExactSign>(
+    masses: &Masses<R>,
+    config: &Config<R>,
+    lz: R,
+    k_star: R,
+) -> Construction<R> {
+    let fields = seeds(masses, config);
+    let seed = choose(fields.1);
+    finish(masses, config, fields, seed, lz, k_star)
 }
 
 /// The word of an outcome: 0 feasible, 1 infeasible, 2 `DEGENERATE`.
@@ -465,9 +536,10 @@ pub fn construct_out_words() -> usize {
     8
 }
 
-/// The construction at f32 under the default links, so a test reads the GPU's: invocation `n` reads sample `n`'s
-/// [`construct_in_words`] words of `input` (f32 bits), decodes the masses and configuration from them, constructs, and
-/// writes [`construct_out_words`] words at sample `n` of `output`; an invocation past the last sample writes nothing.
+/// The decoder's construction at f32 under the default links, so a test reads the GPU's: invocation `n` reads sample
+/// `n`'s [`construct_in_words`] words of `input` (f32 bits), decodes the masses and configuration from them, constructs
+/// ([`construct`], its seed decided on `z_α`), and writes [`construct_out_words`] words at sample `n` of
+/// `output`; an invocation past the last sample writes nothing.
 #[spirv(compute(threads(64)))]
 pub fn construct_defaults(
     #[spirv(global_invocation_id)] id: UVec3,
@@ -480,7 +552,8 @@ pub fn construct_defaults(
         let masses = mass::decode::<Defaults, f32>([word(input, at), word(input, at + 1)]);
         let z_cfg = [word(input, at + 2), word(input, at + 3)];
         let config = config::decode::<Defaults, f32>(z_cfg, &masses);
-        let c = construct(&masses, &config, word(input, at + 4), word(input, at + 5));
+        let (lz, k_star) = (word(input, at + 4), word(input, at + 5));
+        let c = construct(&masses, &config, z_cfg[0], lz, k_star);
         let out = construct_out_words() * n;
         output[out] = c.p[0][0].to_bits();
         output[out + 1] = c.p[0][1].to_bits();

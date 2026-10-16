@@ -277,6 +277,14 @@ wᵢ = w⁽²⁾ᵢ / √(‖w⁽²⁾‖²_m)
 largest `‖w⁽²⁾‖_m`**, for conditioning; break ties by seed order. Emit `DEGENERATE` only if no seed
 qualifies.
 
+**On the canonical-frame decode the rule is decided on `z_α`** (TASK-M2-09). There `I = 1`, and the four norms are
+exactly `cos²α`, `sin²α`, `cos²α·sin²α` and `cos²α·sin²α`: the largest is `(ρ, 0)` where `α ≤ π/4` (a tie keeps it)
+and `(0, λ)` elsewhere, and it is at least ½, so no decoded configuration is `DEGENERATE` by the seed rule. Every
+registered α link maps `z_α = 0` to `π/4` and increases, so `α ≤ π/4` exactly where `z_α ≤ 0`, and the decoder reads
+that sign from the control's bits: one input takes one seed at every precision and on every backend
+(`principia_dd_decoder.md` §2, §5 test 12). Comparing the computed norms would fork near `α = π/4`, where the two seeds
+are orthogonal and the momenta would differ at O(1).
+
 **(iii) Mix to the target kinetic energy:**
 
 ```
