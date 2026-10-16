@@ -494,7 +494,8 @@ jobs:
         run: cargo test -p engine --features controls canonicaliser_ --doc
       # Encode `E` on Metal, its controls included (TASK-M2-15): `β`'s selects on the `−x` half-axis and at the pole,
       # `±0` operands included, and the exact `α`-poles' encode, against CPU-f32 and CPU-f64. `encode_` selects
-      # `encode_gpu`'s tests and `encode_dispatch`'s host-side check; its doctest step runs over the same filter.
+      # `encode_gpu`'s tests, qa's `qa_TASK-M2-15_gpu` and `encode_dispatch`'s host-side check; its doctest step runs
+      # over the same filter.
       - name: cargo nextest run -p engine --features controls encode_
         run: cargo nextest run -p engine --features controls encode_ --no-capture
       - name: cargo test -p engine --features controls encode_ --doc
@@ -579,8 +580,8 @@ jobs:
         run: cargo test -p engine --features controls canonicaliser_ --doc
       # Encode `E` on lavapipe, its controls included (TASK-M2-15; applied per R-369): `β`'s selects, where Vulkan
       # without `SignedZeroInfNanPreserve` may ignore a zero's sign through `atan2` (R-438), and the exact `α`-poles.
-      # `encode_` selects `encode_gpu`'s tests and `encode_dispatch`'s; `gpu-kernel` runs `encode_gpu` on lavapipe too,
-      # without the controls.
+      # `encode_` selects `encode_gpu`'s tests, qa's `qa_TASK-M2-15_gpu` and `encode_dispatch`'s; `gpu-kernel` runs
+      # `encode_gpu` and `qa_TASK-M2-15_gpu` on lavapipe too, without the controls.
       - name: cargo nextest run -p engine --features controls encode_
         run: cargo nextest run -p engine --features controls encode_ --no-capture
       - name: cargo test -p engine --features controls encode_ --doc
