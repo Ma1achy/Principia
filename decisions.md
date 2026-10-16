@@ -7803,8 +7803,11 @@ rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and
 ## R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
 *Amended in part by R-450 (the console: its two scopes and its landing on the header bar scope, in place of "the
 console's first filter").*
+*Amended in part by R-451 (the compass's view angle: the reference's isometric projection, in place of point 1's yaw
+−35°, pitch 25°).*
 *Still in force: all of it, except that the console opens in navigation mode on its header bar scope, not on its first
-filter, and its sections are R-450's two scopes, the header bar and the log (R-450).*
+filter, and its sections are R-450's two scopes, the header bar and the log (R-450); and that the compass's fixed view
+is the reference's isometric projection, not point 1's yaw −35°, pitch 25° (R-451).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
 what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
@@ -10203,8 +10206,9 @@ Adds REQ-GUI-189 and REQ-GUI-190; REQ-GUI-178's note and rulings change.
 ## R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "The compass: look and views (R-451, R-452)" (new) and § "G13. Where the artboards are overridden" (a
-bullet added), `docs/gui/reference/principia_nav_cube.html` (added), REQ-GUI-191 to REQ-GUI-193 (reqio, new), RQ-340,
-TASK-M6-33 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-33 on the mock*
+bullet added), `docs/gui/reference/principia_nav_cube.html` (added), `docs/read_first/principia_INDEX.md` § "GUI"
+(a line added), R-409's heading block, REQ-GUI-191 to REQ-GUI-193 (reqio, new), RQ-340, TASK-M6-33 (new),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-33 on the mock*
 
 The human's words are R-450's quote: its preamble (the three references, and the cream palette not copied) and Part 2.
 
@@ -10236,12 +10240,29 @@ The human's words are R-450's quote: its preamble (the three references, and the
   `q₁ = σ(cos γ u₁ + sin γ u₂)`, `q₂ = σ(cos γ u₂ − sin γ u₁)`. The kernel never sees angles, only `(z₀, q₁, q₂)`. The
   compass (`compass.rs`, `plane_frame`) draws the same construction in the frame `(e_a, e_b, e_d)`, so the compass and
   the decoder agree with each other.
-- **The reference** maps `(τ₁, τ₂)` jointly to the normal `n = (sin m · τ₁/m, cos m, sin m · τ₂/m)`,
-  `m = √(τ₁² + τ₂²)`, toward two different targets.
-- **They differ.** The code's `u₁` and `u₂` share one target, so `u₁ · u₂ = sin τ₁ sin τ₂`: with both tilts non-zero
-  the basis is not orthogonal, and at `τ₁ = ±τ₂ = ±90°` the plane degenerates to a line (`u₁ = ±u₂ = ±e_d`), the
-  gimbal behaviour the reference's map avoids. The decoder's geometry is left as it is, and **RQ-340** puts the
-  difference to physics review; it changes which plane a tilt means, so it is the human's to rule (R-369, physics).
+- **The reference** (`planeSpec`): tilt mode's untilted plane is the horizontal x–z plane, normal y, and the
+  axis-angle map tips that normal toward `(τ₁, 0, τ₂)`, `n = (sin m · τ₁/m, cos m, sin m · τ₂/m)`,
+  `m = √(τ₁² + τ₂²)`. Both tilts therefore tip the plane into the one unnamed vertical axis y, a single shared hidden
+  direction; its labels "q₁'s target" (x) and "q₂'s target" (z) sit on the plane's own untilted in-plane axes, and its
+  help text concedes "no single coordinate perpendicular to both targets".
+- **The code and the reference are one family, parametrised differently** (corrected in the fix round of PR #227,
+  physics review P1 to P3). Read geometrically, both draw the 2-planes in one 3-space through the slice point, the
+  code's `(e_a, e_b, e_d)` with `e_d` hidden and the reference's (x, z, y) with y hidden; they differ in which
+  `(τ₁, τ₂)` gives which plane. The code's map: `u₁ · u₂ = sin τ₁ sin τ₂`, so with both tilts set the basis is not
+  orthogonal, against `principia_chart_reference.md` §1.1 ("q₁, q₂ any orthonormal pair"); its normal is
+  `∝ (−tan τ₁, −tan τ₂, 1)`, one-to-one on the open square; at `|τ₁| = 90°`, `u₁ = ±e_d` and the plane is
+  `span(e_b, e_d)` for every `|τ₂| < 90°`, so τ₂ stops moving it along that whole edge (the gimbal lock the reference's
+  comment names), and at `τ₁ = ±τ₂ = ±90°` it degenerates to the line `e_d`. The reference's map never degenerates
+  inside ±90° (`m ≤ 127.3° < 180°`), but it is not one-to-one there: `n` and `−n` are one plane, so `(90°, 90°)`
+  gives the plane `(−37.3°, −37.3°)` gives.
+- **The contract's two-target form is the different family.** With two distinct targets `t₁ ⊥ t₂`, both orthogonal
+  to the plane, the tilted plane lies in the 4-space `span(q₁, q₂, t₁, t₂)` and has no single normal, so no 3D cube
+  draws it faithfully; the two tilted vectors are then already orthonormal. With one shared target the contract's
+  formula is the code's (`u₁` is already unit, so its `normalise` does nothing): the code is the contract's form with
+  `d_target₁ = d_target₂ = e_d`.
+- The decoder's geometry is left as it is, and **RQ-340** puts the two questions (the parametrisation within one
+  3-space, and one shared target against two) to physics review; they change which plane a tilt means, so they are the
+  human's to rule (R-369, physics).
 
 *Applied per R-369 (routine design choices and readings; the human may veto any, a veto being a GUI design ruling
 applied by a follow-up task):*
@@ -10250,15 +10271,23 @@ applied by a follow-up task):*
   = the slice axis `e_d` on the bottom-right edge), as the reference's slice mode has it. Under the decoder's mapping
   q₁ and q₂ both tilt toward `e_d`, so in tilt mode there is one target, not two: tilt mode names the bottom-right edge
   with it ("q₁, q₂ → <axis>") and leaves the other edges unnamed, and the readout gives q₁'s and q₂'s target (the same
-  axis) and their angles in degrees. If RQ-340 is ruled for the reference's two targets, tilt mode takes the
-  reference's two labels (q₁'s target bottom-left, q₂'s bottom-right, the vertical edge unnamed).
-- **B2. What each mode draws.** Slice mode draws the plane untilted at its position along the slice axis (a
-  rectangle), as the reference does; tilt mode draws the decoder's tilted plane (`View::basis` in the cube's frame) at
-  its position along the slice axis, so with `z₀` on the centre it is the reference's tilt drawing, and off the centre
-  the cross-section can be a triangle or a pentagon as well (3 to 6 vertices).
+  axis) and their angles in degrees. If RQ-340 is ruled for two distinct targets (its option (c)), tilt mode names
+  the two targets in a follow-up task.
+- **B2. What each mode draws.** Both modes draw the decoder's plane, `View::basis`'s `(q₁, q₂)` in the cube's frame
+  `(e_a, e_b, e_d)`, through the point whose coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over
+  the slice step's half-range (`Z0_HALF_RANGE`) and clamped to [−1, 1]. The modes differ in what a drag does (B3) and
+  in the labels and readout (B1, B5), never in the plane drawn, so after a tilt and a slice edit slice mode shows the
+  tilted plane the decoder slices. Untilted (`τ₁ = τ₂ = γ = 0`) the plane is the reference's slice-mode rectangle at
+  its depth. The three axes share one scale, so the drawn tilt is the latent angle τ; the cube is the slider's range on
+  each axis, and the chart window's extent (`|q| = σ`) is not drawn. Through the cube's central axis (`z₀`'s
+  components on `e_a` and `e_b` both 0) the cross-section has 4 to 6 vertices, never a triangle: a rectangle untilted,
+  a pentagon possible off the centre, a hexagon possible through it. Off that axis a plane can cut off one corner, a
+  triangle, so the bound is the human's 3 to 6 (3.6). (Rewritten in the fix round of PR #227, gui review G1, physics
+  review P11: slice mode drew an untilted plane the decoder does not slice.)
 - **B3. The slice-mode drag.** The horizontal component of a drag sets how far the slice moves (the reference's rate, a
-  drag across the cube's full width moving it across the whole range); the direction is R-409 A3's, the drawn plane's
-  normal, which untilted is the slice axis; one `SetField` on `z₀` per drag, coalesced (R-96). The vertical component
+  drag across the cube's full width moving it across the whole range); the direction is the drawn plane's normal,
+  which by B2 is the decoder's (`latent_normal`, R-409 A3's), the slice axis only when untilted; one `SetField` on
+  `z₀` per drag, coalesced (R-96). The vertical component
   does nothing in slice mode. The tilt-mode drag uses the reference's rates (a drag across the full width or height is
   180°), right raising τ₁ and up raising τ₂, one `SetField` on the basis per drag.
 - **B4. Easing is the compass's display only.** The compass draws its displayed values easing towards the targets by
@@ -10267,6 +10296,8 @@ applied by a follow-up task):*
   value.
 - **B5. The readout's position.** "The position as a fraction of range" is `z₀`'s component on the slice axis over the
   slice step's half-range (the code's `Z0_HALF_RANGE`), signed, two decimals, as the reference's "+0.25 of range".
+  Slice mode's first line reads "plane ⟂ <axis>" untilted; with a tilt set the plane is not normal to an axis (B2), and
+  the line gives the tilt as tilt mode's readout does.
 - **B6. The colours.** Every colour is the dark theme's or a dark-mode colour chosen as a look choice under R-390 and
   listed in the PR: the edges in the theme's stroke colour with the reference's opacity and width laws, the fill
   between two dark-mode tones by the Lambert shade, the grid and the outline. The reference's numbers stay: light
@@ -10279,8 +10310,30 @@ applied by a follow-up task):*
 - **B8. The goldens.** "Renders of the reference at the same size and parameters" are made by running the reference
   file headless at the compass's size with its parameters set to the case's, recorded as fixtures with how they were
   made; the comparison is of geometry and labelling (vertex positions, edge order, label text and placement within a
-  stated tolerance), not colour. The case "one giving a rectangle" is a single tilt (τ₁ ≠ 0, τ₂ = 0), and "one giving
-  a hexagon" two tilts whose plane through the centre cuts six faces.
+  stated tolerance), not colour. The tilt-mode drawing differs from the reference's by design (B1, B2: the reference's
+  untilted tilt-mode plane is the horizontal one through the centre, and it labels two edges), so each case says what
+  is compared with the reference and what with an independent computation of the decoder's plane (the polygon of
+  `View::basis`'s plane through `z₀` in the frame `(e_a, e_b, e_d)`, computed apart from the code under test). Points
+  are in the cube's `(x, y, z) = (e_a, e_b, e_d)`, y the vertical. (Rewritten in the fix round of PR #227, gui review
+  G2.)
+  - Every case, against the reference: the projection and fit (the eight corners' screen positions), and the twelve
+    edges' drawing order by `x + z` with their opacity and width laws.
+  - `mock_compass_cube_slice` (slice mode, `τ₁ = τ₂ = γ = 0`, `z₀` +0.25 of range on `e_d` and 0 on `e_a`, `e_b`):
+    wholly against the reference's slice mode at depth +0.25: the rectangle (±1, ±1, 0.25), its place in the edge
+    order, the labels Width, Depth and Height with their corner numbers, and the readout.
+  - `mock_compass_cube_tilt_0` (tilt mode, `τ₁ = τ₂ = γ = 0`, `z₀ = 0`): the polygon, the rectangle (±1, ±1, 0),
+    against the reference's slice mode at depth 0 (its own tilt mode at 0 draws the horizontal plane, which the
+    decoder's is not); the one label's placement against the reference's tilt-mode label on the bottom-right edge.
+  - `mock_compass_cube_tilt_rect` (tilt mode, `τ₁ = 30°`, `τ₂ = 0`, `γ = 0`, `z₀ = 0`): the polygon against the
+    independent computation, normal `∝ (−½, 0, √3/2)`, the rectangle (1, 1, 0.577), (1, −1, 0.577), (−1, −1, −0.577),
+    (−1, 1, −0.577) (`z = x tan 30°`), and its place in the edge order; the label as in `tilt_0`.
+  - `mock_compass_cube_tilt_hex` (tilt mode, `τ₁ = τ₂ = 45°`, `γ = 0`, `z₀ = 0`): the polygon against the independent
+    computation, normal `∝ (−½, −½, ½)`, the regular hexagon (1, −1, 0), (1, 0, 1), (0, 1, 1), (−1, 1, 0), (−1, 0, −1),
+    (0, −1, −1) (`z = x + y`), and its place in the edge order; the label as in `tilt_0`.
+  - The control "a label on the wrong edge": in slice mode Width belongs on the bottom-left edge ((−1, −1, 1) to
+    (1, −1, 1)), Depth on the bottom-right ((1, −1, −1) to (1, −1, 1)) and Height on the left vertical ((−1, −1, 1) to
+    (−1, 1, 1)), and any of them on another edge fails; in tilt mode the one label "q₁, q₂ → <axis>" belongs on the
+    bottom-right edge, and the same label on the bottom-left edge (the reference's q₁ edge) or any other fails.
 - **B9. Where it lands.** render_gui_spec §G2's compass bullet and a new subsection under §G2, "The compass: look and
   views (R-451, R-452)"; §G13 a bullet for the three references; **REQ-GUI-191** (the drawing, golden image),
   **REQ-GUI-192** (the cross-section and the mapping the drawing follows, unit test) and **REQ-GUI-193** (the labels,
@@ -10291,9 +10344,10 @@ applied by a follow-up task):*
   assertions in the task's qa commit, and only those, as R-409 A9 has it.
 - R-451 is in the "design" group of `plan/rule_groups.yaml`.
 
-*What it changes:* R-409 point 1 kept the code's default angle (yaw −35°, pitch 25°) as a look choice under R-390;
-this ruling, the human's, sets the view to the reference's isometric projection, and R-409's text stands. The
-compass's square slice (`PLANE_HALF`) and its dashed untilted plane give way to the cross-section polygon.
+*What it changes:* it amends R-409 point 1, which kept the code's default angle (yaw −35°, pitch 25°) as a look choice
+under R-390: this ruling, the human's, sets the compass's fixed view to the reference's isometric projection instead.
+R-409 carries the forward line and an updated "Still in force" line; the rest of R-409 stands. The compass's square
+slice (`PLANE_HALF`) and its dashed untilted plane give way to the cross-section polygon.
 
 Adds REQ-GUI-191 to REQ-GUI-193.
 
@@ -10302,8 +10356,9 @@ Adds REQ-GUI-191 to REQ-GUI-193.
 (the compass), § "The compass: look and views (R-451, R-452)" (new), § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the Compass scope) and § "G13. Where the artboards are overridden" (the references),
 `docs/gui/reference/principia_plucker_compass.html` and `docs/gui/reference/principia_compass_charts.html` (added),
-REQ-GUI-194 to REQ-GUI-200 (reqio, new), RQ-341 to RQ-344, TASK-M6-34 and TASK-M6-35 (new), `plan/tasks.yaml` and
-`plan/rule_groups.yaml`; built by TASK-M6-34 and TASK-M6-35 on the mock*
+`docs/read_first/principia_INDEX.md` § "GUI" (two lines added), REQ-GUI-194 to REQ-GUI-200 (reqio, new), RQ-341 to
+RQ-346, TASK-M6-34 and TASK-M6-35 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-34 and
+TASK-M6-35 on the mock*
 
 The human's words are R-450's quote, Part 3.
 
@@ -10350,14 +10405,20 @@ The human's words are R-450's quote, Part 3.
 - **The Jacobi set.** The decoder writes `ρ̃ = √μ_ρ (r₁ − r₀)` and `λ̃ = √μ_λ (r₂ − (m₀r₀ + m₁r₁)/M₀₁)` mass-weighted,
   and `p_ρ = (q₀, q₁)`, `p_λ = (q₂, q₃)` as physical Jacobi momenta, not mass-weighted (`principia_dd_decoder.md`
   §3.2; `principia_chart_reference.md` §0.2, §0.3). In the canonical frame `ρ̃` is on `+x` and `R̃ = 1`, so `ρ̃ᵧ ≡ 0`
-  and the four position components carry two degrees of freedom; the masses (`z_μ1`, `z_μ2`) move none of the eight,
-  so a plane tilted into them pushes forward degenerately: **RQ-342** (physics, then the human's).
+  and the four position components carry two degrees of freedom; with `η_E` off, the masses (`z_μ1`, `z_μ2`) move
+  none of the eight, so a plane tilted into them pushes forward degenerately: **RQ-342** (physics, then the human's).
 - **The Shape set.** `n = ((a−b)/I, 2p/I, 2q/I)` is a unit vector (three numbers, two degrees of freedom), `R = √I` is
-  1 on the decoder's image, and no doc defines `ṅ` or `Ṙ`; the set carries neither the masses nor the overall rotation
-  rate (`L_z` lives in the momentum block): **RQ-343** (physics, then the human's).
+  1 on the decoder's image, and no doc defines `ṅ` or `Ṙ`; the set has neither the masses nor the overall rotation
+  rate (`L_z` lives in the momentum block) as coordinates, though the masses enter its rates: **RQ-343** (physics,
+  then the human's).
 - **The steer.** No doc has a pseudo-inverse or a latent preimage of a physical plane; it needs RQ-341's eight-column
   Jacobian, a metric on `z`, a rank test with a threshold, and a rule for what the cell lights when `e_i` is not in the
   Jacobian's range: **RQ-344** (physics, then the human's).
+- **Added in the fix round of PR #227 (physics review P6 to P8).** The decoder's own physical set (`α, β`, the four
+  momenta and two masses) is a non-redundant 8-set of full rank, which RQ-342 to RQ-344 now state. With the energy
+  normalisation `η_E` on, every physical Jacobian has rank at most 7, whatever the coordinates: **RQ-345** (physics,
+  then the human's). The grid and the steer both depend on a metric on the physical coordinates: **RQ-346** (physics,
+  then the human's).
 - The Plücker view, the position readout, the Plücker steer and the keyboard need none of these; they are built
   first.
 
@@ -10388,7 +10449,7 @@ follow-up task):*
   **REQ-GUI-194** (the switcher), **REQ-GUI-195** (the Plücker view), **REQ-GUI-196** (the position readout),
   **REQ-GUI-197** (the Plücker steer) and **REQ-GUI-198** (the keyboard), closed by **TASK-M6-34** (new; code, qa,
   gui; after TASK-M6-33); **REQ-GUI-199** (the physical views) and **REQ-GUI-200** (the physical steer), closed by
-  **TASK-M6-35** (new; code, qa, gui and physics; after TASK-M6-34), which waits on RQ-341 to RQ-344. REQ-GUI-183
+  **TASK-M6-35** (new; code, qa, gui and physics; after TASK-M6-34), which waits on RQ-341 to RQ-346. REQ-GUI-183
   (the Compass scope's three siblings, closed by TASK-M6-31) is unchanged as TASK-M6-31's record; REQ-GUI-198 adds the
   view buttons after them.
 - R-452 is in the "design" group of `plan/rule_groups.yaml`.
@@ -10432,15 +10493,19 @@ ruling applied by a follow-up task):*
 - **D3. Without a pin.** The panel keeps showing the last sample hovered over the figure when the pointer leaves it,
   onto the panel or anywhere else, until the pointer hovers another point of the figure; it never goes blank because
   the pointer moved off the figure. Before any hover it says "move the pointer over the figure", as now.
-- **D4. The figure's path and the hover label.** While a pin is held, the orbit's path drawn on the figure (§G2) is
-  the pinned sample's, matching the panel; the hover label still follows the pointer. No new mark is drawn on the
-  figure (§G1, "the figure is never covered").
+- **D4. The figure's path and the hover label.** Dropped in the fix round of PR #227 (gui review G3), applied per
+  R-369: the human's words cover only the panel ("it changes which trajectory is in the panel"), so the orbit's path
+  drawn on the figure and the hover label keep following the pointer, pinned or not, as §G2's Figure paragraph and
+  REQ-GUI-085 say; the pinned orbit is the panel's. No new mark is drawn on the figure (§G1, "the figure is never
+  covered").
 - **D5. The pin's state.** The pin is `ViewUI` state, like the kept orbits (`principia_trajectory_viewing.md` §6): not
   undoable, not on the sim key, no `SetField` on `SimConfig`; the integration is `computeIC`'s, as for hover. A
   change of the sim key (an integrator or horizon edit) re-integrates the pinned IC.
 - **D6. The keyboard.** In the Figure scope, P pins the sample under the pointer, the point K locks at (§G4), and
-  with the pointer off the figure does nothing, as K; a letter shortcut in either mode, as §G3 has them; the Trajectory scope's elements gain the unpin button (Enter acts as its click, R-409 A1)
-  and the two views, each an adjustable element: Enter on a view starts interaction, where the arrows pan the
+  with the pointer off the figure does nothing, as K; a letter shortcut in either mode, as §G3 has them, listed with
+  the Figure's keys; the Trajectory scope's elements gain the unpin button (Enter acts as its click, R-409 A1)
+  and the two views, each an adjustable element, the unwrapped view being the sphere's element while it is shown in
+  the sphere's place and taking the real-space view's keys (G5 of PR #227's gui review): Enter on a view starts interaction, where the arrows pan the
   real-space view by R-404's `Pan` step (1/20 of the view's span) and turn the sphere by R-404's `Angle` step (1°),
   + and − zoom either by R-404's `ZoomLog2` step (0.25 octave), and Shift ×10 and Alt ×0.1 apply as everywhere; Esc or
   Enter returns to navigation mode. These reuse confirmed steps for the same kinds of quantity, so no new value is

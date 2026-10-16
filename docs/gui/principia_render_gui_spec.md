@@ -117,9 +117,10 @@ IC:
   under it (a drag still pans); the pin holds the sample's IC, so a later pan, zoom or slice edit leaves it, and a
   click on another point moves it. Hover never replaces a pinned trajectory, and **the cursor moving into the panel
   never clears it**; without a pin, the panel keeps the last sample hovered over the figure until the pointer hovers
-  another point. An **unpin** button returns the first tab to following the cursor. While pinned, the path drawn on the
-  figure is the pinned sample's; the hover label still follows the pointer. The pin, like the kept orbits, is `ViewUI`
-  state, never undoable; the first tab reads "pinned" while a pin is held (R-453, D1 to D5);
+  another point. An **unpin** button returns the first tab to following the cursor. The path drawn on the figure and
+  the hover label keep following the pointer, pinned or not (the Figure, above); the pinned orbit is the panel's. The
+  pin, like the kept orbits, is `ViewUI` state, never undoable; the first tab reads "pinned" while a pin is held
+  (R-453, D1 to D3, D5);
 - a one-line summary (fate, `t_end`, FTLE, `E₀`);
 - real space (CoM frame) and the shape sphere side by side. **The shape sphere turns slowly, with visible x, y, z axes,** and
   switches to an unwrapped (equirectangular) view; a "turn" checkbox stops it. **Both views are interactive (R-453):**
@@ -175,19 +176,25 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   `0.8 + 1.0·near` px, `near = (x + z + 2)/4` at the edge's middle); the slice is sorted among them by its own mean
   `x + z`, so edges in front of it draw over it.
 - **The slice** is the true cross-section polygon of the plane through the cube, 3 to 6 vertices: a rectangle
-  untilted, rectangles to hexagons as it tilts. Its fill is Lambert-shaded from the slice's own normal, two-sided
+  untilted, rectangles to hexagons as it tilts. Through the cube's central axis (`z₀` 0 on `e_a` and `e_b`) it has 4 to
+  6, never a triangle, a pentagon possible off the centre; off that axis a plane can cut off one corner, a triangle. Its fill is Lambert-shaded from the slice's own normal, two-sided
   (`0.2 + 0.8·max(0, n·L)`, `n` flipped to face the view `(1,1,1)`, light `(0.35, 1.0, 0.55)` normalised, a depth term
   `±0.05`), at opacity 0.6; an in-plane grid (spacing 0.5) is clipped to the polygon; an outline (1.7 px) closes it.
-  Slice mode draws the plane untilted at its position along the slice axis; tilt mode draws the plane as the decoder
-  tilts it (`View::basis` in the cube's frame), at its position (R-451 B2). The drawing follows the decoder's tilt
-  mapping, not the reference's axis-angle map; RQ-340 holds the difference (R-451).
+  Both modes draw the decoder's plane, `View::basis`'s `(q₁, q₂)` in the cube's frame, through the point whose
+  coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over the slice step's half-range and clamped to
+  [−1, 1]; the modes differ in the drag, the labels and the readout, never in the plane drawn, and untilted the plane
+  is the reference's slice-mode rectangle at its depth (R-451 B2). The three axes share one scale, so the drawn tilt is
+  the latent angle; the cube is the slider's range on each axis, and the chart window's extent is not drawn. The
+  drawing follows the decoder's tilt mapping, not the reference's axis-angle map; RQ-340 holds the difference (R-451).
 - **Labels:** each axis name centred on its edge, pushed 20 px outward from the cube. Slice mode names Width
   (bottom-left edge), Depth (bottom-right) and Height (left vertical), with −1.0 and 1.0 at the corners, one number per
   corner, 12 px outward. Tilt mode names only the tilt target, on the bottom-right edge: under the decoder's mapping q₁
   and q₂ share one target, the slice axis, and the other edges are left unnamed (R-451 B1).
-- **Readout:** slice mode, "plane ⟂ <axis>" and "<axis> = +0.25 of range" (`z₀` on the slice axis over the slice
-  step's half-range); tilt mode, q₁'s and q₂'s target and their angles in degrees, one decimal.
-- **Drag:** slice mode, the horizontal component moves the slice along R-409 A3's normal, the cube's full width
+- **Readout:** slice mode, "plane ⟂ <axis>" untilted, or the tilt as tilt mode reads it when a tilt is set, and
+  "<axis> = +0.25 of range" (`z₀` on the slice axis over the slice step's half-range); tilt mode, q₁'s and q₂'s target
+  and their angles in degrees, one decimal.
+- **Drag:** slice mode, the horizontal component moves the slice along the drawn plane's normal, the decoder's
+  (R-409 A3's), the cube's full width
   spanning the whole range; tilt mode, a horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
   or height 180°, each clamped to ±90°. One `SetField` per drag (R-96). The displayed values ease toward their targets,
   `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s, in the drawing only; the contract holds the target
@@ -213,13 +220,14 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
   grid over eight physical coordinates; the readout gives the dominant pair and the area stretch
   `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)`. Jacobi's eight are `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the decoder
   writes them; Shape's `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets, and which Jacobian (the corpus's `J_D` is
-  `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and wait on RQ-341 to RQ-343; the
+  `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and wait on RQ-341 to RQ-343, RQ-345 and
+  RQ-346; the
   reference's Jacobian is a synthetic placeholder and is not copied. The help text says that these views change as the
   slice moves, because the Jacobian depends on `z₀`, while the Plücker view does not.
 - **Click to steer.** A click on Plücker cell (i, j) sets the slice plane to `z_i × z_j`, the tilts and `γ` reset to 0,
   the zoom and `z₀` kept. A click on a physical cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J⁺ e_i`,
   `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and is refused, with the reason logged to the console, where the
-  preimage is no 2-plane; the construction waits on RQ-344. Every steer is one `SetField` on the basis through the
+  preimage is no 2-plane; the construction waits on RQ-344 to RQ-346. Every steer is one `SetField` on the basis through the
   contract: undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following.
 - **Keys:** the Compass scope's siblings are the compass, Tilt, Slice, Cube, Plücker, Jacobi and Shape (§G3).
 
@@ -243,10 +251,12 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 In scope: a scope's arrow actions need Enter, acting in interaction mode only, and its letter and Space keys are
 shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode, except while a
 text field is being typed in (R-409).
-Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4). Trajectory — Enter reaches the
+Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4), P pins the sample under the pointer
+in the Trajectory panel (R-453). Trajectory — Enter reaches the
 playhead, listen, kept orbits, unpin and its two views; on the real-space view in interaction mode the arrows pan by
 R-404's `Pan` step and + / − zoom by its `ZoomLog2` step, and on the sphere the arrows orbit by its `Angle` step (1°)
-and + / − zoom; the Figure's P pins the sample under the pointer, as K locks there (R-453, D6). Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
+and + / − zoom; the unwrapped view, while shown in the sphere's place, is that element and takes the real-space view's
+keys (R-453, D6). Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
 plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; there is no orbit, and no separate fine
 step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1). Legend is
 read-only.
