@@ -354,10 +354,21 @@ dimension gets its own key:**
 It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and
 its 1-based class names (R-449, superseding R-22's 0-based display labels): "collision 1–2", "collision 1–3", "collision
 2–3", "triple collision", "escape body 1", "escape body 2", "escape body 3", "triple ejection", each from the one display
-function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Its keys are the nine classes, physical outcomes only (R-444): the black key reads "bounded / nothing
-yet", which `running` and every failure share in the outcome view (R-446); it has no "degenerate", "collision @ t=0",
-`running` or `sim_failed` key. A forbidden chart region, which keeps the hatch (R-446), is keyed as the chart's
-forbidden region.
+function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Its keys are the nine classes,
+physical outcomes only (R-444), each a flat swatch: the black key reads "bounded / nothing yet", which `running` and
+every failure share in the outcome view (R-446); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
+key. **Each key's name is the outcome class's name from the same display module** (applied per R-369): the black
+class's is "bounded / nothing yet", the other eight's the function's names for their `state` and `detail`.
+**The forbidden-region key (R-446; applied per R-369).** A forbidden chart region keeps the hatch, and the outcome
+legend keys it with one more key after the nine, labelled "forbidden region", drawn in the hatch style
+(`debug_invalid`) and compared as the style, not as one colour (R-136); it is drawn always, its share 0 where the view
+holds no forbidden pixel. It covers every pixel REQ-COL-102's lane marks forbidden, both of the chart contract's
+hatches (the domain's end and the universal fallback; colour_composition §1.4). **Its share and the nine classes'
+shares are area statistics over the view, so they count as R-408 counts** (chart_decoder_contract Part 3; §G7): a
+visible pixel counts only if every axis is inside its primary range; a pixel hatched because the domain ends there (a
+bounded axis past its edge, or a failed `Φ`) is drawn with the key's hatch but leaves every share and the total; the
+forbidden key's share is that of the states that fail the validity check, §G7's "forbidden in view". Inside `[0,1]²`
+the shares are unchanged.
 
 **A free-fall slice under `η_E` is almost all `decode_failed`, drawn black, and that is expected (R-441, reworded by
 R-446; dd_decoder §3.7).** Energy

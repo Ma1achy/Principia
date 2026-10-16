@@ -255,7 +255,10 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
   exhaustive over every `state` and `detail` value, so a new code fails the build until it has a display name. The
   states with no body or pair read by their names here, applied per R-369: "bounded", "running", and `sim_failed` and
   `decode_failed` with their failure category (`sim_failed` "NaN in state", and so on), a reserved `state` code as
-  "reserved state 6" or "7". **Machine-readable exports** (CSV columns, JSON fields, `.raw` and `.prnq` dumps, the
+  "reserved state 6" or "7". The same module names the outcome palette's classes (colour_composition §1.4), which
+  the outcome legend and swatch labels take: the black class, which `bounded`, `running` and every failure share in
+  the outcome view (R-446), reads "bounded / nothing yet", and each of the other eight reads as the function names
+  its `state` and `detail` (applied per R-369). **Machine-readable exports** (CSV columns, JSON fields, `.raw` and `.prnq` dumps, the
   export decoder's columns, generation root §3.8) keep the 0-based ids, and their headers or schema say so: "body
   index, 0-based", and for a pair "pair id, 0-based; pair `k` is the side opposite body `k`" (REQ-GEN-036).
 - **escape / collision** use `detail` as body id / pair id, and `3` means all three (triple ejection / triple collision, pending change 7). The old `3` = invalid sentinel is dropped. `detail` is written in the same operation as `state` and is meaningful only for `state ∈ {escape, collision, sim_failed, decode_failed}`, so an unwritten `detail` cannot occur without a wrong `state`, which the state field's own gating already catches. (`dmin_pair` keeps its own `3` = unset.)

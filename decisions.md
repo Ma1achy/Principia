@@ -10237,8 +10237,22 @@ The human's words (R-444 quotes the whole message):
 - **Which hatched pixels keep the hatch.** The chart contract hatches a pixel "as forbidden" in two cases (Part 3): a
   bounded axis past its edge (the domain's end) and the universal fallback, a `Φ` that fails to evaluate or a state
   that fails `validate`'s layers 2 and 3. R-408 tells the two apart only for the area statistics. Both are "hatched as
-  forbidden" in the contract's words, so both keep the hatch in the outcome view, decided by the classifier the
-  statistics use (Part 3's order); a `decode_failed` sample the chart does not hatch draws black.
+  forbidden" in the contract's words, so both keep the hatch in the outcome view, on every pixel Part 3 hatches,
+  inside `[0,1]²` and past it: after the types act, a bounded axis past its edge, a state `validate`'s layer 2 or 3
+  rejects, or a `Φ` that fails to evaluate. A `decode_failed` sample the chart does not hatch draws black. (Reworded
+  per physics review 5548113767, P1: the first port tied the hatch to the classifier the statistics use, whose
+  primary-range step decides counting, not hatching.)
+- **The primary ranges hatch nothing (flagged).** The human's words list them among the chart's inputs ("types,
+  primary ranges, validate, Φ"). Under Part 3, whose forbidden-region treatment the ruling keeps, they decide only what
+  the area statistics count (R-408): a pixel outside a primary range that passes is a system and draws its outcome (the
+  shape sphere past its pole, a periodic redraw, R-407), and one whose state fails `validate` there is hatched. Read
+  otherwise, the parenthesis would hatch systems R-407 draws, or draw black a pixel Part 3 hatches, so this port reads
+  it as naming the chart's machinery, not as a step of the hatch (physics review 5548113767, P1).
+- **`Φ` is the chart map** (physics review 5548113767, P2). Part 3 writes the general interface with the decode
+  inside the arrow; chart_reference §5.1 separates `Chart::map` from the shared decoder. For the outcome view "a `Φ`
+  that fails" is `Chart::map` failing to evaluate (non-finite, or outside its domain). The decoder's own outcomes, its
+  `DEGENERATE` tags and a non-finite decode, never set the lane: the human's list draws them black. `validate`'s layer
+  3 marks forbidden a finite decoded state that breaks it; a non-finite decode stays `decode_failed`/0, black.
 - **How the view learns it** is not in the corpus: the outcome palette reads the payload, and the classification is
   the chart's, computed on the CPU (R-26). It is a definition requirement (R-72), **REQ-COL-102**: TASK-M2-32 writes in
   colour_composition §3 how a sample's chart classification reaches the outcome view (a `ctx` field, its type and who
@@ -10257,10 +10271,18 @@ The human's words (R-444 quotes the whole message):
   `detail` codes, payload §2), debug_tooling_plan §B; neither tells `ENERGY_UNSCALABLE` from `ENERGY_INFEASIBLE`. The
   reworded GUI-docs line names the human's view and those two; which view the human means is **RQ-333**.
 - **The mass block's tags and #225's.** PR #225 (TASK-M2-09, in flight) tags an infeasible invariant-chart pixel
-  `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed` detail 3. Inside `[0,1]²` the invariant warp maps every pixel
-  feasible (chart_reference §2.1), so the tag arises past the square, where the warp's axes are bounded and the chart
-  hatches the pixel: there it keeps the hatch, from the chart's classification; anywhere the chart does not hatch it,
-  it draws black.
+  `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed` detail 3. Past the square the warp's axes are bounded and the
+  chart hatches the pixel: there it keeps the hatch, from the chart's classification. Inside `[0,1]²` the invariant
+  warp maps every pixel feasible in exact arithmetic (chart_reference §2.1), so there the tag can arise only from
+  rounding at the feasibility boundary (`K* = E − U` cancelling near `ulp(U)`, or a deep quad's margin at an `s` edge
+  comparable to the rounding of `L_max²` and `L_z²`); the chart does not hatch it there, and it draws black. No test
+  asserts that the tag never occurs inside the square. (Reworded per physics review 5548113767, P4.)
+- **Review fixes on PR #226** (applied per R-369): `#141418` is the outcome palette's explicit invalid treatment
+  (colour_composition §3, "Overridable per node"; render_gui_spec §13), so R-79 and R-436 are met by black in the
+  outcome view, and the human's "NaN, infinity" are `sim_failed`'s details, the view reading no float (physics P3).
+  The outcome legend's forbidden-region key is one key after the nine, "forbidden region", in the hatch style, over
+  every pixel the lane marks forbidden; its share and the classes' shares count as R-408 counts (render_gui_spec §G6;
+  gui review 5548034323, G3).
 
 *Applied:*
 - **colour_composition §1.4**: "how the table reads the payload" gives black's meaning, the failures it covers, the
@@ -10464,7 +10486,9 @@ and its scope, not separate rulings; R-444 to R-448 were split because their ite
   body `k` reads "escape body `k + 1`", as item 4's "escape body 1" does. A state with no body or pair reads by its
   payload §2 name: "bounded", "running", `sim_failed` and `decode_failed` with their failure category, and a reserved
   `state` code as "reserved state 6" or "7". The legend's "bounded / nothing yet" key (R-444) is the outcome legend's
-  class name over several states, and stays.
+  class name over several states, and stays. **The same module owns it** (gui review 5548034323 on PR #226, G2): it
+  gives the outcome class's name, the black class "bounded / nothing yet" and each of the other eight as the function
+  names its `state` and `detail`; the swatch labels take it (payload §2, "What a person reads"; render_gui_spec §G6).
 - **One module, not one function alone.** `dmin_pair`'s legend, the Inspector's per-body readouts (separations shown
   r₁₂, r₁₃, r₂₃), the ternary masses' legend, the k = 6 direction-cosine view's legend and the shape sphere's
   collision landmarks (`BC₀₁` shown `BC₁₂`) name a body or a pair without a `state`; they take the body and pair names

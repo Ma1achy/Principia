@@ -198,17 +198,32 @@ assignment lands on `detail`, not on a second field). **How the table reads the 
 `state` and `detail` alone. `t_end_step` plays no part: a collision at `t_end_step == 0` is an ordinary pair or triple
 collision and draws in that colour (R-445); timing is carried by lightness when a stain wants it, the outcome ×
 `t_end` bivariate preset (§4.1), white = early. **Black means "nothing has happened yet, up to the playhead"
-(R-446):** `bounded`, `running` and every failure draw `#141418` in the outcome view: `sim_failed`, `decode_failed`
-whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a
-non-finite decode), NaN and infinity, and a reserved `state` code (applied per R-369). A view starts black and fills
+(R-446):** `bounded`, `running` and every failure draw `#141418` in the outcome view: `sim_failed` of each detail
+(NaN in state, Inf or overflow in state, a non-finite derived quantity, payload §2: the human's "NaN, infinity"),
+`decode_failed` whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's
+`M01_TINY`, a non-finite decode), and a reserved `state` code (applied per R-369). The outcome view reads only `state`
+and `detail`, integer fields, so it never receives a NaN itself; storage holds none (R-79). **`#141418` is the outcome
+palette's explicit invalid treatment**, which §3 ("Overridable per node") and render_gui_spec §13 ("every colouring
+has an explicit invalid-pixel treatment") allow, so R-79's rule that NaN or a sentinel reads as "no data", and
+R-436's, are met in the outcome view by black, not by the hatch. A view starts black and fills
 in as events fire. Failures are shown by the debug views, which keep the invalid hatch and their own palettes (the
 `state` and `detail` views, `principia_debug_tooling_plan.md` §B). **Forbidden chart regions keep the chart contract's
 forbidden-region treatment** in the outcome view, the hatch `debug_invalid(frag_xy)` (`principia_chart_decoder_contract.md`
-Part 3), decided from the chart's own validity (its axes' extension types, their primary ranges, `validate`, `Φ`),
-never from the payload's `decode_failed` detail, which cannot tell the two hatches apart (R-446). Every pixel the chart
-hatches "as forbidden", past a bounded edge or by the universal fallback, keeps it (applied per R-369); every other
-`decode_failed` sample draws black. How a sample's chart classification reaches the outcome view is REQ-COL-102's
-definition (R-72), written in §3 by the task that needs it. *Was (R-96, superseded in part by R-444 to R-446):*
+Part 3), decided from the chart alone, never from the payload's `decode_failed` detail, which cannot tell the two
+hatches apart (R-446). **A pixel keeps the hatch where chart_decoder_contract Part 3 hatches it**, on every pixel,
+inside `[0,1]²` and past it: after the axes' extension types act, a bounded axis past its edge, a state `validate`
+rejects (layer 2, or layer 3 on a finite decoded state), or a `Φ` that fails to evaluate (non-finite, or outside its
+domain). Both hatches keep it, the domain's end and the universal fallback (applied per R-369). **`Φ` here is the
+chart map, `Chart::map`** (`principia_chart_reference.md` §5.1), not the shared decoder after it: the decoder's own
+outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any tag added later) and a
+non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it, as
+R-446's list of failures says (applied per R-369). **The axes' primary ranges hatch nothing:** R-446's words list them
+among the chart's inputs ("types, primary ranges, validate, Φ"), but under Part 3, whose treatment the ruling keeps,
+they decide what the area statistics count (R-408), not what is hatched (applied per R-369, flagged), so a pixel
+outside a primary range that the chart does not hatch (the shape sphere past its pole, a periodic redraw) is a system
+and draws its outcome, and one whose state fails `validate` there is hatched. Every other `decode_failed` sample draws
+black. How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
+by the task that needs it. *Was (R-96, superseded in part by R-444 to R-446):*
 "degenerate", `decode_failed`, drawn white `#ECECF0`; "collision @ t=0", a collision with `t_end_step == 0`, drawn
 orange; `running` in the neutral grey and `sim_failed` in the invalid pattern. There is **no separate `escaper` field**: the
 escaping body *is* `detail | state=escape`, so “which body escaped” is already carried by this map's
