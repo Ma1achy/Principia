@@ -371,7 +371,7 @@ fn mock_stain_drawn_the_wires() {
         assert_eq!(b.stroke.color, ColorMode::Solid(type_colour(to.ins[port])));
     }
     rejects("a wire from the in-port", || {
-        let w = g.wires()[0].clone();
+        let w = g.wires()[0];
         let to = drawn.iter().find(|d| d.id == w.to).unwrap();
         let p = to.in_port(w.port as usize, Z);
         assert!(beziers.iter().any(|b| close_pos(b.points[0], p)));
