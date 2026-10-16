@@ -198,8 +198,8 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   is the compass's own, numerical, set by the 1e-12 normal check (the normal's error is about `ε/s`): only at the
   four corner points `τ₁ = ±τ₂ = ±90°`, where `q₁` and `q₂` both lie along `e_d`, is there no plane, and within
   about 0.057° of them a plane exists that the compass does not draw. Where `s < 10⁻³` no slice is drawn (no polygon,
-  fill, grid or outline), only the cube's edges, labels and corner numbers; the readout says so and a slice-mode drag
-  sends no edit (R-451 B11; RQ-340).
+  fill, grid or outline), only the cube's edges, labels and corner numbers, and, locked, the gold pin at the anchor
+  (R-451 B7); the readout says so and a slice-mode drag sends no edit (R-451 B11; RQ-340).
 - **Labels:** each axis name centred on its edge, pushed 20 px outward from the cube. Slice mode names Width
   (bottom-left edge), Depth (bottom-right) and Height (left vertical), with −1.0 and 1.0 at the corners, one number per
   corner, 12 px outward. Tilt mode names only the tilt target, on the bottom-right edge: under the decoder's mapping q₁

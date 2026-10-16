@@ -53,8 +53,13 @@ pin (§G4).
 ## Notes
 - **What to try.** The PR description has a "What to try" section (R-390), on `cargo run -p gui --features mock`: lock
   (K), tilt to a corner (τ₁ = τ₂ = 90°, then a rotation γ of 45°), and drag the tilt back off it: the view stays put,
-  where before it jumped. Then, locked, drag the tilt to just short of a corner, where the readout says "no plane
-  drawn" but the tilts are not both ±90°, and drag again: the view still turns about the pin, which stays put.
+  where before it jumped. Then, locked, bring the tilt to just short of a corner, inside the compass's 0.057° disc,
+  where the readout says "no plane drawn" but the tilts are not both ±90°, and drag again: the view still turns about
+  the pin, which stays put. Neither the compass's drag (about 1° a pixel) nor its finest key step (0.1°, R-404's 1°
+  `Angle` with Alt ×0.1) reaches the disc, and the docs give the Slice & tilt angles no typed entry, so the tester
+  types the basis instead, in the Chart section's q₁ and q₂ editors (§G2; the basis editor takes any eight components,
+  R-451 B11): the basis `View::basis` gives at (90°, 89.97°, γ = 45°), its eight components given in the PR (applied
+  per R-369, gui review's nit).
 - **A GUI-track task** (R-390): it merges once its reviews pass and CI is green, without waiting for the gates of M1
   to M5.
 - **Where it came from.** Physics review P15 of PR #227, decided per R-369: B11 rejects the sine test for the compass,

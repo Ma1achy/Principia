@@ -10392,8 +10392,9 @@ applied by a follow-up task):*
   - **The sine is not the test.** The sine of the angle between `q₁` and `q₂` is not used: at a corner with `γ = 45°`
     one of them is rounding alone, `q₂` at `(90°, 90°)` and `(−90°, −90°)`, `q₁` at `(90°, −90°)` and `(−90°, 90°)`,
     and that sine is between about 0.27 and 1 depending on `σ` (σ in [0.01, 4]), about 0.48 at `σ = 1`.
-  - **What the cube draws where `s < 10⁻³`.** The cube's edges, labels and corner numbers as in its mode, and no
-    slice: no polygon, fill, grid or outline. The readout adds a line naming the tilt, "no plane drawn: s < 10⁻³ at
+  - **What the cube draws where `s < 10⁻³`.** The cube's edges, labels and corner numbers as in its mode, and,
+    locked, the gold pin at the anchor (B7), and no slice: no polygon, fill, grid or outline (the pin, gui review G9,
+    applied per R-369). The readout adds a line naming the tilt, "no plane drawn: s < 10⁻³ at
     τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)", the angles signed, one decimal. A slice-mode drag sends no edit, since the
     compass draws no normal to move `z₀` along (B3). Free, a tilt-mode drag acts as anywhere else, and once
     `s ≥ 10⁻³` the plane is drawn again.
