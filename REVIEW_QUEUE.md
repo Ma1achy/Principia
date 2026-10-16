@@ -209,3 +209,261 @@ Nothing is chosen.*
   4 substeps up to `N_max` 64 (`crates/gui/src/mock/profile.rs`, `SUBSTEPS_PER_PIXEL`), the cap marked at 64, with a
   note naming this entry; the real engine's side has no trace, so draws nothing.
 - **Waits:** TASK-M8-28 (REQ-TOOL-098's histogram on real data). TASK-M6-28 does not wait.
+
+## RQ-310: `I_max` and the "when decided" latch want descriptor bits 10–15, which payload §2 holds reserved and "never opportunistically reused", beside R-37's departed bit, whose place is open *(conflict and budget, R-442, R-37, R-36, REQ-PAY-105, REQ-PAY-106, REQ-COL-082, REQ-VAL-055; context: TASK-M7-35, TASK-M7-40)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. **For the human: yes**, as the human asked ("Two need
+me: the descriptor-bit budget …").*
+
+- **File, section:**
+  - `docs/design/principia_dd_chazy_final_motion.md` § "6. The latch: `I_max`", transcribing spec 02 §3: "A
+    log-quantised value fits the reserved descriptor bits 10–14 (32 half-octave levels up to 2¹⁶), leaving bit 15 for
+    the open departure flag. That is a versioned format change and needs a ruling (`04`)."
+  - Spec 04 §3 item 1: "**Descriptor bits.** `I_max` in reserved bits 10–14 claims space next to the open departure
+    flag (bit 15). The "when decided" view (`03` §7.1) needs a second latch and more bits. Is that budget available,
+    and is it worth it?"
+  - Spec 03 §7.1 (drill-down § "10.8.1 When it was decided"): "a second forward-only latch, the time the current
+    coarse class was first committed, reset whenever it changes. Same shape as `I_max`, and it needs its own storage
+    bits. Without that latch this view is offline only."
+  - `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest
+    reserved", line 226: "*reserved* | 10–15 | 6 | … Reserved, decode as zero, never opportunistically reused"; line 228:
+    `last_symbol`'s bits 8–9 were "a deliberate, versioned assignment — a binary-format version bump … (automatic: the
+    version is the ledger's content hash, R-36)".
+  - `open-questions.md` item 9, line 71: "**Still open:** the value of `δ_dep` (by measurement), and where the
+    per-sample "departed" bit lives" (R-37; carried by REQ-VAL-055 and REQ-PAY-056).
+- **Conflict:** the spec spends five of the six reserved bits on `I_max` and names bit 15 for the departed bit, whose
+  placement R-37 left open; payload §2 holds the six reserved. The "when decided" latch needs more storage that the
+  descriptor does not have.
+- **Options seen:**
+  - (a) Spend bits 10–14 on `I_max` (log, half-octave, 5 bits), a versioned assignment as `last_symbol`'s was; bit 15
+    for the departed bit; "when decided" offline only.
+  - (b) As (a), and give the "when decided" latch storage outside the descriptor (a new `SimState` member, a size
+    change with its memory cost), so the view is live.
+  - (c) Keep the descriptor's bits reserved and store `I_max` elsewhere (a new `SimState` member), at its own memory
+    cost.
+  - (d) Do not store `I_max`: OS-candidate is then computed from no history (it never fires), or dropped.
+- **Waits:** REQ-PAY-105's storage and REQ-PAY-106 (`rq: RQ-310`), TASK-M7-35's persisting the latch, and REQ-COL-082
+  (TASK-M7-40). The local, per-step latch and the classifier's tests do not wait.
+
+## RQ-311: the default seven-class final-motion palette sits below τ within itself (H / HP 0.083; HP / P 0.002 under deuteranopia); keep it, or move the default to Okabe–Ito *(decision at the gate, R-442, R-132, R-429, REQ-COL-075, REQ-COL-086, REQ-COL-087; context: TASK-M7-37, the M7 gate)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. **For the human: yes**, as the human asked ("whether the
+default seven-class palette should stay below τ (04 §2.1) or move to Okabe–Ito").*
+
+- **File, section:**
+  - `docs/design/principia_dd_chazy_final_motion.md` § "11.2.1 Palette separation, measured", transcribing spec 04
+    §2.1: "**The seven-class palette is under τ by design.** H, HP and P are steps of one cool family, so H and HP sit
+    0.083 apart, and under deuteranopia HP and P collapse to the same colour. That is the cost of the family logic. The
+    Okabe–Ito variant (`03` §3) is the colour-vision-safe alternative. Whether the default should change is a decision
+    for the gate."
+  - R-442, ruling 7: "The seven-class palette in 03 §1 is the default."
+  - `decisions.md` § "R-429 — …": "τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101", the distance R-132
+    ruled a collision (REQ-COL-055, REQ-COL-061).
+- **Context:** no corpus rule holds a palette's own entries τ apart (R-442's note); the seven-class palette clears
+  every style unsimulated (0.137). The question is the human's choice of default, not a corpus conflict.
+- **Options seen:**
+  - (a) Keep the seven-class palette as the default (R-442 as given), the shortfall recorded and asserted by
+    REQ-COL-086; Okabe–Ito one click away.
+  - (b) Make the Okabe–Ito variant (drill-down § "10.4 Final motion: Okabe–Ito") the default, the seven-class family
+    a preset.
+  - (c) Keep the family logic but respace H, HP and P (and re-measure) until they clear τ unsimulated, at the cost of
+    the shared lightness.
+- **Waits:** REQ-COL-087's confirmation at the M7 gate (`rq: RQ-311`). TASK-M7-37 builds R-442's default meanwhile and
+  does not wait.
+
+## RQ-312: REQ-GUI-076 bans "Chazy subtitles" from the dev GUI, which could be read as banning the Chazy stains R-442 adds *(scope, R-442, REQ-GUI-076, REQ-COL-075, REQ-GUI-185; context: TASK-M8-19, TASK-M8-45)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369 (the scope of a
+requirement's wording).*
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere", line 69: "**Not in the dev GUI:**
+    Chazy subtitles, and the object-based stain desk." `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold
+    everywhere", line 17, the same.
+  - REQ-GUI-076: "The dev GUI must not include Chazy subtitles or the object-based stain desk …"; verify: "no Chazy
+    subtitle or stain-desk code path exists" (TASK-M8-19).
+  - Spec 04 §3 item 4: "**REQ-GUI-076** bans "Chazy subtitles" from the dev GUI. That is a different feature from a
+    Chazy stain. Record a ruling so the ban is not read as covering this."
+- **Silence:** the corpus does not say what "Chazy subtitles" were; read broadly, REQ-GUI-076's check ("no Chazy
+  subtitle … code path exists") would flag the Chazy fields, stains and legends.
+- **Options seen:**
+  - (a) Record that the ban covers subtitles only (a caption naming the final-motion class over the figure), not the
+    Chazy fields, stains or legends; REQ-GUI-076 gains a note, its check scoped to subtitles.
+  - (b) Reword REQ-GUI-076 and render_gui_spec §G1 to say "Chazy subtitles (captions over the figure)", with the same
+    effect.
+  - (c) Read the ban as covering any Chazy surface in the dev GUI, so the stains are browser-only (contradicting
+    R-442's request for stains).
+- **Waits:** nothing yet. REQ-GUI-076 carries no `rq:` (TASK-M8-19 does not wait); TASK-M8-45 opens no PR before this is
+  decided.
+
+## RQ-313: the Chazy HE gate and Principia's escape detector are different tests, so a pixel can read "escape" in the event stain and excursion or B in the Chazy stain at the same playhead *(design, R-442, R-29, R-61, R-103, REQ-EVT-027; context: TASK-M7-36)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no (per R-369), unless the choice is
+read as physics.*
+
+- **File, section:**
+  - `docs/design/principia_dd_chazy_final_motion.md` § "9. Gaps between the prototype and Principia", item 3,
+    transcribing spec 02 §6.3: "Principia's escape event uses its own rule and stops the run at fire. The classifier's
+    HE gate (hierarchy ratio > 5, receding, outer `K/U > 1 + ε`) is not the same test. A pixel can read "escape" in the
+    event stain and "excursion" or B here at the same playhead. Decide whether that is acceptable (they answer different
+    questions) or whether one should gate the other."
+  - Spec 04 §3 item 2: "**Escape detector alignment.** … Acceptable, or should one gate the other?"
+  - `decisions.md` § "R-103 — Escape ends the production loop; …"; the escape rule, `principia_01_pitfalls.md` §
+    "2.2 The criterion" and R-29 (closure over the window and `E_rel > 0`, no receding test).
+  - Spec 02 §4 (drill-down § "7. Validity and styles"): "**Escape-terminated**: the production loop stops at escape
+    fire, so the class freezes at the fire-time state."
+- **Options seen:**
+  - (a) Accept it: the two answer different questions; the legend help says so.
+  - (b) An escape-terminated sample reads at least HE (or PE) in the Chazy fields from fire on: the event gates the
+    class.
+  - (c) The Chazy HE gate gates the escape event, a change to R-29's rule that would need its own ruling.
+- **Waits:** REQ-EVT-027 (`rq: RQ-313`), TASK-M7-36's escape-freeze test. The rest of TASK-M7-36 does not wait.
+
+## RQ-314: the f32 disagreement rate near `K = U` is unmeasured, and the spec's "Tier N" for a categorical label sits uneasily with the parity contract's tiers *(measurement and terminology, R-442, R-85, REQ-VAL-183; context: TASK-M7-39)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no. The measurement is REQ-VAL-183's,
+carried by TASK-M7-39; this entry holds how the result is read.*
+
+- **File, section:**
+  - Spec 04 §3 item 3: "**f32 parity.** Measure the disagreement rate at f32 near the `K = U` sign changes before
+    setting a tolerance."
+  - Spec 02 §5 (drill-down § "8. Parity"): "It is **Tier N**: CPU and GPU agree to tolerance, not bit for bit. A pixel
+    within ulps of a sign change may differ between backends. The parity test measures that disagreement rate rather
+    than asserting zero."
+  - prin-rs PR #32, `results/chazy/README.md` §6: "it is Tier N (numerical), not Tier B: CPU and GPU agree to
+    tolerance, and pixels within the band of a sign change read as the marginal labels rather than as confident ones."
+  - `docs/contracts/principia_parity_contract.md` § "Tier N — tight numerical (checkable because nothing amplifies)",
+    line 110, lists continuous quantities compared elementwise; the scope table, line 103: "a **label on a real
+    trajectory** | **none — it will differ** | reported by the inspector, not suppressed"; Tier B's comparison-only rule:
+    "A branch decision derived from a runtime transcendental **cannot** be made bit-exact across backends".
+- **Silence and tension:** a label is not "within tolerance" of another; the classifier's branches read divisions and
+  square roots (§3.1's `K`, `U`, `d`), so on identical inputs they can fork, which Tier B excludes and Tier N does not
+  describe. The PR's sentence that pixels near a sign change "read as the marginal labels" holds for the parabolic band
+  but not for the pair's binding, which is a sign (drill-down § "3.4 Two choices that are physics, not tuning"); the
+  spec does not repeat it.
+- **Options seen:**
+  - (a) Record the class as "a label", reported not asserted (the scope table's row), with REQ-VAL-183's disagreement
+    rate and its band check the gate.
+  - (b) Treat the label as Tier N with a tolerance on the disagreement rate, set by REQ-VAL-183's measurement (a
+    calibration).
+  - (c) Make the class's branch inputs comparison-only (Tier B's rule) where they can be, and report the rest.
+- **Waits:** REQ-VAL-183 (`rq: RQ-314`), TASK-M7-39's threshold. The measurement itself does not wait.
+
+## RQ-315: OS-candidate and B-stable are labels, not predictions; the spec proposes shipping them as provisional and saying so in the legend help *(design, R-442, REQ-PAY-099, REQ-GUI-185; context: TASK-M7-35, TASK-M8-45)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - Spec 04 §3 item 5: "**OS-candidate and B-stable** are labels, not predictions: OS-candidate is unvalidated and
+    B-stable has never fired on random starts. Ship them as provisional and say so in the legend help."
+  - Drill-down § "4.2 Where it is not perfect": "**OS-candidate is not validated.** 2–3 per seed later escaped as HE";
+    "**B-stable never fired** on random starts" (prin-rs PR #32).
+- **Options seen:**
+  - (a) Ship both, marked provisional in the status legend's help, as the spec proposes.
+  - (b) Ship both unmarked.
+  - (c) Withhold OS-candidate (reading B-so-far) until it is validated; keep B-stable, which a fixture covers.
+- **Waits:** REQ-GUI-185's legend help (`rq: RQ-315`), TASK-M8-45. The classifier (TASK-M7-35) does not wait: it
+  computes both labels under every option.
+
+## RQ-316: where the Chazy tasks land: after the event machinery (M3) and the composition backbone (M7) *(placement, R-442, R-415; context: TASK-M7-35 to TASK-M7-40, TASK-M8-45)*
+
+*Found porting the Chazy stain spec (R-442). For the human: no; decided per R-369 meanwhile.*
+
+- **File, section:**
+  - Spec 04 §3 item 6: "**Where it lands.** Needs the event machinery (M3) and the composition backbone (M7)."
+  - The human's request, item 5: "Create tasks for the implementation, sequenced after the event machinery (M3) and
+    the composition backbone (M7); place them in whichever milestone fits once those land."
+- **Options seen:**
+  - (a) M7 for the classifier, fields, stains and parity, M8 for the legends, each depending on the M3, M4 and M7 tasks
+    it uses.
+  - (b) All in M8, after the M7 gate.
+  - (c) A milestone of its own after M7.
+- **Applied meanwhile:** (a), per R-369: TASK-M7-35 to TASK-M7-40 in M7, TASK-M8-45 in M8. The calibrations are
+  confirmed at the M7 gate.
+- **Waits:** nothing; this records the placement for the human's veto.
+
+## RQ-317: B's swatch `#141418` has OKLab chroma ≈ 0.008, but the spec's B rule and test 05 §2.5 say it has none, so that Replace-L turns it neutral grey *(conflict within the ruled spec, R-442, R-77, REQ-COL-074; context: TASK-M7-38)*
+
+*Found porting the Chazy stain spec (R-442), measuring the swatch. Nothing is chosen. For the human: only if option (c)
+is wanted, since the swatch is a ruling.*
+
+- **File, section:**
+  - R-442, ruling 3: "B is black #141418".
+  - Spec 03, "Two rules hold in every stain" (drill-down § "10.1 The two rules that hold in every stain"): "**B is black
+    `#141418`**, the same swatch as the event palette's "bounded". It has no hue (a = b = 0 in OKLab), so under
+    Replace-L it becomes neutral grey at the brightness field's lightness".
+  - Spec 05 §2.5: "**B has no hue.** The B swatch has OKLab a = b = 0 to within quantisation, so Replace-L gives
+    neutral grey. Control: a chromatic swatch fails the same check."
+  - Measured here, with dd_colouring §3.1's transforms: `#141418` is OKLab L 0.193, a 0.0022, b −0.0077, chroma 0.0080.
+    A neutral 8-bit grey has a = b = 0 to rounding; `#141418`'s blue channel is four steps above its red and green.
+- **Conflict:** under Replace-L at a light `L` (§10.5.1's transient, `L` near 0.9) B keeps a faint blue cast; the test
+  as written fails unless "within quantisation" admits chroma 0.008.
+- **Options seen:**
+  - (a) Keep `#141418` (R-442); the stain takes B's hue as it is, and test 05 §2.5 asserts chroma ≤ a stated bound
+    (0.008 measured) with the control's chroma well above it.
+  - (b) Keep `#141418` as the flat swatch, and have the Chazy stains zero B's `a` and `b` under Replace-L, so that B is
+    exactly neutral there.
+  - (c) Change B to a neutral near-black (e.g. `#151515`), which changes R-442's swatch and the outcome palette's
+    bounded link: the human's.
+- **Waits:** REQ-COL-074 (`rq: RQ-317`), TASK-M7-38's B test. The flat stains (TASK-M7-37) draw `#141418` meanwhile.
+
+## RQ-318: the spec's rule puts B-stable before transient; prin-rs PR #32's `classify` tests transient first; they differ for a Mardling–Aarseth-stable hierarchy with E > 0 *(spec against reference code, R-442, REQ-PAY-099; context: TASK-M7-35)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen (the human's follow-up: where the spec and the PR's code
+disagree, file an RQ). For the human: yes, as physics where the choice changes results (R-369).*
+
+- **File, section:**
+  - Spec 01 §2's table (drill-down § "3.2 The rule, in order"), in order: "… **B-stable** | a bound hierarchy that
+    passes Mardling & Aarseth (2001) | yes … **transient** | none of the above, and `E > 0` | no".
+  - prin-rs PR #32, `src/chazy.rs::classify`: `if e > 0.0 { return Motion::Transient; }` comes before
+    `if cfg.mardling_aarseth && qp == -1 && ko < uo && ma_stable(…) == Some(true) { return Motion::BStable; }`.
+  - Drill-down § "2. Chazy's classes": "**E > 0 rules out B and OS.** Lagrange–Jacobi, `I'' = 4E − 2V > 4E > 0`".
+- **Conflict:** B-stable's test reads the two-body energies of the inner pair and of the outer body against the pair's
+  centre of mass. Their sum is not the total energy (the outer potential is the monopole's), so a state can pass it
+  with `E > 0`. The spec labels such a state B-stable; the code labels it transient.
+- **Options seen:**
+  - (a) The code's order: transient first, so E > 0 never reads B-stable, as the energy certificate says.
+  - (b) The spec's order: B-stable first.
+  - (c) The code's order, with B-stable also requiring `E < 0` explicitly (the same as (a), stated in the rule).
+- **Waits:** REQ-PAY-099's ordering clause (`rq: RQ-318`), in TASK-M7-35, and REQ-VAL-185's E > 0 certificate (which
+  (b) would break at such a state). The fixtures do not reach this case, so TASK-M7-35's other work does not wait.
+
+## RQ-319: what the Chazy fields read and the Chazy stains draw for a `decode_failed` sample, or a reserved `state` code, is not given *(silence, R-442, R-96, R-441, REQ-COL-072; context: TASK-M7-37)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - Spec 02 §4 (drill-down § "7. Validity and styles") gives running, `sim_failed` or NaN, collision-terminated and
+    escape-terminated; it names neither `decode_failed` nor a reserved `state` code.
+  - `docs/design/principia_colour_composition.md` § "1.4 …", line 185: "**How the table reads the payload (R-96):**
+    "degenerate" is `decode_failed`"; § "4.1 …", "What every mode keeps": "a `sim_failed` sample, a reserved `state`
+    code or a NaN the invalid pattern".
+  - `docs/gui/principia_render_gui_spec.md` § "G6. …" (R-441): with `η_E` on, a free-fall slice is almost all
+    `decode_failed`, drawn degenerate's white.
+- **Silence:** a `decode_failed` sample has no physical state to classify.
+- **Options seen:**
+  - (a) The invalid hatch, as for `sim_failed`.
+  - (b) The outcome palette's degenerate white `#ECECF0`, passed through as collision is, so a free-fall slice under
+    `η_E` reads the same in both systems.
+  - (c) A further value, "no IC", in `chazy_final` and `chazy_status`.
+  - A reserved `state` code takes the invalid hatch under every option (colour_composition §4.1).
+- **Waits:** REQ-COL-072's `decode_failed` clause (`rq: RQ-319`), TASK-M7-37.
+
+## RQ-320: the "what just changed" view needs the previous frame's class, but a stain node reads the payload at the playhead *(silence, R-442, REQ-COL-083; context: TASK-M7-40)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - Spec 03 §7.2 (drill-down § "10.8.2 What just changed"): "White where the coarse class changed since the previous
+    playhead, the rest dimmed. Needs the previous frame's class: a render-side comparison between frames, not a payload
+    field."
+  - `docs/contracts/principia_render_contract.md` § "Part 2 — Fixed pipeline, swappable slots", lines 36–39:
+    `colour(ctx) → vec3`, `brightness(ctx) → f32`, `post(rgb) → vec3`: every node reads the context at the playhead.
+- **Silence:** no node kind or stage reads a previous frame, the corpus names no previous-frame buffer, and how much
+  "dimmed" is is not given.
+- **Options seen:**
+  - (a) A render-side previous-class texture written each frame and bound to a post node, with the dimming a
+    calibration.
+  - (b) A latch in the payload (the coarse class at the previous playhead), against the spec's "not a payload field".
+  - (c) Offline only: the view is computed from two exported frames, outside the live stain graph.
+- **Waits:** REQ-COL-083 (`rq: RQ-320`), TASK-M7-40.

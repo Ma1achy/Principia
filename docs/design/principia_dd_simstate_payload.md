@@ -479,6 +479,8 @@ Everything that is a function of stored state is a shader helper, zero storage:
 | `n` (shape) | `shape(r)` or `shape(r, masses)` | current shape-sphere point (`r` mass-weighted, or pass masses); NOT `shape(r,p)` |
 | current substep count | live read off the march | animated integrator-effort heatmap (Part-5 live view) |
 
+**The Chazy final-motion fields** (`chazy_class`, `chazy_final`, `chazy_status`, `chazy_structure`, `chazy_q`) are derived here too, from the live state, the masses, `E_0`, `R_0` and one running latch, `I_max` (R-442; `principia_dd_chazy_final_motion.md` §5–§6). Where `I_max` is stored is open: the spec proposes §2's reserved descriptor bits 10–14, which this file holds reserved (RQ-310).
+
 > **FTLE denominator — finalise the partial renormalisation interval.** The Benettin sum `S` accumulates `log(δ/δ₀)` **only at renormalisation boundaries**. If renorm occurs every `M_renorm` steps and a sample reads/terminates at a step that is *not* a boundary (renorm every 16, terminate at step 30), `S` contains growth only through step 16 — dividing by the full elapsed `30·h` gives a systematically **too-small** FTLE. The contract **finalises the partial interval at read/terminalisation**:
 > ```
 > S_final = S + log(δ_current / δ₀)              // fold in the unfinished interval's growth

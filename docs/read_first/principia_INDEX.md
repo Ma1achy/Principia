@@ -69,6 +69,7 @@ and **`Policy::Tolerance`**.
 
 - `docs/design/principia_colour_composition.md` — the colour algebra; §1.4 the outcome palette
 - `docs/design/principia_dd_colouring.md`
+- `docs/design/principia_dd_chazy_final_motion.md` — Chazy's final-motion classes as a live, per-playhead field, its derived fields and its stains; a separate system from the event classes (R-442). Transcribed from the Chazy stain spec; evidence prin-rs PR #32
 
 **Rings**
 
