@@ -163,11 +163,10 @@ fn qa_non_finite_twin_every_view_every_payload() {
 
 /// The ±∞ sentinels the views declare are exactly `d_min`'s unset `+∞`: a new one has no drawn style here
 /// (REQ-COL-071 defines R-418's), so it must not silently take the "not yet" style.
-#[test]
-fn qa_non_finite_twin_the_only_infinite_sentinel_is_d_mins_unset() {
-    let got: Vec<(&str, u32)> = views()
+fn check_infinite_sentinels(es: &[Entry]) {
+    let got: Vec<(&str, u32)> = es
         .iter()
-        .filter_map(|(e, ..)| {
+        .filter_map(|e| {
             e.sentinel
                 .filter(|s| !s.is_finite())
                 .map(|s| (e.name, (s as f32).to_bits()))
@@ -175,6 +174,34 @@ fn qa_non_finite_twin_the_only_infinite_sentinel_is_d_mins_unset() {
         .collect();
     assert_eq!(got, [("d_min", POS_INF)], "the views' non-finite sentinels");
 }
+
+#[test]
+fn qa_non_finite_twin_the_only_infinite_sentinel_is_d_mins_unset() {
+    let es: Vec<Entry> = views().into_iter().map(|(e, ..)| e).collect();
+    check_infinite_sentinels(&es);
+}
+
+negative_control!(
+    qa_non_finite_twin_the_only_infinite_sentinel_is_d_mins_unset,
+    "a view declaring a second infinite sentinel (V_0 at its collision pole's -inf) is caught",
+    expected = "the views' non-finite sentinels",
+    {
+        let es: Vec<Entry> = views()
+            .into_iter()
+            .map(|(mut e, ..)| {
+                if e.name == "V_0" {
+                    e.sentinel = Some(f64::NEG_INFINITY);
+                }
+                e
+            })
+            .collect();
+        assert!(
+            es.iter().any(|e| e.name == "V_0"),
+            "no `V_0` view to mutate"
+        );
+        check_infinite_sentinels(&es)
+    }
+);
 
 negative_control!(
     qa_non_finite_twin_every_view_every_payload,
