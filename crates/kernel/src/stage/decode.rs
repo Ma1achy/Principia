@@ -5,8 +5,9 @@
 //! **Monomorphised, never interpreted** (REQ-CHART-001, REQ-DEC-007; lowering Part 3, "Compute side"). [`sample`] is
 //! generic over the chart `C` and the link selection `S`: each `(C, S)` is its own compiled variant, a
 //! [`DecodeVariant`], whose compute entry point is a concrete `#[spirv(compute)]` wrapper ([`latent_defaults`],
-//! [`latent_stick_breaking`]) calling [`entry`]. Nothing at run time names a chart, a chart id or an axis kind: adding a
-//! chart is a `Φ` ([`crate::chart`]), its [`UniformChart`] layout and one wrapper.
+//! [`latent_stick_breaking`], [`invariant_le_defaults`], [`invariant_lk_defaults`]) calling [`entry`]. Nothing at run
+//! time names a chart, a chart id or an axis kind: adding a chart is a `Φ` ([`crate::chart`]), its decode
+//! ([`ChartDecode`]), its [`UniformChart`] layout and one wrapper.
 //!
 //! **Uniforms, not code** (lowering Part 3; chart_decoder_contract Design axiom 6). The chart's parameters, `z₀`, `q₁`
 //! and `q₂` for the latent chart, the slice values among `z₀`'s components, are the dispatch's uniform
@@ -32,7 +33,8 @@ use core::mem::offset_of;
 use spirv_std::glam::{UVec3, UVec4, Vec4};
 use spirv_std::spirv;
 
-use crate::chart::{self, Chart, Latent};
+use crate::chart::invariant::{Invariant, WarpReal};
+use crate::chart::{Chart, ChartDecode, InvariantLE, InvariantLK, Latent};
 use crate::decode::{descriptor, Degenerate, Ic};
 use crate::generated::links::{
     tanh_sat, Defaults, LinkReal, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
@@ -79,8 +81,8 @@ pub fn flags(mode: DecodeMode) -> u32 {
 }
 
 /// A chart whose parameters the decode stage reads from its uniform ([`DecodeUniforms::chart`]), held at f32 (R-118,
-/// chart_reference §5.1: the kernel's uniform holds them at f32).
-pub trait UniformChart: Chart<Param = f32> + Sized {
+/// chart_reference §5.1: the kernel's uniform holds them at f32), and which it decodes by its own [`ChartDecode`].
+pub trait UniformChart: Chart<Param = f32> + ChartDecode + Sized {
     /// The chart whose parameters are `rows`.
     fn from_uniform(rows: &[Vec4; 6]) -> Self;
     /// The chart's parameters as the uniform's rows; [`UniformChart::from_uniform`] reads them back.
@@ -122,6 +124,57 @@ impl UniformChart for Latent<f32> {
     }
 }
 
+/// An invariant chart's uniform: row 0 `(z_α, z_β, z_μ₁, z_μ₂)`, row 1 `(K_max, γ_K, 0, 0)`, rows 2–5 zero.
+#[inline]
+fn invariant_rows(c: &Invariant<f32>) -> [Vec4; 6] {
+    let zero = Vec4::ZERO;
+    [
+        Vec4::new(c.z_cfg[0], c.z_cfg[1], c.z_mass[0], c.z_mass[1]),
+        Vec4::new(c.k_max, c.gamma_k, 0.0, 0.0),
+        zero,
+        zero,
+        zero,
+        zero,
+    ]
+}
+
+/// The invariant chart whose uniform is `r`, as [`invariant_rows`] lays it out.
+#[inline]
+fn invariant_of(r: &[Vec4; 6]) -> Invariant<f32> {
+    Invariant {
+        z_cfg: [r[0].x, r[0].y],
+        z_mass: [r[0].z, r[0].w],
+        k_max: r[1].x,
+        gamma_k: r[1].y,
+    }
+}
+
+/// The `(L_z, E)` chart's uniform ([`invariant_rows`]).
+impl UniformChart for InvariantLE<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        InvariantLE(invariant_of(r))
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        invariant_rows(&self.0)
+    }
+}
+
+/// The `(L_z, K)` chart's uniform ([`invariant_rows`]).
+impl UniformChart for InvariantLK<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        InvariantLK(invariant_of(r))
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        invariant_rows(&self.0)
+    }
+}
+
 /// One chart and link set the kernel is built for: the chart, the selection, and the name of its compute entry point
 /// in the WGSL, as naga names it from the wrapper's module path.
 pub trait DecodeVariant {
@@ -156,6 +209,24 @@ impl DecodeVariant for LatentStickBreaking {
     const ENTRY: &'static str = "stage_decode_latent_stick_breaking";
 }
 
+/// The `(L_z, E)` chart under the default links.
+pub struct InvariantLEDefaults;
+
+impl DecodeVariant for InvariantLEDefaults {
+    type Chart = InvariantLE<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_invariant_le_defaults";
+}
+
+/// The `(L_z, K)` chart under the default links.
+pub struct InvariantLKDefaults;
+
+impl DecodeVariant for InvariantLKDefaults {
+    type Chart = InvariantLK<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_invariant_lk_defaults";
+}
+
 /// One sample's decode: the integrator's input and the payload side's record of it.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DecodeOut<R: PayloadReal> {
@@ -167,17 +238,17 @@ pub struct DecodeOut<R: PayloadReal> {
     pub degenerate: Option<Degenerate>,
 }
 
-/// The decode stage at `(u, v)`: `D ∘ Φ` through the shared decoder, under the chart `C` and the selection `S`, at the
-/// float type `R`: f32 in the kernel ([`entry`]) and f64 on the CPU (`engine::decode_dispatch::decode_only`), from this
-/// one source (R-118, R-265).
+/// The decode stage at `(u, v)`: `D ∘ Φ` through the shared decoder, the chart's own ([`ChartDecode`]), under the chart
+/// `C` and the selection `S`, at the float type `R`: f32 in the kernel ([`entry`]) and f64 on the CPU
+/// (`engine::decode_dispatch::decode_only`), from this one source (R-118, R-265).
 #[inline]
 pub fn sample<C, S, R>(chart: &C, u: R, v: R) -> DecodeOut<R>
 where
-    C: Chart,
+    C: ChartDecode,
     S: Selection,
-    R: LinkReal + PayloadReal + From<C::Param>,
+    R: LinkReal + PayloadReal + WarpReal + From<C::Param>,
 {
-    let d = chart::decode::<S, R, C>(chart, u, v);
+    let d = chart.decode_at::<S, R>(u, v);
     DecodeOut {
         ic: d.ic,
         descriptor: d.descriptor,
@@ -380,6 +451,32 @@ pub fn latent_stick_breaking(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
 ) {
     entry::<LatentStickBreaking>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`InvariantLEDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn invariant_le_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<InvariantLEDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`InvariantLKDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn invariant_lk_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<InvariantLKDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
 }
 
 /// The descriptor writer alone, on given `(m, r, p)`: invocation `i` reads sample `i` of `ic`, as [`write_ic`] wrote it,
