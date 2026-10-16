@@ -10243,11 +10243,14 @@ The human's words (R-444 quotes the whole message):
   per physics review 5548113767, P1: the first port tied the hatch to the classifier the statistics use, whose
   primary-range step decides counting, not hatching.)
 - **The primary ranges hatch nothing (flagged).** The human's words list them among the chart's inputs ("types,
-  primary ranges, validate, Φ"). Under Part 3, whose forbidden-region treatment the ruling keeps, they decide only what
-  the area statistics count (R-408): a pixel outside a primary range that passes is a system and draws its outcome (the
-  shape sphere past its pole, a periodic redraw, R-407), and one whose state fails `validate` there is hatched. Read
-  otherwise, the parenthesis would hatch systems R-407 draws, or draw black a pixel Part 3 hatches, so this port reads
-  it as naming the chart's machinery, not as a step of the hatch (physics review 5548113767, P1).
+  primary ranges, validate, Φ"). That parenthesis quotes, word for word, chart_decoder_contract Part 3's own sentence
+  on what the area statistic reads: "The statistic reads the chart (the types, the primary ranges, `validate`, `Φ`)"
+  (the R-408 paragraph); the human named the machinery Part 3 classifies with, not a new step of the hatch (physics
+  review 5550753847, applied per R-369). Under Part 3, whose forbidden-region treatment the ruling keeps, they decide
+  only what the area statistics count (R-408): a pixel outside a primary range that passes is a system and draws its
+  outcome (the shape sphere past its pole, a periodic redraw, R-407), and one whose state fails `validate` there is
+  hatched. Read otherwise, the parenthesis would hatch systems R-407 draws, or draw black a pixel Part 3 hatches, so
+  this port reads it as naming the chart's machinery, not as a step of the hatch (physics review 5548113767, P1).
 - **`Φ` is the chart map** (physics review 5548113767, P2). Part 3 writes the general interface with the decode
   inside the arrow; chart_reference §5.1 separates `Chart::map` from the shared decoder. For the outcome view "a `Φ`
   that fails" is `Chart::map` failing to evaluate (non-finite, or outside its domain). The decoder's own outcomes, its

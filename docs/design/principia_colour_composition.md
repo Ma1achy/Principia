@@ -218,7 +218,9 @@ chart map, `Chart::map`** (`principia_chart_reference.md` §5.1), not the shared
 outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any tag added later) and a
 non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it, as
 R-446's list of failures says (applied per R-369). **The axes' primary ranges hatch nothing:** R-446's words list them
-among the chart's inputs ("types, primary ranges, validate, Φ"), but under Part 3, whose treatment the ruling keeps,
+among the chart's inputs ("types, primary ranges, validate, Φ"), quoting word for word chart_decoder_contract Part 3's
+sentence on what the area statistic reads ("The statistic reads the chart (the types, the primary ranges, `validate`,
+`Φ`)"), but under Part 3, whose treatment the ruling keeps,
 they decide what the area statistics count (R-408), not what is hatched (applied per R-369, flagged), so a pixel
 outside a primary range that the chart does not hatch (the shape sphere past its pole, a periodic redraw) is a system
 and draws its outcome, and one whose state fails `validate` there is hatched. Every other `decode_failed` sample draws
