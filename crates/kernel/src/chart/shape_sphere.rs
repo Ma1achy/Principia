@@ -40,7 +40,7 @@
 //! crosses to the integrator, and its descriptor that state's (dd_decoder §2, §3.6), while its `config` and `momentum`
 //! stay the blocks' outputs in `Φ`'s gauge; `C` folds the lower hemisphere onto the upper at `(θ, π − φ)` (R-141).
 //! `Φ` alone, without `C`, is [`place`] (R-178's round trip). [`Chart::map`] hands over the held blocks with the
-//! configuration block 0: every `D ∘ Φ` entry, [`crate::chart::decode`] and [`crate::decode::energy_norm::decode_chart`],
+//! configuration block 0: every `D ∘ Φ` entry, [`fn@crate::chart::decode`] and [`crate::decode::energy_norm::decode_chart`],
 //! goes through [`Chart::decode`], and the configuration block of `map`'s latent is never decoded.
 //!
 //! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): three, each between values already computed and
