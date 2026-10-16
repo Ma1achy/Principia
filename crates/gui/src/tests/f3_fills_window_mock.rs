@@ -320,7 +320,19 @@ fn f3_fills_window_mock_quads_tile_past_the_root() {
         .map(|q| q[2])
         .fold(f64::NEG_INFINITY, f64::max);
     let min_v = far_quads.iter().map(|q| q[1]).fold(f64::INFINITY, f64::min);
-    assert_eq!((max_u, min_v), (reach, -reach));
+    let min_u = far_quads.iter().map(|q| q[0]).fold(f64::INFINITY, f64::min);
+    let max_v = far_quads
+        .iter()
+        .map(|q| q[3])
+        .fold(f64::NEG_INFINITY, f64::max);
+    assert_eq!((min_u, min_v, max_u, max_v), (-reach, -reach, reach, reach));
+    // The copies tile the plane: no two quads overlap, and every quad is the shown quads' size or finer.
+    for (k, a) in far_quads.iter().enumerate() {
+        assert!(width(a) > 0.0 && width(a) <= widest(&shown), "{a:?}");
+        for b in &far_quads[k + 1..] {
+            assert!(!quads::overlaps(a, b), "{a:?} and {b:?} overlap");
+        }
+    }
     // Zoomed far out, the shown view covers copies, and keeps the root's quads only, as before.
     let mut far = plane.clone();
     far.q1 = far.q1.map(|v| v * 100.0);
