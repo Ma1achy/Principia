@@ -538,6 +538,10 @@ tilt means).*
     compass's cube draws, and its tilt labels name the two targets.
 - **Applied meanwhile:** the compass's cube draws the decoder's mapping (`View::basis` in the cube's frame), and its
   tilt mode names the one shared target (R-451 B1).
+- **The degenerate tilts hang on it** (fix round 4 of PR #227, physics review P13): under the decoder's map, option
+  (a), `q₁` and `q₂` span no plane at `τ₁ = ±τ₂ = ±90°`, and there the compass's cube draws no slice and its readout
+  cites this entry (R-451 B11). Under (b) or (c) those tilts give a plane, so a ruling for either revisits what the
+  cube draws there.
 - **Waits:** nothing builds on the choice yet; TASK-M6-33 does not wait, and no requirement carries `rq: RQ-340`
   (REQ-GUI-192 cites it in its note). A ruling for (b) or (c) changes the decoder's basis, which re-integrates every
   tilted view, and goes to a follow-up task.

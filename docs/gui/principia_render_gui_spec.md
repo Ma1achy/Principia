@@ -193,6 +193,11 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   half-range, absolute, free or locked (free, the sliders' range; locked, the sliders span the anchor ± the
   half-range), and the chart window's extent is not drawn. The drawing follows the decoder's tilt mapping, not the
   reference's axis-angle map; RQ-340 holds the difference (R-451).
+  All of this holds where `View::basis` spans a plane, tested by `s = 2|q₁ × q₂| / (|q₁|² + |q₂|²)`, `q₁`, `q₂` in
+  the cube's frame, `s ≥ 10⁻³` (under the decoder's map `s = √(1 − sin²τ₁ sin²τ₂)` for every `γ` and `σ`). At and
+  near the four tilts `τ₁ = ±τ₂ = ±90°`, where `q₁` and `q₂` both lie along `e_d` and `s < 10⁻³`, no slice is drawn
+  (no polygon, fill, grid or outline), only the cube's edges, labels and corner numbers; the readout says so and a
+  slice-mode drag sends no edit (R-451 B11; RQ-340).
 - **Labels:** each axis name centred on its edge, pushed 20 px outward from the cube. Slice mode names Width
   (bottom-left edge), Depth (bottom-right) and Height (left vertical), with −1.0 and 1.0 at the corners, one number per
   corner, 12 px outward. Tilt mode names only the tilt target, on the bottom-right edge: under the decoder's mapping q₁
@@ -200,12 +205,16 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
 - **Readout:** slice mode, "plane ⟂ <axis>" untilted, or the tilt as tilt mode reads it when a tilt is set, and
   "<axis> = +0.25 of range" (`z₀` on the slice axis over the slice step's half-range); tilt mode, q₁'s and q₂'s target
   and their angles in degrees, one decimal.
+  Where `View::basis` spans no plane (`s < 10⁻³`, above), either mode adds the line "no plane: q₁ ∥ q₂ at τ₁ =
+  <τ₁>°, τ₂ = <τ₂>° (RQ-340)", the angles signed, one decimal (R-451 B11).
 - **Drag:** slice mode, the horizontal component moves the slice along the drawn plane's normal, the decoder's
   (R-409 A3's), the cube's full width
   spanning the whole range; tilt mode, a horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
   or height 180°, each clamped to ±90°. One `SetField` per drag (R-96). The displayed values ease toward their targets,
   `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s, in the drawing only; the contract holds the target
   (R-451 B3, B4).
+  Where `View::basis` spans no plane (`s < 10⁻³`), a slice-mode drag sends no edit, there being no normal to move
+  along; a tilt-mode drag acts as anywhere else (R-451 B11).
 - Kept from R-409: no orbit, the Tilt and Slice buttons and the switch by the slider touched, Tilt the default, the
   gold pin when locked, §G3's keys. The reference's own controls (axis selectors, sliders, Animate) are not on the
   compass; the Manifold view owns them.

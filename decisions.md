@@ -10297,6 +10297,8 @@ applied by a follow-up task):*
   `τ₁ = 30°` a pan of 2 along `q₁` turning `p = (1.732, 0, 1)`, on the plane `z = x tan 30°`, into `(1, 0, 1)`, off
   it; now only the offset is bounded. Fix round 3, physics review P12: the 4-to-6 bound was stated for `|d| ≤ 1` and
   fails at `|d| = 1`, the triangle above; it holds for `|d| < 1`.)
+  All of B2 holds at the tilts where `View::basis` spans a plane; at and near the four corners `τ₁ = ±τ₂ = ±90°` it
+  spans none, and B11 says what the cube draws there (fix round 4 of PR #227, physics review P13).
 - **B3. The slice-mode drag.** The horizontal component of a drag sets how far the slice moves (the reference's rate, a
   drag across the cube's full width moving it across the whole range); the direction is the drawn plane's normal,
   which by B2 is the decoder's (`latent_normal`, R-409 A3's), the slice axis only when untilted; one `SetField` on
@@ -10359,6 +10361,29 @@ applied by a follow-up task):*
 - **B10. qa's files (R-290, forced by this ruling).** A qa file that asserts the compass's yaw-and-pitch view, its
   fixed-quad slice or its drag rates asserts what this ruling changes; TASK-M6-33's qa reviewer changes those
   assertions in the task's qa commit, and only those, as R-409 A9 has it.
+- **B11. The degenerate tilts.** (Added in fix round 4 of PR #227, physics review P13; a definition of a missing
+  behaviour, applied per R-369 as a routine GUI choice.) At the four corners `τ₁ = ±τ₂ = ±90°`, which tilt mode's
+  clamped drags reach, `u₁` and `u₂` are both `±e_d`, so `View::basis`'s `q₁` and `q₂` both lie along `e_d` and span no
+  plane (the comparison above: "it degenerates to the line `e_d`"); near them the normal of `(q₁, q₂)` is
+  ill-conditioned. In floating point, at `(90°, 90°)`, `q₁ × q₂` is about `(−6·10⁻¹⁷, −6·10⁻¹⁷, 0)`, and its
+  normalisation, the plane `x + y = c`, is rounding, not the decoder's plane.
+  - **The test.** `s = 2|q₁ × q₂| / (|q₁|² + |q₂|²)`, with `q₁`, `q₂` restricted to `(e_a, e_b, e_d)`. It is
+    scale-free, and under the decoder's map it equals `|u₁ × u₂| = √(1 − sin²τ₁ sin²τ₂)` for every `γ` and `σ`, since
+    the turn by `γ` has determinant 1 and keeps `|q₁|² + |q₂|² = 2σ²`. `View::basis` spans a plane where `s ≥ 10⁻³`.
+    The cross-section, its 3-to-6 and 4-to-6 bounds, the offset clamp and the 1e-12 normal check apply only there.
+    Near a corner `s` is about the distance in radians from it, so the test excludes about 0.057° around each corner
+    and keeps the rest of the square, including the edges `|τ₁| = 90°`, `|τ₂| < 90°`, where the plane is
+    `span(e_b, e_d)`: at `(90°, 89.9°)`, `s = 1.75·10⁻³` and the normal is `(−1, 0, 0)` within 10⁻¹³. The sine of the
+    angle between `q₁` and `q₂` is not used: at a corner with `γ = 45°`, `q₂` is rounding alone and that sine is about
+    0.48.
+  - **What the cube draws where the test fails.** The cube's edges, labels and corner numbers as in its mode, and no
+    slice: no polygon, fill, grid or outline. The readout adds a line naming the tilt, "no plane: q₁ ∥ q₂ at τ₁ =
+    <τ₁>°, τ₂ = <τ₂>° (RQ-340)", the angles signed, one decimal. A slice-mode drag sends no edit, since there is no
+    normal to move `z₀` along (B3). A tilt-mode drag acts as anywhere else, and once `s ≥ 10⁻³` the plane is drawn
+    again.
+  - **RQ-340.** The degeneracy is the decoder's map's (RQ-340 option (a)). Under option (b), the reference's map, or
+    (c), two distinct targets, these corners give a plane, so a ruling on RQ-340 revisits this item. The decoder's
+    geometry is not changed.
 - R-451 is in the "design" group of `plan/rule_groups.yaml`.
 
 *What it changes:* it amends R-409 point 1, which kept the code's default angle (yaw −35°, pitch 25°) as a look choice
