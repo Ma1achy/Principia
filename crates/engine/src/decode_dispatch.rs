@@ -9,6 +9,9 @@
 //!   need not reach (R-436).
 //! - [`canonicalise_gpu`]: canonicalisation `C` on given `(m, r, p)`, `kernel::stage::canon::canonicalise`, for the
 //!   cross-backend checks of its branches (REQ-DEC-017, REQ-ENC-015, REQ-ENC-016).
+//! - [`encode_gpu`] and [`beta_gpu`]: encode `E` on given `(m, r, p)`, `kernel::stage::encode::encode`, and its `β` on
+//!   given operands, `kernel::stage::encode::beta`, for the cross-backend checks of their selects and notices at the
+//!   poles and on the `−x` half-axis (REQ-ENC-007, REQ-DEC-014).
 //! - [`decode_only`]: parity_contract §1's `decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)`, the CPU-f64
 //!   instantiation of the same source, `kernel::stage::decode::sample` at f64 (R-118, R-265).
 //!
@@ -25,6 +28,7 @@ use kernel::stage::canon as canon_stage;
 use kernel::stage::decode::{
     self as stage, DecodeMode, DecodeOut, DecodeUniforms, DecodeVariant, UniformChart,
 };
+use kernel::stage::encode::{self as encode_stage, EncodeOut};
 
 use crate::compute::{pipeline, ComputeError, ComputeKernel, ComputeShader};
 use crate::contract::fast_math::{FastMath, StageMode};
@@ -39,6 +43,12 @@ pub const DESCRIBE_ENTRY: &str = "stage_decode_describe";
 
 /// The WGSL entry point naga names for `kernel::stage::canon::canonicalise`.
 pub const CANONICALISE_ENTRY: &str = "stage_canon_canonicalise";
+
+/// The WGSL entry point naga names for `kernel::stage::encode::encode`.
+pub const ENCODE_ENTRY: &str = "stage_encode_encode";
+
+/// The WGSL entry point naga names for `kernel::stage::encode::beta`.
+pub const BETA_ENTRY: &str = "stage_encode_beta";
 
 /// The decode-only readback of one dispatch, as words: the integrator's input buffer, the tags and the descriptors.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -389,6 +399,117 @@ pub fn canonicalise_gpu(
     Ok((0..ics.len())
         .map(|i| canon_stage::read_canonical(&read[0], i))
         .collect())
+}
+
+/// The number of samples `n` a dispatch writing `words` words per sample, and no descriptors, covers on a device with
+/// `limits`, or why it can't: one invocation per sample at the workgroup size 64, so `⌈n/64⌉` workgroups, at most
+/// `max_compute_workgroups_per_dimension`; and the output buffer within `max_storage_buffer_binding_size`.
+pub fn check_output_words(
+    n: usize,
+    words: usize,
+    limits: &wgpu::Limits,
+) -> Result<u32, ComputeError> {
+    let groups = n.div_ceil(64);
+    if groups > limits.max_compute_workgroups_per_dimension as usize {
+        return Err(ComputeError(format!(
+            "{n} samples need {groups} workgroups of 64, over the device's {}",
+            limits.max_compute_workgroups_per_dimension
+        )));
+    }
+    let bytes = (n * words * 4) as u64;
+    if bytes > limits.max_storage_buffer_binding_size {
+        return Err(ComputeError(format!(
+            "{n} samples need a {bytes} B output buffer, over the device's {} B",
+            limits.max_storage_buffer_binding_size
+        )));
+    }
+    u32::try_from(n).map_err(|_| ComputeError(format!("{n} samples: over u32")))
+}
+
+/// Dispatches the entry point `entry` of `wgsl` over `n` samples, `input` bound first and an output of `per` words per
+/// sample, filled with NaN before the dispatch, second, under the fast-math `setting`, and reads the output back.
+fn run_entry(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    (wgsl, entry): (&str, &'static str),
+    input: &[u32],
+    (n, per): (usize, usize),
+    setting: FastMath,
+) -> Result<Vec<u32>, ComputeError> {
+    let samples = check_output_words(n, per, &device.limits())?;
+    let kernel = pipeline(
+        device,
+        &ComputeShader {
+            label: entry,
+            wgsl,
+            entry,
+        },
+        setting,
+    )?;
+    let input = buffer(device, entry, input, wgpu::BufferUsages::STORAGE);
+    let outputs = [output(device, entry, f32::NAN.to_bits(), n * per)];
+    let mut read = dispatch_and_read(device, queue, &kernel, &[&input], &outputs, samples)?;
+    Ok(read.remove(0))
+}
+
+/// Encode `E` under the default links, `kernel::stage::encode::encode`, dispatched on `device` over `ics`, one
+/// invocation each, under the fast-math `setting`: each one's `z`, `α`, `β` and report as the GPU computes them, its
+/// output words filled with NaN before the dispatch. Its pipeline is made per call: a test's, never on a navigation
+/// path.
+pub fn encode_gpu(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    wgsl: &str,
+    ics: &[Ic<f32>],
+    setting: FastMath,
+) -> Result<Vec<EncodeOut>, ComputeError> {
+    if ics.is_empty() {
+        return Ok(Vec::new());
+    }
+    let mut words = vec![0; ics.len() * stage::ic_words()];
+    for (i, ic) in ics.iter().enumerate() {
+        stage::write_ic(&mut words, i, ic);
+    }
+    let read = run_entry(
+        device,
+        queue,
+        (wgsl, ENCODE_ENTRY),
+        &words,
+        (ics.len(), encode_stage::encode_words()),
+        setting,
+    )?;
+    Ok((0..ics.len())
+        .map(|i| encode_stage::read_encoded(&read, i))
+        .collect())
+}
+
+/// The encode's `β`, `kernel::stage::encode::beta`, dispatched on `device` over the operands `lambda_t`, each
+/// `(λ̃_x, λ̃_y)` passed by its bits, `±0` kept, under the fast-math `setting`: each one's `β` as the GPU computes it.
+/// Its pipeline is made per call: a test's.
+pub fn beta_gpu(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    wgsl: &str,
+    lambda_t: &[[f32; 2]],
+    setting: FastMath,
+) -> Result<Vec<f32>, ComputeError> {
+    if lambda_t.is_empty() {
+        return Ok(Vec::new());
+    }
+    let words: Vec<u32> = lambda_t
+        .as_flattened()
+        .iter()
+        .map(|x| x.to_bits())
+        .collect();
+    let read = run_entry(
+        device,
+        queue,
+        (wgsl, BETA_ENTRY),
+        &words,
+        (lambda_t.len(), 1),
+        setting,
+    )?;
+    Ok(read.into_iter().map(f32::from_bits).collect())
 }
 
 /// parity_contract §1's `decodeOnly(chart, uv, simKey)`: the decode stage's source at f64, `chart` under the selection
