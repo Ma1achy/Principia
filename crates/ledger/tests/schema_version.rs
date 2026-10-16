@@ -502,9 +502,10 @@ negative_control!(
     check_missing_refused("fx_render_knob")
 );
 
-/// The register's presentation constants (TASK-M1-18; R-427): the six log floors, the hatch's numbers and the hue
-/// wheel's. None decides a stored bit, so none is hashed (dd_generation_root §3.8, "The hash").
-const PRESENTATION: [&str; 11] = [
+/// The register's presentation constants (TASK-M1-18; R-427): the six log floors, the hatch's numbers, the hue
+/// wheel's and the diverging fields' `x₀` (TASK-M7-05). None decides a stored bit, so none is hashed
+/// (dd_generation_root §3.8, "The hash").
+const PRESENTATION: [&str; 13] = [
     "log_floor_d_min",
     "log_floor_dE_max",
     "log_floor_dLz_max",
@@ -516,6 +517,8 @@ const PRESENTATION: [&str; 11] = [
     "hatch_half_period",
     "hue_wheel_l",
     "hue_wheel_c",
+    "diverging_x0_E_0",
+    "diverging_x0_Lz_0",
 ];
 
 /// The M1 gate's calibrations the register holds (R-433): `r_pole`, the pole hold's radius, a march parameter that

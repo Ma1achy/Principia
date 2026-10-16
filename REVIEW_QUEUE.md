@@ -209,3 +209,49 @@ Nothing is chosen.*
   4 substeps up to `N_max` 64 (`crates/gui/src/mock/profile.rs`, `SUBSTEPS_PER_PIXEL`), the cap marked at 64, with a
   note naming this entry; the real engine's side has no trace, so draws nothing.
 - **Waits:** TASK-M8-28 (REQ-TOOL-098's histogram on real data). TASK-M6-28 does not wait.
+
+## RQ-297: a ledger `scale` change moves the payload schema version, which invalidates every cached payload, but seam 5 says it re-styles the view "with **zero** recompute" *(conflict, R-36, REQ-COL-032; context: TASK-M7-05)*
+
+*Found by TASK-M7-05's review (qa, PR #219, `qa_ledger_scale_restyle_keeps_the_sim_key`, since restated; see
+"Waits"). Nothing is chosen.*
+
+- **File, section:**
+  - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)", seam 5 (:243): "read
+    fields only through generated accessors + ledger metadata | field views sane; a ledger scale change re-styles the
+    view with **zero** recompute". § "2. Consolidated contract" (:17): "colour **compaction** is the third
+    compactification role — render-key, free, never re-integrates; per-field scale comes from the **ledger
+    metadata**". REQ-COL-032 repeats it, its verify detail "change a field's ledger scale; the view re-styles and the
+    dispatch counter is unchanged".
+  - `docs/design/principia_dd_generation_root.md` § "2. Consolidated contract" (:21): "From the
+    **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a
+    layout change must invalidate every cached payload. **The schema version is a content hash of the canonicalised
+    §3 ledger, not a hand-bumped integer (R-36).**", and § "4. Seams" (:994): "schema version (the
+    ledger's content hash, R-36) ∈ payload compatibility signature | any ledger change invalidates every cached
+    payload (cache serves nothing stale-schema'd)".
+  - `docs/contracts/principia_caching_contract.md` § "Part 1 — Two-level keying: identity vs validity", "Validity"
+    (:14): the payload compatibility signature includes the "payload schema version (a content hash of the ledger,
+    R-36). Same identity, different signature → different payload".
+  - The code: `crates/ledger/src/version.rs` (:199–209) hashes each entry's `scale` into the schema version, as R-36's
+    "canonicalised §3 ledger" reads; `scale` is one of the §3 ledger's columns.
+- **Conflict:** an edit to a field's ledger `scale` is a ledger change, so under R-36 and generation_root :994 it
+  moves the schema version, the compatibility signature changes, and every cached payload is recomputed. Seam 5 and
+  dd_colouring §2 say the same edit re-styles the view with zero recompute: `scale` is render-key metadata, which
+  changes nothing the kernel computes or the payload's layout. The corpus also differs on scope: generation_root :21
+  states the requirement as "a layout change must invalidate every cached payload", and then makes the schema version
+  a hash of the whole canonicalised §3 ledger; :994 states it as "any ledger change invalidates every cached payload".
+  A `scale` edit is a ledger change but not a layout change.
+- **Options seen:**
+  - (a) The schema version hashes only what decides the payload's layout and the kernel's output, not the colour
+    metadata: `scale` leaves the hash, with any other render-only column a ruling names; R-36 and generation_root
+    :21/:994 are reworded to say which columns, and seam 5 holds as written. It rests on :21's "a layout change".
+  - (b) Keep the whole-ledger hash and amend seam 5, dd_colouring §2 and REQ-COL-032: a ledger scale change re-styles
+    the view with zero *recompute of the view's own pass* but invalidates cached payloads, as any ledger edit does;
+    the run-time re-style without recompute is then a view override (a GUI choice of compaction), not a ledger edit.
+    It rests on :994's "any ledger change" and R-36's hash of the whole canonicalised ledger.
+- **Applied meanwhile:** nothing is chosen. TASK-M7-05's seam-5 test builds a view from an edited clone of `E_0`'s
+  entry without regenerating the ledger, so it shows the render side only (the view re-styles, the sim buffer is
+  unchanged, one fragment compile); it says so in its doc. `ledger::version` is unchanged.
+- **Waits:** TASK-M7-05's PR does not wait; REQ-COL-032 stays held until the ruling. qa has restated its test as
+  `qa_ledger_scale_restyle_leaves_the_sim_buffer`, which asserts neither side of this entry: it covers the render side
+  only (the frame re-styles, the sim buffer reads back byte for byte), and the schema-version side waits on this
+  entry.

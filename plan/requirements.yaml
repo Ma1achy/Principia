@@ -11406,6 +11406,8 @@
   rulings:
   - R-411
   milestone: M7
+  rq:
+  - RQ-297
   note: "R-411 (RQ-265's option (c)): each ledger scale names one range-free form, shared by the user-facing compaction (dd_colouring §3.6) and the debug views."
 - id: REQ-COL-033
   area: COL
