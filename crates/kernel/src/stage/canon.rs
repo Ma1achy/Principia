@@ -21,7 +21,7 @@ pub fn canon_words() -> usize {
 pub fn notices(c: &Canonical<f32>) -> u32 {
     let clamped = if c.clamped { 1 } else { 0 };
     let mirrored = if c.mirrored { 2 } else { 0 };
-    clamped | mirrored
+    clamped + mirrored
 }
 
 /// Writes `c` as sample `i`'s words in `out`, in [`canon_words`]' order.

@@ -8,6 +8,8 @@
 //!   transformed per the inverse-encode contract's table (REQ-DEC-023).
 //! - `scale_step`: dd_encode §5 test 4 on `fixtures/states/burrau_2x.json`: `I_in = 4·I_canon`, `λ = 1/2`,
 //!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}` (REQ-ENC-006).
+//! - `canon_mirror_deadband`: the mirror test at the deadband's edge, `λ̃_y = −δ_λ` and one step below it, at each
+//!   precision; and `λ̃_y` is the decoder's own `λ̃_y` on canonical decodes.
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
 //!   state's `C` in its word layout, notices included, and nothing past the last state.
 //!
@@ -18,7 +20,7 @@
 
 use std::path::Path;
 
-use kernel::canon::{self, canonicalise, inertia, lambda_t_y, Canonical};
+use kernel::canon::{self, canonicalise, inertia, lambda_t_y, mirror_taken, Canonical};
 use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::{decode, Ic, Latent};
 use kernel::generated::constants::ChartConstants;
@@ -648,6 +650,7 @@ fn check_stage(states: &[Ic<f32>], entry: fn(UVec3, &[u32], &mut [u32])) {
 
 #[test]
 fn stage_canon_native() {
+    assert_eq!(canon_words(), ic_words() + 5, "the words of a Canonical");
     let states = notice_states();
     let flags: Vec<(bool, bool)> = states
         .iter()
@@ -693,4 +696,50 @@ negative_control!(
             write_canonical(out, i, &canonicalise(&x));
         })
     }
+);
+
+// ── canon_mirror_deadband (REQ-DEC-017) ─────────────────────────────────────────────────────────────────────────
+
+/// The tolerance on `λ̃_y` against the decoder's, absolute (`|λ̃| ≤ 1`), in eps.
+const LAMBDA_T_EPS: f64 = 4.0;
+
+/// The mirror test at `−δ_λ` (no mirror) and one step below (mirror), at both edges; and on decodes with unequal
+/// masses, `C`'s branch input against the decoder's `λ̃_y = sin α·sin β`, `test` reading `λ̃_y` of `r` and `m`.
+fn check_deadband<R: Precision>(test: fn([R; 3], [[R; 2]; 3]) -> R, down: fn(R) -> R) {
+    let d = <R as ChartConstants>::DELTA_LAMBDA;
+    assert!(!mirror_taken(-d), "{}: mirrored at λ̃_y = −δ_λ", R::NAME);
+    assert!(
+        mirror_taken(down(-d)),
+        "{}: no mirror just below −δ_λ",
+        R::NAME
+    );
+    assert!(!mirror_taken(d), "{}: mirrored at λ̃_y = +δ_λ", R::NAME);
+    let mut rng = SplitMix::new(31);
+    for j in 0..256 {
+        let z: [f32; 8] = core::array::from_fn(|_| rng.uniform(-2.0, 2.0));
+        let x = decode::<Defaults, R>(&Latent::new(z.map(|v| cast::<R>(v as f64))));
+        let got: f64 = test(x.ic.m, x.ic.r).into();
+        let want: f64 = x.config.lambda_t[1].into();
+        assert!(
+            (got - want).abs() <= LAMBDA_T_EPS * eps::<R>(),
+            "{}: λ̃_y = {got}, the decoder's {want}, at sample {j}",
+            R::NAME
+        );
+    }
+}
+
+#[test]
+fn canon_mirror_deadband() {
+    check_deadband::<f64>(lambda_t_y, f64::next_down);
+    check_deadband::<f32>(lambda_t_y, f32::next_down);
+}
+
+negative_control!(
+    canon_mirror_deadband,
+    "a branch input that reads λ_y, not λ̃_y = √μ_λ·λ_y, must fail",
+    expected = "the decoder's",
+    check_deadband::<f64>(
+        |m, r| lambda_t_y(m, r) / (m[2] * (m[0] + m[1])).sqrt(),
+        f64::next_down
+    )
 );

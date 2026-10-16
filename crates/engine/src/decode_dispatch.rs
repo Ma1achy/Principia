@@ -330,6 +330,21 @@ pub fn describe_gpu(
         .collect())
 }
 
+/// The number of states `n` a [`canonicalise_gpu`] dispatch covers on a device with `limits`, or why it can't:
+/// [`check_samples`]' workgroup count, and the output buffer, `kernel::stage::canon::canon_words()` per state, within
+/// `max_storage_buffer_binding_size`.
+pub fn check_canon_samples(n: usize, limits: &wgpu::Limits) -> Result<u32, ComputeError> {
+    let checked = check_samples(n, limits)?;
+    let bytes = (n * canon_stage::canon_words() * 4) as u64;
+    if bytes > limits.max_storage_buffer_binding_size {
+        return Err(ComputeError(format!(
+            "{n} states need a {bytes} B output buffer, over the device's {} B",
+            limits.max_storage_buffer_binding_size
+        )));
+    }
+    Ok(checked)
+}
+
 /// Canonicalisation `C`, `kernel::stage::canon::canonicalise`, dispatched on `device` over `ics`, one invocation each,
 /// under the fast-math `setting`: each one's [`Canonical`] as the GPU computes it, its output words filled with NaN
 /// before the dispatch. Its pipeline is made per call: a test's, never on a navigation path.
@@ -343,16 +358,8 @@ pub fn canonicalise_gpu(
     if ics.is_empty() {
         return Ok(Vec::new());
     }
-    let n = check_samples(ics.len(), &device.limits())?;
+    let n = check_canon_samples(ics.len(), &device.limits())?;
     let count = ics.len() * canon_stage::canon_words();
-    let limit = device.limits().max_storage_buffer_binding_size;
-    if (count * 4) as u64 > limit {
-        return Err(ComputeError(format!(
-            "{} states need a {} B output buffer, over the device's {limit} B",
-            ics.len(),
-            count * 4
-        )));
-    }
     let kernel = pipeline(
         device,
         &ComputeShader {
