@@ -353,12 +353,16 @@ dimension gets its own key:**
 It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and 0-based
 labels (R-22).
 
-**A free-fall slice under `η_E` is uniformly degenerate, and that is expected (R-441; dd_decoder §3.7).** Energy
+**A free-fall slice under `η_E` is almost all degenerate, and that is expected (R-441; dd_decoder §3.7).** Energy
 normalisation scales the momenta, `pᵢ ← η_E·pᵢ`; with zero momenta it cannot reach any `E*` above the potential, since
 scaling zero momenta cannot raise the kinetic energy. So with `η_E` on, every pixel of a zero-momentum (free-fall)
-slice whose `E*` is above its potential `U` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
-below it `DEGENERATE(ENERGY_INFEASIBLE)`: all are `decode_failed`, drawn degenerate's white in the outcome legend
-(colour_composition §1.4; R-96). `η_E` is then a no-op on every free-fall preset, and the uniform tag colour is
+slice whose `E*` is above its potential `U = V₀` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
+below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn degenerate's white in the outcome legend
+(colour_composition §1.4; R-96). There are two exceptions. Where `E* = V₀` exactly, the IC is already at the target:
+the decode is untouched and untagged, and the pixel integrates; `V₀` varies over the slice, so with an `E* < 0` inside
+its range a contour `V₀ = E*` runs between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions. And a pixel the
+mass block has already tagged, such as `DEGENERATE(M01_TINY)`, keeps that tag. `η_E` is then a no-op on every
+free-fall preset, and the near-uniform tag colour, with that contour and those mass-block pixels its exceptions, is
 expected, not a bug.
 
 ## G7. Chart builder (`03_chartbuilder.png`)

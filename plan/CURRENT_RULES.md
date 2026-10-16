@@ -252,7 +252,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-426** — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*. Still in force: all of it; `q_mass` and `mean_y` stay on `ramp_coolwarm` provisionally until TASK-M2-03 and TASK-M3-13 declare their ranges, and `C_ty` is signed, on `ramp_coolwarm` (R-430). Amended in part by R-430.
 - **R-430** — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)*
 - **R-436** — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*
-- **R-441** — η_E cannot raise a zero-momentum slice above its potential: every pixel of a free-fall slice with `E* > U` is tagged `ENERGY_UNSCALABLE`, and the GUI docs say the uniform colour is expected, not a bug
+- **R-441** — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug
 
 ## Values
 

@@ -872,6 +872,6 @@
   reason: informative only
   note: "the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement"
 - file: decisions.md
-  section: "R-441 — η_E cannot raise a zero-momentum slice above its potential: every pixel of a free-fall slice with `E* > U` is tagged `ENERGY_UNSCALABLE`, and the GUI docs say the uniform colour is expected, not a bug"
+  section: "R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug"
   reason: informative only
   note: "the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is uniformly degenerate by design; changes no requirement"
