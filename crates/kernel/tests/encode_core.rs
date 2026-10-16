@@ -160,6 +160,16 @@ fn err<R: P>(a: R, b: R, scale: f64) -> f64 {
     (a.f() - b.f()).abs() / (scale * R::eps())
 }
 
+/// The larger of `a` and `b`, or NaN if either is (pitfalls §9): a worst-case fold that `f64::max` would make drop a
+/// NaN error, so a NaN output fails the limit it is held to.
+fn worse(a: f64, b: f64) -> f64 {
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else {
+        a.max(b)
+    }
+}
+
 /// The forward-into-inverse check on one decoded `z`: the Jacobi map on the decoded state recovers the decoder's `ρ̃`,
 /// `λ̃`, `p_ρ` and `p_λ`; `α` and `β` from the decoder's `ρ̃` and `λ̃` recover its own; and the encode of the decoded
 /// state recovers each block of `z`, with no notice.
@@ -179,17 +189,17 @@ where
     ];
     for (got, want) in pairs {
         for k in 0..2 {
-            worst.jacobi = worst.jacobi.max(err(got[k], want[k], 1.0));
+            worst.jacobi = worse(worst.jacobi, err(got[k], want[k], 1.0));
         }
     }
     let (a, b) = (
         alpha(d.config.rho_t, d.config.lambda_t),
         beta(d.config.lambda_t),
     );
-    worst.angles = worst
-        .angles
-        .max(err(a, d.config.alpha, 1.0))
-        .max(err(b, d.config.beta, 1.0));
+    worst.angles = worse(
+        worse(worst.angles, err(a, d.config.alpha, 1.0)),
+        err(b, d.config.beta, 1.0),
+    );
     let e = encode::<S, R>(&d.ic);
     for (k, (got, want)) in e.z.z.iter().zip(z).enumerate() {
         let x = err(*got, want, 1.0 + want.f().abs());
@@ -198,7 +208,7 @@ where
             2..=5 => &mut worst.momentum,
             _ => &mut worst.mass,
         };
-        *slot = slot.max(x);
+        *slot = worse(*slot, x);
     }
     let at = format!("z = {z:?}");
     assert!(
@@ -787,14 +797,14 @@ fn check_landmark<R: P>(
         let round = ROUND_TRIP_EPS * R::eps();
         let dy = (back[1].f() - y.f()).abs();
         let bound_y = std::f64::consts::PI * eps_z * norm + y.f().abs();
-        worst.lambda_y = worst.lambda_y.max((dy - bound_y) / R::eps());
+        worst.lambda_y = worse(worst.lambda_y, (dy - bound_y) / R::eps());
         assert!(
             dy <= bound_y + round,
             "|Δλ̃_y| = {dy:e} over π·ε_z·‖λ̃‖ + |λ̃_y| = {bound_y:e} at {at}"
         );
         let dx = (back[0].f() - lambda_t[0]).abs();
         let bound_x = norm * (1.0 - (std::f64::consts::PI * eps_z).cos());
-        worst.lambda_x = worst.lambda_x.max((dx - bound_x) / R::eps());
+        worst.lambda_x = worse(worst.lambda_x, (dx - bound_x) / R::eps());
         assert!(
             dx <= bound_x + round,
             "|Δλ̃_x| = {dx:e} over ‖λ̃‖(1 − cos(π·ε_z)) = {bound_x:e} at {at}"
@@ -808,7 +818,7 @@ fn check_landmark<R: P>(
         for (got, want) in rest {
             for (g, w) in got.iter().zip(&want) {
                 let e = err(*g, *w, 1.0);
-                worst.rest = worst.rest.max(e);
+                worst.rest = worse(worst.rest, e);
                 assert!(
                     e <= ROUND_TRIP_EPS,
                     "a mass, ρ̃, p_ρ or p_λ is {e:.1} eps off at {at}"
@@ -928,7 +938,7 @@ fn z_gap<R: P>(a: &Encoded<R>, b: &Encoded<R>) -> f64 {
         .iter()
         .zip(&b.z.z)
         .map(|(x, y)| err(*x, *y, 1.0 + y.f().abs()))
-        .fold(0.0, f64::max)
+        .fold(0.0, worse)
 }
 
 /// The T1 limit, in eps of the precision, over `1 + |z|`: `z`'s error after `C` on a moved and rescaled state,
@@ -981,7 +991,7 @@ fn t1_generic<R: P>(seed: u64) -> f64 {
         let x = interior_state(&mut rng);
         for _ in 0..5 {
             let g = Gauge::random(&mut rng, 10.0, 8.0);
-            worst = worst.max(check_t1::<R>(&x, &g));
+            worst = worse(worst, check_t1::<R>(&x, &g));
         }
     }
     worst
@@ -1029,7 +1039,7 @@ fn t1_deadband(seed: u64) -> f64 {
                 gap <= T1_EPS,
                 "E(g·x) differs from E(x) by {gap:.1} eps across the deadband at {at}"
             );
-            worst = worst.max(gap);
+            worst = worse(worst, gap);
         }
     }
     worst
