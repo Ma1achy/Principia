@@ -6,6 +6,7 @@ pub mod bringup;
 pub mod canon;
 pub mod chart;
 pub mod decode;
+pub mod encode;
 pub mod generated;
 pub mod payload;
 pub mod real;
