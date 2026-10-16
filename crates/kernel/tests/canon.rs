@@ -8,6 +8,8 @@
 //!   transformed per the inverse-encode contract's table (REQ-DEC-023).
 //! - `scale_step`: dd_encode §5 test 4 on `fixtures/states/burrau_2x.json`: `I_in = 4·I_canon`, `λ = 1/2`,
 //!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}` (REQ-ENC-006).
+//! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
+//!   state's `C` in its word layout, notices included, and nothing past the last state.
 //!
 //! **Tolerances** (applied per R-369: a test decision, as dd_decoder §5 test 1's "precision-appropriate tolerance"),
 //! each a multiple of the precision's epsilon, set from the worst case these tests measure and print, with headroom.
@@ -23,7 +25,12 @@ use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{Defaults, LinkReal};
 use kernel::payload::PayloadReal;
 use kernel::real::IeeeBits;
+use kernel::stage::canon::{
+    canon_words, canonicalise as canonicalise_entry, notices, read_canonical, write_canonical,
+};
+use kernel::stage::decode::{ic_words, write_ic};
 use proptest::prelude::*;
+use spirv_std::glam::UVec3;
 use spirv_std::num_traits::NumCast;
 use validation::decode_f32_eps::SplitMix;
 use validation::{negative_control, prop};
@@ -586,5 +593,104 @@ negative_control!(
             *v = v.map(|q| q / 2.0);
         }
         check_row(&x, &c, "momenta scaled by I^(−1/4)");
+    }
+);
+
+// ── stage_canon_native ──────────────────────────────────────────────────────────────────────────────────────────
+
+/// States reaching each pair of notices: none, `lookup_mirrored`, `lookup_clamped`, and both.
+fn notice_states() -> [Ic<f32>; 4] {
+    let plain = Ic {
+        m: [0.25f32, 0.25, 0.5],
+        r: [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]],
+        p: [[0.1, 0.2], [-0.3, 0.1], [0.1, -0.15]],
+    };
+    let flip = |mut x: Ic<f32>| {
+        for v in x.r.iter_mut() {
+            v[1] = -v[1];
+        }
+        x
+    };
+    let pair = |mut x: Ic<f32>| {
+        x.r[1] = x.r[0];
+        x
+    };
+    [plain, flip(plain), pair(plain), pair(flip(plain))]
+}
+
+/// The entry point over `states`, invoked once more than there are states, into a buffer of `u32::MAX`; each state's
+/// words read back as its `C`, its notices word as [`notices`] gives, and the words past the last state untouched.
+fn check_stage(states: &[Ic<f32>], entry: fn(UVec3, &[u32], &mut [u32])) {
+    let mut input = vec![0; states.len() * ic_words()];
+    for (i, x) in states.iter().enumerate() {
+        write_ic(&mut input, i, x);
+    }
+    let mut out = vec![u32::MAX; (states.len() + 1) * canon_words()];
+    for i in 0..=states.len() {
+        entry(UVec3::new(i as u32, 0, 0), &input, &mut out);
+    }
+    for (i, x) in states.iter().enumerate() {
+        let want = canonicalise(x);
+        assert_eq!(read_canonical(&out, i), want, "state {i}'s C");
+        assert_eq!(
+            out[i * canon_words() + ic_words() + 4],
+            notices(&want),
+            "state {i}'s notices word"
+        );
+    }
+    assert!(
+        out[states.len() * canon_words()..]
+            .iter()
+            .all(|&w| w == u32::MAX),
+        "the entry wrote past the last state"
+    );
+}
+
+#[test]
+fn stage_canon_native() {
+    let states = notice_states();
+    let flags: Vec<(bool, bool)> = states
+        .iter()
+        .map(|x| {
+            let c = canonicalise(x);
+            (c.clamped, c.mirrored)
+        })
+        .collect();
+    assert_eq!(
+        flags,
+        [(false, false), (false, true), (true, false), (true, true)],
+        "the states do not reach each pair of notices"
+    );
+    assert_eq!(
+        states.map(|x| notices(&canonicalise(&x))),
+        [0, 2, 1, 3],
+        "the notices word: bit 0 clamped, bit 1 mirrored"
+    );
+    check_stage(&states, canonicalise_entry);
+    // A Canonical written at sample 1 of three reads back there, its neighbours untouched.
+    let c = canonicalise(&states[3]);
+    let mut words = vec![7u32; 3 * canon_words()];
+    write_canonical(&mut words, 1, &c);
+    assert_eq!(read_canonical(&words, 1), c, "sample 1 read back");
+    assert!(
+        words[..canon_words()]
+            .iter()
+            .chain(&words[2 * canon_words()..])
+            .all(|&w| w == 7),
+        "writing sample 1 touched another sample"
+    );
+}
+
+negative_control!(
+    stage_canon_native,
+    "an entry that writes every invocation's output, past the last state too, must fail",
+    expected = "the entry wrote past the last state",
+    {
+        let states = notice_states();
+        check_stage(&states, |id, input, out| {
+            let i = id.x as usize;
+            let x = kernel::stage::decode::read_ic(input, i.min(input.len() / ic_words() - 1));
+            write_canonical(out, i, &canonicalise(&x));
+        })
     }
 );
