@@ -98,7 +98,7 @@ fn mock_status_line_number_formats() {
 }
 
 /// Every control 01_main.png's top bar shows is drawn, the menus open with their items, and the mode switch shows the
-/// Stain page's empty frame and back (RQ-249).
+/// Stain page and back (RQ-249).
 #[test]
 fn mock_status_line_top_bar_controls() {
     let mut app = mock_app();
@@ -279,21 +279,21 @@ fn mock_status_line_mode_switch_marks_the_mode_and_draws_its_page() {
     rejects("the Stain page read as Explore", || {
         check_mode(&stain, "Explore", "Stain")
     });
-    // The Stain page's title is drawn on the page, below the top bar's switch.
+    // The Stain page's library drawer is drawn on the page, below the top bar's switch.
     let page = Layout::new(headless.screen(), headless.pixels_per_point()).page;
     let s = f64::from(headless.pixels_per_point());
     let on_page = |names: &[crate::headless::Name]| {
         names.iter().any(|n| {
-            n.name == "Stain"
+            n.name == "Library"
                 && n.rect.is_some_and(|r| {
                     f64::from(page.min.x) * s <= r[0] && f64::from(page.min.y) * s <= r[1]
                 })
         })
     };
-    assert!(on_page(&headless.names(&stain)), "no Stain page title");
+    assert!(on_page(&headless.names(&stain)), "no Stain page drawer");
     assert!(
         !on_page(&headless.names(&explore)),
-        "a Stain page title on Explore"
+        "a Stain page drawer on Explore"
     );
 }
 

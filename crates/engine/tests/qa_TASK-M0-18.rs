@@ -42,7 +42,7 @@ fn sim() -> SimConfig {
 
 fn render() -> RenderState {
     RenderState {
-        stain_graph: StainGraph {},
+        stain_graph: StainGraph::new(),
         overlays: Overlays::default(),
         hover: Hover::default(),
         palette: Palette {},
@@ -52,7 +52,9 @@ fn render() -> RenderState {
 
 /// The M0 skeleton's canonical text, by §2's rules: its groups' names in byte order, each group `{}` but for the
 /// plane and the lock (R-390), whose members are in byte order too, all zero and unlocked, and, since TASK-M6-27, the
-/// horizon's `t`, the hover's `at` (null) and the overlay set's fourteen toggles, all off, each in byte order (R-390).
+/// horizon's `t`, the hover's `at` (null) and the overlay set's fourteen toggles, all off, each in byte order (R-390),
+/// and, since TASK-M6-29, the stain graph's default, the backbone alone, the combiner (M1's pass-through) wired to
+/// OUT's port 0, as `{ nodes, wires }` in id order, each member in byte order (gui_state_contract §2).
 const SIM_TEXT: &str =
     "{\"chart\":{},\"collision\":{},\"horizon\":{\"t\":0},\"integrator\":{},\"kernel_variant\":\"physics\",\"links\":{},\
 \"lock\":{\"locked\":false,\"z_locked\":[0,0,0,0,0,0,0,0]},\
@@ -62,7 +64,9 @@ const RENDER_TEXT: &str = "{\"hover\":{\"at\":null},\
 \"forbidden_region\":false,\"grid\":false,\"nan_invalid_pixels\":false,\"priority_heatmap\":false,\
 \"refine_flagged\":false,\"split_merge_activity\":false,\"substep_cap_hits\":false,\"substep_density\":false,\
 \"t_end_contours\":false,\"tile_bounds\":false},\
-\"palette\":{},\"playhead\":{\"t\":0},\"stain_graph\":{}}";
+\"palette\":{},\"playhead\":{\"t\":0},\
+\"stain_graph\":{\"nodes\":[{\"id\":0,\"kind\":\"combiner\",\"occupant\":{\"builtin\":\"pass_through\"},\"params\":{}},\
+{\"id\":1,\"kind\":\"out\",\"occupant\":\"none\",\"params\":{}}],\"wires\":[{\"from\":0,\"port\":0,\"to\":1}]}}";
 
 fn check_skeleton(sim_text: &str, render_text: &str) {
     assert_eq!(

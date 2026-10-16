@@ -186,7 +186,7 @@ fn mock_keyboard_top_bar_controls_in_order() {
     rejects("the controls reversed", || check_top_bar(&seen, &reversed));
 }
 
-/// Enter on the mode switch switches the mode, keeping the focus; on the Stain page Tab reaches only the top bar.
+/// Enter on the mode switch switches the mode, keeping the focus; on the Stain page Tab reaches Stain's big scopes.
 #[test]
 fn mock_keyboard_enter_switches_mode() {
     let mut app = mock_app();
@@ -199,11 +199,18 @@ fn mock_keyboard_enter_switches_mode() {
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(app.view.mode, Mode::Stain);
     assert_eq!(focus(&app), ["top_bar", "stain"]);
-    // The Stain page's big scopes: the top bar and the footer (R-405), until TASK-M6-29 adds Stain's.
-    press(&mut h, &mut app, Key::Tab, NONE);
-    assert_eq!(focus(&app), ["footer"]);
-    press(&mut h, &mut app, Key::Tab, NONE);
-    assert_eq!(focus(&app), ["top_bar"]);
+    // The Stain page's big scopes: the top bar, Stain's four (TASK-M6-29) and the footer (R-405).
+    for big in [
+        "stain_library",
+        "stain_canvas",
+        "stain_inspector",
+        "stain_code",
+        "footer",
+        "top_bar",
+    ] {
+        press(&mut h, &mut app, Key::Tab, NONE);
+        assert_eq!(focus(&app), [big]);
+    }
     keys(&mut h, &mut app, &[(Key::Enter, NONE)]);
     for _ in 0..8 {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
@@ -1456,7 +1463,8 @@ fn mock_keyboard_capture_steps() {
             "lock",
             "hover",
             "alt_1",
-            "space"
+            "space",
+            "click_node"
         ]
     );
     let err = Step::parse("zoom").expect_err("an unknown step");

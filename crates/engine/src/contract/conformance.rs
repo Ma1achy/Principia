@@ -6,7 +6,7 @@
 
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
-use crate::contract::render_state::{Hover, Overlays, Playhead};
+use crate::contract::render_state::{Hover, NodeKind, Occupant, Overlays, Playhead};
 use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
 use crate::contract::sim_config::{Horizon, Latent, Lock};
 use crate::contract::snapshot::{History, Snapshot};
@@ -48,6 +48,10 @@ pub const CASES: &[Case] = &[
     Case {
         name: "horizon_edit_shows_and_undoes",
         check: horizon_edit_shows_and_undoes,
+    },
+    Case {
+        name: "stain_graph_edit_shows_and_undoes",
+        check: stain_graph_edit_shows_and_undoes,
     },
 ];
 
@@ -345,5 +349,59 @@ fn horizon_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(),
         "the horizon after undo",
         engine.snapshot().sim.horizon,
         sim.horizon,
+    )
+}
+
+/// The stain graph's path (R-390, "Contract fields"; gui_state_contract §2, §5): an edit of the graph, a source added,
+/// shows in the next snapshot, touches nothing else of the `RenderState`, enters the history, logs "SetField
+/// StainGraph before → after", and undo restores it.
+fn stain_graph_edit_shows_and_undoes(engine: &mut dyn EngineInterface) -> Result<(), String> {
+    let first = engine.snapshot();
+    let (render, h0) = (first.render.clone(), first.history);
+    let mut graph = render.stain_graph.clone();
+    // A source is in the free interior, so adding one is an edit any graph takes, and from any graph it changes it.
+    graph
+        .add(NodeKind::Source, Occupant::Field("ftle".into()))
+        .map_err(|e| format!("adding a source to the engine's graph: {e}"))?;
+    engine.set_field(SetField {
+        edit: Edit::Render(RenderField::StainGraph(graph.clone())),
+        no_history: false,
+    });
+    let after = engine.snapshot();
+    expect(
+        "the stain graph after its SetField",
+        &after.render.stain_graph,
+        &graph,
+    )?;
+    expect(
+        "the overlay set after a stain graph SetField",
+        &after.render.overlays,
+        &render.overlays,
+    )?;
+    expect(
+        "the playhead after a stain graph SetField",
+        after.render.playhead.t,
+        render.playhead.t,
+    )?;
+    expect(
+        "the undo depth after a stain graph SetField",
+        after.history.undo_depth,
+        h0.undo_depth + 1,
+    )?;
+    let logged = format!(
+        "SetField StainGraph {} → {}",
+        crate::contract::store::stain_graph(&render.stain_graph),
+        crate::contract::store::stain_graph(&graph)
+    );
+    expect(
+        "the stain graph SetField's log line",
+        after.log.iter().any(|e| e.message == logged),
+        true,
+    )?;
+    engine.undo();
+    expect(
+        "the stain graph after undo",
+        engine.snapshot().render.stain_graph,
+        render.stain_graph,
     )
 }

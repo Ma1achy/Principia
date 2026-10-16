@@ -46,7 +46,7 @@ pub mod mock {
             Some("capture") => {
                 let args = capture::Args::parse(&args[1..])?;
                 let canvas = Arc::new(MockCanvas::new()?);
-                capture::write(&capture::shoot(canvas, &args.steps), &args.out)
+                capture::write(&capture::shoot_screen(canvas, &args.screen, &args.steps), &args.out)
             }
             Some(other) => Err(format!(
                 "gui: unknown command `{other}`; run with no argument, or `capture --screen … --steps … --out …`"

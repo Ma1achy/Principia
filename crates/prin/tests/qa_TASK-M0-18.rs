@@ -158,7 +158,7 @@ fn raw_member<'a>(object_text: &'a str, key: &str) -> &'a str {
 /// `synthetic_frames`: every object's members sorted (for these ASCII keys UTF-16 order is byte order: `frames`,
 /// `render`, `scenario`, `sim`, as telemetry §5 lists them), no whitespace, the frame count a number. The groups are
 /// gui_state_contract §2's, each named and empty at M0 (TASK-M0-16), but for the plane and the lock, whose
-/// fields (R-390) a scenario leaves all zero and unlocked.
+/// fields (R-390) a scenario leaves all zero and unlocked, and the stain graph, the backbone alone (§2).
 fn expected_config_text(frames: u64) -> String {
     format!(
         concat!(
@@ -168,7 +168,13 @@ fn expected_config_text(frames: u64) -> String {
             "\"energy_drift\":false,\"forbidden_region\":false,\"grid\":false,\"nan_invalid_pixels\":false,",
             "\"priority_heatmap\":false,\"refine_flagged\":false,\"split_merge_activity\":false,",
             "\"substep_cap_hits\":false,\"substep_density\":false,\"t_end_contours\":false,\"tile_bounds\":false}},",
-            "\"palette\":{{}},\"playhead\":{{\"t\":0}},\"stain_graph\":{{}}}},",
+            "\"palette\":{{}},\"playhead\":{{\"t\":0}},",
+            // The stain graph's default, gui_state_contract §2: the backbone alone, the combiner (its occupant M1's
+            // pass-through) wired to OUT's port 0, as `{ nodes, wires }` in id order, each member sorted (JCS).
+            "\"stain_graph\":{{\"nodes\":[",
+            "{{\"id\":0,\"kind\":\"combiner\",\"occupant\":{{\"builtin\":\"pass_through\"}},\"params\":{{}}}},",
+            "{{\"id\":1,\"kind\":\"out\",\"occupant\":\"none\",\"params\":{{}}}}],",
+            "\"wires\":[{{\"from\":0,\"port\":0,\"to\":1}}]}}}},",
             "\"scenario\":\"synthetic_frames\",",
             "\"sim\":{{\"chart\":{{}},\"collision\":{{}},\"horizon\":{{\"t\":0}},\"integrator\":{{}},",
             "\"kernel_variant\":\"physics\",\"links\":{{}},",
