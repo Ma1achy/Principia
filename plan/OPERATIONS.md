@@ -120,7 +120,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
   - for an implementer, the target directory of its local mutants run, `<target>-mutants`, and that it deletes it
-    straight after (§ "Reviewers", its **Mutants** item; R-388);
+    straight after (§ "Reviewers", its **Mutants** item; R-388); for a task that may touch `crates/gui/`, the
+    `--build-timeout` of its gui run and the hard limits that run takes (R-439);
   - for a task started early off a dependency's approved head, that head's sha, and that the PR waits for the
     dependency to merge (R-388; § "Roles and the loop");
   - the environment: `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0`,
@@ -191,6 +192,18 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   Linux runners enforce both caps (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a
   dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
   (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
+  - **A local run that mutates the gui crate uses hard limits (R-439, amending R-388).** A local gui-crate run crashed
+    the Mac twice (two kernel watchdog panics, 15 Oct 2026): a mutant made a gui test process allocate about 10 GB,
+    with 14 to 20 copies under nextest on an 18 GB machine. So where the diff touches `crates/gui/`, the gui crate's
+    mutants run on their own, as `cargo mutants --in-diff <diff> --package gui -j 1 --timeout 90 --build-timeout
+    <generous>`, with nextest at one test thread (`--cargo-test-arg=--test-threads=1`), `RUST_TEST_THREADS=1` and a
+    narrow nextest filter (`--cargo-test-arg=-E --cargo-test-arg='<filterset>'`). Applied per R-369: the filterset
+    selects the gui tests that exercise the diff's files, and the PR names it; a test the filter leaves out can only
+    leave a local survivor, which CI's run, the gate, still sees. The `--build-timeout`, in seconds, is the
+    dispatch's, at least the gui crate's cold build. The 90 s per mutant is the ruling's, in place of CI's value for
+    this run only; CI's caps (REQ-VAL-180, REQ-VAL-181) are unchanged. The rest of the diff, every other crate, runs
+    as above, unchanged, in a run of its own that leaves gui out (`--exclude 'crates/gui/**'`). The orchestrator's
+    memory guard (§ "Resources") runs throughout.
 
 ## qa commits
 
@@ -430,6 +443,13 @@ with two agents running, was 39 and 2 page-outs a minute, with 0 swap-outs. Each
 with its run or PR. If timeouts or flaky failures rise above the days before the trial, revert to R-277's 2 at warning
 at once, log it, and tell the human in the next summary. After three days, report the log in the next summary; the
 trial runs until the human rules on it or it is reverted.
+
+**The memory guard (R-439).** While any agent builds or tests on the Mac, the orchestrator keeps a memory guard
+running: it kills any process run from the agents' targets directory (§ "Paths and warm builds") once its resident
+memory passes 3 GB. macOS has no `prlimit`, so a local run has no per-process memory cap of its own (R-352): the guard
+is the Mac's stand-in, not CI's cap, which stays REQ-VAL-181's. Applied per R-369: the guard selects a process by its
+executable's path, never by `pkill -f` on a pattern; each kill is logged (§ "Logs"); and it is stopped when the
+session's last agent finishes, leaving no process behind.
 
 **Cleaning disk** (28 Sep 2026): delete each reviewer's worktree and target when its review ends, and each task's when
 its PR merges (R-345). Below 20 GB, `cargo clean` stale targets (merged or abandoned first, then the main checkout's),

@@ -25,7 +25,9 @@ only what the task's References tell you to, and cite the contract rather than t
    directory), with `CARGO_TARGET_DIR` set to the `<target>-mutants` directory the dispatch names, and delete that
    directory straight after. Kill each survivor with a test, or as `plan/OPERATIONS.md` § "Reviewers" (its
    **Mutants** item) says for an equivalent mutant. Run it again before pushing fixes for survivors CI reports. CI's
-   mutants gate stays the authority (R-388).
+   mutants gate stays the authority (R-388). If your diff touches `crates/gui/`, run the gui crate's mutants on their
+   own with the hard limits that item gives (`-j 1 --timeout 90`, a generous `--build-timeout`, nextest at one test
+   thread, `RUST_TEST_THREADS=1`, a narrow nextest filter named in the PR), and the rest of the diff as before (R-439).
 5. Open the PR, titled `<TASK-id>: <title>`, from `.github/pull_request_template.md` once it exists. For each
    requirement closed, give the acceptance command and its output. Label it `design`, `investigation` or
    `validation` where that applies. A benchmark command runs on the human's Mac: say it waits for that run (R-186).

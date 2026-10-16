@@ -863,3 +863,15 @@
   section: "R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts"
   reason: informative only
   note: "the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate passes on gate run 38629476853 on main ab65c273 and R-428 to R-431; main is tagged m1-gate once the rulings PR has merged, and M2 starts; plan/OPERATIONS.md's order of work and plan/MILESTONES.md's M1 block gain it; changes no requirement"
+- file: decisions.md
+  section: "R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)*"
+  reason: informative only
+  note: "the human's ruling of 15 Oct 2026 on local mutation testing: a local run that mutates the gui crate takes -j 1, --timeout 90, a generous --build-timeout, nextest at one test thread, RUST_TEST_THREADS=1 and a narrow filter; other crates keep R-388's run; the orchestrator keeps a memory guard; process, applied in plan/OPERATIONS.md and .claude/agents/implementer.md; changes no requirement"
+- file: decisions.md
+  section: "R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)*"
+  reason: informative only
+  note: "the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement"
+- file: decisions.md
+  section: "R-441 — η_E cannot raise a zero-momentum slice above its potential: every pixel of a free-fall slice with `E* > U` is tagged `ENERGY_UNSCALABLE`, and the GUI docs say the uniform colour is expected, not a bug"
+  reason: informative only
+  note: "the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is uniformly degenerate by design; changes no requirement"
