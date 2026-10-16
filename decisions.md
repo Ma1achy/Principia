@@ -9788,8 +9788,8 @@ Round 3 changes REQ-ENC-007 (verify, note) and REQ-COL-006 (rulings, source, ver
 
 ## R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)*
 *15 Oct 2026 · applied in `plan/OPERATIONS.md` § "Dispatching" (what every dispatch names: a clause), § "Reviewers"
-(its **Mutants** item: a sub-item added) and § "Resources" (the memory guard: a paragraph added),
-`.claude/agents/implementer.md` (step 4: a sentence added) and `plan/rule_groups.yaml`*
+(its **Mutants** item: a sub-item added), § "Resources" (the memory guard: a paragraph added) and § "Logs" (the
+guard's log: an item added), `.claude/agents/implementer.md` (step 4: a sentence added) and `plan/rule_groups.yaml`*
 
 The orchestrator asked the human "How should local mutation testing (R-388) run from now on?", after a local mutants
 run on the gui crate crashed the Mac twice: two kernel watchdog panics, from a mutant that made a gui test process
@@ -9808,7 +9808,7 @@ allocate about 10 GB, with 14 to 20 copies of it under nextest on an 18 GB machi
   review, and again before it pushes fixes for survivors CI reports; CI's mutants gate stays the authority (R-302).
 - **Where it mutates the gui crate, the run takes hard limits:** one job (`-j 1`), a per-mutant timeout of 90 s
   (`--timeout 90`), a generous `--build-timeout`, nextest at one test thread (`--test-threads 1`),
-  `RUST_TEST_THREADS=1`, and a narrow nextest filter.
+  `RUST_TEST_THREADS=1` (no effect under nextest; `--test-threads 1` is the binding limit), and a narrow nextest filter.
 - **Every other crate keeps R-388's run unchanged.**
 - **The orchestrator keeps a memory guard running** that kills any process from the targets directory whose resident
   memory passes 3 GB.
@@ -9831,8 +9831,12 @@ local timeout can only record a slow mutant as a timeout, never hide a survivor 
     build time; § "Dispatching"'s list of what every dispatch names gains it.
 - `plan/OPERATIONS.md` § "Resources" gains the memory guard. macOS has no `prlimit`, so a local run has no
   per-process memory cap of its own (R-352); the guard is the Mac's stand-in, not CI's cap.
-  - Applied per R-369: the guard selects a process by its executable's path, never by `pkill -f` on a pattern; each
-    kill is logged in the away-mode log (§ "Logs"); it is stopped when the session's last agent finishes.
+  - Applied per R-369 (code review 5541514708): the guard, `/Volumes/X10 Pro/Principia/orch/mem-guard.sh`, reads
+    `ps -axo pid=,rss=,comm=` every 2 s and selects only a process whose executable's path starts with
+    `/Volumes/X10 Pro/Principia/targets/`, the test binaries, never rustc or a shell whose arguments merely mention the
+    path; one whose RSS passes 3 GB (3 × 1024 × 1024 KB) is killed by its PID. Never `pkill -f` on a pattern. It logs
+    its start and each kill to `/Volumes/X10 Pro/Principia/orch/mem-guard.log`, named in § "Logs"; it is stopped when
+    the session's last agent finishes.
 - `.claude/agents/implementer.md` step 4 states the gui run's limits.
 - R-388 gains R-439 in its "Amended in part by" and "Still in force" lines (R-292).
 - R-439 is in the "process" group of `plan/rule_groups.yaml`.
