@@ -752,6 +752,11 @@ population = { name, lo, hi, count }
   A provisional entry is read the same way. **No number is wrapped in a function to get past the lint (R-427;
   REQ-SYS-082):** a `fn` or `const fn` that returns a register constant's number in place of a register entry is the
   `const` the lint refuses, under another form. A proposed value is entered `provisional` and read from the register.
+  **A counter's starting zero is not a register value (R-440):** a count from none, written `Cell::default()`, is not a
+  default, threshold or calibration. This covers counters only, never real values: a default, threshold or
+  calibration is read from the register, even at 0, in whatever form it is written. An IEEE-754 format constant written
+  from its std name, such as `f32::INFINITY.to_bits()` for the f32 exponent mask, is not one either (applied per R-369,
+  recorded in R-440); the scope is format constants, never calibration values.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
   the f16 pack clamp (payload §1), the f16 subnormal floor (R-271), and the step count and sentinel of `θ̃`'s pole
