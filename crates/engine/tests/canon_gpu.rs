@@ -15,6 +15,9 @@
 //! - `canonicaliser_hierarchy`: hierarchical collinear states, the inner pair `10⁻³` to `10⁻⁸` of the outer distance:
 //!   GPU-f32 takes CPU-f32's branch at the deadband's edge and mirrors at `λ̃_y = −2δ_λ`, where Metal flushes
 //!   subnormals (REQ-DEC-017).
+//! - `canonicaliser_hierarchy_edge`: states within 30 f32 steps of the deadband's edge, the inner pair `2^−12` to
+//!   `2^−40` of the outer distance, on `+x` and turned: GPU-f32 takes CPU-f32's branch on every one, and on `+x`
+//!   CPU-f32 takes R-82's decision at f64 on the same inputs except within 4 f32 steps of the edge (REQ-DEC-017).
 //! - `canonicaliser_canonicalise_order`: an off-CoM, boosted, scaled, rotated state, mirrored or not: `I` is the
 //!   CoM-frame one, and the output is the canonical representative on both backends (REQ-ENC-015).
 //! - `canonicaliser_coincident_inner_pair`: `ρ = 0` raises `lookup_clamped` with `φ = +0` and the identity rotation on
@@ -645,6 +648,146 @@ negative_control!(
     expected = "a flushing GPU",
     {
         check_hierarchy(
+            &|states| states.iter().map(flushed_decision).collect(),
+            "a flushing GPU",
+        );
+    }
+);
+
+// ── canonicaliser_hierarchy_edge (REQ-DEC-017) ─────────────────────────────────────────────────────────────────
+
+/// The inner pair's half-separation over the outer distance, as powers of two.
+const EDGE_RATIOS: [i32; 4] = [-12, -15, -20, -40];
+
+/// `m₂c² − δ_λ²·M₀₁·‖ρ‖²·d²` at f64 on f64 inputs: positive where `|λ̃_y| > δ_λ`.
+fn edge_side(m: [f64; 3], r: [[f64; 2]; 3]) -> f64 {
+    let diff = |a: [f64; 2], b: [f64; 2]| [b[0] - a[0], b[1] - a[1]];
+    let (rho, d02, d12) = (diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]));
+    let lam = [0, 1].map(|k| m[0] * d02[k] + m[1] * d12[k]);
+    let c = rho[0] * lam[1] - rho[1] * lam[0];
+    let sq = |v: [f64; 2]| v[0] * v[0] + v[1] * v[1];
+    let d2 = m[0] * m[1] * sq(rho) + m[0] * m[2] * sq(d02) + m[1] * m[2] * sq(d12);
+    let d = f64::DELTA_LAMBDA;
+    m[2] * c * c - d * d * (m[0] + m[1]) * sq(rho) * d2
+}
+
+/// R-82's decision on `x`'s f32 values, at f64: `c < 0` and `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`.
+fn edge_truth(x: &Ic<f32>) -> bool {
+    let m = x.m.map(f64::from);
+    let r = x.r.map(|v| v.map(f64::from));
+    let lam = [0, 1].map(|k| m[0] * (r[2][k] - r[0][k]) + m[1] * (r[2][k] - r[1][k]));
+    let c = (r[1][0] - r[0][0]) * lam[1] - (r[1][1] - r[0][1]) * lam[0];
+    c < 0.0 && edge_side(m, r) > 0.0
+}
+
+/// States at the deadband's edge, the inner pair `2^j` (times `1…2`) of the outer distance: `r = [(−u, a), (u, a),
+/// (x₂, −a)]`, turned by `θ`, with `a` bisected at f64 to where [`edge_side`] changes sign and swept over the 61 f32
+/// values from 30 below it to 30 above, for 40 random mass draws.
+fn hierarchy_edge(j: i32, theta: f64, seed: u64) -> Vec<Ic<f32>> {
+    let mut rng = SplitMix::new(seed);
+    let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
+    let (cs, sn) = (theta.cos(), theta.sin());
+    let turn = |v: [f64; 2]| [v[0] * cs - v[1] * sn, v[0] * sn + v[1] * cs];
+    let mut out = Vec::new();
+    for _ in 0..40 {
+        let w = [u(0.2, 1.2), u(0.2, 1.2), u(0.2, 1.2)];
+        let total: f64 = w.iter().sum();
+        let m32 = w.map(|x| (x / total) as f32);
+        let m = m32.map(f64::from);
+        let half = f64::from((2f64.powi(j) * u(1.0, 2.0)) as f32);
+        let x2 = f64::from(u(0.5, 1.5) as f32);
+        let state = |a: f64| [[-half, a], [half, a], [x2, -a]].map(turn);
+        let (mut lo, mut hi) = (0.0f64, 1e-6f64);
+        for _ in 0..200 {
+            let mid = 0.5 * (lo + hi);
+            if edge_side(m, state(mid)) > 0.0 {
+                hi = mid;
+            } else {
+                lo = mid;
+            }
+        }
+        let mut a = (0.5 * (lo + hi)) as f32;
+        for _ in 0..30 {
+            a = a.next_down();
+        }
+        for _ in 0..61 {
+            out.push(Ic {
+                m: m32,
+                r: state(f64::from(a)).map(|v| v.map(|q| q as f32)),
+                p: [[0.0; 2]; 3],
+            });
+            a = a.next_up();
+        }
+    }
+    out
+}
+
+/// How far from the f64 edge, in f32 steps of `a`, CPU-f32 may decide differently from R-82's decision at f64 on `+x`:
+/// the decision's own rounding, a few ulps of `c²` and of its right side (measured: at most 2).
+const EDGE_STEPS: usize = 4;
+
+/// One backend's mirror flags on the edge states, `flags`, against CPU-f32's on identical inputs, on `+x` and turned,
+/// at every ratio; and on `+x`, where `ρ_y = 0` and `c = ρ_xΛ_y` cancels nothing, CPU-f32 against R-82's decision at f64
+/// on the same f32 inputs, to within [`EDGE_STEPS`] of the edge. Turned, `c = ρ_xΛ_y − ρ_yΛ_x` cancels about as many
+/// bits as `‖ρ‖` is below the outer distance, and the f32 inputs, rounded after the turn, sit at random within
+/// about `ε_f32`, not `δ_λ`, of the edge, so f32's arithmetic resolves `λ̃_y` only to about `ε_f32` there; the count
+/// is printed, not bounded. Returns the number of states, the number mirrored, and the counts differing from f64 on
+/// `+x` and turned.
+fn check_hierarchy_edge(
+    flags: &dyn Fn(&[Ic<f32>]) -> Vec<bool>,
+    name: &str,
+) -> (usize, usize, [usize; 2]) {
+    let (mut n, mut mirrored, mut off) = (0, 0, [0, 0]);
+    for (k, j) in EDGE_RATIOS.into_iter().enumerate() {
+        for theta in [0.0, 0.7] {
+            let states = hierarchy_edge(j, theta, 81 + k as u64);
+            let got = flags(&states);
+            for (i, x) in states.iter().enumerate() {
+                let cpu = canonicalise(x).mirrored;
+                mirrored += usize::from(cpu);
+                if cpu != edge_truth(x) {
+                    off[usize::from(theta != 0.0)] += 1;
+                    let step = (i % 61).abs_diff(30);
+                    assert!(
+                        theta != 0.0 || step <= EDGE_STEPS,
+                        "CPU-f32 differs from R-82's decision at f64 {step} f32 steps from the edge, ratio 2^{j} on \
+                         +x, edge state {i}: {x:?}"
+                    );
+                }
+                assert_eq!(
+                    got[i], cpu,
+                    "{name} and CPU-f32 mirror differently at ratio 2^{j}, turned {theta}, edge state {i}: {x:?}"
+                );
+                n += 1;
+            }
+        }
+    }
+    (n, mirrored, off)
+}
+
+#[test]
+fn canonicaliser_hierarchy_edge() {
+    let h = harness();
+    let (n, mirrored, off) = check_hierarchy_edge(
+        &|states| gpu(&h, states).iter().map(|c| c.mirrored).collect(),
+        "GPU-f32",
+    );
+    eprintln!(
+        "canonicaliser_hierarchy_edge: ratios 2^{EDGE_RATIOS:?}, on +x and turned, {n} states within 30 f32 steps of \
+         the deadband's edge; GPU-f32 takes CPU-f32's branch on every one ({mirrored} mirrored); CPU-f32 differs \
+         from R-82's decision at f64 on {} on +x, each within {EDGE_STEPS} steps of the edge, and on {} turned",
+        off[0],
+        off[1]
+    );
+}
+
+negative_control!(
+    canonicaliser_hierarchy_edge,
+    "66974583's decision on a GPU that flushes subnormals, emulated, forks at the edge on hierarchical states and must \
+     fail",
+    expected = "a flushing GPU and CPU-f32 mirror differently",
+    {
+        check_hierarchy_edge(
             &|states| states.iter().map(flushed_decision).collect(),
             "a flushing GPU",
         );
