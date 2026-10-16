@@ -7,7 +7,8 @@
 //! - `invariant_warp_formula`: `K(t) = K_max·t^γ_K`, `L_max(t)` the largest float with `L_max² ≤ 2K` within the steps
 //!   it takes from the rounded root, `L_z(s, t) = (2s − 1)·L_max(t)`; `E(t) = U + K(t)` on `(L_z, E)`.
 //! - `invariant_chart_decode_targets`: the chart's decode is the shared decoder with the construction on the decoded
-//!   masses and configuration, its seed decided on the very `z_α` the configuration came from, bit for bit; it meets
+//!   masses and configuration, its seed decided on the very `z_α` the configuration came from, bit for bit, and its
+//!   descriptor the decoded IC's; it meets
 //!   `Σpᵢ = 0`, `L_z(p) = L_z` and `K(p) = K*` within REQ-DEC-046's proposed tolerances over random `(u, v)`, near
 //!   `K* → K_min` included; the two charts decode alike (chart_reference §5.2).
 //! - `invariant_chart_validate`: `Valid` on `[0,1]²` and above it; `t < 0` and `s ∉ [0, 1]` projected onto the
@@ -334,6 +335,11 @@ fn check_decode_point<R: Q>(decode: ChartDecodeFn<R>, z: [f64; 4], u: R, v: R, w
         "the chart's mass and configuration are not the shared blocks' {ctx}"
     );
     check_jacobi(&got, &ctx);
+    assert_eq!(
+        got.descriptor,
+        kernel::decode::descriptor::describe(&got.ic),
+        "the descriptor is not the decoded IC's {ctx}"
+    );
     let lk = invariant::decode::<Defaults, R, _>(&InvariantLK(c), u, v);
     assert_eq!(lk.0, got, "(L_z, K) and (L_z, E) decode differently {ctx}");
     assert_eq!(
