@@ -6,7 +6,7 @@
 
 | area | count |
 |---|---|
-| DEC | 46 |
+| DEC | 47 |
 | ENC | 33 |
 | CHART | 56 |
 | INT | 89 |
@@ -17,14 +17,14 @@
 | REF | 51 |
 | RENDER | 86 |
 | COL | 70 |
-| GUI | 183 |
+| GUI | 197 |
 | TOOL | 165 |
 | VAL | 181 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1391** |
+| **total** | **1406** |
 
-Of these: 120 calibration, 127 definition, 1144 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 121 calibration, 127 definition, 1158 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -32,20 +32,20 @@ Of these: 120 calibration, 127 definition, 1144 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 166 |
+| M2 | 167 |
 | M3 | 200 |
 | M4 | 104 |
 | M5 | 175 |
-| M6 | 160 |
+| M6 | 174 |
 | M7 | 117 |
 | M8 | 239 |
 
 ## Sections
 
-1136 sections in 46 files: 936 yield at least one requirement; 200 yield none and are listed below with the reason.
+1144 sections in 46 files: 941 yield at least one requirement; 203 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 152 |
+| informative only | 155 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 32 |
@@ -163,6 +163,9 @@ Of these: 120 calibration, 127 definition, 1144 obligation. Retired (kept for th
 | R-430 — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)* | informative only | the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate's ramp results stand as reported, S, ftle and diffusion passing, q_mass and mean_y provisional on cool-warm (R-426), theta cyclic (R-423), C_ty per R-369 (RQ-277's option (a), no veto); applied in forward lines, an acceptance line and plan/MILESTONES.md; the re-checks are REQ-PAY-097's and REQ-PAY-098's already; amends R-423 and R-426 in part; changes no requirement |
 | R-431 — No veto on #209's alias test, the constants lint's skip of test code, `constants::MILESTONES`'s names or the narrowed local mutants runs | informative only | the human's message of 14 Oct 2026 (R-428 quotes it): no veto on #209 (the alias test on the workspace target in ci-workspace, gate.yml's cpu-workspace job), the constants lint's skip of #[cfg(test)] code, constants::MILESTONES's names M0 … M8, or the narrowed local mutants runs with CI's full run as the gate; an act, recorded only; changes no requirement |
 | R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts | informative only | the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate passes on gate run 38629476853 on main ab65c273 and R-428 to R-431; main is tagged m1-gate once the rulings PR has merged, and M2 starts; plan/OPERATIONS.md's order of work and plan/MILESTONES.md's M1 block gain it; changes no requirement |
+| R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)* | informative only | the human's ruling of 15 Oct 2026 on local mutation testing: a local run that mutates the gui crate takes -j 1, --timeout 90, a generous --build-timeout, nextest at one test thread, RUST_TEST_THREADS=1 and a narrow filter; other crates keep R-388's run; the orchestrator keeps a memory guard; process, applied in plan/OPERATIONS.md and .claude/agents/implementer.md; changes no requirement |
+| R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)* | informative only | the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement |
+| R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug | informative only | the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is near-uniformly degenerate white by design, the contour E* = V₀ (E* < 0 only, scattered pixels) its one exception in colour and mass-block tags (e.g. M01_TINY, also white) an exception in tag only; changes no requirement |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

@@ -15048,6 +15048,8 @@
     section: G2. Explore — the everyday view (`01_main.png`)
   - file: decisions.md
     section: "R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*"
+  - file: decisions.md
+    section: "R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*"
   verify:
     method: GUI screenshot
     detail: "cargo test -p gui mock_keyboard and scope_tab_order_mock: Tab from Legend reaches the footer and Tab from the footer the top bar; Shift+Tab from no focus starts at the footer; Enter on the footer opens the console with the focus on its first filter, in navigation mode; Tab and Shift+Tab move between the console's sections without leaving it, the arrows move within a section and Enter on clear clears it; Tab to the text filter lands in navigation mode, where a letter types nothing; Enter on it starts typing in interaction mode, letters, Space and the arrows go to the field, Esc returns to navigation mode on it with the text kept, Enter likewise, and Tab while typing moves to the next section in navigation mode; while typing, ? appears in the field and does not open the shortcuts overlay, and Ctrl+Z undoes the text edit and not the contract's history; Tab to the entry list lands in navigation mode, where ↑ and ↓ do not scroll it; Enter on it starts interaction mode and ↑ and ↓ scroll it; Esc returns to navigation mode on the list; Tab from the entry list in interaction mode moves to the console's next section in navigation mode and does not leave the console; Esc closes the console with the focus on the footer; Windows › Console opens it with the focus on its first filter, and Esc closes it with the focus on Windows › Console; a raised error opens the console without moving the focus; controls: a tree without the footer scope (Tab from Legend wraps to the top bar), a console that does not take the focus on Enter, a console landing in interaction mode, an entry list that scrolls in navigation mode, a text filter that types on landing, an Esc while typing that clears the text or closes the console, a ? while typing that opens the overlay, a field whose Ctrl+Z goes to the contract's undo instead of the text edit, a Tab from the entry list in interaction mode that leaves the console, and an Esc that returns the menu-opened console's focus to the footer each fail; cargo xtask screenshot 07_keyboard (mock_focus_console): the ring on a console control, in navigation mode's colour, and the breadcrumb naming the console"
@@ -15055,8 +15057,9 @@
   - R-390
   - R-405
   - R-409
+  - R-450
   milestone: M6
-  note: "R-405. Applied per R-369 (R-405): \"the bottom bar\" is read as the footer; and the console is a window under TASK-M6-28's window rule, Tab between its sections, the arrows within one, Esc closing it and returning the focus to whatever opened it (gui review 5478696211, G2). Closed by TASK-M6-28, which builds the console's controls (REQ-GUI-126) and each window's scope. R-409 (10 Oct 2026) restates the human's ask that the footer and the console be reached by keyboard, and adds that they follow §G3's two modes: the console's first filter is a landing in navigation mode. R-409's follow-up answer (F2) amends R-405 in part: the entry list's ↑ and ↓ scroll it only after Enter on it. TASK-M6-28 builds on TASK-M6-31's modes, through TASK-M6-27."
+  note: "R-405. Applied per R-369 (R-405): \"the bottom bar\" is read as the footer; and the console is a window under TASK-M6-28's window rule, Tab between its sections, the arrows within one, Esc closing it and returning the focus to whatever opened it (gui review 5478696211, G2). Closed by TASK-M6-28, which builds the console's controls (REQ-GUI-126) and each window's scope. R-409 (10 Oct 2026) restates the human's ask that the footer and the console be reached by keyboard, and adds that they follow §G3's two modes: the console's first filter is a landing in navigation mode. R-409's follow-up answer (F2) amends R-405 in part: the entry list's ↑ and ↓ scroll it only after Enter on it. TASK-M6-28 builds on TASK-M6-31's modes, through TASK-M6-27. R-450 (16 Oct 2026) amends R-405 and R-409 as they apply to the console: two scopes, the header bar (the filters, the search field, Copy, Clear, ×) and the log, the console opening on the header bar scope, × a focusable button and the log's Page Up, Page Down, Home and End. This statement stays as TASK-M6-28's (merged) record; REQ-GUI-189 and REQ-GUI-190, closed by TASK-M6-32, are the console's keyboard model as R-450 words it."
 - id: REQ-GUI-179
   area: GUI
   statement: "On the mock engine, with the egui layer hidden by F3 and in present mode, the figure must fill the whole window, the stand-in showing more of the field at the same scale in every direction, each point of the field at the screen position it has in the shown layout, never the shown view stretched; past the shown figure's rect the stand-in must extend as an affine chart, with R-407's hatch fallback (a pixel the mock flags invalid hatched as forbidden); showing the layer, or Esc from present mode, must return the figure to its rect in the shown layout; and neither must send a SetField or add an undo entry."
@@ -15170,6 +15173,262 @@
   - R-409
   milestone: M8
   note: "R-409 A4; proposed by TASK-M6-31, the first task to need it, and used provisionally until the human confirms it at the M8 gate (R-182). R-409's follow-up answer (F3): Shift ×10 and Alt ×0.1 apply to it, as everywhere; it stays a calibration (conflict 5)."
+- id: REQ-GUI-189
+  area: GUI
+  statement: "On the mock engine, the console must be a window of exactly two scopes, top to bottom, the header bar (the filters All, Warnings, Errors, Info, then the search field, Copy, Clear and the close button ×, in that visual order) and the log (the entry list); opened from the footer or from Windows › Console it must land in navigation mode on the header bar scope itself, and opening by itself on an error must take no focus; in navigation mode on a scope ↑ and ↓, and Tab and Shift+Tab, must move between the two scopes and stay in the window; Enter on the header bar must go in onto All, ← and → must move across every header element in visual order, the search field, Copy, Clear and × included, and Esc must go back up to the header bar scope; the search field must behave as §G3's text field; × must be a focusable button whose Enter, or a click, closes the console and returns the focus to whatever opened it, and Esc from the window's top level must close it too; Enter on the log must start interaction, in which ↑ and ↓ scroll one entry, Page Up and Page Down a page, Home and End go to the first and last entry and Shift gives ×10, over the whole filtered log, not only the rows drawn, and Esc must return to navigation mode on the log scope; a click on a console control must move the keyboard's focus onto it; and the ring and the breadcrumb must follow (\"Console › Header › Copy\", \"Console › Log\")."
+  source:
+  - file: decisions.md
+    section: "R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_console_keys (keyboard scripts on the mock): the console opened from the footer and from Windows › Console lands on the header bar scope in navigation mode; from the landing every header element (All, Warnings, Errors, Info, the search field, Copy, Clear, ×), the log and × are reached with only ↑ ↓, Tab, Shift+Tab, Enter, Esc and ← →; Enter on the search field types and Esc and Enter keep the text; Enter on × and Esc at the top level each close the console with the focus on its opener; Enter on the log and Home, End, Page Up, Page Down, ↑ ↓ and Shift+↑ reach the first and last entry of a list longer than the rows drawn; the breadcrumb reads \"Console › Header › Copy\" on Copy; every script repeated after an auto-open on error (then reached by Enter on the footer) and with a filter that empties the list gives the same order; controls: a console landing on All, × outside the scope tree, an order that skips the log when the list is empty, a scroll that stops at the last row drawn, and an Esc on a header element that closes the console each fail; cargo xtask screenshot 07_keyboard (mock_focus_console_header, mock_focus_console_log)"
+  rulings:
+  - R-390
+  - R-405
+  - R-409
+  - R-450
+  milestone: M6
+  note: "R-450; closed by TASK-M6-32. Takes the place of REQ-GUI-178's sections and landing (REQ-GUI-178 stays TASK-M6-28's record). The page size, the arrows at the row's ends, Esc and a click are R-450 A1 to A6 (applied per R-369)."
+- id: REQ-GUI-190
+  area: GUI
+  statement: "On the mock engine, every control of a scope or window that is drawn must be reachable from the keyboard by render_gui_spec §G3's keys, and the order in which the keyboard reaches them must not depend on state (an empty or filtered list, a hidden or disabled control, how the window was opened, or whether it opened by itself); the intermittent reachability of the console's search field, Copy and Clear must be reproduced and its cause named before it is fixed; and every other window and scope must be audited against §G3 for the same failure, each finding listed and fixed or assigned to the task that owns the screen."
+  source:
+  - file: decisions.md
+    section: "R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_reachability: a reusable check walks a scope or window with §G3's keys and asserts that every drawn control's scope id is reached, run on the console in its states (opened from the footer, from the menu, after an auto-open on error, with a filter that empties the list) and on each window the audit covers; negative arm: a test fixture with a drawn control left out of the scope tree, and one registered only when a list is non-empty, each fail the check; review checklist (gui reviewer): the PR names the intermittent fault's cause with its reproduction, and lists the audit's findings, each fixed here or recorded against its task"
+  rulings:
+  - R-390
+  - R-409
+  - R-450
+  milestone: M6
+  note: "R-450 (the human's audit and the bug's cause; A7 applied per R-369: a finding is fixed here or recorded against the open task that owns the screen). Closed by TASK-M6-32."
+- id: REQ-GUI-191
+  area: GUI
+  statement: "On the mock engine, the compass's Cube view must be drawn as docs/gui/reference/principia_nav_cube.html draws its cube, in the dev GUI's dark-mode colours and never its cream palette: the isometric projection P(x,y,z) = (CX + S·√3/2·(x − z), CY + S·(½(x + z) − y)) of [−1,1]³ fitted with the reference's margins; the edges depth-sorted by x + z, nearer ones more opaque and thicker, with the slice sorted among them by its own depth; the slice as the plane's true cross-section polygon, Lambert-shaded from its own normal (two-sided, ambient 0.2), with an in-plane grid clipped to it and an outline; in slice mode the plane untilted at its position along the slice axis, and in tilt mode the plane as the decoder tilts it, at its position; and the edge labels as R-451 gives them (slice mode Width, Depth and Height with −1.0 and 1.0 at the corners, one number per corner; tilt mode the tilt target only)."
+  source:
+  - file: decisions.md
+    section: "R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G13. Where the artboards are overridden
+  verify:
+    method: golden image
+    detail: "cargo xtask screenshot 01_main (mock_compass_cube_slice, mock_compass_cube_tilt_0, mock_compass_cube_tilt_rect, mock_compass_cube_tilt_hex): golden images of the cube in each mode and at three tilts (0°; one tilt, giving a rectangle; two tilts, giving a hexagon), compared with renders of principia_nav_cube.html at the same size and parameters (fixtures recording how they were made) in geometry and labelling, not colour: the projected vertices, the edge drawing order around the slice, and each label's text and position within a stated tolerance; controls: a yaw-and-pitch projection, the slice drawn as a fixed square, and a label on the wrong edge each fail"
+  rulings:
+  - R-390
+  - R-409
+  - R-451
+  milestone: M6
+  note: "R-451; closed by TASK-M6-33. The look's numbers are the reference's (R-451 B6); the colours are look choices under R-390, listed in the PR. Tilt mode's single target follows the decoder's mapping (R-451 B1); RQ-340 holds the mapping question."
+- id: REQ-GUI-192
+  area: GUI
+  statement: "On the mock engine, the compass's cross-section of its plane with the cube [−1,1]³ must be a convex polygon of 3 to 6 vertices that lie in the plane and inside the cube, ordered around it, for every tilt and position; and the plane it draws must be the decoder's plane, the basis View::basis builds from τ₁, τ₂ and γ expressed in the cube's frame (e_a, e_b, e_d), not the reference's axis-angle map."
+  source:
+  - file: decisions.md
+    section: "R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui compass_cross_section: over a sweep of τ₁, τ₂ ∈ [−90°, 90°] and γ and depths in [−1, 1] the polygon has 3 to 6 vertices, each on the plane within 1e-12 and inside the cube within 1e-12, convex and ordered; untilted it is the rectangle at the depth; a plane through the centre with two tilts that cuts six faces gives six vertices; the drawn plane's normal equals the normal of View::basis's (q₁, q₂) restricted to (e_a, e_b, e_d) within 1e-12; controls: a polygon built from a fixed square, and a normal from the reference's axis-angle map at τ₁ = τ₂ = 30°, each fail"
+  rulings:
+  - R-390
+  - R-451
+  milestone: M6
+  rq:
+  - RQ-340
+  note: "R-451; closed by TASK-M6-33. The comparison of the three mappings is RQ-340 (for the human); the drawing follows the decoder's until it is ruled."
+- id: REQ-GUI-193
+  area: GUI
+  statement: "On the mock engine, the compass's Cube view must read out, in slice mode, the plane's normal axis and its position as a signed fraction of the slice step's half-range, and in tilt mode q₁'s and q₂'s target and their angles in degrees; in slice mode a horizontal drag must move the slice along R-409 A3's normal at the reference's rate (the cube's full width the whole range), and in tilt mode a horizontal drag must set τ₁ and a vertical drag τ₂ at the reference's rate (the full width or height 180°), each clamped to ±90°, one SetField per drag; and the displayed values must ease toward their targets by v ← v + (target − v)·(1 − 0.0016^dt), dt capped at 0.05 s, in the compass's drawing only, the contract holding the target."
+  source:
+  - file: decisions.md
+    section: "R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_compass_cube: the readout in slice mode reads the slice axis and z₀'s fraction, and in tilt mode the target and τ₁, τ₂ in degrees; a horizontal drag of half the cube's width in slice mode emits one SetField on z₀ of half the range along the normal; in tilt mode a drag of the full width sets τ₁ to the clamp, and one of a quarter of the height up raises τ₂ by 45°; a vertical drag in slice mode emits nothing; after a drag the SetField carries the target, and the displayed value approaches it by the easing law frame by frame (checked at dt = 1/60 s and at the 0.05 s cap); controls: a drag past 90° that is not clamped, an eased value sent through the contract, and a vertical drag in slice mode that moves the slice each fail"
+  rulings:
+  - R-390
+  - R-409
+  - R-451
+  milestone: M6
+  note: R-451 (B3 to B5 applied per R-369); closed by TASK-M6-33.
+- id: REQ-GUI-194
+  area: GUI
+  statement: "On the mock engine, the compass must carry a view switcher on the compass itself, four buttons Cube, Plücker, Jacobi and Shape, Cube the default and the current view shown; the view must set only what the compass draws, independent of its Tilt and Slice modes, which keep their buttons in every view and set what a drag on the Cube does; in a grid view a drag must do nothing; and the view must be the compass's own GUI state, not undoable and not in the contract."
+  source:
+  - file: decisions.md
+    section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_compass_views: the compass opens on Cube; a click on each view button shows that view and leaves the mode unchanged; a click on Tilt or Slice in a grid view leaves the view unchanged; touching a slice slider in the Plücker view switches the mode to Slice and leaves the view on Plücker; a drag in a grid view emits no SetField; switching views emits no SetField and adds nothing to undo; controls: a view switch that changes the mode, and a mode switch that changes the view, each fail; cargo xtask screenshot 01_main (mock_compass_views)"
+  rulings:
+  - R-390
+  - R-409
+  - R-452
+  milestone: M6
+  note: R-452 (C1 applied per R-369); closed by TASK-M6-34.
+- id: REQ-GUI-195
+  area: GUI
+  statement: "On the mock engine, the compass's Plücker view must draw the slice plane's Plücker coordinates p_ij = q₁ᵢ q₂ⱼ − q₁ⱼ q₂ᵢ (i < j), computed from the q₁, q₂ the decoder uses, orthonormalised, never from a reconstructed tilt, as the upper triangle of an 8 × 8 grid labelled with the chart's coordinate names on both edges, the diagonal empty; each cell coloured by its sign in one of two dark-mode hues with intensity |p|, zero the cell background, with no number in a cell and its value on hover; the dominant cell outlined when its |p| exceeds 0.02; and a readout giving the dominant pair and value (\"strongest: z_a × z_b +0.993\") and Σ p²."
+  source:
+  - file: decisions.md
+    section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui compass_plucker: Σ p² = 1 within 1e-12 over random planes, tilted, rotated and scaled (q₁, q₂ not orthonormal on input); an axis-aligned plane z_i × z_j lights exactly cell (i, j) at ±1 and every other cell 0; rotating q₁, q₂ within the plane by any angle leaves every cell unchanged within 1e-12; the dominant cell and the readout's pair and value match the grid's largest |p|; hovering a cell shows its names and value; controls: a grid built from the tilt angles instead of the basis, and one from an un-orthonormalised basis, each fail; cargo xtask screenshot 01_main (mock_compass_plucker)"
+  rulings:
+  - R-390
+  - R-452
+  milestone: M6
+  note: "R-452; closed by TASK-M6-34. The hues and the outline are look choices under R-390, listed in the PR (C7)."
+- id: REQ-GUI-196
+  area: GUI
+  statement: "On the mock engine, under the compass's Plücker view a position readout must show z₀ as one signed bar per latent coordinate, labelled with the chart's coordinate names, with the current slice axis highlighted, as principia_compass_charts.html's position gauge does; it must be a readout only, taking no input."
+  source:
+  - file: decisions.md
+    section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui compass_position_gauge: each bar's signed length is its z₀ component over the slider's half-range, clamped to ±1; the slice axis's row is highlighted and moves when the preset's slice axis changes; a slice edit moves the slice axis's bar and leaves the Plücker grid unchanged; a click on the readout emits nothing; cargo xtask screenshot 01_main (mock_compass_plucker)"
+  rulings:
+  - R-390
+  - R-452
+  milestone: M6
+  note: R-452; closed by TASK-M6-34.
+- id: REQ-GUI-197
+  area: GUI
+  statement: "On the mock engine, a click on cell (i, j) of the compass's Plücker view must set the slice plane to the coordinate plane z_i × z_j with τ₁, τ₂ and γ reset to 0, the zoom and z₀ kept, as one SetField on the basis through the contract, undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following; locked, the plane must turn about the pin."
+  source:
+  - file: decisions.md
+    section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_compass_steer_latent: clicking cell (i, j) for every i < j gives a plane whose Plücker grid lights (i, j) at ±1; it emits one SetField on the basis, logged in the console, the Manifold view's chart showing z_i × z_j and its tilts 0; one Ctrl+Z restores the basis exactly; z₀ is unchanged unlocked and the anchor is kept locked; controls: a steer that leaves a tilt, one that emits two SetFields, and a click on the diagonal that steers each fail"
+  rulings:
+  - R-390
+  - R-452
+  milestone: M6
+  note: R-452 (C5 applied per R-369); closed by TASK-M6-34.
+- id: REQ-GUI-198
+  area: GUI
+  statement: "On the mock engine, the Compass scope must hold, as siblings in navigation mode in this order, the compass, Tilt, Slice, Cube, Plücker, Jacobi and Shape; Enter on a view button must switch the view and stay in navigation mode; in a grid view Enter on the compass must start interaction, in which the arrows move a highlighted cell over the grid's upper triangle, Space steers to it as a click does, and Esc or Enter returns to navigation mode; and in the Cube view interaction must be as REQ-GUI-183 gives it."
+  source:
+  - file: decisions.md
+    section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_compass_view_keys: from the compass → reaches Tilt, Slice, Cube, Plücker, Jacobi and Shape in turn and ← walks back; Enter on each view button shows that view in navigation mode; in the Plücker view Enter on the compass starts interaction with the cursor on the dominant cell, the arrows move it over upper cells only and stop at the triangle's edges, Space steers to it (one SetField, undone by one Ctrl+Z), and Esc returns to navigation mode on the compass; in the Cube view the arrows tilt as REQ-GUI-183's test has them; controls: a sibling order other than the one given, a cursor that enters the diagonal or lower triangle, and a Space that steers in navigation mode each fail"
+  rulings:
+  - R-390
+  - R-409
+  - R-452
+  milestone: M6
+  note: "R-452 (C6 applied per R-369); closed by TASK-M6-34. REQ-GUI-183's three siblings stay TASK-M6-31's record; this adds the view buttons after them."
+- id: REQ-GUI-199
+  area: GUI
+  statement: "On the mock engine, the compass's Jacobi and Shape views must push the slice plane through the decoder's Jacobian at z₀, or at the hovered pixel while the pointer is over the figure, u₁ = J q₁ and u₂ = J q₂ orthonormalised, and draw the Plücker grid of u₁ ∧ u₂ over the view's eight physical coordinates with the Plücker view's colouring, outline and hover, and a readout of the dominant pair and the area stretch √(|J q₁|²|J q₂|² − (J q₁ · J q₂)²); the Jacobian, its coordinates and the stretch must be those RQ-341, RQ-342 and RQ-343 settle (proposed: Jacobi ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ as the decoder writes them; Shape n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ), never the reference's synthetic Jacobian; where J q₁ ∧ J q₂ vanishes the view must say so rather than draw; and the help text must say that these views change as the slice moves, because the Jacobian depends on z₀, while the Plücker view does not."
+  source:
+  - file: decisions.md
+    section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui compass_physical_views: on a fixture with a known linear decoder J, the grid equals the normalised bivector of J q₁ ∧ J q₂ within 1e-12 and the stretch equals the Gram factor; on the real decoder, a slice edit changes the grid where J depends on z₀ and leaves the Plücker grid unchanged; moving the pointer over the figure evaluates J at the hovered pixel's latent point (affine chart) and leaving it returns to z₀; a plane on which J q₁ ∧ J q₂ = 0 shows the degenerate message; controls: the reference's synthetic Jacobian, and a grid from un-orthonormalised u₁, u₂, each fail; review checklist (physics reviewer): the coordinate sets and the Jacobian are as RQ-341 to RQ-343's rulings give them"
+  rulings:
+  - R-390
+  - R-452
+  milestone: M6
+  rq:
+  - RQ-341
+  - RQ-342
+  - RQ-343
+  note: "R-452; closed by TASK-M6-35, which waits on RQ-341, RQ-342 and RQ-343 (the Jacobian, and the two coordinate sets, under the physics review the human asked for). C4 (the hovered pixel on an affine chart) applied per R-369."
+- id: REQ-GUI-200
+  area: GUI
+  statement: "On the mock engine, a click on cell (i, j) of the compass's Jacobi or Shape view must set the slice plane to the latent preimage of that physical plane at z₀, q₁ ∝ J⁺ e_i and q₂ ∝ J⁺ e_j Gram–Schmidt orthonormalised, J⁺ the pseudo-inverse of the Jacobian RQ-341 settles, by the construction RQ-344 settles; where the preimage is no 2-plane it must refuse the click and log why to the console; and every steer must be one SetField on the basis through the contract, undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following."
+  source:
+  - file: decisions.md
+    section: "R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_compass_steer_physical: on the linear-decoder fixture, clicking physical cell (i, j) with e_i, e_j in J's range gives a plane whose pushforward lights (i, j) at ±1 within the tolerance RQ-344's ruling gives; a rank-deficient case (a coordinate outside J's range, or J⁺e_i ∥ J⁺e_j) is refused with a console line naming the reason and no SetField; each accepted steer is one SetField, logged, undone by one Ctrl+Z; controls: a steer accepted on a rank-deficient case, and a steer that skips the Gram–Schmidt step, each fail; review checklist (physics reviewer): the construction is as RQ-344's ruling gives it"
+  rulings:
+  - R-390
+  - R-452
+  milestone: M6
+  rq:
+  - RQ-341
+  - RQ-344
+  note: "R-452; closed by TASK-M6-35, which waits on RQ-341 and RQ-344 (the Jacobian over all eight latent directions, and the steer's construction, under the physics review the human asked for)."
+- id: REQ-GUI-201
+  area: GUI
+  statement: "On the mock engine, a primary click on the figure with no drag must pin that sample's trajectory in the Trajectory panel, the pin holding the sample's IC so that a later pan, zoom or slice edit leaves it, and a click on another point moving it; hover must never replace a pinned trajectory, and the cursor moving into the panel, or anywhere off the figure, must never clear the panel, which without a pin keeps the last sample hovered until the pointer hovers another point of the figure; the panel's first tab must read \"pinned\" while a pin is held, with an unpin button returning it to following the cursor; while pinned, the path drawn on the figure must be the pinned sample's; P in the Figure scope must pin the sample under the pointer, as K locks there; and the pin must be ViewUI state, not undoable and emitting no SetField on SimConfig."
+  source:
+  - file: decisions.md
+    section: "R-453 — A click on the figure pins that sample's trajectory in the Trajectory panel, and hover never replaces it; the cursor moving into the panel never clears it; the panel's real-space view pans and zooms and its shape-sphere view orbits and zooms"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_trajectory_pin: a click on the figure pins its sample and the first tab reads \"pinned\"; moving the pointer over other figure points, onto the panel and off the window leaves the pinned trajectory; a pan, a zoom and a slice edit leave it; a click on another point moves the pin; unpin returns the tab to \"under cursor\", which follows the next hover; without a pin, moving the pointer from the figure onto the panel keeps the last sample shown; a drag on the figure pans and does not pin; P with the pointer over the figure pins and with it off does nothing; \"+\" with the mouse keeps the pinned sample; pinning adds nothing to undo; controls: a panel that blanks when the pointer leaves the figure, a hover that replaces the pin, and a pin that holds a pixel (changing on pan) each fail"
+  rulings:
+  - R-390
+  - R-453
+  milestone: M6
+  note: "R-453 (D1 to D6 applied per R-369); closed by TASK-M6-36. TASK-M8-11 (the real engine's Trajectory panel) is left to a later port: PR #226 edits its file."
+- id: REQ-GUI-202
+  area: GUI
+  statement: "On the mock engine, the Trajectory panel's views must be interactive: on the real-space view, and on the unwrapped view, a drag must pan and the wheel zoom about the pointer; on the shape-sphere view a drag must orbit the view (yaw, pitch clamped to ±90°) and the wheel zoom, a drag turning \"turn\" off; a double-click must restore a view's default; the orbit must turn the view of the sphere, never the data, so the sphere and its unwrap agree; each view's state must be the panel's own ViewUI state, not undoable; and from the keyboard each view must be an element of the Trajectory scope whose interaction mode pans (R-404's Pan step) or orbits (R-404's Angle step) with the arrows and zooms (R-404's ZoomLog2 step) with + and −, Shift ×10 and Alt ×0.1."
+  source:
+  - file: decisions.md
+    section: "R-453 — A click on the figure pins that sample's trajectory in the Trajectory panel, and hover never replaces it; the cursor moving into the panel never clears it; the panel's real-space view pans and zooms and its shape-sphere view orbits and zooms"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_trajectory_views: a drag on real space moves the drawn path by the drag and the wheel scales it about the pointer; a drag on the sphere changes its yaw and pitch, pitch clamped at ±90°, and unticks \"turn\"; ticking it resumes turning from the current view; the wheel on the sphere scales it; a double-click restores each default; the sphere's data points' (θ, φ) are unchanged by any orbit; from the keyboard, Enter on each view starts interaction, the arrows pan or orbit by the named steps, + and − zoom, Shift ×10 and Alt ×0.1 apply, and Esc returns to navigation mode; no interaction emits a SetField or adds to undo; controls: a view that only paints (no response to a drag), an orbit that rotates the data, and a keyboard step other than the named ones each fail; cargo xtask screenshot 01_main (mock_trajectory_views)"
+  rulings:
+  - R-390
+  - R-404
+  - R-409
+  - R-453
+  milestone: M6
+  note: "R-453 (D6 to D8 applied per R-369; the keyboard steps reuse R-404's confirmed Pan, Angle and ZoomLog2, so no calibration is added); closed by TASK-M6-36. R-409's \"no orbit\" is the compass's and is untouched."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
