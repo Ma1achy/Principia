@@ -421,3 +421,83 @@ fn mock_stain_preview_a_slider_click_is_one_set_field() {
         check_one_edit((&g0, d0, rows), &app, |g| fade(g).is_none())
     });
 }
+
+/// The preview's pipeline is built once per target format and reused.
+#[test]
+fn mock_stain_preview_pipeline_is_cached() {
+    let canvas = MockCanvas::new().expect("a GPU adapter for the mock's canvas");
+    let (a, _) = canvas.preview_pipeline(FORMAT);
+    let (b, _) = canvas.preview_pipeline(FORMAT);
+    assert!(a == b, "the pipeline rebuilt for the same format");
+    let other = wgpu::TextureFormat::Rgba16Float;
+    let (c, _) = canvas.preview_pipeline(other);
+    assert!(a != c);
+    let (d, _) = canvas.preview_pipeline(other);
+    assert!(c == d);
+    rejects("a rebuilt pipeline read as the cached one", || {
+        assert!(a == c)
+    });
+}
+
+/// The inspector's sections follow the node: a source's "Field", the combiner's "Mode" with its occupant selected,
+/// no shader actions on OUT; and the Problems pane's heading counts the problems.
+#[test]
+fn mock_stain_preview_inspector_sections() {
+    let (mut app, mut h) = on_stain(mock_app());
+    select(&mut app, &mut h, OUTCOME);
+    let texts = frame_texts(&mut h, &mut app);
+    assert!(texts.iter().any(|t| t == "▾ Field") && !texts.iter().any(|t| t == "▾ Mode"));
+    assert!(texts.iter().any(|t| t == "Edit this node's WGSL"));
+    select(&mut app, &mut h, COMBINER);
+    let texts = frame_texts(&mut h, &mut app);
+    assert!(texts.iter().any(|t| t == "▾ Mode") && !texts.iter().any(|t| t == "▾ Field"));
+    // The combiner's occupant, Multiply, is the choice shown selected.
+    let all = nodes(&mut h, &mut app);
+    let rect = |t: &str| all.iter().find(|n| n.text == t).map(|n| n.rect).unwrap();
+    let fill = h.ctx.global_style().visuals.selection.bg_fill;
+    let drawn = super::support::shapes(&mut h, &mut app);
+    let lit = |r: Rect| {
+        drawn.iter().any(|s| matches!(s, eframe::egui::Shape::Rect(x) if x.fill == fill && r.contains(x.rect.center())))
+    };
+    assert!(lit(rect("Multiply")) && !lit(rect("Replace-L")));
+    app.stain.canvas.selection = [crate::mock::stain::OUT].into();
+    let texts = frame_texts(&mut h, &mut app);
+    assert!(texts.iter().any(|t| t == "OUT · to the style"), "{texts:?}");
+    assert!(!texts.iter().any(|t| t == "Edit this node's WGSL"));
+    assert!(texts.iter().any(|t| t == "Problems · 0"));
+    let mut content = app.side().stain_content().unwrap();
+    content.problems = vec!["a".into(), "b".into()];
+    assert_eq!(
+        crate::stain::problems::heading(Some(&content)),
+        "Problems · 2"
+    );
+    assert_eq!(crate::stain::problems::heading(None), "Problems · 0");
+    rejects("Replace-L shown selected", || {
+        assert!(lit(rect("Replace-L")))
+    });
+}
+
+/// While the fade's slider is dragged, it shows the dragged value; a drag held for another node or param does not
+/// move it.
+#[test]
+fn mock_stain_preview_a_dragged_slider_shows_its_value() {
+    let (mut app, mut h) = on_stain(mock_app());
+    select(&mut app, &mut h, LATE_FADE);
+    let shown = |app: &mut App<MockSide>, h: &mut Headless, drag: Option<(NodeId, &str)>| {
+        app.stain.param_drag = drag.map(|(n, p)| (n, p.to_owned(), 0.9));
+        let v = nodes(h, app)
+            .into_iter()
+            .find(|n| n.role == Role::Slider)
+            .and_then(|n| n.value)
+            .expect("the slider's value");
+        app.stain.param_drag = None;
+        v
+    };
+    assert!((shown(&mut app, &mut h, Some((LATE_FADE, FADE))) - 0.9).abs() < 1e-6);
+    assert!((shown(&mut app, &mut h, Some((LATE_FADE, "other"))) - 0.12).abs() < 1e-6);
+    assert!((shown(&mut app, &mut h, Some((NodeId(4), FADE))) - 0.12).abs() < 1e-6);
+    assert!((shown(&mut app, &mut h, None) - 0.12).abs() < 1e-6);
+    rejects("another node's drag shown", || {
+        assert!((shown(&mut app, &mut h, Some((NodeId(4), FADE))) - 0.9).abs() < 1e-6)
+    });
+}

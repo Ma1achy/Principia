@@ -161,7 +161,7 @@ impl MockCanvas {
     }
 
     /// The preview's pipeline and bind group for `format`.
-    fn preview_pipeline(
+    pub(crate) fn preview_pipeline(
         &self,
         format: wgpu::TextureFormat,
     ) -> (wgpu::RenderPipeline, wgpu::BindGroup) {
