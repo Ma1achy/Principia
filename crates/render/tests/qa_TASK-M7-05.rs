@@ -339,12 +339,12 @@ fn check_gpu_forms(h: &GpuHarness, lib: &str) {
         for (k, &m) in mags.iter().enumerate() {
             let (up, down) = (b[2 + 2 * k], b[3 + 2 * k]);
             assert!(
-                up + down == 1.0 && f64::from(up) + f64::from(down) == 1.0,
-                "x₀ = {x0}: the symlog's b({m}) + b(−{m}) = {up} + {down} ≠ 1"
-            );
-            assert!(
                 (0.5..1.0).contains(&up),
                 "x₀ = {x0}: b({m}) = {up} is outside [½, 1)"
+            );
+            assert!(
+                up + down == 1.0 && f64::from(up) + f64::from(down) == 1.0,
+                "x₀ = {x0}: the symlog's b({m}) + b(−{m}) = {up} + {down} ≠ 1"
             );
         }
         for w in (0..mags.len()).collect::<Vec<_>>().windows(2) {
@@ -434,18 +434,19 @@ negative_control!(
     check_gpu_forms(&gpu(), ASYMMETRIC)
 );
 
-/// A library whose symlog is the requirement's formula written naively, `log(1 + |x|/x₀)`: symmetric, but its
-/// quotient overflows to +∞ for a large finite `|x|` over a small `x₀`, and the form reaches 1 there.
+/// `compaction.wgsl` itself with its overflow guard switched off: `log1p_ratio` always takes its `ln(1 + a/s)` side, the
+/// naive `log(1 + |x|/scale)`, whose quotient overflows to +∞ for a large finite `|x|` over a small scale, where the
+/// form reaches 1. Below the overflow it is the shipped library's code unchanged, so on every backend it fails only
+/// where the quotient overflows.
 #[cfg(feature = "controls")]
-const OVERFLOWING: &str = r"
-fn compact_log(x: f32, eps: f32) -> f32 { return 1.0 - 1.0 / (1.0 + log(1.0 + max(x, 0.0) / eps)); }
-fn compact_cyclic(x: f32, period: f32) -> f32 { return fract(x / period); }
-fn compact_flag(x: f32) -> f32 { return select(0.0, 1.0, x != 0.0); }
-fn compact_symlog(x: f32, x0: f32) -> f32 {
-    let u = 0.5 + 0.5 * (1.0 - 1.0 / (1.0 + log(1.0 + abs(x) / x0)));
-    return select(1.0 - u, u, x >= 0.0);
+fn overflowing() -> String {
+    const GUARD: &str = "let huge = a * 5.421010862427522e-20 > s;";
+    assert!(
+        COMPACTION_WGSL.contains(GUARD),
+        "compaction.wgsl's overflow guard is not `{GUARD}`: the control no longer switches it off"
+    );
+    COMPACTION_WGSL.replace(GUARD, "let huge = a < 0.0;")
 }
-";
 
 #[cfg(feature = "controls")]
 mod qa_compaction_forms_on_the_gpu_overflow {
@@ -454,7 +455,7 @@ mod qa_compaction_forms_on_the_gpu_overflow {
         qa_compaction_forms_on_the_gpu,
         "a symlog whose |x|/x₀ overflows at a large finite x reaches 1 there",
         expected = "is outside [½, 1)",
-        check_gpu_forms(&gpu(), OVERFLOWING)
+        check_gpu_forms(&gpu(), &overflowing())
     );
 }
 
