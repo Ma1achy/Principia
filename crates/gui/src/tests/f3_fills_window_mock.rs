@@ -263,6 +263,93 @@ fn f3_fills_window_mock_tile_bounds_cover_the_window() {
     });
 }
 
+/// Past the root the plane is tiled with copies of it, so the window's quads cover the whole window at the shown
+/// quads' size; a copy's quads stay clear of the shown view, which keeps exactly [`quads::quads`]'s; and the tiling
+/// stops [`quads::MAX_TILE`] roots out.
+#[test]
+fn f3_fills_window_mock_quads_tile_past_the_root() {
+    use crate::mock::quads::{touches, MAX_TILE, ROOT};
+    let plane = MockEngine::frozen().plane().clone();
+    let span = layout().placement().span();
+    let shown = quads::quads(&plane);
+    let all = quads::quads_over(&plane, span);
+    // The window in the plane's (u, v): the mock's unit basis, centred on z₀'s (0.18, 0.41).
+    let (cu, cv) = (plane.z0[0], plane.z0[1]);
+    let window = [
+        cu + 2.0 * span[0] - 1.0,
+        cv + 2.0 * span[1] - 1.0,
+        cu + 2.0 * span[2] - 1.0,
+        cv + 2.0 * span[3] - 1.0,
+    ];
+    assert!(
+        window[2] > ROOT,
+        "the default window reaches past the root: {window:?}"
+    );
+    // Every point of the window, on a fine grid, lies in a quad.
+    let covered = |qs: &[[f64; 4]], u: f64, v: f64| {
+        qs.iter()
+            .any(|q| q[0] <= u && u <= q[2] && q[1] <= v && v <= q[3])
+    };
+    for i in 0..=100 {
+        for j in 0..=100 {
+            let u = window[0] + (window[2] - window[0]) * f64::from(i) / 100.0;
+            let v = window[1] + (window[3] - window[1]) * f64::from(j) / 100.0;
+            assert!(covered(&all, u, v), "({u}, {v}) in no quad");
+        }
+    }
+    rejects("the root alone", || {
+        let central: Vec<_> = all.iter().filter(|q| q[2] <= ROOT).copied().collect();
+        assert!(covered(&central, window[2] - 1e-3, cv), "past the root")
+    });
+    // Past the root the quads are the shown ones' size: the widest copy quad is as wide as the widest shown quad.
+    let width = |q: &[f64; 4]| q[2] - q[0];
+    let copies: Vec<_> = all.iter().filter(|q| q[2] > ROOT).copied().collect();
+    assert!(!copies.is_empty());
+    let widest = |qs: &[[f64; 4]]| qs.iter().map(width).fold(0.0, f64::max);
+    assert_eq!(widest(&copies), widest(&shown));
+    // The shown view's quads are the root's alone: every quad touching the shown view is a shown quad.
+    let shown_view = [cu - 1.0, cv - 1.0, cu + 1.0, cv + 1.0];
+    for q in all.iter().filter(|q| touches(q, &shown_view)) {
+        assert!(shown.contains(q), "{q:?} touches the shown view");
+    }
+    // Over a span far wider than any window, the copies stop MAX_TILE roots out each way.
+    let far_quads = quads::quads_over(&plane, [-20.0, -20.0, 21.0, 21.0]);
+    let reach = (2.0 * f64::from(MAX_TILE) + 1.0) * ROOT;
+    let max_u = far_quads
+        .iter()
+        .map(|q| q[2])
+        .fold(f64::NEG_INFINITY, f64::max);
+    let min_v = far_quads.iter().map(|q| q[1]).fold(f64::INFINITY, f64::min);
+    assert_eq!((max_u, min_v), (reach, -reach));
+    // Zoomed far out, the shown view covers copies, and keeps the root's quads only, as before.
+    let mut far = plane.clone();
+    far.q1 = far.q1.map(|v| v * 100.0);
+    far.q2 = far.q2.map(|v| v * 100.0);
+    assert_eq!(quads::quads(&far), quads::quads_over(&far, UNIT));
+    assert!(quads::quads(&far)
+        .iter()
+        .all(|q| q[2] <= ROOT && q[0] >= -ROOT));
+    // `touches` at its edges: touching on each side counts, a hair apart does not.
+    let a = [0.0, 0.0, 1.0, 1.0];
+    for b in [
+        [1.0, 0.0, 2.0, 1.0],
+        [-1.0, 0.0, 0.0, 1.0],
+        [0.0, 1.0, 1.0, 2.0],
+        [0.0, -1.0, 1.0, 0.0],
+    ] {
+        assert!(touches(&a, &b), "{b:?} touches");
+    }
+    let e = 1e-9;
+    for b in [
+        [1.0 + e, 0.0, 2.0, 1.0],
+        [-1.0, 0.0, -e, 1.0],
+        [0.0, 1.0 + e, 1.0, 2.0],
+        [0.0, -1.0, 1.0, -e],
+    ] {
+        assert!(!touches(&a, &b), "{b:?} is apart");
+    }
+}
+
 /// The span reaches as far as it says each way, no farther: a quad past the window's span is not in view, one just
 /// inside it is; and over [`UNIT`] the span changes nothing (`quads` is `quads_over` the unit square).
 #[test]

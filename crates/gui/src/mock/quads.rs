@@ -76,17 +76,37 @@ pub fn quads(plane: &Plane) -> Vec<Quad> {
     quads_over(plane, UNIT)
 }
 
+/// The farthest the plane is tiled with copies of the root past it, in roots each way: so a window past the root is
+/// covered by quads, and a far zoom out stays a bounded tree (placeholder content).
+pub const MAX_TILE: i32 = 4;
+
+/// Whether two quads overlap or touch.
+pub fn touches(a: &Quad, b: &Quad) -> bool {
+    a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
+}
+
 /// [`quads`] over the figure's span `span` (`[s₀, t₀, s₁, t₁]`): the same tree, its quads sized against the shown
-/// figure, so a span past `[0, 1]²` adds quads at the shown quads' size (R-406). The tree's root stays `[−ROOT, ROOT]²`:
-/// past it there are no quads, the layer shown or hidden.
+/// figure, so a span past `[0, 1]²` adds quads at the shown quads' size (R-406). Past the root `[−ROOT, ROOT]²` the
+/// plane is tiled with copies of it, out to [`MAX_TILE`] roots each way, split by the same rules; a copy's quads are
+/// kept only clear of the shown view, so the shown figure's quads are [`quads`]'s, the layer shown or hidden.
 pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
     let (Some(shown), Some(view)) = (view_of(plane, UNIT), view_of(plane, span)) else {
         return Vec::new();
     };
     let width = shown[2] - shown[0];
-    let mut stack = vec![([-ROOT, -ROOT, ROOT, ROOT], 0u32)];
+    // The copies first, the root last, so the root's quads come first, in the order [`quads`] gives them.
+    let mut stack = Vec::new();
+    for i in -MAX_TILE..=MAX_TILE {
+        for j in -MAX_TILE..=MAX_TILE {
+            if (i, j) != (0, 0) {
+                let (du, dv) = (f64::from(i) * 2.0 * ROOT, f64::from(j) * 2.0 * ROOT);
+                stack.push(([du - ROOT, dv - ROOT, du + ROOT, dv + ROOT], 0u32, true));
+            }
+        }
+    }
+    stack.push(([-ROOT, -ROOT, ROOT, ROOT], 0u32, false));
     let mut leaves = Vec::new();
-    while let Some((q, depth)) = stack.pop() {
+    while let Some((q, depth, copy)) = stack.pop() {
         if !overlaps(&q, &view) {
             continue;
         }
@@ -102,9 +122,9 @@ pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
                 [q[0], mv, mu, q[3]],
                 [mu, mv, q[2], q[3]],
             ] {
-                stack.push((c, depth + 1));
+                stack.push((c, depth + 1, copy));
             }
-        } else {
+        } else if !(copy && touches(&q, &shown)) {
             leaves.push(q);
         }
     }
