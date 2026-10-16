@@ -110,7 +110,8 @@ IC:
   shape-sphere `(θ, φ)` chart, where the chart's coordinates are the shape itself.
 - **The hover label names a fate only once it's decided.** Before that it reads "undecided · still interacting at `t` of
   `t_max`". A decided fate is a terminal `state` (escape, collision) or `bounded` at the horizon (payload §2); its labels
-  use 0-based bodies and pairs (R-22).
+  name the bodies 1, 2, 3 and a pair by its two bodies, "collision 1–2", never a pair id, from the one display function
+  (R-449; payload §2, "What a person reads").
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - a one-line summary (fate, `t_end`, FTLE, `E₀`);
@@ -350,8 +351,10 @@ dimension gets its own key:**
 - coordinate maps: their colour square (e.g. `u → red`, `v → green`);
 - post operations: line samples (quad boundaries, grid).
 
-It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and 0-based
-labels (R-22). Its keys are the nine classes, physical outcomes only (R-444): the black key reads "bounded / nothing
+It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and
+its 1-based class names (R-449, superseding R-22's 0-based display labels): "collision 1–2", "collision 1–3", "collision
+2–3", "triple collision", "escape body 1", "escape body 2", "escape body 3", "triple ejection", each from the one display
+function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Its keys are the nine classes, physical outcomes only (R-444): the black key reads "bounded / nothing
 yet", which `running` and every failure share in the outcome view (R-446); it has no "degenerate", "collision @ t=0",
 `running` or `sim_failed` key. A forbidden chart region, which keeps the hatch (R-446), is keyed as the chart's
 forbidden region.
@@ -406,7 +409,7 @@ shows `decode_failed` and the `detail` view its failure category (debug_tooling_
 Explore's Trajectory panel (§G2); trajectory_viewing §4 says where each lives. The standalone IC Inspector tool is absorbed;
 its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 
-- **Pane 1, the IC:** drag bodies (0, 1, 2) and their velocity arrows, with ghost markers at the playhead. **Right-click a
+- **Pane 1, the IC:** drag bodies 1, 2, 3 (internally 0, 1, 2; R-449) and their velocity arrows, with ghost markers at the playhead. **Right-click a
   body** for its properties popover (mass, position, velocity, momentum, distances, per-body share of P / L / E — all
   editable, in sync with dragging); each body's disc radius is ∝ ∛m (R-96; `ic_inspector_scratchpad.md`).
 - **Pane 2, the canonical representative:** bodies or the shape sphere (turning, with axes, or unwrapped); "ghost the gauge
@@ -474,7 +477,10 @@ It is reached from Windows › Console too, and Esc returns the focus to whichev
 The pictures are layouts, and **their values are illustrative: corpus values win, and the Run window exposes the parameters
 the contracts define, under their contract names (R-68).** Where a detail in one differs from a ruling, the notes or the
 corpus, the spec follows the authority:
-- **Body and pair labels** are 0-based (R-22). The artboards show "body 1 escapes", "collision 1–2", "body 3 crosses".
+- **Body and pair labels** are 1-based, as the artboards show them ("body 1 escapes", "collision 1–2", "body 3
+  crosses"): R-449 supersedes R-22's 0-based display labels, which overrode the artboards here. A pair is named by its
+  two bodies, smaller first, never by its pair id; storage, computation and machine-readable exports stay 0-based
+  (payload §2, "What a person reads").
 - **Escape has no persistence count** (R-29, change 11). The Run artboard shows "persistence 8".
 - **The profiler's top level is telemetry §2's five stages** (R-56). The donut shows other categories.
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".

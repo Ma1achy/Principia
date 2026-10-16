@@ -298,7 +298,7 @@ with dd_colouring §3.1's sRGB transfer.
     direction cosines `cᵢ = vᵢ/‖v‖` of the `k` components, each squared, are summed into channel `⌊3i/k⌋`; the three
     sums, which total 1, are linear RGB scaled by `1/max`, as the ternary masses are. For `k = 6`, `r`, `p` and their
     shadows, the components are `(x, y)` per body, so channel `j` is body `j`'s share of `‖v‖²`: red body 0, green
-    body 1, blue body 2, equal shares white. The scale cancels `‖v‖²`, so the colour is `wⱼ/max(wⱼ)` with `wⱼ` body
+    body 1, blue body 2 (internal ids; the view's legend reads body 1, 2, 3, R-449), equal shares white. The scale cancels `‖v‖²`, so the colour is `wⱼ/max(wⱼ)` with `wⱼ` body
     `j`'s squared norm. A k = 6 vector has no three-channel sign, so the signs of the cosines are not shown; the
     field's per-component views show them.
 - **Drift max-vs-final (TASK-M1-12; applied per R-369):** the accumulator view of the drift shape shows the current

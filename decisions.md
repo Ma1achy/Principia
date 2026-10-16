@@ -228,8 +228,11 @@ reworded. Files: dd_decoder §3, §3.2; chart_reference §0.2; inverse_encode_co
 
 ## R-22 — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*
 *Amended by R-62.*
-*Still in force: 0-based body indices and labels, `m0 m1 m2`, and pair id `k` naming the side opposite body `k`, as a
-schema event; the Jacobi fields are named by R-62.*
+*Superseded in part by R-449 (the display half: what a person reads names the bodies 1, 2, 3 and a pair by its two
+bodies, never by its pair id).*
+*Still in force: 0-based body indices in storage, computation, the code, the WGSL and every machine-readable export,
+`m0 m1 m2`, and pair id `k` naming the side opposite body `k`, as a schema event; the Jacobi fields are named by R-62;
+the 0-based display labels are superseded by R-449's 1-based ones.*
 *24 Sep 2026 · applied in step 5*
 
 0-based throughout: `ICDescriptor` fields `m0 m1 m2`, `rho0_mag` / `rho1_mag`, and 0-based display labels. **Pair id `k` names the side
@@ -9947,6 +9950,9 @@ The human's words are R-440's quote, its second remark ("Call 5").
 Changes no requirement.
 
 ## R-444 — The outcome view shows physical outcomes only, in nine classes: bounded / nothing yet `#141418`, the three pair collisions, triple collision, the three escapes and triple ejection *(supersedes R-96 and R-433 as they apply to the outcome palette's classes and the triple outcomes' swatches)*
+*Amended in part by R-449 (the class names as shown: collision 1–2, 1–3 and 2–3 for pairs 2, 1 and 0, escape body 1,
+2 and 3 for `detail` 0, 1 and 2; same classes, same colours).*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
 outcome-state default palette" (the table, the mnemonic paragraph, "how the table reads the payload" and the triple
 outcomes' paragraph rewritten) and § "4.1 Backbone & `Option` occupants" (event mode's reading),
@@ -10110,6 +10116,8 @@ Changes REQ-COL-002 (statement, verify, rulings, sources, note), REQ-COL-062 (st
 note) and REQ-TOOL-021 (rulings, note); adds TASK-M2-32.
 
 ## R-445 — "Collision @ t = 0" is no longer a class: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and lightness carries timing; the orange `#F29620` goes to triple collision, and triple ejection moves from navy `#000097` to purple `#611597` *(supersedes R-96 and R-433 as they apply to "collision at start", the triple swatches and the first-step triple collision's orange)*
+*Amended in part by R-449 (the class names as shown: its "collision 1–2", pair 0, is shown "collision 2–3").*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
 outcome-state default palette" (the triple outcomes' paragraph and the timing sentence) and § "4.1 Backbone & `Option`
 occupants" (the bivariate family: a sentence added), `docs/contracts/principia_render_contract.md` § "Presentation
@@ -10276,6 +10284,8 @@ Adds REQ-COL-101 and REQ-COL-102; changes REQ-COL-002, REQ-COL-053, REQ-COL-064 
 sources, note), REQ-GUI-105 (rulings, sources, note) and REQ-CHART-054 (verify, rulings, sources, note).
 
 ## R-447 — The outcome palette has an OKLab-uniform variant as a second preset: each chromatic class at its own OKLab hue, L = 0.72 and C = 0.123; bounded stays `#141418`; the sRGB palette stays the default
+*Amended in part by R-449 (the class names as shown, as for R-444; same hues, same swatches).*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
 outcome-state default palette" (a paragraph and a table added), `docs/contracts/principia_render_contract.md` §
 "Presentation layer (hand-written, small, reused by every debug view)" (a clause of R-445's sentence), REQ-COL-103 and
@@ -10338,6 +10348,9 @@ human gave them, the measured values beside them, and put to the human in **RQ-3
 Adds REQ-COL-103 and REQ-COL-105.
 
 ## R-448 — Greyscale and hue modes rank the outcome class's nine classes bounded first, then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2 and triple ejection: `K = 9`
+*Amended in part by R-449 (the class names as shown: bounded first, then collision 1–2, 1–3, 2–3, triple collision,
+escape body 1, 2, 3 and triple ejection; the same rank).*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
 (greyscale mode's rank), REQ-COL-067 and REQ-COL-068 (reqio), TASK-M2-32 and `plan/rule_groups.yaml`; built by
 TASK-M2-32*
@@ -10358,3 +10371,157 @@ R-448 and the rank in their verify. TASK-M2-32 conforms the code (`colour_indepe
 R-448 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes REQ-COL-067 and REQ-COL-068 (verify, rulings, sources, note).
+
+## R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*
+*16 Oct 2026 · applied in `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of
+`packed_a`) — 10 used, rest reserved" (a bullet, "What a person reads", added), `docs/design/principia_colour_composition.md`
+§ "1.4 Categorical colour-assignment — the outcome-state default palette" (the two tables' class names, a paragraph
+added, the mnemonic, the triple outcomes' and the variant's measured pairs, the escaper filter's example) and § "4.1
+Backbone & `Option` occupants" (greyscale mode's rank), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the
+everyday view (`01_main.png`)" (the hover label), § "G6. Legend — generated by evaluating the stain (`06_legend.png`)",
+§ "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)" (pane 1) and § "G13. Where the
+artboards are overridden" (the labels' bullet), `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema
+(what every entry must carry)" (a paragraph added) and § "6. Deferred / flagged", `docs/contracts/principia_render_contract.md`
+§ "Presentation layer (hand-written, small, reused by every debug view)" (the k = 6 view's legend),
+`docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)" and §
+"E. Payload field views — `ICDescriptor` (64 B) & the live-state block" (the legends), `docs/notes/ic_inspector_scratchpad.md`
+§ "Measurement readouts (gauge-invariant → hold under all four handles)", `docs/design/principia_dd_decoder.md` § "6.
+Deferred / flagged", `docs/design/principia_chart_reference.md`'s indexing note, `docs/design/principia_dd_integrator.md`
+§ "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)" (the landmarks' shown labels), the
+forward lines of R-22, R-444, R-445, R-447 and R-448, REQ-GUI-188 and REQ-GEN-036 (reqio, new), REQ-GUI-087,
+REQ-GUI-066, REQ-GUI-113, REQ-GUI-105, REQ-SYS-016, REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-COL-067, REQ-COL-103,
+REQ-COL-104 and REQ-COL-105 (reqio), TASK-M2-33 (new), TASK-M2-32, TASK-M8-10 and TASK-M8-11, `plan/tasks.yaml`,
+`plan/MILESTONES.md`, `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-331 and RQ-332's names; RQ-334 to RQ-336);
+built by TASK-M2-33, with TASK-M8-10 and TASK-M8-11*
+
+The human's message of 16 Oct 2026, in their own words ("My ruling (Malachy's, 16 October 2026)"), quoted whole:
+
+> "A display rule for body and pair names. My ruling (Malachy's, 16 October 2026). Record it in
+> decisions.md as superseding the display half of R-22, port it into the docs, add requirements through
+> plan/tools/reqio.py, run python3 plan/check_plan.py before every plan commit; docs first, then the
+> plan; "Removed lines" notes. Do not implement.
+>
+> 1. Internally, bodies stay 0-based. The payload's detail field, R-22's pair map (pair k is the side
+>    opposite body k), the code, the WGSL and every machine-readable dump keep 0-based ids. Nothing in
+>    storage or computation changes.
+>
+> 2. Everything a person reads is 1-based. Legends, GUI labels, stain and preset names, tooltips, the
+>    inspector, the dev GUI, figure captions, export captions, and docs prose describing what is shown
+>    all call the bodies 1, 2, 3, and name a pair by its two bodies, never by its pair id.
+>
+>    | internal | shown as |
+>    |---|---|
+>    | body 0 / 1 / 2 | body 1 / 2 / 3 |
+>    | pair 2 = bodies (0, 1) | collision 1–2 |
+>    | pair 1 = bodies (2, 0) | collision 1–3 |
+>    | pair 0 = bodies (1, 2) | collision 2–3 |
+>    | collision detail 3 | triple collision |
+>    | escape detail 3 | triple ejection |
+>
+>    Never show a pair id. A pair is always named by its bodies, smaller first.
+>
+> 3. One conversion function owns this mapping (detail and state in, display string out), and every
+>    human-facing surface goes through it. Requirement and test: exhaustive over every state and detail
+>    value, so a new code breaks the build until it has a display name; and a negative arm asserting
+>    that no legend or GUI label contains "body 0" or a pair id.
+>
+> 4. This applies to everything already sent: the outcome-palette rulings (whose class names were
+>    written 0-based, e.g. "collision 0–1", "escape body 0"; their display names are "collision 1–2",
+>    "escape body 1" and so on, same colours) and the Chazy spec and its follow-ups (the body lens's k
+>    and the escaper map's "body 0/1/2" are internal; their legends read body 1/2/3). Correct those
+>    names where they have already been ported. Update render GUI spec §G6, which currently says the
+>    outcome legend uses 0-based labels (R-22).
+>
+> 5. Machine-readable exports (CSV columns, JSON fields, .raw and .prnq dumps) stay 0-based, and their
+>    headers or schema say so explicitly ("body index, 0-based").
+>
+> Report the ruling id and requirement ids added."
+
+Recorded as one ruling, applied per R-369: the five items are one rule (inside 0-based, what a person reads 1-based)
+and its scope, not separate rulings; R-444 to R-448 were split because their items ruled different things.
+
+*What it decides:*
+- **Inside, nothing changes.** The payload's `detail`, R-22's pair map (pair `k` is the side opposite body `k`), the
+  code, the WGSL and every machine-readable dump keep 0-based ids. Nothing in storage or computation changes; the
+  schema version does not move.
+- **What a person reads is 1-based**: legends, GUI labels, stain and preset names, tooltips, the Inspector, the dev
+  GUI, figure and export captions, and docs prose describing what is shown name the bodies 1, 2, 3 and a pair by its
+  two bodies, smaller first, never by its pair id: pair 2 is "collision 1–2", pair 1 "collision 1–3", pair 0
+  "collision 2–3"; collision `detail` 3 "triple collision", escape `detail` 3 "triple ejection".
+- **One conversion function owns the mapping**, `state` and `detail` in, the display string out, and every
+  human-facing surface goes through it. Its test is exhaustive over every `state` and `detail` value, so a new code
+  breaks the build until it has a display name, and a negative arm asserts that no legend or GUI label contains
+  "body 0" or a pair id.
+- **What is already ported is renamed**: the outcome palette's classes (R-444 to R-448 wrote them 0-based) are shown
+  "collision 1–2", "escape body 1" and so on, the same classes and colours. R-22's display half ("0-based display
+  labels") is superseded; its storage half stands.
+- **Machine-readable exports** (CSV columns, JSON fields, `.raw` and `.prnq` dumps) stay 0-based, and their headers or
+  schema say so ("body index, 0-based").
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **The function's other outputs.** The human's table names the bodies, the pairs and the triple outcomes. An escape of
+  body `k` reads "escape body `k + 1`", as item 4's "escape body 1" does. A state with no body or pair reads by its
+  payload §2 name: "bounded", "running", `sim_failed` and `decode_failed` with their failure category, and a reserved
+  `state` code as "reserved state 6" or "7". The legend's "bounded / nothing yet" key (R-444) is the outcome legend's
+  class name over several states, and stays.
+- **One module, not one function alone.** `dmin_pair`'s legend, the Inspector's per-body readouts (separations shown
+  r₁₂, r₁₃, r₂₃), the ternary masses' legend, the k = 6 direction-cosine view's legend and the shape sphere's
+  collision landmarks (`BC₀₁` shown `BC₁₂`) name a body or a pair without a `state`; they take the body and pair names
+  from the same module, which the `(state, detail)` function is built from, so that the 0 → 1 conversion is written
+  once (REQ-GUI-188). It lives in the `ledger` crate beside the pair map (`ledger::payload::pair_bodies`), which
+  `render`, `engine` and `gui` all reach; TASK-M2-33 may place it otherwise with the code reviewer's agreement.
+- **`detail_meanings`** (`ledger::payload`, hashed into the schema version) is ledger data, machine-readable, and keeps
+  its 0-based "body 0" and "pair 0" strings; no legend may show them (REQ-GUI-188's negative arm).
+- **The swatch ids** (`escape_body_0`, `collision_pair_2`) are machine-readable ids and stay; the swatch labels are the
+  display names.
+- **The export header.** The ledger's metadata schema (generation root §3.8) says which fields are body- or
+  pair-indexed; which key carries "body index, 0-based" is TASK-M2-33's choice, so long as the export decoder's header
+  or schema states it for each such field (REQ-GEN-036). An export's caption is read by a person and is 1-based.
+- **The decisions.md records are not rewritten.** R-444 to R-448's texts, the human's words among them, keep their
+  0-based class names as the record; their forward lines say the names as shown are R-449's. The docs, the
+  requirements, the task files and the open review-queue entries carry the shown names.
+- **The Euler landmarks' labels** (`E₀, E₁, E₂`) have no defined index: RQ-334, decidable per R-369, written by
+  TASK-M8-11, which draws them.
+- **The Burrau literature numbers the bodies differently**: shown body 1 is internal body 0, the mass opposite the
+  hypotenuse (5/12 at the classical point). RQ-335 records it; R-449's map applies as ruled.
+- **`.raw` and `.prnq`** are not defined in the live corpus: RQ-336; REQ-GEN-036 covers every machine-readable export
+  the corpus defines and any defined later.
+- **A new task builds it**, TASK-M2-33 ("Display names: one conversion function, 1-based labels on every human-facing
+  surface, and 0-based exports that say so"), M2, depending on TASK-M2-32 (both change `outcome.rs`'s labels; this one
+  routes them through the function); reviewers code, qa and gui. It closes REQ-GUI-188 and REQ-GEN-036, conforms the
+  surfaces built so far (the outcome legend, the `detail` and `dmin_pair` debug legends, the GUI mock's hover label,
+  Trajectory panel and Inspector labels) and the tests that pin 0-based labels. TASK-M8-10, which closes REQ-GUI-087 on
+  the real engine, depends on it and uses the function in place of its own `labels.rs`; TASK-M8-11 depends on it for
+  the landmarks' labels.
+- **Open PR #223 (the Chazy port)** is not edited here: the body lens's `k`, the escaper map's "body 0/1/2" and the
+  three-panel view's "k = 0, 1, 2" are internal there, and their legends and panel titles read body 1, 2, 3. Its fix
+  round applies R-449 to its docs, requirements and tasks; whichever of the two PRs merges second carries the forward
+  line on #223's rulings.
+
+*Applied:*
+- **payload §2** gains "What a person reads": the human's table, the function and the exports' rule.
+- **colour_composition §1.4**: both tables' class names are the shown names, the payload column keeping the 0-based
+  ids; a paragraph says so; the mnemonic, the triple outcomes' and the variant's measured pairs and the filter's
+  example are renamed. **§4.1**: greyscale mode's rank is named as shown.
+- **render_gui_spec §G6**: the outcome legend's 1-based class names, in place of "0-based labels (R-22)". **§G2**: the
+  hover label's names. **§G8**: pane 1's bodies 1, 2, 3. **§G13**: the labels' bullet: 1-based, as the artboards show
+  them, R-22's override superseded.
+- **generation root §3.8**: the exports' 0-based ids and their header; **§6**'s body-index bullet points there.
+- render contract (the k = 6 view's legend), debug_tooling_plan §B and §E (the legends), the IC Inspector scratchpad
+  (the separations shown), dd_decoder §6, chart_reference's indexing note and dd_integrator §3.7 (the landmarks) gain
+  a sentence or a clause each.
+- **The requirements (reqio).** New, M2: **REQ-GUI-188** (the one conversion function, exhaustive, every surface
+  through it, the negative arm) and **REQ-GEN-036** (machine-readable exports 0-based, the header saying so). Changed:
+  REQ-GUI-087 (the GUI's labels 1-based, in place of 0-based; its verify), REQ-GUI-066 and REQ-GUI-113 (the Inspector's
+  shown names), REQ-GUI-105 (note), REQ-SYS-016 (0-based in storage and computation; shown 1-based), REQ-COL-004 (the
+  `detail` legend's names), REQ-COL-002, REQ-COL-062 (note), REQ-COL-067, REQ-COL-103, REQ-COL-104 and REQ-COL-105 (the
+  class names as shown). The ids follow open PR #223's: REQ-GUI-185 to REQ-GUI-187 are #223's, so the new GUI id is
+  REQ-GUI-188.
+- **Tasks**: TASK-M2-33 (new); TASK-M2-32's goal and acceptance lines name the classes as shown and its swatch labels
+  are the display names; TASK-M8-10 (depends on TASK-M2-33; its goal, deliverable and acceptance line 1-based);
+  TASK-M8-11 (depends on TASK-M2-33; a note for the landmarks' labels and RQ-334).
+- R-22, R-444, R-445, R-447 and R-448 carry forward and "Still in force" lines (R-292, R-293).
+- R-449 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-188 and REQ-GEN-036; changes REQ-GUI-087, REQ-GUI-066, REQ-GUI-113, REQ-GUI-105, REQ-SYS-016,
+REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-COL-067, REQ-COL-103, REQ-COL-104 and REQ-COL-105; adds TASK-M2-33.

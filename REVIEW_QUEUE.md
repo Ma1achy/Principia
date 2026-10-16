@@ -268,7 +268,7 @@ milestone gate confirms the new swatches." Nothing is chosen. For the human: yes
   entry for its goldens' `BASELINES.md` decision only; its code and tests do not wait.
 - **Waits:** the `BASELINES.md` rows of TASK-M2-32's re-rendered goldens; REQ-COL-104's and REQ-COL-105's gate.
 
-## RQ-331: the sRGB outcome palette's closest pair is 0.175 (triple collision against escape 0), not the 0.185 R-444's message gives, because the orange stays as triple collision *(measurement against a ruled figure, R-445, R-71, REQ-COL-104; context: TASK-M2-32)*
+## RQ-331: the sRGB outcome palette's closest pair is 0.175 (triple collision against escape body 1), not the 0.185 R-444's message gives, because the orange stays as triple collision *(measurement against a ruled figure, R-445, R-71, REQ-COL-104; context: TASK-M2-32)*
 
 *Found porting R-444 to R-448, measuring as REQ-COL-055 measures. Nothing is chosen; no swatch is changed. For the
 human: yes (a calibration's evidence, R-71).*
@@ -279,13 +279,14 @@ human: yes (a calibration's evidence, R-71).*
   - The same message, item 2: "Its orange #F29620 is reused for triple collision."
   - `docs/design/principia_colour_composition.md` § "1.4 …", the triple outcomes' paragraph, where both values are
     recorded.
-- **Measured** (Euclidean OKLab distance from 8-bit sRGB through dd_colouring §3.1's transforms): in the nine-class
-  palette of R-444, the closest pair is triple collision `#F29620` against escape 0 `#F0DE32`, **0.1751**; next,
-  collision 0–2 against escape 2, **0.1847**; then collision 1–2 against triple ejection, 0.1926. The old palette's
-  0.175 was collision @ t=0 against escape 0, the same two colours. 0.185 is the closest pair only with the orange left
+- **Measured** (Euclidean OKLab distance from 8-bit sRGB through dd_colouring §3.1's transforms; the classes named as
+  shown, R-449, the human's "collision 0–2 / escape 2" being collision 1–3 / escape body 3): in the nine-class palette
+  of R-444, the closest pair is triple collision `#F29620` against escape body 1 `#F0DE32`, **0.1751**; next,
+  collision 1–3 against escape body 3, **0.1847**; then collision 2–3 against triple ejection, 0.1926. The old
+  palette's 0.175 was collision @ t=0 against escape body 1, the same two colours. 0.185 is the closest pair only with the orange left
   out of the palette.
 - **Options seen:**
-  - (a) Record 0.175 (triple collision / escape 0) as the palette's closest pair, the swatches as ruled.
+  - (a) Record 0.175 (triple collision / escape body 1) as the palette's closest pair, the swatches as ruled.
   - (b) Change a swatch so that the closest pair is 0.185 or more (for instance triple collision's orange), which is a
     new ruling.
 - **Applied meanwhile:** both figures are recorded, the human's and the measured; REQ-COL-104's evidence gives both.
@@ -302,12 +303,12 @@ human: yes (a calibration's evidence, R-71).*
   - `docs/design/principia_colour_composition.md` § "1.4 …", the variant's paragraph, where both values are recorded.
 - **Measured:**
   - The largest chroma in the sRGB gamut at every hue at L = 0.72 is **0.1224**, at a hue near 199.8°: at C = 0.123 a
-    hue there is out of gamut. At each of the eight listed hues C = 0.123 is in gamut; the narrowest is escape 2's 208°,
+    hue there is out of gamut. At each of the eight listed hues C = 0.123 is in gamut; the narrowest is escape body 3's 208° (R-449's name),
     whose largest in-gamut chroma is 0.1238.
   - The swatches as ruled measure L 0.719 to 0.721, C 0.122 to 0.124, each hue within 0.5° of its row. Rounding
     (0.72, 0.123, hue) to 8 bits gives the ruled swatch for five rows and, for three, `#6DB976` (ruled `#6EB976`),
     `#D9934A` (`#D99349`) and `#07B9CD` (`#09B9CD`).
-  - The variant's closest pair is 0.063 (escape 1 / triple ejection); the human said it would be closer than the sRGB
+  - The variant's closest pair is 0.063 (escape body 2 / triple ejection, R-449's names); the human said it would be closer than the sRGB
     palette by construction, and it is. Recorded, not a departure.
 - **Options seen:**
   - (a) Keep C = 0.123 and the swatches as ruled; the parenthesis reads "in gamut at every listed hue", and the
@@ -341,3 +342,61 @@ human: yes (a calibration's evidence, R-71).*
 - **Applied meanwhile:** render_gui_spec §G6's reworded line names the human's view and says the `state` and `detail`
   views show the failure today, pointing here.
 - **Waits:** nothing built; REQ-COL-101's outcome-view behaviour does not depend on it.
+
+## RQ-334: the shape sphere's Euler landmarks `E₀, E₁, E₂` have no defined index, so R-449 cannot say how they are shown *(silence, R-449, R-14, R-50, R-72; context: TASK-M8-11, which draws the landmarks)*
+
+*Found porting R-449. For the human: no; decidable per R-369 (naming).*
+
+- **File, section:**
+  - `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per macro-step — lockstep,
+    ratified)": the table's symbols "$BC_{01}, BC_{12}, BC_{20}$" and "$E_0, E_1, E_2$", and "$\hat{\mathbf e}_j =
+    -\hat{\mathbf b}_j$ (equal masses)", where $\hat{\mathbf b}$ is indexed by two bodies and $\hat{\mathbf e}$ by one
+    index; "The table's labels are 0-based (R-22)".
+  - `decisions.md` § "R-449 — …": "Everything a person reads is 1-based … GUI labels"; "A pair is always named by its
+    bodies, smaller first."
+- **Silence:** `BC₀₁` names a pair by its bodies, so it is shown `BC₁₂` (applied in dd_integrator §3.7). `E_j`'s index
+  is not defined: it may be the body in the middle of the collinear configuration (the usual reading, the antipode of
+  the other two bodies' collision at equal masses), or the antipode's pair id, which R-449 forbids showing.
+- **Options seen:**
+  - (a) Define `E_j` as the configuration with body `j` in the middle, and show it `E_{j+1}`.
+  - (b) Name each Euler landmark by its two outer bodies, as the collision it is antipodal to (`E₁₂` opposite `BC₁₂`).
+- **Applied meanwhile:** nothing built; TASK-M8-11, which draws the landmarks' labels, writes the definition (R-72)
+  and its reviewers decide per R-369.
+- **Waits:** the overlay's landmark labels only.
+
+## RQ-335: R-449's shown body numbers are not the Burrau literature's: at `ν = 1/2` the shown body 1 is the mass-5 body *(possible confusion, R-449, R-22, R-73, REQ-SYS-016; context: TASK-M2-33)*
+
+*Found porting R-449. For the human: no; decidable per R-369 (R-449's table is explicit), recorded so that it is
+seen.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "4.2 Positions and masses — Burrau convention": "`m0 = c/(a+b+c)` …
+    `(m0,m1,m2) = (5,4,3)/12`"; the indexing note: "The Burrau family is conventionally written 1-based (bodies 1–3,
+    inner pair 1–2), and §4.2 translates it."
+  - `decisions.md` § "R-449 — …": "body 0 / 1 / 2 | body 1 / 2 / 3".
+- **The point:** R-449 shows internal body `k` as body `k + 1`. In the Burrau family internal body 0 has the mass
+  opposite the hypotenuse, 5/12 at the classical point; in the usual literature labelling of the Pythagorean problem
+  (masses 3, 4, 5 as bodies 1, 2, 3) that body is body 3. A reader comparing "body 1 escapes" with the literature reads
+  a different body.
+- **Options seen:**
+  - (a) R-449's map as ruled, everywhere; the Burrau presets' legends and the Inspector show each body's mass beside its
+    number.
+  - (b) A Burrau-only relabelling, which R-449's "one conversion function" does not allow without a ruling.
+- **Applied meanwhile:** (a)'s first half, R-449 as ruled; chart_reference's indexing note says the shown numbers are
+  not the literature's.
+- **Waits:** nothing.
+
+## RQ-336: R-449 names `.raw` and `.prnq` dumps, which the live corpus does not define *(silence, R-449, R-159, REQ-GEN-036; context: TASK-M2-33)*
+
+*Found porting R-449. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - `decisions.md` § "R-449 — …", item 5: "Machine-readable exports (CSV columns, JSON fields, .raw and .prnq dumps)
+    stay 0-based, and their headers or schema say so explicitly".
+  - `.prnq` appears only in `docs/experiments/briefs/principia_ARCHIVE_brief_structure_criterion.md` (prin-rs's tree
+    dumps, a record) and `workbench/`; no live contract defines a `.raw` or `.prnq` format.
+- **Silence:** which dumps of this project the two names mean.
+- **Applied meanwhile:** REQ-GEN-036 covers every machine-readable export the corpus defines (the export decoder of
+  generation root seam 13, the Measure tool's CSV) and any dump defined later, `.raw` and `.prnq` included when they
+  are; nothing more is built for them now.
+- **Waits:** nothing.

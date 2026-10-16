@@ -234,6 +234,30 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
 - **Body and pair ids (R-22).** Bodies are 0-based (`0, 1, 2`), as the decode is. **Pair id `k` names the side opposite body `k`:**
   pair 0 = bodies (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). Every consumer of `detail` (collision) and `dmin_pair` uses this map.
+- **What a person reads (R-449).** The ids above are internal: the payload, `detail`, the pair map, the code, the WGSL
+  and every machine-readable dump keep them 0-based. Everything a person reads is 1-based: legends, GUI labels, stain
+  and preset names, tooltips, the Inspector, the dev GUI, figure and export captions, and docs prose describing what is
+  shown call the bodies 1, 2, 3, and name a pair by its two bodies, smaller first, **never by its pair id**.
+
+  | internal | shown as |
+  |---|---|
+  | body 0 / 1 / 2 | body 1 / 2 / 3 |
+  | pair 2 = bodies (0, 1) | collision 1–2 |
+  | pair 1 = bodies (2, 0) | collision 1–3 |
+  | pair 0 = bodies (1, 2) | collision 2–3 |
+  | collision `detail` 3 | triple collision |
+  | escape `detail` 3 | triple ejection |
+
+  An escape of body `k` (`detail` = `k`) reads "escape body `k + 1`". **One conversion function owns the mapping**
+  (`state` and `detail` in, the display string out), with the body and pair names it is built from (a body index in,
+  "body `k + 1`" out; a pair id in, its two bodies 1-based, smaller first, out), which `dmin_pair`'s legend, the
+  Inspector and every per-body label use too; every human-facing surface goes through it (REQ-GUI-188). It is
+  exhaustive over every `state` and `detail` value, so a new code fails the build until it has a display name. The
+  states with no body or pair read by their names here, applied per R-369: "bounded", "running", and `sim_failed` and
+  `decode_failed` with their failure category (`sim_failed` "NaN in state", and so on), a reserved `state` code as
+  "reserved state 6" or "7". **Machine-readable exports** (CSV columns, JSON fields, `.raw` and `.prnq` dumps, the
+  export decoder's columns, generation root §3.8) keep the 0-based ids, and their headers or schema say so: "body
+  index, 0-based", and for a pair "pair id, 0-based; pair `k` is the side opposite body `k`" (REQ-GEN-036).
 - **escape / collision** use `detail` as body id / pair id, and `3` means all three (triple ejection / triple collision, pending change 7). The old `3` = invalid sentinel is dropped. `detail` is written in the same operation as `state` and is meaningful only for `state ∈ {escape, collision, sim_failed, decode_failed}`, so an unwritten `detail` cannot occur without a wrong `state`, which the state field's own gating already catches. (`dmin_pair` keeps its own `3` = unset.)
 
 > **A valid t=0 terminal is a real outcome, NOT a decode failure.** If a validly-decoded IC *begins* inside `r_coll`, that is a **collision outcome at step 0** (`state=collision`, `detail=pair`, `t_end_step=0`) — the decoder *succeeded*; the state is simply already-collided. Escape has no step-0 case: its settling test needs a window of history (R-29), so an IC that is already escaping is classified when its window completes (RQ-19). These must NOT be folded into `decode_failed` — doing so would undercount the collision/escape basins and inflate the failure diagnostics. `decode_failed` is reserved strictly for the decoder failing to produce a valid physical IC.
