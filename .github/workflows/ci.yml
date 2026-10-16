@@ -476,6 +476,13 @@ jobs:
         run: cargo nextest run -p engine --features controls qa_m206_ --no-capture
       - name: cargo test -p engine --features controls qa_m206_ --doc
         run: cargo test -p engine --features controls qa_m206_ --doc
+      # Canonicalisation `C` on Metal, its controls included (TASK-M2-07): the mirror tie at `±δ_λ`, the order, the
+      # coincident inner pair at `ρ = (±0, ±0)` and the no-op on Metal's own decodes. `canonicaliser_` selects
+      # `canon_gpu`'s tests; its doctest step runs over the same filter.
+      - name: cargo nextest run -p engine --features controls canonicaliser_
+        run: cargo nextest run -p engine --features controls canonicaliser_ --no-capture
+      - name: cargo test -p engine --features controls canonicaliser_ --doc
+        run: cargo test -p engine --features controls canonicaliser_ --doc
       # The codegen self-test on Metal, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture

@@ -7,6 +7,8 @@
 //!   tag and the `ICDescriptor` of every point.
 //! - [`describe_gpu`]: the stage's descriptor writer alone, on given `(m, r, p)`, for the pole inputs the f32 decode
 //!   need not reach (R-436).
+//! - [`canonicalise_gpu`]: canonicalisation `C` on given `(m, r, p)`, `kernel::stage::canon::canonicalise`, for the
+//!   cross-backend checks of its branches (REQ-DEC-017, REQ-ENC-015, REQ-ENC-016).
 //! - [`decode_only`]: parity_contract §1's `decodeOnly(chart, uv, simKey) → (m, r, p, ICDescriptor)`, the CPU-f64
 //!   instantiation of the same source, `kernel::stage::decode::sample` at f64 (R-118, R-265).
 //!
@@ -14,10 +16,12 @@
 
 use std::marker::PhantomData;
 
+use kernel::canon::Canonical;
 use kernel::chart::Chart;
 use kernel::decode::Ic;
 use kernel::generated::links::Selection;
 use kernel::payload::ICDescriptor;
+use kernel::stage::canon as canon_stage;
 use kernel::stage::decode::{
     self as stage, DecodeMode, DecodeOut, DecodeUniforms, DecodeVariant, UniformChart,
 };
@@ -32,6 +36,9 @@ pub const UNWRITTEN: u32 = u32::MAX;
 
 /// The WGSL entry point naga names for `kernel::stage::decode::describe` (rust-gpu names it by its module path).
 pub const DESCRIBE_ENTRY: &str = "stage_decode_describe";
+
+/// The WGSL entry point naga names for `kernel::stage::canon::canonicalise`.
+pub const CANONICALISE_ENTRY: &str = "stage_canon_canonicalise";
 
 /// The decode-only readback of one dispatch, as words: the integrator's input buffer, the tags and the descriptors.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -320,6 +327,60 @@ pub fn describe_gpu(
     let read = dispatch_and_read(device, queue, &kernel, &[&input], &outputs, n)?;
     Ok((0..ics.len())
         .map(|i| stage::read_descriptor(&read[0], i))
+        .collect())
+}
+
+/// Canonicalisation `C`, `kernel::stage::canon::canonicalise`, dispatched on `device` over `ics`, one invocation each,
+/// under the fast-math `setting`: each one's [`Canonical`] as the GPU computes it, its output words filled with NaN
+/// before the dispatch. Its pipeline is made per call: a test's, never on a navigation path.
+pub fn canonicalise_gpu(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    wgsl: &str,
+    ics: &[Ic<f32>],
+    setting: FastMath,
+) -> Result<Vec<Canonical<f32>>, ComputeError> {
+    if ics.is_empty() {
+        return Ok(Vec::new());
+    }
+    let n = check_samples(ics.len(), &device.limits())?;
+    let count = ics.len() * canon_stage::canon_words();
+    let limit = device.limits().max_storage_buffer_binding_size;
+    if (count * 4) as u64 > limit {
+        return Err(ComputeError(format!(
+            "{} states need a {} B output buffer, over the device's {limit} B",
+            ics.len(),
+            count * 4
+        )));
+    }
+    let kernel = pipeline(
+        device,
+        &ComputeShader {
+            label: CANONICALISE_ENTRY,
+            wgsl,
+            entry: CANONICALISE_ENTRY,
+        },
+        setting,
+    )?;
+    let mut words = vec![0; ics.len() * stage::ic_words()];
+    for (i, ic) in ics.iter().enumerate() {
+        stage::write_ic(&mut words, i, ic);
+    }
+    let input = buffer(
+        device,
+        "canonicalise ic",
+        &words,
+        wgpu::BufferUsages::STORAGE,
+    );
+    let outputs = [output(
+        device,
+        "canonicalise out",
+        f32::NAN.to_bits(),
+        count,
+    )];
+    let read = dispatch_and_read(device, queue, &kernel, &[&input], &outputs, n)?;
+    Ok((0..ics.len())
+        .map(|i| canon_stage::read_canonical(&read[0], i))
         .collect())
 }
 

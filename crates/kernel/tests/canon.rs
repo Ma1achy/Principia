@@ -1,0 +1,590 @@
+//! Canonicalisation `C` and the scale gauge on the CPU, at f64 and f32, the one source's two instantiations
+//! (`kernel::canon`; TASK-M2-07). The GPU-f32 build's checks are `engine/tests/canon_gpu.rs`.
+//! - `canonicalise_section`: on random physical states, the output has CoM at the origin, zero total momentum, `ρ̃` on
+//!   `+x`, `λ̃_y ≥ −δ_λ` and `I = 1`, and `C` is idempotent (REQ-DEC-002).
+//! - `canonical_noop`: dd_decoder §5 test 5, `C` on canonical-frame decodes of fuzzed and saturated `z` leaves them
+//!   unchanged, and at the `λ̃_y = 0` seam gives the same result twice (REQ-DEC-018).
+//! - `scale_gauge`: dd_decoder §5 test 10, the identity on canonical output; on a scaled input, `I = 1` and `E`, `L_z`
+//!   transformed per the inverse-encode contract's table (REQ-DEC-023).
+//! - `scale_step`: dd_encode §5 test 4 on `fixtures/states/burrau_2x.json`: `I_in = 4·I_canon`, `λ = 1/2`,
+//!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}` (REQ-ENC-006).
+//!
+//! **Tolerances** (applied per R-369: a test decision, as dd_decoder §5 test 1's "precision-appropriate tolerance"),
+//! each a multiple of the precision's epsilon, set from the worst case these tests measure and print, with headroom.
+//!
+//! **Domain** (pitfalls §10): `C` alone, on states held fixed; no trajectory.
+
+use std::path::Path;
+
+use kernel::canon::{self, canonicalise, inertia, lambda_t_y, Canonical};
+use kernel::decode::descriptor::{kinetic, potential};
+use kernel::decode::{decode, Ic, Latent};
+use kernel::generated::constants::ChartConstants;
+use kernel::generated::links::{Defaults, LinkReal};
+use kernel::payload::PayloadReal;
+use kernel::real::IeeeBits;
+use proptest::prelude::*;
+use spirv_std::num_traits::NumCast;
+use validation::decode_f32_eps::SplitMix;
+use validation::{negative_control, prop};
+
+/// A float the tests run at: f32 or f64.
+trait Precision: LinkReal + PayloadReal + IeeeBits + Into<f64> {}
+impl Precision for f32 {}
+impl Precision for f64 {}
+
+fn eps<R: Precision>() -> f64 {
+    R::epsilon().into()
+}
+
+fn cast<R: Precision>(x: f64) -> R {
+    <R as NumCast>::from(x).expect("a finite value")
+}
+
+fn to64<R: Precision>(ic: &Ic<R>) -> Ic<f64> {
+    Ic {
+        m: ic.m.map(Into::into),
+        r: ic.r.map(|v| v.map(Into::into)),
+        p: ic.p.map(|v| v.map(Into::into)),
+    }
+}
+
+fn from64<R: Precision>(ic: &Ic<f64>) -> Ic<R> {
+    Ic {
+        m: ic.m.map(cast),
+        r: ic.r.map(|v| v.map(cast)),
+        p: ic.p.map(|v| v.map(cast)),
+    }
+}
+
+fn norm(v: [f64; 2]) -> f64 {
+    v[0].hypot(v[1])
+}
+
+/// `E = K + V` of `ic`, at f64.
+fn energy(ic: &Ic<f64>) -> f64 {
+    kinetic(ic) + potential(ic)
+}
+
+/// `L_z = Σ rᵢ × pᵢ` of `ic`.
+fn angular(ic: &Ic<f64>) -> f64 {
+    (0..3)
+        .map(|i| ic.r[i][0] * ic.p[i][1] - ic.r[i][1] * ic.p[i][0])
+        .sum()
+}
+
+/// `|a − b|` relative to `|b|`, in `eps`; 0 where both are 0.
+fn rel(a: f64, b: f64, eps: f64) -> f64 {
+    within(a, b, b.abs(), eps)
+}
+
+/// `|a − b|` relative to `scale`, in `eps`; 0 where `a = b`, so a zero `scale` asks for equality.
+fn within(a: f64, b: f64, scale: f64, eps: f64) -> f64 {
+    if a == b {
+        0.0
+    } else {
+        (a - b).abs() / (scale * eps)
+    }
+}
+
+/// `K + |V|` of `ic`, the scale of its `E`, which can cancel.
+fn energy_scale(ic: &Ic<f64>) -> f64 {
+    kinetic(ic) + potential(ic).abs()
+}
+
+/// `Σ ‖rᵢ‖‖pᵢ‖` of `ic`, the scale of its `L_z`, which can cancel.
+fn angular_scale(ic: &Ic<f64>) -> f64 {
+    (0..3).map(|i| norm(ic.r[i]) * norm(ic.p[i])).sum()
+}
+
+/// The largest component difference of `a` and `b`, positions over `a`'s largest `‖rᵢ‖` and momenta over its largest
+/// `‖pᵢ‖` (1 where they are all zero), in `eps`.
+fn state_error(a: &Ic<f64>, b: &Ic<f64>, eps: f64) -> f64 {
+    let scale = |v: &[[f64; 2]; 3]| {
+        let s = v.iter().map(|x| norm(*x)).fold(0.0, f64::max);
+        if s == 0.0 {
+            1.0
+        } else {
+            s
+        }
+    };
+    let (sr, sp) = (scale(&a.r), scale(&a.p));
+    let mut worst = 0.0f64;
+    for i in 0..3 {
+        for k in 0..2 {
+            worst = worst.max((a.r[i][k] - b.r[i][k]).abs() / (sr * eps));
+            worst = worst.max((a.p[i][k] - b.p[i][k]).abs() / (sp * eps));
+        }
+    }
+    worst
+}
+
+// ── canonicalise_section (REQ-DEC-002) ──────────────────────────────────────────────────────────────────────────
+
+/// The section's tolerances, in the precision's epsilon: the CoM relative to `Σmᵢ‖rᵢ‖` plus the input's CoM offset
+/// in output units, `λ‖R_com‖`, which step 1a subtracts with its rounding; `Σpᵢ` relative to `Σ‖pᵢ‖` plus the input's
+/// total momentum in output units, `‖P_tot‖/√λ`, which step 1b subtracts; `ρ_y` relative to
+/// `‖r₀‖ + ‖r₁‖`, since step 2 rotates `r₀` and `r₁`, not `ρ`; `I − 1`; and `C ∘ C` against `C`, per [`state_error`].
+const COM_EPS: f64 = 4.0;
+const SUM_P_EPS: f64 = 4.0;
+const RHO_Y_EPS: f64 = 4.0;
+const INERTIA_EPS: f64 = 8.0;
+const IDEMPOTENT_EPS: f64 = 8.0;
+
+/// The worst of each section measure over a run, in eps: CoM, `Σp`, `ρ_y`, `I − 1`, idempotence.
+#[derive(Default, Debug)]
+struct Worst([f64; 5]);
+
+/// The section conditions on `out`, each within its tolerance, the worst recorded in `worst`; `offset` is the input's
+/// CoM offset and total momentum in output units, `λ‖R_com‖` and `‖P_tot‖/√λ`. `Err` names the first that fails.
+fn check_section<R: Precision>(
+    out: &Canonical<R>,
+    offset: [f64; 2],
+    worst: &mut Worst,
+) -> Result<(), String> {
+    let e = eps::<R>();
+    let ic = to64(&out.ic);
+    let (m, r, p) = (ic.m, ic.r, ic.p);
+    let com = [0, 1].map(|k| (0..3).map(|i| m[i] * r[i][k]).sum::<f64>());
+    let size: f64 = (0..3).map(|i| m[i] * norm(r[i])).sum::<f64>() + offset[0];
+    let measures = [
+        norm(com) / (size * e),
+        {
+            let sum = [0, 1].map(|k| p[0][k] + p[1][k] + p[2][k]);
+            let scale: f64 = p.iter().map(|v| norm(*v)).sum::<f64>() + offset[1];
+            if scale == 0.0 {
+                norm(sum)
+            } else {
+                norm(sum) / (scale * e)
+            }
+        },
+        {
+            let rho = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
+            if rho[0] <= 0.0 {
+                return Err(format!("ρ̃ is not on +x: ρ = {rho:?}"));
+            }
+            rho[1].abs() / ((norm(r[0]) + norm(r[1])) * e)
+        },
+        (inertia(m, r) - 1.0).abs() / e,
+    ];
+    let bounds = [COM_EPS, SUM_P_EPS, RHO_Y_EPS, INERTIA_EPS];
+    let names = ["the CoM", "Σp", "ρ_y", "I − 1"];
+    for k in 0..4 {
+        worst.0[k] = worst.0[k].max(measures[k]);
+        if measures[k] > bounds[k] {
+            return Err(format!(
+                "{} is {} eps, over {}",
+                names[k], measures[k], bounds[k]
+            ));
+        }
+    }
+    let lty = lambda_t_y(out.ic.m, out.ic.r);
+    if lty < -<R as ChartConstants>::DELTA_LAMBDA {
+        return Err(format!("λ̃_y = {lty:?} < −δ_λ on the output"));
+    }
+    Ok(())
+}
+
+/// `C` applied to its own output `out` changes it by at most [`IDEMPOTENT_EPS`], per [`state_error`] over the
+/// rotation's conditioning `1 + (‖r₀‖ + ‖r₁‖)/‖ρ‖` (the second `C` turns by the first's `ρ_y` residual over `‖ρ‖`), and
+/// takes neither the mirror nor the guard.
+fn check_idempotent<R: Precision>(out: &Canonical<R>, worst: &mut Worst) -> Result<(), String> {
+    let again = canonicalise(&out.ic);
+    if again.mirrored || again.clamped {
+        return Err(format!(
+            "C(C(x)) mirrored {} clamped {}",
+            again.mirrored, again.clamped
+        ));
+    }
+    let ic = to64(&out.ic);
+    let rho = norm([ic.r[1][0] - ic.r[0][0], ic.r[1][1] - ic.r[0][1]]);
+    let conditioning = 1.0 + (norm(ic.r[0]) + norm(ic.r[1])) / rho;
+    let err = state_error(&ic, &to64(&again.ic), eps::<R>()) / conditioning;
+    worst.0[4] = worst.0[4].max(err);
+    if err > IDEMPOTENT_EPS {
+        return Err(format!("C(C(x)) differs from C(x) by {err} eps"));
+    }
+    Ok(())
+}
+
+/// A random physical state: masses on the simplex (each at least 0.05 before normalising), positions and momenta in
+/// `[−10, 10]`, then a similarity scale `s = 10^t`, `t ∈ [−3, 3]`: `r·s`, `p·s^{−1/2}`.
+fn states() -> impl Strategy<Value = Ic<f64>> {
+    (
+        proptest::array::uniform3(0.05f64..1.0),
+        proptest::array::uniform6(-10.0f64..10.0),
+        proptest::array::uniform6(-10.0f64..10.0),
+        -3.0f64..3.0,
+    )
+        .prop_map(|(w, r, p, t)| {
+            let total: f64 = w.iter().sum();
+            let s = 10f64.powf(t);
+            let q = s.powf(-0.5);
+            Ic {
+                m: w.map(|x| x / total),
+                r: [
+                    [r[0] * s, r[1] * s],
+                    [r[2] * s, r[3] * s],
+                    [r[4] * s, r[5] * s],
+                ],
+                p: [
+                    [p[0] * q, p[1] * q],
+                    [p[2] * q, p[3] * q],
+                    [p[4] * q, p[5] * q],
+                ],
+            }
+        })
+}
+
+fn section_at<R: Precision>() -> Worst {
+    let worst = std::cell::RefCell::new(Worst::default());
+    prop::run(&states(), |x| {
+        let x = from64::<R>(&x);
+        let out = canonicalise(&x);
+        let x64 = to64(&x);
+        let lambda: f64 = out.lambda.into();
+        let com = [0, 1].map(|k| (0..3).map(|i| x64.m[i] * x64.r[i][k]).sum::<f64>());
+        let total = [0, 1].map(|k| (0..3).map(|i| x64.p[i][k]).sum::<f64>());
+        let offset = [norm(com) * lambda, norm(total) / lambda.sqrt()];
+        let mut w = worst.borrow_mut();
+        check_section(&out, offset, &mut w).map_err(TestCaseError::fail)?;
+        check_idempotent(&out, &mut w).map_err(TestCaseError::fail)?;
+        Ok(())
+    });
+    worst.into_inner()
+}
+
+#[test]
+fn canonicalise_section() {
+    for (name, worst) in [("f64", section_at::<f64>()), ("f32", section_at::<f32>())] {
+        eprintln!(
+            "canonicalise_section {name}: worst CoM, Σp, ρ_y, I − 1, idempotence (eps) = {:?}; {}",
+            worst.0,
+            prop::cases_status()
+        );
+    }
+}
+
+negative_control!(
+    canonicalise_section,
+    "an output turned off the x axis by 0.1 rad must fail the section's ρ̃ on +x",
+    expected = "ρ_y is",
+    {
+        let x = Ic {
+            m: [0.2, 0.3, 0.5],
+            r: [[1.0, 2.0], [-0.5, 0.25], [0.3, -1.5]],
+            p: [[0.1, 0.2], [-0.3, 0.4], [0.2, -0.1]],
+        };
+        let mut out = canonicalise(&x);
+        let (s, c) = 0.1f64.sin_cos();
+        for v in out.ic.r.iter_mut().chain(out.ic.p.iter_mut()) {
+            *v = [c * v[0] - s * v[1], s * v[0] + c * v[1]];
+        }
+        check_section(&out, [0.0; 2], &mut Worst::default()).unwrap()
+    }
+);
+
+// ── canonical_noop (REQ-DEC-018) ────────────────────────────────────────────────────────────────────────────────
+
+/// The no-op's tolerance, per [`state_error`], in eps: what step 1a's CoM and step 0's rescale move by rounding.
+const NOOP_EPS: f64 = 4.0;
+
+/// The `z` the no-op runs on: 4096 fuzzed on `[−4, 4]⁸`; each component alone at `±30` and `±1000`, the others fuzzed
+/// on `[−2, 2]`; and `(z_α, z_β)` together at every pair of `{±30, ±1000}`, the rest fuzzed.
+fn noop_z() -> Vec<[f32; 8]> {
+    let mut rng = SplitMix::new(11);
+    let mut out: Vec<[f32; 8]> = (0..4096)
+        .map(|_| core::array::from_fn(|_| rng.uniform(-4.0, 4.0)))
+        .collect();
+    let sat = [-1000.0f32, -30.0, 30.0, 1000.0];
+    for k in 0..8 {
+        for s in sat {
+            let mut z: [f32; 8] = core::array::from_fn(|_| rng.uniform(-2.0, 2.0));
+            z[k] = s;
+            out.push(z);
+        }
+    }
+    for a in sat {
+        for b in sat {
+            let mut z: [f32; 8] = core::array::from_fn(|_| rng.uniform(-2.0, 2.0));
+            z[0] = a;
+            z[1] = b;
+            out.push(z);
+        }
+    }
+    out
+}
+
+/// Test 5 on one decode `x` and `C(x)`: the mirror not taken, the rotation angle 0, and the state unchanged within
+/// [`NOOP_EPS`]; the measured error.
+fn check_noop<R: Precision>(x: &Ic<R>, out: &Canonical<R>, at: &str) -> f64 {
+    assert!(!out.mirrored, "the mirror was taken at {at}");
+    assert!(
+        out.phi == R::zero(),
+        "the rotation angle is {:?}, not 0, at {at}",
+        out.phi
+    );
+    let err = state_error(&to64(x), &to64(&out.ic), eps::<R>());
+    assert!(err <= NOOP_EPS, "C moved the decode by {err} eps at {at}");
+    err
+}
+
+fn noop_at<R: Precision>() {
+    let (mut worst, mut seam, mut clamped) = (0.0f64, 0, 0);
+    for (j, z) in noop_z().into_iter().enumerate() {
+        let x = decode::<Defaults, R>(&Latent::new(z.map(|v| cast::<R>(v as f64)))).ic;
+        let out = canonicalise(&x);
+        let at = format!("{} z = {z:?} (sample {j})", R::NAME);
+        worst = worst.max(check_noop(&x, &out, &at));
+        clamped += out.clamped as usize;
+        if Into::<f64>::into(out.lambda_t_y).abs() <= Into::<f64>::into(R::DELTA_LAMBDA) {
+            seam += 1;
+            assert_eq!(
+                canonicalise(&x),
+                out,
+                "the seam's tie gave two results at {at}"
+            );
+        }
+    }
+    assert!(seam > 0, "no {} decode reached the λ̃_y = 0 seam", R::NAME);
+    eprintln!(
+        "canonical_noop {}: worst state change {worst} eps (tolerance {NOOP_EPS}); {seam} decodes at the seam; \
+         {clamped} at ρ = 0 (lookup_clamped)",
+        R::NAME
+    );
+}
+
+#[test]
+fn canonical_noop() {
+    noop_at::<f64>();
+    noop_at::<f32>();
+}
+
+negative_control!(
+    canonical_noop,
+    "a C that mirrors the seam (a test reading λ̃_y ≤ δ_λ, the deadband's sign reversed) must fail test 5",
+    expected = "the mirror was taken",
+    {
+        let x = decode::<Defaults, f64>(&Latent::new([0.3, -30.0, 0.1, 0.2, -0.4, 0.5, 0.2, -0.1])).ic;
+        let mut out = canonicalise(&x);
+        assert!(out.lambda_t_y.abs() <= f64::DELTA_LAMBDA, "not at the seam");
+        out.mirrored = out.lambda_t_y <= f64::DELTA_LAMBDA;
+        check_noop(&x, &out, "the seam");
+    }
+);
+
+// ── scale_gauge (REQ-DEC-023) ───────────────────────────────────────────────────────────────────────────────────
+
+/// The scale gauge's tolerances, in eps: the identity on canonical output, per [`state_error`]; `I − 1` on a scaled
+/// input; `E` and `L_z` against the table, relative.
+const GAUGE_ID_EPS: f64 = 4.0;
+const GAUGE_I_EPS: f64 = 8.0;
+const GAUGE_TABLE_EPS: f64 = 8.0;
+
+/// Test 10's table on `x` and `g = scale_gauge(x)`: `I(g) = 1`, `E(g) = √I·E(x)`, `L_z(g) = L_z(x)/I^{1/4}`, `I = I(x)`;
+/// the worst of the `E` and `L_z` rows' errors, in eps.
+fn check_table<R: Precision>(x: &Ic<R>, g: &Ic<R>, at: &str) -> f64 {
+    let e = eps::<R>();
+    let (x, g) = (to64(x), to64(g));
+    let i = inertia(x.m, x.r);
+    let ig = inertia(g.m, g.r);
+    assert!(
+        (ig - 1.0).abs() / e <= GAUGE_I_EPS,
+        "I = {ig} after the scale gauge at {at}"
+    );
+    let de = within(energy(&g), i.sqrt() * energy(&x), energy_scale(&g), e);
+    assert!(
+        de <= GAUGE_TABLE_EPS,
+        "E_canon is {de} eps from √I·E_in at {at}"
+    );
+    let dl = within(
+        angular(&g),
+        angular(&x) / i.powf(0.25),
+        angular_scale(&g),
+        e,
+    );
+    assert!(
+        dl <= GAUGE_TABLE_EPS,
+        "L_canon is {dl} eps from L_in/I^(1/4) at {at}"
+    );
+    de.max(dl)
+}
+
+fn gauge_at<R: Precision>() {
+    let mut rng = SplitMix::new(5);
+    let (mut worst, mut table) = (0.0f64, 0.0f64);
+    for j in 0..512 {
+        let z: [f32; 8] = core::array::from_fn(|_| rng.uniform(-3.0, 3.0));
+        let x = decode::<Defaults, R>(&Latent::new(z.map(|v| cast::<R>(v as f64)))).ic;
+        let err = state_error(&to64(&x), &to64(&canon::scale_gauge(&x)), eps::<R>());
+        worst = worst.max(err);
+        assert!(
+            err <= GAUGE_ID_EPS,
+            "the scale gauge moved canonical output by {err} eps at {} z = {z:?}",
+            R::NAME
+        );
+        let s = 10f64.powf(rng.uniform(-2.0, 2.0) as f64);
+        let mut scaled = to64(&x);
+        for v in scaled.r.iter_mut() {
+            *v = v.map(|c| c * s);
+        }
+        for v in scaled.p.iter_mut() {
+            *v = v.map(|c| c / s.sqrt());
+        }
+        let scaled = from64::<R>(&scaled);
+        table = table.max(check_table(
+            &scaled,
+            &canon::scale_gauge(&scaled),
+            &format!("{} z = {z:?}, s = {s} (sample {j})", R::NAME),
+        ));
+    }
+    eprintln!(
+        "scale_gauge {}: worst change on canonical output {worst} eps (tolerance {GAUGE_ID_EPS}); worst E, L_z row \
+         {table} eps (tolerance {GAUGE_TABLE_EPS})",
+        R::NAME
+    );
+}
+
+#[test]
+fn scale_gauge() {
+    gauge_at::<f64>();
+    gauge_at::<f32>();
+}
+
+negative_control!(
+    scale_gauge,
+    "a scale gauge that divides the momenta by √ℓ, the s^{+1/2} error dd_encode §3.3 names, must fail the E row",
+    expected = "E_canon is",
+    {
+        let x = decode::<Defaults, f64>(&Latent::new([0.2, 0.4, 0.5, -0.3, 0.2, 0.6, 0.1, -0.2])).ic;
+        let mut scaled = x;
+        for v in scaled.r.iter_mut() {
+            *v = v.map(|c| c * 9.0);
+        }
+        let mut g = canon::scale_gauge(&scaled);
+        for v in g.p.iter_mut() {
+            *v = v.map(|c| c / 3.0);
+        }
+        check_table(&scaled, &g, "momenta scaled by 1/√ℓ");
+    }
+);
+
+// ── scale_step (REQ-ENC-006) ────────────────────────────────────────────────────────────────────────────────────
+
+/// `fixtures/states/burrau_2x.json`: its state and its stated `I_in` and scale.
+fn burrau_2x() -> (Ic<f64>, f64, f64) {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/states/burrau_2x.json");
+    let text = std::fs::read_to_string(&path).expect("fixtures/states/burrau_2x.json");
+    let j: serde_json::Value = serde_json::from_str(&text).expect("the fixture's JSON");
+    let num = |v: &serde_json::Value| v.as_f64().expect("a number");
+    let pair = |v: &serde_json::Value| [num(&v[0]), num(&v[1])];
+    let ic = Ic {
+        m: [num(&j["m"][0]), num(&j["m"][1]), num(&j["m"][2])],
+        r: [pair(&j["r"][0]), pair(&j["r"][1]), pair(&j["r"][2])],
+        p: [pair(&j["p"][0]), pair(&j["p"][1]), pair(&j["p"][2])],
+    };
+    (ic, num(&j["i_in"]), num(&j["scale"]))
+}
+
+/// The scale step's tolerance, relative, in eps.
+const STEP_EPS: f64 = 8.0;
+
+/// Encode test 4's row on the input `x` and `c = C(x)`: `I_in = 4·I_canon` with `I_canon = 1`, `λ = 1/2` carried,
+/// `E_canon = 2·E_in = √I_in·E_in`, `L_canon = L_in/I_in^{1/4}`, and the timing factor `I_in^{3/4} = 2^{3/2}`.
+fn check_row<R: Precision>(x: &Ic<R>, c: &Canonical<R>, at: &str) -> f64 {
+    let e = eps::<R>();
+    let (x, out) = (to64(x), to64(&c.ic));
+    let i_in: f64 = c.i_in.into();
+    let i_canon = inertia(out.m, out.r);
+    let lambda: f64 = c.lambda.into();
+    let checks = [
+        ("I_in = 4", rel(i_in, 4.0, e)),
+        ("I_in = 4·I_canon", rel(i_in, 4.0 * i_canon, e)),
+        ("λ = 1/2", rel(lambda, 0.5, e)),
+        ("λ = I_in^(−1/2)", rel(lambda, i_in.powf(-0.5), e)),
+        (
+            "E_canon = 2·E_in",
+            within(energy(&out), 2.0 * energy(&x), energy_scale(&out), e),
+        ),
+        (
+            "E_canon = √I_in·E_in",
+            within(
+                energy(&out),
+                i_in.sqrt() * energy(&x),
+                energy_scale(&out),
+                e,
+            ),
+        ),
+        (
+            "L_canon = L_in/I_in^(1/4)",
+            within(
+                angular(&out),
+                angular(&x) / i_in.powf(0.25),
+                angular_scale(&out),
+                e,
+            ),
+        ),
+        (
+            "the timing factor I_in^(3/4) = 2^(3/2)",
+            rel(i_in.powf(0.75), 2f64.powf(1.5), e),
+        ),
+        (
+            "the timing factor = λ^(−3/2)",
+            rel(i_in.powf(0.75), lambda.powf(-1.5), e),
+        ),
+    ];
+    let mut worst = 0.0f64;
+    for (what, err) in checks {
+        assert!(err <= STEP_EPS, "{what}: {err} eps off at {at}");
+        worst = worst.max(err);
+    }
+    worst
+}
+
+/// `x` with momenta of zero sum and non-zero `L_z`, so the `E` and `L_z` rows carry kinetic energy and an angular
+/// momentum.
+fn moving(x: &Ic<f64>) -> Ic<f64> {
+    Ic {
+        p: [[0.1, -0.2], [-0.3, 0.05], [0.2, 0.15]],
+        ..*x
+    }
+}
+
+fn step_at<R: Precision>() {
+    let (x, i_stated, scale) = burrau_2x();
+    assert_eq!(
+        x.m,
+        [5.0 / 12.0, 4.0 / 12.0, 3.0 / 12.0],
+        "the fixture's masses are not (5,4,3)/12"
+    );
+    assert_eq!((i_stated, scale), (4.0, 2.0), "the fixture's stated I_in");
+    for (what, x) in [("at rest", x), ("moving", moving(&x))] {
+        let xr = from64::<R>(&x);
+        let c = canonicalise(&xr);
+        let at = format!("{} {what}", R::NAME);
+        assert!(!c.mirrored && !c.clamped, "a notice besides λ at {at}");
+        let worst = check_row(&xr, &c, &at);
+        eprintln!("scale_step {at}: λ = {:?}, I_in = {:?}; worst row error {worst} eps (tolerance {STEP_EPS})", c.lambda, c.i_in);
+    }
+}
+
+#[test]
+fn scale_step() {
+    step_at::<f64>();
+    step_at::<f32>();
+}
+
+negative_control!(
+    scale_step,
+    "a step 0 that scales momenta by I^(−1/4), the s^(+1/2) error, must fail the E row",
+    expected = "E_canon = 2·E_in",
+    {
+        let (x, _, _) = burrau_2x();
+        let x = moving(&x);
+        let mut c = canonicalise(&x);
+        for v in c.ic.p.iter_mut() {
+            *v = v.map(|q| q / 2.0);
+        }
+        check_row(&x, &c, "momenta scaled by I^(−1/4)");
+    }
+);
