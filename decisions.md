@@ -10039,3 +10039,86 @@ recorded in the drill-down's § "0. Provenance and authority", not as rulings.
   the calibrations (R-71) REQ-EVT-028 to REQ-EVT-031, REQ-PAY-106 and REQ-COL-087 to REQ-COL-089.
 - Tasks TASK-M7-35 to TASK-M7-40 and TASK-M8-45; the M7 and M8 gate blocks regenerated.
 - R-442 is in the "design" group of `plan/rule_groups.yaml`.
+
+## R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback
+*16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "0. Provenance and authority" (a bullet
+added), § "5.2 The fields" (two rows added), § "5.6 `chazy_escaper` and `chazy_qk` (R-443)", § "10.11 One body at a
+time (R-443)", § "11.1.1 Decided (R-443)", § "11.2.2 One-body palettes, measured (R-443)" and § "12.3 One body at a
+time (R-443)" (new), § "11.2 Calibrations to confirm at a gate (R-71)" (three rows and a line added) and § "11.3 Open
+questions" (a paragraph added); `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment —
+the outcome-state default palette" and § "4.1 Backbone & `Option` occupants", `docs/design/principia_dd_colouring.md`
+§ "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)" and
+`docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored" (a sentence added to
+each); `REVIEW_QUEUE.md` (RQ-321 to RQ-323, new); REQ-PAY-107, REQ-PAY-108, REQ-COL-090 to REQ-COL-100, REQ-VAL-188,
+REQ-VAL-189, REQ-GUI-186 and REQ-GUI-187 (reqio, new); TASK-M7-41 (new), TASK-M7-36 and TASK-M8-45 (extended),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by those tasks*
+
+The human's follow-up to the Chazy final-motion spec (R-442), given the same day, asked for a section to be added to the
+spec as 03 §10 "One body at a time", with additions to its 02, 04 and 05, and carried through the same port, not
+implemented. Its 04 addition, verbatim:
+
+> "Decided (Malachy, 16 October 2026): the one-body views of 03 §10 are added as stains; the lens body is a stain
+> parameter; mass rank is offered alongside label, with the tie fallback above."
+
+(The block of 16 October 2026, given in the orchestrator's session; numbered by the orchestrator, the next free number
+after R-442.) The rest of the block is spec text, transcribed into the drill-down: the two derived fields
+(`chazy_escaper`, `chazy_qk[k]`), the five views, the measured counts, three calibrations (R-71) and one open question,
+which is RQ-321.
+
+*What it decides:*
+1. **The one-body views are stains** (the drill-down's § "10.11 One body at a time (R-443)"): the body lens, the body
+   lens with energy, the escaper map, the escaper by mass rank and the lightest- and heaviest-body lenses. The three
+   panels side by side (§10.11.3) are a layout over the body lens, not a new stain.
+2. **The lens body is a stain parameter**, `k` ∈ {0, 1, 2}.
+3. **Mass rank is offered alongside label**, with the tie fallback: where two masses are equal to within a relative
+   10⁻⁶ the rank is undefined, those pixels fall back to the label view, and the legend says so; on an equal-mass chart
+   the rank views are entirely the label views, and the legend says that.
+
+*Checked, and what was found (the orchestrator's checks; none changes the ruling):*
+- **"Masses are already in the payload."** They are the `ICDescriptor`'s `m0 m1 m2` (render contract § "Part 1 — The
+  payload (render input)"; R-86), read as `ctx.ic`. No RQ.
+- **OS-candidate in the body lens.** The lens's bound row takes "the B and OS folds of 02 §2", so OS-candidate draws
+  black there, where `chazy_final` draws it OS green. The block's plain reading, contradicted by nothing in the corpus:
+  noted in the drill-down §10.11.1, not an RQ. The escaper map's "bound black" is read the same way.
+- **The escaper by rank's parabolic shades.** The block lists the hyperbolic shades by rank; "§10.4 with hue = the
+  escaper's mass rank" re-indexes §10.4's columns, so the parabolic shades follow plainly (`#A24B36`, `#287C42`,
+  `#4665AE`, lightest to heaviest). Transcribed, not an RQ.
+- **The palettes against τ.** The body lens's 0.084 (escaping hyperbolic against parabolic) is within the palette; τ
+  separates entries from the invalid hatch and the stipple (REQ-COL-055, REQ-COL-061, REQ-COL-064), not entries from
+  each other, as R-442 found. The escaper palette clears τ against collision by 0.001 (0.102), recorded as the margin.
+  Re-measured, the grey `#8A8A90` sits 0.020 from the stipple dot `#909090`, where the block says every entry clears
+  the stipple, and its chroma is ≈ 0.009 where §10.11.2 says it has no hue: RQ-322.
+- **`chazy_escaper`'s tie.** The block does not say; prin-rs PR #32's `classify` settles it (its fold keeps the first
+  strictly greater ratio, so the lowest body index wins), as the drill-down's §3.1 already transcribes. Transcribed in
+  §5.6, not an RQ.
+
+*Applied per R-369 (the orchestrator's and the porter's decisions, not the human's; the human may veto any):*
+- R-443 is the "Decided" line alone; the calibrations are R-71 calibration requirements (REQ-COL-098 to REQ-COL-100),
+  confirmed by the human at the M7 gate with R-442's (REQ-COL-087 to REQ-COL-089), the block's measured values their
+  evidence.
+- The spec's "03 §10" is the drill-down's §10.11, its 02 addition §5.6, its 05 additions §12.3, keeping the
+  drill-down's numbering.
+- The label a rank lens falls back to, and the form of the relative tie comparison, are not given: a definition
+  requirement (R-72), REQ-COL-096. Test 4's control ("falls back only where the tie matters") is read as: a body's rank
+  is undefined where its own mass ties another's.
+- Test 3's fixtures keep the largest hierarchy ratio strictly largest, since an exact tie goes to the lowest index and
+  does not permute.
+- The tasks: `chazy_escaper` and `chazy_qk` extend TASK-M7-36 (the fields); the one-body stains, their tests and
+  calibrations are TASK-M7-41 (new, after TASK-M7-36 and TASK-M7-38); the one-body legends and the three panels extend
+  TASK-M8-45.
+
+*Applied:*
+- The drill-down, with the sections above; cross-references in colour_composition, dd_colouring and payload where
+  they already name the drill-down.
+- REVIEW_QUEUE gains RQ-321 (the escaper definition, the block's open question; RQ-313's sibling; for the human, as
+  physics), RQ-322 (the grey `#8A8A90`; for the human at the M7 gate with the palette calibrations) and RQ-323 (where
+  the three panels live; decidable per R-369).
+- Requirements, through `plan/tools/reqio.py`: the fields REQ-PAY-107 (`chazy_escaper`) and REQ-PAY-108
+  (`chazy_qk[k]`); the stains REQ-COL-090 (body lens), REQ-COL-091 (with energy), REQ-COL-092 (escaper map),
+  REQ-COL-093 (escaper by mass rank), REQ-COL-094 (lightest- and heaviest-body lenses) and REQ-COL-095 (the tie
+  fallback and its legend flag); the definition REQ-COL-096; the palette separation REQ-COL-097; the calibrations
+  REQ-COL-098 (body-lens palette), REQ-COL-099 (escaper palette) and REQ-COL-100 (mass tie tolerance); the tests
+  REQ-VAL-188 (exactly one escaping body) and REQ-VAL-189 (label symmetry); the layout REQ-GUI-186 and the legends
+  REQ-GUI-187. The 05 additions' tests 1, 4, 5 and 6 are the verifies of REQ-COL-090, REQ-COL-093 to REQ-COL-095,
+  REQ-COL-091 and REQ-COL-097.
+- R-443 is in the "design" group of `plan/rule_groups.yaml`.

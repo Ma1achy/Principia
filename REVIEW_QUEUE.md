@@ -467,3 +467,83 @@ disagree, file an RQ). For the human: yes, as physics where the choice changes r
   - (b) A latch in the payload (the coarse class at the previous playhead), against the spec's "not a payload field".
   - (c) Offline only: the view is computed from two exported frames, outside the live stain graph.
 - **Waits:** REQ-COL-083 (`rq: RQ-320`), TASK-M7-40.
+
+## RQ-321: the one-body views' escaping body: the classifier's `chazy_escaper`, or the event's escape detail where the run has an escape event *(open question in the ruled spec, R-443, R-442, R-29, R-103, REQ-COL-090, REQ-COL-092, REQ-COL-093; context: TASK-M7-41; sibling of RQ-313)*
+
+*Found in the human's follow-up to the Chazy spec, which asks for it to be filed (R-443). Nothing is chosen. For the
+human: yes, as physics where the choice changes results (R-369): it decides which body the views draw as escaping on
+the pixels where the two rules disagree, and the docs do not settle it.*
+
+- **File, section:**
+  - The block's 04 addition, verbatim: "Open question for REVIEW_QUEUE: the escaper definition. chazy_escaper is the
+    classifier's most-separated-body choice; the event stain's escape detail is set by Principia's own escape rule.
+    They can name different bodies on the same pixel at the same playhead (the same gap as 02 §6.3). Decide whether
+    the one-body views should read the event detail when the run has an escape event, or chazy_escaper always."
+  - `docs/design/principia_dd_chazy_final_motion.md` § "5.6 `chazy_escaper` and `chazy_qk` (R-443)" (the field: the
+    argmax of the hierarchy ratio, the lowest index on a tie) and § "10.11 One body at a time (R-443)" (the role
+    table keys the escaping body on `chazy_escaper`).
+  - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts (the packed u32s)", `detail`: "escape → body id
+    (0–2), `3` = **triple ejection**"; the escape rule, `principia_01_pitfalls.md` § "2.2 The criterion" and R-29.
+  - RQ-313 (the same gap for the class: an escape-terminated pixel can read excursion or B here).
+- **Options seen:**
+  - (a) `chazy_escaper` always. The views agree with `chazy_class`'s HE/PE by construction; the body can differ from
+    the event stain's on the pixels where the rules disagree.
+  - (b) The event's escape detail where the run has an escape event naming one body (0–2), `chazy_escaper` otherwise.
+    The views agree with the event stain on those pixels; a triple ejection (`detail` 3) names no single body, so it
+    needs its own reading under this option.
+  - (c) As (a), with the pixels where the two name different bodies counted in the legend, so the disagreement shows
+    without changing what is drawn.
+  - How RQ-313 is ruled bears on this one: if the event gates the class (its option (b)), (b) here follows naturally;
+    under its (a), either option here stands.
+- **Waits:** the escaping-body clause of REQ-COL-090, REQ-COL-092 and REQ-COL-093 (`rq: RQ-321`). TASK-M7-41 builds
+  them on `chazy_escaper`, as the block gives it, meanwhile.
+
+## RQ-322: the grey `#8A8A90` of the one-body palettes sits 0.020 from the stipple dot `#909090`, where the block says every entry clears the stipple, and has OKLab chroma ≈ 0.009, where §10.11.2 says grey has no hue *(measured against the ruled spec, R-443, R-442, R-132, R-429, R-434, REQ-COL-097, REQ-COL-098, REQ-COL-099; context: TASK-M7-41, the M7 gate; sibling of RQ-317)*
+
+*Found porting the follow-up, re-measuring its palettes (R-443). Nothing is chosen. For the human: yes, at the M7 gate,
+with the palette calibrations it belongs to (REQ-COL-098, REQ-COL-099), since a calibration value is the human's
+(R-369).*
+
+- **File, section:**
+  - The block's 04 addition: "Body-lens palette: 0.084, escaping hyperbolic against escaping parabolic … Every other
+    pair, and every entry against the hatch and stipple, clears tau".
+  - The block's 03 §10.2 (drill-down § "10.11.2 Body lens with energy"): "Grey and black have no hue, so under
+    Replace-L they become neutral greys at body k's energy".
+  - `docs/design/principia_dd_chazy_final_motion.md` § "11.2.1 Palette separation, measured": the stipple dot is
+    `#909090`; § "11.2.2 One-body palettes, measured (R-443)".
+  - Measured here, with dd_colouring §3.1's transforms: `#8A8A90` against `#909090`, OKLab distance 0.020 (τ = 0.101,
+    R-429); `#8A8A90` is OKLab L 0.635, a 0.0025, b −0.0085, chroma 0.0089. The block's other values (0.084, 0.177,
+    0.076, 0.102) reproduce, so the method agrees with the block's.
+- **Conflict:** the block's measurement statement and the value disagree for the grey against the stipple dot; and the
+  grey, like `#141418` (RQ-317), keeps a faint blue cast under Replace-L. The Chazy stains never draw the stipple
+  (§7), so the first is a measurement record, not a collision on screen; REQ-COL-064's criterion is between the stipple
+  and a flat colour of the view.
+- **Options seen:**
+  - (a) Keep `#8A8A90`; record 0.020 against the stipple dot as measured, since the stipple never appears in these
+    stains, and assert it so a change shows; for its chroma, take RQ-317's ruling for `#141418` (its (a) or (b)).
+  - (b) Move the grey off the stipple dot's lightness (a neutral grey well above or below L 0.64), re-measured against
+    every entry and style, and neutral so Replace-L gives grey.
+  - (c) As (a) for the stipple, and make the grey exactly neutral (e.g. `#8C8C8C`, which sits nearer still to
+    `#909090`): only the chroma changes.
+- **Waits:** REQ-COL-097's grey clause and REQ-COL-098 and REQ-COL-099's confirmation (`rq: RQ-322`). TASK-M7-41 draws
+  `#8A8A90` meanwhile.
+
+## RQ-323: where §10.11.3's three body-lens panels live: the GUI spec has no view of one figure as several panels in v1, and its "side by side" is a v2 research tool *(silence, R-443, R-106, REQ-GUI-186; context: TASK-M8-45)*
+
+*Found porting the follow-up (R-443). Nothing is chosen. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - The block's 03 §10.3 (drill-down § "10.11.3 All three bodies"): "The 10.1 lens for k = 0, 1, 2 as three small
+    panels side by side, at one playhead. A layout over 10.1, not a new stain."
+  - `docs/gui/principia_render_gui_spec.md` § "G11. Research — first pass (v2)": "**Side by side** with a linked cursor
+    and navigation, and a difference view. The linked views are a separate `ViewUI` item, specified with these v2
+    research tools (R-106)".
+  - The render contract's stain graph renders one composition per view (§ "Part 2 — Fixed pipeline, swappable
+    slots").
+- **Silence:** no v1 view shows one figure as several panels at one playhead, so the layout has no host.
+- **Options seen:**
+  - (a) One figure: the view's canvas is split into three tiles, each the body lens at its own `k`, from the one
+    payload at one playhead; a GUI layout, no new stain or node.
+  - (b) Three linked views: the v2 side-by-side (R-106), so §10.11.3 moves to v2 with it.
+  - (c) An export only: the three lenses rendered and composed into one image for the record, with no live layout.
+- **Waits:** REQ-GUI-186 (`rq: RQ-323`), its part of TASK-M8-45.

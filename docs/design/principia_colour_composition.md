@@ -230,6 +230,8 @@ palette is `chazy_status`'s (§10.6); the structure hues are `chazy_structure`'s
 Chazy stain: B is this table's bounded `#141418`, and collision, any pair or triple, is magenta `#DA85B6` (§10.1).
 The categorical filter above applies to them unchanged (§10.7). The palettes, their measured separations and their
 calibration are in the drill-down, not here.
+R-443 adds `chazy_escaper`, the escaping body's index, and the one-body views that follow one body (the body lens,
+its energy form, the escaper map and its mass-rank forms), with their palettes, in the drill-down's §10.11.
 
 ---
 
@@ -379,6 +381,8 @@ the brightness role. It is therefore a *row-family* of the render-mode catalogue
 backbone, not a set of hand-authored modes.
 The Chazy stains with an energy channel are of this family: `chazy_final` or `chazy_structure` as the hue carrier
 and `chazy_q` in the brightness slot under Replace-L's range form (`principia_dd_chazy_final_motion.md` §10.5, R-442).
+So is the body lens with energy: the lens's roles as the hue carrier and `chazy_qk[k]` in the brightness slot
+(`principia_dd_chazy_final_motion.md` §10.11.2, R-443).
 
 **The three modes of pitfalls §1.2 (c): event, greyscale and hue (R-72; REQ-COL-067, REQ-COL-068).** Pitfalls §1.2 (c)
 renders one slice "in event mode, greyscale and hue mode" from one payload, to tell a structure of the physics from one

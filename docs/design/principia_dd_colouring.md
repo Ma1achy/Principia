@@ -136,6 +136,7 @@ may come later as an optional parameter, not as a second built-in map.
 The outcome `state` takes `principia_colour_composition.md` §1.4's canonical nine-class palette (R-77) — the outcome palette (`state ⊕ detail`) only; the raw `state` debug view keeps its six-colour `dbg_cat` palette (R-115). Other categorical fields → palette index (Okabe–Ito cycle ≤ 8, golden-angle beyond: `θᵢ = 2π·frac(i·φ_g)`, `φ_g = (√5−1)/2` — adjacent indices ≈ 137.5° apart). `detail` is a **union field**: legend and palette segment switch on `state` (escape → body id; collision → pair id; ids per payload §2, R-22).
 
 **The Chazy final-motion fields** (`chazy_final`, `chazy_status`, `chazy_structure`) take the default palettes R-442 gives them, not a generated index palette (`principia_dd_chazy_final_motion.md` §10; colour_composition §1.4). Each sample, and each ensemble copy, is classified on its own, so the class anti-aliases like any point quantity.
+`chazy_escaper` and the one-body views' palettes are the drill-down's too (§10.11, R-443).
 
 **The mixed-pixel question is anti-aliasing, not semantics** (sampling/SSAA note, ratified). Samples ≠ pixels: at a fractal boundary several disagreeing samples fall under one display pixel. Resolution: **each sample is coloured independently through the full pipeline, then a render-side resolve pass averages the sample *colours* into the pixel colour** (`post(combine(colour, brightness))` runs per sample; only then are colours averaged). Consequences:
 

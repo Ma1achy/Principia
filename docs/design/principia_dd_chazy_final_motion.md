@@ -34,6 +34,13 @@ Transcribed from the Chazy stain spec, which was written up from prin-rs PR #32;
   PNGs use the superseded palette. In Principia the stains' golden images (§10) are the visual record. Because
   `r_coll = 0` integrates through binary collisions, **no collision appears in any preview**; Principia stops a run at
   `r_coll`, and those pixels draw in the collision colour (§7).
+- **The follow-up of 16 October 2026 (R-443).** The human added a section to the spec, 03 §10 "One body at a time",
+  with additions to 02 (two derived fields), 04 (a ruling, three calibrations and an open question) and 05 (six
+  tests). This drill-down transcribes them: §5.2's last two rows and §5.6, §10.11, §11.1.1, §11.2's last three rows
+  and §11.2.2, §11.3 and §12.3. The block's measured counts and distances are the human's own prin-rs runs (48 × 48,
+  Heggie, η = 10⁻², `r_coll = 0`, t = 800), given in the block; prin-rs PR #32 at `8335db7` holds the functions the
+  fields use (`other`, `pair_kup`, `out_kup`), not those runs. Every colour in §10.11 is the block's. The three cautions
+  above hold for it unchanged.
 
 ---
 
@@ -321,6 +328,8 @@ recomputed at every playhead. A palette change re-styles with zero dispatches: i
 | `chazy_status` | categorical, 7 | committed, B-stable, B-so-far, excursion, transient, OS-candidate, collision | the status stain |
 | `chazy_structure` | categorical, 4 | dispersal, hierarchy, interacting, oscillatory | the structure × energy stain |
 | `chazy_q` | scalar ≥ 0 | `K/\|U\|` of the separating motion; 1 is parabolic | the energy channel |
+| `chazy_escaper` | categorical, 3 | body index 0, 1 or 2: the body most separated from its pair (§5.6, R-443) | the one-body views (§10.11) |
+| `chazy_qk[k]`, k = 0, 1, 2 | scalar ≥ 0, per body | body k's `K/\|U\|` against the centre of mass of the other two; 1 is parabolic (§5.6, R-443) | the body lens with energy (§10.11.2) |
 
 ### 5.3 `chazy_final`: the labels folded onto Chazy's seven
 
@@ -360,6 +369,37 @@ no range (`principia_dd_colouring.md` §3.6, the range-free forms, R-411).
 
 Which row holds where several apply (an OS-candidate, or a two-stage H, whose most separated body has ratio > `h_far`)
 is not given by the spec; it is a definition requirement (R-72), written here by the task that builds the field.
+
+### 5.6 `chazy_escaper` and `chazy_qk` (R-443)
+
+The spec's 02 addition (the human's follow-up of 16 October 2026), transcribed:
+
+| field | type | definition |
+|---|---|---|
+| `chazy_escaper` | categorical, body index 0–2 | the body most separated from its pair: argmax over `b` of `\|r_b − R_cm(other two)\| / \|r_i − r_j\|` (the same hierarchy-ratio choice `classify` uses for HE/PE) |
+| `chazy_qk[k]`, k = 0..2 | scalar ≥ 0, per body | body k's `K/\|U\|` against the centre of mass of the other two (`out_kup(k)` in prin-rs PR #32, `src/chazy.rs`); 1 is parabolic |
+
+- **Derived, nothing stored.** Both come from the live state and the masses, so they are read-side accessors like the
+  other Chazy fields (§5.1). Nothing new is stored, and neither needs a latch.
+- **The masses are on the read side already.** The spec says "Masses are already in the payload". They are the
+  `ICDescriptor`'s `m0 m1 m2`, written once post-decode (`principia_render_contract.md` § "Part 1 — The payload
+  (render input)"; R-86), which the read side holds as `ctx.ic` (the same contract, § "Part 4 — Semantic rules", the
+  generated accessors). A derived field names them in its `from`, as `n` and `energy_drift` do
+  (`principia_dd_generation_root.md` §3.8). Where masses vary across a slice, each sample reads its own.
+- **`chazy_escaper`** is §3.1's body most separated from its pair: the `b` with the largest hierarchy ratio
+  `ρ_b = d_out(b) / d_pair(i, j)`, where `(i, j)` is the pair not containing `b` (prin-rs PR #32, `src/chazy.rs::other`:
+  0 → (1, 2), 1 → (0, 2), 2 → (0, 1)), `d_out(b)` is `out_kup(b)`'s distance and `d_pair` `pair_kup(i, j)`'s.
+  Bodies are 0-based (R-22). **Ties:** the block does not say what two equally separated bodies give; `classify`
+  settles it, as §3.1 transcribes: its fold runs over `b = 0, 1, 2` from `(0, 0)` and keeps the first strictly greater
+  ratio, so on a tie the lowest body index wins (prin-rs PR #32, `src/chazy.rs::classify`). The field is defined at
+  every sample; the one-body views read it only on HE and PE samples (§10.11).
+- **`chazy_qk[k]`** is the outer `K/U` of `out_kup(k)` (§3.1, with `b = k`): `M_p = m_i + m_j` for the other two,
+  `μ = m_k M_p / (m_k + M_p)`, `K = ½ μ |Δv|²`, `U = m_k M_p / d`. It is ≥ 0, below 1 bound, 1 parabolic, above 1
+  hyperbolic. On a HE or PE sample, `chazy_qk[chazy_escaper]` is the outer ratio the classifier banded, which is also
+  `chazy_q`'s hierarchy row (§5.5).
+- **Which body the event names.** The event stain's escape detail names a body by Principia's own escape rule
+  (payload §2; R-29). It and `chazy_escaper` can name different bodies on the same pixel at the same playhead, the same
+  gap as §9 item 3 (RQ-313). Which one the one-body views read is RQ-321.
 
 ---
 
@@ -569,6 +609,111 @@ Generated from the stain (`principia_render_gui_spec.md` §G6), with shares of t
 playhead: "Final motion (as of t = …)". The status stain's legend names the working states in full. OS-candidate and
 B-stable are labels, not predictions; whether the legend help says they are provisional is RQ-315.
 
+### 10.11 One body at a time (R-443)
+
+Spec 03 §10, the human's follow-up of 16 October 2026, transcribed. Which body escapes is never drawn in the
+final-motion maps (the event stain carries escape of body k). These views follow one body, so the detail stays
+legible. Collision is magenta `#DA85B6` and bound is black `#141418` throughout, as everywhere else (§10.1). Like every
+stain in §10, each is a composition on the backbone, its palette a user-editable default; §7's validity rules hold in
+each (running samples hold a value; `sim_failed` and NaN the hatch; `decode_failed` is RQ-319). The fields are §5.6's.
+
+#### 10.11.1 Body lens
+
+A chosen body `k` (a stain parameter, 0, 1 or 2; R-443). Each pixel shows body k's role:
+
+| role | rule | sRGB |
+|---|---|---|
+| escaping, hyperbolic | class HE and `chazy_escaper == k` | `#E4896A` |
+| escaping, parabolic | class PE and `chazy_escaper == k` | `#CC9C42` |
+| in the pair left behind | class HE or PE and `chazy_escaper != k` | `#4158BD` |
+| flying apart with the others | class H, HP or P | `#8A8A90` |
+| bound | B-stable, B-so-far, excursion, transient, OS-candidate (the B and OS folds of 02 §2, here §5.3) | `#141418` |
+| collision | run ended in a collision | `#DA85B6` |
+
+The two escaping colours are the seven-class palette's HE and PE (§10.2), so the meaning carries across.
+
+- **OS-candidate draws bound black here, not OS green.** In `chazy_final` OS-candidate folds to OS, `#7BB76E` (§5.3,
+  §10.2); the lens's bound row takes both folds, B's and OS's, so OS-candidate is black. That is the block's plain
+  reading ("the B and OS folds of 02 §2"), and no corpus rule contradicts it: the lens asks what body k is doing, and in
+  an OS-candidate no body has left (applied per R-369, recorded, not an RQ).
+- **"Class"** is `chazy_class`'s label at the playhead (§3.8); the role table is exhaustive over its ten labels plus
+  collision, so a new label breaks the build until it is mapped (§12.3 item 1).
+- **The escaping body is `chazy_escaper`** as the block gives it. Whether the views should read the event's escape
+  detail instead, where the run has an escape event, is RQ-321.
+
+#### 10.11.2 Body lens with energy
+
+The §10.11.1 roles in the colour slot, `chazy_qk[k]` in the brightness slot under Replace-L, compacted
+`b = q/(1 + q)`, `L = 0.3 + 0.6 b` (dark bound, mid parabolic, light hyperbolic), the same mapping as §10.5 (REQ-COL-088,
+REQ-COL-089). Grey and black have no hue, so under Replace-L they become neutral greys at body k's energy: inside the
+bound regions this shows how close body k has come to leaving before anything commits.
+
+`#141418`'s chroma is ≈ 0.008 (RQ-317), and the grey `#8A8A90`'s is ≈ 0.009 (OKLab `a ≈ 0.002`, `b ≈ −0.009`, measured
+here with `principia_dd_colouring.md` §3.1's transforms), so neither is exactly neutral: RQ-322.
+
+#### 10.11.3 All three bodies
+
+The §10.11.1 lens for k = 0, 1, 2 as three small panels side by side, at one playhead. A layout over §10.11.1, not a
+new stain. The GUI spec has no view of one figure as several panels in v1; its "side by side" is a v2 research tool
+(`principia_render_gui_spec.md` § "G11. Research — first pass (v2)", R-106). Where the panels live is RQ-323.
+
+#### 10.11.4 Escaper map
+
+Escapes only. Hue is which body escaped; parabolic is the darker shade of the same hue (OKLab L 0.72 hyperbolic, 0.52
+parabolic, chroma 0.12, hues 35°, 150°, 265°).
+
+| | body 0 | body 1 | body 2 |
+|---|---|---|---|
+| HE (escapes hyperbolically) | `#E58870` | `#69BA7C` | `#80A3F0` |
+| PE (escapes parabolically) | `#A24B36` | `#287C42` | `#4665AE` |
+
+H, HP, P draw grey `#8A8A90`; bound black `#141418`; collision magenta `#DA85B6`. "Bound" is §10.11.1's bound row, the
+B and OS folds, so OS-candidate is black here too (applied per R-369, the same reading as §10.11.1). The escaping body
+is `chazy_escaper` (RQ-321). Re-measured here, the six swatches sit at L 0.72 / 0.52 (±0.002), chroma 0.12 (±0.001) and
+hues 35°, 150°, 265° (±0.3°), as stated.
+
+#### 10.11.5 By mass instead of by label
+
+Where masses vary across a slice, "body 0" is not the same physical body everywhere, so rank by mass instead. Two
+stains:
+
+- **Escaper by mass rank:** §10.11.4 with hue = the escaper's mass rank (lightest `#E58870`, middle `#69BA7C`, heaviest
+  `#80A3F0`) instead of its label.
+- **Lightest-body lens (and heaviest-body lens):** §10.11.1 with k = the body of that rank at each pixel.
+
+The block names only the hyperbolic shades by rank. "§10.11.4 with hue = the escaper's mass rank" re-indexes §10.11.4's
+columns by rank, so the parabolic shades follow plainly (applied per R-369, transcribed, not an RQ):
+
+| | lightest | middle | heaviest |
+|---|---|---|---|
+| HE | `#E58870` | `#69BA7C` | `#80A3F0` |
+| PE | `#A24B36` | `#287C42` | `#4665AE` |
+
+**Ties.** Where two masses are equal to within a relative 10⁻⁶, the rank is undefined. Such pixels fall back to the
+label view, and the legend says so. On an equal-mass chart (all the presets) the mass-rank views are entirely the label
+views; the legend says that rather than draw a misleading rank. The block's test (§12.3 item 4) adds that a chart with
+one tied pair "falls back only where the tie matters": so a body's rank is undefined where its own mass ties another's,
+and a pixel falls back where the rank it needs is undefined (the escaper's, for the escaper map; the lightest's or the
+heaviest's, for that lens). Two things are not given, and are a definition requirement (R-72), written here by the task
+that builds the views: the label body `k` a rank lens falls back to (a rank lens has no label parameter), and the form
+of the relative comparison (relative to which of the two masses). The tolerance's value is a calibration (§11.2).
+
+Because the rank hues are the label hues (lightest = body 0's coral, and so on), a fallback pixel and a ranked pixel
+of the same colour mean different things; the legend's fallback flag is what tells them apart.
+
+#### 10.11.6 Measured, for the record
+
+The human's prin-rs runs (48 × 48, Heggie, η = 10⁻², `r_coll = 0`, t = 800), as the block gives them:
+
+- `preset_shape_h1` (equal masses): the escapes split evenly by body, 711 / 708 / 671 pixels. The escaper map shows each
+  arm of the tripod as a different body escaping, a symmetry no other view shows. (2090 of 2304 pixels, 90.71%, §4.3's
+  HE and PE shares at t = 800.)
+- `latent_mass` (masses vary 0.0009 to 0.97 across the slice): 102 escapes; by label 33 body 0 and 69 body 2, two
+  regions in two colours. By mass rank: 98 lightest, 4 middle, 0 heaviest; the two regions are one colour, because
+  both are the lightest body leaving.
+- `latent_shape` (unequal but constant masses): all 432 escapes are body 2, its lightest body. (432 of 2304 is §4.3's
+  18.75% HE.)
+
 ---
 
 ## 11. Decisions, calibrations and open questions
@@ -588,6 +733,12 @@ The human's rulings (Malachy, 15–16 October 2026), recorded as R-442:
    the final-motion palette.
 7. The seven-class palette of §10.2 is the default.
 
+#### 11.1.1 Decided (R-443)
+
+The human's ruling (Malachy, 16 October 2026), recorded as R-443: the one-body views of §10.11 (spec 03 §10) are added
+as stains; the lens body is a stain parameter; mass rank is offered alongside label, with the tie fallback of
+§10.11.5.
+
 ### 11.2 Calibrations to confirm at a gate (R-71)
 
 | calibration | proposed | evidence |
@@ -600,8 +751,12 @@ The human's rulings (Malachy, 15–16 October 2026), recorded as R-442:
 | the palettes of §10 | as listed | measured, §11.2.1 |
 | energy lightness range | L 0.3 to 0.9 | chosen so dark regions keep their hue |
 | `q` compaction | `q/(1 + q)` | range-free; parabolic at ½ |
+| the body-lens palette (§10.11.1) | as listed | measured, §11.2.2 |
+| the escaper palette, by label and by rank (§10.11.4–§10.11.5) | as listed | measured, §11.2.2 |
+| the mass tie tolerance (§10.11.5) | relative 10⁻⁶ | not measured |
 
 The evidence column is prin-rs PR #32's (`results/chazy/README.md` §4) and the spec's measurement below.
+The last three rows are the human's follow-up (R-443), measured as §11.2.2 gives.
 
 #### 11.2.1 Palette separation, measured
 
@@ -635,6 +790,31 @@ REQ-COL-061) and between the stipple and a flat colour (REQ-COL-064); no corpus 
 four simulations. The weak CVD distances against the stipple dot do not arise in practice, because the Chazy stains
 never draw the stipple (§7).
 
+#### 11.2.2 One-body palettes, measured (R-443)
+
+The block's measurement, minimum OKLab distance against τ = 0.101, unsimulated (it gives no simulated values):
+
+- **Body-lens palette:** 0.084, escaping hyperbolic against escaping parabolic (the same coral and amber as HE and PE,
+  kept deliberately so the meaning carries). Every other pair, and every entry against the hatch and stipple, clears τ;
+  "in the pair" `#4158BD` clears all by at least 0.177. It replaced an earlier steel blue `#6C8EBF` that sat 0.076 from
+  the grey.
+- **Escaper palette:** 0.102 at its closest (body 0 hyperbolic against collision).
+- **Mass tie tolerance:** relative 10⁻⁶.
+
+What those numbers mean against the corpus's τ, as in §11.2.1:
+
+- **The body lens's 0.084 is within the palette.** τ is the collision criterion between a palette entry and the
+  invalid hatch (REQ-COL-055, REQ-COL-061) and between the stipple and a flat colour (REQ-COL-064); no corpus rule holds
+  a palette's own entries τ apart. The pair is §10.2's HE / PE pair (0.084 there too), kept by design, and the test
+  asserts it as measured so a change shows (§12.3 item 6).
+- **The escaper palette clears τ against collision by 0.001** (0.102 against 0.101). That is the margin, recorded; a
+  later change to either swatch can cross it, and the test asserts the value.
+- **Re-measured here** with `principia_dd_colouring.md` §3.1's transforms: the block's 0.084, 0.177, 0.076 and 0.102
+  reproduce. But the grey `#8A8A90`, in both palettes, sits **0.020** from the stipple dot `#909090`, below τ, where the
+  block says every entry clears the stipple. Every other entry clears the hatch's two colours, the not-yet grey and the
+  stipple dot (the next closest is 0.137, coral against the stipple dot). The Chazy stains never draw the stipple (§7),
+  as §11.2.1 says of the status palette's CVD distances, but the block's claim and the value disagree: RQ-322.
+
 ### 11.3 Open questions
 
 1. **Descriptor bits** (RQ-310). `I_max` in reserved bits 10–14 claims space next to the open departure flag (bit 15).
@@ -651,6 +831,11 @@ never draw the stipple (§7).
 
 And from this port: the default palette against τ and Okabe–Ito (RQ-311), B's chroma (RQ-317), the order of
 B-stable and transient (RQ-318), `decode_failed` (RQ-319) and where "what just changed" lives (RQ-320).
+
+And from the follow-up (R-443): the escaper definition, the block's own open question, whether the one-body views read
+the event's escape detail when the run has an escape event or `chazy_escaper` always (RQ-321, beside RQ-313); the
+grey `#8A8A90`'s distance from the stipple dot and its chroma (RQ-322); and where §10.11.3's three panels live
+(RQ-323).
 
 ### 11.4 Not done, and natural next steps
 
@@ -713,6 +898,26 @@ says otherwise. Transcribed from the file:
    the differing pixels checked to lie within the band of a sign change.
 9. **Live-playhead property.** The classifier reads nothing after t: classifying a run at playhead t, then continuing
    the run, never changes the label already given at t.
+
+### 12.3 One body at a time (R-443)
+
+The block's 05 additions, transcribed:
+
+1. **Role table, exhaustive.** For every class label and every (k, escaper) pair the §10.11.1 role is as tabled. A
+   new label breaks the build until mapped.
+2. **Exactly one escaping body.** On every HE/PE pixel, exactly one of the three lenses reads "escaping" and the other
+   two read "in the pair". On every other pixel, none reads "escaping".
+3. **Label symmetry.** Relabelling the bodies of an IC permutes `chazy_escaper` and the lens panels the same way.
+   Control: a fixture where the escaper is not body 0, so the test is not passing on a default. Its fixtures keep the
+   largest hierarchy ratio strictly largest, since an exact tie goes to the lowest index (§5.6) and does not permute
+   (applied per R-369).
+4. **Mass rank.** On a fixture with distinct masses the rank views agree with the label views composed with the rank
+   permutation. On an equal-mass fixture they fall back to the label views exactly, and the legend flag is set.
+   Control: a fixture with one tied pair falls back only where the tie matters.
+5. **Energy lens recovers the escape.** For body k escaping hyperbolically, `chazy_qk[k] > 1` and the pixel's lightness
+   is above the parabolic mid-point; for a bound k below. Control: the flat lens draws two bound pixels with different
+   `q_k` identically.
+6. **Palette separation** as measured in §11.2.2, asserted to the measured values so a change is visible.
 
 ---
 
