@@ -220,9 +220,11 @@ pub fn mirror_taken<R: LinkReal>(lambda_t_y: R) -> bool {
     lambda_t_y < -R::DELTA_LAMBDA
 }
 
-/// The exponent [`Wide`] gives zero: below every product's exponent the decision can form, so a zero is the smallest
-/// value in every comparison and alignment.
-const ZERO_EXPONENT: i32 = -(1 << 20);
+/// The exponent [`Wide`] gives zero: below every product's exponent the decision can form (its longest product has
+/// nine factors, so at f64's least subnormal exponent about `−9700`), so a zero is the smallest value in every
+/// comparison and alignment, and twice it is far from `i32`'s range. A sentinel of the representation, not a settled value, so a type's
+/// bound, as `decode_dispatch`'s `UNWRITTEN` is.
+const ZERO_EXPONENT: i32 = i16::MIN as i32;
 
 /// A number `m·2^e` with its exponent carried as an integer: `|m|` in `[1, 2)`, or `m = 0` with `e` the
 /// [`ZERO_EXPONENT`]. The mirror decision's arithmetic, so that no float it rounds lies outside `[2^−60, 4)` in
