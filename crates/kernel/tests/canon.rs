@@ -22,7 +22,10 @@
 //!   power-of-two scale from `2^−60` to `2^60` at f32 and `2^±500` at f64 (REQ-DEC-017).
 //! - `canon_product_fusion_proof`: the f32 product the mirror decision is built from rounds the same fused or not at
 //!   each of its contractible sites, on 200 000 pairs (REQ-DEC-017).
-//! - `canon_pow2_bits`: the bit-formed powers of two and exponents the decision's rescale reads.
+//! - `canon_pow2_bits`: the bit-formed powers of two and exponents the decision's integer exponents are read with.
+//! - `canon_mirror_exact_terms`: the decision on states whose sums have an exact zero term, at powers of two from
+//!   `2^−100` to `2^100` (f32) and `2^±900` (f64), and on states whose sums add terms more than the exponent range
+//!   apart, is the one their exact `c` gives (REQ-DEC-017).
 //! - `canon_mirror_subnormal_difference`: the decision on an inner pair a subnormal apart is the exact one at f32 and
 //!   f64, where subnormals are kept (REQ-DEC-017).
 //! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
@@ -1242,6 +1245,98 @@ negative_control!(
     "a pow2 whose bias has the wrong sign must fail",
     expected = "f32: pow2(-126)",
     check_pow2::<f32>(|e| f32::from_bits(((e - 127) as u32) << 23), -126, 127)
+);
+
+// ── canon_mirror_exact_terms (REQ-DEC-017) ─────────────────────────────────────────────────────────────────────
+
+/// `v` turned by `k` quarter turns, exactly: `(x, y) ↦ (−y, x)` `k` times.
+fn quarter<R: Precision>(v: [R; 2], k: usize) -> [R; 2] {
+    (0..k).fold(v, |w, _| [-w[1], w[0]])
+}
+
+/// States whose sums have an exact zero term, masses `(¼, ¼, ½)`, and their exact `c = ρ × Λ`, whose sign alone sets
+/// the decision (each `λ̃_y` is at least about `0.1`, far outside the deadband):
+/// - `x₀ = 0`, `x₁ = (1, 1)`, `x₂ = (0, y)`: `d02_x = 0`, so `Λ_x = m₀·0 + m₁·(−1)`, and `c = y/2`;
+/// - `x₀ = 0`, `x₁ = (1, 0)`, `x₂ = (0.375, y)`: `ρ_y = 0`, so `c = ρ_xΛ_y − 0·Λ_x` and `‖ρ‖² = 1 + 0`, and `c = y/2`;
+///
+/// each turned by `k` quarter turns, which keeps the zeros (in the other component) and `c`.
+fn zero_terms<R: Precision>() -> Vec<([[R; 2]; 3], bool)> {
+    let mut out = Vec::new();
+    for y in [0.25, -0.25, 0.75, -0.75, 3.0, -3.0] {
+        for x1 in [[1.0, 1.0], [1.0, 0.0]] {
+            let x2 = if x1[1] == 1.0 { 0.0 } else { 0.375 };
+            for k in 0..4 {
+                let r = [[0.0, 0.0], x1, [x2, y]].map(|v| quarter(v.map(cast::<R>), k));
+                out.push((r, y < 0.0));
+            }
+        }
+    }
+    out
+}
+
+/// States whose sums add terms more than the exponent range apart, masses `(¼, ¼, ½)`: `x₀ = 0`,
+/// `x₁ = (1, 2^−g)`, `x₂ = (0, −t)`, with `g = 100` at f32 and `1000` at f64, so `‖ρ‖² = 1 + 2^−2g` sums terms `2g`
+/// binades apart, past the exponent range. `c = −M₀₁t` to within `2^−g`; at `t = 2^−50`
+/// `m₂c² ≈ 2^−103` is below `δ_λ²·M₀₁·‖ρ‖²·d² ≈ 2^−83` (no mirror), at `t = 2^−20` it is above (a mirror), and at
+/// `t = −2^−20` `c > 0` (no mirror).
+fn spread_terms<R: Precision>(g: i32) -> Vec<([[R; 2]; 3], bool)> {
+    [(-50, 1.0, false), (-20, 1.0, true), (-20, -1.0, false)]
+        .into_iter()
+        .map(|(e, sign, mirror)| {
+            let t = sign * 2f64.powi(e);
+            let r = [[0.0, 0.0], [1.0, 2f64.powi(-g)], [0.0, -t]].map(|v| v.map(cast::<R>));
+            (r, mirror)
+        })
+        .collect()
+}
+
+/// The decision on every exact-term state at every power of two in `exps`, and on the spread states, is the exact
+/// one; the number of states checked.
+fn check_exact_terms<R: Precision>(decide: Decide<R>, exps: &[i32], g: i32) -> usize {
+    let m = [0.25, 0.25, 0.5].map(cast::<R>);
+    let mut n = 0;
+    for (j, (r, want)) in zero_terms::<R>().into_iter().enumerate() {
+        for &e in exps {
+            let k = cast::<R>(2f64.powi(e));
+            let x = r.map(|v| v.map(|q| q * k));
+            assert_eq!(
+                decide(m, x),
+                want,
+                "{}: the decision at 2^{e} on zero-term state {j} ({x:?})",
+                R::NAME
+            );
+            n += 1;
+        }
+    }
+    for (j, (r, want)) in spread_terms::<R>(g).into_iter().enumerate() {
+        assert_eq!(
+            decide(m, r),
+            want,
+            "{}: the decision on spread state {j} ({r:?})",
+            R::NAME
+        );
+        n += 1;
+    }
+    n
+}
+
+#[test]
+fn canon_mirror_exact_terms() {
+    let n32 = check_exact_terms::<f32>(mirror_decision, &EXPS_F32, 100);
+    let n64 = check_exact_terms::<f64>(mirror_decision, &EXPS_F64, 1000);
+    eprintln!(
+        "canon_mirror_exact_terms: {n32} (f32) and {n64} (f64) states with an exact zero term or terms past the \
+         exponent range apart, each decided as its exact c says"
+    );
+}
+
+negative_control!(
+    canon_mirror_exact_terms,
+    "the decision in plain floats underflows on the zero-term states at 2^−100 in f32 and must fail",
+    expected = "f32: the decision at 2^-100",
+    {
+        check_exact_terms::<f32>(unscaled, &EXPS_F32, 100);
+    }
 );
 
 // ── canon_mirror_subnormal_difference (REQ-DEC-017) ────────────────────────────────────────────────────────────
