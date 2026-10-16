@@ -14,15 +14,20 @@
 //!   `ramp_viridis`, increasing, `K_0`'s minimum and `V_0`'s most negative value at the dark end, in the views'
 //!   default, auto mode (`range_scenes_*`);
 //! - every golden scene renders its CPU twin, far enough from every rounding tie that one reference holds on every
-//!   backend (`golden_scenes_*`).
+//!   backend (`golden_scenes_*`);
+//! - REQ-COL-070 (R-436; TASK-M2-31): `rho_ratio` at `+∞` and `V_0` and `E_0` at `−∞` draw the hatch, the image
+//!   bit-identical to the one with a NaN in their place, so the measured range left as it was; and `d_min` at its unset
+//!   `+∞` draws the "not yet" style, bit-identical to the field ramp's, so the order (the unset line before the
+//!   non-finite guard) holds on the GPU (`non_finite_*`).
 //!
 //! Each test registers its negative control (R-176).
 
 use ledger::gen::numeric::Ramp;
+use render::colour::field_ramp::FieldRamp;
 use render::present::Rgb;
 use validation::golden_scene::{
-    self, f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, scene, Colouring, Look, Scene,
-    SimState, RANGE_SCENES, STATE_SIM_FAILED,
+    self, f16_bits_to_f32, f32_to_f16_bits, fgw_length_raw, row_scene, scene, Colouring, Look,
+    Scene, SimState, RANGE_SCENES, STATE_SIM_FAILED,
 };
 use validation::gpu::GpuHarness;
 use validation::negative_control;
@@ -601,5 +606,182 @@ negative_control!(
             t: 0.5,
         };
         check_range_scene(&s, &values, &painted(&s, &image, 4, mid));
+    }
+);
+
+// ── R-436 (TASK-M2-31): a non-finite value draws the hatch on the GPU (REQ-COL-070) ──────────────────────────────────
+
+/// The sample of a pole scene that holds the pole's value.
+const POLE: u32 = 3;
+
+/// The pole scenes: each field's view over a row of eight samples, its finite values, the pole's value at [`POLE`]
+/// (the 0.0 there is replaced), and the pole's f32 bits: `rho_ratio`'s `+∞` at `α = 0`, `V_0`'s and `E_0`'s `−∞` at the
+/// collision pole (dd_decoder §3.6).
+const POLES: [(&str, [f32; 8], u32); 3] = [
+    (
+        "rho_ratio",
+        [0.2, 0.55, 1.0, 0.0, 1.7, 3.1, 6.5, 12.0],
+        0x7f80_0000,
+    ),
+    (
+        "V_0",
+        [-2.3, -1.8, -1.35, 0.0, -0.95, -0.6, -0.4, -0.15],
+        0xff80_0000,
+    ),
+    (
+        "E_0",
+        [-1.25, -0.8, -0.35, 0.0, 0.2, 0.55, 0.9, 1.15],
+        0xff80_0000,
+    ),
+];
+
+/// `field`'s pole scene, sample [`POLE`] holding the f32 bits `bits`.
+fn pole_scene(field: &'static str, values: [f32; 8], bits: u32) -> Scene {
+    let mut s = row_scene(field, 8, Colouring::View(field)).unwrap_or_else(|e| panic!("{e}"));
+    for (i, v) in (0u32..).zip(values) {
+        let v = if i == POLE { f32::from_bits(bits) } else { v };
+        match field {
+            "rho_ratio" => s.set.ic(i).rho_ratio = v,
+            "V_0" => s.set.ic(i).V_0 = v,
+            _ => {
+                s.set.sample(i).E_0(v);
+            }
+        }
+    }
+    s
+}
+
+/// The canonical quiet NaN's bits, the reference the pole's hatch is compared with.
+const QNAN: u32 = 0x7fc0_0000;
+
+/// Checks that `pole`, `field`'s scene at its pole value, and `nan`, the same scene with NaN in its place, render the
+/// same image, bit for bit: the pole's tile the hatch, every other pixel unchanged, the measured range included; and
+/// that the pole's sample stores the pole's bits, reads invalid on the twin, and the render is its twin.
+fn check_pole(field: &str, (s, pole): (&Scene, &[[f32; 4]]), nan: &[[f32; 4]], bits: u32) {
+    let (v, _) = s.value(POLE).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(v.to_bits(), bits, "`{field}`'s pole sample stores {v}");
+    assert_eq!(look(s, POLE), Look::Invalid, "`{field}`'s pole's look");
+    let width = s.size().0 as usize;
+    for (k, (a, b)) in pole.iter().zip(nan).enumerate() {
+        assert!(
+            a.map(f32::to_bits) == b.map(f32::to_bits),
+            "pixel ({}, {}) of `{field}` at {} is {a:?}, not the NaN's {b:?}",
+            k % width,
+            k / width,
+            f32::from_bits(bits)
+        );
+    }
+    assert_eq!(pole.len(), nan.len(), "`{field}`: the images' sizes");
+    let image: Vec<Rgb> = pole
+        .iter()
+        .map(|p| [p[0], p[1], p[2]].map(f64::from))
+        .collect();
+    check_sample(s, &image, POLE, Look::Invalid, "the hatch");
+    check_twin(s, &image);
+}
+
+/// `s` rendered with its colouring's WGSL as given, `None`, or with `from` replaced by `to`: the controls' wrong view.
+fn render_view(h: &GpuHarness, s: &Scene, edit: Option<(&str, &str)>) -> Vec<[f32; 4]> {
+    match edit {
+        None => s.render(h.device(), h.queue()),
+        Some((from, to)) => {
+            let src = s.colour().unwrap_or_else(|e| panic!("{e}"));
+            assert!(src.contains(from), "`{}`'s view has no `{from}`", s.name);
+            s.render_colour(h.device(), h.queue(), &src.replace(from, to))
+        }
+    }
+    .unwrap_or_else(|e| panic!("{e}"))
+}
+
+/// Checks every pole scene, each view rendered with `edit` applied (`None` for the views as generated).
+fn check_poles(edit: Option<(&str, &str)>) {
+    let h = gpu();
+    for (field, values, bits) in POLES {
+        let s = pole_scene(field, values, bits);
+        let nan = pole_scene(field, values, QNAN);
+        let (a, b) = (render_view(&h, &s, edit), render_view(&h, &nan, None));
+        check_pole(field, (&s, &a), &b, bits);
+    }
+}
+
+#[test]
+fn non_finite_poles_draw_the_hatch_as_nan_does() {
+    check_poles(None);
+}
+
+/// The non-finite guard as the views write it, and the NaN-alone guard TASK-M1-09 built: the controls' edit.
+#[cfg(feature = "controls")]
+const GUARD_TEST: (&str, &str) = (
+    "(bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u",
+    "bitcast<u32>(raw) == 0x7fc00000u",
+);
+
+negative_control!(
+    non_finite_poles_draw_the_hatch_as_nan_does,
+    "a guard that tests NaN alone draws `rho_ratio`'s +∞ on the ramp, not the hatch",
+    expected = "of `rho_ratio` at inf is",
+    check_poles(Some(GUARD_TEST))
+);
+
+/// Checks that samples 0 and 1 of `s`, the `d_min` scene, unset, render in `view` the "not yet" style bit for bit as
+/// in `ramp`, the same scene through `d_min`'s field ramp, which tests its unset value first.
+fn check_unset_order(s: &Scene, view: &[[f32; 4]], ramp: &[[f32; 4]]) {
+    let width = s.size().0;
+    for i in [0, 1] {
+        assert_eq!(look(s, i), Look::NotYet, "sample {i}'s look");
+        for (x, y) in s.pixels(i) {
+            let k = (y * width + x) as usize;
+            assert!(
+                view[k].map(f32::to_bits) == ramp[k].map(f32::to_bits),
+                "pixel ({x}, {y}) of the unset `d_min` is {:?}, not the \"not yet\" style {:?}",
+                view[k],
+                ramp[k]
+            );
+        }
+    }
+}
+
+/// `d_min`'s scene, and the same through its field ramp.
+fn d_min_and_ramp() -> (Scene, Scene) {
+    let s = named("d_min");
+    let mut r = named("d_min");
+    r.colouring = Colouring::Ramp {
+        ramp: FieldRamp::d_min().unwrap_or_else(|e| panic!("{e}")),
+        override_on: false,
+    };
+    (s, r)
+}
+
+#[test]
+fn non_finite_d_min_unset_stays_not_yet() {
+    let h = gpu();
+    let (s, r) = d_min_and_ramp();
+    let (view, ramp) = (render_view(&h, &s, None), render_view(&h, &r, None));
+    check_unset_order(&s, &view, &ramp);
+}
+
+negative_control!(
+    non_finite_d_min_unset_stays_not_yet,
+    "the guard before `d_min`'s unset line draws its +∞ as the hatch",
+    expected = "of the unset `d_min` is",
+    {
+        let h = gpu();
+        let (s, r) = d_min_and_ramp();
+        let unset =
+            "    if (bitcast<u32>(raw) == 0x7f800000u) { return debug_not_yet(ctx.frag_xy); }\n";
+        let src = s.colour().unwrap_or_else(|e| panic!("{e}"));
+        let guard = src
+            .lines()
+            .find(|l| l.contains(GUARD_TEST.0))
+            .map(|l| format!("{l}\n"))
+            .unwrap_or_else(|| panic!("no guard in `d_min`'s view"));
+        let swapped = src
+            .replace(unset, "@@")
+            .replace(&guard, unset)
+            .replace("@@", &guard);
+        let view = s
+            .render_colour(h.device(), h.queue(), &swapped)
+            .unwrap_or_else(|e| panic!("{e}"));
+        check_unset_order(&s, &view, &render_view(&h, &r, None));
     }
 );

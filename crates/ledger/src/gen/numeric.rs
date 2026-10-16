@@ -1,15 +1,24 @@
-//! The numeric field view's template (render_gui_spec §10.1; R-114, R-136; RQ-231, decided per R-369; TASK-M1-09):
-//! the colouring the debug catalogue ([`super::catalogue`]) generates for each numeric field, and its CPU twin.
+//! The numeric field view's template (render_gui_spec §10.1; R-114, R-136, R-436; RQ-231, decided per R-369;
+//! TASK-M1-09): the colouring the debug catalogue ([`super::catalogue`]) generates for each numeric field, and its CPU
+//! twin.
 //!
-//! **The two lines.** A numeric view's `colour()` is the NaN guard, the exact bitcast comparison of `raw` against the
-//! canonical quiet NaN's bits (lowering Part 3a; never a self-comparison or `isnan`, R-114), returning
-//! `debug_invalid(frag_xy)`, the hatch (R-136); then `ramp(range_norm(raw, lo, hi, RANGE_AUTO, u_range))`. Debug
-//! fields are raw (R-79's exception): apart from the guard nothing is masked, so a failed-state 0.0 shows as 0.0.
-//! Between the two, a field with a stored sentinel has one more line: the sentinel shows as its literal value on the
-//! ramp, through the presentation layer's `dbg_sentinel`, fed the compacted value (R-381) and never scaled by the
-//! range (R-136); `d_min`'s unset value, f16 +∞, is
-//! drawn in the "not yet" style of running samples, `debug_not_yet(frag_xy)`, the neutral grey with a fine dot stipple
-//! (R-399), tested by its bits, never by a float comparison (R-271, R-280, R-343 item 5).
+//! **The lines, in their order (render_gui_spec §10.1; R-436).** A numeric view's `colour()` tests, in this order:
+//! 1. a declared sentinel's or unset value's own line, where the field has one: a stored sentinel shows as its literal
+//!    value on the ramp, through the presentation layer's `dbg_sentinel`, fed the compacted value (R-381) and never
+//!    scaled by the range (R-136); `d_min`'s unset value, f16 +∞, is drawn in the "not yet" style of running samples,
+//!    `debug_not_yet(frag_xy)`, the neutral grey with a fine dot stipple (R-399), tested by its bits, never by a float
+//!    comparison (R-271, R-280, R-343 item 5);
+//! 2. the non-finite guard: `raw`'s bits with an exponent field of all ones, `(bits & 0x7F80_0000) == 0x7F80_0000`, NaN
+//!    and every stored `±∞` that is no declared sentinel or unset value, return `debug_invalid(frag_xy)`, the hatch
+//!    (R-136; R-436, extending R-79 and R-114's bitcast NaN guard). It is a comparison on the value's bits before any
+//!    arithmetic: never a self-comparison, `isnan`, `isinf`, a float comparison against the largest finite value or an
+//!    infinite literal, each of which an implementation that assumes no NaN or infinity may fold away or reject (R-114;
+//!    gpu_determinism_note rule 4). So `rho_ratio`'s `+∞` at the `α = 0` pole and `V_0`'s and `E_0`'s `−∞` at the
+//!    collision pole (dd_decoder §3.6) draw the hatch, never the end of the ramp, and `d_min`'s unset `+∞`, tested
+//!    first, stays "not yet";
+//! 3. `ramp(range_norm(raw, lo, hi, RANGE_AUTO, u_range))`.
+//!
+//! Debug fields are raw (R-79's exception): apart from the guard nothing is masked, so a failed-state 0.0 shows as 0.0.
 //!
 //! **`raw`, `lo`, `hi`, the ramp** (RQ-231; R-400, R-403). `raw` is the field's value compacted per its ledger scale
 //! ([`Placement`]): `lin` the identity; `log` the floor form as `dbg_log` places it, `1 − 1/(1 + ln(1 + |x|/ε_f))`, on
@@ -34,7 +43,8 @@
 //! `// @uniform RANGE_AUTO: u32 = <0|1> [0, 1]`, the node's param, whose default the generator writes from the param
 //! ([`NumericView::with_range_auto`]) and the assembler's declaration parser reads back; and
 //! `// @uniform u_range: vec2<f32> = (lo, hi)`, the measured `(min, max)` of `raw` over the draw, which the host fills
-//! (at M1 from a CPU min/max over the synthetic buffer; TASK-M1-03).
+//! (at M1 from a CPU min/max over the synthetic buffer; TASK-M1-03), over the samples whose stored value reaches the
+//! ramp: finite, and no sentinel or unset value ([`NumericView::measured`]; R-436).
 //!
 //! **Not numeric here.** A categorical or flag field, a vector, and the drift fields (`energy_drift`, `Lz_drift`, the
 //! fields with a ledger `floor`) keep their views: the drifts keep R-381's `symlog` default, TASK-M1-08's view until
@@ -141,9 +151,20 @@ pub fn undeclared(e: &Entry) -> Option<String> {
     })
 }
 
-/// The canonical quiet NaN's bits, the guard's (lowering Part 3a).
-fn qnan_bits() -> u32 {
-    crate::payload::canonical_qnan_bits()
+/// An f32's exponent field, all ones: the bits of every non-finite value, NaN and `±∞`, and of no finite one (IEEE 754
+/// binary32). The guard tests `bits & NON_FINITE == NON_FINITE` (R-436). It is +∞'s bit pattern, written from its std
+/// name: an IEEE-754 format constant, not a value the constants register holds (applied per R-369, qa review
+/// 5540671570 Q1).
+pub const NON_FINITE: u32 = f32::INFINITY.to_bits();
+
+/// Whether `x` is not finite, NaN or `±∞`, by its bits: the guard's test, the CPU twin of the WGSL line (R-436).
+pub fn non_finite(x: f32) -> bool {
+    x.to_bits() & NON_FINITE == NON_FINITE
+}
+
+/// The non-finite guard's WGSL condition on the `f32` expression `x`: its bits' exponent field all ones (R-436).
+pub fn non_finite_wgsl(x: &str) -> String {
+    format!("(bitcast<u32>({x}) & {NON_FINITE:#010x}u) == {NON_FINITE:#010x}u")
 }
 
 /// `b` as a finite end, or `None`.
@@ -293,13 +314,10 @@ impl NumericView {
         }
     }
 
-    /// The `colour()` body after `raw`'s binding: the NaN guard, the sentinel's line where the field has one, and the
-    /// ramp.
+    /// The `colour()` body after `raw`'s binding, in render_gui_spec §10.1's order: the sentinel's or unset value's
+    /// line where the field has one, the non-finite guard, and the ramp (R-436).
     fn body(&self) -> String {
-        let mut out = format!(
-            "    if (bitcast<u32>(raw) == {:#010x}u) {{ return debug_invalid(ctx.frag_xy); }}\n",
-            qnan_bits()
-        );
+        let mut out = String::new();
         match self.sentinel {
             Some(Sentinel::Literal(s)) => {
                 let _ = writeln!(
@@ -317,6 +335,11 @@ impl NumericView {
             }
             None => {}
         }
+        let _ = writeln!(
+            out,
+            "    if ({}) {{ return debug_invalid(ctx.frag_xy); }}",
+            non_finite_wgsl("raw")
+        );
         let auto = "uniforms.RANGE_AUTO != 0u";
         let ramp = self.ramp().wgsl();
         if self.placement == Placement::Diverging {
@@ -394,17 +417,18 @@ impl NumericView {
         )
     }
 
-    /// What the view shows for the stored value `x`, with `RANGE_AUTO` `auto`, `u_range` and `horizon_steps`.
+    /// What the view shows for the stored value `x`, with `RANGE_AUTO` `auto`, `u_range` and `horizon_steps`: the
+    /// WGSL's lines in their order, the sentinel's or unset value's, the non-finite guard, the ramp (R-436).
     pub fn shown(&self, x: f32, auto: bool, u_range: [f64; 2], horizon_steps: u32) -> Shown {
-        if x.to_bits() == qnan_bits() {
-            return Shown::Invalid;
-        }
         match self.sentinel {
             Some(Sentinel::Literal(s)) if f64::from(x) == s => {
                 return Shown::Literal(self.compact(f64::from(x)))
             }
             Some(Sentinel::Unset { bits }) if x.to_bits() == bits => return Shown::NotYet,
             _ => {}
+        }
+        if non_finite(x) {
+            return Shown::Invalid;
         }
         let ([lo, hi], meas) = self.range(u_range, horizon_steps);
         let (l, h) = if auto { (meas[0], meas[1]) } else { (lo, hi) };
@@ -420,13 +444,14 @@ impl NumericView {
         }
     }
 
-    /// Whether `x` reaches the ramp: neither the NaN nor the field's sentinel or unset value.
+    /// Whether `x` reaches the ramp: finite (R-436), and neither the field's sentinel nor its unset value.
     pub fn on_ramp(&self, x: f32) -> bool {
         matches!(self.shown(x, false, [0.0, 1.0], 1), Shown::Ramp { .. })
     }
 
-    /// `u_range` for the stored values `xs`: the min and max of `raw` over those that reach the ramp, `(0, 1)` when
-    /// none does (TASK-M1-03: at M1, a CPU min/max over the synthetic buffer), as [`NumericView::u_range_default`].
+    /// `u_range` for the stored values `xs`: the min and max of `raw` over those that reach the ramp, so over the
+    /// finite ones (R-436), `(0, 1)` when none does (TASK-M1-03: at M1, a CPU min/max over the synthetic buffer), as
+    /// [`NumericView::u_range_default`].
     pub fn measured(&self, xs: &[f32]) -> [f64; 2] {
         let raws: Vec<f64> = xs
             .iter()
@@ -446,7 +471,8 @@ impl NumericView {
 /// What a numeric view shows for one stored value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shown {
-    /// The hatch, `debug_invalid(frag_xy)`: the NaN (R-136).
+    /// The hatch, `debug_invalid(frag_xy)`: a non-finite value, NaN or a `±∞` that is no sentinel or unset value
+    /// (R-136, R-436).
     Invalid,
     /// The stored sentinel's literal value, compacted, through `dbg_sentinel` (R-136, R-381).
     Literal(f64),

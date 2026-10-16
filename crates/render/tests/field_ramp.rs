@@ -1,6 +1,7 @@
 //! The minimal field ramp (`render::colour::field_ramp`; colour_composition §1.2, §3; RQ-232; TASK-M1-09), REQ-COL-001
-//! on the CPU side: each `ScalarField` returns `(value, valid)` with the ledger's validity, a sentinel and the absence
-//! NaN invalid, `d_min`'s unset value its own case (`field_ramp_scalar_*`); the `lin` compaction clamps to its range
+//! on the CPU side: each `ScalarField` returns `(value, valid)` with the ledger's validity, a sentinel and a non-finite
+//! value invalid, the absence NaN and every stored `±∞` by an exponent field of all ones (R-436; REQ-COL-070),
+//! `d_min`'s unset value its own case (`field_ramp_scalar_*`); the `lin` compaction clamps to its range
 //! (`field_ramp_compaction_*`); the ramp's WGSL declares its invalid lane's uniforms, the override off and R-16's
 //! magenta by default (`field_ramp_declares_*`), and its CPU twin orders the unset grey before the invalid lane
 //! (`field_ramp_shown_*`). The renders are `numeric_views.rs`'s.
@@ -31,6 +32,12 @@ fn check_length(f: &ScalarField) {
         assert_eq!(f.read(x, true), (x, true), "{x} is valid");
     }
     assert_eq!(f.read(3.0, false), (3.0, false), "a failed gate is invalid");
+    // A u-bits field's value is never non-finite, so, as in its WGSL, it has no non-finite test (R-436).
+    assert!(
+        !f.valid.contains("0x7f800000u") && f.read(f32::INFINITY, true).1,
+        "`length` tests a non-finite value: {}",
+        f.valid
+    );
     assert!(
         f.unset.is_none() && !f.is_unset(f32::INFINITY),
         "`length` has no unset value"
@@ -49,23 +56,31 @@ negative_control!(
     check_length(&field("d_min"))
 );
 
-/// Checks `d_min`'s validity: the canonical NaN alone is invalid, by its bits; +∞ is its unset value, by its bits.
+/// Checks `d_min`'s validity: a non-finite value, every NaN and `±∞`, is invalid, by an exponent field of all ones
+/// (R-436); the largest finite f32 is valid; +∞ is its unset value, by its bits.
 fn check_d_min(f: &ScalarField) {
     assert!(
-        f.valid.contains("bitcast<u32>(v) != 0x7fc00000u"),
-        "`d_min`'s NaN test: {}",
+        f.valid
+            .contains("(bitcast<u32>(v) & 0x7f800000u) != 0x7f800000u"),
+        "`d_min`'s non-finite test: {}",
         f.valid
     );
-    let nan = f32::from_bits(0x7fc0_0000);
-    assert!(!f.read(nan, true).1, "the canonical NaN is invalid");
-    assert!(
-        f.read(f32::from_bits(0x7fc0_0001), true).1,
-        "another NaN's bits are not the guard's"
-    );
-    assert!(
-        f.read(0.0, true).1 && f.read(1.5, true).1,
-        "values are valid"
-    );
+    for bits in [
+        0x7fc0_0000,
+        0x7fc0_0001,
+        0xffc0_0000,
+        0x7f80_0001,
+        0x7f80_0000,
+        0xff80_0000,
+    ] {
+        assert!(
+            !f.read(f32::from_bits(bits), true).1,
+            "{bits:#010x} is not invalid"
+        );
+    }
+    for x in [0.0, 1.5, f32::MAX, -f32::MAX] {
+        assert!(f.read(x, true).1, "{x} is not valid");
+    }
     assert_eq!(
         f.unset.as_deref(),
         Some("bitcast<u32>(v) == 0x7f800000u"),
@@ -85,7 +100,7 @@ fn field_ramp_scalar_d_min_nan_invalid_inf_unset() {
 negative_control!(
     field_ramp_scalar_d_min_nan_invalid_inf_unset,
     "the word `length`, a u-bits field, has no NaN test",
-    expected = "`d_min`'s NaN test",
+    expected = "`d_min`'s non-finite test",
     check_d_min(&field("length"))
 );
 
@@ -194,8 +209,8 @@ negative_control!(
     )
 );
 
-/// Checks the CPU twin of `d_min`'s ramp `r`: the unset value grey, before the invalid lane; NaN invalid; a value at
-/// its place on `[0, 2]`.
+/// Checks the CPU twin of `d_min`'s ramp `r`: the unset value grey, before the invalid lane; NaN and −∞ invalid
+/// (R-436); a value at its place on `[0, 2]`.
 fn check_shown(r: &FieldRamp) {
     assert_eq!(
         r.shown(f32::INFINITY, false),
@@ -203,6 +218,16 @@ fn check_shown(r: &FieldRamp) {
         "unset, even with a failed gate"
     );
     assert_eq!(r.shown(f32::from_bits(0x7fc0_0000), true), Shown::Invalid);
+    assert_eq!(
+        r.shown(f32::NEG_INFINITY, true),
+        Shown::Invalid,
+        "-inf, no unset value, is invalid"
+    );
+    assert_eq!(
+        r.shown(f32::MAX, true),
+        Shown::Ramp(1.0),
+        "the largest finite"
+    );
     assert_eq!(r.shown(0.5, true), Shown::Ramp(0.25));
     assert_eq!(r.shown(0.5, false), Shown::Invalid, "a failed gate");
     assert_eq!(r.shown(3.0, true), Shown::Ramp(1.0), "clamped");
@@ -224,8 +249,8 @@ negative_control!(
 );
 
 /// Checks that every field `payload` accepts takes the validity lane's predicate for its lane member, `rc` read as
-/// `ctx`, behind the absence-NaN test for an `f32`; and that a field `payload` refuses has no lane member to take it
-/// from or is no scalar.
+/// `ctx`, followed by the non-finite test for an `f32`, which stands behind it (R-436); and that a field `payload`
+/// refuses has no lane member to take it from or is no scalar.
 fn check_lane(payload: fn(&str) -> Result<ScalarField, String>) {
     let lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
     let lane_valid = |lane: &str| {
@@ -250,9 +275,9 @@ fn check_lane(payload: fn(&str) -> Result<ScalarField, String>) {
                 e.name, f.lane
             )
         });
-        let nan = "bitcast<u32>(v) != 0x7fc00000u";
+        let nan = "(bitcast<u32>(v) & 0x7f800000u) != 0x7f800000u";
         let ok = f.valid == want
-            || f.valid == format!("{nan} && {want}")
+            || f.valid == format!("{want} && {nan}")
             || (want == "true" && f.valid == nan);
         assert!(
             ok,

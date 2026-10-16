@@ -2,12 +2,13 @@
 // The debug view of `V_0` (render contract Part 6; debug_tooling_plan §B–E): scalar index 9, f32, scale lin, range (−∞,
 // 0]. A colour occupant, `present(unpack(ctx))` (gui_state_contract §3), it reads the field through `ICDescriptor.V_0`;
 // its test, `catalogue_view_v_0` in `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust
-// twins. Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec §10.1, RQ-231): the NaN guard,
-// the stored sentinel's line where the field has one, and the ramp, with `RANGE_AUTO` and `u_range` its uniforms.
+// twins. Its colouring is the numeric template (`ledger::gen::numeric`; render_gui_spec §10.1, RQ-231): the stored
+// sentinel's or unset value's line where the field has one, the non-finite guard (R-436), and the ramp, with
+// `RANGE_AUTO` and `u_range` its uniforms.
 // @uniform RANGE_AUTO: u32 = 1 [0, 1]
 // @uniform u_range: vec2<f32> = (0.0, 1.0)
 fn colour(ctx: Ctx) -> vec3<f32> {
     let raw = ctx.ic.V_0;
-    if (bitcast<u32>(raw) == 0x7fc00000u) { return debug_invalid(ctx.frag_xy); }
+    if ((bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u) { return debug_invalid(ctx.frag_xy); }
     return ramp_viridis(range_norm(raw, uniforms.u_range.x, 0.0, uniforms.RANGE_AUTO != 0u, uniforms.u_range));
 }
