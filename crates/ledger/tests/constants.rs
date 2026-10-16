@@ -14,7 +14,7 @@
 use ledger::constants::{
     gate, is_milestone, provisional_until, Admissibility, Citation, ConstantBuilder, Population,
     RelativeBasis, Value, DIVERGING_X0, HATCH_CYAN, HATCH_HALF_PERIOD, HATCH_VIOLET, LOG_FLOORS,
-    LOG_FLOOR_D_MIN, REGISTER,
+    LOG_FLOOR_D_MIN, REGISTER, SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL,
 };
 use ledger::gen::prelude::{self, Hatch};
 use validation::negative_control;
@@ -782,4 +782,24 @@ negative_control!(
         h.colours.swap(0, 1);
         check_hatch(h);
     }
+);
+
+/// The shape sphere's two proposals read as TASK-M2-08 proposes them (REQ-CHART-049, REQ-CHART-053): `shape_vec_js_tol`
+/// is 16ε = 2⁻⁴⁸, ε the f64 epsilon, and `shape_roundtrip_bound` is `1e-13`.
+fn check_shape_tolerances(js_tol: f64, roundtrip: f64) {
+    assert_eq!(js_tol, 16.0 * f64::EPSILON, "shape_vec_js_tol is not 16ε");
+    assert_eq!(js_tol, 2f64.powi(-48), "shape_vec_js_tol is not 2⁻⁴⁸");
+    assert_eq!(roundtrip, 1e-13, "shape_roundtrip_bound is not 1e-13");
+}
+
+#[test]
+fn constants_provisional_shape_tolerances_read_their_proposals() {
+    check_shape_tolerances(SHAPE_VEC_JS_TOL.number(), SHAPE_ROUNDTRIP_BOUND.number());
+}
+
+negative_control!(
+    constants_provisional_shape_tolerances_read_their_proposals,
+    "a tolerance of 8ε must fail",
+    expected = "shape_vec_js_tol is not 16ε",
+    check_shape_tolerances(8.0 * f64::EPSILON, SHAPE_ROUNDTRIP_BOUND.number())
 );
