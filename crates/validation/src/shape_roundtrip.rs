@@ -162,7 +162,11 @@ pub fn samples(input: &Input) -> Vec<Sample> {
 }
 
 fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
-    ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
+    a.iter()
+        .zip(b)
+        .map(|(x, y)| (x - y) * (x - y))
+        .sum::<f64>()
+        .sqrt()
 }
 
 /// The round trip's misses at `s` with `Φ` built by `inverse`: `‖shape(r, m) − n‖`, through the reconstructed
@@ -213,14 +217,8 @@ impl ShapeRoundtripGate {
         let (by_positions, by_jacobi) = pairs
             .iter()
             .fold((0.0f64, 0.0f64), |(x, y), &(a, b)| (x.max(a), y.max(b)));
-        let (at, worst) = misses
-            .iter()
-            .copied()
-            .enumerate()
-            .fold(
-                (0, 0.0f64),
-                |(k, w), (i, x)| if x > w { (i, x) } else { (k, w) },
-            );
+        let worst = misses.iter().copied().fold(0.0, f64::max);
+        let at = misses.iter().position(|&x| x == worst).unwrap_or(0);
         let random = input.samples as usize;
         let near = 2 * input.near_pole_samples as usize;
         let near_max = misses[random..random + near]

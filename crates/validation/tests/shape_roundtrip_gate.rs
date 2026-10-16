@@ -4,6 +4,8 @@
 
 use std::path::{Path, PathBuf};
 
+use kernel::chart::shape_sphere::{exponential, spherical};
+use validation::decode_f32_eps::SplitMix;
 use validation::gate::{self, Gate, GateConfig, Verdict};
 use validation::negative_control;
 use validation::shape_roundtrip::{
@@ -43,7 +45,11 @@ fn check_samples(input: &Input, list: &[Sample]) {
     assert_eq!(list.len(), k + 2 * near + 8 * poles, "the sample count");
     for s in list {
         let norm = s.n.iter().map(|x| x * x).sum::<f64>().sqrt();
-        assert!((norm - 1.0).abs() <= 1e-14, "the point {:?} is not unit", s.n);
+        assert!(
+            (norm - 1.0).abs() <= 1e-14,
+            "the point {:?} is not unit",
+            s.n
+        );
         assert!(
             s.z_mass.iter().all(|z| z.abs() <= 4.0)
                 && (0.25..=4.0).contains(&s.inertia)
@@ -55,7 +61,7 @@ fn check_samples(input: &Input, list: &[Sample]) {
         let sign = if i < near { 1.0 } else { -1.0 };
         let radius = s.n[1].hypot(s.n[2]);
         assert!(
-            s.n[0] * sign > 0.0 && radius <= 1.01e-2 && radius >= 0.99e-15,
+            s.n[0] * sign > 0.0 && (0.99e-15..=1.01e-2).contains(&radius),
             "near-pole sample {i} at {:?}, polar radius {radius:e}",
             s.n
         );
@@ -72,8 +78,79 @@ fn check_samples(input: &Input, list: &[Sample]) {
         .iter()
         .map(|s| s.n.map(f64::to_bits))
         .collect();
-    assert!(got == want, "the poles are not the eight (±1, ±0, ±0) in order");
+    assert!(
+        got == want,
+        "the poles are not the eight (±1, ±0, ±0) in order"
+    );
     assert_eq!(samples(input), samples(input), "one seed, one list");
+}
+
+/// A draw on `[lo, hi]` from `rng`, as the gate draws: 53 random bits.
+fn on(rng: &mut SplitMix, lo: f64, hi: f64) -> f64 {
+    lo + (hi - lo) * ((rng.next_u64() >> 11) as f64 / (1u64 << 53) as f64)
+}
+
+fn unit(a: [f64; 3]) -> [f64; 3] {
+    let k = (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt();
+    a.map(|x| x / k)
+}
+
+fn cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+/// The masses' and phase's draws take both signs, as do the near-pole points' `n₂`.
+fn check_signs(input: &Input, list: &[Sample]) {
+    let (k, near) = (input.samples as usize, input.near_pole_samples as usize);
+    let both = |xs: Vec<f64>| xs.iter().any(|&x| x < 0.0) && xs.iter().any(|&x| x > 0.0);
+    assert!(
+        both(list.iter().map(|s| s.z_mass[0]).collect())
+            && both(list.iter().map(|s| s.z_mass[1]).collect())
+            && both(list.iter().map(|s| s.phase).collect()),
+        "the mass and phase draws do not take both signs"
+    );
+    assert!(
+        both(list[k..k + 2 * near].iter().map(|s| s.n[2]).collect()),
+        "the near-pole points' n₂ does not take both signs"
+    );
+}
+
+/// The first three samples are, from the seed's stream, a spherical point, an exponential one and a spherical one,
+/// each followed by its four gauge draws.
+fn check_order(input: &Input, list: &[Sample]) {
+    let mut rng = SplitMix::new(input.seed);
+    let mut want = Vec::new();
+    for j in 0..3 {
+        let n = if j == 1 {
+            let n0 = unit([0, 1, 2].map(|_| on(&mut rng, -1.0, 1.0)));
+            let e1 = unit(cross(n0, [0, 1, 2].map(|_| on(&mut rng, -1.0, 1.0))));
+            let (scale, u, v) = (
+                on(&mut rng, 0.0, PI),
+                on(&mut rng, 0.0, 1.0),
+                on(&mut rng, 0.0, 1.0),
+            );
+            exponential(n0, e1, cross(n0, e1), scale, u, v)
+        } else {
+            spherical(on(&mut rng, 0.0, 1.0), on(&mut rng, 0.0, 1.0), PI)
+        };
+        let z_mass = [on(&mut rng, -4.0, 4.0), on(&mut rng, -4.0, 4.0)];
+        let (inertia, phase) = (on(&mut rng, 0.25, 4.0), on(&mut rng, -PI, PI));
+        want.push(Sample {
+            n,
+            z_mass,
+            inertia,
+            phase,
+        });
+    }
+    assert_eq!(
+        list[..3],
+        want[..],
+        "the first three samples are not drawn in order"
+    );
 }
 
 #[test]
@@ -84,10 +161,16 @@ fn shape_roundtrip_gate_samples() {
         .iter()
         .filter(|s| s.n[2] < 0.0)
         .count();
-    assert!((1700..2400).contains(&lower), "{lower} of 4096 on the lower hemisphere");
+    assert!(
+        (1700..2400).contains(&lower),
+        "{lower} of 4096 on the lower hemisphere"
+    );
     assert_ne!(
         samples(&i),
-        samples(&Input { seed: 4, ..i.clone() }),
+        samples(&Input {
+            seed: 4,
+            ..i.clone()
+        }),
         "another seed draws another list"
     );
 }
@@ -104,6 +187,44 @@ negative_control!(
     }
 );
 
+#[test]
+fn shape_roundtrip_gate_samples_order() {
+    let i = input(64, 8, 2, InverseKind::ClosedForm);
+    check_order(&i, &samples(&i));
+}
+
+negative_control!(
+    shape_roundtrip_gate_samples_order,
+    "a list whose first two points are swapped must fail",
+    expected = "the first three samples are not drawn in order",
+    {
+        let i = input(64, 8, 2, InverseKind::ClosedForm);
+        let mut list = samples(&i);
+        list.swap(0, 1);
+        check_order(&i, &list)
+    }
+);
+
+#[test]
+fn shape_roundtrip_gate_samples_signs() {
+    let i = input(64, 8, 2, InverseKind::ClosedForm);
+    check_signs(&i, &samples(&i));
+}
+
+negative_control!(
+    shape_roundtrip_gate_samples_signs,
+    "a list whose phases are all positive must fail",
+    expected = "the mass and phase draws do not take both signs",
+    {
+        let i = input(64, 8, 2, InverseKind::ClosedForm);
+        let mut list = samples(&i);
+        for s in &mut list {
+            s.phase = s.phase.abs();
+        }
+        check_signs(&i, &list)
+    }
+);
+
 // ── The miss ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// Over `input`'s samples, the closed form misses by at most `1e-14` and the superseded inverse by more than `|n₂|`
@@ -111,7 +232,11 @@ negative_control!(
 fn check_miss(of: fn(&Sample, InverseKind) -> (f64, f64)) {
     for s in samples(&input(2048, 64, 2, InverseKind::ClosedForm)) {
         let (a, b) = of(&s, InverseKind::ClosedForm);
-        assert!(a.max(b) <= 1e-14, "the closed form misses {:?} by {a:e}, {b:e}", s.n);
+        assert!(
+            a.max(b) <= 1e-14,
+            "the closed form misses {:?} by {a:e}, {b:e}",
+            s.n
+        );
         let (c, d) = of(&s, InverseKind::NegativeCross);
         if s.n[2].abs() > 1e-3 {
             assert!(
@@ -158,7 +283,11 @@ fn check_verdict(of: fn(f64, f64) -> Verdict) {
     let t = 1e-13;
     assert_eq!(of(t, t), Verdict::Pass, "a worst at the threshold");
     assert_eq!(of(t * 0.5, t), Verdict::Pass, "a worst below the threshold");
-    assert_eq!(of(f64::from_bits(t.to_bits() + 1), t), Verdict::Fail, "a worst one ulp beyond the threshold");
+    assert_eq!(
+        of(f64::from_bits(t.to_bits() + 1), t),
+        Verdict::Fail,
+        "a worst one ulp beyond the threshold"
+    );
 }
 
 #[test]
@@ -186,7 +315,8 @@ fn check_refusals(run: fn(&GateConfig, &Input) -> Result<(), String>) {
         c.threshold.value = value;
         let got = run(&c, &one);
         assert!(
-            got.as_ref().is_err_and(|e| e.contains("is not the register's")),
+            got.as_ref()
+                .is_err_and(|e| e.contains("is not the register's")),
             "the threshold {value:e} is not refused: {got:?}"
         );
     }
@@ -195,7 +325,11 @@ fn check_refusals(run: fn(&GateConfig, &Input) -> Result<(), String>) {
         got.as_ref().is_err_and(|e| e.contains("no samples")),
         "no samples is not refused: {got:?}"
     );
-    assert_eq!(run(&config(), &one), Ok(()), "one sample at the register's threshold");
+    assert_eq!(
+        run(&config(), &one),
+        Ok(()),
+        "one sample at the register's threshold"
+    );
 }
 
 #[test]
@@ -204,7 +338,8 @@ fn shape_roundtrip_gate_refusals() {
     let value = serde_json::json!({ "description": "x", "seed": 1 });
     let got = ShapeRoundtripGate.run(&config(), "bad.json", &value);
     assert!(
-        got.as_ref().is_err_and(|e| e.contains("is not a shape-roundtrip input")),
+        got.as_ref()
+            .is_err_and(|e| e.contains("is not a shape-roundtrip input")),
         "an input missing its fields is not refused: {got:?}"
     );
 }
@@ -223,22 +358,89 @@ fn check_report(judge: fn(&GateConfig, &Input) -> Result<validation::gate::GateR
     assert_eq!(pass.verdict, Verdict::Pass, "the closed form's verdict");
     assert_eq!(pass.gate, shape_roundtrip::NAME);
     let text = pass.scatter.join("\n");
-    for want in ["max by path", "on the lower hemisphere", "near n₀ = ±1", "at the eight poles", "margin"] {
+    for want in [
+        "max by path",
+        "on the lower hemisphere",
+        "near n₀ = ±1",
+        "at the eight poles",
+        "margin",
+    ] {
         assert!(text.contains(want), "the scatter lacks `{want}`: {text}");
     }
     assert!(
-        pass.negative_results.iter().any(|l| l.starts_with("0 of 304 samples beyond")),
+        pass.negative_results
+            .iter()
+            .any(|l| l.starts_with("0 of 304 samples beyond")),
         "the pass's negative results: {:?}",
         pass.negative_results
     );
     let fail = judge(&config(), &input(256, 16, 2, InverseKind::NegativeCross)).unwrap();
-    assert_eq!(fail.verdict, Verdict::Fail, "the superseded inverse's verdict");
+    assert_eq!(
+        fail.verdict,
+        Verdict::Fail,
+        "the superseded inverse's verdict"
+    );
     assert!(
-        fail.negative_results.iter().any(|l| l.contains("negative-cross inverse")),
+        fail.negative_results
+            .iter()
+            .any(|l| l.contains("negative-cross inverse")),
         "the fail's negative results: {:?}",
         fail.negative_results
     );
-    assert!(pass.check().is_ok() && fail.check().is_ok(), "a report section is empty");
+    assert!(
+        pass.check().is_ok() && fail.check().is_ok(),
+        "a report section is empty"
+    );
+    check_numbers(&pass, &input(256, 16, 2, InverseKind::ClosedForm));
+    check_numbers(&fail, &input(256, 16, 2, InverseKind::NegativeCross));
+}
+
+/// `report`'s numbers are `input`'s, measured here from `samples` and `miss`: the worst miss and the first sample
+/// giving it, the random samples on the lower hemisphere, the near-pole and the pole maxima, and on a fail the
+/// samples beyond the threshold.
+fn check_numbers(report: &validation::gate::GateReport, input: &Input) {
+    let all = samples(input);
+    let misses: Vec<f64> = all
+        .iter()
+        .map(|s| {
+            let (a, b) = miss(s, input.inverse);
+            a.max(b)
+        })
+        .collect();
+    let (random, near) = (input.samples as usize, 2 * input.near_pole_samples as usize);
+    let worst = misses.iter().copied().fold(0.0, f64::max);
+    let at = misses.iter().position(|&x| x == worst).unwrap();
+    let lower = all[..random].iter().filter(|s| s.n[2] < 0.0).count();
+    let near_max = misses[random..random + near]
+        .iter()
+        .copied()
+        .fold(0.0, f64::max);
+    let pole_max = misses[random + near..].iter().copied().fold(0.0, f64::max);
+    let text = report.scatter.join("\n");
+    for want in [
+        format!("max {worst:.3e} at sample {at} "),
+        format!("{random} random samples, {lower} on the lower hemisphere"),
+        format!("{near} near n₀ = ±1 at polar radii 10⁻² to 10⁻¹⁵, their max {near_max:.3e}; "),
+        format!(
+            "{} at the eight poles (±1, ±0, ±0), their max {pole_max:.3e}",
+            misses.len() - random - near
+        ),
+    ] {
+        assert!(text.contains(&want), "the scatter lacks `{want}`: {text}");
+    }
+    if report.verdict == Verdict::Fail {
+        let threshold = SHAPE_ROUNDTRIP_BOUND.number();
+        let over = misses.iter().filter(|&&x| x > threshold).count();
+        let want = format!(
+            "{over} of {} samples beyond the threshold {threshold:.3e}; the worst, {worst:.3e} at sample {at}, fails",
+            misses.len()
+        );
+        assert!(
+            report.negative_results.contains(&want),
+            "the fail's negative results lack `{want}`: {:?}",
+            report.negative_results
+        );
+    }
 }
 
 #[test]
@@ -260,6 +462,36 @@ negative_control!(
     ))
 );
 
+/// The judge's reports on the closed form and on the superseded inverse carry their numbers.
+fn check_report_numbers(
+    judge: fn(&GateConfig, &Input) -> Result<validation::gate::GateReport, String>,
+) {
+    for inverse in [InverseKind::ClosedForm, InverseKind::NegativeCross] {
+        let i = input(256, 16, 2, inverse);
+        check_numbers(&judge(&config(), &i).unwrap(), &i);
+    }
+}
+
+#[test]
+fn shape_roundtrip_gate_report_numbers() {
+    check_report_numbers(|c, i| ShapeRoundtripGate::judge(c, "t", i));
+}
+
+negative_control!(
+    shape_roundtrip_gate_report_numbers,
+    "a fail that counts one sample too many beyond the threshold must fail",
+    expected = "the fail's negative results lack",
+    check_report_numbers(|c, i| {
+        let mut r = ShapeRoundtripGate::judge(c, "t", i)?;
+        if r.verdict == Verdict::Fail {
+            let line = &r.negative_results[0];
+            let (n, rest) = line.split_once(' ').unwrap();
+            r.negative_results[0] = format!("{} {rest}", n.parse::<usize>().unwrap() + 1);
+        }
+        Ok(r)
+    })
+);
+
 // ── The fixtures ─────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The runner on `root`'s `fixtures/gates/shape-roundtrip/` gives every input its expected outcome: `random.json`
@@ -272,7 +504,11 @@ fn check_fixtures(root: &Path) {
         "the gate's fixtures do not give their expected outcomes: {result:?}"
     );
     let random = shape_roundtrip::input(root, "random.json").unwrap();
-    assert_eq!(random.inverse, InverseKind::ClosedForm, "random.json's inverse");
+    assert_eq!(
+        random.inverse,
+        InverseKind::ClosedForm,
+        "random.json's inverse"
+    );
 }
 
 #[test]
