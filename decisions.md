@@ -10368,7 +10368,8 @@ applied by a follow-up task):*
   a routine GUI choice. Fix round 5, physics review P14 to P16: the band near the corners is the compass's own cut, not
   a place without a plane; why the cut is 10⁻³; the locked drag routed to REQ-GUI-203; the sine's range. Fix round 6,
   physics review P17 and P18, fix (a) applied per R-369: the guards get their own cut, 10⁻⁶, and inside the compass's
-  disc the lock keeps its pivot.) At the four
+  disc the lock keeps its pivot. Fix round 7, physics review P19, fix (a) applied per R-369: the pivot's error above
+  the guards' cut is `ε/sin²θ`, not `ε/s`, and the in-disc drag's tolerances follow from it.) At the four
   corner points `τ₁ = ±τ₂ = ±90°`, which tilt mode's clamped drags reach, `u₁` and `u₂` are both `±e_d`, so
   `View::basis`'s `q₁` and `q₂` both lie along `e_d` and span no plane (the comparison above: "it degenerates to the
   line `e_d`"). Near them a plane exists, but the normal of `(q₁, q₂)` is ill-conditioned. In floating point, at
@@ -10413,17 +10414,42 @@ applied by a follow-up task):*
     absolute error of up to about `(4n + 2)u·g₁₁g₂₂`, `u = ε/2`, and `4g₁₁g₂₂/(g₁₁ + g₂₂)² ≤ 1`, so the computed `s²`
     is off by up to about `17ε` and a basis with no plane can read `s` up to `√(17ε) ≈ 6.1·10⁻⁸` (measured: up to
     2.4·10⁻⁸ at the four corner points, `σ` in [0.01, 4], every `γ`). 10⁻⁶ is the first power of ten at least ten
-    times that floor, so no basis without a plane passes. Above it the pivot is accurate: `View::basis`'s components
-    carry absolute rounding of about `εσ`, so the pivot's chart coordinates carry a relative error of about `ε/s`, at
-    most about 2.2·10⁻¹⁰ at the cut (measured 0.25 to 1.1 times `ε/s` at `(90°, τ₂, 45°)`, `σ = 1`, `s` from
-    1.75·10⁻³ down to 1.75·10⁻¹⁰); a typed basis's error is relative per vector, about `ε/sin θ`, which the kept sine
-    tests bound.
+    times that floor, so no basis without a plane passes.
+  - **The pivot's error above the cut (fix round 7, physics review P19).** `chart_coords` solves the 2×2 Gram system
+    `g·(x, y) = (r·q₁, r·q₂)`, `(x, y) = (2s − 1, 2t − 1)`, `r = z − z₀`, by Cramer's rule. Its determinant
+    `g₁₁g₂₂ − g₁₂² = g₁₁g₂₂ sin²θ`, `θ` the angle between `q₁` and `q₂`, carries the absolute rounding of up to about
+    `17ε·g₁₁g₂₂` derived above, so the pivot's chart coordinates carry a relative error of about `ε/sin²θ`, at most
+    about `17ε/sin²θ`. Since `s = sin θ · 2|q₁||q₂| / (|q₁|² + |q₂|²) ≤ sin θ`, above the cut that is at most about
+    `17ε/s²`, about 3.8·10⁻³ at `s = 10⁻⁶`. A small `s` that is only a norm ratio, `θ` near 90°, costs nothing: the
+    error stays at rounding. Measured against 50-digit arithmetic on the same float components, at `(90°, τ₂, γ)`,
+    `σ = 1`, the anchor `(0.1, 0.05, 0.2)` or `0.3q₁ + 0.2q₂`, the relative error in `(2s − 1, 2t − 1)` is:
+    - `γ = 45°` (`sin θ ≈ 1`): 2·10⁻¹⁶ to 9.1·10⁻¹⁶ at every `s` from 5.2·10⁻⁴ down to 10⁻⁶;
+    - `γ = 0` (`sin θ = s`): up to 4.0·10⁻¹⁰ at `s = 5.2·10⁻⁴`, 7.4·10⁻⁸ at 1.75·10⁻⁵, 1.8·10⁻⁵ at 1.75·10⁻⁶ and
+      1.1·10⁻⁴ at 1.0·10⁻⁶;
+    - `γ = 30°` (`sin θ = 2s`): up to 3.0·10⁻¹⁰ at `s = 5.2·10⁻⁴`, 1.8·10⁻⁷ at 1.75·10⁻⁵, 1.5·10⁻⁴ at 1.75·10⁻⁶ and
+      1.7·10⁻⁴ at 1.0·10⁻⁶;
+    - a typed basis, `q₁` and `q₂` of equal norm at angle `θ` in 200 random 8-D orientations, anchor `0.3q₁ + 0.2q₂`:
+      at worst 9.4·10⁻⁸ at `sin θ = 10⁻⁴`, 8.9·10⁻⁶ at 10⁻⁵ and 6.2·10⁻⁴ at 1.2·10⁻⁶;
+    - every value is within `17ε/sin²θ`; the `ε/s` that fix round 6 stated, measured at `γ = 45°` only, does not hold
+      elsewhere. A typed basis follows the same model, and what bounds its error is `s ≤ sin θ` together with the
+      10⁻⁶ cut, not the kept sine tests: `chart_coords`' fires only at `sin θ ≤ 10⁻¹²`.
+  - **Why that error is acceptable.** Locked, a basis edit moves the pin by the pivot's error, plus the error of the
+    solve on the new basis. For an anchor in the view (`|2s − 1|`, `|2t − 1| ≤ 1`), the pin's chart point therefore
+    moves by at most about `½·17ε(1/sin²θ + 1/sin²θ′)` of the view's width per edit, `θ′` the angle after it. At the
+    cut, the first term is at most 1.9·10⁻³, about 2 px of a view 1000 px across. The worst measured near the cut, a
+    relative 1.7·10⁻⁴, is under 0.1 px. A shift of a whole pixel at that view size needs `sin θ` below about
+    1.4·10⁻⁶, that is, a tilt within about 1.4·10⁻⁶ rad of a corner with `γ = 0`, or a typed basis that close to
+    parallel. The alternatives are worse: declining the pivot there moves the pin by 5 % of the view, 50 px, at
+    `(90°, 89.97°)`, and the rounding pivot sends a `z₀` edit of about 7·10¹². No value is calibrated: the bound
+    follows from `ε` and the cut.
   - **Inside the compass's disc.** Only at the four corner points is there no plane, and so no pivot. Inside the
     0.057° disc, off them, a plane exists and so does the pivot: the compass declines to draw the plane, but the lock
     and the figure keep their pivot and their samples, and a locked drag turns about the pin as §G4 says. At
     `(90°, 89.97°, 45°)`, `σ = 1`, `s = 5.2·10⁻⁴`, a pin at `z₀ + 0.3q₁ + 0.2q₂`, chart point `(0.65, 0.60)`, stays
-    there under a locked drag to `(89°, 89.97°, 45°)`; declining the pivot would move it to `(0.65, 0.65)`, 5 % of
-    the view.
+    there, to within 1.1·10⁻¹⁶, under a locked drag to `(89°, 89.97°, 45°)`; declining the pivot would move it to
+    `(0.65, 0.65)`, 5 % of the view. Off `γ = 45°` the pin moves by the pivot's error (above): the same drag at
+    `γ = 0`, `sin θ = 5.2·10⁻⁴`, moves it by 6.1·10⁻¹¹, and at `γ = 30°` from `(90°, 89.999°)`, `sin θ = 3.5·10⁻⁵`,
+    by 3.4·10⁻⁸, each within `17ε(1/sin²θ + 1/sin²θ′)`, 1.4·10⁻⁸ and 3.1·10⁻⁶.
   - **Where the guards decline.** Where their sine test fires or `s < 10⁻⁶`, the guards return none, as for any
     degenerate basis: locked, no `z₀` edit is sent and the basis edit passes as it does free (`about_the_pin`'s rule
     for a degenerate basis), and the figure shows nothing new, no sample placed along the rounding direction. That
