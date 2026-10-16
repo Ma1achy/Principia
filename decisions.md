@@ -742,11 +742,15 @@ independent ground truth, with the legacy t = 30 set kept as a comparison.
 ## R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*
 *Amended in part by R-399 (`running`'s neutral grey is drawn in the "not yet" style: the grey with a fine dot stipple
 from the pixel position).*
+*Superseded in part by R-444, R-445 and R-446 (the palette reading, in the outcome view: "degenerate" and "collision
+at start" are no longer classes, and `running`, `sim_failed` and `decode_failed` draw bounded's `#141418`).*
 *25 Sep 2026 · applied in step 7 · last bullet withdrawn by R-106*
-*Still in force: every bullet but the last: the palette readings, pointer_channels normative only where cited, the
-properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`, with `running`'s
-neutral grey drawn in R-399's "not yet" style, the grey with a fine dot stipple; the last bullet is withdrawn, the link
-ids being the chart's link functions (R-106).*
+*Still in force: every bullet but the last, the first only outside the outcome view: pointer_channels normative only
+where cited, the properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`;
+`running`'s neutral grey, drawn in R-399's "not yet" style, the grey with a fine dot stipple, for every field but the
+outcome class; in the outcome view the classes are R-444's, a collision at `t_end_step == 0` draws its pair's or the
+triple collision's colour (R-445), and `running`, `sim_failed` and `decode_failed` draw `#141418` (R-446); the last
+bullet is withdrawn, the link ids being the chart's link functions (R-106).*
 
 - Palette reading: "degenerate" = `decode_failed`; "collision at start" = collision with `t_end_step == 0`; `running` shows
   neutral grey; `sim_failed` shows the invalid colour.
@@ -6882,8 +6886,11 @@ REQ-TOOL-019's verify and rulings and REQ-TOOL-152's note, rulings and `rq` chan
 *Amended in part by R-433 (the grey confirmed at the M1 gate: `#4E4E4E`).*
 *Amended in part by R-434 (the stipple confirmed at the M1 gate: 2 × 2 px dots in each 4 × 4 physical-pixel cell, the
 dots changed to `#909090`, so that no flat palette colour comes within τ = 0.101 of every pixel of a 4 × 4 block).*
-*Still in force: all of it; the grey and the stipple it left calibrations are confirmed: `#4E4E4E` (R-433), and
-`#909090` dots, 2 × 2 px in each 4 × 4 px cell (R-434).*
+*Superseded in part by R-446 (in the outcome view `running` samples draw bounded's `#141418`, not the "not yet"
+style).*
+*Still in force: all of it but the outcome view's `running` samples, which draw `#141418` (R-446): the style stands
+for every other field that shows "not yet", an unset `d_min` among them; the grey and the stipple it left calibrations
+are confirmed: `#4E4E4E` (R-433), and `#909090` dots, 2 × 2 px in each 4 × 4 px cell (R-434).*
 *9 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or
 `f32`" and § "1.4 Categorical colour-assignment — the outcome-state default palette",
 `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library",
@@ -9288,6 +9295,13 @@ passing, `gate-provisional` red only for the nine entries R-428 confirms) and on
 Changes no requirement.
 
 ## R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*
+*Superseded in part by R-444 and R-445 (the triple outcomes' swatches: triple collision `#F29620`, triple ejection
+`#611597`; the no-veto on a first-step triple collision in the t=0 orange has nothing left to apply to, the class
+being removed).*
+*Still in force: all of it but the triple outcomes' swatches and that no-veto: `r_pole` = 0.01, a register entry
+provisional until M3; the running grey `#4E4E4E`, the "not yet" style's grey (in the outcome view `running` draws
+`#141418`, R-446); the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry;
+RQ-279 closed.*
 *15 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per
 macro-step — lockstep, ratified)", `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the
 same branch decisions* (integer & packed fields)", `docs/design/principia_dd_simstate_payload.md` § "`_reserved` (u16) —
@@ -9887,6 +9901,12 @@ never calibration values.
 Changes no requirement.
 
 ## R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug
+*Superseded in part by R-446 (the colour: the tagged pixels draw black `#141418` in the outcome view, not
+degenerate's white; the tags show in the debug views).*
+*Still in force: all of it but the colour: the outcome stands, physically right; `η_E` is silently a no-op on every
+free-fall preset; the GUI-docs line stays, reworded by R-446: the near-uniform colour, now black in the outcome view,
+is expected, not a bug; §3.7's exceptions, the contour `E* = V₀` (untagged, integrated, drawn in its outcome's colour)
+and the mass block's tags (kept, `decode_failed`, drawn black).*
 *15 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G6. Legend — generated by evaluating the stain
 (`06_legend.png`)" (a paragraph added) and `plan/rule_groups.yaml`*
 
@@ -9925,3 +9945,416 @@ The human's words are R-440's quote, its second remark ("Call 5").
 - R-441 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-444 — The outcome view shows physical outcomes only, in nine classes: bounded / nothing yet `#141418`, the three pair collisions, triple collision, the three escapes and triple ejection *(supersedes R-96 and R-433 as they apply to the outcome palette's classes and the triple outcomes' swatches)*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (the table, the mnemonic paragraph, "how the table reads the payload" and the triple
+outcomes' paragraph rewritten) and § "4.1 Backbone & `Option` occupants" (event mode's reading),
+`docs/gui/principia_render_gui_spec.md` § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (a
+sentence added) and § "G13. Where the artboards are overridden" (a bullet added), the forward lines of R-96 and R-433,
+REQ-COL-002, REQ-COL-062 and REQ-TOOL-021 (reqio), TASK-M2-32 (new), `plan/tasks.yaml`, `plan/MILESTONES.md` § "M2 —
+Charts, decode and encode", `plan/rule_groups.yaml`, `plan/section_notes.yaml` and `REVIEW_QUEUE.md` (RQ-330); built by
+TASK-M2-32*
+
+The human's message of 16 Oct 2026, in their own words ("These are my rulings (Malachy's, 16 October 2026)"), quoted
+whole here; R-445 to R-448 quote their own items from it:
+
+> "A change to the outcome-state palette (principia_colour_composition.md §1.4) and how the outcome view
+> draws non-outcomes. These are my rulings (Malachy's, 16 October 2026). Record them in decisions.md,
+> port them into the docs, update the requirements through plan/tools/reqio.py, and run
+> python3 plan/check_plan.py before every plan commit. Docs first, then the plan; "Removed lines"
+> notes; one branch, one PR. Do not implement. Where a ruling below supersedes an earlier one, record it
+> as superseding (R-96, R-433, R-399's scope, REQ-COL-062, REQ-COL-053/064's scope, R-71 calibrations
+> confirmed at M1) rather than editing the old ruling.
+>
+> === Rulings ===
+>
+> 1. The outcome view shows physical outcomes only. Nine classes:
+>
+> | outcome | payload | sRGB |
+> |---|---|---|
+> | bounded / nothing yet | bounded, running, and every failure (ruling 3) | #141418 |
+> | collision 0–1 | collision, detail = pair 2 (bodies 0, 1) | #DE2D2D |
+> | collision 0–2 | collision, detail = pair 1 | #2EBC4E |
+> | collision 1–2 | collision, detail = pair 0 | #3462E0 |
+> | triple collision | collision, detail = 3 | #F29620 |
+> | escape body 0 | escape, detail = 0 | #F0DE32 |
+> | escape body 1 | escape, detail = 1 | #E034C6 |
+> | escape body 2 | escape, detail = 2 | #30C8DC |
+> | triple ejection | escape, detail = 3 | #611597 |
+>
+> (Keep R-22's 0-based ids and pair-k-opposite-body-k map.)
+>
+> 2. "Collision @ t = 0" is removed as a class. A collision at t_end_step == 0 is an ordinary pair or
+>    triple collision and draws in that colour. Timing is carried by lightness when a stain wants it
+>    (the outcome x t_end bivariate preset, white = early). Its orange #F29620 is reused for triple
+>    collision. Triple ejection moves from navy #000097, which shares collision 1–2's hue (264° against
+>    265°) and becomes indistinguishable from it once lightness carries another field, to purple
+>    #611597, between blue and magenta in hue and clear of the invalid hatch's violet #9B00FF.
+>
+> 3. "Degenerate" is removed from the outcome view. Black #141418 means "nothing has happened yet, up to
+>    the playhead": bounded, running, and every failure (sim_failed, decode_failed including the η_E
+>    ENERGY_UNSCALABLE / ENERGY_INFEASIBLE tags and mass-block tags such as M01_TINY, non-finite decode,
+>    NaN, infinity) draw black in the outcome view. A view starts black and fills in as events fire.
+>    Failures are shown by debug views, which keep the invalid hatch and their own palettes.
+>    - Running samples draw black in the outcome view instead of the not-yet stipple. The stipple and
+>      its calibrations (R-399, R-434) stand for every other field that uses them (an unset d_min, for
+>      example); only the outcome view changes.
+>    - This resolves the conflict between colour_composition §1.4 / R-96 ("degenerate" = decode_failed,
+>      drawn white) and the chart–decoder contract (hatched pixels are decode_failed, drawn with
+>      debug_invalid). Forbidden chart regions keep the chart contract's forbidden-region treatment in
+>      the outcome view, decided from the chart's own validity (types, primary ranges, validate, Φ), not
+>      from the payload's decode_failed detail, which cannot tell the two hatches apart. Every other
+>      decode_failed sample draws black.
+>    - Update the η_E note on record (the decision that a free-fall slice with η_E on draws "degenerate's
+>      white" everywhere): it now draws black in the outcome view, and the η_E debug view is where the
+>      tags show. The GUI-docs line stays, reworded.
+>
+> 4. An OKLab-uniform variant of the outcome palette, as a second preset: each chromatic class keeps its
+>    own OKLab hue at L = 0.72 and C = 0.123 (the largest chroma in gamut at every hue at that L), so
+>    only hue varies and any brightness-slot field reads cleanly. Bounded stays #141418.
+>
+> | outcome | hue | sRGB |
+> |---|---|---|
+> | collision 0–1 | 27° | #E7857A |
+> | collision 0–2 | 147° | #6EB976 |
+> | collision 1–2 | 265° | #7FA2F2 |
+> | triple collision | 65° | #D99349 |
+> | escape body 0 | 103° | #B3A841 |
+> | escape body 1 | 335° | #D486C3 |
+> | escape body 2 | 208° | #09B9CD |
+> | triple ejection | 305° | #B790E2 |
+>
+> The sRGB palette of ruling 1 stays the default.
+>
+> 5. Greyscale and hue modes (REQ-COL-067/068): K = 9, ranked bounded first (darkest), then collision
+>    0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2, triple ejection.
+>
+> === What to change ===
+>
+> - colour_composition §1.4 (the table, the mnemonic paragraph, "how the table reads the payload", the
+>   triple-outcomes paragraph, the not-yet paragraph's scope), §4.1's three-modes text (K = 11 -> 9 and
+>   the rank), and the legend text that names the classes.
+> - The requirements that pin the nine-class table, REQ-COL-062 (triple swatches), the synthetic-payload
+>   render test (drop the t_end_step == 0 and decode_failed rows from the outcome view; add a triple
+>   collision and a triple ejection row; add rows asserting running, sim_failed and decode_failed draw
+>   #141418 and a forbidden-region pixel draws the forbidden treatment).
+> - Separation evidence for the calibrations (R-71), measured the way REQ-COL-055 measures: the sRGB
+>   palette's closest pair rises from 0.175 to 0.185 with the t = 0 class gone (collision 0–2 / escape
+>   2); purple #611597 clears every entry and the hatch and stipple colours by at least 0.19. Record the
+>   OKLab variant's closest pair as measured; it is closer than the sRGB palette by construction (8
+>   hues at one L and C).
+> - Any GUI-doc text, fixtures or goldens that name collision @ t=0, degenerate white or navy #000097.
+>
+> === Questions to file (REVIEW_QUEUE), not to decide ===
+>
+> - Whether any task already in flight or merged (M1-10's goldens, the outcome palette fixtures,
+>   REQ-COL-053/064 tests) needs re-baselining, and which milestone gate confirms the new swatches.
+>
+> Report the ruling ids, requirement ids, RQ ids and any task ids added or changed."
+
+(Numbered by the orchestrator, applied per R-369: one ruling per numbered item, R-444 to R-448, as R-433 to R-435
+split the M1 gate's message.)
+
+This ruling holds item 1.
+
+*What it decides:*
+- **The outcome view shows physical outcomes only, in nine classes**, read from `state` and the `detail` union:
+  bounded / nothing yet `#141418` (`bounded`, `running` and every failure, R-446); collision 0–1 (`detail` = pair 2)
+  `#DE2D2D`, 0–2 (pair 1) `#2EBC4E` and 1–2 (pair 0) `#3462E0`; triple collision (`detail` = 3) `#F29620`; escape of
+  body 0, 1 and 2 (`detail` = 0, 1, 2) `#F0DE32`, `#E034C6` and `#30C8DC`; triple ejection (`detail` = 3) `#611597`.
+  R-22's 0-based ids and its pair map (pair `k` is the side opposite body `k`) are kept.
+- **The classes it ends**, R-96's palette reading as it applied to the outcome palette: "degenerate" (`decode_failed`,
+  white `#ECECF0`) and "collision at start" (a collision with `t_end_step == 0`, orange) are no longer classes (R-446
+  and R-445 give why), and the triple outcomes are classes of the table, no longer two swatches beside it (RQ-234,
+  decided per R-369; REQ-COL-062).
+- **The triple outcomes' swatches** R-433 confirmed at the M1 gate, `#D6A1FF` and `#000097`, give way to `#F29620`
+  and `#611597` (R-445). Those were R-71 calibrations confirmed at M1; the new values are the human's, and their
+  separation evidence is recorded as R-71 calibrations (REQ-COL-104, below), measured as REQ-COL-055 measures.
+- **R-77 stands:** the state palette is §1.4's nine canonical classes, now these nine.
+
+*Applied:*
+- **colour_composition §1.4**: the table gives the nine classes with their payload readings, in the human's order;
+  the mnemonic paragraph keeps the additive primaries for the pair collisions and the subtractive for the escapes, and
+  names the triple outcomes and bounded as the three classes outside the primaries; "how the table reads the payload"
+  reads `state` and `detail` alone (R-445, R-446); the triple outcomes' paragraph gives the new swatches, the old ones
+  and why they moved, and the measured separation (R-445). §4.1's event mode reads the class from `state` and `detail`.
+- **render_gui_spec §G6**: the outcome legend's keys are the nine classes, the black one reading "bounded / nothing
+  yet". **§G13**: the reference HTML files' event palette (`principia_render_modes.html` and `principia_dev_gui.html`
+  label "coll @ t=0" and "degenerate", and the render-modes catalogue gives "t=0 orange, degenerate white") is
+  overridden by R-444 to R-446, as the artboards' values are by R-68. Applied per R-369: the reference files are
+  records and are not edited (R-159); the override is written where the GUI docs list the others.
+- **The requirements (reqio).** REQ-COL-002's statement gives the nine classes and its verify the human's rows (below);
+  REQ-COL-062 is superseded, its M1 confirmation kept as written, with a sentence added; REQ-TOOL-021's note reads the
+  nine classes as R-444's.
+  - **REQ-COL-002's render test, the human's rows:** the `decode_failed` row (white) and the `t_end_step == 0` row
+    (orange) leave; a triple collision and a triple ejection row stay, at `#F29620` and `#611597`; rows assert that a
+    `running`, a `sim_failed` and a `decode_failed` sample draw `#141418`, and that a forbidden-region pixel draws the
+    forbidden treatment. *Applied per R-369:* a collision at `t_end_step == 0` stays as a row asserting its pair's
+    colour, and a triple collision at `t_end_step == 0` the triple collision's, so that R-445 is tested; the orange
+    "collision @ t=0" class row is the one that leaves.
+- **A new task builds it**, applied per R-369, as R-436 added TASK-M2-31: TASK-M1-10, which built the palette, has
+  merged, so the palette, its render test and the goldens it changes need their own PR. **TASK-M2-32** ("The outcome
+  view conformed to R-444 to R-448"), M2, depending on TASK-M1-10, TASK-M1-14, TASK-M1-17 and TASK-M2-05; reviewers
+  code, qa, physics and gui (physics for REQ-COL-102's definition of how the view reads the chart's classification,
+  R-72). It closes REQ-COL-101 to REQ-COL-105 and re-establishes REQ-COL-002, REQ-COL-062's successor values,
+  REQ-COL-067 and REQ-COL-068 under the changed statements. Applied per R-369: REQ-COL-002, REQ-COL-062, REQ-COL-067 and
+  REQ-COL-068 stay closed by their merged M1 tasks and in the M1 gate's list; `main` meets their changed statements once
+  TASK-M2-32 merges, and whether the M1 gate's record needs anything more is RQ-330's.
+- **The new requirement ids start at REQ-COL-101**, applied per R-369: open PR #223 adds REQ-COL-072 to REQ-COL-100,
+  and reqio numbers from the largest id on `main`, so the ids are moved past #223's to keep both PRs' ids permanent.
+- R-96 and R-433 carry forward and "Still in force" lines (R-292, R-293).
+- R-444 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-002 (statement, verify, rulings, sources, note), REQ-COL-062 (statement, verify, rulings, sources,
+note) and REQ-TOOL-021 (rulings, note); adds TASK-M2-32.
+
+## R-445 — "Collision @ t = 0" is no longer a class: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and lightness carries timing; the orange `#F29620` goes to triple collision, and triple ejection moves from navy `#000097` to purple `#611597` *(supersedes R-96 and R-433 as they apply to "collision at start", the triple swatches and the first-step triple collision's orange)*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (the triple outcomes' paragraph and the timing sentence) and § "4.1 Backbone & `Option`
+occupants" (the bivariate family: a sentence added), `docs/contracts/principia_render_contract.md` § "Presentation
+layer (hand-written, small, reused by every debug view)" (a sentence added), the forward lines of R-96 and R-433,
+REQ-COL-002, REQ-COL-055, REQ-COL-062 and REQ-GUI-030 (reqio), REQ-COL-104 (reqio, new), TASK-M2-32, TASK-M7-17 (a
+deliverable and a note), `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-330, RQ-331); built by TASK-M2-32 and
+TASK-M7-17*
+
+The human's words (R-444 quotes the whole message):
+
+> "2. "Collision @ t = 0" is removed as a class. A collision at t_end_step == 0 is an ordinary pair or
+>    triple collision and draws in that colour. Timing is carried by lightness when a stain wants it
+>    (the outcome x t_end bivariate preset, white = early). Its orange #F29620 is reused for triple
+>    collision. Triple ejection moves from navy #000097, which shares collision 1–2's hue (264° against
+>    265°) and becomes indistinguishable from it once lightness carries another field, to purple
+>    #611597, between blue and magenta in hue and clear of the invalid hatch's violet #9B00FF."
+
+*What it decides:*
+- **"Collision @ t = 0" is no longer a class.** A collision at `t_end_step == 0` is an ordinary pair or triple
+  collision and draws in that colour. R-96's reading "collision at start" (a collision with `t_end_step == 0`) leaves
+  the outcome palette, and with it R-433's "no veto on a first-step triple collision drawing in the t=0 orange" (PR
+  #178's decision per R-369), which has nothing left to apply to. The payload is unchanged: a valid IC inside `r_coll`
+  is still a collision at step 0 (payload §2, R-13, REQ-ENC-033); only its colour changes.
+- **Timing is carried by lightness** when a stain wants it: the outcome × `t_end` bivariate preset, the outcome class
+  in the colour slot and `t_end` in the brightness slot, white = early (`t_end`'s polarity, colour_composition §1.2).
+- **Triple collision takes the orange `#F29620`.**
+- **Triple ejection moves from navy `#000097` to purple `#611597`**: navy shares collision 1–2's hue and becomes
+  indistinguishable from it once lightness carries another field; purple sits between blue and magenta in hue and
+  clear of the hatch's violet `#9B00FF`.
+
+*Measured (applied per R-369, as REQ-COL-055 measures: Euclidean distance in OKLab, from 8-bit sRGB through
+dd_colouring §3.1's transforms; the script is the PR's):*
+- **Navy against collision 1–2**: OKLab hue 264.1° against 265.1°, the human's 264° and 265°.
+- **Purple `#611597`**: OKLab L 0.401, C 0.190, hue 305.1°, between collision 1–2's 265.1° and escape 1's 335.2°. Its
+  distances: 0.192 from the "not yet" grey `#4E4E4E`, 0.193 from collision 1–2 and from the hatch's violet `#9B00FF`,
+  0.272 from escape 1, 0.277 from bounded, 0.316 from the stipple's dot `#909090`, 0.580 from the hatch's cyan
+  `#48FFFF`, and more from the rest. The nearest is 0.1915: the human's "by at least 0.19" holds. It is 0.217 from the
+  pending hatch's `#0000FF` and 0.373 from the fallback tint's `#FF69FF` (debug_tooling_plan §G), and the hatch's
+  nearest entries are unchanged (violet's, plasma at 0.142; cyan's, Turbo at 0.112; render contract Part 5).
+- **The sRGB palette's closest pair** is **0.175**, triple collision `#F29620` against escape 0 `#F0DE32`, not the
+  human's 0.185. The 0.175 was the old palette's closest pair, collision @ t=0 against escape 0; the orange stays in the
+  palette as triple collision, so the pair stays. With the orange left out, the closest pair would be 0.185, collision
+  0–2 against escape 2, the human's figure. Transcribed as the human gave it, with the measured value beside it, in
+  colour_composition §1.4 and REQ-COL-104; no swatch is changed. **RQ-331** puts it to the human.
+
+*Applied:*
+- colour_composition §1.4's triple outcomes' paragraph gives the swatches, the old ones and the reason; "how the table
+  reads the payload" says a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and that
+  timing is the outcome × `t_end` preset's. §4.1's bivariate family names that preset.
+- The render contract's hatch bullet gains a sentence: purple's distances from the hatch, its nearest entries unchanged.
+- **The outcome × `t_end` preset**, applied per R-369: the corpus has no such preset yet; it is of §4.1's bivariate
+  family and render_gui_spec §11's bivariate presets, so TASK-M7-17, which builds that list (n̂ × FTLE, n̂ × `t_end`,
+  outcome-state × FTLE, …), gains it, and REQ-GUI-030 a note.
+- **REQ-COL-104 (new, M2, calibration, R-71)**: the sRGB palette's separation evidence, measured as REQ-COL-055
+  measures, proposed by TASK-M2-32 with the figures above and confirmed at the gate RQ-330 asks for. REQ-COL-062
+  (calibration, confirmed at M1) is superseded rather than edited: its statement keeps the M1 confirmation and gains a
+  sentence naming R-445's values and REQ-COL-104. REQ-COL-055 gains a note: purple leaves the hatch's nearest entries
+  unchanged.
+- R-96 and R-433 carry forward and "Still in force" lines (R-292, R-293).
+- R-445 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-104; changes REQ-COL-002, REQ-COL-055 (rulings, sources, note), REQ-COL-062 and REQ-GUI-030 (rulings,
+sources, note).
+
+## R-446 — "Degenerate" leaves the outcome view: black `#141418` means nothing has happened yet, up to the playhead, and bounded, running and every failure draw it; failures show in the debug views; forbidden chart regions keep the chart contract's hatch, decided from the chart's validity *(supersedes R-96, R-399 and R-441 as they apply to the outcome view)*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" ("how the table reads the payload" and the "not yet" paragraph's scope) and § "4.1
+Backbone & `Option` occupants" ("What every mode keeps"), `docs/gui/principia_render_gui_spec.md` § "G6. Legend —
+generated by evaluating the stain (`06_legend.png`)" (R-441's paragraph reworded),
+`docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every debug
+view)" (the stipple bullet's last clause), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit
+square — each axis's extension type (R-407)" (a sentence added), the forward lines of R-96, R-399 and R-441, REQ-COL-002, REQ-COL-053,
+REQ-COL-064, REQ-TOOL-162, REQ-GUI-105 and REQ-CHART-054 (reqio), REQ-COL-101 and REQ-COL-102 (reqio, new),
+TASK-M2-32, TASK-M8-05 (an acceptance line and a note), `plan/section_notes.yaml` (R-441's note), `plan/rule_groups.yaml`
+and `REVIEW_QUEUE.md` (RQ-330, RQ-333); built by TASK-M2-32 and TASK-M8-05*
+
+The human's words (R-444 quotes the whole message):
+
+> "3. "Degenerate" is removed from the outcome view. Black #141418 means "nothing has happened yet, up to
+>    the playhead": bounded, running, and every failure (sim_failed, decode_failed including the η_E
+>    ENERGY_UNSCALABLE / ENERGY_INFEASIBLE tags and mass-block tags such as M01_TINY, non-finite decode,
+>    NaN, infinity) draw black in the outcome view. A view starts black and fills in as events fire.
+>    Failures are shown by debug views, which keep the invalid hatch and their own palettes.
+>    - Running samples draw black in the outcome view instead of the not-yet stipple. The stipple and
+>      its calibrations (R-399, R-434) stand for every other field that uses them (an unset d_min, for
+>      example); only the outcome view changes.
+>    - This resolves the conflict between colour_composition §1.4 / R-96 ("degenerate" = decode_failed,
+>      drawn white) and the chart–decoder contract (hatched pixels are decode_failed, drawn with
+>      debug_invalid). Forbidden chart regions keep the chart contract's forbidden-region treatment in
+>      the outcome view, decided from the chart's own validity (types, primary ranges, validate, Φ), not
+>      from the payload's decode_failed detail, which cannot tell the two hatches apart. Every other
+>      decode_failed sample draws black.
+>    - Update the η_E note on record (the decision that a free-fall slice with η_E on draws "degenerate's
+>      white" everywhere): it now draws black in the outcome view, and the η_E debug view is where the
+>      tags show. The GUI-docs line stays, reworded."
+
+*What it decides:*
+- **"Degenerate" leaves the outcome view.** Black `#141418` means "nothing has happened yet, up to the playhead":
+  `bounded`, `running` and every failure draw it in the outcome view: `sim_failed`, `decode_failed` (whatever its
+  `detail` and tag: η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite
+  decode), NaN and infinity. A view starts black and fills in as events fire.
+- **Failures are shown by the debug views**, which keep the invalid hatch and their own palettes.
+- **Running samples draw black in the outcome view, not the "not yet" stipple.** The stipple and its calibrations
+  (R-399, R-434) stand for every other field that uses them, an unset `d_min` among them; only the outcome view
+  changes.
+- **The conflict it resolves:** colour_composition §1.4 and R-96 drew `decode_failed` as degenerate's white, while the
+  chart contract draws its hatched pixels, which are `decode_failed`, with `debug_invalid` (chart_decoder_contract
+  Part 3).
+- **Forbidden chart regions keep the chart contract's forbidden-region treatment**, the hatch, in the outcome view,
+  decided from the chart's own validity (its axes' extension types, their primary ranges, `validate`, `Φ`), never from
+  the payload's `decode_failed` detail, which cannot tell the two hatches apart. Every other `decode_failed` sample
+  draws black.
+- **R-441's note is updated:** a free-fall slice with `η_E` on draws black in the outcome view, not degenerate's white;
+  the tags show in the η_E debug view. The GUI-docs line stays, reworded.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **Which hatched pixels keep the hatch.** The chart contract hatches a pixel "as forbidden" in two cases (Part 3): a
+  bounded axis past its edge (the domain's end) and the universal fallback, a `Φ` that fails to evaluate or a state
+  that fails `validate`'s layers 2 and 3. R-408 tells the two apart only for the area statistics. Both are "hatched as
+  forbidden" in the contract's words, so both keep the hatch in the outcome view, decided by the classifier the
+  statistics use (Part 3's order); a `decode_failed` sample the chart does not hatch draws black.
+- **How the view learns it** is not in the corpus: the outcome palette reads the payload, and the classification is
+  the chart's, computed on the CPU (R-26). It is a definition requirement (R-72), **REQ-COL-102**: TASK-M2-32 writes in
+  colour_composition §3 how a sample's chart classification reaches the outcome view (a `ctx` field, its type and who
+  fills it), reviewed by the physics reviewer. Inside `[0,1]²` the classification is `validate`'s and `Φ`'s (TASK-M2-05's
+  `Chart` trait); past it, the extension types are TASK-M8-05's (R-407), which gains an acceptance line: its hatched
+  pixels draw the hatch in the outcome view.
+- **A reserved `state` code (6 or 7)** is no physical outcome and no class: it draws black in the outcome view, as the
+  failures do, and keeps the hatch in the `state` debug view, which shows it (`m1-synthetic/set_state`). The human's
+  list of failures does not name it; black follows "The outcome view shows physical outcomes only" (R-444).
+- **The three modes.** The outcome class now holds a value for every sample: `running` and every failure are its
+  bounded / nothing yet class. So in greyscale and hue mode they take that class's place, rank 0 (R-448), and no longer
+  the "not yet" style or the hatch; a forbidden chart region keeps the hatch in every mode, decided from the chart.
+  colour_composition §4.1's "What every mode keeps" says so; it stands unchanged for every other field.
+- **The η_E debug view.** The corpus names no view by that name. The debug views that show a failure are the `state`
+  view (`decode_failed` in its `dbg_cat` colour) and the `detail` view (the failure category: `decode_failed`'s
+  `detail` codes, payload §2), debug_tooling_plan §B; neither tells `ENERGY_UNSCALABLE` from `ENERGY_INFEASIBLE`. The
+  reworded GUI-docs line names the human's view and those two; which view the human means is **RQ-333**.
+- **The mass block's tags and #225's.** PR #225 (TASK-M2-09, in flight) tags an infeasible invariant-chart pixel
+  `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed` detail 3. Inside `[0,1]²` the invariant warp maps every pixel
+  feasible (chart_reference §2.1), so the tag arises past the square, where the warp's axes are bounded and the chart
+  hatches the pixel: there it keeps the hatch, from the chart's classification; anywhere the chart does not hatch it,
+  it draws black.
+
+*Applied:*
+- **colour_composition §1.4**: "how the table reads the payload" gives black's meaning, the failures it covers, the
+  debug views and the forbidden regions; the "not yet" paragraph's scope leaves the outcome view out. **§4.1**'s "What
+  every mode keeps" gives the outcome class's case.
+- **render_gui_spec §G6**: R-441's paragraph reworded: the tagged pixels draw black in the outcome view, the near-uniform
+  black is expected, and the tags show in the debug views.
+- **The render contract's stipple bullet**: "the outcome palette's `running` class included" becomes the outcome
+  view's exception. **The chart contract's Part 3** gains a sentence: the outcome view keeps the hatch, decided from the
+  classification.
+- **The requirements (reqio).** REQ-COL-101 (new, M2): the outcome view draws `running`, `sim_failed`, `decode_failed`
+  and a reserved `state` code `#141418`, and a forbidden chart region the hatch, decided from the chart, in every mode.
+  REQ-COL-102 (new, M2, definition, R-72): how the view reads the classification. REQ-COL-053's, REQ-COL-064's and
+  REQ-TOOL-162's statements gain their scope (the outcome view draws `running` black) and keep their confirmations;
+  REQ-GUI-105 gains a note (the outcome legend's keys); REQ-CHART-054's verify gains the outcome view's hatch, and
+  TASK-M8-05 the line. REQ-COL-002's verify carries the human's rows (R-444).
+- R-96, R-399 and R-441 carry forward and "Still in force" lines (R-292, R-293); R-441's section note says so.
+- R-446 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-101 and REQ-COL-102; changes REQ-COL-002, REQ-COL-053, REQ-COL-064 and REQ-TOOL-162 (statement, rulings,
+sources, note), REQ-GUI-105 (rulings, sources, note) and REQ-CHART-054 (verify, rulings, sources, note).
+
+## R-447 — The outcome palette has an OKLab-uniform variant as a second preset: each chromatic class at its own OKLab hue, L = 0.72 and C = 0.123; bounded stays `#141418`; the sRGB palette stays the default
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (a paragraph and a table added), `docs/contracts/principia_render_contract.md` §
+"Presentation layer (hand-written, small, reused by every debug view)" (a clause of R-445's sentence), REQ-COL-103 and
+REQ-COL-105 (reqio, new), TASK-M2-32,
+TASK-M7-17 (a note), `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-330, RQ-332); built by TASK-M2-32*
+
+The human's words (R-444 quotes the whole message):
+
+> "4. An OKLab-uniform variant of the outcome palette, as a second preset: each chromatic class keeps its
+>    own OKLab hue at L = 0.72 and C = 0.123 (the largest chroma in gamut at every hue at that L), so
+>    only hue varies and any brightness-slot field reads cleanly. Bounded stays #141418.
+>
+> | outcome | hue | sRGB |
+> |---|---|---|
+> | collision 0–1 | 27° | #E7857A |
+> | collision 0–2 | 147° | #6EB976 |
+> | collision 1–2 | 265° | #7FA2F2 |
+> | triple collision | 65° | #D99349 |
+> | escape body 0 | 103° | #B3A841 |
+> | escape body 1 | 335° | #D486C3 |
+> | escape body 2 | 208° | #09B9CD |
+> | triple ejection | 305° | #B790E2 |
+>
+> The sRGB palette of ruling 1 stays the default."
+
+*What it decides:*
+- **A second preset of the outcome palette, OKLab-uniform:** each chromatic class at its own OKLab hue (the sRGB
+  class's hue, rounded to a degree), at L = 0.72 and C = 0.123, so only hue varies and a field in the brightness slot
+  reads cleanly; bounded stays `#141418`. The swatches are the table's.
+- **The sRGB palette of R-444 stays the default.**
+
+*Measured (applied per R-369, as REQ-COL-055 measures; dd_colouring §3.1's transforms):*
+- **The hues** are the sRGB classes' own, rounded: 26.8°, 146.7°, 265.1°, 65.3°, 103.0°, 335.2°, 208.5° and 305.1°.
+- **The swatches as ruled** measure L 0.719 to 0.721, C 0.122 to 0.124, and each hue within 0.5° of its row. Five
+  are the 8-bit rounding of (L 0.72, C 0.123, the row's hue); three differ by one or two 8-bit steps in one channel:
+  `#6EB976` (computed `#6DB976`), `#D99349` (`#D9934A`) and `#09B9CD` (`#07B9CD`).
+- **C = 0.123 is in gamut at every listed hue**, the narrowest being escape 2's 208°, where the largest in-gamut chroma
+  at L = 0.72 is 0.1238. **It is not "the largest chroma in gamut at every hue at that L"**: over all hues, that is
+  0.1224, at about 199.8°, so C = 0.123 is out of gamut near there, though at no listed hue.
+- **The closest pair is 0.063**, escape 1 (335°) against triple ejection (305°), the two hues 30° apart: a chord of
+  `2C·sin(15°)` = 0.064 at one L and C. Four more pairs are under 0.101: collision 0–1 against triple collision (0.079),
+  triple collision against escape 0 (0.081), collision 1–2 against triple ejection (0.084) and collision 0–2 against
+  escape 0 (0.091). Closer than the sRGB palette by construction, as the human said. Each chromatic swatch is at least
+  0.139 from the stipple's dot, 0.196 from the hatch's colours, 0.132 from the fallback tint and 0.320 from the "not
+  yet" grey.
+
+The two departures, C against the largest in-gamut chroma and the three swatches' rounding, are transcribed as the
+human gave them, the measured values beside them, and put to the human in **RQ-332**; no swatch is changed.
+
+*Applied:*
+- colour_composition §1.4 gains the variant's paragraph and table, with the measured values and RQ-332.
+- **REQ-COL-103 (new, M2)**: the variant, a second named swatch set of the outcome palette, selectable, the sRGB set the
+  default; its render test. **REQ-COL-105 (new, M2, calibration, R-71)**: its separation evidence, as measured, proposed
+  by TASK-M2-32 and confirmed at the gate RQ-330 asks for.
+- **Where the preset lives**, applied per R-369: in M2 it is a second swatch set on the outcome palette's occupant
+  (TASK-M2-32), selectable where the swatches are edited; the preset library (TASK-M7-17) lists it with the outcome
+  palette, a note there says so.
+- R-447 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-103 and REQ-COL-105.
+
+## R-448 — Greyscale and hue modes rank the outcome class's nine classes bounded first, then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2 and triple ejection: `K = 9`
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
+(greyscale mode's rank), REQ-COL-067 and REQ-COL-068 (reqio), TASK-M2-32 and `plan/rule_groups.yaml`; built by
+TASK-M2-32*
+
+The human's words (R-444 quotes the whole message):
+
+> "5. Greyscale and hue modes (REQ-COL-067/068): K = 9, ranked bounded first (darkest), then collision
+>    0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2, triple ejection."
+
+*What it decides:* the outcome class has `K = 9` classes in greyscale and hue mode, ranked bounded first, the
+darkest, then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2 and triple ejection. Rank `r` takes
+`B = (r + ½)/9` in greyscale mode and `t = r/9` in hue mode, as §4.1 defines them (REQ-COL-067, REQ-COL-068); the
+definitions are otherwise unchanged. Bounded's rank 0 holds `running` and every failure too (R-446).
+
+*Applied:* colour_composition §4.1's greyscale bullet gives the rank and `K = 9`, in place of TASK-M1-14's `K = 11`
+(REQ-COL-067's definition, physics-reviewed); hue mode reads the same rank. REQ-COL-067 and REQ-COL-068 (reqio) gain
+R-448 and the rank in their verify. TASK-M2-32 conforms the code (`colour_independence`'s ranks) and its tests.
+R-448 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-067 and REQ-COL-068 (verify, rulings, sources, note).

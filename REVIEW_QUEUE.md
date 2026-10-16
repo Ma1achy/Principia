@@ -209,3 +209,135 @@ Nothing is chosen.*
   4 substeps up to `N_max` 64 (`crates/gui/src/mock/profile.rs`, `SUBSTEPS_PER_PIXEL`), the cap marked at 64, with a
   note naming this entry; the real engine's side has no trace, so draws nothing.
 - **Waits:** TASK-M8-28 (REQ-TOOL-098's histogram on real data). TASK-M6-28 does not wait.
+
+## RQ-330: R-444 to R-448 change what merged M1 tasks built and what their goldens hold; which goldens, fixtures and tests are re-baselined, under what decision, and which gate confirms the new swatches and their evidence *(the human's question, R-444 to R-448, R-110, R-71, REQ-COL-002, REQ-COL-053, REQ-COL-062, REQ-COL-064, REQ-COL-067, REQ-COL-068, REQ-COL-104, REQ-COL-105; context: TASK-M2-32)*
+
+*Filed at the human's request in their message of 16 Oct 2026 (R-444 quotes it): "Whether any task already in flight
+or merged (M1-10's goldens, the outcome palette fixtures, REQ-COL-053/064 tests) needs re-baselining, and which
+milestone gate confirms the new swatches." Nothing is chosen. For the human: yes (a gate and a re-baseline, R-110).*
+
+- **File, section:**
+  - `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default
+    palette" and § "4.1 Backbone & `Option` occupants", as R-444 to R-448 leave them.
+  - `plan/WORKFLOW.md` § "Conventions: crates and runners (R-146)", the golden-image row: "no baseline is re-baselined
+    without a gate decision (R-110)". § "Human checkpoints: the milestone gates": every calibration (R-71) is confirmed
+    by the human at its milestone's gate.
+- **What changes, by owner** (merged unless marked):
+  - **Goldens** (`fixtures/golden/`, rows in `BASELINES.md`): `m1-outcome/outcome` and `m1-outcome/outcome_edited`
+    (TASK-M1-10; last re-rendered by R-434, confirmed by R-435) draw every class, the white "degenerate" and the orange
+    t = 0 rows, the triple swatches `#D6A1FF` and `#000097`, and `running` in the stipple; `m1-synthetic/known_escaper`
+    (TASK-M1-14; R-434, R-435) draws a triple ejection in navy and a running sample in the stipple. Each changes under
+    R-444 to R-446. `m1-outcome/state_view`, `detail_view`, `m1-synthetic/set_state` and `forced_failure` are debug
+    views and do not change. No other fixture names a removed class or navy (`fixtures/cvd/goldens.json` holds the
+    simulation matrices, not the palette).
+  - **Test data asserted against** (`crates/render/tests/`): `outcome_state.rs` (TASK-M1-10, TASK-M1-17: the eleven
+    swatches, navy, a triple collision at `t = 0` in orange); `not_yet_grey.rs` (TASK-M1-09: the grey's separation from
+    "degenerate" `#ECECF0` and "collision @ t=0"); `colour_independence.rs` (TASK-M1-14: the eleven classes, `K = 11`);
+    `support/palettes.rs` (TASK-M1-10, TASK-M1-13, TASK-M7-20: the outcome entries every hatch, stipple and
+    colour-vision measurement runs over, REQ-COL-055, REQ-COL-061 and REQ-COL-064 among them); and qa's files, which only
+    qa changes (R-290): `qa_TASK-M1-03.rs`, `qa_TASK-M1-10.rs` (white, navy, "collision at start"),
+    `qa_TASK-M1-14_independence.rs` (`K = 11`, the orange) and `qa_TASK-M1-18_r434.rs` (navy against the dot).
+  - **Code**: `crates/render/src/colour/outcome.rs` and `crates/render/shaders/wgsl/frag/colour/outcome_state.wgsl`
+    (TASK-M1-10, TASK-M1-17), `crates/validation/src/golden_scene.rs`'s outcome scenes, and the GUI mock's Inspector
+    labels "collision @ t=0" and "degenerate" (`crates/gui/src/tests/mock_content.rs`, TASK-M6-27). The Legend reads
+    `SWATCHES` (`crates/engine/src/contract/legend.rs`, TASK-M6-27, TASK-M6-29), so it follows the code.
+  - **Requirements claimed by merged tasks whose statements change**: REQ-COL-002 and REQ-COL-062 (TASK-M1-10),
+    REQ-COL-053 (TASK-M1-09), REQ-COL-064 and REQ-TOOL-162 (TASK-M1-17), REQ-COL-067 and REQ-COL-068 (TASK-M1-14). They
+    stay closed by those tasks and in the M1 gate's list; none is reopened. `main` meets the changed statements once
+    TASK-M2-32 merges.
+  - **In flight**: PR #223 (the Chazy rulings) quotes the old §4.1 text (`K = 11`, "degenerate", "collision @ t=0")
+    as context and offers, in its entry on what the Chazy stains draw for `decode_failed`, "the outcome palette's
+    degenerate white `#ECECF0`" as an option, which R-446 removes; it draws B as "the event palette's bounded" `#141418`,
+    unchanged. PR #225 (TASK-M2-09) adds `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed`/3, which the outcome view
+    draws black or, where the chart hatches it, with the hatch (R-446). PR #224 (TASK-M6-30) and PR #219 (TASK-M7-05) do
+    not use the outcome palette's classes.
+- **Options seen, the re-baseline:**
+  - (a) The swatches are the human's (R-444 to R-446), as R-434's dot was, so TASK-M2-32 re-renders the three goldens
+    under those rulings, each `BASELINES.md` row leading with the ruling, confirmed at it (as R-434's seven were).
+  - (b) TASK-M2-32 re-renders them as proposals, marked for the gate the human names below, and they are confirmed
+    there (R-110).
+- **Options seen, the gate that confirms the new swatches' evidence** (REQ-COL-104, REQ-COL-105, both M2, calibration):
+  - (a) The M2 gate, TASK-M2-32's milestone and the requirements' as filed.
+  - (b) None: R-444 to R-447 are the confirmation, and the evidence is checked in review, so REQ-COL-104 and
+    REQ-COL-105 become ordinary requirements (`kind` cleared).
+  - (c) The M7 gate, with the other palette calibrations (REQ-COL-061's colour-vision check, which runs over the same
+    entries, and PR #223's Chazy palettes, if it merges), the requirements moved to M7.
+- **Options seen, the M1 gate's record:** (i) the M1 gate stays passed, and the changed M1 requirements are re-checked
+  as "every earlier gate still green" at the next gate; (ii) the M1 gate is re-run once TASK-M2-32 has merged.
+- **Applied meanwhile:** REQ-COL-104 and REQ-COL-105 are filed in M2, TASK-M2-32's milestone. TASK-M2-32 waits on this
+  entry for its goldens' `BASELINES.md` decision only; its code and tests do not wait.
+- **Waits:** the `BASELINES.md` rows of TASK-M2-32's re-rendered goldens; REQ-COL-104's and REQ-COL-105's gate.
+
+## RQ-331: the sRGB outcome palette's closest pair is 0.175 (triple collision against escape 0), not the 0.185 R-444's message gives, because the orange stays as triple collision *(measurement against a ruled figure, R-445, R-71, REQ-COL-104; context: TASK-M2-32)*
+
+*Found porting R-444 to R-448, measuring as REQ-COL-055 measures. Nothing is chosen; no swatch is changed. For the
+human: yes (a calibration's evidence, R-71).*
+
+- **File, section:**
+  - `decisions.md` § "R-444 — …", the human's message, "What to change": "the sRGB palette's closest pair rises from
+    0.175 to 0.185 with the t = 0 class gone (collision 0–2 / escape 2)".
+  - The same message, item 2: "Its orange #F29620 is reused for triple collision."
+  - `docs/design/principia_colour_composition.md` § "1.4 …", the triple outcomes' paragraph, where both values are
+    recorded.
+- **Measured** (Euclidean OKLab distance from 8-bit sRGB through dd_colouring §3.1's transforms): in the nine-class
+  palette of R-444, the closest pair is triple collision `#F29620` against escape 0 `#F0DE32`, **0.1751**; next,
+  collision 0–2 against escape 2, **0.1847**; then collision 1–2 against triple ejection, 0.1926. The old palette's
+  0.175 was collision @ t=0 against escape 0, the same two colours. 0.185 is the closest pair only with the orange left
+  out of the palette.
+- **Options seen:**
+  - (a) Record 0.175 (triple collision / escape 0) as the palette's closest pair, the swatches as ruled.
+  - (b) Change a swatch so that the closest pair is 0.185 or more (for instance triple collision's orange), which is a
+    new ruling.
+- **Applied meanwhile:** both figures are recorded, the human's and the measured; REQ-COL-104's evidence gives both.
+- **Waits:** REQ-COL-104's confirmation (RQ-330's gate).
+
+## RQ-332: R-447's C = 0.123 is in gamut at the eight listed hues but is not "the largest chroma in gamut at every hue at that L" (0.1224), and three of its swatches differ by one or two 8-bit steps from (0.72, 0.123, hue) *(measurement against a ruled figure, R-447, R-71, REQ-COL-103, REQ-COL-105; context: TASK-M2-32)*
+
+*Found porting R-447, measuring with dd_colouring §3.1's transforms. Nothing is chosen; no swatch is changed. For the
+human: yes (a calibration's evidence, R-71).*
+
+- **File, section:**
+  - `decisions.md` § "R-447 — …", the human's words: "each chromatic class keeps its own OKLab hue at L = 0.72 and C
+    = 0.123 (the largest chroma in gamut at every hue at that L)", and the table's swatches.
+  - `docs/design/principia_colour_composition.md` § "1.4 …", the variant's paragraph, where both values are recorded.
+- **Measured:**
+  - The largest chroma in the sRGB gamut at every hue at L = 0.72 is **0.1224**, at a hue near 199.8°: at C = 0.123 a
+    hue there is out of gamut. At each of the eight listed hues C = 0.123 is in gamut; the narrowest is escape 2's 208°,
+    whose largest in-gamut chroma is 0.1238.
+  - The swatches as ruled measure L 0.719 to 0.721, C 0.122 to 0.124, each hue within 0.5° of its row. Rounding
+    (0.72, 0.123, hue) to 8 bits gives the ruled swatch for five rows and, for three, `#6DB976` (ruled `#6EB976`),
+    `#D9934A` (`#D99349`) and `#07B9CD` (`#09B9CD`).
+  - The variant's closest pair is 0.063 (escape 1 / triple ejection); the human said it would be closer than the sRGB
+    palette by construction, and it is. Recorded, not a departure.
+- **Options seen:**
+  - (a) Keep C = 0.123 and the swatches as ruled; the parenthesis reads "in gamut at every listed hue", and the
+    swatches are the ruled hex values, not a computed rounding.
+  - (b) Take C = 0.1224 (in gamut at every hue) and recompute the eight swatches.
+  - (c) Keep C = 0.123 and replace the three swatches with the computed rounding.
+- **Applied meanwhile:** the ruled values are transcribed, the measured beside them; REQ-COL-103 pins the ruled hex
+  values and REQ-COL-105's evidence gives the measurements.
+- **Waits:** REQ-COL-105's confirmation (RQ-330's gate). TASK-M2-32 builds the ruled swatches meanwhile.
+
+## RQ-333: R-446 sends the η_E tags to "the η_E debug view", which the corpus does not define *(silence, R-446, R-441, R-72, REQ-COL-101; context: TASK-M2-32)*
+
+*Found porting R-446. Nothing is chosen. For the human: no; decidable per R-369, unless the human meant a new view.*
+
+- **File, section:**
+  - `decisions.md` § "R-446 — …", the human's words: "it now draws black in the outcome view, and the η_E debug view
+    is where the tags show".
+  - `docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)":
+    the `state` view draws `decode_failed` in its `dbg_cat` colour, and the `detail` view its failure category,
+    `decode_failed`'s codes 0 to 3 (payload §2). No view is named for `η_E`.
+  - `docs/design/principia_dd_decoder.md` § "3.7 Energy normalisation (optional; keep-or-drop is decision B9)" (the tags `ENERGY_UNSCALABLE` and
+    `ENERGY_INFEASIBLE`); the payload records each as `decode_failed` with a `detail` code, so no stored field tells
+    the two tags apart from each other or from `M01_TINY` beyond that code.
+- **Silence:** which debug view "the η_E debug view" is, and whether it must tell `ENERGY_UNSCALABLE`,
+  `ENERGY_INFEASIBLE` and the mass block's tags apart, which the payload's `detail` alone may not.
+- **Options seen:**
+  - (a) The existing `state` and `detail` views are where the tags show; nothing new is built.
+  - (b) A decoded-IC debug preset (fragment-side, from `ctx.chart.z`, as DECODE is, R-75) that re-runs the decode's
+    `η_E` branch and draws each tag in its own colour.
+  - (c) A further `detail` code for the energy tags, a payload change by ruling.
+- **Applied meanwhile:** render_gui_spec §G6's reworded line names the human's view and says the `state` and `detail`
+  views show the failure today, pointing here.
+- **Waits:** nothing built; REQ-COL-101's outcome-view behaviour does not depend on it.

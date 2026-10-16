@@ -159,7 +159,9 @@ a non-positive mass), is hatched as forbidden. The pixel's check is layers 2 and
 "After encoding") is the encode path's, on lookup and lock, and never applied to a pixel inside `[0,1]²` either, so an
 affine latent axis whose `z` leaves `[0,1]⁸` past the edge is not hatched for that. This covers physical-quantity axes
 automatically: energy beyond what is reachable hatches. A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload §2), it
-is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5).
+is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5). The outcome view keeps
+the hatch too, decided from this classification, not from the payload's `decode_failed` detail; there every other
+`decode_failed` sample draws black (R-446; colour_composition §1.4).
 
 **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
 needs physics review. The existing charts' types are in `principia_chart_reference.md` §5.4.

@@ -336,6 +336,9 @@ with dd_colouring §3.1's sRGB transfer.
   the stripes stay visible without colour vision. `dbg_hash_u32` can
   give any colour, but never a pattern. The human confirms the pattern and colours at the M1 gate.
   **Confirmed at the M1 gate as proposed (R-428):** violet `#9B00FF`, cyan `#48FFFF`, stripes 4 px wide.
+  With R-445's triple ejection, purple `#611597`, in the outcome palette, the nearest entries are unchanged: purple is
+  0.193 from violet and 0.580 from cyan, and R-447's OKLab-uniform swatches at least 0.235 and 0.196
+  (colour_composition §1.4; REQ-COL-104, REQ-COL-105).
   **Under each colour-vision simulation (R-429; REQ-COL-061, R-386)** the hatch stays distinguishable from every
   palette entry above, by the criterion confirmed beside it: τ is the OKLab distance from `#FF00FF` to `#E034C6`,
   0.101; under each simulation it passes by colour, each stripe colour farther than τ from every palette entry, both
@@ -348,7 +351,8 @@ with dd_colouring §3.1's sRGB transfer.
   not the hatch's diagonal stripes, so the two never read as one another, and it is never one flat colour, so no ramp
   value, greyscale included, collides with it. The grey's value (REQ-COL-053, proposed by TASK-M1-09) and the
   stipple's pattern (REQ-COL-064, proposed by TASK-M1-17) are confirmed by the human at the M1 gate. It lives in `present.wgsl`
-  beside `DBG_NOT_YET`; every view that shows "not yet" calls it, the outcome palette's `running` class included.
+  beside `DBG_NOT_YET`; every view that shows "not yet" calls it. The outcome view does not: there `running` samples
+  draw bounded's `#141418` (R-446; colour_composition §1.4).
   **Confirmed at the M1 gate:** the grey `#4E4E4E` (R-433), and the stipple as a 2 × 2 px dot of `#909090` in each
   4 × 4 physical-pixel cell, where bit 1 of `p.x` and of `p.y` are both 0, its dots changed from the proposed `#808080`
   (R-434). No flat colour of any palette comes within the hatch's τ = 0.101 of every pixel of a 4 × 4 block (the
