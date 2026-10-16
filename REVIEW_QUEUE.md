@@ -308,3 +308,41 @@ Nothing is chosen.*
   state or `λ`.
 - **Waits:** REQ-DEC-002 (`rq: RQ-296`), TASK-M2-07's closing of it. TASK-M2-07's PR does not wait: it merges with
   REQ-DEC-002 held, not closed.
+
+## RQ-298: An explicit `fma` is not fused on every backend: lavapipe evaluates it as a rounded product and an add, against the determinism note's rule 6 *(conflict: corpus premise against measurement, R-34, R-84; context: TASK-M2-07)*
+
+*Found by TASK-M2-07's CI (qa review 5543656052 R1). TASK-M2-07 no longer relies on the premise; other branch inputs do.*
+
+- **File, section:**
+  - `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)", rule 2:
+    "an **explicitly written** `fma(dy, dy, dx*dx)` (explicit `fma` forces every backend onto the identical fused op
+    instead of choosing)"; rule 6: "Written as `a*b + c`, one compiler contracts and another does not; written as
+    `fma(a, b, c)`, every backend takes the fused path."
+  - `docs/design/principia_dd_decoder.md` § "3.1 Mass", "Its premise": "The form holds only on a backend that keeps an
+    explicit `fma` fused and does not fold the `×1`. … Whether the kernel's SPIR-V keeps GLSL.std.450 `Fma` fused, which
+    TASK-M2-02's qa review observes needs the `NoContraction` decoration, and whether rust-gpu emits that decoration, is
+    a check for the second-backend parity run, not settled here."
+- **Conflict:** CI's `gpu-lavapipe` and mutants shards (Mesa 25.2.8 lavapipe, Vulkan, `PRIN_GPU_BACKEND=vulkan`; run
+  38857393629, jobs 116831834076 and 116831834067) failed `canonicaliser_seam_sweep` at 1c1037ae: "the backends'
+  mirror branches differ at seam state 3". At that head the decision was built from explicit `fma`s. qa recomputed it
+  on the CPU with every `fma` as an unfused `a*b + c`, and that reproduces lavapipe's branch at state 3 and flips
+  states 4, 6, 7, 11 and 15 too. The same code gives CPU-f32's branch on Metal. So on lavapipe an explicit `fma` is not
+  the single fused rounding that rule 6 says every backend takes. (Whether WGSL's `fma` or SPIR-V's GLSL.std.450 `Fma`
+  must be fused is not settled here: the specifications were not checked from this machine, and dd_decoder §3.1
+  already leaves it open.) Every
+  branch input built on rule 6's premise can therefore fork between Metal and lavapipe at its rounding edges:
+  dd_decoder §3.1's `M₀₁ = fma(m₁, 1, m₀)` and rule 2's quantised `d²` among them.
+- **Options seen:**
+  - (a) Correct rule 6 and rule 2: an explicit `fma` pins the operation only where the backend fuses it; a branch
+    input that must agree everywhere is built from operations every IEEE backend rounds alike, whatever it fuses. The
+    pattern is TASK-M2-07's `IeeeBits::product`: operands split at their bits into halves whose partial products are
+    exact, so fusing or contracting any site rounds the same sum.
+  - (b) Require `NoContraction` and a fused `Fma` of the toolchain (rust-gpu → naga → each driver), checked per
+    backend at the parity gate, and treat a backend that does not fuse as out of scope for branch parity.
+  - (c) Keep rule 6 for Metal, and record lavapipe as a CI-only backend whose branch parity is not claimed.
+- **Applied meanwhile (TASK-M2-07, per R-369 on qa R1):** `C`'s mirror decision and guard use no `fma`. The guard is a
+  lone subtraction, and the decision's products are `IeeeBits::product` (`kernel::canon`, "The branch inputs, read
+  before step 0"). Nothing else is changed: `M₀₁` and the other `fma`-based branch inputs stay as they are, pending a
+  ruling.
+- **Waits:** nothing in TASK-M2-07, whose branches no longer rest on the premise. Which requirements this holds
+  (REQ-VAL-017's no-fork test, the `M₀₁` tag's parity) is the orchestrator's to set.
