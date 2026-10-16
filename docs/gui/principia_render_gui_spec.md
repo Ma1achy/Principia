@@ -217,10 +217,11 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s, in the drawing only; the contract holds the target
   (R-451 B3, B4).
   Where `s < 10⁻³`, a slice-mode drag sends no edit, the compass drawing no normal to move along; a tilt-mode drag
-  acts as anywhere else, free or locked: a plane exists there, and locked the drag turns about the pin (§G4), its
-  pivot and the figure's samples kept. The GUI's guards for a degenerate basis have their own cut, not the compass's:
-  they decline where their sine test fires or `s < 10⁻⁶` on the plane's own basis (the corner points, and `s`'s own
-  rounding floor), and there no `z₀` edit is sent and the figure shows nothing new (R-451 B11; REQ-GUI-203).
+  acts as anywhere else, free or locked: off the corner points a plane exists there, and locked the drag turns about
+  the pin (§G4), its pivot and the figure's samples kept. The GUI's guards for a degenerate basis have their own cut,
+  not the compass's: they decline where their sine test fires or `s < 10⁻⁶` on the plane's own basis (the corner
+  points, and `s`'s own rounding floor), and there no `z₀` edit is sent and the figure shows nothing new (R-451 B11;
+  REQ-GUI-203).
 - Kept from R-409: no orbit, the Tilt and Slice buttons and the switch by the slider touched, Tilt the default, the
   gold pin when locked, §G3's keys. The reference's own controls (axis selectors, sliders, Animate) are not on the
   compass; the Manifold view owns them.
