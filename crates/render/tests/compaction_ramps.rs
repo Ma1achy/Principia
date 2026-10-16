@@ -6,8 +6,9 @@
 //!   on the GPU agree with their CPU twins (`ramp_kinds_*`);
 //! - REQ-COL-016: the default ramp registry returns the stated ramp and polarity per field role, "signed" read from the
 //!   declared range as R-400 reads it (`default_ramps_*`);
-//! - REQ-COL-032: a field's ledger scale changes, and the view re-styles while the dispatch counter and the sim buffer
-//!   stay as they were (`ledger_scale_restyle_*`);
+//! - REQ-COL-032: a field's ledger scale changes, and the view re-styles while the sim buffer stays as it was, read
+//!   back (`ledger_scale_restyle_*`): the measure of "the dispatch counter is unchanged" here, as the render loop has
+//!   no integrate path whose frame-record counters could move;
 //! - REQ-COL-024: FTLE bound as the colour, through a ramp, and as the brightness, each compiles and renders as its CPU
 //!   twin has it (`field_either_role_*`).
 //!
@@ -25,7 +26,7 @@ use render::colour::field_ramp::{
     COMPACTION_WGSL, RAMP_WGSL,
 };
 use render::compositor::LAYER_FORMAT;
-use render::frame_record::{FrameRecord, RenderLoop};
+use render::frame_record::RenderLoop;
 use render::pipeline_cache::FrameInputs;
 use render::present::{self, Rgb};
 use render::registry::ZERO_SOURCE;
@@ -1310,18 +1311,6 @@ const INPUTS: FrameInputs = FrameInputs {
     horizon_steps: 1000,
 };
 
-/// The dispatch counter: the integration work the render loop's frame record counts (telemetry §2: new quads, samples,
-/// substeps) and the GPU passes of the integrate and reduce stages, the compute side of a frame. This rig has no
-/// integrate path (`RenderLoop::frame` runs the colour and present stages alone), so here the counter is 0 by
-/// construction and cannot move; the check that carries seam 5's "zero recompute" is the sim buffer read back
-/// unchanged, which its control shows can fail ([`check_restyle`]).
-fn dispatches(r: &FrameRecord) -> u64 {
-    r.quads_computed
-        + r.samples
-        + r.substeps_total
-        + (r.stages.integrate.gpu_passes.len() + r.stages.reduce.gpu_passes.len()) as u64
-}
-
 /// The render loop's rig: the loop, its target, and the sim buffers it reads.
 struct Rig {
     h: GpuHarness,
@@ -1381,8 +1370,8 @@ const COLOUR_KEY: u64 = 1;
 
 impl Rig {
     /// `ramp`'s stain requested and compiled, its `u_range` written with `u_range` where it declares one, then one
-    /// frame: its pixels, 8-bit sRGB, and its dispatch count.
-    fn frame(&mut self, ramp: &FieldRamp, u_range: [f64; 2]) -> (Vec<[u8; 4]>, u64) {
+    /// frame: its pixels, 8-bit sRGB.
+    fn frame(&mut self, ramp: &FieldRamp, u_range: [f64; 2]) -> Vec<[u8; 4]> {
         let stain = ramp_stain(ramp, true);
         let keys: Vec<u64> = (0..stain.nodes().len() as u64).collect();
         self.rl
@@ -1400,14 +1389,14 @@ impl Rig {
 
     /// One more frame of the current stain, `u_range` written where `ramp` declares it, as the measurement writes it
     /// after a pan or zoom: a uniform write, no request and no compile.
-    fn again(&mut self, ramp: &FieldRamp, u_range: [f64; 2]) -> (Vec<[u8; 4]>, u64) {
+    fn again(&mut self, ramp: &FieldRamp, u_range: [f64; 2]) -> Vec<[u8; 4]> {
         if ramp.compaction.uniforms().contains("u_range") {
             self.rl
                 .set_param(COLOUR_KEY, "u_range", &u_range)
                 .unwrap_or_else(|e| panic!("{e}"));
         }
-        let n = dispatches(self.rl.frame(&INPUTS, &self.view));
-        (read_texture(&self.h, &self.target), n)
+        self.rl.frame(&INPUTS, &self.view);
+        read_texture(&self.h, &self.target)
     }
 }
 
@@ -1522,10 +1511,10 @@ fn e0_view(e: &Entry) -> FieldRamp {
 
 /// Seam 5: `E_0`'s ledger scale changes from `diverging` to `to`, which R-403 admits for its range (−∞, ∞); the view
 /// built from the changed entry re-styles (another compaction, other pixels, each its twin), while the sim buffer
-/// stays as it was: nothing re-integrates (the dispatch counter, 0 by construction here, is checked too). With
-/// `recompute`, the change also rewrites the sim buffer, as a re-integration would. Then a pan or zoom, a new measured
-/// range: a `u_range` write re-places the `lin` view with no compile (lowering contract Part 3); with `bake`, the view
-/// carries the measured range as literals instead, and the write cannot move it.
+/// stays as it was, read back byte for byte: nothing re-integrates. With `recompute`, the change also rewrites the sim
+/// buffer, as a re-integration would. Then a pan or zoom, a new measured range: a `u_range` write re-places the `lin`
+/// view with no compile (lowering contract Part 3); with `bake`, the view carries the measured range as literals
+/// instead, and the write cannot move it.
 ///
 /// This shows the render side only: the changed entry is a clone of `E_0`'s, built into a view without regenerating
 /// the ledger, so the payload schema version, which hashes each entry's `scale` (`ledger::version`), is not consulted.
@@ -1541,7 +1530,7 @@ fn check_restyle(to: Scale, recompute: bool, bake: bool) {
     assert_eq!(before.scale, Scale::Diverging);
     let m = e0_measured();
     let a = e0_view(&before);
-    let (pa, na) = rig.frame(&a, m);
+    let pa = rig.frame(&a, m);
     check_pixels(&pa, &a, m, "before");
 
     let mut after = before.clone();
@@ -1557,17 +1546,12 @@ fn check_restyle(to: Scale, recompute: bool, bake: bool) {
         let fresh: Vec<u8> = rig.bytes.iter().map(|b| b.wrapping_add(1)).collect();
         rig.h.queue().write_buffer(&rig.simstate, 0, &fresh);
     }
-    let (pb, nb) = rig.frame(&b, m);
+    let pb = rig.frame(&b, m);
     assert!(
         a.compaction != b.compaction && pa != pb,
         "the view did not re-style: {:?} → {:?}",
         a.compaction,
         b.compaction
-    );
-    assert_eq!(
-        (na, nb),
-        (0, 0),
-        "the dispatch counter moved across the re-style"
     );
     assert!(
         read_buffer(&rig.h, &rig.simstate) == rig.bytes,
@@ -1581,7 +1565,7 @@ fn check_restyle(to: Scale, recompute: bool, bake: bool) {
     );
     if to == Scale::Lin {
         let zoomed = [-1.0, 1.0];
-        let (pc, _) = rig.again(&b, zoomed);
+        let pc = rig.again(&b, zoomed);
         assert!(pc != pb, "the u_range write did not re-place the view");
         if !bake {
             check_pixels(&pc, &b, zoomed, "after the u_range write");
