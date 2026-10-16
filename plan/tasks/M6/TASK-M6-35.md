@@ -43,9 +43,9 @@ metric), and builds what their rulings give.
   pushforward (`J q₁ ∧ J q₂ = 0`) said, not drawn; the help text (the physical views change as the slice moves, the
   latent one does not).
 - The physical steer — `q₁ ∝ J⁺ e_i`, `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, by RQ-344's construction (with a
-  full-rank set, RQ-342 and RQ-343 point 6, `J⁺ = J⁻¹`; otherwise its
-  rank test, its tolerance, and how the Manifold view's sliders follow a general plane); a refused click logged with
-  its reason; an accepted one a single `SetField` on the basis, logged, undone by one Ctrl+Z.
+  full-rank set, RQ-342 and RQ-343 point 6, `J⁺ = J⁻¹`; otherwise RQ-344's rank test, its tolerance, and how the
+  Manifold view's sliders follow a general plane); a refused click logged with its reason; an accepted one a single
+  `SetField` on the basis, logged, undone by one Ctrl+Z.
 - A linear-decoder fixture (a known `J`) for the tests, and tests `compass_physical_views` and
   `mock_compass_steer_physical`; screenshot cases `01_main/mock_compass_jacobi` and `01_main/mock_compass_shape`.
 
