@@ -249,7 +249,7 @@ Nothing is chosen.*
 - **Waits:** REQ-ENC-006's and REQ-ENC-014's notice (`rq: RQ-295`): TASK-M2-07's closing of REQ-ENC-006, and
   TASK-M2-15's of REQ-ENC-014.
 
-## RQ-296: What `C` outputs when all three bodies coincide, `I_in = 0`, where step 0 divides by `√I_in = 0` before step 2's guard *(silence, R-72, R-23, R-13, R-436, REQ-DEC-002; context: TASK-M2-07, TASK-M2-15)*
+## RQ-296: What `C` outputs where `I_in` is 0 or rounds to 0 or `+∞`: all three bodies coinciding, an underflowing or an overflowing state, where step 0 divides by `√I_in` before step 2's guard *(silence, R-72, R-23, R-13, R-436, REQ-DEC-002; context: TASK-M2-07, TASK-M2-15)*
 
 *Found by TASK-M2-07, building `C`. Nothing is chosen.*
 
@@ -270,14 +270,37 @@ Nothing is chosen.*
   Part 6 give the notice, `lookup_clamped`; R-437 gives step 2's `φ = 0`. But step 0 runs first and divides by
   `√I_in = 0`, and nothing defines `C`'s output there: `λ = I_in^{−1/2}` is `+∞`, `r/√I_in` is `0/0`, and
   `I_in^{1/4}·p` is `0` (a state with no kinetic energy). No section point has `I = 1` and all bodies at one place.
+  In floating point `I_in` also reaches 0 and `+∞` with the bodies apart (physics review 5542989202 P1), where the
+  corpus is as silent:
+  - **Underflow:** `I_in` rounds to 0 while the bodies are still apart: at f64 below about `1e-162` per coordinate
+    (e.g. `r₀,₁ = ∓1e-170`, masses `(¼, ¼, ½)`), at f32 below about `4e-23` (about `1e-19` where a GPU
+    flushes subnormals). There `ρ ≠ 0`, so no `lookup_clamped` fires, and step 0 cannot reach `I = 1`.
+  - **Overflow:** `I_in` rounds to `+∞`, at f64 above about `1e154` per coordinate and at f32 above about `1e19`. Then
+    `λ = 0`, `r/√I_in` is `±0`, and `I_in^{1/4}·p` is `±∞`, or `0·∞` = NaN for a zero component; and WGSL may assume
+    there are no infinities (R-436), so the GPU's arithmetic there is not pinned.
 - **Options seen:**
-  - (a) Skip step 0 at `I_in = 0` (select divisor 1, so `r` stays 0, `p` unscaled, `λ = 1`), and let `lookup_clamped`
-    carry the case: the state passes through un-normalised and flagged.
+  - (a) Skip step 0 at `I_in = 0` (select divisor 1, so `r` stays as it is, `p` unscaled, `λ = 1`), and let
+    `lookup_clamped` carry the coincident case: the state passes through un-normalised and flagged. Underflow and
+    overflow are not covered by this alone.
   - (b) Record `λ = +∞` by its bits (R-436's producer rule), `r = 0`, `p = 0`, flagged `lookup_clamped`.
   - (c) Define `C`'s output there as a fixed sentinel state, or as undefined with the flag the only output a consumer
     may read (the validation ladder rejects the pixel before decode).
+  - (d) For underflow and overflow: rescale in two steps (by a power of two first, exact, then by the rest), so `I_in`
+    is formed from scaled coordinates and neither rounds to 0 nor `+∞` for any finite state with the bodies apart.
+  - (e) For underflow and overflow: a range check on `I_in` (against calibrated bounds, R-71) that raises
+    `lookup_clamped`, or a notice of its own, with the output defined as in (a), (b) or (c).
 - **Applied meanwhile:** `kernel::canon::similarity` (TASK-M2-07) selects the divisor `√I_in` as 1 where `I_in = 0`,
-  so no `1/0` is formed (R-436): `r` stays 0, `p ← I_in^{1/4}·p = 0`, `λ = 1`. That only keeps the arithmetic finite;
-  the tests assert `lookup_clamped` and `φ = +0` there (R-13, R-437) and that the GPU forms no non-finite value, and
-  nothing about the state or `λ`.
+  so no `1/0` is formed (R-436). What the code then does in each case (`crates/kernel/src/canon.rs`, the module's
+  note):
+  - **`I_in = 0`, bodies coincident:** `r` stays 0, `p ← I_in^{1/4}·p = 0`, `λ = 1`, `lookup_clamped`, `φ = +0`.
+  - **`I_in` rounded to 0, bodies apart:** the same select, so `r` is left unscaled (`I ≈ 0`, not 1), every momentum
+    becomes 0 (`√√0 = 0`), `λ = 1`, and, since `ρ ≠ 0`, no `lookup_clamped`: the state leaves `C` off the section,
+    unflagged.
+  - **`I_in = +∞`:** `r` becomes `±0`, `λ = 0`, every momentum NaN on the CPU (`±∞` or `0·∞`, then step 1b's sums and
+    the rotation), `ρ = 0` so `lookup_clamped` and `φ = 0`; on the GPU the arithmetic on `∞` is unpinned.
+
+  That only keeps the arithmetic free of `1/0`. The tests assert `lookup_clamped` and `φ = +0` at the coincident case
+  (R-13, R-437) and that the GPU forms no non-finite value there; at underflow, that the case is reached and no `1/0` is
+  formed (every output finite, `canon_inertia_extremes`); at overflow, only that the case is reached. Nothing about the
+  state or `λ`.
 - **Waits:** REQ-DEC-002 (`rq: RQ-296`), TASK-M2-07's closing of it.
