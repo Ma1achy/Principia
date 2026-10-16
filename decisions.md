@@ -9897,22 +9897,25 @@ The human's words are R-440's quote, its second remark ("Call 5").
   (free-fall) slice whose `E*` is above its potential is tagged `ENERGY_UNSCALABLE`, a `decode_failed` sample, which
   the outcome palette draws degenerate's white (colour_composition §1.4; R-96).
 - **A line in the GUI docs** says so, so that nobody reads the uniform tag colour as a bug.
-- **The exceptions §3.7 gives** (applied per R-369 after physics review 5541460731 F1, as they follow from §3.7; the
-  human's words above are unchanged). "Every pixel" holds for the pixels whose `E*` is above their potential, and two
-  kinds of pixel are not tagged so:
+- **The exceptions §3.7 gives** (applied per R-369 after physics reviews 5541460731 F1 and 5541483216 F3, as they
+  follow from §3.7; the human's words above are unchanged). "Every pixel" holds for the pixels whose `E*` is above
+  their potential, and two kinds of pixel are not tagged so:
   - where `E* = V₀` exactly, the IC is already at the target: the decode is untouched and untagged, and the pixel
-    integrates. On a free-fall slice `V₀` varies, so with an `E* < 0` inside its range a contour `V₀ = E*` runs between
-    the `ENERGY_INFEASIBLE` region (`E* < V₀`) and the `ENERGY_UNSCALABLE` one (`E* > V₀`);
-  - a pixel the mass block has already tagged, such as `M01_TINY`, keeps that tag.
-  So almost every pixel of such a slice is drawn degenerate's white, with that contour and those mass-block pixels the
-  exceptions.
+    integrates. On a free-fall slice `V₀` varies and is negative, so only an `E* < 0` inside its range has such a
+    contour `V₀ = E*`, between the `ENERGY_INFEASIBLE` region (`E* < V₀`) and the `ENERGY_UNSCALABLE` one (`E* > V₀`);
+    on a sampled grid it shows only as scattered pixels where a sample lands on it exactly, not as a drawn line;
+  - a pixel the mass block has already tagged, such as `M01_TINY`, keeps that tag rather than an energy one. It is an
+    exception to the tag, not to the colour: it is `decode_failed` (dd_simstate_payload §2, detail 2), drawn the same
+    degenerate white (colour_composition §1.4; R-96).
+  So every pixel of such a slice is drawn degenerate's white except on that contour, the colour's only exception.
 
 *Applied:*
 - render_gui_spec §G6, beside the outcome legend, gains a paragraph: with zero momenta `η_E` cannot reach any `E*`
   above the potential, so every pixel of a zero-momentum (free-fall) slice whose `E*` is above its potential is tagged
   `ENERGY_UNSCALABLE` (and any pixel whose `E*` is below its potential `ENERGY_INFEASIBLE`), drawn degenerate's white;
-  the exceptions are the contour `E* = V₀`, which integrates untagged, and the pixels the mass block has tagged, which
-  keep their tag (applied per R-369 after physics review 5541460731 F1); the near-uniform colour is expected, not a bug
+  the pixels the mass block has tagged keep their tag and are drawn the same white, and the contour `E* = V₀` (only for
+  `E* < 0`), which integrates untagged, is the colour's only exception, scattered pixels on a sampled grid (applied per
+  R-369 after physics reviews 5541460731 F1 and 5541483216 F3); the near-uniform colour is expected, not a bug
   (dd_decoder §3.7). Applied per R-369: §G6 is the place, since the GUI docs describe neither the
   `η_E` control nor a per-cause tag colour, and the outcome legend is where the colour is read.
 - R-441 is in the "design" group of `plan/rule_groups.yaml`.

@@ -358,12 +358,13 @@ normalisation scales the momenta, `pᵢ ← η_E·pᵢ`; with zero momenta it ca
 scaling zero momenta cannot raise the kinetic energy. So with `η_E` on, every pixel of a zero-momentum (free-fall)
 slice whose `E*` is above its potential `U = V₀` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
 below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn degenerate's white in the outcome legend
-(colour_composition §1.4; R-96). There are two exceptions. Where `E* = V₀` exactly, the IC is already at the target:
-the decode is untouched and untagged, and the pixel integrates; `V₀` varies over the slice, so with an `E* < 0` inside
-its range a contour `V₀ = E*` runs between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions. And a pixel the
-mass block has already tagged, such as `DEGENERATE(M01_TINY)`, keeps that tag. `η_E` is then a no-op on every
-free-fall preset, and the near-uniform tag colour, with that contour and those mass-block pixels its exceptions, is
-expected, not a bug.
+(colour_composition §1.4; R-96). A pixel the mass block has already tagged, such as `DEGENERATE(M01_TINY)`, keeps
+that tag rather than an energy one, but it is `decode_failed` too and drawn the same white. The one exception to the
+colour is where `E* = V₀` exactly: the IC is already at the target, the decode is untouched and untagged, and the pixel
+integrates. `V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
+`V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
+scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E` is then a no-op on every free-fall
+preset, and the near-uniform white, with that contour its only exception, is expected, not a bug.
 
 ## G7. Chart builder (`03_chartbuilder.png`)
 
