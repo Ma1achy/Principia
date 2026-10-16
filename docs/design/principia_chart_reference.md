@@ -286,16 +286,22 @@ a = √(2·(K* − Lz²/(2I)))
 vᵢ = vᵢ^(L) + a·wᵢ                pᵢ = mᵢ·vᵢ
 ```
 
-**The infeasible pixel's label** (defined per R-72). A pixel with `K* < K_min` carries `state = decode_failed` (5) and
-`detail = 3` (other) in its `sample_descriptor` (`principia_dd_simstate_payload.md` §2): no momentum realises `L_z` with
-less kinetic energy than the rigid rotation's, so the decoder produces no physical IC there, which is what
-`decode_failed` records, and none of `detail`'s codes 0–2 (non-finite output, degenerate configuration, invalid mass
-construction) describes it. It is a decode failure, not a dynamical outcome: the sample is terminal at decode, kept,
-never dropped. Its momenta are finite, `a = 0` selected, so `pᵢ = mᵢ·vᵢ^(L)`; nothing integrates them. The test is
-exactly `K* < L_z²/(2I)`, decided as `2·I·K* < L_z²` with no rounding at the decision, so one input takes one branch at
-every precision and on every backend; `K* = K_min` is feasible, with `a = 0`. Infeasibility is decided on `(L_z, K*)`
-alone and takes precedence over the seed rule's `DEGENERATE`, which a pixel carries only where its `(L_z, K*)` is
-feasible.
+**The infeasible pixel's label** (defined per R-72). A pixel with `K* < K_min` is tagged
+`DEGENERATE(INVARIANT_INFEASIBLE)`, one of `DEGENERATE`'s enumerated causes (§0.7; `principia_dd_decoder.md` §2, "From
+totality"), as `η_E`'s `E* < U` is `DEGENERATE(ENERGY_INFEASIBLE)` (`principia_dd_decoder.md` §3.7). Its
+`sample_descriptor` (`principia_dd_simstate_payload.md` §2) records the reason as `state = decode_failed` (5),
+`detail = 3` (other): no momentum realises `L_z` with less kinetic energy than the rigid rotation's, so the decoder
+produces no physical IC there, which is what `decode_failed` records, and none of `detail`'s codes 0–2 (non-finite
+output, degenerate configuration, invalid mass construction) describes it. It is a decode failure, not a dynamical
+outcome: the sample is terminal at decode, kept, never dropped. Its momenta are finite, `a = 0` selected, so
+`pᵢ = mᵢ·vᵢ^(L)`; nothing integrates them. The test is exactly `K* < L_z²/(2I)`, decided as `2·I·K* < L_z²` with no
+rounding at the decision, so one input takes one branch at every precision and on every backend; `K* = K_min` is
+feasible, with `a = 0`.
+
+**Its precedence.** The decode runs mass → config → momentum, and a decode an earlier block has already tagged keeps
+that tag (`principia_dd_decoder.md` §3.7): a pixel the mass block tags `DEGENERATE(M01_TINY)` keeps that tag, whatever
+its `(L_z, K*)`. Within the momentum stage, infeasibility is decided on `(L_z, K*)` alone and takes precedence over the
+seed rule's `DEGENERATE`, which a pixel carries only where its `(L_z, K*)` is feasible.
 
 **Verification that can fail:** assert `Σpᵢ = 0`, `Lz(p) = Lz_target`, and `K(p) = K*`, all to
 machine precision, over random `(u,v)`. Three independent constraints; the construction should hit
