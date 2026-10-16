@@ -77,7 +77,9 @@
 //! for any state whose coordinates and pair differences are 0 or normal (at f32, none below about `1.2e-38` in
 //! magnitude): one input takes one branch on every IEEE backend that keeps its additions and multiplications correctly
 //! rounded and unreassociated (fast-math off, R-84), whether it fuses, contracts or flushes subnormals. A state with a
-//! subnormal coordinate or difference is itself read differently by a flushing GPU, before `C` runs.
+//! subnormal coordinate or difference is itself read differently by a flushing GPU, before `C` runs (RQ-298); on a
+//! backend that keeps subnormals, the CPU's, such a difference is taken into the `Wide` form exactly too, so the
+//! decision there is R-82's within the decision's rounding, as on any other state.
 //! [`Canonical::lambda_t_y`] is formed after the rotation and read, not branched on; within rounding of `−δ_λ` it may
 //! disagree with the flag. The cross-backend claim is for identical inputs only (PIT-10).
 //!
@@ -231,8 +233,8 @@ struct Wide<R> {
     e: i32,
 }
 
-/// `x·2^k` normalised, for `x` 0 or a normal float within `[2^−60, 4)` in magnitude: `k` read from the bits, `x` scaled
-/// by `2^−k`, exact.
+/// `x·2^k` normalised, for `x` 0 or a normal float within `[2^−60, 4)` in magnitude: its exponent read from the bits,
+/// `x` scaled by its inverse, exact.
 #[inline]
 fn renorm<R: LinkReal + IeeeBits>(x: R, k: i32) -> Wide<R> {
     let n = x.exponent();
@@ -242,15 +244,14 @@ fn renorm<R: LinkReal + IeeeBits>(x: R, k: i32) -> Wide<R> {
     }
 }
 
-/// `x` as a [`Wide`], for `x` 0 or normal: scaled by `2^−e`, `e` its exponent field, as two normal powers of two.
+/// `x` as a [`Wide`], for `x` finite: scaled by `2^−k`, `k` its exponent field, as two normal powers of two, exactly,
+/// into `[1, 2)` where `x` is normal and into `[2^−22, 1)` (f32; `[2^−51, 1)` at f64) where it is subnormal, then
+/// renormalised, so a subnormal `x` (on a backend that keeps it) gets its own mantissa and exponent too.
 #[inline]
 fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
     let k = x.exponent();
     let half = k / 2;
-    Wide {
-        m: x * R::pow2(-half) * R::pow2(half - k),
-        e: select(x == R::zero(), ZERO_EXPONENT, k),
-    }
+    renorm(x * R::pow2(-half) * R::pow2(half - k), k)
 }
 
 /// `a·b`: the mantissas' [`IeeeBits::product`], in `[1, 4)`, whose partial products are at least `2^−46`, renormalised.

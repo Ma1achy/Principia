@@ -23,6 +23,8 @@
 //! - `canon_product_fusion_proof`: the f32 product the mirror decision is built from rounds the same fused or not at
 //!   each of its contractible sites, on 200 000 pairs (REQ-DEC-017).
 //! - `canon_pow2_bits`: the bit-formed powers of two and exponents the decision's rescale reads.
+//! - `canon_mirror_subnormal_difference`: the decision on an inner pair a subnormal apart is the exact one at f32 and
+//!   f64, where subnormals are kept (REQ-DEC-017).
 //! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
 //!   (RQ-296 holds the outputs).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
@@ -1240,6 +1242,62 @@ negative_control!(
     "a pow2 whose bias has the wrong sign must fail",
     expected = "f32: pow2(-126)",
     check_pow2::<f32>(|e| f32::from_bits(((e - 127) as u32) << 23), -126, 127)
+);
+
+// ── canon_mirror_subnormal_difference (REQ-DEC-017) ────────────────────────────────────────────────────────────
+
+/// States whose inner pair is a subnormal apart, `v` the subnormal with bits `0x201`, masses `(¼, ¼, ½)`, and the exact
+/// decision: `x₁ = (v, 0)`, `x₂ = (1536, −1024)`, `c = −512v`, a mirror; `x₁ = (0, v)`, `x₂ = (−1536, −1024)`,
+/// `c = 768v`, none. `x₀ = 0`. Each `λ̃_y` is far outside the deadband.
+fn subnormal_pairs<R: Precision>(v: R) -> [([[R; 2]; 3], bool); 2] {
+    let z = R::zero();
+    let c = cast::<R>;
+    [
+        ([[z, z], [v, z], [c(1536.0), c(-1024.0)]], true),
+        ([[z, z], [z, v], [c(-1536.0), c(-1024.0)]], false),
+    ]
+}
+
+/// The decision on the subnormal pairs at `R`, through `decide`, is the exact one, on a backend that keeps subnormals.
+fn check_subnormal<R: Precision>(decide: Decide<R>, v: R) {
+    assert!(
+        v != R::zero() && v.exponent() == R::zero().exponent(),
+        "{}: v is subnormal",
+        R::NAME
+    );
+    let m = [0.25, 0.25, 0.5].map(cast::<R>);
+    for (j, (r, want)) in subnormal_pairs(v).into_iter().enumerate() {
+        assert_eq!(
+            decide(m, r),
+            want,
+            "{}: the decision on subnormal pair {j}",
+            R::NAME
+        );
+    }
+}
+
+#[test]
+fn canon_mirror_subnormal_difference() {
+    check_subnormal::<f32>(mirror_decision, f32::from_bits(0x201));
+    check_subnormal::<f64>(mirror_decision, f64::from_bits(0x201));
+    eprintln!(
+        "canon_mirror_subnormal_difference: an inner pair 0x201 (subnormal) apart, at f32 and f64: the mirror on c < 0 \
+         and none on c > 0"
+    );
+}
+
+/// The decision after flushing every subnormal coordinate to zero, as a GPU that flushes reads the state.
+#[cfg(feature = "controls")]
+fn flushed_input(m: [f32; 3], r: [[f32; 2]; 3]) -> bool {
+    let flush = |q: f32| if q.abs() < f32::MIN_POSITIVE { 0.0 } else { q };
+    mirror_decision(m, r.map(|v| v.map(flush)))
+}
+
+negative_control!(
+    canon_mirror_subnormal_difference,
+    "the decision on the input with its subnormals flushed reads the pole and must fail",
+    expected = "f32: the decision on subnormal pair 1",
+    check_subnormal::<f32>(flushed_input, f32::from_bits(0x201))
 );
 
 // ── canon_inertia_extremes (RQ-296) ─────────────────────────────────────────────────────────────────────────────
