@@ -96,17 +96,17 @@ mutant = "crates/gui/src/explore/compass.rs:234:41: replace * with / in adjust"
 justification = "Z0_HALF_RANGE is 1.0 (manifold_view::Z0_HALF_RANGE, a const), and 2.0 * 1.0 == 2.0 / 1.0, so the slice arrow's step is the same value"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:255:18: replace / with % in wide"
+mutant = "crates/kernel/src/canon.rs:259:18: replace / with % in wide"
 justification = "both split 2^-k into two normal powers of two, each product exact: identical bits on all 2^32 f32 patterns but ±inf and on every f64 exponent field (checked); ±inf, a pair difference that overflowed, is outside mirror_decision's domain, where I_in is +inf (RQ-296)"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:273:28: replace > with >= in wide_add"
+mutant = "crates/kernel/src/canon.rs:277:28: replace > with >= in wide_add"
 justification = "at gap = 60 both select a shift of 60, so the shift, and the sum, are the same at every gap"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:286:17: replace | with ^ in wide_greater"
+mutant = "crates/kernel/src/canon.rs:290:17: replace | with ^ in wide_greater"
 justification = "a.e > b.e and a.e == b.e exclude each other, so the two operands are never both true and their ^ is their |"
 
 [[equivalent]]
-mutant = "crates/kernel/src/canon.rs:338:10: replace < with <= in mirror_decision"
+mutant = "crates/kernel/src/canon.rs:342:10: replace < with <= in mirror_decision"
 justification = "c.m is ±0 only for c = 0, at the zero exponent, so left = m2*c^2 is 0 at the least exponent and wide_greater(left, right) is false: the mirror is not taken either way"
