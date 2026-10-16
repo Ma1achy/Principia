@@ -14,15 +14,15 @@
 //! Each test registers its negative control (R-176).
 
 use ledger::constants::{DIVERGING_X0, LOG_FLOORS};
-use ledger::gen::numeric::cyclic_period;
+use ledger::gen::numeric::{cyclic_period, End};
 use ledger::schema::{Bound, Declaration, Entry, Range, Scale};
 use render::assemble::{Kind, Node, Occupant, Stain, Tier};
 use render::codegen::Slot;
 use render::colour::combine::{combine, Combiner, LRange};
 use render::colour::defaults::{self, DefaultRamp, Resolve, Role};
 use render::colour::field_ramp::{
-    Compaction, FieldRamp, Invalid, Lut, Map, Polarity, Ramp, ScalarField, Shown, COMPACTION_WGSL,
-    RAMP_WGSL,
+    Compaction, FieldRamp, Invalid, Lut, Map, Polarity, Ramp, Reads, ScalarField, Shown,
+    COMPACTION_WGSL, RAMP_WGSL,
 };
 use render::compositor::LAYER_FORMAT;
 use render::frame_record::{FrameRecord, RenderLoop};
@@ -61,12 +61,8 @@ fn sim_key(name: &str) -> Option<f64> {
 
 const EPS: f64 = 1.0 / 1_048_576.0;
 
-fn resolve(measured: [f64; 2]) -> Resolve<'static> {
-    Resolve {
-        sim_key: &sim_key,
-        measured,
-        horizon_steps: 1000,
-    }
+fn resolve() -> Resolve<'static> {
+    Resolve { sim_key: &sim_key }
 }
 
 // ── REQ-COL-039: the forms ───────────────────────────────────────────────────────────────────────────────────────
@@ -596,8 +592,17 @@ negative_control!(
 /// A field's expected default: its role, ramp, polarity and compaction.
 type Want = (Role, Lut, Polarity, Compaction);
 
-/// The measured range the default registry is given: `(−3, 5)`.
-const MEASURED: [f64; 2] = [-3.0, 5.0];
+/// The run-time values the registry's `lin` ranges are placed at in [`check_placed`]: the measured `(−3, 5)` and a
+/// horizon of 1000 steps.
+const READS: Reads = Reads {
+    u_range: [-3.0, 5.0],
+    horizon_steps: 1000,
+};
+
+/// A `lin` range read at run time, `lo` and `hi` its ends, `symmetric` for a signed field.
+fn read(lo: End, hi: End, symmetric: bool) -> Compaction {
+    Compaction::LinRead { lo, hi, symmetric }
+}
 
 /// `e` with its name, scale and range replaced: a test's ledger entry.
 fn edited(name: &'static str, scale: Scale, lo: Bound, hi: Bound) -> Entry {
@@ -619,7 +624,8 @@ fn wants() -> Vec<(Entry, Want)> {
             .map(|(_, k)| k.number())
             .expect("a floor")
     };
-    let sym = Compaction::Lin { lo: -5.0, hi: 5.0 };
+    use End::{Fixed, Horizon, Measured};
+    let sym = read(Measured, Measured, true);
     let x0 = |n: &str| {
         DIVERGING_X0
             .iter()
@@ -636,7 +642,7 @@ fn wants() -> Vec<(Entry, Want)> {
                 Role::Magnitude(Polarity::High),
                 Lut::Grey,
                 Polarity::High,
-                Compaction::Lin { lo: -3.0, hi: 5.0 },
+                read(Measured, Measured, false),
             ),
         ),
         (
@@ -645,7 +651,7 @@ fn wants() -> Vec<(Entry, Want)> {
                 Role::Magnitude(Polarity::High),
                 Lut::Grey,
                 Polarity::High,
-                Compaction::Lin { lo: -3.0, hi: 5.0 },
+                read(Measured, Measured, false),
             ),
         ),
         (
@@ -654,7 +660,7 @@ fn wants() -> Vec<(Entry, Want)> {
                 Role::Magnitude(Polarity::High),
                 Lut::Grey,
                 Polarity::High,
-                Compaction::Lin { lo: 0.0, hi: 5.0 },
+                read(Fixed(0.0), Measured, false),
             ),
         ),
         (
@@ -742,7 +748,7 @@ fn wants() -> Vec<(Entry, Want)> {
                 Role::Sequential,
                 Lut::Viridis,
                 Polarity::High,
-                Compaction::Lin { lo: 0.0, hi: 5.0 },
+                read(Fixed(0.0), Measured, false),
             ),
         ),
         (
@@ -751,7 +757,7 @@ fn wants() -> Vec<(Entry, Want)> {
                 Role::Sequential,
                 Lut::Viridis,
                 Polarity::High,
-                Compaction::Lin { lo: -3.0, hi: 0.0 },
+                read(Measured, Fixed(0.0), false),
             ),
         ),
         (
@@ -769,10 +775,7 @@ fn wants() -> Vec<(Entry, Want)> {
                 Role::Sequential,
                 Lut::Viridis,
                 Polarity::High,
-                Compaction::Lin {
-                    lo: 0.0,
-                    hi: 1000.0,
-                },
+                read(Fixed(0.0), Horizon, false),
             ),
         ),
         (
@@ -815,7 +818,7 @@ fn wants() -> Vec<(Entry, Want)> {
             ),
         ));
     }
-    // An infinite declared end is no end: the measured one stands in, as for an unbounded end.
+    // An infinite declared end is no end: the measured one stands in, read at run time, as for an unbounded end.
     out.push((
         edited(
             "infinite_hi",
@@ -827,7 +830,7 @@ fn wants() -> Vec<(Entry, Want)> {
             Role::Sequential,
             Lut::Viridis,
             Polarity::High,
-            Compaction::Lin { lo: 0.0, hi: 5.0 },
+            read(Fixed(0.0), Measured, false),
         ),
     ));
     out.push((
@@ -845,8 +848,7 @@ fn wants() -> Vec<(Entry, Want)> {
 /// The registry `registry` gives each field its stated default.
 fn check_defaults(registry: impl Fn(&Entry, &Resolve) -> Result<DefaultRamp, String>) {
     for (e, (role, lut, polarity, compaction)) in wants() {
-        let d =
-            registry(&e, &resolve(MEASURED)).unwrap_or_else(|why| panic!("`{}`: {why}", e.name));
+        let d = registry(&e, &resolve()).unwrap_or_else(|why| panic!("`{}`: {why}", e.name));
         let got = (d.role, d.ramp, d.polarity, d.compaction);
         let want = (role, Ramp::Lut(lut), polarity, compaction);
         assert!(
@@ -861,6 +863,86 @@ fn check_defaults(registry: impl Fn(&Entry, &Resolve) -> Result<DefaultRamp, Str
 fn default_ramps_follow_field_role() {
     check_defaults(defaults::default_ramp);
 }
+
+/// The fields whose `lin` range the registry leaves open, each with the fixed range it is placed on at [`READS`]: a
+/// measured end `u_range`'s, a step index's top the horizon, a signed field's `[−M, M]`.
+const PLACED: [(&str, [f64; 2]); 7] = [
+    ("ftle", [-3.0, 5.0]),
+    ("diffusion", [-3.0, 5.0]),
+    ("S", [-5.0, 5.0]),
+    ("mean_y", [-5.0, 5.0]),
+    ("K_0", [0.0, 5.0]),
+    ("V_0", [-3.0, 0.0]),
+    ("t_end_step", [0.0, 1000.0]),
+];
+
+/// Each of [`PLACED`]'s defaults, by `registry`, reads its open ends at run time: its WGSL reads `uniforms.u_range` or
+/// `ctx.params.horizon_steps` and its header declares `u_range` where it measures, no literal of those values (lowering
+/// contract Part 3: no gesture reaches a compiler); its twin places each value as the fixed range would at [`READS`],
+/// and, at other reads, where those reads put it.
+fn check_placed(registry: impl Fn(&Entry) -> Compaction) {
+    let other = Reads {
+        u_range: [-1.0, 1.0],
+        horizon_steps: 10,
+    };
+    for (name, [lo, hi]) in PLACED {
+        let c = registry(&entry(name));
+        let text = c.wgsl("v");
+        let measured = text.contains("uniforms.u_range");
+        assert!(
+            measured || text.contains("ctx.params.horizon_steps"),
+            "`{name}`'s range is not read at run time: {text}"
+        );
+        assert_eq!(
+            c.uniforms().contains("@uniform u_range: vec2<f32>"),
+            measured,
+            "`{name}`'s header: {}",
+            c.uniforms()
+        );
+        let fixed = Compaction::Lin { lo, hi };
+        for x in [-4.0, -1.0, 0.0, 0.5, 2.0, 7.0, 600.0] {
+            assert_eq!(
+                c.place_at(x, READS),
+                fixed.place(x),
+                "`{name}` at {x} with the reads (−3, 5), 1000"
+            );
+        }
+        assert_ne!(
+            (c.place_at(-2.0, other), c.place_at(0.5, other)),
+            (fixed.place(-2.0), fixed.place(0.5)),
+            "`{name}` is placed the same at other reads"
+        );
+    }
+}
+
+#[test]
+fn default_ramps_read_their_open_ends_at_run_time() {
+    check_placed(|e| {
+        defaults::default_ramp(e, &resolve())
+            .unwrap_or_else(|why| panic!("{why}"))
+            .compaction
+    });
+}
+
+negative_control!(
+    default_ramps_read_their_open_ends_at_run_time,
+    "a registry that bakes the measured range into the source is caught",
+    expected = "is not read at run time",
+    check_placed(|e| {
+        let c = defaults::default_ramp(e, &resolve())
+            .unwrap_or_else(|why| panic!("{why}"))
+            .compaction;
+        let [lo, hi] = PLACED
+            .iter()
+            .find(|(n, _)| *n == e.name)
+            .map(|(_, r)| *r)
+            .unwrap_or([0.0, 1.0]);
+        match c {
+            Compaction::LinRead { .. } => Compaction::Lin { lo, hi },
+            c => c,
+        }
+    })
+);
 
 negative_control!(
     default_ramps_follow_field_role,
@@ -896,7 +978,7 @@ fn check_signed(role: impl Fn(&Entry) -> Role) {
     let mut gap = edited("gap_probe", Scale::Lin, Unbounded, Unbounded);
     gap.declaration = None;
     assert_eq!(role(&gap), Role::Sequential, "a gap does not span zero");
-    let why = defaults::default_ramp(&gap, &resolve(MEASURED)).expect_err("a gap is refused");
+    let why = defaults::default_ramp(&gap, &resolve()).expect_err("a gap is refused");
     assert!(why.contains("`gap_probe`"), "{why}");
 }
 
@@ -920,14 +1002,10 @@ negative_control!(
 );
 
 /// The registry refuses a field it can't place, naming it: a categorical field, a vector, a `diverging` field whose
-/// sim-key floor the sim key does not give or with no `x₀`, a `log` field with no floor, and an unbounded `lin` end with
-/// no finite measured end.
+/// sim-key floor the sim key does not give or with no `x₀`, a `log` field with no floor, and an inverted declared
+/// `lin` range.
 fn check_refusals(sim: &'static dyn Fn(&str) -> Option<f64>) {
-    let r = Resolve {
-        sim_key: sim,
-        measured: MEASURED,
-        horizon_steps: 1000,
-    };
+    let r = Resolve { sim_key: sim };
     let refused = |e: &Entry, r: &Resolve, why: &str| {
         let got = defaults::default_ramp(e, r)
             .err()
@@ -958,33 +1036,30 @@ fn check_refusals(sim: &'static dyn Fn(&str) -> Option<f64>) {
         &r,
         "no log floor of its own",
     );
-    let nan = Resolve {
-        sim_key: sim,
-        measured: [f64::NAN, 1.0],
-        horizon_steps: 1000,
-    };
-    refused(&entry("ftle"), &nan, "not a finite range");
+    refused(
+        &edited(
+            "inverted",
+            Scale::Lin,
+            Bound::Closed(2.0),
+            Bound::Closed(1.0),
+        ),
+        &r,
+        "is inverted",
+    );
     let mut zero = entry("energy_drift");
     zero.floor = Some("eps_zero");
     refused(&zero, &r, "not a finite positive value");
     let mut inf = entry("energy_drift");
     inf.floor = Some("eps_inf");
     refused(&inf, &r, "not a finite positive value");
-    for m in [[3.0, -3.0], [0.0, f64::INFINITY]] {
-        let bad = Resolve {
-            sim_key: sim,
-            measured: m,
-            horizon_steps: 1000,
-        };
-        refused(&entry("ftle"), &bad, "not a finite range");
-    }
-    // A degenerate measured range is a range: `range_norm` reads it as 0 (R-72).
-    let one = Resolve {
-        sim_key: sim,
-        measured: [2.0, 2.0],
-        horizon_steps: 1000,
-    };
-    let d = defaults::default_ramp(&entry("ftle"), &one).unwrap_or_else(|why| panic!("{why}"));
+    // A degenerate declared range is a range: `range_norm` reads it as 0 (R-72).
+    let one = edited(
+        "degenerate",
+        Scale::Lin,
+        Bound::Closed(2.0),
+        Bound::Closed(2.0),
+    );
+    let d = defaults::default_ramp(&one, &r).unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(d.compaction, Compaction::Lin { lo: 2.0, hi: 2.0 });
 }
 
@@ -1025,15 +1100,26 @@ fn ramp_stain(ramp: &FieldRamp, post: bool) -> Stain {
     custom_stain(kind, occupant, post)
 }
 
-/// `ramp` rendered over `s`'s payload with its style post where `post` is `Some(true)` (a colour ramp has none).
+/// The run-time values `s` is drawn with: the measured range of its valid, finite values, written to `u_range` as
+/// the measurement does, and its context's horizon.
+fn reads(s: &Scene) -> Reads {
+    Reads {
+        u_range: measured(s),
+        horizon_steps: s.context.horizon_steps,
+    }
+}
+
+/// `ramp` rendered over `s`'s payload with its style post where `post` is `Some(true)` (a colour ramp has none),
+/// `u_range` written with [`reads`]' measured range.
 fn render_with(h: &GpuHarness, s: &Scene, ramp: &FieldRamp, post: Option<bool>) -> Vec<[f32; 4]> {
+    let u_range = reads(s).u_range.to_vec();
     render_stain(
         h.device(),
         h.queue(),
         &ramp_stain(ramp, post.unwrap_or(true)),
         &s.set,
         &s.context,
-        &|_, _| None,
+        &|_, name| (name == "u_range").then(|| u_range.clone()),
     )
     .unwrap_or_else(|e| panic!("{e}"))
 }
@@ -1043,9 +1129,9 @@ fn render_with(h: &GpuHarness, s: &Scene, ramp: &FieldRamp, post: Option<bool>) 
 fn want_at(s: &Scene, i: u32, ramp: &FieldRamp, (x, y): (u32, u32)) -> Rgb {
     let (v, gate) = s.value(i).unwrap_or_else(|e| panic!("{e}"));
     let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
-    ramp.colour_at(v, gate, frag, Invalid::Pattern)
+    ramp.colour_at_reads(v, gate, frag, Invalid::Pattern, reads(s))
         .unwrap_or_else(|| {
-            let Shown::Ramp(b) = ramp.shown(v, gate) else {
+            let Shown::Ramp(b) = ramp.shown_at(v, gate, reads(s)) else {
                 unreachable!("a placed sample")
             };
             combine(Combiner::ReplaceL(LRange::DEFAULT), None, Some(b))
@@ -1103,7 +1189,7 @@ fn measured(s: &Scene) -> [f64; 2] {
 fn check_either_role(h: &GpuHarness, post: bool) {
     let s = ftle_scene();
     let e = entry("ftle");
-    let r = resolve(measured(&s));
+    let r = resolve();
     let grey = defaults::field_ramp(&e, Slot::Colour, &r).unwrap_or_else(|why| panic!("{why}"));
     assert_eq!(
         grey.map,
@@ -1240,9 +1326,13 @@ fn rig(s: &Scene) -> Rig {
     }
 }
 
+/// The colour node's key in [`custom_stain`]'s stain: the source is 0, the colour 1.
+const COLOUR_KEY: u64 = 1;
+
 impl Rig {
-    /// `ramp`'s stain requested and compiled, then one frame: its pixels, 8-bit sRGB, and its dispatch count.
-    fn frame(&mut self, ramp: &FieldRamp) -> (Vec<[u8; 4]>, u64) {
+    /// `ramp`'s stain requested and compiled, its `u_range` written with `u_range` where it declares one, then one
+    /// frame: its pixels, 8-bit sRGB, and its dispatch count.
+    fn frame(&mut self, ramp: &FieldRamp, u_range: [f64; 2]) -> (Vec<[u8; 4]>, u64) {
         let stain = ramp_stain(ramp, true);
         let keys: Vec<u64> = (0..stain.nodes().len() as u64).collect();
         self.rl
@@ -1255,6 +1345,17 @@ impl Rig {
             "{:?}",
             self.rl.cache().errors()
         );
+        self.again(ramp, u_range)
+    }
+
+    /// One more frame of the current stain, `u_range` written where `ramp` declares it, as the measurement writes it
+    /// after a pan or zoom: a uniform write, no request and no compile.
+    fn again(&mut self, ramp: &FieldRamp, u_range: [f64; 2]) -> (Vec<[u8; 4]>, u64) {
+        if ramp.compaction.uniforms().contains("u_range") {
+            self.rl
+                .set_param(COLOUR_KEY, "u_range", &u_range)
+                .unwrap_or_else(|e| panic!("{e}"));
+        }
         let n = dispatches(self.rl.frame(&INPUTS, &self.view));
         (read_texture(&self.h, &self.target), n)
     }
@@ -1332,11 +1433,15 @@ fn srgb8(v: f64) -> i32 {
 
 /// `pixels` are `ramp`'s twin for [`E0`], one sample per pixel, to one 8-bit step (the layer and the target are 8-bit
 /// sRGB).
-fn check_pixels(pixels: &[[u8; 4]], ramp: &FieldRamp, what: &str) {
+fn check_pixels(pixels: &[[u8; 4]], ramp: &FieldRamp, u_range: [f64; 2], what: &str) {
+    let reads = Reads {
+        u_range,
+        horizon_steps: INPUTS.horizon_steps,
+    };
     for (i, (&v, p)) in E0.iter().zip(pixels).enumerate() {
         let frag = [i as f64 + 0.5, 0.5];
         let want = ramp
-            .colour_at(v, true, frag, Invalid::Pattern)
+            .colour_at_reads(v, true, frag, Invalid::Pattern, reads)
             .expect("a colour ramp");
         for c in 0..3 {
             assert!(
@@ -1347,25 +1452,31 @@ fn check_pixels(pixels: &[[u8; 4]], ramp: &FieldRamp, what: &str) {
     }
 }
 
-/// The `E_0` view built from `e`, its ledger entry, by the default registry.
-fn e0_view(e: &Entry) -> FieldRamp {
+/// The measured range of [`E0`]'s finite values, `u_range` as the measurement writes it.
+fn e0_measured() -> [f64; 2] {
     let finite: Vec<f64> = E0
         .iter()
         .filter(|v| v.is_finite())
         .map(|&v| f64::from(v))
         .collect();
-    let m = [
+    [
         finite.iter().copied().fold(f64::INFINITY, f64::min),
         finite.iter().copied().fold(f64::NEG_INFINITY, f64::max),
-    ];
-    defaults::field_ramp(e, Slot::Colour, &resolve(m)).unwrap_or_else(|why| panic!("{why}"))
+    ]
+}
+
+/// The `E_0` view built from `e`, its ledger entry, by the default registry.
+fn e0_view(e: &Entry) -> FieldRamp {
+    defaults::field_ramp(e, Slot::Colour, &resolve()).unwrap_or_else(|why| panic!("{why}"))
 }
 
 /// Seam 5: `E_0`'s ledger scale changes from `diverging` to `to`, which R-403 admits for its range (−∞, ∞); the view
 /// built from the changed entry re-styles (another compaction, other pixels, each its twin), while the dispatch
-/// counter and the sim buffer stay as they were: nothing re-integrates. With `recompute`, the change also rewrites
-/// the sim buffer, as a re-integration would.
-fn check_restyle(to: Scale, recompute: bool) {
+/// counter and the sim buffer stay as they were: nothing re-integrates. With
+/// `recompute`, the change also rewrites the sim buffer, as a re-integration would. Then a pan or zoom, a new measured
+/// range: a `u_range` write re-places the `lin` view with no compile (lowering contract Part 3); with `bake`, the view
+/// carries the measured range as literals instead, and the write cannot move it.
+fn check_restyle(to: Scale, recompute: bool, bake: bool) {
     let mut s = row_scene("restyle", W, Colouring::View("E_0")).unwrap_or_else(|e| panic!("{e}"));
     for (i, v) in E0.into_iter().enumerate() {
         s.set.sample(i as u32).E_0(v);
@@ -1373,18 +1484,25 @@ fn check_restyle(to: Scale, recompute: bool) {
     let mut rig = rig(&s);
     let before = entry("E_0");
     assert_eq!(before.scale, Scale::Diverging);
+    let m = e0_measured();
     let a = e0_view(&before);
-    let (pa, na) = rig.frame(&a);
-    check_pixels(&pa, &a, "before");
+    let (pa, na) = rig.frame(&a, m);
+    check_pixels(&pa, &a, m, "before");
 
     let mut after = before.clone();
     after.scale = to;
-    let b = e0_view(&after);
+    let mut b = e0_view(&after);
+    if bake {
+        if let Compaction::LinRead { .. } = b.compaction {
+            let r = m[0].abs().max(m[1].abs());
+            b.compaction = Compaction::Lin { lo: -r, hi: r };
+        }
+    }
     if recompute {
         let fresh: Vec<u8> = rig.bytes.iter().map(|b| b.wrapping_add(1)).collect();
         rig.h.queue().write_buffer(&rig.simstate, 0, &fresh);
     }
-    let (pb, nb) = rig.frame(&b);
+    let (pb, nb) = rig.frame(&b, m);
     assert!(
         a.compaction != b.compaction && pa != pb,
         "the view did not re-style: {:?} → {:?}",
@@ -1400,24 +1518,37 @@ fn check_restyle(to: Scale, recompute: bool) {
         read_buffer(&rig.h, &rig.simstate) == rig.bytes,
         "the sim buffer changed across the re-style"
     );
-    check_pixels(&pb, &b, "after");
+    check_pixels(&pb, &b, m, "after");
     assert_eq!(
         rig.rl.cache().compiles(),
         2,
         "the re-style compiled other than its one fragment"
     );
+    if to == Scale::Lin {
+        let zoomed = [-1.0, 1.0];
+        let (pc, _) = rig.again(&b, zoomed);
+        assert!(pc != pb, "the u_range write did not re-place the view");
+        if !bake {
+            check_pixels(&pc, &b, zoomed, "after the u_range write");
+        }
+        assert_eq!(
+            rig.rl.cache().compiles(),
+            2,
+            "the u_range write reached a compiler"
+        );
+    }
 }
 
 #[test]
 fn ledger_scale_restyle_zero_recompute() {
-    check_restyle(Scale::Lin, false);
+    check_restyle(Scale::Lin, false, false);
 }
 
 negative_control!(
     ledger_scale_restyle_zero_recompute,
     "a re-style that rewrites the sim buffer, as a re-integration does, is caught",
     expected = "the sim buffer changed across the re-style",
-    check_restyle(Scale::Lin, true)
+    check_restyle(Scale::Lin, true, false)
 );
 
 #[cfg(feature = "controls")]
@@ -1427,7 +1558,18 @@ mod ledger_scale_restyle_unchanged {
         ledger_scale_restyle_zero_recompute,
         "a scale \"change\" to the scale it had does not re-style the view",
         expected = "the view did not re-style",
-        check_restyle(Scale::Diverging, false)
+        check_restyle(Scale::Diverging, false, false)
+    );
+}
+
+#[cfg(feature = "controls")]
+mod ledger_scale_restyle_baked {
+    use super::*;
+    negative_control!(
+        ledger_scale_restyle_zero_recompute,
+        "a view whose measured range is baked into its source is not re-placed by a u_range write",
+        expected = "the u_range write did not re-place the view",
+        check_restyle(Scale::Lin, false, true)
     );
 }
 
@@ -1529,6 +1671,120 @@ negative_control!(
         line: [1.0, 0.0, 0.0],
         base: [0.0, 0.0, 1.0],
     })
+);
+
+/// Each ramp kind's settings are header uniforms (lowering contract Part 3, the swatches; Part 4: no gesture reaches a
+/// compiler): declared with the ramp's own values as their defaults, and read by name, so a write of one, here
+/// through the draw's params, re-colours FTLE's ramp to the twin of the ramp with that setting, one compile. With
+/// `write` off, the setting keeps its default, and the image is the default ramp's, not the twin's.
+fn check_ramp_uniforms(h: &GpuHarness, write: bool) {
+    let s = ftle_scene();
+    let field = ScalarField::payload("ftle").unwrap_or_else(|e| panic!("{e}"));
+    // A fixed range wider than the scene's FTLE values, its ends off round numbers, so no sample sits at a band's edge
+    // (at t = 1, f32's `n·t` may fall just short of the next band).
+    let lin = Compaction::Lin { lo: -9.7, hi: 10.3 };
+    let bands = |n: f64, width: f64| Ramp::Bands {
+        n,
+        width,
+        line: [1.0, 0.0, 0.0],
+        base: [0.0, 0.0, 1.0],
+    };
+    let cases: [(Ramp, &str, Vec<f64>, Ramp); 4] = [
+        (
+            Ramp::Lerp { c0: C0, c1: C1 },
+            "RAMP_C1",
+            C2.to_vec(),
+            Ramp::Lerp { c0: C0, c1: C2 },
+        ),
+        (
+            Ramp::Diverging {
+                lo: C0,
+                mid: C2,
+                hi: C1,
+            },
+            "RAMP_MID",
+            C1.to_vec(),
+            Ramp::Diverging {
+                lo: C0,
+                mid: C1,
+                hi: C1,
+            },
+        ),
+        (bands(4.0, 0.25), "RAMP_WIDTH", vec![0.75], bands(4.0, 0.75)),
+        (bands(4.0, 0.25), "RAMP_N", vec![1.0], bands(1.0, 0.25)),
+    ];
+    let u_range = reads(&s).u_range.to_vec();
+    for (ramp, name, value, twin) in cases {
+        let a = FieldRamp::new(field.clone(), lin, Map::ramp(ramp));
+        let text = a.wgsl();
+        let d = render::assemble::Declaration::parse(&text).unwrap_or_else(|e| panic!("{e}"));
+        let declared = d
+            .uniforms
+            .iter()
+            .find(|u| u.name == name)
+            .unwrap_or_else(|| panic!("{} declares no `{name}`:\n{text}", ramp.name()));
+        let own = match (ramp, name) {
+            (Ramp::Lerp { c1, .. }, _) => c1.to_vec(),
+            (Ramp::Diverging { mid, .. }, _) => mid.to_vec(),
+            (Ramp::Bands { width, .. }, "RAMP_WIDTH") => vec![width],
+            (Ramp::Bands { n, .. }, _) => vec![n],
+            (Ramp::Lut(_), _) => unreachable!("a LUT has no settings"),
+        };
+        // The header writes each as its f32's shortest literal, so the two agree as f32s.
+        let f32s = |v: &[f64]| v.iter().map(|&x| x as f32).collect::<Vec<_>>();
+        assert_eq!(
+            f32s(&declared.default),
+            f32s(&own),
+            "`{name}`'s default is not the ramp's own"
+        );
+        assert!(
+            text.contains(&format!("uniforms.{name}")),
+            "{} does not read `{name}`:\n{text}",
+            ramp.name()
+        );
+        let draw = |write: bool| {
+            render_stain(
+                h.device(),
+                h.queue(),
+                &ramp_stain(&a, true),
+                &s.set,
+                &s.context,
+                &|_, n| {
+                    if n == "u_range" {
+                        Some(u_range.clone())
+                    } else {
+                        (write && n == name).then(|| value.clone())
+                    }
+                },
+            )
+            .unwrap_or_else(|e| panic!("{e}"))
+        };
+        let image = draw(write);
+        assert!(
+            image != draw(false) || !write,
+            "writing `{name}` changed no pixel of {}",
+            ramp.name()
+        );
+        let b = FieldRamp::new(field.clone(), lin, Map::ramp(twin));
+        check_image(
+            &s,
+            &image,
+            &b,
+            &format!("{} with `{name}` written", ramp.name()),
+        );
+    }
+}
+
+#[test]
+fn ramp_kinds_settings_are_uniforms() {
+    check_ramp_uniforms(&gpu(), true);
+}
+
+negative_control!(
+    ramp_kinds_settings_are_uniforms,
+    "a draw that leaves each setting at its default is not the written ramp's twin",
+    expected = "with `RAMP_C1` written",
+    check_ramp_uniforms(&gpu(), false)
 );
 
 /// Every compaction, every ramp kind and the lightness, each polarity: the ramp's WGSL names its form, its ramp and

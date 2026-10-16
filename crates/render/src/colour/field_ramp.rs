@@ -18,13 +18,16 @@
 //! "not yet" style of running samples, `debug_not_yet(frag_xy)`, never the invalid pattern (R-280, R-399).
 //!
 //! **The compactions** ([`Compaction`]; dd_colouring §3.6, one form per ledger `scale`, R-411): `lin`, the prelude's
-//! `range_norm` on a fixed range; `log`, `1 − 1/(1 + ln(1 + |x|/ε_f))`, with `x < 0`, the −1.0 sentinel, styled and
+//! `range_norm` on a fixed range, an end the ledger leaves open read at run time ([`Reads`]); `log`, `1 − 1/(1 + ln(1 + |x|/ε_f))`, with `x < 0`, the −1.0 sentinel, styled and
 //! never ramped; `cyclic`, `fract(x/period)`; `diverging`, the symlog `½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`, with
 //! no range and no `x_max`; and `flag`, `b ∈ {0, 1}`. Their WGSL is `shaders/wgsl/lib/compaction.wgsl`
 //! ([`COMPACTION_WGSL`]), which the assembler places after the prelude. **The ramps** ([`Ramp`]): `lut(name)`, the
 //! prelude's `ramp_<name>`; `lerp(c0, c1)`; `diverging(c−, c0, c+)` through a neutral; `bands(field, n, line_col,
 //! base)`, a band-mask, each band the first `width` of its period (applied per R-369: §1.2 gives the band no width, so
-//! the node carries it). Their WGSL is `shaders/wgsl/lib/ramp.wgsl` ([`RAMP_WGSL`]). **Polarity** ([`Polarity`]) is
+//! the node carries it). Their WGSL is `shaders/wgsl/lib/ramp.wgsl` ([`RAMP_WGSL`]). **Run time, not source**
+//! (lowering contract Part 3, Part 4: no gesture reaches a compiler): a ramp's settings (its colours, the bands' `n`
+//! and `width`) and a `lin` end measured or a step index's horizon are header uniforms or `ctx.params` reads; only
+//! the ledger's and the register's constants (declared ends, `ε`, `x₀`, the period) are literals. **Polarity** ([`Polarity`]) is
 //! per field: `low` reverses the compacted value, `1 − b`, so the field's low end is bright (colour_composition §1.2).
 //!
 //! **The order of the tests** (render_gui_spec §10.1's, R-436): first the unset value's own bit test (`d_min`'s `+∞`,
@@ -50,7 +53,7 @@
 
 use std::fmt::Write as _;
 
-use ledger::gen::numeric::{float, non_finite, NON_FINITE};
+use ledger::gen::numeric::{float, half_width, half_width_wgsl, non_finite, End, NON_FINITE};
 use ledger::gen::{self as generate, catalogue};
 use ledger::schema::{Entry, FieldType};
 
@@ -187,11 +190,35 @@ impl ScalarField {
     }
 }
 
+/// The values a field ramp reads at run time, not from its source (lowering contract Part 3: no gesture reaches a
+/// compiler): the measured range `u_range`, the header uniform the measurement writes, and the read side's
+/// `horizon_steps`, `ctx.params.horizon_steps`. The CPU twins take them as the GPU reads them.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Reads {
+    pub u_range: [f64; 2],
+    pub horizon_steps: u32,
+}
+
+impl Reads {
+    /// `u_range`'s header default, `(0, 1)`, `range_norm`'s unit interval, with a horizon of 0: what an occupant reads
+    /// before anything writes them.
+    pub const HEADER: Reads = Reads {
+        u_range: [0.0, 1.0],
+        horizon_steps: 0,
+    };
+}
+
 /// A compaction, scalar → `[0, 1]` (dd_colouring §3.6; colour_composition §1.2): one form per ledger `scale` (R-411).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Compaction {
-    /// `lin`: `range_norm(x, lo, hi, false, ·)`, the fixed range, clamped (render_gui_spec §10.1).
+    /// `lin`: `range_norm(x, lo, hi, false, ·)`, the fixed range, clamped (render_gui_spec §10.1): both ends the
+    /// ledger's declared finite ends, constants of the source.
     Lin { lo: f64, hi: f64 },
+    /// `lin` with an end read at run time ([`Reads`]): a measured end, `uniforms.u_range`'s, or a step index's
+    /// `horizon_steps`, each a uniform or param read, never a literal, so a pan, zoom or new run re-places the field
+    /// with no recompile (lowering contract Part 3, Part 4). `symmetric` places it on `[−M, M]`, `M` the larger
+    /// magnitude of its ends, as a field whose range spans zero is (R-400; `ledger::gen::numeric::half_width`).
+    LinRead { lo: End, hi: End, symmetric: bool },
     /// `log`: `1 − 1/(1 + ln(1 + |x|/eps))`, `eps > 0` the field's own (its ledger `floor`, R-263, or its display
     /// floor, R-401); `x < 0`, the −1.0 sentinel, is styled, never ramped.
     Log { eps: f64 },
@@ -208,7 +235,7 @@ impl Compaction {
     /// The form's name, as §3.6 writes it.
     pub fn name(&self) -> &'static str {
         match self {
-            Compaction::Lin { .. } => "lin",
+            Compaction::Lin { .. } | Compaction::LinRead { .. } => "lin",
             Compaction::Log { .. } => "log",
             Compaction::Cyclic { .. } => "cyclic",
             Compaction::Diverging { .. } => "diverging",
@@ -224,6 +251,15 @@ impl Compaction {
                 float(lo),
                 float(hi)
             ),
+            Compaction::LinRead { lo, hi, symmetric } => {
+                let (lo, hi) = if symmetric {
+                    let m = half_width_wgsl(lo, hi);
+                    (format!("-{m}"), m)
+                } else {
+                    (lo.wgsl("uniforms.u_range.x"), hi.wgsl("uniforms.u_range.y"))
+                };
+                format!("range_norm({x}, {lo}, {hi}, false, vec2<f32>(0.0, 0.0))")
+            }
             Compaction::Log { eps } => format!("compact_log({x}, {})", float(eps)),
             Compaction::Cyclic { period } => format!("compact_cyclic({x}, {})", float(period)),
             Compaction::Diverging { x0 } => format!("compact_symlog({x}, {})", float(x0)),
@@ -231,11 +267,38 @@ impl Compaction {
         }
     }
 
-    /// The compaction of the finite `x`, in f64: the CPU twin of [`Compaction::wgsl`], each form as
-    /// `compaction.wgsl` computes it (`lin` [`crate::present::range_norm`]).
+    /// The header declarations the form reads: `u_range`, defaulting to `(0, 1)`, where an end is measured.
+    pub fn uniforms(&self) -> String {
+        match *self {
+            Compaction::LinRead { lo, hi, .. } if lo == End::Measured || hi == End::Measured => {
+                "// @uniform u_range: vec2<f32> = (0.0, 1.0)\n".to_owned()
+            }
+            _ => String::new(),
+        }
+    }
+
+    /// The compaction of the finite `x`, in f64, at the header's [`Reads::HEADER`]: [`Compaction::place_at`].
     pub fn place(&self, x: f64) -> f64 {
+        self.place_at(x, Reads::HEADER)
+    }
+
+    /// The compaction of the finite `x`, in f64, with the run-time values `reads`: the CPU twin of
+    /// [`Compaction::wgsl`], each form as `compaction.wgsl` computes it (`lin` [`crate::present::range_norm`]).
+    pub fn place_at(&self, x: f64, reads: Reads) -> f64 {
         match *self {
             Compaction::Lin { lo, hi } => present::range_norm(x, lo, hi, false, [0.0, 0.0]),
+            Compaction::LinRead { lo, hi, symmetric } => {
+                let (l, h) = if symmetric {
+                    let m = half_width(lo, hi, reads.u_range, reads.horizon_steps);
+                    (-m, m)
+                } else {
+                    (
+                        lo.at(reads.u_range[0], reads.horizon_steps),
+                        hi.at(reads.u_range[1], reads.horizon_steps),
+                    )
+                };
+                present::range_norm(x, l, h, false, [0.0, 0.0])
+            }
             // `x < 0` maps to 0, as `max` gives it: the form at 0.
             Compaction::Log { eps } => 1.0 - 1.0 / (1.0 + (1.0 + x.max(0.0) / eps).ln()),
             Compaction::Cyclic { period } => {
@@ -333,10 +396,10 @@ pub enum Ramp {
     },
 }
 
-/// `c` as a WGSL `vec3<f32>` literal.
-fn vec3(c: Rgb) -> String {
+/// The header declaration of the `vec3<f32>` uniform `name`, defaulting to `c`.
+fn vec3_uniform(name: &str, c: Rgb) -> String {
     format!(
-        "vec3<f32>({}, {}, {})",
+        "// @uniform {name}: vec3<f32> = ({}, {}, {})\n",
         float(c[0]),
         float(c[1]),
         float(c[2])
@@ -354,33 +417,49 @@ impl Ramp {
         }
     }
 
-    /// The ramp at the WGSL `f32` expression `t`.
-    pub fn wgsl(&self, t: &str) -> String {
+    /// The ramp's settings as header uniforms, each defaulting to the ramp's own value: slot parameters, written by
+    /// a uniform write, never compiled in (lowering contract Part 3, the fragment side's swatches; Part 4). A LUT has
+    /// none.
+    pub fn uniforms(&self) -> String {
         match *self {
-            Ramp::Lut(l) => format!("ramp_{}({t})", l.name()),
-            Ramp::Lerp { c0, c1 } => format!("ramp_lerp({t}, {}, {})", vec3(c0), vec3(c1)),
-            Ramp::Diverging { lo, mid, hi } => format!(
-                "ramp_diverging({t}, {}, {}, {})",
-                vec3(lo),
-                vec3(mid),
-                vec3(hi)
-            ),
+            Ramp::Lut(_) => String::new(),
+            Ramp::Lerp { c0, c1 } => vec3_uniform("RAMP_C0", c0) + &vec3_uniform("RAMP_C1", c1),
+            Ramp::Diverging { lo, mid, hi } => {
+                vec3_uniform("RAMP_LO", lo)
+                    + &vec3_uniform("RAMP_MID", mid)
+                    + &vec3_uniform("RAMP_HI", hi)
+            }
             Ramp::Bands {
                 n,
                 width,
                 line,
                 base,
             } => format!(
-                "ramp_bands({t}, {}, {}, {}, {})",
+                "// @uniform RAMP_N: f32 = {}\n// @uniform RAMP_WIDTH: f32 = {} [0, 1]\n{}{}",
                 float(n),
                 float(width),
-                vec3(line),
-                vec3(base)
+                vec3_uniform("RAMP_LINE", line),
+                vec3_uniform("RAMP_BASE", base)
             ),
         }
     }
 
-    /// The ramp at `t`, linear RGB: the CPU twin of [`Ramp::wgsl`], as `ramp.wgsl` computes it.
+    /// The ramp at the WGSL `f32` expression `t`, its settings read from its uniforms ([`Ramp::uniforms`]).
+    pub fn wgsl(&self, t: &str) -> String {
+        match *self {
+            Ramp::Lut(l) => format!("ramp_{}({t})", l.name()),
+            Ramp::Lerp { .. } => format!("ramp_lerp({t}, uniforms.RAMP_C0, uniforms.RAMP_C1)"),
+            Ramp::Diverging { .. } => format!(
+                "ramp_diverging({t}, uniforms.RAMP_LO, uniforms.RAMP_MID, uniforms.RAMP_HI)"
+            ),
+            Ramp::Bands { .. } => format!(
+                "ramp_bands({t}, uniforms.RAMP_N, uniforms.RAMP_WIDTH, uniforms.RAMP_LINE, uniforms.RAMP_BASE)"
+            ),
+        }
+    }
+
+    /// The ramp at `t`, linear RGB, its settings its uniforms' defaults: the CPU twin of [`Ramp::wgsl`], as `ramp.wgsl`
+    /// computes it.
     pub fn colour(&self, t: f64) -> Rgb {
         let u = t.clamp(0.0, 1.0);
         let mix = |a: Rgb, b: Rgb, f: f64| [0, 1, 2].map(|c| a[c] + (b[c] - a[c]) * f);
@@ -600,11 +679,13 @@ impl FieldRamp {
             Map::Ramp(ramp) => format!(
                 "// A field ramp of `{}` (colour_composition §1.2; render::colour::field_ramp): the `{}` compaction, \
                  polarity {polarity},\n// then `{}`, with the invalid lane, the hatched pattern unless INVALID_OVERRIDE \
-                 is 1 (REQ-COL-001; R-132).\n{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{}    return {};\n}}\n",
+                 is 1 (REQ-COL-001; R-132).\n{}{}{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{}    return {};\n}}\n",
                 self.field.field,
                 self.compaction.name(),
                 ramp.name(),
                 Self::invalid_uniforms(),
+                self.compaction.uniforms(),
+                ramp.uniforms(),
                 self.guards(
                     "return debug_not_yet(ctx.frag_xy);",
                     Self::INVALID_RETURN
@@ -614,9 +695,10 @@ impl FieldRamp {
             Map::Lightness => format!(
                 "// A field ramp of `{}` as a lightness (colour_composition §1.2, §4.1; render::colour::field_ramp): the \
                  `{}`\n// compaction, polarity {polarity}. An unset or invalid sample returns 0: its style is drawn by \
-                 the ramp's post.\nfn brightness(ctx: Ctx) -> f32 {{\n{}    return {b};\n}}\n",
+                 the ramp's post.\n{}fn brightness(ctx: Ctx) -> f32 {{\n{}    return {b};\n}}\n",
                 self.field.field,
                 self.compaction.name(),
+                self.compaction.uniforms(),
                 self.guards("return 0.0;", "return 0.0;"),
             ),
         }
@@ -640,23 +722,31 @@ impl FieldRamp {
         )
     }
 
-    /// What the ramp shows for the stored value `x` with the read side's validity `gate`: the CPU twin of
-    /// [`FieldRamp::wgsl`], in its order: the unset value, then the invalid lane (the field's validity, a non-finite
-    /// value, the compaction's styled values), then the compacted value with the polarity applied.
+    /// [`FieldRamp::shown_at`] at the header's [`Reads::HEADER`].
     pub fn shown(&self, x: f32, gate: bool) -> Shown {
+        self.shown_at(x, gate, Reads::HEADER)
+    }
+
+    /// What the ramp shows for the stored value `x` with the read side's validity `gate` and the run-time values
+    /// `reads`: the CPU twin of [`FieldRamp::wgsl`], in its order: the unset value, then the invalid lane (the field's
+    /// validity, a non-finite value, the compaction's styled values), then the compacted value with the polarity
+    /// applied.
+    pub fn shown_at(&self, x: f32, gate: bool, reads: Reads) -> Shown {
         if self.field.is_unset(x) {
             return Shown::NotYet;
         }
         match self.field.read(x, gate) {
-            (v, true) if !self.compaction.styles(f64::from(v)) => {
-                Shown::Ramp(self.polarity.apply(self.compaction.place(f64::from(v))))
-            }
+            (v, true) if !self.compaction.styles(f64::from(v)) => Shown::Ramp(
+                self.polarity
+                    .apply(self.compaction.place_at(f64::from(v), reads)),
+            ),
             _ => Shown::Invalid,
         }
     }
 
     /// The colour the ramp draws at the pixel `frag_xy` for the stored value `x` with the read side's validity `gate`,
-    /// its invalid lane overridden with `invalid` (linear RGB; [`Invalid::Pattern`] for the hatch): the CPU twin of a
+    /// at the header's [`Reads::HEADER`], its invalid lane overridden with `invalid` (linear RGB; [`Invalid::Pattern`]
+    /// for the hatch): the CPU twin of a
     /// colour ramp's `colour`, and of a brightness ramp's post at a styled sample. `None` for a brightness ramp at a
     /// sample it places, whose colour is the combiner's.
     pub fn colour_at(
@@ -666,7 +756,19 @@ impl FieldRamp {
         frag_xy: [f64; 2],
         invalid: Invalid,
     ) -> Option<Rgb> {
-        match (self.shown(x, gate), &self.map) {
+        self.colour_at_reads(x, gate, frag_xy, invalid, Reads::HEADER)
+    }
+
+    /// [`FieldRamp::colour_at`] with the run-time values `reads`.
+    pub fn colour_at_reads(
+        &self,
+        x: f32,
+        gate: bool,
+        frag_xy: [f64; 2],
+        invalid: Invalid,
+        reads: Reads,
+    ) -> Option<Rgb> {
+        match (self.shown_at(x, gate, reads), &self.map) {
             (Shown::NotYet, _) => Some(present::debug_not_yet(frag_xy)),
             (Shown::Invalid, _) => Some(match invalid {
                 Invalid::Pattern => present::debug_invalid(frag_xy),

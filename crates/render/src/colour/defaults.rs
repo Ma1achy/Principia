@@ -19,10 +19,12 @@
 //! span zero (R-423, R-426), and §1.2 gives them the greyscale with white = high, which a diverging ramp has no place
 //! for (applied per R-369: REQ-COL-016's per-field polarity names them, and would otherwise apply to no field).
 //!
-//! **The compaction** ([`compaction`]) is the ledger `scale`'s form (dd_colouring §3.6; R-411): `lin` on the declared
-//! range's finite ends, a step index's `[0, horizon_steps]`, an end with no finite bound the measured end, and a signed
-//! field's range made symmetric, `[−M, M]` with `M = max(|lo|, |hi|)`, so zero sits at the diverging ramp's neutral
-//! (R-400); `log` with the field's ledger `floor` (R-263, a sim-key parameter, read from the sim key) or its display
+//! **The compaction** ([`compaction`]) is the ledger `scale`'s form (dd_colouring §3.6; R-411): `lin` on the numeric
+//! views' ends, one rule, `ledger::gen::numeric`'s ([`lin_ends`], [`half_width`]): the declared range's finite ends,
+//! a step index's `[0, horizon_steps]`, an end with no finite bound the measured end, and a signed field's range made
+//! symmetric, `[−M, M]` with `M = max(|lo|, |hi|)`, so zero sits at the diverging ramp's neutral (R-400). A measured
+//! end and the horizon are read at run time ([`Compaction::LinRead`]; lowering contract Part 3), never resolved into
+//! the source; `log` with the field's ledger `floor` (R-263, a sim-key parameter, read from the sim key) or its display
 //! floor (R-401, the register's [`ledger::constants::LOG_FLOORS`]); `cyclic` over one turn
 //! ([`ledger::gen::numeric::cyclic_period`]); `diverging`, the symlog, with `x₀` its ledger `floor` (the drifts'
 //! `eps_E` and `eps_L`, R-263) or its own (the register's [`ledger::constants::DIVERGING_X0`], provisional until
@@ -32,8 +34,8 @@
 //! ledger gap is refused, as generation refuses it (R-426); each is refused here, naming the field.
 
 use ledger::constants::{DIVERGING_X0, LOG_FLOORS};
-use ledger::gen::numeric::{cyclic_period, undeclared};
-use ledger::schema::{Bound, Entry, FieldType, Location, Scale};
+use ledger::gen::numeric::{cyclic_period, half_width, lin_ends, undeclared, End};
+use ledger::schema::{Entry, FieldType, Scale};
 
 use super::field_ramp::{Compaction, FieldRamp, Lut, Map, Polarity, Ramp, ScalarField};
 use crate::codegen::Slot;
@@ -94,21 +96,11 @@ pub fn role(e: &Entry) -> Role {
     }
 }
 
-/// What the registry resolves a field's scale against, the host's at the draw: each sim-key parameter's value by its
-/// name (`eps_E`, `eps_L`, R-263), the measured `(min, max)` of the field's finite values, and the read side's
-/// `horizon_steps`.
+/// What the registry resolves a field's scale against: each sim-key parameter's value by its name (`eps_E`, `eps_L`,
+/// R-263), which a change of re-integrates anyway. Nothing that changes with a gesture is resolved here: a measured
+/// range and the horizon are read at run time ([`Compaction::LinRead`]).
 pub struct Resolve<'a> {
     pub sim_key: &'a dyn Fn(&str) -> Option<f64>,
-    pub measured: [f64; 2],
-    pub horizon_steps: u32,
-}
-
-/// `b` as a finite end, or `None`.
-fn finite(b: Bound) -> Option<f64> {
-    match b {
-        Bound::Closed(v) | Bound::Open(v) if v.is_finite() => Some(v),
-        _ => None,
-    }
 }
 
 /// `e`'s scale, `x₀` or `ε`: its ledger `floor`, a sim-key parameter, read from the sim key; else its entry in `own`.
@@ -160,31 +152,26 @@ pub fn compaction(e: &Entry, role: Role, resolve: &Resolve) -> Result<Compaction
     }
     Ok(match e.scale {
         Scale::Lin => {
-            let step = matches!(e.location, Location::Packed { .. } | Location::Scalar(_))
-                && e.ty == FieldType::UBits
-                && finite(e.range.lo) == Some(0.0)
-                && finite(e.range.hi) == Some(ledger::constants::HORIZON_STEPS_MAX.number());
-            let (lo, hi) = if step {
-                (0.0, f64::from(resolve.horizon_steps))
-            } else {
-                (
-                    finite(e.range.lo).unwrap_or(resolve.measured[0]),
-                    finite(e.range.hi).unwrap_or(resolve.measured[1]),
-                )
-            };
-            let (lo, hi) = if role == Role::Signed {
-                let m = lo.abs().max(hi.abs());
-                (-m, m)
-            } else {
-                (lo, hi)
-            };
-            if !(lo.is_finite() && hi.is_finite() && lo <= hi) {
-                return Err(format!(
-                    "`{}`'s lin range [{lo}, {hi}] is not a finite range",
-                    e.name
-                ));
+            let (lo, hi) = lin_ends(e);
+            let symmetric = role == Role::Signed;
+            match (lo, hi) {
+                (End::Fixed(l), End::Fixed(h)) => {
+                    let (l, h) = if symmetric {
+                        let m = half_width(lo, hi, [0.0, 0.0], 0);
+                        (-m, m)
+                    } else {
+                        (l, h)
+                    };
+                    if l > h {
+                        return Err(format!(
+                            "`{}`'s lin range [{l}, {h}] is inverted",
+                            e.name
+                        ));
+                    }
+                    Compaction::Lin { lo: l, hi: h }
+                }
+                _ => Compaction::LinRead { lo, hi, symmetric },
             }
-            Compaction::Lin { lo, hi }
         }
         Scale::Log => Compaction::Log {
             eps: scale_of(
