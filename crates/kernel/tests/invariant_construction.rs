@@ -671,8 +671,10 @@ fn check_projection<R: Q>(project: Projection<R>) {
             let size: f64 = v.iter().flatten().map(|x| x.f().abs()).sum::<f64>() * 4.0;
             let tol = 16.0 * R::eps() * size;
             let at = format!("field {n} at m = {:?} ({})", masses.m, R::NAME);
-            for d in 0..2 {
-                let c: f64 = (0..3).map(|i| mf[i] * wf[i][d]).sum();
+            let drift_left = mf.iter().zip(&wf).fold([0.0f64; 2], |c, (mi, wi)| {
+                [c[0] + mi * wi[0], c[1] + mi * wi[1]]
+            });
+            for c in drift_left {
                 assert!(c.abs() <= tol, "the CoM drift {c:e} is left in {at}");
             }
             let l: f64 = (0..3)
