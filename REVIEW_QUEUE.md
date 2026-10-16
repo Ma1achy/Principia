@@ -210,7 +210,7 @@ Nothing is chosen.*
   note naming this entry; the real engine's side has no trace, so draws nothing.
 - **Waits:** TASK-M8-28 (REQ-TOOL-098's histogram on real data). TASK-M6-28 does not wait.
 
-## RQ-310: `I_max` and the "when decided" latch want descriptor bits 10–15, which payload §2 holds reserved and "never opportunistically reused", beside R-37's departed bit, whose place is open *(conflict and budget, R-442, R-37, R-36, REQ-PAY-105, REQ-PAY-106, REQ-COL-082, REQ-VAL-055; context: TASK-M7-35, TASK-M7-40)*
+## RQ-310: `I_max` and the "when decided" latch want descriptor bits 10–15, which payload §2 holds reserved and "never opportunistically reused", beside R-37's departed bit, whose place is open *(conflict and budget, R-442, R-37, R-36, REQ-PAY-105, REQ-PAY-106, REQ-COL-082, REQ-COL-106, REQ-VAL-055; context: TASK-M7-35, TASK-M7-40)*
 
 *Found porting the Chazy stain spec (R-442). Nothing is chosen. **For the human: yes**, as the human asked ("Two need
 me: the descriptor-bit budget …").*
@@ -243,7 +243,7 @@ me: the descriptor-bit budget …").*
     cost.
   - (d) Do not store `I_max`: OS-candidate is then computed from no history (it never fires), or dropped.
 - **Waits:** REQ-PAY-105's storage and REQ-PAY-106 (`rq: RQ-310`), TASK-M7-35's persisting the latch, and REQ-COL-082
-  (TASK-M7-40). The local, per-step latch and the classifier's tests do not wait.
+  and REQ-COL-106's lightness by time (TASK-M7-40). The local, per-step latch and the classifier's tests do not wait.
 
 ## RQ-311: the default seven-class final-motion palette sits below τ within itself (H / HP 0.083; HP / P 0.002 under deuteranopia); keep it, or move the default to Okabe–Ito *(decision at the gate, R-442, R-132, R-429, REQ-COL-075, REQ-COL-086, REQ-COL-087; context: TASK-M7-37, the M7 gate)*
 
@@ -465,7 +465,7 @@ change results is RQ-324.*
   - A reserved `state` code takes the invalid hatch under every option (colour_composition §4.1).
 - **Waits:** REQ-COL-072's `decode_failed` clause (`rq: RQ-319`), TASK-M7-37.
 
-## RQ-320: the "what just changed" view needs the previous frame's class, but a stain node reads the payload at the playhead *(silence, R-442, REQ-COL-083; context: TASK-M7-40)*
+## RQ-320: the "what just changed" view needs the previous frame's class, but a stain node reads the payload at the playhead *(silence, R-442, REQ-COL-083, REQ-COL-106; context: TASK-M7-40)*
 
 *Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369.*
 
@@ -482,7 +482,8 @@ change results is RQ-324.*
     calibration.
   - (b) A latch in the payload (the coarse class at the previous playhead), against the spec's "not a payload field".
   - (c) Offline only: the view is computed from two exported frames, outside the live stain graph.
-- **Waits:** REQ-COL-083 (`rq: RQ-320`), TASK-M7-40.
+- **Waits:** REQ-COL-083 and REQ-COL-106's dimming (`rq: RQ-320`), TASK-M7-40. The dimming's value is REQ-COL-106's
+  calibration (R-71), proposed by TASK-M7-40 under whichever option rules.
 
 ## RQ-321: the one-body views' escaping body: the classifier's `chazy_escaper`, or the event's escape detail where the run has an escape event *(open question in the ruled spec, R-443, R-442, R-29, R-103, REQ-COL-090, REQ-COL-092, REQ-COL-093; context: TASK-M7-41; sibling of RQ-313)*
 

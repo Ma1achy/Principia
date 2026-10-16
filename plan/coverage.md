@@ -16,15 +16,15 @@
 | SCHED | 97 |
 | REF | 51 |
 | RENDER | 86 |
-| COL | 99 |
+| COL | 101 |
 | GUI | 186 |
 | TOOL | 165 |
 | VAL | 188 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1446** |
+| **total** | **1448** |
 
-Of these: 132 calibration, 130 definition, 1184 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 133 calibration, 131 definition, 1184 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -37,7 +37,7 @@ Of these: 132 calibration, 130 definition, 1184 obligation. Retired (kept for th
 | M4 | 104 |
 | M5 | 175 |
 | M6 | 160 |
-| M7 | 168 |
+| M7 | 170 |
 | M8 | 242 |
 
 ## Sections
@@ -45,7 +45,7 @@ Of these: 132 calibration, 130 definition, 1184 obligation. Retired (kept for th
 1204 sections in 47 files: 985 yield at least one requirement; 219 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323) | 1 |
+| gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
 | informative only | 164 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
@@ -289,7 +289,7 @@ Of these: 132 calibration, 130 definition, 1184 obligation. Retired (kept for th
 | 11. Decisions, calibrations and open questions | parent heading (obligations are in its subsections) | §11.1–§11.4 |
 | 11.1 Decided (R-442) | informative only | restates R-442's seven rulings, which the requirements citing R-442 carry |
 | 11.1.1 Decided (R-443) | informative only | restates R-443's ruling, which the requirements citing R-443 carry |
-| 11.3 Open questions | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323) | each open question is an RQ entry; the requirements waiting on them carry rq: |
+| 11.3 Open questions | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | each open question is an RQ entry; the requirements waiting on them carry rq: |
 | 11.4 Not done, and natural next steps | informative only | Standish's certificate and a chaotic-chart re-run, named as next steps, not obligations |
 | 12. Tests | parent heading (obligations are in its subsections) | §12.1–§12.3 |
 | 13. References | informative only | bibliography |

@@ -34,7 +34,7 @@ how hard (lightness). The lightness range and the compaction are proposed for th
 
 ## Acceptance tests
 - `cargo test -p render chazy_b_no_hue` — B's OKLab `a` and `b` are 0 to within the bound RQ-317 settles, and B under Replace-L at L = 0.3, 0.6 and 0.9 gives a neutral grey to that bound; control: `#14BBC2` fails the same check (REQ-COL-074).
-- `cargo test -p render chazy_energy_recovers_transient` — the transient fixture's pixel has OKLab L above L(b = ½) and the same configuration at rest below it; control: the flat seven-class stain draws both identically (REQ-COL-078).
+- `cargo test -p render chazy_energy_recovers_transient` — the transient fixture's sample has OKLab L above L(b = ½) and the same configuration at rest below it; with `chazy_q` under REQ-PAY-104's definition, the drill-down's §5.5 overlap states do the same (a transient whose outer body is at ρ = 10, receding, with outer `K/U = 0.5`, above; a B-so-far whose outer body approaches with outer `K/U > 1`, below); control: the flat seven-class stain draws both identically (REQ-COL-078).
 - `cargo xtask golden chazy-energy` — a synthetic payload with a sample per populated §10.5.2 cell renders its hue at the cell's lightness band; dispersal never renders dark (REQ-COL-079).
 - Review (gui): the lightness range L 0.3 to 0.9, with renders showing dark regions keep their hue at L_min and lose it near 0, confirmed by the human at the M7 gate (REQ-COL-088).
 - Review (physics): the compaction `q/(1 + q)`, range-free (dd_colouring §3.6, R-411) and parabolic at ½, confirmed by the human at the M7 gate (REQ-COL-089).

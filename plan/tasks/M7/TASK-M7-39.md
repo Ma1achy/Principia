@@ -10,9 +10,9 @@
 
 ## Goal
 The Chazy class flips on the sign of a two-body energy and on band edges in `K/U`, so CPU-f64 and GPU-f32 can differ
-at pixels within ulps of a sign change (R-442; the Chazy drill-down §8). Measure, on a gallery chart at several
-playheads, the fraction of pixels whose class differs between the two, report it, and check that every differing
-pixel lies within the band of a sign change. The prototype never measured f32 (§9 item 2); the measurement comes first,
+at samples within ulps of a sign change (R-442; the Chazy drill-down §8). Measure, on a gallery chart at several
+playheads, the fraction of samples whose class differs between the two, report it, and check that every differing
+sample lies within the band of a sign change. The prototype never measured f32 (§9 item 2); the measurement comes first,
 and the threshold on the fraction follows RQ-314.
 
 ## References
@@ -25,11 +25,11 @@ and the threshold on the fraction follows RQ-314.
 
 ## Deliverables
 - `cargo xtask gate chazy-parity`: classify a gallery chart on CPU-f64 and GPU-f32 (native wgpu) from the same states
-  at several playheads; report the disagreement fraction per playhead; for each differing pixel, report the nearest
+  at several playheads; report the disagreement fraction per playhead; for each differing sample, report the nearest
   sign change or band edge and its margin.
 
 ## Acceptance tests
-- `cargo xtask gate chazy-parity` — prints the disagreement fraction at each playhead and fails if a differing pixel is not within the band of a sign change of a two-body energy or a `K/U` band edge; the fraction is reported, not asserted zero, its threshold set as RQ-314 settles (REQ-VAL-183).
+- `cargo xtask gate chazy-parity` — prints the disagreement fraction over samples at each playhead and fails if a differing sample is not within the band of a sign change of a two-body energy or a `K/U` band edge; the fraction is reported, not asserted zero, its threshold set as RQ-314 settles (REQ-VAL-183).
 
 ## Notes
 - How a categorical label fits the parity tiers (the spec's "Tier N" against the contract's "a label on a real

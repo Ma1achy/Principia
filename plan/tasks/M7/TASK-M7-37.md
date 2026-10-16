@@ -39,7 +39,8 @@ measured against τ and the palettes proposed for the M7 gate (R-71).
 - The validity styles in every Chazy stain; collision `#DA85B6`.
 - The ranks of `chazy_final` and, written into the drill-down's §10.9, of `chazy_class`, `chazy_status` and
   `chazy_structure` (REQ-COL-085).
-- `cargo test -p render chazy_palette_separation`, and the Chazy palettes added to `cvd_hatch_distinct`'s entries.
+- `cargo test -p render chazy_palette_separation` over the seven-class, four-family, Okabe–Ito, structure and status
+  palettes, and the Chazy palettes added to `cvd_hatch_distinct`'s entries.
 - Golden images of each flat stain on a synthetic payload, and the calibration proposal for the palettes.
 
 ## Acceptance tests
@@ -50,12 +51,15 @@ measured against τ and the palettes proposed for the M7 gate (R-71).
 - `cargo test -p render chazy_filter` — the seven-class stain filtered to {HE, PE} keeps their colours and mutes every other pixel by REQ-COL-058's transform; the same on the status stain (REQ-COL-081).
 - `cargo test -p render chazy_rank` — greyscale mode gives `chazy_final`'s class `r` the lightness `(r + ½)/8` and hue mode `t = r/8`, in the order B, OS, PE, HE, P, HP, H, collision (REQ-COL-084).
 - Review (physics): the drill-down's §10.9 gives the ranks and K of `chazy_class`, `chazy_status` and `chazy_structure`, consistent with colour_composition §4.1, and their greyscale and hue renders use them (REQ-COL-085).
-- `cargo test -p render chazy_palette_separation` — prints each palette's tightest pair and tightest style distance unsimulated and under each simulation; status (0.114, 0.111) and four-family clear τ = 0.101 unsimulated; seven-class asserts H / HP 0.083 and §11.2.1's simulated values, every entry ≥ τ from the styles unsimulated (0.137); `cvd_hatch_distinct` passes with the Chazy palettes added (REQ-COL-086).
-- Review (gui): the palettes' proposal with REQ-COL-086's measurements, confirmed by the human at the M7 gate, deciding RQ-311 (REQ-COL-087).
+- `cargo test -p render chazy_palette_separation` — prints each palette's tightest pair and tightest style distance unsimulated and under each simulation; status (0.114, 0.111) and four-family (0.110, 0.137) clear τ = 0.101 unsimulated; seven-class asserts H / HP 0.083 and §11.2.1's simulated values, Okabe–Ito asserts P / collision 0.041 unsimulated and under each simulation, the structure hues their §11.2.1 values, and every entry of each is ≥ τ from the styles unsimulated (0.137, 0.121, 0.137); `cvd_hatch_distinct` passes with the Chazy palettes added (REQ-COL-086).
+- Review (gui): the palettes' proposal (seven-class, four families, Okabe–Ito, structure hues, status) with REQ-COL-086's measurements, Okabe–Ito's 0.041 P / collision among them, confirmed by the human at the M7 gate, deciding RQ-311 (REQ-COL-087).
 
 ## Notes
-- R-442: the seven-class palette is the default; whether it stays below τ or moves to Okabe–Ito is RQ-311, for the
-  human at the gate. REQ-COL-087 waits on it and on RQ-317 (B's chroma); this task builds R-442's default meanwhile.
+- R-442: the seven-class palette is the default; whether it stays below τ or moves to Okabe–Ito (whose P sits 0.041
+  from collision) is RQ-311, for the human at the gate. REQ-COL-087 waits on it and on RQ-317 (B's chroma); this task
+  builds R-442's default meanwhile.
+- The time views' dimming and lightness by time are REQ-COL-106, TASK-M7-40's, not this task's (R-71: proposed by the
+  task that needs them).
 - What `decode_failed` draws is RQ-319; REQ-COL-072 waits on it for that clause.
 - The filter's mute is REQ-COL-058's (TASK-M7-08); the spec's preview `#3A3B40` is not a second rule (R-442, applied
   per R-369).

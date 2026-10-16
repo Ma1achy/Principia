@@ -1954,15 +1954,15 @@
   title: "The Chazy time views: when it was decided, and what just changed"
   depends_on: [TASK-M7-37, TASK-M7-12]
   needs: []
-  requirements: [REQ-COL-082, REQ-COL-083]
-  reviewers: [code, qa, gui]
+  requirements: [REQ-COL-082, REQ-COL-083, REQ-COL-106]
+  reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M7-41
   milestone: M7
   title: "The Chazy one-body stains: the body lens, its energy form, the escaper map, the mass-rank views and their tie fallback"
   depends_on: [TASK-M7-36, TASK-M7-38]
   needs: [REQ-COL-055, REQ-COL-064]
-  requirements: [REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-COL-096, REQ-COL-097, REQ-COL-098, REQ-COL-099, REQ-COL-100, REQ-VAL-188, REQ-VAL-189]
+  requirements: [REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-COL-096, REQ-COL-097, REQ-COL-098, REQ-COL-099, REQ-COL-100, REQ-COL-107, REQ-VAL-188, REQ-VAL-189]
   reviewers: [code, qa, gui, physics]
   pitfalls: [PIT-5]
 - id: TASK-M8-01
@@ -2321,7 +2321,7 @@
   milestone: M8
   title: "The Chazy legends: the playhead in the title, B's label, the status legend's full names, the one-body legends and the three-body panels"
   depends_on: [TASK-M8-22, TASK-M7-37, TASK-M7-38, TASK-M7-41]
-  needs: [REQ-COL-075, REQ-COL-080, REQ-COL-090, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095]
+  needs: [REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-078, REQ-COL-079, REQ-COL-080, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095]
   requirements: [REQ-GUI-185, REQ-GUI-186, REQ-GUI-187]
   reviewers: [code, qa, gui]
   pitfalls: []

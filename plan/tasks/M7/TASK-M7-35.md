@@ -59,8 +59,12 @@ parameters and the latch's quantisation are proposed with their evidence for the
 - Review (physics): the proposals for ε = 0.05 (REQ-EVT-028), `h_far` = 5 with the hierarchy gate and δ = 10⁻⁵ (REQ-EVT-029), `os_ratio` = 25 measured at the snapshot cadence while the latch updates every step (REQ-EVT-030), settling off (REQ-EVT-031) and the latch's log half-octave 5-bit quantisation (REQ-PAY-106), each with the drill-down's §4.1 and §11.2 evidence, confirmed by the human at the M7 gate.
 
 ## Notes
-- The order of B-stable and transient at E > 0 is RQ-318: the code's order (transient first) is what prin-rs PR #32
-  measured; REQ-PAY-099 waits on the ruling for that clause only. The fixtures do not reach the case.
+- The rule's order differs between the spec's table and the code in two places: B-stable against transient at E > 0
+  (RQ-318; no state has been shown to reach it) and B-stable against excursion (RQ-324; reachable and common). The
+  code's order is what prin-rs PR #32 measured and is built meanwhile; REQ-PAY-099 waits on the rulings for those
+  clauses only. The fixtures reach neither case.
+- `classify` enforces the E > 0 certificate by its order but never tests E in the dispersal step or the two-stage H;
+  whether to guard them with E ≥ 0 is RQ-325, and REQ-PAY-099 waits on it for those clauses (drill-down §2).
 - Where `I_max` is stored is RQ-310 (for the human). Until it rules, the latch is local and per step, and the
   persistence test runs on the latch's local value; REQ-PAY-105 and REQ-PAY-106 wait on it.
 - Outside the fixtures `R_0` is computed from the initial state; the fixtures pass `R_0 = 1`, as written (§12.1).
