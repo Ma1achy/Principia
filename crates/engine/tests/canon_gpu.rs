@@ -12,6 +12,9 @@
 //! - `canonicaliser_scale_invariance`: 2000 generic states scaled by powers of two from `2^−60` to `2^60` and by
 //!   `1e-8` to `1e18`: GPU-f32 takes CPU-f32's branch and the f64 one at every scale, and its notices at a power of
 //!   two are those at `2⁰` (REQ-DEC-017).
+//! - `canonicaliser_hierarchy`: hierarchical collinear states, the inner pair `10⁻³` to `10⁻⁸` of the outer distance:
+//!   GPU-f32 takes CPU-f32's branch at the deadband's edge and mirrors at `λ̃_y = −2δ_λ`, where Metal flushes
+//!   subnormals (REQ-DEC-017).
 //! - `canonicaliser_canonicalise_order`: an off-CoM, boosted, scaled, rotated state, mirrored or not: `I` is the
 //!   CoM-frame one, and the output is the canonical representative on both backends (REQ-ENC-015).
 //! - `canonicaliser_coincident_inner_pair`: `ρ = 0` raises `lookup_clamped` with `φ = +0` and the identity rotation on
@@ -501,6 +504,150 @@ negative_control!(
     expected = "GPU-f32 and CPU-f32 mirror differently at scale",
     {
         check_scales(&harness(), unscaled);
+    }
+);
+
+// ── canonicaliser_hierarchy (REQ-DEC-017) ───────────────────────────────────────────────────────────────────────
+
+/// The inner pair's separation over the outer distance.
+const RATIOS: [f64; 6] = [1e-3, 1e-4, 1e-5, 1e-6, 1e-7, 1e-8];
+
+/// Hierarchical collinear f32 states: `r₀ = 0`, `r₁ = ρ` with `‖ρ‖ = ratio`, and `r₂` at distance `0.5…2` along `ρ`'s line
+/// from the pair's centre of mass, offset across it so that `λ̃_y` is `−k·δ_λ`; `k` is `1 ± 10⁻⁶` at the deadband's
+/// edge, or 2, which must mirror. On `+x` where `axis`, so the offset survives the rounding to f32; at a random angle
+/// otherwise, where it does not, and the state is at the seam.
+fn hierarchy(ratio: f64, axis: bool, edge: bool, seed: u64) -> Vec<Ic<f32>> {
+    let mut rng = SplitMix::new(seed);
+    let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
+    (0..2000)
+        .map(|_| {
+            let w = [u(0.01, 1.0), u(0.01, 1.0), u(0.01, 1.0)];
+            let total: f64 = w.iter().sum();
+            let m = w.map(|x| f64::from((x / total) as f32));
+            let m01 = m[0] + m[1];
+            let theta = if axis {
+                0.0
+            } else {
+                u(0.0, 1.0) * std::f64::consts::TAU
+            };
+            let (dir, across) = ([theta.cos(), theta.sin()], [-theta.sin(), theta.cos()]);
+            let rho = dir.map(|q| ratio * q);
+            let inner = rho.map(|q| m[1] * q / m01);
+            let l = u(0.5, 2.0);
+            let i = m[0] * m[1] / m01 * ratio * ratio + m[2] * m01 * l * l;
+            let k = if edge { 1.0 + u(-1e-6, 1e-6) } else { 2.0 };
+            let ly = -k * f64::DELTA_LAMBDA * i.sqrt() / (m[2] * m01).sqrt();
+            let r2 = [0, 1].map(|j| inner[j] + l * dir[j] + ly * across[j]);
+            Ic {
+                m: m.map(|x| x as f32),
+                r: [[0.0, 0.0], rho.map(|q| q as f32), r2.map(|q| q as f32)],
+                p: [[0.1, 0.0], [0.0, -0.2], [0.05, 0.1]],
+            }
+        })
+        .collect()
+}
+
+/// One backend's mirror flags on the hierarchical states, `flags`, against CPU-f32's on identical inputs at the edge,
+/// on `+x` and at a random angle, and against R-82 (a mirror) at `λ̃_y = −2δ_λ` on `+x`, at every ratio; the number
+/// mirrored at the edge.
+fn check_hierarchy(flags: &dyn Fn(&[Ic<f32>]) -> Vec<bool>, name: &str) -> usize {
+    let mut mirrored = 0;
+    for (n, ratio) in RATIOS.into_iter().enumerate() {
+        for axis in [true, false] {
+            let states = hierarchy(ratio, axis, true, 61 + n as u64);
+            let got = flags(&states);
+            for (j, x) in states.iter().enumerate() {
+                let cpu = canonicalise(x).mirrored;
+                mirrored += usize::from(cpu);
+                assert_eq!(
+                    got[j], cpu,
+                    "{name} and CPU-f32 mirror differently at ratio {ratio:e}, on +x {axis}, edge state {j}: {x:?}"
+                );
+            }
+        }
+        let states = hierarchy(ratio, true, false, 71 + n as u64);
+        let got = flags(&states);
+        for (j, x) in states.iter().enumerate() {
+            assert!(
+                got[j] && canonicalise(x).mirrored,
+                "{name} misses the mirror at ratio {ratio:e}, λ̃_y = −2δ_λ, state {j}: {x:?}"
+            );
+        }
+    }
+    mirrored
+}
+
+#[test]
+fn canonicaliser_hierarchy() {
+    let h = harness();
+    let mirrored = check_hierarchy(
+        &|states| gpu(&h, states).iter().map(|c| c.mirrored).collect(),
+        "GPU-f32",
+    );
+    eprintln!(
+        "canonicaliser_hierarchy: ratios {RATIOS:?}, 2000 states each at the edge (on +x and turned) and at −2δ_λ; \
+         GPU-f32 takes CPU-f32's branch on every edge state ({mirrored} mirrored) and mirrors every −2δ_λ one"
+    );
+}
+
+/// `x`, or a zero of its sign where it is subnormal: a GPU that flushes subnormals.
+#[cfg(feature = "controls")]
+fn flush(x: f32) -> f32 {
+    if x != 0.0 && x.abs() < f32::MIN_POSITIVE {
+        0.0f32.copysign(x)
+    } else {
+        x
+    }
+}
+
+/// The f32 product of 66974583's decision, its operands split at 12 bits, on a backend that flushes every subnormal.
+#[cfg(feature = "controls")]
+fn flushed_product(a: f32, b: f32) -> f32 {
+    let ah = f32::from_bits(a.to_bits() & 0xFFFF_F000);
+    let bh = f32::from_bits(b.to_bits() & 0xFFFF_F000);
+    let (al, bl) = (a - ah, b - bh);
+    let low = flush(flush(flush(ah * bl) + flush(al * bh)) + flush(al * bl));
+    flush(flush(ah * bh) + low)
+}
+
+/// 66974583's decision, the differences rescaled by one power of two for the largest, emulated on a flushing GPU.
+#[cfg(feature = "controls")]
+fn flushed_decision(x: &Ic<f32>) -> bool {
+    let (m, r) = (x.m, x.r);
+    let diff = |a: [f32; 2], b: [f32; 2]| [b[0] - a[0], b[1] - a[1]];
+    let (d01, d02, d12) = (diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]));
+    let largest = [d01, d02, d12]
+        .iter()
+        .flatten()
+        .map(|q| q.abs())
+        .fold(0.0f32, f32::max);
+    let k = largest.log2().floor() as i32;
+    let s = 2f32.powi(-k);
+    let (rho, d02, d12) = (d01.map(|q| q * s), d02.map(|q| q * s), d12.map(|q| q * s));
+    let p = flushed_product;
+    let sq = |v: [f32; 2]| flush(p(v[0], v[0]) + p(v[1], v[1]));
+    let d2 = flush(
+        flush(p(p(m[0], m[1]), sq(rho)) + p(p(m[0], m[2]), sq(d02))) + p(p(m[1], m[2]), sq(d12)),
+    );
+    let pole = rho == [0.0, 0.0];
+    let axis = if pole { [1.0, 0.0] } else { rho };
+    let lam = |j: usize| flush(p(m[0], d02[j]) + p(m[1], d12[j]));
+    let c = flush(p(axis[0], lam(1)) - p(axis[1], lam(0)));
+    let d = f32::DELTA_LAMBDA;
+    let left = p(p(c, c), m[2]);
+    let right = p(p(p(p(d, d), m[0] + m[1]), sq(axis)), d2);
+    c < 0.0 && left > right
+}
+
+negative_control!(
+    canonicaliser_hierarchy,
+    "66974583's decision on a GPU that flushes subnormals, emulated, forks on hierarchical states and must fail",
+    expected = "a flushing GPU",
+    {
+        check_hierarchy(
+            &|states| states.iter().map(flushed_decision).collect(),
+            "a flushing GPU",
+        );
     }
 );
 

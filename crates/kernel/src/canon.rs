@@ -37,12 +37,12 @@
 //!   about `1e-19` where a GPU flushes subnormals): the same select, so `r` is left unscaled, at `I ≈ 0`, not 1, every
 //!   momentum becomes `0·p` (`√√0 = 0`) and `λ = 1`; since `ρ ≠ 0`, no `lookup_clamped`. The state leaves `C` off the
 //!   section, unflagged. The mirror is still R-82's on the state's own `λ̃_y`, which is scale-free (the decision's
-//!   range rescale, below).
+//!   range, below).
 //! - **`I_in` rounding to `+∞`** (f64 above about `1e154` per coordinate, f32 above about `1e19`): `√I_in = +∞`, so
 //!   `r/√I_in` is `±0`, `λ = 1/∞ = 0`, and `I_in^{1/4}·p` is `±∞`, or NaN for a zero component; step 1b's sums and the
 //!   rotation then make every momentum NaN on the CPU. `ρ` and the mirror are read from the input's differences before
 //!   the division (below), so `lookup_clamped` is raised iff `ρ = r₁ − r₀` is 0, `φ` is that `ρ`'s angle, and the
-//!   mirror is R-82's on the state's own `λ̃_y` (the decision's range rescale, below). On the GPU this arithmetic on `∞`
+//!   mirror is R-82's on the state's own `λ̃_y` (the decision's range, below). On the GPU this arithmetic on `∞`
 //!   is not pinned (WGSL may assume there are no infinities; R-436).
 //!
 //! **The branch inputs, read before step 0** (R-34, R-84; gpu_determinism_note rules 1 and 2). Step 2's guard and
@@ -60,24 +60,26 @@
 //!   `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`: `δ_λ` carried into the units of `c²`. At `ρ = 0` step 2 is the identity and
 //!   `λ̃_y = √(m₂M₀₁)·Λ_y/(M₀₁d)`, the same with `ρ` read as `(1, 0)`. `d² = I_in = Σ_{i<j} mᵢmⱼ‖rⱼ − rᵢ‖²` (with
 //!   `Σmᵢ = 1`), from the differences too, so the test reads no CoM.
-//! - **The range rescale.** `c²` and `‖ρ‖²d²` are both of degree 4 in the state's scale, so the test is unchanged by
-//!   scaling the differences by `2^−k`, which [`mirror_decision`] does first, with `k` read from their exponent bits
-//!   so that the largest component is in `[1, 2)`. A power-of-two product is exact wherever its result is normal, so
-//!   for any state with finite differences the test neither overflows nor underflows: at f32 a state of size `1e18` or
-//!   `1e-18`, and at f64 one of `1e150` or `1e-150`, takes R-82's branch, which the unscaled form loses (`m₂c²` and
-//!   `δ_λ²M₀₁‖ρ‖²d²` both `+∞`, or both rounded to 0), and a GPU that flushes subnormals sees the same normal numbers as
-//!   one that keeps them.
-//! - **The products** ([`IeeeBits::product`]). At f32 every product is formed from its operands' bit-split halves,
-//!   whose partial products are exact, summed in one fixed order: a backend that fuses or contracts any of its sites
-//!   rounds the same exact sums, so the product's bits are the same everywhere. Every other operation is a lone
-//!   subtraction or addition, an integer operation on bits, a select or a comparison.
+//! - **The range.** `c²` and `‖ρ‖²d²` are both of degree 4 in the state's scale, and `‖ρ‖²` is of degree 2 in the
+//!   inner pair's own size, so a float form of the test overflows, underflows or, on a GPU that flushes subnormals,
+//!   drops terms, at large or small scales and on hierarchical states (an inner pair `10⁻³` of the outer distance is
+//!   enough at f32: `δ_λ² ≈ 2^−80` takes the products' low parts below the smallest normal). So
+//!   [`mirror_decision`] carries every quantity as a mantissa in `[1, 2)` and an integer exponent (`Wide`): products
+//!   multiply mantissas and add exponents, sums align on the larger exponent, and the two sides are compared by
+//!   exponent, then mantissa. `δ_λ`, the masses and each difference are taken into that form exactly from their bits.
+//! - **The products** ([`IeeeBits::product`]). At f32 every mantissa product is formed from its operands' bit-split
+//!   halves, whose partial products are exact and, the mantissas being in `[1, 2)`, at least `2^−46`; they are summed
+//!   in one fixed order. A backend that fuses or contracts any site rounds the same exact sums. Every other float
+//!   operation is an aligned sum of mantissas, the smaller scaled by at most `2^−60`, or a scaling by a power of two into
+//!   `[1, 2)`; the rest are integer operations on bits and exponents, selects and comparisons.
 //!
-//! So `|λ̃_y| ≤ δ_λ`, `−δ_λ` itself included, is no mirror, and one input takes one branch on every IEEE backend that
-//! keeps its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84), fused or not.
-//! The one gap left is a partial product below the smallest normal, where a GPU that flushes subnormals drops it: a
-//! component more than about `2^−100` (f32) below the state's largest difference. [`Canonical::lambda_t_y`] is formed
-//! after the rotation and read, not branched on; within rounding of `−δ_λ` it may disagree with the flag. The
-//! cross-backend claim is for identical inputs only (PIT-10).
+//! So `|λ̃_y| ≤ δ_λ`, `−δ_λ` itself included, is no mirror, and no float the decision rounds is subnormal or overflows,
+//! for any state whose coordinates and pair differences are 0 or normal (at f32, none below about `1.2e-38` in
+//! magnitude): one input takes one branch on every IEEE backend that keeps its additions and multiplications correctly
+//! rounded and unreassociated (fast-math off, R-84), whether it fuses, contracts or flushes subnormals. A state with a
+//! subnormal coordinate or difference is itself read differently by a flushing GPU, before `C` runs.
+//! [`Canonical::lambda_t_y`] is formed after the rotation and read, not branched on; within rounding of `−δ_λ` it may
+//! disagree with the flag. The cross-backend claim is for identical inputs only (PIT-10).
 //!
 //! **The scale gauge** ([`scale_gauge`]; dd_decoder §3.5, chart_reference §0.5): `ℓ = √I`, `rᵢ ← rᵢ/ℓ`,
 //! `pᵢ ← √ℓ·pᵢ`, the same similarity map as step 0 ([`similarity`]); a no-op, to rounding, on canonical output.
@@ -216,61 +218,121 @@ pub fn mirror_taken<R: LinkReal>(lambda_t_y: R) -> bool {
     lambda_t_y < -R::DELTA_LAMBDA
 }
 
-/// `d²`'s three pair terms' sum, `Σ_{i<j} mᵢmⱼ‖rⱼ − rᵢ‖²` over the differences `d01 = r₁ − r₀`, `d02 = r₂ − r₀`,
-/// `d12 = r₂ − r₁`: the CoM-frame moment of inertia when `Σmᵢ = 1`, from differences alone, every product an
-/// [`IeeeBits::product`].
+/// The exponent [`Wide`] gives zero: below every product's exponent the decision can form, so a zero is the smallest
+/// value in every comparison and alignment.
+const ZERO_EXPONENT: i32 = -(1 << 20);
+
+/// A number `m·2^e` with its exponent carried as an integer: `|m|` in `[1, 2)`, or `m = 0` with `e` the
+/// [`ZERO_EXPONENT`]. The mirror decision's arithmetic, so that no float it rounds lies outside `[2^−60, 4)` in
+/// magnitude, and none is subnormal on any backend, whatever the state's scale or its terms' spread.
+#[derive(Clone, Copy)]
+struct Wide<R> {
+    m: R,
+    e: i32,
+}
+
+/// `x·2^k` normalised, for `x` 0 or a normal float within `[2^−60, 4)` in magnitude: `k` read from the bits, `x` scaled
+/// by `2^−k`, exact.
 #[inline]
-fn pair_sum<R: LinkReal + IeeeBits>(m: [R; 3], d01: [R; 2], d02: [R; 2], d12: [R; 2]) -> R {
-    let sq = |v: [R; 2]| v[0].product(v[0]) + v[1].product(v[1]);
-    let n01 = m[0].product(m[1]).product(sq(d01));
-    let n02 = m[0].product(m[2]).product(sq(d02));
-    let n12 = m[1].product(m[2]).product(sq(d12));
-    (n01 + n02) + n12
+fn renorm<R: LinkReal + IeeeBits>(x: R, k: i32) -> Wide<R> {
+    let n = x.exponent();
+    Wide {
+        m: x * R::pow2(-n),
+        e: select(x == R::zero(), ZERO_EXPONENT, k + n),
+    }
+}
+
+/// `x` as a [`Wide`], for `x` 0 or normal: scaled by `2^−e`, `e` its exponent field, as two normal powers of two.
+#[inline]
+fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
+    let k = x.exponent();
+    let half = k / 2;
+    Wide {
+        m: x * R::pow2(-half) * R::pow2(half - k),
+        e: select(x == R::zero(), ZERO_EXPONENT, k),
+    }
+}
+
+/// `a·b`: the mantissas' [`IeeeBits::product`], in `[1, 4)`, whose partial products are at least `2^−46`, renormalised.
+#[inline]
+fn wide_mul<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+    renorm(a.m.product(b.m), a.e + b.e)
+}
+
+/// `a + b`, aligned on the larger exponent: the smaller mantissa times `2^−s`, `s` the exponents' difference capped at
+/// 60, below which it is under half an ulp of the larger (so the cap changes no rounding), then renormalised. A
+/// cancellation leaves an exact difference of at least `2^−24` (f32; `2^−53` at f64), normal.
+#[inline]
+fn wide_add<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> Wide<R> {
+    let a_big = a.e >= b.e;
+    let (big, small) = (select(a_big, a, b), select(a_big, b, a));
+    let gap = big.e - small.e;
+    let shift = select(gap > 60, 60, gap);
+    renorm(big.m + small.m * R::pow2(-shift), big.e)
+}
+
+/// `−a`.
+#[inline]
+fn wide_neg<R: LinkReal + IeeeBits>(a: Wide<R>) -> Wide<R> {
+    Wide { m: -a.m, e: a.e }
+}
+
+/// `a > b` for `a, b ≥ 0`: by exponent, then by mantissa; a zero, at the [`ZERO_EXPONENT`], is below every other value.
+#[inline]
+fn wide_greater<R: LinkReal + IeeeBits>(a: Wide<R>, b: Wide<R>) -> bool {
+    (a.e > b.e) | ((a.e == b.e) & (a.m > b.m))
+}
+
+/// `‖v‖² = v_x² + v_y²`.
+#[inline]
+fn wide_norm2<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> Wide<R> {
+    wide_add(wide_mul(v[0], v[0]), wide_mul(v[1], v[1]))
 }
 
 /// Step 3's decision (R-82), on the positions `r` in any frame, before step 0 (the module's note):
-/// 1. the pair differences `d01 = r₁ − r₀ = ρ`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`, each a lone subtraction;
-/// 2. the range rescale: `k`, the greatest exponent field among their six components, read from the bits, and every
-///    difference times `2^−k` (two powers of two formed from their bits, each a normal number), exact wherever the
-///    result is normal, so the largest component is in `[1, 2)`;
-/// 3. `Λ = m₀d02 + m₁d12` (`= M₀₁r₂ − m₀r₀ − m₁r₁`), `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x` with `ρ` read as `(1, 0)` where it is
-///    0 (step 2's identity), `d² = Σ_{i<j} mᵢmⱼ‖dᵢⱼ‖²`, and mirror iff `c < 0` and
-///    `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`.
+/// 1. the pair differences `ρ = r₁ − r₀`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`, each a lone subtraction, and every
+///    component and mass taken as a [`Wide`], its exponent carried as an integer;
+/// 2. `Λ = m₀d02 + m₁d12` (`= M₀₁r₂ − m₀r₀ − m₁r₁`), `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x` with `ρ` read as `(1, 0)` where it is
+///    0 (step 2's guard, on the same `ρ`), `d² = Σ_{i<j} mᵢmⱼ‖dᵢⱼ‖²`, and mirror iff `c < 0` and
+///    `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`, compared by exponent, then mantissa.
 ///
-/// Every product is an [`IeeeBits::product`], exact in its partial products, and every other operation a lone
-/// difference or sum, an integer operation on bits or a comparison: no `fma`, `√`, division or trigonometry. So no
-/// backend can round it differently, fusing or not, contracting or not, and the same input takes the same branch
-/// everywhere.
+/// Every float the decision rounds is a mantissa product in `[1, 4)` (an [`IeeeBits::product`], its partial products
+/// at least `2^−46`), an aligned sum of mantissas scaled by at most `2^−60`, or a power-of-two scaling into `[1, 2)`:
+/// none is subnormal and none overflows, for any state whose coordinates and pair differences are 0 or normal. So no
+/// backend rounds it differently, whether it fuses, contracts or flushes subnormals, and the same input takes the same
+/// branch everywhere.
 #[inline]
 pub fn mirror_decision<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> bool {
     let diff = |a: [R; 2], b: [R; 2]| [b[0] - a[0], b[1] - a[1]];
-    let (d01, d02, d12) = (diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]));
-    let wider = |a: i32, b: i32| select(b > a, b, a);
-    let k = wider(
-        wider(
-            wider(d01[0].exponent(), d01[1].exponent()),
-            wider(d02[0].exponent(), d02[1].exponent()),
-        ),
-        wider(d12[0].exponent(), d12[1].exponent()),
-    );
-    let half = k / 2;
-    let (s1, s2) = (R::pow2(-half), R::pow2(half - k));
-    let shrink = |v: [R; 2]| [v[0] * s1 * s2, v[1] * s1 * s2];
-    let (rho, d02, d12) = (shrink(d01), shrink(d02), shrink(d12));
-    let d2 = pair_sum(m, rho, d02, d12);
+    let (rho, d02, d12) = (diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]));
     let pole = coincident(rho);
-    let axis = [
+    let vector = |v: [R; 2]| [wide(v[0]), wide(v[1])];
+    let axis = vector([
         select(pole, R::one(), rho[0]),
         select(pole, R::zero(), rho[1]),
-    ];
-    let lam = |k: usize| m[0].product(d02[k]) + m[1].product(d12[k]);
-    let c = axis[0].product(lam(1)) - axis[1].product(lam(0));
-    let m01 = m[0] + m[1];
-    let delta = R::DELTA_LAMBDA;
-    let p = axis[0].product(axis[0]) + axis[1].product(axis[1]);
-    let left = c.product(c).product(m[2]);
-    let right = delta.product(delta).product(m01).product(p).product(d2);
-    (c < R::zero()) & (left > right)
+    ]);
+    let (rho, d02, d12) = (vector(rho), vector(d02), vector(d12));
+    let mass = [wide(m[0]), wide(m[1]), wide(m[2])];
+    let lam = |k: usize| wide_add(wide_mul(mass[0], d02[k]), wide_mul(mass[1], d12[k]));
+    let c = wide_add(
+        wide_mul(axis[0], lam(1)),
+        wide_neg(wide_mul(axis[1], lam(0))),
+    );
+    let d2 = wide_add(
+        wide_add(
+            wide_mul(wide_mul(mass[0], mass[1]), wide_norm2(rho)),
+            wide_mul(wide_mul(mass[0], mass[2]), wide_norm2(d02)),
+        ),
+        wide_mul(wide_mul(mass[1], mass[2]), wide_norm2(d12)),
+    );
+    let m01 = wide_add(mass[0], mass[1]);
+    let delta = wide(R::DELTA_LAMBDA);
+    let left = wide_mul(wide_mul(c, c), mass[2]);
+    let right = wide_mul(
+        wide_mul(wide_mul(wide_mul(delta, delta), m01), wide_norm2(axis)),
+        d2,
+    );
+    (c.m < R::zero()) & wide_greater(left, right)
 }
 
 /// `(v_x, −v_y)` where `flip` holds, else `v`, selected.

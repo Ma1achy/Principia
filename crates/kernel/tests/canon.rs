@@ -973,7 +973,7 @@ negative_control!(
 // ── canon_mirror_extreme_scales (REQ-DEC-017, REQ-DEC-002) ───────────────────────────────────────────────────
 
 /// The far scales at each precision: up to the largest `s` whose `I_in = s²` is finite, down to the smallest whose
-/// `I_in` is normal, where the decision's sides, of degree 4 in `s`, overflow or underflow without the range rescale.
+/// `I_in` is normal, where the decision's sides, of degree 4 in `s`, overflow or underflow in plain floats.
 const SCALES_F32: [f64; 9] = [4e15, 1e16, 1e18, 1e-8, 1e-9, 1e-10, 1e-12, 1e-15, 1e-18];
 const SCALES_F64: [f64; 9] = [
     1e83, 1e100, 1e150, 1e153, 1e-75, 1e-80, 1e-100, 1e-150, 1e-153,
@@ -1028,7 +1028,7 @@ fn canon_mirror_extreme_scales() {
     check_extreme_scales::<f64>(mirror_decision, &SCALES_F64, true);
 }
 
-/// The decision without the range rescale, for the control.
+/// The decision in plain floats, without its integer exponents, for the control.
 #[cfg(feature = "controls")]
 fn unscaled<R: Precision>(m: [R; 3], x: [[R; 2]; 3]) -> bool {
     let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
@@ -1042,7 +1042,7 @@ fn unscaled<R: Precision>(m: [R; 3], x: [[R; 2]; 3]) -> bool {
 
 negative_control!(
     canon_mirror_extreme_scales,
-    "the decision without its range rescale overflows at s = 1e16 in f32 and must fail",
+    "the decision in plain floats overflows at s = 1e16 in f32 and must fail",
     expected = "f32: the decision at s = 1e16",
     check_extreme_scales::<f32>(unscaled, &SCALES_F32, false)
 );
@@ -1130,7 +1130,7 @@ fn canon_mirror_scale_invariance() {
 
 negative_control!(
     canon_mirror_scale_invariance,
-    "the decision without its range rescale changes with the scale and must fail",
+    "the decision in plain floats changes with the scale and must fail",
     expected = "f32: the decision at 2^",
     {
         check_scale_invariance::<f32>(unscaled, &EXPS_F32, false);
