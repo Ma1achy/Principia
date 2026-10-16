@@ -167,6 +167,21 @@ fn gauge_action() {
         (400..600).contains(&mirrors),
         "{mirrors} of 1000 draws mirror"
     );
+    // `Π` is the low bit of the draw after the six uniforms', each of which takes one draw: set iff that bit is 1.
+    for seed in 0..64 {
+        let g = Gauge::random(&mut SplitMix::new(seed), 1.0, 1.0);
+        let mut rng = SplitMix::new(seed);
+        for _ in 0..6 {
+            rng.next_u64();
+        }
+        let bit = rng.next_u64() & 1;
+        assert_eq!(
+            g.mirror,
+            bit == 1,
+            "seed {seed}: Π drawn {}, its bit {bit}",
+            g.mirror
+        );
+    }
     let unit = uniform(&mut rng, 2.0, 2.0);
     assert_eq!(unit, 2.0, "a draw on [2, 2) is {unit}");
 }

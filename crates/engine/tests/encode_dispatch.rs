@@ -16,13 +16,18 @@ fn limits(groups: u32, bytes: u64) -> wgpu::Limits {
     }
 }
 
-/// `check` for an output of `words` words a sample: no samples, a workgroup count one past the limit, and a binding of
-/// exactly 64 samples' words, which 64 fit and 65 do not.
+/// `check` for an output of `words` words a sample: no samples, a workgroup count at the limit and one past it, and a
+/// binding of exactly 64 samples' words, which 64 fit and 65 do not.
 fn check_counts(check: fn(usize, usize, &wgpu::Limits) -> Result<u32, String>, words: usize) {
     assert_eq!(
         check(0, words, &limits(u32::MAX, u64::MAX)),
         Ok(0),
         "no samples"
+    );
+    assert_eq!(
+        check(128, words, &limits(2, u64::MAX)),
+        Ok(128),
+        "128 samples in two workgroups"
     );
     let past = check(129, words, &limits(2, u64::MAX)).expect_err("129 samples in two workgroups");
     assert!(past.contains("3 workgroups"), "{past}");

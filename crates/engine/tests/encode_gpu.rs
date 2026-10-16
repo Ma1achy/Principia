@@ -170,6 +170,13 @@ fn half_axis() -> Vec<[f32; 2]> {
 /// The half-axis's `β` on one backend: `π̂`'s bits at every operand.
 fn check_half_axis<R: LinkReal>(betas: &[R], pairs: &[[f32; 2]], backend: &str) {
     let pi = R::LIT_7;
+    assert_eq!(
+        betas.len(),
+        pairs.len(),
+        "{} β for {} operands on {backend}",
+        betas.len(),
+        pairs.len()
+    );
     for (b, pair) in betas.iter().zip(pairs) {
         assert!(
             b.to_f64().unwrap().to_bits() == pi.to_f64().unwrap().to_bits(),
@@ -218,7 +225,15 @@ fn encode_beta_half_axis() {
     );
     // The pole, each sign of each zero: 0 on every backend.
     let poles = [[0.0f32, 0.0], [-0.0, 0.0], [0.0, -0.0], [-0.0, -0.0]];
-    for (b, pair) in gpu_beta(&h, &poles).iter().zip(&poles) {
+    let at_poles = gpu_beta(&h, &poles);
+    assert_eq!(
+        at_poles.len(),
+        poles.len(),
+        "{} β for {} poles",
+        at_poles.len(),
+        poles.len()
+    );
+    for (b, pair) in at_poles.iter().zip(&poles) {
         assert_eq!(*b, 0.0, "β = {b:e}, not 0, at the pole {pair:?} on GPU-f32");
     }
     assert!(gpu_beta(&h, &[]).is_empty(), "β of no operands");

@@ -251,9 +251,15 @@ const BLOCK_LIMITS: BlockLimits = BlockLimits {
 /// A canonical state of `z` under the defaults with `p_ρ` set to `p_rho`.
 fn with_p_rho<R: P>(z: [R; 8], p_rho: [R; 2]) -> Ic<R> {
     let d = decode::<Defaults, R>(&Latent::new(z));
+    with_momenta(z, p_rho, d.momentum.p_lambda)
+}
+
+/// A canonical state of `z` under the defaults with its momenta set to `p_rho` and `p_lambda`.
+fn with_momenta<R: P>(z: [R; 8], p_rho: [R; 2], p_lambda: [R; 2]) -> Ic<R> {
+    let d = decode::<Defaults, R>(&Latent::new(z));
     let masses = from_masses(d.ic.m);
     Ic {
-        p: to_particles(&masses, p_rho, d.momentum.p_lambda),
+        p: to_particles(&masses, p_rho, p_lambda),
         ..d.ic
     }
 }
@@ -282,6 +288,49 @@ fn check_q_clamp<R: P>() {
             bits != 0,
             "lookup_clamped is {} at p_ρ = {p_rho:?}",
             e.report.lookup_clamped()
+        );
+    }
+    // `p_λ`'s components, `q₂` and `q₃`, each its own bit, and with `p_ρ`'s.
+    let lambda_cases = [
+        ([R::zero(); 2], [R::of(2.5), R::zero()], 1u32 << 4),
+        ([R::zero(); 2], [R::zero(), R::of(-2.5)], 1 << 5),
+        (
+            [R::of(2.5), R::zero()],
+            [R::zero(), R::of(2.5)],
+            (1 << 2) | (1 << 5),
+        ),
+        (
+            [R::zero(), R::of(-2.5)],
+            [R::of(-2.5), R::zero()],
+            (1 << 3) | (1 << 4),
+        ),
+    ];
+    for (p_rho, p_lambda, bits) in lambda_cases {
+        let e = encode::<Defaults, R>(&with_momenta(z, p_rho, p_lambda));
+        assert_eq!(
+            e.report.clamped_controls, bits,
+            "p_ρ = {p_rho:?}, p_λ = {p_lambda:?} clamps controls {:#b}, not {bits:#b}",
+            e.report.clamped_controls
+        );
+    }
+    // The masses' bits 6 and 7, `μ₁ = log(m₁/m₀)` and `μ₂` past `±(1 − ε_μ)·μ_max = ±5(1 − 10⁻⁶)`: `log(0.99/0.004)`
+    // is 5.5 and `log(0.006/0.004)` 0.4; `log(0.5/10⁻³)` and `log(0.499/10⁻³)` are 6.2.
+    let base = with_p_rho(z, [R::zero(); 2]);
+    for (m, bits) in [
+        ([0.004, 0.99, 0.006], 1u32 << 6),
+        ([0.004, 0.006, 0.99], 1 << 7),
+        ([1e-3, 0.5, 0.499], (1 << 6) | (1 << 7)),
+        ([0.3, 0.3, 0.4], 0),
+    ] {
+        let x = Ic {
+            m: m.map(R::of),
+            ..base
+        };
+        let e = encode::<Defaults, R>(&x);
+        assert_eq!(
+            e.report.clamped_controls, bits,
+            "m = {m:?} clamps controls {:#b}, not {bits:#b}",
+            e.report.clamped_controls
         );
     }
 }
@@ -506,11 +555,17 @@ fn check_stick_edges<R: P>() {
 fn check_corners<R: P>() {
     let (zero, one, half) = (R::zero(), R::one(), R::of(0.5));
     let tiny = R::min_positive_value();
-    assert_eq!(
-        guard([zero, -zero, R::nan()]).map(P::bits),
-        [tiny; 3].map(P::bits),
-        "guard keeps a mass that is not positive"
-    );
+    for m in [
+        [zero, -zero, R::nan()],
+        [R::nan(), zero, -zero],
+        [-zero, R::nan(), zero],
+    ] {
+        assert_eq!(
+            guard(m).map(P::bits),
+            [tiny; 3].map(P::bits),
+            "guard keeps a mass that is not positive in {m:?}"
+        );
+    }
     assert_eq!(
         guard([half, R::of(0.25), R::of(0.25)]).map(P::bits),
         [half, R::of(0.25), R::of(0.25)].map(P::bits),
@@ -803,6 +858,20 @@ fn check_pole<R: P>() {
             out_bits(&encode::<Defaults, R>(&x)),
             out_bits(&e),
             "the pole encodes differently twice at {at}"
+        );
+    }
+    // `β` at `λ̃ = 0` itself, each sign of each zero: 0 by the select (R-437), never `atan2(+0, −0) = π`.
+    for lambda_t in [
+        [R::zero(), R::zero()],
+        [-R::zero(), R::zero()],
+        [R::zero(), -R::zero()],
+        [-R::zero(), -R::zero()],
+    ] {
+        let b = beta(lambda_t);
+        assert_eq!(
+            b.bits(),
+            R::zero().bits(),
+            "β = {b:e}, not +0, at λ̃ = {lambda_t:?}"
         );
     }
 }
