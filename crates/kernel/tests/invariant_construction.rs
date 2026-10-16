@@ -11,6 +11,8 @@
 //! - `invariant_construction_infeasible_tagged`: a pair with `K* < L_z²/2` is `Infeasible`, exactly on that inequality
 //!   (`K* = L_z²/2` is feasible with `a = 0`, one ulp below is not), labelled `decode_failed`/3, never dropped or NaN,
 //!   its momenta the rigid rotation; it takes precedence over `DEGENERATE` (REQ-DEC-022, REQ-DEC-040).
+//! - `invariant_construction_binade`: each operand's sign, zero flag and `s·2^e` read from its bits, exactly,
+//!   subnormals included, and the limbs of `s`, each on its grid, summing to `s`.
 //! - `invariant_construction_entries`: the two compute entry points, called natively, write what the construction gives.
 //! - `seed_selection_largest`: where several seeds qualify the largest-norm one is taken, not the first, on a dyadic
 //!   fixture and on decoded configurations against an independent transcription of §2.2 (REQ-DEC-021).
@@ -31,7 +33,8 @@ mod decode_support;
 use decode_support::*;
 use kernel::decode::config::Config;
 use kernel::decode::invariant::{
-    self, choose, construct, infeasible, infeasible_label, Construction, ExactSign, Outcome, Seed,
+    self, choose, construct, infeasible, infeasible_label, Binade, Construction, ExactSign,
+    Outcome, Seed,
 };
 use kernel::decode::mass::{self, Masses};
 use kernel::decode::{self as dec, Latent};
@@ -625,6 +628,70 @@ mod tagged_nan {
         })
     );
 }
+
+// ── invariant_construction_binade ───────────────────────────────────────────────────────────────────────────────
+
+/// A binade reader under check.
+type Reader<R> = fn(R) -> Binade<R>;
+
+/// `read` gives each value's sign bit, zero flag and `|x| = s·2^e`, `s ∈ [1, 2)`, exactly, subnormals included; and
+/// `s`'s limbs sum to `s`, each on its grid and below its bound (`w` = 8 at f32, 18 at f64).
+fn check_binade<R: Q>(read: Reader<R>) {
+    let w: i32 = if R::FRAC == 23 { 8 } else { 18 };
+    let mut g = SplitMix::new(11);
+    let mut xs = vec![
+        R::zero(),
+        R::raw(1),
+        R::raw(0x15),
+        R::one(),
+        R::of(1.5),
+        make::<R>(2 * R::BIAS, u64::MAX),
+    ];
+    xs.extend((0..2000).map(|_| R::raw(g.next_u64() & ((1u64 << (R::FRAC + 4)) - 1))));
+    xs.extend((0..2000).map(|_| rand_pos::<R>(&mut g, 0, 2 * R::BIAS)));
+    for x in xs.clone().into_iter().chain(xs.into_iter().map(|x| -x)) {
+        let b = read(x);
+        let at = format!("at {:e} ({})", x.f(), R::NAME);
+        assert_eq!(b.negative, x.f().is_sign_negative(), "the sign flag {at}");
+        assert_eq!(b.zero, x.f() == 0.0, "the zero flag {at}");
+        if x.f() == 0.0 {
+            continue;
+        }
+        assert!(
+            (1.0..2.0).contains(&b.s.f()),
+            "s = {} is not in [1, 2) {at}",
+            b.s.f()
+        );
+        let scaled = b.s.f() * 2f64.powi(b.e / 2) * 2f64.powi(b.e - b.e / 2);
+        assert_eq!(scaled, x.f().abs(), "s·2^e {at}");
+        let l = b.s.limbs().map(|v| v.f());
+        assert_eq!(l[0] + l[1] + l[2], b.s.f(), "the limbs' sum {at}");
+        for (a, v) in l.iter().enumerate() {
+            let grid = 2f64.powi(-(a as i32 + 1) * w + 1);
+            assert_eq!((v / grid).fract(), 0.0, "limb {a} is off its grid {at}");
+            assert!(
+                *v >= 0.0 && *v < 2.0 * 2f64.powi(-(a as i32) * w),
+                "limb {a} = {v:e} {at}"
+            );
+        }
+    }
+}
+
+#[test]
+fn invariant_construction_binade() {
+    check_binade::<f64>(<f64 as ExactSign>::binade);
+    check_binade::<f32>(<f32 as ExactSign>::binade);
+}
+
+negative_control!(
+    invariant_construction_binade,
+    "a reader whose sign flag is inverted must fail",
+    expected = "the sign flag",
+    check_binade::<f32>(|x| Binade {
+        negative: !x.binade().negative,
+        ..x.binade()
+    })
+);
 
 // ── invariant_construction_entries ──────────────────────────────────────────────────────────────────────────────
 
