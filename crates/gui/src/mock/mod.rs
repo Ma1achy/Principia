@@ -138,13 +138,24 @@ impl MockEngine {
     /// The marks the mock draws into its stand-in: the hover path, while the hover is on the figure, and the fake
     /// quads' bounds, while the overlay set has tile bounds on.
     pub fn marks(&self) -> Vec<Line> {
+        self.marks_over(quads::UNIT)
+    }
+
+    /// [`MockEngine::marks`] over the figure's span `span` (`[s₀, t₀, s₁, t₁]`): with the egui layer hidden, the
+    /// fake quads' bounds over the whole window, the extra quads at the shown quads' size (R-406).
+    pub fn marks_over(&self, span: [f64; 4]) -> Vec<Line> {
         let plane = &self.sim.plane;
         let mut lines = Vec::new();
         if self.render.overlays.tile_bounds {
-            lines.extend(quads::bounds(plane).into_iter().map(|[a, b]| Line {
-                ends: [a.map(|v| v as f32), b.map(|v| v as f32)],
-                rgba: TILE_BOUNDS_RGBA,
-            }));
+            lines.extend(
+                quads::bounds_over(plane, span)
+                    .into_iter()
+                    .map(|([a, b], outside)| Line {
+                        ends: [a.map(|v| v as f32), b.map(|v| v as f32)],
+                        rgba: TILE_BOUNDS_RGBA,
+                        outside,
+                    }),
+            );
         }
         if let Some(at) = self.render.hover.at {
             let path = sample::hover_path(plane, at);
@@ -153,6 +164,7 @@ impl MockEngine {
                 Line {
                     ends: [w[0].at.map(|v| v as f32), w[1].at.map(|v| v as f32)],
                     rgba: [r, g, b, w[0].alpha.min(w[1].alpha)],
+                    outside: false,
                 }
             }));
         }

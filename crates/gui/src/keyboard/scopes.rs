@@ -3,9 +3,9 @@
 //! order it draws its scopes; the focus is a path through it, held in `ViewUI` (gui_state_contract §2), with the
 //! keyboard's mode, navigation or interaction (R-409; [`ScopeTree::navigate`]).
 //!
-//! The base steps (REQ-GUI-158) are calibrations proposed here (R-71), used provisionally until the human confirms
-//! them at the M8 gate (R-182): [`StepKind::base`]. The compass's slice-mode step (REQ-GUI-184) is proposed by
-//! TASK-M6-31 and used provisionally until the M8 gate too.
+//! The base steps (REQ-GUI-158) are calibrations (R-71), proposed by TASK-M6-25 and confirmed by R-404, so no longer
+//! provisional (R-182): [`StepKind::base`]; R-409 retired R-404's `Orbit` step, the compass having no orbit. The
+//! compass's slice-mode step (REQ-GUI-184) is proposed by TASK-M6-31 and used provisionally until the M8 gate.
 
 use engine::contract::view_ui::{Focus, KeyMode};
 
@@ -171,9 +171,9 @@ impl Base {
 }
 
 impl StepKind {
-    /// The base step, before Shift's ×10 or Alt's ×0.1: proposed, R-71 (REQ-GUI-158), the reasoning in the PR of
-    /// TASK-M6-25 and the human's confirmation at the M8 gate to come. `SliceNormal`'s is REQ-GUI-184's, proposed by
-    /// TASK-M6-31 and used provisionally (R-182) until the human confirms it at the M8 gate.
+    /// The base step, before Shift's ×10 or Alt's ×0.1: confirmed by R-404 (REQ-GUI-158; R-71), the reasoning in the
+    /// PR of TASK-M6-25; R-409 retired its `Orbit` step. `SliceNormal`'s is REQ-GUI-184's, proposed by TASK-M6-31 and
+    /// used provisionally (R-182) until the human confirms it at the M8 gate.
     pub const fn base(self) -> Base {
         match self {
             // A hundredth of the range: Shift crosses a tenth, Alt a thousandth.
