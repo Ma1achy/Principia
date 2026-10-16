@@ -46,12 +46,23 @@ pub fn near_frontier(quad: &Quad) -> bool {
     nearest <= r + w && farthest >= r - w
 }
 
-/// The figure's span in `(u, v)`: the visible square, centre `z₀`'s in-plane point and half-width `|q₁|`.
-fn view_of(plane: &Plane) -> Option<Quad> {
+/// The shown figure's span of the field, `[s₀, t₀, s₁, t₁]`: `[0, 1]²`.
+pub const UNIT: [f64; 4] = [0.0, 0.0, 1.0, 1.0];
+
+/// The span `[s₀, t₀, s₁, t₁]` of the figure in `(u, v)`: the shown figure, [`UNIT`], is the visible square, centre
+/// `z₀`'s in-plane point and half-width `|q₁|`; a wider span, the window with the egui layer hidden (R-406), is more of
+/// the plane at the same scale.
+fn view_of(plane: &Plane, span: [f64; 4]) -> Option<Quad> {
     let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
     // `in_plane` gives `None` for a degenerate basis.
     let (u, v) = crate::explore::manifold_view::in_plane(plane, &plane.z0)?;
-    Some([u - n1, v - n2, u + n1, v + n2])
+    let at = |c: f64, n: f64, s: f64| c + n * (2.0 * s - 1.0);
+    Some([
+        at(u, n1, span[0]),
+        at(v, n2, span[1]),
+        at(u, n1, span[2]),
+        at(v, n2, span[3]),
+    ])
 }
 
 /// Whether two quads overlap.
@@ -62,10 +73,17 @@ pub fn overlaps(a: &Quad, b: &Quad) -> bool {
 /// The leaf quads in view: the root split at least [`MIN_DEPTH`] deep, then while a quad in view is wider than
 /// [`SPLIT_WIDE`] of the figure, or near the frontier and wider than [`SPLIT_NEAR`], down to [`MAX_DEPTH`].
 pub fn quads(plane: &Plane) -> Vec<Quad> {
-    let Some(view) = view_of(plane) else {
+    quads_over(plane, UNIT)
+}
+
+/// [`quads`] over the figure's span `span` (`[s₀, t₀, s₁, t₁]`): the same tree, its quads sized against the shown
+/// figure, so a span past `[0, 1]²` adds quads at the shown quads' size (R-406). The tree's root stays `[−ROOT, ROOT]²`:
+/// past it there are no quads, the layer shown or hidden.
+pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
+    let (Some(shown), Some(view)) = (view_of(plane, UNIT), view_of(plane, span)) else {
         return Vec::new();
     };
-    let width = view[2] - view[0];
+    let width = shown[2] - shown[0];
     let mut stack = vec![([-ROOT, -ROOT, ROOT, ROOT], 0u32)];
     let mut leaves = Vec::new();
     while let Some((q, depth)) = stack.pop() {
@@ -95,8 +113,13 @@ pub fn quads(plane: &Plane) -> Vec<Quad> {
 
 /// The bounds of the quads in view, as segments of the figure, `[(s, t), (s, t)]`: each quad's four edges.
 pub fn bounds(plane: &Plane) -> Vec<[[f64; 2]; 2]> {
+    bounds_over(plane, UNIT)
+}
+
+/// [`bounds`] of [`quads_over`] `span`: past `[0, 1]²`, `(s, t)` continues at the same scale.
+pub fn bounds_over(plane: &Plane, span: [f64; 4]) -> Vec<[[f64; 2]; 2]> {
     let mut lines = Vec::new();
-    for q in quads(plane) {
+    for q in quads_over(plane, span) {
         let corners = [(q[0], q[1]), (q[2], q[1]), (q[2], q[3]), (q[0], q[3])];
         let points: Option<Vec<[f64; 2]>> = corners.iter().map(|c| on_figure(plane, *c)).collect();
         let Some(points) = points else {

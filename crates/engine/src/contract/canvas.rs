@@ -25,3 +25,20 @@ pub trait Canvas: Send + Sync {
     /// Draws the figure into `pass`, whose viewport the app has set to the figure's rect, on a target of `format`.
     fn draw_figure(&self, pass: &mut wgpu::RenderPass<'_>, format: wgpu::TextureFormat);
 }
+
+/// The hatch a canvas draws a forbidden pixel with, past the chart's `[0,1]²` (R-407's fallback;
+/// chart_decoder_contract § "Past the unit square — each axis's extension type (R-407)"): the render contract's
+/// `debug_invalid(frag_xy)` (Part 5), re-exported from where it is generated, so a canvas outside the render crate's
+/// assembler, the mock's (TASK-M6-30), draws the one hatch the corpus defines rather than a copy of it.
+pub mod hatch {
+    /// The shared prelude's WGSL at a tier, which defines `debug_invalid(frag_xy)` (linear RGB) and the sRGB transfer
+    /// both ways, `srgb_to_linear` and `linear_to_srgb`; its uniform block's binding, which a module including it
+    /// must leave free; and the hatch's colours and stripe width.
+    pub use ledger::gen::prelude::{
+        hatch, uniforms_binding, wgsl as prelude, Hatch, UniformsBinding,
+    };
+    /// The tier the prelude is emitted at.
+    pub use ledger::gen::read::Tier;
+    /// Which of the hatch's two colours `debug_invalid` draws at a pixel, the render crate's CPU mirror.
+    pub use render::present::hatch_stripe;
+}

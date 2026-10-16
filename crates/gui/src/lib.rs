@@ -22,6 +22,8 @@ mod tests {
     mod canvas_gestures_mock;
     mod cli;
     mod conformance;
+    mod f3_fallback_mock;
+    mod f3_fills_window_mock;
     mod f3_toggle_mock;
     mod mock_axis_labels;
     mod mock_compass;
@@ -46,6 +48,7 @@ mod tests {
     mod mock_time;
     mod mock_windows_drawn;
     mod mock_windows_open;
+    mod present_fills_window_mock;
     mod scope_tab_order_mock;
     mod support;
     mod theme;
