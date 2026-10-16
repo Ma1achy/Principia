@@ -1,0 +1,61 @@
+# TASK-M7-37 — The Chazy flat stains: the seven-class default, four families, Okabe–Ito, the status map, the filter, the ranks and palette separation
+
+- **Milestone:** M7
+- **Closes:** REQ-COL-072, REQ-COL-073, REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-080, REQ-COL-081, REQ-COL-084, REQ-COL-085, REQ-COL-086, REQ-COL-087
+- **Depends on:** TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14
+- **Needs (earlier milestones):** REQ-COL-002, REQ-COL-053, REQ-COL-064, REQ-COL-067, REQ-COL-068
+- **Reviewers:** code, qa, gui, physics
+- **Pitfalls:** PIT-5, PIT-3
+- **Size:** ~450 lines (palettes and presets as data ~150, the separation test ~150, goldens are fixtures, the ranks' definition in the drill-down)
+
+## Goal
+The Chazy stains with no lightness encoding, compositions on the backbone (R-442; the Chazy drill-down §10): the
+seven-class palette on `chazy_final` as the default final-motion stain, with B "bound, or nobody has left yet"; the
+four-family and Okabe–Ito variants; the status map on `chazy_status`, its own map; the categorical filter unchanged.
+In every stain collision is magenta `#DA85B6` and B is `#141418`; running samples draw their class, never the "not
+yet" stipple, and `sim_failed`, reserved codes and NaN the hatch (§7). Greyscale and hue modes rank `chazy_final`
+B, OS, PE, HE, P, HP, H, collision, and the other fields' ranks are written (R-72). The palettes' separation is
+measured against τ and the palettes proposed for the M7 gate (R-71).
+
+## References
+- `docs/design/principia_dd_chazy_final_motion.md` § "7. Validity and styles"
+- `docs/design/principia_dd_chazy_final_motion.md` § "10.1 The two rules that hold in every stain"
+- `docs/design/principia_dd_chazy_final_motion.md` § "10.2 Final motion: Chazy's seven (the default)"
+- `docs/design/principia_dd_chazy_final_motion.md` § "10.3 Final motion: four families"
+- `docs/design/principia_dd_chazy_final_motion.md` § "10.4 Final motion: Okabe–Ito"
+- `docs/design/principia_dd_chazy_final_motion.md` § "10.6 Status"
+- `docs/design/principia_dd_chazy_final_motion.md` § "10.7 Filter"
+- `docs/design/principia_dd_chazy_final_motion.md` § "10.9 Greyscale and hue modes"
+- `docs/design/principia_dd_chazy_final_motion.md` § "11.2.1 Palette separation, measured"
+- `docs/design/principia_dd_chazy_final_motion.md` § "12.2 New, for Principia"
+- `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default palette"
+- `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
+- `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD"
+- `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+
+## Deliverables
+- The seven-class, four-family, Okabe–Ito and status palettes as swatch sets, user-editable, and their presets; the
+  seven-class stain the default final-motion preset.
+- The validity styles in every Chazy stain; collision `#DA85B6`.
+- The ranks of `chazy_final` and, written into the drill-down's §10.9, of `chazy_class`, `chazy_status` and
+  `chazy_structure` (REQ-COL-085).
+- `cargo test -p render chazy_palette_separation`, and the Chazy palettes added to `cvd_hatch_distinct`'s entries.
+- Golden images of each flat stain on a synthetic payload, and the calibration proposal for the palettes.
+
+## Acceptance tests
+- `cargo test -p render chazy_validity` — through each Chazy stain, a running sample draws its class's colour and no pixel equals `debug_not_yet`'s pattern; `sim_failed`, a reserved `state` code and NaN draw `debug_invalid`'s hatch on the CPU twin and in WGSL (REQ-COL-072).
+- `cargo test -p render chazy_collision` — runs terminated at `r_coll` for each pair, a triple collision and a t = 0 collision read collision in `chazy_final` and `chazy_status` and render `#DA85B6` in every flat stain (REQ-COL-073).
+- `cargo xtask golden chazy` — synthetic payloads with one sample per class render exactly the seven-class colours (REQ-COL-075), the four-family colours (REQ-COL-076), the Okabe–Ito colours (REQ-COL-077) and the status colours (REQ-COL-080).
+- `cargo test -p render chazy_restyle` — a swatch change re-styles the view and the dispatch counter is unchanged; the default final-motion preset is the seven-class stain (REQ-COL-075).
+- `cargo test -p render chazy_filter` — the seven-class stain filtered to {HE, PE} keeps their colours and mutes every other pixel by REQ-COL-058's transform; the same on the status stain (REQ-COL-081).
+- `cargo test -p render chazy_rank` — greyscale mode gives `chazy_final`'s class `r` the lightness `(r + ½)/8` and hue mode `t = r/8`, in the order B, OS, PE, HE, P, HP, H, collision (REQ-COL-084).
+- Review (physics): the drill-down's §10.9 gives the ranks and K of `chazy_class`, `chazy_status` and `chazy_structure`, consistent with colour_composition §4.1, and their greyscale and hue renders use them (REQ-COL-085).
+- `cargo test -p render chazy_palette_separation` — prints each palette's tightest pair and tightest style distance unsimulated and under each simulation; status (0.114, 0.111) and four-family clear τ = 0.101 unsimulated; seven-class asserts H / HP 0.083 and §11.2.1's simulated values, every entry ≥ τ from the styles unsimulated (0.137); `cvd_hatch_distinct` passes with the Chazy palettes added (REQ-COL-086).
+- Review (gui): the palettes' proposal with REQ-COL-086's measurements, confirmed by the human at the M7 gate, deciding RQ-311 (REQ-COL-087).
+
+## Notes
+- R-442: the seven-class palette is the default; whether it stays below τ or moves to Okabe–Ito is RQ-311, for the
+  human at the gate. REQ-COL-087 waits on it and on RQ-317 (B's chroma); this task builds R-442's default meanwhile.
+- What `decode_failed` draws is RQ-319; REQ-COL-072 waits on it for that clause.
+- The filter's mute is REQ-COL-058's (TASK-M7-08); the spec's preview `#3A3B40` is not a second rule (R-442, applied
+  per R-369).

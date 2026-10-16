@@ -253,6 +253,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-430** — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)*
 - **R-436** — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*
 - **R-441** — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug
+- **R-442** — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default
 
 ## Values
 

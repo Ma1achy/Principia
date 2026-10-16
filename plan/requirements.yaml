@@ -4604,6 +4604,121 @@
   - R-72
   - R-182
   milestone: M3
+- id: REQ-EVT-027
+  area: EVT
+  statement: "An escape-terminated sample's Chazy fields must be classified on the state at escape fire, frozen from then on, as the production loop stops there (R-103)."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 7. Validity and styles
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 9. Gaps between the prototype and Principia
+  - file: decisions.md
+    section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "a fixture run to escape fire: chazy_class at every later playhead equals its value at the fire step, computed from the frozen state"
+  rulings:
+  - R-103
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-313
+- id: REQ-EVT-028
+  area: EVT
+  kind: calibration
+  statement: "The Chazy classifier's parabolic band half-width ε in K/U (proposed 0.05) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.3 Defaults
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 4.1 The probe
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives ε with the drill-down's §4.1 and §11.2 evidence (prin-rs PR #32: not swept) and any sweep the task runs; physics reviewer checks it"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
+- id: REQ-EVT-029
+  area: EVT
+  kind: calibration
+  statement: "The Chazy classifier's hierarchy ratio and dispersal distance h_far (proposed 5, with the hierarchy gate, not the tidal gate, as the default, and the tidal gate's δ = 10⁻⁵ for the option and the reference) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.3 Defaults
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.6 The options the fixtures exercise
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 4.1 The probe
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives h_far, the gate and δ with the drill-down's §4.1 evidence (prin-rs PR #32: 3, 5 and 10 tried, 3 and 5 within 2 points; 0 wrong commits on E < 0; median first correct label 51.6 / 40.8 against Fewbody's 69.6 / 69.6); physics reviewer checks it"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
+- id: REQ-EVT-030
+  area: EVT
+  kind: calibration
+  statement: "The Chazy classifier's OS-candidate threshold os_ratio on I_max / I (proposed 25) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.3 Defaults
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "6. The latch: `I_max`"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 4.2 Where it is not perfect
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives os_ratio with the drill-down's evidence (prin-rs PR #32: not swept; OS-candidate unvalidated, 2–3 per seed later escaped as HE) and states that it was measured with I_max latched per snapshot (every 0.4) while the latch updates every step (§6); physics reviewer checks it"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
+- id: REQ-EVT-031
+  area: EVT
+  kind: calibration
+  statement: "The Chazy classifier's settling gate τ (proposed off, τ = ∞, so no previous-shape latch is stored) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.3 Defaults
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.6 The options the fixtures exercise
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 4.1 The probe
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives τ off with the drill-down's §4.1 evidence (prin-rs PR #32: τ = 0.01 bought zero precision for a median 35 time units of delay, 86.4 / 77.2 against 51.6 / 40.8); physics reviewer checks it"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
 - id: REQ-PAY-001
   area: PAY
   statement: "ICDescriptor must be 64 B (its 12 f32 fields plus explicit padding, with E₀ derived as K_0 + V_0 and not stored), and the sample descriptor must use bits 0–9 (bits 8–9 `last_symbol`) with bits 10–15 reserved."
@@ -6359,6 +6474,170 @@
   - R-426
   milestone: M3
   note: "R-426 (RQ-274, options (a) and (c)): mean_y stays on ramp_coolwarm provisionally from M1 until this re-check; closed by TASK-M3-13, which defines y (REQ-PAY-073)."
+- id: REQ-PAY-099
+  area: PAY
+  statement: "`chazy_class` must be a generated read-side accessor, derived at read and never stored, beside `energy_drift`, that labels each sample (each ensemble copy on its own) at every playhead with exactly one of the ten labels H, HP, P, HE, PE, B-stable, B-so-far, transient, OS-candidate and excursion by the Chazy drill-down's §3.2 rule in its order, reading only the live Cartesian state, the masses, E_0, R_0 = √(I_0/M) and the latch I_max, with §3.1's two-body K and U (pair and outer), its parabolic band, its hierarchy ratio, §3.4's sign test for a pair's binding and `coarse` (HP, P → H; PE → HE), §3.5's Mardling–Aarseth test, §3.3's defaults, and §3.6's tidal gate and settling as options; it writes no event class (R-442, a separate system)."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.1 Inputs and definitions
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.2 The rule, in order
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.3 Defaults
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.4 Two choices that are physics, not tuning
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.5 Mardling–Aarseth
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.6 The options the fixtures exercise
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "3.8 The labels: ten"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.1 Derived, not stored
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.2 The fields
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.1 The fixtures to port
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "the ten fixtures of the drill-down's §12.1 (prin-rs PR #32's tests/chazy.rs, transcribed), each with its control arm: HE; PE at outer K/U = 1 and excursion at 0.5, with coarse; HE for the e = 0.95 pair at pericentre, its control the pair inside the band and K < U (reverting the sign test fails it); the two-stage H; H for three flying apart (E > 0); transient at E > 0 and B-so-far at rest (E < 0); B-so-far with a fresh latch and OS-candidate at I_max = 2·os_ratio·I; B-stable with Mardling–Aarseth on and B-so-far with it off; the tidal gate's HE at d = 50 and not at d = 20 while the hierarchy gate commits on both; settling withholding HE when the shape moved; every output one of the ten labels; run on CPU-f64"
+  rulings:
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-318
+  note: "Spec 02 §2 says \"the nine labels of 01 §2\"; the classifier returns ten (drill-down §3.8; R-442's note). The order of B-stable and transient at E > 0 is RQ-318."
+- id: REQ-PAY-100
+  area: PAY
+  statement: "`chazy_final` must be a generated read-side accessor folding `chazy_class` onto Chazy's seven plus collision by the drill-down's §5.3 table — H, HP, P, HE, PE to themselves; B-stable, B-so-far, excursion and transient to B; OS-candidate to OS; a collision-terminated sample (any pair, triple, or at t = 0) to collision — exhaustively, so that a label with no mapping fails to build."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.2 The fields
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "5.3 `chazy_final`: the labels folded onto Chazy's seven"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "the fold table (drill-down §12.2 item 3): an exhaustive match over the label enum maps every label to its §5.3 class, transient to B; a collision-terminated sample maps to collision (item 2); a negative control adds an unmapped label and the build fails"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-PAY-101
+  area: PAY
+  statement: "`chazy_status` must be a generated read-side accessor mapping `chazy_class` to the drill-down's §5.4 seven values: committed for H, HP, P, HE and PE; B-stable; B-so-far; excursion; transient; OS-candidate; and collision for a collision-terminated sample, exhaustively over the label enum."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.2 The fields
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.4 `chazy_status`
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "the fold table's status half (drill-down §12.2 item 3): every label maps to its §5.4 status, transient to transient, a collision-terminated sample to collision (item 2), exhaustive over the enum"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-PAY-102
+  area: PAY
+  statement: "`chazy_structure` must be a generated read-side accessor giving dispersal (label H, HP or P), hierarchy (the most separated body's hierarchy ratio above h_far), interacting (otherwise) or oscillatory (label OS-candidate), by the drill-down's §5.5 table and REQ-PAY-104's precedence."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.2 The fields
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.5 `chazy_structure` and `chazy_q`
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "on the §12.1 fixture states: H, HP and P read dispersal; HE, PE and excursion hierarchy; transient interacting; an OS-candidate oscillatory; each row's precedence case reads as REQ-PAY-104 defines it"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-PAY-103
+  area: PAY
+  statement: "`chazy_q` must be a generated read-side scalar accessor, `K/|U|` of the separating motion by the drill-down's §5.5 table: for dispersal the smallest pair K/U, for hierarchy the outer body's K/U relative to its pair, for interacting and oscillatory the total K/|U|; it is ≥ 0 and 1 is parabolic, and its display compaction is REQ-COL-089's."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.2 The fields
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.5 `chazy_structure` and `chazy_q`
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "on the §12.1 fixture states each row's q equals its hand-computed K/U (the escaper's 2, 1 and 0.5 outer ratios among them) to f64 rounding; for an interacting state q > 1 exactly when E > 0 (the transient fixture and the same configuration at rest)"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-PAY-104
+  area: PAY
+  kind: definition
+  statement: "Which `chazy_structure` row holds where several apply (an OS-candidate, or a two-stage H, whose most separated body has hierarchy ratio above h_far), and which q it then reads, must be defined in the Chazy drill-down's §5.5 by the task that needs it, starting from the §5.5 table and §10.5.2's stain and contradicting neither, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.5 `chazy_structure` and `chazy_q`
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5.2 Structure × energy
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the drill-down's §5.5 gives the precedence and the q of each overlapping case, consistent with §10.5.2's cells (OS dark green, two-stage H light cyan); REQ-PAY-102's test uses it; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-442
+  milestone: M7
+- id: REQ-PAY-105
+  area: PAY
+  statement: "`I_max`, the running maximum of the moment of inertia about the centre of mass, must be a forward-only latch that starts at I_0, is updated at every step (not every snapshot), is held per sample and per ensemble copy, and persists across persist boundaries like `d_min`'s, so that the classifier reads only the live state and it."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "6. The latch: `I_max`"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 9. Gaps between the prototype and Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "the latch equals the offline maximum of I over a fixture trajectory at every step, within REQ-PAY-106's quantisation once stored; it never decreases; it equals I_0 at step 0; resumed across many persist boundaries it equals a single uninterrupted latch; two ensemble copies of one pixel carry their own values"
+  rulings:
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-310
+  note: "Where it is stored is RQ-310 (the spec proposes descriptor bits 10–14, which payload §2 holds reserved)."
+- id: REQ-PAY-106
+  area: PAY
+  kind: calibration
+  statement: "The quantisation of the stored `I_max` latch (proposed: log, half-octave steps, 5 bits, 32 levels up to 2¹⁶) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "6. The latch: `I_max`"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the quantisation and its range and shows, on fixture and chart trajectories, that the stored latch changes no OS-candidate label against the unquantised one (or how many it changes); evidence: the drill-down's §11.2 (not measured in prin-rs PR #32)"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-310
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -11145,7 +11424,7 @@
   milestone: M7
 - id: REQ-COL-018
   area: COL
-  statement: "Categorical fields other than the outcome state must map through a palette swatch-set generated by golden-angle for many-class fields (word/basin) and an Okabe–Ito cycle for small class counts, while the outcome state must take colour_composition §1.4's nine-class canonical palette."
+  statement: "Categorical fields other than the outcome state and the Chazy fields must map through a palette swatch-set generated by golden-angle for many-class fields (word/basin) and an Okabe–Ito cycle for small class counts, while the outcome state must take colour_composition §1.4's nine-class canonical palette and the Chazy fields the default palettes of the Chazy drill-down (R-442)."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -11153,12 +11432,16 @@
     section: "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)"
   - file: decisions.md
     section: R-77 — Replace-L, and the state palette *(closes RQ-28)*
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
   verify:
     method: unit test
     detail: "palette generator for n ≤ 8 returns OI colours; for larger n golden-angle hues θ_i = 2π·frac(i·φ_g); the state field resolves to the §1.4 palette, not to a generated index palette"
   rulings:
   - R-77
+  - R-442
   milestone: M7
+  note: "R-442: the Chazy fields (chazy_final, chazy_status, chazy_structure) take the drill-down's default palettes (REQ-COL-075, REQ-COL-080, REQ-COL-079), not a generated index palette."
 - id: REQ-COL-019
   area: COL
   statement: "Every categorical mode must admit a categorical filter (show class ∈ {…}, mute the rest), and there must be no separate escaper field or escaper render mode."
@@ -12210,6 +12493,348 @@
   - R-436
   milestone: M5
   note: "Gui review 5533020211 G3 of PR #214, applied per R-369: §10.1's literal-sentinel line `if (raw == <literal>)` would need an infinite literal for these two, which naga rejects (gpu_determinism_note rule 4), and the compaction would do arithmetic on ±∞; the corpus defines no other style. TASK-M5-17, the resolve stage, first stores these bits (REQ-REF-053) and adds quad fields to the field-view catalogue (REQ-PAY-096), so it writes the style (round 6; TASK-M5-01, which built the ledger entries, merged before R-436)."
+- id: REQ-COL-072
+  area: COL
+  statement: "The Chazy fields must hold a value for a `running` sample and render it in every mode, never drawing the \"not yet\" stipple, and a `sim_failed` sample, a reserved `state` code or a NaN must draw the invalid hatch (`debug_invalid(frag_xy)`) in every Chazy stain."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 7. Validity and styles
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "synthetic payloads through each Chazy stain: a running sample draws its class's colour, and no pixel of any Chazy stain equals debug_not_yet's pattern; a sim_failed sample, a reserved state code and a NaN draw debug_invalid's hatch on the CPU twin and in WGSL"
+  rulings:
+  - R-136
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-319
+  note: What a decode_failed sample reads and draws is RQ-319.
+- id: REQ-COL-073
+  area: COL
+  statement: "A collision-terminated sample (any pair, a triple collision, or a collision at t = 0) must read collision in `chazy_final` and `chazy_status`, never a motion class, and draw magenta `#DA85B6` in every Chazy stain (R-442)."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 7. Validity and styles
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.1 The two rules that hold in every stain
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "the collision test (drill-down §12.2 item 2): runs terminated at r_coll for each pair, a triple collision and a t = 0 collision read collision in both fields and render #DA85B6 in the seven-class, four-family, Okabe–Ito, status and energy-channel stains"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-074
+  area: COL
+  statement: "B's swatch must be `#141418` (R-442) and must carry no hue, so that under Replace-L B renders neutral grey at the brightness field's lightness, the one class with no hue."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.1 The two rules that hold in every stain
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "B has no hue (drill-down §12.2 item 5): B's OKLab a and b are 0 to within the bound RQ-317 settles, and B under Replace-L at L = 0.3, 0.6 and 0.9 gives a neutral grey to that bound; control: a chromatic swatch (#14BBC2) fails the same check"
+  rulings:
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-317
+  note: "#141418 is OKLab a ≈ 0.002, b ≈ −0.008 (chroma ≈ 0.008), not 0: RQ-317 (R-442's note)."
+- id: REQ-COL-075
+  area: COL
+  statement: "The default final-motion stain must be `chazy_final` in the colour slot through the drill-down's §10.2 seven-class palette (B #141418, H #14BBC2, HP #55AEE8, P #A497EA, HE #E4896A, PE #CC9C42, OS #7BB76E, collision #DA85B6), brightness None, user-editable like any swatch set, its B labelled \"bound, or nobody has left yet\"; a palette change must re-style with zero dispatches."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "10.2 Final motion: Chazy's seven (the default)"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.1 Derived, not stored
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: golden image
+    detail: "a synthetic payload with one sample per chazy_final class renders exactly these sRGB values; the default final-motion preset is this stain; `cargo test -p render chazy_restyle`: changing a swatch re-styles the view and the dispatch counter is unchanged"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-076
+  area: COL
+  statement: "The four-family final-motion stain must be `chazy_final` through `coarse` in the colour slot, brightness None, with the drill-down's §10.3 colours: dispersal (H, HP, P) #14BBC2, escape (HE, PE) #E4896A, bound #141418, oscillatory #7BB76E, collision #DA85B6."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "10.3 Final motion: four families"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: golden image
+    detail: "a synthetic payload with one sample per chazy_final class renders the family colours exactly"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-077
+  area: COL
+  statement: "The Okabe–Ito final-motion stain must be `chazy_final` in the colour slot, brightness None, with the drill-down's §10.4 colours (B #000000, H #56B4E9, HP #0072B2, P #CC79A7, HE #E69F00, PE #F0E442, OS #009E73) and collision #DA85B6."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "10.4 Final motion: Okabe–Ito"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: golden image
+    detail: "a synthetic payload with one sample per chazy_final class renders these sRGB values exactly"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-078
+  area: COL
+  statement: "The seven-class × energy stain must put the seven-class palette in the colour slot and `chazy_q` in the brightness slot under Replace-L's range form, L = L_min + (L_max − L_min)·b with b = q/(1 + q) and REQ-COL-088's range, so that a transient sample (E > 0) renders lighter than the parabolic mid-point and a bound one darker."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5 With an energy channel
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5.1 Seven classes × energy
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: R-77 — Replace-L, and the state palette *(closes RQ-28)*
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "energy channel recovers transient (drill-down §12.2 item 6): the transient fixture's pixel has OKLab L above L(b = ½) and the same configuration at rest below it; control: the flat seven-class stain draws both identically"
+  rulings:
+  - R-77
+  - R-442
+  milestone: M7
+- id: REQ-COL-079
+  area: COL
+  statement: "The structure × energy stain must put `chazy_structure` in the colour slot (dispersal #14BBC2, hierarchy #E4896A, interacting #A497EA, oscillatory #7BB76E) and `chazy_q` in the brightness slot under Replace-L as REQ-COL-078 does, so that the drill-down's §10.5.2 cells (light, mid, dark per hue) hold."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5 With an energy channel
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5.2 Structure × energy
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: golden image
+    detail: "a synthetic payload with a sample for each populated §10.5.2 cell renders its hue at the cell's lightness band; dispersal never renders dark"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-080
+  area: COL
+  statement: "The status stain must be `chazy_status` in the colour slot, brightness None, on its own map (R-442), with the drill-down's §10.6 colours: committed #E2E3E8, B-stable #2F6DB5, B-so-far #160928, excursion #E08A2E, transient #16A394, OS-candidate #7BB76E, collision #DA85B6."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.6 Status
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: golden image
+    detail: "a synthetic payload with one sample per chazy_status value renders exactly these sRGB values; no final-motion palette contains a working state"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-081
+  area: COL
+  statement: "The categorical filter must apply to every Chazy stain unchanged, showing a set of classes and muting the rest by REQ-COL-058's mute transform, with no Chazy-specific mute colour."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.7 Filter
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "filter the seven-class stain to {HE, PE} (\"just escapes\"): HE and PE pixels keep their colours, every other pixel is muted by REQ-COL-058's transform; the same on the status stain"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-082
+  area: COL
+  statement: "The \"when it was decided\" view must colour each pixel by its final class with lightness by how early that coarse class settled for good (palest by t = 10, darkest at t = 800, grey never), live from a second forward-only latch holding the time the current coarse class was first committed, reset whenever it changes."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.8 Time views
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.8.1 When it was decided
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "the latch holds the first-commit time and resets on a change of coarse class, on a fixture trajectory; the view renders a never-settled pixel grey and an earlier-settled one lighter"
+  rulings:
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-310
+  note: "Its storage is RQ-310; without the latch the view is offline only."
+- id: REQ-COL-083
+  area: COL
+  statement: "The \"what just changed\" view must draw white where the coarse Chazy class changed since the previous playhead and dim the rest."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.8 Time views
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.8.2 What just changed
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "two frames of a fixture chart across a playhead step: exactly the pixels whose coarse class changed are white, the rest dimmed by the proposed amount"
+  rulings:
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-320
+  note: "Where the previous frame's class lives, and the dimming, are RQ-320."
+- id: REQ-COL-084
+  area: COL
+  statement: "Greyscale and hue modes (REQ-COL-067, REQ-COL-068) must rank `chazy_final` B, OS, PE, HE, P, HP, H, collision, K = 8, bound first and darkest."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.9 Greyscale and hue modes
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "greyscale mode gives class r the lightness B = (r + ½)/8 and hue mode t = r/8 in that order, B darkest"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-COL-085
+  area: COL
+  kind: definition
+  statement: "The greyscale and hue-mode ranks of `chazy_class`, `chazy_status` and `chazy_structure` must be defined in the Chazy drill-down's §10.9 by the task that needs them, consistent with colour_composition §4.1's rank rule and `chazy_final`'s rank, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.9 Greyscale and hue modes
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the drill-down's §10.9 gives each field's rank and K; the greyscale and hue renders of each field use them; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-442
+  milestone: M7
+- id: REQ-COL-086
+  area: COL
+  statement: "The Chazy palettes' separation must be measured the way REQ-COL-055 measures, against τ = 0.101 (R-429): the status and four-family palettes must clear τ unsimulated within themselves and against the hatch's colours and the stipple's; the seven-class palette's measured within-palette distances must be asserted as measured so that a change shows, and its every entry must clear the styles unsimulated; REQ-COL-061's hatch test must include these palettes among its entries."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2.1 Palette separation, measured
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-429 — REQ-COL-061's criterion is confirmed beside REQ-COL-055: τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101; the hatch passes by colour, or by its pattern when its two simulated stripes are more than τ apart; the pattern argument holds at 1:1 device pixels only *(amends R-386)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "palette separation (drill-down §12.2 item 7): `cargo test -p render chazy_palette_separation` prints each palette's tightest pair and tightest style distance unsimulated and under each simulation; status (0.114, 0.111) and four-family clear τ unsimulated; seven-class asserts H / HP 0.083 and the simulated values of §11.2.1, and every entry ≥ τ from the styles unsimulated (0.137); cvd_hatch_distinct passes with the Chazy palettes added"
+  rulings:
+  - R-429
+  - R-442
+  milestone: M7
+  note: "The seven-class default below τ within itself is RQ-311, for the human at the M7 gate."
+- id: REQ-COL-087
+  area: COL
+  kind: calibration
+  statement: "The Chazy palettes of the drill-down's §10 (the seven-class default, the four families, Okabe–Ito, the structure hues and the status palette), with the \"what just changed\" view's dimming and the \"when it was decided\" view's lightness by time, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "10.2 Final motion: Chazy's seven (the default)"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "10.3 Final motion: four families"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: "10.4 Final motion: Okabe–Ito"
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5.2 Structure × energy
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.6 Status
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.8 Time views
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2.1 Palette separation, measured
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the palettes as listed with REQ-COL-086's measured separations (the drill-down's §11.2.1 and prin-rs PR #32's previews), the dimming and the time-lightness mapping; the human confirms at the M7 gate, deciding RQ-311"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-311
+  - RQ-317
+  note: "R-442 makes the seven-class palette the default; B is #141418 (RQ-317)."
+- id: REQ-COL-088
+  area: COL
+  kind: calibration
+  statement: "The Chazy energy channel's lightness range under Replace-L (proposed L_min = 0.3, L_max = 0.9, so parabolic sits at L = 0.6) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5 With an energy channel
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the range with renders showing dark regions keep their hue at L_min (and lose it near 0); evidence: the drill-down's §10.5 and §11.2"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
+- id: REQ-COL-089
+  area: COL
+  kind: calibration
+  statement: "The compaction of `chazy_q` for display (proposed b = q/(1 + q): bound below ½, parabolic at ½, hyperbolic above, range-free) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.5 `chazy_structure` and `chazy_q`
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the form, shows it range-free (dd_colouring §3.6, R-411) and parabolic at ½; evidence: the drill-down's §5.5 and §11.2"
+  rulings:
+  - R-71
+  - R-442
+  milestone: M7
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -15170,6 +15795,25 @@
   - R-409
   milestone: M8
   note: "R-409 A4; proposed by TASK-M6-31, the first task to need it, and used provisionally until the human confirms it at the M8 gate (R-182). R-409's follow-up answer (F3): Shift ×10 and Alt ×0.1 apply to it, as everywhere; it stays a calibration (conflict 5)."
+- id: REQ-GUI-185
+  area: GUI
+  statement: "The Chazy stains' legends must be generated from the stain (render GUI spec §G6) with each class's share of the view, titled with the playhead (\"Final motion (as of t = …)\"), B labelled \"bound, or nobody has left yet\", and the status legend naming the working states in full."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.10 Legends
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: GUI screenshot
+    detail: "the seven-class and status stains' legends against 06_legend.png's layout: the title carries t, B's label, shares summing to 1, the status legend's full names; the legend keys equal the stain's output (REQ-GUI-105)"
+  rulings:
+  - R-442
+  milestone: M8
+  rq:
+  - RQ-315
+  note: "Whether OS-candidate and B-stable are marked provisional in the legend help is RQ-315."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -20962,6 +21606,97 @@
   - R-72
   milestone: M1
   note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: no doc defines the edge map REQ-VAL-012's verify compares."
+- id: REQ-VAL-183
+  area: VAL
+  statement: "The Chazy class's CPU-f64 against GPU-f32 disagreement must be measured and reported on a gallery chart, not asserted zero: the fraction of pixels whose class differs, with every differing pixel checked to lie within the band of a sign change of a two-body energy or a K/U band edge."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 8. Parity
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 9. Gaps between the prototype and Principia
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: docs/contracts/principia_parity_contract.md
+    section: "Tier N — tight numerical (checkable because nothing amplifies)"
+  verify:
+    method: numerical gate
+    detail: "`cargo xtask gate chazy-parity` (drill-down §12.2 item 8): on a gallery chart at several playheads, prints the disagreement fraction and fails if a differing pixel is not within the band of a sign change; the threshold on the fraction is set as RQ-314 settles"
+  rulings:
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-314
+  note: How a label fits the parity tiers is RQ-314.
+- id: REQ-VAL-184
+  area: VAL
+  statement: "The Fewbody reference test (Fregeau et al. 2004 §3.3.5, specialised to three bodies, the drill-down's §3.7) and its Mardling–Aarseth and Kepler helpers must be ported into the validation crate as the classifier's reference, never as a candidate."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.5 Mardling–Aarseth
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.7 The Fewbody reference
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.1 The fixtures to port
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: unit test
+    detail: "the §12.1 fixtures' reference arms: Fewbody (δ = 10⁻⁵) reads H for three flying apart, B-stable for the Mardling–Aarseth hierarchy (ma_stable true), HE at d = 50 and unresolved at d = 20 (tidal ratios 8 × 10⁻⁶ and 1.25 × 10⁻⁴)"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-VAL-185
+  area: VAL
+  statement: "The energy certificates must hold per pixel at every playhead: on a free-fall chart (E < 0 everywhere) no pixel reads H, HP, P or transient, and on an E > 0 chart no pixel reads B-so-far, B-stable or OS-candidate."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 2. Chazy's classes
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: property test
+    detail: "energy certificates (drill-down §12.2 item 4): a free-fall chart and an E > 0 chart classified at t = 10, 50, 200 and the horizon on CPU-f64; the forbidden labels count zero; control: a fixture with the energy sign flipped reaches a forbidden label"
+  rulings:
+  - R-442
+  milestone: M7
+  rq:
+  - RQ-318
+- id: REQ-VAL-186
+  area: VAL
+  statement: "The Burrau ICs run to a horizon past their escape must end HE, with no H, HP or P at any playhead (E < 0)."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 2. Chazy's classes
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: numerical gate
+    detail: "Burrau smoke test (drill-down §12.2 item 1): `cargo xtask gate chazy-burrau` classifies the Burrau trajectory at every step to its horizon; the last label is HE and no step reads H, HP or P"
+  rulings:
+  - R-442
+  milestone: M7
+- id: REQ-VAL-187
+  area: VAL
+  statement: "The Chazy classifier must pass the live-playhead test: classifying a run at playhead t, then continuing the run, never changes the label already given at t."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.1 Inputs and definitions
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.2 New, for Principia
+  - file: decisions.md
+    section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  verify:
+    method: property test
+    detail: "live-playhead property (drill-down §12.2 item 9): for random ICs, the label at t from a run stopped at t equals the label at t from a run continued past t, at every t; control: a classifier variant that reads the state at t + Δ fails it"
+  rulings:
+  - R-442
+  milestone: M7
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
