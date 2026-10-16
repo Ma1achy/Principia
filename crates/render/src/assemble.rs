@@ -53,6 +53,11 @@ const COLOUR_SPACE: &str = include_str!("../shaders/wgsl/lib/colour_space.wgsl")
 /// The presentation layer, hand-written; it follows the prelude at assembly (render contract Part 5).
 const PRESENT: &str = include_str!("../shaders/wgsl/lib/present.wgsl");
 
+/// The compactions and ramps of the field ramp (dd_colouring §3.6; colour_composition §1.2), hand-written; they follow
+/// the prelude at assembly, so every node may call them (TASK-M7-05).
+const COMPACTION: &str = crate::colour::field_ramp::COMPACTION_WGSL;
+const RAMP: &str = crate::colour::field_ramp::RAMP_WGSL;
+
 /// The built-in occupants, each its slot, id and WGSL file (gui_state_contract §3's `shaders/wgsl/frag/<slot>/`): the
 /// combiners pass-through (M1's), Replace-L and Multiply (dd_colouring §3.5); the colour `outcome_state`, the
 /// outcome palette of colour_composition §1.4 (TASK-M1-10); and the structural overlays, post occupants
@@ -967,7 +972,7 @@ fn source(
     let (words, entries) = ledger()?;
     let read_side = read::assemble(words, entries, tier, fields).map_err(AssembleError::Field)?;
     let mut out = format!(
-        "{}\n{COLOUR_SPACE}\n{PRESENT}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
+        "{}\n{COLOUR_SPACE}\n{PRESENT}\n{COMPACTION}\n{RAMP}\n{read_side}\n// ── The stain (TASK-M1-04): context, node functions, shade() ──\n{}",
         prelude::wgsl(tier),
         CONTEXT
     );
