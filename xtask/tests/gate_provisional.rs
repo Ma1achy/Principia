@@ -105,7 +105,8 @@ negative_control!(
 /// The register's own lists at M1 and M2. The M1 gate confirmed its nine provisional entries as proposed (R-428): the
 /// six log floors and the hatch's three numbers (R-427), so the M1 list is empty. `rho_ratio`'s and `r_min_pair_0`'s
 /// floors, confirmed provisionally, are provisional until M2, citing REQ-TOOL-163 (R-419), and are listed at M2 with
-/// `eps_m01` (REQ-DEC-039) and `tanh_sat` (REQ-DEC-047).
+/// `eps_m01` (REQ-DEC-039), `tanh_sat` (REQ-DEC-047) and the shape sphere's `shape_vec_js_tol` (REQ-CHART-049) and
+/// `shape_roundtrip_bound` (REQ-CHART-053).
 fn check_register_m1_m2(register: &[ConstantBuilder]) {
     check_lists("M1", register, &[]);
     check_lists(
@@ -116,6 +117,8 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
             ("tanh_sat", "M2", "REQ-DEC-047"),
             ("log_floor_rho_ratio", "M2", "REQ-TOOL-163"),
             ("log_floor_r_min_pair_0", "M2", "REQ-TOOL-163"),
+            ("shape_vec_js_tol", "M2", "REQ-CHART-049"),
+            ("shape_roundtrip_bound", "M2", "REQ-CHART-053"),
         ],
     );
 }

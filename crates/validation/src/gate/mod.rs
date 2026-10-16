@@ -28,6 +28,7 @@ pub use report::{GateReport, Minimum, RegionCount, Regions, Verdict};
 use crate::convergence::ConvergenceGate;
 use crate::decode_f32_eps::DecodeF32EpsGate;
 use crate::oklab::OklabRoundtripGate;
+use crate::shape_roundtrip::ShapeRoundtripGate;
 
 /// A numerical gate.
 pub trait Gate: Sync {
@@ -45,7 +46,12 @@ pub trait Gate: Sync {
 }
 
 /// The registered gates, in the order `--all` runs them.
-pub const REGISTRY: &[&dyn Gate] = &[&ConvergenceGate, &OklabRoundtripGate, &DecodeF32EpsGate];
+pub const REGISTRY: &[&dyn Gate] = &[
+    &ConvergenceGate,
+    &OklabRoundtripGate,
+    &DecodeF32EpsGate,
+    &ShapeRoundtripGate,
+];
 
 /// Whether a threshold is confirmed, or a calibration requirement's provisional value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
