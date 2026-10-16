@@ -4,7 +4,9 @@
 // through the mock's chart, z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂ (chart_decoder_contract Part 3), `t` Y-up: so a pan
 // shifts the picture and a zoom scales it about the centre, and a slice or a tilt changes it. `chart` carries z₀, q₁
 // and q₂ projected on three directions: z_α, z_β and a fixed mix of the six hidden ones. Its output is gamma-space, as
-// egui-wgpu's own output is on the targets it chooses.
+// egui-wgpu's own output is on the targets it chooses. `fs_stain` draws the Stain editor's preview of the same
+// stand-in in the look the mock takes from its stain graph (`stain.rs`): colour or a grey ramp, a late fade to
+// `look.y`, multiplied, its lightness replaced, or passed through, and shifted by the source field's phase.
 
 struct ChartUniform {
     origin: vec4<f32>,
@@ -58,22 +60,61 @@ fn fbm(p: vec2<f32>) -> f32 {
     return sum;
 }
 
-@fragment
-fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
-    let x = in.uv.x * 2.0 - 1.0;
-    let y = 1.0 - in.uv.y * 2.0;
+struct StandIn {
+    n: f32,
+    bands: f32,
+    warp: vec2<f32>,
+};
+
+// The stand-in's field at `uv`, its noise shifted by `shift`.
+fn stand_in(uv: vec2<f32>, shift: vec2<f32>) -> StandIn {
+    let x = uv.x * 2.0 - 1.0;
+    let y = 1.0 - uv.y * 2.0;
     let z = chart.origin.xyz + x * chart.q1.xyz + y * chart.q2.xyz;
-    let p = (z.xy + vec2<f32>(1.0, 1.0)) * vec2<f32>(3.0, 2.5);
+    let p = (z.xy + vec2<f32>(1.0, 1.0)) * vec2<f32>(3.0, 2.5) + shift;
     let phase = vec2<f32>(1.7, -1.1) * z.z;
     let warp = vec2<f32>(fbm(p + vec2<f32>(3.1, 1.7) + phase), fbm(p + vec2<f32>(8.3, 2.8) - phase));
     let n = fbm(p + 2.5 * warp);
-    let bands = fract(n * 4.0);
+    return StandIn(n, fract(n * 4.0), warp);
+}
+
+// The stand-in's colours: black through magenta and gold to cyan.
+fn palette(f: StandIn) -> vec3<f32> {
     let black = vec3<f32>(0.02, 0.02, 0.03);
     let magenta = vec3<f32>(0.93, 0.13, 0.55);
     let gold = vec3<f32>(0.98, 0.80, 0.12);
     let cyan = vec3<f32>(0.10, 0.75, 0.90);
-    var colour = mix(black, magenta, smoothstep(0.0, 0.35, bands));
-    colour = mix(colour, gold, smoothstep(0.45, 0.7, bands));
-    colour = mix(colour, cyan, smoothstep(0.8, 1.0, bands) * n);
+    var colour = mix(black, magenta, smoothstep(0.0, 0.35, f.bands));
+    colour = mix(colour, gold, smoothstep(0.45, 0.7, f.bands));
+    colour = mix(colour, cyan, smoothstep(0.8, 1.0, f.bands) * f.n);
+    return colour;
+}
+
+@fragment
+fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
+    return vec4<f32>(palette(stand_in(in.uv, vec2<f32>(0.0, 0.0))), 1.0);
+}
+
+// The preview's look: colour (1) or a grey ramp (0); the darkest the late fade goes; the combiner, 0 Multiply,
+// 1 Replace-L, 2 pass-through; and the source field's phase.
+@group(0) @binding(1) var<uniform> look: vec4<f32>;
+
+@fragment
+fn fs_stain(in: VsOut) -> @location(0) vec4<f32> {
+    let f = stand_in(in.uv, vec2<f32>(7.0, 3.0) * look.w);
+    var base = vec3<f32>(f.n);
+    if (look.x > 0.5) {
+        base = palette(f);
+    }
+    // The time of fate, a second field of the stand-in: early fates full, late ones fading to `look.y`.
+    let fate = clamp(f.warp.x * 1.4 - 0.2, 0.0, 1.0);
+    let b = mix(1.0, look.y, fate);
+    var colour = base;
+    if (look.z < 0.5) {
+        colour = base * b;
+    } else if (look.z < 1.5) {
+        let l = max(dot(base, vec3<f32>(0.2126, 0.7152, 0.0722)), 0.02);
+        colour = clamp(base * (0.5 * b / l), vec3<f32>(0.0), vec3<f32>(1.0));
+    }
     return vec4<f32>(colour, 1.0);
 }

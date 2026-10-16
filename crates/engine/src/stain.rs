@@ -21,7 +21,9 @@
 use std::collections::BTreeMap;
 use std::fmt;
 
-use render::assemble::{self, AssembleError, Kind, PortType, Stain};
+use render::assemble::{self, AssembleError, Kind, Stain};
+
+pub use render::assemble::{PortType, Uniform, UniformType};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
@@ -41,6 +43,13 @@ pub enum NodeKind {
     Combiner,
     Post,
     Out,
+}
+
+impl NodeKind {
+    /// The type on the kind's out-port (render_gui_spec Part II §3.1); `OUT` has none.
+    pub fn output(self) -> Option<PortType> {
+        Kind::from(self).output()
+    }
 }
 
 impl From<NodeKind> for Kind {
@@ -90,13 +99,14 @@ pub struct Node {
     pub params: BTreeMap<String, Vec<f64>>,
 }
 
-/// One wire: from a node's out-port into another's in-port, by its position.
+/// One wire: from a node's out-port into another's in-port, by its position: a u32, as the graph serialises with
+/// `RenderState`, and no serialised type has a `usize` field (R-329).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Wire {
     pub from: NodeId,
     pub to: NodeId,
-    pub port: usize,
+    pub port: u32,
 }
 
 /// Why a graph or an edit was refused.
@@ -148,7 +158,7 @@ impl TryFrom<Parts> for StainGraph {
             }
         }
         for w in p.wires {
-            if g.wires.insert((w.to, w.port), w.from).is_some() {
+            if g.wires.insert((w.to, w.port as usize), w.from).is_some() {
                 return Err(GraphError(format!(
                     "node {}'s in-port {} has two wires; an in-port takes one",
                     w.to.0, w.port
@@ -210,8 +220,32 @@ impl StainGraph {
     pub fn wires(&self) -> Vec<Wire> {
         self.wires
             .iter()
-            .map(|(&(to, port), &from)| Wire { from, to, port })
+            .map(|(&(to, port), &from)| Wire {
+                from,
+                to,
+                // An in-port's position is below the assembler's few inputs (`assemble::MAX_INPUTS`), so it fits.
+                port: u32::try_from(port).expect("an in-port's position fits a u32"),
+            })
             .collect()
+    }
+
+    /// The nodes, in id order.
+    pub fn nodes(&self) -> impl Iterator<Item = &Node> {
+        self.nodes.values()
+    }
+
+    /// Node `id`'s in-ports, in order, each its type (render_gui_spec Part II §3.1): what an editor draws on its left
+    /// edge.
+    pub fn in_ports(&self, id: NodeId) -> Result<Vec<PortType>, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        self.ports(n)
+    }
+
+    /// The uniforms node `id`'s occupant declares (its `uniformSchema`, lowering contract Part 3), each with its
+    /// default and range: what a node's params are values of.
+    pub fn uniforms(&self, id: NodeId) -> Result<Vec<Uniform>, GraphError> {
+        let n = self.nodes.get(&id).ok_or_else(|| no_node(id))?;
+        Ok(assemble::declaration(n.kind.into(), &(&n.occupant).into())?.uniforms)
     }
 
     /// Adds a node of `kind` with `occupant`, its id one past the largest in the graph; a combiner or an `OUT` is

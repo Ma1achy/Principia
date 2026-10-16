@@ -96,7 +96,7 @@ fn state() -> (SimConfig, RenderState) {
             quality: Quality {},
         },
         RenderState {
-            stain_graph: StainGraph {},
+            stain_graph: StainGraph::new(),
             overlays: Overlays::default(),
             hover: Hover::default(),
             palette: Palette {},

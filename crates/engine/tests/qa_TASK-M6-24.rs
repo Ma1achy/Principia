@@ -26,7 +26,9 @@ use engine::contract::conformance::{self, CASES};
 use engine::contract::interface::EngineInterface;
 use engine::contract::legend::Legend;
 use engine::contract::log::{LogEntry, Severity, Source};
-use engine::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
+use engine::contract::render_state::{
+    Hover, NodeKind, Occupant, Overlays, Palette, Playhead, RenderState, StainGraph,
+};
 use engine::contract::set_field::{Edit, RenderField, SetField, SimField};
 use engine::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
@@ -60,7 +62,7 @@ fn sim() -> SimConfig {
 
 fn render(t: f64) -> RenderState {
     RenderState {
-        stain_graph: StainGraph {},
+        stain_graph: StainGraph::new(),
         overlays: Overlays::default(),
         hover: Hover::default(),
         palette: Palette {},
@@ -162,8 +164,8 @@ enum Rule {
 
 /// A double of the interface, written here from the rules (R-52, R-69, R-101; RQ-245), breaking `rule`.
 /// It holds the playhead and, since R-390's navigation paths, the plane and the lock, and, since its overlay set and
-/// hover, those two, and, since its Run window's horizon (TASK-M6-28), the horizon; each history entry is the edit
-/// restoring the value before and the edit itself.
+/// hover, those two, and, since its Run window's horizon (TASK-M6-28), the horizon, and, since its Stain editor
+/// (TASK-M6-29), the stain graph; each history entry is the edit restoring the value before and the edit itself.
 struct Broken {
     rule: Rule,
     t: f64,
@@ -172,6 +174,7 @@ struct Broken {
     overlays: Overlays,
     hover: Hover,
     horizon: Horizon,
+    stain_graph: StainGraph,
     undo: Vec<(Edit, Edit)>,
     redo: Vec<(Edit, Edit)>,
     log: Vec<LogEntry>,
@@ -189,6 +192,7 @@ impl Broken {
             overlays: Overlays::default(),
             hover: Hover::default(),
             horizon: sim().horizon,
+            stain_graph: StainGraph::new(),
             undo: Vec::new(),
             redo: Vec::new(),
             log: Vec::new(),
@@ -224,6 +228,9 @@ impl Broken {
                 &mut self.horizon,
                 h.clone(),
             ))),
+            Edit::Render(RenderField::StainGraph(g)) => Edit::Render(RenderField::StainGraph(
+                std::mem::replace(&mut self.stain_graph, g.clone()),
+            )),
         }
     }
 
@@ -250,6 +257,15 @@ impl Broken {
                 (Edit::Sim(SimField::Horizon(b)), Edit::Sim(SimField::Horizon(a))) => {
                     format!("SetField Horizon.t {} → {}{marker}", b.t, a.t)
                 }
+                // gui_state_contract §2: "logged as \"SetField StainGraph [before] → [after]\"".
+                (
+                    Edit::Render(RenderField::StainGraph(b)),
+                    Edit::Render(RenderField::StainGraph(a)),
+                ) => format!(
+                    "SetField StainGraph {} → {}{marker}",
+                    graph_text(b),
+                    graph_text(a)
+                ),
                 (b, a) => format!("SetField {b:?} → {a:?}{marker}"),
             },
         }
@@ -298,6 +314,7 @@ impl EngineInterface for Broken {
             render: RenderState {
                 overlays: self.overlays.clone(),
                 hover: self.hover.clone(),
+                stain_graph: self.stain_graph.clone(),
                 ..render(self.t)
             },
             tier: Tier {},
@@ -340,6 +357,48 @@ impl EngineInterface for Broken {
             self.undo.push((before, after));
         }
     }
+}
+
+/// A stain graph as gui_state_contract §2 has the log write it, written here from its words: "each graph as its nodes
+/// in id order, `id kind occupant` (a custom occupant written `custom`) with its params, if any, as `{name=value, …}`,
+/// then its wires, each `from→to.port`", in brackets. The suite's own graphs carry no params of several components,
+/// which §2 does not spell, so each value here is one number.
+fn graph_text(g: &StainGraph) -> String {
+    let nodes: Vec<String> = g
+        .nodes()
+        .map(|n| {
+            let kind = match n.kind {
+                NodeKind::Source => "source",
+                NodeKind::Colour => "colour",
+                NodeKind::Brightness => "brightness",
+                NodeKind::Combiner => "combiner",
+                NodeKind::Post => "post",
+                NodeKind::Out => "out",
+            };
+            let occupant = match &n.occupant {
+                Occupant::None => "none".to_owned(),
+                Occupant::Field(f) => f.clone(),
+                Occupant::Builtin(id) => id.clone(),
+                Occupant::Custom(_) => "custom".to_owned(),
+            };
+            let mut text = format!("{} {kind} {occupant}", n.id.0);
+            if !n.params.is_empty() {
+                let ps: Vec<String> = n
+                    .params
+                    .iter()
+                    .map(|(k, v)| format!("{k}={}", v[0]))
+                    .collect();
+                text += &format!(" {{{}}}", ps.join(", "));
+            }
+            text
+        })
+        .collect();
+    let wires: Vec<String> = g
+        .wires()
+        .iter()
+        .map(|w| format!("{}→{}.{}", w.from.0, w.to.0, w.port))
+        .collect();
+    format!("[{}; {}]", nodes.join(", "), wires.join(", "))
 }
 
 /// The cases that fail on a fresh double breaking `rule`, each run alone.

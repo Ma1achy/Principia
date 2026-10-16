@@ -1,7 +1,8 @@
 //! The engine-side adapter (RQ-247): it constructs the engine the app runs on and says whether it is the mock, which
 //! the footer's "mock engine" tag and the window title read (REQ-GUI-167; RQ-248). It hands the app the canvas, §1's
-//! sanctioned exception, when the engine side has one, the time source the app's clock reads (RQ-246), and the
-//! profiler trace the Profiler window reads, in profiler schema v1's shape (R-56; render_gui_spec §G5).
+//! sanctioned exception, when the engine side has one, the time source the app's clock reads (RQ-246), the profiler
+//! trace the Profiler window reads, in profiler schema v1's shape (R-56; render_gui_spec §G5), and the Stain editor's
+//! content and preview (render_gui_spec Part II §1; R-390), drawn through the canvas as the figure is.
 
 use std::sync::Arc;
 
@@ -33,6 +34,17 @@ pub trait EngineSide {
 
     /// The profiler trace, schema v1 (R-56), the Profiler window shows; `None` when the engine side has none.
     fn trace(&self) -> Option<&Trace>;
+
+    /// The Stain editor's content for the stain as it stands: its library, assembled code, per-node code and Problems;
+    /// `None` draws the panes empty.
+    fn stain_content(&self) -> Option<crate::stain::Content>;
+
+    /// The canvas the Stain editor's preview is drawn through, in the stain's look as it stands; `None` draws no
+    /// preview.
+    fn preview(&self) -> Option<Arc<dyn Canvas>>;
+
+    /// Asks the engine side to recompile the stain (the Problems pane's Recompile).
+    fn recompile(&mut self);
 }
 
 /// The real engine's data contract, with no figure, no time source and no trace: its frame loop and canvas are
@@ -72,6 +84,19 @@ impl EngineSide for RealSide {
     fn trace(&self) -> Option<&Trace> {
         None
     }
+
+    /// None: the real engine's Stain content is TASK-M7-24's and TASK-M8-19's.
+    fn stain_content(&self) -> Option<crate::stain::Content> {
+        None
+    }
+
+    /// None: the real engine's canvas is TASK-M8-05's.
+    fn preview(&self) -> Option<Arc<dyn Canvas>> {
+        None
+    }
+
+    /// Nothing: the real engine's compile is TASK-M7-24's.
+    fn recompile(&mut self) {}
 }
 
 /// The mock engine, with its canvas when one is open, and its canned profiler trace (R-390).
@@ -121,5 +146,21 @@ impl EngineSide for MockSide {
 
     fn trace(&self) -> Option<&Trace> {
         Some(&self.trace)
+    }
+
+    fn stain_content(&self) -> Option<crate::stain::Content> {
+        Some(crate::mock::stain::content(self.engine.graph()))
+    }
+
+    /// The preview through the canvas, told the chart and the look of the mock's graph first.
+    fn preview(&self) -> Option<Arc<dyn Canvas>> {
+        let canvas = self.canvas.clone()?;
+        canvas.set_chart(self.engine.plane());
+        canvas.set_look(crate::mock::stain::look(self.engine.graph()));
+        Some(Arc::new(crate::mock::canvas::PreviewCanvas(canvas)) as Arc<dyn Canvas>)
+    }
+
+    fn recompile(&mut self) {
+        self.engine.recompile();
     }
 }

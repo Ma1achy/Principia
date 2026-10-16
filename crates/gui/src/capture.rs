@@ -1,6 +1,6 @@
 //! The headless capture mode (R-274; RQ-253): `gui capture --screen <screen> --steps <steps> --out <dir>` runs the app
-//! on the mock, its clock frozen (RQ-246), plays the steps, renders the named screen offscreen at 01_main.png's 2160 ×
-//! 1350 pixels, and writes `capture.png` and `names.json`, each accessible name with its rect in pixels, for R-275.
+//! on the mock, its clock frozen (RQ-246), in the screen's mode (`01_main` Explore, `02_stain` Stain), plays the
+//! steps, renders the screen offscreen at 01_main.png's 2160 × 1350 pixels, and writes `capture.png` and `names.json`, each accessible name with its rect in pixels, for R-275.
 //! The screenshot runner spawns it as a separate process, as `gate` spawns validation's binary: no crate depends on
 //! `gui` (systems_architecture §7.1). Always compiled, as the mock is (RQ-252).
 
@@ -18,7 +18,7 @@ pub const CAPTURE: &str = "capture.png";
 /// The file the names are written to, in the output directory.
 pub const NAMES: &str = "names.json";
 /// The screens the capture mode renders.
-pub const SCREENS: &[&str] = &["01_main"];
+pub const SCREENS: &[&str] = &["01_main", "02_stain"];
 /// The capture's size: 01_main.png's, in pixels.
 pub const SIZE: [u32; 2] = [2160, 1350];
 /// The capture's pixels per point, set to match the artboard's text (the gui reviewer's, recorded in the PR).
@@ -67,6 +67,8 @@ pub enum Step {
     Alt1,
     /// Press Space: play in Time, keep the orbit in the Figure.
     Space,
+    /// Click the mock's colour node's title on the Stain page's canvas ([`node_point`]): select it.
+    ClickNode,
 }
 
 /// Where the `hover` step puts the pointer, `(s, t)` of the figure, `t` Y-up: left of the centre, as 01_main.png's
@@ -86,7 +88,7 @@ pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
 
 /// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25), the Manifold view's
 /// (TASK-M6-26), and the hover, Alt+1 and Space (TASK-M6-27).
-pub const STEPS: [(&str, Step); 19] = [
+pub const STEPS: [(&str, Step); 20] = [
     ("f3", Step::F3),
     ("raise_warning", Step::RaiseWarning),
     ("raise_error", Step::RaiseError),
@@ -106,6 +108,7 @@ pub const STEPS: [(&str, Step); 19] = [
     ("hover", Step::Hover),
     ("alt_1", Step::Alt1),
     ("space", Step::Space),
+    ("click_node", Step::ClickNode),
 ];
 
 impl Step {
@@ -165,6 +168,15 @@ pub fn lock_point(figure: egui::Rect) -> egui::Pos2 {
     )
 }
 
+/// The point the `click_node` step clicks on `layout`'s Stain page at `pixels_per_point`: the title of the colour
+/// node's default place (02_stain.png's selected "colour · Event palette"), the drawer open and the canvas unmoved.
+pub fn node_point(layout: &crate::layout::Layout, pixels_per_point: f32) -> egui::Pos2 {
+    use crate::stain::canvas::{default_position, TITLE_H};
+    let canvas = crate::stain::Regions::new(layout, pixels_per_point, false).canvas;
+    let at = default_position(engine::contract::render_state::NodeKind::Colour, 0);
+    canvas.min + at.to_vec2() + egui::vec2(40.0, TITLE_H / 2.0)
+}
+
 /// The point a footer click lands on: the footer's left end, on its counts.
 pub fn footer_point(footer: egui::Rect) -> egui::Pos2 {
     egui::pos2(footer.min.x + 40.0, footer.center().y)
@@ -180,14 +192,27 @@ pub struct Shot {
     pub names: Vec<Name>,
 }
 
-/// Runs the app on the mock, its clock frozen, plays `steps` and renders the screen through `canvas`'s device.
+/// Runs the app on the mock, its clock frozen, plays `steps` and renders the screen through `canvas`'s device: the
+/// Explore screen, `01_main`.
 pub fn shoot(canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>, steps: &[Step]) -> Shot {
+    shoot_screen(canvas, "01_main", steps)
+}
+
+/// [`shoot`] on `screen`: `02_stain` starts in Stain mode, any other screen in Explore.
+pub fn shoot_screen(
+    canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>,
+    screen: &str,
+    steps: &[Step],
+) -> Shot {
     use crate::app::App;
     use crate::layout::Layout;
     use crate::side::{EngineSide, MockSide};
 
     let side = MockSide::new(crate::mock::MockEngine::frozen(), Some(canvas.clone()));
     let mut app = App::new(side, FORMAT);
+    if screen == "02_stain" {
+        app.view.mode = engine::contract::view_ui::Mode::Stain;
+    }
     let mut headless = Headless::new(SIZE, PIXELS_PER_POINT);
     let layout = Layout::new(headless.screen(), PIXELS_PER_POINT);
     let mut frames: Vec<Vec<Event>> = vec![Vec::new(), Vec::new()];
@@ -218,6 +243,7 @@ pub fn shoot(canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>, steps: &[S
             Step::RaiseWarning => app.side().engine().raise_warning(),
             Step::RaiseError => app.side().engine().raise_error(),
             Step::ClickFooter => frames.extend(click(footer_point(layout.footer))),
+            Step::ClickNode => frames.extend(click(node_point(&layout, PIXELS_PER_POINT))),
         }
         frames.extend([Vec::new(), Vec::new()]);
     }

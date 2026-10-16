@@ -439,7 +439,7 @@ fn skeleton() -> (SimConfig, RenderState) {
             quality: Quality {},
         },
         RenderState {
-            stain_graph: StainGraph {},
+            stain_graph: StainGraph::new(),
             overlays: Overlays::default(),
             palette: Palette {},
             playhead: Playhead { t: 0.0 },
@@ -532,7 +532,7 @@ fn cases() -> Vec<(String, &'static str)> {
         ),
         (
             to(&render),
-            r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#,
+            r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}}"#,
         ),
     ]
 }
@@ -670,6 +670,6 @@ validation::negative_control!(
     expected = "the text does not round-trip",
     check_round_trip(
         r#"{"slice":{},"chart":{},"collision":{},"horizon":{"t":0},"integrator":{},"kernel_variant":"physics","links":{},"lock":{"locked":false,"z_locked":[0,0,0,0,0,0,0,0]},"plane":{"q1":[0,0,0,0,0,0,0,0],"q2":[0,0,0,0,0,0,0,0],"z0":[0,0,0,0,0,0,0,0]},"quality":{}}"#,
-        r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{}}"#
+        r#"{"hover":{"at":null},"overlays":{"burrau_lattice":false,"class_edges":false,"depth_colouring":false,"energy_drift":false,"forbidden_region":false,"grid":false,"nan_invalid_pixels":false,"priority_heatmap":false,"refine_flagged":false,"split_merge_activity":false,"substep_cap_hits":false,"substep_density":false,"t_end_contours":false,"tile_bounds":false},"palette":{},"playhead":{"t":0},"stain_graph":{"nodes":[{"id":0,"kind":"combiner","occupant":{"builtin":"pass_through"},"params":{}},{"id":1,"kind":"out","occupant":"none","params":{}}],"wires":[{"from":0,"port":0,"to":1}]}}"#
     )
 );

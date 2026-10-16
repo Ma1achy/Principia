@@ -84,8 +84,9 @@ impl Default for Keyboard {
 
 impl Keyboard {
     /// The layer, each mode's screens registered: Explore's eight big scopes in §G3's Tab order, the footer last
-    /// (R-405); on the Stain page, the top bar and the footer, until TASK-M6-29 adds Stain's scopes. The windows join
-    /// both trees, outside the Tab order (§G5).
+    /// (R-405); on the Stain page, the top bar, the library drawer, the graph canvas, the preview and node inspector,
+    /// the code and Problems pane, and the footer last (`crate::stain`). The windows join both trees, outside the Tab
+    /// order (§G5).
     pub fn new() -> Self {
         let mut explore = ScopeTree::new();
         crate::explore::top_bar::register(&mut explore);
@@ -94,6 +95,7 @@ impl Keyboard {
         crate::windows::register(&mut explore);
         let mut stain = ScopeTree::new();
         crate::explore::top_bar::register(&mut stain);
+        crate::stain::register(&mut stain);
         crate::explore::footer::register(&mut stain);
         crate::windows::register(&mut stain);
         Self {

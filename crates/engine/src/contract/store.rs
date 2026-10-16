@@ -8,7 +8,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::contract::interface::EngineInterface;
 use crate::contract::legend::Legend;
 use crate::contract::log::{LogEntry, Severity, Source};
-use crate::contract::render_state::{Overlays, RenderState};
+use crate::contract::render_state::{NodeKind, Occupant, Overlays, RenderState, StainGraph};
 use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
 use crate::contract::sim_config::{Latent, SimConfig};
 use crate::contract::snapshot::{FrameSummary, History, Precision, Snapshot, Tier};
@@ -71,6 +71,9 @@ pub fn write(sim: &mut SimConfig, render: &mut RenderState, edit: Edit) -> Edit 
         Edit::Render(RenderField::Hover(hover)) => {
             Edit::Render(RenderField::Hover(replace(&mut render.hover, hover)))
         }
+        Edit::Render(RenderField::StainGraph(graph)) => Edit::Render(RenderField::StainGraph(
+            replace(&mut render.stain_graph, graph),
+        )),
     }
 }
 
@@ -104,6 +107,54 @@ fn overlays(o: &Overlays) -> String {
     format!("[{}]", on.join(", "))
 }
 
+/// The stain graph as the log writes it (gui_state_contract §2): its nodes in id order, each `id kind occupant`, the
+/// occupant a built-in's id, a source's field, `custom` for custom WGSL or `none`, and its params, if any, as
+/// `{name=value, …}`, a value of several components in `(…)`; then its wires, each `from→to.port`.
+pub fn stain_graph(g: &StainGraph) -> String {
+    let number = |v: &[f64]| match v {
+        [one] => one.to_string(),
+        many => {
+            let parts: Vec<String> = many.iter().map(f64::to_string).collect();
+            format!("({})", parts.join(", "))
+        }
+    };
+    let nodes: Vec<String> = g
+        .nodes()
+        .map(|n| {
+            let kind = match n.kind {
+                NodeKind::Source => "source",
+                NodeKind::Colour => "colour",
+                NodeKind::Brightness => "brightness",
+                NodeKind::Combiner => "combiner",
+                NodeKind::Post => "post",
+                NodeKind::Out => "out",
+            };
+            let occupant = match &n.occupant {
+                Occupant::None => "none",
+                Occupant::Field(f) => f.as_str(),
+                Occupant::Builtin(id) => id.as_str(),
+                Occupant::Custom(_) => "custom",
+            };
+            let mut text = format!("{} {kind} {occupant}", n.id.0);
+            if !n.params.is_empty() {
+                let params: Vec<String> = n
+                    .params
+                    .iter()
+                    .map(|(name, v)| format!("{name}={}", number(v)))
+                    .collect();
+                text.push_str(&format!(" {{{}}}", params.join(", ")));
+            }
+            text
+        })
+        .collect();
+    let wires: Vec<String> = g
+        .wires()
+        .iter()
+        .map(|w| format!("{}→{}.{}", w.from.0, w.to.0, w.port))
+        .collect();
+    format!("[{}; {}]", nodes.join(", "), wires.join(", "))
+}
+
 /// The wall-clock time now, in milliseconds since the Unix epoch (the log entry's `at`, gui_state_contract §2).
 fn now_ms() -> u64 {
     SystemTime::now()
@@ -129,6 +180,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
             Some([s, t]) => format!("({s:.4}, {t:.4})"),
             None => "none".to_owned(),
         },
+        Edit::Render(RenderField::StainGraph(g)) => stain_graph(g),
     };
     let path = match &edit.edit {
         Edit::Sim(SimField::Z0(_)) => "Plane.z0",
@@ -138,6 +190,7 @@ pub fn set_field_message(before: &Edit, edit: &SetField) -> String {
         Edit::Render(RenderField::Playhead(_)) => "Playhead.t",
         Edit::Render(RenderField::Overlays(_)) => "Overlays",
         Edit::Render(RenderField::Hover(_)) => "Hover.at",
+        Edit::Render(RenderField::StainGraph(_)) => "StainGraph",
     };
     let marker = if edit.no_history { " (no history)" } else { "" };
     format!(

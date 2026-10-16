@@ -3,9 +3,9 @@
 //! (R-69); `ViewUI` is never read by the engine, so no edit reaches it. The paths are added with the fields they
 //! name (R-133): the first is the playhead's, `RenderField::Playhead` (RQ-243); the navigation paths, `z₀`, the basis
 //! and the lock, came with the dev GUI's Manifold view, the overlay set and the hover with its Overlays menu and
-//! hover label, and the horizon with its Run window (R-390, "Contract fields").
+//! hover label, the horizon with its Run window, and the stain graph with its Stain editor (R-390, "Contract fields").
 
-use crate::contract::render_state::{Hover, Overlays, Playhead};
+use crate::contract::render_state::{Hover, Overlays, Playhead, StainGraph};
 use crate::contract::sim_config::{Horizon, Latent, Lock};
 
 /// One typed edit: a field path with its value (gui_state_contract §2).
@@ -55,4 +55,7 @@ pub enum RenderField {
     Overlays(Overlays),
     /// The cursor over the figure (gui_state_contract §2), always sent marked "no history" (R-101).
     Hover(Hover),
+    /// The stain graph (gui_state_contract §2, §5): an edit of the Stain editor (picking a node's occupant, a param)
+    /// is one edit of the whole graph, undoable (R-69).
+    StainGraph(StainGraph),
 }
