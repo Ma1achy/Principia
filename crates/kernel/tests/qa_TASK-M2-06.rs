@@ -12,8 +12,8 @@
 //! - The `DEGENERATE` readback tag: every reason, and none, round-trips through its tag word; the words are distinct and
 //!   no other word decodes (`qa_m206_tag_round_trip`).
 //! - REQ-DEC-047 (dd_generation_root §3.9's `tanh` operator; the requirement's verify detail): `tanh_sat` lies at or
-//!   above the first argument where `tanh` rounds to ±1, found here by search at each width, and below 44, Metal's
-//!   measured failure (`qa_m206_tanh_sat_window`).
+//!   above the first argument where `tanh` rounds to ±1, found here by search at each width, and below 43.671875, from
+//!   which Metal's GPU `tanh` was measured to fail, 0 and then NaN (`qa_m206_tanh_sat_window`).
 //!
 //! **Domain** (pitfalls §10): the decode's stateless pieces, inputs fixed; no trajectory.
 //!
@@ -485,8 +485,8 @@ fn saturates64() -> f64 {
 }
 
 /// `t` is at or above where `tanh` rounds to ±1 at both widths (and `tanh` is ±1 at `±t`, so the clamp changes no
-/// CPU value), and below 44, the first argument where Metal's GPU `tanh` was measured to fail (REQ-DEC-047's
-/// verify detail). Both widths' `tanh_sat` are the same number.
+/// CPU value), and below 43.671875, the first argument where Metal's GPU `tanh` was measured to fail, 0 and then NaN
+/// (REQ-DEC-047's verify detail). Both widths' `tanh_sat` are the same number.
 fn check_window(t32: f32, t64: f64) {
     let (s32, s64) = (saturates32(), saturates64());
     println!("tanh rounds to 1 from {s32} at f32 and {s64} at f64; tanh_sat = {t64}");
@@ -499,8 +499,8 @@ fn check_window(t32: f32, t64: f64) {
     assert_eq!(t64.tanh(), 1.0);
     assert_eq!((-t64).tanh(), -1.0);
     assert!(
-        t64 < 44.0,
-        "tanh_sat = {t64} is not below 44, Metal's failure"
+        t64 < 43.671_875,
+        "tanh_sat = {t64} is not below 43.671875, Metal's failure"
     );
     assert_eq!(f64::from(t32), t64, "tanh_sat differs between the widths");
 }
