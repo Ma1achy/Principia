@@ -2,14 +2,14 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156
-- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27
-- **Needs (earlier milestones):** REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002
+- **Depends on:** TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33
+- **Needs (earlier milestones):** REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002, REQ-GUI-188
 - **Reviewers:** code, qa, gui
 - **Pitfalls:** PIT-2.4
 - **Size:** ~350 lines
 
 ## Goal
-The hover trace is drawn as a transient overlay layer above the stain pipeline: z(t) projected onto this chart's q₁, q₂, solid near the slice and fainter with distance from it, and never drawn where the cursor is over a stale (blurred) region. The hover label names a fate only once it is decided (a terminal state or bounded at the horizon) and otherwise reads "undecided · still interacting at t of t_max". All body and pair labels are 0-based, pair k naming the side opposite body k (R-22).
+The hover trace is drawn as a transient overlay layer above the stain pipeline: z(t) projected onto this chart's q₁, q₂, solid near the slice and fainter with distance from it, and never drawn where the cursor is over a stale (blurred) region. The hover label names a fate only once it is decided (a terminal state or bounded at the horizon) and otherwise reads "undecided · still interacting at t of t_max". All body and pair labels are 1-based, the bodies 1, 2, 3 and a pair named by its two bodies, never by its pair id, from TASK-M2-33's conversion function (R-449, superseding R-22's 0-based display labels).
 
 ## References
 - `docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view"
@@ -20,18 +20,19 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - `docs/notes/ic_inspector_scratchpad.md` § "Measurement readouts (gauge-invariant → hold under all four handles)"
 - `docs/contracts/principia_render_contract.md` § "Part 7 — The hover trace (per-IC trajectory overlay)"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+- `decisions.md` § "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
 
 ## Deliverables
 - `crates/render/src/compositor/trace_layer.rs` — the trace as a compositor layer above the stain output; suppressed over non-current-identity regions.
 - `crates/gui/src/explore/hover_label.rs`, the track's hover label (TASK-M6-27, R-390) wired to the real engine — label strings from the snapshot's sample under the cursor.
-- `crates/gui/src/labels.rs` — the shared 0-based body / pair label functions (used by the legend, Trajectory panel and Inspector).
-- Tests: `hover_clears`, `hover_label_strings`, `labels_zero_based`; screenshot cases `01_main/hover_current`, `01_main/hover_stale`, `01_main/hover_path`.
+- The legend, Trajectory panel and Inspector labels from TASK-M2-33's conversion function (R-449), with no label function of the GUI's own.
+- Tests: `hover_clears`, `hover_label_strings`, `labels_one_based`; screenshot cases `01_main/hover_current`, `01_main/hover_stale`, `01_main/hover_path`.
 
 ## Acceptance tests
 - `cargo test -p gui hover_clears` — moving the pointer off clears the trace; the inspector stays open after the pointer leaves (REQ-GUI-052).
 - `cargo xtask screenshot 01_main` (hover path) — screenshot against 01_main.png: the path is drawn from the cursor's IC with opacity falling with distance from the slice (REQ-GUI-085).
 - `cargo test -p gui hover_label_strings` — label strings for a running sample, an escape, a collision and a bounded-at-horizon sample (REQ-GUI-086).
-- `cargo test -p gui labels_zero_based` — labels for body 0 escape read 'body 0'; pair 0 is (1, 2), pair 1 (2, 0), pair 2 (0, 1); no '1–2' style collision label (REQ-GUI-087).
+- `cargo test -p gui labels_one_based` — on the real engine the hover label, the legend, the Trajectory panel and the Inspector name an escape of body 0 "escape body 1" and collisions of pairs 2, 1 and 0 "collision 1–2", "collision 1–3" and "collision 2–3", each through TASK-M2-33's function; no label reads "body 0" or a pair id (REQ-GUI-087, as R-449 changes it).
 - `cargo xtask screenshot 01_main` (hover over stale and current regions) — hover over a stale backdrop region: no trace; over a current region: trace drawn above the composite (REQ-RENDER-073).
 - Definition: the hover path's out-of-plane distance and opacity fall-off written into render_gui_spec §G2 and approved by the physics reviewer (REQ-GUI-156).
 
@@ -40,3 +41,4 @@ The hover trace is drawn as a transient overlay layer above the stain pipeline: 
 - The click inspector's persistence half of REQ-GUI-052 is asserted against the Inspector window id; the window itself is TASK-M8-14.
 - Closes, for gaps the corpus leaves open: REQ-GUI-156 (R-72 definition) (classification accepted by R-132).
 - R-390: TASK-M6-27 builds the hover path and label on mock data, the path drawn by the mock into its stand-in (applied per R-369, review 5434766412 on PR #157); this task depends on it, draws the real path with the compositor's trace layer and the label from the real sample, and keeps REQ-GUI-085 and REQ-GUI-086. The mock's fall-off is a stand-in; REQ-GUI-156's definition is written here.
+- R-449 (16 Oct 2026): the labels are 1-based, in place of R-22's 0-based ones (was `labels_zero_based`, "labels for body 0 escape read 'body 0' … no '1–2' style collision label"); the shared `crates/gui/src/labels.rs` is replaced by TASK-M2-33's conversion function, which the render crate's legends use too (applied per R-369).

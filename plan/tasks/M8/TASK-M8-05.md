@@ -2,8 +2,8 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056
-- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30
-- **Needs (earlier milestones):** REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069
+- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32
+- **Needs (earlier milestones):** REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
 - **Size:** ~700 lines
@@ -22,6 +22,7 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 - `decisions.md` § "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
 - `decisions.md` § "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)"
+- `decisions.md` § "R-446 — "Degenerate" leaves the outcome view: black `#141418` means nothing has happened yet, up to the playhead, and bounded, running and every failure draw it; failures show in the debug views; forbidden chart regions keep the chart contract's hatch, decided from the chart's validity *(supersedes R-96, R-399 and R-441 as they apply to the outcome view)*"
 - `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)"
 - `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces (they nest; each is right for its job)"
 
@@ -73,6 +74,7 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 - `cargo xtask screenshot 01_main` (warning case) — trigger a warning and an error with the figure visible: screenshot against 01_main.png shows nothing new over the plot; the footer count increments (REQ-GUI-074).
 - `cargo xtask screenshot 01_main` (top bar, budget-bound case) and `cargo test -p gui status_undo_depth` — screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2 (REQ-GUI-078).
 - `cargo xtask screenshot 01_main` (footer) and `cargo test -p gui footer_opens_console` — screenshot against 01_main.png's footer; a click opens the 12_console.png layout (REQ-GUI-093).
+- `cargo test -p kernel chart_extension` (the outcome view) — past `[0,1]²`, every pixel the types or the fallback hatch is marked forbidden in REQ-COL-102's field, and the outcome view draws it with the hatch, not `#141418`; the field is Part 3's hatching, the primary ranges playing no part: a shape-sphere pixel past its pole draws its outcome colour, not the hatch, and on a test chart with a periodic axis and an affine physical-quantity axis, a pixel past one period whose state fails `validate` draws the hatch (physics review 5548113767 on PR #226, P1); controls: a pixel past the invariant warp's edge drawn from its `decode_failed` detail alone draws black, and a field filled from the area statistics' classifier, which leaves that pixel "not counted", each fail (REQ-CHART-054, R-446).
 
 ## Notes
 - The footer click opens the console window; its layout (12_console.png) is TASK-M8-27's. Until then the test asserts the console window id is requested.
@@ -108,3 +110,7 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   reads no screen-lane field" (gui review 5478798782, G5); `area_stats_primary_range` checks B5's order (physics review
   5478805963, F1); the mass simplex is sampled past the `ε_m` buffer (F5); the physical-quantity axis carries B1's
   guard (F3).
+- R-446 (16 Oct 2026), applied per R-369: the outcome view keeps the hatch on the pixels this task hatches, decided from
+  Part 3's hatching (the types, `validate`, `Φ` as `Chart::map`), not from the classifier's primary-range step, which
+  decides only counting, and never from the payload's `decode_failed` detail; this task fills TASK-M2-32's field (REQ-COL-102)
+  past `[0,1]²`, and gains TASK-M2-32 as a dependency and the acceptance line above.

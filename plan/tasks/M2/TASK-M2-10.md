@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-The Burrau family enters as ordinary Φ maps into the shared decoder: Euclid's a = m²−n², b = 2mn, c = m²+n² with the normalised Burrau convention (right angle at the origin, each mass equal to its opposite side, m = (c, b, a)/(a+b+c)), stated as the convention in use; the continuous ν = n/m axis with θ(ν) = arctan((1−ν²)/(2ν)); the (ν, K) chart taking K from §2's construction; and the Euclid plane, m(u) = m_min(m_max/m_min)^u on [1, 32] as an annotation axis and ν(v) linear on [1/32, 31/32], decoding from ν alone (Burrau masses, rest) with the primitive-triple overlay. Body indices are 0-based throughout and the 1-based literature convention is translated at the boundary (R-22).
+The Burrau family enters as ordinary Φ maps into the shared decoder: Euclid's a = m²−n², b = 2mn, c = m²+n² with the normalised Burrau convention (right angle at the origin, each mass equal to its opposite side, m = (c, b, a)/(a+b+c)), stated as the convention in use; the continuous ν = n/m axis with θ(ν) = arctan((1−ν²)/(2ν)); the (ν, K) chart taking K from §2's construction; and the Euclid plane, m(u) = m_min(m_max/m_min)^u on [1, 32] as an annotation axis and ν(v) linear on [1/32, 31/32], decoding from ν alone (Burrau masses, rest) with the primitive-triple overlay. Body indices are 0-based throughout and the 1-based literature convention is translated at the boundary (R-22); what a person reads is 1-based, through TASK-M2-33's conversion function (R-449), and is not the literature's numbering (RQ-335).
 
 ## References
 - `docs/design/principia_chart_reference.md` § "4.1 The discrete family — Euclid's parametrisation"
