@@ -8,6 +8,19 @@
 // invalid one and a non-finite one are styled before any form is called, so no form here does arithmetic on ±∞ or
 // NaN, which WGSL may assume are absent (gpu_determinism_note rule 4).
 
+// ln(1 + a/s) for a finite a ≥ 0 and s > 0, never forming a quotient that overflows: `a/s` reaches +∞ in f32 for a
+// large finite a over a small s (|x| ≈ 4e32 over x₀ = 2⁻²⁰), and WGSL may assume no value is infinite
+// (gpu_determinism_note rule 4). While a ≤ s·2⁶⁴, tested as a·2⁻⁶⁴ > s so that nothing overflows, it is ln(1 + a/s)
+// itself, a/s ≤ 2⁶⁴. Above, it is ln a − ln s: the dropped ln(1 + s/a) < 2⁻⁶⁴ is far below an f32 step of a value
+// over 44. The quotient is formed on every call, so the side not chosen is kept finite too, s/s there; m = max(a, s)
+// keeps ln a off ln 0. The two sides agree at a = s·2⁶⁴ to within ln(1 + 2⁻⁶⁴).
+fn log1p_ratio(a: f32, s: f32) -> f32 {
+    let huge = a * 5.421010862427522e-20 > s;
+    let below = log(1.0 + select(a, s, huge) / s);
+    let above = log(max(a, s)) - log(s);
+    return select(below, above, huge);
+}
+
 // `log`: b = 1 − 1/(1 + ln(1 + |x|/ε)), the debug views' `dbg_log` placement (R-411), with the field's own ε > 0, its
 // ledger `floor` (R-263) or its display floor (R-401). Linear below ε (b ≈ |x|/ε), logarithmic above it; 0 maps to
 // b = 0 and |x| → ∞ to b → 1. x < 0, the stored −1.0 sentinel, maps to 0: the field ramp styles it before calling this
@@ -16,7 +29,7 @@ fn compact_log(x: f32, eps: f32) -> f32 {
     if (x < 0.0) {
         return 0.0;
     }
-    let s = log(1.0 + abs(x) / eps);
+    let s = log1p_ratio(abs(x), eps);
     return 1.0 - 1.0 / (1.0 + s);
 }
 
@@ -31,7 +44,7 @@ fn compact_cyclic(x: f32, period: f32) -> f32 {
 // exactly in f32, not only to rounding. x = 0, either sign, takes u = ½ by selection, not through `log(1)`, which a
 // fast-math `log` need not return as exactly 0, so b(0) = ½ exactly.
 fn compact_symlog(x: f32, x0: f32) -> f32 {
-    let s = log(1.0 + abs(x) / x0);
+    let s = log1p_ratio(abs(x), x0);
     let u = select(0.5 + 0.5 * (1.0 - 1.0 / (1.0 + s)), 0.5, x == 0.0);
     return select(1.0 - u, u, x >= 0.0);
 }

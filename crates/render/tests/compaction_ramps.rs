@@ -430,7 +430,8 @@ fn run(h: &GpuHarness, compaction: &str, cases: &[(u32, f32, f32)]) -> Vec<[u32;
 /// The bound on a GPU form's difference from its f64 twin at f32: WGSL's `log` is within 2⁻²¹ absolute on
 /// [0.5, 2] and 3 ULP relative elsewhere (WGSL § "Floating Point Accuracy"), and `b = 1 − 1/(1 + s)` has
 /// `|db/ds| ≤ 1`, so the form's error is the log's, a few f32 roundings of `|x|/k` and of the division, each at most
-/// 2⁻²⁴ relative: 2⁻¹⁸ covers them with room.
+/// 2⁻²⁴ relative: 2⁻¹⁸ covers them with room. Above `|x| = k·2⁶⁴`, where `s` is formed as `ln|x| − ln k`, each log's
+/// 3 ULP is of a value up to ~89 in size, but there `s > 44` and `|db/ds| = 1/(1 + s)² < 2⁻¹¹`.
 const FORM_BOUND: f64 = 1.0 / 262_144.0;
 
 /// The forms on the GPU: within [`FORM_BOUND`] of their CPU twins; the symlog's `b(x) + b(−x)` exactly 1 and `b(0)`
@@ -492,6 +493,61 @@ negative_control!(
         &COMPACTION_WGSL.replace(
             "return select(1.0 - u, u, x >= 0.0);",
             "return 0.5 + sign(x) * (u - 0.5) + 1e-7;"
+        )
+    )
+);
+
+/// `log` and the symlog at the f32 extremes of `|x|/k` (the forms take any finite value): `|x|` near `f32::MAX` over a
+/// scale of 2⁻²⁰, where `|x|/k` itself would overflow to +∞, and `|x|` at `k·2⁶⁴` and one f32 step either side of
+/// it, where `compaction.wgsl` switches from `ln(1 + |x|/k)` to `ln|x| − ln k`: each GPU value finite, below 1 and
+/// within [`FORM_BOUND`] of its twin, the symlog's sum still exactly 1.
+fn check_gpu_forms_extremes(h: &GpuHarness, compaction: &str) {
+    let mut cases = Vec::new();
+    for k in [1.0f32 / 1_048_576.0, 1.0 / 16_384.0, 1.0] {
+        let edge = k * 18_446_744_073_709_551_616.0;
+        let at = [edge.next_down(), edge, edge.next_up()];
+        for x in at.into_iter().chain([1e20, 4e32, 1e36, f32::MAX]) {
+            cases.push((LOG, x, k));
+            cases.push((SYMLOG, x, k));
+            cases.push((SYMLOG, -x, k));
+        }
+    }
+    let got = run(h, compaction, &cases);
+    for (&(op, x, k), p) in cases.iter().zip(&got) {
+        let b = f32::from_bits(p[0]);
+        let (xd, kd) = (f64::from(x), f64::from(k));
+        let want = if op == LOG {
+            Compaction::Log { eps: kd }.place(xd)
+        } else {
+            let sum = f32::from_bits(p[2]);
+            assert_eq!(sum, 1.0, "on the GPU, b({x}) + b({}) = {sum}", -x);
+            Compaction::Diverging { x0: kd }.place(xd)
+        };
+        assert!(
+            b.is_finite() && (0.0..1.0).contains(&b),
+            "op {op} at x = {x}, k = {k}: the GPU's {b} is not in [0, 1)"
+        );
+        assert!(
+            (f64::from(b) - want).abs() <= FORM_BOUND,
+            "op {op} at x = {x}, k = {k}: the GPU's {b}, the twin's {want}"
+        );
+    }
+}
+
+#[test]
+fn compaction_forms_on_the_gpu_hold_at_the_f32_extremes() {
+    check_gpu_forms_extremes(&gpu(), COMPACTION_WGSL);
+}
+
+negative_control!(
+    compaction_forms_on_the_gpu_hold_at_the_f32_extremes,
+    "a GPU log formed as ln(1 + |x|/k), whose quotient overflows to +∞ for a huge x, is caught",
+    expected = "op 1 at x = ",
+    check_gpu_forms_extremes(
+        &gpu(),
+        &COMPACTION_WGSL.replace(
+            "return select(below, above, huge);",
+            "return log(1.0 + a / s);"
         )
     )
 );
