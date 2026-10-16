@@ -297,10 +297,10 @@ Nothing is chosen.*
     becomes 0 (`√√0 = 0`), `λ = 1`, and, since `ρ ≠ 0`, no `lookup_clamped`: the state leaves `C` off the section,
     unflagged.
   - **`I_in = +∞`:** `r` becomes `±0`, `λ = 0`, every momentum NaN on the CPU (`±∞` or `0·∞`, then step 1b's sums and
-    the rotation). Step 2's guard and angle and step 3's decision are read from the CoM-frame state before step 0's
-    division (`kernel::canon`, "The branch inputs, read before step 0"), so `lookup_clamped` is raised iff the
-    CoM-frame `ρ` is 0, `φ` is that `ρ`'s angle, and the mirror is never taken (the decision's right side is `+∞`); on
-    the GPU the arithmetic on `∞` is unpinned.
+    the rotation). Step 2's guard and angle and step 3's decision are read from the input's pair differences before
+    step 0's division (`kernel::canon`, "The branch inputs, read before step 0"), so `lookup_clamped` is raised iff
+    `ρ = r₁ − r₀` is 0, `φ` is that `ρ`'s angle, and the mirror is R-82's on the state's own `λ̃_y`, which the
+    decision's power-of-two rescale keeps in range; on the GPU the arithmetic on `∞` is unpinned.
 
   That only keeps the arithmetic free of `1/0`. The tests assert `lookup_clamped` and `φ = +0` at the coincident case
   (R-13, R-437) and that the GPU forms no non-finite value there; at underflow, that the case is reached and no `1/0` is

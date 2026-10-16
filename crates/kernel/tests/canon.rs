@@ -10,12 +10,18 @@
 //!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}` (REQ-ENC-006).
 //! - `canon_mirror_deadband`: the mirror test at the deadband's edge, `λ̃_y = −δ_λ` and one step below it, at each
 //!   precision; and `λ̃_y` is the decoder's own `λ̃_y` on canonical decodes.
-//! - `canon_mirror_decision_edges`: `C`'s decision ([`mirror_decision`], R-82's test without `√`, division or trig) on
-//!   states where its arithmetic is exact: no mirror at `|λ̃_y| ≤ δ_λ`, a mirror one step below `−δ_λ`, at each precision,
-//!   `ρ = 0` included (REQ-DEC-017).
+//! - `canon_mirror_decision_edges`: `C`'s decision ([`mirror_decision`], R-82's test without `fma`, `√`, division or
+//!   trig) at the pole, where its arithmetic is exact: no mirror at `|λ̃_y| ≤ δ_λ`, a mirror one step below `−δ_λ`, at
+//!   each precision; and off it, `10⁻⁴` of `δ_λ` either side of the edges (REQ-DEC-017).
 //! - `canon_mirror_decision_near`: the decision against `λ̃_y < −δ_λ` at f64 on turned, scaled, translated and mirrored
 //!   states `1%` of `δ_λ` either side of the deadband's edges, and `C`'s flag on such states at `I_in ≠ 1`
 //!   (REQ-DEC-017).
+//! - `canon_mirror_extreme_scales`: the decision and `C`'s flag at `λ̃_y = ∓0.577` on states scaled to the edges of
+//!   `I_in`'s finite, normal range at each precision (REQ-DEC-017, REQ-DEC-002).
+//! - `canon_mirror_scale_invariance`: on 2000 generic states, the decision and `C`'s flag are the same at every
+//!   power-of-two scale from `2^−60` to `2^60` at f32 and `2^±500` at f64 (REQ-DEC-017).
+//! - `canon_product_fusion_proof`: the f32 product the mirror decision is built from rounds the same fused or not at
+//!   each of its contractible sites, on 200 000 pairs (REQ-DEC-017).
 //! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
 //!   (RQ-296 holds the outputs).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
@@ -738,27 +744,35 @@ fn check_deadband<R: Precision>(test: fn([R; 3], [[R; 2]; 3]) -> R, down: fn(R) 
     }
 }
 
-/// [`mirror_decision`]'s signature: masses, CoM-frame positions before step 0, `d²`; whether to mirror.
-type Decide<R> = fn([R; 3], [[R; 2]; 3], R) -> bool;
+/// [`mirror_decision`]'s signature: masses, CoM-frame positions before step 0; whether to mirror.
+type Decide<R> = fn([R; 3], [[R; 2]; 3]) -> bool;
 
-/// An edge state: masses `(¼, ¼, ½)`, `x₀ = (−u, a)`, `x₁ = (u, a)`, `x₂ = (0, −a)`, `u` 1 or 0. Its CoM is 0,
-/// `ρ = (2u, 0)` and `Λ = (0, −a)`, so at `d² = 1`, `λ̃_y = ½·λ_y = −a`, through step 2's identity at `u = 0` (`ρ = 0`).
-/// Every operation of the decision is exact on it but `a²` and `δ_λ²`, so its sides compare `2a²` with `2δ_λ²` (`a²/2`
-/// with `δ_λ²/2` at `u = 0`), each one rounding: the deadband's edges at each precision.
-fn edge<R: Precision>(u: R, a: R) -> ([R; 3], [[R; 2]; 3]) {
-    let (q, h, z) = (cast::<R>(0.25), cast::<R>(0.5), R::zero());
-    ([q, q, h], [[-u, a], [u, a], [z, -a]])
+/// An edge state, masses `(¼, ¼, ½)`, its CoM 0:
+/// - at the pole, `x₀ = x₁ = (−1, a)`, `x₂ = (1, −a)`: `ρ = 0`, so step 2 is the identity, `Λ = (1, −a)`, `I = 1`
+///   exactly and `λ̃_y = −a`. Every operation of the decision is exact on it but `a²` and `δ_λ²`, so its sides compare
+///   `a²/2` with `δ_λ²/2`, each one rounding: the deadband's edge exactly, at each precision;
+/// - on `+x`, `x₀ = (−1, a)`, `x₁ = (1, a)`, `x₂ = (0, −a)`: `ρ = (2, 0)`, `Λ = (0, −a)`, `I = ½` exactly and
+///   `λ̃_y = −√2·a`, which no float `a` puts on `−δ_λ`; the cases there are a set fraction either side.
+fn edge<R: Precision>(pole: bool, a: R) -> ([R; 3], [[R; 2]; 3]) {
+    let (q, h, one, z) = (cast::<R>(0.25), cast::<R>(0.5), R::one(), R::zero());
+    let x = if pole {
+        [[-one, a], [-one, a], [one, -a]]
+    } else {
+        [[-one, a], [one, a], [z, -a]]
+    };
+    ([q, q, h], x)
 }
 
-/// The decision at the deadband's edges, `λ̃_y = −a`: no mirror at `a = ±δ_λ`, one step inside, `±0`, and `−2δ_λ`; a
-/// mirror one step outside `−δ_λ` and at `2δ_λ`; with `ρ` on `+x` and with `ρ = 0`.
+/// The decision at the deadband's edges, `λ̃_y = −a` at the pole: no mirror at `a = ±δ_λ`, one step inside, `±0`, and
+/// `−2δ_λ`; a mirror one step outside `−δ_λ` and at `2δ_λ`. On `+x`, `λ̃_y = −√2·a`: no mirror at `√2·a = δ_λ(1 − 10⁻⁴)`,
+/// a mirror at `δ_λ(1 + 10⁻⁴)`.
 fn check_decision_edges<R: Precision + std::fmt::LowerExp>(
     decide: Decide<R>,
     up: fn(R) -> R,
     down: fn(R) -> R,
 ) {
     let d = <R as ChartConstants>::DELTA_LAMBDA;
-    let cases = [
+    let pole = [
         (d, false),
         (up(d), true),
         (down(d), false),
@@ -769,15 +783,22 @@ fn check_decision_edges<R: Precision + std::fmt::LowerExp>(
         (R::zero(), false),
         (-R::zero(), false),
     ];
-    for u in [R::one(), R::zero()] {
-        for (a, want) in cases {
-            let (m, x) = edge(u, a);
+    let at = |k: f64| cast::<R>(f64::DELTA_LAMBDA * k / 2f64.sqrt());
+    let axis = [
+        (at(1.0 - 1e-4), false),
+        (at(1.0 + 1e-4), true),
+        (at(2.0), true),
+        (at(-1.0 - 1e-4), false),
+        (R::zero(), false),
+    ];
+    for (on_pole, cases) in [(true, &pole[..]), (false, &axis[..])] {
+        for &(a, want) in cases {
+            let (m, x) = edge(on_pole, a);
             assert_eq!(
-                decide(m, x, R::one()),
+                decide(m, x),
                 want,
-                "{}: the decision at λ̃_y = −({a:e}), ρ_x = {}, against λ̃_y < −δ_λ",
-                R::NAME,
-                Into::<f64>::into(u + u)
+                "{}: the decision at a = {a:e}, at the pole {on_pole}, against λ̃_y < −δ_λ",
+                R::NAME
             );
         }
     }
@@ -821,7 +842,7 @@ fn check_decision_near(decide: Decide<f64>) {
                         let x = y.map(|v| [v[0] - com[0], v[1] - com[1]]);
                         let want = if mirror { -k } else { k } < -1.0;
                         assert_eq!(
-                            decide(m, x, inertia(m, x)),
+                            decide(m, x),
                             want,
                             "the decision at λ̃_y = {}δ_λ, masses {m:?}, θ {theta}, s {s}, mirrored {mirror}, \
                              against λ̃_y < −δ_λ",
@@ -850,24 +871,29 @@ negative_control!(
     )
 );
 
-/// The decision at f64 in plain arithmetic, for the controls: `m₂` and `M₀₁` exchanged where `swap` (R-82's threshold
-/// scaled by `m₂/M₀₁`), and the tie `m₂c² = δ_λ²M₀₁‖ρ‖²d²` taken as a mirror where `tie`.
+/// The decision at f64 in plain arithmetic, unrescaled, for the controls: `m₂` and `M₀₁` exchanged where `swap`
+/// (R-82's threshold scaled by `m₂/M₀₁`), and the tie `m₂c² = δ_λ²M₀₁‖ρ‖²d²` taken as a mirror where `tie`.
 #[cfg(feature = "controls")]
-fn defective(m: [f64; 3], x: [[f64; 2]; 3], d2: f64, swap: bool, tie: bool) -> bool {
+fn defective(m: [f64; 3], x: [[f64; 2]; 3], swap: bool, tie: bool) -> bool {
     let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
+    let rho = if rho == [0.0, 0.0] { [1.0, 0.0] } else { rho };
     let m01 = m[0] + m[1];
     let big = |k: usize| m01 * x[2][k] - m[0] * x[0][k] - m[1] * x[1][k];
     let c = rho[0] * big(1) - rho[1] * big(0);
     let (lhs, rhs) = if swap { (m01, m[2]) } else { (m[2], m01) };
     let (left, right) = (
         c * c * lhs,
-        f64::DELTA_LAMBDA * f64::DELTA_LAMBDA * rhs * (rho[0] * rho[0] + rho[1] * rho[1]) * d2,
+        f64::DELTA_LAMBDA
+            * f64::DELTA_LAMBDA
+            * rhs
+            * (rho[0] * rho[0] + rho[1] * rho[1])
+            * inertia(m, x),
     );
     c < 0.0 && if tie { left >= right } else { left > right }
 }
 
 /// `C` itself at f64 on [`gauged`]'s states, with momenta, scaled so `I_in = s²` is not 1: its mirror flag against
-/// `λ̃_y < −δ_λ`, which reads `d² = I_in`.
+/// `λ̃_y < −δ_λ`.
 fn check_canonicalise_near() {
     let d = f64::DELTA_LAMBDA;
     for k in [-1.01, -0.99, 0.99, 1.01] {
@@ -901,7 +927,7 @@ negative_control!(
     canon_mirror_decision_near,
     "a decision with m₂ and M₀₁ exchanged, R-82's threshold scaled by m₂/M₀₁, must fail near the edge",
     expected = "against λ̃_y < −δ_λ",
-    check_decision_near(|m, x, d2| defective(m, x, d2, true, false))
+    check_decision_near(|m, x| defective(m, x, true, false))
 );
 
 #[test]
@@ -913,12 +939,239 @@ fn canon_mirror_decision_edges() {
 negative_control!(
     canon_mirror_decision_edges,
     "a decision that mirrors at |λ̃_y| = δ_λ, the deadband's tie taken as a mirror, must fail",
-    expected = "the decision at λ̃_y = −(1e-12), ρ_x = 2",
+    expected = "the decision at a = 1e-12, at the pole true",
     check_decision_edges::<f64>(
-        |m, x, d2| defective(m, x, d2, false, true),
+        |m, x| defective(m, x, false, true),
         f64::next_up,
         f64::next_down
     )
+);
+
+// ── canon_mirror_extreme_scales (REQ-DEC-017, REQ-DEC-002) ───────────────────────────────────────────────────
+
+/// The far scales at each precision: up to the largest `s` whose `I_in = s²` is finite, down to the smallest whose
+/// `I_in` is normal, where the decision's sides, of degree 4 in `s`, overflow or underflow without the range rescale.
+const SCALES_F32: [f64; 9] = [4e15, 1e16, 1e18, 1e-8, 1e-9, 1e-10, 1e-12, 1e-15, 1e-18];
+const SCALES_F64: [f64; 9] = [
+    1e83, 1e100, 1e150, 1e153, 1e-75, 1e-80, 1e-100, 1e-150, 1e-153,
+];
+
+/// [`gauged`]'s state at `λ̃_y = t`, turned by 0.9 and scaled by `s`, with momenta, at `R`.
+fn far<R: Precision>(t: f64, s: f64) -> Ic<R> {
+    let m = [0.15, 0.25, 0.6];
+    from64(&Ic {
+        m,
+        r: gauged(m, t, false, 0.9, s),
+        p: [[0.2, -0.1], [-0.3, 0.4], [0.05, 0.1]],
+    })
+}
+
+/// The decision at `λ̃_y = ∓0.577` (mirror, no mirror) on [`far`]'s states at each scale, with `I_in` finite and normal
+/// at `R`, and `C`'s own flag there where `with_c`.
+fn check_extreme_scales<R: Precision>(decide: Decide<R>, scales: &[f64], with_c: bool) {
+    for &s in scales {
+        for t in [-0.577, 0.577] {
+            let ic = far::<R>(t, s);
+            let com = canon::centre_of_mass(ic.m, ic.r);
+            let x = ic.r.map(|v| [v[0] - com[0], v[1] - com[1]]);
+            let i = inertia(ic.m, x);
+            assert!(
+                !i.non_finite_bits() && i >= R::min_positive_value(),
+                "{}: I_in = {i:?} is not finite and normal at s = {s:e}",
+                R::NAME
+            );
+            let want = t < 0.0;
+            assert_eq!(
+                decide(ic.m, x),
+                want,
+                "{}: the decision at s = {s:e}, λ̃_y = {t}, against λ̃_y < −δ_λ",
+                R::NAME
+            );
+            if with_c {
+                assert_eq!(
+                    canonicalise(&ic).mirrored,
+                    want,
+                    "{}: C's mirror at s = {s:e}, λ̃_y = {t}",
+                    R::NAME
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn canon_mirror_extreme_scales() {
+    check_extreme_scales::<f32>(mirror_decision, &SCALES_F32, true);
+    check_extreme_scales::<f64>(mirror_decision, &SCALES_F64, true);
+}
+
+/// The decision without the range rescale, for the control.
+#[cfg(feature = "controls")]
+fn unscaled<R: Precision>(m: [R; 3], x: [[R; 2]; 3]) -> bool {
+    let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
+    let m01 = m[0] + m[1];
+    let big = |k: usize| m01 * x[2][k] - m[0] * x[0][k] - m[1] * x[1][k];
+    let c = rho[0] * big(1) - rho[1] * big(0);
+    let d = <R as ChartConstants>::DELTA_LAMBDA;
+    let p = rho[0] * rho[0] + rho[1] * rho[1];
+    c < R::zero() && c * c * m[2] > d * d * m01 * p * inertia(m, x)
+}
+
+negative_control!(
+    canon_mirror_extreme_scales,
+    "the decision without its range rescale overflows at s = 1e16 in f32 and must fail",
+    expected = "f32: the decision at s = 1e16",
+    check_extreme_scales::<f32>(unscaled, &SCALES_F32, false)
+);
+
+// ── canon_mirror_scale_invariance (REQ-DEC-017) ────────────────────────────────────────────────────────────────
+
+/// The powers of two the states are scaled by, at each precision: near `1e±8`, `1e±9`, `1e±12` and `1e±18` at f32,
+/// and to `2^±500` at f64, within `I_in`'s finite, normal range.
+const EXPS_F32: [i32; 9] = [-60, -40, -30, -27, 0, 27, 30, 40, 60];
+const EXPS_F64: [i32; 9] = [-500, -330, -250, -100, 0, 100, 250, 330, 500];
+
+/// Generic states, random masses, positions and momenta: `λ̃_y` anywhere, about half of them mirrored.
+fn generic<R: Precision>(n: usize) -> Vec<Ic<R>> {
+    let mut rng = SplitMix::new(43);
+    let mut u = |lo: f32, hi: f32| rng.uniform(lo, hi) as f64;
+    (0..n)
+        .map(|_| {
+            let w = [u(0.2, 1.2), u(0.2, 1.2), u(0.2, 1.2)];
+            let total: f64 = w.iter().sum();
+            from64(&Ic {
+                m: w.map(|x| x / total),
+                r: [0; 3].map(|_| [u(-1.0, 1.0), u(-1.0, 1.0)]),
+                p: [0; 3].map(|_| [u(-0.5, 0.5), u(-0.5, 0.5)]),
+            })
+        })
+        .collect()
+}
+
+/// `ic`'s positions times `2^e`, exactly.
+fn scaled<R: Precision>(ic: &Ic<R>, e: i32) -> Ic<R> {
+    let k = cast::<R>(2f64.powi(e));
+    Ic {
+        m: ic.m,
+        r: ic.r.map(|v| v.map(|q| q * k)),
+        p: ic.p,
+    }
+}
+
+/// The decision on `ic`'s CoM-frame positions, formed as `C` forms them.
+fn decide_on<R: Precision>(decide: Decide<R>, ic: &Ic<R>) -> bool {
+    let com = canon::centre_of_mass(ic.m, ic.r);
+    decide(ic.m, ic.r.map(|v| [v[0] - com[0], v[1] - com[1]]))
+}
+
+/// A power-of-two scale changes no bit of the rescaled state, so the decision, and `C`'s flag where `with_c`, is the
+/// same at every scale in `exps` as at `2⁰`, on every one of `n` generic states; the number mirrored at `2⁰`.
+fn check_scale_invariance<R: Precision>(decide: Decide<R>, exps: &[i32], with_c: bool) -> usize {
+    let states = generic::<R>(2000);
+    let mut mirrors = 0;
+    for (j, ic) in states.iter().enumerate() {
+        let base = decide_on(decide, ic);
+        mirrors += base as usize;
+        for &e in exps {
+            let x = scaled(ic, e);
+            assert_eq!(
+                decide_on(decide, &x),
+                base,
+                "{}: the decision at 2^{e} differs from 2⁰ at state {j}",
+                R::NAME
+            );
+            if with_c {
+                assert_eq!(
+                    canonicalise(&x).mirrored,
+                    base,
+                    "{}: C's mirror at 2^{e} differs from 2⁰ at state {j}",
+                    R::NAME
+                );
+            }
+        }
+    }
+    mirrors
+}
+
+#[test]
+fn canon_mirror_scale_invariance() {
+    let m32 = check_scale_invariance::<f32>(mirror_decision, &EXPS_F32, true);
+    let m64 = check_scale_invariance::<f64>(mirror_decision, &EXPS_F64, true);
+    assert!(m32 > 0 && m64 > 0, "no generic state mirrored");
+    eprintln!(
+        "canon_mirror_scale_invariance: 2000 generic states, {m32} (f32) and {m64} (f64) mirrored, the same at every \
+         scale"
+    );
+}
+
+negative_control!(
+    canon_mirror_scale_invariance,
+    "the decision without its range rescale changes with the scale and must fail",
+    expected = "f32: the decision at 2^",
+    {
+        check_scale_invariance::<f32>(unscaled, &EXPS_F32, false);
+    }
+);
+
+// ── canon_product_fusion_proof (REQ-DEC-017) ───────────────────────────────────────────────────────────────────
+
+/// The f32 [`IeeeBits::product`]'s four partial products and its fixed sum, written out with each of its two
+/// contractible sites `x·y + z` fused or not as `fuse` says.
+fn product_with(a: f32, b: f32, fuse: [bool; 2]) -> f32 {
+    let ah = f32::from_bits(a.to_bits() & 0xFFFF_F000);
+    let bh = f32::from_bits(b.to_bits() & 0xFFFF_F000);
+    let (al, bl) = (a - ah, b - bh);
+    let mul_add =
+        |x: f32, y: f32, z: f32, fused: bool| if fused { x.mul_add(y, z) } else { x * y + z };
+    let inner = mul_add(ah, bl, al * bh, fuse[0]) + al * bl;
+    mul_add(ah, bh, inner, fuse[1])
+}
+
+/// On `n` random pairs over a wide exponent range, `product(a, b)` is the same whether each of its two contractible
+/// sites (`ah·bl + al·bh` and `ah·bh + rest`) is fused or not: the partial products are exact, so fusion cannot change
+/// a sum's rounding. `with` is the product under test, given the fusion choice. The number of pairs.
+fn check_fusion_proof(with: fn(f32, f32, [bool; 2]) -> f32) -> usize {
+    let mut rng = SplitMix::new(53);
+    let n = 200_000;
+    for j in 0..n {
+        let e = |r: &mut SplitMix| 2f32.powi((r.uniform(-40.0, 40.0)) as i32);
+        let a = rng.uniform(-2.0, 2.0) * e(&mut rng);
+        let b = rng.uniform(-2.0, 2.0) * e(&mut rng);
+        let plain = a.product(b);
+        for fuse in [[false, false], [true, false], [false, true], [true, true]] {
+            assert_eq!(
+                with(a, b, fuse).to_bits(),
+                plain.to_bits(),
+                "the product of {a:e} and {b:e} changes with fusion {fuse:?} at pair {j}"
+            );
+        }
+    }
+    n
+}
+
+#[test]
+fn canon_product_fusion_proof() {
+    let n = check_fusion_proof(product_with);
+    eprintln!("canon_product_fusion_proof: {n} pairs, the same bits fused or not at each site");
+}
+
+negative_control!(
+    canon_product_fusion_proof,
+    "a split that clears 10 bits, not 12, leaves 14-bit parts whose product is rounded, and must fail",
+    expected = "changes with fusion",
+    {
+        check_fusion_proof(|a, b, fuse| {
+            let ah = f32::from_bits(a.to_bits() & 0xFFFF_FC00);
+            let bh = f32::from_bits(b.to_bits() & 0xFFFF_FC00);
+            let (al, bl) = (a - ah, b - bh);
+            let inner = (ah * bl + al * bh) + al * bl;
+            if fuse[1] {
+                ah.mul_add(bh, inner)
+            } else {
+                a.product(b)
+            }
+        });
+    }
 );
 
 // ── canon_inertia_extremes (RQ-296) ─────────────────────────────────────────────────────────────────────────────

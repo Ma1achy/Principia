@@ -1,14 +1,17 @@
 //! Canonicalisation `C` on the GPU (`kernel::stage::canon`, `engine::decode_dispatch::canonicalise_gpu`; TASK-M2-07): the
 //! kernel's f32 build, `target/spirv/kernel.wgsl`, dispatched natively, read back and checked against the same source on
 //! the CPU at f64 and f32. CI runs this file in the `gpu-kernel` job, after `cargo xtask build-kernel`, and on Metal.
-//! - `canonicaliser_mirror_tie`: states whose steps 1a, 0, 1b and 2 are exact no-ops and on which the mirror decision's
-//!   arithmetic is exact, so `λ̃_y` is exactly `±δ_λ` and its neighbours at each precision: no mirror for
+//! - `canonicaliser_mirror_tie`: states at `ρ = 0` whose steps 1a, 0, 1b and 2 are exact no-ops and on which the mirror
+//!   decision's arithmetic is exact, so `λ̃_y` is exactly `±δ_λ` and its neighbours at each precision: no mirror for
 //!   `|λ̃_y| ≤ δ_λ`, a mirror just below `−δ_λ`, the same output twice, and the same branch on CPU-f64, CPU-f32 and
 //!   GPU-f32; the test reads `λ̃_y`, not `λ_y`. Turned, translated and boosted ties take the same branch on CPU-f32 and
 //!   GPU-f32, every one (REQ-DEC-017).
 //! - `canonicaliser_seam_sweep`: collinear f32 states at random angles, all at the `λ̃_y = 0` seam, some with `ρ = 0`:
 //!   CPU-f32 and GPU-f32 take the same mirror branch and raise the same `lookup_clamped` on every one (REQ-DEC-017,
 //!   REQ-ENC-016).
+//! - `canonicaliser_scale_invariance`: 2000 generic states scaled by powers of two from `2^−60` to `2^60` and by
+//!   `1e-8` to `1e18`: GPU-f32 takes CPU-f32's branch and the f64 one at every scale, and its notices at a power of
+//!   two are those at `2⁰` (REQ-DEC-017).
 //! - `canonicaliser_canonicalise_order`: an off-CoM, boosted, scaled, rotated state, mirrored or not: `I` is the
 //!   CoM-frame one, and the output is the canonical representative on both backends (REQ-ENC-015).
 //! - `canonicaliser_coincident_inner_pair`: `ρ = 0` raises `lookup_clamped` with `φ = +0` and the identity rotation on
@@ -29,6 +32,7 @@ use kernel::chart::Latent;
 use kernel::decode::{decode, Ic};
 use kernel::generated::constants::ChartConstants;
 use kernel::generated::links::{Defaults, LinkReal};
+use kernel::real::IeeeBits;
 use kernel::stage::decode::{DecodeMode, LatentDefaults};
 use validation::decode_f32_eps::{interior, Batch, Fuzz, SplitMix};
 use validation::gpu::GpuHarness;
@@ -112,37 +116,33 @@ const EPS32: f64 = f32::EPSILON as f64;
 
 // ── canonicaliser_mirror_tie (REQ-DEC-017) ──────────────────────────────────────────────────────────────────────
 
-/// A state with masses `(¼, ¼, ½)`, `r₀ = (−d, a)`, `r₁ = (2 − d, a)`, `r₂ = (d − 1, −a)`, at rest, `d` in `[1, 2]`:
-/// its CoM is exactly 0, `ρ = (2, 0)`, `Λ = M₀₁r₂ − m₀r₀ − m₁r₁ = (d − 1, −a)` and `λ_y = Λ_y/M₀₁ = −2a`, so
-/// `λ̃_y = √(m₂M₀₁)·λ_y = ½·(−2a) = −a`, each exact. `d` makes `I` round to 1 exactly ([`unit_d`]), so step 0 is the
-/// identity too, and the mirror decision's sides compare `2a²` with `2δ_λ²`, each one rounding: `C`'s branch at the
-/// deadband's edge is the same comparison on every backend.
-fn tie<R: LinkReal>(a: R, d: R) -> Ic<R> {
-    let (q, h, z) = (R::from(0.25).unwrap(), R::from(0.5).unwrap(), R::zero());
-    let (one, two) = (R::one(), R::from(2.0).unwrap());
+/// A tie state, masses `(¼, ¼, ½)`, `r₀ = r₁ = (−1, a)`, `r₂ = (1, −a)`, at rest: its CoM is exactly 0, `I = 1`
+/// exactly, `ρ = 0`, so step 2 is the identity (`lookup_clamped`, `φ = 0`), `Λ = M₀₁r₂ − m₀r₀ − m₁r₁ = (1, −a)` and
+/// `λ_y = Λ_y/M₀₁ = −2a`, so `λ̃_y = √(m₂M₀₁)·λ_y = ½·(−2a) = −a`, each exact. Every operation of the mirror decision
+/// is exact on it but `a²` and `δ_λ²`, so its sides compare `a²/2` with `δ_λ²/2`, each one rounding: `C`'s branch at
+/// the deadband's edge is the same comparison on every backend.
+fn tie<R: LinkReal + IeeeBits>(a: R) -> Ic<R> {
+    let (q, h, z, one) = (
+        R::from(0.25).unwrap(),
+        R::from(0.5).unwrap(),
+        R::zero(),
+        R::one(),
+    );
     Ic {
         m: [q, q, h],
-        r: [[-d, a], [two - d, a], [d - one, -a]],
+        r: [[-one, a], [-one, a], [one, -a]],
         p: [[z; 2]; 3],
     }
 }
 
-/// The `d` nearest `1 + 1/√2` for which [`tie`]'s state has `I = 1` exactly at the precision of `R`
-/// (`I = (d − 1)² + ½` in the reals), found by stepping one representable value at a time.
-fn unit_d<R: LinkReal>(up: fn(R) -> R, down: fn(R) -> R) -> R {
-    let a = R::DELTA_LAMBDA;
-    let start = R::from(1.0 + 0.5f64.sqrt()).unwrap();
-    let (mut lo, mut hi) = (start, start);
-    for _ in 0..64 {
-        for d in [lo, hi] {
-            if canonicalise(&tie(a, d)).i_in == R::one() {
-                return d;
-            }
-        }
-        lo = down(lo);
-        hi = up(hi);
+/// The tie's companion off the pole, `r₀ = (−1, a)`, `r₁ = (1, a)`, `r₂ = (0, −a)`: `ρ = (2, 0)`, `I = ½` and
+/// `λ̃_y = −√2·a`, near the deadband's edge, not on it, for the turned ties.
+fn axis_tie(a: f64) -> Ic<f64> {
+    Ic {
+        m: [0.25, 0.25, 0.5],
+        r: [[-1.0, a], [1.0, a], [0.0, -a]],
+        p: [[0.0; 2]; 3],
     }
-    panic!("no d near 1 + 1/√2 gives I = 1 at {}", R::NAME)
 }
 
 /// The tie's `a` values, so `λ̃_y = −a`: `±δ_λ`, one step either side of each, `±2δ_λ`, and `±0`; and whether each
@@ -193,10 +193,7 @@ fn check_tie<R: LinkReal + Into<f64> + std::fmt::LowerExp>(
             flipped, c.mirrored,
             "r₂'s y does not follow the mirror flag at {at}"
         );
-        assert!(
-            !c.clamped,
-            "lookup_clamped at {at}, where ρ is on +x and non-zero"
-        );
+        assert!(c.clamped, "no lookup_clamped at {at}, where ρ = 0");
     }
 }
 
@@ -221,24 +218,22 @@ fn turned(x: &Ic<f64>, theta: f64) -> Ic<f64> {
 fn canonicaliser_mirror_tie() {
     let h = harness();
     // CPU-f64.
-    let d64 = unit_d::<f64>(f64::next_up, f64::next_down);
     let cases64 = tie_cases::<f64>(f64::next_up, f64::next_down);
     let outs64: Vec<Canonical<f64>> = cases64
         .iter()
-        .map(|(a, _)| canonicalise(&tie(*a, d64)))
+        .map(|(a, _)| canonicalise(&tie(*a)))
         .collect();
     check_tie(&cases64, &outs64, "CPU-f64");
     for ((a, _), c) in cases64.iter().zip(&outs64) {
         assert_eq!(
-            canonicalise(&tie(*a, d64)),
+            canonicalise(&tie(*a)),
             *c,
             "CPU-f64 gave two results at a = {a:e}"
         );
     }
     // CPU-f32 and GPU-f32, on identical inputs.
-    let d32 = unit_d::<f32>(f32::next_up, f32::next_down);
     let cases32 = tie_cases::<f32>(f32::next_up, f32::next_down);
-    let states: Vec<Ic<f32>> = cases32.iter().map(|(a, _)| tie(*a, d32)).collect();
+    let states: Vec<Ic<f32>> = cases32.iter().map(|(a, _)| tie(*a)).collect();
     let cpu32: Vec<Canonical<f32>> = states.iter().map(canonicalise).collect();
     check_tie(&cases32, &cpu32, "CPU-f32");
     let (first, second) = (gpu(&h, &states), gpu(&h, &states));
@@ -256,7 +251,8 @@ fn canonicaliser_mirror_tie() {
         );
     }
     eprintln!(
-        "canonicaliser_mirror_tie: d = {d64:e} (f64), {d32:e} (f32); δ_λ = {:e} (f64), {:e} (f32)",
+        "canonicaliser_mirror_tie: {} exact ties per precision; δ_λ = {:e} (f64), {:e} (f32)",
+        cases64.len(),
         f64::DELTA_LAMBDA,
         f32::DELTA_LAMBDA
     );
@@ -264,7 +260,11 @@ fn canonicaliser_mirror_tie() {
     // output twice, and CPU-f32 and GPU-f32 take the same branch on every one, on identical inputs (PIT-10).
     let turns: Vec<Ic<f64>> = cases64
         .iter()
-        .flat_map(|(a, _)| [0.3, 1.9, -2.6].map(|t| turned(&tie(*a, d64), t)))
+        .flat_map(|(a, _)| {
+            [0.3, 1.9, -2.6]
+                .into_iter()
+                .flat_map(move |t| [turned(&tie(*a), t), turned(&axis_tie(*a / 2f64.sqrt()), t)])
+        })
         .collect();
     let narrow_turns: Vec<Ic<f32>> = turns.iter().map(narrow).collect();
     let (first, second) = (gpu(&h, &narrow_turns), gpu(&h, &narrow_turns));
@@ -310,12 +310,11 @@ negative_control!(
     "a mirror test reading λ_y = λ̃_y/√μ_λ, the defect R-82 names, mirrors at λ̃_y = −δ_λ and must fail",
     expected = "the mirror is true at CPU-f64, λ̃_y = −(1e-12)",
     {
-        let d = unit_d::<f64>(f64::next_up, f64::next_down);
         let cases = tie_cases::<f64>(f64::next_up, f64::next_down);
         let outs: Vec<Canonical<f64>> = cases
             .iter()
             .map(|(a, _)| {
-                let mut c = canonicalise(&tie(*a, d));
+                let mut c = canonicalise(&tie(*a));
                 // λ_y = λ̃_y/√(m₂M₀₁) = 2λ̃_y here.
                 c.mirrored = 2.0 * c.lambda_t_y < -f64::DELTA_LAMBDA;
                 c
@@ -396,6 +395,112 @@ negative_control!(
             x.mirrored = x.lambda_t_y < -f32::DELTA_LAMBDA;
         }
         check_branches(&g, &c, "seam state");
+    }
+);
+
+// ── canonicaliser_scale_invariance (REQ-DEC-017) ───────────────────────────────────────────────────────────────
+
+/// Generic f64 states, random masses, positions and momenta, `λ̃_y` anywhere.
+fn generic(n: usize) -> Vec<Ic<f64>> {
+    let mut rng = SplitMix::new(47);
+    let mut u = |lo: f32, hi: f32| f64::from(rng.uniform(lo, hi));
+    (0..n)
+        .map(|_| {
+            let w = [u(0.2, 1.2), u(0.2, 1.2), u(0.2, 1.2)];
+            let total: f64 = w.iter().sum();
+            Ic {
+                m: w.map(|x| x / total),
+                r: [0; 3].map(|_| [u(-1.0, 1.0), u(-1.0, 1.0)]),
+                p: [0; 3].map(|_| [u(-0.5, 0.5), u(-0.5, 0.5)]),
+            }
+        })
+        .collect()
+}
+
+/// The scales: powers of two near `1e±8`, `1e±9`, `1e±12` and `1e±18`, under which the f32 inputs scale exactly; and
+/// decimal ones, `1e-8`, `1e-9`, `1e-10`, `1e-12`, `1e16` and `1e18`, where the f32 inputs round anew.
+const POW2_SCALES: [i32; 8] = [-60, -40, -30, -27, 27, 30, 40, 60];
+const DECIMAL_SCALES: [f64; 6] = [1e-8, 1e-9, 1e-10, 1e-12, 1e16, 1e18];
+
+/// `x`'s positions times `k`, then narrowed to f32.
+fn scaled32(x: &Ic<f64>, k: f64) -> Ic<f32> {
+    narrow(&Ic {
+        m: x.m,
+        r: x.r.map(|v| v.map(|q| q * k)),
+        p: x.p,
+    })
+}
+
+/// The mirror flags on GPU-f32 against `cpu`'s at each scale, on identical inputs, and against the f64 flag of the
+/// unscaled state; and, at the powers of two, against GPU-f32's own at `2⁰`. The number mirrored at `2⁰`.
+fn check_scales(h: &GpuHarness, cpu: fn(&Ic<f32>) -> bool) -> usize {
+    let states = generic(2000);
+    let truth: Vec<bool> = states.iter().map(|x| canonicalise(x).mirrored).collect();
+    let base = gpu(
+        h,
+        &states.iter().map(|x| scaled32(x, 1.0)).collect::<Vec<_>>(),
+    );
+    let scales = POW2_SCALES
+        .iter()
+        .map(|e| (format!("2^{e}"), 2f64.powi(*e)))
+        .chain(DECIMAL_SCALES.iter().map(|k| (format!("{k:e}"), *k)));
+    for (name, k) in scales {
+        let inputs: Vec<Ic<f32>> = states.iter().map(|x| scaled32(x, k)).collect();
+        let g = gpu(h, &inputs);
+        for (j, x) in inputs.iter().enumerate() {
+            assert_eq!(
+                g[j].mirrored,
+                cpu(x),
+                "GPU-f32 and CPU-f32 mirror differently at scale {name}, state {j}"
+            );
+            assert_eq!(
+                g[j].mirrored, truth[j],
+                "GPU-f32's mirror at scale {name} is not the f64 one at state {j}"
+            );
+            if k.log2().fract() == 0.0 {
+                assert_eq!(
+                    bits(&g[j])[19..],
+                    bits(&base[j])[19..],
+                    "GPU-f32's notices at scale {name} differ from 2⁰'s at state {j}"
+                );
+            }
+        }
+    }
+    truth.iter().filter(|m| **m).count()
+}
+
+#[test]
+fn canonicaliser_scale_invariance() {
+    let h = harness();
+    let mirrors = check_scales(&h, |x| canonicalise(x).mirrored);
+    assert!(mirrors > 0, "no generic state mirrored");
+    eprintln!(
+        "canonicaliser_scale_invariance: 2000 generic states, {mirrors} mirrored; GPU-f32 takes the CPU's branch and \
+         the f64 one at {} scales, 1e-8 and 1e-9 included",
+        POW2_SCALES.len() + DECIMAL_SCALES.len()
+    );
+}
+
+/// The decision without its range rescale, at f32, for the control.
+#[cfg(feature = "controls")]
+fn unscaled(x: &Ic<f32>) -> bool {
+    let (m, r) = (x.m, x.r);
+    let com = [0, 1].map(|k| m[0] * r[0][k] + m[1] * r[1][k] + m[2] * r[2][k]);
+    let x = r.map(|v| [v[0] - com[0], v[1] - com[1]]);
+    let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
+    let m01 = m[0] + m[1];
+    let big = |k: usize| m01 * x[2][k] - m[0] * x[0][k] - m[1] * x[1][k];
+    let c = rho[0] * big(1) - rho[1] * big(0);
+    let d = f32::DELTA_LAMBDA;
+    c < 0.0 && c * c * m[2] > d * d * m01 * (rho[0] * rho[0] + rho[1] * rho[1]) * inertia(m, x)
+}
+
+negative_control!(
+    canonicaliser_scale_invariance,
+    "a CPU decision without the range rescale loses the branch at the far scales and must fail",
+    expected = "GPU-f32 and CPU-f32 mirror differently at scale",
+    {
+        check_scales(&harness(), unscaled);
     }
 );
 

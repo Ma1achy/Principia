@@ -34,37 +34,50 @@
 //!   formed (R-436's producer rule); `r` stays 0, every `p` becomes `0·p`, `λ = 1`, and `ρ = 0` raises `lookup_clamped`
 //!   (R-13), `φ = 0` (R-437).
 //! - **`I_in` rounding to 0 with the bodies apart** (f64 below about `1e-162` per coordinate; f32 below about `4e-23`,
-//!   about `1e-19` where a GPU flushes subnormals): the same select, so `r` is left unscaled, at `I ≈ 0`, not 1, every momentum
-//!   becomes `0·p` (`√√0 = 0`) and `λ = 1`; since `ρ ≠ 0`, no `lookup_clamped`. The state leaves `C` off the section,
-//!   unflagged.
+//!   about `1e-19` where a GPU flushes subnormals): the same select, so `r` is left unscaled, at `I ≈ 0`, not 1, every
+//!   momentum becomes `0·p` (`√√0 = 0`) and `λ = 1`; since `ρ ≠ 0`, no `lookup_clamped`. The state leaves `C` off the
+//!   section, unflagged. The mirror is still R-82's on the state's own `λ̃_y`, which is scale-free (the decision's
+//!   range rescale, below).
 //! - **`I_in` rounding to `+∞`** (f64 above about `1e154` per coordinate, f32 above about `1e19`): `√I_in = +∞`, so
 //!   `r/√I_in` is `±0`, `λ = 1/∞ = 0`, and `I_in^{1/4}·p` is `±∞`, or NaN for a zero component; step 1b's sums and the
-//!   rotation then make every momentum NaN on the CPU. `ρ` and the mirror are read before the division (below), so
-//!   `lookup_clamped` is raised iff the CoM-frame `ρ` is 0, `φ` is that `ρ`'s angle, and the mirror is never taken (the
-//!   test's right side is `+∞`). On the GPU this arithmetic on `∞` is not pinned (WGSL may assume there are no
-//!   infinities; R-436).
+//!   rotation then make every momentum NaN on the CPU. `ρ` and the mirror are read from the input's differences before
+//!   the division (below), so `lookup_clamped` is raised iff `ρ = r₁ − r₀` is 0, `φ` is that `ρ`'s angle, and the
+//!   mirror is R-82's on the state's own `λ̃_y` (the decision's range rescale, below). On the GPU this arithmetic on `∞`
+//!   is not pinned (WGSL may assume there are no infinities; R-436).
 //!
-//! **The branch inputs, read before step 0** (R-34, R-84; gpu_determinism_note rules 1, 2 and 6). Step 2's guard and
-//! angle and step 3's decision are computed from the CoM-frame positions `x`, before step 0's division, in arithmetic
-//! every backend rounds alike: correctly rounded differences and products and explicit `fma`s, with no `√`, division
-//! or trigonometry, whose WGSL results carry ulp bounds, not correct rounding, so that a branch fed through them can
-//! differ between backends on one input. Each is R-23's step in exact arithmetic, `d > 0` being step 0's divisor:
-//! - **The guard and `φ`.** `ρ = x₁ − x₀` is 0 iff the scaled `r₁ − r₀ = ρ/d` is, and `atan2` is unchanged by the
-//!   positive factor `1/d`.
+//! **The branch inputs, read before step 0** (R-34, R-84; gpu_determinism_note rules 1 and 2). Step 2's guard and
+//! angle and step 3's decision are computed from the input's pair differences, before step 1a's subtraction and step
+//! 0's division, in arithmetic every backend rounds alike. `√`, `/` and `atan2` carry ulp bounds in WGSL, not correct
+//! rounding; and `fma` is not fused on every backend (CI's lavapipe evaluates it as a rounded product and an add,
+//! RQ-298), nor is `a·b + c` left uncontracted on every one. So a branch fed through any of them can differ between
+//! backends on one input. Each is R-23's step in exact arithmetic, `d > 0` being step 0's divisor:
+//! - **The guard and `φ`.** `ρ = r₁ − r₀`, one subtraction, is the same in every frame, and is 0 iff the scaled
+//!   `ρ/d` is; `atan2` is unchanged by the positive factor `1/d`.
 //! - **The mirror** ([`mirror_decision`]). `R(−φ)` puts `ρ̂ = ρ/‖ρ‖` on `+x` and keeps cross products, so a vector's `y`
 //!   after it is its cross product with `ρ̂`, `a × b = a_xb_y − a_yb_x`. In the scaled frame `λ = Λ/(M₀₁d)`, with
-//!   `Λ = M₀₁x₂ − m₀x₀ − m₁x₁`; hence `λ̃_y = √(m₂M₀₁)·c/(‖ρ‖·M₀₁·d)`, `c = ρ × Λ`. The factor of `c` is positive, so
-//!   `λ̃_y < −δ_λ` iff `c < 0` and `c² > δ_λ²·‖ρ‖²·d²·M₀₁/m₂`, that is `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`: `δ_λ` carried into the
-//!   units of `c²`. At `ρ = 0` step 2 is the identity and `λ̃_y = √(m₂M₀₁)·Λ_y/(M₀₁d)`, the same with `ρ` read as
-//!   `(1, 0)`. `d² = I_in`, or 1 where `I_in = 0` (step 0's select, below). `M₀₁` is the one rounding of `m₀ + m₁`
-//!   ([`lambda_t_y`]'s).
+//!   `Λ = M₀₁r₂ − m₀r₀ − m₁r₁ = m₀(r₂ − r₀) + m₁(r₂ − r₁)`; hence `λ̃_y = √(m₂M₀₁)·c/(‖ρ‖·M₀₁·d)`, `c = ρ × Λ`. The
+//!   factor of `c` is positive, so `λ̃_y < −δ_λ` iff `c < 0` and `c² > δ_λ²·‖ρ‖²·d²·M₀₁/m₂`, that is
+//!   `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`: `δ_λ` carried into the units of `c²`. At `ρ = 0` step 2 is the identity and
+//!   `λ̃_y = √(m₂M₀₁)·Λ_y/(M₀₁d)`, the same with `ρ` read as `(1, 0)`. `d² = I_in = Σ_{i<j} mᵢmⱼ‖rⱼ − rᵢ‖²` (with
+//!   `Σmᵢ = 1`), from the differences too, so the test reads no CoM.
+//! - **The range rescale.** `c²` and `‖ρ‖²d²` are both of degree 4 in the state's scale, so the test is unchanged by
+//!   scaling the differences by `2^−k`, which [`mirror_decision`] does first, with `k` read from their exponent bits
+//!   so that the largest component is in `[1, 2)`. A power-of-two product is exact wherever its result is normal, so
+//!   for any state with finite differences the test neither overflows nor underflows: at f32 a state of size `1e18` or
+//!   `1e-18`, and at f64 one of `1e150` or `1e-150`, takes R-82's branch, which the unscaled form loses (`m₂c²` and
+//!   `δ_λ²M₀₁‖ρ‖²d²` both `+∞`, or both rounded to 0), and a GPU that flushes subnormals sees the same normal numbers as
+//!   one that keeps them.
+//! - **The products** ([`IeeeBits::product`]). At f32 every product is formed from its operands' bit-split halves,
+//!   whose partial products are exact, summed in one fixed order: a backend that fuses or contracts any of its sites
+//!   rounds the same exact sums, so the product's bits are the same everywhere. Every other operation is a lone
+//!   subtraction or addition, an integer operation on bits, a select or a comparison.
 //!
-//! So `|λ̃_y| ≤ δ_λ`, `−δ_λ` itself included, is no mirror, and one input takes one branch on every backend that keeps
-//! an explicit `fma` fused (dd_decoder §3.1's premise) and keeps subnormals; a GPU that flushes them can differ only
-//! where a difference or product in these tests is below the smallest normal (f32: about `1.2e-38`; `δ_λ² = 1e-24`, so
-//! for `M₀₁‖ρ‖²` or `M₀₁‖ρ‖²I_in` below about `1e-14`). [`Canonical::lambda_t_y`] is formed after the rotation and
-//! read, not branched on; within rounding of `−δ_λ` it may disagree with the flag. The cross-backend claim is for
-//! identical inputs only (PIT-10).
+//! So `|λ̃_y| ≤ δ_λ`, `−δ_λ` itself included, is no mirror, and one input takes one branch on every IEEE backend that
+//! keeps its additions and multiplications correctly rounded and unreassociated (fast-math off, R-84), fused or not.
+//! The one gap left is a partial product below the smallest normal, where a GPU that flushes subnormals drops it: a
+//! component more than about `2^−100` (f32) below the state's largest difference. [`Canonical::lambda_t_y`] is formed
+//! after the rotation and read, not branched on; within rounding of `−δ_λ` it may disagree with the flag. The
+//! cross-backend claim is for identical inputs only (PIT-10).
 //!
 //! **The scale gauge** ([`scale_gauge`]; dd_decoder §3.5, chart_reference §0.5): `ℓ = √I`, `rᵢ ← rᵢ/ℓ`,
 //! `pᵢ ← √ℓ·pᵢ`, the same similarity map as step 0 ([`similarity`]); a no-op, to rounding, on canonical output.
@@ -73,6 +86,7 @@ use spirv_std::num_traits::Float;
 
 use crate::decode::Ic;
 use crate::generated::links::LinkReal;
+use crate::real::IeeeBits;
 
 /// A state on the canonical section, and what `C` did to reach it.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -202,25 +216,69 @@ pub fn mirror_taken<R: LinkReal>(lambda_t_y: R) -> bool {
     lambda_t_y < -R::DELTA_LAMBDA
 }
 
-/// Step 3's decision (R-82), on the CoM-frame positions `x` before step 0 and `d2`, the square of step 0's divisor
-/// (`I_in`, or 1 where `I_in = 0`): with `ρ = x₁ − x₀` (`(1, 0)` where `ρ = 0`, step 2's identity rotation),
-/// `Λ = M₀₁x₂ − m₀x₀ − m₁x₁` and `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x`, mirror iff `c < 0` and `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d2`.
-/// Every operation is a correctly rounded `fma`, product or difference, with no `√`, division or trigonometry, so
-/// every backend that keeps an explicit `fma` fused takes the same branch on the same input (the module's note).
+/// `d²`'s three pair terms' sum, `Σ_{i<j} mᵢmⱼ‖rⱼ − rᵢ‖²` over the differences `d01 = r₁ − r₀`, `d02 = r₂ − r₀`,
+/// `d12 = r₂ − r₁`: the CoM-frame moment of inertia when `Σmᵢ = 1`, from differences alone, every product an
+/// [`IeeeBits::product`].
 #[inline]
-pub fn mirror_decision<R: LinkReal>(m: [R; 3], x: [[R; 2]; 3], d2: R) -> bool {
-    let rho = [x[1][0] - x[0][0], x[1][1] - x[0][1]];
+fn pair_sum<R: LinkReal + IeeeBits>(m: [R; 3], d01: [R; 2], d02: [R; 2], d12: [R; 2]) -> R {
+    let sq = |v: [R; 2]| v[0].product(v[0]) + v[1].product(v[1]);
+    let n01 = m[0].product(m[1]).product(sq(d01));
+    let n02 = m[0].product(m[2]).product(sq(d02));
+    let n12 = m[1].product(m[2]).product(sq(d12));
+    (n01 + n02) + n12
+}
+
+/// The CoM-frame moment of inertia of `r` under `m` (`Σmᵢ = 1`), as [`mirror_decision`] forms it, from the pair
+/// differences: `Σ_{i<j} mᵢmⱼ‖rⱼ − rᵢ‖²`, before the decision's rescale.
+#[inline]
+pub fn pair_inertia<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> R {
+    let diff = |a: [R; 2], b: [R; 2]| [b[0] - a[0], b[1] - a[1]];
+    pair_sum(m, diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]))
+}
+
+/// Step 3's decision (R-82), on the positions `r` in any frame, before step 0 (the module's note):
+/// 1. the pair differences `d01 = r₁ − r₀ = ρ`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`, each a lone subtraction;
+/// 2. the range rescale: `k`, the greatest exponent field among their six components, read from the bits, and every
+///    difference times `2^−k` (two powers of two formed from their bits, each a normal number), exact wherever the
+///    result is normal, so the largest component is in `[1, 2)`;
+/// 3. `Λ = m₀d02 + m₁d12` (`= M₀₁r₂ − m₀r₀ − m₁r₁`), `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x` with `ρ` read as `(1, 0)` where it is
+///    0 (step 2's identity), `d² = Σ_{i<j} mᵢmⱼ‖dᵢⱼ‖²` ([`pair_inertia`]'s), and mirror iff `c < 0` and
+///    `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`.
+///
+/// Every product is an [`IeeeBits::product`], exact in its partial products, and every other operation a lone
+/// difference or sum, an integer operation on bits or a comparison: no `fma`, `√`, division or trigonometry. So no
+/// backend can round it differently, fusing or not, contracting or not, and the same input takes the same branch
+/// everywhere.
+#[inline]
+pub fn mirror_decision<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> bool {
+    let diff = |a: [R; 2], b: [R; 2]| [b[0] - a[0], b[1] - a[1]];
+    let (d01, d02, d12) = (diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]));
+    let wider = |a: i32, b: i32| select(b > a, b, a);
+    let k = wider(
+        wider(
+            wider(d01[0].exponent(), d01[1].exponent()),
+            wider(d02[0].exponent(), d02[1].exponent()),
+        ),
+        wider(d12[0].exponent(), d12[1].exponent()),
+    );
+    let half = k / 2;
+    let (s1, s2) = (R::pow2(-half), R::pow2(half - k));
+    let shrink = |v: [R; 2]| [v[0] * s1 * s2, v[1] * s1 * s2];
+    let (rho, d02, d12) = (shrink(d01), shrink(d02), shrink(d12));
+    let d2 = pair_sum(m, rho, d02, d12);
     let pole = coincident(rho);
     let axis = [
         select(pole, R::one(), rho[0]),
         select(pole, R::zero(), rho[1]),
     ];
-    let m01 = Float::mul_add(m[1], R::one(), m[0]);
-    let big =
-        |k: usize| Float::mul_add(m01, x[2][k], -Float::mul_add(m[1], x[1][k], m[0] * x[0][k]));
-    let c = Float::mul_add(axis[0], big(1), -(axis[1] * big(0)));
+    let lam = |k: usize| m[0].product(d02[k]) + m[1].product(d12[k]);
+    let c = axis[0].product(lam(1)) - axis[1].product(lam(0));
+    let m01 = m[0] + m[1];
     let delta = R::DELTA_LAMBDA;
-    (c < R::zero()) & (c * c * m[2] > delta * delta * m01 * norm2(axis) * d2)
+    let p = axis[0].product(axis[0]) + axis[1].product(axis[1]);
+    let left = c.product(c).product(m[2]);
+    let right = delta.product(delta).product(m01).product(p).product(d2);
+    (c < R::zero()) & (left > right)
 }
 
 /// `(v_x, −v_y)` where `flip` holds, else `v`, selected.
@@ -231,7 +289,7 @@ fn mirror<R: LinkReal>(v: [R; 2], flip: bool) -> [R; 2] {
 
 /// `C`: `ic` onto the canonical section, in R-23's order (the module's note). `ic.m` is positive with `Σmᵢ = 1`.
 #[inline]
-pub fn canonicalise<R: LinkReal>(ic: &Ic<R>) -> Canonical<R> {
+pub fn canonicalise<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> Canonical<R> {
     let m = ic.m;
     // 1a: the CoM frame.
     let com = centre_of_mass(m, ic.r);
@@ -242,12 +300,12 @@ pub fn canonicalise<R: LinkReal>(ic: &Ic<R>) -> Canonical<R> {
     ];
     // 0: I = 1, from the CoM-frame I.
     let i_in = inertia(m, centred);
-    // Step 2's guard and angle and step 3's decision, read off the CoM-frame state before step 0's division (the
-    // module's note): `ρ = 0`, `φ` and the mirror test are scale-free in exact arithmetic.
-    let rho = [centred[1][0] - centred[0][0], centred[1][1] - centred[0][1]];
+    // Step 2's guard and angle and step 3's decision, read off the input's differences before step 0's division (the
+    // module's note): `ρ = 0`, `φ` and the mirror test are translation- and scale-free in exact arithmetic.
+    let rho = [ic.r[1][0] - ic.r[0][0], ic.r[1][1] - ic.r[0][1]];
     let clamped = coincident(rho);
     let phi = rotation_angle(rho);
-    let mirrored = mirror_decision(m, centred, select(i_in == R::zero(), R::one(), i_in));
+    let mirrored = mirror_decision(m, ic.r);
     let (r, p, lambda) = similarity(centred, ic.p, i_in);
     // 1b: zero total momentum.
     let total = [p[0][0] + p[1][0] + p[2][0], p[0][1] + p[1][1] + p[2][1]];
