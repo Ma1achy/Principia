@@ -298,7 +298,7 @@ fn wide_norm2<R: LinkReal + IeeeBits>(v: [Wide<R>; 2]) -> Wide<R> {
 
 /// Step 3's decision (R-82), on the positions `r` in any frame, before step 0 (the module's note):
 /// 1. the pair differences `ρ = r₁ − r₀`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`, each a lone subtraction, and every
-///    component and mass taken as a [`Wide`], its exponent carried as an integer;
+///    component and mass taken as a `Wide`, its exponent carried as an integer;
 /// 2. `Λ = m₀d02 + m₁d12` (`= M₀₁r₂ − m₀r₀ − m₁r₁`), `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x` with `ρ` read as `(1, 0)` where it is
 ///    0 (step 2's guard, on the same `ρ`), `d² = Σ_{i<j} mᵢmⱼ‖dᵢⱼ‖²`, and mirror iff `c < 0` and
 ///    `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`, compared by exponent, then mantissa.
