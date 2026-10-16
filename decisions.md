@@ -10419,7 +10419,9 @@ applied by a follow-up task):*
     `g·(x, y) = (r·q₁, r·q₂)`, `(x, y) = (2s − 1, 2t − 1)`, `r = z − z₀`, by Cramer's rule. Its determinant
     `g₁₁g₂₂ − g₁₂² = g₁₁g₂₂ sin²θ`, `θ` the angle between `q₁` and `q₂`, carries the absolute rounding of up to about
     `17ε·g₁₁g₂₂` derived above, so the pivot's chart coordinates carry a relative error of about `ε/sin²θ`, at most
-    about `17ε/sin²θ`. Since `s = sin θ · 2|q₁||q₂| / (|q₁|² + |q₂|²) ≤ sin θ`, above the cut that is at most about
+    about `17ε/sin²θ`. The error is normwise, relative to the size of `(2s − 1, 2t − 1)`: a component near 0 has no
+    bounded componentwise relative error. Since `s = sin θ · 2|q₁||q₂| / (|q₁|² + |q₂|²) ≤ sin θ`, above the cut that
+    is at most about
     `17ε/s²`, about 3.8·10⁻³ at `s = 10⁻⁶`. A small `s` that is only a norm ratio, `θ` near 90°, costs nothing: the
     error stays at rounding. Measured against 50-digit arithmetic on the same float components, at `(90°, τ₂, γ)`,
     `σ = 1`, the anchor `(0.1, 0.05, 0.2)` or `0.3q₁ + 0.2q₂`, the relative error in `(2s − 1, 2t − 1)` is:
@@ -10436,8 +10438,9 @@ applied by a follow-up task):*
   - **Why that error is acceptable.** Locked, a basis edit moves the pin by the pivot's error, plus the error of the
     solve on the new basis. For an anchor in the view (`|2s − 1|`, `|2t − 1| ≤ 1`), the pin's chart point therefore
     moves by at most about `½·17ε(1/sin²θ + 1/sin²θ′)` of the view's width per edit, `θ′` the angle after it. At the
-    cut, the first term is at most 1.9·10⁻³, about 2 px of a view 1000 px across. The worst measured near the cut, a
-    relative 1.7·10⁻⁴, is under 0.1 px. A shift of a whole pixel at that view size needs `sin θ` below about
+    cut, the first term is at most 1.9·10⁻³, about 2 px of a view 1000 px across. The worst measured near the cut,
+    6.2·10⁻⁴ for a typed basis at `sin θ = 1.2·10⁻⁶` (3.9·10⁻⁴ at `γ = 0` over anchors across the view), is about
+    0.3 px. A shift of a whole pixel at that view size needs `sin θ` below about
     1.4·10⁻⁶, that is, a tilt within about 1.4·10⁻⁶ rad of a corner with `γ = 0`, or a typed basis that close to
     parallel. The alternatives are worse: declining the pivot there moves the pin by 5 % of the view, 50 px, at
     `(90°, 89.97°)`, and the rounding pivot sends a `z₀` edit of about 7·10¹². No value is calibrated: the bound
