@@ -573,3 +573,165 @@ fn f3_fills_window_mock_placement_does_not_leak() {
     });
     assert_eq!(canvas.placement(), Placement::of(shown, viewport));
 }
+
+/// Segments of the figure, `[(s, t), (s, t)]`.
+type Segments = Vec<[[f64; 2]; 2]>;
+
+/// The bounds the old rule drew: every kept quad's edges whole, a copy's quads dropped where they touch the shown view.
+fn dropped_on_touch(plane: &engine::contract::sim_config::Plane, span: [f64; 4]) -> Segments {
+    let mut lines = Vec::new();
+    for q in quads::quads_over(plane, span) {
+        let c = [(q[0], q[1]), (q[2], q[1]), (q[2], q[3]), (q[0], q[3])];
+        let p: Vec<[f64; 2]> = c
+            .iter()
+            .map(|c| quads::on_figure(plane, *c).expect("a figure point"))
+            .collect();
+        for i in 0..4 {
+            lines.push([p[i], p[(i + 1) % 4]]);
+        }
+    }
+    lines
+}
+
+/// Every column of the strips left and right of the shown figure, and every row of the strips under and over it,
+/// crosses a bound beside the shown figure: a column `s` at some `t` in `[0, 1]`, a row `t` at some `s` in `[0, 1]`.
+fn check_strips_bounded(lines: &Segments, span: [f64; 4], what: &str) {
+    let edge = quads::CLIP_MARGIN + 1e-3;
+    let crosses = |axis: usize, c: f64| {
+        lines.iter().any(|[a, b]| {
+            let (lo, hi) = (a[axis].min(b[axis]), a[axis].max(b[axis]));
+            if !(lo <= c && c <= hi) || lo == hi {
+                return false;
+            }
+            let f = (c - a[axis]) / (b[axis] - a[axis]);
+            let other = a[1 - axis] + (b[1 - axis] - a[1 - axis]) * f;
+            (0.0..=1.0).contains(&other)
+        })
+    };
+    let steps = |from: f64, to: f64| {
+        let n = ((to - from) / 0.004).floor() as usize;
+        (0..=n).map(move |i| from + 0.004 * i as f64)
+    };
+    for (axis, from, to) in [
+        (0, span[0], -edge),
+        (0, 1.0 + edge, span[2]),
+        (1, span[1], -edge),
+        (1, 1.0 + edge, span[3]),
+    ] {
+        for c in steps(from, to) {
+            assert!(
+                crosses(axis, c),
+                "{what}: {} {c} crosses no bound beside the figure",
+                ["column", "row"][axis]
+            );
+        }
+    }
+}
+
+/// Panned past the root (`u` 1.5, and 8.18 as the gui review's repro), the bounds still cover the strips of the
+/// window beside the shown figure: a quad straddling its edge, a copy of the root's, is bounded outside it. Control:
+/// the rule that dropped such a quad leaves strips bare.
+#[test]
+fn f3_fills_window_mock_bounds_beside_the_figure_past_the_root() {
+    let span = layout().placement().span();
+    for u in [1.5, 8.18] {
+        let mut plane = MockEngine::frozen().plane().clone();
+        plane.z0[0] = u;
+        let lines = quads::bounds_over(&plane, span);
+        check_strips_bounded(&lines, span, &format!("u = {u}"));
+        // No clipped edge reaches the shown figure: every segment inside it is a shown quad's.
+        let shown = quads::bounds(&plane);
+        for l in &lines {
+            let inside = l
+                .iter()
+                .all(|p| (0.0..=1.0).contains(&p[0]) && (0.0..=1.0).contains(&p[1]));
+            assert!(
+                !inside || shown.contains(l),
+                "u = {u}: {l:?} inside the shown figure"
+            );
+        }
+    }
+    let mut plane = MockEngine::frozen().plane().clone();
+    plane.z0[0] = 8.18;
+    let old = dropped_on_touch(&plane, span);
+    rejects(
+        "the bounds dropped where a copy touches the shown view",
+        || check_strips_bounded(&old, span, "dropped"),
+    );
+}
+
+/// `outside` at its edges: a segment wholly inside the margin's square has no part outside; one crossing it keeps
+/// both ends; one with an end inside keeps one piece; one wholly outside, or along a side past the margin, is kept
+/// whole; one along the margin's side is inside.
+#[test]
+fn f3_fills_window_mock_outside_clips_at_the_margin() {
+    use crate::mock::quads::outside;
+    let m = 0.1;
+    let same = |got: Vec<[[f64; 2]; 2]>, want: Vec<[[f64; 2]; 2]>| {
+        let flat =
+            |v: &[[[f64; 2]; 2]]| -> Vec<f64> { v.iter().flatten().flatten().copied().collect() };
+        assert_eq!(got.len(), want.len(), "{got:?} against {want:?}");
+        for (g, w) in flat(&got).iter().zip(flat(&want)) {
+            assert!((g - w).abs() < 1e-12, "{got:?} against {want:?}");
+        }
+    };
+    assert!(outside([[0.2, 0.5], [0.8, 0.5]], m).is_empty());
+    same(
+        outside([[-1.0, 0.5], [2.0, 0.5]], m),
+        vec![[[-1.0, 0.5], [-0.1, 0.5]], [[1.1, 0.5], [2.0, 0.5]]],
+    );
+    same(
+        outside([[0.5, -1.0], [0.5, 0.5]], m),
+        vec![[[0.5, -1.0], [0.5, -0.1]]],
+    );
+    same(
+        outside([[0.5, 0.5], [0.5, 2.0]], m),
+        vec![[[0.5, 1.1], [0.5, 2.0]]],
+    );
+    let whole = [[-1.0, -1.0], [2.0, -1.0]];
+    same(outside(whole, m), vec![whole]);
+    for past in [
+        [[-0.11, 0.0], [-0.11, 1.0]],
+        [[1.11, 0.0], [1.11, 1.0]],
+        [[0.0, 1.11], [1.0, 1.11]],
+    ] {
+        same(outside(past, m), vec![past]);
+    }
+    assert!(outside([[-0.1, 0.0], [-0.1, 1.0]], m).is_empty());
+    assert!(outside([[1.1, 0.0], [1.1, 1.0]], m).is_empty());
+    // A diagonal crossing a corner: both ends kept, the middle gone.
+    let diag = outside([[-1.0, -1.0], [2.0, 2.0]], m);
+    assert_eq!(diag.len(), 2);
+    assert!((diag[0][1][0] + 0.1).abs() < 1e-12 && (diag[1][0][0] - 1.1).abs() < 1e-12);
+    // A segment passing beside the square, clear of it on the diagonal, is whole.
+    let beside = [[1.5, -1.0], [3.0, 0.5]];
+    same(outside(beside, m), vec![beside]);
+    rejects("a crossing segment kept whole", || {
+        assert_eq!(outside([[-1.0, 0.5], [2.0, 0.5]], m).len(), 1)
+    });
+}
+
+/// Panned past the root with tile bounds on, the two F3 states draw the shown figure identically, and F3 off bounds
+/// the strips beside it (the gui review's repro, its captures' left strip).
+#[test]
+fn f3_fills_window_mock_panned_past_the_root_identical_over_the_rect() {
+    let canvas = canvas();
+    let mut steps = vec![Step::Tab, Step::Tab, Step::Tab, Step::Enter];
+    steps.extend([Step::ShiftArrowRight; 8]);
+    steps.push(Step::Alt1);
+    let on = shoot(canvas.clone(), &steps);
+    steps.push(Step::F3);
+    let off = shoot(canvas.clone(), &steps);
+    let rect = shown_px();
+    check_same_over(&on.rgba, &off.rgba, rect, "panned, tile bounds on");
+    // The left strip beside the figure: every column crosses a bound line, which the bare F3 off has not.
+    let mut bare_steps = steps.clone();
+    bare_steps.retain(|s| *s != Step::Alt1);
+    let bare = shoot(canvas, &bare_steps);
+    for x in 0..rect[0] - 4 {
+        assert!(
+            (rect[1]..rect[3]).any(|y| pixel(&off.rgba, x, y) != pixel(&bare.rgba, x, y)),
+            "column {x} beside the figure has no bound"
+        );
+    }
+}

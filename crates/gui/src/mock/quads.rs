@@ -90,6 +90,18 @@ pub fn touches(a: &Quad, b: &Quad) -> bool {
 /// plane is tiled with copies of it, out to [`MAX_TILE`] roots each way, split by the same rules; a copy's quads are
 /// kept only clear of the shown view, so the shown figure's quads are [`quads`]'s, the layer shown or hidden.
 pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
+    let Some(shown) = view_of(plane, UNIT) else {
+        return Vec::new();
+    };
+    leaves_over(plane, span)
+        .into_iter()
+        .filter(|(q, copy)| !(*copy && touches(q, &shown)))
+        .map(|(q, _)| q)
+        .collect()
+}
+
+/// The leaf quads over `span`, each with whether it is a copy of the root's: the root's first, in [`quads`]'s order.
+fn leaves_over(plane: &Plane, span: [f64; 4]) -> Vec<(Quad, bool)> {
     let (Some(shown), Some(view)) = (view_of(plane, UNIT), view_of(plane, span)) else {
         return Vec::new();
     };
@@ -124,8 +136,8 @@ pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
             ] {
                 stack.push((c, depth + 1, copy));
             }
-        } else if !(copy && touches(&q, &shown)) {
-            leaves.push(q);
+        } else {
+            leaves.push((q, copy));
         }
     }
     leaves
@@ -136,18 +148,66 @@ pub fn bounds(plane: &Plane) -> Vec<[[f64; 2]; 2]> {
     bounds_over(plane, UNIT)
 }
 
-/// [`bounds`] of [`quads_over`] `span`: past `[0, 1]²`, `(s, t)` continues at the same scale.
+/// How far outside the shown figure, `[0, 1]²`, a clipped edge stops, in `(s, t)`: about two pixels of a shown figure
+/// a thousand pixels wide, so no clipped edge reaches a pixel of the shown rect (placeholder content).
+pub const CLIP_MARGIN: f64 = 2e-3;
+
+/// [`bounds`] over `span`: past `[0, 1]²`, `(s, t)` continues at the same scale. The shown figure's quads, [`quads`]'s,
+/// are drawn whole, as with the layer shown; every other quad's edges are clipped to outside the shown figure (with
+/// [`CLIP_MARGIN`]), so a quad straddling its edge, a copy of the root or the root's own, is bounded outside it and the
+/// shown figure is drawn as with the layer shown (R-406).
 pub fn bounds_over(plane: &Plane, span: [f64; 4]) -> Vec<[[f64; 2]; 2]> {
+    let Some(shown) = view_of(plane, UNIT) else {
+        return Vec::new();
+    };
     let mut lines = Vec::new();
-    for q in quads_over(plane, span) {
+    for (q, copy) in leaves_over(plane, span) {
         let corners = [(q[0], q[1]), (q[2], q[1]), (q[2], q[3]), (q[0], q[3])];
         let points: Option<Vec<[f64; 2]>> = corners.iter().map(|c| on_figure(plane, *c)).collect();
         let Some(points) = points else {
             continue;
         };
+        let whole = !copy && overlaps(&q, &shown);
         for i in 0..4 {
-            lines.push([points[i], points[(i + 1) % 4]]);
+            let edge = [points[i], points[(i + 1) % 4]];
+            if whole {
+                lines.push(edge);
+            } else {
+                lines.extend(outside(edge, CLIP_MARGIN));
+            }
         }
     }
     lines
+}
+
+/// The parts of the segment `edge`, in `(s, t)`, outside `[−margin, 1 + margin]²`: none, the whole, or one or two
+/// pieces (Liang–Barsky).
+pub fn outside(edge: [[f64; 2]; 2], margin: f64) -> Vec<[[f64; 2]; 2]> {
+    let [a, b] = edge;
+    let d = [b[0] - a[0], b[1] - a[1]];
+    let (lo, hi) = (-margin, 1.0 + margin);
+    let (mut t0, mut t1) = (0.0_f64, 1.0_f64);
+    for k in 0..2 {
+        if d[k] == 0.0 {
+            if a[k] < lo || a[k] > hi {
+                return vec![edge];
+            }
+            continue;
+        }
+        let (ta, tb) = ((lo - a[k]) / d[k], (hi - a[k]) / d[k]);
+        t0 = t0.max(ta.min(tb));
+        t1 = t1.min(ta.max(tb));
+    }
+    if t0 >= t1 {
+        return vec![edge];
+    }
+    let at = |t: f64| [a[0] + d[0] * t, a[1] + d[1] * t];
+    let mut pieces = Vec::new();
+    if t0 > 0.0 {
+        pieces.push([a, at(t0)]);
+    }
+    if t1 < 1.0 {
+        pieces.push([at(t1), b]);
+    }
+    pieces
 }
