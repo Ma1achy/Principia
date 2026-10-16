@@ -53,7 +53,7 @@ fn sim() -> SimConfig {
 
 fn render() -> RenderState {
     RenderState {
-        stain_graph: StainGraph {},
+        stain_graph: StainGraph::new(),
         overlays: Overlays::default(),
         hover: Hover::default(),
         palette: Palette {},
