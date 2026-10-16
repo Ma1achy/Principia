@@ -6,7 +6,7 @@
 - **Needs (earlier milestones):** REQ-COL-002, REQ-COL-062, REQ-COL-067, REQ-COL-068, REQ-TOOL-162
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-1.2, PIT-3
-- **Size:** ~450 lines, the tests and the re-rendered goldens' rows included
+- **Size:** ~520 lines, the tests, the GUI mock's legend and the re-rendered goldens' rows included
 
 ## Goal
 **R-444 to R-448 (16 Oct 2026):** the outcome view shows physical outcomes only. Its nine classes are bounded / nothing
@@ -44,9 +44,13 @@ TASK-M2-31.
   `t_end_step` read; `running`, `sim_failed`, `decode_failed` and a reserved `state` code to the bounded
   swatch; the forbidden test first, from REQ-COL-102's field, drawing `debug_invalid(frag_xy)`; the module docs citing
   R-444 to R-447.
-- REQ-COL-102's definition in colour_composition §3 (the `ctx` field, its type and values, who fills it and from what),
-  the generated `ctx` declaring it, and its CPU fill inside `[0,1]²` from the chart's `validate` and `Φ` (TASK-M2-05's
-  `Chart` trait); past `[0,1]²` TASK-M8-05 fills it from the extension types.
+- REQ-COL-102's definition in colour_composition §3 (the `ctx` field, its type and values, who fills it and from what):
+  its forbidden value is "hatched by chart_decoder_contract Part 3", on every pixel (a bounded axis past its edge once
+  the types act, `validate`'s layer 2 or 3 rejecting, or `Φ` failing to evaluate), the axes' primary ranges playing
+  no part; `Φ` is chart_reference §5.1's `Chart::map`, and the shared decoder's own outcomes (its `DEGENERATE` tags, a
+  non-finite decoder output) never set it. The generated `ctx` declaring it, and its CPU fill inside `[0,1]²` from the
+  chart's `validate` and `Chart::map` (TASK-M2-05's `Chart` trait); past `[0,1]²` TASK-M8-05 fills it from the
+  extension types.
 - The OKLab-uniform swatch set as a second named set on the occupant, selectable where the swatches are edited, the sRGB
   set the default (REQ-COL-103).
 - Greyscale and hue mode's rank of the outcome class, `K = 9` (R-448), wherever TASK-M1-14 ranked eleven
@@ -62,6 +66,14 @@ TASK-M2-31.
   PR (`--nocapture`).
 - The GUI mock's Inspector labels (`crates/gui/src/tests/mock_content.rs`, TASK-M6-27's): "collision @ t=0" and
   "degenerate" replaced by classes of the nine.
+- The GUI mock's outcome legend and samples (TASK-M6-27's files, not qa's), which name the removed classes and would
+  panic once `SWATCHES` drops them (`engine::contract::legend` re-exports it): `crates/gui/src/mock/legend.rs`'s fake
+  stain's outcome key is the nine classes, each a flat swatch from `SWATCHES`, with no `degenerate`,
+  `collision_at_start` or `Running` class and no `SwatchStyle::NotYet` swatch in it, then the "forbidden region" key
+  in the hatch style (render_gui_spec §G6), for which `engine::contract::legend`'s `SwatchStyle` gains a hatch variant
+  drawn by `debug_invalid`; `crates/gui/src/mock/sample.rs`'s `FATES` are classes of the nine (no `degenerate` or
+  `collision_at_start`, and no fake sample decided at `t = 0` by that class); `crates/gui/src/tests/mock_legend_keys.rs`
+  asserts them.
 - The re-rendered goldens `m1-outcome/outcome`, `m1-outcome/outcome_edited` and `m1-synthetic/known_escaper`, with their
   `fixtures/golden/BASELINES.md` rows citing R-444 to R-446 and the decision RQ-330 records.
 
@@ -71,14 +83,19 @@ TASK-M2-31.
   detail) draw `#141418`; a forbidden-region pixel draws the hatch; editing a swatch changes only that class
   (REQ-COL-002, as R-444 to R-446 change it; REQ-COL-101).
 - `cargo test -p render outcome_view_failures` on the CPU twin and on gpu-metal and gpu-lavapipe — running, every
-  `sim_failed` and `decode_failed` detail, a stored NaN, a reserved `state` code and bounded draw exactly `#141418`; a
-  sample REQ-COL-102's field marks forbidden draws `debug_invalid(frag_xy)`, pixel-identical to the hatch, whatever its
-  payload; a `decode_failed` sample the chart does not hatch draws `#141418`; in greyscale and hue mode running and
-  failures sit at rank 0 and a forbidden sample keeps the hatch; controls: running in the stipple, `sim_failed` in the
-  hatch, `decode_failed` white, and a hatch decided from `decode_failed`'s detail each fail (REQ-COL-101).
-- Review checklist (physics reviewer) — colour_composition §3 defines REQ-COL-102's field (type, values, who fills it,
-  from the chart's types, primary ranges, `validate` and `Φ` in Part 3's order, the payload's detail playing no part);
-  the generated `ctx` declares it; `cargo test -p render outcome_view_failures`' forbidden rows read it (REQ-COL-102).
+  `sim_failed` detail (NaN in state, Inf/overflow in state, a non-finite derived quantity) and `decode_failed` detail,
+  a reserved `state` code and bounded draw exactly `#141418`; on the latent chart (`validate` Valid everywhere) a sample
+  carrying each decoder tag (`ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, `M01_TINY`) and a non-finite decode draws
+  `#141418` with REQ-COL-102's field valid; a sample the field marks forbidden draws `debug_invalid(frag_xy)`,
+  pixel-identical to the hatch, whatever its payload; a `decode_failed` sample the chart does not hatch draws
+  `#141418`; in greyscale and hue mode running and failures sit at rank 0 and a forbidden sample keeps the hatch;
+  controls: running in the stipple, `sim_failed` in the hatch, `decode_failed` white, a hatch decided from
+  `decode_failed`'s detail, and a field set from a decoder tag each fail (REQ-COL-101).
+- Review checklist (physics reviewer) — colour_composition §3 defines REQ-COL-102's field (type, values, who fills
+  it): forbidden where Part 3 hatches (a bounded edge once the types act, `validate`'s layers 2 and 3, `Φ` as
+  `Chart::map` failing), on every pixel, the primary ranges playing no part; the decoder's `DEGENERATE` tags and a
+  non-finite decoder output never set it; the payload's detail plays no part; the generated `ctx` declares it;
+  `cargo test -p render outcome_view_failures`' forbidden and decoder-tag rows read it (REQ-COL-102).
 - `cargo test -p render outcome_oklab_variant` — the variant renders exactly its eight swatches and `#141418`; each
   chromatic swatch measures OKLab L 0.72 ± 0.002, C 0.123 ± 0.002 and its hue within 0.5° of R-447's; failures and
   forbidden samples as in the default; the default is the sRGB set; editing one set leaves the other unchanged
@@ -94,8 +111,12 @@ TASK-M2-31.
 - `cargo test -p render colour_independence` and `cargo xtask golden m1-synthetic` — greyscale and hue mode rank the
   outcome class's nine classes, `K = 9` (REQ-COL-067, REQ-COL-068, REQ-VAL-012, as R-448 changes them); `known_escaper`
   draws the triple ejection `#611597` and the running sample `#141418`.
-- `cargo test -p render prelude not_yet_style cvd` — the hatch's, the stipple's and the colour-vision measurements pass
-  over the new entries (REQ-COL-055, REQ-COL-064, REQ-COL-061).
+- `cargo test -p render --test prelude --test not_yet_style --test cvd` — the hatch's, the stipple's and the
+  colour-vision measurements pass over the new entries (REQ-COL-055, REQ-COL-064, REQ-COL-061).
+- `cargo test -p gui -- mock_legend_keys` and `cargo xtask screenshot 06_legend` (mock_legend) — the mock's outcome key
+  is the nine classes, each a flat swatch, the black one `#141418`, then the "forbidden region" key in the hatch style;
+  it has no "degenerate", "collision @ t=0", "running" or `sim_failed` key and no "not yet" swatch; the mock's fake
+  samples take only classes of the nine; the screenshot against 06_legend.png (REQ-COL-101, R-444, R-446; gui.md §8).
 
 ## Notes
 - New task, applied per R-369 in R-444's port: TASK-M1-10, TASK-M1-14 and TASK-M1-17 have merged, so the palette, its
@@ -112,7 +133,15 @@ TASK-M2-31.
   of values. Two departures from the human's words are open: RQ-331 (the closest pair) and RQ-332 (C and three
   swatches); the task builds the ruled swatches meanwhile.
 - PR #225 (TASK-M2-09) tags an infeasible invariant-chart pixel `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed`/3;
-  this view draws it black, or the hatch where the chart hatches it (past `[0,1]²`, the warp's bounded axes).
+  this view draws it the hatch where the chart hatches it (past `[0,1]²`, the warp's bounded axes) and black anywhere
+  else. Inside `[0,1]²` the warp maps every pixel feasible in exact arithmetic (chart_reference §2.1), so there the tag
+  can arise only from rounding at the feasibility boundary; the chart does not hatch it there, and it draws black. No
+  test asserts that the tag never occurs inside the square (physics review 5548113767, P4).
 - Which debug view shows the η_E tags is RQ-333; this task does not wait on it.
+- Review fixes on PR #226, applied per R-369: the acceptance commands run as cargo takes them (code review 5547986569,
+  F1); the GUI mock's legend, samples and `mock_legend_keys` follow the nine classes, with a legend acceptance line
+  and screenshot (gui review 5548034323, G1); REQ-COL-102's field is Part 3's hatching, not the area statistics'
+  classifier, and `Φ` is `Chart::map` (physics review 5548113767, P1, P2); the failure rows name `sim_failed`'s
+  details, not a stored NaN (P3).
 - The outcome × `t_end` bivariate preset (R-445) is TASK-M7-17's; the preset library's entry for the OKLab-uniform set
   is TASK-M7-17's too.

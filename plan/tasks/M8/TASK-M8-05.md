@@ -74,7 +74,7 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 - `cargo xtask screenshot 01_main` (warning case) — trigger a warning and an error with the figure visible: screenshot against 01_main.png shows nothing new over the plot; the footer count increments (REQ-GUI-074).
 - `cargo xtask screenshot 01_main` (top bar, budget-bound case) and `cargo test -p gui status_undo_depth` — screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2 (REQ-GUI-078).
 - `cargo xtask screenshot 01_main` (footer) and `cargo test -p gui footer_opens_console` — screenshot against 01_main.png's footer; a click opens the 12_console.png layout (REQ-GUI-093).
-- `cargo test -p kernel chart_extension` (the outcome view) — past `[0,1]²`, every pixel the types or the fallback hatch is marked forbidden in REQ-COL-102's field, and the outcome view draws it with the hatch, not `#141418`; control: a pixel past the invariant warp's edge drawn from its `decode_failed` detail alone draws black and fails (REQ-CHART-054, R-446).
+- `cargo test -p kernel chart_extension` (the outcome view) — past `[0,1]²`, every pixel the types or the fallback hatch is marked forbidden in REQ-COL-102's field, and the outcome view draws it with the hatch, not `#141418`; the field is Part 3's hatching, the primary ranges playing no part: a shape-sphere pixel past its pole draws its outcome colour, not the hatch, and on a test chart with a periodic axis and an affine physical-quantity axis, a pixel past one period whose state fails `validate` draws the hatch (physics review 5548113767 on PR #226, P1); controls: a pixel past the invariant warp's edge drawn from its `decode_failed` detail alone draws black, and a field filled from the area statistics' classifier, which leaves that pixel "not counted", each fail (REQ-CHART-054, R-446).
 
 ## Notes
 - The footer click opens the console window; its layout (12_console.png) is TASK-M8-27's. Until then the test asserts the console window id is requested.
@@ -111,5 +111,6 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   5478805963, F1); the mass simplex is sampled past the `ε_m` buffer (F5); the physical-quantity axis carries B1's
   guard (F3).
 - R-446 (16 Oct 2026), applied per R-369: the outcome view keeps the hatch on the pixels this task hatches, decided from
-  the chart's classification, never from the payload's `decode_failed` detail; this task fills TASK-M2-32's field (REQ-COL-102)
+  Part 3's hatching (the types, `validate`, `Φ` as `Chart::map`), not from the classifier's primary-range step, which
+  decides only counting, and never from the payload's `decode_failed` detail; this task fills TASK-M2-32's field (REQ-COL-102)
   past `[0,1]²`, and gains TASK-M2-32 as a dependency and the acceptance line above.

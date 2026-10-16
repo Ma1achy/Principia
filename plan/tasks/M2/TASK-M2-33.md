@@ -40,13 +40,18 @@ side opposite body k" for each pair-indexed one.
   so a new `state` or `detail` code is a compile error until it is named; the body name (`k` → "body `k + 1`") and the
   pair name (pair id → its two bodies 1-based, smaller first) it is built from. The states with no body or pair read
   by their payload §2 names: "bounded", "running", `sim_failed` and `decode_failed` with their failure category, a
-  reserved `state` code as "reserved state 6" or "7".
+  reserved `state` code as "reserved state 6" or "7". The module also gives the outcome palette's class names
+  (colour_composition §1.4): the black class "bounded / nothing yet", which `bounded`, `running` and every failure
+  share in the outcome view (R-446), and each of the other eight as the function names its `state` and `detail`
+  (payload §2, "What a person reads"; render_gui_spec §G6).
 - Every human-facing name built so far taken from it: `crates/render/src/colour/outcome.rs`'s swatch labels (the nine
-  classes TASK-M2-32 leaves; the swatch ids such as `escape_body_0` stay, being machine ids);
+  classes TASK-M2-32 leaves, from the class-name function, the black one "bounded / nothing yet"; the swatch ids such
+  as `escape_body_0` stay, being machine ids);
   `crates/ledger/src/gen/catalogue.rs`'s `detail_label` (today "pair 2: bodies 0–1", which shows a pair id) and the
   `dmin_pair` view's legend; the k = 6 direction-cosine view's and the ternary masses' legends where they are labelled;
   `crates/gui/src/explore/hover_label.rs` and `crates/gui/src/explore/trajectory.rs` (the decided wording reads the
-  function's string, "escape body 1 · t_end …"); the GUI mock's labels (`crates/gui/src/tests/mock_content.rs`).
+  function's string, "escape body 1 · t_end …"); the GUI mock's labels (`crates/gui/src/tests/mock_content.rs`, and
+  the mock legend's keys, `crates/gui/src/mock/legend.rs`).
 - `ledger::payload::detail_meanings` is unchanged: it is hashed into the schema version and is machine data; no legend
   shows it.
 - The export decoder (`crates/engine/src/export/generated.rs`, generated from the ledger): its header or schema states
@@ -62,12 +67,15 @@ side opposite body k" for each pair-indexed one.
 - `cargo test -p ledger display_names` — for every `state` code 0–7 and `detail` code 0–3 the function returns R-449's
   name; the pair names agree with `pair_bodies` (pair 2 "collision 1–2", pair 1 "collision 1–3", pair 0 "collision
   2–3"); collision and escape `detail` 3 read "triple collision" and "triple ejection"; the match has no wildcard arm
-  (code reviewer); negative arm: every outcome-legend key, every built-in occupant's swatch label, the `detail` and
-  `dmin_pair` legends' keys and every label the GUI mock draws (hover label, Trajectory panel, Inspector) contain
-  neither "body 0" nor "pair " followed by a digit; controls: a 0-based body name and a pair named by its id each fail
-  (REQ-GUI-188).
-- `cargo test -p gui mock_hover mock_legend_keys` — the mock's hover label and legend keys read the function's names,
-  "escape body 1", "collision 1–2" (REQ-GUI-188).
+  (code reviewer); the class-name function gives "bounded / nothing yet" for the black class and the function's names
+  for the other eight; negative arm: every outcome-legend key, every built-in occupant's swatch label and the `detail`
+  and `dmin_pair` legends' keys contain neither "body 0" nor "pair " followed by a digit; controls: a 0-based body name
+  and a pair named by its id each fail (REQ-GUI-188).
+- `cargo test -p gui -- mock_hover mock_legend_keys mock_content` — the GUI half of the negative arm, run in the gui
+  crate because `ledger`, the build DAG's root, cannot reach it: every label the GUI mock draws (hover label,
+  Trajectory panel, Inspector, legend keys) reads the module's names ("escape body 1", "collision 1–2"), the black
+  legend key reads "bounded / nothing yet", and none contains "body 0" or "pair " followed by a digit; control: a mock
+  label written 0-based fails (REQ-GUI-188).
 - `cargo test -p engine export_index_base` — the generated export decoder's header or schema states "body index,
   0-based" for each body-indexed field and "pair id, 0-based; pair k is the side opposite body k" for `detail` under
   collision and `dmin_pair`; an exported collision of bodies 0 and 1 writes `detail` 2 and an escape of body 0 writes 0;
@@ -83,5 +91,8 @@ side opposite body k" for each pair-indexed one.
 - The shape sphere's landmarks are TASK-M8-11's: `BC₀₁` is shown `BC₁₂`; the Euler landmarks' index is RQ-334.
 - The shown numbers are not the Burrau literature's (RQ-335); R-449's map applies as ruled.
 - `.raw` and `.prnq` are not defined in the live corpus (RQ-336): nothing is built for them.
+- Review fixes on PR #226, applied per R-369: the gui acceptance command runs as cargo takes it (code review
+  5547986569, F1); the GUI mock's half of REQ-GUI-188's negative arm moves to the gui crate (F4); the module owns the
+  outcome class's name, the black class "bounded / nothing yet" (gui review 5548034323, G2).
 - Open PR #223's Chazy views (the body lens's `k`, the escaper map) take their legends' body names from this function
   when they are built (TASK-M7-41, TASK-M8-45 on that branch).

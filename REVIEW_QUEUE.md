@@ -239,8 +239,13 @@ milestone gate confirms the new swatches." Nothing is chosen. For the human: yes
     `qa_TASK-M1-14_independence.rs` (`K = 11`, the orange) and `qa_TASK-M1-18_r434.rs` (navy against the dot).
   - **Code**: `crates/render/src/colour/outcome.rs` and `crates/render/shaders/wgsl/frag/colour/outcome_state.wgsl`
     (TASK-M1-10, TASK-M1-17), `crates/validation/src/golden_scene.rs`'s outcome scenes, and the GUI mock's Inspector
-    labels "collision @ t=0" and "degenerate" (`crates/gui/src/tests/mock_content.rs`, TASK-M6-27). The Legend reads
-    `SWATCHES` (`crates/engine/src/contract/legend.rs`, TASK-M6-27, TASK-M6-29), so it follows the code.
+    labels "collision @ t=0" and "degenerate" (`crates/gui/src/tests/mock_content.rs`, TASK-M6-27). The GUI mock's
+    Legend and samples hard-code the removed classes (TASK-M6-27): `crates/gui/src/mock/legend.rs`'s fake stain names
+    `collision_at_start`, `degenerate` and a `running` key in the "not yet" style, looking each up in `SWATCHES`
+    (re-exported by `crates/engine/src/contract/legend.rs`), so it panics once they leave; `crates/gui/src/mock/sample.rs`'s
+    `FATES` list `degenerate` and `collision_at_start`; `crates/gui/src/tests/mock_legend_keys.rs` asserts those keys.
+    TASK-M2-32 changes all three (gui review 5548034323 on PR #226, G1; the first port said the Legend follows the
+    code, which holds only for the swatches' colours).
   - **Requirements claimed by merged tasks whose statements change**: REQ-COL-002 and REQ-COL-062 (TASK-M1-10),
     REQ-COL-053 (TASK-M1-09), REQ-COL-064 and REQ-TOOL-162 (TASK-M1-17), REQ-COL-067 and REQ-COL-068 (TASK-M1-14). They
     stay closed by those tasks and in the M1 gate's list; none is reopened. `main` meets the changed statements once
@@ -362,7 +367,10 @@ human: yes (a calibration's evidence, R-71).*
   - (b) Name each Euler landmark by its two outer bodies, as the collision it is antipodal to (`E₁₂` opposite `BC₁₂`).
 - **Applied meanwhile:** nothing built; TASK-M8-11, which draws the landmarks' labels, writes the definition (R-72)
   and its reviewers decide per R-369.
-- **Waits:** the overlay's landmark labels only.
+- **Waits:** the Euler landmarks' shown labels only, in TASK-M8-11's shape-sphere widget. No requirement carries
+  `rq: RQ-334` (applied per R-369, code review 5547986569 on PR #226, F2): REQ-GUI-054, the landmarks TASK-M8-11
+  closes, names the binary collisions and the Lagrange poles, whose labels R-449 settles, and REQ-GUI-188's names;
+  the Euler labels are the definition TASK-M8-11 writes, so neither requirement waits.
 
 ## RQ-335: R-449's shown body numbers are not the Burrau literature's: at `ν = 1/2` the shown body 1 is the mass-5 body *(possible confusion, R-449, R-22, R-73, REQ-SYS-016; context: TASK-M2-33)*
 
