@@ -149,7 +149,7 @@ fn invariant_of(r: &[Vec4; 6]) -> Invariant<f32> {
     }
 }
 
-/// The `(L_z, E)` chart's uniform ([`invariant_rows`]).
+/// The `(L_z, E)` chart's uniform: row 0 `(z_α, z_β, z_μ₁, z_μ₂)`, row 1 `(K_max, γ_K, 0, 0)`, rows 2–5 zero.
 impl UniformChart for InvariantLE<f32> {
     #[inline]
     fn from_uniform(r: &[Vec4; 6]) -> Self {
@@ -162,7 +162,7 @@ impl UniformChart for InvariantLE<f32> {
     }
 }
 
-/// The `(L_z, K)` chart's uniform ([`invariant_rows`]).
+/// The `(L_z, K)` chart's uniform, laid out as the `(L_z, E)` chart's.
 impl UniformChart for InvariantLK<f32> {
     #[inline]
     fn from_uniform(r: &[Vec4; 6]) -> Self {

@@ -31,7 +31,7 @@
 //! charts decode alike; they differ in what the vertical axis reads ([`InvariantLE::energy`]), in their constraints
 //! (inverse_encode_contract § "Chart-aware validation", layer 2) and in their names.
 //!
-//! **The decode** ([`decode`]): the shared mass and configuration blocks, then the construction in place of the free
+//! **The decode** ([`decode()`]): the shared mass and configuration blocks, then the construction in place of the free
 //! momentum block ([`InvariantBlocks`]), then the shared derived invariants ([`crate::decode::decode_with`]). The
 //! configuration block hands the construction the `z_α` it decoded, so R-82's seed is decided on the very control the
 //! configuration came from ([`crate::decode::invariant::construct`]). `Φ`'s [`ChartOut`] carries the frozen controls
