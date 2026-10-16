@@ -9933,9 +9933,10 @@ palette" (a paragraph added), § "4.1 Backbone & `Option` occupants" (three cros
 `docs/design/principia_dd_colouring.md` § "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample →
 SSAA)" (a paragraph added), `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT
 stored" (a paragraph added), `docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a row added),
-`REVIEW_QUEUE.md` (RQ-310 to RQ-320, new), REQ-PAY-099 to REQ-PAY-106, REQ-EVT-027 to REQ-EVT-031, REQ-COL-072 to
-REQ-COL-089, REQ-VAL-183 to REQ-VAL-187 and REQ-GUI-185 (reqio, new), REQ-COL-018 (reqio), TASK-M7-35 to TASK-M7-40
-and TASK-M8-45 (new), `plan/tasks.yaml`, `plan/MILESTONES.md` and `plan/rule_groups.yaml`; built by those tasks*
+`REVIEW_QUEUE.md` (RQ-310 to RQ-320, and RQ-324 and RQ-325 from the PR's review, new), REQ-PAY-099 to REQ-PAY-106,
+REQ-EVT-027 to REQ-EVT-031, REQ-COL-072 to REQ-COL-089, REQ-COL-106, REQ-VAL-183 to REQ-VAL-187 and REQ-GUI-185
+(reqio, new), REQ-COL-018 (reqio), TASK-M7-35 to TASK-M7-40 and TASK-M8-45 (new), `plan/tasks.yaml`,
+`plan/MILESTONES.md` and `plan/rule_groups.yaml`; built by those tasks*
 
 The human gave a spec, `chazy_stain_spec.zip`, for Chazy final-motion classification and its stains, written up from
 prin-rs PR #32 (`Ma1achy/prin-rs`, branch `chazy-final-motion`), and asked, in their own words, for it to be added to
@@ -9991,9 +9992,17 @@ recorded in the drill-down's § "0. Provenance and authority", not as rulings.
 - **The label count.** The spec's 02 §2 gives `chazy_class` "the nine labels of 01 §2"; 01 §2's table yields ten, and
   prin-rs PR #32's `classify` returns ten (`Motion`, less the reference's `Unresolved`). Applied: ten, transcribed in
   the drill-down's § "3.8 The labels: ten" with the spec's wording noted; REQ-PAY-099 lists them.
-- **The rule's order.** The spec's 01 §2 table puts B-stable before transient ("none of the above, and E > 0"); the
-  PR's `classify` tests transient first. They differ only for a Mardling–Aarseth-stable hierarchy with E > 0. Not
-  chosen: RQ-318, a physics question for the human (R-369).
+- **The rule's order.** The spec's 01 §2 table and the PR's `classify` order the labels differently in two places.
+  The table puts B-stable before transient ("none of the above, and E > 0"), and `classify` tests transient first:
+  they differ for a Mardling–Aarseth-stable hierarchy with E > 0, which no state has been shown to reach (RQ-318). The
+  table puts B-stable before excursion, and `classify` returns excursion inside its hierarchy step first: they differ
+  for a bound, Mardling–Aarseth-stable hierarchy whose outer body is past `h_far` and receding, which is reachable and
+  common (RQ-324, found in the PR's physics review). Not chosen: RQ-324 is a physics question for the human (R-369),
+  and RQ-318 is too if a state reaching it is shown.
+- **The E < 0 certificate.** The spec says the classifier relies on "E < 0 rules out H, HP and P"; `classify` enforces
+  the E > 0 half by its order but never tests E in the dispersal step or the two-stage H, and the PR's physics review
+  constructed an E < 0 state that reads H and then P. Not chosen: RQ-325, a physics question for the human (R-369); the
+  drill-down's §2 and §4.3 say which half is enforced and which only observed.
 - **"The one categorical field with a canonical default palette."** colour_composition §1.4 says the outcome `state`
   is the one such field, dd_colouring §3.7 sends every other categorical field to a generated palette, and REQ-COL-018
   says so. Ruling 7 gives `chazy_final` a canonical default, and the spec gives `chazy_status` and `chazy_structure`
@@ -10040,6 +10049,19 @@ recorded in the drill-down's § "0. Provenance and authority", not as rulings.
 - Tasks TASK-M7-35 to TASK-M7-40 and TASK-M8-45; the M7 and M8 gate blocks regenerated.
 - R-442 is in the "design" group of `plan/rule_groups.yaml`.
 
+*From the review of PR #223 (applied per R-369, the orchestrator's and the porter's decisions; the human may veto any):*
+- `chazy_structure`'s overlaps (REQ-PAY-104) now include a transient sample, and a bound label, whose most separated
+  body has ratio above `h_far`: read literally, §5.5 would draw such a transient dark, against ruling 5. A definition
+  can satisfy both (the hierarchy row only for HE, PE and excursion), so it stays REQ-PAY-104's, not an RQ, and
+  REQ-COL-078's property is tested on those states.
+- The time views' calibrations (the "when decided" lightness by time, the "what just changed" dimming) move from
+  REQ-COL-087 to REQ-COL-106, closed by TASK-M7-40, which builds the views (R-71: proposed by the task that needs it).
+- The Okabe–Ito variant and the structure hues are measured and asserted with the other palettes (REQ-COL-086); the
+  Okabe–Ito cost, P against collision 0.041 in every simulation, is in RQ-311's option (b).
+- The energy-channel legends carry §G6's separate brightness bar, and B's label holds in every final-motion legend
+  (REQ-GUI-185); the Burrau gate runs in the validation harness past the escape stop, at the pinned `r_coll`
+  (REQ-VAL-186); "pixel" in the classifier's requirements is "sample" (memory_tiers §1).
+
 ## R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback
 *16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "0. Provenance and authority" (a bullet
 added), § "5.2 The fields" (two rows added), § "5.6 `chazy_escaper` and `chazy_qk` (R-443)", § "10.11 One body at a
@@ -10049,8 +10071,9 @@ questions" (a paragraph added); `docs/design/principia_colour_composition.md` §
 the outcome-state default palette" and § "4.1 Backbone & `Option` occupants", `docs/design/principia_dd_colouring.md`
 § "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)" and
 `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored" (a sentence added to
-each); `REVIEW_QUEUE.md` (RQ-321 to RQ-323, new); REQ-PAY-107, REQ-PAY-108, REQ-COL-090 to REQ-COL-100, REQ-VAL-188,
-REQ-VAL-189, REQ-GUI-186 and REQ-GUI-187 (reqio, new); TASK-M7-41 (new), TASK-M7-36 and TASK-M8-45 (extended),
+each); `REVIEW_QUEUE.md` (RQ-321 to RQ-323, new); REQ-PAY-107, REQ-PAY-108, REQ-COL-090 to REQ-COL-100,
+REQ-COL-107, REQ-VAL-188, REQ-VAL-189, REQ-GUI-186 and REQ-GUI-187 (reqio, new); TASK-M7-41 (new), TASK-M7-36 and
+TASK-M8-45 (extended),
 `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by those tasks*
 
 The human's follow-up to the Chazy final-motion spec (R-442), given the same day, asked for a section to be added to the
@@ -10086,8 +10109,9 @@ which is RQ-321.
 - **The palettes against τ.** The body lens's 0.084 (escaping hyperbolic against parabolic) is within the palette; τ
   separates entries from the invalid hatch and the stipple (REQ-COL-055, REQ-COL-061, REQ-COL-064), not entries from
   each other, as R-442 found. The escaper palette clears τ against collision by 0.001 (0.102), recorded as the margin.
-  Re-measured, the grey `#8A8A90` sits 0.020 from the stipple dot `#909090`, where the block says every entry clears
-  the stipple, and its chroma is ≈ 0.009 where §10.11.2 says it has no hue: RQ-322.
+  Re-measured, the grey `#8A8A90` sits 0.020 from the stipple dot `#909090`, but by R-434's criterion (the distance to
+  a 4 × 4 block's farthest pixel) it is 0.212 from the stipple, so the block's claim holds (corrected in the PR's gui
+  review); its chroma is ≈ 0.009 where §10.11.2 says it has no hue: RQ-322.
 - **`chazy_escaper`'s tie.** The block does not say; prin-rs PR #32's `classify` settles it (its fold keeps the first
   strictly greater ratio, so the lowest body index wins), as the drill-down's §3.1 already transcribes. Transcribed in
   §5.6, not an RQ.
@@ -10122,3 +10146,14 @@ which is RQ-321.
   REQ-GUI-187. The 05 additions' tests 1, 4, 5 and 6 are the verifies of REQ-COL-090, REQ-COL-093 to REQ-COL-095,
   REQ-COL-091 and REQ-COL-097.
 - R-443 is in the "design" group of `plan/rule_groups.yaml`.
+
+*From the review of PR #223 (applied per R-369, the orchestrator's and the porter's decisions; the human may veto any):*
+- `chazy_escaper`'s greyscale and hue-mode rank is a definition requirement (R-72), REQ-COL-107, closed by TASK-M7-41;
+  the lens roles are a stain's output, not a field, and take no rank.
+- The one-body views' bound row is labelled "bound, or nobody has left yet", R-442's label for B, since it folds in
+  transient. In the body lens with energy, "flying apart" and "bound" draw alike at equal `q_k`; the legend shows the
+  flat role colours with a separate `q_k` bar and says so (render GUI spec §G6).
+- The R-443 requirements carry the `rq:` their RQs name (RQ-321, RQ-322, RQ-323), and the Chazy legends carry RQ-312.
+  RQ-323's options (b) and (c) defer or drop part of R-443, so they are the human's; (a) is the orchestrator's.
+- Names a person reads call the bodies 1, 2, 3 (the display rule of 16 October 2026, ruled on PR #226); the fields,
+  the stain parameter `k` and machine-readable dumps stay 0-based.

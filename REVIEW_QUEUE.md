@@ -260,12 +260,16 @@ default seven-class palette should stay below τ (04 §2.1) or move to Okabe–I
   - `decisions.md` § "R-429 — …": "τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101", the distance R-132
     ruled a collision (REQ-COL-055, REQ-COL-061).
 - **Context:** no corpus rule holds a palette's own entries τ apart (R-442's note); the seven-class palette clears
-  every style unsimulated (0.137). The question is the human's choice of default, not a corpus conflict.
+  every style unsimulated (0.137). The question is the human's choice of default, not a corpus conflict. Neither
+  candidate clears τ within itself: the seven-class family's tightest pair is 0.083 unsimulated and 0.002 under
+  deuteranopia (HP / P); Okabe–Ito's is 0.041 everywhere (P / collision).
 - **Options seen:**
   - (a) Keep the seven-class palette as the default (R-442 as given), the shortfall recorded and asserted by
     REQ-COL-086; Okabe–Ito one click away.
   - (b) Make the Okabe–Ito variant (drill-down § "10.4 Final motion: Okabe–Ito") the default, the seven-class family
-    a preset.
+    a preset. Its cost, measured in the review of PR #223 (drill-down § "11.2.1 Palette separation, measured"): with
+    collision kept magenta, Okabe–Ito's P `#CC79A7` sits 0.041 from collision `#DA85B6`, unsimulated and under each
+    simulation, its tightest pair; without collision its seven clear 0.170 unsimulated and at least 0.079 simulated.
   - (c) Keep the family logic but respace H, HP and P (and re-measure) until they clear τ unsimulated, at the cost of
     the shared lightness.
 - **Waits:** REQ-COL-087's confirmation at the M7 gate (`rq: RQ-311`). TASK-M7-37 builds R-442's default meanwhile and
@@ -293,8 +297,9 @@ requirement's wording).*
     effect.
   - (c) Read the ban as covering any Chazy surface in the dev GUI, so the stains are browser-only (contradicting
     R-442's request for stains).
-- **Waits:** nothing yet. REQ-GUI-076 carries no `rq:` (TASK-M8-19 does not wait); TASK-M8-45 opens no PR before this is
-  decided.
+- **Waits:** REQ-GUI-185, REQ-GUI-186 and REQ-GUI-187 (`rq: RQ-312`), the Chazy legends and the three panels the ban
+  could be read to cover, so TASK-M8-45 opens no PR before this is decided. REQ-GUI-076 carries no `rq:` (TASK-M8-19
+  does not wait).
 
 ## RQ-313: the Chazy HE gate and Principia's escape detector are different tests, so a pixel can read "escape" in the event stain and excursion or B in the Chazy stain at the same playhead *(design, R-442, R-29, R-61, R-103, REQ-EVT-027; context: TASK-M7-36)*
 
@@ -407,10 +412,12 @@ is wanted, since the swatch is a ruling.*
     bounded link: the human's.
 - **Waits:** REQ-COL-074 (`rq: RQ-317`), TASK-M7-38's B test. The flat stains (TASK-M7-37) draw `#141418` meanwhile.
 
-## RQ-318: the spec's rule puts B-stable before transient; prin-rs PR #32's `classify` tests transient first; they differ for a Mardling–Aarseth-stable hierarchy with E > 0 *(spec against reference code, R-442, REQ-PAY-099; context: TASK-M7-35)*
+## RQ-318: the spec's rule puts B-stable before transient; prin-rs PR #32's `classify` tests transient first; they differ for a Mardling–Aarseth-stable hierarchy with E > 0, a case no state has been shown to reach *(spec against reference code, R-442, REQ-PAY-099; context: TASK-M7-35; sibling of RQ-324)*
 
 *Found porting the Chazy stain spec (R-442). Nothing is chosen (the human's follow-up: where the spec and the PR's code
-disagree, file an RQ). For the human: yes, as physics where the choice changes results (R-369).*
+disagree, file an RQ). For the human: only if a state reaching the case is shown. While none is, the three options
+give the same label on every state found, so the choice changes no result shown; the ordering question that does
+change results is RQ-324.*
 
 - **File, section:**
   - Spec 01 §2's table (drill-down § "3.2 The rule, in order"), in order: "… **B-stable** | a bound hierarchy that
@@ -419,14 +426,23 @@ disagree, file an RQ). For the human: yes, as physics where the choice changes r
     `if cfg.mardling_aarseth && qp == -1 && ko < uo && ma_stable(…) == Some(true) { return Motion::BStable; }`.
   - Drill-down § "2. Chazy's classes": "**E > 0 rules out B and OS.** Lagrange–Jacobi, `I'' = 4E − 2V > 4E > 0`".
 - **Conflict:** B-stable's test reads the two-body energies of the inner pair and of the outer body against the pair's
-  centre of mass. Their sum is not the total energy (the outer potential is the monopole's), so a state can pass it
-  with `E > 0`. The spec labels such a state B-stable; the code labels it transient.
+  centre of mass. Their sum is not the total energy (the outer potential is the monopole's), so it does not follow
+  from B-stable's test that `E < 0`. Were a state to pass it with `E > 0`, the spec would label it B-stable and the
+  code transient.
+- **Reachability unshown (the physics review of PR #223).** The total energy splits as `E = E_pair + E_out − ΔU`, with
+  `ΔU` the outer potential less its monopole. B-stable needs `E_out < 0`; the osculating orbits bound the geometry,
+  `r_in < 2 a_in` and `d ≥ R_p^out > crit · a_in`; at quadrupole order that gives `|ΔU| ≲ 0.11 |E_pair|`, so `E` stays
+  below about `−0.9 |E_pair|`. Across 400,000 random states and a hill-climb maximising `E / |E_pair|` subject to
+  `ma_stable` true, the pair bound and `K_out < U_out` (any orientation, retrograde included, log-uniform masses), the
+  largest value found was −0.9986; no state reached `E > 0`. This is evidence, not a proof: the case is unshown, not
+  shown unreachable.
 - **Options seen:**
   - (a) The code's order: transient first, so E > 0 never reads B-stable, as the energy certificate says.
   - (b) The spec's order: B-stable first.
   - (c) The code's order, with B-stable also requiring `E < 0` explicitly (the same as (a), stated in the rule).
-- **Waits:** REQ-PAY-099's ordering clause (`rq: RQ-318`), in TASK-M7-35, and REQ-VAL-185's E > 0 certificate (which
-  (b) would break at such a state). The fixtures do not reach this case, so TASK-M7-35's other work does not wait.
+- **Waits:** REQ-PAY-099's B-stable-against-transient ordering clause (`rq: RQ-318`), in TASK-M7-35. REQ-VAL-185 does
+  not wait on it: its E > 0 half holds by the code's order, which TASK-M7-35 builds, and (b) would differ only at a
+  state not shown to exist. The fixtures do not reach this case, so TASK-M7-35's other work does not wait.
 
 ## RQ-319: what the Chazy fields read and the Chazy stains draw for a `decode_failed` sample, or a reserved `state` code, is not given *(silence, R-442, R-96, R-441, REQ-COL-072; context: TASK-M7-37)*
 
@@ -498,7 +514,7 @@ the pixels where the two rules disagree, and the docs do not settle it.*
 - **Waits:** the escaping-body clause of REQ-COL-090, REQ-COL-092 and REQ-COL-093 (`rq: RQ-321`). TASK-M7-41 builds
   them on `chazy_escaper`, as the block gives it, meanwhile.
 
-## RQ-322: the grey `#8A8A90` of the one-body palettes sits 0.020 from the stipple dot `#909090`, where the block says every entry clears the stipple, and has OKLab chroma ≈ 0.009, where §10.11.2 says grey has no hue *(measured against the ruled spec, R-443, R-442, R-132, R-429, R-434, REQ-COL-097, REQ-COL-098, REQ-COL-099; context: TASK-M7-41, the M7 gate; sibling of RQ-317)*
+## RQ-322: the grey `#8A8A90` of the one-body palettes has OKLab chroma ≈ 0.009, where §10.11.2 says grey has no hue; its 0.020 from the stipple dot `#909090` is the dot distance, and by R-434's criterion it clears the stipple *(measured against the ruled spec, R-443, R-442, R-132, R-429, R-434, REQ-COL-091, REQ-COL-098, REQ-COL-099; context: TASK-M7-41, the M7 gate; sibling of RQ-317)*
 
 *Found porting the follow-up, re-measuring its palettes (R-443). Nothing is chosen. For the human: yes, at the M7 gate,
 with the palette calibrations it belongs to (REQ-COL-098, REQ-COL-099), since a calibration value is the human's
@@ -509,28 +525,35 @@ with the palette calibrations it belongs to (REQ-COL-098, REQ-COL-099), since a 
     pair, and every entry against the hatch and stipple, clears tau".
   - The block's 03 §10.2 (drill-down § "10.11.2 Body lens with energy"): "Grey and black have no hue, so under
     Replace-L they become neutral greys at body k's energy".
-  - `docs/design/principia_dd_chazy_final_motion.md` § "11.2.1 Palette separation, measured": the stipple dot is
-    `#909090`; § "11.2.2 One-body palettes, measured (R-443)".
-  - Measured here, with dd_colouring §3.1's transforms: `#8A8A90` against `#909090`, OKLab distance 0.020 (τ = 0.101,
-    R-429); `#8A8A90` is OKLab L 0.635, a 0.0025, b −0.0085, chroma 0.0089. The block's other values (0.084, 0.177,
-    0.076, 0.102) reproduce, so the method agrees with the block's.
-- **Conflict:** the block's measurement statement and the value disagree for the grey against the stipple dot; and the
-  grey, like `#141418` (RQ-317), keeps a faint blue cast under Replace-L. The Chazy stains never draw the stipple
-  (§7), so the first is a measurement record, not a collision on screen; REQ-COL-064's criterion is between the stipple
-  and a flat colour of the view.
+  - `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default
+    palette", R-434's paragraph: the stipple's dots changed to `#909090` "so that no flat palette colour comes within
+    the hatch's τ = 0.101 of every pixel of a 4 × 4 block: the nearest is 0.115 from its farthest pixel" (REQ-COL-064).
+  - `docs/design/principia_dd_chazy_final_motion.md` § "11.2.2 One-body palettes, measured (R-443)".
+  - Measured here, with dd_colouring §3.1's transforms: `#8A8A90` is OKLab L 0.635, a 0.0025, b −0.0085, chroma
+    0.0089. Against the stipple: 0.020 from the dot `#909090` (spec 04 §2.1's method, the distance to the dot colour)
+    and 0.212 from the block's farthest pixel, the not-yet grey `#4E4E4E` (R-434's criterion), τ = 0.101 (R-429). The
+    block's other values (0.084, 0.177, 0.076, 0.102) reproduce, so the method agrees with the block's.
+- **The stipple: no conflict.** By R-434's criterion, which is the corpus's, the grey clears the stipple (0.212 > τ),
+  so the block's claim that every entry clears the hatch and stipple holds. The 0.020 is the dot distance, recorded and
+  asserted as measured beside the R-434 figure (REQ-COL-097); it needs no ruling. (Corrected in the gui review of
+  PR #223: this entry first read the dot distance as a conflict.)
+- **Conflict (open):** the grey, like `#141418` (RQ-317), is not exactly neutral, so under Replace-L it keeps a faint
+  blue cast where §10.11.2 says the grey roles become neutral greys.
 - **Options seen:**
-  - (a) Keep `#8A8A90`; record 0.020 against the stipple dot as measured, since the stipple never appears in these
-    stains, and assert it so a change shows; for its chroma, take RQ-317's ruling for `#141418` (its (a) or (b)).
-  - (b) Move the grey off the stipple dot's lightness (a neutral grey well above or below L 0.64), re-measured against
-    every entry and style, and neutral so Replace-L gives grey.
-  - (c) As (a) for the stipple, and make the grey exactly neutral (e.g. `#8C8C8C`, which sits nearer still to
-    `#909090`): only the chroma changes.
-- **Waits:** REQ-COL-097's grey clause and REQ-COL-098 and REQ-COL-099's confirmation (`rq: RQ-322`). TASK-M7-41 draws
-  `#8A8A90` meanwhile.
+  - (a) Keep `#8A8A90`; for its chroma, take RQ-317's ruling for `#141418` (its (a), a stated chroma bound, or its (b),
+    zeroing `a` and `b` under Replace-L).
+  - (b) Make the grey exactly neutral at about the same lightness (e.g. `#8C8C8C`), re-measured against every entry and
+    style by both methods; only the chroma changes.
+  - (c) Move the grey to a neutral well above or below L 0.64, re-measured, if the human also wants the dot distance
+    above τ.
+- **Waits:** REQ-COL-091's neutral-grey clause and REQ-COL-098 and REQ-COL-099's confirmation (`rq: RQ-322`).
+  REQ-COL-097 does not wait: it asserts both stipple figures as measured. TASK-M7-41 draws `#8A8A90` meanwhile.
 
 ## RQ-323: where §10.11.3's three body-lens panels live: the GUI spec has no view of one figure as several panels in v1, and its "side by side" is a v2 research tool *(silence, R-443, R-106, REQ-GUI-186; context: TASK-M8-45)*
 
-*Found porting the follow-up (R-443). Nothing is chosen. For the human: no; decidable per R-369.*
+*Found porting the follow-up (R-443). Nothing is chosen. Option (a) is the orchestrator's call per R-369 (a GUI
+layout); options (b) and (c) are the human's, since each defers or drops part of R-443's 03 §10.3 (CLAUDE.md § "When to
+ask the human": dropping or deferring a requirement).*
 
 - **File, section:**
   - The block's 03 §10.3 (drill-down § "10.11.3 All three bodies"): "The 10.1 lens for k = 0, 1, 2 as three small
@@ -542,8 +565,85 @@ with the palette calibrations it belongs to (REQ-COL-098, REQ-COL-099), since a 
     slots").
 - **Silence:** no v1 view shows one figure as several panels at one playhead, so the layout has no host.
 - **Options seen:**
-  - (a) One figure: the view's canvas is split into three tiles, each the body lens at its own `k`, from the one
+  - (a) One figure: the view's canvas is split into three panels, each the body lens at its own `k`, from the one
     payload at one playhead; a GUI layout, no new stain or node.
-  - (b) Three linked views: the v2 side-by-side (R-106), so §10.11.3 moves to v2 with it.
-  - (c) An export only: the three lenses rendered and composed into one image for the record, with no live layout.
+  - (b) Three linked views: the v2 side-by-side (R-106), so §10.11.3 moves to v2 with it (a deferral: the human's).
+  - (c) An export only: the three lenses rendered and composed into one image for the record, with no live layout
+    (drops the live layout: the human's).
 - **Waits:** REQ-GUI-186 (`rq: RQ-323`), its part of TASK-M8-45.
+
+## RQ-324: the spec's rule puts B-stable before excursion; prin-rs PR #32's `classify` returns excursion inside the hierarchy step, before B-stable; they differ for a bound, Mardling–Aarseth-stable hierarchy whose outer body is past `h_far` and receding, which is reachable and common *(spec against reference code, R-442, REQ-PAY-099, REQ-PAY-101; context: TASK-M7-35, TASK-M7-36; sibling of RQ-318)*
+
+*Found in the physics review of PR #223 (the Chazy port). Nothing is chosen (the human's follow-up to R-442: where the
+spec and the PR's code disagree, file an RQ). For the human: yes, as physics where the choice changes results (R-369):
+it decides `chazy_class` and `chazy_status` on a large share of stable hierarchies.*
+
+- **File, section:**
+  - Spec 01 §2's table (drill-down § "3.2 The rule, in order"), in order: "… **B-stable** | a bound hierarchy that
+    passes Mardling & Aarseth (2001) | yes | **excursion** | as HE but the outer body is bound to its pair
+    (`K/U < 1 − ε`) | no …".
+  - prin-rs PR #32, `src/chazy.rs::classify`, as the drill-down's § "3.2 The rule, in order" transcribes it: step 2
+    (hierarchy), "pair bound and outer band `−1`: **excursion**", comes before step 4, "**B-stable.** If
+    Mardling–Aarseth is on, the pair is bound, the outer body is bound to it (`K_out < U_out`) and `ma_stable(i, j, b)`
+    holds".
+  - Drill-down § "10.6 Status": B-stable `#2F6DB5` "bound, and passes Mardling–Aarseth: predicted to stay bound";
+    excursion `#E08A2E` "bound, one body far out but still bound to the pair".
+  - The port's first text, drill-down § "3.2" and R-442's note: "They differ only for a Mardling–Aarseth-stable
+    hierarchy with `E > 0`" (RQ-318), which missed this case; both now name it.
+- **Conflict:** a bound, Mardling–Aarseth-stable hierarchy whose outer body has ratio `ρ > h_far` and is receding
+  passes the hierarchy gate with the outer band `−1`, so the code returns excursion; the table's order would reach
+  B-stable first. The review generated 23,675 random Mardling–Aarseth-stable bound hierarchies, of which 11,066 fall in
+  that branch. A stable triple then reads excursion on the outgoing half of each outer orbit and B-stable on the
+  incoming half, so it flickers on the status map. Both fold to B in `chazy_final` (drill-down § "5.3"), so the
+  final-motion maps and the one-body views do not change; `chazy_class` and `chazy_status` do. The §12.1 fixture
+  `a_mardling_aarseth_stable_hierarchy_is_b_stable…` passes under both orders only because its outer `v_r` is exactly
+  0. PE, which the code also returns in step 2, comes before B-stable in both orders, so they agree there.
+- **Options seen:**
+  - (a) The code's order: excursion before B-stable. A Mardling–Aarseth-stable hierarchy reads excursion whenever its
+    outer body is past `h_far` and receding, B-stable otherwise; prin-rs PR #32's measurements (drill-down § "4") were
+    taken under it.
+  - (b) The table's order: B-stable before excursion, so a Mardling–Aarseth-stable bound hierarchy reads B-stable
+    throughout its outer orbit, and excursion means "far out, bound, and not certified stable". The fixtures pass
+    unchanged; PR #32's status-map shares (drill-down § "10.6") would move from excursion to B-stable where this
+    applies.
+  - (c) The code's order, with the status map latching B-stable once fired (a further latch, against the
+    live-playhead reading of a label from the current state only).
+- **Waits:** REQ-PAY-099's B-stable-against-excursion ordering clause (`rq: RQ-324`), in TASK-M7-35, and REQ-PAY-101's
+  status for such a state (TASK-M7-36). The fixtures do not reach the case, so TASK-M7-35's other work does not wait.
+
+## RQ-325: the drill-down says the classifier relies on "E < 0 rules out H, HP and P", but `classify` never tests E in the dispersal step or the two-stage H, so an E < 0 state can read H or P *(spec against reference code, R-442, REQ-PAY-099, REQ-VAL-185, REQ-VAL-186; context: TASK-M7-35, TASK-M7-36)*
+
+*Found in the physics review of PR #223 (the Chazy port). Nothing is chosen (the human's follow-up to R-442: where the
+spec and the PR's code disagree, file an RQ). For the human: yes, as physics where the choice changes results (R-369):
+it decides whether an E < 0 sample can read H, HP or P.*
+
+- **File, section:**
+  - Spec 01 (drill-down § "2. Chazy's classes"), as first transcribed: "**The energy certificates the classifier
+    relies on:** … **E < 0 rules out H, HP and P.** Total dispersal needs non-negative energy."
+  - Drill-down § "4.3 On real charts (48 × 48)", as first transcribed: "No H and no transient appear: free fall has
+    E < 0, and the certificate holds pixel by pixel."
+  - Spec 05 §2.4 (drill-down § "12.2 New, for Principia", item 4): "On a free-fall chart (E < 0 everywhere) no pixel
+    reads H, HP, P or transient at any playhead"; item 1 (Burrau): "E < 0 holds the certificate (no H, HP, P at any
+    playhead)".
+  - prin-rs PR #32, `src/chazy.rs::classify` (drill-down § "3.2 The rule, in order"): E is read only in the tidal
+    gate's dispersal test and in the transient step; under the default hierarchy gate, step 1 (dispersal) and step 2's
+    two-stage H do not test E.
+- **Conflict:** the E > 0 half is enforced by the order (transient before B-stable, OS-candidate and B-so-far); the
+  E < 0 half is not. The physics review constructed a counter-example: an equal-mass homothetic equilateral expansion
+  with `E = −0.1 U_0`. At 2.9 times its initial size, `d_min / R_0 = 5.02`, every pair recedes and every pair's
+  `K/U = 1.065`, so it reads **H**; at 3.2–3.5 times, pair `K/U` = 1.02–0.975, so it reads **P**; `E` stays below 0
+  throughout and the system turns back at 10 times. For equal-mass free fall and for Burrau (3, 4, 5) the dispersal
+  step provably cannot fire (`U(t) ≥ U_0` and `d0_ij ≤ M R_0 / √(m_i m_j) ≤ 3.46 R_0`, so the three separations
+  cannot all exceed `5 R_0`), but the two-stage H is not excluded, nor are free-fall charts with extreme mass ratios.
+  prin-rs PR #32's "0 wrong commits on E < 0" (drill-down § "4.1") is a measurement, not a guarantee.
+- **Options seen:**
+  - (a) Keep the code as it is. REQ-VAL-185's E < 0 arm and REQ-VAL-186's "no H, HP or P" become empirical checks on
+    the charts they run: a failure is a physics result to report, not a bug.
+  - (b) Guard H, HP, P and the two-stage H with `E ≥ 0`, so an E < 0 state that passes their geometric tests falls
+    through to the later steps (B-stable, OS-candidate or B-so-far). The certificate then holds by construction, and
+    the counter-example reads B-so-far.
+  - (c) As (b), but the E < 0 state that passes the geometric tests reads a working state of its own, so the status
+    map shows where the geometry and the energy disagree (an eleventh label).
+- **Waits:** REQ-PAY-099's dispersal and two-stage-H clauses (`rq: RQ-325`), in TASK-M7-35; REQ-VAL-185's E < 0 arm and
+  REQ-VAL-186 (TASK-M7-36). The fixtures do not reach the case (the two-stage H fixture and the three-flying-apart
+  fixture both have E > 0), so the rest of TASK-M7-35 does not wait.

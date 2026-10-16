@@ -231,7 +231,9 @@ Chazy stain: B is this table's bounded `#141418`, and collision, any pair or tri
 The categorical filter above applies to them unchanged (§10.7). The palettes, their measured separations and their
 calibration are in the drill-down, not here.
 R-443 adds `chazy_escaper`, the escaping body's index, and the one-body views that follow one body (the body lens,
-its energy form, the escaper map and its mass-rank forms), with their palettes, in the drill-down's §10.11.
+its energy form, the escaper map and its mass-rank forms), with their palettes, in the drill-down's §10.11. The "no
+separate `escaper` field" above concerns the event outcome, whose escaping body is `detail`; `chazy_escaper` belongs to
+the separate Chazy system (R-443) and does not change it, and the escaper map is a Chazy stain, not this map filtered.
 
 ---
 
