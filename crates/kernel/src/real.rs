@@ -40,6 +40,22 @@ pub trait IeeeBits: Real {
     /// Whether `self`'s exponent field is all ones, so that it is `±∞` or NaN: a test on the bits, made before any
     /// arithmetic on `self`.
     fn non_finite_bits(self) -> bool;
+
+    /// `|self|`'s unbiased exponent field, read from the bits: `e` with `2^e ≤ |self| < 2^(e+1)` for a normal `self`,
+    /// the field's least value (`−127` at f32, `−1023` at f64) for `±0` and subnormals, its greatest (128, 1024) for
+    /// `±∞` and NaN.
+    fn exponent(self) -> i32;
+
+    /// `2^e`, formed from its bits, for `e` a normal exponent (`−126..=127` at f32, `−1022..=1023` at f64).
+    fn pow2(e: i32) -> Self;
+
+    /// `self·b`, rounded the same on every backend, whether it contracts or fuses or not. At f32, the GPU's precision,
+    /// each operand is split at its bits into a high part, its fraction's low 12 bits cleared, and the exact remainder,
+    /// each of at most 12 significant bits, so the four partial products are exact (where normal) and a backend that
+    /// fuses one into the following add rounds the same sum; they are added in one fixed order,
+    /// `hh + ((hl + lh) + ll)`, within an ulp or so of `self·b`. At f64, the CPU's alone, where Rust never contracts,
+    /// it is `self·b`.
+    fn product(self, b: Self) -> Self;
 }
 
 impl IeeeBits for f32 {
@@ -59,6 +75,24 @@ impl IeeeBits for f32 {
     fn non_finite_bits(self) -> bool {
         self.to_bits() & 0x7F80_0000 == 0x7F80_0000
     }
+
+    #[inline]
+    fn exponent(self) -> i32 {
+        ((self.to_bits() >> 23) & 0xFF) as i32 - 127
+    }
+
+    #[inline]
+    fn pow2(e: i32) -> f32 {
+        f32::from_bits(((e + 127) as u32) << 23)
+    }
+
+    #[inline]
+    fn product(self, b: f32) -> f32 {
+        let ah = f32::from_bits(self.to_bits() & 0xFFFF_F000);
+        let bh = f32::from_bits(b.to_bits() & 0xFFFF_F000);
+        let (al, bl) = (self - ah, b - bh);
+        ah * bh + ((ah * bl + al * bh) + al * bl)
+    }
 }
 
 impl IeeeBits for f64 {
@@ -77,5 +111,20 @@ impl IeeeBits for f64 {
     #[inline]
     fn non_finite_bits(self) -> bool {
         self.to_bits() & 0x7FF0_0000_0000_0000 == 0x7FF0_0000_0000_0000
+    }
+
+    #[inline]
+    fn exponent(self) -> i32 {
+        ((self.to_bits() >> 52) & 0x7FF) as i32 - 1023
+    }
+
+    #[inline]
+    fn pow2(e: i32) -> f64 {
+        f64::from_bits(((e + 1023) as u64) << 52)
+    }
+
+    #[inline]
+    fn product(self, b: f64) -> f64 {
+        self * b
     }
 }
