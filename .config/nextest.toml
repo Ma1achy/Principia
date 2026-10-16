@@ -48,7 +48,8 @@ xtask-cargo = { max-threads = 1 }
 # which `cargo xtask build-kernel` writes, run in CI's `gpu-kernel` job under the `gpu-kernel` profile, the codegen
 # self-test (TASK-M0-15), the bring-up mode's GPU readback (TASK-M1-11, RQ-222) and the decode stage's and its gate's
 # GPU tests (`engine`'s `decode_stage_gpu` and `qa_TASK-M2-06_gpu`, validation's `decode_f32_eps_gpu`, TASK-M2-06)
-# and the invariant-momentum construction's (`engine`'s `invariant_gpu`, TASK-M2-09) among them; the xtask tests that
+# and the invariant-momentum construction's (`engine`'s `invariant_gpu`, TASK-M2-09) and the invariant charts' gradient
+# gate's (validation's `invariant_gradient_gpu`, TASK-M2-12) among them; the xtask tests that
 # run cargo on the workspace's own target directory run in the `ci-workspace` job under the `ci-workspace` profile
 # (R-372, REQ-SYS-078; below); every other test runs in the `ci` job under the `ci` profile. Each CI step names its
 # profile in NEXTEST_PROFILE. The three filters are disjoint and together select every test, so the jobs run every test
@@ -66,6 +67,7 @@ default-filter = """
         | binary_id(=engine::qa_TASK-M2-06_gpu)
         | binary_id(=engine::invariant_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
+        | binary_id(=validation::invariant_gradient_gpu)
         | binary_id(=xtask::build_kernel)
         | binary_id(=xtask::qa_TASK-M0-14)
         | binary_id(=xtask::nextest)
@@ -100,6 +102,7 @@ default-filter = """
     | binary_id(=engine::qa_TASK-M2-06_gpu)
     | binary_id(=engine::invariant_gpu)
     | binary_id(=validation::decode_f32_eps_gpu)
+    | binary_id(=validation::invariant_gradient_gpu)
     | binary_id(=xtask::build_kernel)
     | binary_id(=xtask::qa_TASK-M0-14)
 """

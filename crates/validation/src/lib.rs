@@ -10,6 +10,7 @@ pub mod decode_f32_eps;
 pub mod gate;
 pub mod golden_scene;
 pub mod gpu;
+pub mod invariant_gradient;
 pub mod oklab;
 pub mod prop;
 pub mod spawn;

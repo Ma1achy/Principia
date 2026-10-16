@@ -1,0 +1,13 @@
+{
+  "description": "The (L_z, E) chart at the proposed K_max and gamma_K: five frozen configurations, the golden IC's (z = 0, the seed rule's z_alpha = 0) among them, each on a 64 x 64 grid of (s, t) with the unit square's edges and corners.",
+  "chart": "lz_e",
+  "frozen": [
+    { "z_cfg": [0.0, 0.0], "z_mass": [0.0, 0.0] },
+    { "z_cfg": [0.3, -0.5], "z_mass": [0.7, -0.4] },
+    { "z_cfg": [1.8, 0.4], "z_mass": [-1.0, 1.2] },
+    { "z_cfg": [-1.5, 1.0], "z_mass": [0.2, 0.9] },
+    { "z_cfg": [-0.25, -1.75], "z_mass": [1.5, 1.5] }
+  ],
+  "grid": 64,
+  "expected": "pass"
+}
