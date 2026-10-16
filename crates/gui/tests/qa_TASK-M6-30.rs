@@ -792,3 +792,239 @@ fn qa_layer_shown_returns_the_figure_to_its_rect_and_edits_nothing() {
     edit(&mut h, &mut app, SimField::Z0(add(&z0, 0.1, &q1)));
     rejects("a pan", || assert_eq!(state(&app), before));
 }
+
+// --- Panned and grid-aligned views -----------------------------------------------------------------------------------
+
+/// The views the fill is checked at, besides the mock's initial one: `(u, v)`, `z₀`'s first two coordinates (the
+/// chart's `q₁`, `q₂` being the mock's unit `z_α`, `z_β`), and the zoom, a factor on the basis. Grid-aligned, the
+/// quads' edges on the shown rect's edges: `z₀` at the origin; and zoomed in ×2 with the view `[0, 1]²` in `(u, v)`.
+/// Panned: across the root's edge, and past it.
+const VIEWS: [(&str, (f64, f64), f64); 4] = [
+    ("grid-aligned", (0.0, 0.0), 1.0),
+    ("grid-aligned, zoomed in", (0.5, 0.5), 0.5),
+    ("panned", (1.5, 0.41), 1.0),
+    ("panned past the root", (-5.3, 3.7), 1.0),
+];
+
+/// The app at `view`, with the tile bounds on or off, the layer shown or hidden.
+fn at_view(
+    canvas: &Arc<MockCanvas>,
+    (_, (u, v), zoom): (&str, (f64, f64), f64),
+    bounds: bool,
+) -> (App<MockSide>, Headless) {
+    let (mut app, mut h) = app_on(Some(canvas.clone()));
+    let plane = app.snapshot().sim.plane.clone();
+    if zoom != 1.0 {
+        let (q1, q2) = (plane.q1.map(|x| x * zoom), plane.q2.map(|x| x * zoom));
+        edit(&mut h, &mut app, SimField::Basis { q1, q2 });
+    }
+    let mut z0 = plane.z0;
+    (z0[0], z0[1]) = (u, v);
+    edit(&mut h, &mut app, SimField::Z0(z0));
+    if bounds {
+        tile_bounds_on(&mut h, &mut app);
+    }
+    (app, h)
+}
+
+/// The capture at `view`: the layer shown, or hidden by F3.
+fn shot_at(
+    canvas: &Arc<MockCanvas>,
+    view: (&str, (f64, f64), f64),
+    bounds: bool,
+    hide: bool,
+) -> Shot {
+    let (mut app, mut h) = at_view(canvas, view, bounds);
+    if hide {
+        press(&mut h, &mut app, Key::F3);
+    }
+    render_frame(canvas, &mut app, &mut h)
+}
+
+/// `a` and `b` are the same pixel for pixel over `rect`.
+fn check_same_over(a: &[u8], b: &[u8], rect: [usize; 4], what: &str) {
+    for y in rect[1]..rect[3] {
+        for x in rect[0]..rect[2] {
+            assert_eq!(px(a, x, y), px(b, x, y), "{what} at ({x}, {y})");
+        }
+    }
+}
+
+/// At grid-aligned and panned views, with the tile bounds on (REQ-GUI-179; R-406, the overlay "covers the extra quads
+/// too"): over the shown rect the F3-off capture is pixel-identical to the F3-on one; F3 again restores the shown
+/// capture pixel for pixel; and with F3 off the bounds cover the window, every column crossing a quad's top or bottom
+/// edge and every row a quad's side. Controls: the shown capture without the bounds fails the check over the rect
+/// (where the shown figure has bounds), and the bounds left in the shown rect fail the coverage check.
+#[test]
+fn qa_f3_off_bounds_at_panned_and_grid_aligned_views() {
+    let canvas = canvas();
+    let f = shown_px();
+    for view in VIEWS {
+        let name = view.0;
+        let (mut app, mut h) = at_view(&canvas, view, true);
+        let on = render_frame(&canvas, &mut app, &mut h);
+        press(&mut h, &mut app, Key::F3);
+        assert!(!app.shown);
+        let off = render_frame(&canvas, &mut app, &mut h);
+        press(&mut h, &mut app, Key::F3);
+        let back = render_frame(&canvas, &mut app, &mut h);
+        assert!(
+            on.rgba == back.rgba,
+            "{name}: F3 twice is not the shown capture"
+        );
+        check_same_over(
+            &on.rgba,
+            &off.rgba,
+            f,
+            &format!("{name}, F3 off against on"),
+        );
+        let bare_on = shot_at(&canvas, view, false, false);
+        let inside_bounds = diff(&on.rgba, &bare_on.rgba);
+        if (0..W * H).any(|i| inside_bounds[i] && inside(f, i % W, i / W)) {
+            rejects(
+                &format!("{name}, the shown capture without its bounds"),
+                || check_same_over(&bare_on.rgba, &off.rgba, f, "bare"),
+            );
+        }
+        let bounds = diff(&off.rgba, &shot_at(&canvas, view, false, true).rgba);
+        let (cols, rows) = crossings(&bounds, [0, W], [0, H]);
+        assert!(
+            cols.is_empty() && rows.is_empty(),
+            "{name}: with F3 off the tile bounds leave {} columns and {} rows bare",
+            cols.len(),
+            rows.len()
+        );
+        let left: Vec<bool> = (0..W * H)
+            .map(|i| bounds[i] && inside(f, i % W, i / W))
+            .collect();
+        rejects(
+            &format!("{name}, the bounds left in the shown rect"),
+            || {
+                let (cols, rows) = crossings(&left, [0, W], [0, H]);
+                assert!(cols.is_empty() && rows.is_empty());
+            },
+        );
+    }
+}
+
+/// How far, in pixels, either side of the shown rect's edge a bound line is checked unbroken.
+const SEAM: usize = 4;
+
+/// Of the bound lines (a mask, as [`diff`] gives) crossing the shown rect's edge `rect` (a line [`RUN`] pixels long on
+/// each side of the edge, [`SEAM`] pixels clear of it outside): how many there are, and the ones broken in the `SEAM`
+/// pixels outside the edge, each as `(side, x, y)` of its first unset pixel.
+fn seams(d: &[bool], rect: [usize; 4]) -> (usize, Vec<(&'static str, usize, usize)>) {
+    let at = |x: usize, y: usize| d[y * W + x];
+    let (mut lines, mut broken) = (0, Vec::new());
+    let mut check = |side: &'static str, inner: bool, outer: bool, gap: Vec<(usize, usize)>| {
+        if inner && outer {
+            lines += 1;
+            if let Some(&(x, y)) = gap.iter().find(|&&(x, y)| !at(x, y)) {
+                broken.push((side, x, y));
+            }
+        }
+    };
+    let [x0, y0, x1, y1] = rect;
+    for y in y0..y1 {
+        check(
+            "left",
+            (x0..x0 + RUN).all(|x| at(x, y)),
+            (x0 - SEAM - RUN..x0 - SEAM).all(|x| at(x, y)),
+            (x0 - SEAM..x0).map(|x| (x, y)).collect(),
+        );
+        check(
+            "right",
+            (x1 - RUN..x1).all(|x| at(x, y)),
+            (x1 + SEAM..x1 + SEAM + RUN).all(|x| at(x, y)),
+            (x1..x1 + SEAM).map(|x| (x, y)).collect(),
+        );
+    }
+    for x in x0..x1 {
+        check(
+            "top",
+            (y0..y0 + RUN).all(|y| at(x, y)),
+            (y0 - SEAM - RUN..y0 - SEAM).all(|y| at(x, y)),
+            (y0 - SEAM..y0).map(|y| (x, y)).collect(),
+        );
+        check(
+            "bottom",
+            (y1 - RUN..y1).all(|y| at(x, y)),
+            (y1 + SEAM..y1 + SEAM + RUN).all(|y| at(x, y)),
+            (y1..y1 + SEAM).map(|y| (x, y)).collect(),
+        );
+    }
+    (lines, broken)
+}
+
+/// With F3 off the figure fills the window, the shown rect no longer an edge of it (R-406: "the rest of the viewport just
+/// becomes the entire window"; the overlay "covers the extra quads too"): a tile bound running across where the shown
+/// rect's edge was, inside it and past it, is drawn unbroken across that edge, so the hidden layout's rect leaves no
+/// seam in the bounds. Checked at the grid-aligned and panned views, where such lines cross each side. Controls: a
+/// mask with one pixel cleared beside the edge on a crossing line fails; the same mask with each crossing line filled
+/// across the edge passes, so the check can pass.
+#[test]
+fn qa_f3_off_bounds_unbroken_across_the_shown_rect_edge() {
+    let canvas = canvas();
+    let f = shown_px();
+    let mut seen = 0;
+    let mut failures = Vec::new();
+    for view in VIEWS {
+        let bounds = diff(
+            &shot_at(&canvas, view, true, true).rgba,
+            &shot_at(&canvas, view, false, true).rgba,
+        );
+        let (lines, broken) = seams(&bounds, f);
+        seen += lines;
+        if !broken.is_empty() {
+            failures.push(format!(
+                "{}: {} of {lines} lines broken, e.g. {:?}",
+                view.0,
+                broken.len(),
+                &broken[..broken.len().min(4)]
+            ));
+        }
+        if lines > 0 {
+            // Controls on this view's mask: every crossing line filled across the edge passes; one pixel cleared fails.
+            let mut filled = bounds.clone();
+            let mut fill = |xs: std::ops::Range<usize>, ys: std::ops::Range<usize>| {
+                for y in ys {
+                    for x in xs.clone() {
+                        filled[y * W + x] = true;
+                    }
+                }
+            };
+            for (side, x, y) in &broken {
+                match *side {
+                    "left" => fill(f[0] - SEAM..f[0], *y..*y + 1),
+                    "right" => fill(f[2]..f[2] + SEAM, *y..*y + 1),
+                    "top" => fill(*x..*x + 1, f[1] - SEAM..f[1]),
+                    _ => fill(*x..*x + 1, f[3]..f[3] + SEAM),
+                }
+            }
+            let (n, still) = seams(&filled, f);
+            assert!(
+                n == lines && still.is_empty(),
+                "{}: the filled control",
+                view.0
+            );
+            let y =
+                (f[1]..f[3]).find(|&y| (f[0] - SEAM - RUN..f[0] + RUN).all(|x| filled[y * W + x]));
+            if let Some(y) = y {
+                filled[y * W + f[0] - 1] = false;
+                rejects(
+                    &format!("{}, a pixel cleared beside the edge", view.0),
+                    || assert!(seams(&filled, f).1.is_empty()),
+                );
+            }
+        }
+    }
+    assert!(
+        seen > 0,
+        "no bound line crosses the shown rect's edge at any view"
+    );
+    assert!(
+        failures.is_empty(),
+        "with F3 off the tile bounds break where the shown rect's edge was:\n{}",
+        failures.join("\n")
+    );
+}
