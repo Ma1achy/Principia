@@ -23,7 +23,10 @@
 //! most, enough for a square root a few ulps above the exact one (a correctly rounded one needs one). Then
 //! `|L_z| = |2s − 1|·L_max ≤ L_max` after rounding, as `|2s − 1| ≤ 1` is computed exactly or rounded within `[−1, 1]`
 //! and rounding is monotone, so `L_z² ≤ L_max² ≤ 2K` exactly, and the construction's branch is feasible at every
-//! `(s, t) ∈ [0,1]²` on every backend, the edges included.
+//! `(s, t) ∈ [0,1]²`, the edges included, on a backend whose `sqrt` lies within four ulps of the exact root: proven
+//! and tested on the CPU at f32 and f64 (correctly rounded). WGSL's nominal `sqrt` bound (inherited from
+//! `1/inverseSqrt`) can exceed four ulps, so the GPU's edges are verified where its feasibility tags are compared
+//! with the CPU's, TASK-M2-24's cross-backend check, whose fuzz covers the edge columns `s ∈ {0, 1}`.
 //!
 //! **`K* = K(t)` on both charts.** On `(L_z, K)` it is the coordinate itself (§2.1). On `(L_z, E)`, §2.2's
 //! `K* = E − U` with `E = U + K(t)` is `K(t)` in exact arithmetic, so the decode takes `K(t)` directly rather than
@@ -106,8 +109,9 @@ fn lower<R: WarpReal>(k: R, l: R) -> R {
     select(infeasible(R::one(), k, l), l.below(), l)
 }
 
-/// `L_max = √(2·I·K)` at `I = 1`, held to `L_max² ≤ 2K` exactly: the rounded root, stepped down while the exact test
-/// still finds it infeasible, four steps at most (the module's note).
+/// `L_max = √(2·I·K)` at `I = 1`, held to `L_max² ≤ 2K` exactly where `sqrt` lies within four ulps of the exact root:
+/// the rounded root, stepped down while the exact test still finds it infeasible, four steps at most (the module's
+/// note: the CPU's is correctly rounded; a GPU's is checked by TASK-M2-24).
 #[inline]
 pub fn l_max<R: WarpReal>(k: R) -> R {
     let root = Float::sqrt(k + k);
