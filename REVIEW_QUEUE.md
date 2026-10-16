@@ -719,4 +719,6 @@ seen.*
 - **R-12's conclusion survives either option.** No polar buffer is needed under (a) or (b): at a pole `a = b` and
   `ρ̃ ⊥ λ̃`, a nondegenerate triangle for any masses, a regular point of the flow, and every binary collision stays on
   the equator. Only which configuration the pole is named changes, not the map.
-- **Waits:** nothing. Option (b) would change two lines of `landmarks` and the tests' expectation.
+- **Waits:** REQ-INT-003, REQ-CHART-018 and REQ-CHART-036 carry `rq: [RQ-355]`, held, not closed, by TASK-M2-08's PR
+  (applied per R-369); the code waits for nothing, option (a) applied. Option (b)
+  would change two lines of `landmarks` and the tests' expectation.
