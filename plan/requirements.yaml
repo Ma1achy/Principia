@@ -6964,6 +6964,24 @@
   - R-426
   milestone: M1
   note: "R-426 (RQ-274): the human's \"an undeclared range is a ledger gap, not 'spans zero'\"; applied per R-369: a lin or diverging scalar field whose range is undeclared fails generation, as dd_generation_root §3.8's \"A field without a complete entry fails generation loudly\" has it, save q_mass and mean_y, which the same ruling keeps on cool-warm provisionally. C_ty was on cool-warm by the same default (RQ-277); decided per R-369 by the orchestrator, option (a), in PR #205's fix round: it is signed, as diffusion is, and stays on cool-warm. energy_drift and Lz_drift added in the same fix round (physics review 5506860821, code review 5506873900): §3.8 declares them, the ledger did not. Closed by TASK-M1-21."
+- id: REQ-GEN-036
+  area: GEN
+  statement: "Every machine-readable export and dump (the export decoder's columns, generation root seam 13; CSV columns, JSON fields; .raw and .prnq dumps once the corpus defines them) must keep the internal 0-based body and pair ids (R-22) for each body- or pair-indexed field (detail under escape and collision, dmin_pair, m0 m1 m2, any per-body or per-pair field) and must say so in its header or schema: \"body index, 0-based\", and for a pair id \"pair id, 0-based; pair k is the side opposite body k\" (R-449); an export's caption, read by a person, is 1-based (REQ-GUI-188)."
+  source:
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: 3.8 Metadata schema (what every entry must carry)
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine export_index_base: the generated export decoder's header or schema states \"body index, 0-based\" for each body-indexed field and \"pair id, 0-based; pair k is the side opposite body k\" for detail under collision and dmin_pair, generated from the ledger, not hand-written; an exported collision of bodies 0 and 1 writes detail 2 and an escape of body 0 writes 0; a ledger entry marked body-indexed without the text fails generation; control: a header without the base fails"
+  rulings:
+  - R-22
+  - R-449
+  milestone: M2
+  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: which ledger key carries the base is TASK-M2-33's choice (generation root §3.8). .raw and .prnq are not defined in the live corpus (RQ-336); the requirement covers them once they are."
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -10901,7 +10919,7 @@
   note: "R-132: the default is REQ-COL-055's hatched pattern, replacing the corpus's 'fixed magenta'. RQ-232, decided per R-369: TASK-M1-09 builds the minimal FieldRamp over one ScalarField, a lin Compaction and the invalid lane (crates/render/src/colour/field_ramp.rs); the sentinel leg is a non-debug field ramp over the word length, whose stored sentinel 127 maps to the invalid pattern while the length debug view shows 127 literally; d_min's field ramp maps NaN to the invalid pattern and draws its unset value in R-280's grey, never the invalid pattern (amended per code review 5438179638); TASK-M7-05 and TASK-M7-09 extend it."
 - id: REQ-COL-002
   area: COL
-  statement: "The outcome-state field's canonical default palette must be the nine-class table of colour_composition §1.4, physical outcomes only (R-444): bounded / nothing yet #141418 (bounded, running and every failure, R-446); collision pair 2/1/0 → #DE2D2D/#2EBC4E/#3462E0; triple collision (collision, detail = 3) #F29620; escape body 0/1/2 → #F0DE32/#E034C6/#30C8DC; triple ejection (escape, detail = 3) #611597 (R-445); read from state plus the detail union alone, t_end_step playing no part, so a collision at t_end_step == 0 draws its pair's or the triple collision's colour (R-445); a sample in a forbidden chart region keeps the chart contract's hatch, decided from the chart's validity (REQ-COL-101); and it must be user-editable."
+  statement: "The outcome-state field's canonical default palette must be the nine-class table of colour_composition §1.4, physical outcomes only (R-444), its classes named as shown (R-449): bounded / nothing yet #141418 (bounded, running and every failure, R-446); collision 1–2 / 1–3 / 2–3 (detail = pair 2 / 1 / 0) → #DE2D2D/#2EBC4E/#3462E0; triple collision (collision, detail = 3) #F29620; escape body 1 / 2 / 3 (detail = 0 / 1 / 2) → #F0DE32/#E034C6/#30C8DC; triple ejection (escape, detail = 3) #611597 (R-445); read from state plus the detail union alone, t_end_step playing no part, so a collision at t_end_step == 0 draws its pair's or the triple collision's colour (R-445); a sample in a forbidden chart region keeps the chart contract's hatch, decided from the chart's validity (REQ-COL-101); and it must be user-editable."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -10925,6 +10943,8 @@
     section: "R-445 — \"Collision @ t = 0\" is no longer a class: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and lightness carries timing; the orange `#F29620` goes to triple collision, and triple ejection moves from navy `#000097` to purple `#611597` *(supersedes R-96 and R-433 as they apply to \"collision at start\", the triple swatches and the first-step triple collision's orange)*"
   - file: decisions.md
     section: "R-446 — \"Degenerate\" leaves the outcome view: black `#141418` means nothing has happened yet, up to the playhead, and bounded, running and every failure draw it; failures show in the debug views; forbidden chart regions keep the chart contract's hatch, decided from the chart's validity *(supersedes R-96, R-399 and R-441 as they apply to the outcome view)*"
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
   verify:
     method: golden image
     detail: "synthetic payload with one sample per class renders exactly these sRGB values: a collision with t_end_step > 0 per pair, an escape per body, bounded, a triple collision (#F29620) and a triple ejection (#611597); a collision at t_end_step == 0 draws its pair's colour and a triple collision at t_end_step == 0 #F29620 (R-445); a running, a sim_failed and a decode_failed sample (each detail code) each draw #141418 (R-446); a forbidden-region pixel draws the forbidden treatment, the hatch debug_invalid(frag_xy) (R-446); editing a swatch changes only that class; the old decode_failed (white #ECECF0) and collision @ t=0 (orange) rows are gone; cargo xtask golden m1-outcome"
@@ -10937,6 +10957,7 @@
   - R-444
   - R-445
   - R-446
+  - R-449
   milestone: M1
   note: "Corpus hex codes win over artboard values (R-68). The neutral grey's value: REQ-COL-053 (calibration). RQ-234, decided per R-369: the two triple outcomes (detail = 3) are classes of their own, their swatches REQ-COL-062 (calibration). R-399: running is drawn in the \"not yet\" style, the neutral grey with a fine dot stipple; TASK-M1-10 builds the flat grey as dispatched and TASK-M1-17 applies the style (REQ-TOOL-162). R-444 to R-446 (16 Oct 2026): the statement and verify are R-444's nine classes, physical outcomes only; triple collision #F29620 and triple ejection #611597 (R-445, superseding REQ-COL-062's #D6A1FF and #000097); no degenerate or collision @ t=0 class; running and every failure draw #141418, not the stipple or the hatch, in the outcome view (R-446). Still closed by TASK-M1-10 (merged) and in the M1 gate's list; main meets the changed statement once TASK-M2-32 merges, which re-renders m1-outcome (RQ-330). Applied per R-369: the t_end_step == 0 rows stay, asserting the pair's and the triple collision's colours, so that R-445 is tested."
 - id: REQ-COL-003
@@ -10952,7 +10973,7 @@
   milestone: M1
 - id: REQ-COL-004
   area: COL
-  statement: "The detail union's legend and palette segment must switch on state (escape → body id; collision → pair id)."
+  statement: "The detail union's legend and palette segment must switch on state (escape → the escaping body; collision → the pair), its keys named by R-449's conversion function (REQ-GUI-188): body 1–3 and a pair by its two bodies, never \"body 0\" or a pair id."
   source:
   - file: docs/design/principia_dd_colouring.md
     section: 2. Consolidated contract
@@ -10960,12 +10981,18 @@
     section: "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)"
   - file: decisions.md
     section: "R-22 — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*"
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
+  - file: docs/design/principia_debug_tooling_plan.md
+    section: "B. Payload field views — `sample_descriptor` (bit-packed u32)"
   verify:
     method: unit test
     detail: "dd_colouring unit test 8: the detail legend switches per state (three-colours-bug regression)"
   rulings:
   - R-22
+  - R-449
   milestone: M1
+  note: "R-449 (16 Oct 2026): was \"(escape → body id; collision → pair id)\"; the keys are the shown names. Still closed by TASK-M1-10 (merged); TASK-M2-33 conforms the legend's keys."
 - id: REQ-COL-005
   area: COL
   statement: "Colour occupants must read payload fields only through the generated accessors and ledger metadata, and no colour equation may reference chart, integrator or scheduler state."
@@ -12021,8 +12048,9 @@
   - R-433
   - R-444
   - R-445
+  - R-449
   milestone: M1
-  note: "RQ-234, decided per R-369: no value is chosen; the proposal decides, and the human confirms it at the M1 gate. R-433 (the M1 gate, 15 Oct 2026; closes RQ-279): #D6A1FF and #000097 confirmed as proposed, with no veto on a first-step triple collision drawing in the t=0 orange (PR #178's decision per R-369: \"collision @ t=0\" is a collision with t_end_step == 0 whatever its detail). Applied per R-369: the evidence's farthest-colour check counts §1.4's set (the nine classes, the running grey, the hatch's colours); with R-434's #909090 dot counted #FD9CFF would edge out #D6A1FF, which is 0.197 from the dot, and each swatch is checked farther than τ = 0.101 from the dot (0.197 and 0.407). R-444 and R-445 (16 Oct 2026) supersede the values, not edited here: triple collision #F29620 (collision @ t=0's orange, that class removed), triple ejection #611597 (navy shared collision 1–2's hue); the M1 confirmation stays as the record. Still closed by TASK-M1-10 (merged); TASK-M2-32 builds the new values; which gate confirms their evidence is RQ-330."
+  note: "RQ-234, decided per R-369: no value is chosen; the proposal decides, and the human confirms it at the M1 gate. R-433 (the M1 gate, 15 Oct 2026; closes RQ-279): #D6A1FF and #000097 confirmed as proposed, with no veto on a first-step triple collision drawing in the t=0 orange (PR #178's decision per R-369: \"collision @ t=0\" is a collision with t_end_step == 0 whatever its detail). Applied per R-369: the evidence's farthest-colour check counts §1.4's set (the nine classes, the running grey, the hatch's colours); with R-434's #909090 dot counted #FD9CFF would edge out #D6A1FF, which is 0.197 from the dot, and each swatch is checked farther than τ = 0.101 from the dot (0.197 and 0.407). R-444 and R-445 (16 Oct 2026) supersede the values, not edited here: triple collision #F29620 (collision @ t=0's orange, that class removed), triple ejection #611597 (navy shared collision 2–3's hue, R-449's name for pair 0); the M1 confirmation stays as the record. Still closed by TASK-M1-10 (merged); TASK-M2-32 builds the new values; which gate confirms their evidence is RQ-330."
 - id: REQ-COL-063
   area: COL
   statement: "ctx.chart.slice_uv must be the sample's position in the slice plane's own frame, relative to the plane anchor (R-97): c + h·(2·ctx.quad.uv − 1), with c the quad's centre and h its half-width as the CPU computes them in f64 (deep_zoom §1's u = c + h·(2t − 1)), a vec2 in [0, 1]², post-flip Y-up, unchanged by in-plane pan and zoom; it is never a screen-relative position, those being the screen lane's separate fields, ctx.screen.uv and ctx.screen.pixel (R-394)."
@@ -12147,10 +12175,11 @@
     section: "R-448 — Greyscale and hue modes rank the outcome class's nine classes bounded first, then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2 and triple ejection: `K = 9`"
   verify:
     method: review checklist
-    detail: "colour composition §4.1 defines greyscale mode, consistent with its None-colour truth-table row and §1.2's greyscale default and polarity; REQ-VAL-012's greyscale render uses it; physics reviewer approved; the outcome class has K = 9, ranked bounded first (bounded / nothing yet, the darkest), then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2, triple ejection (R-448)"
+    detail: "colour composition §4.1 defines greyscale mode, consistent with its None-colour truth-table row and §1.2's greyscale default and polarity; REQ-VAL-012's greyscale render uses it; physics reviewer approved; the outcome class has K = 9, ranked bounded first (bounded / nothing yet, the darkest), then collision 1–2, 1–3, 2–3, triple collision, escape body 1, 2, 3, triple ejection (R-448; the names as shown, R-449)"
   rulings:
   - R-72
   - R-448
+  - R-449
   milestone: M1
   note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: pitfalls §1.2 (c) names the mode, and REQ-VAL-012 renders in it. R-448 (16 Oct 2026): K = 9 and the rank, in place of TASK-M1-14's K = 11; written in §4.1 by R-448's port; still closed by TASK-M1-14 (merged); TASK-M2-32 conforms the code and tests. R-446: running and every failure are the bounded / nothing yet class, rank 0, in every mode."
 - id: REQ-COL-068
@@ -12288,7 +12317,7 @@
   note: "R-446 (16 Oct 2026): the corpus does not say how the outcome view learns the chart's classification, which is computed CPU-side (R-26); applied per R-369 as a definition requirement (R-72). Closed by TASK-M2-32; TASK-M8-05 fills it past [0,1]² (REQ-CHART-054)."
 - id: REQ-COL-103
   area: COL
-  statement: "The outcome palette must offer R-447's OKLab-uniform variant as a second named swatch set (preset), selectable where the swatches are edited, the sRGB set of REQ-COL-002 staying the default: bounded / nothing yet #141418; collision 0–1 #E7857A (OKLab hue 27°), collision 0–2 #6EB976 (147°), collision 1–2 #7FA2F2 (265°), triple collision #D99349 (65°), escape body 0 #B3A841 (103°), escape body 1 #D486C3 (335°), escape body 2 #09B9CD (208°), triple ejection #B790E2 (305°), each chromatic swatch at OKLab L = 0.72 and C = 0.123; with every other rule of the outcome view (REQ-COL-002, REQ-COL-101) unchanged."
+  statement: "The outcome palette must offer R-447's OKLab-uniform variant as a second named swatch set (preset), selectable where the swatches are edited, the sRGB set of REQ-COL-002 staying the default: bounded / nothing yet #141418; collision 1–2 #E7857A (OKLab hue 27°), collision 1–3 #6EB976 (147°), collision 2–3 #7FA2F2 (265°), triple collision #D99349 (65°), escape body 1 #B3A841 (103°), escape body 2 #D486C3 (335°), escape body 3 #09B9CD (208°), triple ejection #B790E2 (305°), the classes named as shown (R-449), each chromatic swatch at OKLab L = 0.72 and C = 0.123; with every other rule of the outcome view (REQ-COL-002, REQ-COL-101) unchanged."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -12299,12 +12328,13 @@
     detail: "cargo test -p render outcome_oklab_variant: selecting the variant, the synthetic payload's one sample per class renders exactly the variant's sRGB values on the CPU twin and the GPU; failures and running draw #141418 and a forbidden sample the hatch, as in the default; each chromatic swatch measures OKLab L 0.72 ± 0.002 and C 0.123 ± 0.002 (dd_colouring §3.1's transforms) and its hue within 0.5° of R-447's; the default set is the sRGB palette; editing a swatch of one set leaves the other unchanged"
   rulings:
   - R-447
+  - R-449
   milestone: M2
   note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369: in M2 the preset is a second swatch set on the outcome palette's occupant; the preset library (TASK-M7-17) lists it with the outcome palette. The swatches are the ruled hex values; RQ-332 records C = 0.123 against the largest in-gamut chroma at every hue (0.1224) and three swatches' rounding."
 - id: REQ-COL-104
   area: COL
   kind: calibration
-  statement: "The separation of the sRGB outcome palette's nine swatches (R-444, R-445) must be recorded with its evidence, measured as REQ-COL-055 measures (Euclidean OKLab distance from 8-bit sRGB, dd_colouring §3.1): proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the gate RQ-330 names and recorded in decisions.md. Measured at R-445: the closest pair is 0.175, triple collision #F29620 against escape 0 #F0DE32 (the human's figure, 0.185 for collision 0–2 against escape 2, holds with the orange left out; RQ-331); purple #611597 clears every entry, the hatch's #9B00FF and #48FFFF and the stipple's #4E4E4E and #909090 by at least 0.19 (its nearest, the grey, 0.192)."
+  statement: "The separation of the sRGB outcome palette's nine swatches (R-444, R-445) must be recorded with its evidence, measured as REQ-COL-055 measures (Euclidean OKLab distance from 8-bit sRGB, dd_colouring §3.1): proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the gate RQ-330 names and recorded in decisions.md. Measured at R-445 (classes named as shown, R-449): the closest pair is 0.175, triple collision #F29620 against escape body 1 #F0DE32 (the human's figure, 0.185 for collision 1–3 against escape body 3, holds with the orange left out; RQ-331); purple #611597 clears every entry, the hatch's #9B00FF and #48FFFF and the stipple's #4E4E4E and #909090 by at least 0.19 (its nearest, the grey, 0.192)."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -12318,12 +12348,13 @@
   rulings:
   - R-71
   - R-445
+  - R-449
   milestone: M2
   note: "R-445 (16 Oct 2026); supersedes, for the evidence, REQ-COL-062's M1 calibration (R-433), which is kept as the record. Closed by TASK-M2-32. The gate that confirms it is RQ-330's (M2 as filed). Applied per R-369: the figures are the porter's measurement in R-445's port, to be re-run by the task."
 - id: REQ-COL-105
   area: COL
   kind: calibration
-  statement: "The separation of R-447's OKLab-uniform variant's nine swatches must be recorded with its evidence, measured as REQ-COL-055 measures: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the gate RQ-330 names and recorded in decisions.md. Measured at R-447: the closest pair is 0.063, escape body 1 against triple ejection (30° apart), closer than the sRGB palette by construction; four more pairs are under 0.101; each chromatic swatch is at least 0.139 from the stipple's dot and 0.196 from the hatch's colours."
+  statement: "The separation of R-447's OKLab-uniform variant's nine swatches must be recorded with its evidence, measured as REQ-COL-055 measures: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the gate RQ-330 names and recorded in decisions.md. Measured at R-447 (classes named as shown, R-449): the closest pair is 0.063, escape body 2 against triple ejection (30° apart), closer than the sRGB palette by construction; four more pairs are under 0.101; each chromatic swatch is at least 0.139 from the stipple's dot and 0.196 from the hatch's colours."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -12337,6 +12368,7 @@
   rulings:
   - R-71
   - R-447
+  - R-449
   milestone: M2
   note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. The gate that confirms it is RQ-330's (M2 as filed); RQ-332 holds the two departures from R-447's words."
 - id: REQ-GUI-001
@@ -13274,16 +13306,20 @@
   milestone: M8
 - id: REQ-GUI-066
   area: GUI
-  statement: "The Inspector's measurement panel must show pairwise separations r₀₁, r₀₂, r₁₂, distance from the CoM per body, triangle angles, hyperradius R, shape angles (α, β), |pᵢ| and the Jacobi momenta q0–q3, raw P and the removed v_COM, L, E, moment of inertia I, the live z and a shape-sphere marker."
+  statement: "The Inspector's measurement panel must show pairwise separations (shown r₁₂, r₁₃, r₂₃, the internal r₀₁, r₀₂, r₁₂ named 1-based through REQ-GUI-188, R-449), distance from the CoM per body, triangle angles, hyperradius R, shape angles (α, β), |pᵢ| and the Jacobi momenta q0–q3, raw P and the removed v_COM, L, E, moment of inertia I, the live z and a shape-sphere marker."
   source:
   - file: docs/notes/ic_inspector_scratchpad.md
     section: "Measurement readouts (gauge-invariant → hold under all four handles)"
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
   verify:
     method: GUI screenshot
     detail: screenshot of the readout panel against 05_inspectors.png
   rulings:
   - R-22
+  - R-449
   milestone: M8
+  note: "R-449 (16 Oct 2026): the separations were listed r₀₁, r₀₂, r₁₂, 0-based (R-22); shown 1-based."
 - id: REQ-GUI-067
   area: GUI
   statement: "The Inspector must show a live conditioning number for canonicalisation that flags the two ill-conditioning sites, ρ → 0 (rotation pin undefined) and R → 0 (scale undefined)."
@@ -13616,7 +13652,7 @@
   note: "R-390: the GUI track builds the hover label on mock data in TASK-M6-27, from the mock's fake sample, since 01_main.png shows it (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-10, which reads the real sample."
 - id: REQ-GUI-087
   area: GUI
-  statement: "All body and pair labels in the GUI (hover label, legend, Trajectory panel, Inspector readouts) must be 0-based, with pair k naming the side opposite body k, overriding the artboards' 1-based labels."
+  statement: "All body and pair labels in the GUI (hover label, legend, Trajectory panel, Inspector readouts) must be 1-based and come from R-449's one conversion module (REQ-GUI-188): the bodies 1, 2, 3, and a pair named by its two bodies, smaller first, never by its pair id (pair 2 \"collision 1–2\", pair 1 \"collision 1–3\", pair 0 \"collision 2–3\"), as the artboards show them."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
@@ -13626,12 +13662,16 @@
     section: G13. Where the artboards are overridden
   - file: docs/notes/ic_inspector_scratchpad.md
     section: "Measurement readouts (gauge-invariant → hold under all four handles)"
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
   verify:
     method: unit test
-    detail: "labels for body 0 escape read 'body 0'; pair 0 is (1, 2), pair 1 (2, 0), pair 2 (0, 1); no '1–2' style collision label"
+    detail: "cargo test -p gui labels_one_based: on the real engine the hover label, the legend, the Trajectory panel and the Inspector name an escape of body 0 \"escape body 1\" and collisions of pairs 2, 1 and 0 \"collision 1–2\", \"collision 1–3\" and \"collision 2–3\", each through REQ-GUI-188's function; no label reads \"body 0\" or a pair id"
   rulings:
   - R-22
+  - R-449
   milestone: M8
+  note: "R-449 (16 Oct 2026) supersedes R-22's display half: was \"must be 0-based, with pair k naming the side opposite body k, overriding the artboards' 1-based labels\" (verify: \"labels for body 0 escape read 'body 0'; … no '1–2' style collision label\"). Still closed by TASK-M8-10, which uses TASK-M2-33's function."
 - id: REQ-GUI-088
   area: GUI
   statement: "The right-hand Trajectory panel must show, for the IC under the cursor or a kept orbit (tabs 'under cursor', #1, #2, +), a one-line summary (fate, t_end, FTLE, E₀), real space (CoM frame) beside the shape sphere, the F₂ word, substeps, minimum separation and |ΔE/E|, a playhead, listen, Open full viewer… and IC Inspector… (both opening the Inspector window), and the kept orbits below with fate and time, each removable."
@@ -13968,8 +14008,9 @@
   rulings:
   - R-53
   - R-446
+  - R-449
   milestone: M8
-  note: "R-399: the running swatch is the \"not yet\" style, not one flat colour, drawn through debug_not_yet or its CPU mirror; the comparison treats it as the style, as it treats sim_failed's hatch (R-136). R-444 and R-446 (16 Oct 2026): for the outcome stain the keys are the nine classes, the black one \"bounded / nothing yet\" a flat swatch, with no running or sim_failed key; a forbidden chart region's hatch is keyed as the chart's forbidden region and compared as the style (render_gui_spec §G6). Other stains keep the running style's key."
+  note: "R-399: the running swatch is the \"not yet\" style, not one flat colour, drawn through debug_not_yet or its CPU mirror; the comparison treats it as the style, as it treats sim_failed's hatch (R-136). R-444 and R-446 (16 Oct 2026): for the outcome stain the keys are the nine classes, the black one \"bounded / nothing yet\" a flat swatch, with no running or sim_failed key; a forbidden chart region's hatch is keyed as the chart's forbidden region and compared as the style (render_gui_spec §G6). Other stains keep the running style's key. R-449 (16 Oct 2026): every key's name comes from the one conversion function (REQ-GUI-188), 1-based; no key shows \"body 0\" or a pair id."
 - id: REQ-GUI-106
   area: GUI
   statement: "The legend must give each dimension its own key: categorical swatches with their shares of the view, a separate bar for brightness (or any second channel), ticks placed through the curve for number ramps (log-spaced for a log curve), a sphere key for direction fields, a colour square for coordinate maps, and line samples for post operations."
@@ -14073,7 +14114,7 @@
   milestone: M8
 - id: REQ-GUI-113
   area: GUI
-  statement: "Inspector pane 1 must show the IC with draggable bodies 0, 1, 2 and velocity arrows (velocity-only editing), with ghost markers at the playhead."
+  statement: "Inspector pane 1 must show the IC with draggable bodies, shown 1, 2, 3 (internally 0, 1, 2; R-449, REQ-GUI-188), and velocity arrows (velocity-only editing), with ghost markers at the playhead."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)"
@@ -14083,11 +14124,15 @@
     section: Status — as built (supersedes stale details below)
   - file: docs/notes/ic_inspector_scratchpad.md
     section: Physical canvas — interaction
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 05_inspectors.png; dragging an arrow edits velocity"
-  rulings: []
+  rulings:
+  - R-449
   milestone: M8
+  note: "R-449 (16 Oct 2026): was \"draggable bodies 0, 1, 2\"; shown 1-based."
 - id: REQ-GUI-114
   area: GUI
   statement: "Inspector pane 2 must show the canonical representative as bodies (with momentum arrows) or the shape sphere, and 'ghost the gauge transform' must animate g stepping the dragged config into the canonical one in its four named stages (translate → boost → rotate → scale)."
@@ -15306,6 +15351,28 @@
   - R-409
   milestone: M8
   note: "R-409 A4; proposed by TASK-M6-31, the first task to need it, and used provisionally until the human confirms it at the M8 gate (R-182). R-409's follow-up answer (F3): Shift ×10 and Alt ×0.1 apply to it, as everywhere; it stays a calibration (conflict 5)."
+- id: REQ-GUI-188
+  area: GUI
+  statement: "Every name a person reads for a body, a pair or an outcome event — legends, GUI labels, stain and preset names, tooltips, the Inspector, the dev GUI's legends, figure and export captions — must come from one conversion module (R-449; payload §2, \"What a person reads\"): a function of (state, detail) returning the display string, body k shown as body k + 1 and a pair by its two bodies 1-based, smaller first, never by its pair id (pair 2 \"collision 1–2\", pair 1 \"collision 1–3\", pair 0 \"collision 2–3\"; escape of body k \"escape body k + 1\"; collision detail 3 \"triple collision\"; escape detail 3 \"triple ejection\"; bounded, running, sim_failed and decode_failed with their failure category and a reserved state code by their payload §2 names), and the body and pair names it is built from, which dmin_pair's legend, the Inspector's per-body readouts, the ternary masses' legend, the k = 6 direction-cosine view's legend and the shape sphere's collision landmarks use; the function must be exhaustive over every state and detail value, so that a new state or detail code fails to build until it has a display name."
+  source:
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
+  - file: docs/design/principia_dd_simstate_payload.md
+    section: "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G13. Where the artboards are overridden
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger display_names: for every state code 0–7 and every detail code 0–3 the function returns R-449's name (body k → body k + 1; pair 2/1/0 → collision 1–2 / 1–3 / 2–3; detail 3 → triple collision / triple ejection; the others by payload §2's names), the body and pair names agree with ledger::payload::pair_bodies for each pair; its match on state and detail has no wildcard arm, so a new code is a compile error (code reviewer); negative arm: every outcome-legend key, every swatch label of the built-in occupants, the detail and dmin_pair debug legends' keys and every label the GUI mock draws (hover label, Trajectory panel, Inspector) contains neither \"body 0\" nor \"pair \" followed by a digit; controls: a 0-based name for body 0, and a pair named by its id, each fail"
+  rulings:
+  - R-22
+  - R-449
+  milestone: M2
+  note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: one module owns the conversion, the (state, detail) function and the body and pair names it is built from, in the ledger crate beside pair_bodies unless the code reviewer agrees otherwise; the states with no body or pair read by their payload §2 names; ledger::payload::detail_meanings (hashed into the schema version) is machine data and keeps its 0-based strings, never shown. The Euler landmarks' shown labels are RQ-334's."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -22834,7 +22901,7 @@
   milestone: M2
 - id: REQ-SYS-016
   area: SYS
-  statement: "Body indices must be 0-based throughout (inner pair (0,1), outer body 2, softmax reference body 0), and pair id k must name the side opposite body k (pair 0 = (1,2), pair 1 = (2,0), pair 2 = (0,1)); the 1-based Burrau literature convention must be translated at the boundary."
+  statement: "Body indices must be 0-based in storage and computation (inner pair (0,1), outer body 2, softmax reference body 0), and pair id k must name the side opposite body k (pair 0 = (1,2), pair 1 = (2,0), pair 2 = (0,1)); the 1-based Burrau literature convention must be translated at the boundary; what a person reads names the bodies 1, 2, 3 and a pair by its two bodies (R-449, REQ-GUI-188)."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 6. Deferred / flagged
@@ -22854,13 +22921,17 @@
     section: 11. Still open / downstream (not yet fully in the corpus)
   - file: docs/design/principia_debug_tooling_plan.md
     section: "B. Payload field views — `sample_descriptor` (bit-packed u32)"
+  - file: decisions.md
+    section: "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
   verify:
     method: unit test
     detail: "collision of bodies 0 and 1 reports pair id 2; ICDescriptor fields are m0 m1 m2; Burrau (3,4,5) loads with 0-based masses (5,4,3)/12"
   rulings:
   - R-22
   - R-73
+  - R-449
   milestone: M2
+  note: "R-449 (16 Oct 2026) supersedes R-22's display half: \"0-based throughout\" now means storage, computation, the code, the WGSL and the exports; the shown names are REQ-GUI-188's. The shown numbers are not the Burrau literature's (RQ-335)."
 - id: REQ-SYS-017
   area: SYS
   statement: "The CPU-f64 instantiation of the kernel must ship as the Precision ring (hover dwell-tier, click inspector, offline uniform-survey certifier) and expose `computeIC(chart, uv, simKey)`, `computeQuad(chart, quadID, simKey)`, `stepOnce(state, dt, params)` and `decodeOnly(chart, uv, simKey)` with the signatures of parity §1."

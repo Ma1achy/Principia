@@ -3,7 +3,7 @@
 - **Milestone:** M8
 - **Closes:** REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108, REQ-ENC-032
 - **Depends on:** TASK-M8-14, TASK-M8-15, TASK-M4-15
-- **Needs (earlier milestones):** REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074
+- **Needs (earlier milestones):** REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074, REQ-GUI-188
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** PIT-9
 - **Size:** ~500 lines
@@ -46,3 +46,4 @@ Pane 3 shows the trajectory in real space (CoM frame) as CPU-f64 visualisation w
 - The conditioning number's formula is not given by ic_inspector_scratchpad § "Degeneracy routing"; REQ-GUI-067 and TASK-M8-17's routing both need it.
 - Definitions (R-72) written here: REQ-GUI-145. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - Closes, for gaps the corpus leaves open: REQ-ENC-032 (R-72 definition) (classification accepted by R-132).
+- R-449 (16 Oct 2026): every body and pair name this task shows comes from TASK-M2-33's conversion function (REQ-GUI-188), 1-based, never "body 0" or a pair id; TASK-M2-33 is reached through TASK-M8-14.

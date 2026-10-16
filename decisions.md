@@ -10390,8 +10390,9 @@ Deferred / flagged", `docs/design/principia_chart_reference.md`'s indexing note,
 § "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)" (the landmarks' shown labels), the
 forward lines of R-22, R-444, R-445, R-447 and R-448, REQ-GUI-188 and REQ-GEN-036 (reqio, new), REQ-GUI-087,
 REQ-GUI-066, REQ-GUI-113, REQ-GUI-105, REQ-SYS-016, REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-COL-067, REQ-COL-103,
-REQ-COL-104 and REQ-COL-105 (reqio), TASK-M2-33 (new), TASK-M2-32, TASK-M8-10 and TASK-M8-11, `plan/tasks.yaml`,
-`plan/MILESTONES.md`, `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-331 and RQ-332's names; RQ-334 to RQ-336);
+REQ-COL-104 and REQ-COL-105 (reqio), TASK-M2-33 (new), TASK-M2-32, TASK-M2-10, TASK-M8-10, TASK-M8-11, TASK-M8-14,
+TASK-M8-16 and TASK-M8-22, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/rule_groups.yaml`, `plan/reviewers/gui.md`
+and `plan/reviewers/physics.md` (the labels' checklist lines) and `REVIEW_QUEUE.md` (RQ-331 and RQ-332's names; RQ-334 to RQ-336);
 built by TASK-M2-33, with TASK-M8-10 and TASK-M8-11*
 
 The human's message of 16 Oct 2026, in their own words ("My ruling (Malachy's, 16 October 2026)"), quoted whole:
@@ -10519,7 +10520,11 @@ and its scope, not separate rulings; R-444 to R-448 were split because their ite
   REQ-GUI-188.
 - **Tasks**: TASK-M2-33 (new); TASK-M2-32's goal and acceptance lines name the classes as shown and its swatch labels
   are the display names; TASK-M8-10 (depends on TASK-M2-33; its goal, deliverable and acceptance line 1-based);
-  TASK-M8-11 (depends on TASK-M2-33; a note for the landmarks' labels and RQ-334).
+  TASK-M8-11 (depends on TASK-M2-33; a note for the landmarks' labels and RQ-334); TASK-M8-14, TASK-M8-16 and
+  TASK-M8-22 need REQ-GUI-188, with a note; TASK-M2-10's goal says the shown numbers are 1-based (RQ-335).
+- **The reviewer checklists**: gui.md's outcome-legend line names the classes 1-based and, applied per R-369 as a
+  mechanical consequence of R-446 in the same PR, gives the outcome view's black key and the forbidden region's; its
+  §G13 line drops "0-based labels"; physics.md's body-index line scopes 0-based to storage and computation.
 - R-22, R-444, R-445, R-447 and R-448 carry forward and "Still in force" lines (R-292, R-293).
 - R-449 is in the "design" group of `plan/rule_groups.yaml`.
 
