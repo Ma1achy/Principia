@@ -116,7 +116,8 @@ impl ExactSign for f32 {
         Binade {
             negative: bits >> 31 != 0,
             zero: bits & 0x7FFF_FFFF == 0,
-            s: f32::from_bits(significand | 0x3F80_0000),
+            // `significand` holds fraction bits only, so adding 1.0's bits sets the exponent field to 1.0's.
+            s: f32::from_bits(significand + 0x3F80_0000),
             e,
         }
     }
@@ -149,7 +150,8 @@ impl ExactSign for f64 {
         Binade {
             negative: bits >> 63 != 0,
             zero: bits & 0x7FFF_FFFF_FFFF_FFFF == 0,
-            s: f64::from_bits(significand | 0x3FF0_0000_0000_0000),
+            // `significand` holds fraction bits only, so adding 1.0's bits sets the exponent field to 1.0's.
+            s: f64::from_bits(significand + 0x3FF0_0000_0000_0000),
             e,
         }
     }

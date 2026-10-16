@@ -11,6 +11,8 @@
 //! - `invariant_construction_infeasible_tagged`: a pair with `K* < L_z²/2` is `Infeasible`, exactly on that inequality
 //!   (`K* = L_z²/2` is feasible with `a = 0`, one ulp below is not), labelled `decode_failed`/3, never dropped or NaN,
 //!   its momenta the rigid rotation; it takes precedence over `DEGENERATE` (REQ-DEC-022, REQ-DEC-040).
+//! - `invariant_construction_projection`: `project` removes a field's CoM drift and angular momentum, and takes a
+//!   pure drift and a pure rigid rotation to 0.
 //! - `invariant_construction_binade`: each operand's sign, zero flag and `s·2^e` read from its bits, exactly,
 //!   subnormals included, and the limbs of `s`, each on its grid, summing to `s`.
 //! - `invariant_construction_entries`: the two compute entry points, called natively, write what the construction gives.
@@ -628,6 +630,78 @@ mod tagged_nan {
         })
     );
 }
+
+// ── invariant_construction_projection ───────────────────────────────────────────────────────────────────────────
+
+/// A projection under check: `(m, r, v) → w⁽²⁾`.
+type Projection<R> = fn([R; 3], &[[R; 2]; 3], &[[R; 2]; 3]) -> [[R; 2]; 3];
+
+/// On each decoded configuration (`I = 1` to rounding), `project` takes arbitrary velocities, a drift and a turn
+/// included, to a field with no CoM drift `Σ mᵢwᵢ` and no angular momentum `L(w)`, each to 16 eps of the input's size,
+/// and takes a pure drift and a pure rigid rotation to 0.
+fn check_projection<R: Q>(project: Projection<R>) {
+    let mut g = SplitMix::new(23);
+    let mut unit = || R::of((g.next_u64() >> 11) as f64 / (1u64 << 52) as f64 - 1.0);
+    for (masses, config) in decoded::<R>() {
+        let (m, r) = (masses.m, config.r);
+        let drift = [unit(), unit()];
+        let turn = unit();
+        let rigid = |i: usize| [-(turn * r[i][1]), turn * r[i][0]];
+        let mut fields = vec![[drift; 3], [rigid(0), rigid(1), rigid(2)]];
+        for _ in 0..50 {
+            fields.push([0; 3].map(|_| [unit(), unit()]));
+        }
+        for (n, v) in fields.iter().enumerate() {
+            let v = if n > 1 {
+                [0, 1, 2].map(|i| {
+                    [
+                        v[i][0] + drift[0] + rigid(i)[0],
+                        v[i][1] + drift[1] + rigid(i)[1],
+                    ]
+                })
+            } else {
+                *v
+            };
+            let w = project(m, &r, &v);
+            let (mf, rf, wf) = (
+                m.map(|x| x.f()),
+                r.map(|x| x.map(|y| y.f())),
+                w.map(|x| x.map(|y| y.f())),
+            );
+            let size: f64 = v.iter().flatten().map(|x| x.f().abs()).sum::<f64>() * 4.0;
+            let tol = 16.0 * R::eps() * size;
+            let at = format!("field {n} at m = {:?} ({})", masses.m, R::NAME);
+            for d in 0..2 {
+                let c: f64 = (0..3).map(|i| mf[i] * wf[i][d]).sum();
+                assert!(c.abs() <= tol, "the CoM drift {c:e} is left in {at}");
+            }
+            let l: f64 = (0..3)
+                .map(|i| mf[i] * (rf[i][0] * wf[i][1] - rf[i][1] * wf[i][0]))
+                .sum();
+            assert!(l.abs() <= tol, "the angular momentum {l:e} is left in {at}");
+            if n < 2 {
+                let left: f64 = wf.iter().flatten().map(|x| x.abs()).sum();
+                assert!(left <= tol, "a pure drift or turn leaves {left:e} in {at}");
+            }
+        }
+    }
+}
+
+#[test]
+fn invariant_construction_projection() {
+    check_projection::<f64>(invariant::project::<f64>);
+    check_projection::<f32>(invariant::project::<f32>);
+}
+
+negative_control!(
+    invariant_construction_projection,
+    "a projection that adds the CoM drift instead of removing it must fail",
+    expected = "the CoM drift",
+    check_projection::<f64>(|m, r, v| {
+        let c = [0, 1].map(|d| (0..3).map(|i| m[i] * v[i][d]).sum::<f64>());
+        invariant::project(m, r, v).map(|wi| [wi[0] + 2.0 * c[0], wi[1] + 2.0 * c[1]])
+    })
+);
 
 // ── invariant_construction_binade ───────────────────────────────────────────────────────────────────────────────
 
