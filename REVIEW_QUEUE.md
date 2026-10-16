@@ -380,3 +380,57 @@ Nothing is chosen.*
 
   REQ-INT-089 is not held: it is same-backend, split dispatches.
 - **Waits:** the twelve requirements above. TASK-M2-07's PR does not wait.
+
+## RQ-299: The pinned nightly miscompiles plain Rust at every optimisation level above 0: two calls of a by-value closure on one array lose the first call's writes, in rustc's MIR GVN pass, and the workspace's native build, the kernel's f64 instantiation included, is built on that compiler *(conflict: toolchain against the native build, R-169, canonical_spec §1 item 2; context: TASK-M2-07)*
+
+*Found by TASK-M2-07's code review (5544375930). Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)", item 2: "to **f64**
+    for the CPU via ordinary `rustc`"; item 6: "The native build can also run the survey headless and generate the
+    Paper-2 numbers".
+  - `decisions.md` § "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*":
+    "`rust-toolchain.toml` for the rust-gpu pin (TASK-M0-14)". `rust-toolchain.toml` pins `nightly-2026-04-11`
+    (rustc 1.96.0-nightly 02c7f9bec 2026-04-10), and the whole workspace builds on it.
+- **Conflict:** `stage_canon_native` (`crates/kernel/tests/canon.rs`) fails under
+  `cargo test -p kernel --release --test canon`, and under the dev profile at opt-level 1, 2 and 3; it passes at
+  opt-level 0, which every CI test job builds at, so CI does not see it. In `notice_states` (canon.rs:675)
+  `pair(flip(plain))` returns `pair(plain)`: the flip is lost. The kernel's code is not involved. A standalone file
+  with no dependencies reproduces it:
+  ```rust
+  fn main() {
+      let plain: [[f32; 2]; 3] = [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]];
+      let flip = |mut x: [[f32; 2]; 3]| { for v in x.iter_mut() { v[1] = -v[1]; } x };
+      let pair = |mut x: [[f32; 2]; 3]| { x[1] = x[0]; x };
+      let s = [flip(plain), pair(flip(plain))];
+      println!("{} (want 0.5)", s[1][0][1]);
+  }
+  ```
+  Measured on this machine (`rustc +<toolchain> -C opt-level=<n>`):
+
+  | Toolchain | opt-level 0 | 1 | 2 | 3 |
+  |---|---|---|---|---|
+  | nightly-2026-04-11 (the pin) | 0.5 | −0.5 | −0.5 | −0.5 |
+  | stable 1.99.0 (b940084d7 2026-09-28) | 0.5 | 0.5 | 0.5 | 0.5 |
+
+  On the pin, `-Zmir-opt-level=0` or `-Zmir-enable-passes=-GVN` at opt-level 1 gives 0.5, and opt-level 0 with
+  `-Zmir-opt-level=2` gives −0.5: the fault is in rustc's MIR GVN pass, not LLVM. Close variants pass: the same
+  functions as `#[inline(always)] fn`s; `[flip(plain), pair(flip(plain))]` without the first `flip(plain)`, or with
+  `pair(plain)` in its place; a two-element `i32` array. So the trigger is not characterised, and no search can show
+  that shipped code is free of it.
+- **Shipped code searched:** every by-value `mut` closure parameter outside the test files (`git grep` on
+  `crates/*/src` and `xtask/src`, the patterns `|mut x: T` and `|mut x|`): `gui/src/keyboard/scopes.rs:279` (a
+  `usize` loop counter), `engine/src/compute/tests.rs:380` (a test module), and six closures over a writer, a pipe or
+  an iterator item, each called once per item. None takes a `Copy` aggregate and is called twice on the same value,
+  as the reproducer does. Not checked: whether rust-gpu's SPIR-V build of the kernel runs the same MIR pass.
+- **Where it can matter:** release builds, which no CI job builds and the human's Mac uses for benchmarks (R-186),
+  and the native survey build (canonical_spec §1 item 6).
+- **Options seen:**
+  - (a) Bump the pin to a nightly without the fault. It must be one `rustc_codegen_spirv` 0.10.0-alpha.1 builds
+    against, or rust-gpu moves with it; whether such a nightly exists was not checked.
+  - (b) Keep the pin and turn the pass off for the native build: `-Zmir-enable-passes=-GVN` in the workspace's
+    rustflags. This is a nightly flag, changes build configuration (a ruling), and costs some optimisation.
+  - (c) Keep the pin and the passes; report the fault upstream, and add a CI job that runs the native tests at the
+    release profile, so a miscompile a test covers is seen. Code no test covers stays exposed.
+- **Applied meanwhile:** nothing. `stage_canon_native` is unchanged, not restructured around the fault.
+- **Waits:** nothing held: no shipped code was found with the pattern. TASK-M2-07's PR does not wait.
