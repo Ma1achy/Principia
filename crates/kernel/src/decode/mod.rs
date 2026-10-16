@@ -8,6 +8,8 @@
 //! - [`config`]: `D_cfg`, the canonical-frame hyperspherical decode, unweighted and reconstructed.
 //! - [`momentum`]: `D_mom`, the free Jacobi momenta and the Jacobi-to-particle map.
 //! - [`descriptor`]: the derived invariants, the `ICDescriptor` filled from the decoded `(m, r, p)`.
+//! - [`invariant`]: the invariant-momentum construction of the `(L_z, E)` and `(L_z, K)` charts, its seed rule and
+//!   its exact feasibility branch.
 //! - [`energy_norm`]: the optional `η_E` rescale toward a target energy, between the momentum block and the derived
 //!   invariants, behind an explicit `Option` (R-25).
 //! - [`degenerate`]: the `DEGENERATE` reason type.
@@ -31,6 +33,7 @@ pub mod config;
 pub mod degenerate;
 pub mod descriptor;
 pub mod energy_norm;
+pub mod invariant;
 pub mod latent;
 pub mod mass;
 pub mod momentum;

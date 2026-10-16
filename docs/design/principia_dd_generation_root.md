@@ -764,7 +764,9 @@ population = { name, lo, hi, count }
   default, threshold or calibration. This covers counters only, never real values: a default, threshold or
   calibration is read from the register, even at 0, in whatever form it is written. An IEEE-754 format constant written
   from its std name, such as `f32::INFINITY.to_bits()` for the f32 exponent mask, is not one either (applied per R-369,
-  recorded in R-440); the scope is format constants, never calibration values.
+  recorded in R-440); the scope is format constants, never calibration values. A representation sentinel meaning "no
+  value", written from its type's bound (`i16::MIN`, `u32::MAX`), is not a register value either (applied per R-369;
+  TASK-M2-07); the scope is such sentinels only, never defaults, thresholds or calibrations.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
   the f16 pack clamp (payload §1), the f16 subnormal floor (R-271), and the step count and sentinel of `θ̃`'s pole

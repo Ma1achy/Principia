@@ -1,7 +1,9 @@
 //! The Explore page's regions (render_gui_spec §G2; 01_main.png): the top bar, the left Manifold view, the figure,
 //! the right Trajectory panel, the bottom row (compass, Time, Legend) and the footer, in 01_main.png's proportions of
-//! the window. Each edge is rounded to a whole physical pixel, so the figure's rect is the same pixel rect whether the
-//! egui layer is shown or hidden (F3; RQ-248). The figure's axis labels take a strip along the bottom of 01_main.png's
+//! the window. Each edge is rounded to a whole physical pixel. With the egui layer hidden (F3) the figure's rect is the
+//! whole window, and the field keeps the place the shown layout gives it (R-406): the canvas is given that placement,
+//! [`Placement`], so it draws each point of the field where the shown layout puts it, more of the field around it. The
+//! figure's axis labels take a strip along the bottom of 01_main.png's
 //! figure box and one down its left side, so they sit beside the figure and never over it (render_gui_spec §G1, §G2).
 
 use eframe::egui::{pos2, Rect};
@@ -51,6 +53,8 @@ pub struct Layout {
     pub bottom_row: Rect,
     /// Everything between the top bar and the footer: the Stain page's frame.
     pub page: Rect,
+    /// The whole window.
+    pub window: Rect,
 }
 
 impl Layout {
@@ -83,6 +87,72 @@ impl Layout {
             footer: rect(x0, footer, x1, y1),
             bottom_row: rect(x0, bottom, x1, footer),
             page: rect(x0, top, x1, footer),
+            window: screen,
         }
+    }
+
+    /// The figure's rect as it stands: [`Layout::figure`] with the egui layer shown, the whole window with it hidden
+    /// (F3) or in present mode, which hides the chrome as F3 does (R-406).
+    pub fn figure_rect(&self, shown: bool) -> Rect {
+        if shown {
+            self.figure
+        } else {
+            self.window
+        }
+    }
+
+    /// Where the shown layout puts the field in the window: [`Layout::figure`]'s placement in [`Layout::window`].
+    pub fn placement(&self) -> Placement {
+        Placement::of(self.figure, self.window)
+    }
+}
+
+/// Where the field is drawn in a canvas's viewport (R-406): the shown figure's rect, `[0,1]²` of the field, as its
+/// centre and half-size in the viewport's normalized device coordinates, Y-up. A field point `(x, y)`, each in
+/// `[−1, 1]` over the shown rect (`x = 2s − 1`, `y = 2t − 1`), is at `centre + (x, y) · half` in the viewport; past
+/// the shown rect the field continues at the same scale. [`Placement::IDENTITY`] is the field over the whole viewport,
+/// as the Chart builder's quick render and the Stain editor's preview draw it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Placement {
+    /// The shown rect's centre, in the viewport's normalized device coordinates, Y-up.
+    pub centre: [f32; 2],
+    /// The shown rect's half-size, in the same coordinates: 1 where it spans the viewport.
+    pub half: [f32; 2],
+}
+
+impl Placement {
+    /// The field over the whole viewport.
+    pub const IDENTITY: Placement = Placement {
+        centre: [0.0, 0.0],
+        half: [1.0, 1.0],
+    };
+
+    /// The placement of `shown` in a viewport over `drawn`, both in points.
+    pub fn of(shown: Rect, drawn: Rect) -> Self {
+        let ndc = |v: f32, min: f32, size: f32| (v - min) / size * 2.0 - 1.0;
+        Self {
+            centre: [
+                ndc(shown.center().x, drawn.min.x, drawn.width()),
+                -ndc(shown.center().y, drawn.min.y, drawn.height()),
+            ],
+            half: [
+                shown.width() / drawn.width(),
+                shown.height() / drawn.height(),
+            ],
+        }
+    }
+
+    /// The viewport's span of the field, `[s₀, t₀, s₁, t₁]`, `t` Y-up: `[0, 0, 1, 1]` for the identity, wider for a
+    /// viewport larger than the shown rect.
+    pub fn span(&self) -> [f64; 4] {
+        let edge = |ndc: f64, centre: f32, half: f32| {
+            ((ndc - f64::from(centre)) / f64::from(half) + 1.0) / 2.0
+        };
+        [
+            edge(-1.0, self.centre[0], self.half[0]),
+            edge(-1.0, self.centre[1], self.half[1]),
+            edge(1.0, self.centre[0], self.half[0]),
+            edge(1.0, self.centre[1], self.half[1]),
+        ]
     }
 }

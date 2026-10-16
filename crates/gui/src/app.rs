@@ -1,17 +1,19 @@
 //! The app shell (render_gui_spec §G1, §G2; R-390): generic over the engine side, it reads snapshots and sends
 //! `SetField`s and undo / redo requests only (gui_state_contract §1). egui is a toggleable debug layer (F3) over the
-//! figure, which keeps 01_main.png's central rect in both states, the rest of the window the clear colour while the
-//! layer is hidden (RQ-248). The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
+//! figure, which takes 01_main.png's central rect with the layer shown and fills the window with it hidden, more of the
+//! field at the same scale, each point where the shown layout puts it (R-406); the toggle is `ViewUI`'s, sending no
+//! `SetField`. The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
 //! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus. The
 //! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control.
 //! The windows (`crate::windows`; §G5, §G7, §G8, §G12) open from their entries and take the focus, which goes back to
 //! their opener when they close; an error opens the console by itself, taking no focus (R-405). Export & share's
-//! present mode hides all chrome until Esc, which returns the focus to Present (applied per R-369). Stain mode draws
+//! present mode hides all chrome until Esc, which returns the focus to Present (applied per R-369), its figure filling
+//! the window as with F3 (R-406). Stain mode draws
 //! the node-graph editor (`crate::stain`), whose graph edits are `SetField`s as any control's.
 
 use std::sync::Arc;
 
-use eframe::egui::{self, Color32, Id, Key, LayerId, Order, Rect};
+use eframe::egui::{self, Color32, Id, Key, LayerId, Order};
 use eframe::egui_wgpu;
 use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
@@ -49,8 +51,7 @@ pub fn window_title(is_mock: bool) -> &'static str {
     }
 }
 
-/// The colour the window is cleared to: what shows wherever nothing is drawn, all but the figure while the egui layer
-/// is hidden. egui's dark theme's darkest background.
+/// The colour the window is cleared to: what shows wherever nothing is drawn. egui's dark theme's darkest background.
 pub fn clear_colour(visuals: &egui::Visuals) -> Color32 {
     visuals.extreme_bg_color
 }
@@ -287,13 +288,13 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// Present mode: the figure only, every chrome hidden (render_gui_spec §G5); Esc returns, the focus on Present, in
-    /// navigation mode (applied per R-369).
+    /// Present mode: the figure only, every chrome hidden (render_gui_spec §G5), filling the window as with F3 (R-406);
+    /// Esc returns, the focus on Present, in navigation mode (applied per R-369).
     fn presenting(&mut self, ctx: &egui::Context, layout: &Layout) {
         self.keyboard.stand_down();
         self.send_hover(None);
         if self.view.mode == Mode::Explore {
-            self.paint_figure(ctx, layout.figure);
+            self.paint_figure(ctx, layout, false);
         }
         if ctx.input(|i| i.key_pressed(Key::Escape)) {
             self.present = false;
@@ -372,7 +373,7 @@ impl<S: EngineSide> App<S> {
             return;
         }
         if self.view.mode == Mode::Explore {
-            self.paint_figure(&ctx, layout.figure);
+            self.paint_figure(&ctx, &layout, self.shown);
         }
         if !self.shown {
             // Hidden, the layer takes no key: it forgets the ones it held, whose releases now go to egui. The hover,
@@ -915,20 +916,23 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// Draws the figure through the engine side's canvas into `rect`, above the regions' frames, so nothing of
-    /// theirs reaches it.
-    fn paint_figure(&self, ctx: &egui::Context, rect: Rect) {
-        let Some(canvas) = self.side.canvas() else {
+    /// Draws the figure through the engine side's figure canvas, above the regions' frames, so nothing of theirs
+    /// reaches it. The canvas draws over the whole window, the field at the shown layout's placement, and is clipped to
+    /// the figure's rect as it stands: the shown rect with the egui layer `shown`, else the window (R-406). So over the
+    /// shown rect the two states draw the same pixels.
+    fn paint_figure(&self, ctx: &egui::Context, layout: &Layout, shown: bool) {
+        let Some(canvas) = self.side.figure(layout.placement()) else {
             return;
         };
         let callback = egui_wgpu::Callback::new_paint_callback(
-            rect,
+            layout.window,
             FigureCallback {
                 canvas,
                 format: self.format,
             },
         );
         ctx.layer_painter(LayerId::new(Order::Middle, Id::new("figure")))
+            .with_clip_rect(layout.figure_rect(shown))
             .add(callback);
     }
 }
