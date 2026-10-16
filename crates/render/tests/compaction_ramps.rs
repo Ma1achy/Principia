@@ -1264,7 +1264,10 @@ const INPUTS: FrameInputs = FrameInputs {
 };
 
 /// The dispatch counter: the integration work the render loop's frame record counts (telemetry §2: new quads, samples,
-/// substeps) and the GPU passes of the integrate and reduce stages, the compute side of a frame.
+/// substeps) and the GPU passes of the integrate and reduce stages, the compute side of a frame. This rig has no
+/// integrate path (`RenderLoop::frame` runs the colour and present stages alone), so here the counter is 0 by
+/// construction and cannot move; the check that carries seam 5's "zero recompute" is the sim buffer read back
+/// unchanged, which its control shows can fail ([`check_restyle`]).
 fn dispatches(r: &FrameRecord) -> u64 {
     r.quads_computed
         + r.samples
@@ -1471,8 +1474,8 @@ fn e0_view(e: &Entry) -> FieldRamp {
 }
 
 /// Seam 5: `E_0`'s ledger scale changes from `diverging` to `to`, which R-403 admits for its range (−∞, ∞); the view
-/// built from the changed entry re-styles (another compaction, other pixels, each its twin), while the dispatch
-/// counter and the sim buffer stay as they were: nothing re-integrates. With
+/// built from the changed entry re-styles (another compaction, other pixels, each its twin), while the sim buffer
+/// stays as it was: nothing re-integrates (the dispatch counter, 0 by construction here, is checked too). With
 /// `recompute`, the change also rewrites the sim buffer, as a re-integration would. Then a pan or zoom, a new measured
 /// range: a `u_range` write re-places the `lin` view with no compile (lowering contract Part 3); with `bake`, the view
 /// carries the measured range as literals instead, and the write cannot move it.
