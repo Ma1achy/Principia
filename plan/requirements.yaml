@@ -461,6 +461,8 @@
   rulings:
   - R-72
   milestone: M2
+  rq:
+  - RQ-298
   note: "The label (state and detail): REQ-DEC-040 (definition)."
 - id: REQ-DEC-023
   area: DEC

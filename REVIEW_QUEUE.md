@@ -376,6 +376,7 @@ Nothing is chosen.*
   | REQ-INT-058 | the compile-discipline checklist's "explicit `fma`" |
   | REQ-DEC-017 | this PR's mirror decision, which departs from R-34's letter (above) |
   | REQ-DEC-002 | `crates/kernel/src/canon.rs`'s `fma` CoM and `I_in` feed `similarity`'s `I_in = 0` select (also held by RQ-296) |
+  | REQ-DEC-022 | TASK-M2-09's feasibility input (`fma` per R-34), not yet built |
 
   REQ-INT-089 is not held: it is same-backend, split dispatches.
-- **Waits:** the eleven requirements above. TASK-M2-07's PR does not wait.
+- **Waits:** the twelve requirements above. TASK-M2-07's PR does not wait.
