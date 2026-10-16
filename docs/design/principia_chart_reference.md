@@ -339,7 +339,8 @@ decides it on that configuration (§0.4, §0.5): `(p_ρ, p_λ)` mirrored `y → 
 §0.3's map. So `p_fixed` is taken after the fibre-phase rotation, which `C` then undoes: `C(Φ(u, v))` has masses
 `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and a point and its mirror `(θ, π − φ)` decode to one
 system (R-141). `I` and the fibre phase `φ_f` (§3.2) are chart parameters and pure gauge: they change `Φ`'s output,
-never `C ∘ Φ`'s. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ`'s configuration is on `C`'s section on the
+never `C ∘ Φ`'s, except at `ρ = 0` (`BC₀₁`, `n = (−1, 0, 0)`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in
+`C ∘ Φ`'s configuration, turned by `φ_f` against momenta that are not, so `L_z` depends on `φ_f` there. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ`'s configuration is on `C`'s section on the
 upper hemisphere.
 
 ### 3.1 Forward map (already implemented as `shape_vec`)
