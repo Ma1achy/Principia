@@ -481,6 +481,205 @@ Nothing is chosen.*
 - **Applied meanwhile:** nothing. `stage_canon_native` is unchanged, not restructured around the fault.
 - **Waits:** nothing held: no shipped code was found with the pattern. TASK-M2-07's PR does not wait.
 
+## RQ-330: R-444 to R-448 change what merged M1 tasks built and what their goldens hold; which goldens, fixtures and tests are re-baselined, under what decision, and which gate confirms the new swatches and their evidence *(the human's question, R-444 to R-448, R-110, R-71, REQ-COL-002, REQ-COL-053, REQ-COL-062, REQ-COL-064, REQ-COL-067, REQ-COL-068, REQ-COL-104, REQ-COL-105; context: TASK-M2-32)*
+
+*Filed at the human's request in their message of 16 Oct 2026 (R-444 quotes it): "Whether any task already in flight
+or merged (M1-10's goldens, the outcome palette fixtures, REQ-COL-053/064 tests) needs re-baselining, and which
+milestone gate confirms the new swatches." Nothing is chosen. For the human: yes (a gate and a re-baseline, R-110).*
+
+- **File, section:**
+  - `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default
+    palette" and § "4.1 Backbone & `Option` occupants", as R-444 to R-448 leave them.
+  - `plan/WORKFLOW.md` § "Conventions: crates and runners (R-146)", the golden-image row: "no baseline is re-baselined
+    without a gate decision (R-110)". § "Human checkpoints: the milestone gates": every calibration (R-71) is confirmed
+    by the human at its milestone's gate.
+- **What changes, by owner** (merged unless marked):
+  - **Goldens** (`fixtures/golden/`, rows in `BASELINES.md`): `m1-outcome/outcome` and `m1-outcome/outcome_edited`
+    (TASK-M1-10; last re-rendered by R-434, confirmed by R-435) draw every class, the white "degenerate" and the orange
+    t = 0 rows, the triple swatches `#D6A1FF` and `#000097`, and `running` in the stipple; `m1-synthetic/known_escaper`
+    (TASK-M1-14; R-434, R-435) draws a triple ejection in navy and a running sample in the stipple. Each changes under
+    R-444 to R-446. `m1-outcome/state_view`, `detail_view`, `m1-synthetic/set_state` and `forced_failure` are debug
+    views and do not change. No other fixture names a removed class or navy (`fixtures/cvd/goldens.json` holds the
+    simulation matrices, not the palette).
+  - **Test data asserted against** (`crates/render/tests/`): `outcome_state.rs` (TASK-M1-10, TASK-M1-17: the eleven
+    swatches, navy, a triple collision at `t = 0` in orange); `not_yet_grey.rs` (TASK-M1-09: the grey's separation from
+    "degenerate" `#ECECF0` and "collision @ t=0"); `colour_independence.rs` (TASK-M1-14: the eleven classes, `K = 11`);
+    `support/palettes.rs` (TASK-M1-10, TASK-M1-13, TASK-M7-20: the outcome entries every hatch, stipple and
+    colour-vision measurement runs over, REQ-COL-055, REQ-COL-061 and REQ-COL-064 among them); and qa's files, which only
+    qa changes (R-290): `qa_TASK-M1-03.rs`, `qa_TASK-M1-10.rs` (white, navy, "collision at start"),
+    `qa_TASK-M1-14_independence.rs` (`K = 11`, the orange) and `qa_TASK-M1-18_r434.rs` (navy against the dot).
+  - **Code**: `crates/render/src/colour/outcome.rs` and `crates/render/shaders/wgsl/frag/colour/outcome_state.wgsl`
+    (TASK-M1-10, TASK-M1-17), `crates/validation/src/golden_scene.rs`'s outcome scenes, and the GUI mock's Inspector
+    labels "collision @ t=0" and "degenerate" (`crates/gui/src/tests/mock_content.rs`, TASK-M6-27). The GUI mock's
+    Legend and samples hard-code the removed classes (TASK-M6-27): `crates/gui/src/mock/legend.rs`'s fake stain names
+    `collision_at_start`, `degenerate` and a `running` key in the "not yet" style, looking each up in `SWATCHES`
+    (re-exported by `crates/engine/src/contract/legend.rs`), so it panics once they leave; `crates/gui/src/mock/sample.rs`'s
+    `FATES` list `degenerate` and `collision_at_start`; `crates/gui/src/tests/mock_legend_keys.rs` asserts those keys.
+    TASK-M2-32 changes all three (gui review 5548034323 on PR #226, G1; the first port said the Legend follows the
+    code, which holds only for the swatches' colours).
+  - **Requirements claimed by merged tasks whose statements change**: REQ-COL-002 and REQ-COL-062 (TASK-M1-10),
+    REQ-COL-053 (TASK-M1-09), REQ-COL-064 and REQ-TOOL-162 (TASK-M1-17), REQ-COL-067 and REQ-COL-068 (TASK-M1-14). They
+    stay closed by those tasks and in the M1 gate's list; none is reopened. `main` meets the changed statements once
+    TASK-M2-32 merges.
+  - **In flight**: PR #223 (the Chazy rulings) quotes the old §4.1 text (`K = 11`, "degenerate", "collision @ t=0")
+    as context and offers, in its entry on what the Chazy stains draw for `decode_failed`, "the outcome palette's
+    degenerate white `#ECECF0`" as an option, which R-446 removes; it draws B as "the event palette's bounded" `#141418`,
+    unchanged. PR #225 (TASK-M2-09) adds `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed`/3, which the outcome view
+    draws black or, where the chart hatches it, with the hatch (R-446). PR #224 (TASK-M6-30) and PR #219 (TASK-M7-05) do
+    not use the outcome palette's classes.
+- **Options seen, the re-baseline:**
+  - (a) The swatches are the human's (R-444 to R-446), as R-434's dot was, so TASK-M2-32 re-renders the three goldens
+    under those rulings, each `BASELINES.md` row leading with the ruling, confirmed at it (as R-434's seven were).
+  - (b) TASK-M2-32 re-renders them as proposals, marked for the gate the human names below, and they are confirmed
+    there (R-110).
+- **Options seen, the gate that confirms the new swatches' evidence** (REQ-COL-104, REQ-COL-105, both M2, calibration):
+  - (a) The M2 gate, TASK-M2-32's milestone and the requirements' as filed.
+  - (b) None: R-444 to R-447 are the confirmation, and the evidence is checked in review, so REQ-COL-104 and
+    REQ-COL-105 become ordinary requirements (`kind` cleared).
+  - (c) The M7 gate, with the other palette calibrations (REQ-COL-061's colour-vision check, which runs over the same
+    entries, and PR #223's Chazy palettes, if it merges), the requirements moved to M7.
+- **Options seen, the M1 gate's record:** (i) the M1 gate stays passed, and the changed M1 requirements are re-checked
+  as "every earlier gate still green" at the next gate; (ii) the M1 gate is re-run once TASK-M2-32 has merged.
+- **Applied meanwhile:** REQ-COL-104 and REQ-COL-105 are filed in M2, TASK-M2-32's milestone. TASK-M2-32 waits on this
+  entry for its goldens' `BASELINES.md` decision only; its code and tests do not wait.
+- **Waits:** the `BASELINES.md` rows of TASK-M2-32's re-rendered goldens; REQ-COL-104's and REQ-COL-105's gate.
+
+## RQ-331: the sRGB outcome palette's closest pair is 0.175 (triple collision against escape body 1), not the 0.185 R-444's message gives, because the orange stays as triple collision *(measurement against a ruled figure, R-445, R-71, REQ-COL-104; context: TASK-M2-32)*
+
+*Found porting R-444 to R-448, measuring as REQ-COL-055 measures. Nothing is chosen; no swatch is changed. For the
+human: yes (a calibration's evidence, R-71).*
+
+- **File, section:**
+  - `decisions.md` § "R-444 — …", the human's message, "What to change": "the sRGB palette's closest pair rises from
+    0.175 to 0.185 with the t = 0 class gone (collision 0–2 / escape 2)".
+  - The same message, item 2: "Its orange #F29620 is reused for triple collision."
+  - `docs/design/principia_colour_composition.md` § "1.4 …", the triple outcomes' paragraph, where both values are
+    recorded.
+- **Measured** (Euclidean OKLab distance from 8-bit sRGB through dd_colouring §3.1's transforms; the classes named as
+  shown, R-449, the human's "collision 0–2 / escape 2" being collision 1–3 / escape body 3): in the nine-class palette
+  of R-444, the closest pair is triple collision `#F29620` against escape body 1 `#F0DE32`, **0.1751**; next,
+  collision 1–3 against escape body 3, **0.1847**; then collision 2–3 against triple ejection, 0.1926. The old
+  palette's 0.175 was collision @ t=0 against escape body 1, the same two colours. 0.185 is the closest pair only with the orange left
+  out of the palette.
+- **Options seen:**
+  - (a) Record 0.175 (triple collision / escape body 1) as the palette's closest pair, the swatches as ruled.
+  - (b) Change a swatch so that the closest pair is 0.185 or more (for instance triple collision's orange), which is a
+    new ruling.
+- **Applied meanwhile:** both figures are recorded, the human's and the measured; REQ-COL-104's evidence gives both.
+- **Waits:** REQ-COL-104's confirmation (RQ-330's gate).
+
+## RQ-332: R-447's C = 0.123 is in gamut at the eight listed hues but is not "the largest chroma in gamut at every hue at that L" (0.1224), and three of its swatches differ by one or two 8-bit steps from (0.72, 0.123, hue) *(measurement against a ruled figure, R-447, R-71, REQ-COL-103, REQ-COL-105; context: TASK-M2-32)*
+
+*Found porting R-447, measuring with dd_colouring §3.1's transforms. Nothing is chosen; no swatch is changed. For the
+human: yes (a calibration's evidence, R-71).*
+
+- **File, section:**
+  - `decisions.md` § "R-447 — …", the human's words: "each chromatic class keeps its own OKLab hue at L = 0.72 and C
+    = 0.123 (the largest chroma in gamut at every hue at that L)", and the table's swatches.
+  - `docs/design/principia_colour_composition.md` § "1.4 …", the variant's paragraph, where both values are recorded.
+- **Measured:**
+  - The largest chroma in the sRGB gamut at every hue at L = 0.72 is **0.1224**, at a hue near 199.8°: at C = 0.123 a
+    hue there is out of gamut. At each of the eight listed hues C = 0.123 is in gamut; the narrowest is escape body 3's 208° (R-449's name),
+    whose largest in-gamut chroma is 0.1238.
+  - The swatches as ruled measure L 0.719 to 0.721, C 0.122 to 0.124, each hue within 0.5° of its row. Rounding
+    (0.72, 0.123, hue) to 8 bits gives the ruled swatch for five rows and, for three, `#6DB976` (ruled `#6EB976`),
+    `#D9934A` (`#D99349`) and `#07B9CD` (`#09B9CD`).
+  - The variant's closest pair is 0.063 (escape body 2 / triple ejection, R-449's names); the human said it would be closer than the sRGB
+    palette by construction, and it is. Recorded, not a departure.
+- **Options seen:**
+  - (a) Keep C = 0.123 and the swatches as ruled; the parenthesis reads "in gamut at every listed hue", and the
+    swatches are the ruled hex values, not a computed rounding.
+  - (b) Take C = 0.1224 (in gamut at every hue) and recompute the eight swatches.
+  - (c) Keep C = 0.123 and replace the three swatches with the computed rounding.
+- **Applied meanwhile:** the ruled values are transcribed, the measured beside them; REQ-COL-103 pins the ruled hex
+  values and REQ-COL-105's evidence gives the measurements.
+- **Waits:** REQ-COL-105's confirmation (RQ-330's gate). TASK-M2-32 builds the ruled swatches meanwhile.
+
+## RQ-333: R-446 sends the η_E tags to "the η_E debug view", which the corpus does not define *(silence, R-446, R-441, R-72, REQ-COL-101; context: TASK-M2-32)*
+
+*Found porting R-446. Nothing is chosen. For the human: no; decidable per R-369, unless the human meant a new view.*
+
+- **File, section:**
+  - `decisions.md` § "R-446 — …", the human's words: "it now draws black in the outcome view, and the η_E debug view
+    is where the tags show".
+  - `docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)":
+    the `state` view draws `decode_failed` in its `dbg_cat` colour, and the `detail` view its failure category,
+    `decode_failed`'s codes 0 to 3 (payload §2). No view is named for `η_E`.
+  - `docs/design/principia_dd_decoder.md` § "3.7 Energy normalisation (optional; keep-or-drop is decision B9)" (the tags `ENERGY_UNSCALABLE` and
+    `ENERGY_INFEASIBLE`); the payload records each as `decode_failed` with a `detail` code, so no stored field tells
+    the two tags apart from each other or from `M01_TINY` beyond that code.
+- **Silence:** which debug view "the η_E debug view" is, and whether it must tell `ENERGY_UNSCALABLE`,
+  `ENERGY_INFEASIBLE` and the mass block's tags apart, which the payload's `detail` alone may not.
+- **Options seen:**
+  - (a) The existing `state` and `detail` views are where the tags show; nothing new is built.
+  - (b) A decoded-IC debug preset (fragment-side, from `ctx.chart.z`, as DECODE is, R-75) that re-runs the decode's
+    `η_E` branch and draws each tag in its own colour.
+  - (c) A further `detail` code for the energy tags, a payload change by ruling.
+- **Applied meanwhile:** render_gui_spec §G6's reworded line names the human's view and says the `state` and `detail`
+  views show the failure today, pointing here.
+- **Waits:** nothing built; REQ-COL-101's outcome-view behaviour does not depend on it.
+
+## RQ-334: the shape sphere's Euler landmarks `E₀, E₁, E₂` have no defined index, so R-449 cannot say how they are shown *(silence, R-449, R-14, R-50, R-72; context: TASK-M8-11, which draws the landmarks)*
+
+*Found porting R-449. For the human: no; decidable per R-369 (naming).*
+
+- **File, section:**
+  - `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per macro-step — lockstep,
+    ratified)": the table's symbols "$BC_{01}, BC_{12}, BC_{20}$" and "$E_0, E_1, E_2$", and "$\hat{\mathbf e}_j =
+    -\hat{\mathbf b}_j$ (equal masses)", where $\hat{\mathbf b}$ is indexed by two bodies and $\hat{\mathbf e}$ by one
+    index; "The table's labels are 0-based (R-22)".
+  - `decisions.md` § "R-449 — …": "Everything a person reads is 1-based … GUI labels"; "A pair is always named by its
+    bodies, smaller first."
+- **Silence:** `BC₀₁` names a pair by its bodies, so it is shown `BC₁₂` (applied in dd_integrator §3.7). `E_j`'s index
+  is not defined: it may be the body in the middle of the collinear configuration (the usual reading, the antipode of
+  the other two bodies' collision at equal masses), or the antipode's pair id, which R-449 forbids showing.
+- **Options seen:**
+  - (a) Define `E_j` as the configuration with body `j` in the middle, and show it `E_{j+1}`.
+  - (b) Name each Euler landmark by its two outer bodies, as the collision it is antipodal to (`E₁₂` opposite `BC₁₂`).
+- **Applied meanwhile:** nothing built; TASK-M8-11, which draws the landmarks' labels, writes the definition (R-72)
+  and its reviewers decide per R-369.
+- **Waits:** the Euler landmarks' shown labels only, in TASK-M8-11's shape-sphere widget. No requirement carries
+  `rq: RQ-334` (applied per R-369, code review 5547986569 on PR #226, F2): REQ-GUI-054, the landmarks TASK-M8-11
+  closes, names the binary collisions and the Lagrange poles, whose labels R-449 settles, and REQ-GUI-188's names;
+  the Euler labels are the definition TASK-M8-11 writes, so neither requirement waits.
+
+## RQ-335: R-449's shown body numbers are not the Burrau literature's: at `ν = 1/2` the shown body 1 is the mass-5 body *(possible confusion, R-449, R-22, R-73, REQ-SYS-016; context: TASK-M2-33)*
+
+*Found porting R-449. For the human: no; decidable per R-369 (R-449's table is explicit), recorded so that it is
+seen.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "4.2 Positions and masses — Burrau convention": "`m0 = c/(a+b+c)` …
+    `(m0,m1,m2) = (5,4,3)/12`"; the indexing note: "The Burrau family is conventionally written 1-based (bodies 1–3,
+    inner pair 1–2), and §4.2 translates it."
+  - `decisions.md` § "R-449 — …": "body 0 / 1 / 2 | body 1 / 2 / 3".
+- **The point:** R-449 shows internal body `k` as body `k + 1`. In the Burrau family internal body 0 has the mass
+  opposite the hypotenuse, 5/12 at the classical point; in the usual literature labelling of the Pythagorean problem
+  (masses 3, 4, 5 as bodies 1, 2, 3) that body is body 3. A reader comparing "body 1 escapes" with the literature reads
+  a different body.
+- **Options seen:**
+  - (a) R-449's map as ruled, everywhere; the Burrau presets' legends and the Inspector show each body's mass beside its
+    number.
+  - (b) A Burrau-only relabelling, which R-449's "one conversion function" does not allow without a ruling.
+- **Applied meanwhile:** (a)'s first half, R-449 as ruled; chart_reference's indexing note says the shown numbers are
+  not the literature's.
+- **Waits:** nothing.
+
+## RQ-336: R-449 names `.raw` and `.prnq` dumps, which the live corpus does not define *(silence, R-449, R-159, REQ-GEN-036; context: TASK-M2-33)*
+
+*Found porting R-449. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - `decisions.md` § "R-449 — …", item 5: "Machine-readable exports (CSV columns, JSON fields, .raw and .prnq dumps)
+    stay 0-based, and their headers or schema say so explicitly".
+  - `.prnq` appears only in `docs/experiments/briefs/principia_ARCHIVE_brief_structure_criterion.md` (prin-rs's tree
+    dumps, a record) and `workbench/`; no live contract defines a `.raw` or `.prnq` format.
+- **Silence:** which dumps of this project the two names mean.
+- **Applied meanwhile:** REQ-GEN-036 covers every machine-readable export the corpus defines (the export decoder of
+  generation root seam 13, the Measure tool's CSV) and any dump defined later, `.raw` and `.prnq` included when they
+  are; nothing more is built for them now.
+- **Waits:** nothing.
+
 ## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
 
 *Found by TASK-M2-15, building T1's sweep. Nothing is chosen.*

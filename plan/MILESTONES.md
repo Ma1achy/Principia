@@ -172,19 +172,27 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - Inverse encode, lookup and lock. The lock is chart construction on the CPU, in `SimConfig` (R-69).
 - The DECODE and ROUNDTRIP fragment presets and the round-trip residual view (R-75).
 - The chart reference values as unit and property tests.
+- The outcome view conformed to R-444 to R-448 (TASK-M2-32): nine physical classes, triple collision `#F29620` and
+  triple ejection `#611597`, `running` and every failure drawn `#141418`, a forbidden chart region hatched from the
+  chart's classification (REQ-COL-102), the OKLab-uniform swatch set, and `K = 9` in greyscale and hue mode. The
+  separation evidence (REQ-COL-104, REQ-COL-105, R-71) is filed in M2; which gate confirms it, and the re-rendered
+  goldens' decision, are RQ-330's.
+- Display names (R-449; TASK-M2-33): one conversion function names what a person reads, the bodies 1, 2, 3 and a pair
+  by its two bodies, never its pair id, on every surface built so far; machine-readable exports stay 0-based and say
+  so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 167 requirements** (and every earlier gate still green):
+**Exit gate — 174 requirements** (and every earlier gate still green):
 
 - DEC (39): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…047
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
 - CHART (47): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
-- GEN (6): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034
+- GEN (7): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036
 - RENDER (3): REQ-RENDER-025…027
-- COL (4): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070
-- GUI (6): REQ-GUI-002…007
+- COL (9): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105
+- GUI (7): REQ-GUI-002…007, REQ-GUI-188
 - TOOL (3): REQ-TOOL-029…030, REQ-TOOL-163
 - VAL (16): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174
 - SYS (7): REQ-SYS-010…016

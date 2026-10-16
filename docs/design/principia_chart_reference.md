@@ -15,7 +15,9 @@ chart produced them. So adding a chart means adding a `Φ`, nothing else.
 **Indexing note.** This document is **0-based throughout**: inner pair `(0,1)`, outer body `2`. The
 Burrau family is conventionally written 1-based (bodies 1–3, inner pair 1–2), and §4.2 translates it.
 The project-wide convention is 0-based throughout (R-22): `ICDescriptor` names `m0 m1 m2`, and pair id `k` is the side
-opposite body `k` (payload §2).
+opposite body `k` (payload §2). What a person reads is 1-based (R-449): internal body `k` is shown as body `k + 1`, a
+pair by its two bodies. The shown numbers follow that map, not the Burrau literature's numbering: §4.2 gives which mass
+each body has (RQ-335).
 
 ---
 

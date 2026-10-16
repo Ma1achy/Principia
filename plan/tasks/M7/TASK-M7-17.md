@@ -31,7 +31,8 @@ A preset is an entire serialised graph that replaces the current graph wholesale
 - `crates/render/src/presets.rs` — loader; `crates/engine/src/contract/stain/preset.rs` — locked flag, fork-on-edit.
 - The M1–M2 debug catalogue (field views, structural views, UV / DECODE / ROUNDTRIP, agreement presets) re-expressed as presets.
 - `crates/render/shaders/wgsl/frag/post/fuzziness.wgsl`, `frag/post/map_gradient.wgsl`.
-- Bivariate presets n̂ × FTLE, n̂ × diffusion, n̂ × ensemble spread, n̂ × t_end, outcome-state × FTLE.
+- Bivariate presets n̂ × FTLE, n̂ × diffusion, n̂ × ensemble spread, n̂ × t_end, outcome-state × FTLE, outcome-state × t_end (R-445).
+- The outcome palette's two swatch sets in the library: the sRGB default and the OKLab-uniform variant (R-447; TASK-M2-32 builds the set).
 
 ## Acceptance tests
 - `cargo test -p render preset_load` — load a preset: the graph equals the preset data; catalogue metadata and preset graph come from the same file (REQ-GUI-028).
@@ -45,3 +46,4 @@ A preset is an entire serialised graph that replaces the current graph wholesale
 ## Notes
 - Uses TASK-M7-01's debug taxonomy and addressing channel convention for the debug section's groups.
 - The §7.1 map presets are TASK-M7-18.
+- R-445 and R-447 (16 Oct 2026), applied per R-369: the outcome × `t_end` preset (outcome class in the colour slot, `t_end` in the brightness slot, white = early) is how a stain shows an outcome's timing, which the outcome palette no longer carries; it joins the bivariate list (REQ-GUI-030's note). The OKLab-uniform swatch set is TASK-M2-32's; this task lists it with the outcome palette.
