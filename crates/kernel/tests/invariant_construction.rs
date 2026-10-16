@@ -1,9 +1,10 @@
 //! The invariant-momentum construction (`kernel::decode::invariant`; chart_reference §2.2; dd_decoder §3.4, §5 test 8;
 //! REQ-DEC-020, REQ-DEC-021, REQ-DEC-022, REQ-DEC-046), each check at the f64 and the f32 instantiation natively (R-265):
 //! - `invariant_construction_targets`: the decoder's `construct`, over random `(u, v)` through §2.1's warp and a grid
-//!   of `(L_z, K*)`, near `K* → K_min` included, at fixed decoded configurations with unequal masses (PIT-9):
-//!   `Σpᵢ = 0`, `L_z(p) = L_z` and `K(p) = K*`, within the proposed tolerances ([`TOL_P`], [`TOL_L`], [`TOL_K`];
-//!   REQ-DEC-046), whose worst residuals it prints (decoder test 8; chart_reference §5.2).
+//!   of `(L_z, K*)`, near `K* → K_min` included, at fixed decoded configurations with unequal masses (PIT-9), and over
+//!   20 random warp pairs at each of 20 000 fuzzed decoded configurations: `Σpᵢ = 0`, `L_z(p) = L_z` and `K(p) = K*`,
+//!   within the proposed tolerances ([`TOL_P`], [`TOL_L`], [`TOL_K`]; REQ-DEC-046), whose worst residuals it prints,
+//!   with the worst `|I_c − 1|` (decoder test 8; chart_reference §5.2).
 //! - `invariant_construction_feasibility_exact`: `infeasible(I, K*, L_z)` is `2·I·K* < L_z²` in exact arithmetic, against
 //!   an integer reference, over near-boundary triples at every scale, subnormals included, sparse-bit triples whose
 //!   difference lands in each limb column, the exponent cases `E = −4 … 4`, zeros and signs; an f32 triple widened to
@@ -34,7 +35,10 @@
 //! **The tolerances** (REQ-DEC-046, proposed per R-71, for the human to confirm at the M2 gate): each residual is in
 //! units of the precision's `eps` times its scale: `|Σpᵢ|` of `Σ|pᵢ|`, `|L_z(p) − L_z|` of `|L_z| + √(2K*)` (the rigid
 //! part and the mixed part, `|L(w)| ≤ √I‖w‖_m = 1`), and `|K(p) − K*|` of `K*`. The residuals are formed in f64 from the
-//! construction's output, so at f32 they measure the f32 construction alone.
+//! construction's output, so at f32 they measure the f32 construction alone. **The bound on `K`:** the construction
+//! takes `I = 1`, so the rigid part's energy is `L_z²·I_c/2` with `I_c = Σmᵢ‖rᵢ‖²` of the rounded positions, and the
+//! `K` residual is at most `|I_c − 1|` (in eps, `L_z²/2 ≤ K*`) plus the construction's own rounding; the check prints
+//! the worst `|I_c − 1|` beside it.
 //!
 //! **Domain** (pitfalls §10): the construction alone, its inputs held fixed; no trajectory.
 
@@ -385,6 +389,16 @@ fn decode_at<R: Q>(z: [f32; 4]) -> (Masses<R>, Config<R>) {
     (masses, config)
 }
 
+/// Fuzzed controls `z_α z_β z_μ₁ z_μ₂`, each uniform on `[−6, 6]`, at f32.
+fn fuzzed(seed: u64, n: usize) -> Vec<[f32; 4]> {
+    let mut g = SplitMix::new(seed);
+    (0..n)
+        .map(|_| {
+            [0; 4].map(|_| ((g.next_u64() >> 40) as f64 / (1u64 << 24) as f64 * 12.0 - 6.0) as f32)
+        })
+        .collect()
+}
+
 // ── invariant_construction_targets ──────────────────────────────────────────────────────────────────────────────
 
 /// A construction under check.
@@ -392,6 +406,23 @@ type Construct<R> = fn(&Masses<R>, &Config<R>, R, R) -> Construction<R>;
 
 /// A decoder construction under check: `(masses, config, z_α, L_z, K*)`.
 type Decoded<R> = fn(&Masses<R>, &Config<R>, R, R, R) -> Construction<R>;
+
+/// The fuzzed configurations of the targets check, and the pairs at each.
+const FUZZ: (usize, usize) = (20_000, 20);
+
+/// `n` pairs through §2.1's warp at random `(s, t)`, `(K_max, γ)` drawn from the grid's three.
+fn warp_pairs(g: &mut SplitMix, n: usize) -> Vec<(f64, f64)> {
+    let mut unit = || (g.next_u64() >> 11) as f64 / (1u64 << 53) as f64;
+    (0..n)
+        .map(|_| {
+            let (k_max, gamma) =
+                [(1.0f64, 1.0), (0.5, 2.5), (40.0, 1.5)][(unit() * 3.0) as usize % 3];
+            let (s, t) = (unit(), unit());
+            let k = k_max * f64::powf(t, gamma);
+            ((2.0 * s - 1.0) * (2.0 * k).sqrt(), k)
+        })
+        .collect()
+}
 
 /// The `(L_z, K*)` pairs: §2.1's warp `K = K_max·t^γ`, `L_z = (2s − 1)·√(2IK)` at random `(s, t)` and at `s` near 0 and
 /// 1, and a grid of `K*` and `L_z/√(2K*)`, both edges of the parabola included.
@@ -446,13 +477,28 @@ fn residuals<R: Q>(
     ]
 }
 
-/// Every pair at every fixed decoded configuration: the outcome is the exact test's, and a feasible construction meets
-/// its targets within the tolerances.
+/// Every pair at every decoded configuration, the fixed ones with [`pairs`] and [`FUZZ`]'s fuzzed ones with random
+/// pairs through the warp: the outcome is the exact test's, and a feasible construction meets its targets within the
+/// tolerances. It records each configuration's `|I_c − 1|`, `I_c = Σmᵢ‖rᵢ‖²` of the rounded positions, in eps.
 fn check_targets<R: Q>(build: Decoded<R>, worst: &Worst) {
+    let fixed: Vec<[f32; 4]> = ZS.iter().map(|z| z.map(|x| x as f32)).collect();
     let grid = pairs(9);
-    for z in ZS.iter().map(|z| z.map(|x| x as f32)) {
-        let (masses, config) = decode_at::<R>(z);
-        for &(lz, k) in &grid {
+    let mut g = SplitMix::new(31);
+    for (n, z) in fixed.iter().chain(&fuzzed(29, FUZZ.0)).enumerate() {
+        let (masses, config) = decode_at::<R>(*z);
+        let inertia: f64 = (0..3)
+            .map(|i| masses.m[i].f() * (config.r[i][0].f().powi(2) + config.r[i][1].f().powi(2)))
+            .sum();
+        worst.see(
+            &format!("{} |I_c − 1|", R::NAME),
+            (inertia - 1.0).abs() / R::eps(),
+        );
+        let pairs = if n < fixed.len() {
+            grid.clone()
+        } else {
+            warp_pairs(&mut g, FUZZ.1)
+        };
+        for (lz, k) in pairs {
             let (lz, k) = (R::of(lz), R::of(k));
             let c = build(&masses, &config, R::of(f64::from(z[0])), lz, k);
             let feasible = !reference(1.0, k.f(), lz.f());
