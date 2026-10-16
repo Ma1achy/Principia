@@ -302,7 +302,12 @@ fn put(out: &mut [u32], at: usize, v: f32) {
 /// Writes `ic` as sample `i`'s words in `out`, the integrator's input buffer, in [`ic_words`]' order: constant offsets.
 #[inline]
 pub fn write_ic(out: &mut [u32], i: usize, ic: &Ic<f32>) {
-    let at = i * ic_words();
+    write_ic_at(out, i * ic_words(), ic);
+}
+
+/// Writes `ic`'s [`ic_words`] words in `out` from word `at`, in [`write_ic`]'s order.
+#[inline]
+pub fn write_ic_at(out: &mut [u32], at: usize, ic: &Ic<f32>) {
     put(out, at, ic.m[0]);
     put(out, at + 1, ic.m[1]);
     put(out, at + 2, ic.m[2]);
@@ -330,7 +335,12 @@ fn get(words: &[u32], at: usize) -> f32 {
 /// slice, so the kernel's SPIR-V keeps no slice pointer in a struct, which naga refuses.
 #[inline]
 pub fn read_ic(words: &[u32], i: usize) -> Ic<f32> {
-    let at = i * ic_words();
+    read_ic_at(words, i * ic_words())
+}
+
+/// The `(m, r, p)` whose [`ic_words`] words start at word `at` of `words`, as [`write_ic_at`] wrote them.
+#[inline]
+pub fn read_ic_at(words: &[u32], at: usize) -> Ic<f32> {
     Ic {
         m: [get(words, at), get(words, at + 1), get(words, at + 2)],
         r: [

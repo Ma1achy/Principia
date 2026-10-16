@@ -210,6 +210,105 @@ Nothing is chosen.*
   note naming this entry; the real engine's side has no trace, so draws nothing.
 - **Waits:** TASK-M8-28 (REQ-TOOL-098's histogram on real data). TASK-M6-28 does not wait.
 
+## RQ-295: When `lookup_rescaled` is raised: step 0 always rescales and records `λ`, but a notice must fire only if its operation did, and canonical inputs raise none *(silence, R-72, REQ-ENC-006, REQ-ENC-014; context: TASK-M2-07, TASK-M2-15)*
+
+*Found by TASK-M2-07, building `C`. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/design/principia_dd_encode.md` § "3.2 Canonicalisation `C` — the exact ordered procedure", step 0 (:73–75):
+    "`0  SCALE      I_in = Σ mᵢ‖rᵢ‖²  (CoM frame)          → r ← r/√I_in ;  p ← I_in^{1/4}·p`" and
+    "`record λ = I_in^{−1/2} ; notice lookup_rescaled`": the step runs, and the notice is issued, on every input.
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 2 — The scale gauge gap (missing from the original
+    inverse policy)" (:50): "Encode surfaces a **`lookup_rescaled`** notice carrying `λ`"; § "Part 6 — The canonical
+    inverse policy, completed" (:167): "**0. Rescale to `I = 1`** via the similarity transform (Part 2). Record `λ`;
+    notice `lookup_rescaled`."
+  - `docs/design/principia_dd_encode.md` § "4. Seams (obligations → integration tests)", seam 8 (:128): "the three
+    `lookup_*` notices fire iff their operation did"; REQ-ENC-014's statement, "lookup_rescaled, lookup_mirrored and
+    lookup_clamped must each fire if and only if their operation did", and its verify detail, "canonical inputs raise
+    no notice".
+- **Silence:** a canonical-frame decode has `I = 1` only to rounding (TASK-M2-07 measures `|I − 1|` up to 3 eps at
+  f64 and f32 on its output), so step 0 computes `λ = 1 ± a few ulps` and moves `r` and `p` by an ulp or so. Read
+  literally, Part 2 and step 0 raise `lookup_rescaled` on every input; read with seam 8 and REQ-ENC-014, a canonical
+  input raises none. The corpus does not say what counts as "the rescale's operation happened": `λ ≠ 1` bit for bit, a
+  tolerance on `|I_in − 1|` (and so a calibration), or something else; nor whether step 0 is skipped where the notice is
+  not raised, which would make `C` an exact no-op on canonical decodes (dd_decoder §5 test 5 asks only "rotation angle
+  ≈ 0, mirror not taken").
+- **Options seen:**
+  - (a) Raise it iff `λ ≠ 1` bit for bit; step 0 always runs. Canonical decodes then raise it at most rounding
+    rescales, against REQ-ENC-014's "canonical inputs raise no notice".
+  - (b) Raise it iff `|I_in − 1| > τ_I`, a new calibration constant (R-71) in eps of the precision, and still run step 0
+    everywhere; the notice reports a rescale the user would notice, not rounding.
+  - (c) As (b), and skip step 0 (select `λ = 1`, `r`, `p` unchanged) where `|I_in − 1| ≤ τ_I`, so `C` is an exact
+    no-op in scale on canonical input and the notice fires exactly when the state was rescaled.
+  - (d) Always raise it (every lookup reports `λ`), and amend REQ-ENC-014's "canonical inputs raise no notice" for
+    `lookup_rescaled`.
+- **Applied meanwhile:** `kernel::canon::canonicalise` (TASK-M2-07) runs step 0 on every input and records `λ` in its
+  output (`Canonical::lambda`, the notice's value); it forms no raised/not-raised flag for `lookup_rescaled`.
+  `lookup_clamped` and `lookup_mirrored` are flags, each raised iff its operation did. `scale_step` asserts `λ = 1/2`
+  is carried on the 2× Burrau state, which every option raises.
+- **Waits:** REQ-ENC-006's and REQ-ENC-014's notice (`rq: RQ-295`): TASK-M2-07's closing of REQ-ENC-006, and
+  TASK-M2-15's of REQ-ENC-014. TASK-M2-07's PR does not wait: it merges with REQ-ENC-006 held, not closed.
+
+## RQ-296: What `C` outputs where `I_in` is 0 or rounds to 0 or `+∞`: all three bodies coinciding, an underflowing or an overflowing state, where step 0 divides by `√I_in` before step 2's guard *(silence, R-72, R-23, R-13, R-436, REQ-DEC-002; context: TASK-M2-07, TASK-M2-15)*
+
+*Found by TASK-M2-07, building `C`. Nothing is chosen.*
+
+- **File, section:**
+  - `decisions.md` § "R-23 — Encode order: CoM subtraction precedes `I` *(CD-3)*": "The operational order 1a subtract
+    CoM → 0 rescale → 1b subtract boost → 2 rotate → 3 mirror is normative." So step 0's `r ← r/√I_in` runs before
+    step 2's `ρ = 0` guard.
+  - `docs/design/principia_dd_encode.md` § "3.2 Canonicalisation `C` — the exact ordered procedure", step 0:
+    "`r ← r/√I_in ;  p ← I_in^{1/4}·p`", "`record λ = I_in^{−1/2}`"; step 2: "`ρ = 0 → reject (coincident inner
+    pair)`", which R-13 makes `lookup_clamped`.
+  - `decisions.md` § "R-13 — Lookup has no coincident-bodies rejection *(closes RQ-11)*": "Exactly coincident bodies
+    can't be represented, and the lookup ladder's range check catches them with `lookup_clamped`."
+    `docs/contracts/principia_inverse_encode_contract.md` § "Part 6", step 2: "`ρ̃ = 0` (exactly coincident inner pair)
+    can't be represented → `lookup_clamped` (R-13)."
+  - `decisions.md` § "R-436 — …", *Applied*, "The producers select the pole values": a producer never forms `±∞` by
+    `1/0`, and chooses a pole's value by comparing its divisor with 0 and a select.
+- **Silence:** with positive masses, `I_in = 0` exactly when the three bodies coincide. Then `ρ = 0`, and R-13 and
+  Part 6 give the notice, `lookup_clamped`; R-437 gives step 2's `φ = 0`. But step 0 runs first and divides by
+  `√I_in = 0`, and nothing defines `C`'s output there: `λ = I_in^{−1/2}` is `+∞`, `r/√I_in` is `0/0`, and
+  `I_in^{1/4}·p` is `0` (a state with no kinetic energy). No section point has `I = 1` and all bodies at one place.
+  In floating point `I_in` also reaches 0 and `+∞` with the bodies apart (physics review 5542989202 P1), where the
+  corpus is as silent:
+  - **Underflow:** `I_in` rounds to 0 while the bodies are still apart: at f64 below about `1e-162` per coordinate
+    (e.g. `r₀,₁ = ∓1e-170`, masses `(¼, ¼, ½)`), at f32 below about `4e-23` (about `1e-19` where a GPU
+    flushes subnormals). There `ρ ≠ 0`, so no `lookup_clamped` fires, and step 0 cannot reach `I = 1`.
+  - **Overflow:** `I_in` rounds to `+∞`, at f64 above about `1e154` per coordinate and at f32 above about `1e19`. Then
+    `λ = 0`, `r/√I_in` is `±0`, and `I_in^{1/4}·p` is `±∞`, or `0·∞` = NaN for a zero component; and WGSL may assume
+    there are no infinities (R-436), so the GPU's arithmetic there is not pinned.
+- **Options seen:**
+  - (a) Skip step 0 at `I_in = 0` (select divisor 1, so `r` stays as it is, `p` unscaled, `λ = 1`), and let
+    `lookup_clamped` carry the coincident case: the state passes through un-normalised and flagged. Underflow and
+    overflow are not covered by this alone.
+  - (b) Record `λ = +∞` by its bits (R-436's producer rule), `r = 0`, `p = 0`, flagged `lookup_clamped`.
+  - (c) Define `C`'s output there as a fixed sentinel state, or as undefined with the flag the only output a consumer
+    may read (the validation ladder rejects the pixel before decode).
+  - (d) For underflow and overflow: rescale in two steps (by a power of two first, exact, then by the rest), so `I_in`
+    is formed from scaled coordinates and neither rounds to 0 nor `+∞` for any finite state with the bodies apart.
+  - (e) For underflow and overflow: a range check on `I_in` (against calibrated bounds, R-71) that raises
+    `lookup_clamped`, or a notice of its own, with the output defined as in (a), (b) or (c).
+- **Applied meanwhile:** `kernel::canon::similarity` (TASK-M2-07) selects the divisor `√I_in` as 1 where `I_in = 0`,
+  so no `1/0` is formed (R-436). What the code then does in each case (`crates/kernel/src/canon.rs`, the module's
+  note):
+  - **`I_in = 0`, bodies coincident:** `r` stays 0, `p ← I_in^{1/4}·p = 0`, `λ = 1`, `lookup_clamped`, `φ = +0`.
+  - **`I_in` rounded to 0, bodies apart:** the same select, so `r` is left unscaled (`I ≈ 0`, not 1), every momentum
+    becomes 0 (`√√0 = 0`), `λ = 1`, and, since `ρ ≠ 0`, no `lookup_clamped`: the state leaves `C` off the section,
+    unflagged.
+  - **`I_in = +∞`:** `r` becomes `±0`, `λ = 0`, every momentum NaN on the CPU (`±∞` or `0·∞`, then step 1b's sums and
+    the rotation). Step 2's guard and angle and step 3's decision are read from the input's pair differences before
+    step 0's division (`kernel::canon`, "The branch inputs, read before step 0"), so `lookup_clamped` is raised iff
+    `ρ = r₁ − r₀` is 0, `φ` is that `ρ`'s angle, and the mirror is R-82's on the state's own `λ̃_y`, which the
+    decision's power-of-two rescale keeps in range; on the GPU the arithmetic on `∞` is unpinned.
+
+  That only keeps the arithmetic free of `1/0`. The tests assert `lookup_clamped` and `φ = +0` at the coincident case
+  (R-13, R-437) and that the GPU forms no non-finite value there; at underflow, that the case is reached and no `1/0` is
+  formed (every output finite, `canon_inertia_extremes`); at overflow, only that the case is reached. Nothing about the
+  state or `λ`.
+- **Waits:** REQ-DEC-002 (`rq: RQ-296`), TASK-M2-07's closing of it. TASK-M2-07's PR does not wait: it merges with
+  REQ-DEC-002 held, not closed.
+
 ## RQ-297: a ledger `scale` change moves the payload schema version, which invalidates every cached payload, but seam 5 says it re-styles the view "with **zero** recompute" *(conflict, R-36, REQ-COL-032; context: TASK-M7-05)*
 
 *Found by TASK-M7-05's review (qa, PR #219, `qa_ledger_scale_restyle_keeps_the_sim_key`, since restated; see
@@ -255,6 +354,132 @@ Nothing is chosen.*
   `qa_ledger_scale_restyle_leaves_the_sim_buffer`, which asserts neither side of this entry: it covers the render side
   only (the frame re-styles, the sim buffer reads back byte for byte), and the schema-version side waits on this
   entry.
+
+## RQ-298: An explicit `fma` is not fused on every backend: lavapipe evaluates it as a rounded product and an add, against the determinism note's rule 6; and a GPU that flushes subnormals rounds differently from one that keeps them, which the corpus does not address *(conflict and silence: corpus premise against measurement, R-34, R-84, REQ-INT-064; context: TASK-M2-07)*
+
+*Found by TASK-M2-07's CI (qa review 5543656052 R1). TASK-M2-07 no longer relies on the premise; other branch inputs do.*
+
+- **File, section:**
+  - `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)", rule 2:
+    "an **explicitly written** `fma(dy, dy, dx*dx)` (explicit `fma` forces every backend onto the identical fused op
+    instead of choosing)"; rule 6: "Written as `a*b + c`, one compiler contracts and another does not; written as
+    `fma(a, b, c)`, every backend takes the fused path."
+  - `docs/design/principia_dd_decoder.md` § "3.1 Mass", "Its premise": "The form holds only on a backend that keeps an
+    explicit `fma` fused and does not fold the `×1`. … Whether the kernel's SPIR-V keeps GLSL.std.450 `Fma` fused, which
+    TASK-M2-02's qa review observes needs the `NoContraction` decoration, and whether rust-gpu emits that decoration, is
+    a check for the second-backend parity run, not settled here."
+  - `decisions.md` § R-34: "Rule 6 extends to every branch input that consumes multi-op arithmetic", and
+    REQ-INT-064: "must use explicit `fma` in a fixed written form".
+- **Conflict:** CI's `gpu-lavapipe` and mutants shards (Mesa 25.2.8 lavapipe, Vulkan, `PRIN_GPU_BACKEND=vulkan`; run
+  38857393629, jobs 116831834076 and 116831834067) failed `canonicaliser_seam_sweep` at 1c1037ae: "the backends'
+  mirror branches differ at seam state 3". At that head the decision was built from explicit `fma`s. qa recomputed it
+  on the CPU with every `fma` as an unfused `a*b + c`, and that reproduces lavapipe's branch at state 3 and flips
+  states 4, 6, 7, 11 and 15 too. The same code gives CPU-f32's branch on Metal. So on lavapipe an explicit `fma` is not
+  the single fused rounding that rule 6 says every backend takes. (Whether WGSL's `fma` or SPIR-V's GLSL.std.450 `Fma`
+  must be fused is not settled here: the specifications were not checked from this machine, and dd_decoder §3.1
+  already leaves it open.) Every
+  branch input built on rule 6's premise can therefore fork between Metal and lavapipe at its rounding edges:
+  dd_decoder §3.1's `M₀₁ = fma(m₁, 1, m₀)` and rule 2's quantised `d²` among them.
+- **Silence (a second hazard): subnormal flushing.** Metal flushes subnormal results; the CPU keeps them. A branch
+  input with an intermediate below the smallest normal (f32: about `1.2e-38`) can therefore fork on identical inputs,
+  fused or not. The six rules in the note do not mention it. Measured on this PR (physics review 5544295057 P3): at
+  66974583 the mirror decision's products, with `δ_λ² ≈ 2^−80` among their factors, went subnormal in their low parts on
+  hierarchical states, and over 20 000 states per ratio CPU-f32 and Metal forked on 16 at an inner/outer ratio of
+  `1e-3`, 482 at `1e-4` and 10 262 at `1e-6`. At `λ̃_y = −2δ_λ` Metal missed the mirror on 8 093 at `1e-7` and on all
+  at `1e-8`.
+- **Options seen:**
+  - (a) Correct rules 2 and 6, R-34 and REQ-INT-064. A branch input that must agree everywhere is built only from
+    operations every IEEE backend rounds alike, whether it fuses or flushes. For example, TASK-M2-07's
+    `IeeeBits::product` (operands split at their bits so the partial products are exact) is used on mantissas kept in
+    `[1, 2)` with integer exponents, so no intermediate is subnormal. This costs more operations per branch input, and
+    each input's form has to be rewritten and re-proved.
+  - (b) Keep rule 6 and require it of the toolchain: `NoContraction` and a fused `Fma` through rust-gpu → naga → each
+    driver, and subnormals kept (or flushed) alike, checked per backend at the parity gate. A backend that fails the
+    check is out of scope for branch parity. The existing forms stay, and the cost moves into toolchain checks; whether
+    every target driver can meet it is unknown.
+  - (c) Keep rule 6 for Metal, the build machine's backend, and record lavapipe, and any backend that flushes or does
+    not fuse differently from Metal, as one whose branch parity is not claimed. Nothing in the code changes, and the
+    parity claim narrows.
+- **Applied meanwhile (TASK-M2-07, per R-369 on qa R1 and physics P3):** `C`'s mirror decision and guard use no
+  `fma`. The guard is a lone subtraction. The decision carries mantissas in `[1, 2)` with integer exponents, and its
+  products are `IeeeBits::product` (`kernel::canon`, "The branch inputs, read before step 0"). **This departs from
+  R-34's letter and from REQ-INT-064** ("explicit `fma` in a fixed written form"), and option (b) would undo it, so
+  REQ-DEC-017's form is among what this entry holds. Nothing else changes: `M₀₁` and the other `fma`-built branch
+  inputs stay as they are, pending a ruling.
+- **Holds** (`rq: RQ-298`, applied per R-369 from physics review 5544295057; every branch input built with an explicit
+  `fma`, or this PR's departure from that):
+
+  | Requirement | Why |
+  |---|---|
+  | REQ-DEC-011 | `crates/kernel/src/decode/mass.rs:73`: `M₀₁ = fma(m₁, 1, m₀)` feeds `DEGENERATE(M01_TINY)` |
+  | REQ-VAL-017 | the tags must be bit-identical across backends, `M01_TINY` among them |
+  | REQ-VAL-079 | the no-fork test's domain |
+  | REQ-INT-087 | `crates/kernel/src/shape.rs` `disc_input` (every term an explicit `fma`) feeds `in_disc`; the result must match exactly across backends |
+  | REQ-INT-088 | the march's disc test, through `point_disc_input` |
+  | REQ-EVT-021 | collision `d² < r_coll²`, specified with an explicit `fma`, not yet built (TASK-M3-11) |
+  | REQ-INT-066 | the `N_sub` bucket's `d² = fma(dy, dy, dx·dx)`, not yet built (TASK-M4-01) |
+  | REQ-INT-064 | every integrator branch input in explicit `fma`, not yet built (TASK-M4-03) |
+  | REQ-INT-058 | the compile-discipline checklist's "explicit `fma`" |
+  | REQ-DEC-017 | this PR's mirror decision, which departs from R-34's letter (above) |
+  | REQ-DEC-002 | `crates/kernel/src/canon.rs`'s `fma` CoM and `I_in` feed `similarity`'s `I_in = 0` select (also held by RQ-296) |
+  | REQ-DEC-022 | TASK-M2-09's feasibility input (`fma` per R-34), not yet built |
+
+  REQ-INT-089 is not held: it is same-backend, split dispatches.
+- **Waits:** the twelve requirements above. TASK-M2-07's PR does not wait.
+
+## RQ-299: The pinned nightly miscompiles plain Rust at every optimisation level above 0: two calls of a by-value closure on one array lose the first call's writes, in rustc's MIR GVN pass, and the workspace's native build, the kernel's f64 instantiation included, is built on that compiler *(conflict: toolchain against the native build, R-169, canonical_spec §1 item 2; context: TASK-M2-07)*
+
+*Found by TASK-M2-07's code review (5544375930). Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)", item 2: "to **f64**
+    for the CPU via ordinary `rustc`"; item 6: "The native build can also run the survey headless and generate the
+    Paper-2 numbers".
+  - `decisions.md` § "R-169 — The GPU CI jobs, and an install step for every toolchain *(closes G1, H5)*":
+    "`rust-toolchain.toml` for the rust-gpu pin (TASK-M0-14)". `rust-toolchain.toml` pins `nightly-2026-04-11`
+    (rustc 1.96.0-nightly 02c7f9bec 2026-04-10), and the whole workspace builds on it.
+- **Conflict:** `stage_canon_native` (`crates/kernel/tests/canon.rs`) fails under
+  `cargo test -p kernel --release --test canon`, and under the dev profile at opt-level 1, 2 and 3; it passes at
+  opt-level 0, which every CI test job builds at, so CI does not see it. In `notice_states` (canon.rs:675)
+  `pair(flip(plain))` returns `pair(plain)`: the flip is lost. The kernel's code is not involved. A standalone file
+  with no dependencies reproduces it:
+  ```rust
+  fn main() {
+      let plain: [[f32; 2]; 3] = [[-1.0, -0.5], [1.0, -0.5], [0.0, 0.5]];
+      let flip = |mut x: [[f32; 2]; 3]| { for v in x.iter_mut() { v[1] = -v[1]; } x };
+      let pair = |mut x: [[f32; 2]; 3]| { x[1] = x[0]; x };
+      let s = [flip(plain), pair(flip(plain))];
+      println!("{} (want 0.5)", s[1][0][1]);
+  }
+  ```
+  Measured on this machine (`rustc +<toolchain> -C opt-level=<n>`):
+
+  | Toolchain | opt-level 0 | 1 | 2 | 3 |
+  |---|---|---|---|---|
+  | nightly-2026-04-11 (the pin) | 0.5 | −0.5 | −0.5 | −0.5 |
+  | stable 1.99.0 (b940084d7 2026-09-28) | 0.5 | 0.5 | 0.5 | 0.5 |
+
+  On the pin, `-Zmir-opt-level=0` or `-Zmir-enable-passes=-GVN` at opt-level 1 gives 0.5, and opt-level 0 with
+  `-Zmir-opt-level=2` gives −0.5: the fault is in rustc's MIR GVN pass, not LLVM. Close variants pass: the same
+  functions as `#[inline(always)] fn`s; `[flip(plain), pair(flip(plain))]` without the first `flip(plain)`, or with
+  `pair(plain)` in its place; a two-element `i32` array. So the trigger is not characterised, and no search can show
+  that shipped code is free of it.
+- **Shipped code searched:** every by-value `mut` closure parameter outside the test files (`git grep` on
+  `crates/*/src` and `xtask/src`, the patterns `|mut x: T` and `|mut x|`): `gui/src/keyboard/scopes.rs:279` (a
+  `usize` loop counter), `engine/src/compute/tests.rs:380` (a test module), and six closures over a writer, a pipe or
+  an iterator item, each called once per item. None takes a `Copy` aggregate and is called twice on the same value,
+  as the reproducer does. Not checked: whether rust-gpu's SPIR-V build of the kernel runs the same MIR pass.
+- **Where it can matter:** release builds, which no CI job builds and the human's Mac uses for benchmarks (R-186),
+  and the native survey build (canonical_spec §1 item 6).
+- **Options seen:**
+  - (a) Bump the pin to a nightly without the fault. It must be one `rustc_codegen_spirv` 0.10.0-alpha.1 builds
+    against, or rust-gpu moves with it; whether such a nightly exists was not checked.
+  - (b) Keep the pin and turn the pass off for the native build: `-Zmir-enable-passes=-GVN` in the workspace's
+    rustflags. This is a nightly flag, changes build configuration (a ruling), and costs some optimisation.
+  - (c) Keep the pin and the passes; report the fault upstream, and add a CI job that runs the native tests at the
+    release profile, so a miscompile a test covers is seen. Code no test covers stays exposed.
+- **Applied meanwhile:** nothing. `stage_canon_native` is unchanged, not restructured around the fault.
+- **Waits:** nothing held: no shipped code was found with the pattern. TASK-M2-07's PR does not wait.
 
 ## RQ-350: chart_reference §2 says the invariant charts "fix geometry and mass", but no passage says where the frozen configuration and masses come from *(silence, R-72, REQ-CHART-017; context: TASK-M2-12, gap G8)*
 
