@@ -7,14 +7,24 @@
 // egui-wgpu's own output is on the targets it chooses. `fs_stain` draws the Stain editor's preview of the same
 // stand-in in the look the mock takes from its stain graph (`stain.rs`): colour or a grey ramp, a late fade to
 // `look.y`, multiplied, its lightness replaced, or passed through, and shifted by the source field's phase.
+// `fs_main` draws the figure at `chart.place`, the shown figure's rect in the viewport (`crate::layout::Placement`):
+// with the egui layer hidden the viewport is the window and the field continues past the shown rect at the same
+// scale, an affine chart, each point where the shown layout puts it (R-406). Past the shown rect, a pixel whose field
+// point lies in `chart.invalid`, the region the mock flags invalid (a test hook), is drawn with the shared prelude's
+// hatch, `debug_invalid`, as forbidden (R-407's fallback). The canvas puts the prelude ahead of this file, so its
+// uniform block's binding, 0, is left to it.
 
 struct ChartUniform {
     origin: vec4<f32>,
     q1: vec4<f32>,
     q2: vec4<f32>,
+    // The shown rect's centre (xy) and half-size (zw) in the viewport's normalized device coordinates, Y-up.
+    place: vec4<f32>,
+    // The region flagged invalid, `[s₀, t₀, s₁, t₁)` of the field.
+    invalid: vec4<f32>,
 };
 
-@group(0) @binding(0) var<uniform> chart: ChartUniform;
+@group(0) @binding(1) var<uniform> chart: ChartUniform;
 
 struct VsOut {
     @builtin(position) position: vec4<f32>,
@@ -66,11 +76,15 @@ struct StandIn {
     warp: vec2<f32>,
 };
 
-// The stand-in's field at `uv`, its noise shifted by `shift`.
+// The stand-in's field at `uv` of the whole viewport, its noise shifted by `shift`.
 fn stand_in(uv: vec2<f32>, shift: vec2<f32>) -> StandIn {
-    let x = uv.x * 2.0 - 1.0;
-    let y = 1.0 - uv.y * 2.0;
-    let z = chart.origin.xyz + x * chart.q1.xyz + y * chart.q2.xyz;
+    return stand_in_at(vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0), shift);
+}
+
+// The stand-in's field at the field point `xy` = (2s − 1, 2t − 1), `t` Y-up, its noise shifted by `shift`: any point
+// of the plane, the chart affine past `[0, 1]²`.
+fn stand_in_at(xy: vec2<f32>, shift: vec2<f32>) -> StandIn {
+    let z = chart.origin.xyz + xy.x * chart.q1.xyz + xy.y * chart.q2.xyz;
     let p = (z.xy + vec2<f32>(1.0, 1.0)) * vec2<f32>(3.0, 2.5) + shift;
     let phase = vec2<f32>(1.7, -1.1) * z.z;
     let warp = vec2<f32>(fbm(p + vec2<f32>(3.1, 1.7) + phase), fbm(p + vec2<f32>(8.3, 2.8) - phase));
@@ -90,14 +104,28 @@ fn palette(f: StandIn) -> vec3<f32> {
     return colour;
 }
 
+// Whether the field point `xy` is drawn as forbidden: past the shown rect, `[0, 1]²`, and flagged invalid.
+fn forbidden(xy: vec2<f32>) -> bool {
+    let past = abs(xy.x) > 1.0 || abs(xy.y) > 1.0;
+    let st = (xy + vec2<f32>(1.0, 1.0)) * 0.5;
+    let flagged = all(st >= chart.invalid.xy) && all(st < chart.invalid.zw);
+    return past && flagged;
+}
+
 @fragment
 fn fs_main(in: VsOut) -> @location(0) vec4<f32> {
-    return vec4<f32>(palette(stand_in(in.uv, vec2<f32>(0.0, 0.0))), 1.0);
+    let viewport = vec2<f32>(in.uv.x * 2.0 - 1.0, 1.0 - in.uv.y * 2.0);
+    let xy = (viewport - chart.place.xy) / chart.place.zw;
+    if (forbidden(xy)) {
+        // The hatch from the pixel's position, as the render contract draws it; linear, so encoded as the stand-in is.
+        return vec4<f32>(linear_to_srgb(debug_invalid(in.position.xy)), 1.0);
+    }
+    return vec4<f32>(palette(stand_in_at(xy, vec2<f32>(0.0, 0.0))), 1.0);
 }
 
 // The preview's look: colour (1) or a grey ramp (0); the darkest the late fade goes; the combiner, 0 Multiply,
 // 1 Replace-L, 2 pass-through; and the source field's phase.
-@group(0) @binding(1) var<uniform> look: vec4<f32>;
+@group(0) @binding(2) var<uniform> look: vec4<f32>;
 
 @fragment
 fn fs_stain(in: VsOut) -> @location(0) vec4<f32> {

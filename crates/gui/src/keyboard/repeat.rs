@@ -2,15 +2,15 @@
 //! delay (DAS), it acts again, then once every interval (ARR) until released. The system's own key repeats are
 //! ignored, so the rate is the GUI's on every platform.
 //!
-//! The delay and the interval (REQ-GUI-146) are calibrations proposed here (R-71), used provisionally until the human
-//! confirms them at the M8 gate (R-182): the delay is Windows' default keyboard delay, between X11's 660 ms and
+//! The delay and the interval (REQ-GUI-146) are calibrations (R-71), proposed by TASK-M6-25 and confirmed by R-404, so
+//! no longer provisional (R-182): the delay is Windows' default keyboard delay, between X11's 660 ms and
 //! Windows' shortest 250 ms; the interval is X11's default 25 repeats a second, within Windows' 2.5 to 30.
 
 use eframe::egui::{Key, Modifiers};
 
-/// The delay before a held key first repeats, in milliseconds: proposed, R-71 (REQ-GUI-146).
+/// The delay before a held key first repeats, in milliseconds: confirmed by R-404 (REQ-GUI-146; R-71).
 pub const DELAY_MS: u64 = 500;
-/// The interval between repeats, in milliseconds (25 a second): proposed, R-71 (REQ-GUI-146).
+/// The interval between repeats, in milliseconds (25 a second): confirmed by R-404 (REQ-GUI-146; R-71).
 pub const INTERVAL_MS: u64 = 40;
 
 /// `seconds` of egui's input time in whole milliseconds, rounded.

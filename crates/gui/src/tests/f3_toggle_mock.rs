@@ -1,6 +1,6 @@
-//! `f3_toggle_mock` (REQ-GUI-168; RQ-248): F3 hides and shows the egui layer over the stand-in figure, which stays
-//! identical underneath: the captures with F3 on and off are pixel-identical over the figure's rect, and with F3 off
-//! the rest of the window is the clear colour. A raised warning and error change the footer's counts and nothing over
+//! `f3_toggle_mock` (REQ-GUI-168; RQ-248, revised by R-406): F3 hides and shows the egui layer over the stand-in
+//! figure, which stays identical underneath: the captures with F3 on and off are pixel-identical over the shown
+//! figure's rect. With F3 off the figure fills the rest of the window (`f3_fills_window_mock`). A raised warning and error change the footer's counts and nothing over
 //! the figure; a footer click opens the console window frame. These run on the GPU, on `PRIN_GPU_BACKEND`'s backend
 //! (R-206), which the mock's canvas logs.
 
@@ -33,10 +33,6 @@ fn pixel(shot: &Shot, x: usize, y: usize) -> [u8; 4] {
     shot.rgba[i..i + 4].try_into().unwrap()
 }
 
-fn inside(rect: [usize; 4], x: usize, y: usize) -> bool {
-    (rect[0]..rect[2]).contains(&x) && (rect[1]..rect[3]).contains(&y)
-}
-
 /// The two captures are identical over `rect`.
 fn check_same_figure(a: &Shot, b: &Shot, rect: [usize; 4]) {
     for y in rect[1]..rect[3] {
@@ -46,22 +42,6 @@ fn check_same_figure(a: &Shot, b: &Shot, rect: [usize; 4]) {
                 pixel(b, x, y),
                 "the figure differs at ({x}, {y})"
             );
-        }
-    }
-}
-
-/// Every pixel of `shot` outside `rect` is `clear`.
-fn check_clear_outside(shot: &Shot, rect: [usize; 4], clear: [u8; 4]) {
-    let [w, h] = shot.size.map(|v| v as usize);
-    for y in 0..h {
-        for x in 0..w {
-            if !inside(rect, x, y) {
-                assert_eq!(
-                    pixel(shot, x, y),
-                    clear,
-                    "drawn outside the figure at ({x}, {y}) with F3 off"
-                );
-            }
         }
     }
 }
@@ -80,7 +60,6 @@ fn f3_toggle_mock_figure_identical_underneath() {
     );
     check_same_figure(&on, &off, rect);
     let clear = clear_colour(&egui::Visuals::dark()).to_array();
-    check_clear_outside(&off, rect, clear);
     assert_eq!(on.rgba, back.rgba, "F3 twice is not the shell again");
     // The figure is drawn: it is not the clear colour, and not uniform.
     let centre = pixel(&on, (rect[0] + rect[2]) / 2, (rect[1] + rect[3]) / 2);
@@ -97,13 +76,8 @@ fn f3_toggle_mock_figure_identical_underneath() {
         texts(&off.names)
     );
     assert!(texts(&on.names).iter().any(|t| t == MOCK_TAG));
-    rejects(
-        "the shell with F3 on, which draws outside the figure",
-        || check_clear_outside(&on, rect, clear),
-    );
-    rejects("a figure rect shifted by a pixel", || {
+    rejects("a figure rect grown by a pixel", || {
         check_same_figure(&on, &off, [rect[0] - 1, rect[1], rect[2], rect[3]]);
-        check_clear_outside(&off, [rect[0] + 1, rect[1], rect[2], rect[3]], clear);
     });
 }
 

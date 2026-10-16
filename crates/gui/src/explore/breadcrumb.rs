@@ -2,7 +2,8 @@
 //! navigation mode and blue in interaction mode (R-409), and the breadcrumb in the top bar (e.g. "Manifold view ›
 //! Navigate › zoom"). Nothing else changes on screen."). Both are filled from `ViewUI`'s focus scope
 //! (gui_state_contract §2), and both are drawn in the mode's colour: in interaction mode 01_main.png's and
-//! 07_keyboard.png's blue, egui's dark theme's hyperlink colour (R-404); in navigation mode [`NAVIGATION`]'s orange.
+//! 07_keyboard.png's blue, egui's dark theme's hyperlink colour, confirmed by R-404; in navigation mode
+//! [`NAVIGATION`]'s orange (R-409).
 
 use eframe::egui::{self, Color32, Id, LayerId, Order, RichText, Stroke, StrokeKind, Ui};
 use engine::contract::view_ui::{Focus, KeyMode};
@@ -14,15 +15,16 @@ use crate::keyboard::Place;
 pub const SEPARATOR: &str = " › ";
 /// The glyph before the breadcrumb, as 01_main.png draws it.
 pub const GLYPH: &str = "⌨";
-/// The ring's width, in points.
+/// The ring's width, in points: confirmed by R-404.
 pub const RING_WIDTH: f32 = 2.0;
-/// The ring's corner rounding, in points (a look choice, flagged for the human, R-390).
+/// The ring's corner rounding, in points (a look choice, R-390): confirmed by R-404.
 pub const RING_ROUNDING: f32 = 2.0;
 /// The navigation mode's orange (R-409: "it should be orange when you're navigating"): a look choice, R-390, an
 /// orange apart from the theme's warning amber and the lock's gold, as bright on the dark panels as the blue.
 pub const NAVIGATION: Color32 = Color32::from_rgb(240, 120, 40);
 
-/// The ring's colour in `mode`: [`NAVIGATION`]'s orange, or, interacting, the theme's hyperlink blue (R-404, R-409).
+/// The ring's colour in `mode`: [`NAVIGATION`]'s orange, or, interacting, the theme's hyperlink blue, confirmed by
+/// R-404 and kept by R-409 for interaction mode.
 pub fn colour(visuals: &egui::Visuals, mode: KeyMode) -> Color32 {
     match mode {
         KeyMode::Navigation => NAVIGATION,
