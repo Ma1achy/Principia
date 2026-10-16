@@ -492,8 +492,8 @@ tilt means).*
   - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "`q'(τ) = normalise( cos τ · q + sin τ ·
     d_target )        τ ∈ [−90°, +90°]`"; "The 8D has **6 directions orthogonal** to the current plane; the tilt selector
     offers those". `docs/design/principia_chart_reference.md` §1.1: "A 2-plane in 8D has 12 tilt axes (6 hidden
-    dimensions × 2 basis vectors). Raw tilts **replace** rather than compose", and "Arbitrary / oblique: q₁, q₂ any
-    orthonormal pair".
+    dimensions × 2 basis vectors). Raw tilts **replace** rather than compose", and "**Arbitrary / oblique:** `q_1, q_2`
+    any orthonormal pair in ℝ⁸".
   - The code, `crates/gui/src/explore/manifold_view/mod.rs`, `View::basis`: `u₁ = cos τ₁ e_a + sin τ₁ e_d`,
     `u₂ = cos τ₂ e_b + sin τ₂ e_d` (one hidden axis `e_d`, `slice_axis`), then `q₁ = σ(cos γ u₁ + sin γ u₂)`,
     `q₂ = σ(cos γ u₂ − sin γ u₁)`, with no normalisation and no orthogonalisation; `crates/gui/src/explore/compass.rs`,
@@ -531,7 +531,8 @@ tilt means).*
   - (b) One shared hidden axis, the reference's axis-angle map: the reference's x, z and y read as `e_a`, `e_b` and
     `e_d` (its untilted plane `span(e_a, e_b)`, its hidden axis `e_d`), the sign chosen so a single τ₁ moves q₁ toward
     `e_d` as the code's does, and `q₁`, `q₂` the untilted `e_a`, `e_b` turned by the rotation taking `e_d` to `n`, then
-    by γ: orthonormal and without a lock, but not one-to-one past `m = 90°`. Like (a), a one-hidden-axis map.
+    by γ: orthonormal and without a lock, but one-to-one only for `m < 90°`: from the `m = 90°` circle on, `n` and `−n`
+    give one plane, so `(90°, 0)` and `(−90°, 0)` already give the same one. Like (a), a one-hidden-axis map.
   - (c) Two distinct targets, the contract's general form: each of `q₁`, `q₂` tilted toward its own hidden direction,
     `t₁ ⊥ t₂` (orthonormal with no further step); the plane leaves any one 3-space, so the ruling also says what the
     compass's cube draws, and its tilt labels name the two targets.

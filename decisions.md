@@ -9939,10 +9939,11 @@ Changes no requirement.
 
 ## R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
-(`07_keyboard.png`)" (the console's paragraph and the window landing) and § "G12. Console (`12_console.png`)" (a
-paragraph added), R-405's and R-409's heading blocks, REQ-GUI-178 (reqio, its note), REQ-GUI-189 and REQ-GUI-190
-(reqio, new), TASK-M6-32 (new), `plan/tasks.yaml`, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`, `plan/MILESTONES.md` and
-`plan/rule_groups.yaml`; built by TASK-M6-32 on the mock*
+(`07_keyboard.png`)" (the console's paragraph and the window landing), § "G12. Console (`12_console.png`)" (a
+paragraph added) and § "G13. Where the artboards are overridden" (a bullet added), R-405's and R-409's heading blocks,
+REQ-GUI-178 (reqio, its note), REQ-GUI-189 and REQ-GUI-190 (reqio, new), TASK-M6-32 (new), `plan/tasks.yaml`,
+`plan/WORKFLOW.md`, `plan/OPERATIONS.md`, `plan/MILESTONES.md` and `plan/rule_groups.yaml`; built by TASK-M6-32 on the
+mock*
 
 The human's words, a message of 16 Oct 2026 in three parts, given in the orchestrator's session and recorded verbatim.
 Part 1 is this ruling; Part 2 is R-451 and Part 3 is R-452. Each is a GUI design ruling under R-390's feedback rule.
@@ -10203,12 +10204,12 @@ paragraph's sections; REQ-GUI-178's sections and landing (its statement stays as
 
 Adds REQ-GUI-189 and REQ-GUI-190; REQ-GUI-178's note and rulings change.
 
-## R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping
+## R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping *(amends R-409 point 1, the compass's view angle)*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "The compass: look and views (R-451, R-452)" (new) and § "G13. Where the artboards are overridden" (a
 bullet added), `docs/gui/reference/principia_nav_cube.html` (added), `docs/read_first/principia_INDEX.md` § "GUI"
-(a line added), R-409's heading block, REQ-GUI-191 to REQ-GUI-193 (reqio, new), RQ-340, TASK-M6-33 (new),
-`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-33 on the mock*
+(a line added), R-409's heading block, REQ-GUI-181 (reqio, its note), REQ-GUI-191 to REQ-GUI-193 (reqio, new),
+RQ-340, TASK-M6-33 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-33 on the mock*
 
 The human's words are R-450's quote: its preamble (the three references, and the cream palette not copied) and Part 2.
 
@@ -10274,16 +10275,25 @@ applied by a follow-up task):*
   axis) and their angles in degrees. If RQ-340 is ruled for two distinct targets (its option (c)), tilt mode names
   the two targets in a follow-up task.
 - **B2. What each mode draws.** Both modes draw the decoder's plane, `View::basis`'s `(q₁, q₂)` in the cube's frame
-  `(e_a, e_b, e_d)`, through the point whose coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over
-  the slice step's half-range (`Z0_HALF_RANGE`) and clamped to [−1, 1]. The modes differ in what a drag does (B3) and
+  `(e_a, e_b, e_d)`, through the point `p` whose coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over
+  the slice step's half-range (`Z0_HALF_RANGE`). The drawn plane is its normal `n` (that of `(q₁, q₂)` in the frame)
+  and its offset `n·p`, with `p` unclamped: a pan moves `z₀` within the plane, so it leaves `n·p`, and the drawing,
+  unchanged. Only the offset is bounded, clamped to `±|n|₁`, the offsets at which the plane still meets the cube; at
+  the bound the plane touches the cube in a face, an edge or a corner, and the slice draws that contact (a face as the
+  polygon; an edge or a corner as the outline alone, with no fill). The modes differ in what a drag does (B3) and
   in the labels and readout (B1, B5), never in the plane drawn, so after a tilt and a slice edit slice mode shows the
   tilted plane the decoder slices. Untilted (`τ₁ = τ₂ = γ = 0`) the plane is the reference's slice-mode rectangle at
-  its depth. The three axes share one scale, so the drawn tilt is the latent angle τ; the cube is the slider's range on
-  each axis, and the chart window's extent (`|q| = σ`) is not drawn. Through the cube's central axis (`z₀`'s
-  components on `e_a` and `e_b` both 0) the cross-section has 4 to 6 vertices, never a triangle: a rectangle untilted,
-  a pentagon possible off the centre, a hexagon possible through it. Off that axis a plane can cut off one corner, a
-  triangle, so the bound is the human's 3 to 6 (3.6). (Rewritten in the fix round of PR #227, gui review G1, physics
-  review P11: slice mode drew an untilted plane the decoder does not slice.)
+  its depth. The three axes share one scale, so the drawn tilt is the latent angle τ. The cube is [−1, 1] on each axis
+  in units of the half-range, absolute, free or locked: free, it is the sliders' range; locked, the sliders span the
+  anchor ± the half-range (`centre::span`), not the cube, and a `z₀` past the cube draws the plane at the clamped
+  offset. The chart window's extent (`|q| = σ`) is not drawn. Through the cube's central axis (the plane through a
+  point `(0, 0, d)`, `|d| ≤ 1`) the cross-section has 4 to 6 vertices, never a triangle: a rectangle untilted, a
+  pentagon possible off the centre, a hexagon possible through it. Off that axis a plane can cut off one corner, a
+  triangle, so the bound is the human's 3 to 6 (3.6) for a plane through the cube's interior. (Rewritten in the fix
+  round of PR #227, gui review G1, physics review P11: slice mode drew an untilted plane the decoder does not slice.
+  Fix round 2, gui review G6: clamping each of `p`'s components to [−1, 1] shifted a tilted plane after a pan, at
+  `τ₁ = 30°` a pan of 2 along `q₁` turning `p = (1.732, 0, 1)`, on the plane `z = x tan 30°`, into `(1, 0, 1)`, off
+  it; now only the offset is bounded.)
 - **B3. The slice-mode drag.** The horizontal component of a drag sets how far the slice moves (the reference's rate, a
   drag across the cube's full width moving it across the whole range); the direction is the drawn plane's normal,
   which by B2 is the decoder's (`latent_normal`, R-409 A3's), the slice axis only when untilted; one `SetField` on
@@ -10338,7 +10348,11 @@ applied by a follow-up task):*
   views (R-451, R-452)"; §G13 a bullet for the three references; **REQ-GUI-191** (the drawing, golden image),
   **REQ-GUI-192** (the cross-section and the mapping the drawing follows, unit test) and **REQ-GUI-193** (the labels,
   the readout, the drags and the easing, unit test), all M6, closed by **TASK-M6-33** (new), reviewers code, qa and
-  gui, depending on TASK-M6-31 (merged). REQ-GUI-091 and REQ-GUI-181 are unchanged: R-451 keeps what they say.
+  gui, depending on TASK-M6-31 (merged). REQ-GUI-091 is unchanged: R-451 keeps what it says, its "default angle" read
+  as the isometric view. REQ-GUI-181's statement and verify are unchanged, its "default angle" read the same way; its
+  note, which keeps the code's angle under R-409 point 1, gets a forward line (reqio) saying R-451 sets the default
+  angle to the reference's isometric projection, and TASK-M6-33 re-checks the requirement with it. (Corrected in fix
+  round 2 of PR #227, gui review G8.)
 - **B10. qa's files (R-290, forced by this ruling).** A qa file that asserts the compass's yaw-and-pitch view, its
   fixed-quad slice or its drag rates asserts what this ruling changes; TASK-M6-33's qa reviewer changes those
   assertions in the task's qa commit, and only those, as R-409 A9 has it.

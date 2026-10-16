@@ -176,16 +176,21 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   `0.8 + 1.0·near` px, `near = (x + z + 2)/4` at the edge's middle); the slice is sorted among them by its own mean
   `x + z`, so edges in front of it draw over it.
 - **The slice** is the true cross-section polygon of the plane through the cube, 3 to 6 vertices: a rectangle
-  untilted, rectangles to hexagons as it tilts. Through the cube's central axis (`z₀` 0 on `e_a` and `e_b`) it has 4 to
-  6, never a triangle, a pentagon possible off the centre; off that axis a plane can cut off one corner, a triangle. Its fill is Lambert-shaded from the slice's own normal, two-sided
-  (`0.2 + 0.8·max(0, n·L)`, `n` flipped to face the view `(1,1,1)`, light `(0.35, 1.0, 0.55)` normalised, a depth term
-  `±0.05`), at opacity 0.6; an in-plane grid (spacing 0.5) is clipped to the polygon; an outline (1.7 px) closes it.
-  Both modes draw the decoder's plane, `View::basis`'s `(q₁, q₂)` in the cube's frame, through the point whose
-  coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over the slice step's half-range and clamped to
-  [−1, 1]; the modes differ in the drag, the labels and the readout, never in the plane drawn, and untilted the plane
-  is the reference's slice-mode rectangle at its depth (R-451 B2). The three axes share one scale, so the drawn tilt is
-  the latent angle; the cube is the slider's range on each axis, and the chart window's extent is not drawn. The
-  drawing follows the decoder's tilt mapping, not the reference's axis-angle map; RQ-340 holds the difference (R-451).
+  untilted, rectangles to hexagons as it tilts. Through the cube's central axis (the plane through a point `(0, 0, d)`,
+  `|d| ≤ 1`) it has 4 to 6, never a triangle, a pentagon possible off the centre; off that axis a plane can cut off one
+  corner, a triangle. Its fill is Lambert-shaded from the slice's own normal, two-sided (`0.2 + 0.8·max(0, n·L)`, `n`
+  flipped to face the view `(1,1,1)`, light `(0.35, 1.0, 0.55)` normalised, a depth term `±0.05`), at opacity 0.6; an
+  in-plane grid (spacing 0.5) is clipped to the polygon; an outline (1.7 px) closes it.
+  Both modes draw the decoder's plane: its normal `n` is that of `View::basis`'s `(q₁, q₂)` in the cube's frame, and
+  its offset is `n·p`, `p` the point whose coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over the
+  slice step's half-range, unclamped, so a pan, which moves `z₀` within the plane, leaves the drawing unchanged. Only
+  the offset is bounded, clamped to `±|n|₁`; at the bound the plane touches the cube, and a face is drawn as the
+  polygon, an edge or a corner as the outline alone. The modes differ in the drag, the labels and the readout, never
+  in the plane drawn, and untilted the plane is the reference's slice-mode rectangle at its depth (R-451 B2). The three
+  axes share one scale, so the drawn tilt is the latent angle; the cube is [−1, 1] on each axis in units of the
+  half-range, absolute, free or locked (free, the sliders' range; locked, the sliders span the anchor ± the
+  half-range), and the chart window's extent is not drawn. The drawing follows the decoder's tilt mapping, not the
+  reference's axis-angle map; RQ-340 holds the difference (R-451).
 - **Labels:** each axis name centred on its edge, pushed 20 px outward from the cube. Slice mode names Width
   (bottom-left edge), Depth (bottom-right) and Height (left vertical), with −1.0 and 1.0 at the corners, one number per
   corner, 12 px outward. Tilt mode names only the tilt target, on the bottom-right edge: under the decoder's mapping q₁
@@ -584,6 +589,8 @@ corpus, the spec follows the authority:
   selectors, sliders, Animate) are not on the compass; the cube's tilt follows the decoder's mapping, not the
   reference's axis-angle map (RQ-340); the grids draw no in-cell numbers; the physical compass's Jacobian and its body
   position labels are a synthetic placeholder, replaced by the decoder's Jacobian over R-452's coordinates.
+- **The console's header** (R-450). The console artboard's row is "copy · clear · console ▾"; the header bar adds a
+  focusable × after Clear, which closes the console, and the console is two scopes, the header bar and the log (§G12).
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
 - **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag
