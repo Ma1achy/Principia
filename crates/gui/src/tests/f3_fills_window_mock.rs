@@ -441,6 +441,17 @@ fn f3_fills_window_mock_placement_does_not_leak() {
     let preview = PreviewCanvas(canvas.clone());
     let quick_alone = right_half(&offscreen(&canvas, &[(&*canvas, right)]));
     let preview_alone = right_half(&offscreen(&canvas, &[(&preview, right)]));
+    // The quick render is the stand-in over its whole viewport: the figure placed at the identity, drawn.
+    canvas.set_placement(Placement::IDENTITY, Vec::new());
+    let identity = right_half(&offscreen(&canvas, &[(&figure, right)]));
+    assert!(
+        quick_alone == identity,
+        "the quick render is not the field over its viewport"
+    );
+    assert!(
+        identity.chunks(4).any(|p| p[..3] != [0, 0, 0]),
+        "nothing drawn"
+    );
     // The figure placed off-centre, half the viewport, its left past the shown rect flagged invalid.
     let shown = egui::Rect::from_min_max(egui::pos2(8.0, 8.0), egui::pos2(24.0, 24.0));
     let viewport = egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(32.0, 32.0));
