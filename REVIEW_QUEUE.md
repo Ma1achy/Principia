@@ -247,7 +247,7 @@ Nothing is chosen.*
   `lookup_clamped` and `lookup_mirrored` are flags, each raised iff its operation did. `scale_step` asserts `λ = 1/2`
   is carried on the 2× Burrau state, which every option raises.
 - **Waits:** REQ-ENC-006's and REQ-ENC-014's notice (`rq: RQ-295`): TASK-M2-07's closing of REQ-ENC-006, and
-  TASK-M2-15's of REQ-ENC-014.
+  TASK-M2-15's of REQ-ENC-014. TASK-M2-07's PR does not wait: it merges with REQ-ENC-006 held, not closed.
 
 ## RQ-296: What `C` outputs where `I_in` is 0 or rounds to 0 or `+∞`: all three bodies coinciding, an underflowing or an overflowing state, where step 0 divides by `√I_in` before step 2's guard *(silence, R-72, R-23, R-13, R-436, REQ-DEC-002; context: TASK-M2-07, TASK-M2-15)*
 
@@ -306,4 +306,5 @@ Nothing is chosen.*
   (R-13, R-437) and that the GPU forms no non-finite value there; at underflow, that the case is reached and no `1/0` is
   formed (every output finite, `canon_inertia_extremes`); at overflow, only that the case is reached. Nothing about the
   state or `λ`.
-- **Waits:** REQ-DEC-002 (`rq: RQ-296`), TASK-M2-07's closing of it.
+- **Waits:** REQ-DEC-002 (`rq: RQ-296`), TASK-M2-07's closing of it. TASK-M2-07's PR does not wait: it merges with
+  REQ-DEC-002 held, not closed.
