@@ -120,7 +120,8 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   - the task id, and the PR number for a reviewer or a fix round;
   - the agent's worktree and its `CARGO_TARGET_DIR` (§ "Paths and warm builds");
   - for an implementer, the target directory of its local mutants run, `<target>-mutants`, and that it deletes it
-    straight after (§ "Reviewers", its **Mutants** item; R-388);
+    straight after (§ "Reviewers", its **Mutants** item; R-388); for a task that may touch `crates/gui/`, the
+    `--build-timeout` of its gui run and the hard limits that run takes (R-439);
   - for a task started early off a dependency's approved head, that head's sha, and that the PR waits for the
     dependency to merge (R-388; § "Roles and the loop");
   - the environment: `CARGO_BUILD_JOBS=4`, `RUST_TEST_THREADS=4` (R-228), `CARGO_INCREMENTAL=0`,
@@ -191,6 +192,18 @@ or reviews" and `plan/WORKFLOW.md` § "The review loop". In addition:
   Linux runners enforce both caps (R-352). The `mutants::skip` marker doesn't compile without the `mutants` crate as a
   dependency (E0433) and skips a whole function; an equivalent mutant gets a test, a behaviour-preserving rewrite
   (R-197), or a justified entry in `.cargo/mutants-equivalent.toml` (R-202).
+  - **A local run that mutates the gui crate uses hard limits (R-439, amending R-388).** A local gui-crate run crashed
+    the Mac twice (two kernel watchdog panics, 15 Oct 2026): a mutant made a gui test process allocate about 10 GB,
+    with 14 to 20 copies under nextest on an 18 GB machine. So where the diff touches `crates/gui/`, the gui crate's
+    mutants run on their own, as `cargo mutants --in-diff <diff> --package gui -j 1 --timeout 90 --build-timeout
+    <generous>`, with nextest at one test thread (`--cargo-test-arg=--test-threads=1`), `RUST_TEST_THREADS=1` (no effect under nextest; `--test-threads 1` is the binding limit) and a
+    narrow nextest filter (`--cargo-test-arg=-E --cargo-test-arg='<filterset>'`). Applied per R-369: the filterset
+    selects the gui tests that exercise the diff's files, and the PR names it; a test the filter leaves out can only
+    leave a local survivor, which CI's run, the gate, still sees. The `--build-timeout`, in seconds, is the
+    dispatch's, at least the gui crate's cold build. The 90 s per mutant is the ruling's, in place of CI's value for
+    this run only; CI's caps (REQ-VAL-180, REQ-VAL-181) are unchanged. The rest of the diff, every other crate, runs
+    as above, unchanged, in a run of its own that leaves gui out (`--exclude 'crates/gui/**'`). The orchestrator's
+    memory guard (§ "Resources") runs throughout.
 
 ## qa commits
 
@@ -431,6 +444,16 @@ with its run or PR. If timeouts or flaky failures rise above the days before the
 at once, log it, and tell the human in the next summary. After three days, report the log in the next summary; the
 trial runs until the human rules on it or it is reverted.
 
+**The memory guard (R-439).** While any agent builds or tests on the Mac, the orchestrator keeps a memory guard
+running, `/Volumes/X10 Pro/Principia/orch/mem-guard.sh`. Every 2 s it reads `ps -axo pid=,rss=,comm=` and selects
+only a process whose executable's path starts with the targets directory, `/Volumes/X10 Pro/Principia/targets/`: the
+test binaries, never rustc or a shell whose arguments merely mention the path. A selected process whose resident memory
+passes 3 GB (3 × 1024 × 1024 KB) is killed by its PID (`kill -9 <pid>`). macOS has no `prlimit`, so a local run has no
+per-process memory cap of its own (R-352): the guard is the Mac's stand-in, not CI's cap, which stays REQ-VAL-181's.
+Applied per R-369: it selects by the executable's path and kills by PID, never by `pkill -f` on a pattern; it logs its
+start and each kill to `/Volumes/X10 Pro/Principia/orch/mem-guard.log` (§ "Logs"); and it is stopped when the
+session's last agent finishes, leaving no process behind.
+
 **Cleaning disk** (28 Sep 2026): delete each reviewer's worktree and target when its review ends, and each task's when
 its PR merges (R-345). Below 20 GB, `cargo clean` stale targets (merged or abandoned first, then the main checkout's),
 and clear mutants and scratch builds. Never delete sources, uncommitted work, open PR branches or `~/.cargo`'s registry
@@ -533,6 +556,8 @@ don't route around it.
   (the peak, and how many dispatches ran at warning with 3); the page-out rises read (the lowest and highest per
   minute, and each dispatch held to 2); every timeout or flaky failure, local or in CI, with its run or PR; and whether
   the trial was reverted (§ "Resources").
+- **The memory guard's log (R-439; Mac only).** `/Volumes/X10 Pro/Principia/orch/mem-guard.log`: the guard's start,
+  with its limit and PID, and each kill, with the PID, RSS and executable (§ "Resources").
 - **Linux cloud.** A cloud machine's disk may not outlive the session. Under R-347,
   keep the running log in the session's scratch directory, and post the away-mode summary as the session's final
   message and as a comment on each PR it concerns.

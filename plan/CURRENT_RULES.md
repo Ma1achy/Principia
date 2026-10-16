@@ -252,6 +252,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-426** — `q_mass` and `mean_y` stay on cool-warm provisionally, recorded as provisional at the M1 gate, and are re-checked when TASK-M2-03 and TASK-M3-13 declare their ranges; an undeclared range is a ledger gap, not a range that spans zero *(closes RQ-274; amends R-400)*. Still in force: all of it; `q_mass` and `mean_y` stay on `ramp_coolwarm` provisionally until TASK-M2-03 and TASK-M3-13 declare their ranges, and `C_ty` is signed, on `ramp_coolwarm` (R-430). Amended in part by R-430.
 - **R-430** — The ramps are as reported at the M1 gate: `S`, `ftle` and `diffusion` pass on cool-warm; `q_mass` and `mean_y` are provisional on cool-warm; `theta` is cyclic; `C_ty` stands as decided per R-369 *(amends R-423 and R-426)*
 - **R-436** — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*
+- **R-441** — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug
 
 ## Values
 
@@ -282,6 +283,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-433** — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*
 - **R-434** — REQ-COL-064's stipple is confirmed as 2 × 2 px dots in each 4 × 4 physical-pixel cell over `#4E4E4E`, with the dots changed from `#808080` to `#909090`, so that a 4 × 4 block clears the hatch's τ = 0.101 (0.115); the goldens it changes are re-rendered *(amends R-399 as it applies to the stipple)*
 - **R-435** — The golden baselines recorded as proposed for the M1 gate are confirmed: the 131 rows of `fixtures/golden/BASELINES.md` so marked *(amends R-153 as it applies to the M1 gate's baselines)*
+- **R-440** — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)*
 
 ## Process
 
@@ -337,12 +339,13 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-369** — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*
 - **R-371** — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)*
 - **R-373** — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)*
-- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package. Still in force: items 1 to 3 as recorded; item 4's nextest, its test selection by package rather than the whole workspace, and its unchanged shard count and time limits (R-376). Amended in part by R-393 (item 4: nextest with own-package selection; "plus genuine dependents" is not applied).
+- **R-388** — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package. Still in force: items 1 to 3 as recorded, item 1's local run taking R-439's hard limits where it mutates the gui crate; item 4's nextest, its test selection by package rather than the whole workspace, and its unchanged shard count and time limits (R-376). Amended in part by R-393 (item 4: nextest with own-package selection; "plus genuine dependents" is not applied); amended in part by R-439 (item 1: a local run that mutates the gui crate uses hard limits).
 - **R-391** — Trial: at memory-pressure warning, three agents may run unless the Mac is swapping, read from vm_stat's page-outs *(replaces R-277's warning rule)*
 - **R-393** — R-388 item 4 is applied as nextest with own-package selection; "plus genuine dependents" is not applied *(amends R-388)*
 - **R-396** — Physics reviews TASK-M6-24 for REQ-GUI-176 and REQ-GUI-177 only *(amends R-390)*
 - **R-414** — `~/.rustup`'s stable stays at 1.99.0; every dispatch sets `RUSTUP_AUTO_INSTALL=0`, and toolchains change only through the pin
 - **R-415** — A task may merge before an earlier milestone's gate if its dependencies have merged and it relies on no value or behaviour that gate calibrates or could change
+- **R-439** — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)*
 
 ## CI
 

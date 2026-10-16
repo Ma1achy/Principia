@@ -21,6 +21,15 @@
 //!
 //! `2mᵢ` and `2K₀` are formed as the sums `mᵢ + mᵢ` and `K₀ + K₀`, which are exact at any `Real`.
 //!
+//! **The poles' values are selected, never divided** (R-436; dd_decoder §3.6, "Each producer selects its pole value").
+//! The descriptor follows `Real`, so the GPU's decode stage forms it at f32, where WGSL lets an implementation assume
+//! there are no infinities: a GPU-computed `1/0`, or arithmetic on `∞`, is not pinned to `±∞`. So each pole value is
+//! chosen by comparing its divisor with 0 and a select ([`IeeeBits`]), the `±∞` written as its integer pattern's bits:
+//! `rho_ratio` is `+∞` where `‖λ̃‖ = 0`; `V_0` is `−∞` wherever a pair separation is 0, for the whole sum, not a sum with
+//! an infinite term ([`potential`]: a separation is 0 exactly where `r_min_pair_0`, their minimum, is); and
+//! `virial_ratio` is 0 where `V_0` is non-finite, tested on its bits. The quotient a select discards is never read. The
+//! CPU path runs this source, so it stores the same bits.
+//!
 //! **`rho_angle` on the axis** ([`angle`]; dd_decoder §3.6). On `ρ × λ = 0` the value is chosen, not `atan2`'s: the
 //! image of π when `ρ · λ < 0`, whatever the sign of a zero `ρ × λ` (`atan2(−0, x < 0)` is −π), and 0 otherwise, the
 //! pole `ρ × λ = ρ · λ = 0` included, where GLSL.std.450 `Atan2` is undefined. Off the axis `atan2`'s value is taken
@@ -33,6 +42,7 @@ use spirv_std::num_traits::Float;
 use crate::decode::Ic;
 use crate::generated::links::LinkReal;
 use crate::payload::{ICDescriptorOf, PayloadReal};
+use crate::real::IeeeBits;
 
 /// `a − b`.
 #[inline]
@@ -53,13 +63,46 @@ pub fn kinetic<R: LinkReal>(ic: &Ic<R>) -> R {
     term(ic.p[0], ic.m[0]) + term(ic.p[1], ic.m[1]) + term(ic.p[2], ic.m[2])
 }
 
-/// The potential energy `V₀ = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`, `G = 1`.
+/// The pair separations `‖r₀ − r₁‖`, `‖r₀ − r₂‖`, `‖r₁ − r₂‖`.
 #[inline]
-pub fn potential<R: LinkReal>(ic: &Ic<R>) -> R {
-    let [r0, r1, r2] = ic.r;
-    let [m0, m1, m2] = ic.m;
-    let pair = |a: [R; 2], b: [R; 2], ma: R, mb: R| ma * mb / norm(sub(a, b));
-    -(pair(r0, r1, m0, m1) + pair(r0, r2, m0, m2) + pair(r1, r2, m1, m2))
+fn separations<R: LinkReal>(r: [[R; 2]; 3]) -> [R; 3] {
+    let [r0, r1, r2] = r;
+    [norm(sub(r0, r1)), norm(sub(r0, r2)), norm(sub(r1, r2))]
+}
+
+/// The closest pair's separation, `min_{i<j} ‖rᵢ − rⱼ‖`, of the separations `d`.
+#[inline]
+fn closest<R: LinkReal>(d: [R; 3]) -> R {
+    Float::min(Float::min(d[2], d[1]), d[0])
+}
+
+/// `V₀ = −Σ_{i<j} mᵢmⱼ/dᵢⱼ` of the masses `m` and the separations `d`, `−∞`'s bits where the closest, `d_min`, is 0
+/// (R-436; the module's note).
+#[inline]
+fn potential_of<R: LinkReal + IeeeBits>(m: [R; 3], d: [R; 3], d_min: R) -> R {
+    let [m0, m1, m2] = m;
+    let sum = -(m0 * m1 / d[0] + m0 * m2 / d[1] + m1 * m2 / d[2]);
+    sum.or_neg_inf(d_min == R::zero())
+}
+
+/// The potential energy `V₀ = −Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖`, `G = 1`: `−∞`'s bits wherever a pair separation is 0, selected,
+/// not divided (R-436).
+#[inline]
+pub fn potential<R: LinkReal + IeeeBits>(ic: &Ic<R>) -> R {
+    let d = separations(ic.r);
+    potential_of(ic.m, d, closest(d))
+}
+
+/// `virial_ratio = 2K₀/|V₀|` of `k = K₀` and `v = V₀`: 0 where `V₀` is non-finite, tested on its bits (R-436).
+#[inline]
+pub fn virial<R: LinkReal + IeeeBits>(k: R, v: R) -> R {
+    select(v.non_finite_bits(), R::zero(), (k + k) / Float::abs(v))
+}
+
+/// `rho_ratio = ‖ρ̃‖/‖λ̃‖` of `rho_mag` and `lambda_mag`: `+∞`'s bits where `‖λ̃‖ = 0`, selected, not divided (R-436).
+#[inline]
+pub fn ratio<R: LinkReal + IeeeBits>(rho_mag: R, lambda_mag: R) -> R {
+    (rho_mag / lambda_mag).or_pos_inf(lambda_mag == R::zero())
 }
 
 /// The derived `E₀ = K_0 + V_0`, formed at `Real` width from the stored fields (R-86; dd_generation_root §3.6).
@@ -115,11 +158,9 @@ pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
     let cross = rho[0] * lambda[1] - rho[1] * lambda[0];
     let dot = rho[0] * lambda[0] + rho[1] * lambda[1];
     let k = kinetic(ic);
-    let v = potential(ic);
-    let r_min = Float::min(
-        Float::min(norm(sub(r1, r2)), norm(sub(r2, r0))),
-        norm(sub(r0, r1)),
-    );
+    let d = separations(ic.r);
+    let r_min = closest(d);
+    let v = potential_of(ic.m, d, r_min);
     ICDescriptorOf {
         m0,
         m1,
@@ -127,11 +168,11 @@ pub fn describe<R: LinkReal + PayloadReal>(ic: &Ic<R>) -> ICDescriptorOf<R> {
         q_mass: Float::min(m0, m1) / Float::max(m0, m1),
         rho_mag,
         lambda_mag,
-        rho_ratio: rho_mag / lambda_mag,
+        rho_ratio: ratio(rho_mag, lambda_mag),
         rho_angle: angle(cross, dot),
         K_0: k,
         V_0: v,
-        virial_ratio: (k + k) / Float::abs(v),
+        virial_ratio: virial(k, v),
         r_min_pair_0: r_min,
         _pad: Default::default(),
         _tail: Default::default(),

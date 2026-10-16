@@ -6039,8 +6039,10 @@ Changes no requirement.
 
 ## R-388 — Implementers run `cargo mutants --in-diff` locally before review; ready-next tasks are pre-flighted; a task may start off its approved dependency's head; mutants shards select tests by package
 *Amended in part by R-393 (item 4: nextest with own-package selection; "plus genuine dependents" is not applied).*
-*Still in force: items 1 to 3 as recorded; item 4's nextest, its test selection by package rather than the whole
-workspace, and its unchanged shard count and time limits (R-376).*
+*Amended in part by R-439 (item 1: a local run that mutates the gui crate uses hard limits).*
+*Still in force: items 1 to 3 as recorded, item 1's local run taking R-439's hard limits where it mutates the gui
+crate; item 4's nextest, its test selection by package rather than the whole workspace, and its unchanged shard count
+and time limits (R-376).*
 *6 Oct 2026 · applied in `plan/OPERATIONS.md` § "Roles and the loop", § "Dispatching" and § "Reviewers" (its
 **Mutants** item), `plan/WORKFLOW.md` § "The unit: one task, one branch, one PR", § "Task files" and § "The review
 loop", `CLAUDE.md` § "How work runs", `.claude/agents/implementer.md` and `plan/rule_groups.yaml`; item 4 built by a
@@ -9783,3 +9785,143 @@ and `p_λ` are unaffected, since the canonical rotation depends on `ρ̃` only.
 
 Changes REQ-ENC-007 (statement, rulings, source, verify, note, the hold RQ-287).
 Round 3 changes REQ-ENC-007 (verify, note) and REQ-COL-006 (rulings, source, verify).
+
+## R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)*
+*15 Oct 2026 · applied in `plan/OPERATIONS.md` § "Dispatching" (what every dispatch names: a clause), § "Reviewers"
+(its **Mutants** item: a sub-item added), § "Resources" (the memory guard: a paragraph added) and § "Logs" (the
+guard's log: an item added), `.claude/agents/implementer.md` (step 4: a sentence added) and `plan/rule_groups.yaml`*
+
+The orchestrator asked the human "How should local mutation testing (R-388) run from now on?", after a local mutants
+run on the gui crate crashed the Mac twice: two kernel watchdog panics, from a mutant that made a gui test process
+allocate about 10 GB, with 14 to 20 copies of it under nextest on an 18 GB machine. The human replied, on 15 Oct 2026:
+
+> "keep with hard limits but only for the gui crate"
+
+*The applied reading, which the orchestrator told the human:*
+- a local mutants run that mutates the gui crate uses hard limits: `cargo mutants … -j 1 --timeout 90` with a
+  generous `--build-timeout`, nextest `--test-threads 1`, `RUST_TEST_THREADS=1` and a narrow nextest filter;
+- other crates keep R-388's run unchanged;
+- the orchestrator keeps a memory guard running, which kills any process from the targets directory over 3 GB RSS.
+
+*What it decides:*
+- **R-388 item 1's local run is kept.** The implementer still runs `cargo mutants --in-diff` on its own diff before
+  review, and again before it pushes fixes for survivors CI reports; CI's mutants gate stays the authority (R-302).
+- **Where it mutates the gui crate, the run takes hard limits:** one job (`-j 1`), a per-mutant timeout of 90 s
+  (`--timeout 90`), a generous `--build-timeout`, nextest at one test thread (`--test-threads 1`),
+  `RUST_TEST_THREADS=1` (no effect under nextest; `--test-threads 1` is the binding limit), and a narrow nextest filter.
+- **Every other crate keeps R-388's run unchanged.**
+- **The orchestrator keeps a memory guard running** that kills any process from the targets directory whose resident
+  memory passes 3 GB.
+
+*Contradiction flagged, applied:* `plan/OPERATIONS.md` § "Reviewers" (the **Mutants** item) has a local run use R-348's
+per-mutant timeout "at the values CI uses" (REQ-VAL-180, applied per R-204, accepted by R-352). The ruling's
+`--timeout 90` replaces that value for a local run on the gui crate. Applied: the 90 s holds for that local run only,
+the sub-item says so, and CI's caps, REQ-VAL-180's timeout and REQ-VAL-181's memory cap, are unchanged. A shorter
+local timeout can only record a slow mutant as a timeout, never hide a survivor from CI's run, the gate.
+
+*Applied:*
+- `plan/OPERATIONS.md` § "Reviewers", its **Mutants** item, gains a sub-item: where the diff touches `crates/gui/`,
+  the gui crate's mutants run on their own (`--package gui`) with the limits above, nextest's one thread passed as
+  `--cargo-test-arg=--test-threads=1` and the filter as a nextest filterset; the rest of the diff runs as R-388 gives
+  it, in a run of its own that leaves gui out (`--exclude 'crates/gui/**'`).
+  - Applied per R-369: the split into two runs, so that the limits bind only the gui crate's mutants.
+  - Applied per R-369: the narrow filter is a nextest filterset (`-E`) that selects the gui tests exercising the
+    diff's files, named in the PR. A test it leaves out can only leave a local survivor, which CI's run still sees.
+  - Applied per R-369: the generous `--build-timeout` is the dispatch's, in seconds, at least the gui crate's cold
+    build time; § "Dispatching"'s list of what every dispatch names gains it.
+- `plan/OPERATIONS.md` § "Resources" gains the memory guard. macOS has no `prlimit`, so a local run has no
+  per-process memory cap of its own (R-352); the guard is the Mac's stand-in, not CI's cap.
+  - Applied per R-369 (code review 5541514708): the guard, `/Volumes/X10 Pro/Principia/orch/mem-guard.sh`, reads
+    `ps -axo pid=,rss=,comm=` every 2 s and selects only a process whose executable's path starts with
+    `/Volumes/X10 Pro/Principia/targets/`, the test binaries, never rustc or a shell whose arguments merely mention the
+    path; one whose RSS passes 3 GB (3 × 1024 × 1024 KB) is killed by its PID. Never `pkill -f` on a pattern. It logs
+    its start and each kill to `/Volumes/X10 Pro/Principia/orch/mem-guard.log`, named in § "Logs"; it is stopped when
+    the session's last agent finishes.
+- `.claude/agents/implementer.md` step 4 states the gui run's limits.
+- R-388 gains R-439 in its "Amended in part by" and "Still in force" lines (R-292).
+- R-439 is in the "process" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.
+
+## R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)*
+*15 Oct 2026 · applied in `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema (what every entry must
+carry)" ("Reading a constant": a sentence added) and `plan/rule_groups.yaml`*
+
+The orchestrator listed its veto-able calls of 15 Oct 2026. The human's remarks on them, in their own words (R-441
+answers the second):
+
+> "Quick read of the Claude Code status: nothing in it needs a veto from me. Two remarks:
+> - Call 2 (accepting Cell::default() over Cell::new(0)) is fine. A counter's starting zero isn't a calibration value.
+>   The risk is only if this becomes the pattern for dodging the constants lint on real values, so a one-line note in
+>   the ruling text scoping it to counters would close that off.
+> - Call 5: "every pixel UNSCALABLE on a zero-momentum slice whenever the target is above the potential" is physically
+>   right, since you can't raise kinetic energy by scaling zero momenta. But it means η_E is silently a no-op on every
+>   free-fall preset. That's worth a line in the GUI docs so nobody reads a uniform tag colour as a bug."
+
+*Context:* call 2 is PR #217's (TASK-M2-06) pipeline counter, `static CREATED: Cell<u64> = Cell::default()` in
+`crates/engine/src/compute.rs`, written so because `cargo xtask lint constants` (dd_generation_root §3.8, "Reading a
+constant") flags `Cell::new(0)`.
+
+*What it decides:*
+- **No veto** on any of the calls listed.
+- **A counter's starting zero, written `Cell::default()`, is not a register value**: a count that starts from none is
+  not a calibration, a default or a threshold, so it is not entered in the constants register.
+- **Scope, the one-line note the human asked for: this covers counters only, never real values.** A default, a
+  threshold or a calibration belongs in the register and is read from it (dd_generation_root §3.8), even when its
+  value is 0; writing one as `Default::default()`, or in any other form, to get past the lint is the dodge R-427 vetoed
+  for the floors of 13 Oct 2026 (TASK-M1-18; REQ-SYS-082).
+
+*Applied per R-369, the orchestrator's decision, not the human's (recorded here beside the counter ruling because it is
+the same question; the human may veto it):* PR #218 (TASK-M2-31) writes the IEEE `+∞` bit pattern, the f32 exponent
+mask, as `f32::INFINITY.to_bits()` (`NON_FINITE` in `crates/ledger/src/gen/numeric.rs`), not as a literal `0x7F80_0000`.
+It is an IEEE-754 format constant written from its std name, not a default, threshold or calibration the register
+holds, and the std name states its meaning. Scope: this covers IEEE format constants written from their std names,
+never calibration values.
+
+*Applied:*
+- dd_generation_root §3.8, "Reading a constant", gains a sentence: a counter's starting zero, written
+  `Cell::default()`, is not a register value; this covers counters only, never real values (R-440); and an IEEE format
+  constant written from its std name, such as `f32::INFINITY.to_bits()`, is none either (applied per R-369).
+- R-440 is in the "values" group of `plan/rule_groups.yaml`, beside R-427.
+
+Changes no requirement.
+
+## R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug
+*15 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G6. Legend — generated by evaluating the stain
+(`06_legend.png`)" (a paragraph added) and `plan/rule_groups.yaml`*
+
+The human's words are R-440's quote, its second remark ("Call 5").
+
+*Context:* call 5 is PR #216's (TASK-M2-04, merged) outcome in dd_decoder §3.7: at a rest start (`K₀ = 0`, every
+`pᵢ = 0`) with `E* > U`, the decode is tagged `DEGENERATE(ENERGY_UNSCALABLE)`.
+
+*What it decides:*
+- **The outcome stands**, as physically right: scaling zero momenta cannot raise the kinetic energy.
+- **It means `η_E` is silently a no-op on every free-fall preset.** With `η_E` on, every pixel of a zero-momentum
+  (free-fall) slice whose `E*` is above its potential is tagged `ENERGY_UNSCALABLE`, a `decode_failed` sample, which
+  the outcome palette draws degenerate's white (colour_composition §1.4; R-96).
+- **A line in the GUI docs** says so, so that nobody reads the uniform tag colour as a bug.
+- **The exceptions §3.7 gives** (applied per R-369 after physics reviews 5541460731 F1 and 5541483216 F3, as they
+  follow from §3.7; the human's words above are unchanged). "Every pixel" holds for the pixels whose `E*` is above
+  their potential, and two kinds of pixel are not tagged so:
+  - where `E* = V₀` exactly, the IC is already at the target: the decode is untouched and untagged, and the pixel
+    integrates. On a free-fall slice `V₀` varies and is negative, so only an `E* < 0` inside its range has such a
+    contour `V₀ = E*`, between the `ENERGY_INFEASIBLE` region (`E* < V₀`) and the `ENERGY_UNSCALABLE` one (`E* > V₀`);
+    on a sampled grid it shows only as scattered pixels where a sample lands on it exactly, not as a drawn line;
+  - a pixel the mass block has already tagged, such as `M01_TINY`, keeps that tag rather than an energy one. It is an
+    exception to the tag, not to the colour: it is `decode_failed` (dd_simstate_payload §2, detail 2), drawn the same
+    degenerate white (colour_composition §1.4; R-96).
+  So every pixel of such a slice is drawn degenerate's white except on that contour, the colour's only exception.
+
+*Applied:*
+- render_gui_spec §G6, beside the outcome legend, gains a paragraph: with zero momenta `η_E` cannot reach any `E*`
+  above the potential, so every pixel of a zero-momentum (free-fall) slice whose `E*` is above its potential is tagged
+  `ENERGY_UNSCALABLE` (and any pixel whose `E*` is below its potential `ENERGY_INFEASIBLE`), drawn degenerate's white;
+  the pixels the mass block has tagged keep their tag and are drawn the same white, and the contour `E* = V₀` (only for
+  `E* < 0`), which integrates untagged, is the colour's only exception, scattered pixels on a sampled grid (applied per
+  R-369 after physics reviews 5541460731 F1 and 5541483216 F3); the near-uniform colour is expected, not a bug
+  (dd_decoder §3.7). Applied per R-369: §G6 is the place, since the GUI docs describe neither the
+  `η_E` control nor a per-cause tag colour, and the outcome legend is where the colour is read.
+- R-441 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes no requirement.

@@ -9,6 +9,7 @@ pub mod generated;
 pub mod payload;
 pub mod real;
 pub mod shape;
+pub mod stage;
 pub mod toolchain;
 pub mod word;
 

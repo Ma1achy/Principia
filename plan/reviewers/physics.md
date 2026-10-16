@@ -15,13 +15,14 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*103 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*104 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
 
 **M2**
 - [ ] REQ-DEC-043 — the proposal measures f64-vs-f32 decode differences on the golden IC and fuzzed interiors and states the multiple of f32 eps that covers them; recorded in decisions.md
+- [ ] REQ-DEC-047 — the proposal shows the bound at or above where tanh rounds to ±1 at f32 and f64 (no CPU value changes at either width, the goldens unchanged) and below where the measured GPU tanh fails (Metal: from 43.671875, 0 and then NaN), with the decode stage's range and identities holding on the GPU at saturated controls; recorded in decisions.md
 - [ ] REQ-ENC-024 — the proposal measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and sets ε_phys above it; recorded in decisions.md
 - [ ] REQ-ENC-027 — the proposal measures CoM and Σp residuals of decode at f64 and f32 over fuzzed z and sets the tolerance above them; recorded in decisions.md
 - [ ] REQ-CHART-020 — Φ alone (R-178): shape_vec(Φ(u,v)) == n(u,v) over random masses and shapes on both hemispheres, max |Δn| ≤ 1e−13 absolute (REQ-CHART-053, R-181); the canonical fold (Φ then C) checked separately on the upper hemisphere (R-141); at n₀ = ±1, where p = q = 0 (±0 included), the atan2(q, p) term is R-437's defined 0 by a select, so ψ = φ_f

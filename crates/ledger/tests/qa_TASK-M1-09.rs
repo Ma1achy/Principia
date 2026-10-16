@@ -3,9 +3,11 @@
 //! scale `lin`, `log`, `cyclic` or `diverging` with no ledger `floor`; the drifts, which have one, keep R-381's view),
 //! never from the emitter's own classification.
 //! - REQ-RENDER-022 (render_gui_spec §10.1; R-114, R-136; RQ-231): every numeric view's checked-in `colour()` is the
-//!   template: `let raw`, the bitcast guard against the canonical quiet NaN (lowering Part 3a) returning
-//!   `debug_invalid(ctx.frag_xy)`, only a stored sentinel's line between, then `ramp(range_norm(raw', lo, hi,
-//!   RANGE_AUTO, u_range))`; no self-comparison and no `isnan` anywhere; `[lo, hi]` the ledger range's finite ends, a
+//!   template: `let raw`, only a stored sentinel's or unset value's line, then the bitcast guard returning
+//!   `debug_invalid(ctx.frag_xy)`, then `ramp(range_norm(raw', lo, hi, RANGE_AUTO, u_range))`; the guard was the
+//!   canonical quiet NaN's (lowering Part 3a) and is, since R-436, the non-finite one, an exponent field of all ones,
+//!   after the sentinel's or unset value's line (render_gui_spec §10.1's order; amended by qa for TASK-M2-31, the
+//!   change the ruling forces); no self-comparison and no `isnan` anywhere; `[lo, hi]` the ledger range's finite ends, a
 //!   step index's `[0, horizon_steps]`, symmetric for a diverging field; the ramp `ramp_twilight` for a cyclic field,
 //!   `ramp_coolwarm` on a range symmetric about 0 for a `lin` or `diverging` field whose declared range spans zero
 //!   (R-400, R-403; amended by qa for TASK-M1-17), else `ramp_viridis`; `RANGE_AUTO` defaults to 1 exactly for an
@@ -32,8 +34,9 @@ use ledger::gen::catalogue::numeric_view;
 use ledger::schema::{Bound, Entry, FieldType, Scale};
 use validation::{negative_control, Declaration, UniformType};
 
-/// Lowering Part 3a's canonical quiet NaN.
-const QNAN: u32 = 0x7FC0_0000;
+/// An f32's exponent field, all ones: the non-finite guard's mask and value (R-436; it replaced lowering Part 3a's
+/// canonical quiet NaN, 0x7FC0_0000, as the guard's bits).
+const NON_FINITE: u32 = 0x7F80_0000;
 
 /// f32 +∞'s bits: f16 +∞ (0x7C00, R-271) widened by `unpack2x16float`.
 const F32_INF: u32 = 0x7F80_0000;
@@ -251,18 +254,24 @@ fn check_template(e: &Entry, wgsl: &str) {
         "`{f}`'s u_range type"
     );
 
-    // The body: `let raw`, the guard, a sentinel's line, the ramp.
+    // The body: `let raw`, a sentinel's or unset value's line, the guard, the ramp (R-436: the guard follows the
+    // sentinel's or unset value's line, render_gui_spec §10.1).
     let lines = body(wgsl);
     assert!(
         lines.len() >= 3 && lines[0].starts_with("let raw = "),
         "`{f}`'s colour() does not bind raw first: {lines:?}"
     );
+    let g = 1 + usize::from(e.sentinel.is_some());
+    assert!(
+        lines.len() > g + 1,
+        "`{f}`'s colour() is too short: {lines:?}"
+    );
     assert_eq!(
-        squash(&lines[1]),
+        squash(&lines[g]),
         squash(&format!(
-            "if (bitcast<u32>(raw) == {QNAN:#010x}u) {{ return debug_invalid(ctx.frag_xy); }}"
+            "if ((bitcast<u32>(raw) & {NON_FINITE:#010x}u) == {NON_FINITE:#010x}u) {{ return debug_invalid(ctx.frag_xy); }}"
         )),
-        "`{f}`'s first line after raw is not the bitcast NaN guard returning the hatch"
+        "`{f}`'s line after raw and its sentinel's is not the bitcast non-finite guard returning the hatch"
     );
     let last = lines.last().unwrap();
     let ramp = if e.scale == Scale::Cyclic {
@@ -282,7 +291,11 @@ fn check_template(e: &Entry, wgsl: &str) {
         args[3].contains("RANGE_AUTO"),
         "`{f}`'s range_norm is not switched by RANGE_AUTO: {args:?}"
     );
-    let middle = &lines[2..lines.len() - 1];
+    let middle: Vec<String> = lines[1..g]
+        .iter()
+        .chain(&lines[g + 1..lines.len() - 1])
+        .cloned()
+        .collect();
     let lets: Vec<&String> = middle.iter().filter(|l| l.starts_with("let ")).collect();
     let meas_ok = args[4].contains("u_range") || lets.iter().all(|l| l.contains("u_range"));
     assert!(meas_ok, "`{f}`'s measured range is not u_range's: {args:?}");
@@ -466,7 +479,10 @@ negative_control!(
         let views: Vec<(Entry, String)> = numeric_views()
             .into_iter()
             .map(|(e, w)| {
-                let w = w.replace("bitcast<u32>(raw) == 0x7fc00000u", "raw != raw");
+                let w = w.replace(
+                    "(bitcast<u32>(raw) & 0x7f800000u) == 0x7f800000u",
+                    "raw != raw",
+                );
                 (e, w)
             })
             .collect();
@@ -499,7 +515,7 @@ mod qa_numeric_view_template_controls {
         negative_control!(
             qa_numeric_view_template_every_numeric_view_is_the_template,
             "a NaN guard that returns the ramp's start rather than the hatch is caught",
-            expected = "is not the bitcast NaN guard",
+            expected = "is not the bitcast non-finite guard",
             check_all(&mutated(
                 "ftle",
                 "return debug_invalid(ctx.frag_xy);",

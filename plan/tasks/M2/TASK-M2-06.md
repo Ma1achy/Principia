@@ -1,7 +1,7 @@
 # TASK-M2-06 — The kernel decode stage: monomorphised per chart, uniforms, GPU ICDescriptor
 
 - **Milestone:** M2
-- **Closes:** REQ-DEC-005, REQ-DEC-007, REQ-CHART-001, REQ-TOOL-030, REQ-DEC-043
+- **Closes:** REQ-DEC-005, REQ-DEC-007, REQ-CHART-001, REQ-TOOL-030, REQ-DEC-043, REQ-DEC-047
 - **Depends on:** TASK-M2-05, TASK-M1-11
 - **Needs (earlier milestones):** REQ-GEN-004, REQ-PAY-002, REQ-TOOL-013, REQ-RENDER-001, REQ-SYS-004
 - **Reviewers:** code, qa, physics, perf
@@ -50,6 +50,7 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
 - Review (code): the compute kernel contains no runtime dispatch on axis kind or chart id; every chart is a generic instantiation (REQ-CHART-001).
 - `cargo test -p engine decode_stage_descriptor` — GPU `ICDescriptor` fields (masses, virial_ratio, rho_ratio, rho_angle, K_0, V_0, r_min_pair_0) against the f64 decode, within the REQ-DEC-043 tolerance (REQ-TOOL-030).
 - `cargo xtask gate decode-f32-eps` — measures f64-vs-f32 decode differences on the golden IC and fuzzed interiors and reports the multiple of f32 eps that covers them; the calibration proposal is reviewer-checked, confirmed by the human at the M2 gate and recorded in `decisions.md` (REQ-DEC-043).
+- `cargo test -p engine decode_stage_identities` at saturated `z_μ`, and the goldens unchanged: `tanh_sat`'s proposal, at or above where `tanh` rounds to ±1 at f32 and f64 and below where the measured GPU `tanh` fails, reviewer-checked, confirmed by the human at the M2 gate and recorded in `decisions.md` (REQ-DEC-047).
 
 ## Notes
 - The Tier-N tolerances are set later by the M4 measurement (REQ-VAL-064); REQ-DEC-043 is decoder test 12's own factor. The CPU-f64 Precision-ring surface as a whole (`computeIC` etc.) is REQ-SYS-017 (M3); this task delivers only `decodeOnly`.
@@ -63,3 +64,7 @@ The decoder runs in the kernel: a decode-stage entry compiled to f32 SPIR-V → 
   selects go in the shared source, `crates/kernel/src/decode/descriptor.rs`, which TASK-M2-03 wrote with plain
   quotients, so the CPU-f64 path stores the same bits. `decode_stage_descriptor` includes pole inputs at f32
   (REQ-TOOL-030).
+- **Metal's `tanh` (applied per R-369, the orchestrator's decision, recorded in the PR):** Metal's GPU `tanh` fails from 43.671875, 0 and then
+  NaN, so the decode stage clamps `tanh`'s argument to `±tanh_sat` (dd_generation_root §3.9's `tanh` operator, an R-72
+  definition), through the generator; `tanh_sat` is a provisional register entry, its value REQ-DEC-047's calibration
+  (R-71), proposed here.

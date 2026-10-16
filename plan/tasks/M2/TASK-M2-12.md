@@ -43,3 +43,4 @@
 - R-133: the evidence renders show decode-time fields (feasibility, K, L_z coverage); no integrated field is needed at M2.
 - RQ-92 ruled: R-124 — R-25 is applied in the docs: the refusal covers every `Some(E*)`, including `Some(0)`.
 - RQ-100 ruled: R-113 — TASK-M2-10 and TASK-M2-11 depend on this task for K_max and γ_K.
+- Applied per R-369 (physics review 5535371186 of PR #216): the chart-aware validation refuses a non-finite E* before decode (dd_decoder §3.7 :281, 'the view's finite value'; inverse_encode_contract § 'Chart-aware validation').

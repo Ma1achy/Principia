@@ -1,0 +1,6 @@
+{
+  "description": "Fuzzed interiors: 64 latent charts, z0 on [-1, 1]^8 and q1, q2 on [-1/2, 1/2]^8, 256 points (u, v) each, so every |z_k| <= 2.",
+  "points": { "interior": { "seed": 1, "charts": 64, "per_chart": 256 } },
+  "recorded": { "platform": "Apple M3 Pro, Metal, fast-math off (TASK-M2-06)", "max_eps": 42.55 },
+  "expected": "pass"
+}

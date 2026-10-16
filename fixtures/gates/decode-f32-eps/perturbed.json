@@ -1,0 +1,6 @@
+{
+  "description": "The fuzzed interiors against an f64 reference whose z0[0], the alpha control, is changed by 1e-4: a decode not the kernel's must fail (pitfalls §3).",
+  "points": { "interior": { "seed": 1, "charts": 64, "per_chart": 256 } },
+  "perturb": { "component": 0, "by": 1e-4 },
+  "expected": "fail"
+}

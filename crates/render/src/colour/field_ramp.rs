@@ -50,7 +50,8 @@
 
 use std::fmt::Write as _;
 
-use ledger::gen::{self as generate, catalogue, numeric::float};
+use ledger::gen::numeric::{float, non_finite, NON_FINITE};
+use ledger::gen::{self as generate, catalogue};
 use ledger::schema::{Entry, FieldType};
 
 use crate::assemble::{Kind, Occupant};
@@ -62,16 +63,6 @@ pub const COMPACTION_WGSL: &str = include_str!("../../shaders/wgsl/lib/compactio
 
 /// The ramps' WGSL (colour_composition §1.2), placed after the prelude at assembly.
 pub const RAMP_WGSL: &str = include_str!("../../shaders/wgsl/lib/ramp.wgsl");
-
-/// An f32's exponent field, all ones: the bits of every non-finite value, NaN and `±∞`, and of no finite one (IEEE 754
-/// binary32). The guard tests `bits & NON_FINITE == NON_FINITE` (R-436). TASK-M2-31 gives it, and [`non_finite`], one
-/// home in `ledger::gen::numeric`, which this module then reads.
-const NON_FINITE: u32 = 0x7F80_0000;
-
-/// Whether `x` is not finite, NaN or `±∞`, by its bits: the guard's test, the CPU twin of the WGSL line (R-436).
-fn non_finite(x: f32) -> bool {
-    x.to_bits() & NON_FINITE == NON_FINITE
-}
 
 /// A payload field read through `ctx` with its validity (colour_composition §3).
 #[derive(Clone, Debug, PartialEq)]
@@ -92,7 +83,8 @@ pub struct ScalarField {
     sentinel: Option<f64>,
     /// The unset value's f32 bits: the CPU twin's.
     unset_bits: Option<u32>,
-    /// The field is an `f32`, so the absence NaN is one of its invalid values.
+    /// The field is an `f32`, so a non-finite value, the absence NaN or a stored `±∞`, is one of its invalid values
+    /// (R-436).
     float: bool,
 }
 
@@ -496,7 +488,8 @@ pub struct FieldRamp {
 /// What a field ramp shows for one value.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Shown {
-    /// The invalid treatment: NaN, a stored sentinel, `log`'s negative sentinel or a non-finite value (R-436).
+    /// The invalid treatment: NaN, a stored `±∞` that is no unset value (R-436), a stored sentinel, or `log`'s styled
+    /// negative value.
     Invalid,
     /// The "not yet" style, `debug_not_yet(frag_xy)` (R-280, R-399).
     NotYet,

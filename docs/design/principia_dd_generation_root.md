@@ -752,6 +752,11 @@ population = { name, lo, hi, count }
   A provisional entry is read the same way. **No number is wrapped in a function to get past the lint (R-427;
   REQ-SYS-082):** a `fn` or `const fn` that returns a register constant's number in place of a register entry is the
   `const` the lint refuses, under another form. A proposed value is entered `provisional` and read from the register.
+  **A counter's starting zero is not a register value (R-440):** a count from none, written `Cell::default()`, is not a
+  default, threshold or calibration. This covers counters only, never real values: a default, threshold or
+  calibration is read from the register, even at 0, in whatever form it is written. An IEEE-754 format constant written
+  from its std name, such as `f32::INFINITY.to_bits()` for the f32 exponent mask, is not one either (applied per R-369,
+  recorded in R-440); the scope is format constants, never calibration values.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
   the f16 pack clamp (payload §1), the f16 subnormal floor (R-271), and the step count and sentinel of `θ̃`'s pole
@@ -788,6 +793,7 @@ citing its calibration requirement, and read from the register like any other; n
 | `log_floor_rho_ratio` | 2⁻²³ ≈ 1.19e-7, `rho_ratio`'s log floor, assuming the mass-weighted ‖ρ̃‖/‖λ̃‖; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `log_floor_r_min_pair_0` | 2⁻¹⁴ ≈ 6.10e-5, `r_min_pair_0`'s log floor, a distance; confirmed provisionally at the M1 gate and re-marked provisional until M2 (R-419, R-428) | canonical-units | M2 | REQ-TOOL-163 |
 | `eps_m01` | 10⁻⁵, the `DEGENERATE(M01_TINY)` threshold (dd_decoder §3.1), a threshold with its measured gap | canonical-units | M2 | REQ-DEC-039 |
+| `tanh_sat` | 20, the bound §3.9's `tanh` operator clamps its argument to: `tanh` rounds to ±1 from `abs(x)` ≈ 9.01 at f32 and ≈ 19.06 at f64, so the clamp changes no CPU value at either width, while Metal's GPU `tanh` fails from 43.671875, 0 and then NaN (TASK-M2-06) | canonical-units | M2 | REQ-DEC-047 |
 | `r_pole` | 0.01, the pole radius of the unwrapped phase `θ̃` on the unit shape sphere (dd_integrator §3.7, R-389); confirmed at the M1 gate and marked provisional until M3, where it is re-confirmed against real orbits' near-pole arcs (R-433) | canonical-units | M3 | REQ-INT-086 |
 | `diverging_x0_E_0` | 1, `E_0`'s `x₀`, an energy: the magnitude where its `diverging` symlog's compression sets in (dd_colouring §3.6, REQ-COL-065), one unit of the normalised system's binding energy (TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
 | `diverging_x0_Lz_0` | 1, `Lz_0`'s `x₀`, an angular momentum, as `E_0`'s (dd_colouring §3.6, REQ-COL-065; TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
@@ -850,7 +856,8 @@ Changing a hashed member of any entry, or adding or removing an entry, changes t
 edit does not. Every entry is hashed, whether or not a block uses it by default (R-344). The registry's chart
 constants are hashed too, each by value, whether or not a link reads it: those that no link reads, `δ_λ` (decode's
 mirror tie-break), `ε_w` (its seed-selection floor) and `ε_M01` (the mass block's M01_TINY threshold, dd_decoder §3.1;
-added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-344, closing RQ-189).
+added by TASK-M2-02), change how a chart coordinate decodes, as the links do (R-344, closing RQ-189). `tanh_sat`, the
+`tanh` operator's argument bound (added by TASK-M2-06), is read by the operator, not by a tree, and is hashed likewise.
 
 **The canonical form of a link's functions** *(definition, R-72; REQ-GEN-032)*. An entry's forward, inverse and
 log-det are written as expression trees, never as text:
@@ -863,7 +870,15 @@ log-det are written as expression trees, never as text:
   so a tree naming one the entry does not declare fails generation. `num(v)` is a literal number. An operator node
   applies one of a closed list to its arguments, in order: `add`, `mul` (two or more, `x_0 + x_1 + …`,
   `x_0 · x_1 · …`); `sub`, `div` (two, `x_0 − x_1`, `x_0 / x_1`); `clamp` (three, `min(max(x_0, x_1), x_2)`); and,
-  of one, `neg`, `exp`, `log` (natural), `tanh`, `artanh`, `sigmoid` (`σ(x) = 1/(1 + e⁻ˣ)`), `logit` (`log(x/(1 − x))`,
+  of one, `neg`, `exp`, `log` (natural), `tanh` (evaluated as `tanh(clamp(x, −tanh_sat, tanh_sat))`, its result then
+  selected to ±1 where its magnitude exceeds 1, by comparison, a NaN kept; definition, R-72, TASK-M2-06: the clamp acts
+  only where `tanh` already rounds to ±1 at f32 and f64, and gives ±1 where a GPU's `tanh` fails at large arguments, as
+  Metal's does from 43.671875, 0 and then NaN; the select keeps the operator in `tanh`'s own range, `[−1, 1]`, where a
+  backend's accuracy bound lets its result pass 1, as Metal's `tanh` returns 1 + 2⁻²³ at about 1.5% of arguments in
+  `[9, 20]`, and never acts on the CPU, whose `tanh` stays in `[−1, 1]`. Both are an operator-level correction to the
+  backend, distinct from the link-level rule below that no link clamps its output: neither lands a link on an endpoint
+  nor guards against a degenerate configuration (validation ground-truth note), and `qₖ` reaches `±q_max` by
+  saturation, as R-417 has it), `artanh`, `sigmoid` (`σ(x) = 1/(1 + e⁻ˣ)`), `logit` (`log(x/(1 − x))`,
   σ's inverse), `softplus` (`log(1 + eˣ)`), `inv_softplus` (`log(eˣ − 1)`) and `sech2` (`1/cosh² x`). An operator given
   another number of arguments fails generation; one outside the list cannot be written, and adding one is an edit to
   this list.

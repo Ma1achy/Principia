@@ -353,6 +353,19 @@ dimension gets its own key:**
 It's called **"Legend"**, never "Fate". The outcome legend uses colour_composition §1.4's canonical palette (R-77) and 0-based
 labels (R-22).
 
+**A free-fall slice under `η_E` is almost all degenerate, and that is expected (R-441; dd_decoder §3.7).** Energy
+normalisation scales the momenta, `pᵢ ← η_E·pᵢ`; with zero momenta it cannot reach any `E*` above the potential, since
+scaling zero momenta cannot raise the kinetic energy. So with `η_E` on, every pixel of a zero-momentum (free-fall)
+slice whose `E*` is above its potential `U = V₀` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
+below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn degenerate's white in the outcome legend
+(colour_composition §1.4; R-96). A pixel the mass block has already tagged, such as `DEGENERATE(M01_TINY)`, keeps
+that tag rather than an energy one, but it is `decode_failed` too and drawn the same white. The one exception to the
+colour is where `E* = V₀` exactly: the IC is already at the target, the decode is untouched and untagged, and the pixel
+integrates. `V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
+`V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
+scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E` is then a no-op on every free-fall
+preset, and the near-uniform white, with that contour its only exception, is expected, not a bug.
+
 ## G7. Chart builder (`03_chartbuilder.png`)
 
 - **Each axis has a kind:** latent direction (any mix of the eight `z` components, normalised; a normalise button shows
@@ -764,7 +777,10 @@ floor).** `ledger::gen::numeric` emits it for every numeric field but the drifts
 which is on `ramp_coolwarm` centred at zero (R-400; TASK-M1-17). **The cyclic period is one turn, 2π:** a cyclic
 field is an angle in radians (REQ-TOOL-161). `rho_angle` and `theta` are the cyclic fields: `rho_angle`'s formula is
 REQ-PAY-088's, and `theta`, the unwrapped longitude `θ̃` in radians, is cyclic because it is an angle, although its
-range spans zero (R-423; REQ-RENDER-085). **The log floor** of a field with no ledger `floor` is that field's own,
+range spans zero (R-423; REQ-RENDER-085). `fract(x) = x − ⌊x⌋`, WGSL's `fract`, so `raw ∈ [0, 1)` for a negative
+angle too (R-423); that half-open range holds in exact arithmetic. In f32 or f64, a negative `x / period` close enough to
+0 gives `1 − |x / period|` rounded to exactly 1.0 (in f32, any `|x / period| ≤ 2⁻²⁵`), as WGSL's `fract` allows; for a cyclic
+quantity 1.0 is the same turn as 0, so it is no error (applied per R-369). **The log floor** of a field with no ledger `floor` is that field's own,
 `ε_f` in its units, a calibration proposed with its evidence for the M1 gate (R-401, REQ-TOOL-160; TASK-M1-18),
 `rho_ratio`'s and `r_min_pair_0`'s provisionally, re-confirmed at M2 once their formulas are defined (R-419,
 REQ-TOOL-163): `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so, and for `r_min_pair_0` only the
