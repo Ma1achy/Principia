@@ -184,6 +184,11 @@ pub fn miss(s: &Sample, inverse: InverseKind) -> (f64, f64) {
     )
 }
 
+/// How many of `list` are on the lower hemisphere, `w = n₂ < 0`; the equator, `n₂ = ±0`, is not.
+pub fn lower_hemisphere(list: &[Sample]) -> usize {
+    list.iter().filter(|s| s.n[2] < 0.0).count()
+}
+
 /// The verdict on a worst miss against the threshold: a pass at or below it.
 pub fn verdict(worst: f64, threshold: f64) -> Verdict {
     if worst <= threshold {
@@ -226,7 +231,7 @@ impl ShapeRoundtripGate {
             .copied()
             .fold(0.0, f64::max);
         let poles = &misses[random + near..];
-        let lower = all[..random].iter().filter(|s| s.n[2] < 0.0).count();
+        let lower = lower_hemisphere(&all[..random]);
         let q = |x| quantile(&misses, x).unwrap_or(f64::NAN);
         let mut scatter = vec![
             format!(
@@ -247,7 +252,10 @@ impl ShapeRoundtripGate {
                 poles.iter().copied().fold(0.0, f64::max)
             ),
         ];
-        let over = misses.iter().filter(|&&x| x > threshold).count();
+        let over = misses
+            .iter()
+            .filter(|&&x| verdict(x, threshold) == Verdict::Fail)
+            .count();
         let mut negative = Vec::new();
         let pass = verdict(worst, threshold) == Verdict::Pass;
         if pass {

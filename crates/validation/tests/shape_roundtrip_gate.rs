@@ -9,7 +9,7 @@ use validation::decode_f32_eps::SplitMix;
 use validation::gate::{self, Gate, GateConfig, Verdict};
 use validation::negative_control;
 use validation::shape_roundtrip::{
-    self, miss, samples, verdict, Input, InverseKind, Sample, ShapeRoundtripGate,
+    self, lower_hemisphere, miss, samples, verdict, Input, InverseKind, Sample, ShapeRoundtripGate,
 };
 use validation::SHAPE_ROUNDTRIP_BOUND;
 
@@ -223,6 +223,39 @@ negative_control!(
         }
         check_signs(&i, &list)
     }
+);
+
+/// `count` counts the samples with `n₂ < 0` and no others: not the equator's `±0`, and every `n₂` one ulp below zero.
+fn check_lower(count: fn(&[Sample]) -> usize) {
+    let at = |n2: f64| Sample {
+        n: [0.0, 1.0, n2],
+        z_mass: [0.0, 0.0],
+        inertia: 1.0,
+        phase: 0.0,
+    };
+    let tiny = f64::from_bits(1);
+    assert_eq!(
+        count(&[at(0.0), at(-0.0)]),
+        0,
+        "the equator is on the lower hemisphere"
+    );
+    assert_eq!(
+        count(&[at(-tiny), at(-1.0), at(tiny), at(1.0)]),
+        2,
+        "the lower hemisphere's count"
+    );
+}
+
+#[test]
+fn shape_roundtrip_gate_lower_hemisphere() {
+    check_lower(lower_hemisphere);
+}
+
+negative_control!(
+    shape_roundtrip_gate_lower_hemisphere,
+    "a count that takes n₂ ≤ 0 puts the equator on the lower hemisphere, so it must fail",
+    expected = "the equator is on the lower hemisphere",
+    check_lower(|list| list.iter().filter(|s| s.n[2] <= 0.0).count())
 );
 
 // ── The miss ─────────────────────────────────────────────────────────────────────────────────────────────────────
