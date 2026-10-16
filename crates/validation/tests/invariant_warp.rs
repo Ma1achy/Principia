@@ -2,8 +2,9 @@
 //! constants register's proposed entries, measured against what the `(L_z, E)` and `(L_z, K)` charts show at them.
 //! - `invariant_warp_evidence`: the measurement, `fixtures/gates/invariant_warp/measurement.toml`, is this test's,
 //!   within a relative 10⁻⁶, and the renders beside it are the PNGs it draws. Regenerate both with
-//!   `PRIN_WRITE_INVARIANT_WARP=1`. The coverage shares and the unchecked root's count are compared at a relative
-//!   10⁻³, since a platform's `powf` or `sqrt` can move them by a few.
+//!   `PRIN_WRITE_INVARIANT_WARP=1`. The coverage shares and the unchecked root's count, which a platform's `powf` or
+//!   `sqrt` moves (3204 on macOS, 3192 on CI's Linux), are not compared as numbers: the file records the platform
+//!   that wrote it, and both it and the measurement must show what each is evidence of (`check_claims`).
 //!
 //! **What it measures**, at the register's `K_max` and `γ_K`, through the kernel's own chart decode (natively; R-133:
 //! decode-time fields, no integrated field):
@@ -344,8 +345,10 @@ fn measurement_text(values: &[(&str, f64, &str)]) -> String {
         "# The invariant warp's calibration evidence (REQ-CHART-044; R-71, R-133): K_max and γ_K, proposed in the\n\
          # constants register, provisional until the M2 gate. Measured by crates/validation/tests/invariant_warp.rs,\n\
          # invariant_warp_evidence, through the kernel's chart decode natively; regenerate with\n\
-         # PRIN_WRITE_INVARIANT_WARP=1, which also redraws the renders beside it. Compared at a relative 1e-6, the\n\
-         # coverage shares and the unchecked root's count at 1e-3: a platform's powf or sqrt can move them by a few.\n",
+         # PRIN_WRITE_INVARIANT_WARP=1, which also redraws the renders beside it. Compared at a relative 1e-6, except\n\
+         # the coverage shares and the unchecked root's count, which a platform's powf or sqrt moves: as written on\n\
+         # macOS, and checked only for what they evidence (the unchecked root infeasible somewhere; coverage falling\n\
+         # with γ_K overall and rising below 0.1·K_max).\n",
     );
     for (k, v, what) in values {
         s.push_str(&format!("{k} = {v:e}  # {what}\n"));
@@ -353,35 +356,81 @@ fn measurement_text(values: &[(&str, f64, &str)]) -> String {
     s
 }
 
-/// The relative tolerance `key` is compared at: 10⁻³ for the counts a platform's `powf` or `sqrt` can move by a few,
-/// one ulp moving a pixel across a cell's edge or a rounded root across the exact one (the coverage shares and the
-/// unchecked root's count); 10⁻⁶ for the rest, which a few ulps move by far less.
-fn tolerance(key: &str) -> f64 {
-    if key.starts_with("coverage_") || key == "infeasible_rounded_root_f32" {
-        1e-3
-    } else {
-        1e-6
-    }
+/// The keys a platform's `powf` or `sqrt` moves, one ulp taking a pixel across a cell's edge or a rounded root across
+/// the exact one (3204 on macOS against 3192 on CI's Linux): they are checked for what they evidence
+/// ([`check_claims`]), not compared as numbers.
+fn platform_dependent(key: &str) -> bool {
+    key.starts_with("coverage_") || key == "infeasible_rounded_root_f32"
 }
 
-/// Each key of `text` holds its measured value, within its relative [`tolerance`].
+/// What the platform-dependent keys are evidence of, in `get`'s values from `source`: an unchecked rounded root is
+/// infeasible somewhere (why `L_max` is stepped down); each coverage share is a share; a larger `γ_K` reaches less of
+/// the feasible region overall and more of it below `0.1·K_max` than `γ_K = 1`.
+fn check_claims(get: &dyn Fn(&str) -> f64, source: &str) {
+    assert!(
+        get("infeasible_rounded_root_f32") > 0.0,
+        "{source}: an unchecked rounded root is never infeasible"
+    );
+    for k in [
+        "coverage_gamma1",
+        "coverage_gamma2",
+        "coverage_gamma3",
+        "coverage_low_gamma1",
+        "coverage_low_gamma2",
+        "coverage_low_gamma3",
+    ] {
+        let v = get(k);
+        assert!(
+            v > 0.0 && v <= 1.0,
+            "{source}: `{k}` = {v:e} is not a share"
+        );
+    }
+    assert!(
+        get("coverage_gamma1") > get("coverage_gamma2")
+            && get("coverage_gamma2") > get("coverage_gamma3"),
+        "{source}: the coverage does not fall with γ_K"
+    );
+    assert!(
+        get("coverage_low_gamma2") > get("coverage_low_gamma1")
+            && get("coverage_low_gamma3") > get("coverage_low_gamma1"),
+        "{source}: a larger γ_K does not reach more below 0.1·K_max"
+    );
+}
+
+/// The number `text` holds at `k`.
+fn held(text: &str, k: &str) -> f64 {
+    let line = text
+        .lines()
+        .find(|l| l.split('=').next().is_some_and(|key| key.trim() == k))
+        .unwrap_or_else(|| panic!("{MEASUREMENT}: no `{k}`"));
+    line.split('=')
+        .nth(1)
+        .and_then(|r| r.split('#').next())
+        .map(str::trim)
+        .and_then(|r| r.parse().ok())
+        .unwrap_or_else(|| panic!("{MEASUREMENT}: `{k}` holds no number"))
+}
+
+/// Each key of `text` holds its measured value within a relative 10⁻⁶, but the [`platform_dependent`] ones, which
+/// both `text` and the measurement must hold to [`check_claims`].
 fn check_measurement(text: &str, values: &[(&str, f64, &str)]) {
     for (k, v, _) in values {
-        let line = text
-            .lines()
-            .find(|l| l.split('=').next().is_some_and(|key| key.trim() == *k))
-            .unwrap_or_else(|| panic!("{MEASUREMENT}: no `{k}`"));
-        let held: f64 = line
-            .split('=')
-            .nth(1)
-            .and_then(|r| r.split('#').next())
-            .map(str::trim)
-            .and_then(|r| r.parse().ok())
-            .unwrap_or_else(|| panic!("{MEASUREMENT}: `{k}` holds no number"));
+        let held = held(text, k);
         assert!(
-            (held - v).abs() <= tolerance(k) * v.abs(),
+            platform_dependent(k) || (held - v).abs() <= 1e-6 * v.abs(),
             "{MEASUREMENT}: `{k}` holds {held:e}, measured {v:e}"
         );
+    }
+    if values.iter().any(|(k, _, _)| platform_dependent(k)) {
+        check_claims(&|k| held(text, k), MEASUREMENT);
+        let measured = |k: &str| {
+            values
+                .iter()
+                .find(|(key, _, _)| *key == k)
+                .map(|(_, v, _)| *v)
+                .unwrap_or_else(|| panic!("no measured `{k}`"))
+        };
+        check_claims(&measured, "the measurement");
     }
 }
 

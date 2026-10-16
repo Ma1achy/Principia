@@ -1,8 +1,10 @@
 # The invariant warp's calibration evidence (REQ-CHART-044; R-71, R-133): K_max and γ_K, proposed in the
 # constants register, provisional until the M2 gate. Measured by crates/validation/tests/invariant_warp.rs,
 # invariant_warp_evidence, through the kernel's chart decode natively; regenerate with
-# PRIN_WRITE_INVARIANT_WARP=1, which also redraws the renders beside it. Compared at a relative 1e-6, the
-# coverage shares and the unchecked root's count at 1e-3: a platform's powf or sqrt can move them by a few.
+# PRIN_WRITE_INVARIANT_WARP=1, which also redraws the renders beside it. Compared at a relative 1e-6, except
+# the coverage shares and the unchecked root's count, which a platform's powf or sqrt moves: as written on
+# macOS, and checked only for what they evidence (the unchecked root infeasible somewhere; coverage falling
+# with γ_K overall and rising below 0.1·K_max).
 k_max = 1e0  # the proposed K_max (constants register, provisional until M2)
 gamma_k = 2e0  # the proposed γ_K (constants register, provisional until M2)
 u_golden = 1.9245008972987526e-1  # |U| at the golden IC, z = 0
