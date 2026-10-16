@@ -701,6 +701,14 @@
   requirements: [REQ-COL-070]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3]
+- id: TASK-M2-32
+  milestone: M2
+  title: "The outcome view conformed to R-444 to R-448: nine physical classes, failures drawn black, forbidden regions hatched from the chart, and the OKLab-uniform preset"
+  depends_on: [TASK-M2-05, TASK-M1-10, TASK-M1-14, TASK-M1-17]  # R-444: TASK-M1-10, TASK-M1-14 and TASK-M1-17 have merged; applied per R-369
+  needs: [REQ-COL-002, REQ-COL-062, REQ-COL-067, REQ-COL-068, REQ-TOOL-162]
+  requirements: [REQ-COL-101, REQ-COL-102, REQ-COL-103, REQ-COL-104, REQ-COL-105]
+  reviewers: [code, qa, physics, gui]  # physics for REQ-COL-102's definition (R-72): how the view reads the chart's classification
+  pitfalls: [PIT-1.2, PIT-3]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -1944,8 +1952,8 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30]
-  needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069]
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32]  # TASK-M2-32 for REQ-COL-102's lane (R-446)
+  needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102]
   requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056]
   reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
   pitfalls: []
