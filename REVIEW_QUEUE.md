@@ -716,6 +716,10 @@ seen.*
     RQ-298).
   - (c) Keep R-82 and read T1 on the band as holding "after float tolerance" in configuration only, the momenta's
     `y` sign left to the input: weaker than T1's sentence, and REQ-ENC-003 reworded.
+  - Bearing on all three (physics review of PR #228): inverse-encode Part 8 (:248) already lists "the mirror tie"
+    among ROUNDTRIP's "Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie — *tagged
+    expected*, not bugs", which reads with (a) and (c); and under (b) the seam of `E` moves to the band's edges for
+    states whose mirror-odd quantity is negative, so `E` is discontinuous somewhere on the band whichever is chosen.
 - **Applied meanwhile:** `encode_t1_gauge` (`crates/kernel/tests/encode_core.rs`) sweeps random `g` per §3.3, mirror
   included, on states off the band (`|λ̃_y| ≥ about 1.5e-3`), and the band with `g` that turn, move, boost and rescale
   but do not mirror, which is what REQ-ENC-003's verify detail names ("deadband-straddling rotations"). The mirror tie
