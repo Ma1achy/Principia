@@ -596,6 +596,14 @@ without a WGSL extension, so the counts and codes are u32 and the fractions f32.
 
 **A field without a complete entry fails generation loudly.** Coverage is enforced, not hoped for.
 
+**Body and pair indices in exports stay 0-based, and say so (R-449; REQ-GEN-036).** The export decoder (seam 13) and
+every machine-readable dump write a body- or pair-indexed field with the internal 0-based ids (R-22): `detail` under
+escape and collision, `dmin_pair`, `m0 m1 m2` and any per-body or per-pair field. The export's header or schema states
+the base for each: "body index, 0-based", or for a pair id "pair id, 0-based; pair `k` is the side opposite body `k`".
+Which key of the entry carries that text is the task's to choose (REQ-GEN-036). What a person reads is 1-based, through
+the one display function (payload §2, "What a person reads"); an export's caption is read by a person and is 1-based,
+its columns are not.
+
 **The `diverging` scale agrees with the range (R-403; REQ-GEN-033).** An entry carries `scale: diverging` only when
 its declared `range` spans zero (`lo < 0 < hi`, either end possibly unbounded), as R-400 derives a field's diverging
 ramp from its range. A `diverging` entry whose declared range does not span zero fails generation, naming the field
@@ -1018,7 +1026,7 @@ in `z₂`).
 - **`free_group_word` length field is 7 bits (mixed-radix ~76-symbol capacity)** — reserved means reserved; any future use is a ledger edit (⇒ version change) not an opportunistic squat.
 - ~~**`QuadReduction` completion** (§3.7)~~ — **done.** Not a transcription task after all: the older source held only prose, so the member list was derived from consumers (scheduler Part 6) and from measurement (`principia_dd_refinement_criterion.md`). **Pending change 1 (the `dominant_outcome` grain) is dissolved rather than decided** — defining every event-derived field at the joint `class ⊕ detail` grain removes the two-grain problem entirely, so no class-only companion field is needed.
 - **Drift-sign presentation** — the diverging-scale metadata for `energy_drift`/`Lz_drift` is a generator requirement, recorded here so the catalogue doesn't ship them as broken sequential-log views.
-- **Body-index naming** — settled 0-based (R-22); this ledger's `ICDescriptor` names changed with it (⇒ schema version change, correctly — automatic under R-36).
+- **Body-index naming** — settled 0-based (R-22); this ledger's `ICDescriptor` names changed with it (⇒ schema version change, correctly — automatic under R-36). What a person reads is 1-based (R-449); the ledger's names and the exports stay 0-based and say so (§3.8).
 
 ---
 
