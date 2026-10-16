@@ -38,7 +38,7 @@ use kernel::chart::shape_sphere::{
     exponential, held_momentum, inverse, place, spherical, Inverse, ShapeMap, ShapeSphere,
 };
 use kernel::chart::{self, Chart, ValidationResult};
-use kernel::decode::{mass, momentum, Decoded, Ic};
+use kernel::decode::{descriptor, mass, momentum, Decoded, Ic};
 use kernel::generated::links::Defaults;
 use kernel::shape::{landmarks, shape, shape_vec, weighted_jacobi, Landmarks};
 use kernel::stage::decode::StickBreakingLinks;
@@ -507,11 +507,24 @@ negative_control!(
 type Inverse64 = fn([f64; 3], f64, f64) -> Inverse<f64>;
 
 /// At `n₀ = ±1` with every sign of zero in `n₁` and `n₂`, `inv` gives `β = +0`, `ρ̃ = √a·(cos φ_f, sin φ_f)` and
-/// `λ̃ = √b·(cos φ_f, sin φ_f)` bit for bit, so `ψ = φ_f`, and `shape_vec` of them is `(n₀, 0, 0)`.
+/// `λ̃ = √b·(cos φ_f, sin φ_f)` bit for bit, so `ψ = φ_f`, and `shape_vec` of them is `(n₀, 0, 0)`. Off the pole, where
+/// only one of `n₁` and `n₂` is zero, `β` is `atan2(n₂, n₁)`, the select taking the pole alone.
 fn check_inverse_poles(inv: Inverse64) {
     let mut rng = SplitMix::new(5);
     for _ in 0..64 {
         let (i, phase) = (on(&mut rng, 0.25, 4.0), on(&mut rng, -PI, PI));
+        for n in [
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, -1.0],
+            [0.6, 0.0, 0.8],
+            [-0.6, -0.0, -0.8],
+            [0.6, 0.8, 0.0],
+            [0.6, -0.8, -0.0],
+            [0.0, -1.0, 0.0],
+        ] {
+            let got = inv(n, i, phase);
+            assert_eq!(got.beta, n[2].atan2(n[1]), "β off the pole at {n:?}");
+        }
         for n0 in [1.0, -1.0] {
             for n1 in [0.0, -0.0] {
                 for n2 in [0.0, -0.0] {
@@ -818,6 +831,11 @@ fn check_shared(decode: Decode64) {
                 p: p.p
             },
             "the joined ic"
+        );
+        assert_eq!(
+            d.descriptor,
+            descriptor::describe(&d.ic),
+            "the descriptor is not the joined ic's"
         );
         let total = [0, 1].map(|j| d.ic.p.iter().map(|q| q[j]).sum::<f64>());
         let com = [0, 1].map(|j| (0..3).map(|i| d.ic.m[i] * d.ic.r[i][j]).sum::<f64>());
