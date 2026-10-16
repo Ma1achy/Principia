@@ -167,11 +167,71 @@ pub fn non_finite_wgsl(x: &str) -> String {
     format!("(bitcast<u32>({x}) & {NON_FINITE:#010x}u) == {NON_FINITE:#010x}u")
 }
 
-/// `b` as a finite end, or `None`.
-fn finite(b: Bound) -> Option<f64> {
+/// `b` as a finite end, or `None`: an unbounded end, or one at `±∞`, is no end of a fixed range.
+pub fn finite(b: Bound) -> Option<f64> {
     match b {
         Bound::Closed(v) | Bound::Open(v) if v.is_finite() => Some(v),
         _ => None,
+    }
+}
+
+/// Whether `e` is a step index: a `u` bits payload field declared `[0, horizon_steps_max]`, placed on the run's own
+/// `[0, horizon_steps]` (render_gui_spec §10.1).
+pub fn step_index(e: &Entry) -> bool {
+    matches!(e.location, Location::Packed { .. } | Location::Scalar(_))
+        && e.ty == FieldType::UBits
+        && finite(e.range.lo) == Some(0.0)
+        && finite(e.range.hi) == Some(HORIZON_STEPS_MAX.number())
+}
+
+/// The ends of `e`'s `lin` range: a step index's `[0, horizon_steps]`, else each declared finite end fixed and each
+/// other end the measured one (render_gui_spec §10.1).
+pub fn lin_ends(e: &Entry) -> (End, End) {
+    if step_index(e) {
+        return (End::Fixed(0.0), End::Horizon);
+    }
+    let end = |b| finite(b).map_or(End::Measured, End::Fixed);
+    (end(e.range.lo), end(e.range.hi))
+}
+
+impl End {
+    /// The end's value for the measured end `measured` and the read side's `horizon_steps`.
+    pub fn at(self, measured: f64, horizon_steps: u32) -> f64 {
+        match self {
+            End::Fixed(v) => v,
+            End::Horizon => f64::from(horizon_steps),
+            End::Measured => measured,
+        }
+    }
+
+    /// The end in WGSL, `measured` the measured end's expression: a literal, `ctx.params.horizon_steps` or the
+    /// measured end, read at run time, so no gesture reaches a compiler (lowering contract Part 3).
+    pub fn wgsl(self, measured: &str) -> String {
+        match self {
+            End::Fixed(v) => float(v),
+            End::Horizon => "f32(ctx.params.horizon_steps)".to_owned(),
+            End::Measured => measured.to_owned(),
+        }
+    }
+}
+
+/// The half-width `M` of the symmetric range `[−M, M]` a field whose range spans zero is placed on, the larger
+/// magnitude of its two ends (R-400), for the measured range `u_range` and the read side's `horizon_steps`.
+pub fn half_width(lo: End, hi: End, u_range: [f64; 2], horizon_steps: u32) -> f64 {
+    lo.at(u_range[0], horizon_steps)
+        .abs()
+        .max(hi.at(u_range[1], horizon_steps).abs())
+}
+
+/// [`half_width`] in WGSL, the measured ends `uniforms.u_range`'s: a literal where both ends are fixed.
+pub fn half_width_wgsl(lo: End, hi: End) -> String {
+    match (lo, hi) {
+        (End::Fixed(lo), End::Fixed(hi)) => float(lo.abs().max(hi.abs())),
+        _ => format!(
+            "max(abs({}), abs({}))",
+            lo.wgsl("uniforms.u_range.x"),
+            hi.wgsl("uniforms.u_range.y")
+        ),
     }
 }
 
@@ -224,18 +284,9 @@ impl NumericView {
             Scale::Diverging => Placement::Diverging,
             Scale::Categorical(_) | Scale::Flag => return None,
         };
-        let (lo, hi) = (finite(e.range.lo), finite(e.range.hi));
-        let step = matches!(e.location, Location::Packed { .. } | Location::Scalar(_))
-            && e.ty == FieldType::UBits
-            && lo == Some(0.0)
-            && hi == Some(HORIZON_STEPS_MAX.number());
         let (lo, hi) = match placement {
             Placement::Log { .. } | Placement::Cyclic { .. } => (End::Fixed(0.0), End::Fixed(1.0)),
-            _ if step => (End::Fixed(0.0), End::Horizon),
-            _ => (
-                lo.map_or(End::Measured, End::Fixed),
-                hi.map_or(End::Measured, End::Fixed),
-            ),
+            _ => lin_ends(e),
         };
         let bounded = finite(e.range.lo).is_some() && finite(e.range.hi).is_some();
         let range_auto = !matches!(placement, Placement::Cyclic { .. }) && !bounded;
@@ -295,15 +346,6 @@ impl NumericView {
         }
     }
 
-    /// One end in WGSL, `measured` the measured end's expression.
-    fn end(e: End, measured: &str) -> String {
-        match e {
-            End::Fixed(v) => float(v),
-            End::Horizon => "f32(ctx.params.horizon_steps)".to_owned(),
-            End::Measured => measured.to_owned(),
-        }
-    }
-
     /// The ramp the view draws on: twilight for a cyclic field, cool-warm for a field whose range spans zero, else
     /// viridis.
     pub fn ramp(&self) -> Ramp {
@@ -346,17 +388,9 @@ impl NumericView {
             // The fixed `[−M, M]`: `M` the larger magnitude of the two ends, an unbounded end the measured one; with
             // both ends measured, `m`, the measured range's own.
             let (lo, hi) = match (self.lo, self.hi) {
-                (End::Fixed(lo), End::Fixed(hi)) => {
-                    let r = float(lo.abs().max(hi.abs()));
-                    (format!("-{r}"), r)
-                }
                 (End::Measured, End::Measured) => ("-m".to_owned(), "m".to_owned()),
                 (lo, hi) => {
-                    let r = format!(
-                        "max(abs({}), abs({}))",
-                        Self::end(lo, "uniforms.u_range.x"),
-                        Self::end(hi, "uniforms.u_range.y")
-                    );
+                    let r = half_width_wgsl(lo, hi);
                     (format!("-{r}"), r)
                 }
             };
@@ -370,8 +404,8 @@ impl NumericView {
                 out,
                 "    return {ramp}(range_norm({}, {}, {}, {auto}, uniforms.u_range));",
                 self.compacted(),
-                Self::end(self.lo, "uniforms.u_range.x"),
-                Self::end(self.hi, "uniforms.u_range.y"),
+                self.lo.wgsl("uniforms.u_range.x"),
+                self.hi.wgsl("uniforms.u_range.y"),
             );
         }
         out
@@ -399,20 +433,16 @@ impl NumericView {
     /// The `(lo, hi)` `range_norm` reads and its `meas`, for the `RANGE_AUTO` value `auto`, `u_range` and the read
     /// side's `horizon_steps`: the fixed ends, or the measured ones; symmetric about 0 for a diverging field.
     pub fn range(&self, u_range: [f64; 2], horizon_steps: u32) -> ([f64; 2], [f64; 2]) {
-        let end = |e: End, measured: f64| match e {
-            End::Fixed(v) => v,
-            End::Horizon => f64::from(horizon_steps),
-            End::Measured => measured,
-        };
         if self.placement == Placement::Diverging {
             let m = u_range[0].abs().max(u_range[1].abs());
-            let r = end(self.lo, u_range[0])
-                .abs()
-                .max(end(self.hi, u_range[1]).abs());
+            let r = half_width(self.lo, self.hi, u_range, horizon_steps);
             return ([-r, r], [-m, m]);
         }
         (
-            [end(self.lo, u_range[0]), end(self.hi, u_range[1])],
+            [
+                self.lo.at(u_range[0], horizon_steps),
+                self.hi.at(u_range[1], horizon_steps),
+            ],
             u_range,
         )
     }
