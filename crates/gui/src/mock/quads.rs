@@ -76,9 +76,9 @@ pub fn quads(plane: &Plane) -> Vec<Quad> {
     quads_over(plane, UNIT)
 }
 
-/// The farthest the plane is tiled with copies of the root past it, in roots each way: so a window past the root is
-/// covered by quads, and a far zoom out stays a bounded tree (placeholder content).
-pub const MAX_TILE: i32 = 4;
+/// How many copies of the root are laid past it each way: so a window past the root is covered by quads, and a far
+/// zoom out stays a bounded tree (placeholder content).
+pub const MAX_ROOT_COPIES: i32 = 4;
 
 /// Whether two quads overlap or touch.
 pub fn touches(a: &Quad, b: &Quad) -> bool {
@@ -87,7 +87,7 @@ pub fn touches(a: &Quad, b: &Quad) -> bool {
 
 /// [`quads`] over the figure's span `span` (`[s₀, t₀, s₁, t₁]`): the same tree, its quads sized against the shown
 /// figure, so a span past `[0, 1]²` adds quads at the shown quads' size (R-406). Past the root `[−ROOT, ROOT]²` the
-/// plane is tiled with copies of it, out to [`MAX_TILE`] roots each way, split by the same rules; a copy's quads are
+/// plane is covered by copies of the root, out to [`MAX_ROOT_COPIES`] each way, split by the same rules; a copy's quads are
 /// kept only clear of the shown view, so the shown figure's quads are [`quads`]'s, the layer shown or hidden.
 pub fn quads_over(plane: &Plane, span: [f64; 4]) -> Vec<Quad> {
     let Some(shown) = view_of(plane, UNIT) else {
@@ -108,8 +108,8 @@ fn leaves_over(plane: &Plane, span: [f64; 4]) -> Vec<(Quad, bool)> {
     let width = shown[2] - shown[0];
     // The copies first, the root last, so the root's quads come first, in the order [`quads`] gives them.
     let mut stack = Vec::new();
-    for i in -MAX_TILE..=MAX_TILE {
-        for j in -MAX_TILE..=MAX_TILE {
+    for i in -MAX_ROOT_COPIES..=MAX_ROOT_COPIES {
+        for j in -MAX_ROOT_COPIES..=MAX_ROOT_COPIES {
             if (i, j) != (0, 0) {
                 let (du, dv) = (f64::from(i) * 2.0 * ROOT, f64::from(j) * 2.0 * ROOT);
                 stack.push(([du - ROOT, dv - ROOT, du + ROOT, dv + ROOT], 0u32, true));

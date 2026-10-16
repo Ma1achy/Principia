@@ -17,7 +17,7 @@ use engine::contract::set_field::{Edit, RenderField, SetField};
 
 use super::support::{headless, mock_app, press, rejects};
 use crate::app::{clear_colour, App, FigureCallback};
-use crate::capture::{self, shoot, Step, FORMAT, PIXELS_PER_POINT, SIZE};
+use crate::capture::{self, shoot, Shot, Step, FORMAT, PIXELS_PER_POINT, SIZE};
 use crate::headless::Headless;
 use crate::layout::{Layout, Placement};
 use crate::mock::canvas::{FigureCanvas, MockCanvas};
@@ -263,12 +263,12 @@ fn f3_fills_window_mock_tile_bounds_cover_the_window() {
     });
 }
 
-/// Past the root the plane is tiled with copies of it, so the window's quads cover the whole window at the shown
-/// quads' size; a copy's quads stay clear of the shown view, which keeps exactly [`quads::quads`]'s; and the tiling
-/// stops [`quads::MAX_TILE`] roots out.
+/// Past the root the plane is covered by copies of the root, so the window's quads cover the whole window at the shown
+/// quads' size; a copy's quads stay clear of the shown view, which keeps exactly [`quads::quads`]'s; and the copies
+/// stop [`quads::MAX_ROOT_COPIES`] roots out.
 #[test]
-fn f3_fills_window_mock_quads_tile_past_the_root() {
-    use crate::mock::quads::{touches, MAX_TILE, ROOT};
+fn f3_fills_window_mock_quads_copied_past_the_root() {
+    use crate::mock::quads::{touches, MAX_ROOT_COPIES, ROOT};
     let plane = MockEngine::frozen().plane().clone();
     let span = layout().placement().span();
     let shown = quads::quads(&plane);
@@ -312,9 +312,9 @@ fn f3_fills_window_mock_quads_tile_past_the_root() {
     for q in all.iter().filter(|q| touches(q, &shown_view)) {
         assert!(shown.contains(q), "{q:?} touches the shown view");
     }
-    // Over a span far wider than any window, the copies stop MAX_TILE roots out each way.
+    // Over a span far wider than any window, the copies stop MAX_ROOT_COPIES roots out each way.
     let far_quads = quads::quads_over(&plane, [-20.0, -20.0, 21.0, 21.0]);
-    let reach = (2.0 * f64::from(MAX_TILE) + 1.0) * ROOT;
+    let reach = (2.0 * f64::from(MAX_ROOT_COPIES) + 1.0) * ROOT;
     let max_u = far_quads
         .iter()
         .map(|q| q[2])
@@ -326,7 +326,7 @@ fn f3_fills_window_mock_quads_tile_past_the_root() {
         .map(|q| q[3])
         .fold(f64::NEG_INFINITY, f64::max);
     assert_eq!((min_u, min_v, max_u, max_v), (-reach, -reach, reach, reach));
-    // The copies tile the plane: no two quads overlap, and every quad is the shown quads' size or finer.
+    // The copies cover the plane: no two quads overlap, and every quad is the shown quads' size or finer.
     for (k, a) in far_quads.iter().enumerate() {
         assert!(width(a) > 0.0 && width(a) <= widest(&shown), "{a:?}");
         for b in &far_quads[k + 1..] {
@@ -628,36 +628,57 @@ fn check_strips_bounded(lines: &Segments, span: [f64; 4], what: &str) {
     }
 }
 
-/// Panned past the root (`u` 1.5, and 8.18 as the gui review's repro), the bounds still cover the strips of the
-/// window beside the shown figure: a quad straddling its edge, a copy of the root's, is bounded outside it. Control:
-/// the rule that dropped such a quad leaves strips bare.
+/// The views the clipping is checked on: grid-aligned, `z₀` at (0, 0), where root quads touch the shown view without
+/// overlapping it (the code review's repro); and past the root, `u` 1.5, and 8.18 (the gui review's repro).
+const VIEWS: [(f64, f64); 3] = [(0.0, 0.0), (1.5, 0.41), (8.18, 0.41)];
+
+/// The mock's plane with `z₀`'s first two coordinates `(u, v)`.
+fn plane_at((u, v): (f64, f64)) -> engine::contract::sim_config::Plane {
+    let mut plane = MockEngine::frozen().plane().clone();
+    plane.z0[0] = u;
+    plane.z0[1] = v;
+    plane
+}
+
+/// No bound reaches into the shown figure but the shown quads' own: every segment wholly in `[0, 1]²` is one of
+/// [`quads::bounds`].
+fn check_only_shown_inside(lines: &Segments, shown: &Segments, what: &str) {
+    for l in lines {
+        let inside = l
+            .iter()
+            .all(|p| (0.0..=1.0).contains(&p[0]) && (0.0..=1.0).contains(&p[1]));
+        assert!(
+            !inside || shown.contains(l),
+            "{what}: {l:?} inside the shown figure"
+        );
+    }
+}
+
+/// Grid-aligned and past the root, the bounds cover the strips of the window beside the shown figure (a quad
+/// straddling its edge is bounded outside it), and none reaches into the shown figure but the shown quads' own (a
+/// quad touching its edge is never drawn along it a second time). Controls: the rule that dropped a touching copy
+/// leaves the strips bare past the root; the rule that drew every kept quad whole draws a touching root quad's edge
+/// along the grid-aligned figure's edge.
 #[test]
 fn f3_fills_window_mock_bounds_beside_the_figure_past_the_root() {
     let span = layout().placement().span();
-    for u in [1.5, 8.18] {
-        let mut plane = MockEngine::frozen().plane().clone();
-        plane.z0[0] = u;
+    for view in VIEWS {
+        let plane = plane_at(view);
         let lines = quads::bounds_over(&plane, span);
-        check_strips_bounded(&lines, span, &format!("u = {u}"));
-        // No clipped edge reaches the shown figure: every segment inside it is a shown quad's.
-        let shown = quads::bounds(&plane);
-        for l in &lines {
-            let inside = l
-                .iter()
-                .all(|p| (0.0..=1.0).contains(&p[0]) && (0.0..=1.0).contains(&p[1]));
-            assert!(
-                !inside || shown.contains(l),
-                "u = {u}: {l:?} inside the shown figure"
-            );
-        }
+        check_strips_bounded(&lines, span, &format!("{view:?}"));
+        check_only_shown_inside(&lines, &quads::bounds(&plane), &format!("{view:?}"));
     }
-    let mut plane = MockEngine::frozen().plane().clone();
-    plane.z0[0] = 8.18;
-    let old = dropped_on_touch(&plane, span);
+    let past = plane_at(VIEWS[2]);
+    let old = dropped_on_touch(&past, span);
     rejects(
         "the bounds dropped where a copy touches the shown view",
         || check_strips_bounded(&old, span, "dropped"),
     );
+    let grid = plane_at(VIEWS[0]);
+    let old = dropped_on_touch(&grid, span);
+    rejects("a touching root quad drawn whole", || {
+        check_only_shown_inside(&old, &quads::bounds(&grid), "whole")
+    });
 }
 
 /// `outside` at its edges: a segment wholly inside the margin's square has no part outside; one crossing it keeps
@@ -711,27 +732,113 @@ fn f3_fills_window_mock_outside_clips_at_the_margin() {
     });
 }
 
-/// Panned past the root with tile bounds on, the two F3 states draw the shown figure identically, and F3 off bounds
-/// the strips beside it (the gui review's repro, its captures' left strip).
-#[test]
-fn f3_fills_window_mock_panned_past_the_root_identical_over_the_rect() {
-    let canvas = canvas();
-    let mut steps = vec![Step::Tab, Step::Tab, Step::Tab, Step::Enter];
-    steps.extend([Step::ShiftArrowRight; 8]);
-    steps.push(Step::Alt1);
-    let on = shoot(canvas.clone(), &steps);
-    steps.push(Step::F3);
-    let off = shoot(canvas.clone(), &steps);
-    let rect = shown_px();
-    check_same_over(&on.rgba, &off.rgba, rect, "panned, tile bounds on");
-    // The left strip beside the figure: every column crosses a bound line, which the bare F3 off has not.
-    let mut bare_steps = steps.clone();
-    bare_steps.retain(|s| *s != Step::Alt1);
-    let bare = shoot(canvas, &bare_steps);
-    for x in 0..rect[0] - 4 {
-        assert!(
-            (rect[1]..rect[3]).any(|y| pixel(&off.rgba, x, y) != pixel(&bare.rgba, x, y)),
-            "column {x} beside the figure has no bound"
-        );
+/// The app on the mock at the view `(u, v)` with tile bounds on, captured with the layer shown and then hidden.
+fn shown_and_hidden(canvas: &Arc<MockCanvas>, view: (f64, f64)) -> (Shot, Shot) {
+    let mut mock = MockEngine::frozen();
+    let mut z0 = mock.plane().z0;
+    (z0[0], z0[1]) = view;
+    mock.set_field(SetField {
+        edit: Edit::Sim(engine::contract::set_field::SimField::Z0(z0)),
+        no_history: false,
+    });
+    tile_bounds_on(&mut mock);
+    let mut app = App::new(MockSide::new(mock, Some(canvas.clone())), FORMAT);
+    let mut h = Headless::new(SIZE, PIXELS_PER_POINT);
+    for _ in 0..3 {
+        let _ = h.frame(&mut app, Vec::new());
     }
+    let on = capture::render_frame(canvas, &mut app, &mut h);
+    press(&mut h, &mut app, Key::F3, Modifiers::NONE);
+    let _ = h.frame(&mut app, Vec::new());
+    let off = capture::render_frame(canvas, &mut app, &mut h);
+    (on, off)
+}
+
+/// The stand-in at `view` drawn alone over the window with `marks` as its tile bounds.
+fn stand_in_with(canvas: &Arc<MockCanvas>, view: (f64, f64), lines: &Segments) -> Vec<u8> {
+    let mut mock = MockEngine::frozen();
+    let mut z0 = mock.plane().z0;
+    (z0[0], z0[1]) = view;
+    mock.set_field(SetField {
+        edit: Edit::Sim(engine::contract::set_field::SimField::Z0(z0)),
+        no_history: false,
+    });
+    let marks = lines
+        .iter()
+        .map(|[a, b]| crate::mock::canvas::Line {
+            ends: [a.map(|v| v as f32), b.map(|v| v as f32)],
+            rgba: crate::mock::TILE_BOUNDS_RGBA,
+        })
+        .collect();
+    canvas.set_chart(mock.plane());
+    canvas.set_placement(layout().placement(), marks);
+    let window = layout().window;
+    let callback = egui_wgpu::Callback::new_paint_callback(
+        window,
+        FigureCallback {
+            canvas: Arc::new(FigureCanvas(canvas.clone())),
+            format: FORMAT,
+        },
+    );
+    let primitive = egui::ClippedPrimitive {
+        clip_rect: window,
+        primitive: egui::epaint::Primitive::Callback(callback),
+    };
+    capture::render(
+        &**canvas,
+        &Default::default(),
+        &[primitive],
+        clear_colour(&egui::Visuals::dark()),
+    )
+}
+
+/// Grid-aligned and past the root, with tile bounds on, the two F3 states draw the shown figure identically, and as
+/// the shown quads' bounds alone draw it (no edge drawn twice there); and F3 off bounds the strips beside it.
+/// Controls: a rect grown by a pixel differs; the old whole-quad rule draws the grid-aligned figure's edge twice.
+#[test]
+fn f3_fills_window_mock_views_identical_over_the_rect() {
+    let canvas = canvas();
+    let rect = shown_px();
+    let span = layout().placement().span();
+    for view in VIEWS {
+        let (on, off) = shown_and_hidden(&canvas, view);
+        check_same_over(
+            &on.rgba,
+            &off.rgba,
+            rect,
+            &format!("{view:?}, tile bounds on"),
+        );
+        let alone = stand_in_with(&canvas, view, &quads::bounds(&plane_at(view)));
+        check_same_over(
+            &on.rgba,
+            &alone,
+            rect,
+            &format!("{view:?}, the shown quads alone"),
+        );
+        rejects("a rect grown by a pixel", || {
+            check_same_over(
+                &on.rgba,
+                &off.rgba,
+                [rect[0] - 1, rect[1], rect[2], rect[3]],
+                "grown",
+            )
+        });
+        // Beside the figure, left of it, every column crosses a bound with F3 off.
+        let bare = stand_in_with(&canvas, view, &Vec::new());
+        for x in 0..rect[0] - 4 {
+            assert!(
+                (rect[1]..rect[3]).any(|y| pixel(&off.rgba, x, y) != pixel(&bare, x, y)),
+                "{view:?}: column {x} beside the figure has no bound"
+            );
+        }
+    }
+    let old = stand_in_with(
+        &canvas,
+        VIEWS[0],
+        &dropped_on_touch(&plane_at(VIEWS[0]), span),
+    );
+    let (on, _) = shown_and_hidden(&canvas, VIEWS[0]);
+    rejects("the touching root quads' edges drawn whole", || {
+        check_same_over(&on.rgba, &old, rect, "whole")
+    });
 }
