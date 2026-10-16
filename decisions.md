@@ -10366,7 +10366,9 @@ applied by a follow-up task):*
 - **B11. The degenerate tilts.** (Added in fix round 4 of PR #227, physics review P13: a missing definition, written
   as a doc change by the PR that needs it and reviewed by the physics reviewer, as R-72 asks, and applied per R-369 as
   a routine GUI choice. Fix round 5, physics review P14 to P16: the band near the corners is the compass's own cut, not
-  a place without a plane; why the cut is 10⁻³; the locked drag routed to REQ-GUI-203; the sine's range.) At the four
+  a place without a plane; why the cut is 10⁻³; the locked drag routed to REQ-GUI-203; the sine's range. Fix round 6,
+  physics review P17 and P18, fix (a) applied per R-369: the guards get their own cut, 10⁻⁶, and inside the compass's
+  disc the lock keeps its pivot.) At the four
   corner points `τ₁ = ±τ₂ = ±90°`, which tilt mode's clamped drags reach, `u₁` and `u₂` are both `±e_d`, so
   `View::basis`'s `q₁` and `q₂` both lie along `e_d` and span no plane (the comparison above: "it degenerates to the
   line `e_d`"). Near them a plane exists, but the normal of `(q₁, q₂)` is ill-conditioned. In floating point, at
@@ -10380,6 +10382,7 @@ applied by a follow-up task):*
   - **The cut is numerical.** 10⁻³ is not a physical value and not an R-71 calibration: it is set by the 1e-12 normal
     tolerance. The normal computed from `q₁ × q₂` carries an error of about `ε/s`, `ε` the double-precision rounding
     unit, so at `s ≥ 10⁻³` it stays within the 1e-12 check, and below it the check can fail where a plane exists.
+    10⁻³ is the compass's drawing cut only; the GUI's guards for a degenerate basis have their own (below).
   - **What the cut excludes.** Near a corner `s` is about the distance in radians from it, so the cut excludes a disc
     of about 0.057° around each corner. Inside that disc, off the corner point, a plane exists and the compass does not
     draw it: at `(90°, 89.97°)` it is `span(e_b, e_d)`, determined to about 10⁻¹³. The cut keeps the rest of the square,
@@ -10393,18 +10396,40 @@ applied by a follow-up task):*
     τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)", the angles signed, one decimal. A slice-mode drag sends no edit, since the
     compass draws no normal to move `z₀` along (B3). Free, a tilt-mode drag acts as anywhere else, and once
     `s ≥ 10⁻³` the plane is drawn again.
-  - **Locked (physics review P15, decided per R-369).** Locked, a basis edit turns about the pin (§G4), its pivot the
-    anchor's chart point. The GUI's merged guards, `in_plane` (`det ≤ 1e-12`) and `chart_coords`
-    (`det ≤ 1e-24·g₁₁g₂₂`), are sine-type tests that do not fire at the corners, so there `about_the_pin`'s pivot is
-    rounding (`t ≈ −2.9·10¹⁴` in the review's case, `z₀ = 0`, `z_locked = (0.1, 0.05, 0.2)`) and a tilt drag to
-    `(89°, 90°, γ = 45°)` sends a `z₀` edit of about `(−7.1·10¹², 0, 6.2·10¹⁰)`; the mock's figure, built through the
-    same guards, is placed on the rounding direction too. **REQ-GUI-203**, closed by **TASK-M6-37**, replaces those
-    guards with this test at the same 10⁻³ cut, `s` computed on the plane's own basis,
-    `s = 2√(g₁₁g₂₂ − g₁₂²) / (g₁₁ + g₂₂)` with `g` the Gram matrix of its `q₁`, `q₂` (the cube's `s` when the basis
-    lies in the cube's frame), and defines the locked drag and the figure where `s < 10⁻³`: the guards return none, as
-    for any degenerate basis, so no `z₀` edit is sent (there is no pivot; the basis edit passes as it does free,
-    `about_the_pin`'s rule for a degenerate basis), and the figure shows nothing new, no sample placed along the
-    rounding direction.
+  - **Locked (physics review P15, decided per R-369; fix round 6, physics review P17 and P18, fix (a) applied per
+    R-369).** Locked, a basis edit turns about the pin (§G4), its pivot the anchor's chart point. The GUI's merged
+    guards, `in_plane` (`det ≤ 1e-12`) and `chart_coords` (`det ≤ 1e-24·g₁₁g₂₂`), are sine-type tests that do not fire
+    at the corner points, so there `about_the_pin`'s pivot is rounding (`t ≈ −2.9·10¹⁴` in the review's case,
+    `z₀ = 0`, `z_locked = (0.1, 0.05, 0.2)`) and a tilt drag to `(89°, 90°, γ = 45°)` sends a `z₀` edit of about
+    `(−7.1·10¹², 0, 6.2·10¹⁰)`; the mock's figure, built through the same guards, is placed on the rounding direction
+    too. **REQ-GUI-203**, closed by **TASK-M6-37**, keeps both guards' sine tests and adds the guards' own cut: they
+    also return none where `s = 2√(g₁₁g₂₂ − g₁₂²) / (g₁₁ + g₂₂) < 10⁻⁶`, `g` the Gram matrix of the plane's own `q₁`,
+    `q₂` (the cube's `s` when the basis lies in the cube's frame). The compass's 10⁻³ is not the guards' cut: `s` is
+    also small for a basis whose vectors' norms differ (`s ≈ 2r` for orthogonal vectors with norm ratio `r`), so a
+    10⁻³ cut would refuse a typed basis such as `q₁ = e_x`, `q₂ = 10⁻⁴e_y` (the Chart panel's basis editor takes any
+    eight components), whose chart point `(0.75, 0.6)` `chart_coords` returns exactly.
+  - **The guards' cut is numerical.** Like the compass's, it is not a physical value and not an R-71 calibration; it is
+    set by where `s` itself is rounding. In double precision `g₁₁g₂₂ − g₁₂²`, over `n = 8` components, carries an
+    absolute error of up to about `(4n + 2)u·g₁₁g₂₂`, `u = ε/2`, and `4g₁₁g₂₂/(g₁₁ + g₂₂)² ≤ 1`, so the computed `s²`
+    is off by up to about `17ε` and a basis with no plane can read `s` up to `√(17ε) ≈ 6.1·10⁻⁸` (measured: up to
+    2.4·10⁻⁸ at the four corner points, `σ` in [0.01, 4], every `γ`). 10⁻⁶ is the first power of ten at least ten
+    times that floor, so no basis without a plane passes. Above it the pivot is accurate: `View::basis`'s components
+    carry absolute rounding of about `εσ`, so the pivot's chart coordinates carry a relative error of about `ε/s`, at
+    most about 2.2·10⁻¹⁰ at the cut (measured 0.25 to 1.1 times `ε/s` at `(90°, τ₂, 45°)`, `σ = 1`, `s` from
+    1.75·10⁻³ down to 1.75·10⁻¹⁰); a typed basis's error is relative per vector, about `ε/sin θ`, which the kept sine
+    tests bound.
+  - **Inside the compass's disc.** Only at the four corner points is there no plane, and so no pivot. Inside the
+    0.057° disc, off them, a plane exists and so does the pivot: the compass declines to draw the plane, but the lock
+    and the figure keep their pivot and their samples, and a locked drag turns about the pin as §G4 says. At
+    `(90°, 89.97°, 45°)`, `σ = 1`, `s = 5.2·10⁻⁴`, a pin at `z₀ + 0.3q₁ + 0.2q₂`, chart point `(0.65, 0.60)`, stays
+    there under a locked drag to `(89°, 89.97°, 45°)`; declining the pivot would move it to `(0.65, 0.65)`, 5 % of
+    the view.
+  - **Where the guards decline.** Where their sine test fires or `s < 10⁻⁶`, the guards return none, as for any
+    degenerate basis: locked, no `z₀` edit is sent and the basis edit passes as it does free (`about_the_pin`'s rule
+    for a degenerate basis), and the figure shows nothing new, no sample placed along the rounding direction. That
+    takes in the corner points; it also takes in, because the cut must sit above `s`'s own rounding floor and not
+    because they lack a plane, a tilt within about 10⁻⁶ rad of a corner and a typed basis with `s < 10⁻⁶` (for
+    orthogonal vectors, a norm ratio below about 5·10⁻⁷).
   - **RQ-340.** The degeneracy is the decoder's map's (RQ-340 option (a)). Under option (b), the reference's map, or
     (c), two distinct targets, these corners give a plane, so a ruling on RQ-340 revisits this item. The decoder's
     geometry is not changed.
