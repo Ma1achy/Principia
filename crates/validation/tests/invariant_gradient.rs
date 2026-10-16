@@ -3,18 +3,24 @@
 //! - `invariant_gradient_measure`: a field equal to its target measures 0 on all three; a row tilted along `L_z`
 //!   measures its spread, a row below the one before it its decrease, and a pixel off its target its distance, each in
 //!   f32 `eps` scaled by `max(|E|, 1)`.
+//! - `invariant_gradient_infeasible_counts`: the report's count of the construction's infeasible pixels is 0 on the
+//!   unit square's edges and corners, and counts each point past an edge, at f64 and at f32.
 //! - `invariant_gradient_perturbed`: the perturbed construction (`a = √(2K*)`) fails the gate on its fixture's frozen
 //!   configurations, at the gate's threshold, its row spread `L_max²/2` in its eps, far beyond it.
 //! - `invariant_gradient_refusals`: a grid under two points per side, or no frozen configuration, is refused before any
-//!   decode, and two points per side are judged; the gate is registered under its name and its `gate.json` reads.
+//!   decode, and two points per side are judged; the gate is registered under its name, its `gate.json` reads, and
+//!   its warp is the register's `(K_max, γ_K)`.
 
 use std::path::{Path, PathBuf};
 
+use kernel::chart::InvariantLE;
 use validation::gate::{self, Gate, Verdict};
 use validation::invariant_gradient::{
-    grid, measure, Field, Input, InvariantGradientGate, Measurement, Perturb, Which, NAME,
+    grid, infeasible_counts, invariant_of, measure, warp_defaults, widen, Field, Frozen, Input,
+    InvariantGradientGate, Measurement, Perturb, Which, NAME,
 };
 use validation::negative_control;
+use validation::{GAMMA_K, K_MAX};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -93,6 +99,45 @@ negative_control!(
     "a measure reading only each row's first pixel misses a tilted row",
     expected = "not a spread of 4 eps",
     check_measure(first_pixel)
+);
+
+/// `infeasible_counts` under check.
+type Counts = fn(&InvariantLE<f32>, &InvariantLE<f64>, &[[f32; 2]]) -> [usize; 2];
+
+/// The gate's count of infeasible pixels: none on the unit square's edges and corners, and each point past an edge
+/// `s ∈ {0, 1}`, where `|L_z|` exceeds `L_max`, counted at f64 and at f32.
+fn check_counts(counts: Counts) {
+    let c = invariant_of(&Frozen {
+        z_cfg: [0.3, -0.5],
+        z_mass: [0.7, -0.4],
+    });
+    let (le, wide) = (InvariantLE(c), InvariantLE(widen(&c)));
+    let square = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0], [0.5, 0.5]];
+    assert_eq!(counts(&le, &wide, &square), [0, 0], "the unit square");
+    let past = [[1.5, 0.5], [-0.5, 0.75], [0.5, 0.5]];
+    assert_eq!(
+        counts(&le, &wide, &past),
+        [2, 2],
+        "the points past an edge are not counted infeasible"
+    );
+}
+
+#[test]
+fn invariant_gradient_infeasible_counts() {
+    check_counts(infeasible_counts::<InvariantLE<f32>, InvariantLE<f64>>);
+}
+
+/// A count that sees nothing.
+#[cfg(feature = "controls")]
+fn blind(_: &InvariantLE<f32>, _: &InvariantLE<f64>, _: &[[f32; 2]]) -> [usize; 2] {
+    [0; 2]
+}
+
+negative_control!(
+    invariant_gradient_infeasible_counts,
+    "a count that sees nothing misses the points past an edge",
+    expected = "not counted infeasible",
+    check_counts(blind)
 );
 
 /// The fixture's `perturbed.json`.
@@ -206,6 +251,11 @@ fn invariant_gradient_refusals() {
     assert_eq!(InvariantGradientGate.name(), NAME);
     assert_eq!(NAME, "invariant-gradient");
     assert!(gate::gate(NAME).is_ok(), "the gate is not registered");
+    assert_eq!(
+        warp_defaults(),
+        (K_MAX.number() as f32, GAMMA_K.number() as f32),
+        "the gate's warp is not the register's (K_max, γ_K)"
+    );
     let config = gate::config(&root(), NAME).expect("gate.json");
     assert_eq!(
         config.threshold.value, 256.0,

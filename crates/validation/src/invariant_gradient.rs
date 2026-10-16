@@ -213,7 +213,7 @@ pub struct Measured {
 }
 
 /// The construction's infeasible pixels of `chart` and its widening `wide` on `points`, at f64 and natively at f32.
-fn infeasible_counts<C, W>(chart: &C, wide: &W, points: &[[f32; 2]]) -> [usize; 2]
+pub fn infeasible_counts<C, W>(chart: &C, wide: &W, points: &[[f32; 2]]) -> [usize; 2]
 where
     C: InvariantChart<Param = f32>,
     W: InvariantChart<Param = f64>,
