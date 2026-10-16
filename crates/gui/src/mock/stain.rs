@@ -205,7 +205,8 @@ pub fn node_code(occupant: &Occupant) -> String {
     }
 }
 
-/// The library's groups (placeholder content in 02_stain.png's rows).
+/// The library's groups (placeholder content in 02_stain.png's rows). The unit shape vector `n̂` is spelled "n (unit)":
+/// egui doesn't place combining marks, so the hat (U+0302) would draw as a bare `n` (decided per R-369).
 pub const LIBRARY: [Group; 6] = [
     Group {
         title: "Scalar · energy & dynamics",
@@ -219,7 +220,7 @@ pub const LIBRARY: [Group; 6] = [
     },
     Group {
         title: "Directional / vector",
-        rows: &["Shape n̂", "Escape direction"],
+        rows: &["Shape n (unit)", "Escape direction"],
     },
     Group {
         title: "Categorical",
@@ -231,7 +232,7 @@ pub const LIBRARY: [Group; 6] = [
     },
     Group {
         title: "Bivariate",
-        rows: &["n̂ × FTLE", "Outcome class × time to event"],
+        rows: &["n (unit) × FTLE", "Outcome class × time to event"],
     },
     Group {
         title: "Debug · 109 modes",

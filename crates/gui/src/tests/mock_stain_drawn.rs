@@ -830,3 +830,47 @@ fn mock_stain_drawn_the_library() {
     assert!(find(&collapsed, "▸").is_some());
     rejects("an unloaded row highlighted", || assert!(lit(other)));
 }
+
+/// Whether every glyph `galley` places is a mark the eye reads: none is a combining mark (U+0300 to U+036F), which egui
+/// doesn't place over the letter before it, so the letter draws bare. (A glyph's width is no test: a ligature such as
+/// "fi" leaves the `i` with none.)
+fn readable(galley: &egui::Galley) -> bool {
+    galley
+        .rows
+        .iter()
+        .flat_map(|r| r.row.glyphs.iter())
+        .all(|g| !('\u{300}'..='\u{36f}').contains(&g.chr))
+}
+
+/// The drawer's rows as drawn keep every mark: the unit shape vector is drawn "n (unit)", never a bare `n` whose hat
+/// egui drops; no row drawn in the list carries a combining mark.
+#[test]
+fn mock_stain_drawn_library_rows_keep_their_marks() {
+    let (mut app, mut h) = stain_app();
+    let ppp = h.pixels_per_point();
+    let drawer = Regions::new(&Layout::new(h.screen(), ppp), ppp, false).library;
+    let (list, _) = crate::stain::library::areas(drawer);
+    let all = shapes(&mut h, &mut app);
+    let rows: Vec<&std::sync::Arc<egui::Galley>> = all
+        .iter()
+        .filter_map(|s| match s {
+            Shape::Text(t) if list.contains(t.pos) => Some(&t.galley),
+            _ => None,
+        })
+        .collect();
+    let drawn = |text: &str| rows.iter().find(|g| g.text() == text);
+    for text in ["   Shape n (unit)", "   n (unit) × FTLE"] {
+        let galley = drawn(text).unwrap_or_else(|| panic!("no row {text:?}"));
+        assert!(readable(galley), "{text:?}");
+    }
+    assert!(rows.len() > 10, "{} rows", rows.len());
+    assert!(rows.iter().all(|g| readable(g)));
+    // The control: the hat as a combining mark, laid out as the row would be, fails the check.
+    let font = egui::TextStyle::Button.resolve(&h.ctx.global_style());
+    let hat = h
+        .ctx
+        .fonts_mut(|f| f.layout_no_wrap("   Shape n\u{302}".to_owned(), font, Color32::WHITE));
+    rejects("a row drawn with a combining hat", || {
+        assert!(readable(&hat))
+    });
+}

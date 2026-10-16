@@ -174,7 +174,7 @@ fn mock_keyboard_stain_library_rows_and_groups() {
     press(&mut h, &mut app, Key::ArrowRight, NONE);
     assert_eq!(focus(&app), ["stain_library", "stain_lib_collapse"]);
     rejects("a row selected by the heading", || {
-        assert_eq!(app.stain.library.selected, Some("Shape n̂"))
+        assert_eq!(app.stain.library.selected, Some("Shape n (unit)"))
     });
 }
 
