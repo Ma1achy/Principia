@@ -657,6 +657,42 @@ pub const R_POLE: ConstantBuilder = proposed(
     "M3",
 );
 
+// ── The diverging fields' x₀ (REQ-COL-065, REQ-COL-066; R-71, R-411, R-427) ──────────────────────────────────────
+//
+// Each `diverging` field with no ledger `floor` has its own `x₀`, in that field's units, the magnitude where its
+// symlog's compression sets in (dd_colouring §3.6): `b = ½ + ½·sign(x)·(1 − 1/(1 + ln(1 + |x|/x₀)))`, linear below it
+// and logarithmic above. Each is a presentation constant, admissible as expressed in its field's canonical units
+// (`G = M = I = 1`), and a power of two, so `|x|/x₀` is exact. Proposed, R-71, with its evidence on TASK-M7-05's PR,
+// each provisional until the M7 gate (R-427), citing REQ-COL-066. The drifts take their floors, `eps_E` and `eps_L`,
+// sim-key parameters, and are not here.
+
+/// `E_0`'s `x₀`, an energy: 1, one unit of the normalised system's binding energy (the golden IC's `E_0 = −1/(3√3)`
+/// ≈ −0.192). The fixture slices' `E_0` (−0.53 … −0.08) is drawn in the linear zone; the hypercube's (−0.13 … 78.8)
+/// is compressed into the ramp's upper half, `b` ≈ 0.69 … 0.91.
+pub const DIVERGING_X0_E_0: ConstantBuilder = proposed(
+    "diverging_x0_E_0",
+    1.0,
+    Admissibility::CanonicalUnits,
+    "REQ-COL-066",
+    "M7",
+);
+
+/// `Lz_0`'s `x₀`, an angular momentum: 1, as `E_0`'s. The fixture slices' `Lz_0` (−0.29 … −0.03) is drawn in the
+/// linear zone; the hypercube's (−6.6 … 5.5) spans `b` ≈ 0.22 … 0.80 from its 1st to its 99th percentile.
+pub const DIVERGING_X0_LZ_0: ConstantBuilder = proposed(
+    "diverging_x0_Lz_0",
+    1.0,
+    Admissibility::CanonicalUnits,
+    "REQ-COL-066",
+    "M7",
+);
+
+/// Each `diverging` field with no ledger `floor`, by its ledger name, with its `x₀`'s register entry: TASK-M7-05's
+/// `diverging` compaction reads `x₀` from here. A diverging field neither here nor with a floor has no compaction, and
+/// its ramp is refused (dd_colouring §3.6).
+pub const DIVERGING_X0: [(&str, ConstantBuilder); 2] =
+    [("E_0", DIVERGING_X0_E_0), ("Lz_0", DIVERGING_X0_LZ_0)];
+
 /// The tolerance on `‖n‖ − 1` at f32 of the paired test asserting `‖n‖ = 1` for vector fields (REQ-VAL-122;
 /// gui_state_contract §4): 64 U = 2⁻¹⁸ ≈ 3.81e-6, U = 2⁻²⁴ the f32 unit roundoff. `n = (a − b, 2p, 2q)/I` is exactly
 /// unit for any `ρ̃`, `λ̃`, so only the rounding of `a`, `b`, `p`, `q`, `I`, the three divisions and the fragment's
@@ -694,8 +730,9 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 
 /// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the presentation constants the generated views and the prelude read: the
-/// log floors, the hatch and the hue wheel (TASK-M1-18; R-427), and `r_pole` and the ‖n‖ = 1 tolerance (R-433). No
-/// `diffusion` sentinel: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
+/// log floors, the hatch and the hue wheel (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), and the
+/// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the
+/// predicate `n ≥ 2` (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -725,4 +762,6 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HUE_WHEEL_C,
     R_POLE,
     N_NORM_TOL,
+    DIVERGING_X0_E_0,
+    DIVERGING_X0_LZ_0,
 ];
