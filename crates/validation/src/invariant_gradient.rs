@@ -273,14 +273,16 @@ where
             .collect(),
     };
     let key = physics_key();
-    let mut tag_mismatches = 0;
-    for (p, o) in points.iter().zip(&outs) {
-        let reference =
-            decode_only::<_, Defaults>(wide, p.map(f64::from), &key).map_err(|e| e.to_string())?;
-        if reference.degenerate != o.degenerate {
-            tag_mismatches += 1;
-        }
-    }
+    let reference = points
+        .iter()
+        .map(|p| {
+            decode_only::<_, Defaults>(wide, p.map(f64::from), &key)
+                .map(|r| r.degenerate)
+                .map_err(|e| e.to_string())
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    let decoded: Vec<_> = outs.iter().map(|o| o.degenerate).collect();
+    let tag_mismatches = mismatches(&reference, &decoded);
     Ok(Measured {
         field: Field {
             n: n as usize,
@@ -289,6 +291,25 @@ where
         },
         tag_mismatches,
         infeasible: infeasible_counts(chart, wide, &points),
+    })
+}
+
+/// The DEGENERATE tags of `decoded` that differ from `reference`'s, pixel by pixel.
+pub fn mismatches<T: PartialEq>(reference: &[T], decoded: &[T]) -> usize {
+    reference
+        .iter()
+        .zip(decoded)
+        .filter(|(r, d)| r != d)
+        .count()
+}
+
+/// The tag mismatches and the infeasible pixels, at f64 and at f32, over every frozen configuration of `measured`.
+pub fn totals(measured: &[Measured]) -> (usize, [usize; 2]) {
+    measured.iter().fold((0, [0, 0]), |(t, [a, b]), m| {
+        (
+            t + m.tag_mismatches,
+            [a + m.infeasible[0], b + m.infeasible[1]],
+        )
     })
 }
 
@@ -358,10 +379,7 @@ impl InvariantGradientGate {
         };
         let fields: Vec<Field> = measured.iter().map(|m| m.field.clone()).collect();
         let m = measure(&fields);
-        let mismatches: usize = measured.iter().map(|m| m.tag_mismatches).sum();
-        let [inf64, inf32] = measured.iter().fold([0, 0], |[a, b], m| {
-            [a + m.infeasible[0], b + m.infeasible[1]]
-        });
+        let (mismatches, [inf64, inf32]) = totals(&measured);
         let threshold = config.threshold.value;
         let pass = m.max() <= threshold && mismatches == 0;
         let (k_max, gamma_k) = warp_defaults();

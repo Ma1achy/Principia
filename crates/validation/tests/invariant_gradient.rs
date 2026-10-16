@@ -5,8 +5,10 @@
 //!   f32 `eps` scaled by `max(|E|, 1)`.
 //! - `invariant_gradient_infeasible_counts`: the report's count of the construction's infeasible pixels is 0 on the
 //!   unit square's edges and corners, and counts each point past an edge, at f64 and at f32.
+//! - `invariant_gradient_tallies`: the tags differing pixel by pixel, and the tallies summed over configurations.
 //! - `invariant_gradient_perturbed`: the perturbed construction (`a = √(2K*)`) fails the gate on its fixture's frozen
-//!   configurations, at the gate's threshold, its row spread `L_max²/2` in its eps, far beyond it.
+//!   configurations, at the gate's threshold, its row spread `L_max²/2` and its top rows' decrease `2K − K` in its
+//!   eps, far beyond it.
 //! - `invariant_gradient_refusals`: a grid under two points per side, or no frozen configuration, is refused before any
 //!   decode, and two points per side are judged; the gate is registered under its name, its `gate.json` reads, and
 //!   its warp is the register's `(K_max, γ_K)`.
@@ -16,8 +18,8 @@ use std::path::{Path, PathBuf};
 use kernel::chart::InvariantLE;
 use validation::gate::{self, Gate, Verdict};
 use validation::invariant_gradient::{
-    grid, infeasible_counts, invariant_of, measure, warp_defaults, widen, Field, Frozen, Input,
-    InvariantGradientGate, Measurement, Perturb, Which, NAME,
+    grid, infeasible_counts, invariant_of, measure, mismatches, totals, warp_defaults, widen,
+    Field, Frozen, Input, InvariantGradientGate, Measured, Measurement, Perturb, Which, NAME,
 };
 use validation::negative_control;
 use validation::{GAMMA_K, K_MAX};
@@ -140,6 +142,50 @@ negative_control!(
     check_counts(blind)
 );
 
+/// The tag and pixel tallies under check.
+type Tallies = (
+    fn(&[Option<u8>], &[Option<u8>]) -> usize,
+    fn(&[Measured]) -> (usize, [usize; 2]),
+);
+
+/// Two configurations' tallies: tags differing pixel by pixel, and the counts summed over configurations.
+fn check_tallies((mismatches, totals): Tallies) {
+    let reference = [None, Some(1), Some(2), None, Some(5)];
+    let decoded = [None, Some(1), Some(3), Some(4), None];
+    assert_eq!(mismatches(&reference, &decoded), 3, "the differing tags");
+    assert_eq!(mismatches(&reference, &reference), 0, "identical tags");
+    let one = |tags, infeasible| Measured {
+        field: exact(),
+        tag_mismatches: tags,
+        infeasible,
+    };
+    assert_eq!(
+        totals(&[one(2, [3, 5]), one(7, [11, 13])]),
+        (9, [14, 18]),
+        "the tallies are not summed over configurations"
+    );
+}
+
+#[test]
+fn invariant_gradient_tallies() {
+    check_tallies((mismatches::<Option<u8>>, totals));
+}
+
+/// Tallies that keep only the last configuration's.
+#[cfg(feature = "controls")]
+fn last_only(measured: &[Measured]) -> (usize, [usize; 2]) {
+    measured
+        .last()
+        .map_or((0, [0, 0]), |m| (m.tag_mismatches, m.infeasible))
+}
+
+negative_control!(
+    invariant_gradient_tallies,
+    "tallies keeping only the last configuration are not summed",
+    expected = "the tallies are not summed over configurations",
+    check_tallies((mismatches::<Option<u8>>, last_only))
+);
+
 /// The fixture's `perturbed.json`.
 fn perturbed_input() -> Input {
     let text =
@@ -179,6 +225,22 @@ fn check_perturbed(input: &Input, threshold: f64) {
     assert!(
         (spread / want - 1.0).abs() < 1e-3,
         "the perturbed construction's row spread is {spread} eps, not L_max²/2's {want}"
+    );
+    // Its worst decrease is the top pair's: row n − 2's edges, U + 2K, above row n − 1's inner column, U + K(1 +
+    // 1/(n − 1)²), in eps, every target's |E| below 1.
+    let (k_max, gamma_k) = warp_defaults();
+    let k = |i: f64| f64::from(k_max) * (i / (n - 1.0)).powf(f64::from(gamma_k));
+    let want = (2.0 * k(n - 2.0) - k(n - 1.0) * (1.0 + 1.0 / ((n - 1.0) * (n - 1.0))))
+        / f64::from(f32::EPSILON);
+    let drop: f64 = line
+        .split("the next along E: worst ")
+        .nth(1)
+        .and_then(|r| r.split(' ').next())
+        .and_then(|x| x.parse().ok())
+        .expect("the decrease");
+    assert!(
+        (drop / want - 1.0).abs() < 1e-4,
+        "the perturbed construction's decrease is {drop} eps, not 2K − K(1 + 1/(n − 1)²)'s {want}"
     );
 }
 
