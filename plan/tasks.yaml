@@ -1677,6 +1677,14 @@
   requirements: [REQ-GUI-201, REQ-GUI-202]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M6-37
+  milestone: M6
+  title: "Degenerate-tilt guards"
+  depends_on: [TASK-M6-26, TASK-M6-27, TASK-M6-31]  # the guards (in_plane, chart_coords, about_the_pin) are TASK-M6-26's, the mock figure's use of them TASK-M6-27's, the tilt-mode drag TASK-M6-31's; all merged
+  needs: []
+  requirements: [REQ-GUI-203]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
