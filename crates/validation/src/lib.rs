@@ -31,6 +31,10 @@ pub use engine::{presets, stain};
 /// this dev-dependency: the kernel takes the ledger as a build-dependency alone (systems_architecture §7.1, R-185).
 pub use ledger::constants::R_POLE;
 
+/// The invariant charts' warp defaults, `K_max` and `γ_K` (REQ-CHART-044, proposed; TASK-M2-12), for the kernel crate's
+/// tests, as `r_pole` is.
+pub use ledger::constants::{GAMMA_K, K_MAX};
+
 /// The assembler's declaration parser, re-exported for the ledger crate's tests, which reach render only through this
 /// dev-dependency: the numeric view template's `RANGE_AUTO` header round-trips through it (TASK-M1-09).
 pub use render::assemble::{Declaration, UniformType};
