@@ -178,6 +178,12 @@ fn mock_stain_preview_look_reads_the_graph() {
     none.set_occupant(OUTCOME, Occupant::None).unwrap();
     assert_eq!(look(&none)[3], 0.0);
     assert_eq!(look(&none)[0], 1.0);
+    // The assembled code reads each combiner input's field.
+    let code = crate::mock::stain::assembled(&g);
+    assert!(
+        code.contains("return combine(colour(ctx.state), brightness(ctx.t_end_step));"),
+        "{code}"
+    );
     // A colour with no occupant, though wired, or with no field wired into it, is not live: a grey ramp.
     let mut empty = g.clone();
     empty.set_occupant(NodeId(4), Occupant::None).unwrap();
