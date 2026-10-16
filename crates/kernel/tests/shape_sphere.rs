@@ -17,8 +17,13 @@
 //! - `shape_sphere_canonical_fold`: `Φ` then `C` puts a lower-hemisphere point at `(θ, π − φ)` and leaves an upper one,
 //!   with the held masses and momenta, so the two mirror points are one system (R-141, R-178; REQ-CHART-020,
 //!   REQ-CHART-048).
-//! - `shape_sphere_shared_decoder`: the chart's decode is the shared blocks, the configuration [`place`]'s, and its
+//! - `shape_sphere_shared_decoder`: the chart's decode is the shared blocks, the configuration [`place`]'s, `C` after,
+//!   and its
 //!   `validate` is `Valid` everywhere (REQ-CHART-015's shape).
+//! - `shape_sphere_decode_canonical`: the decode's `ic` is `C(Φ)`, on `I = 1`, and its descriptor `C(Φ)`'s, at
+//!   `I ≠ 1` and on both hemispheres (dd_decoder §2, §3.6; REQ-CHART-015).
+//! - `shape_sphere_energy_norm`: `η_E`'s entry, `energy_norm::decode_chart`, decodes the shape sphere through its own
+//!   decode, the configuration `place`'s at `n(u, v)`, with and without a target `E*` (REQ-CHART-015).
 //! - `shape_landmarks`: `BC₀₁ = (−1, 0, 0)`, `L⁺ = (0, 0, 1)`, every collision at `w = 0`, equal masses 120° apart, and
 //!   the collisions against the inspector's (REQ-CHART-036).
 //! - `shape_landmarks_mass_weighted`: dd_integrator test 9, `BC₀₁ = (−1, 0, 0)` for any masses, `L⁺ = (0, 0, 1)`,
@@ -33,11 +38,12 @@
 
 use std::path::Path;
 
-use kernel::canon::canonicalise;
+use kernel::canon::{self, canonicalise};
 use kernel::chart::shape_sphere::{
     exponential, held_momentum, inverse, place, spherical, Inverse, ShapeMap, ShapeSphere,
 };
 use kernel::chart::{self, Chart, ValidationResult};
+use kernel::decode::energy_norm::{self, Outcome};
 use kernel::decode::{descriptor, mass, momentum, Decoded, Ic};
 use kernel::generated::links::Defaults;
 use kernel::shape::{landmarks, shape, shape_vec, weighted_jacobi, Landmarks};
@@ -724,11 +730,25 @@ fn relative(a: [[f64; 2]; 3], b: [[f64; 2]; 3]) -> f64 {
         / scale
 }
 
-/// `C(decode(chart, s, t))`: its shape is `n(s, t)` on the upper hemisphere and `(n₀, n₁, −n₂)`, the point at
+/// `Φ` alone at `(s, t)`, without `C` (R-178): `D_mass`, [`place`] and [`held_momentum`] joined.
+fn phi(chart: &ShapeSphere<f64>, s: f64, t: f64) -> Ic<f64> {
+    let m = mass::decode::<Defaults, f64>(chart.z_mass);
+    let c = place(chart.point(s, t), chart.inertia, chart.phase, &m);
+    let p = held_momentum::<Defaults, f64>(chart.z_mom, &m, &c, chart.inertia);
+    Ic {
+        m: m.m,
+        r: c.r,
+        p: p.p,
+    }
+}
+
+type Phi64 = fn(&ShapeSphere<f64>, f64, f64) -> Ic<f64>;
+
+/// `C(Φ(chart, s, t))`, `Φ` given by `phi`: its shape is `n(s, t)` on the upper hemisphere and `(n₀, n₁, −n₂)`, the point at
 /// `(θ, π − φ)`, on the lower, within `tol`; its masses are `m_fixed` exactly, its momenta `p_fixed` within `tol`
 /// relative; and the mirror points `t` and `1 − t` give one system, positions and momenta within `tol` relative.
 /// Returns the worst.
-fn check_fold(decode: Decode64, tol: f64) -> f64 {
+fn check_fold(phi: Phi64, tol: f64) -> f64 {
     let mut rng = SplitMix::new(7);
     let mut worst: f64 = 0.0;
     for _ in 0..512 {
@@ -737,7 +757,7 @@ fn check_fold(decode: Decode64, tol: f64) -> f64 {
         let fixed_p = momentum::decode::<Defaults, f64>(chart.z_mom, &fixed_m).p;
         let (s, t) = (on(&mut rng, 0.0, 1.0), on(&mut rng, 0.02, 0.98));
         let n = chart.point(s, t);
-        let canon = |t: f64| canonicalise(&decode(&chart, s, t).ic);
+        let canon = |t: f64| canonicalise(&phi(&chart, s, t));
         let c = canon(t);
         let want = if n[2] < 0.0 { [n[0], n[1], -n[2]] } else { n };
         let got = shape(c.ic.r, c.ic.m);
@@ -770,7 +790,7 @@ const FOLD_TOL: f64 = 64.0 * EPS;
 
 #[test]
 fn shape_sphere_canonical_fold() {
-    let worst = check_fold(|c, s, t| c.decode::<Defaults, f64>(s, t), FOLD_TOL);
+    let worst = check_fold(phi, FOLD_TOL);
     eprintln!(
         "shape_sphere_canonical_fold: worst {worst:.3e} ({:.1} ε)",
         worst / EPS
@@ -784,9 +804,12 @@ negative_control!(
     {
         check_fold(
             |c, s, t| {
-                let mut d = c.decode::<Defaults, f64>(s, t);
-                d.ic.p = momentum::decode::<Defaults, f64>(c.z_mom, &d.masses).p;
-                d
+                let ic = phi(c, s, t);
+                let m = mass::decode::<Defaults, f64>(c.z_mass);
+                Ic {
+                    p: momentum::decode::<Defaults, f64>(c.z_mom, &m).p,
+                    ..ic
+                }
             },
             FOLD_TOL,
         );
@@ -796,8 +819,8 @@ negative_control!(
 // ── The shared decoder ──────────────────────────────────────────────────────────────────────────────────────────────
 
 /// `decode` on random spherical and exponential charts, under both link sets: its masses are `D_mass`'s on `z₀`'s
-/// mass block, its configuration [`place`]'s at the chart's point, its momenta [`held_momentum`]'s, its `ic` their
-/// join, `Σpᵢ = 0` and the CoM at the origin within `16ε`; `map`'s controls are the held blocks; `validate` is `Valid`
+/// mass block, its configuration [`place`]'s at the chart's point, its momenta [`held_momentum`]'s, its `ic` `C` of
+/// their join and its descriptor that `ic`'s, `Σpᵢ = 0` and the CoM at the origin within `16ε`; `map`'s controls are the held blocks; `validate` is `Valid`
 /// inside and past `[0,1]²`; the name is `ShapeSphere`.
 fn check_shared(decode: Decode64) {
     let mut rng = SplitMix::new(9);
@@ -823,19 +846,20 @@ fn check_shared(decode: Decode64) {
             d.masses == m && d.config == c && d.momentum == p,
             "the chart's decode is not the shared blocks with the configuration place's at ({u}, {v})"
         );
+        let joined = Ic {
+            m: m.m,
+            r: c.r,
+            p: p.p,
+        };
         assert_eq!(
             d.ic,
-            Ic {
-                m: m.m,
-                r: c.r,
-                p: p.p
-            },
-            "the joined ic"
+            canonicalise(&joined).ic,
+            "the ic is not C of the joined blocks"
         );
         assert_eq!(
             d.descriptor,
             descriptor::describe(&d.ic),
-            "the descriptor is not the joined ic's"
+            "the descriptor is not the canonical ic's"
         );
         let total = [0, 1].map(|j| d.ic.p.iter().map(|q| q[j]).sum::<f64>());
         let com = [0, 1].map(|j| (0..3).map(|i| d.ic.m[i] * d.ic.r[i][j]).sum::<f64>());
@@ -896,6 +920,152 @@ negative_control!(
     expected = "is not the shared blocks",
     {
         check_shared(|c, u, v| kernel::decode::decode::<Defaults, f64>(&c.map(u, v).z));
+    }
+);
+
+// ── The decode is canonical (dd_decoder §2, §3.6) ──────────────────────────────────────────────────────────────────
+
+/// A random chart of either map, its `I` and `φ_f` drawn.
+fn random_chart(rng: &mut SplitMix, exponential: bool) -> ShapeSphere<f64> {
+    let chart = random_sphere(rng);
+    if !exponential {
+        return chart;
+    }
+    let (n0, e1, e2) = frame(rng);
+    ShapeSphere {
+        map: ShapeMap::Exponential,
+        n0,
+        e1,
+        e2,
+        scale: on(rng, 0.1, 1.5),
+        ..chart
+    }
+}
+
+/// `decode` on random charts of both maps, `I` in `[¼, 4]`, both hemispheres drawn: its `ic` is `C(Φ)` and on `C`'s
+/// section, `I = 1` within `64ε`, and its descriptor is `describe(C(Φ))`, with `rho_mag` and `lambda_mag` in
+/// `[0, 1]`.
+fn check_canonical(decode: Decode64) {
+    let mut rng = SplitMix::new(0x0206);
+    let (mut lower, mut scaled) = (0, 0);
+    for k in 0..1024 {
+        let chart = random_chart(&mut rng, k % 2 == 1);
+        let (u, v) = (on(&mut rng, 0.0, 1.0), on(&mut rng, 0.0, 1.0));
+        let d = decode(&chart, u, v);
+        let i = canon::inertia(d.ic.m, d.ic.r);
+        assert!(
+            (i - 1.0).abs() <= 64.0 * EPS,
+            "the decode's ic at ({u}, {v}) is not on I = 1: I = {i} (chart I {})",
+            chart.inertia
+        );
+        let want = canonicalise(&phi(&chart, u, v)).ic;
+        assert_eq!(d.ic, want, "the decode's ic is not C(Φ) at ({u}, {v})");
+        assert_eq!(
+            d.descriptor,
+            descriptor::describe(&want),
+            "the descriptor is not C(Φ)'s"
+        );
+        let q = &d.descriptor;
+        assert!(
+            (0.0..=1.0).contains(&q.rho_mag) && (0.0..=1.0).contains(&q.lambda_mag),
+            "rho_mag {} or lambda_mag {} outside [0, 1]",
+            q.rho_mag,
+            q.lambda_mag
+        );
+        lower += usize::from(chart.point(u, v)[2] < 0.0);
+        scaled += usize::from((chart.inertia - 1.0).abs() > 0.25);
+    }
+    assert!(
+        lower > 200 && scaled > 500,
+        "{lower} lower-hemisphere draws, {scaled} at I far from 1"
+    );
+}
+
+#[test]
+fn shape_sphere_decode_canonical() {
+    check_canonical(|c, u, v| c.decode::<Defaults, f64>(u, v));
+    check_canonical(chart::decode::<Defaults, f64, _>);
+}
+
+negative_control!(
+    shape_sphere_decode_canonical,
+    "Φ's state handed over without C, at I ≠ 1, is off the section, so it must fail",
+    expected = "is not on I = 1",
+    {
+        check_canonical(|c, u, v| {
+            let ic = phi(c, u, v);
+            Decoded {
+                ic,
+                descriptor: descriptor::describe(&ic),
+                ..c.decode::<Defaults, f64>(u, v)
+            }
+        });
+    }
+);
+
+type DecodeChart64 = fn(&ShapeSphere<f64>, f64, f64, Option<f64>) -> (Decoded<f64>, Outcome);
+
+/// `η_E`'s entry on the shape sphere: with no target, the decode is the chart's own, its configuration [`place`]'s at
+/// `n(u, v)`, the outcome `Off`; with `E* = V₀ + ½`, the configuration is the same, the positions unchanged, the
+/// outcome `Scaled` and the energy `E*` within `64ε` relative, the descriptor rewritten from the result.
+fn check_energy_norm(decode: DecodeChart64) {
+    let mut rng = SplitMix::new(0x0e5a);
+    for k in 0..512 {
+        let chart = random_chart(&mut rng, k % 2 == 1);
+        let (u, v) = (on(&mut rng, 0.0, 1.0), on(&mut rng, 0.0, 1.0));
+        let m = mass::decode::<Defaults, f64>(chart.z_mass);
+        let at = place(chart.point(u, v), chart.inertia, chart.phase, &m);
+        let own = chart.decode::<Defaults, f64>(u, v);
+        let (off, outcome) = decode(&chart, u, v, None);
+        assert!(
+            off.config == at,
+            "decode_chart's configuration at ({u}, {v}) is not place's at n(u, v)"
+        );
+        assert_eq!(
+            (off, outcome),
+            (own, Outcome::Off),
+            "decode_chart with no target"
+        );
+        let e_star = own.descriptor.V_0 + 0.5;
+        let (on_, outcome) = decode(&chart, u, v, Some(e_star));
+        assert!(
+            on_.config == at,
+            "decode_chart's configuration under E* at ({u}, {v}) is not place's at n(u, v)"
+        );
+        assert_eq!(outcome, Outcome::Scaled, "the outcome under E* = V₀ + ½");
+        assert_eq!(on_.ic.r, own.ic.r, "η_E moved the positions");
+        let q = &on_.descriptor;
+        assert_eq!(
+            *q,
+            descriptor::describe(&on_.ic),
+            "the descriptor is not the result's"
+        );
+        let e = q.K_0 + q.V_0;
+        assert!(
+            (e - e_star).abs() <= 64.0 * EPS * e_star.abs().max(1.0),
+            "the energy under E* = {e_star} is {e}"
+        );
+    }
+}
+
+#[test]
+fn shape_sphere_energy_norm() {
+    check_energy_norm(energy_norm::decode_chart::<Defaults, f64, _>);
+}
+
+negative_control!(
+    shape_sphere_energy_norm,
+    "η_E's entry decoding map's latent through D_cfg ignores the shape, so it must fail",
+    expected = "is not place's at n(u, v)",
+    {
+        check_energy_norm(|c, u, v, e| {
+            energy_norm::decode_with(
+                &mut kernel::decode::Free::<Defaults>::new(),
+                &c.map(u, v).z,
+                e,
+                false,
+            )
+        });
     }
 );
 

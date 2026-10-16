@@ -34,11 +34,19 @@
 //! `C`'s. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ` is already on `C`'s section on the upper hemisphere.
 //!
 //! **Into the shared decoder** (REQ-CHART-015). The chart sets the configuration explicitly, which `ChartOut`'s latent
-//! controls cannot carry, so it overrides [`Chart::decode`]: the shared decoder's blocks run in order through
-//! [`decode::decode_with`], `D_mass` on `z₀`'s mass block, [`place`] in place of `D_cfg`, `D_mom` on `z₀`'s momentum
-//! block placed by [`held_momentum`], and the shared descriptor. [`Chart::map`] hands over the held blocks, its
-//! configuration block 0 and unread. The output is `Φ`'s, not yet canonical: `C` follows (R-178), and folds the lower
-//! hemisphere onto the upper at `(θ, π − φ)` (R-141).
+//! controls cannot carry, so it overrides [`Chart::decode`]: the shared decoder's blocks run in its order, `D_mass` on
+//! `z₀`'s mass block, [`place`] in place of `D_cfg`, `D_mom` on `z₀`'s momentum block placed by [`held_momentum`]; then `C` ([`canon::canonicalise`], its scale included) on the joined state, and
+//! the shared descriptor of `C`'s output. So the decode's `ic` is the canonical `(m, r, p)`, `G = M = I = 1`, which
+//! crosses to the integrator, and its descriptor that state's (dd_decoder §2, §3.6), while its `config` and `momentum`
+//! stay the blocks' outputs in `Φ`'s gauge; `C` folds the lower hemisphere onto the upper at `(θ, π − φ)` (R-141).
+//! `Φ` alone, without `C`, is [`place`] (R-178's round trip). [`Chart::map`] hands over the held blocks with the
+//! configuration block 0: every `D ∘ Φ` entry, [`crate::chart::decode`] and [`crate::decode::energy_norm::decode_chart`],
+//! goes through [`Chart::decode`], and the configuration block of `map`'s latent is never decoded.
+//!
+//! **The selects** (dd_decoder §2's select rule; gpu_determinism_note): three, each between values already computed and
+//! continuous across its boundary, so a backend fork there moves the output by rounding only: `r = 0` in
+//! [`exponential`] (`sin r/r → 1`), `n₀ ≥ 0` in [`inverse`] (both forms give `I/2` at `n₀ = 0`), and R-437's
+//! `p = q = 0` in [`inverse`] (the defined 0).
 //!
 //! **Validation** (inverse_encode_contract § "Chart-aware validation"; R-26). Layer 2's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`
 //! are the point's own azimuth and polar angle, which every point of S² has: past `[0,1]²` the spherical map's θ is
@@ -50,8 +58,6 @@
 //! **π** is taken at the parameters' type, `P::PI()` widened (`F: From<P>`), as every parameter is: the trait's float
 //! bound has no constant of its own.
 
-use core::marker::PhantomData;
-
 use spirv_std::num_traits::{Float, FloatConst};
 
 use super::{Chart, ChartOut, ValidationResult};
@@ -59,9 +65,9 @@ use crate::canon;
 use crate::decode::config::{self, Config};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::{self, Momentum};
-use crate::decode::{self, descriptor, Blocks, Decoded, Ic};
+use crate::decode::{self, descriptor, Decoded, Ic};
 use crate::generated::links::{LinkReal, Selection};
-use crate::payload::{ICDescriptorOf, PayloadReal};
+use crate::payload::PayloadReal;
 
 /// Which chart map the shape sphere uses (chart_reference §3.3: "state which is used").
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -221,37 +227,6 @@ pub fn held_momentum<S: Selection, R: LinkReal + PayloadReal>(
     }
 }
 
-/// The shared decoder's blocks with the configuration set explicitly: `D_mass`, [`place`] at the chart's point,
-/// [`held_momentum`], and the shared descriptor.
-struct Explicit<S, R> {
-    n: [R; 3],
-    inertia: R,
-    phase: R,
-    selection: PhantomData<S>,
-}
-
-impl<S: Selection, R: LinkReal + PayloadReal> Blocks<R> for Explicit<S, R> {
-    #[inline]
-    fn mass(&mut self, z_mass: [R; 2]) -> Masses<R> {
-        mass::decode::<S, R>(z_mass)
-    }
-
-    #[inline]
-    fn config(&mut self, _z_cfg: [R; 2], masses: &Masses<R>) -> Config<R> {
-        place(self.n, self.inertia, self.phase, masses)
-    }
-
-    #[inline]
-    fn momentum(&mut self, z_mom: [R; 4], masses: &Masses<R>, config: &Config<R>) -> Momentum<R> {
-        held_momentum::<S, R>(z_mom, masses, config, self.inertia)
-    }
-
-    #[inline]
-    fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R> {
-        descriptor::describe(ic)
-    }
-}
-
 impl<P: Copy + FloatConst> ShapeSphere<P> {
     /// The chart's point `n` at `(u, v)` under its map, at the float type `F`.
     #[inline]
@@ -274,8 +249,8 @@ impl<P: Copy + FloatConst> ShapeSphere<P> {
 impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     type Param = P;
 
-    /// The held blocks, `z₀`'s momentum and mass blocks, in the decoder's layout; the configuration block, which the
-    /// chart sets explicitly ([`Chart::decode`]), is 0 and unread.
+    /// The held blocks, `z₀`'s momentum and mass blocks, in the decoder's layout, with the configuration block 0: the
+    /// chart sets the configuration explicitly, and every `D ∘ Φ` entry decodes it through [`Chart::decode`].
     #[inline]
     fn map<F: Float + From<P>>(&self, _u: F, _v: F) -> ChartOut<F> {
         let wide = <F as From<P>>::from;
@@ -293,8 +268,9 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
         }
     }
 
-    /// `D ∘ Φ` with the configuration set explicitly (the module's notes): mass → [`place`] → [`held_momentum`] →
-    /// descriptor, through [`decode::decode_with`]. Not yet canonical; `C` follows.
+    /// `D ∘ Φ` with the configuration set explicitly (the module's notes): mass → [`place`] → [`held_momentum`], then
+    /// `C` on the joined state and the descriptor of `C`'s output. The `ic` is canonical;
+    /// `config` and `momentum` are the blocks' outputs, in `Φ`'s gauge.
     #[inline]
     fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
@@ -302,13 +278,24 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
         R: LinkReal + PayloadReal + From<P>,
     {
         let wide = <R as From<P>>::from;
-        let mut blocks = Explicit::<S, R> {
-            n: self.point(u, v),
-            inertia: wide(self.inertia),
-            phase: wide(self.phase),
-            selection: PhantomData,
-        };
-        decode::decode_with(&mut blocks, &self.map(u, v).z)
+        let inertia = wide(self.inertia);
+        let masses = mass::decode::<S, R>(self.z_mass.map(wide));
+        let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
+        let momentum = held_momentum::<S, R>(self.z_mom.map(wide), &masses, &config, inertia);
+        let ic = canon::canonicalise(&Ic {
+            m: masses.m,
+            r: config.r,
+            p: momentum.p,
+        })
+        .ic;
+        Decoded {
+            ic,
+            masses,
+            config,
+            momentum,
+            descriptor: descriptor::describe(&ic),
+            degenerate: masses.degenerate,
+        }
     }
 
     fn name(&self) -> &str {

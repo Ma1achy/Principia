@@ -4,7 +4,8 @@
 //! REQ-CHART-015): no chart module holds a mass, configuration or momentum decode formula, an integrator or a
 //! renderer. [`decode()`] is `D ∘ Φ` through the shared [`mod@crate::decode`], whose output is the canonical `(m, r, p)`
 //! for a chart that hands the decoder latent controls; a chart that sets the configuration explicitly ([`ShapeSphere`])
-//! runs the same blocks through [`Chart::decode`], and its output is `Φ`'s gauge, which `C` then canonicalises.
+//! runs the same blocks through [`Chart::decode`], then `C`, so its output is canonical too. Every `D ∘ Φ` entry, this
+//! one and `energy_norm::decode_chart`, goes through [`Chart::decode`].
 //!
 //! **The trait** ([`Chart`]; R-26, R-118): `map`, `Φ`, generic over the float type, so the one source is monomorphised
 //! as the f32 kernel and the f64 CPU reference; `forbids_energy_normalisation` (R-25); `name`, which every dump header

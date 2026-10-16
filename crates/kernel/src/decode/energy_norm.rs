@@ -191,7 +191,10 @@ pub fn decode<S: Selection, R: LinkReal + PayloadReal>(
 }
 
 /// `D ∘ Φ` at `(u, v)` under the selection `S` with `η_E` toward `e_star`, applied only where the chart allows it: its
-/// own [`Chart::forbids_energy_normalisation`] (chart_reference §0.6).
+/// own [`Chart::forbids_energy_normalisation`] (chart_reference §0.6). The decode is the chart's own
+/// [`Chart::decode`], so a chart that sets its configuration explicitly (the shape sphere) is decoded as it does it,
+/// never from `map`'s latent alone; `η_E` follows on its `ic`, the descriptor rewritten by the shared `describe`
+/// ([`Free`]'s invariants).
 #[inline]
 pub fn decode_chart<S, R, C>(chart: &C, u: R, v: R, e_star: Option<R>) -> (Decoded<R>, Outcome)
 where
@@ -199,9 +202,9 @@ where
     R: LinkReal + PayloadReal + From<C::Param>,
     C: Chart,
 {
-    decode_with(
+    apply(
         &mut Free::<S>::new(),
-        &chart.map(u, v).z,
+        chart.decode::<S, R>(u, v),
         e_star,
         chart.forbids_energy_normalisation(),
     )
