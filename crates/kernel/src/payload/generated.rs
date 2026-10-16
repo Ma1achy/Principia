@@ -2,7 +2,7 @@
 
 /// The payload schema version: the 64-bit FNV-1a hash of the canonicalised ledger, computed at generation
 /// and never bumped by hand (R-36, R-63; `ledger::version`).
-pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x94b5276a63ea2492;
+pub const PAYLOAD_SCHEMA_VERSION: u64 = 0x82add40473aecbc5;
 
 /// `SimStateFTLE` at the `Real` `R`: 144 B aligned to 8 at f32, 272 B aligned to 8 at f64.
 /// Its f32 members are `R`; `_tail` is its declared tail padding (dd_simstate_payload §1; philosophy §7.1; R-86).
@@ -90,8 +90,8 @@ pub struct ICDescriptorOf<R: PayloadReal> {
 pub type ICDescriptor = ICDescriptorOf<f32>;
 
 /// A `Real` the payload is instantiated at (R-265), with the declared tail padding (R-86) of each struct generic
-/// over it at its width (dd_simstate_payload §1).
-pub trait PayloadReal: crate::Real {
+/// over it at its width (dd_simstate_payload §1), and the IEEE bit patterns a producer selects at a pole (R-436).
+pub trait PayloadReal: crate::Real + crate::real::IeeeBits {
     type SimStateFTLETail: Copy + Default + core::fmt::Debug + PartialEq;
     type SimStateBaseTail: Copy + Default + core::fmt::Debug + PartialEq;
     type ICDescriptorTail: Copy + Default + core::fmt::Debug + PartialEq;

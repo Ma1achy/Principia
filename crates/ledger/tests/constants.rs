@@ -6,8 +6,8 @@
 //! The register's `provisional` key (R-427; REQ-SYS-081; `constants_provisional_*`): a provisional entry builds and
 //! its number reads at compile time like any other; one whose value is `calibration`, one that names no gate and one
 //! citing a corpus section each fail generation naming the constant; the list by gate gives what the M1 gate left
-//! marked (R-428, R-433): none for M1, the two floors and `eps_m01` for M2, `r_pole` for M3 (REQ-SYS-082), and the
-//! hatch is read from its entries. The mark is not hashed: see `schema_version.rs`'s `constants_provisional_*`.
+//! marked (R-428, R-433): none for M1, the two floors, `eps_m01` and `tanh_sat` for M2, `r_pole` for M3
+//! (REQ-SYS-082), and the hatch is read from its entries. The mark is not hashed: see `schema_version.rs`'s `constants_provisional_*`.
 
 use ledger::constants::{
     gate, is_milestone, provisional_until, Admissibility, Citation, ConstantBuilder, Population,
@@ -583,9 +583,10 @@ const R428: &str = "R-428 — ";
 const R433: &str = "R-433 — ";
 
 /// Checks that `register` passes the gate and lists, by gate, exactly the entries still provisional after the M1
-/// gate (R-428, R-433): none for M1; `eps_m01` (REQ-DEC-039) and [`UNTIL_M2`], citing REQ-TOOL-163, for M2; `r_pole`,
-/// citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`] confirmed outright are unmarked and cite
-/// R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`] names the six floors' entries.
+/// gate (R-428, R-433): none for M1; `eps_m01` (REQ-DEC-039), `tanh_sat` (REQ-DEC-047) and [`UNTIL_M2`], citing
+/// REQ-TOOL-163, for M2; `r_pole`, citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`]
+/// confirmed outright are unmarked and cite R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`]
+/// names the six floors' entries.
 fn check_list_by_gate(register: &[ConstantBuilder]) {
     if let Err(e) = gate(register) {
         panic!("the register is refused: {e}");
@@ -597,7 +598,7 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
     );
     assert_eq!(
         provisional_until(register, "M2"),
-        ["eps_m01", UNTIL_M2[0], UNTIL_M2[1]],
+        ["eps_m01", "tanh_sat", UNTIL_M2[0], UNTIL_M2[1]],
         "the entries provisional until M2"
     );
     assert_eq!(

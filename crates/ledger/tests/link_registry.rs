@@ -472,7 +472,8 @@ negative_control!(
 // ── The chart constants ─────────────────────────────────────────────────────────────────────────────────────────
 
 /// `chart` is REQ-DEC-009's constants, each a register entry of its value, in canonical units: exact, but for `ε_M01`,
-/// the M01_TINY threshold, which is a threshold set in a measured gap (REQ-DEC-039's provisional proposal).
+/// the M01_TINY threshold, which is a threshold set in a measured gap (REQ-DEC-039's provisional proposal); and
+/// `tanh_sat`, the `tanh` operator's argument bound (REQ-DEC-047's provisional proposal), exact.
 fn check_chart_constants(chart: &[Param]) {
     let want = [
         ("mu_max", 5.0),
@@ -484,6 +485,7 @@ fn check_chart_constants(chart: &[Param]) {
         ("delta_lambda", 1e-12),
         ("eps_w", 1e-10),
         ("eps_m01", 1e-5),
+        ("tanh_sat", 20.0),
     ];
     let got: Vec<(&str, f64)> = chart.iter().map(|p| (p.name, p.value)).collect();
     assert_eq!(got, want, "the chart constants are not REQ-DEC-009's");

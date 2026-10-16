@@ -174,9 +174,9 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - The chart reference values as unit and property tests.
 
 <!-- gate:M2 -->
-**Exit gate — 166 requirements** (and every earlier gate still green):
+**Exit gate — 167 requirements** (and every earlier gate still green):
 
-- DEC (38): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…046
+- DEC (39): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…047
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
 - CHART (47): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055
 - INT (2): REQ-INT-002…003

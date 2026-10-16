@@ -158,6 +158,24 @@ pub trait Link<const C: usize, const P: usize> {
     fn log_det<R: LinkReal>(v: [R; C]) -> R;
 }
 
+/// `tanh`, §3.9's operator: `tanh(clamp(x, −tanh_sat, tanh_sat))`, then ±1 where its magnitude exceeds 1, by
+/// comparison, a NaN kept (R-72; REQ-DEC-047). The clamp acts only where `tanh` already rounds to ±1 at f32 and
+/// f64, and gives ±1 where a GPU's `tanh` fails at large arguments, as Metal's does; the select keeps the result
+/// in `tanh`'s own range where a backend's accuracy bound lets it pass 1, and never acts on the CPU.
+#[inline]
+pub fn tanh_sat<R: LinkReal>(x: R) -> R {
+    let t = super::constants::tanh_sat::<R>();
+    let lo = if x < -t { -t } else { x };
+    let y = Float::tanh(if lo > t { t } else { lo });
+    let one = R::one();
+    let hi = if y > one { one } else { y };
+    if hi < -one {
+        -one
+    } else {
+        hi
+    }
+}
+
 /// `σ(x) = 1/(1 + e⁻ˣ)`.
 #[inline]
 fn sigmoid<R: LinkReal>(x: R) -> R {
@@ -191,10 +209,10 @@ impl Link<2, 3> for SoftmaxTanh {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 2]) -> [R; 3] {
-        let t0 = Float::tanh(v[0]);
+        let t0 = tanh_sat(v[0]);
         let t1 = R::MU_MAX * t0;
         let t2 = Float::exp(t1);
-        let t3 = Float::tanh(v[1]);
+        let t3 = tanh_sat(v[1]);
         let t4 = R::MU_MAX * t3;
         let t5 = Float::exp(t4);
         let t6 = R::LIT_0 + t2 + t5;
@@ -226,10 +244,10 @@ impl Link<2, 3> for SoftmaxTanh {
     fn log_det<R: LinkReal>(v: [R; 2]) -> R {
         let t0 = Float::ln(R::LIT_2);
         let t1 = R::LIT_1 * t0;
-        let t2 = Float::tanh(v[0]);
+        let t2 = tanh_sat(v[0]);
         let t3 = R::MU_MAX * t2;
         let t4 = Float::exp(t3);
-        let t5 = Float::tanh(v[1]);
+        let t5 = tanh_sat(v[1]);
         let t6 = R::MU_MAX * t5;
         let t7 = Float::exp(t6);
         let t8 = R::LIT_0 + t4 + t7;
@@ -278,7 +296,7 @@ impl Link<2, 3> for StickBreaking {
         let t0 = R::LIT_3 * v[0];
         let t1 = -t0;
         let t2 = sigmoid(t1);
-        let t3 = Float::tanh(v[0]);
+        let t3 = tanh_sat(v[0]);
         let t4 = R::LIT_1 * R::EPS_MU * t3;
         let t5 = t2 + t4;
         let t6 = sigmoid(t0);
@@ -286,7 +304,7 @@ impl Link<2, 3> for StickBreaking {
         let t8 = R::LIT_3 * v[1];
         let t9 = -t8;
         let t10 = sigmoid(t9);
-        let t11 = Float::tanh(v[1]);
+        let t11 = tanh_sat(v[1]);
         let t12 = R::LIT_1 * R::EPS_MU * t11;
         let t13 = t10 + t12;
         let t14 = t7 * t13;
@@ -327,7 +345,7 @@ impl Link<2, 3> for StickBreaking {
         let t6 = R::LIT_3 * t5;
         let t7 = R::LIT_3 * v[0];
         let t8 = sigmoid(t7);
-        let t9 = Float::tanh(v[0]);
+        let t9 = tanh_sat(v[0]);
         let t10 = R::LIT_1 * R::EPS_MU * t9;
         let t11 = t8 - t10;
         let t12 = Float::ln(t11);
@@ -445,7 +463,7 @@ impl Link<1, 1> for TanhAlpha {
         let t0 = R::LIT_3 * R::ALPHA_MIN;
         let t1 = R::LIT_6 - t0;
         let t2 = R::LIT_1 * t1;
-        let t3 = Float::tanh(v[0]);
+        let t3 = tanh_sat(v[0]);
         let t4 = R::LIT_0 + t3;
         let t5 = t2 * t4;
         let t6 = R::ALPHA_MIN + t5;
@@ -496,7 +514,7 @@ impl Link<1, 1> for TanhBeta {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
-        let t0 = Float::tanh(v[0]);
+        let t0 = tanh_sat(v[0]);
         let t1 = R::LIT_0 + t0;
         let t2 = R::LIT_6 * t1;
         [t2]
@@ -690,7 +708,7 @@ impl Link<1, 1> for TanhQ {
 
     #[inline]
     fn forward<R: LinkReal>(v: [R; 1]) -> [R; 1] {
-        let t0 = Float::tanh(v[0]);
+        let t0 = tanh_sat(v[0]);
         let t1 = R::Q_MAX * t0;
         [t1]
     }

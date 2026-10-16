@@ -249,8 +249,8 @@ fn precision_code(structs: &[Struct], rows: &[Precision]) -> String {
         .expect("the payload structs include ICDescriptor (dd_generation_root §3.6)");
     let mut out = String::from(
         "\n/// A `Real` the payload is instantiated at (R-265), with the declared tail padding (R-86) of each struct generic\n\
-         /// over it at its width (dd_simstate_payload §1).\n\
-         pub trait PayloadReal: crate::Real {\n",
+         /// over it at its width (dd_simstate_payload §1), and the IEEE bit patterns a producer selects at a pole (R-436).\n\
+         pub trait PayloadReal: crate::Real + crate::real::IeeeBits {\n",
     );
     for s in &generic {
         let _ = writeln!(

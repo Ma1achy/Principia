@@ -30,7 +30,7 @@ use validation::negative_control;
 // ── The requirement's values ────────────────────────────────────────────────────────────────────────────────────
 
 /// REQ-DEC-009's chart constants by §3.9's names; `eps_m01` at REQ-DEC-039's provisional proposal (dd_decoder §3.1).
-const CHART: [(&str, f64); 9] = [
+const CHART: [(&str, f64); 10] = [
     ("mu_max", 5.0),
     ("q_max", 2.0),
     ("alpha_min", 0.0),
@@ -40,6 +40,7 @@ const CHART: [(&str, f64); 9] = [
     ("delta_lambda", 1e-12),
     ("eps_w", 1e-10),
     ("eps_m01", 1e-5),
+    ("tanh_sat", 20.0),
 ];
 
 fn chart(name: &str) -> f64 {
