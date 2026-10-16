@@ -45,7 +45,7 @@ Jacobi and Shape views are TASK-M6-35's; here their buttons exist and their view
   Plücker, Jacobi, Shape; Enter on a view button switching the view; in a grid view the compass's interaction moving a
   cell cursor over the upper triangle, Space steering to it, Esc or Enter back (C6); the `?` overlay's rows and the
   breadcrumb.
-- The Jacobi and Shape buttons present, their views showing "waits on physics review (RQ-341 to RQ-343)" until
+- The Jacobi and Shape buttons present, their views showing "waits on physics review (RQ-341 to RQ-346)" until
   TASK-M6-35.
 - Tests `mock_compass_views`, `compass_plucker`, `compass_position_gauge`, `mock_compass_steer_latent`,
   `mock_compass_view_keys`; screenshot cases `01_main/mock_compass_views` and `01_main/mock_compass_plucker`.
@@ -69,5 +69,5 @@ Jacobi and Shape views are TASK-M6-35's; here their buttons exist and their view
   The grid's two hues, its outline and its cell cursor's look are such choices (R-452 C7); the references' teal and
   terracotta on cream are not used.
 - **Why apart from the physical views.** The Plücker view, the readout, the latent steer and the keys rest on the
-  decoder's basis alone and need none of RQ-341 to RQ-344, so they are built first; TASK-M6-35 adds the physical views
+  decoder's basis alone and need none of RQ-341 to RQ-346, so they are built first; TASK-M6-35 adds the physical views
   on this task's grid.

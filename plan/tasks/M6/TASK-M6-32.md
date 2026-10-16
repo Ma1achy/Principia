@@ -48,11 +48,13 @@ nothing about the order depends on state; then every other window and scope is a
   task's, named against that task (R-450 A7).
 - Tests `mock_console_keys` and `mock_reachability`; `scope_tab_order_mock`, `mock_keyboard_windows` and
   `mock_keyboard` updated where they assert the console's four sections; screenshot cases
-  `07_keyboard/mock_focus_console_header` and `07_keyboard/mock_focus_console_log` (`mock_focus_console` re-captured).
+  `07_keyboard/mock_focus_console_header` and `07_keyboard/mock_focus_console_log` (`mock_focus_console` re-captured),
+  and `12_console/mock_console` re-captured against its artboard with the × in the header row.
 
 ## Acceptance tests
 - `cargo test -p gui mock_console_keys` and `cargo xtask screenshot 07_keyboard` (mock_focus_console_header, mock_focus_console_log) — the console opened from the footer and from Windows › Console lands on the header bar scope in navigation mode; from the landing every header element, the log and × are reached with only ↑ ↓, Tab, Shift+Tab, Enter, Esc and ← →; the search field types after Enter and keeps its text on Esc and Enter; Enter on × and Esc at the top level close the console with the focus on its opener; the log scrolls to its first and last entry with Home, End, Page Up, Page Down and ↑ ↓, Shift ×10, on a list longer than the rows drawn; the breadcrumb reads "Console › Header › Copy" on Copy; every script repeated after an auto-open on error and with a filter that empties the list gives the same order; controls: a landing on All, × outside the scope tree, an order that skips the log when the list is empty, a scroll that stops at the last row drawn and an Esc on a header element that closes the console each fail (REQ-GUI-189).
 - `cargo test -p gui mock_reachability` — the reachability walk reaches every drawn control of the console in each of its states and of each window the audit covers; its negative arm (a drawn control left out of the scope tree, and one registered only when a list is non-empty) fails; review checklist (gui reviewer): the PR names the intermittent fault's cause with its reproduction and lists the audit's findings, each fixed or recorded against its task (REQ-GUI-190).
+- `cargo xtask screenshot 12_console` (mock_console) — re-captured against 12_console.png; the header row adds R-450's focusable × after Clear, which the artboard's row ("copy · clear · console ▾") does not have, named in the PR as R-450's difference from the artboard (REQ-GUI-126, closed by TASK-M6-28, re-checked here as R-450 changes the console's layout; plan/reviewers/gui.md §8 item 1).
 - `cargo test -p gui mock_keyboard scope_tab_order_mock` — the footer is still big scope 8, Enter on it opens the console with the focus inside it, and an auto-open on error takes no focus (REQ-GUI-178, closed by TASK-M6-28, re-checked here as R-450 words the console).
 
 ## Notes

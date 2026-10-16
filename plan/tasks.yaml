@@ -1664,7 +1664,7 @@
 - id: TASK-M6-35
   milestone: M6
   title: "The compass's Jacobi and Shape views and the physical steer (R-452)"
-  depends_on: [TASK-M6-34]  # waits on RQ-341 to RQ-344 as well (R-452)
+  depends_on: [TASK-M6-34]  # waits on RQ-341 to RQ-346 as well (R-452)
   needs: []
   requirements: [REQ-GUI-199, REQ-GUI-200]
   reviewers: [code, qa, gui, physics]

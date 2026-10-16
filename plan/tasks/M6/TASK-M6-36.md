@@ -37,21 +37,23 @@ cursor reached the panel.
   IC re-integrated when the sim key changes (D5).
 - `crates/gui/src/explore/manifold_view/navigate.rs` and `crates/gui/src/app.rs` — a primary click with no drag on
   the figure pinning the sample under it (a drag still pans); P in the Figure scope pinning under the pointer, as K
-  locks; the figure's drawn path following the pin (D1, D4, D6).
+  locks, in navigation and interaction mode alike; the figure's drawn path and hover label still following the
+  pointer, pinned or not (D1, D6; D4 dropped in the fix round of PR #227).
 - The views — real space and the unwrapped view: drag pans, the wheel zooms about the pointer; the sphere: drag
   orbits (yaw, pitch clamped ±90°), the wheel zooms, a drag unticking "turn"; a double-click restoring each default;
   each view's state per tab, `ViewUI`, the orbit turning the view, never the data (D7, D8); the Inspector's panes
   getting the same where they are the same widgets (D8).
 - `crates/gui/src/keyboard/scopes.rs` — the Trajectory scope's elements gaining unpin and the two views; in a view's
   interaction mode the arrows pan (R-404's `Pan`) or orbit (`Angle`), + and − zoom (`ZoomLog2`), Shift ×10 and Alt
-  ×0.1 (D6); the `?` overlay's rows.
+  ×0.1 (D6), the unwrapped view, while shown in the sphere's place, being that element with the real-space view's
+  keys; P in the Figure's key list; the `?` overlay's rows.
 - Tests `mock_trajectory_pin` and `mock_trajectory_views`; `mock_hover` updated where it asserts the panel blanking
   off the figure; screenshot case `01_main/mock_trajectory_views`.
 
 ## Acceptance tests
-- `cargo test -p gui mock_trajectory_pin` — a click pins and the tab reads "pinned"; hovering elsewhere, entering the panel and leaving the window keep it; a pan, a zoom and a slice edit keep it; another click moves it; unpin follows the cursor again; unpinned, entering the panel keeps the last sample; a drag pans and does not pin; P pins over the figure and does nothing off it; "+" with the mouse keeps the shown sample; nothing is added to undo; controls: a panel blanking off the figure, a hover replacing the pin and a pin holding a pixel each fail (REQ-GUI-201).
-- `cargo test -p gui mock_trajectory_views` and `cargo xtask screenshot 01_main` (mock_trajectory_views) — drag and wheel pan and zoom real space about the pointer; drag and wheel orbit and zoom the sphere, pitch clamped, "turn" unticked and resumable; double-click restores; the sphere's data unchanged by an orbit; the keyboard steps as named, Shift ×10 and Alt ×0.1; no SetField and no undo entry; controls: a paint-only view, an orbit of the data and another keyboard step each fail (REQ-GUI-202).
-- `cargo test -p gui mock_hover` — the hover label and the drawn path still follow the cursor without a pin (§G2's figure, re-checked here).
+- `cargo test -p gui mock_trajectory_pin` — a click pins and the tab reads "pinned"; hovering elsewhere, entering the panel and leaving the window keep it; a pan, a zoom and a slice edit keep it; another click moves it; unpin follows the cursor again; unpinned, entering the panel keeps the last sample; a drag pans and does not pin; P pins over the figure, pressed in navigation mode and in interaction mode on the Figure alike, and does nothing off it; while pinned the figure's path and hover label follow the pointer; "+" with the mouse keeps the shown sample; nothing is added to undo; controls: a panel blanking off the figure, a hover replacing the pin, a pin holding a pixel, a P acting in one mode only and a figure path following the pin each fail (REQ-GUI-201).
+- `cargo test -p gui mock_trajectory_views` and `cargo xtask screenshot 01_main` (mock_trajectory_views) — drag and wheel pan and zoom real space about the pointer; drag and wheel orbit and zoom the sphere, pitch clamped, "turn" unticked and resumable; double-click restores; the sphere's data unchanged by an orbit; the keyboard steps as named, the unwrapped view in the sphere's place taking the real-space view's, Shift ×10 and Alt ×0.1; no SetField and no undo entry; controls: a paint-only view, an orbit of the data and another keyboard step each fail (REQ-GUI-202).
+- `cargo test -p gui mock_hover` — the hover label and the drawn path still follow the cursor, with or without a pin (§G2's figure and REQ-GUI-085, re-checked here; R-453 D4 dropped).
 
 ## Notes
 - **What to try.** The PR description has a "What to try" section (R-390), on `cargo run -p gui --features mock`: hover the figure, click a point, move the pointer
