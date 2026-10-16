@@ -1,8 +1,8 @@
 //! Encode `E` as compute entry points (`crate::encode`): the kernel's f32 build of the one source, so that a test reads
 //! the GPU's encode, its selects and notices included, on given states (REQ-ENC-007, REQ-DEC-014; R-116, R-437, R-438).
-//! - [`encode`]: invocation `i` reads sample `i`'s `(m, r, p)` in the decode stage's word layout ([`read_ic`]) and writes
+//! - [`encode()`]: invocation `i` reads sample `i`'s `(m, r, p)` in the decode stage's word layout ([`read_ic`]) and writes
 //!   its encode under the default links, [`encode_words`] words ([`write_encoded`]).
-//! - [`beta`]: invocation `i` reads the pair `λ̃ = (λ̃_x, λ̃_y)` at words `2i`, `2i + 1` and writes `β` at word `i`, so
+//! - [`beta()`]: invocation `i` reads the pair `λ̃ = (λ̃_x, λ̃_y)` at words `2i`, `2i + 1` and writes `β` at word `i`, so
 //!   a test gives `β`'s selects their operands' exact bits, `±0` included.
 
 use spirv_std::glam::UVec3;
