@@ -99,28 +99,57 @@ fn out_of_gpu(o: &EncodeOut) -> Out {
     }
 }
 
-/// `a` against `b`, both at f32: the notices equal, every value finite in both, and within [`AGREE_EPS`] f32 eps over
-/// `1 + |b|`. Returns the worst difference, in eps.
-fn check_agree(a: &Out, b: &Out, what: &str) -> f64 {
+/// The worst cross-backend difference seen, in f32 eps, and where. A NaN difference is the worst there is: [`Worst::see`]
+/// keeps it (pitfalls §9), though [`check_agree`] has asserted every value finite before it gets here.
+#[derive(Debug, Default)]
+struct Worst {
+    eps: f64,
+    at: String,
+}
+
+impl Worst {
+    fn see(&mut self, e: f64, at: impl FnOnce() -> String) {
+        if e.is_nan() || e > self.eps {
+            self.eps = e;
+            self.at = at();
+        }
+    }
+
+    /// Prints the worst with the backend it was measured on, then holds it to [`AGREE_EPS`]: the whole run is measured
+    /// before the limit is applied, so a failing run still prints the spread.
+    fn check(&self, h: &GpuHarness, test: &str) {
+        let info = h.adapter_info();
+        eprintln!(
+            "{test}: worst cross-backend difference {:.1} f32 eps on {} ({:?}), at {}",
+            self.eps, info.name, info.backend, self.at
+        );
+        assert!(
+            self.eps <= AGREE_EPS,
+            "{test}: {:.1} f32 eps on {} ({:?}), over AGREE_EPS = {AGREE_EPS}, at {}",
+            self.eps,
+            info.name,
+            info.backend,
+            self.at
+        );
+    }
+}
+
+/// `a` against `b`, both at f32: the notices equal and every value finite in both, asserted; each value's difference in
+/// f32 eps over `1 + |b|` goes to `worst`.
+fn check_agree(a: &Out, b: &Out, what: &str, worst: &mut Worst) {
     assert_eq!(
         a.notices, b.notices,
         "the notices differ, {what}: {:?} against {:?}",
         a.notices, b.notices
     );
-    let mut worst = 0.0f64;
     for (k, (x, y)) in a.values.iter().zip(&b.values).enumerate() {
         assert!(
             x.is_finite() && y.is_finite(),
             "output {k} is not finite, {what}: {x} against {y}"
         );
         let e = (x - y).abs() / (EPS32 * (1.0 + y.abs()));
-        worst = worst.max(e);
-        assert!(
-            e <= AGREE_EPS,
-            "output {k} differs by {e:.1} f32 eps, {what}: {x:e} against {y:e}"
-        );
+        worst.see(e, || format!("output {k}, {what}: {x:e} against {y:e}"));
     }
-    worst
 }
 
 /// The decoded state of `z` at f64, its masses, positions and momenta in one list.
@@ -134,25 +163,26 @@ fn decoded(z: [f64; 8]) -> Vec<f64> {
 }
 
 /// The GPU's f32 encode `a` against the CPU's f64 encode `b`, compared in physical units (dd_encode §3.5): the notices
-/// equal; `α` and `β` within [`AGREE_EPS`] f32 eps over `1 + |b|`; and the state each `z` decodes to at f64 within it
-/// over `1 + |x|`. Not `z` itself: at a clamp, `z = logit(1 − ε_z)` reads `1 − ε_z` rounded to each precision, and
-/// `logit`'s slope there, `10⁶`, makes f32's rounding of it about `10⁴` f32 eps of `z`, but nothing in the state.
-fn check_physical(a: &Out, b: &Out, what: &str) -> f64 {
+/// equal; `α` and `β` in f32 eps over `1 + |b|`; and the state each `z` decodes to at f64, over `1 + |x|`, each to
+/// `worst`. Not `z` itself: at a clamp, `z = logit(1 − ε_z)` reads `1 − ε_z` rounded to each precision, and `logit`'s
+/// slope there, `10⁶`, makes f32's rounding of it about `10⁴` f32 eps of `z`, but nothing in the state.
+fn check_physical(a: &Out, b: &Out, what: &str, worst: &mut Worst) {
     let angles = |o: &Out| Out {
         values: o.values[8..].to_vec(),
         notices: o.notices,
     };
-    let mut worst = check_agree(&angles(a), &angles(b), what);
+    check_agree(&angles(a), &angles(b), what, worst);
     let z = |o: &Out| -> [f64; 8] { std::array::from_fn(|k| o.values[k]) };
     for (k, (x, y)) in decoded(z(a)).iter().zip(&decoded(z(b))).enumerate() {
-        let e = (x - y).abs() / (EPS32 * (1.0 + y.abs()));
-        worst = worst.max(e);
         assert!(
-            e <= AGREE_EPS,
-            "the decoded state's component {k} differs by {e:.1} f32 eps, {what}: {x:e} against {y:e}"
+            x.is_finite() && y.is_finite(),
+            "the decoded state's component {k} is not finite, {what}: {x} against {y}"
         );
+        let e = (x - y).abs() / (EPS32 * (1.0 + y.abs()));
+        worst.see(e, || {
+            format!("the decoded state's component {k}, {what}: {x:e} against {y:e}")
+        });
     }
-    worst
 }
 
 // ── encode_beta_half_axis (REQ-ENC-007; R-438) ──────────────────────────────────────────────────────────────────
@@ -240,7 +270,7 @@ fn encode_beta_half_axis() {
     // Collinear states through the whole encode: the GPU's `β` is `π̂`, and its encode is the CPU's.
     let states = collinear_states();
     let narrowed: Vec<Ic<f32>> = states.iter().map(narrow).collect();
-    let mut worst = 0.0f64;
+    let mut worst = Worst::default();
     for (o, (x64, x32)) in gpu_encode(&h, &narrowed)
         .iter()
         .zip(states.iter().zip(&narrowed))
@@ -252,18 +282,20 @@ fn encode_beta_half_axis() {
             o.beta
         );
         let g = out_of_gpu(o);
-        worst = worst.max(check_agree(
+        check_agree(
             &g,
             &out_of(&encode::<Defaults, f32>(x32)),
-            "GPU-f32 against CPU-f32",
-        ));
-        worst = worst.max(check_physical(
+            &format!("GPU-f32 against CPU-f32 at {x32:?}"),
+            &mut worst,
+        );
+        check_physical(
             &g,
             &out_of(&encode::<Defaults, f64>(x64)),
-            "GPU-f32 against CPU-f64",
-        ));
+            &format!("GPU-f32 against CPU-f64 at {x32:?}"),
+            &mut worst,
+        );
     }
-    eprintln!("encode_beta_half_axis: worst cross-backend difference {worst:.1} f32 eps");
+    worst.check(&h, "encode_beta_half_axis");
 }
 
 negative_control!(
@@ -355,7 +387,7 @@ fn encode_exact_poles() {
     let narrowed: Vec<Ic<f32>> = states.iter().map(|(x, _)| narrow(x)).collect();
     let gpu = gpu_encode(&h, &narrowed);
     let again = gpu_encode(&h, &narrowed);
-    let mut worst = 0.0f64;
+    let mut worst = Worst::default();
     for (i, ((x64, kind), x32)) in states.iter().zip(&narrowed).enumerate() {
         let at = format!("state {i}, r = {:?}", x64.r);
         let (g, cpu32, cpu64) = (
@@ -376,22 +408,22 @@ fn encode_exact_poles() {
             cpu64,
             "the CPU-f64 encode differs on repeat at {at}"
         );
-        worst = worst.max(check_agree(
+        check_agree(
             &g,
             &cpu32,
             &format!("GPU-f32 against CPU-f32 at {at}"),
-        ));
-        worst = worst.max(check_physical(
+            &mut worst,
+        );
+        check_physical(
             &g,
             &cpu64,
             &format!("GPU-f32 against CPU-f64 at {at}"),
-        ));
+            &mut worst,
+        );
     }
     assert!(gpu_encode(&h, &[]).is_empty(), "the encode of no states");
-    eprintln!(
-        "encode_exact_poles: {} states; worst cross-backend difference {worst:.1} f32 eps",
-        states.len()
-    );
+    eprintln!("encode_exact_poles: {} states", states.len());
+    worst.check(&h, "encode_exact_poles");
 }
 
 negative_control!(
