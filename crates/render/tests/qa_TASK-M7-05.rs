@@ -4,23 +4,28 @@
 //!   (no value ever reaches the ramp's end), `log` mapping 0 to 0 and styling the −1.0 sentinel instead of ramping it;
 //! - REQ-COL-016 (colour_composition §1.2; R-399, R-400, R-426): every ledger field's default ramp by its role, signed
 //!   by its declared range, through a neutral at zero; FTLE and diffusion white = high, `t_end` white = low / early;
-//! - REQ-COL-032 (dd_colouring §2, §4 seam 5): a ledger scale change re-styles the view, and recomputes nothing, so it
-//!   leaves the payload's sim key (its schema version, caching_contract "Validity") as it was;
+//! - REQ-COL-032 (dd_colouring §2, §4 seam 5): a ledger scale change re-styles the view, and recomputes nothing: the sim
+//!   buffer the frame reads is, read back, the bytes it was before the re-style. Whether the edit may move the payload
+//!   schema version (R-36 hashes the whole ledger, `scale` included) is RQ-297's open question, so no test here asserts
+//!   either side of it;
 //! - REQ-COL-024 (colour_composition §4.1; gui_state_contract §4): FTLE bound as the colour through a ramp and as the
 //!   brightness, each compiling and rendering its field; the only constraint is the output signature.
 //!
 //! Each test registers its negative control (R-176).
 
-use ledger::constants::{DIVERGING_X0, LOG_FLOORS, REGISTER};
+use ledger::constants::{DIVERGING_X0, LOG_FLOORS};
 use ledger::gen;
 use ledger::schema::{Entry, FieldType, Scale};
-use ledger::version::{schema_version, Hashed};
-use render::assemble::{Kind, Node, Occupant, Stain};
+use render::assemble::{Kind, Node, Occupant, Stain, Tier};
 use render::codegen::Slot;
 use render::colour::defaults::{self, Resolve};
 use render::colour::field_ramp::{
-    Compaction, FieldRamp, Lut, Map, Polarity, Ramp, ScalarField, Shown, COMPACTION_WGSL, RAMP_WGSL,
+    Compaction, FieldRamp, Lut, Map, Polarity, Ramp, Reads, ScalarField, Shown, COMPACTION_WGSL,
+    RAMP_WGSL,
 };
+use render::compositor::LAYER_FORMAT;
+use render::frame_record::RenderLoop;
+use render::pipeline_cache::FrameInputs;
 use render::present::{self, Rgb};
 use render::registry::ZERO_SOURCE;
 use validation::golden_scene::{render_stain, row_scene, scene, Colouring, Scene};
@@ -304,19 +309,15 @@ fn f32_magnitudes() -> Vec<f32> {
 }
 
 /// `compaction.wgsl` on the GPU (§5 test 7): the symlog's `b(x) + b(−x) = 1` and `b(±0) = ½` exactly in f32 at every
-/// scale; the symlog increasing in order across the line and `log` across `[0, ∞)`, below 1 wherever `|x|/scale` is finite (no
-/// `x_max`); `log`'s `b(0) = 0` exactly (R-411's note); `cyclic` and `flag` as the formulas give.
+/// scale; the symlog increasing in order across the line and `log` across `[0, ∞)`, below 1 at every finite f32 up to
+/// `f32::MAX`, a quotient `|x|/scale` past `f32::MAX` included (no `x_max`, and no form forms an infinity, which WGSL
+/// may assume absent: gpu_determinism_note rule 4); `log`'s `b(0) = 0` exactly (R-411's note); `cyclic` and `flag` as
+/// the formulas give.
 fn check_gpu_forms(h: &GpuHarness, lib: &str) {
-    // The magnitudes whose `|x|/scale` is a finite f32: the forms' arithmetic domain. Past it `|x|/scale` overflows to
-    // +∞, which WGSL may assume absent (gpu_determinism_note rule 4), so the GPU's result there is no evidence.
-    let within = |scale: f32| -> Vec<f32> {
-        f32_magnitudes()
-            .into_iter()
-            .filter(|m| (m / scale).is_finite())
-            .collect()
-    };
+    // Every finite magnitude: the forms take any finite `x` (§3.6 gives them no range), so the sweep runs to
+    // `f32::MAX` at every scale, past where a naive `|x|/scale` overflows.
     for x0 in [2f32.powi(-20), 1.0, 1e3] {
-        let mags = within(x0);
+        let mags = f32_magnitudes();
         let mut cases = vec![(1, 0.0, x0), (1, -0.0, x0)];
         for &m in &mags {
             cases.push((1, m, x0));
@@ -369,7 +370,7 @@ fn check_gpu_forms(h: &GpuHarness, lib: &str) {
         );
     }
     for eps in [2f32.powi(-24), 1e-3, 1.0] {
-        let mags = within(eps);
+        let mags = f32_magnitudes();
         let mut cases = vec![(0, 0.0, eps)];
         cases.extend(mags.iter().map(|&m| (0, m, eps)));
         let b = gpu_forms(h, lib, &cases);
@@ -432,6 +433,30 @@ negative_control!(
     expected = "≠ 1",
     check_gpu_forms(&gpu(), ASYMMETRIC)
 );
+
+/// A library whose symlog is the requirement's formula written naively, `log(1 + |x|/x₀)`: symmetric, but its
+/// quotient overflows to +∞ for a large finite `|x|` over a small `x₀`, and the form reaches 1 there.
+#[cfg(feature = "controls")]
+const OVERFLOWING: &str = r"
+fn compact_log(x: f32, eps: f32) -> f32 { return 1.0 - 1.0 / (1.0 + log(1.0 + max(x, 0.0) / eps)); }
+fn compact_cyclic(x: f32, period: f32) -> f32 { return fract(x / period); }
+fn compact_flag(x: f32) -> f32 { return select(0.0, 1.0, x != 0.0); }
+fn compact_symlog(x: f32, x0: f32) -> f32 {
+    let u = 0.5 + 0.5 * (1.0 - 1.0 / (1.0 + log(1.0 + abs(x) / x0)));
+    return select(1.0 - u, u, x >= 0.0);
+}
+";
+
+#[cfg(feature = "controls")]
+mod qa_compaction_forms_on_the_gpu_overflow {
+    use super::*;
+    negative_control!(
+        qa_compaction_forms_on_the_gpu,
+        "a symlog whose |x|/x₀ overflows at a large finite x reaches 1 there",
+        expected = "is outside [½, 1)",
+        check_gpu_forms(&gpu(), OVERFLOWING)
+    );
+}
 
 // ── REQ-COL-039: `log` styles the −1.0 sentinel, never ramps it ──────────────────────────────────────────────────
 
@@ -584,12 +609,15 @@ fn sim_key(name: &str) -> Option<f64> {
 }
 
 fn resolve() -> Resolve<'static> {
-    Resolve {
-        sim_key: &sim_key,
-        measured: [-3.0, 5.0],
-        horizon_steps: 1000,
-    }
+    Resolve { sim_key: &sim_key }
 }
+
+/// The run-time values the registry's open ends are read against (the measured range a field's finite values span,
+/// the read side's `horizon_steps`): a range straddling zero, unequal ends, and a run of 1000 steps.
+const READS: Reads = Reads {
+    u_range: [-3.0, 5.0],
+    horizon_steps: 1000,
+};
 
 /// The fields colour_composition §1.2 gives a polarity, by their ledger names: FTLE and diffusion white = high; the
 /// time to the terminal event, `t_end`, stored as `t_end_step` (payload §2; §1.4), white = low / early.
@@ -647,7 +675,7 @@ fn check_defaults(
         );
         if want_lut == Lut::Coolwarm && e.scale != Scale::Log {
             assert_eq!(
-                compaction.place(0.0),
+                compaction.place_at(0.0, READS),
                 0.5,
                 "`{}`'s zero is not at the diverging ramp's neutral",
                 e.name
@@ -709,7 +737,9 @@ fn check_t_end(registry: impl Fn(&Entry) -> Result<(Lut, Polarity, Compaction), 
         (Lut::Grey, Polarity::Low),
         "`t_end_step`'s default is not the greyscale, white = early"
     );
-    let lum = |x: f64| present::linear_to_oklab(lut.colour(polarity.apply(compaction.place(x))))[0];
+    let lum = |x: f64| {
+        present::linear_to_oklab(lut.colour(polarity.apply(compaction.place_at(x, READS))))[0]
+    };
     assert!(
         lum(0.0) > lum(1000.0),
         "`t_end_step`'s early end is not the brighter"
@@ -733,8 +763,9 @@ fn check_white_high(registry: impl Fn(&Entry) -> Result<(Lut, Polarity, Compacti
     for name in ["ftle", "diffusion"] {
         let (lut, polarity, compaction) =
             registry(&entry(name)).unwrap_or_else(|why| panic!("{why}"));
-        let lum =
-            |x: f64| present::linear_to_oklab(lut.colour(polarity.apply(compaction.place(x))))[0];
+        let lum = |x: f64| {
+            present::linear_to_oklab(lut.colour(polarity.apply(compaction.place_at(x, READS))))[0]
+        };
         assert!(
             lum(4.0) > lum(-2.0),
             "`{name}`'s high end is not the brighter"
@@ -759,30 +790,47 @@ negative_control!(
 /// `E_0`'s values the re-style draws.
 const E0: [f32; 5] = [-4.0, -0.5, 0.0, 0.5, 4.0];
 
+/// The measured range of [`E0`], `u_range` as the measurement writes it.
+const E0_RANGE: [f64; 2] = [-4.0, 4.0];
+
 /// `E_0`'s default colour view from its entry `e`.
 fn e0_view(e: &Entry) -> FieldRamp {
     defaults::field_ramp(e, Slot::Colour, &resolve()).unwrap_or_else(|why| panic!("{why}"))
 }
 
-/// `E_0`'s scale changes from `diverging` to `to` in its ledger entry, nothing else: the view built from the changed
-/// entry places its values otherwise and draws other pixels, each as the new form gives it.
-fn check_restyle(h: &GpuHarness, to: Scale) {
+/// `E_0`'s entry with its ledger scale changed to `to`, nothing else.
+fn e0_rescaled(to: Scale) -> (Entry, Entry) {
     let before = entry("E_0");
     assert_eq!(before.scale, Scale::Diverging, "`E_0` is diverging (R-403)");
     let mut after = before.clone();
     after.scale = to;
+    (before, after)
+}
+
+/// `E_0`'s scale changes from `diverging` to `to` in its ledger entry, nothing else: the view built from the changed
+/// entry places its values otherwise and draws other pixels, each as the new form gives it, its measured range
+/// written to `u_range` where it reads one.
+fn check_restyle(h: &GpuHarness, to: Scale) {
+    let (before, after) = e0_rescaled(to);
     let (a, b) = (e0_view(&before), e0_view(&after));
     let mut s = row_scene("qa_restyle", E0.len() as u32, Colouring::View("E_0"))
         .unwrap_or_else(|e| panic!("{e}"));
     for (i, v) in E0.into_iter().enumerate() {
         s.set.sample(i as u32).E_0(v);
     }
+    let reads = Reads {
+        u_range: E0_RANGE,
+        horizon_steps: s.context.horizon_steps,
+    };
     let draw = |r: &FieldRamp| {
         let (kind, occupant) = r.occupant();
-        render(
-            h,
-            &s,
+        render_stain(
+            h.device(),
+            h.queue(),
             &stain(kind, occupant, None).unwrap_or_else(|e| panic!("{e}")),
+            &s.set,
+            &s.context,
+            &|_, name| (name == "u_range").then(|| E0_RANGE.to_vec()),
         )
         .unwrap_or_else(|e| panic!("{e}"))
     };
@@ -799,11 +847,11 @@ fn check_restyle(h: &GpuHarness, to: Scale) {
             panic!("a colour view")
         };
         assert!(
-            same(pa, ra.colour(a.compaction.place(x))),
+            same(pa, ra.colour(a.compaction.place_at(x, reads))),
             "before: E_0 = {x} draws {pa:?}"
         );
         assert!(
-            same(pb, rb.colour(b.compaction.place(x))),
+            same(pb, rb.colour(b.compaction.place_at(x, reads))),
             "after: E_0 = {x} draws {pb:?}"
         );
         moved += usize::from(!same(pa, pb));
@@ -828,60 +876,171 @@ negative_control!(
     check_restyle(&gpu(), Scale::Diverging)
 );
 
-/// The payload's schema version with `edit` applied to the validated ledger's entries.
-fn version_with(edit: impl Fn(&mut Entry)) -> u64 {
-    let l = ledger::layout();
-    let mut es = gen::validate(&l).unwrap_or_else(|e| panic!("{e}"));
-    for e in es.iter_mut() {
-        edit(e);
-    }
-    let structs = ledger::payload::structs();
-    let h = Hashed {
-        register: REGISTER,
-        ..Hashed::payload(&l.words, &es, &structs)
-    };
-    schema_version(&h).unwrap_or_else(|e| panic!("{e}"))
+/// `buffer`'s bytes, read back.
+fn read_back(h: &GpuHarness, buffer: &wgpu::Buffer) -> Vec<u8> {
+    let staging = h.device().create_buffer(&wgpu::BufferDescriptor {
+        label: Some("qa readback"),
+        size: buffer.size(),
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let mut encoder = h.device().create_command_encoder(&Default::default());
+    encoder.copy_buffer_to_buffer(buffer, 0, &staging, 0, buffer.size());
+    h.queue().submit([encoder.finish()]);
+    let slice = staging.slice(..);
+    slice.map_async(wgpu::MapMode::Read, |r| r.expect("map"));
+    h.device()
+        .poll(wgpu::PollType::wait_indefinitely())
+        .expect("poll");
+    let out = slice.get_mapped_range().expect("range").to_vec();
+    staging.unmap();
+    out
 }
 
-/// "Zero recompute" (REQ-COL-032; dd_colouring §4 seam 5): a cached payload is recomputed when its compatibility
-/// signature changes, and the signature holds the payload schema version (caching_contract, "Validity";
-/// dd_generation_root §6). A ledger scale change must therefore leave the schema version as it was, or every cached
-/// payload is recomputed. `field`'s scale goes to `to`.
-fn check_sim_key(field: &str, to: Scale) {
-    let base = version_with(|_| {});
-    let edited = version_with(|e| {
-        if e.name == field {
-            e.scale = to;
-        }
+/// `texture`'s one row of `w` 8-bit pixels, read back.
+fn read_texture(h: &GpuHarness, texture: &wgpu::Texture, w: u32) -> Vec<u8> {
+    let row = 256u32;
+    let staging = h.device().create_buffer(&wgpu::BufferDescriptor {
+        label: Some("qa texture readback"),
+        size: u64::from(row),
+        usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
     });
-    assert_eq!(
-        edited, base,
-        "`{field}`'s scale change moved the payload schema version, so it invalidates every cached payload: a recompute"
+    let mut encoder = h.device().create_command_encoder(&Default::default());
+    encoder.copy_texture_to_buffer(
+        texture.as_image_copy(),
+        wgpu::TexelCopyBufferInfo {
+            buffer: &staging,
+            layout: wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(row),
+                rows_per_image: Some(1),
+            },
+        },
+        wgpu::Extent3d {
+            width: w,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+    );
+    h.queue().submit([encoder.finish()]);
+    let slice = staging.slice(..);
+    slice.map_async(wgpu::MapMode::Read, |r| r.expect("map"));
+    h.device()
+        .poll(wgpu::PollType::wait_indefinitely())
+        .expect("poll");
+    let out = slice.get_mapped_range().expect("range")[..(4 * w) as usize].to_vec();
+    staging.unmap();
+    out
+}
+
+/// "Zero recompute" within the frame (REQ-COL-032; dd_colouring §2: compaction "never re-integrates"; §4 seam 5): the
+/// render loop draws `E_0`'s view, its scale changes to `lin`, and the loop draws the view built from the changed entry,
+/// a compile and a frame. The frame's pixels change (it re-styled), and the sim buffer the colour pass reads is, read
+/// back, byte for byte what was uploaded: nothing between the two frames recomputed the payload. `recompute` stands in
+/// for a re-style that re-integrates: it rewrites the sim buffer between the frames.
+///
+/// Whether the ledger edit itself moves the payload schema version, and so invalidates every cached payload (R-36;
+/// caching contract Part 1, "Validity"), against seam 5's "zero recompute", is RQ-297's open question: no assertion
+/// here takes either side of it.
+fn check_sim_buffer(recompute: bool) {
+    use wgpu::util::DeviceExt;
+    let w = E0.len() as u32;
+    let mut s =
+        row_scene("qa_restyle_sim", w, Colouring::View("E_0")).unwrap_or_else(|e| panic!("{e}"));
+    for (i, v) in E0.into_iter().enumerate() {
+        s.set.sample(i as u32).E_0(v);
+    }
+    let h = gpu();
+    let mut rl = RenderLoop::new(h.device(), h.queue(), LAYER_FORMAT, w, 1)
+        .unwrap_or_else(|e| panic!("{e}"));
+    let target = h.device().create_texture(&wgpu::TextureDescriptor {
+        label: Some("qa target"),
+        size: wgpu::Extent3d {
+            width: w,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: LAYER_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+        view_formats: &[],
+    });
+    let view = target.create_view(&Default::default());
+    let bytes = s.set.bytes();
+    let upload = |label: &str, contents: &[u8]| {
+        h.device()
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some(label),
+                contents,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_SRC
+                    | wgpu::BufferUsages::COPY_DST,
+            })
+    };
+    let simstate = upload("qa simstate", &bytes.simstate);
+    let word = upload("qa word", &bytes.word);
+    rl.set_sim(simstate.clone(), Some(word));
+    let inputs = FrameInputs {
+        ensemble: 0,
+        ensemble_spread: 0.0,
+        masses: [1.0, 1.0, 1.0],
+        dt_macro: 0.01,
+        delta_0: 1e-6,
+        n_renorm: 16,
+        horizon_steps: s.context.horizon_steps,
+    };
+    let readback = read_back(&h, &simstate);
+    assert!(
+        readback == bytes.simstate,
+        "the sim buffer does not read back as uploaded"
+    );
+    let frame = |rl: &mut RenderLoop, r: &FieldRamp| -> Vec<u8> {
+        let (kind, occupant) = r.occupant();
+        let st = stain(kind, occupant, None).unwrap_or_else(|e| panic!("{e}"));
+        let keys: Vec<u64> = (0..st.nodes().len() as u64).collect();
+        rl.cache()
+            .request(&st, &keys, Tier::FULL)
+            .unwrap_or_else(|e| panic!("{e}"));
+        rl.cache().wait();
+        assert!(rl.cache().errors().is_empty(), "{:?}", rl.cache().errors());
+        if r.compaction.uniforms().contains("u_range") {
+            // The colour node is the stain's second, keyed 1.
+            rl.set_param(1, "u_range", &E0_RANGE)
+                .unwrap_or_else(|e| panic!("{e}"));
+        }
+        rl.frame(&inputs, &view);
+        read_texture(&h, &target, w)
+    };
+    let (before, after) = e0_rescaled(Scale::Lin);
+    let pa = frame(&mut rl, &e0_view(&before));
+    if recompute {
+        let fresh: Vec<u8> = bytes.simstate.iter().map(|b| b.wrapping_add(1)).collect();
+        h.queue().write_buffer(&simstate, 0, &fresh);
+    }
+    let pb = frame(&mut rl, &e0_view(&after));
+    assert!(
+        pa != pb,
+        "the view did not re-style across the scale change"
+    );
+    assert!(
+        read_back(&h, &simstate) == bytes.simstate,
+        "the sim buffer changed across the re-style: a recompute"
     );
 }
 
 #[test]
-fn qa_ledger_scale_restyle_keeps_the_sim_key() {
-    check_sim_key("E_0", Scale::Lin);
-    check_sim_key("closure_min", Scale::Lin);
+fn qa_ledger_scale_restyle_leaves_the_sim_buffer() {
+    check_sim_buffer(false);
 }
 
 negative_control!(
-    qa_ledger_scale_restyle_keeps_the_sim_key,
-    "a change to what the stored bits mean, a sentinel, which must recompute, moves the version",
-    expected = "moved the payload schema version",
-    {
-        let base = version_with(|_| {});
-        let edited = version_with(|e| {
-            if e.name == "E_0" {
-                e.sentinel = Some(-7.0);
-            }
-        });
-        assert_eq!(
-            edited, base,
-            "`E_0`'s sentinel moved the payload schema version"
-        );
-    }
+    qa_ledger_scale_restyle_leaves_the_sim_buffer,
+    "a re-style that rewrites the sim buffer between its frames, as a re-integration does, is caught",
+    expected = "the sim buffer changed across the re-style",
+    check_sim_buffer(true)
 );
 
 // ── REQ-COL-024: FTLE in either role ─────────────────────────────────────────────────────────────────────────────
