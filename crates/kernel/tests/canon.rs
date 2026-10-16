@@ -154,7 +154,7 @@ const COM_EPS: f64 = 4.0;
 const SUM_P_EPS: f64 = 4.0;
 const RHO_Y_EPS: f64 = 4.0;
 const INERTIA_EPS: f64 = 8.0;
-const IDEMPOTENT_EPS: f64 = 8.0;
+const IDEMPOTENT_EPS: f64 = 2.0;
 
 /// The worst of each section measure over a run, in eps: CoM, `Σp`, `ρ_y`, `I − 1`, idempotence.
 #[derive(Default, Debug)]
@@ -210,9 +210,14 @@ fn check_section<R: Precision>(
     Ok(())
 }
 
-/// `C` applied to its own output `out` changes it by at most [`IDEMPOTENT_EPS`], per [`state_error`] over the
-/// rotation's conditioning `1 + (‖r₀‖ + ‖r₁‖)/‖ρ‖` (the second `C` turns by the first's `ρ_y` residual over `‖ρ‖`), and
-/// takes neither the mirror nor the guard.
+/// `C` applied to its own output `out`, which takes neither the mirror nor the guard, changes it by what its own steps
+/// remove, plus at most [`IDEMPOTENT_EPS`] over the rotation's conditioning. The error model, per [`state_error`]'s
+/// units (positions over the largest `‖rᵢ‖`, momenta over the largest `‖pᵢ‖`, in eps): the second `C`'s step 1a moves
+/// every `rᵢ` by `out`'s CoM residual, `‖R_com‖`; its step 1b moves `pᵢ` by `mᵢ‖P_tot‖`; its step 0 scales `r` by
+/// `I^{−1/2}` and `p` by `I^{1/4}`, `|I − 1|/2` at most; and its step 2 turns by the residual `ρ_y/ρ_x`, at most
+/// `ρ_y/‖ρ‖` of each vector, with its own rounding: the measured change less the first three terms, over the conditioning
+/// `1 + (‖r₀‖ + ‖r₁‖)/‖ρ‖`. The first three are `out`'s own residuals, each bounded by [`check_section`]; with a large
+/// input offset (the CoM far from the bodies) the CoM's can be several eps of the output's size.
 fn check_idempotent<R: Precision>(out: &Canonical<R>, worst: &mut Worst) -> Result<(), String> {
     let again = canonicalise(&out.ic);
     if again.mirrored || again.clamped {
@@ -221,13 +226,30 @@ fn check_idempotent<R: Precision>(out: &Canonical<R>, worst: &mut Worst) -> Resu
             again.mirrored, again.clamped
         ));
     }
+    let e = eps::<R>();
     let ic = to64(&out.ic);
+    let largest = |v: &[[f64; 2]; 3]| v.iter().map(|x| norm(*x)).fold(0.0, f64::max);
+    let (sr, sp) = (largest(&ic.r), largest(&ic.p));
+    let com = [0, 1].map(|k| (0..3).map(|i| ic.m[i] * ic.r[i][k]).sum::<f64>());
+    let total = [0, 1].map(|k| (0..3).map(|i| ic.p[i][k]).sum::<f64>());
+    let m_max = ic.m.iter().copied().fold(0.0, f64::max);
+    let shift_r = norm(com) / (sr * e);
+    let shift_p = if sp == 0.0 {
+        0.0
+    } else {
+        m_max * norm(total) / (sp * e)
+    };
+    let scale = (inertia(ic.m, ic.r) - 1.0).abs() / (2.0 * e);
     let rho = norm([ic.r[1][0] - ic.r[0][0], ic.r[1][1] - ic.r[0][1]]);
     let conditioning = 1.0 + (norm(ic.r[0]) + norm(ic.r[1])) / rho;
-    let err = state_error(&ic, &to64(&again.ic), eps::<R>()) / conditioning;
+    let change = state_error(&ic, &to64(&again.ic), e);
+    let err = (change - shift_r.max(shift_p) - scale).max(0.0) / conditioning;
     worst.0[4] = worst.0[4].max(err);
     if err > IDEMPOTENT_EPS {
-        return Err(format!("C(C(x)) differs from C(x) by {err} eps"));
+        return Err(format!(
+            "C(C(x)) differs from C(x) by {change} eps, {err} eps over the model (CoM shift {shift_r}, Σp shift \
+             {shift_p}, scale {scale}, conditioning {conditioning})"
+        ));
     }
     Ok(())
 }
