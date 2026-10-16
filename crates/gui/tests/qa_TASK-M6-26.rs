@@ -1152,7 +1152,7 @@ fn real_app_at_depth(octaves: f64) -> Rig<RealSide> {
         quality: Quality {},
     };
     let render = RenderState {
-        stain_graph: StainGraph {},
+        stain_graph: StainGraph::new(),
         overlays: Overlays::default(),
         hover: Hover::default(),
         palette: Palette {},

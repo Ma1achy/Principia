@@ -19,7 +19,7 @@ pub mod time;
 pub mod top_bar;
 pub mod trajectory;
 
-use eframe::egui::{self, Rect, RichText, Ui, UiBuilder};
+use eframe::egui::Rect;
 
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
 use crate::keyboard::Keyboard;
@@ -90,20 +90,4 @@ pub fn manifold_sections(manifold_view: Rect) -> [Rect; 4] {
 /// Places the figure for the keyboard; every region places its own as it draws.
 pub fn place(keyboard: &mut Keyboard, layout: &Layout) {
     keyboard.place(FIGURE, layout.figure);
-}
-
-/// Draws one empty region: its frame and its title.
-fn region(ui: &mut Ui, title: &str, rect: Rect) {
-    let visuals = ui.visuals();
-    let (fill, stroke) = (visuals.panel_fill, visuals.widgets.noninteractive.bg_stroke);
-    ui.painter().rect_filled(rect, 0.0, fill);
-    ui.painter()
-        .rect_stroke(rect, 0.0, stroke, egui::StrokeKind::Inside);
-    let mut inner = ui.new_child(UiBuilder::new().max_rect(rect.shrink(12.0)));
-    inner.label(RichText::new(title).heading());
-}
-
-/// Draws the Stain page as an empty frame, which TASK-M6-29 fills (RQ-249).
-pub fn stain_page(ui: &mut Ui, rect: Rect) {
-    region(ui, "Stain", rect);
 }

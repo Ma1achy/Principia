@@ -24,10 +24,13 @@ pub struct RenderState {
     pub hover: Hover,
 }
 
-/// The stain graph: nodes, wires, per-node params (gui_state_contract §2, §5).
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct StainGraph {}
+/// The stain graph: nodes, wires, per-node params (gui_state_contract §2, §5): the free, typed node graph of
+/// render_gui_spec Part II (R-64), its edits checked ([`crate::stain`]). Its `SetField` path is
+/// [`RenderField::StainGraph`](crate::contract::set_field::RenderField::StainGraph): one edit of the whole graph,
+/// undoable (R-69). Added for the dev GUI's Stain editor (R-390, "Contract fields"); TASK-M7-11 keeps REQ-GUI-016.
+pub use crate::stain::{
+    GraphError, Node, NodeId, NodeKind, Occupant, PortType, StainGraph, Uniform, UniformType, Wire,
+};
 
 /// The overlay set (gui_state_contract §2): render_gui_spec §G2's fourteen toggles of Overlays ▾, each on or off, by
 /// group. Its `SetField` path is [`RenderField::Overlays`](crate::contract::set_field::RenderField::Overlays): one

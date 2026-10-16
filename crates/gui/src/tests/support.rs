@@ -46,7 +46,7 @@ pub fn state(t: f64) -> (SimConfig, RenderState) {
         quality: Quality {},
     };
     let render = RenderState {
-        stain_graph: StainGraph {},
+        stain_graph: StainGraph::new(),
         overlays: Overlays::default(),
         palette: Palette {},
         playhead: Playhead { t },

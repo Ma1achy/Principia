@@ -3,11 +3,11 @@
 //! per dimension, in the order received. The real engine's evaluation is TASK-M8-22's (REQ-GUI-105, REQ-GUI-106);
 //! until then its snapshot carries no key.
 //!
-//! The "not yet" style and the outcome palette are re-exported here, so the GUI draws a `running` key as the style
+//! The "not yet" style and the outcome palette, with its built-in colour occupant's id, are re-exported here, so the GUI draws a `running` key as the style
 //! (R-399), from the one source of their calibrations (REQ-COL-053, REQ-COL-064; colour_composition §1.4), through the
 //! contract it is allowed to reach.
 
-pub use render::colour::outcome::{Swatch, SWATCHES};
+pub use render::colour::outcome::{Swatch, ID as OUTCOME_OCCUPANT, SWATCHES};
 pub use render::present::{
     debug_not_yet, not_yet_dot_at, NOT_YET_CELL, NOT_YET_DOT, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
 };

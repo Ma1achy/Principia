@@ -7,7 +7,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::contract::conformance::{self, CASES};
 use crate::contract::interface::EngineInterface;
 use crate::contract::log::{Severity, Source};
-use crate::contract::render_state::{Hover, Overlays, Palette, Playhead, RenderState, StainGraph};
+use crate::contract::render_state::{
+    Hover, NodeId, NodeKind, Occupant, Overlays, Palette, Playhead, RenderState, StainGraph,
+};
 use crate::contract::set_field::{Edit, RenderField, SetField, SimField};
 use crate::contract::sim_config::{
     Chart, Collision, Horizon, Integrator, KernelVariant, Links, Lock, Plane, Quality, SimConfig,
@@ -39,7 +41,7 @@ fn store(t: f64) -> StateStore {
             quality: Quality {},
         },
         RenderState {
-            stain_graph: StainGraph {},
+            stain_graph: StainGraph::new(),
             overlays: Overlays::default(),
             palette: Palette {},
             playhead: Playhead { t },
@@ -66,9 +68,9 @@ fn check_conforms<E: EngineInterface>(make: impl FnMut() -> E) {
 fn conformance_real_engine_passes_every_case() {
     assert_eq!(
         CASES.len(),
-        7,
-        "the suite's four state-semantics cases (RQ-254), the navigation paths', the overlay set's and hover's, and the \
-         horizon's (R-390)"
+        8,
+        "the suite's four state-semantics cases (RQ-254), the navigation paths', the overlay set's and hover's, the \
+         horizon's and the stain graph's (R-390)"
     );
     check_conforms(|| store(0.0));
     // The cases read the state they start from, so they hold from any playhead.
@@ -120,6 +122,8 @@ enum Rule {
     HoverStays,
     /// A SetField on the horizon is dropped.
     DropHorizon,
+    /// A SetField on the stain graph is dropped.
+    DropStainGraph,
 }
 
 impl EngineInterface for Broken {
@@ -142,6 +146,10 @@ impl EngineInterface for Broken {
                 | (Rule::DropBasis, Edit::Sim(SimField::Basis { .. }))
                 | (Rule::DropOverlays, Edit::Render(RenderField::Overlays(_)))
                 | (Rule::DropHorizon, Edit::Sim(SimField::Horizon(_)))
+                | (
+                    Rule::DropStainGraph,
+                    Edit::Render(RenderField::StainGraph(_))
+                )
                 | (
                     Rule::HoverStays,
                     Edit::Render(RenderField::Hover(Hover { at: None }))
@@ -226,7 +234,85 @@ fn conformance_non_conforming_double_fails_naming_the_case() {
     for rule in [Rule::DropHorizon, Rule::NoLog, Rule::Undo] {
         check_names(rule, "horizon_edit_shows_and_undoes");
     }
+    for rule in [Rule::DropStainGraph, Rule::NoLog, Rule::Undo] {
+        check_names(rule, STAIN_GRAPH);
+    }
 }
+
+/// The stain graph's case.
+const STAIN_GRAPH: &str = "stain_graph_edit_shows_and_undoes";
+
+/// A store whose graph is more than the backbone: a source and a colour node wired into the combiner.
+fn stained_store() -> StateStore {
+    let mut store = store(0.0);
+    let mut g = StainGraph::new();
+    let source = g
+        .add(NodeKind::Source, Occupant::Field("ftle".into()))
+        .expect("a source");
+    let colour = g
+        .add(NodeKind::Colour, Occupant::Builtin("outcome_state".into()))
+        .expect("a colour");
+    g.connect(source, colour, 0).expect("source → colour");
+    g.connect(colour, NodeId(0), 0).expect("colour → combiner");
+    store.set_field(SetField {
+        edit: Edit::Render(RenderField::StainGraph(g)),
+        no_history: true,
+    });
+    let _ = store.snapshot();
+    store
+}
+
+/// The stain graph case holds from a graph past the backbone, and a double dropping graph edits fails it there too.
+#[test]
+fn conformance_stain_graph_case_holds_from_any_graph() {
+    check_conforms(stained_store);
+    check_names_with(
+        || Broken {
+            store: stained_store(),
+            rule: Rule::DropStainGraph,
+        },
+        STAIN_GRAPH,
+    );
+}
+
+validation::negative_control!(
+    conformance_stain_graph_case_holds_from_any_graph,
+    "a double dropping stain graph edits must fail the stain graph case",
+    expected = "conformance case `stain_graph_edit_shows_and_undoes` failed",
+    check_conforms(|| Broken {
+        store: stained_store(),
+        rule: Rule::DropStainGraph,
+    })
+);
+
+/// The store logs a stain graph edit with the graph before and after (gui_state_contract §2).
+#[test]
+fn store_logs_a_stain_graph_edit() {
+    let mut store = store(0.0);
+    let mut g = StainGraph::new();
+    g.add(NodeKind::Source, Occupant::Field("ftle".into()))
+        .expect("a source");
+    store.set_field(SetField {
+        edit: Edit::Render(RenderField::StainGraph(g)),
+        no_history: false,
+    });
+    let log = store.snapshot().log;
+    assert_eq!(
+        log[0].message,
+        "SetField StainGraph [0 combiner pass_through, 1 out none; 0→1.0] → \
+         [0 combiner pass_through, 1 out none, 2 source ftle; 0→1.0]"
+    );
+}
+
+validation::negative_control!(
+    store_logs_a_stain_graph_edit,
+    "a graph logged without its new node must be rejected",
+    expected = "assertion `left == right` failed",
+    assert_eq!(
+        crate::contract::store::stain_graph(&StainGraph::new()),
+        "[0 combiner pass_through, 1 out none, 2 source ftle; 0→1.0]"
+    )
+);
 
 /// The overlay set's and the hover's case.
 const OVERLAY_AND_HOVER: &str = "overlay_and_hover_edits_show";

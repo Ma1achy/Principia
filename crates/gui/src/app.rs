@@ -6,7 +6,8 @@
 //! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control.
 //! The windows (`crate::windows`; §G5, §G7, §G8, §G12) open from their entries and take the focus, which goes back to
 //! their opener when they close; an error opens the console by itself, taking no focus (R-405). Export & share's
-//! present mode hides all chrome until Esc, which returns the focus to Present (applied per R-369).
+//! present mode hides all chrome until Esc, which returns the focus to Present (applied per R-369). Stain mode draws
+//! the node-graph editor (`crate::stain`), whose graph edits are `SetField`s as any control's.
 
 use std::sync::Arc;
 
@@ -28,6 +29,7 @@ use crate::keyboard::scopes::ScopeId;
 use crate::keyboard::Keyboard;
 use crate::layout::Layout;
 use crate::side::EngineSide;
+use crate::stain;
 use crate::windows;
 
 /// How often the app reads a snapshot: the engine posts it throttled to ~10 Hz, never per frame (caching contract
@@ -107,6 +109,8 @@ pub struct App<S: EngineSide> {
     pub time: explore::time::Scratch,
     /// The Trajectory panel's own state.
     pub trajectory: explore::trajectory::Scratch,
+    /// The Stain editor's own state.
+    pub stain: stain::Scratch,
     /// The overlay set Overlays ▾'s save as default kept, for the session (applied per R-369: the mock has no settings
     /// store; every launch starts with every overlay off).
     pub overlay_default: engine::contract::render_state::Overlays,
@@ -162,6 +166,7 @@ impl<S: EngineSide> App<S> {
             manifold: Default::default(),
             time: Default::default(),
             trajectory: Default::default(),
+            stain: Default::default(),
             overlay_default: Default::default(),
             hover_sent: None,
             snapshot,
@@ -388,6 +393,14 @@ impl<S: EngineSide> App<S> {
             self.keyboard.tree_mut(self.view.mode),
             self.windows.chart.presets.len(),
         );
+        let content = self.side.stain_content();
+        let mut stain_out = stain::Out::default();
+        stain::join(
+            self.keyboard.tree_mut(Mode::Stain),
+            &self.snapshot.render.stain_graph,
+            &self.stain,
+            content.as_ref(),
+        );
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
@@ -415,6 +428,8 @@ impl<S: EngineSide> App<S> {
                 &mut self.view.kept_orbits,
                 &mut self.trajectory,
             );
+            let graph = &self.snapshot.render.stain_graph;
+            stain::activate(id, &mut self.stain, graph, content.as_ref(), &mut stain_out);
         }
         for adjust in self.keyboard.adjusted().to_vec() {
             explore::manifold_view::adjust(&adjust, &self.snapshot, &mut self.manifold, &mut out);
@@ -429,6 +444,12 @@ impl<S: EngineSide> App<S> {
             windows::chart_builder::adjust(&adjust, &mut self.windows.chart);
             windows::console::adjust(&adjust, &mut self.windows.console, &self.console);
             windows::inspector::adjust(&adjust, &mut self.windows.inspector);
+            stain::adjust(
+                &adjust,
+                &self.stain,
+                &self.snapshot.render.stain_graph,
+                &mut stain_out,
+            );
         }
         self.shortcuts(&ctx, &mut actions, &mut edits);
         if let Some(due) = self.keyboard.next_repeat_s() {
@@ -449,12 +470,24 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
+        let focused = self.scroll_focus();
         match self.view.mode {
             Mode::Explore => self.explore(ui, &layout, &mut out, &mut edits),
             Mode::Stain => {
-                explore::stain_page(ui, layout.page);
+                self.stain_page(
+                    ui,
+                    &layout,
+                    content.as_ref(),
+                    focused.clone(),
+                    &mut stain_out,
+                );
                 self.send_hover(None);
             }
+        }
+        let stain_edited = !stain_out.edits.is_empty();
+        edits.append(&mut stain_out.edits);
+        if stain_out.recompile || (stain_edited && self.stain.auto_recompile) {
+            self.side.recompile();
         }
         explore::footer::show(
             ui,
@@ -469,7 +502,7 @@ impl<S: EngineSide> App<S> {
             &mut self.keyboard,
             &mut actions,
         );
-        let closed = self.draw_windows(&ctx, &layout, &mut window_edits, &mut acts);
+        let closed = self.draw_windows(&ctx, &layout, focused, &mut window_edits, &mut acts);
         for window in closed {
             self.close_window(&ctx, window);
         }
@@ -621,6 +654,52 @@ impl<S: EngineSide> App<S> {
         }
     }
 
+    /// The Stain page (`crate::stain`): its controls clicked act through the one path Enter takes.
+    fn stain_page(
+        &mut self,
+        ui: &mut egui::Ui,
+        layout: &Layout,
+        content: Option<&stain::Content>,
+        focused: Option<String>,
+        out: &mut stain::Out,
+    ) {
+        let page = stain::Page {
+            graph: &self.snapshot.render.stain_graph,
+            content,
+            preview: self.side.preview().map(|c| (c, self.format)),
+            viewport: layout.figure,
+        };
+        let mut keys = windows::Keys {
+            keyboard: &mut self.keyboard,
+            focused,
+        };
+        let mut clicked = Vec::new();
+        stain::show(
+            ui,
+            layout,
+            &page,
+            &mut self.stain,
+            &mut keys,
+            &mut clicked,
+            out,
+        );
+        for id in clicked {
+            stain::activate(id, &mut self.stain, page.graph, content, out);
+        }
+    }
+
+    /// The focused scope while a focus that moved is still to be scrolled to: for [`windows::SCROLL_FRAMES`] frames
+    /// after it moves (a new window's first frame is egui's sizing pass, and its scroll target is lost); after that
+    /// the wheel is the user's.
+    fn scroll_focus(&mut self) -> Option<String> {
+        if self.scrolled_to.0 != self.view.focus.path {
+            self.scrolled_to = (self.view.focus.path.clone(), windows::SCROLL_FRAMES);
+        }
+        let scrolling = self.scrolled_to.1 > 0;
+        self.scrolled_to.1 = self.scrolled_to.1.saturating_sub(1);
+        self.view.focus.path.last().filter(|_| scrolling).cloned()
+    }
+
     /// Sends the hover `at` when it differs from the one last sent: one no-history `SetField` (R-101).
     fn send_hover(&mut self, at: Option<[f64; 2]>) {
         if at != self.hover_sent {
@@ -707,6 +786,7 @@ impl<S: EngineSide> App<S> {
         &mut self,
         ctx: &egui::Context,
         layout: &Layout,
+        focused: Option<String>,
         edits: &mut Vec<SetField>,
         acts: &mut Acts,
     ) -> Vec<Window> {
@@ -719,16 +799,9 @@ impl<S: EngineSide> App<S> {
         let view_px =
             [layout.figure.width(), layout.figure.height()].map(|v| (v * ppp).round() as u32);
         let quick = self.side.canvas().map(|c| (c, self.format));
-        // A focus that moved is scrolled to for SCROLL_FRAMES frames (a new window's first frame is egui's sizing
-        // pass, and its scroll target is lost); after that the wheel is the user's.
-        if self.scrolled_to.0 != self.view.focus.path {
-            self.scrolled_to = (self.view.focus.path.clone(), windows::SCROLL_FRAMES);
-        }
-        let scrolling = self.scrolled_to.1 > 0;
-        self.scrolled_to.1 = self.scrolled_to.1.saturating_sub(1);
         let mut keys = windows::Keys {
             keyboard: &mut self.keyboard,
-            focused: self.view.focus.path.last().filter(|_| scrolling).cloned(),
+            focused,
         };
         for window in open {
             let e = windows::entry(window);
