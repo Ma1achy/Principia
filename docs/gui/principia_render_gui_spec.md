@@ -177,10 +177,12 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   `x + z`, so edges in front of it draw over it.
 - **The slice** is the true cross-section polygon of the plane through the cube, 3 to 6 vertices: a rectangle
   untilted, rectangles to hexagons as it tilts. Through the cube's central axis (the plane through a point `(0, 0, d)`,
-  `|d| ≤ 1`) it has 4 to 6, never a triangle, a pentagon possible off the centre; off that axis a plane can cut off one
-  corner, a triangle. Its fill is Lambert-shaded from the slice's own normal, two-sided (`0.2 + 0.8·max(0, n·L)`, `n`
-  flipped to face the view `(1,1,1)`, light `(0.35, 1.0, 0.55)` normalised, a depth term `±0.05`), at opacity 0.6; an
-  in-plane grid (spacing 0.5) is clipped to the polygon; an outline (1.7 px) closes it.
+  `|d| < 1`) it has 4 to 6, never a triangle, a pentagon possible off the centre; off that axis a plane can cut off one
+  corner, a triangle, and at `|d| = 1` a tilted plane can be one (at `τ₁ = τ₂ = −45°` the plane `x + y + z = 1` through
+  `(0, 0, 1)`), which the 3-to-6 bound covers (R-451 B2). Its fill is Lambert-shaded from the slice's own normal,
+  two-sided (`0.2 + 0.8·max(0, n·L)`, `n` flipped to face the view `(1,1,1)`, light `(0.35, 1.0, 0.55)` normalised, a
+  depth term `±0.05`), at opacity 0.6; an in-plane grid (spacing 0.5) is clipped to the polygon; an outline (1.7 px)
+  closes it.
   Both modes draw the decoder's plane: its normal `n` is that of `View::basis`'s `(q₁, q₂)` in the cube's frame, and
   its offset is `n·p`, `p` the point whose coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over the
   slice step's half-range, unclamped, so a pan, which moves `z₀` within the plane, leaves the drawing unchanged. Only

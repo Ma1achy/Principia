@@ -10287,13 +10287,16 @@ applied by a follow-up task):*
   in units of the half-range, absolute, free or locked: free, it is the sliders' range; locked, the sliders span the
   anchor ± the half-range (`centre::span`), not the cube, and a `z₀` past the cube draws the plane at the clamped
   offset. The chart window's extent (`|q| = σ`) is not drawn. Through the cube's central axis (the plane through a
-  point `(0, 0, d)`, `|d| ≤ 1`) the cross-section has 4 to 6 vertices, never a triangle: a rectangle untilted, a
+  point `(0, 0, d)`, `|d| < 1`) the cross-section has 4 to 6 vertices, never a triangle: a rectangle untilted, a
   pentagon possible off the centre, a hexagon possible through it. Off that axis a plane can cut off one corner, a
-  triangle, so the bound is the human's 3 to 6 (3.6) for a plane through the cube's interior. (Rewritten in the fix
+  triangle, so the bound is the human's 3 to 6 (3.6) for a plane through the cube's interior. At `|d| = 1` a tilted
+  plane can be a triangle too: at `τ₁ = τ₂ = −45°`, `γ = 0`, the plane through `(0, 0, 1)` is `x + y + z = 1`, through
+  the corners `(−1, 1, 1)`, `(1, −1, 1)` and `(1, 1, −1)`, a triangle the 3-to-6 bound covers. (Rewritten in the fix
   round of PR #227, gui review G1, physics review P11: slice mode drew an untilted plane the decoder does not slice.
   Fix round 2, gui review G6: clamping each of `p`'s components to [−1, 1] shifted a tilted plane after a pan, at
   `τ₁ = 30°` a pan of 2 along `q₁` turning `p = (1.732, 0, 1)`, on the plane `z = x tan 30°`, into `(1, 0, 1)`, off
-  it; now only the offset is bounded.)
+  it; now only the offset is bounded. Fix round 3, physics review P12: the 4-to-6 bound was stated for `|d| ≤ 1` and
+  fails at `|d| = 1`, the triangle above; it holds for `|d| < 1`.)
 - **B3. The slice-mode drag.** The horizontal component of a drag sets how far the slice moves (the reference's rate, a
   drag across the cube's full width moving it across the whole range); the direction is the drawn plane's normal,
   which by B2 is the decoder's (`latent_normal`, R-409 A3's), the slice axis only when untilted; one `SetField` on
