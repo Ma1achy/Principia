@@ -2,7 +2,9 @@
 //! the footer's "mock engine" tag and the window title read (REQ-GUI-167; RQ-248). It hands the app the canvas, §1's
 //! sanctioned exception, when the engine side has one, the time source the app's clock reads (RQ-246), the profiler
 //! trace the Profiler window reads, in profiler schema v1's shape (R-56; render_gui_spec §G5), and the Stain editor's
-//! content and preview (render_gui_spec Part II §1; R-390), drawn through the canvas as the figure is.
+//! content and preview (render_gui_spec Part II §1; R-390), drawn through the canvas as the figure is. The figure is
+//! drawn at the placement the app gives, the shown figure's rect in the viewport, so with the egui layer hidden it fills
+//! the window (R-406); the Chart builder's quick render and the preview never take that placement.
 
 use std::sync::Arc;
 
@@ -14,6 +16,7 @@ use engine::contract::sim_config::SimConfig;
 use engine::contract::store::StateStore;
 
 use crate::clock::TimeSource;
+use crate::layout::Placement;
 
 /// What the app needs from the engine side.
 pub trait EngineSide {
@@ -26,8 +29,13 @@ pub trait EngineSide {
     /// Whether the engine is the mock.
     fn is_mock(&self) -> bool;
 
-    /// The canvas the figure is drawn through; `None` draws no figure.
+    /// The canvas the field is drawn through over its whole viewport, as the Chart builder's quick render draws it;
+    /// `None` draws none.
     fn canvas(&self) -> Option<Arc<dyn Canvas>>;
+
+    /// The canvas the figure is drawn through, the field at `placement` in its viewport (R-406); `None` draws no
+    /// figure.
+    fn figure(&self, placement: Placement) -> Option<Arc<dyn Canvas>>;
 
     /// The time source the app's clock reads; `None` holds the clock.
     fn time_source(&mut self) -> Option<&mut dyn TimeSource>;
@@ -74,6 +82,11 @@ impl EngineSide for RealSide {
     }
 
     fn canvas(&self) -> Option<Arc<dyn Canvas>> {
+        None
+    }
+
+    /// None: the real engine's figure, and its fill past `[0,1]²` (REQ-GUI-180), are TASK-M8-05's.
+    fn figure(&self, _placement: Placement) -> Option<Arc<dyn Canvas>> {
         None
     }
 
@@ -138,6 +151,15 @@ impl EngineSide for MockSide {
         canvas.set_chart(self.engine.plane());
         canvas.set_marks(self.engine.marks());
         Some(canvas as Arc<dyn Canvas>)
+    }
+
+    /// The canvas, told the mock's chart, the placement and the marks over the viewport's span of the field first, so
+    /// it draws the stand-in at the shown layout's scale over the whole viewport, the fake quads' bounds over it too.
+    fn figure(&self, placement: Placement) -> Option<Arc<dyn Canvas>> {
+        let canvas = self.canvas.clone()?;
+        canvas.set_chart(self.engine.plane());
+        canvas.set_placement(placement, self.engine.marks_over(placement.span()));
+        Some(Arc::new(crate::mock::canvas::FigureCanvas(canvas)) as Arc<dyn Canvas>)
     }
 
     fn time_source(&mut self) -> Option<&mut dyn TimeSource> {

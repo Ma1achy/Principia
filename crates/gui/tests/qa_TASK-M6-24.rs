@@ -938,20 +938,41 @@ fn qa_capture_figure_identical_under_f3_warning_and_console() {
         varied,
         "the figure is one flat colour, not the noise stand-in"
     );
-    // With F3 off, everything but the figure is one colour, the clear colour.
+    // With F3 off the figure fills the window (R-406, revising RQ-248's clear colour around it): no pixel outside the
+    // shown figure's rect is the clear colour.
     let (w, h) = (SIZE[0] as usize, SIZE[1] as usize);
-    let clear = shot_px(&f3, 0, 0);
+    let clear = gui::app::clear_colour(&egui::Visuals::dark()).to_array();
+    let check_filled = |shot: &Shot| {
+        for y in 0..h {
+            for x in 0..w {
+                if !inside(figure, x, y) {
+                    assert_ne!(
+                        shot_px(shot, x, y),
+                        clear,
+                        "the clear colour outside the figure with F3 off at ({x}, {y})"
+                    );
+                }
+            }
+        }
+    };
+    check_filled(&f3);
+    // Control: the F3-off capture with the figure left in its rect, the rest the clear colour, as RQ-248 had it.
+    let mut left = Shot {
+        size: f3.size,
+        rgba: f3.rgba.clone(),
+        names: Vec::new(),
+    };
     for y in 0..h {
         for x in 0..w {
             if !inside(figure, x, y) {
-                assert_eq!(
-                    shot_px(&f3, x, y),
-                    clear,
-                    "drawn outside the figure with F3 off at ({x}, {y})"
-                );
+                let i = (y * w + x) * 4;
+                left.rgba[i..i + 4].copy_from_slice(&clear);
             }
         }
     }
+    rejects("the figure left in its rect with F3 off", || {
+        check_filled(&left)
+    });
     // The raised warning and error, and the console, change the footer and the bottom row.
     check_differs_over(
         &base,
