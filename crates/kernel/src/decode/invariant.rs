@@ -47,10 +47,12 @@
 //! are orthogonal, so the momenta would differ at O(1). [`construct_by_norms`], the rule on computed norms, serves a configuration not from the canonical decode, and its
 //! choice near a tie is not claimed branch-identical.
 //!
-//! **The infeasible pixel** (chart_reference §2.2, R-72; REQ-DEC-040): `K* < K_min` is labelled `decode_failed`,
-//! detail 3 (other) ([`infeasible_label`]), and takes precedence over the seed rule's `DEGENERATE`. It is kept, never
-//! dropped, and its momenta are finite: `a` is selected as 0, so `pᵢ = mᵢvᵢ⁽ᴸ⁾`, the rigid rotation. A `DEGENERATE`
-//! pixel likewise keeps `w = 0`, selected, so nothing divides by its zero norm.
+//! **The infeasible pixel** (chart_reference §2.2, R-72; REQ-DEC-040): `K* < K_min` is
+//! `DEGENERATE(INVARIANT_INFEASIBLE)`, recorded as `decode_failed`, detail 3 (other) ([`infeasible_label`]); an earlier
+//! block's tag (the mass block's `M01_TINY`) is kept over it, and it takes precedence over the seed rule's
+//! `DEGENERATE`. The member joins [`crate::decode::degenerate::Degenerate`] with its full set (TASK-M2-24). It is kept,
+//! never dropped, and its momenta are finite: `a` is selected as 0, so `pᵢ = mᵢvᵢ⁽ᴸ⁾`, the rigid rotation. A
+//! `DEGENERATE` pixel likewise keeps `w = 0`, selected, so nothing divides by its zero norm.
 //!
 //! **The feasibility branch** ([`infeasible`]; R-34, R-84; gpu_determinism_note rules 1, 2 and 6). `K* < L_z²/(2I)` is
 //! decided as `2·I·K* < L_z²` in exact arithmetic, so it is the inequality itself, with no rounding at the decision, and
@@ -222,8 +224,8 @@ pub fn infeasible<R: ExactSign>(i: R, k: R, l: R) -> bool {
     select(flat, moving, negative | (moving & below))
 }
 
-/// The label of an infeasible pixel, `(state, detail)` of payload §2's `sample_descriptor`: `decode_failed` (5), detail
-/// 3 (other) (chart_reference §2.2; REQ-DEC-040).
+/// The label of an infeasible pixel, `DEGENERATE(INVARIANT_INFEASIBLE)`, as `(state, detail)` of payload §2's
+/// `sample_descriptor`: `decode_failed` (5), detail 3 (other) (chart_reference §2.2; REQ-DEC-040).
 #[inline]
 pub fn infeasible_label() -> (u32, u32) {
     (STATE_DECODE_FAILED, 3)
