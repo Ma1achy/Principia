@@ -45,5 +45,5 @@ negative_control!(
     canon_dispatch_check_samples,
     "a check that sizes the output by the descriptors' 16 words a state must fail",
     expected = "65 states in a 64-state binding",
-    check_counts(|n, l| engine::decode_dispatch::check_samples(n, l))
+    check_counts(engine::decode_dispatch::check_samples)
 );
