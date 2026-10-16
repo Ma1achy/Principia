@@ -1049,6 +1049,39 @@ negative_control!(
     })
 );
 
+/// A signed field whose declared ends are both fixed is placed on `[−M, M]`, `M` the larger magnitude, so zero sits at
+/// the ramp's neutral: `[−2, 5]` on `[−5, 5]`, `[−5, 2]` on `[−5, 5]`; a sequential one keeps its own ends.
+fn check_signed_fixed(compaction: impl Fn(&Entry) -> Compaction) {
+    use Bound::Closed;
+    for (lo, hi, want) in [
+        (-2.0, 5.0, Compaction::Lin { lo: -5.0, hi: 5.0 }),
+        (-5.0, 2.0, Compaction::Lin { lo: -5.0, hi: 5.0 }),
+        (1.0, 2.0, Compaction::Lin { lo: 1.0, hi: 2.0 }),
+    ] {
+        let e = edited("fixed_probe", Scale::Lin, Closed(lo), Closed(hi));
+        assert_eq!(compaction(&e), want, "the range [{lo}, {hi}]");
+    }
+}
+
+#[test]
+fn default_ramps_signed_fixed_range_is_symmetric() {
+    check_signed_fixed(|e| {
+        defaults::default_ramp(e, &resolve())
+            .unwrap_or_else(|why| panic!("{why}"))
+            .compaction
+    });
+}
+
+negative_control!(
+    default_ramps_signed_fixed_range_is_symmetric,
+    "a signed range placed on its declared ends, zero off the neutral, is caught",
+    expected = "the range [-2, 5]",
+    check_signed_fixed(|e| match (e.range.lo, e.range.hi) {
+        (Bound::Closed(lo), Bound::Closed(hi)) => Compaction::Lin { lo, hi },
+        _ => unreachable!("both ends are closed"),
+    })
+);
+
 /// The registry refuses a field it can't place, naming it: a categorical field, a vector, a `diverging` field whose
 /// sim-key floor the sim key does not give or with no `x₀`, a `log` field with no floor, and an inverted declared
 /// `lin` range.
