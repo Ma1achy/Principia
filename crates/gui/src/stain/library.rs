@@ -87,6 +87,17 @@ pub fn count(c: &Content, state: &State) -> u32 {
     u32::try_from(passing).unwrap_or(u32::MAX)
 }
 
+/// The open drawer's list and its foot, the four buttons', in `rect`: inset 12 points across and 10 down, the foot
+/// the last 30.
+pub fn areas(rect: Rect) -> (Rect, Rect) {
+    let inner = rect.shrink2(vec2(12.0, 10.0));
+    let top = inner.max.y - 30.0;
+    (
+        Rect::from_min_max(inner.min, pos2(inner.max.x, top)),
+        Rect::from_min_max(pos2(inner.min.x, top), inner.max),
+    )
+}
+
 /// Draws the drawer in `rect`: collapsed, its strip and expand; open, its heading, filter, groups and rows, and the
 /// four buttons at its foot.
 pub fn show(
@@ -112,9 +123,7 @@ pub fn show(
         keys.place(COLLAPSE, &expand);
         return;
     }
-    let inner = rect.shrink2(vec2(12.0, 10.0));
-    let foot_h = 30.0;
-    let list = Rect::from_min_max(inner.min, pos2(inner.max.x, inner.max.y - foot_h));
+    let (list, foot) = areas(rect);
     let mut panel = ui.new_child(UiBuilder::new().max_rect(list));
     panel.horizontal(|ui| {
         ui.label(RichText::new("Library").heading());
@@ -180,7 +189,6 @@ pub fn show(
                 });
             });
     }
-    let foot = Rect::from_min_max(pos2(inner.min.x, inner.max.y - foot_h), inner.max);
     let mut row = ui.new_child(
         UiBuilder::new()
             .max_rect(foot)

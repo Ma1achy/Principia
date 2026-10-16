@@ -766,3 +766,67 @@ fn mock_stain_drawn_code_pane_and_filter() {
         assert!(passes("Total energy E₀", "ftle"))
     });
 }
+
+/// The drawer's areas: inset 12 across and 10 down, its foot the last 30 points.
+#[test]
+fn mock_stain_drawn_library_areas() {
+    use crate::stain::library::areas;
+    let (list, foot) = areas(Rect::from_min_max(pos2(0.0, 40.0), pos2(200.0, 640.0)));
+    assert_eq!(
+        list,
+        Rect::from_min_max(pos2(12.0, 50.0), pos2(188.0, 600.0))
+    );
+    assert_eq!(
+        foot,
+        Rect::from_min_max(pos2(12.0, 600.0), pos2(188.0, 630.0))
+    );
+    rejects("a foot below the drawer", || assert_eq!(foot.max.y, 660.0));
+}
+
+/// The drawer as drawn: its count, its rows with the loaded one highlighted, its filter's width, its buttons in the
+/// foot; filtering narrows the rows and the count; collapsed, only its strip.
+#[test]
+fn mock_stain_drawn_the_library() {
+    let (mut app, mut h) = stain_app();
+    let ppp = h.pixels_per_point();
+    let drawer = Regions::new(&Layout::new(h.screen(), ppp), ppp, false).library;
+    let (list, foot) = crate::stain::library::areas(drawer);
+    let all = nodes(&mut h, &mut app);
+    let find =
+        |all: &[super::support::Node], t: &str| all.iter().find(|n| n.text == t).map(|n| n.rect);
+    assert!(find(&all, "135").is_some(), "the catalogue's count");
+    let loaded = find(&all, "   Outcome class").expect("the loaded row");
+    let other = find(&all, "   Total energy E₀").expect("a row");
+    assert!(list.contains_rect(other));
+    let new = find(&all, "New").expect("New");
+    assert!(foot.expand(0.5).contains_rect(new), "{new:?} in {foot:?}");
+    let filter = all
+        .iter()
+        .find(|n| n.role == egui::accesskit::Role::TextInput)
+        .expect("the filter")
+        .rect;
+    assert!(
+        (filter.width() - (list.width() - 40.0)).abs() <= 1.0,
+        "{filter:?} in {list:?}"
+    );
+    let fill = visuals(&h).selection.bg_fill;
+    let drawn = rects(&shapes(&mut h, &mut app));
+    let lit = |r: Rect| {
+        drawn
+            .iter()
+            .any(|s| s.fill == fill && r.contains(s.rect.center()))
+    };
+    assert!(lit(loaded) && !lit(other));
+    // Filtered: two rows hold "ftle", and the count says so.
+    app.stain.library.filter = "ftle".into();
+    let filtered = nodes(&mut h, &mut app);
+    assert!(find(&filtered, "2").is_some());
+    assert!(find(&filtered, "   FTLE (Lyapunov)").is_some());
+    assert!(find(&filtered, "   Total energy E₀").is_none());
+    // Collapsed: no rows.
+    app.stain.library.collapsed = true;
+    let collapsed = nodes(&mut h, &mut app);
+    assert!(find(&collapsed, "   FTLE (Lyapunov)").is_none());
+    assert!(find(&collapsed, "▸").is_some());
+    rejects("an unloaded row highlighted", || assert!(lit(other)));
+}

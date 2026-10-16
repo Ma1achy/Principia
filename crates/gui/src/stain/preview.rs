@@ -26,17 +26,14 @@ pub const PREVIEW_H: f32 = 190.0;
 /// The largest rect of `viewport`'s aspect inside `area`, centred across it at its top: a square viewport gives a
 /// square; an empty one, a square too.
 pub fn fit(area: Rect, viewport: Vec2) -> Rect {
-    let aspect = if viewport.x > 0.0 && viewport.y > 0.0 {
-        viewport.x / viewport.y
+    let v = if viewport.x > 0.0 && viewport.y > 0.0 {
+        viewport
     } else {
-        1.0
+        Vec2::splat(1.0)
     };
-    let (w, h) = if area.width() / area.height() > aspect {
-        (area.height() * aspect, area.height())
-    } else {
-        (area.width(), area.width() / aspect)
-    };
-    Rect::from_min_size(pos2(area.center().x - w / 2.0, area.min.y), vec2(w, h))
+    // The largest scale at which both sides fit.
+    let size = v * (area.width() / v.x).min(area.height() / v.y);
+    Rect::from_min_size(pos2(area.center().x - size.x / 2.0, area.min.y), size)
 }
 
 /// What node `kind` with `occupant` maps, as the inspector's second line reads.
