@@ -212,7 +212,8 @@ Nothing is chosen.*
 
 ## RQ-297: a ledger `scale` change moves the payload schema version, which invalidates every cached payload, but seam 5 says it re-styles the view "with **zero** recompute" *(conflict, R-36, REQ-COL-032; context: TASK-M7-05)*
 
-*Found by TASK-M7-05's review (qa, PR #219, `qa_ledger_scale_restyle_keeps_the_sim_key`). Nothing is chosen.*
+*Found by TASK-M7-05's review (qa, PR #219, `qa_ledger_scale_restyle_keeps_the_sim_key`, since restated; see
+"Waits"). Nothing is chosen.*
 
 - **File, section:**
   - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)", seam 5 (:243): "read
@@ -250,5 +251,7 @@ Nothing is chosen.*
 - **Applied meanwhile:** nothing is chosen. TASK-M7-05's seam-5 test builds a view from an edited clone of `E_0`'s
   entry without regenerating the ledger, so it shows the render side only (the view re-styles, the sim buffer is
   unchanged, one fragment compile); it says so in its doc. `ledger::version` is unchanged.
-- **Waits:** TASK-M7-05's PR does not wait; REQ-COL-032 stays held until the ruling (qa's
-  `qa_ledger_scale_restyle_keeps_the_sim_key` fails against the current hash).
+- **Waits:** TASK-M7-05's PR does not wait; REQ-COL-032 stays held until the ruling. qa has restated its test as
+  `qa_ledger_scale_restyle_leaves_the_sim_buffer`, which asserts neither side of this entry: it covers the render side
+  only (the frame re-styles, the sim buffer reads back byte for byte), and the schema-version side waits on this
+  entry.
