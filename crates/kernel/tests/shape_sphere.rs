@@ -1251,8 +1251,13 @@ fn check_collision_dot(
         .iter()
         .map(|&x| dist(l.bc[x], l.bc[k]))
         .fold(f64::INFINITY, f64::min);
+    // The approach is relative (pitfalls §3: a quantity spanning decades): `n` is linear in `ε` near a collision, with a
+    // slope set by the masses and the triangle, so no absolute bound at a fixed `ε` holds for every mass ratio. From
+    // `ε = 10⁻³` each two decades of `ε` bring the dot at least one decade nearer, and at coincidence it is two decades
+    // nearer than at `ε = 10⁻⁷`, the rounding floor not a fixed multiple of ε (`λ` is a difference of nearly equal
+    // positions when the pair's masses differ widely).
     let mut last = f64::INFINITY;
-    for e in [1e-1, 1e-3, 1e-5, 1e-7, 1e-9, 0.0] {
+    for e in [1e-1, 1e-3, 1e-5, 1e-7, 0.0] {
         let mut rr = r;
         rr[j] = [
             r[i][0] + e * (r[j][0] - r[i][0]),
@@ -1267,18 +1272,14 @@ fn check_collision_dot(
                 "bodies {i} and {j} at ε = {e}: the dot {n:?} nears the wrong landmark {x} ({away:e})"
             );
         }
+        let factor = if e == 0.0 { 100.0 } else { 10.0 };
+        prop_assert!(
+            e > 1e-5 || d <= last / factor,
+            "bodies {i} and {j} at ε = {e}: the dot does not approach landmark {k}: {d:e}, against {last:e} at the \
+             step before (masses {m:?})"
+        );
         last = d;
-        if e == 1e-9 {
-            prop_assert!(
-                d <= 1e-6,
-                "bodies {i} and {j} at ε = {e}: the dot does not approach landmark {k} ({d:e})"
-            );
-        }
     }
-    prop_assert!(
-        last <= 1e-12,
-        "bodies {i} and {j} together: the dot does not approach landmark {k} ({last:e})"
-    );
     Ok(())
 }
 
