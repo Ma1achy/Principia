@@ -215,9 +215,9 @@ fn check_section<R: Precision>(
 /// remove, plus at most [`IDEMPOTENT_EPS`] over the rotation's conditioning. The error model, per [`state_error`]'s
 /// units (positions over the largest `‖rᵢ‖`, momenta over the largest `‖pᵢ‖`, in eps): the second `C`'s step 1a moves
 /// every `rᵢ` by `out`'s CoM residual, `‖R_com‖`; its step 1b moves `pᵢ` by `mᵢ‖P_tot‖`; its step 0 scales `r` by
-/// `I^{−1/2}` and `p` by `I^{1/4}`, `|I − 1|/2` at most; and its step 2 turns by the residual `ρ_y/ρ_x`, at most
-/// `ρ_y/‖ρ‖` of each vector, with its own rounding: the measured change less the first three terms, over the conditioning
-/// `1 + (‖r₀‖ + ‖r₁‖)/‖ρ‖`. The first three are `out`'s own residuals, each bounded by [`check_section`]; with a large
+/// `I^{−1/2}` and `p` by `I^{1/4}`, `|I − 1|/2` and `|I − 1|/4` at most; and its step 2 turns by the residual
+/// `ρ_y/ρ_x`, at most `ρ_y/‖ρ‖` of each vector, with its own rounding. The positions' change less the CoM and scale
+/// terms, and the momenta's less the `Σp` and scale terms, each over the conditioning `1 + (‖r₀‖ + ‖r₁‖)/‖ρ‖`. The first three are `out`'s own residuals, each bounded by [`check_section`]; with a large
 /// input offset (the CoM far from the bodies) the CoM's can be several eps of the output's size.
 fn check_idempotent<R: Precision>(out: &Canonical<R>, worst: &mut Worst) -> Result<(), String> {
     let again = canonicalise(&out.ic);
@@ -240,16 +240,27 @@ fn check_idempotent<R: Precision>(out: &Canonical<R>, worst: &mut Worst) -> Resu
     } else {
         m_max * norm(total) / (sp * e)
     };
-    let scale = (inertia(ic.m, ic.r) - 1.0).abs() / (2.0 * e);
+    let shrink = (inertia(ic.m, ic.r) - 1.0).abs() / e;
     let rho = norm([ic.r[1][0] - ic.r[0][0], ic.r[1][1] - ic.r[0][1]]);
     let conditioning = 1.0 + (norm(ic.r[0]) + norm(ic.r[1])) / rho;
-    let change = state_error(&ic, &to64(&again.ic), e);
-    let err = (change - shift_r.max(shift_p) - scale).max(0.0) / conditioning;
+    let again = to64(&again.ic);
+    let part = |a: &[[f64; 2]; 3], b: &[[f64; 2]; 3], size: f64| {
+        let size = if size == 0.0 { 1.0 } else { size };
+        (0..3)
+            .flat_map(|i| (0..2).map(move |k| (a[i][k] - b[i][k]).abs()))
+            .fold(0.0, f64::max)
+            / (size * e)
+    };
+    let (change_r, change_p) = (part(&ic.r, &again.r, sr), part(&ic.p, &again.p, sp));
+    // Each part less its own steps' shifts: `r` by the CoM and `|I − 1|/2`, `p` by `mᵢ·Σp` and `|I − 1|/4`.
+    let err_r = (change_r - shift_r - shrink / 2.0).max(0.0) / conditioning;
+    let err_p = (change_p - shift_p - shrink / 4.0).max(0.0) / conditioning;
+    let (change, err) = (change_r.max(change_p), err_r.max(err_p));
     worst.0[4] = worst.0[4].max(err);
     if err > IDEMPOTENT_EPS {
         return Err(format!(
-            "C(C(x)) differs from C(x) by {change} eps, {err} eps over the model (CoM shift {shift_r}, Σp shift \
-             {shift_p}, scale {scale}, conditioning {conditioning})"
+            "C(C(x)) differs from C(x) by {change} eps, {err} eps over the model (positions {err_r}, momenta \
+             {err_p}; CoM shift {shift_r}, Σp shift {shift_p}, |I − 1| {shrink}, conditioning {conditioning})"
         ));
     }
     Ok(())
