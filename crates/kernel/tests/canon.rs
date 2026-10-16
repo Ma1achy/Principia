@@ -14,7 +14,8 @@
 //!   states where its arithmetic is exact: no mirror at `|λ̃_y| ≤ δ_λ`, a mirror one step below `−δ_λ`, at each precision,
 //!   `ρ = 0` included (REQ-DEC-017).
 //! - `canon_mirror_decision_near`: the decision against `λ̃_y < −δ_λ` at f64 on turned, scaled, translated and mirrored
-//!   states `1%` of `δ_λ` either side of the deadband's edges (REQ-DEC-017).
+//!   states `1%` of `δ_λ` either side of the deadband's edges, and `C`'s flag on such states at `I_in ≠ 1`
+//!   (REQ-DEC-017).
 //! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
 //!   (RQ-296 holds the outputs).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
@@ -865,9 +866,35 @@ fn defective(m: [f64; 3], x: [[f64; 2]; 3], d2: f64, swap: bool, tie: bool) -> b
     c < 0.0 && if tie { left >= right } else { left > right }
 }
 
+/// `C` itself at f64 on [`gauged`]'s states, with momenta, scaled so `I_in = s²` is not 1: its mirror flag against
+/// `λ̃_y < −δ_λ`, which reads `d² = I_in`.
+fn check_canonicalise_near() {
+    let d = f64::DELTA_LAMBDA;
+    for k in [-1.01, -0.99, 0.99, 1.01] {
+        for mirror in [false, true] {
+            for s in [0.5, 3.0] {
+                let m = [0.15, 0.25, 0.6];
+                let ic = Ic {
+                    m,
+                    r: gauged(m, k * d, mirror, 0.9, s),
+                    p: [[0.2, -0.1], [-0.3, 0.4], [0.05, 0.1]],
+                };
+                let want = if mirror { -k } else { k } < -1.0;
+                assert_eq!(
+                    canonicalise(&ic).mirrored,
+                    want,
+                    "C's mirror at λ̃_y = {}δ_λ, s {s}, mirrored {mirror}, against λ̃_y < −δ_λ",
+                    if mirror { -k } else { k }
+                );
+            }
+        }
+    }
+}
+
 #[test]
 fn canon_mirror_decision_near() {
     check_decision_near(mirror_decision);
+    check_canonicalise_near();
 }
 
 negative_control!(
