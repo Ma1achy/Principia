@@ -22,6 +22,7 @@
 //!   power-of-two scale from `2^−60` to `2^60` at f32 and `2^±500` at f64 (REQ-DEC-017).
 //! - `canon_product_fusion_proof`: the f32 product the mirror decision is built from rounds the same fused or not at
 //!   each of its contractible sites, on 200 000 pairs (REQ-DEC-017).
+//! - `canon_pow2_bits`: the bit-formed powers of two and exponents the decision's rescale reads.
 //! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
 //!   (RQ-296 holds the outputs).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
@@ -1048,10 +1049,11 @@ negative_control!(
 
 // ── canon_mirror_scale_invariance (REQ-DEC-017) ────────────────────────────────────────────────────────────────
 
-/// The powers of two the states are scaled by, at each precision: near `1e±8`, `1e±9`, `1e±12` and `1e±18` at f32,
-/// and to `2^±500` at f64, within `I_in`'s finite, normal range.
-const EXPS_F32: [i32; 9] = [-60, -40, -30, -27, 0, 27, 30, 40, 60];
-const EXPS_F64: [i32; 9] = [-500, -330, -250, -100, 0, 100, 250, 330, 500];
+/// The powers of two the states are scaled by, at each precision: near `1e±8`, `1e±9`, `1e±12`, `1e±18` and `1e±30`
+/// at f32, and to `2^±900` at f64. Past `2^±60` (f32) and `2^±500` (f64) `I_in` itself overflows or underflows, which
+/// the decision, formed from the differences alone, does not read.
+const EXPS_F32: [i32; 11] = [-100, -60, -40, -30, -27, 0, 27, 30, 40, 60, 100];
+const EXPS_F64: [i32; 11] = [-900, -500, -330, -250, -100, 0, 100, 250, 330, 500, 900];
 
 /// Generic states, random masses, positions and momenta: `λ̃_y` anywhere, about half of them mirrored.
 fn generic<R: Precision>(n: usize) -> Vec<Ic<R>> {
@@ -1194,6 +1196,39 @@ negative_control!(
             }
         });
     }
+);
+
+// ── canon_pow2_bits ─────────────────────────────────────────────────────────────────────────────────────────────
+
+/// [`IeeeBits::pow2`] is `2^e` and [`IeeeBits::exponent`] reads `e` back, over every normal exponent at `R`, and the
+/// exponent of `±1.5·2^e` is `e`; zero reads the field's least value. `pow2` is the function under test.
+fn check_pow2<R: Precision>(pow2: fn(i32) -> R, lo: i32, hi: i32) {
+    for e in lo..=hi {
+        let want = cast::<R>(2f64.powi(e));
+        assert_eq!(pow2(e), want, "{}: pow2({e})", R::NAME);
+        assert_eq!(want.exponent(), e, "{}: the exponent of 2^{e}", R::NAME);
+        let x = want * cast::<R>(-1.5);
+        assert_eq!(x.exponent(), e, "{}: the exponent of −1.5·2^{e}", R::NAME);
+    }
+    assert_eq!(
+        R::zero().exponent(),
+        lo - 1,
+        "{}: the exponent of 0",
+        R::NAME
+    );
+}
+
+#[test]
+fn canon_pow2_bits() {
+    check_pow2::<f32>(<f32 as IeeeBits>::pow2, -126, 127);
+    check_pow2::<f64>(<f64 as IeeeBits>::pow2, -1022, 1023);
+}
+
+negative_control!(
+    canon_pow2_bits,
+    "a pow2 whose bias has the wrong sign must fail",
+    expected = "f32: pow2(-126)",
+    check_pow2::<f32>(|e| f32::from_bits(((e - 127) as u32) << 23), -126, 127)
 );
 
 // ── canon_inertia_extremes (RQ-296) ─────────────────────────────────────────────────────────────────────────────

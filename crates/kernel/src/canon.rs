@@ -228,21 +228,13 @@ fn pair_sum<R: LinkReal + IeeeBits>(m: [R; 3], d01: [R; 2], d02: [R; 2], d12: [R
     (n01 + n02) + n12
 }
 
-/// The CoM-frame moment of inertia of `r` under `m` (`Σmᵢ = 1`), as [`mirror_decision`] forms it, from the pair
-/// differences: `Σ_{i<j} mᵢmⱼ‖rⱼ − rᵢ‖²`, before the decision's rescale.
-#[inline]
-pub fn pair_inertia<R: LinkReal + IeeeBits>(m: [R; 3], r: [[R; 2]; 3]) -> R {
-    let diff = |a: [R; 2], b: [R; 2]| [b[0] - a[0], b[1] - a[1]];
-    pair_sum(m, diff(r[0], r[1]), diff(r[0], r[2]), diff(r[1], r[2]))
-}
-
 /// Step 3's decision (R-82), on the positions `r` in any frame, before step 0 (the module's note):
 /// 1. the pair differences `d01 = r₁ − r₀ = ρ`, `d02 = r₂ − r₀`, `d12 = r₂ − r₁`, each a lone subtraction;
 /// 2. the range rescale: `k`, the greatest exponent field among their six components, read from the bits, and every
 ///    difference times `2^−k` (two powers of two formed from their bits, each a normal number), exact wherever the
 ///    result is normal, so the largest component is in `[1, 2)`;
 /// 3. `Λ = m₀d02 + m₁d12` (`= M₀₁r₂ − m₀r₀ − m₁r₁`), `c = ρ × Λ = ρ_xΛ_y − ρ_yΛ_x` with `ρ` read as `(1, 0)` where it is
-///    0 (step 2's identity), `d² = Σ_{i<j} mᵢmⱼ‖dᵢⱼ‖²` ([`pair_inertia`]'s), and mirror iff `c < 0` and
+///    0 (step 2's identity), `d² = Σ_{i<j} mᵢmⱼ‖dᵢⱼ‖²`, and mirror iff `c < 0` and
 ///    `m₂c² > δ_λ²·M₀₁·‖ρ‖²·d²`.
 ///
 /// Every product is an [`IeeeBits::product`], exact in its partial products, and every other operation a lone
