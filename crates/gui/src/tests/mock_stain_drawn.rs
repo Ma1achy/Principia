@@ -675,3 +675,32 @@ fn mock_stain_drawn_capture_screens() {
         assert!(main.iter().any(|n| n == "Library"))
     });
 }
+
+/// A node's title: its kind and its occupant; `OUT`'s none is "to the style", any other none "None".
+#[test]
+fn mock_stain_drawn_titles() {
+    use crate::stain::canvas::title;
+    assert_eq!(
+        title(NodeKind::Out, &Occupant::None),
+        ("OUT", "to the style".to_owned())
+    );
+    assert_eq!(
+        title(NodeKind::Source, &Occupant::None),
+        ("source", "None".to_owned())
+    );
+    assert_eq!(
+        title(NodeKind::Post, &Occupant::None),
+        ("post", "None".to_owned())
+    );
+    assert_eq!(
+        title(NodeKind::Source, &Occupant::Field("ftle".into())),
+        ("source", "ctx.ftle".to_owned())
+    );
+    assert_eq!(
+        title(NodeKind::Brightness, &Occupant::Custom("x".into())),
+        ("brightness", "custom".to_owned())
+    );
+    rejects("a source's none read as OUT's", || {
+        assert_eq!(title(NodeKind::Source, &Occupant::None).1, "to the style")
+    });
+}

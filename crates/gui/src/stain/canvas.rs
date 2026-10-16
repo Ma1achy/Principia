@@ -376,14 +376,11 @@ impl Canvas {
 
     /// Pans the least that brings `rect` inside `within`, when it fits: the focus's scroll to a node.
     pub fn reveal(&mut self, rect: Rect, within: Rect) {
+        // `a` moves the low edge to the view's, `b` the high edge: the least of the two that fits, none when it is in
+        // view already, and the low edge's when it cannot fit.
         let shift = |lo: f32, hi: f32, min: f32, max: f32| {
-            if lo < min {
-                min - lo
-            } else if hi > max {
-                (max - hi).max(min - lo)
-            } else {
-                0.0
-            }
+            let (a, b) = (min - lo, max - hi);
+            0.0_f32.max(a).min(b).max(a)
         };
         self.view.pan += vec2(
             shift(rect.min.x, rect.max.x, within.min.x, within.max.x),
