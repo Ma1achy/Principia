@@ -6638,6 +6638,42 @@
   milestone: M7
   rq:
   - RQ-310
+- id: REQ-PAY-107
+  area: PAY
+  statement: "`chazy_escaper` must be a generated read-side categorical accessor, a body index 0–2, derived at read from the live state and the `ICDescriptor`'s masses with nothing stored: the body most separated from its pair, the argmax over b of |r_b − R_cm(other two)| / |r_i − r_j| with (i, j) the pair not containing b, the same hierarchy-ratio choice the classifier uses for HE/PE; on a tie the lowest body index wins."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.2 The fields
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.6 `chazy_escaper` and `chazy_qk` (R-443)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.1 Inputs and definitions
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "on §12.1's binary_plus_escaper(1, 0, 50, 2) chazy_escaper is 2, and on the same state with bodies relabelled it is the escaper's new index (0 and 1 among them); it equals the body classify's hierarchy step takes on every §12.1 fixture; an equilateral state at rest (three equal ratios) gives 0, the lowest index; control: a state whose most separated body is 1 gives 1, not the default 0"
+  rulings:
+  - R-443
+  milestone: M7
+- id: REQ-PAY-108
+  area: PAY
+  statement: "`chazy_qk[k]`, k = 0, 1, 2, must be a generated read-side scalar accessor per body, derived at read with nothing stored: body k's K/|U| against the centre of mass of the other two (§3.1's outer-body energies with b = k: μ = m_k M_p/(m_k + M_p), K = ½ μ |Δv|², U = m_k M_p / d), ≥ 0, with 1 parabolic."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.2 The fields
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.6 `chazy_escaper` and `chazy_qk` (R-443)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 3.1 Inputs and definitions
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "on binary_plus_escaper(1, 0, 50, q) for q = 2, 1 and 0.5, chazy_qk[2] equals q to f64 rounding; on every HE and PE fixture chazy_qk[chazy_escaper] equals chazy_q (the hierarchy row); every value ≥ 0"
+  rulings:
+  - R-443
+  milestone: M7
 - id: REQ-GEN-001
   area: GEN
   statement: "The catalogue metadata of the `SimState` scalars must match generation-root §3.4's table (scale, range, sentinel), with `energy_drift` and `Lz_drift` on diverging scales."
@@ -12835,6 +12871,221 @@
   - R-71
   - R-442
   milestone: M7
+- id: REQ-COL-090
+  area: COL
+  statement: "The body lens must be a Chazy stain with a stain parameter k ∈ {0, 1, 2} (R-443) that draws body k's role from `chazy_class` and `chazy_escaper` by the drill-down's §10.11.1 table: escaping hyperbolic (HE, escaper k) `#E4896A`, escaping parabolic (PE, escaper k) `#CC9C42`, in the pair left behind (HE or PE, escaper not k) `#4158BD`, flying apart with the others (H, HP, P) `#8A8A90`, bound (B-stable, B-so-far, excursion, transient, OS-candidate) `#141418`, collision `#DA85B6`; the role table must be exhaustive over the labels, and §7's validity rules hold."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11 One body at a time (R-443)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.1 Body lens
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "role table, exhaustive (drill-down §12.3 item 1): for every class label, collision, and every (k, escaper) pair the role and its sRGB are as §10.11.1 tables, OS-candidate bound black; a negative control adds an unmapped label and fails to build; golden (`cargo xtask golden chazy-lens`): a synthetic payload with one sample per role renders exactly those colours at k = 0, 1, 2"
+  rulings:
+  - R-443
+  milestone: M7
+  note: "The escaping body is chazy_escaper as the block gives it; whether it is the event's escape detail where the run has an escape event is RQ-321."
+- id: REQ-COL-091
+  area: COL
+  statement: "The body lens with energy must put §10.11.1's roles in the colour slot and `chazy_qk[k]` in the brightness slot under Replace-L's range form, b = q/(1 + q) and L = L_min + (L_max − L_min)·b with REQ-COL-088's range and REQ-COL-089's compaction, the same mapping as the seven-class × energy stain, so that the grey and black roles render as greys at body k's energy."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.2 Body lens with energy
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.5 With an energy channel
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: decisions.md
+    section: R-77 — Replace-L, and the state palette *(closes RQ-28)*
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "energy lens recovers the escape (drill-down §12.3 item 5): for body k escaping hyperbolically chazy_qk[k] > 1 and the pixel's OKLab L is above L(b = ½), and for a bound k (chazy_qk[k] < 1) below it; control: the flat body lens draws two bound pixels with different q_k identically"
+  rulings:
+  - R-77
+  - R-443
+  milestone: M7
+- id: REQ-COL-092
+  area: COL
+  statement: "The escaper map must be a Chazy stain drawing escapes only, hue by the escaping body (`chazy_escaper`) and the parabolic the darker shade of the same hue, by the drill-down's §10.11.4 table: HE body 0, 1, 2 `#E58870`, `#69BA7C`, `#80A3F0`; PE `#A24B36`, `#287C42`, `#4665AE`; H, HP and P grey `#8A8A90`; bound (the B and OS folds) black `#141418`; collision magenta `#DA85B6`."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.4 Escaper map
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11 One body at a time (R-443)
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: golden image
+    detail: "`cargo xtask golden chazy-escaper`: a synthetic payload with an HE and a PE sample per escaper body and one sample per other class renders exactly §10.11.4's colours, OS-candidate black"
+  rulings:
+  - R-443
+  milestone: M7
+  note: The escaping body is RQ-321's.
+- id: REQ-COL-093
+  area: COL
+  statement: "The escaper-by-mass-rank stain must be the escaper map with hue by the escaper's mass rank instead of its label, read from the `ICDescriptor`'s masses at each sample: HE lightest, middle, heaviest `#E58870`, `#69BA7C`, `#80A3F0`, PE `#A24B36`, `#287C42`, `#4665AE` (§10.11.4's columns re-indexed by rank), falling back to the label escaper map where the escaper's rank is undefined (REQ-COL-095)."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.5 By mass instead of by label
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.4 Escaper map
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "mass rank (drill-down §12.3 item 4): on a fixture with distinct masses the rank map equals the label map composed with the rank permutation, pixel for pixel; on an equal-mass fixture it equals the label map exactly and the fallback flag is set"
+  rulings:
+  - R-443
+  milestone: M7
+- id: REQ-COL-094
+  area: COL
+  statement: "The lightest-body and heaviest-body lenses must be the body lens with k the body of that mass rank at each sample, from the `ICDescriptor`'s masses, falling back to the label view where that rank is undefined (REQ-COL-095, REQ-COL-096)."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.5 By mass instead of by label
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.1 Body lens
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "mass rank (drill-down §12.3 item 4): on a fixture with distinct masses each rank lens equals the body lens at the body of that rank, composed with the rank permutation; on an equal-mass fixture both fall back to the label view exactly, with the flag set"
+  rulings:
+  - R-443
+  milestone: M7
+- id: REQ-COL-095
+  area: COL
+  statement: "Mass rank must be undefined for a body whose mass equals another's to within REQ-COL-100's relative tolerance; a mass-rank view must fall back to its label view exactly at the samples where the rank it needs is undefined and nowhere else, and expose a fallback flag for the legend, set wherever it fell back (on an equal-mass chart, everywhere)."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.5 By mass instead of by label
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "mass rank's control (drill-down §12.3 item 4): a fixture with one tied pair falls back only where the tie matters (the escaper map where the escaper is one of the tied bodies; the lightest lens where the lightest masses tie, the heaviest lens not), and the flag is set exactly there; masses differing by 2 × the tolerance rank, by 0.5 × do not"
+  rulings:
+  - R-443
+  milestone: M7
+- id: REQ-COL-096
+  area: COL
+  kind: definition
+  statement: "The label body a rank lens falls back to where its rank is undefined (a rank lens has no label parameter), and the form of the relative mass-tie comparison (relative to which mass), must be defined in the Chazy drill-down's §10.11.5 by the task that needs them, consistent with R-443's fallback (the label view, flagged in the legend) and REQ-COL-095, and reviewed by the physics reviewer before merge."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.5 By mass instead of by label
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: review checklist
+    detail: "the drill-down's §10.11.5 gives the fallback body and the comparison's form; REQ-COL-094's and REQ-COL-095's tests use them; the physics reviewer checks them against R-443"
+  rulings:
+  - R-72
+  - R-443
+  milestone: M7
+- id: REQ-COL-097
+  area: COL
+  statement: "The one-body palettes' separation must be measured the way REQ-COL-055 measures, against τ = 0.101 (R-429), unsimulated and under each simulation, and asserted to the measured values so a change shows: the body lens's tightest pair 0.084 (escaping hyperbolic / parabolic), `#4158BD` at least 0.177 from every entry and style, the escaper palette's 0.102 (body 0 hyperbolic / collision), and each entry's distance from the hatch's colours and the stipple's; REQ-COL-061's hatch test must include these palettes among its entries."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2.2 One-body palettes, measured (R-443)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: decisions.md
+    section: "R-429 — REQ-COL-061's criterion is confirmed beside REQ-COL-055: τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101; the hatch passes by colour, or by its pattern when its two simulated stripes are more than τ apart; the pattern argument holds at 1:1 device pixels only *(amends R-386)*"
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: unit test
+    detail: "palette separation (drill-down §12.3 item 6): `cargo test -p render chazy_one_body_separation` prints each palette's tightest pair and tightest style distance unsimulated and under each simulation; asserts 0.084, ≥ 0.177 and 0.102 as measured, and the grey #8A8A90 against the stipple dot as RQ-322 settles (0.020 measured), every other entry ≥ τ from the styles unsimulated; cvd_hatch_distinct passes with these palettes added"
+  rulings:
+  - R-429
+  - R-443
+  milestone: M7
+  note: "τ separates entries from styles, not entries from each other (R-442's finding): the 0.084 within-palette pair is recorded, not a failure. The escaper palette clears τ against collision by 0.001."
+- id: REQ-COL-098
+  area: COL
+  kind: calibration
+  statement: "The body-lens palette of the drill-down's §10.11.1 (`#E4896A`, `#CC9C42`, `#4158BD`, `#8A8A90`, `#141418`, `#DA85B6`) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.1 Body lens
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2.2 One-body palettes, measured (R-443)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the palette with REQ-COL-097's measurements; evidence: the block's 0.084 (HE / PE, kept so the meaning carries), #4158BD clearing all by ≥ 0.177, the replaced #6C8EBF at 0.076 from the grey; the human confirms at the M7 gate, deciding RQ-322"
+  rulings:
+  - R-71
+  - R-443
+  milestone: M7
+- id: REQ-COL-099
+  area: COL
+  kind: calibration
+  statement: "The escaper palette of the drill-down's §10.11.4–§10.11.5 (HE `#E58870`, `#69BA7C`, `#80A3F0` and PE `#A24B36`, `#287C42`, `#4665AE`, by body and by mass rank, OKLab L 0.72 and 0.52, chroma 0.12, hues 35°, 150°, 265°; with `#8A8A90`, `#141418`, `#DA85B6`) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.4 Escaper map
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.5 By mass instead of by label
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2.2 One-body palettes, measured (R-443)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: review checklist
+    detail: "the proposal gives the palette with REQ-COL-097's measurements; evidence: the block's 0.102 at its closest (body 0 hyperbolic / collision, a 0.001 margin over τ) and §10.11.6's measured maps; the human confirms at the M7 gate, deciding RQ-322"
+  rulings:
+  - R-71
+  - R-443
+  milestone: M7
+- id: REQ-COL-100
+  area: COL
+  kind: calibration
+  statement: "The mass tie tolerance of the drill-down's §10.11.5 (proposed: relative 10⁻⁶) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M7 gate and recorded in decisions.md."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.5 By mass instead of by label
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2 Calibrations to confirm at a gate (R-71)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 11.2.2 One-body palettes, measured (R-443)
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: review checklist
+    detail: "the proposal gives relative 10⁻⁶ with REQ-COL-095's test and the equal-mass presets falling back entirely; not measured in the block; the human confirms at the M7 gate"
+  rulings:
+  - R-71
+  - R-443
+  milestone: M7
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -15814,6 +16065,39 @@
   rq:
   - RQ-315
   note: "Whether OS-candidate and B-stable are marked provisional in the legend help is RQ-315."
+- id: REQ-GUI-186
+  area: GUI
+  statement: "The view must offer the body lens for k = 0, 1, 2 as three small panels side by side at one playhead, a layout over the body lens, not a new stain."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.3 All three bodies
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: GUI screenshot
+    detail: "`cargo xtask screenshot chazy-three-bodies`: three panels at one playhead, each equal pixel for pixel to the body lens rendered alone at its k"
+  rulings:
+  - R-443
+  milestone: M8
+  note: Where the panels live is RQ-323.
+- id: REQ-GUI-187
+  area: GUI
+  statement: "The one-body stains' legends must be generated from the stain (render GUI spec §G6) with each role's share of the view and the playhead in the title: the body lens names its body k, the escaper map its bodies, the rank views their ranks; where a rank view fell back to the label view the legend says so, and on an equal-mass chart it says the rank view is the label view rather than draw a rank."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.5 By mass instead of by label
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11 One body at a time (R-443)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: GUI screenshot
+    detail: "`cargo xtask screenshot chazy-one-body-legend`: the body lens, escaper map and rank views' legends against 06_legend.png's layout; the title carries t and the lens body; shares sum to 1; on an equal-mass preset the rank legends read as label views; on a one-tied-pair fixture the fallback note appears; the keys equal the stain's output (REQ-GUI-105)"
+  rulings:
+  - R-443
+  milestone: M8
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -21696,6 +21980,40 @@
     detail: "live-playhead property (drill-down §12.2 item 9): for random ICs, the label at t from a run stopped at t equals the label at t from a run continued past t, at every t; control: a classifier variant that reads the state at t + Δ fails it"
   rulings:
   - R-442
+  milestone: M7
+- id: REQ-VAL-188
+  area: VAL
+  statement: "On every HE or PE sample exactly one of the three body lenses (k = 0, 1, 2) must read escaping and the other two in the pair; on every other sample none reads escaping."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.1 Body lens
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: property test
+    detail: "exactly one escaping body (drill-down §12.3 item 2): over a gallery chart's samples at t = 10, 50, 200 and the horizon, and every §12.1 fixture, the three lenses' roles satisfy the rule on every sample"
+  rulings:
+  - R-443
+  milestone: M7
+- id: REQ-VAL-189
+  area: VAL
+  statement: "Relabelling the bodies of an IC must permute `chazy_escaper` and the three body lenses the same way."
+  source:
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 12.3 One body at a time (R-443)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 5.6 `chazy_escaper` and `chazy_qk` (R-443)
+  - file: docs/design/principia_dd_chazy_final_motion.md
+    section: 10.11.1 Body lens
+  - file: decisions.md
+    section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  verify:
+    method: property test
+    detail: "label symmetry (drill-down §12.3 item 3): for each of the six permutations of an IC's bodies, chazy_escaper maps through the permutation and lens k of the permuted IC equals lens π⁻¹(k) of the original; control: a fixture whose escaper is not body 0; fixtures keep the largest hierarchy ratio strictly largest (an exact tie goes to the lowest index)"
+  rulings:
+  - R-443
   milestone: M7
 - id: REQ-PERF-001
   area: PERF

@@ -902,11 +902,11 @@
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "5. Fields"
   reason: parent heading (obligations are in its subsections)
-  note: "§5.1–§5.5"
+  note: "§5.1–§5.6"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "10. Stains and palettes"
   reason: parent heading (obligations are in its subsections)
-  note: "§10.1–§10.10; R-442's hue rule is carried by REQ-COL-075 and REQ-COL-078"
+  note: "§10.1–§10.11; R-442's hue rule is carried by REQ-COL-075 and REQ-COL-078"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "11. Decisions, calibrations and open questions"
   reason: parent heading (obligations are in its subsections)
@@ -916,8 +916,16 @@
   reason: informative only
   note: "restates R-442's seven rulings, which the requirements citing R-442 carry"
 - file: docs/design/principia_dd_chazy_final_motion.md
+  section: "11.1.1 Decided (R-443)"
+  reason: informative only
+  note: "restates R-443's ruling, which the requirements citing R-443 carry"
+- file: docs/design/principia_dd_chazy_final_motion.md
+  section: "10.11.6 Measured, for the record"
+  reason: informative only
+  note: "the human's prin-rs counts (R-443), evidence for the escaper palette's calibration (REQ-COL-099)"
+- file: docs/design/principia_dd_chazy_final_motion.md
   section: "11.3 Open questions"
-  reason: gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320)
+  reason: gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323)
   note: "each open question is an RQ entry; the requirements waiting on them carry rq:"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "11.4 Not done, and natural next steps"
@@ -926,7 +934,7 @@
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "12. Tests"
   reason: parent heading (obligations are in its subsections)
-  note: "§12.1–§12.2"
+  note: "§12.1–§12.3"
 - file: docs/design/principia_dd_chazy_final_motion.md
   section: "13. References"
   reason: informative only

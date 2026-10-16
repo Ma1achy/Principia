@@ -114,7 +114,7 @@ Artboard → governing section:
 - [ ] `docs/gui/design/12_console.png` — Console → `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 
 <!-- list:gui-screenshots -->
-*79 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*81 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M6**
 - [ ] REQ-GUI-014 — presence only (R-129; no layout comparison until the M8 dev GUI): the Run window's 'quality: Custom' section shows each control
@@ -198,6 +198,8 @@ Artboard → governing section:
 - [ ] REQ-GUI-164 — cargo xtask screenshot 04_windows (profiler_fast_math): the compute setting appears in the Profiler (presence only, no artboard, R-129); cargo test -p gui profiler_fast_math: a session-header fixture with the setting on and compute compiled on shows on alone, one with the setting off shows off alone, and one with the setting on and compute compiled off (lavapipe) shows both
 - [ ] REQ-GUI-180 — cargo xtask screenshot 01_main (f3_off, f3_off_sphere, f3_off_invariant) on the real engine, with a stain that reads no screen-lane field, on the latent chart, the shape sphere's spherical map and an invariant chart: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; past [0,1]² the latent chart continues its formula, the sphere wraps in θ and crosses its poles with θ shifted by π, and the invariant chart is hatched on every side; cargo test -p gui f3_fill_labels: every window pixel carries a labelled output, each hatched one decode_failed, none dropped; F3 again restores the shown capture; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a window pixel left unlabelled fails the label check
 - [ ] REQ-GUI-185 — the seven-class and status stains' legends against 06_legend.png's layout: the title carries t, B's label, shares summing to 1, the status legend's full names; the legend keys equal the stain's output (REQ-GUI-105)
+- [ ] REQ-GUI-186 — `cargo xtask screenshot chazy-three-bodies`: three panels at one playhead, each equal pixel for pixel to the body lens rendered alone at its k
+- [ ] REQ-GUI-187 — `cargo xtask screenshot chazy-one-body-legend`: the body lens, escaper map and rank views' legends against 06_legend.png's layout; the title carries t and the lens body; shares sum to 1; on an equal-mass preset the rank legends read as label views; on a one-tied-pair fixture the fallback note appears; the keys equal the stain's output (REQ-GUI-105)
 - [ ] REQ-TOOL-088 — presence (R-129): the Profiler switch exists; the footer indicator is visible while passive logging is on; logging is off by default
 - [ ] REQ-TOOL-098 — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113)
 <!-- /list:gui-screenshots -->

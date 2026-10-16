@@ -11,20 +11,20 @@
 | CHART | 56 |
 | INT | 89 |
 | EVT | 31 |
-| PAY | 104 |
+| PAY | 106 |
 | GEN | 35 |
 | SCHED | 97 |
 | REF | 51 |
 | RENDER | 86 |
-| COL | 88 |
-| GUI | 184 |
+| COL | 99 |
+| GUI | 186 |
 | TOOL | 165 |
-| VAL | 186 |
+| VAL | 188 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1429** |
+| **total** | **1446** |
 
-Of these: 129 calibration, 129 definition, 1171 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 132 calibration, 130 definition, 1184 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -37,16 +37,16 @@ Of these: 129 calibration, 129 definition, 1171 obligation. Retired (kept for th
 | M4 | 104 |
 | M5 | 175 |
 | M6 | 160 |
-| M7 | 153 |
-| M8 | 240 |
+| M7 | 168 |
+| M8 | 242 |
 
 ## Sections
 
-1192 sections in 47 files: 975 yield at least one requirement; 217 yield none and are listed below with the reason.
+1204 sections in 47 files: 985 yield at least one requirement; 219 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320) | 1 |
-| informative only | 162 |
+| gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323) | 1 |
+| informative only | 164 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 38 |
@@ -283,13 +283,15 @@ Of these: 129 calibration, 129 definition, 1171 obligation. Retired (kept for th
 | 3. The classifier at a playhead | parent heading (obligations are in its subsections) | §3.1–§3.8 |
 | 4. Validation | parent heading (obligations are in its subsections) | §4.1–§4.3, the calibrations' evidence |
 | 4.3 On real charts (48 × 48) | informative only | prin-rs PR #32's chart shares, evidence for the calibrations and the status stain's description |
-| 5. Fields | parent heading (obligations are in its subsections) | §5.1–§5.5 |
-| 10. Stains and palettes | parent heading (obligations are in its subsections) | §10.1–§10.10; R-442's hue rule is carried by REQ-COL-075 and REQ-COL-078 |
+| 5. Fields | parent heading (obligations are in its subsections) | §5.1–§5.6 |
+| 10. Stains and palettes | parent heading (obligations are in its subsections) | §10.1–§10.11; R-442's hue rule is carried by REQ-COL-075 and REQ-COL-078 |
+| 10.11.6 Measured, for the record | informative only | the human's prin-rs counts (R-443), evidence for the escaper palette's calibration (REQ-COL-099) |
 | 11. Decisions, calibrations and open questions | parent heading (obligations are in its subsections) | §11.1–§11.4 |
 | 11.1 Decided (R-442) | informative only | restates R-442's seven rulings, which the requirements citing R-442 carry |
-| 11.3 Open questions | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320) | each open question is an RQ entry; the requirements waiting on them carry rq: |
+| 11.1.1 Decided (R-443) | informative only | restates R-443's ruling, which the requirements citing R-443 carry |
+| 11.3 Open questions | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323) | each open question is an RQ entry; the requirements waiting on them carry rq: |
 | 11.4 Not done, and natural next steps | informative only | Standish's certificate and a chaotic-chart re-run, named as next steps, not obligations |
-| 12. Tests | parent heading (obligations are in its subsections) | §12.1–§12.2 |
+| 12. Tests | parent heading (obligations are in its subsections) | §12.1–§12.3 |
 | 13. References | informative only | bibliography |
 
 ### `docs/design/principia_dd_colouring.md`

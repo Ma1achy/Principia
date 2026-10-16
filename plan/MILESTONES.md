@@ -338,19 +338,22 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
   (ε, `h_far`, `os_ratio`, settling, `I_max`'s quantisation, the palettes, the energy lightness range and `q`'s
   compaction) are confirmed at this gate; the human decides RQ-311 (the default palette) there. Requirements waiting on
   RQ-310, RQ-311, RQ-313, RQ-314, RQ-317 to RQ-320 hold the gate until those are ruled.
+  The one-body views (R-443; TASK-M7-41, with `chazy_escaper` and `chazy_qk` in TASK-M7-36): their palettes and the
+  mass tie tolerance are confirmed at this gate too; the human decides RQ-321 (the escaper definition) and RQ-322 (the
+  grey `#8A8A90`) before it.
 
 <!-- gate:M7 -->
-**Exit gate — 153 requirements** (and every earlier gate still green):
+**Exit gate — 168 requirements** (and every earlier gate still green):
 
 - EVT (5): REQ-EVT-027…031
-- PAY (8): REQ-PAY-099…106
+- PAY (10): REQ-PAY-099…108
 - GEN (4): REQ-GEN-019…022
 - SCHED (1): REQ-SCHED-072
 - RENDER (18): REQ-RENDER-057…072, REQ-RENDER-080…081
-- COL (66): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…089
+- COL (77): REQ-COL-008…036, REQ-COL-038…046, REQ-COL-049…052, REQ-COL-054, REQ-COL-058…059, REQ-COL-061, REQ-COL-065…066, REQ-COL-072…100
 - GUI (18): REQ-GUI-016…031, REQ-GUI-151…152
 - TOOL (22): REQ-TOOL-059…072, REQ-TOOL-109…113, REQ-TOOL-118, REQ-TOOL-142, REQ-TOOL-151
-- VAL (9): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…187
+- VAL (11): REQ-VAL-096…098, REQ-VAL-145, REQ-VAL-183…189
 - PERF (2): REQ-PERF-068…069
 <!-- /gate:M7 -->
 
@@ -368,9 +371,10 @@ canonical_spec §11: "build the browser product on top".
 - The browser build: wasm engine worker, `OffscreenCanvas`, and the two membranes.
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 - The Chazy legends (R-442; TASK-M8-45), on the generated legend.
+  With R-443's one-body legends and the three-body panels (RQ-323).
 
 <!-- gate:M8 -->
-**Exit gate — 240 requirements** (and every earlier gate still green):
+**Exit gate — 242 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (4): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057
@@ -378,7 +382,7 @@ canonical_spec §11: "build the browser product on top".
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074
 - COL (2): REQ-COL-047…048
-- GUI (132): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…185
+- GUI (134): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187
 - TOOL (42): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146
 - VAL (17): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144
 - PERF (12): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092
