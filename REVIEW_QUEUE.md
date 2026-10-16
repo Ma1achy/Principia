@@ -722,3 +722,50 @@ seen.*
   is encoded twice, with the same bits. No state on the band is swept under `Π`.
 - **Waits:** REQ-ENC-003 (`rq: RQ-360`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-ENC-003 held, not closed.
+
+## RQ-365: REQ-SYS-015's acceptance scan finds a hand-written WGSL copy of dd_decoder §3.2's Jacobi map, the read side's `shape()`, which RQ-235's R-369 decision put there; does the scan reach read-side derived fields, and if so is REQ-SYS-015 closed before TASK-M2-25 moves it onto the translation? *(conflict, R-116, REQ-SYS-015, RQ-235; context: TASK-M2-15)*
+
+*Found in review of PR #228 (qa's observation, code review 5554105081 C5, physics review 5554127777 P2). Nothing is
+chosen. For the human: whether the scan's reach excludes read-side derived fields narrows the task's acceptance
+(R-369).*
+
+- **File, section:**
+  - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*":
+    "The fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation),
+    never hand-written."
+  - `plan/requirements.yaml` REQ-SYS-015, statement: "there must be no separate transcriptions of the decode logic and
+    no hand-written WGSL decode or encode"; verify detail: "no second implementation of any §3 formula exists (grep for
+    the mass/config/momentum formulae outside the shared source, including .wgsl)".
+  - `plan/tasks/M2/TASK-M2-15.md` § "Acceptance tests" (:49): "a scan (including `.wgsl` files) finds no second
+    implementation of any dd_decoder §3 formula outside the shared source, so any fragment decode/encode can only be
+    the translation's output (REQ-SYS-015)".
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi": the formulae
+    `M₀₁ = m₀ + m₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`, `ρ = r₁ − r₀`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`.
+  - `docs/archive/review_queue/M0.md` § "RQ-235" (record only), its decision: "**Decided:** per R-369 (7 Oct 2026), by
+    the orchestrator: TASK-M1-12 adds `n` to `ledger::payload` as §3.8's worked entry (`derived`, `vector(f32, 3)`).
+    The read side generates its WGSL from the same source as `kernel::shape`, with a twin test, as it does
+    `hamiltonian`."
+  - `crates/render/frag/generated/read_side.wgsl:146–162`, `fn shape(r, m)`: "`kernel::shape::shape`, operation for
+    operation. `ρ = r₁ − r₀`, `λ = r₂ − r₀₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`"; its body
+    `let m01 = m.x + m.y; let mu_rho = m.x * m.y / m01; let mu_lambda = m.z * m01; …`. It is a string literal emitted by
+    `crates/ledger/src/gen/read.rs:1086–1102`, not an output of the rust-gpu → SPIR-V → WGSL translation.
+- **Conflict:** `shape()` is a second, hand-transcribed implementation of §3.2's mass and configuration formulae in a
+  `.wgsl` file, which is what REQ-SYS-015's verify detail and the task's acceptance scan look for. RQ-235's decision
+  made it "the same source as `kernel::shape`" by a twin test, not by the translation R-116 names. It is not a decode
+  or an encode (REQ-SYS-015's statement names those), it is the shape map (R-14) of the read side's derived field `n`,
+  and it predates TASK-M2-15 (TASK-M1-12). The physics review confirmed it agrees with dd_decoder §3.2 formula for
+  formula, `n = (‖ρ̃‖² − ‖λ̃‖², 2ρ̃·λ̃, 2ρ̃∧λ̃)/I` per R-14, and with `kernel::shape::shape`
+  (`crates/kernel/src/shape.rs:43–61`) operation for operation; neither uses an explicit `fma`, so their roundings may
+  differ by a backend's contraction, as any Tier-N value does. TASK-M2-15's first scan (`atanh|jacobi|atan2|artanh`)
+  missed it; the formula scan (`mu_rho|mu_lambda|m01`) finds it.
+- **Options seen:**
+  - (a) The scan reaches it: REQ-SYS-015 stays open until the read side's `shape()` is the translation's output, the
+    fragment-snippet work of TASK-M2-25 (R-116; the task's Notes: "the fragment snippets are built in TASK-M2-25").
+  - (b) The scan's reach is decode and encode only, as REQ-SYS-015's statement words it: read-side derived fields
+    with a twin test (RQ-235) are outside it, REQ-SYS-015 closes with TASK-M2-15, and its verify detail is reworded.
+  - (c) As (a), but REQ-SYS-015 is split: decode and encode close now, the derived fields' shape map moves to a
+    requirement TASK-M2-25 closes.
+- **Applied meanwhile:** nothing in the code changes. TASK-M2-15's PR records the hit in its scan section and holds
+  REQ-SYS-015 (`rq: RQ-365`).
+- **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
+  REQ-SYS-015 held, not closed.

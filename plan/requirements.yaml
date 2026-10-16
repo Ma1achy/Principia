@@ -22943,6 +22943,8 @@
   rulings:
   - R-116
   milestone: M2
+  rq:
+  - RQ-365
 - id: REQ-SYS-016
   area: SYS
   statement: "Body indices must be 0-based in storage and computation (inner pair (0,1), outer body 2, softmax reference body 0), and pair id k must name the side opposite body k (pair 0 = (1,2), pair 1 = (2,0), pair 2 = (0,1)); the 1-based Burrau literature convention must be translated at the boundary; what a person reads names the bodies 1, 2, 3 and a pair by its two bodies (R-449, REQ-GUI-188)."
