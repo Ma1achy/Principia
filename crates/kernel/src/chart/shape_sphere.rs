@@ -31,7 +31,8 @@
 //! ([`canon::mirror_decision`]), turned by `C`'s angle `φ = atan2(ρ_y, ρ_x)` ([`canon::rotation_angle`]) and scaled by
 //! `I^{−1/4}`. So `C(Φ(u, v))` has masses `m_fixed` and momenta `p_fixed` at every pixel, to rounding, and the two
 //! hemispheres' mirror points decode to one system (R-141). `I` and `φ_f` are gauge: they change `Φ`'s output, not
-//! `C`'s, except at `ρ = 0` (`BC₀₁`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in `C`'s configuration. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ` is already on `C`'s section on the upper hemisphere.
+//! `C`'s, except at `ρ = 0` (`BC₀₁`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in `C`'s configuration. Their
+//! defaults are `I = 1` and `φ_f = 0`, at which `Φ` is already on `C`'s section on the upper hemisphere.
 //!
 //! **Into the shared decoder** (REQ-CHART-015). The chart sets the configuration explicitly, which `ChartOut`'s latent
 //! controls cannot carry, so it overrides [`Chart::decode`]: the shared decoder's blocks run in its order, `D_mass` on
