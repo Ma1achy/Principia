@@ -251,7 +251,7 @@ fn renorm<R: LinkReal + IeeeBits>(x: R, k: i32) -> Wide<R> {
 }
 
 /// `x` as a [`Wide`], for `x` finite: scaled by `2^−k`, `k` its exponent field, as two normal powers of two, exactly,
-/// into `[1, 2)` where `x` is normal and into `[2^−22, 1)` (f32; `[2^−51, 1)` at f64) where it is subnormal, then
+/// into `[1, 2)` where `x` is normal and into `[2^−22, 2)` (f32; `[2^−51, 2)` at f64) where it is subnormal, then
 /// renormalised, so a subnormal `x` (on a backend that keeps it) gets its own mantissa and exponent too.
 #[inline]
 fn wide<R: LinkReal + IeeeBits>(x: R) -> Wide<R> {
