@@ -50,6 +50,7 @@
 
 use spirv_std::num_traits::Float;
 
+use crate::canon::lambda_t_axis;
 use crate::decode::descriptor::pi_image;
 use crate::decode::mass::from_masses;
 use crate::decode::Ic;
@@ -89,25 +90,23 @@ pub struct Jacobi<R> {
 
 /// The Jacobi coordinates of `ic` (dd_decoder §3.2, §3.4; inverse-encode Part 3): `ρ = r₁ − r₀`,
 /// `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`, each weighted by its reduced mass's root, and `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p₂`, with
-/// no mass unweighting of the momenta (R-28). `Σpᵢ = 0` is consumed, not assumed: `p₀` is not read.
+/// no mass unweighting of the momenta (R-28). `Σpᵢ = 0` is consumed, not assumed: `p₀` is not read. `λ̃` is
+/// [`lambda_t_axis`] on each axis, the arithmetic `C`'s mirror decision reads.
 #[inline]
 pub fn jacobi<R: LinkReal>(ic: &Ic<R>) -> Jacobi<R> {
-    let [m0, m1, m2] = ic.m;
+    let [m0, m1, _] = ic.m;
     let m01 = from_masses(ic.m).m01;
     let [r0, r1, r2] = ic.r;
     let rho = [r1[0] - r0[0], r1[1] - r0[1]];
-    let inner = [
-        Float::mul_add(m1, r1[0], m0 * r0[0]) / m01,
-        Float::mul_add(m1, r1[1], m0 * r0[1]) / m01,
-    ];
-    let lambda = [r2[0] - inner[0], r2[1] - inner[1]];
     let sqrt_mu_rho = Float::sqrt(m0 * m1 / m01);
-    let sqrt_mu_lambda = Float::sqrt(m2 * m01);
     let w1 = m1 / m01;
     let [_, p1, p2] = ic.p;
     Jacobi {
         rho_t: [sqrt_mu_rho * rho[0], sqrt_mu_rho * rho[1]],
-        lambda_t: [sqrt_mu_lambda * lambda[0], sqrt_mu_lambda * lambda[1]],
+        lambda_t: [
+            lambda_t_axis(ic.m, [r0[0], r1[0], r2[0]]),
+            lambda_t_axis(ic.m, [r0[1], r1[1], r2[1]]),
+        ],
         p_rho: [p1[0] + w1 * p2[0], p1[1] + w1 * p2[1]],
         p_lambda: p2,
     }
