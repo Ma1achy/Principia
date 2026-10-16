@@ -635,7 +635,7 @@ fn wants() -> Vec<(Entry, Want)> {
     };
     let tau = cyclic_period();
     let mut out = vec![
-        // magnitude / diagnostic: the greyscale, FTLE and diffusion white = high, t_end white = low.
+        // magnitude / diagnostic: the greyscale, FTLE and diffusion white = high, t_end_step white = low.
         (
             entry("ftle"),
             (
@@ -664,12 +664,12 @@ fn wants() -> Vec<(Entry, Want)> {
             ),
         ),
         (
-            edited("t_end", Scale::Lin, Closed(0.0), Closed(50.0)),
+            entry("t_end_step"),
             (
                 Role::Magnitude(Polarity::Low),
                 Lut::Grey,
                 Polarity::Low,
-                Compaction::Lin { lo: 0.0, hi: 50.0 },
+                read(Fixed(0.0), Horizon, false),
             ),
         ),
         // signed: diverging through the neutral; the drifts' x₀ their sim-key floors, E_0's and Lz_0's their own.
@@ -767,15 +767,6 @@ fn wants() -> Vec<(Entry, Want)> {
                 Lut::Viridis,
                 Polarity::High,
                 Compaction::Lin { lo: 0.0, hi: 1.0 },
-            ),
-        ),
-        (
-            entry("t_end_step"),
-            (
-                Role::Sequential,
-                Lut::Viridis,
-                Polarity::High,
-                read(Fixed(0.0), Horizon, false),
             ),
         ),
         (

@@ -494,7 +494,7 @@ impl Ramp {
 pub enum Polarity {
     /// `b` as compacted: high values at the ramp's top, white for the greyscale.
     High,
-    /// `1 − b`: low values at the ramp's top, white for the greyscale (`t_end`, white = low / early).
+    /// `1 − b`: low values at the ramp's top, white for the greyscale (`t_end_step`, white = low / early).
     Low,
 }
 

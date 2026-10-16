@@ -4,8 +4,9 @@
 //!
 //! **The role** ([`role`]):
 //! - **magnitude / diagnostic**: the fields §1.2 names with a polarity, FTLE, diffusion and the ensemble spread
-//!   (white = high) and `t_end` (white = low / early) ([`MAGNITUDE`]), on the greyscale, `ramp_grey`, so each doubles
-//!   as a brightness occupant (§4.1). Their polarity is their own; every other field's is high.
+//!   (white = high) and `t_end_step`, the terminal step (white = low / early) ([`MAGNITUDE`]), on the greyscale,
+//!   `ramp_grey`, so each doubles as a brightness occupant (§4.1). Their polarity is their own; every other field's
+//!   is high.
 //! - **angle**: a field whose ledger scale is `cyclic` (`theta`, `rho_angle`), on the cyclic `ramp_twilight`, whatever
 //!   its range (R-423).
 //! - **signed**: a field whose declared ledger range spans zero, `lo < 0 < hi`, either end possibly unbounded, read as
@@ -41,12 +42,13 @@ use super::field_ramp::{Compaction, FieldRamp, Lut, Map, Polarity, Ramp, ScalarF
 use crate::codegen::Slot;
 
 /// The magnitude / diagnostic fields colour_composition §1.2 names, with their polarities: FTLE, diffusion and the
-/// ensemble spread white = high; `t_end`, the time to the terminal event, white = low / early.
+/// ensemble spread white = high; `t_end_step`, the step of the terminal event (the ledger's name for §1.2's `t_end`),
+/// white = low / early.
 pub const MAGNITUDE: [(&str, Polarity); 4] = [
     ("ftle", Polarity::High),
     ("diffusion", Polarity::High),
     ("ensemble_spread", Polarity::High),
-    ("t_end", Polarity::Low),
+    ("t_end_step", Polarity::Low),
 ];
 
 /// A field's role (colour_composition §1.2), which picks its default ramp.
