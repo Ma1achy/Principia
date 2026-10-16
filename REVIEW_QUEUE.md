@@ -680,22 +680,27 @@ seen.*
   are; nothing more is built for them now.
 - **Waits:** nothing.
 
-## RQ-355: The corpus puts the Lagrange (equilateral) configurations at the shape sphere's poles, `w = ±1`, for any masses, but R-14's mass-weighted map puts them there only at equal masses *(conflict: corpus statement against its own map, R-14, R-50, REQ-INT-003, REQ-CHART-018; context: TASK-M2-08)*
+## RQ-355: The corpus puts the Lagrange (equilateral) configurations at the shape sphere's poles, `w = ±1`, for any masses, but R-14's mass-weighted map puts them there only at equal masses *(conflict: corpus statement against its own map, R-14, R-50, REQ-INT-003, REQ-CHART-018, REQ-CHART-036; context: TASK-M2-08)*
 
 *Found by TASK-M2-08 while building the landmarks from the shape map. Nothing is chosen; TASK-M2-08's PR does not wait.*
 
-- **File, section:**
-  - `docs/design/principia_dd_integrator.md` § "5" test 9 (:294): "equilateral configs → `n_w = ±1` (poles)"; and
+- **File, section** (line numbers at TASK-M2-08's fix-round head):
+  - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's": "φ = polar angle from +w, on the vertical
+    axis, 0..π; L⁺ (w = +1) at the top"; and, of the R-12 note, "under this convention the poles are the Lagrange
+    points (regular) and every binary collision lies on the equator (w = 0)". R-14's own words name the pole `L⁺`.
+  - `docs/design/principia_dd_integrator.md` § "5" test 9 (:297): "equilateral configs → `n_w = ±1` (poles)"; and
     "`L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)`", beside "`BC₀₁ → (−1, 0, 0)` for any masses".
   - The same file, § "3.7 The shape readout and winding" (:213): "`w = ±1` at the Lagrange (equilateral) poles"; its
     table (:223) "`L⁺, L⁻` | Lagrange equilateral | north and south poles", headed "(Montgomery's shape sphere, equal
     masses)".
-  - `docs/design/principia_chart_reference.md` § "3.1" (:353): "`L⁺` (`w = +1`) is the equilateral triangle with bodies
-    0 → 1 → 2 anticlockwise"; § "3.3" (:412, :443): "the poles are the Lagrange configurations"; § "3.4" (:452):
-    "**Lagrange configurations** (equilateral) are the two poles. Their exact coordinates depend on the mass ratios —
-    compute them from §3.1 rather than hard-coding."
+  - `docs/design/principia_chart_reference.md` § "3.1" (:356): "`L⁺` (`w = +1`) is the equilateral triangle with bodies
+    0 → 1 → 2 anticlockwise"; § "3.3" (:415): "Under this convention the poles are the Lagrange configurations";
+    § "3.3" "Projection" (:429): "the Lagrange configurations sit at the poles and can be compressed to invisibility
+    in equirectangular"; § "3.3" (:446): "the Lagrange configurations are the poles"; § "3.4" (:455): "**Lagrange
+    configurations** (equilateral) are the two poles. Their exact coordinates depend on the mass ratios — compute them
+    from §3.1 rather than hard-coding."
   - `plan/requirements.yaml` REQ-INT-003: "`L⁺` (bodies 0→1→2 anticlockwise) at `(0, 0, +1)`"; REQ-CHART-018's detail:
-    "L⁺ (bodies 0→1→2 anticlockwise equilateral) → w = +1".
+    "L⁺ (bodies 0→1→2 anticlockwise equilateral) → w = +1"; REQ-CHART-036's verify detail: "L⁺ → (0, 0, +1)".
 - **Why they disagree:** under §3.1's map `w = 2(ρ̃ ∧ λ̃)/I`, with `ρ̃ ∧ λ̃ = √(m₀m₁m₂)·2·Area` and
   `I = Σ_{i<j} mᵢmⱼ rᵢⱼ²` (`M = 1`), the unit equilateral triangle has
   `w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`: 1 at equal masses only, and below 1 otherwise (0.968 at masses
@@ -711,4 +716,7 @@ seen.*
 - **Applied meanwhile:** (a), as §3.4 says to compute them: `kernel::shape::landmarks` gives `L±` as `n` of the unit
   equilateral triangle under the current masses. TASK-M2-08's tests assert `L⁺ = (0, 0, +1)` at equal masses and
   `w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)` for every mass set; no doc line is changed.
+- **R-12's conclusion survives either option.** No polar buffer is needed under (a) or (b): at a pole `a = b` and
+  `ρ̃ ⊥ λ̃`, a nondegenerate triangle for any masses, a regular point of the flow, and every binary collision stays on
+  the equator. Only which configuration the pole is named changes, not the map.
 - **Waits:** nothing. Option (b) would change two lines of `landmarks` and the tests' expectation.
