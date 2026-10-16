@@ -10,6 +10,8 @@
 //!   `E_canon = 2·E_in`, `L_canon = L_in/I_in^{1/4}`, the timing factor `I_in^{3/4}` (REQ-ENC-006).
 //! - `canon_mirror_deadband`: the mirror test at the deadband's edge, `λ̃_y = −δ_λ` and one step below it, at each
 //!   precision; and `λ̃_y` is the decoder's own `λ̃_y` on canonical decodes.
+//! - `canon_inertia_extremes`: `I_in` rounds to 0 with the bodies apart, and to `+∞`; at underflow no `1/0` is formed
+//!   (RQ-296 holds the outputs).
 //! - `stage_canon_native`: the compute entry point `kernel::stage::canon::canonicalise`, called natively, writes each
 //!   state's `C` in its word layout, notices included, and nothing past the last state.
 //!
@@ -742,4 +744,65 @@ negative_control!(
         |m, r| lambda_t_y(m, r) / (m[2] * (m[0] + m[1])).sqrt(),
         f64::next_down
     )
+);
+
+// ── canon_inertia_extremes (RQ-296) ─────────────────────────────────────────────────────────────────────────────
+
+/// Bodies apart at the scale `k`, masses `(¼, ¼, ½)`, with momenta, one of them zero in `x`.
+fn spread<R: Precision>(k: f64) -> Ic<R> {
+    from64(&Ic {
+        m: [0.25, 0.25, 0.5],
+        r: [[-k, 0.0], [k, 0.0], [0.0, k]],
+        p: [[0.1, 0.0], [-0.3, 0.2], [0.1, -0.1]],
+    })
+}
+
+/// No `1/0` was formed: `λ` and every component of the state are finite. Says nothing about which values they are
+/// (RQ-296 holds them).
+fn check_no_division_by_zero<R: Precision>(c: &Canonical<R>, at: &str) {
+    let ic = to64(&c.ic);
+    let all = ic.r.iter().chain(&ic.p).flatten().copied();
+    let lambda: f64 = c.lambda.into();
+    assert!(
+        all.chain([lambda]).all(f64::is_finite),
+        "a non-finite value at {at}: {c:?}"
+    );
+}
+
+/// `I_in` rounds to 0 with the bodies apart, and to `+∞`: each case is reached (RQ-296's underflow and overflow), and at
+/// underflow no `1/0` is formed. The outputs themselves are RQ-296's and are not asserted.
+fn extremes_at<R: Precision>(under: f64, over: f64) {
+    let x = spread::<R>(under);
+    let c = canonicalise(&x);
+    let at = format!("{} at scale {under:e}", R::NAME);
+    assert!(x.r[0] != x.r[1], "the bodies coincide at {at}");
+    assert!(c.i_in == R::zero(), "I_in = {:?}, not 0, at {at}", c.i_in);
+    check_no_division_by_zero(&c, &at);
+    let c = canonicalise(&spread::<R>(over));
+    assert!(
+        c.i_in.non_finite_bits(),
+        "I_in = {:?} is finite at {} scale {over:e}",
+        c.i_in,
+        R::NAME
+    );
+}
+
+#[test]
+fn canon_inertia_extremes() {
+    extremes_at::<f64>(1e-170, 1e160);
+    extremes_at::<f32>(1e-25, 1e20);
+}
+
+negative_control!(
+    canon_inertia_extremes,
+    "a step 0 that divides by √I_in unguarded forms r/0 at underflow and must fail",
+    expected = "a non-finite value",
+    {
+        let x = spread::<f64>(1e-170);
+        let mut c = canonicalise(&x);
+        for v in c.ic.r.iter_mut() {
+            *v = v.map(|q| q / c.i_in.sqrt());
+        }
+        check_no_division_by_zero(&c, "an unguarded divisor");
+    }
 );

@@ -28,9 +28,19 @@
 //! the identity on CPU-f64 and GPU-f32 alike. Only the exact `ρ = 0` reaches `lookup_clamped` here; a near-zero `ρ` is
 //! the validation ladder's (TASK-M2-15).
 //!
-//! **`I_in = 0`** (all three bodies coincide; RQ-296): step 0's divisor `√I_in` is selected as 1 there, so no `1/0` is
-//! formed (R-436's producer rule), and `ρ = 0` raises `lookup_clamped` (R-13). What `C` outputs there, the state and
-//! `λ`, is open (RQ-296): the select only keeps the arithmetic finite.
+//! **`I_in` at 0 and at `+∞`** (RQ-296). What `C` outputs where `I_in` is 0 or `+∞` is open (RQ-296); what the code
+//! does there is only kept finite where it can be, by one select:
+//! - **`I_in = 0` exactly**, all three bodies coincident: step 0's divisor `√I_in` is selected as 1, so no `1/0` is
+//!   formed (R-436's producer rule); `r` stays 0, every `p` becomes `0·p`, `λ = 1`, and `ρ = 0` raises `lookup_clamped`
+//!   (R-13), `φ = 0` (R-437).
+//! - **`I_in` rounding to 0 with the bodies apart** (f64 below about `1e-162` per coordinate; f32 below about `4e-23`,
+//!   about `1e-19` where a GPU flushes subnormals): the same select, so `r` is left unscaled, at `I ≈ 0`, not 1, every momentum
+//!   becomes `0·p` (`√√0 = 0`) and `λ = 1`; since `ρ ≠ 0`, no `lookup_clamped`. The state leaves `C` off the section,
+//!   unflagged.
+//! - **`I_in` rounding to `+∞`** (f64 above about `1e154` per coordinate, f32 above about `1e19`): `√I_in = +∞`, so
+//!   `r/√I_in` is `±0`, `λ = 1/∞ = 0`, and `I_in^{1/4}·p` is `±∞`, or NaN for a zero component; step 1b's sums and the
+//!   rotation then make every momentum NaN on the CPU. `ρ` is then 0, so `lookup_clamped` is raised and `φ = 0`. On the
+//!   GPU this arithmetic on `∞` is not pinned (WGSL may assume there are no infinities; R-436).
 //!
 //! **The branch inputs** (R-34, R-84; gpu_determinism_note rules 1, 2 and 6): the guard compares `ρ_x` and `ρ_y`, each
 //! one lone subtraction, with 0; the mirror compares `λ̃_y` with the constant `−δ_λ` (`ChartConstants::DELTA_LAMBDA`,
