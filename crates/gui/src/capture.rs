@@ -274,7 +274,7 @@ pub fn render_frame(
 
 /// Renders `primitives` offscreen on `canvas`'s device at [`SIZE`] and reads the pixels back, the target first
 /// cleared to `clear`.
-fn render(
+pub(crate) fn render(
     canvas: &dyn Canvas,
     textures: &egui::TexturesDelta,
     primitives: &[egui::ClippedPrimitive],

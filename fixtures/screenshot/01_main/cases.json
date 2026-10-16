@@ -69,6 +69,11 @@
       "name": "mock_hover",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover"] },
       "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_present",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "tab", "tab", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
     }
   ]
 }

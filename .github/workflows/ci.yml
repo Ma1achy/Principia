@@ -472,10 +472,26 @@ jobs:
         run: cargo nextest run -p engine --features controls decode_ --no-capture
       - name: cargo test -p engine --features controls decode_ --doc
         run: cargo test -p engine --features controls decode_ --doc
+      # The invariant-momentum construction's branches on Metal, its controls included (TASK-M2-09): the GPU takes the
+      # exact branch of `2·I·K* < L_z²` that CPU-f32 and CPU-f64 take, the tiny triples whose unnormalised limb products
+      # a flushing GPU would drop among them, and CPU-f64's seed, decided on `z_α`. `invariant_` selects `invariant_gpu`'s
+      # tests.
+      - name: cargo nextest run -p engine --features controls invariant_
+        run: cargo nextest run -p engine --features controls invariant_ --no-capture
+      - name: cargo test -p engine --features controls invariant_ --doc
+        run: cargo test -p engine --features controls invariant_ --doc
       - name: cargo nextest run -p engine --features controls qa_m206_
         run: cargo nextest run -p engine --features controls qa_m206_ --no-capture
       - name: cargo test -p engine --features controls qa_m206_ --doc
         run: cargo test -p engine --features controls qa_m206_ --doc
+      # Canonicalisation `C` on Metal, its controls included (TASK-M2-07): the mirror tie at `±δ_λ`, the order, the
+      # coincident inner pair at `ρ = (±0, ±0)`, the seam sweep's branches against the CPU's and the no-op on Metal's
+      # own decodes. `canonicaliser_` selects
+      # `canon_gpu`'s tests and qa's `qa_TASK-M2-07_gpu`; its doctest step runs over the same filter.
+      - name: cargo nextest run -p engine --features controls canonicaliser_
+        run: cargo nextest run -p engine --features controls canonicaliser_ --no-capture
+      - name: cargo test -p engine --features controls canonicaliser_ --doc
+        run: cargo test -p engine --features controls canonicaliser_ --doc
       # The codegen self-test on Metal, its controls included (debug_tooling_plan §H; TASK-M0-15).
       - name: cargo nextest run -p validation --features controls codegen_selftest
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
@@ -546,6 +562,14 @@ jobs:
         run: cargo nextest run -p validation --features controls codegen_selftest --no-capture
       - name: cargo test -p validation --features controls codegen_selftest --doc
         run: cargo test -p validation --features controls codegen_selftest --doc
+      # Canonicalisation `C` on lavapipe, its controls included (TASK-M2-07; applied per R-369): the mirror decision's
+      # integer-exponent form, which uses no `fma` and rounds no subnormal, against CPU-f32's on identical inputs, the
+      # hierarchical states among them (RQ-298). `canonicaliser_` selects `canon_gpu`'s tests and qa's
+      # `qa_TASK-M2-07_gpu`; `gpu-kernel` runs both on lavapipe too, without the controls.
+      - name: cargo nextest run -p engine --features controls canonicaliser_
+        run: cargo nextest run -p engine --features controls canonicaliser_ --no-capture
+      - name: cargo test -p engine --features controls canonicaliser_ --doc
+        run: cargo test -p engine --features controls canonicaliser_ --doc
       # Every golden suite on lavapipe, each case against its one reference across backends, or its Vulkan one where it
       # keeps one per backend (R-269, R-287, R-296; TASK-M0-43).
       - name: cargo xtask golden --all
