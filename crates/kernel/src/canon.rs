@@ -220,10 +220,14 @@ pub fn mirror_taken<R: LinkReal>(lambda_t_y: R) -> bool {
     lambda_t_y < -R::DELTA_LAMBDA
 }
 
-/// The exponent [`Wide`] gives zero: below every product's exponent the decision can form (its longest product has
-/// nine factors, so at f64's least subnormal exponent about `−9700`), so a zero is the smallest value in every
-/// comparison and alignment, and twice it is far from `i32`'s range. A sentinel of the representation, not a settled value, so a type's
-/// bound, as `decode_dispatch`'s `UNWRITTEN` is.
+/// The exponent [`Wide`] gives zero: a sentinel meaning "no value", not a tuned number. Any value below the least
+/// exponent `Wide` can produce serves (its longest product has nine factors, so about `−9700` at f64's least subnormal
+/// exponent): a zero is then the smallest value in every comparison and alignment. `i16`'s bound is a choice of
+/// meaning, a register-free sentinel (dd_generation_root §3.8, "Reading a constant"), as `decode_dispatch`'s
+/// `UNWRITTEN = u32::MAX` is. No arithmetic on it overflows `i32`: a product's exponent sum is formed from two
+/// operands, each a zero's sentinel or a real exponent, and a zero result is set back to the sentinel, so the least sum
+/// formed is `2·i16::MIN − 1023` (two zeros, renormalised with f64's zero field); the alignment gap is at most about
+/// `9216 − i16::MIN`; both are within `±10^5`.
 const ZERO_EXPONENT: i32 = i16::MIN as i32;
 
 /// A number `m·2^e` with its exponent carried as an integer: `|m|` in `[1, 2)`, or `m = 0` with `e` the
