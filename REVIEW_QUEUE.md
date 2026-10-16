@@ -255,3 +255,28 @@ Nothing is chosen.*
   `qa_ledger_scale_restyle_leaves_the_sim_buffer`, which asserts neither side of this entry: it covers the render side
   only (the frame re-styles, the sim buffer reads back byte for byte), and the schema-version side waits on this
   entry.
+
+## RQ-350: chart_reference §2 says the invariant charts "fix geometry and mass", but no passage says where the frozen configuration and masses come from *(silence, R-72, REQ-CHART-017; context: TASK-M2-12, gap G8)*
+
+*Found by TASK-M2-12 (its Notes, gap G8). Nothing is chosen for the docs; TASK-M2-12's PR does not wait.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "2. Invariant-momentum charts `(Lz, E)` and `(Lz, K)`": "These fix
+    geometry and mass, and use the two axes for **conserved quantities** rather than raw controls."
+  - § "2.1 Feasibility, and the warp that makes every pixel valid": "`E = U + K`", `U` the potential at that
+    configuration, with no source named for the configuration.
+  - `docs/contracts/principia_chart_decoder_contract.md` Part 5: "The usual case is 2 swept + 6 frozen", and Design
+    axiom 6: "the lock pins the centre"; neither names which six controls an invariant chart freezes or where they
+    are read from (`z₀`'s blocks, the lock, or the chart's own parameters).
+- **What the task file gives:** `plan/tasks/M2/TASK-M2-12.md` § "Deliverables": "frozen configuration and mass as
+  chart params".
+- **Options seen:**
+  - (a) The chart's parameters are the four frozen controls `(z_α, z_β, z_μ₁, z_μ₂)` in the decoder's own terms, set
+    from the slice centre `z₀`'s configuration and mass blocks when the chart is entered (or from the lock where one
+    is set), and edited as any chart parameter (Design axiom 6).
+  - (b) The parameters are physical: the masses `mᵢ` and the configuration `(α, β)` (or `rᵢ`), encoded to controls by
+    the encode path.
+- **Applied meanwhile** (per R-369, TASK-M2-12): (a)'s representation, the four controls as chart parameters
+  (`kernel::chart::invariant::Invariant`), decoded by the shared mass and configuration blocks, so the construction
+  reads the decoded `z_α` its seed rule needs; where the GUI takes them from (`z₀` or the lock) is not written.
+- **Waits:** nothing.
