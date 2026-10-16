@@ -11,9 +11,12 @@
 //! - **constant along `L_z`**: each row's spread, its largest `E₀` less its smallest;
 //! - **monotone along `E`**: each row's largest `E₀` less the next row's smallest, where positive.
 //!
-//! The input passes when all three are within the threshold, the f32 decode's own rounding: REQ-DEC-043's multiple of
-//! f32 `eps` ("within f32 rounding of the target", REQ-VAL-015; applied per R-369, as R-133 reads "f32 noise" as that
-//! factor), provisional with it until the M2 gate. Every GPU sample's `DEGENERATE` tag must equal the f64 decode's, and
+//! The input passes when all three are within the threshold, `gate.json`'s, which cites the view's own calibration,
+//! REQ-VAL-112 ("The view's tolerance", REQ-VAL-015's note): 256 f32 `eps`, the f32 decode's own rounding ("within f32
+//! rounding of the target", REQ-VAL-015), proposed by this gate's measurement and provisional (R-71) until the M4 gate
+//! confirms it (TASK-M4-14), as the convergence gate runs early against REQ-VAL-135 (R-171). The monotone measure
+//! means something only while the bottom row's spacing in `K`, `K_max/(n − 1)^γ_K`, exceeds the threshold: true on
+//! the fixtures' 64 rows, not at 512. Every GPU sample's `DEGENERATE` tag must equal the f64 decode's, and
 //! the report counts the construction's infeasible pixels on the grid, at f64 and natively at f32, which the warp makes
 //! none (REQ-CHART-017).
 //!

@@ -11,12 +11,13 @@
 //!   eps, far beyond it.
 //! - `invariant_gradient_refusals`: a grid under two points per side, or no frozen configuration, is refused before any
 //!   decode, and two points per side are judged; the gate is registered under its name, its `gate.json` reads, and
-//!   its warp is the register's `(K_max, γ_K)`.
+//!   its warp is the register's `(K_max, γ_K)`; its threshold and region minimum cite REQ-VAL-112, provisional (R-71).
 
 use std::path::{Path, PathBuf};
 
 use kernel::chart::InvariantLE;
-use validation::gate::{self, Gate, Verdict};
+use validation::gate::report::Minimum;
+use validation::gate::{self, Gate, Status, Verdict};
 use validation::invariant_gradient::{
     grid, infeasible_counts, invariant_of, measure, mismatches, totals, warp_defaults, widen,
     Field, Frozen, Input, InvariantGradientGate, Measured, Measurement, Perturb, Which, NAME,
@@ -321,7 +322,24 @@ fn invariant_gradient_refusals() {
     let config = gate::config(&root(), NAME).expect("gate.json");
     assert_eq!(
         config.threshold.value, 256.0,
-        "the threshold, REQ-DEC-043's factor"
+        "the threshold, REQ-VAL-112's provisional proposal"
+    );
+    assert_eq!(
+        (
+            config.threshold.requirement.as_str(),
+            config.threshold.status,
+            config.threshold.ruling.as_deref(),
+            config.min_regions,
+        ),
+        (
+            "REQ-VAL-112",
+            Status::Provisional,
+            Some("R-71"),
+            Minimum::NotCalibrated {
+                requirement: "REQ-VAL-112".to_owned()
+            },
+        ),
+        "the threshold and the region minimum cite the view's own calibration, REQ-VAL-112, provisionally"
     );
     assert_eq!(
         config.inputs,
