@@ -146,17 +146,29 @@ fn leaves_over(plane: &Plane, span: [f64; 4]) -> Vec<(Quad, bool)> {
 /// The bounds of the quads in view, as segments of the figure, `[(s, t), (s, t)]`: each quad's four edges.
 pub fn bounds(plane: &Plane) -> Vec<[[f64; 2]; 2]> {
     bounds_over(plane, UNIT)
+        .into_iter()
+        .map(|(edge, _)| edge)
+        .collect()
 }
 
-/// How far outside the shown figure, `[0, 1]²`, a clipped edge stops, in `(s, t)`: about two pixels of a shown figure
-/// a thousand pixels wide, so no clipped edge reaches a pixel of the shown rect (placeholder content).
-pub const CLIP_MARGIN: f64 = 2e-3;
+/// How far past `[0, 1]²`, in `(s, t)`, a point still counts as on the shown figure: room for `f32`'s rounding of an
+/// edge on the shown rect's edge, and far under half a pixel of any shown figure up to fifty thousand pixels wide, so
+/// no pixel centre is misjudged.
+pub const ON_SHOWN_SLACK: f64 = 1e-5;
 
-/// [`bounds`] over `span`: past `[0, 1]²`, `(s, t)` continues at the same scale. The shown figure's quads, [`quads`]'s,
-/// are drawn whole, as with the layer shown; every other quad's edges are clipped to outside the shown figure (with
-/// [`CLIP_MARGIN`]), so a quad straddling its edge, a copy of the root or the root's own, is bounded outside it and the
-/// shown figure is drawn as with the layer shown (R-406).
-pub fn bounds_over(plane: &Plane, span: [f64; 4]) -> Vec<[[f64; 2]; 2]> {
+/// Whether the figure point `p` is on the shown figure, `[0, 1]²` (with [`ON_SHOWN_SLACK`]).
+pub fn on_shown(p: [f64; 2]) -> bool {
+    p.iter()
+        .all(|v| (-ON_SHOWN_SLACK..=1.0 + ON_SHOWN_SLACK).contains(v))
+}
+
+/// [`bounds`] over `span`, each edge with whether it is drawn only outside the shown figure: past `[0, 1]²`, `(s, t)`
+/// continues at the same scale. The shown figure's quads, [`quads`]'s, are drawn whole, as with the layer shown; every
+/// other quad's edges are drawn only outside the shown figure (the marks' shader drops each of their pixels whose
+/// centre is on it, [`on_shown`]), so a quad straddling its edge, a copy of the root or the root's own, is bounded
+/// outside it right up to its edge, and the shown figure is drawn as with the layer shown (R-406). An edge of those
+/// lying wholly on the shown figure draws nothing and is left out.
+pub fn bounds_over(plane: &Plane, span: [f64; 4]) -> Vec<([[f64; 2]; 2], bool)> {
     let Some(shown) = view_of(plane, UNIT) else {
         return Vec::new();
     };
@@ -171,43 +183,11 @@ pub fn bounds_over(plane: &Plane, span: [f64; 4]) -> Vec<[[f64; 2]; 2]> {
         for i in 0..4 {
             let edge = [points[i], points[(i + 1) % 4]];
             if whole {
-                lines.push(edge);
-            } else {
-                lines.extend(outside(edge, CLIP_MARGIN));
+                lines.push((edge, false));
+            } else if !edge.iter().all(|p| on_shown(*p)) {
+                lines.push((edge, true));
             }
         }
     }
     lines
-}
-
-/// The parts of the segment `edge`, in `(s, t)`, outside `[−margin, 1 + margin]²`: none, the whole, or one or two
-/// pieces (Liang–Barsky).
-pub fn outside(edge: [[f64; 2]; 2], margin: f64) -> Vec<[[f64; 2]; 2]> {
-    let [a, b] = edge;
-    let d = [b[0] - a[0], b[1] - a[1]];
-    let (lo, hi) = (-margin, 1.0 + margin);
-    let (mut t0, mut t1) = (0.0_f64, 1.0_f64);
-    for k in 0..2 {
-        if d[k] == 0.0 {
-            if a[k] < lo || a[k] > hi {
-                return vec![edge];
-            }
-            continue;
-        }
-        let (ta, tb) = ((lo - a[k]) / d[k], (hi - a[k]) / d[k]);
-        t0 = t0.max(ta.min(tb));
-        t1 = t1.min(ta.max(tb));
-    }
-    if t0 >= t1 {
-        return vec![edge];
-    }
-    let at = |t: f64| [a[0] + d[0] * t, a[1] + d[1] * t];
-    let mut pieces = Vec::new();
-    if t0 > 0.0 {
-        pieces.push([a, at(t0)]);
-    }
-    if t1 < 1.0 {
-        pieces.push([at(t1), b]);
-    }
-    pieces
 }

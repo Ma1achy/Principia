@@ -92,24 +92,27 @@ pub fn noise_source() -> String {
     )
 }
 
-/// One line the mock draws into its stand-in: its ends on the figure, `(s, t)`, `t` Y-up, and its colour, straight
-/// gamma-space RGBA in `[0, 1]`, as the stand-in's own output is.
+/// One line the mock draws into its stand-in: its ends on the figure, `(s, t)`, `t` Y-up, its colour, straight
+/// gamma-space RGBA in `[0, 1]`, as the stand-in's own output is, and whether it is drawn only outside the shown
+/// figure, none of its pixels whose centre is on `[0, 1]²` (`marks.wgsl`; [`super::quads::on_shown`]).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Line {
     /// Its ends.
     pub ends: [[f32; 2]; 2],
     /// Its colour and opacity.
     pub rgba: [f32; 4],
+    /// Drawn only outside the shown figure.
+    pub outside: bool,
 }
 
-/// `lines` as the marks pipeline's vertices: two per line, each `[s, t, r, g, b, a]`.
-pub fn vertices(lines: &[Line]) -> Vec<[f32; 6]> {
+/// `lines` as the marks pipeline's vertices: two per line, each `[s, t, r, g, b, a, outside]`, `outside` 1 or 0.
+pub fn vertices(lines: &[Line]) -> Vec<[f32; 7]> {
     lines
         .iter()
         .flat_map(|l| {
             l.ends.map(|[s, t]| {
                 let [r, g, b, a] = l.rgba;
-                [s, t, r, g, b, a]
+                [s, t, r, g, b, a, f32::from(u8::from(l.outside))]
             })
         })
         .collect()
@@ -486,6 +489,16 @@ impl Canvas for PreviewCanvas {
     }
 }
 
+/// The marks' WGSL: [`super::quads::ON_SHOWN_SLACK`] as `ON_SHOWN_SLACK`, so the shader judges a pixel on the shown
+/// figure as the mock does, then `marks.wgsl`.
+pub fn marks_source() -> String {
+    format!(
+        "const ON_SHOWN_SLACK: f32 = {:e};\n{}",
+        super::quads::ON_SHOWN_SLACK,
+        include_str!("marks.wgsl")
+    )
+}
+
 /// The marks' pipeline: one-pixel lines, alpha-blended over the stand-in, on the stand-in's `layout`, whose uniform
 /// places them.
 fn marks_pipeline(
@@ -495,9 +508,9 @@ fn marks_pipeline(
 ) -> wgpu::RenderPipeline {
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("mock marks"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("marks.wgsl").into()),
+        source: wgpu::ShaderSource::Wgsl(marks_source().into()),
     });
-    let attributes = wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x4];
+    let attributes = wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x4, 2 => Float32];
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("mock marks"),
         layout: Some(layout),
@@ -506,7 +519,7 @@ fn marks_pipeline(
             entry_point: Some("vs_main"),
             compilation_options: Default::default(),
             buffers: &[Some(wgpu::VertexBufferLayout {
-                array_stride: std::mem::size_of::<[f32; 6]>() as u64,
+                array_stride: std::mem::size_of::<[f32; 7]>() as u64,
                 step_mode: wgpu::VertexStepMode::Vertex,
                 attributes: &attributes,
             })],

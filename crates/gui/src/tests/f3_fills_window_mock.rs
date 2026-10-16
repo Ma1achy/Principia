@@ -368,7 +368,12 @@ fn f3_fills_window_mock_quads_copied_past_the_root() {
 fn f3_fills_window_mock_quads_over_a_span() {
     let plane = MockEngine::frozen().plane().clone();
     assert_eq!(quads::quads(&plane), quads::quads_over(&plane, UNIT));
-    assert_eq!(quads::bounds(&plane), quads::bounds_over(&plane, UNIT));
+    let over = quads::bounds_over(&plane, UNIT);
+    assert!(
+        over.iter().all(|(_, outside)| !outside),
+        "the shown quads drawn whole"
+    );
+    assert_eq!(quads::bounds(&plane), edges(&over));
     // Widening the span leftward only adds quads left of the shown ones, and each side's edge moves its own side.
     let shown = quads::quads(&plane);
     let min_u = |qs: &[[f64; 4]]| qs.iter().map(|q| q[0]).fold(f64::INFINITY, f64::min);
@@ -577,6 +582,20 @@ fn f3_fills_window_mock_placement_does_not_leak() {
 /// Segments of the figure, `[(s, t), (s, t)]`.
 type Segments = Vec<[[f64; 2]; 2]>;
 
+/// Segments of the figure, each with whether it is drawn only outside the shown figure, as [`quads::bounds_over`]
+/// gives them.
+type Flagged = Vec<([[f64; 2]; 2], bool)>;
+
+/// The segments of `lines`, without their flags.
+fn edges(lines: &Flagged) -> Segments {
+    lines.iter().map(|(e, _)| *e).collect()
+}
+
+/// `lines`, every one drawn whole.
+fn whole(lines: &Segments) -> Flagged {
+    lines.iter().map(|e| (*e, false)).collect()
+}
+
 /// The bounds the old rule drew: every kept quad's edges whole, a copy's quads dropped where they touch the shown view.
 fn dropped_on_touch(plane: &engine::contract::sim_config::Plane, span: [f64; 4]) -> Segments {
     let mut lines = Vec::new();
@@ -596,7 +615,7 @@ fn dropped_on_touch(plane: &engine::contract::sim_config::Plane, span: [f64; 4])
 /// Every column of the strips left and right of the shown figure, and every row of the strips under and over it,
 /// crosses a bound beside the shown figure: a column `s` at some `t` in `[0, 1]`, a row `t` at some `s` in `[0, 1]`.
 fn check_strips_bounded(lines: &Segments, span: [f64; 4], what: &str) {
-    let edge = quads::CLIP_MARGIN + 1e-3;
+    let edge = 2.0 * quads::ON_SHOWN_SLACK;
     let crosses = |axis: usize, c: f64| {
         lines.iter().any(|[a, b]| {
             let (lo, hi) = (a[axis].min(b[axis]), a[axis].max(b[axis]));
@@ -640,16 +659,13 @@ fn plane_at((u, v): (f64, f64)) -> engine::contract::sim_config::Plane {
     plane
 }
 
-/// No bound reaches into the shown figure but the shown quads' own: every segment wholly in `[0, 1]²` is one of
-/// [`quads::bounds`].
-fn check_only_shown_inside(lines: &Segments, shown: &Segments, what: &str) {
-    for l in lines {
-        let inside = l
-            .iter()
-            .all(|p| (0.0..=1.0).contains(&p[0]) && (0.0..=1.0).contains(&p[1]));
+/// No bound is drawn on the shown figure but the shown quads' own: every segment drawn whole is one of
+/// [`quads::bounds`], and every other is drawn only outside the shown figure.
+fn check_only_shown_inside(lines: &Flagged, shown: &Segments, what: &str) {
+    for (l, outside) in lines {
         assert!(
-            !inside || shown.contains(l),
-            "{what}: {l:?} inside the shown figure"
+            *outside || shown.contains(l),
+            "{what}: {l:?} drawn whole on the shown figure"
         );
     }
 }
@@ -665,7 +681,7 @@ fn f3_fills_window_mock_bounds_beside_the_figure_past_the_root() {
     for view in VIEWS {
         let plane = plane_at(view);
         let lines = quads::bounds_over(&plane, span);
-        check_strips_bounded(&lines, span, &format!("{view:?}"));
+        check_strips_bounded(&edges(&lines), span, &format!("{view:?}"));
         check_only_shown_inside(&lines, &quads::bounds(&plane), &format!("{view:?}"));
     }
     let past = plane_at(VIEWS[2]);
@@ -677,58 +693,104 @@ fn f3_fills_window_mock_bounds_beside_the_figure_past_the_root() {
     let grid = plane_at(VIEWS[0]);
     let old = dropped_on_touch(&grid, span);
     rejects("a touching root quad drawn whole", || {
-        check_only_shown_inside(&old, &quads::bounds(&grid), "whole")
+        check_only_shown_inside(&whole(&old), &quads::bounds(&grid), "whole")
     });
 }
 
-/// `outside` at its edges: a segment wholly inside the margin's square has no part outside; one crossing it keeps
-/// both ends; one with an end inside keeps one piece; one wholly outside, or along a side past the margin, is kept
-/// whole; one along the margin's side is inside.
+/// `on_shown` at its edges: `[0, 1]²` and [`quads::ON_SHOWN_SLACK`] past it each way is on the shown figure, farther
+/// is not; and an edge drawn only outside the shown figure lying wholly on it is left out, one with an end past it kept
+/// whole.
 #[test]
-fn f3_fills_window_mock_outside_clips_at_the_margin() {
-    use crate::mock::quads::outside;
-    let m = 0.1;
-    let same = |got: Vec<[[f64; 2]; 2]>, want: Vec<[[f64; 2]; 2]>| {
-        let flat =
-            |v: &[[[f64; 2]; 2]]| -> Vec<f64> { v.iter().flatten().flatten().copied().collect() };
-        assert_eq!(got.len(), want.len(), "{got:?} against {want:?}");
-        for (g, w) in flat(&got).iter().zip(flat(&want)) {
-            assert!((g - w).abs() < 1e-12, "{got:?} against {want:?}");
-        }
-    };
-    assert!(outside([[0.2, 0.5], [0.8, 0.5]], m).is_empty());
-    same(
-        outside([[-1.0, 0.5], [2.0, 0.5]], m),
-        vec![[[-1.0, 0.5], [-0.1, 0.5]], [[1.1, 0.5], [2.0, 0.5]]],
-    );
-    same(
-        outside([[0.5, -1.0], [0.5, 0.5]], m),
-        vec![[[0.5, -1.0], [0.5, -0.1]]],
-    );
-    same(
-        outside([[0.5, 0.5], [0.5, 2.0]], m),
-        vec![[[0.5, 1.1], [0.5, 2.0]]],
-    );
-    let whole = [[-1.0, -1.0], [2.0, -1.0]];
-    same(outside(whole, m), vec![whole]);
-    for past in [
-        [[-0.11, 0.0], [-0.11, 1.0]],
-        [[1.11, 0.0], [1.11, 1.0]],
-        [[0.0, 1.11], [1.0, 1.11]],
+fn f3_fills_window_mock_on_shown_at_its_edges() {
+    use crate::mock::quads::{on_shown, ON_SHOWN_SLACK as e};
+    for p in [
+        [0.0, 0.0],
+        [1.0, 1.0],
+        [0.5, 0.5],
+        [-e, 1.0 + e],
+        [1.0 + e, -e],
     ] {
-        same(outside(past, m), vec![past]);
+        assert!(on_shown(p), "{p:?} on the shown figure");
     }
-    assert!(outside([[-0.1, 0.0], [-0.1, 1.0]], m).is_empty());
-    assert!(outside([[1.1, 0.0], [1.1, 1.0]], m).is_empty());
-    // A diagonal crossing a corner: both ends kept, the middle gone.
-    let diag = outside([[-1.0, -1.0], [2.0, 2.0]], m);
-    assert_eq!(diag.len(), 2);
-    assert!((diag[0][1][0] + 0.1).abs() < 1e-12 && (diag[1][0][0] - 1.1).abs() < 1e-12);
-    // A segment passing beside the square, clear of it on the diagonal, is whole.
-    let beside = [[1.5, -1.0], [3.0, 0.5]];
-    same(outside(beside, m), vec![beside]);
-    rejects("a crossing segment kept whole", || {
-        assert_eq!(outside([[-1.0, 0.5], [2.0, 0.5]], m).len(), 1)
+    for p in [
+        [-2.0 * e, 0.5],
+        [0.5, -2.0 * e],
+        [1.0 + 2.0 * e, 0.5],
+        [0.5, 1.0 + 2.0 * e],
+    ] {
+        assert!(!on_shown(p), "{p:?} past the shown figure");
+    }
+    // Grid-aligned, a root quad touching the shown figure's edge: its edge along that edge left out, the rest flagged.
+    let grid = plane_at(VIEWS[0]);
+    let span = layout().placement().span();
+    let lines = quads::bounds_over(&grid, span);
+    assert!(lines.iter().any(|(_, outside)| *outside));
+    for (l, outside) in &lines {
+        assert!(
+            !*outside || !l.iter().all(|p| on_shown(*p)),
+            "{l:?} kept on the shown figure"
+        );
+    }
+    rejects("an edge on the shown figure counted past it", || {
+        assert!(!on_shown([1.0 + e, 0.5]))
+    });
+}
+
+/// A line drawn only outside the shown figure, across the window through the middle of the shown figure, each way:
+/// its pixels reach the shown rect's edge on every side, the pixel beside each edge lit, and none is inside the rect.
+/// Control: the same lines drawn whole light pixels inside the rect.
+#[test]
+fn f3_fills_window_mock_outside_lines_meet_the_rect_edge() {
+    let canvas = canvas();
+    let rect = shown_px();
+    let view = VIEWS[0];
+    let across = |outside| {
+        vec![
+            ([[-3.0, 0.5], [4.0, 0.5]], outside),
+            ([[0.5, -3.0], [0.5, 4.0]], outside),
+        ]
+    };
+    let bare = stand_in_with(&canvas, view, &Vec::new());
+    let lit = |rgba: &[u8]| -> Vec<(usize, usize)> {
+        let mut at = Vec::new();
+        for y in 0..SIZE[1] as usize {
+            for x in 0..SIZE[0] as usize {
+                if pixel(rgba, x, y) != pixel(&bare, x, y) {
+                    at.push((x, y));
+                }
+            }
+        }
+        at
+    };
+    let inside =
+        |(x, y): (usize, usize)| (rect[0]..rect[2]).contains(&x) && (rect[1]..rect[3]).contains(&y);
+    let outside = lit(&stand_in_with(&canvas, view, &across(true)));
+    assert!(!outside.is_empty(), "the lines lit pixels");
+    assert!(
+        outside.iter().all(|p| !inside(*p)),
+        "a line drawn only outside lit the shown rect"
+    );
+    let row = |x: usize| {
+        outside
+            .iter()
+            .any(|&(px, py)| px == x && (rect[1]..rect[3]).contains(&py))
+    };
+    let col = |y: usize| {
+        outside
+            .iter()
+            .any(|&(px, py)| py == y && (rect[0]..rect[2]).contains(&px))
+    };
+    for (side, met) in [
+        ("left", row(rect[0] - 1)),
+        ("right", row(rect[2])),
+        ("top", col(rect[1] - 1)),
+        ("bottom", col(rect[3])),
+    ] {
+        assert!(met, "the line stops short of the shown rect's {side} edge");
+    }
+    let drawn = lit(&stand_in_with(&canvas, view, &across(false)));
+    rejects("the lines drawn whole", || {
+        assert!(drawn.iter().all(|p| !inside(*p)))
     });
 }
 
@@ -755,7 +817,7 @@ fn shown_and_hidden(canvas: &Arc<MockCanvas>, view: (f64, f64)) -> (Shot, Shot) 
 }
 
 /// The stand-in at `view` drawn alone over the window with `marks` as its tile bounds.
-fn stand_in_with(canvas: &Arc<MockCanvas>, view: (f64, f64), lines: &Segments) -> Vec<u8> {
+fn stand_in_with(canvas: &Arc<MockCanvas>, view: (f64, f64), lines: &Flagged) -> Vec<u8> {
     let mut mock = MockEngine::frozen();
     let mut z0 = mock.plane().z0;
     (z0[0], z0[1]) = view;
@@ -765,9 +827,10 @@ fn stand_in_with(canvas: &Arc<MockCanvas>, view: (f64, f64), lines: &Segments) -
     });
     let marks = lines
         .iter()
-        .map(|[a, b]| crate::mock::canvas::Line {
+        .map(|([a, b], outside)| crate::mock::canvas::Line {
             ends: [a.map(|v| v as f32), b.map(|v| v as f32)],
             rgba: crate::mock::TILE_BOUNDS_RGBA,
+            outside: *outside,
         })
         .collect();
     canvas.set_chart(mock.plane());
@@ -808,7 +871,7 @@ fn f3_fills_window_mock_views_identical_over_the_rect() {
             rect,
             &format!("{view:?}, tile bounds on"),
         );
-        let alone = stand_in_with(&canvas, view, &quads::bounds(&plane_at(view)));
+        let alone = stand_in_with(&canvas, view, &quads::bounds_over(&plane_at(view), UNIT));
         check_same_over(
             &on.rgba,
             &alone,
@@ -835,7 +898,7 @@ fn f3_fills_window_mock_views_identical_over_the_rect() {
     let old = stand_in_with(
         &canvas,
         VIEWS[0],
-        &dropped_on_touch(&plane_at(VIEWS[0]), span),
+        &whole(&dropped_on_touch(&plane_at(VIEWS[0]), span)),
     );
     let (on, _) = shown_and_hidden(&canvas, VIEWS[0]);
     rejects("the touching root quads' edges drawn whole", || {

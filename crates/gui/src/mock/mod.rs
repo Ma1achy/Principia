@@ -150,9 +150,10 @@ impl MockEngine {
             lines.extend(
                 quads::bounds_over(plane, span)
                     .into_iter()
-                    .map(|[a, b]| Line {
+                    .map(|([a, b], outside)| Line {
                         ends: [a.map(|v| v as f32), b.map(|v| v as f32)],
                         rgba: TILE_BOUNDS_RGBA,
+                        outside,
                     }),
             );
         }
@@ -163,6 +164,7 @@ impl MockEngine {
                 Line {
                     ends: [w[0].at.map(|v| v as f32), w[1].at.map(|v| v as f32)],
                     rgba: [r, g, b, w[0].alpha.min(w[1].alpha)],
+                    outside: false,
                 }
             }));
         }
