@@ -57,6 +57,8 @@
   - R-82
   - R-437
   milestone: M2
+  rq:
+  - RQ-296
 - id: REQ-DEC-003
   area: DEC
   statement: "The latent vector must be ordered z[0:2] = configuration controls (z_α, z_β), z[2:6] = momentum controls (z_q0..z_q3), z[6:8] = mass controls (z_μ1, z_μ2), and this block ordering must be fixed once and held."
@@ -1011,6 +1013,8 @@
     detail: "encode test 4: Burrau state at 2× scale → I_in = 4·I_canon, λ = 1/2, E_canon = 2·E_in, timing factor I_in^(3/4); assert the whole row"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-295
 - id: REQ-ENC-007
   area: ENC
   statement: "The block inverses must be the closed forms of inverse-encode Part 3: μₖ = log(mₖ/m₀), z_μk = artanh(μₖ/μ_max) with |μₖ| ≤ (1−ε_μ)μ_max; α = atan2(‖λ̃‖, ‖ρ̃‖), β = atan2(|λ̃_y|, λ̃_x) ∈ [0, π] (|λ̃_y| read by abs, never max; the range holds because β reads |λ̃_y|, not by the mirror alone, R-438), s_α = 2α/π, s_β = β/π, z = logit(s) with s clamped to [ε_z, 1−ε_z]; p_λ = p₂, p_ρ = p₁ + (m₁/M₀₁)p₂, s = ½(q/q_max + 1), z = logit(clamp(s, ε_q, 1−ε_q)), with |qₖ| > q_max clamped and flagged lookup_clamped."
@@ -1165,6 +1169,8 @@
     detail: "canonical inputs raise no notice; each operation forced individually raises exactly its notice"
   rulings: []
   milestone: M2
+  rq:
+  - RQ-295
 - id: REQ-ENC-015
   area: ENC
   statement: "Canonicalisation must run in the order 1a subtract CoM → 0 rescale (I computed in the CoM frame) → 1b remove the boost (pᵢ ← pᵢ − mᵢP_tot/M) → 2 rotate ρ̃ to +x → 3 mirror iff λ̃_y < −δ_λ, pinned in the shared source so both precisions run the identical sequence."
