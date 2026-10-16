@@ -19,9 +19,16 @@
 //!   both hemispheres through the chart's own decode; the inverse is §3.2's closed form, `‖ρ̃‖² = I(1 + n₀)/2`,
 //!   `‖λ̃‖² = I(1 − n₀)/2`, `ρ̃` at `φ_f`, `λ̃` at `φ_f + atan2(q, p)`; at `n₀ = ±1` with `±0` in `n₁`, `n₂` the `atan2` term
 //!   is `+0` and `ψ = φ_f` (R-437). The gate's fixture holds the register's bound (`shape_sphere_roundtrip_qa_gate_json`).
+//!   `Φ` is the decode's blocks (its `masses`, `config` and `momentum`), not its `ic`, which is `C`'s (below).
 //! - REQ-CHART-020, R-141 (`shape_sphere_canonical_fold_qa`): `C(Φ(s, t))` is at `(θ, π − φ)` on the lower hemisphere,
 //!   at `(θ, φ)` on the upper, and at the default gauge (`I = 1`, `φ_f = 0`) an upper-hemisphere `Φ` is on `C`'s section,
 //!   so `C` leaves it.
+//! - dd_decoder §2, §3.3, §3.5, §3.6; REQ-CHART-020 (`shape_sphere_decode_canonical_qa`,
+//!   `shape_sphere_energy_norm_qa`): the decode's `ic` is canonical, `G = M = I = 1`, at any chart `I` and on both
+//!   hemispheres: the CoM at rest at the origin, `I = 1`, `ρ` on `+x`, `λ̃_y ≥ −δ_λ`, the masses `m_fixed`, the shape
+//!   `C`'s fold of `n(u, v)`, the energy `√I·E(Φ)` and `|L_z|` `I^{−1/4}·|L_z(Φ)|` (§3.5's similarity), the descriptor
+//!   read from it; `η_E`'s entry decodes the chart's shape, with no target as the chart's own decode, with `E*` at the
+//!   same positions and energy `E*`.
 //! - REQ-CHART-036, REQ-INT-003 (`shape_landmarks_qa_equal_masses`, `shape_landmarks_mass_weighted_qa`,
 //!   `shape_landmarks_qa_inspector`): equal masses, `BC₀₁ = (−1, 0, 0)` at 180°, `BC₁₂` at 60°, `BC₂₀` at 300°, 120°
 //!   apart, `L± = (0, 0, ±1)`; random masses, `BC₀₁ = (−1, 0, 0)`, every collision on `w = 0` at its mass-weighted
@@ -50,7 +57,9 @@ use std::path::Path;
 
 use kernel::canon::canonicalise;
 use kernel::chart::shape_sphere::{exponential, inverse, spherical, ShapeMap, ShapeSphere};
-use kernel::chart::Chart;
+use kernel::chart::{self, Chart};
+use kernel::decode::energy_norm::{self, Outcome};
+use kernel::decode::{Decoded, Ic};
 use kernel::generated::links::Defaults;
 use kernel::shape::{landmarks, shape, shape_vec, weighted_jacobi, Landmarks};
 use proptest::prelude::*;
@@ -694,9 +703,20 @@ fn check_chart_roundtrip(decode: DecodeFn) -> f64 {
     worst
 }
 
+/// `Φ` alone through the chart's decode: its blocks' masses and configuration, before `C` (R-178).
 fn chart_decode(chart: &ShapeSphere<f64>, u: f64, v: f64) -> ([f64; 3], Pos) {
     let d = chart.decode::<Defaults, f64>(u, v);
-    (d.ic.m, d.ic.r)
+    (d.masses.m, d.config.r)
+}
+
+/// `Φ`'s state through the chart's decode: its blocks joined, before `C` (R-178).
+fn chart_phi(chart: &ShapeSphere<f64>, u: f64, v: f64) -> Ic<f64> {
+    let d = chart.decode::<Defaults, f64>(u, v);
+    Ic {
+        m: d.masses.m,
+        r: d.config.r,
+        p: d.momentum.p,
+    }
 }
 
 #[test]
@@ -894,6 +914,14 @@ fn shape_sphere_roundtrip_qa_poles() {
                 dist(shape(r, m), pole) <= ROUNDTRIP,
                 "Φ({s}, {t}) is not at {pole:?}"
             );
+            // C folds L⁻ onto L⁺ (R-141): the decode's canonical ic is at L⁺ from either pole.
+            let d = chart.decode::<Defaults, f64>(s, t);
+            assert!(
+                d.ic.r.iter().flatten().all(|x| x.is_finite())
+                    && dist(shape(d.ic.r, d.ic.m), [0.0, 0.0, 1.0]) <= ROUNDTRIP,
+                "C(Φ({s}, {t})) is not finite at L⁺: {:?}",
+                d.ic.r
+            );
         }
     }
 }
@@ -977,7 +1005,7 @@ negative_control!(
 
 // ── REQ-CHART-020, R-141: Φ then C ─────────────────────────────────────────────────────────────────────────────────
 
-type CanonFn = fn(&kernel::decode::Ic<f64>) -> kernel::decode::Ic<f64>;
+type CanonFn = fn(&Ic<f64>) -> Ic<f64>;
 
 /// `C(Φ(s, t))` on random spherical charts: on the lower hemisphere (`t < ½`) its shape is the map's point at
 /// `(s, 1 − t)`, which is `(θ, π − φ)`; on the upper it is `(s, t)`'s own; within `shape_roundtrip_bound`. At the
@@ -993,8 +1021,8 @@ fn check_fold(canon: CanonFn) -> f64 {
             chart.phase = 0.0;
         }
         let (s, t) = (on(&mut rng, 0.0, 1.0), on(&mut rng, 0.01, 0.99));
-        let d = chart.decode::<Defaults, f64>(s, t);
-        let c = canon(&d.ic);
+        let phi = chart_phi(&chart, s, t);
+        let c = canon(&phi);
         let got = shape(c.r, c.m);
         let want = if t < 0.5 {
             lower += 1;
@@ -1009,10 +1037,10 @@ fn check_fold(canon: CanonFn) -> f64 {
         );
         worst = worst.max(miss);
         if k % 2 == 0 && t > 0.5 {
-            let size = d.ic.r.iter().flatten().fold(1.0f64, |k, x| k.max(x.abs()));
+            let size = phi.r.iter().flatten().fold(1.0f64, |k, x| k.max(x.abs()));
             let moved = (0..3)
                 .flat_map(|b| (0..2).map(move |x| (b, x)))
-                .map(|(b, x)| (c.r[b][x] - d.ic.r[b][x]).abs())
+                .map(|(b, x)| (c.r[b][x] - phi.r[b][x]).abs())
                 .fold(0.0, f64::max)
                 / size;
             assert!(
@@ -1037,6 +1065,266 @@ negative_control!(
     expected = "not the fold's",
     {
         check_fold(|ic| *ic);
+    }
+);
+
+// ── dd_decoder §2, §3.5: the decode hands the integrator C(Φ), canonical ───────────────────────────────────────────
+
+/// The canonical section's identities (`I = 1`, the CoM, `ρ_y`, `Σp`) and §3.5's scalings of `E` and `L_z`: `C`'s
+/// rotation, mirror and scale, a few roundings each, against the state's own size (applied per R-369, a test decision).
+const CANON_TOL: f64 = 64.0 * EPS;
+
+/// dd_decoder §3.3's mirror deadband `δ_λ`.
+const DELTA_LAMBDA: f64 = 1e-12;
+
+/// `(com, I, E, L_z, size, L_z's scale)` of a state: the mass-weighted moment of inertia about the CoM, §3.6's
+/// `K₀ + V₀` with `G = 1`, `Σ rᵢ × pᵢ`, the scale `Σ mᵢ‖rᵢ‖ + Σ‖pᵢ‖` the relative checks are taken against, and
+/// `Σ ‖rᵢ‖‖pᵢ‖`, `L_z`'s own (a sum of products that can cancel).
+fn state(ic: &Ic<f64>) -> ([f64; 2], f64, f64, f64, f64, f64) {
+    let (m, r, p) = (ic.m, ic.r, ic.p);
+    let total: f64 = m.iter().sum();
+    let com = [0, 1].map(|j| (0..3).map(|i| m[i] * r[i][j]).sum::<f64>() / total);
+    let inertia = (0..3)
+        .map(|i| m[i] * ((r[i][0] - com[0]).powi(2) + (r[i][1] - com[1]).powi(2)))
+        .sum::<f64>();
+    let kinetic = (0..3)
+        .map(|i| (p[i][0] * p[i][0] + p[i][1] * p[i][1]) / (2.0 * m[i]))
+        .sum::<f64>();
+    let potential = -[(0, 1), (1, 2), (0, 2)]
+        .iter()
+        .map(|&(i, j)| m[i] * m[j] / (r[i][0] - r[j][0]).hypot(r[i][1] - r[j][1]))
+        .sum::<f64>();
+    let lz = (0..3)
+        .map(|i| r[i][0] * p[i][1] - r[i][1] * p[i][0])
+        .sum::<f64>();
+    let size = (0..3)
+        .map(|i| m[i] * r[i][0].hypot(r[i][1]) + p[i][0].hypot(p[i][1]))
+        .sum::<f64>();
+    let lz_scale = (0..3)
+        .map(|i| r[i][0].hypot(r[i][1]) * p[i][0].hypot(p[i][1]))
+        .sum::<f64>();
+    (com, inertia, kinetic + potential, lz, size, lz_scale)
+}
+
+/// `C`'s fold of `n` (R-141): the upper hemisphere stays, the lower goes to `(θ, π − φ)`, `w → −w`.
+fn folded(n: [f64; 3]) -> [f64; 3] {
+    if n[2] < 0.0 {
+        [n[0], n[1], -n[2]]
+    } else {
+        n
+    }
+}
+
+type DecodedFn = fn(&ShapeSphere<f64>, f64, f64) -> Decoded<f64>;
+
+/// The decode's `ic` on random charts of both maps, `I ∈ [¼, 4]`, both hemispheres drawn, is canonical in
+/// `G = M = I = 1` (dd_decoder §2, §3.3, §3.5): the CoM at the origin and at rest, `I = 1`, `ρ = r₁ − r₀` on `+x`,
+/// `λ̃_y ≥ −δ_λ` (no mirror left), the masses the blocks' `m_fixed`, its shape `C`'s fold of `n(u, v)` within
+/// `shape_roundtrip_bound`, and §3.5's similarity of `Φ`'s state, `ℓ = √I`: `E = ℓ·E(Φ)`, `|L_z| = ℓ^{−½}·|L_z(Φ)|`.
+/// Its descriptor is read from that `ic` (§3.6): `rho_mag² + lambda_mag² = 1`, `K₀ + V₀ = E`. Returns the worst
+/// relative miss of the identities.
+fn check_decode_canonical(decode: DecodedFn) -> f64 {
+    let mut rng = SplitMix::new(0x0236);
+    let (mut worst, mut lower, mut far): (f64, u32, u32) = (0.0, 0, 0);
+    for k in 0..4096 {
+        let chart = random_chart(&mut rng, k % 2 == 0);
+        let (u, v) = (on(&mut rng, 0.0, 1.0), on(&mut rng, 0.0, 1.0));
+        let phi = chart_phi(&chart, u, v);
+        let d = decode(&chart, u, v);
+        let ic = d.ic;
+        assert!(
+            ic.r.iter()
+                .chain(ic.p.iter())
+                .flatten()
+                .all(|x| x.is_finite()),
+            "the decode at ({u}, {v}) is not finite"
+        );
+        let (com, inertia, e, lz, size, lz_scale) = state(&ic);
+        let (_, inertia_phi, e_phi, lz_phi, _, lz_scale_phi) = state(&phi);
+        let total = [0, 1].map(|j| ic.p.iter().map(|q| q[j]).sum::<f64>());
+        let rho = [ic.r[1][0] - ic.r[0][0], ic.r[1][1] - ic.r[0][1]];
+        let m01 = ic.m[0] + ic.m[1];
+        let lambda_y = (ic.m[2] * m01).sqrt()
+            * (ic.r[2][1] - (ic.m[0] * ic.r[0][1] + ic.m[1] * ic.r[1][1]) / m01);
+        let ell = inertia_phi.sqrt();
+        let misses = [
+            (inertia - 1.0).abs(),
+            com[0].abs().max(com[1].abs()) / size,
+            total[0].abs().max(total[1].abs()) / size,
+            rho[1].abs() / size,
+            (e - ell * e_phi).abs() / (e.abs() + 1.0),
+            (lz.abs() - lz_phi.abs() / ell.sqrt()).abs() / (lz_scale + lz_scale_phi / ell.sqrt()),
+        ];
+        let miss = misses.iter().fold(0.0f64, |a, &b| a.max(b));
+        assert!(
+            miss <= CANON_TOL,
+            "the decode at ({u}, {v}), chart I {}, is not canonical: I − 1, CoM, Σp, ρ_y, E against ℓE(Φ), |L_z| \
+             against ℓ^-½|L_z(Φ)|: {misses:?}",
+            chart.inertia
+        );
+        worst = worst.max(miss);
+        assert!(rho[0] > 0.0, "ρ at ({u}, {v}) is not on +x: {rho:?}");
+        assert!(
+            lambda_y >= -DELTA_LAMBDA,
+            "λ̃_y = {lambda_y:e} at ({u}, {v}): C's mirror is left undone"
+        );
+        assert!(ic.m == d.masses.m, "the canonical masses are not m_fixed");
+        let n = chart.point(u, v);
+        let got = shape(ic.r, ic.m);
+        assert!(
+            dist(got, folded(n)) <= ROUNDTRIP,
+            "the decode's shape at ({u}, {v}) is {got:?}, not the fold of n {n:?}"
+        );
+        let q = &d.descriptor;
+        assert!(
+            (q.rho_mag.powi(2) + q.lambda_mag.powi(2) - 1.0).abs() <= CANON_TOL
+                && (q.K_0 + q.V_0 - e).abs() <= CANON_TOL * (e.abs() + 1.0),
+            "the descriptor at ({u}, {v}) is not the canonical ic's: rho_mag {}, lambda_mag {}, K₀ + V₀ {} against {e}",
+            q.rho_mag,
+            q.lambda_mag,
+            q.K_0 + q.V_0
+        );
+        lower += u32::from(n[2] < 0.0);
+        far += u32::from((chart.inertia - 1.0).abs() > 0.5);
+    }
+    assert!(
+        lower > 1000 && far > 1000,
+        "the draws miss a regime: {lower} lower-hemisphere, {far} at I far from 1"
+    );
+    worst
+}
+
+#[test]
+fn shape_sphere_decode_canonical_qa() {
+    let w = check_decode_canonical(|c, u, v| c.decode::<Defaults, f64>(u, v));
+    let w2 = check_decode_canonical(chart::decode::<Defaults, f64, _>);
+    eprintln!(
+        "shape_sphere_decode_canonical_qa: worst {:.3e} ({:.1} ε)",
+        w.max(w2),
+        w.max(w2) / EPS
+    );
+}
+
+negative_control!(
+    shape_sphere_decode_canonical_qa,
+    "Φ's state handed to the integrator without C is off I = 1 at a chart I ≠ 1, so it must fail",
+    expected = "is not canonical",
+    {
+        check_decode_canonical(|c, u, v| Decoded {
+            ic: chart_phi(c, u, v),
+            ..c.decode::<Defaults, f64>(u, v)
+        });
+    }
+);
+
+mod decode_unfolded {
+    use super::*;
+    negative_control!(
+        shape_sphere_decode_canonical_qa,
+        "Φ scaled to I = 1 but neither turned nor mirrored leaves ρ off +x and the lower hemisphere unfolded, so it must \
+         fail",
+        expected = "is not canonical",
+        {
+            check_decode_canonical(|c, u, v| {
+                let phi = chart_phi(c, u, v);
+                let ell = c.inertia.sqrt();
+                Decoded {
+                    ic: Ic {
+                        r: phi.r.map(|x| x.map(|y| y / ell)),
+                        p: phi.p.map(|x| x.map(|y| y * ell.sqrt())),
+                        ..phi
+                    },
+                    ..c.decode::<Defaults, f64>(u, v)
+                }
+            });
+        }
+    );
+}
+
+mod decode_unmirrored {
+    use super::*;
+    negative_control!(
+        shape_sphere_decode_canonical_qa,
+        "Φ scaled and turned to put ρ on +x but never mirrored leaves the lower hemisphere at λ̃_y < 0, so it must fail",
+        expected = "C's mirror is left undone",
+        {
+            check_decode_canonical(|c, u, v| {
+                let phi = chart_phi(c, u, v);
+                let ell = c.inertia.sqrt();
+                let rho = [phi.r[1][0] - phi.r[0][0], phi.r[1][1] - phi.r[0][1]];
+                let (sin, cos) = (-rho[1].atan2(rho[0])).sin_cos();
+                let turn = |x: [f64; 2]| [cos * x[0] - sin * x[1], sin * x[0] + cos * x[1]];
+                Decoded {
+                    ic: Ic {
+                        r: phi.r.map(|x| turn(x).map(|y| y / ell)),
+                        p: phi.p.map(|x| turn(x).map(|y| y * ell.sqrt())),
+                        ..phi
+                    },
+                    ..c.decode::<Defaults, f64>(u, v)
+                }
+            });
+        }
+    );
+}
+
+type DecodeChartFn = fn(&ShapeSphere<f64>, f64, f64, Option<f64>) -> (Decoded<f64>, Outcome);
+
+/// `η_E`'s entry on the shape sphere (dd_decoder §3.7): with no target (`None`, "Off") the decode is the chart's own,
+/// its shape the fold of `n(u, v)`; with `E* = V₀ + ½` (feasible, `K₀ > 0`) the positions are the same, the outcome
+/// `Scaled`, the energy of the result `E*` within `CANON_TOL` relative, and the descriptor's `K₀ + V₀` too.
+fn check_energy_norm(decode: DecodeChartFn) {
+    let mut rng = SplitMix::new(0x0237);
+    for k in 0..1024 {
+        let chart = random_chart(&mut rng, k % 2 == 0);
+        let (u, v) = (on(&mut rng, 0.0, 1.0), on(&mut rng, 0.0, 1.0));
+        let n = chart.point(u, v);
+        let (off, outcome) = decode(&chart, u, v, None);
+        let got = shape(off.ic.r, off.ic.m);
+        assert!(
+            dist(got, folded(n)) <= ROUNDTRIP,
+            "η_E's entry at ({u}, {v}) decodes the shape {got:?}, not the fold of n {n:?}"
+        );
+        assert_eq!(outcome, Outcome::Off, "the outcome with no target");
+        assert!(
+            off == chart.decode::<Defaults, f64>(u, v),
+            "η_E's entry with no target is not the chart's own decode at ({u}, {v})"
+        );
+        let e_star = off.descriptor.V_0 + 0.5;
+        let (on_, outcome) = decode(&chart, u, v, Some(e_star));
+        assert_eq!(outcome, Outcome::Scaled, "the outcome under E* = V₀ + ½");
+        assert!(
+            on_.ic.r == off.ic.r,
+            "η_E moved the positions at ({u}, {v})"
+        );
+        let (_, _, e, _, _, _) = state(&on_.ic);
+        let q = &on_.descriptor;
+        assert!(
+            (e - e_star).abs() <= CANON_TOL * (e_star.abs() + 1.0)
+                && (q.K_0 + q.V_0 - e_star).abs() <= CANON_TOL * (e_star.abs() + 1.0),
+            "under E* = {e_star} the energy is {e}, the descriptor's {}",
+            q.K_0 + q.V_0
+        );
+    }
+}
+
+#[test]
+fn shape_sphere_energy_norm_qa() {
+    check_energy_norm(energy_norm::decode_chart::<Defaults, f64, _>);
+}
+
+negative_control!(
+    shape_sphere_energy_norm_qa,
+    "η_E's entry decoding map's latent alone, through D_cfg, loses the chart's shape, so it must fail",
+    expected = "not the fold of n",
+    {
+        check_energy_norm(|c, u, v, e| {
+            energy_norm::decode_with(
+                &mut kernel::decode::Free::<Defaults>::new(),
+                &c.map(u, v).z,
+                e,
+                c.forbids_energy_normalisation(),
+            )
+        });
     }
 );
 
