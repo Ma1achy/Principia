@@ -113,9 +113,20 @@ IC:
   use 0-based bodies and pairs (R-22).
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
+- **a click on the figure pins that sample's trajectory here (R-453).** A primary click with no drag pins the sample
+  under it (a drag still pans); the pin holds the sample's IC, so a later pan, zoom or slice edit leaves it, and a
+  click on another point moves it. Hover never replaces a pinned trajectory, and **the cursor moving into the panel
+  never clears it**; without a pin, the panel keeps the last sample hovered over the figure until the pointer hovers
+  another point. An **unpin** button returns the first tab to following the cursor. While pinned, the path drawn on the
+  figure is the pinned sample's; the hover label still follows the pointer. The pin, like the kept orbits, is `ViewUI`
+  state, never undoable; the first tab reads "pinned" while a pin is held (R-453, D1 to D5);
 - a one-line summary (fate, `t_end`, FTLE, `E₀`);
 - real space (CoM frame) and the shape sphere side by side. **The shape sphere turns slowly, with visible x, y, z axes,** and
-  switches to an unwrapped (equirectangular) view; a "turn" checkbox stops it;
+  switches to an unwrapped (equirectangular) view; a "turn" checkbox stops it. **Both views are interactive (R-453):**
+  on real space (and the unwrapped view) a drag pans and the wheel zooms about the pointer; on the sphere a drag orbits
+  the view (yaw, and pitch clamped to ±90°) and the wheel zooms, a drag turning "turn" off; a double-click restores a
+  view's default. The orbit turns the view of the sphere, never the data (trajectory_viewing §4), and is the panel's
+  own `ViewUI` state; it is not the compass's, which has none (R-409);
 - the F₂ word, substeps, minimum separation, `|ΔE/E|`;
 - a playhead for this orbit;
 - **listen**: sonification (`principia_scratchpad_pointer_channels.md` §4, normative with §3 — R-109, R-144; `θ(t), φ(t)` → spectrum), which can follow the
@@ -131,7 +142,10 @@ IC:
   Slice, and touching a tilt to Tilt (R-409). In tilt mode, dragging on it tilts the plane; in slice mode, dragging
   anywhere on it moves the slice plane along its normal, the tilt fixed (R-409). When locked it carries a gold pin at the
   pivot, and the plane turns about the pin (§G4). It reads out the tilt and rotation angles. From the keyboard it is one
-  element, beside its Tilt and Slice buttons (§G3).
+  element, beside its Tilt and Slice buttons (§G3). It is drawn as `docs/gui/reference/principia_nav_cube.html` draws
+  its cube, isometric, the slice its true cross-section polygon (R-451), and it has four **views**, Cube (the default),
+  Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes (R-452); the next
+  subsection gives both.
 - **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
   on the sim key (R-96). The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no
   history"; a manual scrub is one coalesced undo entry (R-101). **Scrubbing back re-integrates** to that time, so the figure refines
@@ -145,6 +159,69 @@ indicator while logging is on (R-129). Clicking it opens the console
 
 **Run settings are NOT on the page** (they're rarely changed). Horizon, integrator, escape settings, quality, budget, and
 recompute / cancel live in the Run window (§G5).
+
+### The compass: look and views (R-451, R-452)
+
+*References for look and behaviour, transcribed, not copied (§G13): `docs/gui/reference/principia_nav_cube.html`
+("Principia — navigation cube"), `docs/gui/reference/principia_plucker_compass.html` ("Principia — orientation
+compass") and `docs/gui/reference/principia_compass_charts.html` ("Principia — compass, position & chart transform").
+Their light cream palette is copied nowhere: every colour is the dev GUI's dark theme (§G1).*
+
+**The Cube view (R-451).** The cube `[−1,1]³` in the frame of the preset's axes, Width = chart x (`e_a`), Height = chart
+y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
+- **Projection:** isometric, `P(x,y,z) = (CX + S·√3/2·(x − z), CY + S·(½(x + z) − y))`, `S = min(0.78·w/(2√3),
+  0.78·h/4)`, centred.
+- **Edges** depth-sorted by `x + z`, nearer ones more opaque and thicker (opacity `0.28 + 0.55·near`, width
+  `0.8 + 1.0·near` px, `near = (x + z + 2)/4` at the edge's middle); the slice is sorted among them by its own mean
+  `x + z`, so edges in front of it draw over it.
+- **The slice** is the true cross-section polygon of the plane through the cube, 3 to 6 vertices: a rectangle
+  untilted, rectangles to hexagons as it tilts. Its fill is Lambert-shaded from the slice's own normal, two-sided
+  (`0.2 + 0.8·max(0, n·L)`, `n` flipped to face the view `(1,1,1)`, light `(0.35, 1.0, 0.55)` normalised, a depth term
+  `±0.05`), at opacity 0.6; an in-plane grid (spacing 0.5) is clipped to the polygon; an outline (1.7 px) closes it.
+  Slice mode draws the plane untilted at its position along the slice axis; tilt mode draws the plane as the decoder
+  tilts it (`View::basis` in the cube's frame), at its position (R-451 B2). The drawing follows the decoder's tilt
+  mapping, not the reference's axis-angle map; RQ-340 holds the difference (R-451).
+- **Labels:** each axis name centred on its edge, pushed 20 px outward from the cube. Slice mode names Width
+  (bottom-left edge), Depth (bottom-right) and Height (left vertical), with −1.0 and 1.0 at the corners, one number per
+  corner, 12 px outward. Tilt mode names only the tilt target, on the bottom-right edge: under the decoder's mapping q₁
+  and q₂ share one target, the slice axis, and the other edges are left unnamed (R-451 B1).
+- **Readout:** slice mode, "plane ⟂ <axis>" and "<axis> = +0.25 of range" (`z₀` on the slice axis over the slice
+  step's half-range); tilt mode, q₁'s and q₂'s target and their angles in degrees, one decimal.
+- **Drag:** slice mode, the horizontal component moves the slice along R-409 A3's normal, the cube's full width
+  spanning the whole range; tilt mode, a horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
+  or height 180°, each clamped to ±90°. One `SetField` per drag (R-96). The displayed values ease toward their targets,
+  `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s, in the drawing only; the contract holds the target
+  (R-451 B3, B4).
+- Kept from R-409: no orbit, the Tilt and Slice buttons and the switch by the slider touched, Tilt the default, the
+  gold pin when locked, §G3's keys. The reference's own controls (axis selectors, sliders, Animate) are not on the
+  compass; the Manifold view owns them.
+
+**The views (R-452).** Four buttons on the compass, **Cube**, **Plücker**, **Jacobi** and **Shape**, Cube the default,
+the current one shown. A view sets what the compass draws; Tilt and Slice set what a drag on the Cube does; the two are
+independent, and in a grid view a drag does nothing. The view is the compass's own GUI state, not undoable.
+- **Plücker (the latent heading).** The slice plane `span(q₁, q₂)` in the eight latent coordinates, from the `q₁`, `q₂`
+  the decoder uses, orthonormalised, never from a reconstructed tilt: `p_ij = q₁ᵢ q₂ⱼ − q₁ⱼ q₂ᵢ` (i < j) as the upper
+  triangle of an 8 × 8 grid, labelled with the chart's coordinate names on both edges, the diagonal empty. `Σ p² = 1`,
+  and the grid is unchanged by any rotation of `q₁`, `q₂` within the plane. A cell's colour is its sign in one of two
+  dark-mode hues, its intensity `|p|`, zero the cell background; no number in a cell, its value on hover ("z_i × z_j
+  +0.123", a tooltip beside the compass). The dominant cell is outlined (when `|p| > 0.02`) and the readout gives it
+  and `Σ p²`: "strongest: z_a × z_b +0.993 · Σ p² 1.000". It shows heading, not position.
+- **Position readout,** under the Plücker view: `z₀` as one signed bar per latent coordinate, the slice axis
+  highlighted (`principia_compass_charts.html`, "position gauge"). A readout, not a view.
+- **Jacobi and Shape (the decoded heading).** The plane pushed through the decoder's Jacobian at `z₀`, or at the
+  hovered pixel while the pointer is over the figure: `u₁ = J q₁`, `u₂ = J q₂`, orthonormalised, drawn as the same
+  grid over eight physical coordinates; the readout gives the dominant pair and the area stretch
+  `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)`. Jacobi's eight are `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the decoder
+  writes them; Shape's `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets, and which Jacobian (the corpus's `J_D` is
+  `∂physical/∂(u, v)`, `principia_deep_zoom.md`), are under physics review and wait on RQ-341 to RQ-343; the
+  reference's Jacobian is a synthetic placeholder and is not copied. The help text says that these views change as the
+  slice moves, because the Jacobian depends on `z₀`, while the Plücker view does not.
+- **Click to steer.** A click on Plücker cell (i, j) sets the slice plane to `z_i × z_j`, the tilts and `γ` reset to 0,
+  the zoom and `z₀` kept. A click on a physical cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J⁺ e_i`,
+  `q₂ ∝ J⁺ e_j`, Gram–Schmidt orthonormalised, and is refused, with the reason logged to the console, where the
+  preimage is no 2-plane; the construction waits on RQ-344. Every steer is one `SetField` on the basis through the
+  contract: undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following.
+- **Keys:** the Compass scope's siblings are the compass, Tilt, Slice, Cube, Plücker, Jacobi and Shape (§G3).
 
 ## G3. Keyboard — a design note, not a screen (`07_keyboard.png`)
 
@@ -167,7 +244,9 @@ In scope: a scope's arrow actions need Enter, acting in interaction mode only, a
 shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode, except while a
 text field is being typed in (R-409).
 Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks (§G4). Trajectory — Enter reaches the
-playhead, listen and kept orbits. Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
+playhead, listen, kept orbits, unpin and its two views; on the real-space view in interaction mode the arrows pan by
+R-404's `Pan` step and + / − zoom by its `ZoomLog2` step, and on the sphere the arrows orbit by its `Angle` step (1°)
+and + / − zoom; the Figure's P pins the sample under the pointer, as K locks there (R-453, D6). Compass — in interaction mode, arrows tilt in tilt mode and move the slice along the
 plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; there is no orbit, and no separate fine
 step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1). Legend is
 read-only.
@@ -183,16 +262,19 @@ meaning in both modes, except while a text field is being typed in, and Tab or S
 in navigation mode on the next or previous big scope, or, inside a window, on the window's next or previous section,
 staying in the window (applied per R-369, R-409 G1, G2, G5, G6). Every landing is in navigation mode: a Tab on a big scope lands on the scope
 itself, the whole scope highlighted, the Figure and the Compass included, as REQ-GUI-095 has it; Enter into a scope
-lands on its first element; and a window opens on its first section, as the console does on its first filter. Enter
+lands on its first element; and a window opens on its first section, as the console opens on its header bar scope (R-450). Enter
 on an element starts interaction with it, and Enter on a scope goes in, with two exceptions: the Figure, which has no
 elements inside, takes Enter as the start of interaction, and a read-only scope with nothing inside, such as the
 Legend, takes Enter as nothing (R-409 A2, G3). Esc or Enter in interaction mode returns to navigation mode on the same
 element, and Esc in navigation mode goes up one scope (R-409, G1). Enter on a button acts as its click and stays in
 navigation mode (applied per R-369, R-409 A1). The blue is egui's dark theme's `hyperlink_color` (R-404); the orange
-is a look choice (R-390). The Compass scope holds the compass, then its Tilt and Slice buttons, in that order, as
-siblings in navigation mode (R-409, the human's follow-up answer; A2): Tab lands on the Compass scope, Enter goes in
-onto the compass, → moves to Tilt and then to Slice, Enter on the compass starts interaction with it, and Enter on a
-button sets the mode. A text field, such as the console's text filter, lands in navigation mode; Enter on it starts
+is a look choice (R-390). The Compass scope holds the compass, then its Tilt and Slice buttons, then its view buttons
+Cube, Plücker, Jacobi and Shape, in that order, as siblings in navigation mode (R-409, the human's follow-up answer;
+A2; R-452): Tab lands on the Compass scope, Enter goes in onto the compass, → moves to Tilt, Slice and on through the
+views, Enter on the compass starts interaction with it, Enter on Tilt or Slice sets the mode, and Enter on a view
+button switches the view. In the Cube view interaction is as above; in a grid view (Plücker, Jacobi, Shape) the arrows
+move a highlighted cell over the grid's upper triangle, Space steers to it as a click does, and Esc or Enter returns to
+navigation mode (R-452). A text field, such as the console's search field, lands in navigation mode; Enter on it starts
 typing, which is interaction mode, and while typing every key goes to the field but Esc, Enter and Tab, Ctrl+Z
 undoing the text edit and `?` typing a character: Esc and Enter return to navigation mode on the field and keep the
 text, and Tab and Shift+Tab leave it and move on, to the window's next or previous section inside a window (applied
@@ -200,12 +282,22 @@ per R-369, R-409 G4, G5, G6). The footer and the console follow the same two mod
 
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
-console (§G12), as a click does, with the focus inside it. The console is a window: opened by the footer or from
-Windows › Console, it takes the focus; Tab and Shift+Tab move between its sections (the filters, the text filter, copy
-and clear, the entry list), the arrow keys move within a section in navigation mode, and Esc closes it and returns
-the focus to whatever opened it, the footer or Windows › Console. The entry list's ↑ and ↓ scroll it in interaction
-mode only: Enter on the list starts interaction, and Esc returns to navigation mode on it (R-409, amending R-405). The
-console opening by itself on an error does not take the focus.
+console (§G12), as a click does, with the focus inside it. The console is a window with exactly two scopes, top to
+bottom (R-450, amending R-405 and R-409): the **header bar** (the filters All, Warnings, Errors, Info, then the search
+field, Copy, Clear and the close button ×, in that visual order) and the **log** (the entry list). Opened by the
+footer or from Windows › Console, it takes the focus, landing in navigation mode on the header bar scope itself, the
+whole scope highlighted. In navigation mode on a scope, ↑ and ↓ move between the header bar and the log, and Tab and
+Shift+Tab do the same, staying in the window. Enter on the header bar goes in, onto All; ← and → move across every
+header element in visual order, the search field, Copy, Clear and × included, stopping at the row's ends; Esc goes
+back up to the header bar scope. The search field is a text field, as below. × is an ordinary focusable button: Enter
+on it, or a click, closes the console and returns the focus to whatever opened it, the footer or Windows › Console;
+Esc from the window's top level, on the header bar or the log scope, closes it too. Enter on the log starts
+interaction: ↑ and ↓ scroll it one entry, Page Up and Page Down a page (the entries the log shows), Home and End go to
+the first and last entry, and Shift gives ×10, as everywhere; the whole filtered log is reachable, not only the rows
+drawn; Esc returns to navigation mode on the log scope. A click on a console control moves the keyboard's focus onto
+it. The ring and the breadcrumb follow ("Console › Header › Copy", "Console › Log"). Nothing about this order depends
+on state: an empty filtered list, a hidden row, or how the console was opened (R-450, A1 to A6). The console opening
+by itself on an error does not take the focus.
 
 The ring's, the breadcrumb's and the `?` overlay's look, the held-key delay and repeat (500 ms, 40 ms) and the base
 steps are confirmed as #174 built them, and recorded in R-404.
@@ -461,6 +553,12 @@ The keyboard reaches it through the footer, big scope 8 (§G3, R-405). Its entry
 Enter on it, in interaction mode, and Esc returns to navigation mode on the list (§G3, R-409).
 It is reached from Windows › Console too, and Esc returns the focus to whichever opened it.
 
+**Its keyboard model is two scopes (R-450):** the header bar (All, Warnings, Errors, Info, the search field, Copy,
+Clear and ×) and the log. It opens on the header bar scope, in navigation mode; ↑ ↓ and Tab move between the two;
+Enter on the header bar goes in and ← → cross every header control, × included, Enter on × closing the console; Enter
+on the log scrolls it by entry (↑ ↓), page (Page Up, Page Down) and to its ends (Home, End), Shift ×10, over the whole
+filtered log. Every visible control is reachable, whatever the console's state (§G3).
+
 ## G13. Where the artboards are overridden
 
 The pictures are layouts, and **their values are illustrative: corpus values win, and the Run window exposes the parameters
@@ -469,6 +567,13 @@ corpus, the spec follows the authority:
 - **Body and pair labels** are 0-based (R-22). The artboards show "body 1 escapes", "collision 1–2", "body 3 crosses".
 - **Escape has no persistence count** (R-29, change 11). The Run artboard shows "persistence 8".
 - **The profiler's top level is telemetry §2's five stages** (R-56). The donut shows other categories.
+- **The compass references** (R-451, R-452): `docs/gui/reference/principia_nav_cube.html`,
+  `principia_plucker_compass.html` and `principia_compass_charts.html` are references for look and behaviour,
+  transcribed through §G2's compass subsection. Where they differ, the spec follows the rulings: their light cream
+  palette is not copied (the dark theme, §G1); the cube opens in Tilt, not Slice (R-409); their own controls (axis
+  selectors, sliders, Animate) are not on the compass; the cube's tilt follows the decoder's mapping, not the
+  reference's axis-angle map (RQ-340); the grids draw no in-cell numbers; the physical compass's Jacobian and its body
+  position labels are a synthetic placeholder, replaced by the decoder's Jacobian over R-452's coordinates.
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
 - **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag

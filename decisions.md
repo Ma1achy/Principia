@@ -7347,10 +7347,14 @@ Changes REQ-GUI-146's and REQ-GUI-158's rulings, sources and note: each is confi
 ## R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console
 *Amended in part by R-409 (the console's entry list scrolls with ↑ ↓ only after Enter on it; every landing is in
 navigation mode).*
-*Still in force: all of it, as its text reads, except that ↑ and ↓ scroll the entry list only in interaction mode,
-after Enter on the list, Esc returning to navigation mode on it (R-409, the human's follow-up answer); and that every
-landing, the console's first filter included, is in navigation mode, the arrows moving within a section in navigation
-mode (R-409).*
+*Amended in part by R-450 (the console's structure: two scopes, the header bar and the log; opening on the header bar
+scope; × a focusable button; the log's keys).*
+*Still in force: the footer as big scope 8, Enter on it opening the console with the focus inside it, the console a
+window whose Esc from its top level closes it and returns the focus to whatever opened it, and the console opening by
+itself on an error taking no focus; the console's sections, its landing and its keys are R-450's: two scopes, the
+header bar (All, Warnings, Errors, Info, the search field, Copy, Clear, ×) and the log, the console opening in
+navigation mode on the header bar scope, and the log scrolling only in interaction mode, after Enter on it (R-409,
+R-450).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" and § "G12. Console (`12_console.png`)" (paragraphs added), REQ-GUI-095 (reqio), REQ-GUI-178
 (reqio, new), TASK-M6-28, TASK-M6-25 and TASK-M8-13, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
@@ -7797,6 +7801,10 @@ Adds REQ-CHART-056 and REQ-CHART-057; REQ-CHART-054's statement, verify, rulings
 rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and REQ-GUI-100's verify change.
 
 ## R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
+*Amended in part by R-450 (the console: its two scopes and its landing on the header bar scope, in place of "the
+console's first filter").*
+*Still in force: all of it, except that the console opens in navigation mode on its header bar scope, not on its first
+filter, and its sections are R-450's two scopes, the header bar and the log (R-450).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
 what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
@@ -9925,3 +9933,534 @@ The human's words are R-440's quote, its second remark ("Call 5").
 - R-441 is in the "design" group of `plan/rule_groups.yaml`.
 
 Changes no requirement.
+
+## R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (the console's paragraph and the window landing) and § "G12. Console (`12_console.png`)" (a
+paragraph added), R-405's and R-409's heading blocks, REQ-GUI-178 (reqio, its note), REQ-GUI-189 and REQ-GUI-190
+(reqio, new), TASK-M6-32 (new), `plan/tasks.yaml`, `plan/WORKFLOW.md`, `plan/OPERATIONS.md`, `plan/MILESTONES.md` and
+`plan/rule_groups.yaml`; built by TASK-M6-32 on the mock*
+
+The human's words, a message of 16 Oct 2026 in three parts, given in the orchestrator's session and recorded verbatim.
+Part 1 is this ruling; Part 2 is R-451 and Part 3 is R-452. Each is a GUI design ruling under R-390's feedback rule.
+
+> GUI feedback and additions from me (Malachy, 16 October 2026), from using the dev GUI. Three parts:
+> the console's keyboard navigation, the compass's look, and new compass views. The rulings below are
+> mine. Record them in decisions.md (amending R-405 and R-409 where marked), port them into
+> docs/gui/principia_render_gui_spec.md (§G3, §G12, §G13) and the requirements through
+> plan/tools/reqio.py, run python3 plan/check_plan.py, and create or update the GUI-track tasks to
+> implement them (gui-reviewer and qa-reviewer on each; physics-reviewer where marked).
+>
+> Attached are three HTML references. Add them to the repo beside the other GUI references:
+> - docs/gui/reference/principia_nav_cube.html ("Principia — navigation cube")
+> - docs/gui/reference/principia_plucker_compass.html ("Principia — orientation compass")
+> - docs/gui/reference/principia_compass_charts.html ("Principia — compass, position & chart transform")
+> They are references for look and behaviour, cited through the spec, per CLAUDE.md. Their light cream
+> palette is NOT to be copied anywhere. Keep the dev GUI's current dark-mode colours for everything.
+>
+> === Part 1: the console's keyboard model (amends R-405 / R-409's console structure) ===
+>
+> What's wrong now: I can reach the console, but it doesn't behave intuitively or consistently. The
+> filter row (All, Warnings, Errors, Info) isn't a scope of its own. Sometimes I can't reach the search
+> field, Copy or Clear at all, then later I can without knowing what changed. I can never reach the
+> close (×) button. And moving between the controls and the log doesn't work the way the rest of the
+> GUI does.
+>
+> The console window has exactly two scopes, top to bottom, following §G3's two modes:
+> 1. Header bar: the filters All, Warnings, Errors, Info, then the search field, Copy, Clear, and the
+>    close button ×, in that visual order.
+> 2. Log: the entry list.
+>
+> - Opening the console (from the footer or Windows > Console) lands in navigation mode on the header
+>   bar scope itself, the whole scope highlighted. Auto-opening on an error still does not take focus.
+> - In navigation mode on a scope, Up and Down move between the header bar and the log. Tab and
+>   Shift+Tab do the same inside the window, as §G3 has windows.
+> - Enter on the header bar goes in, onto its first element (All). Left and Right then move across
+>   every header element in visual order, the search field, Copy, Clear and × included. Esc goes back up
+>   to the header bar scope.
+> - The search field behaves as §G3's text fields: Enter starts typing; Esc or Enter stops and keeps the
+>   text.
+> - × is an ordinary focusable button: Enter on it closes the console and returns focus to whatever
+>   opened it. Esc from the window's top level still closes it too.
+> - Enter on the log starts interaction: Up and Down scroll one entry, Page Up and Page Down a page,
+>   Home and End go to the first and last entry, and Shift gives ×10 as everywhere. The whole log is
+>   reachable, not only the visible rows. Esc returns to navigation mode on the log scope.
+> - The focus ring and breadcrumb follow this (e.g. "Console › Header › Copy").
+>
+> The intermittent reachability is a bug in its own right. Reproduce it and find the cause before
+> fixing it (focus order that depends on state, such as an empty filtered list, a hidden control, or the
+> console having auto-opened on an error), and say in the PR what it was.
+>
+> Tests (keyboard-script tests on the mock engine):
+> - Open the console from the footer and from Windows > Console.
+> - From the landing, reach every header element, the log and × using only the keys above.
+> - Close with × and with Esc, and check where focus returns.
+> - Scroll the log to its first and last entry.
+> - Repeat all of this after an auto-open on error, and with a filter that empties the list, so the
+>   order is shown not to depend on state.
+> - Negative arm: a script that fails if any visible console control is unreachable.
+>
+> Then audit every other window and scope against §G3 for the same failure (a visible control the
+> keyboard cannot reach, or reachability that depends on state) and list what you find in the PR.
+>
+> === Part 2: the cube view's look (principia_nav_cube.html) ===
+>
+> The current compass is close to the nav-cube reference but not the same. Make its appearance and
+> behaviour match the reference, transcribed from the file's code, in the dev GUI's dark-mode colours:
+>
+> - Isometric projection of the unit cube [−1,1]³:
+>   P(x,y,z) = (CX + S·√3/2·(x − z), CY + S·(½(x + z) − y)), scaled to fit with the same margins.
+> - Cube edges depth-sorted by x + z, nearer edges more opaque and thicker. The slice is sorted in among
+>   the edges by its own depth, so edges in front of it draw over it.
+> - The slice drawn as the true cross-section polygon of the plane through the cube (a rectangle in
+>   slice mode, rectangles to hexagons as it tilts), with its fill shaded by Lambert lighting from the
+>   slice's own normal (two-sided, small ambient term), an in-plane grid clipped to the polygon, and an
+>   outline.
+> - Edge labels: each axis name centred on its edge and pushed outward from the cube. Slice mode
+>   labels Width (chart x, bottom-left edge), Depth (the slider axis, bottom-right edge) and Height
+>   (chart y, left vertical edge), with −1.0 / 1.0 at the corners, one number per corner. Tilt mode
+>   labels only q₁'s target (bottom-left) and q₂'s target (bottom-right), and leaves the vertical edge
+>   unnamed on purpose: no single coordinate is perpendicular to both targets in 8D.
+> - The readout: slice mode shows the plane's normal axis and its position as a fraction of range; tilt
+>   mode shows q₁'s and q₂'s targets and angles in degrees.
+> - Drag: in slice mode a horizontal drag moves the slice along its axis; in tilt mode a horizontal
+>   drag sets q₁'s angle and a vertical drag q₂'s, each clamped to ±90°. Displayed values ease towards
+>   their targets as the reference's do.
+>
+> Keep from R-409: no orbit; Tilt and Slice modes set by the compass's buttons and by the slider
+> touched; Tilt as the default mode (the reference opens in Slice); the gold pin when locked; §G3's
+> keyboard behaviour. The reference's own controls (axis selectors, sliders, the Animate button) are
+> not part of the compass; the Manifold view owns those. Do not add them.
+>
+> Tilt mapping: the reference maps the two tilt angles to the plane's normal with an axis-angle
+> ("joystick") map, n = (sin m · τ₁/m, cos m, sin m · τ₂/m) with m = √(τ₁² + τ₂²), so both angles always
+> move the plane with no gimbal lock across ±90°. Compare it with what the compass and the slice decoder
+> currently do. If they differ, do not change the decoder's geometry: file a REVIEW_QUEUE entry for
+> physics review (it changes which plane a tilt means), and make the drawing follow whatever mapping
+> the decoder uses.
+>
+> === Part 3: compass views (new) ===
+>
+> The compass gets a view switcher on the compass itself, with four views. The cube is the default.
+>
+> | view | shows | reference |
+> |---|---|---|
+> | Cube | Part 2's cube | principia_nav_cube.html |
+> | Plücker | the slice plane's orientation in the latent chart | principia_plucker_compass.html |
+> | Jacobi | the decoded plane's orientation in Jacobi coordinates | principia_compass_charts.html, "physical compass" |
+> | Shape | the decoded plane's orientation in shape-sphere coordinates | the same, with different coordinates |
+>
+> "Views" are not the same thing as R-409's Tilt and Slice modes. Those set what a drag on the cube
+> does. A view sets what the compass draws. They are independent.
+>
+> 3.1 Plücker view (latent heading). The slice is the 2-plane spanned by the chart's own basis vectors
+> q₁, q₂ in the 8 latent coordinates. Draw its Plücker coordinates p_ij = q₁ᵢ q₂ⱼ − q₁ⱼ q₂ᵢ (i < j) as the
+> upper triangle of an 8 × 8 grid, one cell per coordinate plane, labelled with the chart's actual
+> coordinate names on both edges.
+> - Compute it from the q₁, q₂ the decoder actually uses, orthonormalised, never from a reconstructed
+>   tilt. That makes it exact and independent of the tilt-mapping question in Part 2. Σ p² = 1 is an
+>   invariant, and the view is unchanged by any rotation of q₁, q₂ within the plane.
+> - Cell colour encodes the signed value: two hues for + and −, with intensity from |p|, and zero
+>   drawn as the cell background. Use dark-mode colours. Outline the dominant cell, and show its pair
+>   and value in the readout ("strongest: z_a × z_b +0.993"), with Σ p² as a check. The cells are too
+>   small for numbers at compass size, so draw no in-cell numbers; show a cell's value on hover.
+> - The diagonal is drawn as empty. The view shows heading, not position.
+>
+> 3.2 Physical views (decoded heading): Jacobi and Shape. Push the plane through the decoder's
+> Jacobian, J_D at the slice centre z₀, or at the hovered pixel while the pointer is over the figure:
+> u₁ = J_D q₁, u₂ = J_D q₂, orthonormalised, then the same Plücker grid over the physical coordinates
+> below. Readout: the dominant pair, plus the area stretch, √(|J q₁|²|J q₂|² − (J q₁ · J q₂)²), which is
+> the Gram-determinant area factor already defined for J_D. Use the existing J_D machinery; the
+> reference's Jacobian is a synthetic placeholder and must not be copied.
+> - Jacobi view, 8 coordinates: the mass-weighted Jacobi vectors and their momenta, ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ,
+>   p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, as the decoder writes them. A 28-cell grid, the same size as the latent one.
+> - Shape view, 8 coordinates: the shape-sphere vector n̂ = (n₁, n₂, n₃), the hyperradius R, and their
+>   rates ṅ₁, ṅ₂, ṅ₃, Ṙ.
+> - Physics review on both coordinate sets before implementing. They are proposed, not settled: check
+>   that each is the right set of 8 (no redundant coordinate, the quotiented rotation and scale handled
+>   consistently with the decoder), and file a REVIEW_QUEUE entry if either should change.
+> - The physical views change as the slice moves, because J_D depends on z₀; the latent view does not.
+>   That is the point of having both. Say so in the view's help text.
+>
+> 3.3 Position readout. Under the Plücker view, z₀ as a bar per latent coordinate, signed, with the
+> current slice axis highlighted (principia_compass_charts.html, "position gauge"). A readout, not a
+> view.
+>
+> 3.4 Click to steer. Clicking a cell steers the slice.
+> - Plücker view: clicking cell (i, j) sets the slice plane to the coordinate plane z_i × z_j and resets
+>   the tilts to 0, as the reference does.
+> - Jacobi and Shape views: clicking physical cell (i, j) sets the slice plane to the latent preimage of
+>   that physical plane at z₀: q₁ ∝ J_D⁺ e_i, q₂ ∝ J_D⁺ e_j, Gram–Schmidt orthonormalised, with J_D⁺ the
+>   pseudo-inverse. If J_D is rank-deficient there, so the preimage is not a 2-plane, refuse the click
+>   and log why to the console. Physics review on this construction.
+> - Every steer is a SetField through the contract: undoable with Ctrl+Z, logged in the console, and the
+>   Manifold view's sliders follow.
+>
+> 3.5 Keyboard (extends §G3's compass scope, R-409). The compass scope holds, as siblings in navigation
+> mode: the compass, then Tilt and Slice, then the view buttons Cube, Plücker, Jacobi, Shape. Enter on a
+> view button switches view. In a grid view, Enter on the compass starts interaction: the arrows move a
+> highlighted cell, Space steers to it, and Esc or Enter returns to navigation mode. In the Cube view,
+> interaction is unchanged.
+>
+> 3.6 Tests.
+> - Plücker: Σ p² = 1 to round-off; an axis-aligned plane lights exactly one cell at ±1; rotating
+>   q₁, q₂ within the plane leaves every cell unchanged.
+> - Physical views: on a fixture with a known linear decoder, the grid equals the bivector of J q₁ ∧ J q₂
+>   and the stretch equals the Gram factor.
+> - Steering: clicking cell (i, j) in the Plücker view gives a plane whose Plücker grid lights (i, j) at
+>   ±1; clicking a physical cell gives a plane whose pushforward lights that physical cell at ±1 (to
+>   tolerance); a rank-deficient case is refused; every steer is undone by one Ctrl+Z.
+> - Keyboard: switch every view, move the cell cursor, and steer, using only the keys in 3.5.
+> - Cube view: golden images of the cube in each mode and at three tilts (0°, one giving a rectangle,
+>   one giving a hexagon), compared with renders of the reference at the same size and parameters in
+>   geometry and labelling, not colour; and a unit test that the cross-section polygon has 3 to 6
+>   vertices, lies in the plane and inside the cube, over a sweep of tilts.
+>
+> Report the ruling ids, requirement ids, RQ ids and task ids added or changed.
+
+*What it decides (Part 1):*
+- **The console window has exactly two scopes,** top to bottom: the **header bar** (the filters All, Warnings, Errors,
+  Info, then the search field, Copy, Clear and the close button ×, in that visual order) and the **log** (the entry
+  list). They take the place of R-405's four sections (the filters, the text filter, copy and clear, the entry list).
+- **Opening the console lands on the header bar scope itself,** in navigation mode, the whole scope highlighted, whether
+  it is opened from the footer or from Windows › Console. It takes the place of R-405's and R-409's landing "on its first
+  filter". Opening by itself on an error still takes no focus.
+- **Between the scopes:** in navigation mode on a scope, ↑ and ↓ move between the header bar and the log, and Tab and
+  Shift+Tab do the same, staying in the window, as §G3 has windows.
+- **Inside the header bar:** Enter goes in, onto All; ← and → move across every header element in visual order, the
+  search field, Copy, Clear and × included; Esc goes back up to the header bar scope.
+- **The search field** is §G3's text field: Enter starts typing; Esc or Enter stops and keeps the text.
+- **× is an ordinary focusable button:** Enter on it closes the console and returns the focus to whatever opened it.
+  Esc from the window's top level (navigation mode on the header bar or the log scope) still closes it too.
+- **The log:** Enter on it starts interaction; ↑ and ↓ scroll one entry, Page Up and Page Down a page, Home and End go
+  to the first and last entry, and Shift gives ×10 as everywhere. The whole log is reachable, not only the visible
+  rows. Esc returns to navigation mode on the log scope.
+- **The ring and the breadcrumb follow this,** e.g. "Console › Header › Copy".
+- **The intermittent reachability is a bug in its own right.** The task reproduces it and finds its cause before
+  fixing it, and its PR says what the cause was.
+- **Tests** are keyboard scripts on the mock engine, as listed above, each repeated after an auto-open on error and
+  with a filter that empties the list, with a negative arm that fails if any visible console control is unreachable.
+- **An audit** of every other window and scope against §G3 for the same failure, listed in the PR.
+
+*Context (applied per R-369, the orchestrator's reading of the code at `a5ddd9f9`, for the task to confirm by
+reproduction, not a finding):* the console is registered once as `Scope::window("win_console")` with the four
+sections above (`crates/gui/src/windows/console.rs`, `register`), and the × exists only as egui's title-bar button,
+outside the scope tree, which is why it can never be reached. The likeliest cause of the intermittent reachability is
+that the keyboard's focus is often not inside the console at all while it is open: an auto-open on error takes no
+focus and records no opener, a window is outside the big scopes' Tab cycle, and a mouse click inside the console moves
+egui's focus but not the keyboard layer's (a clicked search field then makes the layer stand aside). Re-opening from
+the footer or the menu while it is open moves the focus in, which would be the "later I can". The task confirms or
+replaces this reading by reproducing it.
+
+*Applied per R-369 (routine design choices the words leave open; the human may veto any, a veto being a GUI design
+ruling applied by a follow-up task):*
+- **A1. The arrows at the top level.** In navigation mode on the header bar or log scope, ↑ and ↓ move between the two
+  and ← → do nothing; on a header element ↑ ↓ do nothing. ← → stop at the row's ends, as §G3's other sibling rows do;
+  ↑ ↓ and Tab between the two scopes follow the window rule (Tab wraps from the log to the header bar, as R-405's
+  sections did).
+- **A2. Esc.** Esc in navigation mode on a header element goes up to the header bar scope; Esc in navigation mode on the
+  header bar or log scope closes the console and returns the focus to its opener (R-405), or, after an auto-open, to
+  where the focus was before (none was taken, so it stays there).
+- **A3. A click.** A click on any console control moves the keyboard's focus onto it, in navigation mode, so the mouse
+  and the keyboard never disagree about where the focus is inside the console; a click on × closes the console as Enter
+  on it does.
+- **A4. The log's steps.** A page is the number of entries the log's rect shows; Shift ×10 applies to ↑ ↓ (ten
+  entries) and to Page Up and Page Down (ten pages); Home and End take no modifier; Alt gives the unmodified step, an
+  entry being the smallest. "Scroll one entry" moves the log's top visible row by one entry, so the scroll reaches
+  every entry of the filtered list, the rows not drawn included. Every scroll is clamped to the list's ends.
+- **A5. An empty list.** With a filter that empties the list the log scope is still there, in the same place: Enter on
+  it starts interaction, and the scroll keys do nothing. Nothing about the scope order depends on the list, the filter,
+  how the console was opened, or which controls are drawn.
+- **A6. The breadcrumb's names.** "Console › Header", "Console › Header › <control>" (All, Warnings, Errors, Info,
+  Search, Copy, Clear, Close) and "Console › Log".
+- **A7. The audit's findings.** A visible control the keyboard cannot reach, or reachability that depends on state, is
+  a failure of §G3 (REQ-GUI-095, REQ-GUI-096, REQ-GUI-182). The task lists each finding in its PR and fixes it, unless
+  the screen is another open task's, in which case the PR names that task and the finding goes to that task's file.
+  The negative arm is a reusable check (every visible control of a scope or window is reachable by §G3's keys), run on
+  the console and on each window the audit covers.
+- **A8. Where it lands.** render_gui_spec §G3 (the console's paragraph, and "as the console does on its first filter"
+  reworded) and §G12 (a paragraph); REQ-GUI-178 keeps its id and its closing task, TASK-M6-28 (merged), its acceptance
+  line the record, with a note pointing here; **REQ-GUI-189** (new, M6: the console's two scopes and keys) and
+  **REQ-GUI-190** (new, M6: every visible control reachable, independent of state, and the audit), closed by
+  **TASK-M6-32** (new, M6), a GUI-track task under R-390, reviewers code, qa and gui, depending on TASK-M6-28 (merged).
+  TASK-M8-27, which re-runs the console on the real engine, is unchanged: REQ-GUI-189 and REQ-GUI-190 are the mock's,
+  as REQ-GUI-178 is.
+- **A9. qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-28.rs` and any other qa file that
+  asserts the console's four sections, its landing on the first filter or Esc closing it from a section asserts what
+  this ruling changes. Where every earlier commit of the file is qa's, TASK-M6-32's qa reviewer changes those
+  assertions in the task's qa commit, and only those; the implementer never edits them. The PR lists each change with
+  its reason, and the code reviewer confirms that no assertion was weakened but the ones R-450 changes.
+- R-450 is in the "design" group of `plan/rule_groups.yaml`, with R-405 and R-409.
+
+*What it supersedes:* R-405's "Its sections, in Tab order, are the filters (all, warnings, errors, info), the text
+filter, copy and clear, and the entry list", its "it takes the focus, on its first filter" and its "Esc closes the
+console" from a section (`decisions.md`, R-405, "Applied per R-369", the console bullet); R-409 point 4's and F4's "the
+console's first filter" as a landing; render_gui_spec §G3's "as the console does on its first filter" and its console
+paragraph's sections; REQ-GUI-178's sections and landing (its statement stays as TASK-M6-28's record, with a note).
+
+Adds REQ-GUI-189 and REQ-GUI-190; REQ-GUI-178's note and rulings change.
+
+## R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass), § "The compass: look and views (R-451, R-452)" (new) and § "G13. Where the artboards are overridden" (a
+bullet added), `docs/gui/reference/principia_nav_cube.html` (added), REQ-GUI-191 to REQ-GUI-193 (reqio, new), RQ-340,
+TASK-M6-33 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-33 on the mock*
+
+The human's words are R-450's quote: its preamble (the three references, and the cream palette not copied) and Part 2.
+
+*What it decides:*
+- **The compass's cube matches `docs/gui/reference/principia_nav_cube.html`** in appearance and behaviour, transcribed
+  from the file's code, in the dev GUI's dark-mode colours (§G1); the reference's light cream palette is copied
+  nowhere. In detail: the isometric projection `P(x,y,z) = (CX + S·√3/2·(x − z), CY + S·(½(x + z) − y))` of the cube
+  `[−1,1]³`, scaled to fit with the reference's margins; the edges depth-sorted by `x + z`, nearer edges more opaque and
+  thicker, with the slice sorted among them by its own depth; the slice as the true cross-section polygon of the plane
+  through the cube, its fill Lambert-shaded from its own normal (two-sided, small ambient term), an in-plane grid
+  clipped to the polygon and an outline; the edge labels (slice mode: Width, Depth, Height with −1.0 / 1.0 at the
+  corners, one number per corner; tilt mode: the targets only, the vertical edge unnamed); the readout (slice mode: the
+  normal axis and the position as a fraction of range; tilt mode: the targets and angles in degrees); and the drags
+  (slice mode: a horizontal drag moves the slice; tilt mode: a horizontal drag sets q₁'s angle and a vertical drag
+  q₂'s, each clamped to ±90°), the displayed values easing towards their targets.
+- **Kept from R-409:** no orbit; the Tilt and Slice modes, set by the compass's buttons and by the slider touched; Tilt
+  the default (the reference opens in Slice); the gold pin when locked; §G3's keyboard behaviour. The reference's own
+  controls (axis selectors, sliders, Animate) are not part of the compass: the Manifold view owns those.
+- **The tilt mapping.** The reference's axis-angle ("joystick") map is compared with the compass's and the decoder's;
+  where they differ the decoder's geometry is not changed, a REVIEW_QUEUE entry goes to physics review, and the drawing
+  follows the decoder's mapping.
+
+*The comparison (the orchestrator's porter, reading the docs and the code at `a5ddd9f9`):*
+- **The contract** (`principia_chart_decoder_contract.md` § "Tilt (basis edit)") tilts each basis vector on its own,
+  `q'(τ) = normalise(cos τ · q + sin τ · d_target)`, `τ ∈ [−90°, +90°]`, toward a hidden direction chosen for it ("12
+  tilt axes", chart_reference §1.1).
+- **The code** (`crates/gui/src/explore/manifold_view/mod.rs`, `View::basis`) builds `u₁ = cos τ₁ e_a + sin τ₁ e_d`,
+  `u₂ = cos τ₂ e_b + sin τ₂ e_d`, both toward the one hidden slice axis `e_d`, then turns them by `γ`:
+  `q₁ = σ(cos γ u₁ + sin γ u₂)`, `q₂ = σ(cos γ u₂ − sin γ u₁)`. The kernel never sees angles, only `(z₀, q₁, q₂)`. The
+  compass (`compass.rs`, `plane_frame`) draws the same construction in the frame `(e_a, e_b, e_d)`, so the compass and
+  the decoder agree with each other.
+- **The reference** maps `(τ₁, τ₂)` jointly to the normal `n = (sin m · τ₁/m, cos m, sin m · τ₂/m)`,
+  `m = √(τ₁² + τ₂²)`, toward two different targets.
+- **They differ.** The code's `u₁` and `u₂` share one target, so `u₁ · u₂ = sin τ₁ sin τ₂`: with both tilts non-zero
+  the basis is not orthogonal, and at `τ₁ = ±τ₂ = ±90°` the plane degenerates to a line (`u₁ = ±u₂ = ±e_d`), the
+  gimbal behaviour the reference's map avoids. The decoder's geometry is left as it is, and **RQ-340** puts the
+  difference to physics review; it changes which plane a tilt means, so it is the human's to rule (R-369, physics).
+
+*Applied per R-369 (routine design choices and readings; the human may veto any, a veto being a GUI design ruling
+applied by a follow-up task):*
+- **B1. The frame and the labels follow the decoder's mapping.** The cube's frame is the preset's `(e_a, e_b, e_d)` in
+  both modes (Width = chart x = `e_a` on the bottom-left edge, Height = chart y = `e_b` on the left vertical edge, Depth
+  = the slice axis `e_d` on the bottom-right edge), as the reference's slice mode has it. Under the decoder's mapping
+  q₁ and q₂ both tilt toward `e_d`, so in tilt mode there is one target, not two: tilt mode names the bottom-right edge
+  with it ("q₁, q₂ → <axis>") and leaves the other edges unnamed, and the readout gives q₁'s and q₂'s target (the same
+  axis) and their angles in degrees. If RQ-340 is ruled for the reference's two targets, tilt mode takes the
+  reference's two labels (q₁'s target bottom-left, q₂'s bottom-right, the vertical edge unnamed).
+- **B2. What each mode draws.** Slice mode draws the plane untilted at its position along the slice axis (a
+  rectangle), as the reference does; tilt mode draws the decoder's tilted plane (`View::basis` in the cube's frame) at
+  its position along the slice axis, so with `z₀` on the centre it is the reference's tilt drawing, and off the centre
+  the cross-section can be a triangle or a pentagon as well (3 to 6 vertices).
+- **B3. The slice-mode drag.** The horizontal component of a drag sets how far the slice moves (the reference's rate, a
+  drag across the cube's full width moving it across the whole range); the direction is R-409 A3's, the drawn plane's
+  normal, which untilted is the slice axis; one `SetField` on `z₀` per drag, coalesced (R-96). The vertical component
+  does nothing in slice mode. The tilt-mode drag uses the reference's rates (a drag across the full width or height is
+  180°), right raising τ₁ and up raising τ₂, one `SetField` on the basis per drag.
+- **B4. Easing is the compass's display only.** The compass draws its displayed values easing towards the targets by
+  the reference's law, each frame `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s; the contract's value
+  is the target from the first frame, so the figure, the sliders and every `SetField` see the target, never an eased
+  value.
+- **B5. The readout's position.** "The position as a fraction of range" is `z₀`'s component on the slice axis over the
+  slice step's half-range (the code's `Z0_HALF_RANGE`), signed, two decimals, as the reference's "+0.25 of range".
+- **B6. The colours.** Every colour is the dark theme's or a dark-mode colour chosen as a look choice under R-390 and
+  listed in the PR: the edges in the theme's stroke colour with the reference's opacity and width laws, the fill
+  between two dark-mode tones by the Lambert shade, the grid and the outline. The reference's numbers stay: light
+  `(0.35, 1.0, 0.55)` normalised, view `(1, 1, 1)`, ambient 0.2 (`0.2 + 0.8·max(0, n·L)`, the normal flipped to face the
+  viewer), a depth term `±0.05`, fill opacity 0.6, edge opacity `0.28 + 0.55·near` and width `0.8 + 1.0·near` px with
+  `near = (key + 2)/4`, grid spacing 0.5 over ±1.9, outline 1.7 px, labels 20 px and corner numbers 12 px outward, and
+  the fit `S = min(0.78·w/(2√3), 0.78·h/4)`.
+- **B7. The pin and the hint.** Locked, the gold pin sits at the anchor as now (R-409; §G4); the hint under the buttons
+  stays, reworded where the drags change.
+- **B8. The goldens.** "Renders of the reference at the same size and parameters" are made by running the reference
+  file headless at the compass's size with its parameters set to the case's, recorded as fixtures with how they were
+  made; the comparison is of geometry and labelling (vertex positions, edge order, label text and placement within a
+  stated tolerance), not colour. The case "one giving a rectangle" is a single tilt (τ₁ ≠ 0, τ₂ = 0), and "one giving
+  a hexagon" two tilts whose plane through the centre cuts six faces.
+- **B9. Where it lands.** render_gui_spec §G2's compass bullet and a new subsection under §G2, "The compass: look and
+  views (R-451, R-452)"; §G13 a bullet for the three references; **REQ-GUI-191** (the drawing, golden image),
+  **REQ-GUI-192** (the cross-section and the mapping the drawing follows, unit test) and **REQ-GUI-193** (the labels,
+  the readout, the drags and the easing, unit test), all M6, closed by **TASK-M6-33** (new), reviewers code, qa and
+  gui, depending on TASK-M6-31 (merged). REQ-GUI-091 and REQ-GUI-181 are unchanged: R-451 keeps what they say.
+- **B10. qa's files (R-290, forced by this ruling).** A qa file that asserts the compass's yaw-and-pitch view, its
+  fixed-quad slice or its drag rates asserts what this ruling changes; TASK-M6-33's qa reviewer changes those
+  assertions in the task's qa commit, and only those, as R-409 A9 has it.
+- R-451 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it changes:* R-409 point 1 kept the code's default angle (yaw −35°, pitch 25°) as a look choice under R-390;
+this ruling, the human's, sets the view to the reference's isometric projection, and R-409's text stands. The
+compass's square slice (`PLANE_HALF`) and its dashed untilted plane give way to the cross-section polygon.
+
+Adds REQ-GUI-191 to REQ-GUI-193.
+
+## R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass), § "The compass: look and views (R-451, R-452)" (new), § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (the Compass scope) and § "G13. Where the artboards are overridden" (the references),
+`docs/gui/reference/principia_plucker_compass.html` and `docs/gui/reference/principia_compass_charts.html` (added),
+REQ-GUI-194 to REQ-GUI-200 (reqio, new), RQ-341 to RQ-344, TASK-M6-34 and TASK-M6-35 (new), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M6-34 and TASK-M6-35 on the mock*
+
+The human's words are R-450's quote, Part 3.
+
+*What it decides:*
+- **A view switcher on the compass, four views:** Cube (R-451's cube, the default), Plücker (the slice plane's
+  orientation in the latent chart; `principia_plucker_compass.html`), Jacobi and Shape (the decoded plane's orientation
+  in Jacobi and in shape-sphere coordinates; `principia_compass_charts.html`, "physical compass"). A view sets what the
+  compass draws; R-409's Tilt and Slice modes set what a drag on the cube does. The two are independent.
+- **The Plücker view (3.1):** the upper triangle of an 8 × 8 grid of `p_ij = q₁ᵢ q₂ⱼ − q₁ⱼ q₂ᵢ` (i < j), labelled with
+  the chart's coordinate names on both edges, computed from the `q₁`, `q₂` the decoder uses, orthonormalised, never from
+  a reconstructed tilt; `Σ p² = 1` and invariance under rotation within the plane; signed colour in two dark-mode hues,
+  intensity from `|p|`, zero as the cell background; the dominant cell outlined, its pair and value and `Σ p²` in the
+  readout; no in-cell numbers, a cell's value on hover; the diagonal empty.
+- **The physical views (3.2):** the plane pushed through the decoder's Jacobian at `z₀`, or at the hovered pixel while
+  the pointer is over the figure, `u₁ = J_D q₁`, `u₂ = J_D q₂`, orthonormalised, drawn as the same grid over 8 physical
+  coordinates, with the dominant pair and the area stretch `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)` in the readout, using
+  the J_D machinery, never the reference's synthetic Jacobian. Jacobi: `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the
+  decoder writes them. Shape: `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets are proposed, not settled: physics reviews
+  them before they are built, and a REVIEW_QUEUE entry goes in if either should change. The help text says the
+  physical views change as the slice moves and the latent one does not.
+- **The position readout (3.3):** under the Plücker view, `z₀` as a signed bar per latent coordinate, the slice axis
+  highlighted (`principia_compass_charts.html`, "position gauge"); a readout, not a view.
+- **Click to steer (3.4):** in the Plücker view a click on cell (i, j) sets the slice plane to `z_i × z_j`, the tilts
+  reset to 0; in a physical view a click on cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J_D⁺ e_i`,
+  `q₂ ∝ J_D⁺ e_j`, Gram–Schmidt orthonormalised, refused and logged to the console where `J_D` is rank-deficient so
+  the preimage is no 2-plane; physics reviews the construction. Every steer is one `SetField` through the contract,
+  undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following.
+- **The keyboard (3.5):** the Compass scope's siblings in navigation mode are the compass, Tilt, Slice, then Cube,
+  Plücker, Jacobi, Shape; Enter on a view button switches view; in a grid view Enter on the compass starts interaction,
+  the arrows move a highlighted cell, Space steers to it, and Esc or Enter returns to navigation mode; in the Cube view
+  interaction is R-409's.
+- **The tests (3.6)** as the human lists them.
+
+*What the corpus has, and the entries filed (the porter's reading at `a5ddd9f9`):*
+- **J_D.** The corpus's `J_D` is `∂physical/∂(u, v)`, the derivative of the whole chart-to-IC composite with respect
+  to the chart's two coordinates at a quad's centre, taken by central differences in f64, its codomain the particle
+  frame's `(m, r, p)` (`principia_deep_zoom.md` § "2. Linearised decoder — IC precision" and § "Couplings to the
+  contract", a and b; `principia_integrator_contract.md`). It is built by REQ-DEC-033, not yet (the code refuses the
+  linearised path). The corpus defines no derivative of the decoder with respect to `z` along all eight directions, no
+  Jacobian into Jacobi or shape-sphere coordinates, and no Gram area factor for `J_D` (deep_zoom names `|det J_D|`,
+  whose meaning for a non-square `J_D` is not written; `principia_dd_generation_root.md` gives `√det(JᵀJ)` for the
+  links' Jacobians only). The human's "the existing J_D machinery" and "the Gram-determinant area factor already
+  defined for J_D" therefore point at something the corpus does not have in this form: **RQ-341** (the human's).
+- **The Jacobi set.** The decoder writes `ρ̃ = √μ_ρ (r₁ − r₀)` and `λ̃ = √μ_λ (r₂ − (m₀r₀ + m₁r₁)/M₀₁)` mass-weighted,
+  and `p_ρ = (q₀, q₁)`, `p_λ = (q₂, q₃)` as physical Jacobi momenta, not mass-weighted (`principia_dd_decoder.md`
+  §3.2; `principia_chart_reference.md` §0.2, §0.3). In the canonical frame `ρ̃` is on `+x` and `R̃ = 1`, so `ρ̃ᵧ ≡ 0`
+  and the four position components carry two degrees of freedom; the masses (`z_μ1`, `z_μ2`) move none of the eight,
+  so a plane tilted into them pushes forward degenerately: **RQ-342** (physics, then the human's).
+- **The Shape set.** `n = ((a−b)/I, 2p/I, 2q/I)` is a unit vector (three numbers, two degrees of freedom), `R = √I` is
+  1 on the decoder's image, and no doc defines `ṅ` or `Ṙ`; the set carries neither the masses nor the overall rotation
+  rate (`L_z` lives in the momentum block): **RQ-343** (physics, then the human's).
+- **The steer.** No doc has a pseudo-inverse or a latent preimage of a physical plane; it needs RQ-341's eight-column
+  Jacobian, a metric on `z`, a rank test with a threshold, and a rule for what the cell lights when `e_i` is not in the
+  Jacobian's range: **RQ-344** (physics, then the human's).
+- The Plücker view, the position readout, the Plücker steer and the keyboard need none of these; they are built
+  first.
+
+*Applied per R-369 (routine design choices; the human may veto any, a veto being a GUI design ruling applied by a
+follow-up task):*
+- **C1. The switcher.** Four buttons, Cube, Plücker, Jacobi, Shape, on the compass beside Tilt and Slice, the current
+  view shown as selected. The view is the compass's own GUI state, as its mode is (R-409 A5): not in the contract, not
+  undoable. The Tilt and Slice buttons stay in every view and set the mode the Cube view's drag uses; in a grid view a
+  drag does nothing.
+- **C2. Hover.** Hovering a cell shows "z_i × z_j  +0.123" (the physical names in a physical view) as egui's tooltip
+  beside the compass, not over the figure (§G1).
+- **C3. The grid's thresholds.** The dominant cell is outlined when its `|p|` exceeds 0.02, as the reference's; below
+  that no cell is outlined and the readout shows "—". Readout values have three decimals.
+- **C4. The pointer's pixel.** "At the hovered pixel" is the pixel's latent point on an affine chart,
+  `z₀ + (2s−1)q₁ + (2t−1)q₂` (chart_decoder_contract Part 3); on a nonlinear chart the physical views take `z₀`, and the
+  help text says so, until RQ-341 is ruled.
+- **C5. The Plücker steer.** A click on cell (i, j) sets the preset to the axis pair `(z_i, z_j)` with τ₁ = τ₂ = γ = 0
+  and the zoom kept, one `SetField` on the basis, as the reference's `state.a = i; state.b = j` with the tilts reset;
+  `z₀` is unchanged. Locked, the plane turns about the pin, as every basis edit does (§G4).
+- **C6. The keyboard's cell cursor.** In a grid view's interaction mode the cursor starts on the dominant cell (the
+  first upper cell when none is), moves over the upper-triangle cells only, ← → along a row and ↑ ↓ along a column,
+  stopping at the triangle's edges; Shift moves it to the row's or column's end (×10, clamped); Space steers to it as a
+  click does; the cursor is drawn as a ring in interaction mode's blue. Enter on a view button acts as its click and
+  stays in navigation mode (R-409 A1). The breadcrumb names the view, e.g. "Compass › Plücker".
+- **C7. Colours.** The two hues and the outline are dark-mode look choices under R-390, listed in the PR; the
+  reference's teal and terracotta on cream are not copied.
+- **C8. Where it lands.** render_gui_spec §G2's compass bullet, the new subsection, §G3's Compass scope and §G13;
+  **REQ-GUI-194** (the switcher), **REQ-GUI-195** (the Plücker view), **REQ-GUI-196** (the position readout),
+  **REQ-GUI-197** (the Plücker steer) and **REQ-GUI-198** (the keyboard), closed by **TASK-M6-34** (new; code, qa,
+  gui; after TASK-M6-33); **REQ-GUI-199** (the physical views) and **REQ-GUI-200** (the physical steer), closed by
+  **TASK-M6-35** (new; code, qa, gui and physics; after TASK-M6-34), which waits on RQ-341 to RQ-344. REQ-GUI-183
+  (the Compass scope's three siblings, closed by TASK-M6-31) is unchanged as TASK-M6-31's record; REQ-GUI-198 adds the
+  view buttons after them.
+- R-452 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-194 to REQ-GUI-200.
+
+## R-453 — A click on the figure pins that sample's trajectory in the Trajectory panel, and hover never replaces it; the cursor moving into the panel never clears it; the panel's real-space view pans and zooms and its shape-sphere view orbits and zooms
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the Trajectory panel) and § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (Trajectory's keys),
+REQ-GUI-201 and REQ-GUI-202 (reqio, new), TASK-M6-36 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
+TASK-M6-36 on the mock*
+
+The human's words, a spoken message of 16 Oct 2026, transcribed, given in the orchestrator's session (a GUI design
+ruling under R-390's feedback rule):
+
+> You also can't click on a point and then have that stay in the um, trajectory panel. You can't actually interact with anything in the trajectory panel because the moment your um, cursor moves around, it changes which trajectory is in the panel. And then obviously when you try, then actually put your cursor in the trajectory panel, the uh, trajectory um, disappears. Also, you should be able to interact with the um, shape sphere um, view, as well as the real space trajectory view. Like the real space one, you should be able to pan and zoom, and the um, shape sphere one, you should be able to move the orbit camera and zoom.
+
+*What it decides, in plain terms:*
+- **A click on the figure pins that sample's trajectory in the Trajectory panel.**
+- **Hover does not replace a pinned trajectory, and moving the cursor into the panel never clears it.**
+- **The panel's views are interactive:** the real-space view pans and zooms, and the shape-sphere view orbits and zooms.
+- **R-409's "no orbit" is the compass's and is untouched;** the orbit here is the Trajectory panel's shape-sphere
+  view's. §G1's "no camera" holds as well: the views turn and zoom a drawing of one trajectory, not the figure, and no
+  control, window or log line is named after a camera.
+
+*Context (the porter's reading of the code at `a5ddd9f9`):* the panel's "under cursor" tab shows the snapshot's
+hover sample (`crates/gui/src/explore/trajectory.rs`, `shown`); the pointer leaving the figure, onto the panel
+included, sends an empty hover and the panel shows "move the pointer over the figure"; a click or drag on the figure
+pans it; the real-space and sphere views only paint, with no pointer sense; and the sphere turns by itself while
+"turn" is on. A side effect: a click on the panel's "+" finds no sample and keeps nothing.
+
+*Applied per R-369 (routine design choices the words leave open; the human may veto any, a veto being a GUI design
+ruling applied by a follow-up task):*
+- **D1. The click.** A primary click on the figure, a press and release with no drag past egui's click threshold,
+  pins the sample under it; a drag still pans (§G3; the Figure's drag). The pin holds the sample's IC (its latent
+  point and the sim key's inputs at the click), not a pixel, so a pan, a zoom or a slice edit afterwards leaves the
+  pinned trajectory as it is. A click on another point moves the pin there.
+- **D2. Where the pin shows.** The panel's first tab reads "pinned" while a pin is held and "under cursor" otherwise;
+  the kept orbits (`#1`, `#2`, `+`) are unchanged, and "+" or Space keeps the pinned sample when one is held. The
+  panel shows an **unpin** button while pinned; unpin returns the first tab to following the cursor.
+- **D3. Without a pin.** The panel keeps showing the last sample hovered over the figure when the pointer leaves it,
+  onto the panel or anywhere else, until the pointer hovers another point of the figure; it never goes blank because
+  the pointer moved off the figure. Before any hover it says "move the pointer over the figure", as now.
+- **D4. The figure's path and the hover label.** While a pin is held, the orbit's path drawn on the figure (§G2) is
+  the pinned sample's, matching the panel; the hover label still follows the pointer. No new mark is drawn on the
+  figure (§G1, "the figure is never covered").
+- **D5. The pin's state.** The pin is `ViewUI` state, like the kept orbits (`principia_trajectory_viewing.md` §6): not
+  undoable, not on the sim key, no `SetField` on `SimConfig`; the integration is `computeIC`'s, as for hover. A
+  change of the sim key (an integrator or horizon edit) re-integrates the pinned IC.
+- **D6. The keyboard.** In the Figure scope, P pins the sample under the pointer, the point K locks at (§G4), and
+  with the pointer off the figure does nothing, as K; a letter shortcut in either mode, as §G3 has them; the Trajectory scope's elements gain the unpin button (Enter acts as its click, R-409 A1)
+  and the two views, each an adjustable element: Enter on a view starts interaction, where the arrows pan the
+  real-space view by R-404's `Pan` step (1/20 of the view's span) and turn the sphere by R-404's `Angle` step (1°),
+  + and − zoom either by R-404's `ZoomLog2` step (0.25 octave), and Shift ×10 and Alt ×0.1 apply as everywhere; Esc or
+  Enter returns to navigation mode. These reuse confirmed steps for the same kinds of quantity, so no new value is
+  needed.
+- **D7. The pointer on the views.** On the real-space view a drag pans and the wheel zooms about the pointer; on the
+  sphere a drag orbits it (yaw about the sphere's vertical axis, pitch clamped to ±90°) and the wheel zooms; a
+  double-click restores each view's default (real space fitted, as now; the sphere at its default angle and size). A
+  drag on the sphere turns "turn" off, so the user's view holds; ticking "turn" resumes the slow turn from the view as
+  it stands. The unwrapped (equirectangular) view pans and zooms as the real-space view does.
+- **D8. The views' state.** Each view's pan, zoom and orbit are the panel's own `ViewUI` state, kept per tab, never in
+  the contract's history, and they rotate the view of the sphere, never the data (`principia_trajectory_viewing.md`
+  §4: "rotates the camera, not the data", so the sphere and its unwrap agree). The Inspector (§G8) hosts the same
+  panels (R-65): where it uses the same view widgets it gets the same interaction.
+- **D9. Where it lands.** render_gui_spec §G2's Trajectory panel and §G3's Trajectory keys; **REQ-GUI-201** (the pin)
+  and **REQ-GUI-202** (the interactive views), M6, closed by **TASK-M6-36** (new; code, qa, gui; after TASK-M6-27,
+  merged). TASK-M8-11, the Trajectory panel on the real engine, is unchanged here (PR #226 edits its file); it
+  re-runs these on the real engine once a later port adds them to its acceptance.
+- **D10. qa's files (R-290, forced by this ruling).** A qa file that asserts the panel going blank off the figure, or
+  a click on the figure panning only, asserts what this ruling changes; TASK-M6-36's qa reviewer changes those
+  assertions in the task's qa commit, and only those, as R-409 A9 has it.
+- R-453 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-201 and REQ-GUI-202.
