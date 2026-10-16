@@ -250,5 +250,5 @@ Nothing is chosen.*
 - **Applied meanwhile:** nothing is chosen. TASK-M7-05's seam-5 test builds a view from an edited clone of `E_0`'s
   entry without regenerating the ledger, so it shows the render side only (the view re-styles, the sim buffer is
   unchanged, one fragment compile); it says so in its doc. `ledger::version` is unchanged.
-- **Waits:** TASK-M7-05's merge waits on this entry for REQ-COL-032's ledger half (qa's
+- **Waits:** TASK-M7-05's PR does not wait; REQ-COL-032 stays held until the ruling (qa's
   `qa_ledger_scale_restyle_keeps_the_sim_key` fails against the current hash).
