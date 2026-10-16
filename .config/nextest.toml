@@ -68,7 +68,6 @@ default-filter = """
         | binary_id(=engine::canon_gpu)
         | binary_id(=engine::qa_TASK-M2-07_gpu)
         | binary_id(=engine::invariant_gpu)
-    | binary_id(=engine::encode_gpu)
         | binary_id(=engine::encode_gpu)
         | binary_id(=validation::decode_f32_eps_gpu)
         | binary_id(=xtask::build_kernel)
