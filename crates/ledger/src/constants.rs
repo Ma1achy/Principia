@@ -505,6 +505,40 @@ pub const GAMMA_K: ConstantBuilder = proposed(
     "M2",
 );
 
+/// The section the Euclid plane's defaults are given in (chart_reference §4.5).
+const EUCLID_SECTION: Citation = Citation::Corpus {
+    file: "docs/design/principia_chart_reference.md",
+    section: "4.5 The Burrau-family chart maps",
+};
+
+/// `m_min`, the Euclid plane's default lower `m`: `m(u) = m_min·(m_max/m_min)^u` on `[1, 32]` (chart_reference §4.5).
+pub const EUCLID_M_MIN: ConstantBuilder = chart("euclid_m_min", 1.0, EUCLID_SECTION);
+
+/// `m_max`, the Euclid plane's default upper `m` (chart_reference §4.5).
+pub const EUCLID_M_MAX: ConstantBuilder = chart("euclid_m_max", 32.0, EUCLID_SECTION);
+
+/// `ν_min`, the Euclid plane's default lower `ν`: `ν(v)` linear on `[1/32, 31/32]` (chart_reference §4.5).
+pub const EUCLID_NU_MIN: ConstantBuilder = chart("euclid_nu_min", 0.03125, EUCLID_SECTION);
+
+/// `ν_max`, the Euclid plane's default upper `ν` (chart_reference §4.5).
+pub const EUCLID_NU_MAX: ConstantBuilder = chart("euclid_nu_max", 0.96875, EUCLID_SECTION);
+
+/// The tolerance to which Burrau at `ν = 1/2` reproduces `(3, 4, 5)` and the classical configuration (chart_reference
+/// §5.2): an absolute bound, in units of the precision's machine epsilon, on the largest difference of any mass,
+/// position or momentum component of the canonical `(m, r, p)` (`G = M = I = 1`). The components are not all at most 1
+/// in magnitude: `I = 1` bounds a position only by `|rᵢ| ≤ 1/√mᵢ`, and at `ν = 1/2` `r₂_y = 3/√5 ≈ 1.342`. REQ-VAL-118's
+/// proposal (R-71), provisional until the M2 gate (R-427). Its evidence, `fixtures/gates/burrau_nu_half/` (TASK-M2-10):
+/// at f64 and f32 the `ν = 1/2` decode equals the `(m, n) = (2, 1)` construction bit for bit, every intermediate an
+/// exact operation or one rounding of the same rational; the classical configuration, normalised and historical,
+/// brought to the canonical section by `C`, differs from it by at most 1 `eps` (4 leaves a margin for a platform's `sqrt`).
+pub const BURRAU_NU_HALF_TOL: ConstantBuilder = proposed(
+    "burrau_nu_half_tol",
+    4.0,
+    Admissibility::CanonicalUnits,
+    "REQ-VAL-118",
+    "M2",
+);
+
 /// A proposed number (R-71), admissible as `class`, citing its calibration requirement `requirement` and marked
 /// provisional until the gate `gate` (R-427; dd_generation_root §3.8).
 const fn proposed(
@@ -727,6 +761,39 @@ pub const DIVERGING_X0: [(&str, ConstantBuilder); 2] =
 /// M1 gate (R-433), one entry in place of two test files' definitions.
 pub const N_NORM_TOL: ConstantBuilder = confirmed("n_norm_tol", 1.0 / 262_144.0, R433);
 
+// ── The shape-sphere chart's calibrations (REQ-CHART-049, REQ-CHART-053; R-71, R-181, R-427) ────────────────────
+//
+// Two tolerances TASK-M2-08 proposes with their evidence, each provisional until the M2 gate (R-427) and read from
+// here by the tests and the `shape-roundtrip` gate: dimensionless differences of points on the unit shape sphere, so
+// admissible as expressed in canonical units.
+
+/// The agreement of `kernel::shape`'s `n` with the IC Inspector's (`docs/gui/reference/ic_inspector.html`) on
+/// `fixtures/ic_inspector/shape_vec.json`'s 1000 random ICs, the largest absolute difference in any component
+/// (REQ-CHART-049): 16ε = 2⁻⁴⁸ ≈ 3.55e-15, ε = 2⁻⁵² the f64 epsilon. TASK-M2-08's proposal (R-71): the inspector reaches
+/// `n` by another route, canonicalising, then `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(λ̃_y, λ̃ₓ)` and `(cos 2α, sin 2α cos β,
+/// sin 2α sin β)`, so the two differ by rounding alone: measured, worst 6.94e-16 (3.1ε) over `shape` and `shape_vec`
+/// on the raw and the decoded ICs, and 1.10e-15 (5.0ε) for the collision landmarks against its `collisionPhi`; 16ε
+/// covers them by 5.1× and 3.2×, while the superseded negative-cross sign misses by O(1).
+pub const SHAPE_VEC_JS_TOL: ConstantBuilder = proposed(
+    "shape_vec_js_tol",
+    1.0 / 281_474_976_710_656.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-049",
+    "M2",
+);
+
+/// The shape-sphere round trip's bound, `max ‖shape(Φ(u, v)) − n(u, v)‖` with `Φ` alone (R-178), over the
+/// `shape-roundtrip` gate's samples (REQ-CHART-053): 10⁻¹³ absolute, R-181's value. TASK-M2-08's proposal (R-71,
+/// R-181): measured on `random.json`'s 208 704 samples (random masses, both hemispheres, both maps, polar radii down
+/// to 10⁻¹⁵ about `n₀ = ±1`, and the eight poles), worst 1.06e-15, so 10⁻¹³ covers it by 95×.
+pub const SHAPE_ROUNDTRIP_BOUND: ConstantBuilder = proposed(
+    "shape_roundtrip_bound",
+    1e-13,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-053",
+    "M2",
+);
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -756,10 +823,12 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 };
 
 /// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
-/// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the presentation constants the generated views and the prelude read: the
-/// log floors, the hatch and the hue wheel (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), and the
-/// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the
-/// predicate `n ≥ 2` (R-245).
+/// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
+/// tolerance and the Euclid plane's defaults (TASK-M2-10), the presentation constants the generated views and the
+/// prelude read: the log floors, the hatch and the hue wheel (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance
+/// (R-433), the shape-sphere chart's two tolerances (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging
+/// fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate `n ≥ 2`
+/// (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -778,6 +847,11 @@ pub const REGISTER: &[ConstantBuilder] = &[
     TANH_SAT,
     K_MAX,
     GAMMA_K,
+    BURRAU_NU_HALF_TOL,
+    EUCLID_M_MIN,
+    EUCLID_M_MAX,
+    EUCLID_NU_MIN,
+    EUCLID_NU_MAX,
     LOG_FLOOR_D_MIN,
     LOG_FLOOR_DE_MAX,
     LOG_FLOOR_DLZ_MAX,
@@ -791,6 +865,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HUE_WHEEL_C,
     R_POLE,
     N_NORM_TOL,
+    SHAPE_VEC_JS_TOL,
+    SHAPE_ROUNDTRIP_BOUND,
     DIVERGING_X0_E_0,
     DIVERGING_X0_LZ_0,
 ];

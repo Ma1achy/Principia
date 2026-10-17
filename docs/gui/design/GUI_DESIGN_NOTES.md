@@ -116,6 +116,9 @@ window, for its next section), and Enter, like Esc, returns to navigation. On a 
 scope itself the arrows move between the big scopes. The Figure, with nothing inside, takes Enter as interaction; the
 Legend takes it as nothing. A text field starts typing on Enter; while typing it takes every key, Ctrl+Z (undoing the
 text edit) and `?` (a character) included, but Esc and Enter (back to navigation, text kept) and Tab (move on).
+A click on a text field starts typing at once, in interaction mode; a click anywhere else ends any typing and leaves the
+keyboard in navigation mode, moving the focus only where a rule already says a click does (the console's controls,
+R-450 A3) *(conformed to R-456)*.
 
 ## 08 Lock — the reticle and the pin
 

@@ -6,14 +6,15 @@
 //! The register's `provisional` key (R-427; REQ-SYS-081; `constants_provisional_*`): a provisional entry builds and
 //! its number reads at compile time like any other; one whose value is `calibration`, one that names no gate and one
 //! citing a corpus section each fail generation naming the constant; the list by gate gives what the M1 gate left
-//! marked (R-428, R-433): none for M1, the two floors, `eps_m01` and `tanh_sat` for M2, `r_pole` for M3
+//! marked (R-428, R-433): none for M1, the two floors, `eps_m01`, `tanh_sat` and the shape sphere's two tolerances
+//! (TASK-M2-08) for M2, `r_pole` for M3
 //! (REQ-SYS-082), and the hatch is read from its entries; the diverging fields' `x₀` are listed for M7 (REQ-COL-066).
 //! The mark is not hashed: see `schema_version.rs`'s `constants_provisional_*`.
 
 use ledger::constants::{
     gate, is_milestone, provisional_until, Admissibility, Citation, ConstantBuilder, Population,
     RelativeBasis, Value, DIVERGING_X0, HATCH_CYAN, HATCH_HALF_PERIOD, HATCH_VIOLET, LOG_FLOORS,
-    LOG_FLOOR_D_MIN, REGISTER,
+    LOG_FLOOR_D_MIN, REGISTER, SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL,
 };
 use ledger::gen::prelude::{self, Hatch};
 use validation::negative_control;
@@ -585,7 +586,8 @@ const R433: &str = "R-433 — ";
 
 /// Checks that `register` passes the gate and lists, by gate, exactly the entries still provisional after the M1
 /// gate (R-428, R-433): none for M1; `eps_m01` (REQ-DEC-039), `tanh_sat` (REQ-DEC-047), `k_max` and `gamma_k`
-/// (REQ-CHART-044) and [`UNTIL_M2`], citing REQ-TOOL-163, for M2; `r_pole`, citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`]
+/// (REQ-CHART-044), `burrau_nu_half_tol` (REQ-VAL-118), [`UNTIL_M2`], citing REQ-TOOL-163, and the shape sphere's
+/// `shape_vec_js_tol` (REQ-CHART-049) and `shape_roundtrip_bound` (REQ-CHART-053), for M2; `r_pole`, citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`]
 /// confirmed outright are unmarked and cite R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`]
 /// names the six floors' entries.
 fn check_list_by_gate(register: &[ConstantBuilder]) {
@@ -604,8 +606,11 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "tanh_sat",
             "k_max",
             "gamma_k",
+            "burrau_nu_half_tol",
             UNTIL_M2[0],
-            UNTIL_M2[1]
+            UNTIL_M2[1],
+            "shape_vec_js_tol",
+            "shape_roundtrip_bound"
         ],
         "the entries provisional until M2"
     );
@@ -780,4 +785,24 @@ negative_control!(
         h.colours.swap(0, 1);
         check_hatch(h);
     }
+);
+
+/// The shape sphere's two proposals read as TASK-M2-08 proposes them (REQ-CHART-049, REQ-CHART-053): `shape_vec_js_tol`
+/// is 16ε = 2⁻⁴⁸, ε the f64 epsilon, and `shape_roundtrip_bound` is `1e-13`.
+fn check_shape_tolerances(js_tol: f64, roundtrip: f64) {
+    assert_eq!(js_tol, 16.0 * f64::EPSILON, "shape_vec_js_tol is not 16ε");
+    assert_eq!(js_tol, 2f64.powi(-48), "shape_vec_js_tol is not 2⁻⁴⁸");
+    assert_eq!(roundtrip, 1e-13, "shape_roundtrip_bound is not 1e-13");
+}
+
+#[test]
+fn constants_provisional_shape_tolerances_read_their_proposals() {
+    check_shape_tolerances(SHAPE_VEC_JS_TOL.number(), SHAPE_ROUNDTRIP_BOUND.number());
+}
+
+negative_control!(
+    constants_provisional_shape_tolerances_read_their_proposals,
+    "a tolerance of 8ε must fail",
+    expected = "shape_vec_js_tol is not 16ε",
+    check_shape_tolerances(8.0 * f64::EPSILON, SHAPE_ROUNDTRIP_BOUND.number())
 );

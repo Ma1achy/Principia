@@ -209,6 +209,11 @@ render is a Poincaré section.
 These fix geometry and mass, and use the two axes for **conserved quantities** rather than raw
 controls. `forbids_energy_normalisation = true`.
 
+**The fixed geometry and masses** (defined per R-72, REQ-CHART-048; TASK-M2-08). They are the slice pin `z₀`'s: its
+configuration block through the shared `D_cfg` (§0.2, the canonical-frame decode, so `I = 1`) and its mass block
+through the shared `D_mass` (§0.1), under the chart's link selection. Only the momentum block is built per pixel, by
+§2.2 from the pixel's `(L_z, K*)`; `z₀`'s momentum block is not read.
+
 ### 2.1 Feasibility, and the warp that makes every pixel valid
 
 `E = U + K` with `K ≥ 0`, so `E ≥ U`, and
@@ -324,6 +329,20 @@ all three exactly.
 The quotient of configuration space by translation, rotation and scale. `Φ_S²(u,v) = (n(θ,φ),
 m_fixed, p_fixed)` — masses and momenta held, only the **shape** varies.
 
+**The held values** (defined per R-72, REQ-CHART-048; TASK-M2-08). `m_fixed` and `p_fixed` are the slice pin `z₀`'s:
+its mass block through the shared `D_mass` (§0.1) and its momentum block through the shared `D_mom` (§0.3), under the
+chart's link selection; `z₀`'s configuration block is not read, the shape replacing it. `p_fixed` is a canonical-frame
+momentum, the Jacobi momenta `(p_ρ, p_λ)` relative to the body frame (`ρ̃` on `+x`, `λ̃` in the upper half-plane), and
+`Φ` expresses it in the gauge of the configuration it builds, the inverse of the gauge `C` removes, decided as `C`
+decides it on that configuration (§0.4, §0.5): `(p_ρ, p_λ)` mirrored `y → −y` where `C` mirrors, turned by `R(φ)` with
+`C`'s `φ = atan2(ρ_y, ρ_x)` (0 at `ρ = 0`, R-437), and scaled by `I^{−1/4}`, the particle momenta then rebuilt by
+§0.3's map. So `p_fixed` is taken after the fibre-phase rotation, which `C` then undoes: `C(Φ(u, v))` has masses
+`m_fixed` and momenta `p_fixed` at every pixel, to rounding, and a point and its mirror `(θ, π − φ)` decode to one
+system (R-141). `I` and the fibre phase `φ_f` (§3.2) are chart parameters and pure gauge: they change `Φ`'s output,
+never `C ∘ Φ`'s, except at `ρ = 0` (`BC₀₁`, `n = (−1, 0, 0)`), `C`'s seam, where R-437's `φ = 0` leaves `φ_f` in
+`C ∘ Φ`'s configuration, turned by `φ_f` against momenta that are not, so `L_z` depends on `φ_f` there. Their defaults are `I = 1` and `φ_f = 0`, at which `Φ`'s configuration is on `C`'s section on the
+upper hemisphere.
+
 ### 3.1 Forward map (already implemented as `shape_vec`)
 
 ```
@@ -350,6 +369,12 @@ a = I(1 + n₀)/2      b = I(1 − n₀)/2      p = I·n₁/2      q = I·n₂/2
 ρ̃ = √a·(cos φ_f, sin φ_f)
 λ̃ = √b·(cos ψ,   sin ψ)        with  ψ = φ_f + atan2(q, p)
 ```
+
+**Evaluating the smaller of `a` and `b`** (applied per R-369, TASK-M2-08). It is computed as
+`I(n₁² + n₂²)/(2(1 + |n₀|))`, which equals `I(1 − |n₀|)/2` on the unit sphere (`1 − n₀² = n₁² + n₂²`); the larger is
+`I(1 + |n₀|)/2` as written. Near `n₀ = ±1`, `n₀ = cos r` rounds to `±1` once the polar radius `r` is below about
+`10⁻⁸`, so `1 − |n₀|` loses `r` while `n₁` and `n₂` keep it: evaluated as written, the round trip misses by up to `r`
+there, about `10⁻⁸`, against the `10⁻¹³` bound (R-181). The form through `n₁² + n₂²` keeps `ab = p² + q²` to rounding.
 
 **The `atan2(q, p)` sign is correct given §3.1's `q`** (the standard cross). Under the earlier negative-cross `q` it
 was `atan2(−q, p)`. Verified to machine precision (round trip over 2,000 random masses and shapes, max error 3e−15).

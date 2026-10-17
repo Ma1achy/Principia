@@ -481,68 +481,487 @@ Nothing is chosen.*
 - **Applied meanwhile:** nothing. `stage_canon_native` is unchanged, not restructured around the fault.
 - **Waits:** nothing held: no shipped code was found with the pattern. TASK-M2-07's PR does not wait.
 
-## RQ-330: R-444 to R-448 change what merged M1 tasks built and what their goldens hold; which goldens, fixtures and tests are re-baselined, under what decision, and which gate confirms the new swatches and their evidence *(the human's question, R-444 to R-448, R-110, R-71, REQ-COL-002, REQ-COL-053, REQ-COL-062, REQ-COL-064, REQ-COL-067, REQ-COL-068, REQ-COL-104, REQ-COL-105; context: TASK-M2-32)*
+## RQ-310: `I_max` and the "when decided" latch want descriptor bits 10–15, which payload §2 holds reserved and "never opportunistically reused", beside R-37's departed bit, whose place is open *(conflict and budget, R-442, R-37, R-36, REQ-PAY-105, REQ-PAY-106, REQ-COL-082, REQ-COL-106, REQ-VAL-055; context: TASK-M7-35, TASK-M7-40)*
 
-*Filed at the human's request in their message of 16 Oct 2026 (R-444 quotes it): "Whether any task already in flight
-or merged (M1-10's goldens, the outcome palette fixtures, REQ-COL-053/064 tests) needs re-baselining, and which
-milestone gate confirms the new swatches." Nothing is chosen. For the human: yes (a gate and a re-baseline, R-110).*
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. **For the human: yes**, as the human asked ("Two need
+me: the descriptor-bit budget …").*
 
 - **File, section:**
+  - `docs/design/principia_dd_chazy_final_motion.md` § "6. The latch: `I_max`", transcribing spec 02 §3: "A
+    log-quantised value fits the reserved descriptor bits 10–14 (32 half-octave levels up to 2¹⁶), leaving bit 15 for
+    the open departure flag. That is a versioned format change and needs a ruling (`04`)."
+  - Spec 04 §3 item 1: "**Descriptor bits.** `I_max` in reserved bits 10–14 claims space next to the open departure
+    flag (bit 15). The "when decided" view (`03` §7.1) needs a second latch and more bits. Is that budget available,
+    and is it worth it?"
+  - Spec 03 §7.1 (drill-down § "10.8.1 When it was decided"): "a second forward-only latch, the time the current
+    coarse class was first committed, reset whenever it changes. Same shape as `I_max`, and it needs its own storage
+    bits. Without that latch this view is offline only."
+  - `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest
+    reserved", line 226: "*reserved* | 10–15 | 6 | … Reserved, decode as zero, never opportunistically reused"; line 228:
+    `last_symbol`'s bits 8–9 were "a deliberate, versioned assignment — a binary-format version bump … (automatic: the
+    version is the ledger's content hash, R-36)".
+  - `open-questions.md` item 9, line 71: "**Still open:** the value of `δ_dep` (by measurement), and where the
+    per-sample "departed" bit lives" (R-37; carried by REQ-VAL-055 and REQ-PAY-056).
+- **Conflict:** the spec spends five of the six reserved bits on `I_max` and names bit 15 for the departed bit, whose
+  placement R-37 left open; payload §2 holds the six reserved. The "when decided" latch needs more storage that the
+  descriptor does not have.
+- **Options seen:**
+  - (a) Spend bits 10–14 on `I_max` (log, half-octave, 5 bits), a versioned assignment as `last_symbol`'s was; bit 15
+    for the departed bit; "when decided" offline only.
+  - (b) As (a), and give the "when decided" latch storage outside the descriptor (a new `SimState` member, a size
+    change with its memory cost), so the view is live.
+  - (c) Keep the descriptor's bits reserved and store `I_max` elsewhere (a new `SimState` member), at its own memory
+    cost.
+  - (d) Do not store `I_max`: OS-candidate is then computed from no history (it never fires), or dropped.
+- **Waits:** REQ-PAY-105's storage and REQ-PAY-106 (`rq: RQ-310`), TASK-M7-35's persisting the latch, and REQ-COL-082
+  and REQ-COL-106's lightness by time (TASK-M7-40). The local, per-step latch and the classifier's tests do not wait.
+
+## RQ-311: the default seven-class final-motion palette sits below τ within itself (H / HP 0.083; HP / P 0.002 under deuteranopia); keep it, or move the default to Okabe–Ito *(decision at the gate, R-442, R-132, R-429, REQ-COL-075, REQ-COL-086, REQ-COL-087; context: TASK-M7-37, the M7 gate)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. **For the human: yes**, as the human asked ("whether the
+default seven-class palette should stay below τ (04 §2.1) or move to Okabe–Ito").*
+
+- **File, section:**
+  - `docs/design/principia_dd_chazy_final_motion.md` § "11.2.1 Palette separation, measured", transcribing spec 04
+    §2.1: "**The seven-class palette is under τ by design.** H, HP and P are steps of one cool family, so H and HP sit
+    0.083 apart, and under deuteranopia HP and P collapse to the same colour. That is the cost of the family logic. The
+    Okabe–Ito variant (`03` §3) is the colour-vision-safe alternative. Whether the default should change is a decision
+    for the gate."
+  - R-442, ruling 7: "The seven-class palette in 03 §1 is the default."
+  - `decisions.md` § "R-429 — …": "τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101", the distance R-132
+    ruled a collision (REQ-COL-055, REQ-COL-061).
+- **Context:** no corpus rule holds a palette's own entries τ apart (R-442's note); the seven-class palette clears
+  every style unsimulated (0.137). The question is the human's choice of default, not a corpus conflict. Neither
+  candidate clears τ within itself: the seven-class family's tightest pair is 0.083 unsimulated and 0.002 under
+  deuteranopia (HP / P); Okabe–Ito's is 0.041 everywhere (P / collision).
+- **Options seen:**
+  - (a) Keep the seven-class palette as the default (R-442 as given), the shortfall recorded and asserted by
+    REQ-COL-086; Okabe–Ito one click away.
+  - (b) Make the Okabe–Ito variant (drill-down § "10.4 Final motion: Okabe–Ito") the default, the seven-class family
+    a preset. Its cost, measured in the review of PR #223 (drill-down § "11.2.1 Palette separation, measured"): with
+    collision kept magenta, Okabe–Ito's P `#CC79A7` sits 0.041 from collision `#DA85B6`, unsimulated and under each
+    simulation, its tightest pair; without collision its seven clear 0.170 unsimulated and at least 0.079 simulated.
+  - (c) Keep the family logic but respace H, HP and P (and re-measure) until they clear τ unsimulated, at the cost of
+    the shared lightness.
+- **Waits:** REQ-COL-087's confirmation at the M7 gate (`rq: RQ-311`). TASK-M7-37 builds R-442's default meanwhile and
+  does not wait.
+
+## RQ-312: REQ-GUI-076 bans "Chazy subtitles" from the dev GUI, which could be read as banning the Chazy stains R-442 adds *(scope, R-442, REQ-GUI-076, REQ-COL-075, REQ-GUI-185; context: TASK-M8-19, TASK-M8-45)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369 (the scope of a
+requirement's wording).*
+
+- **File, section:**
+  - `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere", line 69: "**Not in the dev GUI:**
+    Chazy subtitles, and the object-based stain desk." `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold
+    everywhere", line 17, the same.
+  - REQ-GUI-076: "The dev GUI must not include Chazy subtitles or the object-based stain desk …"; verify: "no Chazy
+    subtitle or stain-desk code path exists" (TASK-M8-19).
+  - Spec 04 §3 item 4: "**REQ-GUI-076** bans "Chazy subtitles" from the dev GUI. That is a different feature from a
+    Chazy stain. Record a ruling so the ban is not read as covering this."
+- **Silence:** the corpus does not say what "Chazy subtitles" were; read broadly, REQ-GUI-076's check ("no Chazy
+  subtitle … code path exists") would flag the Chazy fields, stains and legends.
+- **Options seen:**
+  - (a) Record that the ban covers subtitles only (a caption naming the final-motion class over the figure), not the
+    Chazy fields, stains or legends; REQ-GUI-076 gains a note, its check scoped to subtitles.
+  - (b) Reword REQ-GUI-076 and render_gui_spec §G1 to say "Chazy subtitles (captions over the figure)", with the same
+    effect.
+  - (c) Read the ban as covering any Chazy surface in the dev GUI, so the stains are browser-only (contradicting
+    R-442's request for stains).
+- **Waits:** REQ-GUI-185, REQ-GUI-186 and REQ-GUI-187 (`rq: RQ-312`), the Chazy legends and the three panels the ban
+  could be read to cover, so TASK-M8-45 opens no PR before this is decided. REQ-GUI-076 carries no `rq:` (TASK-M8-19
+  does not wait).
+
+## RQ-313: the Chazy HE gate and Principia's escape detector are different tests, so a pixel can read "escape" in the event stain and excursion or B in the Chazy stain at the same playhead *(design, R-442, R-29, R-61, R-103, REQ-EVT-027; context: TASK-M7-36)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no (per R-369), unless the choice is
+read as physics.*
+
+- **File, section:**
+  - `docs/design/principia_dd_chazy_final_motion.md` § "9. Gaps between the prototype and Principia", item 3,
+    transcribing spec 02 §6.3: "Principia's escape event uses its own rule and stops the run at fire. The classifier's
+    HE gate (hierarchy ratio > 5, receding, outer `K/U > 1 + ε`) is not the same test. A pixel can read "escape" in the
+    event stain and "excursion" or B here at the same playhead. Decide whether that is acceptable (they answer different
+    questions) or whether one should gate the other."
+  - Spec 04 §3 item 2: "**Escape detector alignment.** … Acceptable, or should one gate the other?"
+  - `decisions.md` § "R-103 — Escape ends the production loop; …"; the escape rule, `principia_01_pitfalls.md` §
+    "2.2 The criterion" and R-29 (closure over the window and `E_rel > 0`, no receding test).
+  - Spec 02 §4 (drill-down § "7. Validity and styles"): "**Escape-terminated**: the production loop stops at escape
+    fire, so the class freezes at the fire-time state."
+- **Options seen:**
+  - (a) Accept it: the two answer different questions; the legend help says so.
+  - (b) An escape-terminated sample reads at least HE (or PE) in the Chazy fields from fire on: the event gates the
+    class.
+  - (c) The Chazy HE gate gates the escape event, a change to R-29's rule that would need its own ruling.
+- **Waits:** REQ-EVT-027 (`rq: RQ-313`), TASK-M7-36's escape-freeze test. The rest of TASK-M7-36 does not wait.
+
+## RQ-314: the f32 disagreement rate near `K = U` is unmeasured, and the spec's "Tier N" for a categorical label sits uneasily with the parity contract's tiers *(measurement and terminology, R-442, R-85, REQ-VAL-183; context: TASK-M7-39)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no. The measurement is REQ-VAL-183's,
+carried by TASK-M7-39; this entry holds how the result is read.*
+
+- **File, section:**
+  - Spec 04 §3 item 3: "**f32 parity.** Measure the disagreement rate at f32 near the `K = U` sign changes before
+    setting a tolerance."
+  - Spec 02 §5 (drill-down § "8. Parity"): "It is **Tier N**: CPU and GPU agree to tolerance, not bit for bit. A pixel
+    within ulps of a sign change may differ between backends. The parity test measures that disagreement rate rather
+    than asserting zero."
+  - prin-rs PR #32, `results/chazy/README.md` §6: "it is Tier N (numerical), not Tier B: CPU and GPU agree to
+    tolerance, and pixels within the band of a sign change read as the marginal labels rather than as confident ones."
+  - `docs/contracts/principia_parity_contract.md` § "Tier N — tight numerical (checkable because nothing amplifies)",
+    line 110, lists continuous quantities compared elementwise; the scope table, line 103: "a **label on a real
+    trajectory** | **none — it will differ** | reported by the inspector, not suppressed"; Tier B's comparison-only rule:
+    "A branch decision derived from a runtime transcendental **cannot** be made bit-exact across backends".
+- **Silence and tension:** a label is not "within tolerance" of another; the classifier's branches read divisions and
+  square roots (§3.1's `K`, `U`, `d`), so on identical inputs they can fork, which Tier B excludes and Tier N does not
+  describe. The PR's sentence that pixels near a sign change "read as the marginal labels" holds for the parabolic band
+  but not for the pair's binding, which is a sign (drill-down § "3.4 Two choices that are physics, not tuning"); the
+  spec does not repeat it.
+- **Options seen:**
+  - (a) Record the class as "a label", reported not asserted (the scope table's row), with REQ-VAL-183's disagreement
+    rate and its band check the gate.
+  - (b) Treat the label as Tier N with a tolerance on the disagreement rate, set by REQ-VAL-183's measurement (a
+    calibration).
+  - (c) Make the class's branch inputs comparison-only (Tier B's rule) where they can be, and report the rest.
+- **Waits:** REQ-VAL-183 (`rq: RQ-314`), TASK-M7-39's threshold. The measurement itself does not wait.
+
+## RQ-315: OS-candidate and B-stable are labels, not predictions; the spec proposes shipping them as provisional and saying so in the legend help *(design, R-442, REQ-PAY-099, REQ-GUI-185; context: TASK-M7-35, TASK-M8-45)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - Spec 04 §3 item 5: "**OS-candidate and B-stable** are labels, not predictions: OS-candidate is unvalidated and
+    B-stable has never fired on random starts. Ship them as provisional and say so in the legend help."
+  - Drill-down § "4.2 Where it is not perfect": "**OS-candidate is not validated.** 2–3 per seed later escaped as HE";
+    "**B-stable never fired** on random starts" (prin-rs PR #32).
+- **Options seen:**
+  - (a) Ship both, marked provisional in the status legend's help, as the spec proposes.
+  - (b) Ship both unmarked.
+  - (c) Withhold OS-candidate (reading B-so-far) until it is validated; keep B-stable, which a fixture covers.
+- **Waits:** REQ-GUI-185's legend help (`rq: RQ-315`), TASK-M8-45. The classifier (TASK-M7-35) does not wait: it
+  computes both labels under every option.
+
+## RQ-316: where the Chazy tasks land: after the event machinery (M3) and the composition backbone (M7) *(placement, R-442, R-415; context: TASK-M7-35 to TASK-M7-40, TASK-M8-45)*
+
+*Found porting the Chazy stain spec (R-442). For the human: no; decided per R-369 meanwhile.*
+
+- **File, section:**
+  - Spec 04 §3 item 6: "**Where it lands.** Needs the event machinery (M3) and the composition backbone (M7)."
+  - The human's request, item 5: "Create tasks for the implementation, sequenced after the event machinery (M3) and
+    the composition backbone (M7); place them in whichever milestone fits once those land."
+- **Options seen:**
+  - (a) M7 for the classifier, fields, stains and parity, M8 for the legends, each depending on the M3, M4 and M7 tasks
+    it uses.
+  - (b) All in M8, after the M7 gate.
+  - (c) A milestone of its own after M7.
+- **Applied meanwhile:** (a), per R-369: TASK-M7-35 to TASK-M7-40 in M7, TASK-M8-45 in M8. The calibrations are
+  confirmed at the M7 gate.
+- **Waits:** nothing; this records the placement for the human's veto.
+
+## RQ-317: B's swatch `#141418` has OKLab chroma ≈ 0.008, but the spec's B rule and test 05 §2.5 say it has none, so that Replace-L turns it neutral grey *(conflict within the ruled spec, R-442, R-77, REQ-COL-074; context: TASK-M7-38)*
+
+*Found porting the Chazy stain spec (R-442), measuring the swatch. Nothing is chosen. For the human: only if option (c)
+is wanted, since the swatch is a ruling.*
+
+- **File, section:**
+  - R-442, ruling 3: "B is black #141418".
+  - Spec 03, "Two rules hold in every stain" (drill-down § "10.1 The two rules that hold in every stain"): "**B is black
+    `#141418`**, the same swatch as the event palette's "bounded". It has no hue (a = b = 0 in OKLab), so under
+    Replace-L it becomes neutral grey at the brightness field's lightness".
+  - Spec 05 §2.5: "**B has no hue.** The B swatch has OKLab a = b = 0 to within quantisation, so Replace-L gives
+    neutral grey. Control: a chromatic swatch fails the same check."
+  - Measured here, with dd_colouring §3.1's transforms: `#141418` is OKLab L 0.193, a 0.0022, b −0.0077, chroma 0.0080.
+    A neutral 8-bit grey has a = b = 0 to rounding; `#141418`'s blue channel is four steps above its red and green.
+- **Conflict:** under Replace-L at a light `L` (§10.5.1's transient, `L` near 0.9) B keeps a faint blue cast; the test
+  as written fails unless "within quantisation" admits chroma 0.008.
+- **Options seen:**
+  - (a) Keep `#141418` (R-442); the stain takes B's hue as it is, and test 05 §2.5 asserts chroma ≤ a stated bound
+    (0.008 measured) with the control's chroma well above it.
+  - (b) Keep `#141418` as the flat swatch, and have the Chazy stains zero B's `a` and `b` under Replace-L, so that B is
+    exactly neutral there.
+  - (c) Change B to a neutral near-black (e.g. `#151515`), which changes R-442's swatch and the outcome palette's
+    bounded link: the human's.
+- **Waits:** REQ-COL-074 (`rq: RQ-317`), TASK-M7-38's B test; REQ-COL-087's confirmation (`rq: RQ-317`), since
+  option (c) changes B's swatch in its palettes. The flat stains (TASK-M7-37) draw `#141418` meanwhile.
+
+## RQ-318: the spec's rule puts B-stable before transient; prin-rs PR #32's `classify` tests transient first; they differ for a Mardling–Aarseth-stable hierarchy with E > 0, a case no state has been shown to reach *(spec against reference code, R-442, REQ-PAY-099; context: TASK-M7-35; sibling of RQ-324)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen (the human's follow-up: where the spec and the PR's code
+disagree, file an RQ). For the human: only if a state reaching the case is shown. While none is, the three options
+give the same label on every state found, so the choice changes no result shown; the ordering question that does
+change results is RQ-324.*
+
+- **File, section:**
+  - Spec 01 §2's table (drill-down § "3.2 The rule, in order"), in order: "… **B-stable** | a bound hierarchy that
+    passes Mardling & Aarseth (2001) | yes … **transient** | none of the above, and `E > 0` | no".
+  - prin-rs PR #32, `src/chazy.rs::classify`: `if e > 0.0 { return Motion::Transient; }` comes before
+    `if cfg.mardling_aarseth && qp == -1 && ko < uo && ma_stable(…) == Some(true) { return Motion::BStable; }`.
+  - Drill-down § "2. Chazy's classes": "**E > 0 rules out B and OS.** Lagrange–Jacobi, `I'' = 4E − 2V > 4E > 0`".
+- **Conflict:** B-stable's test reads the two-body energies of the inner pair and of the outer body against the pair's
+  centre of mass. Their sum is not the total energy (the outer potential is the monopole's), so it does not follow
+  from B-stable's test that `E < 0`. Were a state to pass it with `E > 0`, the spec would label it B-stable and the
+  code transient.
+- **Reachability unshown (the physics review of PR #223).** The total energy splits as `E = E_pair + E_out − ΔU`, with
+  `ΔU` the outer potential less its monopole. B-stable needs `E_out < 0`; the osculating orbits bound the geometry,
+  `r_in < 2 a_in` and `d ≥ R_p^out > crit · a_in`; at quadrupole order that gives `|ΔU| ≲ 0.11 |E_pair|`, so `E` stays
+  below about `−0.9 |E_pair|`. Across 400,000 random states and a hill-climb maximising `E / |E_pair|` subject to
+  `ma_stable` true, the pair bound and `K_out < U_out` (any orientation, retrograde included, log-uniform masses), the
+  largest value found was −0.9986; no state reached `E > 0`. This is evidence, not a proof: the case is unshown, not
+  shown unreachable.
+- **Options seen:**
+  - (a) The code's order: transient first, so E > 0 never reads B-stable, as the energy certificate says.
+  - (b) The spec's order: B-stable first.
+  - (c) The code's order, with B-stable also requiring `E < 0` explicitly (the same as (a), stated in the rule).
+- **Waits:** REQ-PAY-099's B-stable-against-transient ordering clause (`rq: RQ-318`), in TASK-M7-35. REQ-VAL-185 does
+  not wait on it: its E > 0 half holds by the code's order, which TASK-M7-35 builds, and (b) would differ only at a
+  state not shown to exist. The fixtures do not reach this case, so TASK-M7-35's other work does not wait.
+
+## RQ-319: what the Chazy fields read and the Chazy stains draw for a `decode_failed` sample the chart does not hatch, or a reserved `state` code, is not given *(silence, R-442, R-446, REQ-COL-072; context: TASK-M7-37)*
+
+*Found porting the Chazy stain spec (R-442); restated against R-446 (gui review 5555473056 of PR #223). For the
+human: no; decided per R-369, option (a), on gui review 5555494498 of PR #223.*
+
+- **File, section:**
+  - Spec 02 §4 (drill-down § "7. Validity and styles") gives running, `sim_failed` or NaN, collision-terminated and
+    escape-terminated; it names neither `decode_failed` nor a reserved `state` code.
+  - `docs/design/principia_colour_composition.md` § "1.4 …" (R-446): "`bounded`, `running` and every failure draw
+    `#141418` in the outcome view: … `decode_failed` whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and
+    `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite decode), and a reserved `state` code"; "**Forbidden
+    chart regions keep the chart contract's forbidden-region treatment** in the outcome view, the hatch
+    `debug_invalid(frag_xy)` …, decided from the chart alone, never from the payload's `decode_failed` detail"; "Every
+    other `decode_failed` sample draws black." Degenerate's white `#ECECF0` survives only in its "*Was (R-96,
+    superseded in part by R-444 to R-446)*" note. § "4.1 …", "What every mode keeps": "a `sim_failed` sample, a
+    reserved `state` code or a NaN the invalid pattern", with the outcome class the exception (R-446).
+  - `docs/gui/principia_render_gui_spec.md` § "G6. …": "A free-fall slice under `η_E` is almost all `decode_failed`,
+    drawn black, and that is expected (R-441, reworded by R-446 …)": "these are `decode_failed`, drawn black
+    `#141418` in the outcome view, the bounded / nothing yet key of the outcome legend"; "*Was (R-441):* drawn
+    degenerate's white `#ECECF0`."
+  - `decisions.md` § "R-446 …", the human's words: "Forbidden chart regions keep the chart contract's forbidden-region
+    treatment in the outcome view, decided from the chart's own validity (types, primary ranges, validate, Φ), not
+    from the payload's decode_failed detail, which cannot tell the two hatches apart. Every other decode_failed sample
+    draws black." R-446 rules for the outcome view; it names no Chazy stain.
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
+    (R-407)" (Part 3): "A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload
+    §2), it is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5)."
+- **Not open: a pixel the chart hatches.** It keeps the chart's hatch in every Chazy stain under every option below:
+  Part 3 draws every pixel it hatches with `debug_invalid`, naming no view, and R-446 keeps that even in the outcome
+  view, which draws every other failure black. As in R-446, it is decided from the chart alone (the types,
+  `validate`'s layers 2 and 3, a failed `Φ`), never from the payload's `decode_failed` detail. How the chart's
+  classification reaches a view is REQ-COL-102's definition, written for the outcome view.
+- **Silence:** the decoder's own `decode_failed` samples, the ones the chart does not hatch (its `DEGENERATE` tags,
+  `M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE` and any added later, and a non-finite decode; colour_composition
+  §1.4), have no physical state to classify, and nothing says what the Chazy fields read or the Chazy stains draw for
+  them.
+- **Options seen:**
+  - (a) The invalid hatch, as for `sim_failed` in the Chazy stains (§7). A failed decode then draws like a forbidden
+    region, which the payload's detail cannot tell apart (R-446), and unlike the outcome view, which draws it black;
+    the Chazy stains already differ from the outcome view in the same way for `sim_failed`.
+  - (b) The outcome view's black `#141418` (colour_composition §1.4; R-446), so a free-fall slice under `η_E` reads
+    the same in both systems. Black is Chazy B (drill-down §10.1), labelled "bound, or nobody has left yet" in every
+    final-motion legend and in the one-body views (§10.10, §10.11.1, §10.11.4), so a failed decode would sit under
+    B's legend key, as the outcome view's failures sit under its bounded / nothing yet key. The status stain's
+    palette (§10.6) has no `#141418`, so there it would be a further swatch, its separations unmeasured (§11.2.1).
+  - (c) A further value, "no IC", in `chazy_final` and `chazy_status`.
+  - A reserved `state` code takes the invalid hatch under every option (colour_composition §4.1), as REQ-COL-072
+    requires.
+- **Applied meanwhile:** applied per R-369 on PR #223, on the gui reviewer's recommendation (review 5555494498):
+  option (a), the invalid hatch. In the Chazy stains every sample with no motion to classify draws the render
+  contract's hatch (`debug_invalid`): `sim_failed` (already hatched, drill-down §7), a reserved `state` code, a pixel
+  the chart hatches, and the decoder's own `decode_failed` (its `DEGENERATE` tags and a non-finite decode).
+  - Why: one rule, fitting render_gui_spec §13 and colour_composition §4.1. Under (b) black would read as Chazy B
+    ("bound, or nobody has left yet") in the body lens and the escaper map, and the status stain would need a swatch
+    whose separations are unmeasured; (c) would add a field value, a legend entry and a swatch to every palette for
+    samples the debug views already explain.
+  - Cost: a free-fall slice under `η_E` reads hatched in the Chazy stains but black in the outcome view, the same split
+    `sim_failed` already has, and this hatch cannot be told apart from a forbidden-region hatch.
+  - Where: drill-down §7 and §10.11 (`docs/design/principia_dd_chazy_final_motion.md`), render_gui_spec §G6's
+    free-fall paragraph, REQ-COL-072's note, TASK-M7-37's note. The outcome view's rule (R-446) is unchanged.
+- **Waits:** nothing now; this records the decision for the human's veto. Before it, REQ-COL-072's `decode_failed`
+  clause (`rq: RQ-319`, removed by this decision) and TASK-M7-37.
+
+## RQ-320: the "what just changed" view needs the previous frame's class, but a stain node reads the payload at the playhead *(silence, R-442, REQ-COL-083, REQ-COL-106; context: TASK-M7-40)*
+
+*Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369.*
+
+- **File, section:**
+  - Spec 03 §7.2 (drill-down § "10.8.2 What just changed"): "White where the coarse class changed since the previous
+    playhead, the rest dimmed. Needs the previous frame's class: a render-side comparison between frames, not a payload
+    field."
+  - `docs/contracts/principia_render_contract.md` § "Part 2 — Fixed pipeline, swappable slots", lines 36–39:
+    `colour(ctx) → vec3`, `brightness(ctx) → f32`, `post(rgb) → vec3`: every node reads the context at the playhead.
+- **Silence:** no node kind or stage reads a previous frame, the corpus names no previous-frame buffer, and how much
+  "dimmed" is is not given.
+- **Options seen:**
+  - (a) A render-side previous-class texture written each frame and bound to a post node, with the dimming a
+    calibration.
+  - (b) A latch in the payload (the coarse class at the previous playhead), against the spec's "not a payload field".
+  - (c) Offline only: the view is computed from two exported frames, outside the live stain graph.
+- **Waits:** REQ-COL-083 and REQ-COL-106's dimming (`rq: RQ-320`), TASK-M7-40. The dimming's value is REQ-COL-106's
+  calibration (R-71), proposed by TASK-M7-40 under whichever option rules.
+
+## RQ-321: the one-body views' escaping body: the classifier's `chazy_escaper`, or the event's escape detail where the run has an escape event *(open question in the ruled spec, R-443, R-442, R-29, R-103, REQ-COL-090, REQ-COL-092, REQ-COL-093; context: TASK-M7-41; sibling of RQ-313)*
+
+*Found in the human's follow-up to the Chazy spec, which asks for it to be filed (R-443). Nothing is chosen. For the
+human: yes, as physics where the choice changes results (R-369): it decides which body the views draw as escaping on
+the pixels where the two rules disagree, and the docs do not settle it.*
+
+- **File, section:**
+  - The block's 04 addition, verbatim: "Open question for REVIEW_QUEUE: the escaper definition. chazy_escaper is the
+    classifier's most-separated-body choice; the event stain's escape detail is set by Principia's own escape rule.
+    They can name different bodies on the same pixel at the same playhead (the same gap as 02 §6.3). Decide whether
+    the one-body views should read the event detail when the run has an escape event, or chazy_escaper always."
+  - `docs/design/principia_dd_chazy_final_motion.md` § "5.6 `chazy_escaper` and `chazy_qk` (R-443)" (the field: the
+    argmax of the hierarchy ratio, the lowest index on a tie) and § "10.11 One body at a time (R-443)" (the role
+    table keys the escaping body on `chazy_escaper`).
+  - `docs/design/principia_dd_simstate_payload.md` § "2. Bit layouts (the packed u32s)", `detail`: "escape → body id
+    (0–2), `3` = **triple ejection**"; the escape rule, `principia_01_pitfalls.md` § "2.2 The criterion" and R-29.
+  - RQ-313 (the same gap for the class: an escape-terminated pixel can read excursion or B here).
+- **Options seen:**
+  - (a) `chazy_escaper` always. The views agree with `chazy_class`'s HE/PE by construction; the body can differ from
+    the event stain's on the pixels where the rules disagree.
+  - (b) The event's escape detail where the run has an escape event naming one body (0–2), `chazy_escaper` otherwise.
+    The views agree with the event stain on those pixels; a triple ejection (`detail` 3) names no single body, so it
+    needs its own reading under this option.
+  - (c) As (a), with the pixels where the two name different bodies counted in the legend, so the disagreement shows
+    without changing what is drawn.
+  - How RQ-313 is ruled bears on this one: if the event gates the class (its option (b)), (b) here follows naturally;
+    under its (a), either option here stands.
+- **Waits:** the escaping-body clause of REQ-COL-090, REQ-COL-092 and REQ-COL-093 (`rq: RQ-321`). TASK-M7-41 builds
+  them on `chazy_escaper`, as the block gives it, meanwhile.
+
+## RQ-322: the grey `#8A8A90` of the one-body palettes has OKLab chroma ≈ 0.009, where §10.11.2 says grey has no hue; its 0.020 from the stipple dot `#909090` is the dot distance, and by R-434's criterion it clears the stipple *(measured against the ruled spec, R-443, R-442, R-132, R-429, R-434, REQ-COL-091, REQ-COL-098, REQ-COL-099; context: TASK-M7-41, the M7 gate; sibling of RQ-317)*
+
+*Found porting the follow-up, re-measuring its palettes (R-443). Nothing is chosen. For the human: yes, at the M7 gate,
+with the palette calibrations it belongs to (REQ-COL-098, REQ-COL-099), since a calibration value is the human's
+(R-369).*
+
+- **File, section:**
+  - The block's 04 addition: "Body-lens palette: 0.084, escaping hyperbolic against escaping parabolic … Every other
+    pair, and every entry against the hatch and stipple, clears tau".
+  - The block's 03 §10.2 (drill-down § "10.11.2 Body lens with energy"): "Grey and black have no hue, so under
+    Replace-L they become neutral greys at body k's energy".
   - `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default
-    palette" and § "4.1 Backbone & `Option` occupants", as R-444 to R-448 leave them.
-  - `plan/WORKFLOW.md` § "Conventions: crates and runners (R-146)", the golden-image row: "no baseline is re-baselined
-    without a gate decision (R-110)". § "Human checkpoints: the milestone gates": every calibration (R-71) is confirmed
-    by the human at its milestone's gate.
-- **What changes, by owner** (merged unless marked):
-  - **Goldens** (`fixtures/golden/`, rows in `BASELINES.md`): `m1-outcome/outcome` and `m1-outcome/outcome_edited`
-    (TASK-M1-10; last re-rendered by R-434, confirmed by R-435) draw every class, the white "degenerate" and the orange
-    t = 0 rows, the triple swatches `#D6A1FF` and `#000097`, and `running` in the stipple; `m1-synthetic/known_escaper`
-    (TASK-M1-14; R-434, R-435) draws a triple ejection in navy and a running sample in the stipple. Each changes under
-    R-444 to R-446. `m1-outcome/state_view`, `detail_view`, `m1-synthetic/set_state` and `forced_failure` are debug
-    views and do not change. No other fixture names a removed class or navy (`fixtures/cvd/goldens.json` holds the
-    simulation matrices, not the palette).
-  - **Test data asserted against** (`crates/render/tests/`): `outcome_state.rs` (TASK-M1-10, TASK-M1-17: the eleven
-    swatches, navy, a triple collision at `t = 0` in orange); `not_yet_grey.rs` (TASK-M1-09: the grey's separation from
-    "degenerate" `#ECECF0` and "collision @ t=0"); `colour_independence.rs` (TASK-M1-14: the eleven classes, `K = 11`);
-    `support/palettes.rs` (TASK-M1-10, TASK-M1-13, TASK-M7-20: the outcome entries every hatch, stipple and
-    colour-vision measurement runs over, REQ-COL-055, REQ-COL-061 and REQ-COL-064 among them); and qa's files, which only
-    qa changes (R-290): `qa_TASK-M1-03.rs`, `qa_TASK-M1-10.rs` (white, navy, "collision at start"),
-    `qa_TASK-M1-14_independence.rs` (`K = 11`, the orange) and `qa_TASK-M1-18_r434.rs` (navy against the dot).
-  - **Code**: `crates/render/src/colour/outcome.rs` and `crates/render/shaders/wgsl/frag/colour/outcome_state.wgsl`
-    (TASK-M1-10, TASK-M1-17), `crates/validation/src/golden_scene.rs`'s outcome scenes, and the GUI mock's Inspector
-    labels "collision @ t=0" and "degenerate" (`crates/gui/src/tests/mock_content.rs`, TASK-M6-27). The GUI mock's
-    Legend and samples hard-code the removed classes (TASK-M6-27): `crates/gui/src/mock/legend.rs`'s fake stain names
-    `collision_at_start`, `degenerate` and a `running` key in the "not yet" style, looking each up in `SWATCHES`
-    (re-exported by `crates/engine/src/contract/legend.rs`), so it panics once they leave; `crates/gui/src/mock/sample.rs`'s
-    `FATES` list `degenerate` and `collision_at_start`; `crates/gui/src/tests/mock_legend_keys.rs` asserts those keys.
-    TASK-M2-32 changes all three (gui review 5548034323 on PR #226, G1; the first port said the Legend follows the
-    code, which holds only for the swatches' colours).
-  - **Requirements claimed by merged tasks whose statements change**: REQ-COL-002 and REQ-COL-062 (TASK-M1-10),
-    REQ-COL-053 (TASK-M1-09), REQ-COL-064 and REQ-TOOL-162 (TASK-M1-17), REQ-COL-067 and REQ-COL-068 (TASK-M1-14). They
-    stay closed by those tasks and in the M1 gate's list; none is reopened. `main` meets the changed statements once
-    TASK-M2-32 merges.
-  - **In flight**: PR #223 (the Chazy rulings) quotes the old §4.1 text (`K = 11`, "degenerate", "collision @ t=0")
-    as context and offers, in its entry on what the Chazy stains draw for `decode_failed`, "the outcome palette's
-    degenerate white `#ECECF0`" as an option, which R-446 removes; it draws B as "the event palette's bounded" `#141418`,
-    unchanged. PR #225 (TASK-M2-09) adds `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed`/3, which the outcome view
-    draws black or, where the chart hatches it, with the hatch (R-446). PR #224 (TASK-M6-30) and PR #219 (TASK-M7-05) do
-    not use the outcome palette's classes.
-- **Options seen, the re-baseline:**
-  - (a) The swatches are the human's (R-444 to R-446), as R-434's dot was, so TASK-M2-32 re-renders the three goldens
-    under those rulings, each `BASELINES.md` row leading with the ruling, confirmed at it (as R-434's seven were).
-  - (b) TASK-M2-32 re-renders them as proposals, marked for the gate the human names below, and they are confirmed
-    there (R-110).
-- **Options seen, the gate that confirms the new swatches' evidence** (REQ-COL-104, REQ-COL-105, both M2, calibration):
-  - (a) The M2 gate, TASK-M2-32's milestone and the requirements' as filed.
-  - (b) None: R-444 to R-447 are the confirmation, and the evidence is checked in review, so REQ-COL-104 and
-    REQ-COL-105 become ordinary requirements (`kind` cleared).
-  - (c) The M7 gate, with the other palette calibrations (REQ-COL-061's colour-vision check, which runs over the same
-    entries, and PR #223's Chazy palettes, if it merges), the requirements moved to M7.
-- **Options seen, the M1 gate's record:** (i) the M1 gate stays passed, and the changed M1 requirements are re-checked
-  as "every earlier gate still green" at the next gate; (ii) the M1 gate is re-run once TASK-M2-32 has merged.
-- **Applied meanwhile:** REQ-COL-104 and REQ-COL-105 are filed in M2, TASK-M2-32's milestone. TASK-M2-32 waits on this
-  entry for its goldens' `BASELINES.md` decision only; its code and tests do not wait.
-- **Waits:** the `BASELINES.md` rows of TASK-M2-32's re-rendered goldens; REQ-COL-104's and REQ-COL-105's gate.
+    palette", R-434's paragraph: the stipple's dots changed to `#909090` "so that no flat palette colour comes within
+    the hatch's τ = 0.101 of every pixel of a 4 × 4 block: the nearest is 0.115 from its farthest pixel" (REQ-COL-064).
+  - `docs/design/principia_dd_chazy_final_motion.md` § "11.2.2 One-body palettes, measured (R-443)".
+  - Measured here, with dd_colouring §3.1's transforms: `#8A8A90` is OKLab L 0.635, a 0.0025, b −0.0085, chroma
+    0.0089. Against the stipple: 0.020 from the dot `#909090` (spec 04 §2.1's method, the distance to the dot colour)
+    and 0.212 from the block's farthest pixel, the not-yet grey `#4E4E4E` (R-434's criterion), τ = 0.101 (R-429). The
+    block's other values (0.084, 0.177, 0.076, 0.102) reproduce, so the method agrees with the block's.
+- **The stipple: no conflict.** By R-434's criterion, which is the corpus's, the grey clears the stipple (0.212 > τ),
+  so the block's claim that every entry clears the hatch and stipple holds. The 0.020 is the dot distance, recorded and
+  asserted as measured beside the R-434 figure (REQ-COL-097); it needs no ruling. (Corrected in the gui review of
+  PR #223: this entry first read the dot distance as a conflict.)
+- **Conflict (open):** the grey, like `#141418` (RQ-317), is not exactly neutral, so under Replace-L it keeps a faint
+  blue cast where §10.11.2 says the grey roles become neutral greys.
+- **Options seen:**
+  - (a) Keep `#8A8A90`; for its chroma, take RQ-317's ruling for `#141418` (its (a), a stated chroma bound, or its (b),
+    zeroing `a` and `b` under Replace-L).
+  - (b) Make the grey exactly neutral at about the same lightness (e.g. `#8C8C8C`), re-measured against every entry and
+    style by both methods; only the chroma changes.
+  - (c) Move the grey to a neutral well above or below L 0.64, re-measured, if the human also wants the dot distance
+    above τ.
+- **Waits:** REQ-COL-091's neutral-grey clause and REQ-COL-098 and REQ-COL-099's confirmation (`rq: RQ-322`).
+  REQ-COL-097 does not wait: it asserts both stipple figures as measured. TASK-M7-41 draws `#8A8A90` meanwhile.
+
+## RQ-323: where §10.11.3's three body-lens panels live: the GUI spec has no view of one figure as several panels in v1, and its "side by side" is a v2 research tool *(silence, R-443, R-106, REQ-GUI-186; context: TASK-M8-45)*
+
+*Found porting the follow-up (R-443). Nothing is chosen. Option (a) is the orchestrator's call per R-369 (a GUI
+layout); options (b) and (c) are the human's, since each defers or drops part of R-443's 03 §10.3 (CLAUDE.md § "When to
+ask the human": dropping or deferring a requirement).*
+
+- **File, section:**
+  - The block's 03 §10.3 (drill-down § "10.11.3 All three bodies"): "The 10.1 lens for k = 0, 1, 2 as three small
+    panels side by side, at one playhead. A layout over 10.1, not a new stain."
+  - `docs/gui/principia_render_gui_spec.md` § "G11. Research — first pass (v2)": "**Side by side** with a linked cursor
+    and navigation, and a difference view. The linked views are a separate `ViewUI` item, specified with these v2
+    research tools (R-106)".
+  - The render contract's stain graph renders one composition per view (§ "Part 2 — Fixed pipeline, swappable
+    slots").
+- **Silence:** no v1 view shows one figure as several panels at one playhead, so the layout has no host.
+- **Options seen:**
+  - (a) One figure: the view's canvas is split into three panels, each the body lens at its own `k`, from the one
+    payload at one playhead; a GUI layout, no new stain or node.
+  - (b) Three linked views: the v2 side-by-side (R-106), so §10.11.3 moves to v2 with it (a deferral: the human's).
+  - (c) An export only: the three lenses rendered and composed into one image for the record, with no live layout
+    (drops the live layout: the human's).
+- **Waits:** REQ-GUI-186 (`rq: RQ-323`), its part of TASK-M8-45.
+
+## RQ-324: the spec's rule puts B-stable before excursion; prin-rs PR #32's `classify` returns excursion inside the hierarchy step, before B-stable; they differ for a bound, Mardling–Aarseth-stable hierarchy whose outer body is past `h_far` and receding, which is reachable and common *(spec against reference code, R-442, REQ-PAY-099, REQ-PAY-101; context: TASK-M7-35, TASK-M7-36; sibling of RQ-318)*
+
+*Found in the physics review of PR #223 (the Chazy port). Nothing is chosen (the human's follow-up to R-442: where the
+spec and the PR's code disagree, file an RQ). For the human: yes, as physics where the choice changes results (R-369):
+it decides `chazy_class` and `chazy_status` on a large share of stable hierarchies.*
+
+- **File, section:**
+  - Spec 01 §2's table (drill-down § "3.2 The rule, in order"), in order: "… **B-stable** | a bound hierarchy that
+    passes Mardling & Aarseth (2001) | yes | **excursion** | as HE but the outer body is bound to its pair
+    (`K/U < 1 − ε`) | no …".
+  - prin-rs PR #32, `src/chazy.rs::classify`, as the drill-down's § "3.2 The rule, in order" transcribes it: step 2
+    (hierarchy), "pair bound and outer band `−1`: **excursion**", comes before step 4, "**B-stable.** If
+    Mardling–Aarseth is on, the pair is bound, the outer body is bound to it (`K_out < U_out`) and `ma_stable(i, j, b)`
+    holds".
+  - Drill-down § "10.6 Status": B-stable `#2F6DB5` "bound, and passes Mardling–Aarseth: predicted to stay bound";
+    excursion `#E08A2E` "bound, one body far out but still bound to the pair".
+  - The port's first text, drill-down § "3.2" and R-442's note: "They differ only for a Mardling–Aarseth-stable
+    hierarchy with `E > 0`" (RQ-318), which missed this case; both now name it.
+- **Conflict:** a bound, Mardling–Aarseth-stable hierarchy whose outer body has ratio `ρ > h_far` and is receding
+  passes the hierarchy gate with the outer band `−1`, so the code returns excursion; the table's order would reach
+  B-stable first. The review generated 23,675 random Mardling–Aarseth-stable bound hierarchies, of which 11,066 fall in
+  that branch. A stable triple then reads excursion on the outgoing half of each outer orbit and B-stable on the
+  incoming half, so it flickers on the status map. Both fold to B in `chazy_final` (drill-down § "5.3"), so the
+  final-motion maps and the one-body views do not change; `chazy_class` and `chazy_status` do. The §12.1 fixture
+  `a_mardling_aarseth_stable_hierarchy_is_b_stable…` passes under both orders only because its outer `v_r` is exactly
+  0. PE, which the code also returns in step 2, comes before B-stable in both orders, so they agree there.
+- **Options seen:**
+  - (a) The code's order: excursion before B-stable. A Mardling–Aarseth-stable hierarchy reads excursion whenever its
+    outer body is past `h_far` and receding, B-stable otherwise; prin-rs PR #32's measurements (drill-down § "4") were
+    taken under it.
+  - (b) The table's order: B-stable before excursion, so a Mardling–Aarseth-stable bound hierarchy reads B-stable
+    throughout its outer orbit, and excursion means "far out, bound, and not certified stable". The fixtures pass
+    unchanged; PR #32's status-map shares (drill-down § "10.6") would move from excursion to B-stable where this
+    applies.
+  - (c) The code's order, with the status map latching B-stable once fired (a further latch, against the
+    live-playhead reading of a label from the current state only).
+- **Waits:** REQ-PAY-099's B-stable-against-excursion ordering clause (`rq: RQ-324`), in TASK-M7-35, and REQ-PAY-101's
+  status for such a state (TASK-M7-36). The fixtures do not reach the case, so TASK-M7-35's other work does not wait.
+
+## RQ-325: the drill-down says the classifier relies on "E < 0 rules out H, HP and P", but `classify` never tests E in the dispersal step or the two-stage H, so an E < 0 state can read H or P *(spec against reference code, R-442, REQ-PAY-099, REQ-VAL-185, REQ-VAL-186; context: TASK-M7-35, TASK-M7-36)*
+
+*Found in the physics review of PR #223 (the Chazy port). Nothing is chosen (the human's follow-up to R-442: where the
+spec and the PR's code disagree, file an RQ). For the human: yes, as physics where the choice changes results (R-369):
+it decides whether an E < 0 sample can read H, HP or P.*
+
+- **File, section:**
+  - Spec 01 (drill-down § "2. Chazy's classes"), as first transcribed: "**The energy certificates the classifier
+    relies on:** … **E < 0 rules out H, HP and P.** Total dispersal needs non-negative energy."
+  - Drill-down § "4.3 On real charts (48 × 48)", as first transcribed: "No H and no transient appear: free fall has
+    E < 0, and the certificate holds pixel by pixel."
+  - Spec 05 §2.4 (drill-down § "12.2 New, for Principia", item 4): "On a free-fall chart (E < 0 everywhere) no pixel
+    reads H, HP, P or transient at any playhead"; item 1 (Burrau): "E < 0 holds the certificate (no H, HP, P at any
+    playhead)".
+  - prin-rs PR #32, `src/chazy.rs::classify` (drill-down § "3.2 The rule, in order"): E is read only in the tidal
+    gate's dispersal test and in the transient step; under the default hierarchy gate, step 1 (dispersal) and step 2's
+    two-stage H do not test E.
+- **Conflict:** the E > 0 half is enforced by the order (transient before B-stable, OS-candidate and B-so-far); the
+  E < 0 half is not. The physics review constructed a counter-example: an equal-mass homothetic equilateral expansion
+  with `E = −0.1 U_0`. At 2.9 times its initial size, `d_min / R_0 = 5.02`, every pair recedes and every pair's
+  `K/U = 1.065`, so it reads **H**; at 3.2–3.5 times, pair `K/U` = 1.02–0.975, so it reads **P**; `E` stays below 0
+  throughout and the system turns back at 10 times. For equal-mass free fall and for Burrau (3, 4, 5) the dispersal
+  step provably cannot fire (`U(t) ≥ U_0` and `d0_ij ≤ M R_0 / √(m_i m_j) ≤ 3.46 R_0`, so the three separations
+  cannot all exceed `5 R_0`), but the two-stage H is not excluded, nor are free-fall charts with extreme mass ratios.
+  prin-rs PR #32's "0 wrong commits on E < 0" (drill-down § "4.1") is a measurement, not a guarantee.
+- **Options seen:**
+  - (a) Keep the code as it is. REQ-VAL-185's E < 0 arm and REQ-VAL-186's "no H, HP or P" become empirical checks on
+    the charts they run: a failure is a physics result to report, not a bug.
+  - (b) Guard H, HP, P and the two-stage H with `E ≥ 0`, so an E < 0 state that passes their geometric tests falls
+    through to the later steps (B-stable, OS-candidate or B-so-far). The certificate then holds by construction, and
+    the counter-example reads B-so-far.
+  - (c) As (b), but the E < 0 state that passes the geometric tests reads a working state of its own, so the status
+    map shows where the geometry and the energy disagree (an eleventh label).
+- **Waits:** REQ-PAY-099's dispersal and two-stage-H clauses (`rq: RQ-325`), in TASK-M7-35; REQ-VAL-185's E < 0 arm and
+  REQ-VAL-186 (TASK-M7-36). The fixtures do not reach the case (the two-stage H fixture and the three-flying-apart
+  fixture both have E > 0), so the rest of TASK-M7-35 does not wait.
 
 ## RQ-331: the sRGB outcome palette's closest pair is 0.175 (triple collision against escape body 1), not the 0.185 R-444's message gives, because the orange stays as triple collision *(measurement against a ruled figure, R-445, R-71, REQ-COL-104; context: TASK-M2-32)*
 
@@ -566,7 +985,7 @@ human: yes (a calibration's evidence, R-71).*
   - (b) Change a swatch so that the closest pair is 0.185 or more (for instance triple collision's orange), which is a
     new ruling.
 - **Applied meanwhile:** both figures are recorded, the human's and the measured; REQ-COL-104's evidence gives both.
-- **Waits:** REQ-COL-104's confirmation (RQ-330's gate).
+- **Waits:** REQ-COL-104's confirmation (RQ-330's gate, the M2 gate by R-454).
 
 ## RQ-332: R-447's C = 0.123 is in gamut at the eight listed hues but is not "the largest chroma in gamut at every hue at that L" (0.1224), and three of its swatches differ by one or two 8-bit steps from (0.72, 0.123, hue) *(measurement against a ruled figure, R-447, R-71, REQ-COL-103, REQ-COL-105; context: TASK-M2-32)*
 
@@ -593,7 +1012,7 @@ human: yes (a calibration's evidence, R-71).*
   - (c) Keep C = 0.123 and replace the three swatches with the computed rounding.
 - **Applied meanwhile:** the ruled values are transcribed, the measured beside them; REQ-COL-103 pins the ruled hex
   values and REQ-COL-105's evidence gives the measurements.
-- **Waits:** REQ-COL-105's confirmation (RQ-330's gate). TASK-M2-32 builds the ruled swatches meanwhile.
+- **Waits:** REQ-COL-105's confirmation (RQ-330's gate, the M2 gate by R-454). TASK-M2-32 builds the ruled swatches meanwhile.
 
 ## RQ-333: R-446 sends the η_E tags to "the η_E debug view", which the corpus does not define *(silence, R-446, R-441, R-72, REQ-COL-101; context: TASK-M2-32)*
 
@@ -963,25 +1382,139 @@ steer; RQ-344 point 2 keeps the metric on `z`. Nothing is chosen. For the human 
 - **Applied meanwhile:** nothing; TASK-M6-35 waits.
 - **Waits:** TASK-M6-35 (REQ-GUI-199, REQ-GUI-200).
 
-## RQ-366: escape body 3's OKLab-uniform swatch `#09B9CD` measures hue 208.54°, 0.54° from its row's 208°, where R-447 and RQ-332 record "each hue within 0.5° of its row" *(measurement against a recorded figure, R-447, R-71, REQ-COL-103, REQ-COL-105; context: TASK-M2-32)*
+## RQ-355: The corpus puts the Lagrange (equilateral) configurations at the shape sphere's poles, `w = ±1`, for any masses, but R-14's mass-weighted map puts them there only at equal masses *(conflict: corpus statement against its own map, R-14, R-50, REQ-INT-003, REQ-CHART-018, REQ-CHART-036; context: TASK-M2-08)*
 
-*Found building TASK-M2-32, measuring with dd_colouring §3.1's transforms (`render::present`). Nothing is chosen; no
-swatch is changed. For the human: yes, with RQ-332 (a calibration's evidence, R-71).*
+*Found by TASK-M2-08 while building the landmarks from the shape map. Nothing is chosen; TASK-M2-08's PR does not wait.*
+
+- **File, section** (line numbers at TASK-M2-08's fix-round head):
+  - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's": "φ = polar angle from +w, on the vertical
+    axis, 0..π; L⁺ (w = +1) at the top"; and, of the R-12 note, "under this convention the poles are the Lagrange
+    points (regular) and every binary collision lies on the equator (w = 0)". R-14's own words name the pole `L⁺`.
+  - `docs/design/principia_dd_integrator.md` § "5" test 9 (:297): "equilateral configs → `n_w = ±1` (poles)"; and
+    "`L⁺` (bodies 0 → 1 → 2 anticlockwise, equilateral) `→ (0, 0, +1)`", beside "`BC₀₁ → (−1, 0, 0)` for any masses".
+  - The same file, § "3.7 The shape readout and winding" (:213): "`w = ±1` at the Lagrange (equilateral) poles"; its
+    table (:223) "`L⁺, L⁻` | Lagrange equilateral | north and south poles", headed "(Montgomery's shape sphere, equal
+    masses)".
+  - `docs/design/principia_chart_reference.md` § "3.1" (:356): "`L⁺` (`w = +1`) is the equilateral triangle with bodies
+    0 → 1 → 2 anticlockwise"; § "3.3" (:415): "Under this convention the poles are the Lagrange configurations";
+    § "3.3" "Projection" (:429): "the Lagrange configurations sit at the poles and can be compressed to invisibility
+    in equirectangular"; § "3.3" (:446): "the Lagrange configurations are the poles"; § "3.4" (:455): "**Lagrange
+    configurations** (equilateral) are the two poles. Their exact coordinates depend on the mass ratios — compute them
+    from §3.1 rather than hard-coding."
+  - `plan/requirements.yaml` REQ-INT-003: "`L⁺` (bodies 0→1→2 anticlockwise) at `(0, 0, +1)`"; REQ-CHART-018's detail:
+    "L⁺ (bodies 0→1→2 anticlockwise equilateral) → w = +1"; REQ-CHART-036's verify detail: "L⁺ → (0, 0, +1)".
+- **Why they disagree:** under §3.1's map `w = 2(ρ̃ ∧ λ̃)/I`, with `ρ̃ ∧ λ̃ = √(m₀m₁m₂)·2·Area` and
+  `I = Σ_{i<j} mᵢmⱼ rᵢⱼ²` (`M = 1`), the unit equilateral triangle has
+  `w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`: 1 at equal masses only, and below 1 otherwise (0.968 at masses
+  (0.2, 0.3, 0.5)). The poles are the triangles of largest area for their `I` in the mass metric, equilateral only when
+  the masses are equal. §3.4's own "their exact coordinates depend on the mass ratios" agrees with the map; its "are
+  the two poles", and test 9's `n_w = ±1`, hold at equal masses.
+- **Options seen:**
+  - (a) Qualify the pole statements to equal masses: `L±` are the equilateral (Lagrange) configurations through §3.1
+    with the current masses, the poles at equal masses, off them otherwise; test 9's `n_w = ±1` and REQ-INT-003's `L⁺`
+    line read "at equal masses", with the general value above.
+  - (b) Make `L±` the poles `(0, 0, ±1)` for any masses, the overlay's marks, and say they are the Lagrange
+    configurations only at equal masses.
+- **Applied meanwhile:** (a), as §3.4 says to compute them: `kernel::shape::landmarks` gives `L±` as `n` of the unit
+  equilateral triangle under the current masses. TASK-M2-08's tests assert `L⁺ = (0, 0, +1)` at equal masses and
+  `w = √(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)` for every mass set; no doc line is changed.
+- **R-12's conclusion survives either option.** No polar buffer is needed under (a) or (b): at a pole `a = b` and
+  `ρ̃ ⊥ λ̃`, a nondegenerate triangle for any masses, a regular point of the flow, and every binary collision stays on
+  the equator. Only which configuration the pole is named changes, not the map.
+- **Waits:** REQ-INT-003, REQ-CHART-018 and REQ-CHART-036 carry `rq: [RQ-355]`, held, not closed, by TASK-M2-08's PR
+  (applied per R-369); the code waits for nothing, option (a) applied. Option (b)
+  would change two lines of `landmarks` and the tests' expectation.
+
+## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
+
+*Found by TASK-M2-15, building T1's sweep. Nothing is chosen.*
 
 - **File, section:**
-  - `decisions.md` § "R-447 — …", *Measured*: "The swatches as ruled measure L 0.719 to 0.721, C 0.122 to 0.124, and
-    each hue within 0.5° of its row."
-  - `REVIEW_QUEUE.md` § RQ-332, *Measured*: "each hue within 0.5° of its row".
-  - `plan/tasks/M2/TASK-M2-32.md`, the acceptance line `cargo test -p render outcome_oklab_variant`: "each chromatic
-    swatch measures OKLab L 0.72 ± 0.002, C 0.123 ± 0.002 and its hue within 0.5° of R-447's".
-- **Measured:** `#09B9CD` (escape body 3, R-449's name) is hue 208.54°, 0.54° from the table's 208°; it is 0.04° from
-  208.5°, the sRGB class `#30C8DC`'s own hue, which R-447 also records. Every other swatch is within 0.5° of both its
-  row and its class's own hue.
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 1 — What encode is: a quotient map onto a section"
+    (:23): "**T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This
+    *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no
+    mirror, R-82; …)"; and (:27): "the mirror reflects every `p_i` through the x-axis".
+  - `docs/design/principia_dd_encode.md` § "3.3 The gauge group action, explicit (this is what T1 sweeps)" (:106):
+    "**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the
+    tie-break sweep)."
+  - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*": "mirror iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ),
+    δ_λ = 1e-12; |λ̃_y| ≤ δ_λ → no mirror".
+  - REQ-ENC-003's statement: "E(g·x) = E(x) for every g = (translation a, boost u, rotation θ, scale s, mirror Π)".
+- **Conflict:** `Π = diag(1, −1)` is in `G`, and the mirror acts on the full state, positions and momenta (Part 1).
+  Take `x` canonical with `|λ̃_y| ≤ δ_λ`. Then `Π·x` is canonical too, with `λ̃_y` of the other sign, inside the
+  deadband, so `C` mirrors neither: `C(Π·x) = Π·C(x)`. The two configurations agree to `2δ_λ`, and `β` reads `|λ̃_y|`
+  (R-438), so `z_α` and `z_β` agree; but `p_ρ,y` and `p_λ,y` change sign, so `z_q1` and `z_q3` do, and `L_z` flips.
+  `E(Π·x) ≠ E(x)` unless both `y` momenta are 0. Exactly collinear states (`λ̃_y = 0`) are such states for any
+  momenta: there `Π` fixes the configuration, and nothing in `C` reads which of `x`, `Π·x` was given. A deterministic
+  tie-break makes `E` a function, as T1's sentence asks, but not one constant on the orbit `{x, Π·x}`. Measured at
+  f64 on the collinear Euler landmark `ρ̃ = (0.8, 0)`, `λ̃ = (−0.6, 0)`, masses `(0.2, 0.3, 0.5)`, `p_ρ = (0.3, −0.2)`,
+  `p_λ = (−0.4, 0.25)`: `E(x)` has `z_q1 = −0.2007`, `z_q3 = 0.2513`; `E(Π·x)` has `+0.2007`, `−0.2513`; the other six
+  controls are equal bit for bit, and neither encode mirrors.
 - **Options seen:**
-  - (a) Read "R-447's hue" as the class's own hue (R-447: "each chromatic class keeps its own OKLab hue"), which every
-    swatch meets; record 0.54° against the row.
-  - (b) Take RQ-332's option (c), `#07B9CD`.
-- **Applied meanwhile, per R-369:** (a). `crates/render/tests/outcome_view.rs`'s `outcome_oklab_variant_measures_r_447`
-  checks each hue within 0.5° of its class's own and pins escape body 3 as the one swatch past 0.5° of its row, at
-  0.54°.
-- **Waits:** REQ-COL-105's confirmation (RQ-330's gate), with RQ-332.
+  - (a) Restrict T1 and REQ-ENC-003 to `g` that do not mirror where `|λ̃_y| ≤ δ_λ`: on that band (collinear states
+    included) `E` is a deterministic function constant on the orbit's turns, translations, boosts and scalings, and
+    the mirror's two sides are both kept, as two `z`. The docs say so; the code is unchanged.
+  - (b) Break the tie on the band by the momenta, so `E` is constant on the whole orbit: inside the deadband, mirror
+    iff a mirror-odd momentum quantity is negative (for one, `L_z`, or `p_λ,y`, then `p_ρ,y` where it is 0), and no
+    mirror where it too is 0, the state being then `Π`-invariant. R-82 changes (a ruling), `C`'s decision changes
+    (`kernel::canon`, TASK-M2-07's), and that quantity's own tie needs the cross-backend discipline R-82's has (R-34,
+    RQ-298).
+  - (c) Keep R-82 and read T1 on the band as holding "after float tolerance" in configuration only, the momenta's
+    `y` sign left to the input: weaker than T1's sentence, and REQ-ENC-003 reworded.
+  - Bearing on all three (physics review of PR #228): inverse-encode Part 8 (:248) already lists "the mirror tie"
+    among ROUNDTRIP's "Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie — *tagged
+    expected*, not bugs", which reads with (a) and (c); and under (b) the seam of `E` moves to the band's edges for
+    states whose mirror-odd quantity is negative, so `E` is discontinuous somewhere on the band whichever is chosen.
+- **Applied meanwhile:** `encode_t1_gauge` (`crates/kernel/tests/encode_core.rs`) sweeps random `g` per §3.3, mirror
+  included, on states off the band (`|λ̃_y| ≥ about 1.5e-3`), and the band with `g` that turn, move, boost and rescale
+  but do not mirror, which is what REQ-ENC-003's verify detail names ("deadband-straddling rotations"). The mirror tie
+  is encoded twice, with the same bits. No state on the band is swept under `Π`.
+- **Waits:** REQ-ENC-003 (`rq: RQ-360`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
+  REQ-ENC-003 held, not closed.
+
+## RQ-365: REQ-SYS-015's acceptance scan finds a hand-written WGSL copy of dd_decoder §3.2's Jacobi map, the read side's `shape()`, which RQ-235's R-369 decision put there; does the scan reach read-side derived fields, and if so is REQ-SYS-015 closed before TASK-M2-25 moves it onto the translation? *(conflict, R-116, REQ-SYS-015, RQ-235; context: TASK-M2-15)*
+
+*Found in review of PR #228 (qa's observation, code review 5554105081 C5, physics review 5554127777 P2). Nothing is
+chosen. For the human: whether the scan's reach excludes read-side derived fields narrows the task's acceptance
+(R-369).*
+
+- **File, section:**
+  - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*":
+    "The fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation),
+    never hand-written."
+  - `plan/requirements.yaml` REQ-SYS-015, statement: "there must be no separate transcriptions of the decode logic and
+    no hand-written WGSL decode or encode"; verify detail: "no second implementation of any §3 formula exists (grep for
+    the mass/config/momentum formulae outside the shared source, including .wgsl)".
+  - `plan/tasks/M2/TASK-M2-15.md` § "Acceptance tests" (:49): "a scan (including `.wgsl` files) finds no second
+    implementation of any dd_decoder §3 formula outside the shared source, so any fragment decode/encode can only be
+    the translation's output (REQ-SYS-015)".
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi": the formulae
+    `M₀₁ = m₀ + m₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`, `ρ = r₁ − r₀`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`.
+  - `docs/archive/review_queue/M0.md` § "RQ-235" (record only), its decision: "**Decided:** per R-369 (7 Oct 2026), by
+    the orchestrator: TASK-M1-12 adds `n` to `ledger::payload` as §3.8's worked entry (`derived`, `vector(f32, 3)`).
+    The read side generates its WGSL from the same source as `kernel::shape`, with a twin test, as it does
+    `hamiltonian`."
+  - `crates/render/frag/generated/read_side.wgsl:146–162`, `fn shape(r, m)`: "`kernel::shape::shape`, operation for
+    operation. `ρ = r₁ − r₀`, `λ = r₂ − r₀₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`"; its body
+    `let m01 = m.x + m.y; let mu_rho = m.x * m.y / m01; let mu_lambda = m.z * m01; …`. It is a string literal emitted by
+    `crates/ledger/src/gen/read.rs:1086–1102`, not an output of the rust-gpu → SPIR-V → WGSL translation.
+- **Conflict:** `shape()` is a second, hand-transcribed implementation of §3.2's mass and configuration formulae in a
+  `.wgsl` file, which is what REQ-SYS-015's verify detail and the task's acceptance scan look for. RQ-235's decision
+  made it "the same source as `kernel::shape`" by a twin test, not by the translation R-116 names. It is not a decode
+  or an encode (REQ-SYS-015's statement names those), it is the shape map (R-14) of the read side's derived field `n`,
+  and it predates TASK-M2-15 (TASK-M1-12). The physics review confirmed it agrees with dd_decoder §3.2 formula for
+  formula, `n = (‖ρ̃‖² − ‖λ̃‖², 2ρ̃·λ̃, 2ρ̃∧λ̃)/I` per R-14, and with `kernel::shape::shape`
+  (`crates/kernel/src/shape.rs:43–61`) operation for operation; neither uses an explicit `fma`, so their roundings may
+  differ by a backend's contraction, as any Tier-N value does. TASK-M2-15's first scan (`atanh|jacobi|atan2|artanh`)
+  missed it; the formula scan (`mu_rho|mu_lambda|m01`) finds it.
+- **Options seen:**
+  - (a) The scan reaches it: REQ-SYS-015 stays open until the read side's `shape()` is the translation's output, the
+    fragment-snippet work of TASK-M2-25 (R-116; the task's Notes: "the fragment snippets are built in TASK-M2-25").
+  - (b) The scan's reach is decode and encode only, as REQ-SYS-015's statement words it: read-side derived fields
+    with a twin test (RQ-235) are outside it, REQ-SYS-015 closes with TASK-M2-15, and its verify detail is reworded.
+  - (c) As (a), but REQ-SYS-015 is split: decode and encode close now, the derived fields' shape map moves to a
+    requirement TASK-M2-25 closes.
+- **Applied meanwhile:** nothing in the code changes. TASK-M2-15's PR records the hit in its scan section and holds
+  REQ-SYS-015 (`rq: RQ-365`).
+- **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
+  REQ-SYS-015 held, not closed.

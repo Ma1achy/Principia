@@ -378,13 +378,41 @@ impl View {
     }
 }
 
+/// The guards' cut on [`plane_s`] (R-451 B11, REQ-GUI-203): below it [`in_plane`] and [`chart_coords`] read the basis
+/// as spanning no plane. Numerical, not an R-71 calibration: the computed `s²` is off by up to about `17ε`, so a basis
+/// with no plane can read `s` up to `√(17ε) ≈ 6.1·10⁻⁸`, and 10⁻⁶ is the first power of ten at least ten times that
+/// floor. It is not the compass's 10⁻³ drawing cut: `s` is small also where the vectors' norms differ (`s ≈ 2r` for
+/// orthogonal vectors of norm ratio `r`), and a plane and its pivot exist there.
+pub const PLANE_S_CUT: f64 = 1e-6;
+
+/// R-451 B11's scale-free test of the basis `(q₁, q₂)`: `s = 2√(g₁₁g₂₂ − g₁₂²) / (g₁₁ + g₂₂)`, `g` their Gram matrix,
+/// `2|q₁ × q₂| / (|q₁|² + |q₂|²)` in the cube's frame. It is 0 only where `q₁`, `q₂` span no plane, is unchanged by
+/// scaling both together, and `s ≤ sin θ`, `θ` the angle between them. A negative `g₁₁g₂₂ − g₁₂²`, rounding, reads as 0,
+/// and so does the zero basis.
+pub fn plane_s(q1: &Latent, q2: &Latent) -> f64 {
+    let (g11, g12, g22) = (dot(q1, q1), dot(q1, q2), dot(q2, q2));
+    let total = g11 + g22;
+    if total == 0.0 {
+        return 0.0;
+    }
+    2.0 * (g11 * g22 - g12 * g12).max(0.0).sqrt() / total
+}
+
+/// Whether the guards read `plane`'s basis as spanning no plane by [`plane_s`]: `s < `[`PLANE_S_CUT`]. Each guard keeps
+/// its own sine test beside it.
+fn spans_no_plane(plane: &Plane) -> bool {
+    plane_s(&plane.q1, &plane.q2) < PLANE_S_CUT
+}
+
 /// The in-plane coordinates of `z` along `q̂₁` and `q̂₂`, the unit basis directions: the `(u, v)` with `z`'s projection
-/// on the plane's span `u q̂₁ + v q̂₂`. `None` for a degenerate basis.
+/// on the plane's span `u q̂₁ + v q̂₂`. `None` for a degenerate basis: where the sine test `1 − (q̂₁·q̂₂)² ≤ 10⁻¹²` fires
+/// or `s < `[`PLANE_S_CUT`] (R-451 B11, REQ-GUI-203).
 pub fn in_plane(plane: &Plane, z: &Latent) -> Option<(f64, f64)> {
-    let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
-    if n1 == 0.0 || n2 == 0.0 {
+    // A zero basis vector reads `s = 0`, so the cut also keeps the divisions below off a zero norm.
+    if spans_no_plane(plane) {
         return None;
     }
+    let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
     let (h1, h2) = (plane.q1.map(|x| x / n1), plane.q2.map(|x| x / n2));
     let g = dot(&h1, &h2);
     let det = 1.0 - g * g;
@@ -405,7 +433,8 @@ pub fn point(plane: &Plane, s: f64, t: f64) -> Latent {
 }
 
 /// Where `z` falls in the chart, `(s, t)`: the inverse of [`point`] on the plane through `z₀`, `z`'s out-of-plane part
-/// dropped. `None` for a degenerate basis.
+/// dropped. `None` for a degenerate basis: where the sine test `g₁₁g₂₂ − g₁₂² ≤ 10⁻²⁴ g₁₁g₂₂` fires or
+/// `s < `[`PLANE_S_CUT`] (R-451 B11, REQ-GUI-203).
 pub fn chart_coords(plane: &Plane, z: &Latent) -> Option<(f64, f64)> {
     let r = add(z, -1.0, &plane.z0);
     let (g11, g12, g22) = (
@@ -414,7 +443,7 @@ pub fn chart_coords(plane: &Plane, z: &Latent) -> Option<(f64, f64)> {
         dot(&plane.q2, &plane.q2),
     );
     let det = g11 * g22 - g12 * g12;
-    if det <= 1e-24 * (g11 * g22).max(f64::MIN_POSITIVE) {
+    if det <= 1e-24 * (g11 * g22).max(f64::MIN_POSITIVE) || spans_no_plane(plane) {
         return None;
     }
     let (c1, c2) = (dot(&r, &plane.q1), dot(&r, &plane.q2));

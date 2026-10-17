@@ -26,6 +26,14 @@
 //!   the principal value of the longitude difference, into (−π, π], exactly ±π giving +π (dd_integrator §3.7), and no
 //!   form of that rule avoids a sign decision at the ±π tie. The longitude is [`shape`]'s normalised point's.
 //!
+//! **The map on the Jacobi vectors and the landmarks** (chart_reference §3.1, §3.4; R-14, R-50; TASK-M2-08).
+//! [`shape_vec`] is §3.1's forward map written on the mass-weighted Jacobi vectors `ρ̃`, `λ̃` themselves, the form the
+//! shape-sphere chart's closed-form inverse (§3.2, `crate::chart::shape_sphere`) inverts; [`weighted_jacobi`] takes a
+//! configuration to them. [`shape`] is the same map on the positions, kept in its own operation order because the
+//! WGSL read side mirrors it operation for operation (`ledger::gen::read`). [`landmarks`] are the binary collisions and
+//! the Lagrange poles, each `n` of a configuration of that kind under the current masses through [`shape`], never a
+//! hard-coded point (dd_integrator §3.7; chart_reference §3.4). The Euler landmarks are TASK-M7-09's (R-126).
+//!
 //! Generic over the kernel's `Real`, f32 on the GPU and f64 natively (R-265). The float functions are called through
 //! `Float`, as the read side calls them: the rust-gpu toolchain's `core` has no inherent `f32` math.
 
@@ -38,7 +46,7 @@ use crate::Real;
 /// `ρ = r₁ − r₀` and `λ = r₂ − r₀₁`, `r₀₁` the pair's centre of mass, weighted as `ρ̃ = √μ_ρ ρ` and `λ̃ = √μ_λ λ`
 /// with `μ_ρ = m₀m₁/M₀₁` and `μ_λ = m₂M₀₁` (`M = 1`, chart_reference §0.2); then `u = ‖ρ̃‖² − ‖λ̃‖²`, `v = 2 ρ̃·λ̃`,
 /// `w = 2 ρ̃ ∧ λ̃` (the standard cross, R-14) and `I = ‖ρ̃‖² + ‖λ̃‖²`. The collision of bodies 0 and 1 is
-/// `(−1, 0, 0)`; `L⁺`, the triangle 0 → 1 → 2 anticlockwise, is `(0, 0, 1)`.
+/// `(−1, 0, 0)`; `L⁺`, the triangle 0 → 1 → 2 anticlockwise, is `(0, 0, 1)` at equal masses (RQ-355).
 #[inline]
 pub fn shape<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> [R; 3] {
     let two = R::one() + R::one();
@@ -58,6 +66,81 @@ pub fn shape<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> [R; 3] {
     let q = s * (rho[0] * lambda[1] - rho[1] * lambda[0]);
     let i = a + b;
     [(a - b) / i, two * p / i, two * q / i]
+}
+
+/// `shape_vec`, chart_reference §3.1's forward map on the mass-weighted Jacobi vectors (R-14): `a = ‖ρ̃‖²`,
+/// `b = ‖λ̃‖²`, `I = a + b`, `p = ρ̃ₓλ̃ₓ + ρ̃_yλ̃_y`, `q = ρ̃ₓλ̃_y − ρ̃_yλ̃ₓ` (the standard cross, `ρ̃ ∧ λ̃`), and
+/// `n = ((a − b)/I, 2p/I, 2q/I)`, a unit vector since `(a − b)² + 4p² + 4q² = I²`. `ρ̃ = 0` (the collision of bodies 0
+/// and 1) is `(−1, 0, 0)`; `L⁺`, the equilateral triangle with bodies 0 → 1 → 2 anticlockwise, has `w > 0`, and is
+/// `(0, 0, 1)` at equal masses (RQ-355).
+#[inline]
+pub fn shape_vec<R: Real + Float>(rho_t: [R; 2], lambda_t: [R; 2]) -> [R; 3] {
+    let two = R::one() + R::one();
+    let a = rho_t[0] * rho_t[0] + rho_t[1] * rho_t[1];
+    let b = lambda_t[0] * lambda_t[0] + lambda_t[1] * lambda_t[1];
+    let p = rho_t[0] * lambda_t[0] + rho_t[1] * lambda_t[1];
+    let q = rho_t[0] * lambda_t[1] - rho_t[1] * lambda_t[0];
+    let i = a + b;
+    [(a - b) / i, two * p / i, two * q / i]
+}
+
+/// The mass-weighted Jacobi vectors `(ρ̃, λ̃)` of the configuration `r` with masses `m` (chart_reference §0.2, `M = 1`):
+/// `ρ = r₁ − r₀`, `λ = r₂ − r₀₁` with `r₀₁ = (m₀r₀ + m₁r₁)/M₀₁`, `ρ̃ = √μ_ρ·ρ` and `λ̃ = √μ_λ·λ`, `μ_ρ = m₀m₁/M₀₁` and
+/// `μ_λ = m₂M₀₁`.
+#[inline]
+pub fn weighted_jacobi<R: Real + Float>(r: [[R; 2]; 3], m: [R; 3]) -> ([R; 2], [R; 2]) {
+    let m01 = m[0] + m[1];
+    let sqrt_mu_rho = Float::sqrt(m[0] * m[1] / m01);
+    let sqrt_mu_lambda = Float::sqrt(m[2] * m01);
+    let rho = [r[1][0] - r[0][0], r[1][1] - r[0][1]];
+    let r01 = [
+        (m[0] * r[0][0] + m[1] * r[1][0]) / m01,
+        (m[0] * r[0][1] + m[1] * r[1][1]) / m01,
+    ];
+    let lambda = [r[2][0] - r01[0], r[2][1] - r01[1]];
+    (
+        [sqrt_mu_rho * rho[0], sqrt_mu_rho * rho[1]],
+        [sqrt_mu_lambda * lambda[0], sqrt_mu_lambda * lambda[1]],
+    )
+}
+
+/// The shape sphere's collision and Lagrange landmarks under one set of masses (chart_reference §3.4; dd_integrator
+/// §3.7; R-14, R-50): each the `n` of a configuration of its kind, through [`shape`].
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Landmarks<R> {
+    /// The binary collisions, by pair id (R-22): `bc[k]` is the collision of the side opposite body `k`, so `bc[0]` is
+    /// `BC₁₂`, `bc[1]` is `BC₂₀` and `bc[2]` is `BC₀₁`, always `(−1, 0, 0)`. Every one lies on the equator, `w = 0`.
+    pub bc: [[R; 3]; 3],
+    /// `L⁺`, the equilateral triangle with bodies 0 → 1 → 2 anticlockwise: `(0, 0, +1)` at equal masses (RQ-355).
+    pub l_plus: [R; 3],
+    /// `L⁻`, the equilateral triangle with bodies 0 → 1 → 2 clockwise, `L⁺`'s mirror: `(0, 0, −1)` at equal masses.
+    pub l_minus: [R; 3],
+}
+
+/// The landmarks of the masses `m` (`Σmᵢ = 1`), computed from the shape map, never hard-coded (R-14, R-50): a binary
+/// collision is `n` at a configuration with that pair coincident, `(0, 0)`, and the third body at `(1, 0)`; `L±` is `n`
+/// at the unit equilateral triangle `r₀ = (0, 0)`, `r₁ = (1, 0)`, `r₂ = (½, ±√3/2)`. Each point is the same for every
+/// configuration of its kind, as `n` quotients translation, rotation and scale. The collisions move with the masses
+/// (mass-weighted, R-50); so do `L±`, at `w = ±√(3m₀m₁m₂)/(m₀m₁ + m₀m₂ + m₁m₂)`, the poles at equal masses only
+/// (RQ-355).
+#[inline]
+pub fn landmarks<R: Real + Float>(m: [R; 3]) -> Landmarks<R> {
+    let zero = R::zero();
+    let one = R::one();
+    let two = one + one;
+    let origin = [zero, zero];
+    let unit = [one, zero];
+    let half = one / two;
+    let height = Float::sqrt(two + one) / two;
+    Landmarks {
+        bc: [
+            shape([unit, origin, origin], m),
+            shape([origin, unit, origin], m),
+            shape([origin, origin, unit], m),
+        ],
+        l_plus: shape([origin, unit, [half, height]], m),
+        l_minus: shape([origin, unit, [half, -height]], m),
+    }
 }
 
 /// The pole disc's branch input for a point: its squared polar radius `ρ²_I` and its squared norm `I²`, of the point
