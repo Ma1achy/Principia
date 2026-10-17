@@ -2,16 +2,16 @@
 //! chart_decoder_contract Part 3; R-26, R-446; TASK-M2-32): whether chart_decoder_contract Part 3 hatches a sample's
 //! chart point as forbidden, which the outcome view reads as `ctx.validity.forbidden` and draws with the hatch.
 //!
-//! **Inside `[0,1]²`** ([`forbidden`]) the point is forbidden where the chart's `validate` (R-26; inverse_encode_contract
-//! § "Chart-aware validation", layers 2 and 3) returns anything but `Valid`, or where `Φ`, chart_reference §5.1's
-//! [`Chart::map`], fails to evaluate: a non-finite component of its output. The axes' primary ranges play no part
-//! (R-408's counting, not the hatch), and neither does anything the shared decoder does after `Φ`: its `DEGENERATE`
-//! tags and a non-finite decode never set it (R-446). It reads the chart alone, so the payload, its `decode_failed`
-//! detail among it, cannot reach it.
+//! **Inside `[0,1]²`** ([`forbidden`](crate::chart_class::forbidden)) the point is forbidden where the chart's
+//! `validate` (R-26; inverse_encode_contract § "Chart-aware validation", layers 2 and 3) returns anything but `Valid`,
+//! or where `Φ`, chart_reference §5.1's [`Chart::map`](kernel::chart::Chart::map), fails to evaluate: a non-finite
+//! component of its output. The axes' primary ranges play no part (R-408's counting, not the hatch), and neither does
+//! anything the shared decoder does after `Φ`: its `DEGENERATE` tags and a non-finite decode never set it (R-446). It
+//! reads the chart alone, so the payload, its `decode_failed` detail among it, cannot reach it.
 //!
-//! **Past `[0,1]²`** the axes' extension types act first (chart_decoder_contract Part 3, R-407), and a bounded axis past
-//! its edge hatches the point: that is TASK-M8-05's (REQ-CHART-054), so [`forbidden`] classifies no point outside the
-//! square and returns `None` there.
+//! **Past `[0,1]²`** the axes' extension types act first (chart_decoder_contract Part 3, R-407), and a bounded axis
+//! past its edge hatches the point: that is TASK-M8-05's (REQ-CHART-054), so
+//! [`forbidden`](crate::chart_class::forbidden) classifies no point outside the square and returns `None` there.
 
 use kernel::chart::{Chart, ChartOut, ValidationResult};
 
