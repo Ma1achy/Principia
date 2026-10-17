@@ -898,9 +898,8 @@ fn qa_r450_after_an_auto_open_a_click_then_the_keys_reach_copy_clear_and_close()
     settle(&mut h, &mut app);
     assert!(app.is_open(Window::Console));
     assert_eq!(at(&app), before, "the auto-open took the focus");
-    // A click on the search field: the keyboard's focus there (A3), and its mode the field's: navigation, where a
-    // letter types nothing and the arrows move on (§G3, A3), or typing, which is interaction mode (§G3, R-409 G4), the
-    // ring blue. Either way the mode the ring shows and what the keys do agree.
+    // A click on the search field: the keyboard's focus there (A3), typing at once, which is interaction mode, the ring
+    // blue (R-456; §G3, R-409 G4). The mode the ring shows and what the keys do agree.
     let rect = place(&app, console_id(&app, "Search"));
     click(&mut h, &mut app, rect.center());
     let (path, mode) = at(&app);
@@ -915,15 +914,14 @@ fn qa_r450_after_an_auto_open_a_click_then_the_keys_reach_copy_clear_and_close()
     rejects("a field typing while the ring shows navigation", || {
         check_mode_agrees(NAV, true, "control")
     });
-    if typed {
-        press(&mut h, &mut app, Key::Escape, NONE);
-        check_at(
-            &app,
-            &["Console", "Header", "Search"],
-            NAV,
-            "Esc ends the typing",
-        );
-    }
+    assert!(typed, "a clicked search field typed nothing (R-456)");
+    press(&mut h, &mut app, Key::Escape, NONE);
+    check_at(
+        &app,
+        &["Console", "Header", "Search"],
+        NAV,
+        "Esc ends the typing",
+    );
     let mut reached = Vec::new();
     for _ in 0..3 {
         press(&mut h, &mut app, Key::ArrowRight, NONE);
@@ -939,33 +937,25 @@ fn qa_r450_after_an_auto_open_a_click_then_the_keys_reach_copy_clear_and_close()
     assert_eq!(at(&app), before, "Esc after an auto-open");
 }
 
-/// A click on the search field, as R-450 A3 and §G3 have a click and a text field: if the field then takes letters, it
-/// is being typed in, and §G3's typing rules hold (R-409 G4): Tab leaves it for the next scope, Enter stops typing and
-/// keeps the text, the arrows then moving on.
+/// A click on the search field starts typing (R-456), and §G3's typing rules hold (R-409 G4; R-456 B1): Tab leaves it
+/// for the next scope, Enter stops typing and keeps the text, the arrows then moving on.
 #[test]
 fn qa_r450_a_clicked_search_field_follows_g3s_text_field() {
     for key in [Key::Enter, Key::Tab] {
         let (mut app, mut h, _) = open(Opened::Footer);
         let rect = place(&app, console_id(&app, "Search"));
         click(&mut h, &mut app, rect.center());
+        check_at(
+            &app,
+            &["Console", "Header", "Search"],
+            INTERACT,
+            "a click on the field (R-456)",
+        );
         type_text(&mut h, &mut app, "ab");
-        if app.windows.console.text != "ab" {
-            // Not typing: navigation mode on the field, the arrows moving on (A3).
-            check_at(
-                &app,
-                &["Console", "Header", "Search"],
-                NAV,
-                "a click on the field",
-            );
-            press(&mut h, &mut app, Key::ArrowRight, NONE);
-            check_at(
-                &app,
-                &["Console", "Header", "Copy"],
-                NAV,
-                "→ after the click",
-            );
-            continue;
-        }
+        assert_eq!(
+            app.windows.console.text, "ab",
+            "a clicked search field typed nothing (R-456)"
+        );
         press(&mut h, &mut app, key, NONE);
         assert_eq!(app.windows.console.text, "ab", "{key:?} kept the text");
         assert!(app.is_open(Window::Console));
