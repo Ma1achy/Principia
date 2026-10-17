@@ -14,8 +14,13 @@
 //! **Tolerances** (applied per R-369: test tolerances): a value is compared relative to its scale, in units of the
 //! precision's `eps`. [`KNOWN_EPS`] = 2 for the hand-computed state at f64, whose inputs are all exact, so the error is
 //! the evaluation's own few roundings (measured: the force and `Σmᵢaᵢ` 0.40 `eps` at worst, the energy terms 0.78).
-//! [`GOLDEN_EPS`] = 4 for the golden IC, whose decoded inputs are themselves within the decoder's 4 `eps` (decode_join's
-//! `GOLDEN_EPS`); the worst measured is 1.0 `eps`, the force at f32, and the test prints each.
+//! [`GOLDEN_EPS`] = 4 for the golden IC is empirical, not derived. The decoder's own bound would not give it: positions
+//! within decode_join's 4 `eps` (its `GOLDEN_EPS`) bound the force only to about 11 `eps`, since at the golden IC the
+//! force amplifies a position error `δ` by up to `(8/3)δ`, relative to `|V₀|`, before its own rounding. Measured, the
+//! worst is 1.007 `eps`, the force at f32, of which the evaluation alone, on positions rounded once from z0.json's
+//! closed forms, is 0.866 (physics review 5560168461) and the decoder adds about 0.14. So the bound is about 4× the
+//! measured worst, tighter than the decoder guarantees, and it also trips on a loss of the decoder's accuracy at `z = 0`.
+//! The test prints each worst value.
 
 mod decode_support;
 
