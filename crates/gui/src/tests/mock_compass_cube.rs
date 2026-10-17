@@ -307,6 +307,11 @@ fn mock_compass_cube_clip_and_grid() {
         );
         assert_eq!(clip(&poly, [2.0, 0.0], [2.0, 1.0]), None, "beside an edge");
         assert_eq!(
+            clip(&poly, [-1.0, 0.0], [2.0, 0.0]),
+            Some(([0.0, 0.0], [1.0, 0.0])),
+            "along an edge, kept"
+        );
+        assert_eq!(
             clip(&poly, [-1.0, 1.0], [1.0, -1.0]),
             None,
             "touches a corner"
