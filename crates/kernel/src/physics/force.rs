@@ -4,8 +4,9 @@
 //! aᵢ = Σ_{j≠i} mⱼ (rⱼ − rᵢ) / ‖rⱼ − rᵢ‖³        (3 pairs; ‖·‖³ shared with r_min)
 //! ```
 //!
-//! read from a [`PairGeom`]. Pair `k = (i, j)` contributes `uₖ = dₖ/‖dₖ‖³` once: `+mⱼuₖ` to `aᵢ` and `−mᵢuₖ` to `aⱼ`,
-//! since `rᵢ − rⱼ = −dₖ`.
+//! read from a [`PairGeom`]. Pair `k = (i, j)` (R-22: `(1, 2), (2, 0), (0, 1)`) contributes `uₖ = dₖ/‖dₖ‖³` once:
+//! `+mⱼuₖ` to `aᵢ` and `−mᵢuₖ` to `aⱼ`, since `rᵢ − rⱼ = −dₖ`. So `a₀ = m₁u₂ − m₂u₁`, `a₁ = m₂u₀ − m₀u₂` and
+//! `a₂ = m₀u₁ − m₁u₀`.
 
 use super::PairGeom;
 use crate::Real;
@@ -21,16 +22,16 @@ pub fn force<R: Real>(m: &[R; 3], g: &PairGeom<R>) -> [[R; 2]; 3] {
     ];
     [
         [
-            m[1] * u[0][0] - m[2] * u[2][0],
-            m[1] * u[0][1] - m[2] * u[2][1],
+            m[1] * u[2][0] - m[2] * u[1][0],
+            m[1] * u[2][1] - m[2] * u[1][1],
         ],
         [
-            m[2] * u[1][0] - m[0] * u[0][0],
-            m[2] * u[1][1] - m[0] * u[0][1],
+            m[2] * u[0][0] - m[0] * u[2][0],
+            m[2] * u[0][1] - m[0] * u[2][1],
         ],
         [
-            m[0] * u[2][0] - m[1] * u[1][0],
-            m[0] * u[2][1] - m[1] * u[1][1],
+            m[0] * u[1][0] - m[1] * u[0][0],
+            m[0] * u[1][1] - m[1] * u[0][1],
         ],
     ]
 }

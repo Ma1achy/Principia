@@ -8,7 +8,8 @@
 //!   momenta.
 //! - `pair_geometry_shared*`: an instrumented `Real`, which counts square roots, shows one pairwise-distance computation
 //!   per force evaluation, and the potential and `r_min` reading the same `PairGeom` and forming none (REQ-PERF-001);
-//!   the geometry's values by hand; `closest`'s least `d²`, ties going to the first pair.
+//!   the geometry's values by hand, indexed by R-22 pair id (pair `k` opposite body `k`); `closest`'s least `d²`, ties
+//!   going to the lowest pair id.
 //!
 //! **Tolerances** (applied per R-369: test tolerances): a value is compared relative to its scale, in units of the
 //! precision's `eps`. [`KNOWN_EPS`] = 2 for the hand-computed state at f64, whose inputs are all exact, so the error is
@@ -245,8 +246,8 @@ negative_control!(
 
 // ── force_known_state (REQ-INT-036) ──────────────────────────────────────────────────────────────────────────────
 
-/// Masses 3, 4, 5 at `(2, 3)`, `(14, 19)` and `(26, 10)`: the separations `(12, 16)`, `(12, −9)` and `(−24, −7)`, of
-/// lengths 20, 15 and 25, so each cube is exact; no coordinate, separation component or mass is 0, ±1 or 2, so that no
+/// Masses 3, 4, 5 at `(2, 3)`, `(14, 19)` and `(26, 10)`: the separations of bodies 0 and 1, 1 and 2, 2 and 0 are
+/// `(12, 16)`, `(12, −9)` and `(−24, −7)`, of lengths 20, 15 and 25, so each cube is exact; no coordinate, separation component or mass is 0, ±1 or 2, so that no
 /// operation of the evaluation is one a swapped operator gives the same result for (`x·1 = x/1`, `2·2 = 2 + 2`,
 /// `0·x = 0/x`).
 const M: [f64; 3] = [3.0, 4.0, 5.0];
@@ -459,7 +460,7 @@ fn check_shared(s: &Shared) {
     let n = s.norm;
     assert_eq!(
         s.potential,
-        -(M[0] * M[1] / n[0] + M[1] * M[2] / n[1] + M[2] * M[0] / n[2]),
+        -(M[1] * M[2] / n[0] + M[2] * M[0] / n[1] + M[0] * M[1] / n[2]),
         "the potential does not read the geometry's distances"
     );
     assert_eq!(
@@ -483,17 +484,18 @@ negative_control!(
     }))
 );
 
-/// The known state's geometry, by hand: separations `(12, 16)`, `(12, −9)`, `(−24, −7)`; `d²` 400, 225, 625;
-/// distances 20, 15, 25; cubes 8000, 3375, 15625; the closest pair 1, `r_min = 15`.
+/// The known state's geometry, by hand, by R-22 pair id (pair 0 = bodies 1 and 2, pair 1 = 2 and 0, pair 2 = 0 and 1):
+/// separations `r₂ − r₁ = (12, −9)`, `r₀ − r₂ = (−24, −7)`, `r₁ − r₀ = (12, 16)`; `d²` 225, 625, 400; distances 15, 25,
+/// 20; cubes 3375, 15625, 8000; the closest pair 0, `r_min = 15`.
 fn check_geometry(g: &PairGeom<f64>) {
     assert_eq!(
         (g.sep(), g.d2(), g.norm(), g.cube(), g.closest(), g.r_min()),
         (
-            [[12.0, 16.0], [12.0, -9.0], [-24.0, -7.0]],
-            [400.0, 225.0, 625.0],
-            [20.0, 15.0, 25.0],
-            [8000.0, 3375.0, 15625.0],
-            1,
+            [[12.0, -9.0], [-24.0, -7.0], [12.0, 16.0]],
+            [225.0, 625.0, 400.0],
+            [15.0, 25.0, 20.0],
+            [3375.0, 15625.0, 8000.0],
+            0,
             15.0
         ),
         "the geometry is not the hand-computed one"
@@ -512,7 +514,7 @@ negative_control!(
     check_geometry(&PairGeom::new(&[R[1], R[2], R[0]]))
 );
 
-/// `closest` on each layout `(positions, pair)`: the least `d²`, the first of a tie.
+/// `closest` on each layout `(positions, pair)`: the least `d²`, the lowest pair id of a tie.
 fn check_closest(layouts: &[([[f64; 2]; 3], usize)]) {
     for (r, want) in layouts {
         let g = PairGeom::new(r);
@@ -525,15 +527,16 @@ fn check_closest(layouts: &[([[f64; 2]; 3], usize)]) {
     }
 }
 
-/// Each pair the least alone, and each tie: pairs 0 and 1 (`d²` 1, 1, 4), 0 and 2 (1, 2, 1), 1 and 2 (4, 2, 2), and
-/// all three (the bodies coincident).
+/// Each pair the least alone, and each tie, the `d²` of pairs 0, 1, 2 (R-22) given: pair 2 (25, 16, 9), pair 0
+/// (9, 25, 16), pair 1 (34, 9, 25); ties of pairs 0 and 2 (1, 4, 1), 1 and 2 (2, 1, 1), 0 and 1 (2, 2, 4), and all
+/// three (the bodies coincident).
 const LAYOUTS: [([[f64; 2]; 3], usize); 7] = [
-    ([[0.0, 0.0], [3.0, 0.0], [0.0, 4.0]], 0),
-    ([[0.0, 0.0], [4.0, 0.0], [4.0, 3.0]], 1),
-    ([[0.0, 0.0], [5.0, 0.0], [0.0, 3.0]], 2),
+    ([[0.0, 0.0], [3.0, 0.0], [0.0, 4.0]], 2),
+    ([[0.0, 0.0], [4.0, 0.0], [4.0, 3.0]], 0),
+    ([[0.0, 0.0], [5.0, 0.0], [0.0, 3.0]], 1),
     ([[-1.0, 0.0], [0.0, 0.0], [1.0, 0.0]], 0),
-    ([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]], 0),
-    ([[0.0, 0.0], [2.0, 0.0], [1.0, 1.0]], 1),
+    ([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]], 1),
+    ([[0.0, 0.0], [2.0, 0.0], [1.0, 1.0]], 0),
     ([[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]], 0),
 ];
 
@@ -544,7 +547,7 @@ fn pair_geometry_shared_closest() {
 
 negative_control!(
     pair_geometry_shared_closest,
-    "a tie of pairs 0 and 2 claimed for pair 2",
+    "a tie of pairs 1 and 2 claimed for pair 2",
     expected = "closest is not pair 2",
     check_closest(&[([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]], 2)])
 );

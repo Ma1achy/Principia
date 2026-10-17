@@ -12,7 +12,7 @@
 //!
 //! **Rules held here** (Part 2c, "Rules the new kernel must hold by construction"): the code is bounded by `Real`
 //! alone, which carries no precision-dependent constant (rule 1); its one comparison, [`PairGeom::closest`]'s, is on
-//! `d²` (rule 2); there is no loop (rule 3); its one min-fold is seeded from the first pair, not from an infinity
+//! `d²` (rule 2); there is no loop (rule 3); its one min-fold is seeded from pair 0, not from an infinity
 //! (rule 4).
 
 pub mod energy;

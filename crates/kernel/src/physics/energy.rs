@@ -19,11 +19,12 @@ pub fn kinetic<R: Real>(m: &[R; 3], p: &[[R; 2]; 3]) -> R {
         + (p[2][0] * p[2][0] + p[2][1] * p[2][1]) / (m[2] + m[2])
 }
 
-/// The potential energy `−Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` of masses `m`, from the pairwise geometry `g`.
+/// The potential energy `−Σ_{i<j} mᵢmⱼ/‖rᵢ − rⱼ‖` of masses `m`, from the pairwise geometry `g`: pair `k`'s term is
+/// the product of the masses of the two bodies other than `k` (R-22).
 #[inline]
 pub fn potential<R: Real>(m: &[R; 3], g: &PairGeom<R>) -> R {
     let norm = g.norm();
-    -(m[0] * m[1] / norm[0] + m[1] * m[2] / norm[1] + m[2] * m[0] / norm[2])
+    -(m[1] * m[2] / norm[0] + m[2] * m[0] / norm[1] + m[0] * m[1] / norm[2])
 }
 
 /// The energy `E`, [`kinetic`] plus [`potential`].
