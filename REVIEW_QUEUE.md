@@ -1487,3 +1487,97 @@ steer; RQ-344 point 2 keeps the metric on `z`. Nothing is chosen. For the human 
 - **Waits:** REQ-INT-003, REQ-CHART-018 and REQ-CHART-036 carry `rq: [RQ-355]`, held, not closed, by TASK-M2-08's PR
   (applied per R-369); the code waits for nothing, option (a) applied. Option (b)
   would change two lines of `landmarks` and the tests' expectation.
+
+## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
+
+*Found by TASK-M2-15, building T1's sweep. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 1 — What encode is: a quotient map onto a section"
+    (:23): "**T1 (well-defined).** `E(g·x) = E(x)` for all `g ∈ G`. Encode is constant on gauge orbits. This
+    *requires* deterministic tie-breaking (mirror iff `λ̃_y < −δ_λ`; the tie `|λ̃_y| ≤ δ_λ = 10⁻¹²` resolves to no
+    mirror, R-82; …)"; and (:27): "the mirror reflects every `p_i` through the x-axis".
+  - `docs/design/principia_dd_encode.md` § "3.3 The gauge group action, explicit (this is what T1 sweeps)" (:106):
+    "**T1 asserts `E(g·x) = E(x)` for all such g** — including g's that land `λ̃_y` inside the mirror deadband (the
+    tie-break sweep)."
+  - `decisions.md` § "R-82 — One mirror test, one seed rule *(closes RQ-33)*": "mirror iff λ̃_y < −δ_λ (λ̃ = √μ_λ·λ),
+    δ_λ = 1e-12; |λ̃_y| ≤ δ_λ → no mirror".
+  - REQ-ENC-003's statement: "E(g·x) = E(x) for every g = (translation a, boost u, rotation θ, scale s, mirror Π)".
+- **Conflict:** `Π = diag(1, −1)` is in `G`, and the mirror acts on the full state, positions and momenta (Part 1).
+  Take `x` canonical with `|λ̃_y| ≤ δ_λ`. Then `Π·x` is canonical too, with `λ̃_y` of the other sign, inside the
+  deadband, so `C` mirrors neither: `C(Π·x) = Π·C(x)`. The two configurations agree to `2δ_λ`, and `β` reads `|λ̃_y|`
+  (R-438), so `z_α` and `z_β` agree; but `p_ρ,y` and `p_λ,y` change sign, so `z_q1` and `z_q3` do, and `L_z` flips.
+  `E(Π·x) ≠ E(x)` unless both `y` momenta are 0. Exactly collinear states (`λ̃_y = 0`) are such states for any
+  momenta: there `Π` fixes the configuration, and nothing in `C` reads which of `x`, `Π·x` was given. A deterministic
+  tie-break makes `E` a function, as T1's sentence asks, but not one constant on the orbit `{x, Π·x}`. Measured at
+  f64 on the collinear Euler landmark `ρ̃ = (0.8, 0)`, `λ̃ = (−0.6, 0)`, masses `(0.2, 0.3, 0.5)`, `p_ρ = (0.3, −0.2)`,
+  `p_λ = (−0.4, 0.25)`: `E(x)` has `z_q1 = −0.2007`, `z_q3 = 0.2513`; `E(Π·x)` has `+0.2007`, `−0.2513`; the other six
+  controls are equal bit for bit, and neither encode mirrors.
+- **Options seen:**
+  - (a) Restrict T1 and REQ-ENC-003 to `g` that do not mirror where `|λ̃_y| ≤ δ_λ`: on that band (collinear states
+    included) `E` is a deterministic function constant on the orbit's turns, translations, boosts and scalings, and
+    the mirror's two sides are both kept, as two `z`. The docs say so; the code is unchanged.
+  - (b) Break the tie on the band by the momenta, so `E` is constant on the whole orbit: inside the deadband, mirror
+    iff a mirror-odd momentum quantity is negative (for one, `L_z`, or `p_λ,y`, then `p_ρ,y` where it is 0), and no
+    mirror where it too is 0, the state being then `Π`-invariant. R-82 changes (a ruling), `C`'s decision changes
+    (`kernel::canon`, TASK-M2-07's), and that quantity's own tie needs the cross-backend discipline R-82's has (R-34,
+    RQ-298).
+  - (c) Keep R-82 and read T1 on the band as holding "after float tolerance" in configuration only, the momenta's
+    `y` sign left to the input: weaker than T1's sentence, and REQ-ENC-003 reworded.
+  - Bearing on all three (physics review of PR #228): inverse-encode Part 8 (:248) already lists "the mirror tie"
+    among ROUNDTRIP's "Legitimate bright regions: clamp boundaries, feasibility edges, the mirror tie — *tagged
+    expected*, not bugs", which reads with (a) and (c); and under (b) the seam of `E` moves to the band's edges for
+    states whose mirror-odd quantity is negative, so `E` is discontinuous somewhere on the band whichever is chosen.
+- **Applied meanwhile:** `encode_t1_gauge` (`crates/kernel/tests/encode_core.rs`) sweeps random `g` per §3.3, mirror
+  included, on states off the band (`|λ̃_y| ≥ about 1.5e-3`), and the band with `g` that turn, move, boost and rescale
+  but do not mirror, which is what REQ-ENC-003's verify detail names ("deadband-straddling rotations"). The mirror tie
+  is encoded twice, with the same bits. No state on the band is swept under `Π`.
+- **Waits:** REQ-ENC-003 (`rq: RQ-360`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
+  REQ-ENC-003 held, not closed.
+
+## RQ-365: REQ-SYS-015's acceptance scan finds a hand-written WGSL copy of dd_decoder §3.2's Jacobi map, the read side's `shape()`, which RQ-235's R-369 decision put there; does the scan reach read-side derived fields, and if so is REQ-SYS-015 closed before TASK-M2-25 moves it onto the translation? *(conflict, R-116, REQ-SYS-015, RQ-235; context: TASK-M2-15)*
+
+*Found in review of PR #228 (qa's observation, code review 5554105081 C5, physics review 5554127777 P2). Nothing is
+chosen. For the human: whether the scan's reach excludes read-side derived fields narrows the task's acceptance
+(R-369).*
+
+- **File, section:**
+  - `decisions.md` § "R-116 — The fragment decode and encode are generated from the one source *(closes RQ-84)*":
+    "The fragment WGSL decode and encode are generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation),
+    never hand-written."
+  - `plan/requirements.yaml` REQ-SYS-015, statement: "there must be no separate transcriptions of the decode logic and
+    no hand-written WGSL decode or encode"; verify detail: "no second implementation of any §3 formula exists (grep for
+    the mass/config/momentum formulae outside the shared source, including .wgsl)".
+  - `plan/tasks/M2/TASK-M2-15.md` § "Acceptance tests" (:49): "a scan (including `.wgsl` files) finds no second
+    implementation of any dd_decoder §3 formula outside the shared source, so any fragment decode/encode can only be
+    the translation's output (REQ-SYS-015)".
+  - `docs/design/principia_dd_decoder.md` § "3.2 Configuration — hyperspherical mass-weighted Jacobi": the formulae
+    `M₀₁ = m₀ + m₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`, `ρ = r₁ − r₀`, `λ = r₂ − (m₀r₀ + m₁r₁)/M₀₁`.
+  - `docs/archive/review_queue/M0.md` § "RQ-235" (record only), its decision: "**Decided:** per R-369 (7 Oct 2026), by
+    the orchestrator: TASK-M1-12 adds `n` to `ledger::payload` as §3.8's worked entry (`derived`, `vector(f32, 3)`).
+    The read side generates its WGSL from the same source as `kernel::shape`, with a twin test, as it does
+    `hamiltonian`."
+  - `crates/render/frag/generated/read_side.wgsl:146–162`, `fn shape(r, m)`: "`kernel::shape::shape`, operation for
+    operation. `ρ = r₁ − r₀`, `λ = r₂ − r₀₁`, `μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂M₀₁`"; its body
+    `let m01 = m.x + m.y; let mu_rho = m.x * m.y / m01; let mu_lambda = m.z * m01; …`. It is a string literal emitted by
+    `crates/ledger/src/gen/read.rs:1086–1102`, not an output of the rust-gpu → SPIR-V → WGSL translation.
+- **Conflict:** `shape()` is a second, hand-transcribed implementation of §3.2's mass and configuration formulae in a
+  `.wgsl` file, which is what REQ-SYS-015's verify detail and the task's acceptance scan look for. RQ-235's decision
+  made it "the same source as `kernel::shape`" by a twin test, not by the translation R-116 names. It is not a decode
+  or an encode (REQ-SYS-015's statement names those), it is the shape map (R-14) of the read side's derived field `n`,
+  and it predates TASK-M2-15 (TASK-M1-12). The physics review confirmed it agrees with dd_decoder §3.2 formula for
+  formula, `n = (‖ρ̃‖² − ‖λ̃‖², 2ρ̃·λ̃, 2ρ̃∧λ̃)/I` per R-14, and with `kernel::shape::shape`
+  (`crates/kernel/src/shape.rs:43–61`) operation for operation; neither uses an explicit `fma`, so their roundings may
+  differ by a backend's contraction, as any Tier-N value does. TASK-M2-15's first scan (`atanh|jacobi|atan2|artanh`)
+  missed it; the formula scan (`mu_rho|mu_lambda|m01`) finds it.
+- **Options seen:**
+  - (a) The scan reaches it: REQ-SYS-015 stays open until the read side's `shape()` is the translation's output, the
+    fragment-snippet work of TASK-M2-25 (R-116; the task's Notes: "the fragment snippets are built in TASK-M2-25").
+  - (b) The scan's reach is decode and encode only, as REQ-SYS-015's statement words it: read-side derived fields
+    with a twin test (RQ-235) are outside it, REQ-SYS-015 closes with TASK-M2-15, and its verify detail is reworded.
+  - (c) As (a), but REQ-SYS-015 is split: decode and encode close now, the derived fields' shape map moves to a
+    requirement TASK-M2-25 closes.
+- **Applied meanwhile:** nothing in the code changes. TASK-M2-15's PR records the hit in its scan section and holds
+  REQ-SYS-015 (`rq: RQ-365`).
+- **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
+  REQ-SYS-015 held, not closed.
