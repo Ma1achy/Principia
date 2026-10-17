@@ -518,10 +518,10 @@ pub const EUCLID_M_MIN: ConstantBuilder = chart("euclid_m_min", 1.0, EUCLID_SECT
 pub const EUCLID_M_MAX: ConstantBuilder = chart("euclid_m_max", 32.0, EUCLID_SECTION);
 
 /// `ν_min`, the Euclid plane's default lower `ν`: `ν(v)` linear on `[1/32, 31/32]` (chart_reference §4.5).
-pub const EUCLID_NU_MIN: ConstantBuilder = chart("euclid_nu_min", 1.0 / 32.0, EUCLID_SECTION);
+pub const EUCLID_NU_MIN: ConstantBuilder = chart("euclid_nu_min", 0.03125, EUCLID_SECTION);
 
 /// `ν_max`, the Euclid plane's default upper `ν` (chart_reference §4.5).
-pub const EUCLID_NU_MAX: ConstantBuilder = chart("euclid_nu_max", 31.0 / 32.0, EUCLID_SECTION);
+pub const EUCLID_NU_MAX: ConstantBuilder = chart("euclid_nu_max", 0.96875, EUCLID_SECTION);
 
 /// The tolerance to which Burrau at `ν = 1/2` reproduces `(3, 4, 5)` and the classical configuration (chart_reference
 /// §5.2), in units of the precision's machine epsilon, on the largest difference of any mass, position or momentum
