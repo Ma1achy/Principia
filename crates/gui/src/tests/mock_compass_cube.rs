@@ -14,6 +14,7 @@ use engine::contract::sim_config::{Lock, Plane};
 
 use super::compass_support::{app_at, drag, drawing, on_slice, plane, setfields, settle, view};
 use super::support::rejects;
+use crate::capture::{self, CompassCase, Step};
 use crate::explore::compass::{
     self, after, clip, drag_edit, ease, ease_factor, face_shade, fill_shade, grid, latent_normal,
     Cut, Drag, Drawing, Iso, Item, Shown, CORNERS, EASE_BASE, EASE_SNAP, EDGES, P3,
@@ -517,4 +518,257 @@ fn mock_compass_cube_eases_the_drawing_and_sends_the_target() {
         ["basis"],
         "the easing sends nothing"
     );
+}
+
+// --- the capture's cases and record (R-451 B8) ------------------------------------------------------------------------
+
+/// The case `case` captured on `01_main`, its record, and the record of the drawing at rest on the case's plane.
+fn captured(case: CompassCase) -> (serde_json::Value, serde_json::Value) {
+    let (_, rec) = capture::shoot_case(
+        super::mock_keyboard::canvas(),
+        "01_main",
+        &[Step::Compass(case)],
+    );
+    let rec = rec.expect("a record on 01_main");
+    let ((t1, t2, g), depth, mode) = case.parameters();
+    let v = view(t1, t2, g, 1.0);
+    let layout = crate::layout::Layout::new(
+        super::support::headless().screen(),
+        capture::PIXELS_PER_POINT,
+    );
+    let sq = compass::square(layout.compass);
+    let at_rest = compass::drawing(sq, &plane(&v, [0.0, 0.0, depth]), &v, mode, &free());
+    let mut want = compass::record(&at_rest, sq);
+    want["pixels_per_point"] = serde_json::json!(capture::PIXELS_PER_POINT);
+    (rec, want)
+}
+
+/// Asserts the record's polygon is the cycle `want`, within 1e-12.
+fn check_polygon(rec: &serde_json::Value, want: &[P3]) {
+    let got: Vec<P3> = rec["polygon"]
+        .as_array()
+        .expect("a polygon")
+        .iter()
+        .map(p3)
+        .collect();
+    let n = want.len();
+    let near = |a: P3, b: P3| (0..3).all(|i| (a[i] - b[i]).abs() < 1e-12);
+    assert!(
+        got.len() == n
+            && (0..n).any(|s| {
+                (0..n).all(|i| near(got[i], want[(s + i) % n]))
+                    || (0..n).all(|i| near(got[i], want[(s + n - i) % n]))
+            }),
+        "{got:?} for {want:?}"
+    );
+}
+
+#[test]
+fn mock_compass_cube_capture_records_each_case_at_rest() {
+    let t = 30f64.to_radians().tan();
+    let cases: [(CompassCase, Vec<P3>, &str); 4] = [
+        (
+            CompassCase::Slice,
+            vec![
+                [-1.0, -1.0, 0.25],
+                [1.0, -1.0, 0.25],
+                [1.0, 1.0, 0.25],
+                [-1.0, 1.0, 0.25],
+            ],
+            "mode slice · plane ⟂ z_q3",
+        ),
+        (
+            CompassCase::Tilt0,
+            vec![
+                [-1.0, -1.0, 0.0],
+                [1.0, -1.0, 0.0],
+                [1.0, 1.0, 0.0],
+                [-1.0, 1.0, 0.0],
+            ],
+            "mode tilt",
+        ),
+        (
+            CompassCase::TiltRect,
+            vec![
+                [1.0, 1.0, t],
+                [1.0, -1.0, t],
+                [-1.0, -1.0, -t],
+                [-1.0, 1.0, -t],
+            ],
+            "mode tilt",
+        ),
+        (
+            CompassCase::TiltHex,
+            vec![
+                [1.0, -1.0, 0.0],
+                [1.0, 0.0, 1.0],
+                [0.0, 1.0, 1.0],
+                [-1.0, 1.0, 0.0],
+                [-1.0, 0.0, -1.0],
+                [0.0, -1.0, -1.0],
+            ],
+            "mode tilt",
+        ),
+    ];
+    for (case, polygon, first) in cases {
+        let (rec, want) = captured(case);
+        assert_eq!(rec["readout"][0], first, "{case:?}");
+        assert_eq!(rec["square"], serde_json::json!([172.0, 172.0]));
+        check_polygon(&rec, &polygon);
+        assert_eq!(rec, want, "{case:?} recorded at rest");
+    }
+    // The control: the hexagon case recorded while the compass still eases, a few frames from flat.
+    let (rec, _) = captured(CompassCase::TiltHex);
+    let flat = view(0.0, 0.0, 0.0, 1.0);
+    let mut shown = Shown::of(&plane(&flat, [0.0; 3]));
+    let target = Shown::of(&plane(&view(45.0, 45.0, 0.0, 1.0), [0.0; 3]));
+    for _ in 0..3 {
+        shown = Shown::eased(Some(shown), target, 0.125);
+    }
+    let layout = crate::layout::Layout::new(
+        super::support::headless().screen(),
+        capture::PIXELS_PER_POINT,
+    );
+    let sq = compass::square(layout.compass);
+    let easing = compass::drawing(
+        sq,
+        &shown.plane(&plane(&flat, [0.0; 3])),
+        &shown.view,
+        Touch::Tilt,
+        &free(),
+    );
+    let mut early = compass::record(&easing, sq);
+    early["pixels_per_point"] = serde_json::json!(capture::PIXELS_PER_POINT);
+    rejects("a record taken before the compass is at rest", || {
+        assert_eq!(rec, early)
+    });
+    let (_, none) = capture::shoot_case(super::mock_keyboard::canvas(), "02_stain", &[]);
+    assert_eq!(none, None, "no compass on the Stain page");
+}
+
+#[test]
+fn mock_compass_cube_case_edits_set_the_frame_and_keep_the_rest() {
+    let v = view(10.0, -20.0, 30.0, 0.5);
+    let mut start = plane(&v, [0.4, -0.3, 0.6]);
+    start.z0[0] = 0.123;
+    for case in [
+        CompassCase::Slice,
+        CompassCase::Tilt0,
+        CompassCase::TiltRect,
+        CompassCase::TiltHex,
+    ] {
+        let ((t1, t2, g), depth, _) = case.parameters();
+        let set = after(&start, &case.edits(&start));
+        let sv = View::of(&set);
+        for (i, (got, was)) in set.z0.iter().zip(&start.z0).enumerate() {
+            let want = if i == sv.a || i == sv.b {
+                0.0
+            } else if i == sv.d {
+                depth * Z0_HALF_RANGE
+            } else {
+                *was
+            };
+            assert_eq!(*got, want, "{case:?}: z₀[{i}]");
+        }
+        let a = Angles::of(&sv);
+        assert!(
+            (a.tau1 - t1).abs() < 1e-9 && (a.tau2 - t2).abs() < 1e-9 && (a.gamma - g).abs() < 1e-9,
+            "{case:?}: {a:?}"
+        );
+        assert!((sv.scale - 0.5).abs() < 1e-12, "the scale kept");
+        rejects("the scale reset", || {
+            assert!((sv.scale - 1.0).abs() < 1e-12)
+        });
+    }
+}
+
+#[test]
+fn mock_compass_cube_record_and_write() {
+    let sq = Rect::from_min_size(pos2(12.0, 30.0), vec2(172.0, 172.0));
+    let v = view(30.0, 0.0, 0.0, 1.0);
+    let lock = Lock {
+        locked: true,
+        z_locked: plane(&v, [0.1, 0.2, 0.05]).z0,
+    };
+    let d = compass::drawing(sq, &plane(&v, [0.1, 0.2, 0.05]), &v, Touch::Slice, &lock);
+    let rec = compass::record(&d, sq);
+    assert_eq!(rec["origin"], serde_json::json!([12.0, 30.0]));
+    assert_eq!(rec["centre"], serde_json::json!([86.0, 86.0]));
+    assert_eq!(f(&rec["s"]), d.iso.s);
+    let corner = p2(&rec["corners"][1]);
+    let [x, y] = d.iso.at64(CORNERS[1]);
+    assert_eq!(corner, [x - 12.0, y - 30.0]);
+    let slice = d.slice.as_ref().expect("a slice");
+    assert_eq!(rec["fill"], true);
+    assert_eq!(rec["grid"], slice.grid.len());
+    assert_eq!(
+        rec["polygon"].as_array().expect("points").len(),
+        slice.points.len()
+    );
+    let screen = p2(&rec["polygon_screen"][0]);
+    let [x, y] = d.iso.at64(slice.points[0]);
+    assert_eq!(screen, [x - 12.0, y - 30.0]);
+    let at = d
+        .items
+        .iter()
+        .position(|i| *i == Item::Slice)
+        .expect("in the order");
+    assert_eq!(f(&rec["items"][at]["slice"]), slice.key);
+    let edge = d
+        .items
+        .iter()
+        .position(|i| *i != Item::Slice)
+        .expect("an edge");
+    let Item::Edge {
+        from,
+        opacity,
+        width,
+        ..
+    } = &d.items[edge]
+    else {
+        unreachable!()
+    };
+    assert_eq!(p3(&rec["items"][edge]["edge"][0]), *from);
+    assert_eq!(f(&rec["items"][edge]["opacity"]), *opacity);
+    assert_eq!(f(&rec["items"][edge]["width"]), *width);
+    let [x, y] = d.iso.at64(*from);
+    assert_eq!(p2(&rec["items"][edge]["screen"][0]), [x - 12.0, y - 30.0]);
+    assert_eq!(rec["labels"][0]["text"], d.labels[0].text);
+    assert_eq!(
+        p2(&rec["labels"][0]["at"]),
+        [
+            f64::from(d.labels[0].at.x) - 12.0,
+            f64::from(d.labels[0].at.y) - 30.0
+        ]
+    );
+    assert_eq!(
+        rec["numbers"].as_array().expect("numbers").len(),
+        d.numbers.len()
+    );
+    assert_eq!(rec["readout"], serde_json::json!(d.readout));
+    let pin = d.pin.expect("locked");
+    let [x, y] = d.iso.at64(pin);
+    assert_eq!(p2(&rec["pin"]), [x - 12.0, y - 30.0]);
+    // An edge contact: outlined, not filled.
+    let n = compass::drawn_normal(&v).expect("a plane");
+    let past = plane(&v, [n[0] * 5.0, n[1] * 5.0, n[2] * 5.0]);
+    let contact = compass::record(&compass::drawing(sq, &past, &v, Touch::Slice, &free()), sq);
+    assert_eq!(contact["fill"], false);
+    assert_eq!(contact["grid"], 0);
+    assert_eq!(contact["pin"], serde_json::Value::Null);
+    // Written beside the capture, and refused where the directory cannot be made.
+    let out = std::env::temp_dir().join(format!("gui-compass-record-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&out);
+    capture::write_compass(&rec, &out).expect("written");
+    let back: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(out.join(capture::COMPASS)).expect("read"))
+            .expect("json");
+    assert_eq!(back, rec);
+    let blocked = out.join(capture::COMPASS).join("below");
+    let err = capture::write_compass(&rec, &blocked).expect_err("a file in the way");
+    assert!(err.starts_with("cannot create"), "{err}");
+    std::fs::remove_dir_all(&out).expect("scratch removed");
+    rejects("a record at the square's corner, not its centre", || {
+        assert_eq!(rec["centre"], serde_json::json!([98.0, 116.0]))
+    });
 }
