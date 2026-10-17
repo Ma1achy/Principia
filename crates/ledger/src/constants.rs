@@ -478,6 +478,33 @@ pub const TANH_SAT: ConstantBuilder = proposed(
     "M2",
 );
 
+/// `K_max`, the invariant charts' warp scale (chart_reference §2.1; REQ-CHART-017): the kinetic energy at the top of
+/// `(L_z, E)` and `(L_z, K)`, `K(t) = K_max·t^γ_K`, an energy in `G = M = I = 1`. REQ-CHART-044's proposal (R-71),
+/// provisional until the M2 gate (R-427): 1, so the chart spans `E ∈ [U, U + 1]`, which holds the escape energy
+/// `E = 0`, `K = |U|`, with room above it, for the bulk of the decoder's configurations: `|U|`'s 99th percentile is
+/// 0.256 over `z` uniform on `[−1, 1]⁴` (none above 1) and 0.491 over `[−2, 2]⁴` (6 of 20 000 above 1), the golden
+/// IC's 0.192. Its evidence, the renders and the measurement, is `fixtures/gates/invariant_warp/` (TASK-M2-12).
+pub const K_MAX: ConstantBuilder = proposed(
+    "k_max",
+    1.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-044",
+    "M2",
+);
+
+/// `γ_K`, the invariant charts' warp exponent (chart_reference §2.1; REQ-CHART-017), `γ_K ≥ 1`. REQ-CHART-044's
+/// proposal (R-71), provisional until the M2 gate (R-427): 2, so `L_max(t) = √(2K_max)·t` is linear in `t` and the
+/// rows crowd toward the apex `K → 0`, where `K_min = L_z²/2I` and `K` meet: 52 of 512 rows lie below `K = 0.01·K_max`
+/// (6 at `γ_K = 1`), at the price of twice `γ_K = 1`'s row spacing at the top, `2K_max/511`. Its evidence is
+/// `fixtures/gates/invariant_warp/` (TASK-M2-12).
+pub const GAMMA_K: ConstantBuilder = proposed(
+    "gamma_k",
+    2.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-044",
+    "M2",
+);
+
 /// A proposed number (R-71), admissible as `class`, citing its calibration requirement `requirement` and marked
 /// provisional until the gate `gate` (R-427; dd_generation_root §3.8).
 const fn proposed(
@@ -762,7 +789,7 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 };
 
 /// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
-/// (TASK-M2-01; dd_generation_root §3.9), the presentation constants the generated views and the prelude read: the
+/// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the presentation constants the generated views and the prelude read
 /// log floors, the hatch and the hue wheel (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the
 /// shape-sphere chart's two tolerances (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀`
 /// (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the
@@ -783,6 +810,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     EPS_W,
     EPS_M01,
     TANH_SAT,
+    K_MAX,
+    GAMMA_K,
     LOG_FLOOR_D_MIN,
     LOG_FLOOR_DE_MAX,
     LOG_FLOOR_DLZ_MAX,

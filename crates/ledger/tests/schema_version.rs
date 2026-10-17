@@ -532,6 +532,11 @@ const CALIBRATIONS: [&str; 4] = [
     "shape_roundtrip_bound",
 ];
 
+/// The invariant charts' warp defaults (REQ-CHART-044; TASK-M2-12): `K_max` and `γ_K`, a chart's parameters, which the
+/// decode stage's uniform carries; they decide which IC a pixel decodes to, not what any stored bit means, so they are
+/// not hashed.
+const WARP: [&str; 2] = ["k_max", "gamma_k"];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -543,14 +548,16 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // §3.8 hashes the register entries that decide stored bits; every other entry is a chart constant, hashed by
     // value through the link registry instead (§3.9, "The hash"; R-344), or a presentation constant the generated
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
-    // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08).
+    // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
+    // invariant charts' warp defaults (TASK-M2-12).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
                 .iter()
                 .any(|c| c.name == k.name)
                 || PRESENTATION.contains(&k.name)
-                || CALIBRATIONS.contains(&k.name),
+                || CALIBRATIONS.contains(&k.name)
+                || WARP.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -565,6 +572,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the calibration `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in WARP {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the warp default `{name}` is not an unhashed register entry"
         );
     }
 }
