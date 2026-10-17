@@ -864,6 +864,55 @@ negative_control!(
     )
 );
 
+/// The `outcome` scene's samples, `(state, detail)` as read back: one per class, the collisions and the triple
+/// collision at t = 0, running, `sim_failed` and `decode_failed` of each `detail`, the reserved codes 6 and 7, and the
+/// forbidden `decode_failed` sample (R-444 to R-446; TASK-M2-32).
+const OUTCOME_CODES: [(u32, u32); 23] = [
+    (1, 0),
+    (2, 2),
+    (2, 1),
+    (2, 0),
+    (2, 3),
+    (0, 0),
+    (0, 1),
+    (0, 2),
+    (0, 3),
+    (2, 2),
+    (2, 3),
+    (3, 0),
+    (4, 0),
+    (4, 1),
+    (4, 2),
+    (4, 3),
+    (5, 0),
+    (5, 1),
+    (5, 2),
+    (5, 3),
+    (6, 0),
+    (7, 0),
+    (5, 1),
+];
+
+#[test]
+fn golden_scene_outcome_samples() {
+    check_codes("outcome", &OUTCOME_CODES);
+    check_codes("outcome_edited", &OUTCOME_CODES);
+    assert_eq!(golden_scene::state_code("reserved 6"), 6);
+    assert_eq!(golden_scene::state_code("reserved 7"), 7);
+    assert_eq!(golden_scene::state_code("sim_failed"), 4);
+}
+
+negative_control!(
+    golden_scene_outcome_samples,
+    "the reserved samples taken to hold code 0",
+    expected = "`outcome`'s states and details",
+    {
+        let mut want = OUTCOME_CODES;
+        want[20] = (0, 0);
+        check_codes("outcome", &want)
+    }
+);
+
 /// Checks that `is_structural` holds of each of `ids` and of no id of `not`.
 fn check_structural(ids: &[&str], not: &[&str]) {
     for id in ids {
