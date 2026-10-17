@@ -459,9 +459,23 @@ pub fn construct<R: ExactSign>(
     lz: R,
     k_star: R,
 ) -> Construction<R> {
+    construct_seeded(masses, config, decoded_seed(z_alpha), lz, k_star)
+}
+
+/// The invariant-momentum construction (chart_reference §2.2) with the seed `seed` given: the seed R-82's rule takes,
+/// decided by the chart on an input of its own so that one input takes one seed on every backend, as [`construct`]
+/// decides it on `z_α` (the module's note); the Burrau `(ν, K)` chart decides it on `ν`
+/// (`crate::chart::burrau::seed`).
+#[inline]
+pub fn construct_seeded<R: ExactSign>(
+    masses: &Masses<R>,
+    config: &Config<R>,
+    seed: Seed,
+    lz: R,
+    k_star: R,
+) -> Construction<R> {
     let fields = seeds(masses, config);
-    let seed = Some(decoded_seed(z_alpha));
-    finish(masses, config, fields, seed, lz, k_star)
+    finish(masses, config, fields, Some(seed), lz, k_star)
 }
 
 /// The invariant-momentum construction (chart_reference §2.2) on a configuration not from the canonical-frame decode:
