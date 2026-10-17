@@ -1,7 +1,7 @@
 //! `cargo xtask lint no-alloc` (integrator_contract Part 2c rule 5; REQ-PERF-002): it passes on this tree; a `Vec`,
 //! `Box`, `dyn`, `std::` or `alloc::` in the kernel's physics or driver layer fails it, named by file, line and token;
-//! comments, strings, longer identifiers and paths that only end in `std` are not findings; files outside the two
-//! layers are not read.
+//! so is `extern crate std` or `extern crate alloc`, under any alias; comments, strings, longer identifiers, paths
+//! that only end in `std` and other crates are not findings; files outside the two layers are not read.
 
 use std::fs;
 use std::path::Path;
@@ -52,13 +52,14 @@ negative_control!(
     ))
 );
 
-/// Uses that are not findings: comments, strings, longer identifiers, and `std` or `alloc` not followed by `::`.
+/// Uses that are not findings: comments, strings, longer identifiers, `std` or `alloc` not followed by `::`, and
+/// `extern crate` of another crate.
 const QUIET: &str = r#"// let v: Vec<f32> = Vec::new(); Box<dyn Fn()>; std::mem::swap; alloc::vec
 /* Box::new(1) */
 const S: &str = "Vec Box dyn std::f32 alloc::vec";
 struct MyVec; struct Boxed; fn dynamic() {} fn vec2() {}
 use spirv_std::num_traits::Float;
-fn std() {} fn alloc() {} extern crate std as other;
+fn std() {} fn alloc() {} extern crate core; extern crate stdx;
 "#;
 
 /// The seeded violations, one of each token, in the physics and driver directories and a driver module file, beside
@@ -75,7 +76,7 @@ fn seeded() -> Vec<(&'static str, String)> {
         ),
         (
             "crates/kernel/src/driver/step.rs",
-            format!("{QUIET}use std :: vec;\nuse alloc::boxed;\n"),
+            format!("{QUIET}use std :: vec;\nuse alloc::boxed;\nextern crate std as other;\nextern   crate\talloc;\n"),
         ),
         (
             "crates/kernel/src/driver.rs",
@@ -103,6 +104,8 @@ fn check_seeded(found: &[Finding]) {
         [
             format!("crates/kernel/src/driver/step.rs:7: `std::` {rule}"),
             format!("crates/kernel/src/driver/step.rs:8: `alloc::` {rule}"),
+            format!("crates/kernel/src/driver/step.rs:9: `extern crate std` {rule}"),
+            format!("crates/kernel/src/driver/step.rs:10: `extern crate alloc` {rule}"),
             format!("crates/kernel/src/driver.rs:7: `std::` {rule}"),
             format!("crates/kernel/src/physics/deep/pairs.rs:7: `Box` {rule}"),
             format!("crates/kernel/src/physics/force.rs:7: `Vec` {rule}"),
@@ -167,12 +170,35 @@ negative_control!(
     ))
 );
 
+/// `scan` finds `extern crate std` and `extern crate alloc`, under an alias and with any whitespace, and not
+/// `extern crate` of `core` or `stdx`.
+fn check_extern(source: &str) {
+    assert_eq!(
+        scan(source),
+        [(1, "extern crate std"), (2, "extern crate alloc")],
+        "scan does not find the std and alloc crate imports"
+    );
+}
+
+#[test]
+fn lint_no_alloc_scan_extern_crate() {
+    check_extern("extern crate std as other;\nextern\tcrate  alloc;\nextern crate core;\nextern crate stdx;\n");
+}
+
+negative_control!(
+    lint_no_alloc_scan_extern_crate,
+    "the crate imports commented out",
+    expected = "scan does not find the std and alloc crate imports",
+    check_extern("// extern crate std as other;\n// extern crate alloc;\n")
+);
+
 /// `run` fails on a tree with a violation, counting it, and passes on a clean one.
 fn check_run(violating: &Path, clean: &Path) {
     let err = run(&violating.join("Cargo.toml")).expect_err("the lint passes a violation");
     assert!(
         err.starts_with(
-            "1 `Vec`, `Box`, `dyn`, `std::` or `alloc::` use(s) in the kernel's physics and driver layers"
+            "1 `Vec`, `Box`, `dyn`, `std::`, `alloc::` or `extern crate` of `std` or `alloc` use(s) in the kernel's \
+             physics and driver layers"
         ),
         "{err}"
     );
@@ -219,7 +245,7 @@ negative_control!(
 
 const CHILD: &str = "XTASK_LINT_NO_ALLOC_CI_CHILD";
 const RAN: &str =
-    "xtask lint no-alloc: no `Vec`, `Box`, `dyn`, `std::` or `alloc::` in the kernel's";
+    "xtask lint no-alloc: no `Vec`, `Box`, `dyn`, `std::`, `alloc::` or `extern crate` of `std` or";
 
 fn check_ran(stdout: &str) {
     assert!(

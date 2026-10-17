@@ -2,7 +2,8 @@
 //! kernel must hold by construction", rule 5; REQ-PERF-002). It reads every `.rs` file of the kernel's physics and
 //! driver layers ([`LAYERS`]: each one's directory, and its module file beside it should it have one), its comments
 //! and string literals blanked, and fails, naming the file, line and token, on any of [`TOKENS`]: `Vec`, `Box` or
-//! `dyn` as a whole word, or `std` or `alloc` as a whole word followed by `::`.
+//! `dyn` as a whole word; `std` or `alloc` as a whole word followed by `::`; or `extern crate std` or
+//! `extern crate alloc`, under any alias, the words separated by any whitespace.
 
 use std::fmt;
 use std::fs;
@@ -14,8 +15,17 @@ use crate::lint_constants::strip;
 /// same name with `.rs` beside it.
 pub const LAYERS: [&str; 2] = ["crates/kernel/src/physics", "crates/kernel/src/driver"];
 
-/// The forbidden tokens: the first three as whole words, the last two as whole words followed by `::`.
-pub const TOKENS: [&str; 5] = ["Vec", "Box", "dyn", "std::", "alloc::"];
+/// The forbidden tokens: the first three as whole words, the next two as whole words followed by `::`, the last two as
+/// phrases of whole words.
+pub const TOKENS: [&str; 7] = [
+    "Vec",
+    "Box",
+    "dyn",
+    "std::",
+    "alloc::",
+    "extern crate std",
+    "extern crate alloc",
+];
 
 /// One forbidden token: its file, relative to the root, its line, and the token.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -44,12 +54,22 @@ fn word(c: char) -> bool {
 }
 
 /// Whether `line` holds `token` at a word start: for a token ending in `::`, its name as a whole word followed by
-/// `::` (whitespace allowed between); otherwise the token as a whole word.
+/// `::` (whitespace allowed between); for a phrase, its words as whole words in `line` with its whitespace runs
+/// collapsed to one space; otherwise the token as a whole word.
 fn holds(line: &str, token: &str) -> bool {
+    if token.contains(' ') {
+        let words: Vec<&str> = line.split_whitespace().collect();
+        return found(&words.join(" "), token, false);
+    }
     let (name, path) = match token.strip_suffix("::") {
         Some(name) => (name, true),
         None => (token, false),
     };
+    found(line, name, path)
+}
+
+/// Whether `line` holds `name` as a whole word, followed by `::` where `path` holds.
+fn found(line: &str, name: &str, path: bool) -> bool {
     line.match_indices(name).any(|(i, _)| {
         let before = line[..i].chars().next_back();
         let rest = &line[i + name.len()..];
@@ -127,13 +147,14 @@ pub fn run(manifest: &Path) -> Result<(), String> {
     }
     if found.is_empty() {
         println!(
-            "xtask lint no-alloc: no `Vec`, `Box`, `dyn`, `std::` or `alloc::` in the kernel's physics and driver layers"
+            "xtask lint no-alloc: no `Vec`, `Box`, `dyn`, `std::`, `alloc::` or `extern crate` of `std` or `alloc` in \
+             the kernel's physics and driver layers"
         );
         Ok(())
     } else {
         Err(format!(
-            "{} `Vec`, `Box`, `dyn`, `std::` or `alloc::` use(s) in the kernel's physics and driver layers \
-             (REQ-PERF-002)",
+            "{} `Vec`, `Box`, `dyn`, `std::`, `alloc::` or `extern crate` of `std` or `alloc` use(s) in the \
+             kernel's physics and driver layers (REQ-PERF-002)",
             found.len()
         ))
     }
