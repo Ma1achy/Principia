@@ -656,3 +656,159 @@ fn mock_console_keys_a_click_moves_the_keyboards_focus_onto_the_control() {
     assert!(!app.is_open(Window::Console));
     assert_eq!(focus(&app), ["top_bar"]);
 }
+
+// --- The rules on the tree itself (R-450 A1, A4) -------------------------------------------------------------------------
+
+#[test]
+fn mock_console_keys_the_axes_move_along_their_arrows_only() {
+    use crate::keyboard::keymap::Direction::{Down, Left, Right, Up};
+    use crate::keyboard::scopes::Axis;
+    for d in [Up, Down, Left, Right] {
+        assert!(Axis::Both.moves(d), "{d:?}");
+    }
+    assert_eq!(
+        [Up, Down, Left, Right].map(|d| Axis::Row.moves(d)),
+        [false, false, true, true]
+    );
+    assert_eq!(
+        [Up, Down, Left, Right].map(|d| Axis::Column.moves(d)),
+        [true, true, false, false]
+    );
+    rejects("a row that ↓ moves along", || {
+        assert!(Axis::Row.moves(Down))
+    });
+}
+
+#[test]
+fn mock_console_keys_a_scroll_counts_one_or_ten() {
+    use crate::keyboard::keymap::multiplier;
+    use crate::keyboard::scopes::scroll_count;
+    let shift_alt = Modifiers {
+        shift: true,
+        alt: true,
+        ..NONE
+    };
+    for (m, n) in [(NONE, 1), (SHIFT, 10), (ALT, 1), (shift_alt, 1)] {
+        assert_eq!(scroll_count(1.0, multiplier(m)), n, "{m:?}");
+        assert_eq!(scroll_count(-1.0, multiplier(m)), -n, "{m:?}");
+    }
+    assert_eq!(scroll_count(0.0, 1.0), 1, "no sign is down the list");
+    rejects("Alt's tenth read as no step", || {
+        assert_eq!(scroll_count(1.0, multiplier(ALT)), 0)
+    });
+}
+
+#[test]
+fn mock_console_keys_page_home_and_end_are_the_tables() {
+    use crate::keyboard::keymap::{command, repeats, Command, ScrollKey};
+    for (key, k, held) in [
+        (Key::PageUp, ScrollKey::PageUp, true),
+        (Key::PageDown, ScrollKey::PageDown, true),
+        (Key::Home, ScrollKey::Home, false),
+        (Key::End, ScrollKey::End, false),
+    ] {
+        for m in [NONE, SHIFT] {
+            assert_eq!(command(key, m), Some(Command::Scroll(k)), "{key:?} {m:?}");
+        }
+        assert_eq!(repeats(Command::Scroll(k)), held, "{key:?}");
+    }
+    let ctrl = Modifiers {
+        ctrl: true,
+        command: true,
+        ..NONE
+    };
+    assert_eq!(command(Key::End, ctrl), None, "Ctrl is the system's");
+    rejects("Home repeating while held", || {
+        assert!(repeats(Command::Scroll(ScrollKey::Home)))
+    });
+}
+
+/// The console's own tree, from the layer.
+fn console_tree() -> crate::keyboard::scopes::ScopeTree {
+    let mut tree = crate::keyboard::scopes::ScopeTree::new();
+    tree.register(
+        None,
+        crate::keyboard::scopes::Scope::scoped_window(WINDOW, "Console"),
+    );
+    console::register(&mut tree);
+    tree
+}
+
+fn run(
+    tree: &crate::keyboard::scopes::ScopeTree,
+    path: &[&str],
+    mode: KeyMode,
+    command: crate::keyboard::keymap::Command,
+    multiplier: f64,
+) -> (At, crate::keyboard::scopes::Outcome) {
+    let mut f = engine::contract::view_ui::Focus {
+        path: owned(path),
+        mode,
+    };
+    let outcome = tree.navigate(&mut f, command, multiplier);
+    ((f.path, f.mode), outcome)
+}
+
+#[test]
+fn mock_console_keys_the_tree_lands_moves_and_scrolls_as_r450_has_it() {
+    use crate::keyboard::keymap::Command::{Arrow, Enter, Next, Previous, Scroll as Key};
+    use crate::keyboard::keymap::Direction::{Down, Left, Right, Up};
+    use crate::keyboard::keymap::ScrollKey::{End, Home, PageDown, PageUp};
+    use crate::keyboard::scopes::{Outcome, Scroll, ScrollBy};
+    let tree = console_tree();
+    assert_eq!(tree.window_landing(WINDOW), LANDING);
+    assert_eq!(tree.section_landing(WINDOW, LOG), ON_LOG);
+    assert_eq!(run(&tree, &[WINDOW], NAV, Next, 1.0).0 .0, LANDING);
+    assert_eq!(run(&tree, &[WINDOW], NAV, Previous, 1.0).0 .0, ON_LOG);
+    assert_eq!(run(&tree, &on_control(COPY), NAV, Next, 1.0).0 .0, ON_LOG);
+    // The arrows: ↑ ↓ between the scopes, ← → nothing; on the row ← → only.
+    let moved = |path: &[&str], c| run(&tree, path, NAV, c, 1.0).0 .0;
+    assert_eq!(moved(&LANDING, Arrow(Down)), ON_LOG);
+    assert_eq!(moved(&ON_LOG, Arrow(Up)), LANDING);
+    assert_eq!(moved(&LANDING, Arrow(Right)), LANDING);
+    assert_eq!(moved(&ON_LOG, Arrow(Left)), ON_LOG);
+    assert_eq!(moved(&on_control(COPY), Arrow(Right)), on_control(CLEAR));
+    assert_eq!(moved(&on_control(COPY), Arrow(Left)), on_control(SEARCH));
+    assert_eq!(moved(&on_control(COPY), Arrow(Down)), on_control(COPY));
+    assert_eq!(moved(&on_control(COPY), Arrow(Up)), on_control(COPY));
+    // Enter: into the header bar, on All; on the log, interaction.
+    assert_eq!(
+        run(&tree, &LANDING, NAV, Enter, 1.0).0 .0,
+        on_control("cs_all")
+    );
+    assert_eq!(
+        run(&tree, &ON_LOG, NAV, Enter, 1.0).0,
+        (owned(&ON_LOG), INTERACT)
+    );
+    assert_eq!(
+        run(&tree, &on_control(CLOSE), NAV, Enter, 1.0).1,
+        Outcome::Activate(CLOSE)
+    );
+    // The log's keys, interacting.
+    let scrolled = |c, m| run(&tree, &ON_LOG, INTERACT, c, m).1;
+    let by = |by| Outcome::Scroll(Scroll { scope: LOG, by });
+    assert_eq!(scrolled(Arrow(Down), 1.0), by(ScrollBy::Entries(1)));
+    assert_eq!(scrolled(Arrow(Up), 1.0), by(ScrollBy::Entries(-1)));
+    assert_eq!(scrolled(Arrow(Down), 10.0), by(ScrollBy::Entries(10)));
+    assert_eq!(scrolled(Arrow(Left), 1.0), Outcome::None);
+    assert_eq!(scrolled(Arrow(Right), 1.0), Outcome::None);
+    assert_eq!(scrolled(Key(PageDown), 1.0), by(ScrollBy::Pages(1)));
+    assert_eq!(scrolled(Key(PageUp), 1.0), by(ScrollBy::Pages(-1)));
+    assert_eq!(scrolled(Key(PageUp), 10.0), by(ScrollBy::Pages(-10)));
+    assert_eq!(scrolled(Key(Home), 10.0), by(ScrollBy::First));
+    assert_eq!(scrolled(Key(End), 1.0), by(ScrollBy::Last));
+    // Navigating, or on anything but a list, or on nothing, the scroll keys do nothing.
+    assert_eq!(run(&tree, &ON_LOG, NAV, Key(End), 1.0).1, Outcome::None);
+    let typing = run(&tree, &on_control(SEARCH), INTERACT, Key(End), 1.0).1;
+    assert_eq!(typing, Outcome::None);
+    assert_eq!(run(&tree, &[], NAV, Key(End), 1.0).1, Outcome::None);
+    // A window of the old kind keeps its landing on a section's first element.
+    let mut old = crate::keyboard::scopes::ScopeTree::new();
+    old.register(None, crate::keyboard::scopes::Scope::window("w", "W"));
+    old.register(Some("w"), crate::keyboard::scopes::Scope::group("s", "S"));
+    old.register(Some("s"), crate::keyboard::scopes::Scope::control("e", "E"));
+    assert_eq!(old.window_landing("w"), ["w", "s", "e"]);
+    rejects("a log whose ↑ scrolls towards the last entry", || {
+        assert_eq!(scrolled(Arrow(Up), 1.0), by(ScrollBy::Entries(1)))
+    });
+}
