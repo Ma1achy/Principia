@@ -912,8 +912,42 @@ fn collinear_at<R: P>() -> RoundTrip {
     worst
 }
 
+/// Just off the `−x` half-axis, `λ̃_y = ±1e-13` and `±1e-9`: the true `β` is within `10⁻¹³` of π, which a
+/// round-to-nearest f32 `atan2` returns as f32's nearest π, above `π̂`; `β` is then `π̂` by the select, never above it,
+/// at either sign of `λ̃_y` (C8/Q5; dd_encode §3.1). At f64, `π̂` is f64's nearest π, which `atan2` never exceeds. Below
+/// `π̂`, as at `λ̃_y = 1e-6`, `β` is `atan2`'s own value.
+fn check_near_half_axis<R: P>() {
+    let pi = R::LIT_7;
+    for (x, y) in [
+        (-17.157846897416682, 1.110852467838388e-13),
+        (-1.0, 1e-13),
+        (-0.6, -1e-9),
+    ] {
+        let lambda_t = [R::of(x), R::of(y)];
+        let b = beta(lambda_t);
+        let raw = Float::atan2(Float::abs(lambda_t[1]), lambda_t[0]);
+        let want = if raw > pi { pi } else { raw };
+        assert_eq!(
+            b.bits(),
+            want.bits(),
+            "β = {b:e}, not {want:e}, at λ̃ = {lambda_t:?}"
+        );
+        assert!(b <= pi, "β = {b:e} above π̂ = {pi:e} at λ̃ = {lambda_t:?}");
+    }
+    let lambda_t = [R::of(-1.0), R::of(1e-6)];
+    let raw = Float::atan2(lambda_t[1], lambda_t[0]);
+    assert!(raw < pi, "atan2 at λ̃ = {lambda_t:?} is not below π̂");
+    assert_eq!(
+        beta(lambda_t).bits(),
+        raw.bits(),
+        "β is not atan2's value below π̂"
+    );
+}
+
 #[test]
 fn encode_collinear_beta() {
+    check_near_half_axis::<f64>();
+    check_near_half_axis::<f32>();
     let w64 = collinear_at::<f64>();
     let w32 = collinear_at::<f32>();
     eprintln!("encode_collinear_beta: worst past the bounds (eps): f64 {w64:?}; f32 {w32:?}");

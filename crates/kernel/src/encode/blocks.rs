@@ -21,9 +21,11 @@
 //! - `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`, the `−x` half-axis: `π̂`, R-417's image of π
 //!   (`descriptor::pi_image`), since a GPU may ignore a zero's sign through `atan2` and give `−π` there;
 //! - `λ̃_x = 0` and `λ̃_y = 0`, the `α = 0` pole: 0, never `atan2(0, 0)`, which GLSL.std.450 leaves undefined;
+//! - `atan2(|λ̃_y|, λ̃_x)` above `π̂`: `π̂`. Near the `−x` half-axis the true `β` is just below π, and an f32 `atan2`
+//!   that rounds to nearest (glibc's and Apple's `atan2f`) returns f32's nearest π, above `π̂` (C8/Q5; dd_encode §3.1);
 //! - elsewhere `atan2(|λ̃_y|, λ̃_x)`.
 //!
-//! The two selected cases are disjoint (`λ̃_x < 0` against `λ̃_x = 0`). `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
+//! The two zero-selected cases are disjoint (`λ̃_x < 0` against `λ̃_x = 0`). `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
 //! section, where `‖ρ̃‖² + ‖λ̃‖² = I = 1`; its operands are both 0 only where `C` could not reach `I = 1`, all three
 //! bodies coinciding, whose output RQ-296 holds.
 //!
@@ -119,15 +121,18 @@ pub fn alpha<R: LinkReal>(rho_t: [R; 2], lambda_t: [R; 2]) -> R {
 }
 
 /// `β = atan2(|λ̃_y|, λ̃_x)` (R-438), with `π̂` on the `−x` half-axis and 0 at the `α = 0` pole, each selected by a
-/// comparison with 0 that `±0` pass alike (R-437; the module's note).
+/// comparison with 0 that `±0` pass alike (R-437), and `π̂` wherever `atan2` returns more, so `β ∈ [0, π̂]` (the
+/// module's note).
 #[inline]
 pub fn beta<R: LinkReal>(lambda_t: [R; 2]) -> R {
     let zero = R::zero();
+    let pi = pi_image::<R>();
     let [x, y] = lambda_t;
-    let off_axis = Float::atan2(Float::abs(y), x);
+    let raw = Float::atan2(Float::abs(y), x);
+    let off_axis = select(raw > pi, pi, raw);
     let half_axis = (y == zero) & (x < zero);
     let pole = (x == zero) & (y == zero);
-    select(half_axis, pi_image::<R>(), select(pole, zero, off_axis))
+    select(half_axis, pi, select(pole, zero, off_axis))
 }
 
 /// A codomain's two ends at `R`: values at or past its closed range's ends, which the inverse's clamp moves. Any such
