@@ -789,11 +789,11 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 };
 
 /// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
-/// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the presentation constants the generated views and the prelude read
-/// log floors, the hatch and the hue wheel (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the
-/// shape-sphere chart's two tolerances (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀`
-/// (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the
-/// predicate `n ≥ 2` (R-245).
+/// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the presentation
+/// constants the generated views and the prelude read: the log floors, the hatch and the hue wheel (TASK-M1-18;
+/// R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the shape-sphere chart's two tolerances (TASK-M2-08;
+/// REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel:
+/// an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
