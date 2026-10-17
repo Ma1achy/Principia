@@ -23,7 +23,7 @@ use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
 use keymap::Command;
 use repeat::Repeat;
-use scopes::{Adjust, Outcome, ScopeId, ScopeTree};
+use scopes::{Adjust, Outcome, ScopeId, ScopeTree, Scroll};
 
 /// Where a scope was drawn this frame: its rect, and the egui widget it is, for a control.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -67,6 +67,7 @@ pub struct Keyboard {
     overlay_rect: Option<Rect>,
     open_menu: Option<ScopeId>,
     adjusted: Vec<Adjust>,
+    scrolled: Vec<Scroll>,
     /// Whether a text scope is being typed in from the keyboard: interaction mode on it after the last run.
     typing: Option<ScopeId>,
     /// Each open window that took the focus, with the path of the scope that opened it: where the focus goes back to
@@ -110,6 +111,7 @@ impl Keyboard {
             overlay_rect: None,
             open_menu: None,
             adjusted: Vec::new(),
+            scrolled: Vec::new(),
             typing: None,
             openers: Vec::new(),
             left: Vec::new(),
@@ -237,6 +239,7 @@ impl Keyboard {
     /// a frame it does not run asks for no adjustment.
     pub fn stand_down(&mut self) {
         self.adjusted.clear();
+        self.scrolled.clear();
         self.typing = None;
         self.pending.clear();
         self.down.clear();
@@ -287,6 +290,7 @@ impl Keyboard {
             }
         }
         self.adjusted.clear();
+        self.scrolled.clear();
         self.left.clear();
         let mut activated = Vec::new();
         for (command, modifiers) in fired {
@@ -322,6 +326,7 @@ impl Keyboard {
                     }
                 }
                 Outcome::Adjust(adjust) => self.adjusted.push(adjust),
+                Outcome::Scroll(scroll) => self.scrolled.push(scroll),
                 Outcome::Leave(window) => {
                     if !self.left.contains(&window) {
                         self.left.push(window);
@@ -464,6 +469,36 @@ impl Keyboard {
     /// The adjustments the arrows asked for this frame, in order, for the screens that own the values.
     pub fn adjusted(&self) -> &[Adjust] {
         &self.adjusted
+    }
+
+    /// The scrolls the keys asked for this frame, in order, for the screens that own the lists (R-450 A4).
+    pub fn scrolled(&self) -> &[Scroll] {
+        &self.scrolled
+    }
+
+    /// A click on control `id` of window `window` moves the focus onto it, in navigation mode, so the mouse and the
+    /// keyboard never disagree about where the focus is (R-450 A3). With the focus outside the window until then (the
+    /// window opened by itself, or the focus moved off it), where it was is recorded as the path it goes back to when
+    /// the window closes (A2).
+    pub fn focus_by_click(
+        &mut self,
+        ctx: &egui::Context,
+        mode: Mode,
+        focus: &mut Focus,
+        window: ScopeId,
+        id: ScopeId,
+    ) {
+        let tree = self.tree(mode);
+        if tree.window_of(&focus.path) != Some(window) {
+            self.openers.retain(|(w, _)| *w != window);
+            self.openers.push((window, focus.path.clone()));
+        }
+        focus.path = self.tree(mode).path_to(id);
+        focus.mode = KeyMode::Navigation;
+        // Typing from the keyboard ends; a text field the click focused holds the keyboard as the mouse's.
+        self.typing = None;
+        self.open_menu = None;
+        self.show_menus(ctx, mode);
     }
 
     /// The time the held key's next repeat falls due, in seconds of input time, while one is held.

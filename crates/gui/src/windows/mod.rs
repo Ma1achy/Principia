@@ -6,7 +6,10 @@
 //! order that takes the focus when it opens, on its first section's first element, in navigation mode; Tab and
 //! Shift+Tab move between its sections and stay in it; the arrows move within a section in navigation mode; Esc backs
 //! out one level, and from a section closes the window, the focus going back to the scope that opened it
-//! (`crate::keyboard::Keyboard::open_window`). The console opening by itself on an error takes no focus.
+//! (`crate::keyboard::Keyboard::open_window`). The console's sections are its two scopes, the header bar and the log,
+//! landed on themselves (R-450); it opening by itself on an error takes no focus. Every window's × is a control in its
+//! scope tree, Enter on it closing the window as Esc does: the console's the last of its header bar (R-450), every
+//! other window's its last section, drawn at its title row's right (the R-450 audit's finding, applied per R-369).
 //!
 //! **Where they open** (applied per R-369): each at a fixed rect over the side panels or the bottom row, never over the
 //! figure (§G1, "The figure is never covered"; R-390's review list): Profiler and Chart builder over the Manifold view,
@@ -44,6 +47,9 @@ pub struct Entry {
     pub title: &'static str,
     /// Its entry in the Windows menu, a scope under it.
     pub menu_entry: ScopeId,
+    /// Its close button ×, a control in its scope tree (R-450; the audit's finding, applied per R-369): the last of
+    /// the console's header bar, and every other window's last section, drawn at its title row's right.
+    pub close: ScopeId,
 }
 
 /// The seven windows, in the Windows menu's order (applied per R-369: the first five as TASK-M6-24 listed them, then
@@ -55,6 +61,7 @@ pub const REGISTRY: [Entry; 7] = [
         name: "Run",
         title: run::TITLE,
         menu_entry: "windows_run",
+        close: "run_close",
     },
     Entry {
         window: Window::Profiler,
@@ -62,6 +69,7 @@ pub const REGISTRY: [Entry; 7] = [
         name: "Profiler",
         title: profiler::TITLE,
         menu_entry: "windows_profiler",
+        close: "profiler_close",
     },
     Entry {
         window: Window::Export,
@@ -69,6 +77,7 @@ pub const REGISTRY: [Entry; 7] = [
         name: "Export & share",
         title: export::TITLE,
         menu_entry: "windows_export",
+        close: "export_close",
     },
     Entry {
         window: Window::Display,
@@ -76,6 +85,7 @@ pub const REGISTRY: [Entry; 7] = [
         name: "Display",
         title: display::TITLE,
         menu_entry: "windows_display",
+        close: "display_close",
     },
     Entry {
         window: Window::Console,
@@ -83,6 +93,7 @@ pub const REGISTRY: [Entry; 7] = [
         name: "Console",
         title: console::TITLE,
         menu_entry: "windows_console",
+        close: console::CLOSE,
     },
     Entry {
         window: Window::ChartBuilder,
@@ -90,6 +101,7 @@ pub const REGISTRY: [Entry; 7] = [
         name: "Chart builder",
         title: chart_builder::TITLE,
         menu_entry: "windows_chart_builder",
+        close: "chart_builder_close",
     },
     Entry {
         window: Window::Inspector,
@@ -97,6 +109,7 @@ pub const REGISTRY: [Entry; 7] = [
         name: "Inspector",
         title: inspector::TITLE,
         menu_entry: "windows_inspector",
+        close: "inspector_close",
     },
 ];
 
@@ -125,10 +138,16 @@ pub fn opened_by(id: &str) -> Option<Window> {
     }
 }
 
-/// Joins each window to `tree`, outside the big scopes' Tab order, its sections and elements under it.
+/// Joins each window to `tree`, outside the big scopes' Tab order, its sections and elements under it: the console's
+/// two scopes, its × the last of its header bar (R-450); every other window's × its last section, so Shift+Tab from
+/// its landing reaches it (the audit's finding, applied per R-369).
 pub fn register(tree: &mut ScopeTree) {
     for e in REGISTRY {
-        tree.register(None, Scope::window(e.scope, e.title));
+        let scope = match e.window {
+            Window::Console => Scope::scoped_window(e.scope, e.title),
+            _ => Scope::window(e.scope, e.title),
+        };
+        tree.register(None, scope);
     }
     run::register(tree);
     profiler::register(tree);
@@ -137,6 +156,19 @@ pub fn register(tree: &mut ScopeTree) {
     console::register(tree);
     chart_builder::register(tree);
     inspector::register(tree);
+    for e in REGISTRY.iter().filter(|e| e.window != Window::Console) {
+        tree.register(Some(e.scope), Scope::control(e.close, CLOSE_LABEL));
+    }
+}
+
+/// The close button's name in the breadcrumb (R-450 A6).
+pub const CLOSE_LABEL: &str = "Close";
+/// The close button's text: §G12's ×.
+pub const CLOSE_TEXT: &str = "×";
+
+/// The window whose close button is `id`, if any.
+pub fn closed_by(id: &str) -> Option<Window> {
+    REGISTRY.iter().find(|e| e.close == id).map(|e| e.window)
 }
 
 /// Where `window` opens in `layout` (applied per R-369, as the module says): never over the figure.
@@ -199,17 +231,20 @@ impl Keys<'_> {
     }
 }
 
-/// Draws a window's frame: `title`, fixed at `rect`, closed by its ×, its content scrolling when `scroll`, the window's
-/// scope placed on its rect. Returns whether it is still open.
+/// Draws `entry`'s window's frame, fixed at `rect`, its content scrolling when `scroll`, the window's scope placed on
+/// its rect. Every window but the console starts with a title row: its title, and its × at the right, the scope
+/// `entry.close` (the audit's finding: egui's own title-bar × is outside the scope tree, which no key reaches); the
+/// console's header bar holds its title and its × (R-450). Returns whether it is still open: false once its title
+/// row's × is clicked.
 pub fn frame(
     ctx: &egui::Context,
-    scope: ScopeId,
-    title: &str,
+    entry: &Entry,
     rect: Rect,
     keys: &mut Keys<'_>,
     scroll: bool,
     add: impl FnOnce(&mut Ui, &mut Keys<'_>),
 ) -> bool {
+    let (scope, title) = (entry.scope, entry.title);
     let mut open = true;
     let shown = egui::Window::new(title)
         .id(Id::new(("window", scope)))
@@ -219,8 +254,11 @@ pub fn frame(
         .fixed_rect(rect)
         .collapsible(false)
         .resizable(false)
-        .open(&mut open)
+        .title_bar(false)
         .show(ctx, |ui| {
+            if entry.window != Window::Console {
+                open = !title_row(ui, keys, title, entry.close);
+            }
             if scroll {
                 ScrollArea::vertical()
                     .id_salt(scope)
@@ -234,6 +272,26 @@ pub fn frame(
         keys.keyboard.place(scope, shown.response.rect);
     }
     open
+}
+
+/// Draws a window's title row: `title`, centred, and its × at the right, placed as scope `close`; then a separator.
+/// Returns whether the × was clicked.
+fn title_row(ui: &mut Ui, keys: &mut Keys<'_>, title: &str, close: ScopeId) -> bool {
+    let mut clicked = false;
+    let height =
+        ui.text_style_height(&egui::TextStyle::Heading) + ui.spacing().button_padding.y * 2.0;
+    let size = egui::vec2(ui.available_width(), height);
+    let right = egui::Layout::right_to_left(egui::Align::Center);
+    ui.allocate_ui_with_layout(size, right, |ui| {
+        let button = ui.add(egui::Button::new(RichText::new(CLOSE_TEXT).heading()).frame(false));
+        clicked = button.clicked();
+        keys.place(close, &button);
+        let rest = egui::vec2(ui.available_width(), height);
+        let centred = egui::Layout::centered_and_justified(egui::Direction::LeftToRight);
+        ui.allocate_ui_with_layout(rest, centred, |ui| ui.label(RichText::new(title).heading()));
+    });
+    ui.separator();
+    clicked
 }
 
 /// Draws one section: its heading, as the artboards' "▾ Title", and its content, the section's scope placed on the

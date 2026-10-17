@@ -198,7 +198,8 @@ fn walk(entry: &Entry) -> Vec<At> {
 
 #[test]
 fn mock_keyboard_windows_each_window_is_a_scope_the_keys_walk() {
-    for entry in &REGISTRY {
+    // The console's two scopes are R-450's, walked by `mock_console_keys` and `mock_reachability`.
+    for entry in REGISTRY.iter().filter(|e| e.window != Window::Console) {
         let seen = walk(entry);
         // Every step but the last stayed in the window.
         for s in &seen[..seen.len() - 1] {
@@ -238,11 +239,12 @@ fn mock_keyboard_windows_arrows_adjust_a_window_value_by_its_base_step() {
     });
 }
 
-// --- The footer and the console (R-405; R-409 F2, G4–G6) -------------------------------------------------------------
+// --- The footer and the console (R-405; R-450) -----------------------------------------------------------------------
+// The console's own keys, its two scopes, are `mock_console_keys`'s (REQ-GUI-189).
 
-/// The console's landing: its first filter, `all`.
-fn first_filter() -> Vec<String> {
-    owned(&[console::WINDOW, console::FILTERS, "cs_all"])
+/// The console's landing: its header bar scope itself (R-450).
+fn header() -> Vec<String> {
+    owned(&[console::WINDOW, console::HEADER])
 }
 
 /// An app with three warnings logged, the focus on the footer, then Enter.
@@ -264,284 +266,30 @@ fn console_by_footer() -> (App<MockSide>, Headless) {
 }
 
 #[test]
-fn mock_keyboard_windows_enter_on_the_footer_opens_the_console_on_its_first_filter() {
+fn mock_keyboard_windows_enter_on_the_footer_opens_the_console_on_its_header_bar() {
     let (app, _) = console_by_footer();
     assert!(app.is_open(Window::Console));
     let got = at(&app);
-    check_at(&got, &first_filter(), NAV, "Enter on the footer");
+    check_at(&got, &header(), NAV, "Enter on the footer");
     rejects("a console that does not take the focus on Enter", || {
-        check_at(&(owned(&["footer"]), NAV), &first_filter(), NAV, "Enter")
+        check_at(&(owned(&["footer"]), NAV), &header(), NAV, "Enter")
+    });
+    rejects("a console landing on All", || {
+        check_at(
+            &(owned(&[console::WINDOW, console::HEADER, "cs_all"]), NAV),
+            &header(),
+            NAV,
+            "Enter",
+        )
     });
     rejects("a console landing in interaction mode", || {
-        check_at(&(first_filter(), INTERACT), &first_filter(), NAV, "Enter")
+        check_at(&(header(), INTERACT), &header(), NAV, "Enter")
     });
-}
-
-/// The console's sections, by their landings, in Tab order.
-fn sections() -> [Vec<String>; 4] {
-    [
-        first_filter(),
-        owned(&[console::WINDOW, console::TEXT]),
-        owned(&[console::WINDOW, console::COPY_CLEAR, console::COPY]),
-        owned(&[console::WINDOW, console::LIST]),
-    ]
-}
-
-#[test]
-fn mock_keyboard_windows_tab_moves_between_the_consoles_sections_inside_it() {
-    let (mut app, mut h) = console_by_footer();
-    let s = sections();
-    let mut seen = Vec::new();
-    for _ in 0..s.len() {
-        press(&mut h, &mut app, Key::Tab, NONE);
-        seen.push(at(&app));
-    }
-    for (i, got) in seen.iter().enumerate() {
-        check_at(got, &s[(i + 1) % s.len()], NAV, &format!("Tab {}", i + 1));
-    }
-    for i in (0..s.len()).rev() {
-        press(&mut h, &mut app, Key::Tab, SHIFT);
-        check_at(&at(&app), &s[i], NAV, "Shift+Tab");
-    }
-    rejects("a Tab that left the console", || {
-        check_at(&(owned(&["top_bar"]), NAV), &s[1], NAV, "Tab")
-    });
-    // The arrows move within a section: the filters, then copy and clear.
-    let (mut app, mut h) = console_by_footer();
-    press(&mut h, &mut app, Key::ArrowRight, NONE);
-    check_at(
-        &at(&app),
-        &owned(&[console::WINDOW, console::FILTERS, "cs_warnings"]),
-        NAV,
-        "→",
-    );
-    press(&mut h, &mut app, Key::Enter, NONE);
-    assert_eq!(
-        app.windows.console.filter,
-        console::Filter::Warnings,
-        "Enter acts as the click"
-    );
-    check_at(
-        &at(&app),
-        &owned(&[console::WINDOW, console::FILTERS, "cs_warnings"]),
-        NAV,
-        "Enter on a filter",
-    );
-    presses(&mut h, &mut app, Key::ArrowRight, NONE, 5);
-    check_at(
-        &at(&app),
-        &owned(&[console::WINDOW, console::FILTERS, "cs_info"]),
-        NAV,
-        "→ stops at info",
-    );
-}
-
-#[test]
-fn mock_keyboard_windows_enter_on_clear_clears_the_console_and_the_counts() {
-    let (mut app, mut h) = console_by_footer();
-    assert!(!app.console().is_empty());
-    assert_eq!(app.counts().warnings, 3);
-    presses(&mut h, &mut app, Key::Tab, NONE, 2);
-    press(&mut h, &mut app, Key::ArrowRight, NONE);
-    let clear = owned(&[console::WINDOW, console::COPY_CLEAR, console::CLEAR]);
-    check_at(&at(&app), &clear, NAV, "→ to clear");
-    press(&mut h, &mut app, Key::Enter, NONE);
-    assert!(app.console().is_empty(), "cleared");
-    assert_eq!(
-        app.counts(),
-        crate::app::Counts::default(),
-        "the counts reset"
-    );
-    check_at(&at(&app), &clear, NAV, "the focus kept on clear");
-    rejects("a console left full", || assert_eq!(app.console().len(), 3));
-}
-
-/// Types `text` as a keyboard would: each character's key press with its text, then the release.
-fn type_text(h: &mut Headless, app: &mut App<MockSide>, text: &str) {
-    for c in text.chars() {
-        let key = Key::from_name(&c.to_string()).unwrap_or(Key::Space);
-        let modifiers = if c == '?' { SHIFT } else { NONE };
-        let down = Event::Key {
-            key,
-            physical_key: None,
-            pressed: true,
-            repeat: false,
-            modifiers,
-        };
-        let _ = h.frame(app, vec![down, Event::Text(c.to_string())]);
-        let up = Event::Key {
-            key,
-            physical_key: None,
-            pressed: false,
-            repeat: false,
-            modifiers,
-        };
-        let _ = h.frame(app, vec![up]);
-    }
-}
-
-/// Nothing was typed.
-fn check_untyped(text: &str) {
-    assert_eq!(text, "", "a letter typed on landing");
-}
-
-/// The text typed was kept.
-fn check_kept(text: &str, typed: &str) {
-    assert_eq!(text, typed, "the text not kept");
-}
-
-/// The contract's history kept its depth.
-fn check_no_undo(after: u32, before: u32) {
-    assert_eq!(after, before, "Ctrl+Z reached the contract's undo");
-}
-
-/// The console with the focus on its text filter, navigating.
-fn on_text() -> (App<MockSide>, Headless) {
-    let (mut app, mut h) = console_by_footer();
-    press(&mut h, &mut app, Key::Tab, NONE);
-    check_at(&at(&app), &sections()[1], NAV, "Tab to the text filter");
-    (app, h)
-}
-
-#[test]
-fn mock_keyboard_windows_the_text_filter_types_only_after_enter() {
-    let (mut app, mut h) = on_text();
-    type_text(&mut h, &mut app, "a");
-    check_untyped(&app.windows.console.text);
-    rejects("a text filter that types on landing", || check_untyped("a"));
-    press(&mut h, &mut app, Key::Enter, NONE);
-    check_at(&at(&app), &sections()[1], INTERACT, "Enter starts typing");
-    type_text(&mut h, &mut app, "ab c");
-    press(&mut h, &mut app, Key::ArrowLeft, NONE);
-    press(&mut h, &mut app, Key::ArrowDown, NONE);
-    assert_eq!(
-        app.windows.console.text, "ab c",
-        "letters and Space went to the field"
-    );
-    check_at(
-        &at(&app),
-        &sections()[1],
-        INTERACT,
-        "the arrows are the field's",
-    );
-    press(&mut h, &mut app, Key::Escape, NONE);
-    check_at(&at(&app), &sections()[1], NAV, "Esc back to navigation");
-    assert!(
-        app.is_open(Window::Console),
-        "Esc while typing closed the console"
-    );
-    check_kept(&app.windows.console.text, "ab c");
-    press(&mut h, &mut app, Key::Enter, NONE);
-    press(&mut h, &mut app, Key::Enter, NONE);
-    check_at(&at(&app), &sections()[1], NAV, "Enter back to navigation");
-    assert_eq!(
-        app.windows.console.text, "ab c",
-        "the text kept after Enter"
-    );
-    rejects("an Esc while typing that clears the text", || {
-        check_kept("", "ab c")
-    });
-    // Typing, Tab moves to the next section, navigating, still in the console.
-    press(&mut h, &mut app, Key::Enter, NONE);
-    press(&mut h, &mut app, Key::Tab, NONE);
-    check_at(&at(&app), &sections()[2], NAV, "Tab while typing");
-    press(&mut h, &mut app, Key::Tab, SHIFT);
-    press(&mut h, &mut app, Key::Enter, NONE);
-    press(&mut h, &mut app, Key::Tab, SHIFT);
-    check_at(&at(&app), &sections()[0], NAV, "Shift+Tab while typing");
-}
-
-#[test]
-fn mock_keyboard_windows_question_mark_and_ctrl_z_are_the_fields_while_typing() {
-    let (mut app, mut h) = on_text();
-    // A contract edit, so the contract's undo has something to undo.
-    let t = app.snapshot().render.playhead.t;
-    app.set_field(super::support::playhead(t + 1.0, false));
-    let _ = h.frame(&mut app, Vec::new());
-    let depth = app.snapshot().history.undo_depth;
-    assert!(depth > 0);
-    press(&mut h, &mut app, Key::Enter, NONE);
-    type_text(&mut h, &mut app, "x?");
-    assert_eq!(app.windows.console.text, "x?", "? typed");
-    let check_no_overlay = |open: bool| assert!(!open, "? opened the overlay");
-    check_no_overlay(app.keyboard.shortcuts_open);
-    rejects("a ? while typing that opens the overlay", || {
-        check_no_overlay(true)
-    });
-    // Ctrl+Z (the command key) undoes the text edit, not the contract's history.
-    let command = Modifiers {
-        ctrl: true,
-        command: true,
-        ..Modifiers::NONE
-    };
-    press(&mut h, &mut app, Key::Z, command);
-    let _ = h.frame(&mut app, Vec::new());
-    // egui's undo takes the field back a step: a strict prefix of what was typed.
-    let check_undone = |text: &str| {
-        assert!(
-            text.len() < "x?".len() && "x?".starts_with(text),
-            "Ctrl+Z left {text:?}, not a strict prefix of \"x?\""
-        )
-    };
-    check_undone(&app.windows.console.text);
-    rejects("a Ctrl+Z that types a z", || check_undone("x?z"));
-    check_no_undo(app.snapshot().history.undo_depth, depth);
-    check_at(&at(&app), &sections()[1], INTERACT, "still typing");
-    rejects("a field whose Ctrl+Z goes to the contract's undo", || {
-        check_no_undo(depth - 1, depth)
-    });
-}
-
-#[test]
-fn mock_keyboard_windows_the_entry_list_scrolls_only_after_enter() {
-    let (mut app, mut h) = console_by_footer();
-    press(&mut h, &mut app, Key::Tab, SHIFT);
-    check_at(&at(&app), &sections()[3], NAV, "Shift+Tab to the list");
-    press(&mut h, &mut app, Key::ArrowDown, NONE);
-    press(&mut h, &mut app, Key::ArrowDown, NONE);
-    assert_eq!(
-        app.windows.console.top_row, 0,
-        "↓ scrolled in navigation mode"
-    );
-    check_at(&at(&app), &sections()[3], NAV, "↓ navigating");
-    let top = app.windows.console.top_row;
-    rejects("an entry list that scrolls in navigation mode", || {
-        assert_eq!(top, 1)
-    });
-    press(&mut h, &mut app, Key::Enter, NONE);
-    check_at(&at(&app), &sections()[3], INTERACT, "Enter on the list");
-    press(&mut h, &mut app, Key::ArrowDown, NONE);
-    assert_eq!(app.windows.console.top_row, 1, "↓ scrolls");
-    press(&mut h, &mut app, Key::ArrowUp, NONE);
-    assert_eq!(app.windows.console.top_row, 0, "↑ scrolls back");
-    press(&mut h, &mut app, Key::Escape, NONE);
-    check_at(
-        &at(&app),
-        &sections()[3],
-        NAV,
-        "Esc back to navigation on the list",
-    );
-    // From interaction mode on the list, Tab moves to the console's next section, navigating, inside it.
-    press(&mut h, &mut app, Key::Enter, NONE);
-    press(&mut h, &mut app, Key::Tab, NONE);
-    let got = at(&app);
-    check_at(&got, &sections()[0], NAV, "Tab from the list");
-    rejects(
-        "a Tab from the list in interaction that leaves the console",
-        || check_at(&got, &owned(&["top_bar"]), NAV, "Tab"),
-    );
 }
 
 #[test]
 fn mock_keyboard_windows_esc_closes_the_console_back_to_the_footer() {
     let (mut app, mut h) = console_by_footer();
-    press(&mut h, &mut app, Key::Escape, NONE);
-    check_at(
-        &at(&app),
-        &first_filter()[..2],
-        NAV,
-        "Esc up to the filters",
-    );
     press(&mut h, &mut app, Key::Escape, NONE);
     settle(&mut h, &mut app);
     assert!(!app.is_open(Window::Console));
@@ -570,9 +318,14 @@ fn mock_keyboard_windows_console_from_menu() {
     let (mut app, mut h) = fresh();
     let entry = crate::windows::entry(Window::Console);
     open_by_keys(&mut h, &mut app, entry);
-    check_at(&at(&app), &first_filter(), NAV, "Windows › Console");
+    check_at(&at(&app), &header(), NAV, "Windows › Console");
     press(&mut h, &mut app, Key::Tab, NONE);
-    check_at(&at(&app), &sections()[1], NAV, "Tab");
+    check_at(
+        &at(&app),
+        &owned(&[console::WINDOW, console::LOG]),
+        NAV,
+        "Tab",
+    );
     press(&mut h, &mut app, Key::Escape, NONE);
     settle(&mut h, &mut app);
     assert!(!app.is_open(Window::Console));
@@ -603,7 +356,7 @@ fn mock_keyboard_windows_a_raised_error_opens_the_console_without_moving_the_foc
     let after = at(&app);
     assert_eq!(after, before, "the focus moved");
     rejects("a console that took the focus", || {
-        assert_eq!((first_filter(), NAV), before)
+        assert_eq!((header(), NAV), before)
     });
     // Tab goes on among the big scopes, not into the console.
     press(&mut h, &mut app, Key::Tab, NONE);

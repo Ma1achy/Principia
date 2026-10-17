@@ -108,6 +108,18 @@ pub fn click<S: EngineSide>(headless: &mut Headless, app: &mut App<S>, name: &st
     }
 }
 
+/// Clicks scope `id` where it was last placed: three frames, at its rect's centre.
+pub fn click_scope<S: EngineSide>(headless: &mut Headless, app: &mut App<S>, id: &str) {
+    let rect = app
+        .keyboard
+        .place_of(id)
+        .unwrap_or_else(|| panic!("no `{id}` placed to click"))
+        .rect;
+    for events in crate::capture::click(rect.center()) {
+        let _ = headless.frame(app, events);
+    }
+}
+
 /// Asserts that `check` panics: the check can fail on the input it was given (R-176's control, run in the test).
 pub fn rejects(what: &str, check: impl FnOnce()) {
     let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check));
