@@ -397,6 +397,17 @@ fn write_png(path: &Path, size: u32, rgba: &[u8]) {
 
 /// Checks the slice case recorded at `origin` in a capture with one `pixel` at `at`, in a directory `name`.
 fn check_capture(name: &str, origin: [f64; 2], pixel: [u8; 3], at: [u32; 2]) -> Result<(), String> {
+    check_scaled(name, origin, 1.0, pixel, at)
+}
+
+/// [`check_capture`] at `scale` pixels per point, in a 480-pixel capture.
+fn check_scaled(
+    name: &str,
+    origin: [f64; 2],
+    scale: f64,
+    pixel: [u8; 3],
+    at: [u32; 2],
+) -> Result<(), String> {
     let out = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
     let _ = fs::remove_dir_all(&out);
     fs::create_dir_all(&out).expect("the out dir");
@@ -405,12 +416,57 @@ fn check_capture(name: &str, origin: [f64; 2], pixel: [u8; 3], at: [u32; 2]) -> 
     )
     .expect("json");
     ours["origin"] = serde_json::json!(origin);
-    ours["pixels_per_point"] = serde_json::json!(1.0);
+    ours["pixels_per_point"] = serde_json::json!(scale);
     fs::write(out.join(compass_golden::RECORD), ours.to_string()).expect("the record written");
     let capture = out.join("capture.png");
-    write_png(&capture, 240, &image(240, at, pixel));
+    write_png(&capture, 480, &image(480, at, pixel));
     compass_golden::check(&dir().join("mock_compass_cube_slice.json"), &out, &capture)
 }
+
+#[test]
+fn compass_golden_check_scans_the_square_and_margin_at_the_scale() {
+    let cream = compass_golden::CREAM[0];
+    // At 1 pixel per point, the origin (30, 50): rows 38 to 233 are scanned, columns 18 to 213.
+    for (at, inside) in [
+        ([100, 37], false),
+        ([100, 38], true),
+        ([100, 233], true),
+        ([100, 234], false),
+        ([17, 120], false),
+        ([213, 120], true),
+    ] {
+        let found = check_scaled("compass_scan_rows", [30.0, 50.0], 1.0, cream, at).is_err();
+        assert_eq!(found, inside, "cream at {at:?}");
+    }
+    // At 2 pixels per point, the same square covers columns 36 to 427 and rows 76 to 467.
+    for (at, inside) in [
+        ([35, 300], false),
+        ([36, 300], true),
+        ([427, 300], true),
+        ([428, 300], false),
+        ([300, 75], false),
+        ([300, 76], true),
+        ([300, 467], true),
+        ([300, 468], false),
+    ] {
+        let found = check_scaled("compass_scan_scaled", [30.0, 50.0], 2.0, cream, at).is_err();
+        assert_eq!(found, inside, "cream at {at:?}, scale 2");
+    }
+}
+
+negative_control!(
+    compass_golden_check_scans_the_square_and_margin_at_the_scale,
+    "cream in the scaled square must fail the check",
+    expected = "the reference's cream palette",
+    check_scaled(
+        "compass_scan_control",
+        [30.0, 50.0],
+        2.0,
+        compass_golden::CREAM[0],
+        [300, 300]
+    )
+    .expect("passes")
+);
 
 #[test]
 fn compass_golden_check_reads_the_record_and_the_capture() {
