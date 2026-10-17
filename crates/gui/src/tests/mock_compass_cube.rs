@@ -275,6 +275,11 @@ fn mock_compass_cube_shade() {
     let away = [1.0, -1.0, 0.65];
     assert!(away[0] + away[1] + away[2] > 0.0);
     assert!((face_shade(away) - 0.2).abs() < 1e-12);
+    // Edge-on to the view, n·(1, 1, 1) = 0: not flipped, as the reference's strict `< 0`. (1, −1, 0) faces away from
+    // the light, the ambient alone; (−1, 1, 0) toward it.
+    assert_eq!(face_shade([1.0, -1.0, 0.0]), 0.2);
+    let toward = 0.2 + 0.8 * 0.65 / (2f64.sqrt() * l);
+    assert!((face_shade([-1.0, 1.0, 0.0]) - toward).abs() < 1e-12);
     rejects("a one-sided shade", || {
         assert!((face_shade([0.0, 0.0, -1.0]) - 0.2).abs() < 1e-12)
     });
