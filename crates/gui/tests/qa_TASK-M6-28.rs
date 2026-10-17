@@ -10,6 +10,10 @@
 //!   ↑ ↓ only in interaction mode; Tab from interaction mode moves to the next section, staying in the console; Esc in
 //!   navigation mode closes it, the focus going back to whatever opened it, the footer or Windows › Console; an error
 //!   opens it by itself without moving the focus.
+//!   R-450 (A9) replaces the console's structure: two scopes, the header bar (All, Warnings, Errors, Info, the search
+//!   field, Copy, Clear, ×) and the log; opening it lands on the header bar scope itself; Esc at its top level closes
+//!   it. The tests below that asserted the four sections, the landing on the first filter or Esc from a section are
+//!   changed to R-450's structure (TASK-M6-32's qa commit, R-290); REQ-GUI-189 is tested in `qa_TASK-M6-32`.
 //! - REQ-GUI-126: the console is the footer opened, with severity, time, source and message columns, the filters (all,
 //!   warnings, errors, info, text), copy and clear, and it opens automatically on an error.
 //! - REQ-GUI-174: each window opens from its top-bar or menu entry; the Chart builder's two previews are square for a
@@ -177,21 +181,17 @@ fn in_console(path: &[String]) -> bool {
     path.first().is_some_and(|w| same(w, "Console"))
 }
 
-/// The console section a focus path is in, as §G12 orders them: 0 the filters, 1 the text filter, 2 copy and clear,
-/// 3 the entry list. Read from the section's label.
+/// The console scope a focus path is in, as R-450 orders them (A6's names): 0 the header bar, 1 the log. Read from
+/// the scope's label.
 fn section_of(path: &[String]) -> Option<usize> {
     if !in_console(path) {
         return None;
     }
     let s = lower(path.get(1)?);
-    if s.contains("text") {
-        Some(1)
-    } else if s.contains("filter") {
+    if s == "header" {
         Some(0)
-    } else if s.contains("copy") && s.contains("clear") {
-        Some(2)
-    } else if s.contains("entr") || s.contains("list") {
-        Some(3)
+    } else if s == "log" {
+        Some(1)
     } else {
         None
     }
@@ -379,18 +379,22 @@ fn qa_scope_tab_order_mock_footer_after_legend_then_the_top_bar() {
     );
 }
 
-// --- REQ-GUI-178: Enter on the footer opens the console, the focus on its first filter --------------------------------
+// --- REQ-GUI-178: Enter on the footer opens the console, the focus on its header bar (R-450) --------------------------
 
 #[test]
-fn qa_mock_keyboard_enter_on_the_footer_opens_the_console_on_its_first_filter() {
+fn qa_mock_keyboard_enter_on_the_footer_opens_the_console_on_its_header_bar() {
     let (mut app, mut h) = fresh();
     assert!(!app.is_open(Window::Console), "the console opens closed");
     console_by_footer(&mut h, &mut app);
     assert!(app.is_open(Window::Console), "Enter on the footer");
     let path = labels(&app);
-    check_console_at(&app, 0, Some("all"), NAV, "Enter on the footer");
+    check_path(&path, &["Console", "Header"], "Enter on the footer");
+    check_console_at(&app, 0, Some("Header"), NAV, "Enter on the footer");
     rejects("a console that does not take the focus on Enter", || {
         check_path(&path, &["Footer"], "Enter on the footer")
+    });
+    rejects("a console landing on its first filter", || {
+        check_path(&path, &["Console", "Header", "All"], "Enter on the footer")
     });
     // The breadcrumb names the console, drawn in the top bar.
     let n = names(&mut h, &mut app);
@@ -400,11 +404,11 @@ fn qa_mock_keyboard_enter_on_the_footer_opens_the_console_on_its_first_filter() 
         texts(&top).iter().any(|t| t.contains(&crumb)),
         "no breadcrumb `{crumb}` in the top bar"
     );
-    // The ring has the first filter's rect to be drawn on, inside the console.
+    // The ring has the header bar's rect to be drawn on, inside the console.
     let place = app
         .keyboard
         .place_of(app.view.focus.path.last().unwrap())
-        .expect("the first filter placed");
+        .expect("the header bar placed");
     assert!(window_rect(&app, Window::Console).contains_rect(place.rect));
 }
 
@@ -418,7 +422,7 @@ fn qa_mock_keyboard_a_footer_click_opens_the_console_with_the_focus_and_esc_retu
     );
     settle(&mut h, &mut app);
     assert!(app.is_open(Window::Console), "a footer click");
-    check_console_at(&app, 0, Some("all"), NAV, "a footer click");
+    check_console_at(&app, 0, Some("Header"), NAV, "a footer click");
     // Esc in navigation mode, up to the console's top level and out: the console closes, the focus on the footer.
     let mut closed_after = None;
     for i in 1..=3 {
@@ -432,7 +436,8 @@ fn qa_mock_keyboard_a_footer_click_opens_the_console_with_the_focus_and_esc_retu
             "Esc {i} left the console open without its focus"
         );
     }
-    assert!(closed_after.is_some(), "Esc never closed the console");
+    // The landing is the console's top level: the first Esc closes it (R-450 A2).
+    assert_eq!(closed_after, Some(1), "Esc on the header bar scope");
     let path = labels(&app);
     check_path(
         &path,
@@ -453,44 +458,49 @@ fn qa_mock_keyboard_enter_on_the_footer_takes_the_focus_into_a_console_an_error_
     check_console_at(
         &app,
         0,
-        Some("all"),
+        Some("Header"),
         NAV,
         "Enter on the footer, the console open",
     );
 }
 
-// --- REQ-GUI-178: Tab and Shift+Tab between the console's sections, inside it -----------------------------------------
+// --- REQ-GUI-178: Tab and Shift+Tab between the console's scopes, inside it (R-450) ------------------------------------
 
 #[test]
 fn qa_mock_keyboard_console_sections_in_tab_order_stay_inside() {
     let (mut app, mut h) = fresh();
     console_by_footer(&mut h, &mut app);
-    // Tab: text filter, copy and clear, the entry list, then back to the filters, each landing in navigation mode.
+    // Tab: the log, then back to the header bar, each landing on the scope itself in navigation mode.
     let mut forward = Vec::new();
     for _ in 0..5 {
         press(&mut h, &mut app, Key::Tab, NONE);
         assert!(app.is_open(Window::Console));
         assert_eq!(app.view.focus.mode, NAV, "a Tab lands in navigation mode");
+        assert_eq!(labels(&app).len(), 2, "a Tab lands on the scope itself");
         forward.push(section_of(&labels(&app)));
     }
-    let want: Vec<Option<usize>> = [1, 2, 3, 0, 1].into_iter().map(Some).collect();
-    assert_eq!(forward, want, "Tab through the console's sections");
-    rejects("a Tab that leaves the console after the list", || {
-        assert_eq!(forward[..3].to_vec(), want[..3].to_vec());
-        assert_eq!(forward[3], None);
+    let want: Vec<Option<usize>> = [1, 0, 1, 0, 1].into_iter().map(Some).collect();
+    assert_eq!(forward, want, "Tab through the console's scopes");
+    rejects("a Tab that leaves the console after the log", || {
+        assert_eq!(forward[..1].to_vec(), want[..1].to_vec());
+        assert_eq!(forward[1], None);
     });
-    // Copy and clear lands on copy, its first.
-    press(&mut h, &mut app, Key::Tab, NONE);
-    check_console_at(&app, 2, Some("copy"), NAV, "Tab to copy and clear");
-    // Shift+Tab: back the other way, wrapping from the filters to the list.
+    // Shift+Tab: back the other way, wrapping from the header bar to the log.
     let mut back = Vec::new();
     for _ in 0..5 {
         press(&mut h, &mut app, Key::Tab, SHIFT);
+        assert_eq!(
+            labels(&app).len(),
+            2,
+            "a Shift+Tab lands on the scope itself"
+        );
         back.push(section_of(&labels(&app)));
     }
-    let want_back: Vec<Option<usize>> = [1, 0, 3, 2, 1].into_iter().map(Some).collect();
-    assert_eq!(back, want_back, "Shift+Tab through the console's sections");
-    rejects("Shift+Tab read as Tab", || assert_eq!(back, want));
+    let want_back: Vec<Option<usize>> = [0, 1, 0, 1, 0].into_iter().map(Some).collect();
+    assert_eq!(back, want_back, "Shift+Tab through the console's scopes");
+    rejects("a Shift+Tab that stays on the log", || {
+        assert_eq!(back, vec![Some(1); 5])
+    });
 }
 
 // --- REQ-GUI-178 / REQ-GUI-126: the arrows within a section; Enter on a filter, copy and clear as their clicks ---------
@@ -503,6 +513,9 @@ fn qa_mock_keyboard_console_filters_copy_and_clear_by_the_keys() {
     app.side().engine().raise_error();
     settle(&mut h, &mut app);
     console_by_footer(&mut h, &mut app);
+    // Enter on the header bar goes in, onto All (R-450).
+    press(&mut h, &mut app, Key::Enter, NONE);
+    check_console_at(&app, 0, Some("all"), NAV, "Enter on the header bar");
     // The arrows walk the filters in §G12's order: all, warnings, errors, info.
     let mut walked = vec![labels(&app).last().cloned().unwrap()];
     for _ in 0..3 {
@@ -557,9 +570,9 @@ fn qa_mock_keyboard_console_filters_copy_and_clear_by_the_keys() {
         shown.iter().any(|t| t == MOCK_WARNING),
         "`all` hides the warning"
     );
-    // Copy: the rows, to the clipboard, the error's message among them.
-    presses(&mut h, &mut app, Key::Tab, NONE, 2);
-    check_console_at(&app, 2, Some("copy"), NAV, "Tab to copy");
+    // Copy: the rows, to the clipboard, the error's message among them. → from all, past the search field (R-450).
+    presses(&mut h, &mut app, Key::ArrowRight, NONE, 5);
+    check_console_at(&app, 0, Some("copy"), NAV, "→ to copy");
     let mut copied = Vec::new();
     for events in [
         vec![key_event(Key::Enter, true, NONE)],
@@ -581,7 +594,7 @@ fn qa_mock_keyboard_console_filters_copy_and_clear_by_the_keys() {
     );
     // Clear: the console empties, the footer's counts reset, the console stays open with the focus on clear.
     press(&mut h, &mut app, Key::ArrowRight, NONE);
-    check_console_at(&app, 2, Some("clear"), NAV, "→ to clear");
+    check_console_at(&app, 0, Some("clear"), NAV, "→ to clear");
     let counts = app.counts();
     assert!(counts.warnings > 0 && counts.errors > 0 && !app.console().is_empty());
     press(&mut h, &mut app, Key::Enter, NONE);
@@ -597,7 +610,7 @@ fn qa_mock_keyboard_console_filters_copy_and_clear_by_the_keys() {
         "clear resets the footer's counts"
     );
     assert!(app.is_open(Window::Console));
-    check_console_at(&app, 2, Some("clear"), NAV, "the focus kept on clear");
+    check_console_at(&app, 0, Some("clear"), NAV, "the focus kept on clear");
     let shown = texts(&names_in(
         &names(&mut h, &mut app),
         window_rect(&app, Window::Console),
@@ -610,12 +623,14 @@ fn qa_mock_keyboard_console_filters_copy_and_clear_by_the_keys() {
 
 // --- REQ-GUI-178: the text filter (R-409 G4, G5, G6) -------------------------------------------------------------------
 
-/// The console opened by the footer, the focus Tabbed to its text filter.
+/// The console opened by the footer, the focus on its search field: Enter into the header bar, → past the four
+/// filters (R-450).
 fn on_text_filter() -> (App<MockSide>, Headless) {
     let (mut app, mut h) = fresh();
     console_by_footer(&mut h, &mut app);
-    press(&mut h, &mut app, Key::Tab, NONE);
-    check_console_at(&app, 1, None, NAV, "Tab to the text filter");
+    press(&mut h, &mut app, Key::Enter, NONE);
+    presses(&mut h, &mut app, Key::ArrowRight, NONE, 4);
+    check_console_at(&app, 0, Some("search"), NAV, "→ to the search field");
     (app, h)
 }
 
@@ -628,7 +643,13 @@ fn qa_mock_keyboard_console_text_filter_types_only_after_enter() {
     assert_eq!(app.windows.console.text, "", "a letter typed on landing");
     // Enter: typing, in interaction mode; letters, Space and the arrows go to the field.
     press(&mut h, &mut app, Key::Enter, NONE);
-    check_console_at(&app, 1, None, INTERACT, "Enter on the text filter");
+    check_console_at(
+        &app,
+        0,
+        Some("search"),
+        INTERACT,
+        "Enter on the text filter",
+    );
     type_text(&mut h, &mut app, "ab");
     press(&mut h, &mut app, Key::ArrowLeft, NONE);
     type_text(&mut h, &mut app, "x ");
@@ -643,7 +664,7 @@ fn qa_mock_keyboard_console_text_filter_types_only_after_enter() {
     );
     press(&mut h, &mut app, Key::ArrowDown, NONE);
     assert_eq!(app.view.focus.path, field, "↓ moved the focus while typing");
-    check_console_at(&app, 1, None, INTERACT, "still typing");
+    check_console_at(&app, 0, Some("search"), INTERACT, "still typing");
     // Esc: back to navigation mode on the field, the text kept, the console open.
     press(&mut h, &mut app, Key::Escape, NONE);
     assert!(
@@ -651,7 +672,7 @@ fn qa_mock_keyboard_console_text_filter_types_only_after_enter() {
         "Esc while typing closed the console"
     );
     assert_eq!(app.view.focus.path, field);
-    check_console_at(&app, 1, None, NAV, "Esc while typing");
+    check_console_at(&app, 0, Some("search"), NAV, "Esc while typing");
     assert_eq!(
         app.windows.console.text, "ax b",
         "Esc while typing changed the text"
@@ -661,22 +682,26 @@ fn qa_mock_keyboard_console_text_filter_types_only_after_enter() {
     assert_eq!(app.windows.console.text, "ax b", "a letter typed after Esc");
     // Enter, then Enter: back to navigation mode, the text kept.
     press(&mut h, &mut app, Key::Enter, NONE);
-    check_console_at(&app, 1, None, INTERACT, "Enter again");
+    check_console_at(&app, 0, Some("search"), INTERACT, "Enter again");
     press(&mut h, &mut app, Key::Enter, NONE);
-    check_console_at(&app, 1, None, NAV, "Enter while typing");
+    check_console_at(&app, 0, Some("search"), NAV, "Enter while typing");
     assert_eq!(
         app.windows.console.text, "ax b",
         "Enter while typing changed the text"
     );
-    // Tab while typing: the next section, copy and clear, navigating, in the console; Shift+Tab likewise backwards.
+    // Tab while typing: the next scope, the log, navigating, in the console; Shift+Tab likewise backwards, wrapping
+    // from the header bar to the log (R-450).
     press(&mut h, &mut app, Key::Enter, NONE);
     press(&mut h, &mut app, Key::Tab, NONE);
-    check_console_at(&app, 2, Some("copy"), NAV, "Tab while typing");
+    check_console_at(&app, 1, Some("log"), NAV, "Tab while typing");
     press(&mut h, &mut app, Key::Tab, SHIFT);
+    check_console_at(&app, 0, Some("header"), NAV, "Shift+Tab to the header bar");
     press(&mut h, &mut app, Key::Enter, NONE);
-    check_console_at(&app, 1, None, INTERACT, "typing again");
+    presses(&mut h, &mut app, Key::ArrowRight, NONE, 4);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    check_console_at(&app, 0, Some("search"), INTERACT, "typing again");
     press(&mut h, &mut app, Key::Tab, SHIFT);
-    check_console_at(&app, 0, None, NAV, "Shift+Tab while typing");
+    check_console_at(&app, 1, Some("log"), NAV, "Shift+Tab while typing");
     assert_eq!(app.windows.console.text, "ax b");
     // The typed filter filters: a text no row holds hides every row.
     let rows = texts(&names_in(
@@ -732,11 +757,17 @@ fn qa_mock_keyboard_console_question_mark_and_ctrl_z_while_typing_are_the_fields
         t1,
         "Ctrl+Z undid the playhead edit"
     );
-    check_console_at(&app, 1, None, INTERACT, "still typing after Ctrl+Z");
+    check_console_at(
+        &app,
+        0,
+        Some("search"),
+        INTERACT,
+        "still typing after Ctrl+Z",
+    );
     // Control: the same `?` in navigation mode opens the overlay. (Ctrl+Z to the contract's undo is not on the mock
     // yet, REQ-GUI-096 being TASK-M8-13's, so the depth check above is shown able to move by the contract's own undo.)
     press(&mut h, &mut app, Key::Escape, NONE);
-    check_console_at(&app, 1, None, NAV, "Esc");
+    check_console_at(&app, 0, Some("search"), NAV, "Esc");
     press(&mut h, &mut app, Key::Questionmark, SHIFT);
     assert!(
         app.keyboard.shortcuts_open,
@@ -788,18 +819,18 @@ fn qa_mock_keyboard_console_entry_list_scrolls_only_after_enter() {
     settle(&mut h, &mut app);
     let newest = app.console().last().expect("rows logged").message.clone();
     console_by_footer(&mut h, &mut app);
-    // Shift+Tab from the first filter: the entry list, the last section, navigating.
+    // Shift+Tab from the header bar: the log, the last scope, navigating (R-450).
     press(&mut h, &mut app, Key::Tab, SHIFT);
-    check_console_at(&app, 3, None, NAV, "Shift+Tab to the entry list");
+    check_console_at(&app, 1, Some("log"), NAV, "Shift+Tab to the log");
     let list = app.view.focus.path.clone();
     let y0 = row_y(&mut h, &mut app, &newest).expect("the newest row drawn");
     presses(&mut h, &mut app, Key::ArrowDown, NONE, 3);
     let y_nav = row_y(&mut h, &mut app, &newest);
     assert_eq!(y_nav, Some(y0), "↓ scrolled the list in navigation mode");
-    check_console_at(&app, 3, None, NAV, "↓ navigating");
+    check_console_at(&app, 1, Some("log"), NAV, "↓ navigating");
     // Enter: interaction; ↓ scrolls towards the older rows, the newest moving up or out.
     press(&mut h, &mut app, Key::Enter, NONE);
-    check_console_at(&app, 3, None, INTERACT, "Enter on the list");
+    check_console_at(&app, 1, Some("log"), INTERACT, "Enter on the list");
     presses(&mut h, &mut app, Key::ArrowDown, NONE, 3);
     settle(&mut h, &mut app);
     let y_int = row_y(&mut h, &mut app, &newest);
@@ -821,14 +852,20 @@ fn qa_mock_keyboard_console_entry_list_scrolls_only_after_enter() {
     // Esc: navigation mode on the list.
     press(&mut h, &mut app, Key::Escape, NONE);
     assert_eq!(app.view.focus.path, list);
-    check_console_at(&app, 3, None, NAV, "Esc on the list");
+    check_console_at(&app, 1, Some("log"), NAV, "Esc on the list");
     assert!(app.is_open(Window::Console));
-    // Tab from interaction mode on the list: the console's next section, the filters, navigating, inside.
+    // Tab from interaction mode on the log: the console's next scope, the header bar, navigating, inside.
     press(&mut h, &mut app, Key::Enter, NONE);
     press(&mut h, &mut app, Key::Tab, NONE);
     assert!(app.is_open(Window::Console));
     let path = labels(&app);
-    check_console_at(&app, 0, None, NAV, "Tab from the list in interaction mode");
+    check_console_at(
+        &app,
+        0,
+        Some("header"),
+        NAV,
+        "Tab from the list in interaction mode",
+    );
     rejects("a Tab from the list that leaves the console", || {
         check_path(&path, &["top bar"], "Tab")
     });
@@ -864,13 +901,13 @@ fn qa_mock_keyboard_console_esc_returns_to_the_footer_or_windows_console() {
         &["Footer"],
         "Esc, the console opened by the footer",
     );
-    // Opened from Windows › Console: the focus on its first filter, Tab between its sections, then back on the entry.
+    // Opened from Windows › Console: the focus on its header bar, Tab between its scopes, then back on the entry (R-450).
     let (mut app, mut h) = fresh();
     open_from_windows_menu(&mut h, &mut app, "Console");
     assert!(app.is_open(Window::Console), "Windows › Console");
-    check_console_at(&app, 0, Some("all"), NAV, "Windows › Console");
+    check_console_at(&app, 0, Some("header"), NAV, "Windows › Console");
     press(&mut h, &mut app, Key::Tab, NONE);
-    check_console_at(&app, 1, None, NAV, "Tab in the menu-opened console");
+    check_console_at(&app, 1, Some("log"), NAV, "Tab in the menu-opened console");
     press(&mut h, &mut app, Key::Tab, SHIFT);
     esc_out(&mut h, &mut app);
     let by_menu = labels(&app);

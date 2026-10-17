@@ -4,46 +4,50 @@
 //! the snapshots carry (gui_state_contract §2). An error opens it by itself, taking no focus (R-405); clear empties it
 //! and resets the footer's warning and error counts, which count from the session's start until then.
 //!
-//! Its keys (§G3; R-405, R-409 F2, G4–G6): a window under the window rule, its sections in Tab order the filters, the
-//! text filter, copy and clear, and the entry list. The arrows move between the filters, and between copy and clear,
-//! in navigation mode; Enter on one acts as its click. The text filter lands in navigation mode, Enter starting typing,
-//! in which every key but Esc, Enter and Tab goes to the field (Ctrl+Z undoing the text edit, `?` typing). The entry
-//! list lands in navigation mode, where ↑ and ↓ do not scroll it; Enter starts interaction, in which they scroll it a
-//! row a step, ten with Shift (applied per R-369: its own step of one row, under `Bounded`, no step kind added); Esc
-//! returns to navigation mode on it.
+//! Its keys (§G3, §G12; R-405, R-409 G4–G6, R-450): a window of exactly two scopes, top to bottom, the header bar and
+//! the log. Opening it from the footer or Windows › Console lands in navigation mode on the header bar scope itself;
+//! ↑ ↓, Tab and Shift+Tab move between the two, inside the window (A1). Enter on the header bar goes in, onto All, and
+//! ← → cross its controls in visual order, All, Warnings, Errors, Info, the search field, Copy, Clear and ×, stopping
+//! at its ends; Esc goes back up to it (A2). The search field is §G3's text field: Enter starts typing, in which every
+//! key but Esc, Enter and Tab goes to it; Esc or Enter stops and keeps the text. × is a button: Enter or a click closes
+//! the console, the focus back on whatever opened it. Esc at the top level, on either scope, closes it too. Enter on the
+//! log starts interaction: ↑ ↓ scroll it an entry, Page Up and Page Down a page (the entries its rect shows), Home and
+//! End to its first and last entry, Shift ×10, over the whole filtered list, clamped (A4); an empty list leaves the log
+//! where it is (A5). A click on a console control moves the keyboard's focus onto it (A3).
 
-use eframe::egui::{self, Button, Grid, RichText, ScrollArea, TextEdit, Ui};
+use eframe::egui::{self, Align, Button, Grid, Layout, RichText, ScrollArea, TextEdit, Ui};
 use engine::contract::log::{LogEntry, Severity};
 
 use crate::app::Counts;
 use crate::explore::footer::severity_colour;
-use crate::keyboard::scopes::{Adjust, Scope, ScopeId, ScopeTree, StepKind};
-use crate::windows::{note, Keys};
+use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree, Scroll, ScrollBy};
+use crate::windows::{note, Keys, CLOSE_LABEL, CLOSE_TEXT};
 
 /// The window's scope.
 pub const WINDOW: ScopeId = "win_console";
 /// The console window's title.
 pub const TITLE: &str = "Console";
 
-/// The filters' section.
-pub const FILTERS: ScopeId = "cs_filters";
-/// The text filter, a section of one text field.
-pub const TEXT: ScopeId = "cs_text";
-/// Copy and clear's section.
-pub const COPY_CLEAR: ScopeId = "cs_copy_clear";
-/// The entry list, a section of one element the arrows scroll in interaction mode.
-pub const LIST: ScopeId = "cs_list";
+/// The header bar, the first scope: the filters, the search field, Copy, Clear and × in a row (R-450).
+pub const HEADER: ScopeId = "cs_header";
+/// The log, the second scope: the entry list, scrolled by the keys in interaction mode (R-450 A4).
+pub const LOG: ScopeId = "cs_log";
+/// The search field: the text filter.
+pub const SEARCH: ScopeId = "cs_search";
 /// Copy: the rows shown, as text, to the clipboard.
 pub const COPY: ScopeId = "cs_copy";
 /// Clear: empties the console and resets the footer's counts.
 pub const CLEAR: ScopeId = "cs_clear";
+/// ×: closes the console, the focus back on its opener (R-450).
+pub const CLOSE: ScopeId = "cs_close";
 
-/// The filters' scopes and labels, in order (§G12: all, warnings, errors, info).
-pub const FILTER_IDS: [(ScopeId, Filter, &str); 4] = [
-    ("cs_all", Filter::All, "all"),
-    ("cs_warnings", Filter::Warnings, "warnings"),
-    ("cs_errors", Filter::Errors, "errors"),
-    ("cs_info", Filter::Info, "info"),
+/// The filters' scopes, their buttons' text (12_console.png) and their breadcrumb names (R-450 A6), in order (§G12:
+/// all, warnings, errors, info).
+pub const FILTER_IDS: [(ScopeId, Filter, &str, &str); 4] = [
+    ("cs_all", Filter::All, "all", "All"),
+    ("cs_warnings", Filter::Warnings, "warnings", "Warnings"),
+    ("cs_errors", Filter::Errors, "errors", "Errors"),
+    ("cs_info", Filter::Info, "info", "Info"),
 ];
 
 /// The text filter's hint (12_console.png).
@@ -85,8 +89,10 @@ pub struct State {
     pub filter: Filter,
     /// The text filter.
     pub text: String,
-    /// The entry list's top row, among the rows shown, newest first.
+    /// The log's top row, among the rows shown, newest first.
     pub top_row: usize,
+    /// The rows the log's rect showed when last drawn: a page (R-450 A4).
+    pub page: usize,
     /// Whether the list scrolls to [`State::top_row`] next frame.
     pub scroll_pending: bool,
     /// The text copy last put on the clipboard.
@@ -100,6 +106,10 @@ pub enum Act {
     Copy(String),
     /// Empty the console and reset the footer's counts.
     Clear,
+    /// Close the console, the focus back on its opener (×, R-450).
+    Close,
+    /// A click on this control: the keyboard's focus moves onto it (R-450 A3).
+    Focus(ScopeId),
 }
 
 /// `at`, milliseconds since the Unix epoch, as the time of day in UTC: "12:04:11.251" (12_console.png).
@@ -140,25 +150,27 @@ pub fn row_text(entry: &LogEntry) -> String {
     )
 }
 
-/// Joins the window's sections and elements to `tree`, in Tab order.
+/// Joins the window's two scopes and the header bar's controls to `tree`, in order (R-450), and the log's keys to the
+/// `?` overlay.
 pub fn register(tree: &mut ScopeTree) {
-    tree.register(Some(WINDOW), Scope::group(FILTERS, "filters"));
-    for (id, _, label) in FILTER_IDS {
-        tree.register(Some(FILTERS), Scope::control(id, label));
+    tree.register(Some(WINDOW), Scope::group(HEADER, "Header").row());
+    for (id, _, _, label) in FILTER_IDS {
+        tree.register(Some(HEADER), Scope::control(id, label));
     }
-    tree.register(Some(WINDOW), Scope::text(TEXT, "text filter"));
-    tree.register(Some(WINDOW), Scope::group(COPY_CLEAR, "copy and clear"));
-    tree.register(Some(COPY_CLEAR), Scope::control(COPY, "copy"));
-    tree.register(Some(COPY_CLEAR), Scope::control(CLEAR, "clear"));
-    tree.register(
-        Some(WINDOW),
-        Scope::value(LIST, "entries", StepKind::Bounded),
+    tree.register(Some(HEADER), Scope::text(SEARCH, "Search"));
+    tree.register(Some(HEADER), Scope::control(COPY, "Copy"));
+    tree.register(Some(HEADER), Scope::control(CLEAR, "Clear"));
+    tree.register(Some(HEADER), Scope::control(CLOSE, CLOSE_LABEL));
+    tree.register(Some(WINDOW), Scope::scroll(LOG, "Log"));
+    tree.register_shortcut(
+        "Page Up / Down · Home / End",
+        "the console's log, interacting: a page · its first / last entry",
     );
 }
 
 /// Enter on control `id`, as its click, with the console's `entries`.
 pub fn activate(id: &str, state: &mut State, entries: &[LogEntry]) -> Option<Act> {
-    if let Some((_, filter, _)) = FILTER_IDS.iter().find(|(f, _, _)| *f == id) {
+    if let Some((_, filter, _, _)) = FILTER_IDS.iter().find(|(f, _, _, _)| *f == id) {
         state.filter = *filter;
         state.top_row = 0;
         state.scroll_pending = true;
@@ -180,26 +192,45 @@ pub fn activate(id: &str, state: &mut State, entries: &[LogEntry]) -> Option<Act
     }
 }
 
-/// The rows one arrow press scrolls: its sign, a row a step, ten with Shift (applied per R-369), at least one.
-pub fn rows_of(times: f64) -> i64 {
-    let rows = times.abs().round().max(1.0) as i64;
-    if times < 0.0 {
-        -rows
-    } else {
-        rows
-    }
+/// The log's top row once `by` has scrolled it from `top`, over `rows` rows of which `page` show: clamped so the
+/// first row is the top one at least and the last row shows at most (R-450 A4).
+pub fn scrolled_top(top: usize, by: ScrollBy, rows: usize, page: usize) -> usize {
+    let page = page.max(1);
+    let last_top = rows.saturating_sub(page) as i64;
+    let to = match by {
+        ScrollBy::Entries(n) => top as i64 + n,
+        ScrollBy::Pages(n) => top as i64 + n * page as i64,
+        ScrollBy::First => 0,
+        ScrollBy::Last => last_top,
+    };
+    to.clamp(0, last_top) as usize
 }
 
-/// The arrows on the entry list, in interaction mode: ↓ scrolls down the list, to older rows, ↑ back up, kept on it.
-pub fn adjust(adjust: &Adjust, state: &mut State, entries: &[LogEntry]) {
-    if adjust.scope != LIST {
+/// The keys' scroll of the log, in interaction mode, over the whole filtered list.
+pub fn scroll(scroll: &Scroll, state: &mut State, entries: &[LogEntry]) {
+    if scroll.scope != LOG {
         return;
     }
-    let last = shown(entries, state).len().saturating_sub(1) as i64;
-    // ↑'s sign is +, and ↑ moves towards the top, the newest row.
-    let to = (state.top_row as i64 - rows_of(adjust.times)).clamp(0, last);
-    state.top_row = to as usize;
+    let rows = shown(entries, state).len();
+    state.top_row = scrolled_top(state.top_row, scroll.by, rows, state.page);
     state.scroll_pending = true;
+}
+
+/// The rows a log of `height` points shows whole, each `line` tall and `row_h` from the next: at least one.
+pub fn page_of(height: f32, line: f32, row_h: f32) -> usize {
+    if row_h <= 0.0 {
+        return 1;
+    }
+    ((height - line) / row_h).floor().max(0.0) as usize + 1
+}
+
+/// The first row drawn whole in a log scrolled `offset` points down, its rows `row_h` apart: a row scrolled past by
+/// less than a thousandth of a row counts as whole, so an offset of exact rows gives that row.
+pub fn top_of(offset: f32, row_h: f32) -> usize {
+    if row_h <= 0.0 {
+        return 0;
+    }
+    (offset / row_h - 1e-3).ceil().max(0.0) as usize
 }
 
 /// What the console draws from.
@@ -210,49 +241,68 @@ pub struct View<'a> {
     pub counts: Counts,
 }
 
-/// Draws the console's content; returns what its controls asked for.
-pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>) -> Option<Act> {
-    let mut act = None;
-    ui.horizontal(|ui| {
-        let filters = ui
-            .scope(|ui| {
-                for (id, filter, label) in FILTER_IDS {
-                    let text = match filter {
-                        Filter::Warnings => format!("⚠ {label} {}", view.counts.warnings),
-                        Filter::Errors => format!("× {label} {}", view.counts.errors),
-                        _ => label.to_owned(),
-                    };
-                    let button = ui.add(Button::selectable(state.filter == filter, text));
-                    if button.clicked() {
-                        act = activate(id, state, view.entries).or(act.take());
-                    }
-                    keys.place(id, &button);
+/// Draws one header button, as `id`: its click acts and moves the keyboard's focus onto it (A3).
+fn header_button(
+    ui: &mut Ui,
+    keys: &mut Keys<'_>,
+    id: ScopeId,
+    button: Button<'_>,
+    state: &mut State,
+    entries: &[LogEntry],
+    acts: &mut Vec<Act>,
+) {
+    let response = ui.add(button);
+    if response.clicked() {
+        acts.push(Act::Focus(id));
+        // Enter on × closes through the window rule (`windows::closed_by`); its click, as here.
+        let act = if id == CLOSE {
+            Some(Act::Close)
+        } else {
+            activate(id, state, entries)
+        };
+        acts.extend(act);
+    }
+    keys.place(id, &response);
+}
+
+/// Draws the console's content, its header bar first (its title, then its controls in order, Copy, Clear and × at
+/// the right, as 12_console.png's row has copy and clear); returns what its controls asked for, in order.
+pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>) -> Vec<Act> {
+    let mut acts = Vec::new();
+    let header = ui
+        .horizontal(|ui| {
+            ui.label(RichText::new(TITLE).strong());
+            for (id, filter, label, _) in FILTER_IDS {
+                let text = match filter {
+                    Filter::Warnings => format!("⚠ {label} {}", view.counts.warnings),
+                    Filter::Errors => format!("× {label} {}", view.counts.errors),
+                    _ => label.to_owned(),
+                };
+                let button = Button::selectable(state.filter == filter, text);
+                header_button(ui, keys, id, button, state, view.entries, &mut acts);
+            }
+            let text = ui.add(
+                TextEdit::singleline(&mut state.text)
+                    .hint_text(TEXT_HINT)
+                    .desired_width(240.0),
+            );
+            keys.place(SEARCH, &text);
+            if text.clicked() || text.drag_started() {
+                acts.push(Act::Focus(SEARCH));
+            }
+            if text.changed() {
+                state.top_row = 0;
+                state.scroll_pending = true;
+            }
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                for (id, label) in [(CLOSE, CLOSE_TEXT), (CLEAR, "clear"), (COPY, "copy")] {
+                    let button = Button::new(label);
+                    header_button(ui, keys, id, button, state, view.entries, &mut acts);
                 }
-            })
-            .response;
-        keys.place_rect(ui, FILTERS, filters.rect);
-        let text = ui.add(
-            TextEdit::singleline(&mut state.text)
-                .hint_text(TEXT_HINT)
-                .desired_width(240.0),
-        );
-        keys.place(TEXT, &text);
-        if text.changed() {
-            state.top_row = 0;
-        }
-        let pair = ui
-            .scope(|ui| {
-                for (id, label) in [(COPY, "copy"), (CLEAR, "clear")] {
-                    let button = ui.button(label);
-                    if button.clicked() {
-                        act = activate(id, state, view.entries).or(act.take());
-                    }
-                    keys.place(id, &button);
-                }
-            })
-            .response;
-        keys.place_rect(ui, COPY_CLEAR, pair.rect);
-    });
+            });
+        })
+        .response;
+    keys.place_rect(ui, HEADER, header.rect);
     ui.separator();
     let rows = shown(view.entries, state);
     // A row is the grid's line, at least a control's height, as egui's grid makes it, and its spacing below.
@@ -265,7 +315,8 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
         .id_salt("console rows")
         .auto_shrink(false)
         .max_height((ui.available_height() - foot_h).max(row_h));
-    if std::mem::take(&mut state.scroll_pending) {
+    let pending = std::mem::take(&mut state.scroll_pending);
+    if pending {
         area = area.vertical_scroll_offset(state.top_row as f32 * row_h);
     }
     let list = area.show(ui, |ui| {
@@ -274,7 +325,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
             .min_row_height(line)
             .spacing(ui.spacing().item_spacing)
             .show(ui, |ui| {
-                for entry in rows {
+                for entry in &rows {
                     let colour = severity_colour(ui.visuals(), entry.severity);
                     ui.label(
                         RichText::new(entry.severity.name())
@@ -288,7 +339,16 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
                 }
             });
     });
-    keys.place_rect(ui, LIST, list.inner_rect);
+    state.page = page_of(list.inner_rect.height(), line, row_h);
+    if !pending {
+        // The wheel's scroll is where the keys go on from: its first row drawn whole.
+        state.top_row =
+            top_of(list.state.offset.y, row_h).min(rows.len().saturating_sub(state.page));
+    }
+    if ui.rect_contains_pointer(list.inner_rect) && ui.input(|i| i.pointer.primary_clicked()) {
+        acts.push(Act::Focus(LOG));
+    }
+    keys.place_rect(ui, LOG, list.inner_rect);
     note(ui, FOOT);
-    act
+    acts
 }
