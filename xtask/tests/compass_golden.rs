@@ -680,6 +680,14 @@ fn compass_golden_a_slice_on_an_edges_key_goes_among_them() {
         let (g, ours) = on_a_key(after);
         check_same(&g, &ours);
     }
+    // A contact at key 1 + 1e-9, the comparison's own allowance above an edge's key: the edges at key 1 are still
+    // not below it, so the slice may go after the seven.
+    let contact = vec![[1.0, -1.0, 1e-9], [1.0, 1.0, 1e-9]];
+    let (mut g, mut ours) = on_a_key(7);
+    g.polygon = Some(contact.clone());
+    ours.polygon = contact;
+    ours.fill = false;
+    check_same(&g, &ours);
     for after in [6, 12] {
         let (g, ours) = on_a_key(after);
         let failures = compass_golden::compare(&g, &ours);
