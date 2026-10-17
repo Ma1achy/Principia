@@ -224,7 +224,8 @@ fn degenerate_tilt_guards_return_todays_values_off_the_corners() {
     let z0 = in_frame(0.02, -0.03, 0.05);
     let points = [review_anchor(), z0, in_frame(-0.7, 0.4, 0.3)];
     for (t1, t2, gamma, s_stated) in tilts {
-        for sigma in [0.01, 1.0, 4.0] {
+        // The zoom's deepest scale, 2⁻⁴⁸ (ZOOM_RANGE), among them: a sound basis that small is kept.
+        for sigma in [2f64.powi(-48), 0.01, 1.0, 4.0] {
             let what = format!("({t1}°, {t2}°, γ = {gamma}°), σ = {sigma}");
             let plane = plane_at(t1, t2, gamma, sigma, z0);
             let s = plane_s(&plane.q1, &plane.q2);

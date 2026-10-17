@@ -408,10 +408,11 @@ fn spans_no_plane(plane: &Plane) -> bool {
 /// on the plane's span `u q̂₁ + v q̂₂`. `None` for a degenerate basis: where the sine test `1 − (q̂₁·q̂₂)² ≤ 10⁻¹²` fires
 /// or `s < `[`PLANE_S_CUT`] (R-451 B11, REQ-GUI-203).
 pub fn in_plane(plane: &Plane, z: &Latent) -> Option<(f64, f64)> {
-    let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
-    if n1 == 0.0 || n2 == 0.0 || spans_no_plane(plane) {
+    // A zero basis vector reads `s = 0`, so the cut also keeps the divisions below off a zero norm.
+    if spans_no_plane(plane) {
         return None;
     }
+    let (n1, n2) = (norm(&plane.q1), norm(&plane.q2));
     let (h1, h2) = (plane.q1.map(|x| x / n1), plane.q2.map(|x| x / n2));
     let g = dot(&h1, &h2);
     let det = 1.0 - g * g;
