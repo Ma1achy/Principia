@@ -10,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 use validation::negative_control;
 use xtask::compass_golden::{self, Golden, Item, Label, Record};
+use xtask::screenshot::{self, CaseResult, Outcome};
 
 /// The compass fixtures' directory.
 fn dir() -> PathBuf {
@@ -697,4 +698,99 @@ negative_control!(
         let (g, ours) = on_a_key(6);
         check_same(&g, &ours)
     }
+);
+
+/// The selftest suite, under a root of its own, with `compass` naming a spec on each of its cases when `with` is set:
+/// its results.
+fn selftest(name: &str, with: bool) -> Vec<CaseResult> {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _ = fs::remove_dir_all(&root);
+    let from = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(screenshot::SUITES)
+        .join("selftest");
+    let to = root.join(screenshot::SUITES).join("selftest");
+    fs::create_dir_all(&to).expect("the suite dir");
+    for file in ["reference.png", "surface.json"] {
+        fs::copy(from.join(file), to.join(file)).expect("a fixture copied");
+    }
+    let mut cases: serde_json::Value =
+        serde_json::from_str(&fs::read_to_string(from.join("cases.json")).expect("the cases"))
+            .expect("json");
+    if with {
+        for case in cases["cases"].as_array_mut().expect("cases") {
+            case["compass"] = serde_json::json!("spec.json");
+        }
+    }
+    fs::write(to.join("cases.json"), cases.to_string()).expect("the cases written");
+    screenshot::run_suite(&root, "selftest").expect("the suite read")
+}
+
+/// Asserts the selftest's layout case is refused for its data surface and its presence case for having no artboard.
+fn check_refused(results: &[CaseResult]) {
+    let err = |case: &str| {
+        let r = results.iter().find(|r| r.case == case).expect("the case");
+        r.result.as_ref().err().cloned().unwrap_or_default()
+    };
+    assert!(
+        err("layout").contains("a `compass` spec needs a `gui` surface"),
+        "the layout case on a data surface refused: {}",
+        err("layout")
+    );
+    assert!(
+        err("presence").contains("belongs to a layout case"),
+        "the presence case refused: {}",
+        err("presence")
+    );
+}
+
+#[test]
+fn compass_golden_a_spec_needs_a_gui_layout_case() {
+    check_refused(&selftest("compass_selftest_with", true));
+}
+
+negative_control!(
+    compass_golden_a_spec_needs_a_gui_layout_case,
+    "the selftest suite without a compass spec must not be read as refused",
+    expected = "the layout case on a data surface refused",
+    check_refused(&selftest("compass_selftest_without", false))
+);
+
+/// A compared case's line.
+fn compared_line(outcome: Outcome) -> String {
+    CaseResult {
+        suite: "01_main".to_owned(),
+        case: "mock_compass_cube_slice".to_owned(),
+        result: Ok(outcome),
+    }
+    .to_string()
+}
+
+/// Asserts `line` is the compared case's, naming the spec.
+fn check_names_spec(line: &str) {
+    assert_eq!(
+        line,
+        "01_main/mock_compass_cube_slice: layout: wrote c/capture.png beside c/01_main.png; the compass's drawing \
+         matches s/spec.json (R-451 B8)",
+        "no spec named"
+    );
+}
+
+#[test]
+fn compass_golden_a_compared_case_names_its_spec() {
+    check_names_spec(&compared_line(Outcome::Compared {
+        capture: PathBuf::from("c/capture.png"),
+        artboard: PathBuf::from("c/01_main.png"),
+        spec: PathBuf::from("s/spec.json"),
+    }));
+}
+
+negative_control!(
+    compass_golden_a_compared_case_names_its_spec,
+    "a captured case's line names no spec",
+    expected = "no spec named",
+    check_names_spec(&compared_line(Outcome::Captured {
+        capture: PathBuf::from("c/capture.png"),
+        artboard: PathBuf::from("c/01_main.png"),
+    }))
 );
