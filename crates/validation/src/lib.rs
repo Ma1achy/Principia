@@ -41,6 +41,15 @@ pub use ledger::constants::{GAMMA_K, K_MAX};
 /// crate's tests and the `shape-roundtrip` gate, as `r_pole`'s is.
 pub use ledger::constants::{SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL};
 
+/// The Burrau `ν = 1/2` tolerance (REQ-VAL-118, proposed) and the Euclid plane's defaults (chart_reference §4.5;
+/// TASK-M2-10), for the kernel crate's tests, as `r_pole` is.
+pub use ledger::constants::{
+    BURRAU_NU_HALF_TOL, EUCLID_M_MAX, EUCLID_M_MIN, EUCLID_NU_MAX, EUCLID_NU_MIN,
+};
+
+/// The payload's pair-id map (R-22; payload §2), for the kernel crate's tests, as `r_pole` is.
+pub use ledger::payload::pair_bodies;
+
 /// The assembler's declaration parser, re-exported for the ledger crate's tests, which reach render only through this
 /// dev-dependency: the numeric view template's `RANGE_AUTO` header round-trips through it (TASK-M1-09).
 pub use render::assemble::{Declaration, UniformType};
