@@ -537,15 +537,19 @@ const CALIBRATIONS: [&str; 4] = [
 /// not hashed.
 const WARP: [&str; 2] = ["k_max", "gamma_k"];
 
-/// The Burrau family's entries (TASK-M2-10): the Euclid plane's defaults, a chart's parameters as the warp defaults
-/// are, and the `ν = 1/2` tolerance (REQ-VAL-118), a test's, as `n_norm_tol` is. None decides what a stored bit means,
-/// so none is hashed.
-const BURRAU: [&str; 5] = [
+/// The Burrau family's entries (TASK-M2-10, TASK-M2-11): the Euclid plane's and the acute-angle charts' defaults, a
+/// chart's parameters as the warp defaults are, and the `ν = 1/2` tolerance (REQ-VAL-118), a test's, as `n_norm_tol`
+/// is. None decides what a stored bit means, so none is hashed.
+const BURRAU: [&str; 9] = [
     "burrau_nu_half_tol",
     "euclid_m_min",
     "euclid_m_max",
     "euclid_nu_min",
     "euclid_nu_max",
+    "burrau_theta_min",
+    "burrau_theta_max",
+    "burrau_theta_lz_k",
+    "burrau_theta_lz_fraction",
 ];
 
 #[test]
