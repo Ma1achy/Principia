@@ -46,10 +46,11 @@ Transcribed from the Chazy stain spec, which was written up from prin-rs PR #32;
   resolve several samples (`principia_memory_tiers.md` § "1. Taxonomy (locked vocabulary)": SAMPLE against PIXEL). The
   classifier labels each sample and each ensemble copy (§6), and the requirements say "sample"; the transcribed counts
   stand as given. Where a line is about rendered output (a golden image, a screenshot), "pixel" means a pixel.
-- **Body names as shown (the display rule of 16 October 2026, ruled on PR #226).** Bodies are 0-based internally
-  (R-22): the fields, the stain parameter `k`, the code and every machine-readable dump keep 0, 1, 2. Everything a
+- **Body names as shown (R-449).** Bodies are 0-based internally (R-22): the fields, the stain parameter `k`, the
+  code and every machine-readable dump keep 0, 1, 2, and a dump's header or schema says so (REQ-GEN-036). Everything a
   person reads (legends, labels, preset names, panel titles, and this file's prose about what is shown) calls them
-  body 1, 2, 3, so internal body `k` is shown as body `k + 1`.
+  body 1, 2, 3, so internal body `k` is shown as body `k + 1`, through the one display conversion, TASK-M2-33's
+  (REQ-GUI-188; `principia_dd_simstate_payload.md` §2, "What a person reads").
 
 ---
 
@@ -137,7 +138,7 @@ the running maximum moment of inertia `I_max`. `G = 1`. Transcribed from prin-rs
   `ρ_b = d_out(b) / d_pair(i, j)`. **The body most separated from its pair** is the `b` with the largest `ρ_b`; on a tie
   the lowest body index wins (`classify`'s fold keeps the first strictly greater). Bodies are 0-based (R-22); the
   classifier names no pair id, so prin-rs's pair order `(0,1), (0,2), (1,2)` does not reach any output. Legends and
-  labels read the bodies as body 1, 2, 3 (§0, the display rule of 16 October 2026).
+  labels read the bodies as body 1, 2, 3 (§0, R-449).
 - **`I_max`** is the running maximum of `I` (§6).
 - **The live-playhead test** (prin-rs PR #32, `src/chazy.rs`, module note): everything the classifier reads is either
   the live state or a running latch, with no re-run from `t = 0` and nothing after `t`.
@@ -443,8 +444,8 @@ The spec's 02 addition (the human's follow-up of 16 October 2026), transcribed:
   Bodies are 0-based (R-22). **Ties:** the block does not say what two equally separated bodies give; `classify`
   settles it, as §3.1 transcribes: its fold runs over `b = 0, 1, 2` from `(0, 0)` and keeps the first strictly greater
   ratio, so on a tie the lowest body index wins (prin-rs PR #32, `src/chazy.rs::classify`). Legends and labels read
-  the index as body 1, 2, 3 (§0); a machine-readable export keeps it 0-based and says so. The field is defined at
-  every sample; the one-body views read it only on HE and PE samples (§10.11).
+  the index as body 1, 2, 3 (§0, R-449; REQ-GUI-188); a machine-readable export keeps it 0-based and says so
+  (REQ-GEN-036). The field is defined at every sample; the one-body views read it only on HE and PE samples (§10.11).
 - **`chazy_qk[k]`** is the outer `K/U` of `out_kup(k)` (§3.1, with `b = k`): `M_p = m_i + m_j` for the other two,
   `μ = m_k M_p / (m_k + M_p)`, `K = ½ μ |Δv|²`, `U = m_k M_p / d`. It is ≥ 0, below 1 bound, 1 parabolic, above 1
   hyperbolic. On a HE or PE sample, `chazy_qk[chazy_escaper]` is the outer ratio the classifier banded, which is also

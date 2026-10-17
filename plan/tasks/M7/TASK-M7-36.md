@@ -2,8 +2,8 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-PAY-100, REQ-PAY-101, REQ-PAY-102, REQ-PAY-103, REQ-PAY-104, REQ-PAY-107, REQ-PAY-108, REQ-EVT-027, REQ-VAL-185, REQ-VAL-186
-- **Depends on:** TASK-M7-35, TASK-M3-12, TASK-M3-22, TASK-M3-27
-- **Needs (earlier milestones):** REQ-EVT-005, REQ-EVT-006, REQ-GEN-016, REQ-VAL-034
+- **Depends on:** TASK-M7-35, TASK-M3-12, TASK-M3-22, TASK-M3-27, TASK-M2-33
+- **Needs (earlier milestones):** REQ-EVT-005, REQ-EVT-006, REQ-GEN-016, REQ-VAL-034, REQ-GEN-036
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-2, PIT-10
 - **Size:** ~500 lines (six accessors and the folds ~220, the structure definition in the drill-down, the certificate and Burrau runs ~150, tests ~130)
@@ -17,8 +17,9 @@ several structure rows apply, the precedence is written into §5.5 (R-72). An es
 its fire-time state (§7). The energy certificates are checked per sample (§2), and the Burrau run ends HE (§12.2).
 R-443 adds two per-body fields (§5.6): `chazy_escaper`, the body most separated from its pair (the lowest index on a
 tie), and `chazy_qk[k]`, body k's `K/|U|` against the other two's centre of mass, both from the live state and the
-`ICDescriptor`'s masses, nothing stored. `chazy_escaper` is 0-based, as every machine-readable export of it says;
-what a person reads names the bodies 1, 2, 3 (the drill-down's §0).
+`ICDescriptor`'s masses, nothing stored. `chazy_escaper` is 0-based, as every machine-readable export of it says
+(REQ-GEN-036); what a person reads names the bodies 1, 2, 3 through TASK-M2-33's one display conversion (R-449,
+REQ-GUI-188; the drill-down's §0).
 
 ## References
 - `docs/design/principia_dd_chazy_final_motion.md` § "2. Chazy's classes"
@@ -36,6 +37,7 @@ what a person reads names the bodies 1, 2, 3 (the drill-down's §0).
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `docs/contracts/principia_render_contract.md` § "Part 1 — The payload (render input)"
 - `decisions.md` § "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+- `decisions.md` § "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
 
 ## Deliverables
@@ -71,3 +73,4 @@ what a person reads names the bodies 1, 2, 3 (the drill-down's §0).
 - `chazy_escaper` and `chazy_qk` (R-443) extend this task, not a new one (applied per R-369): two accessors beside
   the others, reading the same `out_kup`/`pair_kup` quantities. Which body the one-body views read as escaping is
   RQ-321, a question for the views (TASK-M7-41), not for the field.
+- R-449 (16 Oct 2026): `chazy_escaper` and `chazy_qk[k]`'s `k` are body indices, 0-based in storage and computation; a machine-readable export that carries them keeps them 0-based and its header or schema says so (REQ-GEN-036, TASK-M2-33's); what a person reads is 1-based through TASK-M2-33's conversion module (REQ-GUI-188).

@@ -10097,6 +10097,11 @@ recorded in the drill-down's § "0. Provenance and authority", not as rulings.
   (REQ-VAL-186); "pixel" in the classifier's requirements is "sample" (memory_tiers §1).
 
 ## R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback
+*Amended in part by R-449 (the names as shown: the lens body `k` ∈ {0, 1, 2} is chosen and shown as body 1, 2 or 3,
+the escaper map's columns `chazy_escaper` = 0, 1, 2 as body 1, 2, 3, and the three panels titled body 1, 2, 3,
+through TASK-M2-33's one display conversion, REQ-GUI-188; R-449's text names "the Chazy spec and its follow-ups").*
+*Still in force: all of it; `k` and `chazy_escaper` stay 0-based in storage and computation, and a machine-readable
+export keeps them 0-based and says so (REQ-GEN-036); only the names a person reads are R-449's.*
 *16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "0. Provenance and authority" (a bullet
 added), § "5.2 The fields" (two rows added), § "5.6 `chazy_escaper` and `chazy_qk` (R-443)", § "10.11 One body at a
 time (R-443)", § "11.1.1 Decided (R-443)", § "11.2.2 One-body palettes, measured (R-443)" and § "12.3 One body at a
@@ -10189,8 +10194,8 @@ which is RQ-321.
   flat role colours with a separate `q_k` bar and says so (render GUI spec §G6).
 - The R-443 requirements carry the `rq:` their RQs name (RQ-321, RQ-322, RQ-323), and the Chazy legends carry RQ-312.
   RQ-323's options (b) and (c) defer or drop part of R-443, so they are the human's; (a) is the orchestrator's.
-- Names a person reads call the bodies 1, 2, 3 (the display rule of 16 October 2026, ruled on PR #226); the fields,
-  the stain parameter `k` and machine-readable dumps stay 0-based.
+- Names a person reads call the bodies 1, 2, 3 (R-449, through TASK-M2-33's one display conversion, REQ-GUI-188);
+  the fields, the stain parameter `k` and machine-readable dumps stay 0-based (REQ-GEN-036).
 
 ## R-444 — The outcome view shows physical outcomes only, in nine classes: bounded / nothing yet `#141418`, the three pair collisions, triple collision, the three escapes and triple ejection *(supersedes R-96 and R-433 as they apply to the outcome palette's classes and the triple outcomes' swatches)*
 *Amended in part by R-449 (the class names as shown: collision 1–2, 1–3 and 2–3 for pairs 2, 1 and 0, escape body 1,

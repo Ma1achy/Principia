@@ -3,7 +3,7 @@
 - **Milestone:** M7
 - **Closes:** REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-COL-096, REQ-COL-097, REQ-COL-098, REQ-COL-099, REQ-COL-100, REQ-COL-107, REQ-VAL-188, REQ-VAL-189
 - **Depends on:** TASK-M7-36, TASK-M7-38
-- **Needs (earlier milestones):** REQ-COL-055, REQ-COL-064
+- **Needs (earlier milestones):** REQ-COL-055, REQ-COL-064, REQ-GUI-188
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** PIT-5
 - **Size:** ~600 lines (the role and rank logic and the tie fallback ~200, palettes and presets as data ~100, the separation test ~100, the property tests ~200; goldens are fixtures, the definitions in the drill-down)
@@ -37,6 +37,7 @@ separation is measured against τ, and the palettes and the tie tolerance are pr
 - `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
 - `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD"
 - `decisions.md` § "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+- `decisions.md` § "R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 
@@ -44,8 +45,8 @@ separation is measured against τ, and the palettes and the tie tolerance are pr
 - The body-lens palette and the escaper palette (by body and by rank) as swatch sets, user-editable, and their presets:
   the body lens (parameter `k`), the body lens with energy, the escaper map, the escaper by mass rank, and the
   lightest- and heaviest-body lenses. Preset names and stain labels name bodies 1, 2, 3 and the lens parameter is
-  chosen as body 1, 2 or 3, through the one display conversion of the display rule of 16 Oct 2026 (ruled on PR #226);
-  `k` and `chazy_escaper` stay 0-based inside.
+  chosen as body 1, 2 or 3, through TASK-M2-33's one display conversion (R-449, REQ-GUI-188); `k` and `chazy_escaper`
+  stay 0-based inside.
 - The mass rank from the `ICDescriptor`'s masses, undefined where a body's mass ties another's within the tolerance;
   the rank views' fallback to the label view and the fallback flag the legend reads (TASK-M8-45).
 - The drill-down's §10.11.5 gains the label body a rank lens falls back to and the tie comparison's form
@@ -84,3 +85,4 @@ separation is measured against τ, and the palettes and the tie tolerance are pr
 - The energy form reuses TASK-M7-38's Replace-L range and compaction (REQ-COL-088, REQ-COL-089), hence the dependency.
 - The three panels (§10.11.3) and the one-body legends are TASK-M8-45's; this task gives them the stains and the
   fallback flag.
+- R-449 (16 Oct 2026): every body name this task shows (preset names, stain labels, the lens parameter's choices) comes from TASK-M2-33's conversion module (REQ-GUI-188), 1-based, never "body 0"; TASK-M2-33 is reached through TASK-M7-36.

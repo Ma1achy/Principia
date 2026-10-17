@@ -6689,8 +6689,9 @@
     detail: "on §12.1's binary_plus_escaper(1, 0, 50, 2) chazy_escaper is 2, and on the same state with bodies relabelled it is the escaper's new index (0 and 1 among them); it equals the body classify's hierarchy step takes on every §12.1 fixture; an equilateral state at rest built to tie exactly (the equilateral directions at scale 1) gives 0, the lowest index, with a control asserting that its three f64 ratios are bitwise equal, so the test exercises the tie rule and not a larger ratio; control: a state whose most separated body is 1 gives 1, not the default 0"
   rulings:
   - R-443
+  - R-449
   milestone: M7
-  note: "The index is 0-based internally and in every machine-readable export, whose header or schema says so; legends and labels show it as body 1, 2, 3 (the display rule of 16 Oct 2026, ruled on PR #226; drill-down §0)."
+  note: "The index is 0-based internally and in every machine-readable export, whose header or schema says so (REQ-GEN-036); legends and labels show it as body 1, 2, 3, through TASK-M2-33's one display conversion (R-449, REQ-GUI-188; drill-down §0)."
 - id: REQ-PAY-108
   area: PAY
   statement: "`chazy_qk[k]`, k = 0, 1, 2, must be a generated read-side scalar accessor per body, derived at read with nothing stored: body k's K/|U| against the centre of mass of the other two (§3.1's outer-body energies with b = k: μ = m_k M_p/(m_k + M_p), K = ½ μ |Δv|², U = m_k M_p / d), ≥ 0, with 1 parabolic."
@@ -12980,10 +12981,11 @@
     detail: "role table, exhaustive (drill-down §12.3 item 1): for every class label, collision, and every (k, escaper) pair the role and its sRGB are as §10.11.1 tables, OS-candidate bound black; a negative control adds an unmapped label and fails to build; golden (`cargo xtask golden chazy-lens`): a synthetic payload with one sample per role renders exactly those colours at k = 0, 1, 2"
   rulings:
   - R-443
+  - R-449
   milestone: M7
   rq:
   - RQ-321
-  note: "The escaping body is chazy_escaper as the block gives it; whether it is the event's escape detail where the run has an escape event is RQ-321."
+  note: "The escaping body is chazy_escaper as the block gives it; whether it is the event's escape detail where the run has an escape event is RQ-321. R-449: k is chosen and shown as body 1, 2 or 3 through TASK-M2-33's one display conversion (REQ-GUI-188); k stays 0-based inside."
 - id: REQ-COL-091
   area: COL
   statement: "The body lens with energy must put §10.11.1's roles in the colour slot and `chazy_qk[k]` in the brightness slot under Replace-L's range form, b = q/(1 + q) and L = L_min + (L_max − L_min)·b with REQ-COL-088's range and REQ-COL-089's compaction, the same mapping as the seven-class × energy stain, so that the grey and black roles render as greys at body k's energy."
@@ -13023,10 +13025,11 @@
     detail: "`cargo xtask golden chazy-escaper`: a synthetic payload with an HE and a PE sample per escaper body and one sample per other class renders exactly §10.11.4's colours, OS-candidate black"
   rulings:
   - R-443
+  - R-449
   milestone: M7
   rq:
   - RQ-321
-  note: The escaping body is RQ-321's.
+  note: "The escaping body is RQ-321's. R-449: the bodies are shown as body 1, 2, 3 through TASK-M2-33's one display conversion (REQ-GUI-188); chazy_escaper stays 0-based inside."
 - id: REQ-COL-093
   area: COL
   statement: "The escaper-by-mass-rank stain must be the escaper map with hue by the escaper's mass rank instead of its label, read from the `ICDescriptor`'s masses at each sample: HE lightest, middle, heaviest `#E58870`, `#69BA7C`, `#80A3F0`, PE `#A24B36`, `#287C42`, `#4665AE` (§10.11.4's columns re-indexed by rank), falling back to the label escaper map where the escaper's rank is undefined (REQ-COL-095)."
@@ -16367,11 +16370,12 @@
     detail: "`cargo xtask screenshot chazy-three-bodies`: three panels at one playhead titled body 1, 2, 3, each equal pixel for pixel to the body lens rendered alone at its k at the panel's size, chart and playhead"
   rulings:
   - R-443
+  - R-449
   milestone: M8
   rq:
   - RQ-312
   - RQ-323
-  note: "Where the panels live is RQ-323; its options (b) and (c), which defer or drop this requirement, are the human's."
+  note: "Where the panels live is RQ-323; its options (b) and (c), which defer or drop this requirement, are the human's. R-449: the titles body 1, 2, 3 come from TASK-M2-33's one display conversion (REQ-GUI-188); k stays 0-based inside."
 - id: REQ-GUI-187
   area: GUI
   statement: "The one-body stains' legends must be generated from the stain (render GUI spec §G6) with each role's share of the view and the playhead in the title: the body lens names its body as body 1, 2 or 3 (never a 0-based index), the escaper map its bodies as body 1, 2, 3, the rank views their ranks; the bound row reads \"bound, or nobody has left yet\"; the body lens with energy shows its roles in their flat §10.11.1 colours with a separate bar for `q_k` (b = q/(1 + q), parabolic at ½) and says that its grey and black roles draw alike at equal q_k; where a rank view fell back to the label view the legend says so, and on an equal-mass chart it says the rank view is the label view rather than draw a rank."
@@ -16389,9 +16393,11 @@
     detail: "`cargo xtask screenshot chazy-one-body-legend`: the body lens, body lens with energy, escaper map and rank views' legends against 06_legend.png's layout; the title carries t and the lens body as body 1, 2 or 3, and no legend reads body 0; the bound row's label; the energy lens's flat role key, q_k bar and note; shares sum to 1; on an equal-mass preset the rank legends read as label views; on a one-tied-pair fixture the fallback note appears; the keys equal the stain's output (REQ-GUI-105)"
   rulings:
   - R-443
+  - R-449
   milestone: M8
   rq:
   - RQ-312
+  note: "R-449: every body name these legends show comes from TASK-M2-33's one display conversion (REQ-GUI-188)."
 - id: REQ-GUI-188
   area: GUI
   statement: "Every name a person reads for a body, a pair or an outcome event — legends, GUI labels, stain and preset names, tooltips, the Inspector, the dev GUI's legends, figure and export captions — must come from one conversion module (R-449; payload §2, \"What a person reads\"): a function of (state, detail) returning the display string, body k shown as body k + 1 and a pair by its two bodies 1-based, smaller first, never by its pair id (pair 2 \"collision 1–2\", pair 1 \"collision 1–3\", pair 0 \"collision 2–3\"; escape of body k \"escape body k + 1\"; collision detail 3 \"triple collision\"; escape detail 3 \"triple ejection\"; bounded, running, sim_failed and decode_failed with their failure category and a reserved state code by their payload §2 names), and the body and pair names it is built from, which dmin_pair's legend, the Inspector's per-body readouts, the ternary masses' legend, the k = 6 direction-cosine view's legend and the shape sphere's collision landmarks use; the module must also give the outcome palette's class names (colour_composition §1.4), which the outcome legend and swatch labels take: the black class \"bounded / nothing yet\" and each of the other eight as the function names its state and detail; the function must be exhaustive over every state and detail value, so that a new state or detail code fails to build until it has a display name."

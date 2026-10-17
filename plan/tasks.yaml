@@ -1984,8 +1984,8 @@
 - id: TASK-M7-36
   milestone: M7
   title: "The Chazy fields: chazy_final, chazy_status, chazy_structure, chazy_q, chazy_escaper and chazy_qk, the escape freeze, and the energy certificates"
-  depends_on: [TASK-M7-35, TASK-M3-12, TASK-M3-22, TASK-M3-27]
-  needs: [REQ-EVT-005, REQ-EVT-006, REQ-GEN-016, REQ-VAL-034]
+  depends_on: [TASK-M7-35, TASK-M3-12, TASK-M3-22, TASK-M3-27, TASK-M2-33]
+  needs: [REQ-EVT-005, REQ-EVT-006, REQ-GEN-016, REQ-VAL-034, REQ-GEN-036]
   requirements: [REQ-PAY-100, REQ-PAY-101, REQ-PAY-102, REQ-PAY-103, REQ-PAY-104, REQ-PAY-107, REQ-PAY-108, REQ-EVT-027, REQ-VAL-185, REQ-VAL-186]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-2, PIT-10]
@@ -2025,7 +2025,7 @@
   milestone: M7
   title: "The Chazy one-body stains: the body lens, its energy form, the escaper map, the mass-rank views and their tie fallback"
   depends_on: [TASK-M7-36, TASK-M7-38]
-  needs: [REQ-COL-055, REQ-COL-064]
+  needs: [REQ-COL-055, REQ-COL-064, REQ-GUI-188]
   requirements: [REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-COL-096, REQ-COL-097, REQ-COL-098, REQ-COL-099, REQ-COL-100, REQ-COL-107, REQ-VAL-188, REQ-VAL-189]
   reviewers: [code, qa, gui, physics]
   pitfalls: [PIT-5]
@@ -2385,7 +2385,7 @@
   milestone: M8
   title: "The Chazy legends: the playhead in the title, B's label, the status legend's full names, the one-body legends and the three-body panels"
   depends_on: [TASK-M8-22, TASK-M7-37, TASK-M7-38, TASK-M7-41]
-  needs: [REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-078, REQ-COL-079, REQ-COL-080, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095]
+  needs: [REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-078, REQ-COL-079, REQ-COL-080, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-GUI-188]
   requirements: [REQ-GUI-185, REQ-GUI-186, REQ-GUI-187]
   reviewers: [code, qa, gui]
   pitfalls: []
