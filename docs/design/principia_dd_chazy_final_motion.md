@@ -484,8 +484,12 @@ previous-shape latch.
   collision at `t = 0` alike.
 - **Escape-terminated**: the production loop stops at escape fire, so the class freezes at the fire-time state. It can
   then read excursion or B where the event stain reads escape (§9, RQ-313).
-- **`decode_failed`** (and a reserved `state` code) has no state to classify; the spec does not say what it draws:
-  RQ-319.
+- **A pixel the chart hatches** (`principia_chart_decoder_contract.md` Part 3: the types, `validate`'s layers 2 and 3,
+  a failed `Φ`) keeps the chart's hatch, `debug_invalid`, in every stain, decided from the chart alone, never from the
+  payload's `decode_failed` detail (Part 3; R-446).
+- **The decoder's own `decode_failed`** samples (its `DEGENERATE` tags and a non-finite decode) have no state to
+  classify; the spec does not say what they draw: RQ-319. Under R-446 the outcome view draws them black `#141418`,
+  which here is B (§10.1). A reserved `state` code draws the hatch under every option (colour_composition §4.1).
 
 ---
 

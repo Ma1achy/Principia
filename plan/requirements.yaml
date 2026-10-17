@@ -12645,7 +12645,7 @@
   milestone: M7
   rq:
   - RQ-319
-  note: What a decode_failed sample reads and draws is RQ-319.
+  note: "What the decoder's own decode_failed samples (its DEGENERATE tags and a non-finite decode) read and draw is RQ-319, restated against R-446: under R-446 the outcome view draws them black #141418, which in the Chazy stains is B. A pixel the chart hatches keeps the chart's hatch under every option (chart_decoder_contract Part 3; R-446)."
 - id: REQ-COL-073
   area: COL
   statement: "A collision-terminated sample (any pair, a triple collision, or a collision at t = 0) must read collision in `chazy_final` and `chazy_status`, never a motion class, and draw magenta `#DA85B6` in every Chazy stain (R-442)."

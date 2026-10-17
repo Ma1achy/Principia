@@ -60,6 +60,9 @@ measured against τ and the palettes proposed for the M7 gate (R-71).
   builds R-442's default meanwhile.
 - The time views' dimming and lightness by time are REQ-COL-106, TASK-M7-40's, not this task's (R-71: proposed by the
   task that needs them).
-- What `decode_failed` draws is RQ-319; REQ-COL-072 waits on it for that clause.
+- What the decoder's own `decode_failed` samples (its `DEGENERATE` tags and a non-finite decode) draw is RQ-319,
+  restated against R-446 (the outcome view draws them black `#141418`, which here is B); REQ-COL-072 waits on it for
+  that clause. A pixel the chart hatches keeps the chart's hatch under every option (chart_decoder_contract Part 3;
+  R-446).
 - The filter's mute is REQ-COL-058's (TASK-M7-08); the spec's preview `#3A3B40` is not a second rule (R-442, applied
   per R-369).
