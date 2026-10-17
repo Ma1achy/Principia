@@ -27,7 +27,7 @@
 //! Burrau masses and the `v = 1` row's `m_target`, exactly: `1·x + 0·y = x` and `0·x + 1·y = y` in floating point.
 //!
 //! **Into the shared decoder**, as on the `ν` axis's charts: `Φ`'s [`ChartOut`] is the zero vector, unread. `Φ_θ,K`
-//! and `Φ_θ,L_z` decode by [`decode_theta_k`] and [`decode_theta_lz`] (the construction's [`ExactSign`] is beyond
+//! and `Φ_θ,L_z` decode by [`decode_theta_k`] and [`decode_theta_lz`] (the construction's [`ExactSign`](crate::decode::invariant::ExactSign) is beyond
 //! [`Chart::decode`]'s bound, as on the `(ν, K)` chart), which their [`ChartDecode`] calls; the δm strip overrides
 //! [`Chart::decode`] with [`decode_delta_m`]. Energy is the construction's on `Φ_θ,K` and `Φ_θ,L_z`, which forbid
 //! `η_E` (chart_reference §0.6; R-25); the δm strip is a rest start and allows it, as the Euclid plane does.
