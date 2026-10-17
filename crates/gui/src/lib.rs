@@ -46,6 +46,8 @@ mod tests {
     mod mock_tag;
     mod mock_tile_bounds;
     mod mock_time;
+    mod mock_trajectory_pin;
+    mod mock_trajectory_views;
     mod mock_windows_drawn;
     mod mock_windows_open;
     mod present_fills_window_mock;

@@ -60,7 +60,13 @@ pub const FATES: [&str; 9] = [
 /// The fake sample at the figure point `at` of `plane`, with the playhead at `t` and the horizon `t_max`: its fate is
 /// decided once the playhead reaches its `t_end` (`t_max` for `bounded`, 0 for a collision at the start).
 pub fn sample(plane: &Plane, at: [f64; 2], t: f64, t_max: f64) -> Sample {
-    let ic = point(plane, at[0], at[1]);
+    integrate(point(plane, at[0], at[1]), at, t, t_max)
+}
+
+/// The fake sample of the IC `ic`, given at the figure point `at`, with the playhead at `t` and the horizon `t_max`:
+/// the mock's `computeIC` (trajectory_viewing §1, §6), deterministic in the IC, so a pinned IC integrates the same on
+/// any chart (R-453 D1, D5).
+pub fn integrate(ic: Latent, at: [f64; 2], t: f64, t_max: f64) -> Sample {
     let class = FATES[(ic_hash(&ic, 0.0) * FATES.len() as f64) as usize % FATES.len()];
     let end = match class {
         "bounded" => t_max,
