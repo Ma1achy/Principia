@@ -612,7 +612,7 @@ fn check_keyboard_steps(names: &[(&str, screenshot::GuiStep)]) {
     }
 }
 
-const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 20] = [
+const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 24] = [
     ("f3", screenshot::GuiStep::F3),
     ("raise_warning", screenshot::GuiStep::RaiseWarning),
     ("raise_error", screenshot::GuiStep::RaiseError),
@@ -633,6 +633,16 @@ const KEYBOARD_STEPS: [(&str, screenshot::GuiStep); 20] = [
     ("alt_1", screenshot::GuiStep::Alt1),
     ("space", screenshot::GuiStep::Space),
     ("click_node", screenshot::GuiStep::ClickNode),
+    ("compass_case_slice", screenshot::GuiStep::CompassCaseSlice),
+    ("compass_case_tilt_0", screenshot::GuiStep::CompassCaseTilt0),
+    (
+        "compass_case_tilt_rect",
+        screenshot::GuiStep::CompassCaseTiltRect,
+    ),
+    (
+        "compass_case_tilt_hex",
+        screenshot::GuiStep::CompassCaseTiltHex,
+    ),
 ];
 
 #[test]

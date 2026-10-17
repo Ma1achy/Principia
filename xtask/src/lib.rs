@@ -5,6 +5,7 @@ pub mod bench;
 pub mod build_kernel;
 pub mod ci;
 pub mod codegen;
+pub mod compass_golden;
 pub mod controls;
 pub mod deps;
 pub mod gate;

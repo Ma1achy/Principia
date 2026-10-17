@@ -1464,7 +1464,11 @@ fn mock_keyboard_capture_steps() {
             "hover",
             "alt_1",
             "space",
-            "click_node"
+            "click_node",
+            "compass_case_slice",
+            "compass_case_tilt_0",
+            "compass_case_tilt_rect",
+            "compass_case_tilt_hex"
         ]
     );
     let err = Step::parse("zoom").expect_err("an unknown step");

@@ -21,6 +21,8 @@ pub mod mock;
 mod tests {
     mod canvas_gestures_mock;
     mod cli;
+    mod compass_cross_section;
+    mod compass_support;
     mod conformance;
     mod degenerate_tilt_guards;
     mod f3_fallback_mock;
@@ -28,6 +30,7 @@ mod tests {
     mod f3_toggle_mock;
     mod mock_axis_labels;
     mod mock_compass;
+    mod mock_compass_cube;
     mod mock_content;
     mod mock_drawn;
     mod mock_engine;
