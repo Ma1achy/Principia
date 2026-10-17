@@ -509,6 +509,11 @@ fn check_construction<R: Q>(dec: NuKDecode<R>, u: f64, v: f64) {
     );
     assert_eq!(outcome, Outcome::Feasible, "the outcome at {at}");
     assert_eq!(
+        d.descriptor,
+        kernel::decode::descriptor::describe(&d.ic),
+        "the descriptor is not the decoded IC's at {at}"
+    );
+    assert_eq!(
         d.ic.r, d.config.r,
         "the positions are not the configuration's at {at}"
     );
