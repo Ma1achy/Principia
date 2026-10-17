@@ -1,0 +1,9 @@
+{
+  "description": "PIT-3, the measurement can fire: the same draws with Φ built by the superseded inverse ψ = φ_f + atan2(−q, p) (chart_reference §3.2), which misses every point off the equator, so the gate must fail it (REQ-CHART-020).",
+  "seed": 1,
+  "samples": 200000,
+  "near_pole_samples": 4096,
+  "pole_samples": 64,
+  "inverse": "negative_cross",
+  "expected": "fail"
+}

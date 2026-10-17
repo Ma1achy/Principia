@@ -1818,6 +1818,8 @@
   rulings:
   - R-14
   milestone: M2
+  rq:
+  - RQ-355
 - id: REQ-CHART-019
   area: CHART
   statement: "The shape-sphere chart must state which chart map it uses; the spherical map must be θ = 2π·s (azimuth, horizontal), φ = π·(1 − t) (polar from +w, vertical, L⁺ at the top), n = (sin φ cos θ, sin φ sin θ, cos φ), over the full φ ∈ [0, π] with no polar buffer; the exponential map n = cos(r)·n₀ + sin(r)·d/‖d‖ about an orthonormal frame (n₀, e₁, e₂) must be available as the nonlinear chart."
@@ -2149,6 +2151,8 @@
   - R-12
   - R-14
   milestone: M2
+  rq:
+  - RQ-355
   note: "R-14 corrects R-12's premise; R-12's 'no polar buffer' stands."
 - id: REQ-CHART-037
   area: CHART
@@ -2619,6 +2623,8 @@
   - R-50
   - R-124
   milestone: M2
+  rq:
+  - RQ-355
   note: "R-50 (applied now, R-124): the collision landmarks are mass-weighted; dd_integrator §3.7's 'B18 still open' is conformed. Decides audit B18 left open in R-14."
 - id: REQ-INT-004
   area: INT

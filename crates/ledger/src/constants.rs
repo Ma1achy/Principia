@@ -727,6 +727,39 @@ pub const DIVERGING_X0: [(&str, ConstantBuilder); 2] =
 /// M1 gate (R-433), one entry in place of two test files' definitions.
 pub const N_NORM_TOL: ConstantBuilder = confirmed("n_norm_tol", 1.0 / 262_144.0, R433);
 
+// ── The shape-sphere chart's calibrations (REQ-CHART-049, REQ-CHART-053; R-71, R-181, R-427) ────────────────────
+//
+// Two tolerances TASK-M2-08 proposes with their evidence, each provisional until the M2 gate (R-427) and read from
+// here by the tests and the `shape-roundtrip` gate: dimensionless differences of points on the unit shape sphere, so
+// admissible as expressed in canonical units.
+
+/// The agreement of `kernel::shape`'s `n` with the IC Inspector's (`docs/gui/reference/ic_inspector.html`) on
+/// `fixtures/ic_inspector/shape_vec.json`'s 1000 random ICs, the largest absolute difference in any component
+/// (REQ-CHART-049): 16ε = 2⁻⁴⁸ ≈ 3.55e-15, ε = 2⁻⁵² the f64 epsilon. TASK-M2-08's proposal (R-71): the inspector reaches
+/// `n` by another route, canonicalising, then `α = atan2(‖λ̃‖, ‖ρ̃‖)`, `β = atan2(λ̃_y, λ̃ₓ)` and `(cos 2α, sin 2α cos β,
+/// sin 2α sin β)`, so the two differ by rounding alone: measured, worst 6.94e-16 (3.1ε) over `shape` and `shape_vec`
+/// on the raw and the decoded ICs, and 1.10e-15 (5.0ε) for the collision landmarks against its `collisionPhi`; 16ε
+/// covers them by 5.1× and 3.2×, while the superseded negative-cross sign misses by O(1).
+pub const SHAPE_VEC_JS_TOL: ConstantBuilder = proposed(
+    "shape_vec_js_tol",
+    1.0 / 281_474_976_710_656.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-049",
+    "M2",
+);
+
+/// The shape-sphere round trip's bound, `max ‖shape(Φ(u, v)) − n(u, v)‖` with `Φ` alone (R-178), over the
+/// `shape-roundtrip` gate's samples (REQ-CHART-053): 10⁻¹³ absolute, R-181's value. TASK-M2-08's proposal (R-71,
+/// R-181): measured on `random.json`'s 208 704 samples (random masses, both hemispheres, both maps, polar radii down
+/// to 10⁻¹⁵ about `n₀ = ±1`, and the eight poles), worst 1.06e-15, so 10⁻¹³ covers it by 95×.
+pub const SHAPE_ROUNDTRIP_BOUND: ConstantBuilder = proposed(
+    "shape_roundtrip_bound",
+    1e-13,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-053",
+    "M2",
+);
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -756,10 +789,11 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 };
 
 /// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
-/// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the presentation constants the generated views and the prelude read: the
-/// log floors, the hatch and the hue wheel (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), and the
-/// diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the
-/// predicate `n ≥ 2` (R-245).
+/// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the presentation
+/// constants the generated views and the prelude read: the log floors, the hatch and the hue wheel (TASK-M1-18;
+/// R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the shape-sphere chart's two tolerances (TASK-M2-08;
+/// REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel:
+/// an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -791,6 +825,8 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HUE_WHEEL_C,
     R_POLE,
     N_NORM_TOL,
+    SHAPE_VEC_JS_TOL,
+    SHAPE_ROUNDTRIP_BOUND,
     DIVERGING_X0_E_0,
     DIVERGING_X0_LZ_0,
 ];
