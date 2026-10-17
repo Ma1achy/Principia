@@ -679,3 +679,26 @@ seen.*
   generation root seam 13, the Measure tool's CSV) and any dump defined later, `.raw` and `.prnq` included when they
   are; nothing more is built for them now.
 - **Waits:** nothing.
+
+## RQ-366: escape body 3's OKLab-uniform swatch `#09B9CD` measures hue 208.54°, 0.54° from its row's 208°, where R-447 and RQ-332 record "each hue within 0.5° of its row" *(measurement against a recorded figure, R-447, R-71, REQ-COL-103, REQ-COL-105; context: TASK-M2-32)*
+
+*Found building TASK-M2-32, measuring with dd_colouring §3.1's transforms (`render::present`). Nothing is chosen; no
+swatch is changed. For the human: yes, with RQ-332 (a calibration's evidence, R-71).*
+
+- **File, section:**
+  - `decisions.md` § "R-447 — …", *Measured*: "The swatches as ruled measure L 0.719 to 0.721, C 0.122 to 0.124, and
+    each hue within 0.5° of its row."
+  - `REVIEW_QUEUE.md` § RQ-332, *Measured*: "each hue within 0.5° of its row".
+  - `plan/tasks/M2/TASK-M2-32.md`, the acceptance line `cargo test -p render outcome_oklab_variant`: "each chromatic
+    swatch measures OKLab L 0.72 ± 0.002, C 0.123 ± 0.002 and its hue within 0.5° of R-447's".
+- **Measured:** `#09B9CD` (escape body 3, R-449's name) is hue 208.54°, 0.54° from the table's 208°; it is 0.04° from
+  208.5°, the sRGB class `#30C8DC`'s own hue, which R-447 also records. Every other swatch is within 0.5° of both its
+  row and its class's own hue.
+- **Options seen:**
+  - (a) Read "R-447's hue" as the class's own hue (R-447: "each chromatic class keeps its own OKLab hue"), which every
+    swatch meets; record 0.54° against the row.
+  - (b) Take RQ-332's option (c), `#07B9CD`.
+- **Applied meanwhile, per R-369:** (a). `crates/render/tests/outcome_view.rs`'s `outcome_oklab_variant_measures_r_447`
+  checks each hue within 0.5° of its class's own and pins escape body 3 as the one swatch past 0.5° of its row, at
+  0.54°.
+- **Waits:** REQ-COL-105's confirmation (RQ-330's gate), with RQ-332.
