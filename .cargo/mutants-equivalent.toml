@@ -114,3 +114,19 @@ justification = "c.m is ±0 only for c = 0, at the zero exponent, so left = m2*c
 [[equivalent]]
 mutant = "crates/gui/src/explore/compass.rs:268:34: replace / with * in point_of"
 justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x / Z0_HALF_RANGE and x * Z0_HALF_RANGE are equal for every x"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:325:64: replace > with >= in cross_section"
+justification = "da == 0.0 already has da.abs() <= ON_PLANE, which skips the edge before (da > 0.0) is read, so da > 0.0 and da >= 0.0 agree wherever it is read"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:325:78: replace > with >= in cross_section"
+justification = "db == 0.0 already has db.abs() <= ON_PLANE, which skips the edge before (db > 0.0) is read, so db > 0.0 and db >= 0.0 agree wherever it is read"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:331:21: replace < with <= in cross_section"
+justification = "only a 3-point result is affected, returned in edge order rather than by angle: any order of three points is the same triangle, drawn and compared (same_cycle) alike"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:331:21: replace < with == in cross_section"
+justification = "only a 0-, 1- or 2-point result is affected, sorted by angle rather than returned as found: an empty list, one point, or the same segment either way round"

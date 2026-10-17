@@ -488,3 +488,28 @@ fn compass_cross_section_an_edge_contact_is_its_outline() {
         assert!(!fills(&shapes).is_empty())
     });
 }
+
+#[test]
+fn compass_cross_section_near_a_corner_and_nearly_along_an_edge() {
+    // 5e-12 inside the corner (1, 1, 1), not on it: its three edges' crossings lie within 1e-11 of it and are one
+    // point.
+    let n = unit([1.0, 1.0, 1.0]);
+    let reach: f64 = n.iter().sum();
+    let near = cross_section(Cut {
+        normal: n,
+        offset: reach - 5e-12,
+    });
+    assert_eq!(near.len(), 1, "{near:?}");
+    assert!(near3(near[0], [1.0, 1.0, 1.0], 1e-10), "{near:?}");
+    // A plane through the top face's edge x = 1, tilted by 1.25e-12: the corners (1, ±1, 1) are on it within 1e-12,
+    // the corners (−1, ±1, 1) 2e-12 below it. The contact is that edge; the top face's other edges cross nothing.
+    let along = cross_section(Cut {
+        normal: [1.25e-12, 0.0, 1.0],
+        offset: 1.0 + 0.75e-12,
+    });
+    assert!(
+        same_cycle(&along, &[[1.0, -1.0, 1.0], [1.0, 1.0, 1.0]], 0.0),
+        "{along:?}"
+    );
+    rejects("three points for one corner", || assert_eq!(near.len(), 3));
+}
