@@ -524,8 +524,9 @@ pub const EUCLID_NU_MIN: ConstantBuilder = chart("euclid_nu_min", 0.03125, EUCLI
 pub const EUCLID_NU_MAX: ConstantBuilder = chart("euclid_nu_max", 0.96875, EUCLID_SECTION);
 
 /// The tolerance to which Burrau at `ν = 1/2` reproduces `(3, 4, 5)` and the classical configuration (chart_reference
-/// §5.2), in units of the precision's machine epsilon, on the largest difference of any mass, position or momentum
-/// component of the canonical `(m, r, p)` (`G = M = I = 1`, every component at most 1 in magnitude). REQ-VAL-118's
+/// §5.2): an absolute bound, in units of the precision's machine epsilon, on the largest difference of any mass,
+/// position or momentum component of the canonical `(m, r, p)` (`G = M = I = 1`). The components are not all at most 1
+/// in magnitude: `I = 1` bounds a position only by `|rᵢ| ≤ 1/√mᵢ`, and at `ν = 1/2` `r₂_y = 3/√5 ≈ 1.342`. REQ-VAL-118's
 /// proposal (R-71), provisional until the M2 gate (R-427). Its evidence, `fixtures/gates/burrau_nu_half/` (TASK-M2-10):
 /// at f64 and f32 the `ν = 1/2` decode equals the `(m, n) = (2, 1)` construction bit for bit, every intermediate an
 /// exact operation or one rounding of the same rational; the classical configuration, normalised and historical,
