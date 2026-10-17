@@ -3,7 +3,7 @@
 //!   double-double instantiation exists (R-265); the same golden-IC force and energy check runs at each, the M2
 //!   decoder's `z = 0` decode (`fixtures/golden_ic/z0.json`: the equilateral triangle of side √3, at rest) run through
 //!   [`PairGeom`], [`force`] and [`energy`]; and `fma` is fused and `square_root` the root at each (REQ-INT-004).
-//! - `force_known_state*`: the force on a hand-computed three-body state, the 3-4-5 triangle with masses 1, 2, 3,
+//! - `force_known_state*`: the force on a hand-computed three-body state, a triangle of sides 20, 15, 25 with masses 3, 4, 5,
 //!   matches to f64 rounding, and `Σ mᵢaᵢ = 0` (REQ-INT-036); so do the energy and `L_z` of the same state with
 //!   momenta.
 //! - `pair_geometry_shared*`: an instrumented `Real`, which counts square roots, shows one pairwise-distance computation
@@ -12,9 +12,9 @@
 //!
 //! **Tolerances** (applied per R-369: test tolerances): a value is compared relative to its scale, in units of the
 //! precision's `eps`. [`KNOWN_EPS`] = 2 for the hand-computed state at f64, whose inputs are all exact, so the error is
-//! the evaluation's own few roundings (measured: the force exact, `K` 0.56 `eps`). [`GOLDEN_EPS`] = 4 for the golden IC,
-//! whose decoded inputs are themselves within the decoder's 4 `eps` (decode_join's `GOLDEN_EPS`); the worst measured
-//! is 1.0 `eps`, the force at f32, and the test prints each.
+//! the evaluation's own few roundings (measured: the force and `Σmᵢaᵢ` 0.40 `eps` at worst, the energy terms 0.78).
+//! [`GOLDEN_EPS`] = 4 for the golden IC, whose decoded inputs are themselves within the decoder's 4 `eps` (decode_join's
+//! `GOLDEN_EPS`); the worst measured is 1.0 `eps`, the force at f32, and the test prints each.
 
 mod decode_support;
 
@@ -245,17 +245,21 @@ negative_control!(
 
 // ── force_known_state (REQ-INT-036) ──────────────────────────────────────────────────────────────────────────────
 
-/// Masses 1, 2, 3 at `(0, 0)`, `(3, 0)` and `(0, 4)`: the pairs' distances are 3, 5 and 4, each cube exact.
-const M: [f64; 3] = [1.0, 2.0, 3.0];
-const R: [[f64; 2]; 3] = [[0.0, 0.0], [3.0, 0.0], [0.0, 4.0]];
+/// Masses 3, 4, 5 at `(2, 3)`, `(14, 19)` and `(26, 10)`: the separations `(12, 16)`, `(12, −9)` and `(−24, −7)`, of
+/// lengths 20, 15 and 25, so each cube is exact; no coordinate, separation component or mass is 0, ±1 or 2, so that no
+/// operation of the evaluation is one a swapped operator gives the same result for (`x·1 = x/1`, `2·2 = 2 + 2`,
+/// `0·x = 0/x`).
+const M: [f64; 3] = [3.0, 4.0, 5.0];
+const R: [[f64; 2]; 3] = [[2.0, 3.0], [14.0, 19.0], [26.0, 10.0]];
 
-/// The accelerations, by hand: `a₀ = 2(3, 0)/27 + 3(0, 4)/64`, `a₁ = 1(−3, 0)/27 + 3(−3, 4)/125`,
-/// `a₂ = 1(0, −4)/64 + 2(3, −4)/125`.
+/// The accelerations, by hand: `a₀ = 4(12, 16)/8000 + 5(24, 7)/15625 = (171/12500, 32/3125)`,
+/// `a₁ = 5(12, −9)/3375 + 3(−12, −16)/8000 = (239/18000, −29/1500)`,
+/// `a₂ = 3(−24, −7)/15625 + 4(−12, 9)/3375 = (−2648/140625, 437/46875)`.
 fn known_force() -> [[f64; 2]; 3] {
     [
-        [2.0 / 9.0, 3.0 / 16.0],
-        [-1.0 / 9.0 - 9.0 / 125.0, 12.0 / 125.0],
-        [6.0 / 125.0, -1.0 / 16.0 - 8.0 / 125.0],
+        [171.0 / 12500.0, 32.0 / 3125.0],
+        [239.0 / 18000.0, -29.0 / 1500.0],
+        [-2648.0 / 140625.0, 437.0 / 46875.0],
     ]
 }
 
@@ -298,7 +302,7 @@ negative_control!(
     force_known_state,
     "the force with body 2's mass dropped is not the hand-computed one",
     expected = "not the hand-computed",
-    check_known_force(force(&[1.0, 2.0, 0.0], &PairGeom::new(&R)))
+    check_known_force(force(&[3.0, 4.0, 0.0], &PairGeom::new(&R)))
 );
 
 #[test]
@@ -308,22 +312,22 @@ fn force_known_state_balance() {
 
 negative_control!(
     force_known_state_balance,
-    "the force of masses 1, 2, 0 weighed by masses 1, 2, 3",
+    "the force of masses 3, 4, 0 weighed by masses 3, 4, 5",
     expected = "Σmᵢaᵢ[0]",
-    check_balance(M, force(&[1.0, 2.0, 0.0], &PairGeom::new(&R)))
+    check_balance(M, force(&[3.0, 4.0, 0.0], &PairGeom::new(&R)))
 );
 
 /// Momenta summing to 0 for the state of [`M`] and [`R`].
-const P: [[f64; 2]; 3] = [[1.0, 2.0], [-3.0, 1.0], [2.0, -3.0]];
+const P: [[f64; 2]; 3] = [[3.0, 4.0], [-7.0, 5.0], [4.0, -9.0]];
 
-/// `K = 5/2 + 10/4 + 13/6 = 43/6`, `V = −(2/3 + 6/5 + 3/4) = −157/60`, `E = 91/20`,
-/// `L_z = 0 + (3·1 − 0) + (0 − 4·2) = −5`, each matched to [`KNOWN_EPS`].
+/// `K = 25/6 + 74/8 + 97/10 = 1387/60`, `V = −(3·4/20 + 4·5/15 + 5·3/25) = −38/15`, `E = 247/12`,
+/// `L_z = (2·4 − 3·3) + (14·5 + 19·7) + (−26·9 − 10·4) = −72`, each matched to [`KNOWN_EPS`].
 fn check_known_energy(k: f64, v: f64, e: f64, lz: f64) {
     for (name, got, want) in [
-        ("K", k, 43.0 / 6.0),
-        ("V", v, -157.0 / 60.0),
-        ("E", e, 91.0 / 20.0),
-        ("L_z", lz, -5.0),
+        ("K", k, 1387.0 / 60.0),
+        ("V", v, -38.0 / 15.0),
+        ("E", e, 247.0 / 12.0),
+        ("L_z", lz, -72.0),
     ] {
         let err = err_eps(got, want, want.abs(), f64::EPSILON);
         assert!(
@@ -479,18 +483,18 @@ negative_control!(
     }))
 );
 
-/// The 3-4-5 state's geometry, by hand: separations `(3, 0)`, `(−3, 4)`, `(0, −4)`; `d²` 9, 25, 16; distances 3, 5,
-/// 4; cubes 27, 125, 64; the closest pair 0, `r_min = 3`.
+/// The known state's geometry, by hand: separations `(12, 16)`, `(12, −9)`, `(−24, −7)`; `d²` 400, 225, 625;
+/// distances 20, 15, 25; cubes 8000, 3375, 15625; the closest pair 1, `r_min = 15`.
 fn check_geometry(g: &PairGeom<f64>) {
     assert_eq!(
         (g.sep(), g.d2(), g.norm(), g.cube(), g.closest(), g.r_min()),
         (
-            [[3.0, 0.0], [-3.0, 4.0], [0.0, -4.0]],
-            [9.0, 25.0, 16.0],
-            [3.0, 5.0, 4.0],
-            [27.0, 125.0, 64.0],
-            0,
-            3.0
+            [[12.0, 16.0], [12.0, -9.0], [-24.0, -7.0]],
+            [400.0, 225.0, 625.0],
+            [20.0, 15.0, 25.0],
+            [8000.0, 3375.0, 15625.0],
+            1,
+            15.0
         ),
         "the geometry is not the hand-computed one"
     );
