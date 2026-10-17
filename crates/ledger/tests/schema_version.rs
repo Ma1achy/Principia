@@ -531,6 +531,17 @@ const CALIBRATIONS: [&str; 2] = ["r_pole", "n_norm_tol"];
 /// not hashed.
 const WARP: [&str; 2] = ["k_max", "gamma_k"];
 
+/// The Burrau family's entries (TASK-M2-10): the Euclid plane's defaults, a chart's parameters as the warp defaults
+/// are, and the `ν = 1/2` tolerance (REQ-VAL-118), a test's, as `n_norm_tol` is. None decides what a stored bit means,
+/// so none is hashed.
+const BURRAU: [&str; 5] = [
+    "burrau_nu_half_tol",
+    "euclid_m_min",
+    "euclid_m_max",
+    "euclid_nu_min",
+    "euclid_nu_max",
+];
+
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
     for name in STORED_BITS {
@@ -543,7 +554,7 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // value through the link registry instead (§3.9, "The hash"; R-344), or a presentation constant the generated
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
     // register"; R-427, TASK-M1-18), or one of the M1 gate's calibrations (R-433), or the invariant charts' warp
-    // defaults (TASK-M2-12).
+    // defaults (TASK-M2-12), or the Burrau family's (TASK-M2-10).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
@@ -551,7 +562,8 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
                 .any(|c| c.name == k.name)
                 || PRESENTATION.contains(&k.name)
                 || CALIBRATIONS.contains(&k.name)
-                || WARP.contains(&k.name),
+                || WARP.contains(&k.name)
+                || BURRAU.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -572,6 +584,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the warp default `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in BURRAU {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the Burrau entry `{name}` is not an unhashed register entry"
         );
     }
 }

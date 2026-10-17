@@ -129,10 +129,17 @@ pub struct Targets<R> {
     pub lz: R,
 }
 
+/// §2.1's `K(t) = K_max·t^γ_K`, the warp's kinetic energy, which the Burrau `(ν, K)` chart's vertical axis takes too
+/// (chart_reference §4.5; R-113).
+#[inline]
+pub fn kinetic<R: Float>(k_max: R, gamma_k: R, t: R) -> R {
+    k_max * Float::powf(t, gamma_k)
+}
+
 /// §2.1's warp at `(s, t)` under `K_max = k_max` and `γ_K = gamma_k`, `I = 1` (the module's note).
 #[inline]
 pub fn warp<R: WarpReal>(k_max: R, gamma_k: R, s: R, t: R) -> Targets<R> {
-    let k = k_max * Float::powf(t, gamma_k);
+    let k = kinetic(k_max, gamma_k, t);
     let l_max = l_max(k);
     Targets {
         k,
@@ -327,7 +334,7 @@ impl<S, R: Float> InvariantBlocks<S, R> {
 
 /// The Jacobi momenta of the particle momenta `p` (the inverse of §0.3's map): `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)·p₂`.
 #[inline]
-fn jacobi<R: LinkReal>(masses: &Masses<R>, p: [[R; 2]; 3]) -> Momentum<R> {
+pub(crate) fn jacobi<R: LinkReal>(masses: &Masses<R>, p: [[R; 2]; 3]) -> Momentum<R> {
     let w1 = masses.m[1] / masses.m01;
     let p_lambda = p[2];
     let p_rho = [p[1][0] + w1 * p[2][0], p[1][1] + w1 * p[2][1]];

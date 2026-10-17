@@ -585,7 +585,7 @@ const R433: &str = "R-433 — ";
 
 /// Checks that `register` passes the gate and lists, by gate, exactly the entries still provisional after the M1
 /// gate (R-428, R-433): none for M1; `eps_m01` (REQ-DEC-039), `tanh_sat` (REQ-DEC-047), `k_max` and `gamma_k`
-/// (REQ-CHART-044) and [`UNTIL_M2`], citing REQ-TOOL-163, for M2; `r_pole`, citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`]
+/// (REQ-CHART-044), `burrau_nu_half_tol` (REQ-VAL-118) and [`UNTIL_M2`], citing REQ-TOOL-163, for M2; `r_pole`, citing REQ-INT-086, for M3; none for M0; that the seven of [`M1_PROPOSED`]
 /// confirmed outright are unmarked and cite R-428 in `decisions.md`, and `n_norm_tol` R-433; and that [`LOG_FLOORS`]
 /// names the six floors' entries.
 fn check_list_by_gate(register: &[ConstantBuilder]) {
@@ -604,6 +604,7 @@ fn check_list_by_gate(register: &[ConstantBuilder]) {
             "tanh_sat",
             "k_max",
             "gamma_k",
+            "burrau_nu_half_tol",
             UNTIL_M2[0],
             UNTIL_M2[1]
         ],

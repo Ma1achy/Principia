@@ -11,7 +11,13 @@
 //! REQ-CHART-043).
 //!
 //! **The charts, in chart_reference §5.1's order** (REQ-CHART-029): [`Latent`] (`latent`), then `ShapeSphere`,
-//! `Burrau`, [`InvariantLE`] / [`InvariantLK`] (`invariant`) and `MassSimplex`, each a `Φ` beside it.
+//! [`Burrau`] and the [`EuclidPlane`] (`burrau`), [`InvariantLE`] / [`InvariantLK`] (`invariant`) and `MassSimplex`,
+//! each a `Φ` beside it.
+//!
+//! **Axis metadata and the statistics guard** ([`AxisMeta`], [`admit_statistic`]; chart_decoder_contract Part 5): an
+//! axis declares the decoder blocks it writes and whether it is annotation-only. A chart with an annotation axis is a
+//! 1-swept family rendered in 2D ([`swept`], [`family_label`]): it supports per-value statistics along its swept axis
+//! only, and a 2D density claim across the annotation axis is refused.
 //!
 //! **Each chart's decode** ([`ChartDecode`]): `D ∘ Φ` through the shared blocks. A chart whose `Φ` hands `D` only `z`
 //! decodes by [`decode()`]; an invariant chart hands the construction its targets `(L_z, K*)` in place of the free
@@ -23,6 +29,7 @@
 //! f32 maps at f32 on the GPU and one held at f64 maps at f64 on the CPU; narrowing f64 parameters to f32 is the CPU's
 //! own step, never `map`'s.
 
+pub mod burrau;
 pub mod invariant;
 pub mod latent;
 
@@ -30,6 +37,7 @@ use core::fmt;
 
 use spirv_std::num_traits::Float;
 
+pub use burrau::{Burrau, EuclidPlane};
 pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;
 
@@ -178,6 +186,131 @@ impl<P: Copy> ChartDecode for InvariantLK<P> {
         R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
     {
         invariant::decode::<S, R, Self>(self, u, v).0
+    }
+}
+
+impl<P: Copy> ChartDecode for Burrau<P>
+where
+    f64: From<P>,
+{
+    /// [`burrau::decode`]: the construction's outcome is not part of [`Decoded`], as for the invariant charts.
+    #[inline]
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        burrau::decode(self, u, v).0
+    }
+}
+
+impl<P: Copy> ChartDecode for EuclidPlane<P>
+where
+    f64: From<P>,
+{
+    /// [`burrau::decode_plane`]: the Burrau system at `ν(v)`, at rest; `u` is not read.
+    #[inline]
+    fn decode_at<S, R>(&self, _u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        burrau::decode_plane(self, v)
+    }
+}
+
+/// The decoder blocks an axis writes, its block-touch set (chart_decoder_contract Part 5): empty for an annotation axis.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct BlockTouch {
+    /// The configuration block.
+    pub config: bool,
+    /// The momentum block.
+    pub momentum: bool,
+    /// The mass block.
+    pub mass: bool,
+}
+
+impl BlockTouch {
+    /// Whether the set is empty.
+    #[inline]
+    pub fn is_empty(&self) -> bool {
+        !(self.config | self.momentum | self.mass)
+    }
+}
+
+/// The per-axis metadata the validator and the statistics read (chart_decoder_contract Part 5).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AxisMeta {
+    /// The blocks the axis writes.
+    pub touches: BlockTouch,
+    /// Annotation-only: the axis drives no IC degree of freedom, a display and landmark coordinate the decoder ignores.
+    pub annotation: bool,
+}
+
+/// One of a chart's two axes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Axis {
+    /// The horizontal axis, `u`.
+    Horizontal,
+    /// The vertical axis, `v`.
+    Vertical,
+}
+
+/// A quantitative statistic asked of a chart's pixels.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Statistic {
+    /// A per-value statistic along one axis: at each value of that axis, a statistic over the pixels there.
+    PerValue(Axis),
+    /// A 2D density claim: an area fraction or density over both axes of the chart.
+    Density2D,
+}
+
+/// Why [`admit_statistic`] refused a statistic.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum StatisticRefused {
+    /// A 2D density across an annotation axis, which drives no degree of freedom (chart_decoder_contract Part 5).
+    DensityAcrossAnnotation,
+    /// A per-value statistic along an annotation axis: every value of it is the same family.
+    AlongAnnotation,
+}
+
+/// The metadata of `axis` among `axes`, `[horizontal, vertical]`.
+#[inline]
+fn meta(axes: [AxisMeta; 2], axis: Axis) -> AxisMeta {
+    match axis {
+        Axis::Horizontal => axes[0],
+        Axis::Vertical => axes[1],
+    }
+}
+
+/// The statistics guard (chart_decoder_contract Part 5; REQ-CHART-013): on a chart with an annotation axis, only
+/// per-value statistics along a swept axis are admitted; a 2D density, and a per-value statistic along the annotation
+/// axis, are refused. A chart with no annotation axis admits both.
+pub fn admit_statistic(axes: [AxisMeta; 2], statistic: Statistic) -> Result<(), StatisticRefused> {
+    match statistic {
+        Statistic::Density2D if axes[0].annotation | axes[1].annotation => {
+            Err(StatisticRefused::DensityAcrossAnnotation)
+        }
+        Statistic::PerValue(axis) if meta(axes, axis).annotation => {
+            Err(StatisticRefused::AlongAnnotation)
+        }
+        _ => Ok(()),
+    }
+}
+
+/// How many of the chart's axes are swept, not annotation-only: 2 for a 2-swept chart, 1 for a 1-swept family rendered
+/// in 2D (chart_decoder_contract Part 5).
+pub fn swept(axes: [AxisMeta; 2]) -> u32 {
+    (!axes[0].annotation) as u32 + (!axes[1].annotation) as u32
+}
+
+/// The label a chart with these axes carries for its well-posedness (chart_decoder_contract Part 5: a chart with an
+/// annotation axis "must be labelled as such").
+pub fn family_label(axes: [AxisMeta; 2]) -> &'static str {
+    match swept(axes) {
+        2 => "2-swept chart",
+        1 => "1-swept family rendered in 2D",
+        _ => "no swept axis",
     }
 }
 
