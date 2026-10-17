@@ -963,6 +963,8 @@
   rulings:
   - R-82
   milestone: M2
+  rq:
+  - RQ-360
 - id: REQ-ENC-004
   area: ENC
   statement: "Encode must be a right inverse on the interior (T2), asserted per chart in physical units as ‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys over interior z, with clamp-adjacent samples asserting lookup_clamped instead of a tight residual."
@@ -24361,6 +24363,8 @@
   rulings:
   - R-116
   milestone: M2
+  rq:
+  - RQ-365
 - id: REQ-SYS-016
   area: SYS
   statement: "Body indices must be 0-based in storage and computation (inner pair (0,1), outer body 2, softmax reference body 0), and pair id k must name the side opposite body k (pair 0 = (1,2), pair 1 = (2,0), pair 2 = (0,1)); the 1-based Burrau literature convention must be translated at the boundary; what a person reads names the bodies 1, 2, 3 and a pair by its two bodies (R-449, REQ-GUI-188)."
