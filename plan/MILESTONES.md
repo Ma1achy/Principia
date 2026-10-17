@@ -177,6 +177,8 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   chart's classification (REQ-COL-102), the OKLab-uniform swatch set, and `K = 9` in greyscale and hue mode. The
   separation evidence (REQ-COL-104, REQ-COL-105, R-71) is filed in M2; which gate confirms it, and the re-rendered
   goldens' decision, are RQ-330's.
+  R-454 (closing RQ-330): the M2 gate confirms the new swatches and that evidence, and the three re-rendered
+  goldens are re-baselined under R-444 to R-446.
 - Display names (R-449; TASK-M2-33): one conversion function names what a person reads, the bodies 1, 2, 3 and a pair
   by its two bodies, never its pair id, on every surface built so far; machine-readable exports stay 0-based and say
   so in their header or schema.
