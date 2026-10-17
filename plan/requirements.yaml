@@ -12626,7 +12626,7 @@
   note: "Gui review 5533020211 G3 of PR #214, applied per R-369: §10.1's literal-sentinel line `if (raw == <literal>)` would need an infinite literal for these two, which naga rejects (gpu_determinism_note rule 4), and the compaction would do arithmetic on ±∞; the corpus defines no other style. TASK-M5-17, the resolve stage, first stores these bits (REQ-REF-053) and adds quad fields to the field-view catalogue (REQ-PAY-096), so it writes the style (round 6; TASK-M5-01, which built the ledger entries, merged before R-436)."
 - id: REQ-COL-072
   area: COL
-  statement: "The Chazy fields must hold a value for a `running` sample and render it in every mode, never drawing the \"not yet\" stipple, and a `sim_failed` sample, a reserved `state` code or a NaN must draw the invalid hatch (`debug_invalid(frag_xy)`) in every Chazy stain."
+  statement: "The Chazy fields must hold a value for a `running` sample and render it in every mode, never drawing the \"not yet\" stipple, and a `sim_failed` sample, the decoder's own `decode_failed` sample (a `DEGENERATE` tag or a non-finite decode; RQ-319, decided per R-369), a reserved `state` code or a NaN must draw the invalid hatch (`debug_invalid(frag_xy)`) in every Chazy stain."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 7. Validity and styles
@@ -12638,7 +12638,7 @@
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
   verify:
     method: unit test
-    detail: "synthetic payloads through each Chazy stain: a running sample draws its class's colour, and no pixel of any Chazy stain equals debug_not_yet's pattern; a sim_failed sample, a reserved state code and a NaN draw debug_invalid's hatch on the CPU twin and in WGSL"
+    detail: "synthetic payloads through each Chazy stain: a running sample draws its class's colour, and no pixel of any Chazy stain equals debug_not_yet's pattern; a sim_failed sample, a decode_failed sample with a DEGENERATE tag, a decode_failed sample from a non-finite decode, a reserved state code and a NaN draw debug_invalid's hatch on the CPU twin and in WGSL; a control stain that draws the decode_failed samples black #141418 (Chazy B) fails the test"
   rulings:
   - R-136
   - R-442

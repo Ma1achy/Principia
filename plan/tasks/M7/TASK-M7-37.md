@@ -13,9 +13,10 @@ The Chazy stains with no lightness encoding, compositions on the backbone (R-442
 seven-class palette on `chazy_final` as the default final-motion stain, with B "bound, or nobody has left yet"; the
 four-family and Okabe–Ito variants; the status map on `chazy_status`, its own map; the categorical filter unchanged.
 In every stain collision is magenta `#DA85B6` and B is `#141418`; running samples draw their class, never the "not
-yet" stipple, and `sim_failed`, reserved codes and NaN the hatch (§7). Greyscale and hue modes rank `chazy_final`
-B, OS, PE, HE, P, HP, H, collision, and the other fields' ranks are written (R-72). The palettes' separation is
-measured against τ and the palettes proposed for the M7 gate (R-71).
+yet" stipple, and `sim_failed`, the decoder's own `decode_failed`, reserved codes and NaN the hatch (§7; RQ-319,
+decided per R-369). Greyscale and hue modes rank `chazy_final` B, OS, PE, HE, P, HP, H, collision, and the other
+fields' ranks are written (R-72). The palettes' separation is measured against τ and the palettes proposed for the M7
+gate (R-71).
 
 ## References
 - `docs/design/principia_dd_chazy_final_motion.md` § "7. Validity and styles"
@@ -44,7 +45,7 @@ measured against τ and the palettes proposed for the M7 gate (R-71).
 - Golden images of each flat stain on a synthetic payload, and the calibration proposal for the palettes.
 
 ## Acceptance tests
-- `cargo test -p render chazy_validity` — through each Chazy stain, a running sample draws its class's colour and no pixel equals `debug_not_yet`'s pattern; `sim_failed`, a reserved `state` code and NaN draw `debug_invalid`'s hatch on the CPU twin and in WGSL (REQ-COL-072).
+- `cargo test -p render chazy_validity` — through each Chazy stain, a running sample draws its class's colour and no pixel equals `debug_not_yet`'s pattern; `sim_failed`, a `decode_failed` sample with a `DEGENERATE` tag, a `decode_failed` sample from a non-finite decode, a reserved `state` code and NaN draw `debug_invalid`'s hatch on the CPU twin and in WGSL; a control stain drawing the `decode_failed` samples black `#141418` fails (REQ-COL-072).
 - `cargo test -p render chazy_collision` — runs terminated at `r_coll` for each pair, a triple collision and a t = 0 collision read collision in `chazy_final` and `chazy_status` and render `#DA85B6` in every flat stain (REQ-COL-073).
 - `cargo xtask golden chazy` — synthetic payloads with one sample per class render exactly the seven-class colours (REQ-COL-075), the four-family colours (REQ-COL-076), the Okabe–Ito colours (REQ-COL-077) and the status colours (REQ-COL-080).
 - `cargo test -p render chazy_restyle` — a swatch change re-styles the view and the dispatch counter is unchanged; the default final-motion preset is the seven-class stain (REQ-COL-075).
@@ -63,7 +64,7 @@ measured against τ and the palettes proposed for the M7 gate (R-71).
 - What the decoder's own `decode_failed` samples (its `DEGENERATE` tags and a non-finite decode) draw is RQ-319,
   restated against R-446 (the outcome view draws them black `#141418`, which here is B), decided per R-369: option
   (a), on gui review 5555494498 of PR #223. They draw the invalid hatch, `debug_invalid`, in every Chazy stain, as
-  `sim_failed` does (dd_chazy_final_motion §7); REQ-COL-072 no longer waits on it. A pixel the chart hatches keeps
-  the chart's hatch (chart_decoder_contract Part 3; R-446).
+  `sim_failed` does (dd_chazy_final_motion §7); REQ-COL-072 no longer waits on it, and its statement and verify name
+  them (`chazy_validity`). A pixel the chart hatches keeps the chart's hatch (chart_decoder_contract Part 3; R-446).
 - The filter's mute is REQ-COL-058's (TASK-M7-08); the spec's preview `#3A3B40` is not a second rule (R-442, applied
   per R-369).
