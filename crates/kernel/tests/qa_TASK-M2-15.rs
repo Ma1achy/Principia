@@ -228,9 +228,51 @@ fn narrow(x: &Ic<f64>) -> Ic<f32> {
     }
 }
 
-fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
-    (a[0] - b[0]).abs().max((a[1] - b[1]).abs())
+/// The larger of `a` and `b`, or NaN if either is (pitfalls §9): `f64::max` drops a NaN operand, so a fold through it
+/// would let a NaN output pass the limit it is held to.
+fn worse(a: f64, b: f64) -> f64 {
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else {
+        a.max(b)
+    }
 }
+
+fn dist(a: [f64; 2], b: [f64; 2]) -> f64 {
+    worse((a[0] - b[0]).abs(), (a[1] - b[1]).abs())
+}
+
+/// The folds keep a NaN in any place, so a NaN output fails each `≤` limit they feed (pitfalls §9); `f64::max`'s fold
+/// would drop it and pass. `fold` is the fold under test.
+fn check_folds_keep_nan(fold: fn(f64, f64) -> f64) {
+    for v in [[f64::NAN, 0.0], [0.0, f64::NAN]] {
+        assert!(dist(v, [0.0, 0.0]).is_nan(), "dist({v:?}) dropped the NaN");
+    }
+    for xs in [
+        [f64::NAN, 1.0, 2.0],
+        [1.0, f64::NAN, 2.0],
+        [1.0, 2.0, f64::NAN],
+    ] {
+        let folded = xs.iter().copied().fold(0.0f64, fold);
+        assert!(
+            folded.is_nan(),
+            "the fold of {xs:?} dropped the NaN, so a limit would pass it: {folded}"
+        );
+    }
+    assert_eq!([1.0, 3.0, 2.0].iter().copied().fold(0.0f64, fold), 3.0);
+}
+
+#[test]
+fn encode_qa_m215_folds_keep_nan() {
+    check_folds_keep_nan(worse);
+}
+
+negative_control!(
+    encode_qa_m215_folds_keep_nan,
+    "a worst-case fold through f64::max must drop the NaN and fail",
+    expected = "dropped the NaN",
+    check_folds_keep_nan(f64::max)
+);
 
 // ── REQ-ENC-007: each block recovers z, under the gauge ───────────────────────────────────────────────────────────
 
@@ -247,7 +289,7 @@ fn check_block_inverses(n: usize, seed: u64, half_mirror: bool) {
         let e = enc64(&g.act(&x));
         for (k, (got, want)) in e.z.z.iter().zip(z).enumerate() {
             let d = (got - want).abs();
-            worst.0 = worst.0.max(d);
+            worst.0 = worse(worst.0, d);
             assert!(
                 d <= Z_TOL_F64,
                 "case {case}: z[{k}] does not recover: {got} for {want} (g = {g:?})"
@@ -255,10 +297,11 @@ fn check_block_inverses(n: usize, seed: u64, half_mirror: bool) {
         }
         let back = decode::<Defaults, f64>(&Latent::new(e.z.z)).ic;
         for i in 0..3 {
-            let d = dist(back.r[i], x.r[i])
-                .max(dist(back.p[i], x.p[i]))
-                .max((back.m[i] - x.m[i]).abs());
-            worst.1 = worst.1.max(d);
+            let d = worse(
+                worse(dist(back.r[i], x.r[i]), dist(back.p[i], x.p[i])),
+                (back.m[i] - x.m[i]).abs(),
+            );
+            worst.1 = worse(worst.1, d);
             assert!(
                 d <= PHYS_TOL_F64,
                 "case {case}: body {i}'s decode does not recover the canonical state: {d:e}"
@@ -295,7 +338,7 @@ fn check_block_inverses_f32(n: usize, seed: u64, offset: f32) {
         let e = enc32(&forward(z));
         for (k, (got, want)) in e.z.z.iter().zip(z).enumerate() {
             let d = (f64::from(got + offset) - want).abs();
-            worst = worst.max(d);
+            worst = worse(worst, d);
             assert!(
                 d <= Z_TOL_F32,
                 "case {case}: f32 z[{k}] does not recover: {got} for {want}"
@@ -630,7 +673,7 @@ fn check_collinear(m: [f64; 3], tamper: bool) {
                     dist(j.p_rho, P_RHO),
                     dist(j.p_lam, P_LAM),
                 ])
-                .fold(0.0f64, f64::max);
+                .fold(0.0f64, worse);
             assert!(
                 rest <= ROUND_F64,
                 "{what}: the masses, ρ̃ or the momenta move by {rest:e}"
