@@ -1,6 +1,6 @@
-//! The samples' chart classification, CPU-side (REQ-COL-102; colour_composition §3, the chart lane's `forbidden`;
+//! The samples' chart classification, CPU-side (REQ-COL-102; colour_composition §3, the validity lane's `forbidden`;
 //! chart_decoder_contract Part 3; R-26, R-446; TASK-M2-32): whether chart_decoder_contract Part 3 hatches a sample's
-//! chart point as forbidden, which the outcome view reads as `ctx.chart.forbidden` and draws with the hatch.
+//! chart point as forbidden, which the outcome view reads as `ctx.validity.forbidden` and draws with the hatch.
 //!
 //! **Inside `[0,1]²`** ([`forbidden`]) the point is forbidden where the chart's `validate` (R-26; inverse_encode_contract
 //! § "Chart-aware validation", layers 2 and 3) returns anything but `Valid`, or where `Φ`, chart_reference §5.1's

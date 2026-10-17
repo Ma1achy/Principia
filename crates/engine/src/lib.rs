@@ -58,7 +58,7 @@ pub mod stain;
 pub mod synthetic;
 
 /// The samples' chart classification, CPU-side: whether chart_decoder_contract Part 3 hatches a sample's chart point
-/// as forbidden, from the chart's `validate` and `Chart::map`, which the outcome view reads as `ctx.chart.forbidden`
+/// as forbidden, from the chart's `validate` and `Chart::map`, which the outcome view reads as `ctx.validity.forbidden`
 /// (REQ-COL-102; R-26, R-446; TASK-M2-32).
 pub mod chart_class;
 

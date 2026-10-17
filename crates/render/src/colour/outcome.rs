@@ -11,7 +11,7 @@
 //! every `detail`, and a reserved `state` code (6, 7; applied per R-369), all take the bounded / nothing yet class,
 //! `#141418`, never the "not yet" stipple or the hatch, which stay the debug views' and every other field's; there is no
 //! "degenerate" class. **A sample in a forbidden chart region keeps the hatch** `debug_invalid(frag_xy)`, decided from
-//! the chart's classification, `ctx.chart.forbidden` (REQ-COL-102; colour_composition §3), never from the payload's
+//! the chart's classification, `ctx.validity.forbidden` (REQ-COL-102; colour_composition §3's validity lane), never from the payload's
 //! `decode_failed` detail (R-446): it is the occupant's first test.
 //!
 //! **The swatches** are the occupant's node params, so editing one changes only its class (REQ-COL-002): linear RGB,
@@ -147,7 +147,7 @@ pub fn class(state: u32, detail: u32) -> usize {
 }
 
 /// What the occupant shows for a sample with `state` and `detail` whose chart classification is `forbidden`
-/// (`ctx.chart.forbidden`): its CPU twin. The forbidden test comes first, so a forbidden sample is hatched whatever its
+/// (`ctx.validity.forbidden`): its CPU twin. The forbidden test comes first, so a forbidden sample is hatched whatever its
 /// payload.
 pub fn shown(state: u32, detail: u32, forbidden: bool) -> Shown {
     if forbidden {

@@ -5,7 +5,7 @@
 //! **The rank (R-448):** the outcome class's nine classes, bounded / nothing yet first, the darkest, then collision
 //! 1–2, 1–3 and 2–3, triple collision, escape body 1, 2 and 3 and triple ejection (the names as shown, R-449): `K = 9`,
 //! `B = (r + ½)/K` in greyscale mode and `t = r/K` in hue mode. `running`, every failure and a reserved `state` code are
-//! the bounded / nothing yet class, rank 0 (R-446). A sample in a forbidden chart region (`ctx.chart.forbidden`,
+//! the bounded / nothing yet class, rank 0 (R-446). A sample in a forbidden chart region (`ctx.validity.forbidden`,
 //! REQ-COL-102) has no rank and keeps the hatch in every mode, decided from the chart, never from the payload.
 
 use render::assemble::{Kind, Node, Occupant, Stain};
@@ -17,7 +17,7 @@ pub const K: u32 = 9;
 /// The outcome field's rank, WGSL, which each mode's occupants share (colour_composition §4.1; R-448): `-1` for a
 /// sample in a forbidden chart region, which the hatch draws.
 pub const RANK: &str = "fn outcome_rank(ctx: Ctx) -> i32 {
-    if (ctx.chart.forbidden) { return -1; }
+    if (ctx.validity.forbidden) { return -1; }
     let s = ctx.sample.state;
     let d = ctx.sample.detail;
     if (s == STATE_COLLISION) {

@@ -27,9 +27,9 @@
 //! little-endian, as the GPU reads them: no offset is written here.
 //!
 //! **The chart classification** (REQ-COL-102; colour_composition §3; TASK-M2-32). Each sample's chart point is
-//! forbidden or not, `ctx.chart.forbidden`: the chart's own classification, which the CPU fills
+//! forbidden or not, `ctx.validity.forbidden`: the chart's own classification, which the CPU fills
 //! ([`crate::chart_class`]) and the harness writes per sample
-//! ([`Synthetic::set_forbidden`](crate::synthetic::Synthetic::set_forbidden)), as it writes the chart lane's other
+//! ([`Synthetic::set_forbidden`](crate::synthetic::Synthetic::set_forbidden)), as it writes the context's other
 //! values, and binds at `render::bind::CHART_BINDING`. A fresh set has none forbidden.
 //!
 //! [`QuadFrame`]: crate::synthetic::QuadFrame

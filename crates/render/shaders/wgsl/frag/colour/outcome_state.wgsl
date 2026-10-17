@@ -6,7 +6,7 @@
 // Black, bounded / nothing yet, means nothing has happened yet (R-446): `bounded`, `running`, `sim_failed`,
 // `decode_failed` of every `detail` and a reserved `state` code all draw it, never the "not yet" stipple or the hatch,
 // which stay the debug views' and every other field's. The forbidden test comes first: a sample in a forbidden chart
-// region, `ctx.chart.forbidden` (REQ-COL-102; colour_composition §3), the chart's own classification and never the
+// region, `ctx.validity.forbidden` (REQ-COL-102; colour_composition §3's validity lane), the chart's own classification and never the
 // payload's `decode_failed` detail, keeps the chart contract's hatch, `debug_invalid` (R-446).
 //
 // Each class's swatch is a node param, so editing one changes only its class and recompiles nothing (REQ-COL-002;
@@ -60,7 +60,7 @@
 // @uniform oklab_triple_ejection: vec3<f32> = (0.47353148, 0.27889428, 0.7605245)
 
 fn colour(ctx: Ctx) -> vec3<f32> {
-    if (ctx.chart.forbidden) {
+    if (ctx.validity.forbidden) {
         return debug_invalid(ctx.frag_xy);
     }
     let v = uniforms.swatch_set == 1u;

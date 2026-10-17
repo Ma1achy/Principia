@@ -469,7 +469,7 @@ negative_control!(
     failures_event(
         every,
         Some(altered(
-            "if (ctx.chart.forbidden) {",
+            "if (ctx.validity.forbidden) {",
             "if (ctx.sample.state == STATE_DECODE_FAILED && ctx.sample.detail == 1u) {",
         )),
         &chart_lane,
