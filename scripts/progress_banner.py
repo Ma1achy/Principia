@@ -3,9 +3,13 @@
 
 Each task in plan/tasks.yaml is in one of three states:
   done         its status is `done` in tasks.yaml, or main's history has the merge commit
-               "Merge pull request #N from <owner>/task/<TASK-id>" (the rule the orchestrator's ready-task check uses);
-  in review    an open PR's head branch is `task/<TASK-id>` (only with --open-prs, the JSON
-               `gh pr list --state open --json headRefName` prints);
+               "Merge pull request #N from <owner>/task/<TASK-id>": the subject GitHub gives the merge of the PR
+               whose head is that task's branch. A branch that only starts with the task id
+               (`task/TASK-M0-06-r333-flake`) and a merge of main into a task branch do not count;
+  in review    an open PR from this repository (not a fork) has head branch `task/<TASK-id>` (only with
+               --open-prs, the JSON `gh pr list --state open --json headRefName,isCrossRepository` prints; a PR
+               without `"isCrossRepository": false` is skipped, since anyone can open one from a fork's
+               `task/...` branch);
   not started  otherwise.
 
 Progress is counted by task, not by size: each task weighs the same.
@@ -111,9 +115,17 @@ def git(*args):
 
 
 def open_pr_ids(path):
-    """The task ids of open PRs, from `gh pr list --state open --json headRefName` output."""
+    """The task ids of open PRs from this repository, from `gh pr list --state open --json
+    headRefName,isCrossRepository` output. A PR from a fork, or one the list doesn't mark as from this repository,
+    is skipped."""
     prs = json.loads(Path(path).read_text(encoding="utf-8"))
-    return {m.group(1) for pr in prs for m in [HEAD_RE.match(pr.get("headRefName", ""))] if m}
+    return {
+        m.group(1)
+        for pr in prs
+        if pr.get("isCrossRepository") is False
+        for m in [HEAD_RE.match(pr.get("headRefName", ""))]
+        if m
+    }
 
 
 def states(tasks, merged, in_review):
@@ -166,7 +178,8 @@ def svg(tasks, state, names, commit, generated_at):
     o.append(f"<style>{STYLE}</style>")
     o.append(f'<rect class="panel" x="0.5" y="0.5" width="{WIDTH - 1}" height="{height - 1}" rx="12"/>')
 
-    # Header: title, overall %, bar, counts, legend.
+    # Header: title, overall %, bar, counts.
+    o.append(f'<g data-part="header" data-done="{done}" data-total="{total}" data-pct="{pct(done, total)}">')
     o.append(f'<text class="t" x="{PAD}" y="48" font-size="26" font-weight="700">Principia — build progress</text>')
     o.append(
         f'<text class="t m" x="{PAD}" y="72" font-size="14">{done} done · {review} in review · '
@@ -186,7 +199,9 @@ def svg(tasks, state, names, commit, generated_at):
         if dw:
             o.append(f'<rect class="done" x="{PAD}" y="{bar_y}" width="{dw:.1f}" height="12" rx="6"/>')
 
-    # Milestone boxes.
+    o.append("</g>")
+
+    # Milestone boxes, each a group.
     y = HEADER_H
     for r, rh in zip(rows, row_h):
         for i, m in enumerate(r):
@@ -194,6 +209,10 @@ def svg(tasks, state, names, commit, generated_at):
             ts = by_m[m]
             md = sum(1 for t in ts if state[t["id"]] == DONE)
             mr = sum(1 for t in ts if state[t["id"]] == REVIEW)
+            o.append(
+                f'<g data-milestone="{m}" data-done="{md}" data-review="{mr}" data-total="{len(ts)}" '
+                f'data-pct="{pct(md, len(ts))}">'
+            )
             o.append(f'<rect class="box" x="{x + 0.5}" y="{y + 0.5}" width="{box_w - 1}" height="{rh - 1}" rx="8"/>')
             tx = x + BOX_PAD
             o.append(f'<text class="t" x="{tx}" y="{y + 24}" font-size="17" font-weight="700">{m}</text>')
@@ -227,6 +246,7 @@ def svg(tasks, state, names, commit, generated_at):
                     f'<rect class="{cls}" x="{cx}" y="{cy}" width="{CELL}" height="{CELL}" rx="3" '
                     f'data-task="{escape(t["id"])}" data-state="{s}"><title>{escape(tip)}</title></rect>'
                 )
+            o.append("</g>")
         y += rh + GAP
 
     # Footer: legend, then provenance.

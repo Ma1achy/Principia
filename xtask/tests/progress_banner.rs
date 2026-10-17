@@ -1,7 +1,8 @@
 //! `scripts/progress_banner.py`, the README's build-progress banner: run on this tree's `plan/tasks.yaml`, it writes an
 //! SVG that parses as XML, draws one square per task (each milestone's squares its tasks, each task once) with the
-//! header's counts matching, colours a task green when main's history merged its `task/<TASK-id>` PR or tasks.yaml
-//! marks it done, amber when an open PR's head is its branch, and grey otherwise.
+//! header's counts matching, shows each milestone's done/total and percentage in its own box and the overall
+//! percentage in the header, colours a task green when main's history merged its `task/<TASK-id>` PR or tasks.yaml
+//! marks it done, amber when an open PR from this repository (not a fork) has its branch as head, and grey otherwise.
 //!
 //! CI's checkout is shallow, so the merge history is passed as a file of merge-commit subjects (`--merges`), in the
 //! form `git log --merges --format=%s` prints. Each test has its negative control (R-176).
@@ -36,8 +37,14 @@ Merge origin/main into task/TASK-M2-10
 Merge pull request #223 from Ma1achy/rulings/R-442
 ";
 
-/// Open PRs as `gh pr list --state open --json headRefName` prints them.
-const OPEN: &str = r#"[{"headRefName":"task/TASK-M2-10"},{"headRefName":"task/TASK-M6-37"},{"headRefName":"rulings/R-460"}]"#;
+/// Open PRs as `gh pr list --state open --json headRefName,isCrossRepository` prints them: TASK-M2-10's and
+/// TASK-M6-37's from this repository; TASK-M2-32's from a fork; TASK-M3-02's without the field, so not known to be
+/// from this repository; and a rulings PR.
+const OPEN: &str = r#"[{"headRefName":"task/TASK-M2-10","isCrossRepository":false},
+{"headRefName":"task/TASK-M6-37","isCrossRepository":false},
+{"headRefName":"task/TASK-M2-32","isCrossRepository":true},
+{"headRefName":"task/TASK-M3-02"},
+{"headRefName":"rulings/R-460","isCrossRepository":false}]"#;
 
 /// Runs the generator in scratch `name` on `tasks` (a tasks.yaml), with `merges` and, if given, `open` (JSON) as its
 /// inputs; returns the SVG.
@@ -145,7 +152,8 @@ negative_control!(
     }
 );
 
-/// The banner has one square per task of `tasks`, each milestone's in its order, and its header counts them.
+/// The banner has one square per task of `tasks`, in id order, and its header counts them. Each box's own counts and
+/// percentages are checked by `progress_banner_percentages_per_milestone`.
 fn assert_counts(svg: &str, tasks: &Path) {
     let plan = planned(tasks);
     let total: usize = plan.values().map(Vec::len).sum();
@@ -168,13 +176,6 @@ fn assert_counts(svg: &str, tasks: &Path) {
         drawn_ids, ids,
         "the banner's squares are not tasks.yaml's tasks in id order"
     );
-    for (m, ts) in &plan {
-        assert!(
-            svg.contains(&format!("/{} ", ts.len())) || svg.contains(&format!("/{}<", ts.len())),
-            "{m}'s box does not count its {} tasks",
-            ts.len()
-        );
-    }
     assert!(
         svg.contains(&format!("· {total} tasks in {} milestones", plan.len())),
         "the header does not count {total} tasks"
@@ -204,6 +205,104 @@ negative_control!(
         fs::write(&short, format!("{}{}", &text[..start], &text[end..])).expect("written");
         let svg = generate("counts_ctl", &short, MERGES, Some(OPEN));
         assert_counts(&svg, &tasks_yaml());
+    }
+);
+
+/// The group `<g {key}="{value}" ...>...</g>` of the banner: its opening tag and its contents.
+fn group<'a>(svg: &'a str, key: &str, value: &str) -> &'a str {
+    let start = svg
+        .find(&format!("<g {key}=\"{value}\""))
+        .unwrap_or_else(|| panic!("the banner has no group {key}={value}"));
+    let len = svg[start..].find("</g>").expect("group closed");
+    &svg[start..start + len]
+}
+
+/// The value of attribute `key` in the opening tag `tag` starts with.
+fn attr<'a>(tag: &'a str, key: &str) -> &'a str {
+    let tag = &tag[..tag.find('>').expect("tag closed")];
+    let at = tag
+        .find(&format!(" {key}=\""))
+        .unwrap_or_else(|| panic!("no {key} in {tag}"))
+        + key.len()
+        + 3;
+    &tag[at..at + tag[at..].find('"').expect("attribute closed")]
+}
+
+/// `done` of `total` as the banner rounds it: down, to a whole percent.
+fn percent(done: usize, total: usize) -> usize {
+    done * 100 / total
+}
+
+/// Each milestone's box shows `done[m]` of its tasks.yaml tasks done (0 where `done` has no entry) and that share as a
+/// whole percent, in its attributes and its text; the header shows the sum and its percent.
+fn assert_percentages(svg: &str, done: &BTreeMap<&str, usize>) {
+    let plan = planned(&tasks_yaml());
+    let mut all = 0;
+    for (m, ts) in &plan {
+        let (d, n) = (done.get(m.as_str()).copied().unwrap_or(0), ts.len());
+        let p = percent(d, n);
+        all += d;
+        let g = group(svg, "data-milestone", m);
+        let shown = (
+            attr(g, "data-done"),
+            attr(g, "data-total"),
+            attr(g, "data-pct"),
+        );
+        assert!(
+            shown
+                == (
+                    d.to_string().as_str(),
+                    n.to_string().as_str(),
+                    p.to_string().as_str()
+                )
+                && g.contains(&format!(">{d}/{n}"))
+                && g.contains(&format!(">{p}%</text>")),
+            "{m}'s box shows {shown:?}, not {d}/{n} at {p}%"
+        );
+    }
+    let total: usize = plan.values().map(Vec::len).sum();
+    let p = percent(all, total);
+    let h = group(svg, "data-part", "header");
+    assert!(
+        attr(h, "data-done") == all.to_string()
+            && attr(h, "data-pct") == p.to_string()
+            && h.contains(&format!(">{all} done · "))
+            && h.contains(&format!(">{p}%</text>")),
+        "the header does not show {all}/{total} at {p}%"
+    );
+}
+
+/// [`MERGES`] with every M1 task's PR merged as well.
+fn merges_with_m1() -> String {
+    let plan = planned(&tasks_yaml());
+    let mut out = MERGES.to_owned();
+    for (k, id) in plan["M1"].iter().enumerate() {
+        out += &format!("Merge pull request #{} from Ma1achy/task/{id}\n", 1000 + k);
+    }
+    out
+}
+
+/// What [`merges_with_m1`] merges, by milestone: TASK-M0-00 (`status: done`), all of M1, and TASK-M6-37.
+fn done_with_m1() -> BTreeMap<&'static str, usize> {
+    let m1 = planned(&tasks_yaml())["M1"].len();
+    BTreeMap::from([("M0", 1), ("M1", m1), ("M6", 1)])
+}
+
+#[test]
+fn progress_banner_percentages_per_milestone() {
+    let svg = generate("pct", &tasks_yaml(), &merges_with_m1(), Some(OPEN));
+    assert_percentages(&svg, &done_with_m1());
+}
+
+negative_control!(
+    progress_banner_percentages_per_milestone,
+    "without #232's merge commit, M6's box must not count TASK-M6-37 done",
+    expected = "M6's box shows",
+    {
+        let merges =
+            merges_with_m1().replace("Merge pull request #232 from Ma1achy/task/TASK-M6-37\n", "");
+        let svg = generate("pct_ctl", &tasks_yaml(), &merges, Some(OPEN));
+        assert_percentages(&svg, &done_with_m1());
     }
 );
 
@@ -256,4 +355,37 @@ negative_control!(
     "with no open-PR list, TASK-M2-10 must not be amber",
     expected = "TASK-M2-10 is not started",
     assert_in_review(&generate("open_ctl", &tasks_yaml(), MERGES, None))
+);
+
+/// A `task/` PR from a fork (TASK-M2-32), or one not marked as from this repository (TASK-M3-02), leaves its task
+/// grey: anyone can open a PR from a fork's branch of that name.
+fn assert_forks_skipped(svg: &str) {
+    for (id, want) in [
+        ("TASK-M2-32", "not started"),
+        ("TASK-M3-02", "not started"),
+        ("TASK-M2-10", "in review"),
+    ] {
+        let got = state_of(svg, id);
+        assert_eq!(got, want, "{id} is {got}, not {want}");
+    }
+}
+
+#[test]
+fn progress_banner_fork_pr_is_not_amber() {
+    assert_forks_skipped(&generate("fork", &tasks_yaml(), MERGES, Some(OPEN)));
+}
+
+negative_control!(
+    progress_banner_fork_pr_is_not_amber,
+    "the same PR from this repository must draw TASK-M2-32 amber",
+    expected = "TASK-M2-32 is in review",
+    assert_forks_skipped(&generate(
+        "fork_ctl",
+        &tasks_yaml(),
+        MERGES,
+        Some(&OPEN.replace(
+            r#""task/TASK-M2-32","isCrossRepository":true"#,
+            r#""task/TASK-M2-32","isCrossRepository":false"#,
+        )),
+    ))
 );

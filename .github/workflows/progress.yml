@@ -43,11 +43,12 @@ jobs:
           python-version: "3.12"
       - name: Install PyYAML
         run: python3 -m pip install pyyaml
-      # Open PRs, whose `task/<TASK-id>` heads draw their tasks amber.
+      # Open PRs, whose `task/<TASK-id>` heads draw their tasks amber; the generator skips PRs from forks
+      # (`isCrossRepository`), since anyone can open one from a branch of that name.
       - name: List open PRs
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh pr list --state open --limit 500 --json headRefName > "$RUNNER_TEMP/open-prs.json"
+        run: gh pr list --state open --limit 500 --json headRefName,isCrossRepository > "$RUNNER_TEMP/open-prs.json"
       - name: Draw the banner
         run: python3 scripts/progress_banner.py -o "$RUNNER_TEMP/progress.svg" --open-prs "$RUNNER_TEMP/open-prs.json"
       # `progress` holds one commit, the latest banner, replaced on every run.
