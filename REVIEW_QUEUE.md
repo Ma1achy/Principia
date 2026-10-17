@@ -679,3 +679,262 @@ seen.*
   generation root seam 13, the Measure tool's CSV) and any dump defined later, `.raw` and `.prnq` included when they
   are; nothing more is built for them now.
 - **Waits:** nothing.
+
+## RQ-340: The compass's tilt: the code and the human's nav-cube reference both tilt the plane within one 3-space toward one shared hidden axis, but map (τ₁, τ₂) to planes differently, and the contract's two-target form is a different family; which plane a tilt means is not settled *(conflict, physics, R-451; context: TASK-M6-33)*
+
+*Found by R-451's port (16 Oct 2026), which the human asked to compare the three; restated in the fix round of PR #227
+after the physics review (P1 to P3) found the first comparison misread the reference. Nothing is chosen; the decoder's
+geometry is not changed, and the compass draws the decoder's mapping. For the human (physics: it changes which plane a
+tilt means).*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "`q'(τ) = normalise( cos τ · q + sin τ ·
+    d_target )        τ ∈ [−90°, +90°]`"; "The 8D has **6 directions orthogonal** to the current plane; the tilt selector
+    offers those". `docs/design/principia_chart_reference.md` §1.1: "A 2-plane in 8D has 12 tilt axes (6 hidden
+    dimensions × 2 basis vectors). Raw tilts **replace** rather than compose", and "**Arbitrary / oblique:** `q_1, q_2`
+    any orthonormal pair in ℝ⁸".
+  - The code, `crates/gui/src/explore/manifold_view/mod.rs`, `View::basis`: `u₁ = cos τ₁ e_a + sin τ₁ e_d`,
+    `u₂ = cos τ₂ e_b + sin τ₂ e_d` (one hidden axis `e_d`, `slice_axis`), then `q₁ = σ(cos γ u₁ + sin γ u₂)`,
+    `q₂ = σ(cos γ u₂ − sin γ u₁)`, with no normalisation and no orthogonalisation; `crates/gui/src/explore/compass.rs`,
+    `plane_frame`, draws the same in the frame `(e_a, e_b, e_d)`.
+  - `docs/gui/reference/principia_nav_cube.html`, `planeSpec`: "axis-angle ("joystick") map — rotate the up-normal by
+    angle m toward (τ₁,0,τ₂) … no gimbal lock (the naïve Euler form freezes q₂ at τ₁=±90°)", `n = (sin m · τ₁/m, cos m,
+    sin m · τ₂/m)`, `m = √(τ₁² + τ₂²)`; tilt mode's untilted plane is the horizontal x–z plane (`n = [0,1,0]`), its
+    labels "q₁'s target" on x and "q₂'s target" on z, and its help text: "no single coordinate perpendicular to both
+    targets".
+- **The reading:**
+  - **The code and the reference are one family.** The reference tips its plane's normal y toward x and z, so both
+    tilts tip the plane into the one unnamed vertical axis y; its "targets" x and z are the plane's own untilted in-plane
+    axes. Read geometrically, the code and the reference both give the 2-planes in one 3-space through the slice point
+    (the code's `(e_a, e_b, e_d)`, `e_d` hidden; the reference's (x, z, y), y hidden). They differ only in which
+    `(τ₁, τ₂)` gives which plane.
+  - **The code's map.** `u₁ · u₂ = sin τ₁ sin τ₂`, so with both tilts set the basis is not orthogonal, against
+    chart_reference §1.1's "any orthonormal pair", and the window's shape changes with it. Its normal is
+    `∝ (−tan τ₁, −tan τ₂, 1)`, one-to-one on the open square. At `|τ₁| = 90°`, `u₁ = ±e_d`, so the plane is
+    `span(e_b, e_d)` for every `|τ₂| < 90°`: τ₂ stops moving it along that whole edge, the gimbal lock the reference's
+    comment names (the physics review: the normal stays (−1, 0, 0) for τ₂ ∈ {0, 0.3, 1.0, 1.5}). At `τ₁ = ±τ₂ = ±90°`
+    the plane degenerates to the line `e_d`.
+  - **The reference's map.** It never degenerates inside ±90° (`m ≤ 127.3° < 180°`), but it is not one-to-one there:
+    `n` and `−n` are one plane, so `(τ₁, τ₂) = (90°, 90°)`, `m = 127.3°`, gives the plane `(−37.3°, −37.3°)` gives.
+    This bears on the contract's "sign matters".
+  - **The contract's two-target form is the different family.** With distinct targets `t₁ ⊥ t₂`, both orthogonal to
+    the plane, the two tilted vectors are already orthonormal, and the plane lies in the 4-space
+    `span(q₁, q₂, t₁, t₂)`, with no single normal: no 3D cube draws it faithfully. With one shared target the contract's
+    formula is the code's (`u₁` is unit, so `normalise` does nothing): the code is the contract's form with
+    `d_target₁ = d_target₂ = e_d`.
+- **The questions:** (i) within one 3-space, which parametrisation of the tilt pair: the code's or the reference's;
+  (ii) one shared target (the code and the reference) or two distinct targets (the contract's general form).
+- **Options seen:**
+  - (a) One shared hidden axis, the code's map (as applied): the contract states it as the tilt pair's meaning, with
+    its non-orthogonal basis against chart_reference §1.1 and its lock at `|τ₁| = 90°`; the compass draws it.
+  - (b) One shared hidden axis, the reference's axis-angle map: the reference's x, z and y read as `e_a`, `e_b` and
+    `e_d` (its untilted plane `span(e_a, e_b)`, its hidden axis `e_d`), the sign chosen so a single τ₁ moves q₁ toward
+    `e_d` as the code's does, and `q₁`, `q₂` the untilted `e_a`, `e_b` turned by the rotation taking `e_d` to `n`, then
+    by γ: orthonormal and without a lock, but one-to-one only for `m < 90°`: from the `m = 90°` circle on, `n` and `−n`
+    give one plane, so `(90°, 0)` and `(−90°, 0)` already give the same one. Like (a), a one-hidden-axis map.
+  - (c) Two distinct targets, the contract's general form: each of `q₁`, `q₂` tilted toward its own hidden direction,
+    `t₁ ⊥ t₂` (orthonormal with no further step); the plane leaves any one 3-space, so the ruling also says what the
+    compass's cube draws, and its tilt labels name the two targets.
+- **Applied meanwhile:** the compass's cube draws the decoder's mapping (`View::basis` in the cube's frame), and its
+  tilt mode names the one shared target (R-451 B1).
+- **The degenerate tilts hang on it** (fix round 4 of PR #227, physics review P13): under the decoder's map, option
+  (a), `q₁` and `q₂` span no plane at `τ₁ = ±τ₂ = ±90°`, and there the compass's cube draws no slice and its readout
+  cites this entry (R-451 B11). Under (b) or (c) those tilts give a plane, so a ruling for either revisits what the
+  cube draws there.
+- **Waits:** nothing builds on the choice yet; TASK-M6-33 does not wait, and no requirement carries `rq: RQ-340`
+  (REQ-GUI-192 cites it in its note). A ruling for (b) or (c) changes the decoder's basis, which re-integrates every
+  tilted view, and goes to a follow-up task.
+
+## RQ-341: The physical compass views need the decoder's Jacobian with respect to z along all eight latent directions, into Jacobi or shape-sphere coordinates, and its Gram area factor; the corpus's J_D is the derivative with respect to the chart's (u, v) into the particle frame, not yet built, and no Gram factor is defined for it *(silence and conflict with the ruling's words, R-72, R-452; context: TASK-M6-35)*
+
+*Found by R-452's port (16 Oct 2026). Nothing is chosen. For the human: R-452 says "use the existing J_D machinery"
+and "the Gram-determinant area factor already defined for J_D", and neither exists in that form.*
+
+- **File, section:**
+  - `docs/design/principia_deep_zoom.md` § "2. Linearised decoder — IC precision": "compute `J_D = ∂D/∂(u,v)` at the
+    centre by **central differences in f64** (two decode evals per axis)"; § "Couplings to the contract", a: "The
+    linearised object is the full chart→IC composite, not the decoder `D` alone", and b: "`|det J_D|` is the shared
+    measure weight … `J_D = ∂physical/∂(u,v)`". `docs/contracts/principia_integrator_contract.md`: `(m, r, p)` "comes from
+    `x₀ + J_D·δ`". It is built by REQ-DEC-033 (M6); `crates/kernel/src/stage/decode.rs` says the linearised path lands
+    in M6, and nothing in `crates/` computes a Jacobian of the decode today.
+  - `docs/design/principia_dd_generation_root.md` gives `√det(JᵀJ)` as "the log of the area element" for the links'
+    forward Jacobians only; nothing defines `|det J_D|` for a non-square `J_D`, nor the Gram factor
+    `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)` that R-452 quotes.
+- **Silence:** (1) the views' `J` is `∂(Jacobi or shape coordinates)/∂z`, applied to `q₁`, `q₂` (and, for the steer,
+  RQ-344, its pseudo-inverse over all eight directions); the corpus's `J_D` has two columns (∂/∂u, ∂/∂v) and the
+  particle frame's 15 rows. On an affine chart `J_D`'s columns are `2·(∂D/∂z)·q₁` and `2·(∂D/∂z)·q₂` through
+  `(m, r, p)`, so the views' pushforward could be read off `J_D` up to that factor and the change of coordinates, but
+  the steer cannot. (2) Which stage the views differentiate: before or after canonicalisation and the scale gauge
+  (whether before or after `η_E` is RQ-345). (3) The derivative's method and step (central differences in f64, as
+  deep_zoom's, or analytic). (4) The Gram factor's definition: `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)` is the
+  pushforward's area factor only for an orthonormal pair, and the decoder's `q₁`, `q₂` carry the zoom σ (`|q| = σ`,
+  R-83) and, with both tilts set, the shear `u₁ · u₂ = sin τ₁ sin τ₂` (RQ-340), so on them the "stretch" picks up σ²
+  and `√(1 − sin²τ₁ sin²τ₂)` and changes with the zoom; and the factor of 2 from the chart's `(2s−1)`. (5) The metric
+  on the physical coordinates, which the grid depends on as the steer does, is RQ-346. (Points 2, 4 and 5 added in
+  the fix round of PR #227, physics review P7 to P9.)
+- **Options seen:**
+  - (a) A definition requirement (R-72): a CPU, f64, central-difference Jacobian `∂x/∂z` (8 columns) of the decoder's
+    output in the view's coordinates at a latent point, the views reading `J q₁`, `J q₂` from it, the Gram factor
+    read on the orthonormalised pair, `√(|J q̂₁|²|J q̂₂|² − (J q̂₁ · J q̂₂)²)` with `q̂₁`, `q̂₂` orthonormal (the physics
+    review's proposed reading of R-452's formula); a new requirement in M6 beside REQ-DEC-033, sharing its method.
+  - (b) Read the views off REQ-DEC-033's `J_D` once built (two columns, through `(m, r, p)` to Jacobi or shape
+    coordinates by the chain rule), and drop the physical steer or give it another construction.
+- **Applied meanwhile:** nothing; TASK-M6-35 waits.
+- **Waits:** TASK-M6-35 (REQ-GUI-199, REQ-GUI-200).
+
+## RQ-342: The Jacobi view's eight coordinates are not eight degrees of freedom of the decoder's image: ρ̃ᵧ is identically 0 and the four position components carry two, the masses move none of them, and the momenta are not mass-weighted *(physics review, R-452; context: TASK-M6-35)*
+
+*Found by R-452's port (16 Oct 2026), the physics review the human asked for before the set is built. Nothing is
+chosen. For the physics reviewer, then the human (the set is the human's proposal).*
+
+- **File, section:**
+  - `decisions.md` § R-452 (the human's words, 3.2): "Jacobi view, 8 coordinates: the mass-weighted Jacobi vectors and
+    their momenta, ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, as the decoder writes them."
+  - `docs/design/principia_dd_decoder.md` §3.2 and `docs/design/principia_chart_reference.md` §0.2: the canonical frame
+    `ρ̃ = R̃ cos α · (1, 0)`, `λ̃ = R̃ sin α · (cos β, sin β)`, `R̃ = 1`; §0.3: `p_ρ = (q0, q1)`, `p_λ = (q2, q3)`,
+    physical Jacobi momenta (`docs/notes/ic_inspector_scratchpad.md`: "*no* `√μ` unweighting").
+  - `docs/contracts/principia_chart_decoder_contract.md` Part 1: the eight latent coordinates are "2 config ⊕ 4
+    momentum ⊕ 2 mass", rotation and scale fixed.
+- **The points:** (1) `ρ̃ᵧ ≡ 0` on the decoder's image, so every cell in its row and column is always 0; (2) `ρ̃ₓ, λ̃ₓ,
+  λ̃ᵧ` carry the two configuration degrees of freedom (α, β) with `R̃ = 1`, so they are redundant; (3) with `η_E` off,
+  `z_μ1`, `z_μ2` move none of the eight, so a plane tilted into the mass directions pushes forward degenerately
+  (`J q = 0` for `q` in them) and the view cannot draw it; the physics review measured the set's rank at exactly 6 at
+  every sample, its kernel the two mass directions; (4) the positions are mass-weighted and the momenta are not, so
+  `Σ`-type comparisons mix weightings; (5) whether the decoder's output is read before or after the scale gauge;
+  `η_E` is RQ-345: with it on, `η_E` depends on the masses and the configuration, so the masses do move the momenta,
+  and point 3 holds only with it off; (6) a non-redundant 8-set exists: the decoder `z ↦ (α, β, q₀…q₃, m₀, m₁)` is a
+  diffeomorphism onto its image (each block a monotone link of its own latents, the masses through softmax∘tanh), so
+  the decoder's own physical set, `(α, β)` or a chart of the hemisphere, the four Jacobi momenta and two masses, gives
+  an 8 × 8 `J` of full rank (the physics review: rank 8 at 200 of 200 samples, `η_E` off). With such a set
+  `J⁺ = J⁻¹`, the steer is metric-independent and lights cell (i, j) at exactly ±1 at `z₀` for every cell, and its
+  only refusals are chart singularities (RQ-344). (Point 6, and the rank in point 3, added in the fix round of
+  PR #227, physics review P6 and P7.)
+- **Options seen:**
+  - (a) Keep the eight as proposed; the view shows the dead row and the degenerate cases (readout "J q = 0: the plane
+    moves only the masses"). This fails the criterion the human set in 3.2 ("no redundant coordinate"): a row and
+    column always 0, and a steer refused or lighting below ±1 on most cells.
+  - (b) Eight coordinates that chart the image, the full-rank set of point 6: e.g. `α, β` (or `ρ̃ₓ, λ̃` in polar form),
+    the four momenta, and the two masses (`m₀/M`, `m₁/M`), each named as the decoder writes it.
+  - (c) The momenta mass-weighted as the positions are (`p̃ = p/√μ`), so the coordinates share one weighting. This
+    complements (a) or (b) rather than replacing them: mass-weighting the momenta alone leaves the rank at 6.
+- **Applied meanwhile:** nothing; TASK-M6-35 waits.
+- **Waits:** TASK-M6-35 (REQ-GUI-199, REQ-GUI-200: the steer's cells are this set's).
+
+## RQ-343: The Shape view's eight coordinates are redundant and incomplete: n̂ is three numbers for two degrees of freedom, R is 1 on the decoder's image, no doc defines ṅ or Ṙ, and the masses and the overall rotation rate are missing *(physics review, silence, R-72, R-452; context: TASK-M6-35)*
+
+*Found by R-452's port (16 Oct 2026), the physics review the human asked for. Nothing is chosen. For the physics
+reviewer, then the human (the set is the human's proposal).*
+
+- **File, section:**
+  - `decisions.md` § R-452 (the human's words, 3.2): "Shape view, 8 coordinates: the shape-sphere vector n̂ = (n₁, n₂,
+    n₃), the hyperradius R, and their rates ṅ₁, ṅ₂, ṅ₃, Ṙ."
+  - `docs/design/principia_chart_reference.md` § "3. Shape-sphere chart (θ, φ)", §3.1: `n = ((a−b)/I, 2p/I, 2q/I)`,
+    `I = a + b`; the full reduced phase space is `T*S²`. The scale gauge fixes `I = 1` (`principia_dd_decoder.md` §3.5).
+- **The points:** (1) `|n̂| = 1`, so `n₁, n₂, n₃` carry two degrees of freedom and their pushforward is constrained
+  (`n̂ · ṅ = 0`); (2) `R = √I = 1` on the image, so its row is always 0; (3) no doc defines `ṅ` or `Ṙ` (from the
+  momenta through which masses, in which frame); (4) the set has no mass coordinate and no overall rotation rate
+  (`L_z`, the fibre of `T*S²`) as coordinates. The masses do move its rates: `ṅ` and `Ṙ` are `d/dt` of the
+  mass-weighted `ρ̃`, `λ̃`, with `ρ̃̇ = p_ρ/√μ_ρ` and `λ̃̇ = p_λ/√μ_λ`, e.g.
+  `Ṙ = cos α · p_ρx/√μ_ρ + sin α (cos β p_λx + sin β p_λy)/√μ_λ` (the physics review: the `z_μ` columns' norms about
+  19 and 17, not 0). The Shape Jacobian has rank 5 at every sample (`n̂` 2, `ṅ` 2, `Ṙ` 1), and its 3-dimensional
+  kernel is mixed: the rotation (`L_z`-only) direction in the momentum block, and two mass directions each compensated
+  by a momentum change. So a plane in the `L_z` direction pushes forward degenerately; a mass-direction tilt does not
+  push forward to 0. The masses enter Shape's rates but not Jacobi's coordinates (RQ-342 point 3); (5) the 2-to-1
+  cover of the shape sphere (chart_reference §3.3); (6) a non-redundant 8-set exists (RQ-342 point 6): (b)'s set
+  `(θ, φ, θ̇, φ̇, L_z, Ṙ, m₀, m₁)` has full rank (the physics review: rank 8 at 299 of 300 samples, the one other at
+  8e-8 relative being a saturated mass logit). (Point 4 corrected, and point 6 added, in the fix round of PR #227,
+  physics review P4 and P6.)
+- **Options seen:**
+  - (a) Keep the eight; define `ṅ`, `Ṙ` from the decoded state (`ṅ = dn/dt` along the flow at `t = 0`), and show the
+    dead `R` row. This fails the criterion the human set in 3.2 ("no redundant coordinate"): a row and column always
+    0, rank at most 5, and a steer refused or lighting below ±1 on most cells.
+  - (b) A chart of the image, the full-rank set of point 6: `θ, φ` (or two of `n̂`, naming which: `(n₁, n₂)` is
+    singular on `n₃ = 0`, the collinear configurations, which is the decoder's mirror boundary `β ∈ {0, π}`), their
+    rates, `L_z` (or the fibre rate), `Ṙ` and the two masses.
+  - (c) Drop the Shape view until the set is settled.
+- **Applied meanwhile:** nothing; TASK-M6-35 waits.
+- **Waits:** TASK-M6-35 (REQ-GUI-199, REQ-GUI-200: the steer's cells are this set's).
+
+## RQ-344: The physical steer's latent preimage q ∝ J_D⁺ e_i needs a Jacobian over all eight latent directions, a metric, a rank test and a rule for a coordinate outside the Jacobian's range; none is written *(physics review, silence, R-72, R-452; context: TASK-M6-35)*
+
+*Found by R-452's port (16 Oct 2026), the physics review the human asked for on this construction. Nothing is
+chosen. For the physics reviewer, then the human.*
+
+- **File, section:** `decisions.md` § R-452 (the human's words, 3.4): "clicking physical cell (i, j) sets the slice
+  plane to the latent preimage of that physical plane at z₀: q₁ ∝ J_D⁺ e_i, q₂ ∝ J_D⁺ e_j, Gram–Schmidt
+  orthonormalised, with J_D⁺ the pseudo-inverse. If J_D is rank-deficient there, so the preimage is not a 2-plane,
+  refuse the click and log why to the console." No doc has a pseudo-inverse or a latent preimage
+  (`principia_inverse_encode_contract.md` inverts by closed-form blocks after canonicalisation and rejects a "smallest
+  latent norm" argmin for invariant charts).
+- **The points:** (1) it needs RQ-341's eight-column `∂x/∂z`, not the chart's two-column `J_D`; (2) the
+  Moore–Penrose inverse assumes the Euclidean metric on `z` (and on the physical coordinates, whose units differ:
+  positions and momenta; the physical metric is RQ-346); (3) by RQ-342 and RQ-343 the proposed sets' Jacobians are
+  rank-deficient on the whole image (rank at most 6 for Jacobi, at most 5 for Shape), so "rank-deficient there" needs
+  reading as "the two preimages do not span a 2-plane", with a threshold (a singular
+  value or the Gram factor of `J⁺e_i`, `J⁺e_j` below a tolerance); (4) where `e_i` is not in the Jacobian's range
+  (`ρ̃ᵧ`, `R`), `J⁺e_i = 0` and the click is always refused, and where it is partly in range the steered plane's
+  pushforward lights cell (i, j) below ±1, so R-452's test "lights that physical cell at ±1 (to tolerance)" holds only
+  for `e_i`, `e_j` in the range; (5) the steered basis is a general 8D plane, not a preset with tilts, so how the
+  Manifold view's sliders follow needs saying (as the Chart builder's Apply does, §G7, is the nearest); (6) the
+  coupling to RQ-342 and RQ-343: with a full-rank 8-set (their option (b), `η_E` off), `J⁺ = J⁻¹`, the steer is
+  metric-independent and lights (i, j) at exactly ±1 at `z₀` for every cell, its only refusals chart singularities
+  (link saturation, the α and β poles, the chosen sphere chart's poles), and points 2 to 4 largely dissolve; options
+  (a) and (b) below matter only if the human keeps a rank-deficient set. With `η_E` on, no 8-set has full rank
+  (RQ-345). (Point 3 corrected, and point 6 added, in the fix round of PR #227, physics review P5 and P6.)
+- **Options seen:**
+  - (a) As written, the test restricted to coordinates in the range, and the sliders following as after Chart
+    builder's Apply, with one of two rank tests: (a1) the smaller singular value of `[J⁺e_i, J⁺e_j]` above a
+    tolerance, a quantity in `J`'s inverse units that scales with `J`, so a fixed tolerance on it is not dimensionless;
+    or (a2) the smaller singular value of `[P e_i, P e_j]`, with `P = J J⁺` the projector onto `J`'s range, which lies
+    in [0, 1], is scale-free, and also predicts how close to ±1 cell (i, j) lights (the physics review, P10).
+  - (b) A weighted pseudo-inverse with stated metrics on `z` and on the physical coordinates (the latter RQ-346's).
+  - (c) Only the latent steer (the Plücker view's); the physical cells are not clickable.
+- **Applied meanwhile:** nothing; TASK-M6-35 waits.
+- **Waits:** TASK-M6-35 (REQ-GUI-200).
+
+## RQ-345: With the energy normalisation E* set, every physical Jacobian of the decoder has rank at most 7, whatever the coordinates; the physical views and the steer must read the state before or after η_E, and the steer needs a rule for the direction normal to the energy shell *(physics review, silence, R-72, R-452; context: TASK-M6-35)*
+
+*Found by PR #227's physics review (P7, 16 Oct 2026), filed in its fix round as a new entry rather than folded into
+RQ-341, because it bounds every coordinate set of RQ-342 and RQ-343 and the steer of RQ-344 alike. Nothing is chosen.
+For the human (physics: it changes what the physical views show).*
+
+- **File, section:** `docs/design/principia_chart_reference.md` § "0.6 Energy normalisation — optional, and forbidden
+  on some charts": "`η_E = √((E* − U)/K0)          pᵢ ← η_E·pᵢ          feasibility: E* ≥ U`". `decisions.md` § R-452
+  (the human's words, 3.2) pushes the plane "through the decoder's Jacobian at z₀" and names no stage.
+- **The points:** (1) with `E*` set, `p ← η_E p` puts the decoder's whole image on the level set `E = E*`, so every
+  physical Jacobian has rank at most 7, whatever the eight coordinates (the physics review: rank 7 at every sample,
+  even for RQ-342's full-rank set); no 8-coordinate set is non-degenerate there. (2) `η_E` depends on the masses and the
+  configuration, so with it on the masses move Jacobi's momenta (RQ-342 point 3 holds only with it off). (3) The
+  steer on an `E*`-normalised chart has a direction it cannot reach: the one normal to the energy shell.
+- **Options seen:**
+  - (a) The physical views and the steer read the state before `η_E` (the full-rank sets stay full rank; the views show
+    a state the integrator does not start from when `E*` is set).
+  - (b) They read it after `η_E`, as the integrator starts from it; on an `E*`-normalised chart the steer refuses the
+    one direction normal to the energy shell, and a cell whose plane needs it is refused with that reason logged.
+  - (c) After `η_E`, with the Jacobi and Shape views replaced on an `E*`-normalised chart by a 7-coordinate set on the
+    level set.
+- **Applied meanwhile:** nothing; TASK-M6-35 waits.
+- **Waits:** TASK-M6-35 (REQ-GUI-199, REQ-GUI-200).
+
+## RQ-346: The physical views' grid and the physical steer both depend on a metric on the physical coordinates, whose units differ (positions, momenta, angles, masses); no metric is written *(physics review, silence, R-72, R-452; context: TASK-M6-35)*
+
+*Found by PR #227's physics review (P8, 16 Oct 2026), filed in its fix round as one question for the view and the
+steer; RQ-344 point 2 keeps the metric on `z`. Nothing is chosen. For the human (physics).*
+
+- **File, section:** `decisions.md` § R-452 (the human's words, 3.2): "u₁ = J_D q₁, u₂ = J_D q₂, orthonormalised";
+  3.4: "J_D⁺ the pseudo-inverse". `docs/design/principia_chart_reference.md` §0.2, §0.3: the positions mass-weighted,
+  the momenta physical.
+- **The points:** (1) R-452's view orthonormalises `u₁`, `u₂` and normalises `Σ p² = 1` in the physical coordinates'
+  Euclidean metric; rescaling one coordinate (the units of momenta against positions, angles against masses) rescales
+  its row and column of `p_ij` and can change the dominant cell, so the grid and the dominant pair depend on the
+  metric. (2) The steer's `J⁺` depends on the same metric (RQ-344 point 2), unless the set has full rank (RQ-342 and
+  RQ-343 point 6, where `J⁺ = J⁻¹`). (3) One choice should serve both, so the grid shows the planes the steer reaches.
+- **Options seen:**
+  - (a) The Euclidean metric in the coordinates as named, stated as a convention, with the help text saying the grid
+    depends on the units.
+  - (b) The canonical pairing for Jacobi, `(ρ̃, p_ρ/√μ_ρ)` and `(λ̃, p_λ/√μ_λ)`, which gives a natural metric there
+    (the physics review's suggestion), and a stated one for Shape and the masses.
+  - (c) Each coordinate scaled by a stated reference range (e.g. its spread over the chart's image), so every row is
+    dimensionless.
+- **Applied meanwhile:** nothing; TASK-M6-35 waits.
+- **Waits:** TASK-M6-35 (REQ-GUI-199, REQ-GUI-200).

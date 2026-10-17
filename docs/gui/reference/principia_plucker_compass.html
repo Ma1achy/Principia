@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Principia — orientation compass</title>
+<style>
+  :root{
+    --cream:#ece4d3; --panel:#f3ecdd; --ink:#26221d; --ink-soft:#6c6353;
+    --line:#c9bfa8; --teal:#1c5a54; --terra:#a5431f;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:"Helvetica Neue",Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--cream);color:var(--ink);font-family:var(--sans);}
+  .wrap{max-width:560px;margin:0 auto;padding:22px 16px 40px;}
+  h1{font-size:15px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin:0 0 2px;}
+  .sub{font-family:var(--mono);font-size:11px;color:var(--ink-soft);margin:0 0 16px;letter-spacing:.02em;line-height:1.5;}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:3px;}
+  .stage{position:relative;}
+  canvas{display:block;width:100%;height:420px;touch-action:none;cursor:pointer;}
+  .hud{padding:10px 14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11px;color:var(--ink-soft);line-height:1.6;}
+  .hud b{color:var(--ink);font-weight:400;} .hud .k{color:var(--teal);}
+  .controls{padding:14px;border-top:1px solid var(--line);}
+  .row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+  .row:last-child{margin-bottom:0;}
+  .tag{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--cream);background:var(--ink);border-radius:2px;padding:5px 8px;}
+  .tag select{background:transparent;border:0;color:var(--cream);padding:0 2px;font-family:var(--mono);font-size:11px;}
+  input[type=range]{-webkit-appearance:none;appearance:none;flex:1;min-width:120px;height:2px;background:var(--line);border-radius:2px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:2px;background:var(--ink);cursor:pointer;border:2px solid var(--panel);}
+  input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:2px;background:var(--ink);cursor:pointer;border:2px solid var(--panel);}
+  .val{font-family:var(--mono);font-size:11px;color:var(--cream);background:var(--ink);border-radius:2px;padding:4px 8px;min-width:60px;text-align:right;}
+  .btn{font-family:var(--mono);font-size:11px;letter-spacing:.03em;padding:6px 11px;border:1px solid var(--line);border-radius:3px;background:transparent;color:var(--ink);cursor:pointer;}
+  .btn.on{background:var(--terra);color:var(--cream);border-color:var(--terra);}
+  .note{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);line-height:1.6;margin:14px 2px 0;}
+  .note .k{color:var(--teal);} .note .t{color:var(--terra);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Orientation Compass</h1>
+  <p class="sub">the view plane q₁∧q₂ as Plücker coordinates · one cell per coordinate-plane z_i×z_j · exact, Σ‖p‖²=1 · click a cell to steer</p>
+
+  <div class="card">
+    <div class="stage"><canvas id="c"></canvas></div>
+    <div class="hud" id="hud"></div>
+    <div class="controls">
+      <div class="row">
+        <span class="tag">q₁ tilt into <select id="k1"></select></span>
+        <input type="range" id="t1" min="-90" max="90" value="0" />
+        <span class="val" id="t1v">+0°</span>
+      </div>
+      <div class="row">
+        <span class="tag">q₂ tilt into <select id="k2"></select></span>
+        <input type="range" id="t2" min="-90" max="90" value="0" />
+        <span class="val" id="t2v">+0°</span>
+      </div>
+      <div class="row">
+        <button class="btn" id="anim">ANIMATE</button>
+        <span class="tag" id="basetag" style="background:transparent;color:var(--ink-soft)">base: — (click a cell)</span>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">
+    Each filled cell answers one question: <em>how aligned is my view with the plane spanned by two chart axes?</em>
+    <span class="k">Teal = +</span>, <span class="t">terracotta = −</span>, blank = orthogonal. An axis-aligned view lights exactly one cell at ±1.00.
+    A single tilt slides that weight along a row or column (the cells sharing the untilted index) — <b>no dead spots, exact at every configuration</b>.
+    It shows the <em>plane</em>, not your basis: spinning q₁,q₂ within the view leaves every cell unchanged. It does not show position (z₀) — a compass gives heading, not location.
+  </p>
+</div>
+
+<script>
+const COORDS = ["z_α","z_β","z_q₀","z_q₁","z_q₂","z_q₃","z_μ₁","z_μ₂"];
+const N = 8;
+
+const state = {
+  a:0, b:1,            // base view plane (indices, a<b)
+  k1:6, k2:2,          // tilt targets for q1, q2
+  t1:0, t1T:0, t2:0, t2T:0,
+  anim:false
+};
+
+// ---- DOM ----
+const cv=document.getElementById("c"), ctx=cv.getContext("2d"), hud=document.getElementById("hud");
+const fill=(el,val)=>{COORDS.forEach((c,i)=>{const o=document.createElement("option");o.value=i;o.textContent=c;if(i===val)o.selected=true;el.appendChild(o);});};
+fill(document.getElementById("k1"),state.k1); fill(document.getElementById("k2"),state.k2);
+document.getElementById("k1").onchange=e=>state.k1=+e.target.value;
+document.getElementById("k2").onchange=e=>state.k2=+e.target.value;
+const t1El=document.getElementById("t1"), t2El=document.getElementById("t2");
+t1El.oninput=e=>{state.t1T=(+e.target.value)*Math.PI/180; stopAnim();};
+t2El.oninput=e=>{state.t2T=(+e.target.value)*Math.PI/180; stopAnim();};
+function stopAnim(){ state.anim=false; document.getElementById("anim").classList.remove("on"); }
+document.getElementById("anim").onclick=function(){ state.anim=!state.anim; this.classList.toggle("on",state.anim); };
+
+// ---- linear algebra ----
+const dot=(u,v)=>u.reduce((s,x,i)=>s+x*v[i],0);
+const unit=v=>{const n=Math.hypot(...v)||1; return v.map(x=>x/n);};
+function frame(){
+  // q1 = cos·e_a + sin·e_k1 ; q2 = cos·e_b + sin·e_k2, Gram–Schmidt against q1 (anchor q1)
+  const q1r=new Array(N).fill(0); q1r[state.a]+=Math.cos(state.t1); q1r[state.k1]+=Math.sin(state.t1);
+  const q1=unit(q1r);
+  const q2r=new Array(N).fill(0); q2r[state.b]+=Math.cos(state.t2); q2r[state.k2]+=Math.sin(state.t2);
+  const d=dot(q2r,q1); const q2=unit(q2r.map((x,i)=>x-d*q1[i]));
+  return [q1,q2];
+}
+// bivector p_ij = q1_i q2_j − q1_j q2_i, for i<j
+function bivector(q1,q2){
+  const p=[]; let sum2=0, best={a:-1,b:-1,v:0};
+  for(let i=0;i<N;i++){ p[i]=[]; for(let j=i+1;j<N;j++){ const v=q1[i]*q2[j]-q1[j]*q2[i]; p[i][j]=v; sum2+=v*v; if(Math.abs(v)>Math.abs(best.v)) best={a:i,b:j,v}; } }
+  return {p,sum2,best};
+}
+
+// ---- colour ----
+const CREAM=[236,228,211], TEAL=[28,90,84], TERRA=[165,67,31];
+function cellColour(v){
+  const a=Math.min(1,Math.abs(v)), t=v>=0?TEAL:TERRA;
+  return `rgb(${(CREAM[0]+(t[0]-CREAM[0])*a)|0},${(CREAM[1]+(t[1]-CREAM[1])*a)|0},${(CREAM[2]+(t[2]-CREAM[2])*a)|0})`;
+}
+
+// ---- layout / draw ----
+let GX=0,GY=0,CELL=40;
+function resize(){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  cv.width=w*dpr;cv.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
+  const pad=8,gut=40, avail=Math.min(w-2*pad-gut, h-2*pad-gut); CELL=avail/N;
+  const gridW=gut+N*CELL, gridH=gut+N*CELL;
+  GX=(w-gridW)/2+gut; GY=(h-gridH)/2+gut;
+}
+window.addEventListener("resize",resize);
+
+function draw(){
+  const w=cv.clientWidth,h=cv.clientHeight; ctx.clearRect(0,0,w,h);
+  const [q1,q2]=frame(); const {p,sum2,best}=bivector(q1,q2);
+  const gut=40, fs=Math.min(12.5, CELL*0.3);
+
+  // axis labels (both edges)
+  ctx.font=`700 11px ${getComputedStyle(document.body).fontFamily}`;
+  ctx.fillStyle="#26221d"; ctx.textAlign="center"; ctx.textBaseline="middle";
+  for(let j=0;j<N;j++) ctx.fillText(COORDS[j], GX+j*CELL+CELL/2, GY-gut/2);   // top
+  for(let i=0;i<N;i++) ctx.fillText(COORDS[i], GX-gut/2, GY+i*CELL+CELL/2);   // left
+
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++){
+    const x=GX+j*CELL, y=GY+i*CELL, s=CELL-1.5;
+    if(j>i){
+      const v=p[i][j];
+      ctx.fillStyle=cellColour(v); ctx.fillRect(x,y,s,s);
+      ctx.strokeStyle="rgba(38,34,29,0.18)"; ctx.lineWidth=1; ctx.strokeRect(x+0.5,y+0.5,s-1,s-1);
+      if(Math.abs(v)>=0.1){
+        ctx.font=`${fs}px ${getComputedStyle(document.body).fontFamily}`;
+        ctx.fillStyle=Math.abs(v)>0.5?"#f3ecdd":"#26221d"; ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(v.toFixed(2).replace("0.",".").replace("-.","−."), x+s/2, y+s/2);
+      }
+    } else if(j===i){
+      ctx.fillStyle="rgba(38,34,29,0.05)"; ctx.fillRect(x,y,s,s);   // diagonal: self-plane = 0
+    }
+  }
+  // outline the dominant cell
+  if(best.a>=0 && Math.abs(best.v)>0.02){
+    ctx.strokeStyle="#26221d"; ctx.lineWidth=2;
+    ctx.strokeRect(GX+best.b*CELL+0.5, GY+best.a*CELL+0.5, CELL-2.5, CELL-2.5);
+  }
+
+  document.getElementById("basetag").textContent = `base: ${COORDS[state.a]} × ${COORDS[state.b]} (click a cell)`;
+  const domTxt = Math.abs(best.v)>0.02 ? `<span class="k">${COORDS[best.a]}×${COORDS[best.b]}</span> at <b>${best.v>=0?"+":""}${best.v.toFixed(3)}</b>` : "—";
+  hud.innerHTML = `Σ‖p‖² = <b>${sum2.toFixed(3)}</b> &nbsp;·&nbsp; strongest alignment: ${domTxt}`;
+  document.getElementById("t1v").textContent=(state.t1>=0?"+":"")+Math.round(state.t1*180/Math.PI)+"°";
+  document.getElementById("t2v").textContent=(state.t2>=0?"+":"")+Math.round(state.t2*180/Math.PI)+"°";
+  requestAnimationFrame(tick);
+}
+
+// ---- click to steer: snap base view to the clicked plane ----
+cv.addEventListener("pointerdown",e=>{
+  const r=cv.getBoundingClientRect();
+  const j=Math.floor((e.clientX-r.left-GX)/CELL), i=Math.floor((e.clientY-r.top-GY)/CELL);
+  if(i>=0&&j<N&&j>i){
+    state.a=i; state.b=j; state.t1T=0; state.t2T=0; state.t1=0; state.t2=0;
+    t1El.value=0; t2El.value=0; stopAnim();
+  }
+});
+
+// ---- loop ----
+let last=performance.now();
+function tick(now){
+  const dt=Math.min(0.05,(now-last)/1000); last=now;
+  if(state.anim){
+    state.t1T=Math.sin(now/1300)*Math.PI/2; state.t2T=Math.cos(now/1900)*Math.PI/2;
+    t1El.value=Math.round(state.t1T*180/Math.PI); t2El.value=Math.round(state.t2T*180/Math.PI);
+  }
+  const k=1-Math.pow(0.0016,dt);
+  state.t1+=(state.t1T-state.t1)*k; state.t2+=(state.t2T-state.t2)*k;
+  draw();
+}
+resize(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>
