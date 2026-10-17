@@ -110,6 +110,10 @@ pub mod compute;
 /// non-finite `E*`, are refused before anything decodes (chart_reference §0.6; R-25, R-124; TASK-M2-12).
 pub mod chart_validate;
 
+/// Navigation as chart construction: pan, slice, zoom and tilt as typed `SetField` edits of `SimConfig`'s `z₀`, `q₁`
+/// and `q₂`, and the direction library (chart_decoder_contract Part 4; TASK-M2-22).
+pub mod nav;
+
 // The kernel's decode stage dispatched natively, and its CPU-f64 counterpart `decode_only` (TASK-M2-06): documented in
 // the module itself, whose links resolve there.
 pub mod decode_dispatch;
