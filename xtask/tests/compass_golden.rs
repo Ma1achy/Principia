@@ -481,3 +481,47 @@ negative_control!(
     expected = "cream found at [5, 6]",
     check_cream_found([27, 27, 27])
 );
+
+/// The slice case with a triangle near the cube's nearest corner as its polygon, depth key 5/3, and the slice drawn
+/// after `after` edges.
+fn near_corner(after: usize) -> (Golden, Record) {
+    let triangle = vec![[1.0, 1.0, 1.0], [1.0, -1.0, 1.0], [1.0, 1.0, 0.0]];
+    let mut g = golden("mock_compass_cube_slice");
+    g.polygon = Some(triangle.clone());
+    let mut ours = slice_case();
+    ours.polygon = triangle;
+    let at = ours
+        .items
+        .iter()
+        .position(|i| matches!(i, Item::Slice { .. }))
+        .expect("the slice");
+    let slice = ours.items.remove(at);
+    ours.items.insert(after, slice);
+    (g, ours)
+}
+
+#[test]
+fn compass_golden_the_slices_place_by_its_depth_key() {
+    // The edges' keys, their middles' x + z: −2 once, −1 four times, 0 twice, 1 four times, 2 once. A slice at 5/3
+    // is drawn after the eleven below it, before the nearest.
+    let (g, ours) = near_corner(11);
+    check_same(&g, &ours);
+    for after in [7, 10, 12] {
+        let (g, ours) = near_corner(after);
+        let failures = compass_golden::compare(&g, &ours);
+        assert!(
+            failures.len() == 1 && failures[0].contains("between 11 and 11"),
+            "{after}: {failures:?}"
+        );
+    }
+}
+
+negative_control!(
+    compass_golden_the_slices_place_by_its_depth_key,
+    "the slice drawn after seven edges, its key read four times too far, must fail",
+    expected = "in the edge order",
+    {
+        let (g, ours) = near_corner(7);
+        check_same(&g, &ours)
+    }
+);
