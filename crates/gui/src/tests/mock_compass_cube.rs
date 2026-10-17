@@ -903,3 +903,142 @@ fn mock_compass_cube_plane_basis_turns_its_helper_at_0_9() {
         assert_eq!(compass::plane_basis(n), basis(up, n))
     });
 }
+
+// --- labels on every edge, the colours, the turn, and the pin and a corner contact as painted -------------------------
+
+#[test]
+fn mock_compass_cube_an_edge_label_stands_out_from_the_centre() {
+    let iso = Iso::fit(square172());
+    for (i, j) in EDGES {
+        let edge = [CORNERS[i], CORNERS[j]];
+        let l = compass::edge_label(&iso, edge, "x".to_owned(), false);
+        let ([ax, ay], [bx, by]) = (iso.at64(edge[0]), iso.at64(edge[1]));
+        let (mx, my) = ((ax + bx) / 2.0, (ay + by) / 2.0);
+        let (ox, oy) = (f64::from(l.at.x) - mx, f64::from(l.at.y) - my);
+        // LABEL_OUT from the edge's middle, square to the edge.
+        assert!((ox.hypot(oy) - compass::LABEL_OUT).abs() < 1e-3, "{edge:?}");
+        assert!((ox * (bx - ax) + oy * (by - ay)).abs() < 1e-3, "{edge:?}");
+        let (px, py) = (-(by - ay), bx - ax);
+        let towards = (mx - iso.cx) * px + (my - iso.cy) * py;
+        if towards == 0.0 {
+            // An edge pointing exactly at the centre, as (−1, −1, −1)–(−1, 1, −1): its own left-hand normal, (−dy, dx).
+            assert!(ox * px + oy * py > 0.0, "{edge:?}: {ox}, {oy}");
+        } else if towards.abs() > 1e-9 {
+            assert!(
+                (mx - iso.cx) * ox + (my - iso.cy) * oy > 0.0,
+                "{edge:?} labelled inward: {ox}, {oy}"
+            );
+        }
+        // Between, an edge pointing at the centre to within rounding: either side.
+    }
+    let vertical = [CORNERS[0], CORNERS[2]];
+    assert_eq!(vertical, [[-1.0, -1.0, -1.0], [-1.0, 1.0, -1.0]]);
+    let l = compass::edge_label(&iso, vertical, "x".to_owned(), false);
+    assert!(
+        f64::from(l.at.x) > iso.cx,
+        "right of the vertical edge: {l:?}"
+    );
+    let inward = compass::edge_label(&iso, compass::WIDTH_EDGE, "x".to_owned(), false);
+    rejects("a label inward of its edge", || {
+        assert!(f64::from(inward.at.y) < iso.cy)
+    });
+}
+
+#[test]
+fn mock_compass_cube_colours_from_the_dark_theme() {
+    let v = eframe::egui::Visuals::dark();
+    let (dark, light) = compass::fill_tones(&v);
+    assert_eq!(
+        (dark, light),
+        (v.selection.bg_fill, v.selection.stroke.color)
+    );
+    assert_ne!(dark, light);
+    let rgb = |c: eframe::egui::Color32| [c.r(), c.g(), c.b()];
+    assert_eq!(rgb(compass::fill_colour(&v, 0.0)), rgb(dark));
+    assert_eq!(rgb(compass::fill_colour(&v, 1.0)), rgb(light));
+    let half = compass::fill_colour(&v, 0.5);
+    for (k, got) in rgb(half).into_iter().enumerate() {
+        let (a, b) = (f64::from(rgb(dark)[k]), f64::from(rgb(light)[k]));
+        assert_eq!(got, (a + (b - a) * 0.5) as u8, "channel {k}");
+    }
+    assert_eq!(compass::label_colour(&v, true), v.hyperlink_color);
+    assert_eq!(compass::label_colour(&v, false), v.strong_text_color());
+    assert_eq!(compass::plane_colour(&v), v.selection.stroke.color);
+    assert_eq!(
+        compass::edge_colour(&v),
+        v.widgets.noninteractive.fg_stroke.color
+    );
+    rejects("the fill's tones swapped", || {
+        assert_eq!(rgb(compass::fill_colour(&v, 0.0)), rgb(light))
+    });
+}
+
+#[test]
+fn mock_compass_cube_turn_between_takes_the_short_way() {
+    use std::f64::consts::PI;
+    let d = |a: f64, b: f64| compass::turn_between(a.to_radians(), b.to_radians()).to_degrees();
+    assert!(
+        (d(170.0, -170.0) + 20.0).abs() < 1e-9,
+        "{}",
+        d(170.0, -170.0)
+    );
+    assert!((d(-170.0, 170.0) - 20.0).abs() < 1e-9);
+    assert!((d(30.0, 10.0) - 20.0).abs() < 1e-9);
+    assert!((d(10.0, 30.0) + 20.0).abs() < 1e-9);
+    // Half a turn is +π, in (−π, π].
+    assert_eq!(compass::turn_between(PI, 0.0), PI);
+    rejects("the long way round", || {
+        assert!((d(170.0, -170.0) - 340.0).abs() < 1e-9)
+    });
+}
+
+#[test]
+fn mock_compass_cube_paints_the_pin_and_a_corner_contact() {
+    use crate::explore::compass::PINNED;
+    use crate::explore::lock::GOLD;
+    use eframe::egui::Shape;
+    let v = view(-45.0, -45.0, 0.0, 1.0);
+    // z₀ far along the normal (1, 1, 1): the offset clamps to √3, the contact the corner (1, 1, 1).
+    let mut past = plane(&v, [3.0, 3.0, 3.0]);
+    let (mut app, mut h) = app_at(&past);
+    let d = drawing(&h, &app);
+    let slice = d.slice.clone().expect("the contact");
+    assert_eq!(slice.points, [[1.0, 1.0, 1.0]], "the corner contact");
+    let shapes = super::compass_support::compass_shapes(&mut h, &mut app);
+    super::compass_support::check_painted(&shapes, &d);
+    // Locked: the pin's stalk, dot and head, and "pinned" beside the head.
+    past.z0 = plane(&v, [0.2, 0.1, -0.3]).z0;
+    let (mut app, mut h) = app_at(&past);
+    app.set_field(crate::explore::manifold_view::lock_edit(Lock {
+        locked: true,
+        z_locked: past.z0,
+    }));
+    let _ = h.frame(&mut app, Vec::new());
+    settle(&mut h, &mut app);
+    let d = drawing(&h, &app);
+    let centre = d.iso.at(d.pin.expect("locked"));
+    let head = centre - vec2(0.0, 18.0);
+    let shapes = super::compass_support::compass_shapes(&mut h, &mut app);
+    let close = |a: Pos2, b: Pos2| (a - b).length() < 1e-3;
+    assert!(shapes.iter().any(|s| matches!(s, Shape::Circle(c)
+        if c.fill == GOLD && c.radius == 5.0 && close(c.center, head))));
+    assert!(shapes
+        .iter()
+        .any(|s| matches!(s, Shape::LineSegment { points, stroke }
+        if stroke.color == GOLD && close(points[0], centre) && close(points[1], head))));
+    let text = shapes
+        .iter()
+        .find_map(|s| match s {
+            Shape::Text(t) if t.galley.text() == PINNED => {
+                Some(t.galley.rect.translate(t.pos.to_vec2()))
+            }
+            _ => None,
+        })
+        .expect("the pin's label");
+    assert!((text.left() - (head.x + 8.0)).abs() < 1e-3, "{text:?}");
+    assert!((text.center().y - head.y).abs() < 1e-3, "{text:?}");
+    rejects("the head below the pin", || {
+        assert!(shapes.iter().any(|s| matches!(s, Shape::Circle(c)
+            if c.radius == 5.0 && close(c.center, centre + vec2(0.0, 18.0)))))
+    });
+}

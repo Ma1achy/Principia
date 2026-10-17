@@ -830,8 +830,6 @@ fn paint_slice(painter: &Painter, visuals: &egui::Visuals, iso: &Iso, slice: &Sl
 pub struct Drag {
     /// What it does: the mode when it started, tilting or slicing.
     pub mode: Touch,
-    /// The pointer's travel since it started, in points.
-    pub travel: Vec2,
     /// `(τ₁, τ₂)` in degrees when it started.
     pub from: (f64, f64),
     /// The tilt's targets `(τ₁, τ₂)` in degrees, each clamped to ±90° as the pointer moves.
@@ -846,7 +844,6 @@ impl Drag {
         let a = Angles::of(&View::of(plane));
         Self {
             mode,
-            travel: Vec2::ZERO,
             from: (a.tau1, a.tau2),
             tau: (a.tau1, a.tau2),
             amount: 0.0,
@@ -858,7 +855,6 @@ impl Drag {
     /// in slice mode the horizontal travel moves the slice, the full width the whole range `2·`[`Z0_HALF_RANGE`], and
     /// the vertical does nothing (R-451 B3).
     pub fn moved(&mut self, delta: Vec2, square: Rect) {
-        self.travel += delta;
         let dx = f64::from(delta.x) / f64::from(square.width());
         let dy = f64::from(delta.y) / f64::from(square.height());
         match self.mode {
