@@ -525,3 +525,120 @@ negative_control!(
         check_same(&g, &ours)
     }
 );
+
+/// The slice case against a golden whose first edge reads opacity 0.5 and width 0, with ours at `opacity` and `width`,
+/// and the opacity tolerance 1/16: values a binary fraction apart, so a difference is exactly its tolerance.
+fn first_edge_at(opacity: f64, width: f64) -> Vec<String> {
+    let mut g = golden("mock_compass_cube_slice");
+    g.spec.opacity_tolerance = 0.0625;
+    if let Item::Edge {
+        opacity: o,
+        width: w,
+        ..
+    } = &mut g.reference.items[0]
+    {
+        (*o, *w) = (0.5, 0.0);
+    }
+    let mut ours = slice_case();
+    if let Item::Edge {
+        opacity: o,
+        width: w,
+        ..
+    } = &mut ours.items[0]
+    {
+        (*o, *w) = (opacity, width);
+    }
+    compass_golden::compare(&g, &ours)
+}
+
+#[test]
+fn compass_golden_opacity_and_width_at_their_tolerances() {
+    let width = compass_golden::WIDTH_TOLERANCE;
+    assert_eq!(
+        first_edge_at(0.5625, 0.0),
+        Vec::<String>::new(),
+        "the opacity at its tolerance"
+    );
+    assert_eq!(
+        first_edge_at(0.5, width),
+        Vec::<String>::new(),
+        "the width at its tolerance"
+    );
+    assert_eq!(
+        first_edge_at(0.4375, -width),
+        Vec::<String>::new(),
+        "both, below"
+    );
+    assert_eq!(
+        first_edge_at(0.5625 + 1e-9, 0.0).len(),
+        1,
+        "past the opacity's"
+    );
+    assert_eq!(
+        first_edge_at(0.5, width * 1.001).len(),
+        1,
+        "past the width's"
+    );
+}
+
+negative_control!(
+    compass_golden_opacity_and_width_at_their_tolerances,
+    "an opacity past its tolerance must fail",
+    expected = "opacity and width",
+    assert_eq!(
+        first_edge_at(0.5625 + 1e-9, 0.0),
+        Vec::<String>::new(),
+        "within"
+    )
+);
+
+/// The slice case with the face x = 1 as its polygon, depth key 1, an edge's own, and the slice drawn after `after`
+/// edges.
+fn on_a_key(after: usize) -> (Golden, Record) {
+    let face = vec![
+        [1.0, -1.0, -1.0],
+        [1.0, -1.0, 1.0],
+        [1.0, 1.0, 1.0],
+        [1.0, 1.0, -1.0],
+    ];
+    let mut g = golden("mock_compass_cube_slice");
+    g.polygon = Some(face.clone());
+    let mut ours = slice_case();
+    ours.polygon = face;
+    let at = ours
+        .items
+        .iter()
+        .position(|i| matches!(i, Item::Slice { .. }))
+        .expect("the slice");
+    let slice = ours.items.remove(at);
+    ours.items.insert(after, slice);
+    (g, ours)
+}
+
+#[test]
+fn compass_golden_a_slice_on_an_edges_key_goes_among_them() {
+    // Key 1: seven edges below it, four at it. The stable sort may put it anywhere from after the seven to after the
+    // eleven.
+    for after in [7, 9, 11] {
+        let (g, ours) = on_a_key(after);
+        check_same(&g, &ours);
+    }
+    for after in [6, 12] {
+        let (g, ours) = on_a_key(after);
+        let failures = compass_golden::compare(&g, &ours);
+        assert!(
+            failures.len() == 1 && failures[0].contains("between 7 and 11"),
+            "{after}: {failures:?}"
+        );
+    }
+}
+
+negative_control!(
+    compass_golden_a_slice_on_an_edges_key_goes_among_them,
+    "the slice drawn before the edges below its key must fail",
+    expected = "in the edge order",
+    {
+        let (g, ours) = on_a_key(6);
+        check_same(&g, &ours)
+    }
+);

@@ -355,6 +355,46 @@ fn mock_compass_cube_clip_and_grid() {
         at.len() == 4 && at.iter().zip(want).all(|(a, b)| (a - b).abs() < 1e-12),
         "{at:?}"
     );
+    // Tilted and off the centre: every line ends on the polygon's boundary.
+    let h = 0.5f64.sqrt();
+    for c in [
+        Cut {
+            normal: [h, 0.0, h],
+            offset: 0.9,
+        },
+        Cut {
+            normal: [0.0, h, h],
+            offset: -0.7,
+        },
+    ] {
+        let poly = compass::cross_section(c);
+        let lines = grid(c, &poly);
+        assert!(lines.len() >= 4, "{lines:?}");
+        let on_edge = |p: P3| {
+            (0..poly.len()).any(|i| {
+                let (a, b) = (poly[i], poly[(i + 1) % poly.len()]);
+                let ab: P3 = std::array::from_fn(|k| b[k] - a[k]);
+                let ap: P3 = std::array::from_fn(|k| p[k] - a[k]);
+                let t = (0..3).map(|k| ab[k] * ap[k]).sum::<f64>()
+                    / (0..3).map(|k| ab[k] * ab[k]).sum::<f64>();
+                (-1e-9..=1.0 + 1e-9).contains(&t)
+                    && (0..3).all(|k| (a[k] + t * ab[k] - p[k]).abs() < 1e-9)
+            })
+        };
+        let n = poly.len() as f64;
+        let centre: P3 = std::array::from_fn(|k| poly.iter().map(|p| p[k]).sum::<f64>() / n);
+        rejects("a line ending inside the polygon", || {
+            assert!(on_edge(centre), "{centre:?}")
+        });
+        for line in &lines {
+            for p in line {
+                assert!(
+                    on_edge(*p),
+                    "{p:?} of {line:?} is not on the polygon's boundary {poly:?}"
+                );
+            }
+        }
+    }
     rejects("a grid from the cube's centre", || {
         assert!(at.iter().any(|a| a.abs() < 1e-12))
     });
