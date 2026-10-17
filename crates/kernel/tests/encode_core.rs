@@ -914,7 +914,9 @@ fn collinear_at<R: P>() -> RoundTrip {
 
 /// Just off the `−x` half-axis, `λ̃_y = ±1e-13` and `±1e-9`: the true `β` is within `10⁻¹³` of π, which a
 /// round-to-nearest f32 `atan2` returns as f32's nearest π, above `π̂`; `β` is then `π̂` by the select, never above it,
-/// at either sign of `λ̃_y` (C8/Q5; dd_encode §3.1). At f64, `π̂` is f64's nearest π, which `atan2` never exceeds. Below
+/// at either sign of `λ̃_y` (C8/Q5; dd_encode §3.1). glibc's `atan2f` returns f32's π here; Apple's returns `π̂`, so on
+/// macOS the select is not reached and this checks only the bound. At f64, `π̂` is f64's nearest π, which `atan2` never
+/// exceeds. Below
 /// `π̂`, as at `λ̃_y = 1e-6`, `β` is `atan2`'s own value.
 fn check_near_half_axis<R: P>() {
     let pi = R::LIT_7;

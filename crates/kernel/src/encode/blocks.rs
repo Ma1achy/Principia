@@ -17,12 +17,14 @@
 //!
 //! **`β`** ([`beta`]; R-437, R-438; dd_encode §3.1). `β` reads `|λ̃_y|`, by `abs`, never `max` (`FMax` returns `−0` for
 //! `max(−0, +0)`): `C`'s deadband leaves `λ̃_y ∈ [−δ_λ, 0]` unmirrored (R-82), and `β ∈ [0, π]` holds because `β` reads
-//! `|λ̃_y|`. Each case is chosen by a comparison with the constant 0, selecting a value already computed:
+//! `|λ̃_y|`. Each case is chosen by a comparison with a constant (0, or `π̂` for the third), selecting a value already
+//! computed:
 //! - `λ̃_y` compares equal to 0 (true for `±0`) and `λ̃_x < 0`, the `−x` half-axis: `π̂`, R-417's image of π
 //!   (`descriptor::pi_image`), since a GPU may ignore a zero's sign through `atan2` and give `−π` there;
 //! - `λ̃_x = 0` and `λ̃_y = 0`, the `α = 0` pole: 0, never `atan2(0, 0)`, which GLSL.std.450 leaves undefined;
 //! - `atan2(|λ̃_y|, λ̃_x)` above `π̂`: `π̂`. Near the `−x` half-axis the true `β` is just below π, and an f32 `atan2`
-//!   that rounds to nearest (glibc's and Apple's `atan2f`) returns f32's nearest π, above `π̂` (C8/Q5; dd_encode §3.1);
+//!   that rounds to nearest (glibc's `atan2f`; Apple's returns `π̂` there) gives f32's nearest π, above `π̂` (C8/Q5;
+//!   dd_encode §3.1);
 //! - elsewhere `atan2(|λ̃_y|, λ̃_x)`.
 //!
 //! The two zero-selected cases are disjoint (`λ̃_x < 0` against `λ̃_x = 0`). `α = atan2(‖λ̃‖, ‖ρ̃‖)` has no pole on the
