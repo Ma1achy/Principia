@@ -218,10 +218,10 @@ pub fn scroll(scroll: &Scroll, state: &mut State, entries: &[LogEntry]) {
 
 /// The rows a log of `height` points shows whole, each `line` tall and `row_h` from the next: at least one.
 pub fn page_of(height: f32, line: f32, row_h: f32) -> usize {
-    if height < line || row_h <= 0.0 {
+    if row_h <= 0.0 {
         return 1;
     }
-    ((height - line) / row_h).floor() as usize + 1
+    ((height - line) / row_h).floor().max(0.0) as usize + 1
 }
 
 /// The first row drawn whole in a log scrolled `offset` points down, its rows `row_h` apart: a row scrolled past by

@@ -812,3 +812,104 @@ fn mock_console_keys_the_tree_lands_moves_and_scrolls_as_r450_has_it() {
         assert_eq!(scrolled(Arrow(Up), 1.0), by(ScrollBy::Entries(1)))
     });
 }
+
+/// F3 hides the layer: a scroll asked for in the frame before is forgotten, as an adjustment is.
+#[test]
+fn mock_console_keys_hiding_the_layer_forgets_a_scroll() {
+    let (mut app, mut h) = long_log(20);
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    let key = |key, pressed| Event::Key {
+        key,
+        physical_key: None,
+        pressed,
+        repeat: false,
+        modifiers: NONE,
+    };
+    let _ = h.frame(&mut app, vec![key(Key::End, true)]);
+    let asked = app.keyboard.scrolled().len();
+    assert_eq!(asked, 1, "End asked for a scroll");
+    let _ = h.frame(&mut app, vec![key(Key::F3, true)]);
+    assert!(!app.shown, "F3 hid the layer");
+    let left = app.keyboard.scrolled().len();
+    assert_eq!(left, 0, "the scroll forgotten");
+    rejects("a scroll kept while hidden", || assert_eq!(asked, 0));
+}
+
+/// A click in the console while another window holds the focus keeps that window's opener: Run, opened from the top
+/// bar, then the console opened by an error and clicked, Esc out of each in turn, back on Run….
+#[test]
+fn mock_console_keys_a_click_keeps_the_other_windows_openers() {
+    let (mut app, mut h) = with_warnings(0);
+    app.view.focus.path.clear();
+    press(&mut h, &mut app, Key::Tab, NONE);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    for _ in 0..12 {
+        if focus(&app).last() == Some(&"run") {
+            break;
+        }
+        press(&mut h, &mut app, Key::ArrowRight, NONE);
+    }
+    press(&mut h, &mut app, Key::Enter, NONE);
+    settle(&mut h, &mut app);
+    assert!(app.is_open(Window::Run));
+    let in_run = app.view.focus.path.clone();
+    assert_eq!(in_run[0], "win_run");
+    app.side().engine().raise_error();
+    settle(&mut h, &mut app);
+    click_scope(&mut h, &mut app, COPY);
+    check_at(&at(&app), &on_control(COPY), NAV, "the click");
+    // Esc, Esc: out of the console, back where the focus was in Run.
+    presses(&mut h, &mut app, Key::Escape, NONE, 2);
+    settle(&mut h, &mut app);
+    assert!(!app.is_open(Window::Console));
+    assert_eq!(app.view.focus.path, in_run, "back in Run");
+    // Esc up and out of Run: back on Run….
+    for _ in 0..3 {
+        if !app.is_open(Window::Run) {
+            break;
+        }
+        press(&mut h, &mut app, Key::Escape, NONE);
+    }
+    settle(&mut h, &mut app);
+    assert!(!app.is_open(Window::Run));
+    let got = focus(&app)
+        .iter()
+        .map(|s| (*s).to_owned())
+        .collect::<Vec<_>>();
+    assert_eq!(got, ["top_bar", "run"], "back on Run…");
+    rejects("Run's opener lost to the console's click", || {
+        assert_eq!(got, Vec::<String>::new())
+    });
+}
+
+/// The wheel scrolls the log; the keys go on from where it left it, so the mouse and the keyboard agree (A3, A4).
+#[test]
+fn mock_console_keys_the_keys_scroll_on_from_the_wheel() {
+    let (mut app, mut h) = long_log(60);
+    let log = app.keyboard.place_of(LOG).expect("the log placed").rect;
+    let _ = h.frame(&mut app, vec![Event::PointerMoved(log.center())]);
+    for _ in 0..4 {
+        let wheel = Event::MouseWheel {
+            unit: eframe::egui::MouseWheelUnit::Line,
+            delta: eframe::egui::vec2(0.0, -3.0),
+            phase: eframe::egui::TouchPhase::Move,
+            modifiers: NONE,
+        };
+        let _ = h.frame(&mut app, vec![wheel]);
+    }
+    for _ in 0..4 {
+        settle(&mut h, &mut app);
+    }
+    let wheeled = top(&app);
+    assert!(wheeled > 2, "the wheel scrolled the log to row {wheeled}");
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    settle(&mut h, &mut app);
+    let after = top(&app);
+    assert_eq!(after, wheeled + 1, "↓ goes on from the wheel's row");
+    rejects("a ↓ that jumps back to the keys' last row", || {
+        assert_eq!(1, wheeled + 1)
+    });
+}

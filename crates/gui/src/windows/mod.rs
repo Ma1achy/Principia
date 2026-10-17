@@ -278,8 +278,8 @@ pub fn frame(
 /// Returns whether the × was clicked.
 fn title_row(ui: &mut Ui, keys: &mut Keys<'_>, title: &str, close: ScopeId) -> bool {
     let mut clicked = false;
-    let height =
-        ui.text_style_height(&egui::TextStyle::Heading) + ui.spacing().button_padding.y * 2.0;
+    // The row is the title's height at least: its × grows it to fit.
+    let height = ui.text_style_height(&egui::TextStyle::Heading);
     let size = egui::vec2(ui.available_width(), height);
     let right = egui::Layout::right_to_left(egui::Align::Center);
     ui.allocate_ui_with_layout(size, right, |ui| {
