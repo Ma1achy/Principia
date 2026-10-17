@@ -9,7 +9,7 @@
 //! - `pair_geometry_shared*`: an instrumented `Real`, which counts square roots, shows one pairwise-distance computation
 //!   per force evaluation, and the potential and `r_min` reading the same `PairGeom` and forming none (REQ-PERF-001);
 //!   the geometry's values by hand, indexed by R-22 pair id (pair `k` opposite body `k`); `closest`'s least `d²`, ties
-//!   going to the lowest pair id.
+//!   going to the lowest pair id; `d²` built as `fma(dy, dy, dx·dx)` (R-34).
 //!
 //! **Tolerances** (applied per R-369: test tolerances): a value is compared relative to its scale, in units of the
 //! precision's `eps`. [`KNOWN_EPS`] = 2 for the hand-computed state at f64, whose inputs are all exact, so the error is
@@ -512,6 +512,38 @@ negative_control!(
     "the bodies relabelled is another geometry",
     expected = "the geometry is not the hand-computed one",
     check_geometry(&PairGeom::new(&[R[1], R[2], R[0]]))
+);
+
+/// A separation `(x, y)` whose `d²` rounds differently fused and unfused: `fma(y, y, x·x)` is 1.9945402333912907,
+/// `y·y + x·x` 1.9945402333912905.
+const UNFUSED_XY: [f64; 2] = [1.0413266654746878, 0.9540330230986024];
+
+/// `d2` is `fma(y, y, x·x)` for the separation `(x, y)`, which differs from the unfused `y·y + x·x` (R-34).
+fn check_fused(d2: f64, [x, y]: [f64; 2]) {
+    let fused = y.mul_add(y, x * x);
+    assert_ne!(
+        fused,
+        y * y + x * x,
+        "the separation does not tell fused from unfused"
+    );
+    assert_eq!(d2, fused, "d² is not built as fma(dy, dy, dx·dx)");
+}
+
+#[test]
+fn pair_geometry_shared_d2_fused() {
+    let g = PairGeom::new(&[[5.0, 7.0], [0.0, 0.0], UNFUSED_XY]);
+    assert_eq!(g.sep()[0], UNFUSED_XY, "pair 0's separation is not r₂ − r₁");
+    check_fused(g.d2()[0], UNFUSED_XY);
+}
+
+negative_control!(
+    pair_geometry_shared_d2_fused,
+    "the unfused sum dx·dx + dy·dy",
+    expected = "d² is not built as fma(dy, dy, dx·dx)",
+    {
+        let [x, y] = UNFUSED_XY;
+        check_fused(x * x + y * y, UNFUSED_XY)
+    }
 );
 
 /// `closest` on each layout `(positions, pair)`: the least `d²`, the lowest pair id of a tie.

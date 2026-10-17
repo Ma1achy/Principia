@@ -4,6 +4,14 @@
 //! The pairs are indexed by R-22's pair id: pair `k` is the side opposite body `k`, `(i, j) = (1, 2), (2, 0), (0, 1)`
 //! for `k = 0, 1, 2` (`i = k + 1`, `j = k + 2`, mod 3), the order `burrau::pair_id` and `shape::Landmarks::bc` use and
 //! dd_simstate_payload §2's `detail` and `dmin_pair` read. Pair `k`'s separation is `dₖ = rⱼ − rᵢ`.
+//!
+//! **`d²` is a branch input** (R-34's enumeration): [`PairGeom::closest`] compares it here, and the driver's collision
+//! test `d² < r_coll²` and its `N_sub` bucket will read the same `d²`. So it is built in the fixed form the
+//! determinism discipline gives, a lone subtract, a lone multiply and an explicitly written `fma(dy, dy, dx·dx)`
+//! through [`RealOps::fma`](crate::real::RealOps::fma), never a plain `dx·dx + dy·dy` a backend may contract or not
+//! (gpu_determinism_note § "The discipline", rules 2 and 6; integrator_contract Part 4; dd_integrator §3.3; R-34).
+//! Whether every backend fuses an explicit `fma` is RQ-298's open question; this `d²` is held with the other `fma`-built
+//! branch inputs under its "applied meanwhile".
 
 use crate::Real;
 
@@ -18,7 +26,7 @@ pub struct PairGeom<R> {
 }
 
 impl<R: Real> PairGeom<R> {
-    /// The pairwise geometry of the positions `r`: per pair, `dₖ`, `d² = dₖ·dₖ`, `‖dₖ‖ = √d²` and
+    /// The pairwise geometry of the positions `r`: per pair, `dₖ`, `d² = fma(dy, dy, dx·dx)`, `‖dₖ‖ = √d²` and
     /// `‖dₖ‖³ = d²·‖dₖ‖`.
     #[inline]
     pub fn new(r: &[[R; 2]; 3]) -> Self {
@@ -28,9 +36,9 @@ impl<R: Real> PairGeom<R> {
             [r[1][0] - r[0][0], r[1][1] - r[0][1]],
         ];
         let d2 = [
-            sep[0][0] * sep[0][0] + sep[0][1] * sep[0][1],
-            sep[1][0] * sep[1][0] + sep[1][1] * sep[1][1],
-            sep[2][0] * sep[2][0] + sep[2][1] * sep[2][1],
+            sep[0][1].fma(sep[0][1], sep[0][0] * sep[0][0]),
+            sep[1][1].fma(sep[1][1], sep[1][0] * sep[1][0]),
+            sep[2][1].fma(sep[2][1], sep[2][0] * sep[2][0]),
         ];
         let norm = [
             d2[0].square_root(),
