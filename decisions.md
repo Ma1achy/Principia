@@ -11690,7 +11690,10 @@ follow-up task):*
   there, in navigation mode (R-450 A3); a click on a text input starts typing in it. The human may veto this reading.
 - **B7. The checks.** REQ-GUI-189's verify gains a script: a click on the search field, letters typed, then a click on
   Copy or the log lands in navigation mode there and a letter types nothing, with a control in which typing survives
-  the click. REQ-GUI-190's verify gains a click on a text field outside the console (the Run window's, the stain
+  the click; and a second script: a click on the search field, letters typed, then a click on the Figure ends the
+  typing and leaves the focus on the search field in navigation mode, the ring orange, a letter then typing nothing,
+  with controls in which the Figure click moves the focus to the Figure scope or leaves the field typing (gui review
+  5558848660, G1). REQ-GUI-190's verify gains a click on a text field outside the console (the Run window's, the stain
   library's) that must start typing, with a control in which such a field needs Enter.
 - R-450 and R-409 gain forward lines (R-292, R-293).
 - R-456 is in the "design" group of `plan/rule_groups.yaml`, with R-450.
