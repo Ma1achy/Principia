@@ -166,11 +166,12 @@ negative_control!(
     check_lin(Compaction::Lin { lo: 0.0, hi: 8.0 })
 );
 
-/// Checks that `wgsl` declares `INVALID_OVERRIDE: u32 = override_on [0, 1]` and `INVALID_COLOUR`, R-16's magenta.
+/// Checks that `wgsl` declares, first, `INVALID_OVERRIDE: u32 = override_on [0, 1]` and `INVALID_COLOUR`, R-16's
+/// magenta; a compaction's and a ramp's run-time settings follow them (TASK-M7-05; lowering contract Part 3).
 fn check_declares(wgsl: &str, override_on: f64) {
     let d = Declaration::parse(wgsl).unwrap_or_else(|e| panic!("{e}"));
     let names: Vec<&str> = d.uniforms.iter().map(|u| u.name.as_str()).collect();
-    assert_eq!(names, ["INVALID_OVERRIDE", "INVALID_COLOUR"]);
+    assert_eq!(names[..2], ["INVALID_OVERRIDE", "INVALID_COLOUR"]);
     let o = &d.uniforms[0];
     assert_eq!((o.ty, o.range), (UniformType::U32, Some((0.0, 1.0))));
     assert_eq!(o.default, vec![override_on], "the override's default");

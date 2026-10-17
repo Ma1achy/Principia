@@ -701,6 +701,22 @@
   requirements: [REQ-COL-070]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-3]
+- id: TASK-M2-32
+  milestone: M2
+  title: "The outcome view conformed to R-444 to R-448: nine physical classes, failures drawn black, forbidden regions hatched from the chart, and the OKLab-uniform preset"
+  depends_on: [TASK-M2-05, TASK-M1-10, TASK-M1-14, TASK-M1-17]  # R-444: TASK-M1-10, TASK-M1-14 and TASK-M1-17 have merged; applied per R-369
+  needs: [REQ-COL-002, REQ-COL-062, REQ-COL-067, REQ-COL-068, REQ-TOOL-162]
+  requirements: [REQ-COL-101, REQ-COL-102, REQ-COL-103, REQ-COL-104, REQ-COL-105]
+  reviewers: [code, qa, physics, gui]  # physics for REQ-COL-102's definition (R-72): how the view reads the chart's classification
+  pitfalls: [PIT-1.2, PIT-3]
+- id: TASK-M2-33
+  milestone: M2
+  title: "Display names: one conversion function, 1-based labels on every human-facing surface, and 0-based exports that say so"
+  depends_on: [TASK-M2-32]  # R-449: both change outcome.rs's labels; applied per R-369
+  needs: [REQ-COL-002, REQ-COL-004]
+  requirements: [REQ-GUI-188, REQ-GEN-036]
+  reviewers: [code, qa, gui]
+  pitfalls: []
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -1637,6 +1653,54 @@
   requirements: [REQ-GUI-181, REQ-GUI-182, REQ-GUI-183, REQ-GUI-184]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M6-32
+  milestone: M6
+  title: "The console's two scopes and the keyboard's reach in every window (R-450)"
+  depends_on: [TASK-M6-28]
+  needs: []
+  requirements: [REQ-GUI-189, REQ-GUI-190]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-33
+  milestone: M6
+  title: "The compass's cube as the nav-cube reference draws it (R-451)"
+  depends_on: [TASK-M6-31]
+  needs: []
+  requirements: [REQ-GUI-191, REQ-GUI-192, REQ-GUI-193]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-34
+  milestone: M6
+  title: "The compass's views: the switcher, the Plücker view, the position readout, the latent steer and the keys (R-452)"
+  depends_on: [TASK-M6-33]
+  needs: []
+  requirements: [REQ-GUI-194, REQ-GUI-195, REQ-GUI-196, REQ-GUI-197, REQ-GUI-198]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-35
+  milestone: M6
+  title: "The compass's Jacobi and Shape views and the physical steer (R-452)"
+  depends_on: [TASK-M6-34]  # waits on RQ-341 to RQ-346 as well (R-452)
+  needs: []
+  requirements: [REQ-GUI-199, REQ-GUI-200]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M6-36
+  milestone: M6
+  title: "The Trajectory panel: a click pins a trajectory, and its views pan, zoom and orbit (R-453)"
+  depends_on: [TASK-M6-27]
+  needs: []
+  requirements: [REQ-GUI-201, REQ-GUI-202]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-37
+  milestone: M6
+  title: "Degenerate-tilt guards"
+  depends_on: [TASK-M6-26, TASK-M6-27, TASK-M6-31]  # the guards (in_plane, chart_coords, about_the_pin) are TASK-M6-26's, the mock figure's use of them TASK-M6-27's, the tilt-mode drag TASK-M6-31's; all merged
+  needs: []
+  requirements: [REQ-GUI-203]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
@@ -2000,8 +2064,8 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30]
-  needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069]
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32]  # TASK-M2-32 for REQ-COL-102's lane (R-446)
+  needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102]
   requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056]
   reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
   pitfalls: []
@@ -2040,16 +2104,16 @@
 - id: TASK-M8-10
   milestone: M8
   title: The hover trace and label on the figure
-  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27]
-  needs: [REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002]
+  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33]  # TASK-M2-33 for R-449's display names
+  needs: [REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002, REQ-GUI-188]
   requirements: [REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156]
   reviewers: [code, qa, gui]
   pitfalls: [PIT-2.4]
 - id: TASK-M8-11
   milestone: M8
   title: "The Trajectory panel: summary, real space, the turning shape sphere, kept orbits"
-  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27]
-  needs: [REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047]
+  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33]  # TASK-M2-33 for R-449's display names
+  needs: [REQ-CHART-036, REQ-CHART-018, REQ-INT-003, REQ-VAL-023, REQ-PAY-033, REQ-PAY-047, REQ-GUI-188]
   requirements: [REQ-GUI-088, REQ-GUI-089, REQ-GUI-054]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
@@ -2073,7 +2137,7 @@
   milestone: M8
   title: "Inspector window and pane 1: the editable IC on the physical canvas (05_inspectors.png)"
   depends_on: [TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28]
-  needs: [REQ-GUI-008, REQ-TOOL-040, REQ-SYS-016, REQ-GUI-001, REQ-DEC-002, REQ-ENC-008]
+  needs: [REQ-GUI-008, REQ-TOOL-040, REQ-SYS-016, REQ-GUI-001, REQ-DEC-002, REQ-ENC-008, REQ-GUI-188]
   requirements: [REQ-GUI-112, REQ-GUI-113, REQ-GUI-061, REQ-GUI-062, REQ-GUI-063, REQ-GUI-068]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
@@ -2089,7 +2153,7 @@
   milestone: M8
   title: Inspector pane 3, the one timeline, and the readouts
   depends_on: [TASK-M8-14, TASK-M8-15, TASK-M4-15]
-  needs: [REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074]
+  needs: [REQ-GUI-008, REQ-TOOL-040, REQ-TOOL-041, REQ-SYS-017, REQ-SYS-016, REQ-PAY-074, REQ-GUI-188]
   requirements: [REQ-GUI-055, REQ-GUI-066, REQ-GUI-067, REQ-GUI-115, REQ-GUI-116, REQ-GUI-117, REQ-GUI-119, REQ-GUI-145, REQ-VAL-108, REQ-ENC-032]
   reviewers: [code, qa, physics, gui]
   pitfalls: [PIT-9]
@@ -2137,7 +2201,7 @@
   milestone: M8
   title: Legend generated by evaluating the stain (06_legend.png)
   depends_on: [TASK-M8-19, TASK-M8-10, TASK-M6-27]
-  needs: [REQ-GEN-019, REQ-COL-002, REQ-GUI-021, REQ-GUI-030, REQ-COL-018]
+  needs: [REQ-GEN-019, REQ-COL-002, REQ-GUI-021, REQ-GUI-030, REQ-COL-018, REQ-GUI-188]
   requirements: [REQ-GUI-105, REQ-GUI-106]
   reviewers: [code, qa, gui]
   pitfalls: []

@@ -166,54 +166,127 @@ an Okabe–Ito cycle for small class counts. This is the categorical case of §1
 assignment: a class→colour map is a swatch-set.
 
 The outcome **`state`** field is the one categorical field with a **canonical default palette**, because
-its nine terminal classes carry structure worth encoding in the colours themselves:
+its nine classes carry structure worth encoding in the colours themselves. **The outcome view shows physical outcomes
+only (R-444):**
 
-| class | colour | sRGB | | class | colour | sRGB |
-|-------|--------|------|-|-------|--------|------|
-| collision 0–1 (pair 2) | red     | `#DE2D2D` | | body 0 escape   | yellow  | `#F0DE32` |
-| collision 0–2 (pair 1) | green   | `#2EBC4E` | | body 1 escape   | magenta | `#E034C6` |
-| collision 1–2 (pair 0) | blue    | `#3462E0` | | body 2 escape   | cyan    | `#30C8DC` |
-| bounded        | black   | `#141418` | | collision @ t=0 | orange  | `#F29620` |
-| degenerate     | white   | `#ECECF0` | |                 |         |           |
+| class | payload | colour | sRGB |
+|-------|---------|--------|------|
+| bounded / nothing yet | `bounded`, `running` and every failure (R-446) | black | `#141418` |
+| collision 1–2 | collision, `detail` = pair 2 (bodies 0, 1) | red | `#DE2D2D` |
+| collision 1–3 | collision, `detail` = pair 1 (bodies 2, 0) | green | `#2EBC4E` |
+| collision 2–3 | collision, `detail` = pair 0 (bodies 1, 2) | blue | `#3462E0` |
+| triple collision | collision, `detail` = 3 | orange | `#F29620` |
+| escape body 1 | escape, `detail` = 0 | yellow | `#F0DE32` |
+| escape body 2 | escape, `detail` = 1 | magenta | `#E034C6` |
+| escape body 3 | escape, `detail` = 2 | cyan | `#30C8DC` |
+| triple ejection | escape, `detail` = 3 | purple | `#611597` |
+
+**The class names are what a person reads, 1-based (R-449):** the bodies are 1, 2, 3 and a pair is named by its two
+bodies, smaller first, never by its pair id. The payload column keeps the internal 0-based ids (R-22: body `k` is
+`detail` `k`, pair `k` the side opposite body `k`), which the code, the WGSL and every machine-readable export use.
+Every legend, label and swatch name takes the class's name from the one display function (payload §2, "What a person
+reads"). R-444 to R-448 wrote these classes 0-based ("collision 0–1", "escape body 0"); the classes and their colours
+are unchanged, only the names as shown.
 
 The assignment is a **mnemonic, not arbitrary**: **collisions are additive primaries keyed by the
-colliding pair** (0–1 → R, 0–2 → G, 1–2 → B); **escapes are subtractive primaries keyed by the
-escaping body** (0 → Y, 1 → M, 2 → C; 0-based, R-22). The two event *families* (collision vs escape) are therefore
-separable at a glance while the pair/body identity stays legible; the three non-generic outcomes are
-bounded (black), the t=0 collision (orange), and degenerate (white). The nine classes read from the
-`state` enum **plus the `detail` union** — collision → pair id, escape → body id (so the R/G/B/Y/M/C
-assignment lands on `detail`, not on a second field). **How the table reads the payload (R-96):** "degenerate" is
-`decode_failed`; "collision @ t=0" is a collision with `t_end_step == 0`. The two states the table has no row for:
-`running` shows neutral grey, and `sim_failed` shows the invalid pattern (§3). There is **no separate `escaper` field**: the
+colliding pair** (1–2 → R, 1–3 → G, 2–3 → B); **escapes are subtractive primaries keyed by the
+escaping body** (1 → Y, 2 → M, 3 → C; as shown, R-449; internally `detail` 0, 1 and 2, R-22). The two event *families* (collision vs escape) are therefore
+separable at a glance while the pair/body identity stays legible; the three classes outside the primaries are
+bounded / nothing yet (black), triple collision (orange) and triple ejection (purple). The nine classes read from the
+`state` enum **plus the `detail` union** — collision → pair id or 3, escape → body id or 3 (so the R/G/B/Y/M/C
+assignment lands on `detail`, not on a second field). **How the table reads the payload (R-444 to R-446):** from
+`state` and `detail` alone. `t_end_step` plays no part: a collision at `t_end_step == 0` is an ordinary pair or triple
+collision and draws in that colour (R-445); timing is carried by lightness when a stain wants it, the outcome ×
+`t_end` bivariate preset (§4.1), white = early. **Black means "nothing has happened yet, up to the playhead"
+(R-446):** `bounded`, `running` and every failure draw `#141418` in the outcome view: `sim_failed` of each detail
+(NaN in state, Inf or overflow in state, a non-finite derived quantity, payload §2: the human's "NaN, infinity"),
+`decode_failed` whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's
+`M01_TINY`, a non-finite decode), and a reserved `state` code (applied per R-369). The outcome view reads only `state`
+and `detail`, integer fields, so it never receives a NaN itself; storage holds none (R-79). **`#141418` is the outcome
+palette's explicit invalid treatment**, which §3 ("Overridable per node") and render_gui_spec §13 ("every colouring
+has an explicit invalid-pixel treatment") allow, so R-79's rule that NaN or a sentinel reads as "no data", and
+R-436's, are met in the outcome view by black, not by the hatch. A view starts black and fills
+in as events fire. Failures are shown by the debug views, which keep the invalid hatch and their own palettes (the
+`state` and `detail` views, `principia_debug_tooling_plan.md` §B). **Forbidden chart regions keep the chart contract's
+forbidden-region treatment** in the outcome view, the hatch `debug_invalid(frag_xy)` (`principia_chart_decoder_contract.md`
+Part 3), decided from the chart alone, never from the payload's `decode_failed` detail, which cannot tell the two
+hatches apart (R-446). **A pixel keeps the hatch where chart_decoder_contract Part 3 hatches it**, on every pixel,
+inside `[0,1]²` and past it: after the axes' extension types act, a bounded axis past its edge, a state `validate`
+rejects (layer 2, or layer 3 on a finite decoded state), or a `Φ` that fails to evaluate (non-finite, or outside its
+domain). Both hatches keep it, the domain's end and the universal fallback (applied per R-369). **`Φ` here is the
+chart map, `Chart::map`** (`principia_chart_reference.md` §5.1), not the shared decoder after it: the decoder's own
+outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any tag added later) and a
+non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it, as
+R-446's list of failures says (applied per R-369). **The axes' primary ranges hatch nothing:** R-446's words list them
+among the chart's inputs ("types, primary ranges, validate, Φ"), quoting word for word chart_decoder_contract Part 3's
+sentence on what the area statistic reads ("The statistic reads the chart (the types, the primary ranges, `validate`,
+`Φ`)"), but under Part 3, whose treatment the ruling keeps,
+they decide what the area statistics count (R-408), not what is hatched (applied per R-369, flagged), so a pixel
+outside a primary range that the chart does not hatch (the shape sphere past its pole, a periodic redraw) is a system
+and draws its outcome, and one whose state fails `validate` there is hatched. Every other `decode_failed` sample draws
+black. How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
+by the task that needs it. *Was (R-96, superseded in part by R-444 to R-446):*
+"degenerate", `decode_failed`, drawn white `#ECECF0`; "collision @ t=0", a collision with `t_end_step == 0`, drawn
+orange; `running` in the neutral grey and `sim_failed` in the invalid pattern. There is **no separate `escaper` field**: the
 escaping body *is* `detail | state=escape`, so “which body escaped” is already carried by this map's
 escape colours. A standalone escaper view is therefore this map **filtered to the escape classes** — a
 **categorical filter** (`show class ∈ {…}, mute the rest`), which is a general operation any categorical
-mode admits (“just collisions”, “just body-2 escape”), not a distinct render mode.
+mode admits (“just collisions”, “just body 3's escape”, R-449), not a distinct render mode.
 
-**The "not yet" style (R-399).** `running`'s neutral grey is not a flat swatch: "not yet", for running samples and
-for an unset `d_min` alike, is the neutral grey (REQ-COL-053) with a fine dot stipple from the pixel position, drawn by
+**The "not yet" style (R-399).** The neutral grey of "not yet" is not a flat swatch: "not yet", for running samples of a
+field that holds no value for them and for an unset `d_min` alike, is the neutral grey (REQ-COL-053) with a fine dot
+stipple from the pixel position, drawn by
 `debug_not_yet(frag_xy)` (render contract, presentation layer), distinct from the invalid hatch's stripes. A ramp draws
 one flat colour per value, so no ramp, greyscale included, can collide with it. The grey's value and the stipple's
 pattern are proposed for the M1 gate (REQ-COL-053, REQ-COL-064). **Confirmed at the M1 gate:** the grey `#4E4E4E`
 (R-433), and the stipple as a 2 × 2 px dot in each 4 × 4 physical-pixel cell over it, its dots changed from the proposed
 `#808080` to `#909090`, so that no flat palette colour comes within the hatch's τ = 0.101 of every pixel of a 4 × 4
-block: the nearest is 0.115 from its farthest pixel (R-434).
+block: the nearest is 0.115 from its farthest pixel (R-434). **Not in the outcome view (R-446):** there `running`
+samples draw black, bounded / nothing yet, not the style. The style and its calibrations stand for every other field
+that uses them, an unset `d_min` among them.
 
-**The two triple outcomes (proposed; RQ-234, decided per R-369; REQ-COL-062).** Two valid outcomes have no row in
-the table either: **triple collision**, a collision with `detail = 3`, and **triple ejection**, an escape with
-`detail = 3` (payload § `sample_descriptor`, "3 means all three"; R-30; REQ-EVT-006). They are neither `running` nor
-`sim_failed`, so neither takes the grey or the invalid pattern, which stays NaN's (PIT-8). Each gets a swatch of its
-own, a calibration (R-71): proposed with its evidence by TASK-M1-10 (its OKLab separation from the nine classes, the
-running grey and the invalid pattern's colours) and confirmed by the human at the M1 gate. **The proposed values
-(R-71; TASK-M1-10), until the human confirms them at the M1 gate:** triple collision, lavender `#D6A1FF`, OKLab
-lightness 0.792; triple ejection, navy `#000097`, OKLab lightness 0.306. Of the 8-bit sRGB colours, `#000097` is the
-one farthest in OKLab from its nearest of the nine classes, the running grey (`#4E4E4E`, itself proposed, REQ-COL-053)
-and the invalid pattern's two colours: 0.233, from bounded; `#D6A1FF` is the farthest from those and `#000097`: 0.204,
-from degenerate. The lighter goes to the collision and the darker to the ejection, as all three additive primaries
-mix toward white and all three subtractive primaries toward black. **Confirmed at the M1 gate as proposed (R-433):**
-triple collision `#D6A1FF` and triple ejection `#000097`, with no veto on a triple collision at `t_end_step == 0`
-drawing in the t=0 orange, as every collision there does. Each is farther than τ = 0.101 from the stipple's `#909090`
-dot (R-434): 0.197 and 0.407.
+**The two triple outcomes (R-444, R-445; REQ-COL-062 superseded, REQ-COL-104).** **Triple collision**, a collision with
+`detail = 3`, and **triple ejection**, an escape with `detail = 3` (payload § `sample_descriptor`, "3 means all three";
+R-30; REQ-EVT-006), are classes of the table. Triple collision takes the orange `#F29620`, which the removed
+"collision @ t=0" class had. Triple ejection is purple `#611597` (OKLab L 0.401, C 0.190, hue 305°), between blue and
+magenta in hue (collision 2–3 at 265°, escape body 2 at 335°) and clear of the hatch's violet `#9B00FF`. *Was:* lavender
+`#D6A1FF` and navy `#000097`, proposed by TASK-M1-10 as the 8-bit colours farthest in OKLab from the classes, the
+running grey and the hatch's colours, and confirmed at the M1 gate (R-433, RQ-234 decided per R-369). Navy shares
+collision 2–3's hue (264° against 265°) and becomes indistinguishable from it once lightness carries another field
+(R-445).
+**Separation (R-71; REQ-COL-104), measured as REQ-COL-055 measures** (Euclidean distance in OKLab, dd_colouring §3.1's
+transforms): purple is 0.192 from the "not yet" grey `#4E4E4E`, 0.193 from collision 2–3 and from the hatch's violet,
+0.272 from escape body 2, 0.277 from bounded, 0.316 from the stipple's `#909090` dot and 0.580 from the hatch's cyan
+`#48FFFF`, so it clears every entry and the hatch and stipple colours by at least 0.19, as R-445 says; the orange is
+0.188 from the dot. The human's figure for the palette's closest pair is 0.185, collision 1–3 against escape body 3, "with
+the t = 0 class gone"; measured, the closest pair is 0.175, triple collision `#F29620` against escape body 1 `#F0DE32`, the
+pair that was collision @ t=0's, since the orange stays as triple collision (0.185 is the closest pair with the orange
+left out). Transcribed as ruled, the measured value beside it: RQ-331.
+
+**The OKLab-uniform variant (R-447; REQ-COL-103, REQ-COL-105).** A second preset of the outcome palette: each chromatic
+class keeps its own OKLab hue at L = 0.72 and C = 0.123, so only hue varies and any brightness-slot field reads
+cleanly; bounded stays `#141418`. **The sRGB palette above stays the default.**
+
+| class | OKLab hue | sRGB |
+|-------|-----------|------|
+| collision 1–2 | 27° | `#E7857A` |
+| collision 1–3 | 147° | `#6EB976` |
+| collision 2–3 | 265° | `#7FA2F2` |
+| triple collision | 65° | `#D99349` |
+| escape body 1 | 103° | `#B3A841` |
+| escape body 2 | 335° | `#D486C3` |
+| escape body 3 | 208° | `#09B9CD` |
+| triple ejection | 305° | `#B790E2` |
+
+The hues are the sRGB classes' own, rounded to a degree. R-447 gives C = 0.123 as "the largest chroma in gamut at every
+hue at that L"; measured, C = 0.123 is in gamut at every listed hue (the narrowest, 208°, allows 0.1238), but the
+largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°. The swatches as ruled measure L 0.719 to
+0.721, C 0.122 to 0.124 and each hue within 0.5° of its row; `#6EB976`, `#D99349` and `#09B9CD` differ by one or two
+8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Transcribed as
+ruled: RQ-332. **Its closest pair, measured, is 0.063**, escape body 2 against triple ejection, 30° apart; four more pairs are
+under 0.101 (collision 1–2 and triple collision, 0.079; triple collision and escape body 1, 0.081; collision 2–3 and
+triple ejection, 0.084; collision 1–3 and escape body 1, 0.091). It is closer than the sRGB palette by construction, eight hues at
+one L and C. Each swatch is at least 0.139 from the stipple's dot and 0.196 from the hatch's colours.
 
 Like every colour assignment in the system, **this is a default, not a fixed mapping** — the
 class→colour swatch-set is user-editable. It is the canonical default the render-mode catalogue's
@@ -379,7 +452,8 @@ orbits reach no event within the window (sentinel).
 
 Generally, the bivariate space is the **product ⟨hue carriers⟩ × ⟨brightness fields⟩**, not a fixed
 list: categorical hue carriers compose the same way (outcome-state × FTLE), and any scalar can take
-the brightness role. It is therefore a *row-family* of the render-mode catalogue, generated by the
+the brightness role. The outcome × `t_end` preset, the outcome class in the colour slot and `t_end` in the brightness
+slot, white = early, is how a stain shows an outcome's timing, which the outcome palette does not carry (R-445). It is therefore a *row-family* of the render-mode catalogue, generated by the
 backbone, not a set of hand-authored modes.
 The Chazy stains with an energy channel are of this family: `chazy_final` or `chazy_structure` as the hue carrier
 and `chazy_q` in the brightness slot under Replace-L's range form (`principia_dd_chazy_final_motion.md` §10.5, R-442).
@@ -390,8 +464,8 @@ So is the body lens with energy: the lens's roles as the hue carrier and `chazy_
 renders one slice "in event mode, greyscale and hue mode" from one payload, to tell a structure of the physics from one
 of the colour map. Each mode is a stain on the backbone above, its combiner Replace-L, and the three differ only in
 their occupants: the payload, its read path and the field are the same in all three. **Event mode** is the outcome
-palette (§1.4) in the colour slot, the brightness None; its field is the outcome class, read from `state`, the
-`detail` union and `t_end_step` (§1.4, R-96). Greyscale and hue mode render a field on the prelude's ramps
+palette (§1.4) in the colour slot, the brightness None; its field is the outcome class, read from `state` and the
+`detail` union (§1.4, R-444; `t_end_step` plays no part, R-445). Greyscale and hue mode render a field on the prelude's ramps
 (render GUI spec §10.1), the same field as event mode where they are compared with it.
 
 - **Greyscale mode (REQ-COL-067)** renders a field through the truth table's None-colour row: the colour slot None and
@@ -400,9 +474,9 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   its §1.2 compaction with its per-field polarity, its salient end bright (FTLE white = high; `t_end` white = low).
   A categorical field has classes and no magnitude: its class of rank `r` among its `K` classes takes
   `B = (r + ½)/K`, so each class has its own lightness, `1/K` from the next, and none is pure black or white. The
-  outcome class is ranked bounded first, so that bounded is the darkest, as §1.2 and §1.4 keep it, then §1.4's
-  table by its columns, collision 0–1, 0–2 and 1–2, degenerate, the escapes of body 0, 1 and 2 and collision @ t=0,
-  then the two triple outcomes, triple collision then triple ejection: `K = 11`.
+  outcome class is ranked bounded first (bounded / nothing yet), so that bounded is the darkest, as §1.2 and §1.4 keep
+  it, then collision 1–2, 1–3 and 2–3, triple collision, escape body 1, 2 and 3, and triple ejection: `K = 9` (R-448;
+  the names as shown, R-449).
   The Chazy fields' ranks are in `principia_dd_chazy_final_motion.md` §10.9 (R-442).
 - **Hue mode (REQ-COL-068)** renders a hue-carrier field, the colour role of the canonical bivariate family above (a
   categorical field, or a field of direction or phase), in the colour slot through the prelude's hue wheel,
@@ -414,10 +488,12 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   its phase in turns. A magnitude field is not a hue carrier: the bivariate family puts it in the brightness slot,
   and greyscale mode is its reading.
 - **What every mode keeps (R-399; §3).** A sample the field holds no value for keeps its own style in every mode,
-  never a place on the greyscale or the wheel: a `running` sample of a field that holds no value for it, as the
-  outcome class holds none (R-96), the "not yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a
-  reserved `state` code or a NaN the invalid pattern, `debug_invalid(frag_xy)`, as the outcome palette draws them
-  (§1.4). A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in
+  never a place on the greyscale or the wheel: a `running` sample of a field that holds no value for it, the "not
+  yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a reserved `state` code or a NaN the invalid
+  pattern, `debug_invalid(frag_xy)`, as the debug views draw them. **The outcome class is the exception (R-446):** it
+  holds a value for every sample, `running` and every failure being its bounded / nothing yet class, so in every mode
+  they take that class's place, rank 0, as the outcome palette draws them black (§1.4); only a forbidden chart region
+  keeps the hatch, in every mode, decided from the chart's validity, not from the payload (§1.4; applied per R-369). A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in
   every mode, so a progressive render shows the field as it fills. Hue mode's colour occupant draws the styles
   itself, as the palette does. Greyscale mode's brightness slot carries a lightness and can draw neither pattern, so
   the mode ends in one post (§4.2) that draws each style at those samples over the combiner's output and passes every

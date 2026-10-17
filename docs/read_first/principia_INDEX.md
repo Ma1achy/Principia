@@ -1,6 +1,6 @@
 # Principia — document index and reading order
 
-**178 files in `docs/`, several supersession relationships, and a vertical slice that changed a number of
+**183 files in `docs/`, several supersession relationships, and a vertical slice that changed a number of
 defaults.** This is the map. Anything prefixed `principia_ARCHIVE_` is kept for the record and
 **should not be implemented from**.
 
@@ -108,6 +108,9 @@ and **`Policy::Tolerance`**.
 - `docs/gui/reference/principia_colour_presets.html` — Colour Composition · Preset Gallery
 - `docs/gui/reference/principia_colour_explorer.html` — Colour Composition Explorer
 - `docs/gui/reference/ic_inspector.html` — IC Inspector: static single-sample tool; canonical copy (R-8). Prior art: the tool is absorbed into the dev GUI's Inspector window (R-65)
+- `docs/gui/reference/principia_nav_cube.html` — Principia — navigation cube: reference for look and behaviour (R-451, R-452); its cream palette is not copied
+- `docs/gui/reference/principia_plucker_compass.html` — Principia — orientation compass: reference for look and behaviour (R-451, R-452); its cream palette is not copied
+- `docs/gui/reference/principia_compass_charts.html` — Principia — compass, position & chart transform: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 
 ---
 

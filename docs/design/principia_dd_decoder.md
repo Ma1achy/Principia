@@ -350,7 +350,7 @@ Golden anchor: **`z = 0` decodes to the canonical golden IC** — equal masses `
 
 ## 6. Deferred / flagged
 
-- **Body indexing — settled, 0-based (R-22).** The decode uses bodies **0, 1, 2** (softmax reference = body 0), and `ICDescriptor` names `m0, m1, m2`; pair id `k` is the side opposite body `k` (payload §2). The flag was raised because this is exactly the off-by-one that survives until a collision-pair label is wrong on screen.
+- **Body indexing — settled, 0-based (R-22).** The decode uses bodies **0, 1, 2** (softmax reference = body 0), and `ICDescriptor` names `m0, m1, m2`; pair id `k` is the side opposite body `k` (payload §2). The flag was raised because this is exactly the off-by-one that survives until a collision-pair label is wrong on screen. What a person reads is 1-based (R-449): the screen's labels come from the one display function (payload §2, "What a person reads"), so the conversion happens in one place.
 - **Energy normalisation `η_E`**: specified in §3.7, its outcomes at `K₀ = 0` and on `E* < U` included (REQ-DEC-041).
   It is kept, with an explicit `Option` off switch (R-25), which settles audit decision B9.
 - **Quantised checkpoint storage** — moot under lockstep (no stored trajectory; temporal note, ratified).

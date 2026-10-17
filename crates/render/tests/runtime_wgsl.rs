@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use render::assemble::Occupant;
-use render::colour::field_ramp::{Compaction, FieldRamp, ScalarField};
+use render::colour::field_ramp::{Compaction, FieldRamp, Lut, Map, Ramp, ScalarField};
 use validation::negative_control;
 use validation::presets::{self, CoordinateMode};
 
@@ -27,10 +27,11 @@ fn ramp(field: &str) -> Result<FieldRamp, String> {
     match field {
         "d_min" => FieldRamp::d_min(),
         "length" => FieldRamp::length(),
-        _ => Ok(FieldRamp {
-            field: ScalarField::payload(field)?,
-            compaction: Compaction::Lin { lo: 0.0, hi: 1.0 },
-        }),
+        _ => Ok(FieldRamp::new(
+            ScalarField::payload(field)?,
+            Compaction::Lin { lo: 0.0, hi: 1.0 },
+            Map::ramp(Ramp::Lut(Lut::Viridis)),
+        )),
     }
 }
 

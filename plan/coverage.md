@@ -12,19 +12,19 @@
 | INT | 89 |
 | EVT | 31 |
 | PAY | 106 |
-| GEN | 35 |
+| GEN | 36 |
 | SCHED | 97 |
 | REF | 51 |
 | RENDER | 86 |
-| COL | 101 |
-| GUI | 186 |
+| COL | 106 |
+| GUI | 202 |
 | TOOL | 165 |
 | VAL | 188 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1448** |
+| **total** | **1470** |
 
-Of these: 133 calibration, 131 definition, 1184 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -32,17 +32,17 @@ Of these: 133 calibration, 131 definition, 1184 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 167 |
+| M2 | 174 |
 | M3 | 200 |
 | M4 | 104 |
 | M5 | 175 |
-| M6 | 160 |
+| M6 | 175 |
 | M7 | 170 |
 | M8 | 242 |
 
 ## Sections
 
-1204 sections in 47 files: 985 yield at least one requirement; 219 yield none and are listed below with the reason.
+1215 sections in 47 files: 996 yield at least one requirement; 219 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
@@ -166,7 +166,7 @@ Of these: 133 calibration, 131 definition, 1184 obligation. Retired (kept for th
 | R-432 — The M1 gate passes; `main` is tagged `m1-gate` and M2 starts | informative only | the human's message of 14 Oct 2026 (R-428 quotes it): the M1 gate passes on gate run 38629476853 on main ab65c273 and R-428 to R-431; main is tagged m1-gate once the rulings PR has merged, and M2 starts; plan/OPERATIONS.md's order of work and plan/MILESTONES.md's M1 block gain it; changes no requirement |
 | R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)* | informative only | the human's ruling of 15 Oct 2026 on local mutation testing: a local run that mutates the gui crate takes -j 1, --timeout 90, a generous --build-timeout, nextest at one test thread, RUST_TEST_THREADS=1 and a narrow filter; other crates keep R-388's run; the orchestrator keeps a memory guard; process, applied in plan/OPERATIONS.md and .claude/agents/implementer.md; changes no requirement |
 | R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)* | informative only | the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement |
-| R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug | informative only | the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is near-uniformly degenerate white by design, the contour E* = V₀ (E* < 0 only, scattered pixels) its one exception in colour and mass-block tags (e.g. M01_TINY, also white) an exception in tag only; changes no requirement |
+| R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug | informative only | the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is near-uniformly degenerate white by design, the contour E* = V₀ (E* < 0 only, scattered pixels) its one exception in colour and mass-block tags (e.g. M01_TINY, also white) an exception in tag only; changes no requirement. Superseded in part by R-446 (16 Oct 2026): the line is reworded, the tagged pixels drawn black #141418 in the outcome view, not white |
 
 ### `docs/contracts/principia_canonical_spec.md`
 

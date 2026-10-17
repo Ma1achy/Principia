@@ -15,7 +15,9 @@ chart produced them. So adding a chart means adding a `Φ`, nothing else.
 **Indexing note.** This document is **0-based throughout**: inner pair `(0,1)`, outer body `2`. The
 Burrau family is conventionally written 1-based (bodies 1–3, inner pair 1–2), and §4.2 translates it.
 The project-wide convention is 0-based throughout (R-22): `ICDescriptor` names `m0 m1 m2`, and pair id `k` is the side
-opposite body `k` (payload §2).
+opposite body `k` (payload §2). What a person reads is 1-based (R-449): internal body `k` is shown as body `k + 1`, a
+pair by its two bodies. The shown numbers follow that map, not the Burrau literature's numbering: §4.2 gives which mass
+each body has (RQ-335).
 
 ---
 
@@ -277,6 +279,14 @@ wᵢ = w⁽²⁾ᵢ / √(‖w⁽²⁾‖²_m)
 largest `‖w⁽²⁾‖_m`**, for conditioning; break ties by seed order. Emit `DEGENERATE` only if no seed
 qualifies.
 
+**On the canonical-frame decode the rule is decided on `z_α`** (TASK-M2-09). There `I = 1`, and the four norms are
+exactly `cos²α`, `sin²α`, `cos²α·sin²α` and `cos²α·sin²α`: the largest is `(ρ, 0)` where `α ≤ π/4` (a tie keeps it)
+and `(0, λ)` elsewhere, and it is at least ½, so no decoded configuration is `DEGENERATE` by the seed rule. Every
+registered α link maps `z_α = 0` to `π/4` and increases, so `α ≤ π/4` exactly where `z_α ≤ 0`, and the decoder reads
+that sign from the control's bits: one input takes one seed at every precision and on every backend
+(`principia_dd_decoder.md` §2, §5 test 12). Comparing the computed norms would fork near `α = π/4`, where the two seeds
+are orthogonal and the momenta would differ at O(1).
+
 **(iii) Mix to the target kinetic energy:**
 
 ```
@@ -285,6 +295,23 @@ if K* < K_min:  terminal
 a = √(2·(K* − Lz²/(2I)))
 vᵢ = vᵢ^(L) + a·wᵢ                pᵢ = mᵢ·vᵢ
 ```
+
+**The infeasible pixel's label** (defined per R-72). A pixel with `K* < K_min` is tagged
+`DEGENERATE(INVARIANT_INFEASIBLE)`, one of `DEGENERATE`'s enumerated causes (§0.7; `principia_dd_decoder.md` §2, "From
+totality"), as `η_E`'s `E* < U` is `DEGENERATE(ENERGY_INFEASIBLE)` (`principia_dd_decoder.md` §3.7). Its
+`sample_descriptor` (`principia_dd_simstate_payload.md` §2) records the reason as `state = decode_failed` (5),
+`detail = 3` (other): no momentum realises `L_z` with less kinetic energy than the rigid rotation's, so the decoder
+produces no physical IC there, which is what `decode_failed` records, and none of `detail`'s codes 0–2 (non-finite
+output, degenerate configuration, invalid mass construction) describes it. It is a decode failure, not a dynamical
+outcome: the sample is terminal at decode, kept, never dropped. Its momenta are finite, `a = 0` selected, so
+`pᵢ = mᵢ·vᵢ^(L)`; nothing integrates them. The test is exactly `K* < L_z²/(2I)`, decided as `2·I·K* < L_z²` with no
+rounding at the decision, so one input takes one branch at every precision and on every backend; `K* = K_min` is
+feasible, with `a = 0`.
+
+**Its precedence.** The decode runs mass → config → momentum, and a decode an earlier block has already tagged keeps
+that tag (`principia_dd_decoder.md` §3.7): a pixel the mass block tags `DEGENERATE(M01_TINY)` keeps that tag, whatever
+its `(L_z, K*)`. Within the momentum stage, infeasibility is decided on `(L_z, K*)` alone and takes precedence over the
+seed rule's `DEGENERATE`, which a pixel carries only where its `(L_z, K*)` is feasible.
 
 **Verification that can fail:** assert `Σpᵢ = 0`, `Lz(p) = Lz_target`, and `K(p) = K*`, all to
 machine precision, over random `(u,v)`. Three independent constraints; the construction should hit

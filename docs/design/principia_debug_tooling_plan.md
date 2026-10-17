@@ -41,9 +41,9 @@ One view + one test per field. Generated from the ledger, conformed to the paylo
 | Field | Shader shows | Test asserts |
 |---|---|---|
 | `state` (0–2) | six-colour `dbg_cat` categorical palette, **6 states** (escape/bounded/collision/running/sim_failed/decode_failed) — not the outcome palette, which R-77 sets at `state ⊕ detail` grain (R-115) | `sd_state(w)` round-trips 0–5; union legend switches on it; `running`(3) shows in-flight; the three failure/lifecycle states render distinctly |
-| `detail` (3–4) | **legend keyed by state** (escape→body, collision→pair, sim/decode_failed→failure category — the 4-state union, payload §2; blank for running) | correct code per state; **the three-colours-bug regression test** — detail is read, not dropped; undefined-when-running handled |
+| `detail` (3–4) | **legend keyed by state** (escape→body, collision→pair, sim/decode_failed→failure category — the 4-state union, payload §2; blank for running); the keys are the one display function's names, body 1–3 and a pair by its two bodies, never "body 0" or a pair id (R-449; payload §2, "What a person reads") | correct code per state; **the three-colours-bug regression test** — detail is read, not dropped; undefined-when-running handled |
 | `saturated` (5) | boolean overlay | set iff `N_sub == N_max` occurred at some macro-step (sticky; R-86) |
-| `dmin_pair` (6–7) | categorical(3) | round-trips; matches the pair that achieved `d_min` (a latched fact, not the word) |
+| `dmin_pair` (6–7) | categorical(3), its legend naming each pair by its two bodies, 1-based (R-449) | round-trips; matches the pair that achieved `d_min` (a latched fact, not the word) |
 | `last_symbol` (8–9) | categorical(4) — the word's final symbol (`a=0, A=1, b=2, B=3`); invalid-styled when the word is empty or truncated | equals the last symbol of `fgw_decode(word)` whenever `sd_last_symbol_valid(fgw_length_raw(word))` — the cache stays coherent with the sidecar word (payload §3) |
 | *reserved* (10–15) | — | decode as zero (payload §2) |
 | `total_substeps_log2` (derived, not a descriptor field) | scalar (log) — cumulative work / complexity | matches `⌊log₂ Σ N_sub⌋` (0 for a total ≤ 1; R-86), derived at read via `countLeadingZeros` from the exact `total_substeps` u32 (payload §2); the *complexity* proxy (not peak — peak was dropped) |
@@ -100,7 +100,7 @@ Regenerated from the ledger's §3.4 rows (R-86); the storage column is the paylo
 
 | Field | Shader | Test |
 |---|---|---|
-| masses `m0 m1 m2` | ternary colour | = decode masses |
+| masses `m0 m1 m2` | ternary colour, its legend reading body 1, 2, 3 (R-449) | = decode masses |
 | `q_mass`, `rho_mag`, `lambda_mag`, `virial_ratio`, `rho_ratio`(log), `rho_angle`(cyclic), `K_0`(lin, [0, ∞)), `V_0`(lin, (−∞, 0]; R-403), `r_min_pair_0`(log) | scalar per scale | = f64 decode values |
 | `E₀` (derived, `K_0 + V_0`) | diverging | = `SimState.E_0` (the energy-agreement cross-check, §G) |
 | **live shape views** `u_mode` | mode 0: `½(n+1)` dir-cosines RGB of current derived `n`; mode 1: running phase `θ̃` cyclic; mode 2: `|n|−1` error | `‖n‖=1` (flat-zero — derived fresh each step); `θ̃` continuous (no 2π jumps); terminal-latched samples frozen |

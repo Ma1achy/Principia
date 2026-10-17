@@ -596,6 +596,14 @@ without a WGSL extension, so the counts and codes are u32 and the fractions f32.
 
 **A field without a complete entry fails generation loudly.** Coverage is enforced, not hoped for.
 
+**Body and pair indices in exports stay 0-based, and say so (R-449; REQ-GEN-036).** The export decoder (seam 13) and
+every machine-readable dump write a body- or pair-indexed field with the internal 0-based ids (R-22): `detail` under
+escape and collision, `dmin_pair`, `m0 m1 m2` and any per-body or per-pair field. The export's header or schema states
+the base for each: "body index, 0-based", or for a pair id "pair id, 0-based; pair `k` is the side opposite body `k`".
+Which key of the entry carries that text is the task's to choose (REQ-GEN-036). What a person reads is 1-based, through
+the one display function (payload §2, "What a person reads"); an export's caption is read by a person and is 1-based,
+its columns are not.
+
 **The `diverging` scale agrees with the range (R-403; REQ-GEN-033).** An entry carries `scale: diverging` only when
 its declared `range` spans zero (`lo < 0 < hi`, either end possibly unbounded), as R-400 derives a field's diverging
 ramp from its range. A `diverging` entry whose declared range does not span zero fails generation, naming the field
@@ -756,7 +764,9 @@ population = { name, lo, hi, count }
   default, threshold or calibration. This covers counters only, never real values: a default, threshold or
   calibration is read from the register, even at 0, in whatever form it is written. An IEEE-754 format constant written
   from its std name, such as `f32::INFINITY.to_bits()` for the f32 exponent mask, is not one either (applied per R-369,
-  recorded in R-440); the scope is format constants, never calibration values.
+  recorded in R-440); the scope is format constants, never calibration values. A representation sentinel meaning "no
+  value", written from its type's bound (`i16::MIN`, `u32::MAX`), is not a register value either (applied per R-369;
+  TASK-M2-07); the scope is such sentinels only, never defaults, thresholds or calibrations.
 - **The hash:** the register entries that decide what the payload's stored bits mean are part of the ledger hashed
   into the schema version (R-36): the word's capacity and length sentinel (§3.3), the `horizon_steps` limit (§3.1),
   the f16 pack clamp (payload §1), the f16 subnormal floor (R-271), and the step count and sentinel of `θ̃`'s pole
@@ -795,6 +805,8 @@ citing its calibration requirement, and read from the register like any other; n
 | `eps_m01` | 10⁻⁵, the `DEGENERATE(M01_TINY)` threshold (dd_decoder §3.1), a threshold with its measured gap | canonical-units | M2 | REQ-DEC-039 |
 | `tanh_sat` | 20, the bound §3.9's `tanh` operator clamps its argument to: `tanh` rounds to ±1 from `abs(x)` ≈ 9.01 at f32 and ≈ 19.06 at f64, so the clamp changes no CPU value at either width, while Metal's GPU `tanh` fails from 43.671875, 0 and then NaN (TASK-M2-06) | canonical-units | M2 | REQ-DEC-047 |
 | `r_pole` | 0.01, the pole radius of the unwrapped phase `θ̃` on the unit shape sphere (dd_integrator §3.7, R-389); confirmed at the M1 gate and marked provisional until M3, where it is re-confirmed against real orbits' near-pole arcs (R-433) | canonical-units | M3 | REQ-INT-086 |
+| `diverging_x0_E_0` | 1, `E_0`'s `x₀`, an energy: the magnitude where its `diverging` symlog's compression sets in (dd_colouring §3.6, REQ-COL-065), one unit of the normalised system's binding energy (TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
+| `diverging_x0_Lz_0` | 1, `Lz_0`'s `x₀`, an angular momentum, as `E_0`'s (dd_colouring §3.6, REQ-COL-065; TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the
@@ -1014,7 +1026,7 @@ in `z₂`).
 - **`free_group_word` length field is 7 bits (mixed-radix ~76-symbol capacity)** — reserved means reserved; any future use is a ledger edit (⇒ version change) not an opportunistic squat.
 - ~~**`QuadReduction` completion** (§3.7)~~ — **done.** Not a transcription task after all: the older source held only prose, so the member list was derived from consumers (scheduler Part 6) and from measurement (`principia_dd_refinement_criterion.md`). **Pending change 1 (the `dominant_outcome` grain) is dissolved rather than decided** — defining every event-derived field at the joint `class ⊕ detail` grain removes the two-grain problem entirely, so no class-only companion field is needed.
 - **Drift-sign presentation** — the diverging-scale metadata for `energy_drift`/`Lz_drift` is a generator requirement, recorded here so the catalogue doesn't ship them as broken sequential-log views.
-- **Body-index naming** — settled 0-based (R-22); this ledger's `ICDescriptor` names changed with it (⇒ schema version change, correctly — automatic under R-36).
+- **Body-index naming** — settled 0-based (R-22); this ledger's `ICDescriptor` names changed with it (⇒ schema version change, correctly — automatic under R-36). What a person reads is 1-based (R-449); the ledger's names and the exports stay 0-based and say so (§3.8).
 
 ---
 

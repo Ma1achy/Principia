@@ -228,8 +228,11 @@ reworded. Files: dd_decoder §3, §3.2; chart_reference §0.2; inverse_encode_co
 
 ## R-22 — Body indices are 0-based; pair ids name the opposite side *(CD-2, amended)*
 *Amended by R-62.*
-*Still in force: 0-based body indices and labels, `m0 m1 m2`, and pair id `k` naming the side opposite body `k`, as a
-schema event; the Jacobi fields are named by R-62.*
+*Superseded in part by R-449 (the display half: what a person reads names the bodies 1, 2, 3 and a pair by its two
+bodies, never by its pair id).*
+*Still in force: 0-based body indices in storage, computation, the code, the WGSL and every machine-readable export,
+`m0 m1 m2`, and pair id `k` naming the side opposite body `k`, as a schema event; the Jacobi fields are named by R-62;
+the 0-based display labels are superseded by R-449's 1-based ones.*
 *24 Sep 2026 · applied in step 5*
 
 0-based throughout: `ICDescriptor` fields `m0 m1 m2`, `rho0_mag` / `rho1_mag`, and 0-based display labels. **Pair id `k` names the side
@@ -742,11 +745,15 @@ independent ground truth, with the legacy t = 30 set kept as a comparison.
 ## R-96 — Colour and GUI definitions *(closes RQ-52 and RQ-54, definitional parts)*
 *Amended in part by R-399 (`running`'s neutral grey is drawn in the "not yet" style: the grey with a fine dot stipple
 from the pixel position).*
+*Superseded in part by R-444, R-445 and R-446 (the palette reading, in the outcome view: "degenerate" and "collision
+at start" are no longer classes, and `running`, `sim_failed` and `decode_failed` draw bounded's `#141418`).*
 *25 Sep 2026 · applied in step 7 · last bullet withdrawn by R-106*
-*Still in force: every bullet but the last: the palette readings, pointer_channels normative only where cited, the
-properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`, with `running`'s
-neutral grey drawn in R-399's "not yet" style, the grey with a fine dot stipple; the last bullet is withdrawn, the link
-ids being the chart's link functions (R-106).*
+*Still in force: every bullet but the last, the first only outside the outcome view: pointer_channels normative only
+where cited, the properties popover and the disc radius ∝ ∛m, one undo entry per drag, and transport in `ViewUI`;
+`running`'s neutral grey, drawn in R-399's "not yet" style, the grey with a fine dot stipple, for every field but the
+outcome class; in the outcome view the classes are R-444's, a collision at `t_end_step == 0` draws its pair's or the
+triple collision's colour (R-445), and `running`, `sim_failed` and `decode_failed` draw `#141418` (R-446); the last
+bullet is withdrawn, the link ids being the chart's link functions (R-106).*
 
 - Palette reading: "degenerate" = `decode_failed`; "collision at start" = collision with `t_end_step == 0`; `running` shows
   neutral grey; `sim_failed` shows the invalid colour.
@@ -6882,8 +6889,11 @@ REQ-TOOL-019's verify and rulings and REQ-TOOL-152's note, rulings and `rq` chan
 *Amended in part by R-433 (the grey confirmed at the M1 gate: `#4E4E4E`).*
 *Amended in part by R-434 (the stipple confirmed at the M1 gate: 2 × 2 px dots in each 4 × 4 physical-pixel cell, the
 dots changed to `#909090`, so that no flat palette colour comes within τ = 0.101 of every pixel of a 4 × 4 block).*
-*Still in force: all of it; the grey and the stipple it left calibrations are confirmed: `#4E4E4E` (R-433), and
-`#909090` dots, 2 × 2 px in each 4 × 4 px cell (R-434).*
+*Superseded in part by R-446 (in the outcome view `running` samples draw bounded's `#141418`, not the "not yet"
+style).*
+*Still in force: all of it but the outcome view's `running` samples, which draw `#141418` (R-446): the style stands
+for every other field that shows "not yet", an unset `d_min` among them; the grey and the stipple it left calibrations
+are confirmed: `#4E4E4E` (R-433), and `#909090` dots, 2 × 2 px in each 4 × 4 px cell (R-434).*
 *9 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.2 Family B — field-ramp  →  `vec3` or
 `f32`" and § "1.4 Categorical colour-assignment — the outcome-state default palette",
 `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library",
@@ -7347,10 +7357,14 @@ Changes REQ-GUI-146's and REQ-GUI-158's rulings, sources and note: each is confi
 ## R-405 — The footer and the console join the keyboard's scope tree, as the top bar does: the footer is big scope 8, and Enter on it opens the console
 *Amended in part by R-409 (the console's entry list scrolls with ↑ ↓ only after Enter on it; every landing is in
 navigation mode).*
-*Still in force: all of it, as its text reads, except that ↑ and ↓ scroll the entry list only in interaction mode,
-after Enter on the list, Esc returning to navigation mode on it (R-409, the human's follow-up answer); and that every
-landing, the console's first filter included, is in navigation mode, the arrows moving within a section in navigation
-mode (R-409).*
+*Amended in part by R-450 (the console's structure: two scopes, the header bar and the log; opening on the header bar
+scope; × a focusable button; the log's keys).*
+*Still in force: the footer as big scope 8, Enter on it opening the console with the focus inside it, the console a
+window whose Esc from its top level closes it and returns the focus to whatever opened it, and the console opening by
+itself on an error taking no focus; the console's sections, its landing and its keys are R-450's: two scopes, the
+header bar (All, Warnings, Errors, Info, the search field, Copy, Clear, ×) and the log, the console opening in
+navigation mode on the header bar scope, and the log scrolling only in interaction mode, after Enter on it (R-409,
+R-450).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" and § "G12. Console (`12_console.png`)" (paragraphs added), REQ-GUI-095 (reqio), REQ-GUI-178
 (reqio, new), TASK-M6-28, TASK-M6-25 and TASK-M8-13, `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
@@ -7797,6 +7811,13 @@ Adds REQ-CHART-056 and REQ-CHART-057; REQ-CHART-054's statement, verify, rulings
 rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and REQ-GUI-100's verify change.
 
 ## R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
+*Amended in part by R-450 (the console: its two scopes and its landing on the header bar scope, in place of "the
+console's first filter").*
+*Amended in part by R-451 (the compass's view angle: the reference's isometric projection, in place of point 1's yaw
+−35°, pitch 25°).*
+*Still in force: all of it, except that the console opens in navigation mode on its header bar scope, not on its first
+filter, and its sections are R-450's two scopes, the header bar and the log (R-450); and that the compass's fixed view
+is the reference's isometric projection, not point 1's yaw −35°, pitch 25° (R-451).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
 what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
@@ -9288,6 +9309,13 @@ passing, `gate-provisional` red only for the nine entries R-428 confirms) and on
 Changes no requirement.
 
 ## R-433 — The M1 gate's other calibrations are confirmed: `r_pole` = 0.01, a constants-register entry provisional until M3; the running grey `#4E4E4E`; the triple outcomes' `#D6A1FF` and `#000097`; the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry *(closes RQ-279; amends R-389, R-395, R-398, R-399 and R-428 as they apply to these values)*
+*Superseded in part by R-444 and R-445 (the triple outcomes' swatches: triple collision `#F29620`, triple ejection
+`#611597`; the no-veto on a first-step triple collision in the t=0 orange has nothing left to apply to, the class
+being removed).*
+*Still in force: all of it but the triple outcomes' swatches and that no-veto: `r_pole` = 0.01, a register entry
+provisional until M3; the running grey `#4E4E4E`, the "not yet" style's grey (in the outcome view `running` draws
+`#141418`, R-446); the banding criterion, 1/16 of a step; the ‖n‖ = 1 tolerance, 64 U = 2⁻¹⁸, one register entry;
+RQ-279 closed.*
 *15 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.7 The shape readout and winding (live, per
 macro-step — lockstep, ratified)", `docs/contracts/principia_parity_contract.md` § "Tier B — integer-exact *given the
 same branch decisions* (integer & packed fields)", `docs/design/principia_dd_simstate_payload.md` § "`_reserved` (u16) —
@@ -9887,6 +9915,12 @@ never calibration values.
 Changes no requirement.
 
 ## R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug
+*Superseded in part by R-446 (the colour: the tagged pixels draw black `#141418` in the outcome view, not
+degenerate's white; the tags show in the debug views).*
+*Still in force: all of it but the colour: the outcome stands, physically right; `η_E` is silently a no-op on every
+free-fall preset; the GUI-docs line stays, reworded by R-446: the near-uniform colour, now black in the outcome view,
+is expected, not a bug; §3.7's exceptions, the contour `E* = V₀` (untagged, integrated, drawn in its outcome's colour)
+and the mass block's tags (kept, `decode_failed`, drawn black).*
 *15 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G6. Legend — generated by evaluating the stain
 (`06_legend.png`)" (a paragraph added) and `plan/rule_groups.yaml`*
 
@@ -10157,3 +10191,1326 @@ which is RQ-321.
   RQ-323's options (b) and (c) defer or drop part of R-443, so they are the human's; (a) is the orchestrator's.
 - Names a person reads call the bodies 1, 2, 3 (the display rule of 16 October 2026, ruled on PR #226); the fields,
   the stain parameter `k` and machine-readable dumps stay 0-based.
+
+## R-444 — The outcome view shows physical outcomes only, in nine classes: bounded / nothing yet `#141418`, the three pair collisions, triple collision, the three escapes and triple ejection *(supersedes R-96 and R-433 as they apply to the outcome palette's classes and the triple outcomes' swatches)*
+*Amended in part by R-449 (the class names as shown: collision 1–2, 1–3 and 2–3 for pairs 2, 1 and 0, escape body 1,
+2 and 3 for `detail` 0, 1 and 2; same classes, same colours).*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (the table, the mnemonic paragraph, "how the table reads the payload" and the triple
+outcomes' paragraph rewritten) and § "4.1 Backbone & `Option` occupants" (event mode's reading),
+`docs/gui/principia_render_gui_spec.md` § "G6. Legend — generated by evaluating the stain (`06_legend.png`)" (a
+sentence added) and § "G13. Where the artboards are overridden" (a bullet added), the forward lines of R-96 and R-433,
+REQ-COL-002, REQ-COL-062 and REQ-TOOL-021 (reqio), TASK-M2-32 (new), `plan/tasks.yaml`, `plan/MILESTONES.md` § "M2 —
+Charts, decode and encode", `plan/rule_groups.yaml`, `plan/section_notes.yaml` and `REVIEW_QUEUE.md` (RQ-330); built by
+TASK-M2-32*
+
+The human's message of 16 Oct 2026, in their own words ("These are my rulings (Malachy's, 16 October 2026)"), quoted
+whole here; R-445 to R-448 quote their own items from it:
+
+> "A change to the outcome-state palette (principia_colour_composition.md §1.4) and how the outcome view
+> draws non-outcomes. These are my rulings (Malachy's, 16 October 2026). Record them in decisions.md,
+> port them into the docs, update the requirements through plan/tools/reqio.py, and run
+> python3 plan/check_plan.py before every plan commit. Docs first, then the plan; "Removed lines"
+> notes; one branch, one PR. Do not implement. Where a ruling below supersedes an earlier one, record it
+> as superseding (R-96, R-433, R-399's scope, REQ-COL-062, REQ-COL-053/064's scope, R-71 calibrations
+> confirmed at M1) rather than editing the old ruling.
+>
+> === Rulings ===
+>
+> 1. The outcome view shows physical outcomes only. Nine classes:
+>
+> | outcome | payload | sRGB |
+> |---|---|---|
+> | bounded / nothing yet | bounded, running, and every failure (ruling 3) | #141418 |
+> | collision 0–1 | collision, detail = pair 2 (bodies 0, 1) | #DE2D2D |
+> | collision 0–2 | collision, detail = pair 1 | #2EBC4E |
+> | collision 1–2 | collision, detail = pair 0 | #3462E0 |
+> | triple collision | collision, detail = 3 | #F29620 |
+> | escape body 0 | escape, detail = 0 | #F0DE32 |
+> | escape body 1 | escape, detail = 1 | #E034C6 |
+> | escape body 2 | escape, detail = 2 | #30C8DC |
+> | triple ejection | escape, detail = 3 | #611597 |
+>
+> (Keep R-22's 0-based ids and pair-k-opposite-body-k map.)
+>
+> 2. "Collision @ t = 0" is removed as a class. A collision at t_end_step == 0 is an ordinary pair or
+>    triple collision and draws in that colour. Timing is carried by lightness when a stain wants it
+>    (the outcome x t_end bivariate preset, white = early). Its orange #F29620 is reused for triple
+>    collision. Triple ejection moves from navy #000097, which shares collision 1–2's hue (264° against
+>    265°) and becomes indistinguishable from it once lightness carries another field, to purple
+>    #611597, between blue and magenta in hue and clear of the invalid hatch's violet #9B00FF.
+>
+> 3. "Degenerate" is removed from the outcome view. Black #141418 means "nothing has happened yet, up to
+>    the playhead": bounded, running, and every failure (sim_failed, decode_failed including the η_E
+>    ENERGY_UNSCALABLE / ENERGY_INFEASIBLE tags and mass-block tags such as M01_TINY, non-finite decode,
+>    NaN, infinity) draw black in the outcome view. A view starts black and fills in as events fire.
+>    Failures are shown by debug views, which keep the invalid hatch and their own palettes.
+>    - Running samples draw black in the outcome view instead of the not-yet stipple. The stipple and
+>      its calibrations (R-399, R-434) stand for every other field that uses them (an unset d_min, for
+>      example); only the outcome view changes.
+>    - This resolves the conflict between colour_composition §1.4 / R-96 ("degenerate" = decode_failed,
+>      drawn white) and the chart–decoder contract (hatched pixels are decode_failed, drawn with
+>      debug_invalid). Forbidden chart regions keep the chart contract's forbidden-region treatment in
+>      the outcome view, decided from the chart's own validity (types, primary ranges, validate, Φ), not
+>      from the payload's decode_failed detail, which cannot tell the two hatches apart. Every other
+>      decode_failed sample draws black.
+>    - Update the η_E note on record (the decision that a free-fall slice with η_E on draws "degenerate's
+>      white" everywhere): it now draws black in the outcome view, and the η_E debug view is where the
+>      tags show. The GUI-docs line stays, reworded.
+>
+> 4. An OKLab-uniform variant of the outcome palette, as a second preset: each chromatic class keeps its
+>    own OKLab hue at L = 0.72 and C = 0.123 (the largest chroma in gamut at every hue at that L), so
+>    only hue varies and any brightness-slot field reads cleanly. Bounded stays #141418.
+>
+> | outcome | hue | sRGB |
+> |---|---|---|
+> | collision 0–1 | 27° | #E7857A |
+> | collision 0–2 | 147° | #6EB976 |
+> | collision 1–2 | 265° | #7FA2F2 |
+> | triple collision | 65° | #D99349 |
+> | escape body 0 | 103° | #B3A841 |
+> | escape body 1 | 335° | #D486C3 |
+> | escape body 2 | 208° | #09B9CD |
+> | triple ejection | 305° | #B790E2 |
+>
+> The sRGB palette of ruling 1 stays the default.
+>
+> 5. Greyscale and hue modes (REQ-COL-067/068): K = 9, ranked bounded first (darkest), then collision
+>    0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2, triple ejection.
+>
+> === What to change ===
+>
+> - colour_composition §1.4 (the table, the mnemonic paragraph, "how the table reads the payload", the
+>   triple-outcomes paragraph, the not-yet paragraph's scope), §4.1's three-modes text (K = 11 -> 9 and
+>   the rank), and the legend text that names the classes.
+> - The requirements that pin the nine-class table, REQ-COL-062 (triple swatches), the synthetic-payload
+>   render test (drop the t_end_step == 0 and decode_failed rows from the outcome view; add a triple
+>   collision and a triple ejection row; add rows asserting running, sim_failed and decode_failed draw
+>   #141418 and a forbidden-region pixel draws the forbidden treatment).
+> - Separation evidence for the calibrations (R-71), measured the way REQ-COL-055 measures: the sRGB
+>   palette's closest pair rises from 0.175 to 0.185 with the t = 0 class gone (collision 0–2 / escape
+>   2); purple #611597 clears every entry and the hatch and stipple colours by at least 0.19. Record the
+>   OKLab variant's closest pair as measured; it is closer than the sRGB palette by construction (8
+>   hues at one L and C).
+> - Any GUI-doc text, fixtures or goldens that name collision @ t=0, degenerate white or navy #000097.
+>
+> === Questions to file (REVIEW_QUEUE), not to decide ===
+>
+> - Whether any task already in flight or merged (M1-10's goldens, the outcome palette fixtures,
+>   REQ-COL-053/064 tests) needs re-baselining, and which milestone gate confirms the new swatches.
+>
+> Report the ruling ids, requirement ids, RQ ids and any task ids added or changed."
+
+(Numbered by the orchestrator, applied per R-369: one ruling per numbered item, R-444 to R-448, as R-433 to R-435
+split the M1 gate's message.)
+
+This ruling holds item 1.
+
+*What it decides:*
+- **The outcome view shows physical outcomes only, in nine classes**, read from `state` and the `detail` union:
+  bounded / nothing yet `#141418` (`bounded`, `running` and every failure, R-446); collision 0–1 (`detail` = pair 2)
+  `#DE2D2D`, 0–2 (pair 1) `#2EBC4E` and 1–2 (pair 0) `#3462E0`; triple collision (`detail` = 3) `#F29620`; escape of
+  body 0, 1 and 2 (`detail` = 0, 1, 2) `#F0DE32`, `#E034C6` and `#30C8DC`; triple ejection (`detail` = 3) `#611597`.
+  R-22's 0-based ids and its pair map (pair `k` is the side opposite body `k`) are kept.
+- **The classes it ends**, R-96's palette reading as it applied to the outcome palette: "degenerate" (`decode_failed`,
+  white `#ECECF0`) and "collision at start" (a collision with `t_end_step == 0`, orange) are no longer classes (R-446
+  and R-445 give why), and the triple outcomes are classes of the table, no longer two swatches beside it (RQ-234,
+  decided per R-369; REQ-COL-062).
+- **The triple outcomes' swatches** R-433 confirmed at the M1 gate, `#D6A1FF` and `#000097`, give way to `#F29620`
+  and `#611597` (R-445). Those were R-71 calibrations confirmed at M1; the new values are the human's, and their
+  separation evidence is recorded as R-71 calibrations (REQ-COL-104, below), measured as REQ-COL-055 measures.
+- **R-77 stands:** the state palette is §1.4's nine canonical classes, now these nine.
+
+*Applied:*
+- **colour_composition §1.4**: the table gives the nine classes with their payload readings, in the human's order;
+  the mnemonic paragraph keeps the additive primaries for the pair collisions and the subtractive for the escapes, and
+  names the triple outcomes and bounded as the three classes outside the primaries; "how the table reads the payload"
+  reads `state` and `detail` alone (R-445, R-446); the triple outcomes' paragraph gives the new swatches, the old ones
+  and why they moved, and the measured separation (R-445). §4.1's event mode reads the class from `state` and `detail`.
+- **render_gui_spec §G6**: the outcome legend's keys are the nine classes, the black one reading "bounded / nothing
+  yet". **§G13**: the reference HTML files' event palette (`principia_render_modes.html` and `principia_dev_gui.html`
+  label "coll @ t=0" and "degenerate", and the render-modes catalogue gives "t=0 orange, degenerate white") is
+  overridden by R-444 to R-446, as the artboards' values are by R-68. Applied per R-369: the reference files are
+  records and are not edited (R-159); the override is written where the GUI docs list the others.
+- **The requirements (reqio).** REQ-COL-002's statement gives the nine classes and its verify the human's rows (below);
+  REQ-COL-062 is superseded, its M1 confirmation kept as written, with a sentence added; REQ-TOOL-021's note reads the
+  nine classes as R-444's.
+  - **REQ-COL-002's render test, the human's rows:** the `decode_failed` row (white) and the `t_end_step == 0` row
+    (orange) leave; a triple collision and a triple ejection row stay, at `#F29620` and `#611597`; rows assert that a
+    `running`, a `sim_failed` and a `decode_failed` sample draw `#141418`, and that a forbidden-region pixel draws the
+    forbidden treatment. *Applied per R-369:* a collision at `t_end_step == 0` stays as a row asserting its pair's
+    colour, and a triple collision at `t_end_step == 0` the triple collision's, so that R-445 is tested; the orange
+    "collision @ t=0" class row is the one that leaves.
+- **A new task builds it**, applied per R-369, as R-436 added TASK-M2-31: TASK-M1-10, which built the palette, has
+  merged, so the palette, its render test and the goldens it changes need their own PR. **TASK-M2-32** ("The outcome
+  view conformed to R-444 to R-448"), M2, depending on TASK-M1-10, TASK-M1-14, TASK-M1-17 and TASK-M2-05; reviewers
+  code, qa, physics and gui (physics for REQ-COL-102's definition of how the view reads the chart's classification,
+  R-72). It closes REQ-COL-101 to REQ-COL-105 and re-establishes REQ-COL-002, REQ-COL-062's successor values,
+  REQ-COL-067 and REQ-COL-068 under the changed statements. Applied per R-369: REQ-COL-002, REQ-COL-062, REQ-COL-067 and
+  REQ-COL-068 stay closed by their merged M1 tasks and in the M1 gate's list; `main` meets their changed statements once
+  TASK-M2-32 merges, and whether the M1 gate's record needs anything more is RQ-330's.
+- **The new requirement ids start at REQ-COL-101**, applied per R-369: open PR #223 adds REQ-COL-072 to REQ-COL-100,
+  and reqio numbers from the largest id on `main`, so the ids are moved past #223's to keep both PRs' ids permanent.
+- R-96 and R-433 carry forward and "Still in force" lines (R-292, R-293).
+- R-444 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-002 (statement, verify, rulings, sources, note), REQ-COL-062 (statement, verify, rulings, sources,
+note) and REQ-TOOL-021 (rulings, note); adds TASK-M2-32.
+
+## R-445 — "Collision @ t = 0" is no longer a class: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and lightness carries timing; the orange `#F29620` goes to triple collision, and triple ejection moves from navy `#000097` to purple `#611597` *(supersedes R-96 and R-433 as they apply to "collision at start", the triple swatches and the first-step triple collision's orange)*
+*Amended in part by R-449 (the class names as shown: its "collision 1–2", pair 0, is shown "collision 2–3").*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (the triple outcomes' paragraph and the timing sentence) and § "4.1 Backbone & `Option`
+occupants" (the bivariate family: a sentence added), `docs/contracts/principia_render_contract.md` § "Presentation
+layer (hand-written, small, reused by every debug view)" (a sentence added), the forward lines of R-96 and R-433,
+REQ-COL-002, REQ-COL-055, REQ-COL-062 and REQ-GUI-030 (reqio), REQ-COL-104 (reqio, new), TASK-M2-32, TASK-M7-17 (a
+deliverable and a note), `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-330, RQ-331); built by TASK-M2-32 and
+TASK-M7-17*
+
+The human's words (R-444 quotes the whole message):
+
+> "2. "Collision @ t = 0" is removed as a class. A collision at t_end_step == 0 is an ordinary pair or
+>    triple collision and draws in that colour. Timing is carried by lightness when a stain wants it
+>    (the outcome x t_end bivariate preset, white = early). Its orange #F29620 is reused for triple
+>    collision. Triple ejection moves from navy #000097, which shares collision 1–2's hue (264° against
+>    265°) and becomes indistinguishable from it once lightness carries another field, to purple
+>    #611597, between blue and magenta in hue and clear of the invalid hatch's violet #9B00FF."
+
+*What it decides:*
+- **"Collision @ t = 0" is no longer a class.** A collision at `t_end_step == 0` is an ordinary pair or triple
+  collision and draws in that colour. R-96's reading "collision at start" (a collision with `t_end_step == 0`) leaves
+  the outcome palette, and with it R-433's "no veto on a first-step triple collision drawing in the t=0 orange" (PR
+  #178's decision per R-369), which has nothing left to apply to. The payload is unchanged: a valid IC inside `r_coll`
+  is still a collision at step 0 (payload §2, R-13, REQ-ENC-033); only its colour changes.
+- **Timing is carried by lightness** when a stain wants it: the outcome × `t_end` bivariate preset, the outcome class
+  in the colour slot and `t_end` in the brightness slot, white = early (`t_end`'s polarity, colour_composition §1.2).
+- **Triple collision takes the orange `#F29620`.**
+- **Triple ejection moves from navy `#000097` to purple `#611597`**: navy shares collision 1–2's hue and becomes
+  indistinguishable from it once lightness carries another field; purple sits between blue and magenta in hue and
+  clear of the hatch's violet `#9B00FF`.
+
+*Measured (applied per R-369, as REQ-COL-055 measures: Euclidean distance in OKLab, from 8-bit sRGB through
+dd_colouring §3.1's transforms; the script is the PR's):*
+- **Navy against collision 1–2**: OKLab hue 264.1° against 265.1°, the human's 264° and 265°.
+- **Purple `#611597`**: OKLab L 0.401, C 0.190, hue 305.1°, between collision 1–2's 265.1° and escape 1's 335.2°. Its
+  distances: 0.192 from the "not yet" grey `#4E4E4E`, 0.193 from collision 1–2 and from the hatch's violet `#9B00FF`,
+  0.272 from escape 1, 0.277 from bounded, 0.316 from the stipple's dot `#909090`, 0.580 from the hatch's cyan
+  `#48FFFF`, and more from the rest. The nearest is 0.1915: the human's "by at least 0.19" holds. It is 0.217 from the
+  pending hatch's `#0000FF` and 0.373 from the fallback tint's `#FF69FF` (debug_tooling_plan §G), and the hatch's
+  nearest entries are unchanged (violet's, plasma at 0.142; cyan's, Turbo at 0.112; render contract Part 5).
+- **The sRGB palette's closest pair** is **0.175**, triple collision `#F29620` against escape 0 `#F0DE32`, not the
+  human's 0.185. The 0.175 was the old palette's closest pair, collision @ t=0 against escape 0; the orange stays in the
+  palette as triple collision, so the pair stays. With the orange left out, the closest pair would be 0.185, collision
+  0–2 against escape 2, the human's figure. Transcribed as the human gave it, with the measured value beside it, in
+  colour_composition §1.4 and REQ-COL-104; no swatch is changed. **RQ-331** puts it to the human.
+
+*Applied:*
+- colour_composition §1.4's triple outcomes' paragraph gives the swatches, the old ones and the reason; "how the table
+  reads the payload" says a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and that
+  timing is the outcome × `t_end` preset's. §4.1's bivariate family names that preset.
+- The render contract's hatch bullet gains a sentence: purple's distances from the hatch, its nearest entries unchanged.
+- **The outcome × `t_end` preset**, applied per R-369: the corpus has no such preset yet; it is of §4.1's bivariate
+  family and render_gui_spec §11's bivariate presets, so TASK-M7-17, which builds that list (n̂ × FTLE, n̂ × `t_end`,
+  outcome-state × FTLE, …), gains it, and REQ-GUI-030 a note.
+- **REQ-COL-104 (new, M2, calibration, R-71)**: the sRGB palette's separation evidence, measured as REQ-COL-055
+  measures, proposed by TASK-M2-32 with the figures above and confirmed at the gate RQ-330 asks for. REQ-COL-062
+  (calibration, confirmed at M1) is superseded rather than edited: its statement keeps the M1 confirmation and gains a
+  sentence naming R-445's values and REQ-COL-104. REQ-COL-055 gains a note: purple leaves the hatch's nearest entries
+  unchanged.
+- R-96 and R-433 carry forward and "Still in force" lines (R-292, R-293).
+- R-445 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-104; changes REQ-COL-002, REQ-COL-055 (rulings, sources, note), REQ-COL-062 and REQ-GUI-030 (rulings,
+sources, note).
+
+## R-446 — "Degenerate" leaves the outcome view: black `#141418` means nothing has happened yet, up to the playhead, and bounded, running and every failure draw it; failures show in the debug views; forbidden chart regions keep the chart contract's hatch, decided from the chart's validity *(supersedes R-96, R-399 and R-441 as they apply to the outcome view)*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" ("how the table reads the payload" and the "not yet" paragraph's scope) and § "4.1
+Backbone & `Option` occupants" ("What every mode keeps"), `docs/gui/principia_render_gui_spec.md` § "G6. Legend —
+generated by evaluating the stain (`06_legend.png`)" (R-441's paragraph reworded),
+`docs/contracts/principia_render_contract.md` § "Presentation layer (hand-written, small, reused by every debug
+view)" (the stipple bullet's last clause), `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit
+square — each axis's extension type (R-407)" (a sentence added), the forward lines of R-96, R-399 and R-441, REQ-COL-002, REQ-COL-053,
+REQ-COL-064, REQ-TOOL-162, REQ-GUI-105 and REQ-CHART-054 (reqio), REQ-COL-101 and REQ-COL-102 (reqio, new),
+TASK-M2-32, TASK-M8-05 (an acceptance line and a note), `plan/section_notes.yaml` (R-441's note), `plan/rule_groups.yaml`
+and `REVIEW_QUEUE.md` (RQ-330, RQ-333); built by TASK-M2-32 and TASK-M8-05*
+
+The human's words (R-444 quotes the whole message):
+
+> "3. "Degenerate" is removed from the outcome view. Black #141418 means "nothing has happened yet, up to
+>    the playhead": bounded, running, and every failure (sim_failed, decode_failed including the η_E
+>    ENERGY_UNSCALABLE / ENERGY_INFEASIBLE tags and mass-block tags such as M01_TINY, non-finite decode,
+>    NaN, infinity) draw black in the outcome view. A view starts black and fills in as events fire.
+>    Failures are shown by debug views, which keep the invalid hatch and their own palettes.
+>    - Running samples draw black in the outcome view instead of the not-yet stipple. The stipple and
+>      its calibrations (R-399, R-434) stand for every other field that uses them (an unset d_min, for
+>      example); only the outcome view changes.
+>    - This resolves the conflict between colour_composition §1.4 / R-96 ("degenerate" = decode_failed,
+>      drawn white) and the chart–decoder contract (hatched pixels are decode_failed, drawn with
+>      debug_invalid). Forbidden chart regions keep the chart contract's forbidden-region treatment in
+>      the outcome view, decided from the chart's own validity (types, primary ranges, validate, Φ), not
+>      from the payload's decode_failed detail, which cannot tell the two hatches apart. Every other
+>      decode_failed sample draws black.
+>    - Update the η_E note on record (the decision that a free-fall slice with η_E on draws "degenerate's
+>      white" everywhere): it now draws black in the outcome view, and the η_E debug view is where the
+>      tags show. The GUI-docs line stays, reworded."
+
+*What it decides:*
+- **"Degenerate" leaves the outcome view.** Black `#141418` means "nothing has happened yet, up to the playhead":
+  `bounded`, `running` and every failure draw it in the outcome view: `sim_failed`, `decode_failed` (whatever its
+  `detail` and tag: η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite
+  decode), NaN and infinity. A view starts black and fills in as events fire.
+- **Failures are shown by the debug views**, which keep the invalid hatch and their own palettes.
+- **Running samples draw black in the outcome view, not the "not yet" stipple.** The stipple and its calibrations
+  (R-399, R-434) stand for every other field that uses them, an unset `d_min` among them; only the outcome view
+  changes.
+- **The conflict it resolves:** colour_composition §1.4 and R-96 drew `decode_failed` as degenerate's white, while the
+  chart contract draws its hatched pixels, which are `decode_failed`, with `debug_invalid` (chart_decoder_contract
+  Part 3).
+- **Forbidden chart regions keep the chart contract's forbidden-region treatment**, the hatch, in the outcome view,
+  decided from the chart's own validity (its axes' extension types, their primary ranges, `validate`, `Φ`), never from
+  the payload's `decode_failed` detail, which cannot tell the two hatches apart. Every other `decode_failed` sample
+  draws black.
+- **R-441's note is updated:** a free-fall slice with `η_E` on draws black in the outcome view, not degenerate's white;
+  the tags show in the η_E debug view. The GUI-docs line stays, reworded.
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **Which hatched pixels keep the hatch.** The chart contract hatches a pixel "as forbidden" in two cases (Part 3): a
+  bounded axis past its edge (the domain's end) and the universal fallback, a `Φ` that fails to evaluate or a state
+  that fails `validate`'s layers 2 and 3. R-408 tells the two apart only for the area statistics. Both are "hatched as
+  forbidden" in the contract's words, so both keep the hatch in the outcome view, on every pixel Part 3 hatches,
+  inside `[0,1]²` and past it: after the types act, a bounded axis past its edge, a state `validate`'s layer 2 or 3
+  rejects, or a `Φ` that fails to evaluate. A `decode_failed` sample the chart does not hatch draws black. (Reworded
+  per physics review 5548113767, P1: the first port tied the hatch to the classifier the statistics use, whose
+  primary-range step decides counting, not hatching.)
+- **The primary ranges hatch nothing (flagged).** The human's words list them among the chart's inputs ("types,
+  primary ranges, validate, Φ"). That parenthesis quotes, word for word, chart_decoder_contract Part 3's own sentence
+  on what the area statistic reads: "The statistic reads the chart (the types, the primary ranges, `validate`, `Φ`)"
+  (the R-408 paragraph); the human named the machinery Part 3 classifies with, not a new step of the hatch (physics
+  review 5550753847, applied per R-369). Under Part 3, whose forbidden-region treatment the ruling keeps, they decide
+  only what the area statistics count (R-408): a pixel outside a primary range that passes is a system and draws its
+  outcome (the shape sphere past its pole, a periodic redraw, R-407), and one whose state fails `validate` there is
+  hatched. Read otherwise, the parenthesis would hatch systems R-407 draws, or draw black a pixel Part 3 hatches, so
+  this port reads it as naming the chart's machinery, not as a step of the hatch (physics review 5548113767, P1).
+- **`Φ` is the chart map** (physics review 5548113767, P2). Part 3 writes the general interface with the decode
+  inside the arrow; chart_reference §5.1 separates `Chart::map` from the shared decoder. For the outcome view "a `Φ`
+  that fails" is `Chart::map` failing to evaluate (non-finite, or outside its domain). The decoder's own outcomes, its
+  `DEGENERATE` tags and a non-finite decode, never set the lane: the human's list draws them black. `validate`'s layer
+  3 marks forbidden a finite decoded state that breaks it; a non-finite decode stays `decode_failed`/0, black.
+- **How the view learns it** is not in the corpus: the outcome palette reads the payload, and the classification is
+  the chart's, computed on the CPU (R-26). It is a definition requirement (R-72), **REQ-COL-102**: TASK-M2-32 writes in
+  colour_composition §3 how a sample's chart classification reaches the outcome view (a `ctx` field, its type and who
+  fills it), reviewed by the physics reviewer. Inside `[0,1]²` the classification is `validate`'s and `Φ`'s (TASK-M2-05's
+  `Chart` trait); past it, the extension types are TASK-M8-05's (R-407), which gains an acceptance line: its hatched
+  pixels draw the hatch in the outcome view.
+- **A reserved `state` code (6 or 7)** is no physical outcome and no class: it draws black in the outcome view, as the
+  failures do, and keeps the hatch in the `state` debug view, which shows it (`m1-synthetic/set_state`). The human's
+  list of failures does not name it; black follows "The outcome view shows physical outcomes only" (R-444).
+- **The three modes.** The outcome class now holds a value for every sample: `running` and every failure are its
+  bounded / nothing yet class. So in greyscale and hue mode they take that class's place, rank 0 (R-448), and no longer
+  the "not yet" style or the hatch; a forbidden chart region keeps the hatch in every mode, decided from the chart.
+  colour_composition §4.1's "What every mode keeps" says so; it stands unchanged for every other field.
+- **The η_E debug view.** The corpus names no view by that name. The debug views that show a failure are the `state`
+  view (`decode_failed` in its `dbg_cat` colour) and the `detail` view (the failure category: `decode_failed`'s
+  `detail` codes, payload §2), debug_tooling_plan §B; neither tells `ENERGY_UNSCALABLE` from `ENERGY_INFEASIBLE`. The
+  reworded GUI-docs line names the human's view and those two; which view the human means is **RQ-333**.
+- **The mass block's tags and #225's.** PR #225 (TASK-M2-09, in flight) tags an infeasible invariant-chart pixel
+  `DEGENERATE(INVARIANT_INFEASIBLE)`, `decode_failed` detail 3. Past the square the warp's axes are bounded and the
+  chart hatches the pixel: there it keeps the hatch, from the chart's classification. Inside `[0,1]²` the invariant
+  warp maps every pixel feasible in exact arithmetic (chart_reference §2.1), so there the tag can arise only from
+  rounding at the feasibility boundary (`K* = E − U` cancelling near `ulp(U)`, or a deep quad's margin at an `s` edge
+  comparable to the rounding of `L_max²` and `L_z²`); the chart does not hatch it there, and it draws black. No test
+  asserts that the tag never occurs inside the square. (Reworded per physics review 5548113767, P4.)
+- **Review fixes on PR #226** (applied per R-369): `#141418` is the outcome palette's explicit invalid treatment
+  (colour_composition §3, "Overridable per node"; render_gui_spec §13), so R-79 and R-436 are met by black in the
+  outcome view, and the human's "NaN, infinity" are `sim_failed`'s details, the view reading no float (physics P3).
+  The outcome legend's forbidden-region key is one key after the nine, "forbidden region", in the hatch style, over
+  every pixel the lane marks forbidden; its share and the classes' shares count as R-408 counts (render_gui_spec §G6;
+  gui review 5548034323, G3).
+
+*Applied:*
+- **colour_composition §1.4**: "how the table reads the payload" gives black's meaning, the failures it covers, the
+  debug views and the forbidden regions; the "not yet" paragraph's scope leaves the outcome view out. **§4.1**'s "What
+  every mode keeps" gives the outcome class's case.
+- **render_gui_spec §G6**: R-441's paragraph reworded: the tagged pixels draw black in the outcome view, the near-uniform
+  black is expected, and the tags show in the debug views.
+- **The render contract's stipple bullet**: "the outcome palette's `running` class included" becomes the outcome
+  view's exception. **The chart contract's Part 3** gains a sentence: the outcome view keeps the hatch, decided from the
+  classification.
+- **The requirements (reqio).** REQ-COL-101 (new, M2): the outcome view draws `running`, `sim_failed`, `decode_failed`
+  and a reserved `state` code `#141418`, and a forbidden chart region the hatch, decided from the chart, in every mode.
+  REQ-COL-102 (new, M2, definition, R-72): how the view reads the classification. REQ-COL-053's, REQ-COL-064's and
+  REQ-TOOL-162's statements gain their scope (the outcome view draws `running` black) and keep their confirmations;
+  REQ-GUI-105 gains a note (the outcome legend's keys); REQ-CHART-054's verify gains the outcome view's hatch, and
+  TASK-M8-05 the line. REQ-COL-002's verify carries the human's rows (R-444).
+- R-96, R-399 and R-441 carry forward and "Still in force" lines (R-292, R-293); R-441's section note says so.
+- R-446 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-101 and REQ-COL-102; changes REQ-COL-002, REQ-COL-053, REQ-COL-064 and REQ-TOOL-162 (statement, rulings,
+sources, note), REQ-GUI-105 (rulings, sources, note) and REQ-CHART-054 (verify, rulings, sources, note).
+
+## R-447 — The outcome palette has an OKLab-uniform variant as a second preset: each chromatic class at its own OKLab hue, L = 0.72 and C = 0.123; bounded stays `#141418`; the sRGB palette stays the default
+*Amended in part by R-449 (the class names as shown, as for R-444; same hues, same swatches).*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (a paragraph and a table added), `docs/contracts/principia_render_contract.md` §
+"Presentation layer (hand-written, small, reused by every debug view)" (a clause of R-445's sentence), REQ-COL-103 and
+REQ-COL-105 (reqio, new), TASK-M2-32,
+TASK-M7-17 (a note), `plan/rule_groups.yaml` and `REVIEW_QUEUE.md` (RQ-330, RQ-332); built by TASK-M2-32*
+
+The human's words (R-444 quotes the whole message):
+
+> "4. An OKLab-uniform variant of the outcome palette, as a second preset: each chromatic class keeps its
+>    own OKLab hue at L = 0.72 and C = 0.123 (the largest chroma in gamut at every hue at that L), so
+>    only hue varies and any brightness-slot field reads cleanly. Bounded stays #141418.
+>
+> | outcome | hue | sRGB |
+> |---|---|---|
+> | collision 0–1 | 27° | #E7857A |
+> | collision 0–2 | 147° | #6EB976 |
+> | collision 1–2 | 265° | #7FA2F2 |
+> | triple collision | 65° | #D99349 |
+> | escape body 0 | 103° | #B3A841 |
+> | escape body 1 | 335° | #D486C3 |
+> | escape body 2 | 208° | #09B9CD |
+> | triple ejection | 305° | #B790E2 |
+>
+> The sRGB palette of ruling 1 stays the default."
+
+*What it decides:*
+- **A second preset of the outcome palette, OKLab-uniform:** each chromatic class at its own OKLab hue (the sRGB
+  class's hue, rounded to a degree), at L = 0.72 and C = 0.123, so only hue varies and a field in the brightness slot
+  reads cleanly; bounded stays `#141418`. The swatches are the table's.
+- **The sRGB palette of R-444 stays the default.**
+
+*Measured (applied per R-369, as REQ-COL-055 measures; dd_colouring §3.1's transforms):*
+- **The hues** are the sRGB classes' own, rounded: 26.8°, 146.7°, 265.1°, 65.3°, 103.0°, 335.2°, 208.5° and 305.1°.
+- **The swatches as ruled** measure L 0.719 to 0.721, C 0.122 to 0.124, and each hue within 0.5° of its row. Five
+  are the 8-bit rounding of (L 0.72, C 0.123, the row's hue); three differ by one or two 8-bit steps in one channel:
+  `#6EB976` (computed `#6DB976`), `#D99349` (`#D9934A`) and `#09B9CD` (`#07B9CD`).
+- **C = 0.123 is in gamut at every listed hue**, the narrowest being escape 2's 208°, where the largest in-gamut chroma
+  at L = 0.72 is 0.1238. **It is not "the largest chroma in gamut at every hue at that L"**: over all hues, that is
+  0.1224, at about 199.8°, so C = 0.123 is out of gamut near there, though at no listed hue.
+- **The closest pair is 0.063**, escape 1 (335°) against triple ejection (305°), the two hues 30° apart: a chord of
+  `2C·sin(15°)` = 0.064 at one L and C. Four more pairs are under 0.101: collision 0–1 against triple collision (0.079),
+  triple collision against escape 0 (0.081), collision 1–2 against triple ejection (0.084) and collision 0–2 against
+  escape 0 (0.091). Closer than the sRGB palette by construction, as the human said. Each chromatic swatch is at least
+  0.139 from the stipple's dot, 0.196 from the hatch's colours, 0.132 from the fallback tint and 0.320 from the "not
+  yet" grey.
+
+The two departures, C against the largest in-gamut chroma and the three swatches' rounding, are transcribed as the
+human gave them, the measured values beside them, and put to the human in **RQ-332**; no swatch is changed.
+
+*Applied:*
+- colour_composition §1.4 gains the variant's paragraph and table, with the measured values and RQ-332.
+- **REQ-COL-103 (new, M2)**: the variant, a second named swatch set of the outcome palette, selectable, the sRGB set the
+  default; its render test. **REQ-COL-105 (new, M2, calibration, R-71)**: its separation evidence, as measured, proposed
+  by TASK-M2-32 and confirmed at the gate RQ-330 asks for.
+- **Where the preset lives**, applied per R-369: in M2 it is a second swatch set on the outcome palette's occupant
+  (TASK-M2-32), selectable where the swatches are edited; the preset library (TASK-M7-17) lists it with the outcome
+  palette, a note there says so.
+- R-447 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-COL-103 and REQ-COL-105.
+
+## R-448 — Greyscale and hue modes rank the outcome class's nine classes bounded first, then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2 and triple ejection: `K = 9`
+*Amended in part by R-449 (the class names as shown: bounded first, then collision 1–2, 1–3, 2–3, triple collision,
+escape body 1, 2, 3 and triple ejection; the same rank).*
+*Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
+*16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
+(greyscale mode's rank), REQ-COL-067 and REQ-COL-068 (reqio), TASK-M2-32 and `plan/rule_groups.yaml`; built by
+TASK-M2-32*
+
+The human's words (R-444 quotes the whole message):
+
+> "5. Greyscale and hue modes (REQ-COL-067/068): K = 9, ranked bounded first (darkest), then collision
+>    0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2, triple ejection."
+
+*What it decides:* the outcome class has `K = 9` classes in greyscale and hue mode, ranked bounded first, the
+darkest, then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2 and triple ejection. Rank `r` takes
+`B = (r + ½)/9` in greyscale mode and `t = r/9` in hue mode, as §4.1 defines them (REQ-COL-067, REQ-COL-068); the
+definitions are otherwise unchanged. Bounded's rank 0 holds `running` and every failure too (R-446).
+
+*Applied:* colour_composition §4.1's greyscale bullet gives the rank and `K = 9`, in place of TASK-M1-14's `K = 11`
+(REQ-COL-067's definition, physics-reviewed); hue mode reads the same rank. REQ-COL-067 and REQ-COL-068 (reqio) gain
+R-448 and the rank in their verify. TASK-M2-32 conforms the code (`colour_independence`'s ranks) and its tests.
+R-448 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-COL-067 and REQ-COL-068 (verify, rulings, sources, note).
+
+## R-449 — What a person reads is 1-based: the bodies are 1, 2, 3 and a pair is named by its two bodies, never by its pair id, through one conversion function; storage, computation and machine-readable exports stay 0-based and say so *(supersedes R-22 as it applies to display labels; amends R-444, R-445, R-447 and R-448 as they name the classes)*
+*16 Oct 2026 · applied in `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of
+`packed_a`) — 10 used, rest reserved" (a bullet, "What a person reads", added), `docs/design/principia_colour_composition.md`
+§ "1.4 Categorical colour-assignment — the outcome-state default palette" (the two tables' class names, a paragraph
+added, the mnemonic, the triple outcomes' and the variant's measured pairs, the escaper filter's example) and § "4.1
+Backbone & `Option` occupants" (greyscale mode's rank), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the
+everyday view (`01_main.png`)" (the hover label), § "G6. Legend — generated by evaluating the stain (`06_legend.png`)",
+§ "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)" (pane 1) and § "G13. Where the
+artboards are overridden" (the labels' bullet), `docs/design/principia_dd_generation_root.md` § "3.8 Metadata schema
+(what every entry must carry)" (a paragraph added) and § "6. Deferred / flagged", `docs/contracts/principia_render_contract.md`
+§ "Presentation layer (hand-written, small, reused by every debug view)" (the k = 6 view's legend),
+`docs/design/principia_debug_tooling_plan.md` § "B. Payload field views — `sample_descriptor` (bit-packed u32)" and §
+"E. Payload field views — `ICDescriptor` (64 B) & the live-state block" (the legends), `docs/notes/ic_inspector_scratchpad.md`
+§ "Measurement readouts (gauge-invariant → hold under all four handles)", `docs/design/principia_dd_decoder.md` § "6.
+Deferred / flagged", `docs/design/principia_chart_reference.md`'s indexing note, `docs/design/principia_dd_integrator.md`
+§ "3.7 The shape readout and winding (live, per macro-step — lockstep, ratified)" (the landmarks' shown labels), the
+forward lines of R-22, R-444, R-445, R-447 and R-448, REQ-GUI-188 and REQ-GEN-036 (reqio, new), REQ-GUI-087,
+REQ-GUI-066, REQ-GUI-113, REQ-GUI-105, REQ-SYS-016, REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-COL-067, REQ-COL-103,
+REQ-COL-104 and REQ-COL-105 (reqio), TASK-M2-33 (new), TASK-M2-32, TASK-M2-10, TASK-M8-10, TASK-M8-11, TASK-M8-14,
+TASK-M8-16 and TASK-M8-22, `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/rule_groups.yaml`, `plan/reviewers/gui.md`
+and `plan/reviewers/physics.md` (the labels' checklist lines) and `REVIEW_QUEUE.md` (RQ-331 and RQ-332's names; RQ-334 to RQ-336);
+built by TASK-M2-33, with TASK-M8-10 and TASK-M8-11*
+
+The human's message of 16 Oct 2026, in their own words ("My ruling (Malachy's, 16 October 2026)"), quoted whole:
+
+> "A display rule for body and pair names. My ruling (Malachy's, 16 October 2026). Record it in
+> decisions.md as superseding the display half of R-22, port it into the docs, add requirements through
+> plan/tools/reqio.py, run python3 plan/check_plan.py before every plan commit; docs first, then the
+> plan; "Removed lines" notes. Do not implement.
+>
+> 1. Internally, bodies stay 0-based. The payload's detail field, R-22's pair map (pair k is the side
+>    opposite body k), the code, the WGSL and every machine-readable dump keep 0-based ids. Nothing in
+>    storage or computation changes.
+>
+> 2. Everything a person reads is 1-based. Legends, GUI labels, stain and preset names, tooltips, the
+>    inspector, the dev GUI, figure captions, export captions, and docs prose describing what is shown
+>    all call the bodies 1, 2, 3, and name a pair by its two bodies, never by its pair id.
+>
+>    | internal | shown as |
+>    |---|---|
+>    | body 0 / 1 / 2 | body 1 / 2 / 3 |
+>    | pair 2 = bodies (0, 1) | collision 1–2 |
+>    | pair 1 = bodies (2, 0) | collision 1–3 |
+>    | pair 0 = bodies (1, 2) | collision 2–3 |
+>    | collision detail 3 | triple collision |
+>    | escape detail 3 | triple ejection |
+>
+>    Never show a pair id. A pair is always named by its bodies, smaller first.
+>
+> 3. One conversion function owns this mapping (detail and state in, display string out), and every
+>    human-facing surface goes through it. Requirement and test: exhaustive over every state and detail
+>    value, so a new code breaks the build until it has a display name; and a negative arm asserting
+>    that no legend or GUI label contains "body 0" or a pair id.
+>
+> 4. This applies to everything already sent: the outcome-palette rulings (whose class names were
+>    written 0-based, e.g. "collision 0–1", "escape body 0"; their display names are "collision 1–2",
+>    "escape body 1" and so on, same colours) and the Chazy spec and its follow-ups (the body lens's k
+>    and the escaper map's "body 0/1/2" are internal; their legends read body 1/2/3). Correct those
+>    names where they have already been ported. Update render GUI spec §G6, which currently says the
+>    outcome legend uses 0-based labels (R-22).
+>
+> 5. Machine-readable exports (CSV columns, JSON fields, .raw and .prnq dumps) stay 0-based, and their
+>    headers or schema say so explicitly ("body index, 0-based").
+>
+> Report the ruling id and requirement ids added."
+
+Recorded as one ruling, applied per R-369: the five items are one rule (inside 0-based, what a person reads 1-based)
+and its scope, not separate rulings; R-444 to R-448 were split because their items ruled different things.
+
+*What it decides:*
+- **Inside, nothing changes.** The payload's `detail`, R-22's pair map (pair `k` is the side opposite body `k`), the
+  code, the WGSL and every machine-readable dump keep 0-based ids. Nothing in storage or computation changes; the
+  schema version does not move.
+- **What a person reads is 1-based**: legends, GUI labels, stain and preset names, tooltips, the Inspector, the dev
+  GUI, figure and export captions, and docs prose describing what is shown name the bodies 1, 2, 3 and a pair by its
+  two bodies, smaller first, never by its pair id: pair 2 is "collision 1–2", pair 1 "collision 1–3", pair 0
+  "collision 2–3"; collision `detail` 3 "triple collision", escape `detail` 3 "triple ejection".
+- **One conversion function owns the mapping**, `state` and `detail` in, the display string out, and every
+  human-facing surface goes through it. Its test is exhaustive over every `state` and `detail` value, so a new code
+  breaks the build until it has a display name, and a negative arm asserts that no legend or GUI label contains
+  "body 0" or a pair id.
+- **What is already ported is renamed**: the outcome palette's classes (R-444 to R-448 wrote them 0-based) are shown
+  "collision 1–2", "escape body 1" and so on, the same classes and colours. R-22's display half ("0-based display
+  labels") is superseded; its storage half stands.
+- **Machine-readable exports** (CSV columns, JSON fields, `.raw` and `.prnq` dumps) stay 0-based, and their headers or
+  schema say so ("body index, 0-based").
+
+*Applied per R-369 (mechanical consequences and routine design choices):*
+- **The function's other outputs.** The human's table names the bodies, the pairs and the triple outcomes. An escape of
+  body `k` reads "escape body `k + 1`", as item 4's "escape body 1" does. A state with no body or pair reads by its
+  payload §2 name: "bounded", "running", `sim_failed` and `decode_failed` with their failure category, and a reserved
+  `state` code as "reserved state 6" or "7". The legend's "bounded / nothing yet" key (R-444) is the outcome legend's
+  class name over several states, and stays. **The same module owns it** (gui review 5548034323 on PR #226, G2): it
+  gives the outcome class's name, the black class "bounded / nothing yet" and each of the other eight as the function
+  names its `state` and `detail`; the swatch labels take it (payload §2, "What a person reads"; render_gui_spec §G6).
+- **One module, not one function alone.** `dmin_pair`'s legend, the Inspector's per-body readouts (separations shown
+  r₁₂, r₁₃, r₂₃), the ternary masses' legend, the k = 6 direction-cosine view's legend and the shape sphere's
+  collision landmarks (`BC₀₁` shown `BC₁₂`) name a body or a pair without a `state`; they take the body and pair names
+  from the same module, which the `(state, detail)` function is built from, so that the 0 → 1 conversion is written
+  once (REQ-GUI-188). It lives in the `ledger` crate beside the pair map (`ledger::payload::pair_bodies`), which
+  `render`, `engine` and `gui` all reach; TASK-M2-33 may place it otherwise with the code reviewer's agreement.
+- **`detail_meanings`** (`ledger::payload`, hashed into the schema version) is ledger data, machine-readable, and keeps
+  its 0-based "body 0" and "pair 0" strings; no legend may show them (REQ-GUI-188's negative arm).
+- **The swatch ids** (`escape_body_0`, `collision_pair_2`) are machine-readable ids and stay; the swatch labels are the
+  display names.
+- **The export header.** The ledger's metadata schema (generation root §3.8) says which fields are body- or
+  pair-indexed; which key carries "body index, 0-based" is TASK-M2-33's choice, so long as the export decoder's header
+  or schema states it for each such field (REQ-GEN-036). An export's caption is read by a person and is 1-based.
+- **The decisions.md records are not rewritten.** R-444 to R-448's texts, the human's words among them, keep their
+  0-based class names as the record; their forward lines say the names as shown are R-449's. The docs, the
+  requirements, the task files and the open review-queue entries carry the shown names.
+- **The Euler landmarks' labels** (`E₀, E₁, E₂`) have no defined index: RQ-334, decidable per R-369, written by
+  TASK-M8-11, which draws them.
+- **The Burrau literature numbers the bodies differently**: shown body 1 is internal body 0, the mass opposite the
+  hypotenuse (5/12 at the classical point). RQ-335 records it; R-449's map applies as ruled.
+- **`.raw` and `.prnq`** are not defined in the live corpus: RQ-336; REQ-GEN-036 covers every machine-readable export
+  the corpus defines and any defined later.
+- **A new task builds it**, TASK-M2-33 ("Display names: one conversion function, 1-based labels on every human-facing
+  surface, and 0-based exports that say so"), M2, depending on TASK-M2-32 (both change `outcome.rs`'s labels; this one
+  routes them through the function); reviewers code, qa and gui. It closes REQ-GUI-188 and REQ-GEN-036, conforms the
+  surfaces built so far (the outcome legend, the `detail` and `dmin_pair` debug legends, the GUI mock's hover label,
+  Trajectory panel and Inspector labels) and the tests that pin 0-based labels. TASK-M8-10, which closes REQ-GUI-087 on
+  the real engine, depends on it and uses the function in place of its own `labels.rs`; TASK-M8-11 depends on it for
+  the landmarks' labels.
+- **Open PR #223 (the Chazy port)** is not edited here: the body lens's `k`, the escaper map's "body 0/1/2" and the
+  three-panel view's "k = 0, 1, 2" are internal there, and their legends and panel titles read body 1, 2, 3. Its fix
+  round applies R-449 to its docs, requirements and tasks; whichever of the two PRs merges second carries the forward
+  line on #223's rulings.
+
+*Applied:*
+- **payload §2** gains "What a person reads": the human's table, the function and the exports' rule.
+- **colour_composition §1.4**: both tables' class names are the shown names, the payload column keeping the 0-based
+  ids; a paragraph says so; the mnemonic, the triple outcomes' and the variant's measured pairs and the filter's
+  example are renamed. **§4.1**: greyscale mode's rank is named as shown.
+- **render_gui_spec §G6**: the outcome legend's 1-based class names, in place of "0-based labels (R-22)". **§G2**: the
+  hover label's names. **§G8**: pane 1's bodies 1, 2, 3. **§G13**: the labels' bullet: 1-based, as the artboards show
+  them, R-22's override superseded.
+- **generation root §3.8**: the exports' 0-based ids and their header; **§6**'s body-index bullet points there.
+- render contract (the k = 6 view's legend), debug_tooling_plan §B and §E (the legends), the IC Inspector scratchpad
+  (the separations shown), dd_decoder §6, chart_reference's indexing note and dd_integrator §3.7 (the landmarks) gain
+  a sentence or a clause each.
+- **The requirements (reqio).** New, M2: **REQ-GUI-188** (the one conversion function, exhaustive, every surface
+  through it, the negative arm) and **REQ-GEN-036** (machine-readable exports 0-based, the header saying so). Changed:
+  REQ-GUI-087 (the GUI's labels 1-based, in place of 0-based; its verify), REQ-GUI-066 and REQ-GUI-113 (the Inspector's
+  shown names), REQ-GUI-105 (note), REQ-SYS-016 (0-based in storage and computation; shown 1-based), REQ-COL-004 (the
+  `detail` legend's names), REQ-COL-002, REQ-COL-062 (note), REQ-COL-067, REQ-COL-103, REQ-COL-104 and REQ-COL-105 (the
+  class names as shown). The ids follow open PR #223's: REQ-GUI-185 to REQ-GUI-187 are #223's, so the new GUI id is
+  REQ-GUI-188.
+- **Tasks**: TASK-M2-33 (new); TASK-M2-32's goal and acceptance lines name the classes as shown and its swatch labels
+  are the display names; TASK-M8-10 (depends on TASK-M2-33; its goal, deliverable and acceptance line 1-based);
+  TASK-M8-11 (depends on TASK-M2-33; a note for the landmarks' labels and RQ-334); TASK-M8-14, TASK-M8-16 and
+  TASK-M8-22 need REQ-GUI-188, with a note; TASK-M2-10's goal says the shown numbers are 1-based (RQ-335).
+- **The reviewer checklists**: gui.md's outcome-legend line names the classes 1-based and, applied per R-369 as a
+  mechanical consequence of R-446 in the same PR, gives the outcome view's black key and the forbidden region's; its
+  §G13 line drops "0-based labels"; physics.md's body-index line scopes 0-based to storage and computation.
+- R-22, R-444, R-445, R-447 and R-448 carry forward and "Still in force" lines (R-292, R-293).
+- R-449 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-188 and REQ-GEN-036; changes REQ-GUI-087, REQ-GUI-066, REQ-GUI-113, REQ-GUI-105, REQ-SYS-016,
+REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-COL-067, REQ-COL-103, REQ-COL-104 and REQ-COL-105; adds TASK-M2-33.
+
+## R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (the console's paragraph and the window landing), § "G12. Console (`12_console.png`)" (a
+paragraph added) and § "G13. Where the artboards are overridden" (a bullet added), R-405's and R-409's heading blocks,
+REQ-GUI-178 (reqio, its note), REQ-GUI-189 and REQ-GUI-190 (reqio, new), TASK-M6-32 (new), `plan/tasks.yaml`,
+`plan/WORKFLOW.md`, `plan/OPERATIONS.md`, `plan/MILESTONES.md` and `plan/rule_groups.yaml`; built by TASK-M6-32 on the
+mock*
+
+The human's words, a message of 16 Oct 2026 in three parts, given in the orchestrator's session and recorded verbatim.
+Part 1 is this ruling; Part 2 is R-451 and Part 3 is R-452. Each is a GUI design ruling under R-390's feedback rule.
+
+> GUI feedback and additions from me (Malachy, 16 October 2026), from using the dev GUI. Three parts:
+> the console's keyboard navigation, the compass's look, and new compass views. The rulings below are
+> mine. Record them in decisions.md (amending R-405 and R-409 where marked), port them into
+> docs/gui/principia_render_gui_spec.md (§G3, §G12, §G13) and the requirements through
+> plan/tools/reqio.py, run python3 plan/check_plan.py, and create or update the GUI-track tasks to
+> implement them (gui-reviewer and qa-reviewer on each; physics-reviewer where marked).
+>
+> Attached are three HTML references. Add them to the repo beside the other GUI references:
+> - docs/gui/reference/principia_nav_cube.html ("Principia — navigation cube")
+> - docs/gui/reference/principia_plucker_compass.html ("Principia — orientation compass")
+> - docs/gui/reference/principia_compass_charts.html ("Principia — compass, position & chart transform")
+> They are references for look and behaviour, cited through the spec, per CLAUDE.md. Their light cream
+> palette is NOT to be copied anywhere. Keep the dev GUI's current dark-mode colours for everything.
+>
+> === Part 1: the console's keyboard model (amends R-405 / R-409's console structure) ===
+>
+> What's wrong now: I can reach the console, but it doesn't behave intuitively or consistently. The
+> filter row (All, Warnings, Errors, Info) isn't a scope of its own. Sometimes I can't reach the search
+> field, Copy or Clear at all, then later I can without knowing what changed. I can never reach the
+> close (×) button. And moving between the controls and the log doesn't work the way the rest of the
+> GUI does.
+>
+> The console window has exactly two scopes, top to bottom, following §G3's two modes:
+> 1. Header bar: the filters All, Warnings, Errors, Info, then the search field, Copy, Clear, and the
+>    close button ×, in that visual order.
+> 2. Log: the entry list.
+>
+> - Opening the console (from the footer or Windows > Console) lands in navigation mode on the header
+>   bar scope itself, the whole scope highlighted. Auto-opening on an error still does not take focus.
+> - In navigation mode on a scope, Up and Down move between the header bar and the log. Tab and
+>   Shift+Tab do the same inside the window, as §G3 has windows.
+> - Enter on the header bar goes in, onto its first element (All). Left and Right then move across
+>   every header element in visual order, the search field, Copy, Clear and × included. Esc goes back up
+>   to the header bar scope.
+> - The search field behaves as §G3's text fields: Enter starts typing; Esc or Enter stops and keeps the
+>   text.
+> - × is an ordinary focusable button: Enter on it closes the console and returns focus to whatever
+>   opened it. Esc from the window's top level still closes it too.
+> - Enter on the log starts interaction: Up and Down scroll one entry, Page Up and Page Down a page,
+>   Home and End go to the first and last entry, and Shift gives ×10 as everywhere. The whole log is
+>   reachable, not only the visible rows. Esc returns to navigation mode on the log scope.
+> - The focus ring and breadcrumb follow this (e.g. "Console › Header › Copy").
+>
+> The intermittent reachability is a bug in its own right. Reproduce it and find the cause before
+> fixing it (focus order that depends on state, such as an empty filtered list, a hidden control, or the
+> console having auto-opened on an error), and say in the PR what it was.
+>
+> Tests (keyboard-script tests on the mock engine):
+> - Open the console from the footer and from Windows > Console.
+> - From the landing, reach every header element, the log and × using only the keys above.
+> - Close with × and with Esc, and check where focus returns.
+> - Scroll the log to its first and last entry.
+> - Repeat all of this after an auto-open on error, and with a filter that empties the list, so the
+>   order is shown not to depend on state.
+> - Negative arm: a script that fails if any visible console control is unreachable.
+>
+> Then audit every other window and scope against §G3 for the same failure (a visible control the
+> keyboard cannot reach, or reachability that depends on state) and list what you find in the PR.
+>
+> === Part 2: the cube view's look (principia_nav_cube.html) ===
+>
+> The current compass is close to the nav-cube reference but not the same. Make its appearance and
+> behaviour match the reference, transcribed from the file's code, in the dev GUI's dark-mode colours:
+>
+> - Isometric projection of the unit cube [−1,1]³:
+>   P(x,y,z) = (CX + S·√3/2·(x − z), CY + S·(½(x + z) − y)), scaled to fit with the same margins.
+> - Cube edges depth-sorted by x + z, nearer edges more opaque and thicker. The slice is sorted in among
+>   the edges by its own depth, so edges in front of it draw over it.
+> - The slice drawn as the true cross-section polygon of the plane through the cube (a rectangle in
+>   slice mode, rectangles to hexagons as it tilts), with its fill shaded by Lambert lighting from the
+>   slice's own normal (two-sided, small ambient term), an in-plane grid clipped to the polygon, and an
+>   outline.
+> - Edge labels: each axis name centred on its edge and pushed outward from the cube. Slice mode
+>   labels Width (chart x, bottom-left edge), Depth (the slider axis, bottom-right edge) and Height
+>   (chart y, left vertical edge), with −1.0 / 1.0 at the corners, one number per corner. Tilt mode
+>   labels only q₁'s target (bottom-left) and q₂'s target (bottom-right), and leaves the vertical edge
+>   unnamed on purpose: no single coordinate is perpendicular to both targets in 8D.
+> - The readout: slice mode shows the plane's normal axis and its position as a fraction of range; tilt
+>   mode shows q₁'s and q₂'s targets and angles in degrees.
+> - Drag: in slice mode a horizontal drag moves the slice along its axis; in tilt mode a horizontal
+>   drag sets q₁'s angle and a vertical drag q₂'s, each clamped to ±90°. Displayed values ease towards
+>   their targets as the reference's do.
+>
+> Keep from R-409: no orbit; Tilt and Slice modes set by the compass's buttons and by the slider
+> touched; Tilt as the default mode (the reference opens in Slice); the gold pin when locked; §G3's
+> keyboard behaviour. The reference's own controls (axis selectors, sliders, the Animate button) are
+> not part of the compass; the Manifold view owns those. Do not add them.
+>
+> Tilt mapping: the reference maps the two tilt angles to the plane's normal with an axis-angle
+> ("joystick") map, n = (sin m · τ₁/m, cos m, sin m · τ₂/m) with m = √(τ₁² + τ₂²), so both angles always
+> move the plane with no gimbal lock across ±90°. Compare it with what the compass and the slice decoder
+> currently do. If they differ, do not change the decoder's geometry: file a REVIEW_QUEUE entry for
+> physics review (it changes which plane a tilt means), and make the drawing follow whatever mapping
+> the decoder uses.
+>
+> === Part 3: compass views (new) ===
+>
+> The compass gets a view switcher on the compass itself, with four views. The cube is the default.
+>
+> | view | shows | reference |
+> |---|---|---|
+> | Cube | Part 2's cube | principia_nav_cube.html |
+> | Plücker | the slice plane's orientation in the latent chart | principia_plucker_compass.html |
+> | Jacobi | the decoded plane's orientation in Jacobi coordinates | principia_compass_charts.html, "physical compass" |
+> | Shape | the decoded plane's orientation in shape-sphere coordinates | the same, with different coordinates |
+>
+> "Views" are not the same thing as R-409's Tilt and Slice modes. Those set what a drag on the cube
+> does. A view sets what the compass draws. They are independent.
+>
+> 3.1 Plücker view (latent heading). The slice is the 2-plane spanned by the chart's own basis vectors
+> q₁, q₂ in the 8 latent coordinates. Draw its Plücker coordinates p_ij = q₁ᵢ q₂ⱼ − q₁ⱼ q₂ᵢ (i < j) as the
+> upper triangle of an 8 × 8 grid, one cell per coordinate plane, labelled with the chart's actual
+> coordinate names on both edges.
+> - Compute it from the q₁, q₂ the decoder actually uses, orthonormalised, never from a reconstructed
+>   tilt. That makes it exact and independent of the tilt-mapping question in Part 2. Σ p² = 1 is an
+>   invariant, and the view is unchanged by any rotation of q₁, q₂ within the plane.
+> - Cell colour encodes the signed value: two hues for + and −, with intensity from |p|, and zero
+>   drawn as the cell background. Use dark-mode colours. Outline the dominant cell, and show its pair
+>   and value in the readout ("strongest: z_a × z_b +0.993"), with Σ p² as a check. The cells are too
+>   small for numbers at compass size, so draw no in-cell numbers; show a cell's value on hover.
+> - The diagonal is drawn as empty. The view shows heading, not position.
+>
+> 3.2 Physical views (decoded heading): Jacobi and Shape. Push the plane through the decoder's
+> Jacobian, J_D at the slice centre z₀, or at the hovered pixel while the pointer is over the figure:
+> u₁ = J_D q₁, u₂ = J_D q₂, orthonormalised, then the same Plücker grid over the physical coordinates
+> below. Readout: the dominant pair, plus the area stretch, √(|J q₁|²|J q₂|² − (J q₁ · J q₂)²), which is
+> the Gram-determinant area factor already defined for J_D. Use the existing J_D machinery; the
+> reference's Jacobian is a synthetic placeholder and must not be copied.
+> - Jacobi view, 8 coordinates: the mass-weighted Jacobi vectors and their momenta, ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ,
+>   p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ, as the decoder writes them. A 28-cell grid, the same size as the latent one.
+> - Shape view, 8 coordinates: the shape-sphere vector n̂ = (n₁, n₂, n₃), the hyperradius R, and their
+>   rates ṅ₁, ṅ₂, ṅ₃, Ṙ.
+> - Physics review on both coordinate sets before implementing. They are proposed, not settled: check
+>   that each is the right set of 8 (no redundant coordinate, the quotiented rotation and scale handled
+>   consistently with the decoder), and file a REVIEW_QUEUE entry if either should change.
+> - The physical views change as the slice moves, because J_D depends on z₀; the latent view does not.
+>   That is the point of having both. Say so in the view's help text.
+>
+> 3.3 Position readout. Under the Plücker view, z₀ as a bar per latent coordinate, signed, with the
+> current slice axis highlighted (principia_compass_charts.html, "position gauge"). A readout, not a
+> view.
+>
+> 3.4 Click to steer. Clicking a cell steers the slice.
+> - Plücker view: clicking cell (i, j) sets the slice plane to the coordinate plane z_i × z_j and resets
+>   the tilts to 0, as the reference does.
+> - Jacobi and Shape views: clicking physical cell (i, j) sets the slice plane to the latent preimage of
+>   that physical plane at z₀: q₁ ∝ J_D⁺ e_i, q₂ ∝ J_D⁺ e_j, Gram–Schmidt orthonormalised, with J_D⁺ the
+>   pseudo-inverse. If J_D is rank-deficient there, so the preimage is not a 2-plane, refuse the click
+>   and log why to the console. Physics review on this construction.
+> - Every steer is a SetField through the contract: undoable with Ctrl+Z, logged in the console, and the
+>   Manifold view's sliders follow.
+>
+> 3.5 Keyboard (extends §G3's compass scope, R-409). The compass scope holds, as siblings in navigation
+> mode: the compass, then Tilt and Slice, then the view buttons Cube, Plücker, Jacobi, Shape. Enter on a
+> view button switches view. In a grid view, Enter on the compass starts interaction: the arrows move a
+> highlighted cell, Space steers to it, and Esc or Enter returns to navigation mode. In the Cube view,
+> interaction is unchanged.
+>
+> 3.6 Tests.
+> - Plücker: Σ p² = 1 to round-off; an axis-aligned plane lights exactly one cell at ±1; rotating
+>   q₁, q₂ within the plane leaves every cell unchanged.
+> - Physical views: on a fixture with a known linear decoder, the grid equals the bivector of J q₁ ∧ J q₂
+>   and the stretch equals the Gram factor.
+> - Steering: clicking cell (i, j) in the Plücker view gives a plane whose Plücker grid lights (i, j) at
+>   ±1; clicking a physical cell gives a plane whose pushforward lights that physical cell at ±1 (to
+>   tolerance); a rank-deficient case is refused; every steer is undone by one Ctrl+Z.
+> - Keyboard: switch every view, move the cell cursor, and steer, using only the keys in 3.5.
+> - Cube view: golden images of the cube in each mode and at three tilts (0°, one giving a rectangle,
+>   one giving a hexagon), compared with renders of the reference at the same size and parameters in
+>   geometry and labelling, not colour; and a unit test that the cross-section polygon has 3 to 6
+>   vertices, lies in the plane and inside the cube, over a sweep of tilts.
+>
+> Report the ruling ids, requirement ids, RQ ids and task ids added or changed.
+
+*What it decides (Part 1):*
+- **The console window has exactly two scopes,** top to bottom: the **header bar** (the filters All, Warnings, Errors,
+  Info, then the search field, Copy, Clear and the close button ×, in that visual order) and the **log** (the entry
+  list). They take the place of R-405's four sections (the filters, the text filter, copy and clear, the entry list).
+- **Opening the console lands on the header bar scope itself,** in navigation mode, the whole scope highlighted, whether
+  it is opened from the footer or from Windows › Console. It takes the place of R-405's and R-409's landing "on its first
+  filter". Opening by itself on an error still takes no focus.
+- **Between the scopes:** in navigation mode on a scope, ↑ and ↓ move between the header bar and the log, and Tab and
+  Shift+Tab do the same, staying in the window, as §G3 has windows.
+- **Inside the header bar:** Enter goes in, onto All; ← and → move across every header element in visual order, the
+  search field, Copy, Clear and × included; Esc goes back up to the header bar scope.
+- **The search field** is §G3's text field: Enter starts typing; Esc or Enter stops and keeps the text.
+- **× is an ordinary focusable button:** Enter on it closes the console and returns the focus to whatever opened it.
+  Esc from the window's top level (navigation mode on the header bar or the log scope) still closes it too.
+- **The log:** Enter on it starts interaction; ↑ and ↓ scroll one entry, Page Up and Page Down a page, Home and End go
+  to the first and last entry, and Shift gives ×10 as everywhere. The whole log is reachable, not only the visible
+  rows. Esc returns to navigation mode on the log scope.
+- **The ring and the breadcrumb follow this,** e.g. "Console › Header › Copy".
+- **The intermittent reachability is a bug in its own right.** The task reproduces it and finds its cause before
+  fixing it, and its PR says what the cause was.
+- **Tests** are keyboard scripts on the mock engine, as listed above, each repeated after an auto-open on error and
+  with a filter that empties the list, with a negative arm that fails if any visible console control is unreachable.
+- **An audit** of every other window and scope against §G3 for the same failure, listed in the PR.
+
+*Context (applied per R-369, the orchestrator's reading of the code at `a5ddd9f9`, for the task to confirm by
+reproduction, not a finding):* the console is registered once as `Scope::window("win_console")` with the four
+sections above (`crates/gui/src/windows/console.rs`, `register`), and the × exists only as egui's title-bar button,
+outside the scope tree, which is why it can never be reached. The likeliest cause of the intermittent reachability is
+that the keyboard's focus is often not inside the console at all while it is open: an auto-open on error takes no
+focus and records no opener, a window is outside the big scopes' Tab cycle, and a mouse click inside the console moves
+egui's focus but not the keyboard layer's (a clicked search field then makes the layer stand aside). Re-opening from
+the footer or the menu while it is open moves the focus in, which would be the "later I can". The task confirms or
+replaces this reading by reproducing it.
+
+*Applied per R-369 (routine design choices the words leave open; the human may veto any, a veto being a GUI design
+ruling applied by a follow-up task):*
+- **A1. The arrows at the top level.** In navigation mode on the header bar or log scope, ↑ and ↓ move between the two
+  and ← → do nothing; on a header element ↑ ↓ do nothing. ← → stop at the row's ends, as §G3's other sibling rows do;
+  ↑ ↓ and Tab between the two scopes follow the window rule (Tab wraps from the log to the header bar, as R-405's
+  sections did).
+- **A2. Esc.** Esc in navigation mode on a header element goes up to the header bar scope; Esc in navigation mode on the
+  header bar or log scope closes the console and returns the focus to its opener (R-405), or, after an auto-open, to
+  where the focus was before (none was taken, so it stays there).
+- **A3. A click.** A click on any console control moves the keyboard's focus onto it, in navigation mode, so the mouse
+  and the keyboard never disagree about where the focus is inside the console; a click on × closes the console as Enter
+  on it does.
+- **A4. The log's steps.** A page is the number of entries the log's rect shows; Shift ×10 applies to ↑ ↓ (ten
+  entries) and to Page Up and Page Down (ten pages); Home and End take no modifier; Alt gives the unmodified step, an
+  entry being the smallest. "Scroll one entry" moves the log's top visible row by one entry, so the scroll reaches
+  every entry of the filtered list, the rows not drawn included. Every scroll is clamped to the list's ends.
+- **A5. An empty list.** With a filter that empties the list the log scope is still there, in the same place: Enter on
+  it starts interaction, and the scroll keys do nothing. Nothing about the scope order depends on the list, the filter,
+  how the console was opened, or which controls are drawn.
+- **A6. The breadcrumb's names.** "Console › Header", "Console › Header › <control>" (All, Warnings, Errors, Info,
+  Search, Copy, Clear, Close) and "Console › Log".
+- **A7. The audit's findings.** A visible control the keyboard cannot reach, or reachability that depends on state, is
+  a failure of §G3 (REQ-GUI-095, REQ-GUI-096, REQ-GUI-182). The task lists each finding in its PR and fixes it, unless
+  the screen is another open task's, in which case the PR names that task and the finding goes to that task's file.
+  The negative arm is a reusable check (every visible control of a scope or window is reachable by §G3's keys), run on
+  the console and on each window the audit covers.
+- **A8. Where it lands.** render_gui_spec §G3 (the console's paragraph, and "as the console does on its first filter"
+  reworded) and §G12 (a paragraph); REQ-GUI-178 keeps its id and its closing task, TASK-M6-28 (merged), its acceptance
+  line the record, with a note pointing here; **REQ-GUI-189** (new, M6: the console's two scopes and keys) and
+  **REQ-GUI-190** (new, M6: every visible control reachable, independent of state, and the audit), closed by
+  **TASK-M6-32** (new, M6), a GUI-track task under R-390, reviewers code, qa and gui, depending on TASK-M6-28 (merged).
+  TASK-M8-27, which re-runs the console on the real engine, is unchanged: REQ-GUI-189 and REQ-GUI-190 are the mock's,
+  as REQ-GUI-178 is.
+- **A9. qa's files (R-290, forced by this ruling).** `crates/gui/tests/qa_TASK-M6-28.rs` and any other qa file that
+  asserts the console's four sections, its landing on the first filter or Esc closing it from a section asserts what
+  this ruling changes. Where every earlier commit of the file is qa's, TASK-M6-32's qa reviewer changes those
+  assertions in the task's qa commit, and only those; the implementer never edits them. The PR lists each change with
+  its reason, and the code reviewer confirms that no assertion was weakened but the ones R-450 changes.
+- R-450 is in the "design" group of `plan/rule_groups.yaml`, with R-405 and R-409.
+
+*What it supersedes:* R-405's "Its sections, in Tab order, are the filters (all, warnings, errors, info), the text
+filter, copy and clear, and the entry list", its "it takes the focus, on its first filter" and its "Esc closes the
+console" from a section (`decisions.md`, R-405, "Applied per R-369", the console bullet); R-409 point 4's and F4's "the
+console's first filter" as a landing; render_gui_spec §G3's "as the console does on its first filter" and its console
+paragraph's sections; REQ-GUI-178's sections and landing (its statement stays as TASK-M6-28's record, with a note).
+
+Adds REQ-GUI-189 and REQ-GUI-190; REQ-GUI-178's note and rulings change.
+
+## R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping *(amends R-409 point 1, the compass's view angle)*
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass), § "The compass: look and views (R-451, R-452)" (new) and § "G13. Where the artboards are overridden" (a
+bullet added), `docs/gui/reference/principia_nav_cube.html` (added), `docs/read_first/principia_INDEX.md` § "GUI"
+(a line added), R-409's heading block, REQ-GUI-181 (reqio, its note), REQ-GUI-191 to REQ-GUI-193 (reqio, new),
+RQ-340, TASK-M6-33 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-33 on the mock*
+
+The human's words are R-450's quote: its preamble (the three references, and the cream palette not copied) and Part 2.
+
+*What it decides:*
+- **The compass's cube matches `docs/gui/reference/principia_nav_cube.html`** in appearance and behaviour, transcribed
+  from the file's code, in the dev GUI's dark-mode colours (§G1); the reference's light cream palette is copied
+  nowhere. In detail: the isometric projection `P(x,y,z) = (CX + S·√3/2·(x − z), CY + S·(½(x + z) − y))` of the cube
+  `[−1,1]³`, scaled to fit with the reference's margins; the edges depth-sorted by `x + z`, nearer edges more opaque and
+  thicker, with the slice sorted among them by its own depth; the slice as the true cross-section polygon of the plane
+  through the cube, its fill Lambert-shaded from its own normal (two-sided, small ambient term), an in-plane grid
+  clipped to the polygon and an outline; the edge labels (slice mode: Width, Depth, Height with −1.0 / 1.0 at the
+  corners, one number per corner; tilt mode: the targets only, the vertical edge unnamed); the readout (slice mode: the
+  normal axis and the position as a fraction of range; tilt mode: the targets and angles in degrees); and the drags
+  (slice mode: a horizontal drag moves the slice; tilt mode: a horizontal drag sets q₁'s angle and a vertical drag
+  q₂'s, each clamped to ±90°), the displayed values easing towards their targets.
+- **Kept from R-409:** no orbit; the Tilt and Slice modes, set by the compass's buttons and by the slider touched; Tilt
+  the default (the reference opens in Slice); the gold pin when locked; §G3's keyboard behaviour. The reference's own
+  controls (axis selectors, sliders, Animate) are not part of the compass: the Manifold view owns those.
+- **The tilt mapping.** The reference's axis-angle ("joystick") map is compared with the compass's and the decoder's;
+  where they differ the decoder's geometry is not changed, a REVIEW_QUEUE entry goes to physics review, and the drawing
+  follows the decoder's mapping.
+
+*The comparison (the orchestrator's porter, reading the docs and the code at `a5ddd9f9`):*
+- **The contract** (`principia_chart_decoder_contract.md` § "Tilt (basis edit)") tilts each basis vector on its own,
+  `q'(τ) = normalise(cos τ · q + sin τ · d_target)`, `τ ∈ [−90°, +90°]`, toward a hidden direction chosen for it ("12
+  tilt axes", chart_reference §1.1).
+- **The code** (`crates/gui/src/explore/manifold_view/mod.rs`, `View::basis`) builds `u₁ = cos τ₁ e_a + sin τ₁ e_d`,
+  `u₂ = cos τ₂ e_b + sin τ₂ e_d`, both toward the one hidden slice axis `e_d`, then turns them by `γ`:
+  `q₁ = σ(cos γ u₁ + sin γ u₂)`, `q₂ = σ(cos γ u₂ − sin γ u₁)`. The kernel never sees angles, only `(z₀, q₁, q₂)`. The
+  compass (`compass.rs`, `plane_frame`) draws the same construction in the frame `(e_a, e_b, e_d)`, so the compass and
+  the decoder agree with each other.
+- **The reference** (`planeSpec`): tilt mode's untilted plane is the horizontal x–z plane, normal y, and the
+  axis-angle map tips that normal toward `(τ₁, 0, τ₂)`, `n = (sin m · τ₁/m, cos m, sin m · τ₂/m)`,
+  `m = √(τ₁² + τ₂²)`. Both tilts therefore tip the plane into the one unnamed vertical axis y, a single shared hidden
+  direction; its labels "q₁'s target" (x) and "q₂'s target" (z) sit on the plane's own untilted in-plane axes, and its
+  help text concedes "no single coordinate perpendicular to both targets".
+- **The code and the reference are one family, parametrised differently** (corrected in the fix round of PR #227,
+  physics review P1 to P3). Read geometrically, both draw the 2-planes in one 3-space through the slice point, the
+  code's `(e_a, e_b, e_d)` with `e_d` hidden and the reference's (x, z, y) with y hidden; they differ in which
+  `(τ₁, τ₂)` gives which plane. The code's map: `u₁ · u₂ = sin τ₁ sin τ₂`, so with both tilts set the basis is not
+  orthogonal, against `principia_chart_reference.md` §1.1 ("q₁, q₂ any orthonormal pair"); its normal is
+  `∝ (−tan τ₁, −tan τ₂, 1)`, one-to-one on the open square; at `|τ₁| = 90°`, `u₁ = ±e_d` and the plane is
+  `span(e_b, e_d)` for every `|τ₂| < 90°`, so τ₂ stops moving it along that whole edge (the gimbal lock the reference's
+  comment names), and at `τ₁ = ±τ₂ = ±90°` it degenerates to the line `e_d`. The reference's map never degenerates
+  inside ±90° (`m ≤ 127.3° < 180°`), but it is not one-to-one there: `n` and `−n` are one plane, so `(90°, 90°)`
+  gives the plane `(−37.3°, −37.3°)` gives.
+- **The contract's two-target form is the different family.** With two distinct targets `t₁ ⊥ t₂`, both orthogonal
+  to the plane, the tilted plane lies in the 4-space `span(q₁, q₂, t₁, t₂)` and has no single normal, so no 3D cube
+  draws it faithfully; the two tilted vectors are then already orthonormal. With one shared target the contract's
+  formula is the code's (`u₁` is already unit, so its `normalise` does nothing): the code is the contract's form with
+  `d_target₁ = d_target₂ = e_d`.
+- The decoder's geometry is left as it is, and **RQ-340** puts the two questions (the parametrisation within one
+  3-space, and one shared target against two) to physics review; they change which plane a tilt means, so they are the
+  human's to rule (R-369, physics).
+
+*Applied per R-369 (routine design choices and readings; the human may veto any, a veto being a GUI design ruling
+applied by a follow-up task):*
+- **B1. The frame and the labels follow the decoder's mapping.** The cube's frame is the preset's `(e_a, e_b, e_d)` in
+  both modes (Width = chart x = `e_a` on the bottom-left edge, Height = chart y = `e_b` on the left vertical edge, Depth
+  = the slice axis `e_d` on the bottom-right edge), as the reference's slice mode has it. Under the decoder's mapping
+  q₁ and q₂ both tilt toward `e_d`, so in tilt mode there is one target, not two: tilt mode names the bottom-right edge
+  with it ("q₁, q₂ → <axis>") and leaves the other edges unnamed, and the readout gives q₁'s and q₂'s target (the same
+  axis) and their angles in degrees. If RQ-340 is ruled for two distinct targets (its option (c)), tilt mode names
+  the two targets in a follow-up task.
+- **B2. What each mode draws.** Both modes draw the decoder's plane, `View::basis`'s `(q₁, q₂)` in the cube's frame
+  `(e_a, e_b, e_d)`, through the point `p` whose coordinates are `z₀`'s components on `e_a`, `e_b` and `e_d`, each over
+  the slice step's half-range (`Z0_HALF_RANGE`). The drawn plane is its normal `n` (that of `(q₁, q₂)` in the frame)
+  and its offset `n·p`, with `p` unclamped: a pan moves `z₀` within the plane, so it leaves `n·p`, and the drawing,
+  unchanged. Only the offset is bounded, clamped to `±|n|₁`, the offsets at which the plane still meets the cube; at
+  the bound the plane touches the cube in a face, an edge or a corner, and the slice draws that contact (a face as the
+  polygon; an edge or a corner as the outline alone, with no fill). The modes differ in what a drag does (B3) and
+  in the labels and readout (B1, B5), never in the plane drawn, so after a tilt and a slice edit slice mode shows the
+  tilted plane the decoder slices. Untilted (`τ₁ = τ₂ = γ = 0`) the plane is the reference's slice-mode rectangle at
+  its depth. The three axes share one scale, so the drawn tilt is the latent angle τ. The cube is [−1, 1] on each axis
+  in units of the half-range, absolute, free or locked: free, it is the sliders' range; locked, the sliders span the
+  anchor ± the half-range (`centre::span`), not the cube, and a `z₀` past the cube draws the plane at the clamped
+  offset. The chart window's extent (`|q| = σ`) is not drawn. Through the cube's central axis (the plane through a
+  point `(0, 0, d)`, `|d| < 1`) the cross-section has 4 to 6 vertices, never a triangle: a rectangle untilted, a
+  pentagon possible off the centre, a hexagon possible through it. Off that axis a plane can cut off one corner, a
+  triangle, so the bound is the human's 3 to 6 (3.6) for a plane through the cube's interior. At `|d| = 1` a tilted
+  plane can be a triangle too: at `τ₁ = τ₂ = −45°`, `γ = 0`, the plane through `(0, 0, 1)` is `x + y + z = 1`, through
+  the corners `(−1, 1, 1)`, `(1, −1, 1)` and `(1, 1, −1)`, a triangle the 3-to-6 bound covers. (Rewritten in the fix
+  round of PR #227, gui review G1, physics review P11: slice mode drew an untilted plane the decoder does not slice.
+  Fix round 2, gui review G6: clamping each of `p`'s components to [−1, 1] shifted a tilted plane after a pan, at
+  `τ₁ = 30°` a pan of 2 along `q₁` turning `p = (1.732, 0, 1)`, on the plane `z = x tan 30°`, into `(1, 0, 1)`, off
+  it; now only the offset is bounded. Fix round 3, physics review P12: the 4-to-6 bound was stated for `|d| ≤ 1` and
+  fails at `|d| = 1`, the triangle above; it holds for `|d| < 1`.)
+  All of B2 holds at the tilts where B11's test passes, `s ≥ 10⁻³`. At the four corner points `τ₁ = ±τ₂ = ±90°`
+  `View::basis` spans no plane; within about 0.057° of them it spans one, but the compass does not draw it (B11's
+  cut), and B11 says what the cube draws there (fix round 4 of PR #227, physics review P13; reworded in fix round 5,
+  physics review P14).
+- **B3. The slice-mode drag.** The horizontal component of a drag sets how far the slice moves (the reference's rate, a
+  drag across the cube's full width moving it across the whole range); the direction is the drawn plane's normal,
+  which by B2 is the decoder's (`latent_normal`, R-409 A3's), the slice axis only when untilted; one `SetField` on
+  `z₀` per drag, coalesced (R-96). The vertical component
+  does nothing in slice mode. The tilt-mode drag uses the reference's rates (a drag across the full width or height is
+  180°), right raising τ₁ and up raising τ₂, one `SetField` on the basis per drag.
+- **B4. Easing is the compass's display only.** The compass draws its displayed values easing towards the targets by
+  the reference's law, each frame `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s; the contract's value
+  is the target from the first frame, so the figure, the sliders and every `SetField` see the target, never an eased
+  value.
+- **B5. The readout's position.** "The position as a fraction of range" is `z₀`'s component on the slice axis over the
+  slice step's half-range (the code's `Z0_HALF_RANGE`), signed, two decimals, as the reference's "+0.25 of range".
+  Slice mode's first line reads "plane ⟂ <axis>" untilted; with a tilt set the plane is not normal to an axis (B2), and
+  the line gives the tilt as tilt mode's readout does.
+- **B6. The colours.** Every colour is the dark theme's or a dark-mode colour chosen as a look choice under R-390 and
+  listed in the PR: the edges in the theme's stroke colour with the reference's opacity and width laws, the fill
+  between two dark-mode tones by the Lambert shade, the grid and the outline. The reference's numbers stay: light
+  `(0.35, 1.0, 0.55)` normalised, view `(1, 1, 1)`, ambient 0.2 (`0.2 + 0.8·max(0, n·L)`, the normal flipped to face the
+  viewer), a depth term `±0.05`, fill opacity 0.6, edge opacity `0.28 + 0.55·near` and width `0.8 + 1.0·near` px with
+  `near = (key + 2)/4`, grid spacing 0.5 over ±1.9, outline 1.7 px, labels 20 px and corner numbers 12 px outward, and
+  the fit `S = min(0.78·w/(2√3), 0.78·h/4)`.
+- **B7. The pin and the hint.** Locked, the gold pin sits at the anchor as now (R-409; §G4); the hint under the buttons
+  stays, reworded where the drags change.
+- **B8. The goldens.** "Renders of the reference at the same size and parameters" are made by running the reference
+  file headless at the compass's size with its parameters set to the case's, recorded as fixtures with how they were
+  made; the comparison is of geometry and labelling (vertex positions, edge order, label text and placement within a
+  stated tolerance), not colour. The tilt-mode drawing differs from the reference's by design (B1, B2: the reference's
+  untilted tilt-mode plane is the horizontal one through the centre, and it labels two edges), so each case says what
+  is compared with the reference and what with an independent computation of the decoder's plane (the polygon of
+  `View::basis`'s plane through `z₀` in the frame `(e_a, e_b, e_d)`, computed apart from the code under test). Points
+  are in the cube's `(x, y, z) = (e_a, e_b, e_d)`, y the vertical. (Rewritten in the fix round of PR #227, gui review
+  G2.)
+  - Every case, against the reference: the projection and fit (the eight corners' screen positions), and the twelve
+    edges' drawing order by `x + z` with their opacity and width laws.
+  - `mock_compass_cube_slice` (slice mode, `τ₁ = τ₂ = γ = 0`, `z₀` +0.25 of range on `e_d` and 0 on `e_a`, `e_b`):
+    wholly against the reference's slice mode at depth +0.25: the rectangle (±1, ±1, 0.25), its place in the edge
+    order, the labels Width, Depth and Height with their corner numbers, and the readout.
+  - `mock_compass_cube_tilt_0` (tilt mode, `τ₁ = τ₂ = γ = 0`, `z₀ = 0`): the polygon, the rectangle (±1, ±1, 0),
+    against the reference's slice mode at depth 0 (its own tilt mode at 0 draws the horizontal plane, which the
+    decoder's is not); the one label's placement against the reference's tilt-mode label on the bottom-right edge.
+  - `mock_compass_cube_tilt_rect` (tilt mode, `τ₁ = 30°`, `τ₂ = 0`, `γ = 0`, `z₀ = 0`): the polygon against the
+    independent computation, normal `∝ (−½, 0, √3/2)`, the rectangle (1, 1, 0.577), (1, −1, 0.577), (−1, −1, −0.577),
+    (−1, 1, −0.577) (`z = x tan 30°`), and its place in the edge order; the label as in `tilt_0`.
+  - `mock_compass_cube_tilt_hex` (tilt mode, `τ₁ = τ₂ = 45°`, `γ = 0`, `z₀ = 0`): the polygon against the independent
+    computation, normal `∝ (−½, −½, ½)`, the regular hexagon (1, −1, 0), (1, 0, 1), (0, 1, 1), (−1, 1, 0), (−1, 0, −1),
+    (0, −1, −1) (`z = x + y`), and its place in the edge order; the label as in `tilt_0`.
+  - The control "a label on the wrong edge": in slice mode Width belongs on the bottom-left edge ((−1, −1, 1) to
+    (1, −1, 1)), Depth on the bottom-right ((1, −1, −1) to (1, −1, 1)) and Height on the left vertical ((−1, −1, 1) to
+    (−1, 1, 1)), and any of them on another edge fails; in tilt mode the one label "q₁, q₂ → <axis>" belongs on the
+    bottom-right edge, and the same label on the bottom-left edge (the reference's q₁ edge) or any other fails.
+- **B9. Where it lands.** render_gui_spec §G2's compass bullet and a new subsection under §G2, "The compass: look and
+  views (R-451, R-452)"; §G13 a bullet for the three references; **REQ-GUI-191** (the drawing, golden image),
+  **REQ-GUI-192** (the cross-section and the mapping the drawing follows, unit test) and **REQ-GUI-193** (the labels,
+  the readout, the drags and the easing, unit test), all M6, closed by **TASK-M6-33** (new), reviewers code, qa and
+  gui, depending on TASK-M6-31 (merged). REQ-GUI-091 is unchanged: R-451 keeps what it says, its "default angle" read
+  as the isometric view. REQ-GUI-181's statement and verify are unchanged, its "default angle" read the same way; its
+  note, which keeps the code's angle under R-409 point 1, gets a forward line (reqio) saying R-451 sets the default
+  angle to the reference's isometric projection, and TASK-M6-33 re-checks the requirement with it. (Corrected in fix
+  round 2 of PR #227, gui review G8.)
+- **B10. qa's files (R-290, forced by this ruling).** A qa file that asserts the compass's yaw-and-pitch view, its
+  fixed-quad slice or its drag rates asserts what this ruling changes; TASK-M6-33's qa reviewer changes those
+  assertions in the task's qa commit, and only those, as R-409 A9 has it.
+- **B11. The degenerate tilts.** (Added in fix round 4 of PR #227, physics review P13: a missing definition, written
+  as a doc change by the PR that needs it and reviewed by the physics reviewer, as R-72 asks, and applied per R-369 as
+  a routine GUI choice. Fix round 5, physics review P14 to P16: the band near the corners is the compass's own cut, not
+  a place without a plane; why the cut is 10⁻³; the locked drag routed to REQ-GUI-203; the sine's range. Fix round 6,
+  physics review P17 and P18, fix (a) applied per R-369: the guards get their own cut, 10⁻⁶, and inside the compass's
+  disc the lock keeps its pivot. Fix round 7, physics review P19, fix (a) applied per R-369: the pivot's error above
+  the guards' cut is `ε/sin²θ`, not `ε/s`, and the in-disc drag's tolerances follow from it.) At the four
+  corner points `τ₁ = ±τ₂ = ±90°`, which tilt mode's clamped drags reach, `u₁` and `u₂` are both `±e_d`, so
+  `View::basis`'s `q₁` and `q₂` both lie along `e_d` and span no plane (the comparison above: "it degenerates to the
+  line `e_d`"). Near them a plane exists, but the normal of `(q₁, q₂)` is ill-conditioned. In floating point, at
+  `(90°, 90°)`, `q₁ × q₂` is about `(−6·10⁻¹⁷, −6·10⁻¹⁷, 0)`, and its normalisation, the plane `x + y = c`, is
+  rounding, not the decoder's plane.
+  - **The test.** `s = 2|q₁ × q₂| / (|q₁|² + |q₂|²)`, with `q₁`, `q₂` restricted to `(e_a, e_b, e_d)`. It is
+    scale-free, and under the decoder's map it equals `|u₁ × u₂| = √(1 − sin²τ₁ sin²τ₂)` for every `γ` and `σ`, since
+    the turn by `γ` has determinant 1 and keeps `|q₁|² + |q₂|² = 2σ²`. `s` is 0 only at the corner points, and the
+    compass draws the plane where `s ≥ 10⁻³`; the cross-section, its 3-to-6 and 4-to-6 bounds, the offset clamp and
+    the 1e-12 normal check apply only there.
+  - **The cut is numerical.** 10⁻³ is not a physical value and not an R-71 calibration: it is set by the 1e-12 normal
+    tolerance. The normal computed from `q₁ × q₂` carries an error of about `ε/s`, `ε` the double-precision rounding
+    unit, so at `s ≥ 10⁻³` it stays within the 1e-12 check, and below it the check can fail where a plane exists.
+    10⁻³ is the compass's drawing cut only; the GUI's guards for a degenerate basis have their own (below).
+  - **What the cut excludes.** Near a corner `s` is about the distance in radians from it, so the cut excludes a disc
+    of about 0.057° around each corner. Inside that disc, off the corner point, a plane exists and the compass does not
+    draw it: at `(90°, 89.97°)` it is `span(e_b, e_d)`, determined to about 10⁻¹³. The cut keeps the rest of the square,
+    including the edges `|τ₁| = 90°`, `|τ₂| < 90°`, where the plane is `span(e_b, e_d)`: at `(90°, 89.9°)`,
+    `s = 1.75·10⁻³` and the normal is `(−1, 0, 0)` within 10⁻¹³.
+  - **The sine is not the test.** The sine of the angle between `q₁` and `q₂` is not used: at a corner with `γ = 45°`
+    one of them is rounding alone, `q₂` at `(90°, 90°)` and `(−90°, −90°)`, `q₁` at `(90°, −90°)` and `(−90°, 90°)`,
+    and that sine is between about 0.27 and 1 depending on `σ` (σ in [0.01, 4]), about 0.48 at `σ = 1`.
+  - **What the cube draws where `s < 10⁻³`.** The cube's edges, labels and corner numbers as in its mode, and,
+    locked, the gold pin at the anchor (B7), and no slice: no polygon, fill, grid or outline (the pin, gui review G9,
+    applied per R-369). The readout adds a line naming the tilt, "no plane drawn: s < 10⁻³ at
+    τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)", the angles signed, one decimal. A slice-mode drag sends no edit, since the
+    compass draws no normal to move `z₀` along (B3). Free, a tilt-mode drag acts as anywhere else, and once
+    `s ≥ 10⁻³` the plane is drawn again.
+  - **Locked (physics review P15, decided per R-369; fix round 6, physics review P17 and P18, fix (a) applied per
+    R-369).** Locked, a basis edit turns about the pin (§G4), its pivot the anchor's chart point. The GUI's merged
+    guards, `in_plane` (`det ≤ 1e-12`) and `chart_coords` (`det ≤ 1e-24·g₁₁g₂₂`), are sine-type tests that do not fire
+    at the corner points, so there `about_the_pin`'s pivot is rounding (`t ≈ −2.9·10¹⁴` in the review's case,
+    `z₀ = 0`, `z_locked = (0.1, 0.05, 0.2)`) and a tilt drag to `(89°, 90°, γ = 45°)` sends a `z₀` edit of about
+    `(−7.1·10¹², 0, 6.2·10¹⁰)`; the mock's figure, built through the same guards, is placed on the rounding direction
+    too. **REQ-GUI-203**, closed by **TASK-M6-37**, keeps both guards' sine tests and adds the guards' own cut: they
+    also return none where `s = 2√(g₁₁g₂₂ − g₁₂²) / (g₁₁ + g₂₂) < 10⁻⁶`, `g` the Gram matrix of the plane's own `q₁`,
+    `q₂` (the cube's `s` when the basis lies in the cube's frame). The compass's 10⁻³ is not the guards' cut: `s` is
+    also small for a basis whose vectors' norms differ (`s ≈ 2r` for orthogonal vectors with norm ratio `r`), so a
+    10⁻³ cut would refuse a typed basis such as `q₁ = e_x`, `q₂ = 10⁻⁴e_y` (the Chart panel's basis editor takes any
+    eight components), whose chart point `(0.75, 0.6)` `chart_coords` returns exactly.
+  - **The guards' cut is numerical.** Like the compass's, it is not a physical value and not an R-71 calibration; it is
+    set by where `s` itself is rounding. In double precision `g₁₁g₂₂ − g₁₂²`, over `n = 8` components, carries an
+    absolute error of up to about `(4n + 2)u·g₁₁g₂₂`, `u = ε/2`, and `4g₁₁g₂₂/(g₁₁ + g₂₂)² ≤ 1`, so the computed `s²`
+    is off by up to about `17ε` and a basis with no plane can read `s` up to `√(17ε) ≈ 6.1·10⁻⁸` (measured: up to
+    2.4·10⁻⁸ at the four corner points, `σ` in [0.01, 4], every `γ`). 10⁻⁶ is the first power of ten at least ten
+    times that floor, so no basis without a plane passes.
+  - **The pivot's error above the cut (fix round 7, physics review P19).** `chart_coords` solves the 2×2 Gram system
+    `g·(x, y) = (r·q₁, r·q₂)`, `(x, y) = (2s − 1, 2t − 1)`, `r = z − z₀`, by Cramer's rule. Its determinant
+    `g₁₁g₂₂ − g₁₂² = g₁₁g₂₂ sin²θ`, `θ` the angle between `q₁` and `q₂`, carries the absolute rounding of up to about
+    `17ε·g₁₁g₂₂` derived above, so the pivot's chart coordinates carry a relative error of about `ε/sin²θ`, at most
+    about `17ε/sin²θ`. The error is normwise, relative to the size of `(2s − 1, 2t − 1)`: a component near 0 has no
+    bounded componentwise relative error. Since `s = sin θ · 2|q₁||q₂| / (|q₁|² + |q₂|²) ≤ sin θ`, above the cut that
+    is at most about
+    `17ε/s²`, about 3.8·10⁻³ at `s = 10⁻⁶`. A small `s` that is only a norm ratio, `θ` near 90°, costs nothing: the
+    error stays at rounding. Measured against 50-digit arithmetic on the same float components, at `(90°, τ₂, γ)`,
+    `σ = 1`, the anchor `(0.1, 0.05, 0.2)` or `0.3q₁ + 0.2q₂`, the relative error in `(2s − 1, 2t − 1)` is:
+    - `γ = 45°` (`sin θ ≈ 1`): 2·10⁻¹⁶ to 9.1·10⁻¹⁶ at every `s` from 5.2·10⁻⁴ down to 10⁻⁶;
+    - `γ = 0` (`sin θ = s`): up to 4.0·10⁻¹⁰ at `s = 5.2·10⁻⁴`, 7.4·10⁻⁸ at 1.75·10⁻⁵, 1.8·10⁻⁵ at 1.75·10⁻⁶ and
+      1.1·10⁻⁴ at 1.0·10⁻⁶;
+    - `γ = 30°` (`sin θ = 2s`): up to 3.0·10⁻¹⁰ at `s = 5.2·10⁻⁴`, 1.8·10⁻⁷ at 1.75·10⁻⁵, 1.5·10⁻⁴ at 1.75·10⁻⁶ and
+      1.7·10⁻⁴ at 1.0·10⁻⁶;
+    - a typed basis, `q₁` and `q₂` of equal norm at angle `θ` in 200 random 8-D orientations, anchor `0.3q₁ + 0.2q₂`:
+      at worst 9.4·10⁻⁸ at `sin θ = 10⁻⁴`, 8.9·10⁻⁶ at 10⁻⁵ and 6.2·10⁻⁴ at 1.2·10⁻⁶;
+    - every value is within `17ε/sin²θ`; the `ε/s` that fix round 6 stated, measured at `γ = 45°` only, does not hold
+      elsewhere. A typed basis follows the same model, and what bounds its error is `s ≤ sin θ` together with the
+      10⁻⁶ cut, not the kept sine tests: `chart_coords`' fires only at `sin θ ≤ 10⁻¹²`.
+  - **Why that error is acceptable.** Locked, a basis edit moves the pin by the pivot's error, plus the error of the
+    solve on the new basis. For an anchor in the view (`|2s − 1|`, `|2t − 1| ≤ 1`), the pin's chart point therefore
+    moves by at most about `½·17ε(1/sin²θ + 1/sin²θ′)` of the view's width per edit, `θ′` the angle after it. At the
+    cut, the first term is at most 1.9·10⁻³, about 2 px of a view 1000 px across. The worst measured near the cut,
+    6.2·10⁻⁴ for a typed basis at `sin θ = 1.2·10⁻⁶` (3.9·10⁻⁴ at `γ = 0` over anchors across the view), is about
+    0.3 px. A shift of a whole pixel at that view size needs `sin θ` below about
+    1.4·10⁻⁶, that is, a tilt within about 1.4·10⁻⁶ rad of a corner with `γ = 0`, or a typed basis that close to
+    parallel. The alternatives are worse: declining the pivot there moves the pin by 5 % of the view, 50 px, at
+    `(90°, 89.97°)`, and the rounding pivot sends a `z₀` edit of about 7·10¹². No value is calibrated: the bound
+    follows from `ε` and the cut.
+  - **Inside the compass's disc.** Only at the four corner points is there no plane, and so no pivot. Inside the
+    0.057° disc, off them, a plane exists and so does the pivot: the compass declines to draw the plane, but the lock
+    and the figure keep their pivot and their samples, and a locked drag turns about the pin as §G4 says. At
+    `(90°, 89.97°, 45°)`, `σ = 1`, `s = 5.2·10⁻⁴`, a pin at `z₀ + 0.3q₁ + 0.2q₂`, chart point `(0.65, 0.60)`, stays
+    there, to within 1.1·10⁻¹⁶, under a locked drag to `(89°, 89.97°, 45°)`; declining the pivot would move it to
+    `(0.65, 0.65)`, 5 % of the view. Off `γ = 45°` the pin moves by the pivot's error (above): the same drag at
+    `γ = 0`, `sin θ = 5.2·10⁻⁴`, moves it by 6.1·10⁻¹¹, and at `γ = 30°` from `(90°, 89.999°)`, `sin θ = 3.5·10⁻⁵`,
+    by 3.4·10⁻⁸, each within `17ε(1/sin²θ + 1/sin²θ′)`, 1.4·10⁻⁸ and 3.1·10⁻⁶.
+  - **Where the guards decline.** Where their sine test fires or `s < 10⁻⁶`, the guards return none, as for any
+    degenerate basis: locked, no `z₀` edit is sent and the basis edit passes as it does free (`about_the_pin`'s rule
+    for a degenerate basis), and the figure shows nothing new, no sample placed along the rounding direction. That
+    takes in the corner points; it also takes in, because the cut must sit above `s`'s own rounding floor and not
+    because they lack a plane, a tilt within about 10⁻⁶ rad of a corner and a typed basis with `s < 10⁻⁶` (for
+    orthogonal vectors, a norm ratio below about 5·10⁻⁷).
+  - **RQ-340.** The degeneracy is the decoder's map's (RQ-340 option (a)). Under option (b), the reference's map, or
+    (c), two distinct targets, these corners give a plane, so a ruling on RQ-340 revisits this item. The decoder's
+    geometry is not changed.
+- R-451 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it changes:* it amends R-409 point 1, which kept the code's default angle (yaw −35°, pitch 25°) as a look choice
+under R-390: this ruling, the human's, sets the compass's fixed view to the reference's isometric projection instead.
+R-409 carries the forward line and an updated "Still in force" line; the rest of R-409 stands. The compass's square
+slice (`PLANE_HALF`) and its dashed untilted plane give way to the cross-section polygon.
+
+Adds REQ-GUI-191 to REQ-GUI-193.
+
+## R-452 — The compass has four views, Cube (the default), Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes; a grid view draws the slice plane's Plücker coordinates, latent or pushed through the decoder, and a click on a cell steers the slice
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass), § "The compass: look and views (R-451, R-452)" (new), § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (the Compass scope) and § "G13. Where the artboards are overridden" (the references),
+`docs/gui/reference/principia_plucker_compass.html` and `docs/gui/reference/principia_compass_charts.html` (added),
+`docs/read_first/principia_INDEX.md` § "GUI" (two lines added), REQ-GUI-194 to REQ-GUI-200 (reqio, new), RQ-341 to
+RQ-346, TASK-M6-34 and TASK-M6-35 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-34 and
+TASK-M6-35 on the mock*
+
+The human's words are R-450's quote, Part 3.
+
+*What it decides:*
+- **A view switcher on the compass, four views:** Cube (R-451's cube, the default), Plücker (the slice plane's
+  orientation in the latent chart; `principia_plucker_compass.html`), Jacobi and Shape (the decoded plane's orientation
+  in Jacobi and in shape-sphere coordinates; `principia_compass_charts.html`, "physical compass"). A view sets what the
+  compass draws; R-409's Tilt and Slice modes set what a drag on the cube does. The two are independent.
+- **The Plücker view (3.1):** the upper triangle of an 8 × 8 grid of `p_ij = q₁ᵢ q₂ⱼ − q₁ⱼ q₂ᵢ` (i < j), labelled with
+  the chart's coordinate names on both edges, computed from the `q₁`, `q₂` the decoder uses, orthonormalised, never from
+  a reconstructed tilt; `Σ p² = 1` and invariance under rotation within the plane; signed colour in two dark-mode hues,
+  intensity from `|p|`, zero as the cell background; the dominant cell outlined, its pair and value and `Σ p²` in the
+  readout; no in-cell numbers, a cell's value on hover; the diagonal empty.
+- **The physical views (3.2):** the plane pushed through the decoder's Jacobian at `z₀`, or at the hovered pixel while
+  the pointer is over the figure, `u₁ = J_D q₁`, `u₂ = J_D q₂`, orthonormalised, drawn as the same grid over 8 physical
+  coordinates, with the dominant pair and the area stretch `√(|J q₁|²|J q₂|² − (J q₁ · J q₂)²)` in the readout, using
+  the J_D machinery, never the reference's synthetic Jacobian. Jacobi: `ρ̃ₓ, ρ̃ᵧ, λ̃ₓ, λ̃ᵧ, p_ρₓ, p_ρᵧ, p_λₓ, p_λᵧ`, as the
+  decoder writes them. Shape: `n₁, n₂, n₃, R, ṅ₁, ṅ₂, ṅ₃, Ṙ`. Both sets are proposed, not settled: physics reviews
+  them before they are built, and a REVIEW_QUEUE entry goes in if either should change. The help text says the
+  physical views change as the slice moves and the latent one does not.
+- **The position readout (3.3):** under the Plücker view, `z₀` as a signed bar per latent coordinate, the slice axis
+  highlighted (`principia_compass_charts.html`, "position gauge"); a readout, not a view.
+- **Click to steer (3.4):** in the Plücker view a click on cell (i, j) sets the slice plane to `z_i × z_j`, the tilts
+  reset to 0; in a physical view a click on cell (i, j) sets it to the latent preimage at `z₀`, `q₁ ∝ J_D⁺ e_i`,
+  `q₂ ∝ J_D⁺ e_j`, Gram–Schmidt orthonormalised, refused and logged to the console where `J_D` is rank-deficient so
+  the preimage is no 2-plane; physics reviews the construction. Every steer is one `SetField` through the contract,
+  undone by one Ctrl+Z, logged in the console, the Manifold view's sliders following.
+- **The keyboard (3.5):** the Compass scope's siblings in navigation mode are the compass, Tilt, Slice, then Cube,
+  Plücker, Jacobi, Shape; Enter on a view button switches view; in a grid view Enter on the compass starts interaction,
+  the arrows move a highlighted cell, Space steers to it, and Esc or Enter returns to navigation mode; in the Cube view
+  interaction is R-409's.
+- **The tests (3.6)** as the human lists them.
+
+*What the corpus has, and the entries filed (the porter's reading at `a5ddd9f9`):*
+- **J_D.** The corpus's `J_D` is `∂physical/∂(u, v)`, the derivative of the whole chart-to-IC composite with respect
+  to the chart's two coordinates at a quad's centre, taken by central differences in f64, its codomain the particle
+  frame's `(m, r, p)` (`principia_deep_zoom.md` § "2. Linearised decoder — IC precision" and § "Couplings to the
+  contract", a and b; `principia_integrator_contract.md`). It is built by REQ-DEC-033, not yet (the code refuses the
+  linearised path). The corpus defines no derivative of the decoder with respect to `z` along all eight directions, no
+  Jacobian into Jacobi or shape-sphere coordinates, and no Gram area factor for `J_D` (deep_zoom names `|det J_D|`,
+  whose meaning for a non-square `J_D` is not written; `principia_dd_generation_root.md` gives `√det(JᵀJ)` for the
+  links' Jacobians only). The human's "the existing J_D machinery" and "the Gram-determinant area factor already
+  defined for J_D" therefore point at something the corpus does not have in this form: **RQ-341** (the human's).
+- **The Jacobi set.** The decoder writes `ρ̃ = √μ_ρ (r₁ − r₀)` and `λ̃ = √μ_λ (r₂ − (m₀r₀ + m₁r₁)/M₀₁)` mass-weighted,
+  and `p_ρ = (q₀, q₁)`, `p_λ = (q₂, q₃)` as physical Jacobi momenta, not mass-weighted (`principia_dd_decoder.md`
+  §3.2; `principia_chart_reference.md` §0.2, §0.3). In the canonical frame `ρ̃` is on `+x` and `R̃ = 1`, so `ρ̃ᵧ ≡ 0`
+  and the four position components carry two degrees of freedom; with `η_E` off, the masses (`z_μ1`, `z_μ2`) move
+  none of the eight, so a plane tilted into them pushes forward degenerately: **RQ-342** (physics, then the human's).
+- **The Shape set.** `n = ((a−b)/I, 2p/I, 2q/I)` is a unit vector (three numbers, two degrees of freedom), `R = √I` is
+  1 on the decoder's image, and no doc defines `ṅ` or `Ṙ`; the set has neither the masses nor the overall rotation
+  rate (`L_z` lives in the momentum block) as coordinates, though the masses enter its rates: **RQ-343** (physics,
+  then the human's).
+- **The steer.** No doc has a pseudo-inverse or a latent preimage of a physical plane; it needs RQ-341's eight-column
+  Jacobian, a metric on `z`, a rank test with a threshold, and a rule for what the cell lights when `e_i` is not in the
+  Jacobian's range: **RQ-344** (physics, then the human's).
+- **Added in the fix round of PR #227 (physics review P6 to P8).** The decoder's own physical set (`α, β`, the four
+  momenta and two masses) is a non-redundant 8-set of full rank, which RQ-342 to RQ-344 now state. With the energy
+  normalisation `η_E` on, every physical Jacobian has rank at most 7, whatever the coordinates: **RQ-345** (physics,
+  then the human's). The grid and the steer both depend on a metric on the physical coordinates: **RQ-346** (physics,
+  then the human's).
+- The Plücker view, the position readout, the Plücker steer and the keyboard need none of these; they are built
+  first.
+
+*Applied per R-369 (routine design choices; the human may veto any, a veto being a GUI design ruling applied by a
+follow-up task):*
+- **C1. The switcher.** Four buttons, Cube, Plücker, Jacobi, Shape, on the compass beside Tilt and Slice, the current
+  view shown as selected. The view is the compass's own GUI state, as its mode is (R-409 A5): not in the contract, not
+  undoable. The Tilt and Slice buttons stay in every view and set the mode the Cube view's drag uses; in a grid view a
+  drag does nothing.
+- **C2. Hover.** Hovering a cell shows "z_i × z_j  +0.123" (the physical names in a physical view) as egui's tooltip
+  beside the compass, not over the figure (§G1).
+- **C3. The grid's thresholds.** The dominant cell is outlined when its `|p|` exceeds 0.02, as the reference's; below
+  that no cell is outlined and the readout shows "—". Readout values have three decimals.
+- **C4. The pointer's pixel.** "At the hovered pixel" is the pixel's latent point on an affine chart,
+  `z₀ + (2s−1)q₁ + (2t−1)q₂` (chart_decoder_contract Part 3); on a nonlinear chart the physical views take `z₀`, and the
+  help text says so, until RQ-341 is ruled.
+- **C5. The Plücker steer.** A click on cell (i, j) sets the preset to the axis pair `(z_i, z_j)` with τ₁ = τ₂ = γ = 0
+  and the zoom kept, one `SetField` on the basis, as the reference's `state.a = i; state.b = j` with the tilts reset;
+  `z₀` is unchanged. Locked, the plane turns about the pin, as every basis edit does (§G4).
+- **C6. The keyboard's cell cursor.** In a grid view's interaction mode the cursor starts on the dominant cell (the
+  first upper cell when none is), moves over the upper-triangle cells only, ← → along a row and ↑ ↓ along a column,
+  stopping at the triangle's edges; Shift moves it to the row's or column's end (×10, clamped); Space steers to it as a
+  click does; the cursor is drawn as a ring in interaction mode's blue. Enter on a view button acts as its click and
+  stays in navigation mode (R-409 A1). The breadcrumb names the view, e.g. "Compass › Plücker".
+- **C7. Colours.** The two hues and the outline are dark-mode look choices under R-390, listed in the PR; the
+  reference's teal and terracotta on cream are not copied.
+- **C8. Where it lands.** render_gui_spec §G2's compass bullet, the new subsection, §G3's Compass scope and §G13;
+  **REQ-GUI-194** (the switcher), **REQ-GUI-195** (the Plücker view), **REQ-GUI-196** (the position readout),
+  **REQ-GUI-197** (the Plücker steer) and **REQ-GUI-198** (the keyboard), closed by **TASK-M6-34** (new; code, qa,
+  gui; after TASK-M6-33); **REQ-GUI-199** (the physical views) and **REQ-GUI-200** (the physical steer), closed by
+  **TASK-M6-35** (new; code, qa, gui and physics; after TASK-M6-34), which waits on RQ-341 to RQ-346. REQ-GUI-183
+  (the Compass scope's three siblings, closed by TASK-M6-31) is unchanged as TASK-M6-31's record; REQ-GUI-198 adds the
+  view buttons after them.
+- R-452 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-194 to REQ-GUI-200.
+
+## R-453 — A click on the figure pins that sample's trajectory in the Trajectory panel, and hover never replaces it; the cursor moving into the panel never clears it; the panel's real-space view pans and zooms and its shape-sphere view orbits and zooms
+*16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the Trajectory panel) and § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (Trajectory's keys),
+REQ-GUI-201 and REQ-GUI-202 (reqio, new), TASK-M6-36 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
+TASK-M6-36 on the mock*
+
+The human's words, a spoken message of 16 Oct 2026, transcribed, given in the orchestrator's session (a GUI design
+ruling under R-390's feedback rule):
+
+> You also can't click on a point and then have that stay in the um, trajectory panel. You can't actually interact with anything in the trajectory panel because the moment your um, cursor moves around, it changes which trajectory is in the panel. And then obviously when you try, then actually put your cursor in the trajectory panel, the uh, trajectory um, disappears. Also, you should be able to interact with the um, shape sphere um, view, as well as the real space trajectory view. Like the real space one, you should be able to pan and zoom, and the um, shape sphere one, you should be able to move the orbit camera and zoom.
+
+*What it decides, in plain terms:*
+- **A click on the figure pins that sample's trajectory in the Trajectory panel.**
+- **Hover does not replace a pinned trajectory, and moving the cursor into the panel never clears it.**
+- **The panel's views are interactive:** the real-space view pans and zooms, and the shape-sphere view orbits and zooms.
+- **R-409's "no orbit" is the compass's and is untouched;** the orbit here is the Trajectory panel's shape-sphere
+  view's. §G1's "no camera" holds as well: the views turn and zoom a drawing of one trajectory, not the figure, and no
+  control, window or log line is named after a camera.
+
+*Context (the porter's reading of the code at `a5ddd9f9`):* the panel's "under cursor" tab shows the snapshot's
+hover sample (`crates/gui/src/explore/trajectory.rs`, `shown`); the pointer leaving the figure, onto the panel
+included, sends an empty hover and the panel shows "move the pointer over the figure"; a click or drag on the figure
+pans it; the real-space and sphere views only paint, with no pointer sense; and the sphere turns by itself while
+"turn" is on. A side effect: a click on the panel's "+" finds no sample and keeps nothing.
+
+*Applied per R-369 (routine design choices the words leave open; the human may veto any, a veto being a GUI design
+ruling applied by a follow-up task):*
+- **D1. The click.** A primary click on the figure, a press and release with no drag past egui's click threshold,
+  pins the sample under it; a drag still pans (§G3; the Figure's drag). The pin holds the sample's IC (its latent
+  point and the sim key's inputs at the click), not a pixel, so a pan, a zoom or a slice edit afterwards leaves the
+  pinned trajectory as it is. A click on another point moves the pin there.
+- **D2. Where the pin shows.** The panel's first tab reads "pinned" while a pin is held and "under cursor" otherwise;
+  the kept orbits (`#1`, `#2`, `+`) are unchanged, and "+" or Space keeps the pinned sample when one is held. The
+  panel shows an **unpin** button while pinned; unpin returns the first tab to following the cursor.
+- **D3. Without a pin.** The panel keeps showing the last sample hovered over the figure when the pointer leaves it,
+  onto the panel or anywhere else, until the pointer hovers another point of the figure; it never goes blank because
+  the pointer moved off the figure. Before any hover it says "move the pointer over the figure", as now.
+- **D4. The figure's path and the hover label.** Dropped in the fix round of PR #227 (gui review G3), applied per
+  R-369: the human's words cover only the panel ("it changes which trajectory is in the panel"), so the orbit's path
+  drawn on the figure and the hover label keep following the pointer, pinned or not, as §G2's Figure paragraph and
+  REQ-GUI-085 say; the pinned orbit is the panel's. No new mark is drawn on the figure (§G1, "the figure is never
+  covered").
+- **D5. The pin's state.** The pin is `ViewUI` state, like the kept orbits (`principia_trajectory_viewing.md` §6): not
+  undoable, not on the sim key, no `SetField` on `SimConfig`; the integration is `computeIC`'s, as for hover. A
+  change of the sim key (an integrator or horizon edit) re-integrates the pinned IC.
+- **D6. The keyboard.** In the Figure scope, P pins the sample under the pointer, the point K locks at (§G4), and
+  with the pointer off the figure does nothing, as K; a letter shortcut in either mode, as §G3 has them, listed with
+  the Figure's keys; the Trajectory scope's elements gain the unpin button (Enter acts as its click, R-409 A1)
+  and the two views, each an adjustable element, the unwrapped view being the sphere's element while it is shown in
+  the sphere's place and taking the real-space view's keys (G5 of PR #227's gui review): Enter on a view starts interaction, where the arrows pan the
+  real-space view by R-404's `Pan` step (1/20 of the view's span) and turn the sphere by R-404's `Angle` step (1°),
+  + and − zoom either by R-404's `ZoomLog2` step (0.25 octave), and Shift ×10 and Alt ×0.1 apply as everywhere; Esc or
+  Enter returns to navigation mode. These reuse confirmed steps for the same kinds of quantity, so no new value is
+  needed.
+- **D7. The pointer on the views.** On the real-space view a drag pans and the wheel zooms about the pointer; on the
+  sphere a drag orbits it (yaw about the sphere's vertical axis, pitch clamped to ±90°) and the wheel zooms; a
+  double-click restores each view's default (real space fitted, as now; the sphere at its default angle and size). A
+  drag on the sphere turns "turn" off, so the user's view holds; ticking "turn" resumes the slow turn from the view as
+  it stands. The unwrapped (equirectangular) view pans and zooms as the real-space view does.
+- **D8. The views' state.** Each view's pan, zoom and orbit are the panel's own `ViewUI` state, kept per tab, never in
+  the contract's history, and they rotate the view of the sphere, never the data (`principia_trajectory_viewing.md`
+  §4: "rotates the camera, not the data", so the sphere and its unwrap agree). The Inspector (§G8) hosts the same
+  panels (R-65): where it uses the same view widgets it gets the same interaction.
+- **D9. Where it lands.** render_gui_spec §G2's Trajectory panel and §G3's Trajectory keys; **REQ-GUI-201** (the pin)
+  and **REQ-GUI-202** (the interactive views), M6, closed by **TASK-M6-36** (new; code, qa, gui; after TASK-M6-27,
+  merged). TASK-M8-11, the Trajectory panel on the real engine, is unchanged here (PR #226 edits its file); it
+  re-runs these on the real engine once a later port adds them to its acceptance.
+- **D10. qa's files (R-290, forced by this ruling).** A qa file that asserts the panel going blank off the figure, or
+  a click on the figure panning only, asserts what this ruling changes; TASK-M6-36's qa reviewer changes those
+  assertions in the task's qa commit, and only those, as R-409 A9 has it.
+- R-453 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-201 and REQ-GUI-202.
