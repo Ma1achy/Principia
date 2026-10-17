@@ -654,8 +654,8 @@ mod qa_m2_32_failures_hatch_from_detail {
         "the hatch decided from decode_failed's detail, not the chart, fails (R-446)",
         expected = "row 20 (state 5, detail 1",
         control(replaced(
-            "if (ctx.chart.forbidden) {",
-            "if (ctx.chart.forbidden || (ctx.sample.state == STATE_DECODE_FAILED && ctx.sample.detail == 1u)) {"
+            "if (ctx.validity.forbidden) {",
+            "if (ctx.validity.forbidden || (ctx.sample.state == STATE_DECODE_FAILED && ctx.sample.detail == 1u)) {"
         ))
     );
 }
@@ -667,7 +667,7 @@ mod qa_m2_32_failures_field_ignored {
         qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched,
         "an occupant that ignores REQ-COL-102's field draws a forbidden escape in its swatch",
         expected = "row 30 (state 0, detail 1, t 120, forbidden true)",
-        control(replaced("if (ctx.chart.forbidden) {", "if (false) {"))
+        control(replaced("if (ctx.validity.forbidden) {", "if (false) {"))
     );
 }
 
@@ -1514,3 +1514,114 @@ negative_control!(
         );
     }
 );
+
+// ── REQ-COL-102 with REQ-COL-005: the classification is a validity predicate, not chart state ─────────────────────
+
+/// Checks that `lanes` carry the chart classification `forbidden` in the validity lane alone, a `bool` filled from the
+/// CPU's classification (`chart_forbidden_at`), and that `occupant` reads it there and reads no chart-lane identifier
+/// (REQ-COL-005, seam 6; render contract Part 4; colour_composition §3).
+fn check_forbidden_lane(lanes: &[render::bind::Lane], occupant: &str) {
+    for lane in lanes {
+        let has = lane
+            .members
+            .iter()
+            .filter(|m| m.name == "forbidden")
+            .count();
+        let want = usize::from(lane.name == "validity");
+        assert_eq!(
+            has, want,
+            "lane `{}` holds `forbidden` {has} times, not {want}",
+            lane.name
+        );
+    }
+    let validity = lanes
+        .iter()
+        .find(|l| l.name == "validity")
+        .unwrap_or_else(|| panic!("no validity lane"));
+    let f = validity
+        .members
+        .iter()
+        .find(|m| m.name == "forbidden")
+        .unwrap_or_else(|| panic!("no forbidden in the validity lane"));
+    assert!(
+        f.ty == "bool" && f.fill.contains("chart_forbidden_at("),
+        "validity.forbidden is {} filled by {}, not a bool from the chart classification",
+        f.ty,
+        f.fill
+    );
+    assert!(
+        !occupant.contains("ctx.chart"),
+        "the outcome occupant reads a chart-lane identifier"
+    );
+    assert!(
+        occupant.contains("ctx.validity.forbidden"),
+        "the outcome occupant does not read ctx.validity.forbidden"
+    );
+}
+
+#[test]
+fn qa_m2_32_forbidden_is_a_validity_predicate() {
+    let lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
+    check_forbidden_lane(&lanes, outcome::WGSL);
+}
+
+#[cfg(feature = "controls")]
+mod qa_m2_32_forbidden_in_chart_lane {
+    use super::*;
+    negative_control!(
+        qa_m2_32_forbidden_is_a_validity_predicate,
+        "forbidden moved back into the chart lane fails",
+        expected = "lane `chart` holds `forbidden` 1 times, not 0",
+        {
+            let mut lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
+            let v = lanes.iter().position(|l| l.name == "validity").unwrap();
+            let c = lanes.iter().position(|l| l.name == "chart").unwrap();
+            let k = lanes[v]
+                .members
+                .iter()
+                .position(|m| m.name == "forbidden")
+                .unwrap();
+            let m = lanes[v].members.remove(k);
+            lanes[c].members.push(m);
+            check_forbidden_lane(&lanes, outcome::WGSL)
+        }
+    );
+}
+
+#[cfg(feature = "controls")]
+mod qa_m2_32_forbidden_read_from_chart {
+    use super::*;
+    negative_control!(
+        qa_m2_32_forbidden_is_a_validity_predicate,
+        "an occupant reading the classification from the chart lane fails",
+        expected = "reads a chart-lane identifier",
+        {
+            let lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
+            let src = outcome::WGSL.replace(
+                "if (ctx.validity.forbidden) {",
+                "if (ctx.validity.forbidden || ctx.chart.chart_id == 7u) {",
+            );
+            check_forbidden_lane(&lanes, &src)
+        }
+    );
+}
+
+#[cfg(feature = "controls")]
+mod qa_m2_32_forbidden_from_payload {
+    use super::*;
+    negative_control!(
+        qa_m2_32_forbidden_is_a_validity_predicate,
+        "a validity forbidden filled from the payload, not the chart classification, fails",
+        expected = "not a bool from the chart classification",
+        {
+            let mut lanes = render::bind::lanes().unwrap_or_else(|e| panic!("{e}"));
+            let v = lanes.iter().position(|l| l.name == "validity").unwrap();
+            for m in &mut lanes[v].members {
+                if m.name == "forbidden" {
+                    m.fill = "s.state == STATE_DECODE_FAILED && s.detail == 1u".to_owned();
+                }
+            }
+            check_forbidden_lane(&lanes, outcome::WGSL)
+        }
+    );
+}
