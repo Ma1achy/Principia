@@ -58,9 +58,9 @@ impl Real for f64 {
 /// `Float`'s constants (its epsilon, largest value, infinity) stay out of reach of code bounded by `Real` alone (the
 /// module's note).
 pub trait RealOps: Sized {
-    /// `self·a + b`, the fused multiply-add: rounded once on the CPU. WGSL lets a backend evaluate its `fma` as
-    /// `self·a + b` unfused, so on the GPU it is a continuous value that may differ, never a branch input
-    /// (integrator_contract Part 2c, "And FMA contraction is a live question").
+    /// `self·a + b`, the fused multiply-add, rounded once. R-34 requires it, written explicitly, at every branch input
+    /// that consumes multi-op arithmetic (gpu_determinism_note § "The discipline", rules 2 and 6), as `d²` is built in
+    /// [`crate::physics::pairs`]. Whether every GPU backend fuses it is RQ-298's open question.
     fn fma(self, a: Self, b: Self) -> Self;
 
     /// `√self`: correctly rounded on the CPU, not guaranteed so on a GPU backend, so no branch decides on it (Part 2c
