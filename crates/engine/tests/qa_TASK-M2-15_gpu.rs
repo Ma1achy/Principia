@@ -215,7 +215,23 @@ negative_control!(
     }
 );
 
-/// `β` operands: the `−x` half-axis with `±0`, the pole, and random pairs with their mirror images.
+/// Just off the `−x` half-axis, `λ̃_y = ±|λ̃_x|·2⁻ᵏ`: the true `β` is below π by about `2⁻ᵏ`, under half an f32 ulp of
+/// π for `k ≥ 23`, so an `atan2` that rounds to nearest returns f32's nearest π, above π̂; `β ∈ [0, π̂]` (REQ-ENC-007,
+/// R-417, R-438) must hold there too. Each pair comes with its mirror image.
+fn near_half_axis() -> Vec<[f32; 2]> {
+    let mut v = Vec::new();
+    for e in [-6, -1, 0, 3] {
+        let x = -(2f32).powi(e) * 1.37;
+        for k in (12..=48).step_by(3) {
+            let y = -x * (2f32).powi(-k);
+            v.push([x, y]);
+            v.push([x, -y]);
+        }
+    }
+    v
+}
+
+/// `β` operands: the `−x` half-axis with `±0`, operands just off it, the pole, and random pairs with their mirror images.
 fn pairs() -> Vec<[f32; 2]> {
     let mut v = Vec::new();
     for e in -30..=30 {
@@ -228,6 +244,7 @@ fn pairs() -> Vec<[f32; 2]> {
             v.push([x, y]);
         }
     }
+    v.extend(near_half_axis());
     let mut s = 0x2150_0005u64;
     for _ in 0..512 {
         s = s
@@ -342,3 +359,38 @@ negative_control!(
         check_half_axis(&p, &g);
     }
 );
+
+negative_control!(
+    encode_qa_m215_gpu_near_half_axis,
+    "a GPU β of f32's nearest π just off the −x half-axis, above π̂, must fail",
+    expected = "∉ [0, π̂]",
+    {
+        let h = GpuHarness::new().expect("a GPU device");
+        let p = pairs();
+        let mut g = gpu_beta(&h, &p);
+        let near = near_half_axis();
+        let k = p
+            .iter()
+            .position(|q| *q == near[near.len() - 1])
+            .expect("a near pair");
+        // An uncapped round-to-nearest atan2: f32's nearest π, one ulp above π̂.
+        g[k] = std::f32::consts::PI;
+        check_half_axis(&p, &g);
+    }
+);
+
+#[test]
+fn encode_qa_m215_gpu_near_half_axis() {
+    let h = GpuHarness::new().expect("a GPU device");
+    let p = near_half_axis();
+    let g = gpu_beta(&h, &p);
+    check_half_axis(&p, &g);
+    let cpu_above = p
+        .iter()
+        .filter(|&&[x, y]| f64::from(y.abs().atan2(x)) > f64::from(pi_hat()))
+        .count();
+    eprintln!(
+        "encode_qa_m215_gpu_near_half_axis: {} pairs; CPU-f32 atan2 above π̂ at {cpu_above}",
+        p.len()
+    );
+}
