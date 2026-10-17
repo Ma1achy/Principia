@@ -31,8 +31,8 @@ for the M7 gate (R-71).
   renders, in the PR (REQ-COL-106).
 
 ## Acceptance tests
-- `cargo test -p kernel chazy_decided_latch` — on a fixture trajectory the latch holds the first-commit time of the current coarse class and resets when it changes; the view renders a never-settled pixel grey and an earlier-settled one lighter (REQ-COL-082).
-- `cargo test -p render chazy_what_changed` — two frames across a playhead step: exactly the pixels whose coarse class changed are white, the rest dimmed by the proposed amount (REQ-COL-083).
+- `cargo test -p kernel chazy_decided_latch` — on a fixture trajectory the latch holds the first-commit time of the current coarse class and resets when it changes; the view renders a never-settled sample grey and an earlier-settled one lighter (REQ-COL-082).
+- `cargo test -p render chazy_what_changed` — two frames across a playhead step: exactly the samples whose coarse class changed are white, the rest dimmed by the proposed amount (REQ-COL-083).
 - Review (gui): the time-lightness mapping (palest by t = 10 to darkest at t = 800, grey never) with renders on `preset_shape_h1`, and the "what just changed" dimming with renders, confirmed by the human at the M7 gate (REQ-COL-106).
 
 ## Notes

@@ -681,7 +681,8 @@ is wanted, since the swatch is a ruling.*
     exactly neutral there.
   - (c) Change B to a neutral near-black (e.g. `#151515`), which changes R-442's swatch and the outcome palette's
     bounded link: the human's.
-- **Waits:** REQ-COL-074 (`rq: RQ-317`), TASK-M7-38's B test. The flat stains (TASK-M7-37) draw `#141418` meanwhile.
+- **Waits:** REQ-COL-074 (`rq: RQ-317`), TASK-M7-38's B test; REQ-COL-087's confirmation (`rq: RQ-317`), since
+  option (c) changes B's swatch in its palettes. The flat stains (TASK-M7-37) draw `#141418` meanwhile.
 
 ## RQ-318: the spec's rule puts B-stable before transient; prin-rs PR #32's `classify` tests transient first; they differ for a Mardling–Aarseth-stable hierarchy with E > 0, a case no state has been shown to reach *(spec against reference code, R-442, REQ-PAY-099; context: TASK-M7-35; sibling of RQ-324)*
 

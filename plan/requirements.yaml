@@ -6643,7 +6643,7 @@
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
   verify:
     method: unit test
-    detail: "the latch equals the offline maximum of I over a fixture trajectory at every step, within REQ-PAY-106's quantisation once stored; it never decreases; it equals I_0 at step 0; resumed across many persist boundaries it equals a single uninterrupted latch; two ensemble copies of one pixel carry their own values"
+    detail: "the latch equals the offline maximum of I over a fixture trajectory at every step, within REQ-PAY-106's quantisation once stored; it never decreases; it equals I_0 at step 0; resumed across many persist boundaries it equals a single uninterrupted latch; two ensemble copies of one sample carry their own values"
   rulings:
   - R-442
   milestone: M7
@@ -12790,13 +12790,13 @@
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
   verify:
     method: unit test
-    detail: "filter the seven-class stain to {HE, PE} (\"just escapes\"): HE and PE pixels keep their colours, every other pixel is muted by REQ-COL-058's transform; the same on the status stain"
+    detail: "filter the seven-class stain to {HE, PE} (\"just escapes\"): HE and PE samples keep their colours, every other sample is muted by REQ-COL-058's transform; the same on the status stain"
   rulings:
   - R-442
   milestone: M7
 - id: REQ-COL-082
   area: COL
-  statement: "The \"when it was decided\" view must colour each pixel by its final class with lightness by how early that coarse class settled for good (palest by t = 10, darkest at t = 800, grey never), live from a second forward-only latch holding the time the current coarse class was first committed, reset whenever it changes."
+  statement: "The \"when it was decided\" view must colour each sample by its final class with lightness by how early that coarse class settled for good (palest by t = 10, darkest at t = 800, grey never), live from a second forward-only latch holding the time the current coarse class was first committed, reset whenever it changes."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.8 Time views
@@ -12806,7 +12806,7 @@
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
   verify:
     method: unit test
-    detail: "the latch holds the first-commit time and resets on a change of coarse class, on a fixture trajectory; the view renders a never-settled pixel grey and an earlier-settled one lighter"
+    detail: "the latch holds the first-commit time and resets on a change of coarse class, on a fixture trajectory; the view renders a never-settled sample grey and an earlier-settled one lighter"
   rulings:
   - R-442
   milestone: M7
@@ -12825,7 +12825,7 @@
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
   verify:
     method: unit test
-    detail: "two frames of a fixture chart across a playhead step: exactly the pixels whose coarse class changed are white, the rest dimmed by the proposed amount"
+    detail: "two frames of a fixture chart across a playhead step: exactly the samples whose coarse class changed are white, the rest dimmed by the proposed amount"
   rulings:
   - R-442
   milestone: M7
@@ -13000,7 +13000,7 @@
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
   verify:
     method: unit test
-    detail: "energy lens recovers the escape (drill-down §12.3 item 5): for body k escaping hyperbolically chazy_qk[k] > 1 and the pixel's OKLab L is above L(b = ½), and for a bound k (chazy_qk[k] < 1) below it; control: the flat body lens draws two bound pixels with different q_k identically"
+    detail: "energy lens recovers the escape (drill-down §12.3 item 5): for body k escaping hyperbolically chazy_qk[k] > 1 and the sample's OKLab L is above L(b = ½), and for a bound k (chazy_qk[k] < 1) below it; control: the flat body lens draws two bound samples with different q_k identically"
   rulings:
   - R-77
   - R-443

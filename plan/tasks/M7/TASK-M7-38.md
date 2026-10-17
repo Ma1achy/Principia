@@ -11,7 +11,7 @@
 ## Goal
 The stains that put `chazy_q` in the brightness slot under Replace-L's range form, so lightness carries the energy of
 the separating motion (R-442; the Chazy drill-down §10.5): `L = 0.3 + 0.6·b`, `b = q/(1 + q)`, dark bound, mid
-parabolic, light hyperbolic. Seven classes × energy recovers what the flat map folds into B: a transient pixel renders
+parabolic, light hyperbolic. Seven classes × energy recovers what the flat map folds into B: a transient sample renders
 light grey and a bound one dark grey, because B has no hue. Structure × energy reads which bodies separate (hue) and
 how hard (lightness). The lightness range and the compaction are proposed for the M7 gate (R-71).
 
