@@ -813,7 +813,8 @@ type DeltaMDecode<R> = fn(&BurrauThetaDeltaM<R>, R, R) -> Decoded<R>;
 /// The δm strip at `(u, v)` is the Burrau triangle at `ν(θ(u))` under the blended masses, at rest: the decoded
 /// positions have the right angle at body 0 and the legs in the ratio `a : b` of the embed (within 64 eps), the CoM at
 /// the origin and `I = 1` (within 16 eps); the Jacobi vectors are [`jacobi`]'s, `λ_x = −(m₁/M₀₁)·a/c`, so at `v = 0`
-/// within 4 eps of §4.2's; every momentum is 0; `Σmᵢ = 1` within 4 eps; and the `v = 0` row decodes as the Euclid
+/// within 4 eps of §4.2's, `ρ`, the masses and the positions unchanged; every momentum is 0; the descriptor is the
+/// shared one of the decoded IC; `Σmᵢ = 1` within 4 eps; and the `v = 0` row decodes as the Euclid
 /// plane's rest start at the same `ν`, within 64 eps.
 fn check_geometry<R: Q>(dec: DeltaMDecode<R>, u: f64, v: f64) {
     let chart = delta_m::<R>();
@@ -860,9 +861,20 @@ fn check_geometry<R: Q>(dec: DeltaMDecode<R>, u: f64, v: f64) {
         "Σmᵢ at {at}"
     );
     let masses = from_masses(chart.masses(u, v));
-    let (rho, lambda) = jacobi(&system, &masses);
+    let under = jacobi(&system, &masses);
+    let (rho, lambda) = (under.rho, under.lambda);
     let w = masses.m[1].f() / (masses.m[0].f() + masses.m[1].f());
     assert_eq!(rho, system.rho, "ρ at {at}");
+    assert_eq!(
+        (under.m, under.r),
+        (system.m, system.r),
+        "jacobi changed more than λ at {at}"
+    );
+    assert_eq!(
+        d.descriptor,
+        kernel::decode::descriptor::describe(&d.ic),
+        "the descriptor is not the decoded IC's at {at}"
+    );
     assert!(
         (lambda[0].f() + w * system.rho[0].f()).abs() <= 4.0 * eps,
         "λ_x at {at}"

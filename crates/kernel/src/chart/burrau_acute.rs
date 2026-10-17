@@ -542,13 +542,15 @@ where
     }
 }
 
-/// The Jacobi vectors of `system`'s triangle under the masses `masses` (the module's note): `ρ = r₁ − r₀ = (a/c, 0)`
-/// and `λ = r₂ − r₀₁ = (−(m₁/M₀₁)·a/c, b/c)`.
+/// `system` with its triangle's Jacobi vectors under the masses `masses` (the module's note): `ρ = r₁ − r₀ = (a/c, 0)`,
+/// unchanged, and `λ = r₂ − r₀₁ = (−(m₁/M₀₁)·a/c, b/c)`. Only `λ` depends on the masses, through `r₀₁`.
 #[inline]
-pub fn jacobi<R: Float>(system: &System<R>, masses: &Masses<R>) -> ([R; 2], [R; 2]) {
+pub fn jacobi<R: Float>(system: &System<R>, masses: &Masses<R>) -> System<R> {
     let w = masses.m[1] / masses.m01;
-    let rho = system.rho;
-    (rho, [-(w * rho[0]), system.lambda[1]])
+    System {
+        lambda: [-(w * system.rho[0]), system.lambda[1]],
+        ..*system
+    }
 }
 
 /// The δm strip's decoder: the blended masses through the shared entry for a chart that sets masses, the triangle's
@@ -580,15 +582,7 @@ impl<R: LinkReal + PayloadReal> Blocks<R> for DeltaMBlocks<R> {
 
     #[inline]
     fn config(&mut self, _z_cfg: [R; 2], masses: &Masses<R>) -> Config<R> {
-        let (rho, lambda) = jacobi(&self.system, masses);
-        system_config(
-            &System {
-                rho,
-                lambda,
-                ..self.system
-            },
-            masses,
-        )
+        system_config(&jacobi(&self.system, masses), masses)
     }
 
     /// The rest start: every momentum 0.
