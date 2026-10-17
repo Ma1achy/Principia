@@ -11,13 +11,19 @@
 //! REQ-CHART-043).
 //!
 //! **The charts, in chart_reference §5.1's order** (REQ-CHART-029): [`Latent`] (`latent`), then `ShapeSphere`,
-//! `Burrau`, `InvariantLE` / `InvariantLK` and `MassSimplex`, each a `Φ` beside it.
+//! `Burrau`, [`InvariantLE`] / [`InvariantLK`] (`invariant`) and `MassSimplex`, each a `Φ` beside it.
+//!
+//! **Each chart's decode** ([`ChartDecode`]): `D ∘ Φ` through the shared blocks. A chart whose `Φ` hands `D` only `z`
+//! decodes by [`decode()`]; an invariant chart hands the construction its targets `(L_z, K*)` in place of the free
+//! momentum block ([`invariant::decode`]). The decode stage is generic over this trait, so each chart's own decode is
+//! what the kernel monomorphises.
 //!
 //! **The chart's parameters** are held at a float type of their own, [`Chart::Param`]: f32 in the kernel's uniform, f64
 //! on the CPU. `map` is generic over any float type the parameters widen into (`From<Self::Param>`), so a chart held at
 //! f32 maps at f32 on the GPU and one held at f64 maps at f64 on the CPU; narrowing f64 parameters to f32 is the CPU's
 //! own step, never `map`'s.
 
+pub mod invariant;
 pub mod latent;
 
 use core::fmt;
@@ -26,6 +32,7 @@ use core::fmt;
 /// test's among them, names the same trait (TASK-M2-32).
 pub use spirv_std::num_traits::Float;
 
+pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;
 
 use crate::decode::{self, Decoded};
@@ -128,6 +135,52 @@ where
     C: Chart,
 {
     decode::decode::<S, R>(&chart.map(u, v).z)
+}
+
+/// A chart's decode, `D ∘ Φ` at `(u, v)` under the link selection `S`, through the shared blocks (REQ-CHART-015): the
+/// decode stage's ([`crate::stage::decode::sample`]).
+pub trait ChartDecode: Chart {
+    /// The chart's decode at `(u, v)`.
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<Self::Param>;
+}
+
+impl<P: Copy> ChartDecode for Latent<P> {
+    /// [`decode()`]: the shared decoder on `Φ`'s `z`.
+    #[inline]
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        decode::<S, R, Self>(self, u, v)
+    }
+}
+
+impl<P: Copy> ChartDecode for InvariantLE<P> {
+    /// [`invariant::decode`]: the construction's outcome is not part of [`Decoded`] (`invariant`'s note).
+    #[inline]
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        invariant::decode::<S, R, Self>(self, u, v).0
+    }
+}
+
+impl<P: Copy> ChartDecode for InvariantLK<P> {
+    /// [`invariant::decode`], as for [`InvariantLE`].
+    #[inline]
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
+    {
+        invariant::decode::<S, R, Self>(self, u, v).0
+    }
 }
 
 /// Writes a dump's header, which stamps the chart's [`Chart::name`] (chart_reference §5.1): the line

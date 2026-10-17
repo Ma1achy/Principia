@@ -105,7 +105,7 @@ negative_control!(
 /// The register's own lists at M1 and M2. The M1 gate confirmed its nine provisional entries as proposed (R-428): the
 /// six log floors and the hatch's three numbers (R-427), so the M1 list is empty. `rho_ratio`'s and `r_min_pair_0`'s
 /// floors, confirmed provisionally, are provisional until M2, citing REQ-TOOL-163 (R-419), and are listed at M2 with
-/// `eps_m01` (REQ-DEC-039) and `tanh_sat` (REQ-DEC-047).
+/// `eps_m01` (REQ-DEC-039), `tanh_sat` (REQ-DEC-047) and the invariant warp's `k_max` and `gamma_k` (REQ-CHART-044).
 fn check_register_m1_m2(register: &[ConstantBuilder]) {
     check_lists("M1", register, &[]);
     check_lists(
@@ -114,6 +114,8 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
         &[
             ("eps_m01", "M2", "REQ-DEC-039"),
             ("tanh_sat", "M2", "REQ-DEC-047"),
+            ("k_max", "M2", "REQ-CHART-044"),
+            ("gamma_k", "M2", "REQ-CHART-044"),
             ("log_floor_rho_ratio", "M2", "REQ-TOOL-163"),
             ("log_floor_r_min_pair_0", "M2", "REQ-TOOL-163"),
         ],

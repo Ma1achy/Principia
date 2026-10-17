@@ -111,6 +111,10 @@ pub mod quad {
 /// (R-297; TASK-M0-44).
 pub mod compute;
 
+/// The CPU validation pass's view-level check: a chart that forbids energy normalisation with any `Some(E*)`, and a
+/// non-finite `E*`, are refused before anything decodes (chart_reference §0.6; R-25, R-124; TASK-M2-12).
+pub mod chart_validate;
+
 // The kernel's decode stage dispatched natively, and its CPU-f64 counterpart `decode_only` (TASK-M2-06): documented in
 // the module itself, whose links resolve there.
 pub mod decode_dispatch;

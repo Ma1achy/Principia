@@ -1,0 +1,14 @@
+{
+  "description": "The (L_z, E) chart decoded by a perturbed construction, a = sqrt(2 K*) for sqrt(2 (K* - K_min)): the rigid rotation's energy is not subtracted, so E_0 = U + K(t) + L_z^2/2 varies along L_z and the gate must fail (pitfalls §3).",
+  "chart": "lz_e",
+  "frozen": [
+    { "z_cfg": [0.0, 0.0], "z_mass": [0.0, 0.0] },
+    { "z_cfg": [0.3, -0.5], "z_mass": [0.7, -0.4] },
+    { "z_cfg": [1.8, 0.4], "z_mass": [-1.0, 1.2] },
+    { "z_cfg": [-1.5, 1.0], "z_mass": [0.2, 0.9] },
+    { "z_cfg": [-0.25, -1.75], "z_mass": [1.5, 1.5] }
+  ],
+  "grid": 64,
+  "perturb": "k_min_not_subtracted",
+  "expected": "fail"
+}
