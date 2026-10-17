@@ -521,10 +521,21 @@ const PRESENTATION: [&str; 13] = [
     "diverging_x0_Lz_0",
 ];
 
-/// The M1 gate's calibrations the register holds (R-433): `r_pole`, the pole hold's radius, a march parameter that
-/// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance.
-/// Neither is among the entries §3.8 hashes ("The hash"), so neither is hashed.
-const CALIBRATIONS: [&str; 2] = ["r_pole", "n_norm_tol"];
+/// The calibrations the register holds: the M1 gate's (R-433), `r_pole`, the pole hold's radius, a march parameter that
+/// decides which value `θ̃` and `_reserved` take, not what their bits mean, and `n_norm_tol`, a test's tolerance; and
+/// the shape sphere's (TASK-M2-08), `shape_vec_js_tol` and `shape_roundtrip_bound`, a test's and a gate's tolerances.
+/// None is among the entries §3.8 hashes ("The hash"), so none is hashed.
+const CALIBRATIONS: [&str; 4] = [
+    "r_pole",
+    "n_norm_tol",
+    "shape_vec_js_tol",
+    "shape_roundtrip_bound",
+];
+
+/// The invariant charts' warp defaults (REQ-CHART-044; TASK-M2-12): `K_max` and `γ_K`, a chart's parameters, which the
+/// decode stage's uniform carries; they decide which IC a pixel decodes to, not what any stored bit means, so they are
+/// not hashed.
+const WARP: [&str; 2] = ["k_max", "gamma_k"];
 
 #[test]
 fn schema_version_hashes_the_registers_stored_bits_entries() {
@@ -537,14 +548,16 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
     // §3.8 hashes the register entries that decide stored bits; every other entry is a chart constant, hashed by
     // value through the link registry instead (§3.9, "The hash"; R-344), or a presentation constant the generated
     // views and the prelude read, which §3.8 leaves unhashed ("a render … constant the lint brings into the
-    // register"; R-427, TASK-M1-18), or one of the M1 gate's calibrations (R-433).
+    // register"; R-427, TASK-M1-18), or one of the calibrations the register holds (R-433; TASK-M2-08), or the
+    // invariant charts' warp defaults (TASK-M2-12).
     for k in REGISTER.iter().filter(|k| !STORED_BITS.contains(&k.name)) {
         assert!(
             ledger::links::CHART_CONSTANTS
                 .iter()
                 .any(|c| c.name == k.name)
                 || PRESENTATION.contains(&k.name)
-                || CALIBRATIONS.contains(&k.name),
+                || CALIBRATIONS.contains(&k.name)
+                || WARP.contains(&k.name),
             "`{}` is neither a stored-bits entry nor a chart constant, so it is not hashed",
             k.name
         );
@@ -559,6 +572,12 @@ fn schema_version_hashes_the_registers_stored_bits_entries() {
         assert!(
             REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
             "the calibration `{name}` is not an unhashed register entry"
+        );
+    }
+    for name in WARP {
+        assert!(
+            REGISTER.iter().any(|k| k.name == name) && !STORED_BITS.contains(&name),
+            "the warp default `{name}` is not an unhashed register entry"
         );
     }
 }

@@ -807,6 +807,8 @@ citing its calibration requirement, and read from the register like any other; n
 | `r_pole` | 0.01, the pole radius of the unwrapped phase `θ̃` on the unit shape sphere (dd_integrator §3.7, R-389); confirmed at the M1 gate and marked provisional until M3, where it is re-confirmed against real orbits' near-pole arcs (R-433) | canonical-units | M3 | REQ-INT-086 |
 | `diverging_x0_E_0` | 1, `E_0`'s `x₀`, an energy: the magnitude where its `diverging` symlog's compression sets in (dd_colouring §3.6, REQ-COL-065), one unit of the normalised system's binding energy (TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
 | `diverging_x0_Lz_0` | 1, `Lz_0`'s `x₀`, an angular momentum, as `E_0`'s (dd_colouring §3.6, REQ-COL-065; TASK-M7-05) | canonical-units | M7 | REQ-COL-066 |
+| `shape_vec_js_tol` | 2⁻⁴⁸ ≈ 3.55e-15, the agreement of the shape map's `n` with the IC Inspector's on random ICs, the largest component difference (chart_reference §3.1; TASK-M2-08) | canonical-units | M2 | REQ-CHART-049 |
+| `shape_roundtrip_bound` | 10⁻¹³, the shape-sphere round trip's bound, `max ‖shape(Φ(u, v)) − n(u, v)‖` with `Φ` alone (chart_reference §3.2; R-178, R-181; TASK-M2-08) | canonical-units | M2 | REQ-CHART-053 |
 
 The register's entries confirmed at the M1 gate (R-428): each was provisional until M1 (R-427), is confirmed as
 proposed, and cites R-428 in place of its calibration requirement (REQ-TOOL-160 for the floors, REQ-COL-055 for the
