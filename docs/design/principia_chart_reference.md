@@ -552,6 +552,24 @@ $$\Phi_{\theta,K}(u,v) = \big(\nu(\theta(u)),\ \mathbf m_{\mathrm{Burrau}}(\nu(\
 
 The variants are $\Phi_{\theta,L_z}$ (fix $K$, sweep $L_z$) and $\Phi_{\theta,\delta m}$ (below).
 
+**The acute-angle charts, as built** (defined per R-72, REQ-CHART-024; TASK-M2-11). $\theta(u)$ is horizontal and
+the parameter vertical, as on the strips below. $\nu(\theta) = \sec\theta - \tan\theta$ is evaluated as
+$\cos\theta/(1 + \sin\theta)$, the same function (multiply through by $1 + \sin\theta$), which cancels nowhere on
+$(0, \pi/4]$; it inverts $\theta(\nu)$ (§4.3) there, mapping $(0, \pi/4]$ onto $[\sqrt2 - 1, 1)$: the fold's end
+$\theta = \pi/4$ is $\nu = \sqrt2 - 1$, the isosceles triangle ($a = b$), and $\theta \to 0$ is $\nu \to 1$ ($a \to 0$).
+The system at $\nu(\theta(u))$ is the $\nu$ axis's embed (§4.3, §4.2). $\Phi_{\theta,K}$'s $K_{\max}$ and $\gamma_K$
+are the invariant warp's (REQ-CHART-044, R-113), and its momenta §2.2's construction at $(L_z = 0, K(v))$, as on the
+$(\nu, K)$ chart. $\Phi_{\theta,L_z}$ holds $K$ fixed and sweeps $L_z$ linearly over a band symmetric about 0, inside
+the feasible $|L_z| \le \sqrt{2IK}$ ($I = 1$, §0.5):
+
+$$L_z(v) = (2v - 1)\,\lambda_L\,L_{\max}(K), \qquad \lambda_L \in (0, 1], \qquad
+\Phi_{\theta,L_z}(u,v) = \big(\nu(\theta(u)),\ \mathbf m_{\mathrm{Burrau}}(\nu(\theta(u))),\ (L_z(v),\ K)\big),$$
+
+with $L_{\max}(K) = \sqrt{2IK}$ held to $L_{\max}^2 \le 2K$ in floating point as §2.1's warp holds it, so every
+$(u, v) \in [0,1]^2$ is feasible, the edges included. $\theta_{\min}$ and $\theta_{\max}$ are REQ-CHART-045's
+calibration; $K$ and $\lambda_L$, which give the $L_z$ range $[-\lambda_L\sqrt{2IK}, \lambda_L\sqrt{2IK}]$, are
+REQ-CHART-046's. Both charts' energy is the construction's, so both forbid energy normalisation (§0.6).
+
 **The two shape axes survey different sets (R-27: both charts kept, applied before any Burrau statistic).** The acute-angle axis $\theta \in (0, \pi/4]$ folds out
 the leg swap ($\theta$ and $\pi/2 - \theta$ are the same triangle with the legs swapped). The Euclid plane's default
 $\nu \in [1/32, 31/32]$ maps to $\theta \in (0, \pi/2)$, both leg orderings. Under the Burrau mass convention ($m_i$ =
@@ -560,6 +578,17 @@ both orderings surveys shape × labelling; folding surveys each shape once. Neit
 disagree silently. Both are kept (R-27): label each chart with the quotient it covers (in its
 `system_image` descriptor — the full range covers each shape twice, as two labelled systems: `DoubleCover`, R-27,
 R-104), and don't take shape fractions from the full-range chart, which double-counts.
+
+**The charts' `system_image` values** (defined per R-72, REQ-CHART-025; TASK-M2-11). The acute-angle charts
+($\Phi_{\theta,K}$, $\Phi_{\theta,L_z}$, $\Phi_{\theta,\delta m}$), their $\theta$ range inside $(0, \pi/4]$, cover each
+shape once under one labelling: **bijective**, the quotient "shape only". A $\nu$-axis chart (the Euclid plane, the
+$(\nu, K)$ chart) is **`DoubleCover`**, the quotient "shape × labelling", where its $\nu$ range reaches both leg
+orderings, $\nu_{\min} < \sqrt2 - 1 < \nu_{\max}$ (the leg swap is $\nu \mapsto (1 - \nu)/(1 + \nu)$, whose fixed point
+$\sqrt2 - 1$ is the isosceles triangle), so that a shape appears in it twice, as two labelled systems; the Euclid
+plane's default range does. A $\nu$ range on one side of $\sqrt2 - 1$ covers each of its shapes once: bijective. Each
+chart's label shows its value and its quotient. The statistics guard refuses a shape fraction on a `DoubleCover` chart
+(R-27), and on a ray-degenerate one, whose areas are not system fractions (`principia_chart_decoder_contract.md` Part
+5); a bijective or n-to-1 chart admits it.
 
 **Ternary mass plot.** Fix the geometry at $\nu_0$. Map $(u,v)$ to the simplex: $x = u$, $y = (1-u)v$,
 $m_0 = 1 - x - y$, $m_1 = x$, $m_2 = y$ (0-based, R-22). Shrink toward the
@@ -575,11 +604,23 @@ $\Phi_{\mathrm{strip},K} = \Phi_{\theta,K}$ above. For $(\theta, \delta m)$, ble
 $$\mathbf m(u,v) = (1 - v)\,\mathbf m_{\mathrm{Burrau}}(\nu(\theta(u))) + v\,\mathbf m_{\mathrm{target}}, \qquad
 \Phi_{\mathrm{strip},\delta m}(u,v) = \big(\nu(\theta(u)),\ \mathbf m(u,v),\ \mathrm{rest}\big).$$
 
+(Defined per R-72, REQ-CHART-027; TASK-M2-11.) The default target, equal masses, is
+$\mathbf m_{\mathrm{target}} = (1, 1, 1)/3$. The triangle is the Burrau one at $\nu(\theta(u))$, its positions §4.2's
+$\mathbf r_i$; only the masses are blended, and the Jacobi vectors are that triangle's under the blended masses,
+$\boldsymbol\rho = \mathbf r_1 - \mathbf r_0 = (a/c, 0)$ and
+$\boldsymbol\lambda = \mathbf r_2 - \mathbf r_{01} = \big(-\tfrac{m_1}{m_0 + m_1}\,\tfrac{a}{c},\ \tfrac{b}{c}\big)$, which
+at $v = 0$ are §4.2's. $\Sigma m_i = 1$ on every row, as both ends sum to 1. The momenta are zero (rest), so the chart
+allows energy normalisation, as the Euclid plane does.
+
 **Past the unit square (R-407).** Each Burrau-family axis's extension type is a definition (R-72, REQ-CHART-055),
 written in §5.4 by TASK-M2-11 and physics-reviewed; until it is written each axis is bounded, the default. (`ν` past
 `(0,1)` gives `a = 1 − ν² ≤ 0` or `b ≤ 0`, a zero or negative mass, and the acute angle past `(0, π/4]` the same.) The
 ternary mass plot's axes are affine in R-407's sense (its formula continues; the map itself, `m₁ = u`,
 `m₂ = (1−u)v`, `m₀ = (1−u)(1−v)`, is bilinear), and the fallback hatches its negative-mass area (§5.4).
+The types are now written in §5.4 (TASK-M2-11, REQ-CHART-055). On the acute angle the parenthesis above holds past
+`θ = 0`: there `ν ≥ 1`, so `a ≤ 0`, a zero or negative mass. Past `θ = π/4` the formula continues into the other leg
+ordering (`ν < √2 − 1`), whose masses stay positive up to `θ = π/2` (`ν = 0`, `b = 0`): real systems, the leg-swapped
+twins of the fold's own, which the fold exists to leave out. On both sides the acute angle is bounded (§5.4).
 
 ### 4.6 The central hypothesis
 
@@ -632,7 +673,9 @@ layer 1, the hypercube bounds, is the encode path's, on lookup and lock, never `
 On a failure the chart returns the first of project, clamp, reject that keeps the IC the one intended (the contract's
 order of preference). **The failed constraint** `failed` names one of the contract's constraints, layer 2 then layer
 3: the `(Lz,E)` parabola `|Lz| ≤ √(2I(E − U))`; `(Lz,K)`'s `K ≥ 0` and `K ≥ Lz²/2I`; the mass simplex's `mᵢ > 0`,
-`Σmᵢ = 1` and interior buffer `ε_m`; the shape sphere's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`; the Burrau charts' `ν ∈ (0,1)`;
+`Σmᵢ = 1` and interior buffer `ε_m`; the shape sphere's `θ ∈ [0, 2π)` and `φ ∈ [0, π]`; the Burrau charts' `ν ∈ (0,1)`
+and the acute-angle charts' `θ ∈ (0, π/4]`, `Φ_θ,L_z` adding `(Lz,K)`'s `K ≥ Lz²/2I` and the δm strip the mass simplex's
+`mᵢ > 0` on its blended masses (§4.5; TASK-M2-11);
 then decode sanity's decoded masses positive, CoM at the origin and total momentum zero. A mixed-axis chart names its
 axes' constraints; a chart that adds a constraint adds it to this list. Every chart's `validate` checks both layers.
 The latent chart (§1.1) adds no layer-2 constraint, and layer 3 holds for it by the shared decoder's construction: the
@@ -710,8 +753,43 @@ existing charts:
 | `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end) |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded | hatched on every side; the `t > 1` side is not declared (§2.1) | out of the count and the total (the domain's end) |
 | `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
-| Burrau family (§4.5) | REQ-CHART-055 (R-72, TASK-M2-11, physics-reviewed) | REQ-CHART-055 | bounded until the definition is written | by the types REQ-CHART-055 gives; bounded until then |
+| Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | hatched on every side | out of the count and the total (the domain's end) |
+| Burrau family: the `(ν, K)` chart (§4.3, §4.5) | `ν` bounded (declares nothing) | `K` bounded (declares nothing; the warp's `K(t)`, §2.1) | hatched on every side | out of the count and the total (the domain's end) |
+| Burrau family: `Φ_θ,K`, the strip `Φ_strip,K` (§4.5) | `θ` bounded (declares nothing) | `K` bounded (declares nothing; as on `(ν, K)`) | hatched on every side | out of the count and the total (the domain's end) |
+| Burrau family: `Φ_θ,L_z` (§4.5) | `θ` bounded (declares nothing) | `L_z` affine (linear at fixed `K`) | hatched past `θ`'s edges; past `L_z`'s the formula continues and the fallback hatches `L_z² > 2IK` by validation layer 2's `K ≥ L_z²/2I`; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`, with no band | past `θ`'s edges out of the count and the total; past `L_z`'s every visible pixel counts, its infeasible states forbidden |
+| Burrau family: the δm strip `Φ_strip,δm` (§4.5) | `θ` bounded (declares nothing) | δm affine (the blend is linear in `v`) | hatched past `θ`'s edges; past δm's the blend continues, `Σmᵢ = 1` kept, and the fallback hatches the zero- or negative-mass area by validation layer 2's `mᵢ > 0` | past `θ`'s edges out of the count and the total; past δm's every visible pixel counts, its zero- or negative-mass states forbidden |
 | mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
+
+**The Burrau family's types** (defined per R-72, REQ-CHART-055; R-407 clause 3, physics-reviewed; TASK-M2-11). One
+type per axis of every Burrau-family chart (§4.5), with the reasoning:
+
+- **`ν`, bounded** (the Euclid plane's vertical axis, the `(ν, K)` chart's horizontal). Past `(0, 1)` `a = 1 − ν² ≤ 0`
+  or `b = 2ν ≤ 0`, a zero or negative mass. Inside `(0, 1)` but past the chart's range, the formula would continue
+  through the leg swap's fixed point `√2 − 1` onto the leg-swapped twins of shapes a one-sided range already shows,
+  changing the chart's `system_image` past `[0,1]²`, where it must add no multiplicity (R-408). Nothing is declared.
+- **`m`, bounded** (the Euclid plane's horizontal axis). An annotation axis behind the exponential warp
+  `m(u) = m_min·(m_max/m_min)^u`, a quantity behind a nonlinear warp, which declares nothing: its continuation would
+  draw the same `ν` family again, adding no system (the decoder ignores `u`), and below `u = 0` `m < m_min`, where the
+  default `m_min = 1` leaves no lattice point.
+- **`K`, bounded** (the `(ν, K)` chart's and `Φ_θ,K`'s vertical axis). It is §2.1's `K(t) = K_max·t^γ_K`, bounded for
+  §2.1's reasons: `t < 0` has no real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back
+  onto `t > 0`). Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) is left undeclared, as on the warp (R-407, A5).
+- **`θ`, bounded** (every acute-angle chart's horizontal axis). Past `θ = 0` `ν ≥ 1`, so `a ≤ 0`, a zero or negative
+  mass. Past `θ = π/4` the formula continues into the other leg ordering, real systems up to `θ = π/2` (then `b < 0`),
+  but the leg-swapped twins of the fold's own: continuing would undo the fold the axis exists for and count each shape
+  twice (R-27, R-408).
+- **`L_z`, affine** (`Φ_θ,L_z`'s vertical axis). At fixed `K`, `L_z(v) = (2v − 1)·λ_L·L_max(K)` is linear in `v`: a
+  physical-quantity axis mapped linearly onto its range (R-408's port, B1, the Chart builder's `L_z` axis). Past its edge
+  the formula continues, with `λ_L < 1` through feasible systems (new `L_z`, not seen in `[0,1]²`) up to
+  `|L_z| = √(2IK)`; beyond, `K < K_min`, and the fallback hatches it as forbidden.
+- **δm, affine** (the δm strip's vertical axis). The blend `(1 − v)·m_Burrau + v·m_target` is linear in `v` and keeps
+  `Σmᵢ = 1`, as the ternary plot's map continues (R-407, A7): past `v = 1` it runs on beyond `m_target`, past `v = 0`
+  back beyond `m_Burrau`, through new mass vectors on the column's own triangle, until a mass reaches 0; the fallback
+  hatches the zero- or negative-mass area. No pixel past δm's edge is a twin of one inside: the leg swap changes the
+  triangle, which the column holds fixed (at `θ = π/4`, where it does not, `m₁ = m₂` on the whole column).
+
+Only `L_z` and δm are given more than bounded; each needs the physics reviewer's approval (R-407, clause 3). The types
+are declared in code with the extension mechanism, by TASK-M8-05 (REQ-CHART-054).
 
 A custom chart (the Chart builder, render_gui_spec §G7) takes its axes' types: a latent direction is affine, a
 physical-quantity axis mapped linearly onto its range is affine, a Burrau dimension takes the Burrau family's types.
