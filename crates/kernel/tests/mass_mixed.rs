@@ -626,6 +626,13 @@ fn mixed_axis_feasibility_conjunction() {
             failed: Constraint::AxisDomain
         }
     );
+    let unbounded: AlphaPRho<f64> = Mixed::new(FROZEN, [-1e308, 1e308], [0.0, 1.0]);
+    assert_eq!(
+        unbounded.validate(0.0, 0.5),
+        ValidationResult::Reject {
+            failed: Constraint::AxisDomain
+        }
+    );
     let inside: AlphaPRho<f64> = Mixed::new(FROZEN, [1.0, 1.0], [0.0, 1.0]);
     assert_eq!(inside.validate(0.5, 0.5), ValidationResult::Valid);
     // A latent axis takes any finite z, and is refused only where its value is not finite.

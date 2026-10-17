@@ -327,7 +327,8 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
 }
 
 /// One axis's check at `t` on `range` (the module's note): `Ok(t)` inside the domain, `Ok(t′)` with `t′ ≠ t` where the
-/// axis meets the domain's edge, `Err(())` where nothing can be clamped.
+/// axis meets the domain's edge, `Err(())` where nothing can be clamped: a value that is not finite, or a range of no
+/// width, or of a width past f64's range, along which no step is taken.
 fn axis_check<Q: Quantity>(range: [f64; 2], t: f64) -> Result<f64, ()> {
     let x = lerp(range, t);
     let [lo, hi] = Q::DOMAIN;
@@ -340,7 +341,7 @@ fn axis_check<Q: Quantity>(range: [f64; 2], t: f64) -> Result<f64, ()> {
     let below = x < lo;
     let edge = if below { lo } else { hi };
     let width = range[1] - range[0];
-    if width == 0.0 {
+    if width == 0.0 || !width.is_finite() {
         return Err(());
     }
     // Rounding may leave `x(t)` a hair past the edge: step `t` inward, toward larger `x` from below and smaller from
