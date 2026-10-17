@@ -1,22 +1,24 @@
-//! The outcome state and detail views (TASK-M1-10): the outcome palette, the built-in colour `outcome_state`
-//! (`shaders/wgsl/frag/colour/outcome_state.wgsl`; colour_composition §1.4; R-77, R-96), and the debug catalogue's
-//! `state` and `detail` views, rendered through the golden harness's scenes (`validation::golden_scene`, `m1-outcome`
-//! and `debug-views`):
-//! - REQ-COL-002: one sample per class renders exactly §1.4's sRGB values, a triple collision and a triple ejection
-//!   REQ-COL-062's proposed swatches, running the neutral grey and sim_failed the invalid pattern; the swatches are the
-//!   occupant's params, and editing one changes only its class (`outcome_palette_*`).
+//! The outcome state and detail views (TASK-M1-10, as R-444 to R-447 change them, TASK-M2-32): the outcome palette,
+//! the built-in colour `outcome_state` (`shaders/wgsl/frag/colour/outcome_state.wgsl`; colour_composition §1.4; R-77,
+//! R-444 to R-447), and the debug catalogue's `state` and `detail` views, rendered through the golden harness's scenes
+//! (`validation::golden_scene`, `m1-outcome` and `debug-views`):
+//! - REQ-COL-002: one sample per class renders exactly §1.4's sRGB values, the nine classes physical outcomes only; a
+//!   collision and a triple collision at `t_end_step == 0` their own classes' colours (R-445); running, `sim_failed`
+//!   and `decode_failed` of each `detail` and the reserved codes `#141418` (R-446); a forbidden-region sample the hatch
+//!   (REQ-COL-101); the swatches are the occupant's params, both sets', and editing one changes only its class
+//!   (`outcome_palette_*`).
 //! - REQ-COL-004: the `detail` legend switches per state, and the view draws each state's segment from it
 //!   (`detail_legend_per_state`).
 //! - REQ-TOOL-021: the raw `state` view shows six distinct `dbg_cat` colours for the six states
 //!   (`state_view_six_colours`).
 //! - REQ-TOOL-022: escapes of different bodies render different colours, in the outcome palette and the `detail` view:
 //!   `detail` is read, not dropped (`three_colours_regression`).
-//! - REQ-RENDER-017: a synthetic RUNNING sample renders its palette colour, the grey, not discarded and not blank
-//!   (`running_is_coloured`).
-//! - REQ-COL-062: the proposal's evidence: the two triple-outcome swatches' OKLab lightness and their separation from
-//!   the nine classes, the running grey and the hatch's two colours, and that each is the 8-bit colour farthest from
-//!   its nearest such colour; and each, confirmed (R-433), farther than τ from the stipple's dot (R-434)
-//!   (`outcome_triple_swatches_proposal`). Run with `--nocapture` for the table the PR attaches.
+//! - REQ-RENDER-017: a synthetic RUNNING sample renders its palette colour, bounded / nothing yet's `#141418` (R-446),
+//!   not discarded and not blank (`running_is_coloured`).
+//!
+//! REQ-COL-062's proposal evidence for the triple swatches `#D6A1FF` and `#000097` (TASK-M1-10, confirmed by R-433)
+//! leaves with them: R-445 gives the triple outcomes `#F29620` and `#611597`, and their evidence is REQ-COL-104's
+//! (`tests/outcome_view.rs`, `outcome_palette_separation`).
 //!
 //! Each GPU check takes a render, so its control runs it on the render of an altered occupant and shows it fails
 //! (pitfalls §9). Each test registers its negative control (R-176).
@@ -25,30 +27,41 @@ use ledger::gen::catalogue;
 use render::assemble::Declaration;
 use render::colour::outcome::{self, SWATCHES};
 use render::present::{self, Rgb};
-use validation::golden_scene::{scene, Scene, OUTCOME_EDIT, OUTCOME_SAMPLES};
+use validation::golden_scene::{scene, Scene, OUTCOME_EDIT, OUTCOME_FORBIDDEN, OUTCOME_SAMPLES};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 
-/// The largest per-channel difference, linear RGB, between a computed pixel (the grey, the hatch, a `dbg_cat` colour)
-/// and its CPU twin, as `numeric_views.rs` allows.
+/// The largest per-channel difference, linear RGB, between a computed pixel (the hatch, a `dbg_cat` colour) and its
+/// CPU twin, as `numeric_views.rs` allows.
 const TOL: f64 = 1e-5;
 
-/// colour_composition §1.4's table, as written there: each class's label and its sRGB.
+/// colour_composition §1.4's table, as written there (R-444, R-445; the names as shown, R-449): each class's label and
+/// its sRGB, in the table's order.
 const SECTION_1_4: [(&str, u32); 9] = [
-    ("collision 0–1 (pair 2)", 0xDE2D2D),
-    ("collision 0–2 (pair 1)", 0x2EBC4E),
-    ("collision 1–2 (pair 0)", 0x3462E0),
-    ("bounded", 0x141418),
-    ("degenerate", 0xECECF0),
-    ("body 0 escape", 0xF0DE32),
-    ("body 1 escape", 0xE034C6),
-    ("body 2 escape", 0x30C8DC),
-    ("collision @ t=0", 0xF29620),
+    ("bounded / nothing yet", 0x141418),
+    ("collision 1–2", 0xDE2D2D),
+    ("collision 1–3", 0x2EBC4E),
+    ("collision 2–3", 0x3462E0),
+    ("triple collision", 0xF29620),
+    ("escape body 1", 0xF0DE32),
+    ("escape body 2", 0xE034C6),
+    ("escape body 3", 0x30C8DC),
+    ("triple ejection", 0x611597),
 ];
 
-/// REQ-COL-062's swatches, proposed and confirmed at the M1 gate (R-433): triple collision and triple ejection.
-const TRIPLE_COLLISION: u32 = 0xD6A1FF;
-const TRIPLE_EJECTION: u32 = 0x000097;
+/// colour_composition §1.4's OKLab-uniform variant (R-447), as written there, bounded `#141418` with it, in the first
+/// table's order.
+const VARIANT_1_4: [(&str, u32); 9] = [
+    ("bounded / nothing yet", 0x141418),
+    ("collision 1–2", 0xE7857A),
+    ("collision 1–3", 0x6EB976),
+    ("collision 2–3", 0x7FA2F2),
+    ("triple collision", 0xD99349),
+    ("escape body 1", 0xB3A841),
+    ("escape body 2", 0xD486C3),
+    ("escape body 3", 0x09B9CD),
+    ("triple ejection", 0xB790E2),
+];
 
 fn hex(h: u32) -> [u8; 3] {
     [(h >> 16) as u8, (h >> 8) as u8, h as u8]
@@ -106,37 +119,31 @@ fn encode8(c: f32) -> u8 {
 enum Want {
     /// A swatch: every pixel exactly the f32 nearest the sRGB decode of this 8-bit code, so it encodes back to it.
     Srgb(u32),
-    /// The "not yet" style, `debug_not_yet`: the grey `DBG_NOT_YET` stippled with its dot (R-399).
-    NotYet,
-    /// The hatched invalid pattern.
+    /// The hatch, `debug_invalid`: a sample in a forbidden chart region (R-446).
     Hatch,
 }
 
-/// The outcome scene's samples' wants, in [`OUTCOME_SAMPLES`]' order, from §1.4's table and the proposal: the
-/// collisions per pair, bounded, degenerate, the escapes per body, the collision at t = 0, the triple collision and
-/// ejection, running, sim_failed, and a triple collision at t = 0, the t = 0 collision's orange.
+/// The outcome scene's samples' wants, in [`OUTCOME_SAMPLES`]' order, from §1.4's table: bounded, the collisions per
+/// pair, the triple collision, the escapes per body, the triple ejection; the collision of pair 2 at t = 0 in collision
+/// 1–2's red and the triple collision at t = 0 in its orange (R-445); running, `sim_failed` and `decode_failed` of each
+/// `detail` and the reserved codes in `#141418` (R-446); the forbidden sample in the hatch.
 fn outcome_wants() -> Vec<Want> {
     let c = |k: usize| Want::Srgb(SECTION_1_4[k].1);
-    vec![
-        c(0),
-        c(1),
-        c(2),
-        c(3),
-        c(4),
-        c(5),
-        c(6),
-        c(7),
-        c(8),
-        Want::Srgb(TRIPLE_COLLISION),
-        Want::Srgb(TRIPLE_EJECTION),
-        Want::NotYet,
-        Want::Hatch,
-        c(8),
-    ]
+    let mut out: Vec<Want> = (0..9).map(c).collect();
+    out.extend([c(1), c(4)]);
+    out.extend([c(0); 11]);
+    assert_eq!(
+        out.len(),
+        OUTCOME_FORBIDDEN as usize,
+        "the forbidden sample is last"
+    );
+    out.push(Want::Hatch);
+    assert_eq!(out.len(), OUTCOME_SAMPLES.len(), "a want per sample");
+    out
 }
 
 /// Checks that every sample of the outcome scene `s`'s `image` shows `wants`' colour, and alpha 1: a swatch exactly
-/// (its f32 bits, the declared default's, and its 8-bit sRGB code), the grey and the hatch within [`TOL`].
+/// (its f32 bits, the declared default's, and its 8-bit sRGB code), the hatch within [`TOL`].
 fn check_outcome(s: &Scene, image: &[[f32; 4]], wants: &[Want]) {
     assert_eq!(wants.len(), OUTCOME_SAMPLES.len());
     for (i, want) in wants.iter().enumerate() {
@@ -150,7 +157,6 @@ fn check_outcome(s: &Scene, image: &[[f32; 4]], wants: &[Want]) {
                     [got[0], got[1], got[2]] == exact
                         && [got[0], got[1], got[2]].map(encode8) == hex(h)
                 }
-                Want::NotYet => near(got, present::debug_not_yet(frag)),
                 Want::Hatch => near(got, present::debug_invalid(frag)),
             };
             assert!(
@@ -174,7 +180,7 @@ fn outcome_palette_classes_render_section_1_4() {
 
 negative_control!(
     outcome_palette_classes_render_section_1_4,
-    "an occupant with the body-1 and body-2 escapes' swatches swapped renders neither's §1.4 value",
+    "an occupant drawing escape body 2 in escape body 3's swatch renders not §1.4's value",
     expected = "pixel (48, 0) is",
     {
         let h = gpu();
@@ -183,8 +189,8 @@ negative_control!(
             &h,
             &s,
             outcome::WGSL,
-            "if (d == 1u) {\n            return uniforms.escape_body_1;",
-            "if (d == 1u) {\n            return uniforms.escape_body_2;",
+            "select(uniforms.escape_body_1, uniforms.oklab_escape_body_1, v)",
+            "select(uniforms.escape_body_2, uniforms.oklab_escape_body_2, v)",
         );
         check_outcome(&s, &image, &outcome_wants());
     }
@@ -241,15 +247,31 @@ negative_control!(
     }
 );
 
-/// Checks that `swatches` are the occupant's declared params in order, each default the f32 nearest its sRGB decode,
-/// and that the first nine are §1.4's table, the last two the triple swatches, confirmed (R-433): none is still a
-/// proposal.
-fn check_declared(swatches: &[outcome::Swatch]) {
+/// Checks that the occupant's declared params are the set selector, `swatch_set`, a `u32` in `[0, 1]` defaulting to
+/// 0, the sRGB palette (REQ-COL-103), then `swatches` and `variant`, the two sets, each default the f32 nearest its sRGB
+/// decode; that `swatches` are §1.4's table and `variant` its OKLab-uniform table, labels as shown (R-449), none still
+/// a proposal; and that `outcome::SETS` holds them in that order.
+fn check_declared(swatches: &[outcome::Swatch], variant: &[outcome::Swatch]) {
     let d = Declaration::parse(outcome::WGSL).unwrap_or_else(|e| panic!("{e:?}"));
-    let names: Vec<&str> = d.uniforms.iter().map(|u| u.name.as_str()).collect();
-    let params: Vec<&str> = swatches.iter().map(|s| s.param).collect();
+    let (set, rest) = d
+        .uniforms
+        .split_first()
+        .expect("the occupant declares params");
+    assert_eq!(
+        (set.name.as_str(), set.ty, set.default.as_slice(), set.range),
+        (
+            outcome::SET_PARAM,
+            render::assemble::UniformType::U32,
+            &[0.0][..],
+            Some((0.0, 1.0))
+        ),
+        "the set selector"
+    );
+    let all: Vec<&outcome::Swatch> = swatches.iter().chain(variant).collect();
+    let names: Vec<&str> = rest.iter().map(|u| u.name.as_str()).collect();
+    let params: Vec<&str> = all.iter().map(|s| s.param).collect();
     assert_eq!(names, params, "the occupant's params are the swatches");
-    for (u, s) in d.uniforms.iter().zip(swatches) {
+    for (u, s) in rest.iter().zip(&all) {
         let want = present::srgb8(s.srgb8).map(|c| c as f32);
         let got: Vec<f32> = u.default.iter().map(|&v| v as f32).collect();
         assert_eq!(
@@ -258,25 +280,24 @@ fn check_declared(swatches: &[outcome::Swatch]) {
             s.param, s.srgb8
         );
     }
-    for (s, (label, h)) in swatches.iter().zip(SECTION_1_4) {
-        assert_eq!((s.label, s.srgb8, s.proposed), (label, hex(h), false));
+    for (table, set) in [(SECTION_1_4, swatches), (VARIANT_1_4, variant)] {
+        let got: Vec<_> = set.iter().map(|s| (s.label, s.srgb8, s.proposed)).collect();
+        let want: Vec<_> = table.iter().map(|&(l, h)| (l, hex(h), false)).collect();
+        assert_eq!(got, want, "a set is not §1.4's table");
     }
-    let triples: Vec<_> = swatches[9..]
-        .iter()
-        .map(|s| (s.label, s.srgb8, s.proposed))
-        .collect();
     assert_eq!(
-        triples,
+        outcome::SETS.map(|(name, set)| (name, set.to_vec())),
         [
-            ("triple collision", hex(TRIPLE_COLLISION), false),
-            ("triple ejection", hex(TRIPLE_EJECTION), false)
-        ]
+            ("sRGB", swatches.to_vec()),
+            ("OKLab-uniform", variant.to_vec())
+        ],
+        "the named sets, the sRGB palette first, the default"
     );
 }
 
 #[test]
 fn outcome_palette_swatches_are_the_occupants_params() {
-    check_declared(&SWATCHES);
+    check_declared(&SWATCHES, &outcome::OKLAB_UNIFORM);
     assert_eq!(
         render::assemble::builtin(render::assemble::Kind::Colour, outcome::ID),
         Some(outcome::WGSL),
@@ -292,7 +313,7 @@ negative_control!(
     {
         let mut swatches = SWATCHES;
         swatches[7].srgb8[2] += 1;
-        check_declared(&swatches);
+        check_declared(&swatches, &outcome::OKLAB_UNIFORM);
     }
 );
 
@@ -307,8 +328,8 @@ fn running_sample() -> u32 {
         .unwrap_or_else(|| panic!("the outcome scene has no running sample"))
 }
 
-/// Checks that the running sample of `image` is drawn, alpha 1, in the "not yet" style (R-399): neither blank (black,
-/// or the clear colour) nor any other class's colour.
+/// Checks that the running sample of `image` is drawn, alpha 1, in bounded / nothing yet's swatch, `#141418` (R-446):
+/// neither blank (black, or the clear colour) nor any other class's colour.
 fn check_running(s: &Scene, image: &[[f32; 4]]) {
     let i = running_sample();
     assert_eq!(
@@ -316,11 +337,11 @@ fn check_running(s: &Scene, image: &[[f32; 4]]) {
         outcome::code("running"),
         "a RUNNING sample"
     );
+    let want = present::srgb8(hex(0x141418)).map(|c| c as f32);
     for ((x, y), got) in tile(s, image, i) {
-        let want = present::debug_not_yet([f64::from(x) + 0.5, f64::from(y) + 0.5]);
         assert!(
-            got[3] == 1.0 && near(got, want) && got[..3] != [0.0; 3],
-            "the running sample's pixel ({x}, {y}) is {got:?}, not the \"not yet\" style's {want:?}"
+            got[3] == 1.0 && got[..3] == want && got[..3] != [0.0; 3],
+            "the running sample's pixel ({x}, {y}) is {got:?}, not bounded / nothing yet's {want:?}"
         );
     }
 }
@@ -341,8 +362,8 @@ negative_control!(
             &gpu(),
             &s,
             outcome::WGSL,
-            "return debug_not_yet(ctx.frag_xy);",
-            "return vec3<f32>(0.0, 0.0, 0.0);",
+            "    return select(uniforms.bounded, uniforms.oklab_bounded, v);",
+            "    return vec3<f32>(0.0, 0.0, 0.0);",
         );
         check_running(&s, &image);
     }
@@ -368,9 +389,9 @@ fn check_distinct(s: &Scene, image: &[[f32; 4]], samples: &[u32], what: &str) {
     }
 }
 
-/// The outcome scene's escapes, bodies 0, 1, 2 and all three, and the `detail` view scene's escapes and collisions,
-/// each by `detail` code.
-const OUTCOME_ESCAPES: [u32; 4] = [5, 6, 7, 10];
+/// The outcome scene's escapes, bodies 0, 1, 2 and all three (shown escape body 1, 2, 3 and triple ejection), and the
+/// `detail` view scene's escapes and collisions, each by `detail` code.
+const OUTCOME_ESCAPES: [u32; 4] = [5, 6, 7, 8];
 const DETAIL_ESCAPES: [u32; 4] = [0, 1, 2, 3];
 const DETAIL_COLLISIONS: [u32; 4] = [4, 5, 6, 7];
 
@@ -492,7 +513,8 @@ fn check_view_is_legend(s: &Scene, image: &[[f32; 4]]) {
     );
 }
 
-/// The outcome legend's segment of each state code, by swatch param: keyed by state, as the detail legend is.
+/// The outcome legend's segment of each state code, by swatch param: keyed by state, as the detail legend is. Every
+/// state but escape and collision is the bounded / nothing yet class alone (R-446), the reserved codes 6 and 7 too.
 fn check_outcome_segments(segment: impl Fn(u32) -> Vec<usize>) {
     let want: [&[&str]; 8] = [
         &[
@@ -504,16 +526,15 @@ fn check_outcome_segments(segment: impl Fn(u32) -> Vec<usize>) {
         &["bounded"],
         &[
             "collision_pair_0",
-            "collision_at_start",
             "collision_pair_1",
             "collision_pair_2",
             "triple_collision",
         ],
-        &[],
-        &[],
-        &["degenerate"],
-        &[],
-        &[],
+        &["bounded"],
+        &["bounded"],
+        &["bounded"],
+        &["bounded"],
+        &["bounded"],
     ];
     for (state, want) in want.iter().enumerate() {
         let got: Vec<&str> = segment(state as u32)
@@ -583,193 +604,3 @@ negative_control!(
         check_state_view(&s, &image);
     }
 );
-
-// ── REQ-COL-062: the proposal's evidence ─────────────────────────────────────────────────────────────────────────────
-
-/// The colours the triple swatches must stand apart from: §1.4's nine classes, the running grey (REQ-COL-053) and its
-/// dot (R-399), and the hatch's two colours (REQ-COL-055), by name, as OKLab.
-fn neighbours() -> Vec<(String, Rgb)> {
-    let mut out: Vec<(String, Rgb)> = SECTION_1_4
-        .iter()
-        .map(|&(name, h)| (format!("{name} #{h:06X}"), present::srgb8(hex(h))))
-        .collect();
-    let [g, ..] = present::NOT_YET_SRGB8;
-    out.push((
-        format!("running grey #{g:02X}{g:02X}{g:02X}"),
-        present::not_yet(),
-    ));
-    let [d, ..] = present::NOT_YET_DOT_SRGB8;
-    out.push((
-        format!("running dot #{d:02X}{d:02X}{d:02X}"),
-        present::not_yet_dot(),
-    ));
-    for c in ledger::gen::prelude::hatch().colours {
-        out.push((
-            format!("hatch #{:02X}{:02X}{:02X}", c[0], c[1], c[2]),
-            present::srgb8(c),
-        ));
-    }
-    out.into_iter()
-        .map(|(n, c)| (n, present::linear_to_oklab(c)))
-        .collect()
-}
-
-fn distance(a: Rgb, b: Rgb) -> f64 {
-    a.iter()
-        .zip(&b)
-        .map(|(x, y)| (x - y) * (x - y))
-        .sum::<f64>()
-        .sqrt()
-}
-
-/// The OKLab of every 8-bit sRGB colour, by `(r << 16) | (g << 8) | b`: dd_colouring §3.1's map, `M₂ · cbrt(M₁ · rgb)`,
-/// with `M₁ · rgb` summed from per-channel tables.
-fn cube() -> Vec<Rgb> {
-    let m = render::colour::space::OKLAB;
-    let lin: Vec<f64> = (0..=255u8)
-        .map(|v| present::srgb_to_linear(f64::from(v) / 255.0))
-        .collect();
-    let column = |c: usize| -> Vec<Rgb> {
-        lin.iter()
-            .map(|&x| [0, 1, 2].map(|r| m.m1[r][c] * x))
-            .collect()
-    };
-    let (cr, cg, cb) = (column(0), column(1), column(2));
-    let mut out = Vec::with_capacity(1 << 24);
-    for r in &cr {
-        for g in &cg {
-            for b in &cb {
-                let lms = [0, 1, 2].map(|k| (r[k] + g[k] + b[k]).cbrt());
-                out.push(
-                    [0, 1, 2]
-                        .map(|k| m.m2[k][0] * lms[0] + m.m2[k][1] * lms[1] + m.m2[k][2] * lms[2]),
-                );
-            }
-        }
-    }
-    out
-}
-
-/// Each 8-bit colour's squared OKLab distance from its nearest of `from`, lowered in place.
-fn lower(nearest: &mut [f64], cube: &[Rgb], from: &[Rgb]) {
-    for (n, c) in nearest.iter_mut().zip(cube) {
-        for f in from {
-            let d = (c[0] - f[0]).powi(2) + (c[1] - f[1]).powi(2) + (c[2] - f[2]).powi(2);
-            if d < *n {
-                *n = d;
-            }
-        }
-    }
-}
-
-/// The 8-bit colour, as `0xRRGGBB`, whose `nearest` is the largest, and that distance.
-fn farthest(nearest: &[f64]) -> (u32, f64) {
-    let (k, d) =
-        nearest.iter().enumerate().fold(
-            (0, f64::NEG_INFINITY),
-            |a, (k, &d)| if d > a.1 { (k, d) } else { a },
-        );
-    (k as u32, d.sqrt())
-}
-
-/// Checks that `first` is the 8-bit colour farthest from its nearest neighbour, and `second` the farthest once `first`
-/// is a neighbour too. The neighbours are the set REQ-COL-062's proposal was measured against, as §1.4 states it: the
-/// nine classes, the running grey and the hatch's two colours. The stipple's dot is not among them: R-434 changed it
-/// to `#909090` after the swatches were confirmed (R-433), and with it counted `#FD9CFF`, 0.2036 from its nearest,
-/// would edge out `#D6A1FF`, 0.197 from the dot; [`check_dot_apart`] holds the swatches apart from it instead
-/// (applied per R-369).
-fn check_farthest(cube: &[Rgb], first: u32, second: u32) {
-    let from: Vec<Rgb> = neighbours()
-        .into_iter()
-        .filter(|(name, _)| !name.starts_with("running dot"))
-        .map(|(_, c)| c)
-        .collect();
-    let mut nearest = vec![f64::INFINITY; cube.len()];
-    lower(&mut nearest, cube, &from);
-    let (a, da) = farthest(&nearest);
-    assert_eq!(
-        a, first,
-        "#{first:06X} is not the farthest colour, #{a:06X} is ({da:.4})"
-    );
-    lower(&mut nearest, cube, &[cube[a as usize]]);
-    let (b, db) = farthest(&nearest);
-    assert_eq!(
-        b, second,
-        "#{second:06X} is not the next farthest, #{b:06X} is ({db:.4})"
-    );
-}
-
-#[test]
-fn outcome_triple_swatches_proposal() {
-    let cube = cube();
-    let mut rows: Vec<(String, Rgb)> = neighbours();
-    for (name, h) in [
-        ("triple collision", TRIPLE_COLLISION),
-        ("triple ejection", TRIPLE_EJECTION),
-    ] {
-        let lab = present::linear_to_oklab(present::srgb8(hex(h)));
-        assert_eq!(
-            lab, cube[h as usize],
-            "the cube's OKLab is dd_colouring §3.1's"
-        );
-        println!(
-            "REQ-COL-062 proposal: {name} #{h:06X}, OKLab L {:.3}",
-            lab[0]
-        );
-        let mut d: Vec<(f64, &str)> = rows
-            .iter()
-            .map(|(n, c)| (distance(lab, *c), n.as_str()))
-            .collect();
-        d.sort_by(|a, b| a.0.total_cmp(&b.0));
-        for (dist, n) in &d {
-            println!("  OKLab distance from {n}: {dist:.3}");
-        }
-        rows.push((format!("{name} #{h:06X}"), lab));
-    }
-    let l = |h: u32| present::linear_to_oklab(present::srgb8(hex(h)))[0];
-    assert!(
-        l(TRIPLE_COLLISION) > l(TRIPLE_EJECTION),
-        "the collision's swatch is the lighter: the additive primaries mix toward white"
-    );
-    check_farthest(&cube, TRIPLE_EJECTION, TRIPLE_COLLISION);
-    check_dot_apart(&[TRIPLE_COLLISION, TRIPLE_EJECTION]);
-}
-
-/// τ, the OKLab distance from R-16's flat magenta `#FF00FF` to body-1 escape's `#E034C6`, 0.101: the distance R-132
-/// ruled a collision, the bar R-429 confirmed and R-434 holds the stipple to.
-fn tau() -> f64 {
-    let lab = |h: u32| present::linear_to_oklab(present::srgb8(hex(h)));
-    distance(lab(0xFF00FF), lab(0xE034C6))
-}
-
-/// Checks that each swatch of `swatches` is farther than τ from the stipple's dot (R-434), so a triple outcome never
-/// reads as a dot of the "not yet" style.
-fn check_dot_apart(swatches: &[u32]) {
-    let dot = present::linear_to_oklab(present::not_yet_dot());
-    for &h in swatches {
-        let d = distance(present::linear_to_oklab(present::srgb8(hex(h))), dot);
-        assert!(
-            d > tau(),
-            "#{h:06X} is {d:.3} from the stipple's dot, within τ = {:.3}",
-            tau()
-        );
-    }
-}
-
-negative_control!(
-    outcome_triple_swatches_proposal,
-    "mid grey, #808080, is not the farthest colour",
-    expected = "#808080 is not the farthest colour",
-    check_farthest(&cube(), 0x808080, TRIPLE_COLLISION)
-);
-
-#[cfg(feature = "controls")]
-mod outcome_triple_swatches_dot {
-    use super::*;
-    negative_control!(
-        outcome_triple_swatches_proposal,
-        "a swatch the stipple's own dot colour is within τ of it",
-        expected = "from the stipple's dot, within",
-        check_dot_apart(&[0x909090])
-    );
-}

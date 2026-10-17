@@ -11,7 +11,9 @@ use super::support::{headless, rejects, shapes};
 use crate::app::App;
 use crate::capture::{hover_point, FORMAT, PIXELS_PER_POINT};
 use crate::explore::hover_label::{self, placed, BACKING, PADDING};
-use crate::explore::legend::{colour, entry_rect, key_rects, ramp_mesh, MARGIN, ROW_H, SWATCH};
+use crate::explore::legend::{
+    colour, entry_rect, hatch_at, hatch_mesh, key_rects, ramp_mesh, MARGIN, ROW_H, SWATCH,
+};
 use crate::explore::time::{self, SCRUBBER};
 use crate::explore::trajectory::{
     areas, fit, index_at, on_sphere, on_square, unwrapped_point, view, wraps, AXIS_COLOURS,
@@ -317,6 +319,62 @@ fn mock_hover_drawn_label_is_placed_by_its_offset() {
 
 // --- The Legend ------------------------------------------------------------------------------------------------------
 
+/// Whether `p` is inside the triangle `a`, `b`, `c`, its edges included.
+fn in_triangle(p: Pos2, a: Pos2, b: Pos2, c: Pos2) -> bool {
+    let side = |u: Pos2, v: Pos2| (v.x - u.x) * (p.y - u.y) - (v.y - u.y) * (p.x - u.x);
+    let (d1, d2, d3) = (side(a, b), side(b, c), side(c, a));
+    let neg = d1 < 0.0 || d2 < 0.0 || d3 < 0.0;
+    let pos = d1 > 0.0 || d2 > 0.0 || d3 > 0.0;
+    !(neg && pos)
+}
+
+/// The colour `mesh` paints at `p`: that of its last triangle holding `p`, as the painter lays them in order; `None`
+/// where none does. Each triangle is one colour, as every swatch mesh's rects are.
+fn painted(mesh: &egui::Mesh, p: Pos2) -> Option<Color32> {
+    mesh.indices.chunks(3).rev().find_map(|t| {
+        let [a, b, c] = [t[0], t[1], t[2]].map(|k| mesh.vertices[k as usize]);
+        in_triangle(p, a.pos, b.pos, c.pos).then_some(a.color)
+    })
+}
+
+/// The mesh `drawn` holds over the swatch square `square`, from its corner: the hatch key's, as a mesh, not a flat rect.
+fn hatch_drawn(drawn: &[Shape], square: Rect) -> egui::Mesh {
+    drawn
+        .iter()
+        .find_map(|s| match s {
+            Shape::Mesh(m)
+                if (m.vertices[0].pos - square.min).length() < 1.0 / PIXELS_PER_POINT =>
+            {
+                let m: &egui::Mesh = m;
+                Some(m.clone())
+            }
+            _ => None,
+        })
+        .expect("the forbidden region's swatch, a mesh")
+}
+
+/// Checks that `mesh` draws the hatch over `square` as the style (render_gui_spec §G6, "compared as the style";
+/// R-136): each physical pixel of the square at [`PIXELS_PER_POINT`] painted, at its centre, the colour `debug_invalid`
+/// gives at its position `[x + 0.5, y + 0.5]` ([`hatch_at`]), and so the hatch's two colours, never one.
+fn check_hatch(mesh: &egui::Mesh, square: Rect) {
+    let px = |v: f32| (v * PIXELS_PER_POINT).round() as i64;
+    let mut seen = std::collections::BTreeSet::new();
+    for y in px(square.min.y)..px(square.max.y) {
+        for x in px(square.min.x)..px(square.max.x) {
+            let frag = [x as f64 + 0.5, y as f64 + 0.5];
+            let centre = pos2(frag[0] as f32, frag[1] as f32) / PIXELS_PER_POINT;
+            let want = colour(hatch_at(frag));
+            assert_eq!(
+                painted(mesh, centre),
+                Some(want),
+                "the hatch's pixel ({x}, {y})"
+            );
+            seen.insert(hatch_at(frag));
+        }
+    }
+    assert_eq!(seen.len(), 2, "the hatch's two colours");
+}
+
 #[test]
 fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
     let mut app = App::new(MockSide::new(MockEngine::frozen(), None), FORMAT);
@@ -348,6 +406,30 @@ fn mock_legend_keys_drawn_swatches_bar_and_ticks() {
                 drawn.iter().any(|s| matches!(s, Shape::Mesh(m) if m.vertices.len() > 4 && (m.vertices[0].pos - square.min).length() < 1.0 / PIXELS_PER_POINT)),
                 "running's stipple"
             ),
+            SwatchStyle::Hatch => {
+                let mesh = hatch_drawn(&drawn, square);
+                let want = hatch_mesh(square, PIXELS_PER_POINT);
+                assert!(
+                    mesh.vertices.len() == want.vertices.len()
+                        && mesh
+                            .vertices
+                            .iter()
+                            .zip(&want.vertices)
+                            .all(|(a, b)| near(a.pos, b.pos) && a.color == b.color),
+                    "{}'s swatch is not hatch_mesh",
+                    entry.label
+                );
+                check_hatch(&mesh, square);
+                let flat = colour(hatch_at([0.5, 0.5]));
+                rejects("a hatch key drawn as a flat rect", || {
+                    hatch_drawn(&[Shape::rect_filled(square, 0.0, flat)], square);
+                });
+                rejects("a hatch key drawn as a mesh of one colour", || {
+                    let mut one = egui::Mesh::default();
+                    one.add_colored_rect(square, flat);
+                    check_hatch(&one, square);
+                });
+            }
         }
         // The label left in its cell, beside the swatch; the share right, before the cell's end.
         let label = words

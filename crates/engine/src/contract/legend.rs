@@ -3,13 +3,16 @@
 //! per dimension, in the order received. The real engine's evaluation is TASK-M8-22's (REQ-GUI-105, REQ-GUI-106);
 //! until then its snapshot carries no key.
 //!
-//! The "not yet" style and the outcome palette, with its built-in colour occupant's id, are re-exported here, so the GUI draws a `running` key as the style
-//! (R-399), from the one source of their calibrations (REQ-COL-053, REQ-COL-064; colour_composition §1.4), through the
-//! contract it is allowed to reach.
+//! The "not yet" style, the hatch and the outcome palette, with its built-in colour occupant's id, are re-exported
+//! here, so the GUI draws a "not yet" key as the style (R-399) and the outcome legend's "forbidden region" key as the
+//! hatch (R-136, R-446; render_gui_spec §G6), from the one source of their calibrations (REQ-COL-053, REQ-COL-055,
+//! REQ-COL-064; colour_composition §1.4), through the contract it is allowed to reach. `linear_to_srgb` is the sRGB
+//! transfer (dd_colouring §3.1) the GUI encodes the hatch's linear colour with.
 
 pub use render::colour::outcome::{Swatch, ID as OUTCOME_OCCUPANT, SWATCHES};
 pub use render::present::{
-    debug_not_yet, not_yet_dot_at, NOT_YET_CELL, NOT_YET_DOT, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
+    debug_invalid, debug_not_yet, hatch_stripe, linear_to_srgb, not_yet_dot_at, NOT_YET_CELL,
+    NOT_YET_DOT, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
 };
 
 /// The keys of the stain on show, one per dimension, in the order the evaluation walks back from OUT (render_gui_spec
@@ -51,7 +54,7 @@ pub enum LegendKey {
 /// One class of a categorical key.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LegendEntry {
-    /// Its label, 0-based (R-22).
+    /// Its label, as a person reads it: 1-based (R-449).
     pub label: String,
     /// How it is drawn.
     pub swatch: SwatchStyle,
@@ -59,11 +62,14 @@ pub struct LegendEntry {
     pub share: f64,
 }
 
-/// How a class is drawn: a flat colour, or the "not yet" style, never flat (R-399).
+/// How a class is drawn: a flat colour, the "not yet" style (R-399), or the hatch (R-136), neither ever flat.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SwatchStyle {
     /// One flat colour, 8-bit sRGB.
     Flat([u8; 3]),
     /// The "not yet" style: [`debug_not_yet`], the grey with a fine dot stipple from the pixel position.
     NotYet,
+    /// The hatch: [`debug_invalid`], the diagonal stripes from the pixel position, the outcome legend's "forbidden
+    /// region" key (R-446; render_gui_spec §G6), compared as the style, not as one colour.
+    Hatch,
 }

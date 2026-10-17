@@ -41,6 +41,20 @@ struct CtxTile {
     uv: vec2<f32>,
 }
 
+// colour_composition §3's chart lane as the stain reads it: the sample's chart classification (REQ-COL-102; R-446;
+// TASK-M2-32). `forbidden` is true where chart_decoder_contract Part 3 hatches the sample's chart point as forbidden,
+// as the CPU classifies it from the chart (R-26): after the axes' extension types act, a bounded axis past its edge, a
+// state `validate`'s layer 2 or 3 rejects, or `Φ`, `Chart::map`, failing to evaluate; never from the payload, and
+// never from the shared decoder's own outcomes (its `DEGENERATE` tags, a non-finite decode).
+struct CtxChart {
+    forbidden: bool,
+}
+
+// The chart lane where no chart classification reaches the pass (`shade_sample`): no sample is forbidden.
+fn ctx_chart_unclassified() -> CtxChart {
+    return CtxChart(false);
+}
+
 // The absence NaN's bits, the canonical quiet NaN (lowering Part 3a), which an absent lane's u32 member holds: its
 // `bitcast<f32>` is the absence NaN, which `is_absent_nan` tests (TASK-M1-13; applied per R-369).
 const CTX_ABSENT_BITS: u32 = 0x7fc00000u;
@@ -61,7 +75,7 @@ fn ctx_tile_absent() -> CtxTile {
 
 // What every node reads (render contract Part 1): the sample's read-side `SimState`, its `ICDescriptor` (`ic`, only
 // the members the stain reads filled; RQ-227), the pixel's position for the invalid hatch (`debug_invalid`), its
-// screen, quad and tile lanes, the node's wired fields, `inputs[k]` its k-th field input, and the read side's
+// screen, quad and tile lanes, its chart lane (`chart.forbidden`, REQ-COL-102), the node's wired fields, `inputs[k]` its k-th field input, and the read side's
 // arguments, `params`, the uniforms the sample was read with, whose `horizon_steps` places a step index on
 // `[0, horizon_steps]` (render_gui_spec §10.1; TASK-M1-09).
 struct Ctx {
@@ -71,6 +85,7 @@ struct Ctx {
     screen: CtxScreen,
     quad: CtxQuad,
     tile: CtxTile,
+    chart: CtxChart,
     inputs: array<Field, 4>,
     params: ReadParams,
 }

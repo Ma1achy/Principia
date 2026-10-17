@@ -49,8 +49,8 @@ const SCENES: [(&str, &str, &str); 29] = [
     ("length_ramp_override", "length", "RRRRRRRO"),
     ("d_min_ramp", "d_min", "NNIRRRRR"),
     ("d_min_ramp_override", "d_min", "NNORRRRR"),
-    ("outcome", "state", "FFFFFFFFFFFNIF"),
-    ("outcome_edited", "state", "FFFFFFFFFFFNIF"),
+    ("outcome", "state", "FFFFFFFFFFFFFFFFFFFFFFI"),
+    ("outcome_edited", "state", "FFFFFFFFFFFFFFFFFFFFFFI"),
     ("state_view", "state", "FFFFFF"),
     ("detail_view", "detail", "FFFFFFFFFFFFFFFFFF"),
     ("e_0_signed", "E_0", "RRRRRRRR"),
@@ -60,7 +60,7 @@ const SCENES: [(&str, &str, &str); 29] = [
     ("v_0", "V_0", "RRRRRRRR"),
     ("virial_ratio", "virial_ratio", "RRRRRRRR"),
     ("set_state", "state", "FFFFFFFF"),
-    ("known_escaper", "state", "FFFFFFFN"),
+    ("known_escaper", "state", "FFFFFFFF"),
     ("energy_drift_ramp", "energy_drift", "LLLLLLLL"),
     ("adversarial_state", "state", "FFFFFFFF"),
     ("adversarial_detail", "detail", "FFFFFFFF"),
@@ -713,12 +713,13 @@ fn check_exact(name: &str, want: &str) {
     );
 }
 
-/// The outcome scenes' swatches are exact, their running and sim_failed samples not; no other scene's sample is
-/// exact, the view scenes' flat colours included, which the fragment computes.
+/// The outcome scenes' swatches are exact, their running and failed samples among them (`#141418`, R-446), their
+/// forbidden sample, the hatch, not; no other scene's sample is exact, the view scenes' flat colours included, which the
+/// fragment computes.
 #[test]
 fn golden_scene_exact_samples_are_the_swatches() {
     for name in ["outcome", "outcome_edited"] {
-        check_exact(name, "xxxxxxxxxxx..x");
+        check_exact(name, "xxxxxxxxxxxxxxxxxxxxxx.");
     }
     check_exact("state_view", "......");
     check_exact("detail_view", "..................");
@@ -728,9 +729,9 @@ fn golden_scene_exact_samples_are_the_swatches() {
 
 negative_control!(
     golden_scene_exact_samples_are_the_swatches,
-    "the running sample, drawn in the computed grey, taken as exact",
+    "the forbidden sample, drawn in the computed hatch, taken as exact",
     expected = "`outcome`'s exact samples",
-    check_exact("outcome", "xxxxxxxxxxxx.x")
+    check_exact("outcome", "xxxxxxxxxxxxxxxxxxxxxxx")
 );
 
 /// Checks that scene `name`'s swatches are the palette's defaults, but `edits`.
@@ -800,13 +801,16 @@ fn golden_scene_outcome_is_the_built_in() {
         .render_colour(h.device(), h.queue(), outcome::WGSL)
         .unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(built_in, custom, "the outcome text rendered as custom WGSL");
-    let from = "return uniforms.escape_body_1;";
+    let from = "select(uniforms.escape_body_1, uniforms.oklab_escape_body_1, v)";
     assert!(outcome::WGSL.contains(from));
     let swapped = s
         .render_colour(
             h.device(),
             h.queue(),
-            &outcome::WGSL.replace(from, "return uniforms.escape_body_2;"),
+            &outcome::WGSL.replace(
+                from,
+                "select(uniforms.escape_body_2, uniforms.oklab_escape_body_2, v)",
+            ),
         )
         .unwrap_or_else(|e| panic!("{e}"));
     assert_ne!(built_in, swapped, "the altered text renders other pixels");
