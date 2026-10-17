@@ -13258,18 +13258,21 @@
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
   - file: decisions.md
     section: "R-447 — The outcome palette has an OKLab-uniform variant as a second preset: each chromatic class at its own OKLab hue, L = 0.72 and C = 0.123; bounded stays `#141418`; the sRGB palette stays the default"
+  - file: decisions.md
+    section: "R-455 — R-447's \"its hue\" is each chromatic class's own OKLab hue, which every swatch meets within 0.5°; escape body 3's `#09B9CD` is recorded at 0.54° from its row and stays *(closes RQ-366)*"
   verify:
     method: unit test
     detail: "cargo test -p render outcome_oklab_variant: selecting the variant, the synthetic payload's one sample per class renders exactly the variant's sRGB values on the CPU twin and the GPU; failures and running draw #141418 and a forbidden sample the hatch, as in the default; each chromatic swatch measures OKLab L 0.72 ± 0.002 and C 0.123 ± 0.002 (dd_colouring §3.1's transforms) and its hue within 0.5° of R-447's; the default set is the sRGB palette; editing a swatch of one set leaves the other unchanged"
   rulings:
   - R-447
   - R-449
+  - R-455
   milestone: M2
-  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369: in M2 the preset is a second swatch set on the outcome palette's occupant; the preset library (TASK-M7-17) lists it with the outcome palette. The swatches are the ruled hex values; RQ-332 records C = 0.123 against the largest in-gamut chroma at every hue (0.1224) and three swatches' rounding."
+  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369: in M2 the preset is a second swatch set on the outcome palette's occupant; the preset library (TASK-M7-17) lists it with the outcome palette. The swatches are the ruled hex values; RQ-332 records C = 0.123 against the largest in-gamut chroma at every hue (0.1224) and three swatches' rounding. R-455 (17 Oct 2026; RQ-366, option (a)): \"its hue within 0.5° of R-447's\" is read against each class's own OKLab hue (the sRGB class's, before rounding), which every swatch meets; escape body 3's #09B9CD measures 208.54°, 0.54° from its row's 208°, and stays."
 - id: REQ-COL-104
   area: COL
   kind: calibration
-  statement: "The separation of the sRGB outcome palette's nine swatches (R-444, R-445) must be recorded with its evidence, measured as REQ-COL-055 measures (Euclidean OKLab distance from 8-bit sRGB, dd_colouring §3.1): proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the gate RQ-330 names and recorded in decisions.md. Measured at R-445 (classes named as shown, R-449): the closest pair is 0.175, triple collision #F29620 against escape body 1 #F0DE32 (the human's figure, 0.185 for collision 1–3 against escape body 3, holds with the orange left out; RQ-331); purple #611597 clears every entry, the hatch's #9B00FF and #48FFFF and the stipple's #4E4E4E and #909090 by at least 0.19 (its nearest, the grey, 0.192)."
+  statement: "The separation of the sRGB outcome palette's nine swatches (R-444, R-445) must be recorded with its evidence, measured as REQ-COL-055 measures (Euclidean OKLab distance from 8-bit sRGB, dd_colouring §3.1): proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate (R-454) and recorded in decisions.md. Measured at R-445 (classes named as shown, R-449): the closest pair is 0.175, triple collision #F29620 against escape body 1 #F0DE32 (the human's figure, 0.185 for collision 1–3 against escape body 3, holds with the orange left out; RQ-331); purple #611597 clears every entry, the hatch's #9B00FF and #48FFFF and the stipple's #4E4E4E and #909090 by at least 0.19 (its nearest, the grey, 0.192)."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -13277,22 +13280,24 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-445 — \"Collision @ t = 0\" is no longer a class: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and lightness carries timing; the orange `#F29620` goes to triple collision, and triple ejection moves from navy `#000097` to purple `#611597` *(supersedes R-96 and R-433 as they apply to \"collision at start\", the triple swatches and the first-step triple collision's orange)*"
+  - file: decisions.md
+    section: "R-454 — The three outcome goldens are re-baselined under R-444 to R-446, tile 7 of `known_escaper` named; the new swatches and their evidence are confirmed at the M2 gate *(closes RQ-330)*"
   verify:
     method: review checklist
-    detail: "the proposal gives every pair's OKLab distance, the closest pair, purple's distance from every entry, the hatch's two colours, the stipple's grey and dot, the pending hatch's #0000FF and the fallback tint's #FF69FF, and each swatch's distance from the dot against τ = 0.101; cargo test -p render outcome_palette_separation computes them; it states the human's 0.185 beside the measured 0.175 (RQ-331); confirmed by the human at the gate RQ-330 names"
+    detail: "the proposal gives every pair's OKLab distance, the closest pair, purple's distance from every entry, the hatch's two colours, the stipple's grey and dot, the pending hatch's #0000FF and the fallback tint's #FF69FF, and each swatch's distance from the dot against τ = 0.101; cargo test -p render outcome_palette_separation computes them; it states the human's 0.185 beside the measured 0.175 (RQ-331); confirmed by the human at the M2 gate (R-454)"
   rulings:
   - R-71
   - R-445
   - R-449
+  - R-454
   milestone: M2
   rq:
-  - RQ-330
   - RQ-331
-  note: "R-445 (16 Oct 2026); supersedes, for the evidence, REQ-COL-062's M1 calibration (R-433), which is kept as the record. Closed by TASK-M2-32. The gate that confirms it is RQ-330's (M2 as filed). Applied per R-369: the figures are the porter's measurement in R-445's port, to be re-run by the task."
+  note: "R-445 (16 Oct 2026); supersedes, for the evidence, REQ-COL-062's M1 calibration (R-433), which is kept as the record. Closed by TASK-M2-32. The gate that confirms it is the M2 gate (R-454, closing RQ-330; first written \"RQ-330's (M2 as filed)\"). Applied per R-369: the figures are the porter's measurement in R-445's port, to be re-run by the task."
 - id: REQ-COL-105
   area: COL
   kind: calibration
-  statement: "The separation of R-447's OKLab-uniform variant's nine swatches must be recorded with its evidence, measured as REQ-COL-055 measures: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the gate RQ-330 names and recorded in decisions.md. Measured at R-447 (classes named as shown, R-449): the closest pair is 0.063, escape body 2 against triple ejection (30° apart), closer than the sRGB palette by construction; four more pairs are under 0.101; each chromatic swatch is at least 0.139 from the stipple's dot and 0.196 from the hatch's colours."
+  statement: "The separation of R-447's OKLab-uniform variant's nine swatches must be recorded with its evidence, measured as REQ-COL-055 measures: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M2 gate (R-454) and recorded in decisions.md. Measured at R-447 (classes named as shown, R-449): the closest pair is 0.063, escape body 2 against triple ejection (30° apart), closer than the sRGB palette by construction; four more pairs are under 0.101; each chromatic swatch is at least 0.139 from the stipple's dot and 0.196 from the hatch's colours."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -13300,18 +13305,23 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-447 — The outcome palette has an OKLab-uniform variant as a second preset: each chromatic class at its own OKLab hue, L = 0.72 and C = 0.123; bounded stays `#141418`; the sRGB palette stays the default"
+  - file: decisions.md
+    section: "R-454 — The three outcome goldens are re-baselined under R-444 to R-446, tile 7 of `known_escaper` named; the new swatches and their evidence are confirmed at the M2 gate *(closes RQ-330)*"
+  - file: decisions.md
+    section: "R-455 — R-447's \"its hue\" is each chromatic class's own OKLab hue, which every swatch meets within 0.5°; escape body 3's `#09B9CD` is recorded at 0.54° from its row and stays *(closes RQ-366)*"
   verify:
     method: review checklist
-    detail: "the proposal gives every pair's OKLab distance, the closest pair, each swatch's L, C and hue as measured, whether C = 0.123 is in gamut at each hue and the largest in-gamut chroma at every hue at L = 0.72 (RQ-332), and each swatch's distance from the hatch's colours, the stipple's grey and dot, the pending hatch and the fallback tint; cargo test -p render outcome_palette_separation computes them; confirmed by the human at the gate RQ-330 names"
+    detail: "the proposal gives every pair's OKLab distance, the closest pair, each swatch's L, C and hue as measured, whether C = 0.123 is in gamut at each hue and the largest in-gamut chroma at every hue at L = 0.72 (RQ-332), and each swatch's distance from the hatch's colours, the stipple's grey and dot, the pending hatch and the fallback tint; cargo test -p render outcome_palette_separation computes them; confirmed by the human at the M2 gate (R-454)"
   rulings:
   - R-71
   - R-447
   - R-449
+  - R-454
+  - R-455
   milestone: M2
   rq:
-  - RQ-330
   - RQ-332
-  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. The gate that confirms it is RQ-330's (M2 as filed); RQ-332 holds the two departures from R-447's words."
+  note: "R-447 (16 Oct 2026). Closed by TASK-M2-32. The gate that confirms it is the M2 gate (R-454, closing RQ-330; first written \"RQ-330's (M2 as filed)\"); RQ-332 holds the two departures from R-447's words. R-455 (RQ-366, option (a)): each hue is measured against its class's own OKLab hue, every swatch within 0.5°; escape body 3's #09B9CD is recorded at 0.54° from its row's 208° and stays."
 - id: REQ-COL-106
   area: COL
   kind: calibration
@@ -16299,6 +16309,8 @@
     section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 07 Keyboard — design note, not a screen
+  - file: decisions.md
+    section: "R-456 — A click on a text input starts typing, in interaction mode; a click anywhere else lands in navigation mode *(amends R-450 A3, and R-409's landing rule and G4, for text inputs)*"
   verify:
     method: GUI screenshot
     detail: "cargo test -p gui mock_keyboard_modes: Tab to Manifold view lands on Manifold view itself, in navigation mode, → there moves to the Figure and ← back to Manifold view, and Enter lands on Chart in navigation mode; Enter on Centre z₀ lands on its first slider in navigation mode, ↓ moves to the second slider and changes no value; Enter on it starts interaction mode and ↑ raises it by its base step; ↓ in interaction mode adjusts it and does not move the focus; Esc returns to navigation mode on the same slider, and a second Esc goes up to Centre z₀; Enter on the slider again and then Enter returns to navigation mode on it; in interaction mode on the slider, Tab lands on the Figure in navigation mode, and Ctrl+Z and ? act as in navigation mode; Tab lands on the Figure in navigation mode, where the arrows move to the next big scope and emit no SetField, + and − zoom and K locks, and Enter starts interaction mode, where the arrows pan and + / − and K still act; Enter on the Legend changes nothing; Tab lands on the Compass scope itself in navigation mode and Enter goes in onto the compass, still in navigation mode (R-409 A2, F4); Enter on a button (Tilt, a menu entry) acts as its click and stays in navigation mode; the ring is the orange in navigation mode and `hyperlink_color` in interaction mode; controls: an Enter into a scope that lands in interaction mode, a Tab that lands on a big scope's first element, an Esc in interaction mode that goes up a scope, an Enter in interaction mode that stays in it, a Tab in interaction mode captured by the element, Enter on the Figure landing in navigation mode, Enter on the Legend starting interaction mode, arrows on a big scope that do nothing, a Figure shortcut (+, −, K) that acts in one mode only, a ring of one colour in both modes and the pre-R-409 `browsing` model (arrows adjusting a value reached by Enter on its section) each fail; cargo xtask screenshot 07_keyboard (mock_focus_navigation, mock_focus_interaction): the two captures differ only in the ring's colour (and the breadcrumb's, per R-409 A6)"
@@ -16306,8 +16318,9 @@
   - R-390
   - R-404
   - R-409
+  - R-456
   milestone: M6
-  note: "R-409; closed by TASK-M6-31. The orange is a look choice under R-390; the mode is held with the focus, in ViewUI (R-409 A5). The footer and the console follow these modes under REQ-GUI-178 (TASK-M6-28). R-409's follow-up answers (F1, F4): the arrows need Enter, the letter and Space shortcuts act in either mode, and a Tab lands on the big scope itself."
+  note: "R-409; closed by TASK-M6-31. The orange is a look choice under R-390; the mode is held with the focus, in ViewUI (R-409 A5). The footer and the console follow these modes under REQ-GUI-178 (TASK-M6-28). R-409's follow-up answers (F1, F4): the arrows need Enter, the letter and Space shortcuts act in either mode, and a Tab lands on the big scope itself. R-456 (17 Oct 2026): a click on a text field anywhere in the GUI starts typing, in interaction mode, and is no navigation-mode landing; the statement stays TASK-M6-31's record, and TASK-M6-32 (REQ-GUI-189, its audit under R-450 A7) builds and checks the click."
 - id: REQ-GUI-183
   area: GUI
   statement: "On the mock engine, the compass must be one focusable element in navigation mode, with its Tilt and Slice buttons as its siblings in the Compass scope, in the order compass, Tilt, Slice, reached by Enter on the Compass scope, Enter on a button setting the mode; Enter on the compass must start interaction mode, in which the compass takes the arrows: they tilt the plane in tilt mode and move the slice along the plane's normal in slice mode, Shift ×10 and Alt ×0.1 applying to their steps as everywhere, with no separate fine step; and Esc or Enter must return to navigation mode on the compass."
@@ -16428,7 +16441,7 @@
   note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: one module owns the conversion, the (state, detail) function and the body and pair names it is built from, in the ledger crate beside pair_bodies unless the code reviewer agrees otherwise; the states with no body or pair read by their payload §2 names; ledger::payload::detail_meanings (hashed into the schema version) is machine data and keeps its 0-based strings, never shown. The Euler landmarks' shown labels are RQ-334's. Code review 5547986569 on PR #226, F4 (applied per R-369): the GUI mock's half of the negative arm runs in the gui crate, since ledger, the build DAG's root, cannot reach gui. Gui review 5548034323, G2 (applied per R-369): the module also owns the outcome class's name, the black class \"bounded / nothing yet\"."
 - id: REQ-GUI-189
   area: GUI
-  statement: "On the mock engine, the console must be a window of exactly two scopes, top to bottom, the header bar (the filters All, Warnings, Errors, Info, then the search field, Copy, Clear and the close button ×, in that visual order) and the log (the entry list); opened from the footer or from Windows › Console it must land in navigation mode on the header bar scope itself, and opening by itself on an error must take no focus; in navigation mode on a scope ↑ and ↓, and Tab and Shift+Tab, must move between the two scopes and stay in the window; Enter on the header bar must go in onto All, ← and → must move across every header element in visual order, the search field, Copy, Clear and × included, and Esc must go back up to the header bar scope; the search field must behave as §G3's text field; × must be a focusable button whose Enter, or a click, closes the console and returns the focus to whatever opened it, and Esc from the window's top level must close it too; Enter on the log must start interaction, in which ↑ and ↓ scroll one entry, Page Up and Page Down a page, Home and End go to the first and last entry and Shift gives ×10, over the whole filtered log, not only the rows drawn, and Esc must return to navigation mode on the log scope; a click on a console control must move the keyboard's focus onto it; and the ring and the breadcrumb must follow (\"Console › Header › Copy\", \"Console › Log\")."
+  statement: "On the mock engine, the console must be a window of exactly two scopes, top to bottom, the header bar (the filters All, Warnings, Errors, Info, then the search field, Copy, Clear and the close button ×, in that visual order) and the log (the entry list); opened from the footer or from Windows › Console it must land in navigation mode on the header bar scope itself, and opening by itself on an error must take no focus; in navigation mode on a scope ↑ and ↓, and Tab and Shift+Tab, must move between the two scopes and stay in the window; Enter on the header bar must go in onto All, ← and → must move across every header element in visual order, the search field, Copy, Clear and × included, and Esc must go back up to the header bar scope; the search field must behave as §G3's text field; × must be a focusable button whose Enter, or a click, closes the console and returns the focus to whatever opened it, and Esc from the window's top level must close it too; Enter on the log must start interaction, in which ↑ and ↓ scroll one entry, Page Up and Page Down a page, Home and End go to the first and last entry and Shift gives ×10, over the whole filtered log, not only the rows drawn, and Esc must return to navigation mode on the log scope; a click on a console control must move the keyboard's focus onto it, in navigation mode, except that a click on the search field must start typing at once, in interaction mode with the blue ring, §G3's typing rules then holding (Esc and Enter stop and keep the text, Tab and Shift+Tab move on to the window's next or previous section) (R-456); and the ring and the breadcrumb must follow (\"Console › Header › Copy\", \"Console › Log\")."
   source:
   - file: decisions.md
     section: "R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*"
@@ -16436,16 +16449,19 @@
     section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
   - file: docs/gui/principia_render_gui_spec.md
     section: G12. Console (`12_console.png`)
+  - file: decisions.md
+    section: "R-456 — A click on a text input starts typing, in interaction mode; a click anywhere else lands in navigation mode *(amends R-450 A3, and R-409's landing rule and G4, for text inputs)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui mock_console_keys (keyboard scripts on the mock): the console opened from the footer and from Windows › Console lands on the header bar scope in navigation mode; from the landing every header element (All, Warnings, Errors, Info, the search field, Copy, Clear, ×), the log and × are reached with only ↑ ↓, Tab, Shift+Tab, Enter, Esc and ← →; Enter on the search field types and Esc and Enter keep the text; Enter on × and Esc at the top level each close the console with the focus on its opener; Enter on the log and Home, End, Page Up, Page Down, ↑ ↓ and Shift+↑ reach the first and last entry of a list longer than the rows drawn; the breadcrumb reads \"Console › Header › Copy\" on Copy; every script repeated after an auto-open on error (then reached by Enter on the footer) and with a filter that empties the list gives the same order; controls: a console landing on All, × outside the scope tree, an order that skips the log when the list is empty, a scroll that stops at the last row drawn, and an Esc on a header element that closes the console each fail; cargo xtask screenshot 07_keyboard (mock_focus_console_header, mock_focus_console_log)"
+    detail: "cargo test -p gui mock_console_keys (keyboard scripts on the mock): the console opened from the footer and from Windows › Console lands on the header bar scope in navigation mode; from the landing every header element (All, Warnings, Errors, Info, the search field, Copy, Clear, ×), the log and × are reached with only ↑ ↓, Tab, Shift+Tab, Enter, Esc and ← →; Enter on the search field types and Esc and Enter keep the text; Enter on × and Esc at the top level each close the console with the focus on its opener; Enter on the log and Home, End, Page Up, Page Down, ↑ ↓ and Shift+↑ reach the first and last entry of a list longer than the rows drawn; the breadcrumb reads \"Console › Header › Copy\" on Copy; every script repeated after an auto-open on error (then reached by Enter on the footer) and with a filter that empties the list gives the same order; controls: a console landing on All, × outside the scope tree, an order that skips the log when the list is empty, a scroll that stops at the last row drawn, and an Esc on a header element that closes the console each fail; a click on the search field starts typing at once: the ring blue, the mode interaction, a letter typed next lands in the field, Esc then returns to navigation mode on it with the text kept, and in a second run Tab while typing lands on the log scope in navigation mode; a click on Copy, a filter or the log lands in navigation mode on it, a letter typing nothing; control: a clicked search field that needs Enter before it types fails; a click on the search field, letters typed, then a click on Copy, and in a second run on the log, lands in navigation mode on what was clicked, the ring orange, and a letter then types nothing; control: typing that survives a click on another console control fails; a click on the search field, letters typed, then a click on the Figure ends the typing and leaves the focus on the search field in navigation mode, the ring orange, a letter then typing nothing; controls: a Figure click that moves the focus to the Figure scope, and one that leaves the field typing, each fail (R-456 B6); cargo xtask screenshot 07_keyboard (mock_focus_console_header, mock_focus_console_log)"
   rulings:
   - R-390
   - R-405
   - R-409
   - R-450
+  - R-456
   milestone: M6
-  note: "R-450; closed by TASK-M6-32. Takes the place of REQ-GUI-178's sections and landing (REQ-GUI-178 stays TASK-M6-28's record). The page size, the arrows at the row's ends, Esc and a click are R-450 A1 to A6 (applied per R-369)."
+  note: "R-450; closed by TASK-M6-32. Takes the place of REQ-GUI-178's sections and landing (REQ-GUI-178 stays TASK-M6-28's record). The page size, the arrows at the row's ends, Esc and a click are R-450 A1 to A6 (applied per R-369). R-456 (17 Oct 2026, on PR #234): a click on the search field starts typing, in interaction mode; a click on any other console control still lands in navigation mode (A3, amended). R-456 B6 (applied per R-369): a click not on a text input ends any typing and moves the focus only where R-450 A3 already says a click does."
 - id: REQ-GUI-190
   area: GUI
   statement: "On the mock engine, every control of a scope or window that is drawn must be reachable from the keyboard by render_gui_spec §G3's keys, and the order in which the keyboard reaches them must not depend on state (an empty or filtered list, a hidden or disabled control, how the window was opened, or whether it opened by itself); the intermittent reachability of the console's search field, Copy and Clear must be reproduced and its cause named before it is fixed; and every other window and scope must be audited against §G3 for the same failure, each finding listed and fixed or assigned to the task that owns the screen."
@@ -16454,15 +16470,18 @@
     section: "R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*"
   - file: docs/gui/principia_render_gui_spec.md
     section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: decisions.md
+    section: "R-456 — A click on a text input starts typing, in interaction mode; a click anywhere else lands in navigation mode *(amends R-450 A3, and R-409's landing rule and G4, for text inputs)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui mock_reachability: a reusable check walks a scope or window with §G3's keys and asserts that every drawn control's scope id is reached, run on the console in its states (opened from the footer, from the menu, after an auto-open on error, with a filter that empties the list) and on each window the audit covers; negative arm: a test fixture with a drawn control left out of the scope tree, and one registered only when a list is non-empty, each fail the check; review checklist (gui reviewer): the PR names the intermittent fault's cause with its reproduction, and lists the audit's findings, each fixed here or recorded against its task"
+    detail: "cargo test -p gui mock_reachability: a reusable check walks a scope or window with §G3's keys and asserts that every drawn control's scope id is reached, run on the console in its states (opened from the footer, from the menu, after an auto-open on error, with a filter that empties the list) and on each window the audit covers; negative arm: a test fixture with a drawn control left out of the scope tree, and one registered only when a list is non-empty, each fail the check; a click on a text field outside the console (the Run window's, the stain library's filter) starts typing at once, in interaction mode, a letter then landing in the field; control: such a field that needs Enter before it types fails (R-456); review checklist (gui reviewer): the PR names the intermittent fault's cause with its reproduction, and lists the audit's findings, each fixed here or recorded against its task"
   rulings:
   - R-390
   - R-409
   - R-450
+  - R-456
   milestone: M6
-  note: "R-450 (the human's audit and the bug's cause; A7 applied per R-369: a finding is fixed here or recorded against the open task that owns the screen). Closed by TASK-M6-32."
+  note: "R-450 (the human's audit and the bug's cause; A7 applied per R-369: a finding is fixed here or recorded against the open task that owns the screen). Closed by TASK-M6-32. R-456 (17 Oct 2026): the audit also checks that a click on every text field of the GUI starts typing (B2, B7)."
 - id: REQ-GUI-191
   area: GUI
   statement: "On the mock engine, the compass's Cube view must be drawn as docs/gui/reference/principia_nav_cube.html draws its cube, in the dev GUI's dark-mode colours and never its cream palette: the isometric projection P(x,y,z) = (CX + S·√3/2·(x − z), CY + S·(½(x + z) − y)) of [−1,1]³ fitted with the reference's margins; the edges depth-sorted by x + z, nearer ones more opaque and thicker, with the slice sorted among them by its own depth; the slice as the plane's true cross-section polygon, Lambert-shaded from its own normal (two-sided, ambient 0.2), with an in-plane grid clipped to it and an outline; in both modes the decoder's plane, View::basis's (q₁, q₂) in the cube's frame (e_a, e_b, e_d), through the point whose coordinates are z₀'s components on e_a, e_b and e_d over the slice step's half-range, unclamped, only the plane's offset n·p bounded, to ±|n|₁, so that a pan leaves the drawing unchanged, the modes differing in the drag, the labels and the readout, never in the plane drawn; and the edge labels as R-451 gives them (slice mode Width, Depth and Height with −1.0 and 1.0 at the corners, one number per corner; tilt mode the tilt target only)."

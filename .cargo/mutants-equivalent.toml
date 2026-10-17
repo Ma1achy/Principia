@@ -124,6 +124,14 @@ mutant = "crates/gui/src/keyboard/scopes.rs:349:23: replace > with >= in ScopeTr
 justification = "remove_children has already removed every node whose parent is the removed index i, so no parent equals i and > and >= agree"
 
 [[equivalent]]
+mutant = "crates/kernel/src/burrau.rs:74:7: replace > with >= in primitive"
+justification = "m == n makes m ^ n = 0, so the parity test (m ^ n) & 1 == 1 already refuses every pair the > excludes"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/burrau.rs:106:29: replace | with ^ in seed"
+justification = "s < 1 and s == 1 cannot both hold, so the two operands of | are never both true, and their ^ is their |"
+
+[[equivalent]]
 mutant = "crates/kernel/src/encode/blocks.rs:207:41: replace | with ^ in <impl SimplexClamp for SoftmaxTanh>::clamps"
 justification = "the operands are select(.., 1, 0) and select(.., 2, 0), disjoint single bits, so their ^ is their |"
 

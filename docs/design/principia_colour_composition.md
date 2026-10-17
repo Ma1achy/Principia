@@ -283,7 +283,10 @@ hue at that L"; measured, C = 0.123 is in gamut at every listed hue (the narrowe
 largest chroma in gamut at every hue at L = 0.72 is 0.1224, near 199.8°. The swatches as ruled measure L 0.719 to
 0.721, C 0.122 to 0.124 and each hue within 0.5° of its row; `#6EB976`, `#D99349` and `#09B9CD` differ by one or two
 8-bit steps in one channel from the rounding of (0.72, 0.123, hue), `#6DB976`, `#D9934A` and `#07B9CD`. Transcribed as
-ruled: RQ-332. **Its closest pair, measured, is 0.063**, escape body 2 against triple ejection, 30° apart; four more pairs are
+ruled: RQ-332. Against each class's own OKLab hue (the sRGB class's, before R-447 rounds it to a degree) every
+swatch is within 0.5°; escape body 3's `#09B9CD` measures 208.54°, 0.54° from its row's 208° and 0.04° from its class's
+208.5°, and stays: R-455 (RQ-366) reads the 0.5° against the class's own hue, a tolerance below hex quantisation at this
+chroma (one green or blue step moves the hue about 0.7°). **Its closest pair, measured, is 0.063**, escape body 2 against triple ejection, 30° apart; four more pairs are
 under 0.101 (collision 1–2 and triple collision, 0.079; triple collision and escape body 1, 0.081; collision 2–3 and
 triple ejection, 0.084; collision 1–3 and escape body 1, 0.091). It is closer than the sRGB palette by construction, eight hues at
 one L and C. Each swatch is at least 0.139 from the stipple's dot and 0.196 from the hatch's colours.
