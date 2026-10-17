@@ -5,8 +5,9 @@
 //! focus back on its opener; the log scrolls to its first and last entry by Home, End, Page Up, Page Down and ↑ ↓,
 //! Shift ×10, on a list longer than the rows drawn; the breadcrumb follows. Every script runs again after an auto-open on
 //! error and with a filter that empties the list, giving the same order. A click on a console control moves the
-//! keyboard's focus onto it (A3), which is the fix for the intermittent reachability this file first reproduces. Each
-//! check also runs on an input it must reject (R-176, through `rejects`).
+//! keyboard's focus onto it (A3), which is the fix for the intermittent reachability this file first reproduces: a click
+//! on the search field types at once, in interaction mode, and a click anywhere else lands in navigation mode, ending
+//! any typing (R-456). Each check also runs on an input it must reject (R-176, through `rejects`).
 
 use eframe::egui::{Event, Key, Modifiers};
 use engine::contract::view_ui::{KeyMode, Window};
@@ -587,7 +588,8 @@ fn mock_console_keys_an_empty_list_keeps_the_log_where_it_is() {
 /// focus never moved into the console on a click (a clicked field held the keyboard as egui's), and a window is outside
 /// the big scopes' Tab cycle, so Tab and the arrows walked the big scopes and no key reached the search field, Copy or
 /// Clear, until Enter on the footer or Windows › Console moved the focus in ("then later I can"). Now the click puts
-/// the keyboard's focus on the field in navigation mode (A3): a letter types nothing, the ring orange, and → moves on.
+/// the keyboard's focus on the field (A3), typing in it at once, the ring blue (R-456); Esc ends the typing and → moves
+/// on.
 #[test]
 fn mock_console_keys_reproduce_the_intermittent_reachability() {
     let (mut app, mut h) = with_warnings(1);
@@ -600,27 +602,28 @@ fn mock_console_keys_reproduce_the_intermittent_reachability() {
     check_at(
         &after_click,
         &on_control(SEARCH),
-        NAV,
-        "the click moved the focus",
+        INTERACT,
+        "the click moved the focus and types",
     );
     rejects(
         "a click that leaves the keyboard's focus outside the console",
-        || check_at(&(Vec::new(), NAV), &on_control(SEARCH), NAV, "click"),
+        || check_at(&(Vec::new(), NAV), &on_control(SEARCH), INTERACT, "click"),
     );
-    // Navigation mode, as the ring shows: a letter types nothing.
+    rejects(
+        "a clicked field in navigation mode, the ring orange",
+        || check_at(&after_click, &on_control(SEARCH), NAV, "click"),
+    );
+    // Typing, as the ring shows: a letter types at once (R-456).
     type_text(&mut h, &mut app, "m");
     let text = app.windows.console.text.clone();
-    assert_eq!(text, "", "a clicked field typing in navigation mode");
-    rejects("a clicked field that types with the ring orange", || {
-        assert_eq!("m", "")
+    assert_eq!(text, "m", "a clicked field types at once");
+    rejects("a clicked field that types nothing", || {
+        assert_eq!(text, "")
     });
-    // Enter types, as on any text field (§G3, R-409 G4); Esc ends it.
-    press(&mut h, &mut app, Key::Enter, NONE);
-    check_at(&at(&app), &on_control(SEARCH), INTERACT, "Enter types");
-    type_text(&mut h, &mut app, "m");
-    assert_eq!(app.windows.console.text, "m", "typed after Enter");
+    // Esc ends typing, the text kept (§G3, R-409 G4).
     press(&mut h, &mut app, Key::Escape, NONE);
     check_at(&at(&app), &on_control(SEARCH), NAV, "Esc ends typing");
+    assert_eq!(app.windows.console.text, "m", "Esc kept the text");
     press(&mut h, &mut app, Key::ArrowRight, NONE);
     check_at(&at(&app), &on_control(COPY), NAV, "→ reaches Copy");
     press(&mut h, &mut app, Key::Enter, NONE);
@@ -633,6 +636,140 @@ fn mock_console_keys_reproduce_the_intermittent_reachability() {
     settle(&mut h, &mut app);
     assert!(!app.is_open(Window::Console));
     assert!(focus(&app).is_empty(), "{:?}", focus(&app));
+}
+
+/// A click on the search field types at once (R-456), and §G3's text-field rule holds while it does: Tab and Shift+Tab
+/// leave the field for the window's next or previous scope, the log from the header (qa's F2), in navigation mode, the
+/// text kept, a letter after it typing nothing; Enter stops typing on the field, the text kept (R-409 G4, G5).
+#[test]
+fn mock_console_keys_a_clicked_text_field_types_and_tab_leaves_it() {
+    for (key, m) in [(Key::Tab, NONE), (Key::Tab, SHIFT), (Key::Enter, NONE)] {
+        let (mut app, mut h) = open(Opened::Footer);
+        click_scope(&mut h, &mut app, SEARCH);
+        type_text(&mut h, &mut app, "ab");
+        assert_eq!(app.windows.console.text, "ab", "typed after the click");
+        press(&mut h, &mut app, key, m);
+        let got = at(&app);
+        if key == Key::Enter {
+            check_at(&got, &on_control(SEARCH), NAV, "Enter while typing");
+        } else {
+            check_at(&got, &ON_LOG, NAV, &format!("{key:?} {m:?} while typing"));
+        }
+        rejects("a key the field kept, typing on", || {
+            check_at(&got, &on_control(SEARCH), INTERACT, "after the key")
+        });
+        type_text(&mut h, &mut app, "c");
+        let text = app.windows.console.text.clone();
+        assert_eq!(
+            text, "ab",
+            "{key:?}: kept the text, and the next letter typed nothing"
+        );
+        rejects("a field still typing", || assert_eq!(text, "abc"));
+    }
+}
+
+/// Where a click lands, after typing in the search field.
+#[derive(Clone, Copy, Debug)]
+enum Away {
+    /// A console control: Copy, a filter or the log, the focus moved onto it (A3).
+    Control(&'static str),
+    /// The Figure, outside the console, which moves no focus (R-456 B6).
+    Figure,
+}
+
+/// Clicks `away`, outside any console control for [`Away::Figure`].
+fn click_away(h: &mut Headless, app: &mut App<MockSide>, away: Away) {
+    match away {
+        Away::Control(id) => click_scope(h, app, id),
+        Away::Figure => {
+            let console = app
+                .keyboard
+                .place_of(WINDOW)
+                .expect("the console placed")
+                .rect;
+            let figure = app
+                .keyboard
+                .place_of(crate::explore::FIGURE)
+                .expect("the figure")
+                .rect;
+            let outside = figure.left_top() + eframe::egui::vec2(8.0, 8.0);
+            assert!(!console.contains(outside), "{outside:?} is in the console");
+            for events in crate::capture::click(outside) {
+                let _ = h.frame(app, events);
+            }
+        }
+    }
+    settle(h, app);
+}
+
+/// Ctrl+Z (Cmd+Z), which undoes the text edit while a field is typed in (§G3, R-409).
+fn undo(h: &mut Headless, app: &mut App<MockSide>) {
+    press(h, app, Key::Z, Modifiers::COMMAND);
+}
+
+/// A click anywhere but a text field lands in navigation mode (R-456): on a console control, Copy, a filter or the
+/// log, the focus on it; on the Figure, outside the console, the focus where it was, on the field (B6). Either way the
+/// typing ends: egui's text focus is released, and neither a letter nor Ctrl+Z reaches the field.
+#[test]
+fn mock_console_keys_a_click_elsewhere_lands_in_navigation() {
+    for away in [
+        Away::Control(COPY),
+        Away::Control("cs_warnings"),
+        Away::Control(LOG),
+        Away::Figure,
+    ] {
+        let (mut app, mut h) = open(Opened::Footer);
+        click_scope(&mut h, &mut app, SEARCH);
+        check_at(
+            &at(&app),
+            &on_control(SEARCH),
+            INTERACT,
+            "the field clicked",
+        );
+        type_text(&mut h, &mut app, "y");
+        assert_eq!(app.windows.console.text, "y", "{away:?}: typed");
+        click_away(&mut h, &mut app, away);
+        let got = at(&app);
+        let want = match away {
+            Away::Control(LOG) => ON_LOG.to_vec(),
+            Away::Control(id) => on_control(id).to_vec(),
+            Away::Figure => on_control(SEARCH).to_vec(),
+        };
+        check_at(&got, &want, NAV, &format!("a click on {away:?}"));
+        rejects("typing that survives the click", || {
+            check_at(&got, &on_control(SEARCH), INTERACT, "typing")
+        });
+        type_text(&mut h, &mut app, "z");
+        undo(&mut h, &mut app);
+        let text = app.windows.console.text.clone();
+        assert_eq!(text, "y", "{away:?}: a letter or Ctrl+Z reached the field");
+        rejects("a letter that reached the field", || {
+            assert_eq!(format!("{text}z"), "y")
+        });
+        if let Away::Figure = away {
+            // B6: the click moves no focus; the control has it moved onto the Figure scope.
+            let figure = app
+                .keyboard
+                .tree(app.view.mode)
+                .path_to(crate::explore::FIGURE);
+            rejects("a Figure click that moved the focus to the Figure", || {
+                check_at(&(figure, NAV), &want, NAV, "the Figure clicked")
+            });
+            press(&mut h, &mut app, Key::ArrowRight, NONE);
+            check_at(
+                &at(&app),
+                &on_control(COPY),
+                NAV,
+                "→ after the click outside",
+            );
+        }
+    }
+    // The control for Ctrl+Z: typing, it undoes the text edit, so the check above can fail.
+    let (mut app, mut h) = open(Opened::Footer);
+    click_scope(&mut h, &mut app, SEARCH);
+    type_text(&mut h, &mut app, "y");
+    undo(&mut h, &mut app);
+    assert_eq!(app.windows.console.text, "", "Ctrl+Z while typing");
 }
 
 #[test]

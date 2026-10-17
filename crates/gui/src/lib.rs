@@ -46,6 +46,7 @@ mod tests {
     mod mock_stain_preview;
     mod mock_status_line;
     mod mock_tag;
+    mod mock_text_click;
     mod mock_tile_bounds;
     mod mock_time;
     mod mock_windows_drawn;

@@ -514,6 +514,9 @@ impl<S: EngineSide> App<S> {
             self.close_window(&ctx, window);
         }
         self.act(&ctx, acts);
+        // A click on a text field starts typing in it, on every page and in every window (R-456).
+        self.keyboard
+            .follow_text_clicks(&ctx, self.view.mode, &mut self.view.focus);
         self.draw_ring(&ctx);
         if let Some(overlays) = actions.overlays.take() {
             edits.push(engine::contract::set_field::SetField {
