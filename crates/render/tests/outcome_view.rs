@@ -12,12 +12,12 @@
 //!   `validate` rejects.
 //! - REQ-COL-103 (`outcome_oklab_variant_*`): the variant renders exactly its eight swatches and `#141418`; each
 //!   chromatic swatch measures OKLab L 0.72 ± 0.002, C 0.123 ± 0.002 and its hue within 0.5° of its class's own (R-447;
-//!   RQ-366); failures and forbidden samples as in the default; the default is the sRGB set; editing one set leaves the
+//!   R-455); failures and forbidden samples as in the default; the default is the sRGB set; editing one set leaves the
 //!   other unchanged.
 //! - REQ-COL-104 and REQ-COL-105 (`outcome_palette_separation_*`): the separation evidence R-444, R-445 and R-447
 //!   measured, recomputed and printed for the PR (`--nocapture`), measured as REQ-COL-055 measures: Euclidean distance
-//!   in OKLab, from 8-bit sRGB through dd_colouring §3.1's transforms (`render::present`). Proposals for the gate
-//!   RQ-330 names (R-71), not values: the swatches are the human's.
+//!   in OKLab, from 8-bit sRGB through dd_colouring §3.1's transforms (`render::present`). Proposals for the M2
+//!   gate, R-454 (R-71), not values: the swatches are the human's.
 //!
 //! The classes are named as shown, 1-based (R-449): R-449's names, fixed strings until TASK-M2-33's conversion function
 //! lands. Each GPU check takes a render, so its control runs it on the render of an altered occupant, payload or field
@@ -798,7 +798,7 @@ fn hue_gap(a: f64, b: f64) -> f64 {
 /// Checks the variant's swatches, `variant`: bounded `#141418`, and each chromatic swatch at OKLab L 0.72 ± 0.002, C
 /// 0.123 ± 0.002 and within 0.5° of its class's own hue, the sRGB swatch's (R-447: "each chromatic class keeps its own
 /// OKLab hue"). Against the table's rounded hues, the one departure past 0.5° is escape body 3's `#09B9CD`, 0.54° from
-/// its row's 208° (RQ-366); the check pins it, so a swatch that moves past 0.5° of its row fails.
+/// its row's 208° (R-455); the check pins it, so a swatch that moves past 0.5° of its row fails.
 fn check_measured(variant: &[outcome::Swatch]) {
     assert_eq!(variant[0].srgb8, BLACK, "the variant's bounded");
     let mut past_row = Vec::new();
