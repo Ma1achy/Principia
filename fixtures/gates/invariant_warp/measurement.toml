@@ -1,0 +1,41 @@
+# The invariant warp's calibration evidence (REQ-CHART-044; R-71, R-133): K_max and γ_K, proposed in the
+# constants register, provisional until the M2 gate. Measured by crates/validation/tests/invariant_warp.rs,
+# invariant_warp_evidence, through the kernel's chart decode natively; regenerate with
+# PRIN_WRITE_INVARIANT_WARP=1, which also redraws the renders beside it. Compared at a relative 1e-6, except
+# the coverage shares and the unchecked root's count, which a platform's powf or sqrt moves: as written on
+# macOS, and checked only for what they evidence (the unchecked root infeasible somewhere; coverage falling
+# with γ_K overall and rising below 0.1·K_max).
+k_max = 1e0  # the proposed K_max (constants register, provisional until M2)
+gamma_k = 2e0  # the proposed γ_K (constants register, provisional until M2)
+u_golden = 1.9245008972987526e-1  # |U| at the golden IC, z = 0
+u_h1_p50 = 7.439259198753823e-2  # |U|, median, z uniform on [−1, 1]⁴ (20 000, seed 11)
+u_h1_p90 = 1.8456682296777197e-1  # |U|, 90th percentile, [−1, 1]⁴
+u_h1_p99 = 2.562024982513979e-1  # |U|, 99th percentile, [−1, 1]⁴
+u_h2_p50 = 2.165490340070789e-2  # |U|, median, z uniform on [−2, 2]⁴ (20 000, seed 12)
+u_h2_p90 = 1.9692767882995027e-1  # |U|, 90th percentile, [−2, 2]⁴
+u_h2_p99 = 4.9070689837326553e-1  # |U|, 99th percentile, [−2, 2]⁴
+u_h1_above_k_max = 0e0  # configurations of [−1, 1]⁴ whose escape energy lies above the chart
+u_h2_above_k_max = 6e0  # configurations of [−2, 2]⁴ whose escape energy lies above the chart
+t_escape_golden = 4.3869133765083085e-1  # the row t where E = 0 at the golden IC
+t_escape_h1_p50 = 2.7275005405597674e-1  # the row t where E = 0 at [−1, 1]⁴'s median |U|
+t_escape_h1_p99 = 5.061644972253565e-1  # the row t where E = 0 at [−1, 1]⁴'s 99th percentile
+t_escape_h2_p99 = 7.005047454323672e-1  # the row t where E = 0 at [−2, 2]⁴'s 99th percentile
+rows_below_0p01_gamma1 = 6e0  # rows of 512 with K < 0.01·K_max, γ_K = 1
+rows_below_0p01_gamma2 = 5.2e1  # rows of 512 with K < 0.01·K_max, γ_K = 2
+rows_below_0p01_gamma3 = 1.11e2  # rows of 512 with K < 0.01·K_max, γ_K = 3
+rows_below_0p1_gamma1 = 5.2e1  # rows of 512 with K < 0.1·K_max, γ_K = 1
+rows_below_0p1_gamma2 = 1.62e2  # rows of 512 with K < 0.1·K_max, γ_K = 2
+rows_below_0p1_gamma3 = 2.38e2  # rows of 512 with K < 0.1·K_max, γ_K = 3
+dk_top_gamma1 = 1.9569471624266144e-3  # K's row spacing at the top of 512 rows, γ_K = 1
+dk_top_gamma2 = 3.913894324853229e-3  # the same, γ_K = 2
+dk_top_gamma3 = 5.870841487279843e-3  # the same, γ_K = 3
+edge_margin_512 = 7.812470080920342e-3  # (K* − K_min)/K* at the outermost interior column of 512, any γ_K
+coverage_gamma1 = 9.997768368047608e-1  # share of the feasible region's 512² cells a 512² chart reaches, γ_K = 1
+coverage_gamma2 = 6.878004119935912e-1  # the same, γ_K = 2
+coverage_gamma3 = 5.330510414282444e-1  # the same, γ_K = 3
+coverage_low_gamma1 = 9.928935860058309e-1  # the same below K = 0.1·K_max, γ_K = 1
+coverage_low_gamma2 = 1e0  # the same below K = 0.1·K_max, γ_K = 2
+coverage_low_gamma3 = 1e0  # the same below K = 0.1·K_max, γ_K = 3
+infeasible_f64 = 0e0  # infeasible pixels, six configurations' 512² grids with edges, f64 decode
+infeasible_f32 = 0e0  # the same, f32 decode
+infeasible_rounded_root_f32 = 3.204e3  # the same for an unchecked rounded √(2K) at f32: why L_max is stepped

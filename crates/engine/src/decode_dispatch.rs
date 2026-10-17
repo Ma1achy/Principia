@@ -17,7 +17,7 @@
 use std::marker::PhantomData;
 
 use kernel::canon::Canonical;
-use kernel::chart::Chart;
+use kernel::chart::ChartDecode;
 use kernel::decode::Ic;
 use kernel::generated::links::Selection;
 use kernel::payload::ICDescriptor;
@@ -405,7 +405,7 @@ pub fn decode_only<C, S>(
     sim_key: &SimConfig,
 ) -> Result<DecodeOut<f64>, ComputeError>
 where
-    C: Chart,
+    C: ChartDecode,
     S: Selection,
     f64: From<C::Param>,
 {

@@ -265,8 +265,9 @@ enum Stand {
 
 /// dd_generation_root §3.8's provisional entries, each as R-428 leaves it, and `r_pole`, which R-433 confirms at the
 /// M1 gate and marks provisional until M3, citing REQ-INT-086; and the diverging fields' `x₀`, `E_0`'s and `Lz_0`'s,
-/// proposed by TASK-M7-05 and provisional until the M7 gate, citing REQ-COL-066 (dd_colouring §3.6).
-const TABLE: [(&str, Stand); 14] = [
+/// proposed by TASK-M7-05 and provisional until the M7 gate, citing REQ-COL-066 (dd_colouring §3.6); and the invariant
+/// warp's `k_max` and `gamma_k`, proposed by TASK-M2-12 and provisional until the M2 gate, citing REQ-CHART-044.
+const TABLE: [(&str, Stand); 16] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -279,6 +280,8 @@ const TABLE: [(&str, Stand); 14] = [
     ("eps_m01", Stand::Until("M2", "REQ-DEC-039")),
     ("r_pole", Stand::Until("M3", "REQ-INT-086")),
     ("tanh_sat", Stand::Until("M2", "REQ-DEC-047")),
+    ("k_max", Stand::Until("M2", "REQ-CHART-044")),
+    ("gamma_k", Stand::Until("M2", "REQ-CHART-044")),
     ("diverging_x0_E_0", Stand::Until("M7", "REQ-COL-066")),
     ("diverging_x0_Lz_0", Stand::Until("M7", "REQ-COL-066")),
 ];
