@@ -1,0 +1,65 @@
+# The README's build-progress banner: after every push to `main` (each merged PR), `scripts/progress_banner.py` draws
+# `progress.svg`, a square per task of `plan/tasks.yaml` grouped by milestone (green merged, amber with an open PR,
+# grey not started), and this job force-pushes it as the single commit of the orphan branch `progress`, which the
+# README shows from raw.githubusercontent.com. Applied per R-369.
+#
+# It never commits to `main`, so it needs no review and starts no CI: a push made with the workflow's GITHUB_TOKEN
+# triggers no workflow run, so the push to `progress` starts neither `ci.yml` nor any other. It runs on no pull request,
+# so it adds no check to a PR and cannot hold or satisfy a required one. Runs cancel each other: only the latest
+# push's banner matters.
+name: progress
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: progress
+  cancel-in-progress: true
+
+# Set as in every workflow (R-374); this workflow builds nothing.
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_DEV_DEBUG: line-tables-only
+  CARGO_PROFILE_TEST_DEBUG: line-tables-only
+
+jobs:
+  progress:
+    runs-on: ubuntu-24.04
+    steps:
+      # main's full history: a task is done when main has its PR's merge commit (`git log --merges`).
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      # The generator needs Python and PyYAML, as plan/check_plan.py does.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python3 -m pip install pyyaml
+      # Open PRs, whose `task/<TASK-id>` heads draw their tasks amber; the generator skips PRs from forks
+      # (`isCrossRepository`), since anyone can open one from a branch of that name.
+      - name: List open PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr list --state open --limit 500 --json headRefName,isCrossRepository > "$RUNNER_TEMP/open-prs.json"
+      - name: Draw the banner
+        run: python3 scripts/progress_banner.py -o "$RUNNER_TEMP/progress.svg" --open-prs "$RUNNER_TEMP/open-prs.json"
+      # `progress` holds one commit, the latest banner, replaced on every run.
+      - name: Publish to the progress branch
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse --short HEAD)
+          git switch --orphan progress
+          cp "$RUNNER_TEMP/progress.svg" progress.svg
+          git add progress.svg
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet --message "progress: main @ $sha"
+          git push --force origin HEAD:refs/heads/progress
