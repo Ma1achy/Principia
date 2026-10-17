@@ -134,3 +134,7 @@ justification = "only a 0-, 1- or 2-point result is affected, sorted by angle ra
 [[equivalent]]
 mutant = "crates/gui/src/explore/compass.rs:371:16: replace > with >= in clip"
 justification = "den == 0.0 has already continued the loop two lines above, so den > 0.0 and den >= 0.0 agree wherever it is read"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:412:47: replace + with - in grid"
+justification = "2·GRID_REACH/GRID_STEP is 7.6 to within rounding, 0.4 from any integer, so its floor is 7 whether 1e-9 is added or taken away"

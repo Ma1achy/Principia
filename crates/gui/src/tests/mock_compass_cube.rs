@@ -405,6 +405,39 @@ fn mock_compass_cube_clip_and_grid() {
             }
         }
     }
+    // The lines of constant y, along u = x, sit at the same steps.
+    let mut ys: Vec<f64> = lines
+        .iter()
+        .filter(|l| (l[0][1] - l[1][1]).abs() < 1e-12)
+        .map(|l| l[0][1])
+        .collect();
+    ys.sort_by(f64::total_cmp);
+    assert!(
+        ys.len() == 4 && ys.iter().zip(want).all(|(a, b)| (a - b).abs() < 1e-12),
+        "{ys:?}"
+    );
+    // The hexagon reaches √2 from its centre: its grid has the lines 1.1 from the foot, of the steps past the cube's
+    // half-width.
+    let h3 = 1.0 / 3f64.sqrt();
+    let hex = Cut {
+        normal: [-h3, -h3, h3],
+        offset: 0.0,
+    };
+    let hex_poly = compass::cross_section(hex);
+    let (u, v) = compass::plane_basis(hex.normal);
+    let dot = |a: P3, b: P3| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    let at: Vec<f64> = grid(hex, &hex_poly)
+        .iter()
+        .flat_map(|l| {
+            [u, v].into_iter().filter_map(move |w| {
+                ((dot(l[0], w) - dot(l[1], w)).abs() < 1e-12).then(|| dot(l[0], w))
+            })
+        })
+        .collect();
+    assert!(at.iter().any(|c| (c - 1.1).abs() < 1e-12), "{at:?}");
+    rejects("a grid reaching only to 0.6", || {
+        assert!(at.iter().all(|c| *c < 0.6 + 1e-12))
+    });
     rejects("a grid from the cube's centre", || {
         assert!(at.iter().any(|a| a.abs() < 1e-12))
     });
