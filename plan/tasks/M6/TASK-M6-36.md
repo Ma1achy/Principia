@@ -69,3 +69,8 @@ cursor reached the panel.
   task's qa commit, and only those; the PR lists each `M` with its reason.
 - **The real engine.** TASK-M8-11 (the real engine's Trajectory panel) is left as it is by this port, PR #226
   editing its file; a later port adds R-453's re-run there.
+- **R-450's audit finding (TASK-M6-32, R-450 A7).** The Trajectory panel's kept-orbit tabs, `#1` to `#9`, drawn in its
+  title row after "under cursor", are visible controls outside the scope tree, which no key reaches (the kept orbit's
+  row's show does what its tab does). This task reworks the panel's tabs (the first reading "pinned"), so the finding is
+  its: each tab joins the scope tree in visual order, and `crates/gui/src/tests/mock_reachability.rs`'s `KEPT_TABS`,
+  which asserts the finding still holds, is emptied, so `mock_reachability` checks the tabs as every other control.
