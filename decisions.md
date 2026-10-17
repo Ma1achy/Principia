@@ -11639,8 +11639,8 @@ Changes REQ-COL-103 and REQ-COL-105 (rulings, note).
 *17 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the two modes' paragraph and the console's paragraph, a sentence each) and § "G12. Console
 (`12_console.png`)" (a sentence added), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a
-screen" (a sentence added), R-450's and R-409's heading blocks, REQ-GUI-189 (reqio) and REQ-GUI-182 (reqio, a note),
-TASK-M6-32 (a reference, an acceptance clause and a note) and `plan/rule_groups.yaml`; built by TASK-M6-32 (PR #234) on the mock*
+screen" (a sentence added), R-450's and R-409's heading blocks, REQ-GUI-189 and REQ-GUI-190 (reqio) and REQ-GUI-182 (reqio,
+a note), TASK-M6-32 (a reference, an acceptance clause and a note) and `plan/rule_groups.yaml`; built by TASK-M6-32 (PR #234) on the mock*
 
 The human's words (R-454 quotes the message's first item), a GUI design ruling under R-390's feedback rule, on PR #234
 (TASK-M6-32), which applied R-450 A3 as written, so that a clicked search field needed Enter before it typed:
@@ -11651,13 +11651,17 @@ The human's words (R-454 quotes the message's first item), a GUI design ruling u
 - **A click on a text input starts typing.** The keyboard's focus moves onto the field in interaction mode, the ring
   blue (R-409 G4's typing, which is interaction mode); the field takes every key but Esc, Enter and Tab, as §G3's text
   field does once Enter has started it. In the console this is the search field.
-- **A click anywhere else lands in navigation mode,** on the control clicked, as R-450 A3 has it for every other
-  console control (All, Warnings, Errors, Info, Copy, Clear, the log); a click on × still closes the console.
+- **A click anywhere else lands in navigation mode:** a click that is not on a text input ends any typing and leaves the
+  keyboard in navigation mode. It moves the keyboard's focus only where a rule already says a click does, as R-450 A3
+  does for every other console control (All, Warnings, Errors, Info, Copy, Clear, the log), landing in navigation mode
+  on the control clicked; a click on × still closes the console. A click on the Figure that pins a sample (R-453) ends
+  typing and does not move the focus. (This scope is the orchestrator's reading, B6 below.)
 
 *What it amends:* R-450 A3's "in navigation mode", for the search field; R-409's "every landing is in navigation mode"
 and G4's "Landing on a text field is navigation mode", which are read from here on as the keyboard's landings (Tab,
-Enter, the arrows), a click on a text field being no navigation-mode landing. R-405 says nothing contrary: its text
-filter "holds the keyboard" once clicked, as egui's field does. Nothing else in R-405, R-409 or R-450 changes.
+Enter, the arrows), a click on a text field being no navigation-mode landing. R-405 says nothing contrary: it says
+"the text filter is a text field, so the keyboard layer stands aside while it holds the keyboard, as #174 built for
+every text field", and nothing about a click. Nothing else in R-405, R-409 or R-450 changes.
 
 *Applied per R-369 (routine design choices; the human may veto any, a veto being a GUI design ruling applied by a
 follow-up task):*
@@ -11678,7 +11682,18 @@ follow-up task):*
 - **B5. qa's files (R-290, forced by this ruling).** A qa assertion that a clicked search field lands in navigation mode
   asserts what R-456 changes; TASK-M6-32's qa reviewer changes it in the task's qa commit, and only it. PR #234's
   `qa_TASK-M6-32.rs` accepts either mode after a click (`check_mode_agrees`), so it may need none.
+- **B6. The scope of "elsewhere" (flagged; the orchestrator's decision in #237's fix round, code review 5558818630 F1
+  and gui review 5558817839 F1).** "Elsewhere a click lands in navigation mode" is read as: a click not on a text input
+  ends any typing and leaves the keyboard in navigation mode, and moves the keyboard's focus only where an existing
+  rule says a click does (R-450 A3's console controls). It adds no new click-moves-focus rule: a click on the Figure
+  that pins a sample (R-453) ends typing and leaves the focus where it was; a click on Copy or the log moves the focus
+  there, in navigation mode (R-450 A3); a click on a text input starts typing in it. The human may veto this reading.
+- **B7. The checks.** REQ-GUI-189's verify gains a script: a click on the search field, letters typed, then a click on
+  Copy or the log lands in navigation mode there and a letter types nothing, with a control in which typing survives
+  the click. REQ-GUI-190's verify gains a click on a text field outside the console (the Run window's, the stain
+  library's) that must start typing, with a control in which such a field needs Enter.
 - R-450 and R-409 gain forward lines (R-292, R-293).
 - R-456 is in the "design" group of `plan/rule_groups.yaml`, with R-450.
 
-Changes REQ-GUI-189 (statement, verify, rulings, note) and REQ-GUI-182 (rulings, note).
+Changes REQ-GUI-189 (statement, verify, rulings, note), REQ-GUI-190 (verify, rulings, sources, note) and REQ-GUI-182
+(rulings, note).
