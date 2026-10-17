@@ -477,7 +477,7 @@ impl Keyboard {
     }
 
     /// A click on control `id` of window `window` moves the focus onto it, in navigation mode, so the mouse and the
-    /// keyboard never disagree about where the focus is (R-450 A3). With the focus outside the window until then (the
+    /// keyboard never disagree about where the focus is (R-450 A3); a clicked text field does not type until Enter. With the focus outside the window until then (the
     /// window opened by itself, or the focus moved off it), where it was is recorded as the path it goes back to when
     /// the window closes (A2).
     pub fn focus_by_click(
@@ -495,8 +495,13 @@ impl Keyboard {
         }
         focus.path = self.tree(mode).path_to(id);
         focus.mode = KeyMode::Navigation;
-        // Typing from the keyboard ends; a text field the click focused holds the keyboard as the mouse's.
+        // Navigation mode, so nothing types (R-450 A3; §G3, R-409 G4: Enter on a text field starts typing): typing from
+        // the keyboard ends, and egui's focus, which the click gave a text field, is released, so the layer takes the
+        // keys again and the ring's orange is what they do.
         self.typing = None;
+        if let Some(id) = ctx.memory(|m| m.focused()) {
+            ctx.memory_mut(|m| m.surrender_focus(id));
+        }
         self.open_menu = None;
         self.show_menus(ctx, mode);
     }

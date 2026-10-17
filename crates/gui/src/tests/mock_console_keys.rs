@@ -583,10 +583,11 @@ fn mock_console_keys_an_empty_list_keeps_the_log_where_it_is() {
 // --- A3: a click moves the keyboard's focus; the intermittent reachability ----------------------------------------------
 
 /// The reproduction of the intermittent reachability (R-450): an error opens the console by itself, which takes no
-/// focus; the user clicks its search field and types a filter, Esc ends it, and the keys alone should then reach Copy.
-/// Before this task the layer's focus never moved into the console on a click, and a window is outside the big scopes'
-/// Tab cycle, so Tab and the arrows walked the big scopes and no key reached the search field, Copy or Clear, until
-/// Enter on the footer or Windows › Console moved the focus in ("then later I can").
+/// focus; the user clicks its search field, and the keys alone should then reach Copy. Before this task the layer's
+/// focus never moved into the console on a click (a clicked field held the keyboard as egui's), and a window is outside
+/// the big scopes' Tab cycle, so Tab and the arrows walked the big scopes and no key reached the search field, Copy or
+/// Clear, until Enter on the footer or Windows › Console moved the focus in ("then later I can"). Now the click puts
+/// the keyboard's focus on the field in navigation mode (A3): a letter types nothing, the ring orange, and → moves on.
 #[test]
 fn mock_console_keys_reproduce_the_intermittent_reachability() {
     let (mut app, mut h) = with_warnings(1);
@@ -595,13 +596,6 @@ fn mock_console_keys_reproduce_the_intermittent_reachability() {
     assert!(app.is_open(Window::Console));
     assert!(focus(&app).is_empty(), "the auto-open took no focus");
     click_scope(&mut h, &mut app, SEARCH);
-    type_text(&mut h, &mut app, "m");
-    assert_eq!(
-        app.windows.console.text, "m",
-        "the click let the field type"
-    );
-    // Esc ends the mouse's typing: the keyboard's focus is on the field, in the console.
-    press(&mut h, &mut app, Key::Escape, NONE);
     let after_click = at(&app);
     check_at(
         &after_click,
@@ -613,6 +607,20 @@ fn mock_console_keys_reproduce_the_intermittent_reachability() {
         "a click that leaves the keyboard's focus outside the console",
         || check_at(&(Vec::new(), NAV), &on_control(SEARCH), NAV, "click"),
     );
+    // Navigation mode, as the ring shows: a letter types nothing.
+    type_text(&mut h, &mut app, "m");
+    let text = app.windows.console.text.clone();
+    assert_eq!(text, "", "a clicked field typing in navigation mode");
+    rejects("a clicked field that types with the ring orange", || {
+        assert_eq!("m", "")
+    });
+    // Enter types, as on any text field (§G3, R-409 G4); Esc ends it.
+    press(&mut h, &mut app, Key::Enter, NONE);
+    check_at(&at(&app), &on_control(SEARCH), INTERACT, "Enter types");
+    type_text(&mut h, &mut app, "m");
+    assert_eq!(app.windows.console.text, "m", "typed after Enter");
+    press(&mut h, &mut app, Key::Escape, NONE);
+    check_at(&at(&app), &on_control(SEARCH), NAV, "Esc ends typing");
     press(&mut h, &mut app, Key::ArrowRight, NONE);
     check_at(&at(&app), &on_control(COPY), NAV, "→ reaches Copy");
     press(&mut h, &mut app, Key::Enter, NONE);

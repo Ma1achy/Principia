@@ -287,7 +287,7 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
                     .desired_width(240.0),
             );
             keys.place(SEARCH, &text);
-            if text.clicked() {
+            if text.clicked() || text.drag_started() {
                 acts.push(Act::Focus(SEARCH));
             }
             if text.changed() {
