@@ -110,3 +110,15 @@ justification = "a.e > b.e and a.e == b.e exclude each other, so the two operand
 [[equivalent]]
 mutant = "crates/kernel/src/canon.rs:342:10: replace < with <= in mirror_decision"
 justification = "c.m is ±0 only for c = 0, at the zero exponent, so left = m2*c^2 is 0 at the least exponent and wide_greater(left, right) is false: the mirror is not taken either way"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/trajectory.rs:780:32: replace * with / in orbit_input"
+justification = "ORBIT_DEG_PER_POINT is 1.0, and x * 1.0 == x / 1.0 for every f64 x"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/trajectory.rs:781:32: replace * with / in orbit_input"
+justification = "ORBIT_DEG_PER_POINT is 1.0, and x * 1.0 == x / 1.0 for every f64 x"
+
+[[equivalent]]
+mutant = "crates/gui/src/keyboard/scopes.rs:349:23: replace > with >= in ScopeTree::remove"
+justification = "remove_children has already removed every node whose parent is the removed index i, so no parent equals i and > and >= agree"

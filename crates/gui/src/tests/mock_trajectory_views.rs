@@ -197,6 +197,26 @@ fn mock_trajectory_views_pan_and_zoom_state() {
         close(zoomed.centre[0], 0.05),
         "half the span zoomed in once"
     );
+    // Zoomed in an octave, a point 1.5 half-widths out is 0.75 of the drawing out, and a drag of 1.5 half-widths moves
+    // the centre by 0.75 of the drawing, on each axis.
+    let z1 = PanZoom {
+        centre: [0.1, -0.2],
+        zoom: 1.0,
+    };
+    let u = z1.unapply([1.5, -1.25]);
+    assert!(close(u[0], 0.85) && close(u[1], -0.825), "{u:?}");
+    let mut d = z1;
+    d.drag([1.5, -1.25]);
+    assert!(
+        close(d.centre[0], -0.65) && close(d.centre[1], 0.425),
+        "{:?}",
+        d.centre
+    );
+    rejects("a drag that ignores the zoom", || {
+        let mut e = PanZoom::default();
+        e.drag([1.5, -1.25]);
+        assert!(close(e.centre[0] + 0.1, -0.65))
+    });
 }
 
 #[test]
@@ -553,6 +573,19 @@ fn mock_trajectory_views_adjust_and_zoom_reach_only_the_views() {
     assert!(s.turn);
     trajectory::zoom_view(TRAJECTORY, 1.0, &mut s);
     assert_eq!(s.views_of(Tab::UnderCursor), Views::default());
+    // The unwrapped view shown, an Angle step on the sphere's place orbits nothing: it is the unwrapped view's.
+    s.unwrapped = true;
+    trajectory::adjust(
+        &adjust(SPHERE_VIEW, StepKind::Angle, Direction::Right),
+        10.0,
+        &mut s,
+    );
+    assert_eq!(s.views_of(Tab::UnderCursor), Views::default());
+    assert!(
+        s.turn,
+        "an orbit the unwrapped view does not take leaves turn"
+    );
+    s.unwrapped = false;
     // The zoom keys' presses: + and = in, − out, with the modifiers' multiples, releases ignored.
     let key = |key, pressed, modifiers| Event::Key {
         key,
@@ -630,10 +663,12 @@ fn mock_trajectory_views_the_inspector_panes_take_the_pointer() {
     };
     let (real, sphere) = (rect_of(&app, 2), rect_of(&app, 1));
     drag(&mut h, &mut app, real.center(), vec2(12.0, 0.0));
-    assert_ne!(
-        app.windows.inspector.views.real,
-        PanZoom::default(),
-        "pane 3 panned"
+    // Pane 3 is square: its half-width is half its side.
+    let want = -f64::from(12.0 / (real.width() / 2.0));
+    let got = app.windows.inspector.views.real.centre;
+    assert!(
+        close(got[0], want) && got[1] == 0.0,
+        "{got:?}, not [{want}, 0]"
     );
     assert!(app.windows.inspector.turn);
     drag(&mut h, &mut app, sphere.center(), vec2(8.0, 0.0));
@@ -647,6 +682,17 @@ fn mock_trajectory_views_the_inspector_panes_take_the_pointer() {
     );
     double_click(&mut h, &mut app, real.center());
     assert_eq!(app.windows.inspector.views.real, PanZoom::default());
+    // Pane 2 unwrapped pans by its own half-widths.
+    app.windows.inspector.unwrapped = true;
+    let _ = h.frame(&mut app, Vec::new());
+    let flat = rect_of(&app, 1);
+    drag(&mut h, &mut app, flat.center(), vec2(10.0, -8.0));
+    let got = app.windows.inspector.views.unwrapped.centre;
+    let (hx, hy) = (flat.width() / 2.0, flat.height() / 2.0);
+    assert!(
+        close(got[0], -f64::from(10.0 / hx)) && close(got[1], f64::from(8.0 / hy)),
+        "{got:?}"
+    );
     rejects("a pane that only paints", || {
         assert_eq!(app.windows.inspector.views.sphere, Orbit::default())
     });
