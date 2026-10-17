@@ -294,8 +294,8 @@ fn payload(rows: &[Row], lane: &dyn Fn(&Row) -> bool) -> Synthetic {
     set
 }
 
-/// The field as REQ-COL-102 defines it: the chart's classification of the row's point.
-fn chart_lane(r: &Row) -> bool {
+/// The validity lane's `forbidden` as REQ-COL-102 defines it: the chart's classification of the row's point.
+fn validity_lane(r: &Row) -> bool {
     classified(r.at)
 }
 
@@ -435,7 +435,7 @@ type Which = fn(&Row) -> bool;
 fn failures_event(which: Which, colour: Option<String>, lane: &dyn Fn(&Row) -> bool) {
     let h = gpu();
     let rows = rows();
-    check_lane(&rows, &chart_lane);
+    check_lane(&rows, &validity_lane);
     let set = payload(&rows, lane);
     let mode = colour.map_or_else(event, event_with);
     let image = render(&h, &set, rows.len(), &mode, &defaults);
@@ -459,7 +459,7 @@ fn state_is(r: &Row, state: u32) -> bool {
 
 #[test]
 fn outcome_view_failures_render_black_or_the_hatch() {
-    failures_event(every, None, &chart_lane);
+    failures_event(every, None, &validity_lane);
 }
 
 negative_control!(
@@ -472,13 +472,13 @@ negative_control!(
             "if (ctx.validity.forbidden) {",
             "if (ctx.sample.state == STATE_DECODE_FAILED && ctx.sample.detail == 1u) {",
         )),
-        &chart_lane,
+        &validity_lane,
     )
 );
 
 #[test]
 fn outcome_view_failures_running_not_stippled() {
-    failures_event(|r| state_is(r, RUNNING), None, &chart_lane);
+    failures_event(|r| state_is(r, RUNNING), None, &validity_lane);
 }
 
 negative_control!(
@@ -492,13 +492,13 @@ negative_control!(
             "    if (s == STATE_RUNNING) { return debug_not_yet(ctx.frag_xy); }\n    \
              return select(uniforms.bounded, uniforms.oklab_bounded, v);",
         )),
-        &chart_lane,
+        &validity_lane,
     )
 );
 
 #[test]
 fn outcome_view_failures_sim_failed_not_hatched() {
-    failures_event(|r| state_is(r, STATE_SIM_FAILED), None, &chart_lane);
+    failures_event(|r| state_is(r, STATE_SIM_FAILED), None, &validity_lane);
 }
 
 negative_control!(
@@ -512,13 +512,13 @@ negative_control!(
             "    if (s == STATE_SIM_FAILED) { return debug_invalid(ctx.frag_xy); }\n    \
              return select(uniforms.bounded, uniforms.oklab_bounded, v);",
         )),
-        &chart_lane,
+        &validity_lane,
     )
 );
 
 #[test]
 fn outcome_view_failures_decode_failed_not_white() {
-    failures_event(|r| state_is(r, STATE_DECODE_FAILED), None, &chart_lane);
+    failures_event(|r| state_is(r, STATE_DECODE_FAILED), None, &validity_lane);
 }
 
 negative_control!(
@@ -532,7 +532,7 @@ negative_control!(
             "    if (s == STATE_DECODE_FAILED) { return vec3<f32>(1.0, 1.0, 1.0); }\n    \
              return select(uniforms.bounded, uniforms.oklab_bounded, v);",
         )),
-        &chart_lane,
+        &validity_lane,
     )
 );
 
@@ -543,7 +543,7 @@ fn decoder_rows(r: &Row) -> bool {
 
 #[test]
 fn outcome_view_failures_field_not_from_the_decoder() {
-    failures_event(decoder_rows, None, &chart_lane);
+    failures_event(decoder_rows, None, &validity_lane);
 }
 
 negative_control!(
@@ -553,7 +553,7 @@ negative_control!(
     {
         let from_tags = |r: &Row| match r.at {
             At::Decoder(case) => case != Case::NonFinite,
-            _ => chart_lane(r),
+            _ => validity_lane(r),
         };
         failures_event(decoder_rows, None, &from_tags)
     }
@@ -603,14 +603,14 @@ fn failures_ranked(lane: &dyn Fn(&Row) -> bool) {
 
 #[test]
 fn outcome_view_failures_rank_zero_in_every_mode() {
-    failures_ranked(&chart_lane);
+    failures_ranked(&validity_lane);
 }
 
 negative_control!(
     outcome_view_failures_rank_zero_in_every_mode,
     "a field set from the decoder's tags hatches the tagged samples in greyscale too, and fails",
     expected = "greyscale: decoder case (5, 0, 0) at Decoder(Unscalable)",
-    failures_ranked(&|r: &Row| matches!(r.at, At::Decoder(_)) || chart_lane(r))
+    failures_ranked(&|r: &Row| matches!(r.at, At::Decoder(_)) || validity_lane(r))
 );
 
 /// Checks the CPU twin `shown` (`render::colour::outcome::shown`): every `state` code 0 to 7 and `detail` 0 to 3, the
@@ -647,7 +647,7 @@ fn check_twin(shown: &dyn Fn(u32, u32, bool) -> Shown) {
             Want::Hatch => Shown::Forbidden,
         };
         assert_eq!(
-            shown(state, detail, chart_lane(&r)),
+            shown(state, detail, validity_lane(&r)),
             want,
             "{} {:?} at {:?}",
             r.name,
@@ -917,7 +917,7 @@ impl VariantScene {
     fn new() -> Self {
         let h = gpu();
         let rows = variant_rows();
-        let set = payload(&rows, &chart_lane);
+        let set = payload(&rows, &validity_lane);
         let probe = render(
             &h,
             &set,
