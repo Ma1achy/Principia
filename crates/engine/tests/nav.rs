@@ -32,7 +32,9 @@ use kernel::chart::{Chart as _, Latent as LatentChart};
 use kernel::decode::descriptor::{kinetic, potential};
 use kernel::decode::latent::Latent as Controls;
 use kernel::decode::{decode, invariant};
-use kernel::generated::links::{Defaults, Link, SigmoidQ, SoftmaxTanh};
+use kernel::generated::links::{
+    Defaults, Link, Select, SigmoidAlpha, SigmoidBeta, SigmoidQ, SoftmaxTanh, StickBreaking,
+};
 use validation::negative_control;
 
 /// `ê_k`.
@@ -845,6 +847,98 @@ negative_control!(
     )
 );
 
+/// The mass selection a stick-breaking link makes, the rest the defaults.
+type StickSelection =
+    Select<StickBreaking, SigmoidAlpha, SigmoidBeta, SigmoidQ, SigmoidQ, SigmoidQ, SigmoidQ>;
+
+/// Under `S`, the mass line from `z` ends at equal masses.
+fn check_mass_line<S: kernel::generated::links::Selection>(z: &Latent) {
+    let d = mass_away_from_burrau::<S>(z).expect("d_m");
+    let start = <S::MassLink as Link<2, 3>>::forward([z[6], z[7]]);
+    let length = {
+        let eq = <S::MassLink as Link<2, 3>>::inverse([1.0 / 3.0; 3]);
+        ((eq[0] - z[6]).powi(2) + (eq[1] - z[7]).powi(2)).sqrt()
+    };
+    let end = <S::MassLink as Link<2, 3>>::forward([z[6] + length * d[6], z[7] + length * d[7]]);
+    for mi in end {
+        assert!(
+            (mi - 1.0 / 3.0).abs() <= 1e-12,
+            "the line ends at the masses {end:?}, from {start:?}"
+        );
+    }
+}
+
+#[test]
+fn named_directions_mass_line_reaches_equal_masses_under_any_mass_link() {
+    check_mass_line::<Defaults>(&burrau_centre());
+    check_mass_line::<StickSelection>(&[0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.7, -0.4]);
+}
+
+negative_control!(
+    named_directions_mass_line_reaches_equal_masses_under_any_mass_link,
+    "the line along the energy direction does not reach equal masses",
+    expected = "the line ends at the masses",
+    {
+        let z = burrau_centre();
+        let d = energy_at_fixed_lz::<Defaults>(&z).expect("d_E");
+        let end = <SoftmaxTanh as Link<2, 3>>::forward([z[6] + d[6], z[7] + d[7]]);
+        for mi in end {
+            assert!(
+                (mi - 1.0 / 3.0).abs() <= 1e-12,
+                "the line ends at the masses {end:?}"
+            );
+        }
+    }
+);
+
+/// The centre at the configuration control `z_alpha` whose momenta are the `(L_z, K)` construction's with `seed`, and
+/// the latent chord from the same construction at `K_min` to it, normalised: its momentum direction off the rotation.
+fn seeded_centre(z_alpha: f64, seed: invariant::Seed, lz: f64, k: f64) -> (Latent, Latent) {
+    let mut z = burrau_centre();
+    z[0] = z_alpha;
+    let d = decode::<Defaults, f64>(&Controls::new(z));
+    let controls = |kk: f64| {
+        let c = invariant::construct_seeded(&d.masses, &d.config, seed, lz, kk);
+        let m = d.masses.m;
+        let q = [
+            (m[0] * c.p[1][0] - m[1] * c.p[0][0]) / d.masses.m01,
+            (m[0] * c.p[1][1] - m[1] * c.p[0][1]) / d.masses.m01,
+            c.p[2][0],
+            c.p[2][1],
+        ];
+        q.map(|qk| <SigmoidQ as Link<1, 1>>::inverse([qk])[0])
+    };
+    let (at, rotation) = (controls(k), controls(lz * lz / 2.0));
+    z[2..6].copy_from_slice(&at);
+    let mut chord = [0.0; 8];
+    for i in 0..4 {
+        chord[2 + i] = at[i] - rotation[i];
+    }
+    (z, scale(&chord, 1.0 / norm(&chord)))
+}
+
+#[test]
+fn named_directions_energy_near_the_rotation_is_the_velocity_off_it() {
+    // (K − K_min)/K = 10⁻⁹ > ε_w, so the field is δv, here along the seed (0, λ), not the decoded seed (ρ, 0).
+    let (lz, k_min) = (0.05, 0.05 * 0.05 / 2.0);
+    let (z, off) = seeded_centre(-0.4, invariant::Seed::Lambda, lz, k_min * (1.0 + 1e-9));
+    let d = energy_at_fixed_lz::<Defaults>(&z).expect("d_E");
+    check_seed_direction(&d, &off);
+}
+
+negative_control!(
+    named_directions_energy_near_the_rotation_is_the_velocity_off_it,
+    "the decoded seed's direction is not δv there",
+    expected = "is not the construction's seed direction",
+    {
+        let (lz, k_min) = (0.05, 0.05 * 0.05 / 2.0);
+        let (z, _) = seeded_centre(-0.4, invariant::Seed::Lambda, lz, k_min * (1.0 + 1e-9));
+        let (_, rho) = seeded_centre(-0.4, invariant::Seed::Rho, lz, k_min * (1.0 + 1e-9));
+        let d = energy_at_fixed_lz::<Defaults>(&z).expect("d_E");
+        check_seed_direction(&d, &rho);
+    }
+);
+
 /// One step of the persistence sweep: `after` keeps `before`'s anchor `z(½,½)` exactly and its non-source vector.
 fn check_anchor_kept(before: &Plane, after: &Plane) {
     assert_eq!(ic(after, 0.5, 0.5), before.z0, "the anchor moved");
@@ -908,6 +1002,11 @@ fn named_directions_morph_source_is_the_configuration_direction() {
     let mixed: Latent = [0.6, 0.0, 0.8, 0.0, 0.0, 0.0, 0.0, 0.0];
     assert_eq!(morph_source(&plane(mixed, e(1))), Ok(BasisVector::Q2));
     assert_eq!(morph_source(&plane(e(1), mixed)), Ok(BasisVector::Q1));
+    // The share is of each vector's own length: a long, mostly momentum q₁ against a short configuration q₂.
+    assert_eq!(
+        morph_source(&plane(scale(&mixed, 2.0), scale(&e(1), 0.5))),
+        Ok(BasisVector::Q2)
+    );
     assert_eq!(
         morph_source(&plane(e(2), e(6))),
         Err(NavError::NoConfiguration)
