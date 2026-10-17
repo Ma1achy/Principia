@@ -78,23 +78,34 @@ impl<R: Real> PairGeom<R> {
         self.cube
     }
 
-    /// The closest pair's R-22 id: the least `d²`, the lowest pair id of a tie. A comparison of `d²`, not of `‖·‖` (Part 2c rule
-    /// 2), folded from pair 0 rather than from an infinity (rule 4).
+    /// The closest pair's R-22 id: the least `d²`, the lowest pair id of a tie. A comparison of `d²`, not of `‖·‖`
+    /// (Part 2c rule 2), from pair 0 rather than from an infinity (rule 4), with constant indices only: rust-gpu bounds
+    /// checks a runtime index with a multi-level exit (gpu_determinism_note § "The discipline", rule 5).
     #[inline]
     pub fn closest(&self) -> usize {
-        let mut k = 0;
-        if self.d2[1] < self.d2[k] {
-            k = 1;
+        let [d0, d1, d2] = self.d2;
+        if d1 < d0 {
+            if d2 < d1 {
+                2
+            } else {
+                1
+            }
+        } else if d2 < d0 {
+            2
+        } else {
+            0
         }
-        if self.d2[2] < self.d2[k] {
-            k = 2;
-        }
-        k
     }
 
-    /// `r_min`, the least pairwise distance: the closest pair's `‖dₖ‖`, read from this geometry, not recomputed.
+    /// `r_min`, the least pairwise distance: the closest pair's `‖dₖ‖`, read from this geometry, not recomputed, and
+    /// selected by constant index.
     #[inline]
     pub fn r_min(&self) -> R {
-        self.norm[self.closest()]
+        let [n0, n1, n2] = self.norm;
+        match self.closest() {
+            0 => n0,
+            1 => n1,
+            _ => n2,
+        }
     }
 }
