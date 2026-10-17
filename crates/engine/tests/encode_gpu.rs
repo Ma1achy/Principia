@@ -10,9 +10,10 @@
 //!   CPU-f32's, the angles and the decoded state against CPU-f64's), the notices identical, and `lookup_clamped` set, the
 //!   encode clamp flag (R-133; REQ-DEC-014).
 //!
-//! **Tolerances** (applied per R-369, a test decision): `z` and the angles agree across backends to a multiple of f32's
-//! epsilon over `1 + |z|`, set from the worst case measured and printed, with headroom: WGSL's `atan2`, `log` and `√`
-//! are not correctly rounded, so the backends' last bits can differ; the selects and notices are compared exactly.
+//! **Tolerances** (applied per R-369, a test decision): `z` and the angles agree across backends to [`AGREE_EPS`] f32
+//! eps over `1 + |z|`, set from the worst case measured on Metal and lavapipe, each printed with its backend, with
+//! headroom: WGSL's `atan2`, `log` and `√` are not correctly rounded, so the backends' last bits can differ; the selects
+//! and notices are compared exactly.
 //! Against CPU-f64, the comparison is in physical units (dd_encode §3.5; [`check_physical`]).
 //!
 //! **Domain** (pitfalls §10): encode alone, on states held fixed; no trajectory.
@@ -61,8 +62,19 @@ fn narrow(ic: &Ic<f64>) -> Ic<f32> {
 
 const EPS32: f64 = f32::EPSILON as f64;
 
-/// The cross-backend limit on `z` and the angles, in f32 eps over `1 + |x|`.
-const AGREE_EPS: f64 = 16.0;
+/// The cross-backend limit on `z`, the angles and the decoded state, in f32 eps over `1 + |x|` (R-85, R-110; applied per
+/// R-369, a test tolerance). Measured worst, each backend's whole run, by [`Worst::check`]'s print:
+/// - Metal: 0.5 (`encode_beta_half_axis`) and 1.3 (`encode_exact_poles`) on an Apple M3 Pro, locally; 2.0 and 1.7 on
+///   CI's Apple Paravirtual device (`gpu-metal`, run 38972849213).
+/// - lavapipe: 21.1 (output 0, `z_α`, at the half-axis states) and 22.4 (output 1, `z_β`, at the turned `‖ρ̃‖ = 0` pole,
+///   `β = π/4`) on llvmpipe, LLVM 20.1.2 (`gpu-lavapipe`, runs 38972849213 and 38977653340; first seen failing 16 in
+///   jobs 117191742262 and 117191741963).
+///
+/// 64 is about 2.9 times lavapipe's 22.4. WGSL's own accuracy bounds these states only at about `3.9·10³` eps (`z_α`,
+/// `atan2`'s 4096 ULP) and `1.7·10³` (`z_β` at `π/4`), so the limit is the measured spread, not the spec. The failures
+/// these tests target are far past it: `−π` for `π̂` moves `z_β` by `2·logit(1 − ε_z) ≈ 27.6`, about `10⁸` eps; the
+/// selects and notices are compared exactly.
+const AGREE_EPS: f64 = 64.0;
 
 /// One encode's comparable outputs at any precision: `z`, `α`, `β`, and the notices `(coincident, clamped controls,
 /// mirrored)`.
