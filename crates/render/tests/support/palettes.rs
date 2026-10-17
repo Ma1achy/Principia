@@ -72,19 +72,23 @@ pub fn hex(h: u32) -> Rgb {
     present::srgb8([(h >> 16) as u8, (h >> 8) as u8, h as u8])
 }
 
-/// Every finite palette the hatch must not collide with, as linear RGB: the outcome palette (colour_composition §1.4),
-/// with the two triple outcomes' proposed swatches (REQ-COL-062, `#D6A1FF` and `#000097`; the rerun RQ-234 asks for)
-/// and the running grey (REQ-COL-053, `#4E4E4E`), the `dbg_*` palettes (Okabe–Ito, the flag pair), every LUT of
-/// colour_composition §7.1 (Viridis, Cividis, Plasma, Magma, Inferno, Twilight, Cool-warm, Principia, Cubehelix and
-/// Turbo; R-16, R-139) as its ramp draws it, and the grey ramp and the OKLCH hue circle the hue wheel and the golden
-/// angle draw from, sampled finely.
+/// The outcome palette's entries, 8-bit sRGB, as colour_composition §1.4 gives them (R-444, R-445, R-447): the nine
+/// swatches of the sRGB palette, then the eight chromatic swatches of the OKLab-uniform variant, whose bounded is the
+/// sRGB palette's `#141418`.
+pub const OUTCOME: [u32; 17] = [
+    0x141418, 0xDE2D2D, 0x2EBC4E, 0x3462E0, 0xF29620, 0xF0DE32, 0xE034C6, 0x30C8DC, 0x611597,
+    0xE7857A, 0x6EB976, 0x7FA2F2, 0xD99349, 0xB3A841, 0xD486C3, 0x09B9CD, 0xB790E2,
+];
+
+/// Every finite palette the hatch must not collide with, as linear RGB: the outcome palette's two sets (colour_composition
+/// §1.4, [`OUTCOME`]: R-444, R-445, R-447) and the "not yet" grey (REQ-COL-053, `#4E4E4E`), the `dbg_*` palettes
+/// (Okabe–Ito, the flag pair), every LUT of colour_composition §7.1 (Viridis, Cividis, Plasma, Magma, Inferno, Twilight,
+/// Cool-warm, Principia, Cubehelix and Turbo; R-16, R-139) as its ramp draws it, and the grey ramp and the OKLCH hue
+/// circle the hue wheel and the golden angle draw from, sampled finely.
 pub fn entries() -> Vec<(String, Rgb)> {
     let mut out = Vec::new();
-    let outcome = [
-        0xDE2D2D, 0x2EBC4E, 0x3462E0, 0x141418, 0xECECF0, 0xF0DE32, 0xE034C6, 0x30C8DC, 0xF29620,
-        0xD6A1FF, 0x000097, 0x4E4E4E,
-    ];
-    out.extend(outcome.map(|h| (format!("outcome #{h:06X}"), hex(h))));
+    out.extend(OUTCOME.map(|h| (format!("outcome #{h:06X}"), hex(h))));
+    out.push(("not yet grey #4E4E4E".to_owned(), hex(0x4E4E4E)));
     out.extend((0..8).map(|i| (format!("Okabe–Ito {i}"), present::dbg_cat(i, 8))));
     out.extend([true, false].map(|b| (format!("dbg_flag({b})"), present::dbg_flag(b))));
     out.extend(sampled("viridis", &present::viridis_stops()));

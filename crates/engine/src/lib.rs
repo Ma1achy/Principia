@@ -57,6 +57,11 @@ pub mod stain;
 /// structural sets of quad metadata (TASK-M1-13).
 pub mod synthetic;
 
+/// The samples' chart classification, CPU-side: whether chart_decoder_contract Part 3 hatches a sample's chart point
+/// as forbidden, from the chart's `validate` and `Chart::map`, which the outcome view reads as `ctx.chart.forbidden`
+/// (REQ-COL-102; R-26, R-446; TASK-M2-32).
+pub mod chart_class;
+
 /// The named synthetic fixture set, written into a synthetic set for the accessor tests and the `m1-synthetic` golden
 /// suite: a set state, a known escaper, a ramp in the energy drift, a bitwise-adversarial descriptor and forced
 /// failures (debug tooling plan, "Principle"; TASK-M1-14).

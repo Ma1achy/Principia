@@ -19,7 +19,9 @@
 //! sample's quad-local coordinate and quad as `ctx.quad.uv`, `ctx.quad.centre` and `ctx.quad.half_width`
 //! (colour_composition §3's lanes; deep_zoom §1's c and h), which `shade_at`'s caller fills from the raster and the
 //! per-quad frames (TASK-M1-07); its quad's `RenderQuad` metadata as the rest of `ctx.quad` (`ctx.quad.depth`,
-//! `ctx.quad.state`, …), and its within-tile coordinate as `ctx.tile.uv` (TASK-M1-13; RQ-238).
+//! `ctx.quad.state`, …), its within-tile coordinate as `ctx.tile.uv` (TASK-M1-13; RQ-238), and its sample's chart
+//! classification as `ctx.chart.forbidden`, which `shade_at`'s caller fills from the chart, CPU-side (REQ-COL-102;
+//! TASK-M2-32).
 //!
 //! **Identity** (render_gui_spec §13; colour_composition §4.1): a node whose occupant is None, or one of whose field
 //! inputs is absent, is the identity. A colour None gives the combiner white, so the combiner gives the greyscale of
@@ -1046,8 +1048,9 @@ fn label(occupant: &Occupant) -> String {
 }
 
 /// `shade(ctx)`, which walks the graph in backbone order: the sources, the colour and the brightness, the combiner,
-/// the post chain, `OUT`; `shade_at`, which reads sample `i` into a context with its screen, quad and tile lanes and
-/// shades it; and `shade_sample`, the same with those lanes absent (the absence NaN), for a pass that places no quad.
+/// the post chain, `OUT`; `shade_at`, which reads sample `i` into a context with its screen, quad, tile and chart lanes
+/// and shades it; and `shade_sample`, the same with the screen, quad and tile lanes absent (the absence NaN) and the
+/// chart lane unclassified, no sample forbidden, for a pass that places no quad (REQ-COL-102).
 fn shade(
     stain: &Stain,
     sources: &[usize],
@@ -1090,9 +1093,9 @@ fn shade(
     out.push_str(
         "    return out; // OUT\n}\n\n\
          // Sample `i` read through the generated read side into a context at pixel `frag_xy`, its `ICDescriptor` too\n\
-         // (`ctx.ic`, only the members the stain reads), with its screen, quad and tile lanes, and shaded. The read\n\
-         // side's arguments are its own (`ledger::gen::read`); `has_ensemble` is the prelude's uniform (R-145).\n\
-         fn shade_at(i: u32, frag_xy: vec2<f32>, screen: CtxScreen, quad: CtxQuad, tile: CtxTile, ensemble_spread: f32, masses: vec3<f32>, params: ReadParams) -> vec3<f32> {\n    \
+         // (`ctx.ic`, only the members the stain reads), with its screen, quad, tile and chart lanes, and shaded. The\n\
+         // read side's arguments are its own (`ledger::gen::read`); `has_ensemble` is the prelude's uniform (R-145).\n\
+         fn shade_at(i: u32, frag_xy: vec2<f32>, screen: CtxScreen, quad: CtxQuad, tile: CtxTile, chart: CtxChart, ensemble_spread: f32, masses: vec3<f32>, params: ReadParams) -> vec3<f32> {\n    \
          var ctx: Ctx;\n    \
          ctx.sample = sample_read(i, ensemble_spread, has_ensemble(), masses, params);\n    \
          ctx.ic = ic_read(i);\n    \
@@ -1100,14 +1103,15 @@ fn shade(
          ctx.screen = screen;\n    \
          ctx.quad = quad;\n    \
          ctx.tile = tile;\n    \
+         ctx.chart = chart;\n    \
          ctx.params = params;\n    \
          return shade(ctx);\n}\n\n\
          // Sample `i` shaded at pixel `frag_xy` where no raster places it in a target, a quad and a tile: its screen,\n\
          // quad and tile lanes hold the absence NaN, the canonical quiet NaN (`is_absent_nan`), each u32 member its\n\
-         // bits (`ctx_quad_absent`, `ctx_tile_absent`).\n\
+         // bits (`ctx_quad_absent`, `ctx_tile_absent`), and no chart classification reaches it (`ctx_chart_unclassified`).\n\
          fn shade_sample(i: u32, frag_xy: vec2<f32>, ensemble_spread: f32, masses: vec3<f32>, params: ReadParams) -> vec3<f32> {\n    \
          let absent = vec2<f32>(bitcast<f32>(0x7fc00000u));\n    \
-         return shade_at(i, frag_xy, CtxScreen(absent), ctx_quad_absent(), ctx_tile_absent(), ensemble_spread, masses, params);\n}\n",
+         return shade_at(i, frag_xy, CtxScreen(absent), ctx_quad_absent(), ctx_tile_absent(), ctx_chart_unclassified(), ensemble_spread, masses, params);\n}\n",
     );
     out
 }
