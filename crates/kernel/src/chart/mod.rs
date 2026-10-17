@@ -2,7 +2,10 @@
 //! a chart is a map `Φ : [0,1]² → Y` into a chart space, followed by the shared decoder `D` and canonicaliser `C`.
 //! Every chart feeds the same `D ∘ C`, so adding a chart means adding a `Φ` and nothing else (REQ-CHART-003,
 //! REQ-CHART-015): no chart module holds a mass, configuration or momentum decode formula, an integrator or a
-//! renderer. [`decode()`] is `D ∘ Φ` through the shared [`mod@crate::decode`], whose output is the canonical `(m, r, p)`.
+//! renderer. [`decode()`] is `D ∘ Φ` through the shared [`mod@crate::decode`], whose output is the canonical `(m, r, p)`
+//! for a chart that hands the decoder latent controls; a chart that sets the configuration explicitly ([`ShapeSphere`])
+//! runs the same blocks through [`Chart::decode`], then `C`, so its output is canonical too. Every `D ∘ Φ` entry, this
+//! one and `energy_norm::decode_chart`, goes through [`Chart::decode`].
 //!
 //! **The trait** ([`Chart`]; R-26, R-118): `map`, `Φ`, generic over the float type, so the one source is monomorphised
 //! as the f32 kernel and the f64 CPU reference; `forbids_energy_normalisation` (R-25); `name`, which every dump header
@@ -10,9 +13,9 @@
 //! (inverse_encode_contract § "Chart-aware validation"), whose variants chart_reference §5.1 defines (R-72,
 //! REQ-CHART-043).
 //!
-//! **The charts, in chart_reference §5.1's order** (REQ-CHART-029): [`Latent`] (`latent`), then `ShapeSphere`,
-//! [`Burrau`] and the [`EuclidPlane`] (`burrau`), [`InvariantLE`] / [`InvariantLK`] (`invariant`) and `MassSimplex`,
-//! each a `Φ` beside it.
+//! **The charts, in chart_reference §5.1's order** (REQ-CHART-029): [`Latent`] (`latent`), then [`ShapeSphere`]
+//! (`shape_sphere`), [`Burrau`] and the [`EuclidPlane`] (`burrau`), [`InvariantLE`] / [`InvariantLK`] (`invariant`)
+//! and `MassSimplex`, each a `Φ` beside it.
 //!
 //! **Axis metadata and the statistics guard** ([`AxisMeta`], [`admit_statistic`]; chart_decoder_contract Part 5): an
 //! axis declares the decoder blocks it writes and whether it is annotation-only. A chart with an annotation axis is a
@@ -32,6 +35,7 @@
 pub mod burrau;
 pub mod invariant;
 pub mod latent;
+pub mod shape_sphere;
 
 use core::fmt;
 
@@ -40,6 +44,7 @@ use spirv_std::num_traits::Float;
 pub use burrau::{Burrau, EuclidPlane};
 pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;
+pub use shape_sphere::{ShapeMap, ShapeSphere};
 
 use crate::decode::{self, Decoded};
 use crate::generated::links::{LinkReal, Selection};
@@ -129,6 +134,19 @@ pub trait Chart {
     /// The chart's domain function (R-26), a CPU-side f64 check: inverse_encode_contract § "Chart-aware validation"'s
     /// layers 2 and 3 at `(u, v)`.
     fn validate(&self, u: f64, v: f64) -> ValidationResult;
+
+    /// `D ∘ Φ` at `(u, v)` under the link selection `S`, through the shared decoder. By default the latent controls
+    /// `map` hands over, decoded by the shared [`mod@crate::decode`]; a chart whose output those controls cannot carry,
+    /// an explicit configuration, overrides it with the same shared blocks ([`ShapeSphere`]).
+    #[inline]
+    fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        Self: Sized,
+        S: Selection,
+        R: LinkReal + PayloadReal + From<Self::Param>,
+    {
+        decode::decode::<S, R>(&self.map(u, v).z)
+    }
 }
 
 /// `D ∘ Φ` at `(u, v)` under the link selection `S`: the chart's output through the shared decoder, which no chart
@@ -140,7 +158,7 @@ where
     R: LinkReal + PayloadReal + From<C::Param>,
     C: Chart,
 {
-    decode::decode::<S, R>(&chart.map(u, v).z)
+    chart.decode::<S, R>(u, v)
 }
 
 /// A chart's decode, `D ∘ Φ` at `(u, v)` under the link selection `S`, through the shared blocks (REQ-CHART-015): the
@@ -208,14 +226,15 @@ impl<P: Copy> ChartDecode for EuclidPlane<P>
 where
     f64: From<P>,
 {
-    /// [`burrau::decode_plane`]: the Burrau system at `ν(v)`, at rest; `u` is not read.
+    /// The chart's own [`Chart::decode`], [`burrau::decode_plane`]: the Burrau system at `ν(v)`, at rest; `u` is not
+    /// read.
     #[inline]
-    fn decode_at<S, R>(&self, _u: R, v: R) -> Decoded<R>
+    fn decode_at<S, R>(&self, u: R, v: R) -> Decoded<R>
     where
         S: Selection,
         R: LinkReal + PayloadReal + invariant::WarpReal + From<P>,
     {
-        burrau::decode_plane(self, v)
+        Chart::decode::<S, R>(self, u, v)
     }
 }
 

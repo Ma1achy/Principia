@@ -31,7 +31,7 @@ use kernel::burrau::{
 };
 use kernel::canon;
 use kernel::chart::burrau::{
-    acute_angle, decode, decode_plane, embed, seed, BurrauBlocks, LatticePoint, Momenta,
+    acute_angle, decode, decode_plane, embed, seed, LatticePoint, RestBlocks,
 };
 use kernel::chart::invariant::WarpReal;
 use kernel::chart::Axis;
@@ -129,10 +129,7 @@ fn largest(a: &[f64], b: &[f64]) -> f64 {
 
 /// The decode of `system` at rest, through the shared blocks.
 fn at_rest<R: Q>(system: System<R>) -> Decoded<R> {
-    decode_with(
-        &mut BurrauBlocks::new(system, Momenta::Rest),
-        &Latent::new([R::zero(); 8]),
-    )
+    decode_with(&mut RestBlocks::new(system), &Latent::new([R::zero(); 8]))
 }
 
 // ── burrau_euclid (REQ-CHART-021) ───────────────────────────────────────────────────────────────────────────────
@@ -1058,6 +1055,12 @@ fn check_ignores_m(dec: PlaneDecode<f64>) {
 #[test]
 fn annotation_axis_ignored() {
     check_ignores_m(plane_decode);
+    // `chart::decode`, through the chart's own `Chart::decode`, is the plane's decode too.
+    check_ignores_m(kernel::chart::decode::<Defaults, f64, EuclidPlane<f64>>);
+    assert_eq!(
+        kernel::chart::decode::<Defaults, f64, _>(&plane::<f64>(), 0.7, 0.5),
+        decode_plane(&plane::<f64>(), 0.5)
+    );
     assert_eq!(plane::<f64>().map(0.1, 0.2), plane::<f64>().map(0.9, 0.2));
 }
 

@@ -1,0 +1,9 @@
+{
+  "description": "Φ alone (R-178): 200 000 random samples, masses on z_μ ∈ [−4, 4]², I ∈ [1/4, 4], φ_f ∈ [−π, π], half from the spherical map on [0, 1]² (both hemispheres), half from the exponential map about random frames, extent up to π; 4096 draws about each of n₀ = ±1 at polar radii 10⁻² to 10⁻¹⁵; and 64 draws at each of the eight poles (±1, ±0, ±0), R-437's ψ = φ_f.",
+  "seed": 1,
+  "samples": 200000,
+  "near_pole_samples": 4096,
+  "pole_samples": 64,
+  "inverse": "closed_form",
+  "expected": "pass"
+}

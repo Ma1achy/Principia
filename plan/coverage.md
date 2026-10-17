@@ -10,21 +10,21 @@
 | ENC | 33 |
 | CHART | 56 |
 | INT | 89 |
-| EVT | 26 |
-| PAY | 96 |
+| EVT | 31 |
+| PAY | 106 |
 | GEN | 36 |
 | SCHED | 97 |
 | REF | 51 |
 | RENDER | 86 |
-| COL | 75 |
-| GUI | 199 |
+| COL | 106 |
+| GUI | 202 |
 | TOOL | 165 |
-| VAL | 181 |
+| VAL | 188 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1414** |
+| **total** | **1470** |
 
-Of these: 123 calibration, 128 definition, 1163 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -37,18 +37,19 @@ Of these: 123 calibration, 128 definition, 1163 obligation. Retired (kept for th
 | M4 | 104 |
 | M5 | 175 |
 | M6 | 175 |
-| M7 | 117 |
-| M8 | 239 |
+| M7 | 170 |
+| M8 | 242 |
 
 ## Sections
 
-1150 sections in 46 files: 947 yield at least one requirement; 203 yield none and are listed below with the reason.
+1215 sections in 47 files: 996 yield at least one requirement; 219 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| informative only | 155 |
+| gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
+| informative only | 164 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 32 |
+| parent heading (obligations are in its subsections) | 38 |
 | rationale | 10 |
 | superseded (kept for the record) | 4 |
 
@@ -271,6 +272,27 @@ Of these: 123 calibration, 128 definition, 1163 obligation. Retired (kept for th
 |---|---|---|
 | Principia — core design decisions | informative only | document preface |
 | Seams — draw these hard. Each subsystem: one job, one input type. | parent heading (obligations are in its subsections) |  |
+
+### `docs/design/principia_dd_chazy_final_motion.md`
+
+| section | reason | note |
+|---|---|---|
+| Drill-down — Chazy final motion: the classifier, its fields and its stains | informative only | title and status note (R-442); obligations in §3, §5–§10 and §12 |
+| 0. Provenance and authority | informative only | the source, the evidence (prin-rs PR #32) and the follow-up's source-handling cautions; no obligation on the build |
+| 1. What it is | informative only | overview of the system and its dependencies (M3, M7) |
+| 3. The classifier at a playhead | parent heading (obligations are in its subsections) | §3.1–§3.8 |
+| 4. Validation | parent heading (obligations are in its subsections) | §4.1–§4.3, the calibrations' evidence |
+| 4.3 On real charts (48 × 48) | informative only | prin-rs PR #32's chart shares, evidence for the calibrations and the status stain's description |
+| 5. Fields | parent heading (obligations are in its subsections) | §5.1–§5.6 |
+| 10. Stains and palettes | parent heading (obligations are in its subsections) | §10.1–§10.11; R-442's hue rule is carried by REQ-COL-075 and REQ-COL-078 |
+| 10.11.6 Measured, for the record | informative only | the human's prin-rs counts (R-443), evidence for the escaper palette's calibration (REQ-COL-099) |
+| 11. Decisions, calibrations and open questions | parent heading (obligations are in its subsections) | §11.1–§11.4 |
+| 11.1 Decided (R-442) | informative only | restates R-442's seven rulings, which the requirements citing R-442 carry |
+| 11.1.1 Decided (R-443) | informative only | restates R-443's ruling, which the requirements citing R-443 carry |
+| 11.3 Open questions | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | each open question is an RQ entry; the requirements waiting on them carry rq: |
+| 11.4 Not done, and natural next steps | informative only | Standish's certificate and a chaotic-chart re-run, named as next steps, not obligations |
+| 12. Tests | parent heading (obligations are in its subsections) | §12.1–§12.3 |
+| 13. References | informative only | bibliography |
 
 ### `docs/design/principia_dd_colouring.md`
 

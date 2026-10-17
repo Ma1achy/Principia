@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*104 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*106 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -122,6 +122,8 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-COL-052 — the proposal shows per-map pixel differences between the composition engine and the reference HTML renders over the §7.1 list, and the tolerance with its margin
 - [ ] REQ-TOOL-069 — capacity at 128² ≥ 1 tile of config + full shader
 - [ ] REQ-VAL-145 — on the real render with the VMF/OKLab mapping at E + 1 = 8, measure mean reconstruction error vs dt; where it crosses ~2 8-bit levels below the M5 ceiling, the ceiling is lowered to it
+- [ ] REQ-VAL-183 — `cargo xtask gate chazy-parity` (drill-down §12.2 item 8): on a gallery chart at several playheads, prints the disagreement fraction over samples and fails if a differing sample is not within the band of a sign change; the threshold on the fraction is set as RQ-314 settles
+- [ ] REQ-VAL-186 — Burrau smoke test (drill-down §12.2 item 1): `cargo xtask gate chazy-burrau` runs the Burrau ICs in the validation harness, past the production loop's escape stop on its post-escape march (R-103), at the pinned r_coll, which it records (REQ-VAL-049), and classifies every step to its horizon; the last label is HE and no step reads H, HP or P; a run that ends in collision at that r_coll fails the gate and is reported
 
 **M8**
 - [ ] REQ-ENC-028 — the proposal measures κ and the chart-encode vs direct-inject difference over near-degenerate and random ICs and states both values; recorded in decisions.md

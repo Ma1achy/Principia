@@ -110,3 +110,11 @@ justification = "a.e > b.e and a.e == b.e exclude each other, so the two operand
 [[equivalent]]
 mutant = "crates/kernel/src/canon.rs:342:10: replace < with <= in mirror_decision"
 justification = "c.m is ±0 only for c = 0, at the zero exponent, so left = m2*c^2 is 0 at the least exponent and wide_greater(left, right) is false: the mirror is not taken either way"
+
+[[equivalent]]
+mutant = "crates/kernel/src/burrau.rs:74:7: replace > with >= in primitive"
+justification = "m == n makes m ^ n = 0, so the parity test (m ^ n) & 1 == 1 already refuses every pair the > excludes"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/burrau.rs:106:29: replace | with ^ in seed"
+justification = "s < 1 and s == 1 cannot both hold, so the two operands of | are never both true, and their ^ is their |"

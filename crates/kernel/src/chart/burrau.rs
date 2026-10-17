@@ -9,14 +9,17 @@
 //! take): masses, positions and Jacobi vectors are rational in `ν`, smooth on `(0, 1)`, and the primitive triples sit at
 //! `ν = n/m`. The acute angle is `θ(ν) = arctan((1 − ν²)/(2ν))` ([`acute_angle`]).
 //!
-//! **Into the shared decoder** ([`BurrauBlocks`]). The decode runs the shared order mass → config → momentum →
+//! **Into the shared decoder** ([`RestBlocks`], [`BurrauBlocks`]). The decode runs the shared order mass → config → momentum →
 //! derived invariants ([`crate::decode::decode_with`]): the mass block is the shared entry for a chart that sets masses
 //! ([`mass::from_masses`], whose `M01_TINY` test applies), the configuration the shared canonical-frame decode of an
 //! explicit `(ρ, λ)` ([`config::from_jacobi`]: mass-weighted, scale-gauged to `I = 1`, reconstructed by the decoder's
 //! own reconstruction), and the derived invariants the shared descriptor. The embed's `ρ` lies on `+x` and `λ_y =
 //! b/c > 0`, so the canonical frame holds by construction and `C` is a no-op. `Φ`'s [`ChartOut`] carries the zero
-//! vector, which none of these blocks reads: the Burrau system is the blocks' own input, so [`decode()`] and
-//! [`decode_plane`] are the charts' decodes ([`super::ChartDecode`]), never [`super::decode()`].
+//! vector, which none of these blocks reads: the Burrau system is the blocks' own input. The Euclid plane overrides
+//! [`Chart::decode`] with [`decode_plane`], so every entry decodes it so. The `(ν, K)` chart's construction needs the
+//! exact-sign arithmetic ([`ExactSign`]) beyond [`Chart::decode`]'s bound, so, as on the invariant charts, its decode is
+//! [`decode()`], which its [`super::ChartDecode`] calls, and [`Chart::decode`] on it would be the free decode of the
+//! zero vector, not the chart's.
 //!
 //! **The `(ν, K)` chart** ([`Burrau`]; §4.3, §4.5; R-113). `ν(u) = ν_min + (ν_max − ν_min)·u`, and `K` from §2's
 //! construction at `K(v) = K_max·v^γ_K`, the invariant charts' warp, its `K_max` and `γ_K` REQ-CHART-044's
@@ -62,7 +65,7 @@ use crate::decode::invariant::{construct_seeded, ExactSign, Outcome, Seed};
 use crate::decode::mass::{self, Masses};
 use crate::decode::momentum::Momentum;
 use crate::decode::{self, descriptor, Blocks, Decoded, Ic, Latent};
-use crate::generated::links::LinkReal;
+use crate::generated::links::{LinkReal, Selection};
 use crate::payload::{ICDescriptorOf, PayloadReal};
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
@@ -110,41 +113,93 @@ fn lerp<F: Float>(lo: F, hi: F, t: F) -> F {
     lo + (hi - lo) * t
 }
 
-/// What the momentum block does with the Burrau system.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Momenta<R> {
-    /// The rest start: every `pᵢ = 0`.
-    Rest,
-    /// §2's construction at the targets `L_z = lz`, `K* = k`, with the seed given.
-    Construct {
-        /// The seed, [`seed`]'s.
-        seed: Seed,
-        /// The target `L_z`.
-        lz: R,
-        /// The target `K*`.
-        k: R,
-    },
+/// The system's masses, through the shared entry for a chart that sets masses ([`mass::from_masses`]).
+#[inline]
+fn system_masses<R: LinkReal>(system: &System<R>) -> Masses<R> {
+    mass::from_masses(system.m)
 }
 
-/// The Burrau charts' decoder: the system's masses through the shared [`mass::from_masses`], its `(ρ, λ)` through the
-/// shared [`config::from_jacobi`], the momenta at rest or by §2's construction, and the shared descriptor. No block
-/// reads its `z` slice.
+/// The system's configuration, through the shared canonical-frame entry for an explicit `(ρ, λ)`
+/// ([`config::from_jacobi`]).
+#[inline]
+fn system_config<R: LinkReal>(system: &System<R>, masses: &Masses<R>) -> Config<R> {
+    config::from_jacobi(masses, system.rho, system.lambda)
+}
+
+/// The Euclid plane's decoder, the Burrau system at rest: its masses and configuration through the shared entries,
+/// every momentum 0, and the shared descriptor. No block reads its `z` slice.
+pub struct RestBlocks<R> {
+    /// The system the embed gave.
+    system: System<R>,
+}
+
+impl<R> RestBlocks<R> {
+    /// The decoder of `system` at rest.
+    #[inline]
+    pub fn new(system: System<R>) -> Self {
+        RestBlocks { system }
+    }
+}
+
+impl<R: LinkReal + PayloadReal> Blocks<R> for RestBlocks<R> {
+    #[inline]
+    fn mass(&mut self, _z_mass: [R; 2]) -> Masses<R> {
+        system_masses(&self.system)
+    }
+
+    #[inline]
+    fn config(&mut self, _z_cfg: [R; 2], masses: &Masses<R>) -> Config<R> {
+        system_config(&self.system, masses)
+    }
+
+    /// The rest start: every momentum 0.
+    #[inline]
+    fn momentum(
+        &mut self,
+        _z_mom: [R; 4],
+        _masses: &Masses<R>,
+        _config: &Config<R>,
+    ) -> Momentum<R> {
+        let zero = R::zero();
+        Momentum {
+            q: [zero; 4],
+            p_rho: [zero; 2],
+            p_lambda: [zero; 2],
+            p: [[zero; 2]; 3],
+        }
+    }
+
+    #[inline]
+    fn invariants(&mut self, ic: &Ic<R>) -> ICDescriptorOf<R> {
+        descriptor::describe(ic)
+    }
+}
+
+/// The `(ν, K)` chart's decoder: the system's masses and configuration as [`RestBlocks`] takes them, the momenta by
+/// §2's construction at the targets `(L_z, K*)` with the seed given, and the shared descriptor. No block reads its `z`
+/// slice.
 pub struct BurrauBlocks<R> {
     /// The system the embed gave.
     system: System<R>,
-    /// What the momentum block does.
-    momenta: Momenta<R>,
-    /// What the construction did; [`Outcome::Feasible`] at rest.
+    /// The construction's seed, [`seed`]'s.
+    seed: Seed,
+    /// The target `L_z`.
+    lz: R,
+    /// The target `K*`.
+    k: R,
+    /// What the construction did.
     outcome: Outcome,
 }
 
-impl<R: Copy> BurrauBlocks<R> {
-    /// The decoder of `system` with `momenta`.
+impl<R> BurrauBlocks<R> {
+    /// The decoder of `system` with the construction at `L_z = lz`, `K* = k`, its seed `seed`.
     #[inline]
-    pub fn new(system: System<R>, momenta: Momenta<R>) -> Self {
+    pub fn new(system: System<R>, seed: Seed, lz: R, k: R) -> Self {
         BurrauBlocks {
             system,
-            momenta,
+            seed,
+            lz,
+            k,
             outcome: Outcome::Feasible,
         }
     }
@@ -159,32 +214,21 @@ impl<R: Copy> BurrauBlocks<R> {
 impl<R: LinkReal + PayloadReal + ExactSign> Blocks<R> for BurrauBlocks<R> {
     #[inline]
     fn mass(&mut self, _z_mass: [R; 2]) -> Masses<R> {
-        mass::from_masses(self.system.m)
+        system_masses(&self.system)
     }
 
     #[inline]
     fn config(&mut self, _z_cfg: [R; 2], masses: &Masses<R>) -> Config<R> {
-        config::from_jacobi(masses, self.system.rho, self.system.lambda)
+        system_config(&self.system, masses)
     }
 
-    /// At rest, every momentum 0; else the construction (chart_reference §2.2), whose [`Momentum::q`] holds the Jacobi
-    /// momenta `(p_ρ, p_λ)`, as on the invariant charts.
+    /// The construction (chart_reference §2.2), whose [`Momentum::q`] holds the Jacobi momenta `(p_ρ, p_λ)`, as on the
+    /// invariant charts.
     #[inline]
     fn momentum(&mut self, _z_mom: [R; 4], masses: &Masses<R>, config: &Config<R>) -> Momentum<R> {
-        let zero = R::zero();
-        match self.momenta {
-            Momenta::Rest => Momentum {
-                q: [zero; 4],
-                p_rho: [zero; 2],
-                p_lambda: [zero; 2],
-                p: [[zero; 2]; 3],
-            },
-            Momenta::Construct { seed, lz, k } => {
-                let c = construct_seeded(masses, config, seed, lz, k);
-                self.outcome = c.outcome;
-                invariant::jacobi(masses, c.p)
-            }
-        }
+        let c = construct_seeded(masses, config, self.seed, self.lz, self.k);
+        self.outcome = c.outcome;
+        invariant::jacobi(masses, c.p)
     }
 
     #[inline]
@@ -345,12 +389,7 @@ where
     P: Copy,
 {
     let nu = chart.nu(u);
-    let momenta = Momenta::Construct {
-        seed: seed(nu),
-        lz: R::zero(),
-        k: chart.kinetic(v),
-    };
-    let mut blocks = BurrauBlocks::new(embed(nu), momenta);
+    let mut blocks = BurrauBlocks::new(embed(nu), seed(nu), R::zero(), chart.kinetic(v));
     let decoded = decode::decode_with(&mut blocks, &unread().z);
     (decoded, blocks.outcome())
 }
@@ -479,6 +518,16 @@ where
         "EuclidPlane"
     }
 
+    /// [`decode_plane`] at `v`: `u` is not read.
+    #[inline]
+    fn decode<S, R>(&self, _u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode_plane(self, v)
+    }
+
     /// Layer 2's `ν ∈ (0, 1)`, then layer 3 on the f64 decode (the module's note); `u` is not read, as the decoder
     /// does not read it.
     fn validate(&self, _u: f64, v: f64) -> ValidationResult {
@@ -499,9 +548,9 @@ where
 #[inline]
 pub fn decode_plane<R, P>(chart: &EuclidPlane<P>, v: R) -> Decoded<R>
 where
-    R: LinkReal + PayloadReal + WarpReal + From<P>,
+    R: LinkReal + PayloadReal + From<P>,
     P: Copy,
 {
-    let mut blocks = BurrauBlocks::new(embed(chart.nu(v)), Momenta::Rest);
+    let mut blocks = RestBlocks::new(embed(chart.nu(v)));
     decode::decode_with(&mut blocks, &unread().z)
 }

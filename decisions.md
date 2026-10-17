@@ -9960,6 +9960,243 @@ The human's words are R-440's quote, its second remark ("Call 5").
 
 Changes no requirement.
 
+## R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default
+*16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` (new; the spec transcribed),
+`docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the outcome-state default
+palette" (a paragraph added), § "4.1 Backbone & `Option` occupants" (three cross-references added),
+`docs/design/principia_dd_colouring.md` § "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample →
+SSAA)" (a paragraph added), `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT
+stored" (a paragraph added), `docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a row added),
+`REVIEW_QUEUE.md` (RQ-310 to RQ-320, and RQ-324 and RQ-325 from the PR's review, new), REQ-PAY-099 to REQ-PAY-106,
+REQ-EVT-027 to REQ-EVT-031, REQ-COL-072 to REQ-COL-089, REQ-COL-106, REQ-VAL-183 to REQ-VAL-187 and REQ-GUI-185
+(reqio, new), REQ-COL-018 (reqio), TASK-M7-35 to TASK-M7-40 and TASK-M8-45 (new), `plan/tasks.yaml`,
+`plan/MILESTONES.md` and `plan/rule_groups.yaml`; built by those tasks*
+
+The human gave a spec, `chazy_stain_spec.zip`, for Chazy final-motion classification and its stains, written up from
+prin-rs PR #32 (`Ma1achy/prin-rs`, branch `chazy-final-motion`), and asked, in their own words, for it to be added to
+the build plan, not implemented: ported into the corpus as a design drill-down, with requirements, REVIEW_QUEUE entries
+and tasks. Item 2 of that request, verbatim:
+
+> "Record these as my rulings in decisions.md. They are mine (Malachy's), made 15–16 October 2026:
+> - The Chazy final-motion class is a separate system from the event classes, with its own stains.
+> - Hue carries the class. The default final-motion stain uses no lightness, so lightness stays free
+>   for another field; stains that use lightness use it for a named field in the brightness slot.
+> - B is black #141418, and B-stable and B-so-far are one class in the final-motion maps.
+> - Collision is magenta #DA85B6, one colour for every collision, pair or triple.
+> - Transient draws as B in the final-motion maps, labelled "bound, or nobody has left yet". The
+>   energy-channel stains and the status map recover it.
+> - The working states (B-stable, B-so-far, excursion, transient, OS-candidate) live on their own
+>   status map, not in the final-motion palette.
+> - The seven-class palette in 03 §1 is the default."
+
+(Messages of 16 October 2026, given in the orchestrator's session; numbered by the orchestrator, the next free number.)
+The human's follow-up the same day names prin-rs PR #32 as a read-only reference and gives three cautions: it is a
+reference, not an authority; its map colours are an early palette, superseded by the spec's 03; and it ran at
+`r_coll = 0` and CPU f64, so its silence on collisions, f32 parity and the escape-detector alignment is not a ruling.
+These are source-handling instructions for the port, as R-1 and R-159 are for prin-rs's other material, and are
+recorded in the drill-down's § "0. Provenance and authority", not as rulings.
+
+*What it decides (the seven rulings; the drill-down's § "11.1 Decided (R-442)" lists them):*
+1. **A separate system.** The Chazy final-motion class is a separate system from the event classes (payload §2's
+   `state` and `detail`), with its own stains. It is derived at read and writes no event class.
+2. **Hue carries the class.** The default final-motion stain uses no lightness, so lightness stays free for another
+   field; a stain that uses lightness uses it for a named field (the energy channel, `chazy_q`) in the brightness slot.
+3. **B is black `#141418`**, the outcome palette's bounded, and B-stable and B-so-far are one class in the final-motion
+   maps.
+4. **Collision is magenta `#DA85B6`**, one colour for every collision, pair or triple.
+5. **Transient draws as B** in the final-motion maps, labelled "bound, or nobody has left yet"; the energy-channel
+   stains and the status map recover it.
+6. **The working states** (B-stable, B-so-far, excursion, transient, OS-candidate) live on their own status map, not
+   in the final-motion palette.
+7. **The seven-class palette** (the drill-down's § "10.2 Final motion: Chazy's seven (the default)") is the default.
+
+*Contradictions flagged, applied (CLAUDE.md § Rulings; the rulings stand as given):*
+- **The default palette and τ.** The spec measures the seven-class palette below R-132's τ = 0.101 within itself (H / HP
+  0.083 unsimulated; HP / P 0.002 under deuteranopia). τ is the corpus's collision criterion between the invalid hatch
+  and a palette entry (REQ-COL-055, R-132; REQ-COL-061, R-429) and between the "not yet" stipple and a flat colour
+  (REQ-COL-064, R-434); no requirement or ruling holds a palette's own entries τ apart, and the seven-class palette
+  clears every style unsimulated (0.137, P / stipple dot). So ruling 7 conflicts with no corpus rule. The shortfall is
+  kept visible, not waived: REQ-COL-086 asserts the measured within-palette values so a change shows, REQ-COL-087's
+  confirmation at the gate carries RQ-311, which asks the human, as they asked, whether the default stays or moves to
+  Okabe–Ito, and REQ-COL-061's hatch test is re-run with these palettes among the entries it measures against.
+- **B's hue.** Ruling 3 gives B `#141418`; the spec (its 03 and test 05 §2.5) says that swatch has no hue, OKLab
+  a = b = 0, so that Replace-L turns it neutral grey. Its OKLab is a ≈ 0.002, b ≈ −0.008, chroma ≈ 0.008: not zero, and
+  more than 8-bit quantisation of a neutral grey gives. Applied: the swatch is the ruling's; REQ-COL-074 carries
+  RQ-317, which holds what the test asserts.
+- **The label count.** The spec's 02 §2 gives `chazy_class` "the nine labels of 01 §2"; 01 §2's table yields ten, and
+  prin-rs PR #32's `classify` returns ten (`Motion`, less the reference's `Unresolved`). Applied: ten, transcribed in
+  the drill-down's § "3.8 The labels: ten" with the spec's wording noted; REQ-PAY-099 lists them.
+- **The rule's order.** The spec's 01 §2 table and the PR's `classify` order the labels differently in two places.
+  The table puts B-stable before transient ("none of the above, and E > 0"), and `classify` tests transient first:
+  they differ for a Mardling–Aarseth-stable hierarchy with E > 0, which no state has been shown to reach (RQ-318). The
+  table puts B-stable before excursion, and `classify` returns excursion inside its hierarchy step first: they differ
+  for a bound, Mardling–Aarseth-stable hierarchy whose outer body is past `h_far` and receding, which is reachable and
+  common (RQ-324, found in the PR's physics review). Not chosen: RQ-324 is a physics question for the human (R-369),
+  and RQ-318 is too if a state reaching it is shown.
+- **The E < 0 certificate.** The spec says the classifier relies on "E < 0 rules out H, HP and P"; `classify` enforces
+  the E > 0 half by its order but never tests E in the dispersal step or the two-stage H, and the PR's physics review
+  constructed an E < 0 state that reads H and then P. Not chosen: RQ-325, a physics question for the human (R-369); the
+  drill-down's §2 and §4.3 say which half is enforced and which only observed.
+- **"The one categorical field with a canonical default palette."** colour_composition §1.4 says the outcome `state`
+  is the one such field, dd_colouring §3.7 sends every other categorical field to a generated palette, and REQ-COL-018
+  says so. Ruling 7 gives `chazy_final` a canonical default, and the spec gives `chazy_status` and `chazy_structure`
+  theirs. Applied: §1.4 and §3.7 each gain a paragraph naming the Chazy fields' defaults, the existing text kept;
+  REQ-COL-018's statement names the Chazy fields and their drill-down defaults beside the outcome state (R-442), its
+  verify unchanged (TASK-M7-08 precedes the Chazy fields; TASK-M7-37's goldens check their palettes).
+- **The validity rules.** The spec's "running samples hold a value … never draws the not-yet stipple" agrees with
+  colour_composition §4.1 ("A field that holds a value for a `running` sample … renders that value in every mode"); the
+  invalid hatch for `sim_failed` and NaN agrees with R-136. No conflict. What `decode_failed` draws is not given:
+  RQ-319.
+- **The terms.** "Tier N" is the parity contract's (§2, "Tier N — tight numerical"); how a categorical label, which
+  the contract's scope table puts under "a label on a real trajectory", fits it is RQ-314. "Seam 5" and "render key"
+  are systems_architecture's (§4, "The two keys as ladder geometry"; §5, the seam catalogue). Descriptor bits 10–15 are
+  payload §2's, "Reserved, decode as zero, never opportunistically reused": RQ-310. "The departure flag" is R-37's
+  per-sample "departed" bit, whose placement is open (open-questions item 9; REQ-VAL-055), also RQ-310. None is
+  undefined, so no definition requirement follows from them.
+
+*Applied per R-369 (the orchestrator's and the porter's decisions, not the human's; the human may veto any):*
+- The drill-down is `docs/design/principia_dd_chazy_final_motion.md`, in the house form, and the plan cites it, never
+  prin-rs. Where the spec is unclear and the PR's code settles it (the two-body `K` and `U`, the hierarchy ratio, the
+  rule's order, Mardling–Aarseth's form, the Fewbody reference, the fixtures' states), the code is transcribed and
+  named by file and function.
+- The spec's `img/` previews are not added: `docs/design/` holds no images; the drill-down names prin-rs PR #32's
+  `examples/chazy_map.rs` to regenerate them, and the stains' golden images are the record in Principia.
+- The filter's mute is REQ-COL-058's transform (colour_composition §1.4, R-72), which applies to every categorical
+  mode; the spec's preview value `#3A3B40` is not a second rule.
+- Where several `chazy_structure` rows apply, and the greyscale and hue-mode ranks of `chazy_class`, `chazy_status` and
+  `chazy_structure`, are not given by the spec: definition requirements (R-72), REQ-PAY-104 and REQ-COL-085.
+- The tasks are placed in M7 (the classifier, the fields, the stains, parity) and M8 (the legends), after the M3
+  event tasks and the M7 backbone tasks they use, and after the M4 parity tasks for the f32 measurement: RQ-316 records
+  the placement.
+- The calibrations (spec 04 §2) are confirmed at the M7 gate, where their tasks land.
+
+*Applied:*
+- The drill-down, with the cross-references above; the INDEX lists it under "Meaning".
+- REVIEW_QUEUE gains RQ-310 to RQ-320: the spec's six open questions (04 §3) and the port's five. RQ-310 (the
+  descriptor bits) and RQ-311 (the default palette) need the human, as the human said; RQ-318 is physics, which
+  R-369 sends to the human. No current task's PR waits on any of them.
+- Requirements, through `plan/tools/reqio.py`: the fields REQ-PAY-099 to REQ-PAY-103; the structure rows' definition
+  REQ-PAY-104; the latch REQ-PAY-105; the escape freeze REQ-EVT-027; the validity and style rules REQ-COL-072 to
+  REQ-COL-074; the stains REQ-COL-075 to REQ-COL-084, with the ranks' definition REQ-COL-085 and the palette
+  separation test REQ-COL-086; parity REQ-VAL-183; the tests REQ-VAL-184 to REQ-VAL-187; the legends REQ-GUI-185; and
+  the calibrations (R-71) REQ-EVT-028 to REQ-EVT-031, REQ-PAY-106 and REQ-COL-087 to REQ-COL-089.
+- Tasks TASK-M7-35 to TASK-M7-40 and TASK-M8-45; the M7 and M8 gate blocks regenerated.
+- R-442 is in the "design" group of `plan/rule_groups.yaml`.
+
+*From the review of PR #223 (applied per R-369, the orchestrator's and the porter's decisions; the human may veto any):*
+- `chazy_structure`'s overlaps (REQ-PAY-104) now include a transient sample, and a bound label, whose most separated
+  body has ratio above `h_far`: read literally, §5.5 would draw such a transient dark, against ruling 5. A definition
+  can satisfy both (the hierarchy row only for HE, PE and excursion), so it stays REQ-PAY-104's, not an RQ, and
+  REQ-COL-078's property is tested on those states.
+- The time views' calibrations (the "when decided" lightness by time, the "what just changed" dimming) move from
+  REQ-COL-087 to REQ-COL-106, closed by TASK-M7-40, which builds the views (R-71: proposed by the task that needs it).
+- The Okabe–Ito variant and the structure hues are measured and asserted with the other palettes (REQ-COL-086); the
+  Okabe–Ito cost, P against collision 0.041 in every simulation, is in RQ-311's option (b).
+- The energy-channel legends carry §G6's separate brightness bar, and B's label holds in every final-motion legend
+  (REQ-GUI-185); the Burrau gate runs in the validation harness past the escape stop, at the pinned `r_coll`
+  (REQ-VAL-186); "pixel" in the classifier's requirements is "sample" (memory_tiers §1).
+
+## R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback
+*Amended in part by R-449 (the names as shown: the lens body `k` ∈ {0, 1, 2} is chosen and shown as body 1, 2 or 3,
+the escaper map's columns `chazy_escaper` = 0, 1, 2 as body 1, 2, 3, and the three panels titled body 1, 2, 3,
+through TASK-M2-33's one display conversion, REQ-GUI-188; R-449's text names "the Chazy spec and its follow-ups").*
+*Still in force: all of it; `k` and `chazy_escaper` stay 0-based in storage and computation, and a machine-readable
+export keeps them 0-based and says so (REQ-GEN-036); only the names a person reads are R-449's.*
+*16 Oct 2026 · applied in `docs/design/principia_dd_chazy_final_motion.md` § "0. Provenance and authority" (a bullet
+added), § "5.2 The fields" (two rows added), § "5.6 `chazy_escaper` and `chazy_qk` (R-443)", § "10.11 One body at a
+time (R-443)", § "11.1.1 Decided (R-443)", § "11.2.2 One-body palettes, measured (R-443)" and § "12.3 One body at a
+time (R-443)" (new), § "11.2 Calibrations to confirm at a gate (R-71)" (three rows and a line added) and § "11.3 Open
+questions" (a paragraph added); `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment —
+the outcome-state default palette" and § "4.1 Backbone & `Option` occupants", `docs/design/principia_dd_colouring.md`
+§ "3.7 Categorical colour, and how mixed pixels resolve (colour-per-sample → SSAA)" and
+`docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored" (a sentence added to
+each); `REVIEW_QUEUE.md` (RQ-321 to RQ-323, new); REQ-PAY-107, REQ-PAY-108, REQ-COL-090 to REQ-COL-100,
+REQ-COL-107, REQ-VAL-188, REQ-VAL-189, REQ-GUI-186 and REQ-GUI-187 (reqio, new); TASK-M7-41 (new), TASK-M7-36 and
+TASK-M8-45 (extended),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by those tasks*
+
+The human's follow-up to the Chazy final-motion spec (R-442), given the same day, asked for a section to be added to the
+spec as 03 §10 "One body at a time", with additions to its 02, 04 and 05, and carried through the same port, not
+implemented. Its 04 addition, verbatim:
+
+> "Decided (Malachy, 16 October 2026): the one-body views of 03 §10 are added as stains; the lens body is a stain
+> parameter; mass rank is offered alongside label, with the tie fallback above."
+
+(The block of 16 October 2026, given in the orchestrator's session; numbered by the orchestrator, the next free number
+after R-442.) The rest of the block is spec text, transcribed into the drill-down: the two derived fields
+(`chazy_escaper`, `chazy_qk[k]`), the five views, the measured counts, three calibrations (R-71) and one open question,
+which is RQ-321.
+
+*What it decides:*
+1. **The one-body views are stains** (the drill-down's § "10.11 One body at a time (R-443)"): the body lens, the body
+   lens with energy, the escaper map, the escaper by mass rank and the lightest- and heaviest-body lenses. The three
+   panels side by side (§10.11.3) are a layout over the body lens, not a new stain.
+2. **The lens body is a stain parameter**, `k` ∈ {0, 1, 2}.
+3. **Mass rank is offered alongside label**, with the tie fallback: where two masses are equal to within a relative
+   10⁻⁶ the rank is undefined, those pixels fall back to the label view, and the legend says so; on an equal-mass chart
+   the rank views are entirely the label views, and the legend says that.
+
+*Checked, and what was found (the orchestrator's checks; none changes the ruling):*
+- **"Masses are already in the payload."** They are the `ICDescriptor`'s `m0 m1 m2` (render contract § "Part 1 — The
+  payload (render input)"; R-86), read as `ctx.ic`. No RQ.
+- **OS-candidate in the body lens.** The lens's bound row takes "the B and OS folds of 02 §2", so OS-candidate draws
+  black there, where `chazy_final` draws it OS green. The block's plain reading, contradicted by nothing in the corpus:
+  noted in the drill-down §10.11.1, not an RQ. The escaper map's "bound black" is read the same way.
+- **The escaper by rank's parabolic shades.** The block lists the hyperbolic shades by rank; "§10.4 with hue = the
+  escaper's mass rank" re-indexes §10.4's columns, so the parabolic shades follow plainly (`#A24B36`, `#287C42`,
+  `#4665AE`, lightest to heaviest). Transcribed, not an RQ.
+- **The palettes against τ.** The body lens's 0.084 (escaping hyperbolic against parabolic) is within the palette; τ
+  separates entries from the invalid hatch and the stipple (REQ-COL-055, REQ-COL-061, REQ-COL-064), not entries from
+  each other, as R-442 found. The escaper palette clears τ against collision by 0.001 (0.102), recorded as the margin.
+  Re-measured, the grey `#8A8A90` sits 0.020 from the stipple dot `#909090`, but by R-434's criterion (the distance to
+  a 4 × 4 block's farthest pixel) it is 0.212 from the stipple, so the block's claim holds (corrected in the PR's gui
+  review); its chroma is ≈ 0.009 where §10.11.2 says it has no hue: RQ-322.
+- **`chazy_escaper`'s tie.** The block does not say; prin-rs PR #32's `classify` settles it (its fold keeps the first
+  strictly greater ratio, so the lowest body index wins), as the drill-down's §3.1 already transcribes. Transcribed in
+  §5.6, not an RQ.
+
+*Applied per R-369 (the orchestrator's and the porter's decisions, not the human's; the human may veto any):*
+- R-443 is the "Decided" line alone; the calibrations are R-71 calibration requirements (REQ-COL-098 to REQ-COL-100),
+  confirmed by the human at the M7 gate with R-442's (REQ-COL-087 to REQ-COL-089), the block's measured values their
+  evidence.
+- The spec's "03 §10" is the drill-down's §10.11, its 02 addition §5.6, its 05 additions §12.3, keeping the
+  drill-down's numbering.
+- The label a rank lens falls back to, and the form of the relative tie comparison, are not given: a definition
+  requirement (R-72), REQ-COL-096. Test 4's control ("falls back only where the tie matters") is read as: a body's rank
+  is undefined where its own mass ties another's.
+- Test 3's fixtures keep the largest hierarchy ratio strictly largest, since an exact tie goes to the lowest index and
+  does not permute.
+- The tasks: `chazy_escaper` and `chazy_qk` extend TASK-M7-36 (the fields); the one-body stains, their tests and
+  calibrations are TASK-M7-41 (new, after TASK-M7-36 and TASK-M7-38); the one-body legends and the three panels extend
+  TASK-M8-45.
+
+*Applied:*
+- The drill-down, with the sections above; cross-references in colour_composition, dd_colouring and payload where
+  they already name the drill-down.
+- REVIEW_QUEUE gains RQ-321 (the escaper definition, the block's open question; RQ-313's sibling; for the human, as
+  physics), RQ-322 (the grey `#8A8A90`; for the human at the M7 gate with the palette calibrations) and RQ-323 (where
+  the three panels live; decidable per R-369).
+- Requirements, through `plan/tools/reqio.py`: the fields REQ-PAY-107 (`chazy_escaper`) and REQ-PAY-108
+  (`chazy_qk[k]`); the stains REQ-COL-090 (body lens), REQ-COL-091 (with energy), REQ-COL-092 (escaper map),
+  REQ-COL-093 (escaper by mass rank), REQ-COL-094 (lightest- and heaviest-body lenses) and REQ-COL-095 (the tie
+  fallback and its legend flag); the definition REQ-COL-096; the palette separation REQ-COL-097; the calibrations
+  REQ-COL-098 (body-lens palette), REQ-COL-099 (escaper palette) and REQ-COL-100 (mass tie tolerance); the tests
+  REQ-VAL-188 (exactly one escaping body) and REQ-VAL-189 (label symmetry); the layout REQ-GUI-186 and the legends
+  REQ-GUI-187. The 05 additions' tests 1, 4, 5 and 6 are the verifies of REQ-COL-090, REQ-COL-093 to REQ-COL-095,
+  REQ-COL-091 and REQ-COL-097.
+- R-443 is in the "design" group of `plan/rule_groups.yaml`.
+
+*From the review of PR #223 (applied per R-369, the orchestrator's and the porter's decisions; the human may veto any):*
+- `chazy_escaper`'s greyscale and hue-mode rank is a definition requirement (R-72), REQ-COL-107, closed by TASK-M7-41;
+  the lens roles are a stain's output, not a field, and take no rank.
+- The one-body views' bound row is labelled "bound, or nobody has left yet", R-442's label for B, since it folds in
+  transient. In the body lens with energy, "flying apart" and "bound" draw alike at equal `q_k`; the legend shows the
+  flat role colours with a separate `q_k` bar and says so (render GUI spec §G6).
+- The R-443 requirements carry the `rq:` their RQs name (RQ-321, RQ-322, RQ-323), and the Chazy legends carry RQ-312.
+  RQ-323's options (b) and (c) defer or drop part of R-443, so they are the human's; (a) is the orchestrator's.
+- Names a person reads call the bodies 1, 2, 3 (R-449, through TASK-M2-33's one display conversion, REQ-GUI-188);
+  the fields, the stain parameter `k` and machine-readable dumps stay 0-based (REQ-GEN-036).
+
 ## R-444 — The outcome view shows physical outcomes only, in nine classes: bounded / nothing yet `#141418`, the three pair collisions, triple collision, the three escapes and triple ejection *(supersedes R-96 and R-433 as they apply to the outcome palette's classes and the triple outcomes' swatches)*
 *Amended in part by R-449 (the class names as shown: collision 1–2, 1–3 and 2–3 for pairs 2, 1 and 0, escape body 1,
 2 and 3 for `detail` 0, 1 and 2; same classes, same colours).*

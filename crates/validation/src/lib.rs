@@ -13,6 +13,7 @@ pub mod gpu;
 pub mod invariant_gradient;
 pub mod oklab;
 pub mod prop;
+pub mod shape_roundtrip;
 pub mod spawn;
 pub mod structural_scene;
 
@@ -35,6 +36,9 @@ pub use ledger::constants::R_POLE;
 /// The invariant charts' warp defaults, `K_max` and `γ_K` (REQ-CHART-044, proposed; TASK-M2-12), for the kernel crate's
 /// tests, as `r_pole` is.
 pub use ledger::constants::{GAMMA_K, K_MAX};
+/// The shape-sphere chart's two tolerances' register entries (REQ-CHART-049, REQ-CHART-053; R-427), for the kernel
+/// crate's tests and the `shape-roundtrip` gate, as `r_pole`'s is.
+pub use ledger::constants::{SHAPE_ROUNDTRIP_BOUND, SHAPE_VEC_JS_TOL};
 
 /// The Burrau `ν = 1/2` tolerance (REQ-VAL-118, proposed) and the Euclid plane's defaults (chart_reference §4.5;
 /// TASK-M2-10), for the kernel crate's tests, as `r_pole` is.
