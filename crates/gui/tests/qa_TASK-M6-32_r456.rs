@@ -516,3 +516,53 @@ fn check_ended(seen: &Typed, what: &str) {
     assert_eq!(seen.at.1, NAV, "{what}: the mode");
     assert_eq!(seen.after, seen.before, "{what}: a letter typed something");
 }
+
+// --- REQ-GUI-189 (R-456 B3): a drag on the search field types at once, as a click does --------------------------------
+
+/// A press at `from`, the pointer moved to `to` with the button held, then the release: a drag.
+fn drag(h: &mut Headless, app: &mut App<MockSide>, from: Pos2, to: Pos2) {
+    let button = |pos, pressed| Event::PointerButton {
+        pos,
+        button: PointerButton::Primary,
+        pressed,
+        modifiers: NONE,
+    };
+    let _ = h.frame(app, vec![Event::PointerMoved(from)]);
+    let _ = h.frame(app, vec![button(from, true)]);
+    let mid = from + (to - from) * 0.5;
+    let _ = h.frame(app, vec![Event::PointerMoved(mid)]);
+    let _ = h.frame(app, vec![Event::PointerMoved(to)]);
+    let _ = h.frame(app, vec![button(to, false)]);
+    let _ = h.frame(app, vec![Event::PointerGone]);
+    settle(h, app);
+}
+
+#[test]
+fn qa_r456_a_drag_across_the_search_field_types_at_once() {
+    // A press on the field and a drag along it (a selection, B3's caret) is a press on a text input: it starts typing,
+    // as a click does.
+    let (mut app, mut h) = console();
+    let field = labels_to(&app, SEARCH);
+    let rect = place(&app, SEARCH);
+    let (from, to) = (
+        Pos2::new(rect.left() + 0.25 * rect.width(), rect.center().y),
+        Pos2::new(rect.left() + 0.75 * rect.width(), rect.center().y),
+    );
+    drag(&mut h, &mut app, from, to);
+    assert!(egui_holds(&h, &app, SEARCH), "egui's focus on the field");
+    let seen = observe_letter(&mut h, &mut app, search_text);
+    check_types_at_once(&seen, &field, "a drag on the field");
+
+    // Control: a drag that starts on Copy and ends on the field presses no text input; it lands on Copy (R-450 A3) or
+    // nowhere new, in navigation mode, and the check rejects it.
+    let (mut app, mut h) = console();
+    let (copy, onto) = (
+        place(&app, console_id(&app, "Copy")).center(),
+        place(&app, SEARCH).center(),
+    );
+    drag(&mut h, &mut app, copy, onto);
+    let off = observe_letter(&mut h, &mut app, search_text);
+    rejects("a drag that never pressed the field", || {
+        check_types_at_once(&off, &field, "control")
+    });
+}
