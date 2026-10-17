@@ -311,7 +311,10 @@ navigation mode (R-452). A text field, such as the console's search field, lands
 typing, which is interaction mode, and while typing every key goes to the field but Esc, Enter and Tab, Ctrl+Z
 undoing the text edit and `?` typing a character: Esc and Enter return to navigation mode on the field and keep the
 text, and Tab and Shift+Tab leave it and move on, to the window's next or previous section inside a window (applied
-per R-369, R-409 G4, G5, G6). The footer and the console follow the same two modes (R-405, R-409).
+per R-369, R-409 G4, G5, G6). A click on a text field starts typing at once, in interaction mode, the ring blue, the
+caret where the click lands; from there the typing rules above hold, Esc, Enter and Tab included. A click anywhere else
+that moves the keyboard's focus, as a click on a console control does, lands in navigation mode on what was clicked
+(R-456, amending R-450 A3 and R-409 G4 for text fields). The footer and the console follow the same two modes (R-405, R-409).
 
 **The footer and the console are scopes too (R-405).** The footer, the bar at the bottom of the window, is big scope 8,
 after Legend, so Tab runs 1 top bar · … · 7 Legend · 8 footer and wraps to the top bar. Enter on the footer opens the
@@ -328,7 +331,7 @@ Esc from the window's top level, on the header bar or the log scope, closes it t
 interaction: ↑ and ↓ scroll it one entry, Page Up and Page Down a page (the entries the log shows), Home and End go to
 the first and last entry, and Shift gives ×10, as everywhere; the whole filtered log is reachable, not only the rows
 drawn; Esc returns to navigation mode on the log scope. A click on a console control moves the keyboard's focus onto
-it. The ring and the breadcrumb follow ("Console › Header › Copy", "Console › Log"). Nothing about this order depends
+it, in navigation mode, but a click on the search field starts typing, in interaction mode (R-456). The ring and the breadcrumb follow ("Console › Header › Copy", "Console › Log"). Nothing about this order depends
 on state: an empty filtered list, a hidden row, or how the console was opened (R-450, A1 to A6). The console opening
 by itself on an error does not take the focus.
 
@@ -613,7 +616,8 @@ It is reached from Windows › Console too, and Esc returns the focus to whichev
 Clear and ×) and the log. It opens on the header bar scope, in navigation mode; ↑ ↓ and Tab move between the two;
 Enter on the header bar goes in and ← → cross every header control, × included, Enter on × closing the console; Enter
 on the log scrolls it by entry (↑ ↓), page (Page Up, Page Down) and to its ends (Home, End), Shift ×10, over the whole
-filtered log. Every visible control is reachable, whatever the console's state (§G3).
+filtered log. Every visible control is reachable, whatever the console's state (§G3). A click on the search field
+starts typing, in interaction mode; a click on any other console control lands in navigation mode on it (R-456).
 
 ## G13. Where the artboards are overridden
 
