@@ -59,6 +59,9 @@ constant 0, selecting a value already computed, with no branch:
 - `λ̃_x = 0` and `λ̃_y = 0` (the `α = 0` pole): 0, above (R-437);
 - `λ̃_y` compares equal to 0, true for `+0` and `−0` alike, and `λ̃_x < 0`: `π̂`, the image of π in
   `principia_dd_decoder.md` §3.2 (rounded toward zero at f32, the nearest value at f64; R-417);
+- `atan2(|λ̃_y|, λ̃_x)` compares above `π̂`: `π̂` (code review C8 and qa Q5 of PR #228, applied per R-369 under R-438
+  and R-417). Near the `−x` half-axis the true `β` is just below π, and an f32 `atan2` that rounds to nearest (glibc's
+  `atan2f`) can return f32's nearest π, which is above `π̂`; the select keeps `β` in `[0, π̂]`, the range `s_β` reads;
 - elsewhere: `atan2(|λ̃_y|, λ̃_x)`.
 
 At f64, `π̂` is what the CPU's `atan2(+0, x < 0)` returns, so the select pins the GPU to the CPU's value, and CPU-f64 and

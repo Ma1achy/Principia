@@ -8,6 +8,7 @@ pub mod control;
 pub mod convergence;
 pub mod decode_f32_eps;
 pub mod gate;
+pub mod gauge;
 pub mod golden_scene;
 pub mod gpu;
 pub mod invariant_gradient;

@@ -208,9 +208,18 @@ fn rotate<R: LinkReal>(v: [R; 2], c: R, s: R) -> [R; 2] {
 /// recorded in [`Canonical::lambda_t_y`]. `C` does not branch on it ([`mirror_decision`] does the branching).
 #[inline]
 pub fn lambda_t_y<R: LinkReal>(m: [R; 3], r: [[R; 2]; 3]) -> R {
+    lambda_t_axis(m, [r[0][1], r[1][1], r[2][1]])
+}
+
+/// One component of `λ̃ = √μ_λ·λ` under `m`, from the three bodies' coordinates `x` on that axis:
+/// `√(m₂M₀₁)·(x₂ − fma(m₁, x₁, m₀x₀)/M₀₁)`, `M₀₁ = fma(m₁, 1, m₀)`. The one place this arithmetic is written:
+/// [`lambda_t_y`] reads it on `y`, and the encode's Jacobi map (`crate::encode::blocks::jacobi`) on both axes, so the
+/// mirror decision and `β` read the same bits.
+#[inline]
+pub fn lambda_t_axis<R: LinkReal>(m: [R; 3], x: [R; 3]) -> R {
     let m01 = Float::mul_add(m[1], R::one(), m[0]);
-    let inner = Float::mul_add(m[1], r[1][1], m[0] * r[0][1]) / m01;
-    Float::sqrt(m[2] * m01) * (r[2][1] - inner)
+    let inner = Float::mul_add(m[1], x[1], m[0] * x[0]) / m01;
+    Float::sqrt(m[2] * m01) * (x[2] - inner)
 }
 
 /// R-82's test as it reads, on a given `λ̃_y`: mirror iff `λ̃_y < −δ_λ`; `|λ̃_y| ≤ δ_λ` is no mirror. The reference
