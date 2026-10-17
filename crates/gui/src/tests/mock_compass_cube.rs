@@ -405,6 +405,17 @@ fn mock_compass_cube_clip_and_grid() {
             }
         }
     }
+    // The drawn slice carries its grid: the rectangle's eight lines, and a triangle's too.
+    let v0 = view(0.0, 0.0, 0.0, 1.0);
+    let drawn = compass::slice_drawing(&plane(&v0, [0.0, 0.0, 0.25]).z0, &v0).expect("a slice");
+    assert_eq!(drawn.grid, lines, "the slice's grid");
+    let v1 = view(-45.0, -45.0, 0.0, 1.0);
+    let triangle = compass::slice_drawing(&plane(&v1, [0.0, 0.0, 1.0]).z0, &v1).expect("a slice");
+    assert_eq!(triangle.points.len(), 3);
+    assert!(!triangle.grid.is_empty(), "a triangle's grid");
+    rejects("a polygon drawn without its grid", || {
+        assert!(drawn.grid.is_empty())
+    });
     // The lines of constant y, along u = x, sit at the same steps.
     let mut ys: Vec<f64> = lines
         .iter()
@@ -429,9 +440,10 @@ fn mock_compass_cube_clip_and_grid() {
     let at: Vec<f64> = grid(hex, &hex_poly)
         .iter()
         .flat_map(|l| {
-            [u, v].into_iter().filter_map(move |w| {
-                ((dot(l[0], w) - dot(l[1], w)).abs() < 1e-12).then(|| dot(l[0], w))
-            })
+            [u, v]
+                .into_iter()
+                .filter(move |w| (dot(l[0], *w) - dot(l[1], *w)).abs() < 1e-12)
+                .map(move |w| dot(l[0], w))
         })
         .collect();
     assert!(at.iter().any(|c| (c - 1.1).abs() < 1e-12), "{at:?}");
