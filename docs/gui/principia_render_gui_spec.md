@@ -507,10 +507,12 @@ decode is untouched and untagged, and the pixel integrates, drawn in its outcome
 `V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
 `V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
 scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E` is then a no-op on every free-fall
-preset, and the near-uniform black, with that contour its only exception, is expected, not a bug. The tags show in the
-η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today the `state` view
-shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view the ruling's
-"η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's white `#ECECF0`.
+preset, and the near-uniform black, with that contour its only exception, is expected, not a bug. The Chazy stains
+draw the same samples with the render contract's hatch (`debug_invalid`), as they draw `sim_failed`, not black, which
+there is Chazy B (dd_chazy_final_motion §7; RQ-319, decided per R-369), so the same slice reads hatched there. The
+tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today
+the `state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view
+the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's white `#ECECF0`.
 
 ## G7. Chart builder (`03_chartbuilder.png`)
 

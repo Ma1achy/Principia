@@ -717,8 +717,8 @@ change results is RQ-324.*
 
 ## RQ-319: what the Chazy fields read and the Chazy stains draw for a `decode_failed` sample the chart does not hatch, or a reserved `state` code, is not given *(silence, R-442, R-446, REQ-COL-072; context: TASK-M7-37)*
 
-*Found porting the Chazy stain spec (R-442); restated against R-446 (gui review 5555473056 of PR #223). Nothing is
-chosen. For the human: no; decidable per R-369.*
+*Found porting the Chazy stain spec (R-442); restated against R-446 (gui review 5555473056 of PR #223). For the
+human: no; decided per R-369, option (a), on gui review 5555494498 of PR #223.*
 
 - **File, section:**
   - Spec 02 §4 (drill-down § "7. Validity and styles") gives running, `sim_failed` or NaN, collision-terminated and
@@ -763,7 +763,20 @@ chosen. For the human: no; decidable per R-369.*
   - (c) A further value, "no IC", in `chazy_final` and `chazy_status`.
   - A reserved `state` code takes the invalid hatch under every option (colour_composition §4.1), as REQ-COL-072
     requires.
-- **Waits:** REQ-COL-072's `decode_failed` clause (`rq: RQ-319`), TASK-M7-37.
+- **Applied meanwhile:** applied per R-369 on PR #223, on the gui reviewer's recommendation (review 5555494498):
+  option (a), the invalid hatch. In the Chazy stains every sample with no motion to classify draws the render
+  contract's hatch (`debug_invalid`): `sim_failed` (already hatched, drill-down §7), a reserved `state` code, a pixel
+  the chart hatches, and the decoder's own `decode_failed` (its `DEGENERATE` tags and a non-finite decode).
+  - Why: one rule, fitting render_gui_spec §13 and colour_composition §4.1. Under (b) black would read as Chazy B
+    ("bound, or nobody has left yet") in the body lens and the escaper map, and the status stain would need a swatch
+    whose separations are unmeasured; (c) would add a field value, a legend entry and a swatch to every palette for
+    samples the debug views already explain.
+  - Cost: a free-fall slice under `η_E` reads hatched in the Chazy stains but black in the outcome view, the same split
+    `sim_failed` already has, and this hatch cannot be told apart from a forbidden-region hatch.
+  - Where: drill-down §7 and §10.11 (`docs/design/principia_dd_chazy_final_motion.md`), render_gui_spec §G6's
+    free-fall paragraph, REQ-COL-072's note, TASK-M7-37's note. The outcome view's rule (R-446) is unchanged.
+- **Waits:** nothing now; this records the decision for the human's veto. Before it, REQ-COL-072's `decode_failed`
+  clause (`rq: RQ-319`, removed by this decision) and TASK-M7-37.
 
 ## RQ-320: the "what just changed" view needs the previous frame's class, but a stain node reads the payload at the playhead *(silence, R-442, REQ-COL-083, REQ-COL-106; context: TASK-M7-40)*
 

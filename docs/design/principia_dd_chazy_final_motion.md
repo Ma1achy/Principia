@@ -488,8 +488,13 @@ previous-shape latch.
   a failed `Φ`) keeps the chart's hatch, `debug_invalid`, in every stain, decided from the chart alone, never from the
   payload's `decode_failed` detail (Part 3; R-446).
 - **The decoder's own `decode_failed`** samples (its `DEGENERATE` tags and a non-finite decode) have no state to
-  classify; the spec does not say what they draw: RQ-319. Under R-446 the outcome view draws them black `#141418`,
-  which here is B (§10.1). A reserved `state` code draws the hatch under every option (colour_composition §4.1).
+  classify, and draw the invalid hatch, `debug_invalid`, in every stain, as `sim_failed` does (RQ-319, decided per
+  R-369: option (a), on gui review 5555494498 of PR #223). The spec does not say what they draw. Under R-446 the
+  outcome view draws them black `#141418`, which here is B (§10.1), "bound, or nobody has left yet". So a free-fall
+  slice under `η_E` reads hatched in the Chazy stains and black in the outcome view, the same split `sim_failed`
+  already has, and this hatch cannot be told apart from a chart's hatch. A reserved `state` code draws the hatch too
+  (colour_composition §4.1). Every sample with no motion to classify thus draws the hatch: `sim_failed`, a reserved
+  `state` code, a pixel the chart hatches and the decoder's own `decode_failed`.
 
 ---
 
@@ -680,7 +685,8 @@ Spec 03 §10, the human's follow-up of 16 October 2026, transcribed. Which body 
 final-motion maps (the event stain carries escape of body k). These views follow one body, so the detail stays
 legible. Collision is magenta `#DA85B6` and bound is black `#141418` throughout, as everywhere else (§10.1). Like every
 stain in §10, each is a composition on the backbone, its palette a user-editable default; §7's validity rules hold in
-each (running samples hold a value; `sim_failed` and NaN the hatch; `decode_failed` is RQ-319). The fields are §5.6's.
+each (running samples hold a value; `sim_failed` and NaN the hatch; `decode_failed` the hatch too, RQ-319 decided per
+R-369). The fields are §5.6's.
 
 #### 10.11.1 Body lens
 
@@ -934,9 +940,9 @@ What those numbers mean against the corpus's τ, as in §11.2.1:
 6. **Where it lands** (RQ-316). It needs the event machinery (M3) and the composition backbone (M7).
 
 And from this port: the default palette against τ and Okabe–Ito (RQ-311), B's chroma (RQ-317), the order of
-B-stable and transient (RQ-318), `decode_failed` (RQ-319) and where "what just changed" lives (RQ-320). From its
-review: the order of B-stable and excursion (RQ-324) and whether the classifier enforces the E < 0 certificate
-(RQ-325).
+B-stable and transient (RQ-318), `decode_failed` (RQ-319, decided per R-369: the hatch) and where "what just
+changed" lives (RQ-320). From its review: the order of B-stable and excursion (RQ-324) and whether the classifier
+enforces the E < 0 certificate (RQ-325).
 
 And from the follow-up (R-443): the escaper definition, the block's own open question, whether the one-body views read
 the event's escape detail when the run has an escape event or `chazy_escaper` always (RQ-321, beside RQ-313); the
