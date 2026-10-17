@@ -7811,13 +7811,16 @@ Adds REQ-CHART-056 and REQ-CHART-057; REQ-CHART-054's statement, verify, rulings
 rulings, sources and note, REQ-GUI-180's note, REQ-GUI-070's verify and note and REQ-GUI-100's verify change.
 
 ## R-409 — The compass has no orbit and two modes, Tilt and Slice, set by its buttons and by the slider touched; the keyboard has a navigation mode (orange ring) and an interaction mode (blue ring), Enter going in and Esc coming out *(amends R-390 and R-404)*
+*Amended in part by R-456 (17 Oct 2026; a click on a text field starts typing, in interaction mode: "every landing is
+in navigation mode" and G4's landing on a text field are the keyboard's landings, not a click's).*
 *Amended in part by R-450 (the console: its two scopes and its landing on the header bar scope, in place of "the
 console's first filter").*
 *Amended in part by R-451 (the compass's view angle: the reference's isometric projection, in place of point 1's yaw
 −35°, pitch 25°).*
 *Still in force: all of it, except that the console opens in navigation mode on its header bar scope, not on its first
 filter, and its sections are R-450's two scopes, the header bar and the log (R-450); and that the compass's fixed view
-is the reference's isometric projection, not point 1's yaw −35°, pitch 25° (R-451).*
+is the reference's isometric projection, not point 1's yaw −35°, pitch 25° (R-451); and that a click on a text field
+starts typing, in interaction mode (R-456).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
 what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
@@ -10198,6 +10201,8 @@ which is RQ-321.
   the fields, the stain parameter `k` and machine-readable dumps stay 0-based (REQ-GEN-036).
 
 ## R-444 — The outcome view shows physical outcomes only, in nine classes: bounded / nothing yet `#141418`, the three pair collisions, triple collision, the three escapes and triple ejection *(supersedes R-96 and R-433 as they apply to the outcome palette's classes and the triple outcomes' swatches)*
+*Its gate named by R-454 (17 Oct 2026; closes RQ-330): the three goldens re-baselined under R-444 to R-446, and the
+new swatches and their evidence (REQ-COL-104, REQ-COL-105) confirmed at the M2 gate.*
 *Amended in part by R-449 (the class names as shown: collision 1–2, 1–3 and 2–3 for pairs 2, 1 and 0, escape body 1,
 2 and 3 for `detail` 0, 1 and 2; same classes, same colours).*
 *Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
@@ -10364,6 +10369,8 @@ Changes REQ-COL-002 (statement, verify, rulings, sources, note), REQ-COL-062 (st
 note) and REQ-TOOL-021 (rulings, note); adds TASK-M2-32.
 
 ## R-445 — "Collision @ t = 0" is no longer a class: a collision at `t_end_step == 0` draws its pair's or the triple collision's colour, and lightness carries timing; the orange `#F29620` goes to triple collision, and triple ejection moves from navy `#000097` to purple `#611597` *(supersedes R-96 and R-433 as they apply to "collision at start", the triple swatches and the first-step triple collision's orange)*
+*Its gate named by R-454 (17 Oct 2026; closes RQ-330): the three goldens re-baselined under R-444 to R-446, and the
+new swatches and their evidence (REQ-COL-104, REQ-COL-105) confirmed at the M2 gate.*
 *Amended in part by R-449 (the class names as shown: its "collision 1–2", pair 0, is shown "collision 2–3").*
 *Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
@@ -10557,6 +10564,11 @@ Adds REQ-COL-101 and REQ-COL-102; changes REQ-COL-002, REQ-COL-053, REQ-COL-064 
 sources, note), REQ-GUI-105 (rulings, sources, note) and REQ-CHART-054 (verify, rulings, sources, note).
 
 ## R-447 — The outcome palette has an OKLab-uniform variant as a second preset: each chromatic class at its own OKLab hue, L = 0.72 and C = 0.123; bounded stays `#141418`; the sRGB palette stays the default
+*Read by R-455 (17 Oct 2026; closes RQ-366): "its hue within 0.5°" is against each class's own OKLab hue, which
+every swatch meets; escape body 3's `#09B9CD` is recorded at 0.54° from its row and stays. The measured line below
+stands as written.*
+*Its gate named by R-454 (17 Oct 2026; closes RQ-330): the three goldens re-baselined under R-444 to R-446, and the
+new swatches and their evidence (REQ-COL-104, REQ-COL-105) confirmed at the M2 gate.*
 *Amended in part by R-449 (the class names as shown, as for R-444; same hues, same swatches).*
 *Still in force: all of it; its 0-based class names are the internal ids, shown by R-449's names.*
 *16 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
@@ -10807,6 +10819,9 @@ Adds REQ-GUI-188 and REQ-GEN-036; changes REQ-GUI-087, REQ-GUI-066, REQ-GUI-113,
 REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-COL-067, REQ-COL-103, REQ-COL-104 and REQ-COL-105; adds TASK-M2-33.
 
 ## R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*
+*Amended in part by R-456 (17 Oct 2026; A3: a click on the search field starts typing, in interaction mode; a click on
+any other console control still lands in navigation mode on it).*
+*Still in force: all of it, except A3 for the search field, which a click now starts typing in (R-456).*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the console's paragraph and the window landing), § "G12. Console (`12_console.png`)" (a
 paragraph added) and § "G13. Where the artboards are overridden" (a bullet added), R-405's and R-409's heading blocks,
@@ -11519,3 +11534,169 @@ ruling applied by a follow-up task):*
 - R-453 is in the "design" group of `plan/rule_groups.yaml`.
 
 Adds REQ-GUI-201 and REQ-GUI-202.
+
+## R-454 — The three outcome goldens are re-baselined under R-444 to R-446, tile 7 of `known_escaper` named; the new swatches and their evidence are confirmed at the M2 gate *(closes RQ-330)*
+*17 Oct 2026 · applied in `decisions.md` (R-444's, R-445's and R-447's heading blocks, a forward line each),
+REQ-COL-104 and REQ-COL-105 (reqio), TASK-M2-32 (a reference, two acceptance lines and a note), `plan/MILESTONES.md` § "M2 —
+Charts, decode and encode", `plan/rule_groups.yaml`, `REVIEW_QUEUE.md` (RQ-330 moved out; RQ-331's and RQ-332's waits)
+and `docs/archive/review_queue/M0.md` (RQ-330, with its ruling); the `fixtures/golden/BASELINES.md` rows are TASK-M2-32's
+(PR #231); built by TASK-M2-32*
+
+The human's words, a message of 17 Oct 2026, its first item (R-455 and R-456 quote the other two):
+
+> RQ-330: re-baseline the three under R-444–R-446, once you've named tile 7's old and new swatch. Confirm the swatches
+> at the M2 gate.
+
+*The naming the human asked for (given to the human by the orchestrator before the ruling, and recorded with it):*
+- **"The three"** are the goldens RQ-330 names: `m1-outcome/outcome`, `m1-outcome/outcome_edited` and
+  `m1-synthetic/known_escaper`, re-rendered by TASK-M2-32 (PR #231) under R-444 to R-446.
+- **Tile 7** (0-based) of `m1-synthetic/known_escaper` is the eighth sample of `engine::fixtures` "known_escaper",
+  `STATE_RUNNING`. **Old:** the "not yet" style, the grey `#4E4E4E` stippled with dots `#909090` (R-399, R-434).
+  **New:** bounded / nothing yet's `#141418` (R-446).
+- **Tile 3**, the triple ejection (`STATE_ESCAPE`, `detail` 3), goes from navy `#000097` to purple `#611597` (R-445).
+  Only those two tiles' pixels change in `known_escaper`.
+
+*What it decides:*
+- **The re-baseline (RQ-330's first options, (a)).** The three goldens are re-baselined under R-444 to R-446, as
+  TASK-M2-32 re-renders them; R-454 is the gate decision R-110 asks for ("no re-baselining without a gate decision").
+  Each `BASELINES.md` row names R-454 as the decision that set its hash, with the rulings that changed the image.
+- **The gate (RQ-330's second options, (a)): the M2 gate.** The new swatches are confirmed by the human at the M2 gate,
+  with their evidence: REQ-COL-104 (the sRGB palette's separation, R-445) and REQ-COL-105 (the OKLab-uniform variant's,
+  R-447), both calibration requirements (R-71), both M2 as filed. They are the only calibration requirements R-444 to
+  R-448 named; R-446 and R-448 named none, and REQ-COL-053's, REQ-COL-062's and REQ-COL-064's M1 confirmations stay as
+  their record (R-445, R-446). RQ-331 (the closest pair, 0.175 against the human's 0.185) and RQ-332 (C = 0.123 and three
+  swatches' rounding) stay open and are put to the human with them at that gate.
+
+*Applied per R-369 (flagged):*
+- **The M1 gate's record (RQ-330's third options).** The human's words answer the re-baseline and the gate, not whether
+  the M1 gate's record needs more. Option (i) is applied, as the reading that follows "confirm the swatches at the M2
+  gate": the M1 gate stays passed (R-432) and is not re-run; REQ-COL-002, REQ-COL-053, REQ-COL-062, REQ-COL-064,
+  REQ-COL-067, REQ-COL-068 and REQ-TOOL-162 stay closed by their M1 tasks, and their changed statements are re-checked at
+  the M2 gate as "every earlier gate still green". Re-running the M1 gate, option (ii), would be the human's to ask for.
+- **The rows' text**, transcribed for PR #231 (its rows say "the gate decision RQ-330 asks for is pending"): each row
+  leads with R-454 and keeps its history. For `m1-outcome/outcome` and `m1-outcome/outcome_edited`: "R-454
+  (re-baselined under R-444 to R-446, RQ-330; the swatches and their evidence, REQ-COL-104 and REQ-COL-105, confirmed at
+  the M2 gate); re-rendered by TASK-M2-32 …". For `m1-synthetic/known_escaper` the same, with: "tile 3, the triple
+  ejection, from navy `#000097` to purple `#611597` (R-445), and tile 7, the running sample, from the "not yet" style
+  (`#4E4E4E` stippled `#909090`) to `#141418` (R-446), named to the human before R-454". The golden runner checks that
+  every `R-n` a row names is in `decisions.md`, so PR #231 takes `main` with this ruling before its rows name it.
+- **REQ-COL-104 and REQ-COL-105 (reqio)**: "the gate RQ-330 names" becomes "the M2 gate (R-454)" in statement and verify;
+  R-454 is added to their rulings and RQ-330 leaves their `rq`.
+- RQ-330 moves, unchanged, to `docs/archive/review_queue/M0.md` with its ruling (R-292); RQ-331's and RQ-332's waits
+  name the M2 gate.
+- R-444, R-445 and R-447 gain a forward line.
+- R-454 is in the "design" group of `plan/rule_groups.yaml`, with R-444 to R-448.
+
+Changes REQ-COL-104 and REQ-COL-105 (statement, verify, rulings, rq, note).
+
+## R-455 — R-447's "its hue" is each chromatic class's own OKLab hue, which every swatch meets within 0.5°; escape body 3's `#09B9CD` is recorded at 0.54° from its row and stays *(closes RQ-366)*
+*17 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "1.4 Categorical colour-assignment — the
+outcome-state default palette" (a sentence added), R-447's heading block (a forward line), REQ-COL-103 and REQ-COL-105
+(reqio, notes), TASK-M2-32 (a reference and a note), `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-366, filed on
+PR #231's branch, taken from it unchanged with its ruling; #231 drops it from its `REVIEW_QUEUE.md`); built by
+TASK-M2-32*
+
+The human's words (R-454 quotes the message's first item):
+
+> RQ-366: (a). The 0.5° tolerance is below hex quantisation at this chroma (one green or blue step is about 0.7°), and
+> by my numbers #07B9CD only moves 0.025°.
+
+RQ-366 (filed by TASK-M2-32 on PR #231) gave two options: "(a) Read "R-447's hue" as the class's own hue (R-447: "each
+chromatic class keeps its own OKLab hue"), which every swatch meets; record 0.54° against the row." and "(b) Take
+RQ-332's option (c), `#07B9CD`."
+
+*What it decides:* option (a). "Its hue within 0.5° of R-447's" (TASK-M2-32's acceptance, REQ-COL-103's verify) is read
+against each chromatic class's own OKLab hue, the sRGB class's measured hue that R-447 rounds to a degree (26.8°,
+146.7°, 265.1°, 65.3°, 103.0°, 335.2°, 208.5°, 305.1°), and every swatch meets it. Escape body 3's `#09B9CD` measures
+208.54°, 0.54° from its row's 208° and 0.04° from its class's 208.5°; it is recorded at 0.54° against the row and is not
+changed. The human's reasons: 0.5° is below hex quantisation at C ≈ 0.123 (one 8-bit step of green or blue moves the
+hue about 0.7°), and option (b), `#07B9CD`, moves the hue only 0.025°.
+
+*Measured (physics review 5558765536 on PR #231, recorded here; not a ruling and no new choice):* option (b)'s
+`#07B9CD` measures L 0.7193, C 0.1231, hue 208.52°, still 0.52° from the 208° row, so (b) would not have met the row
+check either, which agrees with the human's "only moves 0.025°" (208.545° to 208.52°). R-447's values give exactly sRGB
+(7.05, 185.34, 204.59); rounding it to 8 bits alone takes the hue past 0.5° of 208°, as the human's quantisation point
+says. A swatch meeting all three tolerances against the row exists, `#11B9CC` (L 0.7195, C 0.1217, hue 207.99°); the
+ruling keeps `#09B9CD`, and this figure changes nothing.
+
+*Applied:*
+- **R-447's measured line stands as written** ("each hue within 0.5° of its row", porting rule); its heading block gains
+  a forward line, and colour_composition §1.4's variant paragraph a sentence after its own copy of that figure: within
+  0.5° of each class's own hue, escape body 3 0.54° from its row (R-455).
+- **TASK-M2-32's acceptance line** ("its hue within 0.5° of R-447's") is read as R-455 reads it; a note in the task says
+  so, and REQ-COL-103's and REQ-COL-105's notes name R-455. The test PR #231 already has
+  (`outcome_oklab_variant_measures_r_447`: each hue within 0.5° of its class's own, escape body 3 pinned at 0.54° from its
+  row) is what this ruling asks for.
+- **RQ-332 stays open.** Its option (c) (the three computed roundings, `#07B9CD` among them) is the same swatch as
+  RQ-366's (b); R-455 rules on the 0.5° reading only. RQ-332's own question (C = 0.123 against 0.1224, and the three
+  swatches' rounding) goes to the M2 gate with REQ-COL-105 (R-454). *Flagged:* the human's reasons for (a) bear on
+  RQ-332's (c) as well, but the ruling names RQ-366 alone.
+- R-455 is in the "design" group of `plan/rule_groups.yaml`, with R-447.
+
+Changes REQ-COL-103 and REQ-COL-105 (rulings, note).
+
+## R-456 — A click on a text input starts typing, in interaction mode; a click anywhere else lands in navigation mode *(amends R-450 A3, and R-409's landing rule and G4, for text inputs)*
+*17 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (the two modes' paragraph and the console's paragraph, a sentence each) and § "G12. Console
+(`12_console.png`)" (a sentence added), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a
+screen" (a sentence added), R-450's and R-409's heading blocks, REQ-GUI-189 and REQ-GUI-190 (reqio) and REQ-GUI-182 (reqio,
+a note), TASK-M6-32 (a reference, an acceptance clause and a note) and `plan/rule_groups.yaml`; built by TASK-M6-32 (PR #234) on the mock*
+
+The human's words (R-454 quotes the message's first item), a GUI design ruling under R-390's feedback rule, on PR #234
+(TASK-M6-32), which applied R-450 A3 as written, so that a clicked search field needed Enter before it typed:
+
+> #234: clicking a text input should start typing; elsewhere a click lands in navigation mode.
+
+*What it decides:*
+- **A click on a text input starts typing.** The keyboard's focus moves onto the field in interaction mode, the ring
+  blue (R-409 G4's typing, which is interaction mode); the field takes every key but Esc, Enter and Tab, as §G3's text
+  field does once Enter has started it. In the console this is the search field.
+- **A click anywhere else lands in navigation mode:** a click that is not on a text input ends any typing and leaves the
+  keyboard in navigation mode. It moves the keyboard's focus only where a rule already says a click does, as R-450 A3
+  does for every other console control (All, Warnings, Errors, Info, Copy, Clear, the log), landing in navigation mode
+  on the control clicked; a click on × still closes the console. A click on the Figure that pins a sample (R-453) ends
+  typing and does not move the focus. (This scope is the orchestrator's reading, B6 below.)
+
+*What it amends:* R-450 A3's "in navigation mode", for the search field; R-409's "every landing is in navigation mode"
+and G4's "Landing on a text field is navigation mode", which are read from here on as the keyboard's landings (Tab,
+Enter, the arrows), a click on a text field being no navigation-mode landing. R-405 says nothing contrary: it says
+"the text filter is a text field, so the keyboard layer stands aside while it holds the keyboard, as #174 built for
+every text field", and nothing about a click. Nothing else in R-405, R-409 or R-450 changes.
+
+*Applied per R-369 (routine design choices; the human may veto any, a veto being a GUI design ruling applied by a
+follow-up task):*
+- **B1. Typing after a click follows §G3's text-field rule unchanged:** Esc and Enter stop typing, keep the text and
+  return to navigation mode on the field; Tab and Shift+Tab leave the field and move on, in navigation mode, to the
+  window's next or previous section inside a window (R-409 G4, G6). §G3's rule is checked and kept: qa's review of PR
+  #234 (finding F2) relies on Tab leaving a typing field for the next scope, and that holds after a click as after
+  Enter.
+- **B2. Every text input of the GUI, not only the console's.** "A text input" is §G3's text field, wherever it is: the
+  console's search field, and the Run window's and the stain library's text fields on the mock today. The rule lands in
+  §G3, which holds the text-field rule for the whole GUI; TASK-M6-32's audit of every window (R-450 A7) checks that a
+  click on each starts typing.
+- **B3. The caret.** A click puts egui's caret where it lands, as egui's field does; the text is kept.
+- **B4. Where it lands.** render_gui_spec §G3 (the two modes' paragraph and the console's) and §G12; GUI_DESIGN_NOTES §07;
+  REQ-GUI-189's statement and verify (reqio), with a control; REQ-GUI-182's note (the GUI-wide rule, its statement
+  TASK-M6-31's record); TASK-M6-32's REQ-GUI-189 acceptance line and a note. TASK-M6-32 is open (PR #234), so it conforms
+  the code and tests there.
+- **B5. qa's files (R-290, forced by this ruling).** A qa assertion that a clicked search field lands in navigation mode
+  asserts what R-456 changes; TASK-M6-32's qa reviewer changes it in the task's qa commit, and only it. PR #234's
+  `qa_TASK-M6-32.rs` accepts either mode after a click (`check_mode_agrees`), so it may need none.
+- **B6. The scope of "elsewhere" (flagged; the orchestrator's decision in #237's fix round, code review 5558818630 F1
+  and gui review 5558817839 F1).** "Elsewhere a click lands in navigation mode" is read as: a click not on a text input
+  ends any typing and leaves the keyboard in navigation mode, and moves the keyboard's focus only where an existing
+  rule says a click does (R-450 A3's console controls). It adds no new click-moves-focus rule: a click on the Figure
+  that pins a sample (R-453) ends typing and leaves the focus where it was; a click on Copy or the log moves the focus
+  there, in navigation mode (R-450 A3); a click on a text input starts typing in it. The human may veto this reading.
+- **B7. The checks.** REQ-GUI-189's verify gains a script: a click on the search field, letters typed, then a click on
+  Copy or the log lands in navigation mode there and a letter types nothing, with a control in which typing survives
+  the click; and a second script: a click on the search field, letters typed, then a click on the Figure ends the
+  typing and leaves the focus on the search field in navigation mode, the ring orange, a letter then typing nothing,
+  with controls in which the Figure click moves the focus to the Figure scope or leaves the field typing (gui review
+  5558848660, G1). REQ-GUI-190's verify gains a click on a text field outside the console (the Run window's, the stain
+  library's) that must start typing, with a control in which such a field needs Enter.
+- R-450 and R-409 gain forward lines (R-292, R-293).
+- R-456 is in the "design" group of `plan/rule_groups.yaml`, with R-450.
+
+Changes REQ-GUI-189 (statement, verify, rulings, note), REQ-GUI-190 (verify, rulings, sources, note) and REQ-GUI-182
+(rulings, note).

@@ -90,6 +90,42 @@ pub fn reconstruct<R: LinkReal>(
     (rho, lambda, r)
 }
 
+/// The canonical-frame configuration of a chart that sets the unweighted Jacobi vectors `(ρ, λ)` directly
+/// (chart_reference §5.1's `ChartOut`, "an explicit `(ρ, λ)`"; the Burrau family, §4.5): mass-weighted,
+/// `ρ̃ = √μ_ρ·ρ`, `λ̃ = √μ_λ·λ`; brought to `R̃ = 1` by the scale gauge `ℓ = √I`, `I = ‖ρ̃‖² + ‖λ̃‖²` (§0.5), which
+/// divides both by `ℓ`; `α = atan2(‖λ̃‖, ‖ρ̃‖)` and `β = atan2(λ̃_y, λ̃_x)` read off them (`‖ρ̃‖ = cos α`); then
+/// [`reconstruct`], the same unweighting and reconstruction as [`decode`]'s. `(ρ, λ)` must already be in the canonical
+/// frame, `ρ` on `+x` and `λ_y ≥ 0`, as the Burrau embed's are, so no rotation or mirror is left for `C`.
+#[inline]
+pub fn from_jacobi<R: LinkReal>(masses: &Masses<R>, rho: [R; 2], lambda: [R; 2]) -> Config<R> {
+    let [m0, m1, m2] = masses.m;
+    let sqrt_mu_rho = Float::sqrt(m0 * m1 / masses.m01);
+    let sqrt_mu_lambda = Float::sqrt(m2 * masses.m01);
+    let rho_w = [rho[0] * sqrt_mu_rho, rho[1] * sqrt_mu_rho];
+    let lambda_w = [lambda[0] * sqrt_mu_lambda, lambda[1] * sqrt_mu_lambda];
+    let ell = Float::sqrt(
+        rho_w[0] * rho_w[0]
+            + rho_w[1] * rho_w[1]
+            + lambda_w[0] * lambda_w[0]
+            + lambda_w[1] * lambda_w[1],
+    );
+    let rho_t = [rho_w[0] / ell, rho_w[1] / ell];
+    let lambda_t = [lambda_w[0] / ell, lambda_w[1] / ell];
+    let norm = |v: [R; 2]| Float::sqrt(v[0] * v[0] + v[1] * v[1]);
+    let alpha = Float::atan2(norm(lambda_t), norm(rho_t));
+    let beta = Float::atan2(lambda_t[1], lambda_t[0]);
+    let (rho, lambda, r) = reconstruct(masses, rho_t, lambda_t);
+    Config {
+        alpha,
+        beta,
+        rho_t,
+        lambda_t,
+        rho,
+        lambda,
+        r,
+    }
+}
+
 /// `D_cfg`: the config controls `z[0:2]`, with the mass block's output, to the canonical-frame configuration.
 #[inline]
 pub fn decode<S: Selection, R: LinkReal>(z_cfg: [R; 2], masses: &Masses<R>) -> Config<R> {
