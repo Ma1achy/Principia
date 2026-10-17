@@ -242,6 +242,37 @@ as slice directions or tilt targets:
 - **Burrau-to-unconstrained morph:** tilt one basis vector from a configuration direction into a mass or
   momentum direction. This is the direct test of the Burrau hypothesis (`principia_chart_reference.md` §4.6).
 
+**Their latent vectors** (defined per R-72, REQ-CHART-051; TASK-M2-22). Each is evaluated at the chart centre `z₀`,
+under the chart's link selection, on the shared decode before any energy normalisation (`principia_chart_reference.md`
+§0.1–§0.3, §0.6), and recomputed whenever `z₀` changes. Each is a unit vector of ℝ⁸ (Euclidean norm 1 in the latent
+controls), zero outside the block named; where its construction gives no direction, the library reports it
+unavailable at that centre rather than returning a vector.
+
+- **Mass perturbation away from Burrau,** `d_m`, in the mass block `z[6:8]`: `d_m ∝ z_eq − z₀[6:8]`, where `z_eq` is the
+  selected mass link's inverse at equal masses `(⅓, ⅓, ⅓)` (`(0, 0)` under the default softmax ∘ `μ_max·tanh`). It is
+  the straight latent line from the centre's mass controls, the Burrau logits when the centre is a Burrau IC, to equal
+  masses, which a slice step of `‖z_eq − z₀[6:8]‖` along it reaches exactly. Unavailable where `z₀[6:8] = z_eq`: the
+  centre already has equal masses.
+- **Energy increase at fixed `L_z`,** `d_E`, in the momentum block `z[2:6]`. Decode `z₀` to `(mᵢ, rᵢ, pᵢ)` and take
+  `vᵢ = pᵢ/mᵢ`. The physical tangent is `δv = v − v⁽ᴸ⁾`, `v⁽ᴸ⁾ᵢ = (L_z/I)·J rᵢ`: the velocity with its rigid rotation
+  projected out in `⟨·,·⟩_m` (`principia_chart_reference.md` §2.2 (i) and (ii)'s projection). It is the tangent at
+  `s = 0` of the curve `v(s) = v⁽ᴸ⁾ + eˢ·(v − v⁽ᴸ⁾)`, along which `L_z` is exactly constant and
+  `K = K_min + e²ˢ·(K − K_min)` increases: the steepest ascent of `K`, and of `E = U + K` at the centre's fixed
+  configuration and masses, on the `L_z` level set in the kinetic metric. Where `‖δv‖²_m ≤ ε_w·‖v‖²_m` (`ε_w = 10⁻¹⁰`,
+  §2.2's), at rest and on the rigid rotation `K = K_min`, where every direction on the level set raises `K` alike at
+  second order, `δv` is §2.2 (ii)'s unit direction `w`, its seed decided on `z_α` (R-82): the direction the `(L_z, K)`
+  construction adds energy along, so on that construction's image `d_E` is its `K` axis's tangent. `δpᵢ = mᵢ·δvᵢ` in
+  Jacobi form is `δq = (δp_ρ, δp_λ)`, `δp_ρ = (m₀·δp₁ − m₁·δp₀)/M₀₁`, `δp_λ = δp₂`; it is pulled back through the
+  selected momentum links, `δz_qk = δq_k / f_k′(z_qk)`, `f_k′ = exp(log_det_k)` (each registered momentum link
+  increases), and normalised. Unavailable where an `f_k′` underflows to 0 (a saturated control).
+- **Burrau-to-unconstrained morph,** a tilt `(source, target)`. The source is the basis vector with the larger share of
+  its length in the configuration block, `‖q[0:2]‖/‖q‖`, `q₁` on a tie: the plane's configuration direction, on a
+  Burrau slice its `ν` axis's tangent `γ′(ν₀)`. It is refused where neither basis vector has a configuration component.
+  The target is into mass, `d_m`, or into momentum, `d_E`, with its component in `span(q₁, q₂)` projected out and
+  renormalised, so the rotation leaves the plane: `τ = 0` is the slice the test starts from, `τ = ±90°` commits the
+  source to the unconstrained direction, and `z(½,½) = z₀` throughout, the anchor-preserving persistence test of
+  `principia_chart_reference.md` §4.6. Unavailable where that direction is unavailable or lies in the plane.
+
 This rule retro-explains the curve-axis result: a curve axis has no single basis vector — `γ(ν)` bends — so tilting it means rotating its **tangent at the centre**:
 
 ```
