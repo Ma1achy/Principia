@@ -106,7 +106,8 @@ negative_control!(
 /// six log floors and the hatch's three numbers (R-427), so the M1 list is empty. `rho_ratio`'s and `r_min_pair_0`'s
 /// floors, confirmed provisionally, are provisional until M2, citing REQ-TOOL-163 (R-419), and are listed at M2 with
 /// `eps_m01` (REQ-DEC-039), `tanh_sat` (REQ-DEC-047), the shape sphere's `shape_vec_js_tol` (REQ-CHART-049) and
-/// `shape_roundtrip_bound` (REQ-CHART-053), and the invariant warp's `k_max` and `gamma_k` (REQ-CHART-044).
+/// `shape_roundtrip_bound` (REQ-CHART-053), the invariant warp's `k_max` and `gamma_k` (REQ-CHART-044), and the
+/// Burrau ν = 1/2 gate's `burrau_nu_half_tol` (REQ-VAL-118).
 fn check_register_m1_m2(register: &[ConstantBuilder]) {
     check_lists("M1", register, &[]);
     check_lists(
@@ -117,6 +118,7 @@ fn check_register_m1_m2(register: &[ConstantBuilder]) {
             ("tanh_sat", "M2", "REQ-DEC-047"),
             ("k_max", "M2", "REQ-CHART-044"),
             ("gamma_k", "M2", "REQ-CHART-044"),
+            ("burrau_nu_half_tol", "M2", "REQ-VAL-118"),
             ("log_floor_rho_ratio", "M2", "REQ-TOOL-163"),
             ("log_floor_r_min_pair_0", "M2", "REQ-TOOL-163"),
             ("shape_vec_js_tol", "M2", "REQ-CHART-049"),
