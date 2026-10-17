@@ -682,6 +682,14 @@ fn mock_trajectory_views_the_inspector_panes_take_the_pointer() {
     );
     double_click(&mut h, &mut app, real.center());
     assert_eq!(app.windows.inspector.views.real, PanZoom::default());
+    // Pane 1 is the IC: a drag on it moves no view.
+    let ic = rect_of(&app, 0);
+    drag(&mut h, &mut app, ic.center(), vec2(12.0, 0.0));
+    assert_eq!(
+        app.windows.inspector.views.real,
+        PanZoom::default(),
+        "a drag on the IC pane panned the real-space view"
+    );
     // Pane 2 unwrapped pans by its own half-widths.
     app.windows.inspector.unwrapped = true;
     let _ = h.frame(&mut app, Vec::new());
