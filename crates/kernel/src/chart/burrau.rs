@@ -351,6 +351,11 @@ where
         "Burrau"
     }
 
+    /// `true`: the Burrau masses follow `ν(u)`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        true
+    }
+
     /// Layer 2's `ν ∈ (0, 1)` and `K ≥ 0`, then layer 3 on the f64 decode (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         if !(u.is_finite() && v.is_finite()) {
@@ -516,6 +521,11 @@ where
 
     fn name(&self) -> &str {
         "EuclidPlane"
+    }
+
+    /// `true`: the Burrau masses follow `ν(v)`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        true
     }
 
     /// [`decode_plane`] at `v`: `u` is not read.

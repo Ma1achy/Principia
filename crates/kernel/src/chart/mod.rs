@@ -15,7 +15,12 @@
 //!
 //! **The charts, in chart_reference §5.1's order** (REQ-CHART-029): [`Latent`] (`latent`), then [`ShapeSphere`]
 //! (`shape_sphere`), [`Burrau`] and the [`EuclidPlane`] (`burrau`), [`InvariantLE`] / [`InvariantLK`] (`invariant`)
-//! and `MassSimplex`, each a `Φ` beside it.
+//! and [`MassSimplex`] (`mass_simplex`), each a `Φ` beside it; and the mixed-axis charts, [`Mixed`] (`mixed`), whose two
+//! axes are any two quantities, the other six frozen.
+//!
+//! **Masses come from the decode** (lowering Part 3, "Mass source"; REQ-DEC-006): every chart's masses are its own
+//! decode's, per pixel, and each declares [`Chart::requires_per_pixel_mass`], CPU-side metadata saying whether a
+//! uniform mass, `SimUniforms.m[3]`, describes its pixels for CPU consumers. The kernel reads no such uniform.
 //!
 //! **Axis metadata and the statistics guard** ([`AxisMeta`], [`admit_statistic`]; chart_decoder_contract Part 5): an
 //! axis declares the decoder blocks it writes and whether it is annotation-only. A chart with an annotation axis is a
@@ -35,6 +40,8 @@
 pub mod burrau;
 pub mod invariant;
 pub mod latent;
+pub mod mass_simplex;
+pub mod mixed;
 pub mod shape_sphere;
 
 use core::fmt;
@@ -44,6 +51,8 @@ use spirv_std::num_traits::Float;
 pub use burrau::{Burrau, EuclidPlane};
 pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;
+pub use mass_simplex::MassSimplex;
+pub use mixed::Mixed;
 pub use shape_sphere::{ShapeMap, ShapeSphere};
 
 use crate::decode::{self, Decoded};
@@ -82,6 +91,9 @@ pub enum Constraint {
     ShapePhi,
     /// Layer 2, Burrau charts: `ν ∈ (0, 1)`.
     BurrauNu,
+    /// Layer 2, mixed-axis charts: a derived-quantity axis's value inside its domain, its link's codomain; each axis's
+    /// own check, which the chart inherits.
+    AxisDomain,
     /// Layer 3, decode sanity: every decoded mass positive.
     DecodedMassPositive,
     /// Layer 3, decode sanity: the CoM at the origin, within tolerance.
@@ -130,6 +142,15 @@ pub trait Chart {
 
     /// The chart's name, written in every dump header ([`write_dump_header`]).
     fn name(&self) -> &str;
+
+    /// Whether the chart's masses vary per pixel, so that a uniform mass (`SimUniforms.m[3]`) does not describe its
+    /// pixels and the integrator must not read one (inverse_encode_contract § "Chart-aware validation", the chart
+    /// flags; REQ-DEC-006): true for the ternary mass plot, the Burrau family and a mixed-axis chart with a mass axis.
+    /// CPU-side metadata only (lowering Part 3): the masses always come from the chart's own decode. Every chart in this
+    /// crate declares it; the default, `true`, trusts no uniform mass.
+    fn requires_per_pixel_mass(&self) -> bool {
+        true
+    }
 
     /// The chart's domain function (R-26), a CPU-side f64 check: inverse_encode_contract § "Chart-aware validation"'s
     /// layers 2 and 3 at `(u, v)`.

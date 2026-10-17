@@ -86,6 +86,12 @@ impl<P: Copy> Chart for Latent<P> {
         "Latent"
     }
 
+    /// `true`: `q₁` or `q₂` may sweep the mass controls, and the chart's type does not say whether they do, so no uniform
+    /// mass is trusted.
+    fn requires_per_pixel_mass(&self) -> bool {
+        true
+    }
+
     /// [`ValidationResult::Valid`] at every `(u, v)`: the chart has no layer-2 constraint, and layer 3 holds by the
     /// shared decoder's construction (the module's header).
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {

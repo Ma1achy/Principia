@@ -47,6 +47,10 @@ pub use ledger::constants::{
     BURRAU_NU_HALF_TOL, EUCLID_M_MAX, EUCLID_M_MIN, EUCLID_NU_MAX, EUCLID_NU_MIN,
 };
 
+/// The ternary mass plot's default buffer `ε_m` (chart_reference §4.5; TASK-M2-13), for the kernel and engine crates'
+/// tests, as the Euclid plane's defaults are.
+pub use ledger::constants::MASS_SIMPLEX_EPS_M;
+
 /// The payload's pair-id map (R-22; payload §2), for the kernel crate's tests, as `r_pole` is.
 pub use ledger::payload::pair_bodies;
 

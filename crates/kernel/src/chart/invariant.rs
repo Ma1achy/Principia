@@ -267,6 +267,11 @@ impl<P: Copy> Chart for InvariantLE<P> {
         "InvariantLE"
     }
 
+    /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
+    }
+
     /// Layer 2's parabola `|L_z| ≤ √(2I(E − U))` (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         check(u, v, Constraint::LzEParabola, Constraint::LzEParabola)
@@ -289,6 +294,11 @@ impl<P: Copy> Chart for InvariantLK<P> {
 
     fn name(&self) -> &str {
         "InvariantLK"
+    }
+
+    /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
     }
 
     /// Layer 2's `K ≥ 0` and `K ≥ L_z²/2I` (the module's note).

@@ -523,6 +523,10 @@ pub const EUCLID_NU_MIN: ConstantBuilder = chart("euclid_nu_min", 0.03125, EUCLI
 /// `ν_max`, the Euclid plane's default upper `ν` (chart_reference §4.5).
 pub const EUCLID_NU_MAX: ConstantBuilder = chart("euclid_nu_max", 0.96875, EUCLID_SECTION);
 
+/// `ε_m`, the ternary mass plot's default interior buffer: the masses are shrunk toward the barycentre,
+/// `m ← (1 − 3ε_m)·m + ε_m·(1, 1, 1)`, default `10⁻⁴` (chart_reference §4.5).
+pub const MASS_SIMPLEX_EPS_M: ConstantBuilder = chart("mass_simplex_eps_m", 1e-4, EUCLID_SECTION);
+
 /// The tolerance to which Burrau at `ν = 1/2` reproduces `(3, 4, 5)` and the classical configuration (chart_reference
 /// §5.2): an absolute bound, in units of the precision's machine epsilon, on the largest difference of any mass,
 /// position or momentum component of the canonical `(m, r, p)` (`G = M = I = 1`). The components are not all at most 1
@@ -852,6 +856,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     EUCLID_M_MAX,
     EUCLID_NU_MIN,
     EUCLID_NU_MAX,
+    MASS_SIMPLEX_EPS_M,
     LOG_FLOOR_D_MIN,
     LOG_FLOOR_DE_MAX,
     LOG_FLOOR_DLZ_MAX,
