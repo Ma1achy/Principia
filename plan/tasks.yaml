@@ -1973,6 +1973,62 @@
   requirements: [REQ-TOOL-151]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M7-35
+  milestone: M7
+  title: "The Chazy classifier: the rule, the Fewbody reference, the ten fixtures and the I_max latch"
+  depends_on: [TASK-M3-10, TASK-M3-11, TASK-M3-17, TASK-M3-19]
+  needs: [REQ-PAY-041, REQ-PAY-044, REQ-EVT-001, REQ-SYS-017]
+  requirements: [REQ-PAY-099, REQ-PAY-105, REQ-PAY-106, REQ-EVT-028, REQ-EVT-029, REQ-EVT-030, REQ-EVT-031, REQ-VAL-184, REQ-VAL-187]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-10, PIT-3]
+- id: TASK-M7-36
+  milestone: M7
+  title: "The Chazy fields: chazy_final, chazy_status, chazy_structure, chazy_q, chazy_escaper and chazy_qk, the escape freeze, and the energy certificates"
+  depends_on: [TASK-M7-35, TASK-M3-12, TASK-M3-22, TASK-M3-27, TASK-M2-33]
+  needs: [REQ-EVT-005, REQ-EVT-006, REQ-GEN-016, REQ-VAL-034, REQ-GEN-036]
+  requirements: [REQ-PAY-100, REQ-PAY-101, REQ-PAY-102, REQ-PAY-103, REQ-PAY-104, REQ-PAY-107, REQ-PAY-108, REQ-EVT-027, REQ-VAL-185, REQ-VAL-186]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-2, PIT-10]
+- id: TASK-M7-37
+  milestone: M7
+  title: "The Chazy flat stains: the seven-class default, four families, Okabe–Ito, the status map, the filter, the ranks and palette separation"
+  depends_on: [TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14]
+  needs: [REQ-COL-002, REQ-COL-053, REQ-COL-064, REQ-COL-067, REQ-COL-068]
+  requirements: [REQ-COL-072, REQ-COL-073, REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-080, REQ-COL-081, REQ-COL-084, REQ-COL-085, REQ-COL-086, REQ-COL-087]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: [PIT-5, PIT-3]
+- id: TASK-M7-38
+  milestone: M7
+  title: "The Chazy energy-channel stains: seven classes × energy, structure × energy, and B's hue"
+  depends_on: [TASK-M7-37, TASK-M7-04, TASK-M7-05]
+  needs: []
+  requirements: [REQ-COL-074, REQ-COL-078, REQ-COL-079, REQ-COL-088, REQ-COL-089]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: [PIT-5]
+- id: TASK-M7-39
+  milestone: M7
+  title: "Chazy parity: the f32 against f64 label disagreement, measured and reported"
+  depends_on: [TASK-M7-36, TASK-M4-04, TASK-M4-05, TASK-M4-18]
+  needs: [REQ-VAL-060, REQ-VAL-061, REQ-VAL-057]
+  requirements: [REQ-VAL-183]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
+- id: TASK-M7-40
+  milestone: M7
+  title: "The Chazy time views: when it was decided, and what just changed"
+  depends_on: [TASK-M7-37, TASK-M7-12]
+  needs: []
+  requirements: [REQ-COL-082, REQ-COL-083, REQ-COL-106]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: []
+- id: TASK-M7-41
+  milestone: M7
+  title: "The Chazy one-body stains: the body lens, its energy form, the escaper map, the mass-rank views and their tie fallback"
+  depends_on: [TASK-M7-36, TASK-M7-38]
+  needs: [REQ-COL-055, REQ-COL-064, REQ-GUI-188]
+  requirements: [REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-COL-096, REQ-COL-097, REQ-COL-098, REQ-COL-099, REQ-COL-100, REQ-COL-107, REQ-VAL-188, REQ-VAL-189]
+  reviewers: [code, qa, gui, physics]
+  pitfalls: [PIT-5]
 - id: TASK-M8-01
   milestone: M8
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"
@@ -2324,6 +2380,14 @@
   needs: [REQ-CHART-002]
   requirements: [REQ-CHART-057]
   reviewers: [code, qa, physics]
+  pitfalls: []
+- id: TASK-M8-45
+  milestone: M8
+  title: "The Chazy legends: the playhead in the title, B's label, the status legend's full names, the one-body legends and the three-body panels"
+  depends_on: [TASK-M8-22, TASK-M7-37, TASK-M7-38, TASK-M7-41]
+  needs: [REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-078, REQ-COL-079, REQ-COL-080, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-GUI-188]
+  requirements: [REQ-GUI-185, REQ-GUI-186, REQ-GUI-187]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0
