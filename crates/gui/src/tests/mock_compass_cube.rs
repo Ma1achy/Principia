@@ -812,3 +812,39 @@ fn mock_compass_cube_record_and_write() {
         assert_eq!(rec["centre"], serde_json::json!([98.0, 116.0]))
     });
 }
+
+#[test]
+fn mock_compass_cube_plane_basis_turns_its_helper_at_0_9() {
+    let cross = |a: P3, b: P3| -> P3 {
+        [
+            a[1] * b[2] - a[2] * b[1],
+            a[2] * b[0] - a[0] * b[2],
+            a[0] * b[1] - a[1] * b[0],
+        ]
+    };
+    let unit = |a: P3| -> P3 {
+        let l = (a[0] * a[0] + a[1] * a[1] + a[2] * a[2]).sqrt();
+        a.map(|x| x / l)
+    };
+    let basis = |helper: P3, n: P3| -> (P3, P3) {
+        let u = unit(cross(helper, n));
+        (u, cross(n, u))
+    };
+    let (up, x) = ([0.0, 1.0, 0.0], [1.0, 0.0, 0.0]);
+    // Below |n_y| = 0.9 the vertical is the helper; at it and above, x, as the reference's `Math.abs(nn[1]) < 0.9`.
+    for (ny, helper) in [
+        (0.9, x),
+        (-0.9, x),
+        (0.95, x),
+        (0.899_999, up),
+        (-0.899_999, up),
+        (0.0, up),
+    ] {
+        let n: P3 = [0.0, ny, (1.0f64 - ny * ny).sqrt()];
+        assert_eq!(compass::plane_basis(n), basis(helper, n), "n_y = {ny}");
+    }
+    let n = [0.0, 0.9, 0.19f64.sqrt()];
+    rejects("the vertical as the helper at 0.9", || {
+        assert_eq!(compass::plane_basis(n), basis(up, n))
+    });
+}

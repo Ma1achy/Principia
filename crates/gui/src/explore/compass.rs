@@ -304,7 +304,7 @@ pub fn plane_basis(n: P3) -> (P3, P3) {
 /// corners on the plane (within [`ON_PLANE`]) and the crossings of the edges whose ends lie strictly either side.
 pub fn cross_section(cut: Cut) -> Vec<P3> {
     let Cut { normal: n, offset } = cut;
-    let side = |p: P3| n[0] * p[0] + n[1] * p[1] + n[2] * p[2] - offset;
+    let side = |p: P3| dot3(n, p) - offset;
     let mut points: Vec<P3> = Vec::new();
     let mut push = |p: P3| {
         if !points
