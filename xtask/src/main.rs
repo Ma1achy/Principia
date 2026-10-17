@@ -94,6 +94,9 @@ Commands:
   lint compute-pipelines          fail on a compute pipeline created, or wgpu's passthrough used, outside the
                                   compute entry point (crates/engine/src/compute.rs), or a vertex or fragment
                                   pipeline beside its passthrough, naming file, line and identifier (R-297)
+  lint no-alloc                   fail on `Vec`, `Box` or `dyn`, or `std::` or `alloc::`, in the kernel's physics and
+                                  driver layers (crates/kernel/src/{physics,driver}), naming file, line and token
+                                  (integrator_contract Part 2c rule 5; REQ-PERF-002)
   mutants-check <mutants.out>... [--equivalent <file>]
                                   the per-PR mutation gate (R-196, R-202): list each mutant that survived the
                                   `cargo mutants` run whose output is <mutants.out>, or each shard's (R-302), and fail
@@ -173,6 +176,7 @@ fn main() -> ExitCode {
         ["lint", "vocab"] => xtask::lint_vocab::run(&workspace_manifest()),
         ["lint", "wgsl"] => xtask::lint_wgsl::run(&workspace_manifest()),
         ["lint", "compute-pipelines"] => xtask::lint_compute::run(&workspace_manifest()),
+        ["lint", "no-alloc"] => xtask::lint_no_alloc::run(&workspace_manifest()),
         ["mutants-check", outs @ .., "--equivalent", list]
             if !outs.is_empty() && !outs.contains(&"--equivalent") =>
         {

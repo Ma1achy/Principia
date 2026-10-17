@@ -12,11 +12,36 @@
 //! kernel's WGSL has a `select`, not a branch (gpu_determinism_note's discipline). A stored value is tested on its bits, an exponent field of all ones
 //! ([`IeeeBits::non_finite_bits`]), as R-114's NaN guard is, never by `isinf` or a comparison with the largest finite
 //! value. The payload's float types have them ([`crate::payload::PayloadReal`]'s bound): f32 and f64.
+//!
+//! **What `Real` gives the physics layer** (integrator_contract Part 2c, "Rules the new kernel must hold by
+//! construction"): the four operations and negation, [`RealOps::fma`], [`RealOps::square_root`] and the comparisons
+//! of `PartialOrd`, and nothing else. It carries no numeric constant, no epsilon, no largest value, no infinity: rule 1
+//! forbids a precision-dependent constant in a control-flow decision, so code bounded by `Real` alone, as
+//! [`crate::physics`] is, has none to reach. A tolerance that must scale with precision is supplied where the value is
+//! used, never where a branch is taken. `NAME` is the precision row's label for the ledger, not a number. The two
+//! functions are named apart from `num_traits::Float`'s `mul_add` and `sqrt`, which the links' bound
+//! ([`crate::generated::links::LinkReal`]) also carries, so that a call on a type bounded by both is not ambiguous.
 
 use core::fmt::Debug;
+use core::ops::{Add, Div, Mul, Neg, Sub};
+
+use spirv_std::num_traits::Float;
 
 /// A float type the one kernel source is instantiated at: f32 on the GPU, f64 on the CPU (R-265).
-pub trait Real: Copy + Default + Debug + PartialEq + PartialOrd + 'static {
+pub trait Real:
+    Copy
+    + Default
+    + Debug
+    + PartialEq
+    + PartialOrd
+    + Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Div<Output = Self>
+    + Neg<Output = Self>
+    + RealOps
+    + 'static
+{
     /// The name the ledger's precision row gives this type (dd_simstate_payload §1).
     const NAME: &'static str;
 }
@@ -27,6 +52,32 @@ impl Real for f32 {
 
 impl Real for f64 {
     const NAME: &'static str = "f64";
+}
+
+/// The two functions [`Real`] gives beyond its operators, taken from `num_traits::Float` for every float type, so that
+/// `Float`'s constants (its epsilon, largest value, infinity) stay out of reach of code bounded by `Real` alone (the
+/// module's note).
+pub trait RealOps: Sized {
+    /// `self·a + b`, the fused multiply-add: rounded once on the CPU. WGSL lets a backend evaluate its `fma` as
+    /// `self·a + b` unfused, so on the GPU it is a continuous value that may differ, never a branch input
+    /// (integrator_contract Part 2c, "And FMA contraction is a live question").
+    fn fma(self, a: Self, b: Self) -> Self;
+
+    /// `√self`: correctly rounded on the CPU, not guaranteed so on a GPU backend, so no branch decides on it (Part 2c
+    /// rule 2: compare `d²`, never `d`).
+    fn square_root(self) -> Self;
+}
+
+impl<T: Float> RealOps for T {
+    #[inline]
+    fn fma(self, a: T, b: T) -> T {
+        Float::mul_add(self, a, b)
+    }
+
+    #[inline]
+    fn square_root(self) -> T {
+        Float::sqrt(self)
+    }
 }
 
 /// The IEEE 754 bit patterns a producer selects at a pole, and the stored value's bit test (R-436; the module's note).
