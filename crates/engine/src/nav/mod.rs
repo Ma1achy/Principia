@@ -5,7 +5,7 @@
 //! | Gesture | Edit | Constraint (Part 4, "The operation table") |
 //! |---|---|---|
 //! | [`pan`] | `z₀` | `Δz₀ ∈ span(q₁, q₂)`: the same plane, another window |
-//! | [`slice`] | `z₀` | `Δz₀ ⊥ span(q₁, q₂)`, `z₀ ← z₀ + t·d`: every pixel's IC moves by the same hidden step |
+//! | [`slice`](slice()) | `z₀` | `Δz₀ ⊥ span(q₁, q₂)`, `z₀ ← z₀ + t·d`: every pixel's IC moves by the same hidden step |
 //! | [`zoom`] | `q₁, q₂` | one common factor, log-stepped: `2^−octaves` |
 //! | [`ChartConstructor::tilt`] | `q₁` or `q₂` | `q′(τ) = normalise(cos τ·q + sin τ·d_target)`, `τ ∈ [−90°, +90°]` |
 //!
@@ -111,7 +111,7 @@ fn edit(field: SimField) -> SetField {
 }
 
 /// The plane's orthonormal frame `(û₁, û₂)`: Gram–Schmidt of `q₁`, then `q₂`. [`NavError::DegeneratePlane`] where they
-/// span no plane: `q₁ = 0`, or `q₂`'s part orthogonal to `q₁` at most `√ε·‖q₂‖` ([`unit_of`]).
+/// span no plane: `q₁ = 0`, or `q₂`'s part orthogonal to `q₁` at most `√ε·‖q₂‖` (the `unit_of` tolerance).
 pub fn frame(plane: &Plane) -> Result<[Latent; 2], NavError> {
     let degenerate = |e| match e {
         NavError::ZeroVector => NavError::DegeneratePlane,
