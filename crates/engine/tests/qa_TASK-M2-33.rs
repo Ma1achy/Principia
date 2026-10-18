@@ -11,8 +11,12 @@
 //!   (`qa_m2_33_export_header_*`).
 //! - The header is generated from the ledger, not hand-written: the checked-in decoder is byte-for-byte what the
 //!   ledger's generator emits now (`qa_m2_33_export_generated_*`).
-//! - A body-indexed ledger entry without the text fails generation, naming the field; so does one whose text names a
-//!   1-based base (`qa_m2_33_export_refuses_*`).
+//! - A ledger entry marked body- or pair-indexed (its §3.8 index-base key) without the text fails generation, naming
+//!   the field; so does one whose text names a 1-based base, and so does every marked entry at once with its text
+//!   emptied (`qa_m2_33_export_refuses_*`).
+//! - The check follows the entry's own key, not a list of names: an indexed entry renamed is still refused under its
+//!   new name, and any other per-body or per-pair field marked indexed without the text is refused too
+//!   (`qa_m2_33_export_key_*`).
 //!
 //! Each test has its negative control (R-176).
 // The file name `qa_TASK-M2-33` gives a crate name that is not snake case.
@@ -20,7 +24,8 @@
 
 use engine::export::{decode, Decoded, INDEX_BASES};
 use kernel::payload::*;
-use ledger::gen::{export, generate, generate_with_index_bases, GenError};
+use ledger::gen::{export, generate, GenError};
+use ledger::schema::{EntryBuilder, IndexBase, Indexed, Ledger, Location};
 use validation::negative_control;
 
 /// R-449's words.
@@ -218,7 +223,43 @@ negative_control!(
 
 // ── A missing base fails generation ─────────────────────────────────────────────────────────────────────────────────
 
-fn check_refuses(gen: impl Fn(&[(&str, &str)]) -> Result<(), GenError>) {
+/// The payload layout with `edit` applied to the entry named `field`.
+fn layout_with(field: &str, edit: impl FnOnce(&mut EntryBuilder)) -> Ledger {
+    let mut l = ledger::layout();
+    let e = l
+        .entries
+        .iter_mut()
+        .find(|e| e.name == Some(field))
+        .unwrap_or_else(|| panic!("the payload ledger has no entry `{field}`"));
+    edit(e);
+    l
+}
+
+/// The payload layout with `field`'s index-base text replaced by `text`, its kind of index kept.
+fn text_of(field: &str, text: &'static str) -> Ledger {
+    layout_with(field, |e| {
+        let key = e
+            .index_base
+            .unwrap_or_else(|| panic!("`{field}` is not marked body- or pair-indexed"));
+        e.index_base = Some(IndexBase { text, ..key });
+    })
+}
+
+/// The refusal lines generating `layout` gives, or none when it generates.
+fn refusals(gen: &impl Fn(&Ledger) -> Result<(), GenError>, layout: &Ledger) -> Vec<String> {
+    match gen(layout) {
+        Ok(()) => vec![],
+        Err(GenError::Unread(lines)) => lines,
+        Err(other) => panic!("generation failed other than by refusing a field: {other:?}"),
+    }
+}
+
+fn check_refuses(gen: impl Fn(&Ledger) -> Result<(), GenError>) {
+    assert_eq!(
+        gen(&ledger::layout()),
+        Ok(()),
+        "the payload ledger generates"
+    );
     for (field, text) in [
         ("m2", "body 2's mass"),
         ("m0", "body index, 1-based"),
@@ -229,11 +270,7 @@ fn check_refuses(gen: impl Fn(&[(&str, &str)]) -> Result<(), GenError>) {
         ),
         ("p", "components 2j and 2j + 1"),
     ] {
-        let bases: Vec<(&str, &str)> = ledger::payload::INDEX_BASES
-            .iter()
-            .map(|&(f, t)| if f == field { (f, text) } else { (f, t) })
-            .collect();
-        match gen(&bases) {
+        match gen(&text_of(field, text)) {
             Err(GenError::Unread(lines)) => assert!(
                 lines.iter().any(|l| l.contains(&format!("`{field}`"))),
                 "the refusal does not name `{field}`: {lines:?}"
@@ -241,28 +278,146 @@ fn check_refuses(gen: impl Fn(&[(&str, &str)]) -> Result<(), GenError>) {
             other => panic!("`{field}` with the base `{text}` generated: {other:?}"),
         }
     }
-    // Every base dropped: each indexed field is refused.
-    match gen(&[]) {
+    // Every marked entry at once, its text emptied: each is refused, named. (In place of the side table's "every base
+    // dropped": the base now lives on the entry, so an entry still marked indexed with no text is the whole case.)
+    let mut l = ledger::layout();
+    for e in &mut l.entries {
+        if let Some(key) = e.index_base {
+            e.index_base = Some(IndexBase { text: "", ..key });
+        }
+    }
+    match gen(&l) {
         Err(GenError::Unread(lines)) => {
             for (field, _) in INDEXED {
                 assert!(
                     lines.iter().any(|l| l.contains(&format!("`{field}`"))),
-                    "with no bases, `{field}` is not refused: {lines:?}"
+                    "with every text emptied, `{field}` is not refused: {lines:?}"
                 );
             }
         }
-        other => panic!("with no bases, generation went ahead: {other:?}"),
+        other => panic!("with every text emptied, generation went ahead: {other:?}"),
     }
+}
+
+/// Generates the export decoder from `layout`, keeping only whether it was refused.
+fn generated(layout: &Ledger) -> Result<(), GenError> {
+    generate(layout, &[export::emit]).map(|_| ())
 }
 
 #[test]
 fn qa_m2_33_export_refuses_a_missing_base() {
-    check_refuses(|b| generate_with_index_bases(b, &ledger::layout(), &[export::emit]).map(|_| ()));
+    check_refuses(generated);
 }
 
 negative_control!(
     qa_m2_33_export_refuses_a_missing_base,
-    "a generator that never checks the bases fails",
+    "a generator that never reads the entries' index-base keys fails",
     expected = "`m2` with the base `body 2's mass` generated",
-    check_refuses(|_| generate(&ledger::layout(), &[export::emit]).map(|_| ()))
+    check_refuses(|_| generated(&ledger::layout()))
+);
+
+// ── The check follows the entry's key ───────────────────────────────────────────────────────────────────────────────
+
+/// REQ-GEN-036's "any per-body or per-pair field": the check reads each entry's own key. `p_sh` renamed `qa_p_sh_moved`
+/// (and so read by the derived fields that read it) keeps its key: with its text, renaming adds no refusal naming it; with a text that drops "0-based", a refusal names
+/// it under the new name. A field no list names, `q_mass`, marked body-indexed without the text is refused; marked
+/// with R-449's words it generates. `detail`'s key narrowed to a body index while its text states only the pair base
+/// is refused (the kind decides which bases the text must state).
+fn check_key(gen: impl Fn(&Ledger) -> Result<(), GenError>) {
+    let renamed = |text: Option<&'static str>| {
+        let mut l = layout_with("p_sh", |e| {
+            e.name = Some("qa_p_sh_moved");
+            if let Some(text) = text {
+                let key = e.index_base.expect("`p_sh` is marked body-indexed");
+                e.index_base = Some(IndexBase { text, ..key });
+            }
+        });
+        // The derived fields that read `p_sh` read it under its new name.
+        for e in &mut l.entries {
+            if let Some(Location::Derived { from }) = &mut e.location {
+                for f in from.iter_mut().filter(|f| **f == "p_sh") {
+                    *f = "qa_p_sh_moved";
+                }
+            }
+        }
+        l
+    };
+    let names = |lines: &[String]| -> usize {
+        lines
+            .iter()
+            .filter(|l| l.contains("`qa_p_sh_moved`"))
+            .count()
+    };
+    let kept = names(&refusals(&gen, &renamed(None)));
+    let bad = names(&refusals(&gen, &renamed(Some("components 2j and 2j + 1"))));
+    assert!(
+        bad > kept,
+        "the renamed indexed entry `qa_p_sh_moved` without the text is not refused ({kept} lines name it either way)"
+    );
+
+    let q = |text: &'static str| {
+        layout_with("q_mass", |e| {
+            assert_eq!(e.index_base, None, "`q_mass` is already marked");
+            e.index_base = Some(IndexBase {
+                indexed: Indexed::Body,
+                text,
+            });
+        })
+    };
+    assert_eq!(
+        gen(&q("body index, 0-based: the qa stand-in")),
+        Ok(()),
+        "`q_mass` marked with R-449's words"
+    );
+    assert!(
+        refusals(&gen, &q("the mass ratio"))
+            .iter()
+            .any(|l| l.contains("`q_mass`")),
+        "`q_mass` marked body-indexed without the text is not refused"
+    );
+
+    let narrowed = layout_with("detail", |e| {
+        e.index_base = Some(IndexBase {
+            indexed: Indexed::Body,
+            text: PAIR,
+        });
+    });
+    assert!(
+        refusals(&gen, &narrowed)
+            .iter()
+            .any(|l| l.contains("`detail`")),
+        "`detail` marked body-indexed with only the pair base is not refused"
+    );
+}
+
+#[test]
+fn qa_m2_33_export_key_follows_the_entry() {
+    check_key(generated);
+}
+
+negative_control!(
+    qa_m2_33_export_key_follows_the_entry,
+    "a generator that checks a fixed list of names, not the entries' keys, fails",
+    expected = "the renamed indexed entry `qa_p_sh_moved` without the text is not refused",
+    check_key(|l: &Ledger| {
+        // The side table's way: only the names it lists are checked, so a renamed entry escapes.
+        const LISTED: [&str; 9] = [
+            "r",
+            "p",
+            "r_sh",
+            "p_sh",
+            "detail",
+            "dmin_pair",
+            "m0",
+            "m1",
+            "m2",
+        ];
+        let mut l = l.clone();
+        for e in &mut l.entries {
+            if !e.name.is_some_and(|n| LISTED.contains(&n)) {
+                e.index_base = None;
+            }
+        }
+        generated(&l)
+    })
 );

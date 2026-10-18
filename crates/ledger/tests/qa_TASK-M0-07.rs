@@ -66,6 +66,7 @@ fn complete(
         provenance: Some(provenance),
         consumers: Some(consumers.to_vec()),
         declaration: None,
+        index_base: None,
     }
 }
 
@@ -495,6 +496,7 @@ fn check_each_kind_carried(mangle: fn(&mut Entry)) {
             provenance,
             consumers: who.to_vec(),
             declaration: None,
+            index_base: None,
         };
         assert_eq!(got, want, "qa: the entry does not carry what was written");
     }
