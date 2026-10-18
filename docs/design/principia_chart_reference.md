@@ -617,10 +617,15 @@ written in §5.4 by TASK-M2-11 and physics-reviewed; until it is written each ax
 `(0,1)` gives `a = 1 − ν² ≤ 0` or `b ≤ 0`, a zero or negative mass, and the acute angle past `(0, π/4]` the same.) The
 ternary mass plot's axes are affine in R-407's sense (its formula continues; the map itself, `m₁ = u`,
 `m₂ = (1−u)v`, `m₀ = (1−u)(1−v)`, is bilinear), and the fallback hatches its negative-mass area (§5.4).
-The types are now written in §5.4 (TASK-M2-11, REQ-CHART-055). On the acute angle the parenthesis above holds past
-`θ = 0`: there `ν ≥ 1`, so `a ≤ 0`, a zero or negative mass. Past `θ = π/4` the formula continues into the other leg
-ordering (`ν < √2 − 1`), whose masses stay positive up to `θ = π/2` (`ν = 0`, `b = 0`): real systems, the leg-swapped
-twins of the fold's own, which the fold exists to leave out. On both sides the acute angle is bounded (§5.4).
+The types are now written in §5.4 (TASK-M2-11, REQ-CHART-055). The acute angle's axis has its edges at `θ_min` and
+`θ_max`, inside the domain `(0, π/4]`, so past each edge the formula first runs through real systems the chart does not
+show: below `u = 0` the thin triangles of `θ ∈ (0, θ_min)`, and above `u = 1`, where `θ_max < π/4`, the shapes of
+`(θ_max, π/4]`. The parenthesis above holds only past `θ = 0`: there `ν ≥ 1`, so `a ≤ 0`, a zero or negative mass. Past
+`θ = π/4` the formula continues into the other leg ordering (`ν < √2 − 1`), whose masses stay positive up to `θ = π/2`
+(`ν = 0`, `b = 0`): real systems, on `Φ_θ,K` and `Φ_θ,L_z`, and on the δm strip for a target symmetric in bodies 1 and
+2 (the default), the leg-swapped twins of the fold's own, which the fold exists to leave out; on a δm strip with an
+asymmetric target they are new systems. On both sides the acute angle is bounded anyway (§5.4): one type per axis, and
+the twins side decides it.
 
 ### 4.6 The central hypothesis
 
@@ -764,9 +769,14 @@ existing charts:
 type per axis of every Burrau-family chart (§4.5), with the reasoning:
 
 - **`ν`, bounded** (the Euclid plane's vertical axis, the `(ν, K)` chart's horizontal). Past `(0, 1)` `a = 1 − ν² ≤ 0`
-  or `b = 2ν ≤ 0`, a zero or negative mass. Inside `(0, 1)` but past the chart's range, the formula would continue
-  through the leg swap's fixed point `√2 − 1` onto the leg-swapped twins of shapes a one-sided range already shows,
-  changing the chart's `system_image` past `[0,1]²`, where it must add no multiplicity (R-408). Nothing is declared.
+  or `b = 2ν ≤ 0`, a zero or negative mass: the domain's end. Between the chart's range and those ends the formula
+  runs through real systems the chart does not show: past `ν_max` (default `31/32`) new shapes up to `ν = 1`, not
+  twins, since their leg-swapped partners `(1 − ν)/(1 + ν) < 1/63` lie below the default `ν_min = 1/32` too; past
+  `ν_min` shapes down to `ν = 0`, at the default some twins of shapes inside and some new. Inside `(0, 1)` but past the
+  chart's range, the formula would continue through the leg swap's fixed point `√2 − 1` onto the leg-swapped twins of
+  shapes a one-sided range already shows, changing the chart's `system_image` past `[0,1]²`, where it must add no
+  multiplicity (R-408). Bounded is chosen anyway: one type per axis, and the twins side decides it; the real systems
+  past the range are hatched and fall out of the count and the total with the domain's end. Nothing is declared.
 - **`m`, bounded** (the Euclid plane's horizontal axis). An annotation axis behind the exponential warp
   `m(u) = m_min·(m_max/m_min)^u`, a quantity behind a nonlinear warp, which declares nothing: its continuation would
   draw the same `ν` family again, adding no system (the decoder ignores `u`), and below `u = 0` `m < m_min`, where the
@@ -774,10 +784,16 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
 - **`K`, bounded** (the `(ν, K)` chart's and `Φ_θ,K`'s vertical axis). It is §2.1's `K(t) = K_max·t^γ_K`, bounded for
   §2.1's reasons: `t < 0` has no real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back
   onto `t > 0`). Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) is left undeclared, as on the warp (R-407, A5).
-- **`θ`, bounded** (every acute-angle chart's horizontal axis). Past `θ = 0` `ν ≥ 1`, so `a ≤ 0`, a zero or negative
-  mass. Past `θ = π/4` the formula continues into the other leg ordering, real systems up to `θ = π/2` (then `b < 0`),
-  but the leg-swapped twins of the fold's own: continuing would undo the fold the axis exists for and count each shape
-  twice (R-27, R-408).
+- **`θ`, bounded** (every acute-angle chart's horizontal axis). The axis's edges are `θ_min` and `θ_max`
+  (REQ-CHART-045), inside the domain `(0, π/4]`, so past each edge the formula first runs through real systems the
+  chart does not show: below `u = 0` the thin triangles of `θ ∈ (0, θ_min)`, and above `u = 1`, where `θ_max < π/4`,
+  the shapes of `(θ_max, π/4]`. Past `θ = 0` `ν ≥ 1`, so `a ≤ 0`, a zero or negative mass: the domain's end. Past
+  `θ = π/4` the formula continues into the other leg ordering, real systems up to `θ = π/2` (then `b < 0`), on `Φ_θ,K`
+  and `Φ_θ,L_z`, and on the δm strip for a target symmetric in bodies 1 and 2 (the default), the leg-swapped twins of
+  the fold's own: continuing would undo the fold the axis exists for and count each shape twice (R-27, R-408). On a δm
+  strip with an asymmetric target the blended masses do not swap with the legs, and the systems past `π/4` are new.
+  Bounded is chosen anyway: one type per axis, and the twins side decides it; the real systems between the axis's
+  edges and the domain's ends are hatched and fall out of the count and the total with the domain's end.
 - **`L_z`, affine** (`Φ_θ,L_z`'s vertical axis). At fixed `K`, `L_z(v) = (2v − 1)·λ_L·L_max(K)` is linear in `v`: a
   physical-quantity axis mapped linearly onto its range (R-408's port, B1, the Chart builder's `L_z` axis). Past its edge
   the formula continues, with `λ_L < 1` through feasible systems (new `L_z`, not seen in `[0,1]²`) up to
@@ -786,7 +802,8 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   `Σmᵢ = 1`, as the ternary plot's map continues (R-407, A7): past `v = 1` it runs on beyond `m_target`, past `v = 0`
   back beyond `m_Burrau`, through new mass vectors on the column's own triangle, until a mass reaches 0; the fallback
   hatches the zero- or negative-mass area. No pixel past δm's edge is a twin of one inside: the leg swap changes the
-  triangle, which the column holds fixed (at `θ = π/4`, where it does not, `m₁ = m₂` on the whole column).
+  triangle, which the column holds fixed (at `θ = π/4`, where it does not, `m₁ = m₂` on the whole column for a target
+  symmetric in bodies 1 and 2, the default; with an asymmetric target the column's swapped masses lie off the column).
 
 Only `L_z` and δm are given more than bounded; each needs the physics reviewer's approval (R-407, clause 3). The types
 are declared in code with the extension mechanism, by TASK-M8-05 (REQ-CHART-054).
