@@ -30,9 +30,9 @@ use kernel::chart::mixed::{
 };
 use kernel::chart::shape_sphere::ShapeMap;
 use kernel::chart::{
-    family_label, BlockTouch, Burrau, Chart, ChartDecode, ChartOut, Constraint, EuclidPlane,
-    InvariantLE, InvariantLK, Latent as LatentChart, MassSimplex, Mixed, ShapeSphere,
-    ValidationResult,
+    family_label, BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart,
+    ChartDecode, ChartOut, Constraint, EuclidPlane, InvariantLE, InvariantLK,
+    Latent as LatentChart, MassSimplex, Mixed, ShapeSphere, ValidationResult,
 };
 use kernel::decode::{self, mass, Decoded, Latent};
 use kernel::generated::links::*;
@@ -969,6 +969,21 @@ fn per_pixel_mass_declared_by_every_chart() {
             true,
         ),
         (
+            "BurrauThetaK",
+            theta_k::<f64>().requires_per_pixel_mass(),
+            true,
+        ),
+        (
+            "BurrauThetaLz",
+            theta_lz::<f64>().requires_per_pixel_mass(),
+            true,
+        ),
+        (
+            "BurrauThetaDeltaM",
+            delta_m::<f64>().requires_per_pixel_mass(),
+            true,
+        ),
+        (
             "Mixed (z_μ1, α)",
             Mixed::<ZMu1, Alpha, f64>::new(FROZEN, [0.0, 1.0], [0.1, 1.0])
                 .requires_per_pixel_mass(),
@@ -1043,6 +1058,9 @@ fn per_pixel_mass_declared_by_every_chart() {
         k_max: 1.0,
         gamma_k: 2.0,
     });
+    behaves(&theta_k::<f64>());
+    behaves(&theta_lz::<f64>());
+    behaves(&delta_m::<f64>());
     behaves(&EuclidPlane {
         m_range: [1.0, 32.0],
         nu_range: [0.1, 0.9],
@@ -1131,6 +1149,37 @@ fn nu_k<R: Q>() -> Burrau<R> {
     }
 }
 
+/// The acute-angle range checked, inside `(0, π/4]`.
+fn theta_range<R: Q>() -> [R; 2] {
+    [R::of(0.2), R::of(core::f64::consts::FRAC_PI_4)]
+}
+
+/// The `(θ, K)` chart checked.
+fn theta_k<R: Q>() -> BurrauThetaK<R> {
+    BurrauThetaK {
+        theta_range: theta_range(),
+        k_max: R::of(1.0),
+        gamma_k: R::of(2.0),
+    }
+}
+
+/// The `(θ, L_z)` chart checked.
+fn theta_lz<R: Q>() -> BurrauThetaLz<R> {
+    BurrauThetaLz {
+        theta_range: theta_range(),
+        k: R::of(0.5),
+        lz_fraction: R::of(0.9),
+    }
+}
+
+/// The δm strip checked, toward equal masses.
+fn delta_m<R: Q>() -> BurrauThetaDeltaM<R> {
+    BurrauThetaDeltaM {
+        theta_range: theta_range(),
+        m_target: BurrauThetaDeltaM::<R>::equal_masses(),
+    }
+}
+
 /// The Euclid plane checked.
 fn euclid<R: Q>() -> EuclidPlane<R> {
     EuclidPlane {
@@ -1165,6 +1214,9 @@ where
     check_trait_decode(&ternary::<R>(0.5), Chart::decode::<Defaults, R>);
     check_trait_decode(&nu_k::<R>(), Chart::decode::<Defaults, R>);
     check_trait_decode(&euclid::<R>(), Chart::decode::<Defaults, R>);
+    check_trait_decode(&theta_k::<R>(), Chart::decode::<Defaults, R>);
+    check_trait_decode(&theta_lz::<R>(), Chart::decode::<Defaults, R>);
+    check_trait_decode(&delta_m::<R>(), Chart::decode::<Defaults, R>);
     check_trait_decode(&h, Chart::decode::<Defaults, R>);
     check_trait_decode(&v, Chart::decode::<Defaults, R>);
     check_trait_decode(&both, Chart::decode::<Defaults, R>);
@@ -1194,6 +1246,9 @@ where
     check_trait_masses_vary(&ternary::<R>(0.5));
     check_trait_masses_vary(&nu_k::<R>());
     check_trait_masses_vary(&euclid::<R>());
+    check_trait_masses_vary(&theta_k::<R>());
+    check_trait_masses_vary(&theta_lz::<R>());
+    check_trait_masses_vary(&delta_m::<R>());
     check_trait_masses_vary(&h);
     check_trait_masses_vary(&v);
     check_trait_masses_vary(&both);

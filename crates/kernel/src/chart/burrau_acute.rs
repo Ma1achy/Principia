@@ -27,9 +27,11 @@
 //! Burrau masses and the `v = 1` row's `m_target`, exactly: `1·x + 0·y = x` and `0·x + 1·y = y` in floating point.
 //!
 //! **Into the shared decoder**, as on the `ν` axis's charts: `Φ`'s [`ChartOut`] is the zero vector, unread. `Φ_θ,K`
-//! and `Φ_θ,L_z` decode by [`decode_theta_k`] and [`decode_theta_lz`] (the construction's [`ExactSign`](crate::decode::invariant::ExactSign) is beyond
-//! [`Chart::decode`]'s bound, as on the `(ν, K)` chart), which their [`ChartDecode`] calls; the δm strip overrides
-//! [`Chart::decode`] with [`decode_delta_m`]. Energy is the construction's on `Φ_θ,K` and `Φ_θ,L_z`, which forbid
+//! and `Φ_θ,L_z` decode by [`decode_theta_k`] and [`decode_theta_lz`], whose construction's exact-sign arithmetic
+//! every payload float type has ([`crate::real::IeeeBits`]'s bound), as on the `(ν, K)` chart: each overrides
+//! [`Chart::decode`] with its own, which its [`ChartDecode`] calls too; the δm strip overrides [`Chart::decode`] with
+//! [`decode_delta_m`]. All three are the Burrau family, whose masses vary per pixel, and declare
+//! [`Chart::requires_per_pixel_mass`] (inverse_encode_contract § "Chart-aware validation", the chart flags). Energy is the construction's on `Φ_θ,K` and `Φ_θ,L_z`, which forbid
 //! `η_E` (chart_reference §0.6; R-25); the δm strip is a rest start and allows it, as the Euclid plane does.
 //!
 //! **Validation** (R-26; chart_reference §5.1). Layer 2: `θ ∈ (0, π/4]` ([`Constraint::BurrauTheta`]), whose failure is
@@ -234,6 +236,22 @@ where
         "BurrauThetaK"
     }
 
+    /// `true`: the Burrau masses follow `ν(θ(u))`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        true
+    }
+
+    /// [`decode_theta_k`] at `(u, v)`, the construction's outcome dropped, as [`ChartDecode::decode_at`] decodes it: the
+    /// masses follow `ν(θ(u))` (REQ-DEC-006). `S` is not read, as there.
+    #[inline]
+    fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode_theta_k(self, u, v).0
+    }
+
     /// Layer 2's `θ ∈ (0, π/4]` and `K ≥ 0`, then layer 3 on the f64 decode (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         if let Some(r) = reject_early(self.theta(u), u, v, Constraint::KNonNegative) {
@@ -403,6 +421,22 @@ where
 
     fn name(&self) -> &str {
         "BurrauThetaLz"
+    }
+
+    /// `true`: the Burrau masses follow `ν(θ(u))`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        true
+    }
+
+    /// [`decode_theta_lz`] at `(u, v)`, the construction's outcome dropped, as [`ChartDecode::decode_at`] decodes it: the
+    /// masses follow `ν(θ(u))` (REQ-DEC-006). `S` is not read, as there.
+    #[inline]
+    fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode_theta_lz(self, u, v).0
     }
 
     /// Layer 2's `θ ∈ (0, π/4]` and `K ≥ L_z²/2I`, then layer 3 on the f64 decode (the module's note).
@@ -622,6 +656,11 @@ where
 
     fn name(&self) -> &str {
         "BurrauThetaDeltaM"
+    }
+
+    /// `true`: the Burrau masses follow `ν(θ(u))`, blended toward the target along `v`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        true
     }
 
     /// [`decode_delta_m`].
