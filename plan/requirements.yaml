@@ -14562,7 +14562,7 @@
   milestone: M8
 - id: REQ-GUI-081
   area: GUI
-  statement: "The left panel must be one 'Manifold view' group holding Chart, Navigate, the depth readout (2^-k and quad level) with its precision warning, Lock, Centre z₀ (eight sliders z_α, z_β, z_q0…z_q3, z_μ1, z_μ2) and Slice & tilt (slice step, τ₁, τ₂, rotation γ)."
+  statement: "The left panel must be one 'Manifold view' group holding Chart, Navigate, the depth readout (2^-k and quad level) with its precision warning, Lock, Slice centre (eight sliders z_α, z_β, z_q0…z_q3, z_μ1, z_μ2, each with its number box) and Tilt (τ₁ and τ₂, each with its target dropdown, and rotation γ), with no slice step (R-457)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
@@ -14570,13 +14570,16 @@
     section: 01 Explore — the everyday view
   - file: docs/gui/principia_render_gui_spec.md
     section: G14. Settled by the notes (record)
+  - file: decisions.md
+    section: "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; \"Centre z₀\" is renamed \"Slice centre\" and \"Slice & tilt\" \"Tilt\"; each tilt angle tilts into a latent dimension the user picks, \"tilt τ₁ into [X]\" and \"tilt τ₂ into [Y]\", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's \"the slice step\" and R-451 B1's single tilt target)*"
   verify:
     method: GUI screenshot
-    detail: "screenshot against 01_main.png's left panel: one group, sub-sections in that order, eight named z₀ sliders"
+    detail: "screenshot against 01_main.png's left panel, read with R-457: one group, sub-sections in that order, eight named Slice centre sliders, no z₀ values under Navigate and no step under Tilt"
   rulings:
   - R-390
+  - R-457
   milestone: M8
-  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-06, which re-runs its acceptance on the real engine and depends on TASK-M6-26)"
+  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-06, which re-runs its acceptance on the real engine and depends on TASK-M6-26). R-457 (18 Oct 2026) renames Centre z₀ and Slice & tilt to Slice centre and Tilt, adds the tilt targets and removes the slice step; TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-38 builds the new sections on the mock (REQ-GUI-204, REQ-GUI-205), and TASK-M8-06 re-runs this wording on the real engine."
 - id: REQ-GUI-082
   area: GUI
   statement: "The Chart sub-group must show the chart preset named by its axes (e.g. 'z_α × z_β', never a nickname), the basis vectors q₁ and q₂ each with an edit button, a Chart builder… button and the chart's kind (affine or nonlinear)."
@@ -14592,17 +14595,21 @@
   milestone: M8
 - id: REQ-GUI-083
   area: GUI
-  statement: "The Navigate sub-group must show the centre (u, v), the zoom as log₂, and all eight z₀ values, each editable by drag and by typing."
+  statement: "The Navigate sub-group must show the centre (u, v) and the zoom as log₂, each editable by drag and by typing, and no grid of z₀ values; the eight z₀ values are the Slice centre sliders', each editable by drag and by typing in its number box (R-457)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 01 Explore — the everyday view
+  - file: decisions.md
+    section: "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; \"Centre z₀\" is renamed \"Slice centre\" and \"Slice & tilt\" \"Tilt\"; each tilt angle tilts into a latent dimension the user picks, \"tilt τ₁ into [X]\" and \"tilt τ₂ into [Y]\", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's \"the slice step\" and R-451 B1's single tilt target)*"
   verify:
     method: unit test
-    detail: "drag and typed entry on each of the eight z₀ fields both emit the same SetField and round-trip through the snapshot"
-  rulings: []
+    detail: "drag and typed entry on centre u, v, the zoom and each of the eight Slice centre sliders' number boxes emit the same SetField as the slider and round-trip through the snapshot; no Navigate widget edits a z₀ component"
+  rulings:
+  - R-457
   milestone: M8
+  note: "R-457 (18 Oct 2026) removes the eight z₀ value boxes from Navigate: they repeated the Slice centre sliders. Closed by TASK-M8-06 on the real engine; TASK-M6-38 builds it on the mock under REQ-GUI-204."
 - id: REQ-GUI-084
   area: GUI
   statement: "The figure's axis labels must carry the short axis name and the range at each end."
@@ -14810,7 +14817,7 @@
   note: "GUI_DESIGN_NOTES no longer lists an integrator 'tolerance' (conformed to R-68, R-107)."
 - id: REQ-GUI-095
   area: GUI
-  statement: "The GUI must be a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer, with Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) reached with Enter."
+  statement: "The GUI must be a tree of keyboard scopes with Tab order 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory · 5 Compass · 6 Time · 7 Legend · 8 footer, with Manifold view's sub-scopes (Chart, Navigate, Slice centre, Tilt) reached with Enter."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
@@ -14826,8 +14833,9 @@
   rulings:
   - R-390
   - R-405
+  - R-457
   milestone: M8
-  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-405 (10 Oct 2026) adds the footer as big scope 8, after Legend: TASK-M6-25 (merged) built and checked the seven; TASK-M6-28 adds the footer and extends scope_tab_order_mock to eight under REQ-GUI-178, and TASK-M8-13 re-runs the eight on the real engine."
+  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-405 (10 Oct 2026) adds the footer as big scope 8, after Legend: TASK-M6-25 (merged) built and checked the seven; TASK-M6-28 adds the footer and extends scope_tab_order_mock to eight under REQ-GUI-178, and TASK-M8-13 re-runs the eight on the real engine. R-457 (18 Oct 2026) renames the sub-scopes Centre z₀ and Slice & tilt to Slice centre and Tilt; TASK-M6-38 renames them on the mock (REQ-GUI-204)."
 - id: REQ-GUI-096
   area: GUI
   statement: "The global keys must follow §G3's table, in its two modes (R-409): Tab / Shift+Tab next / previous big scope, landing on the big scope itself in navigation mode, from either mode, and from interaction mode inside a window on the window's next or previous section instead, staying in the window (R-409 G6); Enter in navigation mode on a scope into it, on its first element, on the Figure, which has nothing inside, starting interaction mode, on a read-only scope with nothing inside (the Legend) doing nothing, on an element starting interaction mode, and on a button acting as its click; Enter and Esc in interaction mode back to navigation mode on the same element, and Esc in navigation mode up one scope; arrows in navigation mode always between siblings, on a big scope itself between the big scopes in Tab order, and in interaction mode adjusting the focused element; Shift ×10 and Alt ×0.1 steps, everywhere, the compass included; a scope's letter and Space shortcuts acting whenever the focus is in that scope, in either mode, except while a text field is being typed in; held keys delay-then-repeat (DAS / ARR); Ctrl+Z undo from the contract's history, in either mode, and ? shows shortcuts over everything, in either mode, each except while a text field is being typed in, when Ctrl+Z undoes the text edit and ? types a character (R-409 G5)."
@@ -14878,8 +14886,9 @@
   rulings:
   - R-390
   - R-409
+  - R-460
   milestone: M8
-  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-409 (10 Oct 2026): the ring's colour shows the keyboard's mode. TASK-M6-25 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the two colours (REQ-GUI-182) and re-checks this requirement on the mock, and TASK-M8-13 re-runs it on the real engine as now worded."
+  note: "R-390: closed by TASK-M6-25 on the mock engine (moved from TASK-M8-13, which re-runs its acceptance on the real engine and depends on TASK-M6-25). R-409 (10 Oct 2026): the ring's colour shows the keyboard's mode. TASK-M6-25 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the two colours (REQ-GUI-182) and re-checks this requirement on the mock, and TASK-M8-13 re-runs it on the real engine as now worded. R-460 (18 Oct 2026): the ring shows only while keyboard navigation is on, which starts only on keyboard input; a window opened with the mouse takes the focus with no ring (REQ-GUI-210, TASK-M6-41)."
 - id: REQ-GUI-099
   area: GUI
   statement: "Locking (K, or right-click → lock here) must recentre the view on that point and mark it with a gold reticle at the centre and a gold pin on the compass, and the lock badge must read '● locked at z_locked' and offer unlock and open in Inspector."
@@ -16072,8 +16081,9 @@
   rulings:
   - R-390
   - R-409
+  - R-457
   milestone: M6
-  note: "R-409 (10 Oct 2026) rewords the compass's part: the Tilt and Slice buttons beside the switch by the slider touched, and no orbit. TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the new compass (REQ-GUI-181) and re-checks this requirement on the mock."
+  note: "R-409 (10 Oct 2026) rewords the compass's part: the Tilt and Slice buttons beside the switch by the slider touched, and no orbit. TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the new compass (REQ-GUI-181) and re-checks this requirement on the mock. R-457 (18 Oct 2026) renames Centre z₀ and Slice & tilt to Slice centre and Tilt and removes Navigate's z₀ values and the slice step; this statement stays as TASK-M6-26's record, and TASK-M6-38 builds the new sections (REQ-GUI-204, REQ-GUI-205)."
 - id: REQ-GUI-171
   area: GUI
   statement: "On the mock engine, the figure's procedural stand-in must pan and zoom as the real figure does: pan and zoom are SetFields on z₀ and the basis (no camera), and the mock redraws the stand-in for the new chart."
@@ -16297,8 +16307,9 @@
   rulings:
   - R-390
   - R-409
+  - R-458
   milestone: M6
-  note: "R-409; closed by TASK-M6-31. The default angle stays the code's, a look choice under R-390 (R-409 point 1); the normal is that of the plane as the compass draws it (R-409 A3). R-451 (16 Oct 2026) sets the default angle to the reference's isometric projection, amending R-409 point 1; TASK-M6-33 re-checks this requirement with it (fix round 2 of PR #227, gui review G8)."
+  note: "R-409; closed by TASK-M6-31. The default angle stays the code's, a look choice under R-390 (R-409 point 1); the normal is that of the plane as the compass draws it (R-409 A3). R-451 (16 Oct 2026) sets the default angle to the reference's isometric projection, amending R-409 point 1; TASK-M6-33 re-checks this requirement with it (fix round 2 of PR #227, gui review G8). R-458 (18 Oct 2026): 'one SetField on z₀ per drag' is read as one history entry per drag, the edit applied every frame of it; TASK-M6-39 builds that (REQ-GUI-206), this statement staying as TASK-M6-31's record."
 - id: REQ-GUI-182
   area: GUI
   statement: "On the mock engine, the keyboard must have two modes in every scope the GUI has: navigation mode, with an orange focus ring, in which the arrows always move between siblings, on a big scope itself between the big scopes in Tab order; and interaction mode, with a blue focus ring (`hyperlink_color`, R-404), in which the focused element takes the arrows, with Shift ×10 and Alt ×0.1, while Tab and Shift+Tab, Ctrl+Z, ? and the letter and Space shortcuts keep their meaning, except while a text field is being typed in (R-409 G5), Tab or Shift+Tab leaving interaction mode for the next or previous big scope in navigation mode, or, inside a window, for the window's next or previous section, staying in the window (R-409 G1, G2, G6). Entering any scope must land in navigation mode on its first element; every Tab landing must be on the big scope itself, the whole scope highlighted, in navigation mode, the Figure and the Compass included (REQ-GUI-095), and the console's first filter is a landing in navigation mode too; Enter on an element must start interaction mode, Enter on the Figure, which has nothing inside, start interaction mode, Enter on a read-only scope with nothing inside (the Legend) do nothing, and Enter on a button act as its click and stay in navigation mode (R-409 A2, G3); Esc or Enter in interaction mode must return to navigation mode on the same element, and Esc in navigation mode go up one scope; a text field must land in navigation mode, Enter starting typing, in which every key goes to it, Ctrl+Z undoing the text edit and ? typing a character, but Esc and Enter (back to navigation mode, the text kept) and Tab (moving on) (R-409 G4, G5); a scope's arrow actions must act in interaction mode only, and its letter and Space shortcuts whenever the focus is in the scope, in either mode, except while a text field is being typed in; and nothing else on screen may change with the mode but the ring's colour (and the breadcrumb's, if R-409 A6's look choice ties it to the ring's)."
@@ -16319,8 +16330,9 @@
   - R-404
   - R-409
   - R-456
+  - R-460
   milestone: M6
-  note: "R-409; closed by TASK-M6-31. The orange is a look choice under R-390; the mode is held with the focus, in ViewUI (R-409 A5). The footer and the console follow these modes under REQ-GUI-178 (TASK-M6-28). R-409's follow-up answers (F1, F4): the arrows need Enter, the letter and Space shortcuts act in either mode, and a Tab lands on the big scope itself. R-456 (17 Oct 2026): a click on a text field anywhere in the GUI starts typing, in interaction mode, and is no navigation-mode landing; the statement stays TASK-M6-31's record, and TASK-M6-32 (REQ-GUI-189, its audit under R-450 A7) builds and checks the click."
+  note: "R-409; closed by TASK-M6-31. The orange is a look choice under R-390; the mode is held with the focus, in ViewUI (R-409 A5). The footer and the console follow these modes under REQ-GUI-178 (TASK-M6-28). R-409's follow-up answers (F1, F4): the arrows need Enter, the letter and Space shortcuts act in either mode, and a Tab lands on the big scope itself. R-456 (17 Oct 2026): a click on a text field anywhere in the GUI starts typing, in interaction mode, and is no navigation-mode landing; the statement stays TASK-M6-31's record, and TASK-M6-32 (REQ-GUI-189, its audit under R-450 A7) builds and checks the click. R-460 (18 Oct 2026): the two modes hold while keyboard navigation is on; it starts only on keyboard input, and a window opened with the mouse takes the focus with no ring (REQ-GUI-210, TASK-M6-41); RQ-367 holds whether a click turns it off."
 - id: REQ-GUI-183
   area: GUI
   statement: "On the mock engine, the compass must be one focusable element in navigation mode, with its Tilt and Slice buttons as its siblings in the Compass scope, in the order compass, Tilt, Slice, reached by Enter on the Compass scope, Enter on a button setting the mode; Enter on the compass must start interaction mode, in which the compass takes the arrows: they tilt the plane in tilt mode and move the slice along the plane's normal in slice mode, Shift ×10 and Alt ×0.1 applying to their steps as everywhere, with no separate fine step; and Esc or Enter must return to navigation mode on the compass."
@@ -16501,8 +16513,9 @@
   - R-390
   - R-409
   - R-451
+  - R-459
   milestone: M6
-  note: "R-451; closed by TASK-M6-33. The look's numbers are the reference's (R-451 B6); the colours are look choices under R-390, listed in the PR. Tilt mode's single target follows the decoder's mapping (R-451 B1); RQ-340 holds the mapping question. Fix round of PR #227 (gui review G1, G2): both modes draw the decoder's plane through z₀, and each golden case names what is compared with the reference and what with an independent computation (R-451 B2, B8). Fix round 2 (gui review G6): the plane is its normal and offset n·p, p unclamped, the offset alone bounded to ±|n|₁ (R-451 B2)."
+  note: "R-451; closed by TASK-M6-33. The look's numbers are the reference's (R-451 B6); the colours are look choices under R-390, listed in the PR. Tilt mode's single target follows the decoder's mapping (R-451 B1); RQ-340 holds the mapping question. Fix round of PR #227 (gui review G1, G2): both modes draw the decoder's plane through z₀, and each golden case names what is compared with the reference and what with an independent computation (R-451 B2, B8). Fix round 2 (gui review G6): the plane is its normal and offset n·p, p unclamped, the offset alone bounded to ±|n|₁ (R-451 B2). R-459 (18 Oct 2026): the edge labels become the H, V and D buttons in both modes, the third axis following the gesture, with a '4D: see Plücker' badge (REQ-GUI-208, REQ-GUI-209, TASK-M6-40); this statement stays as TASK-M6-33's, its tilt-mode label the record."
 - id: REQ-GUI-192
   area: GUI
   statement: "On the mock engine, the compass's cross-section of its plane with the cube [−1,1]³ must be a convex polygon of 3 to 6 vertices that lie in the plane and inside the cube, ordered around it, for every tilt at which the compass draws the plane (s = 2|q₁ × q₂| / (|q₁|² + |q₂|²), q₁, q₂ restricted to (e_a, e_b, e_d), at least 10⁻³, R-451 B11's numerical cut) and every position at which the plane cuts the cube's interior, and of 4 to 6 vertices, never a triangle, when the plane passes through a point (0, 0, d) of the cube's central axis, |d| < 1; and the plane it draws must be the decoder's plane, the basis View::basis builds from τ₁, τ₂ and γ expressed in the cube's frame (e_a, e_b, e_d), through z₀'s point, unclamped, the plane's offset n·p alone bounded to ±|n|₁, so that a pan leaves the drawing unchanged, in slice mode as in tilt mode, not the reference's axis-angle map; and at a tilt where s < 10⁻³, within about 0.057° of the corner points τ₁ = ±τ₂ = ±90°, at which alone q₁ and q₂ both lie along e_d and span no plane, it must draw the cube with no slice polygon, the gold pin kept when locked, its readout saying that no plane is drawn, naming the tilt and citing RQ-340."
@@ -16534,8 +16547,9 @@
   - R-390
   - R-409
   - R-451
+  - R-458
   milestone: M6
-  note: "R-451 (B3 to B5 applied per R-369); closed by TASK-M6-33. Fix round of PR #227 (gui review G1): the slice-mode readout and drag follow the decoder's plane, drawn in both modes. Fix round 4 (physics P13): at a tilt where View::basis spans no plane a slice-mode drag sends no edit (R-451 B11), applied per R-369. Fix round 5 (physics P14): \"spans no plane\" reworded to the compass's cut, s < 10⁻³, applied per R-369."
+  note: "R-451 (B3 to B5 applied per R-369); closed by TASK-M6-33. Fix round of PR #227 (gui review G1): the slice-mode readout and drag follow the decoder's plane, drawn in both modes. Fix round 4 (physics P13): at a tilt where View::basis spans no plane a slice-mode drag sends no edit (R-451 B11), applied per R-369. Fix round 5 (physics P14): \"spans no plane\" reworded to the compass's cut, s < 10⁻³, applied per R-369. R-458 (18 Oct 2026): the drags' one edit per drag is one history entry, the edit applied every frame, so the sliders, the readout and the figure follow the drag (REQ-GUI-206, TASK-M6-39); RQ-368 holds the gestures' screen direction, built as written meanwhile."
 - id: REQ-GUI-194
   area: GUI
   statement: "On the mock engine, the compass must carry a view switcher on the compass itself, four buttons Cube, Plücker, Jacobi and Shape, Cube the default and the current view shown; the view must set only what the compass draws, independent of its Tilt and Slice modes, which keep their buttons in every view and set what a drag on the Cube does; in a grid view a drag must do nothing; and the view must be the compass's own GUI state, not undoable and not in the contract."
@@ -16723,6 +16737,268 @@
   - R-451
   milestone: M6
   note: "R-451 B11 (fix round 5 of PR #227, physics review P15, decided per R-369; fix round 6, physics review P17 and P18, fix (a) applied per R-369: the guards' own cut 10⁻⁶ is numerical, set by s's rounding floor √(17ε) ≈ 6.1·10⁻⁸, not an R-71 calibration, and B11 is R-72's missing definition; the compass's 10⁻³ is its drawing cut only; fix round 7, physics review P19, fix (a) applied per R-369: above the cut the pivot's chart coordinates carry a relative error of about ε/sin²θ, θ the angle between q₁ and q₂, at most about 17ε/s² since s ≤ sin θ, about 3.8·10⁻³ at the cut, a pin shift of at most about 2 px of a view 1000 px across; the in-disc drag's tolerances are 17ε(1/sin²θ + 1/sin²θ′)); closed by TASK-M6-37. Where the guards decline, the locked behaviour keeps about_the_pin's rule for a degenerate basis, the edits passing as they are; RQ-340 is cited by B11, not carried as rq."
+- id: REQ-GUI-204
+  area: GUI
+  statement: "On the mock engine, the Manifold view's Navigate section must hold centre (u, v) and zoom (log₂), with the depth readout, the precision warning and the lock row, and no grid of z₀ value boxes; the section that was 'Centre z₀' must be named 'Slice centre', its eight sliders z_α, z_β, z_q0…z_q3, z_μ1, z_μ2 each with its number box beside it; the section that was 'Slice & tilt' must be named 'Tilt' and hold τ₁, τ₂ and γ, each slider with its number box, and no step slider; the breadcrumb and the keyboard's sub-scopes must use the new names."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 01 Explore — the everyday view
+  - file: decisions.md
+    section: "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; \"Centre z₀\" is renamed \"Slice centre\" and \"Slice & tilt\" \"Tilt\"; each tilt angle tilts into a latent dimension the user picks, \"tilt τ₁ into [X]\" and \"tilt τ₂ into [Y]\", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's \"the slice step\" and R-451 B1's single tilt target)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_manifold_sections: the Navigate section's widgets are centre u, v, zoom, the depth readout, the precision warning and the lock row, and no widget there edits a z₀ component; Slice centre has eight sliders, each with a number box that edits the same component; Tilt has τ₁, τ₂ and γ with number boxes and no widget that edits z₀; the breadcrumb on a Tilt slider reads 'Manifold view › Tilt › τ₁' and Enter on Manifold view then ↓ reaches Chart, Navigate, Slice centre and Tilt in that order; controls: a panel with the eight z₀ boxes under Navigate, a Tilt section with a step slider, and the old names each fail; cargo xtask screenshot 01_main (mock_manifold_view)"
+  rulings:
+  - R-390
+  - R-457
+  milestone: M6
+  note: "R-457; closed by TASK-M6-38. Takes the place of REQ-GUI-081's and REQ-GUI-083's Navigate values and slice step on the mock (both reworded, re-run on the real engine by TASK-M8-06)."
+- id: REQ-GUI-205
+  area: GUI
+  statement: "On the mock engine, each tilt angle must have its own target, chosen in the Tilt section by a dropdown beside it, 'tilt τ₁ into [X]' and 'tilt τ₂ into [Y]', offering only the latent dimensions not in the plane (not e_a or e_b); View::basis must build u₁ = cos τ₁ e_a + sin τ₁ e_X and u₂ = cos τ₂ e_b + sin τ₂ e_Y, then turn them by γ as now; both targets must default to the slice normal (the code's slice axis before R-457), so that the defaults give today's basis exactly; the targets, with the slice normal, must be SimConfig's slice frame (gui_state_contract §2), undoable and read by no kernel; changing a target with its angle non-zero must re-tilt into the new dimension, one history entry editing the slice frame and the basis, and with its angle zero one entry editing the slice frame alone, undo restoring both; a target equal to the slice normal must follow it when the normal changes, and a change of the plane's axes that takes a target into the plane must reset that target to the slice normal; the compass's readout must name both targets with their angles."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; \"Centre z₀\" is renamed \"Slice centre\" and \"Slice & tilt\" \"Tilt\"; each tilt angle tilts into a latent dimension the user picks, \"tilt τ₁ into [X]\" and \"tilt τ₂ into [Y]\", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's \"the slice step\" and R-451 B1's single tilt target)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui tilt_targets: with the default targets, View::basis equals today's map at a sweep of (τ₁, τ₂, γ, σ) to 1e-15; with X = z_q3, Y = z_μ1, τ₁ = 30°, τ₂ = 20°, γ = 0, q₁ = σ(cos 30° e_a + sin 30° e_q3) and q₂ = σ(cos 20° e_b + sin 20° e_μ1), and q₁·q₂ = 0; each dropdown lists exactly the six dimensions not e_a, e_b; at τ₁ = 30° a change of X from z_q3 to z_q2 sends one history entry whose basis tilts q₁ into e_q2, and one Ctrl+Z restores the basis and X = z_q3; at τ₁ = 0 a change of X sends one entry on the slice frame and no basis edit, undone by one Ctrl+Z; a preset change to a plane containing X resets X to the slice normal and the angles to 0; the readout reads both targets with their angles; controls: a dropdown that offers e_a, a target change that makes two history entries, a target change that does not re-tilt at a non-zero angle, and an undo that restores the basis but not the target each fail"
+  rulings:
+  - R-390
+  - R-457
+  milestone: M6
+  note: "R-457 (E1 to E7 applied per R-369); closed by TASK-M6-38. Bears on RQ-340's question (ii), which stays open for (i); with X = Y the map is the code's (RQ-340 option (a), as applied)."
+- id: REQ-GUI-206
+  area: GUI
+  statement: "On the mock engine, a drag on the compass's Cube view must apply its edit every frame the pointer moves, at most once a frame, pointer events coalesced, so that during the drag the Manifold view's sliders, the compass's readout and the figure follow it, not the release; the whole drag must be one undo entry in the contract's history, its before the value at the drag's start and its after the last value, and one console line, logged when the drag ends; the compass's eased drawing (R-451 B4) must ease toward the value the contract holds."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-458 — Drags are live in both directions: a drag on the compass or on any slider applies its edit every frame, at most once a frame, so the sliders, the compass, its readout and the figure follow the drag, and the whole drag is one undo entry; a drag on a Slice centre slider switches the compass to Slice and one on a Tilt slider to Tilt, its plane moving with the drag *(amends R-409 A3 and R-451 B3 as they send one `SetField` per drag)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_live_compass_drag (pointer scripts on the mock): over a slice-mode and a tilt-mode drag of ten frames, the snapshot's z₀ or basis, the slider value and the readout change on every frame the pointer moves and equal the drag's target at that frame; two pointer events in one frame give one edit; the undo depth rises by one over the drag and one Ctrl+Z restores the value before it; the console gains one line for the drag; controls: a drag that sends its edit only on release, and one that pushes an undo entry per frame, each fail"
+  rulings:
+  - R-96
+  - R-390
+  - R-451
+  - R-458
+  milestone: M6
+  note: "R-458 (F1, F3, F6 applied per R-369); closed by TASK-M6-39. R-451 B3's 'one SetField per drag' is one history entry per drag (F1). The gestures' screen direction is RQ-368's; built as R-451 has them meanwhile."
+- id: REQ-GUI-207
+  area: GUI
+  statement: "On the mock engine, a drag on any slider or number box (the Manifold view's, Time's scrubber, the windows'), and the figure's pan, must apply its edit every frame the value changes, at most once a frame, so the figure follows the drag, each drag one undo entry and one console line; the compass's mode must switch on a drag's first frame, to Slice for a Slice centre slider or its number box and to Tilt for a Tilt slider (τ₁, τ₂, γ), its number box or a target dropdown, including at a slider's end and on a click into its number box; and the compass's drawn plane must follow z₀ and the basis every frame of such a drag, by R-451 B2's rule."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-458 — Drags are live in both directions: a drag on the compass or on any slider applies its edit every frame, at most once a frame, so the sliders, the compass, its readout and the figure follow the drag, and the whole drag is one undo entry; a drag on a Slice centre slider switches the compass to Slice and one on a Tilt slider to Tilt, its plane moving with the drag *(amends R-409 A3 and R-451 B3 as they send one `SetField` per drag)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_live_slider_drag (pointer scripts on the mock): a ten-frame drag on the Slice centre slider of the slice normal changes the snapshot's z₀, the compass's drawn offset and the figure's chart on every frame, the compass in Slice mode from the first frame; the same on τ₁ tilts the drawn plane every frame, the compass in Tilt mode from the first frame; a press on τ₂'s thumb that moves it past 90° (no value change) still switches to Tilt; a click into γ's number box switches to Tilt; each drag (the Slice centre slider, τ₁, the scrubber, the figure's pan) raises the undo depth by one and adds one console line; controls: a switch only on a changed value, a slider that pushes an undo entry per frame, and a scrubber that applies only on release each fail"
+  rulings:
+  - R-96
+  - R-101
+  - R-390
+  - R-409
+  - R-458
+  milestone: M6
+  note: "R-458 (F1 to F5 applied per R-369); closed by TASK-M6-39. Takes in the mock's undo entry per slider frame, against R-96, and the slider-to-compass switch that fired only on a changed value."
+- id: REQ-GUI-208
+  area: GUI
+  statement: "On the mock engine, the compass's Cube view must label its three edges with buttons in both modes, H on the bottom-left edge (chart x, the same dimension as Chart's 'horizontal q₁'), V on the left vertical edge (chart y, Chart's 'vertical q₂') and the third axis on the bottom-right edge (in Slice mode D, the slice normal), each reading its letter and dimension and opening a dropdown of the latent dimensions not on the other two, so no dimension appears twice across H, V and D; picking H or V must set the plane to the new axis pair with τ₁ = τ₂ = γ = 0, the zoom and z₀ kept (locked, about the pin), Chart's rows following, and an edit in Chart must move H and V with it; picking D must set the slice frame's normal, a target equal to the old D following it; each pick must be one undoable history entry; a plane change that takes D into the plane must move D by the slice-axis rule in the same entry; H, V and D must be siblings of the Compass scope after the view buttons, Enter opening a dropdown."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-459 — The cube's H, V and D axis labels are buttons, each a dropdown of latent dimensions, no dimension twice, each pick one undoable edit, H and V in step with Chart's horizontal q₁ and vertical q₂; in Tilt mode the third axis shows what the gesture tilts into, and a \"4D: see Plücker\" badge appears when both angles are set into different targets *(amends R-451 B1's labels)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_cube_axis_buttons: the three buttons sit on R-451 B1's edges with 'H z_α', 'V z_β', 'D z_q3' at the default; each dropdown lists the dimensions not on the other two; picking H = z_q0 sets q₁ ∝ e_q0, resets τ₁, τ₂, γ to 0 and keeps zoom and z₀, Chart's horizontal q₁ reading z_q0; editing q₂ in Chart to e_q1 moves V to z_q1; picking D = z_μ1 sets the slice frame's normal and, at τ₁ = 20° with X = D, re-tilts q₁ into e_μ1 in one entry; each pick is undone by one Ctrl+Z; a Plücker steer onto z_q2 × z_q3 with D = z_q3 moves D by the slice-axis rule; keyboard: Tab to the Compass, Enter, → to H, Enter, ↓, Enter picks; controls: a dropdown that offers V's dimension in H's list, and a D pick that makes two entries, each fail"
+  rulings:
+  - R-390
+  - R-452
+  - R-459
+  milestone: M6
+  note: "R-459 (G1 to G4, G9 applied per R-369); closed by TASK-M6-40. R-451 B1's single tilt-mode label gives way to these."
+- id: REQ-GUI-209
+  area: GUI
+  statement: "On the mock engine, in Tilt mode the Cube view's third axis must show what the gesture tilts into: X while τ₁ is being dragged and Y while τ₂ is (a compass drag moving both showing the angle moved further since it began, τ₁ on a tie); with nothing dragged, X if τ₁ ≠ 0, else Y if τ₂ ≠ 0, else the slice normal; in Slice mode it shows D; its label must take the active gesture's colour; the cube must draw the plane of that gesture exactly, View::basis with the other angle at 0 in the frame (e_a, e_b, e_T); while it shows X or Y it must be that target's dropdown; the readout must always name both targets with their angles; when both angles are non-zero and X ≠ Y the cube must show a '4D: see Plücker' badge, and a click on it, or Enter on it from the keyboard, must switch the compass to the Plücker view."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: decisions.md
+    section: "R-459 — The cube's H, V and D axis labels are buttons, each a dropdown of latent dimensions, no dimension twice, each pick one undoable edit, H and V in step with Chart's horizontal q₁ and vertical q₂; in Tilt mode the third axis shows what the gesture tilts into, and a \"4D: see Plücker\" badge appears when both angles are set into different targets *(amends R-451 B1's labels)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_cube_third_axis: with X = z_q3, Y = z_μ1, the third axis reads D in Slice mode; in Tilt mode with τ₁ = τ₂ = 0 it reads the slice normal, with τ₁ = 20° X, with τ₁ = 0 and τ₂ = 15° Y; during a τ₂ slider drag with τ₁ = 20° it reads Y, back to X when the drag ends; a compass drag moving τ₁ by 10° and τ₂ by 30° reads Y; its label's colour is the active gesture's; at τ₁ = 20°, τ₂ = 15° the cube's polygon equals the independent computation of View::basis at (20°, 0°) in (e_a, e_b, e_q3) and the badge is shown, a click on it setting the view to Plücker; with X = Y = z_q3 at the same angles no badge is shown and the polygon is R-451 B2's; the readout names both targets in every case; controls: a third axis that stays on the slice normal in Tilt mode, a badge shown with X = Y, and a readout naming one target each fail; cargo xtask screenshot compass (mock_compass_cube_third_axis, mock_compass_cube_badge)"
+  rulings:
+  - R-390
+  - R-452
+  - R-459
+  milestone: M6
+  note: "R-459 (G5 to G8 applied per R-369); closed by TASK-M6-40. The human chose the orchestrator's option 3 and replaced its 'or was last changed' with the rule for when nothing is dragged."
+- id: REQ-GUI-210
+  area: GUI
+  statement: "On the mock engine, the focus and keyboard navigation must be separate: keyboard navigation (the ring and R-409's two modes) must start only on keyboard input, Tab, Shift+Tab and the arrows acting as always from the focus where it is and Enter, while it is off, only turning it on with the ring where the focus is; Esc, the letter and Space shortcuts, Ctrl+Z and ? must not turn it on; a window opened with the mouse, from any entry point, must take the focus on its landing and show no ring, keyboard navigation left off whatever it was; a window opened from the keyboard must turn it on and land with the ring as R-450 has it; a menu opened with the mouse must take the focus with no ring; a click must never turn keyboard navigation on (RQ-367 holds whether it turns it off); the GUI must start with it off; and the flag must be the GUI's own, never the contract's."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 07 Keyboard — design note, not a screen
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-460 — Focus and keyboard navigation are separate: a window opened with the mouse takes the focus but shows no ring and leaves keyboard navigation off; keyboard navigation starts only on keyboard input; a test per entry point, with a keyboard control arm *(amends R-409 point 4's \"always in one of two modes\" and R-450's landing \"the whole scope highlighted\", for a window opened with the mouse; reads R-456's blue ring on a clicked text field as shown only while keyboard navigation is on)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_keyboard_nav_state (pointer and keyboard scripts on the mock), one script per entry point: the footer, Windows › each of Run, Chart builder, Export & share, Display, Profiler, Console and Inspector, the top bar's Run…, Profiler… and Export…, the Manifold view's Chart builder… and open in Inspector, and the Trajectory panel's IC Inspector… and Open full viewer…: opened by a click with no key pressed, the focus is on the window's landing and keyboard navigation is off, no ring drawn; control arm for each: the same window opened by keys (Enter on the footer, a menu entry chosen by Enter, a button reached by Tab and pressed by Enter) has keyboard navigation on and the ring on its landing, so a GUI that never turns it on fails; after a mouse open, Tab turns it on and moves on from the landing, and Enter turns it on without acting; a menu opened by a click shows no ring; Esc closes a mouse-opened window with it still off; a click on a console control or the figure leaves it as it was, off or on; control: a GUI that turns it on at a mouse open (today's) fails"
+  rulings:
+  - R-390
+  - R-405
+  - R-409
+  - R-450
+  - R-456
+  - R-460
+  milestone: M6
+  note: "R-460 (H1 to H5 applied per R-369); closed by TASK-M6-41. The cause, the porter's reading at ab87a879 for the task to confirm: Keyboard::open_window (crates/gui/src/keyboard/mod.rs line 434) moves the focus path into every window however it was opened, and draw_ring (app.rs lines 920 to 930) draws whenever the path is set; R-450 A3 is not the cause (built on PR #234). RQ-367 holds the click recommendation."
+- id: REQ-GUI-211
+  area: GUI
+  statement: "On the mock engine, every window but the console (Run, Chart builder, Export & share, Display, Profiler, Inspector) must be dragged by its title bar and resized from its edges and corners, down to a minimum size that keeps its title bar and controls usable, and must stay at least partly on screen: at least its title bar's height and 64 points of its title bar's width inside the GUI after a drag and after the GUI's window is resized."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G5. Windows (`04_windows.png`)
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 04 Windows
+  - file: decisions.md
+    section: "R-461 — Every window is dragged by its title bar and resized from its edges and corners, stays at least partly on screen, and remembers its position and size across sessions"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_windows_move_resize (pointer scripts on the mock), for each of the six windows: a drag on the title bar moves it by the drag; a drag on each edge and corner resizes it, clamped at its minimum; a drag that would take it off any side leaves its title bar's height and 64 points of its width inside; shrinking the GUI's window keeps it so; controls: a window fixed in place (today's fixed_rect), one not resizable, and one dragged wholly off screen each fail"
+  rulings:
+  - R-390
+  - R-461
+  milestone: M6
+  note: "R-461 (I1 to I3, I5 applied per R-369); closed by TASK-M6-42. The console is docked (R-463)."
+- id: REQ-GUI-212
+  area: GUI
+  statement: "On the mock engine, each window's position and size must be remembered per window across sessions, in the GUI's own settings, never the contract; with nothing remembered a window must open where it does today; a remembered place outside a smaller screen must be clamped as REQ-GUI-211 says; an unreadable settings file must be ignored, logged once to the console, and replaced on the next save."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G5. Windows (`04_windows.png`)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-461 — Every window is dragged by its title bar and resized from its edges and corners, stays at least partly on screen, and remembers its position and size across sessions"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_windows_remembered: a window moved and resized, the GUI's state saved and a new GUI started from it, opens at the same place and size; a remembered place off a smaller screen is clamped; with no settings each window opens at today's place; a corrupt settings file is ignored with one console line; no window place appears in the contract's snapshot or history; control: a GUI that forgets the place across a restart fails"
+  rulings:
+  - R-390
+  - R-461
+  milestone: M6
+  note: "R-461 (I4 applied per R-369); closed by TASK-M6-42. Kept with the layout (REQ-GUI-214)."
+- id: REQ-GUI-213
+  area: GUI
+  statement: "On the mock engine, every panel boundary must be a draggable splitter: between the Manifold view and the canvas, the canvas and the Trajectory panel, the top row and the bottom row, Compass and Time, and Time and Legend, the canvas taking the space that remains; each panel, and the canvas, must have a minimum size no splitter passes; a double-click on a splitter must reset it to its default, 01_main.png's proportions."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/design/GUI_DESIGN_NOTES.md
+    section: 01 Explore — the everyday view
+  - file: decisions.md
+    section: "R-462 — Every panel boundary is a draggable splitter, the canvas taking the space left; each panel has a minimum size, a double-click resets a splitter, the layout is remembered and View › reset layout restores it; resizing the canvas re-frames the figure and never re-integrates it"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_layout_splitters (pointer scripts on the mock): a drag on each of the five splitters moves that boundary by the drag and the canvas takes the rest; a drag past a minimum stops there, for every panel and the canvas; a double-click returns that splitter, and only it, to its default; the ring follows a resized scope's rect; controls: a fixed layout (today's), and a splitter that closes the canvas, each fail"
+  rulings:
+  - R-390
+  - R-462
+  milestone: M6
+  note: "R-462 (J1, J2, J3, J6 applied per R-369); closed by TASK-M6-43."
+- id: REQ-GUI-214
+  area: GUI
+  statement: "On the mock engine, the layout (the splitters' places and the console's height) must be remembered across sessions in the GUI's own settings, never the contract; View › reset layout must return every splitter and the console's height to their defaults; and resizing the canvas must re-frame the figure by R-406's rule, each point of the field keeping its screen position and the canvas showing more or less of the field at the same scale, sending no SetField and never re-integrating the view, only what the canvas newly exposes being computed."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: decisions.md
+    section: "R-462 — Every panel boundary is a draggable splitter, the canvas taking the space left; each panel has a minimum size, a double-click resets a splitter, the layout is remembered and View › reset layout restores it; resizing the canvas re-frames the figure and never re-integrates it"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_layout_remembered: a layout changed, saved and restored in a new GUI comes back the same; View › reset layout restores the defaults; mock_layout_reframe: a splitter drag that widens the canvas sends no SetField, keeps the figure point under a fixed screen pixel at the same field point (to 1e-9 in chart coordinates) and leaves the mock's integrated quads in place, only quads in the newly exposed area requested; controls: a canvas resize that sends a SetField, one that stretches the figure, and one that drops the integrated quads each fail"
+  rulings:
+  - R-390
+  - R-406
+  - R-462
+  milestone: M6
+  note: "R-462 (J3 to J5 applied per R-369); closed by TASK-M6-43 on the mock. The real figure (TASK-M8-05) follows the same rule when it lands."
+- id: REQ-GUI-215
+  area: GUI
+  statement: "On the mock engine, the console must be docked along the bottom with its height dragged from its top edge, between its header bar and three log rows and the full height below the top bar, and remembered with the layout; a maximise button in its header bar, between Clear and ×, and the console scope's shortcut M (not while the search field is typed in) must toggle it between that height and the full height below the top bar; the header bar's ← → order must be All, Warnings, Errors, Info, the search field, Copy, Clear, maximise, ×, the breadcrumb reading 'Console › Header › Maximise' on it."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  - file: decisions.md
+    section: "R-463 — The console's height drags and a maximise toggle (button and key M) fills the height below the top bar; its open and close lag is measured first, and both are brought within one frame at 60 fps, with the frame times before and after *(amends R-450 as it lists the header bar's controls)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_console_height (pointer and keyboard scripts on the mock): a drag on the console's top edge sets its height, clamped at both ends, and the height survives a restart; a click on maximise, and M with the focus in the console, toggle the full height and back; M while typing in the search field types 'm'; → from Clear reaches maximise then ×; controls: a console of fixed height, and an M that types nothing outside the field, each fail"
+  rulings:
+  - R-390
+  - R-450
+  - R-463
+  milestone: M6
+  note: "R-463 (K1 to K3 applied per R-369); closed by TASK-M6-44. Adds the maximise button to REQ-GUI-189's header bar."
+- id: REQ-GUI-216
+  area: GUI
+  statement: "On the mock engine, the console must open and must close each within one frame at 60 fps (16.7 ms), with an empty log, with 1 000 entries and with CONSOLE_ROWS entries, on the human's Mac; the time of the opening and closing frames, and where it goes (egui layout, the log's filter, the log's rows, the wgpu frame), must be measured before the fix and after it and given in the PR."
+  source:
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  - file: decisions.md
+    section: "R-463 — The console's height drags and a maximise toggle (button and key M) fills the height below the top bar; its open and close lag is measured first, and both are brought within one frame at 60 fps, with the frame times before and after *(amends R-450 as it lists the header bar's controls)*"
+  verify:
+    method: benchmark
+    detail: "benchmark on the human's Mac (R-186): cargo run -p gui --features mock --release -- --bench console-open-close at the three log sizes, before and after, the frame times of the opening and closing frames and their breakdown in the PR; after the fix each is under 16.7 ms at every size; review checklist (perf reviewer): the breakdown names where the time went before the fix, the fix addresses it, and the after-table meets the target"
+  rulings:
+  - R-186
+  - R-390
+  - R-463
+  milestone: M6
+  note: "R-463 (K4 applied per R-369); closed by TASK-M6-44. The porter's pointer for the measurement, not a finding: the console filters and lays out the whole log every frame while open (windows/console.rs)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

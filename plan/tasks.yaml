@@ -1701,6 +1701,62 @@
   requirements: [REQ-GUI-203]
   reviewers: [code, qa, gui, physics]
   pitfalls: []
+- id: TASK-M6-38
+  milestone: M6
+  title: "The Navigate, Slice centre and Tilt sections, and a target per tilt angle (R-457)"
+  depends_on: [TASK-M6-33]  # the compass's readout it extends is TASK-M6-33's (PR #240, open)
+  needs: []
+  requirements: [REQ-GUI-204, REQ-GUI-205]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-39
+  milestone: M6
+  title: "Live drags both ways: every frame, one undo entry per drag, the compass's mode switched by the slider dragged (R-458)"
+  depends_on: [TASK-M6-33, TASK-M6-38]  # the compass is TASK-M6-33's rework (PR #240); the Slice centre and Tilt sections it switches from are TASK-M6-38's
+  needs: []
+  requirements: [REQ-GUI-206, REQ-GUI-207]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-40
+  milestone: M6
+  title: "The cube's H, V and D buttons, the third axis that follows the gesture, and the \"4D: see Plücker\" badge (R-459)"
+  depends_on: [TASK-M6-34, TASK-M6-38]  # the badge opens TASK-M6-34's Plücker view; the targets and slice frame are TASK-M6-38's
+  needs: []
+  requirements: [REQ-GUI-208, REQ-GUI-209]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-41
+  milestone: M6
+  title: "Focus and keyboard navigation apart: a mouse-opened window takes the focus with no ring; keyboard navigation starts only on keys (R-460)"
+  depends_on: [TASK-M6-32]  # the keyboard's click rules (R-450 A3, R-456) it builds beside are TASK-M6-32's (PR #234, open)
+  needs: []
+  requirements: [REQ-GUI-210]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-42
+  milestone: M6
+  title: "Windows that move, resize, stay on screen and remember their place (R-461)"
+  depends_on: [TASK-M6-32]  # PR #234 (TASK-M6-32) changes the console window's code beside windows::frame
+  needs: []
+  requirements: [REQ-GUI-211, REQ-GUI-212]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-43
+  milestone: M6
+  title: "Splitters on every panel boundary, the layout remembered and reset, the canvas re-framed without re-integration (R-462)"
+  depends_on: [TASK-M6-42]  # the settings store is TASK-M6-42's
+  needs: []
+  requirements: [REQ-GUI-213, REQ-GUI-214]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M6-44
+  milestone: M6
+  title: "The console's height and maximise toggle, and its open and close within one frame, measured before and after (R-463)"
+  depends_on: [TASK-M6-32, TASK-M6-43]  # the console's keyboard model is TASK-M6-32's (PR #234); the layout's splitters and settings TASK-M6-43's
+  needs: []
+  requirements: [REQ-GUI-215, REQ-GUI-216]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
@@ -2071,8 +2127,8 @@
   pitfalls: []
 - id: TASK-M8-06
   milestone: M8
-  title: "Manifold view panel: Chart, Navigate, depth readout, Centre z₀, Slice & tilt, and the figure's axis labels"
-  depends_on: [TASK-M8-05, TASK-M6-26]
+  title: "Manifold view panel: Chart, Navigate, depth readout, Slice centre, Tilt, and the figure's axis labels"
+  depends_on: [TASK-M8-05, TASK-M6-26, TASK-M6-38]
   needs: [REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-GUI-012, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026]
   requirements: [REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161]
   reviewers: [code, qa, physics, gui]

@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*36 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*37 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -132,6 +132,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-SCHED-068 — scripted camera paths: compare in-view quads and stall (px texel size) for naive cull, widened margin and refill-derived margin; refill-derived must beat widened margin, and naive cull (170 px, 4 in view) is the known failure
 - [ ] REQ-SCHED-094 — scripted zoom-in then zoom-out over the same region: the quads newly computed during the zoom-out are within the calibrated tolerance (REQ-SCHED-095)
 - [ ] REQ-REF-032 — calibrate tau per the tolerance grid (charts × horizons × eps) at the first refine milestone and record it; config has no tau = k·eps derivation
+- [ ] REQ-GUI-216 — benchmark on the human's Mac (R-186): cargo run -p gui --features mock --release -- --bench console-open-close at the three log sizes, before and after, the frame times of the opening and closing frames and their breakdown in the PR; after the fix each is under 16.7 ms at every size; review checklist (perf reviewer): the breakdown names where the time went before the fix, the fix addresses it, and the after-table meets the target
 - [ ] REQ-VAL-085 — motion trace with all three active: reconstruction error and visual quality recorded against each alone
 - [ ] REQ-VAL-090 — scripted zoom over two octaves on config_stability and preset_shape_h1: converged in-view texel size stays flat (~1.5 px) and max_depth tracks camera target depth; quad count stays far below the alpha_lo = 0 degeneration (+49% / +222%)
 - [ ] REQ-VAL-092 — a recorded results entry covers each of the three measurements

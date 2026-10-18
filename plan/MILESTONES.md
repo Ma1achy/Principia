@@ -310,20 +310,20 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
 - The symbolic-dynamics per-quad quantities.
 - The refinement policy's open measurements.
 - **The GUI track on a mock engine (R-390):** TASK-M6-24 to TASK-M6-29, with TASK-M6-30 and TASK-M6-31 from the human's
-  feedback (R-406, R-409) and TASK-M6-32 to TASK-M6-36 from it again (R-450 to R-453) with TASK-M6-37 (R-451 B11), the dev GUI built against a mock engine with
+  feedback (R-406, R-409) and TASK-M6-32 to TASK-M6-36 from it again (R-450 to R-453) with TASK-M6-37 (R-451 B11), and TASK-M6-38 to TASK-M6-44 from it a third time (R-457 to R-463), the dev GUI built against a mock engine with
   one contract conformance suite for the mock and the real engine. It sits in M6 because TASK-M6-21, TASK-M6-22,
   TASK-M7-22 and TASK-M7-25 build on it and no task may depend on a later milestone's; it starts now, on spare agent
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 175 requirements** (and every earlier gate still green):
+**Exit gate — 188 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (40): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…203
+- GUI (53): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…216
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090

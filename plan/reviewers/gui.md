@@ -162,7 +162,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-078 — screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2
 - [ ] REQ-GUI-079 — screenshot of the open menu against 01_main.png; each Alt+digit toggles its overlay; 'all off' clears the overlay set
 - [ ] REQ-GUI-080 — screenshots of Explore (01_main.png) and Stain (02_stain.png): no display bar; style / scale / gamut / CVD are reachable only from the Display window
-- [ ] REQ-GUI-081 — screenshot against 01_main.png's left panel: one group, sub-sections in that order, eight named z₀ sliders
+- [ ] REQ-GUI-081 — screenshot against 01_main.png's left panel, read with R-457: one group, sub-sections in that order, eight named Slice centre sliders, no z₀ values under Navigate and no step under Tilt
 - [ ] REQ-GUI-082 — screenshot against 01_main.png; every shipped preset's display name is built from its axis names
 - [ ] REQ-GUI-084 — screenshot against 01_main.png; after a pan the end values update
 - [ ] REQ-GUI-085 — screenshot against 01_main.png: the path is drawn from the cursor's IC with opacity falling with distance from the slice
