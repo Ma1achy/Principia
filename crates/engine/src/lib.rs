@@ -32,6 +32,11 @@ pub mod contract {
     pub mod store;
     pub mod view_ui;
 
+    /// The display names, the one conversion module (R-449; REQ-GUI-188): what a person reads for a body, a pair, a
+    /// sample's `state` and `detail` and an outcome class, 1-based, re-exported so the GUI names every body, pair and
+    /// fate through it.
+    pub use ledger::display;
+
     /// A stain node's colour occupant as the occupant algebra's typed expression tree (colour_composition §1;
     /// TASK-M7-03).
     pub mod stain {

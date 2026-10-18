@@ -42,6 +42,7 @@
 use std::fmt::Write as _;
 use std::path::PathBuf;
 
+use crate::display;
 use crate::gen::numeric::NumericView;
 use crate::gen::{read, rust, Generated};
 use crate::schema::{Bound, Entry, FieldType, Location, Scale, Storage, Struct, Word};
@@ -290,6 +291,14 @@ fn dircos(r: &Read) -> Option<&'static str> {
     }
 }
 
+/// The legend of a view whose red, green and blue channels are bodies 0, 1 and 2 (the ternary masses, a `k = 6`
+/// vector's direction cosines): "red body 1, green body 2, blue body 3", the names a person reads (R-449;
+/// [`crate::display::body_names`]).
+pub fn body_channels() -> String {
+    let [r, g, b] = display::body_names();
+    format!("red {r}, green {g}, blue {b}")
+}
+
 /// One reduction view: its name, its file under [`REDUCTIONS_DIR`], the fields it reads and its WGSL.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Reduction {
@@ -315,13 +324,20 @@ pub fn reductions(words: &[Word], entries: &[Entry]) -> Vec<Reduction> {
             let r = read(words, entries, e)?;
             let helper = dircos(&r)?;
             let name = format!("{}_dircos", e.name);
-            let text = format!(
+            let mut text = format!(
                 "The 'as direction-cosines' view of the vector field `{field}` (gui_state_contract §4; \
                  dd_generation_root §3.8), beside its '‖·‖ as scalar' view, `{DIR}/{field}.wgsl`. A colour occupant, it \
                  reads the field through `SimState.{field}` and draws `{helper}`, render contract Part 5's rendering \
                  of its direction cosines (REQ-TOOL-157).",
                 field = e.name
             );
+            if helper == "dbg_dircos6" {
+                let _ = write!(
+                    text,
+                    " Channel `j` is body `j`'s share; its legend reads {} (R-449).",
+                    body_channels()
+                );
+            }
             Some(Reduction {
                 path: PathBuf::from(format!("{REDUCTIONS_DIR}/{name}.wgsl")),
                 wgsl: format!(
@@ -342,18 +358,21 @@ pub fn reductions(words: &[Word], entries: &[Entry]) -> Vec<Reduction> {
         })
         .collect();
     if masses.len() == MASSES.len() {
-        let text = "The `ICDescriptor` masses `m0 m1 m2` as one ternary colour (debug_tooling_plan §E; render contract \
-                    Part 5): `dbg_ternary`, the masses as linear RGB scaled by `1/max(mᵢ)`, so equal masses draw white \
-                    and each vertex its primary (REQ-TOOL-154). A colour occupant, it reads the masses through \
-                    `ICDescriptor.m0`, `ICDescriptor.m1` and `ICDescriptor.m2`; it certifies the decoder, independent \
-                    of any integration.";
+        let text = format!(
+            "The `ICDescriptor` masses `m0 m1 m2` as one ternary colour (debug_tooling_plan §E; render contract \
+             Part 5): `dbg_ternary`, the masses as linear RGB scaled by `1/max(mᵢ)`, so equal masses draw white \
+             and each vertex its primary (REQ-TOOL-154); its legend reads {} (R-449). A colour occupant, it reads the \
+             masses through `ICDescriptor.m0`, `ICDescriptor.m1` and `ICDescriptor.m2`; it certifies the decoder, \
+             independent of any integration.",
+            body_channels()
+        );
         out.push(Reduction {
             name: MASSES_TERNARY.to_owned(),
             fields: MASSES.to_vec(),
             path: PathBuf::from(format!("{REDUCTIONS_DIR}/{MASSES_TERNARY}.wgsl")),
             wgsl: format!(
                 "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    return dbg_ternary(vec3<f32>({}), ctx.frag_xy);\n}}\n",
-                generated_comment(text),
+                generated_comment(&text),
                 masses.join(", ")
             ),
         });
@@ -493,8 +512,9 @@ pub const UNION_FIELD: &str = "detail";
 pub const UNION_KEY: &str = "state";
 
 /// One class of a state's segment of the `detail` view: the `detail` code, its meaning in that state (payload §2, as
-/// the ledger hashes it, [`crate::payload::detail_meanings`]), its legend label, 0-based (R-22), and its class, the
-/// index the view colours it by, `dbg_cat(class, detail_classes())`.
+/// the ledger hashes it, [`crate::payload::detail_meanings`], machine data that no legend shows), its legend label, the
+/// display name a person reads, 1-based ([`crate::display::name`]; R-449), and its class, the index the view colours
+/// it by, `dbg_cat(class, detail_classes())`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DetailClass {
     pub detail: u32,
@@ -510,16 +530,6 @@ pub struct DetailSegment {
     pub state: &'static str,
     pub code: u32,
     pub classes: Vec<DetailClass>,
-}
-
-/// The legend label of `detail` code `d`, meaning `meaning`, in the state `state`: a collision's pair id names its two
-/// bodies, the lower first, as colour_composition §1.4's table does (R-22: pair `k` is the side opposite body `k`);
-/// every other meaning is the ledger's.
-fn detail_label(state: &str, d: usize, meaning: &str) -> String {
-    match (state, crate::payload::pair_bodies().get(d)) {
-        ("collision", Some(&[a, b])) => format!("{meaning}: bodies {}–{}", a.min(b), a.max(b)),
-        _ => meaning.to_owned(),
-    }
 }
 
 /// The `detail` view's segments, one per state in which `detail` has a meaning (payload §2: escape, collision,
@@ -540,7 +550,8 @@ pub fn detail_segments() -> Vec<DetailSegment> {
                 .map(|(d, meaning)| DetailClass {
                     detail: d as u32,
                     meaning,
-                    label: detail_label(state, d, meaning),
+                    label: display::name(display::State::ALL[code], display::Detail::ALL[d])
+                        .to_owned(),
                     class: no_detail() + 1 + (meanings.len() * k + d) as u32,
                 })
                 .collect();
@@ -615,7 +626,7 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
             let labels: Vec<String> = s
                 .classes
                 .iter()
-                .map(|c| format!("{} {}", c.detail, c.label))
+                .map(|c| format!("{} = {}", c.detail, c.label))
                 .collect();
             format!("{} ({})", s.state, labels.join(", "))
         })
@@ -623,7 +634,8 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
     let colouring = format!(
         "Its colouring is the union's, keyed by `{UNION_KEY}` (debug_tooling_plan §B; dd_colouring §3.7; \
          `ledger::gen::catalogue::detail_segments`, the legend's data): each state's palette segment is four classes \
-         of `dbg_cat(·, {n}u)`, one per code: {}. Every other state, bounded, running and the reserved codes, has no \
+         of `dbg_cat(·, {n}u)`, one per code, each code with its legend's key, the name a person reads (R-449; \
+         `ledger::display`): {}. Every other state, bounded, running and the reserved codes, has no \
          `detail` and draws blank, black, class {} (payload §2).",
         segments.join("; "),
         no_detail()
@@ -632,6 +644,17 @@ fn union_wgsl(words: &[Word], entries: &[Entry], e: &Entry, r: &Read) -> Option<
         "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n{body}}}\n",
         header(e, r, &colouring)
     ))
+}
+
+/// The field whose codes are pair ids: `dmin_pair`, the pair that achieved `d_min` (payload §2; R-22), its stored 3
+/// unset, the sentinel.
+pub const PAIR_FIELD: &str = "dmin_pair";
+
+/// The legend of [`PAIR_FIELD`]'s view (debug_tooling_plan §B): each pair id, in code order, with its key, the pair's
+/// name as a person reads it, its two bodies 1-based, smaller first (R-449; [`crate::display::pair_name`]): 0 "2–3",
+/// 1 "1–3", 2 "1–2". The stored 3, unset, has no key: the view shows it as its literal value (R-136).
+pub fn dmin_pair_legend() -> Vec<(u32, &'static str)> {
+    (0..).zip(display::pair_names()).collect()
 }
 
 /// The field whose validity gates on the word's sidecar length: `last_symbol`, which has no in-band "none" code and is
@@ -668,16 +691,28 @@ fn placeholder_wgsl(e: &Entry, r: &Read) -> String {
     let colouring = if e.name == UNION_KEY {
         "Its colouring is the six-colour `dbg_cat` palette, one colour per state, not the outcome palette (R-115; \
          debug_tooling_plan §B)."
+            .to_owned()
     } else if e.name == WORD_GATED {
         "The colouring is a placeholder (`ledger::gen::catalogue`), gated on the word: the field has no in-band \
          \"none\" code and is meaningful where `sd_last_symbol_valid(fgw_length_raw(word))` holds, so the empty \
          word and a truncated word draw the hatch (payload §2, §6; applied per R-369)."
+            .to_owned()
+    } else if e.name == PAIR_FIELD {
+        let keys: Vec<String> = dmin_pair_legend()
+            .iter()
+            .map(|(code, key)| format!("{code} = {key}"))
+            .collect();
+        format!(
+            "The colouring is a placeholder (`ledger::gen::catalogue`). Its legend names each pair id by the pair's \
+             two bodies, 1-based, smaller first, never by the id (R-449; `ledger::display`): {}.",
+            keys.join(", ")
+        )
     } else {
-        "The colouring is a placeholder (`ledger::gen::catalogue`)."
+        "The colouring is a placeholder (`ledger::gen::catalogue`).".to_owned()
     };
     format!(
         "{}fn colour(ctx: Ctx) -> vec3<f32> {{\n    {body}\n}}\n",
-        header(e, r, colouring)
+        header(e, r, &colouring)
     )
 }
 

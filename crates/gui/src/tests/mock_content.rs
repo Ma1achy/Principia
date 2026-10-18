@@ -3,9 +3,14 @@
 //! values are placeholder content, not corpus values; the pins keep them, and every capture of them, from drifting
 //! unseen. Each check also runs on an input it must reject (R-176, through `rejects`).
 
+use engine::contract::display;
+use engine::contract::legend::SWATCHES;
+use engine::contract::sample::Sample;
 use engine::contract::sim_config::Plane;
 
 use super::support::rejects;
+use crate::explore::hover_label;
+use crate::explore::trajectory::{kept_row, summary};
 use crate::mock::quads;
 use crate::mock::sample::{hash, hover_path, sample};
 use crate::mock::{MOCK_Q1, MOCK_Q2, MOCK_Z0};
@@ -118,7 +123,7 @@ const PINS: [Pin; 9] = [
     ),
     (
         [0.03, 0.37],
-        "bounded / nothing yet",
+        "bounded",
         50.0,
         0.057852986941288695,
         -0.791212596099649,
@@ -308,4 +313,77 @@ fn mock_hover_content_path_and_quads_are_pinned() {
         .sum();
     assert!((bs - 15938.364999999812).abs() < 1e-6, "{bs}");
     rejects("another tree", || assert_eq!(leaves.len(), 681));
+}
+
+// --- REQ-GUI-188: every label the mock draws reads the display module's names ----------------------------------------
+
+/// The labels a person reads for `s`, the playhead at the horizon 50: the hover label, the Trajectory panel's summary
+/// and kept row, and the Inspector's readouts.
+fn labels_of(s: &Sample) -> Vec<String> {
+    let mut out = vec![hover_label::text(s, 50.0, 50.0), summary(s), kept_row(0, s)];
+    out.extend(
+        crate::windows::inspector::readouts(s)
+            .into_iter()
+            .map(|(name, value)| format!("{name} {value}")),
+    );
+    out
+}
+
+/// Checks that `labels`, a person's reading of a sample whose fate is `fate`, name it, the one conversion function's
+/// name of its class's `state` and `detail` (R-449), and show no internal id, neither "body 0" nor "pair " and a digit.
+fn check_labels(labels: &[String], fate: &str) {
+    assert!(
+        SWATCHES
+            .iter()
+            .any(|w| display::name_of(w.state, w.detail) == Some(fate)),
+        "the fate `{fate}` is no class's display name"
+    );
+    for l in labels {
+        assert!(
+            !display::shows_an_internal_id(l),
+            "the label `{l}` shows an internal id"
+        );
+    }
+    for l in &labels[..3] {
+        assert!(l.contains(fate), "the label `{l}` does not name `{fate}`");
+    }
+    assert!(
+        labels.contains(&format!("outcome {fate}")),
+        "the Inspector's outcome does not read `{fate}`"
+    );
+}
+
+#[test]
+fn mock_content_labels_read_the_display_names() {
+    let p = plane();
+    // One pinned sample per class: each fate is R-449's name, "escape body 1", "collision 1–2", "bounded".
+    for pin in &PINS {
+        let s = sample(&p, pin.0, 50.0, 50.0);
+        assert_eq!(s.fate.as_deref(), Some(pin.1), "{:?}", pin.0);
+        check_labels(&labels_of(&s), pin.1);
+    }
+    let fates: Vec<&str> = PINS.iter().map(|pin| pin.1).collect();
+    let names: Vec<&str> = SWATCHES
+        .iter()
+        .map(|w| display::name_of(w.state, w.detail).unwrap())
+        .collect();
+    for name in &names {
+        assert!(fates.contains(name), "no pin of `{name}`");
+    }
+    let s = sample(&p, PINS[0].0, 50.0, 50.0);
+    rejects("a mock label written 0-based", || {
+        let mut s0 = s.clone();
+        s0.fate = Some("escape body 0".to_owned());
+        check_labels(&labels_of(&s0), "escape body 0")
+    });
+    rejects("a pair named by its id", || {
+        let mut s0 = s.clone();
+        s0.fate = Some("collision pair 2".to_owned());
+        check_labels(&labels_of(&s0), "collision pair 2")
+    });
+    rejects("a label written 0-based beside a 1-based fate", || {
+        let mut labels = labels_of(&s);
+        labels.push("body 0 · t 3.0".to_owned());
+        check_labels(&labels, "escape body 1")
+    });
 }

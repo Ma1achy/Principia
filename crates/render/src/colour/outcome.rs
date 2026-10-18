@@ -25,9 +25,9 @@
 //! the swatches where they are edited (applied per R-369).
 //!
 //! **The labels** are R-449's display names, 1-based: the bodies 1, 2, 3 and a pair by its two bodies, never by its
-//! pair id; the params stay the machine-readable 0-based ids (`escape_body_0`, `collision_pair_2`). Until TASK-M2-33's
-//! one conversion function lands, they are written here as R-449's fixed strings (applied per R-369), and TASK-M2-33
-//! routes them through it.
+//! pair id, each the class name of the one conversion module, `ledger::display::class_name` (REQ-GUI-188), of the
+//! swatch's `state` and `detail`: the black class "bounded / nothing yet", every other its `(state, detail)` name. The
+//! params stay the machine-readable 0-based ids (`escape_body_0`, `collision_pair_2`).
 //!
 //! **The order** of the swatches is colour_composition §1.4's table, bounded / nothing yet first, and it is the rank
 //! greyscale and hue mode give the outcome class (R-448; §4.1): [`class`] is that rank, `K = 9` ([`K`]).
@@ -36,25 +36,35 @@
 //! palette's classes a state's samples may take, and [`detail_view`] the `detail` view's colour, from the ledger's
 //! segments, the data the view is generated from.
 
+use ledger::display;
+use ledger::display::Detail::{self, D0, D1, D2, D3};
+use ledger::display::State::{self, Bounded, Collision, Escape};
 use ledger::gen::catalogue;
 
 use crate::present::{self, Rgb};
 
-/// One swatch of the outcome palette: the occupant's param, its class's legend label (R-449's display name) and its
-/// 8-bit sRGB colour, and whether the value is still a proposal awaiting the human's confirmation (R-71). None is: the
-/// colours are the human's (R-444, R-445, R-447).
+/// One swatch of the outcome palette: the occupant's param; its class's legend label, R-449's display name from
+/// `ledger::display::class_name`; the `state` and `detail` codes of a sample of its class (colour_composition §1.4's
+/// payload column; `bounded`'s for the black class, which `running` and the failures share); its 8-bit sRGB colour;
+/// and whether the value is still a proposal awaiting the human's confirmation (R-71). None is: the colours are the
+/// human's (R-444, R-445, R-447).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Swatch {
     pub param: &'static str,
     pub label: &'static str,
+    pub state: u32,
+    pub detail: u32,
     pub srgb8: [u8; 3],
     pub proposed: bool,
 }
 
-const fn swatch(param: &'static str, label: &'static str, hex: u32) -> Swatch {
+/// The swatch `param` of the class of samples with `state` and `detail`, labelled by the class's display name.
+const fn swatch(param: &'static str, state: State, detail: Detail, hex: u32) -> Swatch {
     Swatch {
         param,
-        label,
+        label: display::class_name(state, detail),
+        state: state.code(),
+        detail: detail.code(),
         srgb8: [(hex >> 16) as u8, (hex >> 8) as u8, hex as u8],
         proposed: false,
     }
@@ -67,15 +77,15 @@ pub const K: usize = 9;
 /// yet `#141418`; collision 1–2, 1–3 and 2–3 (pairs 2, 1 and 0) `#DE2D2D`, `#2EBC4E`, `#3462E0`; triple collision
 /// `#F29620`; escape body 1, 2 and 3 (`detail` 0, 1 and 2) `#F0DE32`, `#E034C6`, `#30C8DC`; triple ejection `#611597`.
 pub const SWATCHES: [Swatch; K] = [
-    swatch("bounded", "bounded / nothing yet", 0x141418),
-    swatch("collision_pair_2", "collision 1–2", 0xDE2D2D),
-    swatch("collision_pair_1", "collision 1–3", 0x2EBC4E),
-    swatch("collision_pair_0", "collision 2–3", 0x3462E0),
-    swatch("triple_collision", "triple collision", 0xF29620),
-    swatch("escape_body_0", "escape body 1", 0xF0DE32),
-    swatch("escape_body_1", "escape body 2", 0xE034C6),
-    swatch("escape_body_2", "escape body 3", 0x30C8DC),
-    swatch("triple_ejection", "triple ejection", 0x611597),
+    swatch("bounded", Bounded, D0, 0x141418),
+    swatch("collision_pair_2", Collision, D2, 0xDE2D2D),
+    swatch("collision_pair_1", Collision, D1, 0x2EBC4E),
+    swatch("collision_pair_0", Collision, D0, 0x3462E0),
+    swatch("triple_collision", Collision, D3, 0xF29620),
+    swatch("escape_body_0", Escape, D0, 0xF0DE32),
+    swatch("escape_body_1", Escape, D1, 0xE034C6),
+    swatch("escape_body_2", Escape, D2, 0x30C8DC),
+    swatch("triple_ejection", Escape, D3, 0x611597),
 ];
 
 /// R-447's OKLab-uniform variant, the second set, in [`SWATCHES`]' order (colour_composition §1.4's second table):
@@ -83,15 +93,15 @@ pub const SWATCHES: [Swatch; K] = [
 /// `#D99349` (65°); escape body 1 `#B3A841` (103°), 2 `#D486C3` (335°), 3 `#09B9CD` (208°); triple ejection `#B790E2`
 /// (305°). Its params are the default set's, prefixed `oklab_`.
 pub const OKLAB_UNIFORM: [Swatch; K] = [
-    swatch("oklab_bounded", "bounded / nothing yet", 0x141418),
-    swatch("oklab_collision_pair_2", "collision 1–2", 0xE7857A),
-    swatch("oklab_collision_pair_1", "collision 1–3", 0x6EB976),
-    swatch("oklab_collision_pair_0", "collision 2–3", 0x7FA2F2),
-    swatch("oklab_triple_collision", "triple collision", 0xD99349),
-    swatch("oklab_escape_body_0", "escape body 1", 0xB3A841),
-    swatch("oklab_escape_body_1", "escape body 2", 0xD486C3),
-    swatch("oklab_escape_body_2", "escape body 3", 0x09B9CD),
-    swatch("oklab_triple_ejection", "triple ejection", 0xB790E2),
+    swatch("oklab_bounded", Bounded, D0, 0x141418),
+    swatch("oklab_collision_pair_2", Collision, D2, 0xE7857A),
+    swatch("oklab_collision_pair_1", Collision, D1, 0x6EB976),
+    swatch("oklab_collision_pair_0", Collision, D0, 0x7FA2F2),
+    swatch("oklab_triple_collision", Collision, D3, 0xD99349),
+    swatch("oklab_escape_body_0", Escape, D0, 0xB3A841),
+    swatch("oklab_escape_body_1", Escape, D1, 0xD486C3),
+    swatch("oklab_escape_body_2", Escape, D2, 0x09B9CD),
+    swatch("oklab_triple_ejection", Escape, D3, 0xB790E2),
 ];
 
 /// The named swatch sets, by the value of [`SET_PARAM`]: 0 the sRGB palette, the default; 1 the OKLab-uniform variant

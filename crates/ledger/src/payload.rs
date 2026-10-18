@@ -785,6 +785,63 @@ pub const fn detail_meanings() -> [(&'static str, [&'static str; 4]); 4] {
     ]
 }
 
+/// What a body- or pair-indexed field's index names (R-22; dd_generation_root §3.8, R-449).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Indexed {
+    /// A body index: the field is a body's, or its components are the bodies'.
+    Body,
+    /// A pair id: pair `k` is the side opposite body `k`.
+    Pair,
+    /// `detail`, a union keyed by `state`: a body index under escape, a pair id under collision (payload §2).
+    BodyOrPair,
+}
+
+/// The base a machine-readable export states for a body index (R-449; REQ-GEN-036).
+pub const BODY_BASE: &str = "body index, 0-based";
+
+/// The base a machine-readable export states for a pair id (R-449; REQ-GEN-036).
+pub const PAIR_BASE: &str = "pair id, 0-based; pair k is the side opposite body k";
+
+/// The ledger's body- and pair-indexed fields (dd_generation_root §3.8: "`detail` under escape and collision,
+/// `dmin_pair`, `m0 m1 m2` and any per-body or per-pair field"): the stored vectors, slot `j` body `j`'s (payload §1);
+/// `detail`; `dmin_pair`; and the masses, `m0` body 0's. Ledger data, not hashed into the schema version: it changes
+/// no stored bit (R-449: "the schema version does not move").
+pub const INDEXED: [(&str, Indexed); 9] = [
+    ("r", Indexed::Body),
+    ("p", Indexed::Body),
+    ("r_sh", Indexed::Body),
+    ("p_sh", Indexed::Body),
+    ("detail", Indexed::BodyOrPair),
+    ("dmin_pair", Indexed::Pair),
+    ("m0", Indexed::Body),
+    ("m1", Indexed::Body),
+    ("m2", Indexed::Body),
+];
+
+/// The ledger key that states the base of each [`INDEXED`] field's ids, as a machine-readable export writes them
+/// (dd_generation_root §3.8, R-449; REQ-GEN-036): the text the export decoder's schema carries for the field, which
+/// states [`BODY_BASE`] for a body index and [`PAIR_BASE`] for a pair id. Generation refuses an indexed field whose
+/// text does not (`gen::export::index_refused`). The ids stay 0-based (R-22); an export's caption, which a person
+/// reads, is 1-based (`crate::display`).
+pub const INDEX_BASES: [(&str, &str); 9] = [
+    ("r", "body index, 0-based: components 2j and 2j + 1 are body j's"),
+    ("p", "body index, 0-based: components 2j and 2j + 1 are body j's"),
+    ("r_sh", "body index, 0-based: components 2j and 2j + 1 are body j's"),
+    ("p_sh", "body index, 0-based: components 2j and 2j + 1 are body j's"),
+    (
+        "detail",
+        "under escape, body index, 0-based; under collision, pair id, 0-based; pair k is the side opposite body k; \
+         3 all three under either; under sim_failed and decode_failed, the failure category",
+    ),
+    (
+        "dmin_pair",
+        "pair id, 0-based; pair k is the side opposite body k; 3 unset",
+    ),
+    ("m0", "body index, 0-based: body 0's mass"),
+    ("m1", "body index, 0-based: body 1's mass"),
+    ("m2", "body index, 0-based: body 2's mass"),
+];
+
 /// One member of generation-root §3.7's `QuadReduction`: its name, its §3.7 type as written there, and the §3.7
 /// subsection that gives it. Ledger data, not a §3.8 entry, and not emitted: the struct, its members' §3.8 entries and
 /// their placement are [`crate::reduction`]'s (R-306, R-113).

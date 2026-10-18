@@ -13,8 +13,9 @@ pub struct Sample {
     pub at: [f64; 2],
     /// Its IC, `z(s, t)` (chart_decoder_contract Part 3).
     pub ic: Latent,
-    /// Its fate once decided at the playhead: its outcome class's legend label, 0-based (R-22; colour_composition
-    /// §1.4), a terminal `state` or `bounded` at the horizon (payload §2). `None` while it is still interacting.
+    /// Its fate once decided at the playhead, a terminal `state` or `bounded` at the horizon (payload §2): the display
+    /// name of its `state` and `detail`, 1-based ("escape body 1", "collision 1–2", "bounded"), from the one conversion
+    /// function ([`crate::contract::display::name`]; R-449). `None` while it is still interacting.
     pub fate: Option<String>,
     /// The time its fate was decided, `t_end`; `None` while it is still interacting.
     pub t_end: Option<f64>,
@@ -35,6 +36,7 @@ pub struct Sample {
     /// The shape-sphere path, `(θ, φ)` in radians, `θ` the azimuth and `φ` the polar angle, `n = (sin φ cos θ,
     /// sin φ sin θ, cos φ)` (chart_reference §3.3).
     pub shape: Vec<[f64; 2]>,
-    /// The three bodies' paths in real space, centre-of-mass frame, each `(x, y)`, 0-based (R-22).
+    /// The three bodies' paths in real space, centre-of-mass frame, each `(x, y)`, body `k`'s at index `k`, 0-based
+    /// (R-22); shown as body `k + 1` ([`crate::contract::display::body_name`]; R-449).
     pub bodies: [Vec<[f64; 2]>; 3],
 }
