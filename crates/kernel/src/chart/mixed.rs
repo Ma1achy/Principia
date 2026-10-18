@@ -13,15 +13,18 @@
 //! (lowering Part 3: chart type and axis kinds are monomorphised, never interpreted); the ranges and the frozen values
 //! are its parameters, uniforms.
 //!
-//! **The convention fixes the other six** ([`Mixed::frozen`]): the eight controls `z`, in the decoder's block layout, of
-//! which the two the axes set are not read. Then `Φ_mixed(u, v) = D(z(u, v))`, `z(u, v)` taking the horizontal axis's
-//! coordinate from `u`, the vertical's from `v` and the rest from the frozen values ([`Mixed::controls`]). It composes
-//! with the shared decoder ([`crate::decode::decode`]) and adds no GPU logic: the decode is the latent chart's on that
-//! `z`. A derived axis's control is its link's inverse at the axis's value, which needs the link selection, so
-//! [`Chart::decode`] places it; [`Chart::map`] places the latent axes and leaves a derived axis's coordinate frozen, and
-//! every `D ∘ Φ` entry goes through [`Chart::decode`]. When one axis is a configuration coordinate and the other its
-//! conjugate momentum the render is a Poincaré section: the `(α, p_ρ)` chart is `Mixed<Alpha, PRhoX>`, `p_ρ`'s component
-//! along `ρ̃`, which the canonical frame puts on `+x`.
+//! **The convention fixes the other six** ([`Mixed::frozen`]): the eight controls `z`, in the decoder's block layout,
+//! of which the two the axes set are not read. Then `Φ_mixed(u, v) = D(z(u, v))`, `z(u, v)` taking the horizontal
+//! axis's coordinate from `u`, the vertical's from `v` and the rest from the frozen values ([`Mixed::controls`]). It
+//! composes with the shared decoder ([`crate::decode::decode`]) and adds no GPU logic: the decode is the latent chart's
+//! on that `z`. A derived axis's control is its link's inverse at the axis's value, which needs the link selection, so
+//! [`Chart::decode`] places it; [`Chart::map`] places the latent axes and leaves a derived axis's coordinate frozen,
+//! and every `D ∘ Φ` entry goes through [`Chart::decode`]. The `(α, p_ρ)` chart, chart_reference §1.3's classical
+//! phase-space portrait, is `Mixed<Alpha, PRhoX>`: `p_ρ`'s component along `ρ̃`, which the canonical frame puts on
+//! `+x`. That component, `q₀`, is the momentum conjugate to the inner pair's separation `‖ρ‖ = cos α/√μ_ρ`
+//! (chart_reference §0.2, §0.3), not to `α`, whose conjugate is `p_α = −sin α·(p̃_ρ·ρ̂) + cos α·(p̃_λ·λ̂)`; the axes
+//! are not a canonical pair, and `dα·dp_ρ,x` is not the Liouville measure (canonical_spec §9 W7; chart_decoder_contract
+//! § "Links carry a measure").
 //!
 //! **Feasibility is inherited** (inverse_encode_contract § "Chart-aware validation", layer 2: "Mixed-axis charts inherit
 //! both axes' constraints"). Each axis has its own check, and the chart's is their conjunction: a latent coordinate
