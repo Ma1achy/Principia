@@ -72,13 +72,12 @@ jobs:
           done
       # librsvg, from the runner's own Ubuntu archive, renders the SVGs to PNG; the SVGs' font list falls back from
       # `Helvetica Neue` through `Arial`, `Liberation Sans` and `DejaVu Sans` to `sans-serif`, so the runner's fonts take
-      # over. The log shows the regular and bold faces fontconfig picks.
+      # over. The log lists which of the list's families the runner has (librsvg takes the first it finds).
       - name: Install rsvg-convert
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin
-          fc-match 'Helvetica Neue'
-          fc-match 'Helvetica Neue:bold'
+          fc-list : family | grep -E "Helvetica|Arial|Liberation Sans|Arimo|Nimbus Sans|DejaVu Sans" | sort -u || true
       - name: Render the PNGs
         run: |
           set -euo pipefail
