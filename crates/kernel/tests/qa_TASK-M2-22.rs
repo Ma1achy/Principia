@@ -76,21 +76,40 @@ negative_control!(
         + t * c.q2[k]))
 );
 
+/// Chart `c` narrowed to f32.
+fn narrow(c: &Latent<f64>) -> Latent<f32> {
+    Latent {
+        z0: c.z0.map(|x| x as f32),
+        q1: c.q1.map(|x| x as f32),
+        q2: c.q2.map(|x| x as f32),
+    }
+}
+
+fn place_f32(c: &Latent<f32>, s: f32, t: f32) -> [f32; 8] {
+    c.map::<f32>(s, t).z.z
+}
+
+/// UV `(½, ½)` → `z₀` exactly at f32 under `place`.
+fn check_centre_f32(c: &Latent<f32>, place: fn(&Latent<f32>, f32, f32) -> [f32; 8]) {
+    assert_eq!(place(c, 0.5, 0.5), c.z0, "UV (½, ½) is not z₀ at f32");
+}
+
 #[test]
 fn qa_uv_ic_space_centre_is_z0_at_f32() {
     for c in charts() {
-        let narrow: Latent<f32> = Latent {
-            z0: c.z0.map(|x| x as f32),
-            q1: c.q1.map(|x| x as f32),
-            q2: c.q2.map(|x| x as f32),
-        };
-        assert_eq!(
-            narrow.map::<f32>(0.5, 0.5).z.z,
-            narrow.z0,
-            "UV (½, ½) is not z₀ at f32"
-        );
+        check_centre_f32(&narrow(&c), place_f32);
     }
 }
+
+negative_control!(
+    qa_uv_ic_space_centre_is_z0_at_f32,
+    "an unsigned f32 placement z₀ + s·q₁ + t·q₂ puts UV (½, ½) off z₀",
+    expected = "is not z₀ at f32",
+    check_centre_f32(&narrow(&charts()[0]), |c, s, t| std::array::from_fn(|k| c
+        .z0[k]
+        + s * c.q1[k]
+        + t * c.q2[k]))
+);
 
 /// The address `(s, t)` of the IC `z` of chart `c`, solved from `z − z₀ = (2s−1)·q₁ + (2t−1)·q₂` by the normal
 /// equations.

@@ -205,19 +205,43 @@ fn qa_nav_ops_slice_is_one_hidden_step_for_every_pixel() {
     }
 }
 
+/// An exactly hidden direction of `p`, built independently: a random vector's residual off the plane.
+fn hidden_of(p: &Plane) -> Latent {
+    normalise(&residual_off(&p.q1, &p.q2, &draw(&mut 99_u64)))
+}
+
+/// `after`'s centre is `before`'s `z₀ + 0.6·d`.
+fn check_hidden_slice(before: &Plane, d: &Latent, after: &Plane) {
+    let want = add_scaled(&before.z0, 0.6, d);
+    assert!(
+        norm(&sub(&after.z0, &want)) <= 1e-12,
+        "slice along a hidden d is not z₀ + t·d"
+    );
+}
+
 #[test]
 fn qa_nav_ops_slice_along_a_hidden_direction_is_z0_plus_t_d() {
     for p in planes() {
-        // An exactly hidden direction, built independently: a random vector's residual off the plane.
-        let d = normalise(&residual_off(&p.q1, &p.q2, &draw(&mut 99_u64)));
+        let d = hidden_of(&p);
         let after = apply(&p, slice(&p, &d, 0.6).expect("a slice"));
-        let want = add_scaled(&p.z0, 0.6, &d);
-        assert!(
-            norm(&sub(&after.z0, &want)) <= 1e-12,
-            "slice along a hidden d is not z₀ + t·d"
-        );
+        check_hidden_slice(&p, &d, &after);
     }
 }
+
+negative_control!(
+    qa_nav_ops_slice_along_a_hidden_direction_is_z0_plus_t_d,
+    "a step along q₁ instead of the hidden d is not z₀ + t·d",
+    expected = "slice along a hidden d is not z₀ + t·d",
+    {
+        let p = planes()[0].clone();
+        let d = hidden_of(&p);
+        let after = Plane {
+            z0: add_scaled(&p.z0, 0.6, &normalise(&p.q1)),
+            ..p.clone()
+        };
+        check_hidden_slice(&p, &d, &after);
+    }
+);
 
 negative_control!(
     qa_nav_ops_slice_is_one_hidden_step_for_every_pixel,
@@ -411,27 +435,47 @@ negative_control!(
     }
 );
 
+const OUT_OF_RANGE: [f64; 6] = [
+    -90.000001,
+    90.000001,
+    180.0,
+    -135.0,
+    f64::NAN,
+    f64::INFINITY,
+];
+
+/// `tilt` refuses every `τ` outside `[−90°, 90°]`.
+fn check_refuses(tilt: &dyn Fn(f64) -> Result<Latent, NavError>) {
+    for tau in OUT_OF_RANGE {
+        assert!(
+            tilt(tau).is_err(),
+            "τ = {tau} outside [−90°, 90°] was accepted"
+        );
+    }
+}
+
 #[test]
 fn qa_tilt_refuses_tau_outside_plus_minus_ninety() {
     let p = planes()[0].clone();
     let (q, d) = unit_pair(&p, &mut 1_u64);
-    for tau in [
-        -90.000001,
-        90.000001,
-        180.0,
-        -135.0,
-        f64::NAN,
-        f64::INFINITY,
-    ] {
-        assert!(
-            tilt_vector(&q, tau, &d).is_err(),
-            "τ = {tau} outside [−90°, 90°] was accepted"
-        );
+    check_refuses(&|tau| tilt_vector(&q, tau, &d));
+    for tau in OUT_OF_RANGE {
         let c = ChartConstructor::new(p.clone());
         assert!(c.tilt(&p, BasisVector::Q1, tau, &d).is_err(), "τ = {tau}");
     }
     assert_eq!(tilt_vector(&q, 91.0, &d), Err(NavError::TauOutOfRange));
 }
+
+negative_control!(
+    qa_tilt_refuses_tau_outside_plus_minus_ninety,
+    "a tilt that clamps τ into [−90°, 90°] accepts an out-of-range τ",
+    expected = "was accepted",
+    {
+        let p = planes()[0].clone();
+        let (q, d) = unit_pair(&p, &mut 1_u64);
+        check_refuses(&|tau| Ok(formula(&q, tau.clamp(-90.0, 90.0), &d)));
+    }
+);
 
 /// A curve through latent space, `γ(ν)`, bending, and its tangent by central difference.
 fn gamma(nu: f64) -> Latent {
@@ -452,26 +496,38 @@ fn tangent(nu: f64) -> Latent {
     scale(&sub(&gamma(nu + h), &gamma(nu - h)), 0.5 / h)
 }
 
+/// Tilting the tangent `g` gives the contract formula applied to `γ′(ν₀)`, at every `τ`.
+fn check_curve_tilt(nu0: f64, g: &Latent, d: &Latent) {
+    let at = normalise(&tangent(nu0));
+    for tau in [-45.0, 0.0, 20.0, 90.0] {
+        let got = normalise(&tilt_tangent(g, 1.0, tau, d).expect("in range"));
+        let want = formula(&at, tau, d);
+        assert!(
+            norm(&sub(&got, &want)) <= 1e-9,
+            "ν₀ = {nu0}, τ = {tau}: not the tilt of γ′(ν₀)"
+        );
+    }
+}
+
 #[test]
 fn qa_tilt_curve_axis_rotates_the_tangent_at_the_centre() {
     let d = e(6);
     for nu0 in [-0.8, 0.0, 0.4, 1.3] {
         let g = tangent(nu0);
-        let at = normalise(&g);
-        for tau in [-45.0, 0.0, 20.0, 90.0] {
-            let got = normalise(&tilt_tangent(&g, 1.0, tau, &d).expect("in range"));
-            let want = formula(&at, tau, &d);
-            assert!(
-                norm(&sub(&got, &want)) <= 1e-9,
-                "ν₀ = {nu0}, τ = {tau}: not the tilt of γ′(ν₀)"
-            );
-        }
+        check_curve_tilt(nu0, &g, &d);
         // At τ = 0 it is the tangent at ν₀ and not at another point of the curve.
         let elsewhere = normalise(&tangent(nu0 + 0.5));
         let got = normalise(&tilt_tangent(&g, 1.0, 0.0, &d).unwrap());
         assert!(norm(&sub(&got, &elsewhere)) > 1e-3);
     }
 }
+
+negative_control!(
+    qa_tilt_curve_axis_rotates_the_tangent_at_the_centre,
+    "tilting the tangent at another point of the curve is not the tilt of γ′(ν₀)",
+    expected = "not the tilt of γ′(ν₀)",
+    check_curve_tilt(0.4, &tangent(0.9), &e(6))
+);
 
 /// The six hidden directions of `p` with `p`'s two span ℝ⁸, orthonormally and off the plane.
 fn check_six(p: &Plane, six: &[Latent]) {
@@ -659,16 +715,21 @@ negative_control!(
     }
 );
 
+/// The energy vectors at two different centres differ.
+fn check_moved(da: &Latent, db: &Latent) {
+    assert!(
+        norm(&sub(da, db)) > 1e-3,
+        "the energy-at-fixed-L_z vector did not move with the centre"
+    );
+}
+
 #[test]
 fn qa_named_directions_are_recomputed_with_the_centre() {
     let cs = centres();
     let (a, b) = (cs[0], cs[1]);
     let da = energy_at_fixed_lz::<Defaults>(&a).unwrap();
     let db = energy_at_fixed_lz::<Defaults>(&b).unwrap();
-    assert!(
-        norm(&sub(&da, &db)) > 1e-3,
-        "the energy-at-fixed-L_z vector did not move with the centre"
-    );
+    check_moved(&da, &db);
     // The library at a plane through each centre carries that centre's vectors.
     for z in [a, b] {
         let p = Plane {
@@ -683,6 +744,16 @@ fn qa_named_directions_are_recomputed_with_the_centre() {
         assert_eq!(lib.hidden.as_ref().map(|h| h.len()), Ok(6));
     }
 }
+
+negative_control!(
+    qa_named_directions_are_recomputed_with_the_centre,
+    "an energy vector frozen at the first centre does not move with the centre",
+    expected = "did not move with the centre",
+    {
+        let da = energy_at_fixed_lz::<Defaults>(&centres()[0]).unwrap();
+        check_moved(&da, &da);
+    }
+);
 
 /// `d_m` at `z`: a unit mass-block vector whose step of `‖z_eq − z₀[6:8]‖` decodes to equal masses.
 fn check_mass(z: &Latent, d: &Latent) {
