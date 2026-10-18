@@ -340,11 +340,9 @@ fn axis_check<Q: Quantity>(range: [f64; 2], t: f64) -> Result<f64, ()> {
     let edge = x.clamp(lo, hi);
     let below = edge == lo;
     let width = range[1] - range[0];
-    if width == 0.0 || !width.is_finite() {
-        return Err(());
-    }
     // Rounding may leave `x(t)` a hair past the edge, by an ulp or two: step `t` inward, toward larger `x` from below
-    // and smaller from above, until it lands in the domain, at most four steps, and refuse past them.
+    // and smaller from above, until it lands in the domain, at most four steps, and refuse past them. A range of no
+    // width or of a width past f64's range gives a `t` whose `x` is NaN or infinite, and is refused so.
     let up = below == width.is_sign_positive();
     let mut t = (edge - range[0]) / width;
     for _ in 0..4 {
