@@ -5,7 +5,8 @@
 //! - `nav_ops` (REQ-GUI-002): a slice moves every pixel's IC by the identical hidden step; a pan keeps the plane; a
 //!   zoom keeps `z₀`.
 //! - `tilt` (REQ-GUI-003): `τ = 0` leaves `q`, `τ = ±90°` gives `±d_target`, `+30°` and `−30°` differ, a curve axis
-//!   tilts its tangent at the centre, and the six directions orthogonal to the plane.
+//!   tilts its tangent at the centre, and the six directions orthogonal to the plane; a pair tilt holds `τ₁` and `τ₂`
+//!   together, and re-tilting one replaces its own tilt.
 //! - `named_directions` (REQ-CHART-009, REQ-CHART-051): the library returns the three named vectors, the energy vector
 //!   moves with the centre, and the morph keeps the anchor through the §4.6 persistence sweep.
 //! - `oblique_slice_record` (REQ-CHART-016): the export of an oblique slice carries `q₁, q₂`; two raw tilts give the
@@ -597,6 +598,186 @@ negative_control!(
                 "hidden 0 is not orthogonal to the plane: {got}"
             );
         }
+    }
+);
+
+/// `after` holds both angles: `q₁` is the committed `p.q1` turned by `tau1` toward `d1`, `q₂` the committed `p.q2`
+/// turned by `tau2` toward `d2`, each alone.
+fn check_both_held(
+    p: &Plane,
+    after: &Plane,
+    (tau1, d1): (f64, &Latent),
+    (tau2, d2): (f64, &Latent),
+) {
+    let want1 = tilt_vector(&p.q1, tau1, d1).expect("q₁'s tilt");
+    let want2 = tilt_vector(&p.q2, tau2, d2).expect("q₂'s tilt");
+    assert!(
+        close(&after.q2, &want2, 1e-15),
+        "q₂ lost its tilt: {:?}, want {want2:?}",
+        after.q2
+    );
+    assert!(
+        close(&after.q1, &want1, 1e-15),
+        "q₁ is not its own tilt: {:?}, want {want1:?}",
+        after.q1
+    );
+}
+
+#[test]
+fn tilt_pair_holds_both_angles() {
+    let p = oblique_plane();
+    let h = hidden(&p).expect("a plane");
+    let (d1, d2) = (h[1].direction, h[4].direction);
+    let c = ChartConstructor::new(p.clone());
+    // τ₂ = 30° first, then τ₁ = 20° with τ₂ held.
+    let first = apply(&p, c.tilt_pair(&p, (0.0, &d1), (30.0, &d2)).expect("τ₂"));
+    let alone = tilted(&p, 30.0, &d2);
+    assert!(close(&first.q1, &alone.q1, 1e-15) && close(&first.q2, &alone.q2, 1e-15));
+    let both = apply(
+        &first,
+        c.tilt_pair(&first, (20.0, &d1), (30.0, &d2))
+            .expect("τ₁, τ₂"),
+    );
+    check_both_held(&p, &both, (20.0, &d1), (30.0, &d2));
+    check_planes_differ(&p, &both);
+    assert_eq!(ic(&both, 0.5, 0.5), p.z0);
+    assert_eq!(c.committed(), &p);
+}
+
+negative_control!(
+    tilt_pair_holds_both_angles,
+    "a one-vector tilt of q₁ drops q₂'s tilt",
+    expected = "q₂ lost its tilt",
+    {
+        let p = oblique_plane();
+        let h = hidden(&p).expect("a plane");
+        let (d1, d2) = (h[1].direction, h[4].direction);
+        let c = ChartConstructor::new(p.clone());
+        let first = tilted(&p, 30.0, &d2);
+        let one = apply(
+            &first,
+            c.tilt(&first, BasisVector::Q1, 20.0, &d1).expect("τ₁"),
+        );
+        check_both_held(&p, &one, (20.0, &d1), (30.0, &d2));
+    }
+);
+
+/// The pair `(τ₁ = −35°, τ₂ = 30°)` of `p`, after an earlier pair `(20°, 30°)`: `got`; the pair alone `alone`.
+fn retilted(p: &Plane, c: &ChartConstructor, d: [&Latent; 3]) -> (Plane, Plane, Plane) {
+    let earlier = apply(
+        p,
+        c.tilt_pair(p, (20.0, d[0]), (30.0, d[1])).expect("earlier"),
+    );
+    let got = apply(
+        &earlier,
+        c.tilt_pair(&earlier, (-35.0, d[2]), (30.0, d[1]))
+            .expect("re-tilt"),
+    );
+    let alone = apply(
+        p,
+        c.tilt_pair(p, (-35.0, d[2]), (30.0, d[1])).expect("alone"),
+    );
+    (earlier, got, alone)
+}
+
+#[test]
+fn tilt_pair_retilting_q1_replaces_its_tilt() {
+    let p = oblique_plane();
+    let h = hidden(&p).expect("a plane");
+    let c = ChartConstructor::new(p.clone());
+    let (earlier, got, alone) =
+        retilted(&p, &c, [&h[1].direction, &h[4].direction, &h[2].direction]);
+    // The composition: −35° of the already tilted q₁, q₂ unchanged.
+    let composed = apply(
+        &earlier,
+        ChartConstructor::new(earlier.clone())
+            .tilt_pair(&earlier, (-35.0, &h[2].direction), (0.0, &h[1].direction))
+            .expect("composed"),
+    );
+    check_replaced(&got, &alone, &composed);
+    check_both_held(&p, &got, (-35.0, &h[2].direction), (30.0, &h[4].direction));
+}
+
+negative_control!(
+    tilt_pair_retilting_q1_replaces_its_tilt,
+    "a composition is not the re-tilt alone",
+    expected = "two raw tilts composed",
+    {
+        let p = oblique_plane();
+        let h = hidden(&p).expect("a plane");
+        let c = ChartConstructor::new(p.clone());
+        let (earlier, _, alone) =
+            retilted(&p, &c, [&h[1].direction, &h[4].direction, &h[2].direction]);
+        let composed = apply(
+            &earlier,
+            ChartConstructor::new(earlier.clone())
+                .tilt_pair(&earlier, (-35.0, &h[2].direction), (0.0, &h[1].direction))
+                .expect("composed"),
+        );
+        check_replaced(&composed, &alone, &composed);
+    }
+);
+
+#[test]
+fn tilt_pair_keeps_each_zoom_and_refuses_what_tilt_refuses() {
+    let p = oblique_plane();
+    let h = hidden(&p).expect("a plane");
+    let (d1, d2) = (h[0].direction, h[3].direction);
+    let c = ChartConstructor::new(p.clone());
+    // A current plane whose two vectors have different lengths since the commit.
+    let current = Plane {
+        q1: scale(&p.q1, 2.0),
+        q2: scale(&p.q2, 0.5),
+        ..p.clone()
+    };
+    let after = apply(
+        &current,
+        c.tilt_pair(&current, (50.0, &d1), (-40.0, &d2))
+            .expect("a tilt"),
+    );
+    assert!(
+        (norm(&after.q1) - 0.6).abs() <= 1e-15,
+        "the tilt changed |q₁|: {}",
+        norm(&after.q1)
+    );
+    assert!(
+        (norm(&after.q2) - 0.15).abs() <= 1e-15,
+        "the tilt changed |q₂|: {}",
+        norm(&after.q2)
+    );
+    // Both vectors fully along one direction leave no plane, either sign.
+    for (t1, t2) in [(90.0, 90.0), (-90.0, 90.0), (90.0, -90.0)] {
+        assert_eq!(
+            c.tilt_pair(&p, (t1, &d1), (t2, &d1)),
+            Err(NavError::DegeneratePlane),
+            "({t1}, {t2})"
+        );
+    }
+    // Just inside, a plane.
+    assert!(c.tilt_pair(&p, (89.0, &d1), (90.0, &d1)).is_ok());
+    // Each angle's range is [−90°, +90°], on either vector.
+    for (t1, t2) in [(90.0 + 1e-9, 0.0), (0.0, -90.0 - 1e-9), (f64::NAN, 0.0)] {
+        assert!(
+            c.tilt_pair(&p, (t1, &d1), (t2, &d2)).is_err(),
+            "({t1}, {t2}) accepted"
+        );
+    }
+    assert!(c.tilt_pair(&p, (-90.0, &d1), (90.0, &d2)).is_ok());
+}
+
+negative_control!(
+    tilt_pair_keeps_each_zoom_and_refuses_what_tilt_refuses,
+    "a tilt at the committed lengths loses the zoom since the commit",
+    expected = "the tilt changed |q₁|",
+    {
+        let p = oblique_plane();
+        let d = hidden(&p).expect("a plane")[0].direction;
+        let after = tilt_vector(&p.q1, 50.0, &d).expect("a tilt");
+        assert!(
+            (norm(&after) - 0.6).abs() <= 1e-15,
+            "the tilt changed |q₁|: {}",
+            norm(&after)
+        );
     }
 );
 

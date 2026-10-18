@@ -8,6 +8,7 @@
 //! | [`slice`](slice()) | `z₀` | `Δz₀ ⊥ span(q₁, q₂)`, `z₀ ← z₀ + t·d`: every pixel's IC moves by the same hidden step |
 //! | [`zoom`] | `q₁, q₂` | one common factor, log-stepped: `2^−octaves` |
 //! | [`ChartConstructor::tilt`] | `q₁` or `q₂` | `q′(τ) = normalise(cos τ·q + sin τ·d_target)`, `τ ∈ [−90°, +90°]` |
+//! | [`ChartConstructor::tilt_pair`] | `q₁` and `q₂` | the same, `τ₁` on `q₁` and `τ₂` on `q₂`, held together |
 //!
 //! **The scale lives in `q`** (R-83): a zoomed basis vector is `k·q̂`. A tilt rotates the direction and keeps each basis
 //! vector's length, `q′ = ‖q‖·normalise(cos τ·q̂ + sin τ·d̂)`, so a tilt neither resets the zoom nor gives the two axes
@@ -16,7 +17,9 @@
 //!
 //! **Raw tilts replace rather than compose** (chart_reference §1.1): a [`ChartConstructor`] holds the committed plane,
 //! and each raw tilt is of that plane, so a second tilt replaces the first; [`ChartConstructor::commit`] is the commit
-//! mechanism that makes the current plane the one later tilts start from.
+//! mechanism that makes the current plane the one later tilts start from. The raw tilt is the pair of angles `(τ₁, τ₂)`
+//! on `(q₁, q₂)`: [`ChartConstructor::tilt_pair`] sets both at once, so a view holding `τ₁` and `τ₂` together issues
+//! each change as one edit of both; [`ChartConstructor::tilt`] sets one and the other to 0.
 //!
 //! **An oblique slice records its pair** (§1.1): [`oblique`] orthonormalises two vectors by Gram–Schmidt into the
 //! `(q₁, q₂)` the plane holds, so `SimConfig`'s export carries the pair used.
@@ -221,7 +224,8 @@ impl ChartConstructor {
 
     /// The raw tilt of `which` by `tau_deg` toward `target`, as one basis edit: the committed plane's direction of
     /// `which` turned by [`tilt_tangent`], the other basis vector the committed one's direction, each at the length it
-    /// has in `current`, so the zoom since the commit is kept and an earlier raw tilt is replaced, not composed.
+    /// has in `current`, so the zoom since the commit is kept and an earlier raw tilt is replaced, not composed. The
+    /// other vector's angle is 0: to hold both angles, use [`tilt_pair`](Self::tilt_pair).
     /// [`NavError::DegeneratePlane`] where the tilted pair spans no plane.
     pub fn tilt(
         &self,
@@ -245,6 +249,29 @@ impl ChartConstructor {
             BasisVector::Q1 => (turned, kept),
             BasisVector::Q2 => (kept, turned),
         };
+        frame(&Plane {
+            z0: current.z0,
+            q1,
+            q2,
+        })?;
+        Ok(edit(SimField::Basis { q1, q2 }))
+    }
+
+    /// The raw tilt of both basis vectors at once, as one basis edit: `q₁` the committed plane's `q₁` turned by `τ₁ =
+    /// q1.0` toward `q1.1`, `q₂` the committed `q₂` turned by `τ₂ = q2.0` toward `q2.1`, each by [`tilt_tangent`] at the
+    /// length it has in `current`. The two angles are held together (chart_reference §1.1's 12 tilt axes, 6 hidden × 2
+    /// basis vectors; render_gui_spec G2's `τ₁, τ₂` set by one drag as one `SetField`), and each replaces its own
+    /// vector's earlier raw tilt; [`tilt`](Self::tilt) is this with the other angle 0. [`NavError::DegeneratePlane`]
+    /// where the tilted pair spans no plane (at `τ₁ = ±τ₂ = ±90°` toward one direction).
+    pub fn tilt_pair(
+        &self,
+        current: &Plane,
+        q1: (f64, &Latent),
+        q2: (f64, &Latent),
+    ) -> Result<SetField, NavError> {
+        let base = &self.committed;
+        let q1 = tilt_tangent(&base.q1, norm(&current.q1), q1.0, q1.1)?;
+        let q2 = tilt_tangent(&base.q2, norm(&current.q2), q2.0, q2.1)?;
         frame(&Plane {
             z0: current.z0,
             q1,
