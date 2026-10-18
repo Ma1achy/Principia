@@ -10832,8 +10832,11 @@ any other console control still lands in navigation mode on it).*
 *Amended in part by R-460 (18 Oct 2026; opened with the mouse, the console takes the focus on its header bar scope with
 no ring, keyboard navigation staying off).*
 *Amended in part by R-463 (18 Oct 2026; the header bar gains a maximise button between Clear and ×).*
+*Amended in part by R-464 (18 Oct 2026; A3, as to the ring only: a click moves the focus as A3 says, and the ring is
+hidden after any click or drag until the next key press, which shows it where the focus is).*
 *Still in force: all of it, except A3 for the search field, which a click now starts typing in (R-456); and that a
-mouse open lands with no ring (R-460); and that the header bar has a maximise button between Clear and × (R-463).*
+mouse open lands with no ring (R-460); and that the header bar has a maximise button between Clear and × (R-463); and
+that A3's click draws no ring until the next key press, the focus moving as A3 says (R-464).*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the console's paragraph and the window landing), § "G12. Console (`12_console.png`)" (a
 paragraph added) and § "G13. Where the artboards are overridden" (a bullet added), R-405's and R-409's heading blocks,
@@ -11657,6 +11660,11 @@ Changes REQ-COL-103 and REQ-COL-105 (rulings, note).
 ## R-456 — A click on a text input starts typing, in interaction mode; a click anywhere else lands in navigation mode *(amends R-450 A3, and R-409's landing rule and G4, for text inputs)*
 *Read by R-460 (18 Oct 2026; a click never turns keyboard navigation on, so the clicked field's blue ring shows only
 while keyboard navigation is on; flagged, RQ-367).*
+*Amended in part by R-464 (18 Oct 2026; closes RQ-367, and governs where R-460's reading above differs: as to the ring
+only, a click on a text input starts typing with the ring hidden, and the next key press, the first character typed
+included, shows it blue; a click elsewhere moves the focus as this ruling says, with no ring until the next key press).*
+*Still in force: all of it, except that the ring is hidden after any click until the next key press, the focus and the
+mode set as this ruling says (R-464).*
 *17 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the two modes' paragraph and the console's paragraph, a sentence each) and § "G12. Console
 (`12_console.png`)" (a sentence added), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a
@@ -12038,6 +12046,12 @@ follow-up task):*
 Adds REQ-GUI-208 and REQ-GUI-209; changes REQ-GUI-191 (rulings, note).
 
 ## R-460 — Focus and keyboard navigation are separate: a window opened with the mouse takes the focus but shows no ring and leaves keyboard navigation off; keyboard navigation starts only on keyboard input; a test per entry point, with a keyboard control arm *(amends R-409 point 4's "always in one of two modes" and R-450's landing "the whole scope highlighted", for a window opened with the mouse; reads R-456's blue ring on a clicked text field as shown only while keyboard navigation is on)*
+*Amended in part by R-464 (18 Oct 2026; closes RQ-367: H3 no longer applies, any click or drag hiding the ring and
+turning keyboard navigation off, the focus moving as R-450 A3 and R-456 say; the next key press, whichever key, shows
+the ring where the focus is; a clicked text field types with no ring until then).*
+*Still in force: all of it, except H3, H3's reading of R-456's blue ring and H1's keys that do not start keyboard
+navigation, which are R-464's (a click or drag hides the ring, the next key press shows it), and H5's check that a
+click leaves keyboard navigation as it was, which is R-464 M5's.*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (a paragraph added; the two modes, the landings, a click on a text field, what the user sees and the
 console's landing, a clause each), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a screen"
@@ -12303,3 +12317,118 @@ follow-up task):*
 and the close button ×, in that visual order") gains the maximise button between Clear and ×; the rest of R-450 stands.
 
 Adds REQ-GUI-215 and REQ-GUI-216.
+
+## R-464 — After any mouse click or drag the ring is hidden, the focus moving exactly as R-450 A3 and R-456 say; the next key press shows it again where the focus is; a window or the console opened with the mouse takes the focus with no ring, opened from the keyboard with it *(closes RQ-367; amends R-450, R-456 and R-460 as to whether the ring is drawn)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (R-460's paragraph, what the user sees, a click on a text field, a click elsewhere and the
+console's landing, a clause each), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a screen"
+(conformed), `docs/contracts/principia_gui_state_contract.md` § 2 (a clause), R-450's, R-456's and R-460's heading
+blocks, `docs/archive/review_queue/M0.md` (RQ-367, moved with its ruling), REQ-GUI-210 (reqio: statement, verify,
+rulings, note), REQ-GUI-098, REQ-GUI-182 and REQ-GUI-189 (reqio, notes), TASK-M6-41 (its title, goal, references,
+deliverables, acceptance and notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-41 on the mock*
+
+The human's words (18 Oct 2026), ruling RQ-367:
+
+> Confirm follow-up 3, as a narrow amendment to R-450 A3 and R-456. Focus position stays exactly as those rulings say:
+> a click moves focus to what was clicked, in navigation mode, and a click on a text input starts typing. What changes
+> is only whether the ring is drawn: after any mouse click or drag the ring is hidden, and the next key press shows it
+> again where the focus already is. A window or console opened with the mouse gets focus with no ring; opened from the
+> keyboard, it shows the ring. #234 merges as it stands, and a follow-up task adds the ring visibility rule.
+
+"Follow-up 3" is the human's Message 3 of 18 Oct 2026, whose item 1 R-460 quotes; its bullet "Recommended, to be
+confirmed by Malachy: any pointer click or drag returns to mouse mode and hides the keyboard highlight. That includes
+clicking off to close something. Focus doesn't move, so the next key press resumes keyboard navigation from where it
+was." is what RQ-367 held. RQ-367's options were (a) the recommendation literally, no click moving the focus; (b) a
+click or drag hides the ring, the focus still moving where R-450 A3 and R-456 move it; (c) a click leaves keyboard
+navigation as it was (R-460 H3, applied meanwhile); and, for a clicked text field, (i) its blue ring only while
+keyboard navigation is on (applied meanwhile) or (ii) the blue ring while typing, keyboard navigation turned on.
+
+*What it decides:*
+- **A narrow amendment of R-450 A3 and R-456: only whether the ring is drawn.** The focus moves exactly as A3 and R-456
+  say: a click on a console control moves the focus onto it, in navigation mode; a click on a text input starts typing
+  in it, in interaction mode; a click anywhere else ends any typing and leaves the keyboard in navigation mode, moving
+  the focus only where A3 does (R-456 B6); a click on × closes the console. Nothing else in R-450 or R-456 changes.
+- **After any mouse click or drag the ring is hidden,** whatever was clicked or dragged and whatever was shown before:
+  a click on a control, a text field, the Figure, a menu entry or ×, or off something to close it (the recommendation's
+  "that includes clicking off to close something"); a drag on the compass, a slider, the figure, a splitter or a
+  window. In R-460's terms the click or drag turns keyboard navigation off, since the ring and the breadcrumb's focus
+  path are drawn only while it is on (R-460 H4).
+- **The next key press shows it again where the focus already is.** Hiding the ring moves no focus, so the next key
+  resumes from the focus the click left, as the recommendation's "the next key press resumes keyboard navigation from
+  where it was" has it. In R-460's terms the key press turns keyboard navigation on.
+- **Windows.** A window or the console opened with the mouse gets the focus with no ring; opened from the keyboard, it
+  shows the ring. That is R-460 H2, now in the human's words.
+- **#234 (TASK-M6-32) merges as it stands.** The ring-visibility rule is a follow-up task: TASK-M6-41 (M1 below).
+
+In RQ-367's terms: (b), for the click and the drag. For the clicked text field, neither (i) nor (ii): the click starts
+typing with the ring hidden, and the next key press shows the ring, blue while typing. (c) and (i), which R-460 H3
+applied meanwhile, no longer apply.
+
+*The first key typed after a click on a text field (settled by the words, not a choice).* The click starts typing
+(R-456, unchanged), so the field is in interaction mode, with egui's caret where the click landed and no ring. The
+first key the user then presses is "the next key press": it acts as typing does, since only whether the ring is drawn
+changes, and it shows the ring where the focus is, on the field. A typed character goes into the field and the ring
+appears on it, blue, interaction mode's colour (R-409). Esc or Enter stops typing, the text kept, and the ring appears
+on the field, orange, navigation mode's colour; Tab or Shift+Tab leaves the field as R-456 B1 says and the ring appears,
+orange, where the focus lands. No new review-queue entry is needed.
+
+*What changes in R-460 (R-464 governs where R-460's port differs from the human's words):*
+- **H3** ("A click, meanwhile") no longer applies. Its "a click never turns keyboard navigation on and leaves it as it
+  was otherwise: with it on, R-450 A3 and R-456 land as written, with the ring" becomes: any click or drag turns
+  keyboard navigation off and hides the ring, the focus moving as A3 and R-456 say.
+- **H3's flagged reading of R-456's "the ring blue"** (the clicked field's blue ring shown only while keyboard
+  navigation is on) becomes: the clicked field's ring is hidden from the click until the next key press, and the first
+  key typed shows it blue (above). R-456's "the ring blue" stands as the ring's colour while typing, once a key has
+  shown it.
+- **H1's keys** (flagged). R-460's words name the keys that start keyboard navigation ("Tab, the arrow keys, or the nav
+  shortcut"), and H1 kept Esc, the letter and Space shortcuts, Ctrl+Z and `?` from starting it. The human's newer words
+  make "the next key press" after a click or drag, whichever key, show the ring; they govern. Every hidden ring that
+  has a focus to show comes from a mouse act, a mouse open included (the console's opening by itself on an error
+  leaves the focus and the flag as they were), so in effect every key press turns keyboard navigation on (M2 below).
+  The human may say otherwise.
+- **H5's check** "a click on a console control or the figure leaves it as it was, off or on" becomes R-464's checks
+  (M5 below). H2, H4, H6 and H7 stand, and the rest of H5.
+
+*Applied per R-369 (routine design choices and mechanical consequences; the human may veto any, a veto being a GUI
+design ruling applied by a follow-up task):*
+- **M1. The follow-up task is TASK-M6-41.** It builds R-460's flag, is not started, and R-464 sets the same flag
+  (`Keyboard`, R-460 H4): one task builds both, after TASK-M6-32 (#234, merging as it stands). No new task is added.
+- **M2. What a key does as it shows the ring.** The key acts as it always does, and the ring is drawn where the focus is
+  once it has acted: Tab, Shift+Tab and the arrows move on from the focus the click left; Esc, the letter and Space
+  shortcuts, Ctrl+Z and `?` act as always; in a text field every key acts as typing does (above). Enter in navigation
+  mode keeps R-460 H1: while the ring is hidden it only shows it where the focus is, without acting, so nothing unseen
+  is pressed. A modifier pressed alone (Shift, Ctrl, Alt, Cmd) is no key press here. One rule serves every state: any
+  key press turns keyboard navigation on, at start too, where with no focus path set it draws nothing either way.
+- **M3. Clicks and drags only.** A scroll of the wheel or trackpad and the pointer's hover are neither a click nor a
+  drag; they leave the ring as it is.
+- **M4. #234's ring after a click.** REQ-GUI-189's verify, which TASK-M6-32 builds as it stands, checks "the ring
+  orange" after a click on Copy, the log or the Figure. That is #234's record: REQ-GUI-189 stays closed by TASK-M6-32,
+  its statement and verify unchanged, with a note. TASK-M6-41 changes only what the click draws: the focus and the mode
+  that REQ-GUI-189 checks stand, the ring is hidden until the next key, and the next key shows it orange there.
+  TASK-M6-41 conforms its own and TASK-M6-32's non-qa tests that assert a ring drawn right after a click.
+- **M5. The checks (REQ-GUI-210's verify, reqio).** R-460 H5's per-entry-point scripts stand, each with its keyboard
+  control arm, for the console (the footer, Windows › Console), the Chart builder, the Profiler and every other window:
+  opened by a click, the focus on the landing and no ring; opened by keys, the ring on the landing. Added, each with a
+  control: (1) click then key: with the ring on, a click on Copy, and in a second run on the Figure, hides it, the
+  focus where R-450 A3 and R-456 put it; Enter then shows it there, orange, without acting, and in a third run a letter
+  shortcut shows it there and acts; controls: a GUI that still draws the ring after the click fails, one that draws
+  none after the key fails, and one that draws it anywhere but the focus the click left fails. (2) With the ring on, a
+  drag on a Slice centre slider, and in a second run on the compass, hides it, the focus unmoved; the next Enter shows
+  it there; control: a GUI that keeps the ring through the drag fails. (3) A click on the console's search field types
+  with no ring; a letter then goes into the field and shows the ring blue on it; controls: a ring drawn at the click
+  fails, and no ring after the letter fails. (4) With the ring on, a click off an open menu that closes it hides the
+  ring. The test stays `mock_keyboard_nav_state`.
+- **M6. qa's files (R-290, forced by this ruling).** A qa assertion that a click leaves keyboard navigation on, or
+  draws the ring right after a click (on a console control, the Figure or a text field), asserts what R-464 changes;
+  TASK-M6-41's qa reviewer changes it in the task's qa commit, and only it.
+- **M7. Where it lands.** render_gui_spec §G3; GUI_DESIGN_NOTES § 07 (conformed, R-107); gui_state_contract §2 (a
+  clause); REQ-GUI-210's statement, verify, rulings and note (reqio); REQ-GUI-098's, REQ-GUI-182's and REQ-GUI-189's
+  notes; TASK-M6-41; R-450's, R-456's and R-460's heading blocks (forward lines, R-292, R-293); RQ-367 moved to
+  `docs/archive/review_queue/M0.md` with its ruling (R-292). RQ-368 is untouched.
+- R-464 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it amends:* R-450 A3's and R-456's "in navigation mode" and "the ring blue" landings, as to the ring only: a
+click moves the focus as they say and draws no ring until the next key press; R-460 H3, H3's reading of R-456 and H1's
+keys, as above. The focus rules of R-450, R-456 and R-460 stand.
+
+Changes REQ-GUI-210 (statement, verify, rulings, note), REQ-GUI-098, REQ-GUI-182 and REQ-GUI-189 (notes).

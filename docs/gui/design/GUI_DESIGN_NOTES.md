@@ -133,6 +133,9 @@ keyboard in navigation mode, moving the focus only where a rule already says a c
 R-450 A3) *(conformed to R-456)*.
 Focus and keyboard navigation are separate: a window opened with the mouse takes the focus but shows no ring; keyboard
 navigation, and with it the ring, starts only on keyboard input (Tab, the arrows, Enter) *(conformed to R-460)*.
+After any mouse click or drag the ring is hidden, the focus moving only as the click rules say; the next key press
+shows it again where the focus is, so a clicked text field types with no ring until the first key, which shows it
+blue *(conformed to R-464)*.
 
 ## 08 Lock — the reticle and the pin
 

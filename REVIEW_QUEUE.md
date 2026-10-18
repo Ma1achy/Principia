@@ -1526,48 +1526,6 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
 
-## RQ-367: Does any pointer click or drag turn keyboard navigation off and hide the ring, the focus kept? The human recommended it "to be confirmed by Malachy"; it would amend R-450 A3 and R-456, which land a click in navigation mode, and it bears on R-456's blue ring on a clicked text field *(the human's recommendation, unconfirmed; R-460, R-450, R-456; context: TASK-M6-41, TASK-M6-32)*
-
-*Filed by R-460's port (18 Oct 2026). The human marked it "to be confirmed"; nothing is chosen. For the human: it
-changes a ruling of the human's (R-450 A3, R-456).*
-
-- **File, section:**
-  - The human's message of 18 Oct 2026 (`decisions.md` § "R-460 — …", quoted): "Recommended, to be confirmed by Malachy:
-    any pointer click or drag returns to mouse mode and hides the keyboard highlight. That includes clicking off to
-    close something. Focus doesn't move, so the next key press resumes keyboard navigation from where it was."
-  - `decisions.md` § "R-450 — …", A3: "A click on any console control moves the keyboard's focus onto it, in navigation
-    mode, so the mouse and the keyboard never disagree about where the focus is inside the console; a click on ×
-    closes the console as Enter on it does."
-  - `decisions.md` § "R-456 — …", the human's words: "#234: clicking a text input should start typing; elsewhere a click
-    lands in navigation mode." Its first decision: "The keyboard's focus moves onto the field in interaction mode, the
-    ring blue". Its B6: a click not on a text input "moves the keyboard's focus only where an existing rule says a click
-    does (R-450 A3's console controls)". R-456 is built by TASK-M6-32, PR #234, open.
-  - `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)", R-460's
-    paragraph: "A click never turns keyboard navigation on; whether a click or a drag turns it off is open (RQ-367), and
-    meanwhile it leaves it as it was."
-- **The conflicts:**
-  - "Focus doesn't move" against R-450 A3 and R-456 B6, under which a click on a console control does move the focus,
-    onto it. "Returns to mouse mode and hides the keyboard highlight" against "lands in navigation mode", which in the
-    corpus is the orange ring's mode (R-409). R-460 reads "navigation mode" there as the mode keys find when they
-    next act, with no ring unless keyboard navigation is already on; the recommendation would turn it off.
-  - R-456's "the ring blue" on a clicked text field against R-460's confirmed "Keyboard-nav mode starts only on keyboard
-    input": a click is not keyboard input. R-460 H3 applied the newer words (the caret, no blue ring while keyboard
-    navigation is off) and flagged it here.
-- **Options seen:**
-  - (a) As recommended, literally: any click or drag turns keyboard navigation off and hides the ring, clicking off to
-    close something included, and moves no keyboard focus, so R-450 A3's and R-456 B6's click-moves-focus are withdrawn;
-    a click on a text field still starts typing (R-456), its ring hidden.
-  - (b) A click or drag turns keyboard navigation off and hides the ring, but where R-450 A3 and R-456 move the focus on
-    a click they still do, so the next key resumes from what was clicked.
-  - (c) Not adopted: a click leaves keyboard navigation as it was (R-460 H3, applied meanwhile); with it on, A3 and
-    R-456 land with the ring.
-  - For the text field, under any of them: (i) its blue ring only while keyboard navigation is on (applied meanwhile),
-    or (ii) a click on a text field shows the blue ring while typing, as R-456 says, and turns keyboard navigation on.
-- **Applied meanwhile:** (c) and (i) (R-460 H3). TASK-M6-41 builds them; R-456's code on PR #234 is unchanged by this
-  entry.
-- **Waits:** nothing. TASK-M6-41 does not wait; a ruling for (a) or (b), or (ii), is applied by a follow-up task, or by
-  TASK-M6-41 if it is still open.
-
 ## RQ-368: The compass's slice gesture moves the slice by the drag's horizontal component along the decoder's normal, which the isometric cube draws toward the lower left, so a drag to the right moves the drawn plane left and down; the tilt gesture's rates are the reference's while the drawn plane is the decoder's. The human reports the gestures unintuitive; changing them changes R-451 *(the human's report against a ruling's transcription, R-451 B3, R-458; context: TASK-M6-33, TASK-M6-39)*
 
 *Filed by R-458's port (18 Oct 2026), which the human asked to confirm that the compass rework covers the tilt and slice

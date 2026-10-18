@@ -340,16 +340,21 @@ read-only.
 What the user sees, while keyboard navigation is on (R-460): a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
 and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). Nothing else changes on screen.
 
-**Keyboard navigation is on or off, apart from the focus (R-460).** The focus (where keys go) and keyboard navigation
-(the ring, and R-409's two modes below) are separate. Keyboard navigation starts only on keyboard input: Tab, Shift+Tab,
-the arrows, or Enter (there is no other navigation shortcut today). Tab, Shift+Tab and the arrows then act as always,
-from the focus where it is; Enter, while it is off, only turns it on and shows the ring where the focus is, so nothing
-unseen is pressed. Esc, the letter and Space shortcuts, Ctrl+Z and `?` act as always without turning it on. Opening a
+**Keyboard navigation is on or off, apart from the focus (R-460, R-464).** The focus (where keys go) and keyboard navigation
+(the ring, and R-409's two modes below) are separate. Keyboard navigation starts only on keyboard input: any key press
+turns it on and shows the ring where the focus is once the key has acted, a modifier pressed alone excepted (R-460,
+R-464; there is no navigation shortcut today). Tab, Shift+Tab and the arrows act as always, from the focus where it
+is; Esc, the letter and Space shortcuts, Ctrl+Z and `?` act as always; in a text field being typed in every key acts as
+typing does; Enter in navigation mode, while it is off, only turns it on and shows the ring where the focus is, so
+nothing unseen is pressed (applied per R-369, R-460 H1, R-464 M2). Opening a
 window with the mouse (a click on the footer, a menu entry, a top-bar button or a panel's button) gives the window the
 focus, on its landing as below, but shows no ring and leaves keyboard navigation off, whatever it was; opening one from
 the keyboard turns it on, landing as below with the ring. A menu opened with the mouse takes the focus the same way,
-with no ring. A click never turns keyboard navigation on; whether a click or a drag turns it off is open (RQ-367),
-and meanwhile it leaves it as it was. The GUI starts with it off. It is the GUI's own state, beside the focus, never
+with no ring. After any mouse click or drag, whatever was clicked or dragged, clicking off to close something
+included, keyboard navigation is off and the ring hidden; the click moves the focus only as the click rules below say
+(R-450 A3, R-456), and the next key press shows the ring again where the focus already is (R-464, amending R-450 A3 and
+R-456 only as to whether the ring is drawn). A scroll or a hover is neither a click nor a drag and leaves the ring as
+it is (applied per R-369, R-464 M3). The GUI starts with it off. It is the GUI's own state, beside the focus, never
 undoable and never read by the engine.
 
 **Two modes: navigation and interaction (R-409).** While keyboard navigation is on (R-460), the keyboard is always in one of two modes. In **navigation mode**
@@ -382,8 +387,10 @@ typing, which is interaction mode, and while typing every key goes to the field 
 undoing the text edit and `?` typing a character: Esc and Enter return to navigation mode on the field and keep the
 text, and Tab and Shift+Tab leave it and move on, to the window's next or previous section inside a window (applied
 per R-369, R-409 G4, G5, G6). A click on a text field starts typing at once, in interaction mode, the ring blue, the
-caret where the click lands (the blue ring shown only while keyboard navigation is on, R-460; RQ-367); from there the typing rules above hold, Esc, Enter and Tab included. A click anywhere else
-ends any typing and leaves the keyboard in navigation mode (the mode keys find; a click turns no ring on, R-460); it moves the keyboard's focus only where a rule already says
+caret where the click lands (the ring hidden from the click until the next key press: the first character typed goes
+into the field and shows the ring blue, and Esc, Enter or Tab shows it orange where the focus then is, R-464); from there the typing rules above hold, Esc, Enter and Tab included. A click anywhere else
+ends any typing and leaves the keyboard in navigation mode (the mode keys find; the click hides the ring until the
+next key press, R-460, R-464); it moves the keyboard's focus only where a rule already says
 a click does, as a click on a console control does (R-450 A3), landing in navigation mode on what was clicked, so a
 click on the Figure that pins a sample (R-453) ends typing and leaves the focus where it was (R-456, amending R-450 A3
 and R-409 G4 for text fields; its scope applied per R-369). The footer and the console follow the same two modes (R-405, R-409).
@@ -394,7 +401,8 @@ console (§G12), as a click does, with the focus inside it. The console is a win
 bottom (R-450, amending R-405 and R-409): the **header bar** (the filters All, Warnings, Errors, Info, then the search
 field, Copy, Clear and the close button ×, in that visual order) and the **log** (the entry list). Opened by the
 footer or from Windows › Console, it takes the focus, landing in navigation mode on the header bar scope itself, the
-whole scope highlighted when it was opened from the keyboard; opened with the mouse it lands there with no ring (R-460). In navigation mode on a scope, ↑ and ↓ move between the header bar and the log, and Tab and
+whole scope highlighted when it was opened from the keyboard; opened with the mouse it lands there with no ring (R-460,
+R-464). In navigation mode on a scope, ↑ and ↓ move between the header bar and the log, and Tab and
 Shift+Tab do the same, staying in the window. Enter on the header bar goes in, onto All; ← and → move across every
 header element in visual order, the search field, Copy, Clear and × included, stopping at the row's ends; Esc goes
 back up to the header bar scope. The search field is a text field, as below. × is an ordinary focusable button: Enter
