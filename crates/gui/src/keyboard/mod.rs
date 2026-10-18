@@ -495,12 +495,23 @@ impl Keyboard {
         self.click_onto(ctx, mode, focus, Some(window), id);
     }
 
-    /// Follows the mouse on the text fields, on every page and in every window, once the frame is drawn (R-456): a
-    /// text field the mouse gave egui's focus to (a click on it) is typed in, as [`Self::focus_by_click`] has it; one
-    /// being typed in that lost egui's focus to a click elsewhere stops typing, navigation mode on the field. egui
-    /// focuses a text field the layer did not on a click only: the layer takes Tab and the arrows before egui sees
-    /// them.
+    /// Follows the mouse once the frame is drawn (R-456): a pointer press anywhere but on a text field lands in
+    /// navigation mode, the focus where it was (B6; a console control's click then moves it, R-450 A3), ending any
+    /// typing or interaction; a text field the mouse gave egui's focus to (a click on it) is typed in, as
+    /// [`Self::focus_by_click`] has it; one being typed in that lost egui's focus otherwise stops typing, navigation
+    /// mode on the field. egui focuses a text field the layer did not on a click only: the layer takes Tab and the
+    /// arrows before egui sees them.
     pub fn follow_text_clicks(&mut self, ctx: &egui::Context, mode: Mode, focus: &mut Focus) {
+        let pressed = ctx.input(|i| i.pointer.any_pressed().then(|| i.pointer.press_origin()));
+        if let Some(at) = pressed.flatten() {
+            let tree = self.tree(mode);
+            let on_text = self.places.iter().any(|(id, p)| {
+                p.widget.is_some() && p.rect.contains(at) && tree.get(id).is_some_and(|s| s.text)
+            });
+            if !on_text {
+                focus.mode = KeyMode::Navigation;
+            }
+        }
         let held = ctx.memory(|m| m.focused());
         let tree = self.tree(mode);
         let clicked = self

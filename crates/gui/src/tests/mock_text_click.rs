@@ -6,11 +6,12 @@
 //! navigation mode, the text kept, and Esc stops typing on the field. Each check also runs on an input it must reject
 //! (R-176, through `rejects`). The tests' names carry `mock_reachability`, the audit's acceptance filter.
 
-use eframe::egui::{Event, Key, Modifiers};
+use eframe::egui::{vec2, Event, Key, Modifiers, PointerButton, Pos2};
 use engine::contract::view_ui::{KeyMode, Mode};
 
 use super::support::{click_scope, headless, mock_app, press, rejects};
 use crate::app::App;
+use crate::explore::manifold_view;
 use crate::headless::Headless;
 use crate::keyboard::scopes::{ScopeId, ScopeTree};
 use crate::side::MockSide;
@@ -190,4 +191,89 @@ fn mock_reachability_text_click_esc_stops_typing_on_the_field() {
     });
     assert_eq!(app.stain.library.filter, "a", "Esc kept the text");
     assert!(app.keyboard.typing().is_none(), "still typing after Esc");
+}
+
+/// Drags from `from` to `to`, a frame for each step, as a mouse does.
+fn drag(h: &mut Headless, app: &mut App<MockSide>, from: Pos2, to: Pos2) {
+    let button = |pos, pressed| Event::PointerButton {
+        pos,
+        button: PointerButton::Primary,
+        pressed,
+        modifiers: NONE,
+    };
+    let _ = h.frame(app, vec![Event::PointerMoved(from)]);
+    let _ = h.frame(app, vec![button(from, true)]);
+    for k in 1..=4 {
+        let at = from + (to - from) * (k as f32 / 4.0);
+        let _ = h.frame(app, vec![Event::PointerMoved(at)]);
+    }
+    let _ = h.frame(app, vec![button(to, false)]);
+    let _ = h.frame(app, vec![Event::PointerGone]);
+    settle(h, app);
+}
+
+/// The Explore page with the focus on value `id`, in interaction mode, as Enter on it leaves it.
+fn interacting_on(id: ScopeId) -> (App<MockSide>, Headless, Vec<String>) {
+    let mut app = mock_app();
+    let mut h = headless();
+    settle(&mut h, &mut app);
+    let path = app.keyboard.tree(Mode::Explore).path_to(id);
+    app.view.focus.path = path.clone();
+    app.view.focus.mode = KeyMode::Interaction;
+    settle(&mut h, &mut app);
+    (app, h, path)
+}
+
+/// Asserts that `got`, a focus path and mode, is on `path` in navigation mode.
+fn check_navigating(got: &(Vec<String>, KeyMode), path: &[String], what: &str) {
+    assert_eq!(got, &(path.to_vec(), KeyMode::Navigation), "{what}");
+}
+
+fn at(app: &App<MockSide>) -> (Vec<String>, KeyMode) {
+    (app.view.focus.path.clone(), app.view.focus.mode)
+}
+
+/// Interaction mode on a z₀ value, then a click on the Figure: navigation mode, the focus still on the value (R-456;
+/// B6).
+#[test]
+fn mock_reachability_text_click_a_click_off_a_text_input_ends_interaction_on_a_value() {
+    let id = manifold_view::NAV_Z0[0];
+    let (mut app, mut h, path) = interacting_on(id);
+    let figure = app
+        .keyboard
+        .place_of(crate::explore::FIGURE)
+        .expect("the figure")
+        .rect;
+    for events in crate::capture::click(figure.left_top() + vec2(8.0, 8.0)) {
+        let _ = h.frame(&mut app, events);
+    }
+    settle(&mut h, &mut app);
+    check_navigating(&at(&app), &path, "a click on the Figure");
+    rejects("interaction mode surviving the click", || {
+        check_navigating(&(path.clone(), KeyMode::Interaction), &path, "control")
+    });
+}
+
+/// A drag on a Centre z₀ slider while another scope (τ₁) is in interaction mode: navigation mode, the focus still on
+/// τ₁ (R-456; B6).
+#[test]
+fn mock_reachability_text_click_a_drag_on_a_slider_ends_interaction_elsewhere() {
+    let (mut app, mut h, path) = interacting_on(manifold_view::TAU1);
+    let slider = app
+        .keyboard
+        .place_of(manifold_view::SLIDERS[0])
+        .expect("the slider placed")
+        .rect;
+    assert!(slider.width() > 20.0, "the slider drawn: {slider:?}");
+    let from = slider.left_center() + vec2(slider.width() * 0.3, 0.0);
+    drag(
+        &mut h,
+        &mut app,
+        from,
+        from + vec2(slider.width() * 0.2, 0.0),
+    );
+    check_navigating(&at(&app), &path, "a drag on the slider");
+    rejects("interaction mode surviving the drag", || {
+        check_navigating(&(path.clone(), KeyMode::Interaction), &path, "control")
+    });
 }

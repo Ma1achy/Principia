@@ -772,6 +772,27 @@ fn mock_console_keys_a_click_elsewhere_lands_in_navigation() {
     assert_eq!(app.windows.console.text, "", "Ctrl+Z while typing");
 }
 
+/// Interaction mode on the log, then a click on the Figure, outside the console: navigation mode, the focus still on
+/// the log (R-456: a click off a text input lands in navigation mode; B6: it moves no focus), and ↓ no longer scrolls.
+#[test]
+fn mock_console_keys_a_click_off_a_text_input_ends_interaction_on_the_log() {
+    let (mut app, mut h) = long_log(60);
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    press(&mut h, &mut app, Key::Enter, NONE);
+    check_at(&at(&app), &ON_LOG, INTERACT, "Enter on the log");
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    let scrolled = top(&app);
+    assert!(scrolled > 0, "↓ scrolled the log in interaction mode");
+    click_away(&mut h, &mut app, Away::Figure);
+    let got = at(&app);
+    check_at(&got, &ON_LOG, NAV, "a click on the Figure");
+    rejects("interaction mode surviving the click", || {
+        check_at(&got, &ON_LOG, INTERACT, "the Figure clicked")
+    });
+    press(&mut h, &mut app, Key::ArrowDown, NONE);
+    assert_eq!(top(&app), scrolled, "↓ scrolled after the click");
+}
+
 #[test]
 fn mock_console_keys_a_click_moves_the_keyboards_focus_onto_the_control() {
     let (mut app, mut h) = open(Opened::Footer);
