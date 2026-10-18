@@ -64,7 +64,8 @@ data. The two words name one object. The **figure** is the rendered slice.
   after a camera.
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console (§G12). The hover
-  label and the lock reticle are the figure's own marks, not notifications.
+  label and the lock reticle are the figure's own marks, not notifications. The one control over the figure is the
+  **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7).
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
   (Part II).
@@ -105,7 +106,7 @@ view the manifold.
 - **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
   number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
   (R-457, R-459). Its **reset**, beside its heading, returns every out-of-plane coordinate of `z₀` to the chart preset's
-  base point (R-466).
+  base point, the six coordinates off the preset's axes, tilted or not (R-466, K2).
 - **Tilt** (named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]", each a slider with its
   number box and a dropdown that picks the latent dimension the angle tilts into, and the rotation `γ`. `τ₁` tilts the
   horizontal axis `q₁` toward `e_X` and `τ₂` the vertical axis `q₂` toward `e_Y`: `u₁ = cos τ₁ e_a + sin τ₁ e_X`,
@@ -121,11 +122,16 @@ view the manifold.
 preset's definition, which carries, with its pair of axes, a base point, a centre `(u, v)` and a window (the scale at
 which the zoom reads × 1.00), defined here and in §G7 by TASK-M6-45 (R-72, REQ-GUI-224); no value is hardcoded. The
 active preset is the one Chart names, tilted or not; with a basis edited out of every preset's frame there is none, and
-the resets and Home are dimmed. Read in the preset's frame by the chart decoder contract's split (Part 4), Slice centre's
-values are `z₀`'s part across the plane, Tilt's are `τ₁`, `τ₂`, `γ`, and Navigate's are `z₀`'s in-plane coordinates
-`(u, v)` and the zoom: the Slice centre reset moves `z₀` across the plane only, `z₀ ← z₀ + P⊥(b − z₀)` for the base
-point `b`; the Tilt reset edits the basis only, turning the plane about the view's centre `z₀`, the zoom kept; the
-Navigate reset pans within the plane and sets the zoom (applied per R-369, R-466 K2). **Home** is all three resets in
+the resets and Home are dimmed. All three sections are read in the active preset's coordinates, its axes `e_a`, `e_b`
+and the six dimensions off them, tilted or not (applied per R-369, R-466 K2): Slice centre's values are `z₀`'s six
+coordinates off `e_a` and `e_b`; Navigate's are `z₀`'s two coordinates on them and the zoom `σ`; Tilt's are `τ₁`, `τ₂`,
+`γ`. The Slice centre reset sets the six to the base point's; the Navigate reset sets the two to the preset's centre
+and the zoom to the window, the angles kept; the Tilt reset edits the basis only, turning the plane about the view's
+centre `z₀`, the zoom kept. Untilted, these are the chart decoder contract's split (Part 4): a move across the plane, a
+pan within it and a zoom, and a basis edit. Each reset sets only its own values, so it leaves the other two sections
+untouched at every tilt, and the three commute: in any order they compose to Home. Navigate's centre row reads `z₀` in
+the current plane, along `q̂₁`, `q̂₂`, the coordinates its pan edits; untilted they are the section's values, and tilted
+the dimming and the checks compare the section's values, not the row's figures. **Home** is all three resets in
 one command: the button in the figure's top-right corner (below), the Home key in both keyboard modes (§G3) and
 **View › Home**. It leaves alone the chart preset and its axes (Chart's `q₁` and `q₂` axes, the cube's H and V), the H,
 V and D choice and the tilt targets, the time playhead, the stain, and the panel and window layout, and also the lock,
@@ -135,8 +141,9 @@ set, and a command with nothing to change sends nothing. A section's reset is **
 click) while the section is already at its home values, within 10⁻¹², and Home, its button and its menu entry while all
 three are. A reset drives the compass, its readout, the sliders and the figure live, as any change to the slice does
 (R-458), and switches no compass mode. Locked, the edits go through the lock's rule for their kind (§G4), and the lock
-and its anchor stay (R-466 K5). The commands are named "Reset Slice centre", "Reset Tilt", "Reset Navigate" and "Home"
-(tooltips, the menu and the `?` overlay).
+and its anchor stay (R-466 K5): a locked Tilt reset, or a locked Navigate reset's zoom, turns about the pin and so may
+move `z₀`, so the checks that a reset leaves the other two sections untouched run unlocked. The commands are named
+"Reset Slice centre", "Reset Tilt", "Reset Navigate" and "Home" (tooltips, the menu and the `?` overlay).
 
 **Figure.** Axis labels carry the short axis name and the range at each end. A **Home** button, a house icon 24 × 24
 points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7): a click on it is
@@ -271,10 +278,11 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
 - **Drag:** slice mode, the drag moves the slice along the drawn plane's normal, the decoder's (R-409 A3's), by its
   2-D displacement projected onto that normal's direction on the screen (`ŝ`, along `P(n̂) − P(0)`), so the drawn
   plane moves with the pointer at every tilt, the component across `ŝ` doing nothing, a drag of the cube's full width
-  along `ŝ` spanning the whole range (R-465). Untilted, `ŝ` points to the lower left, so a drag to the lower left moves
+  along `ŝ`, `2√3·S`, spanning the whole range (R-465). Untilted, `ŝ` points to the lower left, so a drag to the lower left moves
   the plane toward `+e_d` and a drag to the right moves it back, up and right. Where the drawn unit normal's screen
   image is shorter than `0.25·S` (the normal near the view axis `(1, 1, 1)`, as at `τ₁ = τ₂ = −45°`), the drag reads
-  its vertical component instead, up moving the plane toward the viewer (R-465 N3). Tilt mode, unchanged by R-465: a
+  its vertical component instead, up moving the plane toward the viewer, at the same rate, the whole range per `2√3·S`
+  of vertical travel (R-465 N3). Tilt mode, unchanged by R-465: a
   horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
   or height 180°, each clamped to ±90°. One undo entry per drag (R-96), the edit applied every frame of the drag so the
   sliders, the readout and the figure follow it (R-458). The displayed values ease toward their targets,

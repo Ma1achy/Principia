@@ -11989,7 +11989,9 @@ Adds REQ-GUI-206 and REQ-GUI-207; changes REQ-GUI-181 and REQ-GUI-193 (rulings, 
 Keyboard — a design note, not a screen (`07_keyboard.png`)" (the Compass scope), `docs/gui/design/GUI_DESIGN_NOTES.md`
 § "01 Explore — the everyday view" (conformed), `docs/contracts/principia_gui_state_contract.md` § 2 (the slice frame),
 R-451's heading block, REQ-GUI-191 (reqio, a note), REQ-GUI-208 and REQ-GUI-209 (reqio, new), TASK-M6-40 (new),
-`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-40 on the mock*
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; in review round 1, REQ-GUI-205 (reqio, G4's rule for a preset change
+and Chart's basis edits), REQ-GUI-208 (reqio, a note), TASK-M6-38 and TASK-M6-40; built by TASK-M6-38 and TASK-M6-40
+on the mock*
 
 The human's words (R-457 quotes the messages' preambles), Message 2, item 3, then the option the human chose, as the
 orchestrator offered it, and the human's answer:
@@ -12006,8 +12008,12 @@ orchestrator offered it, and the human's answer:
 >      two targets. Propose options in your report.
 
 > 3. D follows the gesture. In Slice mode, D is the slice normal. In Tilt mode, the third axis shows X while τ₁ is
-> being dragged, or was last changed, and Y for τ₂. The other target is named in the readout. Each gesture is drawn
-> exactly and both targets stay, but the D label changes with what you're doing.
+> being dragged, or was last changed, and Y for τ₂. The other target is named in the readout.
+
+(The quote of option 3 is conformed to the orchestrator's record of it in review round 1 of PR #243: a sentence first
+quoted after "named in the readout", on each gesture drawn exactly and both targets staying, is not in the record.
+What follows keeps "each gesture is drawn exactly and both targets stay" as the orchestrator's reading of option 3,
+G6 its detail, applied per R-369.)
 
 > D question: option 3. When nothing is being dragged, the third axis shows X if τ₁ ≠ 0, else Y if τ₂ ≠ 0, else the
 > slice normal. The D label takes the active gesture's colour. When both angles are non-zero with X ≠ Y, the cube
@@ -12044,7 +12050,10 @@ follow-up task):*
   (R-457 E4); with a target following and its angle non-zero the plane re-tilts, in the same entry. Each pick is one
   history entry (R-457 E3).
 - **G4. A plane change that takes D.** A Plücker steer (R-452 C5) or a preset whose plane contains D moves D to the
-  code's slice-axis rule (z_q3, or the first axis the plane does not show), in the same entry.
+  code's slice-axis rule (z_q3, or the first axis the plane does not show), in the same entry. For a preset change and
+  Chart's basis edits, which exist when the slice frame does, TASK-M6-38 builds this rule with the slice frame
+  (REQ-GUI-205), so the normal is never in the plane from the slice frame's first merge; TASK-M6-40 applies it to the
+  H and V picks and the Plücker steer (REQ-GUI-208) (review round 1 of PR #243, applied per R-369).
 - **G5. A compass drag that moves both angles** shows the angle it has moved further since the drag began, `τ₁` on a
   tie; with `X = Y` the two are one label.
 - **G6. "Each gesture is drawn exactly".** In Tilt mode the cube draws the plane of the gesture its third axis shows:
@@ -12522,12 +12531,17 @@ design ruling applied by a follow-up task):*
   unit normal's screen image is shorter than a quarter of the cube's scale `S` (`|P(n̂) − P(0)| < 0.25·S`, the cut of
   `MIN_NORMAL_ON_SCREEN` on `main`; a look choice under R-390), the drag reads its vertical component instead, up
   moving the plane along the normal's side that faces the viewer (`n̂·(1, 1, 1) > 0`), at the same rate, the
-  horizontal component doing nothing. Everywhere else `ŝ` is as above.
+  horizontal component doing nothing. Everywhere else `ŝ` is as above. **The rate is one quantity for both readings**
+  (review round 1 of PR #243, applied per R-369): the whole range per `2√3·S` of pointer travel, the cube's full screen
+  width (R-451's projection of `[−1, 1]³`, `S` its scale), measured along `ŝ` or, here, vertically; the cube's screen
+  height, `4S`, is not used.
 - **N4. The checks (REQ-GUI-217, reqio).** `cargo test -p gui mock_compass_slice_follows_pointer`, pointer scripts on
   the mock, in slice mode, each step at a pose with its control:
+  - The plane measured is the target plane, the one the contract holds, drawn without easing; the cube's eased drawing
+    follows it by B4's law (N1). Half the cube's width is `√3·S` (N3).
   - Untilted (`τ₁ = τ₂ = γ = 0`, `z₀ = 0`): `ŝ` is `(−√3/2, ½)` on the screen (y down). A drag of half the cube's width
-    along `ŝ` moves `z₀` by half the range along `+e_d`, and the screen image of the plane's point nearest the cube's
-    centre moves along `+ŝ`, with the pointer; a drag of the same length across `ŝ` moves nothing; a drag straight
+    along `ŝ` moves `z₀` by half the range along `+e_d`, and the screen image of the target plane's point nearest the
+    cube's centre moves along `+ŝ`, with the pointer; a drag of the same length across `ŝ` moves nothing; a drag straight
     right moves the plane along `−e_d`, its image moving right and up. Control: a GUI that reads the horizontal component (B3
     as written) moves the plane along `−e_d` for the drag along `ŝ`, against the pointer, and fails.
   - Tilted (`τ₁ = 30°`, `τ₂ = 0`, `γ = 0`, `z₀ = 0`, the `tilt_rect` pose of R-451 B8, `n̂ ∝ (−½, 0, √3/2)`): `ŝ` is
@@ -12535,8 +12549,8 @@ design ruling applied by a follow-up task):*
     `latent_normal`, and the image of the plane's point nearest the centre moves along `+ŝ`; a drag across `ŝ` moves
     nothing. Controls: the horizontal-component reading moves the plane against the pointer and fails, and a GUI that
     uses the untilted direction `P(e_d)` in place of the tilted `ŝ` fails the drag across `ŝ`.
-  - At the view axis (`τ₁ = τ₂ = −45°`, `γ = 0`; N3): an upward drag of half the cube's height moves `z₀` by half the
-    range along the normal's side facing the viewer, a horizontal one nothing. Control: a GUI that sends no edit, or a
+  - At the view axis (`τ₁ = τ₂ = −45°`, `γ = 0`; N3): an upward drag of half the cube's width, `√3·S`, moves `z₀` by
+    half the range along the normal's side facing the viewer, a horizontal one nothing. Control: a GUI that sends no edit, or a
     non-finite one, fails.
   - The tilt-mode drag keeps REQ-GUI-193's checks of B3's rates, re-run unchanged.
 - **N5. qa's files and TASK-M6-33's tests (R-290, forced by this ruling).** REQ-GUI-193's verify, which TASK-M6-33
@@ -12568,7 +12582,9 @@ note, not a screen (`07_keyboard.png`)" (a row of the key table and the sub-scop
 § "01 Explore — the everyday view" and § "07 Keyboard — design note, not a screen" (conformed),
 `docs/contracts/principia_gui_state_contract.md` § 2 (a bullet), R-52's, R-69's, R-409's, R-450's, R-456's, R-457's,
 R-458's, R-460's and R-462's heading blocks, REQ-GUI-218 to REQ-GUI-224 (reqio, new), TASK-M6-45 (new),
-`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-45 on the mock*
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; in review round 1, `docs/gui/principia_render_gui_spec.md` § "G1. Rules
+that hold everywhere" (the figure's rule), `plan/reviewers/gui.md` § 1, REQ-GUI-108 (reqio, its statement) and TASK-M8-18 (a note); built by TASK-M6-45 on
+the mock*
 
 The human's words, a message of 18 Oct 2026, the human's own, given in the orchestrator's session and recorded
 verbatim. It is a GUI design ruling under R-390's feedback rule.
@@ -12639,7 +12655,8 @@ preset carries, with its pair of axes, a base point (a value for each of the eig
 `log₂(σ_h / σ)` and its magnification `σ_h / σ`), defined in render_gui_spec §G2 and §G7 by the task, its values on the
 mock placeholder content (R-390), and reviewed by the physics reviewer before merge (R-72; `plan/WORKFLOW.md`'s rule
 for definition requirements). The task may define the centre as the base point's in-plane coordinates. A preset saved
-from the Chart builder (REQ-GUI-108, M8) stores the three with its axes; the real engine's presets are REQ-GUI-082's,
+from the Chart builder (REQ-GUI-108, M8) stores the three with its axes (REQ-GUI-108's statement and TASK-M8-18's
+note, review round 1); the real engine's presets are REQ-GUI-082's,
 TASK-M8-06's. No review-queue entry is needed: R-72 says who writes a missing definition.
 
 *The Home key against the keymap (the human's "check it against the existing keymap and report any clash").* Checked
@@ -12673,24 +12690,36 @@ design ruling applied by a follow-up task):*
   turns keyboard navigation on and shows the ring where the focus is once it has acted (R-464 M2); the focus does not
   move. The `?` overlay and §G3's table gain a row: "Home — Home: reset Slice centre, Tilt and Navigate to the chart
   preset's values".
-- **K2. What each section's values are.** The chart decoder contract's own split (Part 4: a slice moves `z₀` across the
-  plane, `Δz₀ ⊥ span(q₁, q₂)`; a pan within it, `Δz₀ ∈ span(q₁, q₂)`; a tilt or zoom edits the basis) gives each section
-  its values, read in the active preset's frame:
-  - **Slice centre:** `z₀`'s out-of-plane part, its component orthogonal to `span(q₁, q₂)`. Its reset sets it to the
-    base point's out-of-plane part, `z₀ ← z₀ + P⊥(b − z₀)`, `b` the base point and `P⊥` the projection orthogonal to the
-    plane; the in-plane part, so the centre `(u, v)`, and the basis are kept. Untilted, the out-of-plane coordinates
-    are exactly the six the preset's axes do not show, each set to the base point's; tilted, they are the components
-    across the tilted plane (flagged: the human's "out-of-plane coordinate", read for a tilted plane).
-  - **Tilt:** `τ₁`, `τ₂`, `γ`. Its reset is a basis edit to `q₁ = σ e_a`, `q₂ = σ e_b`, `σ` kept; `z₀`, the targets
-    and the slice frame are kept (R-457 E3). The plane turns about the view's centre `z₀`, as every tilt does, so the
-    Slice centre's eight values and the zoom are untouched; the centre `(u, v)` is `z₀` read in the plane, and is read
-    anew in the untilted plane (flagged: no reading of a tilt reset keeps both `z₀` and its in-plane coordinates, and
-    this one keeps `z₀`, the figure's centre point).
-  - **Navigate:** the centre `(u, v)`, `z₀`'s in-plane coordinates along `q̂₁`, `q̂₂` as the Navigate row reads them,
-    and the zoom, `σ`. Its reset sets the in-plane part to the preset's centre and `σ` to the window's `σ_h`; the
-    out-of-plane part and `τ₁`, `τ₂`, `γ` are kept.
-  - **Home** sets all three: the basis to `(σ_h e_a, σ_h e_b)`, `z₀`'s six coordinates off the preset's axes to the
-    base point's and its two on them to the centre, the preset's home view, whatever the order.
+- **K2. What each section's values are (re-decided in review round 1 of PR #243, applied per R-369).** All three
+  sections are read in the active preset's coordinates, tilted or not: its axes `e_a`, `e_b` (Chart's `q₁` and `q₂`
+  axes, the cube's H and V) and the six latent dimensions off them. Untilted, the plane is `span(e_a, e_b)` and this is
+  the chart decoder contract's own split (Part 4: a slice moves `z₀` across the plane, a pan within it, a tilt or zoom
+  edits the basis):
+  - **Slice centre:** `z₀`'s six coordinates off `e_a` and `e_b`, the human's "every out-of-plane coordinate" read
+    literally. Its reset sets each to the base point's; `z₀`'s two coordinates on `e_a`, `e_b` and the basis are kept.
+    Untilted it moves `z₀` across the plane only; tilted, a dimension tilted into the plane (a mass `z_μ1` as `Y`, say)
+    still returns to the base point's, so the move may have a part within the tilted plane (flagged).
+  - **Navigate:** `z₀`'s two coordinates on `e_a` and `e_b`, and the zoom `σ`. Its reset sets those two to the preset's
+    centre and `σ` to the window's `σ_h`, a basis edit of the scale alone (`τ₁`, `τ₂`, `γ` and the targets kept);
+    `z₀`'s six other coordinates are kept.
+  - **Tilt:** `τ₁`, `τ₂`, `γ`. Its reset is a basis edit to `q₁ = σ e_a`, `q₂ = σ e_b`, `σ` kept; `z₀`, the targets and
+    the slice frame are kept (R-457 E3), the plane turning about the view's centre `z₀`, as every tilt does.
+  - **Each reset leaves the other two sections untouched, and the three commute.** They set disjoint values (`z₀`'s six
+    coordinates off the axes; its two on them and `σ`; the three angles), so each leaves the other two sections' values
+    exactly as they were, at every tilt, and the three in any order compose to **Home**: the basis
+    `(σ_h e_a, σ_h e_b)`, `z₀`'s six coordinates off the preset's axes at the base point's and its two on them at the
+    centre, the preset's home view.
+  - **What Navigate's row shows.** The centre row keeps reading `z₀` in the current plane, its coordinates along `q̂₁`,
+    `q̂₂` (`in_plane`), the ones its pan edits (R-457). Untilted they are `z₀`'s coordinates on `e_a`, `e_b`, the
+    section's values; tilted they are not, and the dimming (K11) and the checks (K13) compare the section's values in
+    the preset's coordinates, never the row's figures (flagged). After a Navigate reset the row reads the preset's
+    centre once the plane is untilted (by the Tilt reset or Home).
+  - **The first reading, replaced.** K2 first read Slice centre and Navigate in the tilted plane: Slice centre `z₀`'s
+    component across `span(q₁, q₂)`, its reset `z₀ ← z₀ + P⊥(b − z₀)`, and Navigate `z₀`'s coordinates along `q̂₁`,
+    `q̂₂`. Under it a Tilt reset moved Navigate's `(u, v)`, a tilted Slice centre reset left a mass tilted into the
+    plane off the base point, and the three resets did not compose to Home from a tilted pose; its claim that no
+    reading of a tilt reset keeps both `z₀` and its in-plane coordinates held only for that reading. The code and gui
+    reviews of round 1 proposed the reading above, under which every sentence of the human's words holds.
 - **K3. The active chart preset** is the one Chart's preset row names (§G2), tilted or not, in R-457's frame. With a
   basis edited out of every preset's frame (q₁'s or q₂'s edit button, the Chart builder) there is no preset to read:
   the three resets and Home are dimmed and do nothing, their tooltip saying "no chart preset".
@@ -12701,7 +12730,11 @@ design ruling applied by a follow-up task):*
 - **K5. Locked.** The resets and Home set the same values; the lock, its anchor and the pin stay. Each edit goes
   through the lock's rule for its kind (§G4: tilt, rotation and zoom turn about the pin; `about_the_pin`), and Home's
   edit of `z₀` comes last, so Home lands on the home view exactly, locked or not, the pin drawn where the anchor then
-  falls. A Tilt reset while locked turns about the pin and so may move `z₀`, as every tilt does.
+  falls. A Tilt reset while locked turns about the pin and so may move `z₀`, as every tilt does, and so may a Navigate
+  reset's zoom, as every zoom does; locked, a section reset can therefore change the other sections' values, the lock's
+  rule winning over "untouched" (flagged). The checks of K13 that a reset leaves the other two sections untouched run
+  unlocked for that reason; a locked run checks that the lock, its anchor and the pin stay and that Home lands on the
+  home view.
 - **K6. The section resets.** Each is a small egui button reading "reset" at the right end of its section's heading row,
   the note beside the heading kept. Its tooltip names the command and its values ("Reset Slice centre to the chart
   preset's base point"). From the keyboard each is its sub-scope's last element, after the section's own (so Enter into
@@ -12722,8 +12755,8 @@ design ruling applied by a follow-up task):*
   history key, the contract's mechanism for a drag (gui_state_contract §2, R-458), so the history keeps one entry; one
   Ctrl+Z restores every field it set and one redo sets them again. A command whose sections are already home sends
   nothing and adds no entry.
-- **K11. Dimmed.** A section is at its home values when each value its reset sets is within 10⁻¹² of the home value
-  (the zoom compared as `log₂(σ / σ_h)`, the angles in radians). A dimmed reset, and a dimmed Home button or View › Home,
+- **K11. Dimmed.** A section is at its home values when each value its reset sets, read in the preset's coordinates
+  (K2), is within 10⁻¹² of the home value (the zoom compared as `log₂(σ / σ_h)`, the angles in radians). A dimmed reset, and a dimmed Home button or View › Home,
   is drawn in egui's disabled style (`add_enabled(false, …)`: weak text, no hover, no click), its tooltip saying
   "already at the chart preset's values"; it keeps its place in the keyboard's order (the order never depends on state,
   as R-450 has it), Enter on it doing nothing. The Home key while Home is dimmed does nothing.
@@ -12733,12 +12766,15 @@ design ruling applied by a follow-up task):*
   it is not a touch on a slider (R-409, R-458; flagged).
 - **K13. The checks (REQ-GUI-218 to REQ-GUI-223's verify, reqio).** On the mock, scripted: for each reset, first move all
   three sections (a Slice centre slider and the number box of a mass, `τ₁`, `τ₂` and `γ` non-zero with a target
-  changed, a pan and a zoom), then reset; the reset's section reads the preset's values within 10⁻¹² (untilted, the
-  six coordinates and the basis bit for bit) and the other two read as before within 10⁻¹² (for the Tilt reset: `z₀`
-  bit for bit and the zoom, K2); controls: a reset that does nothing fails (all three were moved); a reset that zeroes
-  fails (the test's preset has a base point with non-zero `z_μ1`, `z_μ2` and a centre off `(0, 0)`); a reset that
-  also resets another section fails; and, with a second preset of other home values, a GUI that hardcodes the first
-  preset's fails. Home, from the button, the key in each mode and View › Home: the home view, and the playhead, the
+  changed to `z_μ1`, a pan and a zoom), unlocked (K5), then reset; the reset's section reads the preset's values within
+  10⁻¹² (untilted, the six coordinates and the basis bit for bit) and the other two read as before within 10⁻¹², every
+  value read in the preset's coordinates (K2), for each of the three resets, the Tilt reset included, from that tilted
+  pose; and the three resets run in each of the six orders from it each reach Home's view. Controls: a reset that does
+  nothing fails (all three were moved); a reset that zeroes fails (the test's preset has a base point with non-zero
+  `z_μ1`, `z_μ2` and a centre off `(0, 0)`); a reset that also resets another section fails; a Slice centre reset
+  across the tilted plane (K2's first reading) fails, `z_μ1` tilted into the plane left off the base point; and, with
+  a second preset of other home values, a GUI that hardcodes the first preset's fails. Home, from the button, the key
+  in each mode and View › Home: the home view, and the playhead, the
   stain, the targets, the H, V and D choice, the preset and the layout as before; controls: a Home that resets one
   section only, or touches the playhead or a target, fails. One Ctrl+Z after each restores all it set, one redo sets
   it again; control: a command that leaves two entries fails. Dimming at home and not after a move, per section and for
@@ -12746,18 +12782,22 @@ design ruling applied by a follow-up task):*
   fails. The Home key on the console's log and in a typed field keeps their meaning.
 - **K14. Which task builds it: TASK-M6-45 (new).** TASK-M6-38 builds the three sections and R-457's frame and
   TASK-M6-39 the one-entry history key and the live compass; both are open and each already carries its own ruling,
-  so the resets and Home are a task of their own after both (Depends on: TASK-M6-38, TASK-M6-39). Reviewers code, qa,
+  so the resets and Home are a task of their own after both, and after TASK-M6-43, whose splitters and View › reset
+  layout REQ-GUI-220's check moves and K8 places Home above, TASK-M6-43 itself after TASK-M6-42's movable windows
+  (Depends on: TASK-M6-38, TASK-M6-39, TASK-M6-43; TASK-M6-43 added in review round 1). Reviewers code, qa,
   gui and physics, physics reviewing REQ-GUI-224 only, the definition (R-72; as R-396 for TASK-M6-24). ~550 lines.
 - **K15. qa's files (R-290).** No qa assertion is known to assert what R-466 changes. Should one assert that a section's
   heading row, the View menu or the figure's canvas holds nothing more, TASK-M6-45's qa reviewer changes it in the
   task's qa commit, and only it.
-- **K16. Where it lands.** render_gui_spec §G2 (the top bar, Navigate, Slice centre, Tilt, the Figure, the compass and
-  a paragraph), §G3 (a key-table row and the sub-scopes), §G7 (a sentence) and §G13 (a bullet); GUI_DESIGN_NOTES § "Rules that
+- **K16. Where it lands.** render_gui_spec §G1 (the figure's rule, the Home button; added in review round 1), §G2 (the
+  top bar, Navigate, Slice centre, Tilt, the Figure, the compass and a paragraph), §G3 (a key-table row and the sub-scopes), §G7 (a sentence) and §G13 (a bullet); GUI_DESIGN_NOTES § "Rules that
   hold everywhere", § 01 and § 07 (conformed, R-107); gui_state_contract §2 (a bullet); the heading blocks of R-409,
   R-457, R-458 and R-462 (forward lines, R-292, R-293) and of R-52, R-69, R-450, R-456 and R-460 (read-by lines);
   **REQ-GUI-218** (the three resets), **REQ-GUI-219** (Home's three ways), **REQ-GUI-220** (what Home leaves alone),
   **REQ-GUI-221** (one undoable command each), **REQ-GUI-222** (dimming), **REQ-GUI-223** (the live compass) and
-  **REQ-GUI-224** (the preset's values, a definition), all M6, closed by TASK-M6-45.
+  **REQ-GUI-224** (the preset's values, a definition), all M6, closed by TASK-M6-45; `plan/reviewers/gui.md` § 1 (the
+  figure's line, conformed) and REQ-GUI-108 (reqio, its statement: a saved preset stores its home values) with
+  TASK-M8-18 (a note), both added in review round 1.
 - R-466 is in the "design" group of `plan/rule_groups.yaml`.
 
 *What it extends:* R-409's key table gains the Home key, global in both modes but on the console's log in interaction
