@@ -1849,7 +1849,7 @@ fn leaves(paths: &[Vec<String>]) -> Vec<&str> {
 #[test]
 fn mock_keyboard_trajectory_and_time_scopes_in_order() {
     use crate::explore::{time, trajectory};
-    let into_trajectory = walk_into(4, 12);
+    let into_trajectory = walk_into(4, 14);
     assert!(into_trajectory
         .iter()
         .all(|p| p[0] == trajectory::TRAJECTORY));
@@ -1858,6 +1858,8 @@ fn mock_keyboard_trajectory_and_time_scopes_in_order() {
         [
             trajectory::UNDER_CURSOR,
             trajectory::KEEP,
+            trajectory::REAL_VIEW,
+            trajectory::SPHERE_VIEW,
             trajectory::SPHERE,
             trajectory::UNWRAPPED,
             trajectory::TURN,

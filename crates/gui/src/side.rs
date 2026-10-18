@@ -12,7 +12,8 @@ use engine::contract::canvas::Canvas;
 use engine::contract::interface::EngineInterface;
 use engine::contract::profile::Trace;
 use engine::contract::render_state::RenderState;
-use engine::contract::sim_config::SimConfig;
+use engine::contract::sample::Sample;
+use engine::contract::sim_config::{Latent, SimConfig};
 use engine::contract::store::StateStore;
 
 use crate::clock::TimeSource;
@@ -53,6 +54,11 @@ pub trait EngineSide {
 
     /// Asks the engine side to recompile the stain (the Problems pane's Recompile).
     fn recompile(&mut self);
+
+    /// `computeIC` (trajectory_viewing §1, §6): the sample of the IC `ic`, given at the figure point `at`, integrated
+    /// under the sim key as it stands and read at the playhead, as the hover's sample is: what the Trajectory panel's
+    /// pin re-integrates (R-453 D1, D5). `None` when the engine side has none.
+    fn compute_ic(&mut self, ic: &Latent, at: [f64; 2]) -> Option<Sample>;
 }
 
 /// The real engine's data contract, with no figure, no time source and no trace: its frame loop and canvas are
@@ -110,6 +116,11 @@ impl EngineSide for RealSide {
 
     /// Nothing: the real engine's compile is TASK-M7-24's.
     fn recompile(&mut self) {}
+
+    /// None: the real engine's `computeIC` and its Trajectory panel are TASK-M8-10's and TASK-M8-11's.
+    fn compute_ic(&mut self, _ic: &Latent, _at: [f64; 2]) -> Option<Sample> {
+        None
+    }
 }
 
 /// The mock engine, with its canvas when one is open, and its canned profiler trace (R-390).
@@ -184,5 +195,9 @@ impl EngineSide for MockSide {
 
     fn recompile(&mut self) {
         self.engine.recompile();
+    }
+
+    fn compute_ic(&mut self, ic: &Latent, at: [f64; 2]) -> Option<Sample> {
+        Some(self.engine.compute_ic(ic, at))
     }
 }
