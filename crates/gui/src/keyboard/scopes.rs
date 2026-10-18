@@ -9,7 +9,7 @@
 
 use engine::contract::view_ui::{Focus, KeyMode};
 
-use crate::keyboard::keymap::{Command, Direction};
+use crate::keyboard::keymap::{Command, Direction, ScrollKey};
 
 /// A scope's id: unique in its tree, and what `ViewUI`'s focus path holds.
 pub type ScopeId = &'static str;
@@ -21,6 +21,31 @@ pub enum Arrows {
     Siblings,
     /// Adjust the focused value by steps of this kind; Enter on it starts interaction mode.
     Adjust(StepKind),
+    /// Scroll the focused list by entries (↑ ↓), pages (Page Up, Page Down) and to its ends (Home, End); Enter on it
+    /// starts interaction mode (the console's log, R-450 A4).
+    Scroll,
+}
+
+/// Which arrows move between a scope's children in navigation mode.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Axis {
+    /// Every arrow: ↑ and ← to the previous, ↓ and → to the next.
+    Both,
+    /// ← and → only: a row (the console's header bar, R-450 A1).
+    Row,
+    /// ↑ and ↓ only: a column (the console's two scopes, R-450 A1).
+    Column,
+}
+
+impl Axis {
+    /// Whether the arrow `direction` moves along it.
+    pub fn moves(self, direction: Direction) -> bool {
+        match self {
+            Axis::Both => true,
+            Axis::Row => matches!(direction, Direction::Left | Direction::Right),
+            Axis::Column => matches!(direction, Direction::Up | Direction::Down),
+        }
+    }
 }
 
 /// Where the focus ring is drawn on a scope's rect.
@@ -55,6 +80,11 @@ pub struct Scope {
     /// scopes' Tab order, reached only by opening it. With the focus inside it, Tab and Shift+Tab move between its
     /// sections and stay in it, and Esc in navigation mode on a section leaves it ([`Outcome::Leave`]).
     pub window: bool,
+    /// For a window, whether its sections are scopes the focus lands on themselves, opening and on Tab, Enter going
+    /// into one (the console's header bar and log, R-450); otherwise a section's landing is its first element.
+    pub scopes: bool,
+    /// Which arrows move between its children in navigation mode.
+    pub axis: Axis,
 }
 
 impl Scope {
@@ -69,6 +99,8 @@ impl Scope {
             menu: false,
             text: false,
             window: false,
+            scopes: false,
+            axis: Axis::Both,
         }
     }
 
@@ -98,6 +130,31 @@ impl Scope {
         Self {
             window: true,
             ..Self::group(id, label)
+        }
+    }
+
+    /// A window whose sections are scopes, landed on themselves, the arrows moving between them on ↑ ↓ (R-450).
+    pub const fn scoped_window(id: ScopeId, label: &'static str) -> Self {
+        Self {
+            scopes: true,
+            axis: Axis::Column,
+            ..Self::window(id, label)
+        }
+    }
+
+    /// A list the keys scroll in interaction mode, after Enter on it (R-450 A4).
+    pub const fn scroll(id: ScopeId, label: &'static str) -> Self {
+        Self {
+            arrows: Arrows::Scroll,
+            ..Self::group(id, label)
+        }
+    }
+
+    /// The scope with its children in a row: ← → move between them, ↑ ↓ do nothing (R-450 A1).
+    pub const fn row(self) -> Self {
+        Self {
+            axis: Axis::Row,
+            ..self
         }
     }
 
@@ -212,6 +269,39 @@ impl Adjust {
     }
 }
 
+/// How far a scroll moves a list (R-450 A4): positive towards its last entry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScrollBy {
+    /// This many entries.
+    Entries(i64),
+    /// This many pages, a page the entries the list's rect shows.
+    Pages(i64),
+    /// To the first entry.
+    First,
+    /// To the last entry.
+    Last,
+}
+
+/// A scroll the keys asked of a focused list; the screen that owns the list applies it, clamped to its ends.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Scroll {
+    /// The list's scope.
+    pub scope: ScopeId,
+    /// How far.
+    pub by: ScrollBy,
+}
+
+/// The count a step of `sign` moves with `multiplier`: Shift's ten; one with no modifier, and with Alt, an entry or
+/// a page being the smallest step (R-450 A4).
+pub fn scroll_count(sign: f64, multiplier: f64) -> i64 {
+    let n = if multiplier > 1.0 { 10 } else { 1 };
+    if sign < 0.0 {
+        -n
+    } else {
+        n
+    }
+}
+
 /// What one command did.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Outcome {
@@ -223,6 +313,8 @@ pub enum Outcome {
     Activate(ScopeId),
     /// The arrows adjusted a value.
     Adjust(Adjust),
+    /// The keys scrolled a list.
+    Scroll(Scroll),
     /// Esc in navigation mode at this window's top level, on one of its sections: the window is left, closed, and the
     /// focus goes back to the scope that opened it (render_gui_spec §G3, §G5; R-405). The focus is left as it was for
     /// the layer to move.
@@ -418,9 +510,12 @@ impl ScopeTree {
 
     /// Where the focus lands on section `section` of a window: on the section's first element, or on the section
     /// itself when it is one element (applied per R-369: a Tab lands on a section's first element, and the arrows
-    /// move among its siblings).
+    /// move among its siblings). In a window whose sections are scopes, on the section itself (R-450).
     pub fn section_landing(&self, window: ScopeId, section: ScopeId) -> Vec<String> {
         let mut path = vec![window.to_owned(), section.to_owned()];
+        if self.get(window).is_some_and(|w| w.scopes) {
+            return path;
+        }
         if let Some(first) = self.children(Some(section)).first() {
             path.push((*first).to_owned());
         }
@@ -479,12 +574,15 @@ impl ScopeTree {
     /// - Tab and Shift+Tab, from either mode, land on the next or previous big scope itself, in navigation mode; inside a
     ///   window, on its next or previous section's landing, staying in the window (R-409 G6).
     /// - Enter in navigation mode: on a scope, into it, on its first element; on a control, its click; on a value (the
-    ///   Figure's pan, the compass, a slider) or a text field, interaction mode; on anything else, the Legend
+    ///   Figure's pan, the compass, a slider), a list or a text field, interaction mode; on anything else, the Legend
     ///   among them, nothing. In interaction mode: back to navigation mode on the same element.
     /// - Esc in interaction mode: back to navigation mode on the same element; in navigation mode, up one scope, or,
     ///   on a window's section or the window itself, [`Outcome::Leave`].
     /// - The arrows in navigation mode move between siblings, stopping at either end (on a big scope, between the big
-    ///   scopes in Tab order); in interaction mode they adjust the focused value.
+    ///   scopes in Tab order), only along the parent's [`Axis`]; in interaction mode they adjust the focused value, or,
+    ///   on a list, ↑ ↓ scroll it an entry, Shift ten (R-450 A4).
+    /// - Page Up, Page Down, Home and End, in interaction mode on a list, scroll it a page, Shift ten, or to its first
+    ///   or last entry; otherwise nothing.
     pub fn navigate(&self, focus: &mut Focus, command: Command, multiplier: f64) -> Outcome {
         let valid = self.valid_prefix(&focus.path);
         if valid < focus.path.len() || valid == 0 {
@@ -547,7 +645,7 @@ impl ScopeTree {
                     Outcome::Moved
                 } else if scope.activates {
                     Outcome::Activate(scope.id)
-                } else if scope.text || matches!(scope.arrows, Arrows::Adjust(_)) {
+                } else if scope.text || scope.arrows != Arrows::Siblings {
                     focus.mode = KeyMode::Interaction;
                     Outcome::Moved
                 } else {
@@ -578,11 +676,23 @@ impl ScopeTree {
                             times: direction.sign() * multiplier,
                             direction,
                         }),
-                        Arrows::Siblings => Outcome::None,
+                        // ↓ towards the last entry: the opposite of a value's sign.
+                        Arrows::Scroll if Axis::Column.moves(direction) => {
+                            Outcome::Scroll(Scroll {
+                                scope: scope.id,
+                                by: ScrollBy::Entries(scroll_count(-direction.sign(), multiplier)),
+                            })
+                        }
+                        Arrows::Scroll | Arrows::Siblings => Outcome::None,
                     };
                 }
                 let path = &mut focus.path;
                 let parent = path.len().checked_sub(2).map(|i| path[i].as_str());
+                if let Some(p) = parent.and_then(|p| self.get(p)) {
+                    if !p.axis.moves(direction) {
+                        return Outcome::None;
+                    }
+                }
                 let siblings = match parent {
                     Some(p) => self.children(Some(p)),
                     None => self.bigs(),
@@ -604,6 +714,24 @@ impl ScopeTree {
                     }
                     None => Outcome::None,
                 }
+            }
+            Command::Scroll(key) => {
+                let Some(scope) = focus.path.last().and_then(|id| self.get(id)) else {
+                    return Outcome::None;
+                };
+                if !interacting || scope.arrows != Arrows::Scroll {
+                    return Outcome::None;
+                }
+                let by = match key {
+                    ScrollKey::PageUp => ScrollBy::Pages(scroll_count(-1.0, multiplier)),
+                    ScrollKey::PageDown => ScrollBy::Pages(scroll_count(1.0, multiplier)),
+                    ScrollKey::Home => ScrollBy::First,
+                    ScrollKey::End => ScrollBy::Last,
+                };
+                Outcome::Scroll(Scroll {
+                    scope: scope.id,
+                    by,
+                })
             }
             Command::Shortcuts => Outcome::None,
         }

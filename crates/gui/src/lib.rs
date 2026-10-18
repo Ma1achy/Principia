@@ -31,6 +31,7 @@ mod tests {
     mod mock_axis_labels;
     mod mock_compass;
     mod mock_compass_cube;
+    mod mock_console_keys;
     mod mock_content;
     mod mock_drawn;
     mod mock_engine;
@@ -44,10 +45,12 @@ mod tests {
     mod mock_legend_keys;
     mod mock_lock_badge;
     mod mock_manifold_view;
+    mod mock_reachability;
     mod mock_stain_drawn;
     mod mock_stain_preview;
     mod mock_status_line;
     mod mock_tag;
+    mod mock_text_click;
     mod mock_tile_bounds;
     mod mock_time;
     mod mock_trajectory_pin;
@@ -55,6 +58,7 @@ mod tests {
     mod mock_windows_drawn;
     mod mock_windows_open;
     mod present_fills_window_mock;
+    mod reachability;
     mod scope_tab_order_mock;
     mod support;
     mod theme;

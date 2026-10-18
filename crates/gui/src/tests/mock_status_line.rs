@@ -5,7 +5,9 @@
 
 use engine::contract::snapshot::LiveMemory;
 
-use super::support::{click, frame_texts, headless, mock_app, playhead, real_app, rejects};
+use super::support::{
+    click, click_scope, frame_texts, headless, mock_app, playhead, real_app, rejects,
+};
 use crate::app::Counts;
 use crate::explore::footer::{counts_label, megabytes, memory_readout};
 use crate::explore::top_bar::{grouped, status_line, WINDOWS};
@@ -220,14 +222,14 @@ fn check_console(texts: &[String], open: bool) {
 }
 
 #[test]
-fn mock_status_line_console_window_closes_from_its_title_bar() {
+fn mock_status_line_console_window_closes_from_its_header_bar() {
     let mut app = mock_app();
     let mut headless = headless();
     check_console(&frame_texts(&mut headless, &mut app), false);
     click(&mut headless, &mut app, "⚠ 0 · × 0 · console ▴");
     let opened = frame_texts(&mut headless, &mut app);
     check_console(&opened, true);
-    click(&mut headless, &mut app, "Close window");
+    click_scope(&mut headless, &mut app, crate::windows::console::CLOSE);
     let closed = frame_texts(&mut headless, &mut app);
     check_console(&closed, false);
     rejects("the closed console read as open", || {

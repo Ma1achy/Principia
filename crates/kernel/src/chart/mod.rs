@@ -14,13 +14,20 @@
 //! REQ-CHART-043).
 //!
 //! **The charts, in chart_reference §5.1's order** (REQ-CHART-029): [`Latent`] (`latent`), then [`ShapeSphere`]
-//! (`shape_sphere`), [`Burrau`] and the [`EuclidPlane`] (`burrau`), [`InvariantLE`] / [`InvariantLK`] (`invariant`)
-//! and `MassSimplex`, each a `Φ` beside it.
+//! (`shape_sphere`), [`Burrau`] and the [`EuclidPlane`] (`burrau`) with the acute-angle charts [`BurrauThetaK`],
+//! [`BurrauThetaLz`] and [`BurrauThetaDeltaM`] (`burrau_acute`), [`InvariantLE`] / [`InvariantLK`] (`invariant`) and
+//! `MassSimplex`, each a `Φ` beside it.
 //!
 //! **Axis metadata and the statistics guard** ([`AxisMeta`], [`admit_statistic`]; chart_decoder_contract Part 5): an
 //! axis declares the decoder blocks it writes and whether it is annotation-only. A chart with an annotation axis is a
 //! 1-swept family rendered in 2D ([`swept`], [`family_label`]): it supports per-value statistics along its swept axis
 //! only, and a 2D density claim across the annotation axis is refused.
+//!
+//! **`system_image` and the shape-fraction guard** ([`SystemImage`], [`ChartLabel`], [`admit_shape_fraction`];
+//! chart_decoder_contract Part 5; chart_reference §4.5; R-27, R-104, R-157): a chart's descriptor of how its pixels
+//! fold onto distinct systems, one of the contract's four values, shown in the chart's label with the quotient it
+//! covers. A shape fraction is refused on a `DoubleCover` chart, which counts each shape twice (R-27), and on a
+//! ray-degenerate one, whose areas are not system fractions. The Burrau charts carry it (`burrau`, `burrau_acute`).
 //!
 //! **Each chart's decode** ([`ChartDecode`]): `D ∘ Φ` through the shared blocks. A chart whose `Φ` hands `D` only `z`
 //! decodes by [`decode()`]; an invariant chart hands the construction its targets `(L_z, K*)` in place of the free
@@ -33,6 +40,7 @@
 //! own step, never `map`'s.
 
 pub mod burrau;
+pub mod burrau_acute;
 pub mod invariant;
 pub mod latent;
 pub mod shape_sphere;
@@ -44,6 +52,7 @@ use core::fmt;
 pub use spirv_std::num_traits::Float;
 
 pub use burrau::{Burrau, EuclidPlane};
+pub use burrau_acute::{BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
 pub use invariant::{InvariantLE, InvariantLK};
 pub use latent::Latent;
 pub use shape_sphere::{ShapeMap, ShapeSphere};
@@ -84,6 +93,8 @@ pub enum Constraint {
     ShapePhi,
     /// Layer 2, Burrau charts: `ν ∈ (0, 1)`.
     BurrauNu,
+    /// Layer 2, the acute-angle Burrau charts: `θ ∈ (0, π/4]`.
+    BurrauTheta,
     /// Layer 3, decode sanity: every decoded mass positive.
     DecodedMassPositive,
     /// Layer 3, decode sanity: the CoM at the origin, within tolerance.
@@ -293,6 +304,10 @@ pub enum StatisticRefused {
     DensityAcrossAnnotation,
     /// A per-value statistic along an annotation axis: every value of it is the same family.
     AlongAnnotation,
+    /// A shape fraction on a `DoubleCover` chart, which covers each shape twice, as two labelled systems (R-27).
+    ShapeFractionOnDoubleCover,
+    /// A shape fraction on a ray-degenerate chart, whose areas are not system fractions (chart_decoder_contract Part 5).
+    ShapeFractionOnRayDegenerate,
 }
 
 /// The metadata of `axis` among `axes`, `[horizontal, vertical]`.
@@ -332,6 +347,66 @@ pub fn family_label(axes: [AxisMeta; 2]) -> &'static str {
         2 => "2-swept chart",
         1 => "1-swept family rendered in 2D",
         _ => "no swept axis",
+    }
+}
+
+/// How a chart's address map folds onto distinct systems: the `system_image` descriptor (chart_decoder_contract Part 5,
+/// its four values; R-104, R-141, R-157).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SystemImage {
+    /// Every pixel is a distinct system.
+    Bijective,
+    /// A fixed finite number `n` of pixels share each system; the shape sphere is 2-to-1 over its φ hemispheres (R-141).
+    NToOne(u32),
+    /// Each shape is covered twice, as two labelled systems: the full-range Burrau chart, where the leg swap relabels
+    /// the bodies (R-27, R-104, R-157).
+    DoubleCover,
+    /// Whole lines of pixels map to the same system.
+    RayDegenerate,
+}
+
+impl fmt::Display for SystemImage {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            SystemImage::Bijective => f.write_str("bijective"),
+            SystemImage::NToOne(n) => write!(f, "{n}-to-1"),
+            SystemImage::DoubleCover => f.write_str("DoubleCover"),
+            SystemImage::RayDegenerate => f.write_str("ray-degenerate"),
+        }
+    }
+}
+
+/// A chart's label (chart_reference §4.5, R-27: "label each chart with the quotient it covers"): its name, its
+/// [`SystemImage`] and, in words, the quotient that value covers. It displays as `<name> · system_image <value> ·
+/// <quotient>`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ChartLabel<'a> {
+    /// The chart's [`Chart::name`].
+    pub name: &'a str,
+    /// The chart's `system_image`.
+    pub image: SystemImage,
+    /// The quotient the chart covers, in words.
+    pub quotient: &'static str,
+}
+
+impl fmt::Display for ChartLabel<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} · system_image {} · {}",
+            self.name, self.image, self.quotient
+        )
+    }
+}
+
+/// The shape-fraction guard (chart_reference §4.5; R-27; chart_decoder_contract Part 5): a fraction of shapes taken
+/// over a chart's pixels is refused on a [`SystemImage::DoubleCover`] chart, which counts each shape twice, and on a
+/// [`SystemImage::RayDegenerate`] one, whose areas are not system fractions; a bijective or n-to-1 chart admits it.
+pub fn admit_shape_fraction(image: SystemImage) -> Result<(), StatisticRefused> {
+    match image {
+        SystemImage::DoubleCover => Err(StatisticRefused::ShapeFractionOnDoubleCover),
+        SystemImage::RayDegenerate => Err(StatisticRefused::ShapeFractionOnRayDegenerate),
+        SystemImage::Bijective | SystemImage::NToOne(_) => Ok(()),
     }
 }
 

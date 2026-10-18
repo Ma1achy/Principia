@@ -539,6 +539,57 @@ pub const BURRAU_NU_HALF_TOL: ConstantBuilder = proposed(
     "M2",
 );
 
+/// `θ_min`, the acute-angle Burrau charts' default lower acute angle, in radians: `θ(u) = θ_min + (θ_max − θ_min)·u`
+/// (chart_reference §4.5; REQ-CHART-024). REQ-CHART-045's proposal (R-71), provisional until the M2 gate (R-427):
+/// `θ(31/32) = arctan(63/1984) ≈ 1.82°`, rounded to f32 (so the kernel's f32 uniform and the CPU's f64 chart hold the
+/// same number), the acute angle of the Euclid plane's default `ν_max = 31/32`, so both Burrau shape charts reach the
+/// same thinnest triangle; there the lightest mass is 1/64 of the total and `|U| ≈ 0.956`, and the strip's `E = 0` row
+/// lies at `v ≈ 0.98` (at `θ_max`, `v ≈ 0.44`). Its evidence, the renders
+/// and the measurement, is `fixtures/gates/burrau_acute/` (TASK-M2-11).
+pub const BURRAU_THETA_MIN: ConstantBuilder = proposed(
+    "burrau_theta_min",
+    0.0317433662712574,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-045",
+    "M2",
+);
+
+/// `θ_max`, the acute-angle Burrau charts' default upper acute angle, in radians (chart_reference §4.5). REQ-CHART-045's
+/// proposal (R-71), provisional until the M2 gate (R-427): the fold's end `π/4`, the isosceles triangle, rounded down
+/// to f32 (`π/4 − 3.8e-8`), so that both widths hold it inside `(0, π/4]`; f32's nearest to `π/4` lies above it. Its
+/// evidence is `fixtures/gates/burrau_acute/` (TASK-M2-11).
+pub const BURRAU_THETA_MAX: ConstantBuilder = proposed(
+    "burrau_theta_max",
+    0.7853981256484985,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-045",
+    "M2",
+);
+
+/// `K`, `Φ_θ,L_z`'s fixed kinetic energy, in `G = M = I = 1` (chart_reference §4.5). REQ-CHART-046's proposal (R-71),
+/// provisional until the M2 gate (R-427): 1/8, below `|U|` at every `θ` of the default range (`|U|` is least at the
+/// fold's end, 0.195 at `π/4`), so every system of the chart is bound, `E < 0`, with `2K/|U|` from 0.26 at `θ_min` to
+/// 1.28 at `π/4`, about the virial balance `2K = |U|`. Its evidence is `fixtures/gates/burrau_acute/` (TASK-M2-11).
+pub const BURRAU_THETA_LZ_K: ConstantBuilder = proposed(
+    "burrau_theta_lz_k",
+    0.125,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-046",
+    "M2",
+);
+
+/// `λ_L`, `Φ_θ,L_z`'s `L_z` range as a fraction of the feasible `√(2IK)`: `L_z ∈ [−λ_L·√(2IK), λ_L·√(2IK)]`
+/// (chart_reference §4.5). REQ-CHART-046's proposal (R-71), provisional until the M2 gate (R-427): 1, the whole feasible
+/// band, from the counter-rotating rigid rotation through `L_z = 0` to the co-rotating one, feasible at every pixel, the
+/// edges included. Its evidence is `fixtures/gates/burrau_acute/` (TASK-M2-11).
+pub const BURRAU_THETA_LZ_FRACTION: ConstantBuilder = proposed(
+    "burrau_theta_lz_fraction",
+    1.0,
+    Admissibility::CanonicalUnits,
+    "REQ-CHART-046",
+    "M2",
+);
+
 /// A proposed number (R-71), admissible as `class`, citing its calibration requirement `requirement` and marked
 /// provisional until the gate `gate` (R-427; dd_generation_root §3.8).
 const fn proposed(
@@ -824,11 +875,11 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 
 /// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
-/// tolerance and the Euclid plane's defaults (TASK-M2-10), the presentation constants the generated views and the
-/// prelude read: the log floors, the hatch and the hue wheel (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance
-/// (R-433), the shape-sphere chart's two tolerances (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging
-/// fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion` sentinel: an invalid fit reads NaN by the predicate `n ≥ 2`
-/// (R-245).
+/// tolerance and the Euclid plane's defaults (TASK-M2-10), the acute-angle Burrau charts' defaults (TASK-M2-11), the
+/// presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
+/// (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the shape-sphere chart's two tolerances
+/// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion`
+/// sentinel: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -852,6 +903,10 @@ pub const REGISTER: &[ConstantBuilder] = &[
     EUCLID_M_MAX,
     EUCLID_NU_MIN,
     EUCLID_NU_MAX,
+    BURRAU_THETA_MIN,
+    BURRAU_THETA_MAX,
+    BURRAU_THETA_LZ_K,
+    BURRAU_THETA_LZ_FRACTION,
     LOG_FLOOR_D_MIN,
     LOG_FLOOR_DE_MAX,
     LOG_FLOOR_DLZ_MAX,

@@ -42,7 +42,17 @@
     },
     {
       "name": "mock_focus_console",
-      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter", "arrow_right"] },
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_console_header",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right"] },
+      "artboard": "docs/gui/design/07_keyboard.png"
+    },
+    {
+      "name": "mock_focus_console_log",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["raise_warning", "shift_tab", "enter", "arrow_down", "enter"] },
       "artboard": "docs/gui/design/07_keyboard.png"
     },
     {

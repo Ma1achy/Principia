@@ -1,0 +1,30 @@
+# The acute-angle Burrau charts' calibration evidence (REQ-CHART-045, REQ-CHART-046; R-71, R-133): θ_min,
+# θ_max, and Φ_θ,L_z's K and λ_L, proposed in the constants register, provisional until the M2 gate.
+# Measured by crates/validation/tests/burrau_acute.rs, burrau_acute_evidence, through the decode stage's CPU
+# dispatch (decode_only) and the same source at f32; regenerate with PRIN_WRITE_BURRAU_ACUTE=1, which also
+# redraws the renders beside it. Compared at a relative 1e-6, except the bound share, a pixel count, at an
+# absolute 1e-3.
+theta_min = 3.17433662712574e-2  # the proposed θ_min, rad (constants register, provisional until M2)
+theta_max = 7.853981256484985e-1  # the proposed θ_max, rad (constants register, provisional until M2)
+k = 1.25e-1  # the proposed K of Φ_θ,L_z (constants register, provisional until M2)
+lz_fraction = 1e0  # the proposed λ_L of Φ_θ,L_z (constants register, provisional until M2)
+nu_theta_min = 9.68749999721172e-1  # ν at θ_min
+nu_theta_max = 4.1421358448591805e-1  # ν at θ_max
+m_light_theta_min = 1.5625000139413987e-2  # the lightest mass at θ_min
+m_light_theta_max = 2.92893207757041e-1  # the lightest mass at θ_max
+u_theta_min = 9.557761193213625e-1  # |U| at θ_min, I = 1
+u_theta_max = 1.9520268968879217e-1  # |U| at θ_max, I = 1
+u_classical = 1.9902040216404376e-1  # |U| at the classical θ = arctan(3/4)
+t_escape_theta_min = 9.776380308280578e-1  # the row v where E = 0 on Φ_θ,K at θ_min
+t_escape_theta_max = 4.4181748458927267e-1  # the row v where E = 0 on Φ_θ,K at θ_max
+bound_share_theta_k = 5.2899169921875e-1  # share of Φ_θ,K's 256² pixels with E < 0
+e_max_theta_lz = -7.020268968879215e-2  # the largest E over Φ_θ,L_z's 256² pixels
+e_min_theta_lz = -8.307761193213625e-1  # the least E over Φ_θ,L_z's 256² pixels
+two_k_over_u_theta_min = 2.615675312933216e-1  # 2K/|U| on Φ_θ,L_z at θ_min
+two_k_over_u_theta_max = 1.2807200576926994e0  # 2K/|U| on Φ_θ,L_z at θ_max
+lz_span = 1.0000000000000007e0  # the largest |L_z(p)|/√(2K) over Φ_θ,L_z's 256² pixels
+infeasible_theta_k_f64 = 0e0  # infeasible pixels of Φ_θ,K, 257² with edges, f64
+infeasible_theta_k_f32 = 0e0  # the same, f32
+infeasible_theta_lz_f64 = 0e0  # infeasible pixels of Φ_θ,L_z, 257² with edges, f64
+infeasible_theta_lz_f32 = 0e0  # the same, f32
+nonfinite_f64 = 0e0  # non-finite decodes, both charts, 257² with edges, f64

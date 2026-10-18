@@ -270,7 +270,7 @@ enum Stand {
 /// the shape sphere's two tolerances, proposed by TASK-M2-08 and provisional until the M2 gate: `shape_vec_js_tol`,
 /// citing REQ-CHART-049, and `shape_roundtrip_bound`, citing REQ-CHART-053 (R-181); and the Burrau `ν = 1/2`
 /// tolerance `burrau_nu_half_tol`, proposed by TASK-M2-10 and provisional until the M2 gate, citing REQ-VAL-118.
-const TABLE: [(&str, Stand); 19] = [
+const TABLE: [(&str, Stand); 23] = [
     ("log_floor_d_min", Stand::Confirmed),
     ("log_floor_dE_max", Stand::Confirmed),
     ("log_floor_dLz_max", Stand::Confirmed),
@@ -290,6 +290,13 @@ const TABLE: [(&str, Stand); 19] = [
     ("shape_vec_js_tol", Stand::Until("M2", "REQ-CHART-049")),
     ("shape_roundtrip_bound", Stand::Until("M2", "REQ-CHART-053")),
     ("burrau_nu_half_tol", Stand::Until("M2", "REQ-VAL-118")),
+    ("burrau_theta_min", Stand::Until("M2", "REQ-CHART-045")),
+    ("burrau_theta_max", Stand::Until("M2", "REQ-CHART-045")),
+    ("burrau_theta_lz_k", Stand::Until("M2", "REQ-CHART-046")),
+    (
+        "burrau_theta_lz_fraction",
+        Stand::Until("M2", "REQ-CHART-046"),
+    ),
 ];
 
 /// The stand §3.8's table, as R-428 and R-433 leave it, gives `name`.
