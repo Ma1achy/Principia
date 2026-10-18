@@ -978,6 +978,11 @@ fn per_pixel_mass_declared_by_every_chart() {
             true,
         ),
         (
+            "Mixed (z_μ1, z_μ2)",
+            Mixed::<ZMu1, ZMu2, f64>::new(FROZEN, [0.0, 1.0], [0.0, 1.0]).requires_per_pixel_mass(),
+            true,
+        ),
+        (
             "Mixed (α, p_ρ)",
             alpha_prho::<f64>().requires_per_pixel_mass(),
             false,

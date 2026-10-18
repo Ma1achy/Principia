@@ -326,8 +326,8 @@ impl<H: Quantity, V: Quantity, P: Copy> Mixed<H, V, P> {
 }
 
 /// One axis's check at `t` on `range` (the module's note): `Ok(t)` inside the domain, `Ok(t′)` with `t′ ≠ t` where the
-/// axis meets the domain's edge, `Err(())` where nothing can be clamped: a value that is not finite, or a range of no
-/// width, or of a width past f64's range, along which no step is taken.
+/// axis meets the domain's edge, `Err(())` where nothing can be clamped: a value that is not finite, a range of no
+/// width or of a width past f64's range, or an edge four inward steps of `t` do not reach.
 fn axis_check<Q: Quantity>(range: [f64; 2], t: f64) -> Result<f64, ()> {
     let x = lerp(range, t);
     let [lo, hi] = Q::DOMAIN;
@@ -337,20 +337,23 @@ fn axis_check<Q: Quantity>(range: [f64; 2], t: f64) -> Result<f64, ()> {
     if in_domain(x, lo, hi) {
         return Ok(t);
     }
-    let below = x < lo;
-    let edge = if below { lo } else { hi };
+    let edge = x.clamp(lo, hi);
+    let below = edge == lo;
     let width = range[1] - range[0];
     if width == 0.0 || !width.is_finite() {
         return Err(());
     }
-    // Rounding may leave `x(t)` a hair past the edge: step `t` inward, toward larger `x` from below and smaller from
-    // above, until it lands in the domain. `x` is monotone in `t` and the domain has width, so the steps end.
+    // Rounding may leave `x(t)` a hair past the edge, by an ulp or two: step `t` inward, toward larger `x` from below
+    // and smaller from above, until it lands in the domain, at most four steps, and refuse past them.
     let up = below == width.is_sign_positive();
     let mut t = (edge - range[0]) / width;
-    while !in_domain(lerp(range, t), lo, hi) {
+    for _ in 0..4 {
+        if in_domain(lerp(range, t), lo, hi) {
+            return Ok(t);
+        }
         t = if up { t.next_up() } else { t.next_down() };
     }
-    Ok(t)
+    Err(())
 }
 
 /// Whether `x ∈ [lo, hi]`.
