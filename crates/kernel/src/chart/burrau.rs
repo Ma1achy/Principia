@@ -44,6 +44,13 @@
 //! primitive-triple overlays ([`EuclidPlane::lattice`]), touching no block. The chart is a 1-swept family rendered in
 //! 2D, well-posed as 1 + 7, and [`super::admit_statistic`] refuses a 2D density across it.
 //!
+//! **`system_image`** ([`nu_image`]; chart_reference §4.5; R-27, R-104, R-157). A `ν`-axis chart is
+//! [`SystemImage::DoubleCover`], the quotient "shape × labelling", where its `ν` range reaches both leg orderings,
+//! `ν_min < √2 − 1 < ν_max`: the leg swap `ν ↦ (1 − ν)/(1 + ν)` has the isosceles triangle `√2 − 1` as its fixed point,
+//! so such a range holds some shape twice, as two labelled systems. The Euclid plane's default range does. A range on
+//! one side of `√2 − 1` is bijective. Each chart's [`ChartLabel`] shows it, and `super::admit_shape_fraction` refuses a
+//! shape fraction on a `DoubleCover` chart.
+//!
 //! **Validation** (R-26; chart_reference §5.1). Layer 2 is `ν ∈ (0, 1)` ([`Constraint::BurrauNu`]); outside it a side
 //! is zero or negative, so a mass is, and clamping `ν` onto the open interval's ends would give such a system, a
 //! qualitatively different IC: rejected. On `(ν, K)`, `v < 0` (`K < 0`, and no real `v^γ_K` for a non-integer `γ_K`)
@@ -58,7 +65,9 @@
 use spirv_std::num_traits::Float;
 
 use super::invariant::{self, WarpReal};
-use super::{AxisMeta, BlockTouch, Chart, ChartOut, Constraint, ValidationResult};
+use super::{
+    AxisMeta, BlockTouch, Chart, ChartLabel, ChartOut, Constraint, SystemImage, ValidationResult,
+};
 use crate::burrau::{self as family, Convention, System, CONVENTION, CONVENTION_STATEMENT};
 use crate::decode::config::{self, Config};
 use crate::decode::invariant::{construct_seeded, ExactSign, Outcome, Seed};
@@ -70,7 +79,7 @@ use crate::payload::{ICDescriptorOf, PayloadReal};
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
-fn select<T: Copy>(c: bool, t: T, f: T) -> T {
+pub(super) fn select<T: Copy>(c: bool, t: T, f: T) -> T {
     if c {
         t
     } else {
@@ -109,20 +118,20 @@ pub fn seed<R: Float>(nu: R) -> Seed {
 
 /// `lo + (hi − lo)·t`.
 #[inline]
-fn lerp<F: Float>(lo: F, hi: F, t: F) -> F {
+pub(super) fn lerp<F: Float>(lo: F, hi: F, t: F) -> F {
     lo + (hi - lo) * t
 }
 
 /// The system's masses, through the shared entry for a chart that sets masses ([`mass::from_masses`]).
 #[inline]
-fn system_masses<R: LinkReal>(system: &System<R>) -> Masses<R> {
+pub(super) fn system_masses<R: LinkReal>(system: &System<R>) -> Masses<R> {
     mass::from_masses(system.m)
 }
 
 /// The system's configuration, through the shared canonical-frame entry for an explicit `(ρ, λ)`
 /// ([`config::from_jacobi`]).
 #[inline]
-fn system_config<R: LinkReal>(system: &System<R>, masses: &Masses<R>) -> Config<R> {
+pub(super) fn system_config<R: LinkReal>(system: &System<R>, masses: &Masses<R>) -> Config<R> {
     config::from_jacobi(masses, system.rho, system.lambda)
 }
 
@@ -239,7 +248,7 @@ impl<R: LinkReal + PayloadReal + ExactSign> Blocks<R> for BurrauBlocks<R> {
 
 /// The zero latent vector, the Burrau charts' [`ChartOut`] (the module's note).
 #[inline]
-fn unread<F: Float>() -> ChartOut<F> {
+pub(super) fn unread<F: Float>() -> ChartOut<F> {
     ChartOut {
         z: Latent::new([F::zero(); 8]),
     }
@@ -247,7 +256,7 @@ fn unread<F: Float>() -> ChartOut<F> {
 
 /// The layer-3 check on the f64 decode `d` (the module's note): `None` where it is sane. The masses are positive at
 /// every `ν ∈ (0, 1)`, so only the positions and the momenta are read.
-fn sanity(d: &Decoded<f64>) -> Option<Constraint> {
+pub(super) fn sanity(d: &Decoded<f64>) -> Option<Constraint> {
     let finite = |v: &[[f64; 2]; 3]| v.iter().flatten().all(|x| x.is_finite());
     if !finite(&d.ic.r) {
         Some(Constraint::ComAtOrigin)
@@ -262,6 +271,46 @@ fn sanity(d: &Decoded<f64>) -> Option<Constraint> {
 #[inline]
 fn in_family(nu: f64) -> bool {
     nu > 0.0 && nu < 1.0
+}
+
+/// The leg swap's fixed point `ν = √2 − 1`, the isosceles triangle (`a = b`): `θ(ν) = π/4`.
+#[inline]
+pub fn isosceles_nu() -> f64 {
+    Float::sqrt(2.0) - 1.0
+}
+
+/// The `system_image` of a `ν`-axis chart on `[ν_min, ν_max]` (the module's note): [`SystemImage::DoubleCover`] where
+/// `ν_min < √2 − 1 < ν_max`, the range reaching both leg orderings, else [`SystemImage::Bijective`].
+#[inline]
+pub fn nu_image(nu_range: [f64; 2]) -> SystemImage {
+    let fixed = isosceles_nu();
+    select(
+        nu_range[0] < fixed && fixed < nu_range[1],
+        SystemImage::DoubleCover,
+        SystemImage::Bijective,
+    )
+}
+
+/// The quotient a Burrau chart of `image` covers, in words, for its [`ChartLabel`] (chart_reference §4.5): "shape ×
+/// labelling" for `DoubleCover`, else "shape only". No digit, so no body number (R-449).
+#[inline]
+pub fn quotient(image: SystemImage) -> &'static str {
+    match image {
+        SystemImage::DoubleCover => {
+            "shape × labelling: both leg orderings, a shape covered twice as two labelled systems"
+        }
+        _ => "shape only: one leg ordering, each shape covered once",
+    }
+}
+
+/// The [`ChartLabel`] of a Burrau chart named `name` with `system_image` `image`.
+#[inline]
+pub fn label(name: &str, image: SystemImage) -> ChartLabel<'_> {
+    ChartLabel {
+        name,
+        image,
+        quotient: quotient(image),
+    }
 }
 
 // ── The (ν, K) chart ───────────────────────────────────────────────────────────────────────────────────────────────
@@ -327,6 +376,23 @@ impl<P: Copy> Burrau<P> {
                 annotation: false,
             },
         ]
+    }
+}
+
+impl<P: Copy> Burrau<P>
+where
+    f64: From<P>,
+{
+    /// The chart's `system_image`, [`nu_image`] of its `ν` range (the module's note).
+    #[inline]
+    pub fn system_image(&self) -> SystemImage {
+        nu_image(self.nu_range.map(<f64 as From<P>>::from))
+    }
+
+    /// The chart's label: its name, its `system_image` and the quotient it covers.
+    #[inline]
+    pub fn label(&self) -> ChartLabel<'_> {
+        label(self.name(), self.system_image())
     }
 }
 
@@ -515,6 +581,24 @@ where
                 })
             })
         })
+    }
+}
+
+impl<P: Copy> EuclidPlane<P>
+where
+    f64: From<P>,
+{
+    /// The chart's `system_image`, [`nu_image`] of its `ν` range (the module's note): `DoubleCover` at the default
+    /// range, the full-range chart of R-27 and R-157.
+    #[inline]
+    pub fn system_image(&self) -> SystemImage {
+        nu_image(self.nu_range.map(<f64 as From<P>>::from))
+    }
+
+    /// The chart's label: its name, its `system_image` and the quotient it covers.
+    #[inline]
+    pub fn label(&self) -> ChartLabel<'_> {
+        label(self.name(), self.system_image())
     }
 }
 

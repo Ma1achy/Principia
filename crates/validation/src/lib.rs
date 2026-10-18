@@ -51,6 +51,12 @@ pub use ledger::constants::{
 /// tests, as the Euclid plane's defaults are.
 pub use ledger::constants::MASS_SIMPLEX_EPS_M;
 
+/// The acute-angle Burrau charts' defaults (REQ-CHART-045, REQ-CHART-046, proposed; chart_reference §4.5; TASK-M2-11),
+/// for the kernel crate's tests and the `burrau_acute` evidence, as `r_pole` is.
+pub use ledger::constants::{
+    BURRAU_THETA_LZ_FRACTION, BURRAU_THETA_LZ_K, BURRAU_THETA_MAX, BURRAU_THETA_MIN,
+};
+
 /// The payload's pair-id map (R-22; payload §2), for the kernel crate's tests, as `r_pole` is.
 pub use ledger::payload::pair_bodies;
 
