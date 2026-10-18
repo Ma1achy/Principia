@@ -10,6 +10,7 @@ pub mod explore;
 pub mod headless;
 pub mod keyboard;
 pub mod layout;
+pub mod settings;
 pub mod side;
 pub mod stain;
 pub mod theme;
@@ -53,7 +54,9 @@ mod tests {
     mod mock_trajectory_pin;
     mod mock_trajectory_views;
     mod mock_windows_drawn;
+    mod mock_windows_move_resize;
     mod mock_windows_open;
+    mod mock_windows_remembered;
     mod present_fills_window_mock;
     mod reachability;
     mod scope_tab_order_mock;

@@ -30,6 +30,7 @@ pub mod mock {
     use crate::app::{window_title, App};
     use crate::capture;
     use crate::mock::{canvas::MockCanvas, MockEngine};
+    use crate::settings::Store;
     use crate::side::{EngineSide, MockSide};
 
     /// The window's size when it opens, in points: 01_main.png's 2160 × 1350 pixels at the capture's 1.5 pixels per
@@ -89,7 +90,11 @@ pub mod mock {
                     .as_ref()
                     .ok_or("eframe opened no wgpu renderer")?
                     .target_format;
-                Ok(Box::new(App::new(side, format)))
+                Ok(Box::new(App::with_settings(
+                    side,
+                    format,
+                    Store::platform(),
+                )))
             }),
         )
         .map_err(|e| format!("gui: {e}"))

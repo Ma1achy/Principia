@@ -11,10 +11,13 @@
 //! scope tree, Enter on it closing the window as Esc does: the console's the last of its header bar (R-450), every
 //! other window's its last section, drawn at its title row's right (the R-450 audit's finding, applied per R-369).
 //!
-//! **Where they open** (applied per R-369): each at a fixed rect over the side panels or the bottom row, never over the
-//! figure (§G1, "The figure is never covered"; R-390's review list): Profiler and Chart builder over the Manifold view,
-//! Run, Export & share, Display and the Inspector over the Trajectory panel, the console over the bottom row (§G12).
-//! The artboards' windows are layouts of their content, kept inside those rects, each scrolling where it is longer.
+//! **Where they open** (applied per R-369): with no place remembered, each at a rect over the side panels or the bottom
+//! row, never over the figure (§G1, "The figure is never covered"; R-390's review list): Profiler and Chart builder
+//! over the Manifold view, Run, Export & share, Display and the Inspector over the Trajectory panel, the console over
+//! the bottom row (§G12). The artboards' windows are layouts of their content, kept inside those rects, each scrolling
+//! where it is longer. Every window but the console is then dragged by its title bar and resized from its edges and
+//! corners, kept at least partly on screen, and its place remembered across sessions (R-461; [`place`],
+//! `crate::settings`); the console is docked.
 //!
 //! Each window's state is the GUI's own (`ViewUI`'s open list, and its drafts), never the engine's; what reaches the
 //! engine goes through `SetField` (gui_state_contract §1).
@@ -24,10 +27,11 @@ pub mod console;
 pub mod display;
 pub mod export;
 pub mod inspector;
+pub mod place;
 pub mod profiler;
 pub mod run;
 
-use eframe::egui::{self, Id, Rect, Response, RichText, ScrollArea, Ui};
+use eframe::egui::{self, Id, LayerId, Rect, Response, RichText, ScrollArea, Sense, Ui, UiBuilder};
 use engine::contract::view_ui::Window;
 
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
@@ -231,11 +235,21 @@ impl Keys<'_> {
     }
 }
 
-/// Draws `entry`'s window's frame, fixed at `rect`, its content scrolling when `scroll`, the window's scope placed on
-/// its rect. Every window but the console starts with a title row: its title, and its × at the right, the scope
+/// What drawing a window's frame gave: whether it is still open, and what of it a drag holds.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct Framed {
+    /// False once its title row's × is clicked.
+    pub open: bool,
+    /// Its title bar, or edges of it, while a drag holds them (R-461): the console's never.
+    pub held: Option<place::Grip>,
+}
+
+/// Draws `entry`'s window's frame at `rect`, its content scrolling when `scroll`, the window's scope placed on its
+/// rect. Every window but the console starts with a title row: its title, and its × at the right, the scope
 /// `entry.close` (the audit's finding: egui's own title-bar × is outside the scope tree, which no key reaches); the
-/// console's header bar holds its title and its × (R-450). Returns whether it is still open: false once its title
-/// row's × is clicked.
+/// console's header bar holds its title and its × (R-450). Every window but the console is dragged by its title bar,
+/// off its ×, and resized from its edges and corners (R-461; `place`): the frame reports the drag, and the caller moves
+/// the window, egui drawing it where it is told.
 pub fn frame(
     ctx: &egui::Context,
     entry: &Entry,
@@ -243,21 +257,40 @@ pub fn frame(
     keys: &mut Keys<'_>,
     scroll: bool,
     add: impl FnOnce(&mut Ui, &mut Keys<'_>),
-) -> bool {
+) -> Framed {
     let (scope, title) = (entry.scope, entry.title);
-    let mut open = true;
+    let movable = place::movable(entry.window);
+    let mut framed = Framed {
+        open: true,
+        held: None,
+    };
     let shown = egui::Window::new(title)
         .id(Id::new(("window", scope)))
         // The size first, then the rect: egui lays a new window out in an invisible sizing pass, at its default size
         // pushed back on screen; at the rect's own size, that pass already sits on the rect, never over the figure.
         .default_size(rect.size())
         .fixed_rect(rect)
+        // A movable window is kept on screen by `place::on_screen` alone: partly, never pushed wholly inside, nor made
+        // smaller than its place.
+        .constrain_to(if movable {
+            Rect::EVERYTHING
+        } else {
+            ctx.content_rect()
+        })
         .collapsible(false)
         .resizable(false)
         .title_bar(false)
         .show(ctx, |ui| {
-            if entry.window != Window::Console {
-                open = !title_row(ui, keys, title, entry.close);
+            if movable {
+                let close = title_row(ui, keys, title, entry.close);
+                framed.open = !close.clicked();
+                // The title bar off the ×, laid after the title row so a drag on its title holds it.
+                let mut bar = place::title_bar(rect);
+                bar.max.x = bar.max.x.min(close.rect.min.x);
+                let bar = ui.interact(bar, Id::new(("title_bar", scope)), Sense::drag());
+                if bar.dragged() {
+                    framed.held = Some(place::Grip::Title);
+                }
             }
             if scroll {
                 ScrollArea::vertical()
@@ -270,28 +303,71 @@ pub fn frame(
         });
     if let Some(shown) = shown {
         keys.keyboard.place(scope, shown.response.rect);
+        if movable {
+            let layer = shown.response.layer_id;
+            if let Some(edges) = edge_handles(ctx, layer, scope, shown.response.rect) {
+                framed.held = Some(place::Grip::Edges(edges));
+            }
+        }
     }
-    open
+    framed
+}
+
+/// Lays the edge and corner handles of the window at `rect` on its `layer`, above its content, the corners last so
+/// they take priority; shows the resize cursor over one. Returns the edges a drag holds, if any.
+fn edge_handles(
+    ctx: &egui::Context,
+    layer: LayerId,
+    scope: ScopeId,
+    rect: Rect,
+) -> Option<place::Edges> {
+    let builder = UiBuilder::new()
+        .layer_id(layer)
+        .max_rect(ctx.content_rect());
+    let ui = Ui::new(ctx.clone(), Id::new(("window_edges", scope)), builder);
+    let mut held = None;
+    for edges in place::Edges::ALL {
+        let id = Id::new((
+            "window_edge",
+            scope,
+            edges.left,
+            edges.right,
+            edges.top,
+            edges.bottom,
+        ));
+        let handle = ui.interact(edges.handle(rect), id, Sense::drag());
+        if handle.hovered() || handle.dragged() {
+            ctx.set_cursor_icon(edges.cursor());
+        }
+        if handle.dragged() {
+            held = Some(edges);
+        }
+    }
+    held
 }
 
 /// Draws a window's title row: `title`, centred, and its × at the right, placed as scope `close`; then a separator.
-/// Returns whether the × was clicked.
-fn title_row(ui: &mut Ui, keys: &mut Keys<'_>, title: &str, close: ScopeId) -> bool {
-    let mut clicked = false;
+/// Returns the ×'s response.
+fn title_row(ui: &mut Ui, keys: &mut Keys<'_>, title: &str, close: ScopeId) -> Response {
     // The row is the title's height at least: its × grows it to fit.
     let height = ui.text_style_height(&egui::TextStyle::Heading);
     let size = egui::vec2(ui.available_width(), height);
     let right = egui::Layout::right_to_left(egui::Align::Center);
-    ui.allocate_ui_with_layout(size, right, |ui| {
-        let button = ui.add(egui::Button::new(RichText::new(CLOSE_TEXT).heading()).frame(false));
-        clicked = button.clicked();
-        keys.place(close, &button);
-        let rest = egui::vec2(ui.available_width(), height);
-        let centred = egui::Layout::centered_and_justified(egui::Direction::LeftToRight);
-        ui.allocate_ui_with_layout(rest, centred, |ui| ui.label(RichText::new(title).heading()));
-    });
+    let button = ui
+        .allocate_ui_with_layout(size, right, |ui| {
+            let button =
+                ui.add(egui::Button::new(RichText::new(CLOSE_TEXT).heading()).frame(false));
+            keys.place(close, &button);
+            let rest = egui::vec2(ui.available_width(), height);
+            let centred = egui::Layout::centered_and_justified(egui::Direction::LeftToRight);
+            ui.allocate_ui_with_layout(rest, centred, |ui| {
+                ui.label(RichText::new(title).heading())
+            });
+            button
+        })
+        .inner;
     ui.separator();
-    clicked
+    button
 }
 
 /// Draws one section: its heading, as the artboards' "▾ Title", and its content, the section's scope placed on the
