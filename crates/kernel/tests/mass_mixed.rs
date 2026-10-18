@@ -12,7 +12,8 @@
 //! - `per_pixel_mass_declared_*`: every chart declares `requires_per_pixel_mass`, true exactly for the ternary plot, the
 //!   Burrau family, a mixed chart with a mass axis and the latent chart, whose type cannot say (REQ-DEC-006).
 //! - `per_pixel_mass_trait_decode_*`: on each chart that declares it and whose masses its type decides, the trait's
-//!   `Chart::decode` is the decode stage's `ChartDecode::decode_at`, and its masses vary per pixel (REQ-DEC-006).
+//!   `Chart::decode` is the decode stage's `ChartDecode::decode_at`, and its masses vary per pixel (REQ-DEC-006); on the
+//!   invariant charts, which declare no per-pixel mass, the trait decode is `decode_at` too.
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -1212,6 +1213,44 @@ negative_control!(
         z0: [0.0; 8],
         q1: [0.0; 8],
         q2: [0.0; 8],
+    })
+);
+
+/// The invariant charts' frozen part checked: a mass point off the equal masses.
+fn invariant_part<R: Q>() -> Invariant<R> {
+    Invariant {
+        z_cfg: [R::of(0.4), R::of(-0.3)],
+        z_mass: [R::of(0.3), R::of(-0.2)],
+        k_max: R::of(1.0),
+        gamma_k: R::of(2.0),
+    }
+}
+
+/// [`check_trait_decode`] on the invariant charts at `R`: they declare no per-pixel mass, but their trait decode is
+/// still the construction's.
+fn check_invariant_trait_decodes<R: Q>() {
+    check_trait_decode(
+        &InvariantLE(invariant_part::<R>()),
+        Chart::decode::<Defaults, R>,
+    );
+    check_trait_decode(
+        &InvariantLK(invariant_part::<R>()),
+        Chart::decode::<Defaults, R>,
+    );
+}
+
+#[test]
+fn per_pixel_mass_trait_decode_invariant() {
+    check_invariant_trait_decodes::<f64>();
+    check_invariant_trait_decodes::<f32>();
+}
+
+negative_control!(
+    per_pixel_mass_trait_decode_invariant,
+    "the trait's default decode on the (L_z, E) chart, the shared decoder on Φ's frozen controls, must fail the check",
+    expected = "InvariantLE's Chart::decode is not its decode_at",
+    check_trait_decode(&InvariantLE(invariant_part::<f64>()), |c, u, v| {
+        decode::decode::<Defaults, f64>(&c.map(u, v).z)
     })
 );
 
