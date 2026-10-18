@@ -5,64 +5,71 @@
 //! - the three modes' edge maps agree, and are the field's own class boundaries; a payload perturbed between modes
 //!   fails (`colour_independence_edge_maps_agree`);
 //! - each mode is the one §4.1 defines: event the outcome palette, greyscale the None-colour row `OKLab(L = B, 0, 0)`
-//!   at `B = (r + ½)/K`, hue the hue wheel at `t = r/K` with the brightness None, and the samples with no class in
-//!   their styles in every mode (`colour_independence_modes_are_the_defined_ones`);
+//!   at `B = (r + ½)/K`, hue the hue wheel at `t = r/K` with the brightness None, `K = 9` ranked as R-448 ranks the
+//!   outcome class, `running` and every failure at rank 0 and a forbidden sample in the hatch in every mode (R-446)
+//!   (`colour_independence_modes_are_the_defined_ones`);
 //! - the map is taken on the render, so a mode that gives two classes one colour loses their edge and fails
 //!   (`colour_independence_a_merging_mode_fails`).
 //!
 //! The slice is eight by eight samples, one quad each, each tile 8 px: a bounded dome ringed by collision and escape
-//! basins, wedges of triple outcomes, a t = 0 collision band, a degenerate corner, a 2 × 2 block of `sim_failed`
-//! samples and a pair of running ones. Each test registers its negative control (R-176).
+//! basins, wedges of triple outcomes, a band of collisions at t = 0 in their pair's class (R-445), a `decode_failed`
+//! corner, a 2 × 2 block of `sim_failed` samples and a pair of running ones, all three in the bounded / nothing yet
+//! class (R-446), and a block of samples in a forbidden chart region, hatched. The modes are `support/outcome_modes.rs`'s.
+//! Each test registers its negative control (R-176).
 
 use std::collections::BTreeSet;
 
-use render::assemble::{Kind, Node, Occupant, Stain};
+use render::assemble::Occupant;
 use render::bind::Context;
 use render::present::{self, Rgb};
 use render::raster::Grid;
-use render::registry::ZERO_SOURCE;
 use validation::golden_scene::{render_stain, STATE_DECODE_FAILED, STATE_SIM_FAILED};
 use validation::gpu::GpuHarness;
 use validation::negative_control;
 use validation::synthetic::Synthetic;
 
+#[path = "support/outcome_modes.rs"]
+mod modes;
+use modes::{event, greyscale, hue, hue_colour, stain, Mode, K};
+
 /// The slice's side in samples, and each tile's side in pixels.
 const SIDE: u32 = 8;
 const TILE: u32 = 8;
-
-/// The outcome field's class count (colour_composition §4.1: §1.4's nine and the two triple outcomes).
-const K: u32 = 11;
 
 /// The edge detector's threshold in OKLab (debug_tooling_plan §G): in the gap between the render's float error and the
 /// least distance a mode puts between two appearances.
 const TAU: f64 = 0.01;
 
-/// The slice, rows from the top: each character a sample's class, `b` bounded; `1`, `2`, `3` the collisions of pair
-/// 2 (bodies 0–1), 1 (0–2) and 0 (1–2); `d` degenerate; `y`, `m`, `c` the escapes of body 0, 1 and 2; `o` a collision
-/// at t = 0; `t` a triple collision; `j` a triple ejection; `R` running; `F` sim_failed. The bounded dome meets the
-/// triple ejection, ranked first and last, which a hue at `r/(K − 1)` would give one colour.
+/// The slice, rows from the top: each character a sample, `b` bounded; `1`, `2`, `3` the collisions of pair 2 (shown
+/// collision 1–2), 1 (1–3) and 0 (2–3); `o` a collision of pair 0 at t = 0, class `3`'s (R-445); `t` a triple
+/// collision; `y`, `m`, `c` the escapes of body 0, 1 and 2 (shown body 1, 2, 3); `j` a triple ejection; `d`
+/// `decode_failed`, `R` running and `F` `sim_failed`, class `b`'s (R-446); `X` a `decode_failed` sample in a forbidden
+/// chart region, the hatch. The bounded dome meets the triple ejection, ranked first and last, which a hue at
+/// `r/(K − 1)` would give one colour.
 const SLICE: [&str; 8] = [
-    "yyymmmcc", "yy11mmcc", "y1bbbjmc", "22bbbjtc", "22bbRRt3", "oo2FF333", "oddFF3cc", "dddyymmc",
+    "yyymmmcc", "yy11mmcc", "y1bbbjmc", "22bbbjtc", "22bbRRt3", "oo2FF333", "oXXFF3cc", "dXXyymmc",
 ];
 
-/// A class's sample: `(state, detail, t_end_step)`, and its rank in the outcome field (colour_composition §4.1: bounded
-/// 0; collision 0–1, 0–2 and 1–2, degenerate, the escapes of body 0, 1 and 2 and collision @ t=0; triple collision,
-/// triple ejection), `None` for a sample with no class.
-fn class(c: char) -> ((u32, u32, u32), Option<u32>) {
+/// A sample's payload `(state, detail, t_end_step)`, whether its chart point is forbidden, and its class: its rank in
+/// the outcome field (colour_composition §4.1, R-448: bounded / nothing yet 0; collision 1–2, 1–3, 2–3; triple
+/// collision; escape body 1, 2, 3; triple ejection 8), `None` for a forbidden sample.
+fn class(c: char) -> ((u32, u32, u32), bool, Option<u32>) {
+    let valid = |p, r| (p, false, Some(r));
     match c {
-        'b' => ((1, 0, 1000), Some(0)),
-        '1' => ((2, 2, 40), Some(1)),
-        '2' => ((2, 1, 40), Some(2)),
-        '3' => ((2, 0, 40), Some(3)),
-        'd' => ((STATE_DECODE_FAILED, 1, 0), Some(4)),
-        'y' => ((0, 0, 120), Some(5)),
-        'm' => ((0, 1, 120), Some(6)),
-        'c' => ((0, 2, 120), Some(7)),
-        'o' => ((2, 0, 0), Some(8)),
-        't' => ((2, 3, 40), Some(9)),
-        'j' => ((0, 3, 120), Some(10)),
-        'R' => ((3, 0, 20), None),
-        'F' => ((STATE_SIM_FAILED, 0, 40), None),
+        'b' => valid((1, 0, 1000), 0),
+        '1' => valid((2, 2, 40), 1),
+        '2' => valid((2, 1, 40), 2),
+        '3' => valid((2, 0, 40), 3),
+        'o' => valid((2, 0, 0), 3),
+        't' => valid((2, 3, 40), 4),
+        'y' => valid((0, 0, 120), 5),
+        'm' => valid((0, 1, 120), 6),
+        'c' => valid((0, 2, 120), 7),
+        'j' => valid((0, 3, 120), 8),
+        'd' => valid((STATE_DECODE_FAILED, 1, 0), 0),
+        'R' => valid((3, 0, 20), 0),
+        'F' => valid((STATE_SIM_FAILED, 0, 40), 0),
+        'X' => ((STATE_DECODE_FAILED, 1, 0), true, None),
         other => panic!("no class `{other}`"),
     }
 }
@@ -81,16 +88,15 @@ fn sample_at(x: u32, y: u32) -> u32 {
     grid().cell(x * TILE + TILE / 2, y * TILE + TILE / 2).sample
 }
 
-/// The payload of `slice`: each sample its class's `state`, `detail` and `t_end_step`.
+/// The payload of `slice`: each sample its class's `state`, `detail` and `t_end_step`, and its chart classification.
 fn payload(slice: &[&str; 8]) -> Synthetic {
     let mut set = Synthetic::flat(grid(), 3);
     for y in 0..SIDE {
         for x in 0..SIDE {
-            let ((state, detail, t), _) = class(at(slice, x, y));
-            set.sample(sample_at(x, y))
-                .state(state)
-                .detail(detail)
-                .times(t, 0);
+            let ((state, detail, t), forbidden, _) = class(at(slice, x, y));
+            let i = sample_at(x, y);
+            set.sample(i).state(state).detail(detail).times(t, 0);
+            set.set_forbidden(i, forbidden);
         }
     }
     set
@@ -110,136 +116,6 @@ fn context() -> Context {
         out_of_chart: false,
         valid_sample_count: 1,
     }
-}
-
-/// The outcome field's rank, WGSL, which each mode's occupants share (colour_composition §4.1): `-1` for a running
-/// sample, `-2` for one the invalid pattern draws (`sim_failed`, a reserved code).
-const RANK: &str = "fn outcome_rank(ctx: Ctx) -> i32 {
-    let s = ctx.sample.state;
-    let d = ctx.sample.detail;
-    if (s == STATE_RUNNING) { return -1; }
-    if (s == STATE_BOUNDED) { return 0; }
-    if (s == STATE_COLLISION) {
-        if (ctx.sample.t_end_step == 0u) { return 8; }
-        if (d == 3u) { return 9; }
-        return 3 - i32(d);
-    }
-    if (s == STATE_DECODE_FAILED) { return 4; }
-    if (s == STATE_ESCAPE) {
-        if (d == 3u) { return 10; }
-        return 5 + i32(d);
-    }
-    return -2;
-}
-";
-
-/// Greyscale mode's brightness: `B = (r + ½)/K`.
-fn grey_brightness() -> String {
-    format!(
-        "{RANK}fn brightness(ctx: Ctx) -> f32 {{ return (f32(max(outcome_rank(ctx), 0)) + 0.5) / 11.0; }}\n"
-    )
-}
-
-/// Greyscale mode's post: the samples with no class in their styles, every other colour passed on.
-fn grey_post() -> String {
-    format!(
-        "{RANK}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {{
-    let r = outcome_rank(ctx);
-    if (r == -1) {{ return debug_not_yet(ctx.frag_xy); }}
-    if (r == -2) {{ return debug_invalid(ctx.frag_xy); }}
-    return rgb;
-}}
-"
-    )
-}
-
-/// Hue mode's colour, the class of rank `r` at `t = r/turns` on the hue wheel, the samples with no class in their
-/// styles: `turns` is `K` in hue mode, `K − 1` in the merging control.
-fn hue_colour(turns: u32) -> String {
-    format!(
-        "{RANK}fn colour(ctx: Ctx) -> vec3<f32> {{
-    let r = outcome_rank(ctx);
-    if (r == -1) {{ return debug_not_yet(ctx.frag_xy); }}
-    if (r == -2) {{ return debug_invalid(ctx.frag_xy); }}
-    return hue_wheel(f32(r) / {turns}.0);
-}}
-"
-    )
-}
-
-/// A mode: its colour and brightness occupants, its combiner and its post, if any.
-struct Mode {
-    name: &'static str,
-    colour: Occupant,
-    brightness: Occupant,
-    combiner: &'static str,
-    post: Option<String>,
-}
-
-fn event() -> Mode {
-    Mode {
-        name: "event",
-        colour: Occupant::BuiltIn(render::colour::outcome::ID.to_owned()),
-        brightness: Occupant::None,
-        combiner: "replace_l",
-        post: None,
-    }
-}
-
-fn greyscale() -> Mode {
-    Mode {
-        name: "greyscale",
-        colour: Occupant::None,
-        brightness: Occupant::Custom(grey_brightness()),
-        combiner: "replace_l",
-        post: Some(grey_post()),
-    }
-}
-
-fn hue() -> Mode {
-    Mode {
-        name: "hue",
-        colour: Occupant::Custom(hue_colour(K)),
-        brightness: Occupant::None,
-        combiner: "replace_l",
-        post: None,
-    }
-}
-
-/// The stain of `mode`: source → colour, brightness → combiner → post → OUT.
-fn stain(mode: &Mode) -> Stain {
-    let node = |kind, occupant, inputs: Vec<Option<usize>>| Node {
-        kind,
-        occupant,
-        inputs,
-    };
-    let mut nodes = vec![
-        node(
-            Kind::Source,
-            Occupant::Custom(ZERO_SOURCE.to_owned()),
-            vec![],
-        ),
-        node(Kind::Colour, mode.colour.clone(), vec![Some(0)]),
-        node(Kind::Brightness, mode.brightness.clone(), vec![Some(0)]),
-        node(
-            Kind::Combiner,
-            Occupant::BuiltIn(mode.combiner.to_owned()),
-            vec![Some(1), Some(2)],
-        ),
-    ];
-    let last = match &mode.post {
-        Some(post) => {
-            nodes.push(node(
-                Kind::Post,
-                Occupant::Custom(post.clone()),
-                vec![Some(3)],
-            ));
-            4
-        }
-        None => 3,
-    };
-    nodes.push(node(Kind::Out, Occupant::None, vec![Some(last)]));
-    Stain::new(nodes).unwrap_or_else(|e| panic!("{}: {e}", mode.name))
 }
 
 /// `slice` rendered in `mode`: each pixel's OKLab, rows from the top.
@@ -301,11 +177,12 @@ fn edge_map(lab: &[Rgb]) -> BTreeSet<Edge> {
         .collect()
 }
 
-/// The class boundaries of `slice`: the adjacent tiles of two classes, the samples with no class each their own.
+/// The class boundaries of `slice`: the adjacent tiles of two classes, the forbidden samples a class of their own.
 fn boundaries(slice: &[&str; 8]) -> BTreeSet<Edge> {
+    let kind = |x, y| class(at(slice, x, y)).2;
     neighbours()
         .into_iter()
-        .filter(|&((ax, ay), (bx, by))| at(slice, ax, ay) != at(slice, bx, by))
+        .filter(|&((ax, ay), (bx, by))| kind(ax, ay) != kind(bx, by))
         .collect()
 }
 
@@ -365,8 +242,8 @@ negative_control!(
     {
         // The slice with the escape at column 1, row 0 turned to body 1's, which moves the boundary between them.
         let perturbed = [
-            "ymymmmcc", "yy11mmcc", "y1bbbjmc", "22bbbjtc", "22bbRRt3", "oo2FF333", "oddFF3cc",
-            "dddyymmc",
+            "ymymmmcc", "yy11mmcc", "y1bbbjmc", "22bbbjtc", "22bbRRt3", "oo2FF333", "oXXFF3cc",
+            "dXXyymmc",
         ];
         let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
         let renders = vec![
@@ -378,24 +255,18 @@ negative_control!(
     }
 );
 
-/// What `mode` draws at pixel `(px, py)` of a tile of class `c`, by colour_composition §4.1 and §1.4, linear RGB.
+/// What `mode` draws at pixel `(px, py)` of a tile of class `c`, by colour_composition §4.1 and §1.4, linear RGB: a
+/// forbidden sample the hatch in every mode; event mode the outcome palette's swatch of the class's rank, which is its
+/// index in `SWATCHES` (R-448); greyscale and hue mode the rank's lightness and hue.
 fn defined(mode: &str, c: char, px: u32, py: u32) -> Rgb {
     let frag = [f64::from(px) + 0.5, f64::from(py) + 0.5];
-    let ((state, detail, t), rank) = class(c);
-    match (c, rank) {
-        ('R', _) => present::debug_not_yet(frag),
-        ('F', _) => present::debug_invalid(frag),
-        (_, Some(r)) => match mode {
-            "greyscale" => present::ramp_grey((f64::from(r) + 0.5) / f64::from(K)),
-            "hue" => present::hue_wheel(f64::from(r) / f64::from(K)),
-            _ => match render::colour::outcome::shown(state, detail, t) {
-                render::colour::outcome::Shown::Swatch(k) => {
-                    present::srgb8(render::colour::outcome::SWATCHES[k].srgb8)
-                }
-                other => panic!("class `{c}` is no swatch: {other:?}"),
-            },
-        },
-        _ => unreachable!("a class has a rank or a style"),
+    let Some(r) = class(c).2 else {
+        return present::debug_invalid(frag);
+    };
+    match mode {
+        "greyscale" => present::ramp_grey((f64::from(r) + 0.5) / f64::from(K)),
+        "hue" => present::hue_wheel(f64::from(r) / f64::from(K)),
+        _ => present::srgb8(render::colour::outcome::SWATCHES[r as usize].srgb8),
     }
 }
 
@@ -458,8 +329,10 @@ fn check_merging(turns: u32) {
     );
     for &&((ax, ay), (bx, by)) in &lost {
         let pair = [at(&SLICE, ax, ay), at(&SLICE, bx, by)];
+        let mut ranks = pair.map(|c| class(c).2);
+        ranks.sort();
         assert!(
-            pair == ['b', 'j'] || pair == ['j', 'b'],
+            ranks == [Some(0), Some(K - 1)],
             "the hue at r/{turns} loses the edge between `{}` and `{}`",
             pair[0],
             pair[1]
@@ -469,7 +342,8 @@ fn check_merging(turns: u32) {
 
 #[test]
 fn colour_independence_a_merging_mode_fails() {
-    // At `t = r/(K − 1)` the bounded dome, rank 0, and the triple ejection, rank 10, are one hue: their edge is lost.
+    // At `t = r/(K − 1)` the bounded / nothing yet class, rank 0, and the triple ejection, rank 8, are one hue: their
+    // edges are lost.
     check_merging(K - 1);
 }
 

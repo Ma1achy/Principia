@@ -156,6 +156,18 @@ mutant = "crates/gui/src/capture.rs:116:28: replace * with / in CompassCase::edi
 justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so depth * Z0_HALF_RANGE and depth / Z0_HALF_RANGE are equal for every depth"
 
 [[equivalent]]
+mutant = "crates/gui/src/explore/trajectory.rs:780:32: replace * with / in orbit_input"
+justification = "ORBIT_DEG_PER_POINT is 1.0, and x * 1.0 == x / 1.0 for every f64 x"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/trajectory.rs:781:32: replace * with / in orbit_input"
+justification = "ORBIT_DEG_PER_POINT is 1.0, and x * 1.0 == x / 1.0 for every f64 x"
+
+[[equivalent]]
+mutant = "crates/gui/src/keyboard/scopes.rs:349:23: replace > with >= in ScopeTree::remove"
+justification = "remove_children has already removed every node whose parent is the removed index i, so no parent equals i and > and >= agree"
+
+[[equivalent]]
 mutant = "crates/kernel/src/burrau.rs:74:7: replace > with >= in primitive"
 justification = "m == n makes m ^ n = 0, so the parity test (m ^ n) & 1 == 1 already refuses every pair the > excludes"
 

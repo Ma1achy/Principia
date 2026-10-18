@@ -54,7 +54,12 @@
     },
     {
       "name": "mock_trajectory_unwrapped",
-      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_trajectory_views",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["hover", "tab", "tab", "tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "shift_arrow_right", "escape", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_right"] },
       "artboard": "docs/gui/design/01_main.png"
     },
     {

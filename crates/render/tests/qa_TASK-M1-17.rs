@@ -2,8 +2,9 @@
 //! implementation. Each renders a scene of its own through the render harness (`validation::golden_scene`) and reads
 //! the pixels:
 //! - REQ-TOOL-162 / REQ-COL-064 (R-399): an unset `d_min` (forced failures and unstepped samples, f16 +∞) in its
-//!   debug view and in its `FieldRamp`, and running samples in the outcome palette, are drawn in one style, the same
-//!   colour at the same pixel in all three; over every 4 × 4 pixel block it takes at least two colours (never flat, so
+//!   debug view and in its `FieldRamp` are drawn in one style, the same colour at the same pixel in both. Amended by qa
+//!   for TASK-M2-32, as R-446 forces: running samples in the outcome palette leave the style's scope and draw bounded /
+//!   nothing yet's `#141418` on every pixel. Over every 4 × 4 pixel block the style takes at least two colours (never flat, so
 //!   no flat ramp colour, viridis, twilight, magma, grey or cool-warm, reproduces a block), its two colours differ in
 //!   luminance (visible without colour vision), it is dots, not stripes (no block is invariant along a row, a column,
 //!   a diagonal or an anti-diagonal, as `debug_invalid`'s and REQ-TOOL-124's pending hatch's stripes are), it differs
@@ -176,22 +177,29 @@ fn check_style(img: &Image, what: &str) {
     );
 }
 
-/// The three renders, the same style at the same pixel in each (R-399: one style for an unset `d_min` and running
-/// samples alike).
+/// The three renders: the debug view and the ramp the same style at the same pixel (R-399), and the outcome palette's
+/// running samples bounded / nothing yet's `#141418` on every pixel, not the style (R-446).
 fn check_three(view: &Image, ramp: &Image, outcome: &Image) {
     check_style(view, "d_min's debug view");
     check_style(ramp, "d_min's FieldRamp");
-    check_style(outcome, "the outcome palette's running class");
-    for (other, what) in [(ramp, "d_min's FieldRamp"), (outcome, "the running class")] {
-        for y in 0..view.h.min(other.h) {
-            for x in 0..view.w.min(other.w) {
-                assert!(
-                    near(view.at(x, y), other.at(x, y)),
-                    "pixel ({x}, {y}): {what} is {:?}, d_min's view {:?}: not one style",
-                    other.at(x, y),
-                    view.at(x, y)
-                );
-            }
+    for y in 0..view.h.min(ramp.h) {
+        for x in 0..view.w.min(ramp.w) {
+            assert!(
+                near(view.at(x, y), ramp.at(x, y)),
+                "pixel ({x}, {y}): d_min's FieldRamp is {:?}, d_min's view {:?}: not one style",
+                ramp.at(x, y),
+                view.at(x, y)
+            );
+        }
+    }
+    let black = present::srgb8([0x14, 0x14, 0x18]);
+    for y in 0..outcome.h {
+        for x in 0..outcome.w {
+            assert!(
+                near(outcome.at(x, y), black),
+                "pixel ({x}, {y}): the outcome palette's running sample is {:?}, not bounded / nothing yet's #141418",
+                outcome.at(x, y)
+            );
         }
     }
 }
@@ -269,14 +277,14 @@ mod qa_not_yet_style_hatched {
     use super::*;
     negative_control!(
         qa_not_yet_style_one_stipple_in_every_view,
-        "the running class drawn in the invalid hatch is caught",
+        "d_min's FieldRamp drawn in the invalid hatch is caught",
         expected = "the invalid hatch's colour there",
         {
             let h = gpu();
-            let (v, r, mut o) = three(&h);
-            for y in 0..o.h {
-                for x in 0..o.w {
-                    o.px[(y * o.w + x) as usize] =
+            let (v, mut r, o) = three(&h);
+            for y in 0..r.h {
+                for x in 0..r.w {
+                    r.px[(y * r.w + x) as usize] =
                         present::debug_invalid([f64::from(x) + 0.5, f64::from(y) + 0.5]);
                 }
             }
@@ -290,20 +298,36 @@ mod qa_not_yet_style_two_styles {
     use super::*;
     negative_control!(
         qa_not_yet_style_one_stipple_in_every_view,
-        "a running class whose stipple is shifted by one pixel is caught as a second style",
+        "a FieldRamp whose stipple is shifted by one pixel is caught as a second style",
         expected = "not one style",
         {
             let h = gpu();
             let (v, r, o) = three(&h);
             let shifted = Image {
-                w: o.w,
-                h: o.h,
-                px: (0..o.h)
-                    .flat_map(|y| (0..o.w).map(move |x| (x, y)))
-                    .map(|(x, y)| o.at((x + 1) % o.w, y))
+                w: r.w,
+                h: r.h,
+                px: (0..r.h)
+                    .flat_map(|y| (0..r.w).map(move |x| (x, y)))
+                    .map(|(x, y)| r.at((x + 1) % r.w, y))
                     .collect(),
             };
-            check_three(&v, &r, &shifted)
+            check_three(&v, &shifted, &o)
+        }
+    );
+}
+
+/// R-446's leg can fail: the outcome palette's running samples drawn in the "not yet" style, as before R-446.
+#[cfg(feature = "controls")]
+mod qa_not_yet_style_outcome_stippled {
+    use super::*;
+    negative_control!(
+        qa_not_yet_style_one_stipple_in_every_view,
+        "the outcome palette's running samples drawn in the stipple are caught (R-446)",
+        expected = "not bounded / nothing yet's #141418",
+        {
+            let h = gpu();
+            let (v, r, _) = three(&h);
+            check_three(&v, &r, &v)
         }
     );
 }

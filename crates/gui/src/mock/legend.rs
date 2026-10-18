@@ -3,18 +3,29 @@
 //! back from OUT, one key per dimension, in the order the dimensions feed OUT: categorical swatches with their shares,
 //! then a bar for what brightness encodes. The GUI draws exactly the keys it receives and holds none of its own. The
 //! real evaluation is TASK-M8-22's. The shares and the brightness field are placeholder content.
+//!
+//! The outcome key is render_gui_spec §G6's (R-444, R-446): the nine classes, physical outcomes only, each a flat swatch
+//! from `SWATCHES` in colour_composition §1.4's order, the black one "bounded / nothing yet", then the "forbidden
+//! region" key in the hatch style; no "degenerate", "collision @ t=0", `running` or `sim_failed` key and no "not yet"
+//! swatch. The "not yet" style stays a class a key of another field may show (R-399).
 
 use engine::contract::legend::{Legend, LegendEntry, LegendKey, SwatchStyle, SWATCHES};
 
-/// The class a categorical dimension shows: one of the outcome palette's swatches, by its param, or the running
-/// samples' "not yet" style (R-399).
+/// The class a categorical dimension shows: one of the outcome palette's swatches, by its param, the running samples'
+/// "not yet" style of a field that holds no value for them (R-399), or the outcome legend's forbidden chart regions,
+/// drawn as the hatch (R-446).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Class {
     /// The swatch whose param this is (colour_composition §1.4).
     Swatch(&'static str),
     /// The running samples, drawn as the "not yet" style.
     Running,
+    /// The forbidden chart regions, "forbidden region", drawn as the hatch (render_gui_spec §G6).
+    Forbidden,
 }
+
+/// The outcome legend's forbidden-region key's label (render_gui_spec §G6).
+pub const FORBIDDEN: &str = "forbidden region";
 
 /// One dimension of the fake stain feeding OUT.
 #[derive(Clone, Debug, PartialEq)]
@@ -49,25 +60,26 @@ pub const DARKEST: f64 = 0.12;
 /// How many samples the brightness bar is drawn from, at equal steps over its domain.
 pub const RAMP_SAMPLES: usize = 16;
 
-/// The mock's default stain: the outcome class, then brightness by `t_end` with a late fade, as 01_main.png's Legend
+/// The mock's default stain: the outcome class, its nine classes in colour_composition §1.4's order and the forbidden
+/// region (R-444, R-446; render_gui_spec §G6), then brightness by `t_end` with a late fade, as 01_main.png's Legend
 /// shows them, its shares placeholder content.
 pub fn default_stain() -> FakeStain {
-    use Class::{Running, Swatch};
+    use Class::{Forbidden, Swatch};
     FakeStain {
         out: vec![
             Dimension::Categorical {
                 title: "colour · outcome class",
                 classes: vec![
                     (Swatch("bounded"), 31.2),
+                    (Swatch("collision_pair_2"), 6.4),
+                    (Swatch("collision_pair_1"), 5.9),
+                    (Swatch("collision_pair_0"), 6.3),
+                    (Swatch("triple_collision"), 0.9),
                     (Swatch("escape_body_0"), 11.0),
                     (Swatch("escape_body_1"), 24.8),
                     (Swatch("escape_body_2"), 12.1),
-                    (Swatch("collision_pair_0"), 6.3),
-                    (Swatch("collision_pair_1"), 5.9),
-                    (Swatch("collision_pair_2"), 6.4),
-                    (Swatch("collision_at_start"), 0.9),
-                    (Swatch("degenerate"), 1.4),
-                    (Running, 0.6),
+                    (Swatch("triple_ejection"), 1.4),
+                    (Forbidden, 0.6),
                 ],
             },
             Dimension::Brightness {
@@ -111,6 +123,7 @@ pub fn evaluate(stain: &FakeStain) -> Legend {
                                 (s.label.to_owned(), SwatchStyle::Flat(s.srgb8))
                             }
                             Class::Running => ("running".to_owned(), SwatchStyle::NotYet),
+                            Class::Forbidden => (FORBIDDEN.to_owned(), SwatchStyle::Hatch),
                         };
                         let share = if total > 0.0 { 100.0 * w / total } else { 0.0 };
                         LegendEntry {
