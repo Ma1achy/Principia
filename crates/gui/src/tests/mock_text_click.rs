@@ -7,10 +7,11 @@
 //! (R-176, through `rejects`). The tests' names carry `mock_reachability`, the audit's acceptance filter.
 
 use eframe::egui::{vec2, Event, Key, Modifiers, PointerButton, Pos2};
-use engine::contract::view_ui::{KeyMode, Mode};
+use engine::contract::view_ui::{KeyMode, Mode, Window};
 
 use super::support::{click_scope, headless, mock_app, press, rejects};
 use crate::app::App;
+use crate::capture::{PIXELS_PER_POINT, SIZE};
 use crate::explore::manifold_view;
 use crate::headless::Headless;
 use crate::keyboard::scopes::{ScopeId, ScopeTree};
@@ -229,7 +230,7 @@ fn check_navigating(got: &(Vec<String>, KeyMode), path: &[String], what: &str) {
     assert_eq!(got, &(path.to_vec(), KeyMode::Navigation), "{what}");
 }
 
-fn at(app: &App<MockSide>) -> (Vec<String>, KeyMode) {
+fn at_focus(app: &App<MockSide>) -> (Vec<String>, KeyMode) {
     (app.view.focus.path.clone(), app.view.focus.mode)
 }
 
@@ -248,7 +249,7 @@ fn mock_reachability_text_click_a_click_off_a_text_input_ends_interaction_on_a_v
         let _ = h.frame(&mut app, events);
     }
     settle(&mut h, &mut app);
-    check_navigating(&at(&app), &path, "a click on the Figure");
+    check_navigating(&at_focus(&app), &path, "a click on the Figure");
     rejects("interaction mode surviving the click", || {
         check_navigating(&(path.clone(), KeyMode::Interaction), &path, "control")
     });
@@ -272,8 +273,102 @@ fn mock_reachability_text_click_a_drag_on_a_slider_ends_interaction_elsewhere() 
         from,
         from + vec2(slider.width() * 0.2, 0.0),
     );
-    check_navigating(&at(&app), &path, "a drag on the slider");
+    check_navigating(&at_focus(&app), &path, "a drag on the slider");
     rejects("interaction mode surviving the drag", || {
+        check_navigating(&(path.clone(), KeyMode::Interaction), &path, "control")
+    });
+}
+
+/// Presses and releases the primary button at `at`, then settles.
+fn click_at(h: &mut Headless, app: &mut App<MockSide>, at: Pos2) {
+    for events in crate::capture::click(at) {
+        let _ = h.frame(app, events);
+    }
+    settle(h, app);
+}
+
+/// Run's text fields, in its tree's order.
+fn run_fields() -> Vec<ScopeId> {
+    run::FIELDS
+        .iter()
+        .chain([&run::CEILING])
+        .map(|f| f.id)
+        .collect()
+}
+
+/// Run and the Inspector both open, the Inspector over Run on the same rect (windows::REGISTRY's shared region): a
+/// press on the Inspector where one of Run's fields lies hidden below it is no press on a text field, so it lands in
+/// navigation mode, the focus where it was (R-456 B6), as egui hits the Inspector's layer, not Run's.
+#[test]
+fn mock_reachability_text_click_a_press_on_a_window_over_a_field_lands_in_navigation() {
+    let (mut app, mut h, path) = interacting_on(manifold_view::TAU1);
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Run, None);
+    settle(&mut h, &mut app);
+    app.open_window(&ctx, Window::Inspector, None);
+    settle(&mut h, &mut app);
+    app.view.focus.path = path.clone();
+    app.view.focus.mode = KeyMode::Interaction;
+    settle(&mut h, &mut app);
+    let (field, at) = run_fields()
+        .into_iter()
+        .filter_map(|id| app.keyboard.place_of(id).map(|p| (p, p.hit.center())))
+        .find(|(p, at)| p.hit.contains(*at) && h.ctx.layer_id_at(*at) != p.layer)
+        .expect("a Run field hidden under the Inspector");
+    assert!(field.rect.contains(at), "the press on the field's own rect");
+    click_at(&mut h, &mut app, at);
+    check_navigating(
+        &at_focus(&app),
+        &path,
+        "a press on the Inspector over Run's field",
+    );
+    rejects("interaction mode surviving the press", || {
+        check_navigating(&(path.clone(), KeyMode::Interaction), &path, "control")
+    });
+    assert!(app.keyboard.typing().is_none(), "Run's hidden field typed");
+}
+
+/// A Run field scrolled out of view, under the clip of its window's scroll area: a press where its unclipped rect
+/// lies is no press on a text field, so it lands in navigation mode (R-456 B6).
+#[test]
+fn mock_reachability_text_click_a_press_where_a_scrolled_out_field_lies_lands_in_navigation() {
+    // A short screen, so Run's window scrolls.
+    let mut app = mock_app();
+    let mut h = Headless::new([SIZE[0], SIZE[1] / 2], PIXELS_PER_POINT);
+    settle(&mut h, &mut app);
+    let path = app
+        .keyboard
+        .tree(Mode::Explore)
+        .path_to(manifold_view::TAU1);
+    let ctx = h.ctx.clone();
+    app.open_window(&ctx, Window::Run, None);
+    settle(&mut h, &mut app);
+    // Run scrolled to its last field, so its first ones lie above its window.
+    let last = app.keyboard.tree(Mode::Explore).path_to(run::CEILING.id);
+    app.view.focus.path = last;
+    app.view.focus.mode = KeyMode::Navigation;
+    settle(&mut h, &mut app);
+    app.view.focus.path = path.clone();
+    app.view.focus.mode = KeyMode::Interaction;
+    settle(&mut h, &mut app);
+    let screen = h.screen();
+    let (field, at) = run_fields()
+        .into_iter()
+        .filter_map(|id| app.keyboard.place_of(id))
+        .map(|p| (p, p.rect.center()))
+        .find(|(p, at)| screen.contains(*at) && !p.hit.contains(*at))
+        .expect("a Run field scrolled out of view, its rect on screen");
+    assert!(
+        field.rect.contains(at),
+        "the press on the field's unclipped rect"
+    );
+    click_at(&mut h, &mut app, at);
+    check_navigating(
+        &at_focus(&app),
+        &path,
+        "a press where the scrolled-out field lies",
+    );
+    rejects("interaction mode surviving the press", || {
         check_navigating(&(path.clone(), KeyMode::Interaction), &path, "control")
     });
 }

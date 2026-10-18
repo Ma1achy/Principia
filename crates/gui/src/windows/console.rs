@@ -5,15 +5,16 @@
 //! and resets the footer's warning and error counts, which count from the session's start until then.
 //!
 //! Its keys (§G3, §G12; R-405, R-409 G4–G6, R-450): a window of exactly two scopes, top to bottom, the header bar and
-//! the log. Opening it from the footer or Windows › Console lands in navigation mode on the header bar scope itself;
-//! ↑ ↓, Tab and Shift+Tab move between the two, inside the window (A1). Enter on the header bar goes in, onto All, and
-//! ← → cross its controls in visual order, All, Warnings, Errors, Info, the search field, Copy, Clear and ×, stopping
-//! at its ends; Esc goes back up to it (A2). The search field is §G3's text field: Enter starts typing, in which every
-//! key but Esc, Enter and Tab goes to it; Esc or Enter stops and keeps the text. × is a button: Enter or a click closes
-//! the console, the focus back on whatever opened it. Esc at the top level, on either scope, closes it too. Enter on the
+//! the log. Opening it from the footer or Windows › Console lands in navigation mode on the header bar scope itself; ↑
+//! ↓, Tab and Shift+Tab move between the two, inside the window (A1). Enter on the header bar goes in, onto All, and ←
+//! → cross its controls in visual order, All, Warnings, Errors, Info, the search field, Copy, Clear and ×, stopping at
+//! its ends; Esc goes back up to it (A2). The search field is §G3's text field: Enter starts typing, in which every key
+//! but Esc, Enter and Tab goes to it; Esc or Enter stops and keeps the text. × is a button: Enter or a click closes the
+//! console, the focus back on whatever opened it. Esc at the top level, on either scope, closes it too. Enter on the
 //! log starts interaction: ↑ ↓ scroll it an entry, Page Up and Page Down a page (the entries its rect shows), Home and
 //! End to its first and last entry, Shift ×10, over the whole filtered list, clamped (A4); an empty list leaves the log
-//! where it is (A5). A click on a console control moves the keyboard's focus onto it (A3).
+//! where it is (A5). A click on a console control moves the keyboard's focus onto it (A3), and a click on the search
+//! field starts typing in it (R-456).
 
 use eframe::egui::{self, Align, Button, Grid, Layout, RichText, ScrollArea, TextEdit, Ui};
 use engine::contract::log::{LogEntry, Severity};

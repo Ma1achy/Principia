@@ -18,7 +18,7 @@ pub mod repeat;
 pub mod scopes;
 
 use eframe::egui::{
-    self, Event, Id, Key, Modifiers, PointerButton, Popup, RawInput, Rect, Response,
+    self, Event, Id, Key, LayerId, Modifiers, PointerButton, Popup, RawInput, Rect, Response,
 };
 use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
@@ -33,6 +33,11 @@ pub struct Place {
     pub rect: Rect,
     /// The widget's id, for a control drawn as one.
     pub widget: Option<Id>,
+    /// Where a press reaches the widget: its rect clipped as egui clips it (a scroll area's, a window's), for a
+    /// control drawn as one; otherwise its rect.
+    pub hit: Rect,
+    /// The layer the widget is drawn on (its window's, or the page's), for a control drawn as one.
+    pub layer: Option<LayerId>,
 }
 
 /// A key event the layer took.
@@ -495,18 +500,22 @@ impl Keyboard {
         self.click_onto(ctx, mode, focus, Some(window), id);
     }
 
-    /// Follows the mouse once the frame is drawn (R-456): a pointer press anywhere but on a text field lands in
-    /// navigation mode, the focus where it was (B6; a console control's click then moves it, R-450 A3), ending any
-    /// typing or interaction; a text field the mouse gave egui's focus to (a click on it) is typed in, as
-    /// [`Self::focus_by_click`] has it; one being typed in that lost egui's focus otherwise stops typing, navigation
-    /// mode on the field. egui focuses a text field the layer did not on a click only: the layer takes Tab and the
-    /// arrows before egui sees them.
+    /// Follows the mouse once the frame is drawn (R-456): a pointer press anywhere but on a text field (where egui hits
+    /// it: in its clipped rect, its layer on top) lands in navigation mode, the focus where it was (B6; a console
+    /// control's click then moves it, R-450 A3), ending any typing or interaction; a text field the mouse gave egui's
+    /// focus to (a click on it) is typed in, as [`Self::focus_by_click`] has it; one being typed in that lost egui's
+    /// focus otherwise stops typing, navigation mode on the field. egui focuses a text field the layer did not on a
+    /// click only: the layer takes Tab and the arrows before egui sees them.
     pub fn follow_text_clicks(&mut self, ctx: &egui::Context, mode: Mode, focus: &mut Focus) {
         let pressed = ctx.input(|i| i.pointer.any_pressed().then(|| i.pointer.press_origin()));
         if let Some(at) = pressed.flatten() {
+            // Hit as egui hits: inside the field's clipped rect, and on its layer, the one on top at the press.
+            let top = ctx.layer_id_at(at);
             let tree = self.tree(mode);
             let on_text = self.places.iter().any(|(id, p)| {
-                p.widget.is_some() && p.rect.contains(at) && tree.get(id).is_some_and(|s| s.text)
+                p.layer.is_some_and(|l| top == Some(l))
+                    && p.hit.contains(at)
+                    && tree.get(id).is_some_and(|s| s.text)
             });
             if !on_text {
                 focus.mode = KeyMode::Navigation;
@@ -586,7 +595,15 @@ impl Keyboard {
 
     /// Scope `id` was drawn in `rect`.
     pub fn place(&mut self, id: ScopeId, rect: Rect) {
-        self.places.push((id, Place { rect, widget: None }));
+        self.places.push((
+            id,
+            Place {
+                rect,
+                widget: None,
+                hit: rect,
+                layer: None,
+            },
+        ));
     }
 
     /// Scope `id` is the widget of `response`.
@@ -596,6 +613,8 @@ impl Keyboard {
             Place {
                 rect: response.rect,
                 widget: Some(response.id),
+                hit: response.interact_rect,
+                layer: Some(response.layer_id),
             },
         ));
     }

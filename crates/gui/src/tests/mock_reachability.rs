@@ -308,7 +308,7 @@ fn mock_reachability_every_menu_reaches_its_entries() {
     }
 }
 
-// --- The negative arm: fixtures the check must reject ------------------------------------------------------------------
+// --- The negative arm: fixtures the check must reject ----------------------------------------------------------------
 
 /// A console tree for the fixtures: its two scopes and header controls as `console::register` has them, but for the
 /// controls in `skip`, and the log registered only when `rows` is not `Some(0)`.

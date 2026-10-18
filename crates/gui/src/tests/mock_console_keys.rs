@@ -1,10 +1,10 @@
 //! REQ-GUI-189 (R-450; render_gui_spec §G3, §G12): the console's two scopes on the mock, by keyboard scripts. The
 //! console opened from the footer or from Windows › Console lands in navigation mode on its header bar scope; from the
-//! landing ↑ ↓, Tab, Shift+Tab, Enter, Esc and ← → reach every header control, × included, and the log; the search field
-//! types after Enter and keeps its text on Esc and Enter; Enter on × and Esc at the top level close the console, the
-//! focus back on its opener; the log scrolls to its first and last entry by Home, End, Page Up, Page Down and ↑ ↓,
-//! Shift ×10, on a list longer than the rows drawn; the breadcrumb follows. Every script runs again after an auto-open on
-//! error and with a filter that empties the list, giving the same order. A click on a console control moves the
+//! landing ↑ ↓, Tab, Shift+Tab, Enter, Esc and ← → reach every header control, × included, and the log; the search
+//! field types after Enter and keeps its text on Esc and Enter; Enter on × and Esc at the top level close the console,
+//! the focus back on its opener; the log scrolls to its first and last entry by Home, End, Page Up, Page Down and ↑ ↓,
+//! Shift ×10, on a list longer than the rows drawn; the breadcrumb follows. Every script runs again after an auto-open
+//! on error and with a filter that empties the list, giving the same order. A click on a console control moves the
 //! keyboard's focus onto it (A3), which is the fix for the intermittent reachability this file first reproduces: a
 //! click on the search field types at once, in interaction mode, and a click anywhere else lands in navigation mode,
 //! ending any typing (R-456). Each check also runs on an input it must reject (R-176, through `rejects`).
@@ -581,7 +581,7 @@ fn mock_console_keys_an_empty_list_keeps_the_log_where_it_is() {
     });
 }
 
-// --- A3: a click moves the keyboard's focus; the intermittent reachability ----------------------------------------------
+// --- A3: a click moves the keyboard's focus; the intermittent reachability -------------------------------------------
 
 /// The reproduction of the intermittent reachability (R-450): an error opens the console by itself, which takes no
 /// focus; the user clicks its search field, and the keys alone should then reach Copy. Before this task the layer's
@@ -823,7 +823,7 @@ fn mock_console_keys_a_click_moves_the_keyboards_focus_onto_the_control() {
     assert_eq!(focus(&app), ["top_bar"]);
 }
 
-// --- The rules on the tree itself (R-450 A1, A4) -------------------------------------------------------------------------
+// --- The rules on the tree itself (R-450 A1, A4) ---------------------------------------------------------------------
 
 #[test]
 fn mock_console_keys_the_axes_move_along_their_arrows_only() {
