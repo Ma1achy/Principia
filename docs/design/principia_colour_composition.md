@@ -358,7 +358,7 @@ render-key.
 | **quad**      | `index`, `depth`, `tl` (slice coords), `centre` (slice coords), `half_width` (slice coords, vec2), `uv` (within-quad vec2), `state` (enum), and summary stats: `impurity`, `spread`, `suspect_frac`, `priority`, `cache_age`, `sample_count` |
 | **tile/sample** | `tile_index` (within quad), `sample_index`, `N` (samples per quad axis: a quad holds N × N, canonical spec §8), `E` (ensemble), `uv` (within-tile vec2) |
 | **payload**   | every per-pixel field written by the kernel — `state`, `ftle`, `energy_drift`, `Lz_drift`, `diffusion`, `d_min`, `word`/hash, `t_end`, decoded-IC quantities, masses, … |
-| **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion predicate `n ≥ 2` (R-245), `sd_is_failed`, out-of-chart / saturated flags, `ftle_valid` etc. |
+| **validity**  | the sentinel/predicate lane paired with **every** field: `ftle_valid`, the diffusion predicate `n ≥ 2` (R-245), `sd_is_failed`, out-of-chart / saturated flags, `forbidden` (bool, the sample's chart classification, REQ-COL-102), `ftle_valid` etc. |
 
 **The chart lane's `ctx.chart.slice_uv` (R-394; REQ-COL-063).** The sample's position in the slice plane's own frame,
 relative to the plane anchor (R-97): a vec2 in [0, 1]², post-flip Y-up, built from its quad's centre `c`
@@ -371,6 +371,31 @@ free of banding only up to the deep-zoom switchover (ℓ_switch, R-90); past it 
 coordinates, `ctx.quad.centre` and the offset `δ = ctx.quad.half_width · (2 · ctx.quad.uv − 1)` from it.
 Where the figure fills the window past the chart's depth-0 root (F3 off or present mode, R-406, R-407),
 `ctx.chart.slice_uv` lies outside [0, 1]² there; the formula is unchanged, and inside [0, 1]² nothing changes.
+
+**The validity lane's `ctx.validity.forbidden`, the sample's chart classification (R-72; REQ-COL-102; R-446).** How a
+sample's chart classification reaches the outcome view, so that it draws a forbidden chart region with the hatch from
+the chart and not from the payload (§1.4). **Type and values:** a `bool`, one per sample, read by every pixel that shows
+the sample. `true`, forbidden, is "hatched by chart_decoder_contract Part 3": on every pixel, inside `[0,1]²` and past
+it, the sample's chart point is hatched as forbidden after the axes' extension types act, where a bounded axis is past
+its edge, where `validate`'s layer 2 or layer 3 rejects the state (R-26; `principia_inverse_encode_contract.md` §
+"Chart-aware validation"; layer 3 on a finite decoded state), or where `Φ` fails to evaluate (non-finite, or outside its
+domain), `Φ` being `principia_chart_reference.md` §5.1's `Chart::map`, the chart map before the shared decoder. `false`
+is every other sample. **What plays no part:** the axes' primary ranges, which decide only what R-408's area statistics
+count, so a pixel outside a primary range that passes is a system and draws its outcome; the shared decoder's own
+outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any added later) and a
+non-finite decoder output, which never set it, so such a sample is `decode_failed` and draws black unless the types or
+`validate` hatch it, a non-finite decode staying `decode_failed`/0; and the payload, whose `decode_failed` detail cannot
+tell the two hatches apart (R-446). **Who fills it, and from what:** the CPU, from the chart (R-26), per sample at its
+chart point, never the kernel and never the payload. Inside `[0,1]²` it is filled from the chart's `validate` and
+`Chart::map` (the `Chart` trait, chart_reference §5.1): forbidden where `validate` returns anything but `Valid` or
+`Chart::map`'s output has a non-finite component. Past `[0,1]²` the extension types act first, and that fill is
+TASK-M8-05's (REQ-CHART-054). It reaches the fragment as one bit per sample, in a buffer bound beside the per-quad
+frames; a pass that binds no classification marks no sample forbidden. The outcome palette's occupant tests it first and
+draws `debug_invalid(frag_xy)` where it is set, in every mode (§1.4, §4.1). *Applied per R-369 (TASK-M2-32): a member of
+the validity lane, beside the out-of-chart flag, as a validity predicate of the sample, which the colour occupants may
+read, and not a member of the chart lane, which they may not (REQ-COL-005, seam 6; render contract Part 4: the chart
+lane holds the chart id, `z` and the position in the slice plane); a member of its own, not the out-of-chart flag, since
+a pixel past `[0,1]²` on a periodic or affine axis is out of the square but not forbidden (qa review 5557530841, Q1).*
 
 **The within-cell coordinates `ctx.quad.uv` and `ctx.tile.uv` (R-72; REQ-COL-056).** Each is a vec2 in [0, 1]², with
 its origin at its cell's bottom-left corner, `u` increasing rightward and `v` upward on the slice: the post-flip, Y-up

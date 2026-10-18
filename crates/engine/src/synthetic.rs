@@ -26,6 +26,12 @@
 //! member of `SimStateFTLE` and `ICDescriptor` by its name at the ledger's offset for it (`ledger::gen::rust::offsets`),
 //! little-endian, as the GPU reads them: no offset is written here.
 //!
+//! **The chart classification** (REQ-COL-102; colour_composition §3; TASK-M2-32). Each sample's chart point is
+//! forbidden or not, `ctx.validity.forbidden`: the chart's own classification, which the CPU fills
+//! ([`crate::chart_class`]) and the harness writes per sample
+//! ([`Synthetic::set_forbidden`](crate::synthetic::Synthetic::set_forbidden)), as it writes the context's other
+//! values, and binds at `render::bind::CHART_BINDING`. A fresh set has none forbidden.
+//!
 //! [`QuadFrame`]: crate::synthetic::QuadFrame
 
 use kernel::payload::{
@@ -61,6 +67,8 @@ pub struct Synthetic {
     word: Vec<[u32; 4]>,
     ic: Vec<ICDescriptor>,
     quad: Vec<[u32; QUAD_WORDS]>,
+    /// Each sample's chart classification: forbidden where chart_decoder_contract Part 3 hatches its chart point.
+    forbidden: Vec<bool>,
     counters: DminCounters,
 }
 
@@ -73,6 +81,8 @@ pub struct Bytes {
     pub quad: Vec<u8>,
     /// Each quad's frame, `(c_u, c_v, h_u, h_v)` as f32 ([`QuadFrame`]; `render::bind::FRAME_BINDING`).
     pub quad_frame: Vec<u8>,
+    /// The samples' chart classification, one bit per sample (`render::bind::chart_words`, `CHART_BINDING`).
+    pub chart_forbidden: Vec<u8>,
 }
 
 impl Bytes {
@@ -84,6 +94,7 @@ impl Bytes {
             ic: &self.ic,
             quad: &self.quad,
             quad_frame: &self.quad_frame,
+            chart_forbidden: &self.chart_forbidden,
         }
     }
 }
@@ -98,7 +109,8 @@ impl Synthetic {
     /// A flat layout: `grid`'s quads all at quadtree depth `depth`, the quad in grid column `i` and row `j` the slice's
     /// depth-`depth` cell `(origin[0] + i, origin[1] + j)` (its frame, [`Synthetic::quad_frame`]), each `quad_state`
     /// loaded (code 0) and its other members zero. Every sample starts fresh: `running`, `d_min` unset, `dmin_pair` at
-    /// its sentinel, the empty word, and equal masses summing to 1; every other member zero.
+    /// its sentinel, the empty word, and equal masses summing to 1; every other member zero; its chart point not
+    /// forbidden.
     pub fn flat_at(grid: Grid, depth: u32, origin: [u64; 2]) -> Synthetic {
         let fresh = {
             let w = set_state(0, STATE_RUNNING);
@@ -134,6 +146,7 @@ impl Synthetic {
             word: vec![fgw_pack([0; 4], 0); samples],
             ic: vec![ic; samples],
             quad: vec![quad; grid.quad_count() as usize],
+            forbidden: vec![false; samples],
             counters: DminCounters::new(),
         }
     }
@@ -217,6 +230,18 @@ impl Synthetic {
         self.word[i as usize]
     }
 
+    /// Sets sample `i`'s chart classification (REQ-COL-102): `forbidden` where chart_decoder_contract Part 3 hatches its
+    /// chart point, as [`crate::chart_class`] classifies it from the chart; never from the sample's payload.
+    pub fn set_forbidden(&mut self, i: u32, forbidden: bool) -> &mut Self {
+        self.forbidden[i as usize] = forbidden;
+        self
+    }
+
+    /// Sample `i`'s chart classification, as set.
+    pub fn forbidden(&self, i: u32) -> bool {
+        self.forbidden[i as usize]
+    }
+
     /// Sample `i`'s `ICDescriptor`, written in place.
     pub fn ic(&mut self, i: u32) -> &mut ICDescriptor {
         &mut self.ic[i as usize]
@@ -260,6 +285,7 @@ impl Synthetic {
             ic: Vec::new(),
             quad: Vec::new(),
             quad_frame: Vec::new(),
+            chart_forbidden: le(render::bind::chart_words(&self.forbidden)),
         };
         for s in &self.simstate {
             out.simstate
