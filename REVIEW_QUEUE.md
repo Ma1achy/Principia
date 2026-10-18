@@ -1187,6 +1187,13 @@ tilt means).*
 - **Waits:** nothing builds on the choice yet; TASK-M6-33 does not wait, and no requirement carries `rq: RQ-340`
   (REQ-GUI-192 cites it in its note). A ruling for (b) or (c) changes the decoder's basis, which re-integrates every
   tilted view, and goes to a follow-up task.
+- **R-457 bears on it (18 Oct 2026, a note; the entry stays open).** The human ruled that each tilt angle tilts into a
+  latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target.
+  That answers question (ii) in part: both the one-target map (`X = Y`) and the contract's two-target form (`X ≠ Y`,
+  option (c)'s family, orthonormal) are reachable, the shared target the default. Question (i), the parametrisation
+  within one 3-space when `X = Y` (options (a) and (b)), stays open, and with it R-451 B11's corner points, which arise
+  only with `X = Y`. R-459 says what the cube draws with `X ≠ Y` (each gesture exactly, and a "4D: see Plücker"
+  badge). TASK-M6-38 builds the targets with the code's map for `X = Y` (option (a), as applied).
 
 ## RQ-341: The physical compass views need the decoder's Jacobian with respect to z along all eight latent directions, into Jacobi or shape-sphere coordinates, and its Gram area factor; the corpus's J_D is the derivative with respect to the chart's (u, v) into the particle frame, not yet built, and no Gram factor is defined for it *(silence and conflict with the ruling's words, R-72, R-452; context: TASK-M6-35)*
 

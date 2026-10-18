@@ -221,6 +221,8 @@ q'(τ) = normalise( cos τ · q + sin τ · d_target )        τ ∈ [−90°, +
 
 `τ = 0` → no tilt; `τ = ±90°` → fully committed to the target. **Sign matters** — the manifold is not symmetric under latent sign flips, so `+30°` and `−30°` reveal different cross-sections. The 8D has **6 directions orthogonal** to the current plane; the tilt selector offers those (plus named compound directions, below). Choosing which hidden direction to rotate into is the core hypothesis-testing gesture ("does this boundary persist as I rotate `q₂` toward `L_z`?").
 
+In the dev GUI each tilt angle has its own target, picked from those directions: `τ₁` tilts `q₁` toward the latent axis `e_X` and `τ₂` tilts `q₂` toward `e_Y`, each chosen in the Tilt section ("tilt τ₁ into [X]", "tilt τ₂ into [Y]"), both defaulting to the slice normal, the one shared target the GUI used before (R-457; `principia_render_gui_spec.md` §G2). With `X = Y` the GUI's map is the code's one-target map that RQ-340 describes, still open there; with `X ≠ Y` it is this section's two-target form, and the two tilted vectors are orthonormal.
+
 ### Slice (centre edit, orthogonal component)
 
 Fixing the six non-displayed coordinates to constants; changing the slice = stepping `z₀` along a hidden direction `d`: `z₀ ← z₀ + t·d`. Coordinate-agnostic; works in every chart. Every pixel's IC shifts by the identical hidden step — the plane translates parallel to itself.

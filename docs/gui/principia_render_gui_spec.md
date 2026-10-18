@@ -64,7 +64,8 @@ data. The two words name one object. The **figure** is the rendered slice.
   after a camera.
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console (§G12). The hover
-  label and the lock reticle are the figure's own marks, not notifications.
+  label and the lock reticle are the figure's own marks, not notifications. The one control over the figure is the
+  **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7).
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
   (Part II).
@@ -73,7 +74,7 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 ## G2. Explore — the everyday view (`01_main.png`)
 
-**Top bar.** Menus (File, View, Windows, Help); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
+**Top bar.** Menus (File, View, Windows, Help; View holds **Home**, its first entry, R-466, and **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
 many are on; **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb (§G3); status: `t`, fps, frame ms, quad count,
 `budget-bound` when the frame budget binds, undo / redo depth, and "F3 hide".
 
@@ -94,16 +95,60 @@ view the manifold.
   the section also shows the **projection selector** (equirectangular, or an equal-area alternative) and the **hemisphere
   toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113); with one
   hemisphere drawn, φ's span runs from the pole to the equator (R-412).
-- **Navigate:** centre `(u, v)`; zoom (log₂); all eight `z₀` values, editable by drag or by typing.
+- **Navigate:** centre `(u, v)`; zoom (log₂). With the depth readout, the precision warning and the lock row (the next
+  two bullets) that is all it holds, with the reset beside its heading (R-466): no grid of `z₀` values, which repeated
+  the Slice centre sliders (R-457). Its **reset** returns the centre `(u, v)` to the chart preset's centre and the zoom
+  to the preset's window, which the zoom row reads as × 1.00 (R-466).
 - **Depth readout** (`2^-k`, quad level) **and a precision warning**. The warning is **raised by events** (R-54):
   `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`. It is never tied to fixed depths. The artboard's readout
   is "f64 · 7 digits left · linearise decode".
 - **Lock:** a "● locked at z_locked" badge with **unlock**. Sliders are **re-based to the anchor, not frozen** (§G4).
-- **Centre z₀:** eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`.
-- **Slice & tilt:** the slice step, the tilt angles `τ₁`, `τ₂`, and the rotation `γ`.
+- **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
+  number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
+  (R-457, R-459). Its **reset**, beside its heading, returns every out-of-plane coordinate of `z₀` to the chart preset's
+  base point, the six coordinates off the preset's axes, tilted or not (R-466, K2).
+- **Tilt** (named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]", each a slider with its
+  number box and a dropdown that picks the latent dimension the angle tilts into, and the rotation `γ`. `τ₁` tilts the
+  horizontal axis `q₁` toward `e_X` and `τ₂` the vertical axis `q₂` toward `e_Y`: `u₁ = cos τ₁ e_a + sin τ₁ e_X`,
+  `u₂ = cos τ₂ e_b + sin τ₂ e_Y`, then `γ` turns them as before (`View::basis`). A dropdown offers only the dimensions
+  not in the plane (not `e_a`, `e_b`); both default to the slice normal, the cube's D axis, which is today's one shared
+  target, so the defaults draw what the code drew before. Changing a target while its angle is non-zero re-tilts into
+  the new dimension, one undoable edit. There is no step slider: it set `z₀`'s component on the slice axis, which the
+  Slice centre slider for that dimension sets (R-457). Its **reset**, beside its heading, sets `τ₁`, `τ₂` and `γ` to 0;
+  it changes neither tilt target nor the H, V and D choice (R-466).
 
-**Figure.** Axis labels carry the short axis name and the range at each end. The orbit's path is drawn from the cursor's
-IC:
+**Resets and Home (R-466).** "Reset" means the active chart preset's own values, never literal zero: the masses `z_μ1`,
+`z_μ2` are slice coordinates, and zeroing them would change the physical system. Each reset reads its target from the
+preset's definition, which carries, with its pair of axes, a base point, a centre `(u, v)` and a window (the scale at
+which the zoom reads × 1.00), defined here and in §G7 by TASK-M6-45 (R-72, REQ-GUI-224); no value is hardcoded. The
+active preset is the one Chart names, tilted or not; with a basis edited out of every preset's frame there is none, and
+the resets and Home are dimmed. All three sections are read in the active preset's coordinates, its axes `e_a`, `e_b`
+and the six dimensions off them, tilted or not (applied per R-369, R-466 K2): Slice centre's values are `z₀`'s six
+coordinates off `e_a` and `e_b`; Navigate's are `z₀`'s two coordinates on them and the zoom `σ`; Tilt's are `τ₁`, `τ₂`,
+`γ`. The Slice centre reset sets the six to the base point's; the Navigate reset sets the two to the preset's centre
+and the zoom to the window, the angles kept; the Tilt reset edits the basis only, turning the plane about the view's
+centre `z₀`, the zoom kept. Untilted, these are the chart decoder contract's split (Part 4): a move across the plane, a
+pan within it and a zoom, and a basis edit. Each reset sets only its own values, so it leaves the other two sections
+untouched at every tilt, and the three commute: in any order they compose to Home. Navigate's centre row reads `z₀` in
+the current plane, along `q̂₁`, `q̂₂`, the coordinates its pan edits; untilted they are the section's values, and tilted
+the dimming and the checks compare the section's values, not the row's figures. **Home** is all three resets in
+one command: the button in the figure's top-right corner (below), the Home key in both keyboard modes (§G3) and
+**View › Home**. It leaves alone the chart preset and its axes (Chart's `q₁` and `q₂` axes, the cube's H and V), the H,
+V and D choice and the tilt targets, the time playhead, the stain, and the panel and window layout, and also the lock,
+the compass's mode and view, the overlays and the Trajectory panel's pin and kept orbits (R-466 K4). Each reset, and
+Home, is **one undoable command**: its edits are sent in one frame under one history key, so one Ctrl+Z restores all it
+set, and a command with nothing to change sends nothing. A section's reset is **dimmed** (egui's disabled style, no
+click) while the section is already at its home values, within 10⁻¹², and Home, its button and its menu entry while all
+three are. A reset drives the compass, its readout, the sliders and the figure live, as any change to the slice does
+(R-458), and switches no compass mode. Locked, the edits go through the lock's rule for their kind (§G4), and the lock
+and its anchor stay (R-466 K5): a locked Tilt reset, or a locked Navigate reset's zoom, turns about the pin and so may
+move `z₀`, so the checks that a reset leaves the other two sections untouched run unlocked. The commands are named
+"Reset Slice centre", "Reset Tilt", "Reset Navigate" and "Home" (tooltips, the menu and the `?` overlay).
+
+**Figure.** Axis labels carry the short axis name and the range at each end. A **Home** button, a house icon 24 × 24
+points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7): a click on it is
+Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
+and it hides with the layer (F3, present mode). The orbit's path is drawn from the cursor's IC:
 - **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. This is
   `principia_trajectory_viewing.md` §3's hover trace (the full CPU state, `computeIC`, projected onto the chart's actual
   basis). It is **solid near the slice and faint where it leaves the plane.** The notes add that it is exact in the
@@ -147,12 +192,17 @@ IC:
   element, beside its Tilt and Slice buttons (§G3). It is drawn as `docs/gui/reference/principia_nav_cube.html` draws
   its cube, isometric, the slice its true cross-section polygon (R-451), and it has four **views**, Cube (the default),
   Plücker, Jacobi and Shape, chosen on the compass and independent of its Tilt and Slice modes (R-452); the next
-  subsection gives both.
+  subsection gives both. Its drags are live in both directions: a drag on it moves the sliders, its readout and the
+  figure every frame, and a drag on a Slice centre or Tilt slider switches its mode and moves its plane every frame,
+  each drag one undo entry (R-458). Its cube's H, V and D axis labels are buttons that choose the slice's dimensions
+  (R-459). A section reset or Home drives it live too, the cube easing to the new plane as after a click, its mode
+  unchanged (R-466).
 - **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
   on the sim key (R-96). The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no
   history"; a manual scrub is one coalesced undo entry (R-101). **Scrubbing back re-integrates** to that time, so the figure refines
   progressively. It is not instant, and it says so ("refining · 72%"). The scrubber sets the display time and never replays
-  stored frames; the export contract's "no scrub" applies to exported animations only (R-66).
+  stored frames; the export contract's "no scrub" applies to exported animations only (R-66). While the scrubber is
+  dragged the display time follows the drag every frame, the whole drag one undo entry (R-458).
 - **Legend, generated from the stain** (§G6).
 
 **Footer.** Warning and error counts, the latest message, memory (GPU, heap), "? keys", and the passive-logging
@@ -161,6 +211,19 @@ indicator while logging is on (R-129). Clicking it opens the console
 
 **Run settings are NOT on the page** (they're rarely changed). Horizon, integrator, escape settings, quality, budget, and
 recompute / cancel live in the Run window (§G5).
+
+**Every drag is live (R-458).** Dragging any slider (or the number box beside it, or the compass) applies its value
+every frame while the pointer moves, at most once a frame, pointer events coalesced, so the figure, the other controls
+showing the value and the compass follow the drag, not the release; the whole drag is one undo entry (R-96) and one
+console line. A sim-key field re-integrates progressively as it is dragged, as a scrub back does.
+
+**Layout: every panel boundary is a splitter (R-462).** The Manifold view, the Trajectory panel, the Compass, Time and
+Legend each meet their neighbours at a draggable splitter, and the figure's canvas takes the space that remains. Each
+panel has a minimum size; a double-click on a splitter resets that splitter to its default; the layout is remembered
+across sessions, and **View › reset layout** returns every splitter to its default, which is `01_main.png`'s layout.
+Resizing the canvas re-frames the figure by R-406's rule (each point of the field keeps its screen position, the
+canvas showing more or less of the field at the same scale) and sends no `SetField`; it never re-integrates the view,
+only computing what it newly exposes.
 
 ### The compass: look and views (R-451, R-452)
 
@@ -204,18 +267,28 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
 - **Labels:** each axis name centred on its edge, pushed 20 px outward from the cube. Slice mode names Width
   (bottom-left edge), Depth (bottom-right) and Height (left vertical), with −1.0 and 1.0 at the corners, one number per
   corner, 12 px outward. Tilt mode names only the tilt target, on the bottom-right edge: under the decoder's mapping q₁
-  and q₂ share one target, the slice axis, and the other edges are left unnamed (R-451 B1).
+  and q₂ share one target, the slice axis, and the other edges are left unnamed (R-451 B1). From R-459 the three
+  edges' labels are the H, V and D buttons below, in both modes, and the third axis names what the gesture tilts into.
 - **Readout:** slice mode, "plane ⟂ <axis>" untilted, or the tilt as tilt mode reads it when a tilt is set, and
   "<axis> = +0.25 of range" (`z₀` on the slice axis over the slice step's half-range); tilt mode, q₁'s and q₂'s target
-  and their angles in degrees, one decimal.
+  and their angles in degrees, one decimal. Both tilt targets are always named, each with its angle ("τ₁ → z_q3
+  +12.0°", "τ₂ → z_μ1 0.0°"), whichever the third axis shows (R-457, R-459).
   Where `s < 10⁻³` (above), either mode adds the line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>°
   (RQ-340)", the angles signed, one decimal (R-451 B11).
-- **Drag:** slice mode, the horizontal component moves the slice along the drawn plane's normal, the decoder's
-  (R-409 A3's), the cube's full width
-  spanning the whole range; tilt mode, a horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
-  or height 180°, each clamped to ±90°. One `SetField` per drag (R-96). The displayed values ease toward their targets,
+- **Drag:** slice mode, the drag moves the slice along the drawn plane's normal, the decoder's (R-409 A3's), by its
+  2-D displacement projected onto that normal's direction on the screen (`ŝ`, along `P(n̂) − P(0)`), so the drawn
+  plane moves with the pointer at every tilt, the component across `ŝ` doing nothing, a drag of the cube's full width
+  along `ŝ`, `2√3·S`, spanning the whole range (R-465). Untilted, `ŝ` points to the lower left, so a drag to the lower left moves
+  the plane toward `+e_d` and a drag to the right moves it back, up and right. Where the drawn unit normal's screen
+  image is shorter than `0.25·S` (the normal near the view axis `(1, 1, 1)`, as at `τ₁ = τ₂ = −45°`), the drag reads
+  its vertical component instead, up moving the plane toward the viewer, at the same rate, the whole range per `2√3·S`
+  of vertical travel (R-465 N3). Tilt mode, unchanged by R-465: a
+  horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
+  or height 180°, each clamped to ±90°. One undo entry per drag (R-96), the edit applied every frame of the drag so the
+  sliders, the readout and the figure follow it (R-458). The displayed values ease toward their targets,
   `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s, in the drawing only; the contract holds the target
-  (R-451 B3, B4).
+  (R-451 B3, B4), so during a drag only the cube's drawing trails the pointer (R-465 N1). Slice mode and tilt mode
+  stay two separate modes (R-465).
   Where `s < 10⁻³`, a slice-mode drag sends no edit, the compass drawing no normal to move along; a tilt-mode drag
   acts as anywhere else, free or locked: off the corner points a plane exists there, and locked the drag turns about
   the pin (§G4), its pivot and the figure's samples kept. The GUI's guards for a degenerate basis have their own cut,
@@ -225,6 +298,29 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
 - Kept from R-409: no orbit, the Tilt and Slice buttons and the switch by the slider touched, Tilt the default, the
   gold pin when locked, §G3's keys. The reference's own controls (axis selectors, sliders, Animate) are not on the
   compass; the Manifold view owns them.
+- **Live, both ways (R-458).** A drag on the cube applies its edit every frame, at most once a frame, so the Manifold
+  view's sliders, the readout and the figure follow the pointer during the drag; the whole drag is one undo entry.
+  The other way, a drag on a Slice centre slider switches the compass to Slice and a drag on a Tilt slider (`τ₁`,
+  `τ₂`, `γ`) to Tilt, from the drag's first frame, and the drawn plane moves or tilts with the drag every frame (a
+  Slice centre slider moves the plane where its dimension is one the cube draws, by B2's rule; a pan along `e_a` or
+  `e_b` of an untilted plane, or a move along a dimension the cube does not draw, leaves the drawing where it is).
+- **Axis buttons (R-459).** The cube's three edge labels are buttons: **H** (the bottom-left edge, chart x, the same as
+  Chart's "horizontal q₁"), **V** (the left vertical edge, chart y, Chart's "vertical q₂") and **D** (the bottom-right
+  edge, the slice normal, the dimension the slice moves through). Each reads its letter and its dimension
+  ("H z_α") and opens a dropdown of the latent dimensions not on the other two, so no dimension appears twice across
+  H, V and D. Picking H or V sets the plane to the new axis pair, the tilts and `γ` reset to 0, the zoom and `z₀` kept
+  (locked, about the pin), as the preset does, and Chart's rows follow; an edit in Chart moves H and V with it.
+  Picking D sets the slice normal; a tilt target that was the old D follows it. Each pick is one undoable edit. The
+  slice normal and the two tilt targets are `SimConfig`'s slice frame (gui_state_contract §2), read by no kernel.
+- **The third axis (R-459).** In Slice mode the bottom-right edge shows D, the slice normal. In Tilt mode it shows
+  what the gesture tilts into: X while `τ₁` is being dragged and Y while `τ₂` is; when nothing is being dragged, X if
+  `τ₁ ≠ 0`, else Y if `τ₂ ≠ 0`, else the slice normal. A compass drag that moves both angles shows the one it has
+  moved further since it began, `τ₁` on a tie. The label takes the active gesture's colour (slice, `τ₁` or `τ₂`). The
+  cube draws the plane of that gesture exactly: `View::basis` with the other angle at 0, in the frame `(e_a, e_b,
+  e_T)`, `T` the dimension the third axis shows. While the third axis shows X or Y it is that target's dropdown, the
+  same choice as the Tilt section's. When both angles are non-zero and X ≠ Y the plane leaves any one cube, and the
+  cube shows a badge, **"4D: see Plücker"**; a click on it switches the compass to the Plücker view, which is exact
+  (R-452). Both targets are always named in the readout.
 
 **The views (R-452).** Four buttons on the compass, **Cube**, **Plücker**, **Jacobi** and **Shape**, Cube the default,
 the current one shown. A view sets what the compass draws; Tilt and Slice set what a drag on the Cube does; the two are
@@ -257,7 +353,10 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
 ## G3. Keyboard — a design note, not a screen (`07_keyboard.png`)
 
 The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory ·
-5 Compass · 6 Time · 7 Legend · 8 footer (R-405). Manifold view's sub-scopes (Chart, Navigate, Centre z₀, Slice & tilt) are reached with Enter.
+5 Compass · 6 Time · 7 Legend · 8 footer (R-405). Manifold view's sub-scopes (Chart, Navigate, Slice centre, Tilt; named Centre z₀ and Slice & tilt before R-457) are reached with Enter.
+The reset of Navigate, Slice centre and Tilt is its sub-scope's last element, so Enter into a sub-scope still lands on
+its first; Enter on a reset acts as its click, and on a dimmed one does nothing, the order unchanged (R-466). The Home
+button over the figure is not an element; the Home key does its work.
 
 | key | action |
 |---|---|
@@ -270,6 +369,7 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 | held keys | delay, then repeat (the DAS / ARR model) |
 | Ctrl+Z | undo, from the contract's history (R-52), in either mode, except while a text field is being typed in, when it undoes the text edit (R-409) |
 | ? | shortcuts, over everything, in either mode, except while a text field is being typed in, when it types a character (R-409) |
+| Home | Home: Slice centre, Tilt and Navigate reset to the chart preset's values, one undoable command, wherever the focus is, in either mode, except on the console's log in interaction mode (its first entry, R-450) and while a text field is being typed in (the caret to the line's start); Shift and Alt change nothing, Ctrl and Cmd make it no Home; it does not repeat (R-466) |
 
 In scope: a scope's arrow actions need Enter, acting in interaction mode only, and its letter and Space keys are
 shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode, except while a
@@ -284,10 +384,27 @@ plane's normal in slice mode, Shift ×10 and Alt ×0.1 as everywhere (R-409; the
 step). Time — Space plays; ← → step, in interaction mode on its scrubber (applied per R-369, R-409 F1). Legend is
 read-only.
 
-What the user sees: a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
+What the user sees, while keyboard navigation is on (R-460): a focus ring on the current scope, orange in navigation mode and blue in interaction mode (R-409),
 and the breadcrumb in the top bar (e.g. "Manifold view › Navigate › zoom"). Nothing else changes on screen.
 
-**Two modes: navigation and interaction (R-409).** The keyboard is always in one of two modes. In **navigation mode**
+**Keyboard navigation is on or off, apart from the focus (R-460, R-464).** The focus (where keys go) and keyboard navigation
+(the ring, and R-409's two modes below) are separate. Keyboard navigation starts only on keyboard input: any key press
+turns it on and shows the ring where the focus is once the key has acted, a modifier pressed alone excepted (R-460,
+R-464; there is no navigation shortcut today). Tab, Shift+Tab and the arrows act as always, from the focus where it
+is; Esc, the letter and Space shortcuts, Ctrl+Z and `?` act as always; in a text field being typed in every key acts as
+typing does; Enter in navigation mode, while it is off, only turns it on and shows the ring where the focus is, so
+nothing unseen is pressed (applied per R-369, R-460 H1, R-464 M2). Opening a
+window with the mouse (a click on the footer, a menu entry, a top-bar button or a panel's button) gives the window the
+focus, on its landing as below, but shows no ring and leaves keyboard navigation off, whatever it was; opening one from
+the keyboard turns it on, landing as below with the ring. A menu opened with the mouse takes the focus the same way,
+with no ring. After any mouse click or drag, whatever was clicked or dragged, clicking off to close something
+included, keyboard navigation is off and the ring hidden; the click moves the focus only as the click rules below say
+(R-450 A3, R-456), and the next key press shows the ring again where the focus already is (R-464, amending R-450 A3 and
+R-456 only as to whether the ring is drawn). A scroll or a hover is neither a click nor a drag and leaves the ring as
+it is (applied per R-369, R-464 M3). The GUI starts with it off. It is the GUI's own state, beside the focus, never
+undoable and never read by the engine.
+
+**Two modes: navigation and interaction (R-409).** While keyboard navigation is on (R-460), the keyboard is always in one of two modes. In **navigation mode**
 the ring is orange and the arrows move between siblings; on a big scope itself, the big scopes are the siblings, and
 the arrows move between them in Tab order. In **interaction mode** the ring is blue and the focused element takes the
 arrows, with Shift ×10 and Alt ×0.1; Tab and Shift+Tab, Ctrl+Z, `?` and the letter and Space shortcuts keep their
@@ -295,7 +412,8 @@ meaning in both modes, except while a text field is being typed in, and Tab or S
 in navigation mode on the next or previous big scope, or, inside a window, on the window's next or previous section,
 staying in the window (applied per R-369, R-409 G1, G2, G5, G6). Every landing is in navigation mode: a Tab on a big scope lands on the scope
 itself, the whole scope highlighted, the Figure and the Compass included, as REQ-GUI-095 has it; Enter into a scope
-lands on its first element; and a window opens on its first section, as the console opens on its header bar scope (R-450).
+lands on its first element; and a window opens on its first section, as the console opens on its header bar scope (R-450);
+opened with the mouse it takes the focus there with no ring (R-460).
 The landings above are the keyboard's; a click on a text field is not one (R-456). Enter
 on an element starts interaction with it, and Enter on a scope goes in, with two exceptions: the Figure, which has no
 elements inside, takes Enter as the start of interaction, and a read-only scope with nothing inside, such as the
@@ -303,7 +421,9 @@ Legend, takes Enter as nothing (R-409 A2, G3). Esc or Enter in interaction mode 
 element, and Esc in navigation mode goes up one scope (R-409, G1). Enter on a button acts as its click and stays in
 navigation mode (applied per R-369, R-409 A1). The blue is egui's dark theme's `hyperlink_color` (R-404); the orange
 is a look choice (R-390). The Compass scope holds the compass, then its Tilt and Slice buttons, then its view buttons
-Cube, Plücker, Jacobi and Shape, in that order, as siblings in navigation mode (R-409, the human's follow-up answer;
+Cube, Plücker, Jacobi and Shape, then the cube's axis buttons H, V and D and, while it is shown, the "4D: see Plücker"
+badge (R-459; Enter on an axis button opens its dropdown, ↑ ↓ choose, Enter picks and Esc closes it unchanged; Enter on
+the badge acts as its click), in that order, as siblings in navigation mode (R-409, the human's follow-up answer;
 A2; R-452): Tab lands on the Compass scope, Enter goes in onto the compass, → moves to Tilt, Slice and on through the
 views, Enter on the compass starts interaction with it, Enter on Tilt or Slice sets the mode, and Enter on a view
 button switches the view. In the Cube view interaction is as above; in a grid view (Plücker, Jacobi, Shape) the arrows
@@ -314,8 +434,10 @@ typing, which is interaction mode, and while typing every key goes to the field 
 undoing the text edit and `?` typing a character: Esc and Enter return to navigation mode on the field and keep the
 text, and Tab and Shift+Tab leave it and move on, to the window's next or previous section inside a window (applied
 per R-369, R-409 G4, G5, G6). A click on a text field starts typing at once, in interaction mode, the ring blue, the
-caret where the click lands; from there the typing rules above hold, Esc, Enter and Tab included. A click anywhere else
-ends any typing and leaves the keyboard in navigation mode; it moves the keyboard's focus only where a rule already says
+caret where the click lands (the ring hidden from the click until the next key press: the first character typed goes
+into the field and shows the ring blue, and Esc, Enter or Tab shows it orange where the focus then is, R-464); from there the typing rules above hold, Esc, Enter and Tab included. A click anywhere else
+ends any typing and leaves the keyboard in navigation mode (the mode keys find; the click hides the ring until the
+next key press, R-460, R-464); it moves the keyboard's focus only where a rule already says
 a click does, as a click on a console control does (R-450 A3), landing in navigation mode on what was clicked, so a
 click on the Figure that pins a sample (R-453) ends typing and leaves the focus where it was (R-456, amending R-450 A3
 and R-409 G4 for text fields; its scope applied per R-369). The footer and the console follow the same two modes (R-405, R-409).
@@ -326,7 +448,8 @@ console (§G12), as a click does, with the focus inside it. The console is a win
 bottom (R-450, amending R-405 and R-409): the **header bar** (the filters All, Warnings, Errors, Info, then the search
 field, Copy, Clear and the close button ×, in that visual order) and the **log** (the entry list). Opened by the
 footer or from Windows › Console, it takes the focus, landing in navigation mode on the header bar scope itself, the
-whole scope highlighted. In navigation mode on a scope, ↑ and ↓ move between the header bar and the log, and Tab and
+whole scope highlighted when it was opened from the keyboard; opened with the mouse it lands there with no ring (R-460,
+R-464). In navigation mode on a scope, ↑ and ↓ move between the header bar and the log, and Tab and
 Shift+Tab do the same, staying in the window. Enter on the header bar goes in, onto All; ← and → move across every
 header element in visual order, the search field, Copy, Clear and × included, stopping at the row's ends; Esc goes
 back up to the header bar scope. The search field is a text field, as below. × is an ordinary focusable button: Enter
@@ -358,6 +481,14 @@ same point as a gold pin.
 - The lock badge offers **unlock** and **open in Inspector** (§G8).
 
 ## G5. Windows (`04_windows.png`)
+
+**Every window moves and resizes (R-461).** The Profiler, Export & share, Display, Run, the Chart builder (§G7) and the
+Inspector (§G8) are windows, not overlays: each is dragged by its title bar and resized from its edges and corners, down
+to a minimum size that keeps its title bar and controls usable. Each stays at least partly on screen: a drag or a
+change of the GUI's size never leaves less than its title bar's height of it, and 64 points of its title bar's width,
+inside the GUI. Each window's position and size are remembered across sessions, in the GUI's own settings, never the
+contract; with none remembered a window opens where the artboards put it. The console is docked along the bottom
+instead, its height dragged (§G12).
 
 ### Profiler
 
@@ -527,7 +658,9 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
   `|q|`), physical quantity (energy, `L_z`, virial ratio, mass ratio…, with a range and what is **held fixed**, e.g. "z₀ along
   the other 7" — the kind-2 residual convention, chart_decoder_contract Part 3), or Burrau dimension (Euclid `(m, n)` → the
   primitive triple, and the neighbourhood swept, e.g. mass × momentum).
-- **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete.
+- **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete. Each preset also carries the values
+  the resets and Home read (§G2, R-466): a base point, a centre `(u, v)` and a window, defined by TASK-M6-45 (R-72,
+  REQ-GUI-224); a saved preset stores them with its axes.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
@@ -623,6 +756,14 @@ on the log scrolls it by entry (↑ ↓), page (Page Up, Page Down) and to its e
 filtered log. Every visible control is reachable, whatever the console's state (§G3). A click on the search field
 starts typing, in interaction mode; a click on any other console control lands in navigation mode on it (R-456).
 
+**Its height and a maximise toggle (R-463).** The console is docked along the bottom of the GUI, over the bottom row.
+Its height is dragged from its top edge, between a minimum of its header bar and three log rows and the height below
+the top bar, and is remembered with the layout (R-462). A **maximise** button in the header bar, between Clear and ×,
+and the console's shortcut **M** (§G3's scope shortcuts, not while the search field is being typed in) toggle it
+between its height and the full height below the top bar, covering the panels and the figure until toggled back; the
+user chose it, so it is no notification over the figure (§G1). Opening and closing it each complete within one frame
+at 60 fps (16.7 ms), measured on the human's Mac before and after the fix, with where the time went.
+
 ## G13. Where the artboards are overridden
 
 The pictures are layouts, and **their values are illustrative: corpus values win, and the Run window exposes the parameters
@@ -639,10 +780,23 @@ corpus, the spec follows the authority:
   transcribed through §G2's compass subsection. Where they differ, the spec follows the rulings: their light cream
   palette is not copied (the dark theme, §G1); the cube opens in Tilt, not Slice (R-409); their own controls (axis
   selectors, sliders, Animate) are not on the compass; the cube's tilt follows the decoder's mapping, not the
-  reference's axis-angle map (RQ-340); the grids draw no in-cell numbers; the physical compass's Jacobian and its body
-  position labels are a synthetic placeholder, replaced by the decoder's Jacobian over R-452's coordinates.
+  reference's axis-angle map (RQ-340); the cube's slice drag follows the pointer along the drawn normal's screen
+  direction, not the reference's horizontal `dx` along its z axis (R-465); the grids draw no in-cell numbers; the
+  physical compass's Jacobian and its body position labels are a synthetic placeholder, replaced by the decoder's
+  Jacobian over R-452's coordinates.
 - **The console's header** (R-450). The console artboard's row is "copy · clear · console ▾"; the header bar adds a
   focusable × after Clear, which closes the console, and the console is two scopes, the header bar and the log (§G12).
+  R-463 adds the maximise button between Clear and ×.
+- **The Navigate section and the slice controls** (R-457). Where `01_main.png` shows the eight `z₀` values under
+  Navigate and a step under the slice and tilt, the GUI has neither: the `z₀` values are the Slice centre sliders,
+  and the sections are named Slice centre and Tilt, each tilt angle with its target dropdown.
+- **The resets and Home** (R-466). `01_main.png` shows no reset beside the Manifold view's headings, no Home button
+  on the figure and no View › Home; the GUI has all three. The Home button is the one control drawn over the figure,
+  in its top-right corner, by the human's words; nothing else covers it (GUI_DESIGN_NOTES, "The figure is never
+  covered").
+- **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
+  defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
+  the artboards'.
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
 - **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag
