@@ -1,7 +1,8 @@
 //! `mock_hover` (REQ-GUI-157's Trajectory panel frame; render_gui_spec §G2, §G3; R-101): the cursor over the figure is
 //! a no-history `SetField` on the hover, and the snapshot carries the mock's sample there; the label beside the cursor
 //! reads it; the mock draws the hover path into its stand-in, solid near the slice and faint away from it; the
-//! Trajectory panel's "under cursor" tab shows the same sample; moving off the figure clears them all. The Figure's
+//! Trajectory panel's "under cursor" tab shows the same sample; moving off the figure clears the hover, the sample, the
+//! label and the path, and the panel keeps the last sample hovered (R-453 D3; the pin is `mock_trajectory_pin`). The Figure's
 //! Space keeps the orbit and L toggles listen; the panel's sphere turns at its proposed rate by the time source's
 //! seconds, the wall clock's, never by frames. Each check also runs on an input it must reject (R-176, through `rejects`).
 
@@ -226,10 +227,10 @@ fn mock_hover_path_is_drawn_by_the_mock_solid_and_faint() {
     assert!(!engine.marks().is_empty());
 }
 
-// --- The Trajectory panel: under cursor shows the same sample; moving off clears it all -------------------------------
+// --- The Trajectory panel: under cursor shows the same sample; moving off clears all but the panel's -------------------
 
 #[test]
-fn mock_hover_under_cursor_shows_the_same_sample_and_leaving_clears_it() {
+fn mock_hover_under_cursor_shows_the_same_sample_and_leaving_keeps_it_in_the_panel() {
     let (mut app, mut h, _) = hovering();
     let sample = app.snapshot().sample.clone().unwrap();
     let texts = frame_texts(&mut h, &mut app);
@@ -239,7 +240,7 @@ fn mock_hover_under_cursor_shows_the_same_sample_and_leaving_clears_it() {
     );
     assert!(texts.contains(&sample.f2_word), "its F₂ word");
     assert!(!texts.iter().any(|t| t == NO_SAMPLE));
-    // Leaving: the hover, the sample, the label, the path and the panel's orbit, all gone.
+    // Leaving: the hover, the sample, the label and the path gone; the panel keeps the last sample (R-453 D3).
     let _ = h.frame(&mut app, vec![Event::PointerGone]);
     for _ in 0..2 {
         let _ = h.frame(&mut app, Vec::new());
@@ -249,7 +250,11 @@ fn mock_hover_under_cursor_shows_the_same_sample_and_leaving_clears_it() {
     assert!(snapshot.sample.is_none());
     assert!(app.side().engine().marks().is_empty(), "no path");
     let texts = frame_texts(&mut h, &mut app);
-    assert!(texts.iter().any(|t| t == NO_SAMPLE), "{texts:?}");
+    assert!(!texts.iter().any(|t| t == NO_SAMPLE), "{texts:?}");
+    assert!(
+        texts.contains(&summary(&sample)),
+        "the panel kept the last sample: {texts:?}"
+    );
     let painted = painted_texts(&mut h, &mut app);
     assert!(
         !painted.iter().any(|t| t.ends_with(LISTEN_HINT)),
@@ -260,9 +265,16 @@ fn mock_hover_under_cursor_shows_the_same_sample_and_leaving_clears_it() {
         2,
         "on and off: two no-history SetFields"
     );
-    rejects("a panel that keeps the orbit", || {
-        assert!(texts.contains(&summary(&sample)))
+    rejects("a panel that blanks off the figure", || {
+        assert!(!texts.contains(&summary(&sample)))
     });
+    // Before any hover the panel says what to do.
+    let mut fresh = mock_app();
+    let fresh_texts = frame_texts(&mut headless(), &mut fresh);
+    assert!(
+        fresh_texts.iter().any(|t| t == NO_SAMPLE),
+        "{fresh_texts:?}"
+    );
     // Hidden by F3, the hover goes too.
     let (mut app, mut h, _) = hovering();
     press(&mut h, &mut app, Key::F3, NONE);
@@ -414,15 +426,16 @@ fn mock_hover_kept_orbits_and_their_tabs() {
     // activate: each control.
     let mut scratch = Scratch::default();
     let mut list = KeptOrbits::default();
-    activate(KEEP, None, &mut list, &mut scratch);
+    activate(KEEP, &mut list, &mut scratch);
     assert!(list.orbits.is_empty(), "+ with no sample keeps nothing");
-    activate(KEEP, Some(&s), &mut list, &mut scratch);
+    scratch.last = Some(s.clone());
+    activate(KEEP, &mut list, &mut scratch);
     assert_eq!(list.orbits.len(), 1);
-    activate(KEPT_IDS[0].1, None, &mut list, &mut scratch);
+    activate(KEPT_IDS[0].1, &mut list, &mut scratch);
     assert_eq!(scratch.tab, Tab::Kept(0));
-    activate(KEPT_IDS[1].1, None, &mut list, &mut scratch);
+    activate(KEPT_IDS[1].1, &mut list, &mut scratch);
     assert_eq!(scratch.tab, Tab::Kept(0), "no second orbit to show");
-    activate(UNDER_CURSOR, None, &mut list, &mut scratch);
+    activate(UNDER_CURSOR, &mut list, &mut scratch);
     assert_eq!(scratch.tab, Tab::UnderCursor);
     for (id, get) in [
         (
@@ -435,19 +448,19 @@ fn mock_hover_kept_orbits_and_their_tabs() {
         (trajectory::FOLLOW, |s| !s.follow),
     ] {
         let mut scratch = Scratch::default();
-        activate(id, None, &mut list, &mut scratch);
+        activate(id, &mut list, &mut scratch);
         assert!(get(&scratch), "{id}");
     }
     let mut scratch = Scratch {
         unwrapped: true,
         ..Scratch::default()
     };
-    activate(trajectory::SPHERE, None, &mut list, &mut scratch);
+    activate(trajectory::SPHERE, &mut list, &mut scratch);
     assert!(!scratch.unwrapped);
-    activate(KEPT_IDS[0].2, None, &mut list, &mut scratch);
+    activate(KEPT_IDS[0].2, &mut list, &mut scratch);
     assert!(list.orbits.is_empty(), "× removes it");
-    let before = scratch;
-    activate("nowhere", None, &mut list, &mut scratch);
+    let before = scratch.clone();
+    activate("nowhere", &mut list, &mut scratch);
     assert_eq!(scratch, before);
     // The rows and the summary.
     let mut s = marked(0.5);
@@ -684,6 +697,8 @@ fn mock_hover_trajectory_scopes_and_the_playhead() {
         [
             UNDER_CURSOR,
             KEEP,
+            trajectory::REAL_VIEW,
+            trajectory::SPHERE_VIEW,
             trajectory::SPHERE,
             trajectory::UNWRAPPED,
             trajectory::TURN,

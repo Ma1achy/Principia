@@ -1,15 +1,17 @@
 //! QA tests for the M1 gate's colour confirmations, R-433 and R-434, written from REQ-COL-053, REQ-COL-062, REQ-COL-064,
 //! REQ-TOOL-152 and colour_composition §1.4 / the render contract's stipple bullet, not from the implementation. Colours
 //! are decoded with IEC 61966-2-1's sRGB transfer and taken to OKLab with Ottosson's matrices, both typed in here.
-//! - REQ-COL-053 / REQ-COL-064 (R-433, R-434): a running sample and an unset `d_min`, rendered, draw `#4E4E4E` with a
-//!   2 × 2 px dot of `#909090` in each 4 × 4 physical-pixel cell, where bit 1 of `x` and of `y` are both 0, and no other
-//!   colour (`r434_qa_stipple_*`).
+//! - REQ-COL-053 / REQ-COL-064 (R-433, R-434): an unset `d_min`, rendered, draws `#4E4E4E` with a 2 × 2 px dot of
+//!   `#909090` in each 4 × 4 physical-pixel cell, where bit 1 of `x` and of `y` are both 0, and no other colour
+//!   (`r434_qa_stipple_*`). Amended by qa for TASK-M2-32, as R-446 forces: a running sample in the outcome palette
+//!   leaves the style's scope and draws bounded / nothing yet's `#141418`.
 //! - REQ-COL-064 (R-434, the bar): no flat colour comes within τ = 0.101, the OKLab distance from `#FF00FF` to
 //!   `#E034C6` (R-429), of every pixel of a 4 × 4 block. Every block holds both colours, so a flat colour within τ of
 //!   all its pixels is within τ of the grey and of the dot, and by the triangle inequality the two would be at most
 //!   2τ apart. The check is that they are more than 2τ apart, which holds for every colour of every palette at once,
 //!   and fails for the proposal's `#808080` dot, 0.176 from the grey (`r434_qa_no_flat_colour_*`).
-//! - REQ-COL-062 (R-433, R-434): each triple-outcome swatch, `#D6A1FF` and `#000097`, is farther than τ from the dot
+//! - REQ-COL-062 (R-433, R-434): each triple-outcome swatch is farther than τ from the dot: R-433's `#D6A1FF` and
+//!   `#000097`, and since R-445 the occupant's `#F29620` and `#611597` (amended by qa for TASK-M2-32)
 //!   (`r434_qa_triple_swatches_*`).
 //! - REQ-TOOL-152 (R-433): the banding bound is 1/16 of a step (`r433_qa_banding_bound_*`).
 //!
@@ -28,6 +30,7 @@ use validation::synthetic::Synthetic;
 const TOL: f64 = 1e-5;
 
 /// Payload §2's running state.
+#[cfg(feature = "controls")]
 const STATE_RUNNING: u32 = 3;
 
 /// R-433's running grey and R-434's dot, 8-bit sRGB.
@@ -37,9 +40,13 @@ const DOT: u32 = 0x909090;
 /// The proposal's dot, which R-434 replaced.
 const PROPOSED_DOT: u32 = 0x808080;
 
-/// R-433's triple-outcome swatches.
-const TRIPLE_COLLISION: u32 = 0xD6A1FF;
-const TRIPLE_EJECTION: u32 = 0x000097;
+/// R-433's triple-outcome swatches, superseded by R-445: the record.
+const M1_TRIPLE_COLLISION: u32 = 0xD6A1FF;
+const M1_TRIPLE_EJECTION: u32 = 0x000097;
+
+/// R-445's triple-outcome swatches.
+const TRIPLE_COLLISION: u32 = 0xF29620;
+const TRIPLE_EJECTION: u32 = 0x611597;
 
 type Rgb = [f64; 3];
 
@@ -133,6 +140,7 @@ fn unset_d_min(colouring: Colouring) -> Scene {
 }
 
 /// A row of running samples in the outcome palette.
+#[cfg(feature = "controls")]
 fn running() -> Scene {
     let mut s = scene("detail_view").unwrap_or_else(|e| panic!("{e}"));
     for i in 0..s.context.grid.sample_count() as u32 {
@@ -169,7 +177,9 @@ fn check_stipple(img: &Image, what: &str, grey: u32, dot: u32) {
     }
 }
 
-fn renders(h: &GpuHarness) -> [(Image, &'static str); 3] {
+/// The renders that draw the style: an unset `d_min` in its view and its ramp. The outcome palette's running samples
+/// left the style's scope (R-446).
+fn renders(h: &GpuHarness) -> [(Image, &'static str); 2] {
     let ramp = FieldRamp::d_min().unwrap_or_else(|e| panic!("{e}"));
     [
         (
@@ -186,7 +196,6 @@ fn renders(h: &GpuHarness) -> [(Image, &'static str); 3] {
             ),
             "the d_min ramp, d_min unset",
         ),
-        (render(h, &running()), "the outcome palette, running"),
     ]
 }
 
@@ -209,6 +218,26 @@ negative_control!(
         }
     }
 );
+
+/// R-446's scope can fail: the outcome palette's running samples are not the stipple, so reading them as it fails.
+#[cfg(feature = "controls")]
+mod r434_qa_stipple_outcome_out_of_scope {
+    use super::*;
+    negative_control!(
+        r434_qa_stipple_is_909090_dots_on_4e4e4e,
+        "the outcome palette's running samples, #141418 since R-446, are not the stipple",
+        expected = "the outcome palette, running: pixel (0, 0)",
+        {
+            let h = gpu();
+            check_stipple(
+                &render(&h, &running()),
+                "the outcome palette, running",
+                GREY,
+                DOT,
+            );
+        }
+    );
+}
 
 #[cfg(feature = "controls")]
 mod r434_qa_stipple_phase {
@@ -289,8 +318,9 @@ fn check_apart_from_dot(swatches: &[u32]) {
 
 #[test]
 fn r434_qa_triple_swatches_apart_from_the_dot() {
+    check_apart_from_dot(&[M1_TRIPLE_COLLISION, M1_TRIPLE_EJECTION]);
     check_apart_from_dot(&[TRIPLE_COLLISION, TRIPLE_EJECTION]);
-    // The swatches the occupant declares are those R-433 confirms.
+    // The swatches the occupant declares are R-445's, which supersede R-433's.
     let declared: Vec<[u8; 3]> = render::colour::outcome::SWATCHES
         .iter()
         .filter(|s| s.param.starts_with("triple_"))

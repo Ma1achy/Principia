@@ -113,7 +113,9 @@ Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §
   `ftle` and `diffusion` from); and the scheduler's, `ctx.quad`'s `RenderQuad` members, every one but the frame and the
   raster's own addressing (depth, state, coherence, impurity, spread, suspect fraction, priority, cache age, ancestor
   gap and dominant outcome: what the CPU scheduler writes, Part 6's quad fields). They are not the payload's fields and
-  predicates, `ctx.params.horizon_steps` (the step scale the display fractions are derived with, Part 5), the raster's
+  predicates, the validity lane's predicates (`ctx.validity`, the sample's chart classification `forbidden` among them,
+  colour composition §3, REQ-COL-102), `ctx.params.horizon_steps` (the step scale the display fractions are derived
+  with, Part 5), the raster's
   addressing (`ctx.frag_xy`, `ctx.screen.uv`, `ctx.tile.uv`, and `ctx.quad`'s `index`, `uv` and `sample_count`), the
   prelude's tier constants and `has_ensemble()`, or a node's own uniforms.
 - **Reading `r_sh` or `p_sh` as a sample** (REQ-RENDER-018) is any read of the `r_sh` or `p_sh` member of a stored or

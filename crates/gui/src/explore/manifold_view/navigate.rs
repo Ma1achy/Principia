@@ -2,7 +2,9 @@
 //! or by typing; under them the depth readout and the lock (`depth`, `lock`). And the figure's own gestures, which are
 //! navigation too: a drag pans, the wheel zooms, and with the Figure scope focused the arrows pan and + / − zoom (§G3).
 //! Each is one `SetField`: a pan on `z₀` (`Δz₀ ∈ span(q₁, q₂)`), a zoom on the basis, scaled about the centre, and,
-//! locked, about the pin ([`super::about_the_pin`]; chart_decoder_contract Part 4).
+//! locked, about the pin ([`super::about_the_pin`]; chart_decoder_contract Part 4). A primary click with no drag, or
+//! P with the pointer over the figure, asks for the sample there to be pinned in the Trajectory panel, which sends no
+//! `SetField` (R-453 D1, D6).
 
 use eframe::egui::{self, DragValue, Key, Rect, Response, RichText, Sense, Slider, Ui};
 use engine::contract::sim_config::Plane;
@@ -173,6 +175,9 @@ pub fn figure_coords(figure: Rect, pos: egui::Pos2) -> (f64, f64) {
 
 /// The figure's gestures in `figure`: drag to pan, the wheel to zoom, K over a point or right-click › lock here to
 /// lock there, and, with the Figure scope focused, + / − to zoom. Takes no key while a text field holds the keyboard.
+/// Returns the figure point `(s, t)` to pin in the Trajectory panel, if any: a primary click's with no drag past egui's
+/// click threshold, or the pointer's when P is pressed over the figure, as K locks, in either keyboard mode (R-453 D1,
+/// D6).
 pub fn figure(
     ui: &mut Ui,
     figure: Rect,
@@ -180,7 +185,7 @@ pub fn figure(
     snapshot: &engine::contract::snapshot::Snapshot,
     scratch: &mut Scratch,
     out: &mut Out,
-) {
+) -> Option<[f64; 2]> {
     let plane = &snapshot.sim.plane;
     let response: Response = ui.interact(
         figure,
@@ -194,6 +199,10 @@ pub fn figure(
         }
     }
     let typing = ui.ctx().text_edit_focused();
+    let mut pin = None;
+    if response.clicked_by(egui::PointerButton::Primary) {
+        pin = response.interact_pointer_pos();
+    }
     if response.hovered() {
         let octaves = ui.input(|i| wheel_octaves(&i.events));
         if octaves != 0.0 {
@@ -203,6 +212,9 @@ pub fn figure(
             if let Some(pos) = response.hover_pos() {
                 super::lock::lock_at(plane, figure_coords(figure, pos), scratch, out);
             }
+        }
+        if !typing && ui.input(|i| i.key_pressed(Key::P)) {
+            pin = response.hover_pos().or(pin);
         }
     }
     if response.secondary_clicked() {
@@ -252,4 +264,8 @@ pub fn figure(
             out.edit(edit, None, scratch);
         }
     }
+    pin.map(|pos| {
+        let (s, t) = figure_coords(figure, pos);
+        [s, t]
+    })
 }

@@ -18,15 +18,37 @@
 //! listen and the kept orbits among them; Enter on a button acts as its click, on the playhead starts interaction, in
 //! which the arrows move it by `Bounded`, 1/100 of the orbit's span. The kept orbits are a scope whose elements come and
 //! go with the list: each kept orbit, with its show and remove.
+//!
+//! **The pin (R-453 D1 to D3, D5):** a primary click on the figure with no drag, or P with the pointer over it, pins
+//! the sample under the pointer here: the first tab reads "pinned", shows that sample whatever the pointer does, and
+//! an **unpin** button, an element after `+` while it is held, returns it to following the cursor. The pin holds the
+//! sample's IC and the inputs its integration read, never a pixel, so a pan, a zoom or a slice edit leaves it; a change
+//! of those inputs (the horizon, the integrator, the playhead it is read at) re-integrates the IC through the engine
+//! side's `computeIC`. Without a pin the first tab keeps the last sample hovered over the figure, never going blank as
+//! the pointer leaves it. `+` and Space keep the first tab's orbit. Like the kept orbits, the pin is the GUI's own
+//! state, never undoable, and sends no `SetField`.
+//!
+//! **The views (R-453 D6 to D8):** real space and the unwrapped view pan and zoom, the sphere orbits and zooms, each
+//! tab with its own [`Views`]. On real space and the unwrapped view a drag pans and the wheel zooms about the pointer;
+//! on the sphere a drag orbits (yaw about its pole, pitch clamped to ±90°), turning "turn" off, and the wheel zooms; a
+//! double-click restores a view's default. The orbit turns the view, never the data, so the sphere and its unwrap
+//! agree. From the keyboard each view is an element of the Trajectory scope, the unwrapped view standing in the
+//! sphere's place while shown and taking real space's keys: in interaction mode the arrows pan by `Pan` or orbit by
+//! `Angle` and + and − zoom by `ZoomLog2`, Shift ×10 and Alt ×0.1.
 
 use eframe::egui::{
-    self, pos2, vec2, Align, Button, Color32, Layout as EguiLayout, Pos2, Rect, RichText, Slider,
-    Stroke, Ui, UiBuilder,
+    self, pos2, vec2, Align, Button, Color32, Layout as EguiLayout, Pos2, Rect, Response, RichText,
+    Sense, Slider, Stroke, Ui, UiBuilder, Vec2,
 };
 use engine::contract::sample::Sample;
+use engine::contract::sim_config::{
+    Collision, Horizon, Integrator, KernelVariant, Latent, Quality,
+};
+use engine::contract::snapshot::Snapshot;
 use engine::contract::view_ui::KeptOrbits;
 
-use crate::keyboard::scopes::{Adjust, Base, Scope, ScopeId, ScopeTree, StepKind};
+use crate::keyboard::keymap::{multiplier, Direction};
+use crate::keyboard::scopes::{Adjust, Arrows, Base, Scope, ScopeId, ScopeTree, StepKind};
 use crate::keyboard::Keyboard;
 
 /// The shape sphere's turn rate, in degrees per second (REQ-GUI-157; proposed, R-71): a full turn in 30 s. Slow enough
@@ -45,10 +67,16 @@ pub const MAX_KEPT: usize = 9;
 
 /// The panel's big scope.
 pub const TRAJECTORY: ScopeId = "trajectory";
-/// The "under cursor" tab.
+/// The first tab: "under cursor", or "pinned" while a pin is held (R-453 D2).
 pub const UNDER_CURSOR: ScopeId = "traj_under_cursor";
-/// The `+` tab: keep the orbit under the cursor.
+/// The `+` tab: keep the first tab's orbit.
 pub const KEEP: ScopeId = "traj_keep";
+/// unpin, an element while a pin is held (R-453 D2, D6).
+pub const UNPIN: ScopeId = "traj_unpin";
+/// The real-space view, an adjustable element (R-453 D6).
+pub const REAL_VIEW: ScopeId = "traj_real_view";
+/// The sphere's place: the sphere, or the unwrapped view while it is shown there, an adjustable element (R-453 D6).
+pub const SPHERE_VIEW: ScopeId = "traj_sphere_view";
 /// The "sphere" view.
 pub const SPHERE: ScopeId = "traj_sphere";
 /// The "unwrapped" view.
@@ -84,10 +112,43 @@ pub const KEPT_IDS: [(ScopeId, ScopeId, ScopeId, &str); MAX_KEPT] = [
     ("kept_9", "kept_9_show", "kept_9_remove", "#9"),
 ];
 
+/// The kept orbits' tabs, `#1` to `#9`, beside the first tab: elements while their orbits are kept, so every visible
+/// tab is reachable by keyboard (R-405, R-409; TASK-M6-32's audit), Enter showing the orbit as a click does.
+pub const KEPT_TAB_IDS: [ScopeId; MAX_KEPT] = [
+    "traj_tab_1",
+    "traj_tab_2",
+    "traj_tab_3",
+    "traj_tab_4",
+    "traj_tab_5",
+    "traj_tab_6",
+    "traj_tab_7",
+    "traj_tab_8",
+    "traj_tab_9",
+];
+
 /// The title.
 pub const TITLE: &str = "Trajectory";
-/// What the panel shows with no sample under the cursor.
+/// What the panel shows before any sample was hovered over the figure.
 pub const NO_SAMPLE: &str = "move the pointer over the figure";
+/// The first tab's label while a pin is held (R-453 D2).
+pub const PINNED: &str = "pinned";
+/// The first tab's label without a pin.
+pub const FOLLOWING: &str = "under cursor";
+/// The unpin button's label (R-453 D2).
+pub const UNPIN_LABEL: &str = "unpin";
+/// The views' elements' labels, as the breadcrumb reads them: real space, the sphere and the unwrapped view.
+pub const VIEW_LABELS: [&str; 3] = ["real-space view", "sphere view", "unwrapped view"];
+/// The zoom of real space and of the unwrapped view, in octaves from the default, kept within this range (a look
+/// choice, R-390): out to an eighth, in to 64 times.
+pub const PAN_ZOOM_RANGE: (f64, f64) = (-3.0, 6.0);
+/// The sphere's zoom, in octaves from its default size, kept within this range (a look choice, R-390): out to a
+/// quarter, in to eight times.
+pub const SPHERE_ZOOM_RANGE: (f64, f64) = (-2.0, 3.0);
+/// The sphere's orbit for a drag, in degrees per point dragged (a look choice, R-390): a drag across a sphere of 180
+/// points turns it half a turn.
+pub const ORBIT_DEG_PER_POINT: f64 = 1.0;
+/// The sphere's pitch is kept within ±this many degrees (R-453 D7).
+pub const PITCH_LIMIT_DEG: f64 = 90.0;
 /// What listen sonifies (`principia_scratchpad_pointer_channels.md` §4: `θ(t), φ(t)` → spectrum; 01_main.png's
 /// selector is illustrative, R-68).
 pub const LISTEN_MAPPING: &str = "θ(t), φ(t) → spectrum";
@@ -111,9 +172,18 @@ pub const FAR_SIDE: f32 = 0.3;
 /// Joins the panel's elements to `tree`, under its big scope, in the order drawn, with its rows of the `?` overlay.
 pub fn register(tree: &mut ScopeTree) {
     tree.register(None, Scope::group(TRAJECTORY, TITLE));
+    for (id, label) in [(UNDER_CURSOR, FOLLOWING), (KEEP, "+ keep")] {
+        tree.register(Some(TRAJECTORY), Scope::control(id, label));
+    }
+    tree.register(
+        Some(TRAJECTORY),
+        Scope::value(REAL_VIEW, VIEW_LABELS[0], StepKind::Pan),
+    );
+    tree.register(
+        Some(TRAJECTORY),
+        Scope::value(SPHERE_VIEW, VIEW_LABELS[1], StepKind::Angle),
+    );
     for (id, label) in [
-        (UNDER_CURSOR, "under cursor"),
-        (KEEP, "+ keep"),
         (SPHERE, "sphere"),
         (UNWRAPPED, "unwrapped"),
         (TURN, "turn"),
@@ -138,20 +208,62 @@ pub fn register(tree: &mut ScopeTree) {
     }
 }
 
-/// The rows the Figure's Space and L and the panel add to the `?` overlay (§G3).
-pub const SHORTCUTS: [(&str, &str); 3] = [
+/// The rows the Figure's Space, L and P and the panel add to the `?` overlay (§G3; R-453 D6).
+pub const SHORTCUTS: [(&str, &str); 5] = [
     (
         "Figure: Space",
-        "keep the orbit under the cursor, in either mode",
+        "keep the orbit under the cursor, or the pinned one, in either mode",
     ),
     ("Figure: L", "listen, in either mode"),
     (
+        "Figure: P",
+        "pin the sample under the pointer in the Trajectory panel, in either mode",
+    ),
+    (
         "Trajectory",
-        "Enter reaches the playhead, listen and the kept orbits",
+        "Enter reaches the tabs, unpin, the two views, the playhead, listen and the kept orbits",
+    ),
+    (
+        "Trajectory: views",
+        "after Enter: arrows pan real space and the unwrapped view, orbit the sphere; + / − zoom; Shift ×10, Alt ×0.1",
     ),
 ];
 
-/// Joins the kept orbits' scopes to `tree` for `n` kept, again whenever `n` changed.
+/// Joins the panel's changing elements to `tree`, again each frame: unpin after `+` while a pin is held, the first
+/// tab's label ("pinned" or "under cursor"), and the sphere's place, the sphere orbiting by `Angle` or, while the
+/// unwrapped view is shown there, the unwrapped view panning by `Pan`, as real space does (R-453 D2, D6).
+pub fn join(tree: &mut ScopeTree, scratch: &Scratch) {
+    let pinned = scratch.pin.is_some();
+    match (pinned, tree.get(UNPIN).is_some()) {
+        (true, false) => tree.insert_after(KEEP, Scope::control(UNPIN, UNPIN_LABEL)),
+        (false, true) => tree.remove(UNPIN),
+        _ => {}
+    }
+    if let Some(first) = tree.get_mut(UNDER_CURSOR) {
+        first.label = first_tab(pinned);
+    }
+    if let Some(view) = tree.get_mut(SPHERE_VIEW) {
+        let (label, kind) = if scratch.unwrapped {
+            (VIEW_LABELS[2], StepKind::Pan)
+        } else {
+            (VIEW_LABELS[1], StepKind::Angle)
+        };
+        view.label = label;
+        view.arrows = Arrows::Adjust(kind);
+    }
+}
+
+/// The first tab's label: "pinned" while a pin is held, else "under cursor".
+pub fn first_tab(pinned: bool) -> &'static str {
+    if pinned {
+        PINNED
+    } else {
+        FOLLOWING
+    }
+}
+
+/// Joins the kept orbits' scopes to `tree` for `n` kept, again whenever `n` changed: each kept orbit in the list, with
+/// its show and remove, and its tab after the first tab, in the order drawn.
 pub fn join_kept(tree: &mut ScopeTree, n: usize) {
     if tree.children(Some(KEPT)).len() == n {
         return;
@@ -162,20 +274,176 @@ pub fn join_kept(tree: &mut ScopeTree, n: usize) {
         tree.register(Some(orbit), Scope::control(show, "show"));
         tree.register(Some(orbit), Scope::control(remove, "remove"));
     }
+    for tab in KEPT_TAB_IDS {
+        tree.remove(tab);
+    }
+    for i in (0..n).rev() {
+        tree.insert_after(UNDER_CURSOR, Scope::control(KEPT_TAB_IDS[i], KEPT_IDS[i].3));
+    }
 }
 
 /// Which orbit the panel shows.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Tab {
-    /// The IC under the cursor.
+    /// The first tab: the pinned IC, or the IC under the cursor, the last one hovered.
     #[default]
     UnderCursor,
     /// Kept orbit `#n`, by its index in the list.
     Kept(usize),
 }
 
-/// The panel's own state: the GUI's, never the engine's, never undoable.
+impl Tab {
+    /// The tab's place among the panel's views: 0 for the first tab, `i + 1` for kept orbit `i`.
+    pub fn index(self) -> usize {
+        match self {
+            Tab::UnderCursor => 0,
+            Tab::Kept(i) => i + 1,
+        }
+    }
+}
+
+/// A view that pans and zooms (real space, the unwrapped view; R-453 D7): the point of the drawing at its centre and
+/// its zoom. The drawing's points are in `[−1, 1]²` across the view at the default, `x` right and `y` down, the view's
+/// half-width 1; the view draws `p` at `(p − centre) · 2^zoom`. The default is the drawing fitted, as before.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct PanZoom {
+    /// The drawing's point at the view's centre.
+    pub centre: [f64; 2],
+    /// The zoom, in octaves from the fit, in [`PAN_ZOOM_RANGE`].
+    pub zoom: f64,
+}
+
+impl PanZoom {
+    /// Where the drawing's point `p` falls in the view, in half-widths from its centre.
+    pub fn apply(&self, p: [f64; 2]) -> [f64; 2] {
+        let k = self.zoom.exp2();
+        [(p[0] - self.centre[0]) * k, (p[1] - self.centre[1]) * k]
+    }
+
+    /// The drawing's point the view shows at `v`, in half-widths from its centre: the inverse of [`Self::apply`].
+    pub fn unapply(&self, v: [f64; 2]) -> [f64; 2] {
+        let k = self.zoom.exp2();
+        [self.centre[0] + v[0] / k, self.centre[1] + v[1] / k]
+    }
+
+    /// A drag by `delta` half-widths: the drawing follows the pointer.
+    pub fn drag(&mut self, delta: [f64; 2]) {
+        let k = self.zoom.exp2();
+        self.centre = [self.centre[0] - delta[0] / k, self.centre[1] - delta[1] / k];
+    }
+
+    /// A zoom by `octaves` about the view's point `at`, in half-widths from its centre: the drawing's point there stays
+    /// there. The zoom is kept in [`PAN_ZOOM_RANGE`].
+    pub fn zoom_about(&mut self, octaves: f64, at: [f64; 2]) {
+        let fixed = self.unapply(at);
+        self.zoom = (self.zoom + octaves).clamp(PAN_ZOOM_RANGE.0, PAN_ZOOM_RANGE.1);
+        let k = self.zoom.exp2();
+        self.centre = [fixed[0] - at[0] / k, fixed[1] - at[1] / k];
+    }
+
+    /// An arrow's pan by `fraction` of the view's span along its axis (R-404's `Pan`, its sign the arrow's): → and ↑
+    /// move the view right and up over the drawing, as the Figure's arrows do.
+    pub fn step(&mut self, fraction: f64, direction: Direction) {
+        let span = 2.0 / self.zoom.exp2();
+        match direction {
+            Direction::Left | Direction::Right => self.centre[0] += fraction * span,
+            Direction::Up | Direction::Down => self.centre[1] -= fraction * span,
+        }
+    }
+}
+
+/// The sphere's view (R-453 D7, D8): its orbit, a yaw about the pole added to the turn and a pitch of the pole toward
+/// the viewer, and its zoom. It turns the view, never the data.
 #[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Orbit {
+    /// The yaw, in degrees, in `[0, 360)`, added to the turn.
+    pub yaw: f64,
+    /// The pole's pitch toward the viewer, in degrees, in `[−90, 90]`.
+    pub pitch: f64,
+    /// The zoom, in octaves from the default size, in [`SPHERE_ZOOM_RANGE`].
+    pub zoom: f64,
+}
+
+impl Default for Orbit {
+    /// The default view: at rest, the pole tilted [`SPHERE_TILT_DEG`] toward the viewer, at its default size.
+    fn default() -> Self {
+        Self {
+            yaw: 0.0,
+            pitch: SPHERE_TILT_DEG,
+            zoom: 0.0,
+        }
+    }
+}
+
+impl Orbit {
+    /// Turns the view by `yaw` and `pitch` degrees, the pitch kept within ±[`PITCH_LIMIT_DEG`].
+    pub fn turn(&mut self, yaw: f64, pitch: f64) {
+        self.yaw = (self.yaw + yaw).rem_euclid(360.0);
+        self.pitch = (self.pitch + pitch).clamp(-PITCH_LIMIT_DEG, PITCH_LIMIT_DEG);
+    }
+
+    /// Zooms by `octaves`, kept in [`SPHERE_ZOOM_RANGE`].
+    pub fn zoom_by(&mut self, octaves: f64) {
+        self.zoom = (self.zoom + octaves).clamp(SPHERE_ZOOM_RANGE.0, SPHERE_ZOOM_RANGE.1);
+    }
+}
+
+/// One tab's views: real space, the sphere and the unwrapped view (R-453 D8).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Views {
+    /// Real space.
+    pub real: PanZoom,
+    /// The sphere.
+    pub sphere: Orbit,
+    /// The unwrapped view.
+    pub unwrapped: PanZoom,
+}
+
+/// What a pinned IC's integration read besides the IC: the sim key's settings an IC's orbit depends on, and the
+/// playhead its fate is read at, as the hover's sample is. The slice plane is not among them: the pin holds the IC,
+/// whatever plane it was picked on (R-453 D1, D5).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Inputs {
+    /// The horizon.
+    pub horizon: Horizon,
+    /// The integrator.
+    pub integrator: Integrator,
+    /// The kernel variant.
+    pub kernel_variant: KernelVariant,
+    /// The collision settings.
+    pub collision: Collision,
+    /// The quality settings.
+    pub quality: Quality,
+    /// The playhead's `t`.
+    pub playhead: f64,
+}
+
+impl Inputs {
+    /// The inputs as `snapshot` holds them.
+    pub fn of(snapshot: &Snapshot) -> Self {
+        let sim = &snapshot.sim;
+        Self {
+            horizon: sim.horizon.clone(),
+            integrator: sim.integrator.clone(),
+            kernel_variant: sim.kernel_variant,
+            collision: sim.collision.clone(),
+            quality: sim.quality.clone(),
+            playhead: snapshot.render.playhead.t,
+        }
+    }
+}
+
+/// The pin: the pinned sample, its IC integrated under `inputs` (R-453 D1, D5).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Pin {
+    /// The sample: its IC, and its orbit as last integrated.
+    pub sample: Sample,
+    /// What that integration read.
+    pub inputs: Inputs,
+}
+
+/// The panel's own state: the GUI's, never the engine's, never undoable.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Scratch {
     /// The tab shown.
     pub tab: Tab,
@@ -198,6 +466,12 @@ pub struct Scratch {
     /// The control that asked for the Inspector this frame (IC Inspector… or Open full viewer…, a click or Enter),
     /// for the app to open it on the orbit shown, that control its opener.
     pub open_inspector: Option<ScopeId>,
+    /// The pin, while one is held (R-453 D1).
+    pub pin: Option<Pin>,
+    /// The last sample hovered over the figure, kept when the pointer leaves it (R-453 D3).
+    pub last: Option<Sample>,
+    /// Each tab's views, by [`Tab::index`]; a tab past the end has the defaults (R-453 D8).
+    pub views: Vec<Views>,
 }
 
 impl Default for Scratch {
@@ -213,6 +487,9 @@ impl Default for Scratch {
             orbit_t: 0.0,
             playing: false,
             open_inspector: None,
+            pin: None,
+            last: None,
+            views: Vec::new(),
         }
     }
 }
@@ -246,12 +523,66 @@ impl Scratch {
     pub fn moving(&self, shown: bool) -> bool {
         shown && ((self.turn && !self.unwrapped) || self.playing)
     }
+
+    /// The first tab's orbit: the pinned sample while a pin is held, else the last sample hovered (R-453 D2, D3).
+    pub fn first(&self) -> Option<&Sample> {
+        self.pin.as_ref().map(|p| &p.sample).or(self.last.as_ref())
+    }
+
+    /// The snapshot's sample under the cursor, `sample`, read: kept as the last hovered while there is one, and kept
+    /// when there is none, the pointer off the figure (R-453 D3).
+    pub fn hovered(&mut self, sample: Option<&Sample>) {
+        if let Some(s) = sample {
+            if self.last.as_ref() != Some(s) {
+                self.last = Some(s.clone());
+            }
+        }
+    }
+
+    /// Pins `sample`, integrated under `inputs`, the first tab shown (R-453 D1).
+    pub fn pin(&mut self, sample: Sample, inputs: Inputs) {
+        self.pin = Some(Pin { sample, inputs });
+        self.tab = Tab::UnderCursor;
+    }
+
+    /// Re-integrates the pinned IC through `compute_ic` when the inputs as they stand, `inputs`, differ from those its
+    /// orbit read (R-453 D5); the orbit as it was while `compute_ic` gives none.
+    pub fn repin(
+        &mut self,
+        inputs: Inputs,
+        compute_ic: impl FnOnce(&Latent, [f64; 2]) -> Option<Sample>,
+    ) {
+        let Some(pin) = &mut self.pin else {
+            return;
+        };
+        if pin.inputs == inputs {
+            return;
+        }
+        if let Some(sample) = compute_ic(&pin.sample.ic, pin.sample.at) {
+            pin.sample = sample;
+        }
+        pin.inputs = inputs;
+    }
+
+    /// The views of `tab`.
+    pub fn views_of(&self, tab: Tab) -> Views {
+        self.views.get(tab.index()).copied().unwrap_or_default()
+    }
+
+    /// The views of `tab`, to change.
+    pub fn views_mut(&mut self, tab: Tab) -> &mut Views {
+        let i = tab.index();
+        if self.views.len() <= i {
+            self.views.resize(i + 1, Views::default());
+        }
+        &mut self.views[i]
+    }
 }
 
-/// The orbit the panel shows: the sample under the cursor, or a kept one.
-pub fn shown<'a>(tab: Tab, sample: Option<&'a Sample>, kept: &'a KeptOrbits) -> Option<&'a Sample> {
+/// The orbit the panel shows: the first tab's, `first` (the pinned sample, or the last hovered), or a kept one.
+pub fn shown<'a>(tab: Tab, first: Option<&'a Sample>, kept: &'a KeptOrbits) -> Option<&'a Sample> {
     match tab {
-        Tab::UnderCursor => sample,
+        Tab::UnderCursor => first,
         Tab::Kept(i) => kept.orbits.get(i),
     }
 }
@@ -271,6 +602,11 @@ pub fn remove(i: usize, kept: &mut KeptOrbits, scratch: &mut Scratch) {
         return;
     }
     kept.orbits.remove(i);
+    // Its views go with it; the later tabs' move up with theirs.
+    let views = Tab::Kept(i).index();
+    if views < scratch.views.len() {
+        scratch.views.remove(views);
+    }
     if let Tab::Kept(j) = scratch.tab {
         scratch.tab = match j.cmp(&i) {
             std::cmp::Ordering::Equal => Tab::UnderCursor,
@@ -280,15 +616,19 @@ pub fn remove(i: usize, kept: &mut KeptOrbits, scratch: &mut Scratch) {
     }
 }
 
+/// Keeps the first tab's orbit, the pinned one or the last hovered, as `+` and the Figure's Space do (R-453 D2).
+pub fn keep_first(kept: &mut KeptOrbits, scratch: &mut Scratch) {
+    if let Some(s) = scratch.first().cloned() {
+        keep(&s, kept, scratch);
+    }
+}
+
 /// Enter on the panel's control `id`, as its click.
-pub fn activate(id: &str, sample: Option<&Sample>, kept: &mut KeptOrbits, scratch: &mut Scratch) {
+pub fn activate(id: &str, kept: &mut KeptOrbits, scratch: &mut Scratch) {
     match id {
         UNDER_CURSOR => scratch.tab = Tab::UnderCursor,
-        KEEP => {
-            if let Some(s) = sample {
-                keep(s, kept, scratch);
-            }
-        }
+        KEEP => keep_first(kept, scratch),
+        UNPIN => scratch.pin = None,
         SPHERE => scratch.unwrapped = false,
         UNWRAPPED => scratch.unwrapped = true,
         TURN => scratch.turn = !scratch.turn,
@@ -299,7 +639,7 @@ pub fn activate(id: &str, sample: Option<&Sample>, kept: &mut KeptOrbits, scratc
         INSPECTOR => scratch.open_inspector = Some(INSPECTOR),
         _ => {
             for (i, (_, show, remove_id, _)) in KEPT_IDS.iter().enumerate() {
-                if id == *show && i < kept.orbits.len() {
+                if (id == *show || id == KEPT_TAB_IDS[i]) && i < kept.orbits.len() {
                     scratch.tab = Tab::Kept(i);
                 } else if id == *remove_id {
                     remove(i, kept, scratch);
@@ -309,13 +649,143 @@ pub fn activate(id: &str, sample: Option<&Sample>, kept: &mut KeptOrbits, scratc
     }
 }
 
-/// The arrows on the playhead, in interaction mode: by `Bounded`'s 1/100 of the orbit's span `[0, span]`, kept in it.
+/// The arrows in interaction mode: on the playhead, by `Bounded`'s 1/100 of the orbit's span `[0, span]`, kept in it;
+/// on the shown tab's real-space view and unwrapped view, a pan by `Pan`'s 1/20 of the view's span; on its sphere, an
+/// orbit by `Angle`'s degree, ← → the yaw and ↑ ↓ the pitch, which turns "turn" off as a drag does (R-453 D6).
 pub fn adjust(adjust: &Adjust, span: f64, scratch: &mut Scratch) {
-    if adjust.scope != PLAYHEAD {
+    let tab = scratch.tab;
+    match (adjust.scope, adjust.delta()) {
+        (PLAYHEAD, Base::OfRange(fraction)) => {
+            scratch.orbit_t = (scratch.orbit_t + fraction * span).clamp(0.0, span);
+        }
+        (REAL_VIEW, Base::OfView(fraction)) => {
+            scratch.views_mut(tab).real.step(fraction, adjust.direction);
+        }
+        (SPHERE_VIEW, Base::OfView(fraction)) if scratch.unwrapped => {
+            scratch
+                .views_mut(tab)
+                .unwrapped
+                .step(fraction, adjust.direction);
+        }
+        (SPHERE_VIEW, Base::Degrees(degrees)) if !scratch.unwrapped => {
+            let (yaw, pitch) = match adjust.direction {
+                Direction::Left | Direction::Right => (degrees, 0.0),
+                Direction::Up | Direction::Down => (0.0, degrees),
+            };
+            scratch.views_mut(tab).sphere.turn(yaw, pitch);
+            scratch.turn = false;
+        }
+        _ => {}
+    }
+}
+
+/// The zoom keys' steps among `events`: each press of + (or =) or −, as a signed multiple of the base step, Shift ×10
+/// and Alt ×0.1.
+pub fn zoom_presses(events: &[egui::Event]) -> Vec<f64> {
+    events
+        .iter()
+        .filter_map(|e| match e {
+            egui::Event::Key {
+                key,
+                pressed: true,
+                modifiers,
+                ..
+            } => match key {
+                egui::Key::Plus | egui::Key::Equals => Some(multiplier(*modifiers)),
+                egui::Key::Minus => Some(-multiplier(*modifiers)),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect()
+}
+
+/// The + or − key on view `id` in interaction mode, `times` the base step: a zoom by `ZoomLog2`'s quarter octave, about
+/// the view's centre for real space and the unwrapped view (R-453 D6). Nothing on any other scope.
+pub fn zoom_view(id: &str, times: f64, scratch: &mut Scratch) {
+    let Base::Log2(base) = StepKind::ZoomLog2.base().times(times) else {
+        unreachable!("the zoom's base step is in octaves")
+    };
+    let (tab, unwrapped) = (scratch.tab, scratch.unwrapped);
+    let views = match id {
+        REAL_VIEW | SPHERE_VIEW => scratch.views_mut(tab),
+        _ => return,
+    };
+    match (id, unwrapped) {
+        (REAL_VIEW, _) => views.real.zoom_about(base, [0.0, 0.0]),
+        (_, true) => views.unwrapped.zoom_about(base, [0.0, 0.0]),
+        (_, false) => views.sphere.zoom_by(base),
+    }
+}
+
+/// The pointer at `pos` on a view drawn about `centre` with half-widths `half`, in half-widths from its centre.
+pub fn in_view(pos: Pos2, centre: Pos2, half: Vec2) -> [f64; 2] {
+    [
+        f64::from((pos.x - centre.x) / half.x),
+        f64::from((pos.y - centre.y) / half.y),
+    ]
+}
+
+/// The wheel's zoom, in octaves, while the pointer is over `response`'s view, which takes the wheel: the window below
+/// it does not scroll as well.
+fn wheel_over(ui: &Ui, response: &Response) -> f64 {
+    if !response.hovered() {
+        return 0.0;
+    }
+    ui.input_mut(|i| i.smooth_scroll_delta = Vec2::ZERO);
+    ui.input(|i| crate::explore::manifold_view::navigate::wheel_octaves(&i.events))
+}
+
+/// The pointer on a pan-and-zoom view drawn about `centre` with half-widths `half` (real space, the unwrapped view;
+/// R-453 D7): a drag pans, the drawing following the pointer; the wheel zooms about the pointer; a double-click
+/// restores the default.
+pub fn pan_zoom_input(ui: &Ui, response: &Response, centre: Pos2, half: Vec2, view: &mut PanZoom) {
+    if response.double_clicked() {
+        *view = PanZoom::default();
         return;
     }
-    if let Base::OfRange(fraction) = adjust.delta() {
-        scratch.orbit_t = (scratch.orbit_t + fraction * span).clamp(0.0, span);
+    if response.dragged_by(egui::PointerButton::Primary) {
+        let d = response.drag_delta();
+        if d != Vec2::ZERO {
+            view.drag([f64::from(d.x / half.x), f64::from(d.y / half.y)]);
+        }
+    }
+    let octaves = wheel_over(ui, response);
+    if octaves != 0.0 {
+        if let Some(pos) = response.hover_pos() {
+            view.zoom_about(octaves, in_view(pos, centre, half));
+        }
+    }
+}
+
+/// The pointer on the sphere (R-453 D7): a drag orbits it, right turning the yaw up and down the pitch, by
+/// [`ORBIT_DEG_PER_POINT`], and turns `turn` off so the view holds; the wheel zooms; a double-click restores the default
+/// view, the turn's `angle` back at rest too.
+pub fn orbit_input(
+    ui: &Ui,
+    response: &Response,
+    orbit: &mut Orbit,
+    turn: &mut bool,
+    angle: &mut f64,
+) {
+    if response.double_clicked() {
+        *orbit = Orbit::default();
+        *angle = 0.0;
+        return;
+    }
+    if response.dragged_by(egui::PointerButton::Primary) {
+        let d = response.drag_delta();
+        if d != Vec2::ZERO {
+            orbit.turn(
+                f64::from(d.x) * ORBIT_DEG_PER_POINT,
+                f64::from(d.y) * ORBIT_DEG_PER_POINT,
+            );
+            *turn = false;
+        }
+    }
+    let octaves = wheel_over(ui, response);
+    if octaves != 0.0 {
+        orbit.zoom_by(octaves);
     }
 }
 
@@ -345,8 +815,14 @@ pub fn on_sphere([theta, phi]: [f64; 2]) -> [f64; 3] {
 /// the pole tilted [`SPHERE_TILT_DEG`] toward the viewer: its screen point `(x, y)`, `y` up, each in `[−1, 1]`, and its
 /// depth toward the viewer, ≥ 0 on the near side.
 pub fn view(p: [f64; 3], angle: f64) -> ([f64; 2], f64) {
+    view_at(p, angle, SPHERE_TILT_DEG)
+}
+
+/// [`view`] with the pole tilted `pitch` degrees toward the viewer: the orbit's view (R-453 D7). It moves where `p` is
+/// drawn, never `p`.
+pub fn view_at(p: [f64; 3], angle: f64, pitch: f64) -> ([f64; 2], f64) {
     let (sa, ca) = (angle + REST_ANGLE_DEG).to_radians().sin_cos();
-    let (st, ct) = SPHERE_TILT_DEG.to_radians().sin_cos();
+    let (st, ct) = pitch.to_radians().sin_cos();
     let x = p[0] * ca - p[1] * sa;
     let y = p[0] * sa + p[1] * ca;
     ([x, p[2] * ct + y * st], p[2] * st - y * ct)
@@ -471,8 +947,6 @@ pub fn areas(rect: Rect) -> Areas {
 
 /// What the panel reads and records into.
 pub struct Panel<'a> {
-    /// The sample under the cursor.
-    pub sample: Option<&'a Sample>,
     /// The kept orbits, `ViewUI`'s.
     pub kept: &'a mut KeptOrbits,
     /// The panel's scratch state.
@@ -494,23 +968,89 @@ pub fn show(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
     panel.keyboard.place(TRAJECTORY, rect);
     let a = areas(rect);
     tabs(ui, a.title, panel);
-    let orbit = shown(panel.scratch.tab, panel.sample, panel.kept).cloned();
-    let mut line = ui.new_child(UiBuilder::new().max_rect(a.summary));
-    let text = orbit.as_ref().map_or(NO_SAMPLE.to_owned(), summary);
-    line.label(RichText::new(text).monospace().weak().small());
+    let orbit = shown(panel.scratch.tab, panel.scratch.first(), panel.kept).cloned();
+    let mut line = ui.new_child(
+        UiBuilder::new()
+            .max_rect(a.summary)
+            .layout(EguiLayout::left_to_right(Align::Center)),
+    );
+    if panel.scratch.pin.is_some() {
+        line.with_layout(EguiLayout::right_to_left(Align::Center), |r| {
+            let unpin = r.small_button(UNPIN_LABEL);
+            panel.keyboard.place_widget(UNPIN, &unpin);
+            if unpin.clicked() {
+                panel.scratch.pin = None;
+            }
+            r.with_layout(EguiLayout::left_to_right(Align::Center), |l| {
+                summary_line(l, orbit.as_ref());
+            });
+        });
+    } else {
+        summary_line(&mut line, orbit.as_ref());
+    }
     frame(ui, a.real, "real space · CoM frame");
     frame(ui, a.sphere, "");
+    views(ui, &a, panel);
     if let Some(orbit) = &orbit {
         let i = index_at(panel.scratch.orbit_t, orbit.path_t, orbit.shape.len());
-        real_space(ui, a.real.shrink(8.0), orbit, i);
+        let v = panel.scratch.views_of(panel.scratch.tab);
+        real_space(ui, a.real.shrink(8.0), orbit, i, &v.real);
         if panel.scratch.unwrapped {
-            unwrapped(ui, a.sphere.shrink(8.0), orbit, i);
+            unwrapped(ui, a.sphere.shrink(8.0), orbit, i, &v.unwrapped);
         } else {
-            sphere(ui, a.sphere.shrink(8.0), orbit, panel.scratch.angle, i);
+            let angle = panel.scratch.angle;
+            sphere(ui, a.sphere.shrink(8.0), orbit, angle, i, &v.sphere);
         }
         stats(ui, a.stats, orbit);
     }
     rows(ui, a.rows, orbit.as_ref(), panel);
+}
+
+/// The summary line: the orbit's, or what to do before any.
+fn summary_line(ui: &mut Ui, orbit: Option<&Sample>) {
+    let text = orbit.map_or(NO_SAMPLE.to_owned(), summary);
+    ui.label(RichText::new(text).monospace().weak().small());
+}
+
+/// The views' elements and their pointer (R-453 D6 to D8): real space, and the sphere's place, the sphere or the
+/// unwrapped view, each sensing drags, the wheel and double-clicks over its frame, for the shown tab's views.
+fn views(ui: &mut Ui, a: &Areas, panel: &mut Panel<'_>) {
+    let real = ui.interact(a.real, ui.id().with(REAL_VIEW), Sense::click_and_drag());
+    let place = ui.interact(a.sphere, ui.id().with(SPHERE_VIEW), Sense::click_and_drag());
+    panel.keyboard.place(REAL_VIEW, a.real);
+    panel.keyboard.place(SPHERE_VIEW, a.sphere);
+    let scratch = &mut *panel.scratch;
+    let tab = scratch.tab;
+    let (inner_real, inner_sphere) = (a.real.shrink(8.0), a.sphere.shrink(8.0));
+    let r = inner_real.width().min(inner_real.height()) / 2.0;
+    pan_zoom_input(
+        ui,
+        &real,
+        inner_real.center(),
+        vec2(r, r),
+        &mut scratch.views_mut(tab).real,
+    );
+    if scratch.unwrapped {
+        let half = inner_sphere.size() / 2.0;
+        let centre = inner_sphere.center();
+        pan_zoom_input(
+            ui,
+            &place,
+            centre,
+            half,
+            &mut scratch.views_mut(tab).unwrapped,
+        );
+    } else {
+        let mut orbit = scratch.views_of(tab).sphere;
+        orbit_input(
+            ui,
+            &place,
+            &mut orbit,
+            &mut scratch.turn,
+            &mut scratch.angle,
+        );
+        scratch.views_mut(tab).sphere = orbit;
+    }
 }
 
 /// A view's frame, with its caption at its bottom left.
@@ -546,20 +1086,21 @@ fn tabs(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
         let keep_tab = r.button("+");
         panel.keyboard.place_widget(KEEP, &keep_tab);
         if keep_tab.clicked() {
-            activate(KEEP, panel.sample, panel.kept, panel.scratch);
+            keep_first(panel.kept, panel.scratch);
         }
         for i in (0..panel.kept.orbits.len()).rev() {
             let tab = r.add(Button::selectable(
                 panel.scratch.tab == Tab::Kept(i),
                 KEPT_IDS[i].3,
             ));
+            panel.keyboard.place_widget(KEPT_TAB_IDS[i], &tab);
             if tab.clicked() {
                 panel.scratch.tab = Tab::Kept(i);
             }
         }
         let under = r.add(Button::selectable(
             panel.scratch.tab == Tab::UnderCursor,
-            "under cursor",
+            first_tab(panel.scratch.pin.is_some()),
         ));
         panel.keyboard.place_widget(UNDER_CURSOR, &under);
         if under.clicked() {
@@ -568,14 +1109,17 @@ fn tabs(ui: &mut Ui, rect: Rect, panel: &mut Panel<'_>) {
     });
 }
 
-/// Real space: the three bodies' paths, fitted to `rect`, each with its position at the playhead.
-pub fn real_space(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
+/// Real space: the three bodies' paths, fitted to `rect` and seen through `view`, each with its position at the
+/// playhead.
+pub fn real_space(ui: &Ui, rect: Rect, orbit: &Sample, i: usize, view: &PanZoom) {
     let painter = ui.painter_at(rect);
     let [x0, y0, x1, y1] = fit(&orbit.bodies);
     let to = |p: &[f64; 2]| {
         let x = 2.0 * (p[0] - x0) / (x1 - x0) - 1.0;
         let y = 2.0 * (p[1] - y0) / (y1 - y0) - 1.0;
-        on_square(rect, [x, y])
+        // The view's `y` is down; real space's up.
+        let [vx, vy] = view.apply([x, -y]);
+        on_square(rect, [vx, -vy])
     };
     for (path, colour) in orbit.bodies.iter().zip(BODY_COLOURS) {
         let points: Vec<Pos2> = path.iter().map(to).collect();
@@ -589,16 +1133,19 @@ pub fn real_space(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
     }
 }
 
-/// The shape sphere turned `angle` degrees: its outline, its x, y, z axes, and the path, its far side faint.
-pub fn sphere(ui: &Ui, rect: Rect, orbit: &Sample, angle: f64, i: usize) {
+/// The shape sphere turned `angle` degrees and seen through `orbit`'s view: its outline, its x, y, z axes, and the
+/// path, its far side faint. The orbit moves where the path is drawn, never the path (R-453 D8).
+pub fn sphere(ui: &Ui, rect: Rect, orbit: &Sample, angle: f64, i: usize, view: &Orbit) {
     let painter = ui.painter_at(rect);
     let weak = ui.visuals().weak_text_color();
+    let size = 0.86 * view.zoom.exp2();
     let r = rect.width().min(rect.height()) / 2.0;
-    painter.circle_stroke(rect.center(), r * 0.86, Stroke::new(1.0, weak));
-    let shrink = |p: [f64; 2]| [p[0] * 0.86, p[1] * 0.86];
+    painter.circle_stroke(rect.center(), r * size as f32, Stroke::new(1.0, weak));
+    let shrink = |p: [f64; 2]| [p[0] * size, p[1] * size];
+    let (yaw, pitch) = (angle + view.yaw, view.pitch);
     for (axis, (colour, name)) in AXIS_COLOURS.iter().zip(["x", "y", "z"]).enumerate() {
         let tip = std::array::from_fn(|k| if k == axis { 1.12 } else { 0.0 });
-        let (end, _) = view(tip, angle);
+        let (end, _) = view_at(tip, yaw, pitch);
         let end = on_square(rect, shrink(end));
         painter.line_segment([rect.center(), end], Stroke::new(1.2, *colour));
         painter.text(
@@ -612,7 +1159,7 @@ pub fn sphere(ui: &Ui, rect: Rect, orbit: &Sample, angle: f64, i: usize) {
     let points: Vec<([f64; 2], f64)> = orbit
         .shape
         .iter()
-        .map(|p| view(on_sphere(*p), angle))
+        .map(|p| view_at(on_sphere(*p), yaw, pitch))
         .collect();
     let ink = ui.visuals().text_color();
     for w in points.windows(2) {
@@ -635,39 +1182,45 @@ pub fn sphere(ui: &Ui, rect: Rect, orbit: &Sample, angle: f64, i: usize) {
     }
 }
 
-/// The unwrapped (equirectangular) view: `θ` across, `φ` down, the path broken where it wraps.
-pub fn unwrapped(ui: &Ui, rect: Rect, orbit: &Sample, i: usize) {
+/// Where `view` draws the point `p` of the unwrapped drawing on `rect`.
+fn through(rect: Rect, view: &PanZoom, p: Pos2) -> Pos2 {
+    let half = rect.size() / 2.0;
+    let [x, y] = view.apply(in_view(p, rect.center(), half));
+    rect.center() + vec2(x as f32 * half.x, y as f32 * half.y)
+}
+
+/// The unwrapped (equirectangular) view, seen through `view`: `θ` across, `φ` down, the path broken where it wraps.
+pub fn unwrapped(ui: &Ui, rect: Rect, orbit: &Sample, i: usize, view: &PanZoom) {
     let painter = ui.painter_at(rect);
     let weak = ui.visuals().weak_text_color();
-    painter.rect_stroke(rect, 0.0, Stroke::new(1.0, weak), egui::StrokeKind::Inside);
+    let to = |p: [f64; 2]| through(rect, view, unwrapped_point(rect, p));
+    let map = Rect::from_two_pos(through(rect, view, rect.min), through(rect, view, rect.max));
+    painter.rect_stroke(map, 0.0, Stroke::new(1.0, weak), egui::StrokeKind::Inside);
     let ink = ui.visuals().text_color();
     for w in orbit.shape.windows(2) {
         if !wraps(w[0], w[1]) {
-            painter.line_segment(
-                [unwrapped_point(rect, w[0]), unwrapped_point(rect, w[1])],
-                Stroke::new(1.2, ink),
-            );
+            painter.line_segment([to(w[0]), to(w[1])], Stroke::new(1.2, ink));
         }
     }
     if let Some(p) = orbit.shape.get(i) {
-        painter.circle_filled(unwrapped_point(rect, *p), 3.5, AXIS_COLOURS[2]);
+        painter.circle_filled(to(*p), 3.5, AXIS_COLOURS[2]);
     }
     let font = egui::FontId::monospace(10.0);
     painter.text(
-        rect.left_bottom(),
+        map.left_bottom(),
         egui::Align2::LEFT_BOTTOM,
         "θ 0",
         font.clone(),
         weak,
     );
     painter.text(
-        rect.right_bottom(),
+        map.right_bottom(),
         egui::Align2::RIGHT_BOTTOM,
         "2π",
         font.clone(),
         weak,
     );
-    painter.text(rect.left_top(), egui::Align2::LEFT_TOP, "φ 0", font, weak);
+    painter.text(map.left_top(), egui::Align2::LEFT_TOP, "φ 0", font, weak);
 }
 
 /// The stats in one row below the two views: the F₂ word, substeps, minimum separation and `|ΔE/E|`, each in its cell.

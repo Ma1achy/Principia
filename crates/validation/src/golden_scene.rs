@@ -45,12 +45,17 @@
 //! from sample to sample, the first fresh; the ternary masses view renders its own ([`ternary_masses`]): equal masses,
 //! each vertex, and five mixes.
 //!
-//! **The scenes** (`m1-outcome` and `debug-views`; TASK-M1-10's acceptance lines):
-//! - `outcome`: the outcome palette (`render::colour::outcome`; colour_composition §1.4): one sample per class, the
-//!   collisions with `t_end_step > 0` per pair, the escapes per body, bounded, a `decode_failed` sample, a collision
-//!   with `t_end_step == 0`, a triple collision and a triple ejection (`detail = 3`), running, sim_failed, and a triple
-//!   collision at `t_end_step == 0`, which is the t = 0 collision's.
-//! - `outcome_edited`: the same samples, the body-1 escape's swatch edited: only that class changes (REQ-COL-002).
+//! **The scenes** (`m1-outcome` and `debug-views`; TASK-M1-10's acceptance lines, as R-444 to R-446 change them;
+//! TASK-M2-32):
+//! - `outcome`: the outcome palette (`render::colour::outcome`; colour_composition §1.4): one sample per class, in the
+//!   table's order: bounded, the collisions with `t_end_step > 0` per pair, the triple collision, the escapes per body,
+//!   the triple ejection; a collision and a triple collision at `t_end_step == 0`, each in its own class's colour
+//!   (R-445); then a running sample, a `sim_failed` sample of each `detail`, a `decode_failed` sample of each `detail`
+//!   and the reserved `state` codes 6 and 7, each drawn bounded / nothing yet's `#141418` (R-446); and a sample whose
+//!   chart point is forbidden ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn with the hatch (REQ-COL-101,
+//!   REQ-COL-102).
+//! - `outcome_edited`: the same samples, the body-2 escape's swatch (`escape_body_1`) edited: only that class changes
+//!   (REQ-COL-002).
 //! - `state_view`: the raw `state` view, one sample per state, 0–5: six `dbg_cat` colours (R-115).
 //! - `detail_view`: the `detail` view, keyed by state: every `detail` code of escape, collision, sim_failed and
 //!   decode_failed, then bounded and running, which have none and draw blank.
@@ -60,7 +65,8 @@
 //! that shows the value it sets ([`SYNTHETIC_SCENES`]):
 //! - `set_state`: each `state` code, 0–5 and the reserved 6 and 7, on the `state` view;
 //! - `known_escaper`: an escaper of each body, a triple ejection and the earliest escape the settling window allows,
-//!   at step 40, beside a bounded, a colliding and a running sample, on the outcome palette (colour_composition §1.4);
+//!   at step 40, beside a bounded, a colliding and a running sample, on the outcome palette (colour_composition §1.4):
+//!   the triple ejection `#611597` (R-445), the running sample `#141418` (R-446);
 //! - `energy_drift_ramp`: a ramp in the current energy drift, on the `energy_drift` view, its values literal;
 //! - `adversarial_state`, `adversarial_detail`, `adversarial_saturated`, `adversarial_dmin_pair`,
 //!   `adversarial_last_symbol`: the bitwise-adversarial descriptor, written whole, on each sub-field view, so each
@@ -193,27 +199,52 @@ pub const RANGE_SCENES: [(&str, &str, [f32; 8]); 6] = [
     ),
 ];
 
-/// The swatch `outcome_edited` edits, and its edited colour, 8-bit sRGB: the body-1 escape's, to olive.
+/// The swatch `outcome_edited` edits, and its edited colour, 8-bit sRGB: escape body 2's (`detail` 1), to olive.
 pub const OUTCOME_EDIT: (&str, [u8; 3]) = ("escape_body_1", [0x80, 0x80, 0x20]);
 
-/// The `outcome` scene's samples, `(state, detail, t_end_step)`, by the state's name: one per class (colour_composition
-/// §1.4, R-96), then a triple collision at step 0.
-pub const OUTCOME_SAMPLES: [(&str, u32, u32); 14] = [
+/// The `outcome` scene's samples, `(state, detail, t_end_step)`, by the state's name (`reserved 6` and `reserved 7`
+/// the reserved codes, payload §2): one per class in colour_composition §1.4's order (R-444), a collision and a triple
+/// collision at step 0 (R-445), then running, `sim_failed` and `decode_failed` of each `detail`, the reserved codes
+/// (R-446), and the forbidden sample ([`OUTCOME_FORBIDDEN`]).
+pub const OUTCOME_SAMPLES: [(&str, u32, u32); 23] = [
+    ("bounded", 0, 1000),
     ("collision", 2, 40),
     ("collision", 1, 40),
     ("collision", 0, 40),
-    ("bounded", 0, 1000),
-    ("decode_failed", 1, 0),
+    ("collision", 3, 40),
     ("escape", 0, 120),
     ("escape", 1, 120),
     ("escape", 2, 120),
-    ("collision", 2, 0),
-    ("collision", 3, 40),
     ("escape", 3, 120),
+    ("collision", 2, 0),
+    ("collision", 3, 0),
     ("running", 0, 20),
     ("sim_failed", 0, 40),
-    ("collision", 3, 0),
+    ("sim_failed", 1, 40),
+    ("sim_failed", 2, 40),
+    ("sim_failed", 3, 40),
+    ("decode_failed", 0, 0),
+    ("decode_failed", 1, 0),
+    ("decode_failed", 2, 0),
+    ("decode_failed", 3, 0),
+    ("reserved 6", 0, 40),
+    ("reserved 7", 0, 40),
+    ("decode_failed", 1, 0),
 ];
+
+/// The `outcome` scene's sample whose chart point is forbidden (REQ-COL-102): its last, a `decode_failed` sample like
+/// the one before it, which is not, so only the chart's classification tells them apart (R-446).
+pub const OUTCOME_FORBIDDEN: u32 = 22;
+
+/// The `state` code of an outcome sample's state name: the ledger's ([`outcome::code`]), or the reserved codes, named
+/// `reserved 6` and `reserved 7`.
+pub fn state_code(name: &str) -> u32 {
+    match name {
+        "reserved 6" => 6,
+        "reserved 7" => 7,
+        _ => outcome::code(name),
+    }
+}
 
 /// Each tile's side in pixels.
 const TILE_PX: u32 = 8;
@@ -236,8 +267,8 @@ pub enum Colouring {
     /// A colour occupant's WGSL as given, with the params it sets over its header's defaults: a test's probe, which
     /// writes a view's value rather than its colour.
     Probe(String, Vec<(String, Vec<f64>)>),
-    /// The outcome palette, the built-in colour `outcome_state`, the swatch `edit` names set to its 8-bit sRGB colour,
-    /// as the linear RGB param the node takes.
+    /// The outcome palette, the built-in colour `outcome_state`, its default set shown (the sRGB palette, R-447), the
+    /// swatch `edit` names set to its 8-bit sRGB colour, as the linear RGB param the node takes.
     Outcome {
         edit: Option<(&'static str, [u8; 3])>,
     },
@@ -515,10 +546,11 @@ pub fn scene(name: &str) -> Result<Scene, String> {
         "outcome" | "outcome_edited" => {
             for (i, &(state, detail, t)) in OUTCOME_SAMPLES.iter().enumerate() {
                 set.sample(i as u32)
-                    .state(outcome::code(state))
+                    .state(state_code(state))
                     .detail(detail)
                     .times(t, 0);
             }
+            set.set_forbidden(OUTCOME_FORBIDDEN, true);
             Colouring::Outcome {
                 edit: (name == "outcome_edited").then_some(OUTCOME_EDIT),
             }
@@ -1159,10 +1191,9 @@ impl Scene {
                 Look::Literal(f64::from(v))
             }),
             Colouring::Outcome { .. } => Ok(
-                match outcome::shown(read.state, read.detail, read.t_end_step) {
+                match outcome::shown(read.state, read.detail, self.set.forbidden(i)) {
                     OutcomeShown::Swatch(k) => Look::Flat(present::srgb8(self.swatches()[k])),
-                    OutcomeShown::Running => Look::NotYet,
-                    OutcomeShown::Invalid => Look::Invalid,
+                    OutcomeShown::Forbidden => Look::Invalid,
                 },
             ),
             Colouring::View(f) => {

@@ -9,15 +9,18 @@
 //!   edges, and the check fails (the control of `qa_m1_14_independence_edge_maps_agree`): the "gains" half of §G's
 //!   claim, beside the "loses" half `colour_independence.rs` shows.
 //! - REQ-COL-067 / REQ-COL-068 (colour composition §4.1, "The three modes of pitfalls §1.2 (c)"): greyscale draws class
-//!   `r` of `K = 11` at `OKLab(L = (r + ½)/K, 0, 0)`; hue draws it on the hue wheel at L = 0.75, C = 0.12, hue `r/K`
-//!   turns; event is §1.4's palette, its hex values read from the doc; and every mode keeps the "not yet" style for
-//!   `running` and the invalid pattern for `sim_failed` and the reserved codes (`qa_m1_14_independence_modes_*`).
+//!   `r` of `K = 9` at `OKLab(L = (r + ½)/K, 0, 0)`; hue draws it on the hue wheel at L = 0.75, C = 0.12, hue `r/K`
+//!   turns; event is §1.4's palette, its hex values typed in from the doc; R-448's rank, bounded / nothing yet first,
+//!   then collision 1–2, 1–3, 2–3, triple collision, escape body 1, 2, 3, triple ejection; and in every mode `running`,
+//!   `sim_failed`, `decode_failed` and the reserved codes are the bounded / nothing yet class, rank 0, not the "not
+//!   yet" style or the invalid pattern (R-446) (`qa_m1_14_independence_modes_*`). Amended by qa for TASK-M2-32 as
+//!   R-444 to R-448 force: `K = 11` became 9, the degenerate and t = 0 classes left, the styles left the outcome class.
 //!
-//! The slice is my own: 16 × 8 samples, one quad each, 8 px tiles. Its first 56 tiles, in a snake, walk an Eulerian
-//! circuit of the complete graph on the eleven classes, so every pair of classes meets at least once; the rest hold the
-//! styles beside one another and beside classes, `decode_failed` of every `detail` (one class, degenerate: R-96),
-//! collisions at t = 0 of every pair (one class), and 2 × 2 blocks so that every class also meets itself. Each
-//! sample's `t_end_step` varies (the field does not read it but at t = 0).
+//! The slice is my own: 16 × 8 samples, one quad each, 8 px tiles. Its first 37 tiles, in a snake, walk an Eulerian
+//! circuit of the complete graph on the nine classes, so every pair of classes meets at least once; the next hold
+//! running and the failures beside one another and beside every class, and 2 × 2 blocks so that every class also
+//! meets itself. Each sample's `t_end_step` varies, collisions at t = 0 among them, which the field does not read
+//! (R-445).
 //!
 //! Each test registers its negative control (R-176).
 
@@ -36,13 +39,13 @@ use validation::synthetic::Synthetic;
 const COLS: u32 = 16;
 const ROWS: u32 = 8;
 const TILE: u32 = 8;
-/// colour composition §4.1: the outcome field's eleven classes.
-const K: u32 = 11;
+/// colour composition §4.1: the outcome field's nine classes (R-448).
+const K: u32 = 9;
 /// debug tooling plan §G: the detector's threshold, and the float error it sits above.
 const TAU: f64 = 0.01;
 const FLOAT_ERROR: f64 = 1e-5;
 
-/// A tile's content: a class of rank `0..K` (§4.1's ranking), or a style.
+/// A tile's content: a class of rank `0..K` (§4.1's ranking), or a sample that is no physical outcome.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Cell {
     Class(u32),
@@ -50,39 +53,41 @@ enum Cell {
     Running,
     /// `sim_failed`.
     Failed,
+    /// `decode_failed`.
+    DecodeFailed,
     /// A reserved state code, 6 or 7.
     Reserved(u32),
 }
 
-/// What a tile shows, by §4.1 ("What every mode keeps"): its class, or "not yet", or the invalid pattern.
-fn appearance(c: Cell) -> (u32, u32) {
+/// What a tile shows, by §4.1 ("What every mode keeps") as R-446 changes it: its class, `running`, the failures and
+/// the reserved codes being the bounded / nothing yet class, rank 0.
+fn appearance(c: Cell) -> u32 {
     match c {
-        Cell::Class(r) => (0, r),
-        Cell::Running => (1, 0),
-        Cell::Failed | Cell::Reserved(_) => (2, 0),
+        Cell::Class(r) => r,
+        Cell::Running | Cell::Failed | Cell::DecodeFailed | Cell::Reserved(_) => 0,
     }
 }
 
-/// The payload of `c` at sample `i`, `(state, detail, t_end_step)`, from colour composition §1.4 and §4.1's ranking and
-/// payload §2's codes: bounded; collision 0–1 (pair 2), 0–2 (pair 1), 1–2 (pair 0); degenerate (`decode_failed`,
-/// any detail, step 0); escapes of body 0, 1, 2; collision at t = 0 (any pair, the triple too); triple collision;
-/// triple ejection. `t_end_step` varies with `i` but at t = 0.
+/// The payload of `c` at sample `i`, `(state, detail, t_end_step)`, from colour composition §1.4, R-448's ranking and
+/// payload §2's codes: bounded; collision 1–2 (pair 2), 1–3 (pair 1), 2–3 (pair 0); triple collision; escapes of
+/// body 1, 2, 3 (`detail` 0, 1, 2); triple ejection. `t_end_step` varies with `i`, a collision's at 0 for every third
+/// `i` (R-445: it draws its own class).
 fn payload_of(c: Cell, i: u32) -> (u32, u32, u32) {
     let t = 1 + (i * 37) % 900;
+    let tc = if i.is_multiple_of(3) { 0 } else { t };
     match c {
-        Cell::Class(0) => (1, 0, t),
-        Cell::Class(1) => (2, 2, t),
-        Cell::Class(2) => (2, 1, t),
-        Cell::Class(3) => (2, 0, t),
-        Cell::Class(4) => (5, i % 4, 0),
+        Cell::Class(0) => (1, i % 4, t),
+        Cell::Class(1) => (2, 2, tc),
+        Cell::Class(2) => (2, 1, tc),
+        Cell::Class(3) => (2, 0, tc),
+        Cell::Class(4) => (2, 3, tc),
         Cell::Class(5) => (0, 0, t),
         Cell::Class(6) => (0, 1, t),
         Cell::Class(7) => (0, 2, t),
-        Cell::Class(8) => (2, i % 4, 0),
-        Cell::Class(9) => (2, 3, t),
-        Cell::Class(10) => (0, 3, t),
-        Cell::Running => (3, 0, i % 5),
+        Cell::Class(8) => (0, 3, t),
+        Cell::Running => (3, i % 4, i % 5),
         Cell::Failed => (4, i % 4, t),
+        Cell::DecodeFailed => (5, i % 4, i % 3),
         Cell::Reserved(code) => (code, i % 4, t),
         Cell::Class(r) => panic!("no class of rank {r}"),
     }
@@ -113,33 +118,35 @@ fn eulerian_circuit() -> Vec<u32> {
 /// The slice, `slice[y][x]`, rows from the top.
 fn slice() -> Vec<Vec<Cell>> {
     let mut seq: Vec<Cell> = eulerian_circuit().into_iter().map(Cell::Class).collect();
-    assert_eq!(seq.len(), 56);
-    // The styles beside one another and beside classes.
-    seq.extend([
+    assert_eq!(seq.len(), 37);
+    // Running and the failures beside one another, and each beside every class.
+    let others = [
         Cell::Running,
         Cell::Failed,
+        Cell::DecodeFailed,
         Cell::Reserved(6),
         Cell::Reserved(7),
-        Cell::Failed,
-        Cell::Running,
-        Cell::Class(4),
-        Cell::Class(4),
-    ]);
+    ];
+    seq.extend(others);
+    for r in 1..K {
+        seq.extend([others[r as usize % others.len()], Cell::Class(r)]);
+    }
+    assert!(seq.len() <= 4 * COLS as usize);
     let mut grid = vec![vec![Cell::Class(0); COLS as usize]; ROWS as usize];
     for (k, c) in seq.into_iter().enumerate() {
         let (y, x) = (k / COLS as usize, k % COLS as usize);
         let x = if y % 2 == 0 { x } else { COLS as usize - 1 - x };
         grid[y][x] = c;
     }
-    // Rows 4–7: 2 × 2 blocks of every class and style, so each meets itself and its neighbours.
+    // Rows 4–7: 2 × 2 blocks of every class, running and failure, so each meets itself and its neighbours.
     let all: Vec<Cell> = (0..K)
         .map(Cell::Class)
         .chain([
             Cell::Running,
             Cell::Failed,
+            Cell::DecodeFailed,
             Cell::Reserved(6),
             Cell::Reserved(7),
-            Cell::Class(8),
         ])
         .collect();
     for by in 0..2 {
@@ -189,23 +196,32 @@ fn context() -> Context {
     }
 }
 
-/// §4.1's ranking of the outcome class, from §1.4's table read by R-96, in WGSL: −1 `running`, −2 the invalid pattern.
+/// §4.1's ranking of the outcome class, R-448's, from `state` and `detail` alone, in WGSL: every state but a collision
+/// or an escape is bounded / nothing yet, rank 0 (R-446).
 const RANK: &str = "fn qa_rank(ctx: Ctx) -> i32 {
     let s = ctx.sample.state;
     let d = i32(ctx.sample.detail);
-    if (s == 3u) { return -1; }
-    if (s == 1u) { return 0; }
-    if (s == 5u) { return 4; }
     if (s == 2u) {
-        if (ctx.sample.t_end_step == 0u) { return 8; }
-        if (d == 3) { return 9; }
+        if (d == 3) { return 4; }
         return 3 - d;
     }
     if (s == 0u) {
-        if (d == 3) { return 10; }
+        if (d == 3) { return 8; }
         return 5 + d;
     }
-    return -2;
+    return 0;
+}
+";
+
+/// Greyscale's post before R-446: `running` in the "not yet" style and `sim_failed` and the reserved codes in the
+/// invalid pattern, which R-446 takes out of the outcome class: the control of
+/// `qa_m1_14_independence_modes_rank_failures_zero`.
+#[cfg(feature = "controls")]
+const STYLES_POST: &str = "fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
+    let s = ctx.sample.state;
+    if (s == 3u) { return debug_not_yet(ctx.frag_xy); }
+    if (s == 4u || s > 5u) { return debug_invalid(ctx.frag_xy); }
+    return rgb;
 }
 ";
 
@@ -227,26 +243,18 @@ fn event() -> Mode {
 }
 
 /// Greyscale mode, `B = (r + ½)/K` plus `leak` times another payload field, `t_end_step`'s parity: a mode coloured by
-/// something besides the field when `leak` is not 0.
+/// something besides the field when `leak` is not 0. No post: no sample of the outcome class takes a style (R-446).
 fn greyscale_with(leak: f32) -> Mode {
     Mode {
         name: "greyscale",
         colour: Occupant::None,
         brightness: Occupant::Custom(format!(
             "{RANK}fn brightness(ctx: Ctx) -> f32 {{
-    return (f32(max(qa_rank(ctx), 0)) + 0.5) / {K}.0 + {leak:?} * f32(ctx.sample.t_end_step % 2u);
+    return (f32(qa_rank(ctx)) + 0.5) / {K}.0 + {leak:?} * f32(ctx.sample.t_end_step % 2u);
 }}
 "
         )),
-        post: Some(format!(
-            "{RANK}fn post(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {{
-    let r = qa_rank(ctx);
-    if (r == -1) {{ return debug_not_yet(ctx.frag_xy); }}
-    if (r == -2) {{ return debug_invalid(ctx.frag_xy); }}
-    return rgb;
-}}
-"
-        )),
+        post: None,
     }
 }
 
@@ -260,10 +268,7 @@ fn hue_with(turns: u32) -> Mode {
         name: "hue",
         colour: Occupant::Custom(format!(
             "{RANK}fn colour(ctx: Ctx) -> vec3<f32> {{
-    let r = qa_rank(ctx);
-    if (r == -1) {{ return debug_not_yet(ctx.frag_xy); }}
-    if (r == -2) {{ return debug_invalid(ctx.frag_xy); }}
-    return hue_wheel(f32(r) / {turns}.0);
+    return hue_wheel(f32(qa_rank(ctx)) / {turns}.0);
 }}
 "
         )),
@@ -490,24 +495,21 @@ fn srgb8(c: Rgb) -> [u8; 3] {
     })
 }
 
-/// colour composition §1.4's palette by rank, its hex values as the doc gives them, the two triple outcomes the
-/// proposed values (REQ-COL-062).
-const EVENT_HEX: [[u8; 3]; 11] = [
-    [0x14, 0x14, 0x18], // bounded
-    [0xDE, 0x2D, 0x2D], // collision 0–1
-    [0x2E, 0xBC, 0x4E], // collision 0–2
-    [0x34, 0x62, 0xE0], // collision 1–2
-    [0xEC, 0xEC, 0xF0], // degenerate
-    [0xF0, 0xDE, 0x32], // escape body 0
-    [0xE0, 0x34, 0xC6], // escape body 1
-    [0x30, 0xC8, 0xDC], // escape body 2
-    [0xF2, 0x96, 0x20], // collision @ t=0
-    [0xD6, 0xA1, 0xFF], // triple collision
-    [0x00, 0x00, 0x97], // triple ejection
+/// colour composition §1.4's palette by R-448's rank, its hex values as the doc gives them (R-444, R-445).
+const EVENT_HEX: [[u8; 3]; 9] = [
+    [0x14, 0x14, 0x18], // bounded / nothing yet
+    [0xDE, 0x2D, 0x2D], // collision 1–2
+    [0x2E, 0xBC, 0x4E], // collision 1–3
+    [0x34, 0x62, 0xE0], // collision 2–3
+    [0xF2, 0x96, 0x20], // triple collision
+    [0xF0, 0xDE, 0x32], // escape body 1
+    [0xE0, 0x34, 0xC6], // escape body 2
+    [0x30, 0xC8, 0xDC], // escape body 3
+    [0x61, 0x15, 0x97], // triple ejection
 ];
 
-/// What §4.1 defines for `mode` at pixel `(x, y)` of a tile holding `c`: linear RGB for the styles and greyscale and
-/// hue's classes; event's classes are checked in 8-bit sRGB against `EVENT_HEX`.
+/// What §4.1 defines for `mode` at pixel `(x, y)` of a tile holding `c`: linear RGB for greyscale and hue's classes;
+/// event's classes are checked in 8-bit sRGB against `EVENT_HEX`. Running and the failures are class 0 (R-446).
 fn check_mode(mode: &str, slice: &[Vec<Cell>], rgb: &[Rgb], turns: u32) {
     let lab = oklab(rgb);
     let width = COLS * TILE;
@@ -522,13 +524,8 @@ fn check_mode(mode: &str, slice: &[Vec<Cell>], rgb: &[Rgb], turns: u32) {
     for (k, &got) in lab.iter().enumerate() {
         let (x, y) = (k as u32 % width, k as u32 / width);
         let c = slice[(y / TILE) as usize][(x / TILE) as usize];
-        let frag = [f64::from(x) + 0.5, f64::from(y) + 0.5];
-        let want = match (c, mode) {
-            (Cell::Running, _) => present::linear_to_oklab(present::debug_not_yet(frag)),
-            (Cell::Failed | Cell::Reserved(_), _) => {
-                present::linear_to_oklab(present::debug_invalid(frag))
-            }
-            (Cell::Class(r), "event") => {
+        let want = match (appearance(c), mode) {
+            (r, "event") => {
                 assert_eq!(
                     srgb8(rgb[k]),
                     EVENT_HEX[r as usize],
@@ -536,8 +533,8 @@ fn check_mode(mode: &str, slice: &[Vec<Cell>], rgb: &[Rgb], turns: u32) {
                 );
                 continue;
             }
-            (Cell::Class(r), "greyscale") => [(f64::from(r) + 0.5) / f64::from(K), 0.0, 0.0],
-            (Cell::Class(r), _) => {
+            (r, "greyscale") => [(f64::from(r) + 0.5) / f64::from(K), 0.0, 0.0],
+            (r, _) => {
                 // OKLCH L = 0.75, C = 0.12, the hue r/turns turns past class 0's.
                 let a = std::f64::consts::TAU * f64::from(r) / f64::from(turns);
                 let (h0a, h0b) = (hue0[1], hue0[2]);
@@ -583,24 +580,26 @@ negative_control!(
 );
 
 #[test]
-fn qa_m1_14_independence_modes_keep_the_styles() {
-    // Greyscale's post draws the styles; without it a running or failed sample would take a lightness.
+fn qa_m1_14_independence_modes_rank_failures_zero() {
+    // R-446: running and every failure are the bounded / nothing yet class, rank 0, in every mode; no style.
     let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
     let s = slice();
-    check_mode("greyscale", &s, &render_rgb(&h, &s, &greyscale()), K);
+    for m in [event(), greyscale(), hue()] {
+        check_mode(m.name, &s, &render_rgb(&h, &s, &m), K);
+    }
 }
 
 negative_control!(
-    qa_m1_14_independence_modes_keep_the_styles,
-    "greyscale without its post: running and failed samples drawn on the greyscale",
+    qa_m1_14_independence_modes_rank_failures_zero,
+    "greyscale with the styles' post of before R-446: running and failed samples drawn as styles",
     expected = "not the defined",
     {
         let h = GpuHarness::new().unwrap_or_else(|e| panic!("{e}"));
         let s = slice();
-        let bare = Mode {
-            post: None,
+        let styled = Mode {
+            post: Some(STYLES_POST.to_owned()),
             ..greyscale()
         };
-        check_mode("greyscale", &s, &render_rgb(&h, &s, &bare), K);
+        check_mode("greyscale", &s, &render_rgb(&h, &s, &styled), K);
     }
 );

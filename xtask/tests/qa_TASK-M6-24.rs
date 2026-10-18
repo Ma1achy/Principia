@@ -120,7 +120,7 @@ fn steps(c: &Case) -> Vec<GuiStep> {
 /// the four cases that task names, `mock_manifold_view`, `mock_compass_slice`, `mock_compass_tilt` and
 /// `mock_axis_labels`; and, since TASK-M6-27, the six cases that task names, `mock_time`, `mock_trajectory_sphere`,
 /// `mock_trajectory_unwrapped`, `mock_overlays_menu`, `mock_tile_bounds` and `mock_hover`; and, since TASK-M6-30,
-/// `mock_present` (REQ-GUI-179); and no other.
+/// `mock_present` (REQ-GUI-179); and, since TASK-M6-36, `mock_trajectory_views` (REQ-GUI-202, R-453); and no other.
 fn check_01_main(cases: &[Case]) {
     let mut names: Vec<&str> = cases.iter().map(|c| c.name.as_str()).collect();
     names.sort_unstable();
@@ -141,6 +141,7 @@ fn check_01_main(cases: &[Case]) {
             "mock_time",
             "mock_trajectory_sphere",
             "mock_trajectory_unwrapped",
+            "mock_trajectory_views",
             "mock_warning"
         ],
         "the 01_main cases"

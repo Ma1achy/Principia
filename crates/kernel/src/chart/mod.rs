@@ -39,7 +39,9 @@ pub mod shape_sphere;
 
 use core::fmt;
 
-use spirv_std::num_traits::Float;
+/// The float trait [`Chart::map`] is generic over (R-118), re-exported so that a chart written outside the kernel, a
+/// test's among them, names the same trait (TASK-M2-32).
+pub use spirv_std::num_traits::Float;
 
 pub use burrau::{Burrau, EuclidPlane};
 pub use invariant::{InvariantLE, InvariantLK};

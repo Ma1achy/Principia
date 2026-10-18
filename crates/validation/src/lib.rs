@@ -53,3 +53,13 @@ pub use ledger::payload::pair_bodies;
 /// The assembler's declaration parser, re-exported for the ledger crate's tests, which reach render only through this
 /// dev-dependency: the numeric view template's `RANGE_AUTO` header round-trips through it (TASK-M1-09).
 pub use render::assemble::{Declaration, UniformType};
+
+/// The samples' chart classification (REQ-COL-102; TASK-M2-32), and the chart trait and the latent chart it classifies
+/// from, with the decoder entry `D ∘ Φ` under `η_E` (`energy_norm`) and the link selections that reach the decoder's
+/// `DEGENERATE` tags, re-exported for the render crate's tests, which reach the engine and the kernel only through this
+/// dev-dependency.
+pub use engine::chart_class;
+pub use kernel::chart;
+pub use kernel::decode::{energy_norm, Degenerate};
+pub use kernel::generated::links::Defaults;
+pub use kernel::stage::decode::StickBreakingLinks;
