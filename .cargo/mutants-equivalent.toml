@@ -174,3 +174,7 @@ justification = "coincident | mirrored uses bits 0 and 1, and clamped_controls <
 [[equivalent]]
 mutant = "crates/kernel/src/encode/blocks.rs:134:31: replace > with >= in beta"
 justification = "where raw == π̂ both select π̂: select(true, pi, raw) and select(false, pi, raw) are the same value"
+
+[[equivalent]]
+mutant = "crates/kernel/src/chart/burrau_acute.rs:376:33: replace > with >= in BurrauThetaLz<P>::nearest_feasible"
+justification = "nearest_feasible runs only on an infeasible v; v = 1/2 gives L_z = 0, feasible at every K >= 0, so it never reaches the comparison, and at K < 0 no v is feasible, both edges fail, and the clamp returns 1/2 either way"
