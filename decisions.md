@@ -437,6 +437,8 @@ Fix the two HTML references that disagree. Files: dd_integrator §3.7, test 9; d
 Files: dd_colouring §3.1, only if a digit is wrong.
 
 ## R-52 — Undo lives in the state contract *(GU-1 (a))*
+*Read by R-466 (18 Oct 2026; a section reset or Home is one history entry however many fields it sets, its edits sent
+under one key as a drag's are, K10).*
 *24 Sep 2026 · recorded; applied in step 6*
 
 Undo/redo is a history of typed `setField` edits, shared by every GUI. Files: gui_state_contract §2, §7; colour_composition :264;
@@ -545,6 +547,8 @@ the contracts define, under their contract names. The rule is added to the heade
 render_gui_spec §G2, §G5, §G13.
 
 ## R-69 — What is undoable *(closes the step-6 open question)*
+*Read by R-466 (18 Oct 2026; the section resets and Home edit `z₀` and the basis, so they are undoable, each one
+command).*
 *25 Sep 2026 · applied in step 6*
 
 `SimConfig` and `RenderState` edits are undoable, including navigation (it edits `z₀` and the basis) and lock / unlock (chart
@@ -7823,12 +7827,15 @@ component on the slice normal, the Slice centre slider of that dimension).*
 the edit applied every frame of it).*
 *Amended in part by R-460 (18 Oct 2026; point 4: the two modes hold while keyboard navigation is on; a window opened with
 the mouse takes the focus with no ring, and keyboard navigation starts only on keyboard input).*
+*Extended by R-466 (18 Oct 2026; the key table gains the Home key, a global command in both modes that resets Slice
+centre, Tilt and Navigate to the chart preset's values, except on the console's log in interaction mode and in a text
+field being typed in, where those elements keep it).*
 *Still in force: all of it, except that the console opens in navigation mode on its header bar scope, not on its first
 filter, and its sections are R-450's two scopes, the header bar and the log (R-450); and that the compass's fixed view
 is the reference's isometric projection, not point 1's yaw −35°, pitch 25° (R-451); and that a click on a text field
 starts typing, in interaction mode (R-456); and that A3's drag is applied every frame, one history entry per drag, and
 moves the slice normal's component, there being no step slider (R-457, R-458); and that the two modes and the ring hold
-only while keyboard navigation is on (R-460).*
+only while keyboard navigation is on (R-460); R-466 adds the Home key to the key table, in both modes.*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
 what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
@@ -10834,6 +10841,8 @@ no ring, keyboard navigation staying off).*
 *Amended in part by R-463 (18 Oct 2026; the header bar gains a maximise button between Clear and ×).*
 *Amended in part by R-464 (18 Oct 2026; A3, as to the ring only: a click moves the focus as A3 says, and the ring is
 hidden after any click or drag until the next key press, which shows it where the focus is).*
+*Read by R-466 (18 Oct 2026; on the log in interaction mode Home keeps going to the first entry; everywhere else the Home
+key is R-466's Home, K1).*
 *Still in force: all of it, except A3 for the search field, which a click now starts typing in (R-456); and that a
 mouse open lands with no ring (R-460); and that the header bar has a maximise button between Clear and × (R-463); and
 that A3's click draws no ring until the next key press, the focus moving as A3 says (R-464).*
@@ -11668,6 +11677,8 @@ while keyboard navigation is on; flagged, RQ-367).*
 *Amended in part by R-464 (18 Oct 2026; closes RQ-367, and governs where R-460's reading above differs: as to the ring
 only, a click on a text input starts typing with the ring hidden, and the next key press, the first character typed
 included, shows it blue; a click elsewhere moves the focus as this ruling says, with no ring until the next key press).*
+*Read by R-466 (18 Oct 2026; a text field a click started typing in takes the Home key as typing does, the caret to the
+line's start, not as R-466's Home, K1).*
 *Still in force: all of it, except that the ring is hidden after any click until the next key press, the focus and the
 mode set as this ruling says (R-464).*
 *17 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
@@ -11736,6 +11747,10 @@ Changes REQ-GUI-189 (statement, verify, rulings, note), REQ-GUI-190 (verify, rul
 (rulings, note).
 
 ## R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; "Centre z₀" is renamed "Slice centre" and "Slice & tilt" "Tilt"; each tilt angle tilts into a latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's "the slice step" and R-451 B1's single tilt target)*
+*Extended by R-466 (18 Oct 2026; Slice centre, Tilt and Navigate each gain a "reset" beside the heading, returning the
+section to the active chart preset's values; Navigate's reset is in its heading row, the rest of what Navigate holds
+unchanged).*
+*Still in force: all of it; R-466 adds a reset beside each section's heading.*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (Navigate, Slice centre and Tilt), § "The compass: look and views (R-451, R-452)" (the labels and the readout), § "G3.
 Keyboard — a design note, not a screen (`07_keyboard.png`)" (the sub-scopes' names) and § "G13. Where the artboards are
@@ -11856,6 +11871,9 @@ Adds REQ-GUI-204 and REQ-GUI-205; changes REQ-GUI-081, REQ-GUI-083 and REQ-GUI-0
 REQ-GUI-170 (rulings, note).
 
 ## R-458 — Drags are live in both directions: a drag on the compass or on any slider applies its edit every frame, at most once a frame, so the sliders, the compass, its readout and the figure follow the drag, and the whole drag is one undo entry; a drag on a Slice centre slider switches the compass to Slice and one on a Tilt slider to Tilt, its plane moving with the drag *(amends R-409 A3 and R-451 B3 as they send one `SetField` per drag)*
+*Extended by R-466 (18 Oct 2026; a section reset and Home drive the compass, its readout, the sliders and the figure in
+the next frame as any edit does, each one history entry; a reset switches no compass mode).*
+*Still in force: all of it; R-466 adds the resets and Home to what the compass follows live.*
 *RQ-368, filed by F6 and F7 below, is ruled by R-465 (18 Oct 2026): option (b), the slice drag following the pointer
 along the drawn normal's screen direction, tilt mode unchanged; F6's easing stands (R-465 N1, applied per R-369); F7's
 "until RQ-368 is ruled" has ended, and TASK-M6-39 builds R-465's slice drag (R-465 N2).*
@@ -12060,6 +12078,8 @@ the ring where the focus is; a clicked text field types with no ring until then)
 *Still in force: all of it, except H3, H3's reading of R-456's blue ring and H1's keys that do not start keyboard
 navigation, which are R-464's (a click or drag hides the ring, the next key press shows it), and H5's check that a
 click leaves keyboard navigation as it was, which is R-464 M5's.*
+*Read by R-466 (18 Oct 2026; the Home key, as any key press, turns keyboard navigation on and shows the ring where the
+focus is once it has acted, R-464 M2; it moves no focus, K1).*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (a paragraph added; the two modes, the landings, a click on a text field, what the user sees and the
 console's landing, a clause each), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a screen"
@@ -12213,6 +12233,9 @@ follow-up task):*
 Adds REQ-GUI-211 and REQ-GUI-212.
 
 ## R-462 — Every panel boundary is a draggable splitter, the canvas taking the space left; each panel has a minimum size, a double-click resets a splitter, the layout is remembered and View › reset layout restores it; resizing the canvas re-frames the figure and never re-integrates it
+*Extended by R-466 (18 Oct 2026; the View menu also holds Home, its first entry, above F3 hide and reset layout; Home
+leaves the panel and window layout alone).*
+*Still in force: all of it; R-466 adds View › Home.*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the top bar and a paragraph) and § "G13. Where the artboards are overridden" (a bullet),
 `docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" (conformed),
@@ -12536,3 +12559,210 @@ projected onto the drawn normal's screen direction, the component across it doin
 in the latent space and its tilt-mode sentence stand, and B4 stands (N1).
 
 Adds REQ-GUI-217; changes REQ-GUI-193 (rulings, note) and REQ-GUI-206 (note).
+
+## R-466 — Slice centre, Tilt and Navigate each have a "reset" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the top bar, Navigate, Slice centre, Tilt, the Figure, the compass and a paragraph added), § "G3. Keyboard — a design
+note, not a screen (`07_keyboard.png`)" (a row of the key table and the sub-scopes), § "G7. Chart builder
+(`03_chartbuilder.png`)" (the presets bullet, a sentence) and § "G13. Where the artboards are overridden" (a bullet), `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere",
+§ "01 Explore — the everyday view" and § "07 Keyboard — design note, not a screen" (conformed),
+`docs/contracts/principia_gui_state_contract.md` § 2 (a bullet), R-52's, R-69's, R-409's, R-450's, R-456's, R-457's,
+R-458's, R-460's and R-462's heading blocks, REQ-GUI-218 to REQ-GUI-224 (reqio, new), TASK-M6-45 (new),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-45 on the mock*
+
+The human's words, a message of 18 Oct 2026, the human's own, given in the orchestrator's session and recorded
+verbatim. It is a GUI design ruling under R-390's feedback rule.
+
+> Reset and Home controls (Malachy, 2026-10-18).
+>
+> 1. Three section resets, each beside its own section's heading:
+>    - Slice centre: "reset" returns every out-of-plane coordinate to the chart preset's
+>      base point.
+>    - Tilt: "reset" sets τ₁, τ₂ and γ to 0. It does not change the tilt targets (X, Y)
+>      or the H, V and D choice.
+>    - Navigate: "reset" returns centre u, v to the preset centre and zoom to the preset
+>      window (× 1.00).
+>    "Reset" means the active chart preset's own values, not literal zero. The masses
+>    (z_μ1, z_μ2) are slice coordinates, and zeroing them would change the physical system.
+>    Read each reset target from the preset definition. Don't hardcode values.
+>
+> 2. Master "Home" = all three resets in one command:
+>    - A home icon button in a corner of the canvas.
+>    - The Home key (for both keyboard modes, check it against the existing keymap and
+>      report any clash).
+>    - View → Home in the menu.
+>    Home leaves alone: the chart preset and basis, the H / V / D choice and tilt targets,
+>    the time playhead, the stain, and the panel and window layout.
+>
+> 3. Behaviour:
+>    - Each reset, and Home, is one undoable command.
+>    - A section's reset button is dimmed when that section is already at its home values;
+>      Home is dimmed when all three are.
+>    - Resets drive the compass live, like any other change to the slice.
+>    - Tests: each reset returns exactly the preset's values, and leaves the other two
+>      sections untouched. For the control arm, move all three sections first, so a reset
+>      that does nothing fails.
+
+*What it decides:*
+- **Three section resets,** a "reset" beside the heading of each of the Manifold view's Slice centre, Tilt and
+  Navigate sections (§G2; the names are R-457's):
+  - **Slice centre:** every out-of-plane coordinate of `z₀` returns to the active chart preset's base point.
+  - **Tilt:** `τ₁`, `τ₂` and `γ` are set to 0. The tilt targets `X` and `Y` (R-457) and the H, V and D choice (R-459)
+    do not change.
+  - **Navigate:** the centre `(u, v)` returns to the preset's centre and the zoom to the preset's window, which the
+    zoom row reads as × 1.00.
+- **"Reset" means the active chart preset's own values, not literal zero.** The masses `z_μ1`, `z_μ2` are slice
+  coordinates; zeroing them would change the physical system. Each reset reads its target from the preset's
+  definition; no value is hardcoded.
+- **Home is all three resets in one command,** reached three ways: a home icon button in a corner of the figure's
+  canvas, the Home key in both keyboard modes, and View › Home in the top bar's menu.
+- **Home leaves alone** the chart preset and its basis, the H, V and D choice and the tilt targets, the time playhead,
+  the stain, and the panel and window layout.
+- **Each reset, and Home, is one undoable command.** A section's reset is dimmed while that section is already at its
+  home values; Home is dimmed while all three are.
+- **Resets drive the compass live,** as any other change to the slice does (R-458).
+- **The checks:** each reset returns exactly the preset's values and leaves the other two sections untouched; the
+  control arm moves all three sections first, so a reset that does nothing fails.
+
+*The preset's values: a definition requirement (R-72), not a value invented here.* The human's words name three values
+a chart preset carries: its **base point**, its **centre** and its **window**. The corpus defines no such values. A chart
+preset is "the preset, named by its axes" (§G2, Chart) and "**Presets are saved pairs of axes and are editable:** Save,
+Duplicate, Delete" (§G7; REQ-GUI-108); the chart decoder contract (Part 3, Part 4) defines the view as `(z₀, q₁, q₂)`
+and no preset; `principia_chart_reference.md` defines charts, not presets. The code agrees: the mock's presets are
+`PRESETS: [(usize, usize); 5]`, "each the pair of axes it is named by … Placeholder content on the mock (R-390)"
+(`crates/gui/src/explore/manifold_view/mod.rs` lines 41 to 43, at this branch's head); the mock's starting `z₀`
+(`MOCK_Z0`, 01_main.png's) and scale 1 are the mock's initial state, not any preset's; and the zoom row's "× 1.00" is
+`2^zoom` with `zoom = −log₂ σ` (`navigate.rs` lines 48 to 50, `mod.rs` `View::zoom`), so × 1.00 is `σ = 1` for every
+preset. So the three values are a definition requirement, **REQ-GUI-224** (M6, closed by TASK-M6-45): each chart
+preset carries, with its pair of axes, a base point (a value for each of the eight latent coordinates), a centre
+`(u, v)` in its plane and a window (the scale `σ_h` at which the zoom reads × 1.00, the zoom row reading
+`log₂(σ_h / σ)` and its magnification `σ_h / σ`), defined in render_gui_spec §G2 and §G7 by the task, its values on the
+mock placeholder content (R-390), and reviewed by the physics reviewer before merge (R-72; `plan/WORKFLOW.md`'s rule
+for definition requirements). The task may define the centre as the base point's in-plane coordinates. A preset saved
+from the Chart builder (REQ-GUI-108, M8) stores the three with its axes; the real engine's presets are REQ-GUI-082's,
+TASK-M8-06's. No review-queue entry is needed: R-72 says who writes a missing definition.
+
+*The Home key against the keymap (the human's "check it against the existing keymap and report any clash").* Checked
+against render_gui_spec §G3 (the key table, the in-scope keys, the two modes, the console's paragraph), §G12, R-409,
+R-450, R-456, R-460, R-464, `docs/contracts/principia_gui_state_contract.md` § 2 and the code at this branch's head
+(`crates/gui/src/keyboard/keymap.rs`, whose `command` maps Tab, Shift+Tab, Enter, Esc, the four arrows and `?` only;
+`Key::Home` appears nowhere in `crates/gui/src`):
+- **Navigation mode: no clash.** No rule or code binds Home in navigation mode, anywhere: not §G3's table, not a
+  scope's letter or Space shortcuts, not a window's keys. Home there is the new command, whatever the focus.
+- **Interaction mode: two clashes, both on keys a ruling already gives an element.**
+  - **The console's log.** R-450 (its log bullet, in the human's words "Home and End go to the first and last entry";
+    §G3's console paragraph, §G12, REQ-GUI-189) binds Home on the log in interaction mode.
+  - **A text field being typed in** (the console's search field; a number box beside a slider while typed into).
+    R-409 G4, §G3: "while typing every key goes to the field but Esc, Enter and Tab", so Home moves the caret to the
+    start of the line, as egui's text edit does. A click on a text field starts typing (R-456), so this holds from the
+    click on.
+  - Everywhere else in interaction mode (a slider, the compass in either mode, a grid view, the Figure, Time's
+    scrubber, the Trajectory panel's views, an open dropdown or menu) nothing binds Home.
+- **Settled per R-369 (K1 below), no review-queue entry:** in those two places the element keeps Home, as a text field
+  keeps Ctrl+Z and `?` (R-409 G4) and as R-450 bound it; everywhere else, in both modes, Home is Home. The human's
+  "for both keyboard modes" is met in both modes; the two exceptions are the human's own earlier words (R-450) and the
+  typing rule. The human may veto, Home then winning there too, by a follow-up ruling.
+
+*Applied per R-369 (routine design choices and mechanical consequences; the human may veto any, a veto being a GUI
+design ruling applied by a follow-up task):*
+- **K1. The Home key.** A global command, like Ctrl+Z: it acts wherever the focus is, in navigation and interaction
+  mode, on the Explore page and the Stain page alike, except on the console's log in interaction mode (first entry,
+  R-450) and in a text field being typed in (the caret, R-409 G4). Shift+Home and Alt+Home are Home (there is no step
+  to scale); Ctrl+Home and Cmd+Home are not, the keymap leaving Ctrl and Cmd to the system and to Ctrl+Z. On a Mac
+  keyboard without a Home key, Fn+← sends it. It acts once a press and does not repeat while held. As any key press it
+  turns keyboard navigation on and shows the ring where the focus is once it has acted (R-464 M2); the focus does not
+  move. The `?` overlay and §G3's table gain a row: "Home — Home: reset Slice centre, Tilt and Navigate to the chart
+  preset's values".
+- **K2. What each section's values are.** The chart decoder contract's own split (Part 4: a slice moves `z₀` across the
+  plane, `Δz₀ ⊥ span(q₁, q₂)`; a pan within it, `Δz₀ ∈ span(q₁, q₂)`; a tilt or zoom edits the basis) gives each section
+  its values, read in the active preset's frame:
+  - **Slice centre:** `z₀`'s out-of-plane part, its component orthogonal to `span(q₁, q₂)`. Its reset sets it to the
+    base point's out-of-plane part, `z₀ ← z₀ + P⊥(b − z₀)`, `b` the base point and `P⊥` the projection orthogonal to the
+    plane; the in-plane part, so the centre `(u, v)`, and the basis are kept. Untilted, the out-of-plane coordinates
+    are exactly the six the preset's axes do not show, each set to the base point's; tilted, they are the components
+    across the tilted plane (flagged: the human's "out-of-plane coordinate", read for a tilted plane).
+  - **Tilt:** `τ₁`, `τ₂`, `γ`. Its reset is a basis edit to `q₁ = σ e_a`, `q₂ = σ e_b`, `σ` kept; `z₀`, the targets
+    and the slice frame are kept (R-457 E3). The plane turns about the view's centre `z₀`, as every tilt does, so the
+    Slice centre's eight values and the zoom are untouched; the centre `(u, v)` is `z₀` read in the plane, and is read
+    anew in the untilted plane (flagged: no reading of a tilt reset keeps both `z₀` and its in-plane coordinates, and
+    this one keeps `z₀`, the figure's centre point).
+  - **Navigate:** the centre `(u, v)`, `z₀`'s in-plane coordinates along `q̂₁`, `q̂₂` as the Navigate row reads them,
+    and the zoom, `σ`. Its reset sets the in-plane part to the preset's centre and `σ` to the window's `σ_h`; the
+    out-of-plane part and `τ₁`, `τ₂`, `γ` are kept.
+  - **Home** sets all three: the basis to `(σ_h e_a, σ_h e_b)`, `z₀`'s six coordinates off the preset's axes to the
+    base point's and its two on them to the centre, the preset's home view, whatever the order.
+- **K3. The active chart preset** is the one Chart's preset row names (§G2), tilted or not, in R-457's frame. With a
+  basis edited out of every preset's frame (q₁'s or q₂'s edit button, the Chart builder) there is no preset to read:
+  the three resets and Home are dimmed and do nothing, their tooltip saying "no chart preset".
+- **K4. "The chart preset and basis" that Home leaves alone** is the preset and its axes, `e_a` and `e_b` (Chart's
+  horizontal `q₁` and vertical `q₂`, the cube's H and V), not the tilt or the zoom, which Home sets (flagged).
+  Home also leaves the lock and its anchor, the compass's mode and view, the overlays, the Trajectory panel's pin and
+  kept orbits, the Run settings and the keyboard's focus.
+- **K5. Locked.** The resets and Home set the same values; the lock, its anchor and the pin stay. Each edit goes
+  through the lock's rule for its kind (§G4: tilt, rotation and zoom turn about the pin; `about_the_pin`), and Home's
+  edit of `z₀` comes last, so Home lands on the home view exactly, locked or not, the pin drawn where the anchor then
+  falls. A Tilt reset while locked turns about the pin and so may move `z₀`, as every tilt does.
+- **K6. The section resets.** Each is a small egui button reading "reset" at the right end of its section's heading row,
+  the note beside the heading kept. Its tooltip names the command and its values ("Reset Slice centre to the chart
+  preset's base point"). From the keyboard each is its sub-scope's last element, after the section's own (so Enter into
+  the sub-scope still lands on its first element), and Enter on it acts as its click (R-409 A1).
+- **K7. The Home button.** A 24 × 24 point icon button in the **top-right corner** of the figure's canvas, inset 8
+  points, a house painted in egui's own strokes (a roof over a square, in the theme's text colour on egui's button fill;
+  no font glyph), tooltip "Home: reset Slice centre, Tilt and Navigate (Home)". It is drawn with the dev GUI's layer, so
+  F3 and present mode hide it with the rest, and no export or capture of the figure holds it. A click on it is not a
+  click on the figure: it pins no sample (R-453) and starts no pan. It is not a keyboard element (the Home key does
+  its work), so the Figure scope keeps nothing inside (§G3). The design notes' "The figure is never covered. No toasts
+  or labels over the plot." stands, the human's words placing this one control over the figure.
+- **K8. View › Home** is the View menu's first entry, its shortcut "Home" drawn at the right as egui draws a menu
+  shortcut, a separator under it, then F3 hide and reset layout (R-462).
+- **K9. The commands' names** are "Reset Slice centre", "Reset Tilt", "Reset Navigate" and "Home", in the tooltips, the
+  menu and the `?` overlay. The contract's history carries no names (`History { undo_depth, redo_depth }`, gui_state
+  §2): each command is one entry, and the console logs its `SetField`s as the contract logs any edit.
+- **K10. One undoable command.** A reset or Home sends its edits (`z₀`, the basis, or both) in one frame under one fresh
+  history key, the contract's mechanism for a drag (gui_state_contract §2, R-458), so the history keeps one entry; one
+  Ctrl+Z restores every field it set and one redo sets them again. A command whose sections are already home sends
+  nothing and adds no entry.
+- **K11. Dimmed.** A section is at its home values when each value its reset sets is within 10⁻¹² of the home value
+  (the zoom compared as `log₂(σ / σ_h)`, the angles in radians). A dimmed reset, and a dimmed Home button or View › Home,
+  is drawn in egui's disabled style (`add_enabled(false, …)`: weak text, no hover, no click), its tooltip saying
+  "already at the chart preset's values"; it keeps its place in the keyboard's order (the order never depends on state,
+  as R-450 has it), Enter on it doing nothing. The Home key while Home is dimmed does nothing.
+- **K12. Live.** The compass, its readout and labels, the sliders and the figure read the new state in the next frame,
+  as after any edit (R-458): the cube eases to the new plane as after a click (R-451 B4); the figure re-integrates
+  progressively for a slice or tilt change and re-addresses for a pan or zoom (R-92). A reset switches no compass mode:
+  it is not a touch on a slider (R-409, R-458; flagged).
+- **K13. The checks (REQ-GUI-218 to REQ-GUI-223's verify, reqio).** On the mock, scripted: for each reset, first move all
+  three sections (a Slice centre slider and the number box of a mass, `τ₁`, `τ₂` and `γ` non-zero with a target
+  changed, a pan and a zoom), then reset; the reset's section reads the preset's values within 10⁻¹² (untilted, the
+  six coordinates and the basis bit for bit) and the other two read as before within 10⁻¹² (for the Tilt reset: `z₀`
+  bit for bit and the zoom, K2); controls: a reset that does nothing fails (all three were moved); a reset that zeroes
+  fails (the test's preset has a base point with non-zero `z_μ1`, `z_μ2` and a centre off `(0, 0)`); a reset that
+  also resets another section fails; and, with a second preset of other home values, a GUI that hardcodes the first
+  preset's fails. Home, from the button, the key in each mode and View › Home: the home view, and the playhead, the
+  stain, the targets, the H, V and D choice, the preset and the layout as before; controls: a Home that resets one
+  section only, or touches the playhead or a target, fails. One Ctrl+Z after each restores all it set, one redo sets
+  it again; control: a command that leaves two entries fails. Dimming at home and not after a move, per section and for
+  Home. The compass's drawn target and readout follow in the next frame; control: a compass that keeps the old plane
+  fails. The Home key on the console's log and in a typed field keeps their meaning.
+- **K14. Which task builds it: TASK-M6-45 (new).** TASK-M6-38 builds the three sections and R-457's frame and
+  TASK-M6-39 the one-entry history key and the live compass; both are open and each already carries its own ruling,
+  so the resets and Home are a task of their own after both (Depends on: TASK-M6-38, TASK-M6-39). Reviewers code, qa,
+  gui and physics, physics reviewing REQ-GUI-224 only, the definition (R-72; as R-396 for TASK-M6-24). ~550 lines.
+- **K15. qa's files (R-290).** No qa assertion is known to assert what R-466 changes. Should one assert that a section's
+  heading row, the View menu or the figure's canvas holds nothing more, TASK-M6-45's qa reviewer changes it in the
+  task's qa commit, and only it.
+- **K16. Where it lands.** render_gui_spec §G2 (the top bar, Navigate, Slice centre, Tilt, the Figure, the compass and
+  a paragraph), §G3 (a key-table row and the sub-scopes), §G7 (a sentence) and §G13 (a bullet); GUI_DESIGN_NOTES § "Rules that
+  hold everywhere", § 01 and § 07 (conformed, R-107); gui_state_contract §2 (a bullet); the heading blocks of R-409,
+  R-457, R-458 and R-462 (forward lines, R-292, R-293) and of R-52, R-69, R-450, R-456 and R-460 (read-by lines);
+  **REQ-GUI-218** (the three resets), **REQ-GUI-219** (Home's three ways), **REQ-GUI-220** (what Home leaves alone),
+  **REQ-GUI-221** (one undoable command each), **REQ-GUI-222** (dimming), **REQ-GUI-223** (the live compass) and
+  **REQ-GUI-224** (the preset's values, a definition), all M6, closed by TASK-M6-45.
+- R-466 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it extends:* R-409's key table gains the Home key, global in both modes but on the console's log in interaction
+mode and in a text field being typed in; R-457's three sections each gain a reset beside the heading, Navigate's
+"that is all it holds" now with its reset in the heading row; R-458's live updates cover the resets and Home; R-462's
+View menu gains Home above reset layout.
+
+Adds REQ-GUI-218 to REQ-GUI-224.

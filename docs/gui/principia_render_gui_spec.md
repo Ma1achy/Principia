@@ -73,7 +73,7 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 ## G2. Explore — the everyday view (`01_main.png`)
 
-**Top bar.** Menus (File, View, Windows, Help; View holds **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
+**Top bar.** Menus (File, View, Windows, Help; View holds **Home**, its first entry, R-466, and **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
 many are on; **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb (§G3); status: `t`, fps, frame ms, quad count,
 `budget-bound` when the frame budget binds, undo / redo depth, and "F3 hide".
 
@@ -95,14 +95,17 @@ view the manifold.
   toggle** (one hemisphere, or both with the redundancy flagged) — `principia_chart_reference.md` §3.3 (R-113); with one
   hemisphere drawn, φ's span runs from the pole to the equator (R-412).
 - **Navigate:** centre `(u, v)`; zoom (log₂). With the depth readout, the precision warning and the lock row (the next
-  two bullets) that is all it holds: no grid of `z₀` values, which repeated the Slice centre sliders (R-457).
+  two bullets) that is all it holds, with the reset beside its heading (R-466): no grid of `z₀` values, which repeated
+  the Slice centre sliders (R-457). Its **reset** returns the centre `(u, v)` to the chart preset's centre and the zoom
+  to the preset's window, which the zoom row reads as × 1.00 (R-466).
 - **Depth readout** (`2^-k`, quad level) **and a precision warning**. The warning is **raised by events** (R-54):
   `DECODE_SWITCHOVER` firing on visible quads, and `AT_F32_FLOOR`. It is never tied to fixed depths. The artboard's readout
   is "f64 · 7 digits left · linearise decode".
 - **Lock:** a "● locked at z_locked" badge with **unlock**. Sliders are **re-based to the anchor, not frozen** (§G4).
 - **Slice centre** (named "Centre z₀" before R-457): eight sliders, `z_α, z_β, z_q0…z_q3, z_μ1, z_μ2`, each with its
   number box beside it. Moving the slice along its normal is the slider of the normal's dimension, the cube's D axis
-  (R-457, R-459).
+  (R-457, R-459). Its **reset**, beside its heading, returns every out-of-plane coordinate of `z₀` to the chart preset's
+  base point (R-466).
 - **Tilt** (named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]", each a slider with its
   number box and a dropdown that picks the latent dimension the angle tilts into, and the rotation `γ`. `τ₁` tilts the
   horizontal axis `q₁` toward `e_X` and `τ₂` the vertical axis `q₂` toward `e_Y`: `u₁ = cos τ₁ e_a + sin τ₁ e_X`,
@@ -110,10 +113,35 @@ view the manifold.
   not in the plane (not `e_a`, `e_b`); both default to the slice normal, the cube's D axis, which is today's one shared
   target, so the defaults draw what the code drew before. Changing a target while its angle is non-zero re-tilts into
   the new dimension, one undoable edit. There is no step slider: it set `z₀`'s component on the slice axis, which the
-  Slice centre slider for that dimension sets (R-457).
+  Slice centre slider for that dimension sets (R-457). Its **reset**, beside its heading, sets `τ₁`, `τ₂` and `γ` to 0;
+  it changes neither tilt target nor the H, V and D choice (R-466).
 
-**Figure.** Axis labels carry the short axis name and the range at each end. The orbit's path is drawn from the cursor's
-IC:
+**Resets and Home (R-466).** "Reset" means the active chart preset's own values, never literal zero: the masses `z_μ1`,
+`z_μ2` are slice coordinates, and zeroing them would change the physical system. Each reset reads its target from the
+preset's definition, which carries, with its pair of axes, a base point, a centre `(u, v)` and a window (the scale at
+which the zoom reads × 1.00), defined here and in §G7 by TASK-M6-45 (R-72, REQ-GUI-224); no value is hardcoded. The
+active preset is the one Chart names, tilted or not; with a basis edited out of every preset's frame there is none, and
+the resets and Home are dimmed. Read in the preset's frame by the chart decoder contract's split (Part 4), Slice centre's
+values are `z₀`'s part across the plane, Tilt's are `τ₁`, `τ₂`, `γ`, and Navigate's are `z₀`'s in-plane coordinates
+`(u, v)` and the zoom: the Slice centre reset moves `z₀` across the plane only, `z₀ ← z₀ + P⊥(b − z₀)` for the base
+point `b`; the Tilt reset edits the basis only, turning the plane about the view's centre `z₀`, the zoom kept; the
+Navigate reset pans within the plane and sets the zoom (applied per R-369, R-466 K2). **Home** is all three resets in
+one command: the button in the figure's top-right corner (below), the Home key in both keyboard modes (§G3) and
+**View › Home**. It leaves alone the chart preset and its axes (Chart's `q₁` and `q₂` axes, the cube's H and V), the H,
+V and D choice and the tilt targets, the time playhead, the stain, and the panel and window layout, and also the lock,
+the compass's mode and view, the overlays and the Trajectory panel's pin and kept orbits (R-466 K4). Each reset, and
+Home, is **one undoable command**: its edits are sent in one frame under one history key, so one Ctrl+Z restores all it
+set, and a command with nothing to change sends nothing. A section's reset is **dimmed** (egui's disabled style, no
+click) while the section is already at its home values, within 10⁻¹², and Home, its button and its menu entry while all
+three are. A reset drives the compass, its readout, the sliders and the figure live, as any change to the slice does
+(R-458), and switches no compass mode. Locked, the edits go through the lock's rule for their kind (§G4), and the lock
+and its anchor stay (R-466 K5). The commands are named "Reset Slice centre", "Reset Tilt", "Reset Navigate" and "Home"
+(tooltips, the menu and the `?` overlay).
+
+**Figure.** Axis labels carry the short axis name and the range at each end. A **Home** button, a house icon 24 × 24
+points, sits in the canvas's top-right corner, inset 8 points (R-466; its look applied per R-369, K7): a click on it is
+Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
+and it hides with the layer (F3, present mode). The orbit's path is drawn from the cursor's IC:
 - **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. This is
   `principia_trajectory_viewing.md` §3's hover trace (the full CPU state, `computeIC`, projected onto the chart's actual
   basis). It is **solid near the slice and faint where it leaves the plane.** The notes add that it is exact in the
@@ -160,7 +188,8 @@ IC:
   subsection gives both. Its drags are live in both directions: a drag on it moves the sliders, its readout and the
   figure every frame, and a drag on a Slice centre or Tilt slider switches its mode and moves its plane every frame,
   each drag one undo entry (R-458). Its cube's H, V and D axis labels are buttons that choose the slice's dimensions
-  (R-459).
+  (R-459). A section reset or Home drives it live too, the cube easing to the new plane as after a click, its mode
+  unchanged (R-466).
 - **Time:** play, step, a scrubber, speed. Transport (play / pause / speed / loop) is `ViewUI` state: not undoable, not
   on the sim key (R-96). The GUI's clock advances `RenderState`'s playhead each frame through a `SetField` marked "no
   history"; a manual scrub is one coalesced undo entry (R-101). **Scrubbing back re-integrates** to that time, so the figure refines
@@ -317,6 +346,9 @@ independent, and in a grid view a drag does nothing. The view is the compass's o
 
 The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifold view · 3 Figure · 4 Trajectory ·
 5 Compass · 6 Time · 7 Legend · 8 footer (R-405). Manifold view's sub-scopes (Chart, Navigate, Slice centre, Tilt; named Centre z₀ and Slice & tilt before R-457) are reached with Enter.
+The reset of Navigate, Slice centre and Tilt is its sub-scope's last element, so Enter into a sub-scope still lands on
+its first; Enter on a reset acts as its click, and on a dimmed one does nothing, the order unchanged (R-466). The Home
+button over the figure is not an element; the Home key does its work.
 
 | key | action |
 |---|---|
@@ -329,6 +361,7 @@ The GUI is a tree of scopes. The big scopes, in Tab order: 1 top bar · 2 Manifo
 | held keys | delay, then repeat (the DAS / ARR model) |
 | Ctrl+Z | undo, from the contract's history (R-52), in either mode, except while a text field is being typed in, when it undoes the text edit (R-409) |
 | ? | shortcuts, over everything, in either mode, except while a text field is being typed in, when it types a character (R-409) |
+| Home | Home: Slice centre, Tilt and Navigate reset to the chart preset's values, one undoable command, wherever the focus is, in either mode, except on the console's log in interaction mode (its first entry, R-450) and while a text field is being typed in (the caret to the line's start); Shift and Alt change nothing, Ctrl and Cmd make it no Home; it does not repeat (R-466) |
 
 In scope: a scope's arrow actions need Enter, acting in interaction mode only, and its letter and Space keys are
 shortcuts, acting whenever the focus is in the scope, on it or on an element inside it, in either mode, except while a
@@ -617,7 +650,9 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
   `|q|`), physical quantity (energy, `L_z`, virial ratio, mass ratio…, with a range and what is **held fixed**, e.g. "z₀ along
   the other 7" — the kind-2 residual convention, chart_decoder_contract Part 3), or Burrau dimension (Euclid `(m, n)` → the
   primitive triple, and the neighbourhood swept, e.g. mass × momentum).
-- **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete.
+- **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete. Each preset also carries the values
+  the resets and Home read (§G2, R-466): a base point, a centre `(u, v)` and a window, defined by TASK-M6-45 (R-72,
+  REQ-GUI-224); a saved preset stores them with its axes.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
@@ -747,6 +782,10 @@ corpus, the spec follows the authority:
 - **The Navigate section and the slice controls** (R-457). Where `01_main.png` shows the eight `z₀` values under
   Navigate and a step under the slice and tilt, the GUI has neither: the `z₀` values are the Slice centre sliders,
   and the sections are named Slice centre and Tilt, each tilt angle with its target dropdown.
+- **The resets and Home** (R-466). `01_main.png` shows no reset beside the Manifold view's headings, no Home button
+  on the figure and no View › Home; the GUI has all three. The Home button is the one control drawn over the figure,
+  in its top-right corner, by the human's words; nothing else covers it (GUI_DESIGN_NOTES, "The figure is never
+  covered").
 - **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
   defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
   the artboards'.

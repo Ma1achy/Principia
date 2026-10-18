@@ -12,7 +12,8 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
 - **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit z₀ and the basis
   (chart_decoder_contract rule 6).
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
-- **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console.
+- **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console. The one
+  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain panel is the plain node-graph editor.
 
@@ -27,6 +28,10 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     R-457)*.
   - **Slice centre** (eight z₀ sliders, each with its number box) and **Tilt** ("tilt τ₁ into [X]", "tilt τ₂ into [Y]",
     each target a dropdown of the dimensions not in the plane, and γ; no step slider) *(conformed to R-457)*.
+  - **Resets and Home:** Slice centre, Tilt and Navigate each have a "reset" beside the heading, returning the section
+    to the active chart preset's own values (its base point, τ₁ = τ₂ = γ = 0, its centre and window), never literal
+    zero; Home does all three in one command, from a button in the figure's top-right corner, the Home key and View ›
+    Home. Each is one undo step, dimmed when already home, and the compass follows it live *(conformed to R-466)*.
   - **Depth readout, and a precision warning** raised by events (GU-3: `DECODE_SWITCHOVER` on visible quads, `AT_F32_FLOOR`),
     not fixed depths.
   - **Lock:** a "● locked at z_locked" badge with unlock. **Sliders are RE-BASED to the anchor, not frozen**: each shows
@@ -138,6 +143,9 @@ navigation, and with it the ring, starts only on keyboard input (Tab, the arrows
 After any mouse click or drag the ring is hidden, the focus moving only as the click rules say; the next key press
 shows it again where the focus is, so a clicked text field types with no ring until the first key, which shows it
 blue *(conformed to R-464)*.
+The Home key is Home in both modes, wherever the focus is: Slice centre, Tilt and Navigate reset to the chart preset's
+values in one undo step; on the console's log in interaction mode it still goes to the first entry, and in a text field
+being typed in it moves the caret *(conformed to R-466)*.
 
 ## 08 Lock — the reticle and the pin
 
