@@ -572,7 +572,7 @@ pub fn labels(iso: &Iso, view: &View, mode: Touch) -> Vec<Label> {
     }
 }
 
-/// Tilt mode's one label: "q₁, q₂ → <axis>".
+/// Tilt mode's one label: "q₁, q₂ → `<axis>`".
 pub fn tilt_label(view: &View) -> String {
     format!("q₁, q₂ → {}", AXES[view.d])
 }
@@ -616,7 +616,7 @@ pub fn signed(value: f64, decimals: usize) -> String {
     format!("{sign}{value:.decimals$}")
 }
 
-/// The tilt as the readout reads it, as the reference's: "q₁→<axis> +30.0° · q₂→<axis> +0.0°", q₁'s and q₂'s target
+/// The tilt as the readout reads it, as the reference's: "q₁→`<axis>` +30.0° · q₂→`<axis>` +0.0°", q₁'s and q₂'s target
 /// the slice axis (R-451 B1).
 pub fn tilt_readout(view: &View) -> String {
     let a = Angles::of(view);
@@ -633,8 +633,8 @@ pub fn rotation_readout(view: &View) -> String {
     format!("γ {}°", signed(Angles::of(view).gamma, 1))
 }
 
-/// The readout of `mode` for `z₀` and `view` (R-451 B5): slice mode, "mode slice · plane ⟂ <axis>" untilted or the
-/// tilt with a tilt set, then "<axis> = +0.25 of range"; tilt mode, "mode tilt", the tilt and the rotation. Where
+/// The readout of `mode` for `z₀` and `view` (R-451 B5): slice mode, "mode slice · plane ⟂ `<axis>`" untilted or the
+/// tilt with a tilt set, then "`<axis>` = +0.25 of range"; tilt mode, "mode tilt", the tilt and the rotation. Where
 /// `s < `[`DRAW_CUT`], a line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" (R-451 B11).
 pub fn readout(z0: &Latent, view: &View, mode: Touch) -> Vec<String> {
     let axis = AXES[view.d];
