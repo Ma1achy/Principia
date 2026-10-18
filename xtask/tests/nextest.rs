@@ -3,8 +3,8 @@
 //! together list every test that the `cargo test` steps they replaced list (`cargo test <args> -- --list`); a step
 //! sharded by its job's matrix (`--partition hash:${{ matrix.shard }}/4`, R-336, R-366) is listed once per shard, and a
 //! step that runs from a nextest archive (`--archive-file`, R-372, REQ-SYS-078) is listed with the arguments the
-//! `cargo nextest archive` step that builds that archive was given. The documented local run (README) installs the same
-//! pinned version.
+//! `cargo nextest archive` step that builds that archive was given. The documented local run (`plan/WORKFLOW.md`,
+//! "Running the suite locally") installs the same pinned version.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -46,8 +46,9 @@ fn ci_workflow() -> Vec<String> {
     vec![std::fs::read_to_string(root().join(".github/workflows/ci.yml")).unwrap()]
 }
 
-fn readme() -> String {
-    std::fs::read_to_string(root().join("README.md")).unwrap()
+/// The text of `plan/WORKFLOW.md`, which documents the local run (the README did until the README of 18 Oct 2026).
+fn documented_run_doc() -> String {
+    std::fs::read_to_string(root().join("plan/WORKFLOW.md")).unwrap()
 }
 
 /// The jobs of `workflow`: each job's lines, from its name (two spaces in, under `jobs:`) to the next job's.
@@ -280,16 +281,16 @@ fn test_steps(workflows: &[String]) -> (Vec<Step>, String) {
     (steps, pins.remove(0))
 }
 
-/// The documented local run in `readme` installs cargo-nextest at `pin` and runs the suite and the doctests.
-fn check_documented_run(readme: &str, pin: &str) {
+/// The documented local run in `doc` installs cargo-nextest at `pin` and runs the suite and the doctests.
+fn check_documented_run(doc: &str, pin: &str) {
     for line in [
         format!("cargo install cargo-nextest --version {pin} --locked"),
         "cargo nextest run --workspace".to_owned(),
         "cargo test --workspace --doc".to_owned(),
     ] {
         assert!(
-            readme.lines().any(|l| l.trim() == line),
-            "the README's local run lacks `{line}`"
+            doc.lines().any(|l| l.trim() == line),
+            "the documented local run lacks `{line}`"
         );
     }
 }
@@ -297,17 +298,17 @@ fn check_documented_run(readme: &str, pin: &str) {
 #[test]
 fn nextest_ci_and_the_documented_run_install_the_pinned_nextest() {
     let (_, pin) = test_steps(&workflows());
-    check_documented_run(&readme(), &pin);
+    check_documented_run(&documented_run_doc(), &pin);
 }
 
 validation::negative_control!(
     nextest_ci_and_the_documented_run_install_the_pinned_nextest,
-    "a README installing another cargo-nextest version than CI's, required to document the pinned one",
-    expected = "the README's local run lacks `cargo install cargo-nextest --version",
+    "a documented run installing another cargo-nextest version than CI's, required to document the pinned one",
+    expected = "the documented local run lacks `cargo install cargo-nextest --version",
     {
         let (_, pin) = test_steps(&workflows());
         check_documented_run(
-            &readme().replace(&format!("--version {pin} "), "--version 0.0.1 "),
+            &documented_run_doc().replace(&format!("--version {pin} "), "--version 0.0.1 "),
             &pin,
         )
     }
