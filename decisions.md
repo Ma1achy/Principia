@@ -270,6 +270,9 @@ lowering_contract appendix; scheduler_contract (a quad-skip rule); the step-6 GU
 
 ## R-27 — Both Burrau charts are kept, each labelled with its quotient *(CD-7)*
 *24 Sep 2026 · recorded; applied before any Burrau statistic*
+*The Euclid-plane correction is also applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 —
+Well-posedness and the validation contract" (the ray-degenerate example reworded as a chart sweeping both `m` and `n`,
+a sentence added, a clause reworded), applied per R-369 (found by qa and physics on PR #241)*
 
 Shape only (the fold) and shape × labelling (the full range) are both kept. A `system_image` value for "covers each shape twice, as two
 labelled systems" is added, and the stale "ray-degenerate" description of the Euclid plane is corrected. Files: chart_reference

@@ -293,13 +293,13 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
   - **bijective** — every pixel is a distinct system (most charts).
   - **n-to-1** — a fixed finite number of pixels share each system. Carries the fold so downstream draws/labels one representative. The shape sphere is n-to-1 with n = 2: 2-to-1 over the φ hemispheres, which are reflection-equivalent (the canonical decode gauges `λ̃_y → −λ̃_y`, Part 1), so both decode to the same system (R-141).
   - **`DoubleCover`** — covers each shape twice, as two labelled systems (R-27, R-104, R-157): the full-range Burrau chart, where the leg swap relabels the bodies (`principia_chart_reference.md` §4.5). Carries the fold so downstream draws/labels one representative. *Was (R-104): the shape sphere's value too; R-141 made the shape sphere n-to-1, and R-157 keeps `DoubleCover` for the Burrau chart.*
-  - **ray-degenerate** — whole lines of pixels map to the same system (the *continuous* `(m,n)` Euclid plane: rays through the origin are similarity classes, so the picture bands along rays). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
+  - **ray-degenerate** — whole lines of pixels map to the same system (for example, a chart sweeping both `m` and `n` continuously: rays through the origin are similarity classes, so the picture bands along rays). §4.5's Euclid plane is not this case: it sweeps only `ν`, its `m` axis annotation-only (above), and its full range is `DoubleCover` (R-27, R-157). Legitimate and often *pedagogically the point* — it makes the similarity symmetry visible — but the quantitative layer must not read areas as system fractions, and the UI should expect banding.
 
   The multiplicity is `[0,1]²`'s. Past `[0,1]²` (the window's extension, Part 3) it adds none: an area statistic counts a
   pixel only if every axis is inside its extension type's primary range, so a periodic or pole-crossing redraw is never
   counted again, and a pixel hatched where the domain ends leaves both the count and the total (R-408).
 
-  The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and the continuous plane are different instruments over the same 1D curve of shapes.
+  The int `(m,n)` lattice is **bijective**: coprimality (`gcd=1`) is the lowest-terms rule, one address per ray, redundancy quotiented out — which is exactly why the discrete survey and a continuous `(m,n)` chart are different instruments over the same 1D curve of shapes.
 
 - `forbids_energy_normalisation` — set on invariant charts where `E` is itself a coordinate (`(L_z,E)`, `(L_z,K)`); the validation pass refuses any config combining such a chart with an `E*` override — every `Some(E*)`, including `Some(0)` (R-25).
 - `has_feasibility_boundary` — invariant charts; infeasible pixels are *tagged labelled outputs*, never dropped.
