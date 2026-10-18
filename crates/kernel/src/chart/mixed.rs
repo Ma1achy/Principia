@@ -76,12 +76,11 @@ pub enum Coordinate {
 impl Coordinate {
     /// The decoder block the coordinate is in (chart_decoder_contract Part 5's block-touch set).
     pub fn touches(self) -> BlockTouch {
-        let config = matches!(self, Coordinate::ZAlpha | Coordinate::ZBeta);
-        let mass = matches!(self, Coordinate::ZMu1 | Coordinate::ZMu2);
+        use Coordinate::*;
         BlockTouch {
-            config,
-            momentum: !(config | mass),
-            mass,
+            config: matches!(self, ZAlpha | ZBeta),
+            momentum: matches!(self, ZQ0 | ZQ1 | ZQ2 | ZQ3),
+            mass: matches!(self, ZMu1 | ZMu2),
         }
     }
 }
@@ -346,7 +345,7 @@ fn axis_check<Q: Quantity>(range: [f64; 2], t: f64) -> Result<f64, ()> {
     }
     // Rounding may leave `x(t)` a hair past the edge: step `t` inward, toward larger `x` from below and smaller from
     // above, until it lands in the domain. `x` is monotone in `t` and the domain has width, so the steps end.
-    let up = below == (width > 0.0);
+    let up = below == width.is_sign_positive();
     let mut t = (edge - range[0]) / width;
     while !in_domain(lerp(range, t), lo, hi) {
         t = if up { t.next_up() } else { t.next_down() };

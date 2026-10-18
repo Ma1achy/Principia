@@ -618,6 +618,40 @@ fn mixed_axis_feasibility_conjunction() {
         };
         assert_eq!(reversed.validate(cu, cv), ValidationResult::Valid);
     }
+    // Where the edge's `t` rounds to an `α` a hair past the edge, the clamp steps inward, from either edge, on a rising
+    // and a falling range: each clamped point is valid and its `α` in `[0, π/2]`.
+    for (lo, hi, u) in [
+        (-0.7984536338313981, 2.7864072317121256, 1.0),
+        (2.803925140313406, 0.4888151182640976, 1.5),
+        (-0.9347690644652089, 2.5847349240453705, 0.0),
+        (2.934716228582044, 0.22785132669049601, 0.0),
+    ] {
+        let chart: Mixed<Alpha, ZQ0, f64> = Mixed::new(FROZEN, [lo, hi], [0.0, 1.0]);
+        let edge = if lo + (hi - lo) * u > 1.0 {
+            core::f64::consts::FRAC_PI_2
+        } else {
+            0.0
+        };
+        let naive = (edge - lo) / (hi - lo);
+        let x = lo + (hi - lo) * naive;
+        assert!(
+            !(0.0..=core::f64::consts::FRAC_PI_2).contains(&x),
+            "[{lo}, {hi}]: no rounding past the edge"
+        );
+        let ValidationResult::Clamp { u: cu, .. } = chart.validate(u, 0.5) else {
+            panic!("[{lo}, {hi}] at u = {u} must clamp");
+        };
+        assert!(
+            (0.0..=core::f64::consts::FRAC_PI_2).contains(&chart.h(cu)),
+            "[{lo}, {hi}]: {}",
+            chart.h(cu)
+        );
+        assert_eq!(chart.validate(cu, 0.5), ValidationResult::Valid);
+        assert!(
+            (cu - naive).abs() <= 4.0 * f64::EPSILON,
+            "[{lo}, {hi}]: {cu} far from {naive}"
+        );
+    }
     // A range of no width past the domain has nowhere to clamp to.
     let pinned: AlphaPRho<f64> = Mixed::new(FROZEN, [2.0, 2.0], [0.0, 1.0]);
     assert_eq!(
