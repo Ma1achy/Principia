@@ -425,71 +425,61 @@ fn check_scaled(
 }
 
 #[test]
-fn compass_golden_check_scans_the_square_and_margin_at_the_scale() {
+fn compass_golden_check_scans_the_whole_capture() {
     let cream = compass_golden::CREAM[0];
-    // At 1 pixel per point, the origin (30, 50): rows 38 to 233 are scanned, columns 18 to 213.
-    for (at, inside) in [
-        ([100, 37], false),
-        ([100, 38], true),
-        ([100, 233], true),
-        ([100, 234], false),
-        ([17, 120], false),
-        ([213, 120], true),
-    ] {
-        let found = check_scaled("compass_scan_rows", [30.0, 50.0], 1.0, cream, at).is_err();
-        assert_eq!(found, inside, "cream at {at:?}");
-    }
-    // At 2 pixels per point, the same square covers columns 36 to 427 and rows 76 to 467.
-    for (at, inside) in [
-        ([35, 300], false),
-        ([36, 300], true),
-        ([427, 300], true),
-        ([428, 300], false),
-        ([300, 75], false),
-        ([300, 76], true),
-        ([300, 467], true),
-        ([300, 468], false),
-    ] {
-        let found = check_scaled("compass_scan_scaled", [30.0, 50.0], 2.0, cream, at).is_err();
-        assert_eq!(found, inside, "cream at {at:?}, scale 2");
+    // Cream anywhere in the capture fails, at any scale and wherever the square is: its corners, the far side of the
+    // square, and the square itself.
+    for scale in [1.0, 2.0] {
+        for at in [
+            [0, 0],
+            [479, 0],
+            [0, 479],
+            [479, 479],
+            [17, 100],
+            [440, 300],
+            [100, 100],
+        ] {
+            let err = check_scaled("compass_scan_whole", [30.0, 50.0], scale, cream, at)
+                .expect_err("cream in the capture");
+            assert!(
+                err.contains("1 pixel(s)") && err.contains(&format!("{at:?}")),
+                "cream at {at:?}, scale {scale}: {err}"
+            );
+        }
     }
 }
 
 negative_control!(
-    compass_golden_check_scans_the_square_and_margin_at_the_scale,
-    "cream in the scaled square must fail the check",
+    compass_golden_check_scans_the_whole_capture,
+    "cream in the capture's far corner must fail the check",
     expected = "the reference's cream palette",
     check_scaled(
         "compass_scan_control",
         [30.0, 50.0],
         2.0,
         compass_golden::CREAM[0],
-        [300, 300]
+        [479, 479]
     )
     .expect("passes")
 );
 
 #[test]
 fn compass_golden_check_reads_the_record_and_the_capture() {
-    let cream = compass_golden::CREAM[1];
+    // A capture without cream passes; each cream colour, one pixel of it, fails and is named.
     check_capture("compass_check_dark", [30.0, 30.0], [27, 27, 27], [0, 0]).expect("passes");
-    // Cream outside the square and its 12-point margin is not the compass's.
-    check_capture("compass_check_outside", [30.0, 30.0], cream, [17, 100]).expect("passes");
-    check_capture("compass_check_far", [30.0, 30.0], cream, [214, 100]).expect("passes");
-    let err = check_capture("compass_check_margin", [30.0, 30.0], cream, [18, 100])
-        .expect_err("cream in the margin");
-    assert!(
-        err.contains("1 pixel(s)") && err.contains("[18, 100]"),
-        "{err}"
-    );
-    let err = check_capture("compass_check_right", [30.0, 30.0], cream, [213, 100])
-        .expect_err("cream in the right margin");
-    assert!(err.contains("1 pixel(s)"), "{err}");
+    for cream in compass_golden::CREAM {
+        let err = check_capture("compass_check_cream", [30.0, 30.0], cream, [18, 100])
+            .expect_err("cream in the capture");
+        assert!(
+            err.contains("1 pixel(s)") && err.contains("[18, 100]"),
+            "{err}"
+        );
+    }
 }
 
 negative_control!(
     compass_golden_check_reads_the_record_and_the_capture,
-    "a capture with the reference's cream in the compass must fail",
+    "a capture with the reference's cream must fail",
     expected = "the reference's cream palette",
     check_capture(
         "compass_check_control",

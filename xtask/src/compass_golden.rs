@@ -8,8 +8,8 @@
 //! drawing order with their opacity and width. A spec may add the slice's polygon, against the reference's or the
 //! decoder's, with its place in the edge order; the labels, either wholly against the reference's (the names, the
 //! corner numbers and the readout) or as tilt mode's one label placed as the reference's bottom-right label; and
-//! whether the slice is drawn at all. Every capture with a spec is also checked for the reference's cream palette in
-//! the compass's rect: none of it may appear (R-451, §G1).
+//! whether the slice is drawn at all. Every capture with a spec is also checked for the reference's cream palette over
+//! the whole capture: none of it may appear (R-451, §G1).
 
 use std::fs;
 use std::path::Path;
@@ -402,29 +402,18 @@ pub fn cream(rgba: &[u8], size: [u32; 2], rect: [u32; 4]) -> (usize, Option<[u32
     (count, first)
 }
 
-/// Checks the case whose capture and record are in `out` against the spec at `spec`: the comparison, and no cream in
-/// the compass's square and the margin round it ([`compare`], [`cream`]).
+/// Checks the case whose capture and record are in `out` against the spec at `spec`: the comparison, and no cream
+/// anywhere in the capture ([`compare`], [`cream`]).
 pub fn check(spec: &Path, out: &Path, capture: &Path) -> Result<(), String> {
     let golden = Golden::read(spec)?;
     let ours: Record = read(&out.join(RECORD))?;
     let mut failures = compare(&golden, &ours);
     let (size, rgba) = crate::screenshot::read_png(capture)?;
-    let (origin, scale) = (
-        ours.origin.unwrap_or([0.0, 0.0]),
-        ours.pixels_per_point.unwrap_or(1.0),
-    );
-    // The square and its 12-point margin, where the compass draws its cube and labels.
-    let px = |v: f64| (v * scale).max(0.0) as u32;
-    let rect = [
-        px(origin[0] - 12.0),
-        px(origin[1] - 12.0),
-        px(origin[0] + ours.square[0] + 12.0),
-        px(origin[1] + ours.square[1] + 12.0),
-    ];
-    let (count, first) = cream(&rgba, size, rect);
+    // The whole capture: no cream anywhere in it.
+    let (count, first) = cream(&rgba, size, [0, 0, size[0], size[1]]);
     if count > 0 {
         failures.push(format!(
-            "{count} pixel(s) of the reference's cream palette in the compass, the first at {first:?}"
+            "{count} pixel(s) of the reference's cream palette in the capture, the first at {first:?}"
         ));
     }
     if failures.is_empty() {
