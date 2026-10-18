@@ -7817,10 +7817,18 @@ in navigation mode" and G4's landing on a text field are the keyboard's landings
 console's first filter").*
 *Amended in part by R-451 (the compass's view angle: the reference's isometric projection, in place of point 1's yaw
 −35°, pitch 25°).*
+*Amended in part by R-457 (18 Oct 2026; A3: there is no slice step slider, so an untilted slice-mode drag moves `z₀`'s
+component on the slice normal, the Slice centre slider of that dimension).*
+*Amended in part by R-458 (18 Oct 2026; A3's "one `SetField` on `z₀` coalesced per drag" is one history entry per drag,
+the edit applied every frame of it).*
+*Amended in part by R-460 (18 Oct 2026; point 4: the two modes hold while keyboard navigation is on; a window opened with
+the mouse takes the focus with no ring, and keyboard navigation starts only on keyboard input).*
 *Still in force: all of it, except that the console opens in navigation mode on its header bar scope, not on its first
 filter, and its sections are R-450's two scopes, the header bar and the log (R-450); and that the compass's fixed view
 is the reference's isometric projection, not point 1's yaw −35°, pitch 25° (R-451); and that a click on a text field
-starts typing, in interaction mode (R-456).*
+starts typing, in interaction mode (R-456); and that A3's drag is applied every frame, one history entry per drag, and
+moves the slice normal's component, there being no step slider (R-457, R-458); and that the two modes and the ring hold
+only while keyboard navigation is on (R-460).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the key table, the in-scope keys,
 what the user sees, a paragraph added), § "G13. Where the artboards are overridden" (a bullet added) and § "G14.
@@ -10821,7 +10829,11 @@ REQ-COL-002, REQ-COL-004, REQ-COL-062, REQ-COL-067, REQ-COL-103, REQ-COL-104 and
 ## R-450 — The console has two scopes, its header bar and its log: opening it lands on the header bar, Enter goes in and ← → cross every header control, × included; Enter on the log scrolls it entry by entry, the whole log reachable *(amends R-405 and R-409 as they apply to the console's structure)*
 *Amended in part by R-456 (17 Oct 2026; A3: a click on the search field starts typing, in interaction mode; a click on
 any other console control still lands in navigation mode on it).*
-*Still in force: all of it, except A3 for the search field, which a click now starts typing in (R-456).*
+*Amended in part by R-460 (18 Oct 2026; opened with the mouse, the console takes the focus on its header bar scope with
+no ring, keyboard navigation staying off).*
+*Amended in part by R-463 (18 Oct 2026; the header bar gains a maximise button between Clear and ×).*
+*Still in force: all of it, except A3 for the search field, which a click now starts typing in (R-456); and that a
+mouse open lands with no ring (R-460); and that the header bar has a maximise button between Clear and × (R-463).*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the console's paragraph and the window landing), § "G12. Console (`12_console.png`)" (a
 paragraph added) and § "G13. Where the artboards are overridden" (a bullet added), R-405's and R-409's heading blocks,
@@ -11089,6 +11101,13 @@ paragraph's sections; REQ-GUI-178's sections and landing (its statement stays as
 Adds REQ-GUI-189 and REQ-GUI-190; REQ-GUI-178's note and rulings change.
 
 ## R-451 — The compass's cube is drawn as `principia_nav_cube.html` draws it, in the dev GUI's dark colours: isometric, depth-sorted edges, the slice as its true cross-section polygon, Lambert-shaded, with the reference's labels, readout, drags and easing; the drawing follows the decoder's tilt mapping *(amends R-409 point 1, the compass's view angle)*
+*Amended in part by R-457 (18 Oct 2026; B1: each tilt angle has its own target, the default the one shared target).*
+*Amended in part by R-458 (18 Oct 2026; B3's "one `SetField` … per drag" is one history entry per drag, the edit
+applied every frame, so the sliders, the readout and the figure follow the drag).*
+*Amended in part by R-459 (18 Oct 2026; B1's labels: the H, V and D buttons in both modes, the third axis following the
+gesture, the "4D: see Plücker" badge).*
+*Still in force: all of it, except B1's single shared target and its labels, which are R-457's and R-459's, and B3's one
+`SetField` at a drag's end, which is R-458's one history entry with the edit applied every frame.*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "The compass: look and views (R-451, R-452)" (new) and § "G13. Where the artboards are overridden" (a
 bullet added), `docs/gui/reference/principia_nav_cube.html` (added), `docs/read_first/principia_INDEX.md` § "GUI"
@@ -11636,6 +11655,8 @@ ruling keeps `#09B9CD`, and this figure changes nothing.
 Changes REQ-COL-103 and REQ-COL-105 (rulings, note).
 
 ## R-456 — A click on a text input starts typing, in interaction mode; a click anywhere else lands in navigation mode *(amends R-450 A3, and R-409's landing rule and G4, for text inputs)*
+*Read by R-460 (18 Oct 2026; a click never turns keyboard navigation on, so the clicked field's blue ring shows only
+while keyboard navigation is on; flagged, RQ-367).*
 *17 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
 (`07_keyboard.png`)" (the two modes' paragraph and the console's paragraph, a sentence each) and § "G12. Console
 (`12_console.png`)" (a sentence added), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a
@@ -11700,3 +11721,585 @@ follow-up task):*
 
 Changes REQ-GUI-189 (statement, verify, rulings, note), REQ-GUI-190 (verify, rulings, sources, note) and REQ-GUI-182
 (rulings, note).
+
+## R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; "Centre z₀" is renamed "Slice centre" and "Slice & tilt" "Tilt"; each tilt angle tilts into a latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's "the slice step" and R-451 B1's single tilt target)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(Navigate, Slice centre and Tilt), § "The compass: look and views (R-451, R-452)" (the labels and the readout), § "G3.
+Keyboard — a design note, not a screen (`07_keyboard.png`)" (the sub-scopes' names) and § "G13. Where the artboards are
+overridden" (a bullet), `docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" (conformed),
+`docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" (a paragraph) and
+`docs/contracts/principia_gui_state_contract.md` § 2 (the slice frame), R-409's and R-451's heading blocks, RQ-340 (a
+note), REQ-GUI-081, REQ-GUI-083 and REQ-GUI-095 (reqio, statements and notes), REQ-GUI-170 (reqio, a note), REQ-GUI-204 and
+REQ-GUI-205 (reqio, new), TASK-M6-38 (new), TASK-M8-06 (a note), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built
+by TASK-M6-38 on the mock*
+
+The human's words, three messages and one answer of 18 Oct 2026, the human's own, given in the orchestrator's session
+and recorded verbatim, each item in the ruling that ports it. Each is a GUI design ruling under R-390's feedback rule.
+Message 1's preamble and its closing lines, which every ruling here follows:
+
+> Dev GUI feedback on the Manifold view and compass (from Malachy, 2026-10-18). Read it all before changing anything.
+
+> As usual: docs first, then the plan, then the code. Record each change against its requirement, with a "Removed
+> lines" note for the deleted Navigate grid.
+
+This ruling ports Message 1, items 1 to 3, and Message 2, item 1 (whose preamble settles item 3's open question):
+
+> 1. Navigate section: remove the grid of value boxes under "centre u, v" and "zoom"
+>    (z_α, z_β, z_q0, z_q1, z_q2, z_q3, z_μ1, z_μ2). They repeat the slice sliders below and
+>    are redundant. Navigate keeps centre u, v, zoom, depth, precision and the lock row.
+>    The number box beside each slider stays.
+>
+> 2. Renames:
+>    - "Centre z₀" -> "Slice centre"
+>    - "Slice & tilt" -> "Tilt"
+>
+> 3. Tilt targets are chosen by the user, one per tilt angle:
+>    - "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", where [X] and [Y] are dropdowns that pick
+>      which latent dimension each angle tilts into.
+>    - τ₁ tilts the horizontal axis q₁, and τ₂ tilts the vertical axis q₂.
+>    - Only offer dimensions not already in the plane.
+>    - Defaults reproduce today's behaviour (currently one shared "along z_q3").
+>    - Show the chosen targets in the compass readout and on the compass cube's axis labels.
+>    - Changing a target with a non-zero angle re-tilts into the new dimension. Make that an
+>      undoable command like any other.
+>    - Open question for Malachy, don't guess: does "step" (the move along the slice normal)
+>      stay in Tilt or move to Slice centre? Ask in your next report.
+
+> Follow-up to the Manifold view and compass feedback (Malachy, 2026-10-18). It adds to the previous message and
+> settles its open question.
+>
+> 1. Remove the "step" slider from Tilt. It moves the slice along its normal (the cube's
+>    D axis, currently z_q3), and that is the same quantity as the z_q3 slider in Slice
+>    centre: both read 0.312 in the current build. Two controls for one value is redundant.
+>    Moving along the normal is done with the Slice centre slider for that dimension.
+>    Record a "Removed lines" note.
+
+*What it decides:*
+- **Navigate holds centre `(u, v)`, zoom, the depth readout, the precision warning and the lock row,** and no grid of
+  `z₀` values: the eight boxes repeated the Slice centre sliders, writing the same field (the code at `ab87a879`:
+  `crates/gui/src/explore/manifold_view/navigate.rs` lines 98 to 123, each box `z0[i]`, as `centre.rs`'s sliders). The
+  number box beside each slider stays.
+- **The renames:** the section "Centre z₀" is **Slice centre**, and "Slice & tilt" is **Tilt**, in the panel, the
+  breadcrumb and the keyboard's sub-scopes.
+- **One target per tilt angle,** chosen by the user: "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", `[X]` and `[Y]`
+  dropdowns of latent dimensions. `τ₁` tilts the horizontal axis `q₁` toward `e_X` and `τ₂` the vertical axis `q₂`
+  toward `e_Y`. A dropdown offers only the dimensions not in the plane. The defaults reproduce today's behaviour, the
+  one shared target ("along z_q3", the code's slice axis). The chosen targets are shown in the compass's readout and
+  on its cube's axis labels (R-459 says how). Changing a target while its angle is non-zero re-tilts into the new
+  dimension, one undoable command like any other.
+- **No step slider.** It set `z₀`'s component on the slice axis, the same value as the Slice centre slider of that
+  dimension (the code: `slice_tilt.rs` lines 84 to 92, `z0[view.d] = value`). Moving along the normal is done with the
+  Slice centre slider for that dimension, the cube's D axis (R-459).
+
+*Applied per R-369 (routine design choices and mechanical consequences; the human may veto any, a veto being a GUI
+design ruling applied by a follow-up task):*
+- **E1. The map.** `View::basis` builds `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_Y`, then turns them
+  by `γ` as now (`q₁ = σ(cos γ u₁ + sin γ u₂)`, `q₂ = σ(cos γ u₂ − sin γ u₁)`). With `X = Y = d` it is today's map
+  exactly, so no saved view, golden or tilted figure changes until a target is changed. With `X ≠ Y` it is the
+  chart decoder contract's two-target form (§ "Tilt (basis edit)"), and `u₁`, `u₂` are orthonormal.
+- **E2. RQ-340.** The human's words answer RQ-340's question (ii) in part: the targets are the user's, one per angle,
+  the shared target the default, so both the code's one-target map and the contract's two-target form are reachable.
+  Question (i), the parametrisation within one 3-space when the targets are one (the code's map or the reference's),
+  stays open, and with it R-451 B11's corner points, which arise only with `X = Y`. RQ-340 gets a note and stays in
+  the queue. The kernel is not changed: it reads only `(z₀, q₁, q₂)`.
+- **E3. Where the targets live.** The targets, with the slice normal (R-459), are `SimConfig`'s slice frame,
+  `SliceFrame { normal, tilt_x, tilt_y }` (gui_state_contract §2): a target change must be undoable (the human's
+  words), and undo lives in the contract (R-52), so the choice is contract state, chart construction like the lock
+  (R-69), read by no kernel and so re-integrating nothing by itself. A target change at a zero angle is one history
+  entry that edits the slice frame only; at a non-zero angle it is one entry that edits the slice frame and the
+  basis together. Undo restores both. A field added to the contract re-runs the conformance suite on both engines
+  (R-390, R-409 A5).
+- **E4. The defaults and following.** The three default to the code's slice axis (`slice_axis(a, b)`: z_q3, or the
+  first axis the plane does not show). A target equal to the slice normal follows it when the normal changes (R-459);
+  a target the user moved off it keeps its own value. A change of the plane's axes (the preset, R-459's H or V, or
+  R-452's Plücker steer) that takes a target's dimension into the plane resets that target to the slice normal; it
+  resets the angles to 0 anyway, so nothing re-tilts.
+- **E5. The dropdowns** list the six dimensions not `e_a` or `e_b` by their `AXES` names, the slice normal among them;
+  `X = Y` is allowed (it is the default). The keyboard reaches each as an element of the Tilt sub-scope, after its
+  slider and number box: Enter opens it, ↑ ↓ choose, Enter picks, Esc closes it unchanged.
+- **E6. The readout.** The compass's readout names both targets with their angles ("τ₁ → z_q3 +12.0°", "τ₂ → z_μ1
+  0.0°"), whatever its mode, as R-459 also says.
+- **E7. The Tilt section's note** ("along z_q3", `slice_tilt.rs` line 81) gives way to the two dropdowns.
+- **E8. Where it lands.** render_gui_spec §G2's three bullets, §G3's sub-scope names and the compass subsection's labels
+  and readout; GUI_DESIGN_NOTES § 01; chart_decoder_contract § "Tilt (basis edit)" a paragraph; gui_state_contract §2
+  the slice frame. **REQ-GUI-204** (the Navigate, Slice centre and Tilt sections: no grid, the names, no step) and
+  **REQ-GUI-205** (the per-angle targets), both M6, closed by **TASK-M6-38** (new; code, qa, gui; after TASK-M6-33,
+  whose compass readout it extends). REQ-GUI-081 (M8, closed on the mock by TASK-M6-26, re-run on the real engine by
+  TASK-M8-06), REQ-GUI-083 (M8, TASK-M8-06) and REQ-GUI-095 (the sub-scopes' names) are reworded (reqio), each with a
+  note; REQ-GUI-170 (TASK-M6-26's record) gets a note; TASK-M8-06 gets a note.
+- **E9. qa's files (R-290, forced by this ruling).** A qa assertion of the Navigate grid, the step slider, the names
+  "Centre z₀" or "Slice & tilt", or the shared tilt target asserts what this ruling changes; TASK-M6-38's qa reviewer
+  changes those assertions in the task's qa commit, and only those, and the code reviewer confirms that no other
+  assertion was weakened.
+- R-457 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it changes:* render_gui_spec §G2's "all eight `z₀` values, editable by drag or by typing" under Navigate and "the
+slice step" under Slice & tilt (stale, replaced by R-457); the names "Centre z₀" and "Slice & tilt" (reworded); R-451
+B1's tilt mode with one shared target, labelled on the bottom-right edge alone (R-459 gives the labels); R-409 A3's
+"so the drag moves the slice step", read from here on as the drag moving `z₀`'s component on the slice normal, the
+Slice centre slider of that dimension.
+
+Adds REQ-GUI-204 and REQ-GUI-205; changes REQ-GUI-081, REQ-GUI-083 and REQ-GUI-095 (statements, rulings, notes) and
+REQ-GUI-170 (rulings, note).
+
+## R-458 — Drags are live in both directions: a drag on the compass or on any slider applies its edit every frame, at most once a frame, so the sliders, the compass, its readout and the figure follow the drag, and the whole drag is one undo entry; a drag on a Slice centre slider switches the compass to Slice and one on a Tilt slider to Tilt, its plane moving with the drag *(amends R-409 A3 and R-451 B3 as they send one `SetField` per drag)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass, Time and a paragraph added) and § "The compass: look and views (R-451, R-452)" (the drag and a bullet
+added), `docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" (conformed),
+`docs/contracts/principia_gui_state_contract.md` § 2 (the drag's coalescing), R-409's and R-451's heading blocks, RQ-368,
+REQ-GUI-181 and REQ-GUI-193 (reqio, notes), REQ-GUI-206 and REQ-GUI-207 (reqio, new), TASK-M6-39 (new), `plan/tasks.yaml`
+and `plan/rule_groups.yaml`; built by TASK-M6-39 on the mock*
+
+The human's words (R-457 quotes the messages' preambles), Message 1, items 4 and 5, and Message 2, item 2:
+
+> 4. Live update while dragging: dragging on the compass must update the sliders, the readout
+>    and the rendered slice continuously during the drag, not on mouse release.
+>    - At most one update per frame (coalesce pointer events).
+>    - The whole drag counts as one undo step.
+>    - Same rule for dragging any slider: the figure follows the drag.
+>
+> 5. The compass's tilt and slice interaction is unintuitive as it stands; the slicing gesture
+>    in particular doesn't behave as it should. I believe the compass rework already queued
+>    (cube look matching the reference, view switcher, Jacobi and shape-sphere views,
+>    click-to-steer) replaces this. Confirm it covers the tilt and slice gestures. If it
+>    doesn't, say so in your report rather than patching the old compass.
+
+> 2. The sliders drive the compass live, in both directions:
+>    - Dragging a Slice centre slider switches the compass to Slice mode, and the cube's
+>      plane moves with the drag.
+>    - Dragging a Tilt slider (τ₁, τ₂, γ) switches it to Tilt mode, and the plane tilts
+>      with the drag.
+>    - Update every frame during the drag, not on release, the same as compass to sliders.
+>    - The current build partly does this but not fully or reliably. If the queued compass
+>      rework replaces this code, build it there and say so.
+
+*What it decides:*
+- **A compass drag is live:** during the drag the Manifold view's sliders, the compass's readout and the rendered
+  slice (the figure) update continuously, not on release; at most one update a frame, pointer events coalesced; the
+  whole drag is one undo step.
+- **Every slider drag is live:** the figure follows the drag, under the same rules.
+- **The sliders drive the compass live:** a drag on a Slice centre slider switches the compass to Slice mode and the
+  cube's plane moves with the drag; a drag on a Tilt slider (`τ₁`, `τ₂`, `γ`) switches it to Tilt mode and the plane
+  tilts with the drag; every frame, not on release.
+- **Built on the reworked compass.** The queued rework (R-451, TASK-M6-33, PR #240) replaces the compass's code, so
+  this is built there, on its code, by a task that depends on TASK-M6-33.
+
+*What the code does (the porter's reading at `ab87a879` and of PR #240's head, for the task to confirm, not a
+finding):*
+- **The compass, on main and in PR #240:** a drag is previewed in the compass only, its edit built each frame but sent
+  once, on `drag_stopped` (main `crates/gui/src/explore/compass.rs` lines 281 to 303; PR #240's lines 1111 to 1130).
+  The sliders and the figure read the snapshot, so they jump on release. PR #240 also eases the compass's drawing and
+  its readout toward the drag's target (R-451 B4), so the cube trails the pointer by a few tenths of a second while the
+  figure waits for the release. That is against B4 as written ("the contract's value is the target from the first
+  frame, so the figure, the sliders and every `SetField` see the target"), which B3's "one `SetField` … per drag" left
+  no way to meet without a coalescing history.
+- **The sliders, on both:** each sends a `SetField` every frame its value changes, so the figure follows the drag, but
+  nothing coalesces: the mock pushes one undo entry per frame (`crates/engine/src/contract/store.rs`; the mock's
+  `set_field`), against R-96. The figure's pan does the same.
+- **Why the slider-to-compass switch is unreliable:** the mode switches only when an edit is emitted with a touch
+  (`manifold_view/mod.rs`, `Out::edit`), so it does not switch when the thumb is pressed or held without moving, when
+  a slider is dragged on past its end (τ's sliders clamp, so nothing changes), or while a number is being typed and
+  not yet committed; and `centre u, v`, the zoom and the basis editors send no touch.
+
+*Applied per R-369 (routine design choices and mechanical consequences; the human may veto any, a veto being a GUI
+design ruling applied by a follow-up task):*
+- **F1. How one drag is one entry.** The contract's history coalesces a drag: each frame's edit carries the drag's key,
+  and the history keeps one entry per key, its before the value at the drag's start and its after the last value
+  sent; an edit with another key, or none, closes it (gui_state_contract §2). The console logs a drag once, at its
+  end, as one "SetField … before → after" line, not a line per frame. R-409 A3's and R-451 B3's "one `SetField` per
+  drag" is read from here on as one history entry per drag, the edit applied every frame; R-451 B4's "the contract's
+  value is the target from the first frame" then holds as written.
+- **F2. "Any slider".** Every slider and drag value in the GUI: the Manifold view's (Navigate's centre `u, v` and
+  zoom, the Slice centre and Tilt sliders and their number boxes, the basis editors), the compass, Time's scrubber (the
+  display time follows the drag, R-101's one coalesced entry), the figure's pan, and the windows' sliders (Run,
+  Display, the stain preview). A sim-key field re-integrates progressively as it is dragged, as a scrub back does.
+- **F3. "At most one update a frame".** The GUI applies at most one edit per field per frame, the latest pointer
+  position's; a frame with no change sends none.
+- **F4. The switch.** The compass's mode switches on the drag's first frame (the pointer pressed on the slider and
+  moved, or the thumb grabbed), not on the first changed value, so it switches at a slider's end and while typing
+  starts too (a click into the number box switches it). Slice centre's sliders and boxes switch to Slice; Tilt's
+  `τ₁`, `τ₂` and `γ` sliders and boxes, and their target dropdowns, switch to Tilt. Navigate's centre `u, v` and zoom
+  switch nothing (they are neither a slice nor a tilt).
+- **F5. "The cube's plane moves with the drag".** The compass draws `z₀`'s current value every frame by R-451 B2's
+  rule, so the plane moves with a Slice centre slider whose dimension the cube draws (D, and `e_a` or `e_b` when the
+  plane is tilted); a slider of a dimension the cube does not draw, or a pan along `e_a` or `e_b` of an untilted plane,
+  moves no part of the drawing, and the readout's position follows instead. The switch to Slice happens either way.
+- **F6. The easing.** R-451 B4's easing of the drawn values stays, toward the contract's value, which is now the
+  drag's target from its first frame. Whether the ease's lag reads as part of the human's "unintuitive" is for the
+  human (RQ-368, below).
+- **F7. Item 5, the gestures.** The porter checked R-451's gestures against the complaint. The rework replaces the
+  compass's drawing, its labels and its drag rates, and with this ruling the release lag; it does not settle the
+  screen direction of the slice gesture. R-451 B3 moves the slice by the drag's horizontal component, as the
+  reference does (`depthT += dx·2`), along the decoder's normal; the isometric projection draws the untilted normal
+  `+e_d` toward the screen's lower left, so a drag to the right moves the drawn plane left and down, and once tilted
+  the plane can move sideways to the pointer. The tilt gesture keeps the reference's rates while the drawn plane is the
+  decoder's, vertical when untilted, not the reference's horizontal one, so "right raises τ₁, up raises τ₂" need not
+  tip the drawn plane toward the pointer. Changing either changes R-451, the human's ruling, so it is **RQ-368**, for
+  the human; nothing here patches the old compass, and TASK-M6-39 builds the gestures as R-451 has them until RQ-368 is
+  ruled.
+- **F8. Where it lands.** render_gui_spec §G2 (a paragraph, the compass, Time) and the compass subsection;
+  GUI_DESIGN_NOTES § 01; gui_state_contract §2. **REQ-GUI-206** (the live compass drag, one entry) and
+  **REQ-GUI-207** (live slider drags, one entry each, and the switch), both M6, closed by **TASK-M6-39** (new; code, qa,
+  gui; after TASK-M6-33 and TASK-M6-38). REQ-GUI-181 and REQ-GUI-193 (TASK-M6-31's and TASK-M6-33's) keep their
+  statements, each with a note reading "one `SetField` per drag" as one history entry.
+- **F9. qa's files (R-290, forced by this ruling).** A qa assertion that a compass drag sends nothing until release, or
+  that a slider drag makes one undo entry per frame, asserts what this ruling changes; TASK-M6-39's qa reviewer
+  changes those assertions in the task's qa commit, and only those.
+- R-458 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-206 and REQ-GUI-207; changes REQ-GUI-181 and REQ-GUI-193 (rulings, notes).
+
+## R-459 — The cube's H, V and D axis labels are buttons, each a dropdown of latent dimensions, no dimension twice, each pick one undoable edit, H and V in step with Chart's horizontal q₁ and vertical q₂; in Tilt mode the third axis shows what the gesture tilts into, and a "4D: see Plücker" badge appears when both angles are set into different targets *(amends R-451 B1's labels)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the compass), § "The compass: look and views (R-451, R-452)" (the labels, the readout and two bullets) and § "G3.
+Keyboard — a design note, not a screen (`07_keyboard.png`)" (the Compass scope), `docs/gui/design/GUI_DESIGN_NOTES.md`
+§ "01 Explore — the everyday view" (conformed), `docs/contracts/principia_gui_state_contract.md` § 2 (the slice frame),
+R-451's heading block, REQ-GUI-191 (reqio, a note), REQ-GUI-208 and REQ-GUI-209 (reqio, new), TASK-M6-40 (new),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-40 on the mock*
+
+The human's words (R-457 quotes the messages' preambles), Message 2, item 3, then the option the human chose, as the
+orchestrator offered it, and the human's answer:
+
+> 3. The cube's axis labels become buttons. Each of H, V and D opens a dropdown of latent
+>    dimensions, and picking one changes the slice:
+>    - H and V are the chart plane's horizontal and vertical dimensions, the same as
+>      "horizontal q₁" and "vertical q₂" in Chart. They must stay in sync with those.
+>    - D is the normal dimension, the one the slice moves through.
+>    - Rules: no dimension may appear twice across H, V and D, and each change is one
+>      undoable command.
+>    - Open question for Malachy, don't guess: how D relates to the per-angle tilt
+>      targets (τ₁ into X, τ₂ into Y). If X and Y differ, the cube has one D axis and
+>      two targets. Propose options in your report.
+
+> 3. D follows the gesture. In Slice mode, D is the slice normal. In Tilt mode, the third axis shows X while τ₁ is
+> being dragged, or was last changed, and Y for τ₂. The other target is named in the readout. Each gesture is drawn
+> exactly and both targets stay, but the D label changes with what you're doing.
+
+> D question: option 3. When nothing is being dragged, the third axis shows X if τ₁ ≠ 0, else Y if τ₂ ≠ 0, else the
+> slice normal. The D label takes the active gesture's colour. When both angles are non-zero with X ≠ Y, the cube
+> shows a "4D: see Plücker" badge, and clicking it switches the compass to the Plücker view, which is exact. Both
+> targets are always named in the readout.
+
+*What it decides:*
+- **H, V and D are buttons,** each opening a dropdown of latent dimensions; picking one changes the slice. H and V are
+  the chart plane's horizontal and vertical dimensions, the same as Chart's "horizontal q₁" and "vertical q₂", and stay
+  in step with them. D is the normal dimension, the one the slice moves through. No dimension appears twice across H, V
+  and D; each change is one undoable command.
+- **The third axis follows the gesture (option 3):** in Slice mode it is D, the slice normal; in Tilt mode it shows X
+  while `τ₁` is being dragged and Y while `τ₂` is; when nothing is being dragged, X if `τ₁ ≠ 0`, else Y if `τ₂ ≠ 0`,
+  else the slice normal. Each gesture is drawn exactly and both targets stay. The label takes the active gesture's
+  colour. Both targets are always named in the readout.
+- **The badge:** when both angles are non-zero with X ≠ Y, the cube shows a "4D: see Plücker" badge; a click on it
+  switches the compass to the Plücker view (R-452), which is exact.
+- The human's answer replaces the offered option's "or was last changed" with the rule for when nothing is dragged.
+
+*Applied per R-369 (routine design choices; the human may veto any, a veto being a GUI design ruling applied by a
+follow-up task):*
+- **G1. Where the buttons sit.** On R-451 B1's edges: H on the bottom-left edge (Width, chart x), V on the left vertical
+  edge (Height, chart y), the third axis on the bottom-right edge (Depth), in both modes, each reading its letter and
+  its dimension ("H z_α", "V z_β", "D z_q3"; in Tilt mode "X z_q3" or "Y z_μ1"). Slice mode keeps its corner numbers.
+  R-451 B1's tilt-mode label "q₁, q₂ → <axis>" on the bottom-right edge alone, the other edges unnamed, gives way to
+  these.
+- **G2. The dropdowns.** Each lists the dimensions not on the other two axes, by their `AXES` names, so a duplicate
+  cannot be picked. While the third axis shows X or Y it is that target's dropdown, the same choice as the Tilt
+  section's (R-457), offering the dimensions not in the plane.
+- **G3. What a pick does.** H or V: the plane becomes the new axis pair, `τ₁ = τ₂ = γ = 0`, the zoom and `z₀` kept,
+  locked turning about the pin, as the preset does today (`chart.rs`'s `preset_basis`) and as R-452 C5's steer does;
+  Chart's rows show the new `q₁`, `q₂`; an edit in Chart (the preset, a basis editor) moves H and V with it, H and V
+  being the dominant axes `View::of` reads. D: the slice frame's normal; a target equal to the old D follows it
+  (R-457 E4); with a target following and its angle non-zero the plane re-tilts, in the same entry. Each pick is one
+  history entry (R-457 E3).
+- **G4. A plane change that takes D.** A Plücker steer (R-452 C5) or a preset whose plane contains D moves D to the
+  code's slice-axis rule (z_q3, or the first axis the plane does not show), in the same entry.
+- **G5. A compass drag that moves both angles** shows the angle it has moved further since the drag began, `τ₁` on a
+  tie; with `X = Y` the two are one label.
+- **G6. "Each gesture is drawn exactly".** In Tilt mode the cube draws the plane of the gesture its third axis shows:
+  `View::basis` with the other angle at 0, in the frame `(e_a, e_b, e_T)`, `T` that axis's dimension. With `X = Y`, or
+  one angle 0, that is the whole plane, as R-451 B2 draws it; with both set and `X ≠ Y` the badge says the plane is
+  not in the cube. Slice mode draws R-451 B2's plane in `(e_a, e_b, e_D)` (with `X ≠ Y` and both set, that of the
+  third axis's rule above, the badge shown).
+- **G7. The colours.** Slice, `τ₁` and `τ₂` each have a gesture colour, dark-mode look choices under R-390, listed in
+  the PR; the third axis's label and its readout line take the active one, the others the theme's text colour.
+- **G8. The badge** sits in the cube's top-right corner, clear of the drawing, as a small button in the theme; it is
+  shown only while both angles are non-zero with `X ≠ Y`, and a click on it (or Enter, from the keyboard) sets the
+  compass's view to Plücker, the compass's own state (R-452 C1).
+- **G9. The keyboard.** The Compass scope's siblings gain H, V and D after the view buttons, then the badge while it is
+  shown (§G3); Enter on an axis button opens its dropdown, ↑ ↓ choose, Enter picks, Esc closes it unchanged.
+- **G10. Where it lands.** render_gui_spec's compass subsection (two bullets, the labels, the readout), §G2's compass
+  bullet and §G3's Compass scope; GUI_DESIGN_NOTES § 01; gui_state_contract §2 the slice frame's normal.
+  **REQ-GUI-208** (the axis buttons) and **REQ-GUI-209** (the third axis, its colour, the readout, the badge), both M6,
+  closed by **TASK-M6-40** (new; code, qa, gui; after TASK-M6-34, whose Plücker view the badge opens, and TASK-M6-38,
+  whose targets and slice frame it uses). REQ-GUI-191 (TASK-M6-33's) keeps its statement, with a note.
+- **G11. qa's files (R-290, forced by this ruling).** A qa assertion of R-451 B1's tilt-mode label on the bottom-right
+  edge alone, or of the cube's unnamed edges in Tilt mode, asserts what this ruling changes; TASK-M6-40's qa reviewer
+  changes those assertions in the task's qa commit, and only those.
+- R-459 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-208 and REQ-GUI-209; changes REQ-GUI-191 (rulings, note).
+
+## R-460 — Focus and keyboard navigation are separate: a window opened with the mouse takes the focus but shows no ring and leaves keyboard navigation off; keyboard navigation starts only on keyboard input; a test per entry point, with a keyboard control arm *(amends R-409 point 4's "always in one of two modes" and R-450's landing "the whole scope highlighted", for a window opened with the mouse; reads R-456's blue ring on a clicked text field as shown only while keyboard navigation is on)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen
+(`07_keyboard.png`)" (a paragraph added; the two modes, the landings, a click on a text field, what the user sees and the
+console's landing, a clause each), `docs/gui/design/GUI_DESIGN_NOTES.md` § "07 Keyboard — design note, not a screen"
+(conformed), `docs/contracts/principia_gui_state_contract.md` § 2, R-409's, R-450's and R-456's heading blocks, RQ-367,
+REQ-GUI-098 and REQ-GUI-182 (reqio, notes), REQ-GUI-210 (reqio, new), TASK-M6-41 (new), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M6-41 on the mock*
+
+The human's words, Message 3's preamble and item 1:
+
+> Follow-up 3: keyboard-navigation state, window handling, resizable panels, console (Malachy, 2026-10-18).
+>
+> 1. Keyboard navigation turns on by itself. In mouse mode, with no key pressed:
+>    - Clicking the console to open it starts keyboard navigation.
+>    - Opening the Chart builder starts it.
+>    - Opening the Profiler starts it.
+>    Probably the window-open path sets keyboard-nav state when it gives the new window
+>    focus. Find the actual cause and report it rather than patching each window.
+>    Rules:
+>    - Focus and keyboard-nav mode are separate. A window opened with the mouse gets focus
+>      but shows no keyboard highlight and does not enter keyboard-nav mode.
+>    - Keyboard-nav mode starts only on keyboard input (Tab, the arrow keys, or the nav
+>      shortcut).
+>    - Recommended, to be confirmed by Malachy: any pointer click or drag returns to mouse
+>      mode and hides the keyboard highlight. That includes clicking off to close something.
+>      Focus doesn't move, so the next key press resumes keyboard navigation from where it
+>      was.
+>    - Check this against R-450 A3 ("a click lands in navigation mode") and say whether that
+>      ruling is what caused the bug.
+>    - Add a test per entry point (console, Chart builder, Profiler, and any other window):
+>      opening it with the mouse leaves keyboard-nav mode off. Add a control arm that opens
+>      the same window from the keyboard and expects the mode to be on, so the test can fail.
+
+The "Recommended, to be confirmed by Malachy" bullet is not confirmed: it is **RQ-367**, for the human, and this ruling
+does not apply it.
+
+*What it decides:*
+- **Focus and keyboard navigation are separate.** The focus is where keys go; keyboard navigation is whether the
+  keyboard layer is showing itself, its ring and R-409's two modes. A window opened with the mouse gets the focus but
+  shows no keyboard highlight and does not turn keyboard navigation on.
+- **Keyboard navigation starts only on keyboard input** (Tab, the arrow keys, or the nav shortcut).
+- **Tests per entry point:** for the console, the Chart builder, the Profiler and every other window, opening it with
+  the mouse leaves keyboard navigation off; a control arm opens the same window from the keyboard and expects it on,
+  so the test can fail.
+- **The cause is found and reported, not patched per window** (below).
+
+*The cause (the porter's reading of the code at `ab87a879`, for the task to confirm by reproduction):*
+- **There is no "keyboard navigation off" state.** The focus is `Focus { path, mode }`
+  (`crates/engine/src/contract/view_ui.rs` lines 40 to 55), `mode` only `Navigation` or `Interaction`, and the GUI draws
+  the ring whenever the focus path names a placed scope (`crates/gui/src/app.rs` lines 920 to 930, `draw_ring`, called
+  every frame). At start the path is empty, which is the only reason no ring shows.
+- **Every window open moves the path:** `App::open_window` (`app.rs` lines 247 to 272) calls `Keyboard::open_window`
+  (`crates/gui/src/keyboard/mod.rs` lines 424 to 438), which sets `focus.path = …window_landing(window)` (line 434) and
+  `focus.mode = KeyMode::Navigation` (line 435), however the window was opened. Line 434 alone turns the ring on. Every
+  entry point goes through it: the footer, the Windows menu's seven entries, the top bar's Run…, Profiler… and
+  Export…, the Manifold view's Chart builder… and open in Inspector, and the Trajectory panel's IC Inspector… and Open
+  full viewer…. The one exception is the console opening by itself on an error (`app.rs` lines 226 to 233), which
+  leaves the focus alone. A menu opened with the mouse takes the focus the same way (`keyboard/mod.rs` lines 382 to
+  385), and closing a window returns the focus to its opener (lines 457 and 458), so the ring stays on there.
+- **It is the corpus as written,** not a stray bug: §G3's "The keyboard is always in one of two modes", R-405's "with
+  the focus inside it" and R-450's "it takes the focus, landing in navigation mode on the header bar scope itself, the
+  whole scope highlighted" leave no state with the focus held and no ring. This ruling adds that state.
+- **R-450 A3 is not the cause.** A3 ("a click on any console control moves the keyboard's focus onto it, in navigation
+  mode") is not on `main`: it is built by TASK-M6-32, PR #234, open. There, `Keyboard::focus_by_click` puts the focus on
+  the clicked control in navigation mode, so each click shows the ring as well, and R-456's `follow_text_clicks` sets
+  navigation mode on a click elsewhere; both add rings on top of the open's, but neither makes one. Under this ruling
+  neither turns keyboard navigation on.
+
+*Applied per R-369 (routine design choices and mechanical consequences; the human may veto any, a veto being a GUI
+design ruling applied by a follow-up task):*
+- **H1. The keys that start it.** Tab, Shift+Tab and the arrows turn keyboard navigation on and act as always, from the
+  focus where it is. Enter, while it is off, turns it on and shows the ring where the focus is, without acting, so
+  nothing unseen is pressed. Esc, the letter and Space shortcuts, Ctrl+Z and `?` act as always and leave it as it is.
+  The GUI has no navigation shortcut today ("the nav shortcut" names none); one added later starts it too.
+- **H2. A mouse open turns it off.** Opening a window with the mouse leaves keyboard navigation off whatever it was
+  before, as the words' "a window opened with the mouse … does not enter keyboard-nav mode"; the window has the focus
+  on its landing (R-450's header bar scope for the console), so Esc still closes it and the next Tab or arrow resumes
+  from there. Opening one from the keyboard (Enter on the footer, a menu entry chosen by Enter, a button by Enter)
+  turns it on and lands with the ring as R-450 has it. A menu opened with the mouse takes the focus with no ring.
+- **H3. A click, meanwhile.** Until RQ-367 is ruled, a click never turns keyboard navigation on and leaves it as it was
+  otherwise: with it on, R-450 A3 and R-456 land as written, with the ring; with it off, they move the focus as written
+  and show none. A click on a text field starts typing (R-456), with egui's caret; its blue ring shows only while
+  keyboard navigation is on. That reads R-456's "the ring blue" through this ruling's newer "starts only on keyboard
+  input"; RQ-367 asks the human about it.
+- **H4. Where the state lives.** The flag is the GUI's own, beside the focus and the openers (`Keyboard`), never the
+  contract's: never undoable, never read by the engine (gui_state_contract §2). The ring and the breadcrumb's focus
+  path are drawn only while it is on; the focus is kept and moved as now.
+- **H5. The tests.** One keyboard-and-pointer script per entry point listed above (the footer and Windows › Console
+  for the console, Windows › each of the seven, the top bar's three buttons, Chart builder…, open in Inspector, IC
+  Inspector… and Open full viewer…): opened by a click, the focus is on the window's landing and keyboard navigation is
+  off, no ring drawn; the control arm opens the same window by keys and expects it on, the ring on the landing. One more
+  script: a mouse-opened window, then Tab, turns it on and moves on from the landing. The existing tests that assert the
+  focus's path and mode after a mouse open stay; they gain no ring assertion that contradicts this ruling.
+- **H6. Where it lands.** render_gui_spec §G3 (a paragraph and clauses), GUI_DESIGN_NOTES § 07, gui_state_contract §2.
+  **REQ-GUI-210** (M6), closed by **TASK-M6-41** (new; code, qa, gui; after TASK-M6-32, PR #234, whose click rules and
+  keyboard code it extends). REQ-GUI-098 and REQ-GUI-182 keep their statements, each with a note.
+- **H7. qa's files (R-290, forced by this ruling).** A qa assertion that a window opened with the mouse shows the ring
+  asserts what this ruling changes; TASK-M6-41's qa reviewer changes it in the task's qa commit, and only it.
+- R-460 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it amends:* §G3's "The keyboard is always in one of two modes", read from here on as while keyboard navigation is
+on (R-409 point 4); R-450's "the whole scope highlighted" on opening, for an open with the mouse; R-456's blue ring on
+a clicked text field, shown only while keyboard navigation is on (H3, flagged in RQ-367). R-405's "with the focus
+inside it" stands: the focus moves in, with no ring when the mouse opened it.
+
+Adds REQ-GUI-210; changes REQ-GUI-098 and REQ-GUI-182 (rulings, notes).
+
+## R-461 — Every window is dragged by its title bar and resized from its edges and corners, stays at least partly on screen, and remembers its position and size across sessions
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G5. Windows (`04_windows.png`)" (a paragraph) and
+§ "G13. Where the artboards are overridden" (a bullet), `docs/gui/design/GUI_DESIGN_NOTES.md` § "04 Windows"
+(conformed), `docs/contracts/principia_gui_state_contract.md` § 2, REQ-GUI-211 and REQ-GUI-212 (reqio, new), TASK-M6-42
+(new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-42 on the mock*
+
+The human's words (R-460 quotes Message 3's preamble), Message 3, item 2:
+
+> 2. Windows (Profiler, Chart builder, Run, Export and the rest are windows, not overlays):
+>    - Drag them by the title bar, and resize them from their edges and corners.
+>    - Keep each one at least partly on screen.
+>    - Remember position and size per window across sessions.
+
+*What it decides:* the Profiler, the Chart builder, Run, Export & share and the rest are windows, not overlays: each is
+dragged by its title bar and resized from its edges and corners, is kept at least partly on screen, and remembers its
+position and size per window across sessions.
+
+*The code (the porter's reading at `ab87a879`):* every window goes through `windows::frame`
+(`crates/gui/src/windows/mod.rs` lines 204 to 237), which pins it with `.fixed_rect(rect)` and `.resizable(false)`
+over a region of the layout (lines 143 to 149); the GUI keeps no settings across sessions (eframe without its
+`persistence` feature; `app.rs`, "the mock has no settings store").
+
+*Applied per R-369 (routine design choices; the human may veto any, a veto being a GUI design ruling applied by a
+follow-up task):*
+- **I1. Which windows.** Run, the Chart builder, Export & share, Display, the Profiler and the Inspector, gui_state
+  contract §2's list but the console. The console is docked along the bottom, its height dragged and maximised (R-463):
+  the human's item 4 gives it its own handling.
+- **I2. "At least partly on screen".** A window keeps at least its title bar's height, and 64 points of its title
+  bar's width, inside the GUI, after a drag and after the GUI's window is resized, so it can always be dragged back. A
+  remembered position that falls outside a smaller screen is clamped the same way on opening.
+- **I3. Minimum sizes.** Each window's minimum keeps its title bar and its controls usable; the values are the task's,
+  listed in its PR (sizes are decided per R-369).
+- **I4. Where it is kept.** In the GUI's own settings, kept across sessions, per window by name, never the contract
+  (gui_state_contract §2): not undoable, not read by the engine. With nothing remembered a window opens where it opens
+  today, the artboards' places. A settings file that cannot be read is ignored, logged once to the console, and
+  replaced on the next save; nothing else depends on it. How the settings are stored is the task's choice, within the
+  repo's rules for new dependencies.
+- **I5. The keyboard.** Moving and resizing are pointer actions only; the keyboard's model of a window (R-409 G6,
+  R-450) is unchanged.
+- **I6. Where it lands.** render_gui_spec §G5 a paragraph, §G13 a bullet; GUI_DESIGN_NOTES § 04; gui_state_contract
+  §2. **REQ-GUI-211** (move, resize, on screen) and **REQ-GUI-212** (remembered across sessions), M6, closed by
+  **TASK-M6-42** (new; code, qa, gui; after TASK-M6-32, PR #234, which changes the console window's code beside them).
+- R-461 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-211 and REQ-GUI-212.
+
+## R-462 — Every panel boundary is a draggable splitter, the canvas taking the space left; each panel has a minimum size, a double-click resets a splitter, the layout is remembered and View › reset layout restores it; resizing the canvas re-frames the figure and never re-integrates it
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the top bar and a paragraph) and § "G13. Where the artboards are overridden" (a bullet),
+`docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" (conformed),
+`docs/contracts/principia_gui_state_contract.md` § 2, REQ-GUI-213 and REQ-GUI-214 (reqio, new), TASK-M6-43 (new),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-43 on the mock*
+
+The human's words (R-460 quotes Message 3's preamble), Message 3, item 3:
+
+> 3. Resizable layout: every panel boundary is a draggable splitter. That covers the
+>    Manifold view, Trajectory, Compass, Time and Legend panels, and the main canvas, which
+>    takes the remaining space.
+>    - Each panel has a sensible minimum size.
+>    - Double-click a splitter to reset it.
+>    - The layout persists, with a "reset layout" command in the View menu.
+>    - Resizing the canvas re-frames the figure. It must not trigger a full re-integration.
+
+*What it decides:* every panel boundary is a draggable splitter: the Manifold view, Trajectory, Compass, Time and
+Legend panels, and the main canvas, which takes the remaining space. Each panel has a sensible minimum size; a
+double-click on a splitter resets it; the layout persists, with a "reset layout" command in the View menu; resizing
+the canvas re-frames the figure and must not trigger a full re-integration.
+
+*The code (the porter's reading at `ab87a879`):* the layout is fixed rects, each a set proportion of the 2160 × 1350
+artboard (`crates/gui/src/layout.rs` lines 62 to 93), rebuilt each frame from the window's size; the View menu holds
+only "F3 hide" (`explore/top_bar.rs`). A resize already only re-frames on the mock: no `SetField`, no re-integration
+(the engine's contract has no viewport field); the real figure is TASK-M8-05's.
+
+*Applied per R-369 (routine design choices and readings; the human may veto any, a veto being a GUI design ruling
+applied by a follow-up task):*
+- **J1. The splitters.** The boundaries between the Manifold view and the canvas, the canvas and the Trajectory panel,
+  the top row and the bottom row (Compass, Time, Legend), and between Compass and Time and between Time and Legend.
+  The top bar and the footer keep their heights. A splitter shows a resize cursor on hover.
+- **J2. Minimum sizes.** Each panel's minimum keeps its controls usable (the Manifold view its widest row, the compass
+  its cube and buttons, Time its transport); the canvas has one too, so no splitter can close it. The values are the
+  task's, listed in its PR.
+- **J3. "Reset it".** A double-click on a splitter returns that splitter to its default, `01_main.png`'s proportions;
+  View › reset layout returns every splitter, and the console's height (R-463), to the defaults. Reset is not undoable:
+  the layout is the GUI's own state.
+- **J4. "Re-frames the figure".** By R-406's rule: each point of the field keeps its screen position as the canvas's
+  edges move, so a wider canvas shows more of the field at the same scale, past `[0,1]²` by each axis's declared type
+  (R-407), and a narrower one less. No `SetField` is sent; the quads already integrated are kept and redrawn, and only
+  what the canvas newly exposes is computed. A canvas grown past the artboard's figure rect is read like F3's hidden
+  layer.
+- **J5. Where it is kept.** The GUI's own settings, kept across sessions with the windows' (R-461 I4), never the
+  contract.
+- **J6. The keyboard.** Splitters are pointer controls; the scope tree and its order are unchanged, the ring following
+  each scope's new rect.
+- **J7. Where it lands.** render_gui_spec §G2 (the top bar's View menu, a paragraph) and §G13; GUI_DESIGN_NOTES § 01;
+  gui_state_contract §2. **REQ-GUI-213** (the splitters, minimum sizes, double-click reset) and **REQ-GUI-214** (the
+  layout remembered, View › reset layout, the re-frame without re-integration), M6, closed by **TASK-M6-43** (new; code,
+  qa, gui; after TASK-M6-42, whose settings store it shares). TASK-M8-05's real figure follows J4 when it lands; its
+  file gets no change here, REQ-GUI-214 naming the rule.
+- R-462 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-213 and REQ-GUI-214.
+
+## R-463 — The console's height drags and a maximise toggle (button and key M) fills the height below the top bar; its open and close lag is measured first, and both are brought within one frame at 60 fps, with the frame times before and after *(amends R-450 as it lists the header bar's controls)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)" (a paragraph),
+§ "G5. Windows (`04_windows.png`)" (the console docked) and § "G13. Where the artboards are overridden" (the console's
+header), `docs/gui/design/GUI_DESIGN_NOTES.md` § "12 Console" (conformed), R-450's heading block, REQ-GUI-215 and
+REQ-GUI-216 (reqio, new), TASK-M6-44 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-44 on the
+mock*
+
+The human's words (R-460 quotes Message 3's preamble), Message 3, item 4:
+
+> 4. Console:
+>    - Its height can be dragged, and there is a maximise / full-screen toggle (with a key).
+>    - Opening and closing it lags. Measure where the time goes before fixing it, for
+>      example animation, re-laying out the whole UI, or rebuilding the log view.
+>    - Report the frame times before and after; the target is open and close within one
+>      frame at 60 fps.
+
+*What it decides:* the console's height can be dragged, and it has a maximise / full-screen toggle with a key; its open
+and close lag is measured, where the time goes, before it is fixed; the frame times before and after are reported; the
+target is open and close each within one frame at 60 fps.
+
+*The code (the porter's reading at `ab87a879`, a pointer for the measurement, not a finding):* the console is an
+`egui::Window` fixed over the bottom row, with no animation; while open, each frame `shown()`
+(`crates/gui/src/windows/console.rs` lines 128 to 130) lowercases and filters the whole log, up to `CONSOLE_ROWS =
+10 000` entries, and a `Grid` in a `ScrollArea` lays out every matching row (lines 277 to 288, no `show_rows`), and
+the mock logs a line per `SetField`, so the log grows quickly. The task measures before it decides.
+
+*Applied per R-369 (routine design choices; the human may veto any, a veto being a GUI design ruling applied by a
+follow-up task):*
+- **K1. Docked, height dragged.** The console stays docked along the bottom, over the bottom row; its top edge is a
+  splitter, from a minimum of its header bar and three log rows to the full height below the top bar; the height is
+  remembered with the layout (R-462) and reset by View › reset layout.
+- **K2. The toggle.** A **maximise** button in the header bar between Clear and ×, and the console scope's shortcut
+  **M** (a scope shortcut, §G3, acting whenever the focus is in the console in either mode, not while the search field
+  is typed in), toggle between the dragged height and the full height below the top bar. "Full-screen" is read as the
+  GUI's full height below the top bar, not the operating system's full screen. Maximised, it covers the panels and the
+  figure until toggled back; the user chose it, so it is no notification over the figure and §G1's "the figure is never
+  covered" (toasts and labels) does not forbid it.
+- **K3. The header bar.** R-450's header bar order becomes All, Warnings, Errors, Info, the search field, Copy, Clear,
+  maximise, ×; ← → cross it in that order, and the breadcrumb names it "Console › Header › Maximise". R-450's two
+  scopes are otherwise unchanged.
+- **K4. The measurement.** The frame time of the frame that opens the console and of the frame that closes it, and of
+  the frames around them, with where the time goes (egui layout, the log's filter, the log's rows, the wgpu frame),
+  measured on the human's Mac with the log empty, with 1 000 entries and with `CONSOLE_ROWS` entries, before the fix
+  and after it; the PR gives both tables (benchmarks run on the human's Mac, R-186). The target: open and close each
+  within one frame at 60 fps, 16.7 ms, at every log size measured.
+- **K5. Where it lands.** render_gui_spec §G12 a paragraph, §G5 and §G13 a clause each; GUI_DESIGN_NOTES § 12.
+  **REQ-GUI-215** (height, maximise, key) and **REQ-GUI-216** (open and close within a frame, measured), M6, closed by
+  **TASK-M6-44** (new; code, qa, gui and perf; after TASK-M6-32, PR #234, the console's keyboard model, and TASK-M6-43,
+  the layout's splitters and settings).
+- **K6. qa's files (R-290, forced by this ruling).** A qa assertion of the header bar's controls in R-450's order with
+  × right after Clear asserts what K3 changes; TASK-M6-44's qa reviewer changes it in the task's qa commit, and only it.
+- R-463 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it amends:* R-450's header bar ("the filters All, Warnings, Errors, Info, then the search field, Copy, Clear,
+and the close button ×, in that visual order") gains the maximise button between Clear and ×; the rest of R-450 stands.
+
+Adds REQ-GUI-215 and REQ-GUI-216.

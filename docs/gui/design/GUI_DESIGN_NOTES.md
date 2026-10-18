@@ -23,7 +23,10 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
 - **Left: "Manifold view" is ONE group** — chart, navigation, centre z₀, slice and tilt, rotation. They are one thing: how
   you view the manifold.
   - **Chart:** preset (named by its axes, e.g. "z_α × z_β" — never nicknames), the two basis vectors, Chart builder…
-  - **Navigate:** centre (u, v), zoom (log₂), all eight z₀ values editable by drag or typing.
+  - **Navigate:** centre (u, v), zoom (log₂); no grid of z₀ values, which the Slice centre sliders hold *(conformed to
+    R-457)*.
+  - **Slice centre** (eight z₀ sliders, each with its number box) and **Tilt** ("tilt τ₁ into [X]", "tilt τ₂ into [Y]",
+    each target a dropdown of the dimensions not in the plane, and γ; no step slider) *(conformed to R-457)*.
   - **Depth readout, and a precision warning** raised by events (GU-3: `DECODE_SWITCHOVER` on visible quads, `AT_F32_FLOOR`),
     not fixed depths.
   - **Lock:** a "● locked at z_locked" badge with unlock. **Sliders are RE-BASED to the anchor, not frozen**: each shows
@@ -41,6 +44,12 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     default) and always show it, and it still **switches mode by itself**: touching a slice slider shows slicing,
     touching a tilt shows tilting. When locked it carries a gold pin at the pivot, and the plane turns about the pin.
     Dragging tilts in tilt mode; in slice mode it moves the slice plane along its normal *(conformed to R-409)*.
+    Drags are live both ways, each one undo entry: the sliders, readout and figure follow a compass drag, and a slider's
+    drag switches the mode and moves the plane *(conformed to R-458)*. The cube's H, V and D labels are buttons that
+    pick the slice's dimensions; in Tilt mode the third axis names what the gesture tilts into, with a "4D: see
+    Plücker" badge when the two targets differ and both angles are set *(conformed to R-459)*.
+  - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
+    it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It
     is not instant, and says so.
   - **Legend, generated from the stain** (see 06).
@@ -65,6 +74,9 @@ inspector holds every setting the old dev GUI had.
   as a rectangle, and "forbidden in view: N%". Each chart supplies its domain function (CD-6). **Both previews are square.**
 
 ## 04 Windows
+
+Every window is dragged by its title bar, resized from its edges and corners, kept partly on screen, and remembers its
+position and size across sessions *(conformed to R-461)*.
 
 - **Profiler:** frame-time trace; where the frame goes (donut); stacked per-frame bars; substeps-per-pixel histogram; flame
   chart of nested scopes; GPU timestamps per pass; memory (heap, GPU, tile cache) over time; live allocations by type with
@@ -119,6 +131,8 @@ text edit) and `?` (a character) included, but Esc and Enter (back to navigation
 A click on a text field starts typing at once, in interaction mode; a click anywhere else ends any typing and leaves the
 keyboard in navigation mode, moving the focus only where a rule already says a click does (the console's controls,
 R-450 A3) *(conformed to R-456)*.
+Focus and keyboard navigation are separate: a window opened with the mouse takes the focus but shows no ring; keyboard
+navigation, and with it the ring, starts only on keyboard input (Tab, the arrows, Enter) *(conformed to R-460)*.
 
 ## 08 Lock — the reticle and the pin
 
@@ -148,4 +162,5 @@ Poincaré return map on syzygy crossings (w = 0), a chosen shape-sphere great ci
 ## 12 Console
 
 The footer opened: severity, time, source, message; filters; copy and clear. The same stream as the profiler's telemetry.
-Errors open it automatically.
+Errors open it automatically. Its height drags and it has a maximise toggle (M); it opens and closes within one frame
+*(conformed to R-463)*.

@@ -1187,6 +1187,13 @@ tilt means).*
 - **Waits:** nothing builds on the choice yet; TASK-M6-33 does not wait, and no requirement carries `rq: RQ-340`
   (REQ-GUI-192 cites it in its note). A ruling for (b) or (c) changes the decoder's basis, which re-integrates every
   tilted view, and goes to a follow-up task.
+- **R-457 bears on it (18 Oct 2026, a note; the entry stays open).** The human ruled that each tilt angle tilts into a
+  latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target.
+  That answers question (ii) in part: both the one-target map (`X = Y`) and the contract's two-target form (`X ≠ Y`,
+  option (c)'s family, orthonormal) are reachable, the shared target the default. Question (i), the parametrisation
+  within one 3-space when `X = Y` (options (a) and (b)), stays open, and with it R-451 B11's corner points, which arise
+  only with `X = Y`. R-459 says what the cube draws with `X ≠ Y` (each gesture exactly, and a "4D: see Plücker"
+  badge). TASK-M6-38 builds the targets with the code's map for `X = Y` (option (a), as applied).
 
 ## RQ-341: The physical compass views need the decoder's Jacobian with respect to z along all eight latent directions, into Jacobi or shape-sphere coordinates, and its Gram area factor; the corpus's J_D is the derivative with respect to the chart's (u, v) into the particle frame, not yet built, and no Gram factor is defined for it *(silence and conflict with the ruling's words, R-72, R-452; context: TASK-M6-35)*
 
@@ -1518,3 +1525,82 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
   REQ-SYS-015 (`rq: RQ-365`).
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
+
+## RQ-367: Does any pointer click or drag turn keyboard navigation off and hide the ring, the focus kept? The human recommended it "to be confirmed by Malachy"; it would amend R-450 A3 and R-456, which land a click in navigation mode, and it bears on R-456's blue ring on a clicked text field *(the human's recommendation, unconfirmed; R-460, R-450, R-456; context: TASK-M6-41, TASK-M6-32)*
+
+*Filed by R-460's port (18 Oct 2026). The human marked it "to be confirmed"; nothing is chosen. For the human: it
+changes a ruling of the human's (R-450 A3, R-456).*
+
+- **File, section:**
+  - The human's message of 18 Oct 2026 (`decisions.md` § "R-460 — …", quoted): "Recommended, to be confirmed by Malachy:
+    any pointer click or drag returns to mouse mode and hides the keyboard highlight. That includes clicking off to
+    close something. Focus doesn't move, so the next key press resumes keyboard navigation from where it was."
+  - `decisions.md` § "R-450 — …", A3: "A click on any console control moves the keyboard's focus onto it, in navigation
+    mode, so the mouse and the keyboard never disagree about where the focus is inside the console; a click on ×
+    closes the console as Enter on it does."
+  - `decisions.md` § "R-456 — …", the human's words: "#234: clicking a text input should start typing; elsewhere a click
+    lands in navigation mode." Its first decision: "The keyboard's focus moves onto the field in interaction mode, the
+    ring blue". Its B6: a click not on a text input "moves the keyboard's focus only where an existing rule says a click
+    does (R-450 A3's console controls)". R-456 is built by TASK-M6-32, PR #234, open.
+  - `docs/gui/principia_render_gui_spec.md` § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)", R-460's
+    paragraph: "A click never turns keyboard navigation on; whether a click or a drag turns it off is open (RQ-367), and
+    meanwhile it leaves it as it was."
+- **The conflicts:**
+  - "Focus doesn't move" against R-450 A3 and R-456 B6, under which a click on a console control does move the focus,
+    onto it. "Returns to mouse mode and hides the keyboard highlight" against "lands in navigation mode", which in the
+    corpus is the orange ring's mode (R-409). R-460 reads "navigation mode" there as the mode keys find when they
+    next act, with no ring unless keyboard navigation is already on; the recommendation would turn it off.
+  - R-456's "the ring blue" on a clicked text field against R-460's confirmed "Keyboard-nav mode starts only on keyboard
+    input": a click is not keyboard input. R-460 H3 applied the newer words (the caret, no blue ring while keyboard
+    navigation is off) and flagged it here.
+- **Options seen:**
+  - (a) As recommended, literally: any click or drag turns keyboard navigation off and hides the ring, clicking off to
+    close something included, and moves no keyboard focus, so R-450 A3's and R-456 B6's click-moves-focus are withdrawn;
+    a click on a text field still starts typing (R-456), its ring hidden.
+  - (b) A click or drag turns keyboard navigation off and hides the ring, but where R-450 A3 and R-456 move the focus on
+    a click they still do, so the next key resumes from what was clicked.
+  - (c) Not adopted: a click leaves keyboard navigation as it was (R-460 H3, applied meanwhile); with it on, A3 and
+    R-456 land with the ring.
+  - For the text field, under any of them: (i) its blue ring only while keyboard navigation is on (applied meanwhile),
+    or (ii) a click on a text field shows the blue ring while typing, as R-456 says, and turns keyboard navigation on.
+- **Applied meanwhile:** (c) and (i) (R-460 H3). TASK-M6-41 builds them; R-456's code on PR #234 is unchanged by this
+  entry.
+- **Waits:** nothing. TASK-M6-41 does not wait; a ruling for (a) or (b), or (ii), is applied by a follow-up task, or by
+  TASK-M6-41 if it is still open.
+
+## RQ-368: The compass's slice gesture moves the slice by the drag's horizontal component along the decoder's normal, which the isometric cube draws toward the lower left, so a drag to the right moves the drawn plane left and down; the tilt gesture's rates are the reference's while the drawn plane is the decoder's. The human reports the gestures unintuitive; changing them changes R-451 *(the human's report against a ruling's transcription, R-451 B3, R-458; context: TASK-M6-33, TASK-M6-39)*
+
+*Filed by R-458's port (18 Oct 2026), which the human asked to confirm that the compass rework covers the tilt and slice
+gestures and, if not, to say so rather than patch the old compass. Nothing is chosen; for the human, since it changes a
+ruling of the human's (R-451).*
+
+- **File, section:**
+  - The human's message of 18 Oct 2026 (`decisions.md` § "R-458 — …", quoted, Message 1 item 5): "The compass's tilt and
+    slice interaction is unintuitive as it stands; the slicing gesture in particular doesn't behave as it should. I
+    believe the compass rework already queued … replaces this. Confirm it covers the tilt and slice gestures."
+  - `decisions.md` § "R-451 — …", B3: "The horizontal component of a drag sets how far the slice moves (the reference's
+    rate, a drag across the cube's full width moving it across the whole range); the direction is the drawn plane's
+    normal … The vertical component does nothing in slice mode. The tilt-mode drag uses the reference's rates (a drag
+    across the full width or height is 180°), right raising τ₁ and up raising τ₂".
+  - `docs/gui/reference/principia_nav_cube.html`: the slice drag `depthT += dx*2`, along its z axis; its tilt mode's
+    untilted plane horizontal (normal y).
+  - PR #240 (TASK-M6-33, open), `crates/gui/src/explore/compass.rs`: the projection's screen x is `ISO·(x − z)`; the slice
+    drag adds `dx·2·Z0_HALF_RANGE` along `latent_normal`, the vertical component ignored.
+- **The reading:** untilted the decoder's normal is `+e_d`, the cube's z, which the projection draws toward the screen's
+  lower left, so the drawn plane moves against the pointer's x; tilted, the normal's screen direction turns while the
+  drag still reads `dx`, so the plane can move sideways to the pointer. The reference has the same property (it moves
+  its plane along z by `dx`). The code on `main` projects the 2-D drag onto the drawn normal's screen direction, so its
+  plane follows the pointer. In tilt mode the drawn plane is the decoder's, vertical when untilted (R-451 B1, B2), not
+  the reference's horizontal plane, so the reference's "right raises τ₁, up raises τ₂" need not tip the drawn plane
+  toward the pointer. R-451 B4's easing makes the cube trail the pointer by a few tenths of a second.
+- **Options seen:**
+  - (a) Keep R-451 B3 as written (the reference's gestures); R-458's live updates are the only change.
+  - (b) The slice drag follows the pointer: the 2-D drag projected onto the drawn normal's screen direction, so the
+    drawn plane moves with the pointer at every tilt, at R-451's rate along that direction.
+  - (c) As (b) for the slice, and the tilt drag tips the drawn plane toward the pointer: horizontal drags turn about
+    the screen's vertical through the cube's centre and vertical drags about the screen's horizontal, mapped to `τ₁`,
+    `τ₂` so the plane's nearer edge follows the pointer.
+  - Independently: keep R-451 B4's easing during a drag, or draw the drag's target at once and ease only after a
+    click or a keyboard step.
+- **Applied meanwhile:** (a). TASK-M6-33 and TASK-M6-39 build R-451's gestures as written.
+- **Waits:** nothing. A ruling for (b) or (c) is applied by a follow-up task, or by TASK-M6-39 if it is still open.
