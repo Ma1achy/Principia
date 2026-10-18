@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Draw the README's build-progress banner: one SVG, a square per task, grouped by milestone.
+"""Draw the README's build-progress grid: one SVG, a square per task, grouped by milestone.
+
+It is drawn in the README's style (docs/readme/: the title's neo-grotesque lettering and its inks on a transparent
+ground), in two themes: `light`, dark ink for a light page, and `dark`, pale ink for a dark page, which the README
+picks between with a <picture> as it does the title and signature. A merged task is a square of ink, one in review a
+square of ochre wash, one not started a pencil outline.
 
 Each task in plan/tasks.yaml is in one of three states:
   done         its status is `done` in tasks.yaml, or main's history has the merge commit
@@ -16,7 +21,7 @@ Progress is counted by task, not by size: each task weighs the same.
 
 Usage:
   python3 scripts/progress_banner.py -o progress.svg [--open-prs open.json]
-      [--merges subjects.txt] [--commit SHA] [--generated-at TEXT]
+      [--merges subjects.txt] [--commit SHA] [--generated-at TEXT] [--theme light|dark]
 
 --merges reads the merge-commit subjects from a file (one per line) instead of `git log --merges --format=%s`; a
 shallow clone has no history to read. --commit and --generated-at fix the footer's commit and time (the defaults are
@@ -43,36 +48,39 @@ TASK_ID_RE = re.compile(r"^TASK-M(\d+)-(\d+)$")
 
 DONE, REVIEW, TODO = "done", "in review", "not started"
 
-# Layout, in px.
-WIDTH = 1200
-PAD = 24  # outer margin
-GAP = 16  # between milestone boxes
-COLS = 3  # milestone boxes per row
-CELL = 16  # task square
-PITCH = 20  # square + gap
-BOX_PAD = 14
-HEADER_H = 128
-FOOTER_H = 36
+# Layout, in px: one ledger line per milestone across the README's width. The width is the title's (1600, as
+# docs/readme/title-*.svg draws it), so the grid lines up with the title above it at width="100%".
+WIDTH = 1600
+PAD = 2  # side margin; the title's lettering starts at x = 2
+CELL = 22  # task square
+PITCH = 28  # square + gap
+HEADER_H = 156  # title, overall rule, counts
+LINE_H = 40  # a milestone's text line, above its squares
+BLOCK_GAP = 30  # between milestones
+FOOTER_H = 64
 
-STYLE = """
-.panel{fill:#ffffff;stroke:#d0d7de}
-.box{fill:#f6f8fa;stroke:#d0d7de}
-.t{fill:#1f2328;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif}
-.m{fill:#59636e}
-.track{fill:#e6e9ed}
-.done{fill:#1f883d}
-.review{fill:#d4a72c}
-.todo{fill:#d8dee4}
-@media (prefers-color-scheme: dark){
-.panel{fill:#0d1117;stroke:#30363d}
-.box{fill:#161b22;stroke:#30363d}
-.t{fill:#e6edf3}
-.m{fill:#9198a1}
-.track{fill:#262c36}
-.done{fill:#2ea043}
-.review{fill:#d29922}
-.todo{fill:#30363d}
+# The README's inks (docs/readme/title-*.svg, signature-*.svg) on a transparent ground, as the title and signature
+# are drawn: `ink` the title's lettering, `ink2` its subtitle, `pencil` the signature's. `ochre` is a watercolour
+# yellow ochre, the one wash, for tasks in review. A task merged is a square of ink; one not started, a pencil outline.
+THEMES = {
+    "light": {"ink": "#1d1b19", "ink2": "#3d3a34", "pencil": "#4f4a42", "ochre": "#b5822e"},
+    "dark": {"ink": "#efe9dc", "ink2": "#c8c1b2", "pencil": "#c8c1b2", "ochre": "#d9a84e"},
 }
+
+# The title's lettering is a neo-grotesque; the runner (Ubuntu) has Liberation Sans or DejaVu Sans, and `sans-serif`
+# ends the list.
+FONTS = "'Helvetica Neue',Helvetica,Arial,'Liberation Sans',Arimo,'Nimbus Sans','DejaVu Sans',sans-serif"
+
+
+def style(theme):
+    c = THEMES[theme]
+    return f"""
+.t{{fill:{c['ink']};font-family:{FONTS}}}
+.m{{fill:{c['ink2']}}}
+.track{{stroke:{c['pencil']};stroke-opacity:0.45;stroke-width:1.5}}
+.done{{fill:{c['ink']}}}
+.review{{fill:{c['ochre']}}}
+.todo{{fill:none;stroke:{c['pencil']};stroke-opacity:0.6;stroke-width:1.5}}
 """
 
 
@@ -149,24 +157,22 @@ def clip(text, n):
     return text if len(text) <= n else text[: n - 1].rstrip() + "…"
 
 
-def svg(tasks, state, names, commit, generated_at):
+def svg(tasks, state, names, commit, generated_at, theme="light"):
     milestones = sorted({t["milestone"] for t in tasks}, key=lambda m: int(m[1:]))
     by_m = {m: [t for t in tasks if t["milestone"] == m] for m in milestones}
     total = len(tasks)
     done = sum(1 for s in state.values() if s == DONE)
     review = sum(1 for s in state.values() if s == REVIEW)
 
-    box_w = (WIDTH - 2 * PAD - (COLS - 1) * GAP) // COLS
-    per_row = (box_w - 2 * BOX_PAD + (PITCH - CELL)) // PITCH
-    head_h = 62  # title, name, bar
+    inner = WIDTH - 2 * PAD
+    per_row = (inner + (PITCH - CELL)) // PITCH
 
-    def box_h(m):
+    def block_h(m):
         rows = -(-len(by_m[m]) // per_row)
-        return head_h + rows * PITCH - (PITCH - CELL) + BOX_PAD
+        return LINE_H + rows * PITCH - (PITCH - CELL)
 
-    rows = [milestones[i : i + COLS] for i in range(0, len(milestones), COLS)]
-    row_h = [max(box_h(m) for m in r) for r in rows]
-    height = HEADER_H + sum(row_h) + GAP * (len(rows) - 1) + FOOTER_H + PAD
+    height = HEADER_H + sum(block_h(m) for m in milestones) + BLOCK_GAP * (len(milestones) - 1) + FOOTER_H
+    right = WIDTH - PAD
 
     o = []
     o.append(
@@ -175,90 +181,91 @@ def svg(tasks, state, names, commit, generated_at):
         f'{pct(done, total)}% ({done} of {total} tasks done)">'
     )
     o.append(f"<title>Principia build progress: {done} of {total} tasks done</title>")
-    o.append(f"<style>{STYLE}</style>")
-    o.append(f'<rect class="panel" x="0.5" y="0.5" width="{WIDTH - 1}" height="{height - 1}" rx="12"/>')
+    o.append(f"<style>{style(theme)}</style>")
 
-    # Header: title, overall %, bar, counts.
+    # Header: title and overall % in the title's weight, a ruled line filled in ink as tasks merge, then the counts.
     o.append(f'<g data-part="header" data-done="{done}" data-total="{total}" data-pct="{pct(done, total)}">')
-    o.append(f'<text class="t" x="{PAD}" y="48" font-size="26" font-weight="700">Principia — build progress</text>')
     o.append(
-        f'<text class="t m" x="{PAD}" y="72" font-size="14">{done} done · {review} in review · '
-        f"{total - done - review} not started · {total} tasks in {len(milestones)} milestones</text>"
+        f'<text class="t" x="{PAD}" y="56" font-size="56" font-weight="700" letter-spacing="-1.5">'
+        f"Build progress</text>"
     )
     o.append(
-        f'<text class="t" x="{WIDTH - PAD}" y="62" font-size="44" font-weight="700" '
+        f'<text class="t" x="{right}" y="56" font-size="56" font-weight="700" letter-spacing="-1.5" '
         f'text-anchor="end">{pct(done, total)}%</text>'
     )
-    bar_y, bar_w = 88, WIDTH - 2 * PAD
-    o.append(f'<rect class="track" x="{PAD}" y="{bar_y}" width="{bar_w}" height="12" rx="6"/>')
+    rule_y = 86
+    o.append(f'<line class="track" x1="{PAD}" y1="{rule_y}" x2="{right}" y2="{rule_y}"/>')
     if total:
-        dw = bar_w * done / total
-        rw = bar_w * review / total
+        dw = inner * done / total
+        rw = inner * review / total
         if rw:
-            o.append(f'<rect class="review" x="{PAD}" y="{bar_y}" width="{dw + rw:.1f}" height="12" rx="6"/>')
+            o.append(f'<rect class="review" x="{PAD + dw:.1f}" y="{rule_y - 3}" width="{rw:.1f}" height="6"/>')
         if dw:
-            o.append(f'<rect class="done" x="{PAD}" y="{bar_y}" width="{dw:.1f}" height="12" rx="6"/>')
-
+            o.append(f'<rect class="done" x="{PAD}" y="{rule_y - 3}" width="{dw:.1f}" height="6"/>')
+    o.append(
+        f'<text class="t m" x="{PAD}" y="124" font-size="26">{done} done · {review} in review · '
+        f"{total - done - review} not started · {total} tasks in {len(milestones)} milestones</text>"
+    )
     o.append("</g>")
 
-    # Milestone boxes, each a group.
+    # One ledger line per milestone: its number and name, its count and %, then a square per task.
     y = HEADER_H
-    for r, rh in zip(rows, row_h):
-        for i, m in enumerate(r):
-            x = PAD + i * (box_w + GAP)
-            ts = by_m[m]
-            md = sum(1 for t in ts if state[t["id"]] == DONE)
-            mr = sum(1 for t in ts if state[t["id"]] == REVIEW)
+    for m in milestones:
+        ts = by_m[m]
+        md = sum(1 for t in ts if state[t["id"]] == DONE)
+        mr = sum(1 for t in ts if state[t["id"]] == REVIEW)
+        o.append(
+            f'<g data-milestone="{m}" data-done="{md}" data-review="{mr}" data-total="{len(ts)}" '
+            f'data-pct="{pct(md, len(ts))}">'
+        )
+        base = y + 26
+        o.append(f'<text class="t" x="{PAD}" y="{base}" font-size="30" font-weight="700">{m}</text>')
+        name = names.get(m, "")
+        if name:
             o.append(
-                f'<g data-milestone="{m}" data-done="{md}" data-review="{mr}" data-total="{len(ts)}" '
-                f'data-pct="{pct(md, len(ts))}">'
+                f'<text class="t m" x="{PAD + 64}" y="{base}" font-size="26">'
+                f"<title>{escape(m)} — {escape(name)}</title>{escape(clip(name, 72))}</text>"
             )
-            o.append(f'<rect class="box" x="{x + 0.5}" y="{y + 0.5}" width="{box_w - 1}" height="{rh - 1}" rx="8"/>')
-            tx = x + BOX_PAD
-            o.append(f'<text class="t" x="{tx}" y="{y + 24}" font-size="17" font-weight="700">{m}</text>')
+        o.append(
+            f'<text class="t" x="{right}" y="{base}" font-size="30" font-weight="700" '
+            f'text-anchor="end">{pct(md, len(ts))}%</text>'
+        )
+        count = f"{md}/{len(ts)}" + (f" · {mr} in review" if mr else "")
+        o.append(
+            f'<text class="t m" x="{right - 96}" y="{base}" font-size="24" '
+            f'text-anchor="end">{escape(count)}</text>'
+        )
+        gy = y + LINE_H
+        for k, t in enumerate(ts):
+            s = state[t["id"]]
+            cls = {DONE: "done", REVIEW: "review", TODO: "todo"}[s]
+            cx = PAD + (k % per_row) * PITCH
+            cy = gy + (k // per_row) * PITCH
+            tip = f"{t['id']}: {t['title']} ({s})"
+            # An outline is inset by half its stroke, so every square covers the same area.
+            inset = 0.75 if cls == "todo" else 0
             o.append(
-                f'<text class="t" x="{x + box_w - BOX_PAD}" y="{y + 24}" font-size="17" font-weight="700" '
-                f'text-anchor="end">{pct(md, len(ts))}%</text>'
+                f'<rect class="{cls}" x="{cx + inset}" y="{cy + inset}" width="{CELL - 2 * inset}" '
+                f'height="{CELL - 2 * inset}" rx="2" '
+                f'data-task="{escape(t["id"])}" data-state="{s}"><title>{escape(tip)}</title></rect>'
             )
-            count = f"{md}/{len(ts)}" + (f" · {mr} in review" if mr else "")
-            o.append(
-                f'<text class="t m" x="{x + box_w - BOX_PAD - 62}" y="{y + 24}" font-size="12" '
-                f'text-anchor="end">{escape(count)}</text>'
-            )
-            name = names.get(m, "")
-            if name:
-                o.append(
-                    f'<text class="t m" x="{tx}" y="{y + 42}" font-size="12">'
-                    f"<title>{escape(m)} — {escape(name)}</title>{escape(clip(name, 54))}</text>"
-                )
-            bw = box_w - 2 * BOX_PAD
-            o.append(f'<rect class="track" x="{tx}" y="{y + 50}" width="{bw}" height="4" rx="2"/>')
-            if md:
-                o.append(f'<rect class="done" x="{tx}" y="{y + 50}" width="{bw * md / len(ts):.1f}" height="4" rx="2"/>')
-            gy = y + head_h
-            for k, t in enumerate(ts):
-                s = state[t["id"]]
-                cls = {DONE: "done", REVIEW: "review", TODO: "todo"}[s]
-                cx = tx + (k % per_row) * PITCH
-                cy = gy + (k // per_row) * PITCH
-                tip = f"{t['id']}: {t['title']} ({s})"
-                o.append(
-                    f'<rect class="{cls}" x="{cx}" y="{cy}" width="{CELL}" height="{CELL}" rx="3" '
-                    f'data-task="{escape(t["id"])}" data-state="{s}"><title>{escape(tip)}</title></rect>'
-                )
-            o.append("</g>")
-        y += rh + GAP
+        o.append("</g>")
+        y += block_h(m) + BLOCK_GAP
 
     # Footer: legend, then provenance.
-    fy = y - GAP + 26
+    fy = y - BLOCK_GAP + FOOTER_H - 14
     lx = PAD
     for cls, label in (("done", "done (merged)"), ("review", "in review (open PR)"), ("todo", "not started")):
-        o.append(f'<rect class="{cls}" x="{lx}" y="{fy - 11}" width="12" height="12" rx="2"/>')
-        o.append(f'<text class="t m" x="{lx + 18}" y="{fy}" font-size="12">{label}</text>')
-        lx += 18 + int(6.6 * len(label)) + 24
+        inset = 0.75 if cls == "todo" else 0
+        o.append(
+            f'<rect class="{cls}" x="{lx + inset}" y="{fy - 17 + inset}" width="{18 - 2 * inset}" '
+            f'height="{18 - 2 * inset}" rx="2"/>'
+        )
+        o.append(f'<text class="t m" x="{lx + 28}" y="{fy}" font-size="22">{label}</text>')
+        lx += 28 + int(11.5 * len(label)) + 36
     o.append(
-        f'<text class="t m" x="{WIDTH - PAD}" y="{fy}" font-size="12" text-anchor="end">'
-        f"one square per task, by task count · generated {escape(generated_at)} from main @ {escape(commit)}</text>"
+        f'<text class="t m" x="{right}" y="{fy}" font-size="22" text-anchor="end">'
+        f"one square per task · generated {escape(generated_at)} from main @ {escape(commit)}</text>"
     )
     o.append("</svg>")
     return "\n".join(o) + "\n"
@@ -273,6 +280,12 @@ def main(argv=None):
     p.add_argument("--merges", help="merge-commit subjects, one per line, in place of git log")
     p.add_argument("--commit", help="the commit the banner reflects (default: git rev-parse --short HEAD)")
     p.add_argument("--generated-at", help="the footer's time (default: now, UTC)")
+    p.add_argument(
+        "--theme",
+        choices=sorted(THEMES),
+        default="light",
+        help="the inks: light (dark ink, for a light page) or dark (pale ink, for a dark page); default light",
+    )
     a = p.parse_args(argv)
 
     tasks = load_tasks(a.tasks)
@@ -285,7 +298,7 @@ def main(argv=None):
     commit = a.commit or git("rev-parse", "--short", "HEAD").strip()
     generated_at = a.generated_at or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    out = svg(tasks, state, milestone_names(a.milestones), commit, generated_at)
+    out = svg(tasks, state, milestone_names(a.milestones), commit, generated_at, a.theme)
     if a.output == "-":
         sys.stdout.write(out)
     else:
