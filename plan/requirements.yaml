@@ -17022,6 +17022,141 @@
   - R-465
   milestone: M6
   note: "R-465 (N1 to N5 applied per R-369); closed by TASK-M6-39. RQ-368's option (b), the human's: the slice drag follows the pointer; tilt mode unchanged. The 0.25·S cut near the view axis (N3) is a look choice under R-390, taken from main's MIN_NORMAL_ON_SCREEN. R-451 B4's easing stands during the drag, only the cube's drawing easing (N1, flagged). REQ-GUI-193's slice-drag checks, built by TASK-M6-33 as written, are conformed by TASK-M6-39 (N5)."
+- id: REQ-GUI-218
+  area: GUI
+  statement: "On the mock engine, each of the Manifold view's Slice centre, Tilt and Navigate sections must have a \"reset\" button beside its heading that returns that section, and only it, to the active chart preset's own values, read from the preset's definition and never hardcoded or literal zero: Slice centre's sets z₀'s out-of-plane part (its component across span(q₁, q₂)) to the preset's base point's, keeping the centre (u, v) and the basis; Tilt's sets τ₁, τ₂ and γ to 0 by a basis edit, keeping z₀, the zoom, the tilt targets X and Y and the H, V and D choice; Navigate's sets the centre (u, v) to the preset's centre and the zoom to the preset's window (× 1.00), keeping z₀'s out-of-plane part and τ₁, τ₂, γ."
+  source:
+  - file: decisions.md
+    section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: "Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_manifold_resets (scripts on the mock): for each of the three resets, all three sections are first moved (a Slice centre slider and the number box of z_μ1, τ₁, τ₂ and γ non-zero with a tilt target changed, a pan and a zoom), then the reset is clicked; its section reads exactly the preset's values (within 10⁻¹²; untilted, z₀'s six coordinates off the preset's axes and the basis bit for bit) and the other two sections read as before (within 10⁻¹²; for the Tilt reset z₀ bit for bit and the zoom, the targets and H, V, D unchanged); controls: a reset that does nothing fails, all three having been moved; a reset to literal zero fails (the test's preset has a base point with non-zero z_μ1 and z_μ2 and a centre off (0, 0)); a reset that also resets another section fails; and the script re-run under a second preset with other home values fails a GUI that hardcodes the first preset's values."
+  rulings:
+  - R-390
+  - R-457
+  - R-466
+  milestone: M6
+  note: "R-466 (K2, K3, K6 applied per R-369); closed by TASK-M6-45. Each section's values follow the chart decoder contract's split (Part 4): Slice centre the slice across the plane, Navigate the pan within it and the zoom, Tilt the basis's angles; the Tilt reset keeps z₀, so the centre (u, v) is read anew in the untilted plane (flagged). With no active preset (a basis edited out of every preset's frame) the resets are dimmed and do nothing (K3). The preset's values are REQ-GUI-224's definition."
+- id: REQ-GUI-219
+  area: GUI
+  statement: "On the mock engine, Home must perform all three section resets (Slice centre, Tilt, Navigate) as one command, reaching the active chart preset's home view (τ₁ = τ₂ = γ = 0, the basis at the preset's window, z₀'s coordinates off the preset's axes at its base point's and on them at its centre) whatever the order, and must be reached three ways: a house-icon button in the top-right corner of the figure's canvas (a click on it pinning no sample and starting no pan, hidden with the layer by F3 and present mode); the Home key in both keyboard modes, wherever the focus is, except on the console's log in interaction mode (where it goes to the first entry, R-450) and in a text field being typed in (where it moves the caret), Shift and Alt leaving it Home, Ctrl and Cmd making it no Home, not repeating while held; and View › Home, the View menu's first entry."
+  source:
+  - file: decisions.md
+    section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_home (scripts on the mock): with all three sections moved, Home by a click on the canvas's corner button, by the Home key in navigation mode (focus on the Figure scope, and in a second run on a Chart element), by the Home key in interaction mode on a Slice centre slider and on the compass, and by View › Home, each reaches the preset's home view within 10⁻¹²; controls: a Home that resets one or two sections only fails, and a click on the button that also pins a sample or pans fails; the Home key on the console's log in interaction mode goes to the first entry and resets nothing, and in the console's search field while typing moves the caret and resets nothing; controls: a GUI where Home there resets the view fails; Ctrl+Home resets nothing; with F3 the button is not drawn."
+  rulings:
+  - R-390
+  - R-409
+  - R-450
+  - R-466
+  milestone: M6
+  note: "R-466 (K1, K7, K8 applied per R-369); closed by TASK-M6-45. The Home key was checked against the keymap: no clash in navigation mode; in interaction mode the console's log (R-450) and a text field being typed in (R-409 G4) keep it (K1, the human may veto). The button is the one control over the figure, by the human's words."
+- id: REQ-GUI-220
+  area: GUI
+  statement: "On the mock engine, Home must leave alone the chart preset and its axes (e_a, e_b; Chart's q₁ and q₂ axes, the cube's H and V), the H, V and D choice and the tilt targets (the slice frame), the time playhead, the stain graph, and the panel and window layout, and also the lock and its anchor, the compass's mode and view, the overlays and the Trajectory panel's pin and kept orbits."
+  source:
+  - file: decisions.md
+    section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_home_leaves_alone (scripts on the mock): with all three sections moved, the playhead scrubbed off 0, the stain graph edited, a tilt target and the D axis changed, a splitter dragged and a window moved, Home is run; the preset and its axes, the slice frame, the playhead, the stain graph, the layout, the lock, the compass's mode and view and the overlays are unchanged; controls: a Home that resets the playhead, a tilt target, the D choice or the layout fails."
+  rulings:
+  - R-390
+  - R-462
+  - R-466
+  milestone: M6
+  note: "R-466 (K4 applied per R-369, flagged): \"the chart preset and basis\" is read as the preset and its axes, not the tilt or the zoom, which Home sets; the lock and the other ViewUI state are left too."
+- id: REQ-GUI-221
+  area: GUI
+  statement: "On the mock engine, each section reset and Home must be one undoable command: its edits (z₀ and the basis) sent in one frame under one history key, so the contract's history gains exactly one entry, one undo restores every field it set and one redo sets them again; a command whose sections are already at their home values must send nothing and add no entry."
+  source:
+  - file: decisions.md
+    section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_reset_undo (scripts on the mock): after all three sections are moved, each reset and Home in turn raises the undo depth by exactly 1; one Ctrl+Z restores z₀ and the basis bit for bit to their values before it, and one redo sets the home values again; control: a command sent as two or more history entries fails, as does one whose single undo leaves a field at its home value; a reset or Home at home leaves the undo depth unchanged."
+  rulings:
+  - R-52
+  - R-69
+  - R-458
+  - R-466
+  milestone: M6
+  note: "R-466 (K9, K10 applied per R-369); closed by TASK-M6-45. The one-entry key is R-458's drag mechanism (gui_state_contract §2), built by TASK-M6-39. The commands are named \"Reset Slice centre\", \"Reset Tilt\", \"Reset Navigate\" and \"Home\" in the tooltips, the menu and the ? overlay; the history carries no names."
+- id: REQ-GUI-222
+  area: GUI
+  statement: "On the mock engine, a section's reset must be dimmed (drawn in egui's disabled style, no hover, no click, Enter on it doing nothing, its place in the keyboard order kept) while that section is at its home values within 10⁻¹² (the zoom compared as log₂(σ / σ_h), the angles in radians), and Home's button and View › Home dimmed while all three sections are, the Home key then doing nothing; with no active chart preset all of them must be dimmed."
+  source:
+  - file: decisions.md
+    section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_reset_dimming (scripts on the mock): at the preset's home view every reset, the Home button and View › Home are disabled; moving one section enables its reset, Home and View › Home and leaves the other two resets disabled; running that reset disables them again; controls: a reset enabled at home, or disabled after its section moved, fails; Home disabled while one section is off home fails; with a basis edited out of every preset's frame all are disabled."
+  rulings:
+  - R-390
+  - R-450
+  - R-466
+  milestone: M6
+  note: R-466 (K3, K11 applied per R-369); closed by TASK-M6-45.
+- id: REQ-GUI-223
+  area: GUI
+  statement: "On the mock engine, each section reset and Home must drive the compass live as any change to the slice does (R-458): in the next frame the compass's drawn target plane, its readout and labels, the Manifold view's sliders and the figure follow the new state, the cube easing to it as after a click (R-451 B4); a reset must not switch the compass's mode."
+  source:
+  - file: decisions.md
+    section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_reset_compass_live (scripts on the mock): with the compass in Tilt mode and all three sections moved, after each reset and Home the compass's target plane and readout in the next frame equal those of the new state, and the mode is still Tilt; repeated in Slice mode; control: a compass that keeps the old plane or readout until a drag fails, and a reset that switches the mode fails."
+  rulings:
+  - R-409
+  - R-451
+  - R-458
+  - R-466
+  milestone: M6
+  note: "R-466 (K12 applied per R-369; no mode switch flagged); closed by TASK-M6-45."
+- id: REQ-GUI-224
+  area: GUI
+  kind: definition
+  statement: "Each chart preset's home values — its base point (a value for each of the eight latent coordinates), its centre (u, v) in its plane (which may be defined as the base point's in-plane coordinates) and its window (the scale σ_h at which the zoom reads × 1.00, the zoom row reading log₂(σ_h / σ) and its magnification σ_h / σ), carried with its pair of axes, a saved preset storing them — must be defined in render_gui_spec §G2 and §G7 by the task that needs it (the section resets and Home, R-466), with the mock's values placeholder content (R-390), and reviewed by the physics reviewer before merge."
+  source:
+  - file: decisions.md
+    section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  verify:
+    method: review checklist
+    detail: "§G2 and §G7 define the three values for every preset, the zoom row relative to the window; the mock's presets carry them and the resets read them; physics reviewer approved (the base point fixes the masses z_μ1, z_μ2, so it must be a physical system the preset intends)"
+  rulings:
+  - R-72
+  - R-390
+  - R-466
+  milestone: M6
+  note: "R-466; closed by TASK-M6-45. The corpus defines a chart preset only as a saved pair of axes (§G7, REQ-GUI-108); the mock's PRESETS are axis pairs, and its starting z₀ (MOCK_Z0) and σ = 1 are its initial state, not a preset's. The real engine's presets are REQ-GUI-082's (TASK-M8-06), saved presets REQ-GUI-108's."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

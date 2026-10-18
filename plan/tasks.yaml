@@ -1757,6 +1757,14 @@
   requirements: [REQ-GUI-215, REQ-GUI-216]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
+- id: TASK-M6-45
+  milestone: M6
+  title: "Resets for Slice centre, Tilt and Navigate, and Home (button, key, View › Home): the chart preset's own values, one undoable command each, dimmed when home, the compass live (R-466)"
+  depends_on: [TASK-M6-38, TASK-M6-39]  # the three sections and R-457's frame are TASK-M6-38's; the one-entry history key and the live compass TASK-M6-39's
+  needs: []
+  requirements: [REQ-GUI-218, REQ-GUI-219, REQ-GUI-220, REQ-GUI-221, REQ-GUI-222, REQ-GUI-223, REQ-GUI-224]
+  reviewers: [code, qa, gui, physics]  # physics reviews REQ-GUI-224 only, the definition (R-72; applied per R-369, R-466 K14, as R-396 for TASK-M6-24)
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
