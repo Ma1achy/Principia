@@ -13,6 +13,12 @@ name: mutants
 on:
   pull_request:
 
+# A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled; on `main` no run
+# is ever cancelled, so every merge to `main` keeps its full run (applied per R-369).
+concurrency:
+  group: mutants-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 permissions:
   contents: read
 

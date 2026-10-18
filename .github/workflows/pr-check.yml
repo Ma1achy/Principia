@@ -7,6 +7,12 @@ on:
   pull_request:
     types: [opened, edited, synchronize, reopened, labeled, unlabeled]
 
+# A newer run on the same ref (a push, an edit or a relabel) supersedes an older one, so the older run on that ref is
+# cancelled; on `main` no run is ever cancelled (applied per R-369).
+concurrency:
+  group: pr-check-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 permissions:
   contents: read
 
