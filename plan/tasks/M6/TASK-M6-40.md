@@ -27,7 +27,7 @@ On the mock engine, the compass's Cube view labels its edges with buttons in bot
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
 
 ## Deliverables
-- The H, V and D buttons and their dropdowns on R-451 B1's edges (`crates/gui/src/explore/compass.rs`), H and V setting the axis pair as the preset does, D the slice frame's normal (R-459 G1 to G4).
+- The H, V and D buttons and their dropdowns on R-451 B1's edges (`crates/gui/src/explore/compass.rs`), H and V setting the axis pair as the preset does, D the slice frame's normal (R-459 G1 to G3); G4's slice-axis rule for the H and V picks and the Plücker steer, on TASK-M6-38's rule for a preset change and Chart's basis edits (REQ-GUI-205).
 - The third axis's rule, its colour and the gesture's plane drawn exactly (G5 to G7); the badge and its click (G8); the Compass scope's new siblings (G9).
 - Tests `mock_cube_axis_buttons` and `mock_cube_third_axis`, and the screenshot cases `mock_compass_cube_third_axis` and `mock_compass_cube_badge`.
 
@@ -38,6 +38,7 @@ On the mock engine, the compass's Cube view labels its edges with buttons in bot
 ## Notes
 - **What to try.** The PR description has a "What to try" section (R-390), on `cargo run -p gui --features mock`: pick H = z_q0 on the cube and watch Chart's horizontal q₁ follow; set τ₁ into z_q3 and τ₂ into z_μ1, both non-zero, and see the third axis follow the slider you drag and the "4D: see Plücker" badge; click it.
 - **A GUI-track task** (R-390): it merges once its reviews pass and CI is green, without waiting for the gates of M1 to M5.
+- **R-459 G4 is shared (review round 1 of PR #243, gui review F4).** The rule for a preset change and Chart's basis edits is TASK-M6-38's, built with the slice frame; this task applies it to the H and V picks and the Plücker steer, and its tests reuse TASK-M6-38's rule.
 - **The gesture colours** (slice, τ₁, τ₂) are dark-mode look choices under R-390, listed in the PR (R-459 G7).
 - **qa's files (R-290, R-459 G11).** A qa assertion of R-451 B1's single tilt-mode label, or of the unnamed edges, asserts what R-459 changes; this task's qa reviewer changes those, and only those.
 - **Early start (R-388).** It may start off the approved head of whichever of TASK-M6-34 and TASK-M6-38 merges last, the other merged.

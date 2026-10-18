@@ -1760,7 +1760,7 @@
 - id: TASK-M6-45
   milestone: M6
   title: "Resets for Slice centre, Tilt and Navigate, and Home (button, key, View › Home): the chart preset's own values, one undoable command each, dimmed when home, the compass live (R-466)"
-  depends_on: [TASK-M6-38, TASK-M6-39]  # the three sections and R-457's frame are TASK-M6-38's; the one-entry history key and the live compass TASK-M6-39's
+  depends_on: [TASK-M6-38, TASK-M6-39, TASK-M6-43]  # the three sections and R-457's frame are TASK-M6-38's; the one-entry history key and the live compass TASK-M6-39's; the splitters and View › reset layout TASK-M6-43's (review round 1 of PR #243)
   needs: []
   requirements: [REQ-GUI-218, REQ-GUI-219, REQ-GUI-220, REQ-GUI-221, REQ-GUI-222, REQ-GUI-223, REQ-GUI-224]
   reviewers: [code, qa, gui, physics]  # physics reviews REQ-GUI-224 only, the definition (R-72; applied per R-369, R-466 K14, as R-396 for TASK-M6-24)
@@ -2232,7 +2232,7 @@
 - id: TASK-M8-18
   milestone: M8
   title: "Chart builder window: axis kinds, presets, domain preview, quick render, Apply (03_chartbuilder.png)"
-  depends_on: [TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28]
+  depends_on: [TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45]  # TASK-M6-45 defines the preset's home values a saved preset stores (R-466, REQ-GUI-224; review round 1 of PR #243)
   needs: [REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027]
   requirements: [REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160]
   reviewers: [code, qa, physics, gui]

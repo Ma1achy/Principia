@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160
-- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28
+- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45
 - **Needs (earlier milestones):** REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -16,6 +16,7 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 - `docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)"
 - `docs/gui/principia_render_gui_spec.md` § "11. Presets = whole graphs"
 - `docs/design/principia_memory_tiers.md` § "7. The "are you sure?" safety system (three severities, none blocking)"
+- `decisions.md` § "R-466 — Slice centre, Tilt and Navigate each have a "reset" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
 - `decisions.md` § "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
 - `decisions.md` § "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
 
@@ -27,13 +28,14 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
 
 ## Acceptance tests
 - `cargo xtask screenshot 03_chartbuilder` (each axis kind) and `cargo test -p gui normalise_unit_q` — screenshot of each axis kind against 03_chartbuilder.png; normalise sets |q| = 1 (REQ-CHART-040).
-- `cargo test -p gui preset_crud` — save, duplicate, edit and delete a preset; the list reflects each (REQ-GUI-108).
+- `cargo test -p gui preset_crud` — save, duplicate, edit and delete a preset; the list reflects each; a saved preset stores its base point, centre and window, which a duplicate keeps and the section resets and Home of the saved preset read back exactly; control: a saved preset whose resets fall back to another preset's values fails (REQ-GUI-108).
 - `cargo test -p engine forbidden_fraction` and `cargo xtask screenshot 03_chartbuilder` — N% equals the fraction of a uniform grid over the view that validate rejects; screenshot against 03_chartbuilder.png (REQ-GUI-109).
 - `cargo xtask screenshot 03_chartbuilder` (quick render) — screenshot against 03_chartbuilder.png (REQ-GUI-110).
 - `cargo test -p gui footer_orthogonality` — non-orthogonal q₁, q₂ shows the check failing; Revert restores the prior chart; Apply emits the chart SetFields (REQ-GUI-111).
 - Definition: the chart-preset, Your-stains and warning-suppression stores written into render_gui_spec §G7 and §11 and approved by the physics reviewer (REQ-GUI-160).
 
 ## Notes
+- **A saved preset stores its home values (R-466; review round 1 of PR #243, gui review F6).** With its axes, a saved preset stores its base point, centre and window, which the section resets and Home read (REQ-GUI-108, REQ-GUI-224). TASK-M6-45 defines the three in render_gui_spec §G2 and §G7 and builds them on the mock; this task stores them with each saved, duplicated or edited preset.
 - Closes, for gaps the corpus leaves open: REQ-GUI-160 (R-72 definition) (classification accepted by R-132).
 - R-390: TASK-M6-28 builds the Chart builder's frame on the mock engine, its previews square; this task depends on it and wires it to the real chart system, keeping every requirement it closes.
 - R-408 (10 Oct 2026): "forbidden in view" counts a visible pixel only if every axis is inside its primary range, a
