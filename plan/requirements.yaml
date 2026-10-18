@@ -16548,8 +16548,9 @@
   - R-409
   - R-451
   - R-458
+  - R-465
   milestone: M6
-  note: "R-451 (B3 to B5 applied per R-369); closed by TASK-M6-33. Fix round of PR #227 (gui review G1): the slice-mode readout and drag follow the decoder's plane, drawn in both modes. Fix round 4 (physics P13): at a tilt where View::basis spans no plane a slice-mode drag sends no edit (R-451 B11), applied per R-369. Fix round 5 (physics P14): \"spans no plane\" reworded to the compass's cut, s < 10⁻³, applied per R-369. R-458 (18 Oct 2026): the drags' one edit per drag is one history entry, the edit applied every frame, so the sliders, the readout and the figure follow the drag (REQ-GUI-206, TASK-M6-39); RQ-368 holds the gestures' screen direction, built as written meanwhile."
+  note: "R-451 (B3 to B5 applied per R-369); closed by TASK-M6-33. Fix round of PR #227 (gui review G1): the slice-mode readout and drag follow the decoder's plane, drawn in both modes. Fix round 4 (physics P13): at a tilt where View::basis spans no plane a slice-mode drag sends no edit (R-451 B11), applied per R-369. Fix round 5 (physics P14): \"spans no plane\" reworded to the compass's cut, s < 10⁻³, applied per R-369. R-458 (18 Oct 2026): the drags' one edit per drag is one history entry, the edit applied every frame, so the sliders, the readout and the figure follow the drag (REQ-GUI-206, TASK-M6-39); RQ-368 held the gestures' screen direction, built as written meanwhile. R-465 (18 Oct 2026, closes RQ-368): the slice-mode drag reads the 2-D drag projected onto the drawn normal's screen direction, not its horizontal component, so a vertical drag moves the slice by its component along that direction; TASK-M6-39 builds it (REQ-GUI-217) and conforms this requirement's slice-drag tests, qa's in its qa commit (R-465 N5). This statement and verify stay as TASK-M6-33's record (PR #240, R-451 B3 as written); the tilt-mode drag and the easing stand (R-465 N1)."
 - id: REQ-GUI-194
   area: GUI
   statement: "On the mock engine, the compass must carry a view switcher on the compass itself, four buttons Cube, Plücker, Jacobi and Shape, Cube the default and the current view shown; the view must set only what the compass draws, independent of its Tilt and Slice modes, which keep their buttons in every view and set what a drag on the Cube does; in a grid view a drag must do nothing; and the view must be the compass's own GUI state, not undoable and not in the contract."
@@ -16800,7 +16801,7 @@
   - R-451
   - R-458
   milestone: M6
-  note: "R-458 (F1, F3, F6 applied per R-369); closed by TASK-M6-39. R-451 B3's 'one SetField per drag' is one history entry per drag (F1). The gestures' screen direction is RQ-368's; built as R-451 has them meanwhile."
+  note: "R-458 (F1, F3, F6 applied per R-369); closed by TASK-M6-39. R-451 B3's 'one SetField per drag' is one history entry per drag (F1). The gestures' screen direction was RQ-368's, ruled by R-465 (18 Oct 2026): the slice drag follows the pointer, built by this task under REQ-GUI-217; the tilt drag as R-451 B3 has it; the eased drawing as here (R-465 N1, applied per R-369)."
 - id: REQ-GUI-207
   area: GUI
   statement: "On the mock engine, a drag on any slider or number box (the Manifold view's, Time's scrubber, the windows'), and the figure's pan, must apply its edit every frame the value changes, at most once a frame, so the figure follows the drag, each drag one undo entry and one console line; the compass's mode must switch on a drag's first frame, to Slice for a Slice centre slider or its number box and to Tilt for a Tilt slider (τ₁, τ₂, γ), its number box or a target dropdown, including at a slider's end and on a click into its number box; and the compass's drawn plane must follow z₀ and the basis every frame of such a drag, by R-451 B2's rule."
@@ -17002,6 +17003,25 @@
   - R-463
   milestone: M6
   note: "R-463 (K4 applied per R-369); closed by TASK-M6-44. The porter's pointer for the measurement, not a finding: the console filters and lays out the whole log every frame while open (windows/console.rs)."
+- id: REQ-GUI-217
+  area: GUI
+  statement: "On the mock engine, a slice-mode drag on the compass's Cube view must move the slice along the drawn plane's normal (the decoder's, latent_normal) by the drag's 2-D screen displacement projected onto the drawn normal's screen direction ŝ (the unit vector along P(n̂) − P(0), P the cube's isometric projection), at R-451 B3's rate (a drag of the cube's full width along ŝ moving the slice across the whole range), the component across ŝ doing nothing, so the drawn plane moves with the pointer at every tilt; where |P(n̂) − P(0)| < 0.25·S the drag must read its vertical component instead, up moving the plane along the normal's side facing the viewer (n̂·(1, 1, 1) > 0), at the same rate; the tilt-mode drag must stay as R-451 B3 has it."
+  source:
+  - file: decisions.md
+    section: "R-465 — The compass's slice drag follows the pointer: the 2-D drag projected onto the drawn normal's direction on the screen moves the slice along that normal at R-451's rate, so the drawn plane moves with the pointer at every tilt; slice mode and tilt mode stay separate, tilt mode's drag unchanged *(closes RQ-368; amends R-451 B3's slice-mode sentence)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_compass_slice_follows_pointer (pointer scripts on the mock, slice mode): untilted (τ₁ = τ₂ = γ = 0, z₀ = 0), ŝ = (−√3/2, ½) on the screen (y down); a drag of half the cube's width along ŝ moves z₀ by half the range along +e_d and the screen image of the plane's point nearest the cube's centre moves along +ŝ, with the pointer; a drag of the same length across ŝ moves nothing; a drag straight right moves the plane along −e_d, its image moving right and up; control: a GUI that reads the horizontal component (R-451 B3 as written) moves the plane along −e_d for the drag along ŝ, against the pointer, and fails. Tilted (τ₁ = 30°, τ₂ = 0, γ = 0, z₀ = 0, n̂ ∝ (−½, 0, √3/2)), ŝ along (−1.183, 0.183); a drag of half the cube's width along ŝ moves z₀ by half the range along latent_normal and the image of the plane's nearest point moves along +ŝ; a drag across ŝ moves nothing; controls: the horizontal-component reading, against the pointer, fails, and a GUI that uses the untilted direction P(e_d) in place of the tilted ŝ fails the drag across ŝ. At the view axis (τ₁ = τ₂ = −45°, γ = 0), an upward drag of half the cube's height moves z₀ by half the range along the normal's side facing the viewer and a horizontal one nothing; control: a GUI that sends no edit or a non-finite one fails. The tilt-mode drag's rates are REQ-GUI-193's checks, re-run unchanged."
+  rulings:
+  - R-390
+  - R-409
+  - R-451
+  - R-458
+  - R-465
+  milestone: M6
+  note: "R-465 (N1 to N5 applied per R-369); closed by TASK-M6-39. RQ-368's option (b), the human's: the slice drag follows the pointer; tilt mode unchanged. The 0.25·S cut near the view axis (N3) is a look choice under R-390, taken from main's MIN_NORMAL_ON_SCREEN. R-451 B4's easing stands during the drag, only the cube's drawing easing (N1, flagged). REQ-GUI-193's slice-drag checks, built by TASK-M6-33 as written, are conformed by TASK-M6-39 (N5)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

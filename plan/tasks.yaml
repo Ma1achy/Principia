@@ -1711,10 +1711,10 @@
   pitfalls: []
 - id: TASK-M6-39
   milestone: M6
-  title: "Live drags both ways: every frame, one undo entry per drag, the compass's mode switched by the slider dragged (R-458)"
+  title: "Live drags both ways: every frame, one undo entry per drag, the compass's mode switched by the slider dragged (R-458); the slice drag follows the pointer (R-465)"
   depends_on: [TASK-M6-33, TASK-M6-38]  # the compass is TASK-M6-33's rework (PR #240); the Slice centre and Tilt sections it switches from are TASK-M6-38's
   needs: []
-  requirements: [REQ-GUI-206, REQ-GUI-207]
+  requirements: [REQ-GUI-206, REQ-GUI-207, REQ-GUI-217]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M6-40
