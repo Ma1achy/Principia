@@ -239,13 +239,19 @@ y (`e_b`), Depth = the slice axis (`e_d`), drawn as the reference draws it:
   +12.0°", "τ₂ → z_μ1 0.0°"), whichever the third axis shows (R-457, R-459).
   Where `s < 10⁻³` (above), either mode adds the line "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>°
   (RQ-340)", the angles signed, one decimal (R-451 B11).
-- **Drag:** slice mode, the horizontal component moves the slice along the drawn plane's normal, the decoder's
-  (R-409 A3's), the cube's full width
-  spanning the whole range; tilt mode, a horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
+- **Drag:** slice mode, the drag moves the slice along the drawn plane's normal, the decoder's (R-409 A3's), by its
+  2-D displacement projected onto that normal's direction on the screen (`ŝ`, along `P(n̂) − P(0)`), so the drawn
+  plane moves with the pointer at every tilt, the component across `ŝ` doing nothing, a drag of the cube's full width
+  along `ŝ` spanning the whole range (R-465). Untilted, `ŝ` points to the lower left, so a drag to the lower left moves
+  the plane toward `+e_d` and a drag to the right moves it back, up and right. Where the drawn unit normal's screen
+  image is shorter than `0.25·S` (the normal near the view axis `(1, 1, 1)`, as at `τ₁ = τ₂ = −45°`), the drag reads
+  its vertical component instead, up moving the plane toward the viewer (R-465 N3). Tilt mode, unchanged by R-465: a
+  horizontal drag sets τ₁ and a vertical one τ₂ (up raising it), the full width
   or height 180°, each clamped to ±90°. One undo entry per drag (R-96), the edit applied every frame of the drag so the
   sliders, the readout and the figure follow it (R-458). The displayed values ease toward their targets,
   `v ← v + (target − v)·(1 − 0.0016^dt)`, `dt` capped at 0.05 s, in the drawing only; the contract holds the target
-  (R-451 B3, B4). Which way on screen each gesture moves the drawn plane is open (RQ-368).
+  (R-451 B3, B4), so during a drag only the cube's drawing trails the pointer (R-465 N1). Slice mode and tilt mode
+  stay two separate modes (R-465).
   Where `s < 10⁻³`, a slice-mode drag sends no edit, the compass drawing no normal to move along; a tilt-mode drag
   acts as anywhere else, free or locked: off the corner points a plane exists there, and locked the drag turns about
   the pin (§G4), its pivot and the figure's samples kept. The GUI's guards for a degenerate basis have their own cut,
@@ -731,8 +737,10 @@ corpus, the spec follows the authority:
   transcribed through §G2's compass subsection. Where they differ, the spec follows the rulings: their light cream
   palette is not copied (the dark theme, §G1); the cube opens in Tilt, not Slice (R-409); their own controls (axis
   selectors, sliders, Animate) are not on the compass; the cube's tilt follows the decoder's mapping, not the
-  reference's axis-angle map (RQ-340); the grids draw no in-cell numbers; the physical compass's Jacobian and its body
-  position labels are a synthetic placeholder, replaced by the decoder's Jacobian over R-452's coordinates.
+  reference's axis-angle map (RQ-340); the cube's slice drag follows the pointer along the drawn normal's screen
+  direction, not the reference's horizontal `dx` along its z axis (R-465); the grids draw no in-cell numbers; the
+  physical compass's Jacobian and its body position labels are a synthetic placeholder, replaced by the decoder's
+  Jacobian over R-452's coordinates.
 - **The console's header** (R-450). The console artboard's row is "copy · clear · console ▾"; the header bar adds a
   focusable × after Clear, which closes the console, and the console is two scopes, the header bar and the log (§G12).
   R-463 adds the maximise button between Clear and ×.

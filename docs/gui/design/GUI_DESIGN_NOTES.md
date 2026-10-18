@@ -45,9 +45,11 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     touching a tilt shows tilting. When locked it carries a gold pin at the pivot, and the plane turns about the pin.
     Dragging tilts in tilt mode; in slice mode it moves the slice plane along its normal *(conformed to R-409)*.
     Drags are live both ways, each one undo entry: the sliders, readout and figure follow a compass drag, and a slider's
-    drag switches the mode and moves the plane *(conformed to R-458)*. The cube's H, V and D labels are buttons that
-    pick the slice's dimensions; in Tilt mode the third axis names what the gesture tilts into, with a "4D: see
-    Plücker" badge when the two targets differ and both angles are set *(conformed to R-459)*.
+    drag switches the mode and moves the plane *(conformed to R-458)*. In slice mode the plane follows the pointer: the
+    drag counts along the normal's direction as drawn on the screen; tilt mode's drag is unchanged *(conformed to
+    R-465)*. The cube's H, V and D labels are buttons that pick the slice's dimensions; in Tilt mode the third axis
+    names what the gesture tilts into, with a "4D: see Plücker" badge when the two targets differ and both angles are
+    set *(conformed to R-459)*.
   - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
     it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It

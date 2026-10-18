@@ -11109,8 +11109,13 @@ Adds REQ-GUI-189 and REQ-GUI-190; REQ-GUI-178's note and rulings change.
 applied every frame, so the sliders, the readout and the figure follow the drag).*
 *Amended in part by R-459 (18 Oct 2026; B1's labels: the H, V and D buttons in both modes, the third axis following the
 gesture, the "4D: see Plücker" badge).*
+*Amended in part by R-465 (18 Oct 2026; closes RQ-368: B3's slice-mode drag reads the 2-D drag projected onto the drawn
+normal's direction on the screen, not its horizontal component, so the drawn plane moves with the pointer at every
+tilt, at B3's rate; B3's tilt-mode drag and B4's easing stand).*
 *Still in force: all of it, except B1's single shared target and its labels, which are R-457's and R-459's, and B3's one
-`SetField` at a drag's end, which is R-458's one history entry with the edit applied every frame.*
+`SetField` at a drag's end, which is R-458's one history entry with the edit applied every frame; and B3's slice-mode
+drag by its horizontal component, the vertical doing nothing, which is R-465's 2-D drag projected onto the drawn
+normal's screen direction, the component across it doing nothing.*
 *16 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass), § "The compass: look and views (R-451, R-452)" (new) and § "G13. Where the artboards are overridden" (a
 bullet added), `docs/gui/reference/principia_nav_cube.html` (added), `docs/read_first/principia_INDEX.md` § "GUI"
@@ -11851,6 +11856,9 @@ Adds REQ-GUI-204 and REQ-GUI-205; changes REQ-GUI-081, REQ-GUI-083 and REQ-GUI-0
 REQ-GUI-170 (rulings, note).
 
 ## R-458 — Drags are live in both directions: a drag on the compass or on any slider applies its edit every frame, at most once a frame, so the sliders, the compass, its readout and the figure follow the drag, and the whole drag is one undo entry; a drag on a Slice centre slider switches the compass to Slice and one on a Tilt slider to Tilt, its plane moving with the drag *(amends R-409 A3 and R-451 B3 as they send one `SetField` per drag)*
+*RQ-368, filed by F6 and F7 below, is ruled by R-465 (18 Oct 2026): option (b), the slice drag following the pointer
+along the drawn normal's screen direction, tilt mode unchanged; F6's easing stands (R-465 N1, applied per R-369); F7's
+"until RQ-368 is ruled" has ended, and TASK-M6-39 builds R-465's slice drag (R-465 N2).*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the compass, Time and a paragraph added) and § "The compass: look and views (R-451, R-452)" (the drag and a bullet
 added), `docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" (conformed),
@@ -12432,3 +12440,99 @@ click moves the focus as they say and draws no ring until the next key press; R-
 keys, as above. The focus rules of R-450, R-456 and R-460 stand.
 
 Changes REQ-GUI-210 (statement, verify, rulings, note), REQ-GUI-098, REQ-GUI-182 and REQ-GUI-189 (notes).
+
+## R-465 — The compass's slice drag follows the pointer: the 2-D drag projected onto the drawn normal's direction on the screen moves the slice along that normal at R-451's rate, so the drawn plane moves with the pointer at every tilt; slice mode and tilt mode stay separate, tilt mode's drag unchanged *(closes RQ-368; amends R-451 B3's slice-mode sentence)*
+*18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "The compass: look and views (R-451, R-452)" (the
+drag bullet) and § "G13. Where the artboards are overridden" (the compass references' bullet, a clause),
+`docs/gui/design/GUI_DESIGN_NOTES.md` § "01 Explore — the everyday view" (conformed), R-451's and R-458's heading
+blocks, `docs/archive/review_queue/M0.md` (RQ-368, moved with its ruling), REQ-GUI-217 (reqio, new), REQ-GUI-193
+(reqio, rulings and note), REQ-GUI-206 (reqio, note), TASK-M6-39 (its title, closes, goal, references, deliverables,
+acceptance and notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-39 on the mock*
+
+The human's words (18 Oct 2026), ruling RQ-368, in reply to its options (a), (b) and (c):
+
+> b. because there's two modes slice mode and tilt mode, your suggestion c combines tilt mode and slice mode which is
+> wrong
+
+RQ-368's options were (a) keep R-451 B3 as written, the reference's gestures, R-458's live updates the only change;
+(b) "The slice drag follows the pointer: the 2-D drag projected onto the drawn normal's screen direction, so the drawn
+plane moves with the pointer at every tilt, at R-451's rate along that direction"; (c) as (b) for the slice, and the
+tilt drag tipping the drawn plane toward the pointer, horizontal drags turning it about the screen's vertical and
+vertical drags about the screen's horizontal; and, independently, keep R-451 B4's easing during a drag, or draw the
+drag's target at once and ease only after a click or a keyboard step. The human answered (b) and left the independent
+question unanswered (N1 below).
+
+*What it decides:*
+- **Option (b): the slice drag follows the pointer.** In slice mode the drag's 2-D displacement on the screen, `d`, is
+  projected onto the drawn normal's screen direction `ŝ`, the unit vector along `P(n̂) − P(0)`, where `P` is R-451's
+  isometric projection and `n̂` the unit normal of the plane the cube draws (R-451 B2, the decoder's). The slice moves
+  along the normal by `d·ŝ` at R-451 B3's rate, unchanged: what B3 measures along the screen's horizontal is measured
+  along `ŝ` instead, so a drag of the cube's full width along `ŝ` moves the slice across the whole range. The drawn
+  plane therefore moves with the pointer at every tilt. Untilted, `ŝ` is `P(e_d)`'s direction, toward the screen's
+  lower left: a drag to the lower left moves the plane toward `+e_d`, drawn down and left with the pointer, and a drag
+  to the right moves it back along `−e_d`, drawn up and right, where B3 as written moved it left and down. Tilted,
+  `ŝ` turns with the normal and the plane still follows the pointer. The drag's component across `ŝ` does nothing,
+  in place of B3's "The vertical component does nothing in slice mode".
+- **The rest of B3's slice-mode sentence stands:** the direction in the latent space is the drawn plane's normal, the
+  decoder's (`latent_normal`, R-409 A3's), the slice axis only when untilted; the drag is one history entry, its edit
+  applied every frame (R-458 F1); where `s < 10⁻³` a slice-mode drag sends no edit (R-451 B11); locked, the drag is an
+  excursion along the normal through the anchor (R-409).
+- **Tilt mode is unchanged.** B3's tilt-mode sentence stands: right raises `τ₁` and up raises `τ₂`, a drag across the
+  full width or height being 180°, each clamped to ±90°, one history entry per drag (R-458).
+- **(c) is rejected,** for the human's reason: there are two modes, slice mode and tilt mode, and (c) combined them.
+
+In RQ-368's terms: (b). (a), applied meanwhile, no longer applies to the slice drag; it stands for the tilt drag.
+
+*Applied per R-369 (routine design choices and mechanical consequences; the human may veto any, a veto being a GUI
+design ruling applied by a follow-up task):*
+- **N1. The easing during a drag (RQ-368's independent question, unanswered; flagged).** R-451 B4's easing stands as
+  written, read with R-458's live updates (F1, F6): from a drag's first frame the contract holds the drag's target, so
+  the figure, the Manifold view's sliders, the readout (REQ-GUI-206) and every `SetField` see the target during the
+  drag; only the cube's drawing eases toward it, by B4's law. The human may instead choose to draw the drag's target
+  at once and ease only after a click or a keyboard step, RQ-368's other answer, by a follow-up ruling.
+- **N2. Which task builds it: TASK-M6-39.** It is open and not started, it depends on TASK-M6-33, it already rewrites
+  the compass's drag to apply its edit every frame (R-458), and RQ-368's "Waits" names it. TASK-M6-33 (PR #240, open)
+  builds R-451 B3 as written and is not changed: its code stands, and REQ-GUI-193 stays its record, closed by it, its
+  statement and verify unchanged, with a note. No new task is added.
+- **N3. Where the drawn normal points at the viewer.** `ŝ` has no direction where `P(n̂) − P(0)` vanishes: the normal
+  along the view axis `(1, 1, 1)`, reached at `τ₁ = τ₂ = −45°` (the plane `x + y + z = c`), `γ` any. Where the drawn
+  unit normal's screen image is shorter than a quarter of the cube's scale `S` (`|P(n̂) − P(0)| < 0.25·S`, the cut of
+  `MIN_NORMAL_ON_SCREEN` on `main`; a look choice under R-390), the drag reads its vertical component instead, up
+  moving the plane along the normal's side that faces the viewer (`n̂·(1, 1, 1) > 0`), at the same rate, the
+  horizontal component doing nothing. Everywhere else `ŝ` is as above.
+- **N4. The checks (REQ-GUI-217, reqio).** `cargo test -p gui mock_compass_slice_follows_pointer`, pointer scripts on
+  the mock, in slice mode, each step at a pose with its control:
+  - Untilted (`τ₁ = τ₂ = γ = 0`, `z₀ = 0`): `ŝ` is `(−√3/2, ½)` on the screen (y down). A drag of half the cube's width
+    along `ŝ` moves `z₀` by half the range along `+e_d`, and the screen image of the plane's point nearest the cube's
+    centre moves along `+ŝ`, with the pointer; a drag of the same length across `ŝ` moves nothing; a drag straight
+    right moves the plane along `−e_d`, its image moving right and up. Control: a GUI that reads the horizontal component (B3
+    as written) moves the plane along `−e_d` for the drag along `ŝ`, against the pointer, and fails.
+  - Tilted (`τ₁ = 30°`, `τ₂ = 0`, `γ = 0`, `z₀ = 0`, the `tilt_rect` pose of R-451 B8, `n̂ ∝ (−½, 0, √3/2)`): `ŝ` is
+    the direction of `(−1.183, 0.183)`. A drag of half the cube's width along `ŝ` moves `z₀` by half the range along
+    `latent_normal`, and the image of the plane's point nearest the centre moves along `+ŝ`; a drag across `ŝ` moves
+    nothing. Controls: the horizontal-component reading moves the plane against the pointer and fails, and a GUI that
+    uses the untilted direction `P(e_d)` in place of the tilted `ŝ` fails the drag across `ŝ`.
+  - At the view axis (`τ₁ = τ₂ = −45°`, `γ = 0`; N3): an upward drag of half the cube's height moves `z₀` by half the
+    range along the normal's side facing the viewer, a horizontal one nothing. Control: a GUI that sends no edit, or a
+    non-finite one, fails.
+  - The tilt-mode drag keeps REQ-GUI-193's checks of B3's rates, re-run unchanged.
+- **N5. qa's files and TASK-M6-33's tests (R-290, forced by this ruling).** REQ-GUI-193's verify, which TASK-M6-33
+  builds as written, checks the slice-mode drag by its horizontal component ("a horizontal drag of half the cube's
+  width in slice mode emits one SetField on z₀ of half the range along the normal"; "a vertical drag in slice mode
+  emits nothing", with the control "a vertical drag in slice mode that moves the slice"). Under R-465 a vertical drag
+  moves the slice by its component along `ŝ`, which untilted has a vertical part, and the half-width drag is measured
+  along `ŝ`. TASK-M6-39's implementer conforms its own and TASK-M6-33's non-qa tests that assert those; its qa
+  reviewer changes the qa assertions of them in the task's qa commit, and only those; the code reviewer confirms that
+  no other assertion was weakened.
+- **N6. Where it lands.** render_gui_spec's compass subsection (the drag bullet) and §G13 (a clause); GUI_DESIGN_NOTES
+  § 01 (conformed, R-107); R-451's and R-458's heading blocks (forward lines, R-292, R-293); RQ-368 moved to
+  `docs/archive/review_queue/M0.md` with its ruling (R-292); **REQ-GUI-217** (the slice drag follows the pointer, M6,
+  closed by TASK-M6-39); REQ-GUI-193's rulings and note and REQ-GUI-206's note (reqio); TASK-M6-39.
+- R-465 is in the "design" group of `plan/rule_groups.yaml`.
+
+*What it amends:* R-451 B3's slice-mode sentence, as to which part of the drag counts: "The horizontal component of a
+drag sets how far the slice moves" and "The vertical component does nothing in slice mode" become the 2-D drag
+projected onto the drawn normal's screen direction, the component across it doing nothing. B3's rate, its direction
+in the latent space and its tilt-mode sentence stand, and B4 stands (N1).
+
+Adds REQ-GUI-217; changes REQ-GUI-193 (rulings, note) and REQ-GUI-206 (note).
