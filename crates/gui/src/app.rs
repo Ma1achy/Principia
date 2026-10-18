@@ -173,7 +173,7 @@ impl<S: EngineSide> App<S> {
             console_open: errored,
             windows: windows::State::default(),
             places: Default::default(),
-            store: Store::none(),
+            store: Store::default(),
             save_failed: false,
             present: false,
             scrolled_to: (Vec::new(), 0),

@@ -270,7 +270,7 @@ fn mock_windows_remembered_the_file_reads_back_what_it_wrote() {
 fn mock_windows_remembered_the_store_loads_and_saves() {
     let dir = scratch("store");
     // No store: the defaults, and a save that does nothing.
-    let none = Store::none();
+    let none = Store::default();
     assert_eq!(none.path(), None);
     assert_eq!(none.load().settings, Settings::default());
     assert_eq!(none.save(&Settings::default()), Ok(()));
@@ -301,12 +301,16 @@ fn mock_windows_remembered_the_store_loads_and_saves() {
     assert!(Store::at(&blocked).save(&settings).is_err());
     let mut app = gui(&blocked);
     app.places = settings.places.clone();
+    let saves = |app: &App<MockSide>| -> Vec<String> {
+        settings_lines(app)
+            .into_iter()
+            .filter(|l| l.contains("could not be saved"))
+            .collect()
+    };
     app.save_settings();
+    assert_eq!(saves(&app).len(), 1, "logged at the first failure");
     app.save_settings();
-    let lines: Vec<String> = settings_lines(&app)
-        .into_iter()
-        .filter(|l| l.contains("could not be saved"))
-        .collect();
+    let lines = saves(&app);
     assert_eq!(lines.len(), 1, "{lines:?}");
     rejects("a save failure logged each time", || {
         assert_eq!(lines.len(), 2)

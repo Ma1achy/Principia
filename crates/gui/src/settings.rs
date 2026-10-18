@@ -82,7 +82,8 @@ fn rect(place: &Value) -> Option<Rect> {
     (w > 0.0 && h > 0.0).then(|| Rect::from_min_size(pos2(x, y), vec2(w, h)))
 }
 
-/// Where the settings are kept: a file, or nowhere (the tests' GUIs, and a platform with no config directory).
+/// Where the settings are kept: a file, or nowhere, the default (the tests' GUIs, and a platform with no config
+/// directory): each GUI then starts with the defaults and saves nothing.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Store {
     path: Option<PathBuf>,
@@ -98,11 +99,6 @@ pub struct Loaded {
 }
 
 impl Store {
-    /// Settings kept nowhere: each GUI starts with the defaults and saves nothing.
-    pub fn none() -> Self {
-        Self::default()
-    }
-
     /// Settings kept in the file at `path`.
     pub fn at(path: impl Into<PathBuf>) -> Self {
         Self {

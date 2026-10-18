@@ -146,15 +146,13 @@ pub fn title_bar(rect: Rect) -> Rect {
 /// `rect` moved by the least that keeps it on `screen` (R-461 I2): its title bar's height and [`KEEP_W`] points of its
 /// width inside. Its size is kept. On a screen less than a title bar tall, its top is kept on screen.
 pub fn on_screen(rect: Rect, screen: Rect) -> Rect {
-    let mut d = Vec2::ZERO;
-    if rect.max.x < screen.min.x + KEEP_W {
-        d.x = screen.min.x + KEEP_W - rect.max.x;
-    } else if rect.min.x > screen.max.x - KEEP_W {
-        d.x = screen.max.x - KEEP_W - rect.min.x;
-    }
+    let left = rect
+        .min
+        .x
+        .max(screen.min.x + KEEP_W - rect.width())
+        .min(screen.max.x - KEEP_W);
     let top = rect.min.y.min(screen.max.y - TITLE_BAR_H).max(screen.min.y);
-    d.y = top - rect.min.y;
-    rect.translate(d)
+    Rect::from_min_size(pos2(left, top), rect.size())
 }
 
 /// The window at `start` with `edges` moved by `delta`, each moved edge stopped where the window would be smaller than
