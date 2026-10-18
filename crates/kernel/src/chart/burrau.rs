@@ -16,10 +16,10 @@
 //! own reconstruction), and the derived invariants the shared descriptor. The embed's `ρ` lies on `+x` and `λ_y =
 //! b/c > 0`, so the canonical frame holds by construction and `C` is a no-op. `Φ`'s [`ChartOut`] carries the zero
 //! vector, which none of these blocks reads: the Burrau system is the blocks' own input. The Euclid plane overrides
-//! [`Chart::decode`] with [`decode_plane`], so every entry decodes it so. The `(ν, K)` chart's construction needs the
-//! exact-sign arithmetic ([`ExactSign`]) beyond [`Chart::decode`]'s bound, so, as on the invariant charts, its decode is
-//! [`decode()`], which its [`super::ChartDecode`] calls, and [`Chart::decode`] on it would be the free decode of the
-//! zero vector, not the chart's.
+//! [`Chart::decode`] with [`decode_plane`], so every entry decodes it so. The `(ν, K)` chart's decode is [`decode()`],
+//! whose construction needs the exact-sign arithmetic ([`ExactSign`], [`WarpReal`]) that every payload float type has
+//! ([`crate::real::IeeeBits`]'s bound); it overrides [`Chart::decode`] with it, and its [`super::ChartDecode`] calls it
+//! too, so every entry decodes its per-pixel masses, never the free decode of the zero vector (REQ-DEC-006).
 //!
 //! **The `(ν, K)` chart** ([`Burrau`]; §4.3, §4.5; R-113). `ν(u) = ν_min + (ν_max − ν_min)·u`, and `K` from §2's
 //! construction at `K(v) = K_max·v^γ_K`, the invariant charts' warp, its `K_max` and `γ_K` REQ-CHART-044's
@@ -354,6 +354,17 @@ where
     /// `true`: the Burrau masses follow `ν(u)`.
     fn requires_per_pixel_mass(&self) -> bool {
         true
+    }
+
+    /// [`decode()`] at `(u, v)`, the construction's outcome dropped, as [`super::ChartDecode::decode_at`] decodes it:
+    /// the masses follow `ν(u)` (REQ-DEC-006). `S` is not read, as there.
+    #[inline]
+    fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode(self, u, v).0
     }
 
     /// Layer 2's `ν ∈ (0, 1)` and `K ≥ 0`, then layer 3 on the f64 decode (the module's note).

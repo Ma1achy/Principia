@@ -11,6 +11,8 @@
 //!   is the chart's own decode, and a uniform that round-trips its parameters.
 //! - `per_pixel_mass_declared_*`: every chart declares `requires_per_pixel_mass`, true exactly for the ternary plot, the
 //!   Burrau family, a mixed chart with a mass axis and the latent chart, whose type cannot say (REQ-DEC-006).
+//! - `per_pixel_mass_trait_decode_*`: on each chart that declares it and whose masses its type decides, the trait's
+//!   `Chart::decode` is the decode stage's `ChartDecode::decode_at`, and its masses vary per pixel (REQ-DEC-006).
 //!
 //! **Domain** (pitfalls §10): the decode alone, its inputs held fixed; no trajectory.
 
@@ -1035,6 +1037,11 @@ fn per_pixel_mass_declared_by_every_chart() {
         [0.0, 1.0],
     ));
     behaves(&sphere);
+    behaves(&Burrau {
+        nu_range: [0.1, 0.9],
+        k_max: 1.0,
+        gamma_k: 2.0,
+    });
     behaves(&EuclidPlane {
         m_range: [1.0, 32.0],
         nu_range: [0.1, 0.9],
@@ -1061,6 +1068,151 @@ negative_control!(
         &Mixed::<Alpha, ZMu2, f64>::new(FROZEN, [0.1, 1.4], [-1.0, 1.0]),
         false
     )
+);
+
+// ── per_pixel_mass_trait_decode (REQ-DEC-006) ───────────────────────────────────────────────────────────────────
+
+/// A chart's decode under the default links, behind a function pointer so a control runs the check on a broken one.
+type TraitDecodeFn<C, R> = fn(&C, R, R) -> Decoded<R>;
+
+/// Over the grid at `R`, `f` (the trait's [`Chart::decode`] under check) is [`ChartDecode::decode_at`], IC, label and
+/// descriptor, compared by their `Debug` forms, which round-trip every float and its sign, NaN included.
+fn check_trait_decode<R: Q, C: ChartDecode<Param = R>>(chart: &C, f: TraitDecodeFn<C, R>) {
+    for (u, v) in grid() {
+        let (u, v) = (R::of(u), R::of(v));
+        let got = format!("{:?}", f(chart, u, v));
+        let want = format!("{:?}", ChartDecode::decode_at::<Defaults, R>(chart, u, v));
+        assert!(
+            got == want,
+            "{}'s Chart::decode is not its decode_at at ({}, {}) at {}",
+            chart.name(),
+            u.f(),
+            v.f(),
+            R::LABEL
+        );
+    }
+}
+
+/// `chart` declares `requires_per_pixel_mass`, and its trait [`Chart::decode`] gives more than one mass triple over
+/// the grid at `R`.
+fn check_trait_masses_vary<R: Q, C: Chart<Param = R>>(chart: &C) {
+    assert!(
+        chart.requires_per_pixel_mass(),
+        "{} does not declare requires_per_pixel_mass",
+        chart.name()
+    );
+    let mut masses: Vec<String> = grid()
+        .into_iter()
+        .map(|(u, v)| {
+            format!(
+                "{:?}",
+                Chart::decode::<Defaults, R>(chart, R::of(u), R::of(v)).ic.m
+            )
+        })
+        .collect();
+    masses.sort();
+    masses.dedup();
+    assert!(
+        masses.len() > 1,
+        "{}'s Chart::decode gives {} mass triple(s) over the grid at {}",
+        chart.name(),
+        masses.len(),
+        R::LABEL
+    );
+}
+
+/// The `(ν, K)` chart checked.
+fn nu_k<R: Q>() -> Burrau<R> {
+    Burrau {
+        nu_range: [R::of(0.1), R::of(0.9)],
+        k_max: R::of(1.0),
+        gamma_k: R::of(2.0),
+    }
+}
+
+/// The Euclid plane checked.
+fn euclid<R: Q>() -> EuclidPlane<R> {
+    EuclidPlane {
+        m_range: [R::of(1.0), R::of(32.0)],
+        nu_range: [R::of(0.1), R::of(0.9)],
+    }
+}
+
+/// The mixed charts with a mass axis: on the horizontal axis, on the vertical, and on both.
+type MassAxisCharts<R> = (
+    Mixed<ZMu1, Alpha, R>,
+    Mixed<Alpha, ZMu2, R>,
+    Mixed<ZMu1, ZMu2, R>,
+);
+
+/// The mixed charts with a mass axis checked.
+fn mass_axis_charts<R: Q>() -> MassAxisCharts<R> {
+    (
+        Mixed::new(at(FROZEN), at([-1.0, 1.0]), at([0.1, 1.4])),
+        Mixed::new(at(FROZEN), at([0.1, 1.4]), at([-1.0, 1.0])),
+        Mixed::new(at(FROZEN), at([-1.0, 1.0]), at([-1.0, 1.0])),
+    )
+}
+
+/// [`check_trait_decode`] on every chart that declares `requires_per_pixel_mass` and whose masses its type decides,
+/// at `R`.
+fn check_trait_decodes<R: Q>()
+where
+    f64: From<R>,
+{
+    let (h, v, both) = mass_axis_charts::<R>();
+    check_trait_decode(&ternary::<R>(0.5), Chart::decode::<Defaults, R>);
+    check_trait_decode(&nu_k::<R>(), Chart::decode::<Defaults, R>);
+    check_trait_decode(&euclid::<R>(), Chart::decode::<Defaults, R>);
+    check_trait_decode(&h, Chart::decode::<Defaults, R>);
+    check_trait_decode(&v, Chart::decode::<Defaults, R>);
+    check_trait_decode(&both, Chart::decode::<Defaults, R>);
+}
+
+#[test]
+fn per_pixel_mass_trait_decode_is_decode_at() {
+    check_trait_decodes::<f64>();
+    check_trait_decodes::<f32>();
+}
+
+negative_control!(
+    per_pixel_mass_trait_decode_is_decode_at,
+    "the trait's default decode on the (ν, K) chart, the shared decoder on Φ's zero vector, must fail the check",
+    expected = "Burrau's Chart::decode is not its decode_at",
+    check_trait_decode(&nu_k::<f64>(), |c, u, v| decode::decode::<Defaults, f64>(
+        &c.map(u, v).z
+    ))
+);
+
+/// [`check_trait_masses_vary`] on the same charts at `R`.
+fn check_trait_masses<R: Q>()
+where
+    f64: From<R>,
+{
+    let (h, v, both) = mass_axis_charts::<R>();
+    check_trait_masses_vary(&ternary::<R>(0.5));
+    check_trait_masses_vary(&nu_k::<R>());
+    check_trait_masses_vary(&euclid::<R>());
+    check_trait_masses_vary(&h);
+    check_trait_masses_vary(&v);
+    check_trait_masses_vary(&both);
+}
+
+#[test]
+fn per_pixel_mass_trait_decode_varies() {
+    check_trait_masses::<f64>();
+    check_trait_masses::<f32>();
+}
+
+negative_control!(
+    per_pixel_mass_trait_decode_varies,
+    "a declared chart whose masses are held, the latent chart with no sweep, must fail the check",
+    expected = "Latent's Chart::decode gives 1 mass triple(s)",
+    check_trait_masses_vary(&LatentChart {
+        z0: [0.0; 8],
+        q1: [0.0; 8],
+        q2: [0.0; 8],
+    })
 );
 
 // ── per_pixel_mass_stage ────────────────────────────────────────────────────────────────────────────────────────
