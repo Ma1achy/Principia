@@ -188,11 +188,12 @@ impl Scope {
 pub enum StepKind {
     /// A bounded field on a slider: a `z₀` value, the slice step, the playback speed.
     Bounded,
-    /// An angle field: the tilt angles `τ₁`, `τ₂` and the rotation `γ`.
+    /// An angle field: the tilt angles `τ₁`, `τ₂` and the rotation `γ`; and the Trajectory panel's sphere's orbit
+    /// (R-453 D6).
     Angle,
-    /// The zoom, in log₂.
+    /// The zoom, in log₂: Navigate's, and the Trajectory panel's views' + and − (R-453 D6).
     ZoomLog2,
-    /// Figure's arrows: pan the view.
+    /// Figure's arrows: pan the view; and the Trajectory panel's real-space and unwrapped views' (R-453 D6).
     Pan,
     /// Compass's arrows in tilt mode: tilt the slice plane.
     Tilt,
@@ -397,6 +398,57 @@ impl ScopeTree {
                 })
             })
             .collect();
+    }
+
+    /// Adds `scope` as the sibling right after scope `after`, under the same parent: for an element that comes and goes
+    /// in the middle of its scope's order (the Trajectory panel's unpin, R-453). Nothing when `after` is not in the
+    /// tree.
+    ///
+    /// # Panics
+    /// When the id is already in the tree: a registration error, caught by the screen's tests.
+    pub fn insert_after(&mut self, after: &str, scope: Scope) {
+        assert!(
+            self.index(scope.id).is_none(),
+            "the scope `{}` is registered twice",
+            scope.id
+        );
+        let Some(i) = self.index(after) else {
+            return;
+        };
+        let at = i + 1;
+        for node in &mut self.nodes {
+            if let Some(p) = node.parent.as_mut() {
+                if *p >= at {
+                    *p += 1;
+                }
+            }
+        }
+        let parent = self.nodes[i].parent;
+        self.nodes.insert(at, Node { scope, parent });
+    }
+
+    /// Removes scope `id` and every scope below it; the rest keep their places and parents. Nothing for an id the tree
+    /// does not hold. A focus path into a removed scope is cut back at the next command.
+    pub fn remove(&mut self, id: &str) {
+        if self.index(id).is_none() {
+            return;
+        }
+        self.remove_children(id);
+        let i = self.index(id).expect("kept by remove_children");
+        self.nodes.remove(i);
+        for node in &mut self.nodes {
+            if let Some(p) = node.parent.as_mut() {
+                if *p > i {
+                    *p -= 1;
+                }
+            }
+        }
+    }
+
+    /// The scope `id`, to change its label or its arrows as the screen's state changes (the Trajectory panel's first
+    /// tab, "pinned" or "under cursor", and its sphere's place, the sphere or the unwrapped view, R-453).
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut Scope> {
+        self.index(id).map(|i| &mut self.nodes[i].scope)
     }
 
     /// Adds a row to the `?` overlay, after the global table's: a screen's own keys, registered with its scopes.

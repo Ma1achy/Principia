@@ -21,6 +21,10 @@
 //! first step under them, the round trip a hash of the IC under 10⁻¹⁴, and the gauge error 0, the mock's canonical
 //! pane ignoring the gauge exactly; the energy error grows to the sample's `|ΔE/E|` as the pairs close, the real
 //! readouts being `computeIC`'s (TASK-M8-14).
+//!
+//! Panes 2 and 3 are the Trajectory panel's view widgets, so they take its pointer (R-453 D8): on pane 3 and on the
+//! unwrapped pane 2 a drag pans and the wheel zooms about the pointer, on the sphere a drag orbits, turning "turn" off,
+//! and the wheel zooms, and a double-click restores a pane's default; the window's own [`trajectory::Views`].
 
 use eframe::egui::{self, vec2, Button, Pos2, Rect, RichText, Sense, Slider, Stroke, Ui};
 use engine::contract::sample::Sample;
@@ -132,6 +136,8 @@ pub struct State {
     pub playing: bool,
     /// The time source's seconds at the last frame.
     pub last_seconds: Option<f64>,
+    /// Panes 2's and 3's views: real space, the sphere and the unwrapped view (R-453 D8).
+    pub views: trajectory::Views,
 }
 
 impl Default for State {
@@ -148,6 +154,7 @@ impl Default for State {
             ghost: false,
             playing: false,
             last_seconds: None,
+            views: trajectory::Views::default(),
         }
     }
 }
@@ -572,7 +579,8 @@ pub fn show(
             let side = ((ui.available_width() - 2.0 * gap) / 3.0).max(16.0);
             ui.horizontal(|ui| {
                 for (k, (id, caption)) in PANE_IDS.iter().enumerate() {
-                    let (rect, pane) = ui.allocate_exact_size(vec2(side, side), Sense::click());
+                    let (rect, pane) =
+                        ui.allocate_exact_size(vec2(side, side), Sense::click_and_drag());
                     ui.painter()
                         .rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
                     let pane = pane.on_hover_text(*caption);
@@ -580,11 +588,26 @@ pub fn show(
                     let Some(sample) = &state.sample else {
                         continue;
                     };
+                    let r = rect.width().min(rect.height()) / 2.0;
+                    let v = &mut state.views;
                     match (k, state.unwrapped) {
                         (0, _) => ic_pane(ui, rect, sample, state.gauge, i),
-                        (1, false) => trajectory::sphere(ui, rect, sample, state.angle, i),
-                        (1, true) => trajectory::unwrapped(ui, rect, sample, i),
-                        _ => trajectory::real_space(ui, rect, sample, i),
+                        (1, false) => {
+                            let (turn, angle) = (&mut state.turn, &mut state.angle);
+                            trajectory::orbit_input(ui, &pane, &mut v.sphere, turn, angle);
+                            trajectory::sphere(ui, rect, sample, state.angle, i, &v.sphere);
+                        }
+                        (1, true) => {
+                            let half = rect.size() / 2.0;
+                            let unwrapped = &mut v.unwrapped;
+                            trajectory::pan_zoom_input(ui, &pane, rect.center(), half, unwrapped);
+                            trajectory::unwrapped(ui, rect, sample, i, &v.unwrapped);
+                        }
+                        _ => {
+                            let real = &mut v.real;
+                            trajectory::pan_zoom_input(ui, &pane, rect.center(), vec2(r, r), real);
+                            trajectory::real_space(ui, rect, sample, i, &v.real);
+                        }
                     }
                     if k == 1 && state.ghost {
                         gauge_ghost(ui, rect, sample, state.gauge);

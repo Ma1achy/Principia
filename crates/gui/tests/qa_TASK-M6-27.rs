@@ -13,7 +13,8 @@
 //!   reading "undecided · still interacting at t … of …" until then (§G2); at the horizon every sample is decided
 //!   (a terminal state or `bounded`, payload §2); the GUI draws nothing over the figure but the label; the mock draws
 //!   the hover path, solid at the cursor's IC, which is on the slice, fainter where it leaves it; the Trajectory
-//!   panel's "under cursor" tab shows the same sample; moving off clears both. Overlays ▾ holds §G2's fourteen
+//!   panel's "under cursor" tab shows the same sample; moving off clears the label and the path, the panel
+//!   keeping the last sample (R-453 D3, forced by R-453 D10). Overlays ▾ holds §G2's fourteen
 //!   toggles in its four groups, plus all off and save as default, with its count on the top bar.
 //!   The keyboard's big scopes run Figure · Trajectory · Compass · Time · Legend in §G3's order (3 to 7), every
 //!   landing in navigation mode; Enter on the Legend does nothing (read-only); the Trajectory panel's playhead, listen
@@ -1002,10 +1003,12 @@ fn qa_overlays_menu_holds_g2_toggles_grouped_with_all_off_and_save() {
         .1;
     let before: Vec<String> = rig.texts().into_iter().map(|(t, _)| t).collect();
     rig.click(button.center());
+    // The popup's texts: those the click added, and the toggles whose words the frame already shows elsewhere ("grid";
+    // "forbidden region", the outcome legend's key since R-446, amended by qa for TASK-M2-32).
     let mut menu: Vec<(String, Rect)> = rig
         .texts()
         .into_iter()
-        .filter(|(t, _)| !before.contains(t) || t == "grid")
+        .filter(|(t, _)| !before.contains(t) || t == "grid" || t == "forbidden region")
         .collect();
     // The popup's own texts, top to bottom, then left to right.
     menu.sort_by(|a, b| {
@@ -1152,7 +1155,8 @@ fn qa_legend_draws_exactly_the_keys_received() {
             },
             Dimension::Categorical {
                 title: C,
-                classes: vec![(Class::Swatch("degenerate"), 1.0)],
+                // R-444 removed "degenerate": another class of the nine (amended by qa for TASK-M2-32).
+                classes: vec![(Class::Swatch("triple_ejection"), 1.0)],
             },
             Dimension::Brightness {
                 title: B,
@@ -1244,12 +1248,19 @@ fn qa_legend_running_swatch_is_the_not_yet_style() {
     let canvas = Arc::new(MockCanvas::new().expect("a GPU adapter for the mock's canvas"));
     let mut rig = Rig::new(MockSide::new(MockEngine::frozen(), Some(canvas.clone())));
     rig.pointer_gone();
+    // R-446 takes `running` out of the outcome key; the "not yet" style stays a class a key of another field shows
+    // (R-399): a stain whose field holds no value for its running samples (amended by qa for TASK-M2-32).
+    rig.set_stain(stain(
+        "qa colour · d_min",
+        vec![(Class::Swatch("bounded"), 3.0), (Class::Running, 1.0)],
+        None,
+    ));
     let legend = layout().legend;
     let label = rig
         .texts_in(legend)
         .into_iter()
         .find(|(t, _)| t == "running")
-        .expect("the default stain's legend has no running class")
+        .expect("the stain's legend has no running class")
         .1;
     let shot = render_frame(&canvas, &mut rig.app, &mut rig.h);
     let p = PIXELS_PER_POINT;
@@ -1480,7 +1491,7 @@ fn qa_hover_label_path_and_under_cursor_follow_the_sample() {
         panel.contains(fate.as_str()),
         "the panel does not show the fate `{fate}`: {panel}"
     );
-    // Moving off the figure clears both.
+    // Moving off the figure clears the label and the path; the panel keeps the sample (R-453 D3).
     let n1 = rig.contract().len();
     rig.pointer_to(layout().footer.center());
     let s2 = rig.snap();
@@ -1497,10 +1508,12 @@ fn qa_hover_label_path_and_under_cursor_follow_the_sample() {
     assert!(s2.sample.is_none(), "moving off left a sample");
     assert!(label_of(&mut rig).is_empty(), "moving off left the label");
     assert!(rig.marks().is_empty(), "moving off left the hover path");
+    // R-453 D3 (forced change, R-290; R-453 D10): the panel keeps the last sample hovered when the pointer leaves the
+    // figure; it never goes blank.
     let panel = trajectory_text(&mut rig);
     assert!(
-        !panel.contains(fate.as_str()),
-        "moving off left the sample in the panel: {panel}"
+        panel.contains(fate.as_str()),
+        "moving off cleared the last sample from the panel (R-453 D3): {panel}"
     );
     // Controls.
     rejects("an undecided label naming a fate", || {

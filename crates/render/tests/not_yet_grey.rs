@@ -3,7 +3,11 @@
 //! - the proposal's evidence: the grey's OKLab lightness and its separation from the nine outcome classes
 //!   (colour_composition §1.4) and the invalid pattern's two colours (REQ-COL-055), and that among the 8-bit greys it
 //!   is the one farthest from its nearest such colour (`not_yet_grey_proposal_*`). Run with `--nocapture` for the table
-//!   the PR attaches.
+//!   the PR attaches. The proposal measured the palette of its day, [`M1_CLASSES`], which the human confirmed with it at
+//!   the M1 gate (R-433); that record is kept as measured.
+//! - the grey beside the outcome palette R-444 and R-445 give (TASK-M2-32): since R-446 the outcome view draws running
+//!   in bounded / nothing yet's `#141418`, and the grey is the "not yet" style's for every other field; its nearest
+//!   class is triple ejection's purple `#611597`, 0.192, as R-444 records (`not_yet_grey_beside_r_444s_palette`).
 //!
 //! Each test registers its negative control (R-176).
 
@@ -11,8 +15,10 @@ use ledger::gen::prelude;
 use render::present::{self, Rgb};
 use validation::negative_control;
 
-/// The nine outcome classes, colour_composition §1.4's default palette, 8-bit sRGB.
-const CLASSES: [(&str, u32); 9] = [
+/// The nine outcome classes of colour_composition §1.4's default palette as the proposal measured them (TASK-M1-09),
+/// 8-bit sRGB: the record R-433 confirmed. R-444 to R-446 have since removed "degenerate" and "collision @ t=0" from
+/// the outcome view; [`R_444_CLASSES`] is the palette now.
+const M1_CLASSES: [(&str, u32); 9] = [
     ("collision 0–1", 0xDE2D2D),
     ("collision 0–2", 0x2EBC4E),
     ("collision 1–2", 0x3462E0),
@@ -24,13 +30,26 @@ const CLASSES: [(&str, u32); 9] = [
     ("collision @ t=0", 0xF29620),
 ];
 
+/// The nine outcome classes of colour_composition §1.4 since R-444 and R-445, as shown (R-449), 8-bit sRGB.
+const R_444_CLASSES: [(&str, u32); 9] = [
+    ("bounded / nothing yet", 0x141418),
+    ("collision 1–2", 0xDE2D2D),
+    ("collision 1–3", 0x2EBC4E),
+    ("collision 2–3", 0x3462E0),
+    ("triple collision", 0xF29620),
+    ("escape body 1", 0xF0DE32),
+    ("escape body 2", 0xE034C6),
+    ("escape body 3", 0x30C8DC),
+    ("triple ejection", 0x611597),
+];
+
 fn hex(h: u32) -> [u8; 3] {
     [(h >> 16) as u8, (h >> 8) as u8, h as u8]
 }
 
-/// The colours the grey must stand apart from: the nine classes and the hatch's two, by name, linear.
-fn neighbours() -> Vec<(String, Rgb)> {
-    let mut out: Vec<(String, Rgb)> = CLASSES
+/// The colours the grey must stand apart from: the nine classes of `classes` and the hatch's two, by name, linear.
+fn neighbours_of(classes: &[(&str, u32)]) -> Vec<(String, Rgb)> {
+    let mut out: Vec<(String, Rgb)> = classes
         .iter()
         .map(|&(name, h)| (format!("{name} #{h:06X}"), present::srgb8(hex(h))))
         .collect();
@@ -41,6 +60,11 @@ fn neighbours() -> Vec<(String, Rgb)> {
         ));
     }
     out
+}
+
+/// The colours the proposal measured the grey against: [`M1_CLASSES`] and the hatch's two.
+fn neighbours() -> Vec<(String, Rgb)> {
+    neighbours_of(&M1_CLASSES)
 }
 
 /// The OKLab distance between two linear colours.
@@ -172,4 +196,40 @@ negative_control!(
     "mid grey, #808080, sits nearer its nearest neighbour than the proposal",
     expected = "is not the 8-bit grey farthest",
     check_farthest(0x80)
+);
+
+/// Checks the grey beside `classes` and the hatch's two colours: its nearest triple ejection's purple at 0.192 (R-444's
+/// measurement), every other at least 0.19 away. Prints the distances.
+fn check_beside(classes: &[(&str, u32)]) {
+    let grey = present::not_yet();
+    let mut rows: Vec<(f64, String)> = neighbours_of(classes)
+        .into_iter()
+        .map(|(name, c)| (distance(grey, c), name))
+        .collect();
+    rows.sort_by(|a, b| a.0.total_cmp(&b.0));
+    println!("the \"not yet\" grey beside R-444's palette and the hatch:");
+    for (d, name) in &rows {
+        println!("  OKLab distance from {name}: {d:.3}");
+    }
+    assert_eq!(
+        (format!("{:.3}", rows[0].0), rows[0].1.as_str()),
+        ("0.192".to_owned(), "triple ejection #611597"),
+        "the grey's nearest class"
+    );
+    assert!(
+        rows.iter().all(|(d, _)| *d >= 0.19),
+        "a colour within 0.19 of the grey"
+    );
+}
+
+#[test]
+fn not_yet_grey_beside_r_444s_palette() {
+    check_beside(&R_444_CLASSES);
+}
+
+negative_control!(
+    not_yet_grey_beside_r_444s_palette,
+    "the palette the proposal measured has no purple, so its nearest class is another",
+    expected = "the grey's nearest class",
+    check_beside(&M1_CLASSES)
 );

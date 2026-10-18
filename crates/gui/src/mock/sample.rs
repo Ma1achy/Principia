@@ -44,27 +44,35 @@ fn ic_hash(ic: &Latent, salt: f64) -> f64 {
     hash(k + salt)
 }
 
-/// The outcome classes a fake sample may take, by param: the outcome palette's first nine (colour_composition §1.4).
+/// The outcome classes a fake sample may take, by param: the outcome palette's nine (colour_composition §1.4; R-444),
+/// physical outcomes only, no "degenerate" and no "collision @ t=0" (R-445, R-446). Each keeps the slot the fake hash
+/// picks that its class had before R-444 where it stayed; the triple outcomes take the two removed classes' slots
+/// (placeholder content).
 pub const FATES: [&str; 9] = [
     "collision_pair_2",
     "collision_pair_1",
     "collision_pair_0",
     "bounded",
-    "degenerate",
+    "triple_ejection",
     "escape_body_0",
     "escape_body_1",
     "escape_body_2",
-    "collision_at_start",
+    "triple_collision",
 ];
 
 /// The fake sample at the figure point `at` of `plane`, with the playhead at `t` and the horizon `t_max`: its fate is
-/// decided once the playhead reaches its `t_end` (`t_max` for `bounded`, 0 for a collision at the start).
+/// decided once the playhead reaches its `t_end` (`t_max` for `bounded`; no class is decided at `t = 0`, R-445).
 pub fn sample(plane: &Plane, at: [f64; 2], t: f64, t_max: f64) -> Sample {
-    let ic = point(plane, at[0], at[1]);
+    integrate(point(plane, at[0], at[1]), at, t, t_max)
+}
+
+/// The fake sample of the IC `ic`, given at the figure point `at`, with the playhead at `t` and the horizon `t_max`:
+/// the mock's `computeIC` (trajectory_viewing §1, §6), deterministic in the IC, so a pinned IC integrates the same on
+/// any chart (R-453 D1, D5).
+pub fn integrate(ic: Latent, at: [f64; 2], t: f64, t_max: f64) -> Sample {
     let class = FATES[(ic_hash(&ic, 0.0) * FATES.len() as f64) as usize % FATES.len()];
     let end = match class {
         "bounded" => t_max,
-        "collision_at_start" => 0.0,
         _ => t_max * (0.1 + 0.8 * ic_hash(&ic, 1.0)),
     };
     let decided = t >= end;

@@ -1,8 +1,11 @@
-//! `mock_legend_keys` (REQ-GUI-157's Legend frame; render_gui_spec §G2, §G6; R-399): the mock evaluates its fake stain
-//! into the legend's keys, walking back from OUT, one key per dimension in order; the GUI draws exactly the keys it
-//! receives, in order, and an empty list as an empty frame; adding a dimension or removing brightness changes the keys
-//! drawn; the `running` class is drawn as the "not yet" style, its grey with the dot stipple of `debug_not_yet`'s CPU
-//! mirror, never one flat colour. Each check also runs on an input it must reject (R-176, through `rejects`).
+//! `mock_legend_keys` (REQ-GUI-157's Legend frame; render_gui_spec §G2, §G6; R-399; R-444, R-446): the mock evaluates its
+//! fake stain into the legend's keys, walking back from OUT, one key per dimension in order; the outcome key is the nine
+//! classes, each a flat swatch, the black one `#141418`, then the "forbidden region" key in the hatch style, with no
+//! "degenerate", "collision @ t=0", "running" or `sim_failed` key and no "not yet" swatch; the mock's fake samples take
+//! only classes of the nine; the GUI draws exactly the keys it receives, in order, and an empty list as an empty frame;
+//! adding a dimension or removing brightness changes the keys drawn; a `running` class, which another field's key may
+//! show, is drawn as the "not yet" style, its grey with the dot stipple of `debug_not_yet`'s CPU mirror, never one flat
+//! colour. Each check also runs on an input it must reject (R-176, through `rejects`).
 
 use std::sync::Arc;
 
@@ -23,8 +26,10 @@ use crate::headless::Headless;
 use crate::layout::Layout;
 use crate::mock::canvas::MockCanvas;
 use crate::mock::legend::{
-    brightness, default_stain, evaluate, Class, Dimension, FakeStain, DARKEST, RAMP_SAMPLES,
+    brightness, default_stain, evaluate, Class, Dimension, FakeStain, DARKEST, FORBIDDEN,
+    RAMP_SAMPLES,
 };
+use crate::mock::sample::FATES;
 use crate::mock::MockEngine;
 use crate::side::{EngineSide, MockSide};
 
@@ -58,17 +63,22 @@ fn mock_legend_keys_exact_keys_in_order() {
     let legend = evaluate(&default_stain());
     let classes = [
         "bounded",
+        "collision_pair_2",
+        "collision_pair_1",
+        "collision_pair_0",
+        "triple_collision",
         "escape_body_0",
         "escape_body_1",
         "escape_body_2",
-        "collision_pair_0",
-        "collision_pair_1",
-        "collision_pair_2",
-        "collision_at_start",
-        "degenerate",
+        "triple_ejection",
     ];
+    assert_eq!(
+        classes,
+        SWATCHES.map(|s| s.param),
+        "the nine, in §1.4's order"
+    );
     let mut labels: Vec<String> = classes.iter().map(|c| label(c)).collect();
-    labels.push("running".to_owned());
+    labels.push(FORBIDDEN.to_owned());
     let want = vec![
         ("colour · outcome class".to_owned(), labels),
         ("brightness · t_end (late fade)".to_owned(), Vec::new()),
@@ -82,10 +92,11 @@ fn mock_legend_keys_exact_keys_in_order() {
     let LegendKey::Categorical { entries, .. } = &legend.keys[0] else {
         panic!("the first key is the outcome class")
     };
-    // The shares are the weights over their sum, in percent; every swatch is its palette colour; running is "not yet".
+    // The shares are the weights over their sum, in percent; every swatch is its palette colour, flat; the forbidden
+    // region is the hatch.
     let total: f64 = entries.iter().map(|e| e.share).sum();
     assert!((total - 100.0).abs() < 1e-9, "{total}");
-    let weights: f64 = [31.2, 11.0, 24.8, 12.1, 6.3, 5.9, 6.4, 0.9, 1.4, 0.6]
+    let weights: f64 = [31.2, 6.4, 5.9, 6.3, 0.9, 11.0, 24.8, 12.1, 1.4, 0.6]
         .iter()
         .sum();
     assert!(
@@ -97,7 +108,33 @@ fn mock_legend_keys_exact_keys_in_order() {
         let srgb = SWATCHES.iter().find(|s| s.param == class).unwrap().srgb8;
         assert_eq!(entry.swatch, SwatchStyle::Flat(srgb), "{class}");
     }
-    assert_eq!(entries.last().unwrap().swatch, SwatchStyle::NotYet);
+    assert_eq!(
+        (entries[0].label.as_str(), entries[0].swatch),
+        (
+            "bounded / nothing yet",
+            SwatchStyle::Flat([0x14, 0x14, 0x18])
+        ),
+        "the black one"
+    );
+    assert_eq!(entries.last().unwrap().swatch, SwatchStyle::Hatch);
+    for gone in ["degenerate", "collision @ t=0", "running", "sim_failed"] {
+        assert!(!entries.iter().any(|e| e.label == gone), "a \"{gone}\" key");
+    }
+    assert!(
+        !entries.iter().any(|e| e.swatch == SwatchStyle::NotYet),
+        "a \"not yet\" swatch"
+    );
+    rejects("a running key beside the nine", || {
+        let mut stain = default_stain();
+        let Dimension::Categorical { classes, .. } = &mut stain.out[0] else {
+            panic!()
+        };
+        classes.push((Class::Running, 0.6));
+        let LegendKey::Categorical { entries, .. } = &evaluate(&stain).keys[0] else {
+            panic!()
+        };
+        assert!(!entries.iter().any(|e| e.swatch == SwatchStyle::NotYet));
+    });
     // The bar: full at 0, darkest at 50, its samples falling between.
     let LegendKey::Ramp {
         lo,
@@ -122,6 +159,24 @@ fn mock_legend_keys_exact_keys_in_order() {
         samples.windows(2).all(|w| w[1][0] <= w[0][0]),
         "darker to the right"
     );
+}
+
+/// Checks that every fate in `fates` is a class of the nine (colour_composition §1.4; R-444).
+fn check_fates(fates: &[&str]) {
+    for fate in fates {
+        assert!(
+            SWATCHES.iter().any(|s| s.param == *fate),
+            "the fake samples' fate `{fate}`"
+        );
+    }
+}
+
+#[test]
+fn mock_legend_keys_fake_samples_take_the_nine() {
+    check_fates(&FATES);
+    rejects("a fate removed by R-445 and R-446", || {
+        check_fates(&["degenerate", "collision_at_start"])
+    });
 }
 
 #[test]
@@ -182,7 +237,7 @@ fn mock_legend_keys_the_gui_draws_what_it_receives() {
         texts.iter().any(|t| t == "colour · outcome class"),
         "{texts:?}"
     );
-    assert!(texts.iter().any(|t| t == "running"));
+    assert!(texts.iter().any(|t| t == FORBIDDEN));
     assert!(
         texts.iter().any(|t| t == "31.0"),
         "bounded's share: {texts:?}"
@@ -224,7 +279,7 @@ fn mock_legend_keys_the_gui_draws_what_it_receives() {
     assert!(texts.iter().any(|t| t == TITLE));
     assert!(!texts
         .iter()
-        .any(|t| t == "running" || t.contains("outcome class")));
+        .any(|t| t == FORBIDDEN || t.contains("outcome class")));
 }
 
 #[test]
@@ -259,7 +314,7 @@ fn mock_legend_keys_layout() {
     });
 }
 
-// --- The "not yet" style: running, never one flat colour (R-399) ------------------------------------------------------
+// --- The "not yet" style: running, never one flat colour (R-399), in a key of another field (R-446) ----------------------
 
 #[test]
 fn mock_legend_keys_running_is_the_not_yet_stipple() {
@@ -294,6 +349,16 @@ fn mock_legend_keys_running_is_the_not_yet_stipple() {
         MockSide::new(MockEngine::frozen(), Some(canvas.clone())),
         FORMAT,
     );
+    // The outcome key has no running class since R-446; a key of another field, set first, shows it.
+    let mut stain = default_stain();
+    stain.out.insert(
+        0,
+        Dimension::Categorical {
+            title: "colour · d_min",
+            classes: vec![(Class::Swatch("bounded"), 1.0), (Class::Running, 1.0)],
+        },
+    );
+    app.side().engine().set_stain(stain);
     let mut h = headless();
     for _ in 0..2 {
         let _ = h.frame(&mut app, Vec::new());

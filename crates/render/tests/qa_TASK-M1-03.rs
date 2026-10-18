@@ -74,9 +74,12 @@ const SPEC: Spec = Spec {
     auto_selects_meas: true,
 };
 
-/// colour_composition §1.4's outcome-state palette, `#E034C6` (body 1 escape) among it.
-const OUTCOME: [u32; 9] = [
-    0xDE2D2D, 0x2EBC4E, 0x3462E0, 0x141418, 0xECECF0, 0xF0DE32, 0xE034C6, 0x30C8DC, 0xF29620,
+/// colour_composition §1.4's outcome-state palette, `#E034C6` (escape body 2, R-449's name) among it. Amended by qa for
+/// TASK-M2-32, as R-444, R-445 and R-447 force: the nine sRGB swatches (no "degenerate" `#ECECF0`; triple ejection
+/// `#611597`), then the OKLab-uniform variant's eight chromatic swatches.
+const OUTCOME: [u32; 17] = [
+    0x141418, 0xDE2D2D, 0x2EBC4E, 0x3462E0, 0xF29620, 0xF0DE32, 0xE034C6, 0x30C8DC, 0x611597,
+    0xE7857A, 0x6EB976, 0x7FA2F2, 0xD99349, 0xB3A841, 0xD486C3, 0x09B9CD, 0xB790E2,
 ];
 
 /// matplotlib's `_viridis_data`, the stops these tests read, by index (256 stops).

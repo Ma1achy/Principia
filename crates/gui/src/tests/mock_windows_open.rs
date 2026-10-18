@@ -1714,13 +1714,13 @@ fn mock_windows_open_inspector_panes_drawn_by_their_functions() {
             })),
             geometry(&super::mock_windows_drawn::painted(|ui| {
                 if unwrapped {
-                    trajectory::unwrapped(ui, panes[1], &s, i)
+                    trajectory::unwrapped(ui, panes[1], &s, i, &Default::default())
                 } else {
-                    trajectory::sphere(ui, panes[1], &s, angle, i)
+                    trajectory::sphere(ui, panes[1], &s, angle, i, &Default::default())
                 }
             })),
             geometry(&super::mock_windows_drawn::painted(|ui| {
-                trajectory::real_space(ui, panes[2], &s, i)
+                trajectory::real_space(ui, panes[2], &s, i, &Default::default())
             })),
         ];
         let check = |k: usize, want: &[String]| {
@@ -1737,7 +1737,7 @@ fn mock_windows_open_inspector_panes_drawn_by_their_functions() {
         }
         rejects("pane 1 drawn as real space", || {
             let other = geometry(&super::mock_windows_drawn::painted(|ui| {
-                trajectory::real_space(ui, panes[0], &s, i)
+                trajectory::real_space(ui, panes[0], &s, i, &Default::default())
             }));
             check(0, &other)
         });

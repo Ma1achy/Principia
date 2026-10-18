@@ -22,6 +22,7 @@ mod tests {
     mod canvas_gestures_mock;
     mod cli;
     mod conformance;
+    mod degenerate_tilt_guards;
     mod f3_fallback_mock;
     mod f3_fills_window_mock;
     mod f3_toggle_mock;
@@ -49,6 +50,8 @@ mod tests {
     mod mock_text_click;
     mod mock_tile_bounds;
     mod mock_time;
+    mod mock_trajectory_pin;
+    mod mock_trajectory_views;
     mod mock_windows_drawn;
     mod mock_windows_open;
     mod present_fills_window_mock;

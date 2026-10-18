@@ -3,12 +3,15 @@
 //! received, and holds no key of its own: an empty list draws an empty frame. A categorical key is its swatches, each
 //! with its label and share; a bar key is the channel's samples over its domain, with its ends and middle marked. The
 //! `running` class is drawn as the "not yet" style, the neutral grey with a fine dot stipple from the pixel position,
-//! through the CPU mirror of `debug_not_yet`, never as one flat colour (R-399). It is called "Legend", never "Fate".
+//! through the CPU mirror of `debug_not_yet`, never as one flat colour (R-399); the outcome legend's "forbidden region"
+//! key is drawn as the hatch, through the CPU mirror of `debug_invalid`, as the style, never one colour (R-136, R-446;
+//! render_gui_spec §G6). It is called "Legend", never "Fate".
 //! It is read-only: the keyboard reaches it, and Enter on it does nothing (§G3; R-409 G3).
 
 use eframe::egui::{self, pos2, vec2, Color32, Mesh, Rect, RichText, Shape, Ui, UiBuilder};
 use engine::contract::legend::{
-    not_yet_dot_at, Legend, LegendEntry, LegendKey, SwatchStyle, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
+    debug_invalid, linear_to_srgb, not_yet_dot_at, Legend, LegendEntry, LegendKey, SwatchStyle,
+    NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
 };
 
 use crate::keyboard::scopes::{Scope, ScopeId, ScopeTree};
@@ -73,14 +76,49 @@ pub fn not_yet_mesh(rect: Rect, pixels_per_point: f32) -> Mesh {
     mesh
 }
 
-/// Draws one swatch in `rect`: a flat colour, or the "not yet" style.
+/// The hatch's 8-bit sRGB colour at the physical pixel whose centre is `frag_xy`: `debug_invalid`'s linear colour
+/// there, encoded through the sRGB transfer (dd_colouring §3.1) and rounded, which gives back the hatch's own 8-bit
+/// colours.
+pub fn hatch_at(frag_xy: [f64; 2]) -> [u8; 3] {
+    debug_invalid(frag_xy).map(|c| (linear_to_srgb(c).clamp(0.0, 1.0) * 255.0).round() as u8)
+}
+
+/// The hatch over `rect`, in points at `pixels_per_point`, as a mesh of whole physical pixels: the colour of its first
+/// pixel over the whole, then each pixel whose colour `debug_invalid` gives otherwise, by its pixel position
+/// `[x + 0.5, y + 0.5]` (R-136; [`hatch_at`]), as [`not_yet_mesh`] draws the stipple. A mesh, so no edge is feathered
+/// and every stripe stays pixel sharp.
+pub fn hatch_mesh(rect: Rect, pixels_per_point: f32) -> Mesh {
+    let px = |v: f32| (v * pixels_per_point).round() as i64;
+    let (x0, y0, x1, y1) = (
+        px(rect.min.x),
+        px(rect.min.y),
+        px(rect.max.x),
+        px(rect.max.y),
+    );
+    let at = |x: i64, y: i64| pos2(x as f32 / pixels_per_point, y as f32 / pixels_per_point);
+    let centre = |x: i64, y: i64| [x as f64 + 0.5, y as f64 + 0.5];
+    let ground = hatch_at(centre(x0, y0));
+    let mut mesh = Mesh::default();
+    mesh.add_colored_rect(Rect::from_min_max(at(x0, y0), at(x1, y1)), colour(ground));
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let c = hatch_at(centre(x, y));
+            if c != ground {
+                mesh.add_colored_rect(Rect::from_min_max(at(x, y), at(x + 1, y + 1)), colour(c));
+            }
+        }
+    }
+    mesh
+}
+
+/// Draws one swatch in `rect`: a flat colour, the "not yet" style or the hatch.
 fn swatch(ui: &Ui, rect: Rect, style: SwatchStyle) {
     let painter = ui.painter();
+    let ppp = ui.ctx().pixels_per_point();
     match style {
         SwatchStyle::Flat(rgb) => painter.rect_filled(rect, 0.0, colour(rgb)),
-        SwatchStyle::NotYet => {
-            painter.add(Shape::mesh(not_yet_mesh(rect, ui.ctx().pixels_per_point())))
-        }
+        SwatchStyle::NotYet => painter.add(Shape::mesh(not_yet_mesh(rect, ppp))),
+        SwatchStyle::Hatch => painter.add(Shape::mesh(hatch_mesh(rect, ppp))),
     };
     painter.rect_stroke(
         rect,

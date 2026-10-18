@@ -7,6 +7,11 @@ maps initial conditions through a set of charts, integrates them with a regulari
 by what happened to that trajectory, saying where it stops knowing. It is built by coding agents from the plan in this
 repository.
 
+[![Build progress](https://raw.githubusercontent.com/Ma1achy/Principia/progress/progress.png)](plan/MILESTONES.md)
+
+One square per task of `plan/tasks.yaml`, by milestone: green merged, amber in review, grey not started. It updates on
+every merge to `main` (`.github/workflows/progress.yml`).
+
 ## Where to start
 
 - `docs/read_first/`: what the instrument is for (`principia_00_philosophy.md`), the failures that shaped it

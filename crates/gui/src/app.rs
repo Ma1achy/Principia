@@ -4,7 +4,9 @@
 //! field at the same scale, each point where the shown layout puts it (R-406); the toggle is `ViewUI`'s, sending no
 //! `SetField`. The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
 //! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus. The
-//! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control.
+//! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control;
+//! a click on the figure, or P over it, pins the sample there in the Trajectory panel through the engine side's
+//! `computeIC`, sending none (R-453).
 //! The windows (`crate::windows`; §G5, §G7, §G8, §G12) open from their entries and take the focus, which goes back to
 //! their opener when they close; an error opens the console by itself, taking no focus (R-405). Export & share's
 //! present mode hides all chrome until Esc, which returns the focus to Present (applied per R-369), its figure filling
@@ -250,7 +252,7 @@ impl<S: EngineSide> App<S> {
                 Window::Inspector => {
                     let shown = explore::trajectory::shown(
                         self.trajectory.tab,
-                        self.snapshot.sample.as_ref(),
+                        self.trajectory.first(),
                         &self.view.kept_orbits,
                     );
                     self.windows.inspector.seed(shown);
@@ -322,7 +324,7 @@ impl<S: EngineSide> App<S> {
         };
         let orbit = explore::trajectory::shown(
             self.trajectory.tab,
-            self.snapshot.sample.as_ref(),
+            self.trajectory.first(),
             &self.view.kept_orbits,
         );
         let span = orbit.map_or(0.0, |o| o.path_t);
@@ -365,6 +367,7 @@ impl<S: EngineSide> App<S> {
         if !due {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64(SNAPSHOT_INTERVAL_S));
         }
+        self.follow_sample();
         self.trajectory.advance(seconds, span);
         self.windows.inspector.advance(seconds);
         let layout = Layout::new(ui.max_rect(), ctx.pixels_per_point());
@@ -390,6 +393,7 @@ impl<S: EngineSide> App<S> {
             self.keyboard.tree_mut(Mode::Explore),
             self.view.kept_orbits.orbits.len(),
         );
+        explore::trajectory::join(self.keyboard.tree_mut(Mode::Explore), &self.trajectory);
         windows::chart_builder::join_presets(
             self.keyboard.tree_mut(self.view.mode),
             self.windows.chart.presets.len(),
@@ -427,12 +431,7 @@ impl<S: EngineSide> App<S> {
             explore::overlays_menu::activate(id, &self.snapshot.render.overlays, &mut actions);
             explore::manifold_view::activate(id, &self.snapshot, &mut self.manifold, &mut out);
             explore::time::activate(id, &self.snapshot, &mut self.view.transport, &mut edits);
-            explore::trajectory::activate(
-                id,
-                self.snapshot.sample.as_ref(),
-                &mut self.view.kept_orbits,
-                &mut self.trajectory,
-            );
+            explore::trajectory::activate(id, &mut self.view.kept_orbits, &mut self.trajectory);
             let graph = &self.snapshot.render.stain_graph;
             stain::activate(id, &mut self.stain, graph, content.as_ref(), &mut stain_out);
         }
@@ -584,7 +583,6 @@ impl<S: EngineSide> App<S> {
             &mut own("trajectory"),
             layout.trajectory,
             &mut explore::trajectory::Panel {
-                sample: self.snapshot.sample.as_ref(),
                 kept: &mut self.view.kept_orbits,
                 scratch: &mut self.trajectory,
                 keyboard: &mut self.keyboard,
@@ -613,7 +611,7 @@ impl<S: EngineSide> App<S> {
             .path
             .last()
             .is_some_and(|f| f == explore::FIGURE);
-        explore::manifold_view::navigate::figure(
+        let pin = explore::manifold_view::navigate::figure(
             ui,
             layout.figure,
             focused_figure,
@@ -621,6 +619,9 @@ impl<S: EngineSide> App<S> {
             &mut self.manifold,
             out,
         );
+        if let Some(at) = pin {
+            self.pin_at(at);
+        }
         let mut panel = explore::manifold_view::Panel {
             snapshot: &self.snapshot,
             scratch: &mut self.manifold,
@@ -710,6 +711,27 @@ impl<S: EngineSide> App<S> {
         self.view.focus.path.last().filter(|_| scrolling).cloned()
     }
 
+    /// Follows the snapshot's sample into the Trajectory panel: the last hovered kept while the pointer is off the
+    /// figure, and the pinned IC re-integrated when what its integration read has changed (R-453 D3, D5).
+    fn follow_sample(&mut self) {
+        self.trajectory.hovered(self.snapshot.sample.as_ref());
+        let inputs = explore::trajectory::Inputs::of(&self.snapshot);
+        let side = &mut self.side;
+        self.trajectory
+            .repin(inputs, |ic, at| side.compute_ic(ic, at));
+    }
+
+    /// Pins the sample at the figure point `at`, `(s, t)`, in the Trajectory panel: its IC on the chart as it stands,
+    /// integrated through the engine side's `computeIC`, held as `ViewUI` state, sending no `SetField` (R-453 D1, D5).
+    /// Nothing when the engine side has no `computeIC`.
+    pub fn pin_at(&mut self, at: [f64; 2]) {
+        let ic = explore::manifold_view::point(&self.snapshot.sim.plane, at[0], at[1]);
+        if let Some(sample) = self.side.compute_ic(&ic, at) {
+            let inputs = explore::trajectory::Inputs::of(&self.snapshot);
+            self.trajectory.pin(sample, inputs);
+        }
+    }
+
     /// Sends the hover `at` when it differs from the one last sent: one no-history `SetField` (R-101).
     fn send_hover(&mut self, at: Option<[f64; 2]>) {
         if at != self.hover_sent {
@@ -721,8 +743,9 @@ impl<S: EngineSide> App<S> {
     }
 
     /// The letter, Space and Alt+digit shortcuts (render_gui_spec §G2, §G3; R-409 F1): with the focus in the Figure,
-    /// Space keeps the orbit under the cursor and L toggles listen; in Time, Space plays; anywhere, Alt+digit toggles
-    /// an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?` overlay is open.
+    /// Space keeps the orbit under the cursor, or the pinned one, and L toggles listen; in Time, Space plays; anywhere,
+    /// Alt+digit toggles an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?`
+    /// overlay is open. And + and − zoom a Trajectory view in interaction mode on it (R-453 D6).
     fn shortcuts(
         &mut self,
         ctx: &egui::Context,
@@ -751,16 +774,22 @@ impl<S: EngineSide> App<S> {
             })
         };
         let scope = self.view.focus.path.first().map(String::as_str);
+        // + and − on a Trajectory view in interaction mode zoom it (R-453 D6).
+        if self.view.focus.mode == KeyMode::Interaction {
+            if let Some(id) = self.view.focus.path.last() {
+                for times in explore::trajectory::zoom_presses(&events) {
+                    explore::trajectory::zoom_view(id, times, &mut self.trajectory);
+                }
+            }
+        }
         if pressed(Key::Space) {
             match scope {
                 Some(explore::FIGURE) => {
-                    if let Some(sample) = &self.snapshot.sample {
-                        explore::trajectory::keep(
-                            sample,
-                            &mut self.view.kept_orbits,
-                            &mut self.trajectory,
-                        );
-                    }
+                    // The first tab's orbit: the pinned one, or the one under the cursor (R-453 D2).
+                    explore::trajectory::keep_first(
+                        &mut self.view.kept_orbits,
+                        &mut self.trajectory,
+                    );
                 }
                 Some(explore::time::TIME) => {
                     explore::time::toggle_play(&self.snapshot, &mut self.view.transport, edits)
