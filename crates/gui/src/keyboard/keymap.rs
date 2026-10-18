@@ -42,6 +42,22 @@ pub enum Command {
     Arrow(Direction),
     /// `?`: the shortcuts, over everything.
     Shortcuts,
+    /// Page Up, Page Down, Home and End: in interaction mode, scroll a list the keyboard scrolls (the console's log,
+    /// R-450); elsewhere nothing.
+    Scroll(ScrollKey),
+}
+
+/// A key that scrolls a list by a page or to one of its ends (R-450, A4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScrollKey {
+    /// Page Up: a page towards the first entry.
+    PageUp,
+    /// Page Down: a page towards the last entry.
+    PageDown,
+    /// Home: to the first entry.
+    Home,
+    /// End: to the last entry.
+    End,
 }
 
 /// Whether `m` holds Ctrl or Cmd, which the table leaves to the system and to Ctrl+Z.
@@ -64,6 +80,10 @@ pub fn command(key: Key, modifiers: Modifiers) -> Option<Command> {
         Key::ArrowDown => Some(Command::Arrow(Direction::Down)),
         Key::ArrowLeft => Some(Command::Arrow(Direction::Left)),
         Key::ArrowRight => Some(Command::Arrow(Direction::Right)),
+        Key::PageUp => Some(Command::Scroll(ScrollKey::PageUp)),
+        Key::PageDown => Some(Command::Scroll(ScrollKey::PageDown)),
+        Key::Home => Some(Command::Scroll(ScrollKey::Home)),
+        Key::End => Some(Command::Scroll(ScrollKey::End)),
         // `?` is Shift+/ on most layouts, so Shift is allowed.
         Key::Questionmark if !modifiers.alt => Some(Command::Shortcuts),
         _ => None,
@@ -86,11 +106,15 @@ pub fn ends_typing(command: Command) -> bool {
     )
 }
 
-/// Whether a held key repeats its command: Tab, Shift+Tab and the arrows do; Enter, Esc and `?` act once a press.
+/// Whether a held key repeats its command: Tab, Shift+Tab, the arrows, Page Up and Page Down do; Enter, Esc, `?`,
+/// Home and End act once a press.
 pub fn repeats(command: Command) -> bool {
     matches!(
         command,
-        Command::Next | Command::Previous | Command::Arrow(_)
+        Command::Next
+            | Command::Previous
+            | Command::Arrow(_)
+            | Command::Scroll(ScrollKey::PageUp | ScrollKey::PageDown)
     )
 }
 

@@ -417,6 +417,10 @@ impl<S: EngineSide> App<S> {
             }
         }
         for id in &activated {
+            // × in a window, Enter on it: the window closes through the window rule, the focus back on its opener.
+            if let Some(window) = windows::closed_by(id) {
+                self.close_window(&ctx, window);
+            }
             self.activate_in_window(id, &mut window_edits, &mut acts);
             if windows::opened_by(id).is_some() {
                 actions.open.push(id);
@@ -442,7 +446,6 @@ impl<S: EngineSide> App<S> {
             explore::trajectory::adjust(&adjust, span, &mut self.trajectory);
             windows::run::adjust(&adjust, &mut self.windows.run);
             windows::chart_builder::adjust(&adjust, &mut self.windows.chart);
-            windows::console::adjust(&adjust, &mut self.windows.console, &self.console);
             windows::inspector::adjust(&adjust, &mut self.windows.inspector);
             stain::adjust(
                 &adjust,
@@ -450,6 +453,9 @@ impl<S: EngineSide> App<S> {
                 &self.snapshot.render.stain_graph,
                 &mut stain_out,
             );
+        }
+        for scroll in self.keyboard.scrolled().to_vec() {
+            windows::console::scroll(&scroll, &mut self.windows.console, &self.console);
         }
         self.shortcuts(&ctx, &mut actions, &mut edits);
         if let Some(due) = self.keyboard.next_repeat_s() {
@@ -507,6 +513,9 @@ impl<S: EngineSide> App<S> {
             self.close_window(&ctx, window);
         }
         self.act(&ctx, acts);
+        // A click on a text field starts typing in it, on every page and in every window (R-456).
+        self.keyboard
+            .follow_text_clicks(&ctx, self.view.mode, &mut self.view.focus);
         self.draw_ring(&ctx);
         if let Some(overlays) = actions.overlays.take() {
             edits.push(engine::contract::set_field::SetField {
@@ -840,8 +849,7 @@ impl<S: EngineSide> App<S> {
             let snapshot = &self.snapshot;
             let still = windows::frame(
                 ctx,
-                e.scope,
-                e.title,
+                e,
                 rect,
                 &mut keys,
                 window != Window::Console,
@@ -885,9 +893,8 @@ impl<S: EngineSide> App<S> {
                             entries: &self.console,
                             counts: self.counts,
                         };
-                        if let Some(act) = windows::console::show(ui, keys, &mut w.console, &view) {
-                            acts.console.push(act);
-                        }
+                        let shown = windows::console::show(ui, keys, &mut w.console, &view);
+                        acts.console.extend(shown);
                     }
                 },
             );
@@ -907,6 +914,14 @@ impl<S: EngineSide> App<S> {
                     self.console.clear();
                     self.counts = Counts::default();
                 }
+                windows::console::Act::Close => self.close_window(ctx, Window::Console),
+                windows::console::Act::Focus(id) => self.keyboard.focus_by_click(
+                    ctx,
+                    self.view.mode,
+                    &mut self.view.focus,
+                    windows::console::WINDOW,
+                    id,
+                ),
             }
         }
         for act in acts.export {

@@ -10,7 +10,9 @@ use engine::contract::log::{LogEntry, Severity, Source};
 use engine::contract::profile;
 use engine::contract::view_ui::{KeyMode, Window};
 
-use super::support::{click, focus, frame_texts, headless, mock_app, names, press, rejects, state};
+use super::support::{
+    click, click_scope, focus, frame_texts, headless, mock_app, names, press, rejects, state,
+};
 use crate::app::App;
 use crate::capture::{footer_point, PIXELS_PER_POINT};
 use crate::headless::Headless;
@@ -1113,43 +1115,58 @@ fn mock_windows_open_console_copy_clear_and_time() {
 }
 
 #[test]
-fn mock_windows_open_console_rows_scroll() {
-    for (times, rows) in [
-        (1.0, 1),
-        (-1.0, -1),
-        (10.0, 10),
-        (-10.0, -10),
-        (0.1, 1),
-        (-0.1, -1),
-        (1.5, 2),
-        (2.4, 2),
-        (0.0, 1),
-    ] {
-        assert_eq!(console::rows_of(times), rows, "{times}");
-    }
+fn mock_windows_open_console_log_scrolls_clamped() {
+    use crate::keyboard::scopes::{Scroll, ScrollBy};
+    // Over 10 rows, 4 a page: the top row runs from 0 to 6, the last row then the page's last.
+    let top = |from, by| console::scrolled_top(from, by, 10, 4);
+    assert_eq!(top(0, ScrollBy::Entries(1)), 1);
+    assert_eq!(top(0, ScrollBy::Entries(-1)), 0, "clamped at the first");
+    assert_eq!(top(5, ScrollBy::Entries(1)), 6);
+    assert_eq!(top(6, ScrollBy::Entries(1)), 6, "clamped at the last");
+    assert_eq!(top(0, ScrollBy::Entries(10)), 6);
+    assert_eq!(top(1, ScrollBy::Pages(1)), 5);
+    assert_eq!(top(5, ScrollBy::Pages(-1)), 1);
+    assert_eq!(top(2, ScrollBy::Pages(10)), 6);
+    assert_eq!(top(3, ScrollBy::First), 0);
+    assert_eq!(top(0, ScrollBy::Last), 6);
+    // A page is one row at least; a list no longer than a page, or empty, stays at its top.
+    assert_eq!(console::scrolled_top(0, ScrollBy::Pages(1), 10, 0), 1);
+    assert_eq!(console::scrolled_top(0, ScrollBy::Last, 4, 4), 0);
+    assert_eq!(console::scrolled_top(0, ScrollBy::Last, 3, 4), 0);
+    assert_eq!(console::scrolled_top(0, ScrollBy::Entries(1), 0, 4), 0);
+    rejects("a scroll clamped to the rows of one page", || {
+        assert_eq!(top(0, ScrollBy::Last), 3)
+    });
+    // The state: the shown rows, the scroll pending; another scope moves nothing.
     let e = entries();
-    let mut s = console::State::default();
-    let list = |times| adjust(console::LIST, StepKind::Bounded, times);
-    // ↑ at the top stays; ↓ moves to older rows, stopping at the last.
-    console::adjust(&list(1.0), &mut s, &e);
-    assert_eq!(s.top_row, 0);
-    console::adjust(&list(-1.0), &mut s, &e);
-    assert_eq!(s.top_row, 1);
+    let mut s = console::State {
+        page: 1,
+        ..Default::default()
+    };
+    let by = |scope, by| Scroll { scope, by };
+    console::scroll(&by(console::LOG, ScrollBy::Last), &mut s, &e);
+    assert_eq!(s.top_row, e.len() - 1);
     assert!(s.scroll_pending);
-    console::adjust(&list(-10.0), &mut s, &e);
-    assert_eq!(s.top_row, 2);
-    console::adjust(&list(1.0), &mut s, &e);
-    assert_eq!(s.top_row, 1);
-    // Another scope moves nothing; an empty list stays at 0.
-    console::adjust(&adjust(console::TEXT, StepKind::Bounded, -1.0), &mut s, &e);
-    assert_eq!(s.top_row, 1);
-    let mut s = console::State::default();
-    console::adjust(&list(-1.0), &mut s, &[]);
-    assert_eq!(s.top_row, 0);
-    rejects("a list scrolled past its last row", || {
-        let mut s = console::State::default();
-        console::adjust(&list(-10.0), &mut s, &e);
-        assert_eq!(s.top_row, 3)
+    console::scroll(&by(console::SEARCH, ScrollBy::First), &mut s, &e);
+    assert_eq!(s.top_row, e.len() - 1);
+    console::scroll(&by(console::LOG, ScrollBy::Entries(-1)), &mut s, &e);
+    assert_eq!(s.top_row, e.len() - 2);
+    // A page: the rows a log's height shows whole, at least one.
+    assert_eq!(console::page_of(100.0, 20.0, 24.0), 4);
+    assert_eq!(console::page_of(92.0, 20.0, 24.0), 4);
+    assert_eq!(console::page_of(91.0, 20.0, 24.0), 3);
+    assert_eq!(console::page_of(20.0, 20.0, 24.0), 1);
+    assert_eq!(console::page_of(19.0, 20.0, 24.0), 1);
+    assert_eq!(console::page_of(100.0, 20.0, 0.0), 1);
+    // The wheel's offset, as the first row drawn whole.
+    assert_eq!(console::top_of(0.0, 24.0), 0);
+    assert_eq!(console::top_of(48.0, 24.0), 2);
+    assert_eq!(console::top_of(48.01, 24.0), 2);
+    assert_eq!(console::top_of(49.0, 24.0), 3);
+    assert_eq!(console::top_of(-3.0, 24.0), 0);
+    assert_eq!(console::top_of(48.0, 0.0), 0);
+    rejects("an offset of a part row read as that row", || {
+        assert_eq!(console::top_of(49.0, 24.0), 2)
     });
 }
 
@@ -1232,7 +1249,7 @@ fn mock_windows_open_the_close_button_closes_and_returns_the_focus() {
     click(&mut h, &mut app, "Run…");
     settle(&mut h, &mut app);
     assert!(app.is_open(Window::Run));
-    click(&mut h, &mut app, "Close window");
+    click_scope(&mut h, &mut app, "run_close");
     settle(&mut h, &mut app);
     assert!(!app.is_open(Window::Run), "× left the window open");
     let opener = app.keyboard.tree(app.view.mode).path_to("run");
@@ -1243,7 +1260,7 @@ fn mock_windows_open_the_close_button_closes_and_returns_the_focus() {
     app.side().engine().raise_error();
     settle(&mut h, &mut app);
     assert!(app.is_open(Window::Console));
-    click(&mut h, &mut app, "Close window");
+    click_scope(&mut h, &mut app, console::CLOSE);
     settle(&mut h, &mut app);
     assert!(!app.is_open(Window::Console));
     assert_eq!(focus(&app), ["top_bar"], "the focus moved");
@@ -1457,7 +1474,7 @@ fn mock_windows_open_the_manifold_views_builder_is_the_chart_builders_opener() {
     click(&mut h, &mut app, "Chart builder…");
     settle(&mut h, &mut app);
     assert!(app.is_open(Window::ChartBuilder));
-    click(&mut h, &mut app, "Close window");
+    click_scope(&mut h, &mut app, "chart_builder_close");
     settle(&mut h, &mut app);
     assert!(!app.is_open(Window::ChartBuilder));
     let tree = app.keyboard.tree(app.view.mode);
@@ -1808,13 +1825,13 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
     app.open_window(&ctx, Window::Console, None);
     settle(&mut h, &mut app);
     // The filters, by their places.
-    for (k, (_, filter, _)) in console::FILTER_IDS.iter().enumerate() {
+    for (k, (_, filter, _, _)) in console::FILTER_IDS.iter().enumerate() {
         app.windows.console.filter = *filter;
         settle(&mut h, &mut app);
         let output = h.frame(&mut app, Vec::new());
         let marks: Vec<bool> = console::FILTER_IDS
             .iter()
-            .map(|(id, _, _)| {
+            .map(|(id, _, _, _)| {
                 let c = app.keyboard.place_of(id).expect("placed").rect.center();
                 let update = output.platform_output.accesskit_update.as_ref().unwrap();
                 let hits: Vec<bool> = update
@@ -1842,7 +1859,7 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
         app.windows.console.scroll_pending = true;
         settle(&mut h, &mut app);
         let output = h.frame(&mut app, Vec::new());
-        let list = app.keyboard.place_of(console::LIST).expect("placed").rect;
+        let list = app.keyboard.place_of(console::LOG).expect("placed").rect;
         let rows = nodes(&output, MOCK_WARNING);
         assert!(rows.len() > k, "{rows:?}");
         tops.push(rows[k].0.min.y - list.min.y);
@@ -1866,7 +1883,7 @@ fn mock_windows_open_console_marks_its_filter_and_lays_out_its_rows() {
     );
     // The list ends a foot's reserve above the window's foot: the foot line's height and a spacing either side, then
     // the window's margin and stroke.
-    let list = app.keyboard.place_of(console::LIST).expect("placed").rect;
+    let list = app.keyboard.place_of(console::LOG).expect("placed").rect;
     let style = h.ctx.global_style();
     let body = h
         .ctx
@@ -2073,7 +2090,7 @@ fn mock_windows_open_the_trajectory_panels_two_openers() {
         click(&mut h, &mut app, label);
         settle(&mut h, &mut app);
         assert!(app.is_open(Window::Inspector), "{label} clicked");
-        click(&mut h, &mut app, "Close window");
+        click_scope(&mut h, &mut app, "inspector_close");
         settle(&mut h, &mut app);
         let tree = app.keyboard.tree(app.view.mode);
         assert_eq!(
