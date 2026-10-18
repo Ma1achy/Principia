@@ -1,7 +1,9 @@
 # The README's build-progress banner: after every push to `main` (each merged PR), `scripts/progress_banner.py` draws
 # `progress.svg`, a square per task of `plan/tasks.yaml` grouped by milestone (green merged, amber with an open PR,
-# grey not started), and this job force-pushes it as the single commit of the orphan branch `progress`, which the
-# README shows from raw.githubusercontent.com. Applied per R-369.
+# grey not started); `rsvg-convert` renders it to `progress.png` at 2x; and this job force-pushes both as the single
+# commit of the orphan branch `progress`. The README shows the PNG from raw.githubusercontent.com, because the GitHub
+# mobile app does not render SVG images in a README; the PNG takes the SVG's light colours, as librsvg has no dark
+# mode. Applied per R-369.
 #
 # It never commits to `main`, so it needs no review and starts no CI: a push made with the workflow's GITHUB_TOKEN
 # triggers no workflow run, so the push to `progress` starts neither `ci.yml` nor any other. It runs on no pull request,
@@ -51,14 +53,23 @@ jobs:
         run: gh pr list --state open --limit 500 --json headRefName,isCrossRepository > "$RUNNER_TEMP/open-prs.json"
       - name: Draw the banner
         run: python3 scripts/progress_banner.py -o "$RUNNER_TEMP/progress.svg" --open-prs "$RUNNER_TEMP/open-prs.json"
-      # `progress` holds one commit, the latest banner, replaced on every run.
+      # librsvg, from the runner's own Ubuntu archive, renders the SVG to PNG; the SVG's font list ends in
+      # `sans-serif`, so the runner's fonts take over.
+      - name: Install rsvg-convert
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends librsvg2-bin
+      - name: Render the PNG
+        run: rsvg-convert --zoom 2 --format png -o "$RUNNER_TEMP/progress.png" "$RUNNER_TEMP/progress.svg"
+      # `progress` holds one commit, the latest banner as SVG and PNG, replaced on every run.
       - name: Publish to the progress branch
         run: |
           set -euo pipefail
           sha=$(git rev-parse --short HEAD)
           git switch --orphan progress
           cp "$RUNNER_TEMP/progress.svg" progress.svg
-          git add progress.svg
+          cp "$RUNNER_TEMP/progress.png" progress.png
+          git add progress.svg progress.png
           git -c user.name="github-actions[bot]" \
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit --quiet --message "progress: main @ $sha"
