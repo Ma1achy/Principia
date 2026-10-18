@@ -5,9 +5,9 @@
 //! focus back on its opener; the log scrolls to its first and last entry by Home, End, Page Up, Page Down and ↑ ↓,
 //! Shift ×10, on a list longer than the rows drawn; the breadcrumb follows. Every script runs again after an auto-open on
 //! error and with a filter that empties the list, giving the same order. A click on a console control moves the
-//! keyboard's focus onto it (A3), which is the fix for the intermittent reachability this file first reproduces: a click
-//! on the search field types at once, in interaction mode, and a click anywhere else lands in navigation mode, ending
-//! any typing (R-456). Each check also runs on an input it must reject (R-176, through `rejects`).
+//! keyboard's focus onto it (A3), which is the fix for the intermittent reachability this file first reproduces: a
+//! click on the search field types at once, in interaction mode, and a click anywhere else lands in navigation mode,
+//! ending any typing (R-456). Each check also runs on an input it must reject (R-176, through `rejects`).
 
 use eframe::egui::{Event, Key, Modifiers};
 use engine::contract::view_ui::{KeyMode, Window};

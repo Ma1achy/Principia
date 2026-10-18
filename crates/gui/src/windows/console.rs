@@ -286,7 +286,8 @@ pub fn show(ui: &mut Ui, keys: &mut Keys<'_>, state: &mut State, view: &View<'_>
                     .hint_text(TEXT_HINT)
                     .desired_width(240.0),
             );
-            // A click on the field starts typing through `Keyboard::follow_text_clicks`, as on every text field (R-456).
+            // A click on the field starts typing through `Keyboard::follow_text_clicks`, as on every text field
+            // (R-456).
             keys.place(SEARCH, &text);
             if text.changed() {
                 state.top_row = 0;

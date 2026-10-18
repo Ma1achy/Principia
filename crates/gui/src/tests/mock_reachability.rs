@@ -194,39 +194,7 @@ fn mock_reachability_the_console_in_each_state_reaches_every_control_in_one_orde
 
 /// The big scopes of `mode`, each walked from itself, the controls drawn in its rect each reached.
 fn check_bigs(what: &str, app: &mut App<MockSide>, h: &mut Headless) {
-    check_bigs_but(what, app, h, &[]);
-}
-
-/// As [`check_bigs`], but for the controls named `known`, the findings left to another task, each asserted still
-/// unreached.
-fn check_bigs_but(what: &str, app: &mut App<MockSide>, h: &mut Headless, known: &[&str]) {
     let all = nodes(h, app);
-    let tree = app.keyboard.tree(app.view.mode);
-    for name in known {
-        let node = all
-            .iter()
-            .find(|n| n.text == *name)
-            .expect("the known finding drawn");
-        let mut reached = Vec::new();
-        for big in tree.bigs() {
-            reached.extend(walk(tree, &nav(vec![big.to_owned()]), big));
-        }
-        let missed = super::reachability::unreached(
-            tree,
-            &reached,
-            |id| app.keyboard.place_of(id),
-            std::slice::from_ref(node),
-        );
-        assert_eq!(
-            missed.len(),
-            1,
-            "{name} is reached now: remove it from the known findings"
-        );
-    }
-    let all: Vec<Node> = all
-        .into_iter()
-        .filter(|n| !known.contains(&n.text.as_str()))
-        .collect();
     let tree = app.keyboard.tree(app.view.mode);
     for big in tree.bigs() {
         let Some(place) = app.keyboard.place_of(big) else {
@@ -275,14 +243,36 @@ fn mock_reachability_every_big_scope_reaches_every_drawn_control() {
     let _ = h.frame(&mut app, vec![eframe::egui::Event::PointerGone]);
     settle(&mut h, &mut app);
     assert_eq!(app.view.kept_orbits.orbits.len(), 1);
-    check_bigs_but("a kept orbit", &mut app, &mut h, &KEPT_TABS);
+    // The audit's finding 2, the kept-orbit tab `#1` outside the scope tree, fixed by TASK-M6-36 (R-453): drawn, and
+    // reached with the rest.
+    let all = nodes(&mut h, &mut app);
+    let tab = all
+        .iter()
+        .find(|n| n.text == "#1")
+        .expect("the kept tab drawn");
+    let tree = app.keyboard.tree(app.view.mode);
+    let mut reached = Vec::new();
+    for big in tree.bigs() {
+        reached.extend(walk(tree, &nav(vec![big.to_owned()]), big));
+    }
+    let missed = super::reachability::unreached(
+        tree,
+        &reached,
+        |id| app.keyboard.place_of(id),
+        std::slice::from_ref(tab),
+    );
+    assert!(missed.is_empty(), "the kept tab unreached: {missed:?}");
+    rejects("a walk of no scope", || {
+        let missed = super::reachability::unreached(
+            tree,
+            &[],
+            |id| app.keyboard.place_of(id),
+            std::slice::from_ref(tab),
+        );
+        assert!(missed.is_empty(), "{missed:?}")
+    });
+    check_bigs("a kept orbit", &mut app, &mut h);
 }
-
-/// The audit's finding on another open task's screen (R-450 A7), left to it: the Trajectory panel's kept-orbit tabs,
-/// `#1` to `#9`, drawn in its title row and outside the scope tree (the kept orbit's row's show does what the tab does),
-/// recorded against TASK-M6-36, which reworks the panel's tabs (R-453). [`check_bigs_but`] asserts each is still
-/// unreached, so the task that fixes it removes it here.
-const KEPT_TABS: [&str; 1] = ["#1"];
 
 #[test]
 fn mock_reachability_every_menu_reaches_its_entries() {
