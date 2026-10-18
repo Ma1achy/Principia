@@ -54,45 +54,24 @@ pub fn refused(words: &[Word], entries: &[Entry]) -> Vec<String> {
         .collect()
 }
 
-/// A line for each body- or pair-indexed entry ([`crate::payload::INDEXED`]) whose index base in `bases` does not
-/// state its base: [`crate::payload::BODY_BASE`] for a body index, [`crate::payload::PAIR_BASE`] for a pair id, both
-/// for `detail` (dd_generation_root §3.8, R-449; REQ-GEN-036). Generation refuses each, naming the field; an indexed
-/// field the layout does not hold is not checked.
-pub fn index_refused(entries: &[Entry], bases: &[(&str, &str)]) -> Vec<String> {
-    use crate::payload::{Indexed, BODY_BASE, INDEXED, PAIR_BASE};
-    INDEXED
+/// A line for each body- or pair-indexed entry whose index-base key ([`crate::schema::IndexBase`]) does not state the
+/// base its kind needs: [`crate::schema::BODY_BASE`] for a body index, [`crate::schema::PAIR_BASE`] for a pair id, both
+/// for `detail` (dd_generation_root §3.8, R-449; REQ-GEN-036). Generation refuses each, naming the field.
+pub fn index_refused(entries: &[Entry]) -> Vec<String> {
+    entries
         .iter()
-        .filter(|(field, _)| entries.iter().any(|e| e.name == *field))
-        .filter_map(|&(field, indexed)| {
-            let wanted: &[&str] = match indexed {
-                Indexed::Body => &[BODY_BASE],
-                Indexed::Pair => &[PAIR_BASE],
-                Indexed::BodyOrPair => &[BODY_BASE, PAIR_BASE],
-            };
-            let text = bases.iter().find(|(f, _)| *f == field).map(|&(_, t)| t);
-            let missing: Vec<&str> = wanted
-                .iter()
-                .copied()
-                .filter(|w| !text.is_some_and(|t| t.contains(w)))
-                .collect();
+        .filter_map(|e| {
+            let missing = e.index_base?.missing();
             (!missing.is_empty()).then(|| {
                 format!(
-                    "field `{field}` is body- or pair-indexed, but its index base does not state \"{}\" \
+                    "field `{}` is body- or pair-indexed, but its index base does not state \"{}\" \
                      (dd_generation_root §3.8; R-449, REQ-GEN-036)",
+                    e.name,
                     missing.join("\" or \"")
                 )
             })
         })
         .collect()
-}
-
-/// The index base of the field `name` ([`crate::payload::INDEX_BASES`]), or `None` for a field that is not body- or
-/// pair-indexed.
-fn index_base(name: &str) -> Option<&'static str> {
-    crate::payload::INDEX_BASES
-        .iter()
-        .find(|(f, _)| *f == name)
-        .map(|&(_, t)| t)
 }
 
 /// The emitter: the export decoder, or nothing for a layout that declares none of the payload structs' members. Each
@@ -123,8 +102,8 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
          pub struct Decoded {\n",
     );
     for (e, ty, _) in &fields {
-        if let Some(base) = index_base(e.name) {
-            let _ = writeln!(out, "    /// Index base: {base}.");
+        if let Some(base) = e.index_base {
+            let _ = writeln!(out, "    /// Index base: {}.", base.text);
         }
         let _ = writeln!(out, "    pub {}: {ty},", e.name);
     }
@@ -144,7 +123,7 @@ pub fn emit(words: &[Word], entries: &[Entry]) -> Vec<Generated> {
     out.push_str("    }\n}\n");
     let bases: Vec<(&str, &str)> = fields
         .iter()
-        .filter_map(|(e, _, _)| Some((e.name, index_base(e.name)?)))
+        .filter_map(|(e, _, _)| Some((e.name, e.index_base?.text)))
         .collect();
     let _ = write!(
         out,

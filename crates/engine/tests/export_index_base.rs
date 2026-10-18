@@ -1,14 +1,15 @@
 //! The export decoder's index bases (dd_generation_root §3.8; R-449; REQ-GEN-036): the generated decoder
 //! (`engine::export`, from `ledger::gen::export`) keeps the body and pair ids 0-based, as the payload holds them, and its
 //! schema says so, "body index, 0-based" for each body-indexed field and "pair id, 0-based; pair k is the side opposite
-//! body k" for `detail` under collision and for `dmin_pair`, from the ledger's key (`ledger::payload::INDEX_BASES`), not
-//! written by hand; an exported collision of bodies 0 and 1 writes `detail` 2 and an escape of body 0 writes 0; and a
+//! body k" for `detail` under collision and for `dmin_pair`, from each ledger entry's index-base key
+//! (`ledger::schema::IndexBase`), not written by hand; an exported collision of bodies 0 and 1 writes `detail` 2 and an escape of body 0 writes 0; and a
 //! body- or pair-indexed ledger entry without the text fails generation. Each test has a registered negative control
 //! (R-176).
 
 use engine::export::{decode, INDEX_BASES};
 use kernel::payload::*;
-use ledger::gen::{export, generate_with_index_bases, GenError};
+use ledger::gen::{export, generate, GenError};
+use ledger::schema::{IndexBase, Ledger};
 use validation::negative_control;
 
 /// R-449's words for a body index.
@@ -66,8 +67,13 @@ fn check_header(schema: &[(&str, &str)], source: &str) {
 #[test]
 fn export_index_base_header_states_the_base() {
     check_header(&INDEX_BASES, SOURCE);
-    // The schema is the ledger's key, generated, not written by hand.
-    assert_eq!(INDEX_BASES, ledger::payload::INDEX_BASES);
+    // The schema is the ledger entries' keys, in the ledger's order, generated, not written by hand.
+    let keys: Vec<(&str, &str)> = ledger::gen::validate(&ledger::layout())
+        .expect("the payload ledger validates")
+        .iter()
+        .filter_map(|e| Some((e.name, e.index_base?.text)))
+        .collect();
+    assert_eq!(INDEX_BASES.to_vec(), keys);
 }
 
 negative_control!(
@@ -151,52 +157,54 @@ negative_control!(
     })
 );
 
-/// The ledger's index bases with `field`'s text replaced by `text`, or dropped where `text` is `None`.
-fn bases_with(field: &str, text: Option<&'static str>) -> Vec<(&'static str, &'static str)> {
-    ledger::payload::INDEX_BASES
-        .iter()
-        .filter_map(|&(f, t)| match (f == field, text) {
-            (true, Some(t)) => Some((f, t)),
-            (true, None) => None,
-            (false, _) => Some((f, t)),
-        })
-        .collect()
+/// The payload layout with `field`'s index-base key replaced by `text`, or dropped where `text` is `None`.
+fn layout_with(field: &str, text: Option<&'static str>) -> Ledger {
+    let mut l = ledger::layout();
+    let b = l
+        .entries
+        .iter_mut()
+        .find(|b| b.name == Some(field))
+        .unwrap_or_else(|| panic!("no entry `{field}`"));
+    let base = b.index_base.expect("an index base");
+    b.index_base = text.map(|text| IndexBase { text, ..base });
+    l
 }
 
-/// Checks that `generate`, given index bases, refuses each indexed field whose base is dropped or does not state its
-/// base, naming the field, and generates from the ledger's own.
-fn check_refusal(generate: impl Fn(&[(&str, &str)]) -> Result<(), GenError>) {
-    assert_eq!(generate(&ledger::payload::INDEX_BASES), Ok(()));
+/// Checks that `generate`, given a layout, refuses each indexed entry whose key does not state its base, naming the
+/// field, and generates from the ledger's own; an entry whose key is dropped is no longer indexed, and generates.
+fn check_refusal(generate: impl Fn(&Ledger) -> Result<(), GenError>) {
+    assert_eq!(generate(&ledger::layout()), Ok(()));
     for (field, text) in [
-        ("m1", None),
-        ("r", Some("body j's components")),
-        ("dmin_pair", Some(BODY)),
-        ("detail", Some(BODY)),
-        ("detail", Some(PAIR)),
+        ("m1", "body 1's mass"),
+        ("r", "body j's components"),
+        ("dmin_pair", BODY),
+        ("detail", BODY),
+        ("detail", PAIR),
     ] {
-        match generate(&bases_with(field, text)) {
+        match generate(&layout_with(field, Some(text))) {
             Err(GenError::Unread(lines)) => assert!(
                 lines.len() == 1 && lines[0].contains(&format!("field `{field}`")),
-                "the refusal of `{field}` with {text:?}: {lines:?}"
+                "the refusal of `{field}` with `{text}`: {lines:?}"
             ),
-            other => panic!("`{field}` with {text:?} was not refused: {other:?}"),
+            other => panic!("`{field}` with `{text}` was not refused: {other:?}"),
         }
     }
+    assert_eq!(generate(&layout_with("m1", None)), Ok(()), "`m1` unkeyed");
 }
 
-/// Generates the export decoder from the payload ledger with `bases`, keeping only whether it was refused.
-fn generate(bases: &[(&str, &str)]) -> Result<(), GenError> {
-    generate_with_index_bases(bases, &ledger::layout(), &[export::emit]).map(|_| ())
+/// Generates the export decoder from `layout`, keeping only whether it was refused.
+fn generated(layout: &Ledger) -> Result<(), GenError> {
+    generate(layout, &[export::emit]).map(|_| ())
 }
 
 #[test]
 fn export_index_base_missing_text_fails_generation() {
-    check_refusal(generate);
+    check_refusal(generated);
 }
 
 negative_control!(
     export_index_base_missing_text_fails_generation,
-    "a generator that ignores the index bases fails",
-    expected = "`m1` with None was not refused",
-    check_refusal(|_| generate(&ledger::payload::INDEX_BASES))
+    "a generator that ignores the entries' keys fails",
+    expected = "`m1` with `body 1's mass` was not refused",
+    check_refusal(|_| generated(&ledger::layout()))
 );

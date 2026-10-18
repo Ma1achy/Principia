@@ -1,6 +1,6 @@
 //! The ledger entry and its §3.8 metadata (dd_generation_root §3.8): every field carries a name, a location, a
-//! type, a scale, a range, an optional sentinel, tier gate, overflow and floor, a provenance and its consumers. An entry is
-//! written as an [`EntryBuilder`]; [`EntryBuilder::build`] refuses an incomplete one, naming the field and the missing
+//! type, a scale, a range, an optional sentinel, tier gate, overflow and floor, a provenance and its consumers; a body- or
+//! pair-indexed field also carries its index base ([`IndexBase`]; R-449). An entry is written as an [`EntryBuilder`]; [`EntryBuilder::build`] refuses an incomplete one, naming the field and the missing
 //! key.
 
 use std::fmt;
@@ -190,6 +190,58 @@ pub enum Declaration {
 /// … the (−∞, ∞) the ledger once wrote by default"; R-426; applied per R-369).
 pub const WRITTEN_BOUNDS: &str = "the bounds the entry writes, uncited (dd_generation_root §3.8)";
 
+/// What a body- or pair-indexed field's index names, the kind half of the entry's index-base key (R-22;
+/// dd_generation_root §3.8, R-449).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Indexed {
+    /// A body index: the field is a body's, or its components are the bodies'.
+    Body,
+    /// A pair id: pair `k` is the side opposite body `k`.
+    Pair,
+    /// `detail`, a union keyed by `state`: a body index under escape, a pair id under collision (payload §2).
+    BodyOrPair,
+}
+
+/// The base a machine-readable export states for a body index (R-449; REQ-GEN-036).
+pub const BODY_BASE: &str = "body index, 0-based";
+
+/// The base a machine-readable export states for a pair id (R-449; REQ-GEN-036).
+pub const PAIR_BASE: &str = "pair id, 0-based; pair k is the side opposite body k";
+
+impl Indexed {
+    /// The bases an export states for this kind of index: [`BODY_BASE`], [`PAIR_BASE`], or both for `detail`.
+    pub fn bases(self) -> &'static [&'static str] {
+        match self {
+            Indexed::Body => &[BODY_BASE],
+            Indexed::Pair => &[PAIR_BASE],
+            Indexed::BodyOrPair => &[BODY_BASE, PAIR_BASE],
+        }
+    }
+}
+
+/// The entry's index-base key, the key dd_generation_root §3.8 leaves the task to choose (R-449; REQ-GEN-036): a body-
+/// or pair-indexed field's kind of index and the text a machine-readable export states for its ids, which the export
+/// decoder writes in its member's doc and its `INDEX_BASES` schema. The ids stay 0-based (R-22); an export's caption,
+/// which a person reads, is 1-based (`crate::display`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct IndexBase {
+    pub indexed: Indexed,
+    pub text: &'static str,
+}
+
+impl IndexBase {
+    /// The bases its kind needs ([`Indexed::bases`]) that its text does not state; empty when it states them all.
+    /// Generation refuses an entry with any (`gen::export::index_refused`).
+    pub fn missing(&self) -> Vec<&'static str> {
+        self.indexed
+            .bases()
+            .iter()
+            .copied()
+            .filter(|base| !self.text.contains(base))
+            .collect()
+    }
+}
+
 /// A complete ledger entry: the §3.8 metadata of one field.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Entry {
@@ -209,6 +261,10 @@ pub struct Entry {
     /// The state half of the `range` key (§3.8, R-426): `None` leaves (−∞, ∞) a gap ([`Entry::range_state`]). It
     /// changes no stored bit, so the schema version does not hash it (applied per R-369).
     pub declaration: Option<Declaration>,
+    /// The index-base key of a body- or pair-indexed field (§3.8, R-449): `None` for a field whose value is no body
+    /// index or pair id. It changes no stored bit, so the schema version does not hash it (R-449: "the schema version
+    /// does not move"; applied per R-369).
+    pub index_base: Option<IndexBase>,
 }
 
 impl Entry {
@@ -262,6 +318,7 @@ pub struct EntryBuilder {
     pub provenance: Option<Provenance>,
     pub consumers: Option<Vec<Consumer>>,
     pub declaration: Option<Declaration>,
+    pub index_base: Option<IndexBase>,
 }
 
 /// An entry missing a required §3.8 key: `field` is the entry's name, `missing` the key.
@@ -352,6 +409,13 @@ impl EntryBuilder {
         self
     }
 
+    /// Marks the field body- or pair-indexed, `indexed`, with `text` the base a machine-readable export states for its
+    /// ids (§3.8, R-449; [`IndexBase`]).
+    pub fn index_base(mut self, indexed: Indexed, text: &'static str) -> Self {
+        self.index_base = Some(IndexBase { indexed, text });
+        self
+    }
+
     /// Removes the required key `key` (one of [`REQUIRED_KEYS`]); an unknown key changes nothing.
     pub fn without(mut self, key: &str) -> Self {
         match key {
@@ -387,6 +451,7 @@ impl EntryBuilder {
             provenance: self.provenance.ok_or_else(|| missing("provenance"))?,
             consumers: self.consumers.clone().ok_or_else(|| missing("consumers"))?,
             declaration: self.declaration,
+            index_base: self.index_base,
         })
     }
 }
