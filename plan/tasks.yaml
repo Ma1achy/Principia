@@ -1727,7 +1727,7 @@
   pitfalls: []
 - id: TASK-M6-41
   milestone: M6
-  title: "Focus and keyboard navigation apart: a mouse-opened window takes the focus with no ring; keyboard navigation starts only on keys (R-460)"
+  title: "Focus and keyboard navigation apart: a mouse-opened window takes the focus with no ring; any click or drag hides the ring and the next key press shows it (R-460, R-464)"
   depends_on: [TASK-M6-32]  # the keyboard's click rules (R-450 A3, R-456) it builds beside are TASK-M6-32's (PR #234, open)
   needs: []
   requirements: [REQ-GUI-210]
