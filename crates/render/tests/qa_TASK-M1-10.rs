@@ -1,21 +1,23 @@
 //! QA's tests for TASK-M1-10, written from the requirements it closes, not from the implementation:
 //! - REQ-COL-002: the outcome field's canonical default palette is colour_composition §1.4's nine classes, read from
-//!   `state` plus the `detail` union (R-96: "degenerate" = `decode_failed`, "collision at start" = a collision with
-//!   `t_end_step == 0`), running in the "not yet" style (R-399, amended by qa for TASK-M1-17: the neutral grey with a
-//!   fine dot stipple, every pixel the grey or the dot and both present, never one flat colour), sim_failed in the
-//!   invalid pattern, the two triple outcomes in
-//!   REQ-COL-062's swatches; editing any one swatch changes only its class (`qa_col002_*`).
+//!   `state` plus the `detail` union alone. Amended by qa for TASK-M2-32, as R-444 to R-446 force: there is no
+//!   "degenerate" or "collision at start" class; a collision at `t_end_step == 0` draws its pair's or the triple
+//!   collision's colour (R-445); running, sim_failed, decode_failed and the reserved codes draw bounded / nothing yet's
+//!   `#141418`, not the "not yet" style or the invalid pattern (R-446); the triple outcomes are `#F29620` and `#611597`
+//!   (R-445); editing any one swatch changes only its class (`qa_col002_*`).
 //! - REQ-COL-004: the `detail` legend and palette segment switch on `state` (dd_colouring §2, §5 test 8's legend half;
 //!   R-22's pair ids) (`qa_col004_*`).
 //! - REQ-TOOL-021: `state` round-trips 0–5 through the pack and the fragment's unpack, whatever the other descriptor
 //!   bits hold, and the raw `state` view shows six distinct colours, one per state (R-115) (`qa_tool021_*`).
 //! - REQ-TOOL-022: `detail` decodes per state and is read, not dropped: escapes of different bodies render different
 //!   colours (the three-colours-bug regression), and `detail` is ignored where it is undefined (`qa_tool022_*`).
-//! - REQ-RENDER-017: a RUNNING sample is coloured like any class, whatever its `detail` or `t_end_step`
-//!   (`qa_render017_*`).
+//! - REQ-RENDER-017: a RUNNING sample is coloured like any class, whatever its `detail` or `t_end_step`: since R-446,
+//!   bounded / nothing yet's `#141418` (`qa_render017_*`).
 //! - REQ-COL-062: the proposal's figures, recomputed here with Ottosson's OKLab: both swatches' lightness, their
 //!   separation from the nine classes, the running grey and the hatch's two colours, and that each is the farthest
-//!   8-bit colour from those, as colour_composition §1.4 states (`qa_col062_*`).
+//!   8-bit colour from those, as colour_composition §1.4 stated at the M1 gate; kept as the record R-433 confirmed,
+//!   against the M1 table ([`M1_CLASSES`]). R-444 and R-445 supersede the values: the occupant declares `#F29620` and
+//!   `#611597` (`qa_col062_*`).
 //!
 //! The samples here are QA's own: a payload laid out differently from the implementer's scenes, every descriptor bit
 //! outside `state` and `detail` contaminated (PIT-9), and the expected colours typed in from §1.4 and the payload's
@@ -44,13 +46,32 @@ const BODY_0_YELLOW: u32 = 0xF0DE32;
 const BODY_1_MAGENTA: u32 = 0xE034C6;
 const BODY_2_CYAN: u32 = 0x30C8DC;
 const BOUNDED_BLACK: u32 = 0x141418;
+/// The M1 table's "degenerate" and "collision @ t=0" classes, which R-444 to R-446 removed: the record REQ-COL-062's
+/// figures were measured against.
 const DEGENERATE_WHITE: u32 = 0xECECF0;
 const AT_START_ORANGE: u32 = 0xF29620;
 
-/// REQ-COL-062's swatches (colour_composition §1.4, "The two triple outcomes (proposed …)"), confirmed at the M1 gate
-/// as proposed (R-433).
-const TRIPLE_COLLISION: u32 = 0xD6A1FF;
-const TRIPLE_EJECTION: u32 = 0x000097;
+/// The triple outcomes' swatches since R-445: triple collision the orange `#F29620`, triple ejection purple `#611597`.
+const TRIPLE_COLLISION: u32 = 0xF29620;
+const TRIPLE_EJECTION: u32 = 0x611597;
+
+/// REQ-COL-062's swatches (colour_composition §1.4, "The two triple outcomes"), confirmed at the M1 gate as proposed
+/// (R-433), superseded by R-445: the record.
+const M1_TRIPLE_COLLISION: u32 = 0xD6A1FF;
+const M1_TRIPLE_EJECTION: u32 = 0x000097;
+
+/// The M1 table's nine classes, against which REQ-COL-062's proposal was measured (R-433's record).
+const M1_CLASSES: [u32; 9] = [
+    PAIR_0_BLUE,
+    PAIR_1_GREEN,
+    PAIR_2_RED,
+    BODY_0_YELLOW,
+    BODY_1_MAGENTA,
+    BODY_2_CYAN,
+    BOUNDED_BLACK,
+    DEGENERATE_WHITE,
+    AT_START_ORANGE,
+];
 
 /// The running grey TASK-M1-09 proposed (REQ-COL-053; colour_composition §1.4 names it `#4E4E4E`).
 const RUNNING_GREY: u32 = 0x4E4E4E;
@@ -71,23 +92,17 @@ fn is_not_yet_style(seen: &[[u8; 3]]) -> bool {
         && seen.contains(&dot)
 }
 
-/// What a sample of the outcome palette must show.
+/// What a sample of the outcome palette must show: since R-446 every sample draws a swatch, the occupant's param of
+/// that name, 8-bit sRGB, flat (no "not yet" style or invalid pattern in the outcome view).
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum Want {
-    /// A swatch, the occupant's param of that name, 8-bit sRGB.
     Swatch(&'static str, u32),
-    /// The "not yet" style of a running sample (R-399): the grey with its dot stipple.
-    NotYet,
-    /// The invalid pattern: either of the hatch's two colours, by the pixel position.
-    Hatch,
-    /// A reserved state code (6–7): finished and untrusted (payload §2), so neither a class's swatch nor running's grey.
-    Untrusted,
 }
 
 /// QA's outcome samples: `(state, detail, t_end_step, want)`, 18 of them, one tile each. Every class appears, several
 /// more than once with a different `detail` or `t_end_step`, in an order unlike the implementer's.
 const SAMPLES: [(u32, u32, u32, Want); 18] = [
-    // An escape at step 0 is still its body's escape: the t = 0 orange is a collision's (R-96).
+    // An escape at step 0 is still its body's escape.
     (ESCAPE, 2, 0, Want::Swatch("escape_body_2", BODY_2_CYAN)),
     (
         COLLISION,
@@ -95,11 +110,12 @@ const SAMPLES: [(u32, u32, u32, Want); 18] = [
         5,
         Want::Swatch("collision_pair_0", PAIR_0_BLUE),
     ),
+    // A collision at step 0 is its pair's collision (R-445).
     (
         COLLISION,
         0,
         0,
-        Want::Swatch("collision_at_start", AT_START_ORANGE),
+        Want::Swatch("collision_pair_0", PAIR_0_BLUE),
     ),
     (
         COLLISION,
@@ -117,15 +133,11 @@ const SAMPLES: [(u32, u32, u32, Want); 18] = [
     (ESCAPE, 1, 1, Want::Swatch("escape_body_1", BODY_1_MAGENTA)),
     // `detail` has no meaning for bounded (payload §2): any code is bounded's black.
     (BOUNDED, 3, 1000, Want::Swatch("bounded", BOUNDED_BLACK)),
-    (6, 0, 40, Want::Untrusted),
-    // "degenerate" is `decode_failed`, whatever its failure category (R-96).
-    (
-        DECODE_FAILED,
-        0,
-        0,
-        Want::Swatch("degenerate", DEGENERATE_WHITE),
-    ),
-    (7, 1, 40, Want::Untrusted),
+    // A reserved code is no physical outcome: bounded / nothing yet (R-444, R-446).
+    (6, 0, 40, Want::Swatch("bounded", BOUNDED_BLACK)),
+    // `decode_failed`, whatever its failure category, is bounded / nothing yet (R-446).
+    (DECODE_FAILED, 0, 0, Want::Swatch("bounded", BOUNDED_BLACK)),
+    (7, 1, 40, Want::Swatch("bounded", BOUNDED_BLACK)),
     (
         COLLISION,
         3,
@@ -138,26 +150,22 @@ const SAMPLES: [(u32, u32, u32, Want); 18] = [
         0,
         Want::Swatch("triple_ejection", TRIPLE_EJECTION),
     ),
-    (RUNNING, 2, 0, Want::NotYet),
-    (RUNNING, 0, 500, Want::NotYet),
-    (SIM_FAILED, 1, 40, Want::Hatch),
-    (
-        DECODE_FAILED,
-        3,
-        7,
-        Want::Swatch("degenerate", DEGENERATE_WHITE),
-    ),
-    // A triple collision at step 0 is a collision with `t_end_step == 0`: R-96's "collision at start".
+    // Running and the failures are bounded / nothing yet (R-446).
+    (RUNNING, 2, 0, Want::Swatch("bounded", BOUNDED_BLACK)),
+    (RUNNING, 0, 500, Want::Swatch("bounded", BOUNDED_BLACK)),
+    (SIM_FAILED, 1, 40, Want::Swatch("bounded", BOUNDED_BLACK)),
+    (DECODE_FAILED, 3, 7, Want::Swatch("bounded", BOUNDED_BLACK)),
+    // A triple collision at step 0 is a triple collision (R-445).
     (
         COLLISION,
         3,
         0,
-        Want::Swatch("collision_at_start", AT_START_ORANGE),
+        Want::Swatch("triple_collision", TRIPLE_COLLISION),
     ),
 ];
 
-/// The eleven swatches' params and default colours, from §1.4 and the proposal.
-const PARAMS: [(&str, u32); 11] = [
+/// The nine swatches' params and default colours, from §1.4 (R-444, R-445).
+const PARAMS: [(&str, u32); 9] = [
     ("collision_pair_0", PAIR_0_BLUE),
     ("collision_pair_1", PAIR_1_GREEN),
     ("collision_pair_2", PAIR_2_RED),
@@ -165,8 +173,6 @@ const PARAMS: [(&str, u32); 11] = [
     ("escape_body_1", BODY_1_MAGENTA),
     ("escape_body_2", BODY_2_CYAN),
     ("bounded", BOUNDED_BLACK),
-    ("degenerate", DEGENERATE_WHITE),
-    ("collision_at_start", AT_START_ORANGE),
     ("triple_collision", TRIPLE_COLLISION),
     ("triple_ejection", TRIPLE_EJECTION),
 ];
@@ -269,45 +275,15 @@ fn flat8(s: &Scene, image: &[[f32; 4]], i: u32) -> [u8; 3] {
 // ── REQ-COL-002, REQ-COL-062 (render), REQ-RENDER-017: each class's colour ──────────────────────────────────────────
 
 fn check_outcome(s: &Scene, image: &[[f32; 4]]) {
-    let hatch = ledger::gen::prelude::hatch().colours;
-    let swatches: Vec<[u8; 3]> = PARAMS.iter().map(|&(_, h)| rgb8(h)).collect();
     for (i, &(state, detail, t, want)) in SAMPLES.iter().enumerate() {
         let i = i as u32;
         for ((x, y), p) in tile(s, image, i) {
             assert_eq!(p[3], 1.0, "sample {i} pixel ({x}, {y}): alpha {}", p[3]);
             let got = [p[0], p[1], p[2]].map(encode8);
-            let ok = match want {
-                Want::Swatch(_, h) => got == rgb8(h),
-                Want::NotYet => got == rgb8(RUNNING_GREY) || got == running_dot(),
-                Want::Hatch => hatch.contains(&got),
-                Want::Untrusted => {
-                    !swatches.contains(&got) && got != rgb8(RUNNING_GREY) && got != running_dot()
-                }
-            };
+            let Want::Swatch(_, h) = want;
             assert!(
-                ok,
+                got == rgb8(h),
                 "sample {i} (state {state}, detail {detail}, t_end_step {t}) pixel ({x}, {y}) is {got:02X?}, not {want:?}"
-            );
-        }
-        if want == Want::NotYet {
-            let seen: Vec<[u8; 3]> = tile(s, image, i)
-                .into_iter()
-                .map(|(_, p)| [p[0], p[1], p[2]].map(encode8))
-                .collect();
-            assert!(
-                is_not_yet_style(&seen),
-                "sample {i}: running is not the \"not yet\" style, the grey stippled with its dot (R-399)"
-            );
-        }
-        if want == Want::Hatch {
-            // The pattern, not a flat colour (R-132): both colours appear in the tile.
-            let seen: Vec<[u8; 3]> = tile(s, image, i)
-                .into_iter()
-                .map(|(_, p)| [p[0], p[1], p[2]].map(encode8))
-                .collect();
-            assert!(
-                hatch.iter().all(|c| seen.contains(c)),
-                "sample {i}: sim_failed is not the hatched pattern"
             );
         }
     }
@@ -321,7 +297,7 @@ fn qa_col002_each_class_renders_its_section_1_4_colour() {
 
 negative_control!(
     qa_col002_each_class_renders_its_section_1_4_colour,
-    "an occupant that ignores `t_end_step == 0` draws the t = 0 collision in its pair's colour",
+    "an occupant that still draws a collision at `t_end_step == 0` in the removed t = 0 orange fails (R-445)",
     expected = "sample 2 (state 2, detail 0, t_end_step 0)",
     {
         let h = gpu();
@@ -329,8 +305,8 @@ negative_control!(
         let image = render_altered(
             &h,
             &s,
-            "if (ctx.sample.t_end_step == 0u) {",
-            "if (ctx.sample.t_end_step == 12345u) {",
+            "if (s == STATE_COLLISION) {",
+            "if (s == STATE_COLLISION) {\n        if (ctx.sample.t_end_step == 0u) { return uniforms.triple_collision; }",
         );
         check_outcome(&s, &image);
     }
@@ -394,7 +370,8 @@ negative_control!(
     }
 );
 
-/// Checks that every RUNNING sample is drawn: alpha 1, the "not yet" style (R-399), not black, not the clear colour.
+/// Checks that every RUNNING sample is drawn: alpha 1, not the clear colour, and since R-446 bounded / nothing yet's
+/// `#141418` on every pixel, not the "not yet" style.
 fn check_running(s: &Scene, image: &[[f32; 4]]) {
     let mut n = 0;
     for (i, &(state, ..)) in SAMPLES.iter().enumerate() {
@@ -406,16 +383,14 @@ fn check_running(s: &Scene, image: &[[f32; 4]]) {
         for ((x, y), p) in tile(s, image, i as u32) {
             let got = [p[0], p[1], p[2]].map(encode8);
             assert!(
-                p[3] == 1.0
-                    && p[..3] != [0.0; 3]
-                    && (got == rgb8(RUNNING_GREY) || got == running_dot()),
-                "running sample {i} pixel ({x}, {y}) is {p:?}, not drawn in the \"not yet\" style"
+                p[3] == 1.0 && p[..3] != [0.0; 3] && got == rgb8(BOUNDED_BLACK),
+                "running sample {i} pixel ({x}, {y}) is {p:?}, not drawn in bounded / nothing yet's #141418"
             );
             seen.push(got);
         }
         assert!(
-            is_not_yet_style(&seen),
-            "running sample {i} is not the \"not yet\" style, the grey stippled with its dot (R-399)"
+            !is_not_yet_style(&seen),
+            "running sample {i} is the \"not yet\" style, which R-446 takes out of the outcome view"
         );
     }
     assert_eq!(
@@ -430,6 +405,17 @@ fn qa_render017_running_samples_are_coloured() {
     check_running(&s, &render(&gpu(), &s));
 }
 
+/// The occupant with `running` drawn by `draw`, a WGSL expression, ahead of every other class: a control's alteration.
+#[cfg(feature = "controls")]
+fn running_drawn(h: &GpuHarness, s: &Scene, draw: &str) -> Vec<[f32; 4]> {
+    render_altered(
+        h,
+        s,
+        "let d = ctx.sample.detail;",
+        &format!("let d = ctx.sample.detail;\n    if (s == STATE_RUNNING) {{ return {draw}; }}"),
+    )
+}
+
 negative_control!(
     qa_render017_running_samples_are_coloured,
     "an occupant that draws running blank fails",
@@ -437,33 +423,23 @@ negative_control!(
     {
         let h = gpu();
         let s = outcome_scene(None);
-        let image = render_altered(
-            &h,
-            &s,
-            "return debug_not_yet(ctx.frag_xy);",
-            "return vec3<f32>(0.0, 0.0, 0.0);",
-        );
+        let image = running_drawn(&h, &s, "vec3<f32>(0.0, 0.0, 0.0)");
         check_running(&s, &image);
     }
 );
 
-/// R-399's leg can fail: running drawn in the flat grey, as before R-399.
+/// R-446's leg can fail: running drawn in the "not yet" style, as before R-446.
 #[cfg(feature = "controls")]
-mod qa_render017_running_flat_grey {
+mod qa_render017_running_stippled {
     use super::*;
     negative_control!(
         qa_render017_running_samples_are_coloured,
-        "an occupant that draws running in the flat DBG_NOT_YET grey is caught (R-399)",
-        expected = "is not the \"not yet\" style, the grey stippled with its dot",
+        "an occupant that draws running in the \"not yet\" style is caught (R-446)",
+        expected = "not drawn in bounded / nothing yet's #141418",
         {
             let h = gpu();
             let s = outcome_scene(None);
-            let image = render_altered(
-                &h,
-                &s,
-                "return debug_not_yet(ctx.frag_xy);",
-                "return DBG_NOT_YET;",
-            );
+            let image = running_drawn(&h, &s, "debug_not_yet(ctx.frag_xy)");
             check_running(&s, &image);
         }
     );
@@ -471,21 +447,16 @@ mod qa_render017_running_flat_grey {
 
 /// The same leg in the class check.
 #[cfg(feature = "controls")]
-mod qa_col002_running_flat_grey {
+mod qa_col002_running_stippled {
     use super::*;
     negative_control!(
         qa_col002_each_class_renders_its_section_1_4_colour,
-        "an occupant that draws running in the flat DBG_NOT_YET grey is caught (R-399)",
-        expected = "running is not the \"not yet\" style",
+        "an occupant that draws running in the \"not yet\" style is caught (R-446)",
+        expected = "sample 13 (state 3, detail 2, t_end_step 0)",
         {
             let h = gpu();
             let s = outcome_scene(None);
-            let image = render_altered(
-                &h,
-                &s,
-                "return debug_not_yet(ctx.frag_xy);",
-                "return DBG_NOT_YET;",
-            );
+            let image = running_drawn(&h, &s, "debug_not_yet(ctx.frag_xy)");
             check_outcome(&s, &image);
         }
     );
@@ -761,10 +732,10 @@ fn dist(a: [f64; 3], b: [f64; 3]) -> f64 {
     ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
 }
 
-/// The colours a triple swatch must stand apart from (REQ-COL-062's verify): the nine classes, the running grey and
-/// the hatch's two colours.
+/// The colours a triple swatch must stand apart from (REQ-COL-062's verify): the M1 table's nine classes, the running
+/// grey and the hatch's two colours.
 fn references() -> Vec<[u8; 3]> {
-    let mut out: Vec<[u8; 3]> = PARAMS[..9].iter().map(|&(_, h)| rgb8(h)).collect();
+    let mut out: Vec<[u8; 3]> = M1_CLASSES.iter().map(|&h| rgb8(h)).collect();
     out.push(rgb8(RUNNING_GREY));
     out.extend(ledger::gen::prelude::hatch().colours);
     out
@@ -818,8 +789,8 @@ fn check_figures(collision: u32, ejection: u32) {
 
 #[test]
 fn qa_col062_proposed_swatches_match_section_1_4s_figures() {
-    check_figures(TRIPLE_COLLISION, TRIPLE_EJECTION);
-    // The occupant declares the proposed values as its defaults.
+    check_figures(M1_TRIPLE_COLLISION, M1_TRIPLE_EJECTION);
+    // The occupant declares R-445's values, which supersede the proposal, as its defaults.
     let wgsl = render::colour::outcome::WGSL;
     for (param, h) in [
         ("triple_collision", TRIPLE_COLLISION),
@@ -866,7 +837,7 @@ negative_control!(
     qa_col062_proposed_swatches_match_section_1_4s_figures,
     "the swatches swapped do not match §1.4's figures",
     expected = "triple collision's OKLab lightness",
-    { check_figures(TRIPLE_EJECTION, TRIPLE_COLLISION) }
+    { check_figures(M1_TRIPLE_EJECTION, M1_TRIPLE_COLLISION) }
 );
 
 /// Whether `c` is the 8-bit colour farthest in OKLab from its nearest of `refs`, a margin of 1e-9 for ties.
@@ -909,10 +880,10 @@ fn qa_col062_each_swatch_is_the_farthest_8_bit_colour() {
     // §1.4: "`#000097` is the one farthest in OKLab from its nearest of the nine classes, the running grey and the
     // invalid pattern's two colours"; "`#D6A1FF` is the farthest from those and `#000097`".
     let refs = references();
-    check_farthest(rgb8(TRIPLE_EJECTION), &refs, "triple ejection");
+    check_farthest(rgb8(M1_TRIPLE_EJECTION), &refs, "triple ejection");
     let mut refs_c = refs;
-    refs_c.push(rgb8(TRIPLE_EJECTION));
-    check_farthest(rgb8(TRIPLE_COLLISION), &refs_c, "triple collision");
+    refs_c.push(rgb8(M1_TRIPLE_EJECTION));
+    check_farthest(rgb8(M1_TRIPLE_COLLISION), &refs_c, "triple collision");
 }
 
 negative_control!(

@@ -9,7 +9,13 @@
 //! binding 1, read by the read side's `sample_read`; `ICDescriptor` at binding 2, by `ic_read` and its per-member
 //! `ic_read_<member>`; `RenderQuad` at binding 3, by `quad_read` and `quad_read_<member>` ([`buffers`]; applied per
 //! R-369: the corpus binds the first two and gives no number to the others). Every reader loads one stored member at a
-//! time, never the whole stored struct (R-378). Group 2, binding 0 holds the context's uniforms ([`Context`]).
+//! time, never the whole stored struct (R-378). Group 2, binding 0 holds the context's uniforms ([`Context`]), binding
+//! 1 the per-quad frames ([`FRAME_BINDING`]) and binding 2 the samples' chart classification ([`CHART_BINDING`]).
+//!
+//! **The chart classification** (REQ-COL-102; colour_composition §3; TASK-M2-32): the validity lane's `forbidden`, one
+//! bit per sample, true where chart_decoder_contract Part 3 hatches the sample's chart point as forbidden. The CPU
+//! fills it from the chart, never from the payload (R-26, R-446; `engine::chart_class`), and binds it as words
+//! ([`chart_words`]); the fragment reads it as `chart_forbidden_at(i)`, into `ctx.validity.forbidden`.
 //!
 //! **The logical view is accessors, not a copy** (render contract Part 1; REQ-RENDER-007). Nothing here writes a
 //! buffer, and no compute pass does: the fragment reads the physical structs through the generated readers, and
@@ -20,7 +26,7 @@
 //! bits), or the read side's own (`diffusion`'s `n ≥ 2`, R-245; `ensemble_spread`'s E ≥ 1, R-145; the word's and
 //! `last_symbol`'s, payload §6); a field the ledger gives none is valid wherever it is stored (applied per R-369). The
 //! lane also holds the descriptor predicates (`sd_is_failed` and the rest), `saturated` and `out_of_chart`, which
-//! charts fill from M2 and the harness from its uniforms.
+//! charts fill from M2 and the harness from its uniforms, and `forbidden`, the sample's chart classification.
 
 use std::fmt::Write as _;
 
@@ -75,6 +81,22 @@ pub const CONTEXT_BINDING: u32 = 0;
 /// supplies them from its own grid (RQ-214); the per-quad uniforms of the scheduler's `QuadRequest` replace them
 /// (TASK-M5-04). Applied per R-369: a harness binding in the harness's own group, not the ledger's binding table.
 pub const FRAME_BINDING: u32 = 1;
+
+/// The samples' chart classification's binding, in the context's group (REQ-COL-102; TASK-M2-32): one bit per sample,
+/// bit `i mod 32` of word `i / 32` set where sample `i`'s chart point is forbidden ([`chart_words`]). Applied per
+/// R-369, as [`FRAME_BINDING`] is: a harness binding in the harness's own group, filled by the CPU from the chart
+/// (R-26).
+pub const CHART_BINDING: u32 = 2;
+
+/// The words [`CHART_BINDING`] holds for the samples' classification `forbidden`, in sample order: bit `i mod 32` of
+/// word `i / 32` set where `forbidden[i]`; at least one word, as a storage binding holds.
+pub fn chart_words(forbidden: &[bool]) -> Vec<u32> {
+    let mut out = vec![0u32; forbidden.len().div_ceil(32).max(1)];
+    for (i, _) in forbidden.iter().enumerate().filter(|(_, f)| **f) {
+        out[i / 32] |= 1 << (i % 32);
+    }
+    out
+}
 
 /// The context's uniforms (lowering Part 3: view-only state is uniform, never a recompile): the read side's
 /// arguments, the grid the raster covers, the chart lane's values (charts land in M2; until then the uniforms fill
@@ -400,6 +422,10 @@ pub fn lanes() -> Result<Vec<Lane>, String> {
         "bool",
         "ctx_uniforms.out_of_chart != 0u",
     ));
+    // The sample's chart classification (REQ-COL-102), a validity predicate beside the out-of-chart flag: forbidden
+    // where chart_decoder_contract Part 3 hatches its chart point, filled by the CPU from the chart
+    // ([`CHART_BINDING`]).
+    valid.push(member("forbidden", "bool", "chart_forbidden_at(r.sample)"));
     let lane = |name, ty, members| Lane { name, ty, members };
     Ok(vec![
         lane("screen", "ScreenLane", screen),
@@ -421,11 +447,12 @@ fn quad_members() -> Vec<(&'static str, &'static str)> {
 }
 
 /// The declarations every harness module adds to the read side: `RenderQuad` from the ledger, its buffer and its
-/// generated readers, the context's uniform block, and the per-quad frames ([`FRAME_BINDING`], which fill `ctx.quad`'s
-/// `tl`, `centre` and `half_width`). The readers load one stored member at a time, never the whole stored struct
-/// (R-378): `quad_read_<member>(i)`, one per member, and `quad_read(i)`, the element built from them. The
-/// `ICDescriptor` buffer and its readers are the read side's (`ledger::gen::read`; RQ-227), which a harness module
-/// fills for every member and an assembled stain for the members it reads.
+/// generated readers, the context's uniform block, the per-quad frames ([`FRAME_BINDING`], which fill `ctx.quad`'s
+/// `tl`, `centre` and `half_width`), and the samples' chart classification ([`CHART_BINDING`]) with its reader
+/// `chart_forbidden_at(i)`, which fills `ctx.validity.forbidden`. The readers load one stored member at a time, never
+/// the whole stored struct (R-378): `quad_read_<member>(i)`, one per member, and `quad_read(i)`, the element built from
+/// them. The `ICDescriptor` buffer and its readers are the read side's (`ledger::gen::read`; RQ-227), which a harness
+/// module fills for every member and an assembled stain for the members it reads.
 pub fn declarations() -> String {
     let [_, _, _, b] = buffers();
     let mut out = String::from(
@@ -468,7 +495,11 @@ pub fn declarations() -> String {
         out,
         "@group({CONTEXT_GROUP}) @binding({CONTEXT_BINDING}) var<uniform> ctx_uniforms: ContextUniforms;\n\
          // The per-quad frames (render::bind::FRAME_BINDING): (c_u, c_v, h_u, h_v), deep_zoom §1's centre and half-width.\n\
-         @group({CONTEXT_GROUP}) @binding({FRAME_BINDING}) var<storage, read> quad_frames: array<vec4<f32>>;"
+         @group({CONTEXT_GROUP}) @binding({FRAME_BINDING}) var<storage, read> quad_frames: array<vec4<f32>>;\n\
+         // The samples' chart classification (render::bind::CHART_BINDING; REQ-COL-102): bit i mod 32 of word i / 32.\n\
+         @group({CONTEXT_GROUP}) @binding({CHART_BINDING}) var<storage, read> chart_forbidden: array<u32>;\n\
+         // Whether sample `i`'s chart point is forbidden: chart_decoder_contract Part 3 hatches it.\n\
+         fn chart_forbidden_at(i: u32) -> bool {{ return ((chart_forbidden[i >> 5u] >> (i & 31u)) & 1u) != 0u; }}"
     );
     out
 }
@@ -602,11 +633,12 @@ pub const PRESET_ENTRY: &str = "preset_harness_fs";
 
 /// An assembled stain (`crate::assemble::assemble`'s source) as a fragment module over the harness's buffers, its
 /// screen, quad and tile lanes filled: the stain module's ([`stain_module`]) raster and [`declarations`], with the
-/// per-quad frames at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's tile
-/// through `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad` the quad lane ([`quad_lane`]: `uv` the
-/// sample's quad-local coordinate, `centre` and `half_width` its quad's frame, and the quad's `RenderQuad` members, read
-/// through `quad_read(r.quad)` by [`QUAD_LANE`]'s mapping; RQ-238) and `ctx.tile.uv` the within-tile coordinate, and
-/// writes the colour with alpha 1. The presets (`engine::presets`) render through it.
+/// per-quad frames at [`FRAME_BINDING`], and the entry [`PRESET_ENTRY`], which shades the base sample of the pixel's
+/// tile through `shade_at` with `ctx.screen.uv` the pixel's post-flip UV, `ctx.quad` the quad lane ([`quad_lane`]: `uv`
+/// the sample's quad-local coordinate, `centre` and `half_width` its quad's frame, and the quad's `RenderQuad` members,
+/// read through `quad_read(r.quad)` by [`QUAD_LANE`]'s mapping; RQ-238), `ctx.tile.uv` the within-tile coordinate and
+/// `ctx.validity.forbidden` the sample's chart classification ([`CHART_BINDING`]), and writes the colour with alpha 1.
+/// The presets (`engine::presets`) render through it.
 pub fn preset_module(assembled: &str) -> String {
     let [.., b] = buffers();
     let mut quad = String::new();
@@ -622,7 +654,8 @@ pub fn preset_module(assembled: &str) -> String {
          let q = {reader}(r.quad);\n    \
          var quad: CtxQuad;{quad}\n    \
          let tile = CtxTile(r.tile_uv);\n    \
-         let rgb = shade_at(r.sample, pos.xy, CtxScreen(r.screen_uv), quad, tile, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read);\n    \
+         let validity = CtxValidity(chart_forbidden_at(r.sample));\n    \
+         let rgb = shade_at(r.sample, pos.xy, CtxScreen(r.screen_uv), quad, tile, validity, ctx_uniforms.ensemble_spread, masses, ctx_uniforms.read);\n    \
          return vec4<f32>(rgb, 1.0);\n}}\n",
         raster::WGSL,
         declarations(),
@@ -631,8 +664,8 @@ pub fn preset_module(assembled: &str) -> String {
 }
 
 /// The four buffers' contents, as bytes: each the elements its binding's struct declares, in sample order (the quad
-/// buffer in quad order); and the per-quad frames, `(c_u, c_v, h_u, h_v)` as four f32 per quad, in quad order
-/// ([`FRAME_BINDING`]).
+/// buffer in quad order); the per-quad frames, `(c_u, c_v, h_u, h_v)` as four f32 per quad, in quad order
+/// ([`FRAME_BINDING`]); and the samples' chart classification, [`chart_words`]' words ([`CHART_BINDING`]).
 #[derive(Clone, Copy, Debug)]
 pub struct Payload<'a> {
     pub simstate: &'a [u8],
@@ -640,6 +673,7 @@ pub struct Payload<'a> {
     pub ic: &'a [u8],
     pub quad: &'a [u8],
     pub quad_frame: &'a [u8],
+    pub chart_forbidden: &'a [u8],
 }
 
 /// The three bind groups a harness draw reads, and their layouts, by group number, and the four buffers group 1 binds.
@@ -676,8 +710,8 @@ fn entry(binding: u32, ty: wgpu::BufferBindingType) -> wgpu::BindGroupLayoutEntr
 }
 
 /// Uploads `payload` and the uniforms, the prelude's for `context`'s ensemble and `context`'s own, and binds them: group
-/// 0 the prelude's block, group 1 the four buffers at [`buffers`]' bindings, group 2 the context's block and the
-/// per-quad frames ([`FRAME_BINDING`]).
+/// 0 the prelude's block, group 1 the four buffers at [`buffers`]' bindings, group 2 the context's block, the per-quad
+/// frames ([`FRAME_BINDING`]) and the samples' chart classification ([`CHART_BINDING`]).
 pub fn upload(device: &wgpu::Device, payload: &Payload<'_>, context: &Context) -> Bound {
     upload_with(device, payload, context, wgpu::BufferUsages::empty())
 }
@@ -712,6 +746,11 @@ pub fn upload_with(
         payload.quad_frame,
         wgpu::BufferUsages::STORAGE,
     );
+    let chart = buffer(
+        "chart classification",
+        payload.chart_forbidden,
+        wgpu::BufferUsages::STORAGE,
+    );
     let stored = [
         buffer("simstate", payload.simstate, stored_usage),
         buffer("word", payload.word, stored_usage),
@@ -743,6 +782,7 @@ pub fn upload_with(
             &[
                 entry(CONTEXT_BINDING, wgpu::BufferBindingType::Uniform),
                 entry(FRAME_BINDING, read_only),
+                entry(CHART_BINDING, read_only),
             ],
         ),
     ];
@@ -782,6 +822,10 @@ pub fn upload_with(
                 wgpu::BindGroupEntry {
                     binding: FRAME_BINDING,
                     resource: frames.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: CHART_BINDING,
+                    resource: chart.as_entire_binding(),
                 },
             ],
         ),

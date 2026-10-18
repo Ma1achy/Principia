@@ -205,6 +205,12 @@ impl MockEngine {
         self.push(Severity::Info, Source::Stain, stain::RECOMPILED.to_owned());
     }
 
+    /// The mock's `computeIC` (trajectory_viewing §1, §6): the sample of the IC `ic`, given at the figure point `at`,
+    /// integrated under the horizon as it stands and read at the playhead, as the hover's sample is (R-453 D5).
+    pub fn compute_ic(&self, ic: &Latent, at: [f64; 2]) -> engine::contract::sample::Sample {
+        sample::integrate(*ic, at, self.render.playhead.t, self.sim.horizon.t)
+    }
+
     /// The chart the stand-in is drawn for: the plane `(z₀, q₁, q₂)` as the mock holds it now.
     pub fn plane(&self) -> &Plane {
         &self.sim.plane
