@@ -46,3 +46,4 @@ Hover and click map the pointer through the single Y-flip, decode the IC on the 
 ## Notes
 - RQ-74 ruled: R-144 — pointer_channels §3's per-frame-during-motion budget is normative beside §4; trajectory_viewing §1's responsiveness paragraph stays superseded (REQ-PERF-072, REQ-PERF-075, REQ-PERF-078).
 - Calibrations (R-71) proposed here: REQ-PERF-078. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
+- **R-476 M4 (20 Oct 2026):** the integration is unchanged; the drawing is the line system's (TASK-M8-49).

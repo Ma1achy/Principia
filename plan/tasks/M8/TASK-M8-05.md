@@ -1,8 +1,8 @@
 # TASK-M8-05 — Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056
-- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47
+- **Closes:** REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056, REQ-CHART-071
+- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48
 - **Needs (earlier milestones):** REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -77,6 +77,7 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 - `cargo xtask screenshot 01_main` (top bar, budget-bound case) and `cargo test -p gui status_undo_depth` — screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2 (REQ-GUI-078).
 - `cargo xtask screenshot 01_main` (footer) and `cargo test -p gui footer_opens_console` — screenshot against 01_main.png's footer; a click opens the 12_console.png layout (REQ-GUI-093).
 - `cargo test -p kernel chart_extension` (the outcome view) — past `[0,1]²`, every pixel the types or the fallback hatch is marked forbidden in REQ-COL-102's field, and the outcome view draws it as the canvas background, not `#141418` and not the hatch, the debug view hatching it (R-467); the field is Part 3's hatching, the primary ranges playing no part: a shape-sphere pixel past its pole draws its outcome colour, not the background, and on a test chart with a periodic axis and an affine physical-quantity axis, a pixel past one period whose state fails `validate` draws the background (physics review 5548113767 on PR #226, P1); controls: a pixel past the invariant warp's edge drawn from its `decode_failed` detail alone draws black, and a field filled from the area statistics' classifier, which leaves that pixel "not counted", each fail (REQ-CHART-054, R-446, R-467).
+- `cargo test -p kernel lean_gram_factor` — REQ-CHART-071's verify (R-474 R7, the factor's control).
 
 ## Notes
 - The footer click opens the console window; its layout (12_console.png) is TASK-M8-27's. Until then the test asserts the console window id is requested.
@@ -125,3 +126,6 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
   render draws the canvas background REQ-GUI-180 and REQ-CHART-054 now ask for, and on TASK-M6-46 and TASK-M6-47, which
   build View › Debug view and View › F3 fills by, the entries REQ-GUI-078 now lists; this task wires them on the real
   engine's View menu.
+- **R-474 R7 (20 Oct 2026):** under Lean each axis the area statistics take the Gram factor (REQ-CHART-071); depends on TASK-M6-48 for `tilt_map`.
+- **R-470, R-471, R-472 (20 Oct 2026):** a forbidden pixel draws blank, never a palette colour; a builder energy-type axis is warped by default (bounded) and B1's affine axis its linear option, REQ-CHART-054's and REQ-CHART-056's tests run under both mappings; a tilted, sliced or saved chart extends by its axes' types.
+- **⚑ Physics review is required** for REQ-CHART-071 and B1's retirement (R-471, R-474) (the instruction of R-469, "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.

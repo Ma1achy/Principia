@@ -1,7 +1,7 @@
 # TASK-M8-08 — Overlays ▾: the grouped toggles, their tiers, the Tier-3 buffer and quad drill-down
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-079, REQ-RENDER-074, REQ-PERF-076, REQ-PERF-079, REQ-PERF-080, REQ-GUI-141, REQ-GUI-153
+- **Closes:** REQ-GUI-079, REQ-RENDER-074, REQ-PERF-076, REQ-PERF-079, REQ-PERF-080, REQ-GUI-141, REQ-GUI-153, REQ-COL-111
 - **Depends on:** TASK-M8-05, TASK-M4-14, TASK-M5-05, TASK-M6-27
 - **Needs (earlier milestones):** REQ-RENDER-024, REQ-RENDER-055, REQ-TOOL-026, REQ-TOOL-045, REQ-CHART-039, REQ-SYS-013, REQ-SCHED-047
 - **Reviewers:** code, qa, physics, gui, perf
@@ -34,6 +34,7 @@ Overlays ▾ holds §G2's grouped toggles (Quadtree, Integration, Chart, Stain) 
 - `cargo xtask bench tier3-visible-quads` — the proposal shows visible-quad counts measured over the deep-zoom scenarios and the resulting buffer size with the defined per-quad record; a reviewer checks the proposal and the human confirms the value at the M8 gate, then it is recorded in `decisions.md` (REQ-PERF-080).
 - `cargo test -p gui quad_drilldown` — click a quad: depth, generation, refine decision and residency are listed (REQ-GUI-141).
 - Doc review of `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" and § "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)" — §G2 and §G9 name each store; the reviewer checks neither is engine state the engine reads; the physics reviewer approves the doc change before merge (REQ-GUI-153).
+- `cargo test -p render forbidden_overlay` — REQ-COL-111's verify (C9's hatch arm).
 
 ## Notes
 - The Stain group's overlays (class edges, t_end contours) also appear in the Display window (TASK-M8-23); both edit the same RenderState overlay set.
@@ -47,3 +48,5 @@ Overlays ▾ holds §G2's grouped toggles (Quadtree, Integration, Chart, Stain) 
   the Chart group's "forbidden region" stay beside View › Debug view, go, or show only while it is on. Option (a), keep
   both, off by default, drawing the debug view's styles, is applied meanwhile; these two lines of REQ-GUI-079 wait for
   the ruling, the rest of this task does not.
+- **R-470 (20 Oct 2026) rules RQ-374:** forbidden region stays, off by default, hatching exactly the not-a-system pixels (REQ-COL-111); NaN / invalid pixels draws only while a debug view is the figure, dimmed otherwise (option (c), applied per R-369, flagged). The two lines no longer wait.
+- **R-476 (20 Oct 2026):** the Chart group loses grid and the Stain group t_end contours, which are Lines ▾ presets (TASK-M8-50, REQ-GUI-247); REQ-GUI-079's statement is changed so.

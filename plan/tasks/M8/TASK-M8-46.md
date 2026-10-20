@@ -42,3 +42,4 @@ On the real engine, View › Debug view draws REQ-COL-109's styles from the engi
 - **The "Debug" key's legend check** moved here from REQ-GUI-105 (TASK-M8-22), which cannot reach the debug view:
   TASK-M8-46 depends on TASK-M8-22 (R-467 D13; code review 5585240188 of PR #253, F4, applied per R-369).
 - **TASK-M8-32 depends on this task** for Fit in present mode (REQ-GUI-100).
+- **R-470 (20 Oct 2026):** the real engine's View › Debug view selects the baked debug variant (REQ-COL-109's note, R-41); scope unchanged.

@@ -198,6 +198,17 @@
   section: Principia — deep zoom & adaptive sampling
   reason: informative only
   note: preamble
+- file: docs/design/principia_lines.md
+  section: "Principia — the line system: contours and traces"
+  reason: informative only
+  note: "the adoption note (R-476), the proposal's status line and its summary"
+- file: docs/design/principia_lines.md
+  section: 4. Contours
+  reason: parent heading (obligations are in its subsections)
+- file: docs/design/principia_lines.md
+  section: 13. About the mock-ups
+  reason: informative only
+  note: "how the mock-ups were drawn (R-476 M1: the scripts are not kept)"
 - file: docs/design/principia_quality_device_note.md
   section: Principia — quality presets & device characterisation
   reason: informative only

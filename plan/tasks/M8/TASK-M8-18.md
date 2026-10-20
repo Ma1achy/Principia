@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-CHART-040, REQ-GUI-108, REQ-GUI-109, REQ-GUI-110, REQ-GUI-111, REQ-GUI-160
-- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45
+- **Depends on:** TASK-M8-06, TASK-M4-17, TASK-M5-05, TASK-M6-28, TASK-M6-45, TASK-M2-37
 - **Needs (earlier milestones):** REQ-SYS-013, REQ-CHART-039, REQ-CHART-043, REQ-CHART-005, REQ-CHART-021, REQ-GUI-003, REQ-GUI-004, REQ-SYS-027
 - **Reviewers:** code, qa, physics, gui
 - **Pitfalls:** none
@@ -46,3 +46,4 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
   presentation view, and keeps its hatch and its "forbidden in view" count. Whether a Chart-builder chart can fail
   inside its own square, and so whether it gets the debug view's in-square warning, is RQ-372, carried by REQ-GUI-228
   in TASK-M8-47, which depends on this task (decisions.md § R-467, F2).
+- **R-471 (20 Oct 2026):** a physical-quantity axis of kind 3 (energy, `L_z`) is warped by default, its linear mapping an option (REQ-CHART-067, REQ-CHART-068, TASK-M2-37, a new dependency); the Domain preview's N% is 0 inside the square under the warp. R-475: saved charts share the presets' store (REQ-GUI-108's note). RQ-372 is answered for energy-type axes and stays open, narrowed (TASK-M8-47).

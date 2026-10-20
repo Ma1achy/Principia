@@ -62,3 +62,4 @@ In the render, every presentation view (every stain that is not a `debug/` occup
     `FieldRamp` to `debug_invalid`), and :1051-1077, `check_either_role` (FTLE's invalid samples in the colour role to
     `debug_invalid`).
 - **Flagged readings (R-467 F1, F3, D1 to D6; applied per R-369, the human may veto):** the hatch and `debug_invalid` are one pattern, so the debug view's forbidden and failure entries share it, told apart by key and count; every hatch a presentation view drew becomes `#141418`, a field ramp being a presentation occupant.
+- **R-470 G4 (20 Oct 2026, applied per R-369, flagged):** View › Debug view is one of the debug views, built as a baked pipeline variant (R-41) that `debug_view` selects; the presentation variant has no debug arm and no flag bit is added (REQ-COL-109's note). The background is blank, never a palette colour (REQ-COL-108's C9 arm); a `decode_failed` the chart does not classify keeps `#141418` while RQ-379 is open.

@@ -1628,7 +1628,7 @@
   milestone: M2
 - id: REQ-CHART-007
   area: CHART
-  statement: "A coupled-curve (kind 4) axis must carry its embed map γ and tangent γ', and tilt on it must require a lock (evaluated at the centre)."
+  statement: "A coupled-curve (kind 4) axis must carry its embed map γ and tangent γ'; the tangent tilt q_tilt(τ) = normalise(cos τ·γ'(ν₀) + sin τ·d_target) must require a lock (evaluated at the centre), as the lock and the direction library use it; the dev GUI's tilt of a chart with such an axis is R-473's rotation on the chart's own parameters (REQ-CHART-062), which needs no lock."
   source:
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: The four axis kinds — a closed set
@@ -1638,9 +1638,11 @@
     section: Directions are axis kinds — the unifying rule
   verify:
     method: unit test
-    detail: "attempting to tilt a curve axis without a lock is refused; with a lock the tilt uses γ'(ν₀)"
-  rulings: []
+    detail: "attempting a tangent tilt of a curve axis without a lock is refused; with a lock the tangent tilt uses γ'(ν₀); a GUI tilt (REQ-CHART-062's rotation) of a Burrau-family chart with no lock is accepted and anchor-preserving; control: a tangent tilt evaluated at the pixel rather than the centre drifts"
+  rulings:
+  - R-473
   milestone: M2
+  note: "R-473 (20 Oct 2026; chart_decoder_contract Part 4, \"Directions are axis kinds\", amended for GUI tilt only): the tangent construction stays where the contract uses it, the lock. *Was:* \"and tilt on it must require a lock (evaluated at the centre)\"."
 - id: REQ-CHART-008
   area: CHART
   statement: "A mixed-axis chart must let each axis state which latent coordinate or derived quantity it maps and its warp from [0,1], fix the other six by a stated convention, compose as Φ_mixed(u,v) = D(z(u,v)) with no new GPU logic, and inherit both axes' feasibility constraints."
@@ -1783,6 +1785,7 @@
     detail: "oblique slice's exported state contains q₁, q₂; applying two raw tilts yields the second, not the composition"
   rulings: []
   milestone: M2
+  note: "R-475 (20 Oct 2026): Save view as chart is chart_reference §1.1's commit mechanism; with it tilts compose (REQ-CHART-073)."
 - id: REQ-CHART-017
   area: CHART
   statement: "The invariant charts (L_z, E) and (L_z, K) must fix geometry and mass and map the unit square onto the feasible interior via the warp K(t) = K_max·t^γ_K (K_max > 0, γ_K ≥ 1), E(t) = U + K(t), L_max(t) = √(2·I·K(t)), L_z(s,t) = (2s−1)·L_max(t) (K* = K(t) directly on (L_z, K))."
@@ -2250,8 +2253,10 @@
   verify:
     method: GUI screenshot
     detail: "screenshot of each axis kind against 03_chartbuilder.png; normalise sets |q| = 1"
-  rulings: []
+  rulings:
+  - R-471
   milestone: M8
+  note: "R-471 (20 Oct 2026): a physical-quantity axis of kind 3 (energy, L_z) is warped by default (REQ-CHART-067), its linear mapping an option (REQ-CHART-068); built in the Chart builder by TASK-M8-18."
 - id: REQ-CHART-041
   area: CHART
   kind: definition
@@ -2501,8 +2506,11 @@
   - R-408
   - R-446
   - R-467
+  - R-470
+  - R-471
+  - R-472
   milestone: M8
-  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human; not vetoed, R-416). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). R-446 (16 Oct 2026): the outcome view decides these pixels from the chart, on every pixel Part 3 hatches, the primary ranges playing no part, never from the payload's decode_failed detail; the lane is REQ-COL-102's (TASK-M2-32), and this task fills it past [0,1]². R-467 (20 Oct 2026): \"hatched\" is the classification; a presentation view draws these pixels as the canvas background and the debug view hatches them."
+  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human; not vetoed, R-416). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). R-446 (16 Oct 2026): the outcome view decides these pixels from the chart, on every pixel Part 3 hatches, the primary ranges playing no part, never from the payload's decode_failed detail; the lane is REQ-COL-102's (TASK-M2-32), and this task fills it past [0,1]². R-467 (20 Oct 2026): \"hatched\" is the classification; a presentation view draws these pixels as the canvas background and the debug view hatches them. R-470 (20 Oct 2026): a forbidden pixel draws blank, never a palette colour, the hatch only in the debug views and the optional Overlays › Chart › forbidden region (REQ-COL-111). R-471: a Chart-builder physical-quantity axis of kind 3 (energy, L_z) is warped by default and so bounded (REQ-CHART-067), its linear option the affine B1 axis (REQ-CHART-068); the virial ratio and the mass ratio keep B1; this task's tests run under both mappings. R-472 X3: a tilted, sliced or saved chart extends by its axes' types (REQ-CHART-066). Physics review is required (⚑)."
 - id: REQ-CHART-055
   area: CHART
   kind: definition
@@ -2542,12 +2550,13 @@
     section: "9. The load-bearing invariants (the walls — the primary comparison checklist)"
   verify:
     method: unit test
-    detail: "cargo test -p kernel area_stats_primary_range: on the shape sphere's spherical map (both hemispheres), a window that covers [0,1]² and reaches past it in s (a periodic duplicate) and in t (past a pole, θ shifted by π) gives the same forbidden count and the same total as [0,1]² alone, so each periodic duplicate is counted once; on the invariant warp, a window reaching past an edge gives the same count and total as [0,1]², its hatched band leaving both; on the mass simplex, the window's negative-mass pixels count as forbidden and the total grows by the extended pixels, so the forbidden share rises; on a custom chart with a physical-quantity axis, its unreachable pixels count as forbidden; B5's order (on a test chart where no shipped chart has the case): a pixel where layer 2 rejects and Φ fails (non-finite) counts as forbidden, and a pixel where Φ fails and layer 2 accepts is the domain's end, out of the count and the total; inside [0,1]² every chart's statistic is bit-identical to before; controls: counting the periodic duplicate, counting a pixel past a pole, counting the domain-hatched band as forbidden, dropping it from the count but not the total, and a classifier running Φ before validate each fail; review (physics): the primary ranges and the classification order against R-408; run with both of the shape sphere's hemispheres drawn (the one-hemisphere case is REQ-CHART-057)"
+    detail: "cargo test -p kernel area_stats_primary_range: on the shape sphere's spherical map (both hemispheres), a window that covers [0,1]² and reaches past it in s (a periodic duplicate) and in t (past a pole, θ shifted by π) gives the same forbidden count and the same total as [0,1]² alone, so each periodic duplicate is counted once; on the invariant warp, a window reaching past an edge gives the same count and total as [0,1]², its hatched band leaving both; on the mass simplex, the window's negative-mass pixels count as forbidden and the total grows by the extended pixels, so the forbidden share rises; on a custom chart with a physical-quantity axis, its unreachable pixels count as forbidden; B5's order (on a test chart where no shipped chart has the case): a pixel where layer 2 rejects and Φ fails (non-finite) counts as forbidden, and a pixel where Φ fails and layer 2 accepts is the domain's end, out of the count and the total; inside [0,1]² every chart's statistic is bit-identical to before; controls: counting the periodic duplicate, counting a pixel past a pole, counting the domain-hatched band as forbidden, dropping it from the count but not the total, and a classifier running Φ before validate each fail; review (physics): the primary ranges and the classification order against R-408; run with both of the shape sphere's hemispheres drawn (the one-hemisphere case is REQ-CHART-057); R-471 (H3): a Chart-builder energy axis under the default warp is bounded past its edge (the domain's end, out of the count and the total) and under the linear option affine (its unreachable pixels forbidden), each tested; review (physics): B1's retirement breaks no area statistic"
   rulings:
   - R-407
   - R-408
+  - R-471
   milestone: M8
-  note: "R-408 (closes RQ-263); closed by TASK-M8-05, physics-reviewed, applied per R-369 (R-408, B3, B5 to B7). The classification order is chart_decoder_contract Part 3's. TASK-M8-18's forbidden_fraction (REQ-GUI-109) uses it. The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). B5's order is checked per physics review 5478805963, F1."
+  note: "R-408 (closes RQ-263); closed by TASK-M8-05, physics-reviewed, applied per R-369 (R-408, B3, B5 to B7). The classification order is chart_decoder_contract Part 3's. TASK-M8-18's forbidden_fraction (REQ-GUI-109) uses it. The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). B5's order is checked per physics review 5478805963, F1. R-471 (20 Oct 2026), H3: the only statistic that moves is a builder chart's \"forbidden in view\" past its square under the default; physics checks it (⚑). The Gram factor under Lean each axis is REQ-CHART-071 (R-474 R7)."
 - id: REQ-CHART-057
   area: CHART
   statement: "With the shape sphere's hemisphere toggle drawing one hemisphere, φ's `[0,1]` span must be remapped to run from the pole to the equator (φ = (π/2)·(1 − t)); φ stays pole-crossing at its pole edge, and past the equator its formula continues into the mirror hemisphere, real and repeated systems, drawn, not hatched; its primary range is pole to equator, the chart's `[0,1]` span, so the continuation is not counted, for both the drawing (R-407's extension and fallback) and the area statistics (R-408's counting) (R-412); with both hemispheres drawn nothing changes from REQ-CHART-054 and REQ-CHART-056."
@@ -2610,6 +2619,270 @@
   - R-468
   milestone: M3
   note: "R-467 D11 as revised on physics review 5585225466 of PR #253, P3 (applied per R-369): BodyPlane does not exist at M2, so REQ-CHART-058 leaves it out and the task that builds it, TASK-M3-36, sweeps it."
+- id: REQ-CHART-060
+  area: CHART
+  statement: "Navigation must stop at the edge of the manifold: one generic kernel function over the Chart trait and validate must accept a pan, slice, zoom, tilt, lock or chart-parameter edit only if the chart's centre (the view's centre pixel, (s, t) = (½, ½), z(½,½) = z₀ on an affine chart, Φ at the centre of its own parameters with the slice centre's hidden coordinates on a curved one) still passes validate's layers 2 and 3, a centre whose Φ fails counting as failing; an edit that would cross must stop at the last valid value along its own path, found by bisection on the edit's fraction λ ∈ [0, 1] until the two ends are adjacent f64 values (at most 64 steps), the valid end kept, and must report the layer and the constraint that stopped it; no chart may carry its own rule; a lock on a pixel that is not a system must be refused, the centre unchanged; tilt and zoom, anchor-preserving, must pass unless they come with a centre edit."
+  source:
+  - file: decisions.md
+    section: "R-469 — A chart never leaves the manifold: every pixel it draws is a valid three-body system or explicitly \"not a system\", and pan, slice, zoom, tilt and lock are accepted only while the chart's centre passes `validate`, an edit that would cross stopping at the last valid value, by one generic rule in the edit path; undo and the contract record the clamped value, the slider stops and the readout names the check"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The operation table
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel nav_stop_at_edge: on the invariant (L_z, E) chart under the linear option, a pan from a feasible centre toward |L_z| > √(2I(E − U)) stops at a centre that validates while the next f64 along the path fails, the report naming layer 2 and the constraint; a slice on the mass simplex toward a zero mass stops with every mass > 0; a tilt and a zoom with no centre edit pass unchanged; a lock on a forbidden pixel is refused; on the latent chart (the decoder accepts any z) nothing stops; controls: a stop that keeps the requested value (the centre then fails validate), a stop one bisection step short (λ not adjacent), and a per-chart override registered for one chart, each fail"
+  rulings:
+  - R-26
+  - R-407
+  - R-469
+  milestone: M2
+  note: "R-469 (20 Oct 2026), P2, A1 to A3, A8. Closed by TASK-M2-38. The edit path on the real engine is REQ-GUI-243 (TASK-M8-48). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-061
+  area: CHART
+  statement: "Navigation must never leave the manifold under fuzzed edits (C6): on every gallery chart, a seeded, reproducible sequence of random pan, slice, zoom, tilt and lock edits, each passed through REQ-CHART-060's stop, must leave a centre that validates after every edit; under the default warp of every energy-type axis (R-471) every pixel of a 65 × 65 grid over [0,1]² must validate at every tilt reached; and under the linear option infeasible pixels must appear in the window and be classified not a system."
+  source:
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: decisions.md
+    section: "R-469 — A chart never leaves the manifold: every pixel it draws is a valid three-body system or explicitly \"not a system\", and pan, slice, zoom, tilt and lock are accepted only while the chart's centre passes `validate`, an edit that would cross stopping at the last valid value, by one generic rule in the edit path; undo and the contract record the clamped value, the slider stops and the readout names the check"
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The operation table
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: property test
+    detail: "cargo test -p kernel nav_fuzz_never_leaves (seeded, the seed printed): ≥ 1000 edits per gallery chart; after each, validate(centre) is Valid; on the invariant and Burrau K charts, warped, all 65 × 65 grid pixels validate at every tilt; control (the arm that fires): the same run under the linear option finds infeasible pixels inside [0,1]² and each is classified not a system (blank), and a fuzz run with the stop disabled reaches an invalid centre"
+  rulings:
+  - R-469
+  - R-471
+  - R-477
+  milestone: M2
+  note: "R-477 C6. Closed by TASK-M2-38. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-062
+  area: CHART
+  statement: "Tilt and slice must be available on every chart (latent, shape sphere, mass simplex, Burrau family, invariant charts, custom and saved charts): the tilt is a rotation R(τ₁, τ₂) in the 3-space of the two screen axes and the hidden target coordinate (with X ≠ Y the two-target form in the 4-space (a, b, d_X, d_Y)), applied to the chart's own parameters, a pixel at window offset (u, v) mapping to (a, b, d) = R·(u, v, 0), a and b through the chart map exactly and d added to the hidden coordinate's value at the slice centre; on the latent chart it must be exactly the decoder's basis edit; R must come from the active tilt map (REQ-GUI-231) and be computed on the CPU, the kernel receiving it in the chart's params; a chart's hidden coordinates are the latent controls its axes do not write; and untilted (τ = 0, under either map) the chart must take no tilt path and render bitwise today's (C2)."
+  source:
+  - file: decisions.md
+    section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Directions are axis kinds — the unifying rule
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: "What the GPU knows about all of this: nothing"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel tilt_every_chart: per gallery chart, τ₁ = τ₂ = 0 under both maps gives a decode bit-identical to the untilted chart at every pixel of a 33 × 33 grid and calls no tilt arithmetic; a tilt of 30° into a hidden coordinate moves a, b, d as R·(u, v, 0) to 1 ulp, a, b decoding through the chart's own map; the centre pixel is unchanged under every tilt (anchor-preserving); on the shape sphere a tilt composed with the pole-crossing extension decodes past the pole as REQ-CHART-054 has it; on the latent chart the result equals the decoder's basis edit bitwise; controls: a tilt applied to a tangent vector at the centre (it drifts off the chart map's axes away from the centre), a d added to a physical value, and an untilted path that multiplies by an identity R (not bitwise), each fail"
+  rulings:
+  - R-92
+  - R-457
+  - R-473
+  - R-474
+  - R-477
+  milestone: M2
+  note: "R-473 (20 Oct 2026), T1, T2, J1 and J3 to J7; R-477 C2. Closed by TASK-M2-36. Units: REQ-CHART-064 (RQ-375); meanwhile the curved charts use the human's proposal and the latent chart the basis edit. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-063
+  area: CHART
+  statement: "A mass hidden coordinate must be tilted in logits, d added to the mass logits, and every linked coordinate in its link's pre-image (its latent control), never in the physical value, so that a tilt of the shape-sphere chart into a mass keeps every pixel's masses positive and summing to 1 (C7)."
+  source:
+  - file: decisions.md
+    section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: property test
+    detail: "cargo test -p kernel tilt_mass_logits: on the shape-sphere chart tilted into each mass logit at τ ∈ {15°, 45°, 89°, 135°}, over a 65 × 65 grid every pixel has m₁, m₂, m₃ > 0 and m₁ + m₂ + m₃ = 1 to 4 ulp; control: the same tilt added to the physical mass m₁ yields a pixel with a non-positive mass or a sum ≠ 1"
+  rulings:
+  - R-473
+  - R-477
+  milestone: M2
+  note: "R-473 T3, J8; R-477 C7. Closed by TASK-M2-36. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-064
+  area: CHART
+  statement: "Mixing a chart parameter with a hidden coordinate under a tilt must use the common scale RQ-375 rules (proposed: each screen axis in units of the window's half-width, the hidden coordinate in units of its own slider span, so that τ = 45° is the same visual lean on every chart)."
+  source:
+  - file: decisions.md
+    section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel tilt_units: at τ = 45° on each gallery chart the screen-space lean of the tilted axis is the same within 1 px, per RQ-375's ruling; control: unscaled parameters give a different lean on the shape sphere and the latent chart"
+  rulings:
+  - R-473
+  milestone: M2
+  note: "R-473 T4 (queued, RQ-375). Closed by TASK-M2-39, a leaf task. Applied meanwhile (R-473 J3): the proposal on the curved charts, the latent chart keeping the decoder's basis edit. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-065
+  area: CHART
+  statement: "Slice must be available on every chart: it moves the slice centre along any hidden coordinate of the chart, through that coordinate's latent control (a mass through its logit), subject to REQ-CHART-060's stop; the physical value at the centre is what the GUI reads out beside the slider."
+  source:
+  - file: decisions.md
+    section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The operation table
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel slice_every_chart: per gallery chart and per hidden coordinate, a slice edit moves only that latent control of z₀, the decode at the centre changing as the link's forward map says; on the shape sphere a mass slice keeps the masses on the simplex; a slice past the edge stops (REQ-CHART-060); control: a slice that writes the physical mass leaves the simplex"
+  rulings:
+  - R-469
+  - R-473
+  milestone: M2
+  note: "R-473 T6, J2. Closed by TASK-M2-36. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-066
+  area: CHART
+  statement: "A tilted, sliced or saved chart must extend past [0,1]² by its axes' extension types exactly as an untilted one does, with nothing written per chart: the types act on the chart's own parameters a, b after the tilt, the hidden offset d needing no type (a latent control or a mass logit, affine), and a saved chart's axes being its parent's or, for a latent view saved as an oblique chart, affine."
+  source:
+  - file: decisions.md
+    section: "R-472 — Extension stands: R-407's four types, past a bounded edge a pixel blank; F3 has Extend and Fit, a GUI state field, remembered, named in the sidecar, present mode following it; a tilted, sliced or saved chart extends by its axes' types, nothing written per chart *(amends R-407 and R-468)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel tilted_extension: on the shape sphere tilted 30° into a momentum control, a pixel past t = 1 decodes as the untilted pole-crossing rule applied to the tilted (a, b); the invariant chart tilted is not a system past every edge; a saved oblique chart continues affinely; controls: a type applied to (u, v) before the tilt, and a per-chart extension table, each fail"
+  rulings:
+  - R-407
+  - R-472
+  - R-473
+  milestone: M2
+  note: "R-472 X3, X3a. Closed by TASK-M2-36. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-067
+  area: CHART
+  statement: "Axes of kind 3 (E, L_z, K, KE; PE once REQ-CHART-070 defines its warp) must be warped by default, wherever they appear (the invariant charts, the Burrau family's K axes, a mixed-axis chart, a Chart-builder axis), as chart_reference §2.1 warps them: alone or beside a non-energy axis each takes its own line of the warp, K (KE) = K_max·t^γ_K, E = U + K_max·t^γ_K, L_z = (2s − 1)·L_max with L_max = √(2IK) at the chart's held-fixed K, so every pixel inside [0,1]² is feasible by construction; the warped axis is bounded past its edge; this supersedes R-408's port B1 as the default."
+  source:
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: The four axis kinds — a closed set
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel energy_axes_warped: per chart with an energy-type axis, every pixel of a 65 × 65 grid over [0,1]² validates; the existing charts' decodes are bit-identical to before untilted; a mixed chart with a lone E axis decodes E = U + K_max·t^γ_K; controls: a lone E axis mapped linearly onto [U₀, U₀ + K_max] fails validate at the parabola's corners, and a warp computed with the wrong held-fixed K puts a pixel outside the feasible region"
+  rulings:
+  - R-407
+  - R-408
+  - R-471
+  milestone: M2
+  note: "R-471 (20 Oct 2026), E1, H1, H3. Closed by TASK-M2-37. K_max and γ_K stay REQ-CHART-044's calibration (R-71). The t > 1 side is RQ-376 (bounded meanwhile). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-068
+  area: CHART
+  statement: "A linear mapping must be an option per energy-type axis, a chart parameter (warped | linear) in SimConfig, a sim key: under it the axis is affine (R-408's B1 axis), mapped onto the warp's range at the slice centre on a gallery chart (K ∈ [0, K_max], E ∈ [U₀, U₀ + K_max], L_z ∈ ±√(2I₀K_max)) or onto its own range on a Chart-builder axis; its infeasible pixels in the window are not a system (blank, never integrated) and log no decoder-bug warning; the navigation stop keeps the centre feasible, the edge being validate's layer-2 boundary at the centre."
+  source:
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel energy_axis_linear_option: on (L_z, E) under linear, the window's corners past |L_z| = √(2I(E − U)) are classified not a system and draw blank (REQ-COL-108), none integrated, none warned; the centre at both mappings decodes to the same state; switching the mapping changes the sim key; R-408's statistic over the window counts those pixels forbidden (B1); controls: a linear axis whose infeasible pixels are integrated, one that warns, and a mapping change that keeps the sim key, each fail"
+  rulings:
+  - R-408
+  - R-469
+  - R-470
+  - R-471
+  milestone: M2
+  note: "R-471 E2, H4, H5, H7. Closed by TASK-M2-37. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-069
+  area: CHART
+  statement: "The energy warp must be evaluated per pixel, with that pixel's own U, I and masses after the tilt's d, so that a tilt or slice that moves a hidden coordinate (masses, shape) keeps every pixel feasible under every tilt (E3, T5); untilted the per-pixel values are z₀'s, so the chart is bitwise today's."
+  source:
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: decisions.md
+    section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: property test
+    detail: "cargo test -p kernel energy_warp_per_pixel: the (L_z, K) and (L_z, E) charts tilted into a mass logit and into a shape control at τ ∈ {10°, 45°, 80°}: every pixel of a 65 × 65 grid validates; untilted bit-identical to before; control: the warp computed once at the centre leaves pixels with K < L_z²/2I at the same tilts"
+  rulings:
+  - R-471
+  - R-473
+  milestone: M2
+  note: "R-471 E3, H6; R-473 T5. Closed by TASK-M2-37. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-070
+  area: CHART
+  kind: definition
+  statement: "The warp of a PE (potential-energy) axis must be defined: chart_reference §2.1 gives none, the configuration fixing the potential; the definition (the axis's line of the warp, or that no chart offers PE) is written by the task that builds E1 as a chart_reference §2.1 paragraph under physics review, and until then no chart offers a PE axis."
+  source:
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: review checklist
+    detail: "review (physics): chart_reference §2.1 holds the PE paragraph, its feasibility argument and its extension type; cargo test -p kernel pe_axis: a chart offering PE either warps it as written or is refused by the well-posedness validator; control: a PE axis mapped with no written warp is refused"
+  rulings:
+  - R-72
+  - R-471
+  milestone: M2
+  note: "R-471 H2: a definition requirement (R-72). Closed by TASK-M2-37. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-071
+  area: CHART
+  statement: "Under Lean each axis, R-408's area statistics and any per-pixel area weight must multiply each pixel's area by the Gram factor √(|u₁|²|u₂|² − (u₁·u₂)²) of the skewed basis; on an affine chart it is one number over the window, so shares are unchanged and absolute areas scale by it; Tip as sheet needs none (orthonormal)."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel lean_gram_factor: at τ₁ = 40°, τ₂ = 25°, X = Y, under Lean each axis an absolute area statistic equals the Gram factor times the untilted pixel area sum to 1e-12, and the forbidden share is unchanged; under Tip as sheet the factor is 1 to 1e-15; control: the factor left out gives an area off by the factor √(1 − sin²τ₁ sin²τ₂)"
+  rulings:
+  - R-408
+  - R-474
+  milestone: M8
+  note: "R-474 R7, K9. Closed by TASK-M8-05. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-072
+  area: CHART
+  statement: "Cross-chart consistency (C1): the same state reached through two charts, a shape-sphere pixel and the latent pixel its decoded state encodes to (R-82's encode), must give the same z to the encode's tolerance ε_phys, and then the same payload and the same outcome bit for bit from that z."
+  source:
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/design/principia_chart_reference.md
+    section: 1.1 Affine slices — the "no tilt" case
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel cross_chart_consistency: for 64 shape-sphere pixels, encode the decoded state, place the latent chart's centre there, and integrate both: z agrees within ε_phys (REQ-ENC-024), and from the same z the payload and outcome are bit-identical; control: a partner pixel one step off in the latent chart gives a different payload"
+  rulings:
+  - R-82
+  - R-477
+  milestone: M3
+  note: "R-477 C1. Closed by TASK-M3-37 (needs the integrator). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-073
+  area: CHART
+  statement: "A saved chart (R-475) must be a chart of the kernel: a latent view saved as the oblique chart (z₀, q₁, q₂) with the stored vectors exactly, its axes affine and its targets the six dimensions off the saved plane; a curved view saved as its parent chart (id and params) with the slice centre and the tilt (angles, targets, map; R recomputed from them) as its base, its own parameters the saved view's window offsets, so that a new tilt R′ composes as (u′, v′, d′) = R′·(u, v, 0), then (a, b, d) = R·(u′, v′, 0); reopened at zero tilt each must reproduce the saved view bitwise (S3, C8)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: docs/design/principia_chart_reference.md
+    section: 1.1 Affine slices — the "no tilt" case
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel saved_chart: a latent view at τ = (30°, 20°) saved and reopened at zero tilt decodes bit-identically at every pixel of a 33 × 33 grid; a shape-sphere view tilted 25° into a momentum control saved and reopened likewise; a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp; controls: a saved oblique chart that re-orthonormalises q₁, q₂ (not bitwise under Lean), and a composition in the order R′·R, each fail"
+  rulings:
+  - R-473
+  - R-474
+  - R-475
+  milestone: M2
+  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -11288,6 +11561,212 @@
   - R-72
   milestone: M1
   note: "Registered per R-369 (TASK-M1-15), as REQ-COL-067 was for TASK-M1-14: REQ-RENDER-018's 'reads r_sh/p_sh as a sample' had no definition the lint could check."
+- id: REQ-RENDER-087
+  area: RENDER
+  statement: "The line system must be a separate system, not part of the node graph, drawing its lines in its own overlay pass after the stain and the display chain's gamut clamp and before the colour-vision simulation (which sees the lines too), before the egui layer; it changes no pixel's colour value, never touches the sim key, and changing any line setting must leave the simulation key and the quad requests unchanged."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 2. Where it sits
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 4 — Semantic rules
+  - file: docs/design/principia_colour_composition.md
+    section: 4.3 Display stage (terminal, outside the pipeline)
+  - file: docs/design/principia_lines.md
+    section: 1. What it is
+  - file: docs/design/principia_lines.md
+    section: 12. Tests (each with an arm that can fail)
+  verify:
+    method: unit test
+    detail: "cargo test -p render lines_pass: with a contour set on, the stain's output buffer before the pass is bit-identical to the same frame with lines off; under a CVD mode the lines are simulated too; every line setting changed in turn leaves the sim key and quad requests unchanged (§12 no re-integration); controls: a pass placed before the gamut clamp clips a line's colour, and a line edit that bumps the sim key, each fail"
+  rulings:
+  - R-67
+  - R-476
+  milestone: M7
+  note: R-476 L1, M2 (flagged). Closed by TASK-M7-42.
+- id: REQ-RENDER-088
+  area: RENDER
+  statement: "The line system's data model must be principia_lines.md §3's: LineStyle (stroke, dash, outline, ink, label, units), LabelStyle, LineRef (a style by name with partial overrides), ContourSet, Trace, Axes and Lines { styles, contours, traces, axes }; a line refers to a style by name and may override single fields without forking it; editing a style updates every line that uses it; PrintPt sizes in points for exports."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 3. The data model
+  verify:
+    method: unit test
+    detail: "cargo test -p render line_model: a LineRef override changes only its field; editing the library's style updates every line naming it; a Lines value round-trips through its canonical serialisation bitwise; PrintPt widths scale with the export's DPI; control: an override that forks the style stops following it"
+  rulings:
+  - R-476
+  milestone: M7
+  note: R-476 L1. Closed by TASK-M7-42.
+- id: REQ-RENDER-089
+  area: RENDER
+  statement: "Lines must be drawn as screen-space polylines with dashes by arc length, the pattern continuing along the whole line, outline first then stroke with the same dash pattern and phase, dash lengths not scaling with width, opacity per vertex drawn in runs of equal ink and quantised opacity, in px on screen and pt in print."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 5. Drawing a line
+  - file: docs/design/principia_lines.md
+    section: 12. Tests (each with an arm that can fail)
+  verify:
+    method: unit test
+    detail: "cargo test -p render dash_continuity: measured dash lengths along a long dashed contour are constant to 0.5 px (§12 dash continuity); outline and stroke dashes align; control: the per-segment renderer, which restarts the pattern, fails"
+  rulings:
+  - R-476
+  milestone: M7
+  note: R-476 L1. Closed by TASK-M7-42.
+- id: REQ-RENDER-090
+  area: RENDER
+  statement: "Smart ink, an option on any style, must take the figure under the lines (stain plus display chain to the clamp), its WCAG relative luminance averaged over a disc of radius px around each vertex, compared in log contrast against the tie point (0.179 for #F5F4F0 and #111114), switching only when the other ink wins by more than hysteresis, the outline taking the opposite ink; modes LightDark and KeepHue (OKLab lightness to a target contrast)."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 6. Smart ink
+  verify:
+    method: unit test
+    detail: "cargo test -p render smart_ink: over a split background the ink differs on the two sides and stays put within the hysteresis band (§12 smart ink); KeepHue keeps the hue within 1° in OKLCH; control: hysteresis 0 flickers on a mottled strip (the ink changes more than once along it)"
+  rulings:
+  - R-476
+  milestone: M7
+  note: R-476 L1. Closed by TASK-M7-42.
+- id: REQ-RENDER-091
+  area: RENDER
+  statement: "Labels must be placed along each line every spacing px of arc length, rotated to the local tangent and kept upright, a label overlapping one already placed skipped, placement running across all contour sets in list order (the top set wins), on, above or below the line with an offset, an optional gap under the label, format, precision, units with a proper minus sign, and a halo; a trace's time ticks are labels in the same engine."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 7. Labels
+  verify:
+    method: unit test
+    detail: "cargo test -p render line_labels: labels every spacing px along a contour, upright, none overlapping; the top set's labels kept where two collide; \"−\" (U+2212) in negatives; control: placement in reverse list order keeps the lower set's label"
+  rulings:
+  - R-476
+  milestone: M7
+  note: "R-476 L1. Closed by TASK-M7-42. Contour against trace labels: REQ-RENDER-098 (RQ-377 (4))."
+- id: REQ-RENDER-092
+  area: RENDER
+  statement: "A contour's expression must range over principia_lines.md §4.1's variables (chart h, v in each axis's own units, s, t; the latent z at the pixel, slice and tilt applied; the starting state's E K U Lz I virial m1 m2 m3 r12 r13 r23 area α β θ φ; and the playhead's payload fields) with its operators and functions, and must be total: a pixel where it is not finite, or that is not a system, has no value."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 4.1 The expression
+  verify:
+    method: unit test
+    detail: "cargo test -p render contour_expr: each §4.1 example (E; m1/m2; Lz^2/(2*I*K); min(r12,r13,r23)/max(r12,r13,r23); h) evaluates to the decode's value at sampled pixels; log of a negative and a not-a-system pixel give no value; control: an expression evaluated on a not-a-system pixel's decode fails totality"
+  rulings:
+  - R-469
+  - R-476
+  milestone: M7
+  note: "R-476 L1, M7. Closed by TASK-M7-43. The surface syntax and the playhead list wait for RQ-377 (1), (2): REQ-RENDER-097; meanwhile §4.1's tree and its named fields."
+- id: REQ-RENDER-093
+  area: RENDER
+  statement: "Starting-state contours must be evaluated on the chart's decode only, on a screen-resolution grid independent of the quadtree, on the decode's precision path, as a GPU pass on the shared decode with a CPU fallback at reduced resolution, half resolution in motion and refined at rest; playhead contours must read the resident quads' payload at the displayed texels."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 4.2 Evaluation
+  verify:
+    method: unit test
+    detail: "cargo test -p render contour_eval: a starting-state contour at depth 30 on the latent chart matches the CPU f64 decode's level set to one grid cell; it is unchanged by a refinement of the quadtree; the CPU fallback agrees with the GPU pass at its resolution; control: a contour read from the quads' payload moves with refinement"
+  rulings:
+  - R-476
+  milestone: M7
+  note: R-476 L1. Closed by TASK-M7-43.
+- id: REQ-RENDER-094
+  area: RENDER
+  statement: "Contour levels must be given by count (n even across the values in view), step (start, step) or list, with linear or log spacing, and follow the view's range only when asked (off by default, levels staying put when panning)."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 4.3 Levels
+  verify:
+    method: unit test
+    detail: "cargo test -p render contour_levels: count, step and list give the stated values, log spacing geometric; a pan leaves levels unchanged with follow off and recomputes them with it on; control: follow on by default fails"
+  rulings:
+  - R-476
+  milestone: M7
+  note: R-476 L1. Closed by TASK-M7-43.
+- id: REQ-RENDER-095
+  area: RENDER
+  statement: "Contours must be extracted by marching squares on the evaluation grid, linear interpolation along cell edges, saddles resolved by the cell-centre value, a cell with a non-finite corner yielding no segment, and segments joined into polylines before styling; a contour must never pass through a pixel that is not a system."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 4.4 Extraction
+  - file: docs/design/principia_lines.md
+    section: 10. How it fits today's other decisions
+  - file: docs/design/principia_lines.md
+    section: 12. Tests (each with an arm that can fail)
+  verify:
+    method: unit test
+    detail: "cargo test -p render contour_extract: a contour of h lies exactly on the axis ticks (§12 exactness; control: h + 0.001 does not); no segment in a cell with a non-finite corner (§12 totality; control: a field with an injected NaN cell shows a gap there); no segment over a blank pixel under F3 Extend; saddles resolved by the centre; polylines continuous"
+  rulings:
+  - R-469
+  - R-470
+  - R-476
+  milestone: M7
+  note: R-476 L1. Closed by TASK-M7-43.
+- id: REQ-RENDER-096
+  area: RENDER
+  statement: "Contours of energy-type quantities (E, K, U, Lz, and a warped axis's h, v in its own units) must follow the active mapping (warped or linear) and be evaluated through the chart's decode at each pixel, the per-pixel warp included, so that on a tilted chart a contour of E is the true level set on the tilted plane."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: docs/design/principia_lines.md
+    section: 10. How it fits today's other decisions
+  verify:
+    method: unit test
+    detail: "cargo test -p render energy_contours: on (L_z, E) tilted 30° into a mass logit, the decoded E at points sampled on a contour E = c equals c to 1e-9 relative, under the warp and under the linear option; control: a contour of the axis fraction t (not E) departs from E = c under the tilt"
+  rulings:
+  - R-471
+  - R-473
+  - R-476
+  milestone: M7
+  note: "R-476 L4, M7. Closed by TASK-M7-43. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-RENDER-097
+  area: RENDER
+  statement: "A contour expression's surface syntax and the playhead quantities it may read must be as RQ-377 parts (1) and (2) rule (a purpose-built mini-language, or the stain graph's Code view syntax; any payload field, or a curated list), parsed to §4.1's tree with errors reported in the contour-set editor."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 11. Open questions
+  - file: docs/design/principia_lines.md
+    section: 4.1 The expression
+  verify:
+    method: unit test
+    detail: "cargo test -p render contour_syntax: the ruled syntax parses every §4.1 example to the tree REQ-RENDER-092 evaluates; a malformed expression reports its position; the playhead list is the ruled one; control: an expression outside the ruled list is refused"
+  rulings:
+  - R-476
+  milestone: M8
+  note: "R-476 L5, M10. Waits for RQ-377 (1), (2); closed by TASK-M8-51, a leaf task."
+- id: REQ-RENDER-098
+  area: RENDER
+  statement: "Collisions between contour labels and a trace's tick labels must be resolved as RQ-377 part (4) rules."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 11. Open questions
+  - file: docs/design/principia_lines.md
+    section: 7. Labels
+  verify:
+    method: unit test
+    detail: "cargo test -p render label_collisions_traces: where a contour label and a trace tick label overlap, the ruled one is kept; control: the other order"
+  rulings:
+  - R-476
+  milestone: M8
+  note: "R-476 L5, M10. Waits for RQ-377 (4); closed by TASK-M8-51. Meanwhile nothing is suppressed between the two."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -13445,17 +13924,19 @@
     section: G1. Rules that hold everywhere
   verify:
     method: unit test
-    detail: "cargo test -p render presentation_no_hatch: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), through the outcome view, a field ramp (the word length's and d_min's) and a test stain, in the default, greyscale and hue modes: a sample whose REQ-COL-102 lane is forbidden draws exactly the background uniform, inside [0,1]² and past it, whatever its payload; running (in the outcome view), sim_failed of each detail, decode_failed of each detail, a reserved state code, a NaN, a ±∞ that is no declared sentinel and the length ramp's 127 draw exactly #141418; with the node's invalid colour overridden, that colour; d_min's unset +∞ keeps the \"not yet\" stipple; no pixel of any presentation output equals debug_invalid's pattern; a debug/ field view of the same payload still draws the hatch; controls: a presentation occupant that draws the hatch for the forbidden lane, for sim_failed or for a NaN, one that draws the forbidden lane #141418 instead of the background, and one that decides the background from decode_failed's detail, each fail; cargo xtask golden: the goldens R-467 D15 lists are rendered and the hashes that change reported, none re-baselined before RQ-373's gate decision"
+    detail: "cargo test -p render presentation_no_hatch: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), through the outcome view, a field ramp (the word length's and d_min's) and a test stain, in the default, greyscale and hue modes: a sample whose REQ-COL-102 lane is forbidden draws exactly the background uniform, inside [0,1]² and past it, whatever its payload; running (in the outcome view), sim_failed of each detail, decode_failed of each detail, a reserved state code, a NaN, a ±∞ that is no declared sentinel and the length ramp's 127 draw exactly #141418; with the node's invalid colour overridden, that colour; d_min's unset +∞ keeps the \"not yet\" stipple; no pixel of any presentation output equals debug_invalid's pattern; a debug/ field view of the same payload still draws the hatch; controls: a presentation occupant that draws the hatch for the forbidden lane, for sim_failed or for a NaN, one that draws the forbidden lane #141418 instead of the background, and one that decides the background from decode_failed's detail, each fail; cargo xtask golden: the goldens R-467 D15 lists are rendered and the hashes that change reported, none re-baselined before RQ-373's gate decision; C9 (R-477): over the outcome view, a field ramp and a test stain, no presentation output draws a palette colour on a not-a-system pixel (each such pixel equals the background uniform, the blank of R-470); control: an occupant that maps the lane to a palette entry fails"
   rulings:
   - R-79
   - R-136
   - R-436
   - R-446
   - R-467
+  - R-470
+  - R-477
   milestone: M2
   rq:
   - RQ-373
-  note: "R-467 (20 Oct 2026), D1 to D4, F3, F6. Closed by TASK-M2-34. The goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) wait for RQ-373's gate decision; m1-synthetic/known_escaper is expected unchanged. Past [0,1]² the lane is TASK-M8-05's."
+  note: "R-467 (20 Oct 2026), D1 to D4, F3, F6. Closed by TASK-M2-34. The goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) wait for RQ-373's gate decision; m1-synthetic/known_escaper is expected unchanged. Past [0,1]² the lane is TASK-M8-05's. R-470 (20 Oct 2026): the background is blank, never a palette colour, in every view (N1, G1); a sim_failed or non-finite sample of a system keeps #141418 (G2); whether a decode_failed sample the chart does not classify draws blank instead is RQ-379, #141418 meanwhile, nothing waiting."
 - id: REQ-COL-109
   area: COL
   statement: "The debug view (View › Debug view: the render's own debug-view flag, which its caller sets from RenderState's debug_view) must draw, over the active stain, every system pixel exactly as the stain draws it; a pixel REQ-COL-102's lane marks as not a system with the hatch, debug_invalid(frag_xy); a non-finite sample (a sim_failed with a non-finite detail: NaN in state, Inf or overflow in state, a non-finite derived quantity; a decode_failed of detail 0; a non-finite value the stain reads) with REQ-COL-110's NaN / Inf style; and any other sim_failed or decode_failed sample, a reserved state code included, with debug_invalid, reading the lane first, then non-finiteness, then the failure; and the render must count the figure's pixels drawn in each of the three categories, \"forbidden (chart)\", \"decode or sim failure\" and \"NaN / Inf\", for the legend's \"Debug\" key (raw pixel counts, not R-408's statistic)."
@@ -13474,10 +13955,12 @@
     method: unit test
     detail: "cargo test -p render debug_view_styles: on the CPU twin and on the GPU, a synthetic payload with a valid outcome, a forbidden-lane sample of each payload, a sim_failed of each detail, a decode_failed of each detail and a reserved state code, through the outcome view and a field ramp: system pixels equal the stain's output with the toggle off, bit for bit; forbidden-lane pixels equal debug_invalid at their positions; non-finite samples equal the NaN / Inf style at their positions; other failures equal debug_invalid; the three counts equal the numbers of pixels drawn in each; controls: a debug view that reads the payload before the lane (a forbidden sim_failed drawn as a failure), one that draws a NaN sim_failed with debug_invalid, and a count taken through R-408's primary ranges, each fail"
   rulings:
+  - R-41
   - R-136
   - R-467
+  - R-470
   milestone: M2
-  note: "R-467 (20 Oct 2026), D5. Closed by TASK-M2-34; the GUI's toggle and legend are REQ-GUI-225 (mock) and REQ-GUI-227 (real engine). On review (PR #253): the render takes the flag as its own input; the contract field is TASK-M6-46's, wired to the render on the real engine by TASK-M8-46, so TASK-M2-34 does not wait for the GUI track."
+  note: "R-467 (20 Oct 2026), D5. Closed by TASK-M2-34; the GUI's toggle and legend are REQ-GUI-225 (mock) and REQ-GUI-227 (real engine). On review (PR #253): the render takes the flag as its own input; the contract field is TASK-M6-46's, wired to the render on the real engine by TASK-M8-46, so TASK-M2-34 does not wait for the GUI track. R-470 G4 (applied per R-369, flagged): View › Debug view is one of the debug views and is built as a baked pipeline variant (R-41) that RenderState's debug_view selects; the presentation variant is compiled without the debug arm, so a presentation view cannot draw a debug style; no flag bit is added to the dispatch flags."
 - id: REQ-COL-110
   area: COL
   kind: calibration
@@ -13500,6 +13983,27 @@
   - R-467
   milestone: M2
   note: "R-467 (20 Oct 2026), D6: the corpus gives no style for NaN and ±∞; a calibration requirement (R-71). Proposed by TASK-M2-34."
+- id: REQ-COL-111
+  area: COL
+  statement: "Overlays › Chart › forbidden region, off by default, must draw the hatch debug_invalid(frag_xy) over exactly the pixels the chart classifies as not a system (REQ-COL-102's lane), in any view, and nothing anywhere else (C9); Overlays › Integration › NaN / invalid pixels must draw only while a debug view is the figure (View › Debug view on, or a debug-catalogue stain), shown dimmed with a tooltip otherwise."
+  source:
+  - file: decisions.md
+    section: "R-470 — A pixel that is not a system draws blank, the view's background, in every view, the outcome view included, never a palette colour; the hatch survives only as the optional Overlays › Chart › forbidden region, off by default, over blank pixels only; NaN, ±∞, `sim_failed`, `decode_failed` and the classification behind the hatch show only in the debug views; R-408's statistics are unchanged *(amends R-407, R-446 and R-467; closes RQ-374)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  verify:
+    method: unit test
+    detail: "cargo test -p render forbidden_overlay: with the toggle on, the hatch's pixels equal the lane's not-a-system set exactly over a window reaching past [0,1]² on the invariant chart, and every other pixel is bit-identical to the toggle off; NaN / invalid pixels draws nothing in the outcome view and draws in the debug view; controls: an overlay that hatches a decode_failed pixel the chart does not classify, and a NaN toggle that draws over a presentation view, each fail"
+  rulings:
+  - R-26
+  - R-467
+  - R-470
+  milestone: M8
+  note: "R-470 N2, G3 (RQ-374 ruled, option (c) for the NaN toggle, flagged); R-477 C9. Closed by TASK-M8-08."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -13540,6 +14044,7 @@
     detail: "τ = 0 leaves q unchanged; τ = ±90° gives ±d_target; +30° and −30° give different planes"
   rulings: []
   milestone: M2
+  note: "R-473 and R-474 (20 Oct 2026): tilt and slice act on every chart (REQ-CHART-062, REQ-CHART-065), and with one target the tilt follows the active map (REQ-GUI-231)."
 - id: REQ-GUI-004
   area: GUI
   statement: "Setting the lock on an affine chart must compute z_locked = z₀ + (2s−1)q₁ + (2t−1)q₂ on the CPU with no GPU readback; on a nonlinear chart it must replay Φ and D on the CPU (preferred) or read the GPU buffer back, re-centring via the inverse-encode path."
@@ -13998,15 +14503,17 @@
   milestone: M8
 - id: REQ-GUI-034
   area: GUI
-  statement: "Derived, invariant and coupled slice/tilt directions must be tangent vectors evaluated at the chart centre with the axis's residual convention, and the UI must label whether a line is a raw-control line or a physical one-quantity direction."
+  statement: "Derived, invariant and coupled slice/tilt directions of the direction library and the lock must be tangent vectors evaluated at the chart centre with the axis's residual convention, and the UI must label whether a line is a raw-control line or a physical one-quantity direction; the Tilt section's own tilt on a curved chart is R-473's rotation on the chart's own parameters (REQ-GUI-241)."
   source:
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Directions are axis kinds — the unifying rule
   verify:
     method: GUI screenshot
     detail: "slider/direction labels distinguish 'one mass logit' from 'only m₀'"
-  rulings: []
+  rulings:
+  - R-473
   milestone: M8
+  note: "R-473 J7 (20 Oct 2026). *Was:* \"Derived, invariant and coupled slice/tilt directions must be tangent vectors evaluated at the chart centre …\"."
 - id: REQ-GUI-035
   area: GUI
   statement: "Every SimConfig and RenderState edit — including navigation (z₀ and basis edits) and lock / unlock — must be undoable, ViewUI-only state (open panels, focus, selection, the kept-orbit list, playback transport) must not enter the undo history, and the GUI clock's per-frame playhead writes (a SetField marked \"no history\") must never enter it, a manual scrub being one coalesced entry."
@@ -14270,6 +14777,7 @@
     detail: "a conserved axis (E, L_z) gives a dot; tilting it toward a live direction grows a line then a curve; changing the slice shifts the trace without changing its shape"
   rulings: []
   milestone: M8
+  note: "R-476 M4 (20 Oct 2026): the integration is unchanged; the trace's drawing is the line system's (REQ-GUI-245, TASK-M8-49)."
 - id: REQ-GUI-054
   area: GUI
   statement: "The shape-sphere panel must draw n(t) as a polyline on S² with the landmarks (the three binary collisions on the equator, the Lagrange poles), its 3D and unwrapped views must share the config-space frame so they always agree, and the 3D orbit control must rotate the view, not the data."
@@ -14645,7 +15153,7 @@
   milestone: M8
 - id: REQ-GUI-078
   area: GUI
-  statement: "The Explore top bar must hold the File / View / Windows / Help menus (View holding Home, F3 hide, \"F3 fills by: Extend / Fit\", Debug view and reset layout, R-466 to R-468), the Explore / Stain mode switch, Overlays ▾ with a count of overlays on, Run…, Profiler…, Export…, the keyboard breadcrumb, and a status line with t, fps, frame ms, quad count, 'budget-bound' while the frame budget binds, the undo / redo depth and 'F3 hide'."
+  statement: "The Explore top bar must hold the File / View / Windows / Help menus (View holding Home, F3 hide, \"F3 fills by: Extend / Fit\", Debug view, Save view as chart and reset layout, R-466 to R-468, R-475), the Explore / Stain mode switch, Overlays ▾ with a count of overlays on, Lines ▾ with a count (R-476), Run…, Profiler…, Export…, the keyboard breadcrumb, and a status line with t, fps, frame ms, quad count, 'budget-bound' while the frame budget binds, the undo / redo depth and 'F3 hide'."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
@@ -14662,11 +15170,13 @@
   - R-52
   - R-467
   - R-468
+  - R-475
+  - R-476
   milestone: M8
-  note: "R-466 to R-468: the View menu's entries, in order (render_gui_spec §G2); built on the mock by TASK-M6-45, TASK-M6-46 and TASK-M6-47."
+  note: "R-466 to R-468: the View menu's entries, in order (render_gui_spec §G2); built on the mock by TASK-M6-45, TASK-M6-46 and TASK-M6-47. R-475 L1: Save view as chart after Debug view, before reset layout (TASK-M6-49 on the mock); R-476 M9: Lines ▾ beside Overlays ▾ (TASK-M8-50)."
 - id: REQ-GUI-079
   area: GUI
-  statement: "Overlays ▾ must hold the grouped toggles — Quadtree (tile bounds, depth colouring, priority heatmap, refine_flagged, split / merge activity), Integration (substep density, substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function, grid, Burrau lattice), Stain (class edges, t_end contours) — each with an Alt+digit shortcut, plus 'all off' and 'save as default'."
+  statement: "Overlays ▾ must hold the grouped toggles — Quadtree (tile bounds, depth colouring, priority heatmap, refine_flagged, split / merge activity), Integration (substep density, substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function, Burrau lattice), Stain (class edges) — each with an Alt+digit shortcut, plus 'all off' and 'save as default'; forbidden region and NaN / invalid pixels draw as REQ-COL-111 says; the grid and the t_end contours are Lines ▾ presets (REQ-GUI-247)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
@@ -14674,13 +15184,15 @@
     section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: GUI screenshot
-    detail: "screenshot of the open menu against 01_main.png; each Alt+digit toggles its overlay; 'all off' clears the overlay set"
+    detail: "screenshot of the open menu against 01_main.png, the Chart group without grid and the Stain group without t_end contours (R-476); each Alt+digit toggles its overlay; 'all off' clears the overlay set; NaN / invalid pixels dimmed with its tooltip while no debug view is the figure"
   rulings:
   - R-26
   - R-72
   - R-467
+  - R-470
+  - R-476
   milestone: M8
-  note: "Where 'save as default' is stored: REQ-GUI-153 (definition). R-467 (20 Oct 2026), D9, applied per R-369: the Chart group's \"forbidden region\" and the Integration group's \"NaN / invalid pixels\" stay as diagnostics the person turns on, off by default; with View › Debug view built they draw its styles (REQ-COL-109). Flagged. Whether the two toggles stay is RQ-374 (gui review 5585209592 of PR #253, G5): option (a), keep both off by default, is applied meanwhile; only TASK-M8-08's two lines for them wait."
+  note: "Where 'save as default' is stored: REQ-GUI-153 (definition). R-467 (20 Oct 2026), D9, applied per R-369: the Chart group's \"forbidden region\" and the Integration group's \"NaN / invalid pixels\" stay as diagnostics the person turns on, off by default; with View › Debug view built they draw its styles (REQ-COL-109). Flagged. Whether the two toggles stay is RQ-374 (gui review 5585209592 of PR #253, G5): option (a), keep both off by default, is applied meanwhile; only TASK-M8-08's two lines for them wait. R-470 (20 Oct 2026), G3, rules RQ-374: forbidden region stays, off by default, over not-a-system pixels only; NaN / invalid pixels draws only while a debug view is the figure (option (c), applied per R-369, flagged); TASK-M8-08's two lines no longer wait. R-476 L2, M3: the grid and t_end contours leave Overlays ▾ for Lines ▾ (TASK-M8-50). *Was:* \"Chart (forbidden region from the chart's domain function, grid, Burrau lattice), Stain (class edges, t_end contours)\"."
 - id: REQ-GUI-080
   area: GUI
   statement: "There must be no global display bar: its controls must live in the Display window and the Overlays menu."
@@ -14901,7 +15413,7 @@
   - R-390
   - R-409
   milestone: M8
-  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-07, which re-runs its acceptance on the real engine and depends on TASK-M6-26). R-409 (10 Oct 2026) rewords it: no orbit, the Tilt and Slice buttons beside the switch by the slider touched, and a drag in slice mode moving the slice along the plane's normal. TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the new behaviour on the mock (REQ-GUI-181) and re-checks this requirement there, and TASK-M8-07 re-runs it on the real engine as now worded."
+  note: "R-390: closed by TASK-M6-26 on the mock engine (moved from TASK-M8-07, which re-runs its acceptance on the real engine and depends on TASK-M6-26). R-409 (10 Oct 2026) rewords it: no orbit, the Tilt and Slice buttons beside the switch by the slider touched, and a drag in slice mode moving the slice along the plane's normal. TASK-M6-26 (merged) closed the earlier wording, its acceptance line its record; TASK-M6-31 builds the new behaviour on the mock (REQ-GUI-181) and re-checks this requirement there, and TASK-M8-07 re-runs it on the real engine as now worded. R-474 (20 Oct 2026): the compass draws the active tilt map (REQ-GUI-235)."
 - id: REQ-GUI-092
   area: GUI
   statement: "The time controls must offer play, step, a scrubber and speed, and scrubbing back must set the display time and re-integrate progressively, showing it is refining (e.g. 'refining · 72%'), never replaying stored frames."
@@ -15074,18 +15586,20 @@
   - R-467
   - R-468
   milestone: M8
-  note: "R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the same way, each point of the field where it is in the shown layout (flagged in R-406; the human spoke of F3). On the real engine the area past [0,1]² follows R-407, as REQ-GUI-180 does; TASK-M8-32 checks the fill, with the physics reviewer for that line (applied per R-369, R-407, A2). R-467 (20 Oct 2026): a forbidden pixel is the canvas background, not the hatch; R-468 (20 Oct 2026), E6, applied per R-369 and flagged: present mode follows the F3 fill mode."
+  note: "R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the same way, each point of the field where it is in the shown layout (flagged in R-406; the human spoke of F3). On the real engine the area past [0,1]² follows R-407, as REQ-GUI-180 does; TASK-M8-32 checks the fill, with the physics reviewer for that line (applied per R-369, R-407, A2). R-467 (20 Oct 2026): a forbidden pixel is the canvas background, not the hatch; R-468 (20 Oct 2026), E6, applied per R-369 and flagged: present mode follows the F3 fill mode. R-472 X2c (20 Oct 2026): present mode follows F3's fill mode, the human's words now; R-406's flag is lifted."
 - id: REQ-GUI-101
   area: GUI
-  statement: "The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair."
+  statement: "The Display window must offer the overlays class edges and cursor crosshair; the grid and the t_end contours are Lines ▾ presets (REQ-GUI-247)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Display — the last stages
   verify:
     method: GUI screenshot
     detail: screenshot against 04_windows.png's Display window
-  rulings: []
+  rulings:
+  - R-476
   milestone: M8
+  note: "R-476 L2, M3 (20 Oct 2026). *Was:* \"The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair.\""
 - id: REQ-GUI-102
   area: GUI
   statement: "Every Run-window field must be a SimConfig field exposed under its contract name, covering integrator_contract Part 3's parameters — T_horizon (∈ [50, 200]), dt_macro (derived, shown read-only with its rule max(1e-3, T/65535), not editable, R-138), N_max (default 64), r_sub / gamma_sub, r_coll, r_close, eps_E / eps_L — and the integrator occupant (stepper × regularisation, Heggie with KDK leapfrog by default, Aarseth–Zare available), with no 'tolerance' field."
@@ -15213,7 +15727,7 @@
   rulings:
   - R-466
   milestone: M8
-  note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes."
+  note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes. R-475 L3 (20 Oct 2026): saved charts (Save view as chart) sit in the preset selector's Saved group beside the builder's presets, in the same store (REQ-GUI-239)."
 - id: REQ-GUI-109
   area: GUI
   statement: "The chart builder's Domain preview must show the chart's admissible region in its own coordinates, the forbidden region hatched, the current view as a rectangle, the boundary's formula and 'forbidden in view: N%', computed from the chart's validate(u, v)."
@@ -15234,7 +15748,7 @@
   - R-408
   - R-467
   milestone: M8
-  note: "R-408: 'forbidden in view' counts a visible pixel only if every axis is inside its primary range, a domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden (REQ-CHART-056, TASK-M8-05). With the egui layer shown the Chart builder's view is [0,1]², where nothing changes, so this requirement's statement and verify stand; TASK-M8-18's forbidden_fraction uses REQ-CHART-056's classification. R-467 (20 Oct 2026), clause 6: the Domain preview keeps its hatch and 'forbidden in view: N%', a diagnostic for building charts, not a presentation view. Whether a builder chart may fail inside [0,1]² is RQ-372."
+  note: "R-408: 'forbidden in view' counts a visible pixel only if every axis is inside its primary range, a domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden (REQ-CHART-056, TASK-M8-05). With the egui layer shown the Chart builder's view is [0,1]², where nothing changes, so this requirement's statement and verify stand; TASK-M8-18's forbidden_fraction uses REQ-CHART-056's classification. R-467 (20 Oct 2026), clause 6: the Domain preview keeps its hatch and 'forbidden in view: N%', a diagnostic for building charts, not a presentation view. Whether a builder chart may fail inside [0,1]² is RQ-372. R-471 (20 Oct 2026): under the default warp a builder energy axis has no in-square forbidden pixel; under the linear option they appear, drawn blank and counted by N%."
 - id: REQ-GUI-110
   area: GUI
   statement: "The chart builder must show a quick render (e.g. 64 × 64 at a short horizon) at the view's aspect."
@@ -16684,7 +17198,7 @@
   - R-451
   - R-459
   milestone: M6
-  note: "R-451; closed by TASK-M6-33. The look's numbers are the reference's (R-451 B6); the colours are look choices under R-390, listed in the PR. Tilt mode's single target follows the decoder's mapping (R-451 B1); RQ-340 holds the mapping question. Fix round of PR #227 (gui review G1, G2): both modes draw the decoder's plane through z₀, and each golden case names what is compared with the reference and what with an independent computation (R-451 B2, B8). Fix round 2 (gui review G6): the plane is its normal and offset n·p, p unclamped, the offset alone bounded to ±|n|₁ (R-451 B2). R-459 (18 Oct 2026): the edge labels become the H, V and D buttons in both modes, the third axis following the gesture, with a '4D: see Plücker' badge (REQ-GUI-208, REQ-GUI-209, TASK-M6-40); this statement stays as TASK-M6-33's, its tilt-mode label the record."
+  note: "R-451; closed by TASK-M6-33. The look's numbers are the reference's (R-451 B6); the colours are look choices under R-390, listed in the PR. Tilt mode's single target follows the decoder's mapping (R-451 B1); RQ-340 holds the mapping question. Fix round of PR #227 (gui review G1, G2): both modes draw the decoder's plane through z₀, and each golden case names what is compared with the reference and what with an independent computation (R-451 B2, B8). Fix round 2 (gui review G6): the plane is its normal and offset n·p, p unclamped, the offset alone bounded to ±|n|₁ (R-451 B2). R-459 (18 Oct 2026): the edge labels become the H, V and D buttons in both modes, the third axis following the gesture, with a '4D: see Plücker' badge (REQ-GUI-208, REQ-GUI-209, TASK-M6-40); this statement stays as TASK-M6-33's, its tilt-mode label the record. R-474 (20 Oct 2026, ruling RQ-340): the cube draws the active map, Tip as sheet by default, and B11 holds under Lean each axis only (REQ-GUI-235); the tilt drag runs to ±180° under Tip as sheet (REQ-GUI-232); TASK-M6-48 builds it, and its qa commit changes this task's qa files (R-474 K14)."
 - id: REQ-GUI-192
   area: GUI
   statement: "On the mock engine, the compass's cross-section of its plane with the cube [−1,1]³ must be a convex polygon of 3 to 6 vertices that lie in the plane and inside the cube, ordered around it, for every tilt at which the compass draws the plane (s = 2|q₁ × q₂| / (|q₁|² + |q₂|²), q₁, q₂ restricted to (e_a, e_b, e_d), at least 10⁻³, R-451 B11's numerical cut) and every position at which the plane cuts the cube's interior, and of 4 to 6 vertices, never a triangle, when the plane passes through a point (0, 0, d) of the cube's central axis, |d| < 1; and the plane it draws must be the decoder's plane, the basis View::basis builds from τ₁, τ₂ and γ expressed in the cube's frame (e_a, e_b, e_d), through z₀'s point, unclamped, the plane's offset n·p alone bounded to ±|n|₁, so that a pan leaves the drawing unchanged, in slice mode as in tilt mode, not the reference's axis-angle map; and at a tilt where s < 10⁻³, within about 0.057° of the corner points τ₁ = ±τ₂ = ±90°, at which alone q₁ and q₂ both lie along e_d and span no plane, it must draw the cube with no slice polygon, the gold pin kept when locked, its readout saying that no plane is drawn, naming the tilt and citing RQ-340."
@@ -16700,7 +17214,7 @@
   - R-390
   - R-451
   milestone: M6
-  note: "R-451; closed by TASK-M6-33. The comparison of the mappings is RQ-340 (for the human), cited here but not carried as rq: the human settled what the drawing shows, the decoder's mapping, and TASK-M6-33 does not wait (fix round of PR #227, code review F2). The 4-to-6 bound through the central axis is the physics review's (P11); the human's 3 to 6 stays the bound off it. Fix round 2 (gui review G6): the offset alone is bounded, and a pan past the half-range is tested, a per-component clamp its failing control. Fix round 3 (physics P12): the 4-to-6 bound holds for |d| < 1, not at |d| = 1, where τ₁ = τ₂ = −45° gives a triangle, now a 3-to-6 case of the verify; the edge contact at +|n|₁ is asserted (gui review's nit), both applied per R-369. Fix round 4 (physics P13): at τ₁ = ±τ₂ = ±90° View::basis spans no plane, so the sweep, the vertex bounds and the 1e-12 normal check are restricted to s ≥ 10⁻³, and at the corners the cube draws no slice and its readout cites RQ-340 (R-451 B11), applied per R-369 as the definition of a missing behaviour, a routine GUI choice. Fix round 5 (physics P14, P16): s < 10⁻³ is the compass's own drawing cut, numerical, set by the 1e-12 normal check (R-451 B11), and only the four corner points have no plane, so the statement and the readout (\"no plane drawn: s < 10⁻³ at …\") say so; the sine control's value is bounded over σ; applied per R-369. Fix round 9 (gui review G9): at s < 10⁻³ the cube keeps the gold pin when locked (R-451 B7, B11), asserted at a corner with a hidden pin as its failing control, applied per R-369."
+  note: "R-451; closed by TASK-M6-33. The comparison of the mappings is RQ-340 (for the human), cited here but not carried as rq: the human settled what the drawing shows, the decoder's mapping, and TASK-M6-33 does not wait (fix round of PR #227, code review F2). The 4-to-6 bound through the central axis is the physics review's (P11); the human's 3 to 6 stays the bound off it. Fix round 2 (gui review G6): the offset alone is bounded, and a pan past the half-range is tested, a per-component clamp its failing control. Fix round 3 (physics P12): the 4-to-6 bound holds for |d| < 1, not at |d| = 1, where τ₁ = τ₂ = −45° gives a triangle, now a 3-to-6 case of the verify; the edge contact at +|n|₁ is asserted (gui review's nit), both applied per R-369. Fix round 4 (physics P13): at τ₁ = ±τ₂ = ±90° View::basis spans no plane, so the sweep, the vertex bounds and the 1e-12 normal check are restricted to s ≥ 10⁻³, and at the corners the cube draws no slice and its readout cites RQ-340 (R-451 B11), applied per R-369 as the definition of a missing behaviour, a routine GUI choice. Fix round 5 (physics P14, P16): s < 10⁻³ is the compass's own drawing cut, numerical, set by the 1e-12 normal check (R-451 B11), and only the four corner points have no plane, so the statement and the readout (\"no plane drawn: s < 10⁻³ at …\") say so; the sine control's value is bounded over σ; applied per R-369. Fix round 9 (gui review G9): at s < 10⁻³ the cube keeps the gold pin when locked (R-451 B7, B11), asserted at a corner with a hidden pin as its failing control, applied per R-369. R-474 (20 Oct 2026, ruling RQ-340): the cube draws the active map, Tip as sheet by default, and B11 holds under Lean each axis only (REQ-GUI-235); the tilt drag runs to ±180° under Tip as sheet (REQ-GUI-232); TASK-M6-48 builds it, and its qa commit changes this task's qa files (R-474 K14)."
 - id: REQ-GUI-193
   area: GUI
   statement: "On the mock engine, the compass's Cube view must read out, in slice mode, the plane's normal axis untilted, or the tilt as tilt mode reads it when a tilt is set, and its position as a signed fraction of the slice step's half-range, and in tilt mode q₁'s and q₂'s target and their angles in degrees; in slice mode a horizontal drag must move the slice along the drawn plane's normal, the decoder's (R-409 A3's), at the reference's rate (the cube's full width the whole range), and send no edit at a tilt where s < 10⁻³, where the compass draws no plane (R-451 B11), and in tilt mode a horizontal drag must set τ₁ and a vertical drag τ₂ at the reference's rate (the full width or height 180°), each clamped to ±90°, one SetField per drag; and the displayed values must ease toward their targets by v ← v + (target − v)·(1 − 0.0016^dt), dt capped at 0.05 s, in the compass's drawing only, the contract holding the target."
@@ -16719,7 +17233,7 @@
   - R-458
   - R-465
   milestone: M6
-  note: "R-451 (B3 to B5 applied per R-369); closed by TASK-M6-33. Fix round of PR #227 (gui review G1): the slice-mode readout and drag follow the decoder's plane, drawn in both modes. Fix round 4 (physics P13): at a tilt where View::basis spans no plane a slice-mode drag sends no edit (R-451 B11), applied per R-369. Fix round 5 (physics P14): \"spans no plane\" reworded to the compass's cut, s < 10⁻³, applied per R-369. R-458 (18 Oct 2026): the drags' one edit per drag is one history entry, the edit applied every frame, so the sliders, the readout and the figure follow the drag (REQ-GUI-206, TASK-M6-39); RQ-368 held the gestures' screen direction, built as written meanwhile. R-465 (18 Oct 2026, closes RQ-368): the slice-mode drag reads the 2-D drag projected onto the drawn normal's screen direction, not its horizontal component, so a vertical drag moves the slice by its component along that direction; TASK-M6-39 builds it (REQ-GUI-217) and conforms this requirement's slice-drag tests, qa's in its qa commit (R-465 N5). This statement and verify stay as TASK-M6-33's record (PR #240, R-451 B3 as written); the tilt-mode drag and the easing stand (R-465 N1)."
+  note: "R-451 (B3 to B5 applied per R-369); closed by TASK-M6-33. Fix round of PR #227 (gui review G1): the slice-mode readout and drag follow the decoder's plane, drawn in both modes. Fix round 4 (physics P13): at a tilt where View::basis spans no plane a slice-mode drag sends no edit (R-451 B11), applied per R-369. Fix round 5 (physics P14): \"spans no plane\" reworded to the compass's cut, s < 10⁻³, applied per R-369. R-458 (18 Oct 2026): the drags' one edit per drag is one history entry, the edit applied every frame, so the sliders, the readout and the figure follow the drag (REQ-GUI-206, TASK-M6-39); RQ-368 held the gestures' screen direction, built as written meanwhile. R-465 (18 Oct 2026, closes RQ-368): the slice-mode drag reads the 2-D drag projected onto the drawn normal's screen direction, not its horizontal component, so a vertical drag moves the slice by its component along that direction; TASK-M6-39 builds it (REQ-GUI-217) and conforms this requirement's slice-drag tests, qa's in its qa commit (R-465 N5). This statement and verify stay as TASK-M6-33's record (PR #240, R-451 B3 as written); the tilt-mode drag and the easing stand (R-465 N1). R-474 (20 Oct 2026, ruling RQ-340): the cube draws the active map, Tip as sheet by default, and B11 holds under Lean each axis only (REQ-GUI-235); the tilt drag runs to ±180° under Tip as sheet (REQ-GUI-232); TASK-M6-48 builds it, and its qa commit changes this task's qa files (R-474 K14)."
 - id: REQ-GUI-194
   area: GUI
   statement: "On the mock engine, the compass must carry a view switcher on the compass itself, four buttons Cube, Plücker, Jacobi and Shape, Cube the default and the current view shown; the view must set only what the compass draws, independent of its Tilt and Slice modes, which keep their buttons in every view and set what a drag on the Cube does; in a grid view a drag must do nothing; and the view must be the compass's own GUI state, not undoable and not in the contract."
@@ -16906,7 +17420,7 @@
   - R-409
   - R-451
   milestone: M6
-  note: "R-451 B11 (fix round 5 of PR #227, physics review P15, decided per R-369; fix round 6, physics review P17 and P18, fix (a) applied per R-369: the guards' own cut 10⁻⁶ is numerical, set by s's rounding floor √(17ε) ≈ 6.1·10⁻⁸, not an R-71 calibration, and B11 is R-72's missing definition; the compass's 10⁻³ is its drawing cut only; fix round 7, physics review P19, fix (a) applied per R-369: above the cut the pivot's chart coordinates carry a relative error of about ε/sin²θ, θ the angle between q₁ and q₂, at most about 17ε/s² since s ≤ sin θ, about 3.8·10⁻³ at the cut, a pin shift of at most about 2 px of a view 1000 px across; the in-disc drag's tolerances are 17ε(1/sin²θ + 1/sin²θ′)); closed by TASK-M6-37. Where the guards decline, the locked behaviour keeps about_the_pin's rule for a degenerate basis, the edits passing as they are; RQ-340 is cited by B11, not carried as rq."
+  note: "R-451 B11 (fix round 5 of PR #227, physics review P15, decided per R-369; fix round 6, physics review P17 and P18, fix (a) applied per R-369: the guards' own cut 10⁻⁶ is numerical, set by s's rounding floor √(17ε) ≈ 6.1·10⁻⁸, not an R-71 calibration, and B11 is R-72's missing definition; the compass's 10⁻³ is its drawing cut only; fix round 7, physics review P19, fix (a) applied per R-369: above the cut the pivot's chart coordinates carry a relative error of about ε/sin²θ, θ the angle between q₁ and q₂, at most about 17ε/s² since s ≤ sin θ, about 3.8·10⁻³ at the cut, a pin shift of at most about 2 px of a view 1000 px across; the in-disc drag's tolerances are 17ε(1/sin²θ + 1/sin²θ′)); closed by TASK-M6-37. Where the guards decline, the locked behaviour keeps about_the_pin's rule for a degenerate basis, the edits passing as they are; RQ-340 is cited by B11, not carried as rq. R-474 K8 (20 Oct 2026): the guards stay under either map; under Tip as sheet they never fire."
 - id: REQ-GUI-204
   area: GUI
   statement: "On the mock engine, the Manifold view's Navigate section must hold centre (u, v) and zoom (log₂), with the depth readout, the precision warning and the lock row, and no grid of z₀ value boxes; the section that was 'Centre z₀' must be named 'Slice centre', its eight sliders z_α, z_β, z_q0…z_q3, z_μ1, z_μ2 each with its number box beside it; the section that was 'Slice & tilt' must be named 'Tilt' and hold τ₁, τ₂ and γ, each slider with its number box, and no step slider; the breadcrumb and the keyboard's sub-scopes must use the new names."
@@ -16951,7 +17465,7 @@
   - R-457
   - R-459
   milestone: M6
-  note: "R-457 (E1 to E7 applied per R-369); closed by TASK-M6-38. Bears on RQ-340's question (ii), which stays open for (i); with X = Y the map is the code's (RQ-340 option (a), as applied). Review round 1 of PR #243 (gui review F4, applied per R-369): R-459 G4's rule for a preset change and Chart's basis edits is built here with the slice frame, so the normal is never in the plane from this task's merge; TASK-M6-40 applies it to the H and V picks and the Plücker steer (REQ-GUI-208)."
+  note: "R-457 (E1 to E7 applied per R-369); closed by TASK-M6-38. Bears on RQ-340's question (ii), which stays open for (i); with X = Y the map is the code's (RQ-340 option (a), as applied). Review round 1 of PR #243 (gui review F4, applied per R-369): R-459 G4's rule for a preset change and Chart's basis edits is built here with the slice frame, so the normal is never in the plane from this task's merge; TASK-M6-40 applies it to the H and V picks and the Plücker steer (REQ-GUI-208). R-474 (20 Oct 2026) rules RQ-340: with X = Y the map is the active one, Tip as sheet by default, Lean each axis (the code's map) an option (REQ-GUI-231, TASK-M6-48)."
 - id: REQ-GUI-206
   area: GUI
   statement: "On the mock engine, a drag on the compass's Cube view must apply its edit every frame the pointer moves, at most once a frame, pointer events coalesced, so that during the drag the Manifold view's sliders, the compass's readout and the figure follow it, not the release; the whole drag must be one undo entry in the contract's history, its before the value at the drag's start and its after the last value, and one console line, logged when the drag ends; the compass's eased drawing (R-451 B4) must ease toward the value the contract holds."
@@ -17036,7 +17550,7 @@
   - R-452
   - R-459
   milestone: M6
-  note: "R-459 (G5 to G8 applied per R-369); closed by TASK-M6-40. The human chose the orchestrator's option 3 and replaced its 'or was last changed' with the rule for when nothing is dragged."
+  note: "R-459 (G5 to G8 applied per R-369); closed by TASK-M6-40. The human chose the orchestrator's option 3 and replaced its 'or was last changed' with the rule for when nothing is dragged. R-474 (20 Oct 2026): the third axis draws the gesture's plane under the active map; a single tilt is the same under both."
 - id: REQ-GUI-210
   area: GUI
   statement: "On the mock engine, the focus and keyboard navigation must be separate: keyboard navigation (the ring and R-409's two modes) must start only on keyboard input, any key press but a modifier pressed alone turning it on and showing the ring where the focus is once the key has acted: Tab, Shift+Tab and the arrows acting as always from the focus where it is, Esc, the letter and Space shortcuts, Ctrl+Z and ? acting as always, a key in a text field being typed in acting as typing does, and Enter in navigation mode, while it is off, only turning it on; any mouse click or drag, clicking off to close something included, must turn it off and hide the ring, the focus moving exactly as R-450 A3 and R-456 say and a click on a text input still starting typing, so that the next key press shows the ring again where the focus already is, the first character typed into a clicked text field showing it blue; a scroll or a hover must leave it as it is; a window opened with the mouse, from any entry point, must take the focus on its landing and show no ring; a window opened from the keyboard must turn it on and land with the ring as R-450 has it; a menu opened with the mouse must take the focus with no ring; the GUI must start with it off; and the flag must be the GUI's own, never the contract's."
@@ -17409,7 +17923,7 @@
   milestone: M8
   rq:
   - RQ-372
-  note: "R-467 (20 Oct 2026), F2. Waits for RQ-372; closed by TASK-M8-47, a leaf task."
+  note: "R-467 (20 Oct 2026), F2. Waits for RQ-372; closed by TASK-M8-47, a leaf task. R-471 H5 (20 Oct 2026): RQ-372 is answered for energy-type axes (no warning under either mapping) and stays open, narrowed, for the virial ratio and the mass ratio, for which this requirement waits."
 - id: REQ-GUI-229
   area: GUI
   statement: "On the mock engine, View must hold the row \"F3 fills by: Extend / Fit\", two radio options after F3 hide, reached from the keyboard as registered scopes of the View menu, Enter on an option choosing it (§G3), Extend at each launch and the choice kept for the session in ViewUI (never undoable, no SetField); with the layer hidden in Extend the figure must fill the window as REQ-GUI-179 has it; in Fit the view's square (UV ∈ [0,1]²) must be scaled uniformly by min(W, H) over its shown side and centred, never stretched, its extent ratio kept, the rest of the window the canvas background, the mock's fake quads chosen at the new screen scale (finer), the shown layout's and Extend's quads unchanged, with no SetField and no undo entry; present mode must follow the mode; and F3 again must return the shown layout and the view, in either mode, with nothing moved."
@@ -17430,7 +17944,7 @@
   - R-406
   - R-468
   milestone: M6
-  note: "R-468 (20 Oct 2026), E1 to E6. Closed by TASK-M6-47. The real engine's Fit is REQ-GUI-230. Gui review 5585209592 of PR #253 (applied per R-369): G6, frac = quad width / (shown figure width × k), k = 1 outside Fit, so only Fit refines; G7, keyboard reach."
+  note: "R-468 (20 Oct 2026), E1 to E6. Closed by TASK-M6-47. The real engine's Fit is REQ-GUI-230. Gui review 5585209592 of PR #253 (applied per R-369): G6, frac = quad width / (shown figure width × k), k = 1 outside Fit, so only Fit refines; G7, keyboard reach. R-472 (20 Oct 2026): X2's \"remembered\" is read as R-468 E4's \"for the session\" (flagged); present mode following the mode is now the human's words (X2c); the sidecar's f3_fill is REQ-TOOL-168."
 - id: REQ-GUI-230
   area: GUI
   statement: "On the real engine, F3's Fit mode must scale the view's square to the window's shorter side, centred, never stretched, the rest the canvas background, asking for the quads the screen floor gives at the new scale (finer) and keeping those already computed, with no SetField and no undo entry; Extend must stay REQ-GUI-180's fill; and F3 twice must return the identical layout and view in either mode."
@@ -17449,7 +17963,375 @@
   - R-407
   - R-468
   milestone: M8
-  note: R-468 (20 Oct 2026), E2, E3, E5. Closed by TASK-M8-46.
+  note: "R-468 (20 Oct 2026), E2, E3, E5. Closed by TASK-M8-46. R-472 (20 Oct 2026): X2's \"remembered\" is read as R-468 E4's \"for the session\" (flagged); present mode following the mode is now the human's words (X2c); the sidecar's f3_fill is REQ-TOOL-168."
+- id: REQ-GUI-231
+  area: GUI
+  statement: "On the mock engine, the GUI's View::basis must offer two tilt maps, chosen by SimConfig's slice-frame field tilt_map: Sheet | Lean, Sheet the default: Tip as sheet, with one target (X = Y, e_X), m = √(τ₁² + τ₂²), k = (τ₂ e_a − τ₁ e_b)/m and R the Rodrigues rotation by m about k in (e_a, e_b, e_X), û₁ = R e_a, û₂ = R e_b, then γ and σ as today, R the identity at m = 0; Lean each axis, today's u₁ = cos τ₁ e_a + sin τ₁ e_X, u₂ = cos τ₂ e_b + sin τ₂ e_X; with X ≠ Y both the two-target form; the two maps must be bitwise equal for a single tilt or X ≠ Y and differ with X = Y and both angles set (C3); Tip as sheet must be orthonormal at every tilt, m > 90° included (C5); and τ = 0 must be the identity under both (C2). The Tilt section must hold \"map: Tip as sheet / Lean each axis\", two radio options after γ, keyboard-registered, one undoable edit, which neither the Tilt reset nor Home changes."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p gui tilt_maps: C3, single τ₁ (and single τ₂) and X ≠ Y: Sheet and Lean bases bit-identical; X = Y with τ = (30°, 20°): they differ (the arm that shows the first is not vacuous); C5, over a 13 × 13 grid of τ₁, τ₂ ∈ [−180°, 180°]: |q̂₁| = |q̂₂| = 1 and q̂₁·q̂₂ = 0 to 1e-12 under Sheet, and Lean fails orthogonality off the axes (the control); at 45°/45° Sheet's û₁ = (0.722, −0.278, 0.634) to 1e-3; C2: τ = 0 returns the untilted basis bitwise under both; the selector edits tilt_map in one history entry, Ctrl+Z restores it, Tilt reset and Home leave it; screenshot 01_main (mock_tilt_map_selector)"
+  rulings:
+  - R-390
+  - R-457
+  - R-466
+  - R-474
+  - R-477
+  milestone: M6
+  note: "R-474 R1, R2, K1, K2, K6, K7; R-477 C2, C3, C5. Closed by TASK-M6-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-232
+  area: GUI
+  statement: "Under Tip as sheet the tilt must carry on over the pole: each angle runs over [−180°, 180°] (sliders, number boxes and the compass's tilt drag no longer stopping at ±90°), the angles stored as set and the rotation computed from them, wrapped internally only in total tip at 360° (for m > 180°, τ·(m − 360)/m), never folded onto the 180° partner τ·(m − 180)/m; under Lean each axis the ±90° clamp stays."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui tilt_over_the_pole: C4, for m ∈ {200°, 270°, 350°} the basis from the stored angles is bit-identical to the basis from the wrap's own output τ·(m − 360)/m; the 180° partner gives the same plane (normals equal up to sign, 1e-12) and a mirrored basis (in-plane change-of-basis determinant −1); a drag across m = 90° keeps the image's handedness (determinant +1 frame to frame); under Lean a τ₁ drag stops at 90°; controls: a fold onto the 180° partner flips the handedness, and a clamp at 90° under Sheet, each fail"
+  rulings:
+  - R-451
+  - R-474
+  - R-477
+  milestone: M6
+  note: "R-474 R3, K3, K4; R-477 C4. Closed by TASK-M6-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-233
+  area: GUI
+  statement: "\"Same plane\" comparisons (the readout, any cache key or dedupe keyed on the plane alone) must compare planes by their normal up to sign, and nothing compared may be written back into the state; past m = 90° under Tip as sheet the readout must say \"same plane as (τ₁′, τ₂′), mirrored\", τ′ = τ·(m − 180)/m, one decimal, signed; R-92's sim key is not such a comparison and is unchanged."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui same_plane_readout: at τ = (100°, 30°) under Sheet the readout holds \"same plane as (−72.4°, −21.7°), mirrored\" and the stored angles are bit-identical after it; the sim key of the view and of its 180° partner differ; controls: a readout that writes τ′ back, and a comparison by the signed normal, each fail"
+  rulings:
+  - R-92
+  - R-474
+  milestone: M6
+  note: "R-474 R4, K5. Closed by TASK-M6-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-234
+  area: GUI
+  statement: "The tilt map must be recorded: tilt_map is a field of SimConfig's slice frame in the GUI state contract, default Sheet, undoable, one history entry, re-sending the basis where it changes it (X = Y, both angles set); a saved state or export with no tilt_map field must reopen under Lean, the map it was made with."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p gui tilt_map_state: the canonical serialisation holds tilt_map; saved under Lean and reopened, the view is under Lean and its basis bit-identical; a pre-R-474 snapshot without the field reopens under Lean bitwise; control: a reopen under the default Sheet changes that view's basis"
+  rulings:
+  - R-390
+  - R-474
+  milestone: M6
+  note: "R-474 R5, K6. Closed by TASK-M6-48. Exports: REQ-TOOL-167; saved views: REQ-TOOL-170."
+- id: REQ-GUI-235
+  area: GUI
+  statement: "The compass must draw the active map: its Cube view draws View::basis under tilt_map, Tip as sheet by default; under Tip as sheet q̂₁, q̂₂ are orthonormal at every tilt, so s = 1 and the cube always draws a plane, at the corners τ₁ = ±τ₂ = ±90° (m = 127.3°) too; under Lean each axis R-451 B11 stands, its readout line ending \"(Lean each axis)\" where it cited \"(RQ-340)\"."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui compass_active_map and cargo xtask screenshot 01_main: at τ = (90°, 90°), X = Y: under Sheet the cube draws the cross-section polygon (s = 1), under Lean no slice and the B11 line ending \"(Lean each axis)\"; at 45°/45° the drawn plane's normal equals Sheet's to 1e-6 (mock_compass_cube_tilt_hex regenerated, listed); control: the cube drawing Lean while tilt_map = Sheet fails"
+  rulings:
+  - R-451
+  - R-459
+  - R-474
+  milestone: M6
+  note: "R-474 R6, K8, K12. Closed by TASK-M6-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-236
+  area: GUI
+  statement: "Under Lean each axis the compass readout must warn: \"dead zone: |τ₁| = 90°, τ₂ does not move the plane\" (or with the indices swapped) while the displayed angle reads ±90.0°; R-451 B11's line at the corners; and \"axes at <θ>°\", cos θ = sin τ₁ sin τ₂, one decimal, whenever it does not read 90.0°; none of these under Tip as sheet."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui lean_warnings: under Lean at τ₁ = 90°, τ₂ = 20°: the dead-zone line; at (40°, 25°): \"axes at 74.2°\" (the value as computed); at (30°, 0°): no angle line; under Sheet at each: none; control: a readout under the wrong map shows the wrong lines"
+  rulings:
+  - R-474
+  milestone: M6
+  note: R-474 R8, K10. Closed by TASK-M6-48.
+- id: REQ-GUI-237
+  area: GUI
+  statement: "Under either map the compass readout must show each screen axis's actual components, \"H = 0.72 e_a − 0.28 e_b + 0.63 e_X\" and \"V = …\": the unit vectors q̂₁, q̂₂ after γ on the dimensions that carry them, two decimals, a term below 0.005 left out, the dimensions named as the cube's buttons name them."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui readout_components: at 45°/45°, X = Y, under Sheet: \"H = 0.72 e_a − 0.28 e_b + 0.63 e_X\" and \"V = −0.28 e_a + 0.72 e_b + 0.63 e_X\" (the dimensions by their button names); under Lean: \"H = 0.71 e_a + 0.71 e_X\"; control: a readout under the wrong map"
+  rulings:
+  - R-474
+  milestone: M6
+  note: R-474 R9, K11. Closed by TASK-M6-48.
+- id: REQ-GUI-238
+  area: GUI
+  statement: "Switching the default map must re-integrate exactly the views with X = Y and both angles set, under the default: their basis, so their sim key, changes; every other view must be bitwise unchanged (C10), and a view saved before R-474 reopens under Lean, unchanged."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Tilt (basis edit)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui reintegration_scope: over a set of views (untilted; single τ₁; single τ₂; X ≠ Y with both angles; X = Y with both angles; a pre-R-474 snapshot), switching the default from Lean to Sheet changes the sim key of exactly the X = Y-with-both-angles view; control: a switch that also re-keys the X ≠ Y view, or leaves the X = Y view's key unchanged, fails"
+  rulings:
+  - R-92
+  - R-474
+  - R-477
+  milestone: M6
+  note: "R-474 R10, K12; R-477 C10. Closed by TASK-M6-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-239
+  area: GUI
+  statement: "On the mock engine, \"Save view as chart\" must be a button in the Chart section after Chart builder… and a View entry after Debug view, before reset layout, keyboard-registered: it commits the current view as a named custom chart in one undo entry (the switch to it, the view unchanged), adds it to the preset selector's Saved group named \"Saved <n>\", renamed inline, its provenance (parent chart, map, angles, targets, a latent view's q₁, q₂) shown beside it and in the Chart section while it is active; saved charts are the GUI's own settings, kept across sessions, deleted as a preset is."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui save_view_as_chart and cargo xtask screenshot 01_main (mock_saved_chart): one click adds \"Saved 1\" to the Saved group and makes it active; the undo depth rises by one and one Ctrl+Z returns the previous chart, the Saved entry kept; a rename sticks across a relaunch; the provenance lines show the parent, map, angles, targets and q₁, q₂; the button and the View entry reached by the keyboard; control: a save that adds two history entries, and one whose undo removes the picker entry, each fail"
+  rulings:
+  - R-390
+  - R-462
+  - R-466
+  - R-475
+  milestone: M6
+  note: R-475 S1, S4, L1 to L3. Closed by TASK-M6-49.
+- id: REQ-GUI-240
+  area: GUI
+  statement: "On the mock engine, a latent view saved as a chart must be the oblique chart (z₀, q₁, q₂) with the vectors as they are (under Lean not orthogonalised, and reported so), its targets the six dimensions off the saved plane and its centre, window and base point the saved view's; reopened at zero tilt it must reproduce the saved view bitwise (S3, C8), and it can then be tilted, sliced and saved again."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/design/principia_chart_reference.md
+    section: 1.1 Affine slices — the "no tilt" case
+  verify:
+    method: unit test
+    detail: "cargo test -p gui saved_latent_chart: a view at τ = (30°, 20°) under Lean and under Sheet, saved and reopened at zero tilt: the mock's figure pixel-identical and (z₀, q₁, q₂) bit-identical; a further tilt of the saved chart then a second save reopens bitwise; Home on the saved chart returns its saved centre; control: a saved chart that re-orthonormalises the pair differs under Lean"
+  rulings:
+  - R-466
+  - R-475
+  - R-477
+  milestone: M6
+  note: R-475 S2, S3, L4; R-477 C8. Closed by TASK-M6-49.
+- id: REQ-GUI-241
+  area: GUI
+  statement: "On the real engine, the Manifold view's Tilt and Slice centre must work on every chart: the Tilt section's targets offer the chart's hidden coordinates (its latent controls its axes do not write) and its rotation acts on the chart's own parameters (REQ-CHART-062); the Slice centre's sliders of the hidden coordinates move the slice centre, each through its latent control (a mass through its logit), the physical value at the centre read out beside it."
+  source:
+  - file: decisions.md
+    section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui real_tilt_every_chart and cargo xtask screenshot 01_main: on the shape sphere the targets list its four momentum controls and two mass logits; a tilt into a mass logit re-integrates and the figure changes; the mass readouts beside the sliders sum to 1.000; on the latent chart the targets are the six off the plane, as on the mock; control: a curved chart with the Tilt section disabled fails"
+  rulings:
+  - R-457
+  - R-473
+  milestone: M8
+  note: "R-473 T1, T6, J1, J2. Closed by TASK-M8-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-242
+  area: GUI
+  statement: "On the real engine, with an energy-type axis (E, L_z, K) the Chart section must offer each such axis's mapping, warped (the default) or linear, one undoable edit that re-integrates; under linear the infeasible pixels draw blank and warn nothing."
+  source:
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui energy_axis_mapping_control and cargo xtask screenshot 01_main (real engine): on (L_z, E), switching to linear shows blank corners and no console warning; Ctrl+Z returns the warp; the sim key changes with the mapping; control: a switch that does not re-integrate"
+  rulings:
+  - R-470
+  - R-471
+  milestone: M8
+  note: "R-471 E2, H8. Closed by TASK-M8-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-243
+  area: GUI
+  statement: "On the real engine, every navigation SetField (pan, slice, zoom, tilt, lock, a chart-parameter edit) must pass through REQ-CHART-060's stop before it is recorded: the history's after holds the clamped value, not the requested one; a drag's edit is clamped every frame, motion beyond the clamp sending nothing new and motion back inside sending the value again; the slider's handle stops at the clamped value; and the compass's readout shows \"stopped at the edge: <check> (validate layer <n>)\" (or \"stopped at the edge: Φ fails\") until the next edit."
+  source:
+  - file: decisions.md
+    section: "R-469 — A chart never leaves the manifold: every pixel it draws is a valid three-body system or explicitly \"not a system\", and pan, slice, zoom, tilt and lock are accepted only while the chart's centre passes `validate`, an edit that would cross stopping at the last valid value, by one generic rule in the edit path; undo and the contract record the clamped value, the slider stops and the readout names the check"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "The compass: look and views (R-451, R-452)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p gui nav_stop_edit_path: on (L_z, E) under linear, a pan drag past the feasible edge: the slider handle stops, the history entry's after equals the clamped z₀ bit for bit, the readout line names layer 2 and the constraint, the next edit clears it; a drag back inside sends the value; controls: the requested value recorded in the history, and a stop applied after the edit is sent, each fail"
+  rulings:
+  - R-458
+  - R-469
+  milestone: M8
+  note: "R-469 P2, A4 to A6. Closed by TASK-M8-48. On the mock no edit stops (R-469 A6)."
+- id: REQ-GUI-244
+  area: GUI
+  statement: "On the real engine, Save view as chart on a curved view must save its parent chart, slice centre and tilt (angles, targets, map), shown as provenance, and reopened at zero tilt must reproduce the view bitwise; a further tilt composes with the saved one (REQ-CHART-073)."
+  source:
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: decisions.md
+    section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui saved_curved_chart and cargo xtask screenshot 01_main (real engine): a shape-sphere view tilted into a mass logit saved and reopened at zero tilt: the figure pixel-identical and the sim key equal; control: a saved curved chart that drops the slice centre differs"
+  rulings:
+  - R-475
+  - R-477
+  milestone: M8
+  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) waits on nothing. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-245
+  area: GUI
+  statement: "The hover, pinned and kept traces must be drawn by the line system (principia_lines.md §8): each computeIC state projected through the chart's forward map into its own coordinates, breaking where the path leaves the chart and never joined across a pixel that is not a system, with markers, time ticks, colour, arrows, animation, length and the incomplete-run mark as §8 has them; the same Trace and renderer must serve the orbit viewer (the Inspector window and the Trajectory panel's views), nothing specific to the slice view."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/design/principia_trajectory_viewing.md
+    section: "3. Hover trace — projection onto the current (tilted, sliced) plane"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 7 — The hover trace (per-IC trajectory overlay)
+  verify:
+    method: unit test
+    detail: "cargo test -p render line_traces: on the shape chart a trace's first vertex lands on the hovered pixel exactly (§12 trace projection); a path leaving the chart breaks and resumes; dashes run continuously along the trace; the Inspector's trace and the figure's share one Trace value; controls: a trace projected onto the axis's dominant named coordinate freezes on a tilted chart, and a trace joined across the outside, each fail"
+  rulings:
+  - R-453
+  - R-476
+  milestone: M8
+  note: "R-476 L3, M4. Closed by TASK-M8-49. The fade waits for RQ-377 (3): REQ-GUI-249. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-246
+  area: GUI
+  statement: "The figure's axes (frame, ticks, tick labels, titles) must be lines and labels of the line system (principia_lines.md §8b): sides off, primary or a secondary monotonic quantity solved through the chart map (refused where not monotonic); a warped axis's ticks at round values of its quantity; major and minor ticks, label stride; the presets Screen (the dev default), Print and Ends only (the previous GUI's axis labels); hidden with the chrome under F3 and present mode by default, kept in exports as an option."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 8b. Axes
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui line_axes and cargo xtask screenshot 01_main: Screen by default; Ends only reproduces the range at each end and the axis name; a contour of h lies on the major ticks (§12 exactness); the shape chart's secondary α scale on top is unevenly spaced as the link says; a non-monotonic secondary is refused; control: h + 0.001 does not lie on the ticks"
+  rulings:
+  - R-476
+  milestone: M8
+  note: R-476 M8. Closed by TASK-M8-50.
+- id: REQ-GUI-247
+  area: GUI
+  statement: "Lines ▾ must sit beside Overlays ▾ with a count, Alt+L showing or hiding all lines: it lists the contour sets, traces and axes with their visibility, opens the contour-set editor (expression, read at, levels, spacing, follow the view, line style; showing the range in view and the levels inside it, and the resolution a set is drawn at) and the style library (Screen contour, Dashed secondary, Trace, Grid, Print; add, duplicate, rename), and holds the presets Grid (contours of the chart's own axes, spacing from the major ticks) and t_end (t_end at the playhead), which replace the Overlays grid and t_end contours toggles; RenderState's Overlays must lose grid and t_end_contours, which move into RenderState's Lines, on the mock and the real engine."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/design/principia_lines.md
+    section: 2. Where it sits
+  - file: docs/design/principia_lines.md
+    section: 3. The data model
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/design/principia_lines.md
+    section: What it absorbs
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui lines_menu and cargo xtask screenshot 01_main (mock_lines_menu): the menu, its count and Alt+L; the Grid and t_end presets draw over the figure; Overlays ▾ and the Display window no longer hold grid or t_end contours; the canonical RenderState text holds Lines and its Overlays twelve toggles; a style edit updates every line using it; control: a menu that still offers the Overlays grid fails"
+  rulings:
+  - R-390
+  - R-476
+  milestone: M8
+  note: "R-476 L2, M3, M5, M6, M9. Closed by TASK-M8-50; qa's files listed in R-476 M12."
+- id: REQ-GUI-248
+  area: GUI
+  statement: "Lines must be part of the exported view state (principia_lines.md §9): contour sets, traces' settings, the axes and the styles used are RenderState's Lines, each edit one undoable SetField that never touches the sim key and re-integrates nothing, the hover never recorded; the personal style library is the GUI's own settings, and a shared view embeds the styles it uses; lines belong to the figure, staying with F3 and present mode and in exports."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 9. Persistence, undo, provenance
+  - file: docs/design/principia_lines.md
+    section: 2. Where it sits
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  verify:
+    method: unit test
+    detail: "cargo test -p gui lines_provenance: a print re-opened reproduces its contour sets and styles bitwise (§12 provenance); a shared view renders identically for a user without its styles; every Lines edit leaves the sim key and the quad requests unchanged (§12 no re-integration); hovering adds no history entry; control: a Lines edit routed as a sim key re-integrates and fails"
+  rulings:
+  - R-101
+  - R-476
+  milestone: M8
+  note: R-476 M5. Closed by TASK-M8-50.
+- id: REQ-GUI-249
+  area: GUI
+  statement: "A trace's fade off the plane must use the off-plane distance RQ-377 part (3) rules (opacity per vertex falling with the state's distance from the slice, down to a floor)."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/design/principia_lines.md
+    section: 11. Open questions
+  verify:
+    method: unit test
+    detail: "cargo test -p render trace_fade: per RQ-377 (3)'s ruling, a trace in the slice is at full opacity and one leaving it fades to the floor; control: a fade computed with the other option's distance differs"
+  rulings:
+  - R-476
+  milestone: M8
+  note: "R-476 L5, M10. Waits for RQ-377 (3); closed by TASK-M8-51, a leaf task. Meanwhile no fade."
+- id: REQ-GUI-250
+  area: GUI
+  statement: "New contour sets must take the default style RQ-377 part (6) rules (Screen contour, or smart ink on)."
+  source:
+  - file: decisions.md
+    section: "R-476 — The line system is built as `principia_lines.md` specifies, a separate system outside the node graph drawing over the finished figure: contours of any expression over chart, latent and payload quantities, hover and pinned traces, axes, ticks and labels, grids and style presets; it absorbs the grid and `t_end` contours overlays as presets, the colour composition's bands staying in the graph; traces are the orbit viewer's too; energy-type contours follow the active mapping, per pixel; the design's six open questions are queued (RQ-377)"
+  - file: docs/design/principia_lines.md
+    section: 11. Open questions
+  - file: docs/design/principia_lines.md
+    section: 6. Smart ink
+  verify:
+    method: unit test
+    detail: "cargo test -p gui contour_default_style: a new contour set takes the ruled style; control: the other option's style"
+  rulings:
+  - R-476
+  milestone: M8
+  note: "R-476 L5, M10. Waits for RQ-377 (6); closed by TASK-M8-51. Meanwhile Screen contour."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -20147,6 +21029,84 @@
   - R-425
   milestone: M5
   note: "Split from REQ-TOOL-011 by R-425 (RQ-276, option (b)). The candidate readings RQ-276 lists (for \"locked\", the chart lock or caching Part 4's pinned class; for \"visible-set\", scheduler Part 7's live set) are the task's to choose from, not chosen here. Each overlay's slot in the per-visible-quad record counts toward REQ-PERF-079's record (TASK-M8-08). Closed by TASK-M5-29."
+- id: REQ-TOOL-167
+  area: TOOL
+  statement: "An image export (its pxpack), a saved snapshot and a share link must record the tilt map, tilt_map=sheet|lean, with SimConfig, and a view saved under one map must reopen under that map; one with no field reopens under Lean."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p gui export_tilt_map: export at X = Y, τ = (30°, 20°) under Lean; the pxpack, snapshot and link each hold tilt_map=lean; reopened, the basis is bit-identical; control: a reopen under the default differs"
+  rulings:
+  - R-474
+  milestone: M8
+  note: R-474 R5, K6. Closed by TASK-M8-32.
+- id: REQ-TOOL-168
+  area: TOOL
+  statement: "An image export, a saved snapshot and a share link must name F3's fill mode in their sidecar, f3_fill=extend|fit, beside SimConfig and RenderState's canonical serialisation (an export field; the mode stays ViewUI's), and Import picture's restore must restore it; present mode follows the mode."
+  source:
+  - file: decisions.md
+    section: "R-472 — Extension stands: R-407's four types, past a bounded edge a pixel blank; F3 has Extend and Fit, a GUI state field, remembered, named in the sidecar, present mode following it; a tilted, sliced or saved chart extends by its axes' types, nothing written per chart *(amends R-407 and R-468)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p gui export_f3_fill: an export in Fit holds f3_fill=fit, one in Extend f3_fill=extend; restore this view restores the mode; RenderState's text is unchanged by the mode; control: an export without the field"
+  rulings:
+  - R-468
+  - R-472
+  milestone: M8
+  note: R-472 X2b, X2c. Closed by TASK-M8-32.
+- id: REQ-TOOL-169
+  area: TOOL
+  statement: "An export's sidecar must record each energy-type axis's mapping (warped | linear) with SimConfig's chart params, a curved chart's tilt (angles, targets, map) and a saved chart's definition, so a figure reproduces bitwise."
+  source:
+  - file: decisions.md
+    section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
+  - file: decisions.md
+    section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p gui export_chart_params: a linear-E export, a tilted shape-sphere export and a saved-chart export each re-open bit-identically; control: an export that drops the mapping re-opens warped and differs"
+  rulings:
+  - R-471
+  - R-473
+  - R-475
+  milestone: M8
+  note: R-471 H7; R-473 J5; R-475 L8. Closed by TASK-M8-32.
+- id: REQ-TOOL-170
+  area: TOOL
+  statement: "A saved view must reopen under the tilt map it was saved with, one saved before R-474 under Lean each axis; a saved view whose chart is a saved chart must carry the saved chart's definition, so it reopens without the picker entry."
+  source:
+  - file: decisions.md
+    section: "R-474 — RQ-340 is ruled: two tilt maps, \"Tip as sheet\", the nav cube's axis-angle map and the default, and \"Lean each axis\", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+  - file: decisions.md
+    section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui saved_view_tilt_map: saved under Lean, reopened under Lean bitwise; a pre-R-474 saved view reopens under Lean; a saved view on \"Saved 1\" reopens after the picker entry is deleted; control: a reopen under the default"
+  rulings:
+  - R-474
+  - R-475
+  milestone: M8
+  note: R-474 R5, K6; R-475 L8. Closed by TASK-M8-33.
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -25030,7 +25990,7 @@
   milestone: M2
 - id: REQ-SYS-011
   area: SYS
-  statement: "The exported ViewState must record (z₀, q₁, q₂), the chart id and params, the axis warps and the link id per block, so any chart — tilted or not — serialises, saves and restores exactly and a figure's provenance pins its links."
+  statement: "The exported ViewState must record (z₀, q₁, q₂), the chart id and params (a curved chart's tilt, its angles, targets and map, each energy-type axis's mapping, and a saved chart's definition included), the tilt map, the axis warps and the link id per block, so any chart — tilted or not, saved or not — serialises, saves and restores exactly and a figure's provenance pins its links."
   source:
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: "Integrity: the link is part of the experiment"
@@ -25038,9 +25998,14 @@
     section: The operation table
   verify:
     method: unit test
-    detail: "export a tilted view with a non-default link, reload, assert bitwise-identical z per pixel and identical link ids"
-  rulings: []
+    detail: "export a tilted view with a non-default link, reload, assert bitwise-identical z per pixel and identical link ids; likewise a tilted shape-sphere view, a linear-E view and a view on a saved chart"
+  rulings:
+  - R-471
+  - R-473
+  - R-474
+  - R-475
   milestone: M2
+  note: R-471 H7, R-473 J5, R-474 K6, R-475 L8 (20 Oct 2026).
 - id: REQ-SYS-012
   area: SYS
   statement: "The kernel must receive only (z₀, q₁, q₂, chart id + params), identical in free and locked mode and before/after any tilt, slice or excursion; the lock, δ memory, ghost marks and direction library must live CPU-side, with no locked flag or second kernel code path."

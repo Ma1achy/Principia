@@ -28,3 +28,4 @@ A Chart-builder chart whose physical-quantity axis's range leaves the slice's re
 
 ## Notes
 - **Waits for RQ-372** (`rq: RQ-372` on REQ-GUI-228). A leaf task: nothing depends on it.
+- **R-471 H5 (20 Oct 2026):** RQ-372 is answered for energy-type axes and stays open, narrowed to the virial ratio and the mass ratio; this task waits for those alone.

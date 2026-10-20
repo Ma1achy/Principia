@@ -1,0 +1,45 @@
+# TASK-M2-36 — Tilt and slice on every chart: the rotation R(τ₁, τ₂) on the chart's own parameters, mass tilts in logits, the extension after the tilt (R-473, R-472 X3) ⚑
+
+- **Milestone:** M2
+- **Closes:** REQ-CHART-062, REQ-CHART-063, REQ-CHART-065, REQ-CHART-066
+- **Depends on:** TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13
+- **Needs (earlier milestones):** none
+- **Reviewers:** code, qa, physics
+- **Pitfalls:** none
+- **Size:** ~700 lines, the tests included
+
+## Goal
+Every chart tilts and slices (R-473). The tilt is a rotation `R(τ₁, τ₂)` in the 3-space of the two screen axes and the hidden target, `(a, b, d) = R·(u, v, 0)`: `a`, `b` go through the chart's own map exactly and `d` is added to the hidden coordinate's latent control at the slice centre; with `X ≠ Y` it is the two-target form in `(a, b, d_X, d_Y)`. `R` comes from the active tilt map (R-474: Tip as sheet or Lean each axis), computed on the CPU and sent in the chart's params. A mass is tilted in logits, every linked coordinate in its link's pre-image (T3). Untilted, the chart takes no tilt path and is bitwise today's (C2). Slice moves any hidden coordinate (T6). A tilted chart extends past `[0,1]²` by its axes' types on the tilted `(a, b)` (X3).
+
+## References
+- `decisions.md` § "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
+- `decisions.md` § "R-472 — Extension stands: R-407's four types, past a bounded edge a pixel blank; F3 has Extend and Fit, a GUI state field, remembered, named in the sidecar, present mode following it; a tilted, sliced or saved chart extends by its axes' types, nothing written per chart *(amends R-407 and R-468)*"
+- `decisions.md` § "R-474 — RQ-340 is ruled: two tilt maps, "Tip as sheet", the nav cube's axis-angle map and the default, and "Lean each axis", today's, an option, differing only with one target and both angles set; Tip as sheet carries on over the pole, wrapped only in total tip at 360° and never folded onto its 180° partner; planes are compared up to sign and never written back; the map is recorded everywhere as `tilt_map`; the compass draws the active map, B11 revisited; Lean's Gram factor and warnings; every readout shows each axis's components *(closes RQ-340; amends R-451, R-457 and R-459)*"
+- `decisions.md` § "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
+- `decisions.md` § "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; "Centre z₀" is renamed "Slice centre" and "Slice & tilt" "Tilt"; each tilt angle tilts into a latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's "the slice step" and R-451 B1's single tilt target)*"
+- `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)"
+- `docs/contracts/principia_chart_decoder_contract.md` § "Directions are axis kinds — the unifying rule"
+- `docs/contracts/principia_chart_decoder_contract.md` § "What the GPU knows about all of this: nothing"
+- `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)"
+- `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid"
+- `docs/design/principia_chart_reference.md` § "5.4 Past the unit square — each axis's extension type (R-407)"
+
+## Deliverables
+- The chart's hidden coordinates per chart (R-473 J1), from the block-touch sets (`crates/kernel/src/chart/`).
+- `R` from the stored angles, targets and `tilt_map` (Tip as sheet's Rodrigues rotation, R-474 K1; Lean each axis; the two-target form), shared with the GUI's `View::basis` maths, and the chart params carrying `R`, the hidden indices and scales (R-473 J5).
+- The tilt path in each chart's map, skipped exactly at `τ = 0` (J6); mass logits and links' pre-images (J8).
+- Slice along any hidden coordinate (T6), through its latent control.
+- The extension types acting on the tilted `(a, b)` (R-472 X3a).
+- Units: the human's proposal on the curved charts and the decoder's basis edit on the latent chart, as RQ-375 applies meanwhile (R-473 J3); REQ-CHART-064 is TASK-M2-39's.
+- Tests `tilt_every_chart`, `tilt_mass_logits`, `slice_every_chart`, `tilted_extension`.
+
+## Acceptance tests
+- `cargo test -p kernel tilt_every_chart` — REQ-CHART-062's verify (C2 with its controls).
+- `cargo test -p kernel tilt_mass_logits` — REQ-CHART-063's verify (C7).
+- `cargo test -p kernel slice_every_chart` — REQ-CHART-065's verify.
+- `cargo test -p kernel tilted_extension` — REQ-CHART-066's verify.
+
+## Notes
+- **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers T2 on the shape sphere (the pole-crossing extension composed with a tilt), T3 and the anchor (R-473 ⚑).
+- **Units (RQ-375).** Built under the meanwhile reading (R-473 J3); the ruling is TASK-M2-39's, a leaf.
+- **Re-integration (R-92):** a curved chart's tilt is a chart-param edit, a sim key.

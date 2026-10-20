@@ -29,3 +29,4 @@ The Display window holds the fixed last stages (style, display scale, gamut clam
 
 ## Notes
 - R-390: TASK-M6-28 builds the Display window's frame on the mock engine; this task depends on it and keeps REQ-GUI-101 and REQ-GUI-080.
+- **R-476 (20 Oct 2026):** REQ-GUI-101 is reworded: the Display window's overlays are class edges and the cursor crosshair; the grid and t_end contours are Lines ▾ presets (TASK-M8-50).

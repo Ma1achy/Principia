@@ -39,3 +39,4 @@ On the mock engine, View gains the row **F3 fills by: Extend / Fit**, two radio 
 - **A GUI-track task** (R-390): it merges once its reviews pass and CI is green.
 - **Flagged (R-468 E2, E4, E6, applied per R-369):** "the chart square" read as the view's square; "remembered per session" as for the session; present mode follows the mode.
 - **qa's files (R-290, R-468 E9; gui review 5585209592 of PR #253, G2).** `xtask/tests/qa_TASK-M6-24.rs`:118-150, `check_01_main` (the 01_main case names "and no other"), must change in this task's qa commit only, gaining `mock_f3_fit`; the implementer's head is red on it until then. *Was: "No qa assertion is known to assert what R-468 changes".*
+- **R-472 (20 Oct 2026):** X2's "remembered" is read as "for the session" (flagged); present mode following the mode is now the human's words; the sidecar's `f3_fill` is REQ-TOOL-168 (TASK-M8-32).
