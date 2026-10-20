@@ -1127,6 +1127,52 @@ mod tests {
         assert_eq!(cache.in_flight(), 0);
     }
 
+    /// The cache's drop waits for the worker (TASK-M2-42, REQ-VAL-192). With the worker held (`hold`) on a prepare's
+    /// job, a drop on another thread has not returned after 500 ms; once the worker is let go, the drop returns and the
+    /// worker has released the shared state, which holds the device and every compiled pipeline: only this test's
+    /// clone is left. With `job` false, the control, the worker is idle, so the drop returns at once, and the check
+    /// that it waits fails.
+    fn check_drop_waits(job: bool) {
+        let h = GpuHarness::new().expect("a GPU device");
+        let mut cache = PipelineCache::new(h.device());
+        let shared = Arc::clone(&cache.shared);
+        let held = lock(&shared.hold);
+        if job {
+            cache
+                .prepare(&grey(1), &[0, 1, 2, 3], Tier::FULL)
+                .unwrap_or_else(|e| panic!("{e}"));
+        }
+        let dropping = std::thread::spawn(move || drop(cache));
+        let start = std::time::Instant::now();
+        while !dropping.is_finished() && start.elapsed() < std::time::Duration::from_millis(500) {
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        let returned = dropping.is_finished();
+        drop(held);
+        dropping.join().expect("the drop's thread");
+        assert!(
+            !returned,
+            "the cache's drop returned while the worker was still on its job"
+        );
+        assert_eq!(
+            Arc::strong_count(&shared),
+            1,
+            "the worker still holds the shared state after the cache's drop"
+        );
+    }
+
+    #[test]
+    fn pipeline_teardown_drop_waits_for_the_worker() {
+        check_drop_waits(true);
+    }
+
+    negative_control!(
+        pipeline_teardown_drop_waits_for_the_worker,
+        "with no job on, the worker stops at once, and the drop returns without waiting",
+        expected = "the cache's drop returned while the worker was still on its job",
+        check_drop_waits(false)
+    );
+
     #[test]
     fn fragment_cache_superseded_requests_never_compile() {
         check_superseded(true);
