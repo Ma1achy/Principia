@@ -1,0 +1,55 @@
+{
+ "name": "Game Boy",
+ "doc": "The original Game Boy screen: 144 rows, four greens, dithered, pixel grid, shadows on the backing.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "pd": {
+   "op": "pixelate_down",
+   "in": {
+    "image": "src"
+   },
+   "p": {
+    "size": 1,
+    "rounding": "rows:144",
+    "gray": true
+   }
+  },
+  "thr": {
+   "op": "bayer",
+   "in": {
+    "like": "pd.out"
+   },
+   "p": {
+    "n": 4
+   }
+  },
+  "n0": {
+   "op": "noise",
+   "p": {
+    "scale": 120,
+    "octaves": 2,
+    "seed": "$seed"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "small": "pd.out",
+    "thr": "thr",
+    "n0": "n0"
+   },
+   "p": {
+    "f": "n = 144; cell = H/n; gw = int(round(W/cell))\nlo, hi = percentile(small, [1, 99]); small = clip((small-lo)/(hi-lo+1e-9), 0, 1)\nlvl = clip(floor(small*3 + thr), 0, 3).astype(int)\npal = stack([hexc(p) for p in ('#0f380f', '#306230', '#8bac0f', '#9bbc0f')])\ncy = clip((yy/cell).astype(int), 0, n-1); cx = clip((xx/cell).astype(int), 0, gw-1)\ndark = (3-lvl)[cy, cx]/3.0\nfy = (yy/cell) % 1; fx = (xx/cell) % 1\ninpix = sig((minimum(minimum(fx, 1-fx), minimum(fy, 1-fy)) - 0.06)*40)\nd = dark*inpix\nd = 0.8*d + 0.2*gaussian(d, (0, cell*0.8))\nshadow = ndi.shift(gaussian(d, cell*0.25), (cell*0.22, cell*0.22), order=1, mode='nearest')\nback = pal[3]\nout = back*(1 - 0.18*shadow[..., None])\nout = out*(1-d[..., None]) + (pal[0] + (pal[1]-pal[0])*0.15)*d[..., None]\nout = out + (pal[2]-pal[3])*clip(d*(1-d)*2.5, 0, 1)[..., None]*0.6\nout = out*(1 + 0.015*n0)[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

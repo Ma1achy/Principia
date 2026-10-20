@@ -87,6 +87,8 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
 - `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
 - `docs/design/principia_lines.md` — the line system: contours, traces, axes, grids and styles over the finished figure, outside the node graph (adopted by R-476; its §11 queued as RQ-377)
+- `docs/design/principia_print_graph.md` — the Print graph: post-processing as a node graph after the stain, the figure printed in a medium, Plain the identity, never read by measurement; it replaces Display › Style (adopted by R-485 to R-492; its §12 queued as RQ-388 to RQ-391)
+- `docs/design/principia_benchmark.md` — the benchmark: telemetry §1.1's fixed suite as data-driven scenarios, one runner, Run benchmark and `prin bench`, the result file and `prin bench report` (adopted by R-493 to R-499; its §10 queued as RQ-392 to RQ-394)
 
 ---
 
@@ -113,6 +115,7 @@ and **`Policy::Tolerance`**.
 - `docs/gui/reference/principia_plucker_compass.html` — Principia — orientation compass: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/lines/` — the line system's mock-ups, `images/` (PNGs) and `canvas/` (artboards, `.dc.html`), the reference for `principia_lines.md` (R-476)
 - `docs/gui/reference/principia_compass_charts.html` — Principia — compass, position & chart transform: reference for look and behaviour (R-451, R-452); its cream palette is not copied
+- `docs/gui/reference/print_graph/` — **reference only, non-normative** (as `docs/reference/` is, R-159): the Print graph lab (`reference/print_graph_lab/`), the Python prototype (`reference/fx_prototype/`), the node and preset catalogue, the capture tools, the reference images (`images/`, the port's visual references, R-492) and the design boards; port the lab's nodes and take the prototype's data format, cite `principia_print_graph.md` and the rulings, never a file here (R-485; its README)
 
 ---
 

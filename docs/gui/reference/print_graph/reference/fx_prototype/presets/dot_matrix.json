@@ -1,0 +1,61 @@
+{
+ "name": "Dot-matrix printer",
+ "doc": "A 9-pin impact printer on paper; `bands` sets how strongly the passes show (0 = none).",
+ "settings": {
+  "seed": 0,
+  "bands": 1.0
+ },
+ "nodes": {
+  "T": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "(1-stretch(blur(lum(I), 0.8)))**0.8"
+   }
+  },
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "dots": {
+   "op": "impact_dots",
+   "in": {
+    "tone": "T",
+    "rng": "r"
+   },
+   "p": {
+    "pitch": 3.2,
+    "bands": "$bands"
+   }
+  },
+  "n2": {
+   "op": "noise",
+   "p": {
+    "scale": 1.0,
+    "octaves": 1,
+    "seed": "$seed+2"
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "d": "dots.out",
+    "n2": "n2"
+   },
+   "p": {
+    "f": "ink = gaussian(d, 0.5)*(1+0.12*n2)\nink = clip(ink, 0, 1)\nout = array([0.95, 0.94, 0.90])*(1-ink[..., None]) + array([0.10, 0.08, 0.13])*ink[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

@@ -1,0 +1,28 @@
+{
+ "name": "Light painting, printed in halftone",
+ "doc": "light_painting → halftone",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "s0": {
+   "op": "preset:light_painting",
+   "in": {
+    "src": "src"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "s1": {
+   "op": "preset:halftone",
+   "in": {
+    "src": "s0"
+   },
+   "p": {
+    "seed": "$seed"
+   }
+  }
+ },
+ "out": "s1"
+}
