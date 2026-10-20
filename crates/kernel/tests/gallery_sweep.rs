@@ -54,7 +54,7 @@ use kernel::chart::{
 };
 use kernel::decode::invariant::{infeasible, Outcome};
 use kernel::decode::{self, Decoded};
-use kernel::generated::links::{Defaults, LinkReal};
+use kernel::generated::links::{Defaults, Link, LinkReal, Selection};
 use kernel::payload::PayloadReal;
 use spirv_std::num_traits::FloatConst;
 use validation::{
@@ -708,15 +708,21 @@ where
     ));
 }
 
+/// A latent coordinate's edge, `±710`: where each `Defaults` link's output rounds to its own limit, its value at
+/// `z = ±∞`, at f32 and at f64. The sigmoid links bind it: `σ(−x) = 1/(1 + eˣ)` is 0 only once `eˣ` overflows, past
+/// `ln f64::MAX ≈ 709.78` at f64 (88.72 at f32), and `σ(x)` rounds to 1 long before; `tanh_sat` clamps at 20, where
+/// `tanh` already rounds to ±1. `gallery_sweep_unit_square_latent_edge` checks it.
+const LATENT_EDGE: f64 = 710.0;
+
 /// A mixed-axis axis's range at a set: inside its codomain (a latent coordinate `[−1, 1]`, a derived quantity the
 /// middle half of its link's codomain), or at the edge set reaching it (a derived quantity the whole closed codomain,
-/// `α ∈ [0, π/2]`, `β ∈ [0, π]`, `p ∈ [−q_max, q_max]`; a latent coordinate, whose codomain is the line, `[−8, 8]`,
-/// where every link saturates), rounded inward at f32.
+/// `α ∈ [0, π/2]`, `β ∈ [0, π]`, `p ∈ [−q_max, q_max]`; a latent coordinate, whose codomain is the line,
+/// `[−LATENT_EDGE, LATENT_EDGE]`, where every `Defaults` link's output is its limit), rounded inward at f32.
 fn mixed_range<A: Quantity, R: Q>(edge: bool) -> [R; 2] {
     let [lo, hi] = A::DOMAIN;
     let range = match (A::DERIVED, edge) {
         (false, false) => [-1.0, 1.0],
-        (false, true) => [-8.0, 8.0],
+        (false, true) => [-LATENT_EDGE, LATENT_EDGE],
         (true, false) => [lo + (hi - lo) / 4.0, hi - (hi - lo) / 4.0],
         (true, true) => [lo, hi],
     };
@@ -1271,4 +1277,112 @@ negative_control!(
         }
         z
     })
+);
+
+/// Each `Defaults` link at a latent edge `±x`: the controls at the edge the link's output differs on from its output
+/// at `±∞`, its limit; empty where every link has reached its limit.
+fn unsaturated<R: Q>(x: f64) -> Vec<String> {
+    type S = Defaults;
+    let e = R::of(x);
+    let inf = R::infinity();
+    let mut found = Vec::new();
+    for (edge, limit) in [(-e, -inf), (e, inf)] {
+        let one = |name: &str, at: [R; 1], lim: [R; 1]| {
+            (at != lim)
+                .then(|| format!("{name} at {}: {:e} ≠ {:e}", edge.f(), at[0].f(), lim[0].f()))
+        };
+        found.extend(one(
+            "alpha",
+            <<S as Selection>::AlphaLink as Link<1, 1>>::forward([edge]),
+            <<S as Selection>::AlphaLink as Link<1, 1>>::forward([limit]),
+        ));
+        found.extend(one(
+            "beta",
+            <<S as Selection>::BetaLink as Link<1, 1>>::forward([edge]),
+            <<S as Selection>::BetaLink as Link<1, 1>>::forward([limit]),
+        ));
+        for (name, at, lim) in [
+            (
+                "q0",
+                <<S as Selection>::Q0Link as Link<1, 1>>::forward([edge]),
+                <<S as Selection>::Q0Link as Link<1, 1>>::forward([limit]),
+            ),
+            (
+                "q1",
+                <<S as Selection>::Q1Link as Link<1, 1>>::forward([edge]),
+                <<S as Selection>::Q1Link as Link<1, 1>>::forward([limit]),
+            ),
+            (
+                "q2",
+                <<S as Selection>::Q2Link as Link<1, 1>>::forward([edge]),
+                <<S as Selection>::Q2Link as Link<1, 1>>::forward([limit]),
+            ),
+            (
+                "q3",
+                <<S as Selection>::Q3Link as Link<1, 1>>::forward([edge]),
+                <<S as Selection>::Q3Link as Link<1, 1>>::forward([limit]),
+            ),
+        ] {
+            found.extend(one(name, at, lim));
+        }
+        // The mass link, each control at the edge with the other at 0 or at either edge.
+        for other in [R::zero(), -e, e] {
+            let other_limit = if other == R::zero() {
+                other
+            } else if other < R::zero() {
+                -inf
+            } else {
+                inf
+            };
+            for (at, lim) in [
+                ([edge, other], [limit, other_limit]),
+                ([other, edge], [other_limit, limit]),
+            ] {
+                let m = <<S as Selection>::MassLink as Link<2, 3>>::forward(at);
+                let m_lim = <<S as Selection>::MassLink as Link<2, 3>>::forward(lim);
+                if m != m_lim {
+                    found.push(format!(
+                        "mass at ({}, {}): {:?} ≠ {:?}",
+                        at[0].f(),
+                        at[1].f(),
+                        m.map(Q::f),
+                        m_lim.map(Q::f)
+                    ));
+                }
+            }
+        }
+    }
+    found
+}
+
+/// Asserts every `Defaults` link has reached its limit at the latent edge `±x`, at f64 and at f32.
+fn check_latent_edge(x: f64) {
+    let mut found = unsaturated::<f64>(x);
+    found.extend(
+        unsaturated::<f32>(x)
+            .into_iter()
+            .map(|f| format!("f32 {f}")),
+    );
+    assert!(
+        found.is_empty(),
+        "links short of their limit at the latent edge: {}",
+        found.join("; ")
+    );
+}
+
+#[test]
+fn gallery_sweep_unit_square_latent_edge() {
+    check_latent_edge(LATENT_EDGE);
+    // The edge is the least integer that reaches: at ±709 the f64 sigmoid links are still short of 0.
+    assert!(
+        !unsaturated::<f64>(LATENT_EDGE - 1.0).is_empty(),
+        "the latent edge is not the least integer where every link reaches its limit"
+    );
+}
+
+negative_control!(
+    gallery_sweep_unit_square_latent_edge,
+    "the latent edge ±8, where σ(8) = 0.99966, must fail the saturation check",
+    expected = "links short of their limit at the latent edge",
+    check_latent_edge(8.0)
 );
