@@ -2624,12 +2624,12 @@
     section: Part 5 — Well-posedness and the validation contract
   verify:
     method: unit test
-    detail: "cargo test -p kernel exp_map_system_image: a cap inside w ≥ 0, one inside w ≤ 0 and one touching the equator from one side report bijective; a straddling cap on a grid symmetric under w → −w (n0 on the equator, e2 = ŵ, an odd resolution N, no pixel centre at r = π), whose mirrored pixels are the index pairs (i, j) and (i, N−1−j) and whose middle row lies at w = 0, reports the per-pixel fold and a counted total equal to the hand count by the per-pixel rule, N(N+1)/2 when s√2 < π; with s√2 > π on the same grid, the total equals the number of pixels with j ≥ (N−1)/2 and r ≤ π, enumerated from r alone; controls: a fold that counts a mirrored pair twice, one that drops the w = 0 row, one that reads a fixed n = 2 for a cap in one hemisphere, and one that counts the pixels with r > π each fail"
+    detail: "cargo test -p kernel exp_map_system_image: a cap inside w ≥ 0, one inside w ≤ 0 and one touching the equator from one side report bijective; a straddling cap on a grid symmetric under w → −w (n0 on the equator, e2 = ŵ, an odd resolution N, every pixel centre at least 10⁻⁶ from r = π, |r − π| > 10⁻⁶), whose mirrored pixels are the index pairs (i, j) and (i, N−1−j) and whose middle row lies at w = 0, reports the per-pixel fold and a counted total equal to the hand count by the per-pixel rule, N(N+1)/2 when s√2 < π; with s√2·(N−1)/N > π on the same grid, so at least one pixel centre in the counted half lies past r = π, the total equals the number of pixels with j ≥ (N−1)/2 and r ≤ π, enumerated from r alone; controls: a fold that counts a mirrored pair twice, one that drops the w = 0 row, one that reads a fixed n = 2 for a cap in one hemisphere, and one that counts the pixels with r > π each fail"
   rulings:
   - R-141
   - R-503
   milestone: M2
-  note: "R-503 (closes RQ-371). The spherical map keeps n-to-1 with n = 2 (R-141, REQ-CHART-014). Closed by TASK-M2-28. On review (PR #258: physics P5, P6; qa 4; applied per R-369): the per-pixel rule, the symmetric fixture and the r > π control."
+  note: "R-503 (closes RQ-371). The spherical map keeps n-to-1 with n = 2 (R-141, REQ-CHART-014). Closed by TASK-M2-28. On review (PR #258: physics P5, P6; qa 4; applied per R-369): the per-pixel rule, the symmetric fixture and the r > π control. On review round 2 (physics P9, qa C, applied per R-369): the margin from r = π and a pixel past it in the counted half."
 - id: REQ-CHART-078
   area: CHART
   kind: definition
@@ -4255,7 +4255,7 @@
   note: "R-397 (RQ-226): the reason RQ-226 exists; built by TASK-M3-11."
 - id: REQ-INT-090
   area: INT
-  statement: "Yoshida-4's and Yoshida-6's transcribed coefficients must pass a convergence-order test and an algebraic order-condition check that between them fail on a transcription error (R-501). The order test: on dd_integrator §5's Kepler-embedded fixture, the maximum relative energy error over one orbit, max_t |E(t) − E₀| / |E₀|, fitted against dt over a log–log ladder, gives a fitted order rounding to 4 (Yoshida-4) and 6 (Yoshida-6); each free coefficient with its 4th significant digit changed (w₀ recomputed from the consistency condition) gives one rounding lower; and the test measures and prints its detection floor, the smallest relative change it detects (estimated near 3·10⁻⁷ for Yoshida-4 and 10⁻⁹ for Yoshida-6 at f64). The algebraic check: evaluated exactly on the shipped f64 constants, |Σw − 1| and |Σw³| / Σ|w|³ (both) and |Σw⁵| / Σ|w|⁵ (Yoshida-6) are at most 3·10⁻¹⁵ (Yoshida-4) and 5·10⁻¹⁴ (Yoshida-6); digits past the check's controls are REQ-INT-037's equality."
+  statement: "Yoshida-4's and Yoshida-6's transcribed coefficients must pass a convergence-order test and an algebraic order-condition check that between them fail on a transcription error (R-501). The order test: on dd_integrator §5's Kepler-embedded fixture, the maximum relative energy error over one orbit, max_t |E(t) − E₀| / |E₀|, fitted against dt over a log–log ladder, gives a fitted order rounding to 4 (Yoshida-4) and 6 (Yoshida-6); each free coefficient with its 4th significant digit changed (w₀ recomputed from the consistency condition) gives one rounding lower; and the test measures and prints its detection floor, the smallest relative change it detects (estimated near 3·10⁻⁷ for Yoshida-4 and 10⁻⁹ for Yoshida-6 at f64). The algebraic check: evaluated exactly on the shipped f64 constants, the order conditions of a symmetric composition of a symmetric second-order step, |Σw − 1| and |Σw³| / Σ|w|³ (both) and, for Yoshida-6, the two fifth-order conditions |Σw⁵| / Σ|w|⁵ and the nested one (the coefficient of [A₁,[A₁,A₃]] in the composition's BCH logarithm at h⁵, divided by the same coefficient computed with |w|), complete to order 6, are at most 3·10⁻¹⁵ (Yoshida-4) and 5·10⁻¹⁴ (Yoshida-6); digits past the check's controls are REQ-INT-037's equality."
   source:
   - file: decisions.md
     section: "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
@@ -4265,12 +4265,12 @@
     section: 3.2 Occupants
   verify:
     method: unit test
-    detail: "cargo test -p kernel yoshida_convergence_order: fitted orders round to 4 and 6, the ladder, fit and detection floor printed; controls: Yoshida-4's w₁ and Yoshida-6's w₁, w₂, w₃, each with its 4th significant digit changed and w₀ recomputed, give a fitted order that rounds lower and fail. cargo test -p kernel yoshida_order_conditions: the residuals within the bounds (measured on the printed digits: 2.9·10⁻¹⁶ and 5.1·10⁻¹⁵); controls: each coefficient (Yoshida-6's w₀ recomputed) moved by one unit of its 15th significant digit (Yoshida-4) or its 13th (Yoshida-6), in each direction, exceeds the bound and fails (measured: at least 9.8·10⁻¹⁵ and 2.8·10⁻¹³)"
+    detail: "cargo test -p kernel yoshida_convergence_order: fitted orders round to 4 and 6, the ladder, fit and detection floor printed; controls: Yoshida-4's w₁ and Yoshida-6's w₁, w₂, w₃, each with its 4th significant digit changed and w₀ recomputed, give a fitted order that rounds lower and fail. cargo test -p kernel yoshida_order_conditions: the residuals within the bounds (measured on the printed digits: 2.9·10⁻¹⁶, and 5.1·10⁻¹⁵ for Σw⁵ and 4.0·10⁻¹⁶ for the nested condition); controls: each coefficient (Yoshida-6's w₀ recomputed) moved by one unit of its 15th significant digit (Yoshida-4) or its 13th (Yoshida-6), in each direction, exceeds the bound and fails (measured: at least 9.8·10⁻¹⁵ and 2.8·10⁻¹³)"
   rulings:
   - R-57
   - R-501
   milestone: M3
-  note: "R-501: stands in for checking the digits against the paper, which is cited, not held. Closed by TASK-M3-02. On review (PR #258: code C5, physics P1, qa 1; applied per R-369): the controls name the digits the ladder and the check resolve; the fitted quantity and the bounds are for the physics reviewer to confirm. The last printed digits are REQ-INT-037's alone: a change there can lower a residual (Table 1's truncation, f64 rounding) or parse to the same f64."
+  note: "R-501: stands in for checking the digits against the paper, which is cited, not held. Closed by TASK-M3-02. On review (PR #258: code C5, physics P1, qa 1; applied per R-369): the controls name the digits the ladder and the check resolve; the fitted quantity and the bounds are for the physics reviewer to confirm. The last printed digits are REQ-INT-037's alone: a change there can lower a residual (Table 1's truncation, f64 rounding) or parse to the same f64. On review round 2 (qa B, applied per R-369): the nested fifth-order condition is added, at rounding level on the shipped constants; physics confirms the set is complete to order 6."
 - id: REQ-INT-091
   area: INT
   statement: "The N_sub threshold table must be generated on the host per sim key: each THR[n], n = 1 … the table's maximum length (REQ-INT-094), computed in f64 with a pinned pure-software libm (no platform libm and no compiler intrinsic for pow) and rounded once to f32, emitted as exact f32 bit patterns for SimUniforms; and the generator must refuse an N_max above the maximum length or below 1 with a typed error, never truncating (R-502)."
@@ -4285,7 +4285,7 @@
     section: Part 3 — Parameter ownership (who owns what)
   verify:
     method: unit test
-    detail: "cargo test -p kernel nsub_table_host: the generator's bits for a committed fixture of configurations (the default and configurations with r_sub, gamma_sub and N_max each changed) equal the fixture's bit tables; the fixture is produced independently of the generator, by a checked-in reference script (fixtures/gates/nsub-table/reference.py) that evaluates (r_sub·n^(−1/γ_sub))² in Python's decimal at 50 digits and rounds it correctly to f32, and any entry where the generator's f64-then-f32 legitimately differs from the correctly rounded value (a double rounding) is listed in the fixture with that reason and checked against the generator's own rounding; the libm crate is pinned in Cargo.lock and the generator calls no std or platform pow (review); N_max = maximum length + 1 and N_max = 0 are refused with the typed error; control: a fixture entry one ulp off fails"
+    detail: "cargo test -p kernel nsub_table_host: the generator's bits for a committed fixture of configurations (the default and configurations with r_sub, gamma_sub and N_max each changed) equal the fixture's bit tables; the fixture is produced independently of the generator, by a checked-in reference script (fixtures/gates/nsub-table/reference.py) that evaluates (r_sub·n^(−1/γ_sub))² in Python's decimal at 50 digits and rounds it correctly to f32 straight from the decimal value (never through float() and f64), and any entry where the generator legitimately differs from the correctly rounded value, by a double rounding through f64 or by the pinned libm's sub-ulp f64 error, is listed in the fixture with that reason and checked against the generator's own rounding; the libm crate is pinned in Cargo.lock and the generator calls no std or platform pow (review); N_max = maximum length + 1 and N_max = 0 are refused with the typed error; control: a fixture entry one ulp off fails"
   rulings:
   - R-71
   - R-502
@@ -23573,7 +23573,7 @@
   milestone: M7
 - id: REQ-VAL-190
   area: VAL
-  statement: "dd_integrator §5's test 3 must measure every built regularised occupant (Heggie, logH in each time mode, Aarseth–Zare + RK4): apply STEP(dt), the occupant's time-reversal map (REQ-INT-095), STEP(dt), the map again, record the residual, and set the occupant's step_reversible profile value from the measured verdict at REQ-VAL-191's rounding-level criterion; it asserts no rounding-level bound for them (R-500)."
+  statement: "dd_integrator §5's test 3 must measure every built regularised occupant (Heggie, logH in each time mode, Aarseth–Zare + RK4): apply STEP(dt), the occupant's time-reversal map (REQ-INT-095), STEP(dt), the map again, record the residual, taken with its norm on the full extended state, the domain of REQ-INT-095's map, and set the occupant's step_reversible profile value from the measured verdict at REQ-VAL-191's rounding-level criterion; it asserts no rounding-level bound for them (R-500)."
   source:
   - file: decisions.md
     section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
@@ -23596,7 +23596,7 @@
 - id: REQ-VAL-191
   area: VAL
   kind: calibration
-  statement: "Test 3's rounding-level criterion, the residual below which STEP(dt), reversal, STEP(dt), reversal counts as returning the state (REQ-VAL-032, REQ-VAL-190), must be calibrated: proposed with its evidence (the residuals measured for KDK, Yoshida-4 and Yoshida-6 at f64 and f32 across the dt used, and for the asymmetric controls, scaled by the state norm) by the task that needs it, checked by the physics reviewer, confirmed by the human at the M3 gate and recorded in decisions.md (R-71, R-500)."
+  statement: "Test 3's rounding-level criterion, the residual below which STEP(dt), reversal, STEP(dt), reversal counts as returning the state (REQ-VAL-032, REQ-VAL-190), must be calibrated: proposed with its evidence (the residuals measured for KDK, Yoshida-4 and Yoshida-6 at f64 and f32 across the dt used, and for the asymmetric controls, scaled by the state norm; for a regularised occupant the residual and the norm are taken on its full extended state, the domain of REQ-INT-095's map, so that the criterion means the same thing for the steppers and the regularised occupants) by the task that needs it, checked by the physics reviewer, confirmed by the human at the M3 gate and recorded in decisions.md (R-71, R-500)."
   source:
   - file: decisions.md
     section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
@@ -23611,7 +23611,7 @@
   - R-71
   - R-500
   milestone: M3
-  note: "R-500, review round 1 of PR #258 (qa 3, applied per R-369). Proposed by TASK-M3-02; used by TASK-M3-08."
+  note: "R-500, review round 1 of PR #258 (qa 3, applied per R-369). Proposed by TASK-M3-02; used by TASK-M3-08. On review round 2 (qa E, applied per R-369; physics to confirm): the extended state."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

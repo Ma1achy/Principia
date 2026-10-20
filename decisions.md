@@ -13402,6 +13402,10 @@ R-71), proposed by TASK-M3-02 and used by REQ-VAL-032 and REQ-VAL-190; REQ-VAL-1
 stepper at the same `dt` must read not reversible; a profile with one regularised occupant's flag flipped fails; a
 measurement missing one built occupant fails). Integrator contract Part 6 reads "the symmetric steppers" (P7).
 
+*Review round 2, PR #258 (qa review 5587775086 E), applied per R-369, physics to confirm:* for a regularised occupant,
+test 3's residual and its norm are taken on the full extended state, the domain of REQ-INT-095's map (REQ-VAL-190,
+REQ-VAL-191).
+
 R-500 is in the "physics" group of `plan/rule_groups.yaml`, with R-162.
 
 Adds REQ-VAL-190, and on review REQ-INT-095 and REQ-VAL-191; changes REQ-INT-013, REQ-INT-014, REQ-INT-032, REQ-VAL-032 and REQ-VAL-044 (statement, verify,
@@ -13449,9 +13453,15 @@ against a copy of the paper; R-57's label fix stands (amended by R-500 as to Par
 *Review round 1, PR #258 (code review 5587492719 C5, physics review 5587467237 P1, P2, qa review 5587466555 items 1 and
 6), applied per R-369:* the order test's controls, detection floor, fitted quantity and the algebraic check are as above;
 TASK-M3-02's acceptance checks Yoshida-4's citation as well. dd §3.2's sentence that the printed Yoshida-4 digits "are
-that closed form evaluated in f64" was false: they agree with it to 16 significant digits, are not its correctly rounded
+that closed form evaluated in f64" was false: they agree with it to 15 significant digits (`w₁` to 16; *as first corrected:* "to 16", physics review 5587771187 P8), are not its correctly rounded
 f64 values, and give `w₀ + 2w₁ = 0.9999999999999998` in f64. The sentence is corrected; whether the digits change is
 **RQ-405**, filed for the human, the printed digits standing meanwhile and REQ-INT-037 held on it.
+
+*Review round 2, PR #258 (code review 5587795260 C7, physics review 5587771187 P8, qa review 5587775086 A and B), applied
+per R-369:* TASK-M3-02's `occupant_coefficients` asserts `|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`, REQ-INT-090's bound, under
+RQ-405's (a); the printed Yoshida-4 digits agree with the closed form to 15 significant digits (`w₁` to 16), not 16; the
+algebraic check adds Yoshida-6's nested fifth-order condition (the coefficient of `[A₁,[A₁,A₃]]`), measured at
+`4.0·10⁻¹⁶` on the shipped constants, which makes the set complete to order 6, for physics to confirm.
 
 R-501 is in the "physics" group of `plan/rule_groups.yaml`, with R-57.
 
@@ -13518,6 +13528,10 @@ REQ-INT-091's fixture comes from an independent reference (Python's `decimal` at
 its entries where the generator's f64-then-f32 legitimately differs listed with the reason; `cargo xtask codegen`
 evaluates the default table on its own build-time path through the pinned libm, not the host generator's function.
 
+*Review round 2, PR #258 (qa review 5587775086 D), applied per R-369:* `reference.py` rounds the 50-digit decimal straight
+to f32, never through f64, and the fixture's listed exceptions cover the pinned libm's sub-ulp f64 error as well as a
+double rounding.
+
 R-502 is in the "physics" group of `plan/rule_groups.yaml`, with R-34.
 
 Adds REQ-INT-091, REQ-INT-092, REQ-INT-093 and REQ-INT-094; changes REQ-INT-028 (statement, verify, rulings, note), and on review REQ-INT-061 (statement).
@@ -13570,6 +13584,10 @@ fixture is a grid symmetric under `w → −w` (`n0` on the equator, `e2 = ŵ`, 
 pairs and one row lies at `w = 0`), its expected total counted by that rule by hand, with a control on the `r > π`
 arm. How pixels on the `r = π` circle count, all mapping to `−n0`, is a definition TASK-M2-28 writes and the physics
 reviewer checks (REQ-CHART-078, R-72). The requirement keeps the id REQ-CHART-075, first added as REQ-CHART-060.
+
+*Review round 2, PR #258 (physics review 5587771187 P9, qa review 5587775086 C), applied per R-369:* REQ-CHART-075's
+fixture keeps every pixel centre at `|r − π| > 10⁻⁶`, and its `r > π` arm requires `s√2·(N−1)/N > π`, so that at least
+one pixel centre in the counted half lies past `r = π` and the control can fail.
 
 R-503 is in the "physics" group of `plan/rule_groups.yaml`, with R-141.
 
