@@ -91,6 +91,17 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
   entry and one undo restores every field it set; a command with nothing to change sends nothing. Its values are the
   chart preset's (its base point, centre and window, R-72, REQ-GUI-224), read by the GUI; the engine reads only the
   `z₀` and basis it is sent.
+- **The debug view and F3's fill mode (R-467, R-468; decided per R-369).** `RenderState`'s `debug_view: bool` is View ›
+  Debug view (`principia_render_gui_spec.md` §G2): the engine reads it to draw the figure's non-system, failed and
+  non-finite pixels in the debug styles and to count them for the legend's "Debug" key. Its `SetField` path is
+  `RenderField::DebugView`, undoable as an Overlays ▾ toggle is (R-69: every `RenderState` edit is undoable), one
+  history entry per toggle, a render key that re-integrates nothing, logged as "SetField DebugView before → after"; it
+  is off at launch (applied per R-369 on gui review 5585209592 of PR #253, G4). *Was (R-467 D5 as first ported):*
+  "always marked 'no history' as the hover's is, so it never enters undo". `ViewUI`'s
+  `F3Fill { Extend, Fit }` is View › "F3 fills by", Extend at each launch, the GUI's own state: never undoable, never
+  read by the engine, which reads only the figure's viewport, its size and scale (R-406), not kept across sessions.
+  The canvas background the presentation views draw for a pixel that is not part of the chart (R-467) is a render
+  uniform the GUI sets to the colour its window is cleared to, not a contract field.
 - The keyboard navigation flag (on or off, `principia_render_gui_spec.md` §G3, R-460; turned off by any mouse click or drag and on by the next key press, R-464), the windows' positions and sizes (R-461) and the panel layout (R-462) are the GUI's own state, never the contract's: never undoable and never read by the engine. The positions, sizes and layout are kept across sessions in the GUI's own settings.
 
 **The stain graph (R-72; decided per R-369; TASK-M6-29).** `RenderState`'s stain graph is §5's graph object, the one the engine checks and lowers: its nodes, each `{ id, kind, occupant, params }`, `kind` one of `source`, `colour`, `brightness`, `combiner`, `post` and `out`, `occupant` none, a source's field, a built-in's id or a custom occupant's WGSL, and `params` its uniforms' values by name, one number per component; and its wires, each `{ from, to, port }`, `port` the in-port's position, a u32 (R-329). It serialises with `RenderState` as `{ nodes, wires }`, in id order; the default is the backbone alone, the combiner wired to `OUT`. Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable (R-69): picking a node's occupant or setting a param is one edit (REQ-GUI-016, which TASK-M7-11 keeps). It is logged as "SetField StainGraph [before] → [after]", each graph as its nodes in id order, `id kind occupant` (a custom occupant written `custom`) with its params, if any, as `{name=value, …}`, then its wires, each `from→to.port`. A node's place on the editor's canvas, the canvas's pan and zoom, and which nodes are selected are the editor's own, not the graph's (R-390, "Contract fields": the corpus names nodes, wires and per-node params only).
