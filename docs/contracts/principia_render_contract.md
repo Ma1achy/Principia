@@ -359,6 +359,14 @@ with dd_colouring §3.1's sRGB transfer.
   4 × 4 physical-pixel cell, where bit 1 of `p.x` and of `p.y` are both 0, its dots changed from the proposed `#808080`
   (R-434). No flat colour of any palette comes within the hatch's τ = 0.101 of every pixel of a 4 × 4 block (the
   nearest, 0.115), and the dots are 0.229 lighter than the grey in OKLab, visible without colour vision.
+- **Presentation views draw no hatch (R-467).** A presentation view,
+  every stain whose colour occupant is not a debug view (Part 6: a `debug/` occupant), never draws `debug_invalid`: a
+  pixel the chart classifies as not a system (`principia_chart_decoder_contract.md` Part 3) draws the canvas
+  background, a uniform the GUI sets to the colour its window is cleared to, and a `sim_failed` or `decode_failed`
+  sample, a reserved `state` code, a non-finite value and a ramp's invalid value draw `#141418`, unless a node overrides
+  its invalid colour. The "not yet" stipple is unchanged. The hatch stays the debug views': View › Debug view
+  (`principia_render_gui_spec.md` §G2) draws it for a forbidden pixel and for a decode or sim failure, and a NaN / Inf
+  style of its own for a non-finite value, a calibration (REQ-COL-110; R-71), each with a legend key and a count.
 
 ### Live-state & array inspection
 
