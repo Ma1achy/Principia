@@ -717,6 +717,22 @@
   requirements: [REQ-GUI-188, REQ-GEN-036]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M2-34
+  milestone: M2
+  title: "Presentation views draw no hatch: the canvas background for a pixel that is not part of the chart, #141418 for every failure and non-finite value; the debug view's three styles and counts; the NaN / Inf style proposed (R-467)"
+  depends_on: [TASK-M2-31, TASK-M2-32, TASK-M2-33]  # R-467: all three merged; outcome.rs, field_ramp.rs and the display names; applied per R-369
+  needs: [REQ-COL-001, REQ-COL-055]
+  requirements: [REQ-COL-108, REQ-COL-109, REQ-COL-110]
+  reviewers: [code, qa, physics, gui]  # physics for the debug view's order (the lane, then non-finiteness, then the failure) and the non-finite details (R-467 D5)
+  pitfalls: [PIT-3]
+- id: TASK-M2-35
+  milestone: M2
+  title: "Every gallery chart swept over [0,1]²: 0 forbidden and 0 non-finite pixels, with an absolute-E chart as the control arm (R-467)"
+  depends_on: [TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13]  # R-467 D11: the charts' tasks, all merged; applied per R-369
+  needs: []
+  requirements: [REQ-CHART-058]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -1765,6 +1781,22 @@
   requirements: [REQ-GUI-218, REQ-GUI-219, REQ-GUI-220, REQ-GUI-221, REQ-GUI-222, REQ-GUI-223, REQ-GUI-224]
   reviewers: [code, qa, gui, physics]  # physics reviews REQ-GUI-224 only, the definition (R-72; applied per R-369, R-466 K14, as R-396 for TASK-M6-24)
   pitfalls: []
+- id: TASK-M6-46
+  milestone: M6
+  title: "The GUI track (R-390): View › Debug view, the presentation figure with no hatch and no forbidden-region key, the mock's hook turned on at launch and shown only in the debug view, and the decoder-bug warning (R-467)"
+  depends_on: [TASK-M6-30, TASK-M2-33]  # R-467 D13: the F3 fill and the hook are TASK-M6-30's, the mock legend's names TASK-M2-33's; both merged
+  needs: []
+  requirements: [REQ-GUI-225, REQ-GUI-226]
+  reviewers: [code, qa, gui]  # the mock has no chart mapping, as for TASK-M6-30
+  pitfalls: []
+- id: TASK-M6-47
+  milestone: M6
+  title: "The GUI track (R-390): F3 fills by Extend or Fit, chosen in View for the session; Fit scales the view's square to the window's shorter side, never stretched, the rest background (R-468)"
+  depends_on: [TASK-M6-46, TASK-M6-30]  # R-468 E8: both add a View entry, and the Extend check reads View › Debug view
+  needs: []
+  requirements: [REQ-GUI-229]
+  reviewers: [code, qa, gui]
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
@@ -2452,6 +2484,22 @@
   needs: [REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-078, REQ-COL-079, REQ-COL-080, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-GUI-188]
   requirements: [REQ-GUI-185, REQ-GUI-186, REQ-GUI-187]
   reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-46
+  milestone: M8
+  title: "On the real engine: View › Debug view and its counts, the decoder-bug warning for the gallery charts, the mass simplex's background and hatch at the same pixels (R-467), and F3's Fit mode (R-468)"
+  depends_on: [TASK-M8-05, TASK-M8-22, TASK-M2-34, TASK-M6-46, TASK-M6-47]  # R-467 D13, R-468 E8
+  needs: [REQ-COL-108, REQ-COL-109, REQ-GUI-225, REQ-GUI-226, REQ-GUI-229]
+  requirements: [REQ-GUI-227, REQ-GUI-230]
+  reviewers: [code, qa, gui, physics]  # physics for the mass simplex's forbidden set and the quads Fit asks for
+  pitfalls: []
+- id: TASK-M8-47
+  milestone: M8
+  title: "A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning as RQ-372 rules (R-467)"
+  depends_on: [TASK-M8-18, TASK-M8-46]  # R-467 F2: a leaf, waiting for RQ-372
+  needs: []
+  requirements: [REQ-GUI-228]
+  reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

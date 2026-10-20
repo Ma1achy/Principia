@@ -45,3 +45,9 @@ The Export & share window offers image export (size in multiples of the view, fo
   and the physics reviewer joins for that line (applied per R-369, R-407, A2). Nothing here computes an area statistic
   over the extended window; R-408 (RQ-263 ruled) counts each system once, through the axis types (REQ-CHART-056,
   TASK-M8-05).
+- R-467 and R-468 (20 Oct 2026): present mode's fill is the F3-off figure, so it follows R-468's F3 fill setting
+  (View › F3 fills by: Extend / Fit; Extend, the default, is TASK-M8-05's extension; Fit draws the chart's own square,
+  scaled to fit, the rest the canvas background), and where it falls back past the formula's validity the pixel
+  draws the canvas background, not the hatch (R-467, which amends R-407 clause 2 as it applies to display). "Hatch
+  fallback" in the Deliverables line reads "background fallback"; the debug view, when on, shows the hatch in present
+  mode too (TASK-M8-46, REQ-GUI-227 and REQ-GUI-230).

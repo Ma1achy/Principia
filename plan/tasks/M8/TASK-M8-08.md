@@ -37,6 +37,9 @@ Overlays ▾ holds §G2's grouped toggles (Quadtree, Integration, Chart, Stain) 
 
 ## Notes
 - The Stain group's overlays (class edges, t_end contours) also appear in the Display window (TASK-M8-23); both edit the same RenderState overlay set.
+- R-467 (20 Oct 2026; decisions.md § R-467, D9): the debug view is not an overlay. It is the View menu's check entry
+  "Debug view" (`RenderState.debug_view`), not an entry in the Stain group's or the Display window's overlay set, and
+  this task adds no toggle for it; it is built by TASK-M2-34, TASK-M6-46 and TASK-M8-46.
 - Calibrations (R-71) proposed here: REQ-PERF-080. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-PERF-079, REQ-GUI-153. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - R-390: TASK-M6-27 builds Overlays ▾ on the mock engine, with the tile-bounds overlay on the mock's fake quads; this task depends on it and wires every overlay to its tier on the real engine, keeping every requirement it closes.

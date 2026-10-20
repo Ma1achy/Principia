@@ -86,3 +86,8 @@ separation is measured against τ, and the palettes and the tie tolerance are pr
 - The three panels (§10.11.3) and the one-body legends are TASK-M8-45's; this task gives them the stains and the
   fallback flag.
 - R-449 (16 Oct 2026): every body name this task shows (preset names, stain labels, the lens parameter's choices) comes from TASK-M2-33's conversion module (REQ-GUI-188), 1-based, never "body 0"; TASK-M2-33 is reached through TASK-M7-36.
+- R-467 (20 Oct 2026; decisions.md § R-467, F4): the one-body stains draw every failure and non-finite value
+  `#141418` and a pixel the chart classifies as not a system the canvas background, as every Chazy stain does
+  (REQ-COL-072); none of them draws the hatch, which only the debug view draws (TASK-M2-34, REQ-COL-109). REQ-COL-097's
+  separation from the hatch's colours and the stipple stands, since the debug view still draws the hatch over these
+  stains.
