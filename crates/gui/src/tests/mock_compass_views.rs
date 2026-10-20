@@ -138,8 +138,8 @@ fn mock_compass_views_each_view_button_shows_its_view_and_leaves_the_mode() {
 
 #[test]
 fn mock_compass_views_tilt_and_slice_leave_the_view() {
+    let (mut app, mut h) = tilted_app();
     for (view, id, _) in VIEWS {
-        let (mut app, mut h) = tilted_app();
         click_scope(&mut h, &mut app, id);
         for (button, mode) in [(SLICE_BUTTON, Touch::Slice), (TILT_BUTTON, Touch::Tilt)] {
             super::support::click(&mut h, &mut app, button);
@@ -207,13 +207,13 @@ fn check_no_edit(app: &App<MockSide>, rows: usize, depth: u32, what: &str) {
 #[test]
 fn mock_compass_views_a_drag_in_a_grid_view_emits_no_setfield() {
     for mode in [Touch::Tilt, Touch::Slice] {
+        let (mut app, mut h) = tilted_app();
+        app.manifold.compass.mode = mode;
         for view in [
             CompassView::Plucker,
             CompassView::Jacobi,
             CompassView::Shape,
         ] {
-            let (mut app, mut h) = tilted_app();
-            app.manifold.compass.mode = mode;
             app.manifold.compass.view = view;
             let _ = h.frame(&mut app, Vec::new());
             let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
@@ -226,8 +226,8 @@ fn mock_compass_views_a_drag_in_a_grid_view_emits_no_setfield() {
             assert_eq!(app.manifold.compass.drag, None);
         }
         // Control: the same drag in the Cube view edits.
-        let (mut app, mut h) = tilted_app();
-        app.manifold.compass.mode = mode;
+        app.manifold.compass.view = CompassView::Cube;
+        let _ = h.frame(&mut app, Vec::new());
         let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
         let centre = square(&h).center();
         drag(&mut h, &mut app, centre, egui::vec2(60.0, -40.0));

@@ -8,14 +8,14 @@
 use eframe::egui::{self, Shape};
 use engine::contract::sim_config::{Latent, Plane, LATENT_DIM};
 
-use super::compass_support::{app_at, compass_rect, plane, square, view};
-use super::support::{click_scope, rejects, shapes};
+use super::compass_support::{compass_rect, plane, square, view};
+use super::support::{click_scope, headless, mock_app, rejects, shapes};
 use crate::app::App;
 use crate::explore::compass::views::{
     self, cell_background, cell_colour, dominant, hover_text, plucker, plucker_drawing, readout,
     sum_sq, upper, CompassView, Grid, GridPlace, COLUMN_NAMES_H, NEGATIVE, OUTLINE_MIN, POSITIVE,
 };
-use crate::explore::manifold_view::{dot, norm, View, AXES};
+use crate::explore::manifold_view::{basis_edit, dot, norm, z0_edit, View, AXES};
 use crate::explore::COMPASS_PLUCKER;
 use crate::headless::Headless;
 use crate::side::MockSide;
@@ -233,9 +233,15 @@ fn compass_plucker_the_dominant_cell_and_the_readout_name_the_largest() {
     });
 }
 
-/// The app at `p`, at rest, switched to the Plücker view by its button.
+/// The app at `p`, switched to the Plücker view by its button. The grid draws the plane as it stands, so the cube's
+/// easing is not waited for.
 pub fn plucker_app(p: &Plane) -> (App<MockSide>, Headless) {
-    let (mut app, mut h) = app_at(p);
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    app.set_field(z0_edit(p.z0));
+    app.set_field(basis_edit((p.q1, p.q2)));
+    let _ = h.frame(&mut app, Vec::new());
     click_scope(&mut h, &mut app, COMPASS_PLUCKER);
     let _ = h.frame(&mut app, Vec::new());
     assert_eq!(app.manifold.compass.view, CompassView::Plucker);

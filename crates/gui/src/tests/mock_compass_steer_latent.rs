@@ -64,9 +64,11 @@ fn check_steered(before: &Plane, after: &Plane, (i, j): (usize, usize)) {
 
 #[test]
 fn mock_compass_steer_latent_every_cell_steers_to_its_coordinate_plane() {
+    // One app, each steer undone before the next.
+    let (mut app, mut h) = plucker_app(&start());
+    let before = app.snapshot().sim.plane.clone();
     for (i, j) in upper() {
-        let (mut app, mut h) = plucker_app(&start());
-        let before = app.snapshot().sim.plane.clone();
+        assert_eq!(app.snapshot().sim.plane, before);
         let (rows, depth) = (app.console().len(), app.snapshot().history.undo_depth);
         click_cell(&mut h, &mut app, i, j);
         let after = app.snapshot().sim.plane.clone();
