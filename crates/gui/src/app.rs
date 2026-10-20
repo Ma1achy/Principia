@@ -3,7 +3,9 @@
 //! figure, which takes 01_main.png's central rect with the layer shown and fills the window with it hidden, more of the
 //! field at the same scale, each point where the shown layout puts it (R-406); the toggle is `ViewUI`'s, sending no
 //! `SetField`. The GUI's clock reads `ViewUI`'s transport and advances the playhead (R-101; RQ-246).
-//! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus. The
+//! The keyboard layer (render_gui_spec §G3) takes its keys before egui's pass and moves `ViewUI`'s focus; its ring and
+//! the breadcrumb's focus path are drawn only while keyboard navigation is on, which a key press turns on and a click
+//! or a drag off, a window the mouse opened taking the focus with no ring (R-460, R-464). The
 //! Manifold view, the compass and the figure's gestures send their edits through [`App::set_field`], as any control;
 //! a click on the figure, or P over it, pins the sample there in the Trajectory panel through the engine side's
 //! `computeIC`, sending none (R-453).
@@ -338,10 +340,12 @@ impl<S: EngineSide> App<S> {
     }
 
     /// Before each frame's egui pass: the keyboard layer takes its keys out of `raw` while the layer is shown, and not
-    /// in present mode, whose Esc is egui's to read.
+    /// in present mode, whose Esc is egui's to read; then it only follows keyboard navigation (R-460, R-464).
     pub fn raw_input_hook(&mut self, ctx: &egui::Context, raw: &mut egui::RawInput) {
         if self.shown && !self.present {
             self.keyboard.take_keys(ctx, raw);
+        } else {
+            self.keyboard.follow_input(raw);
         }
     }
 
@@ -518,7 +522,12 @@ impl<S: EngineSide> App<S> {
         }
         self.keyboard.clear_places();
         let tree = self.keyboard.tree(self.view.mode);
-        let breadcrumb = explore::breadcrumb::text(tree, &self.view.focus);
+        // The breadcrumb's focus path is drawn only while keyboard navigation is on, as the ring is (R-460 H4).
+        let breadcrumb = if self.keyboard.navigating() {
+            explore::breadcrumb::text(tree, &self.view.focus)
+        } else {
+            String::new()
+        };
         explore::top_bar::show(
             ui,
             layout.top_bar,
@@ -1006,8 +1015,12 @@ impl<S: EngineSide> App<S> {
         }
     }
 
-    /// Draws the focus ring on the focused scope, where it was drawn this frame.
+    /// Draws the focus ring on the focused scope, where it was drawn this frame, while keyboard navigation is on
+    /// (R-460 H4, R-464).
     fn draw_ring(&self, ctx: &egui::Context) {
+        if !self.keyboard.navigating() {
+            return;
+        }
         let tree = self.keyboard.tree(self.view.mode);
         let path = &self.view.focus.path;
         let Some(id) = path[..tree.valid_prefix(path)].last() else {

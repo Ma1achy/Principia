@@ -10,6 +10,7 @@
 use std::sync::Arc;
 
 use eframe::egui::{self, pos2, vec2, Rect};
+use engine::contract::display;
 use engine::contract::legend::{
     not_yet_dot_at, Legend, LegendEntry, LegendKey, SwatchStyle, NOT_YET_DOT_SRGB8, NOT_YET_SRGB8,
     SWATCHES,
@@ -407,4 +408,86 @@ fn mock_legend_keys_running_is_the_not_yet_stipple() {
     );
     assert_eq!(wrong, 0, "every pixel as the mirror places it");
     rejects("one flat colour", || assert_eq!(seen_dot, 0));
+}
+
+/// Checks that every key of `legend` reads the display module's names (R-449; REQ-GUI-188): an outcome swatch its
+/// class name, the black one "bounded / nothing yet", and that no label shows an internal id.
+fn check_keys_read_the_module(legend: &Legend) {
+    for key in &legend.keys {
+        let LegendKey::Categorical { entries, .. } = key else {
+            continue;
+        };
+        for e in entries {
+            assert!(
+                !display::shows_an_internal_id(&e.label),
+                "the key `{}` shows an internal id",
+                e.label
+            );
+            if let SwatchStyle::Flat(srgb) = e.swatch {
+                let s = SWATCHES
+                    .iter()
+                    .find(|s| s.srgb8 == srgb)
+                    .unwrap_or_else(|| panic!("no swatch of `{}`", e.label));
+                assert_eq!(
+                    Some(e.label.as_str()),
+                    display::class_name_of(s.state, s.detail),
+                    "the key of `{}`",
+                    s.param
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn mock_legend_keys_read_the_display_names() {
+    let legend = evaluate(&default_stain());
+    check_keys_read_the_module(&legend);
+    let LegendKey::Categorical { entries, .. } = &legend.keys[0] else {
+        panic!("the first key is the outcome class")
+    };
+    let labels: Vec<&str> = entries.iter().map(|e| e.label.as_str()).collect();
+    assert_eq!(
+        labels,
+        [
+            "bounded / nothing yet",
+            "collision 1–2",
+            "collision 1–3",
+            "collision 2–3",
+            "triple collision",
+            "escape body 1",
+            "escape body 2",
+            "escape body 3",
+            "triple ejection",
+            "forbidden region",
+        ]
+    );
+    // A running key, which another field's legend may show, reads the function's name too.
+    let running = evaluate(&FakeStain {
+        out: vec![Dimension::Categorical {
+            title: "colour · d_min",
+            classes: vec![(Class::Running, 1.0)],
+        }],
+    });
+    assert_eq!(outline(&running)[0].1, ["running"]);
+    // The legend the GUI draws: none of its texts shows an internal id.
+    let mut h = headless();
+    let mut app = mock_app();
+    for t in frame_texts(&mut h, &mut app) {
+        assert!(!display::shows_an_internal_id(&t), "the frame draws `{t}`");
+    }
+    rejects("a key written 0-based", || {
+        let mut l = legend.clone();
+        if let LegendKey::Categorical { entries, .. } = &mut l.keys[0] {
+            entries[5].label = "escape body 0".to_owned();
+        }
+        check_keys_read_the_module(&l)
+    });
+    rejects("a key named by its pair id", || {
+        let mut l = legend.clone();
+        if let LegendKey::Categorical { entries, .. } = &mut l.keys[0] {
+            entries[1].label = "collision pair 2".to_owned();
+        }
+        check_keys_read_the_module(&l)
+    });
 }

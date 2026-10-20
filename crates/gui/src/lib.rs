@@ -41,6 +41,7 @@ mod tests {
     mod mock_hover;
     mod mock_keyboard;
     mod mock_keyboard_modes;
+    mod mock_keyboard_nav_state;
     mod mock_keyboard_stain;
     mod mock_keyboard_windows;
     mod mock_legend_keys;

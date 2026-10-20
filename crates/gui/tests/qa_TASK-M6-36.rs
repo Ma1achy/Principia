@@ -43,6 +43,8 @@ use gui::side::{EngineSide, MockSide};
 const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;
 const ALT: Modifiers = Modifiers::ALT;
+/// A key no command binds: pressed only to turn keyboard navigation on (R-460, R-464 M2).
+const UNBOUND: Key = Key::F12;
 const NAV: KeyMode = KeyMode::Navigation;
 const INTERACT: KeyMode = KeyMode::Interaction;
 
@@ -137,11 +139,19 @@ impl Rig {
     }
 
     /// Puts the focus on the scope `id` in `mode`.
+    /// The focus is set by hand, as no user can, so a key no command binds is then pressed to turn keyboard
+    /// navigation on, as a user arriving there by keys has it: the GUI starts with it off, and while it is off an
+    /// Enter only shows the ring (R-460, R-464 M2).
     fn focus(&mut self, id: &str, mode: KeyMode) {
         let path = self.app.keyboard.tree(Mode::Explore).path_to(id);
         assert!(!path.is_empty(), "no scope {id} in the tree");
         self.app.view.focus.path = path;
         self.app.view.focus.mode = mode;
+        self.key(UNBOUND, NONE);
+        assert!(
+            self.app.keyboard.navigating(),
+            "a key press left keyboard navigation off"
+        );
     }
 
     fn focused(&self) -> Option<String> {
