@@ -332,7 +332,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
    (qa review 5587775086 B). The residuals are at most `3·10⁻¹⁵` (Yoshida-4, f64 rounding) and `5·10⁻¹⁴` (Yoshida-6,
    Table 1's 15-digit truncation). Measured on the printed digits: Yoshida-4 `|Σw − 1| = 0` and `5.5·10⁻¹⁷` (R-515; *was* `2.9·10⁻¹⁶`, on RQ-405's interim digits), Yoshida-6 `5.1·10⁻¹⁵` (`Σw⁵`;
    the nested condition `4.0·10⁻¹⁶`). Its controls: each coefficient (Yoshida-6's `w₀` recomputed) changed by one unit of its 15th significant digit (Yoshida-4) or its 13th
-   (Yoshida-6), in each direction, must exceed the bound (measured: at least `1.0·10⁻¹⁴` and `2.8·10⁻¹³`; R-515, *was* `9.8·10⁻¹⁵` on RQ-405's interim digits). Past those
+   (Yoshida-6), in each direction, must exceed the bound (measured: at least `9.9·10⁻¹⁵` and `2.8·10⁻¹³`; R-515, *was* `9.8·10⁻¹⁵` on RQ-405's interim digits). Past those
    positions a change can lower a residual (Table 1's own truncation sets Yoshida-6's, f64 rounding Yoshida-4's), and a
    last-digit change of Yoshida-4 can parse to the same f64, so the last printed digits are REQ-INT-037's alone. It
    stands in for checking the digits against the paper, which is cited, not held (§3.2). *As first ported:* "the

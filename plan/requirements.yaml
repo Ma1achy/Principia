@@ -3283,7 +3283,7 @@
   milestone: M3
 - id: REQ-INT-037
   area: INT
-  statement: "The occupants must implement exactly the update rules and coefficients of dd_integrator §3.2: Euler, KDK, Yoshida-4 (`w₁ = 1/(2 − 2^{1/3})` correctly rounded to f64, and `w₀ = 1 − 2w₁` as computed in f64, the closed form's `w₀ = −2^{1/3}w₁`, so that `w₀ + 2w₁ = 1` exactly; R-515), Yoshida-6 solution A, and the standard RK4 tableau on `(r, p)`."
+  statement: "The occupants must implement exactly the update rules and coefficients of dd_integrator §3.2: Euler, KDK, Yoshida-4 (`w₁ = 1/(2 − 2^{1/3})` correctly rounded to f64, and `w₀ = 1 − 2w₁` as computed in f64, so that `w₀ + 2w₁ = 1` exactly, which stands in place of the closed form's `w₀ = −2^{1/3}w₁`, from which it differs by 9.9·10⁻¹⁷ relative; R-515), Yoshida-6 solution A, and the standard RK4 tableau on `(r, p)`."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 3.2 Occupants
@@ -4266,7 +4266,7 @@
     section: 3.2 Occupants
   verify:
     method: unit test
-    detail: "cargo test -p kernel yoshida_convergence_order: fitted orders round to 4 and 6, the ladder, fit and detection floor printed; controls: Yoshida-4's w₁ and Yoshida-6's w₁, w₂, w₃, each with its 4th significant digit changed and w₀ recomputed, give a fitted order that rounds lower and fail. cargo test -p kernel yoshida_order_conditions: the residuals within the bounds (measured on the printed digits: Yoshida-4 |Σw − 1| = 0 and 5.5·10⁻¹⁷ (R-515), and Yoshida-6 5.1·10⁻¹⁵ for Σw⁵ and 4.0·10⁻¹⁶ for the nested condition); controls: each coefficient (Yoshida-6's w₀ recomputed) moved by one unit of its 15th significant digit (Yoshida-4) or its 13th (Yoshida-6), in each direction, exceeds the bound and fails (measured: at least 1.0·10⁻¹⁴ and 2.8·10⁻¹³)"
+    detail: "cargo test -p kernel yoshida_convergence_order: fitted orders round to 4 and 6, the ladder, fit and detection floor printed; controls: Yoshida-4's w₁ and Yoshida-6's w₁, w₂, w₃, each with its 4th significant digit changed and w₀ recomputed, give a fitted order that rounds lower and fail. cargo test -p kernel yoshida_order_conditions: the residuals within the bounds (measured on the printed digits: Yoshida-4 |Σw − 1| = 0 and 5.5·10⁻¹⁷ (R-515), and Yoshida-6 5.1·10⁻¹⁵ for Σw⁵ and 4.0·10⁻¹⁶ for the nested condition); controls: each coefficient (Yoshida-6's w₀ recomputed) moved by one unit of its 15th significant digit (Yoshida-4) or its 13th (Yoshida-6), in each direction, exceeds the bound and fails (measured: at least 9.9·10⁻¹⁵ and 2.8·10⁻¹³)"
   rulings:
   - R-57
   - R-501
