@@ -55,7 +55,13 @@ enum Access {
     Store,
 }
 
-/// A word buffer that logs each access, its kind and index, so a check can count the reads and writes.
+/// The most accesses a [`Counted`] buffer logs: far above any check's (at most 3 crossings on each of 600 substeps,
+/// a load and a store each, or 1200 symbols through the hook), so a faulty loop that never ends (a mutant's) panics
+/// here instead of growing the log without bound.
+const LOG_BOUND: usize = 1 << 14;
+
+/// A word buffer that logs each access, its kind and index, so a check can count the reads and writes. The log is
+/// bounded by [`LOG_BOUND`].
 struct Counted {
     words: Vec<FreeGroupWord>,
     log: RefCell<Vec<(Access, usize)>>,
@@ -69,6 +75,16 @@ impl Counted {
         }
     }
 
+    /// Logs an access; panics past [`LOG_BOUND`] accesses.
+    fn log_access(&self, kind: Access, i: usize) {
+        let mut log = self.log.borrow_mut();
+        assert!(
+            log.len() < LOG_BOUND,
+            "the word buffer's access log passed its bound, {LOG_BOUND}: a loop that does not end"
+        );
+        log.push((kind, i));
+    }
+
     /// The accesses logged since the first `from`.
     fn since(&self, from: usize) -> Vec<(Access, usize)> {
         self.log.borrow()[from..].to_vec()
@@ -77,12 +93,12 @@ impl Counted {
 
 impl WordBuffer for Counted {
     fn load(&self, i: usize) -> [u32; 4] {
-        self.log.borrow_mut().push((Access::Load, i));
+        self.log_access(Access::Load, i);
         self.words[..].load(i)
     }
 
     fn store(&mut self, i: usize, w: [u32; 4]) {
-        self.log.borrow_mut().push((Access::Store, i));
+        self.log_access(Access::Store, i);
         self.words[..].store(i, w);
     }
 }
@@ -419,7 +435,10 @@ fn check_mirror(append: Append, cases: &[(u32, Vec<u32>)]) {
             a = append(a.word, a.prev, a.packed_a, s);
             let length = fgw_length_raw(a.word);
             if (1..=FGW_CAPACITY).contains(&length) {
-                let last = fgw_decode(a.word).last().expect("a word of length ≥ 1");
+                let last = fgw_decode(a.word)
+                    .take(FGW_CAPACITY as usize)
+                    .last()
+                    .expect("a word of length ≥ 1");
                 assert_eq!(
                     sd_last_symbol(a.packed_a),
                     last,
