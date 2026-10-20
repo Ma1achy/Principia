@@ -27,14 +27,14 @@
 
 use std::fmt;
 
-use kernel::chart::{family_label, swept, Axis, BlockTouch, Chart, Latent as LatentChart};
+use kernel::chart::{family_label, swept, Axis, BlockTouch};
 use kernel::decode::Decoded;
 use kernel::generated::links::Selection;
 
 use super::axis::{blocks, dof, meets, names, no_blocks, union, within, AxisKind, Block};
 use super::descriptor::{Authored, ChartDescriptor, ChartKind, Coupling, Frozen};
 use crate::chart_validate::{self, validate_view};
-use crate::contract::sim_config::{Latent, Plane, LATENT_DIM};
+use crate::contract::sim_config::{Latent, LATENT_DIM};
 
 /// Why the validator refuses a chart.
 #[derive(Clone, Debug, PartialEq)]
@@ -182,22 +182,14 @@ impl<C: Authored> ValidatedChart<C> {
         self.descriptor.kind()
     }
 
-    /// The CPU decode path at `(u, v)` under `S`, as the lock replays it (render_gui_spec §G7): an affine chart is the
-    /// view's slice `z₀ + (2u−1)q₁ + (2v−1)q₂` through the decoder; a nonlinear one maps through its `Φ`, then the
-    /// decoder (`Chart::decode`).
-    pub fn decode<S: Selection>(&self, plane: &Plane, u: f64, v: f64) -> Decoded<f64>
+    /// The CPU decode path at `(u, v)` under `S`, as the lock replays it (render_gui_spec §G7): the validated
+    /// chart's own map, then the decoder (`Chart::decode`), whatever its kind; an affine chart's map is its own slice
+    /// (the latent chart's `z₀ + (2u−1)q₁ + (2v−1)q₂`), so no plane but the one validated is ever decoded.
+    pub fn decode<S: Selection>(&self, u: f64, v: f64) -> Decoded<f64>
     where
         f64: From<C::Param>,
     {
-        match self.kind() {
-            ChartKind::Affine => LatentChart {
-                z0: plane.z0,
-                q1: plane.q1,
-                q2: plane.q2,
-            }
-            .decode::<S, f64>(u, v),
-            ChartKind::Nonlinear => self.chart.decode::<S, f64>(u, v),
-        }
+        self.chart.decode::<S, f64>(u, v)
     }
 }
 

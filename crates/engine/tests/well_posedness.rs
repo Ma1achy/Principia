@@ -24,9 +24,8 @@ use engine::chart_authoring::{
     Convention, Coupling, CurvePoint, Frozen, InvariantMeta, InvariantQuantity, Refusal, Residual,
     Solve, ValidatedChart,
 };
-use engine::contract::sim_config::Plane;
 use kernel::chart::invariant::Invariant;
-use kernel::chart::mixed::{Alpha, Coordinate, PRhoX, ZMu1, ZQ2};
+use kernel::chart::mixed::{Alpha, Coordinate, PRhoX, ZMu1, ZQ0, ZQ2, ZQ3};
 use kernel::chart::{
     Axis, BlockTouch, Burrau, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz, Chart, ChartOut,
     EuclidPlane, Float, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed, ShapeMap,
@@ -1322,38 +1321,39 @@ negative_control!(
 // ── REQ-CHART-035 ──────────────────────────────────────────────────────────────────────────────────────────────────
 
 /// The decode path under check.
-type Path = fn(&ValidatedChart<Probe>, &Plane, f64, f64) -> Decoded<f64>;
+type Path<C> = fn(&ValidatedChart<C>, f64, f64) -> Decoded<f64>;
 
-fn plane() -> Plane {
-    Plane {
+/// A view's plane, other than any chart's own: what a decode path that reads a caller's plane would decode.
+#[cfg(feature = "controls")]
+fn plane() -> engine::contract::sim_config::Plane {
+    engine::contract::sim_config::Plane {
         z0: [0.1, -0.2, 0.05, 0.0, 0.1, -0.1, 0.2, 0.3],
         q1: e(0).map(|x| 0.5 * x),
         q2: e(2).map(|x| 0.5 * x),
     }
 }
 
-/// The affine probe, `z_α` and `z_q0`; and with its vertical axis replaced by `physical`, which is nonlinear: the
-/// decode path reads the plane for the first and calls `Φ` for the second.
-fn check_nonlinear(
-    path: Path,
-    physical: AxisDescriptor,
-    slice: Vec<Frozen>,
-    conventions: Vec<Convention>,
-) {
-    let affine = validate(two_six(), None).unwrap();
-    assert_eq!(affine.kind(), ChartKind::Affine);
-    let (u, v) = (0.3, 0.8);
-    let out = path(&affine, &plane(), u, v);
+/// A path that decodes the view's plane whatever the chart: the validated chart is never read.
+#[cfg(feature = "controls")]
+fn plane_only<C>(_: &ValidatedChart<C>, u: f64, v: f64) -> Decoded<f64> {
     let p = plane();
-    let expected = Latent {
+    Latent {
         z0: p.z0,
         q1: p.q1,
         q2: p.q2,
     }
-    .decode::<Defaults, f64>(u, v);
-    assert_eq!(out, expected, "the affine path is not the plane's");
-    assert_eq!(affine.chart().calls.get(), 0, "the affine path called Φ");
+    .decode::<Defaults, f64>(u, v)
+}
 
+/// The probe with its vertical axis `physical`, which is nonlinear, and the affine probe, `z_α` and `z_q0`: the decode
+/// path is each validated chart's own map then the decoder, so it calls `Φ` for the first.
+fn check_nonlinear(
+    path: Path<Probe>,
+    physical: AxisDescriptor,
+    slice: Vec<Frozen>,
+    conventions: Vec<Convention>,
+) {
+    let (u, v) = (0.3, 0.8);
     let mut chart = two_six();
     chart.descriptor.axes[1] = physical;
     chart.descriptor.slice = slice;
@@ -1362,18 +1362,62 @@ fn check_nonlinear(
     assert!(physical.is_physical_quantity());
     let nonlinear = validate(chart, None).unwrap_or_else(|r| panic!("refused: {r}"));
     assert_eq!(nonlinear.kind(), ChartKind::Nonlinear);
-    let out = path(&nonlinear, &plane(), u, v);
+    let out = path(&nonlinear, u, v);
     assert!(
         nonlinear.chart().calls.get() > 0,
         "the decode path did not call Φ"
     );
     let phi = nonlinear.chart().decode::<Defaults, f64>(u, v);
     assert_eq!(out, phi, "the decode path is not Φ's");
+
+    let affine = validate(two_six(), None).unwrap();
+    assert_eq!(affine.kind(), ChartKind::Affine);
+    let out = path(&affine, u, v);
+    let own = affine.chart().decode::<Defaults, f64>(u, v);
+    assert_eq!(out, own, "the affine path is not the chart's own map");
 }
 
-fn decode_path(c: &ValidatedChart<Probe>, p: &Plane, u: f64, v: f64) -> Decoded<f64> {
-    c.decode::<Defaults>(p, u, v)
+fn decode_path<C: Authored>(c: &ValidatedChart<C>, u: f64, v: f64) -> Decoded<f64>
+where
+    f64: From<C::Param>,
+{
+    c.decode::<Defaults>(u, v)
 }
+
+/// `Mixed<z_q0, z_q3>`, affine: its validated decode is its own map (`frozen` with `lerp(h_range, u)` and
+/// `lerp(v_range, v)` at `z_q0`, `z_q3`) then the decoder, at every point checked.
+fn check_mixed_own_map(path: Path<Mixed<ZQ0, ZQ3, f64>>) {
+    let frozen = [0.2, -0.3, 0.0, 0.1, -0.1, 0.0, 0.3, -0.2];
+    let m = Mixed::<ZQ0, ZQ3, f64>::new(frozen, [-1.0, 1.5], [0.25, -0.75]);
+    let v = validate(m, None).unwrap_or_else(|r| panic!("refused: {r}"));
+    assert_eq!(v.kind(), ChartKind::Affine, "Mixed<z_q0, z_q3>'s kind");
+    let mut outs = Vec::new();
+    for (s, t) in [(0.0, 0.0), (0.2, 0.7), (0.9, 0.1), (1.0, 1.0)] {
+        let out = path(&v, s, t);
+        assert_eq!(
+            out,
+            m.decode::<Defaults, f64>(s, t),
+            "the validated decode is not the chart's own map at ({s}, {t})"
+        );
+        outs.push(out);
+    }
+    assert!(
+        outs.windows(2).all(|w| w[0] != w[1]),
+        "the map is constant over the points: undiscriminating"
+    );
+}
+
+#[test]
+fn validated_decode_is_the_charts_own_map() {
+    check_mixed_own_map(decode_path);
+}
+
+negative_control!(
+    validated_decode_is_the_charts_own_map,
+    "a decode path that reads the view's plane, not the validated chart",
+    expected = "is not the chart's own map",
+    check_mixed_own_map(plane_only)
+);
 
 #[test]
 fn physical_axis_nonlinear() {
@@ -1405,17 +1449,6 @@ fn physical_axis_nonlinear() {
     // A kind-4 axis is nonlinear too, and an annotation axis beside a latent one leaves the chart affine.
     assert_eq!(burrau(EUCLID_NU).descriptor().kind(), ChartKind::Nonlinear);
     assert_eq!(one_annotation_seven().descriptor.kind(), ChartKind::Affine);
-}
-
-/// A path that reads the plane whatever the chart's kind.
-#[cfg(feature = "controls")]
-fn plane_only(_: &ValidatedChart<Probe>, p: &Plane, u: f64, v: f64) -> Decoded<f64> {
-    Latent {
-        z0: p.z0,
-        q1: p.q1,
-        q2: p.q2,
-    }
-    .decode::<Defaults, f64>(u, v)
 }
 
 negative_control!(
