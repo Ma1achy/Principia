@@ -94,6 +94,8 @@ data. The two words name one object. The **figure** is the rendered slice.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console (§G12). The hover
   label and the lock reticle are the figure's own marks, not notifications. The one control over the figure is the
   **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7).
+  The decoder badge in the top-left corner (§G2's Figure, R-479 D4) is applied meanwhile as a second mark; whether it
+  may be is RQ-387.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain mode is the plain node-graph editor
   (Part II).
@@ -163,6 +165,12 @@ view the manifold.
   (§G7). With an energy-type axis (`E`, `L_z`, `K`), the section offers each such axis's **mapping**, warped (the
   default, every pixel feasible) or linear (an affine axis, its infeasible pixels blank), one undoable edit that
   re-integrates (R-471).
+  **Links (R-478):** one compact row, `Links: softmax·tanh (μ_max 5) · sigmoid · sigmoid (q_max 2)`, the masses, the
+  configuration and the momenta, each by its link's display name with its tunable parameters' active values (the
+  configuration one item while α and β use one link family, `α tanh / β sigmoid` when they differ), and a
+  **Decoder…** button that opens the Decoder window (§G7a). The row is tinted amber whenever any block is off its
+  default, its tooltip naming the blocks, so a non-default decoder is never invisible. The links are the decoder's,
+  not the chart's: no chart edit changes them (R-478, W1).
 - **Navigate:** centre `(u, v)`; zoom (log₂). With the depth readout, the precision warning and the lock row (the next
   two bullets) that is all it holds, with the reset beside its heading (R-466): no grid of `z₀` values, which repeated
   the Slice centre sliders (R-457). Its **reset** returns the centre `(u, v)` to the chart preset's centre and the zoom
@@ -213,7 +221,9 @@ the dimming and the checks compare the section's values, not the row's figures. 
 one command: the button in the figure's top-right corner (below), the Home key in both keyboard modes (§G3) and
 **View › Home**. It leaves alone the chart preset and its axes (Chart's `q₁` and `q₂` axes, the cube's H and V), the H,
 V and D choice and the tilt targets, the time playhead, the stain, and the panel and window layout, and also the lock,
-the compass's mode and view, the overlays and the Trajectory panel's pin and kept orbits (R-466 K4). Each reset, and
+the compass's mode and view, the overlays and the Trajectory panel's pin and kept orbits (R-466 K4). Home and the
+section resets leave the links and their parameters alone too, staged or applied: they are the decoder's, and Home
+is navigation (R-479, D3). Each reset, and
 Home, is **one undoable command**: its edits are sent in one frame under one history key, so one Ctrl+Z restores all it
 set, and a command with nothing to change sends nothing. A section's reset is **dimmed** (egui's disabled style, no
 click) while the section is already at its home values, within 10⁻¹², and Home, its button and its menu entry while all
@@ -242,6 +252,12 @@ and it hides with the layer (F3, present mode). The orbit's path is drawn from t
   `t_max`". A decided fate is a terminal `state` (escape, collision) or `bounded` at the horizon (payload §2); its labels
   name the bodies 1, 2, 3 and a pair by its two bodies, "collision 1–2", never a pair id, from the one display function
   (R-449; payload §2, "What a person reads").
+
+**The decoder badge (R-479, D4; applied meanwhile, RQ-387).** A badge in the canvas's top-left corner names the chart
+by its axes and, while any block is off its default, each block off its default after a "·", for example "z_α × z_β ·
+stick-breaking masses" or "z_α × z_β · μ_max 4 masses"; at the defaults it names the chart alone. It hides with the
+layer (F3, present mode), as the Home button does. A recreated view that is a fallback (an import that assumed default
+links, or an embedding that dropped a tier) says so in the same badge (R-483, X5; R-484, RT3).
 
 **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs: "under cursor", `#1`, `#2`, `+`):
 - **a click on the figure pins that sample's trajectory here (R-453).** A primary click with no drag pins the sample
@@ -583,6 +599,8 @@ change of the GUI's size never leaves less than its title bar's height of it, an
 inside the GUI. Each window's position and size are remembered across sessions, in the GUI's own settings, never the
 contract; with none remembered a window opens where the artboards put it. The console is docked along the bottom
 instead, its height dragged (§G12).
+The Decoder window (§G7a, R-478) is one of these windows, opened from Windows › Decoder… or the Chart section's
+**Decoder…** button; with no place remembered it opens beside the Manifold view, never over the figure.
 
 ### Profiler
 
@@ -654,6 +672,15 @@ either file as schema v1.
   That record is the export's sidecar: with `SimConfig` it carries the tilt map (`tilt_map=sheet|lean`, R-474), a
   curved chart's tilt (R-473), each energy-type axis's mapping (R-471) and a saved chart's definition (R-475), and
   beside it F3's fill mode (`f3_fill=extend|fit`, R-472) and the lines (`Lines`, R-476).
+  With `SimConfig` it carries the links, each block's id and parameter values, written in full even at the defaults
+  (R-483, X1, X2), and beside it the build hash and the schema version, so a receiver refuses a decoder it lacks
+  rather than substituting one (R-483, X4). Importing any of these is the identity on `SimConfig` and `RenderState`
+  (R-484, RT1).
+- **What the image embeds (R-484, RT2, RT3).** When the view's record does not fit the image's low bits, the embedding
+  drops whole tiers from the bottom, the custom shader source first, then the colour, never the physics; before the
+  share the window shows which tiers fit at the chosen size, for example "embedded at 64²: physics; colour and custom
+  shader in the PNG text only", and if the physics does not fit, "not embedded". The PNG's `tEXt` chunk always carries
+  everything. The record is never cut to fit (R-483, X6).
 - **Present:** hide all chrome; Esc returns.
   With the chrome hidden the figure fills the window, as with F3 (R-406), in the mode View › F3 fills by sets (R-468;
   applied per R-369).
@@ -790,7 +817,54 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
   `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3). The preview keeps its hatch and its
   share under R-467: it is a diagnostic for building charts, not a presentation view (R-467, clause 6).
 - **A quick render** (e.g. 64 × 64 at a short horizon), at the view's aspect. **Both previews are square.**
+- **The links, read-only (R-478, W3):** beside the Domain preview, the active links as the Chart section's row names
+  them, with a link that opens the Decoder window (§G7a); the builder never edits them.
+- **The axis warps' preview (R-480, P3):** each warped axis (`K = K_max t^γ_K` and the like) has the Decoder window's
+  preview widget, chart coordinate `t ∈ [0, 1]` against the quantity, with its density and, off its default, the
+  default's ghost, so warps and links are inspected the same way. An energy-type axis's warp is evaluated per pixel
+  (R-471), so its curve is drawn at the slice centre's `U`, `I` and masses and labelled "at the centre".
 - The footer checks `q₁ · q₂ = 0` and lists the hidden directions (and the residual). Revert / Apply.
+
+## G7a. Decoder (no artboard; R-478 to R-482)
+
+The **Decoder** window (Windows › Decoder…, or **Decoder…** in the Chart section) chooses and tunes the link functions,
+which belong to the decoder every chart passes through (R-478, W1;
+`principia_chart_decoder_contract.md` Part 2.5). It is a window under §G5's rule.
+
+- **One row per block** (R-479, D1): Masses; Configuration α; Configuration β; Momenta, the last setting the four
+  momentum controls together. Each row has:
+  - **a link dropdown** listing only the registry entries onto that block's codomain, so an incompatible link cannot be
+    chosen; the default first, marked "(default)";
+  - **the link's parameters** (R-481), numeric fields with sliders, each showing its allowed range and taking no
+    value outside it, greyed with "no parameters" when the link has none; switching link keeps a parameter of the same
+    name and sets the others to their defaults;
+  - **a preview** (below);
+  - **"reset to default"**, dimmed while the row is at its default link and parameters.
+- **The footer** (D2): **Reset all to defaults**; the text "Changing a link re-integrates every pixel"; **Apply /
+  Revert**, as in the Chart builder. Edits are staged, so dragging a parameter does not re-integrate on every frame;
+  Apply sends the whole `Links` in one `SetField`, one undo entry, and re-integrates; Revert drops what is staged. Both
+  are dimmed with nothing staged, and closing the window keeps the staged edits.
+- **Home and the section resets** do not touch links (D3, §G2).
+- **A non-default decoder** shows in the canvas badge (§G2's Figure, RQ-387) and in every sidecar and export (D4),
+  since the links travel in `SimConfig` (R-483).
+- **From the keyboard** it is reached as every window is (§G3): its rows in order, each its dropdown, its parameters and
+  its reset, then the footer.
+
+**The previews (R-480).** Each is about 160 × 110 px, drawn in the line system's style presets
+(`principia_lines.md` §3), and live: it updates while a parameter is dragged, before Apply, nothing re-integrating.
+- **A one-dimensional block** (α, β, the momenta): latent `z` across against the physical value up, the curve over a
+  span of the visible range widened by half its width each side and never narrower than `[−4, 4]`; dashed horizontal
+  lines at the codomain's bounds (±`q_max` at the active value, α's `[α_min, π/2 − α_min]`); the window's current range
+  of `z` on this block, shaded; a dot at the slice centre's value; the derivative `d(value)/dz`, `exp` of the log-det,
+  drawn faint under the curve and labelled "resolution", where the link spends pixels; and, off the default, the
+  default's curve faint behind. The Momenta row's tabs `q₁ … q₄` choose whose range and centre are drawn.
+- **The masses** (two latent dimensions onto the simplex): a small triangle, its corners labelled `m₁`, `m₂`, `m₃`
+  (1-based, R-449); the image of an even grid of `z` lines, so the bunching shows where the link concentrates
+  resolution; the current view's footprint in mass space, shaded; the slice centre, a dot; the equal-mass point
+  marked. `stick_breaking` visibly reaches the edges and `softmax_tanh` visibly does not.
+- **Exact, not sketched** (P4): every preview evaluates the generated link functions, the code the kernel runs, on the
+  CPU at f64, through the engine's link evaluator (`principia_gui_state_contract.md` §1); the GUI never reimplements a
+  formula.
 
 ## G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)
 
@@ -818,6 +892,11 @@ its HTML (`docs/gui/reference/ic_inspector.html`) is prior art.
 - **Import picture:** drop a Principia PNG (or File › Import picture…). It reads the pxpack, shows what's stored (chart,
   centre, zoom, tilt, stain, time, when it was made) and **what differs from now**, and offers **restore this view**, **only
   its stain**, or **open side by side**.
+  What it reports (R-483, R-484): beside §9's record outcomes (`principia_dd_image_embedding.md` §9), "state present,
+  cannot recreate", naming the link the build lacks or the decoder that changed; "state present, links unrecorded",
+  with **Recreate with this build's default links**, the view then badged "links assumed"; and, recovered, which tiers
+  the image held, for example "custom shader source not embedded (it was in the original), rendering with the built-in
+  fallback". Restoring is the identity on `SimConfig` and `RenderState` for every tier recovered (R-484, RT1).
 - **Saved views:** pxpack snapshots, each with a thumbnail and "go"; "Save this view". A saved view reopens under the
   tilt map it was saved with, one saved before R-474 under Lean each axis (R-474). A saved view is a whole view; a
   saved chart (§G2's Save view as chart, R-475) is a chart in the picker.
@@ -921,6 +1000,8 @@ corpus, the spec follows the authority:
 - **The View menu's fill modes and the debug view** (R-467, R-468). No artboard shows View › "F3 fills by: Extend /
   Fit" or View › Debug view; the GUI has both. `06_legend.png` shows no forbidden-region key, and the presentation
   legends have none (R-467); the debug view's "Debug" key is not drawn there.
+- **The Decoder window and the decoder badge** (R-478 to R-480). No artboard shows the Decoder window, the Chart
+  section's links row or the canvas's decoder badge; the GUI has all three (§G7a, §G2; the badge's place is RQ-387).
 - **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
   defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
   the artboards'.

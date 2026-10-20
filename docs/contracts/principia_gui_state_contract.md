@@ -26,6 +26,14 @@ The boundary must stay a **data** boundary, not an **object** one — under *bot
 
 No GUI element ever holds sim logic, caches sim data, or computes anything the engine needs; it reads a snapshot and emits field edits, nothing more.
 
+**The link catalogue and evaluator (R-480, F2; decided per R-369).** The Decoder window's previews evaluate the
+generated link functions, the same code the kernel runs (`principia_render_gui_spec.md` §G7a, P4). The surface offers
+them as a pure function, `engine::contract::links`: the registry's catalogue (the entries onto each block's codomain,
+their display names, their tunable parameters with defaults and ranges) and an evaluator of an entry's forward,
+inverse and log-det at f64 for given parameter values. It is data in and data out, holds no engine state and reads none,
+so it is no handle into the engine; the mock calls the same function, and the TS binding reaches it as a plain call
+across the membrane.
+
 **The mock engine and the conformance suite (R-390).** The dev GUI is built first against a mock engine: a test double of this surface, in the gui crate, always compiled, the crate's `mock` feature choosing only that `main` runs on it (RQ-252 as amended per R-369), which serves plausible snapshots, applies `SetField` with undo and redo (R-69), emits events and runs a fake clock so the playhead moves. One conformance suite, defined beside the surface in the engine crate, runs every case against both the mock and the real engine, and both pass it; a change to the surface goes through review and re-runs it for both. The mock earns no privilege: the GUI reaches it only through this surface, as it reaches the real engine.
 
 ---
@@ -128,6 +136,37 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
     `SimConfig` and `RenderState` in their canonical serialisation, `ViewUI`'s F3 fill mode as `f3_fill=extend|fit`
     (R-472); `tilt_map`, the curved chart's tilt, the axis mappings and a saved chart's definition ride in `SimConfig`.
 - The keyboard navigation flag (on or off, `principia_render_gui_spec.md` §G3, R-460; turned off by any mouse click or drag and on by the next key press, R-464), the windows' positions and sizes (R-461) and the panel layout (R-462) are the GUI's own state, never the contract's: never undoable and never read by the engine. The positions, sizes and layout are kept across sessions in the GUI's own settings.
+
+**The links, the Decoder window and the round-trip rule (R-478 to R-484; decided per R-369).**
+- `SimConfig`'s links are `Links { mass, alpha, beta, momenta }`, one choice per row of the Decoder window
+  (`principia_render_gui_spec.md` §G7a), each a `LinkChoice { id, params }`: `id` the registry entry's name, `params` a
+  map from each tunable parameter of that entry to its value (`{"mu_max":5}`; `{}` for an entry with none). It is the
+  one place the links and their values live: the ViewState record, the sim key, the payload compatibility signature,
+  every export and every sidecar read it through the one canonical serialisation, and no second copy is kept (R-483,
+  X1). Every block's id and every parameter is written even at its default, with no `skip_serializing_if` and no serde
+  default on a link field: a record that omitted a default would read back under the receiver's default (X2). The
+  four momentum controls share the Momenta row's choice (R-479, E1). Its `SetField` path is `SimField::Links`, the
+  whole `Links` in one edit, a sim key that re-integrates and an undoable history entry (R-69), logged as "SetField
+  Links before → after" with each block's id and values; the Decoder window's staged edits are the GUI's own until its
+  Apply sends it (R-479, E4). No chart edit sends it (R-478, L2), and neither Home nor a section reset does (R-479,
+  D3). `ViewUI`'s open windows gain `Decoder`, listed after Chart builder (R-478, L4).
+- **The decoder's identity on import (R-483, X4, X5).** Every export carries, beside `SimConfig` and `RenderState`, the
+  build hash and the schema version (`principia_dd_image_embedding.md` §6). One function of the contract reads every
+  path before anything renders: a link id the build's registry lacks is "state present, cannot recreate", naming the
+  link and its block; meanwhile a schema version other than the build's is refused the same way (whether each link
+  carries its own entry hash is RQ-385); no default link or default value ever stands in. A record whose `links` is
+  `{}`, written before R-483, recreates under this build's defaults if its build hash is this build's, and otherwise
+  only on the user's explicit acceptance, labelled "links assumed".
+- **The round-trip rule (R-484).** Importing an export is the identity on `SimConfig` and `RenderState`, field for field
+  and bitwise in the canonical serialisation, on every path: snapshot JSON, share links, pxpack (a saved view's
+  snapshot), the profiler header's `config`, the animation spec object and the PNG `tEXt` chunk. `ViewUI` is not
+  exported; R-472's `f3_fill` rides beside the two as a sidecar field, outside the identity (R-484, J3). The one lossy
+  path is the image's low-bit embedding, which drops whole tiers, custom source first, then colour, never tier 1
+  (`principia_dd_image_embedding.md` §6). Every field of `SimConfig` and `RenderState` is assigned a tier in one table,
+  `crates/engine/src/contract/tiers.rs`: one function destructuring both structs and every group with no `..`, and
+  every enum by a `match` with no wildcard, so a field added without a tier does not compile; the embedding's writer
+  and the tests read it (R-484, J8). No struct of either type serialises to `{}` in a state whose every field is off
+  its default (R-484, T2; maps and lists may be empty).
 
 **The stain graph (R-72; decided per R-369; TASK-M6-29).** `RenderState`'s stain graph is §5's graph object, the one the engine checks and lowers: its nodes, each `{ id, kind, occupant, params }`, `kind` one of `source`, `colour`, `brightness`, `combiner`, `post` and `out`, `occupant` none, a source's field, a built-in's id or a custom occupant's WGSL, and `params` its uniforms' values by name, one number per component; and its wires, each `{ from, to, port }`, `port` the in-port's position, a u32 (R-329). It serialises with `RenderState` as `{ nodes, wires }`, in id order; the default is the backbone alone, the combiner wired to `OUT`. Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable (R-69): picking a node's occupant or setting a param is one edit (REQ-GUI-016, which TASK-M7-11 keeps). It is logged as "SetField StainGraph [before] → [after]", each graph as its nodes in id order, `id kind occupant` (a custom occupant written `custom`) with its params, if any, as `{name=value, …}`, then its wires, each `from→to.port`. A node's place on the editor's canvas, the canvas's pan and zoom, and which nodes are selected are the editor's own, not the graph's (R-390, "Contract fields": the corpus names nodes, wires and per-node params only).
 

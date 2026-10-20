@@ -103,6 +103,9 @@ grep -rniE --include='*.md' "\blatex\b|spec(_revised)?\.tex" docs/ --exclude-dir
 The rest of R-7 is unchanged.
 
 ## R-10 — μ_max and q_max are settled *(closes RQ-8, amends R-5)*
+*Amended by R-481.*
+*Still in force: `μ_max = 5` and `q_max = 2` as the values, now the defaults of two tunable link parameters, each with
+an allowed range (R-481); the "4" was the IC Inspector's value before its correction; the formulae keep the symbols.*
 *24 Sep 2026 · applied in step 3*
 
 `μ_max = 5` and `q_max = 2`. The "4" was the IC Inspector's value before its correction. The values are written
@@ -14289,3 +14292,842 @@ R-477 is in the "process" group of `plan/rule_groups.yaml`.
 
 Adds REQ-CHART-072 (C1, the one test with no requirement of its own to sit in); every other test is in the verify of
 the requirement named above.
+
+## R-478 — Link functions belong to the decoder, which every chart passes through, not to a chart: they are chosen and tuned in a new Decoder window (Windows › Decoder…); the Manifold view's Chart section shows them in one compact row, tinted amber when any block is off its default; the Chart builder shows them read-only and owns the axis warps; a chart preset carries no links; the instruction's §6 is queued (RQ-380 to RQ-383)
+*20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(the Chart bullet's links row), § "G5. Windows (`04_windows.png`)" (the Decoder window under the window rule), § "G7.
+Chart builder (`03_chartbuilder.png`)" (the links read-only, the warps' preview), § "G7a. Decoder (no artboard; R-478
+to R-482)" (added) and § "G13. Where the artboards are overridden" (a bullet),
+`docs/contracts/principia_chart_decoder_contract.md` § "Part 2.5 — Link functions & compactification (customisable)"
+(a paragraph added, "The links are the decoder's"), `docs/contracts/principia_gui_state_contract.md` § 2 (`ViewUI`'s
+windows), `docs/gui/design/GUI_DESIGN_NOTES.md` § "04 Windows" (conformed), RQ-380 to RQ-383 (new), REQ-GUI-251 to
+REQ-GUI-254 (reqio, new), REQ-GUI-108 and REQ-GEN-013 (reqio, notes), TASK-M6-50 and TASK-M8-52 (new), TASK-M6-45,
+TASK-M8-06 and TASK-M8-18 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-50 (the mock) and
+TASK-M8-52 (the real engine)*
+
+The human's words: an instruction of 20 Oct 2026, "Link functions in the GUI: a picker, parameters and a preview", the
+human's own, delivered after the charts, tilt and lines instruction (R-469 to R-477) and recorded verbatim in the
+orchestrator's notes, with two follow-ups the same day, "Follow-up to the links instruction: export, sharing and the
+embedded record" (R-483) and "Follow-up: the round-trip rule" (R-484), each recorded the same way. The first is ported
+as five rulings, R-478 to R-482, one per lettered section (below, "The split"). This entry holds the instruction's
+preface, its "How to work this", its §0 ("My words"), §1, §2 and §6; each of the other four quotes its own section and
+the §0 lines it rests on.
+
+> # Link functions in the GUI: a picker, parameters and a preview
+>
+> For the Principia agent. This follows the charts, tilt and extension instruction, and depends on nothing in it except T3 (tilt in the link's pre-image).
+
+> ## How to work this
+>
+> 1. **Docs first.** Write the rulings in `decisions.md` with my words from §0. Then amend:
+>    - `principia_chart_decoder_contract.md` Part 2.5;
+>    - `principia_render_gui_spec.md` (§G2, §G7 and a new window);
+>    - `principia_gui_state_contract.md`;
+>    - `principia_dd_generation_root.md` §3.9, if the parameters change how the registry is generated.
+>
+>    Each amendment gets a "Removed lines" note.
+> 2. **Then the plan.** Tasks and requirements.
+> 3. **Then code.** Each PR carries its test output.
+> 4. **Physics review is required where marked ⚑.**
+> 5. **Do not rule on §6.** Queue those items.
+
+> ## 0. My words
+>
+> - "the compactification functions should be swappable and choosable".
+> - "you could change it between like sigmoid, softmax, or like tanh … and like tweak their parameters".
+> - "Obviously, we just have the ones that I've chosen by default".
+> - "I want to be able to like preview the compactification function. We need like a little graph preview of it."
+
+> ## 1. What exists, and what this adds
+>
+> **Exists.**
+> - Part 2.5 already makes links swappable per block, recorded in provenance, and carrying their log-det.
+> - The registry (`crates/ledger/src/links.rs`) has these entries:
+>
+>   | Block | Default | Alternatives |
+>   |---|---|---|
+>   | Masses | `softmax_tanh` | `stick_breaking` |
+>   | α, β | sigmoid | tanh, softsign |
+>   | Momenta | `sigmoid_q` | `tanh_q`, `softsign_q` |
+>
+> - A link change bakes a different kernel.
+>
+> **Missing.**
+> - There is no GUI control to pick a link.
+> - No link parameter can be adjusted: `μ_max = 5` and `q_max = 2` are fixed chart constants (R-10).
+> - There is no way to see what a link does.
+
+> ## 2. Where it lives: a Decoder window, not the Chart builder
+>
+> **W1.** Links belong to the **decoder**, which every chart passes through (chart_reference §0: "every chart ends here"). They are not part of any one chart. Changing a link changes what every chart's pixels mean. Switching chart must not silently switch links, because the robustness test Part 2.5 asks for is exactly "same chart, different link".
+>
+> So the controls go in a new **Decoder** window (Windows › Decoder…, R-461's window rules). The Chart builder is not the place for them.
+>
+> **W2.** The Manifold view's **Chart** section gets one compact row:
+> - `Links: softmax·tanh (μ_max 5) · sigmoid · sigmoid (q_max 2)`;
+> - a **Decoder…** button that opens the window.
+>
+> The row is tinted amber whenever any block is off its default, so a non-default decoder is never invisible.
+>
+> **W3.** The **Chart builder** shows the active links **read-only**, beside its Domain preview, with a link to the Decoder window. What the Chart builder does own is the **axis warps** (`K = K_max t^γ_K` and the like), which are per-axis chart properties. These get the same preview widget (§4), so warps and links are inspected the same way in their two places.
+>
+> **W4.** Chart presets do **not** carry links. A preset is a pair of axes. Whether a preset may optionally pin a link is queued (§6).
+
+> ## 6. Queue, don't rule
+>
+> - Whether a chart preset may optionally pin links ("designed under stick-breaking"), and what loading it does if the current links differ.
+> - Whether the Decoder window should offer a one-click **robustness comparison**, rendering the current view under the default links and under the active ones side by side. This overlaps the v2 side-by-side view (R-106).
+> - Whether α's range (`α_min`) should become a parameter.
+> - Whether new registry entries are wanted. Part 2.5 asks for links that **disagree enough to stress a claim**, such as a heavier-tailed bounded map, not three flavours of the same bias.
+
+*What it decides:*
+- **W1. Links belong to the decoder,** which every chart passes through (chart_reference §0: "every chart ends here"),
+  not to any one chart: changing a link changes what every chart's pixels mean, and switching chart never switches
+  links, because Part 2.5's robustness test is "same chart, different link". The controls are in a new **Decoder**
+  window, Windows › Decoder…, under R-461's window rules; the Chart builder is not their place.
+- **W2.** The Manifold view's Chart section gains one compact row, `Links: softmax·tanh (μ_max 5) · sigmoid · sigmoid
+  (q_max 2)`, and a **Decoder…** button that opens the window; the row is tinted amber whenever any block is off its
+  default, so a non-default decoder is never invisible.
+- **W3.** The Chart builder shows the active links read-only, beside its Domain preview, with a link to the Decoder
+  window. It owns the axis warps (`K = K_max t^γ_K` and the like), per-axis chart properties, which get the same
+  preview widget (R-480, P3), so warps and links are inspected the same way in their two places.
+- **W4.** Chart presets do not carry links; a preset is a pair of axes. Whether a preset may optionally pin a link is
+  queued (RQ-380).
+
+*The facts the instruction states, checked against the repo (the porter's reading at `0d6d361f`, the head of R-469 to
+R-477's port on PR #253's approved head; origin/main at `d7e6f507`):*
+- **Part 2.5** makes links swappable per block, recorded in provenance and carrying their log-det: as stated
+  (`principia_chart_decoder_contract.md` § "Integrity: the link is part of the experiment" and § "Links carry a
+  measure").
+- **The registry** (`crates/ledger/src/links.rs`, `builders()`) holds `softmax_tanh` and `stick_breaking` onto the
+  masses; `sigmoid_alpha`, `tanh_alpha`, `softsign_alpha` and their `_beta` mates onto α and β; `sigmoid_q`, `tanh_q`
+  and `softsign_q` onto each momentum; and `softplus`, `exp` and `identity` onto the two lines no block uses. That is
+  the instruction's table, the bounded entries named per codomain. The defaults are `softmax_tanh`, `sigmoid_alpha`,
+  `sigmoid_beta` and `sigmoid_q` (`slots()`); there are seven slots, `mass`, `alpha`, `beta` and `q0` to `q3`, each
+  momentum control a slot of its own.
+- **"A link change bakes a different kernel":** as stated. The generated selection is a type, `Select<…>`, with one
+  link type parameter per slot (`crates/ledger/src/gen/links.rs`, its module note; REQ-GEN-013, REQ-GEN-015).
+- **No GUI control picks a link, and no parameter can be adjusted:** as stated. `μ_max` and `q_max` are register
+  constants (`crates/ledger/src/constants.rs`, `MU_MAX` and `Q_MAX`, citing R-10), read by the generated links as
+  `R::MU_MAX` and `R::Q_MAX` (`crates/kernel/src/generated/links.rs`) and, outside the link trees, by the encode's
+  clamps (`crates/kernel/src/encode/blocks.rs`).
+- **"every chart ends here"** is chart_reference §0's heading, as quoted.
+
+*Where the words leave a choice, decided per R-369 (routine design choices; the human may veto any, a veto being a
+ruling applied by a follow-up task):*
+- **L1. The row's text.** W2's example names three items, the masses, the configuration and the momenta, where the
+  Decoder window has four rows (R-479, D1). The row lists the masses, the configuration and the momenta, in that order,
+  each by its link's display name with its tunable parameters' active values in parentheses (`μ_max 5`, `q_max 2`);
+  the configuration is one item while α and β use the same link family (`sigmoid`), and reads `α tanh / β sigmoid`
+  when they differ. A display name drops the codomain suffix and writes the entry's words as the human does
+  (`sigmoid_q` → `sigmoid`, `softmax_tanh` → `softmax·tanh`, `stick_breaking` → `stick-breaking`), from one display
+  function, as R-449's names are. The amber is egui's warning colour on the row's text, its tooltip naming the blocks
+  off their defaults.
+- **L2. "Switching chart must not silently switch links."** No chart edit (the preset selector, the Chart builder's
+  Apply, Save view as chart, a saved chart reopened) sends a `Links` edit: the links are `SimConfig`'s own field
+  (R-483, X1), apart from the chart id and params.
+- **L3. Where it is built.** On the mock first (TASK-M6-50: the window, the row, the previews, R-390's GUI track), then
+  on the real engine (TASK-M8-52: Apply re-integrates; W3's read-only links and P3's warp previews in the Chart
+  builder, which is the real engine's, TASK-M8-18).
+- **L4. The window's place.** Decoder is a window like the Chart builder (§G5, R-461): dragged by its title bar,
+  resized from its edges, kept partly on screen, its place remembered; with none remembered it opens beside the
+  Manifold view, never over the figure. `ViewUI`'s open windows gain `Decoder` (gui_state_contract §2).
+
+*Against earlier rulings (applied per R-369, flagged where it reads the words):*
+- **R-106** ("The link ids are the chart's link functions") stands: the link ids are the per-block registry entries.
+  After W1 its "the chart's" reads as the decoder's, which every chart passes through, not a property of one chart.
+  Its other text, linked views for side by side as a `ViewUI` item (v2), stands; RQ-381's robustness comparison
+  overlaps it.
+- **R-466** stands: Home and the section resets edit `z₀` and the basis only (R-479, D3).
+- **R-469 to R-477.** The instruction "depends on nothing in it except T3 (tilt in the link's pre-image)" (R-473): a
+  mass tilt acts on the mass logits, the link's pre-image, and the link maps them forward at its active parameters, so
+  the tilt is unchanged by a link or parameter edit and the masses it reaches follow the link. A saved chart (R-475) is
+  a chart, so by W1 it carries no links; its bitwise reopen (S3) is under the links active at the reopen.
+
+*The split (applied per R-369).* The three documents are ported as seven rulings, the corpus's style for an
+instruction of lettered sections (R-469 to R-477): **R-478** §2 (W) with the instruction's frame; **R-479** §3 (D);
+**R-480** §4 (P); **R-481** §5 (A, ⚑), with A5 resolved in the plan; **R-482** §7 (C1 to C8), the tests; **R-483** the
+export follow-up whole (§5b, X1 to X8, its two queue items and C9 to C13), one ruling as it is one lettered section;
+**R-484** the round-trip rule whole (RT1 to RT5, with T1 to T4, and its queue item). §6 is queued, not ruled:
+**RQ-380** (a preset pinning links), **RQ-381** (the robustness comparison), **RQ-382** (`α_min` as a parameter) and
+**RQ-383** (new registry entries); the follow-up's two are **RQ-384** and **RQ-385** (R-483), and the round-trip rule's
+one is **RQ-386** (R-484). One more, **RQ-387**, holds a conflict the port found (R-479, E7: D4's badge and §G1's
+"The figure is never covered").
+
+*What it amends:* render_gui_spec §G2's Chart bullet, §G5's window list and §G7, as W1 to W3 say; no earlier ruling's
+decision changes.
+
+R-478 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-251 (W1), REQ-GUI-252 (W2), REQ-GUI-253 (W3, the real engine) and REQ-GUI-254 (W4); changes REQ-GUI-108
+and REQ-GEN-013 (notes).
+
+## R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with "Reset all to defaults", "Changing a link re-integrates every pixel" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export
+*20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G7a. Decoder (no artboard; R-478 to R-482)"
+(added), § "G2. Explore — the everyday view (`01_main.png`)" (Resets and Home: the links left alone; the Figure: the
+badge, meanwhile) and § "Export & share" (the sidecar), `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold
+everywhere" (conformed), `docs/contracts/principia_gui_state_contract.md` § 2 (`SimField::Links`, the staged edits),
+RQ-387 (new), REQ-GUI-255 to REQ-GUI-258 and REQ-GUI-264 (reqio, new), TASK-M6-50 (new), TASK-M6-45 (a note), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M6-50 (the mock) and TASK-M8-52 (Apply on the real engine)*
+
+The human's words, §3 of the instruction R-478 holds, with the §0 lines it rests on:
+
+> - "the compactification functions should be swappable and choosable".
+> - "you could change it between like sigmoid, softmax, or like tanh … and like tweak their parameters".
+
+> ## 3. The Decoder window
+>
+> **D1.** One row per block: Masses; Configuration α; Configuration β; Momenta. Each row has:
+> - **A link dropdown** listing only the registry entries compatible with that block's constraint, so an incompatible link cannot be chosen. The default is marked "(default)".
+> - **The link's parameters** (§5), as numeric fields with sliders, each showing its allowed range. They are greyed out when the link has none.
+> - **A preview** (§4).
+> - **A "reset to default"** button for the row, dimmed when the row is already at its defaults.
+>
+> **D2.** The footer has:
+> - **"Reset all to defaults"**;
+> - the text "Changing a link re-integrates every pixel";
+> - **Apply / Revert**, as in the Chart builder.
+>
+> Edits are staged and take effect on Apply, so dragging a parameter does not re-integrate on every frame. Applying is one undo entry.
+>
+> **D3.** Home and the section resets (R-466) do **not** touch links, because they are navigation and links are not.
+>
+> **D4.** A non-default decoder shows in the canvas corner badge beside the chart name, for example "z_α × z_β · stick-breaking masses", and in every sidecar and export.
+
+*What it decides:* D1 to D4 as the human wrote them, above.
+
+*Where the words leave a choice, decided per R-369 (routine design choices; the human may veto any):*
+- **E1. The rows and the slots.** The four rows are the window's blocks: Masses (the `mass` slot), Configuration α
+  (`alpha`), Configuration β (`beta`) and Momenta, which sets the four momentum slots `q0` to `q3` to one link and one
+  `q_max`, a single chart constant today (R-10). `Links` holds one choice per row (R-483, H1); the kernel's per-slot
+  selection (REQ-GEN-013) stands, each momentum slot taking the Momenta row's link.
+- **E2. The dropdown** lists, for a row, exactly the registry entries onto that row's codomain (`select`'s rule,
+  REQ-GEN-013), by display name (R-478, L1), the default first and marked "(default)", the rest in registry order; the
+  lines' entries, onto no block's codomain, are listed in no row. C1 tests it (R-482).
+- **E3. A link switch and its parameters.** Switching a row's link keeps a parameter of the same name (the three
+  momentum links all take `q_max`) and sets every other parameter of the new link to its default. A link with no
+  tunable parameter shows its row's parameter fields greyed, with "no parameters". Each field shows its allowed range
+  (R-481) and accepts only a value within it, as the stain's uniforms do (gui_state_contract §3).
+- **E4. Staged edits.** The window's staged choices are the GUI's own, never the contract's, as the Chart builder's are
+  before its Apply: Apply sends one `SetField`, `SimField::Links`, the whole `Links` in one edit, one history entry, a
+  sim-key edit that re-integrates (R-483, X8); Revert drops the staged choices. Closing the window keeps them staged
+  until Apply, Revert or the next launch. Apply and Revert are dimmed with nothing staged. A row's "reset to default"
+  and "Reset all to defaults" stage, as any edit does; a row's reset is dimmed while its staged choice is its default
+  link at its default parameters, bitwise, and "Reset all" while every row's is.
+- **E5. Keys and focus.** The window is reached from the keyboard as every window is (§G3, R-460): its rows in order,
+  each its dropdown, its parameters and its reset, then the footer's buttons.
+- **E6. D3.** Home and the three section resets send `z₀` and the basis only (R-466); they leave `Links`, staged or
+  applied, as it is. C8 tests it (R-482).
+- **E7. D4's badge.** "The canvas corner badge beside the chart name" names a badge the GUI does not have: the figure
+  carries no chart name, and §G1's rule is "The figure is never covered. No toasts or labels over the plot", the Home
+  button its one control (R-466 K7, by the human's words; GUI_DESIGN_NOTES § "Rules that hold everywhere"). The words
+  do not settle whether D4 makes a second exception, and the answer changes what the figure shows, so it is queued
+  (**RQ-387**). Applied meanwhile, D4 as written: a badge in the canvas's top-left corner (the Home button holds the
+  top-right), naming the chart by its axes and, while any block is off its default, each block off its default after
+  a "·", e.g. "z_α × z_β · stick-breaking masses" (a parameter off its default named with its value, "μ_max 4
+  masses"), hidden with the layer (F3, present mode) as the Home button is; at the defaults it names the chart alone.
+  Nothing waits on RQ-387; a ruling for another place is a follow-up change to REQ-GUI-258.
+- **E8. D4's sidecar and export.** The links travel in `SimConfig` (R-483, X1), so every sidecar and every export
+  names them by construction; nothing is written per destination.
+
+*What it amends:* render_gui_spec §G2's Resets and Home (the links named among what Home leaves alone, which Home never
+touched) and its Figure (the badge, meanwhile), as E6 and E7 say. No earlier ruling's decision changes.
+
+R-479 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-255 (D1, with C1's GUI arm), REQ-GUI-256 (D2), REQ-GUI-257 (D3, with C8), REQ-GUI-258 (D4) and REQ-GUI-264 (D2's Apply on the real engine, TASK-M8-52).
+
+## R-480 — Each link has a preview, about 160 × 110 px in the line system's styles and live while a parameter is dragged: a one-dimensional block's curve with its bounds, the visible range, the centre, its resolution and the default's ghost; the masses' simplex triangle with the image of an even grid of z lines, the view's footprint, the centre and the equal-mass point; the axis warps the same widget; every preview evaluating the generated link functions on the CPU at f64, never a reimplementation
+*20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G7a. Decoder (no artboard; R-478 to R-482)" (the
+previews) and § "G7. Chart builder (`03_chartbuilder.png`)" (the warp preview), `docs/contracts/principia_gui_state_contract.md`
+§ 1 (the link evaluator on the surface), REQ-GUI-259 to REQ-GUI-262 (reqio, new), TASK-M6-50 and TASK-M8-52 (new),
+`plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M6-50 (P1, P2, P4) and TASK-M8-52 (P3)*
+
+The human's words, §4 of the instruction R-478 holds, with the §0 line it rests on:
+
+> - "I want to be able to like preview the compactification function. We need like a little graph preview of it."
+
+> ## 4. The preview
+>
+> The previews are small (about 160 × 110 px), drawn with the line system's styles, and live: they update while parameters are dragged, before Apply.
+>
+> **P1. One-dimensional blocks (α, β, momenta).** The curve of latent `z` (horizontal) against the physical value (vertical). On it:
+> - **Bounds:** dashed horizontal lines at the codomain's limits, for example ±`q_max`, or α's `[α_min, π/2]`.
+> - **Visible range:** the window's current range of `z` on this block, shaded.
+> - **Centre:** a dot at the slice centre's value.
+> - **Density:** the derivative `d(value)/dz` drawn faint under the curve, labelled "resolution". It shows where the link spends pixels. This is the measure Part 2.5 says must travel with the link.
+> - **Default ghost:** when a block is off its default, the default curve drawn faint behind the current one.
+>
+> **P2. Masses (two latent dimensions onto the simplex).** A small triangle with:
+> - the corners labelled `m₁`, `m₂`, `m₃` (1-based, as everything shown to the user is);
+> - the image of an even grid of `z` lines, so the bunching shows where the link concentrates resolution;
+> - the current view's footprint in mass space, shaded;
+> - the slice centre, as a dot;
+> - the equal-mass point marked.
+>
+> `stick_breaking` visibly reaches the edges and `softmax_tanh` visibly does not. That contrast is the point of the preview.
+>
+> **P3. Axis warps (the Chart builder).** The same widget: chart coordinate `t ∈ [0,1]` against the quantity, with density and default ghost.
+>
+> **P4. Previews are exact, not sketched.** They evaluate the generated link functions, the same code the kernel runs, on the CPU at f64. They do not reimplement the formula in the GUI.
+
+*What it decides:* P1 to P4 as the human wrote them, above.
+
+*The facts, checked:* P1's α bounds, "α's `[α_min, π/2]`": α's codomain is `[α_min, π/2 − α_min]`
+(dd_generation_root §3.9, R-417; `crates/ledger/src/links.rs`, `Codomain::range_at`), the human's interval at
+`α_min = 0` (R-21). The preview draws the codomain's own bounds, so the two agree today and the preview stays right if
+RQ-382 makes `α_min` a parameter.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **F1. The styles.** "Drawn with the line system's styles": the previews take their strokes, dashes and labels from
+  the line system's style presets (`principia_lines.md` § "3. The data model", R-476), drawn by the GUI's own painter at
+  the widget's size. On the mock the line engine (TASK-M7-42) is not yet built, and the widget does not wait on it; it
+  reads the same presets.
+- **F2. Through the surface.** P4's "the generated link functions, the same code the kernel runs" are reached through
+  the engine's state surface as a pure function, `engine::contract::links`: the registry's catalogue (the entries onto
+  each block's codomain, their tunable parameters with defaults and ranges, their display names) and an evaluator of
+  an entry's forward, inverse and log-det at f64 for given parameter values. It is data in and data out and holds no
+  engine state, as the firewall asks (gui_state_contract §1: "a **data** boundary, not an **object** one"); the mock
+  calls the same function, so the previews are exact on either engine. The density, "resolution", of a
+  one-dimensional link is `exp(log-det)`, since its log-det is `log |dy/dz|` (R-368), never a finite difference.
+- **F3. The span.** The curve's `z` axis spans the visible range widened by half its width on each side and never
+  narrower than `[−4, 4]`, so the link's saturation shows; 161 samples, evenly spaced. "Live" is every frame a staged
+  value changes while dragged, at most once a frame (R-458's rule), the curve re-evaluated and nothing re-integrated.
+- **F4. The visible range and the centre.** The window's range of `z` on the block is the span of that latent
+  coordinate over the view's square: on an affine chart over its four corners (its extremes), on a curved chart over a
+  9 × 9 grid of the view's pixels. The centre is the slice centre's coordinate, `z₀`'s. Momenta's four coordinates share
+  one curve: the row shows tabs `q₀ q₁ q₂ q₃` (1-based in what is shown: `q₁` to `q₄`, R-449) choosing whose range and
+  centre are drawn, opening on the first the view varies.
+- **F5. The simplex.** P2's grid is 11 lines of each control over F3's span, mapped through the link; the footprint is
+  the image of a 9 × 9 grid of the view's pixels' mass logits, filled as their convex hull; the equal-mass point is
+  `(⅓, ⅓, ⅓)`; the corners read `m₁`, `m₂`, `m₃`, mass `k` shown as `k + 1` (R-449).
+- **F6. The default's ghost** is drawn while the staged choice differs from the default link or a parameter from its
+  default.
+- **F7. P3 and the per-pixel warp.** An energy-type axis's warp is evaluated per pixel with that pixel's own `U`, `I`
+  and masses (R-471, E3), so it has no single curve: the preview plots `t ∈ [0, 1]` against the quantity at the slice
+  centre's `U`, `I` and masses, labelled "at the centre". Another axis's warp (a power law `t^γ`) has one curve.
+
+*What it amends:* none; it adds the previews to the Decoder window and the Chart builder (render_gui_spec §G7, §G7a).
+
+R-480 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-GUI-259 (P1), REQ-GUI-260 (P2), REQ-GUI-261 (P3, the real engine's Chart builder) and REQ-GUI-262 (P4, with
+C7).
+
+## R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*
+*20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Three hard requirements on any
+registered link" (the constants become defaults), § "Links carry a measure" (the log-det at the active value) and §
+"Integrity: the link is part of the experiment" (the parameters in provenance), `docs/design/principia_dd_generation_root.md`
+§ "3.9 The link registry (consolidated from chart contract Part 2.5)" (the declarations, the check, the hash, the chart
+constants, the generated code's parameters), `docs/design/principia_dd_decoder.md` § "3. The maths",
+`docs/design/principia_chart_reference.md` § "0.1 Masses", `docs/contracts/principia_inverse_encode_contract.md` §
+"Part 3 — Block inverses (closed forms, with their forward mates)" and `docs/design/principia_dd_encode.md` § "2.
+Consolidated contract" (each a sentence: the defaults), R-10's heading block, REQ-GEN-037 to REQ-GEN-042, REQ-DEC-048,
+REQ-RENDER-099 and REQ-CHART-074 (reqio, new), REQ-DEC-009 (reqio), TASK-M2-41 and TASK-M4-21 (new), TASK-M4-06 (a
+note), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M2-41 (⚑, the registry, the CPU) and TASK-M4-21
+(the GPU's uniform)*
+
+The human's words, §5 of the instruction R-478 holds, with the §0 lines it rests on:
+
+> - "you could change it between like sigmoid, softmax, or like tanh … and like tweak their parameters".
+> - "Obviously, we just have the ones that I've chosen by default".
+
+> ## 5. Adjustable parameters ⚑
+>
+> **A1. Each registry entry declares its tunable parameters** with a name, a default, an allowed range and a citation. Today these are `μ_max` on `softmax_tanh` and `q_max` on the momentum links. The α range (`α_min`, R-21) stays fixed unless physics review says otherwise.
+>
+> The allowed range must keep **all three** of Part 2.5's hard requirements for **every** value in it:
+> - constraint-preserving;
+> - a conditioned inverse with the existing ε clamps;
+> - C¹.
+>
+> The registry's `check` enforces this at the range's endpoints and on a sampled interior.
+>
+> **A2. R-10 is amended.** `μ_max = 5` and `q_max = 2` become the **defaults**, not fixed constants. Everything that reads them by name keeps reading the active value.
+>
+> **A3. Provenance.** The parameter values are recorded beside the link id everywhere the link id is recorded:
+> - the view state and SimConfig (the sim key, so a change is a different cached simulation);
+> - exports;
+> - sidecars;
+> - the schema hash (R-36), if the hash covers the decoder.
+>
+> A figure that names its link but not its `μ_max` is not reproducible.
+>
+> **A4. Measure.** Each entry's log-det is a function of its parameters. Area statistics reweight with the active value, never the default (Part 2.5, "Links carry a measure").
+>
+> **A5. Implementation note, for the agent to resolve in the plan, not to rule on.** Today the links are baked as type parameters, and the constants are read by name at codegen. A runtime parameter means one of two things:
+> - a uniform the generated code reads; or
+> - a rebuild per value.
+>
+> Say which, and what it costs, in the plan. Under either, the kernel's results at the default values must be **bitwise unchanged**, which C2 tests.
+>
+> **⚑** Physics review covers three things:
+> - each parameter's allowed range;
+> - the inverse's conditioning at the range's ends, at f32 as well as f64;
+> - that the log-det matches the forward map at non-default values (by finite differences).
+
+*What it decides:* A1 to A4 as the human wrote them, above; A5 is resolved in the plan (G7, below), as the human
+asked, not ruled.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **G1. The declaration.** A table of its own beside the entries, one row per tunable parameter: the entry's name, the
+  parameter's name (a chart constant the entry already declares and its trees read), its default (that constant's
+  register value: `μ_max = 5`, `q_max = 2`, R-10), its allowed range `[lo, hi]`, closed, and its citation (the
+  calibration that sets the range, G2). `Link`, `LinkBuilder` and `Param` (`crates/ledger/src/links.rs`) keep their
+  members, so the entries' and chart constants' hashed bytes stand and the declarations are hashed as a block of their
+  own after the chart constants (G5). `α_min`, which the α entries declare and read, is not tunable (A1; RQ-382).
+- **G2. The ranges are calibrations (R-71).** The corpus gives none, so TASK-M2-41 proposes each with its evidence (the
+  three requirements at both ends and inside, the inverse's conditioning at f32 and f64), the physics reviewer checks
+  it (⚑), and the human confirms it at the M2 gate (REQ-GEN-038). Until then the proposed ranges are used,
+  provisionally; nothing else waits.
+- **G3. The check.** `check` refuses a declared range under which the link breaks any of Part 2.5's three requirements,
+  tested at both ends and at a seeded sample of at least 16 interior values, uniform over the range, each under a seeded
+  fuzz of `z` that includes saturating controls: (1) constraint-preserving, the output in its codomain (the simplex
+  within its rounding); (2) a conditioned inverse with the existing ε clamps, `encode(decode(z))` returning `z` within
+  the encode's tolerance where the forward is not saturated, at f32 and f64; (3) C¹, the derivative from the log-det
+  finite and agreeing with a central difference of the forward. A refusal names the entry, the parameter, the value and
+  the requirement. It runs at generation with `check`'s structural checks, so a registry that fails it generates
+  nothing. C1's control is `check`'s too: an entry injected with a codomain its forward leaves, or a slot given an entry
+  of another codomain, is refused, not merely left out of a dropdown (R-482).
+- **G4. A2, "everything that reads them by name keeps reading the active value":** the link trees' `param(mu_max)` and
+  `param(q_max)`; the codomain's bounds (`Codomain::range`, the host-side checks and the previews' bounds); the encode's
+  clamps outside the trees (`crates/kernel/src/encode/blocks.rs`: the momenta's `[−q_max, q_max]` and the masses'
+  `(1 − ε_μ)·μ_max` cap); and encode's layer 1, "momenta above `q_max` or mass ratios beyond `μ_max`"
+  (inverse_encode_contract § "Chart-aware validation"). The register constants keep their values as the defaults
+  (`constants.rs`, still citing R-10).
+- **G5. A3.** The values ride in `SimConfig`'s `Links`, beside each block's id (R-483, X1), so the view state, the sim
+  key (R-483, X8), every export and every sidecar carry them by construction. "The schema hash (R-36), if the hash
+  covers the decoder": it covers the decoder's definition, the registry (R-340), not a view's choice. It hashes each
+  declaration (the entry, the parameter's name, its default and its range's ends by value; not the citation, as R-251
+  leaves out a constant's), and never an active value, which is the view's state, not the ledger's: a changed default
+  or range changes the schema version, a view at `μ_max = 4` does not.
+- **G6. A4.** The log-det trees already read the parameters (`softmax_tanh`'s `2 log μ_max`; the momentum links'
+  `log(b − a)` and `log c`, `b − a = 2q_max`), so evaluated at the active values they reweight at those values and the
+  measure travels with the link (Part 2.5). C5 tests it (R-482).
+- **G7. A5, resolved in the plan: a uniform.** The two ways and their costs:
+  - *A uniform the generated code reads.* The emitter writes each entry's forward, inverse and log-det with the tunable
+    parameters as an argument, `p: &LinkParams<R>` (one field per tunable of the registry, at the float type), in place
+    of `R::MU_MAX` and `R::Q_MAX`; the existing functions stay, evaluated at the defaults (`LinkParams::DEFAULT`), so
+    every caller today, the tests included, is unchanged. On the GPU the values go in the uniform block the chart params
+    already use (TASK-M4-06: "chart params in uniforms"), set from `SimConfig`'s `Links`, each f32 value the f64 value
+    rounded to nearest as the emitter rounds a literal. The link ids stay type parameters, so a link change is still
+    another monomorphised variant (REQ-GEN-013, REQ-GEN-015, R-41) and a parameter change is not. Its cost: a uniform
+    load for each read in decode and encode, which run once per sample, at the march's start and at a lock, never per
+    integrator step, so a handful of loads per sample; and the constant is no longer folded at build time, so
+    `(1 − ε_μ)·μ_max` is computed at run time: the same IEEE operations in the same order, so the same bits wherever the
+    backend does not contract them, and the compute shaders run with fast-math off by default (R-297). C2 tests the
+    bits at the defaults (R-482).
+  - *A rebuild per value.* Each distinct value is a compiled variant: a rust-gpu build of the kernel per value, the
+    build's longest step, held in the variant cache. The variant set, "the finite set of compiled variants the Rust
+    build produced" (gui_state_contract §3), becomes unbounded under a slider; the browser build cannot build one at
+    all ("There is no browser-time compilation of user Rust", the same), so a value not built ahead could not be shown
+    there; and P4's previews (R-480), live while a parameter is dragged, before Apply, would need a CPU rebuild per
+    frame. Its one gain is the constant folded at build time, the bits C2 asks of the uniform anyway.
+  - *Chosen: the uniform,* built by TASK-M2-41 (the emitter, the CPU's decode and encode) and TASK-M4-21 (the GPU's
+    uniform). Bitwise unchanged at the defaults either way (C2); the rebuild fails the browser and the previews outright,
+    and the uniform costs a few loads per sample.
+- **G8. ⚑ Physics review** covers, as the human lists: each parameter's range (G2), the inverse's conditioning at the
+  range's ends at f32 and f64 (G3, C4), and the log-det against the forward map at non-default values by finite
+  differences (G6, C5). TASK-M2-41 carries physics and does not merge on the code reviewer's word alone; TASK-M4-21
+  carries it for C3's payloads.
+
+*What it amends:* **R-10**: `μ_max = 5` and `q_max = 2` become the defaults of two tunable link parameters, no longer
+fixed constants (A2, the human's "R-10 is amended"); the values, the "4" before its correction and the formulae in
+the symbols stand. The corpus's lines that call them settled are reworded with "the defaults (R-481)": the chart
+decoder contract's § "Three hard requirements on any registered link", dd_decoder §3, chart_reference §0.1,
+inverse_encode_contract Part 3, dd_encode §2 and dd_generation_root §3.9's chart constants.
+
+R-481 is in the "physics" group of `plan/rule_groups.yaml`, with R-10.
+
+Adds REQ-GEN-037 (A1, C1's control), REQ-GEN-038 (the ranges, R-71), REQ-GEN-039 (A4, C5), REQ-GEN-040 (A5, C2 on the
+link functions), REQ-GEN-041 (C4), REQ-GEN-042 (the hash), REQ-DEC-048 (A2), REQ-RENDER-099 (A5 on the GPU, C2 on
+renders and payloads) and REQ-CHART-074 (C3); changes REQ-DEC-009 (the constants are defaults).
+
+## R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone
+*20 Oct 2026 · applied in the verify of each requirement R-478 to R-481 add, REQ-SYS-011's (C6; reqio), `plan/tasks.yaml`
+and `plan/rule_groups.yaml`; built by the tasks those requirements name*
+
+The human's words, §7 of the instruction R-478 holds:
+
+> ## 7. Tests
+>
+> Each test needs an arm that can fail.
+>
+> - **C1. Compatible-only dropdown.** Every block's list is exactly the registry entries whose codomain matches. Control: an incompatible entry injected into the registry must be refused by `check`, not merely hidden.
+> - **C2. Defaults are bitwise today's.** At default links and default parameters, renders and payloads are bitwise equal to the current kernel.
+> - **C3. A parameter change moves the result.** `μ_max = 4` against `5` gives different payloads on a mass-varying chart. The control is that it gives identical payloads on a constant-mass chart, so the first arm cannot pass vacuously.
+> - **C4. Range endpoints are admissible.** At each declared endpoint, under fuzzed `z`: the output satisfies the constraint, and the encode/decode round trip holds within its tolerance.
+> - **C5. Log-det at non-default parameters.** The log-det equals the finite-differenced `log √det(JᵀJ)` within tolerance. Mutation arm: a log-det left at the default parameter value must fail.
+> - **C6. Provenance.** Change a link or a parameter, then export and re-import: the view reproduces bitwise. Control: an export with the parameter stripped must fail to reproduce.
+> - **C7. The preview is the kernel's function.** Preview samples equal the generated link evaluated directly.
+> - **C8. Home leaves links alone.** Home and the section resets change no link or parameter.
+
+*What it decides:* C1 to C8 as the human wrote them, above, each with the arm that fires.
+
+*Where each test lives (applied per R-369; each in its requirement's verify, its failing arm stated):*
+- **C1:** REQ-GUI-255 (each row's list equals the registry's entries onto its codomain, TASK-M6-50) and REQ-GEN-037 (the
+  control: an entry injected into the registry with a codomain its forward leaves, or selected for a slot of another
+  codomain, is refused by `check`, TASK-M2-41).
+- **C2:** REQ-GEN-040 (the link functions: at the default parameters the parametrised functions' outputs are bitwise
+  today's at f32 and f64 over a seeded sample of `z`, saturating controls included; control: a parameter one ulp off its
+  default differs somewhere) and REQ-RENDER-099 (renders and payloads: at the default links and parameters the GPU's
+  payloads and the golden renders are bitwise today's, every existing golden unchanged; TASK-M4-21).
+- **C3:** REQ-CHART-074 (TASK-M4-21). The mass-varying chart is the mass simplex chart; the constant-mass control is a
+  latent configuration view with both mass logits at 0, the equal masses `(⅓, ⅓, ⅓)`, which `μ_max` does not move
+  (`μₖ = μ_max·tanh 0 = 0`). At other fixed logits the masses move with `μ_max`, so a control chart there would fail for
+  the wrong reason; the logits at 0 are what make it constant (applied per R-369).
+- **C4:** REQ-GEN-041. **C5:** REQ-GEN-039 (the mutation arm: a log-det evaluated at the default while the forward runs
+  at `μ_max = 4` fails).
+- **C6:** REQ-SYS-011 (TASK-M2-21's `viewstate_roundtrip` gains a parameter and the stripped-parameter control), and on
+  every export path REQ-TOOL-177 (R-484's T1, TASK-M8-53).
+- **C7:** REQ-GUI-262. **C8:** REQ-GUI-257.
+
+*What it amends:* none; it adds tests, each with its control (R-176: controls come before the tests that need them).
+
+R-482 is in the "process" group of `plan/rule_groups.yaml`.
+
+Adds no requirement of its own; every test is in the verify of the requirement named above.
+
+## R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)
+*20 Oct 2026 · applied in `docs/design/principia_dd_image_embedding.md` § "6. What travels" (the list, the decoder's
+identity, old records), § "7. Measured capacity and behaviour" (to be re-measured, never truncated) and § "9.
+Obligations" (the fourth outcome, the golden test), `docs/contracts/principia_export_animation_contract.md` § "Part 3 —
+The keyframe system (retained)" and § "Part 6 — Sharing: the spec is the object, the video is its shadow",
+`docs/contracts/principia_gui_state_contract.md` § 2 (`Links`), `docs/contracts/principia_chart_decoder_contract.md` §
+"Integrity: the link is part of the experiment" (a sentence), `docs/gui/principia_render_gui_spec.md` § "Export & share"
+and § "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)", RQ-384 and RQ-385 (new), REQ-SYS-083,
+REQ-SYS-084, REQ-TOOL-171 to REQ-TOOL-176 and REQ-SCHED-100 (reqio, new), REQ-TOOL-065, REQ-TOOL-066, REQ-TOOL-109,
+REQ-TOOL-112, REQ-VAL-098, REQ-SCHED-048, REQ-CHART-033, REQ-CHART-052 and REQ-GUI-036 (reqio), TASK-M7-44, TASK-M7-45
+and TASK-M8-53 (new), TASK-M2-21, TASK-M5-06, TASK-M7-31, TASK-M7-32 and TASK-M8-31 (amended), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by the tasks H9 names*
+
+The human's words, the follow-up of 20 Oct 2026, whole:
+
+> # Follow-up to the links instruction: export, sharing and the embedded record
+>
+> This adds to the link-functions instruction already sent. It changes nothing in it; it adds §5b, two queue items and five tests (C9–C13). Amend `principia_dd_image_embedding.md` §6 and §7 and `principia_export_animation_contract.md` Parts 3 and 6 alongside the docs that instruction lists, each with a "Removed lines" note.
+>
+> ## 5b. Export, sharing and the embedded record
+>
+> My words: "you'd have to be saving like the decoder parameters as well, like what compactification function and their parameters used … so that people can actually properly recreate the exact settings and stuff you're seeing."
+>
+> **What the repo already has** (checked against origin/main `d7e6f50`):
+> - `SimConfig` has a `links` field (gui_state_contract §2; R-106: "the link ids are the chart's link functions").
+> - `SimConfig` serialises one way everywhere (R-309, JCS by R-318). The same canonical serialisation is carried by:
+>   - snapshot JSON;
+>   - share links;
+>   - the profiler header's `config`;
+>   - pxpack;
+>   - the embedded image record and its `tEXt` chunk (dd_image_embedding §6);
+>   - the animation spec object (export_animation Parts 3 and 6).
+> - REQ-CHART-033 requires link ids in provenance. The sim key and the payload compatibility signature list link ids.
+>
+> **What is missing.**
+> - In code, `Links` is an **empty struct** (`crates/engine/src/contract/sim_config.rs:88`, `pub struct Links {}`). Every export, share link and embedded record today serialises `"links":{}`, so they record nothing.
+> - `Chart` is also `{}`. That matters for the previous instruction's saved charts and energy-axis mapping, which are chart params.
+> - dd_image_embedding §6's "What travels" list does not name link ids at all.
+>
+> **X1. Fill `Links`.** For each block, the link id and its parameter values. The struct is the single place they live, so the canonical serialisation carries them to every destination listed above with no per-destination code. Do **not** add a second copy anywhere.
+>
+> **X2. Always written in full.** Every block's id and every parameter is written **even at its default**. A record that omits a default reads back under the receiver's default. If that default has since changed, the record has silently laundered a different decoder, which is exactly the failure Part 2.5's "Integrity" section exists to prevent. The schema test asserts that no link field is ever skipped when serialising, including at defaults.
+>
+> **X3. Amend dd_image_embedding §6.**
+> - The `slice` line gains `links (per-block id and parameters)`.
+> - The list also gains the previous instruction's fields:
+>   - the tilt map (`sheet`/`lean`) and the tilt angles and targets, so the GUI's controls restore, not only `q₁` and `q₂`;
+>   - each energy axis's mapping (warped or linear), as chart params;
+>   - a **saved chart's full definition**: parent chart, centre, rotation, targets and map.
+>
+> A saved chart travels **by value, never by name**. A share or embed must not depend on the receiver having the same entry in their own saved-chart library.
+>
+> **X4. The decoder's identity is now build plus config.** §6's rule "REFUSE to recreate silently across a version where the decoder changed" read the build hash alone. With swappable links, the decoder a record used is the build's link registry plus the record's `links`. On read:
+> - **Unknown link id.** A link id the reading build does not have is the third of §9's three outcomes, "state present, cannot recreate", naming the missing link.
+> - **Changed definition.** A link id whose registry entry's content hash differs from the writer's is refused the same way. The schema hash already covers registry entries by semantic content (`crates/ledger/src/version.rs`); say in the plan whether that is enough or whether each recorded link should carry its own entry hash.
+> - **Never substitute.** Never fall back to a default link. §6: "A fallback must be visible."
+>
+> **X5. Old records.** Records and exports written before X1 carry `"links":{}`.
+> - Reading one under the **same build hash** means "this build's defaults at the time", and recreates.
+> - Under a **different build hash** it is "state present, links unrecorded": recreate only if the user explicitly accepts the current defaults, and label the result as assumed.
+> - Bump the record `version`, because `deny_unknown_fields` means an old reader cannot read the new struct.
+>
+> **X6. Re-measure capacity.** §7's table was measured at 596 B of JSON, 382 B deflated. Links, the tilt fields and a saved chart's definition add to that. Re-measure the table at the new size, including a saved-chart record.
+> - If 64² no longer holds one config-only tile, say so in §7.
+> - The writer **never truncates** to fit. A record that does not fit is reported as not embedded, and the `tEXt` chunk still carries it.
+>
+> **X7. Animation.** A keyframe's `SimConfig` carries `links`, so a link change between keyframes is a sim-key change at that keyframe (a cut, not an interpolation). Whether link parameters may be **interpolated** across keyframes is queued (§6). It would re-integrate every frame, which the blocking exporter could afford and live playback could not.
+>
+> **X8. The sim key and the compatibility signature** gain the parameter values beside the link ids. A cache entry made at `μ_max = 5` must never serve a request at `μ_max = 4`.
+>
+> ## Add to §6 (queue, don't rule)
+>
+> - Whether link parameters may be interpolated across keyframes in a blocking export (X7).
+> - Whether each recorded link carries its own registry-entry hash, or the schema hash suffices (X4).
+>
+> ## Add to §7 (tests)
+>
+> - **C9. Every destination carries the links.** Set a non-default link and parameter, then read them back from each destination: snapshot JSON, a share link, the profiler header, the embedded record, the `tEXt` chunk and an animation spec. Each must equal the set value. Control: the same check at defaults must still find every field present (X2).
+> - **C10. Embedding golden round trip.** dd_image_embedding §9's golden test at every supported resolution, with a non-default link plus a saved tilted chart, gives bitwise-equal config. Control: the image with its low bits zeroed reads as "no embedded state".
+> - **C11. Refusal.** A record naming an unknown link id, or one whose entry hash differs, reads as "state present, cannot recreate", naming the link. It never renders under a default. Mutation arm: a reader that falls back silently must fail this test.
+> - **C12. Old records.** A pre-X1 record (`"links":{}`) recreates under the same build hash, and is refused-unless-accepted under another (X5).
+> - **C13. Cache separation.** Two views differing only in `μ_max` never share a cache entry (X8).
+
+*What it decides:* X1 to X8 as the human wrote them, above, with C9 to C13; the two items added to §6 are queued, not
+ruled (RQ-384, RQ-385).
+
+*The facts the follow-up states, checked against the repo (the porter's reading at `0d6d361f`):*
+- **`SimConfig` has a `links` field** (`crates/engine/src/contract/sim_config.rs:24`), and **`Links` is an empty
+  struct** (`:88`, `pub struct Links {}`), as is **`Chart`** (`:42`, `pub struct Chart {}`): as stated. So are
+  `Slice {}` (`:70`), `Integrator {}` (`:93`), `Collision {}` (`:120`), `Quality {}` (`:125`) and `RenderState`'s
+  `Palette {}` (`crates/engine/src/contract/render_state.rs:75`): the M0 skeleton's groups, named and empty until the
+  requirements that need them fill them (R-133). R-484's T2 fires on all seven (R-484, J9).
+- **"Every export, share link and embedded record today serialises `"links":{}`."** Of the destinations, only the
+  profiler header's `config` is built (`prin profile`, TASK-M0-18; `crates/prin/tests/profile.rs` pins its text,
+  `"links":{}` in it). Snapshot JSON, share links, pxpack's record, the `tEXt` chunk and the animation spec are not yet
+  built (TASK-M7-31, TASK-M7-32, TASK-M8-31 and TASK-M8-32 are open); each is to write the canonical serialisation, so
+  each would have written `{}`. The point stands.
+- **dd_image_embedding §6's "What travels" names no link id:** as stated.
+- **REQ-CHART-033** requires link ids in provenance; the sim key lists link ids (REQ-SCHED-048); a link swap changes the
+  payload's compatibility signature (REQ-CHART-052): as stated.
+- **The schema hash covers registry entries by semantic content** (`crates/ledger/src/version.rs`, R-340, R-344): as
+  stated.
+- **"The third of §9's three outcomes, 'state present, cannot recreate'"**: §9's three outcomes are "*no embedded
+  state* / *state present, corrupt* / *recovered, and here is how*"; none is "state present, cannot recreate". Applied
+  to the intent (per R-369): a fourth outcome, at the step that recreates a view from a recovered record, "state
+  present, cannot recreate", naming why. The record layer's three stand (a record is read and voted before it is
+  recreated; `crates/render/src/embed/reader.rs`'s `Outcome`), and R-484's RT3 gives the third the tiers recovered.
+- **`deny_unknown_fields`** is on every group (`sim_config.rs`): as stated.
+- **§7's 596 B of JSON, 382 B deflated:** as §7 and §2 have it (a config-only record of 402 B, an RGB tile of side 33).
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **H1. `Links`' shape.** `Links { mass, alpha, beta, momenta }`, one choice per row of the Decoder window (R-479, E1),
+  each a `LinkChoice { id, params }`: `id` the registry entry's name, `params` a map from each tunable parameter of
+  that entry to its value (`{"mu_max":5}`), every one written (X2); an entry with none writes `{}`, a map, not a struct
+  (R-484's T2 checks structs, J10). No link field has `skip_serializing_if` or a serde default. It serialises in the one
+  canonical serialisation, as every group does (R-309, R-318).
+- **H2. "No second copy."** The ViewState record TASK-M2-21 writes is `SimConfig`'s serialisation, and a keyframe's
+  state is its `SimConfig` (export_animation Part 3): neither holds a copy of the links.
+- **H3. X3, the §6 list.** The links per block; the slice frame's tilt map and targets (R-459, R-474) and a curved
+  chart's tilt, its angles, targets and map (R-473); each energy axis's mapping (R-471); and a saved chart's full
+  definition (R-475): its parent chart's id and params, its centre, its rotation (the basis), its targets and its map.
+  All are `SimConfig`'s, so all are tier 1 (R-484). A saved chart travels by value: the record holds that definition,
+  never its name alone, and the receiver's library is not read.
+- **H4. X4, the decoder's identity.** Every export carries, beside `SimConfig` and `RenderState`, the build hash and the
+  schema version (in the image record already, §6's build hash; in the sidecar of every other path), so a record's
+  decoder is the reading build's registry plus the record's links. On read, before anything renders: (a) an id the
+  build's registry lacks reads "state present, cannot recreate: link `<id>` (<block>) is not in this build"; (b) a
+  changed definition: meanwhile, a record whose schema version differs from the reader's is refused the same way,
+  "state present, cannot recreate: the decoder may have changed (schema version <a>, this build <b>)", the schema
+  version covering every registry entry by its content (R-340), as §6's build-hash rule already refuses; the arm that
+  names exactly the changed link waits on RQ-385; (c) never substitute: no default link stands in for an unknown one,
+  and no default value for a missing parameter. One function of the contract reads every path.
+- **H5. X5, old records.** A record whose `links` is `{}` (written before X1) is read with its links unrecorded, not
+  refused as malformed. Under the same build hash it recreates under this build's defaults, labelled "links: this
+  build's defaults"; under another it is "state present, links unrecorded", recreated only when the user accepts
+  "Recreate with this build's default links", and then badged "links assumed" (the canvas badge, R-479 E7, and the
+  import dialog); never silently. The record layout's version is bumped to 4, an R-71 proposal confirmed with the magic
+  at the M7 gate (REQ-TOOL-109; R-380's 3 is the layout before X1), in one layout change with R-484's tier flag (J5),
+  TASK-M7-44. The other paths have no version byte: a pre-X1 snapshot, share link or spec is recognised by its empty
+  `links`.
+- **H6. X6, capacity.** TASK-M7-44 re-measures at the new payload, a saved tilted chart and a non-default link
+  included, at 64² to 1024², for tier 1 alone, tiers 1 and 2, and all three (R-484), and rewrites §7's table with the
+  measurement. The bound it is read against: a tile holds a record of `3·side²` bits, so at 64² one RGB tile holds a
+  record of at most 1,536 B, a payload of at most 1,516 B deflated. The writer never truncates: a record that does not
+  fit (under R-484, a tier 1 that does not fit) is reported "not embedded", and the `tEXt` chunk carries it whole.
+- **H7. X7.** A keyframe's state is its `SimConfig`, links included, so a change of a link or a parameter between
+  keyframes is a sim-key change at that keyframe, a cut, as a chart switch is (Part 3). Meanwhile parameters are never
+  interpolated (RQ-384); nothing waits.
+- **H8. X8.** The sim key and the payload compatibility signature hold each block's id and parameter values, compared
+  bitwise; a cache entry made at `μ_max = 5` never serves a request at `μ_max = 4` (C13).
+- **H9. Where it is built.** X1, X2 and C6: TASK-M2-21 (amended). X3, X4's (a), (c) and meanwhile (b), and C11's
+  unknown-id arm: TASK-M7-31 (amended). X4's per-link arm: TASK-M7-45, a leaf waiting on RQ-385. X5 and C12, X6, the
+  version bump: TASK-M7-44 (with R-484's tiers). X7: TASK-M8-31 (amended). X8 and C13: TASK-M5-06 (amended). C9:
+  TASK-M8-53 (with R-484's T1). C10: TASK-M7-32 (amended; REQ-VAL-098's golden).
+- **H10. qa's files (R-290, forced by X1; decided per R-369).** Filling `Links` breaks every struct literal `Links {}`
+  and every pinned canonical text with `"links":{}`. These are qa files and **must change** in TASK-M2-21's qa commit
+  and only there, the PR listing each `M` line with its reason and the code reviewer confirming no other assertion is
+  weakened: `crates/engine/tests/qa_TASK-M0-18.rs` (`Links {}` at :34; the texts at :59 and :116),
+  `crates/engine/tests/qa_TASK-M6-28.rs` (:45), `crates/engine/tests/qa_TASK-M2-22.rs` (:111),
+  `crates/engine/tests/qa_TASK-M6-24.rs` (:54), `crates/engine/tests/qa_TASK-M1-11.rs` (:294),
+  `crates/engine/tests/qa_TASK-M6-29.rs` (:52), `crates/gui/tests/qa_TASK-M6-26.rs` (:1157) and
+  `crates/gui/tests/qa_TASK-M6-24.rs` (:91). The implementer's own follow in the same task:
+  `crates/engine/src/contract/sim_config.rs`, its `tests/canonical.rs` and `tests/conformance.rs`,
+  `crates/engine/tests/nav.rs`, `crates/engine/tests/bringup.rs`, `crates/prin/tests/profile.rs` (:141, :407),
+  `crates/prin/src/profile/run.rs`, `crates/gui/src/mock/mod.rs`, `crates/gui/src/tests/support.rs` and
+  `crates/validation/src/decode_f32_eps.rs`. The same files hold `Chart {}`, so the task that fills the chart params
+  in the contract changes them again, under the same exception. The version bump (H5) changes
+  `crates/render/tests/qa_TASK-M7-27.rs` (`DOC_VERSION`, :19 and :20) in TASK-M7-44's qa commit. The lists are a
+  survey of the current tree; the qa reviewer confirms them against the build.
+
+*What it amends:* dd_image_embedding §6 (the list, the identity, old records), §7 (re-measured, never truncated) and §9
+(the fourth outcome, the golden test); export_animation Part 3 and Part 6; gui_state_contract §2 (`Links`); render_gui_spec
+§ "Export & share" and §G9. No earlier ruling's decision changes; R-81's contract names hold for the new fields, and
+R-309 and R-318's one canonical serialisation is what carries them.
+
+R-483 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-SYS-083 (X1, with A3), REQ-SYS-084 (X2), REQ-TOOL-171 (X4, unknown and never substituted, C11), REQ-TOOL-172
+(X4's per-link arm, rq RQ-385), REQ-TOOL-173 (X5, C12), REQ-TOOL-174 (X6), REQ-TOOL-175 (X7), REQ-TOOL-176 (C9) and
+REQ-SCHED-100 (X8, C13); changes REQ-TOOL-065 (X3), REQ-TOOL-066 and REQ-TOOL-112 (X4), REQ-TOOL-109 (the version),
+REQ-VAL-098 (C10), REQ-SCHED-048 (X8), REQ-CHART-033, REQ-CHART-052 and REQ-GUI-036 (notes).
+
+## R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)
+*20 Oct 2026 · applied in `docs/contracts/principia_gui_state_contract.md` § 2 (the round-trip rule, the tier table's
+home), `docs/design/principia_dd_image_embedding.md` § "2. Layout" (the `colour` flag), § "6. What travels" (the tiers)
+and § "9. Obligations" (the report, the outcomes), `docs/contracts/principia_export_animation_contract.md` § "Part 5 —
+Determinism & reproducibility" and § "Part 6 — Sharing: the spec is the object, the video is its shadow",
+`docs/gui/principia_render_gui_spec.md` § "Export & share" and § "G9. Import picture · saved views · record a sweep
+(`09_importrecord.png`)", RQ-386 (new), REQ-TOOL-177 to REQ-TOOL-181 and REQ-GUI-263 (reqio, new), REQ-TOOL-070 and
+REQ-TOOL-146 (reqio, notes), TASK-M7-44 and TASK-M8-53 (new), TASK-M8-01, TASK-M8-28, TASK-M8-32, TASK-M8-33, TASK-M8-48
+and TASK-M8-50 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M7-44 (the tiers) and TASK-M8-53
+(the round trip)*
+
+The human's words, the second follow-up of 20 Oct 2026, whole:
+
+> # Follow-up: the round-trip rule
+>
+> For the Principia agent. This generalises the links follow-up into a standing rule, so the export paths cannot drift from the state again.
+>
+> Write it as a ruling in `decisions.md` with my words below, and amend:
+> - `principia_gui_state_contract.md` §2;
+> - `principia_dd_image_embedding.md` §6 and §9;
+> - `principia_export_animation_contract.md` Parts 5 and 6.
+>
+> Each amendment gets a "Removed lines" note.
+>
+> ## My words
+>
+> "the export stuff should allow you to completely recreate the state … when you import it back in"; "if there isn't like enough actual space to encode all that information in the image, then we have to like gracefully degrade"; "the core physics stuff should always be recoverable. Like we can always sacrifice like the custom frag shaders".
+>
+> ---
+>
+> ## RT1. Every export is lossless, except one
+>
+> **Import of an export is the identity on `SimConfig` and `RenderState`**, field for field and bitwise in the canonical serialisation (R-309, R-318). This holds for every export path:
+> - snapshot JSON;
+> - share links;
+> - pxpack;
+> - the profiler header's `config`;
+> - the animation spec object;
+> - the PNG `tEXt` chunk.
+>
+> `ViewUI` is not exported; it is the GUI's own scratch state (gui_state_contract §2).
+>
+> **The one lossy path is the image's low-bit embedding**, because its capacity is set by the image's size. It degrades by tier (RT2), and only it does.
+>
+> ## RT2. The embedding degrades in tiers, and never below tier 1
+>
+> When the record does not fit, the writer drops whole tiers from the bottom up, in this order:
+>
+> | Tier | Contents | Dropped |
+> |---|---|---|
+> | **1. Physics** | Build and schema hash, and the whole of `SimConfig`: chart and params (a saved chart by value), plane, slice frame and tilt (map, angles, targets), lock, links and their parameters, integrator, kernel variant, horizon and thresholds, collision radius, the sim-key part of quality, and the ensemble `E` and `N`. Everything that decides which systems are integrated and how. | **Never.** If tier 1 does not fit once, the image is reported as **not embedded**. It is never written partially. |
+> | **2. Colour** | `RenderState` as built-ins: colour mode enum and every parameter, the ramp window, overlays and the line system. Everything needed to reproduce the image's pixels from built-in occupants. | Only after tier 3. |
+> | **3. Custom source** | Ejected WGSL (custom frag shaders and nodes), the `source` flag (§2 bit 2). | First. |
+>
+> The repo already has the pieces: §6 encodes colour modes as an enum, §2's `source` flag exists, and §7 measures config-only against config-plus-shader by resolution. What it does not state is the **order** and the **floor**. This writes them down.
+>
+> The `tEXt` chunk has no capacity limit, so it always carries all three tiers. The LSB record may carry fewer.
+>
+> ## RT3. Degrading is reported, never silent
+>
+> The record says which tiers it holds, in the header flags or the payload. The reader reports what it recovered, extending §9's three outcomes. For example:
+>
+> > recovered: physics and colour; custom shader source not embedded (it was in the original), rendering with the built-in fallback
+>
+> The recreated view is badged as a fallback wherever it differs (§6: "A fallback must be visible"). The writer also reports at export time which tiers fit at that resolution, so the user knows before sharing.
+>
+> ## RT4. The tiers are a table, not a convention
+>
+> Every field of `SimConfig` and `RenderState` is assigned a tier in **one** table. Both the writer's drop order and the tests read that table.
+>
+> Make the assignment **exhaustive at compile time**: a match with no wildcard, or the codegen refusing an unassigned field. A new field then cannot ship without a tier.
+>
+> ## RT5. The test that keeps it from drifting
+>
+> This is the defect the links follow-up found: `Links {}` and `Chart {}` serialise as `{}`, so a naive round trip passes on a field that carries nothing.
+>
+> **T1. Full round trip over a non-default state.** Generate a `SimConfig` and `RenderState` in which **every** field differs from its default, then round-trip it through every path in RT1. Each must come back bitwise equal. Control: the default state must also round-trip, which shows the default arm is not what the test depends on.
+>
+> **T2. No empty structs.** Fail if any struct in either type serialises to `{}` in the non-default state. This is the test that catches a placeholder. It fires on today's `Links {}` and `Chart {}` until they are filled. Expect that, and record it in the PR.
+>
+> **T3. Tiered embedding.** At each supported resolution, embed the T1 state with a custom shader:
+> - the recovered tiers must be exactly those the writer reported;
+> - tier 1 must be bitwise whenever anything is embedded;
+> - at a size too small for tier 1, the result must be "not embedded" and never a partial record.
+>
+> Mutation arm: a writer that drops tier 1 fields before tier 3 must fail.
+>
+> **T4. Exhaustive tiering.** Adding a field without a tier must fail the build, or fail codegen with a message naming the field.
+>
+> ## Queue, don't rule
+>
+> - Whether tier 2 should split further, for example ramp window and colour mode above overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes.
+
+*What it decides:* RT1 to RT5 as the human wrote them, above, with T1 to T4; the one queue item is queued, not ruled
+(RQ-386).
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **J1. RT1's paths and "pxpack".** In the corpus "pxpack" names the embedded image record (render_gui_spec § "Export &
+  share": "embed the view (pxpack)"; §G9: Import picture "reads the pxpack", saved views are "pxpack snapshots"), which
+  RT1 lists as lossless beside "the image's low-bit embedding" as the one lossy path. Read as: the record's payload
+  written whole, as a saved view's pxpack snapshot (§G9) and in the PNG's `tEXt` chunk, is lossless; its copy in the
+  image's low bits is the one lossy path. Flagged.
+- **J2. "Field for field and bitwise in the canonical serialisation":** the imported `SimConfig`'s and `RenderState`'s
+  canonical text equals the exported's, byte for byte. `RenderState`'s playhead and hover are fields of it and
+  round-trip with it.
+- **J3. `ViewUI` and the sidecar.** RT1: "`ViewUI` is not exported". R-472, X2 (the human's "named in the sidecar")
+  writes `ViewUI`'s F3 fill mode, `f3_fill`, beside the two structs. Read together: `ViewUI` as a whole is not exported,
+  and `f3_fill` rides as a sidecar field outside the identity, restored by Import picture (REQ-TOOL-168), in the
+  embedding's tier 2. Flagged; the two are the human's own and the words are read as one.
+- **J4. The tiers against the structs.** Tier 1: the whole of `SimConfig` (its quality fields that are not on the sim
+  key included: RT2's "the whole of `SimConfig`" governs, and "the sim-key part of quality" names what decides
+  integration), the build hash and the schema version (R-483, H4). Tier 2: the whole of `RenderState` (the playhead,
+  the hover and the debug view included) with each custom occupant's source left out, the node kept, its occupant
+  marked custom and its source not embedded, and the sidecar's `f3_fill`. Tier 3: each custom occupant's WGSL.
+- **J5. "In the header flags or the payload":** the flags. Bit 2, `source`, already marks tier 3 (§2); bit 3, `colour`,
+  marks tier 2; any record holds tier 1. `source` set with `colour` clear is not a defined combination (tier 3 drops
+  first) and is discarded whole (§2); bits 4 to 7 stay reserved. The flag is defined by the version-4 layout (R-483,
+  H5).
+- **J6. The drop.** The writer serialises tier 1, tiers 1 and 2, and all three, and embeds the largest whose record
+  gives at least one RGB tile at the image's size (§2's tile rule): whole tiers drop from the bottom. If tier 1 alone
+  does not give one, nothing is written, "not embedded". A tier is never cut; there is one record format, the payload's
+  JSON object with tier 3, or tiers 2 and 3, left out.
+- **J7. The report.** The writer returns the tiers it embedded and those it left to the `tEXt` chunk, and the Export &
+  share window shows them before the share ("embedded at 64²: physics; colour and custom shader in the PNG text only");
+  the reader reports the tiers it recovered, in the recreated view's outcome (§9, R-483). A view recreated without tier
+  2 renders the default stain, the backbone alone (gui_state_contract §2); without tier 3 each custom node takes its
+  slot's default built-in occupant; either is badged as a fallback (the canvas badge, R-479 E7, and Import picture),
+  naming what was not embedded.
+- **J8. RT4's one table** is `crates/engine/src/contract/tiers.rs`, beside `sim_config.rs` and `render_state.rs`: one
+  function destructuring `SimConfig`, `RenderState` and each group with no `..`, and each enum by a `match` with no
+  wildcard, assigning every field its tier, with `TIERS`, the listing the tests read. The writer (`crates/render/src/embed/`)
+  is given the three tiers' bytes in order and drops from the bottom; the render crate does not depend on the engine,
+  so it reads no contract type. T4: a field added without a tier is a compile error (a pattern that does not name every
+  field), which names the field.
+- **J9. T2 and the empty structs.** T2 fires on more than `Links {}` and `Chart {}`: `Slice {}`, `Integrator {}`,
+  `Collision {}`, `Quality {}` and `RenderState`'s `Palette {}` are empty today too (R-483, the facts). So T2's task,
+  TASK-M8-53, depends on the tasks that fill each: X1's (TASK-M2-21), the chart params' (TASK-M2-36, TASK-M2-37,
+  TASK-M2-40, TASK-M8-48), and the state contract's, which puts every field gui_state_contract §2 names in its struct
+  (TASK-M8-01); main never goes red. The PR that adds T2 records that it fires on all seven before they are filled, as
+  the human asked ("Expect that, and record it in the PR").
+- **J10. T2 checks structs.** A struct of `SimConfig` or `RenderState`, each group, recursively, that serialises to `{}`
+  in T1's state fails; a map or a list may be empty (a link with no tunable parameter writes `"params":{}`, a stain
+  node with no uniform likewise), so T2 walks the types (a serde serializer that fails on a struct with no field
+  serialised), not the text.
+- **J11. T1's state.** "Every field differs from its default" is read from the launch state, the contract's initial
+  `SimConfig` and `RenderState`: every leaf set to another valid value, among them a non-default link and parameter in
+  every block, a tilted saved chart, a non-default tilt map, every overlay on, a custom stain node with a uniform, a
+  hover point and the playhead past 0. The default state is the control.
+- **J12. Where it is built.** RT2, RT3's record, writer and reader, RT4, T3, T4 and X6: TASK-M7-44. RT1, T1, T2, C9 and
+  RT3's GUI (the Export & share window's report, the fallback badge, Import picture's outcomes): TASK-M8-53. The table
+  exists from TASK-M7-44 on, and each later task that adds a field to either struct gives it its tier (T4 makes it a
+  compile error not to).
+
+*What it amends:* gui_state_contract §2 (the round-trip rule, the table's home), dd_image_embedding §2 (the `colour`
+flag), §6 (the tiers) and §9 (the report and the outcomes), export_animation Parts 5 and 6. No earlier ruling's decision
+changes: R-309 and R-318's one canonical serialisation is the identity's measure, and R-472's `f3_fill` stands (J3).
+
+R-484 is in the "design" group of `plan/rule_groups.yaml`.
+
+Adds REQ-TOOL-177 (RT1, T1), REQ-TOOL-178 (T2), REQ-TOOL-179 (RT2, T3), REQ-TOOL-180 (RT3's record, writer and reader),
+REQ-TOOL-181 (RT4, T4) and REQ-GUI-263 (RT3 in the GUI); changes REQ-TOOL-070 and REQ-TOOL-146 (notes).

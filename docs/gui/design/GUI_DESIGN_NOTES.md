@@ -22,7 +22,9 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   (chart_decoder_contract rule 6).
 - **Every preview of the slice keeps the viewport's aspect ratio** — square for the slice. No preview may stretch or crop it.
 - **The figure is never covered.** No toasts or labels over the plot. Warnings go to the footer console. The one
-  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*.
+  control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*. A decoder
+  badge in the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks
+  whether it may be there *(conformed to R-479)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain panel is the plain node-graph editor.
 
@@ -95,6 +97,8 @@ inspector holds every setting the old dev GUI had.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Lock then replays Φ and the decoder on the CPU.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, and "forbidden in view: N%". Each chart supplies its domain function (CD-6). **Both previews are square.**
+- **The links are shown, not edited, here:** read-only beside the Domain preview, with a link to the Decoder window; the
+  axis warps get the Decoder's preview widget *(conformed to R-478, R-480)*.
 
 ## 04 Windows
 
@@ -108,6 +112,9 @@ position and size across sessions *(conformed to R-461)*.
   - **For agents, the same data structured:** `prin profile --scenario … --json`, `prin profile diff base new --threshold`,
     `prin profile query … --live`. Schema v1 (GU-5): telemetry §2's frame record and five stages at the top, with nested scopes,
     GPU passes, allocations and events beneath. JSON. Leak flags and hot-path summaries precomputed.
+- **Decoder:** one row per block (masses, α, β, momenta), each a compatible-only link dropdown, its parameters, a live
+  preview and "reset to default"; a footer with Reset all, Apply / Revert and "Changing a link re-integrates every
+  pixel" *(conformed to R-478, R-479, R-480)*.
 - **Export & share:** PNG with pxpack (and optionally the stain's WGSL), snapshot JSON, share link, present mode.
 - **Display:** fixed order — SimState *(conformed to R-111)* → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
   simulation sees the final in-gamut colours *(conformed to R-67)*. Style is optional and applies to the

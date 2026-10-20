@@ -33,7 +33,7 @@ M01 = m0 + m1        M = m0 + m1 + m2 = 1
 
 If `M01 < ε` emit `DEGENERATE(M01_TINY)`.
 
-**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10; defined in `principia_dd_decoder.md` §3).
+**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10; defined in `principia_dd_decoder.md` §3). Since R-481 they are the defaults of tunable link parameters, chosen in the Decoder window, and every chart reads the active value.
 `α_min = 0` (R-21): full-sphere coverage.
 
 ### 0.2 Configuration — hyperspherical mass-weighted Jacobi

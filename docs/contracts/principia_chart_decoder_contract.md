@@ -67,6 +67,13 @@ Squashing functions appear in **three distinct roles**. They look alike (all map
 
 The last one is what "decouples palette/compactification changes from integration cost" means: recolour the payload (`SimState` buffer) without re-running the integrator. Links and axis warps are on the **integration** side; colour compactification is on the **colour** side. This is the integrate/colour seam again.
 
+**The links are the decoder's (R-478).** Links belong to the decoder, which every chart passes through
+(`principia_chart_reference.md` §0, "every chart ends here"), not to any one chart: changing a link changes what every
+chart's pixels mean, and switching chart never switches links, since this Part's robustness test is "same chart,
+different link". They are chosen and tuned in the GUI's Decoder window (`principia_render_gui_spec.md` §G7a); the axis
+warps are per-axis chart properties, owned by the Chart builder (§G7). A chart preset carries no links (R-478, W4;
+whether one may pin them is RQ-380).
+
 ### Link functions — the mass-simplex / logit question
 
 A decoder stage reaches a *constrained* physical quantity from an unbounded control via a **link**. The choice is customisable, but bounded by the block's constraint type — a link is only valid if it *cannot* leave the constraint set.
@@ -84,12 +91,21 @@ The current decoder (`principia_dd_decoder.md` §3) fixes one link per block (ma
 ### Three hard requirements on any registered link
 
 1. **Constraint-preserving.** Output satisfies the block's constraint for *all* inputs — a simplex link lands in Δ², a bounded link stays in range. This is what "compactification" buys; a link that can escape the constraint is not admissible.
-2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`) and the saturation constants `μ_max = 5`, `q_max = 2` (settled, R-10). A link without a stable inverse cannot support the encode path.
+2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`) and the saturation constants `μ_max = 5`, `q_max = 2` (settled, R-10; since R-481 the defaults of two tunable parameters, below). A link without a stable inverse cannot support the encode path.
 3. **Smooth (C¹).** The deep-zoom **linearised decoder** replaces the nonlinear decode with a local Jacobian; a non-differentiable link breaks that path.
+
+**Tunable parameters (R-481 ⚑).** Each registry entry declares its tunable parameters, each with a name, a default, an
+allowed range and a citation: today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, with defaults 5 and 2
+(R-10); `α_min` stays fixed (R-21; RQ-382). The allowed range keeps **all three** requirements above for **every**
+value in it, and the registry's check tests them at the range's ends and on a sampled interior
+(`principia_dd_generation_root.md` §3.9). Everything that reads a parameter by name reads the active value: the link
+functions, the codomain's bounds, the encode's clamps and its layer-1 range check (`principia_inverse_encode_contract.md`
+§ "Chart-aware validation"). The generated code reads the values as a uniform, so the kernel's results at the defaults
+are bitwise unchanged (R-481, G7).
 
 ### Links carry a measure
 
-A link is **not measure-neutral**. Softmax with saturated logits is smooth but *not uniform* over the simplex; uniform-in-angle ≠ uniform-over-shapes (S² has its own area element); a power-law axis warp `K(t)=K_max·t^{γ_K}` deliberately biases density toward low `K`. Fine for exploration. But for any **quantitative** claim (basin fractions, island prevalence) you must either correct by the link's Jacobian or sample in a known measure. So **each registry entry should carry its log-det Jacobian**, so a quantitative pass can reweight. This is the one place a customisable link can silently corrupt a result — the freedom is real, but it moves the sampling measure, and the measure has to travel with the link.
+A link is **not measure-neutral**. Softmax with saturated logits is smooth but *not uniform* over the simplex; uniform-in-angle ≠ uniform-over-shapes (S² has its own area element); a power-law axis warp `K(t)=K_max·t^{γ_K}` deliberately biases density toward low `K`. Fine for exploration. But for any **quantitative** claim (basin fractions, island prevalence) you must either correct by the link's Jacobian or sample in a known measure. So **each registry entry should carry its log-det Jacobian**, so a quantitative pass can reweight. The log-det is a function of the entry's parameters, and area statistics reweight with the active value, never the default (R-481, A4). This is the one place a customisable link can silently corrupt a result — the freedom is real, but it moves the sampling measure, and the measure has to travel with the link.
 
 ### Integrity: the link is part of the experiment
 
@@ -98,6 +114,15 @@ The reason to expose the link is not flexibility — it's that a fixed, hidden l
 1. **Swappable within the compatible set.** Any constraint-preserving link for that block (the rows above). Already stated.
 2. **Recorded in provenance.** The link id per block lives in the exported ViewState, beside `z₀`, the basis, and the axis warps. A figure whose provenance doesn't pin its links is *not reproducible* — a re-run under a different default samples a different measure and can return a different answer. The link is part of the experiment, so it lives in the record.
 3. **Falsifiable by re-measurement.** The real test: does a finding *survive* a link swap? Extremal under softmax **and** under a boundary-reaching simplex map **and** under a different logit saturation → a property of the *dynamics*. Moves when the link changes → a property of the *parametrisation*. This is the **tilt persistence test of Part 4 applied to the measure instead of the plane**: a structure is real iff it's invariant under the arbitrary choices you could have made differently.
+
+**The parameters are part of the record (R-481, R-483).** The parameter values are recorded beside the link id
+wherever it is recorded: `SimConfig`'s `Links` holds, per block (masses, α, β, momenta), the link id and every tunable
+parameter's value, written in full even at the defaults, so the view state, the sim key and the payload compatibility
+signature, every export and every sidecar carry them through the one canonical serialisation
+(`principia_gui_state_contract.md` §2). A figure that names its link but not its `μ_max` is not reproducible. A record's
+decoder is the reading build's registry plus the record's links: a link id the build lacks, or one whose definition
+changed, is refused ("state present, cannot recreate", naming the link), never replaced by a default
+(`principia_dd_image_embedding.md` §6; R-483, X4; RQ-385).
 
 **What makes an alternative worth offering.** Not any function with the right codomain — one whose Jacobian differs *enough to stress a claim*. Two links inducing near-identical measures agree trivially and prove nothing. The registry should span genuinely different sampling densities (softmax vs. a simplex map that reaches the edges; `t^γ` at spread-apart γ; sigmoid vs. a heavier-tailed bounded map) so that agreement across them *means* something. To make that deliberate, a registry entry carries — beyond forward, inverse, and log-det — a note on **which region of the block it over- and under-samples relative to uniform**, so a robustness sweep picks alternatives that disagree where it matters rather than three flavours of the same bias.
 
