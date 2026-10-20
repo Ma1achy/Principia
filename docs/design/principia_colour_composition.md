@@ -661,7 +661,9 @@ or unset value keeps its own style (`d_min`'s unset `+∞`, R-280, R-399).
 toggle (`RenderState`'s `debug_view`, gui_state_contract §2), not a preset: every system pixel is drawn as the stain
 draws it; a pixel the chart classifies as not a system (§1.4) draws the hatch, `debug_invalid(frag_xy)`; a non-finite
 sample (a `sim_failed` with a non-finite detail, a `decode_failed` of detail 0, a non-finite value the stain reads)
-draws the NaN / Inf style, a prelude pattern of its own (REQ-COL-110, a calibration, R-71); any other `sim_failed` or
+draws the NaN / Inf style, a prelude pattern of its own (REQ-COL-110, a calibration, R-71), proposed by the task
+that needs it and not magenta: R-16's flat magenta `#FF00FF` sits at τ (0.101, R-429) from escape body 2's `#E034C6`,
+so each of the style's colours lies farther than τ from `#FF00FF` (R-505); any other `sim_failed` or
 `decode_failed` sample, a reserved `state` code included, draws `debug_invalid`. The chart is read first, then
 non-finiteness, then the failure. Its legend adds one key after the stain's, "Debug": "forbidden (chart)", "decode or
 sim failure" and "NaN / Inf", each in its style, with the number of the figure's pixels drawn in it and their share,

@@ -1501,39 +1501,6 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
 - **Waits:** REQ-GUI-228 (`rq: RQ-372`), a Chart-builder chart's in-square warning, closed by TASK-M8-47, a leaf task
   nothing depends on.
 
-## RQ-373: R-467 changes two of the three outcome goldens R-454 re-baselined under RQ-330, and two field-ramp goldens; which are re-baselined, under what gate decision *(the human's question, R-467 clause 8, R-110, R-454; context: TASK-M2-34)*
-
-*Filed porting R-467 (D15), as the human asked: "The outcome goldens re-baselined under RQ-330 may need another
-re-baseline; list them, don't re-baseline without a gate decision." Nothing is re-baselined.*
-
-- **File, section:**
-  - `fixtures/golden/BASELINES.md`, the rows `m1-outcome/outcome`, `m1-outcome/outcome_edited` and
-    `m1-synthetic/known_escaper` (each "R-454 (re-baselined under R-444 to R-446, RQ-330 …)"), and the rows
-    `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`.
-  - `crates/validation/src/golden_scene.rs`, the `outcome` scene: "a sample whose chart point is forbidden
-    ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn with the hatch (REQ-COL-101, REQ-COL-102)", tile 22; the
-    `length_ramp` and `d_min_ramp` scenes: "127 in the invalid pattern", "NaN in the invalid pattern".
-  - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*": no re-baselining without
-    a gate decision.
-- **What changes under R-467:**
-  - `m1-outcome/outcome` and `m1-outcome/outcome_edited`: tile 22, the forbidden sample, from the hatch to the canvas
-    background (R-467 D2, D3). No other tile changes.
-  - `m1-synthetic/known_escaper`: no forbidden sample and no hatched pixel; expected unchanged.
-  - `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`: a field ramp is a presentation occupant (R-467 D1), so its
-    invalid value draws `#141418` (D4) where the hatch was; their `_override` twins draw the node's override colour and
-    are expected unchanged.
-  - The debug catalogue's goldens do not change (D1).
-- **Options seen:**
-  - (a) Re-baseline the changed goldens under R-467 as TASK-M2-34 renders them, each `BASELINES.md` row leading with the
-    ruling, and confirm the canvas background's value and the changed tiles at the M2 gate, with REQ-COL-110's NaN /
-    Inf style.
-  - (b) As (a), but `length_ramp` and `d_min_ramp` keep the hatch: a field ramp is read as a debug occupant, which
-    narrows R-467 D1.
-  - (c) Hold the re-baseline for the M2 gate itself, TASK-M2-34 waiting until then.
-- **Applied meanwhile:** nothing re-baselined. TASK-M2-34 is built and reviewed; its PR reports the hashes that
-  change and waits for this ruling before it merges.
-- **Waits:** TASK-M2-34's merge (REQ-COL-108's golden line, `rq: RQ-373`).
-
 ## RQ-374: R-467 says presentation views "never draw the hatch", and Overlays ▾ keeps two toggles, "forbidden region" and "NaN / invalid pixels", that draw it over the presentation figure *(conflict, R-467 clauses 1 and 6, R-26, REQ-GUI-079; context: TASK-M8-08)*
 
 *Filed on gui review 5585209592 of PR #253 (G5): R-467 D9, as first ported, kept both toggles per R-369, which goes

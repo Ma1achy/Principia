@@ -35,7 +35,7 @@ The **Physics rung**: `(m, r, p) → integrate to horizon → classify → pack`
 
 ## 2. Consolidated contract
 
-From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, reversible}` read by all consumers; occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical (default 50), `dt_macro = max(1e-3, T/65535)` (R-132), schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
+From the **integrator contract**: occupant = `ADVANCE(state, t_now, t_target, params) → state'`, nothing else (KDK/Yoshida implement it as the wrapper loop around their `STEP`; R-19); wrapper owns everything shared; **cadence pinned per-`STEP`** (projection, monitoring, detection after every step; shape readout on the macro schedule; nothing stored — lockstep); capability profile `{order, force_evals, symplectic, step_reversible, run_reversible}` read by all consumers (R-500; *was:* `{…, reversible}`); occupant on the sim key; Euler is a debug tool; units `G = M = I = 1`, `T ∈ [50, 200]` physical (default 50), `dt_macro = max(1e-3, T/65535)` (R-132), schedule length `⌈T/dt_macro⌉` deterministic; **values may diverge by precision, wrapper branches may not on identical inputs** (R-84).
 
 From **core design / precision ring**: one physics definition, compiled twice — *structurally* (one Rust source), so logic equality is definitional; divergence (continuous) exposed, never reconciled; branch decisions held bit-identical on identical inputs, per step (comparison-only rule, §3.3; labels on chaotic trajectories may differ across precisions — `principia_parity_contract.md` Tier L, R-84); match-integrator mode for honest inspector comparison.
 
@@ -76,7 +76,10 @@ w₀ = −2^{1/3} · w₁     = −1.7024143839193157        (w₀ + 2w₁ = 1)
 drift coefficients d = [w₁, w₀, w₁]
 kick  coefficients c = [w₁/2, (w₀+w₁)/2, (w₀+w₁)/2, w₁/2]
 ```
-i.e. `KDK(w₁·dt) ∘ KDK(w₀·dt) ∘ KDK(w₁·dt)`. The negative middle step is real and is why naive time-reversal fails (integrator contract Part 6).
+i.e. `KDK(w₁·dt) ∘ KDK(w₀·dt) ∘ KDK(w₁·dt)`. The negative middle step is real, and the composition is still reversible at a fixed step: it is symmetric, so `step_reversible` holds whatever the sign of `w₀` (test 3, §5). What breaks naive time-reversal of a run is the wrapper's adaptive substepping and COM projection (integrator contract Part 6; R-500, closing RQ-369). *Was:* "The negative middle step is real and is why naive time-reversal fails (integrator contract Part 6)."
+*Citation (R-501):* Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150,
+262–268: the fourth-order symmetric triple composition, whose weights are given in closed form there; the digits above
+are that closed form evaluated in f64.
 
 **Yoshida-6** (order 6, 7 force evals, symplectic) — Yoshida (1990), **solution A**:
 ```
@@ -87,7 +90,13 @@ w₀ =  1 − 2(w₁ + w₂ + w₃) = 1.31518632068391
 drift sequence d = [w₃, w₂, w₁, w₀, w₁, w₂, w₃]
 kick sequence  cᵢ = (d_{i−1} + dᵢ)/2  with  d₀ = d₈ = 0
 ```
-*(Transcription check: verify the three w's against Yoshida 1990 Table 1 solution A — the paper is in the lit-review set — before they enter the shared physics source.)*
+*Citation (R-501):* Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150,
+262–268, Table 1, solution A (`w₁`, `w₂`, `w₃` as printed above; `w₀` from the consistency condition). The paper is not
+added to the corpus: the citation stands with the digits, and the transcription is checked by a convergence-order test
+(§5, test 1a), which fails on a transcription error. Like Yoshida-4's, the composition is symmetric, so it is
+reversible at a fixed step despite its negative weight `w₁` (test 3; R-500). *Was:* "(Transcription check: verify the
+three w's against Yoshida 1990 Table 1 solution A — the paper is in the lit-review set — before they enter the shared
+physics source.)" (R-57; R-501 replaces the check against the paper with the citation and the test.)
 
 **RK4** (order 4, 4 force evals, **not** symplectic — Validation cross-check occupant; the inspector's *adaptive* high-precision reference is the separate RK45, integrator contract §6): the standard tableau on the full state `y = (r, p)`, `ẏ = (p/m, F(r))`:
 ```
@@ -98,7 +107,7 @@ y' = y + (dt/6)(k₁ + 2k₂ + 2k₃ + k₄)
 ### 3.3 Substep law — and the determinism pin, made concrete
 
 ```
-N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [r_sub = 0.05, γ_sub = 1.5, N_max = 64]
+N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [defaults r_sub = 0.05, γ_sub = 1.5, N_max = 64; each on the sim key]
 ```
 
 <!-- retired-terms -->
@@ -108,12 +117,24 @@ This formula *specifies* `N_sub`; it does **not** compute it at runtime. `N_sub`
 **The rule (this is the determinism pin, replacing the f32-evaluation framing):** a branch decision may depend only on **comparisons against compile-time constants** and on **single-rounded arithmetic** — never on a runtime `pow`/`sqrt`/`div`. Concretely:
 
 ```
-N_sub  =  bucket( d² )  via a generated comparison tree over 64 constants
-          THR[n] = round_f32( ( r_sub / n^{2/3} )² )   for n = 1 … N_max     (frozen at build time)
+N_sub  =  min( bucket( d² ), N_max )  via a generated comparison tree over the sim key's table
+          THR[n] = round_f32( ( r_sub · n^{−1/γ_sub} )² )   for n = 1 … L_max     (generated per sim key on the host; L_max the maximum length)
+          — at γ_sub = 1.5, THR[n] = round_f32( ( r_sub / n^{2/3} )² );
           — smaller d² ⇒ smaller r_min ⇒ larger N_sub;  no runtime sqrt / div / pow / loop / dynamic index
 ```
 
-The transcendental (`pow`) still exists — it moves from *runtime, every substep, every backend* (where it forks) to *once, at table-generation time, into a constant* (where it cannot). The generator may use f64 libm freely; only the frozen f32 output ships, and every backend then compares against the identical bit-pattern.
+The transcendental (`pow`) still exists — it moves from *runtime, every substep, every backend* (where it forks) to *once per sim key, on the host, into a table* (where it cannot). *Was:* "to *once, at table-generation time, into a constant* … The generator may use f64 libm freely; only the frozen f32 output ships", with the code block's "(frozen at build time)" and "over 64 constants".
+
+**The table is generated per sim key (R-502, closing RQ-370).** `r_sub`, `gamma_sub` and `N_max` are user-adjustable
+sim-key values (integrator contract Part 3), so the thresholds are generated on the host for the sim key's values,
+`THR[1..=L_max]` by the one formula (monotone, so the tree is; `min(·, N_max)` caps the result), and shipped in `SimUniforms` as exact f32 bit patterns; the comparison tree reads them by constant
+index, its shape generated once over the table's maximum length. The branch still compares the one quantised float,
+`d²`, against values both pipelines receive bit-identically, so the determinism pin holds; a change of `r_sub`,
+`gamma_sub` or `N_max` is a sim-key change and re-integrates, as before. The host computes each threshold in f64 with a
+**pinned pure-software libm** (no platform libm, no compiler intrinsic), rounding once to f32, so the native host and
+the wasm host give identical bits. The table's **maximum length** is a calibration value (R-71): an `N_max` above it is
+refused, never truncated. A test asserts that the default configuration (`r_sub = 0.05`, `γ_sub = 1.5`, `N_max = 64`)
+reproduces the build-time table, generated by `cargo xtask codegen` and checked in, bit for bit.
 
 **The one value feeding the comparison must itself be built identically.** `d²` is a scrap of arithmetic (`dx² + dy²`), and if one backend contracts it to an `fma` and another does not it can differ by a ulp — re-forking at a bucket edge. So `d²` is **position-quantised**: cast positions to f32, then lone-subtract, lone-multiply, and an **explicitly written** `fma(dy, dy, dx*dx)` (explicit, so every backend is forced onto the identical fused op rather than choosing). Then the sole float feeding the sole branch is bit-identical everywhere, and the branch cannot fork.
 
@@ -285,8 +306,12 @@ Deliberately resolution-dependent (footprint shrinks with zoom) — a **footprin
 Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **Burrau IC** (via encode from the (3,4,5) construction).
 
 1. **Order scaling (Kepler-embedded):** set `m₂ → ε` so bodies 0–1 form a near-Kepler pair; energy error over one orbit scales `∝ dt²` (KDK), `∝ dt⁴` (Yoshida-4, RK4), `∝ dt⁶` (Yoshida-6) across a dt ladder.
+   1a. **Convergence order of the transcribed coefficients (R-501):** on the same fixture, Yoshida-4's and Yoshida-6's
+   fitted orders over the dt ladder are 4 and 6; the control is each coefficient with one printed digit changed, a
+   transcription error, which breaks the order conditions and must fail the test (its fitted order falls below 4 or
+   6). It stands in for checking the digits against the paper, which is cited, not held (§3.2).
 2. **Symplectic vs not:** long bounded orbit — KDK/Yoshida energy error *oscillates* about E₀ with no secular trend; RK4 and Euler drift secularly; **Euler's violent drift lighting up `SUSPECT_ENERGY` is the pass condition** (the debug-occupant test).
-3. **Step reversibility (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate returns the state to precision — *without* wrapper (projection/substep excluded); documents exactly where reversibility lives and where it breaks.
+3. **Step reversibility (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate returns the state to precision — *without* wrapper (projection/substep excluded); documents exactly where reversibility lives and where it breaks. It is what the profile's `step_reversible` means (integrator contract Part 2, R-500): asserted at rounding level for KDK, Yoshida-4 and Yoshida-6, negative weights included; for the regularised occupants it is a measurement, not an assertion: the residual of each built one (Aarseth–Zare + RK4, Heggie, logH in each time mode) is recorded, and its profile's `step_reversible` is the measured verdict.
 <!-- retired-terms -->
 4. **Substep determinism:** over fuzzed states straddling **bucket edges** (§3.3 threshold table), **all backends** — CPU-f64, CPU-f32, native-GPU, browser-GPU-via-WGSL — produce the identical `N_sub` integer, always (0 forks; the CPU-fround approach this replaced forked 5/272).
 <!-- /retired-terms -->
@@ -308,7 +333,7 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
 - ~~**Priority-order pin (§3.6)**~~ — **settled by R-30** (by time; REQ-EVT-020): the pin above is superseded and kept in §3.6 for the record (R-339). Was: introduced here because the shared-branch rule demands *some* deterministic order; confirm or veto it as decision B4 on the step-5 sheet (R-6). There is no older rule to check it against. Must land in the shared physics source either way.
 - **Naming: `n_renorm`** — the Benettin renorm interval keeps this name (the old `M`-vs-checkpoint-count collision is moot: checkpoints are gone under lockstep).
 - ~~**Shape-map axis assignment**~~ — **settled by R-14:** `n = (u, v, w)/I` with the standard cross, θ azimuthal in `(u, v)`, φ polar from `+w` (§3.7, chart_reference §3.1 and §3.3).
-- **Yoshida-6 coefficients** — verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
+- **Yoshida-6 coefficients** — *settled by R-501:* the coefficients carry their citation (Yoshida 1990, Table 1, solution A; §3.2) and test 1a's convergence-order check; the paper is not added. Was: verify the three w's against Yoshida (1990) Table 1 solution A before they enter the shared source (paper already in the lit set).
 - **Reversibility replay & KS regularisation** — bounded and deferred per the integrator contract Part 6; nothing here forecloses either.
 <!-- /retired-terms -->
 

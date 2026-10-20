@@ -78,18 +78,32 @@ This factoring is load-bearing: it puts all the shared, determinism-critical mac
 
 The occupants (the last column gives the *default* binding; the user overrides):
 
-| Occupant | Order | Force evals/step | Symplectic | Reversible | Default tier |
-|---|---|---|---|---|---|
-| Euler | 1 | 1× | ✗ | ✗ | — (debug only, below) |
-| KDK leapfrog | 2 | 1× | ✓ | (see §4) | Potato–Low (fast, motion) |
-| Yoshida-4 | 4 | 3× | ✓ | (see §4) | Medium–High (default) |
-| Yoshida-6 | 6 | 7× | ✓ | (see §4) | Ultra–Extreme (accuracy) |
-| RK4 | 4 | 4× | ✗ | ✗ | Validation cross-check (fixed, non-symplectic) — NB the inspector's *adaptive* high-precision reference is the separate **RK45**, §6, which is not a wrapper occupant |
+| Occupant | Order | Force evals/step | Symplectic | Step-reversible | Run-reversible | Default tier |
+|---|---|---|---|---|---|---|
+| Euler | 1 | 1× | ✗ | ✗ | ✗ | — (debug only, below) |
+| KDK leapfrog | 2 | 1× | ✓ | ✓ | ✗ | Potato–Low (fast, motion) |
+| Yoshida-4 | 4 | 3× | ✓ | ✓ | ✗ | Medium–High (default) |
+| Yoshida-6 | 6 | 7× | ✓ | ✓ | ✗ | Ultra–Extreme (accuracy) |
+| RK4 | 4 | 4× | ✗ | ✗ | ✗ | Validation cross-check (fixed, non-symplectic) — NB the inspector's *adaptive* high-precision reference is the separate **RK45**, §6, which is not a wrapper occupant |
 
-**Occupants are not interchangeable — each advertises a capability profile `{order, force_evals, symplectic, reversible}`, and downstream features read the profile rather than assuming.** This is the new load-bearing idea, the integrator analogue of the chart `system_image` and the link measure. Three consequences:
+*Was:* one `Reversible` column, ✗ for Euler and RK4 and "(see §4)" for KDK, Yoshida-4 and Yoshida-6; R-500 (closing
+RQ-369) splits it in two, defined below.
+
+**The two reversibility flags (R-500).** `step_reversible` says the occupant's `STEP` is time-symmetric at a fixed
+step: one `STEP(dt)`, momentum negation, `STEP(dt)`, negation returns the state to rounding level, with no wrapper
+projection or substepping (dd_integrator §5, test 3). A symmetric composition is step-reversible whatever the sign of
+its weights, so KDK, Yoshida-4 and Yoshida-6 are ✓; Euler, RK4 and Aarseth–Zare + RK4 are ✗. `run_reversible` says the
+bound occupant's whole run is time-symmetric, as the reversibility test binds it: only logH's TTL time mode (R-162). For
+the regularised occupants (Part 2a, Part 2b) `step_reversible` is measured by dd test 3, not asserted: the test runs
+each one's `STEP` and records its residual, and the profile carries what it measured; the time-transformed leapfrogs
+(logH's TTL time mode, and Aarseth–Zare + time-transformed leapfrog when built) are expected ✓ and Aarseth–Zare + RK4
+✗. What breaks reversal of a run is the wrapper's state-dependent adaptive substepping and its per-step COM projection
+(Part 6), not the steppers.
+
+**Occupants are not interchangeable — each advertises a capability profile `{order, force_evals, symplectic, step_reversible, run_reversible}` (*was:* `{order, force_evals, symplectic, reversible}`; R-500), and downstream features read the profile rather than assuming.** This is the new load-bearing idea, the integrator analogue of the chart `system_image` and the link measure. Three consequences:
 
 - **`energy_drift` is only a *dynamics* diagnostic on a symplectic occupant.** On KDK/Yoshida, energy oscillates around `E_0` and drift measures the *physics* (close-encounter stress). On Euler/RK4 it measures the *integrator* — Euler drifts secularly and will light up `SUSPECT_ENERGY` everywhere. The suspect flag therefore means different things per occupant; a debug/stats layer must read `symplectic` before interpreting drift.
-- **The reversibility diagnostic needs a `reversible` occupant** (§4) — it cannot be wired to whatever happens to be bound. The profile flag is the guard.
+- **The reversibility diagnostic needs a `step_reversible` occupant** (Part 6; *was:* "a `reversible` occupant (§4)") — it cannot be wired to whatever happens to be bound. The profile flag is the guard: both of Part 6's routes, the replayed schedule and the fixed step with projection off, gate on `step_reversible` (R-500).
 - **Order sets the meaning of the `total_substeps_log2` complexity proxy (derived, payload §5) and FTLE confidence** — a 6th-order step is worth more than a Euler step of the same size.
 
 **Euler is kept deliberately, as a debug occupant.** It makes energy drift blow up violently and visibly, which makes "energy-drift view + Euler" a *test that the diagnostic plumbing works* — you *want* to see it explode. It is not a production option; it is the integrator-side analogue of a debug shader. The profile (`symplectic: false`) is what stops it being mistaken for one.
@@ -169,7 +183,7 @@ reason:
 | **none** | Cartesian | — | **the INDEPENDENT control.** Shares no coordinate machinery with the others, which is what let it catch the wedge bug. Prior findings, not controls (R-164): the FTLE–drift Spearman correlation is **+0.305** for leapfrog and **−0.082** for AZ, and AZ's is a null against its shifted control (−0.102; prin-rs `NOTES.md:2077`). No gate rests on them. Keep permanently. |
 | **Aarseth–Zare** | two pairs, reference body from the longest side | **yes, at every sync boundary** | wins on **sustained hierarchy** (`far`: all 65,536 pixels, 0.7–0.9 decades) — precisely because the reference never has to change |
 | **Heggie 1974 (global)** | three relative vectors, symmetric | **no reference body at all** | the general default. **31 of 32 cases**, `err>10` (`error_ratio > 10`) 3915 → 74 at prin-rs `8600d45` (the original run at `70cfbc4` gave 3916 → 73; R-165), fixes AZ's worst decile on 100% of pixels. Default time transformation: Eq. 22 at n = 3/2 (R-161) |
-| **logH (algorithmic)** | **none whatsoever** | n/a | time transformation only, no coordinate transformation. The *strongest* form of the no-chart property. Its **TTL time mode (Mikkola–Tanikawa)** is the reversible occupant (R-162) |
+| **logH (algorithmic)** | **none whatsoever** | n/a | time transformation only, no coordinate transformation. The *strongest* form of the no-chart property. Its **TTL time mode (Mikkola–Tanikawa)** is the reversible occupant (R-162): `run_reversible`, the only one, and `step_reversible` as dd test 3 measures it (R-500) |
 
 **Why this axis exists at all — the measured finding it came from.** Doubling the sync-boundary
 **re-registration count** at *fixed step size* moves the drift field by **0.444 decades**, against
@@ -294,15 +308,19 @@ of the config that is hashed.
 
 #### The table gains two rows
 
-| Occupant | Order | Force evals/step | Symplectic | Reversible | Owns time mapping | Default tier |
-|---|---|---|---|---|---|---|
-| **Aarseth–Zare + RK4** | 4 | 4× | ✗ | ✗ | ✓ | close-encounter regimes; **validation-grade stepper** |
-| **Aarseth–Zare + time-transformed leapfrog** | 2 | 1× | ✓ | ✓ | ✓ | **the entry the table wants**; an allowed future occupant, not a v1 requirement (R-168) |
+| Occupant | Order | Force evals/step | Symplectic | Step-reversible | Run-reversible | Owns time mapping | Default tier |
+|---|---|---|---|---|---|---|---|
+| **Aarseth–Zare + RK4** | 4 | 4× | ✗ | ✗ | ✗ | ✓ | close-encounter regimes; **validation-grade stepper** |
+| **Aarseth–Zare + time-transformed leapfrog** | 2 | 1× | ✓ | ✓ (measured, dd test 3) | ✗ | ✓ | **the entry the table wants**; an allowed future occupant, not a v1 requirement (R-168) |
+
+*Was:* one `Reversible` column, ✗ and ✓; R-500 splits it (Part 2). logH's TTL time mode (Part 2b) is step-reversible
+(measured, dd test 3) and the one run-reversible occupant (R-162, R-500).
 
 **AZ is currently stepped with RK4, which was chosen to prove the physics rather than to ship** — it
 is neither symplectic nor reversible, so binding it makes the regularised default a *validation*
 stepper. **Time-transformed leapfrog (Mikkola–Tanikawa)** gives regularisation at leapfrog cost while
-staying symplectic and reversible, and it is what unblocks the reversibility diagnostic (§4).
+staying symplectic and step-reversible (R-500; *was:* "and reversible, and it is what unblocks the reversibility
+diagnostic (§4)"). The run-reversible occupant the reversibility test binds is logH's TTL time mode (R-162).
 
 **Specify the slot now even if RK4 fills it initially**, so the profile advertises `symplectic:
 false` loudly and nothing downstream quietly assumes otherwise. Note `Gamma` is **not separable**
@@ -328,8 +346,8 @@ Mikkola–Tanikawa form is required, not optional."* **A reversible occupant exi
 |---|---|---|---|
 | `T_horizon` | ∈ [50, 200], default 50 (R-132) | when to stop (physical time, §5) | wrapper loop bound |
 | `dt_macro` | `max(1e-3, T/65535)` (**fixed** for a given `T`, §5; R-132) — so `⌈T/dt_macro⌉ ≤ 65535` and the u16 step indices stay exact (R-86) | base macro step | wrapper loop bound |
-| `N_max` | tunable (default 64) | substep cap per macro-step — **user-adjustable** (raising it resolves more close-encounter structure before the integration floor; saturation is the stored sticky `saturated` bit, set when `N_sub == N_max` occurs — payload §2; the exact cumulative work lives in the `total_substeps` u32). The substepper also exposes the **live current `N_sub`** per macro-step (an already-computed intermediate) for the animated effort view — render Part 5 | wrapper substepper |
-| `r_sub`, `gamma_sub` | 0.05, 1.5 | produce `N_sub` from `r_min` | wrapper substepper |
+| `N_max` | tunable (default 64), at most the threshold table's maximum length (a calibration value, R-502), refused above it | substep cap per macro-step — **user-adjustable** (raising it resolves more close-encounter structure before the integration floor; saturation is the stored sticky `saturated` bit, set when `N_sub == N_max` occurs — payload §2; the exact cumulative work lives in the `total_substeps` u32). The substepper also exposes the **live current `N_sub`** per macro-step (an already-computed intermediate) for the animated effort view — render Part 5 | wrapper substepper |
+| `r_sub`, `gamma_sub` | 0.05, 1.5 | produce `N_sub` from `r_min`: with `N_max` they generate the threshold table on the host, per sim key, shipped in `SimUniforms` (Part 4, R-502) | wrapper substepper |
 | `r_coll` | — | collision threshold — **user-exposed sim-key** (Part 7, collision: definitional regularisation choice, not precision) | wrapper detector |
 | `tau`, escape window | —, 0.4 (provisional) | escape settling threshold (not tuned; to re-measure) and the window `|Δn̂|` is taken over, in time units, sampled at macro-step boundaries (unregularised occupants) or sync boundaries (regularised ones) (R-29, R-95) | wrapper detector |
 | `r_close` | 0.01 | close-encounter counting | wrapper detector |
@@ -352,7 +370,7 @@ Core-design axiom 1: physics defined once, compiled twice — *structurally*, on
 
 The trap, and it is the single highest-value thing in this doc: **`N_sub = min(N_max, max(1, ⌈(r_sub/r_min)^γ_sub⌉))` is a branch decision, and a branch that forks across backends is a divergence source that is neither precision nor chaos — it is two `pow` implementations disagreeing, and it makes the CPU sanity-check a *different discretisation* than the GPU ran.** The naïve reading — "compute it in f32 on both sides so the integers match" — **does not survive real compilers** (spike, `principia_spike_brief.md`): the culprit is not fast-math or FMA but *inherent cross-implementation transcendental latitude* (GPU `pow` vs libm `powf` differ 1–3 ulp at integer boundaries, in every math mode), so no runtime `pow`/`sqrt`/`div` feeding a `ceil` can be made backend-stable by matched rounding.
 
-**Rule (the determinism pin, replacing the f32-evaluation framing — full spec in integrator dd §3.3): a branch decision may depend only on comparisons against compile-time constants and single-rounded arithmetic — never a runtime transcendental.** `N_sub` is a **bucket lookup**: `d²` compared against 64 build-time-frozen f32 thresholds `THR[n] = round_f32((r_sub/n^{2/3})²)` via a generated comparison tree — no runtime sqrt/div/pow/loop/index. The `pow` moves to build time (into the constants); the sole float feeding the sole branch is `d²`, built **position-quantised** (f32 positions, lone-sub, lone-mul, explicit `fma`) so it too is bit-identical everywhere. Clamp in f32 *before* the float→int cast (out-of-range `OpConvertFToU` is GPU UB). This is the *same* law as the read-side NaN/predicate rule (render Part 4, lowering Part 3a): **a control-flow decision is frozen at build time or reduced to a comparison — never left hostage to a floating-point op the backend computes its own way** (`principia_gpu_determinism_note.md`). Same discipline for the terminal comparisons whose control flow must not diverge:
+**Rule (the determinism pin, replacing the f32-evaluation framing — full spec in integrator dd §3.3): a branch decision may depend only on comparisons against compile-time constants, or against values every backend receives bit-identically (the sim key's threshold table, R-502), and single-rounded arithmetic — never a runtime transcendental.** `N_sub` is a **bucket lookup**: `d²` compared against the sim key's f32 thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)`, `(r_sub/n^{2/3})²` at the default `γ_sub = 1.5`, via a generated comparison tree — no runtime sqrt/div/pow/loop/dynamic index. The thresholds are generated per sim key on the host from its `r_sub`, `γ_sub` and `N_max`, shipped in `SimUniforms` as exact f32 bit patterns and read by constant index; the host computes the `pow` with a pinned pure-software libm, so the native and the wasm hosts give identical bits; `N_max` above the table's maximum length, a calibration value, is refused (R-502, closing RQ-370; dd §3.3). *Was:* "compared against 64 build-time-frozen f32 thresholds `THR[n] = round_f32((r_sub/n^{2/3})²)` … The `pow` moves to build time (into the constants)". The `pow` leaves the device (into the host's table); the sole float feeding the sole branch is `d²`, built **position-quantised** (f32 positions, lone-sub, lone-mul, explicit `fma`) so it too is bit-identical everywhere. Clamp in f32 *before* the float→int cast (out-of-range `OpConvertFToU` is GPU UB). This is the *same* law as the read-side NaN/predicate rule (render Part 4, lowering Part 3a): **a control-flow decision is frozen at build time or reduced to a comparison — never left hostage to a floating-point op the backend computes its own way** (`principia_gpu_determinism_note.md`). Same discipline for the terminal comparisons whose control flow must not diverge:
 
 - Escape comparisons (`|Δn̂| < tau`, `E_rel > 0`; R-29) — shared branches whose inputs are multi-op arithmetic. The old persistence counter that absorbed single-step flips is gone (change 11), so nothing forgives a rounding flip near threshold; these inputs take rule 6's treatment (R-34).
 - `SIM_FAILED` raising, the horizon-reached branch (`t ≥ T` ⇒ `bounded` — there is no separate timeout state, payload §2), and the **substep-cap decision** (`N_sub == N_max`) — shared branches. The cap decision leads to *advance with the best-available (under-resolved) step*, not a terminal; the sticky **`saturated`** bit (descriptor bit 5 — a STORED flag set at the point the cap fires, payload §2; the old peak-`substep_log2`-then-derive mechanism is gone) records that it happened. The capped step is computed identically both sides (count-bound, deterministic — never wall-clock), so parity holds through the saturation, not just up to it. **`N_max` is a sim-key tunable** — both pipelines must use the same value (as with `r_coll`), so the shared-branch decision stays bit-identical.
@@ -380,7 +398,7 @@ Consequence, worth stating so an agent doesn't add a per-IC time rescale: becaus
 
 ## Part 6 — Three boundaries stated honestly (deferred work lands here)
 
-**Reversibility.** The shared Lehto/Trani diagnostic (validation doc) needs a genuinely time-symmetric integrator, and **the current stack is symplectic but not cleanly reversible**: Yoshida's `w₂ < 0` middle step, state-dependent adaptive substepping (the substep sequence isn't symmetric under reversal), and per-step COM projection (a non-symplectic nudge) all break naive "integrate → negate → integrate." Not a bug for the *survey* (symplecticity is what matters there). But the reversibility diagnostic must either (a) record the macro-step + substep schedule and replay it exactly in reverse — feasible precisely because the schedule is deterministic (§5) — or (b) bind a fixed-step reversible occupant with COM projection disabled. The `reversible` capability flag (§2) gates which occupants qualify. Stated now so the deferred work doesn't discover it late.
+**Reversibility.** The shared Lehto/Trani diagnostic (validation doc) needs a genuinely time-symmetric integrator, and **the current stack is symplectic but not cleanly reversible as a run**: state-dependent adaptive substepping (the substep sequence isn't symmetric under reversal) and per-step COM projection (a non-symplectic nudge) break naive "integrate → negate → integrate." The steppers do not: a symmetric composition with a negative weight (Yoshida-4's `w₀`, Yoshida-6's `w₁`) is still reversible at a fixed step, which dd_integrator §5 test 3 checks (R-500, closing RQ-369). *Was:* "Yoshida's `w₂ < 0` middle step, state-dependent adaptive substepping …, and per-step COM projection … all break naive …" (R-57 fixed the label; R-500 withdraws the claim). Not a bug for the *survey* (symplecticity is what matters there). But the reversibility diagnostic must either (a) record the macro-step + substep schedule and replay it exactly in reverse — feasible precisely because the schedule is deterministic (§5) — or (b) bind a fixed-step reversible occupant with COM projection disabled. Both routes gate on the `step_reversible` capability flag (§2; *was:* "The `reversible` capability flag (§2) gates which occupants qualify"); `run_reversible` marks the one occupant whose whole run is time-symmetric, logH's TTL time mode (R-162, R-500). Stated now so the deferred work doesn't discover it late.
 
 **Regularisation and the integration floor.** Kustaanheimo–Stiefel (KS) regularisation is **v2**. It transforms the integration variable so the $1/r$ singularity is removed analytically, which would allow fixed-step integration through close encounters with bounded error. But it changes the state representation and ripples through decoder/canonicaliser/observables, so it is not a drop-in occupant (it would not satisfy the `STEP(state,…)` signature on the *same* state type). v1 handles close approaches by brute-force substepping capped at `N_max`. Consequence, connecting to the deep-zoom note: **substep-saturated regions are exactly where the integration floor bites** — the deepest collision-manifold structure is substep-limited, not resolved, until KS lands. This is the concrete cause of the deep-zoom note's second floor. But it is a **confidence gradient, not a terminal wall**: saturated trajectories *continue* to their real outcomes (flagged as under-resolved), so the close-encounter structure is *computed* (degraded) rather than *cut off*. KS (v2) *improves the confidence* in that region; it does not *remove a terminal condition*. The **saturation flag** is the honest v1 marker of reduced trust there.
 
