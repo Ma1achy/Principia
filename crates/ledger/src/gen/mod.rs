@@ -69,7 +69,8 @@ pub enum GenError {
     Constants(Vec<String>),
     /// Fields an artefact emitter has no read of, each naming the field: the debug catalogue's
     /// ([`catalogue::refused`]) and the export decoder's ([`export::refused`]), so the catalogue is exhaustive by
-    /// construction (render contract Part 6; dd_generation_root §4, seam 13).
+    /// construction (render contract Part 6; dd_generation_root §4, seam 13); and the export decoder's body- or
+    /// pair-indexed fields whose base the ledger does not state ([`export::index_refused`]; R-449, REQ-GEN-036).
     Unread(Vec<String>),
     /// Link registry problems, each naming the entry: a missing member, a §3.9 row without its entries, a default that
     /// is not an entry of its slot's codomain ([`crate::links::check`]; REQ-CHART-032, REQ-GEN-013).
@@ -259,7 +260,9 @@ fn is_name(s: &str) -> bool {
 /// ([`rust::emit`] or [`wgsl::emit`]) and `ledger` declares any member of the payload structs, checks every member against it
 /// ([`rust::check`], exempting [`crate::payload::PENDING`]); if they include the export decoder ([`export::emit`]) or
 /// the catalogue ([`catalogue::emit`]), refuses a field it has no read of; refuses a link registry that fails its checks
-/// ([`links::refused`]); then runs `emitters` over it. The files they generate, or why not.
+/// ([`links::refused`]); then runs `emitters` over it. The files they generate, or why not. With the export decoder, a
+/// body- or pair-indexed entry whose index-base key does not state its base is refused, naming the field
+/// ([`export::index_refused`]; R-449, REQ-GEN-036).
 pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>, GenError> {
     let entries = validate(ledger)?;
     let refused = links::refused(crate::links::builders());
@@ -285,6 +288,7 @@ pub fn generate(ledger: &Ledger, emitters: &[Emitter]) -> Result<Vec<Generated>,
     let mut unread = Vec::new();
     if runs(export::emit as Emitter) {
         unread.extend(export::refused(&ledger.words, &entries));
+        unread.extend(export::index_refused(&entries));
     }
     if runs(catalogue::emit as Emitter) {
         unread.extend(catalogue::refused(&ledger.words, &entries));

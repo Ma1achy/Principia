@@ -73,6 +73,7 @@ fn entry(
         provenance: Some(Provenance::Kernel),
         consumers: Some(ALL.to_vec()),
         declaration: None,
+        index_base: None,
     }
 }
 
