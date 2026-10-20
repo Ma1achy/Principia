@@ -44,16 +44,37 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 - **egui is a toggleable debug layer (F3) over the wgpu render.** egui-wgpu shares the engine's `wgpu` context and paints
   onto the same surface (`principia_gui_state_contract.md` §1).
-- **With the layer hidden, the figure fills the window (R-406).** F3 hiding egui makes the figure fill the whole
-  window, showing more of the field at the same scale in every direction, never the shown view stretched: each point
-  of the field keeps the screen position it has in the shown layout, so the figure's rect there is unchanged. Hiding
-  and showing send no `SetField`; showing the layer returns the normal layout. Past the chart's `[0,1]²` each axis
-  extends by its declared type (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or
-  whose state fails validation is hatched as forbidden (R-407, `principia_chart_decoder_contract.md` Part 3). The
+- **With the layer hidden, the figure fills the window (R-406), by one of two modes (R-468).** **Extend**, the
+  default and R-406's fill: F3 hiding egui makes the figure fill the whole window, showing more of the field at the
+  same scale in every direction, never the shown view stretched: each point of the field keeps the screen position it
+  has in the shown layout, so the figure's rect there is unchanged, and nothing already computed is invalidated.
+  **Fit**: the view's square, `UV ∈ [0,1]²` at the current `(z₀, q₁, q₂)`, is scaled uniformly to the window's shorter
+  side and centred, never stretched, its extent ratio kept, and the rest of the window is the canvas background; the
+  larger screen scale asks for finer quads (the screen floor, REQ-REF-011). Either way it is a view change, not an
+  edit: hiding and showing send no `SetField` and add no undo entry; showing the layer returns the normal layout, in
+  either mode, with nothing moved. The mode is chosen in View › **F3 fills by: Extend / Fit** (§G2's top bar) and kept
+  for the session, each launch starting at Extend. Past the chart's `[0,1]²` each axis extends by its declared type
+  (affine, periodic, pole-crossing or bounded, the default), and a pixel whose `Φ` fails or whose state fails
+  validation is classified forbidden (R-407, `principia_chart_decoder_contract.md` Part 3), drawn as the canvas
+  background in a presentation view and with the hatch in the debug view (R-467; next bullet). Extension is free for
+  every affine chart, the latent chart and the flat and body-plane slices, tilted or rotated, planes onto which the
+  square is only the current window; the types and the fallback matter for the charts whose square is their whole
+  domain (the warp, the mass simplex, the Burrau family) and for custom physical-quantity axes (R-468, clause 4). The
   screen lane is the one exception to "nothing moves": `ctx.screen.uv` and `ctx.screen.pixel` are taken over the
-  figure area as shown, the full window with the layer hidden, so a stain that reads them (the UV-view debug preset
-  among them) draws differently over the shown rect when F3 toggles; the figure is identical over the shown rect for a
-  stain that reads no screen-lane field (R-407, A4; `principia_coordinate_conventions_note.md`).
+  figure area as shown, the full window with the layer hidden in Extend and the scaled square in Fit, so a stain that
+  reads them (the UV-view debug preset among them) draws differently over the shown rect when F3 toggles; in Extend the
+  figure is identical over the shown rect for a stain that reads no screen-lane field (R-407, A4;
+  `principia_coordinate_conventions_note.md`). *Was (R-406, R-407):* "a pixel whose `Φ` fails or whose state fails
+  validation is hatched as forbidden"; "the full window with the layer hidden"; "the figure is identical over the shown
+  rect"; one mode.
+- **Presentation views draw no hatch (R-467).** The outcome view, the Chazy stains, every other stain that is not a
+  debug view, the figure filling the window with F3 and present mode are presentation views. In them a pixel that is
+  not part of the chart (past `[0,1]²` a state that fails validity or an axis beyond its bounded edge; inside the
+  square a validity failure, a decoder bug, §G12) draws the plain canvas background, the colour the window is cleared
+  to, with no hatch, legend key or share, as the area outside a map is blank; and NaN, `±∞`, `sim_failed` and
+  `decode_failed` are never a category: they draw R-446's black `#141418`. The debug views show them, View › Debug view
+  all three at once (§G2), and the Chart builder's Domain preview keeps its hatch and its "forbidden in view: N%", a
+  diagnostic for building charts (§G7).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way: UI → `SetField` → core → snapshot → UI (gui_state_contract §1, §2). **Undo and redo live in the
   contract** as a history of typed `SetField` edits, shared by every GUI (R-52). A drag coalesces into one entry (R-96).
@@ -74,7 +95,9 @@ data. The two words name one object. The **figure** is the rendered slice.
 
 ## G2. Explore — the everyday view (`01_main.png`)
 
-**Top bar.** Menus (File, View, Windows, Help; View holds **Home**, its first entry, R-466, and **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
+**Top bar.** Menus (File, View, Windows, Help; View holds, in order, **Home**, its first entry, R-466, a separator,
+**F3 hide**, **F3 fills by: Extend / Fit**, one row of two radio options, R-468, **Debug view**, a check entry, R-467,
+and **reset layout**, R-462); the mode switch **Explore / Stain**; **Overlays ▾**, with a count of how
 many are on; **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb (§G3); status: `t`, fps, frame ms, quad count,
 `budget-bound` when the frame budget binds, undo / redo depth, and "F3 hide".
 
@@ -86,7 +109,19 @@ many are on; **Run…**, **Profiler…**, **Export…**; the keyboard breadcrumb
 
 Each entry is sorted by Part II §12.1's rule into a post node (Tier 1, derived from the address), a sim shader (Tier 2,
 already resident) or a tile debug shader (Tier 3, a scheduler verdict). The Overlays menu and the Display window (§G5)
-replace the corpus's global display bar (R-67).
+replace the corpus's global display bar (R-67). The Chart group's "forbidden region" and the Integration group's
+"NaN / invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view (R-467, applied per
+R-369).
+
+**The debug view (R-467).** View › **Debug view** switches the figure, over whatever stain is active, to the one view
+that shows what the presentation views leave out: every system pixel as the stain draws it; a pixel the chart
+classifies as not a system with the hatch, `debug_invalid`; a decode or sim failure with `debug_invalid`; NaN and `±∞`
+with a style of their own (REQ-COL-110). The legend gains a "Debug" key, its three entries "forbidden (chart)",
+"decode or sim failure" and "NaN / Inf", each with its count of the figure's pixels and their share, drawn always
+(§G6; colour_composition §6). It is a render-side toggle sent as a `SetField` marked "no history": a view, not an edit,
+adding no undo entry and re-integrating nothing (gui_state_contract §2). It is off at launch, keeps its state through
+F3, present mode and both fill modes, and has no key of its own; the View menu reaches it from the keyboard (§G3). On
+the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INVALID`, R-467 D8).
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold.
@@ -558,7 +593,8 @@ either file as schema v1.
   Snapshot JSON, share links and pxpack carry `SimConfig` and `RenderState` in their one canonical
   serialisation (`principia_gui_state_contract.md` §2, R-309).
 - **Present:** hide all chrome; Esc returns.
-  With the chrome hidden the figure fills the window, as with F3 (R-406).
+  With the chrome hidden the figure fills the window, as with F3 (R-406), in the mode View › F3 fills by sets (R-468;
+  applied per R-369).
 
 ### Display — the last stages
 
@@ -621,16 +657,22 @@ physical outcomes only (R-444), each a flat swatch: the black key reads "bounded
 every failure share in the outcome view (R-446); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
 key. **Each key's name is the outcome class's name from the same display module** (applied per R-369): the black
 class's is "bounded / nothing yet", the other eight's the function's names for their `state` and `detail`.
-**The forbidden-region key (R-446; applied per R-369).** A forbidden chart region keeps the hatch, and the outcome
-legend keys it with one more key after the nine, labelled "forbidden region", drawn in the hatch style
-(`debug_invalid`) and compared as the style, not as one colour (R-136); it is drawn always, its share 0 where the view
-holds no forbidden pixel. It covers every pixel REQ-COL-102's lane marks forbidden, both of the chart contract's
-hatches (the domain's end and the universal fallback; colour_composition §1.4). **Its share and the nine classes'
-shares are area statistics over the view, so they count as R-408 counts** (chart_decoder_contract Part 3; §G7): a
-visible pixel counts only if every axis is inside its primary range; a pixel hatched because the domain ends there (a
-bounded axis past its edge, or a failed `Φ`) is drawn with the key's hatch but leaves every share and the total; the
-forbidden key's share is that of the states that fail the validity check, §G7's "forbidden in view". Inside `[0,1]²`
-the shares are unchanged.
+**No forbidden-region key (R-467, amending R-446).** A presentation legend has no "forbidden region" key and no
+share for it: a pixel REQ-COL-102's lane marks forbidden, either of the chart contract's hatches (the domain's end and
+the universal fallback; colour_composition §1.4), is not part of the chart and draws the canvas background, unkeyed.
+**The nine classes' shares are area statistics over the chart's own pixels** (chart_decoder_contract Part 3; §G7): a
+visible pixel counts only if every axis is inside its primary range, and a pixel that is not a system, a domain's end
+or a state that fails the validity check, leaves every share and the total, so the shares sum to 100 % of the
+counted systems (applied per R-369). Inside `[0,1]²` the shares are unchanged. **The debug view's key** (§G2, View ›
+Debug view) comes after the stain's own keys: "Debug", three entries, "forbidden (chart)" in the hatch style, "decode
+or sim failure" in `debug_invalid`'s style and "NaN / Inf" in its own style (REQ-COL-110), each compared as the style,
+not as one colour (R-136), each drawn always with its count, the number of the figure's pixels drawn in it, and its
+share of the figure's pixels, raw pixel counts, not R-408's statistic. *Was (R-446, applied per R-369):* "A forbidden
+chart region keeps the hatch, and the outcome legend keys it with one more key after the nine, labelled "forbidden
+region", drawn in the hatch style (`debug_invalid`) …; it is drawn always, its share 0 where the view holds no
+forbidden pixel"; "Its share and the nine classes' shares are area statistics over the view …; a pixel hatched because
+the domain ends there … is drawn with the key's hatch but leaves every share and the total; the forbidden key's share
+is that of the states that fail the validity check, §G7's "forbidden in view".".
 
 **A free-fall slice under `η_E` is almost all `decode_failed`, drawn black, and that is expected (R-441, reworded by
 R-446; dd_decoder §3.7).** Energy
@@ -646,8 +688,10 @@ decode is untouched and untagged, and the pixel integrates, drawn in its outcome
 `V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
 scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E` is then a no-op on every free-fall
 preset, and the near-uniform black, with that contour its only exception, is expected, not a bug. The Chazy stains
-draw the same samples with the render contract's hatch (`debug_invalid`), as they draw `sim_failed`, not black, which
-there is Chazy B (dd_chazy_final_motion §7; RQ-319, decided per R-369), so the same slice reads hatched there. The
+draw the same samples black too, Chazy B's `#141418`, as every presentation view draws a failure (R-467, ruling
+RQ-319; dd_chazy_final_motion §7), so the same slice reads black there; View › Debug view shows them as "decode or sim
+failure". *Was (RQ-319, decided per R-369):* "The Chazy stains draw the same samples with the render contract's hatch
+(`debug_invalid`), as they draw `sim_failed`, not black, …, so the same slice reads hatched there." The
 tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today
 the `state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view
 the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's white `#ECECF0`.
@@ -676,7 +720,8 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
   counts only if every axis is inside its type's primary range (periodic, one period; pole-crossing, pole to pole;
   affine, unbounded; bounded, its domain); a pixel hatched where the domain ends (a bounded axis past its edge, or a
   failed `Φ`) leaves both the count and the total; only states that fail the validity check count as forbidden. Inside
-  `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3).
+  `[0,1]²` the share is unchanged (`principia_chart_decoder_contract.md` Part 3). The preview keeps its hatch and its
+  share under R-467: it is a diagnostic for building charts, not a presentation view (R-467, clause 6).
 - **A quick render** (e.g. 64 × 64 at a short horizon), at the view's aspect. **Both previews are square.**
 - The footer checks `q₁ · q₂ = 0` and lists the hidden directions (and the residual). Revert / Apply.
 
@@ -764,6 +809,14 @@ between its height and the full height below the top bar, covering the panels an
 user chose it, so it is no notification over the figure (§G1). Opening and closing it each complete within one frame
 at 60 fps (16.7 ms), measured on the human's Mac before and after the fix, with where the time went.
 
+**A decoder bug inside `[0,1]²` is warned here (R-467, clause 4).** Inside the square every gallery chart is valid by
+construction, so a pixel the chart classifies as not a system there (a validity failure, or a `Chart::map` that fails)
+is a decoder bug: it draws the canvas background in a presentation view and the hatch in the debug view, and the
+console logs one warning per chart and view, severity warn, source `app`, "decoder bug: chart <name> fails validity
+inside [0,1]² at pixel (<x>, <y>), (s, t) = (<s>, <t>); <n> pixels in this view", the first such pixel in row order
+from the bottom-left, logged again only when the view or the chart changes (applied per R-369). The real engine should
+log none (REQ-CHART-058's sweep). Whether a Chart-builder chart's in-square failure warns is RQ-372.
+
 ## G13. Where the artboards are overridden
 
 The pictures are layouts, and **their values are illustrative: corpus values win, and the Run window exposes the parameters
@@ -794,6 +847,9 @@ corpus, the spec follows the authority:
   on the figure and no View › Home; the GUI has all three. The Home button is the one control drawn over the figure,
   in its top-right corner, by the human's words; nothing else covers it (GUI_DESIGN_NOTES, "The figure is never
   covered").
+- **The View menu's fill modes and the debug view** (R-467, R-468). No artboard shows View › "F3 fills by: Extend /
+  Fit" or View › Debug view; the GUI has both. `06_legend.png` shows no forbidden-region key, and the presentation
+  legends have none (R-467); the debug view's "Debug" key is not drawn there.
 - **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
   defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
   the artboards'.
@@ -1320,8 +1376,9 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
   **colour's own L** (pass-through); **both**-None → flat mid-grey. (Matches `principia_colour_
   composition.md` §4.1.)
 - **Validity-first.** Every field carries its validity lane; every colouring has an explicit
-  invalid-pixel treatment, by default the hatched invalid pattern (R-132) — a NaN / sentinel must read as "no data", not as a value (composition spec
-  §3, §6; R-79). Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
+  invalid-pixel treatment, by default the hatched invalid pattern (R-132) in a debug view and `#141418` in a
+  presentation view, which draws no hatch (R-467) — a NaN / sentinel must read as "no data", not as a value (composition spec
+  §3, §6; R-79). *Was:* "by default the hatched invalid pattern (R-132)". Debug fields are the stated exception: they show literal stored values, and NaN still goes to the
   invalid pattern (§10.1), as does a stored `±∞` that is no declared sentinel or unset value (R-436).
 
 ---

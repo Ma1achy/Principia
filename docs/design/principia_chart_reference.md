@@ -826,3 +826,14 @@ hemisphere drawn, and R-412 rules it: pole to equator, the chart's `[0,1]` span.
 range, so each system counts once; a pixel hatched where the domain ends (a bounded axis past its edge, or a `Φ` that
 fails) leaves both the count and the total; only states that fail the validity check count as forbidden; inside
 `[0,1]²` nothing changes. The classification order is `principia_chart_decoder_contract.md` Part 3's.
+
+**How these pixels are drawn (R-467) and where the extension matters (R-468).** In this section and its table
+"hatched" names the classification, a pixel that is not a system. A presentation view draws such a pixel as the plain
+canvas background, with no hatch, key or share; only the debug views hatch it, View › Debug view under its "forbidden
+(chart)" key (`principia_chart_decoder_contract.md` Part 3, "How a pixel that is not a system is drawn"). Inside
+`[0,1]²` every chart of this reference is valid by construction (§2.1's warp, §4.5's simplex map, the decoder accepting
+any `z`): a hatched pixel there is a decoder bug, warned in the console, and REQ-CHART-058's sweep checks every chart for
+none. Extension is free for the affine charts (`Latent`, every flat or axis-aligned slice, `BodyPlane`, tilted or
+rotated: planes, the square only the current window onto them), which never produce a forbidden pixel; the types and
+the fallback matter for the charts whose square is their whole domain (the warp, the mass simplex, the Burrau family,
+the shape sphere's redraws) and for a custom chart's physical-quantity axes (R-468, clause 4).
