@@ -1525,3 +1525,64 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
   REQ-SYS-015 (`rq: RQ-365`).
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
+
+## RQ-370: The `N_sub` threshold table is frozen at build time from `r_sub = 0.05`, `γ_sub = 1.5` and `N_max = 64`, but `r_sub`, `gamma_sub` and `N_max` are user-adjustable sim-key uniforms, and `N_max` is "raised" past its default *(conflict, R-68, R-86, REQ-INT-028, REQ-TOOL-033, REQ-SCHED-010; context: TASK-M3-03)*
+
+*Found by TASK-M3-03's implementer before any code was written. Nothing is chosen. For the human: physics, since
+`r_sub`, `γ_sub` and `N_max` set the substep count, which changes every trajectory's discretisation, and the corpus
+reads both ways (R-369).*
+
+- **File, section:**
+  - `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete" (:101):
+    "`N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [r_sub = 0.05, γ_sub = 1.5, N_max = 64]`";
+    (:112): "`THR[n] = round_f32( ( r_sub / n^{2/3} )² )   for n = 1 … N_max     (frozen at build time)`"; and "The
+    transcendental (`pow`) still exists — it moves from *runtime, every substep, every backend* (where it forks) to
+    *once, at table-generation time, into a constant* (where it cannot)."
+  - `docs/contracts/principia_integrator_contract.md` § "Part 4 — Determinism, and the substep as the subtle seam":
+    "`d²` compared against 64 build-time-frozen f32 thresholds `THR[n] = round_f32((r_sub/n^{2/3})²)`"; and
+    "**`N_max` is a sim-key tunable** — both pipelines must use the same value (as with `r_coll`)".
+  - The same contract, § "Part 3 — Parameter ownership (who owns what)" (:325): "**2. Wrapper config — the loop.**
+    Constant across a dispatch, bound once per frame/tier as `SimUniforms`. **On the sim key** — change any and it
+    re-integrates."; its table (:331): "`N_max` | tunable (default 64) | substep cap per macro-step —
+    **user-adjustable** (raising it resolves more close-encounter structure before the integration floor …)"; (:332):
+    "`r_sub`, `gamma_sub` | 0.05, 1.5 | produce `N_sub` from `r_min` | wrapper substepper".
+  - `docs/contracts/principia_lowering_contract.md` § "Part 3 — The baking rules (compile-time vs uniform)",
+    "Compute side" (:55): "Wrapper config (`T, dt, N_max, r_*, eps_*, n_renorm`) | **UNIFORM** (`SimUniforms`) |
+    sim-key *values*, not code."
+  - `docs/gui/principia_render_gui_spec.md` § "Run — from the top bar" (:586–587): "integrator_contract Part 3's
+    parameters — … `N_max` (default 64), `r_sub` / `gamma_sub`, `r_coll` …", each "a `SimConfig` field"; only
+    `dt_macro` is marked "derived, not editable".
+  - `docs/design/principia_dd_image_embedding.md` § "6. What travels" (:222): "sim  T_horizon, dt_macro, N_max, r_sub,
+    gamma_sub, r_coll, r_close, …".
+  - `docs/design/principia_dd_generation_root.md` § "3.1 `sample_descriptor` (u32)" (:39), `saturated`: "`N_max` is a
+    raised tunable (integrator contract), not hardcoded".
+  - `docs/design/principia_dd_simstate_payload.md` § "8. Build-time settles (measure / specify once running)" (:631):
+    "Also assert the joint `horizon_steps × N_max ≤ 2³²−1` for the `total_substeps` counter" (a bound that matters only
+    for `N_max` far above 64).
+- **Conflict:**
+  - A table frozen at build time from `r_sub = 0.05` and `γ_sub = 1.5` gives the specified `N_sub` only at those
+    values. If a user sets `r_sub` or `gamma_sub` in the Run window, as the GUI spec, the lowering contract and the
+    image-embedding sim block allow, the frozen tree no longer equals `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)`, which
+    REQ-INT-028 requires, and nothing in the corpus regenerates it or refuses the setting.
+  - The table has 64 entries, `n = 1 … N_max` at `N_max = 64`. A raised `N_max` (Part 3's "raising it", generation
+    root's "a raised tunable") has no threshold past 64: `min(bucket(d²), N_max)` then never reaches `N_max`, so the
+    sticky `saturated` bit (R-86, "`saturated` ⟺ N_sub == N_max") never sets although the table caps the step at 64,
+    and the tree differs from the specification below `THR[64]`. Nothing gives `N_max`'s upper bound, a refusal, or a
+    larger table.
+- **Options seen:**
+  - (a) `r_sub`, `gamma_sub` and the table's length are build-time constants (constants-register entries): the Run window
+    shows `r_sub` and `gamma_sub` read-only, as it does `dt_macro`, and they leave `SimUniforms`. `N_max` stays a sim-key
+    uniform with `1 ≤ N_max ≤ 64` (the table's length), dispatch refusing a larger one, so "raising it" means raising
+    it back towards 64. TASK-M3-03 is built as written; TASK-M3-06 adds the refusal.
+  - (b) The thresholds are generated per configuration on the host, in f64 libm from the sim key's `r_sub`, `gamma_sub`
+    and `N_max`, and shipped as f32 bit patterns in a uniform; the comparison tree reads them by constant index. The
+    branch still depends only on comparisons against values both pipelines receive bit-identically, so the determinism
+    pin holds, but "frozen at build time" becomes "frozen per dispatch", the table needs a fixed largest length (a
+    calibration value, R-71), and TASK-M3-03's generator moves from `cargo xtask codegen` into the host.
+  - (c) As (a) for `gamma_sub` and the table's length, but `r_sub` stays a uniform: since `THR[n] = r_sub²·n^{-4/3}`,
+    the frozen table holds `n^{-4/3}` and the tree compares `d²` against `r_sub²·K[n]`, one single-rounded product per
+    comparison (allowed by Part 4's "single-rounded arithmetic"); `round_f32` of the product then differs from
+    dd §3.3's `round_f32((r_sub/n^{2/3})²)` by up to an ulp, so §3.3's formula is reworded.
+- **Applied meanwhile:** nothing. TASK-M3-03 has no code on its branch.
+- **Waits:** TASK-M3-03 (REQ-INT-027, REQ-INT-028, REQ-TOOL-033, REQ-TOOL-034), and through it TASK-M3-04 onward;
+  TASK-M3-06's `SimUniforms` refusals.
