@@ -2311,11 +2311,11 @@
   pitfalls: []
 - id: TASK-M8-12
   milestone: M8
-  title: "listen: sonification of θ(t), φ(t) from the one computeIC integration"
-  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]
+  title: "Listen, 1: the signal, spectrum, pitch, windows, channels and loudness from the one computeIC integration, with the audio out (R-540 S1 to S4, S6, S7) ⚑"
+  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
   needs: [REQ-SYS-017, REQ-CHART-036, REQ-TOOL-028, REQ-VAL-041]
-  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060]
-  reviewers: [code, qa, physics, gui, perf]
+  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-283, REQ-GUI-284, REQ-GUI-285, REQ-GUI-286, REQ-GUI-287, REQ-GUI-288, REQ-GUI-290]
+  reviewers: [code, qa, physics, gui, perf]  # ⚑ physics review required: the signal, the pitch's scale invariance, the floor (R-540 S1 to S3, S7)
   pitfalls: [PIT-3]
 - id: TASK-M8-13
   milestone: M8
@@ -2668,6 +2668,46 @@
   needs: []
   requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
+  pitfalls: []
+- id: TASK-M8-59
+  milestone: M8
+  title: "Listen, 2: the voices, the 39 instruments and makeVoice, strikes on the trajectory's beats, the events and the effects (R-540 S5, S8, S9)"
+  depends_on: [TASK-M8-12]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  needs: []
+  requirements: [REQ-GUI-289, REQ-GUI-291, REQ-GUI-292, REQ-GUI-293, REQ-GUI-294]
+  reviewers: [code, qa, gui, perf]
+  pitfalls: []
+- id: TASK-M8-60
+  milestone: M8
+  title: "Listen, 3: horizon and dwell, the spectrum, spectrogram and readout, sweep a row and the known orbits (R-540 S10 to S12)"
+  depends_on: [TASK-M8-12, TASK-M8-49]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  needs: []
+  requirements: [REQ-GUI-295, REQ-GUI-296, REQ-GUI-297]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-61
+  milestone: M8
+  title: "The trace and Listen in Explore, 1: the Trajectory panel's tabs and sections, Overlays ▾ › Trace, the keys, the window highlight and the trace's look (R-541 G1 to G4, G9)"
+  depends_on: [TASK-M8-58, TASK-M8-11, TASK-M8-12, TASK-M8-13]
+  needs: []
+  requirements: [REQ-GUI-298, REQ-GUI-299, REQ-GUI-300, REQ-GUI-301, REQ-GUI-307]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-62
+  milestone: M8
+  title: "The trace and Listen in Explore, 2: the Trace… and Listen… windows (R-541 G5, G6)"
+  depends_on: [TASK-M8-61, TASK-M8-58, TASK-M8-59, TASK-M8-60]
+  needs: []
+  requirements: [REQ-GUI-302, REQ-GUI-303]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-63
+  milestone: M8
+  title: "The trace and Listen in Explore, 3: Listen in the bottom band, the shared time axis and the legend's trace block (R-541 G7, G8)"
+  depends_on: [TASK-M8-61, TASK-M8-60, TASK-M8-07, TASK-M8-22]
+  needs: []
+  requirements: [REQ-GUI-304, REQ-GUI-305, REQ-GUI-306]
+  reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

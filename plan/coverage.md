@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 47 |
 | ENC | 33 |
-| CHART | 74 |
-| INT | 89 |
+| CHART | 76 |
+| INT | 90 |
 | EVT | 31 |
 | PAY | 106 |
 | GEN | 36 |
-| SCHED | 97 |
-| REF | 51 |
-| RENDER | 98 |
+| SCHED | 98 |
+| REF | 52 |
+| RENDER | 99 |
 | COL | 110 |
-| GUI | 251 |
-| TOOL | 169 |
+| GUI | 292 |
+| TOOL | 170 |
 | VAL | 189 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1558** |
+| **total** | **1606** |
 
-Of these: 136 calibration, 134 definition, 1288 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 136 calibration, 134 definition, 1336 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -38,19 +38,19 @@ Of these: 136 calibration, 134 definition, 1288 obligation. Retired (kept for th
 | M5 | 175 |
 | M6 | 210 |
 | M7 | 180 |
-| M8 | 264 |
+| M8 | 312 |
 
 ## Sections
 
-1268 sections in 48 files: 1046 yield at least one requirement; 222 yield none and are listed below with the reason.
+1290 sections in 49 files: 1065 yield at least one requirement; 225 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
 | gap (RQ-378) | 1 |
-| informative only | 165 |
+| informative only | 167 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 39 |
+| parent heading (obligations are in its subsections) | 40 |
 | rationale | 10 |
 | superseded (kept for the record) | 4 |
 
@@ -383,6 +383,14 @@ Of these: 136 calibration, 134 definition, 1288 obligation. Retired (kept for th
 | Principia — the line system: contours and traces | informative only | the adoption note (R-476), the proposal's status line and its summary |
 | 4. Contours | parent heading (obligations are in its subsections) |  |
 | 13. About the mock-ups | informative only | how the mock-ups were drawn (R-476 M1: the scripts are not kept) |
+
+### `docs/design/principia_listen.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia — Listen: the trajectory heard as sound | parent heading (obligations are in its subsections) | §1–§14; the italic preface names the sources and the RQs Listen's build waits on (R-540) |
+| 13. Tests (each with the arm that fires) | informative only | a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-283 to REQ-GUI-296) |
+| 14. What the demo is not | informative only | where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries |
 
 ### `docs/design/principia_quality_device_note.md`
 

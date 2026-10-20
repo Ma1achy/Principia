@@ -25,7 +25,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 
 ## Deliverables
-- The icon sets and markers, the syzygy detection and placement, edge pinning, repeats and the not-a-system checks in the trace renderer (`crates/render/src/lines/`), the trace settings in Lines ▾ (`crates/gui/`), and the guards in `computeIC` (the CPU kernel instance).
+- The icon sets and markers, the syzygy detection and placement, edge pinning, repeats and the not-a-system checks in the trace renderer (`crates/render/src/lines/`), the trace settings as `Lines`' state, each one `SetField` (`crates/gui/`; their controls are TASK-M8-61's and TASK-M8-62's, R-541; *was:* "the trace settings in Lines ▾"), and the guards in `computeIC` (the CPU kernel instance).
 - The follow-up's per-axis leaving, branch continuity, frame rule and curve projection in the trace's projection (`crates/render/src/lines/`), the playback extent and the ramp control (`crates/gui/`).
 - Tests `trace_defaults`, `trace_markers`, `trace_syzygy`, `trace_edge_pins`, `trace_repeats`, `trace_not_a_system`, `compute_ic_guards`, `trace_leaves_per_axis`, `trace_branch_continuity`, `trace_mix_frame`, `trace_curve_axis`, `trace_playback` and `trace_ramp_round_trip`.
 
@@ -50,4 +50,5 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - **T1 under TF3:** REQ-GUI-271's test measures the default length while playing; paused, a new trace draws to its end (REQ-GUI-281).
 - **TF2.2's field half** (the tilted chart's quads never folded, T17) is REQ-CHART-080, TASK-M8-56's, which this task depends on through TASK-M8-55.
 - **Applied meanwhile (R-538 I8, I13):** RQ-412 to RQ-415's option (a); RQ-418 (a), a non-finite step ends the run `sim_failed`, its trace ending with "?"; RQ-417 (b) for the readout. A ruling other than these is a follow-up change.
+- **R-541 (21 Oct 2026):** the settings' place in the GUI is `Trace…`, the Trajectory panel's Trace section and Overlays ▾ › Trace, not Lines ▾ (REQ-GUI-271 restated; RQ-448, (a) applied meanwhile). This task keeps the settings, their order and defaults as state; the ramp control and the playback extent stay this task's, built where TASK-M8-62's `Trace…` will hold them.
 - **REQ-GUI-245** (TASK-M8-49) no longer draws the markers; this task replaces them. The icons are figure marks (R-539).
