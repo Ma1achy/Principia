@@ -2646,7 +2646,7 @@
   note: "R-469 (20 Oct 2026), P2, A1 to A3, A8. Closed by TASK-M2-38. The edit path on the real engine is REQ-GUI-243 (TASK-M8-48). Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F4: halving λ itself reaches adjacent f64s only near λ ≥ ½ (R-469 A3 corrected). *Was:* \"by bisection on the edit's fraction λ ∈ [0, 1] until the two ends are adjacent f64 values (at most 64 steps)\"."
 - id: REQ-CHART-061
   area: CHART
-  statement: "Navigation must never leave the manifold under fuzzed edits (C6): on every gallery chart, a seeded, reproducible sequence of random pan, slice, zoom, tilt and lock edits, each passed through REQ-CHART-060's stop, must leave a centre that validates after every edit; under the default warp of every energy-type axis (R-471) every pixel of a 65 × 65 grid over [0,1]² whose own chart parameters (a, b) lie in the chart's square must validate at every tilt reached (every grid pixel, under Lean each axis, with X ≠ Y or with one angle set; what a pixel whose (a, b) leave the square draws is REQ-CHART-076, RQ-402); and under the linear option infeasible pixels must appear in the window and be classified not a system."
+  statement: "Navigation must never leave the manifold under fuzzed edits (C6): on every gallery chart, a seeded, reproducible sequence of random pan, slice, zoom, tilt and lock edits, each passed through REQ-CHART-060's stop, must leave a centre that validates after every edit; under the default warp of every energy-type axis (R-471) every pixel of a 65 × 65 grid over [0,1]² whose own chart parameters (a, b) lie in the chart's square must validate at every tilt reached (every grid pixel, under Lean each axis, with X ≠ Y or with one angle set; a pixel whose (a, b) leave the square is past the edge, REQ-CHART-076, R-512); and under the linear option infeasible pixels must appear in the window and be classified not a system."
   source:
   - file: decisions.md
     section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
@@ -2658,6 +2658,8 @@
     section: The operation table
   - file: docs/design/principia_chart_reference.md
     section: 2.1 Feasibility, and the warp that makes every pixel valid
+  - file: decisions.md
+    section: "R-512 — Under Tip as sheet a window pixel whose own `(a, b)` leave the chart's square is past the edge, and blank past a bounded one; E3 and C6 read over the chart's square *(closes RQ-402; amends R-471, R-472 and R-477)*"
   verify:
     method: property test
     detail: "cargo test -p kernel nav_fuzz_never_leaves (seeded, the seed printed): ≥ 1000 edits per gallery chart; after each, validate(centre) is Valid; on the invariant and Burrau K charts, warped, every grid pixel whose (a, b) lie in the square validates at every tilt, and under Lean each axis or X ≠ Y that is every grid pixel; control (the arm that fires): the same run under the linear option finds infeasible pixels inside [0,1]² and each is classified not a system (blank), and a fuzz run with the stop disabled reaches an invalid centre"
@@ -2665,8 +2667,9 @@
   - R-469
   - R-471
   - R-477
+  - R-512
   milestone: M2
-  note: "R-477 C6. Closed by TASK-M2-38. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Narrowed on physics review 5586890917 of PR #255, F1 (R-471 H9): under Tip as sheet with one target and both angles set a window pixel's (a, b) can leave the square; that case is RQ-402. *Was:* \"every pixel of a 65 × 65 grid over [0,1]² must validate at every tilt reached\"."
+  note: "R-477 C6. Closed by TASK-M2-38. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Narrowed on physics review 5586890917 of PR #255, F1 (R-471 H9): under Tip as sheet with one target and both angles set a window pixel's (a, b) can leave the square; that case is RQ-402. *Was:* \"every pixel of a 65 × 65 grid over [0,1]² must validate at every tilt reached\". R-512 (RQ-402 ruled): C6 reads over the chart's square, as narrowed. *Was:* \"what a pixel whose (a, b) leave the square draws is REQ-CHART-076, RQ-402\"."
 - id: REQ-CHART-062
   area: CHART
   statement: "Tilt and slice must be available on every chart (latent, shape sphere, mass simplex, Burrau family, invariant charts, custom and saved charts): the tilt is a rotation R(τ₁, τ₂) in the 3-space of the two screen axes and the hidden target coordinate (with X ≠ Y the two-target form in the 4-space (a, b, d_X, d_Y)), applied to the chart's own parameters, a pixel at window offset (u, v) mapping to (a, b, d) = R·(u, v, 0), a and b through the chart map exactly and d added to the hidden coordinate's value at the slice centre; on the latent chart it must be exactly the decoder's basis edit; R must come from the active tilt map (REQ-GUI-231) and be computed on the CPU, the kernel receiving it in the chart's params; a chart's hidden coordinates are the latent controls its axes do not write; and untilted (τ = 0, under either map) the chart must take no tilt path and render bitwise today's (C2)."
@@ -2754,15 +2757,19 @@
     section: Past the unit square — each axis's extension type (R-407)
   - file: docs/design/principia_chart_reference.md
     section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: decisions.md
+    section: "R-508 — An energy chart's `t > 1` side continues: past `t = 1` the warp's `K > K_max` is drawn and counted as an affine side, while past `t < 0`, and the `s` axis past either edge, the warp stays bounded *(closes RQ-376; amends R-471)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel tilted_extension: on the shape sphere tilted 30° into a momentum control, a pixel past t = 1 decodes as the untilted pole-crossing rule applied to the tilted (a, b); the invariant chart tilted is not a system past every edge; a saved oblique chart continues affinely; controls: a type applied to (u, v) before the tilt, and a per-chart extension table, each fail"
+    detail: "cargo test -p kernel tilted_extension: on the shape sphere tilted 30° into a momentum control, a pixel past t = 1 decodes as the untilted pole-crossing rule applied to the tilted (a, b); the invariant chart tilted is not a system past the bounded edges (s either side, t < 0), and past t = 1 it is the continuing side's system (R-508 V2); a saved oblique chart continues affinely; controls: a type applied to (u, v) before the tilt, and a per-chart extension table, each fail"
   rulings:
   - R-407
   - R-472
   - R-473
+  - R-508
+  - R-512
   milestone: M2
-  note: "R-472 X3, X3a. Closed by TASK-M2-36. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-472 X3, X3a. Closed by TASK-M2-36. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5591497181 of PR #255, P1 (R-508 V2, V5; R-512 F1). *Was:* \"the invariant chart tilted is not a system past every edge\"."
 - id: REQ-CHART-067
   area: CHART
   statement: "Axes of kind 3 (E, L_z, K, KE; PE once REQ-CHART-070 defines its warp) must be warped by default, wherever they appear (the invariant charts, the Burrau family's K axes, a mixed-axis chart, a Chart-builder axis), as chart_reference §2.1 warps them: alone or beside a non-energy axis each takes its own line of the warp, K (KE) = K_max·t^γ_K, E = U + K_max·t^γ_K, L_z = (2s − 1)·L_max with L_max = √(2IK) at the chart's held-fixed K, so every pixel inside [0,1]² is feasible by construction; every other physical-quantity axis (the virial ratio, the mass ratio through the mass link) must be warped to its feasible range by default too, by the warp REQ-CHART-070 writes (R-506); the warp's s axis is bounded past either edge and its t axis bounded below t = 0 and continuing, affine, past t = 1 (R-508); this supersedes R-408's port B1 as the default."
@@ -2815,7 +2822,7 @@
   note: "R-471 E2, H4, H5, H7; R-506. Closed by TASK-M2-37. Physics review 5586890917 of PR #255, F2: the arm \"the centre at both mappings decodes to the same state\" held only at γ_K = 1 and is replaced by the arms both mappings share. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-CHART-069
   area: CHART
-  statement: "The energy warp must be evaluated per pixel, with that pixel's own U, I and masses after the tilt's d, so that a tilt or slice that moves a hidden coordinate (masses, shape) keeps feasible every pixel whose own chart parameters (a, b) lie in the chart's square under every tilt (E3, T5; under Tip as sheet with both angles set the others are RQ-402's); untilted the per-pixel values are z₀'s, so the chart is bitwise today's."
+  statement: "The energy warp must be evaluated per pixel, with that pixel's own U, I and masses after the tilt's d, so that a tilt or slice that moves a hidden coordinate (masses, shape) keeps feasible every pixel whose own chart parameters (a, b) lie in the chart's square under every tilt (E3, T5, read over the chart's square by R-512; under Tip as sheet with both angles set the others are past the edge, REQ-CHART-076); untilted the per-pixel values are z₀'s, so the chart is bitwise today's."
   source:
   - file: decisions.md
     section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
@@ -2823,14 +2830,17 @@
     section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
   - file: docs/design/principia_chart_reference.md
     section: 2.1 Feasibility, and the warp that makes every pixel valid
+  - file: decisions.md
+    section: "R-512 — Under Tip as sheet a window pixel whose own `(a, b)` leave the chart's square is past the edge, and blank past a bounded one; E3 and C6 read over the chart's square *(closes RQ-402; amends R-471, R-472 and R-477)*"
   verify:
     method: property test
     detail: "cargo test -p kernel energy_warp_per_pixel: the (L_z, K) and (L_z, E) charts tilted into a mass logit and into a shape control at a single τ ∈ {10°, 45°, 80°}, and at τ = (30°, 20°) under Lean each axis: every pixel of a 65 × 65 grid validates; at τ = (30°, 20°) under Tip as sheet every pixel whose (a, b) lie in the square validates; untilted bit-identical to before; control: the warp computed once at the centre leaves pixels with K < L_z²/2I at the same tilts"
   rulings:
   - R-471
   - R-473
+  - R-512
   milestone: M2
-  note: "R-471 E3, H6; R-473 T5. Closed by TASK-M2-37. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Narrowed on physics review 5586890917 of PR #255, F1 (R-471 H9, RQ-402). *Was:* \"keeps every pixel feasible under every tilt\" and \"at τ ∈ {10°, 45°, 80°}: every pixel of a 65 × 65 grid validates\"."
+  note: "R-471 E3, H6; R-473 T5. Closed by TASK-M2-37. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Narrowed on physics review 5586890917 of PR #255, F1 (R-471 H9, RQ-402). *Was:* \"keeps every pixel feasible under every tilt\" and \"at τ ∈ {10°, 45°, 80°}: every pixel of a 65 × 65 grid validates\". R-512 (RQ-402 ruled): E3 reads over the chart's square, as narrowed. *Was:* \"(E3, T5; under Tip as sheet with both angles set the others are RQ-402's)\"."
 - id: REQ-CHART-070
   area: CHART
   kind: definition
@@ -2885,7 +2895,7 @@
   note: "R-477 C1. Closed by TASK-M3-37 (needs the integrator). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-CHART-073
   area: CHART
-  statement: "A saved chart (R-475) must be a chart of the kernel: a latent view saved as the oblique chart (z₀, q₁, q₂) with the stored vectors exactly, its axes affine; a curved view saved as its parent chart (id and params) with the slice centre and the tilt (angles, targets, map; R recomputed from them) as its base, its own parameters the saved view's window offsets, so that a new tilt R′ into a target other than the saved one composes as the block form (R ⊕ 1)·(1 ⊕ R′) in (a, b, d_saved, d_new): (u′, v′, d′) = R′·(u, v, 0), then (a, b, d) = R·(u′, v′, 0), d′ added to the new target and d to the saved one; the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077); reopened at zero tilt each must reproduce the saved view bitwise (S3, C8)."
+  statement: "A saved chart (R-475) must be a chart of the kernel: a latent view saved as the oblique chart (z₀, q₁, q₂) with the stored vectors exactly, its axes affine; a curved view saved as its parent chart (id and params) with the slice centre and the tilt (angles, targets, map; R recomputed from them) as its base, its own parameters the saved view's window offsets, so that a new tilt R′ into a target other than the saved one composes as the block form (R ⊕ 1)·(1 ⊕ R′) in (a, b, d_saved, d_new): (u′, v′, d′) = R′·(u, v, 0), then (a, b, d) = R·(u′, v′, 0), d′ added to the new target and d to the saved one; a new tilt into the saved target composes the rotations, R·R′ (REQ-CHART-077, R-513); reopened at zero tilt each must reproduce the saved view bitwise (S3, C8)."
   source:
   - file: decisions.md
     section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
@@ -2893,6 +2903,8 @@
     section: 1.1 Affine slices — the "no tilt" case
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Tilt (basis edit)
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
   verify:
     method: unit test
     detail: "cargo test -p kernel saved_chart: a latent view at τ = (30°, 20°) saved and reopened at zero tilt decodes bit-identically at every pixel of a 33 × 33 grid; a shape-sphere view tilted 25° into a momentum control saved and reopened likewise; a further tilt of the saved curved chart into a second momentum control decodes as (R ⊕ 1)·(1 ⊕ R′) applied to (u, v, 0, 0) to 1 ulp; controls: a saved oblique chart that re-orthonormalises q₁, q₂ (not bitwise under Lean), the 3 × 3 product R·R′ (feeding d′ into R's third input), and a composition in the order R′·R, each fail"
@@ -2900,11 +2912,12 @@
   - R-473
   - R-474
   - R-475
+  - R-513
   milestone: M2
-  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\"."
+  note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\"."
 - id: REQ-CHART-076
   area: CHART
-  statement: "Under Tip as sheet with one target and both angles set, a window pixel inside [−1, 1]² whose chart parameters (a, b) leave the chart's square must be decoded and drawn as RQ-402 rules (meanwhile the axes' types act on (a, b), R-472 X3a, so on a bounded warped axis it is past the edge and blank)."
+  statement: "Under Tip as sheet with one target and both angles set, a window pixel inside [−1, 1]² whose own chart parameters (a, b) leave the chart's square must be past the chart's edge (R-512): its axes' types act on (a, b) as past the window (R-472 X3a), so past a bounded edge (a warped L_z's s on either side, the warp's t < 0) it is not a system and draws blank, and past the energy warp's continuing t > 1 side (R-508) it is that side's system (R-512 F1)."
   source:
   - file: decisions.md
     section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
@@ -2912,36 +2925,41 @@
     section: 2.1 Feasibility, and the warp that makes every pixel valid
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Tilt (basis edit)
+  - file: decisions.md
+    section: "R-512 — Under Tip as sheet a window pixel whose own `(a, b)` leave the chart's square is past the edge, and blank past a bounded one; E3 and C6 read over the chart's square *(closes RQ-402; amends R-471, R-472 and R-477)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel tip_sheet_in_window: on the (L_z, K) chart, warped, at τ = (30°, 12.4°) into one target, each window pixel whose (a, b) leave the square decodes and draws as RQ-402's ruling says, with its control; review (physics)"
+    detail: "cargo test -p kernel tip_sheet_in_window: on the (L_z, K) chart, warped, at τ = (30°, 12.4°) and (−45°, 77.9°) into one target, over a 65 × 65 window grid: every pixel whose (a, b) lie in the square validates; every pixel whose (a, b) leave it past an s edge or t = 0 is classified not a system and draws the background; every pixel past t = 1 with s ∈ [0, 1] decodes bit-identically to the untilted chart sliced to that pixel's hidden value (the slice centre plus its d, d ≠ 0 under Tip as sheet) at the same (a, b), on the t > 1 side; controls: a draw that colours a pixel past a bounded edge, a window scaled to keep every (a, b) in the square (RQ-402's option (b)), and a past-t = 1 pixel drawn blank, each fail; review (physics)"
   rulings:
+  - R-470
   - R-471
   - R-472
   - R-474
   - R-477
+  - R-508
+  - R-512
   milestone: M2
-  rq:
-  - RQ-402
-  note: "R-471 H9 (physics review 5586890917 of PR #255, F1). Waits for RQ-402; closed by TASK-M2-39, a leaf task. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-471 H9 (physics review 5586890917 of PR #255, F1); R-512 (RQ-402 ruled, option (a)), F1 to F5. Closed by TASK-M2-39, no longer waiting. Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"must be decoded and drawn as RQ-402 rules (meanwhile the axes' types act on (a, b), R-472 X3a, so on a bounded warped axis it is past the edge and blank).\", the verify's \"at τ = (30°, 12.4°) into one target, each window pixel whose (a, b) leave the square decodes and draws as RQ-402's ruling says, with its control\", and \"Waits for RQ-402; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P2: the past-t = 1 comparison is with the untilted chart at the pixel's own hidden value. *Was:* \"decodes bit-identically to the untilted chart's t > 1 side at the same (a, b)\"."
 - id: REQ-CHART-077
   area: CHART
-  statement: "A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered."
+  statement: "A new tilt R′ of a saved curved chart into its own saved target must compose the rotations (R-513): (u′, v′, d′) = R′·(u, v, 0), then (a, b, d) = R·(u′, v′, d′), that is R·R′·(u, v, 0), d added to the saved target, the offsets never added; one rule for every new target, the new offset on the saved target entering R's third input and an offset on any other target added to it (Q1), both rotations acting in R-507 U1's scaled coordinates (Q2); the saved target is offered with the others, and at τ′ = 0 the saved chart reopens bitwise (Q3)."
   source:
   - file: decisions.md
     section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
   - file: docs/design/principia_chart_reference.md
     section: 1.1 Affine slices — the "no tilt" case
+  - file: decisions.md
+    section: "R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel saved_chart_same_target: a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control, decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs; review (physics)"
+    detail: "cargo test -p kernel saved_chart_same_target: a shape-sphere view tilted τ = (25°, 0) into a momentum control, saved, then tilted τ′ = (0, 20°) into the same control (non-parallel tilts, which do not commute), decodes as R·R′ applied to (u, v, 0) to 1 ulp at every pixel of a 33 × 33 grid, and at zoom 1 and zoom 4 alike; the same new tilt into a second control equals REQ-CHART-073's block form; at τ′ = 0 bit-identical to the saved view; controls: the offsets added (d + d′, RQ-403's option (a)) and the order R′·R, each fail; review (physics)"
   rulings:
   - R-473
   - R-475
+  - R-507
+  - R-513
   milestone: M2
-  rq:
-  - RQ-403
-  note: "R-475 L5 (physics review 5586890917 of PR #255, F3). Waits for RQ-403; closed by TASK-M2-39, a leaf task. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\"."
 - id: REQ-CHART-079
   area: CHART
   statement: "Past the chart's [0,1]², reached by navigation or by F3, the area statistics must be unchanged (R-537 EX7(g), R-408): each system counted once, at its canonical address, through the primary ranges, so that panning the view by one period changes neither \"forbidden in view\" nor W7's counts."
@@ -18304,7 +18322,7 @@
   note: "R-475 S1, S4, L1 to L3. Closed by TASK-M6-49. Gui review 5586902228 of PR #255, G10 (applied per R-369; R-475 L3)."
 - id: REQ-GUI-240
   area: GUI
-  statement: "On the mock engine, a latent view saved as a chart must be the oblique chart (z₀, q₁, q₂) with the vectors as they are (under Lean not orthogonalised, and reported so), its centre, window and base point the saved view's; reopened at zero tilt it must reproduce the saved view bitwise (S3, C8), and it can then be sliced and saved again; a plane saved untilted, spanned by two named dimensions, must offer the six dimensions off it as its tilt targets and tilt as any latent chart; a plane saved at a tilt must show its Tilt section dimmed with a tooltip naming RQ-404, its tilt waiting (REQ-GUI-265), and the compass's tilt mode must be refused on it too: a tilt-mode drag on the plane and the tilt arrows in interaction mode (REQ-GUI-181) emit no edit, the status line saying \"Tilt waits on RQ-404 for a chart saved at a tilt\"; the dimmed controls stay in the keyboard order, inert, Enter doing nothing (R-473 J11)."
+  statement: "On the mock engine, a latent view saved as a chart must be the oblique chart (z₀, q₁, q₂) with the vectors as they are (under Lean not orthogonalised, and reported so), its centre, window and base point the saved view's; reopened at zero tilt it must reproduce the saved view bitwise (S3, C8), and it can then be sliced and saved again; a plane saved untilted, spanned by two named dimensions, must offer the six dimensions off it as its tilt targets and tilt as any latent chart; a plane saved at a tilt must show its Tilt section dimmed with the tooltip \"Tilt of a chart saved at a tilt is not built yet\", its tilt being REQ-GUI-265's (TASK-M6-51, R-514 I6), and the compass's tilt mode must be refused on it too: a tilt-mode drag on the plane and the tilt arrows in interaction mode (REQ-GUI-181) emit no edit, the status line saying \"Tilt of a chart saved at a tilt is not built yet\"; the dimmed controls stay in the keyboard order, inert, Enter doing nothing (R-473 J11)."
   source:
   - file: decisions.md
     section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
@@ -18314,17 +18332,18 @@
     section: 1.1 Affine slices — the "no tilt" case
   verify:
     method: unit test
-    detail: "cargo test -p gui saved_latent_chart: a view at τ = (30°, 20°) under Lean and under Sheet, saved and reopened at zero tilt: the mock's figure pixel-identical and (z₀, q₁, q₂) bit-identical, its Tilt section dimmed with the RQ-404 tooltip; a view saved untilted, then tilted, then saved again, reopens bitwise; Home on the saved chart returns its saved centre; on the tilt-saved chart a compass tilt-mode drag and the tilt arrows emit no SetField and show the status-line message, and Tab reaches the dimmed Tilt controls, Enter on each doing nothing; controls: a saved chart that re-orthonormalises the pair differs under Lean, a tilt-saved chart whose Tilt section is enabled, a compass tilt-mode drag on a tilt-saved chart that sends a basis SetField, and a dimmed Tilt control dropped from the keyboard order, each fail"
+    detail: "cargo test -p gui saved_latent_chart: a view at τ = (30°, 20°) under Lean and under Sheet, saved and reopened at zero tilt: the mock's figure pixel-identical and (z₀, q₁, q₂) bit-identical, its Tilt section dimmed with the not-built-yet tooltip; a view saved untilted, then tilted, then saved again, reopens bitwise; Home on the saved chart returns its saved centre; on the tilt-saved chart a compass tilt-mode drag and the tilt arrows emit no SetField and show the status-line message, and Tab reaches the dimmed Tilt controls, Enter on each doing nothing; controls: a saved chart that re-orthonormalises the pair differs under Lean, a tilt-saved chart whose Tilt section is enabled, a compass tilt-mode drag on a tilt-saved chart that sends a basis SetField, and a dimmed Tilt control dropped from the keyboard order, each fail"
   rulings:
   - R-466
   - R-473
   - R-475
   - R-477
+  - R-514
   milestone: M6
-  note: "R-475 S2, S3, L4; R-477 C8. Closed by TASK-M6-49. Narrowed on gui review 5586902228 of PR #255, G3: a plane saved at a tilt is RQ-404. *Was:* \"its targets the six dimensions off the saved plane\" for every saved plane, and the arm \"a further tilt of the saved chart then a second save reopens bitwise\" on the tilt-saved view. gui review 5587650119 of PR #255, G12 (applied per R-369): the compass's tilt mode is refused too on a tilt-saved chart; the dimmed controls stay in the keyboard order, inert. *Was:* \"its tilt waiting (REQ-GUI-265).\" ending the statement, and the control \"a tilt-saved chart whose Tilt section is enabled fails\"."
+  note: "R-475 S2, S3, L4; R-477 C8. Closed by TASK-M6-49. Narrowed on gui review 5586902228 of PR #255, G3: a plane saved at a tilt is RQ-404. *Was:* \"its targets the six dimensions off the saved plane\" for every saved plane, and the arm \"a further tilt of the saved chart then a second save reopens bitwise\" on the tilt-saved view. gui review 5587650119 of PR #255, G12 (applied per R-369): the compass's tilt mode is refused too on a tilt-saved chart; the dimmed controls stay in the keyboard order, inert. *Was:* \"its tilt waiting (REQ-GUI-265).\" ending the statement, and the control \"a tilt-saved chart whose Tilt section is enabled fails\". R-514 (RQ-404 ruled), I6 (applied per R-369): the guard stays until TASK-M6-51 builds the tilt, its tooltip and status line no longer naming RQ-404. *Was:* \"with a tooltip naming RQ-404, its tilt waiting (REQ-GUI-265)\", \"the status line saying \"Tilt waits on RQ-404 for a chart saved at a tilt\"\" and the verify's \"dimmed with the RQ-404 tooltip\". When TASK-M6-51 lands, REQ-GUI-265 supersedes this requirement's tilt-saved guard arms, and the tests of them change in TASK-M6-51, qa's in its qa commit (R-514 I6)."
 - id: REQ-GUI-241
   area: GUI
-  statement: "On the real engine, the Manifold view's Tilt and Slice centre must work on every chart: the Tilt section's targets offer the chart's hidden coordinates (its latent controls its axes do not write) and its rotation acts on the chart's own parameters (REQ-CHART-062); the Slice centre's sliders of the hidden coordinates move the slice centre, each through its latent control (a mass through its logit), the physical value at the centre read out beside it; on a curved chart the sliders of the coordinates its axes set must stay in the section and the keyboard order, read-only and dimmed, each showing the centre's value with the tooltip \"set by the chart's axes: pan to move it\", Enter on one doing nothing; a saved curved chart's target dropdowns must not offer its saved target (RQ-403)."
+  statement: "On the real engine, the Manifold view's Tilt and Slice centre must work on every chart: the Tilt section's targets offer the chart's hidden coordinates (its latent controls its axes do not write) and its rotation acts on the chart's own parameters (REQ-CHART-062); the Slice centre's sliders of the hidden coordinates move the slice centre, each through its latent control (a mass through its logit), the physical value at the centre read out beside it; on a curved chart the sliders of the coordinates its axes set must stay in the section and the keyboard order, read-only and dimmed, each showing the centre's value with the tooltip \"set by the chart's axes: pan to move it\", Enter on one doing nothing; a saved curved chart's target dropdowns must offer its saved target too, a new tilt into it composing the rotations (R-513, REQ-CHART-077)."
   source:
   - file: decisions.md
     section: "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
@@ -18336,8 +18355,9 @@
   rulings:
   - R-457
   - R-473
+  - R-513
   milestone: M8
-  note: "R-473 T1, T6, J1, J2. Closed by TASK-M8-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Gui review 5586902228 of PR #255, G2 (applied per R-369; R-473 J11)."
+  note: "R-473 T1, T6, J1, J2. Closed by TASK-M8-48. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Gui review 5586902228 of PR #255, G2 (applied per R-369; R-473 J11). R-513 (RQ-403 ruled; code review 5591496358 of PR #255, C1): the saved target is offered; REQ-GUI-244's verify tests it. *Was:* \"a saved curved chart's target dropdowns must not offer its saved target (RQ-403).\""
 - id: REQ-GUI-242
   area: GUI
   statement: "On the real engine, with an energy-type axis (E, L_z, K, KE) or, on a Chart-builder chart, any physical-quantity axis (R-506), the Chart section must offer each such axis's mapping, warped (the default) or linear, one row per axis after Save view as chart, each two radio options registered in the Chart sub-scope in that order, one undoable edit that re-integrates; under linear the infeasible pixels draw blank and warn nothing."
@@ -18387,13 +18407,14 @@
     section: G2. Explore — the everyday view (`01_main.png`)
   verify:
     method: GUI screenshot
-    detail: "cargo test -p gui saved_curved_chart and cargo xtask screenshot 01_main (real engine): a shape-sphere view tilted into a mass logit saved and reopened at zero tilt: the figure pixel-identical and the sim key equal; control: a saved curved chart that drops the slice centre differs"
+    detail: "cargo test -p gui saved_curved_chart and cargo xtask screenshot 01_main (real engine): a shape-sphere view tilted into a mass logit saved and reopened at zero tilt: the figure pixel-identical and the sim key equal; its target dropdowns list its saved target, and a 20° tilt into it decodes as R·R′ applied to (u, v, 0) (REQ-CHART-077), to 1 ulp; controls: a saved curved chart that drops the slice centre differs, and dropdowns without the saved target, and a tilt into it decoded as the offsets added, each fail"
   rulings:
   - R-475
   - R-477
   - R-510
+  - R-513
   milestone: M8
-  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it. Physics review is required (⚑); it does not merge on the code reviewer's word alone. A new tilt into the saved target is RQ-403 (not offered meanwhile)."
+  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it. Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-513 (RQ-403 ruled): the target dropdowns offer the saved target too, a new tilt into it composing the rotations as REQ-CHART-077 says. *Was:* \"A new tilt into the saved target is RQ-403 (not offered meanwhile).\" Code review 5591496358 of PR #255, C1: the verify gains the saved-target arm and its control (R-513 Q3). *Was:* \"control: a saved curved chart that drops the slice centre differs\"."
 - id: REQ-GUI-245
   area: GUI
   statement: "The hover, pinned and kept traces must be drawn by the line system (principia_lines.md §8): each computeIC state projected through the chart's forward map into its own coordinates, breaking where the path leaves the chart and never joined across a pixel that is not a system, with time ticks, colour, arrows, animation, length and the incomplete-run mark as §8 has them (its markers and icon sets, R-538's, are REQ-GUI-272); the same Trace and renderer must serve the orbit viewer (the Inspector window and the Trajectory panel's views), nothing specific to the slice view."
@@ -18521,23 +18542,24 @@
   note: "R-476 L5, M10; R-509 (RQ-377 (6) ruled), Y6. Closed by TASK-M8-51; no longer waits. *Was:* \"New contour sets must take the default style RQ-377 part (6) rules (Screen contour, or smart ink on).\""
 - id: REQ-GUI-265
   area: GUI
-  statement: "On the mock engine, a latent view saved at a tilt must offer the tilt targets, and each tilt map must act on its saved pair, as RQ-404 rules."
+  statement: "On the mock engine, a latent view saved at a tilt must tilt again in an orthonormal frame (R-514): its Tilt section's targets are the named dimensions other than its first parent's axes, each projected off the saved plane and normalised, those with |t|² ≤ 10⁻¹² dropped, a projected one listed as \"<name> ⊥ (projected)\", its name kept; the frame (q̂₁, q̂₂⊥, t̂) is Gram–Schmidt of the stored pair and the target (with two targets the second orthogonalised against the first too); Tip as sheet and Lean each axis act in that frame, and the tilted pair is the stored pair carried by the map, so its lengths are kept and at zero tilt the saved view reopens bitwise; the Tilt section and the compass's tilt mode are enabled on such a chart."
   source:
   - file: decisions.md
     section: "R-475 — \"Save view as chart\", in the Chart section and on View ›, commits the current view as a named custom chart that can be tilted, sliced and saved again, so tilts compose and any plane is reachable: a latent view saves `(z₀, q₁, q₂)` as an oblique chart, a curved one its parent, slice centre and tilt; reopened at zero tilt it reproduces the view bitwise; one undo entry, the picker's \"Saved\" group, its name editable and its provenance shown; \"twelve tilt directions\" is the full count"
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-514 — A latent view saved at a tilt tilts again in an orthonormal frame: the named dimensions projected off the saved plane and normalised, vanishing ones dropped, are its targets; both maps act in that frame; the stored pair is kept, so the view reopens bitwise *(closes RQ-404; amends R-474, R-475 and R-477)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui saved_tilted_chart_tilt: a view at τ = (30°, 20°) under Sheet and under Lean, saved, then tilted again: the dropdowns list the targets RQ-404's ruling gives and the basis is as it says, with its control; C5's check under Sheet; review (physics)"
+    detail: "cargo test -p gui saved_tilted_chart_tilt: a view at τ = (30°, 20°) into one target under Sheet and under Lean, saved, then tilted again: the dropdowns list the six named dimensions other than the first parent's axes, the earlier target listed as \"<name> ⊥ (projected)\"; under Sheet the frame's images are orthonormal to 1e-12 across a grid of angles including m > 90° (C5) and the carried pair keeps its Gram matrix; a plane saved with a named dimension in it drops that one; at zero tilt (z₀, q₁, q₂) are bit-identical to the saved ones; controls: a target not projected (Sheet's images then not orthonormal), a pair renormalised to q̂₂⊥ (the Lean-saved tilt then jumps at τ → 0), and Lean's images (not orthogonal off the axes), each fail; review (physics)"
   rulings:
   - R-474
   - R-475
   - R-477
+  - R-514
   milestone: M6
-  rq:
-  - RQ-404
-  note: "R-475 L4 (gui review 5586902228 of PR #255, G3). Waits for RQ-404; closed by TASK-M6-51, a leaf task. Meanwhile the Tilt section is dimmed (REQ-GUI-240). Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+  note: "R-475 L4 (gui review 5586902228 of PR #255, G3); R-514 (RQ-404 ruled, option (a)), I1 to I7. Closed by TASK-M6-51, no longer waiting; it lifts TASK-M6-49's guard (REQ-GUI-240). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"On the mock engine, a latent view saved at a tilt must offer the tilt targets, and each tilt map must act on its saved pair, as RQ-404 rules.\", the verify's \"the dropdowns list the targets RQ-404's ruling gives and the basis is as it says, with its control; C5's check under Sheet\", and \"Waits for RQ-404; closed by TASK-M6-51, a leaf task. Meanwhile the Tilt section is dimmed (REQ-GUI-240).\" Gui review 5591485827 of PR #255, G14: the exact label, \"<name> ⊥ (projected)\" (R-514 I2). *Was:* \"a projected one listed \"⊥ (projected)\"\" and the verify's \"the earlier target marked \"⊥ (projected)\"\"."
 - id: REQ-GUI-266
   area: GUI
   statement: "A trace's fade off the plane on a chart with no proxy must use the general off-plane distance, the distance in z from the trajectory's encoded point to the slice plane, encoded per step, in the metric RQ-341 rules (R-509 (3): the real distance waits on RQ-341); once it lands it must supersede REQ-GUI-249's no-fade arm and its settings line on the charts it covers: there the trace fades by that distance and the settings no longer say \"fade: no off-plane distance on this chart (RQ-341)\"."
@@ -24765,6 +24787,25 @@
   rulings:
   - R-443
   milestone: M7
+- id: REQ-VAL-192
+  area: VAL
+  statement: "`render::pipeline_runtime`'s `node_failure_isolation_unexplained_failure_keeps_the_pipeline` must not die by a signal at teardown: its process must exit by status, never by SIGSEGV after its assertions pass, on lavapipe (PRIN_GPU_BACKEND=vulkan) under the parallel suite as in CI; the cause is found and fixed, not retried or ignored."
+  source:
+  - file: decisions.md
+    section: "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
+  - file: decisions.md
+    section: "R-276 — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review"
+  - file: decisions.md
+    section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
+  verify:
+    method: unit test
+    detail: "on ubuntu-24.04 lavapipe, the test passes 500 consecutive runs alone and 100 consecutive runs of the whole `pipeline_runtime` binary under nextest with the CI shard's parallelism, each run's exit status recorded, none by signal, the log kept on the PR; `cargo test -p render pipeline_teardown` — the found teardown sequence, run in a child process, exits by status, and the check reports a child that dies by a signal as a failure naming the signal, with a registered negative control (R-176); no retry, ignore or backend skip of the test"
+  rulings:
+  - R-276
+  - R-333
+  - R-369
+  milestone: M2
+  note: "Applied per R-369 (the orchestrator decides tooling and tests), after the precedent of R-276 (REQ-VAL-175) and R-333: the SIGSEGV at teardown seen on PR #235 (run 39048546893, attempt 1, job 117446692905) and PR #254 (run 39427866705, attempt 1, job 118650558546), each passing on re-run. In M2, the milestone in progress, since M1's gate has passed (R-432). Closed by TASK-M2-42."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."

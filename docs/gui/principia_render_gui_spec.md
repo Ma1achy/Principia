@@ -195,8 +195,13 @@ view the manifold.
   any chart, so tilts compose. Saved charts are the GUI's own settings, kept across sessions, deleted as a preset is
   (§G7), at once and not undoable; deleting the active one leaves the view as it is, the picker naming it "unsaved
   chart" with its provenance until another chart is picked or it is saved again (R-475 L3). A latent view saved at a
-  tilt keeps its Tilt section dimmed meanwhile, its tilt waiting on RQ-404; a saved curved chart's target dropdowns do
-  not offer its saved target, which waits on RQ-403 (R-475 L4, L5). With an energy-type axis (`E`, `L_z`, `K`, `KE`)
+  tilt offers as its targets the named dimensions other than its first parent's axes, each projected off the saved
+  plane and normalised (listed as "<name> ⊥ (projected)" where the projection changed it; *was* "listed "⊥ (projected)""), the vanishing ones dropped, and both
+  maps act in the orthonormal frame of the stored pair and the target, carrying the stored pair (R-514); a saved
+  curved chart's target dropdowns offer its saved target too, a new tilt into it composing the rotations (R-513).
+  *Was:* "A latent view saved at a tilt keeps its Tilt section dimmed meanwhile, its tilt waiting on RQ-404; a saved
+  curved chart's target dropdowns do not offer its saved target, which waits on RQ-403 (R-475 L4, L5)."
+  With an energy-type axis (`E`, `L_z`, `K`, `KE`)
   or, on a Chart-builder chart, any physical-quantity axis (R-506), the section offers each such axis's **mapping**,
   warped (the default, every pixel feasible) or linear (an affine axis, its infeasible pixels blank), one undoable edit
   that re-integrates (R-471): one row per axis after Save view as chart, each two radio options, in that keyboard
