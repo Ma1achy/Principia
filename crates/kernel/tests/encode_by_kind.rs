@@ -660,6 +660,11 @@ fn check_primitives(z_shift: f64) {
         "the pole"
     );
     assert_eq!(spherical_inverse([-1.0, 0.0, 0.0], pi), (0.5, 0.5), "θ = π");
+    let (s_y, t_y) = spherical_inverse([0.0, 1.0, 0.0], pi);
+    assert!(
+        (s_y - 0.25).abs() < 1e-15 && (t_y - 0.5).abs() < 1e-15,
+        "n₀ = 0 off the pole: ({s_y}, {t_y})"
+    );
     let frame = ([0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
     assert_eq!(
         exponential_inverse([0.0, 0.0, 1.0], frame, 0.5),

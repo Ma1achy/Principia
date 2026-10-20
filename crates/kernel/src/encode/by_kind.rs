@@ -202,7 +202,7 @@ pub fn component<R: Copy>(z: &[R; 8], k: Coordinate) -> R {
 fn dot<R: LinkReal>(a: &[R; 8], b: &[R; 8]) -> R {
     let mut s = R::zero();
     for k in 0..8 {
-        s = s + a[k] * b[k];
+        s = Float::mul_add(a[k], b[k], s);
     }
     s
 }
@@ -560,8 +560,9 @@ pub fn feasibility<R: WarpReal>(lz: R, k: R, low: Constraint, wide: Constraint) 
     let short = finite && infeasible(R::one(), k, lz);
     let k_c = Float::max(k, zero);
     let lz_c = Float::copysign(l_max(k_c), lz);
-    // `l > 0` exactly where `K* > 0`, so the projection keeps `L_z`'s class iff `L_z = 0` or `K* > 0`.
-    let keeps = (lz == zero) | (k > zero);
+    // The contract's criterion itself: `lz_c` takes `L_z`'s sign, so the class changes only where one is 0 and the other
+    // not, which is `L_z ≠ 0` with `K* ≤ 0`.
+    let keeps = (lz_c == zero) == (lz == zero);
     let failed = select(k < zero, low, wide);
     match (finite, short, keeps) {
         (false, _, _) => Feasibility::Rejected {
