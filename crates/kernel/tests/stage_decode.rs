@@ -3,8 +3,8 @@
 //!   its slot (REQ-DEC-007: the chart's parameters are the uniform).
 //! - `stage_decode_mode_bits`: `DECODE_MODE` is bit 0 of the flags word, full 0 and linearised 1, and no other bit
 //!   moves it (scheduler_contract Part 5).
-//! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2 and `ENERGY_UNSCALABLE`
-//!   3, and every other word refused.
+//! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2, `ENERGY_UNSCALABLE` 3,
+//!   `INVARIANT_INFEASIBLE` 4 and `NO_QUALIFYING_SEED` 5, and every other word refused.
 //! - `stage_words_roundtrip`: a sample's `(m, r, p)` and `ICDescriptor` written as words and read back, at its index,
 //!   every other sample's words untouched.
 //! - `stage_entry_native`: the stage's body, compiled natively at f32, writes each sample's decode, the chart read from
@@ -126,13 +126,15 @@ negative_control!(
 
 // ── stage_tag_words ─────────────────────────────────────────────────────────────────────────────────────────────
 
-/// Each reason round-trips through its word, the words are 0 to 3, and every other word is refused.
+/// Each reason of the closed set round-trips through its word, the words are 0 to 5, and every other word is refused.
 fn check_tags(write: fn(Option<Degenerate>) -> u32) {
     for (reason, word) in [
         (None, 0),
         (Some(Degenerate::M01Tiny), 1),
         (Some(Degenerate::EnergyInfeasible), 2),
         (Some(Degenerate::EnergyUnscalable), 3),
+        (Some(Degenerate::InvariantInfeasible), 4),
+        (Some(Degenerate::NoQualifyingSeed), 5),
     ] {
         assert_eq!(
             write(reason),
@@ -146,7 +148,7 @@ fn check_tags(write: fn(Option<Degenerate>) -> u32) {
             "the word {word} reads back otherwise"
         );
     }
-    for word in [4, 5, u32::MAX] {
+    for word in [6, 7, u32::MAX] {
         assert_eq!(
             untag(word),
             Err(word),
@@ -263,6 +265,7 @@ fn run_entry(chart: &Latent<f32>, flag: u32) -> Written {
     let uniforms = DecodeUniforms {
         chart: chart.uniform(),
         flags: UVec4::new(flag, 0, 0, 0),
+        energy: Default::default(),
     };
     let uv = [0.25f32, 0.75, 0.5, 0.5, 1.0, 0.0];
     let (mut ic, mut tags, mut d) = buffers(3);
@@ -323,6 +326,7 @@ fn stage_entry_native() {
     let uniforms = DecodeUniforms {
         chart: corner.uniform(),
         flags: UVec4::new(flags(DecodeMode::Full), 0, 0, 0),
+        energy: Default::default(),
     };
     let (mut ic, mut tags, mut d) = buffers(1);
     entry::<LatentStickBreaking>(0, &uniforms, &[0.5, 0.5], &mut ic, &mut tags, &mut d);
@@ -364,6 +368,7 @@ fn check_entry_points((defaults, stick, describe_entry): Entries) {
     let uniforms = DecodeUniforms {
         chart: chart.uniform(),
         flags: UVec4::new(flags(DecodeMode::Full), 0, 0, 0),
+        energy: Default::default(),
     };
     let uv = [0.2f32, 0.7, 0.6, 0.3];
     for (name, run, want) in
