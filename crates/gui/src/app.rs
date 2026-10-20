@@ -398,6 +398,10 @@ impl<S: EngineSide> App<S> {
             self.view.kept_orbits.orbits.len(),
         );
         explore::trajectory::join(self.keyboard.tree_mut(Mode::Explore), &self.trajectory);
+        explore::compass::join(
+            self.keyboard.tree_mut(Mode::Explore),
+            &self.manifold.compass,
+        );
         windows::chart_builder::join_presets(
             self.keyboard.tree_mut(self.view.mode),
             self.windows.chart.presets.len(),
@@ -413,6 +417,12 @@ impl<S: EngineSide> App<S> {
         let activated = self
             .keyboard
             .run(&ctx, self.view.mode, &mut self.view.focus, now);
+        // The Plücker view's cell cursor follows interaction mode on the compass (R-452 C6).
+        explore::compass::follow_focus(
+            &self.view.focus,
+            &self.snapshot.sim.plane,
+            &mut self.manifold.compass,
+        );
         let mut window_edits = Vec::new();
         let mut acts = Acts::default();
         for scope in self.keyboard.left().to_vec() {
@@ -461,7 +471,7 @@ impl<S: EngineSide> App<S> {
         for scroll in self.keyboard.scrolled().to_vec() {
             windows::console::scroll(&scroll, &mut self.windows.console, &self.console);
         }
-        self.shortcuts(&ctx, &mut actions, &mut edits);
+        self.shortcuts(&ctx, &mut actions, &mut edits, &mut out);
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
         }
@@ -752,14 +762,16 @@ impl<S: EngineSide> App<S> {
     }
 
     /// The letter, Space and Alt+digit shortcuts (render_gui_spec §G2, §G3; R-409 F1): with the focus in the Figure,
-    /// Space keeps the orbit under the cursor, or the pinned one, and L toggles listen; in Time, Space plays; anywhere,
-    /// Alt+digit toggles an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?`
+    /// Space keeps the orbit under the cursor, or the pinned one, and L toggles listen; in Time, Space plays; on the
+    /// compass in the Plücker view's interaction mode, Space steers to the cell cursor (R-452 C6); anywhere, Alt+digit
+    /// toggles an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?`
     /// overlay is open. And + and − zoom a Trajectory view in interaction mode on it (R-453 D6).
     fn shortcuts(
         &mut self,
         ctx: &egui::Context,
         actions: &mut Actions,
         edits: &mut Vec<engine::contract::set_field::SetField>,
+        out: &mut explore::manifold_view::Out,
     ) {
         if ctx.text_edit_focused()
             || self.keyboard.shortcuts_open
@@ -803,6 +815,12 @@ impl<S: EngineSide> App<S> {
                 Some(explore::time::TIME) => {
                     explore::time::toggle_play(&self.snapshot, &mut self.view.transport, edits)
                 }
+                Some(explore::COMPASS) => explore::compass::space(
+                    &self.view.focus,
+                    &self.snapshot.sim.plane,
+                    &mut self.manifold,
+                    out,
+                ),
                 _ => {}
             }
         }

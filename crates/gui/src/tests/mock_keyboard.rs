@@ -1735,7 +1735,11 @@ fn mock_keyboard_manifold_view_scopes() {
         [
             crate::explore::COMPASS_VIEW,
             crate::explore::COMPASS_TILT,
-            crate::explore::COMPASS_SLICE
+            crate::explore::COMPASS_SLICE,
+            crate::explore::COMPASS_CUBE,
+            crate::explore::COMPASS_PLUCKER,
+            crate::explore::COMPASS_JACOBI,
+            crate::explore::COMPASS_SHAPE
         ]
     );
     assert_eq!(

@@ -27,6 +27,15 @@
 //! Its keys (§G3): the compass is one element in navigation mode, beside its Tilt and Slice buttons; Enter on it
 //! starts interaction mode, in which the arrows tilt in tilt mode and move the slice along the normal in slice mode,
 //! Shift ×10 and Alt ×0.1 as everywhere (R-409 F3).
+//!
+//! Its views (R-452; [`views`]): four buttons beside Tilt and Slice, Cube (the default), Plücker, Jacobi and Shape, set
+//! what it draws, the mode staying what a drag on the Cube does; in a grid view a drag does nothing, and in the Plücker
+//! view a click on a cell, or Space on the keyboard's cell cursor, steers the slice to that coordinate plane. The view
+//! is its own GUI state, as its mode is. The keys: the view buttons follow Slice as siblings, Enter on one switching the
+//! view; in the Plücker view's interaction mode the arrows move the cell cursor ([`adjust`]) and Space steers
+//! ([`space`]).
+
+pub mod views;
 
 use eframe::egui::{
     self, pos2, vec2, Color32, Painter, Pos2, Rect, RichText, Sense, Shape, Stroke, Ui, UiBuilder,
@@ -34,6 +43,7 @@ use eframe::egui::{
 };
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Latent, Lock, Plane, SimConfig};
+use engine::contract::view_ui::{Focus, KeyMode};
 
 use crate::explore::lock::GOLD;
 use crate::explore::manifold_view::slice_tilt::{Angles, TILT_RANGE};
@@ -43,8 +53,9 @@ use crate::explore::manifold_view::{
 };
 use crate::explore::{COMPASS, COMPASS_SLICE, COMPASS_TILT, COMPASS_VIEW};
 use crate::keyboard::keymap::Direction;
-use crate::keyboard::scopes::{Adjust, Base, StepKind};
+use crate::keyboard::scopes::{Adjust, Base, ScopeTree, StepKind};
 use crate::keyboard::Keyboard;
+use views::CompassView;
 
 /// The compass's title.
 pub const TITLE: &str = "Compass";
@@ -1016,11 +1027,17 @@ impl Shown {
     }
 }
 
-/// The compass's own state: its mode, its drag and what it shows. The GUI's, never the engine's.
+/// The compass's own state: its mode, its view, its drag, what it shows and the keyboard's cell cursor. The GUI's,
+/// never the engine's, never undoable (R-409 A5; R-452 C1).
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct Compass {
     /// Its mode, which its buttons show: Tilt by default.
     pub mode: Touch,
+    /// Its view, which its view buttons show: Cube by default (R-452).
+    pub view: CompassView,
+    /// The keyboard's cell cursor in the Plücker view, `(i, j)` with `i < j`, while the compass is in interaction mode
+    /// (R-452 C6).
+    pub cursor: Option<(usize, usize)>,
     /// The drag in progress.
     pub drag: Option<Drag>,
     /// What it showed last frame, easing toward the plane.
@@ -1029,11 +1046,23 @@ pub struct Compass {
     pub moving: bool,
 }
 
-/// The arrows on the compass in interaction mode, by its mode: in tilt mode ← → tilt `τ₁` and ↑ ↓ `τ₂` by the `Tilt`
-/// step; in slice mode ↑ and → move the slice along the normal, ↓ and ← back, by the `SliceNormal` step (REQ-GUI-184),
-/// and nothing where the compass draws no plane (R-451 B11). Shift's ×10 and Alt's ×0.1 are in `adjust.times`, as
-/// everywhere (R-409 F3).
+/// The arrows on the compass in interaction mode, by its view and mode. In the Cube view, in tilt mode ← → tilt `τ₁`
+/// and ↑ ↓ `τ₂` by the `Tilt` step; in slice mode ↑ and → move the slice along the normal, ↓ and ← back, by the
+/// `SliceNormal` step (REQ-GUI-184), and nothing where the compass draws no plane (R-451 B11). Shift's ×10 and Alt's
+/// ×0.1 are in `adjust.times`, as everywhere (R-409 F3). In the Plücker view they move the cell cursor
+/// ([`views::cursor_moved`]; R-452 C6), editing nothing; in the Jacobi and Shape views, which have no grid yet, nothing.
 pub fn adjust(adjust: &Adjust, plane: &Plane, scratch: &mut Scratch, out: &mut Out) {
+    match scratch.compass.view {
+        CompassView::Cube => {}
+        CompassView::Plucker => {
+            if let Some(at) = scratch.compass.cursor {
+                scratch.compass.cursor =
+                    Some(views::cursor_moved(at, adjust.direction, adjust.times));
+            }
+            return;
+        }
+        CompassView::Jacobi | CompassView::Shape => return,
+    }
     match scratch.compass.mode {
         Touch::Tilt => {
             let Base::Degrees(degrees) = StepKind::Tilt.base().times(adjust.times) else {
@@ -1057,12 +1086,55 @@ pub fn adjust(adjust: &Adjust, plane: &Plane, scratch: &mut Scratch, out: &mut O
     }
 }
 
-/// Enter on the compass's control `id`, as its click: Tilt or Slice sets the mode.
+/// Enter on the compass's control `id`, as its click: Tilt or Slice sets the mode, leaving the view; a view button sets
+/// the view, leaving the mode (R-452 C1).
 pub fn activate(id: &str, scratch: &mut Scratch) {
     match id {
         COMPASS_TILT => scratch.compass.mode = Touch::Tilt,
         COMPASS_SLICE => scratch.compass.mode = Touch::Slice,
-        _ => {}
+        _ => {
+            if let Some(view) = CompassView::of_button(id) {
+                scratch.compass.view = view;
+            }
+        }
+    }
+}
+
+/// Names the compass in the breadcrumb by its view, "Compass › Plücker" in a grid view (R-452 C6), before the keys run.
+pub fn join(tree: &mut ScopeTree, compass: &Compass) {
+    if let Some(scope) = tree.get_mut(COMPASS_VIEW) {
+        scope.label = compass.view.breadcrumb();
+    }
+}
+
+/// Whether `focus` is on the compass itself in interaction mode.
+pub fn interacting(focus: &Focus) -> bool {
+    focus.mode == KeyMode::Interaction && focus.path.last().is_some_and(|id| id == COMPASS_VIEW)
+}
+
+/// Follows the keyboard after its keys ran: in the Plücker view, interaction mode on the compass puts the cell cursor
+/// on the dominant cell, or the first upper cell when none is, and keeps it there as the arrows move it; leaving
+/// interaction mode, or the view, takes it away (R-452 C6).
+pub fn follow_focus(focus: &Focus, plane: &Plane, compass: &mut Compass) {
+    if !interacting(focus) || compass.view != CompassView::Plucker {
+        compass.cursor = None;
+    } else if compass.cursor.is_none() {
+        compass.cursor = Some(views::cursor_start(&views::plucker(plane)));
+    }
+}
+
+/// Space on the compass in the Plücker view's interaction mode: the steer to the cell cursor, as a click on its cell
+/// (R-452 C6). Nothing in navigation mode, or in another view.
+pub fn space(focus: &Focus, plane: &Plane, scratch: &mut Scratch, out: &mut Out) {
+    if !interacting(focus) || scratch.compass.view != CompassView::Plucker {
+        return;
+    }
+    if let Some(edit) = scratch
+        .compass
+        .cursor
+        .and_then(|(i, j)| views::steer(plane, i, j))
+    {
+        out.edit(edit, None, scratch);
     }
 }
 
@@ -1086,7 +1158,9 @@ pub fn current(rect: Rect, sim: &SimConfig, compass: &Compass) -> Drawing {
     drawing(square(rect), &plane, &shown.view, compass.mode, &sim.lock)
 }
 
-/// Draws the compass in `rect`, taking its drags and its buttons' clicks.
+/// Draws the compass in `rect`, taking its drags and its buttons' clicks: the Cube view's cube and its drags, or the
+/// Plücker view's grid, its position readout and its cells' clicks, or the Jacobi and Shape views' note; beside it the
+/// title, the Tilt and Slice buttons, the view buttons, the view's readout and its hint.
 pub fn show(
     ui: &mut Ui,
     rect: Rect,
@@ -1107,26 +1181,33 @@ pub fn show(
     let square = square(rect);
     keyboard.place(COMPASS_VIEW, square);
     let plane = &sim.plane;
-    let response = ui.interact(square, egui::Id::new("compass cube"), Sense::drag());
-    if response.drag_started() {
-        scratch.compass.drag = Some(Drag::start(scratch.compass.mode, plane));
-    }
-    if let Some(drag) = &mut scratch.compass.drag {
-        drag.moved(response.drag_delta(), square);
-    }
-    // The plane as the drag leaves it, turned about the pin while locked, as its edit will be.
-    let pending: Vec<SetField> = scratch
-        .compass
-        .drag
-        .and_then(|d| drag_edit(plane, &d))
-        .map(|edit| about_the_pin(vec![edit], sim))
-        .unwrap_or_default();
-    if response.drag_stopped() {
-        if let Some(drag) = scratch.compass.drag.take() {
-            if let Some(edit) = drag_edit(plane, &drag) {
-                out.edit(edit, Some(drag.mode), scratch);
+    let view = scratch.compass.view;
+    // In a grid view a drag does nothing (R-452 C1): the cube takes none.
+    let mut pending: Vec<SetField> = Vec::new();
+    if view == CompassView::Cube {
+        let response = ui.interact(square, egui::Id::new("compass cube"), Sense::drag());
+        if response.drag_started() {
+            scratch.compass.drag = Some(Drag::start(scratch.compass.mode, plane));
+        }
+        if let Some(drag) = &mut scratch.compass.drag {
+            drag.moved(response.drag_delta(), square);
+        }
+        // The plane as the drag leaves it, turned about the pin while locked, as its edit will be.
+        pending = scratch
+            .compass
+            .drag
+            .and_then(|d| drag_edit(plane, &d))
+            .map(|edit| about_the_pin(vec![edit], sim))
+            .unwrap_or_default();
+        if response.drag_stopped() {
+            if let Some(drag) = scratch.compass.drag.take() {
+                if let Some(edit) = drag_edit(plane, &drag) {
+                    out.edit(edit, Some(drag.mode), scratch);
+                }
             }
         }
+    } else {
+        scratch.compass.drag = None;
     }
     let target = Shown::of(&after(plane, &pending));
     let dt = ui.input(|i| f64::from(i.unstable_dt));
@@ -1136,8 +1217,35 @@ pub fn show(
     if scratch.compass.moving {
         ui.ctx().request_repaint();
     }
-    let drawing = current(rect, sim, &scratch.compass);
-    paint(&ui.painter_at(rect), &visuals, &drawing);
+    let painter = ui.painter_at(rect);
+    let (readout, hint) = match view {
+        CompassView::Cube => {
+            let drawing = current(rect, sim, &scratch.compass);
+            paint(&painter, &visuals, &drawing);
+            let hint = match scratch.compass.mode {
+                Touch::Tilt => HINT_TILT,
+                Touch::Slice => HINT_SLICE,
+            };
+            (drawing.readout, hint)
+        }
+        CompassView::Plucker => {
+            let drawing = views::plucker_drawing(square, plane, scratch.compass.cursor);
+            views::paint_plucker(&painter, &visuals, &drawing);
+            cells(ui, &drawing, plane, scratch, out);
+            (vec![drawing.readout], views::PLUCKER_HELP)
+        }
+        CompassView::Jacobi | CompassView::Shape => {
+            let galley = painter.layout(
+                views::WAITS.to_owned(),
+                egui::FontId::proportional(LABEL_SIZE),
+                visuals.weak_text_color(),
+                square.width(),
+            );
+            let at = square.center() - galley.size() / 2.0;
+            painter.galley(at, galley, visuals.weak_text_color());
+            (Vec::new(), "")
+        }
+    };
     let text = Rect::from_min_max(
         pos2(square.max.x + MARGIN, rect.min.y + MARGIN),
         rect.max - vec2(MARGIN, MARGIN),
@@ -1157,14 +1265,46 @@ pub fn show(
             }
         }
     });
-    for line in &drawing.readout {
+    column.horizontal_wrapped(|ui| {
+        for (view, id, label) in views::VIEWS {
+            let button = ui.selectable_label(scratch.compass.view == view, label);
+            keyboard.place_widget(id, &button);
+            if button.clicked() {
+                scratch.compass.view = view;
+            }
+        }
+    });
+    for line in &readout {
         column.label(RichText::new(line).monospace().small());
     }
-    let hint = match scratch.compass.mode {
-        Touch::Tilt => HINT_TILT,
-        Touch::Slice => HINT_SLICE,
-    };
-    column.label(RichText::new(hint).weak().small());
+    if !hint.is_empty() {
+        column.label(RichText::new(hint).weak().small());
+    }
+}
+
+/// The Plücker view's upper cells as widgets: each shows its names and value on hover, as egui's tooltip beside the
+/// compass (R-452 C2), and a click on one steers the slice to its coordinate plane (C5).
+fn cells(
+    ui: &mut Ui,
+    drawing: &views::PluckerDrawing,
+    plane: &Plane,
+    scratch: &mut Scratch,
+    out: &mut Out,
+) {
+    for (i, j) in views::upper() {
+        let cell = ui
+            .interact(
+                drawing.place.cell_rect(i, j),
+                egui::Id::new(("plucker cell", i, j)),
+                Sense::click(),
+            )
+            .on_hover_text(views::hover_text(&drawing.grid, i, j));
+        if cell.clicked() {
+            if let Some(edit) = views::steer(plane, i, j) {
+                out.edit(edit, None, scratch);
+            }
+        }
+    }
 }
 
 /// `drawing` of the compass's `square` as the capture records it (R-451 B8): the square's top left (`origin`) and

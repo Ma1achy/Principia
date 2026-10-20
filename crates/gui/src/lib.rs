@@ -22,6 +22,8 @@ mod tests {
     mod canvas_gestures_mock;
     mod cli;
     mod compass_cross_section;
+    mod compass_plucker;
+    mod compass_position_gauge;
     mod compass_support;
     mod conformance;
     mod degenerate_tilt_guards;
@@ -31,6 +33,9 @@ mod tests {
     mod mock_axis_labels;
     mod mock_compass;
     mod mock_compass_cube;
+    mod mock_compass_steer_latent;
+    mod mock_compass_view_keys;
+    mod mock_compass_views;
     mod mock_console_keys;
     mod mock_content;
     mod mock_drawn;
