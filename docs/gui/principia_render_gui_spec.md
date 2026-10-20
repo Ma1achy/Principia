@@ -173,12 +173,18 @@ icon size (1.4×), syzygy markers (off) and their style (from the icon set: o–
 and bead, Numeral tag, Crossing tick, Eclipse), fade stutters (on), leaving / re-entering the chart's reach (on), end
 event icon (on), "Off-screen icons: pin to the edge (faint). Untick to hide them." (on), leaving / entering the window
 (edge chevrons, off), seams (θ wrap, off), join jumps with a dotted line (off), length (to the head, everything from
-`t = 0`), tail only (off; tail Δt 3 when on), show the rest faintly (off), head marker labelled with its time (on), time
+`t = 0`, while played or scrubbed; to its end otherwise, R-538 TF3), tail only (off; tail Δt 3 when on), show the rest faintly (off), head marker labelled with its time (on), time
 ticks (every 2, labelled), direction arrows (filled triangle, 8 px, every Δt 1.0), width (2.2 px) and colour (the hover
 and pinned trace fixed `#FFF27A`; kept traces the trace palette in turn, `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
-#9EF0D2`). Each is `Lines`' state, one undoable `SetField` that re-integrates nothing (R-476 M5), and each control is in
+#9EF0D2`; or **Ramp along time**, R-538 TF4: the ramp's preset, Sunset by default, Viridis, Magma, Ice, Ember, Aurora,
+Mono or Custom… with three colour stops, a Reverse toggle and a preview bar). Each is `Lines`' state, one undoable `SetField` that re-integrates nothing (R-476 M5), and each control is in
 the keyboard tree as Lines ▾'s others are (R-476 M13). The icons are figure marks (R-539). A click or hover on a pixel
-that is not a system starts no trace and draws the red ✕ (R-537).
+that is not a system starts no trace and draws the red ✕ (R-537). A trace not being played or scrubbed is drawn whole,
+to its end, with no head marker; while the Time panel plays or its scrubber is dragged it is drawn to the head (R-538
+TF3). The ramp is the trace's style, saved with the view and exported, never the stain's palette (R-538 TF4). The
+trace's readout gains "past the domain's end: N samples" on a curve axis (R-538 J5). *Was:* "length (to the head,
+everything from `t = 0`)" and "colour (the hover and pinned trace fixed `#FFF27A`; kept traces the trace palette in
+turn, …)", with no ramp control.
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold.

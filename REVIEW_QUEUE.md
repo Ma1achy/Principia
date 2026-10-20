@@ -1559,6 +1559,9 @@ addressing).*
   or full. *Recommendation:* half, so the primary reads first."
 - **Options seen:** (a) half strength (the file's recommendation); (b) full strength; (c) a setting, half by default.
 - **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+- **Note (R-538's follow-up, J8):** along an axis that mixes θ with a non-periodic coordinate (a tilted chart) there
+  are no images (TF2.2; RQ-430), so this entry applies to the images of untilted periodic, pole-crossing and fold
+  charts; the other θ branches of a tilted chart are RQ-421's.
 
 ## RQ-413: The start icon: the star in every set, or Pictures' initial-triangle glyph as an option elsewhere *(the human's queued question, R-538 Q2, TM4; REQ-GUI-272; context: TASK-M8-58)*
 
@@ -1647,6 +1650,9 @@ shows.*
 - **Applied meanwhile:** (b) (R-537 U7), the reading that keeps both texts' common part: "not a system" and the failed
   check, as R-469 A5's readout names a stop. A ruling for (a) or (c) is a follow-up change to REQ-GUI-269 and
   REQ-GUI-276. Nothing waits.
+- **Note (R-538's follow-up, J5):** the trace's readout gains a second count on a curve axis, "past the domain's end:
+  N samples", which is not a bug and logs no warning (RQ-425). It is a readout line of the trace, as "in forbidden"
+  is, and follows whichever option this entry takes. TF1 does not otherwise touch this entry.
 
 ## RQ-418: R-538 TM9's guard (b) ends a run whose step size is not finite "as incomplete", where the integrator contract labels NaN/Inf during integration `sim_failed` *(conflict: the human's instruction against a contract, R-538 TM9, R-445; REQ-INT-096, REQ-EVT-002, REQ-SYS-017; context: TASK-M8-58)*
 
@@ -1702,3 +1708,206 @@ consequence, unless the human wants it.*
   dropped from EX5.
 - **Applied meanwhile:** EX5 is built for the interactions the corpus defines (R-537 U9). Nothing waits; RQ-411 is
   answered with it.
+
+## RQ-421: On a tilted chart with a periodic parameter, whether the other θ branches (θ ± 2π) are also drawn, each faded by its own out-of-plane distance *(the human's queued question, R-538 TF7 Q5, TF2.2; REQ-GUI-278; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_followup.md` F7, Q5). For the human: yes, it changes what is drawn.*
+
+- **File, section:** `decisions.md` § "R-538 — …", the follow-up's applied text, TF7: "**Q5.** On a tilted chart with a
+  periodic parameter, should the other θ branches (θ ± 2π) also be drawn, each faded by its own out-of-plane distance,
+  since they are the same system projected at different distances? *Recommendation:* no by default; an option. The
+  demo draws the continuous branch only."
+- **Options seen:** (a) no by default; an option (the file's recommendation); (b) always drawn, faded; (c) never drawn.
+- **Applied meanwhile:** (a) (R-538 J13): the continuous branch only. The option fades each branch by its own
+  out-of-plane distance, which exists today only as R-509's proxy on the shape chart; it is built when REQ-GUI-266's
+  distance lands (RQ-341). Flagged. Nothing waits.
+
+## RQ-422: The time ramp's default: Sunset, as the mock-ups, or a perceptually uniform one (Viridis) *(the human's queued question, R-538 TF7 Q6, TF4; REQ-GUI-282; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_followup.md` F7, Q6). For the human: yes (look).*
+
+- **File, section:** `decisions.md` § "R-538 — …", the follow-up's applied text, TF7: "**Q6.** The ramp's default:
+  Sunset, as the mock-ups, or a perceptually uniform one (Viridis)? *Recommendation:* Sunset, which reads on the dark
+  field; Viridis's dark end vanishes on it."; TF4: "**Presets:** Sunset (the default, `#FFF27A #FF8A5B #E0457B #7A4CFF
+  #3BC7FF`), Viridis, …".
+- **Options seen:** (a) Sunset (the file's recommendation); (b) Viridis.
+- **Applied meanwhile:** (a) (R-538 J12, J13). Nothing waits.
+
+## RQ-423: The follow-up names text the delivered bundle does not have ("§3a", the superseded message's "T13") and says F2 "adds two bug classes" while listing three *(conflict of wording: the human's words against the delivered bundle and against themselves, R-538 TF1, TF2; REQ-GUI-272, REQ-GUI-277 to REQ-GUI-279; context: TASK-M8-58)*
+
+*Found by the port of the follow-up into R-538. Nothing is chosen. For the human: no; nothing built depends on it, and
+the reading applied is the one the human's message gives.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-20_trace_followup/principia_trace_followup.md`, the preface: "It amends that bundle's
+    `principia_trace_markers.md`: F1 replaces its §3a, F2 adds two bug classes, F3 and F4 change §1 and §2"; the
+    heading "## F1. Where a trace can leave a chart (replaces §3a)"; "## F2. Two bug classes this rule exposes (new,
+    with tests)", then items 1, 2 and 3.
+  - The human's message (R-538, the follow-up): "F1 replaces §3a." and "F2 adds three bug classes, each with a test".
+  - The superseded message (R-538, history): "One correction, in principia_trace_markers.md §3a and T13".
+  - `docs/incoming/2026-10-20_extension_trace/principia_trace_markers.md`, as delivered: its sections are "## 3. The
+    markers" (no §3a) and its tests "T1" to "T12" (no T13); the leaving text is §3's row "**Leaves the chart's reach** |
+    the state leaves what the chart can show (on the latent chart: a momentum past `q_max`, or α past its limits)".
+- **The conflict:** "§3a" and "T13" name sections of an updated bundle that was never sent; the file's "two" and its
+  three items disagree.
+- **Options seen:** (a) F1 replaces what the delivered bundle says on leaving (§3's row, I5 of R-538), and three bug
+  classes, as the human's message says; (b) an updated bundle with a §3a and a T13 is still to come and is ported when
+  it arrives.
+- **Applied meanwhile:** (a) (R-538 J2). Nothing waits.
+
+## RQ-424: T15 leaves "while the target's `|q| ≥ q_max`", where the demo's tab E leaves "while `|p_λ,y| > q_max`": the boundary and the quantity differ *(conflict: the human's test against the demo the human sent, R-538 TF6 T15, TF1; REQ-GUI-277; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no for the quantity (one component, read as the
+same); yes for the boundary only if it matters which way a sample exactly at `q_max` falls.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF6, T15: "A latent-momentum tilt leaves exactly while the target's `|q| ≥ q_max`;
+    the physical-momentum tilt never does, over 100 runs".
+  - `docs/incoming/2026-10-20_trace_followup/principia_trace_followup.md` § "F5", tab E: "A trace leaves (dotted
+    ring, dashed line) while `|p_λ,y| > q_max` and comes back."; the demo, `docs/gui/reference/trace/trace_markers.html`,
+    E's note: "a trace whose p_λ,y passes q_max = 2 has no point on this chart".
+  - TF1: "**A trace leaves only where a coordinate entering a shown axis with non-zero weight has no value.** That
+    means: ±∞ from a saturated link; NaN; a bounded axis's inverse outside its domain."
+  - The superseded message (R-538, history): "The fade uses R-509's proxy |q|."; R-509 Y3: the proxy is "the
+    scale-normalised Jacobi momentum magnitude".
+- **The conflict:** `≥` against `>` at the boundary; "the target's `|q|`" against `|p_λ,y|`, where `|q|` is also the
+  superseded message's name for R-509's proxy, a magnitude over all four momenta.
+- **Options seen:** (a) the target component's own `|q₃|` (`= |p_λ,y|`, REQ-DEC-019), leaving at `|q₃| ≥ q_max`, where
+  the link's inverse is ±∞ (TF1); (b) the same quantity, leaving at `|q₃| > q_max`, the boundary sample kept; (c) the
+  proxy's magnitude.
+- **Applied meanwhile:** (a) (R-538 J4). Nothing waits.
+
+## RQ-425: A trace sample whose projection falls past a bounded edge: TF1's rule 2 says it leaves, its curve-axis row says it is not drawn and "counted apart from the not-a-system count", R-538 TM8 counts not-a-system samples in one count that must read 0, and R-470 N1 calls a bounded axis past its edge "not a system" *(conflict: the human's words against themselves and against rulings, R-538 TF1, TM8, R-470 N1, R-512 F3; REQ-GUI-276, REQ-GUI-280; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: yes, it changes what is drawn and counted.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF1, rule 2: "A trace leaves only where … That means: … a bounded axis's inverse
+    outside its domain."; its table, the curve-axis row: "**No.** The encode projects onto the nearest point of the
+    curve …, and the distance to the curve is fade. If the nearest point lies past a bounded edge, the point is not
+    drawn there: those are real systems the bounded axis does not show (§8, the domain's end). They are counted apart
+    from the not-a-system count, whose non-zero value is a bug; this one is not."
+  - The same ruling, TM8: "A sample whose chart point is not a system (fails `validate` layers 2 and 3) is not drawn …
+    The readout counts such samples ("in forbidden: N samples"). It reads 0 on every run tried. A non-zero count is a
+    bug in the encode or the chart map".
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 6 — …", "Chart-aware validation", layer 2: "Burrau
+    charts: $\nu \in (0,1)$."
+  - `decisions.md` § "R-470 — …", N1: "A pixel that is not a system draws **blank** … This covers: a bounded axis past
+    its edge; …"; § "R-512 — …", F3: "A blank pixel past a bounded edge inside the window is the domain's end".
+  - The demo (version 27), tab H, readout: "in forbidden 4718 samples" (`docs/incoming/2026-10-20_trace_followup/images/ramp.png`).
+- **The conflict:** for one sample past a curve axis's bounded edge, rule 2 says the trace leaves (rings, dashed);
+  the row says it is only not drawn and counted apart; TM8 and layer 2 put it in the forbidden count that must read 0;
+  R-470 N1 names the place "not a system", R-512 F3 "the domain's end"; the demo counts it as forbidden.
+- **Options seen:**
+  - (a) The row on a curve axis: not drawn, the line broken, no ring, counted in its own readout line ("past the
+    domain's end"), never a bug; rule 2 on every other bounded axis (leaves, with rings); TM8's count keeps only samples
+    whose chart point is not a system.
+  - (b) Rule 2 everywhere: past any bounded edge the trace leaves, with rings, counted apart from TM8's.
+  - (c) TM8 as written: past a bounded edge is not a system, in the forbidden count, which then is not always 0.
+- **Applied meanwhile:** (a) (R-538 J5). Nothing waits; a ruling for (b) or (c) is a follow-up change to REQ-GUI-276
+  and REQ-GUI-280.
+
+## RQ-426: TF1's curve row and T18 make the distance to the curve the trace's fade, where R-509 fades only by the proxy where it is defined, the shape chart, and draws no fade elsewhere *(conflict: the human's words against a ruling, R-538 TF1, TF6 T18, R-509 Y3; REQ-GUI-280, REQ-GUI-249, REQ-GUI-266; context: TASK-M8-58, TASK-M8-54)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: yes, it changes what a test asserts.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF1's table, the curve-axis row: "the distance to the curve is fade"; rule 1:
+    "Anything orthogonal to the chart's plane feeds only the off-slice distance, so it shows as the fade. Where that
+    distance has no value, R-509 applies: no fade, and the GUI says so."; TF6, T18: "The curve chart's trace is the
+    nearest ν: perturb a run's shape off the curve, the point stays and the fade grows".
+  - `decisions.md` § "R-509 — …", (3): "The trace fade uses the proxy where it is defined; elsewhere there is no fade,
+    and the GUI says so. The real off-plane distance waits on RQ-341."; Y3: "It is "defined" on a chart whose plane
+    holds it at zero, the shape chart of the mock-ups, …; on every other chart the trace draws at full opacity".
+  - The demo (version 27), the Trace panel: "Fade off the slice (momentum proxy |q|, R-509; floor 0.18)".
+- **The conflict:** on the ν × dilation chart, whose shown axis carries a momentum, R-509's proxy is not defined, so
+  there is no fade and T18's "the fade grows" cannot hold; TF1 rule 1 defers to R-509, its row and T18 do not.
+- **Options seen:** (a) T18's fade arm runs only where an off-plane distance is defined (R-509's proxy now,
+  REQ-GUI-266's distance when RQ-341 is ruled); elsewhere its point-stays arm runs and the settings line says there is
+  no fade; (b) the distance to the curve is a defined off-plane distance on a curve chart now, a second proxy beside
+  R-509's; (c) T18 waits on RQ-341 whole.
+- **Applied meanwhile:** (a) (R-538 J6). Nothing waits.
+
+## RQ-427: TF3 draws a trace that is not being played or scrubbed "from `t = 0` to its end", and does not say what becomes of a chosen `Window` or `LastDt` length, or of the own clock's "Once" *(silence, R-538 TF3, R-476 §8, R-72; REQ-GUI-281, REQ-GUI-271; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no; the orchestrator may rule it, as a
+mechanical consequence, unless the human wants it.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF3: "**Not playing or scrubbed:** when the playhead is not playing and is not being
+    scrubbed, every trace is drawn from `t = 0` to its end (its event, or the horizon). … **The own-clock mode** is
+    always animated."
+  - `docs/design/principia_lines.md` § "8. Traces", Length: "To the playhead (the default), a fixed window, or the last
+    `Δt`."; Animation: "Own clock: the trace plays over its own window at its own speed …: once, looped, or back and
+    forth."
+- **The question:** whether "every trace … to its end" overrides a fixed window or the last `Δt` while paused, and what
+  the own clock draws once a "Once" play has finished.
+- **Options seen:** (a) TF3 is the default length's (`ToPlayhead`): a fixed window or the last `Δt` is kept as chosen,
+  and "Once" holds its last frame, the whole trace; (b) TF3 for every length: paused, every trace is drawn whole;
+  (c) the last `Δt` is measured back from the trace's end while paused.
+- **Applied meanwhile:** (a) (R-538 J11). Nothing waits.
+
+## RQ-428: TF4 and T20 keep a trace's ramp "with kept orbits" through save and load, where the GUI state contract puts the kept orbits in `ViewUI`, which is never serialised with `SimConfig` and `RenderState` *(conflict: the human's words against a contract, R-538 TF4, TF6 T20, R-453 D5; REQ-GUI-282; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: yes, it decides whether a saved view holds its
+kept orbits.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF4: "It is part of the trace style, so it is kept with kept orbits, saved with the
+    view, and travels in exports (the round-trip rule's tier 2)."; T20: "The ramp round-trips: a kept orbit's ramp
+    survives save and load, and Reverse reverses it | a ramp held only in GUI state".
+  - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface":
+    "ViewUI (pure UI) … kept orbits … — never read by the engine"; "Provenance already serialises `SimConfig +
+    RenderState`".
+  - `docs/gui/principia_render_gui_spec.md` § "G2. …", the Trajectory panel: "The pin, like the kept orbits, is
+    `ViewUI` state, never undoable"; `decisions.md` § "R-453 — …", D5.
+  - `docs/design/principia_lines.md` § "3. The data model": "`Trace { kind: Hover | Pinned | Kept(id), ic: …, … }`" and
+    "`Lines { …, traces: [Trace], … } // part of the exported view state`".
+- **The conflict:** a kept orbit's `Trace`, its IC and its ramp, sits in `Lines` (exported); the kept orbit itself is
+  `ViewUI` (not exported). T20's "survives save and load" needs the first; the contract says the second.
+- **Options seen:** (a) a kept orbit's `Trace` (its IC and style, the ramp included) is `Lines`' state and round-trips
+  with `RenderState`; reopened, the view redraws it; the Trajectory panel's kept-orbit tabs stay `ViewUI`; (b) the kept
+  orbits move into `RenderState` whole; (c) only the ramp round-trips, as a style in the library, and kept orbits are not
+  saved.
+- **Applied meanwhile:** (a) (R-538 J12). Nothing waits; a ruling for (b) or (c) is a follow-up change to REQ-GUI-282.
+
+## RQ-429: TF2.1 forbids the trace to reuse the lookup and lock validation (inverse encode Part 6), where R-538 TM8 decides a sample is not a system by `validate`'s layers 2 and 3, one of whose checks is "θ ∈ [0, 2π)" *(conflict: the human's words against themselves and a contract, R-538 TF2.1, TM8, inverse encode Part 6; REQ-GUI-276, REQ-GUI-277; context: TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no if (a), which keeps both texts; yes otherwise.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF2.1: "The inverse encode contract's validation (Part 6, the three layers) is
+    written for lookup and lock: it clamps, projects or rejects the whole state if any component fails. **The trace must
+    not reuse it.** … The trace checks each shown axis on its own (F1)."
+  - The same ruling, TM8: "A sample whose chart point is not a system (fails `validate` layers 2 and 3) is not drawn".
+  - `docs/contracts/principia_inverse_encode_contract.md` § "Part 6 — …", "Chart-aware validation": "Lookup and lock
+    validate against the **active chart's** constraints before committing."; layer 2: "Shape sphere: $\theta \in [0,
+    2\pi)$ (azimuth) and $\varphi \in [0, \pi]$"; "Mixed-axis charts inherit both axes' constraints."
+- **The conflict:** TM8 runs two of Part 6's layers on each sample; TF2.1 says the trace must not reuse Part 6 and must
+  check per shown axis; layer 2's θ range would fail a branch-continuous θ (TF2.2).
+- **Options seen:** (a) TM8's test is the not-a-system test of the sample's chart point on the shown axes, after the
+  types fold it, never Part 6's ladder on the sample's whole state (TF2.1); (b) TM8 as written, Part 6's layers 2 and 3
+  on the whole state, with θ folded first; (c) TM8 dropped, TF1's per-axis check alone.
+- **Applied meanwhile:** (a) (R-538 J10). Nothing waits.
+
+## RQ-430: TF2.2 says a tilted chart with a periodic parameter "is affine along that axis and does not repeat", where R-537 EX2 says "Periodic (θ): the chart repeats" and EX7(b)'s canonical addresses fold θ with no word on tilt *(silence: R-537 EX2 and EX7(b) on a tilted chart, R-538 TF2.2, TF6 T17, R-472 X3a; REQ-CHART-080, REQ-SCHED-101, REQ-GUI-278; context: TASK-M8-56, TASK-M8-58)*
+
+*Found by the port of the follow-up. Nothing is chosen. For the human: no; it follows from R-472 X3a (the types act on
+the chart's own parameters `(a, b)`, the tilt target's `d` not folded), and the orchestrator may rule it as a
+mechanical consequence, unless the human wants it.*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", TF2.2: "On a tilted chart those branches are **not** repeats of one image. θ wraps
+    but the target does not, so a shift of `2π / cos τ` along the tilted axis is a different system. Such a chart is
+    affine along that axis and does not repeat."; T17: "The tilted chart does not repeat: the systems at `s` and
+    `s + 2π/cos τ` differ | drawing it with periodic repeats".
+  - `decisions.md` § "R-537 — …", EX2: "**Periodic** (θ): the chart repeats."; EX7(b): "On the shape sphere at level
+    `L` … **θ period:** `ix' = ix mod n`."
+  - `decisions.md` § "R-472 — …", X3a, and R-473 V5: on a tilted chart the types act on the chart's own parameters
+    `(a, b)`.
+- **The question:** whether EX2's and EX7(b)'s folding applies along an axis that mixes θ with a non-periodic
+  coordinate.
+- **Options seen:** (a) it does not: canonical folding applies along an axis only where every term with non-zero weight
+  has that period, so a tilted θ axis is affine (TF2.2); the untilted sphere's maps stand; (b) EX7(b) folds the
+  window's quad addresses on every chart whose parameter is periodic.
+- **Applied meanwhile:** (a) (R-538 J8). Nothing waits.

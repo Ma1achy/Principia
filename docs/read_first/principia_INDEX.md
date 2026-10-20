@@ -112,7 +112,7 @@ and **`Policy::Tolerance`**.
 - `docs/gui/reference/principia_nav_cube.html` — Principia — navigation cube: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/principia_plucker_compass.html` — Principia — orientation compass: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/lines/` — the line system's mock-ups, `images/` (PNGs) and `canvas/` (artboards, `.dc.html`), the reference for `principia_lines.md` (R-476)
-- `docs/gui/reference/trace/` — the trace and extension demo, `trace_markers.html` (self-contained), and its screenshots, `images/`: the reference for `principia_lines.md` §8's markers and icon sets (R-538) and for the view past the square with the controls shown (R-537)
+- `docs/gui/reference/trace/` — the trace and extension demo, `trace_markers.html` (self-contained, version 27, the follow-up's), and its screenshots, `images/`: the reference for `principia_lines.md` §8's markers and icon sets, where a trace can leave, mixed axes and the time ramp (R-538) and for the view past the square with the controls shown (R-537)
 - `docs/gui/reference/principia_compass_charts.html` — Principia — compass, position & chart transform: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 
 ---
@@ -167,6 +167,7 @@ standing obligation exists there and ports any that doesn't (R-112).
 | `docs/archive/spec_sources/` | the retired implementation spec (`principia_spec_revised`, see canonical_spec §11), the retired colour-map and COM-projection PDFs, the Burrau and render-quadtree PDFs, older IC Inspector copies, and `SECTION_MAP.md` (the ledger of the port into markdown). Record only; the markdown is the authority |
 | `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
 | `docs/incoming/2026-10-20_extension_trace/` | the human's bundle of 20 Oct 2026 as delivered (`principia_extension_interaction.md`, `principia_trace_markers.md`, the demo, its images and the prin-rs examples): a record, ported by R-537 and R-538, whose rulings and amended docs are cited instead; its prin-rs examples and `encode_check.py` are reference only, not ported |
+| `docs/incoming/2026-10-20_trace_followup/` | the human's follow-up of 20 Oct 2026 to that bundle as delivered (`principia_trace_followup.md`, the demo version 27, its images and a prin-rs example): a record, ported into R-538 (TF1 to TF7), whose ruling and amended docs are cited instead; its demo replaces the bundle's copy in `docs/gui/reference/trace/`; its prin-rs example is reference only, not ported |
 | `docs/archive/principia_design_corpus.zip` | an earlier copy of the corpus in a numbered-folder layout (`arch/00_read_first` … `08_scratchpads`) |
 
 ---

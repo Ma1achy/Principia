@@ -175,7 +175,9 @@ CoM-frame-defined.
 ### Chart-aware validation
 
 Not every point of the latent hypercube $[0,1]^8$ is valid in every chart, and not every entered IC lands inside
-the hypercube. Lookup and lock validate against the **active chart's** constraints before committing.
+the hypercube. Lookup and lock validate against the **active chart's** constraints before committing. A trace does
+not: it never clamps, projects or rejects a sample's whole state by these layers, but encodes the chart's shown
+coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines.md` §8).
 
 **Layers, in order.**
 

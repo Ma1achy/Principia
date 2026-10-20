@@ -101,7 +101,7 @@ Trace {
   join_jumps: bool,                       // a dotted line across a break (R-538)
   arrows:  Option<{ shape: Filled | Chevron | Barb | Notched | Dot, size_px, outline: bool,
                     every: Px(n) | Dt(dt) | PerTrace(n) }>,
-  colour:  Fixed | AutoFromPalette | AlongTime(Ramp),
+  colour:  Fixed | AutoFromPalette | AlongTime(TimeRamp),   // TimeRamp: §8's ramp along time (R-538 TF4)
   animate: Static | WithPlayhead | OwnClock { speed, repeat: Once | Loop | BackAndForth },
   tail:    Option<{ dt, ghost_rest: bool }>,   // "Tail only", for the two animated modes (R-538: off by default)
   head_marker: bool,                      // labelled with its time (R-538: on, with or without a tail)
@@ -123,6 +123,9 @@ Lines { styles: Library, contours: [ContourSet], traces: [Trace], axes: Axes }  
 *`Trace` as R-538 amends it (§8):* `markers` is the icon set and its toggles, `join_jumps` is new and the head marker
 no longer sits under `tail`, since its default is on with the tail off. *Was:* "`markers: bool, // start ●, collision ×,
 escape →, horizon ▪`" and "`tail: Option<{ dt, ghost_rest: bool, head_marker: bool }>, // for the two animated modes`".
+`AlongTime` takes a `TimeRamp { preset: Sunset | Viridis | Magma | Ice | Ember | Aurora | Mono | Custom([c₀, c₁, c₂]),
+reverse: bool }`, the line system's own type, not the stain graph's `Ramp` (R-538 TF4, J12). *Was:* "`colour: Fixed |
+AutoFromPalette | AlongTime(Ramp),`".
 
 **Rules for styles.**
 
@@ -250,7 +253,14 @@ The trajectory comes from `computeIC`: the full CPU f64 state per step (`princip
 it:
 
 - **Projection.** Each state is run through the chart's forward map and read in the chart's own coordinates (§3 there).
-  On a shape chart this is exact: the state's shape maps back onto `(z_α, z_β)`.
+  On a shape chart this is exact: the state's shape maps back onto `(z_α, z_β)`. **Per shown axis, in order (R-538
+  TF2):** each sample's chart parameters are taken on the branch nearest the previous sample's (θ ± 2π; over a pole
+  θ + π with φ reflected), every coordinate of a mix read in the frame the chart's own parameters are defined in (the
+  full shape sphere's `(θ, φ)` unmirrored, `ρ` along `+x`; the latent chart's canonical); then the axes are mixed (a
+  tilt, R-473); then the point is drawn in every image by the extension types. The trace never runs the inverse
+  policy's lookup and lock validation (inverse encode Part 6) on a sample: it encodes the shown coordinates without
+  clamping and checks each shown axis on its own. On a tilted chart the θ branches are not repeats of one image: θ
+  wraps but the tilt target does not, so the chart is affine along that axis and does not repeat.
 - **Fade off the plane.** Opacity per vertex falls with the state's distance from the slice, down to a floor (0.18 in
   the mock). See §11 Q3 for what "distance" should be in general.
 - **Breaks.** The line breaks where the path leaves the chart and resumes where it comes back. It is never joined across
@@ -271,7 +281,7 @@ it:
   | **Triple ejection** | all three unbound (`detail = 3`) | three discs `#611597`, each with an arrow pointing out | the same | three discs flying apart | three dotted streaks out |
   | **Horizon** | nothing happened by `t_max` | an hourglass | hourglass | hourglass | a closed orbit (an ellipse with a body on it) |
   | **Incomplete** | the hover's step budget ran out | "?"; the last stretch of the line dashed | ? | ? | ? |
-  | **Leaves the chart's reach** | the state leaves what the chart can show (latent: a momentum past `q_max`, or α past its limits) | a dotted ring; the line dashed until it re-enters | an arrow into a bar | an open ring | a dotted ring |
+  | **Leaves the chart's reach** | a coordinate entering a shown axis with non-zero weight has no value (below, "Where a trace can leave") | a dotted ring; the line dashed until it re-enters | an arrow into a bar | an open ring | a dotted ring |
   | **Re-enters the chart's reach** | it comes back | a ring with a centre dot | a bar, then an arrow out | a filled ring | a ring with a dot |
   | **Leaves / enters the window** (optional, off) | the line crosses the view's edge | a chevron at the edge | | | |
   | **Seam** (optional, off) | θ wraps | a short tick at both ends of the jump | | | |
@@ -279,7 +289,27 @@ it:
 
   There is no double escape: it is not an outcome class (two bodies leaving a third is triple ejection, `detail = 3`).
   The end event icon can be switched off. *Was:* "**Markers.** Start ●, collision ×, escape →, horizon ▪. Optional time
-  ticks every `Δt`, labelled."
+  ticks every `Δt`, labelled." The leaves row's *Was* (R-538 TF1): "the state leaves what the chart can show (latent: a
+  momentum past `q_max`, or α past its limits)".
+- **Where a trace can leave (R-538 TF1).** The trace point is the state projected onto the chart's actual axes.
+  Hidden coordinates never make a trace leave: anything orthogonal to the chart's plane feeds only the off-slice
+  distance, the fade (where it has no value, R-509: no fade, and the GUI says so). A trace leaves only where a
+  coordinate entering a shown axis with non-zero weight has no value: ±∞ from a saturated link, NaN, or a bounded
+  axis's inverse outside its domain. Moving off the slice is never leaving. So it depends on the chart's axes, not its
+  name:
+
+  | Shown axis | Can it make the trace leave? |
+  |---|---|
+  | θ or φ of the shape sphere, alone or in any mix | No: `n̂` exists for every shape with `I > 0` (`I = 0` is a total collision, which has ended the run); θ's pole singularity is passed as a jump |
+  | a mass or mass ratio | No: masses are constant along a run |
+  | a physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate) | No, unless its warp's inverse has no value (`K ≥ 0` always; R-508 continues `t > 1`) |
+  | a curve axis (Burrau's ν) | No: the encode projects onto the nearest point of the curve (inverse encode Part 5(b)) and the distance to the curve is fade (R-509). A point whose nearest ν lies past a bounded edge is not drawn there, the line broken, with no ring; it is a real system the axis does not show, counted in the readout's "past the domain's end: N samples", apart from the not-a-system count (RQ-425) |
+  | a latent coordinate behind a saturating link (`z_q` past `q_max`, `z_α` past the decoder's α limits) | Yes, exactly when it has weight in the shown axis: on the latent momenta chart, or a tilt toward `z_q`; never on the latent `z_α × z_β` chart through a momentum |
+  | `z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart |
+
+  A tilted axis is a mix, a weighted sum of the chart's parameters and the tilt target (R-473), and leaves only through
+  a term with non-zero weight: tilted toward a latent momentum `z_q` (weight `sin τ`), the trace leaves while the
+  target's `|q| ≥ q_max` (RQ-424); tilted toward the physical momentum, it never leaves.
 - **Time ticks.** Every `Δt`, labelled; by default every 2, labelled (R-538).
 - **Syzygies (R-538), off by default.** A syzygy is an instant at which the three bodies are collinear: the
   configuration crosses the shape sphere's equator, `w = 0` (R-14). Each has a middle body; the sequence of middle
@@ -301,7 +331,8 @@ it:
   or click in a repeat integrates the canonical system, so the trace is identical in every image. With the hemisphere
   toggle on (R-412) the trace folds at the equator and its repeats continue into the mirror hemisphere.
 - **Not a system (R-538).** Every sample of the trajectory is encoded into the chart; a sample whose chart point is not
-  a system (fails `validate`'s layers 2 and 3) is not drawn, the line breaking there. A real trajectory cannot enter such
+  a system (fails `validate`'s layers 2 and 3, on the shown axes after the types fold the point, RQ-429) is not drawn,
+  the line breaking there. A real trajectory cannot enter such
   a region (masses constant, energy conserved), so the readout's count of such samples, "in forbidden: N samples",
   reads 0, and a non-zero count is reported as an encode or chart-map bug, a console warning. A trace is never started
   in such a pixel: a click there integrates nothing and draws a red ✕ where it was clicked (R-537), and hover shows the
@@ -311,20 +342,31 @@ it:
   any of them settable by hand; or a ramp along time from start to end. **By default (R-538)** the hover and pinned
   trace is a fixed `#FFF27A`, and kept traces take the trace palette in turn: `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
   #9EF0D2`. Width 2.2 px; icon size 1.4×.
+- **The ramp along time is selectable (R-538 TF4).** Presets: **Sunset** (the default once the ramp is chosen,
+  RQ-422, `#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`), Viridis, Magma, Ice, Ember, Aurora and Mono; **Custom**, three
+  colour stops; **Reverse**, which reverses the ramp; and a preview bar that shows it. The stops are evenly spaced and
+  interpolated linearly, over `t` from 0 to the horizon `t_max` (R-538 J12). It colours the line and its time ticks,
+  and the marks drawn in the trace's colour (the start star, the direction arrows) at their own time; the event icons
+  keep the outcome palette. It is part of the trace style, so it is kept with kept orbits, saved with the view and
+  travels in exports (the round-trip rule's tier 2; RQ-428). It is not the field's palette: a Chazy or outcome palette
+  is a stain (the node graph); this ramp is the line system's.
 - **Direction arrows.** Optional arrowheads along the path. Shape: filled triangle, open chevron, half barb, notched or
   dot. Size in px. They follow the line's outline. Frequency every N px of path, every Δt of time, or N per trace.
   Spacing them in time makes them bunch where the motion is slow, so speed can be read off the line.
 - **Animation.**
   - Static: the whole path at once.
   - With the playhead: a head marker sits at the playhead and moves as time is scrubbed or played, using the Time
-    panel's own play and loop.
+    panel's own play and loop. **When the playhead is not playing and is not being scrubbed (R-538 TF3)**, every trace
+    is drawn from `t = 0` to its end (its event, or the horizon), with no head marker; while playing, or while the
+    scrubber is dragged, it is drawn to the head, with the head marker. A step while paused is neither (R-538 J11).
   - Own clock: the trace plays over its own window at its own speed while the figure stays put: once, looped, or back
-    and forth.
+    and forth. It is always animated (R-538 TF3); static draws the whole trace, as above.
   - Both animated modes take a tail (a bright stretch of Δt behind the head), an option to show the rest of the path
     faintly, and a head marker labelled with its time. **By default (R-538)** the tail is off ("Tail only", Δt 3 when
     on), "show the rest faintly" is off, and the head marker, labelled with its time, is on.
 - **Length.** To the playhead (the default), a fixed window, or the last `Δt`. The default draws everything from `t = 0`
-  to the head (R-538).
+  to the head while the playhead is played or scrubbed, and to the trace's end otherwise (R-538 TF3); a fixed window
+  or the last `Δt` is kept as chosen (RQ-427). *Was:* "The default draws everything from `t = 0` to the head (R-538)."
 - **Incomplete runs.** When the hover's step budget runs out (the pointer-channels note), the drawn part is marked
   incomplete, rather than drawn as if it were the whole trajectory: its end icon is "?" and its last stretch dashed
   (R-538). *Was:* "the drawn part is marked incomplete, e.g. its tail dashed, rather than drawn as if it were the whole
@@ -412,7 +454,8 @@ can be restyled like any contour.
 - **Provenance.** A print re-opened reproduces its contour sets and styles bitwise.
 - **No re-integration.** Changing any line setting leaves the simulation key and quad requests unchanged.
 - **Trace markers (R-538).** `principia_trace_markers.md` §11's tests T1 to T12, each with its arm, are in the
-  requirements R-538 adds (REQ-GUI-271 to REQ-GUI-276, REQ-INT-096).
+  requirements R-538 adds (REQ-GUI-271 to REQ-GUI-276, REQ-INT-096). The follow-up's T14 to T20 and T16b (R-538 TF6),
+  each with its arm, are in REQ-GUI-277 to REQ-GUI-282 and REQ-CHART-080.
 
 ---
 

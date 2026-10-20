@@ -15307,7 +15307,17 @@ kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sent
 § "G2. Explore — the everyday view (`01_main.png`)" (a paragraph added, "Trace settings"), R-476's heading block,
 RQ-412 to RQ-415 and RQ-418 (new), REQ-GUI-271 to REQ-GUI-276 and REQ-INT-096 (reqio, new), REQ-GUI-245 (reqio:
 statement, rulings, note), TASK-M8-58 (new), TASK-M8-49 and TASK-M8-09 (notes), `plan/tasks.yaml` and
-`plan/rule_groups.yaml`; built by TASK-M8-58*
+`plan/rule_groups.yaml`; built by TASK-M8-58. The follow-up of the same day (below, TF1 to TF7) is applied in
+`docs/design/principia_lines.md` § "3. The data model" (`colour`, with its earlier words kept), § "8. Traces" (the
+projection, leaves-the-reach, not-a-system, colour, animation and length bullets, with their earlier words kept; bullets
+added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md` § "G2.
+Explore — the everyday view (`01_main.png`)" ("Trace settings", sentences added, with its earlier words kept),
+`docs/design/principia_trajectory_viewing.md` § "3. Hover trace — projection onto the current (tilted, sliced) plane"
+(a paragraph added), `docs/contracts/principia_inverse_encode_contract.md` § "Part 6 — The canonical inverse policy,
+completed" (a sentence), `docs/read_first/principia_INDEX.md` (a row), I5 above (reworded, with its earlier words kept),
+RQ-421 to RQ-430 (new), notes on RQ-412 and RQ-417, REQ-GUI-277 to REQ-GUI-282 and REQ-CHART-080 (reqio, new),
+REQ-GUI-271, REQ-GUI-272 and REQ-GUI-276 (reqio), TASK-M8-58 and TASK-M8-56 (requirements, tests, notes) and
+`plan/tasks.yaml`; built by TASK-M8-58 and, REQ-CHART-080, TASK-M8-56*
 
 The human's words: the second instruction of the message R-537 holds ("2. `principia_trace_markers.md`: the trace's
 markers and icons sets, an update to `principia_lines.md` §8"), and that file's §0, "My words", verbatim, its italic
@@ -15582,10 +15592,16 @@ read the words:*
   `#30C8DC` in sRGB). Flagged.
 - **I4. Numbering.** Bodies and pairs are shown 1-based through R-449's one display function; the file's "(R-22)" is
   read as R-449, R-22's successor for display labels.
-- **I5. "Leaves the chart's reach"** is where the trajectory's state has no point on the chart: the chart's encode of
-  the state fails to land in what the chart can show (on the latent chart a momentum past `q_max` or α past its limits,
-  as TM3 says; on a curved chart, a state its forward map does not reach), distinct from leaving the window (the
-  chevrons) and from not being a system (TM8). The line is dashed from there until it re-enters.
+- **I5. "Leaves the chart's reach"** is TF1's, the follow-up's (below): a trace leaves only where a coordinate entering
+  a shown axis with non-zero weight has no value (±∞ from a saturated link, NaN, a bounded axis's inverse outside its
+  domain); hidden coordinates never make it leave, they are fade, and moving off the slice is never leaving. It is
+  distinct from leaving the window (the chevrons) and from not being a system (TM8). The line is dashed from there until
+  it re-enters. TM3's "(on the latent chart: a momentum past `q_max`, or α past its limits)" holds only on a latent
+  chart whose shown axes carry those coordinates (the latent momenta chart, a tilt toward `z_q`); on the latent
+  `z_α × z_β` chart a momentum is hidden and never makes the trace leave (TF1, T14). *Was:* "is where the trajectory's
+  state has no point on the chart: the chart's encode of the state fails to land in what the chart can show (on the
+  latent chart a momentum past `q_max` or α past its limits, as TM3 says; on a curved chart, a state its forward map
+  does not reach), distinct from leaving the window (the chevrons) and from not being a system (TM8)."
 - **I6. "Incomplete"** is REQ-PERF-075's step budget (the pointer-channels note); its "?" replaces §8's "e.g. its tail
   dashed", which stays as the dashed last stretch.
 - **I7. The forbidden-sample count.** "In forbidden: N samples" is a line of the trace's readout; a non-zero count logs
@@ -15625,6 +15641,290 @@ adopted; R-509's answers stand). Read with R-537 (EX6, the ✕), R-509, R-449, R
 R-538 is in the "design" group of `plan/rule_groups.yaml`, with R-476 and R-509.
 
 Adds REQ-GUI-271 to REQ-GUI-276 and REQ-INT-096; changes REQ-GUI-245 (statement, rulings, note).
+
+**The follow-up: where a trace can leave a chart, playback, the time ramp (20 Oct 2026).** R-538 had not merged when
+the follow-up came, so it is ported into this ruling, as the human's message says. The human's words, verbatim:
+
+> Follow-up from me, Malachy, 20 Oct 2026, to the extension/trace bundle already sent:
+> principia_trace_followup.zip (unzip to docs/incoming/2026-10-20_trace_followup/ and commit as-is).
+> Its demo/trace_markers.html (version 27) replaces the bundle's copy.
+>
+> Read principia_trace_followup.md in full and open the demo before changing anything. It amends
+> the bundle's principia_trace_markers.md:
+> - F1 replaces §3a. A trace leaves a chart only where a coordinate entering a shown axis with non-zero
+>   weight has no value. Hidden coordinates never make it leave; they are fade.
+> - F2 adds three bug classes, each with a test: reusing the lookup/lock validation for the trace,
+>   θ wrapped per sample inside a mixed axis, and a tilt target read in a different frame from the
+>   chart's parameters.
+> - F3: a trace not being played or scrubbed is drawn whole, to its end.
+> - F4: the colour ramp along time is selectable (presets, custom stops, reverse); it belongs to the
+>   trace style and round-trips.
+> - F6's tests (T14 to T20, T16b) join §11; F7's two questions join the queue as RQs with the
+>   recommendation as option (a).
+>
+> Port it into the same ruling as the trace bundle if that has not merged, otherwise as the next free
+> R-number, quoting §0 verbatim. The prin-rs example is reference only. If anything here contradicts
+> main, the open rulings branch or the bundle, tell me and queue it rather than resolving it.
+
+*History, the correction's first form.* An earlier message of the human's, superseded by the one above (no updated
+bundle was ever sent; the follow-up zip took its place, and the bundle at `docs/incoming/2026-10-20_extension_trace/`
+stays as delivered), verbatim; TF1 is what applies:
+
+> Follow-up to the extension/trace bundle (20 Oct 2026): replace the bundle with the updated
+> principia_extension_trace_bundle.zip. One correction, in principia_trace_markers.md §3a and T13: a
+> trace leaves a chart only where the chart's own shown coordinates have no value for the state.
+> It never leaves the shape sphere, its hemisphere or the mass simplex. On the latent z_α × z_β chart
+> it leaves only where α passes the decoder's limits. A momentum past q_max is not leaving: it only
+> moves the state off the slice, which the fade shows. The fade uses R-509's proxy |q|. My words for
+> it are quoted in §0 and §3a.
+
+The follow-up file's §0, "My words", verbatim:
+
+> ## 0. My words
+>
+> > "btw how could the trace ever leave the shape sphere chart? n hat is always defined along with theta and phi ?"
+>
+> > "yeah but what about charts that have only one of the angular compents as an axis or some combination of theta plus
+> > something else for an axis etc? means there is a bug with how you are calculating the trace ?"
+>
+> > "yeah a follow up, also update the artefact to have more weird / whacky charts so i can see how it behaves, then we
+> > can give the updated version to claude code. already sent the previous bundle off"
+>
+> > "also allow the user to change the colour ramp along time, i.e. the gradient used"
+>
+> > "also if the trace isn't being animated/played the full trace up to the horizon time should be drawn always"
+>
+
+*The follow-up's applied text (per R-369; the human may veto any).* Its preface and F1 to F4, F6 and F7, numbered here
+TF1 to TF4, TF6 and TF7 after their sections, so that they do not read as the F3 key (R-468, R-472) or R-512's F1 to F5,
+verbatim. F5, the demo's odd charts, is kept in the follow-up (`docs/incoming/2026-10-20_trace_followup/`), as TM10 is
+in the bundle:
+
+> *20 Oct 2026, after `principia_extension_trace_bundle.zip` was sent. It amends that bundle's
+> `principia_trace_markers.md`: F1 replaces its §3a, F2 adds two bug classes, F3 and F4 change §1 and §2, and F6's tests
+> join its §11. Quote §0 verbatim in the ruling. The demo, `demo/trace_markers.html` (version 27), replaces the bundle's
+> copy; it adds four odd charts that exercise F1 and F2.*
+
+> ## F1. Where a trace can leave a chart (replaces §3a)
+>
+> **The trace point is the state projected onto the chart's actual axes** (`principia_trajectory_viewing.md` §3). Two
+> rules follow.
+>
+> 1. **Hidden coordinates never make a trace leave.** Anything orthogonal to the chart's plane feeds only the
+>    off-slice distance, so it shows as the fade. Where that distance has no value, R-509 applies: no fade, and the GUI
+>    says so.
+> 2. **A trace leaves only where a coordinate entering a shown axis with non-zero weight has no value.** That means:
+>    - ±∞ from a saturated link;
+>    - NaN;
+>    - a bounded axis's inverse outside its domain.
+>
+>    Moving off the slice is never leaving.
+>
+> So whether a trace can leave depends on the chart's axes, not the chart's name:
+>
+> | Shown axis | Can it make the trace leave? |
+> |---|---|
+> | θ or φ of the shape sphere, alone or in any mix | **No.** `n̂` exists for every shape with `I > 0`; `I = 0` is a total collision, which has already ended the run. θ is undefined at the poles, a coordinate singularity the line passes as a jump. |
+> | A mass or mass ratio | **No.** Masses are constant along a run. |
+> | A physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate) | **No**, unless its warp's inverse has no value. `K ≥ 0` always, and R-508 continues `t > 1`. |
+> | A curve axis (Burrau's ν) | **No.** The encode projects onto the nearest point of the curve (inverse_encode_contract Part 5(b)), and the distance to the curve is fade. If the nearest point lies past a bounded edge, the point is not drawn there: those are real systems the bounded axis does not show (§8, the domain's end). They are counted apart from the not-a-system count, whose non-zero value is a bug; this one is not. |
+> | A latent coordinate behind a saturating link (`z_q` past `q_max`, `z_α` past the decoder's α limits) | **Yes**, exactly when that coordinate has weight in the shown axis. |
+> | `z_β` at a syzygy | It runs to ±∞ and comes back. That is a jump at infinity, not a sample off the chart. |
+>
+> **A tilted axis is a mix.** The shown coordinate is a weighted sum of the chart's parameters and the tilt target
+> (R-473's rotation). It can leave only through a term with non-zero weight:
+> - **Tilted toward a latent momentum** `z_q`: the axis carries `z_q` with weight `sin τ`, so past `q_max` it has no
+>   value and the trace leaves.
+> - **Tilted toward the physical momentum:** the same tilt never leaves.
+>
+> The demo's tabs E and F are that pair.
+>
+> ---
+>
+> ## F2. Two bug classes this rule exposes (new, with tests)
+>
+> 1. **Whole-encode validity.** The inverse encode contract's validation (Part 6, the three layers) is written for
+>    lookup and lock: it clamps, projects or rejects the whole state if any component fails. **The trace must not
+>    reuse it.**
+>    - A trace that does so vanishes whenever any hidden component is out of range, for example a momentum past
+>      `q_max` on a shape chart.
+>    - The trace checks each shown axis on its own (F1).
+>    - The demo had this bug, and drew leave and re-enter rings on the shape sphere.
+> 2. **θ inside a mix.**
+>    - If θ is taken in `[0, 2π)` at each sample and then rotated together with another coordinate, the tilted
+>      coordinate jumps by `2π·cos τ` at every wrap. A pole passage does the same, through θ + π. Both jumps are
+>      artefacts.
+>    - The correct order is three steps: take the state's chart parameters on the branch nearest the previous sample
+>      (θ ± 2π; θ + π with φ reflected over a pole); then mix; then draw in every image by the extension types.
+>    - On a tilted chart those branches are **not** repeats of one image. θ wraps but the target does not, so a shift
+>      of `2π / cos τ` along the tilted axis is a different system. Such a chart is affine along that axis and does not
+>      repeat.
+>
+> 3. **The tilt target read in a different frame from the chart's parameters.** Found building the demo's tilted
+>    sphere.
+>    - The encode returns momenta in the **canonical** frame, which mirrors whenever the shape is in the lower
+>      hemisphere (`β ∈ (0, π)`, the latent chart's section).
+>    - The full shape sphere keeps both hemispheres, so its `(θ, φ)` are read **unmirrored**.
+>    - Mixing the two flipped the sign of `p_y` at every syzygy, so the tilted trace jumped there: up to ~2000× the
+>      median step.
+>    - Read in the sphere's own frame (`ρ` along `+x`, no mirror), the worst jump falls to 5–97× the median, the size
+>      of genuine fast motion at close approach.
+>    - **Rule:** every coordinate in a mix is read in the frame the chart's own parameters are defined in.
+>
+> ---
+>
+> ## F3. A trace that is not being played is drawn whole (amends §1 and §2)
+>
+> - **Not playing or scrubbed:** when the playhead is not playing and is not being scrubbed, every trace is drawn from
+>   `t = 0` to its end (its event, or the horizon). Under §2 a paused trace was cut at the playhead.
+> - **While playing, or while the playhead is dragged:** the trace is drawn to the head, as §2 says, with the head
+>   marker.
+> - **Static mode** draws the whole trace, as now.
+> - **The own-clock mode** is always animated.
+>
+> ---
+>
+> ## F4. The colour ramp along time is selectable (amends §2's Colour row)
+>
+> - **Presets:** Sunset (the default, `#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`), Viridis, Magma, Ice, Ember, Aurora,
+>   Mono.
+> - **Custom:** three colour stops.
+> - **Reverse:** reverses the ramp.
+> - **Preview:** a preview bar shows the ramp.
+> - It applies to the line and its time ticks.
+> - It is part of the trace style, so it is kept with kept orbits, saved with the view, and travels in exports (the
+>   round-trip rule's tier 2). The demo holds one ramp for every trace.
+>
+> **Not the field.** It is not the field's palette. A Chazy or outcome palette is a stain (the node graph); this ramp is
+> the line system's.
+>
+
+> ## F6. Tests (each with the arm that fires)
+>
+> | # | Test | The arm that fires |
+> |---|---|---|
+> | T14 | Shape-axis charts never lose a trace to a hidden coordinate: on the latent `z_α × z_β` chart, a run whose momentum passes `q_max` keeps every sample's point | reusing the lookup/lock validation drops those samples |
+> | T15 | A latent-momentum tilt leaves exactly while the target's `|q| ≥ q_max`; the physical-momentum tilt never does, over 100 runs | a whole-state check (leaves on any component) or none (never leaves) |
+> | T16b | Frame: on the sphere tilted toward `p_y`, the trace's screen step at a syzygy is within 3× the median | reading `p_y` in the canonical (mirrored) frame flips it at every syzygy |
+> | T16 | No false jumps: on the tilted chart, the trace's screen step at a θ wrap and at a pole passage is within 3× the median step | per-sample `[0, 2π)` θ gives a jump of `2π·cos τ` |
+> | T17 | The tilted chart does not repeat: the systems at `s` and `s + 2π/cos τ` differ | drawing it with periodic repeats |
+> | T18 | The curve chart's trace is the nearest ν: perturb a run's shape off the curve, the point stays and the fade grows | dropping or clamping the point |
+> | T19 | Paused: a pinned trace draws to its end; playing or scrubbing, it draws to the head | cutting a paused trace at the playhead |
+> | T20 | The ramp round-trips: a kept orbit's ramp survives save and load, and Reverse reverses it | a ramp held only in GUI state |
+>
+> ---
+>
+> ## F7. Queue, don't rule
+>
+> - **Q5.** On a tilted chart with a periodic parameter, should the other θ branches (θ ± 2π) also be drawn, each faded
+>   by its own out-of-plane distance, since they are the same system projected at different distances?
+>   *Recommendation:* no by default; an option. The demo draws the continuous branch only.
+> - **Q6.** The ramp's default: Sunset, as the mock-ups, or a perceptually uniform one (Viridis)? *Recommendation:*
+>   Sunset, which reads on the dark field; Viridis's dark end vanishes on it.
+
+*Where the follow-up's words leave a choice, decided per R-369 (routine or mechanical; the human may veto any), flagged
+where they read the words:*
+- **J1. Where it lands.** In R-538, which had not merged, as the human's message says; no new R-number. `principia_lines.md`
+  §8 and §3, the render GUI spec's "Trace settings", the trajectory-viewing note §3 and the inverse encode contract's
+  Part 6 take TF1 to TF4, each replaced line's earlier words kept (*Was:*). I5 above is reworded to TF1.
+- **J2. "§3a" and "two bug classes".** The bundle as delivered has no §3a and no trace test T13 (its §3 is "The
+  markers", its tests T1 to T12); the superseded message's "§3a and T13" names an updated bundle that was never sent. TF1
+  replaces what the delivered bundle says on leaving: TM3's "Leaves the chart's reach" row, as `principia_lines.md` §8
+  carries it, and I5. The follow-up's preface says F2 "adds two bug classes" and lists three; the human's message says
+  three, and three are applied. Both are **RQ-423** (the wording; nothing waits). The bundle's extension file has a T13
+  (statistics, R-537), which is unrelated and unchanged.
+- **J3. "Leaves" draws the reach rings.** Where TF1 says a trace leaves, TM3's rings mark it (the dotted ring, the line
+  dashed until it re-enters, the ring with a dot); where TF1 says it does not, no ring is drawn. "Non-zero weight" is the
+  coordinate's coefficient in the shown axis's map at the current tilt (R-473's rotation): a weight that is exactly zero
+  (the untilted chart, bitwise R-473's) never makes the trace leave.
+- **J4. T15's boundary and quantity.** T15 says the trace leaves while "the target's `|q| ≥ q_max`"; the demo's tab E
+  says "while `|p_λ,y| > q_max`". The target there is `z_q3`, whose momentum is `q₃ = p_λ,y` (REQ-DEC-019's decode,
+  `p_λ = (q₂, q₃)`), so the quantity is read as the target component's own `|q₃|`, not R-509's proxy; the boundary is
+  `≥`, as T15 and TF1's "±∞ from a saturated link" agree (at `|q₃| = q_max` the link's inverse is ±∞). That is
+  **RQ-424**; applied meanwhile.
+- **J5. A curve axis past its bounded edge.** TF1's table says a point projected past a bounded edge of a curve axis is
+  "not drawn there", "counted apart from the not-a-system count"; its rule 2 lists "a bounded axis's inverse outside its
+  domain" as leaving. Applied meanwhile: on a curve axis the table's row (the point not drawn, the line broken there, no
+  reach ring, counted in the readout's own line, "past the domain's end: N samples", which is not a bug and logs no
+  warning); on any other bounded axis rule 2 (the trace leaves, with the rings). TM8's "in forbidden" count keeps only
+  samples whose chart point is not a system and still reads 0. Which of the two the human means, and how this sits with
+  R-470 N1's "a bounded axis past its edge" being "not a system", is **RQ-425**.
+- **J6. The fade.** TF1 rule 1 says hidden coordinates are fade and, where the distance has no value, R-509 applies.
+  The curve row's "the distance to the curve is fade" and T18's "the fade grows" are read through R-509: the fade grows
+  only on a chart where an off-plane distance is defined (R-509's proxy today; REQ-GUI-266's distance when RQ-341 is
+  ruled); elsewhere T18's point-stays arm runs and the settings say "fade: no off-plane distance on this chart". That is
+  **RQ-426**; applied meanwhile.
+- **J7. Branch continuity (TF2.2).** The chart's parameters of each sample are taken on the branch nearest the previous
+  sample's, the first sample's on the canonical branch: θ ± 2π, and over a pole θ + π with φ reflected. Then the mix,
+  then the images by the extension types (R-537 EX6, unchanged on an untilted chart). The seam ticks (TM2, off) mark
+  where the canonical θ wraps, which is no longer a break of the line.
+- **J8. A tilted chart with a periodic parameter does not repeat (TF2.2, T17).** Along an axis that mixes a periodic
+  parameter with a non-periodic one the chart is affine: the field and the trace continue and no image is drawn there.
+  R-537 EX7(b)'s canonical address applies along an axis only where every term with non-zero weight has that period; the
+  untilted sphere's maps stand. R-537 EX2 says "Periodic (θ): the chart repeats" with no word on tilt; that is **RQ-430**
+  (silence); applied meanwhile. The field's half is REQ-CHART-080 (TASK-M8-56, the canonical addresses); the trace's half
+  is REQ-GUI-278.
+- **J9. The frame rule (TF2.3).** Each chart declares the frame its own parameters are defined in: the full shape
+  sphere's `(θ, φ)` unmirrored, `ρ` along `+x`; the latent chart's canonical, mirrored in the lower hemisphere (inverse
+  encode Part 6, step 3). A tilt target, and every other coordinate of a mix, is read in that frame. On the latent
+  momenta chart the parameters are canonical, so TM5's jump at every syzygy, with a marker at both ends, stands.
+- **J10. Per shown axis, never the lookup ladder (TF2.1).** The trace never runs the inverse policy's validation (Part 6,
+  the three layers) on a sample's state: it encodes the shown axes' coordinates without clamping, and a coordinate with
+  no value on a weighted axis is TF1's leaving. TM8's "fails `validate` layers 2 and 3" is read as the not-a-system test
+  of the sample's chart point on the shown axes, after the types fold it, so a branch-continuous θ outside `[0, 2π)` is
+  not a failure. Whether that reading is TM8's is **RQ-429**; applied meanwhile.
+- **J11. Playback (TF3).** It applies to `animate: WithPlayhead`. "Played" is the transport playing (`ViewUI`'s
+  `Transport.playing`); "scrubbed" is the scrubber held by the pointer, as the demo has it. A step (← →, or the step
+  buttons) while paused is neither, so the trace is drawn whole after it (flagged). The head marker is drawn only while
+  the trace is drawn to the head (the demo's). The GUI passes the drawn extent (to the head, or to the end) to the line
+  pass each frame, so the engine reads no `ViewUI` state (gui_state_contract §2). TF3's "drawn from `t = 0` to its end"
+  is the default length, `ToPlayhead`; a `Window` or `LastDt` length is kept as chosen, and the own clock's "Once" plays
+  as §8 has it: those are **RQ-427** (silence); applied meanwhile. T1 (REQ-GUI-271) is measured while playing; paused,
+  a new trace draws to its end (T19).
+- **J12. The ramp (TF4).** `Trace.colour`'s `AlongTime` takes a `TimeRamp { preset: Sunset | Viridis | Magma | Ice |
+  Ember | Aurora | Mono | Custom([c₀, c₁, c₂]), reverse: bool }`, a type of the line system's own, distinct from the stain
+  graph's `Ramp` (colour_composition), as TF4 says it is not the field's palette. The presets' stops are the demo's
+  (Sunset `#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`; Viridis `#440154 #3B528B #21918C #5EC962 #FDE725`; Magma `#3B0F70
+  #8C2981 #DE4968 #FE9F6D #FCFDBF`; Ice `#F2FBFF #9EDCFF #4A9BFF #5B3BFF`; Ember `#FFF4D6 #FFC15A #FF6A2B #B3122E`; Aurora
+  `#B7F28A #3BD6B0 #3B8BFF #C94BFF`; Mono `#FFFFFF #6A6D74`), evenly spaced and interpolated linearly in the
+  sRGB-encoded components, as the demo does (flagged); Custom's three stops start at the demo's `#FFF27A #E0457B
+  #3BC7FF`. The ramp runs over `t ∈ [0, t_max]`, the horizon, so equal times share a colour across traces (the demo's;
+  §8's "from start to end" read so, flagged). It colours the line, its time ticks (TF4), and the marks drawn in the
+  trace's colour, the start star and the direction arrows, each at its own time (the demo's); the event icons keep the
+  outcome palette (TM3). Each trace carries its own ramp (TF4: "part of the trace style"); the demo's one ramp for every
+  trace is the demo's. The default colour stays TM2's fixed `#FFF27A`; the ramp, once chosen, defaults to Sunset
+  (RQ-422 (a)). Each control is one undoable `SetField` that re-integrates nothing, in the keyboard tree as Lines ▾'s
+  others (I2). The ramp is `Lines`' state in `RenderState` (R-476 M5), so it is saved with the view and exported; it is
+  the round-trip rule's tier 2 when that rule merges (R-537 U15's reading). A kept orbit's ramp is its `Trace`'s
+  (`kind: Kept(id)`), which the round trip carries; the kept-orbit list itself is `ViewUI` (gui_state_contract §2,
+  R-453 D5): that is **RQ-428**; applied meanwhile.
+- **J13. The queue (TF7).** Q5 and Q6 are **RQ-421** and **RQ-422**, each with the recommendation as option (a),
+  applied meanwhile: the continuous branch only, the option to draw the other branches faded being built when the
+  distance it fades by exists (REQ-GUI-266, RQ-341; flagged); Sunset the ramp's default. A ruling other than (a) is a
+  follow-up change. Nothing waits.
+- **J14. The tests (TF6).** T14 and T15 are REQ-GUI-277's verify; T16 and T17's trace half REQ-GUI-278's; T16b
+  REQ-GUI-279's; T18 REQ-GUI-280's; T19 REQ-GUI-281's; T20 REQ-GUI-282's; T17's field half REQ-CHART-080's; each with the
+  arm the file gives. TASK-M8-58 closes REQ-GUI-277 to REQ-GUI-282, physics reviewing REQ-GUI-277 to REQ-GUI-280 (the
+  per-axis check, the branches, the frame and the curve's projection touch the encode); TASK-M8-56 closes
+  REQ-CHART-080, with its physics reviewer.
+- **J15. The earlier port's leaving text** is replaced where it said a momentum past `q_max` leaves a chart that does
+  not show it: `principia_lines.md` §8's row and I5 (each *Was*); TM3's row is the bundle's words, quoted, and stays as
+  quoted. RQ-412's and RQ-417's entries gain a note (J8, J5); TF1 settles none of RQ-416 to RQ-420.
+
+*Checked against `main` (b451cd61), `rulings/R-469` (e13faeef) and the bundle (the human's message: "If anything here
+contradicts main, the open rulings branch or the bundle, tell me and queue it rather than resolving it"):* RQ-423 to
+RQ-430 are queued, not ruled. TF2.3's frame agrees with TM5 and inverse encode Part 6 step 3 (J9). TF3 has no bearing
+on R-509's fade; R-472's "F3" is the key, a name only (J1's numbering). TF4's ramp agrees with the stain palettes
+(R-476's line system outside the node graph) and, on the print-graph port's unmerged branches, with the round-trip
+rule's tier 2 ("the line system") and with lines drawn over the Print graph by default; R-130's styles do not reach
+line colour. TF1's θ, mass and
+physical-quantity rows agree with R-14, R-508 and the inverse encode contract Part 5(b).
+
+*What the follow-up amends:* this ruling's TM3 row on leaving (as `principia_lines.md` §8 carries it), I5, TM2's length
+default (TF3) and colour row (TF4), and TM8's count (J5); read with R-473, R-509, R-512, R-470 and R-537, and the round-trip rule when it merges.
+
+The follow-up adds REQ-GUI-277 to REQ-GUI-282 and REQ-CHART-080; changes REQ-GUI-271 (verify, note), REQ-GUI-272
+(statement, note) and REQ-GUI-276 (statement, note).
 
 ## R-539 — "The figure is never covered" is about the generic GUI panels and chrome: figure-level marks, such as the trace, contour lines and icons for points of interest, may cover the figure *(refines R-466)*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (a sentence
