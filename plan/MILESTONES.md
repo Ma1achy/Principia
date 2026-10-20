@@ -184,7 +184,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 178 requirements** (and every earlier gate still green):
+**Exit gate — 179 requirements** (and every earlier gate still green):
 
 - DEC (39): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…047
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
@@ -196,7 +196,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - COL (12): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105, REQ-COL-108…110
 - GUI (7): REQ-GUI-002…007, REQ-GUI-188
 - TOOL (3): REQ-TOOL-029…030, REQ-TOOL-163
-- VAL (16): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174
+- VAL (17): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174, REQ-VAL-192
 - SYS (7): REQ-SYS-010…016
 <!-- /gate:M2 -->
 

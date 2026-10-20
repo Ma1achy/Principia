@@ -733,6 +733,14 @@
   requirements: [REQ-CHART-058]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9]
+- id: TASK-M2-42
+  milestone: M2
+  title: "The pipeline_runtime teardown SIGSEGV stops: reproduce it, find the cause, fix it, and check for it"
+  depends_on: [TASK-M1-05, TASK-M1-08]  # the CI flake on PRs #235 and #254, after R-276 and R-333; applied per R-369
+  needs: [REQ-RENDER-011]
+  requirements: [REQ-VAL-192]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
