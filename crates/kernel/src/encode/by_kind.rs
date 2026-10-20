@@ -181,14 +181,18 @@ pub fn component<R: Copy>(z: &[R; 8], k: Coordinate) -> R {
     }
 }
 
-/// `⟨a, b⟩` over the eight components.
+/// `⟨a, b⟩` over the eight components: the first product, then a chain of explicit `fma`s, each by a literal index
+/// (gpu_determinism_note rules 5 and 6).
 #[inline]
 fn dot<R: LinkReal>(a: &[R; 8], b: &[R; 8]) -> R {
-    let mut s = R::zero();
-    for k in 0..8 {
-        s = Float::mul_add(a[k], b[k], s);
-    }
-    s
+    let fma = Float::mul_add;
+    let s = fma(a[1], b[1], a[0] * b[0]);
+    let s = fma(a[2], b[2], s);
+    let s = fma(a[3], b[3], s);
+    let s = fma(a[4], b[4], s);
+    let s = fma(a[5], b[5], s);
+    let s = fma(a[6], b[6], s);
+    fma(a[7], b[7], s)
 }
 
 /// The components `(a, b)` of `d` in the plane of `q1`, `q2`: the least-squares solution of `d ≈ a·q₁ + b·q₂`, the
@@ -216,10 +220,16 @@ impl<P: Copy> ByKind for Latent<P> {
         let wide = |q: [P; 8]| q.map(<R as From<P>>::from);
         let z0 = wide(self.z0);
         let z = e.z.z;
-        let mut d = [R::zero(); 8];
-        for k in 0..8 {
-            d[k] = z[k] - z0[k];
-        }
+        let d = [
+            z[0] - z0[0],
+            z[1] - z0[1],
+            z[2] - z0[2],
+            z[3] - z0[3],
+            z[4] - z0[4],
+            z[5] - z0[5],
+            z[6] - z0[6],
+            z[7] - z0[7],
+        ];
         let half = R::one() / (R::one() + R::one());
         match plane(&d, &wide(self.q1), &wide(self.q2)) {
             Some((a, b)) => [
@@ -627,7 +637,11 @@ where
             };
             let inverted = super::blocks::invert::<S, R>(&ic);
             let mut z = [R::zero(); 8];
-            z[2..6].copy_from_slice(&inverted.z[2..6]);
+            // The momentum block by literal indices (gpu_determinism_note rule 5).
+            z[2] = inverted.z[2];
+            z[3] = inverted.z[3];
+            z[4] = inverted.z[4];
+            z[5] = inverted.z[5];
             Lookup::Encoded {
                 z,
                 lz,
@@ -674,7 +688,10 @@ where
             clamped,
         } => {
             let mut placed = frozen;
-            placed[2..6].copy_from_slice(&z[2..6]);
+            placed[2] = z[2];
+            placed[3] = z[3];
+            placed[4] = z[4];
+            placed[5] = z[5];
             Lookup::Encoded {
                 z: placed,
                 lz,
