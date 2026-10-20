@@ -171,7 +171,7 @@ only (R-444):**
 
 | class | payload | colour | sRGB |
 |-------|---------|--------|------|
-| bounded / nothing yet | `bounded`, `running` and every failure (R-446) | black | `#141418` |
+| bounded / nothing yet | `bounded`, `running`, `sim_failed` and a reserved `state` code (R-446); a `decode_failed` sample draws blank (R-511; *was:* "`bounded`, `running` and every failure") | black | `#141418` |
 | collision 1–2 | collision, `detail` = pair 2 (bodies 0, 1) | red | `#DE2D2D` |
 | collision 1–3 | collision, `detail` = pair 1 (bodies 2, 0) | green | `#2EBC4E` |
 | collision 2–3 | collision, `detail` = pair 0 (bodies 1, 2) | blue | `#3462E0` |
@@ -198,10 +198,14 @@ assignment lands on `detail`, not on a second field). **How the table reads the 
 `state` and `detail` alone. `t_end_step` plays no part: a collision at `t_end_step == 0` is an ordinary pair or triple
 collision and draws in that colour (R-445); timing is carried by lightness when a stain wants it, the outcome ×
 `t_end` bivariate preset (§4.1), white = early. **Black means "nothing has happened yet, up to the playhead"
-(R-446):** `bounded`, `running` and every failure draw `#141418` in the outcome view: `sim_failed` of each detail
-(NaN in state, Inf or overflow in state, a non-finite derived quantity, payload §2: the human's "NaN, infinity"),
-`decode_failed` whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's
-`M01_TINY`, a non-finite decode), and a reserved `state` code (applied per R-369). The outcome view reads only `state`
+(R-446):** `bounded`, `running`, `sim_failed` of each detail (NaN in state, Inf or overflow in state, a non-finite
+derived quantity, payload §2: the human's "NaN, infinity") and a reserved `state` code (applied per R-369) draw
+`#141418` in the outcome view; a `decode_failed` sample, whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and
+`ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite decode), draws blank, as a pixel that is not a system,
+with no key or share (R-511, ruling RQ-379; below). *Was (R-446):* "`bounded`, `running` and every failure draw
+`#141418` in the outcome view: `sim_failed` of each detail (…), `decode_failed` whatever its `detail` or tag (η_E's
+`ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite decode), and a reserved `state`
+code". The outcome view reads only `state`
 and `detail`, integer fields, so it never receives a NaN itself; storage holds none (R-79). **`#141418` is the outcome
 palette's explicit invalid treatment**, which §3 ("Overridable per node") and render_gui_spec §13 ("every colouring
 has an explicit invalid-pixel treatment") allow, so R-79's rule that NaN or a sentinel reads as "no data", and
@@ -538,9 +542,11 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   never a place on the greyscale or the wheel: a `running` sample of a field that holds no value for it, the "not
   yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a reserved `state` code or a NaN `#141418` in a
   presentation view (R-467) and the invalid pattern, `debug_invalid(frag_xy)`, in the debug views, as they draw them.
-  **The outcome class is the exception (R-446):** it holds a value for every sample, `running` and every failure being
-  its bounded / nothing yet class, so in every mode they take that class's place, rank 0, as the outcome palette draws
-  them black (§1.4); a forbidden chart region draws the canvas background in every mode, decided from the chart's
+  **The outcome class is the exception (R-446):** it holds a value for every sample but a `decode_failed` one,
+  `running`, `sim_failed` and a reserved code being its bounded / nothing yet class, so in every mode they take that
+  class's place, rank 0, as the outcome palette draws them black (§1.4), and a `decode_failed` sample draws blank in
+  every mode (R-511; *was:* "it holds a value for every sample, `running` and every failure being its bounded / nothing
+  yet class"); a forbidden chart region draws the canvas background in every mode, decided from the chart's
   validity, not from the payload (§1.4; R-467). *Was (R-446, R-399):* "a `sim_failed` sample, a reserved `state` code or
   a NaN the invalid pattern, `debug_invalid(frag_xy)`, as the debug views draw them"; "only a forbidden chart region
   keeps the hatch, in every mode". A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in

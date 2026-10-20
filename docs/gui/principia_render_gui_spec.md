@@ -73,7 +73,8 @@ data. The two words name one object. The **figure** is the rendered slice.
   not part of the chart (past `[0,1]²` a state that fails validity or an axis beyond its bounded edge; inside the
   square a validity failure, a decoder bug, §G12) draws the plain canvas background, the colour the window is cleared
   to, with no hatch, legend key or share, as the area outside a map is blank; and NaN, `±∞`, `sim_failed` and
-  `decode_failed` are never a category: they draw R-446's black `#141418`. The debug views show them, View › Debug view
+  `decode_failed` are never a category: NaN, `±∞` and `sim_failed` draw R-446's black `#141418`, and `decode_failed`
+  draws blank (R-511; *was:* "they draw R-446's black `#141418`"). The debug views show them, View › Debug view
   all three at once (§G2), and the Chart builder's Domain preview keeps its hatch and its "forbidden in view: N%", a
   diagnostic for building charts (§G7). **R-470:** such a pixel is blank, the view's background, in every view, never a
   palette colour, the outcome view included; the hatch outside the debug views is only the optional Overlays › Chart ›
@@ -739,8 +740,9 @@ It's called **"Legend"**, never "Fate". The outcome legend uses colour_compositi
 its 1-based class names (R-449, superseding R-22's 0-based display labels): "collision 1–2", "collision 1–3", "collision
 2–3", "triple collision", "escape body 1", "escape body 2", "escape body 3", "triple ejection", each from the one display
 function (payload §2, "What a person reads"); no key shows "body 0" or a pair id. Its keys are the nine classes,
-physical outcomes only (R-444), each a flat swatch: the black key reads "bounded / nothing yet", which `running` and
-every failure share in the outcome view (R-446); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
+physical outcomes only (R-444), each a flat swatch: the black key reads "bounded / nothing yet", which `running`,
+`sim_failed` and a reserved code share in the outcome view (R-446), a `decode_failed` sample drawing blank, with no key
+or share (R-511; *was:* "which `running` and every failure share"); it has no "degenerate", "collision @ t=0", `running` or `sim_failed`
 key. **Each key's name is the outcome class's name from the same display module** (applied per R-369): the black
 class's is "bounded / nothing yet", the other eight's the function's names for their `state` and `detail`.
 **No forbidden-region key (R-467, amending R-446).** A presentation legend has no "forbidden region" key and no
@@ -760,8 +762,8 @@ forbidden pixel"; "Its share and the nine classes' shares are area statistics ov
 the domain ends there … is drawn with the key's hatch but leaves every share and the total; the forbidden key's share
 is that of the states that fail the validity check, §G7's "forbidden in view".".
 
-**A free-fall slice under `η_E` is almost all `decode_failed`, drawn black, and that is expected (R-441, reworded by
-R-446; dd_decoder §3.7).** Energy
+**A free-fall slice under `η_E` is almost all `decode_failed`, drawn blank, and that is expected (R-441, reworded by
+R-446 and R-511; dd_decoder §3.7).** *Was:* "drawn black". Energy
 normalisation scales the momenta, `pᵢ ← η_E·pᵢ`; with zero momenta it cannot reach any `E*` above the potential, since
 scaling zero momenta cannot raise the kinetic energy. So with `η_E` on, every pixel of a zero-momentum (free-fall)
 slice whose `E*` is above its potential `U = V₀` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
@@ -774,11 +776,14 @@ decode is untouched and untagged, and the pixel integrates, drawn in its outcome
 `V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
 `V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
 scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E` is then a no-op on every free-fall
-preset, and the near-uniform black, with that contour its only exception, is expected, not a bug. The Chazy stains
-draw the same samples black too, Chazy B's `#141418`, as every presentation view draws a failure (R-467, ruling
-RQ-319; dd_chazy_final_motion §7), so the same slice reads black there; View › Debug view shows them as "decode or sim
-failure". In both systems the black key's share counts these samples, so there it reads near 100 % and is not a
-bound fraction; the debug view's counts separate them (dd_chazy_final_motion §10.10; R-467, applied per R-369). *Was (RQ-319, decided per R-369):* "The Chazy stains draw the same samples with the render contract's hatch
+preset, and the near-uniform blank (R-511; *was:* "black"), with that contour its only exception, is expected, not a bug.
+The Chazy stains draw the same samples blank too, as every presentation view draws a `decode_failed` sample (R-511,
+ruling RQ-379; dd_chazy_final_motion §7), so the same slice reads blank there; View › Debug view shows them as "decode
+or sim failure". In both systems these samples leave every share and its total (R-511 Z1), so the black key's share
+counts only the systems drawn; the debug view counts them (dd_chazy_final_motion §10.10). *Was (R-467, ruling RQ-319,
+applied per R-369):* "The Chazy stains draw the same samples black too, Chazy B's `#141418`, as every presentation
+view draws a failure …, so the same slice reads black there"; "In both systems the black key's share counts these
+samples, so there it reads near 100 % and is not a bound fraction; the debug view's counts separate them". *Was (RQ-319, decided per R-369):* "The Chazy stains draw the same samples with the render contract's hatch
 (`debug_invalid`), as they draw `sim_failed`, not black, …, so the same slice reads hatched there." The
 tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today
 the `state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view

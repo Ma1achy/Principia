@@ -1496,7 +1496,7 @@ changes what the default view draws.*
 - **Applied meanwhile:** (c), a saved curved chart's target dropdowns not offering its saved target (R-475 L5).
 - **Waits:** REQ-CHART-077 (`rq: RQ-403`), closed by TASK-M2-39, a leaf task.
 
-## RQ-404: The tilt of a latent view saved at a tilt: only five named dimensions are orthogonal to its plane, the tilt target is not off it, and under Lean each axis the saved pair is not orthonormal, so R-475 L4's "the six dimensions off the saved plane" and both maps' formulas do not apply as written *(gui review, tilt maths, R-475 S1 and L4, R-457, R-474 K1, R-477 C5; context: TASK-M6-49, TASK-M6-51)*
+## RQ-404: The tilt of a latent view saved at a tilt: at most five named dimensions (four with two targets) are orthogonal to its plane, the tilt target is not off it, and under Lean each axis the saved pair is not orthonormal, so R-475 L4's "the six dimensions off the saved plane" and both maps' formulas do not apply as written *(gui review, tilt maths, R-475 S1 and L4, R-457, R-474 K1, R-477 C5; context: TASK-M6-49, TASK-M6-51)*
 
 *Found by the gui review of PR #255 (5586902228, G3). Nothing is chosen. For the human: yes (physics: tilt maths).*
 
@@ -1508,8 +1508,8 @@ changes what the default view draws.*
     orthogonal, and is reported so".
   - `decisions.md` § "R-474 — …", K1: Tip as sheet's Rodrigues rotation "in the 3-space `(e_a, e_b, e_X)`"; R1's Lean
     each axis, `u₁ = cos τ₁ e_a + sin τ₁ e_d`.
-- **The question:** a plane saved at a tilt spans a mix of `e_a`, `e_b` and the target `e_X`. Only five named
-  dimensions are orthogonal to it, and `e_X` is not off it. If `e_X` is offered again, Tip as sheet's rotation runs in
+- **The question:** a plane saved at a tilt spans a mix of `e_a`, `e_b` and the target `e_X`. At most five named
+  dimensions (four with two targets, the plane then meeting span(e_a, e_b, e_X, e_Y)) are orthogonal to it, and `e_X` is not off it. If `e_X` is offered again, Tip as sheet's rotation runs in
   the non-orthonormal frame `(q₁, q₂, e_X)`, and Lean's `u₁ = cos τ q̂₁ + sin τ e_X` is not a unit vector. Under Lean the
   saved pair is not orthogonal even before that, so C5's orthonormality does not hold on such a chart. Which targets
   the dropdowns list, and how each map acts on a non-orthonormal saved pair, the words do not say.
@@ -1523,5 +1523,9 @@ changes what the default view draws.*
     its targets, named as such.
 - **Applied meanwhile:** a saved latent chart whose plane is spanned by two named dimensions (saved untilted) takes the
   six off it, exactly as L4 says; one saved at a tilt is sliced, saved again and reopened bitwise, and its Tilt section
-  is dimmed, with a tooltip naming this entry (R-475 L4).
+  is dimmed, with a tooltip naming this entry (R-475 L4). The compass's tilt mode is refused on it too: a tilt-mode
+  drag and the tilt arrows emit no edit, and the status line says "Tilt waits on RQ-404 for a chart saved at a tilt";
+  the dimmed controls stay in the keyboard order, inert (gui review 5587650119 of PR #255, G12; REQ-GUI-240).
+- **Corrected** on physics review 5587614130 of PR #255, item 5: the title and the question said "only five named
+  dimensions are orthogonal", the count with one target; with two targets it is four.
 - **Waits:** REQ-GUI-265 (`rq: RQ-404`), the tilt of such a chart on the mock, closed by TASK-M6-51, a leaf task.

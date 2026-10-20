@@ -248,7 +248,8 @@ is infeasible by construction** — which is why the warp exists rather than cla
 For `(Lz, K)`: identical, with `K* = K(t)` directly. Simpler, since `K ≥ 0` is the natural
 constraint.
 
-**Past the unit square (R-407): both axes are bounded.** Outside `[0,1]²` the warp has no feasibility guarantee:
+**Past the unit square (R-407, R-508): `s` is bounded, and `t` bounded below `t = 0` and continuing past `t = 1`**
+(*was:* "both axes are bounded"). Outside `[0,1]²` the warp has no feasibility guarantee:
 `s ∉ [0,1]` gives `|L_z| = |2s − 1|·L_max(t) > L_max(t)`, so `K* < K_min`, infeasible for every `γ_K`; `t < 0` has no
 real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back onto `t > 0`). So the warp
 is bounded past `s`'s edges and below `t = 0` (§5.4). Its `t > 1` side (`K > K_max`) stays feasible, and it
@@ -824,7 +825,8 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   `m(u) = m_min·(m_max/m_min)^u`, a quantity behind a nonlinear warp, which declares nothing: its continuation would
   draw the same `ν` family again, adding no system (the decoder ignores `u`), and below `u = 0` `m < m_min`, where the
   default `m_min = 1` leaves no lattice point.
-- **`K`, bounded** (the `(ν, K)` chart's and `Φ_θ,K`'s vertical axis). It is §2.1's `K(t) = K_max·t^γ_K`, bounded for
+- **`K`, bounded below `t = 0` and continuing past `t = 1`** (R-508; *was:* "`K`, bounded"; the `(ν, K)` chart's and
+  `Φ_θ,K`'s vertical axis). It is §2.1's `K(t) = K_max·t^γ_K`, bounded for
   §2.1's reasons: `t < 0` has no real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back
   onto `t > 0`). Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) continues, affine, as on the warp (R-508, ruling
   RQ-376), and is counted. *Was:* "is left undeclared, as on the warp (R-407, A5)". The table's rows for the warp, the

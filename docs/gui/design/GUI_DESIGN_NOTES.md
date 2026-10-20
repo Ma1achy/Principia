@@ -9,9 +9,10 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   structure and every feature. With the layer hidden the figure fills the window by Extend, the default, more of the
   field at the same scale, or Fit, the view's square scaled to the window's shorter side, chosen in View › "F3 fills
   by" *(conformed to R-468)*.
-- **Presentation views draw no hatch.** A pixel that is not part of the chart draws the canvas background, and a
-  failure or a non-finite value black `#141418`; View › Debug view shows them, each with a key and a count *(conformed
-  to R-467)*.
+- **Presentation views draw no hatch.** A pixel that is not part of the chart draws the canvas background, a
+  `sim_failed` sample or a non-finite value black `#141418`, and a `decode_failed` sample blank; View › Debug view shows
+  them, each with a key and a count *(conformed to R-467 and R-511; was: "and a failure or a non-finite value black
+  `#141418`")*.
 - **Not a system is blank, never a colour.** A pixel that is not a system draws the background in every view; the hatch
   is only the optional Overlays › Chart › forbidden region, over those pixels alone. A chart never leaves the manifold:
   a pan, slice, zoom, tilt or lock stops at the last value whose centre validates, and the readout says which check
