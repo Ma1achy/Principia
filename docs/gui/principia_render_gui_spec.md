@@ -175,7 +175,7 @@ view the manifold.
   (§G7), at once and not undoable; deleting the active one leaves the view as it is, the picker naming it "unsaved
   chart" with its provenance until another chart is picked or it is saved again (R-475 L3). A latent view saved at a
   tilt offers as its targets the named dimensions other than its first parent's axes, each projected off the saved
-  plane and normalised (listed "⊥ (projected)" where the projection changed it), the vanishing ones dropped, and both
+  plane and normalised (listed as "<name> ⊥ (projected)" where the projection changed it; *was* "listed "⊥ (projected)""), the vanishing ones dropped, and both
   maps act in the orthonormal frame of the stored pair and the target, carrying the stored pair (R-514); a saved
   curved chart's target dropdowns offer its saved target too, a new tilt into it composing the rotations (R-513).
   *Was:* "A latent view saved at a tilt keeps its Tilt section dimmed meanwhile, its tilt waiting on RQ-404; a saved

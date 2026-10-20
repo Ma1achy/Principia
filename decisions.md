@@ -14765,7 +14765,8 @@ Changes REQ-COL-108 and REQ-COL-111 (statement, verify, rulings, note).
 reworded, with its earlier words kept), `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that
 makes every pixel valid" (RQ-402's clause reworded, with its earlier words kept), R-471's, R-472's and R-477's heading
 blocks, `docs/archive/review_queue/M0.md` (RQ-402, moved with its ruling), REQ-CHART-076 (reqio: statement, verify,
-rulings, `rq` removed, note), REQ-CHART-061 and REQ-CHART-069 (reqio: statement, rulings, note), TASK-M2-39
+rulings, `rq` removed, note), REQ-CHART-061 and REQ-CHART-069 (reqio: statement, rulings, note), REQ-CHART-066
+(reqio: verify, rulings, note), TASK-M2-39
 (re-scoped, no longer waiting), TASK-M2-36, TASK-M2-37 and TASK-M2-38 (notes), `plan/tasks.yaml` and
 `plan/rule_groups.yaml`; built by TASK-M2-39 (⚑)*
 
@@ -14790,13 +14791,15 @@ meanwhile (R-471 H9).
 
 *Where the words leave a choice, decided per R-369 (the extension under physics review, R-407 clause 3; the human may
 veto any):*
-- **F1. "Past the edge and blank", with the types (flagged).** Option (a) says "as the types say": such a pixel's axes'
+- **F1. "Past the edge and blank", with the types.** Option (a) says "as the types say": such a pixel's axes'
   types act on its `(a, b)` as past the window (R-472 X3a, unchanged). Past a bounded edge, which is every edge the
   entry asked about (a warped `L_z`'s `s` axis on either side, the warp's `t < 0` side, R-508), the pixel is not a
   system and draws blank (R-470). Past the warp's continuing `t > 1` side (R-508 V2), the one side the types continue,
   the pixel is that side's system, as past the window; it was never infeasible, so the entry's failure does not arise
-  there. Flagged: the human's "blank" read as the bounded case; read for every edge it would contradict R-508 V2 inside
-  the window only, which nothing else in the corpus does.
+  there. Settled by the docs, not a reading of ours (physics review 5591497181 of PR #255, P1): the option the human
+  chose says "draw blank, as the types say", and the types are R-508 V2's (`t > 1` continues) and V5's (tilted, they
+  act on `(a, b)`). *Was:* "Flagged: the human's "blank" read as the bounded case; read for every edge it would
+  contradict R-508 V2 inside the window only, which nothing else in the corpus does.", and "(flagged)" in the heading.
 - **F2. Tip as sheet is unchanged:** no scale (option (b)) and no withholding (option (c)). Lean each axis, a single
   angle and `X ≠ Y` keep every window pixel's `(a, b)` in the square (R-471 H9).
 - **F3. Statistics.** A blank pixel past a bounded edge inside the window is the domain's end, as past the window:
@@ -14816,14 +14819,16 @@ It closes **RQ-402**.
 R-512 is in the "physics" group of `plan/rule_groups.yaml`, with R-471.
 
 Changes REQ-CHART-076 (statement, verify, rulings, `rq` removed, note), REQ-CHART-061 and REQ-CHART-069 (statement,
-rulings, note).
+rulings, note) and REQ-CHART-066 (verify, rulings, note: past `t = 1` the continuing side's system; physics review
+5591497181 of PR #255, P1).
 
 ## R-513 — A new tilt of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v, 0)`, the saved `R` acting on `(u′, v′, d′)`; the saved target is offered again *(closes RQ-403; amends R-473 and R-475)*
 *20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "1.1 Affine slices — the "no tilt" case" (a
 sentence added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)" (RQ-403's
 clause reworded, with its earlier words kept), R-473's and R-475's heading blocks, `docs/archive/review_queue/M0.md`
 (RQ-403, moved with its ruling), REQ-CHART-077 (reqio: statement, verify, rulings, `rq` removed, note), REQ-CHART-073
-(reqio: statement, rulings, note), REQ-GUI-244 (reqio: rulings, note), TASK-M2-40 (closes REQ-CHART-077), TASK-M2-39
+(reqio: statement, rulings, note), REQ-GUI-244 (reqio: verify, rulings, note), REQ-GUI-241 (reqio: statement,
+rulings, note), TASK-M2-40 (closes REQ-CHART-077), TASK-M2-39
 (no longer closes it), TASK-M8-48 (needs REQ-CHART-077; a note), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built
 by TASK-M2-40 (⚑) and TASK-M8-48 (⚑)*
 
@@ -14853,7 +14858,8 @@ two offsets, `d + d′`, and (c), applied meanwhile (R-475 L5), did not offer th
 - **Q4. Where it is built (applied per R-369: the composition is built once).** The kernel's saved chart composes both
   cases, so REQ-CHART-077 moves from TASK-M2-39 to TASK-M2-40, which builds REQ-CHART-073's composition, as R-507 U4
   folded T4's units into T2; TASK-M2-39 keeps REQ-CHART-076 alone and no longer depends on TASK-M2-40. The real
-  engine's dropdowns offer the saved target (TASK-M8-48, REQ-GUI-244, which needs REQ-CHART-077). Physics reviews both.
+  engine's dropdowns offer the saved target (TASK-M8-48: REQ-GUI-241's statement, REQ-GUI-244's verify arm with its
+  control; it needs REQ-CHART-077). Physics reviews both.
 - **Q5. RQ-403 is closed** and moves to the archive; REQ-CHART-077 is restated with the answer and loses its `rq`.
 
 *What it amends:* **R-475** (L5's "whether `d′` and `d` add or `R` acts on `(u′, v′, d′)`", ruled, and its meanwhile)
@@ -14861,8 +14867,9 @@ and **R-473** (J9's composition, into the saved target). It closes **RQ-403**.
 
 R-513 is in the "physics" group of `plan/rule_groups.yaml`, with R-473.
 
-Changes REQ-CHART-077 (statement, verify, rulings, `rq` removed, note), REQ-CHART-073 (statement, rulings, note) and
-REQ-GUI-244 (rulings, note).
+Changes REQ-CHART-077 (statement, verify, rulings, `rq` removed, note), REQ-CHART-073 (statement, rulings, note),
+REQ-GUI-244 (verify, rulings, note) and REQ-GUI-241 (statement, rulings, note: its dropdowns offer the saved target;
+code review 5591496358 of PR #255, C1).
 
 ## R-514 — A latent view saved at a tilt tilts again in an orthonormal frame: the named dimensions projected off the saved plane and normalised, vanishing ones dropped, are its targets; both maps act in that frame; the stored pair is kept, so the view reopens bitwise *(closes RQ-404; amends R-474, R-475 and R-477)*
 *20 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "1.1 Affine slices — the "no tilt" case" (a
@@ -14897,7 +14904,8 @@ any):*
   dimensions its first parent's axes were (R-457's `e_a`, `e_b`, in the provenance, L2), so the earlier target is
   offered again, projected. A dimension **vanishes** when `|t|² ≤ 10⁻¹²`, the threshold of the GUI's degenerate-basis
   sine test (REQ-GUI-203; `|t|` is the sine of its angle to the plane), and is dropped; a second target that vanishes
-  against the first is the one-target case. A projected entry is listed under its name marked "⊥ (projected)"; an entry
+  against the first is the one-target case. A projected entry is listed under its name marked, as "<name> ⊥
+  (projected)" (gui review 5591485827 of PR #255, G14: the exact form, the name kept); an entry
   already orthogonal is listed as it is. For a plane saved untilted every projection is exact, and the six off it are
   L4's, unchanged.
 - **I3. The maps in the frame.** R-474's maps written with `e_a → q̂₁`, `e_b → q̂₂⊥`, `e_X → t̂_X` (`e_Y → t̂_Y`): Tip as
@@ -14918,8 +14926,8 @@ any):*
   tilt mode refused, the dimmed controls kept in the keyboard order, inert), since the tilt itself is TASK-M6-51's,
   which depends on it; its tooltip and status line no longer name RQ-404 and read "Tilt of a chart saved at a tilt is
   not built yet" (REQ-GUI-240). TASK-M6-51 lifts the guard: when it lands REQ-GUI-265 supersedes REQ-GUI-240's
-  tilt-saved arms, the tests of them changing in TASK-M6-51, qa's in its qa commit, as R-509 Y3 has it. The readouts (R-474 R8, R9) show each tilted axis's
-  components as for any chart.
+  tilt-saved arms, the tests of them changing in TASK-M6-51, qa's in its qa commit, as R-509 Y3 has it. The readouts
+  (R-474 R8, R9) show each tilted axis's components as for any chart.
 - **I7. RQ-404 is closed** and moves to the archive; REQ-GUI-265 is restated with the answer and loses its `rq`.
 
 *What it amends:* **R-475** (L4's "Which targets such a chart offers, and how the maps act on its pair", ruled, and
