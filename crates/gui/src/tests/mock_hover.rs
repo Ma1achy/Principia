@@ -7,6 +7,7 @@
 //! seconds, the wall clock's, never by frames. Each check also runs on an input it must reject (R-176, through `rejects`).
 
 use eframe::egui::{self, pos2, vec2, Event, Key, Modifiers, Rect};
+use engine::contract::display;
 use engine::contract::sample::Sample;
 use engine::contract::view_ui::{KeptOrbits, KeyMode};
 
@@ -135,16 +136,16 @@ fn mock_hover_label_reads_the_sample() {
         hover_label::text(&s, 12.4, 50.0),
         format!("undecided · still interacting at t 12.4 of 50 · {LISTEN_HINT}")
     );
-    s.fate = Some("body 1 escape".to_owned());
+    s.fate = Some("escape body 1".to_owned());
     s.t_end = Some(31.2);
     assert_eq!(
         hover_label::text(&s, 40.0, 50.0),
-        format!("body 1 escape · t_end 31.2 · {LISTEN_HINT}")
+        format!("escape body 1 · t_end 31.2 · {LISTEN_HINT}")
     );
     s.t_end = None;
     assert_eq!(
         hover_label::text(&s, 40.0, 50.0),
-        format!("body 1 escape · {LISTEN_HINT}")
+        format!("escape body 1 · {LISTEN_HINT}")
     );
 }
 
@@ -800,5 +801,50 @@ fn mock_hover_remove_children_keeps_the_rest() {
     assert_eq!(tree.children(None), ["a", "d"]);
     rejects("a parent removed with its children", || {
         assert!(tree.get("a").is_none())
+    });
+}
+
+// --- REQ-GUI-188: every label the mock draws reads the display module's names ----------------------------------------
+
+#[test]
+fn mock_hover_frame_shows_no_internal_id() {
+    // The frame the app draws while hovering, its hover label among it: no text shows "body 0" or a pair id.
+    let (mut app, mut h, _) = hovering();
+    let texts = painted_texts(&mut h, &mut app);
+    let check = |texts: &[String]| {
+        for t in texts {
+            assert!(!display::shows_an_internal_id(t), "the frame draws `{t}`");
+        }
+    };
+    check(&texts);
+    let sample = app.snapshot().sample.clone().unwrap();
+    assert!(texts.contains(&hover_label::text(&sample, 0.0, MOCK_T_MAX)));
+    rejects("a frame drawing a 0-based body", || {
+        let mut texts = texts.clone();
+        texts.push("escape body 0 · t_end 3.1".to_owned());
+        check(&texts)
+    });
+}
+
+#[test]
+fn mock_hover_inspector_bodies_read_1_2_3() {
+    let s = sample(&plane(), [0.4, 0.6], 0.0, 10.0);
+    let rect = Rect::from_min_size(pos2(50.0, 60.0), vec2(160.0, 160.0));
+    let shapes = super::mock_windows_drawn::painted(|ui| {
+        crate::windows::inspector::ic_pane(ui, rect, &s, (0.0, 1.0, 0.0), 7)
+    });
+    let texts: Vec<String> = shapes
+        .iter()
+        .filter_map(|s| match s {
+            egui::Shape::Text(t) => Some(t.galley.text().to_owned()),
+            _ => None,
+        })
+        .collect();
+    let check =
+        |texts: &[String]| assert_eq!(texts, display::body_numbers(), "pane 1's body labels");
+    check(&texts);
+    assert_eq!(texts, ["1", "2", "3"]);
+    rejects("bodies labelled 0-based", || {
+        check(&["0".to_owned(), "1".to_owned(), "2".to_owned()])
     });
 }

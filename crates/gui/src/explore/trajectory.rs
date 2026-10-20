@@ -789,7 +789,8 @@ pub fn orbit_input(
     }
 }
 
-/// The one-line summary: fate, `t_end`, FTLE and `E₀`, "undecided" for the fate while it is not decided.
+/// The one-line summary: fate, `t_end`, FTLE and `E₀`, "undecided" for the fate while it is not decided. The fate is
+/// the one conversion function's name (R-449; `engine::contract::display::name`), "escape body 1 · t_end 31.2 · …".
 pub fn summary(sample: &Sample) -> String {
     let fate = match (&sample.fate, sample.t_end) {
         (Some(fate), Some(t_end)) => format!("{fate} · t_end {t_end:.1}"),
@@ -799,7 +800,8 @@ pub fn summary(sample: &Sample) -> String {
     format!("{fate} · FTLE {:.3} · E₀ {:.3}", sample.ftle, sample.e0)
 }
 
-/// A kept orbit's row: "#1 body 1 escape · t 8.9", its time its `t_end` once decided, else its path's span.
+/// A kept orbit's row: "#1 escape body 1 · t 8.9", its fate the one conversion function's name (R-449), its time its
+/// `t_end` once decided, else its path's span.
 pub fn kept_row(i: usize, sample: &Sample) -> String {
     let fate = sample.fate.as_deref().unwrap_or("undecided");
     let t = sample.t_end.unwrap_or(sample.path_t);

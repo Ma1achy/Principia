@@ -11,7 +11,8 @@ use engine::contract::profile;
 use engine::contract::view_ui::{KeyMode, Window};
 
 use super::support::{
-    click, click_scope, focus, frame_texts, headless, mock_app, names, press, rejects, state,
+    click, click_scope, focus, frame_texts, headless, keys_on, mock_app, names, press, rejects,
+    state,
 };
 use crate::app::App;
 use crate::capture::{footer_point, PIXELS_PER_POINT};
@@ -154,6 +155,7 @@ fn mock_windows_open_from_the_top_bar_the_panels_and_the_footer() {
         .keyboard
         .tree(app.view.mode)
         .path_to(crate::explore::trajectory::INSPECTOR);
+    keys_on(&mut h, &mut app);
     press(&mut h, &mut app, Key::Enter, Modifiers::NONE);
     settle(&mut h, &mut app);
     check_open(&mut app, &mut h, windows::entry(Window::Inspector));
@@ -2110,6 +2112,7 @@ fn mock_windows_open_the_trajectory_panels_two_openers() {
             (tree.path_to(id), tree.path_to(other))
         };
         app.view.focus.path = want.clone();
+        keys_on(&mut h, &mut app);
         press(&mut h, &mut app, Key::Enter, Modifiers::NONE);
         settle(&mut h, &mut app);
         assert!(app.is_open(Window::Inspector), "Enter on {label}");
