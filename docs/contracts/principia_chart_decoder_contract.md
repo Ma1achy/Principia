@@ -123,7 +123,7 @@ z(s,t) = z₀ + (2s−1) q₁ + (2t−1) q₂        (s,t) ∈ [0,1]²
 |---|---|---|---|
 | **1. Raw latent** | a single `z_k` | direct assignment | trivial |
 | **2. Derived-in-block** | scalar inside one block: `m₀`, `θ`, `φ` | inverts into its block | **under-determines the 2D block** → chart must declare a *residual convention* for the leftover within-block DOF |
-| **3. Cross-block invariant** | `E`, `L_z`, `K`, `KE`, `PE` | *solves* into a downstream sector, upstream sectors read as fixed | must sit **downstream** of every block it depends on; brings **feasibility boundaries** (infeasible pixels tagged, not dropped); two coupled invariants → joint solve |
+| **3. Cross-block invariant** | `E`, `L_z`, `K`, `KE`, `PE` | *solves* into a downstream sector, upstream sectors read as fixed | must sit **downstream** of every block it depends on; brings **feasibility boundaries** (infeasible pixels tagged, not dropped); two coupled invariants → joint solve; **warped by default** (`principia_chart_reference.md` §2.1, evaluated per pixel), every pixel of `[0,1]²` feasible, a linear mapping an option per axis whose infeasible pixels are not a system (R-471) |
 | **4. Coupled curve** | one scalar `ν` slaving *several* blocks via a fixed nonlinear embed (Burrau/Euclid: `ν → (α,β,μ₁,μ₂)`) | the embed pins config + mass together | tilt is only well-posed **at a point** (Part 4); decouple the coupling → decomposes back to a plain block axis |
 
 Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop the mass coupling is the signal the taxonomy is at the right level.
@@ -142,10 +142,10 @@ extension types**, and the type decides what the axis does past its edge:
 
 | Type | Past the edge | Which axes |
 |---|---|---|
-| **affine** | the formula continues | basis vectors: the latent and flat slices, every latent direction; a physical-quantity axis mapped linearly onto its range (R-408's port, B1) |
+| **affine** | the formula continues | basis vectors: the latent and flat slices, every latent direction; a physical-quantity axis mapped linearly onto its range (R-408's port, B1), for an energy-type axis its linear option (R-471, E2; warped, its default, it is bounded) |
 | **periodic** | the axis wraps | azimuthal angles: the shape sphere's θ |
 | **pole-crossing** | continues over the pole and back down the other side, the partner axis shifted by half its period | polar angles: the shape sphere's φ (its partner θ shifted by π) |
-| **bounded** | forbidden: the canvas background in a presentation view, the hatch in the debug view (R-467) | anything with a hard edge in its domain (the invariant warp's `t^γ_K` at `t < 0`); **the default for an axis that declares nothing** |
+| **bounded** | not a system: blank, the view's background, in every view but the debug views, which hatch it; elsewhere the hatch only as the optional Overlays › Chart › forbidden region (R-467, R-470) | anything with a hard edge in its domain (the invariant warp's `t^γ_K` at `t < 0`); **the default for an axis that declares nothing** |
 
 A custom chart inherits its extension from its axes; nothing is written per chart. The types are a property of each
 axis beside its kind (the four kinds above), not a fifth kind. The axes' types act first: an affine axis passes its
@@ -180,6 +180,19 @@ clause 4; `principia_render_gui_spec.md` §G12), and a sweep of every gallery ch
 engine produces none (REQ-CHART-058). Whether a Chart-builder chart, whose physical-quantity axis has a range, may fail
 there is RQ-372. *Was (R-446):* "it is drawn with the render contract's hatch (`debug_invalid`, Part 5). The outcome
 view keeps the hatch too, on every pixel this part hatches …".
+
+**Blank, never a colour (R-470).** A pixel that is not a system, past a bounded edge, rejected by `validate`'s layer 2
+or 3, or where `Φ` fails, draws **blank**, the view's background colour, which is R-467's canvas background. It is not
+a palette colour in any view, the outcome view included; the debug views hatch it. The hatch survives outside them only
+as the optional overlay Overlays › Chart › forbidden region, off by default, drawn over those pixels only
+(`principia_render_gui_spec.md` §G2). NaN, `±∞`, `sim_failed`, `decode_failed` and the classification behind the hatch
+show only in the debug views, R-467's View › Debug view among them; a presentation view draws a system's failed or
+non-finite sample `#141418` as R-467 has it, and whether a `decode_failed` sample the chart does not classify (a
+non-finite decode, η_E's tags) is instead not a system, blank, is RQ-379. R-408's distinction between the domain's end
+and forbidden stays in the payload and the statistics below, unchanged (N4). Every pixel a chart draws is a valid
+three-body system or explicitly not a system, and no chart, tilt, slice or extension integrates a state that is not a
+system (R-469, P1). *Was (R-467), the bounded row's second cell:* "forbidden: the canvas background in a
+presentation view, the hatch in the debug view (R-467)".
 
 **Where the extension matters (R-468, context).** Extension past `[0,1]²` is free for every affine chart: the latent
 chart and the flat and body-plane slices, tilted or rotated, are planes, and the square is only the current window
@@ -239,6 +252,16 @@ Pan and slice are the **same operation** — move `z₀` — decomposed by the p
 of the same chart, each axis past `[0,1]²` by its extension type (Part 3): `(z₀, q₁, q₂)` is unchanged and nothing is
 edited.
 
+**Navigation stops at the edge (R-469).** Pan, slice, zoom, tilt and lock are accepted only if the chart's centre (the
+view's centre pixel, `z(½,½)`) still passes `validate`'s layers 2 and 3 after the edit. An edit that would cross stops
+at the last valid value along its own path (bisection on the edit's fraction to adjacent f64 values), the drag staying
+live up to there and going no further. It is one generic rule in the edit path, a function of the `Chart` trait and
+`validate`, applied to every chart; no chart writes its own. Undo and the GUI state contract record the clamped value,
+not the requested one, and the GUI's slider stops there while the readout names the check that stopped it
+(`principia_render_gui_spec.md` §G2). Tilt and zoom are anchor-preserving (the lock, below), so they never move the
+centre and pass unless they come with a centre edit; pan, slice, lock and an edit of a chart parameter that moves the
+centre's state are the edits that stop.
+
 ### Tilt (basis edit)
 
 Rotating a basis vector *within the 8D*, smoothly interpolating a plane direction toward a chosen hidden direction. For a raw/affine axis:
@@ -249,7 +272,11 @@ q'(τ) = normalise( cos τ · q + sin τ · d_target )        τ ∈ [−90°, +
 
 `τ = 0` → no tilt; `τ = ±90°` → fully committed to the target. **Sign matters** — the manifold is not symmetric under latent sign flips, so `+30°` and `−30°` reveal different cross-sections. The 8D has **6 directions orthogonal** to the current plane; the tilt selector offers those (plus named compound directions, below). Choosing which hidden direction to rotate into is the core hypothesis-testing gesture ("does this boundary persist as I rotate `q₂` toward `L_z`?").
 
-In the dev GUI each tilt angle has its own target, picked from those directions: `τ₁` tilts `q₁` toward the latent axis `e_X` and `τ₂` tilts `q₂` toward `e_Y`, each chosen in the Tilt section ("tilt τ₁ into [X]", "tilt τ₂ into [Y]"), both defaulting to the slice normal, the one shared target the GUI used before (R-457; `principia_render_gui_spec.md` §G2). With `X = Y` the GUI's map is the code's one-target map that RQ-340 describes, still open there; with `X ≠ Y` it is this section's two-target form, and the two tilted vectors are orthonormal.
+In the dev GUI each tilt angle has its own target, picked from those directions: `τ₁` tilts `q₁` toward the latent axis `e_X` and `τ₂` tilts `q₂` toward `e_Y`, each chosen in the Tilt section ("tilt τ₁ into [X]", "tilt τ₂ into [Y]"), both defaulting to the slice normal, the one shared target the GUI used before (R-457; `principia_render_gui_spec.md` §G2). With `X = Y` the GUI's map is the code's one-target map that RQ-340 described, which R-474 rules (below); with `X ≠ Y` it is this section's two-target form, and the two tilted vectors are orthonormal. *Was (R-457):* "that RQ-340 describes, still open there".
+
+**Two tilt maps (R-474, ruling RQ-340).** With one target (`X = Y`) and both angles set the GUI offers two maps, recorded as the view's `tilt_map`. **Tip as sheet**, the default (`sheet`): with `m = √(τ₁² + τ₂²)` the plane `span(e_a, e_b)` is turned rigidly by `m` about the in-plane axis `k = (τ₂ e_a − τ₁ e_b)/m` (Rodrigues' formula, in the 3-space `(e_a, e_b, e_X)`), so its normal tips toward `e_X` and a single `τ₁` moves `q₁` toward `e_X`; the basis stays orthonormal, with no lock at 90°. **Lean each axis**, an option (`lean`), is the formula above per axis, `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, skewed (`u₁·u₂ = sin τ₁ sin τ₂`). The two differ only with `X = Y` and both angles non-zero; a single tilt, or `X ≠ Y`, gives bitwise the same basis. **Over the pole:** Tip as sheet is not clamped at `m = 90°`; the angles are stored as set and the rotation is computed from them, wrapped internally only in total tip at 360° (for `m > 180°`, `τ·(m − 360)/m`, the same rotation), never folded onto the 180° partner `τ·(m − 180)/m`, which is the same plane mirrored. The range `τ ∈ [−90°, +90°]` above is Lean each axis's; under Tip as sheet each angle runs over `[−180°, 180°]`. A comparison of planes (a readout, a cache or dedupe keyed on the plane) compares normals up to sign and is never written back; the sim key keeps the plane and its in-plane orientation (R-92). Under Lean each axis an area statistic weights each pixel by the Gram factor `√(|u₁|²|u₂|² − (u₁·u₂)²)` (R-408); Tip as sheet needs none.
+
+**Tilt on every chart (R-473).** The dev GUI tilts every chart, curved ones included. The tilt is a rotation in the 3-space of the two screen axes and the hidden target coordinate, `R(τ₁, τ₂)` from the active map, applied to the chart's **own parameters**, not to a tangent vector: the pixel at window offset `(u, v)` maps to `(a, b, d) = R·(u, v, 0)`; `a`, `b` are the chart's own axis parameters and go through its chart map exactly, so its axes keep their meaning; `d` is added to the hidden coordinate's value at the slice centre. With two targets (`X ≠ Y`) each axis turns toward its own, in the 4-space `(a, b, d_X, d_Y)`. Untilted, `R` is the identity and the chart is bitwise today's; on the latent chart T2 is exactly the basis edit above. A chart's hidden coordinates are the latent controls its axes do not write (Part 5's block-touch sets), and every hidden coordinate is tilted in its link's pre-image, a mass in its logit, never in the physical value, so every pixel stays a system (masses positive, summing to 1). How a chart parameter and a hidden coordinate share a scale is RQ-375 (the human's proposal applied meanwhile on the curved charts: each screen axis in units of the window's half-width, the hidden coordinate in units of its own slider span). A tilted chart extends past `[0,1]²` by its axes' types as an untilted one does (Part 3), and an energy-type axis's warp is re-evaluated per pixel under it (R-471). Slicing moves the slice centre along any hidden coordinate, subject to the stop above.
 
 ### Slice (centre edit, orthogonal component)
 
@@ -311,6 +338,12 @@ q_tilt(τ) = normalise( cos τ · γ'(ν₀) + sin τ · d_target )
 
 Free-floating curve-axis tilt is ill-defined only because the tangent changes along the curve. Pin the centre and the tangent is a fixed vector. This is the general pattern — *non-raw directions are tangents; tangents need a point* — of which "curve axes tilt only at a lock" is the special case.
 
+**For the dev GUI's tilt this is amended (R-473):** the GUI tilts a curved chart, a coupled-curve (kind 4) axis
+included, by the rotation on the chart's own parameters (§ "Tilt (basis edit)", "Tilt on every chart"), which needs no
+tangent and so no lock; "curve axes tilt only at a lock" and "free-floating curve-axis tilt is ill-defined" hold for the
+tangent construction above, which stays where this contract uses it: the lock and the direction library's
+tangent-vector targets.
+
 ### The lock (projective microscope)
 
 Every chart has a centre; point-dependent directions are always evaluated there. **The lock is simply the gesture that sets the centre to a chosen IC and pins it.** It is CPU-side chart construction, held in `SimConfig` (R-69) — nothing about the chart maths changes.
@@ -330,7 +363,7 @@ The centre pixel has one special property: `z(½,½) = z₀` **regardless of the
 
 ### What the GPU knows about all of this: nothing
 
-The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in free and locked mode, before and after any tilt, slice, or excursion. Pan, slice, zoom, tilt, lock, snap-back are **all CPU-side edits to the same uniform**. The lock (chart construction, R-69), the `δ` memory, the ghost marks, the direction library — none of it reaches the kernel. If an implementation finds itself adding a "locked" flag or a second code path to the kernel, it has misread this part.
+The kernel receives `(z₀, q₁, q₂, chart id + params)` — identical in free and locked mode, before and after any tilt, slice, or excursion. Pan, slice, zoom, tilt, lock, snap-back are **all CPU-side edits to the same uniform**. The lock (chart construction, R-69), the `δ` memory, the ghost marks, the direction library — none of it reaches the kernel. If an implementation finds itself adding a "locked" flag or a second code path to the kernel, it has misread this part. A curved chart's tilt (R-473) is a chart parameter like any other: its rotation `R`, its targets' indices and their scales, computed on the CPU from the stored angles and the map and sent as part of "chart id + params".
 
 ---
 
@@ -345,7 +378,7 @@ A chart is **well-posed iff its swept axes + conventions + slice pin all 8 DOF**
 
 - **invariant?** — if so, which sector it solves into, its dependency set (must be downstream), **and whether it is `conserved_along_flow`**: `E` and `L_z` are constants of motion (a hover trace pins to a labelled dot); `K` is invariant-*constructed* but not conserved (a trace oscillates as KE↔PE exchanges). Consumers: the hover trace and any along-trajectory rendering.
 - **residual convention** — for derived-in-block axes, how the leftover within-block DOF is pinned
-- **curve?** — if so, tilt requires a lock; carries an `embed` map and its tangent `γ'`
+- **curve?** — if so, tilt requires a lock; carries an `embed` map and its tangent `γ'` (the tangent tilt at a lock; the dev GUI's tilt of a curved chart is Part 4's rotation on the chart's own parameters, which needs none, R-473)
 - **extension type** — affine, periodic, pole-crossing or bounded (the default when none is declared): what the axis does past `[0,1]²` (Part 3, R-407)
 
 **Per-chart descriptors:**

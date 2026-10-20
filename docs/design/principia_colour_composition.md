@@ -229,7 +229,12 @@ sentence on what the area statistic reads ("The statistic reads the chart (the t
 they decide what the area statistics count (R-408), not what is hatched (applied per R-369, flagged), so a pixel
 outside a primary range that the chart does not hatch (the shape sphere past its pole, a periodic redraw) is a system
 and draws its outcome, and one whose state fails `validate` there draws the background (R-467). Every other
-`decode_failed` sample draws black. *Was (R-446):* "one whose state fails `validate` there is hatched". How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
+`decode_failed` sample draws black. **Blank is not a colour (R-470).** The canvas background a not-a-system pixel draws
+is blank, in every view, the outcome view included: no palette, ramp, compaction or legend holds it, it is never
+counted in a legend's shares, and the only thing drawn over it outside the debug views is the optional Overlays › Chart
+› forbidden region hatch (render_gui_spec §G2). NaN, `±∞`, `sim_failed` and `decode_failed` keep their presentation
+treatment above (`#141418`) and show as themselves only in the debug views (§6); whether a `decode_failed` sample the
+chart does not classify should draw blank instead is RQ-379. *Was (R-446):* "one whose state fails `validate` there is hatched". How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
 by the task that needs it. *Was (R-96, superseded in part by R-444 to R-446):*
 "degenerate", `decode_failed`, drawn white `#ECECF0`; "collision @ t=0", a collision with `t_end_step == 0`, drawn
 orange; `running` in the neutral grey and `sim_failed` in the invalid pattern. There is **no separate `escaper` field**: the
@@ -424,7 +429,8 @@ R-71; R-132), confirmed at the M1 gate as proposed (R-428). Overridable per node
 (R-467):** a presentation view, every stain that is not a debug view (§6), draws no hatch, so there a ramp's or
 compaction's invalid value, a NaN and a non-finite input draw bounded / nothing yet's `#141418` unless the node
 overrides its invalid colour, and a pixel the chart classifies as not a system draws the canvas background (§1.4). The
-invalid treatment stays explicit; only its presentation default is black.
+invalid treatment stays explicit; only its presentation default is black. The background there is blank, never a
+palette colour (R-470).
 
 **Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are available in
 WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
@@ -560,7 +566,9 @@ never sees them and they are not part of any occupant or preset:
 style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen
 ```
 
-**Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **Style** is optional and applies to
+**Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **The line system (R-476)** draws its lines after the gamut clamp and
+before the colour-vision simulation, which sees them as it sees the rest of the figure (`principia_lines.md` §2;
+applied per R-369). **Style** is optional and applies to
 the figure only; scientific checks run with plain. *(Was: `gamut_clamp → cvd_sim(mode) → render→display scale`, with no style.)*
 
 **CVD is here, not in the pipeline, and this is a category correction, not a convenience.** CVD
@@ -666,7 +674,8 @@ draws the NaN / Inf style, a prelude pattern of its own (REQ-COL-110, a calibrat
 non-finiteness, then the failure. Its legend adds one key after the stain's, "Debug": "forbidden (chart)", "decode or
 sim failure" and "NaN / Inf", each in its style, with the number of the figure's pixels drawn in it and their share,
 each drawn always (render_gui_spec §G6). It is the one view that shows all three; the presentation views show none of
-them (§3).
+them (§3). *R-470:* it is one of the debug views, built as a baked pipeline variant selected by `debug_view` (R-41's
+baked variants): the presentation variant has no debug arm, and `debug_view` is never a flag bit read per pixel.
 
 **Net:** one colouring system · three data sources (sample payload · quad attributes · fragment
 recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-expressed as a preset table
@@ -692,7 +701,7 @@ rows (schematic — full table lives with the preset library):
 | Custom N-pole | `SiteBlend{ ring(N,tilt,rot), vmf(κ), swatches }` |
 | Direction cosines | `FieldRamp` per channel `½(1+n)` |
 | Checker / stripes / truchet | `bandmask(base, lattice-classifier(θ,φ), band, tileCol)` |
-| Grid / contours | `bandmask(vmf-base, θφ-grid / iso-hue, band, lineCol)` |
+| Grid / contours | `bandmask(vmf-base, θφ-grid / iso-hue, band, lineCol)` (a colouring that bands pixels; the stroked grid and contours over the figure are the line system's, R-476, `principia_lines.md`) |
 | Gradient magnitude | `FieldRamp{ gradient_magnitude(vmf-map), lerp }` |
 | Perlin / harmonics / Turing | `FieldRamp{ noise / Yℓm / wave-triple, lerp or diverging }` |
 | Physics overlay | post step `site_overlay(base, SiteBlend{ physics(m), vmf(κ=11 BC / 9 EL), per-site colours }, s)` |

@@ -12,6 +12,10 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
 - **Presentation views draw no hatch.** A pixel that is not part of the chart draws the canvas background, and a
   failure or a non-finite value black `#141418`; View › Debug view shows them, each with a key and a count *(conformed
   to R-467)*.
+- **Not a system is blank, never a colour.** A pixel that is not a system draws the background in every view; the hatch
+  is only the optional Overlays › Chart › forbidden region, over those pixels alone. A chart never leaves the manifold:
+  a pan, slice, zoom, tilt or lock stops at the last value whose centre validates, and the readout says which check
+  stopped it *(conformed to R-469, R-470)*.
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way (UI → SetField → core → snapshot → UI). Undo and redo live in the contract (GU-1).
 - **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit z₀ and the basis
@@ -60,6 +64,13 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     R-465)*. The cube's H, V and D labels are buttons that pick the slice's dimensions; in Tilt mode the third axis
     names what the gesture tilts into, with a "4D: see Plücker" badge when the two targets differ and both angles are
     set *(conformed to R-459)*.
+  - **Tilt maps and every chart:** the Tilt section's "map: Tip as sheet / Lean each axis", Tip as sheet (the cube's
+    axis-angle map, ±180°) the default; the compass draws the active map; the readout gives each screen axis's
+    components. Every chart tilts and slices, curved ones included *(conformed to R-473, R-474)*.
+  - **Save view as chart** (after Chart builder…, and on View ›) saves the view as a named chart in the picker's Saved
+    group, to tilt and save again *(conformed to R-475)*.
+  - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
+    figure outside the node graph; the grid and `t_end` contours are its presets *(conformed to R-476)*.
   - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
     it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It

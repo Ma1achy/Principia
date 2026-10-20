@@ -102,6 +102,31 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
   read by the engine, which reads only the figure's viewport, its size and scale (R-406), not kept across sessions.
   The canvas background the presentation views draw for a pixel that is not part of the chart (R-467) is a render
   uniform the GUI sets to the colour its window is cleared to, not a contract field.
+- **The tilt map, the energy-axis mappings, saved charts, the stop and the lines (R-469 to R-476; decided per R-369).**
+  - `SimConfig`'s slice frame gains `tilt_map: Sheet | Lean` (`SliceFrame { normal, tilt_x, tilt_y, tilt_map }`),
+    the map from `τ₁`, `τ₂` to the basis when both angles tilt into one target (R-474; `principia_chart_decoder_contract.md`
+    Part 4), default `Sheet`. It is chart construction, as the targets are: undoable, one history entry, sending the
+    basis with it where the basis changes; serialised as `tilt_map=sheet|lean`; a state, saved view or export with no
+    such field, from before R-474, reads as `Lean`, the map it was made with.
+  - A curved chart's tilt (R-473) is part of `SimConfig`'s chart params: the angles, the targets (indices of its hidden
+    coordinates) and the map, from which the CPU computes the rotation `R` the kernel reads. A sim key.
+  - Each energy-type axis's mapping, `warped | linear` (R-471), is part of `SimConfig`'s chart params, a sim key,
+    `warped` by default.
+  - A saved chart (R-475) is, while active, `SimConfig`'s chart id and params: the latent chart with the saved
+    `(z₀, q₁, q₂)`, or the parent chart's id and params with the saved slice centre and tilt. Saving is one `SetField`
+    on them, one history entry. The list of saved charts (the chart picker's "Saved" group, each with its name and
+    provenance) is the GUI's own settings, beside the Chart builder's presets, kept across sessions and never undoable.
+  - **The navigation stop (R-469).** The contract applies the stop to every navigation `SetField` (`z₀`, the basis,
+    the lock, a chart parameter that moves the centre) before it records the edit: the edit applied, the history's
+    after and the console's "SetField … before → after" line are the clamped value, never the requested one, and the
+    snapshot says which check stopped it, for the readout.
+  - `RenderState` gains `Lines` (R-476; `principia_lines.md` §3): the styles a view uses, its contour sets, its traces'
+    settings and its axes, exported with the view, each edit one undoable `SetField` (`RenderField::Lines`) that
+    re-integrates nothing (a render key). `Overlays` loses `grid` and `t_end_contours`, which become the Lines presets
+    Grid and t_end (R-476, L2). The personal style library is the GUI's own settings. A hover is never recorded.
+  - **The sidecar.** An export's provenance record (the pxpack, the snapshot JSON, the share link) carries, beside
+    `SimConfig` and `RenderState` in their canonical serialisation, `ViewUI`'s F3 fill mode as `f3_fill=extend|fit`
+    (R-472); `tilt_map`, the curved chart's tilt, the axis mappings and a saved chart's definition ride in `SimConfig`.
 - The keyboard navigation flag (on or off, `principia_render_gui_spec.md` §G3, R-460; turned off by any mouse click or drag and on by the next key press, R-464), the windows' positions and sizes (R-461) and the panel layout (R-462) are the GUI's own state, never the contract's: never undoable and never read by the engine. The positions, sizes and layout are kept across sessions in the GUI's own settings.
 
 **The stain graph (R-72; decided per R-369; TASK-M6-29).** `RenderState`'s stain graph is §5's graph object, the one the engine checks and lowers: its nodes, each `{ id, kind, occupant, params }`, `kind` one of `source`, `colour`, `brightness`, `combiner`, `post` and `out`, `occupant` none, a source's field, a built-in's id or a custom occupant's WGSL, and `params` its uniforms' values by name, one number per component; and its wires, each `{ from, to, port }`, `port` the in-port's position, a u32 (R-329). It serialises with `RenderState` as `{ nodes, wires }`, in id order; the default is the backbone alone, the combiner wired to `OUT`. Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable (R-69): picking a node's occupant or setting a param is one edit (REQ-GUI-016, which TASK-M7-11 keeps). It is logged as "SetField StainGraph [before] → [after]", each graph as its nodes in id order, `id kind occupant` (a custom occupant written `custom`) with its params, if any, as `{name=value, …}`, then its wires, each `from→to.port`. A node's place on the editor's canvas, the canvas's pan and zoom, and which nodes are selected are the editor's own, not the graph's (R-390, "Contract fields": the corpus names nodes, wires and per-node params only).

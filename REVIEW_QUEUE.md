@@ -1060,78 +1060,6 @@ seen.*
   reads the decoded `z_α` its seed rule needs; where the GUI takes them from (`z₀` or the lock) is not written.
 - **Waits:** nothing.
 
-## RQ-340: The compass's tilt: the code and the human's nav-cube reference both tilt the plane within one 3-space toward one shared hidden axis, but map (τ₁, τ₂) to planes differently, and the contract's two-target form is a different family; which plane a tilt means is not settled *(conflict, physics, R-451; context: TASK-M6-33)*
-
-*Found by R-451's port (16 Oct 2026), which the human asked to compare the three; restated in the fix round of PR #227
-after the physics review (P1 to P3) found the first comparison misread the reference. Nothing is chosen; the decoder's
-geometry is not changed, and the compass draws the decoder's mapping. For the human (physics: it changes which plane a
-tilt means).*
-
-- **File, section:**
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "`q'(τ) = normalise( cos τ · q + sin τ ·
-    d_target )        τ ∈ [−90°, +90°]`"; "The 8D has **6 directions orthogonal** to the current plane; the tilt selector
-    offers those". `docs/design/principia_chart_reference.md` §1.1: "A 2-plane in 8D has 12 tilt axes (6 hidden
-    dimensions × 2 basis vectors). Raw tilts **replace** rather than compose", and "**Arbitrary / oblique:** `q_1, q_2`
-    any orthonormal pair in ℝ⁸".
-  - The code, `crates/gui/src/explore/manifold_view/mod.rs`, `View::basis`: `u₁ = cos τ₁ e_a + sin τ₁ e_d`,
-    `u₂ = cos τ₂ e_b + sin τ₂ e_d` (one hidden axis `e_d`, `slice_axis`), then `q₁ = σ(cos γ u₁ + sin γ u₂)`,
-    `q₂ = σ(cos γ u₂ − sin γ u₁)`, with no normalisation and no orthogonalisation; `crates/gui/src/explore/compass.rs`,
-    `plane_frame`, draws the same in the frame `(e_a, e_b, e_d)`.
-  - `docs/gui/reference/principia_nav_cube.html`, `planeSpec`: "axis-angle ("joystick") map — rotate the up-normal by
-    angle m toward (τ₁,0,τ₂) … no gimbal lock (the naïve Euler form freezes q₂ at τ₁=±90°)", `n = (sin m · τ₁/m, cos m,
-    sin m · τ₂/m)`, `m = √(τ₁² + τ₂²)`; tilt mode's untilted plane is the horizontal x–z plane (`n = [0,1,0]`), its
-    labels "q₁'s target" on x and "q₂'s target" on z, and its help text: "no single coordinate perpendicular to both
-    targets".
-- **The reading:**
-  - **The code and the reference are one family.** The reference tips its plane's normal y toward x and z, so both
-    tilts tip the plane into the one unnamed vertical axis y; its "targets" x and z are the plane's own untilted in-plane
-    axes. Read geometrically, the code and the reference both give the 2-planes in one 3-space through the slice point
-    (the code's `(e_a, e_b, e_d)`, `e_d` hidden; the reference's (x, z, y), y hidden). They differ only in which
-    `(τ₁, τ₂)` gives which plane.
-  - **The code's map.** `u₁ · u₂ = sin τ₁ sin τ₂`, so with both tilts set the basis is not orthogonal, against
-    chart_reference §1.1's "any orthonormal pair", and the window's shape changes with it. Its normal is
-    `∝ (−tan τ₁, −tan τ₂, 1)`, one-to-one on the open square. At `|τ₁| = 90°`, `u₁ = ±e_d`, so the plane is
-    `span(e_b, e_d)` for every `|τ₂| < 90°`: τ₂ stops moving it along that whole edge, the gimbal lock the reference's
-    comment names (the physics review: the normal stays (−1, 0, 0) for τ₂ ∈ {0, 0.3, 1.0, 1.5}). At `τ₁ = ±τ₂ = ±90°`
-    the plane degenerates to the line `e_d`.
-  - **The reference's map.** It never degenerates inside ±90° (`m ≤ 127.3° < 180°`), but it is not one-to-one there:
-    `n` and `−n` are one plane, so `(τ₁, τ₂) = (90°, 90°)`, `m = 127.3°`, gives the plane `(−37.3°, −37.3°)` gives.
-    This bears on the contract's "sign matters".
-  - **The contract's two-target form is the different family.** With distinct targets `t₁ ⊥ t₂`, both orthogonal to
-    the plane, the two tilted vectors are already orthonormal, and the plane lies in the 4-space
-    `span(q₁, q₂, t₁, t₂)`, with no single normal: no 3D cube draws it faithfully. With one shared target the contract's
-    formula is the code's (`u₁` is unit, so `normalise` does nothing): the code is the contract's form with
-    `d_target₁ = d_target₂ = e_d`.
-- **The questions:** (i) within one 3-space, which parametrisation of the tilt pair: the code's or the reference's;
-  (ii) one shared target (the code and the reference) or two distinct targets (the contract's general form).
-- **Options seen:**
-  - (a) One shared hidden axis, the code's map (as applied): the contract states it as the tilt pair's meaning, with
-    its non-orthogonal basis against chart_reference §1.1 and its lock at `|τ₁| = 90°`; the compass draws it.
-  - (b) One shared hidden axis, the reference's axis-angle map: the reference's x, z and y read as `e_a`, `e_b` and
-    `e_d` (its untilted plane `span(e_a, e_b)`, its hidden axis `e_d`), the sign chosen so a single τ₁ moves q₁ toward
-    `e_d` as the code's does, and `q₁`, `q₂` the untilted `e_a`, `e_b` turned by the rotation taking `e_d` to `n`, then
-    by γ: orthonormal and without a lock, but one-to-one only for `m < 90°`: from the `m = 90°` circle on, `n` and `−n`
-    give one plane, so `(90°, 0)` and `(−90°, 0)` already give the same one. Like (a), a one-hidden-axis map.
-  - (c) Two distinct targets, the contract's general form: each of `q₁`, `q₂` tilted toward its own hidden direction,
-    `t₁ ⊥ t₂` (orthonormal with no further step); the plane leaves any one 3-space, so the ruling also says what the
-    compass's cube draws, and its tilt labels name the two targets.
-- **Applied meanwhile:** the compass's cube draws the decoder's mapping (`View::basis` in the cube's frame), and its
-  tilt mode names the one shared target (R-451 B1).
-- **The degenerate tilts hang on it** (fix round 4 of PR #227, physics review P13): under the decoder's map, option
-  (a), `q₁` and `q₂` span no plane at `τ₁ = ±τ₂ = ±90°`, and there the compass's cube draws no slice and its readout
-  cites this entry (R-451 B11). Under (b) or (c) those tilts give a plane, so a ruling for either revisits what the
-  cube draws there.
-- **Waits:** nothing builds on the choice yet; TASK-M6-33 does not wait, and no requirement carries `rq: RQ-340`
-  (REQ-GUI-192 cites it in its note). A ruling for (b) or (c) changes the decoder's basis, which re-integrates every
-  tilted view, and goes to a follow-up task.
-- **R-457 bears on it (18 Oct 2026, a note; the entry stays open).** The human ruled that each tilt angle tilts into a
-  latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target.
-  That answers question (ii) in part: both the one-target map (`X = Y`) and the contract's two-target form (`X ≠ Y`,
-  option (c)'s family, orthonormal) are reachable, the shared target the default. Question (i), the parametrisation
-  within one 3-space when `X = Y` (options (a) and (b)), stays open, and with it R-451 B11's corner points, which arise
-  only with `X = Y`. R-459 says what the cube draws with `X ≠ Y` (each gesture exactly, and a "4D: see Plücker"
-  badge). TASK-M6-38 builds the targets with the code's map for `X = Y` (option (a), as applied).
-
 ## RQ-341: The physical compass views need the decoder's Jacobian with respect to z along all eight latent directions, into Jacobi or shape-sphere coordinates, and its Gram area factor; the corpus's J_D is the derivative with respect to the chart's (u, v) into the particle frame, not yet built, and no Gram factor is defined for it *(silence and conflict with the ruling's words, R-72, R-452; context: TASK-M6-35)*
 
 *Found by R-452's port (16 Oct 2026). Nothing is chosen. For the human: R-452 says "use the existing J_D machinery"
@@ -1500,6 +1428,12 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
   charts and the mock (REQ-GUI-227, TASK-M8-46; REQ-GUI-226, TASK-M6-46). Nothing in the builder changes.
 - **Waits:** REQ-GUI-228 (`rq: RQ-372`), a Chart-builder chart's in-square warning, closed by TASK-M8-47, a leaf task
   nothing depends on.
+- **R-471 bears on it (20 Oct 2026, a note; the entry stays open, narrowed).** The human ruled that energy-type axes
+  are warped by default, every pixel of `[0,1]²` feasible, with a linear mapping as an option whose infeasible pixels
+  are "not a system" (E1, E2). For an energy-type builder axis (energy, `L_z`) that is option (a) under the default and
+  option (b) under the linear option: no decoder-bug warning for its in-square pixels (R-471 H5). The question stays
+  open for the builder's other physical quantities, the virial ratio and the mass ratio, for which nothing is ruled;
+  REQ-GUI-228 waits for those alone.
 
 ## RQ-373: R-467 changes two of the three outcome goldens R-454 re-baselined under RQ-330, and two field-ramp goldens; which are re-baselined, under what gate decision *(the human's question, R-467 clause 8, R-110, R-454; context: TASK-M2-34)*
 
@@ -1534,31 +1468,136 @@ re-baseline; list them, don't re-baseline without a gate decision." Nothing is r
   change and waits for this ruling before it merges.
 - **Waits:** TASK-M2-34's merge (REQ-COL-108's golden line, `rq: RQ-373`).
 
-## RQ-374: R-467 says presentation views "never draw the hatch", and Overlays ▾ keeps two toggles, "forbidden region" and "NaN / invalid pixels", that draw it over the presentation figure *(conflict, R-467 clauses 1 and 6, R-26, REQ-GUI-079; context: TASK-M8-08)*
+## RQ-375: T4's units: mixing a chart parameter with a hidden coordinate under a tilt needs a common scale; the human proposes each screen axis in units of the window's half-width and the hidden coordinate in units of its own slider span, and on the latent chart that proposal departs from T2's "exactly the decoder's basis edit" *(the human's queued question, physics, R-473 T4, R-469 §11; context: TASK-M2-36, TASK-M2-39)*
 
-*Filed on gui review 5585209592 of PR #253 (G5): R-467 D9, as first ported, kept both toggles per R-369, which goes
-beyond the human's words. For the human: yes, because option (b) drops part of a requirement.*
+*Queued by the human (R-469 §11: "T4's units for mixing a chart parameter with a hidden coordinate"; R-473 T4: "Queue
+it as an RQ with this as the proposal; do not settle it silently"). For the human: yes (physics, ⚑).*
 
 - **File, section:**
-  - `decisions.md` § "R-467 …", the human's words: "1. Presentation views (outcome, Chazy, the stains, F3 full-window)
-    never draw the hatch." and "6. The Chart builder's Domain preview "forbidden in view: N%" (R-408, §G7) stays: it is
-    a diagnostic for building charts, not a presentation view." Clause 6 names only the Domain preview.
-  - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)": "- Chart: forbidden
-    region (the chart's domain function, R-26), grid, Burrau lattice (primitive triples)." and the Integration group's
-    "NaN / invalid pixels"; R-467's sentence: "The Chart group's "forbidden region" and the Integration group's "NaN /
-    invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view".
-  - `plan/requirements.yaml` REQ-GUI-079: "Overlays ▾ must hold the grouped toggles — … Integration (substep density,
-    substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function,
-    grid, Burrau lattice) …".
-- **The conflict:** the two toggles draw the hatch (or, with the debug view built, its styles) over a presentation
-  figure on request. Clause 1 says a presentation view never draws the hatch; clause 3 asks for "one switchable view"
-  that shows these categories; the words name neither toggle.
+  - `decisions.md` § "R-473 — …", the human's words: "**T4. Units.** Mixing a chart parameter with a hidden coordinate
+    needs a common scale. Proposed: each screen axis in units of the window half-width; the hidden coordinate in units
+    of its own slider span. This makes `τ = 45°` mean the same visual lean on every chart."
+  - The same, T2: "A pixel at window offset `(u, v)` maps to `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`" and "On the latent
+    chart, T2 is exactly the decoder's basis edit."
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)" ("Tilt on every chart (R-473)"): the
+    rotation acts on the chart's own parameters, the scale queued here.
+- **The question:** in what units `a`, `b` (the chart's own parameters, in their axes' units) and `d` (a hidden latent
+  control, in its own) are compared, so that a rotation between them means something. The latent chart's basis edit
+  compares `q₁`, `q₂` and a unit latent direction in the latent metric; under the proposal the hidden coordinate is
+  scaled by its slider span, which on the latent chart changes what a given `τ` does there.
 - **Options seen:**
-  - (a) Keep both, off by default, drawing the debug view's styles over the figure: diagnostics turned on by the person,
-    as the Domain preview is (R-467 D9 as first ported).
-  - (b) Drop both from Overlays ▾, View › Debug view being the one switchable view. This retires part of REQ-GUI-079,
-    the human's call.
-  - (c) Keep both, enabled only while View › Debug view is on, as filters of what it shows.
-- **Applied meanwhile:** (a). Nothing else waits: TASK-M6-46 and TASK-M6-47 build no Overlays entry.
-- **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
-  the rest of TASK-M8-08 proceeds.
+  - (a) The proposal on every chart: each screen axis in half-widths of the window, the hidden coordinate in its slider
+    span. `τ = 45°` is the same visual lean everywhere; on the latent chart the basis edit is no longer the contract's
+    unit-vector form.
+  - (b) The proposal on curved charts only, the latent chart keeping the decoder's basis edit exactly (its own units,
+    the latent metric), so T2's latent sentence holds as written.
+  - (c) One metric for all charts, the latent metric pulled back through each chart map (needs the decoder's Jacobian
+    and a metric, which RQ-341 and RQ-346 raise).
+- **Applied meanwhile:** (b), per R-369 (R-473 J3): the proposal on the curved charts, the latent chart unchanged.
+- **Waits:** REQ-CHART-064 (`rq: RQ-375`), the units' requirement, closed by TASK-M2-39, a leaf task nothing depends
+  on. The tilt itself (TASK-M2-36) is built under (b).
+
+## RQ-376: Whether an energy chart's `t > 1` side (`K > K_max`, feasible) should be declared affine rather than bounded *(the human's queued question, physics, R-469 §11, R-407 clause 3, R-471; context: TASK-M2-37)*
+
+*Queued by the human (R-469 §11: "Whether an energy chart's `t > 1` side (`K > K_max`, feasible) should be declared
+affine rather than bounded. chart_reference §2.1 leaves this for physics review."). For the human: yes (physics).*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "2.1 Feasibility, and the warp that makes every pixel valid": "Its
+    `t > 1` side (`K > K_max`) stays feasible; declaring it would be a later declaration, needing physics review
+    (R-407, clause 3), and is not made."
+  - The same, § "5.4 …": "Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) is left undeclared, as on the warp
+    (R-407, A5)."
+  - `decisions.md` § "R-471 — …": energy-type axes are warped by default, so every energy-type axis has this side.
+- **The question:** past `t = 1` the warp's `K = K_max·t^γ_K` is still feasible (`K > K_max ≥ 0`), so the axis could
+  continue as affine there, while past `t = 0` it cannot. Bounded draws that side blank (R-470) and leaves it out of the
+  count (R-408).
+- **Options seen:**
+  - (a) Bounded on both sides, as today: past `t > 1` the domain's end, blank.
+  - (b) Affine past `t = 1`, bounded past `t = 0`: a one-sided declaration, `K` continuing beyond `K_max` (for `E` and
+    `L_z` the same through their lines of the warp, R-471 H1), counted as R-408 counts an affine axis.
+  - (c) Affine past `t = 1` for `K` and `E` only, `L_z`'s `±√(2 I K_max)` range staying bounded.
+- **Applied meanwhile:** (a), the corpus as written. Nothing waits; a ruling for (b) or (c) is a follow-up change to
+  REQ-CHART-067's extension type and REQ-CHART-056's statistic.
+
+## RQ-377: `principia_lines.md` §11's six open questions: the expression language, the playhead quantities, the trace fade's off-plane distance, label collisions, class edges, and new contour sets' default style *(the human's queued questions, R-476 L5, R-469 §11; context: TASK-M7-42, TASK-M7-43, TASK-M8-49, TASK-M8-50, TASK-M8-51)*
+
+*Queued by the human (R-469 §11: "`principia_lines.md` §11's six questions"; R-476 L5: "Queue them as RQ entries; do
+not rule on them"). One entry with six parts, one per question (R-476 M10). For the human: yes, each part, as each
+changes what the line system builds.*
+
+- **File, section:** `docs/design/principia_lines.md` § "11. Open questions", quoted in each part below; read with
+  § "4.1 The expression", § "7. Labels" and § "8. Traces".
+- **(1) Expression language.** "A purpose-built mini-language (proposed; total, sandboxed, GPU-compilable), or reuse the
+  stain graph's Code view syntax?"
+  - Options: (a) the purpose-built language (§4.1, proposed); (b) the stain graph's Code view syntax.
+  - Applied meanwhile: contour expressions are held as §4.1's tree (its variables, operators, functions and totality),
+    built and tested without a surface syntax; the contour-set editor picks a variable or one of §4.1's examples from a
+    list.
+  - Waits: REQ-RENDER-097's typed expression (the parser and its error reporting), closed by TASK-M8-51.
+- **(2) Playhead quantities.** "Allow any payload field, or a curated list?"
+  - Options: (a) any payload field; (b) a curated list.
+  - Applied meanwhile: the fields §4.1's table names (`t_end`, `state`, `d_min`, `drift`, `ftle`).
+  - Waits: REQ-RENDER-097's playhead clause, closed by TASK-M8-51.
+- **(3) Off-plane distance for the trace fade.** "The general definition is the distance in z from the trajectory's
+  encoded point to the slice plane, which needs the encode at every step (and the metric RQ-341 raises). The mock-up uses
+  a proxy: the scale-normalised Jacobi momentum magnitude, which this shape chart holds at zero."
+  - Options: (a) the general definition, the encode per step and a metric (RQ-341, RQ-346); (b) the mock-ups' proxy;
+    (c) a per-chart distance, each chart naming its own.
+  - Applied meanwhile: no fade; every trace draws at full opacity (`fade: None`).
+  - Waits: REQ-GUI-249 (`rq: RQ-377`), closed by TASK-M8-51.
+- **(4) Label collisions.** "Between contour labels and the trace's tick labels: which wins?"
+  - Options: (a) contour labels win; (b) the trace's tick labels win; (c) the later in the Lines list wins, as §7 orders
+    contour sets.
+  - Applied meanwhile: §7's rule within the contour sets; between contour labels and a trace's ticks nothing is
+    suppressed.
+  - Waits: REQ-RENDER-098 (`rq: RQ-377`), closed by TASK-M8-51.
+- **(5) Class edges.** "Should they move onto the line system as "contours of a categorical field", or stay in the
+  stain?"
+  - Options: (a) move them onto the line system; (b) keep them in the stain, an Overlays ▾ toggle.
+  - Applied meanwhile: (b), as today (R-476 M3 keeps class edges in Overlays ▾). Nothing waits.
+- **(6) Default style for new contour sets.** "Screen contour (white with outline), or smart ink on by default?"
+  - Options: (a) Screen contour; (b) smart ink on.
+  - Applied meanwhile: (a), Screen contour, the library's first style (§3).
+  - Waits: REQ-GUI-250 (`rq: RQ-377`), the default's confirmation, closed by TASK-M8-51.
+- **Waits, in all:** REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249 and REQ-GUI-250, each closed by TASK-M8-51, a leaf
+  task nothing depends on; the rest of the line system is built meanwhile.
+
+## RQ-378: Whether "Save view as chart" on a curved chart should also offer a flattened oblique-latent version, where one exists locally *(the human's queued question, R-469 §11, R-475; context: TASK-M2-40, TASK-M8-48)*
+
+*Queued by the human (R-469 §11: "Whether "Save view as chart" on a curved chart should also offer a flattened
+oblique-latent version, where one exists locally."). For the human: yes, it changes what Save view as chart builds.*
+
+- **File, section:**
+  - `decisions.md` § "R-475 — …", the human's words, S2: on a curved chart the saved chart is "the parent chart, its
+    slice centre, and the tilt (map, angles, targets)"; on a latent view, "`(z₀, q₁, q₂)` as an oblique chart".
+  - `docs/gui/principia_render_gui_spec.md` § "G2. …", the Chart bullet's Save view as chart.
+- **The question:** a curved view near its centre is approximated by its tangent plane, an oblique latent chart
+  `(z₀, J q̂₁, J q̂₂)`; whether saving should also offer that flattened chart, and what "exists locally" requires (a
+  full-rank Jacobian at the centre, the window small enough).
+- **Options seen:** (a) no, the parent chart and its tilt only (S2 as written); (b) yes, a second option "Save as
+  flat chart", offered where the decoder's Jacobian at the centre has rank 2 (it needs the derivative RQ-341 raises);
+  (c) yes, with the flattened chart shown only as provenance, not offered.
+- **Applied meanwhile:** (a). Nothing waits.
+
+## RQ-379: A `decode_failed` sample the chart does not classify as not a system (a non-finite decode, η_E's `ENERGY_UNSCALABLE` and `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`): blank, as P1 suggests, or `#141418`, as R-467 clause 2 has it *(conflict, R-469 P1, R-470 N1 and N3, R-467 clause 2, REQ-COL-108; context: TASK-M2-34)*
+
+*Found porting R-470 (G2). For the human: yes, it changes what a presentation view draws.*
+
+- **File, section:**
+  - `decisions.md` § "R-469 — …", the human's words, P1: "Every pixel a chart draws is either a valid three-body system
+    or explicitly "not a system"."
+  - `decisions.md` § "R-470 — …", N1: "A pixel that is not a system draws **blank** … This covers: a bounded axis past
+    its edge; layer-2 infeasibility; a failed `Φ`; a layer-3 failure." and N3: "NaN, Inf, `sim_failed`,
+    `decode_failed`, and the classification behind the hatch are shown **only in the debug views**".
+  - `decisions.md` § "R-467 — …", the human's words, clause 2: "Non-finite values (NaN, Inf), sim_failed and
+    decode_failed likewise never appear as a category in a presentation view. They keep R-446's black #141418."
+  - `docs/design/principia_colour_composition.md` § "1.4 …": "the decoder's own outcomes, its `DEGENERATE` tags … and a
+    non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it".
+- **The conflict:** such a sample has no decoded state to integrate, so it is no system, which P1 makes "explicitly
+  not a system", blank; N1's list does not name it, and R-467 clause 2 draws `decode_failed` `#141418`, which N3's
+  "shown only in the debug views" is consistent with (black is not a category).
+- **Options seen:** (a) `#141418`, R-467 D4 as it stands; (b) blank, as a not-a-system pixel, the forbidden-region
+  overlay then drawing over it too; (c) blank for the decoder's `DEGENERATE` tags, `#141418` for a non-finite decode.
+- **Applied meanwhile:** (a), per R-369 (R-470 G2). Nothing waits; a ruling for (b) or (c) is a follow-up change to
+  REQ-COL-108 and REQ-COL-111.

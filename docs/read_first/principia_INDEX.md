@@ -86,6 +86,7 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_dd_generation_root.md` — the Generation Root: layout table + link registry; the roots of the build DAG. "This document **is** the ledger"
 - `docs/design/principia_debug_tooling_plan.md` — the four-surface matrix: for each observable, what the shader shows and what the test asserts
 - `docs/design/principia_trajectory_viewing.md` — hover trace + click inspector; supersedes the render-contract Part 7 hover mechanics
+- `docs/design/principia_lines.md` — the line system: contours, traces, axes, grids and styles over the finished figure, outside the node graph (adopted by R-476; its §11 queued as RQ-377)
 
 ---
 
@@ -110,6 +111,7 @@ and **`Policy::Tolerance`**.
 - `docs/gui/reference/ic_inspector.html` — IC Inspector: static single-sample tool; canonical copy (R-8). Prior art: the tool is absorbed into the dev GUI's Inspector window (R-65)
 - `docs/gui/reference/principia_nav_cube.html` — Principia — navigation cube: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/principia_plucker_compass.html` — Principia — orientation compass: reference for look and behaviour (R-451, R-452); its cream palette is not copied
+- `docs/gui/reference/lines/` — the line system's mock-ups, `images/` (PNGs) and `canvas/` (artboards, `.dc.html`), the reference for `principia_lines.md` (R-476)
 - `docs/gui/reference/principia_compass_charts.html` — Principia — compass, position & chart transform: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 
 ---

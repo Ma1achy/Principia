@@ -176,6 +176,16 @@ Gaussian vectors and Gram–Schmidt. **Report the pair used**, or the slice is n
 > axes (6 hidden dimensions × 2 basis vectors). Raw tilts **replace** rather than compose — the
 > chart constructor is the commit mechanism.
 
+**Twelve is the full count; Save view as chart commits (R-475).** "Twelve tilt directions" (6 hidden coordinates × 2
+axes) is the full count. The UI offers two at a time, through the Tilt section's target dropdowns ("tilt τ₁ into
+[X]", "tilt τ₂ into [Y]", R-457). A plane in which an axis mixes several hidden coordinates is reached by saving and
+tilting again, or by a custom chart. **Save view as chart** (render_gui_spec §G2) is the commit mechanism above: it
+commits the current view as a named custom chart, which can then be tilted, sliced and saved like any other, so with it
+tilts compose and any plane is reachable by navigating. A latent view saves `(z₀, q₁, q₂)` as an oblique chart with
+affine axes, the pair reported as this section asks; a curved chart saves its parent chart, its slice centre and its
+tilt rotation `R` with its targets and map (`principia_chart_decoder_contract.md` Part 4). Reopened with zero tilt, a
+saved chart reproduces the saved view bitwise.
+
 ### 1.2 Geometry + momentum in a fundamental domain
 
 Pin $\boldsymbol\rho = (\rho_0, 0)$, sweep $\beta(s) = \pi s$, and fix $\boldsymbol\lambda = \lambda_0(\cos\beta, \sin\beta)$. For
@@ -242,7 +252,25 @@ constraint.
 `s ∉ [0,1]` gives `|L_z| = |2s − 1|·L_max(t) > L_max(t)`, so `K* < K_min`, infeasible for every `γ_K`; `t < 0` has no
 real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back onto `t > 0`). So the warp
 declares nothing beyond bounded and is hatched on every side (§5.4). Its `t > 1` side (`K > K_max`) stays feasible;
-declaring it would be a later declaration, needing physics review (R-407, clause 3), and is not made.
+declaring it would be a later declaration, needing physics review (R-407, clause 3), and is not made. Whether to declare
+it affine is queued: RQ-376 (R-469, §11).
+
+**Every energy-type axis is warped by default (R-471).** Axes of kind 3 (`E`, `L_z`, `K`, `KE`, `PE`;
+`principia_chart_decoder_contract.md` Part 3) take this warp by default, wherever they appear: on these charts, the
+Burrau family's `K` axes, a mixed-axis chart (§1.3) and a Chart-builder axis (render_gui_spec §G7), superseding R-408's
+port B1 (a physical axis mapped linearly, affine) as the default. Alone, or beside a non-energy axis, an energy-type
+axis takes its own line of the warp: `K` (`KE`) `= K_max·t^γ_K`, `E = U + K_max·t^γ_K`, `L_z = (2s − 1)·L_max` with
+`L_max = √(2·I·K)` at the kinetic energy the chart holds fixed (as §4.5's `Φ_θ,L_z`). A `PE` axis has no warp written
+yet: REQ-CHART-070 (R-72), and no chart offers one until it is. **The warp is evaluated per pixel,** with that pixel's
+own `U`, `I` and masses: a tilt or slice that moves a hidden coordinate (masses, shape) changes `U` and `I` across the
+window, and a warp computed once at the centre would put some pixels outside the feasible region; evaluated per pixel,
+every pixel stays feasible under every tilt (R-471, E3; R-473, T5). Untilted, they are `z₀`'s at every pixel (§2, the
+fixed geometry and masses), so nothing changes. **A linear mapping is an option per axis** (E2): the axis is affine,
+mapped onto the warp's range at the slice centre (`K ∈ [0, K_max]`, `E ∈ [U₀, U₀ + K_max]`, `L_z ∈ ±√(2 I₀ K_max)`, a
+builder axis onto its own range); its infeasible pixels in the window are not a system and draw blank (R-470), with no
+decoder-bug warning, and the navigation stop (R-469) keeps the centre feasible. The mapping is recorded in the view
+state and the export's sidecar. Under the linear option the axis is R-408's B1 axis, affine past its edge; warped, it
+is bounded, as above.
 
 ### 2.2 Deterministic momentum construction
 
@@ -763,7 +791,7 @@ existing charts:
 | Burrau family: `Φ_θ,K`, the strip `Φ_strip,K` (§4.5) | `θ` bounded (declares nothing) | `K` bounded (declares nothing; as on `(ν, K)`) | hatched on every side | out of the count and the total (the domain's end) |
 | Burrau family: `Φ_θ,L_z` (§4.5) | `θ` bounded (declares nothing) | `L_z` affine (linear at fixed `K`) | hatched past `θ`'s edges; past `L_z`'s the formula continues and the fallback hatches `L_z² > 2IK` by validation layer 2's `K ≥ L_z²/2I`; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`, with no band | past `θ`'s edges out of the count and the total; past `L_z`'s every visible pixel counts, its infeasible states forbidden |
 | Burrau family: the δm strip `Φ_strip,δm` (§4.5) | `θ` bounded (declares nothing) | δm affine (the blend is linear in `v`) | hatched past `θ`'s edges; past δm's the blend continues, `Σmᵢ = 1` kept, and the fallback hatches the zero- or negative-mass area by validation layer 2's `mᵢ > 0` | past `θ`'s edges out of the count and the total; past δm's every visible pixel counts, its zero- or negative-mass states forbidden |
-| mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
+| mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1; for an energy-type axis its linear option, R-471, whose default warp is bounded, §2.1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
 
 **The Burrau family's types** (defined per R-72, REQ-CHART-055; R-407 clause 3, physics-reviewed; TASK-M2-11). One
 type per axis of every Burrau-family chart (§4.5), with the reasoning:
@@ -815,7 +843,9 @@ affine would redraw systems and count them again (R-408), so it is typed only by
 Such a physical-quantity axis is linear in its quantity over its range, so past its edge its formula continues and the fallback hatches what cannot be reached
 (energy beyond what is reachable); under R-408 its primary range is unbounded, so those pixels fail validity and count
 as forbidden. (R-407's port first made it bounded, by clause 1's default; corrected in R-408's port, B1, applied per
-R-369 and flagged to the human.) A quantity behind a nonlinear warp (§1.3) declares nothing and is bounded. A new
+R-369 and flagged to the human.) **Under R-471 an energy-type axis (energy, `L_z`) is warped by default** (§2.1) and
+so bounded past its edge, its pixels there the domain's end, out of the count and the total; B1's affine axis is its
+linear option. The virial ratio and the mass ratio are not energy-type axes, and B1 stands for them. A quantity behind a nonlinear warp (§1.3) declares nothing and is bounded. A new
 declaration beyond bounded, or a new extension type, needs physics review (R-407, clause 3).
 
 **Primary ranges and area statistics (R-408).** Each type's primary range: periodic, one period of that axis (for the
@@ -826,6 +856,13 @@ hemisphere drawn, and R-412 rules it: pole to equator, the chart's `[0,1]` span.
 range, so each system counts once; a pixel hatched where the domain ends (a bounded axis past its edge, or a `Φ` that
 fails) leaves both the count and the total; only states that fail the validity check count as forbidden; inside
 `[0,1]²` nothing changes. The classification order is `principia_chart_decoder_contract.md` Part 3's.
+
+**Blank, and tilted charts (R-470, R-472).** A pixel this section calls hatched draws blank, the view's background, in
+every view, the outcome view included, and is never a palette colour; the debug views hatch it, and elsewhere the hatch
+is only the optional overlay Overlays › Chart › forbidden region (R-470). A tilted, sliced or saved chart extends by its
+axes' types exactly as an untilted one: under a tilt the types act on the chart's own parameters `(a, b) =` R's first
+two rows times `(u, v)`, the hidden coordinate's offset being a latent control's or a mass logit's, affine
+(`principia_chart_decoder_contract.md` Part 4, R-473); nothing is written per chart (R-472, X3).
 
 **How these pixels are drawn (R-467) and where the extension matters (R-468).** In this section and its table
 "hatched" names the classification, a pixel that is not a system. A presentation view draws such a pixel as the plain
