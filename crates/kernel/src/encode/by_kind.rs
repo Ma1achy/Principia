@@ -29,10 +29,10 @@
 //! `AxisKind` (`engine::chart_authoring`) describes the same axes, CPU-side.
 //!
 //! **Where possible** (inverse_encode_contract Part 6, step 4's definition, R-72): `x` lands on the chart iff
-//! `D(Φ(c(x)))`, the chart's decode at `c(x)` ([`crate::chart::ChartDecode::decode_at`]), reproduces `C(x)`: every
-//! mass, position and momentum component within the caller's tolerance ([`residual`]), both states canonical, `M = I =
-//! 1`. A coordinate that is not finite, or an axis that cannot place the state ([`Coord::Unplaced`]), lands it in
-//! latent `z` with no comparison.
+//! `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`, `D(Φ(c(x)))` the chart's decode at `c(x)`
+//! ([`crate::chart::ChartDecode::decode_at`]), both states canonical: Part 4's norm (REQ-ENC-029) and tolerance
+//! (REQ-ENC-024). [`encode_into`] takes both from its caller, the lookup, and fixes neither. A coordinate that is not
+//! finite, or an axis that cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison.
 //!
 //! **Feasibility first** ([`feasibility`]; Part 5 kind 3, Part 6 "Chart-aware validation"; REQ-ENC-010, REQ-ENC-030).
 //! An entered pair is tested before the construction, by the construction's own exact test `2·I·K* < L_z²`
@@ -114,29 +114,10 @@ pub struct ChartEncoded<R> {
     pub encoded: Encoded<R>,
     /// The chart coordinates, by kind.
     pub coords: [Coord<R>; 2],
-    /// [`residual`] of the chart's decode at the coordinates against `C(x)`; `+∞` where no point was placed.
-    pub residual: R,
+    /// The caller's norm of the chart's decode at the coordinates against `C(x)`; `None` where no point was placed.
+    pub residual: Option<R>,
     /// The chart point, or latent `z`.
     pub landing: Landing<R>,
-}
-
-/// The largest difference of any mass, position or momentum component of `a` and `b`; NaN where any is NaN.
-#[inline]
-pub fn residual<R: LinkReal>(a: &Ic<R>, b: &Ic<R>) -> R {
-    let (mut worst, mut nan) = (R::zero(), false);
-    let mut take = |x: R, y: R| {
-        let d = Float::abs(x - y);
-        nan |= Float::is_nan(d);
-        worst = Float::max(worst, d);
-    };
-    for i in 0..3 {
-        take(a.m[i], b.m[i]);
-        for k in 0..2 {
-            take(a.r[i][k], b.r[i][k]);
-            take(a.p[i][k], b.p[i][k]);
-        }
-    }
-    select(nan, R::nan(), worst)
 }
 
 /// The chart coordinate an axis's [`Coord`] places: `Some` for a finite coordinate, and 0 for an annotation axis, which
@@ -151,26 +132,29 @@ fn placed<R: LinkReal>(c: Coord<R>) -> Option<R> {
 }
 
 /// Encode `ic` into `chart` under the selection `S` (the module's note): `E(ic)`, the chart point by kind, and the chart
-/// as the landing where its decode there is within `tol` of `C(ic)` in every component ([`residual`]), else latent `z`.
+/// as the landing where `norm(C(ic), D(Φ(c(ic))))`, its decode there measured from `C(ic)`, is at most `eps_phys`, else
+/// latent `z`. `norm` is inverse_encode_contract Part 4's `‖·‖_phys` (REQ-ENC-029) and `eps_phys` its `ε_phys`
+/// (REQ-ENC-024), both the caller's (Part 6, step 4's "where possible").
 #[inline]
-pub fn encode_into<S, R, C>(chart: &C, ic: &Ic<R>, tol: R) -> ChartEncoded<R>
+pub fn encode_into<S, R, C, N>(chart: &C, ic: &Ic<R>, norm: N, eps_phys: R) -> ChartEncoded<R>
 where
     S: Selection,
     S::MassLink: SimplexClamp,
     R: LinkReal + PayloadReal + From<C::Param>,
     C: ByKind,
+    N: Fn(&Ic<R>, &Ic<R>) -> R,
 {
     let encoded = encode::<S, R>(ic);
     let coords = chart.coords::<S, R>(&encoded);
     let (residual, landing) = match (placed(coords[0]), placed(coords[1])) {
         (Some(u), Some(v)) => {
-            let d = residual(&chart.decode_at::<S, R>(u, v).ic, &encoded.canonical.ic);
+            let d = norm(&encoded.canonical.ic, &chart.decode_at::<S, R>(u, v).ic);
             (
-                d,
-                select(d <= tol, Landing::Chart { u, v }, Landing::Latent),
+                Some(d),
+                select(d <= eps_phys, Landing::Chart { u, v }, Landing::Latent),
             )
         }
-        _ => (R::infinity(), Landing::Latent),
+        _ => (None, Landing::Latent),
     };
     ChartEncoded {
         encoded,

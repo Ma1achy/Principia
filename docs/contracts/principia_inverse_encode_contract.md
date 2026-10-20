@@ -173,13 +173,12 @@ CoM-frame-defined.
 - **6. Validate** — the three layers below, in order, with project / clamp / reject and every flag surfaced (`lookup_clamped`, `lookup_rescaled`, `lookup_mirrored`).
 
 **Where possible, at step 4** (R-72, applied per R-369; REQ-ENC-008). The active chart represents `x` when the
-chart point `c(x)`, read off `C(x)` axis by axis (Part 5), decodes back to it: every mass, position and momentum
-component of `D(Φ(c(x)))` lies within the lookup's tolerance of the same component of `C(x)`. Both states are on the
-canonical section, where `M = I = 1` and every component is O(1). A chart sweeps two DOF and its slice and conventions
-pin the other six (chart_decoder_contract Part 5), so a generic state is not on it: its frozen blocks differ from the
-slice's, or, on an invariant chart, its momenta are another point of the fibre than the construction's. Such a state
-lands in latent `z` (case 3), which represents every state. An annotation axis gives no coordinate, and nothing is
-compared for it.
+chart point `c(x)`, read off `C(x)` axis by axis (Part 5), decodes back to it: `‖D(Φ(c(x))) − C(x)‖_phys ≤ ε_phys`,
+Part 4's norm and tolerance (REQ-ENC-029, REQ-ENC-024), both states on the canonical section. A chart sweeps two DOF
+and its slice and conventions pin the other six (chart_decoder_contract Part 5), so a generic state is not on it: its
+frozen blocks differ from the slice's, or, on an invariant chart, its momenta are another point of the fibre than the
+construction's. Such a state lands in latent `z` (case 3), which represents every state. An annotation axis gives no
+coordinate, and nothing is compared for it.
 
 ### Chart-aware validation
 

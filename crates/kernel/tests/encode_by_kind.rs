@@ -8,7 +8,7 @@
 //! - `encode_axis_kinds_unaligned`: a state off every chart, another point of the invariant fibre among them, lands in
 //!   latent `z`, `E(x)`'s own (REQ-ENC-008).
 //! - `encode_axis_kinds_primitives`: each kind's reading at its boundaries: every coordinate's component and derived
-//!   value, a dependent plane, the warp's inverse at rest, the residual's NaN and the tolerance's edge.
+//!   value, a dependent plane, the warp's inverse at rest, a NaN residual and the tolerance's edge.
 //! - `encode_invariant_reuses_decode`: an entered `(L_z, E)` or `(L_z, K)` and the clicked pixel give one `z`, at f64
 //!   and f32, the edges included (REQ-ENC-009).
 //! - `encode_infeasible_invariant`, `_feasibility`, `_degenerate`: dd_encode §5 test 6, feasibility before the
@@ -17,8 +17,10 @@
 //! - `encode_residual_convention`: `m₀ = 0.4` under hold-`m₁:m₂` and hold-`m₁ = m₂` gives two `z`, each round-tripping
 //!   only under its own convention (REQ-CHART-005).
 //!
-//! **Tolerances** (applied per R-369, a test decision): the landing tolerance is `1e-9` at f64, far above the residual
-//! of a state on the chart (printed) and far below that of one off it; coordinates and `z` are compared on the
+//! **The norm and tolerance** (applied per R-369, a test decision): [`encode_into`] takes Part 4's `‖·‖_phys`
+//! (REQ-ENC-029) and `ε_phys` (REQ-ENC-024) from its caller. Here the norm is [`norm`], the largest difference of any
+//! mass, position or momentum component, and the tolerance `1e-9` at f64, far above the residual of a state on the
+//! chart (printed) and far below that of one off it; coordinates and `z` are compared on the
 //! interior, where the links are well conditioned (dd_encode §3.5).
 //!
 //! **Domain** (pitfalls §10): encode alone, on states held fixed; no trajectory.
@@ -35,10 +37,11 @@ use kernel::decode::config;
 use kernel::decode::invariant::{construct_by_norms, construct_seeded, Outcome, Seed};
 use kernel::decode::mass::{self, from_masses};
 use kernel::decode::{self as dec, Decoded, Ic};
+use kernel::encode::by_kind::ChartEncoded;
 use kernel::encode::by_kind::{
     component, derived, encode_into, exponential_inverse, feasibility, fibre, fibre_at, invariants,
-    m0, plane, residual, spherical_inverse, warp_inverse, ByKind, Coord, Feasibility, HoldEqual,
-    HoldRatio, InvariantAxis, Landing, Lookup, Residual, SeedRule,
+    m0, plane, spherical_inverse, warp_inverse, ByKind, Coord, Feasibility, HoldEqual, HoldRatio,
+    InvariantAxis, Landing, Lookup, Residual, SeedRule,
 };
 use kernel::encode::{encode, Encoded};
 use kernel::generated::links::{Defaults, LinkReal, Selection};
@@ -49,6 +52,31 @@ use validation::negative_control;
 
 /// The landing tolerance at f64 (the module's note).
 const TOL: f64 = 1e-9;
+
+/// The tests' norm (the module's note): the largest difference of any mass, position or momentum component, NaN where
+/// any is NaN.
+fn norm(a: &Ic<f64>, b: &Ic<f64>) -> f64 {
+    let mut d = Vec::with_capacity(15);
+    for i in 0..3 {
+        d.push(a.m[i] - b.m[i]);
+        for k in 0..2 {
+            d.push(a.r[i][k] - b.r[i][k]);
+            d.push(a.p[i][k] - b.p[i][k]);
+        }
+    }
+    d.iter().fold(0.0f64, |w, x| {
+        if w.is_nan() || x.is_nan() {
+            f64::NAN
+        } else {
+            w.max(x.abs())
+        }
+    })
+}
+
+/// `x` encoded into `chart` under [`norm`] at the tolerance `tol`.
+fn into<C: ByKind<Param = f64>>(chart: &C, x: &Ic<f64>, tol: f64) -> ChartEncoded<f64> {
+    encode_into::<Defaults, f64, C, _>(chart, x, norm, tol)
+}
 
 /// The frozen controls the charts share: unequal masses (PIT-9), an interior configuration, nonzero momenta.
 const SLICE: [f64; 8] = [0.3, -0.4, 0.2, -0.5, 0.7, 0.1, 0.12, -0.08];
@@ -75,18 +103,18 @@ fn check_lands<C: ByKind<Param = f64>>(
     (u, v): (f64, f64),
     tol_uv: f64,
 ) -> f64 {
-    let e = encode_into::<Defaults, f64, C>(chart, x, TOL);
+    let e = into(chart, x, TOL);
     match e.landing {
         Landing::Chart { u: lu, v: lv } => assert!(
             (lu - u).abs() <= tol_uv && (lv - v).abs() <= tol_uv,
             "lands at ({lu}, {lv}), not the chart point ({u}, {v})"
         ),
         Landing::Latent => panic!(
-            "a state the chart decodes at ({u}, {v}) lands in latent z (residual {:e})",
+            "a state the chart decodes at ({u}, {v}) lands in latent z (residual {:?})",
             e.residual
         ),
     }
-    e.residual
+    e.residual.expect("a landing has a residual")
 }
 
 /// Decodes from `from` at random interior points and checks each lands on `into` at the same point.
@@ -395,7 +423,7 @@ const M0_RANGE: [f64; 2] = [0.1, 0.9];
 
 /// The annotation axis gives no coordinate, and the landing's `v` is 0 whatever the state's chart `v`.
 fn check_annotation<C: ByKind<Param = f64>>(chart: &C, x: &Ic<f64>) {
-    let e = encode_into::<Defaults, f64, C>(chart, x, TOL);
+    let e = into(chart, x, TOL);
     assert_eq!(
         e.coords[1],
         Coord::Annotation,
@@ -403,7 +431,7 @@ fn check_annotation<C: ByKind<Param = f64>>(chart: &C, x: &Ic<f64>) {
     );
     match e.landing {
         Landing::Chart { v, .. } => assert_eq!(v, 0.0, "the annotation axis's v was read"),
-        Landing::Latent => panic!("the state lands in latent z (residual {:e})", e.residual),
+        Landing::Latent => panic!("the state lands in latent z (residual {:?})", e.residual),
     }
 }
 
@@ -491,15 +519,15 @@ fn generic(rng: &mut SplitMix) -> Ic<f64> {
 
 /// `x` lands in latent `z` on `chart`, `E(x)`'s own `z`.
 fn check_latent<C: ByKind<Param = f64>>(chart: &C, x: &Ic<f64>) {
-    let e = encode_into::<Defaults, f64, C>(chart, x, TOL);
+    let e = into(chart, x, TOL);
     assert_eq!(
         e.encoded,
         encode::<Defaults, f64>(x),
         "the fallback is not E(x)"
     );
     assert!(
-        e.landing == Landing::Latent && (e.residual > TOL || e.residual.is_nan()),
-        "a state off the chart lands on it, residual {:e}",
+        e.landing == Landing::Latent && e.residual.is_none_or(|d| d > TOL || d.is_nan()),
+        "a state off the chart lands on it, residual {:?}",
         e.residual
     );
 }
@@ -548,8 +576,8 @@ negative_control!(
 
 // ── Each kind's reading at its boundaries ─────────────────────────────────────────────────────────────────────────
 
-/// Every coordinate's component, the derived values, a dependent plane, the warp's inverse at rest, the residual's
-/// NaN and maximum, and the landing tolerance's edge.
+/// Every coordinate's component, the derived values, a dependent plane, the warp's inverse at rest, a NaN residual,
+/// and the landing tolerance's edge.
 fn check_primitives(z_shift: f64) {
     let z: [f64; 8] = std::array::from_fn(|k| k as f64 + z_shift);
     let all = [
@@ -616,14 +644,14 @@ fn check_primitives(z_shift: f64) {
         q1,
         q2: q1,
     };
-    let e_flat = encode_into::<Defaults, f64, _>(&flat, &x, TOL);
+    let e_flat = into(&flat, &x, TOL);
     assert_eq!(
         e_flat.coords,
         [Coord::Unplaced, Coord::Unplaced],
         "a dependent plane's coordinates"
     );
     assert!(
-        e_flat.landing == Landing::Latent && e_flat.residual == f64::INFINITY,
+        e_flat.landing == Landing::Latent && e_flat.residual.is_none(),
         "a dependent plane lands"
     );
     // The warp inverted: at rest `s = ½` (no `L_max` to divide by), `t = 0`; elsewhere `K(t)` and `L_z(s, t)` back.
@@ -676,55 +704,32 @@ fn check_primitives(z_shift: f64) {
         (eu - 0.75).abs() < 1e-15 && (ev - 0.5).abs() < 1e-15,
         "the exponential map's ({eu}, {ev})"
     );
-    // The residual: the largest component difference, NaN sticky.
-    let mut y = x;
-    y.p[2][1] += 0.25;
-    y.r[0][0] -= 0.125;
-    assert_eq!(
-        residual(&x, &y),
-        0.25,
-        "the residual is not the largest difference"
-    );
-    assert_eq!(residual(&x, &x), 0.0, "a state's residual with itself");
-    let mut nan = y;
-    nan.m[0] = f64::NAN;
-    assert!(
-        residual(&x, &nan).is_nan(),
-        "a NaN component's residual is not NaN"
-    );
-    nan.m[0] = x.m[0];
-    nan.r[0][0] = f64::NAN;
-    nan.p[2][1] = x.p[2][1] + 4.0;
-    assert!(
-        residual(&x, &nan).is_nan(),
-        "a NaN before a larger difference is lost"
-    );
-    // The landing's tolerance: a residual exactly at it lands; just below it does not.
+    // A NaN residual lands in latent `z`.
     let le = InvariantLE(frozen_invariant());
     let xs = gauged(&le, 0.3, 0.7, &mut rng(60));
-    let at = encode_into::<Defaults, f64, _>(&le, &xs, TOL).residual;
+    let e_nan =
+        encode_into::<Defaults, f64, _, _>(&le, &xs, |_: &Ic<f64>, _: &Ic<f64>| f64::NAN, TOL);
+    assert!(
+        e_nan.landing == Landing::Latent && e_nan.residual.is_some_and(f64::is_nan),
+        "a NaN residual landed"
+    );
+    // The landing's tolerance: a residual exactly at it lands; just below it does not.
+    let at = into(&le, &xs, TOL).residual.expect("a placed point");
     assert!(
         at > 0.0,
         "the gauged state's residual is 0, so the edge is not tested"
     );
     assert!(
-        matches!(
-            encode_into::<Defaults, f64, _>(&le, &xs, at).landing,
-            Landing::Chart { .. }
-        ),
+        matches!(into(&le, &xs, at).landing, Landing::Chart { .. }),
         "at tol"
     );
     let below = at.next_down();
-    assert_eq!(
-        encode_into::<Defaults, f64, _>(&le, &xs, below).landing,
-        Landing::Latent,
-        "below tol"
-    );
+    assert_eq!(into(&le, &xs, below).landing, Landing::Latent, "below tol");
     // A non-finite coordinate places nothing: a mixed axis of no width.
     let narrow: Mixed<Alpha, PRhoX, f64> = Mixed::new(SLICE, [0.7, 0.7], [-0.8, 0.9]);
-    let e_narrow = encode_into::<Defaults, f64, _>(&narrow, &x, TOL);
+    let e_narrow = into(&narrow, &x, TOL);
     assert!(
-        e_narrow.landing == Landing::Latent && e_narrow.residual == f64::INFINITY,
+        e_narrow.landing == Landing::Latent && e_narrow.residual.is_none(),
         "a NaN coordinate landed"
     );
 }
@@ -1336,10 +1341,7 @@ fn check_conventions<A: Residual, B: Residual>(slice: [f64; 8]) {
     for (z, own) in [(za, A::STATEMENT), (zb, B::STATEMENT)] {
         let x = Gauge::random(&mut rng(70), 2.0, 1.0).act(&decoded(z));
         assert!((x.m[0] - 0.4).abs() < 1e-15, "m₀ is {}", x.m[0]);
-        let (on_a, on_b) = (
-            encode_into::<Defaults, f64, _>(&a, &x, TOL).landing,
-            encode_into::<Defaults, f64, _>(&b, &x, TOL).landing,
-        );
+        let (on_a, on_b) = (into(&a, &x, TOL).landing, into(&b, &x, TOL).landing);
         let (mine, other) = if own == A::STATEMENT {
             (on_a, on_b)
         } else {
