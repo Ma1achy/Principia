@@ -2797,6 +2797,8 @@
   - R-19
   - R-72
   milestone: M3
+  rq:
+  - RQ-369
   note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition)."
 - id: REQ-INT-014
   area: INT
@@ -2817,6 +2819,8 @@
   - R-162
   - R-168
   milestone: M3
+  rq:
+  - RQ-369
 - id: REQ-INT-015
   area: INT
   statement: "The Euler occupant must be kept as a debug occupant only (profile `symplectic: false`), never offered as a production option."

@@ -1525,3 +1525,68 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
   REQ-SYS-015 (`rq: RQ-365`).
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
+
+## RQ-369: The occupant table gives no `reversible` value for KDK, Yoshida-4 and Yoshida-6 ("(see §4)"), and the corpus reads both ways; TASK-M3-02 must set it in each profile *(silence and conflict, R-162, R-57, REQ-INT-013, REQ-INT-014, REQ-INT-032, REQ-VAL-032; context: TASK-M3-02)*
+
+*Found by TASK-M3-02's implementer before any code was written. Nothing is chosen. For the human: physics, since the
+flag decides which occupants the reversibility diagnostic accepts (REQ-INT-032), and the corpus doesn't settle it
+(R-369).*
+
+- **File, section:**
+  - `docs/contracts/principia_integrator_contract.md` § "Part 2 — Occupants and the capability profile", the table
+    (:84–86): "| KDK leapfrog | 2 | 1× | ✓ | (see §4) | Potato–Low (fast, motion) |", "| Yoshida-4 | 4 | 3× | ✓ |
+    (see §4) | Medium–High (default) |", "| Yoshida-6 | 6 | 7× | ✓ | (see §4) | Ultra–Extreme (accuracy) |". The
+    doc's §4 is "Part 4 — Determinism, and the substep as the subtle seam", which says nothing of reversibility; the
+    reversibility text is Part 6.
+  - The same section (:91): "**The reversibility diagnostic needs a `reversible` occupant** (§4) — it cannot be wired
+    to whatever happens to be bound. The profile flag is the guard."
+  - `plan/requirements.yaml` REQ-INT-014's statement gives `reversible` for Euler, RK4 and Aarseth–Zare + RK4 ("not
+    reversible") and none for KDK, Yoshida-4 or Yoshida-6; its verify detail: "assert each built occupant's
+    advertised profile and default tier binding equals the Part 2 / Part 2a tables".
+  - `docs/contracts/principia_integrator_contract.md` § "Part 6 — Three boundaries stated honestly (deferred work
+    lands here)" (:383): "**the current stack is symplectic but not cleanly reversible**: Yoshida's `w₂ < 0` middle
+    step, state-dependent adaptive substepping (the substep sequence isn't symmetric under reversal), and per-step
+    COM projection (a non-symplectic nudge) all break naive "integrate → negate → integrate." … the reversibility
+    diagnostic must either (a) record the macro-step + substep schedule and replay it exactly in reverse … or (b) bind
+    a fixed-step reversible occupant with COM projection disabled. The `reversible` capability flag (§2) gates which
+    occupants qualify."
+  - `docs/design/principia_dd_integrator.md` § "3.2 Occupants", Yoshida-4: "The negative middle step is real and is
+    why naive time-reversal fails (integrator contract Part 6)."
+  - `docs/design/principia_dd_integrator.md` § "5. Unit tests", test 3 (REQ-VAL-032): "**Step reversibility
+    (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate
+    returns the state to precision — *without* wrapper (projection/substep excluded)"; REQ-VAL-032's verify detail:
+    "residual at rounding level for KDK/Yoshida-4/Yoshida-6".
+  - `plan/requirements.yaml` REQ-INT-032: the diagnostic "must either replay the recorded macro-step + substep
+    schedule exactly in reverse or bind a fixed-step reversible occupant with COM projection disabled, and must be
+    available only for occupants whose profile has `reversible: true`."
+  - `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode": "The reversible occupant is logH's TTL
+    time mode (Mikkola–Tanikawa), as prin-rs built it."
+  - `docs/contracts/principia_integrator_contract.md` § "The table gains two rows": time-transformed leapfrog
+    "gives regularisation at leapfrog cost while staying symplectic and reversible, and it is what unblocks the
+    reversibility diagnostic (§4)".
+- **Silence and conflict:**
+  - No line gives KDK's, Yoshida-4's or Yoshida-6's `reversible`. `CapabilityProfile` needs a value for each.
+  - Read at `STEP` level, all three are symmetric compositions, so they are time-reversible at a fixed step with no
+    projection: dd test 3 (REQ-VAL-032) asserts exactly that, and REQ-INT-032's route (a), replaying the recorded
+    schedule in reverse, runs one of them and is gated on `reversible: true`. That reads `true`.
+  - Read at the bound occupant's level, Part 6 calls the stack "not cleanly reversible", R-162 names logH-TTL as "the
+    reversible occupant", and Part 2a's TTL leapfrog row is "what unblocks the reversibility diagnostic". That reads
+    `false`.
+  - Part 6 and dd §3.2 also blame the negative Yoshida weight for breaking naive reversal; a symmetric composition
+    with a negative weight is still time-symmetric at a fixed step, and dd test 3 asserts that for Yoshida-4 and -6.
+    R-57 fixes the label (`w₂` → the negative weight, `w₀` in Yoshida-4 and `w₁` in Yoshida-6), not the claim, so
+    TASK-M3-02's label fix would keep a sentence its own test contradicts.
+- **Options seen:**
+  - (a) `reversible: true` for KDK, Yoshida-4 and Yoshida-6: the flag means the `STEP` is time-symmetric at a fixed
+    step, as dd test 3 checks; the wrapper's substepping and projection are what route (a)'s replay or route (b)'s
+    fixed step with projection off handle. The table's "(see §4)" becomes ✓, and Part 6's and dd §3.2's sentence on
+    the negative weight is reworded (it doesn't break `STEP` reversibility).
+  - (b) `reversible: false` for all three: the flag means the bound occupant, wrapper substepping included, is
+    reversible, so only logH-TTL (R-162) and a future TTL leapfrog qualify; dd test 3 stays as the occupant-level
+    check of where reversibility lives, and REQ-INT-032's route (a) needs rewording, since it would then accept no
+    built occupant.
+  - (c) Split the flag's meaning in Part 2 (a `STEP`-level and an occupant-level reversibility), as a definition
+    (R-72) TASK-M3-02 writes.
+- **Applied meanwhile:** nothing. TASK-M3-02 has written no code; its branch holds this entry only.
+- **Waits:** REQ-INT-013 and REQ-INT-014 (`rq: RQ-369`), and with them TASK-M3-02, which closes both; TASK-M3-04 and
+  later M3 tasks depend on TASK-M3-02.
