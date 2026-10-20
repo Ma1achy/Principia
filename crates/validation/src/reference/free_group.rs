@@ -85,7 +85,7 @@ pub fn closed_form(symbols: &[u32]) -> u128 {
 }
 
 /// The word buffer's `vec4<u32>` for `reduced` (payload §3): `W`'s low 96 bits in `x`, `y`, `z`, its high bits in
-/// `.w` bits 0–24, `length` in bits 25–31. Panics when `W` does not fit 121 bits.
+/// `.w` bits 0–24, `length` in bits 25–31, added, as their bits are disjoint. Panics when `W` does not fit 121 bits.
 pub fn packed(reduced: &Reduced) -> [u32; 4] {
     let w = closed_form(&reduced.symbols);
     assert!(w < 1 << 121, "W = {w} does not fit 121 bits");
@@ -93,6 +93,6 @@ pub fn packed(reduced: &Reduced) -> [u32; 4] {
         w as u32,
         (w >> 32) as u32,
         (w >> 64) as u32,
-        (w >> 96) as u32 | (reduced.length() << 25),
+        (w >> 96) as u32 + (reduced.length() << 25),
     ]
 }
