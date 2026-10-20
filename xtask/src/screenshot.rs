@@ -158,6 +158,15 @@ pub enum GuiStep {
     Space,
     /// Click a node on the Stain page's canvas: select it.
     ClickNode,
+    /// Set the plane to R-451 B8's `mock_compass_cube_slice` case, the compass in Slice.
+    CompassCaseSlice,
+    /// Set the plane to R-451 B8's `mock_compass_cube_tilt_0` case, the compass in Tilt.
+    #[serde(rename = "compass_case_tilt_0")]
+    CompassCaseTilt0,
+    /// Set the plane to R-451 B8's `mock_compass_cube_tilt_rect` case, the compass in Tilt.
+    CompassCaseTiltRect,
+    /// Set the plane to R-451 B8's `mock_compass_cube_tilt_hex` case, the compass in Tilt.
+    CompassCaseTiltHex,
 }
 
 impl GuiStep {
@@ -184,6 +193,10 @@ impl GuiStep {
             GuiStep::Alt1 => "alt_1",
             GuiStep::Space => "space",
             GuiStep::ClickNode => "click_node",
+            GuiStep::CompassCaseSlice => "compass_case_slice",
+            GuiStep::CompassCaseTilt0 => "compass_case_tilt_0",
+            GuiStep::CompassCaseTiltRect => "compass_case_tilt_rect",
+            GuiStep::CompassCaseTiltHex => "compass_case_tilt_hex",
         }
     }
 }
@@ -191,7 +204,9 @@ impl GuiStep {
 /// The file gui's capture mode writes the names to, beside [`CAPTURE`].
 pub const NAMES: &str = "names.json";
 
-/// One case of `cases.json`: exactly one of `artboard` (a layout case) and `controls` (a presence-only case).
+/// One case of `cases.json`: exactly one of `artboard` (a layout case) and `controls` (a presence-only case). A layout
+/// case of a `gui` surface may name a `compass` spec, relative to the suite directory: the compass's drawing is then
+/// compared with it ([`crate::compass_golden`]; R-451 B8).
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Case {
@@ -201,6 +216,8 @@ pub struct Case {
     pub artboard: Option<String>,
     #[serde(default)]
     pub controls: Option<Vec<String>>,
+    #[serde(default)]
+    pub compass: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -214,6 +231,13 @@ struct Cases {
 pub enum Outcome {
     /// A layout case: the capture and the artboard copy beside it.
     Captured { capture: PathBuf, artboard: PathBuf },
+    /// A layout case with a `compass` spec: the capture, the artboard copy beside it, and the spec the compass's
+    /// drawing matched (R-451 B8).
+    Compared {
+        capture: PathBuf,
+        artboard: PathBuf,
+        spec: PathBuf,
+    },
     /// A presence-only case: every listed control was found.
     Present { controls: Vec<String> },
 }
@@ -235,6 +259,17 @@ impl fmt::Display for CaseResult {
                 "{suite}/{case}: layout: wrote {} beside {} (for layout comparison only, R-68)",
                 capture.display(),
                 artboard.display()
+            ),
+            Ok(Outcome::Compared {
+                capture,
+                artboard,
+                spec,
+            }) => write!(
+                f,
+                "{suite}/{case}: layout: wrote {} beside {}; the compass's drawing matches {} (R-451 B8)",
+                capture.display(),
+                artboard.display(),
+                spec.display()
             ),
             Ok(Outcome::Present { controls }) => write!(
                 f,
@@ -329,6 +364,11 @@ fn run_case(
     gpu: &mut Option<Gpu>,
 ) -> Result<Outcome, String> {
     let out = root.join(OUT).join(suite).join(&case.name);
+    if case.compass.is_some() && case.artboard.is_none() {
+        return Err(
+            "a `compass` spec belongs to a layout case, which names an artboard".to_owned(),
+        );
+    }
     let shot = match &case.surface {
         SurfaceRef::Data(path) => {
             let surface_path = dir.join(path);
@@ -363,6 +403,18 @@ fn run_case(
             let beside = out.join(name);
             fs::copy(&artboard, &beside)
                 .map_err(|e| format!("cannot copy {} to {}: {e}", artboard.display(), beside.display()))?;
+            if let Some(spec) = &case.compass {
+                if !matches!(shot, Shot::Gui(_)) {
+                    return Err("a `compass` spec needs a `gui` surface".to_owned());
+                }
+                let spec = dir.join(spec);
+                crate::compass_golden::check(&spec, &out, &capture)?;
+                return Ok(Outcome::Compared {
+                    capture,
+                    artboard: beside,
+                    spec,
+                });
+            }
             Ok(Outcome::Captured {
                 capture,
                 artboard: beside,

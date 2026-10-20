@@ -69,7 +69,59 @@ pub enum Step {
     Space,
     /// Click the mock's colour node's title on the Stain page's canvas ([`node_point`]): select it.
     ClickNode,
+    /// Set the plane to R-451 B8's case [`CompassCase`] through the contract, and the compass's mode to the case's.
+    Compass(CompassCase),
 }
+
+/// R-451 B8's golden cases of the compass's cube: the plane the case sets, in the mock preset's frame `(e_a, e_b, e_d)`,
+/// and the compass's mode. A step sets each through the contract, as typing the values into the Manifold view's fields
+/// would, so a capture shows the case exactly (TASK-M6-33).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CompassCase {
+    /// `mock_compass_cube_slice`: slice mode, `τ₁ = τ₂ = γ = 0`, `z₀` +0.25 of range on `e_d` and 0 on `e_a`, `e_b`.
+    Slice,
+    /// `mock_compass_cube_tilt_0`: tilt mode, every angle 0, `z₀ = 0` on the frame.
+    Tilt0,
+    /// `mock_compass_cube_tilt_rect`: tilt mode, `τ₁ = 30°`, `τ₂ = γ = 0`, `z₀ = 0` on the frame.
+    TiltRect,
+    /// `mock_compass_cube_tilt_hex`: tilt mode, `τ₁ = τ₂ = 45°`, `γ = 0`, `z₀ = 0` on the frame.
+    TiltHex,
+}
+
+impl CompassCase {
+    /// The case's `(τ₁, τ₂, γ)` in degrees, `z₀`'s component on `e_d` over the half-range, and the compass's mode.
+    pub fn parameters(self) -> ((f64, f64, f64), f64, crate::explore::manifold_view::Touch) {
+        use crate::explore::manifold_view::Touch;
+        match self {
+            CompassCase::Slice => ((0.0, 0.0, 0.0), 0.25, Touch::Slice),
+            CompassCase::Tilt0 => ((0.0, 0.0, 0.0), 0.0, Touch::Tilt),
+            CompassCase::TiltRect => ((30.0, 0.0, 0.0), 0.0, Touch::Tilt),
+            CompassCase::TiltHex => ((45.0, 45.0, 0.0), 0.0, Touch::Tilt),
+        }
+    }
+
+    /// The edits setting the case on `plane`: `z₀` with its components on `e_a`, `e_b` set to 0 and on `e_d` to the
+    /// case's, then the basis at the case's angles, its scale and frame kept.
+    pub fn edits(
+        self,
+        plane: &engine::contract::sim_config::Plane,
+    ) -> [engine::contract::set_field::SetField; 2] {
+        use crate::explore::manifold_view::slice_tilt::Angles;
+        use crate::explore::manifold_view::{basis_edit, z0_edit, View, Z0_HALF_RANGE};
+        let ((tau1, tau2, gamma), depth, _) = self.parameters();
+        let view = View::of(plane);
+        let mut z0 = plane.z0;
+        z0[view.a] = 0.0;
+        z0[view.b] = 0.0;
+        z0[view.d] = depth * Z0_HALF_RANGE;
+        let basis = Angles { tau1, tau2, gamma }.apply(view).basis();
+        [z0_edit(z0), basis_edit(basis)]
+    }
+}
+
+/// The most frames the capture runs after its steps for the compass to come to rest (R-451 B4): its easing reaches its
+/// target within [`crate::explore::compass::EASE_SNAP`] in under 100 frames of the headless step.
+pub const SETTLE_FRAMES: usize = 400;
 
 /// Where the `hover` step puts the pointer, `(s, t)` of the figure, `t` Y-up: left of the centre, as 01_main.png's
 /// cursor.
@@ -87,8 +139,8 @@ pub fn hover_point(figure: egui::Rect) -> egui::Pos2 {
 pub const LOCK_AT: (f32, f32) = (0.35, 0.6);
 
 /// The steps by name: the closed list (RQ-253), with the keyboard's keys (TASK-M6-25), the Manifold view's
-/// (TASK-M6-26), and the hover, Alt+1 and Space (TASK-M6-27).
-pub const STEPS: [(&str, Step); 20] = [
+/// (TASK-M6-26), the hover, Alt+1 and Space (TASK-M6-27), and R-451 B8's compass cases (TASK-M6-33).
+pub const STEPS: [(&str, Step); 24] = [
     ("f3", Step::F3),
     ("raise_warning", Step::RaiseWarning),
     ("raise_error", Step::RaiseError),
@@ -109,6 +161,13 @@ pub const STEPS: [(&str, Step); 20] = [
     ("alt_1", Step::Alt1),
     ("space", Step::Space),
     ("click_node", Step::ClickNode),
+    ("compass_case_slice", Step::Compass(CompassCase::Slice)),
+    ("compass_case_tilt_0", Step::Compass(CompassCase::Tilt0)),
+    (
+        "compass_case_tilt_rect",
+        Step::Compass(CompassCase::TiltRect),
+    ),
+    ("compass_case_tilt_hex", Step::Compass(CompassCase::TiltHex)),
 ];
 
 impl Step {
@@ -204,6 +263,16 @@ pub fn shoot_screen(
     screen: &str,
     steps: &[Step],
 ) -> Shot {
+    shoot_case(canvas, screen, steps).0
+}
+
+/// [`shoot_screen`], with the compass's drawing as [`crate::explore::compass::record`] records it on `01_main`, after
+/// the compass has come to rest ([`SETTLE_FRAMES`]); `None` on `02_stain`.
+pub fn shoot_case(
+    canvas: std::sync::Arc<crate::mock::canvas::MockCanvas>,
+    screen: &str,
+    steps: &[Step],
+) -> (Shot, Option<serde_json::Value>) {
     use crate::app::App;
     use crate::layout::Layout;
     use crate::side::{EngineSide, MockSide};
@@ -244,13 +313,33 @@ pub fn shoot_screen(
             Step::RaiseError => app.side().engine().raise_error(),
             Step::ClickFooter => frames.extend(click(footer_point(layout.footer))),
             Step::ClickNode => frames.extend(click(node_point(&layout, PIXELS_PER_POINT))),
+            Step::Compass(case) => {
+                for edit in case.edits(&app.snapshot().sim.plane) {
+                    app.set_field(edit);
+                }
+                app.manifold.compass.mode = case.parameters().2;
+            }
         }
         frames.extend([Vec::new(), Vec::new()]);
     }
     for events in frames.drain(..) {
         let _ = headless.frame(&mut app, events);
     }
-    render_frame(&canvas, &mut app, &mut headless)
+    for _ in 0..SETTLE_FRAMES {
+        if !app.manifold.compass.moving {
+            break;
+        }
+        let _ = headless.frame(&mut app, Vec::new());
+    }
+    let shot = render_frame(&canvas, &mut app, &mut headless);
+    let compass = (screen != "02_stain").then(|| {
+        use crate::explore::compass;
+        let drawing = compass::current(layout.compass, &app.snapshot().sim, &app.manifold.compass);
+        let mut record = compass::record(&drawing, compass::square(layout.compass));
+        record["pixels_per_point"] = serde_json::json!(PIXELS_PER_POINT);
+        record
+    });
+    (shot, compass)
 }
 
 /// Runs one more frame of `app` on `headless` (at [`SIZE`] and [`PIXELS_PER_POINT`]) with no input and renders it
@@ -364,6 +453,17 @@ pub(crate) fn render(
     drop(mapped);
     readback.unmap();
     rgba
+}
+
+/// The file the compass's drawing is written to, beside [`CAPTURE`] (R-451 B8).
+pub const COMPASS: &str = "compass.json";
+
+/// Writes the compass's drawing `compass`, as [`shoot_case`] records it, into `out`'s [`COMPASS`].
+pub fn write_compass(compass: &serde_json::Value, out: &Path) -> Result<(), String> {
+    fs::create_dir_all(out).map_err(|e| format!("cannot create {}: {e}", out.display()))?;
+    let path = out.join(COMPASS);
+    fs::write(&path, compass.to_string())
+        .map_err(|e| format!("cannot write {}: {e}", path.display()))
 }
 
 /// Writes `shot` into `out`: [`CAPTURE`] and [`NAMES`].

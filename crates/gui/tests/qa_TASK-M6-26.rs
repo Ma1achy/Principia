@@ -1295,7 +1295,8 @@ fn qa_mock_compass_switches_mode_by_the_slider_touched() {
     });
 }
 
-/// The angle after `name` in the compass's readout, in degrees.
+/// The angle after `name` in the compass's readout, in degrees. Since R-451 B1 and B5 tilt mode reads q₁'s and q₂'s
+/// target and angle, "q₁→<axis> +30.0°", and the rotation "γ +0.0°", signed: a target after `name` is skipped.
 fn readout(texts: &[(String, Rect)], compass: Rect, name: &str) -> f64 {
     let line = texts
         .iter()
@@ -1303,13 +1304,28 @@ fn readout(texts: &[(String, Rect)], compass: Rect, name: &str) -> f64 {
         .unwrap_or_else(|| panic!("no {name} readout in the compass"))
         .0
         .clone();
-    let after = &line[line.find(name).unwrap() + name.len()..];
+    let mut after = &line[line.find(name).unwrap() + name.len()..];
+    if let Some(target) = after.strip_prefix('→') {
+        after = target.trim_start_matches(|c: char| !c.is_whitespace());
+    }
     let digits: String = after
         .trim_start()
         .chars()
-        .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '−')
+        .take_while(|c| c.is_ascii_digit() || *c == '.' || *c == '-' || *c == '−' || *c == '+')
         .collect();
     number(&digits).unwrap_or_else(|| panic!("no angle after {name} in {line:?}"))
+}
+
+/// Runs frames until the compass has come to rest: since R-451 B4 its drawing, the readout with it, eases toward the
+/// plane's values (`v ← v + (target − v)·(1 − 0.0016^dt)`), so it reads the plane's only once at rest.
+fn settle(rig: &mut Rig<MockSide>) {
+    for _ in 0..400 {
+        if !rig.app.manifold.compass.moving {
+            return;
+        }
+        rig.idle(1);
+    }
+    panic!("the compass did not come to rest");
 }
 
 /// The angle of `v` out of span(e_α, e_β), in degrees: the tilt of a basis vector of the chart "z_α × z_β".
@@ -1322,7 +1338,8 @@ fn tilt_of(v: &Z) -> f64 {
 #[test]
 fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     let compass = layout().compass;
-    // τ₁ turned by ten base steps, Shift: the compass reads q₁'s tilt out of the chart's plane.
+    // τ₁ turned by ten base steps, Shift: the compass reads q₁'s tilt out of the chart's plane (since R-451 B5, as
+    // "q₁→<target> <angle>°").
     let mut rig = mock();
     let tau1 = scope_by_label(&rig, "τ₁");
     rig.interact(tau1);
@@ -1330,8 +1347,9 @@ fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     let q1 = rig.snap().sim.plane.q1;
     let want = tilt_of(&q1);
     assert!(want > 1.0, "τ₁ did not tilt q₁: {q1:?}");
+    settle(&mut rig);
     let texts = rig.texts();
-    let got = readout(&texts, compass, "τ₁");
+    let got = readout(&texts, compass, "q₁");
     assert!(
         (got.abs() - want).abs() < 0.06,
         "the compass reads τ₁ {got}°, q₁ is tilted {want}°"
@@ -1345,26 +1363,32 @@ fn qa_mock_compass_reads_out_the_tilt_and_rotation_angles() {
     let q1 = rig.snap().sim.plane.q1;
     let want = q1[1].atan2(q1[0]).to_degrees().abs();
     assert!(want > 1.0, "γ did not turn q₁: {q1:?}");
+    settle(&mut rig);
     let got = readout(&rig.texts(), compass, "γ");
     assert!(
         (got.abs() - want).abs() < 0.06,
         "the compass reads γ {got}°, q₁ is turned {want}°"
     );
     rejects("the τ₁ readout taken for γ's angle", || {
-        assert!((readout(&texts, compass, "τ₁").abs() - want).abs() < 0.06)
+        assert!((readout(&texts, compass, "q₁").abs() - want).abs() < 0.06)
     });
 }
 
-/// The cube's edges as the compass draws them: its line segments in the cube's own colour, the weak text colour
-/// (the plane is drawn in the selection blue, the pin in gold).
+/// The cube's edges as the compass draws them: its line segments of an edge's width, `0.8 + 1.0·near` points with
+/// `near = (x + z + 2)/4` at the edge's middle, one of 0.8, 1.05, 1.3, 1.55 and 1.8 (R-451 B6, which sets the edges'
+/// opacity by depth, so their colour no longer tells them apart; the grid is 0.7 points, the outline 1.7, the pin 2).
 fn cube_edges(rig: &mut Rig<MockSide>) -> Vec<[Pos2; 2]> {
-    let weak = rig.h.ctx.global_style().visuals.weak_text_color();
     let compass = layout().compass;
+    let edge_width = |w: f32| {
+        [0.8_f32, 1.05, 1.3, 1.55, 1.8]
+            .iter()
+            .any(|e| (w - e).abs() < 1e-3)
+    };
     rig.shapes()
         .into_iter()
         .filter_map(|s| match s {
             egui::Shape::LineSegment { points, stroke }
-                if stroke.color == weak
+                if edge_width(stroke.width)
                     && compass.contains(points[0])
                     && compass.contains(points[1]) =>
             {

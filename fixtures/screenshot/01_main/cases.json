@@ -28,12 +28,14 @@
     {
       "name": "mock_compass_slice",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "enter", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "enter", "arrow_right", "enter"] },
-      "artboard": "docs/gui/design/01_main.png"
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/corners_edges.json"
     },
     {
       "name": "mock_compass_tilt",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "enter", "arrow_left", "enter"] },
-      "artboard": "docs/gui/design/01_main.png"
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/corners_edges.json"
     },
     {
       "name": "mock_axis_labels",
@@ -79,6 +81,30 @@
       "name": "mock_present",
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "tab", "tab", "enter"] },
       "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_cube_slice",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_slice"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_slice.json"
+    },
+    {
+      "name": "mock_compass_cube_tilt_0",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_tilt_0"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_tilt_0.json"
+    },
+    {
+      "name": "mock_compass_cube_tilt_rect",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_tilt_rect"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_tilt_rect.json"
+    },
+    {
+      "name": "mock_compass_cube_tilt_hex",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_tilt_hex"] },
+      "artboard": "docs/gui/design/01_main.png",
+      "compass": "compass/mock_compass_cube_tilt_hex.json"
     }
   ]
 }

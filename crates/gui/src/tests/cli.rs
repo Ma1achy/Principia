@@ -100,6 +100,27 @@ fn cli_capture_writes_the_capture_and_names() {
         "the step was not played: {names}"
     );
     assert!(out.join("capture.png").is_file());
+    let compass: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(out.join("compass.json")).expect("the compass written"),
+    )
+    .expect("the compass's record");
+    assert_eq!(
+        compass["square"],
+        serde_json::json!([172.0, 172.0]),
+        "{compass}"
+    );
+    std::fs::remove_dir_all(&out).expect("scratch removed");
+    // The Stain page has no compass: no record.
+    let (outcome, _) = dispatch_seen(
+        &["capture", "--screen", "02_stain", "--out", &out_arg],
+        Ok(()),
+    );
+    assert_eq!(outcome, Ok(()));
+    assert!(out.join("capture.png").is_file());
+    assert!(
+        !out.join("compass.json").exists(),
+        "a compass record on 02_stain"
+    );
     std::fs::remove_dir_all(&out).expect("scratch removed");
 }
 
