@@ -77,7 +77,8 @@ fn norm(v: [f64; 2]) -> f64 {
 /// `‖x′ − x‖_phys` (inverse-encode Part 4, REQ-ENC-029), `x` the reference state and `x′` the one measured against it,
 /// both on the canonical section: the largest of `|m′ᵢ − mᵢ|`, `‖r′ᵢ − rᵢ‖/R_x` and `‖p′ᵢ − pᵢ‖/P_x` over the three
 /// bodies, with `R_x = max(1, maxⱼ‖rⱼ‖)` and `P_x = max(1, maxⱼ‖pⱼ‖)` the reference's extent in each block. A NaN
-/// anywhere gives NaN, which no tolerance admits.
+/// anywhere gives NaN, which no tolerance admits: a NaN in `x` or `x′` makes its difference NaN (`f64::max` drops it
+/// from the extent).
 pub fn phys(x: &Ic<f64>, x_prime: &Ic<f64>) -> f64 {
     let extent = |v: &[[f64; 2]; 3]| v.iter().map(|&w| norm(w)).fold(1.0f64, f64::max);
     let (r_x, p_x) = (extent(&x.r), extent(&x.p));
@@ -94,7 +95,7 @@ pub fn phys(x: &Ic<f64>, x_prime: &Ic<f64>) -> f64 {
             worst = worst.max(e);
         }
     }
-    if nan || r_x.is_nan() || p_x.is_nan() {
+    if nan {
         f64::NAN
     } else {
         worst

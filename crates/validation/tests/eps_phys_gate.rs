@@ -1,15 +1,18 @@
-//! The `encode-eps-phys` gate (TASK-M2-16; REQ-ENC-024, REQ-ENC-004, PIT-3): its draws, the clamp-flag agreement, the
-//! verdict at and past the threshold, the rows, the refusals, and the runner on `fixtures/gates/encode-eps-phys/`, where
-//! the mismatched encode fails.
+//! The `encode-eps-phys` gate (TASK-M2-16; REQ-ENC-024, REQ-ENC-004, PIT-3): its draws, the clamp-flag agreement, a
+//! row's counts, the verdict at and past the threshold, the rows, the refusals, and the runner on
+//! `fixtures/gates/encode-eps-phys/`, where the mismatched encode fails.
 
 use std::path::{Path, PathBuf};
 
+use kernel::decode::{self, Decoded, Latent};
+use kernel::generated::links::Defaults;
 use validation::eps_phys::{
-    agrees, latents, points, rows, verdict, EncodeKind, EpsPhysGate, Input, Row, NAME,
+    agrees, chart_row, latents, points, rows, samples, verdict, worst_row, EncodeKind, EpsPhysGate,
+    Input, Row, NAME,
 };
-use validation::gate::{self, GateConfig, Verdict};
+use validation::gate::{self, GateConfig, RegionCount, Verdict};
 use validation::negative_control;
-use validation::roundtrip::{keys, Sides};
+use validation::roundtrip::{keys, margins, Registered, Sides, INSIDE, PAST};
 
 /// This workspace's root.
 fn root() -> PathBuf {
@@ -203,20 +206,85 @@ negative_control!(
     check_verdict(|rows, k| verdict(rows, 2.0 * k))
 );
 
+/// `worst_row` is the row with the largest worst, the first of equals, and none of no rows; `samples` counts every
+/// row's interior, clamped and band samples.
+fn check_worst_row(pick: fn(&[Row]) -> Option<&Row>) {
+    let named = |source: &str, worst: f64| Row {
+        source: source.to_owned(),
+        ..row(worst, 1, 0)
+    };
+    assert!(pick(&[]).is_none(), "a worst row of no rows");
+    let tied = [
+        named("a", 1.0),
+        named("b", 3.0),
+        named("c", 3.0),
+        named("d", 2.0),
+    ];
+    assert_eq!(
+        pick(&tied).map(|r| r.source.as_str()),
+        Some("b"),
+        "the first of equals"
+    );
+    let zeros = [named("a", 0.0), named("b", 0.0)];
+    assert_eq!(
+        pick(&zeros).map(|r| r.source.as_str()),
+        Some("a"),
+        "the first of zeros"
+    );
+    let rising = [named("a", 1.0), named("b", 1.0f64.next_up())];
+    assert_eq!(
+        pick(&rising).map(|r| r.source.as_str()),
+        Some("b"),
+        "one ulp larger"
+    );
+    let counted = [
+        Row {
+            clamped: 2,
+            band: 3,
+            ..row(1.0, 5, 0)
+        },
+        Row {
+            clamped: 7,
+            band: 11,
+            ..row(1.0, 13, 0)
+        },
+    ];
+    assert_eq!(samples(&counted), 41, "the samples counted");
+}
+
+#[test]
+fn eps_phys_gate_worst_row() {
+    check_worst_row(worst_row);
+}
+
+negative_control!(
+    eps_phys_gate_worst_row,
+    "a pick that takes the last of equals must fail",
+    expected = "the first of equals",
+    check_worst_row(
+        |rows| rows
+            .iter()
+            .rev()
+            .reduce(|a, r| if r.worst.0 > a.worst.0 { r } else { a })
+    )
+);
+
 // ── The rows ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
-/// `rows` on `i`: each registered chart at f64 then f32, in the registry's order, then the 8-D interior, each row's
-/// samples all counted; the ternary mass plot's corners clamped; and, under the defaults, every row within 64 `ε` with
-/// no mismatch, while the mismatched encode is far past it.
+/// `rows` on `i`: each registered chart at f64 then f32, in the registry's order, then the 8-D interior if `i` draws
+/// any latents, each row's samples all counted; the ternary mass plot's corners clamped; and, under the defaults,
+/// every row within 64 `ε` with no mismatch, while the mismatched encode is far past it.
 fn check_rows(i: &Input, got: &[Row]) {
     let mut want: Vec<(String, u32)> = keys()
         .into_iter()
         .flat_map(|k| [(k.to_owned(), 64), (k.to_owned(), 32)])
         .collect();
-    want.extend([
-        ("latent z (8-D)".to_owned(), 64),
-        ("latent z (8-D)".to_owned(), 32),
-    ]);
+    if i.fuzz > 0 {
+        want.extend([
+            ("latent z (8-D)".to_owned(), 64),
+            ("latent z (8-D)".to_owned(), 32),
+        ]);
+    }
     let have: Vec<(String, u32)> = got.iter().map(|r| (r.source.clone(), r.bits)).collect();
     assert_eq!(have, want, "the rows and their order");
     for r in got {
@@ -265,6 +333,8 @@ fn eps_phys_gate_rows() {
         let i = input(256, 1024, kind);
         check_rows(&i, &rows(&i));
     }
+    let i = input(256, 0, EncodeKind::Defaults);
+    check_rows(&i, &rows(&i));
 }
 
 negative_control!(
@@ -275,6 +345,149 @@ negative_control!(
         let i = input(256, 0, EncodeKind::Defaults);
         check_rows(&input(256, 1024, EncodeKind::Defaults), &rows(&i))
     }
+);
+
+// ── A row's counts ───────────────────────────────────────────────────────────────────────────────────────────────
+
+/// A chart that decodes every `(u, v)` to the one latent `z`: each of its samples lies on the same side of every clamp.
+struct Fixed(&'static str, [f64; 8]);
+
+impl Registered for Fixed {
+    fn key(&self) -> &'static str {
+        self.0
+    }
+
+    fn type_name(&self) -> &'static str {
+        "Fixed"
+    }
+
+    fn decode64(&self, _: f64, _: f64) -> Decoded<f64> {
+        decode::decode::<Defaults, f64>(&Latent::new(self.1))
+    }
+
+    fn decode32(&self, _: f32, _: f32) -> Decoded<f32> {
+        decode::decode::<Defaults, f32>(&Latent::new(self.1.map(|x| x as f32)))
+    }
+}
+
+/// `z[6]`'s margin, the first ratio's, at `z` with `z[6] = t`, every other control at the centre.
+fn mass_margin(t: f64) -> f64 {
+    let mut z = [0.0; 8];
+    z[6] = t;
+    margins(&decode::decode::<Defaults, f64>(&Latent::new(z)).ic)[6]
+}
+
+/// The latent with `z[6]` where its margin is 1, in the band between [`PAST`] and [`INSIDE`], by bisection.
+fn band_latent() -> [f64; 8] {
+    let (mut lo, mut hi) = (0.0f64, 1e3f64);
+    assert!(
+        mass_margin(lo) > 1.0 && mass_margin(hi) < 1.0,
+        "the bracket"
+    );
+    for _ in 0..200 {
+        let mid = 0.5 * (lo + hi);
+        if mass_margin(mid) > 1.0 {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+    }
+    let mut z = [0.0; 8];
+    z[6] = lo;
+    z
+}
+
+/// A row's function, as `chart_row::<f64>`.
+type RowFn = fn(&dyn Registered, &Input) -> Row;
+
+/// `row` counts each sample on its side: 16 samples of the centre all interior, its worst at the first of them and
+/// equal to its median and p99; 16 in the band all counted there; 16 past the first mass clamp all clamped, with their
+/// flags set; and the mismatched encode, whose flags disagree at the clamp, counts every one a mismatch.
+fn check_counts(row: RowFn) {
+    let z = band_latent();
+    let m = margins(&decode::decode::<Defaults, f64>(&Latent::new(z)).ic);
+    let s = Sides::of(m);
+    assert!(
+        PAST < m[6] && m[6] < INSIDE && s.inside == 0xff & !(1 << 6) && s.past == 0,
+        "the band latent is not in the band: {m:?}"
+    );
+    let defaults = input(16, 0, EncodeKind::Defaults);
+    let centre = row(&Fixed("centre", [0.0; 8]), &defaults);
+    assert_eq!(
+        (
+            centre.interior,
+            centre.clamped,
+            centre.band,
+            centre.mismatches
+        ),
+        (16, 0, 0, 0),
+        "the centre's counts"
+    );
+    assert_eq!(centre.worst.1, 0, "the worst's index, the first of equals");
+    assert!(
+        centre.worst.0 == centre.median && centre.median == centre.p99,
+        "the centre's worst, median and p99 differ: {centre:?}"
+    );
+    let band = row(&Fixed("band", z), &defaults);
+    assert_eq!(
+        (band.interior, band.clamped, band.band, band.mismatches),
+        (0, 0, 16, 0),
+        "the band's counts"
+    );
+    let mut past = [0.0; 8];
+    past[6] = 1e3;
+    let clamped = row(&Fixed("past", past), &defaults);
+    assert_eq!(
+        (
+            clamped.interior,
+            clamped.clamped,
+            clamped.band,
+            clamped.mismatches
+        ),
+        (0, 16, 0, 0),
+        "the clamped counts"
+    );
+    let swapped = row(&Fixed("past", past), &input(16, 0, EncodeKind::Mismatched));
+    assert_eq!(swapped.mismatches, 16, "the mismatch count");
+}
+
+#[test]
+fn eps_phys_gate_counts() {
+    check_counts(chart_row::<f64>);
+}
+
+negative_control!(
+    eps_phys_gate_counts,
+    "a row that drops its band count must fail",
+    expected = "the band's counts",
+    check_counts(|c, i| Row {
+        band: 0,
+        ..chart_row::<f64>(c, i)
+    })
+);
+
+negative_control!(
+    eps_phys_gate_counts_worst,
+    "a row whose worst is the last of equals must fail",
+    expected = "the worst's index",
+    check_counts(|c, i| {
+        let r = chart_row::<f64>(c, i);
+        let n = r.interior.saturating_sub(1);
+        Row {
+            worst: (r.worst.0, n),
+            ..r
+        }
+    })
+);
+
+negative_control!(
+    eps_phys_gate_counts_mismatches,
+    "a row that drops its mismatches must fail",
+    expected = "the mismatch count",
+    check_counts(|c, i| Row {
+        mismatches: 0,
+        ..chart_row::<f64>(c, i)
+    })
 );
 
 // ── Judging ──────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -317,9 +530,32 @@ fn check_judge(judge: Judge) {
         "the defaults: {:?}",
         pass.negative_results
     );
+    let measured = rows(&small);
+    let top = worst_row(&measured).expect("rows");
+    let margin = format!(
+        "margin {:.1}× (k = 64 over the worst, {:.2}, {} f{})",
+        64.0 / top.worst.0,
+        top.worst.0,
+        top.source,
+        top.bits
+    );
     assert!(
-        pass.scatter.iter().any(|l| l.starts_with("margin")),
-        "the pass gives no margin"
+        pass.scatter.contains(&margin),
+        "the pass gives no margin {margin}: {:?}",
+        pass.scatter
+    );
+    assert_eq!(
+        pass.regions.as_ref().map(|r| r.count.clone()),
+        Some(RegionCount::Recorded(28 * 256 + 2 * 1024)),
+        "the pass's sample count"
+    );
+    assert_eq!(
+        pass.negative_results,
+        [format!(
+            "0 of {} samples beyond ε_phys or against their clamp flags",
+            28 * 256 + 2 * 1024
+        )],
+        "the pass's negative results"
     );
     let fail = judge(
         &c,
@@ -334,6 +570,17 @@ fn check_judge(judge: Judge) {
     assert!(
         fail.negative_results[0].starts_with("failing rows: latent f64"),
         "the fail does not name its rows: {:?}",
+        fail.negative_results
+    );
+    assert_eq!(
+        fail.negative_results[0].matches(" interior, ").count(),
+        30,
+        "the fail names every row: {:?}",
+        fail.negative_results
+    );
+    assert!(
+        fail.negative_results.len() == 2 && fail.negative_results[1].contains("PIT-3"),
+        "the fail's PIT-3 note: {:?}",
         fail.negative_results
     );
 }

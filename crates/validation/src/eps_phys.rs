@@ -198,17 +198,29 @@ pub fn rows(input: &Input) -> Vec<Row> {
     out
 }
 
-/// The verdict on `rows` against `k`: a pass when every row has an interior sample and no mismatch, and its worst is
-/// at most `k`.
+/// Whether the row `r` fails against `k`: it has no interior sample, or a mismatch, or its worst is past `k` or NaN.
+pub fn fails(r: &Row, k: f64) -> bool {
+    r.interior == 0 || r.mismatches > 0 || r.worst.0.is_nan() || r.worst.0 > k
+}
+
+/// The verdict on `rows` against `k`: a pass when no row [`fails`].
 pub fn verdict(rows: &[Row], k: f64) -> Verdict {
-    let ok = rows
-        .iter()
-        .all(|r| r.interior > 0 && r.mismatches == 0 && r.worst.0 <= k);
-    if ok {
-        Verdict::Pass
-    } else {
+    if rows.iter().any(|r| fails(r, k)) {
         Verdict::Fail
+    } else {
+        Verdict::Pass
     }
+}
+
+/// The row with the largest worst, the first of equals; `None` when there are no rows.
+pub fn worst_row(rows: &[Row]) -> Option<&Row> {
+    rows.iter()
+        .reduce(|a, r| if r.worst.0 > a.worst.0 { r } else { a })
+}
+
+/// The samples `rows` count, interior, clamped and in the band.
+pub fn samples(rows: &[Row]) -> usize {
+    rows.iter().map(|r| r.interior + r.clamped + r.band).sum()
 }
 
 /// The `encode-eps-phys` gate.
@@ -253,20 +265,14 @@ impl EpsPhysGate {
                 r.mismatches
             ));
         }
-        let (worst, at) = rows.iter().fold((0.0f64, None), |(w, a), r| {
-            if r.worst.0 > w {
-                (r.worst.0, Some(r))
-            } else {
-                (w, a)
-            }
-        });
-        let samples: usize = rows.iter().map(|r| r.interior + r.clamped + r.band).sum();
+        let samples = samples(&rows);
         let mut negative = Vec::new();
-        match (verdict, at) {
+        match (verdict, worst_row(&rows)) {
             (Verdict::Pass, Some(r)) => {
                 scatter.push(format!(
-                    "margin {:.1}× (k = {k} over the worst, {worst:.2}, {} f{})",
-                    k / worst,
+                    "margin {:.1}× (k = {k} over the worst, {:.2}, {} f{})",
+                    k / r.worst.0,
+                    r.worst.0,
                     r.source,
                     r.bits
                 ));
@@ -277,7 +283,7 @@ impl EpsPhysGate {
             _ => {
                 let over: Vec<String> = rows
                     .iter()
-                    .filter(|r| r.interior == 0 || r.mismatches > 0 || r.worst.0 > k)
+                    .filter(|r| fails(r, k))
                     .map(|r| {
                         format!(
                             "{} f{} (worst {:.2}, {} interior, {} mismatches)",
