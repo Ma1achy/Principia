@@ -115,6 +115,10 @@ pub mod compute;
 /// non-finite `E*`, are refused before anything decodes (chart_reference §0.6; R-25, R-124; TASK-M2-12).
 pub mod chart_validate;
 
+// The chart authoring layer: the four axis kinds and their metadata, the per-chart descriptors and the well-posedness
+// validator, before resolution (chart_decoder_contract Part 5; TASK-M2-14): documented in the module itself.
+pub mod chart_authoring;
+
 // Navigation as chart construction: pan, slice, zoom and tilt as typed `SetField` edits of `SimConfig`'s `z₀`, `q₁` and
 // `q₂`, and the direction library (chart_decoder_contract Part 4; TASK-M2-22): documented in the module itself, whose
 // links resolve there.
