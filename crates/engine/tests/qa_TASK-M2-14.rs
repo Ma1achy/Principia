@@ -1150,8 +1150,10 @@ fn plane() -> Plane {
 /// The decode path under check.
 type Path = fn(&ValidatedChart<Hand>, &Plane, f64, f64) -> Decoded<f64>;
 
-fn shipped(c: &ValidatedChart<Hand>, p: &Plane, u: f64, v: f64) -> Decoded<f64> {
-    c.decode::<Defaults>(p, u, v)
+/// The shipped decode path: the validated chart's own map, then the decoder. It reads no plane; the plane is the
+/// faulty path's, which the check proves the shipped one is not.
+fn shipped(c: &ValidatedChart<Hand>, _: &Plane, u: f64, v: f64) -> Decoded<f64> {
+    c.decode::<Defaults>(u, v)
 }
 
 /// A decode path that always takes the affine slice, never `Φ`.
