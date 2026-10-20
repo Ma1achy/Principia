@@ -42,3 +42,7 @@ The Chart builder window builds a chart from two axes, each of a kind: a latent 
   domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden. `forbidden_fraction`
   uses TASK-M8-05's classifier (REQ-CHART-056). With the egui layer shown the view is `[0,1]²`, where nothing changes,
   so REQ-GUI-109's acceptance line stands. A physical-quantity axis is affine past `[0,1]²` (R-408's port, B1).
+- R-467 (20 Oct 2026): the Chart builder's Domain preview (R-408, §G7) stands unchanged: it is a builder tool, not a
+  presentation view, and keeps its hatch and its "forbidden in view" count. Whether a Chart-builder chart can fail
+  inside its own square, and so whether it gets the debug view's in-square warning, is RQ-372, carried by REQ-GUI-228
+  in TASK-M8-47, which depends on this task (decisions.md § R-467, F2).
