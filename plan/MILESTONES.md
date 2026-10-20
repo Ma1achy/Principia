@@ -179,6 +179,8 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   goldens' decision, are RQ-330's.
   R-454 (closing RQ-330): the M2 gate confirms the new swatches and that evidence, and the three re-rendered
   goldens are re-baselined under R-444 to R-446.
+- R-504 (closing RQ-373): the four goldens R-467 changes are re-baselined by TASK-M2-34; the M2 gate confirms the
+  canvas background's value and the changed tiles with REQ-COL-110's NaN / Inf style, which is not magenta (R-505).
 - Display names (R-449; TASK-M2-33): one conversion function names what a person reads, the bodies 1, 2, 3 and a pair
   by its two bodies, never its pair id, on every surface built so far; machine-readable exports stay 0-based and say
   so in their header or schema.
@@ -204,8 +206,9 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 
 canonical_spec §1 item 6 and §11: "validate physics numerically", natively, before the browser.
 
-- Stepper and regularisation occupants (Heggie default; AZ; logH; none). Substep control with the frozen
-  N_sub bucket lookup. The fixed `dt_macro` march.
+- Stepper and regularisation occupants (Heggie default; AZ; logH; none), with the split reversibility flags
+  (R-500). Substep control with the N_sub bucket lookup over the threshold table generated per sim key (R-502;
+  *was:* "the frozen N_sub bucket lookup"); its maximum length is confirmed at this gate (REQ-INT-094). The fixed `dt_macro` march.
 - Terminal events: collision, escape (closure + energy), ionisation, precedence, and the termination checks.
 - The full `SimState` accumulator fill on the CPU.
 - The validation orbits and ground truth. The independent convergence reference. The Inspector's RK45
