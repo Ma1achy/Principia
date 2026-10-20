@@ -1529,3 +1529,229 @@ changes what the default view draws.*
 - **Corrected** on physics review 5587614130 of PR #255, item 5: the title and the question said "only five named
   dimensions are orthogonal", the count with one target; with two targets it is four.
 - **Waits:** REQ-GUI-265 (`rq: RQ-404`), the tilt of such a chart on the mock, closed by TASK-M6-51, a leaf task.
+
+## RQ-406: On a periodic axis, whether the view centre is stored unwrapped (continuous pan, an unbounded number) or canonicalised after each gesture (bounded, with an invisible jump of one period) *(the human's queued question, R-537 Q1, EX9; REQ-GUI-270; context: TASK-M8-55)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q1). For the human: yes, it changes what the view state
+records.*
+
+- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q1.** On a periodic axis, is the view
+  centre stored unwrapped (continuous pan, unbounded number) or canonicalised after each gesture (bounded, with an
+  invisible jump of one period)? *Recommendation:* unwrapped in the view state, canonical in keys and addresses."; EX9:
+  "The view state (centre, zoom, and on a periodic axis the unwrapped centre, Q1) is recorded as it is."
+- **Options seen:** (a) unwrapped in the view state, canonical in keys and addresses (the file's recommendation);
+  (b) canonicalised after each gesture, the view state bounded, the pan jumping by one period invisibly; (c) unwrapped,
+  and canonicalised only on export.
+- **Applied meanwhile:** (a), which EX9 assumes (R-537 U14). A ruling other than (a) is a follow-up change to
+  REQ-GUI-270. Nothing waits.
+
+## RQ-407: Whether repeats of the field are drawn at full strength *(the human's queued question, R-537 Q2, EX2, EX6; REQ-GUI-268; context: TASK-M8-55)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q2). For the human: yes, it changes what is drawn.*
+
+- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q2.** Are repeats of the field drawn at
+  full strength? *Recommendation:* yes; they are the same systems. Repeats of a trace are fainter, as in the demo."
+- **Options seen:** (a) yes, the field's repeats at full strength, a trace's repeats fainter (the file's
+  recommendation); (b) the field's repeats dimmed too, so the primary range reads first; (c) a setting, full strength
+  by default.
+- **Applied meanwhile:** (a) (R-537 U14). Nothing waits.
+
+## RQ-408: An outline of the chart's primary square when the view goes past it *(the human's queued question, R-537 Q3; context: TASK-M8-55, TASK-M8-08)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q3). For the human: yes, it adds an overlay.*
+
+- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q3.** An outline of the chart's primary
+  square when the view goes past it. *Recommendation:* an Overlays › Chart toggle, off by default and on in the debug
+  view. The demo has it on."
+- **Options seen:** (a) an Overlays › Chart toggle, off by default and on in the debug view (the file's
+  recommendation); (b) always drawn while the view shows past the square; (c) none.
+- **Applied meanwhile:** nothing is built: no outline is drawn and Overlays › Chart gains no toggle until this is ruled
+  (R-537 U14). Nothing else waits.
+
+## RQ-409: A zoom-out limit on periodic charts, how many periods may show *(the human's queued question, R-537 Q4; REQ-GUI-267; context: TASK-M8-55)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q4). For the human: yes, it changes navigation.*
+
+- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q4.** A zoom-out limit on periodic charts
+  (how many periods may show). *Recommendation:* none beyond the frame budget and baseline cover. The demo caps at 3×
+  for its fixed maps."
+- **Options seen:** (a) none beyond the frame budget and the baseline cover (the file's recommendation); (b) a fixed
+  number of periods; (c) a limit set by the baseline cover's depth (REQ-SCHED-074).
+- **Applied meanwhile:** (a) (R-537 U14). Nothing waits.
+
+## RQ-410: The level-0 pole repeat: drawn from its two level-1 halves, or the bootstrap raised to `L ≥ 1` on every chart with a pole-crossing axis *(the human's queued question, R-537 Q5, EX7(b); REQ-SCHED-101; context: TASK-M8-56)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q5). For the human: yes (physics: the quadtree's
+addressing).*
+
+- **File, section:** `decisions.md` § "R-537 — …", the applied text, EX7(b): "At `L = 0` the half-period shift splits
+  the root, so **a level-0 repeat across a pole is drawn from its two level-1 halves** (Q5)."; §4: "**Q5.** The level-0
+  pole repeat: draw it from its two level-1 halves, or raise the bootstrap to `L ≥ 1` on every chart with a
+  pole-crossing axis? *Recommendation:* draw from the children; the bootstrap is already ≥ 2 in practice."
+- **Options seen:** (a) draw it from its two level-1 children (the file's recommendation); (b) raise the bootstrap to
+  `L ≥ 1` on every chart with a pole-crossing axis.
+- **Applied meanwhile:** (a), as EX7(b) says (R-537 U14). Nothing waits.
+
+## RQ-411: Whether a comment pinned in a repeat attaches to the canonical point, so that it appears in every image *(the human's queued question, R-537 Q6, EX5; context: TASK-M8-55; waits with RQ-420)*
+
+*Queued by the human (`principia_extension_interaction.md` §4, Q6). For the human: yes; it needs RQ-420 first.*
+
+- **File, section:** `decisions.md` § "R-537 — …", the applied text, §4: "**Q6.** Does a comment pinned in a repeat
+  attach to the canonical point, so that it appears in every image? *Recommendation:* yes."
+- **Options seen:** (a) yes, to the canonical point, shown in every image (the file's recommendation); (b) to the
+  pixel's own place, shown in that image only.
+- **Applied meanwhile:** (a) is the reading, but nothing is built: the corpus defines no comment on the figure
+  (RQ-420). Nothing else waits.
+
+## RQ-412: Repeats of a trace at half strength or full *(the human's queued question, R-538 Q1, TM7, R-537 EX6; REQ-GUI-275; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q1). For the human: yes, it changes what is drawn.*
+
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM7: "the trace is drawn **in every image of the
+  chart in view**, with every marker and icon …, at half strength"; §12: "**Q1.** Repeats of a trace at half strength
+  or full. *Recommendation:* half, so the primary reads first."
+- **Options seen:** (a) half strength (the file's recommendation); (b) full strength; (c) a setting, half by default.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+
+## RQ-413: The start icon: the star in every set, or Pictures' initial-triangle glyph as an option elsewhere *(the human's queued question, R-538 Q2, TM4; REQ-GUI-272; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q2). For the human: yes (look).*
+
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM4's table, Start: "star | star | the initial
+  triangle in body colours | star"; §12: "**Q2.** Start icon: the star in every set, or Pictures' initial-triangle glyph
+  as an option elsewhere. *Recommendation:* star by default, the triangle as Pictures'."
+- **Options seen:** (a) the star by default, the triangle as Pictures' (the file's recommendation); (b) the star in
+  every set; (c) the triangle offered as a start option in every set.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+
+## RQ-414: Where a syzygy and an end event coincide in time, which draws on top *(the human's queued question, R-538 Q3, TM5; REQ-GUI-273; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q3). For the human: yes (look).*
+
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, §12: "**Q3.** Where a syzygy and an end event
+  coincide in time, which draws on top? *Recommendation:* the end event."
+- **Options seen:** (a) the end event on top (the file's recommendation); (b) the syzygy on top; (c) the syzygy
+  hidden where they coincide.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+
+## RQ-415: Whether "Leaves / enters the window" chevrons and edge-pinned icons merge into one edge treatment *(the human's queued question, R-538 Q4, TM6; REQ-GUI-274; context: TASK-M8-58)*
+
+*Queued by the human (`principia_trace_markers.md` §12, Q4). For the human: yes (look).*
+
+- **File, section:** `decisions.md` § "R-538 — …", the applied text, TM6; §12: "**Q4.** Should "Leaves / enters the
+  window" chevrons and edge-pinned icons merge into one edge treatment? *Recommendation:* keep them separate; pins are
+  events, chevrons are the line."
+- **Options seen:** (a) keep them separate (the file's recommendation); (b) one edge treatment, a pinned icon drawn
+  with the chevron's direction.
+- **Applied meanwhile:** (a) (R-538 I13). Nothing waits.
+
+## RQ-416: F3's Fit scales "the view's own square, wherever the view sits, not the chart's `[0,1]²`" (R-537 EX1), where R-472 X2, the human's words, scales "the chart's `[0,1]²` … with no extension" *(conflict: the human's words against a ruling, R-537 EX1, R-472 X2, R-468 E2; REQ-GUI-230, REQ-GUI-267; context: TASK-M8-46, TASK-M8-55)*
+
+*Found by the port of R-537 (the instruction: "If anything in these files contradicts main or that branch, or my words
+contradict a ruling, tell me and queue it rather than resolving it"). Nothing is chosen. For the human: yes, it changes
+what Fit shows once the view can sit past the chart's square.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX1: "F3 Fit scales the window's square to the screen (R-468). Its
+    "square" is the view's own square, wherever the view sits, not the chart's `[0,1]²`."
+  - `decisions.md` § "R-472 — …", the human's words, X2: "**Fit**: the chart's `[0,1]²` is scaled to fill the window,
+    with no extension."; § "R-468 — …", the human's words, clause 2: "Fit: the chart is scaled up to fill the window."
+  - `decisions.md` § "R-468 — …", E2 (applied per R-369): ""The chart square" is the view's square, `UV ∈ [0,1]²`, the
+    depth-0 root the figure shows at the current `(z₀, q₁, q₂)`, the chart's own `[0,1]²` at the preset's window … so
+    Fit shows the view's square and nothing beyond it."
+  - `docs/gui/principia_render_gui_spec.md` § "G1. …", the F3 bullet: "**Fit**: the view's square, `UV ∈ [0,1]²` at
+    the current `(z₀, q₁, q₂)`, is scaled uniformly to the window's shorter side".
+- **The conflict:** until R-537 the view's square sat inside the chart's square whenever the controls were shown, so
+  "the chart's `[0,1]²`" and "the view's square" did not part. With pan and zoom reaching past the square (EX1), they
+  do: EX1 scales the view's square, which may then hold extension, blank or repeats; R-472 X2's words scale the chart's
+  own `[0,1]²`, "with no extension".
+- **Options seen:**
+  - (a) EX1: Fit scales the view's own square wherever it sits, drawing whatever it holds, extension included; "with no
+    extension" read as no window area beyond that square (R-468 E2's reading).
+  - (b) R-472 X2 literally: Fit scales the chart's own `[0,1]²`, the preset's window at the plane anchor, wherever the
+    view sits, so pressing F3 in Fit can change what is shown.
+  - (c) Fit scales the view's square, and the extension inside it draws as the canvas background under Fit.
+- **Applied meanwhile:** (a), R-468 E2's reading, which EX1 states (R-537 U4). Nothing waits; a ruling for (b) or (c)
+  is a follow-up change to REQ-GUI-230 and REQ-GUI-267.
+
+## RQ-417: R-537 EX5 and R-538 TM8 put `decode_failed`, its detail and "forbidden" in the readout of a pixel that is not a system, where R-470 N3, the human's words, shows them only in the debug views *(conflict: the human's words against a ruling, R-537 EX5, R-538 TM8, R-470 N3, R-467; REQ-GUI-269, REQ-GUI-276; context: TASK-M8-55, TASK-M8-58)*
+
+*Found by the port of R-537 and R-538. Nothing is chosen. For the human: yes, it changes what a presentation view
+shows.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX5: "The readout says "not a system", names the check that
+    failed (for example "a mass ≤ 0") and gives the label (`decode_failed`, its detail)."
+  - `decisions.md` § "R-538 — …", the applied text, TM8: "**Readout:** the readout says "forbidden: not integrated",
+    why (for example "a mass is ≤ 0, so this is not a three-body system"), the label `decode_failed`, detail 2, and
+    the masses."
+  - `decisions.md` § "R-470 — …", the human's words, N3: "NaN, Inf, `sim_failed`, `decode_failed`, and the
+    classification behind the hatch are shown **only in the debug views** (R-41's baked variants)."; § "R-467 — …",
+    its heading: "Forbidden pixels and non-finite values are debug-only".
+- **The conflict:** the newer words show the label, its detail and the word "forbidden" in the readout of any view;
+  N3 shows `decode_failed` and the classification behind the hatch only in the debug views, and R-467 keeps "forbidden"
+  to the debug view.
+- **Options seen:**
+  - (a) EX5 and TM8 as written: the readout shows "not a system" (or "forbidden: not integrated"), the failed check, the
+    label and its detail in every view; N3 read as about drawing, not the readout.
+  - (b) N3 holds for the readout: in a presentation view it says "not a system" and names the failed check, and the
+    label, its detail and "forbidden" appear only while a debug view is the figure.
+  - (c) The readout as (b), the label and detail behind a "details" toggle in the readout.
+- **Applied meanwhile:** (b) (R-537 U7), the reading that keeps both texts' common part: "not a system" and the failed
+  check, as R-469 A5's readout names a stop. A ruling for (a) or (c) is a follow-up change to REQ-GUI-269 and
+  REQ-GUI-276. Nothing waits.
+
+## RQ-418: R-538 TM9's guard (b) ends a run whose step size is not finite "as incomplete", where the integrator contract labels NaN/Inf during integration `sim_failed` *(conflict: the human's instruction against a contract, R-538 TM9, R-445; REQ-INT-096, REQ-EVT-002, REQ-SYS-017; context: TASK-M8-58)*
+
+*Found by the port of R-538. Nothing is chosen. For the human: yes (physics: what a run's label means).*
+
+- **File, section:**
+  - `decisions.md` § "R-538 — …", the applied text, TM9: "`computeIC` needs both guards: … **(b)** a step size that is
+    not finite ends the run as incomplete."; TM3: "**Incomplete** | the hover's step budget ran out".
+  - `docs/contracts/principia_integrator_contract.md` § "Part 7 — Detectors as the `SimState` producer" (the terminal states): "`sim_failed` (NaN/Inf during
+    integration) and `decode_failed` …"; REQ-SYS-017: the CPU f64 instance of the kernel is the one `computeIC` runs.
+- **The conflict:** "incomplete" is the hover's step budget running out, a run cut short but sound; a non-finite step
+  is a run that failed, which the contract labels `sim_failed`. The trace file uses "incomplete" for both.
+- **Options seen:**
+  - (a) `sim_failed`, as the contract says; the trace still ends with the "?" icon, since it is not whole.
+  - (b) incomplete, as TM9 says: a hover-only state, the kernel's label unchanged.
+  - (c) `sim_failed` with its own end icon, distinct from incomplete's "?".
+- **Applied meanwhile:** (a) (R-538 I8): the run ends at once and never loops, which both texts require. A ruling for
+  (b) or (c) is a follow-up change to REQ-INT-096. Nothing waits.
+
+## RQ-419: R-537 EX4's "never any gaps … raw canvas background where a system exists is a bug, never a loading state" leaves open the frames before any ancestor exists: launch, or a cold cache with no backdrop and no snapshot *(silence, R-537 EX4, R-72; REQ-GUI-268, REQ-SCHED-056; context: TASK-M8-55, TASK-M5-15)*
+
+*Found by the port of R-537. Nothing is chosen. For the human: no; the orchestrator may rule it, as a mechanical
+consequence, unless the human wants it.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX4: "Every visible point of the window is drawn, at whatever
+    resolution is available. Until a quad is computed it shows its nearest computed ancestor … Raw canvas background
+    where a system exists is a bug, never a loading state."
+  - `docs/contracts/principia_caching_contract.md` § "Part 4 — …": "Something low-resolution appears in one or two
+    dispatches; refinement then proceeds beneath it."; § "Part 5 — …", the fallback: "When there are **no payloads
+    behind the picture** — the spotlight-reel handoff … or a cold cache — the original screen-texture snapshot applies".
+- **The question:** at launch, on a chart switch with no backdrop, or on a cold cache with no snapshot, no ancestor
+  exists for the first dispatches; EX4 does not say what those frames draw.
+- **Options seen:** (a) those frames are excepted: the background until the first baseline cover lands, which EX4's
+  checks follow; (b) the first frame waits for the baseline cover (a blocking first dispatch); (c) a neutral loading
+  fill drawn as a figure mark until then.
+- **Applied meanwhile:** (a) (R-537 U6). Nothing waits.
+
+## RQ-420: R-537 EX5 names "comments" and "the console's pick" among the interactions that must work at every visible pixel, and the corpus defines neither *(silence, R-537 EX5 and Q6, R-72; REQ-GUI-269; context: TASK-M8-55; RQ-411 waits on it)*
+
+*Found by the port of R-537. Nothing is chosen. For the human: yes; a definition is a design choice.*
+
+- **File, section:**
+  - `decisions.md` § "R-537 — …", the applied text, EX5: "That means hover, click and pin (R-453), lock, the IC
+    inspector, the trace, keep, readouts, comments and the console's pick."; §4, Q6: "Does a comment pinned in a repeat
+    attach to the canonical point".
+  - `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)": the console's controls, which include
+    no pick; no section of the spec or of the GUI state contract defines a comment on the figure.
+- **The question:** what a comment on the figure is (where it is stored, how it is placed, whether it is exported), and
+  what the console's pick is (a console command that picks a pixel or an IC), so that EX5 can apply to them.
+- **Options seen:** (a) a definition requirement for each (R-72), written by the GUI tasks that need them, EX5 applying
+  when they exist; (b) the words read as naming features not yet in the corpus, to be specified by the human; (c) both
+  dropped from EX5.
+- **Applied meanwhile:** EX5 is built for the interactions the corpus defines (R-537 U9). Nothing waits; RQ-411 is
+  answered with it.

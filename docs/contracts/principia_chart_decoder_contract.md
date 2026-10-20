@@ -135,9 +135,12 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 
 ### Past the unit square — each axis's extension type (R-407)
 
-The figure can show more than the chart's `[0,1]²`: with the egui layer hidden (F3) or in present mode it fills the
-window at the same scale (R-406), so where the window reaches past the depth-0 root its samples take `(s,t)` beyond
-`[0,1]` on either axis. **Inside `[0,1]²` nothing changes.** Outside it, **each chart axis declares one of four
+The figure can show more than the chart's `[0,1]²`: wherever the view reaches past `[0,1]²`, by pan, by zoom out, or
+by F3 Extend (R-537; F3 and present mode fill the window at the same scale, R-406), its samples take `(s,t)` beyond
+`[0,1]` on either axis. **The extension is a property of the chart, not of F3** (R-537): it is drawn wherever the view
+reaches, the controls shown or hidden, and it never has gaps. **Inside `[0,1]²` nothing changes.** *Was (R-407):* "with
+the egui layer hidden (F3) or in present mode it fills the window at the same scale (R-406), so where the window reaches
+past the depth-0 root its samples take". Outside it, **each chart axis declares one of four
 extension types**, and the type decides what the axis does past its edge:
 
 | Type | Past the edge | Which axes |
@@ -236,6 +239,19 @@ to run from the pole to the equator; past the equator its formula continues into
 repeated), and its primary range is pole to equator, so that continuation is not counted (R-412, closing RQ-264;
 built by TASK-M8-44, REQ-CHART-057).
 
+**Repeats and the canonical point (R-537).** A pixel in a repeat (past a periodic axis's period, over a pole, past the
+hemisphere's fold) is the same system as its **canonical** point, the one inside every axis's primary range, which the
+types give by folding it: its pick, readout, trajectory, outcome and inspector are the canonical system's, the readout
+naming the pixel a repeat. A pixel on an affine extension is that point of the plane. The quadtree follows the same
+fold (EX7): a quad in a repeat maps to its canonical quad by the type group (on the shape sphere at level `L`, `n = 2^L`,
+with R-14's `φ = π(1 − t)`: θ's period `ix' = ix mod n`; over the pole at `t = 1`, `iy' = 2n − 1 − iy` and
+`ix' = (ix + n/2) mod n`; over the pole at `t = 0`, `iy' = −1 − iy` and the same shift; R-412's fold at the equator,
+`t = 0`, `iy' = −1 − iy` with `ix` unchanged; composed until the address is inside the root), which is the one
+requested, computed, cached and decided, every image drawing it; neighbours (2:1 balance, the criterion's arms,
+contours, class edges, smoothing) cross seams, poles and folds through the same map, an affine neighbour is the real
+one, and past a bounded edge there is none. A quad wholly past a bounded edge is not requested; one straddling a
+validity boundary integrates its valid footprints only, the rest `decode_failed` and blank. The statistics above are
+unchanged: each system is counted once, at its canonical address (R-408).
 ---
 
 ## Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)
@@ -258,6 +274,13 @@ Pan and slice are the **same operation** — move `z₀` — decomposed by the p
 **Filling the window is not a gesture (R-406, R-407).** With F3 or present mode hiding the chrome, the figure shows more
 of the same chart, each axis past `[0,1]²` by its extension type (Part 3): `(z₀, q₁, q₂)` is unchanged and nothing is
 edited.
+
+**Pan and zoom past the square (R-537).** Pan and zoom may take the view's window past `[0,1]²` on every chart, with
+the controls shown or hidden. The only stop is R-469's, on the centre (below): on a periodic or pole-crossing axis
+`validate` is evaluated on the centre after the types have folded it, so a pan across a seam or a pole never stops; on
+an affine latent axis there is no stop at all; on a chart whose square is its whole domain the centre stops at the
+domain's edge, while the window may still show blank past it. "Filling the window is not a gesture" stands for F3, whose
+Extend only adds window area.
 
 **Navigation stops at the edge (R-469).** Pan, slice, zoom, tilt and lock are accepted only if the chart's centre (the
 view's centre pixel, `z(½,½)`) still passes `validate`'s layers 2 and 3 after the edit. An edit that would cross stops

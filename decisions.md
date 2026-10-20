@@ -7438,8 +7438,10 @@ to the window's shorter side, chosen in View › "F3 fills by: Extend / Fit"). R
 window is a presentation view: a pixel past `[0,1]²` that is not part of the chart draws the canvas background).*
 *Amended in part by R-472 (20 Oct 2026; §10's row "F3 gains Fit beside Extend": the mode named in the sidecar and
 present mode following it).*
+*Amended in part by R-537 (20 Oct 2026; the extension is a property of the chart, not of F3: pan and zoom reach past
+`[0,1]²` with the controls shown, and F3's Extend only adds window area).*
 *Still in force: all of it, as Extend, the default; R-468 adds Fit beside it, and R-472 names the mode in the
-sidecar.*
+sidecar; F3 is no longer the only way past the square (R-537).*
 *10 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" and § "Export &
 share" (sentences added), REQ-GUI-168, REQ-GUI-070 and REQ-GUI-100 (reqio: notes), REQ-GUI-179 and REQ-GUI-180
 (reqio, new), TASK-M6-30 (new), TASK-M6-24 and TASK-M8-32 (notes), TASK-M8-05, `plan/tasks.yaml`,
@@ -7519,9 +7521,12 @@ background, in every view, never a palette colour; the hatch is only the optiona
 over those pixels, and the debug views').*
 *Amended in part by R-472 (20 Oct 2026; past a bounded edge a pixel is blank, the hatch optional; a tilted, sliced or
 saved chart extends by its axes' types, nothing written per chart).*
+*Amended in part by R-537 (20 Oct 2026; clause 2's "outside `[0,1]²`" is reached by navigation with the controls shown
+as well as by F3; a pixel in a repeat resolves to its canonical system).*
 *Still in force: all of it, the four types, the fallback's classification and the pixel's label (`decode_failed`, never
 integrated, never dropped); only how a forbidden pixel is drawn changes, "hatched" now naming the classification
-(R-467), the pixel drawn blank and the hatch an optional overlay (R-470, R-472).*
+(R-467), the pixel drawn blank and the hatch an optional overlay (R-470, R-472); and the extension is reached by pan and
+zoom too (R-537).*
 *10 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Part 3 — Charts" (a subsection added,
 "Past the unit square — each axis's extension type (R-407)"), § "Part 4 — Navigation is chart construction (pan,
 slice, zoom, tilt, lock)" and § "Part 5 — Well-posedness and the validation contract" (sentences added),
@@ -12635,6 +12640,10 @@ in the latent space and its tilt-mode sentence stand, and B4 stands (N1).
 Adds REQ-GUI-217; changes REQ-GUI-193 (rulings, note) and REQ-GUI-206 (note).
 
 ## R-466 — Slice centre, Tilt and Navigate each have a "reset" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*
+*Refined in part by R-539 (20 Oct 2026; K7's quoted rule, "The figure is never covered", is about the generic GUI
+panels and chrome; figure marks such as the trace, contour lines and icons for points of interest may cover the
+figure).*
+*Still in force: all of it; the Home button is still the one control over the figure.*
 *18 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the top bar, Navigate, Slice centre, Tilt, the Figure, the compass and a paragraph added), § "G3. Keyboard — a design
 note, not a screen (`07_keyboard.png`)" (a row of the key table and the sub-scopes), § "G7. Chart builder
@@ -13755,6 +13764,9 @@ REQ-GUI-242 (the option's control) and REQ-TOOL-169 (the sidecar); changes REQ-C
 note), REQ-CHART-056 (verify, rulings, note), REQ-CHART-040 (note), REQ-GUI-109 (note) and REQ-GUI-228 (note).
 
 ## R-472 — Extension stands: R-407's four types, past a bounded edge a pixel blank; F3 has Extend and Fit, a GUI state field, remembered, named in the sidecar, present mode following it; a tilted, sliced or saved chart extends by its axes' types, nothing written per chart *(amends R-407 and R-468)*
+*Amended in part by R-537 (20 Oct 2026; X2's Extend is no longer the only way to see past the square: pan and zoom
+reach the extension with the controls shown, and Extend only adds window area).*
+*Still in force: all of it; Extend and Fit stand, and R-537 adds the extension with the controls shown.*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (the F3 bullet: the
 sidecar and present mode) and § "Export & share" (the sidecar), `docs/design/principia_chart_reference.md` § "5.4 Past
 the unit square — each axis's extension type (R-407)" (a paragraph added, "Blank, and tilted charts"),
@@ -14235,7 +14247,11 @@ entry), REQ-GUI-108 (note) and REQ-CHART-016 (note).
 *Amended in part by R-509 (20 Oct 2026; RQ-377's six parts ruled: the stain's expression syntax, any ledger-declared
 payload field, the trace fade's proxy where defined, trace labels winning, class edges moving to the line system,
 Screen contour the default; M3's class edges in Overlays ▾ and M10's meanwhile replaced).*
-*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces.*
+*Amended in part by R-538 (20 Oct 2026; `principia_lines.md` §8's markers become the icon sets, with syzygies,
+off-screen pinning, repeats and not-a-system handling, and its length and colour defaults are set; §3's `Trace`
+follows).*
+*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces, and
+§8's markers and trace defaults as adopted, which R-538 replaces.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (added, the bundle's design with an adoption note and
 RQ-377's pointer), `docs/gui/reference/lines/` (added: `images/`, `canvas/`), `docs/read_first/principia_INDEX.md` §
 "Design documents — the reasoning" and § "GUI" (two lines added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore
@@ -14736,3 +14752,711 @@ RQ-379's option (b): "blank, as a not-a-system pixel, the forbidden-region overl
 R-511 is in the "design" group of `plan/rule_groups.yaml`, with R-467 and R-470.
 
 Changes REQ-COL-108 and REQ-COL-111 (statement, verify, rulings, note).
+
+## R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*
+*20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),
+`docs/gui/reference/trace/` (added: the demo and its screenshots), `docs/read_first/principia_INDEX.md` § "GUI" and §
+"Archived — record only, do not implement" (a line each), `docs/contracts/principia_chart_decoder_contract.md` § "Past
+the unit square — each axis's extension type (R-407)" (the opening sentence reworded, with its earlier words kept; a
+paragraph added, "Repeats and the canonical point") and § "The operation table" (a paragraph added after "Filling the
+window is not a gesture"), `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces (they
+nest; each is right for its job)" (two sentences reworded, with their earlier words kept),
+`docs/design/principia_deep_zoom.md` § "The precision split (the CPU/GPU seam, decode side)" (the "Past `[0,1]²`"
+bullet reworded, with its earlier words kept) and § "1. Quad-local coordinates — UV precision" (a paragraph added),
+`docs/contracts/principia_caching_contract.md` § "Part 4 — Baseline-first: an absolute tier, not a priority weight"
+(the baseline cover's bullet, a sentence added), `docs/design/principia_colour_composition.md` § "3. The `ctx`
+contract" (a sentence reworded, with its earlier words kept), `docs/gui/principia_render_gui_spec.md` § "G1. Rules that
+hold everywhere" (the F3 bullet, a sentence added) and § "G2. Explore — the everyday view (`01_main.png`)" (a paragraph
+added, "Past the square with the controls shown"), `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere"
+(conformed), R-406's, R-407's and R-472's heading blocks, RQ-406 to RQ-411 and RQ-416, RQ-417, RQ-419 and RQ-420 (new),
+REQ-GUI-267 to REQ-GUI-270, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-TOOL-182 and REQ-RENDER-100 (reqio, new),
+REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (reqio, notes), TASK-M8-55, TASK-M8-56 and TASK-M8-57 (new),
+TASK-M8-05, TASK-M5-15, TASK-M6-04, TASK-M6-08, TASK-M8-09 and TASK-M8-48 (notes), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M8-55 (the GUI: EX1 to EX5, EX9), TASK-M8-56 (the quadtree and the scheduler:
+EX7, ⚑), TASK-M8-57 (deep zoom: EX8, ⚑) and TASK-M8-58 (EX6, with R-538)*
+
+The human's words: two instructions of 20 Oct 2026 from Malachy, delivered as `principia_extension_trace_bundle.zip`
+and committed as delivered at `docs/incoming/2026-10-20_extension_trace/`. This entry holds the covering instruction
+(the bundle's `INSTRUCTION.md`, the same text as the human's message) and the first file's §0, "My words"; R-538 holds
+the second file's. Both verbatim:
+
+> Two new instructions from me, Malachy, 20 Oct 2026, in `principia_extension_trace_bundle.zip` (unzip it to
+> `docs/incoming/2026-10-20_extension_trace/` and commit the bundle as-is):
+>
+> 1. `principia_extension_interaction.md`: the chart's extension past `[0,1]²` is reached by pan and zoom with the GUI
+>    shown, not only under F3. It must render with no gaps, every interaction must work there, and the quadtree,
+>    refinement and deep zoom must work in extended and wrapped regions.
+> 2. `principia_trace_markers.md`: the trace's markers and icon sets, an update to `principia_lines.md` §8.
+>
+> Read both in full, with `README.md` and the demo `demo/trace_markers.html` (open it in a browser), before changing
+> anything. Docs first, then plan, then code.
+>
+> Port:
+> - Each file's §0 is my words: quote them verbatim in the rulings, never paraphrased. Take the next free R-numbers,
+>   one ruling per file, with their EX and TM items as the applied text per R-369 (mechanical consequences and routine
+>   choices; I may veto any).
+> - Apply every row of each file's "What this changes" table to the docs it names, recording each replaced line as
+>   "stale value, replaced by R-xxx". This includes the decoder contract Parts 3 and 4, the coordinate note, deep_zoom's
+>   precision split, caching contract Part 4, `principia_lines.md` §8 and the render GUI spec.
+> - File each "Queue, don't rule" item as an RQ with its recommendation as option (a). Do not rule them yourself.
+> - Requirements and tasks:
+>   - EX7 (canonical addressing, roots tiling the plane, neighbours across seams, scheduling by the union of images)
+>     and EX8 (deep zoom in repeats and far from the root) belong to the kernel and the scheduler, with the physics
+>     reviewer.
+>   - EX1–EX6 and EX9 belong to the GUI.
+>   - The trace markers belong to the line system's tasks (TASK-M8-50/51/54 or new ones).
+>   - Every test in both files gets its failing arm, as written.
+> - Put the demo under `docs/gui/reference/trace/` as a reference mock, like the lines canvas. The prin-rs examples
+>   are reference only and are not ported.
+>
+> Check against what is open: `rulings/R-469` (R-469 to R-477, R-506 to R-511) is not merged. These files assume
+> R-469's centre clamp, R-470's blank-plus-overlay, R-472's F3 modes and R-509's trace fade. If anything in these files
+> contradicts main or that branch, or my words contradict a ruling, tell me and queue it rather than resolving it.
+>
+> Open a PR for the docs port with the rulings, and paste the doc diffs' summary and any conflicts found in the
+> description. Do not touch anything outside the repo and build or scratch directories without asking.
+
+From `principia_extension_interaction.md`:
+
+> ## 0. My words
+>
+> > "Doesn't the first latent chart also have valid extensions?"
+>
+> > "Also on things like the shape sphere with the domain wrap all of the icons etc should repeat"
+>
+> > "Ok this stuff is more general not necessary to do with the trace: you need to be able to interact with the
+> > extended / domain wrapped regions.
+> > You should be able to zoom / pan into the extended / wrapped regions even when you haven't explicitly hidden the gui
+> > with f3."
+>
+> > "Also yeah by if the viewport extends into a domain wrapped regions / extended region it renders. Never any gaps."
+>
+> > "Also quad tree and refinement needs to work with the extended and wrapped regions correctly. Along with deep zoom.
+> > Ensure there's no issues / gaps"
+
+*The applied text (per R-369; the human may veto any).* The file's §0 is the human's words; the rest of it is the
+applied text, as the instruction says ("with their EX and TM items as the applied text per R-369 (mechanical
+consequences and routine choices; I may veto any)"). Its preface, §1 ("What this changes") and §2 (EX1 to EX9), verbatim:
+
+> *Written 20 Oct 2026 for the orchestrator. It is the human's instruction; quote §0 verbatim in whatever rulings it
+> becomes, and port the rest as the applied text. The working demo is `demo/trace_markers.html` in this bundle (tabs: latent
+> `z_α × z_β`, shape sphere, mass simplex, latent momenta). Read against `origin/main` at 2dc67e4 and the open rulings
+> branch `rulings/R-469` (R-469 to R-477, R-506 to R-511).*
+
+> ## 1. What this changes
+>
+> Today the corpus reaches past `[0,1]²` **only when the chrome is hidden**:
+>
+> - R-406 and R-407: the extension appears "with the egui layer hidden (F3) or in present mode".
+> - The coordinate note: UV is "beyond `[0,1]` only in the window's extension".
+> - The deep-zoom doc's "Past `[0,1]²` (R-407)" bullet: "With the figure filling the window (F3 off or present mode …)".
+> - The decoder contract, Part 4: "Filling the window is not a gesture."
+>
+> This instruction removes that scoping. **The extension is a property of the chart, not of F3.** Pan and zoom reach it
+> with the controls shown. Wherever the view lands it renders, and it never has gaps. The quadtree, refinement and deep
+> zoom work there exactly as they do inside the square.
+>
+> What stays as it is:
+>
+> | Ruling | What stays |
+> |---|---|
+> | R-407 | The four extension types and the validity fallback |
+> | R-408 | The area statistics: each system counted once, through the primary ranges |
+> | R-412 | The hemisphere toggle |
+> | R-468 / R-472 | F3's two modes |
+> | R-469 | Navigation stops at the edge, judged on the centre |
+> | R-470 | Not-a-system pixels are blank; the hatch is an overlay |
+>
+> | Ruling or doc | Change |
+> |---|---|
+> | R-406, R-407 clause 2's context, R-472 X2 | The extension is drawn wherever the view reaches, chrome shown or hidden. F3 Extend only adds window area; it is no longer the only way to see past the square. |
+> | decoder contract Part 3, "Past the unit square" | The opening sentence ("with the egui layer hidden (F3) or in present mode") becomes "wherever the view reaches past `[0,1]²`: by pan, by zoom out, or by F3 Extend". |
+> | decoder contract Part 4 | Pan and zoom may take the view's window past `[0,1]²` on every chart. The only stop is R-469's, on the centre. "Filling the window is not a gesture" stands for F3. |
+> | coordinate note, deep_zoom "precision split" | UV and quad indices outside `[0,1]` / the depth-0 root arise from navigation too, not only from F3. |
+> | caching contract Part 4 | The baseline cover is the coarsest cover of the whole viewport, extension included (EX4). |
+> | `principia_lines.md` §8 | Traces repeat in every image of the chart (see `principia_trace_markers.md`). |
+>
+> ---
+>
+> ## 2. Requirements
+>
+> **EX1. The view is a window onto the chart's extended parameter plane.** With the controls shown or hidden, pan
+> moves the window and zoom scales it, past `[0,1]²` in any direction.
+>
+> - F3 Extend shows more of the same window at the same scale (R-406).
+> - F3 Fit scales the window's square to the screen (R-468). Its "square" is the view's own square, wherever the view
+>   sits, not the chart's `[0,1]²`.
+> - Nothing about what a pixel means changes with F3.
+>
+> **EX2. What is drawn past the square is the axes' types, as now.**
+>
+> - **Affine** (the latent charts, flat slices, body planes, tilted or not): the plane continues, and every pixel is a
+>   system. This is the latent chart's case. It has always had a valid extension; the demo only lacked a map there.
+> - **Periodic** (θ): the chart repeats.
+> - **Pole-crossing** (φ): the chart continues over the pole, with θ shifted by half its period.
+> - **The hemisphere's fold at the equator** (R-412): the mirror hemisphere, the same systems.
+> - **Bounded, or a validity failure**: not a system. It is blank in every view (R-470); the hatch appears only through
+>   Overlays › Chart › forbidden region, which is off by default.
+>
+> **EX3. The only navigation limit is R-469's.**
+>
+> - Pan, zoom, tilt, slice and lock are refused only when the **centre** would fail `validate`.
+> - **Periodic and pole-crossing axes:** `validate` is evaluated on the centre after the types have folded it, so a pan
+>   across a seam or a pole never stops.
+> - **Affine latent axes:** no stop at all.
+> - **Bounded charts** (the warp, the mass simplex, the Burrau family): the centre stops at the domain's edge, but the
+>   window may still show blank past it. In the demo's simplex tab, a drag toward a corner stops the centre at `(0, 1)`
+>   and the far side is blank.
+>
+> **EX4. Never any gaps.** Every visible point of the window is drawn, at whatever resolution is available.
+>
+> - Until a quad is computed it shows its nearest computed ancestor, as caching contract Part 4 and Part 5 already
+>   require for the square ("panning never blanks").
+> - The only blank pixels are not-a-system pixels (EX2).
+> - Raw canvas background where a system exists is a bug, never a loading state.
+> - The baseline cover (caching contract Part 4) is the coarsest cover of the whole viewport, extension included. Its
+>   ancestor chain is evict-exempt there as everywhere.
+>
+> **EX5. Every interaction works at every visible pixel.** That means hover, click and pin (R-453), lock, the IC
+> inspector, the trace, keep, readouts, comments and the console's pick.
+>
+> - **A pixel in a repeat** (periodic, pole, fold) resolves to its **canonical** chart point, the one inside the
+>   primary range, and so to the same system.
+>   - The readout shows the canonical coordinates and labels the pixel a repeat.
+>   - The trajectory, outcome and inspector are those of the canonical system.
+> - **A pixel on an affine extension** is simply that point of the plane.
+> - **A click on a not-a-system pixel** integrates nothing and draws a red ✕ where it was clicked.
+>   - The ✕ is a transient pick marker, not a pixel colour, so it is outside R-470.
+>   - The readout says "not a system", names the check that failed (for example "a mass ≤ 0") and gives the label
+>     (`decode_failed`, its detail).
+>   - Hover over such a pixel shows the same readout and no trace.
+>
+> **EX6. The trace repeats.**
+>
+> - In every image of the chart that is in view, the hovered, pinned and kept traces are drawn with every marker and
+>   icon (`principia_trace_markers.md` §7).
+> - Repeats are drawn fainter and are never pinned to the view's edge.
+>
+> **EX7. The quadtree covers the extended plane, and one system is computed once.**
+>
+> - **(a) Roots tile the plane.** The level-0 cells of the root lattice tile the whole parameter plane. Every cell the
+>   view touches has a root, so every visible point has an ancestor and EX4 can hold.
+>   - Quad indices outside the depth-0 root are negative or exceed `2^L − 1`, as the coordinate note already allows.
+>   - The address stays in the slice plane's own frame (R-97).
+> - **(b) The canonical address.** A quad in a repeat maps to a quad in the primary range by the type group. That quad
+>   is the one requested, computed, cached and decided; the repeat draws it.
+>   - On the shape sphere at level `L`, with `n = 2^L` and R-14's `φ = π(1 − t)`:
+>     - **θ period:** `ix' = ix mod n`.
+>     - **Pole `φ = 0` (`t = 1`):** `iy' = 2n − 1 − iy`, and `ix' = (ix + n/2) mod n`.
+>     - **Pole `φ = π` (`t = 0`):** `iy' = −1 − iy`, and `ix' = (ix + n/2) mod n`.
+>     - **Hemisphere fold at the equator** (R-412, equator at `t = 0`): `iy' = −1 − iy`, `ix` unchanged.
+>   - Compose these until the address is inside the root.
+>   - Every map is quad-exact at `L ≥ 1`. At `L = 0` the half-period shift splits the root, so **a level-0 repeat
+>     across a pole is drawn from its two level-1 halves** (Q5).
+>   - Reflections reverse the order of the footprint grid along the reflected axis. `N` is a power of two (R-398) and
+>     the sample positions `t = (i + ½)/N` are symmetric, so the reflected grid lands exactly on the canonical one. The
+>     repeat therefore draws the canonical samples mirrored and re-integrates nothing.
+> - **(c) Scheduling reads the union of images.** A canonical quad is in view if any of its images is. Its screen size
+>   is its images' size; all images share the zoom, so the screen floor reads the same number.
+>   - It is decided once. Its children are shared by every image.
+>   - The frame quota counts it once.
+>   - Payload, timeline and playhead are shared, so every image shows the same frame.
+> - **(d) Neighbours cross seams, poles and folds through the same map.** This applies to 2:1 balance, the criterion's
+>   neighbour arms (the agreement arm's eight neighbours, the class-coherence arm), contours, class edges and smoothing.
+>   - Past a bounded edge there is no neighbour: the domain ends.
+>   - An affine neighbour is the real neighbour.
+>   - A footprint on the root's edge must never be treated as having fewer neighbours than one in the interior. Today
+>     it would be, and the agreement arm would read the edge as structure.
+> - **(e) Affine extension is ordinary.** Quads past the root on an affine chart are quads of the same plane. They are
+>   scheduled, refined, floored and cached like any other.
+> - **(f) Not-a-system is never integrated.**
+>   - A quad wholly past a bounded edge is not requested.
+>   - A quad straddling a validity boundary integrates its valid footprints only. The rest are labelled `decode_failed`
+>     and drawn blank.
+> - **(g) The area statistics are unchanged** (R-408): each system is counted once, at its canonical address.
+>
+> **EX8. Deep zoom works in the extension and in repeats.**
+>
+> - **(a) In a repeat** the zoom is on the canonical quad. Its f64 centre, half-width, `x₀` and `J_D` are the canonical
+>   ones (deep_zoom §1 and §2), so precision is identical to zooming into the primary. Only the screen placement is
+>   mirrored or shifted, and a reflected axis flips the sign of `δ`.
+> - **(b) On an affine extension far from the root,** the GPU's f32 placement must not be the absolute UV.
+>   - deep_zoom §1's "misplaced globally by less than one quad width" holds only while `ulp_f32(c_u)` is under a quad
+>     width. A view panned to `u ~ 10³` breaks it about ten levels sooner.
+>   - The quad's f32 centre is therefore taken relative to an anchor near the view (its root cell, or the plane anchor
+>     re-set when the view is far from it). The IC is still `x₀ + J_D·δ`, with `x₀` in f64.
+>   - The standing prin-rs finding applies: *the deep-zoom floor is a property of where you zoom*. Quote the
+>     coordinate magnitude with any floor depth.
+> - **(c) The sliding depth bound and the screen floor** are view-relative and unchanged.
+> - **(d) Seams between images are rasterised with a shared-edge rule.** Two adjacent images meet with no background
+>   pixel between them at any zoom. The demo overdraws by half a pixel.
+>
+> **EX9. Round trip.** The view state (centre, zoom, and on a periodic axis the unwrapped centre, Q1) is recorded as it
+> is. An export, the JSON and the steganographic tier 1 reproduce the same window, repeats included (round-trip rule,
+> RT1).
+
+Its §3's tests T1 to T13 are each in their requirement's verify with the arm the file gives (U13); its §4's Q1 to Q6
+are RQ-406 to RQ-411 (U14); its §5 ("About the demo") is the demo's description, kept in the bundle.
+
+*Where the words leave a choice, decided per R-369 (routine or mechanical; the human may veto any), flagged where they
+read the words:*
+- **U1. The files.** The bundle is committed as delivered at `docs/incoming/2026-10-20_extension_trace/`, byte for byte,
+  the zip's wrapper folder dropped; it is the human's instruction as a record, indexed in
+  `docs/read_first/principia_INDEX.md` § "Archived — record only, do not implement" and never cited as normative: the
+  rulings and the docs they amend are. Its demo, `demo/trace_markers.html`, and its nine screenshots (`images/`) are a
+  reference mock at `docs/gui/reference/trace/` (`trace_markers.html`, `images/`), as the lines canvas is at
+  `docs/gui/reference/lines/` (R-476 M1); like every reference there it is transcribed, never copied
+  (render_gui_spec §G13), and where it differs from the app is its §5 and the trace file's §10. The prin-rs examples
+  (`reference/prin_rs_examples/`) and `reference/encode_check.py` are reference only and are not ported; they stay in
+  the bundle. Nothing in it was run.
+- **U2. Who builds what.** EX1 to EX5 and EX9 are the GUI's, TASK-M8-55 (REQ-GUI-267 to REQ-GUI-270), reviewed by
+  gui; EX7 is the kernel's and the scheduler's, TASK-M8-56 (REQ-SCHED-101, REQ-REF-054, REQ-CHART-079), and EX8 deep
+  zoom's, TASK-M8-57 (REQ-TOOL-182, REQ-RENDER-100), each with the physics reviewer (⚑: a physics review is required;
+  neither merges on the code reviewer's word alone), and TASK-M8-56 with perf too, since it changes what the frame quota
+  counts. EX6 is the trace's, built with R-538's markers in TASK-M8-58 (REQ-GUI-275). They are M8 tasks because the
+  extension types they rest on are TASK-M8-05's (REQ-CHART-054). **The mock** needs nothing: its stand-in is an affine
+  chart defined everywhere (R-407 A3), so its pan and zoom already reach past the preset's window with the controls
+  shown, and no qa file is known to assert otherwise (the qa reviewer confirms it against the build).
+- **U3. What "past `[0,1]²`" is with the controls shown.** The shown figure's rect is the view's square, its UV over the
+  rect `[0,1]²` as before; what navigation takes past `[0,1]²` is the chart's own parameters, the sample's position in
+  the slice plane (`ctx.chart.slice_uv`, R-394) and its quad address, which are taken in the plane's frame from the
+  plane anchor (R-97, R-92) and so leave the depth-0 root when the view is panned or zoomed out far enough. So with the
+  controls shown nothing is drawn outside the figure's rect; F3 Extend still adds the window around it (R-406, R-468),
+  and there the window's UV leaves `[0,1]` as R-407 A4 says. Read so, EX1's "the view is a window onto the chart's
+  extended parameter plane" changes the coordinate texts as §1's row says: slice-plane positions and quad indices
+  outside `[0,1]²` and the root arise from navigation too.
+- **U4. EX1's Fit and R-472's words.** R-468 E2 already reads "the chart square" as the view's square, `UV ∈ [0,1]²`
+  at the current view, which EX1 states ("the view's own square, wherever the view sits, not the chart's `[0,1]²`").
+  R-472 X2, the human's words, says "Fit: the chart's `[0,1]²` is scaled to fill the window, with no extension"; with
+  the view panned past the chart's square, the view's square holds extension. That is **RQ-416** (conflict, for the
+  human). Meanwhile E2's reading, which is EX1's, stands, and Fit draws what the view's square holds, its extension
+  included; nothing waits.
+- **U5. EX2's "every pixel is a system" on an affine chart** is read as: no pixel is classified not a system by the
+  axes' types or `validate` (R-468 clause 4; the decoder accepts any `z`). A decode the decoder tags `DEGENERATE`
+  (η_E's `ENERGY_UNSCALABLE`, the mass block's `M01_TINY`) still draws blank past the square as inside it (R-511).
+  Flagged. EX3's "bounded charts (the warp, the mass simplex, the Burrau family)" is read as R-468 clause 4's "charts
+  whose square is their whole domain": the mass simplex's axes are affine in R-407's sense and its centre stops by
+  `validate`'s layer 2 (chart_reference §5.4), as EX3 says.
+- **U6. EX4's citation and the cold start.** "Panning never blanks" is deep_zoom §3's words for layer 1; caching
+  contract Part 5 says the same ("ancestors show, so there are never blanks"). EX4's "raw canvas background where a
+  system exists is a bug, never a loading state" leaves open the frames before any ancestor exists, at launch or on a
+  cold cache with no backdrop and no snapshot (caching contract Part 4: "something low-resolution appears in one or
+  two dispatches"). That is **RQ-419** (silence); meanwhile those frames are excepted until the first baseline cover
+  lands, and EX4's checks (T3) are taken after it.
+- **U7. EX5's readout and R-470's N3.** EX5 puts "the label (`decode_failed`, its detail)" in the readout of a
+  not-a-system pixel, and R-538's §8 "forbidden: not integrated"; R-470 N3, the human's words, shows "NaN, Inf,
+  `sim_failed`, `decode_failed`, and the classification behind the hatch … **only in the debug views**". That is
+  **RQ-417** (conflict, for the human). Meanwhile the readout says "not a system" and names the check that failed (as
+  R-469 A5's readout names a stop, e.g. "a mass ≤ 0"), and the label `decode_failed` with its detail is shown in it only
+  while a debug view is the figure (View › Debug view, R-467, R-470 G4).
+- **U8. The ✕.** It is drawn at the clicked point, in red `#DE2D2D` over a dark halo `#0B0B0E` (R-538's icon halo),
+  by the line system's overlay pass as a figure mark (R-539), and stays until the next click on the figure, the next
+  navigation edit or the pointer leaving the figure. A click on a not-a-system pixel pins nothing and leaves an existing
+  pin as it is (R-453); a lock there is refused (R-469 A2), with the same ✕. Hover over it draws no trace.
+- **U9. EX5's "comments" and "the console's pick"** are named nowhere else in the corpus: no comment on the figure and
+  no pick from the console is defined. That is **RQ-420** (silence, R-72); meanwhile EX5 is built for the interactions
+  the corpus defines (hover, click and pin, lock, the inspector, the trace, keep, the readouts), and Q6 (RQ-411) waits
+  with it.
+- **U10. EX7(b)'s maps** are checked against R-14 (`θ = 2π·s`, `φ = π·(1 − t)`) and R-412 (one hemisphere drawn:
+  `φ = (π/2)·(1 − t)`, the equator at `t = 0`, the mirror `φ ↦ π − φ` at the same θ): over the pole at `t = 1`,
+  `t ↦ 2 − t`, so `iy' = 2n − 1 − iy`; over the pole at `t = 0`, `t ↦ −t`, so `iy' = −1 − iy`; the fold at the equator,
+  `t ↦ −t` at the same θ; θ's half period is `n/2` quads at `L ≥ 1`. They agree. Physics reviews them (TASK-M8-56).
+- **U11. EX7(d)'s 2:1 balance and smoothing** are the corpus's as it defines them: the refinement policy's
+  `BalanceForced` decision, whose producer REQ-REF-047 defines (TASK-M6-01), the criterion's neighbour arms (REQ-REF-025,
+  TASK-M6-04), the contours (TASK-M7-43), the class edges (R-509 Y5) and whatever smoothing reads neighbours; each reads
+  its neighbours through the type group's map. Nothing new is defined.
+- **U12. EX8(b)'s anchor** is the root cell's own origin, held in f64 on the CPU, the quad's f32 centre taken relative
+  to it; the plane anchor is not re-set by a pan, since that would re-address the cache, which R-97 forbids for an
+  in-plane pan (R-92 keys the anchor to the last re-integrating event). Flagged: EX8(b) offers both.
+- **U13. The tests.** T1 and T12 are REQ-GUI-267's verify; T3 and T4 REQ-GUI-268's; T5 and T6 REQ-GUI-269's; T2
+  REQ-SCHED-101's; T7 and T8 REQ-REF-054's; T13 REQ-CHART-079's; T9 and T10 REQ-TOOL-182's; T11 REQ-RENDER-100's; each
+  with the arm the file gives as its control. EX9 has no test in the file; REQ-GUI-270's (an export reopened reproduces
+  the window, a repeat in view included; control: a centre canonicalised on export lands one period off) is decided
+  here.
+- **U14. The queue.** Q1 to Q6 are RQ-406 to RQ-411, each with the file's recommendation as option (a). Each (a) is
+  applied meanwhile, since it is what EX1 to EX9 already assume, except Q3's outline, which nothing builds until it is
+  ruled (RQ-408); a ruling other than (a) is a follow-up change. Nothing waits.
+- **U15. EX9's round-trip rule (RT1) and the steganographic tier 1** are ruled on open branches not yet merged
+  (the print-graph port's two rulings branches); on this branch the round trip is the export's own (the sidecar, R-472 X2b;
+  the export contract). REQ-GUI-270 states it for the export, the JSON and the embedded payload as they stand; when the
+  round-trip rule merges it applies to them as to every export. Flagged in the port's PR.
+
+*Checked against `main` and R-469 to R-477 and R-506 to R-511 (the instruction: "If anything in these files contradicts
+main or that branch, or my words contradict a ruling, tell me and queue it rather than resolving it"):* RQ-416 (U4),
+RQ-417 (U7), RQ-419 (U6) and RQ-420 (U9), queued, not ruled; the readings U3, U5, U10 to U12 and U15 are flagged, not
+queued. R-469's centre clamp (EX3), R-470's blank and its overlay (EX2), R-472's F3 modes (EX1) and R-412's toggle stand
+as the file's §1 says.
+
+*What it amends:* **R-406** (the extension is no longer reached only with the layer hidden: F3 Extend adds window area,
+and pan and zoom reach past the square with the controls shown), **R-407** (clause 2's context, "outside `[0,1]²`",
+reached by navigation as well as by F3; the four types and the fallback stand) and **R-472** (X2: Extend is no longer
+the only way to see past the square). Read with R-468 (Fit, U4), R-469 (the one stop, EX3), R-470 (blank), R-408 (the
+statistics, EX7(g)), R-412 (the fold), R-97 and R-92 (U3, U12), R-453 (U8) and R-538 (EX6, the ✕).
+
+R-537 is in the "design" group of `plan/rule_groups.yaml`, with R-406 and R-472.
+
+Adds REQ-GUI-267 to REQ-GUI-270, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-TOOL-182 and REQ-RENDER-100; changes
+REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (notes).
+
+## R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, "?" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*
+*20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
+`Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
+kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md`
+§ "G2. Explore — the everyday view (`01_main.png`)" (a paragraph added, "Trace settings"), R-476's heading block,
+RQ-412 to RQ-415 and RQ-418 (new), REQ-GUI-271 to REQ-GUI-276 and REQ-INT-096 (reqio, new), REQ-GUI-245 (reqio:
+statement, rulings, note), TASK-M8-58 (new), TASK-M8-49 and TASK-M8-09 (notes), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M8-58*
+
+The human's words: the second instruction of the message R-537 holds ("2. `principia_trace_markers.md`: the trace's
+markers and icons sets, an update to `principia_lines.md` §8"), and that file's §0, "My words", verbatim, its italic
+line and its "…" as written:
+
+> ## 0. My words
+>
+> These are the session's messages that decide something, in order. "…" marks text that was not preserved word for word.
+>
+> > "Idea, if the trace line leaves the current slice and re enters… … special icons for those and colour them based on
+> > the collision / ejection detail :)"
+>
+> > "Oh make it so it draws everything up to the current t by default rather than having a fixed tail length"
+>
+> > "Make the icons for the events more graphical and better convey the event? Maybe? But again be minimalist. Custom
+> > icons would be cool"
+>
+> > "Try these also: Collision == two arrows pointing at an explosion shape? Triple collision == three arrows … Single
+> > Escape == arrow leaving pointing away from circle; Double scape == two arrows …; Triple escape == threee arrows …
+> > Plus maybe other ideas. Wtf is a syzygy btw"
+>
+> > "Maybe syzygy is just like o-o-o or something?"
+>
+> > "Yeah but color them differently LOL and have the lines be a different colour."
+>
+> > "Icons for the start of the trace, the end and when it enters and leaves?"
+>
+> > "Start icon should be a star?"
+>
+> > "Remove double escape. Also would incomplete be used?"
+>
+> > "Incomplete should be a "?""
+>
+> > "Circled what I want the default icon set to be" *(a screenshot circling the Arrows set's event icons and the Orbits
+> > set's leave and re-enter rings; that combination is the default, "Principia", §4)*
+>
+> > "Don't think the syzygy icon is centred on the trace properly btw"
+>
+> > "Btw with the trace stuff I'd turn off sygzgy by default since it adds extra noise to the image and also add an
+> > option to not draw icons at the edge if they aren't actually in the view port or whatever. Plus the trace system
+> > needs to work with the axes extension when we turn off f3 :)"
+>
+> > "Okay but now the icons don't show when the trace and icons go off screen/view port? You can't see them at the
+> > edges?ans there's no option to enable / disable that"
+>
+> > "I don't understand the shape one hemisphere chart? Why is that a thing also surely the latent charts all have valid
+> > extensions? A better one without an extension would be the mass simplex, also the trace system needs to handle
+> > forbidden regions etc I.e. not actually going through forbidden regions or being able to start in one. Maybe if you
+> > try start in a forbidden region a red cross / X is shown where you click?"
+>
+> > "Also on things like the shape sphere with the domain wrap all of the icons etc should repeat"
+
+*The applied text (per R-369; the human may veto any).* As for R-537, the file's §0 is the human's words and the rest
+the applied text; its preface and §1 to §9, numbered here TM1 to TM9 after their sections, verbatim:
+
+> *Written 20 Oct 2026 for the orchestrator. It is the human's instruction from one design session on the trace demo
+> (`demo/trace_markers.html` in this bundle, version 25). Quote §0 verbatim in whatever rulings it becomes. It amends
+> `principia_lines.md` §8 ("Traces") as adopted by R-476, and R-509's answers stand: the trace fade uses the proxy where
+> it is defined, else no fade and the GUI says so; trace labels win. Bodies are numbered 1, 2, 3 on screen; the corpus's
+> ids stay 0-based (R-22).*
+
+> ## 1. What changes in `principia_lines.md` §8
+>
+> | §8 today | Becomes |
+> |---|---|
+> | Markers: "Start ●, collision ×, escape →, horizon ▪" | The icon sets of §3 and §4. Start is a star, each end event has its own icon coloured by its outcome's detail, and incomplete is "?". |
+> | Length: "To the playhead (the default), a fixed window, or the last `Δt`" | Unchanged. The default draws everything from `t = 0` to the head. The tail (a bright stretch behind the head) is **off** by default ("Tail only"), and "show the rest faintly" is **off** by default. |
+> | Breaks: "never joined across the outside" | Unchanged by default; an option joins a jump with a dotted line (§6). |
+> | (absent) | Syzygy markers, off by default (§5) |
+> | (absent) | Leaving and re-entering the chart's reach (§3) |
+> | (absent) | Off-screen icons pinned to the view's edge, with an option to hide them (§6) |
+> | (absent) | Repeats in every image of an extended or wrapped chart (§7) |
+> | (absent) | Not-a-system handling: never drawn through, never started in (§8) |
+>
+> ---
+>
+> ## 2. Defaults
+>
+> | Setting | Default |
+> |---|---|
+> | Icon set | Principia (§4) |
+> | Icon size | 1.4× |
+> | Syzygy markers | off |
+> | Syzygy style | from the icon set (o–o–o in Principia) |
+> | Fade stutters | on |
+> | Leaving / re-entering the chart's reach | on |
+> | End event icon | on |
+> | Off-screen icons pinned to the edge, faint | on |
+> | Leaving / entering the window (edge chevrons) | off |
+> | Seams (θ wrap) | off |
+> | Join jumps with a dotted line | off |
+> | Length | to the head, everything from `t = 0` |
+> | Tail only | off (tail Δt 3 when on) |
+> | Show the rest faintly | off |
+> | Head marker, labelled with its time | on |
+> | Time ticks | every 2, labelled |
+> | Direction arrows | filled triangle, 8 px, every Δt 1.0 |
+> | Width | 2.2 px |
+> | Colour | fixed `#FFF27A` for the hover or pinned trace. Kept traces take the trace palette in turn (`#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2`) |
+>
+> ---
+>
+> ## 3. The markers
+>
+> Every colour below is the outcome palette's (the outcome-view ruling's nine classes), so an icon and the pixel under
+> it agree:
+>
+> - collisions: 1–2 `#DE2D2D`, 1–3 `#2EBC4E`, 2–3 `#3462E0`; triple collision `#F29620`;
+> - escapes: body 1 `#F0DE32`, body 2 `#E034C6`, body 3 `#30C8DC`; triple ejection `#611597`.
+>
+> Icons are drawn over a dark halo (`#0B0B0E`) with light ink (`#F5F4F0`), so they read on any field.
+>
+> | Marker | When | Principia (default) icon |
+> |---|---|---|
+> | **Start** | `t = 0` | a five-pointed star in the trace's colour |
+> | **Collision** | the run ends in a pair collision | two arrows meeting at a burst, the burst in the pair's colour, oriented along the trace |
+> | **Triple collision** | two or more pairs inside `r_coll` (the ≥2-pair rule, `detail = 3`) | three arrows into a burst, `#F29620` |
+> | **Escape** | one body escapes | a disc in the escaping body's colour with an arrow leaving it, pointing along the trace |
+> | **Triple ejection** | all three unbound (`detail = 3`) | three discs `#611597`, each with an arrow pointing out |
+> | **Horizon** | nothing happened by `t_max` | an hourglass |
+> | **Incomplete** | the hover's step budget ran out (the pointer-channels note) | "?" ; the last stretch of the line is dashed |
+> | **Leaves the chart's reach** | the state leaves what the chart can show (on the latent chart: a momentum past `q_max`, or α past its limits) | a dotted ring; the line is dashed until it re-enters |
+> | **Re-enters the chart's reach** | it comes back | a ring with a centre dot |
+> | **Leaves / enters the window** (optional) | the line crosses the view's edge | a chevron at the edge |
+> | **Seam** (optional) | θ wraps | a short tick at both ends of the jump |
+> | **Syzygy** (off by default) | the three bodies are collinear (§5) | o–o–o |
+>
+> **There is no double escape.** It is not an outcome class: two bodies leaving a third is the third and the pair
+> unbound, which classifies as triple ejection (`detail = 3`). The icon was drawn and removed.
+>
+> **"Incomplete" is used.** The hover integration has a step budget, and a run that exhausts it is marked rather than
+> drawn as if it were whole (§8 today; the demo's 400 000-step budget).
+>
+> ---
+>
+> ## 4. Icon sets
+>
+> One selector, **Icon set**. Each set gives every marker in §3.
+>
+> | | Principia (default) | Arrows | Pictures | Orbits |
+> |---|---|---|---|---|
+> | Start | star | star | the initial triangle in body colours | star |
+> | Leaves reach | dotted ring | arrow into a bar | open ring | dotted ring |
+> | Re-enters reach | ring with a dot | bar, then an arrow out | filled ring | ring with a dot |
+> | Syzygy | o–o–o | o–o–o | three in a row | eclipse |
+> | Collision | arrows into a burst | arrows into a burst | two discs touching | a merger: the pair as one point in a flash ring |
+> | Triple collision | three arrows into a burst | the same | three discs touching | three discs in a flash ring |
+> | Escape | disc with an arrow out | the same | a streaking disc | a bound pair (ellipse) left behind, the body leaving |
+> | Triple ejection | three discs, arrows out | the same | three discs flying apart | three dotted streaks out |
+> | Horizon | hourglass | hourglass | hourglass | a closed orbit (ellipse with a body on it) |
+> | Incomplete | ? | ? | ? | ? |
+>
+> Principia is Arrows with Orbits' two rings for leaving and re-entering the reach, which is what was circled. The
+> demo's "Compare icon sets" panel draws this table.
+>
+> ---
+>
+> ## 5. Syzygy
+>
+> **What it is.** A syzygy is an instant at which the three bodies are collinear: the configuration passes through the
+> equator of the shape sphere (`w = 0`). Each syzygy has a **middle body**. The sequence of middle bodies is the
+> trajectory's syzygy word (Montgomery), whose letters name which side of the collinear set the shape crossed.
+> Repeating the same letter twice running is a **stutter**: in the reduced (free-group) word the two cancel, since the
+> shape crossed and came back.
+>
+> **Off by default.** On a chaotic trajectory there are many (75 on Burrau to `t = 70`), and they add noise.
+>
+> **The marker, o–o–o** (Principia's and Arrows' style):
+> - Three discs on a short line. The discs are in the **body colours**, in the order the bodies actually lie on the
+>   line: the outer pair lowest-numbered first, the middle body in the centre.
+> - The line is a different colour, `#D6D3CB`, and the discs have dark halos.
+> - No other dots and no rings.
+> - Five other styles stay selectable (Three in a row, Line and bead, Numeral tag, Crossing tick, Eclipse). The
+>   "Syzygy" selector defaults to "from the icon set".
+>
+> **Placed on the trace.** The marker sits where the line actually crosses `w = 0`, at that point interpolated between
+> the two samples on either side of the crossing. It is not placed at either sample.
+>
+> **Stutters** are drawn faded, with an option to switch that off.
+>
+> **On charts that carry the y-momenta** (the latent momenta chart): the canonical frame mirrors at every syzygy, so
+> the trace jumps there (§9). A marker is drawn at both ends of the jump.
+>
+> ---
+>
+> ## 6. Off-screen icons, jumps and the window
+>
+> - **Pin to the edge, by default.** An icon whose point is outside the view is drawn faint, pinned to the nearest
+>   point just inside the view's edge, so an event that happened off screen is still seen.
+> - **An option hides them:** "Off-screen icons: pin to the edge (faint). Untick to hide them."
+> - **Join jumps** (option, off): a dotted line across a break, where the line leaves the chart and comes back
+>   elsewhere.
+> - **Window chevrons** (option, off): where the line crosses the view's edge.
+>
+> ---
+>
+> ## 7. Extension, repeats and the window past the square
+>
+> The trace works wherever the view goes (`principia_extension_interaction.md`).
+>
+> - **Affine charts:** the trace runs on past the square like the field.
+> - **Periodic, pole-crossing and fold charts** (the shape sphere, its hemisphere): the trace is drawn **in every image
+>   of the chart in view**, with every marker and icon (start, events, rings, ticks, arrows, head), at half strength.
+> - **Repeats are never pinned to the edge.** Only the primary copy pins (§6); a repeat's icon that is off screen is
+>   simply not drawn, so the edge does not fill with duplicates.
+> - **A hover or click in a repeat** integrates the canonical system (the same IC as the primary pixel), so the trace is
+>   identical in every image.
+> - **The hemisphere is a toggle on the shape sphere** (R-412), not a chart of its own. With it on, the trace folds at
+>   the equator and its repeats continue into the mirror hemisphere.
+>
+> ---
+>
+> ## 8. Not a system
+>
+> - **Never drawn through.** Every sample of the trajectory is encoded into the chart. A sample whose chart point is not
+>   a system (fails `validate` layers 2 and 3) is not drawn; the line breaks there.
+>   - A real trajectory cannot enter such a region: masses are constant and energy is conserved, so its own state stays
+>     valid.
+>   - The readout counts such samples ("in forbidden: N samples"). It reads 0 on every run tried. A non-zero count is a
+>     bug in the encode or the chart map, not physics, and is reported as such.
+> - **Never started in.**
+>   - **Click:** a click on a not-a-system pixel integrates nothing and draws a red ✕ where it was clicked.
+>   - **Readout:** the readout says "forbidden: not integrated", why (for example "a mass is ≤ 0, so this is not a
+>     three-body system"), the label `decode_failed`, detail 2, and the masses.
+>   - **Hover:** hovering there shows the same readout and no trace.
+> - **On the mass simplex the trace is a point.** A run's masses never change, so its chart point never moves. What
+>   changes is the off-slice distance: the shape and momenta leave the slice's fixed Burrau triangle at rest. So the
+>   trace is a fading dot. That is correct, and it is the general dot → line → curve rule (`trajectory_viewing.md` §3)
+>   for a conserved axis.
+>
+> ---
+>
+> ## 9. What was measured on the way
+>
+> - **Encode jumps are the chart, not the sampling.** On Burrau 3:4:5 to `t = 70`, with the same encode, in Python:
+>   - 75 syzygies, and the canonical frame mirrors at every one.
+>   - The latent y-momenta jump by up to 3.4 against a median step of 1e-4, and the jump does not shrink at 100× finer
+>     sampling.
+>   - `z_β` runs to ±∞ at each syzygy (β = π·σ(z_β) ∈ (0, π)).
+>   - The momentum leaves `q_max = 2` on 19 excursions.
+> - **A non-finite step size hangs the loop.** A start with bodies 1 and 2 coincident (the centre of the shape sphere,
+>   θ = π, φ = π/2) gave a NaN step. Every comparison with NaN is false, so the loop never advanced and never ended.
+>   `computeIC` needs both guards:
+>   - **(a)** a start already inside `r_coll` ends as a collision at `t = 0`. That is an ordinary collision in its
+>     pair's colour, per the outcome-view ruling that removed "collision @ t = 0" as a class;
+>   - **(b)** a step size that is not finite ends the run as incomplete.
+>
+>   This is the standing "Test `is_finite` explicitly".
+> - **Map agreement.** The sphere map integrated directly matches the latent chart's map, looked up through the shape
+>   inverse, on **100%** of pixels where both fields are smooth (5×5-uniform). The disagreement, 20% of the rest, is all
+>   in the fractal regions, sampled on different grids.
+> - **Holes were a lookup, not physics.** Grey holes on the earlier sphere were where the lookup through the latent map
+>   fell outside its ±3 window: near collinear (`z_β → ±∞`) and near the 1–2 collision, which the demo's α limit of
+>   0.05 cannot reach (prin-rs's GLSL value; Principia's `α_min` is 0, R-21).
+
+Its §10 ("The demo and the app") lists where the demo differs from the app, kept in the bundle; its §11's tests T1 to
+T12 are each in their requirement's verify with the arm the file gives (I12); its §12's Q1 to Q4 are RQ-412 to RQ-415
+(I13).
+
+*Where the words leave a choice, decided per R-369 (routine or mechanical; the human may veto any), flagged where they
+read the words:*
+- **I1. Where it lands.** `principia_lines.md` §8 is amended in place, each replaced line's earlier words kept
+  (*Was:*); §3's `Trace` gains the settings TM2 lists, `markers: bool` becoming the icon set and its toggles, and the
+  head marker no longer under `tail` (TM2 has the head marker on with the tail off). The settings are `Lines`' in
+  `RenderState` (R-476 M5): each edit one undoable `SetField` that re-integrates nothing.
+- **I2. The settings' place in the GUI.** They are the trace's entry in Lines ▾ (render_gui_spec §G2, R-476), in TM2's
+  order, each control registered in the keyboard tree as Lines ▾'s others are (R-476 M13).
+- **I3. Colours.** The icons take the active outcome palette (colour_composition §1.4; R-447's OKLab preset when it is
+  chosen), so "an icon and the pixel under it agree" holds under either preset; TM3's hexes are the sRGB default's,
+  which they match row for row. **The body colours** (o–o–o's discs, Pictures' initial triangle), which the corpus does
+  not otherwise define, are each body's escape colour in that palette (body 1 `#F0DE32`, body 2 `#E034C6`, body 3
+  `#30C8DC` in sRGB). Flagged.
+- **I4. Numbering.** Bodies and pairs are shown 1-based through R-449's one display function; the file's "(R-22)" is
+  read as R-449, R-22's successor for display labels.
+- **I5. "Leaves the chart's reach"** is where the trajectory's state has no point on the chart: the chart's encode of
+  the state fails to land in what the chart can show (on the latent chart a momentum past `q_max` or α past its limits,
+  as TM3 says; on a curved chart, a state its forward map does not reach), distinct from leaving the window (the
+  chevrons) and from not being a system (TM8). The line is dashed from there until it re-enters.
+- **I6. "Incomplete"** is REQ-PERF-075's step budget (the pointer-channels note); its "?" replaces §8's "e.g. its tail
+  dashed", which stays as the dashed last stretch.
+- **I7. The forbidden-sample count.** "In forbidden: N samples" is a line of the trace's readout; a non-zero count logs
+  a console warning (§G12) naming the run and the chart, reported as an encode or chart-map bug, as R-467's decoder-bug
+  warning is.
+- **I8. `computeIC`'s guards (TM9).** Guard (a) is the integrator contract's "t=0 terminals are real outcomes" (REQ-EVT-002),
+  which the CPU kernel instance `computeIC` runs (REQ-SYS-017): an ordinary collision at `t_end_step = 0` in its pair's
+  colour (R-445). Guard (b), "a step size that is not finite ends the run as incomplete", meets the integrator
+  contract's "`sim_failed` (NaN/Inf during integration)": that is **RQ-418** (conflict); meanwhile the run ends at once,
+  never loops, labelled `sim_failed` as the contract has it, and its trace ends with the "?" icon, since it is not whole.
+- **I9. Syzygies.** `w` is R-14's `w = 2(ρ̃ ∧ λ̃)`; a syzygy is a sign change of `w` between two consecutive states, its
+  point on the drawn line the linear interpolation in `w` between them (TM5: "not placed at either sample"); its middle
+  body is the one between the other two on the collinear line. A stutter is the same middle body twice running.
+- **I10. Repeats.** TM7's half strength is RQ-412's option (a), applied meanwhile; the canonical IC of a pick in a
+  repeat is R-537 EX5's and EX7(b)'s.
+- **I11. The ✕** is R-537's (U8): one mark, shared by the figure's click and a trace's start.
+- **I12. The tests.** T1 is REQ-GUI-271's verify; T2 REQ-GUI-272's; T3 and T4 REQ-GUI-273's; T5 REQ-GUI-274's; T6, T7
+  and T12 REQ-GUI-275's; T8, T9 and T10 REQ-GUI-276's; T11 REQ-INT-096's; each with the arm the file gives.
+- **I13. The queue.** Q1 to Q4 are RQ-412 to RQ-415, each with the file's recommendation as option (a), applied
+  meanwhile; a ruling other than (a) is a follow-up change. Nothing waits.
+- **I14. TM9's measurements** are evidence, recorded with the ruling, not values: no calibration follows from them.
+- **I15. The tasks.** One new task, **TASK-M8-58**, after TASK-M8-49 (the traces), TASK-M8-50 (Lines ▾), TASK-M8-51
+  (the fade) and TASK-M8-55 (R-537's repeats and ✕), closes REQ-GUI-271 to REQ-GUI-276 and REQ-INT-096, reviewed by
+  code, qa, gui and physics (the syzygy test on `w`, the guards and the forbidden-sample count). REQ-GUI-245 (TASK-M8-49)
+  loses its markers to it.
+
+*Checked against `main` and R-469 to R-477 and R-506 to R-511:* TM3's colours are the outcome palette's sRGB default
+(R-444, R-445), row for row; the triple collision's "≥2-pair rule, `detail = 3`" is dd_integrator §3's count and the
+payload's `detail`; triple ejection's `detail = 3` likewise; "no double escape" agrees with the nine classes (R-444);
+guard (a) agrees with R-445 and the integrator contract; "R-509's answers stand" holds (the fade and the labels are
+unchanged). RQ-417 (TM8's readout) and RQ-418 (guard (b)) are queued. The ✕ and the icons over the figure are figure
+marks (R-539), not a §G1 conflict.
+
+*What it amends:* **R-476** (`principia_lines.md` §8's markers, length defaults and colours, and §3's `Trace`, as
+adopted; R-509's answers stand). Read with R-537 (EX6, the ✕), R-509, R-449, R-444, R-445 and R-447 (I3), and R-539.
+
+R-538 is in the "design" group of `plan/rule_groups.yaml`, with R-476 and R-509.
+
+Adds REQ-GUI-271 to REQ-GUI-276 and REQ-INT-096; changes REQ-GUI-245 (statement, rulings, note).
+
+## R-539 — "The figure is never covered" is about the generic GUI panels and chrome: figure-level marks, such as the trace, contour lines and icons for points of interest, may cover the figure *(refines R-466)*
+*20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere" (a sentence
+added) and § "G14. Settled by the notes (record)" (a clause added), `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that
+hold everywhere" (conformed), `plan/reviewers/gui.md` § 1 (a clause added), R-466's heading block, REQ-GUI-074 (reqio:
+statement, rulings, source, note), REQ-GUI-168 (reqio, note) and `plan/rule_groups.yaml`; nothing new is built:
+TASK-M8-05 closes REQ-GUI-074 as restated*
+
+The human's words, a follow-up of 20 Oct 2026, the human's own, answering render_gui_spec §G1's "the figure is never
+covered":
+
+> The figure can be covered by elements such as the trace, contour lines, icons that represent points of interest etc. that ruling is only about generic gui panels etc
+
+*What it decides:* §G1's "The figure is never covered. No toasts or labels over the plot." applies to the generic GUI
+panels and chrome: windows, panels, toasts, notifications and other labels of the GUI, which stay off the plot.
+Figure-level marks may cover the figure: the trace and its icons (R-538), contour lines and the line system's other
+lines (R-476), icons that represent points of interest, and, as their consequences, R-538's off-screen icons pinned to
+the view's edge and R-537's red ✕ pick marker. They are the figure's own marks, as the hover label and the lock reticle
+are already.
+
+*Applied per R-369 (mechanical; the human may veto any):*
+- §G1's bullet, the design notes' line, §G14's settled point 5 and the gui checklist gain the clarification; their
+  earlier words stand, the clarification added beside them. R-466 K7's "The design notes' "The figure is never covered.
+  No toasts or labels over the plot." stands" is read with it: the Home button is still the one control over the
+  figure, and a control is chrome.
+- Badges are not figure marks under this ruling; where they go is ruled separately, and this ruling leaves it as it is.
+- **REQ-GUI-074**, "only the figure's own marks (the hover label and the lock reticle) may appear on it", is restated
+  with the figure-level marks this ruling names, and the rule's scope, panels and chrome; its verify, a warning and an
+  error drawing nothing new over the plot, stands. **REQ-GUI-168**'s "nothing drawn over the figure" (the mock) gains a
+  note reading it so.
+
+*What it refines:* **R-466** (K7's reading of §G1: the rule it quotes is about panels and chrome). Read with R-476,
+R-537 and R-538.
+
+R-539 is in the "design" group of `plan/rule_groups.yaml`, with R-466.
+
+Changes REQ-GUI-074 (statement, rulings, source, note) and REQ-GUI-168 (note).

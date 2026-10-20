@@ -39,7 +39,10 @@ z(s,t) = z₀ + (2s−1)·q₁ + (2t−1)·q₂        # the chart placement (ch
 ```
 UV is the unsigned `[0,1]` **address**; converting it places it as a **signed offset from the chart centre**, scaled by zoom. So:
 
-- **UV stays `[0,1]` unsigned** (beyond `[0,1]` only in the window's extension, below) — because "where in the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space, and quad addresses want clean non-negative integers. The addresses themselves live in the slice plane's frame, anchored at the plane anchor, not in the view (R-97). Within the depth-0 root you never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index. Outside the root, where the window extends past `[0,1]²` (R-407, below), quad indices may be negative.
+- **UV stays `[0,1]` unsigned** (beyond `[0,1]` only past the chart's square, below: in the window's extension, and
+  where navigation takes the view past the root, R-537; *was:* "beyond `[0,1]` only in the window's extension, below") — because "where in the current view" is naturally a `[0,1]` index *regardless of where the view sits* in signed IC-space, and quad addresses want clean non-negative integers. The addresses themselves live in the slice plane's frame, anchored at the plane anchor, not in the view (R-97). Within the depth-0 root you never want negative quad indices; the signedness lives in the **placement** (`z₀` can be anywhere), not in the quad index. Outside the root, where the window extends past `[0,1]²` or navigation takes the view past it (R-407, R-537, below),
+  quad indices may be negative or exceed `2^L − 1`. *Was:* "Outside the root, where the window extends past `[0,1]²`
+  (R-407, below), quad indices may be negative."
 - **IC-space is signed and centred** — the chart is a plane *centred on `z₀`*; a displacement from centre is naturally `±` (left/below negative, right/above positive). The golden IC is `z = 0`; ICs on either side are genuinely `±`. The plane has no natural corner-origin — it has a natural *centre*, and coordinates are signed offsets from it. This is the thing that "behaves like a normal graph."
 
 **Past `[0,1]²`: the window's extension (R-406, R-407).** With the egui layer hidden (F3) or in present mode, the
@@ -52,6 +55,12 @@ samples have UV outside `[0,1]`; where they reach past the chart's depth-0 root,
 - `ctx.chart.slice_uv` (R-394) may lie outside `[0,1]²`; its formula is unchanged;
 - `ctx.screen.uv` and `ctx.screen.pixel` are taken over the window's figure area as shown: the shown figure's rect with
   the layer shown, the full window with F3 off.
+
+**Navigation reaches past it too (R-537).** Pan and zoom take the view past the chart's `[0,1]²` with the controls
+shown, not only under F3. The shown figure's rect is the view's square, its UV `[0,1]²` as before; the slice-plane
+position (`ctx.chart.slice_uv`) and the quad indices, taken in the plane's frame from its anchor (R-97), leave `[0,1]²`
+and the depth-0 root, each axis extending by its type, so UV and quad indices outside `[0,1]` and the root arise from
+navigation too, not only from F3.
 
 Inside `[0,1]²` nothing changes.
 
