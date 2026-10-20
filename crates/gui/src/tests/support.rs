@@ -201,3 +201,14 @@ pub fn shapes<S: EngineSide>(
     }
     flat
 }
+
+/// A key no command binds: the tests press it to turn keyboard navigation on, as any key press does (R-460, R-464 M2),
+/// with nothing else happening.
+pub const UNBOUND: eframe::egui::Key = eframe::egui::Key::F12;
+
+/// Turns keyboard navigation on, the ring shown where the focus is, by a key press that does nothing else
+/// ([`UNBOUND`]): for a test that put the focus somewhere itself, as no user can, so the next Enter acts as from the
+/// keyboard rather than only showing the ring (R-460 H1, R-464 M2).
+pub fn keys_on<S: EngineSide>(headless: &mut Headless, app: &mut App<S>) {
+    press(headless, app, UNBOUND, eframe::egui::Modifiers::NONE);
+}

@@ -58,6 +58,8 @@ type Z = [f64; 8];
 const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;
 const ALT: Modifiers = Modifiers::ALT;
+/// A key no command binds: pressed only to turn keyboard navigation on (R-460, R-464 M2).
+const UNBOUND: Key = Key::F12;
 
 /// §G2's eight `z₀` names, in chart_decoder_contract Part 2's block order.
 const AXES: [&str; 8] = ["z_α", "z_β", "z_q0", "z_q1", "z_q2", "z_q3", "z_μ1", "z_μ2"];
@@ -142,11 +144,19 @@ impl<S: EngineSide> Rig<S> {
     }
 
     /// Puts the focus on scope `id`, by its path in the tree, in navigation mode: every landing is (R-409 point 4).
+    /// The focus is set by hand, as no user can, so a key no command binds is then pressed to turn keyboard
+    /// navigation on, as a user arriving there by keys has it: the GUI starts with it off, and while it is off an
+    /// Enter only shows the ring and the breadcrumb draws no path (R-460, R-464 M2).
     fn focus(&mut self, id: &str) {
         let path = self.app.keyboard.tree(Mode::Explore).path_to(id);
         assert!(!path.is_empty(), "no scope {id} in the tree");
         self.app.view.focus.path = path;
         self.app.view.focus.mode = KeyMode::Navigation;
+        self.key(UNBOUND, NONE);
+        assert!(
+            self.app.keyboard.navigating(),
+            "a key press left keyboard navigation off"
+        );
     }
 
     /// Puts the focus on the value `id` and presses Enter on it: interaction mode, in which the arrows adjust it

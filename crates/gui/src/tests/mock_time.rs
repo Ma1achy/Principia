@@ -9,7 +9,7 @@ use engine::contract::interface::EngineInterface;
 use engine::contract::set_field::{Edit, RenderField, SetField};
 use engine::contract::view_ui::{KeyMode, Transport};
 
-use super::support::{focus, headless, mock_app, playhead, press, rejects};
+use super::support::{focus, headless, keys_on, mock_app, playhead, press, rejects};
 use crate::app::App;
 use crate::clock::{Clock, Playback, TimeSource};
 use crate::explore::time::{
@@ -294,6 +294,7 @@ fn mock_time_enter_on_a_button_is_its_click() {
         app.set_field(playhead(0.0, false));
         frames(&mut h, &mut app, 2);
         focus_on(&mut app, &[TIME, id], KeyMode::Navigation);
+        keys_on(&mut h, &mut app);
         press(&mut h, &mut app, Key::Enter, NONE);
         assert_eq!(now(&mut h, &mut app).0, want, "{id}");
         assert_eq!(
@@ -304,6 +305,7 @@ fn mock_time_enter_on_a_button_is_its_click() {
     }
     let (mut app, mut h) = app();
     focus_on(&mut app, &[TIME, PLAY], KeyMode::Navigation);
+    keys_on(&mut h, &mut app);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert!(app.view.transport.playing, "Enter on ▶ plays");
     rejects("an Enter on ▶ that does nothing", || {
@@ -414,6 +416,7 @@ fn mock_time_space_plays_in_time_in_either_mode() {
 fn after_keys(element: &str, keys: &[(Key, Modifiers)]) -> (f64, f64, u32) {
     let (mut app, mut h) = app();
     focus_on(&mut app, &[TIME, element], KeyMode::Navigation);
+    keys_on(&mut h, &mut app);
     press(&mut h, &mut app, Key::Enter, NONE);
     assert_eq!(
         app.view.focus.mode,
