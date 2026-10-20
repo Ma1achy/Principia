@@ -71,19 +71,22 @@ v½ = v + (dt/2)·a(r) ;   r' = r + dt·v½ ;   v' = v½ + (dt/2)·a(r')
 
 **Yoshida-4** (order 4, 3 force evals, symplectic) — composition of three KDK steps with weights
 ```
-w₁ = 1 / (2 − 2^{1/3}) = 1.3512071919596578
-w₀ = −2^{1/3} · w₁     = −1.7024143839193157        (w₀ + 2w₁ = 1)
+w₁ = 1 / (2 − 2^{1/3}) = 1.3512071919596575         (correctly rounded to f64)
+w₀ = 1 − 2w₁           = −1.702414383919315          (computed in f64; w₀ + 2w₁ = 1 exactly)
 drift coefficients d = [w₁, w₀, w₁]
 kick  coefficients c = [w₁/2, (w₀+w₁)/2, (w₀+w₁)/2, w₁/2]
 ```
 i.e. `KDK(w₁·dt) ∘ KDK(w₀·dt) ∘ KDK(w₁·dt)`. The negative middle step is real, and the composition is still reversible at a fixed step: it is symmetric, so `step_reversible` holds whatever the sign of `w₀` (test 3, §5). What breaks naive time-reversal of a run is the wrapper's adaptive substepping and COM projection (integrator contract Part 6; R-500, closing RQ-369). *Was:* "The negative middle step is real and is why naive time-reversal fails (integrator contract Part 6)."
 *Citation (R-501):* Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150,
-262–268: the fourth-order symmetric triple composition, whose weights are given in closed form there. The digits above
-agree with the closed form to 15 significant digits (`w₁` to 16; relative differences `1.2·10⁻¹⁶` and `2.5·10⁻¹⁶`; *as first corrected:* "to 16 significant digits", physics review 5587771187 P8); its exact values are `w₁ = 1.351207191959657634…` and
-`w₀ = −1.702414383919315268…`, whose correctly rounded f64 values are `1.3512071919596575` and `−1.7024143839193153`.
-The printed digits are neither, and with them `w₀ + 2w₁` evaluates to `0.9999999999999998` in f64, not 1; whether the
-printed digits change is RQ-405 (open), and they stand meanwhile. *As first ported (R-501):* "the digits above are that
-closed form evaluated in f64", which physics review 5587467237 of PR #258 (P2) found false.
+262–268: the fourth-order symmetric triple composition, whose weights are given in closed form there, `w₁ = 1 / (2 −
+2^{1/3})` and `w₀ = −2^{1/3} · w₁`. *The digits (R-515, closing RQ-405):* `w₁` is the closed form's correctly rounded f64
+value (exact `1.351207191959657634…`, relative difference `6.2·10⁻¹⁷`); `w₀` is `1 − 2w₁` as computed in f64, a
+subtraction that is exact, so that `w₀ + 2w₁ = 1` holds exactly in f64, as Yoshida-6's `w₀` is computed from its
+consistency condition. It differs from the closed form's `w₀ = −1.702414383919315268…` by `9.9·10⁻¹⁷` relative, and the
+cubic order condition's residual `|2w₁³ + w₀³| / Σ|w|³` is `5.5·10⁻¹⁷` (§5, test 1a). Each printed value is the shortest
+decimal that parses to the shipped f64. *Was (RQ-405's (a), applied meanwhile):* `w₁ = … = 1.3512071919596578`,
+`w₀ = −2^{1/3} · w₁ = −1.7024143839193157 (w₀ + 2w₁ = 1)`, digits that were neither the closed form's correctly rounded
+f64 values nor gave `w₀ + 2w₁ = 1` in f64 (`0.9999999999999998`; physics review 5587467237 of PR #258, P2).
 
 **Yoshida-6** (order 6, 7 force evals, symplectic) — Yoshida (1990), **solution A**:
 ```
@@ -327,9 +330,9 @@ Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **B
    same coefficient computed with `|w|`. With the nested condition the set is complete to order 6 (the degree-5 Lie
    elements are `A₅` and `[A₁,[A₁,A₃]]`), which physics confirms; *as first ported:* `Σw⁵` alone, a necessary subset
    (qa review 5587775086 B). The residuals are at most `3·10⁻¹⁵` (Yoshida-4, f64 rounding) and `5·10⁻¹⁴` (Yoshida-6,
-   Table 1's 15-digit truncation). Measured on the printed digits: Yoshida-4 `2.9·10⁻¹⁶`, Yoshida-6 `5.1·10⁻¹⁵` (`Σw⁵`;
+   Table 1's 15-digit truncation). Measured on the printed digits: Yoshida-4 `|Σw − 1| = 0` and `5.5·10⁻¹⁷` (R-515; *was* `2.9·10⁻¹⁶`, on RQ-405's interim digits), Yoshida-6 `5.1·10⁻¹⁵` (`Σw⁵`;
    the nested condition `4.0·10⁻¹⁶`). Its controls: each coefficient (Yoshida-6's `w₀` recomputed) changed by one unit of its 15th significant digit (Yoshida-4) or its 13th
-   (Yoshida-6), in each direction, must exceed the bound (measured: at least `9.8·10⁻¹⁵` and `2.8·10⁻¹³`). Past those
+   (Yoshida-6), in each direction, must exceed the bound (measured: at least `1.0·10⁻¹⁴` and `2.8·10⁻¹³`; R-515, *was* `9.8·10⁻¹⁵` on RQ-405's interim digits). Past those
    positions a change can lower a residual (Table 1's own truncation sets Yoshida-6's, f64 rounding Yoshida-4's), and a
    last-digit change of Yoshida-4 can parse to the same f64, so the last printed digits are REQ-INT-037's alone. It
    stands in for checking the digits against the paper, which is cited, not held (§3.2). *As first ported:* "the

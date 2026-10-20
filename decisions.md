@@ -13412,6 +13412,10 @@ Adds REQ-VAL-190, and on review REQ-INT-095 and REQ-VAL-191; changes REQ-INT-013
 rulings, source, note).
 
 ## R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*
+*Amended by R-515 (Yoshida-4's digits).*
+*Still in force: the coefficients carry their citation, the paper is not added, and the convergence-order test and the
+algebraic order-condition check guard the transcription; Yoshida-4's printed digits are R-515's, `w₁` correctly rounded
+and `w₀ = 1 − 2w₁` computed in f64.*
 *20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (the citations; Yoshida-6's
 transcription check), § "5. Unit tests" (test 1a) and § "6. Deferred / flagged" (the Yoshida-6 item settled), R-57's
 heading block (a forward line), REQ-INT-056 (reqio), REQ-INT-090 (new), TASK-M3-02 and `plan/rule_groups.yaml`; built
@@ -13454,18 +13458,21 @@ against a copy of the paper; R-57's label fix stands (amended by R-500 as to Par
 6), applied per R-369:* the order test's controls, detection floor, fitted quantity and the algebraic check are as above;
 TASK-M3-02's acceptance checks Yoshida-4's citation as well. dd §3.2's sentence that the printed Yoshida-4 digits "are
 that closed form evaluated in f64" was false: they agree with it to 15 significant digits (`w₁` to 16; *as first corrected:* "to 16", physics review 5587771187 P8), are not its correctly rounded
-f64 values, and give `w₀ + 2w₁ = 0.9999999999999998` in f64. The sentence is corrected; whether the digits change is
-**RQ-405**, filed for the human, the printed digits standing meanwhile and REQ-INT-037 held on it.
+f64 values, and give `w₀ + 2w₁ = 0.9999999999999998` in f64. The sentence is corrected, and **RQ-405** was filed for the
+human; R-515 rules it, `w₁` printed correctly rounded and `w₀ = 1 − 2w₁` as computed in f64, so that `w₀ + 2w₁ = 1`
+exactly. *Was:* "whether the digits change is **RQ-405**, filed for the human, the printed digits standing meanwhile and
+REQ-INT-037 held on it."
 
 *Review round 2, PR #258 (code review 5587795260 C7, physics review 5587771187 P8, qa review 5587775086 A and B), applied
-per R-369:* TASK-M3-02's `occupant_coefficients` asserts `|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`, REQ-INT-090's bound, under
-RQ-405's (a); the printed Yoshida-4 digits agree with the closed form to 15 significant digits (`w₁` to 16), not 16; the
+per R-369:* TASK-M3-02's `occupant_coefficients` asserts `w₀ + 2w₁ = 1` exactly in f64, under R-515 (*was:* "asserts
+`|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`, REQ-INT-090's bound, under RQ-405's (a)"); RQ-405's interim Yoshida-4 digits agree with the closed form to 15 significant digits (`w₁` to 16), not 16; the
 algebraic check adds Yoshida-6's nested fifth-order condition (the coefficient of `[A₁,[A₁,A₃]]`), measured at
 `4.0·10⁻¹⁶` on the shipped constants, which makes the set complete to order 6, for physics to confirm.
 
 R-501 is in the "physics" group of `plan/rule_groups.yaml`, with R-57.
 
-Adds REQ-INT-090; changes REQ-INT-056 (statement, verify, rulings, note), and on review REQ-INT-037 (`rq: RQ-405`).
+Adds REQ-INT-090; changes REQ-INT-056 (statement, verify, rulings, note), and on review REQ-INT-037 (`rq: RQ-405`, which
+R-515 removes).
 
 ## R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*
 *20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made
@@ -13654,3 +13661,46 @@ reviewer checks it and the human confirms the style at the M2 gate (R-504).
 R-505 is in the "design" group of `plan/rule_groups.yaml`, with R-467.
 
 Changes REQ-COL-110 (statement, verify, rulings, note).
+
+## R-515 — Yoshida-4's `w₁` is printed correctly rounded to f64 and `w₀` as `1 − 2w₁` computed in f64, so that `w₀ + 2w₁ = 1` holds exactly in f64 *(closes RQ-405; amends R-501 as to Yoshida-4's digits)*
+*20 Oct 2026 · applied in `docs/design/principia_dd_integrator.md` § "3.2 Occupants" (Yoshida-4's weights and their
+paragraph) and § "5. Unit tests" (test 1a's measured values), R-501's heading block (a forward line and its "Still in
+force" line) and its review-round text, REQ-INT-037 and REQ-INT-090 (reqio), TASK-M3-02, `plan/rule_groups.yaml`,
+`REVIEW_QUEUE.md` (RQ-405 moved out) and `docs/archive/review_queue/M0.md` (RQ-405, with its ruling); built by
+TASK-M3-02*
+
+The human's words (20 Oct 2026, in a message whose other items are ported on other branches):
+
+> RQ-405 (c): w₁ correctly rounded, w₀ = 1 − 2w₁.
+
+RQ-405's option (c): "Print `w₁` correctly rounded and `w₀ = 1 − 2w₁` as computed in f64 (`−1.702414383919315`), so
+that `w₀ + 2w₁ = 1` holds exactly in f64, as Yoshida-6's `w₀` is already computed from its consistency condition."
+
+*What it decides:*
+- **`w₁ = 1.3512071919596575`**, the closed form `1 / (2 − 2^{1/3})` (exact `1.351207191959657634…`) correctly rounded
+  to f64.
+- **`w₀ = −1.702414383919315`**, the f64 result of `1 − 2w₁`; the subtraction is exact, so `w₀ + 2w₁` is exactly 1 in
+  f64 and in real arithmetic on the shipped values. It stands for the closed form's `−2^{1/3} · w₁`
+  (`−1.702414383919315268…`), from which it differs by `9.9·10⁻¹⁷` relative.
+- **REQ-INT-037's `w₀ + 2w₁ = 1`** is an exact equality in f64, no longer read within rounding.
+
+*Applied per R-369:*
+- **The printed form.** Each weight is printed as the shortest decimal that parses to its f64 (`w₁` to 17 significant
+  digits, `w₀` to 16), and REQ-INT-037's "all printed digits" is read as the printed value parsing to the shipped f64.
+- **The test.** TASK-M3-02's `occupant_coefficients` asserts that `w₀` is bitwise `1 − 2w₁` in f64 and that `w₀ + 2w₁`
+  evaluates to exactly `1.0`; its control is RQ-405's interim digits (`1.3512071919596578`, `−1.7024143839193157`),
+  which give `0.9999999999999998` and must fail. It replaces the interim `|w₀ + 2w₁ − 1| ≤ 3·10⁻¹⁵`.
+- **REQ-INT-090's values on the new digits** (measured in exact rational arithmetic on the f64 values): Yoshida-4's
+  `|Σw − 1|` is 0 and `|Σw³| / Σ|w|³` is `5.5·10⁻¹⁷` (was `2.9·10⁻¹⁶`), and its one-unit-of-the-15th-digit controls
+  give at least `1.0·10⁻¹⁴` (was `9.8·10⁻¹⁵`), above the unchanged `3·10⁻¹⁵` bound. The convergence-order test's
+  controls are unchanged.
+- **The kick coefficients** `(w₀ + w₁)/2` stay as dd §3.2 writes them, evaluated in f64 from the shipped weights.
+
+*What it amends:* **R-501**, as to Yoshida-4's digits: its review rounds kept the printed digits under RQ-405's (a)
+with a rounding bound on `w₀ + 2w₁`; Yoshida-4's digits are now this ruling's, the identity exact. R-501's citation,
+order test and algebraic check stand.
+
+R-515 is in the "physics" group of `plan/rule_groups.yaml`, with R-501.
+
+Changes REQ-INT-037 (statement, verify, source, rulings, note; `rq: RQ-405` removed) and REQ-INT-090 (verify, rulings,
+note).
