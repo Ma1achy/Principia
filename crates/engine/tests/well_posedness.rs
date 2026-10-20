@@ -1573,3 +1573,68 @@ negative_control!(
         "refused: {config} is under-determined, 1 of its 2 DOF pinned"
     )])
 );
+
+/// A chart sweeping two kind-4 axes, `ν` and `θ`, both tying configuration and mass, with a rest start.
+fn two_curves() -> Probe {
+    let ties = config_mass();
+    let mut chart = probe(
+        [
+            AxisDescriptor::curve("ν", ties, NU_CURVE),
+            AxisDescriptor::curve("θ", ties, THETA_CURVE),
+        ],
+        vec![],
+        vec![rest()],
+    );
+    chart.descriptor.coupling = Coupling {
+        ties,
+        collisions: ties,
+    };
+    chart
+}
+
+#[test]
+fn well_posedness_two_curves_refused() {
+    // Both embeds pin the same blocks: a double write, though either alone pins them once.
+    check_refused(
+        two_curves(),
+        Refusal::DoubleWritten {
+            blocks: config_mass(),
+            pinned: 8,
+            dof: 4,
+        },
+    );
+    // Overlapping in the masses alone, the configuration held.
+    let mut chart = two_curves();
+    chart.descriptor.axes[1] = AxisDescriptor::curve("μ", Block::Mass.only(), THETA_CURVE);
+    chart.descriptor.coupling.collisions = Block::Mass.only();
+    check_refused(
+        chart,
+        Refusal::DoubleWritten {
+            blocks: config_mass(),
+            pinned: 6,
+            dof: 4,
+        },
+    );
+    // Disjoint tied blocks: each embed pins its own, accepted.
+    let mut chart = two_curves();
+    chart.descriptor.axes = [
+        AxisDescriptor::curve("c", Block::Config.only(), NU_CURVE),
+        AxisDescriptor::curve("m", Block::Mass.only(), THETA_CURVE),
+    ];
+    chart.descriptor.coupling.collisions = no_blocks();
+    check_accepted(chart, 2, 6, "2-swept chart");
+}
+
+negative_control!(
+    well_posedness_two_curves_refused,
+    "one curve beside a kind-2 axis in its blocks, the δm strip's shape, is not refused",
+    expected = "is not refused",
+    check_refused(
+        curved(derived(Block::Mass, 0), vec![], vec![rest()]),
+        Refusal::DoubleWritten {
+            blocks: config_mass(),
+            pinned: 8,
+            dof: 4,
+        },
+    )
+);

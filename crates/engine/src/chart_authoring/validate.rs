@@ -7,8 +7,9 @@
 //! plane's complement). In a group a swept axis pins one DOF, a residual convention, a chart convention and a held set
 //! their stated count; fewer than the group's DOF leave it under-determined, more double-write it. The blocks a kind-4
 //! axis ties are pinned by its embed, every DOF of them (§ "The four axis kinds": "the embed pins config + mass
-//! together"): a slice or convention pin there double-writes them, and another swept axis inside them is a same-block
-//! collision, which pins nothing more and which the chart's `coupling` flags. The latent directions the axes and the slice write must be linearly independent, exactly: a direction written
+//! together"): a slice or convention pin there double-writes them, and so does a second kind-4 axis on any of them,
+//! whose embed pins them again; a kind-1 or kind-2 axis inside them is a same-block collision, which pins nothing more
+//! and which the chart's `coupling` flags. The latent directions the axes and the slice write must be linearly independent, exactly: a direction written
 //! twice is double-written though the counts balance.
 //!
 //! **Kind 3.** An invariant axis sits downstream of every block it depends on, in the decoder's order mass → config →
@@ -313,8 +314,9 @@ fn groups(pins: &[(BlockTouch, u32, Role)]) -> Vec<BlockTouch> {
     groups
 }
 
-/// Every group pinned exactly once (the module's note). In a group with a kind-4 axis, the embed pins every DOF of the
-/// blocks the curves tie, and a swept axis inside those blocks collides with it and pins nothing more.
+/// Every group pinned exactly once (the module's note). In a group with a kind-4 axis, each curve's embed pins every DOF
+/// of the blocks it ties, so two curves on overlapping blocks double-write them; a kind-1 or kind-2 axis inside a
+/// curve's blocks collides with it and pins nothing more.
 fn count(d: &ChartDescriptor) -> Result<(), Refusal> {
     let pins = pins(d);
     for group in groups(&pins) {
@@ -324,15 +326,14 @@ fn count(d: &ChartDescriptor) -> Result<(), Refusal> {
             .filter(|p| p.2 == Role::Curve)
             .fold(no_blocks(), |set, p| union(set, p.0));
         let total = dof(group);
-        let pinned = dof(ties)
-            + inside
-                .iter()
-                .map(|p| match p.2 {
-                    Role::Curve => 0,
-                    Role::Swept if within(p.0, ties) => 0,
-                    Role::Swept | Role::Fixed => p.1,
-                })
-                .sum::<u32>();
+        let pinned: u32 = inside
+            .iter()
+            .map(|p| match p.2 {
+                Role::Curve => dof(p.0),
+                Role::Swept if within(p.0, ties) => 0,
+                Role::Swept | Role::Fixed => p.1,
+            })
+            .sum();
         if pinned < total {
             return Err(Refusal::UnderDetermined {
                 blocks: group,
