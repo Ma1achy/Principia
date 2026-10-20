@@ -207,13 +207,18 @@ palette's explicit invalid treatment**, which §3 ("Overridable per node") and r
 has an explicit invalid-pixel treatment") allow, so R-79's rule that NaN or a sentinel reads as "no data", and
 R-436's, are met in the outcome view by black, not by the hatch. A view starts black and fills
 in as events fire. Failures are shown by the debug views, which keep the invalid hatch and their own palettes (the
-`state` and `detail` views, `principia_debug_tooling_plan.md` §B). **Forbidden chart regions keep the chart contract's
-forbidden-region treatment** in the outcome view, the hatch `debug_invalid(frag_xy)` (`principia_chart_decoder_contract.md`
-Part 3), decided from the chart alone, never from the payload's `decode_failed` detail, which cannot tell the two
-hatches apart (R-446). **A pixel keeps the hatch where chart_decoder_contract Part 3 hatches it**, on every pixel,
-inside `[0,1]²` and past it: after the axes' extension types act, a bounded axis past its edge, a state `validate`
-rejects (layer 2, or layer 3 on a finite decoded state), or a `Φ` that fails to evaluate (non-finite, or outside its
-domain). Both hatches keep it, the domain's end and the universal fallback (applied per R-369). **`Φ` here is the
+`state` and `detail` views, `principia_debug_tooling_plan.md` §B), and by View › Debug view, which shows them over
+the stain with a key and a count each (§6; R-467). **A forbidden chart region is not part of the chart (R-467,
+amending R-446):** the outcome view draws it as the plain canvas background, the colour the window is cleared to, with
+no hatch, legend key or share; only the debug views hatch it, `debug_invalid(frag_xy)`
+(`principia_chart_decoder_contract.md` Part 3). It is decided from the chart alone, never from the payload's
+`decode_failed` detail, which cannot tell the two hatches apart (R-446). **A pixel draws the background where
+chart_decoder_contract Part 3 hatches it**, on every pixel, inside `[0,1]²` and past it: after the axes' extension
+types act, a bounded axis past its edge, a state `validate` rejects (layer 2, or layer 3 on a finite decoded state), or
+a `Φ` that fails to evaluate (non-finite, or outside its domain). Both of Part 3's hatches draw it, the domain's end and
+the universal fallback (applied per R-369). *Was (R-446):* "Forbidden chart regions keep the chart contract's
+forbidden-region treatment in the outcome view, the hatch `debug_invalid(frag_xy)`"; "A pixel keeps the hatch where
+chart_decoder_contract Part 3 hatches it"; "Both hatches keep it". **`Φ` here is the
 chart map, `Chart::map`** (`principia_chart_reference.md` §5.1), not the shared decoder after it: the decoder's own
 outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any tag added later) and a
 non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it, as
@@ -223,8 +228,8 @@ sentence on what the area statistic reads ("The statistic reads the chart (the t
 `Φ`)"), but under Part 3, whose treatment the ruling keeps,
 they decide what the area statistics count (R-408), not what is hatched (applied per R-369, flagged), so a pixel
 outside a primary range that the chart does not hatch (the shape sphere past its pole, a periodic redraw) is a system
-and draws its outcome, and one whose state fails `validate` there is hatched. Every other `decode_failed` sample draws
-black. How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
+and draws its outcome, and one whose state fails `validate` there draws the background (R-467). Every other
+`decode_failed` sample draws black. *Was (R-446):* "one whose state fails `validate` there is hatched". How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
 by the task that needs it. *Was (R-96, superseded in part by R-444 to R-446):*
 "degenerate", `decode_failed`, drawn white `#ECECF0`; "collision @ t=0", a collision with `t_end_step == 0`, drawn
 orange; `running` in the neutral grey and `sim_failed` in the invalid pattern. There is **no separate `escaper` field**: the
@@ -415,7 +420,11 @@ mode do (debug_tooling_plan §F).
 has an explicit **invalid treatment/value**. Without this, debug views silently lie at exactly the
 pixels they exist to expose (a NaN FTLE would ramp to *some* colour and look like data). Invalid pixels
 render in a **hatched pattern** that collides with no palette entry; its exact pattern is a calibration (REQ-COL-055,
-R-71; R-132), confirmed at the M1 gate as proposed (R-428). Overridable per node.
+R-71; R-132), confirmed at the M1 gate as proposed (R-428). Overridable per node. **The hatch is the debug views'
+(R-467):** a presentation view, every stain that is not a debug view (§6), draws no hatch, so there a ramp's or
+compaction's invalid value, a NaN and a non-finite input draw bounded / nothing yet's `#141418` unless the node
+overrides its invalid colour, and a pixel the chart classifies as not a system draws the canvas background (§1.4). The
+invalid treatment stays explicit; only its presentation default is black.
 
 **Fragment-side recompute.** Because `ctx.chart.z` is present and the decode/encode are available in
 WGSL — generated from the one Rust source (rust-gpu → SPIR-V → WGSL translation), never hand-written (R-116) — the fragment stage can *recompute* cheap quantities (decode `z` → shape/energy; `encode(decode
@@ -517,11 +526,14 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
   and greyscale mode is its reading.
 - **What every mode keeps (R-399; §3).** A sample the field holds no value for keeps its own style in every mode,
   never a place on the greyscale or the wheel: a `running` sample of a field that holds no value for it, the "not
-  yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a reserved `state` code or a NaN the invalid
-  pattern, `debug_invalid(frag_xy)`, as the debug views draw them. **The outcome class is the exception (R-446):** it
-  holds a value for every sample, `running` and every failure being its bounded / nothing yet class, so in every mode
-  they take that class's place, rank 0, as the outcome palette draws them black (§1.4); only a forbidden chart region
-  keeps the hatch, in every mode, decided from the chart's validity, not from the payload (§1.4; applied per R-369). A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in
+  yet" style, `debug_not_yet(frag_xy)`, and a `sim_failed` sample, a reserved `state` code or a NaN `#141418` in a
+  presentation view (R-467) and the invalid pattern, `debug_invalid(frag_xy)`, in the debug views, as they draw them.
+  **The outcome class is the exception (R-446):** it holds a value for every sample, `running` and every failure being
+  its bounded / nothing yet class, so in every mode they take that class's place, rank 0, as the outcome palette draws
+  them black (§1.4); a forbidden chart region draws the canvas background in every mode, decided from the chart's
+  validity, not from the payload (§1.4; R-467). *Was (R-446, R-399):* "a `sim_failed` sample, a reserved `state` code or
+  a NaN the invalid pattern, `debug_invalid(frag_xy)`, as the debug views draw them"; "only a forbidden chart region
+  keeps the hatch, in every mode". A field that holds a value for a `running` sample, as FTLE does while the march runs, renders that value in
   every mode, so a progressive render shows the field as it fills. Hue mode's colour occupant draws the styles
   itself, as the palette does. Greyscale mode's brightness slot carries a lightness and can draw neither pattern, so
   the mode ends in one post (§4.2) that draws each style at those samples over the combiner's output and passes every
@@ -644,6 +656,17 @@ stated exception to masking (R-79): they show literal stored values (a failed-st
 against `state`), and NaN still goes to the invalid pattern. So does a stored `±∞` that is no declared sentinel, on
 the CPU and the GPU alike, tested on its bits, never by arithmetic on it (R-436, extending R-79); a declared sentinel
 or unset value keeps its own style (`d_min`'s unset `+∞`, R-280, R-399).
+
+**The debug view, View › Debug view (R-467).** One switchable view over whatever stain is active, a render-side
+toggle (`RenderState`'s `debug_view`, gui_state_contract §2), not a preset: every system pixel is drawn as the stain
+draws it; a pixel the chart classifies as not a system (§1.4) draws the hatch, `debug_invalid(frag_xy)`; a non-finite
+sample (a `sim_failed` with a non-finite detail, a `decode_failed` of detail 0, a non-finite value the stain reads)
+draws the NaN / Inf style, a prelude pattern of its own (REQ-COL-110, a calibration, R-71); any other `sim_failed` or
+`decode_failed` sample, a reserved `state` code included, draws `debug_invalid`. The chart is read first, then
+non-finiteness, then the failure. Its legend adds one key after the stain's, "Debug": "forbidden (chart)", "decode or
+sim failure" and "NaN / Inf", each in its style, with the number of the figure's pixels drawn in it and their share,
+each drawn always (render_gui_spec §G6). It is the one view that shows all three; the presentation views show none of
+them (§3).
 
 **Net:** one colouring system · three data sources (sample payload · quad attributes · fragment
 recompute) · presets all the way down. `debug_tooling_plan` §B–§G are re-expressed as a preset table

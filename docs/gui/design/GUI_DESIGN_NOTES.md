@@ -6,7 +6,12 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
 ## Rules that hold everywhere
 
 - **egui is a toggleable debug layer (F3) over the wgpu render.** It is the dev GUI, not the final UI, but it has the same
-  structure and every feature.
+  structure and every feature. With the layer hidden the figure fills the window by Extend, the default, more of the
+  field at the same scale, or Fit, the view's square scaled to the window's shorter side, chosen in View › "F3 fills
+  by" *(conformed to R-468)*.
+- **Presentation views draw no hatch.** A pixel that is not part of the chart draws the canvas background, and a
+  failure or a non-finite value black `#141418`; View › Debug view shows them, each with a key and a count *(conformed
+  to R-467)*.
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
   and data flows one way (UI → SetField → core → snapshot → UI). Undo and redo live in the contract (GU-1).
 - **Navigation is chart construction.** There is no camera object: pan, zoom and slice edit z₀ and the basis
@@ -114,7 +119,9 @@ where it lands in z and its distance from the slice, then lock the view on it, c
 Walk back from OUT; sample each colour and brightness node over its declared input domain (GU-2); push through the real
 combiner. **Each dimension gets its own key:** categorical swatches (with shares), then a separate bar for what brightness
 (or any second channel) encodes. Number ramps get ticks placed through the curve; direction fields a sphere key; coordinate maps
-their colour square; post operations line samples. It's called "Legend", never "Fate".
+their colour square; post operations line samples. It's called "Legend", never "Fate". A presentation legend has no
+"forbidden region" key; View › Debug view adds its own "Debug" key, forbidden, decode or sim failure and NaN / Inf, each
+with a count *(conformed to R-467)*.
 
 ## 07 Keyboard — design note, not a screen
 
