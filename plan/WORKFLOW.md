@@ -113,6 +113,19 @@ This layout is confirmed by R-146. The workspace sits under `crates/`, next to `
 
 `cargo xtask plan-check` runs `plan/check_plan.py`.
 
+**Running the suite locally (R-231):** the suite runs through [cargo-nextest](https://nexte.st), pinned to the version
+CI installs, and doctests, which nextest does not run, through `cargo test --doc`:
+
+```sh
+cargo install cargo-nextest --version 0.9.146 --locked
+cargo nextest run --workspace
+cargo test --workspace --doc
+```
+
+`cargo xtask ci` runs every control and the other per-push checks (R-235). (This was the README's "Running the tests"
+until the README of 18 Oct 2026, which has no build instructions; `xtask/tests/nextest.rs` checks this run against CI's
+pinned version.)
+
 ## The review loop
 
 1. **The implementer** opens the PR once the task's acceptance tests pass locally and it has run `cargo mutants
