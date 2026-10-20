@@ -39,6 +39,7 @@ use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
+use std::thread::JoinHandle;
 
 use ledger::gen::prelude;
 use wgpu::util::DeviceExt;
@@ -676,6 +677,8 @@ pub struct PipelineCache {
     shared: Arc<Shared>,
     jobs: Sender<Job>,
     outcomes: Receiver<Outcome>,
+    /// The compile worker, joined when the cache is dropped: `None` when it could not start.
+    worker: Option<JoinHandle<()>>,
     current: Option<Arc<CompiledStain>>,
     /// The current request's stain as it renders.
     rendered: Option<Stain>,
@@ -692,7 +695,7 @@ pub struct PipelineCache {
 
 impl PipelineCache {
     /// An empty cache on `device`, its compile worker started. The worker stops when the cache is dropped, once it has
-    /// finished the job it is on.
+    /// finished the job it is on, and the drop waits for it ([`Drop`]).
     pub fn new(device: &wgpu::Device) -> PipelineCache {
         let shared = Arc::new(Shared {
             device: device.clone(),
@@ -707,7 +710,7 @@ impl PipelineCache {
         let (tx, outcomes) = mpsc::channel::<Outcome>();
         let worker_shared = Arc::clone(&shared);
         // A worker that cannot start leaves `jobs` with no receiver: every request is refused, naming it.
-        let _ = std::thread::Builder::new()
+        let worker = std::thread::Builder::new()
             .name("render-compile".into())
             .spawn(move || {
                 for job in rx {
@@ -729,11 +732,13 @@ impl PipelineCache {
                         break;
                     }
                 }
-            });
+            })
+            .ok();
         PipelineCache {
             shared,
             jobs,
             outcomes,
+            worker,
             current: None,
             rendered: None,
             live_keys: Vec::new(),
@@ -931,6 +936,23 @@ impl PipelineCache {
 }
 
 /// `keys` as `stain`'s node keys: one per node, distinct.
+/// The cache's drop stops the compile worker and waits for it (TASK-M2-42). The worker holds a clone of the device and,
+/// through the shared state, every compiled pipeline; a worker left running releases them on its own thread, after
+/// the cache is gone, so a process can reach its exit while the driver is still destroying them. On lavapipe that is
+/// a SIGSEGV after every test has passed (REQ-VAL-192). Closing both channels stops the worker at its next send, which
+/// finds no receiver, or, idle with no job queued, at its next receive, which finds no sender: it compiles at most one
+/// more job, and the drop returns once the worker has released what it held.
+impl Drop for PipelineCache {
+    fn drop(&mut self) {
+        drop(std::mem::replace(&mut self.jobs, mpsc::channel().0));
+        drop(std::mem::replace(&mut self.outcomes, mpsc::channel().1));
+        if let Some(worker) = self.worker.take() {
+            // A worker that panicked has already stopped; its panic was reported on its own thread.
+            let _ = worker.join();
+        }
+    }
+}
+
 fn check_keys(stain: &Stain, keys: &[NodeKey]) -> Result<(), RequestError> {
     if keys.len() != stain.nodes().len() {
         return Err(RequestError(format!(
