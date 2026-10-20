@@ -39,10 +39,10 @@
 //! products an explicit `fma`, and no `±∞` or NaN literal is written. Each divisor a select guards is itself selected
 //! as 1 there, so no `x/0` is formed (R-436's producer rule):
 //! - **The landing**, in [`encode_into`]: the caller's norm against the caller's `ε_phys`, `d ≤ ε_phys`, so a NaN `d`
-//!   lands in latent `z`; [`placed`]'s finiteness test on each coordinate.
+//!   lands in latent `z`; `placed`'s finiteness test on each coordinate.
 //! - **`plane`'s Gram determinant**, in [`plane`]: `det = g₁₁g₂₂ − g₁₂²` against 0, in Kahan's form, `w = g₁₂·g₁₂`,
 //!   `det = fma(g₁₁, g₂₂, −w) + fma(−g₁₂, g₁₂, w)`, which is exactly 0 wherever the rounded Gram entries satisfy
-//!   `g₁₁g₂₂ = g₁₂²`; each `g` and the right-hand side is [`dot`], a chain of explicit `fma`s from the lone first product.
+//!   `g₁₁g₂₂ = g₁₂²`; each `g` and the right-hand side is `dot`, a chain of explicit `fma`s from the lone first product.
 //! - **The ternary plot's edge `u = 1`**, in [`MassSimplex`]'s impl: `v`'s divisor `k − (m₁ − ε_m)` against 0, lone
 //!   subtractions, no division.
 //! - **The pole and `θ`'s sign**, in [`spherical_inverse`]: `n₀`, `n₁` against 0, `θ`'s sign decided on `n₁`, never on
