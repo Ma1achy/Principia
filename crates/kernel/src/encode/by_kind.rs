@@ -34,6 +34,25 @@
 //! (REQ-ENC-024). [`encode_into`] takes both from its caller, the lookup, and fixes neither. A coordinate that is not
 //! finite, or an axis that cannot place the state ([`Coord::Unplaced`]), lands it in latent `z` with no comparison.
 //!
+//! **The branch inputs** (R-34; gpu_determinism_note, "The discipline", rules 1, 2, 4 and 6). The kernel builds this
+//! module to f32 SPIR-V, so every float that decides a branch or a select is built in a fixed form, every sum of
+//! products an explicit `fma`, and no `±∞` or NaN literal is written. Each divisor a select guards is itself selected
+//! as 1 there, so no `x/0` is formed (R-436's producer rule):
+//! - **The landing**, in [`encode_into`]: the caller's norm against the caller's `ε_phys`, `d ≤ ε_phys`, so a NaN `d`
+//!   lands in latent `z`; [`placed`]'s finiteness test on each coordinate.
+//! - **`plane`'s Gram determinant**, in [`plane`]: `det = g₁₁g₂₂ − g₁₂²` against 0, in Kahan's form, `w = g₁₂·g₁₂`,
+//!   `det = fma(g₁₁, g₂₂, −w) + fma(−g₁₂, g₁₂, w)`, which is exactly 0 wherever the rounded Gram entries satisfy
+//!   `g₁₁g₂₂ = g₁₂²`; each `g` and the right-hand side is [`dot`], a chain of explicit `fma`s from the lone first product.
+//! - **The ternary plot's edge `u = 1`**, in [`MassSimplex`]'s impl: `v`'s divisor `k − (m₁ − ε_m)` against 0, lone
+//!   subtractions, no division.
+//! - **The pole and `θ`'s sign**, in [`spherical_inverse`]: `n₀`, `n₁` against 0, `θ`'s sign decided on `n₁`, never on
+//!   `atan2`'s output; the pole's `θ` is selected as 0, as `crate::canon`'s rotation angle selects `φ` (R-437).
+//! - **The centre**, in [`exponential_inverse`]: `‖n⊥‖²`, a chain of explicit `fma`s, against 0, not its `sqrt`.
+//! - **The warp at rest**, in [`warp_inverse`]: `K` against 0, where `L_max(K) = 0`, not `L_max` itself.
+//! - **Feasibility**, in [`feasibility`]: the finiteness of the entries; the construction's own exact test
+//!   (`crate::decode::invariant::infeasible`); `K*` against 0, and `L_z` against 0, for the constraint named and the
+//!   class kept.
+//!
 //! **Feasibility first** ([`feasibility`]; Part 5 kind 3, Part 6 "Chart-aware validation"; REQ-ENC-010, REQ-ENC-030).
 //! An entered pair is tested before the construction, by the construction's own exact test `2·I·K* < L_z²`
 //! (`crate::decode::invariant::infeasible`, `I = 1`). An infeasible pair is projected by the contract's metric: `K*`
@@ -197,15 +216,18 @@ fn dot<R: LinkReal>(a: &[R; 8], b: &[R; 8]) -> R {
 
 /// The components `(a, b)` of `d` in the plane of `q1`, `q2`: the least-squares solution of `d ≈ a·q₁ + b·q₂`, the
 /// Gram system `[⟨q₁,q₁⟩ ⟨q₁,q₂⟩; ⟨q₁,q₂⟩ ⟨q₂,q₂⟩]·(a, b) = (⟨q₁,d⟩, ⟨q₂,d⟩)`, which is `d`'s own components for
-/// `q = ê_i, ê_j`; `None` where the directions are dependent (a zero Gram determinant).
+/// `q = ê_i, ê_j`; `None` where the directions are dependent (a zero Gram determinant, in the module's fixed form).
 #[inline]
 pub fn plane<R: LinkReal>(d: &[R; 8], q1: &[R; 8], q2: &[R; 8]) -> Option<(R, R)> {
     let (g11, g12, g22) = (dot(q1, q1), dot(q1, q2), dot(q2, q2));
     let (r1, r2) = (dot(q1, d), dot(q2, d));
-    let det = g11 * g22 - g12 * g12;
+    let w = g12 * g12;
+    let det = Float::mul_add(g11, g22, -w) + Float::mul_add(-g12, g12, w);
+    let independent = det != R::zero();
+    let div = select(independent, det, R::one());
     select(
-        det != R::zero(),
-        Some(((g22 * r1 - g12 * r2) / det, (g11 * r2 - g12 * r1) / det)),
+        independent,
+        Some(((g22 * r1 - g12 * r2) / div, (g11 * r2 - g12 * r1) / div)),
         None,
     )
 }
@@ -351,8 +373,9 @@ pub fn m0<R: Copy>(e: &Encoded<R>) -> R {
 
 /// The ternary mass plot: both axes kind 2 in the mass block, together pinning it, so no residual. The buffer is undone,
 /// `m′ = (m − ε_m)/(1 − 3ε_m)`, and the shear inverted, `u = m′₁`, `v = m′₂/(1 − u)`, as `crate::chart::mass_simplex`
-/// forms both; `v = 0` on the edge `u = 1`, where the decode does not read it. The fixed triangle and the rest start are
-/// [`encode_into`]'s comparison.
+/// forms both, `v` written `(m₂ − ε_m)/(k − (m₁ − ε_m))`, `k = 1 − 3ε_m`; `v = 0` on the edge `u = 1`, where that
+/// divisor is 0 and the decode does not read `v`. The fixed triangle and the rest start are [`encode_into`]'s
+/// comparison.
 impl<P: Copy> ByKind for MassSimplex<P>
 where
     f64: From<P>,
@@ -366,29 +389,32 @@ where
         let k = R::one() - (eps + eps + eps);
         let m = e.canonical.ic.m;
         let u = (m[1] - eps) / k;
-        let rest = R::one() - u;
-        let v = select(rest == R::zero(), R::zero(), ((m[2] - eps) / k) / rest);
+        let rest = k - (m[1] - eps);
+        let edge = rest == R::zero();
+        let v = select(edge, R::zero(), (m[2] - eps) / select(edge, R::one(), rest));
         [Coord::At(u), Coord::At(v)]
     }
 }
 
-/// `⟨a, b⟩` in three dimensions.
+/// `⟨a, b⟩` in three dimensions: the first product, then explicit `fma`s.
 #[inline]
 fn dot3<R: LinkReal>(a: [R; 3], b: [R; 3]) -> R {
-    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+    Float::mul_add(a[2], b[2], Float::mul_add(a[1], b[1], a[0] * b[0]))
 }
 
 /// The spherical map inverted at the unit point `n`, `pi` the float type's π: `θ = atan2(n₁, n₀)` taken into
 /// `[0, 2π)`, `φ = atan2(√(n₀² + n₁²), n₂)`, `(s, t) = (θ/2π, 1 − φ/π)` (chart_reference §3.3). At the poles, `n₀ = n₁
-/// = 0`, `θ` is 0, selected, never `atan2(0, 0)` (R-437).
+/// = 0`, `θ` is 0, selected, never `atan2(0, 0)` (R-437). `θ` is taken into `[0, 2π)` on `n₁`'s sign, a `−0` as `+0`,
+/// so the select reads no transcendental (the module's list).
 #[inline]
 pub fn spherical_inverse<R: LinkReal>(n: [R; 3], pi: R) -> (R, R) {
     let zero = R::zero();
     let turn = pi + pi;
-    let pole = (n[0] == zero) & (n[1] == zero);
-    let theta = select(pole, zero, Float::atan2(n[1], n[0]));
-    let theta = select(theta < zero, theta + turn, theta);
-    let phi = Float::atan2(Float::sqrt(n[0] * n[0] + n[1] * n[1]), n[2]);
+    let y = select(n[1] == zero, zero, n[1]);
+    let pole = (n[0] == zero) & (y == zero);
+    let theta = select(pole, zero, Float::atan2(y, n[0]));
+    let theta = select(y < zero, theta + turn, theta);
+    let phi = Float::atan2(Float::sqrt(Float::mul_add(n[1], n[1], n[0] * n[0])), n[2]);
     (theta / turn, R::one() - phi / pi)
 }
 
@@ -403,13 +429,15 @@ pub fn exponential_inverse<R: LinkReal>(
     scale: R,
 ) -> (R, R) {
     let c = dot3(n, n0);
-    let perp = [n[0] - c * n0[0], n[1] - c * n0[1], n[2] - c * n0[2]];
-    let sin_r = Float::sqrt(dot3(perp, perp));
-    let k = select(
-        sin_r == R::zero(),
-        R::zero(),
-        Float::atan2(sin_r, c) / sin_r,
-    );
+    let perp = [
+        Float::mul_add(-c, n0[0], n[0]),
+        Float::mul_add(-c, n0[1], n[1]),
+        Float::mul_add(-c, n0[2], n[2]),
+    ];
+    let sin2 = dot3(perp, perp);
+    let centre = sin2 == R::zero();
+    let sin_r = select(centre, R::one(), Float::sqrt(sin2));
+    let k = select(centre, R::zero(), Float::atan2(sin_r, c) / sin_r);
     let d = [k * perp[0], k * perp[1], k * perp[2]];
     let half = R::one() / (R::one() + R::one());
     (
@@ -501,12 +529,14 @@ impl<P: Copy> InvariantAxis for InvariantLK<P> {
 }
 
 /// The chart point of the invariants `inv` on an invariant chart: `t = (K/K_max)^{1/γ_K}`, the warp's `K(t)` inverted,
-/// and `s = (L_z/L_max + 1)/2`, `L_max = L_max(K)`, `s = ½` where `L_max = 0` (chart_reference §2.1's warp).
+/// and `s = (L_z/L_max + 1)/2`, `L_max = L_max(K)`, `s = ½` where `K = 0`, which is where `L_max = 0`
+/// (chart_reference §2.1's warp; the module's list).
 #[inline]
 pub fn warp_inverse<R: WarpReal>(k_max: R, gamma_k: R, inv: &Invariants<R>) -> (R, R) {
     let half = R::one() / (R::one() + R::one());
-    let l = l_max(inv.k);
-    let ratio = select(l == R::zero(), R::zero(), inv.lz / l);
+    let rest = inv.k == R::zero();
+    let l = select(rest, R::one(), l_max(inv.k));
+    let ratio = select(rest, R::zero(), inv.lz / l);
     let s = (ratio + R::one()) * half;
     let t = Float::powf(inv.k / k_max, R::one() / gamma_k);
     (s, t)
@@ -555,8 +585,9 @@ pub fn feasibility<R: WarpReal>(lz: R, k: R, low: Constraint, wide: Constraint) 
     let k_c = Float::max(k, zero);
     let lz_c = Float::copysign(l_max(k_c), lz);
     // The contract's criterion itself: `lz_c` takes `L_z`'s sign, so the class changes only where one is 0 and the other
-    // not, which is `L_z ≠ 0` with `K* ≤ 0`.
-    let keeps = (lz_c == zero) == (lz == zero);
+    // not, which is `L_z ≠ 0` with `K* ≤ 0`. `lz_c` is 0 exactly where `k_c` is (`L_max(K) = 0` iff `K = 0`), so the
+    // test reads `k_c`, not the `sqrt` (the module's list).
+    let keeps = (k_c == zero) == (lz == zero);
     let failed = select(k < zero, low, wide);
     match (finite, short, keeps) {
         (false, _, _) => Feasibility::Rejected {

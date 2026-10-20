@@ -639,6 +639,13 @@ fn check_primitives(z_shift: f64) {
         None,
         "a dependent pair placed a point"
     );
+    // Dependent directions whose Gram products round: the determinant's fixed form is exactly 0 there.
+    let qa = [0.1, 0.2, 0.3, 0.7, -0.6, 0.35, 0.9, -0.15];
+    assert_eq!(
+        plane(&d, &qa, &qa),
+        None,
+        "a rounded dependent pair placed a point"
+    );
     let flat = Latent {
         z0: SLICE,
         q1,
@@ -688,6 +695,11 @@ fn check_primitives(z_shift: f64) {
         "the pole"
     );
     assert_eq!(spherical_inverse([-1.0, 0.0, 0.0], pi), (0.5, 0.5), "θ = π");
+    assert_eq!(
+        spherical_inverse([-1.0, -0.0, 0.0], pi),
+        (0.5, 0.5),
+        "θ = π at n₁ = −0"
+    );
     let (s_y, t_y) = spherical_inverse([0.0, 1.0, 0.0], pi);
     assert!(
         (s_y - 0.25).abs() < 1e-15 && (t_y - 0.5).abs() < 1e-15,
