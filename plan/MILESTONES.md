@@ -186,11 +186,11 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 179 requirements** (and every earlier gate still green):
+**Exit gate — 180 requirements** (and every earlier gate still green):
 
 - DEC (39): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…047
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
-- CHART (49): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-075
+- CHART (50): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058, REQ-CHART-075, REQ-CHART-078
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
 - GEN (7): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036
@@ -226,11 +226,11 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 206 requirements** (and every earlier gate still green):
+**Exit gate — 208 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
 - CHART (1): REQ-CHART-059
-- INT (71): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094
+- INT (72): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…092, REQ-INT-094…095
 - EVT (24): REQ-EVT-001…020, REQ-EVT-023…026
 - PAY (29): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098
 - GEN (1): REQ-GEN-016
@@ -238,7 +238,7 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - RENDER (1): REQ-RENDER-028
 - GUI (1): REQ-GUI-008
 - TOOL (13): REQ-TOOL-031…039, REQ-TOOL-125, REQ-TOOL-132, REQ-TOOL-149…150
-- VAL (53): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190
+- VAL (54): REQ-VAL-025…055, REQ-VAL-115, REQ-VAL-117, REQ-VAL-119, REQ-VAL-123…124, REQ-VAL-126…136, REQ-VAL-139, REQ-VAL-146, REQ-VAL-168, REQ-VAL-170…171, REQ-VAL-190…191
 - PERF (6): REQ-PERF-001…004, REQ-PERF-083, REQ-PERF-085
 - SYS (3): REQ-SYS-017…019
 <!-- /gate:M3 -->

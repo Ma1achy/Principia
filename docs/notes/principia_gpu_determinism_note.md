@@ -36,7 +36,7 @@ The spike's as-briefed rule (`N_sub` = f32 evaluation of `⌈(r_sub/r_min)^1.5�
 
 ## The discipline (each rule = one measured failure)
 
-1. **Branch inputs are comparison-only, against compile-time constants.** No runtime `pow`/`sqrt`/`div` decides control flow.
+1. **Branch inputs are comparison-only, against compile-time constants or values every backend receives bit-identically** (the sim key's threshold table, R-502; *was:* "against compile-time constants"). No runtime `pow`/`sqrt`/`div` decides control flow.
    - `N_sub` is a **bucket lookup**: `d²` against the sim key's f32 thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)` (`(r_sub/n^{2/3})²` at the default `γ_sub = 1.5`), as a generated comparison tree — no runtime sqrt/div/pow/loop/dynamic index. The `pow` moves to *table generation on the host, per sim key* (f64, a pinned pure-software libm, so the native and the wasm hosts give identical bits), shipped as exact f32 bit patterns in `SimUniforms` and read by constant index; every backend then compares against the identical bit-pattern (R-502; integrator dd §3.3). *Was:* "against 64 frozen f32 thresholds `THR[n] = round_f32((r_sub/n^{2/3})²)` … *table-generation time* (f64 libm, run once, frozen into constants)".
    - **Collision** is `d² < r_coll²` against a constant (not `r_min < r_coll` via a runtime `sqrt`).
    - **Horizon** is an **integer step counter** (not `t += dt` then `t ≥ T` — accumulated float time drifts and forks the test).

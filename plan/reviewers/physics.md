@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*106 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*107 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -127,6 +127,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 
 **M8**
 - [ ] REQ-ENC-028 — the proposal measures κ and the chart-encode vs direct-inject difference over near-degenerate and random ICs and states both values; recorded in decisions.md
+- [ ] REQ-INT-093 — cargo xtask gate browser-nsub-table: in Chrome stable and Safari (R-110), the wasm host generator's tables for every configuration of REQ-INT-091's fixture equal the fixture's bits; control: the fixture with one entry one ulp off fails the gate
 - [ ] REQ-GUI-122 — on a region containing a catalogue orbit, a seed refines to it and matches its catalogue period
 - [ ] REQ-GUI-149 — the proposal shows the fitted α on the fixture at the default settings and the tolerance with its margin
 - [ ] REQ-GUI-150 — the proposal shows residuals and period errors for seeds that refine to catalogue orbits and for seeds that do not
@@ -244,7 +245,7 @@ Ids are the headings of `docs/read_first/principia_01_pitfalls.md`; a task lists
 
 ## 7. Determinism and parity
 
-- [ ] Every branch input is a comparison against a compile-time constant, an integer counter or single-rounded arithmetic: `N_sub` is the 64-threshold bucket lookup (`THR[n] = round_f32((r_sub/n^{2/3})²)`), collision is `d² < r_coll²`, the horizon is an integer macro-step counter. `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"; `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
+- [ ] Every branch input is a comparison against a compile-time constant, a value every backend receives bit-identically, an integer counter or single-rounded arithmetic: `N_sub` is the bucket lookup over the sim key's thresholds (`THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)`, generated on the host per sim key, R-502), collision is `d² < r_coll²`, the horizon is an integer macro-step counter. `docs/notes/principia_gpu_determinism_note.md` § "The discipline (each rule = one measured failure)"; `docs/design/principia_dd_integrator.md` § "3.3 Substep law — and the determinism pin, made concrete"
 - [ ] Every multi-op branch input — `d²`, the windowed `|Δn̂|`, `E_rel` and any other — is enumerated and written with explicit `fma` in a fixed form, not left to a backend switch. `decisions.md` § "R-34 — FMA: explicit fma at every branch input, enumerated *(IE-6)*"; `docs/contracts/principia_integrator_contract.md` § "And FMA contraction is a live question"
 - [ ] Every aggregate over `ftle` (footprint means and spreads, quad reductions, histograms, statistics) excludes samples by `ftle_valid` explicitly and never relies on NaN propagation: one NaN poisons a sum or mean, and WGSL's `min`/`max`/`clamp` with NaN operands are implementation-defined. `decisions.md` § "R-255 — Every aggregate over `ftle` excludes samples by `ftle_valid`, never by NaN propagation *(condition on R-254)*"
 - [ ] No constant that differs between the f32 and f64 instantiations appears in a control-flow decision. `docs/contracts/principia_integrator_contract.md` § "Rules the new kernel must hold by construction"

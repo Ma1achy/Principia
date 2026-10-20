@@ -1529,3 +1529,32 @@ beyond the human's words. For the human: yes, because option (b) drops part of a
 - **Applied meanwhile:** (a). Nothing else waits: TASK-M6-46 and TASK-M6-47 build no Overlays entry.
 - **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
   the rest of TASK-M8-08 proceeds.
+
+## RQ-405: Yoshida-4's printed weights are not the f64 values of their closed form, and with them `w₀ + 2w₁` evaluates to `0.9999999999999998` in f64, where REQ-INT-037 asks for "all printed digits" and "w₀ + 2w₁ = 1" *(corpus error, R-501, R-57, REQ-INT-037; context: TASK-M3-02, PR #258)*
+
+*Found in physics review 5587467237 of PR #258 (P2), porting R-501. Nothing is chosen. For the human: changing a printed
+value in the corpus (R-369, the porting rule); the physics changes only at the 10⁻¹⁶ level.*
+
+- **File, section:**
+  - `docs/design/principia_dd_integrator.md` § "3.2 Occupants", Yoshida-4: "`w₁ = 1 / (2 − 2^{1/3}) = 1.3512071919596578`",
+    "`w₀ = −2^{1/3} · w₁     = −1.7024143839193157        (w₀ + 2w₁ = 1)`".
+  - `plan/requirements.yaml` REQ-INT-037's verify: "coefficient constants equal §3.2 to all printed digits; w₀ + 2w₁ = 1".
+  - `decisions.md` § R-501: Yoshida-4's weights are "the same paper's fourth-order closed form".
+- **Measured (exact decimal arithmetic, 40 digits; physics review P2 agrees):**
+  - The closed form: `w₁ = 1.351207191959657634047687…`, `w₀ = −1.702414383919315268095375…`. Their correctly rounded f64
+    values: `1.3512071919596575` and `−1.7024143839193153`. Naive f64 evaluation (`1/(2 − 2^(1/3))`, `−2^(1/3)·w₁`):
+    `1.3512071919596578` and `−1.7024143839193155`. The printed `w₀`, `−1.7024143839193157`, is neither.
+  - In f64, `w₀ + 2w₁` is `0.9999999999999998` with the printed digits, and also with the correctly rounded ones; it is
+    exactly `1.0` with `w₁` correctly rounded and `w₀ = 1 − 2w₁` computed in f64 (`−1.702414383919315`), whose cubic
+    residual `|2w₁³ + w₀³| / Σ|w|³` is `5.5·10⁻¹⁷` (printed digits: `2.9·10⁻¹⁶`).
+- **Options seen:**
+  - (a) Keep the printed digits; REQ-INT-037's `w₀ + 2w₁ = 1` is read within f64 rounding (R-501's algebraic check,
+    dd §5 test 1a, bounds it at `3·10⁻¹⁵`).
+  - (b) Print the closed form's correctly rounded f64 values (`1.3512071919596575`, `−1.7024143839193153`); the identity
+    is read within rounding as in (a).
+  - (c) Print `w₁` correctly rounded and `w₀ = 1 − 2w₁` as computed in f64 (`−1.702414383919315`), so that `w₀ + 2w₁ = 1`
+    holds exactly in f64, as Yoshida-6's `w₀` is already computed from its consistency condition.
+- **Applied meanwhile:** (a). dd §3.2's sentence on the digits' provenance is corrected (it said they were the closed
+  form evaluated in f64); the printed digits are unchanged. REQ-INT-037 carries `rq: RQ-405`; TASK-M3-02 builds the
+  printed digits, and its PR does not wait: it merges with REQ-INT-037 held, not closed.
+- **Waits:** REQ-INT-037 (`rq: RQ-405`), TASK-M3-02's closing of it.

@@ -1,7 +1,7 @@
 # TASK-M3-02 — Stepper occupants and the capability profile
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032, REQ-INT-090
+- **Closes:** REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032, REQ-INT-090, REQ-VAL-191
 - **Depends on:** TASK-M3-01
 - **Needs (earlier milestones):** REQ-INT-002
 - **Reviewers:** code, qa, physics
@@ -44,12 +44,15 @@ The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and
 - `cargo test -p kernel occupant_profiles` — each built occupant's advertised profile, `step_reversible` and `run_reversible` included, and default tier binding equals the Part 2 / Part 2a tables; controls: a table giving Yoshida-4 `step_reversible` false, or KDK `run_reversible` true, fails; Aarseth–Zare + time-transformed leapfrog is an allowed future occupant in Part 2a, not a v1 requirement, and is not built (R-162, R-168) (REQ-INT-014).
 - Review (code): Euler is absent from tier defaults and production occupant lists and present only in the debug selection (REQ-INT-015).
 - `cargo test -p kernel occupant_coefficients` — constants equal §3.2 to all printed digits; w₀ + 2w₁ = 1; Yoshida-6 w₀ = 1 − 2(w₁+w₂+w₃) (REQ-INT-037).
-- `cargo test -p kernel yoshida6_published` — the shared source's Yoshida-6 constants equal dd §3.2's printed digits, each coefficient block carrying the citation (Yoshida 1990, Table 1, solution A), and REQ-INT-090's order test passes on them (REQ-INT-056).
-- `cargo test -p kernel yoshida_convergence_order` — on the Kepler-embedded fixture, over a dt ladder, Yoshida-4's fitted order rounds to 4 and Yoshida-6's to 6; controls: each coefficient with one printed digit changed fails (REQ-INT-090).
-- `cargo test -p kernel step_reversibility` — dd test 3: STEP(dt), negate p, STEP(dt), negate p returns the state to rounding level for KDK, Yoshida-4 and Yoshida-6, without wrapper projection or substepping; control: Yoshida-4 with its stages made asymmetric (w₁, w₁, w₀) fails (REQ-VAL-032).
+- `cargo test -p kernel yoshida6_published` — the shared source's Yoshida-6 constants equal dd §3.2's printed digits, their block carrying the citation (Yoshida 1990, Table 1, solution A), and the Yoshida-4 block carries its citation (Yoshida 1990, the fourth-order closed form); REQ-INT-090's checks pass on them (REQ-INT-056).
+- `cargo test -p kernel yoshida_convergence_order` — on the Kepler-embedded fixture, the maximum relative energy error over one orbit, `max_t |E(t) − E₀| / |E₀|`, fitted against `dt` over a log–log ladder: Yoshida-4's fitted order rounds to 4 and Yoshida-6's to 6, and the test prints the ladder, the fit and its detection floor (the smallest relative coefficient change it detects; estimated near 3·10⁻⁷ for Yoshida-4 and 10⁻⁹ for Yoshida-6); controls: Yoshida-4's `w₁` and Yoshida-6's `w₁`, `w₂`, `w₃`, each with its 4th significant digit changed and `w₀` recomputed, give a fitted order that rounds lower and fail (REQ-INT-090).
+- `cargo test -p kernel yoshida_order_conditions` — evaluated exactly on the shipped f64 constants, `|Σw − 1|`, `|Σw³| / Σ|w|³` and, for Yoshida-6, `|Σw⁵| / Σ|w|⁵` are at most 3·10⁻¹⁵ (Yoshida-4) and 5·10⁻¹⁴ (Yoshida-6); controls: each coefficient (Yoshida-6's `w₀` recomputed) moved by one unit of its 15th (Yoshida-4) or 13th (Yoshida-6) significant digit, in each direction, exceeds the bound and fails; the last printed digits are REQ-INT-037's equality (REQ-INT-090).
+- `cargo test -p kernel step_reversibility` — dd test 3: STEP(dt), negate p, STEP(dt), negate p returns the state within REQ-VAL-191's rounding-level criterion for KDK, Yoshida-4 and Yoshida-6, without wrapper projection or substepping; control: Yoshida-4 with its stages made asymmetric (w₁, w₁, w₀) exceeds it and fails (REQ-VAL-032).
+- Review (physics): the proposed rounding-level criterion with its evidence (the residuals for KDK, Yoshida-4 and Yoshida-6 at f64 and f32 across the dt used, and the asymmetric control's, scaled by the state norm); the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-VAL-191).
 - Physics reviewer approves the Part 2 definition of what `order` means for the complexity proxy and FTLE confidence (REQ-INT-078).
 
 ## Notes
 - R-57 is applied here: Yoshida-6 must not enter the shared source before the coefficient check passes; R-501 makes that check the citation and the convergence-order test.
-- RQ-369 ruled: R-500 (option (c)) — the flag is split; nothing is left for this task to define. The test 3 rounding-level criterion this task uses is the one TASK-M3-08 measures the regularised occupants against (REQ-VAL-190). The dt ladder and fit of the order test are this task's, named in its PR (applied per R-369, R-501).
+- RQ-369 ruled: R-500 (option (c)) — the flag is split; nothing is left for this task to define. The rounding-level criterion is REQ-VAL-191, a calibration this task proposes; TASK-M3-08 measures the regularised occupants against it (REQ-VAL-190). The dt ladder is this task's, named in its PR (applied per R-369, R-501). *As first ported:* "The test 3 rounding-level criterion this task uses is the one TASK-M3-08 measures the regularised occupants against (REQ-VAL-190). The dt ladder and fit of the order test are this task's".
+- RQ-405 (open): Yoshida-4's printed digits; this task builds them as printed, and REQ-INT-037 stays held (`rq: RQ-405`) when this task merges.
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-078.

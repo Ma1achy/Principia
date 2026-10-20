@@ -410,7 +410,9 @@ with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — us
 linearised decoder is being tested, since an affine chart makes the curvature term identically
 zero. **The radius is bounded at π (R-503, closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches
 where `s√2 > π`, is past the antipode of `n0`, where the map wraps; it is the domain's end, not a system, out of the
-count and the total (§5.4). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view.
+count and the total (§5.4). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
+exactly on `r = π` maps to the one point `−n0`; how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078,
+R-72), and the fixtures avoid that circle.
 
 **No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
 $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
@@ -433,7 +435,10 @@ equator, the value is **n-to-1 with a per-pixel fold**: a pixel whose mirror is 
 mirror is in view counts once for the pair, its representative the pixel with `w > 0` (the canonical decode's
 hemisphere, Part 1 of the decoder contract); a pixel on the equator (`w = 0`) is its own mirror and counts once. "In
 view" is the cap, `[0,1]²`'s pixels with `r ≤ π`; past the square the map is bounded (§5.4) and adds no multiplicity.
-The chart computes the value whenever `n0`, `e1`, `e2` or `s` change, and its label shows it.
+The chart computes the value whenever `n0`, `e1`, `e2` or `s` change, and its label shows it. Per pixel the rule is:
+a pixel counts 1 if its `w ≥ 0`, or if its mirror point lies outside the cap; otherwise 0. "`w = 0`" is the computed
+`w` being ±0.0; "the mirror is in view" is the map's inverse (the log map about `n0`) of the mirrored point landing in
+`[0,1]²` with `r ≤ π` (physics review 5587467237 and qa review 5587466555 of PR #258, applied per R-369).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an

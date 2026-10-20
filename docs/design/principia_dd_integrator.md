@@ -78,8 +78,12 @@ kick  coefficients c = [w₁/2, (w₀+w₁)/2, (w₀+w₁)/2, w₁/2]
 ```
 i.e. `KDK(w₁·dt) ∘ KDK(w₀·dt) ∘ KDK(w₁·dt)`. The negative middle step is real, and the composition is still reversible at a fixed step: it is symmetric, so `step_reversible` holds whatever the sign of `w₀` (test 3, §5). What breaks naive time-reversal of a run is the wrapper's adaptive substepping and COM projection (integrator contract Part 6; R-500, closing RQ-369). *Was:* "The negative middle step is real and is why naive time-reversal fails (integrator contract Part 6)."
 *Citation (R-501):* Yoshida, H. (1990), "Construction of higher order symplectic integrators", *Phys. Lett. A* 150,
-262–268: the fourth-order symmetric triple composition, whose weights are given in closed form there; the digits above
-are that closed form evaluated in f64.
+262–268: the fourth-order symmetric triple composition, whose weights are given in closed form there. The digits above
+agree with the closed form to 16 significant digits; its exact values are `w₁ = 1.351207191959657634…` and
+`w₀ = −1.702414383919315268…`, whose correctly rounded f64 values are `1.3512071919596575` and `−1.7024143839193153`.
+The printed digits are neither, and with them `w₀ + 2w₁` evaluates to `0.9999999999999998` in f64, not 1; whether the
+printed digits change is RQ-405 (open), and they stand meanwhile. *As first ported (R-501):* "the digits above are that
+closed form evaluated in f64", which physics review 5587467237 of PR #258 (P2) found false.
 
 **Yoshida-6** (order 6, 7 force evals, symplectic) — Yoshida (1990), **solution A**:
 ```
@@ -114,7 +118,7 @@ N_sub(r_min) = clamp( ⌈ (r_sub / r_min)^{γ_sub} ⌉ , 1 , N_max )    [default
 This formula *specifies* `N_sub`; it does **not** compute it at runtime. `N_sub` is a **branch decision**, and the determinism rule for branch decisions is stronger and different from what an earlier draft assumed (which had `N_sub` computed as the f32 evaluation with `Math.fround`-per-stage on the CPU to match the GPU). **The spike (`principia_spike_brief.md` findings, 2026-07) measured that rule forking** — 5/272 boundary states — and a **controlled test overturned the cause**: it is **not** fast-math and **not** FMA contraction, but *inherent cross-implementation transcendental latitude*. A GPU's `pow` and libm's `powf` legitimately disagree by 1–3 ulp (e.g. `pow(4.000000477, 1.5)` → exactly `8.0` on Metal vs `8.000001907` in libm), **in both fast and safe math modes** — so *any* runtime transcendental feeding a `ceil` at an integer boundary can fork, and no amount of matched rounding fixes it because the two libraries are each entitled to their own result.
 <!-- /retired-terms -->
 
-**The rule (this is the determinism pin, replacing the f32-evaluation framing):** a branch decision may depend only on **comparisons against compile-time constants** and on **single-rounded arithmetic** — never on a runtime `pow`/`sqrt`/`div`. Concretely:
+**The rule (this is the determinism pin, replacing the f32-evaluation framing):** a branch decision may depend only on **comparisons against compile-time constants, or against values every backend receives bit-identically** (the sim key's threshold table, R-502; *was:* "against compile-time constants") and on **single-rounded arithmetic** — never on a runtime `pow`/`sqrt`/`div`. Concretely:
 
 ```
 N_sub  =  min( bucket( d² ), N_max )  via a generated comparison tree over the sim key's table
@@ -306,12 +310,28 @@ Deliberately resolution-dependent (footprint shrinks with zoom) — a **footprin
 Golden anchors: **`z = 0`** (equal-mass, α = π/4, β = π/2, rest) and the **Burrau IC** (via encode from the (3,4,5) construction).
 
 1. **Order scaling (Kepler-embedded):** set `m₂ → ε` so bodies 0–1 form a near-Kepler pair; energy error over one orbit scales `∝ dt²` (KDK), `∝ dt⁴` (Yoshida-4, RK4), `∝ dt⁶` (Yoshida-6) across a dt ladder.
-   1a. **Convergence order of the transcribed coefficients (R-501):** on the same fixture, Yoshida-4's and Yoshida-6's
-   fitted orders over the dt ladder are 4 and 6; the control is each coefficient with one printed digit changed, a
-   transcription error, which breaks the order conditions and must fail the test (its fitted order falls below 4 or
-   6). It stands in for checking the digits against the paper, which is cited, not held (§3.2).
+   1a. **Convergence order of the transcribed coefficients (R-501):** on the same fixture, the fitted quantity is the
+   maximum relative energy error over one orbit, `max_t |E(t) − E₀| / |E₀|`, fitted against `dt` on a log–log ladder;
+   Yoshida-4's fitted order rounds to 4 and Yoshida-6's to 6. *Controls:* each free coefficient (Yoshida-4's `w₁`;
+   Yoshida-6's `w₁`, `w₂`, `w₃`) with its **4th significant digit** changed, `w₀` recomputed from the consistency
+   condition so that only the higher order conditions break, must give a fitted order that rounds lower. A relative
+   change `δ` adds an error term of about `δ·dt²`, which the ladder resolves only above a **detection floor**, estimated at
+   about `3·10⁻⁷` relative for Yoshida-4 (`δ² ≳ 10⁻¹³`) and about `10⁻⁹` for Yoshida-6 (`δ^{3/2} ≳ 10⁻¹³`) at f64, so
+   about the 7th and the 10th significant digits; the test measures the floor (the smallest relative change it
+   detects) and prints it. **The later digits** are covered by REQ-INT-037's equality to the printed digits and by an
+   **algebraic check** on the shipped f64 constants, evaluated exactly (in rational or 50-digit decimal arithmetic) on
+   their f64 values: the symmetric-composition order conditions' residuals, `|Σw − 1|` and `|Σw³| / Σ|w|³` for both and
+   `|Σw⁵| / Σ|w|⁵` for Yoshida-6, are at most `3·10⁻¹⁵` (Yoshida-4, f64 rounding) and `5·10⁻¹⁴` (Yoshida-6, Table 1's
+   15-digit truncation). Measured on the printed digits: Yoshida-4 `2.9·10⁻¹⁶`, Yoshida-6 `5.1·10⁻¹⁵` (the fifth-order
+   condition). Its controls: each coefficient (Yoshida-6's `w₀` recomputed) changed by one unit of its 15th significant digit (Yoshida-4) or its 13th
+   (Yoshida-6), in each direction, must exceed the bound (measured: at least `9.8·10⁻¹⁵` and `2.8·10⁻¹³`). Past those
+   positions a change can lower a residual (Table 1's own truncation sets Yoshida-6's, f64 rounding Yoshida-4's), and a
+   last-digit change of Yoshida-4 can parse to the same f64, so the last printed digits are REQ-INT-037's alone. It
+   stands in for checking the digits against the paper, which is cited, not held (§3.2). *As first ported:* "the
+   control is each coefficient with one printed digit changed, … which … must fail the test" (code review 5587492719
+   C5, physics review 5587467237 P1, qa review 5587466555 item 1 of PR #258: unmeetable for the late digits).
 2. **Symplectic vs not:** long bounded orbit — KDK/Yoshida energy error *oscillates* about E₀ with no secular trend; RK4 and Euler drift secularly; **Euler's violent drift lighting up `SUSPECT_ENERGY` is the pass condition** (the debug-occupant test).
-3. **Step reversibility (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate returns the state to precision — *without* wrapper (projection/substep excluded); documents exactly where reversibility lives and where it breaks. It is what the profile's `step_reversible` means (integrator contract Part 2, R-500): asserted at rounding level for KDK, Yoshida-4 and Yoshida-6, negative weights included; for the regularised occupants it is a measurement, not an assertion: the residual of each built one (Aarseth–Zare + RK4, Heggie, logH in each time mode) is recorded, and its profile's `step_reversible` is the measured verdict.
+3. **Step reversibility (occupant-level):** for symplectic occupants, one `STEP(dt)` then momentum-negate then `STEP(dt)` then negate returns the state to precision — *without* wrapper (projection/substep excluded); documents exactly where reversibility lives and where it breaks. It is what the profile's `step_reversible` means (integrator contract Part 2, R-500): asserted at rounding level for KDK, Yoshida-4 and Yoshida-6, negative weights included; for the regularised occupants it is a measurement, not an assertion: the residual of each built one (Aarseth–Zare + RK4, Heggie, logH in each time mode) is recorded, and its profile's `step_reversible` is the measured verdict. On a regularised occupant's extended state, "momentum-negate" is that occupant's time-reversal map (which regularised momenta are negated, how its time variable and conjugate, and TTL's auxiliary `W`, are mapped), a definition TASK-M3-08 writes (REQ-INT-095, R-72). "Rounding level" is a calibrated criterion (REQ-VAL-191, R-71), proposed by TASK-M3-02 and used by both; the measurement's control is a known-asymmetric stepper at the same `dt` (RK4, and REQ-VAL-032's asymmetric Yoshida-4), which must read not reversible.
 <!-- retired-terms -->
 4. **Substep determinism:** over fuzzed states straddling **bucket edges** (§3.3 threshold table), **all backends** — CPU-f64, CPU-f32, native-GPU, browser-GPU-via-WGSL — produce the identical `N_sub` integer, always (0 forks; the CPU-fround approach this replaced forked 5/272).
 <!-- /retired-terms -->

@@ -32,7 +32,7 @@ The browser build is checked against the native wgpu Tier-N tolerances (R-85): t
 - `cargo xtask gate browser-tier-n` — the browser build runs the Tier-N suite on Chrome stable and on Safari (R-110); every quantity falls within the native-wgpu tolerance; out-of-tolerance quantities are recorded (REQ-VAL-116).
 - `cargo xtask golden browser-fragment` (tolerance: REQ-COL-052, calibrated at M7) — the Playwright job (nightly, GUI and colour PRs, gates; R-134) renders the fragment goldens in the browser build and diffs them against the native-wgpu baselines within tolerance; no baseline file changes without a recorded gate decision (R-110) (REQ-COL-048).
 - `cargo xtask gate browser-tier-l` — in Chrome stable and Safari the boundary-state set's Tier-L decisions (including `N_sub`) and a 100-macro-step dispatch's branch words equal the CPU's, 0 forks (REQ-VAL-144).
-- `cargo xtask gate browser-nsub-table` — in Chrome stable and Safari the wasm host generator's tables for every configuration of `fixtures/gates/nsub-table/` equal the fixture's bits; a difference names the configuration and entry and fails (REQ-INT-093).
+- `cargo xtask gate browser-nsub-table` — in Chrome stable and Safari the wasm host generator's tables for every configuration of `fixtures/gates/nsub-table/` equal the fixture's bits; a difference names the configuration and entry and fails; control: the fixture with one entry one ulp off fails the gate (REQ-INT-093).
 
 ## Notes
 - R-502 (RQ-370): the wasm leg of the host threshold generator is checked here, where the browser build exists, as R-113 placed REQ-INT-028's browser leg (applied per R-369).
