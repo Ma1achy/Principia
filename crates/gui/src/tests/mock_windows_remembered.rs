@@ -254,6 +254,31 @@ fn mock_windows_remembered_the_file_reads_back_what_it_wrote() {
     ] {
         assert!(Settings::from_json(bad).is_err(), "{bad}");
     }
+    // A far edge past f32's range, across or down: refused, as any unreadable place.
+    for bad in [
+        r#"{"windows": {"Run": {"x": 3e38, "y": 0, "w": 3e38, "h": 4}}}"#,
+        r#"{"windows": {"Run": {"x": 0, "y": 3e38, "w": 4, "h": 3e38}}}"#,
+    ] {
+        assert!(Settings::from_json(bad).is_err(), "{bad}");
+    }
+    let near = r#"{"windows": {"Run": {"x": 1e38, "y": 1e38, "w": 1e38, "h": 1e38}}}"#;
+    let read = Settings::from_json(near).expect("a far edge inside f32's range");
+    assert!(read.places.get(Window::Run).is_some_and(|r| r.is_finite()));
+    rejects("a pair whose sum stays in range refused", || {
+        assert!(Settings::from_json(near).is_err())
+    });
+    // A file with an overflowing place: the defaults, and the one console line.
+    let dir = scratch("overflow");
+    let path = dir.join(FILE);
+    std::fs::write(
+        &path,
+        r#"{"windows": {"Run": {"x": 3e38, "y": 0, "w": 3e38, "h": 4}}}"#,
+    )
+    .expect("written");
+    let app = gui(&path);
+    assert_eq!(app.places, Places::default());
+    assert_eq!(settings_lines(&app).len(), 1);
+    let _ = std::fs::remove_dir_all(&dir);
     // The least size read.
     let tiny = r#"{"windows": {"Run": {"x": 0, "y": 0, "w": 0.5, "h": 0.5}}}"#;
     let read = Settings::from_json(tiny).expect("read");

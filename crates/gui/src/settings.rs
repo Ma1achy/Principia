@@ -69,7 +69,7 @@ impl Settings {
     }
 }
 
-/// A place's rect: `{x, y, w, h}`, each finite, `w` and `h` positive.
+/// A place's rect: `{x, y, w, h}`, each finite, `w` and `h` positive, and its far edges `x + w` and `y + h` finite.
 fn rect(place: &Value) -> Option<Rect> {
     let get = |k: &str| {
         place
@@ -79,7 +79,9 @@ fn rect(place: &Value) -> Option<Rect> {
             .filter(|v| v.is_finite())
     };
     let (x, y, w, h) = (get("x")?, get("y")?, get("w")?, get("h")?);
-    (w > 0.0 && h > 0.0).then(|| Rect::from_min_size(pos2(x, y), vec2(w, h)))
+    // Each value finite is not enough: x + w, or y + h, may overflow f32, and egui takes no infinite rect.
+    let rect = Rect::from_min_size(pos2(x, y), vec2(w, h));
+    (w > 0.0 && h > 0.0 && rect.is_finite()).then_some(rect)
 }
 
 /// Where the settings are kept: a file, or nowhere, the default (the tests' GUIs, and a platform with no config
