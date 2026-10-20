@@ -1505,6 +1505,8 @@ fn well_posedness_block_sets_and_messages() {
         (mass, config_mass(), true),
         (config, config_mass(), true),
         (momentum, all, true),
+        (mass, all, true),
+        (config, union(config, momentum), true),
         (momentum, momentum, true),
         (config_mass(), mass, false),
         (all, config_mass(), false),
