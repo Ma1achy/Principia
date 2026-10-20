@@ -351,8 +351,8 @@ fn count(d: &ChartDescriptor) -> Result<(), Refusal> {
     Ok(())
 }
 
-/// `x` as `(negative, m, e)` with `x = ±m·2^e` and `m` odd, or `None` at zero: the exact value of a finite float.
-fn exact(x: f64) -> Option<(bool, u128, i32)> {
+/// `|x|` as `(m, e)` with `|x| = m·2^e` and `m` odd, or `None` at zero: the exact magnitude of a finite float.
+fn exact(x: f64) -> Option<(u128, i32)> {
     if x == 0.0 {
         return None;
     }
@@ -365,14 +365,18 @@ fn exact(x: f64) -> Option<(bool, u128, i32)> {
         (fraction | (1 << 52), biased - 1075)
     };
     let shift = m.trailing_zeros();
-    Some((x < 0.0, u128::from(m >> shift), e + shift as i32))
+    Some((u128::from(m >> shift), e + shift as i32))
 }
 
-/// Whether `a·b = c·d` exactly, for finite floats.
+/// Whether `a·b = c·d` exactly, for finite floats: the same sign, and the same odd mantissa and exponent.
 fn products_equal(a: f64, b: f64, c: f64, d: f64) -> bool {
     let product = |x: f64, y: f64| {
-        let ((sx, mx, ex), (sy, my, ey)) = (exact(x)?, exact(y)?);
-        Some((sx != sy, mx * my, ex + ey))
+        let ((mx, ex), (my, ey)) = (exact(x)?, exact(y)?);
+        Some((
+            x.is_sign_negative() ^ y.is_sign_negative(),
+            mx * my,
+            ex + ey,
+        ))
     };
     product(a, b) == product(c, d)
 }

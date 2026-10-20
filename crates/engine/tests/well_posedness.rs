@@ -492,6 +492,16 @@ fn well_posedness_latent_directions() {
             check_accepted(chart, 2, 6, "2-swept chart");
         }
     }
+    // Products equal in magnitude, opposite in sign: `1·9` and `3·(−3)`, not parallel.
+    check_accepted(
+        latent(
+            [1.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [-3.0, 9.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ),
+        2,
+        6,
+        "2-swept chart",
+    );
     check_refused(
         latent(e(3), e(3).map(|x| -2.0 * x)),
         Refusal::DependentDirections {
