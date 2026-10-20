@@ -185,6 +185,12 @@ tilts compose and any plane is reachable by navigating. A latent view saves `(z�
 affine axes, the pair reported as this section asks; a curved chart saves its parent chart, its slice centre and its
 tilt rotation `R` with its targets and map (`principia_chart_decoder_contract.md` Part 4). Reopened with zero tilt, a
 saved chart reproduces the saved view bitwise.
+A new tilt `R′` of a saved curved chart into its own saved target composes the rotations, `(a, b, d) = R·R′·(u, v,
+0)`, the saved `R` acting on `(u′, v′, d′)`; into another target the new offset is added to it, and the saved target is
+offered with the others (R-513). A latent view saved at a tilt offers as its targets the named dimensions other than
+its first parent's axes, each projected off the saved plane and normalised, the vanishing ones dropped; both tilt maps
+act in the orthonormal frame `(q̂₁, q̂₂⊥, t̂)` that Gram–Schmidt makes of the stored pair and the target, and carry the
+stored pair itself, so it is kept and the view reopens bitwise (R-514).
 
 ### 1.2 Geometry + momentum in a fundamental domain
 
@@ -271,7 +277,8 @@ own `U`, `I` and masses: a tilt or slice that moves a hidden coordinate (masses,
 window, and a warp computed once at the centre would put some pixels outside the feasible region; evaluated per pixel,
 every pixel stays feasible under every tilt (R-471, E3; R-473, T5), each pixel whose own chart parameters lie in
 `[0,1]²`: under Tip as sheet with one target and both angles set a window pixel's `(a, b)` can leave the square, the
-axes' types then acting on it (§5.4), and what such a pixel draws is RQ-402 (R-471, H9). Untilted, they are `z₀`'s at every pixel (§2, the
+axes' types then acting on it (§5.4), and such a pixel is past the edge, blank past a bounded one (R-512, ruling
+RQ-402; R-471, H9). *Was:* "and what such a pixel draws is RQ-402 (R-471, H9)." Untilted, they are `z₀`'s at every pixel (§2, the
 fixed geometry and masses), so nothing changes. **A linear mapping is an option per axis** (E2): the axis is affine,
 mapped onto the warp's range at the slice centre (`K ∈ [0, K_max]`, `E ∈ [U₀, U₀ + K_max]`, `L_z ∈ ±√(2 I₀ K_max)`, a
 builder axis onto its own range); its infeasible pixels in the window are not a system and draw blank (R-470), with no
