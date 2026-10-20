@@ -36,3 +36,6 @@ Axes of kind 3 (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default wherever they
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers E3 on a tilted energy chart, the linear option's edge and B1's retirement (R-471 ⚑).
 - **The t > 1 side** stays bounded (RQ-376, nothing waits).
+- **R-508 (20 Oct 2026) rules RQ-376:** the warp's `t > 1` side continues, affine and counted; `t < 0` and the `s` axis stay bounded (REQ-CHART-067). *Was:* "The t > 1 side stays bounded (RQ-376, nothing waits)."
+- **R-506 (20 Oct 2026) rules RQ-372:** every physical-quantity axis is warped by default, linear an option; REQ-CHART-070's definition now covers the virial ratio's warp and a mass-ratio range in the logits, written here under physics review (W2), and REQ-CHART-068's linear option covers them.
+- **Physics review 5586890917 of PR #255:** REQ-CHART-068's centre arm replaced (F2; the centre agrees only at γ_K = 1); REQ-CHART-069's every-pixel arm narrowed to the pixels whose `(a, b)` lie in the square (F1, RQ-402).

@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 47 |
 | ENC | 33 |
-| CHART | 56 |
+| CHART | 74 |
 | INT | 89 |
 | EVT | 31 |
 | PAY | 106 |
 | GEN | 36 |
 | SCHED | 97 |
 | REF | 51 |
-| RENDER | 86 |
-| COL | 106 |
-| GUI | 202 |
-| TOOL | 165 |
+| RENDER | 98 |
+| COL | 110 |
+| GUI | 251 |
+| TOOL | 169 |
 | VAL | 188 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1470** |
+| **total** | **1557** |
 
-Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 136 calibration, 134 definition, 1287 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -32,24 +32,25 @@ Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 174 |
-| M3 | 200 |
+| M2 | 192 |
+| M3 | 202 |
 | M4 | 104 |
 | M5 | 175 |
-| M6 | 175 |
-| M7 | 170 |
-| M8 | 242 |
+| M6 | 210 |
+| M7 | 180 |
+| M8 | 264 |
 
 ## Sections
 
-1215 sections in 47 files: 996 yield at least one requirement; 219 yield none and are listed below with the reason.
+1265 sections in 48 files: 1042 yield at least one requirement; 223 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
-| informative only | 164 |
+| gap (RQ-378) | 1 |
+| informative only | 166 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 38 |
+| parent heading (obligations are in its subsections) | 39 |
 | rationale | 10 |
 | superseded (kept for the record) | 4 |
 
@@ -167,6 +168,7 @@ Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for th
 | R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)* | informative only | the human's ruling of 15 Oct 2026 on local mutation testing: a local run that mutates the gui crate takes -j 1, --timeout 90, a generous --build-timeout, nextest at one test thread, RUST_TEST_THREADS=1 and a narrow filter; other crates keep R-388's run; the orchestrator keeps a memory guard; process, applied in plan/OPERATIONS.md and .claude/agents/implementer.md; changes no requirement |
 | R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)* | informative only | the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement |
 | R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug | informative only | the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is near-uniformly degenerate white by design, the contour E* = V₀ (E* < 0 only, scattered pixels) its one exception in colour and mass-block tags (e.g. M01_TINY, also white) an exception in tag only; changes no requirement. Superseded in part by R-446 (16 Oct 2026): the line is reworded, the tagged pixels drawn black #141418 in the outcome view, not white |
+| R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied | gap (RQ-378) | a deferral by the human's ruling: RQ-378 stays open, parked until RQ-341; nothing is built (REQ-GUI-244's note) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -374,6 +376,14 @@ Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Principia — deep zoom & adaptive sampling | informative only | preamble |
+
+### `docs/design/principia_lines.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia — the line system: contours and traces | informative only | the adoption note (R-476), the proposal's status line and its summary |
+| 4. Contours | parent heading (obligations are in its subsections) |  |
+| 13. About the mock-ups | informative only | how the mock-ups were drawn (R-476 M1: the scripts are not kept) |
 
 ### `docs/design/principia_quality_device_note.md`
 

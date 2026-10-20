@@ -1,4 +1,4 @@
-# TASK-M8-47 — A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning as RQ-372 rules (R-467)
+# TASK-M8-47 — A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning only for warped axes (R-467, R-506)
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-228
@@ -18,6 +18,7 @@ A Chart-builder chart whose physical-quantity axis's range leaves the slice's re
 - `docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)"
 - `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)"
+- `decisions.md` § "R-506 — Every physical-quantity axis follows R-471: warped to its feasible range by default, linear as an option with its non-systems blank; the decoder-bug warning only for a warped axis; the mass ratio warps through the mass link *(closes RQ-372; amends R-471 and R-467; supersedes R-408's port B1 as the default for every physical-quantity axis)*"
 
 ## Deliverables
 - What RQ-372's ruling asks for, in the Chart builder's Apply path or the console warning (REQ-GUI-228).
@@ -29,3 +30,4 @@ A Chart-builder chart whose physical-quantity axis's range leaves the slice's re
 ## Notes
 - **Waits for RQ-372** (`rq: RQ-372` on REQ-GUI-228). A leaf task: nothing depends on it.
 - **R-471 H5 (20 Oct 2026):** RQ-372 is answered for energy-type axes and stays open, narrowed to the virial ratio and the mass ratio; this task waits for those alone.
+- **R-506 (20 Oct 2026) rules RQ-372:** every physical-quantity axis is warped by default, linear an option; the warning is logged only when the chart's physical-quantity axes are all warped (W1). This task no longer waits; REQ-GUI-228 is restated. The two notes above are kept as history.

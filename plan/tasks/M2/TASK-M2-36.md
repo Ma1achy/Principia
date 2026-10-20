@@ -1,7 +1,7 @@
 # TASK-M2-36 — Tilt and slice on every chart: the rotation R(τ₁, τ₂) on the chart's own parameters, mass tilts in logits, the extension after the tilt (R-473, R-472 X3) ⚑
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-062, REQ-CHART-063, REQ-CHART-065, REQ-CHART-066
+- **Closes:** REQ-CHART-062, REQ-CHART-063, REQ-CHART-064, REQ-CHART-065, REQ-CHART-066
 - **Depends on:** TASK-M2-14, TASK-M2-22, TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -18,6 +18,7 @@ Every chart tilts and slices (R-473). The tilt is a rotation `R(τ₁, τ₂)` i
 - `decisions.md` § "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
 - `decisions.md` § "R-457 — The Manifold view's Navigate section loses its grid of eight `z₀` boxes; "Centre z₀" is renamed "Slice centre" and "Slice & tilt" "Tilt"; each tilt angle tilts into a latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target; the step slider is removed *(amends render_gui_spec §G2's Navigate and Slice & tilt, R-409 A3's "the slice step" and R-451 B1's single tilt target)*"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)"
+- `decisions.md` § "R-507 — T4's units: the screen axis in units of the axis's full range at zoom 1, the hidden coordinate in its slider span, so no unit depends on zoom; the latent chart's tilt stays the decoder's basis edit; the human's half-width proposal is withdrawn *(closes RQ-375; amends R-473)*"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Directions are axis kinds — the unifying rule"
 - `docs/contracts/principia_chart_decoder_contract.md` § "What the GPU knows about all of this: nothing"
 - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type (R-407)"
@@ -30,16 +31,19 @@ Every chart tilts and slices (R-473). The tilt is a rotation `R(τ₁, τ₂)` i
 - The tilt path in each chart's map, skipped exactly at `τ = 0` (J6); mass logits and links' pre-images (J8).
 - Slice along any hidden coordinate (T6), through its latent control.
 - The extension types acting on the tilted `(a, b)` (R-472 X3a).
-- Units: the human's proposal on the curved charts and the decoder's basis edit on the latent chart, as RQ-375 applies meanwhile (R-473 J3); REQ-CHART-064 is TASK-M2-39's.
+- Units as R-507 rules them: each screen axis in units of its full range at zoom 1, the hidden coordinate in its slider span, on the curved charts; the decoder's basis edit on the latent chart (REQ-CHART-064, test `tilt_units`). *Was:* "Units: the human's proposal on the curved charts and the decoder's basis edit on the latent chart, as RQ-375 applies meanwhile (R-473 J3); REQ-CHART-064 is TASK-M2-39's."
 - Tests `tilt_every_chart`, `tilt_mass_logits`, `slice_every_chart`, `tilted_extension`.
 
 ## Acceptance tests
 - `cargo test -p kernel tilt_every_chart` — REQ-CHART-062's verify (C2 with its controls).
 - `cargo test -p kernel tilt_mass_logits` — REQ-CHART-063's verify (C7).
+- `cargo test -p kernel tilt_units` — REQ-CHART-064's verify (R-507).
 - `cargo test -p kernel slice_every_chart` — REQ-CHART-065's verify.
 - `cargo test -p kernel tilted_extension` — REQ-CHART-066's verify.
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers T2 on the shape sphere (the pole-crossing extension composed with a tilt), T3 and the anchor (R-473 ⚑).
-- **Units (RQ-375).** Built under the meanwhile reading (R-473 J3); the ruling is TASK-M2-39's, a leaf.
+- **Units (R-507, ruling RQ-375).** On a curved chart `R` acts on the parameter offsets in units of each axis's full range at zoom 1 and the hidden offset in its slider span, scaled back after; the latent chart keeps the basis edit (U1, U2). REQ-CHART-064 moved here from TASK-M2-39 (applied per R-369: T2 is not built without its scale). *Was:* "Built under the meanwhile reading (R-473 J3); the ruling is TASK-M2-39's, a leaf."
+- **Under Tip as sheet** with one target and both angles set a window pixel's `(a, b)` can leave the square; the types act on it as X3a says (RQ-402, R-471 H9), and REQ-CHART-066's test covers it; what it should draw is TASK-M2-39's.
 - **Re-integration (R-92):** a curved chart's tilt is a chart-param edit, a sim key.
+

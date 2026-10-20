@@ -27,3 +27,4 @@ A saved chart is a chart: a latent view saved as the oblique chart `(z₀, q₁,
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers the composition of tilts (R-475 L5).
+- **Physics review 5586890917 of PR #255, F3:** a new tilt into a target other than the saved one is the block composition `(R ⊕ 1)·(1 ⊕ R′)` in `(a, b, d_saved, d_new)`, not the 3 × 3 product `R·R′` (REQ-CHART-073's verify corrected); the saved target is not offered meanwhile (RQ-403, TASK-M2-39).

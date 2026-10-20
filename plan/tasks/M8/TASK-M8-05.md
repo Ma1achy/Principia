@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056, REQ-CHART-071
-- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48
+- **Depends on:** TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47, TASK-M6-48, TASK-M6-49
 - **Needs (earlier milestones):** REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -129,3 +129,4 @@ The Explore page's frame exists over the wgpu render: egui-wgpu is built from th
 - **R-474 R7 (20 Oct 2026):** under Lean each axis the area statistics take the Gram factor (REQ-CHART-071); depends on TASK-M6-48 for `tilt_map`.
 - **R-470, R-471, R-472 (20 Oct 2026):** a forbidden pixel draws blank, never a palette colour; a builder energy-type axis is warped by default (bounded) and B1's affine axis its linear option, REQ-CHART-054's and REQ-CHART-056's tests run under both mappings; a tilted, sliced or saved chart extends by its axes' types.
 - **⚑ Physics review is required** for REQ-CHART-071 and B1's retirement (R-471, R-474) (the instruction of R-469, "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.
+- **Review round 1 of PR #255 (applied per R-369):** depends on TASK-M6-49, which builds View › Save view as chart on the mock (gui review G4); REQ-GUI-078's Lines ▾ clause moved to REQ-GUI-247 (TASK-M8-50). **R-508:** REQ-CHART-056's statistic counts the warp's `t > 1` side.

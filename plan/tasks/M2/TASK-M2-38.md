@@ -29,3 +29,4 @@ One kernel function decides whether a navigation edit keeps the chart's centre v
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.
 - **The edit path** on the real engine is TASK-M8-48 (REQ-GUI-243); on the mock nothing stops (R-469 A6).
+- **Physics review 5586890917 of PR #255:** the bisection halves the interval between the ends' f64 bit patterns, at most 62 steps (F4; R-469 A3, REQ-CHART-060); C6's every-pixel arm covers the pixels whose `(a, b)` lie in the chart's square (F1; R-471 H9, REQ-CHART-061; the rest is RQ-402, TASK-M2-39).
