@@ -13591,6 +13591,11 @@ one pixel centre in the counted half lies past `r = π` and the control can fail
 
 R-503 is in the "physics" group of `plan/rule_groups.yaml`, with R-141.
 
+*PR #252 merged before this port, carrying RQ-371 into `REVIEW_QUEUE.md` as an open entry; applied per R-369:* this
+branch's merge of `main` moves it out again, the archived copy in `docs/archive/review_queue/M0.md` (the same text,
+with R-503's ruling line) being the record. R-503 is built by TASK-M2-28, not TASK-M2-14, so TASK-M2-14's merge
+re-homes nothing.
+
 Adds REQ-CHART-075, and on review REQ-CHART-078; changes REQ-CHART-014 (note).
 
 ## R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*
