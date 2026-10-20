@@ -47,6 +47,10 @@ pub use ledger::constants::{
     BURRAU_NU_HALF_TOL, EUCLID_M_MAX, EUCLID_M_MIN, EUCLID_NU_MAX, EUCLID_NU_MIN,
 };
 
+/// The ternary mass plot's default buffer `ε_m` (chart_reference §4.5; TASK-M2-13), for the kernel and engine crates'
+/// tests, as the Euclid plane's defaults are.
+pub use ledger::constants::MASS_SIMPLEX_EPS_M;
+
 /// The acute-angle Burrau charts' defaults (REQ-CHART-045, REQ-CHART-046, proposed; chart_reference §4.5; TASK-M2-11),
 /// for the kernel crate's tests and the `burrau_acute` evidence, as `r_pole` is.
 pub use ledger::constants::{

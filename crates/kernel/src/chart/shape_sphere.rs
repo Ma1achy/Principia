@@ -303,6 +303,11 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
         "ShapeSphere"
     }
 
+    /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
+    }
+
     /// [`ValidationResult::Valid`] at every `(u, v)` (the module's notes).
     fn validate(&self, _u: f64, _v: f64) -> ValidationResult {
         ValidationResult::Valid

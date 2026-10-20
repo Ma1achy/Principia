@@ -38,7 +38,10 @@
 //! momentum block ([`InvariantBlocks`]), then the shared derived invariants ([`crate::decode::decode_with`]). The
 //! configuration block hands the construction the `z_α` it decoded, so R-82's seed is decided on the very control the
 //! configuration came from ([`crate::decode::invariant::construct`]). `Φ`'s [`ChartOut`] carries the frozen controls
-//! (the momentum controls 0, unread); the targets `(L_z, K*)` are [`Invariant::targets`].
+//! (the momentum controls 0, unread); the targets `(L_z, K*)` are [`Invariant::targets`]. Both charts override
+//! [`Chart::decode`] with it, the outcome dropped, so every entry runs the construction, never the free decode of `Φ`'s
+//! controls; the exact-sign arithmetic it needs ([`WarpReal`]) every payload float type has
+//! ([`crate::real::IeeeBits`]'s bound).
 //!
 //! **`η_E` is forbidden** (chart_reference §0.6; R-25): energy is a coordinate here, or is fixed by the construction,
 //! so both charts set `forbids_energy_normalisation`, and the validation pass refuses any view combining them with an
@@ -267,6 +270,22 @@ impl<P: Copy> Chart for InvariantLE<P> {
         "InvariantLE"
     }
 
+    /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
+    }
+
+    /// [`decode()`] at `(u, v)` under `S`, the construction's outcome dropped, as [`super::ChartDecode::decode_at`]
+    /// decodes it: the construction's momenta, not the free decode of the frozen controls.
+    #[inline]
+    fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode::<S, R, Self>(self, u, v).0
+    }
+
     /// Layer 2's parabola `|L_z| ≤ √(2I(E − U))` (the module's note).
     fn validate(&self, u: f64, v: f64) -> ValidationResult {
         check(u, v, Constraint::LzEParabola, Constraint::LzEParabola)
@@ -289,6 +308,22 @@ impl<P: Copy> Chart for InvariantLK<P> {
 
     fn name(&self) -> &str {
         "InvariantLK"
+    }
+
+    /// `false`: the masses are held, `D_mass` at the chart's `z_mass`.
+    fn requires_per_pixel_mass(&self) -> bool {
+        false
+    }
+
+    /// [`decode()`] at `(u, v)` under `S`, the construction's outcome dropped, as [`super::ChartDecode::decode_at`]
+    /// decodes it: the construction's momenta, not the free decode of the frozen controls.
+    #[inline]
+    fn decode<S, R>(&self, u: R, v: R) -> Decoded<R>
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        decode::<S, R, Self>(self, u, v).0
     }
 
     /// Layer 2's `K ≥ 0` and `K ≥ L_z²/2I` (the module's note).

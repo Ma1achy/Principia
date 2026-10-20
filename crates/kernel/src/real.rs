@@ -81,7 +81,10 @@ impl<T: Float> RealOps for T {
 }
 
 /// The IEEE 754 bit patterns a producer selects at a pole, and the stored value's bit test (R-436; the module's note).
-pub trait IeeeBits: Real {
+/// A float type with them has the exact constructions' bit-level steps too ([`crate::chart::invariant::WarpReal`] and
+/// its [`crate::decode::invariant::ExactSign`]), f32 and f64 alike, so that a chart's [`crate::chart::Chart::decode`],
+/// at a payload float type, may run its construction (the Burrau chart's).
+pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
     /// `+∞` where `c` holds, else `self`: `+∞`'s integer pattern or `self`'s bits, selected, then one bitcast.
     fn or_pos_inf(self, c: bool) -> Self;
 
