@@ -16,7 +16,9 @@ use std::cell::Cell;
 use std::f64::consts::FRAC_PI_4;
 
 use engine::chart_authoring::axis::{no_blocks, union, COORDINATES};
-use engine::chart_authoring::charts::{nu_embed, nu_tangent, theta_embed, theta_tangent, NU_CURVE};
+use engine::chart_authoring::charts::{
+    nu_embed, nu_tangent, theta_embed, theta_tangent, NU_CURVE, THETA_CURVE,
+};
 use engine::chart_authoring::{
     resolve, validate, Authored, AxisDescriptor, AxisKind, Block, ChartDescriptor, ChartKind,
     Convention, Coupling, Frozen, InvariantMeta, InvariantQuantity, Refusal, Residual, Solve,
@@ -332,6 +334,28 @@ fn well_posedness_double_written_refused() {
             dof: 4,
         },
     );
+    // A kind-2 axis setting its control `z_α`, which the slice holds too, `z_β` held by nothing.
+    check_refused(
+        probe(
+            [
+                AxisDescriptor::derived(
+                    "α",
+                    Block::Config,
+                    Some(Coordinate::ZAlpha),
+                    Residual {
+                        pins: 0,
+                        statement: "the slice",
+                    },
+                ),
+                axis(Coordinate::ZQ0),
+            ],
+            frozen_but(&[Coordinate::ZBeta, Coordinate::ZQ0]),
+            vec![],
+        ),
+        Refusal::DependentDirections {
+            what: "z[0] by α".to_owned(),
+        },
+    );
     // The counts balance, but `z_α` is written by an axis and the slice, `z_β` by neither.
     check_refused(
         probe(
@@ -492,6 +516,26 @@ fn well_posedness_latent_directions() {
             check_accepted(chart, 2, 6, "2-swept chart");
         }
     }
+    // Exactly parallel across a subnormal and a normal product (`2⁻¹⁰⁷⁴·2⁷⁴ = 2⁻¹⁰⁰⁰·1`), and not parallel where the odd
+    // mantissas differ at equal exponents (`1·5` against `3·3`).
+    check_refused(
+        latent(
+            [tiny, 2f64.powi(-1000), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [1.0, 2f64.powi(74), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ),
+        Refusal::DependentDirections {
+            what: "q₁ and q₂, parallel".to_owned(),
+        },
+    );
+    check_accepted(
+        latent(
+            [1.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [3.0, 5.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        ),
+        2,
+        6,
+        "2-swept chart",
+    );
     // Products equal in magnitude, opposite in sign: `1·9` and `3·(−3)`, not parallel.
     check_accepted(
         latent(
@@ -1406,4 +1450,78 @@ negative_control!(
     "a chart that allows η_E is not refused under E*",
     expected = "reaches resolve",
     check_resolve(latent(e(0), e(1)), (false, false), Some(0.0))
+);
+
+/// The block sets' algebra and the refusals' messages, which name the blocks.
+fn check_messages(cases: &[(Refusal, &str)]) {
+    for (refusal, text) in cases {
+        assert_eq!(refusal.to_string(), *text, "the refusal's message");
+    }
+}
+
+fn messages() -> Vec<(Refusal, &'static str)> {
+    vec![
+        (
+            Refusal::UnderDetermined {
+                blocks: config_mass(),
+                pinned: 3,
+                dof: 4,
+            },
+            "refused: {mass, config} is under-determined, 3 of its 4 DOF pinned",
+        ),
+        (
+            Refusal::DoubleWritten {
+                blocks: Block::Momentum.only(),
+                pinned: 5,
+                dof: 4,
+            },
+            "refused: {momentum} is double-written, 5 pins on its 4 DOF",
+        ),
+        (
+            Refusal::InvariantNotDownstream {
+                axis: "E",
+                sector: Block::Config,
+                depends_on: union(Block::Mass.only(), Block::Momentum.only()),
+            },
+            "refused: the invariant axis E solves into config but depends on {mass, momentum}, not all upstream of it",
+        ),
+        (Refusal::NoSweptAxis, "refused: neither axis is swept"),
+    ]
+}
+
+#[test]
+fn well_posedness_block_sets_and_messages() {
+    let (mass, config) = (Block::Mass.only(), Block::Config.only());
+    // A union of overlapping sets keeps the shared block.
+    assert_eq!(union(config_mass(), config), config_mass());
+    assert_eq!(union(config_mass(), mass), config_mass());
+    assert_eq!(union(no_blocks(), no_blocks()), no_blocks());
+    let momentum = Block::Momentum.only();
+    assert_eq!(union(momentum, momentum), momentum);
+    check_messages(&messages());
+    // Curves are one by their parameter.
+    assert_eq!(NU_CURVE, NU_CURVE);
+    assert_ne!(NU_CURVE, THETA_CURVE);
+    // A kind-2 axis setting a control writes that control's direction.
+    let alpha = AxisDescriptor::derived(
+        "α",
+        Block::Config,
+        Some(Coordinate::ZAlpha),
+        Residual {
+            pins: 0,
+            statement: "the slice",
+        },
+    );
+    assert_eq!(alpha.direction(), Some(e(0)));
+    assert_eq!(derived(Block::Mass, 0).direction(), None);
+}
+
+negative_control!(
+    well_posedness_block_sets_and_messages,
+    "a message naming the wrong blocks fails",
+    expected = "the refusal's message",
+    check_messages(&[(
+        Refusal::NoSweptAxis,
+        "refused: {config} is under-determined, 1 of its 2 DOF pinned"
+    )])
 );

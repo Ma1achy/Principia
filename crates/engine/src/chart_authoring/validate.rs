@@ -362,7 +362,7 @@ fn exact(x: f64) -> Option<(u128, i32)> {
     let (m, e) = if biased == 0 {
         (fraction, -1074)
     } else {
-        (fraction | (1 << 52), biased - 1075)
+        (fraction + (1 << 52), biased - 1075)
     };
     let shift = m.trailing_zeros();
     Some((u128::from(m >> shift), e + shift as i32))
