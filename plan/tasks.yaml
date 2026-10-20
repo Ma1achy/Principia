@@ -762,7 +762,7 @@
   title: "The tilt cases that wait: a window pixel whose (a, b) leave the square under Tip as sheet (RQ-402), and a saved curved chart tilted into its own target (RQ-403) ⚑"
   depends_on: [TASK-M2-36, TASK-M2-38, TASK-M2-40]  # re-scoped (R-507 U4): a leaf, waiting for RQ-402 and RQ-403
   needs: []
-  requirements: [REQ-CHART-074, REQ-CHART-075]
+  requirements: [REQ-CHART-076, REQ-CHART-077]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M2-40
@@ -1866,7 +1866,7 @@
   title: "The GUI track (R-390): a latent view saved at a tilt, tilted again, as RQ-404 rules (R-475) ⚑"
   depends_on: [TASK-M6-49]  # R-475 L4: a leaf, waiting for RQ-404; numbered past the links port's (unmerged) TASK-M6-50
   needs: []
-  requirements: [REQ-GUI-251]
+  requirements: [REQ-GUI-265]
   reviewers: [code, qa, gui, physics]  # ⚑ tilt maths
   pitfalls: []
 - id: TASK-M7-01
@@ -2626,7 +2626,7 @@
   title: "The trace fade's general off-plane distance, as RQ-341 rules (R-509 part 3) ⚑"
   depends_on: [TASK-M8-51]  # R-509 Y3: a leaf, waiting for RQ-341; numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
   needs: []
-  requirements: [REQ-GUI-252]
+  requirements: [REQ-GUI-266]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M0-35

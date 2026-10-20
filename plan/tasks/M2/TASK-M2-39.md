@@ -1,7 +1,7 @@
 # TASK-M2-39 — The tilt cases that wait: a window pixel whose (a, b) leave the square under Tip as sheet (RQ-402), and a saved curved chart tilted into its own target (RQ-403) ⚑
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-074, REQ-CHART-075
+- **Closes:** REQ-CHART-076, REQ-CHART-077
 - **Depends on:** TASK-M2-36, TASK-M2-38, TASK-M2-40
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -24,8 +24,8 @@ Apply RQ-402's ruling on what a window pixel draws when Tip as sheet, with one t
 - Tests `tip_sheet_in_window`, `saved_chart_same_target`.
 
 ## Acceptance tests
-- `cargo test -p kernel tip_sheet_in_window` — REQ-CHART-074's verify.
-- `cargo test -p kernel saved_chart_same_target` — REQ-CHART-075's verify.
+- `cargo test -p kernel tip_sheet_in_window` — REQ-CHART-076's verify.
+- `cargo test -p kernel saved_chart_same_target` — REQ-CHART-077's verify.
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.

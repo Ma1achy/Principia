@@ -1,7 +1,7 @@
 # TASK-M8-54 — The trace fade's general off-plane distance, as RQ-341 rules (R-509 part 3) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-252
+- **Closes:** REQ-GUI-266
 - **Depends on:** TASK-M8-51
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -22,8 +22,8 @@ On a chart with no proxy, a trace fades off the plane by the general distance, t
 - Test `trace_fade_distance`.
 
 ## Acceptance tests
-- `cargo test -p render trace_fade_distance` — REQ-GUI-252's verify.
+- `cargo test -p render trace_fade_distance` — REQ-GUI-266's verify.
 
 ## Notes
 - **⚑ Physics review is required**: the distance and its metric; it does not merge on the code reviewer's word alone.
-- **A leaf task waiting for RQ-341** (`rq: RQ-341` on REQ-GUI-252): nothing depends on it. Numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53 (applied per R-369).
+- **A leaf task waiting for RQ-341** (`rq: RQ-341` on REQ-GUI-266): nothing depends on it. Numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53 (applied per R-369).

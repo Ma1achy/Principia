@@ -1,7 +1,7 @@
 # TASK-M6-51 — The GUI track (R-390): a latent view saved at a tilt, tilted again, as RQ-404 rules (R-475) ⚑
 
 - **Milestone:** M6
-- **Closes:** REQ-GUI-251
+- **Closes:** REQ-GUI-265
 - **Depends on:** TASK-M6-49
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -22,8 +22,8 @@ On the mock engine, a latent view saved as a chart at a tilt offers the tilt tar
 - Test `saved_tilted_chart_tilt`.
 
 ## Acceptance tests
-- `cargo test -p gui saved_tilted_chart_tilt` — REQ-GUI-251's verify.
+- `cargo test -p gui saved_tilted_chart_tilt` — REQ-GUI-265's verify.
 
 ## Notes
 - **⚑ Physics review is required**: the tilt maths on a non-orthonormal saved pair; it does not merge on the code reviewer's word alone.
-- **A leaf task waiting for RQ-404** (`rq: RQ-404` on REQ-GUI-251): nothing depends on it. Numbered past the links port's (unmerged) TASK-M6-50 (applied per R-369).
+- **A leaf task waiting for RQ-404** (`rq: RQ-404` on REQ-GUI-265): nothing depends on it. Numbered past the links port's (unmerged) TASK-M6-50 (applied per R-369).
