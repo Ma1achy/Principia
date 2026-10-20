@@ -14,7 +14,8 @@ pub mod descriptor;
 pub mod validate;
 
 pub use axis::{
-    AxisDescriptor, AxisKind, Block, CurveMeta, InvariantMeta, InvariantQuantity, Residual,
+    AxisDescriptor, AxisKind, Block, CurveMeta, CurvePoint, InvariantMeta, InvariantQuantity,
+    Residual,
 };
 pub use descriptor::{Authored, ChartDescriptor, ChartKind, Convention, Coupling, Frozen};
 pub use validate::{resolve, validate, Refusal, Resolved, Solve, ValidatedChart};

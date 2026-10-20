@@ -2,7 +2,6 @@
 //! validator needs"; REQ-CHART-004, REQ-CHART-012): the decoder's three blocks, the closed set of four axis kinds, and
 //! the axis descriptor carrying every field Part 5 lists.
 
-use kernel::burrau::System;
 use kernel::chart::mixed::Coordinate;
 use kernel::chart::{AxisMeta, BlockTouch};
 
@@ -228,18 +227,33 @@ pub struct Residual {
     pub statement: &'static str,
 }
 
-/// Part 5's "curve?" metadata: a kind-4 axis's embed `γ` from its scalar onto the systems it pins, and the embed's
-/// tangent `γ'`, which tilt reads at a lock (Part 4). The embed gives the normalised Burrau system the decoder's mass
-/// and configuration blocks take as their explicit input (chart_reference §4.3); the tangent is its derivative,
-/// componentwise, in the same layout.
+/// A point of a kind-4 axis's embed (chart_decoder_contract § "The four axis kinds", row 4: "`ν → (α,β,μ₁,μ₂)`"): the
+/// configuration angles `α`, `β` of chart_reference §0.2's canonical-frame decode and the mass logits `μ₁`, `μ₂` of
+/// §0.1, `(m₀, m₁, m₂) = softmax(0, μ₁, μ₂)`. These are the decoder's quantities ahead of its links, so the embed and
+/// its tangent hold under any link selection; the pullback to the latent `z` through the selected links is the tilt's
+/// (TASK-M2-23, REQ-CHART-007).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct CurvePoint {
+    /// `α`, `‖ρ̃‖ = cos α` at `R̃ = 1`.
+    pub alpha: f64,
+    /// `β`, `λ̃`'s angle from `+x`.
+    pub beta: f64,
+    /// `μ₁ = ln(m₁/m₀)`.
+    pub mu1: f64,
+    /// `μ₂ = ln(m₂/m₀)`.
+    pub mu2: f64,
+}
+
+/// Part 5's "curve?" metadata: a kind-4 axis's embed `γ` from its scalar to `(α, β, μ₁, μ₂)`, and the embed's tangent
+/// `γ'` in the same coordinates, which tilt reads at a lock (Part 4).
 #[derive(Clone, Copy, Debug)]
 pub struct CurveMeta {
     /// The scalar the curve is parametrised by.
     pub parameter: &'static str,
     /// `γ`, the embed.
-    pub embed: fn(f64) -> System<f64>,
+    pub embed: fn(f64) -> CurvePoint,
     /// `γ'`, its tangent.
-    pub tangent: fn(f64) -> System<f64>,
+    pub tangent: fn(f64) -> CurvePoint,
 }
 
 /// Two curves are one where they share their parameter: a function's address is no identity (two may share one, and

@@ -12,7 +12,8 @@
 //! (chart_reference §2.2, R-82).
 //!
 //! **`system_image`** (R-27, R-104, R-141, R-157). The shape sphere is n-to-1 with n = 2, its φ hemispheres
-//! reflection-equivalent; its descriptors are the `(θ, φ)` chart's (R-117), for either chart map. The `ν`-axis charts
+//! reflection-equivalent; its descriptors are the `(θ, φ)` chart's (R-117), for either chart map, the
+//! exponential map's own value being RQ-371's. The `ν`-axis charts
 //! are `DoubleCover` where their range reaches both leg orderings and bijective otherwise (`kernel::chart::burrau`); the
 //! acute-angle charts fold the swap out and are bijective. Every other chart is bijective: its decode takes distinct
 //! points to distinct systems.
@@ -27,8 +28,8 @@ use kernel::chart::{
 };
 
 use super::axis::{
-    no_blocks, union, AxisDescriptor, Block, CurveMeta, InvariantMeta, InvariantQuantity, Residual,
-    COORDINATES,
+    no_blocks, union, AxisDescriptor, Block, CurveMeta, CurvePoint, InvariantMeta,
+    InvariantQuantity, Residual, COORDINATES,
 };
 use super::descriptor::{Authored, ChartDescriptor, Convention, Coupling, Frozen};
 use crate::contract::sim_config::LATENT_DIM;
@@ -36,48 +37,52 @@ use crate::contract::sim_config::LATENT_DIM;
 // ── The Burrau family's curves ─────────────────────────────────────────────────────────────────────────────────────
 
 /// `γ(ν)`, the `ν` axis's embed: the normalised Burrau system at `a = 1 − ν²`, `b = 2ν`, `c = 1 + ν²`
-/// (`kernel::chart::burrau::embed`; chart_reference §4.3).
-pub fn nu_embed(nu: f64) -> System<f64> {
-    embed(nu)
+/// (`kernel::chart::burrau::embed`; chart_reference §4.3) in the decoder's coordinates (§0.1, §0.2): `μ₁ = ln(m₁/m₀)`
+/// and `μ₂ = ln(m₂/m₀)`, and with `ρ̃ = √μ_ρ·ρ`, `λ̃ = √μ_λ·λ` (`μ_ρ = m₀m₁/M₀₁`, `μ_λ = m₂·M₀₁`), `α = atan2(‖λ̃‖, ‖ρ̃‖)`,
+/// the scale gauge `R̃ = 1` dividing out, and `β = atan2(λ̃_y, λ̃_x)`. The embed's `ρ` lies on `+x` and `λ_y > 0`, so
+/// the canonical frame holds and `β ∈ (0, π)`.
+pub fn nu_embed(nu: f64) -> CurvePoint {
+    let System { m, rho, lambda, .. } = embed(nu);
+    let m01 = m[0] + m[1];
+    let (mu_rho, mu_lambda) = (m[0] * m[1] / m01, m[2] * m01);
+    let rho_t = mu_rho.sqrt() * rho[0].hypot(rho[1]);
+    let lambda_t = [mu_lambda.sqrt() * lambda[0], mu_lambda.sqrt() * lambda[1]];
+    CurvePoint {
+        alpha: lambda_t[0].hypot(lambda_t[1]).atan2(rho_t),
+        beta: lambda_t[1].atan2(lambda_t[0]),
+        mu1: (m[1] / m[0]).ln(),
+        mu2: (m[2] / m[0]).ln(),
+    }
 }
 
-/// `γ'(ν)`, the embed's tangent, each component differentiated in closed form: with `s = a + b + c = 2(1 + ν)`, the
-/// masses `(c, b, a)/s` are `((1 + ν²)/(2(1 + ν)), ν/(1 + ν), (1 − ν)/2)`, `a/c = (1 − ν²)/(1 + ν²)`,
-/// `b/c = 2ν/(1 + ν²)` and `λ_x = −ab/(c(b + c)) = −2ν(1 − ν)/((1 + ν²)(1 + ν))`.
-pub fn nu_tangent(nu: f64) -> System<f64> {
-    let c = 1.0 + nu * nu;
-    let p = 1.0 + nu;
-    let a_c = -4.0 * nu / (c * c);
-    let b_c = 2.0 * (1.0 - nu * nu) / (c * c);
-    let (n, dn) = (2.0 * nu * (1.0 - nu), 2.0 - 4.0 * nu);
-    let (d, dd) = (c * p, 1.0 + 2.0 * nu + 3.0 * nu * nu);
-    let lambda_x = -(dn * d - n * dd) / (d * d);
-    System {
-        m: [
-            (nu * nu + 2.0 * nu - 1.0) / (2.0 * p * p),
-            1.0 / (p * p),
-            -0.5,
-        ],
-        r: [[0.0, 0.0], [a_c, 0.0], [0.0, b_c]],
-        rho: [a_c, 0.0],
-        lambda: [lambda_x, b_c],
+/// `γ'(ν)`, in closed form. On the embed `‖λ̃‖²/‖ρ̃‖² = 2ν/(1 − ν)`, so `tan α = √(2ν/(1 − ν))` and
+/// `dα/dν = 1/((1 + ν)·√(2ν(1 − ν)))`; `λ_y/λ_x = −(1 + ν)/(1 − ν)` with `λ_x < 0`, so `β = 3π/4 − arctan ν` and
+/// `dβ/dν = −1/(1 + ν²)`; `μ₁ = ln(2ν/(1 + ν²))` and `μ₂ = ln((1 − ν²)/(1 + ν²))`, so `dμ₁/dν = (1 − ν²)/(ν(1 + ν²))`
+/// and `dμ₂/dν = −4ν/(1 − ν⁴)`.
+pub fn nu_tangent(nu: f64) -> CurvePoint {
+    let nn = nu * nu;
+    CurvePoint {
+        alpha: 1.0 / ((1.0 + nu) * (2.0 * nu * (1.0 - nu)).sqrt()),
+        beta: -1.0 / (1.0 + nn),
+        mu1: (1.0 - nn) / (nu * (1.0 + nn)),
+        mu2: -4.0 * nu / (1.0 - nn * nn),
     }
 }
 
 /// `γ(ν(θ))`, the acute-angle axis's embed, `ν(θ) = cos θ/(1 + sin θ)` (`kernel::chart::burrau_acute::nu_of`).
-pub fn theta_embed(theta: f64) -> System<f64> {
-    embed(nu_of(theta))
+pub fn theta_embed(theta: f64) -> CurvePoint {
+    nu_embed(nu_of(theta))
 }
 
 /// `γ'(ν(θ))·ν'(θ)`, its tangent: `ν'(θ) = −1/(1 + sin θ)`.
-pub fn theta_tangent(theta: f64) -> System<f64> {
+pub fn theta_tangent(theta: f64) -> CurvePoint {
     let t = nu_tangent(nu_of(theta));
     let k = -1.0 / (1.0 + theta.sin());
-    System {
-        m: t.m.map(|x| x * k),
-        r: t.r.map(|r| r.map(|x| x * k)),
-        rho: t.rho.map(|x| x * k),
-        lambda: t.lambda.map(|x| x * k),
+    CurvePoint {
+        alpha: t.alpha * k,
+        beta: t.beta * k,
+        mu1: t.mu1 * k,
+        mu2: t.mu2 * k,
     }
 }
 

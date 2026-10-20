@@ -21,11 +21,10 @@ use engine::chart_authoring::charts::{
 };
 use engine::chart_authoring::{
     resolve, validate, Authored, AxisDescriptor, AxisKind, Block, ChartDescriptor, ChartKind,
-    Convention, Coupling, Frozen, InvariantMeta, InvariantQuantity, Refusal, Residual, Solve,
-    ValidatedChart,
+    Convention, Coupling, CurvePoint, Frozen, InvariantMeta, InvariantQuantity, Refusal, Residual,
+    Solve, ValidatedChart,
 };
 use engine::contract::sim_config::Plane;
-use kernel::burrau::System;
 use kernel::chart::invariant::Invariant;
 use kernel::chart::mixed::{Alpha, Coordinate, PRhoX, ZMu1, ZQ2};
 use kernel::chart::{
@@ -1231,36 +1230,62 @@ negative_control!(
     )
 );
 
-/// Every component of `a` within `tol` of `b`, else a panic naming `what`.
-fn close(a: System<f64>, b: System<f64>, tol: f64, what: &str) {
-    let flat = |s: System<f64>| {
-        let mut v = s.m.to_vec();
-        v.extend(s.r.iter().flatten());
-        v.extend(s.rho);
-        v.extend(s.lambda);
-        v
-    };
-    for (x, y) in flat(a).into_iter().zip(flat(b)) {
+fn components(p: CurvePoint) -> [f64; 4] {
+    [p.alpha, p.beta, p.mu1, p.mu2]
+}
+
+/// Every component of `a` within `tol` of `b`, relative to `b` past 1, else a panic naming `what`.
+fn close(a: CurvePoint, b: CurvePoint, tol: f64, what: &str) {
+    for (x, y) in components(a).into_iter().zip(components(b)) {
         assert!(
-            (x - y).abs() <= tol,
+            (x - y).abs() <= tol * y.abs().max(1.0),
             "{what}: the tangent {x} is not the derivative {y}"
         );
     }
 }
 
 /// `tangent` is `embed`'s central difference at each of `points`.
-fn check_tangent(embed: fn(f64) -> System<f64>, tangent: fn(f64) -> System<f64>, points: &[f64]) {
+fn check_tangent(embed: fn(f64) -> CurvePoint, tangent: fn(f64) -> CurvePoint, points: &[f64]) {
     let h = 1e-6;
     for &x in points {
-        let (p, m) = (embed(x + h), embed(x - h));
-        let diff = |a: f64, b: f64| (a - b) / (2.0 * h);
-        let numeric = System {
-            m: std::array::from_fn(|i| diff(p.m[i], m.m[i])),
-            r: std::array::from_fn(|i| std::array::from_fn(|j| diff(p.r[i][j], m.r[i][j]))),
-            rho: std::array::from_fn(|i| diff(p.rho[i], m.rho[i])),
-            lambda: std::array::from_fn(|i| diff(p.lambda[i], m.lambda[i])),
+        let [p, m] = [embed(x + h), embed(x - h)].map(components);
+        let d: [f64; 4] = std::array::from_fn(|i| (p[i] - m[i]) / (2.0 * h));
+        let numeric = CurvePoint {
+            alpha: d[0],
+            beta: d[1],
+            mu1: d[2],
+            mu2: d[3],
         };
         close(tangent(x), numeric, 1e-7, &format!("at {x}"));
+    }
+}
+
+/// The embed is chart_reference §0.1–§0.2's coordinates of the Burrau system: its closed forms, and its logits give the
+/// system's masses back through `softmax(0, μ₁, μ₂)`.
+fn check_embed(embed: fn(f64) -> CurvePoint, nus: &[f64]) {
+    for &nu in nus {
+        let p = embed(nu);
+        let want = CurvePoint {
+            alpha: (2.0 * nu / (1.0 - nu)).sqrt().atan(),
+            beta: 3.0 * FRAC_PI_4 - nu.atan(),
+            mu1: (2.0 * nu / (1.0 + nu * nu)).ln(),
+            mu2: ((1.0 - nu * nu) / (1.0 + nu * nu)).ln(),
+        };
+        for (x, y) in components(p).into_iter().zip(components(want)) {
+            assert!(
+                (x - y).abs() <= 1e-13 * y.abs().max(1.0),
+                "at ν = {nu}: the embed's {x} is not {y}"
+            );
+        }
+        let z = 1.0 + p.mu1.exp() + p.mu2.exp();
+        let m = [1.0 / z, p.mu1.exp() / z, p.mu2.exp() / z];
+        let burrau = kernel::chart::burrau::embed(nu).m;
+        for (x, y) in m.into_iter().zip(burrau) {
+            assert!(
+                (x - y).abs() <= 1e-15,
+                "at ν = {nu}: the logits' mass {x} is not {y}"
+            );
+        }
     }
 }
 
@@ -1270,6 +1295,13 @@ fn chart_descriptors_curve_tangent() {
     check_tangent(nu_embed, nu_tangent, &nus);
     let thetas: Vec<f64> = (1..=10).map(|i| i as f64 * FRAC_PI_4 / 10.0).collect();
     check_tangent(theta_embed, theta_tangent, &thetas);
+    check_embed(nu_embed, &nus);
+    for &theta in &thetas {
+        assert_eq!(
+            theta_embed(theta),
+            nu_embed(kernel::chart::burrau_acute::nu_of(theta))
+        );
+    }
     // The curves the charts carry are these.
     let curve = burrau(EUCLID_NU).descriptor().axes[0].curve_meta().unwrap();
     assert_eq!(curve.parameter, "ν");
