@@ -717,6 +717,22 @@
   requirements: [REQ-GUI-188, REQ-GEN-036]
   reviewers: [code, qa, gui]
   pitfalls: []
+- id: TASK-M2-34
+  milestone: M2
+  title: "Presentation views draw no hatch: the canvas background for a pixel that is not part of the chart, #141418 for every failure and non-finite value; the debug view's three styles and counts; the NaN / Inf style proposed (R-467)"
+  depends_on: [TASK-M2-31, TASK-M2-32, TASK-M2-33]  # R-467: all three merged; outcome.rs, field_ramp.rs and the display names; applied per R-369
+  needs: [REQ-COL-001, REQ-COL-055]
+  requirements: [REQ-COL-108, REQ-COL-109, REQ-COL-110]
+  reviewers: [code, qa, physics, gui]  # physics for the debug view's order (the lane, then non-finiteness, then the failure) and the non-finite details (R-467 D5)
+  pitfalls: [PIT-3]
+- id: TASK-M2-35
+  milestone: M2
+  title: "Every gallery chart swept over [0,1]²: 0 forbidden and 0 non-finite pixels, with an absolute-E chart as the control arm (R-467)"
+  depends_on: [TASK-M2-08, TASK-M2-11, TASK-M2-12, TASK-M2-13]  # R-467 D11: the charts' tasks, all merged; applied per R-369
+  needs: []
+  requirements: [REQ-CHART-058]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -1000,9 +1016,9 @@
 - id: TASK-M3-36
   milestone: M3
   title: "Cross-implementation checks: BodyPlane bit-for-bit and the change-10 re-run"
-  depends_on: [TASK-M3-24, TASK-M3-07]
+  depends_on: [TASK-M3-24, TASK-M3-07, TASK-M2-35]  # R-467 D11: the sweep it extends to BodyPlane
   needs: [REQ-CHART-015, REQ-CHART-028, REQ-CHART-029]
-  requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146]
+  requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146, REQ-CHART-059]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M4-01
@@ -1765,6 +1781,22 @@
   requirements: [REQ-GUI-218, REQ-GUI-219, REQ-GUI-220, REQ-GUI-221, REQ-GUI-222, REQ-GUI-223, REQ-GUI-224]
   reviewers: [code, qa, gui, physics]  # physics reviews REQ-GUI-224 only, the definition (R-72; applied per R-369, R-466 K14, as R-396 for TASK-M6-24)
   pitfalls: []
+- id: TASK-M6-46
+  milestone: M6
+  title: "The GUI track (R-390): View › Debug view, the presentation figure with no hatch and no forbidden-region key, the mock's hook turned on at launch and shown only in the debug view, and the decoder-bug warning (R-467)"
+  depends_on: [TASK-M6-30, TASK-M2-33]  # R-467 D13: the F3 fill and the hook are TASK-M6-30's, the mock legend's names TASK-M2-33's; both merged
+  needs: []
+  requirements: [REQ-GUI-225, REQ-GUI-226]
+  reviewers: [code, qa, gui]  # the mock has no chart mapping, as for TASK-M6-30
+  pitfalls: []
+- id: TASK-M6-47
+  milestone: M6
+  title: "The GUI track (R-390): F3 fills by Extend or Fit, chosen in View for the session; Fit scales the view's square to the window's shorter side, never stretched, the rest background (R-468)"
+  depends_on: [TASK-M6-46, TASK-M6-30]  # R-468 E8: both add a View entry, and the Extend check reads View › Debug view
+  needs: []
+  requirements: [REQ-GUI-229]
+  reviewers: [code, qa, gui]
+  pitfalls: []
 - id: TASK-M7-01
   milestone: M7
   title: "Composition-spec gaps: the resolutions the stain editor assumes, written into colour_composition"
@@ -2056,7 +2088,7 @@
 - id: TASK-M7-37
   milestone: M7
   title: "The Chazy flat stains: the seven-class default, four families, Okabe–Ito, the status map, the filter, the ranks and palette separation"
-  depends_on: [TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14]
+  depends_on: [TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14, TASK-M2-34]  # R-467 D13: the forbidden lane's background (code review F4 on PR #253)
   needs: [REQ-COL-002, REQ-COL-053, REQ-COL-064, REQ-COL-067, REQ-COL-068]
   requirements: [REQ-COL-072, REQ-COL-073, REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-080, REQ-COL-081, REQ-COL-084, REQ-COL-085, REQ-COL-086, REQ-COL-087]
   reviewers: [code, qa, gui, physics]
@@ -2128,7 +2160,7 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32]  # TASK-M2-32 for REQ-COL-102's lane (R-446)
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47]  # TASK-M2-32 for REQ-COL-102's lane (R-446); TASK-M2-34 for the background, TASK-M6-46 and TASK-M6-47 for the View entries (R-467 D13, code review F4 on PR #253)
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102]
   requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056]
   reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
@@ -2344,7 +2376,7 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28]
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46]  # R-467 D13: the background and Fit (code review F4 on PR #253)
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)
@@ -2452,6 +2484,22 @@
   needs: [REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-078, REQ-COL-079, REQ-COL-080, REQ-COL-090, REQ-COL-091, REQ-COL-092, REQ-COL-093, REQ-COL-094, REQ-COL-095, REQ-GUI-188]
   requirements: [REQ-GUI-185, REQ-GUI-186, REQ-GUI-187]
   reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-46
+  milestone: M8
+  title: "On the real engine: View › Debug view and its counts, the decoder-bug warning for the gallery charts, the mass simplex's background and hatch at the same pixels (R-467), and F3's Fit mode (R-468)"
+  depends_on: [TASK-M8-05, TASK-M8-22, TASK-M2-34, TASK-M6-46, TASK-M6-47]  # R-467 D13, R-468 E8
+  needs: [REQ-COL-108, REQ-COL-109, REQ-GUI-225, REQ-GUI-226, REQ-GUI-229]
+  requirements: [REQ-GUI-227, REQ-GUI-230]
+  reviewers: [code, qa, gui, physics]  # physics for the mass simplex's forbidden set and the quads Fit asks for
+  pitfalls: []
+- id: TASK-M8-47
+  milestone: M8
+  title: "A Chart-builder chart that fails validity inside [0,1]²: its drawing, and its console warning as RQ-372 rules (R-467)"
+  depends_on: [TASK-M8-18, TASK-M8-46]  # R-467 F2: a leaf, waiting for RQ-372
+  needs: []
+  requirements: [REQ-GUI-228]
+  reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0

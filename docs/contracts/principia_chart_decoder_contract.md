@@ -145,7 +145,7 @@ extension types**, and the type decides what the axis does past its edge:
 | **affine** | the formula continues | basis vectors: the latent and flat slices, every latent direction; a physical-quantity axis mapped linearly onto its range (R-408's port, B1) |
 | **periodic** | the axis wraps | azimuthal angles: the shape sphere's θ |
 | **pole-crossing** | continues over the pole and back down the other side, the partner axis shifted by half its period | polar angles: the shape sphere's φ (its partner θ shifted by π) |
-| **bounded** | hatched as forbidden | anything with a hard edge in its domain (the invariant warp's `t^γ_K` at `t < 0`); **the default for an axis that declares nothing** |
+| **bounded** | forbidden: the canvas background in a presentation view, the hatch in the debug view (R-467) | anything with a hard edge in its domain (the invariant warp's `t^γ_K` at `t < 0`); **the default for an axis that declares nothing** |
 
 A custom chart inherits its extension from its axes; nothing is written per chart. The types are a property of each
 axis beside its kind (the four kinds above), not a fifth kind. The axes' types act first: an affine axis passes its
@@ -159,12 +159,40 @@ a non-positive mass), is hatched as forbidden. The pixel's check is layers 2 and
 "After encoding") is the encode path's, on lookup and lock, and never applied to a pixel inside `[0,1]²` either, so an
 affine latent axis whose `z` leaves `[0,1]⁸` past the edge is not hatched for that. This covers physical-quantity axes
 automatically: energy beyond what is reachable hatches. A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload §2), it
-is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5). The outcome view keeps
-the hatch too, on every pixel this part hatches (the types, `validate`'s layers 2 and 3, and a failed `Φ`, read there
-as the chart map `Chart::map`, `principia_chart_reference.md` §5.1), inside `[0,1]²` and past it; the primary ranges
-below, which decide only what is counted, and the payload's `decode_failed` detail play no part; there every other
-`decode_failed` sample, the decoder's `DEGENERATE` tags and a non-finite decode included, draws black (R-446;
-colour_composition §1.4).
+is not integrated, and it is drawn as the next paragraph says (R-467).
+
+**How a pixel that is not a system is drawn (R-467, amending R-446 and this part's clause 2 as it applies to
+display).** In this part "hatched" names the classification, a pixel that is not a system, forbidden or the domain's
+end; the types and the fallback decide it as above, and only its drawing is R-467's. **In a presentation view** (the
+outcome view, the Chazy stains and every other stain that is not a debug view, in the shown layout, with the figure
+filling the window under F3, in present mode and in an export) it draws the plain canvas background, the colour the
+window is cleared to, with no hatch, legend key or share, as the area outside a map is blank. That holds on every pixel
+this part hatches (the types, `validate`'s layers 2 and 3, and a failed `Φ`, read there as the chart map `Chart::map`,
+`principia_chart_reference.md` §5.1), inside `[0,1]²` and past it, decided from the chart through REQ-COL-102's lane and
+never from the payload's `decode_failed` detail; the primary ranges below decide only what is counted. **Only the debug
+views draw it with the render contract's hatch** (`debug_invalid`, Part 5): View › Debug view
+(`principia_render_gui_spec.md` §G2) hatches it under its "forbidden (chart)" key, with a count. Every other
+`decode_failed` sample, the decoder's `DEGENERATE` tags and a non-finite decode included, draws black `#141418` in a
+presentation view (R-446, R-467; colour_composition §1.4). **Inside `[0,1]²` every gallery chart is valid by
+construction** (the feasibility warp, the simplex map, the decoder accepting any `z`), so a pixel hatched there is a
+decoder bug: it shows only in the debug view and logs a console warning naming the chart and the pixel (R-467,
+clause 4; `principia_render_gui_spec.md` §G12), and a sweep of every gallery chart over `[0,1]²` checks that the real
+engine produces none (REQ-CHART-058). Whether a Chart-builder chart, whose physical-quantity axis has a range, may fail
+there is RQ-372. *Was (R-446):* "it is drawn with the render contract's hatch (`debug_invalid`, Part 5). The outcome
+view keeps the hatch too, on every pixel this part hatches …".
+
+**Where the extension matters (R-468, context).** Extension past `[0,1]²` is free for every affine chart: the latent
+chart and the flat and body-plane slices, tilted or rotated, are planes, and the square is only the current window
+onto them; their axes are affine and the decoder accepts any `z`, so they never produce a forbidden pixel. The types
+and the fallback matter for the charts whose square is their whole domain (the invariant warp, the mass simplex, the
+Burrau family, and the shape sphere's spherical map, whose periodic and pole-crossing types redraw its own systems)
+and for custom physical-quantity axes: past their edge, with F3 in its Extend mode, a presentation view shows the
+canvas background and the debug view the hatch (R-467). The shape sphere's exponential map is one of the bounded
+charts: its axes are bounded (`principia_chart_reference.md` §5.4's table) and its square covers only a disc of radius
+`s√2` about `n₀`, so past its square a pixel is classified not a system and draws the background, though the sphere
+holds systems there (physics review 5585225466 of PR #253, P6). *Was (R-468 as first ported):* "and the shape sphere,
+whose periodic and pole-crossing types redraw its own systems". In Fit mode the figure is the view's square alone, the rest of the window the
+canvas background (`principia_render_gui_spec.md` §G1).
 
 **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type
 needs physics review. The existing charts' types are in `principia_chart_reference.md` §5.4.

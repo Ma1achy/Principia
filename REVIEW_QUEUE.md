@@ -716,69 +716,6 @@ change results is RQ-324.*
   not wait on it: its E > 0 half holds by the code's order, which TASK-M7-35 builds, and (b) would differ only at a
   state not shown to exist. The fixtures do not reach this case, so TASK-M7-35's other work does not wait.
 
-## RQ-319: what the Chazy fields read and the Chazy stains draw for a `decode_failed` sample the chart does not hatch, or a reserved `state` code, is not given *(silence, R-442, R-446, REQ-COL-072; context: TASK-M7-37)*
-
-*Found porting the Chazy stain spec (R-442); restated against R-446 (gui review 5555473056 of PR #223). For the
-human: no; decided per R-369, option (a), on gui review 5555494498 of PR #223.*
-
-- **File, section:**
-  - Spec 02 §4 (drill-down § "7. Validity and styles") gives running, `sim_failed` or NaN, collision-terminated and
-    escape-terminated; it names neither `decode_failed` nor a reserved `state` code.
-  - `docs/design/principia_colour_composition.md` § "1.4 …" (R-446): "`bounded`, `running` and every failure draw
-    `#141418` in the outcome view: … `decode_failed` whatever its `detail` or tag (η_E's `ENERGY_UNSCALABLE` and
-    `ENERGY_INFEASIBLE`, the mass block's `M01_TINY`, a non-finite decode), and a reserved `state` code"; "**Forbidden
-    chart regions keep the chart contract's forbidden-region treatment** in the outcome view, the hatch
-    `debug_invalid(frag_xy)` …, decided from the chart alone, never from the payload's `decode_failed` detail"; "Every
-    other `decode_failed` sample draws black." Degenerate's white `#ECECF0` survives only in its "*Was (R-96,
-    superseded in part by R-444 to R-446)*" note. § "4.1 …", "What every mode keeps": "a `sim_failed` sample, a
-    reserved `state` code or a NaN the invalid pattern", with the outcome class the exception (R-446).
-  - `docs/gui/principia_render_gui_spec.md` § "G6. …": "A free-fall slice under `η_E` is almost all `decode_failed`,
-    drawn black, and that is expected (R-441, reworded by R-446 …)": "these are `decode_failed`, drawn black
-    `#141418` in the outcome view, the bounded / nothing yet key of the outcome legend"; "*Was (R-441):* drawn
-    degenerate's white `#ECECF0`."
-  - `decisions.md` § "R-446 …", the human's words: "Forbidden chart regions keep the chart contract's forbidden-region
-    treatment in the outcome view, decided from the chart's own validity (types, primary ranges, validate, Φ), not
-    from the payload's decode_failed detail, which cannot tell the two hatches apart. Every other decode_failed sample
-    draws black." R-446 rules for the outcome view; it names no Chazy stain.
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's extension type
-    (R-407)" (Part 3): "A hatched pixel is a labelled output, never dropped (Part 5): it is `decode_failed` (payload
-    §2), it is not integrated, and it is drawn with the render contract's hatch (`debug_invalid`, Part 5)."
-- **Not open: a pixel the chart hatches.** It keeps the chart's hatch in every Chazy stain under every option below:
-  Part 3 draws every pixel it hatches with `debug_invalid`, naming no view, and R-446 keeps that even in the outcome
-  view, which draws every other failure black. As in R-446, it is decided from the chart alone (the types,
-  `validate`'s layers 2 and 3, a failed `Φ`), never from the payload's `decode_failed` detail. How the chart's
-  classification reaches a view is REQ-COL-102's definition, written for the outcome view.
-- **Silence:** the decoder's own `decode_failed` samples, the ones the chart does not hatch (its `DEGENERATE` tags,
-  `M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE` and any added later, and a non-finite decode; colour_composition
-  §1.4), have no physical state to classify, and nothing says what the Chazy fields read or the Chazy stains draw for
-  them.
-- **Options seen:**
-  - (a) The invalid hatch, as for `sim_failed` in the Chazy stains (§7). A failed decode then draws like a forbidden
-    region, which the payload's detail cannot tell apart (R-446), and unlike the outcome view, which draws it black;
-    the Chazy stains already differ from the outcome view in the same way for `sim_failed`.
-  - (b) The outcome view's black `#141418` (colour_composition §1.4; R-446), so a free-fall slice under `η_E` reads
-    the same in both systems. Black is Chazy B (drill-down §10.1), labelled "bound, or nobody has left yet" in every
-    final-motion legend and in the one-body views (§10.10, §10.11.1, §10.11.4), so a failed decode would sit under
-    B's legend key, as the outcome view's failures sit under its bounded / nothing yet key. The status stain's
-    palette (§10.6) has no `#141418`, so there it would be a further swatch, its separations unmeasured (§11.2.1).
-  - (c) A further value, "no IC", in `chazy_final` and `chazy_status`.
-  - A reserved `state` code takes the invalid hatch under every option (colour_composition §4.1), as REQ-COL-072
-    requires.
-- **Applied meanwhile:** applied per R-369 on PR #223, on the gui reviewer's recommendation (review 5555494498):
-  option (a), the invalid hatch. In the Chazy stains every sample with no motion to classify draws the render
-  contract's hatch (`debug_invalid`): `sim_failed` (already hatched, drill-down §7), a reserved `state` code, a pixel
-  the chart hatches, and the decoder's own `decode_failed` (its `DEGENERATE` tags and a non-finite decode).
-  - Why: one rule, fitting render_gui_spec §13 and colour_composition §4.1. Under (b) black would read as Chazy B
-    ("bound, or nobody has left yet") in the body lens and the escaper map, and the status stain would need a swatch
-    whose separations are unmeasured; (c) would add a field value, a legend entry and a swatch to every palette for
-    samples the debug views already explain.
-  - Cost: a free-fall slice under `η_E` reads hatched in the Chazy stains but black in the outcome view, the same split
-    `sim_failed` already has, and this hatch cannot be told apart from a forbidden-region hatch.
-  - Where: drill-down §7 and §10.11 (`docs/design/principia_dd_chazy_final_motion.md`), render_gui_spec §G6's
-    free-fall paragraph, REQ-COL-072's note, TASK-M7-37's note. The outcome view's rule (R-446) is unchanged.
-- **Waits:** nothing now; this records the decision for the human's veto. Before it, REQ-COL-072's `decode_failed`
-  clause (`rq: RQ-319`, removed by this decision) and TASK-M7-37.
-
 ## RQ-320: the "what just changed" view needs the previous frame's class, but a stain node reads the payload at the playhead *(silence, R-442, REQ-COL-083, REQ-COL-106; context: TASK-M7-40)*
 
 *Found porting the Chazy stain spec (R-442). Nothing is chosen. For the human: no; decidable per R-369.*
@@ -1525,3 +1462,103 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
   REQ-SYS-015 (`rq: RQ-365`).
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
+
+## RQ-372: R-467 says every chart is valid inside `[0,1]²`, "charts built in the Chart builder too", and makes an in-square validity failure a decoder bug with a console warning; a builder physical-quantity axis has a range that can leave the slice's reach inside the square, which the Domain preview exists to show *(conflict, R-467, R-407, R-408 B1, R-26, REQ-GUI-109, REQ-GUI-228; context: TASK-M8-18, TASK-M8-47)*
+
+*Found porting R-467 (F2). Nothing is chosen. For the human: yes, it changes what the Chart builder must build.*
+
+- **File, section:**
+  - `decisions.md` § "R-467 — …", the human's words: "Inside [0,1]², every chart is valid by construction: the
+    feasibility warp, the simplex map, and the decode accepting any z. That holds for charts built in the Chart builder
+    too." and clause 4: "Inside [0,1]², a validity failure is a decoder bug: debug view only, plus a console warning
+    naming the chart and pixel. The real engine should produce zero."; clause 6: "The Chart builder's Domain preview
+    "forbidden in view: N%" (R-408, §G7) stays: it is a diagnostic for building charts, not a presentation view."
+  - `docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)": "physical quantity (energy,
+    `L_z`, virial ratio, mass ratio…, with a range and what is **held fixed** …)"; "a physical-quantity axis mapped
+    linearly onto its range is affine, the fallback hatching what fails validation"; "**The Domain preview:** the
+    chart's admissible region in its own coordinates, the forbidden region hatched, the current view as a rectangle, the
+    boundary's formula, and "forbidden in view: N%"."
+  - `plan/requirements.yaml` REQ-GUI-109, verify detail: "N% equals the fraction of a uniform grid over the view that
+    validate rejects"; its note: "With the egui layer shown the Chart builder's view is [0,1]²".
+  - `decisions.md` § "R-408 — …", B1: "Under this ruling its primary range is unbounded, so its unreachable pixels fail
+    validity and count as forbidden."
+- **Conflict:** nothing in the corpus makes a builder axis's range feasible on the slice. An energy axis whose range
+  reaches below the slice's potential `U` fails `validate`'s layer 2 at those pixels inside `[0,1]²`, and the Domain
+  preview's N% over `[0,1]²` is non-zero exactly then. Under clause 4 each such chart would log a "decoder bug" warning
+  for a chart the person built that way, while the context says such a chart cannot exist.
+- **Options seen:**
+  - (a) The builder keeps every chart valid inside the square: a physical-quantity axis's range is clamped or warped to
+    the slice's reach (as the invariant charts' warp is, chart_reference §2.1), so N% is 0 inside `[0,1]²` and a
+    failure there is a decoder bug, warned; the Domain preview then shows forbidden regions only past the square or
+    before Apply.
+  - (b) A builder chart may be invalid inside the square: its in-square failures draw the background (presentation)
+    and the hatch (debug view), as R-467 settles for every chart, but log no decoder-bug warning; the warning is for the
+    gallery charts (R-467 D11's list) only.
+  - (c) As (b), with a different, informational console line for a builder chart ("chart <name>: N% of the view is
+    outside its domain").
+- **Applied meanwhile:** R-467's drawing applies to every chart (R-467 D3, F6); the warning is built for the gallery
+  charts and the mock (REQ-GUI-227, TASK-M8-46; REQ-GUI-226, TASK-M6-46). Nothing in the builder changes.
+- **Waits:** REQ-GUI-228 (`rq: RQ-372`), a Chart-builder chart's in-square warning, closed by TASK-M8-47, a leaf task
+  nothing depends on.
+
+## RQ-373: R-467 changes two of the three outcome goldens R-454 re-baselined under RQ-330, and two field-ramp goldens; which are re-baselined, under what gate decision *(the human's question, R-467 clause 8, R-110, R-454; context: TASK-M2-34)*
+
+*Filed porting R-467 (D15), as the human asked: "The outcome goldens re-baselined under RQ-330 may need another
+re-baseline; list them, don't re-baseline without a gate decision." Nothing is re-baselined.*
+
+- **File, section:**
+  - `fixtures/golden/BASELINES.md`, the rows `m1-outcome/outcome`, `m1-outcome/outcome_edited` and
+    `m1-synthetic/known_escaper` (each "R-454 (re-baselined under R-444 to R-446, RQ-330 …)"), and the rows
+    `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`.
+  - `crates/validation/src/golden_scene.rs`, the `outcome` scene: "a sample whose chart point is forbidden
+    ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn with the hatch (REQ-COL-101, REQ-COL-102)", tile 22; the
+    `length_ramp` and `d_min_ramp` scenes: "127 in the invalid pattern", "NaN in the invalid pattern".
+  - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*": no re-baselining without
+    a gate decision.
+- **What changes under R-467:**
+  - `m1-outcome/outcome` and `m1-outcome/outcome_edited`: tile 22, the forbidden sample, from the hatch to the canvas
+    background (R-467 D2, D3). No other tile changes.
+  - `m1-synthetic/known_escaper`: no forbidden sample and no hatched pixel; expected unchanged.
+  - `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`: a field ramp is a presentation occupant (R-467 D1), so its
+    invalid value draws `#141418` (D4) where the hatch was; their `_override` twins draw the node's override colour and
+    are expected unchanged.
+  - The debug catalogue's goldens do not change (D1).
+- **Options seen:**
+  - (a) Re-baseline the changed goldens under R-467 as TASK-M2-34 renders them, each `BASELINES.md` row leading with the
+    ruling, and confirm the canvas background's value and the changed tiles at the M2 gate, with REQ-COL-110's NaN /
+    Inf style.
+  - (b) As (a), but `length_ramp` and `d_min_ramp` keep the hatch: a field ramp is read as a debug occupant, which
+    narrows R-467 D1.
+  - (c) Hold the re-baseline for the M2 gate itself, TASK-M2-34 waiting until then.
+- **Applied meanwhile:** nothing re-baselined. TASK-M2-34 is built and reviewed; its PR reports the hashes that
+  change and waits for this ruling before it merges.
+- **Waits:** TASK-M2-34's merge (REQ-COL-108's golden line, `rq: RQ-373`).
+
+## RQ-374: R-467 says presentation views "never draw the hatch", and Overlays ▾ keeps two toggles, "forbidden region" and "NaN / invalid pixels", that draw it over the presentation figure *(conflict, R-467 clauses 1 and 6, R-26, REQ-GUI-079; context: TASK-M8-08)*
+
+*Filed on gui review 5585209592 of PR #253 (G5): R-467 D9, as first ported, kept both toggles per R-369, which goes
+beyond the human's words. For the human: yes, because option (b) drops part of a requirement.*
+
+- **File, section:**
+  - `decisions.md` § "R-467 …", the human's words: "1. Presentation views (outcome, Chazy, the stains, F3 full-window)
+    never draw the hatch." and "6. The Chart builder's Domain preview "forbidden in view: N%" (R-408, §G7) stays: it is
+    a diagnostic for building charts, not a presentation view." Clause 6 names only the Domain preview.
+  - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)": "- Chart: forbidden
+    region (the chart's domain function, R-26), grid, Burrau lattice (primitive triples)." and the Integration group's
+    "NaN / invalid pixels"; R-467's sentence: "The Chart group's "forbidden region" and the Integration group's "NaN /
+    invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view".
+  - `plan/requirements.yaml` REQ-GUI-079: "Overlays ▾ must hold the grouped toggles — … Integration (substep density,
+    substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function,
+    grid, Burrau lattice) …".
+- **The conflict:** the two toggles draw the hatch (or, with the debug view built, its styles) over a presentation
+  figure on request. Clause 1 says a presentation view never draws the hatch; clause 3 asks for "one switchable view"
+  that shows these categories; the words name neither toggle.
+- **Options seen:**
+  - (a) Keep both, off by default, drawing the debug view's styles over the figure: diagnostics turned on by the person,
+    as the Domain preview is (R-467 D9 as first ported).
+  - (b) Drop both from Overlays ▾, View › Debug view being the one switchable view. This retires part of REQ-GUI-079,
+    the human's call.
+  - (c) Keep both, enabled only while View › Debug view is on, as filters of what it shows.
+- **Applied meanwhile:** (a). Nothing else waits: TASK-M6-46 and TASK-M6-47 build no Overlays entry.
+- **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
+  the rest of TASK-M8-08 proceeds.

@@ -2477,7 +2477,7 @@
   milestone: M2
 - id: REQ-CHART-054
   area: CHART
-  statement: "Each chart axis must declare one of four extension types for the view past [0,1]²: affine (the formula continues), periodic (the axis wraps), pole-crossing (continues over the pole, the partner axis shifted by half its period) or bounded (hatched past its edge), bounded being the default for an axis that declares nothing; a chart must take its extension from its axes; outside [0,1]², a pixel whose Φ fails to evaluate or whose state fails the chart's validity check (validate) must be hatched as forbidden and labelled decode_failed, never integrated and never dropped; the existing charts must carry chart_reference §5.4's types (latent and flat slices affine; the shape sphere's spherical map θ periodic and φ pole-crossing; the invariant warp bounded; the mass simplex affine; a Chart-builder physical-quantity axis mapped linearly onto its range, one of render_gui_spec §G7's non-periodic quantities, affine, and one behind a nonlinear warp bounded); and inside [0,1]² every chart's output must be unchanged."
+  statement: "Each chart axis must declare one of four extension types for the view past [0,1]²: affine (the formula continues), periodic (the axis wraps), pole-crossing (continues over the pole, the partner axis shifted by half its period) or bounded (forbidden past its edge), bounded being the default for an axis that declares nothing; a chart must take its extension from its axes; outside [0,1]², a pixel whose Φ fails to evaluate or whose state fails the chart's validity check (validate) must be classified forbidden (\"hatched\", chart_decoder_contract Part 3) and labelled decode_failed, never integrated and never dropped, and drawn as the canvas background in a presentation view and with the hatch in the debug view (R-467); the existing charts must carry chart_reference §5.4's types (latent and flat slices affine; the shape sphere's spherical map θ periodic and φ pole-crossing; the invariant warp bounded; the mass simplex affine; a Chart-builder physical-quantity axis mapped linearly onto its range, one of render_gui_spec §G7's non-periodic quantities, affine, and one behind a nonlinear warp bounded); and inside [0,1]² every chart's output must be unchanged."
   source:
   - file: decisions.md
     section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
@@ -2491,15 +2491,18 @@
     section: "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
   - file: decisions.md
     section: "R-446 — \"Degenerate\" leaves the outcome view: black `#141418` means nothing has happened yet, up to the playhead, and bounded, running and every failure draw it; failures show in the debug views; forbidden chart regions keep the chart contract's hatch, decided from the chart's validity *(supersedes R-96, R-399 and R-441 as they apply to the outcome view)*"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel chart_extension: per chart, samples past each edge of [0,1]²: the latent chart's z continues z₀ + (2s−1)q₁ + (2t−1)q₂; the sphere's s and s + 1 decode equal, and t = 1 + δ decodes as t = 1 − δ with θ + π (likewise below t = 0); the invariant warp is hatched past every edge; the mass simplex continues and its negative-mass pixels are hatched by inverse_encode layer 2's narrowed simplex (buffered mᵢ ≥ ε_m, exactly raw mᵢ ≥ 0), at every sample past the edge, including one within ε_m of it, so the hatch starts at the edge with no band; control: a check of buffered mᵢ > 0 alone (which passes the band) fails; a custom chart's physical-quantity axis continues linearly in its quantity, and its unreachable pixels (energy beyond what is reachable) are hatched by validate; a custom chart's undeclared axis is hatched past its edge; every hatched pixel is decode_failed and none is integrated; inside [0,1]² every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, a physical-quantity axis built as bounded, and an undeclared axis that continues each fail; review (physics): the types and the fallback against R-407 and R-408's B1; run with both of the shape sphere's hemispheres drawn (the one-hemisphere case is REQ-CHART-057); the outcome view draws every hatched pixel with the hatch, not #141418, through REQ-COL-102's lane (R-446); control: a pixel past the invariant warp's edge drawn from its decode_failed detail draws black and fails; the shape sphere's pixel past its pole draws its outcome colour in the outcome view, not the hatch; on a test chart with a periodic axis and an affine physical-quantity axis, a pixel past one period whose state fails validate draws the hatch (physics review 5548113767 on PR #226, P1); control: a lane set from the area statistics' classifier, which leaves that pixel \"not counted\", fails"
+    detail: "cargo test -p kernel chart_extension: per chart, samples past each edge of [0,1]²: the latent chart's z continues z₀ + (2s−1)q₁ + (2t−1)q₂; the sphere's s and s + 1 decode equal, and t = 1 + δ decodes as t = 1 − δ with θ + π (likewise below t = 0); the invariant warp is forbidden past every edge; the mass simplex continues and its negative-mass pixels are forbidden by inverse_encode layer 2's narrowed simplex (buffered mᵢ ≥ ε_m, exactly raw mᵢ ≥ 0), at every sample past the edge, including one within ε_m of it, so the forbidden area starts at the edge with no band; control: a check of buffered mᵢ > 0 alone (which passes the band) fails; a custom chart's physical-quantity axis continues linearly in its quantity, and its unreachable pixels (energy beyond what is reachable) are forbidden by validate; a custom chart's undeclared axis is forbidden past its edge; every forbidden pixel is decode_failed and none is integrated; inside [0,1]² every chart's output is bit-identical to before; controls: a periodic axis built as affine, a pole-crossing axis without the half-period shift, a physical-quantity axis built as bounded, and an undeclared axis that continues each fail; review (physics): the types and the fallback against R-407 and R-408's B1; run with both of the shape sphere's hemispheres drawn (the one-hemisphere case is REQ-CHART-057); the outcome view draws every forbidden pixel as the canvas background, not #141418 and not the hatch, through REQ-COL-102's lane, and the debug view draws it with the hatch (R-446, R-467); control: a pixel past the invariant warp's edge drawn from its decode_failed detail draws black and fails; the shape sphere's pixel past its pole draws its outcome colour in the outcome view, not the background; on a test chart with a periodic axis and an affine physical-quantity axis, a pixel past one period whose state fails validate draws the background (physics review 5548113767 on PR #226, P1); control: a lane set from the area statistics' classifier, which leaves that pixel \"not counted\", fails"
   rulings:
   - R-407
   - R-408
   - R-446
+  - R-467
   milestone: M8
-  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human; not vetoed, R-416). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). R-446 (16 Oct 2026): the outcome view keeps the hatch on these pixels, on every pixel Part 3 hatches, the primary ranges playing no part, never from the payload's decode_failed detail; the lane is REQ-COL-102's (TASK-M2-32), and this task fills it past [0,1]²."
+  note: "R-407; closed by TASK-M8-05 (applied per R-369, R-407, A1), physics-reviewed. The Burrau family's types are REQ-CHART-055's definition; until written each Burrau axis is bounded. A Chart-builder physical-quantity axis is affine (applied per R-369 in R-408's port, B1, a correction to R-407's applied text, flagged to the human; not vetoed, R-416). Area statistics over the extended window are R-408's (REQ-CHART-056). The shape sphere with one hemisphere drawn is REQ-CHART-057 (TASK-M8-44), ruled by R-412 (RQ-264) (applied per R-369, code review 5478800754, F4). R-446 (16 Oct 2026): the outcome view decides these pixels from the chart, on every pixel Part 3 hatches, the primary ranges playing no part, never from the payload's decode_failed detail; the lane is REQ-COL-102's (TASK-M2-32), and this task fills it past [0,1]². R-467 (20 Oct 2026): \"hatched\" is the classification; a presentation view draws these pixels as the canvas background and the debug view hatches them."
 - id: REQ-CHART-055
   area: CHART
   kind: definition
@@ -2566,6 +2569,47 @@
   - R-412
   milestone: M8
   note: "R-408 B4; split from TASK-M8-05 into the leaf TASK-M8-44 (applied per R-369, code review 5478800754, F4). R-412 (RQ-264's option (a)): the remap φ = (π/2)·(1 − t), the upper hemisphere w ≥ 0 drawn, and the far pole's crossing past t = −1 are applied per R-369 in R-412's port."
+- id: REQ-CHART-058
+  area: CHART
+  statement: "Every gallery chart, every chart crates/kernel/src/chart ships (the latent chart and the flat slices, the shape sphere's spherical and exponential maps, the invariant charts (L_z, E) and (L_z, K), the mass simplex, the Burrau family's Euclid plane, (ν, K), acute-angle charts Φ_θ,K, Φ_θ,L_z and Φ_θ,δm and both strips, and the mixed-axis charts), at the parameter sets TASK-M2-35 names for it (the register's values; a pending calibration at the value the chart ships today; one set at the edge of the admissible space: γ_K = 1, λ_L = 1, a mixed-axis range at its link's closed codomain edge), swept on the real engine's chart, decode and validate code over a uniform grid on [0,1]², its edges and corners included, at f64 and at the f32 instantiation, must give 0 forbidden pixels (validate's layers 2 and 3, or Chart::map failing), 0 non-finite ones (a non-finite chart output z or decoded (m, r, p); the derived V₀ and E₀, R-436's defined −∞ at a collision pole, are outside the count) and, on the warp charts, 0 INVARIANT_INFEASIBLE tags; the other DEGENERATE tags and the grid points landing on a collision pole are counted and printed per chart."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/design/principia_chart_reference.md
+    section: 2.1 Feasibility, and the warp that makes every pixel valid
+  verify:
+    method: property test
+    detail: "cargo test -p kernel gallery_sweep_unit_square: each gallery chart at each of its named parameter sets on a 257 × 257 grid over [0,1]², at f64 and f32: 0 forbidden, 0 non-finite (z and (m, r, p)), INVARIANT_INFEASIBLE = 0 on (L_z, E), (L_z, K), (ν, K), Φ_θ,K, Φ_θ,L_z and the K strip, each chart's other tag counts and collision-pole count printed; control arm: a test chart (L_z, E) whose energy axis sets E absolutely (E = E_lo + v·(E_hi − E_lo) over a fixed range, on a slice whose potential U lies inside it, not relative to the slice's reach as chart_reference §2.1's warp is) reports exactly layer 2's forbidden set |L_z| > √(2I(E − U)), E < U included, and a sweep whose validate accepts every pixel passes that chart and so fails the control; a warp with L_max one ulp too large fires INVARIANT_INFEASIBLE on the s ∈ {0, 1} columns; a test chart whose map is non-finite on one column is caught as non-finite; review (physics): the chart list is complete and each parameter set is the one the task names"
+  rulings:
+  - R-26
+  - R-407
+  - R-467
+  milestone: M2
+  note: "R-467 (20 Oct 2026), clause 7 and D11, F5 as revised on physics review 5585225466 of PR #253 (P1 to P5, applied per R-369). Closed by TASK-M2-35, physics-reviewed. BodyPlane, not yet built, is REQ-CHART-059's (TASK-M3-36). A Chart-builder chart is RQ-372's."
+- id: REQ-CHART-059
+  area: CHART
+  statement: "The BodyPlane chart, once built, must be swept as REQ-CHART-058 sweeps the gallery charts, over a uniform grid on [0,1]², its edges and corners included, at f64 and at the f32 instantiation, giving 0 forbidden and 0 non-finite pixels, and past [0,1]² its axes must be affine, never producing a forbidden pixel (R-468 clause 4: a plane, the square only the current window onto it)."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: decisions.md
+    section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 5.1 One trait, one dispatch
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: property test
+    detail: "cargo test -p kernel gallery_sweep_unit_square includes BodyPlane at the parameter sets TASK-M3-36 names: 0 forbidden, 0 non-finite at f64 and f32; past [0,1]² on a grid over [−1, 2]², every pixel a system (validate Valid) and the map affine (the chart output at s + 1 minus at s constant); control: a BodyPlane declaring a bounded axis fails the second check"
+  rulings:
+  - R-467
+  - R-468
+  milestone: M3
+  note: "R-467 D11 as revised on physics review 5585225466 of PR #253, P3 (applied per R-369): BodyPlane does not exist at M2, so REQ-CHART-058 leaves it out and the task that builds it, TASK-M3-36, sweeps it."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -11246,7 +11290,7 @@
   note: "Registered per R-369 (TASK-M1-15), as REQ-COL-067 was for TASK-M1-14: REQ-RENDER-018's 'reads r_sh/p_sh as a sample' had no definition the lint could check."
 - id: REQ-COL-001
   area: COL
-  statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
+  statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 1.2 Family B — field-ramp  →  `vec3` or `f32`
@@ -11264,6 +11308,8 @@
     section: R-79 — NaN and sentinels *(closes RQ-30)*
   - file: decisions.md
     section: "R-132 — The R-71/R-72 classification is accepted, with three changes *(closes RQ-110)*"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: golden image
     detail: "a field with invalid pixels (NaN and sentinel) renders them in the invalid pattern; overriding the node's invalid colour changes only those pixels; a debug field view shows a failed-state 0.0 as the literal 0.0 and a NaN as the invalid pattern"
@@ -11271,8 +11317,9 @@
   - R-16
   - R-79
   - R-132
+  - R-467
   milestone: M1
-  note: "R-132: the default is REQ-COL-055's hatched pattern, replacing the corpus's 'fixed magenta'. RQ-232, decided per R-369: TASK-M1-09 builds the minimal FieldRamp over one ScalarField, a lin Compaction and the invalid lane (crates/render/src/colour/field_ramp.rs); the sentinel leg is a non-debug field ramp over the word length, whose stored sentinel 127 maps to the invalid pattern while the length debug view shows 127 literally; d_min's field ramp maps NaN to the invalid pattern and draws its unset value in R-280's grey, never the invalid pattern (amended per code review 5438179638); TASK-M7-05 and TASK-M7-09 extend it."
+  note: "R-132: the default is REQ-COL-055's hatched pattern, replacing the corpus's 'fixed magenta'. RQ-232, decided per R-369: TASK-M1-09 builds the minimal FieldRamp over one ScalarField, a lin Compaction and the invalid lane (crates/render/src/colour/field_ramp.rs); the sentinel leg is a non-debug field ramp over the word length, whose stored sentinel 127 maps to the invalid pattern while the length debug view shows 127 literally; d_min's field ramp maps NaN to the invalid pattern and draws its unset value in R-280's grey, never the invalid pattern (amended per code review 5438179638); TASK-M7-05 and TASK-M7-09 extend it. R-467 (20 Oct 2026): a field ramp is a presentation occupant, so its default invalid colour there is #141418, not the hatch; TASK-M2-34 changes it (REQ-COL-108), and the changed statement is re-checked at the M2 gate, as R-454 has it for M1's."
 - id: REQ-COL-002
   area: COL
   statement: "The outcome-state field's canonical default palette must be the nine-class table of colour_composition §1.4, physical outcomes only (R-444), its classes named as shown (R-449): bounded / nothing yet #141418 (bounded, running and every failure, R-446); collision 1–2 / 1–3 / 2–3 (detail = pair 2 / 1 / 0) → #DE2D2D/#2EBC4E/#3462E0; triple collision (collision, detail = 3) #F29620; escape body 1 / 2 / 3 (detail = 0 / 1 / 2) → #F0DE32/#E034C6/#30C8DC; triple ejection (escape, detail = 3) #611597 (R-445); read from state plus the detail union alone, t_end_step playing no part, so a collision at t_end_step == 0 draws its pair's or the triple collision's colour (R-445); a sample in a forbidden chart region keeps the chart contract's hatch, decided from the chart's validity (REQ-COL-101); and it must be user-editable."
@@ -12634,7 +12681,7 @@
   note: "Gui review 5533020211 G3 of PR #214, applied per R-369: §10.1's literal-sentinel line `if (raw == <literal>)` would need an infinite literal for these two, which naga rejects (gpu_determinism_note rule 4), and the compaction would do arithmetic on ±∞; the corpus defines no other style. TASK-M5-17, the resolve stage, first stores these bits (REQ-REF-053) and adds quad fields to the field-view catalogue (REQ-PAY-096), so it writes the style (round 6; TASK-M5-01, which built the ledger entries, merged before R-436)."
 - id: REQ-COL-072
   area: COL
-  statement: "The Chazy fields must hold a value for a `running` sample and render it in every mode, never drawing the \"not yet\" stipple, and a `sim_failed` sample, the decoder's own `decode_failed` sample (a `DEGENERATE` tag or a non-finite decode; RQ-319, decided per R-369), a reserved `state` code or a NaN must draw the invalid hatch (`debug_invalid(frag_xy)`) in every Chazy stain."
+  statement: "The Chazy fields must hold a value for a `running` sample and render it in every mode, never drawing the \"not yet\" stipple, and a `sim_failed` sample, the decoder's own `decode_failed` sample (a `DEGENERATE` tag or a non-finite decode), a reserved `state` code or a NaN must draw #141418, B's black, in every Chazy stain, and a pixel the chart classifies as not a system the canvas background, none of them the hatch, which only the debug view draws (R-467, ruling RQ-319)."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 7. Validity and styles
@@ -12644,14 +12691,17 @@
     section: "R-136 — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*"
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: unit test
-    detail: "synthetic payloads through each Chazy stain: a running sample draws its class's colour, and no pixel of any Chazy stain equals debug_not_yet's pattern; a sim_failed sample, a decode_failed sample with a DEGENERATE tag, a decode_failed sample from a non-finite decode, a reserved state code and a NaN draw debug_invalid's hatch on the CPU twin and in WGSL; a control stain that draws the decode_failed samples black #141418 (Chazy B) fails the test"
+    detail: "synthetic payloads through each Chazy stain: a running sample draws its class's colour, and no pixel of any Chazy stain equals debug_not_yet's pattern; a sim_failed sample, a decode_failed sample with a DEGENERATE tag, a decode_failed sample from a non-finite decode, a reserved state code and a NaN draw #141418 on the CPU twin and in WGSL; a forbidden-lane pixel draws the canvas background; no pixel equals debug_invalid's pattern; controls: a control stain that draws the failures with debug_invalid's hatch, and one that draws the forbidden lane #141418, each fail"
   rulings:
   - R-136
   - R-442
+  - R-467
   milestone: M7
-  note: "What the decoder's own decode_failed samples (its DEGENERATE tags and a non-finite decode) read and draw is RQ-319, restated against R-446: under R-446 the outcome view draws them black #141418, which in the Chazy stains is B. RQ-319 is decided per R-369, option (a), on gui review 5555494498 of PR #223: they draw the invalid hatch (debug_invalid) in every Chazy stain, as sim_failed does (dd_chazy_final_motion §7), so this requirement no longer waits on it. A pixel the chart hatches keeps the chart's hatch (chart_decoder_contract Part 3; R-446)."
+  note: "What the decoder's own decode_failed samples read and draw was RQ-319, restated against R-446 and decided per R-369, option (a), the hatch, on gui review 5555494498 of PR #223. R-467 (20 Oct 2026) rules it: the Chazy stains are presentation views, so every failure and NaN draws #141418, B's black, and a pixel the chart classifies forbidden the canvas background; View › Debug view shows them (dd_chazy_final_motion §7). Flagged (R-467 F4): in the figure a failure reads as B."
 - id: REQ-COL-073
   area: COL
   statement: "A collision-terminated sample (any pair, a triple collision, or a collision at t = 0) must read collision in `chazy_final` and `chazy_status`, never a motion class, and draw magenta `#DA85B6` in every Chazy stain (R-442)."
@@ -13203,7 +13253,7 @@
   milestone: M7
 - id: REQ-COL-101
   area: COL
-  statement: "The outcome view (the outcome palette, colour_composition §1.4) must draw #141418, bounded / nothing yet, for every sample that is no physical outcome: running, sim_failed of each detail (NaN in state, Inf/overflow in state, a non-finite derived quantity: the human's \"NaN, infinity\", payload §2), decode_failed (each detail and tag: η_E's ENERGY_UNSCALABLE and ENERGY_INFEASIBLE, the mass block's M01_TINY, a non-finite decode), and a reserved state code (6, 7) (R-446), #141418 being the outcome palette's explicit invalid treatment (colour_composition §1.4, §3); it must draw a sample in a forbidden chart region with the chart contract's hatch, debug_invalid(frag_xy), on every pixel chart_decoder_contract Part 3 hatches as forbidden, inside [0,1]² and past it (after the extension types act: a bounded axis past its edge, a state validate's layer 2 or 3 rejects, or Φ, chart_reference §5.1's Chart::map, failing to evaluate), the axes' primary ranges playing no part and the payload's decode_failed detail never deciding it; the shared decoder's own outcomes (its DEGENERATE tags, a non-finite decode) must never mark a pixel forbidden; and in greyscale and hue mode (colour_composition §4.1) those samples must take the bounded / nothing yet class's rank 0, a forbidden region keeping the hatch."
+  statement: "The outcome view (the outcome palette, colour_composition §1.4) must draw #141418, bounded / nothing yet, for every sample that is no physical outcome: running, sim_failed of each detail (NaN in state, Inf/overflow in state, a non-finite derived quantity: the human's \"NaN, infinity\", payload §2), decode_failed (each detail and tag: η_E's ENERGY_UNSCALABLE and ENERGY_INFEASIBLE, the mass block's M01_TINY, a non-finite decode), and a reserved state code (6, 7) (R-446), #141418 being the outcome palette's explicit invalid treatment (colour_composition §1.4, §3); it must draw a sample in a forbidden chart region as REQ-COL-108 says, the canvas background, never the hatch (R-467), on every pixel chart_decoder_contract Part 3 hatches as forbidden, inside [0,1]² and past it (after the extension types act: a bounded axis past its edge, a state validate's layer 2 or 3 rejects, or Φ, chart_reference §5.1's Chart::map, failing to evaluate), the axes' primary ranges playing no part and the payload's decode_failed detail never deciding it; the shared decoder's own outcomes (its DEGENERATE tags, a non-finite decode) must never mark a pixel forbidden; and in greyscale and hue mode (colour_composition §4.1) those samples must take the bounded / nothing yet class's rank 0, a forbidden region drawing the canvas background."
   source:
   - file: docs/design/principia_colour_composition.md
     section: "1.4 Categorical colour-assignment — the outcome-state default palette"
@@ -13217,18 +13267,21 @@
     section: "R-448 — Greyscale and hue modes rank the outcome class's nine classes bounded first, then collision 0–1, 0–2, 1–2, triple collision, escape body 0, 1, 2 and triple ejection: `K = 9`"
   - file: docs/design/principia_chart_reference.md
     section: 5.1 One trait, one dispatch
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: unit test
-    detail: "cargo test -p render outcome_view_failures: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), a synthetic payload's running sample, sim_failed samples of each detail (NaN in state, Inf/overflow in state, a non-finite derived quantity), decode_failed samples of each detail, a reserved state code and bounded each draw exactly #141418; on the latent chart (validate Valid everywhere), a sample carrying each decoder tag (ENERGY_UNSCALABLE, ENERGY_INFEASIBLE, M01_TINY) and a non-finite decode draws #141418 with REQ-COL-102's lane valid; a sample whose lane is forbidden draws debug_invalid(frag_xy) pixel-identical to the hatch, whatever its payload (decode_failed of any detail, or a valid outcome); a decode_failed sample the chart does not hatch draws #141418; in greyscale and hue mode running and every failure sit at rank 0 and a forbidden sample keeps the hatch; controls: an occupant that draws running in the stipple, sim_failed in the hatch, decode_failed white, or decides the hatch from decode_failed's detail, and a lane set from a decoder tag, each fail"
+    detail: "cargo test -p render outcome_view_failures: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), a synthetic payload's running sample, sim_failed samples of each detail (NaN in state, Inf/overflow in state, a non-finite derived quantity), decode_failed samples of each detail, a reserved state code and bounded each draw exactly #141418; on the latent chart (validate Valid everywhere), a sample carrying each decoder tag (ENERGY_UNSCALABLE, ENERGY_INFEASIBLE, M01_TINY) and a non-finite decode draws #141418 with REQ-COL-102's lane valid; a sample whose lane is forbidden draws the background uniform exactly, whatever its payload (decode_failed of any detail, or a valid outcome; R-467, REQ-COL-108); a decode_failed sample the chart does not mark forbidden draws #141418; in greyscale and hue mode running and every failure sit at rank 0 and a forbidden sample draws the background; controls: an occupant that draws running in the stipple, sim_failed in the hatch, decode_failed white, a forbidden sample in the hatch, or decides the forbidden drawing from decode_failed's detail, and a lane set from a decoder tag, each fail"
   rulings:
   - R-446
   - R-448
+  - R-467
   milestone: M2
-  note: "R-446 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369 (R-446): both of the chart contract's hatches (the domain's end and the universal fallback) keep the hatch, as both are \"hatched as forbidden\"; a reserved state code draws black, no physical outcome; in the three modes the outcome class holds bounded / nothing yet for running and failures. Past [0,1]² the classification is TASK-M8-05's (REQ-CHART-054). The debug views keep the hatch for failures (R-446); which view shows the η_E tags is RQ-333."
+  note: "R-446 (16 Oct 2026). Closed by TASK-M2-32. Applied per R-369 (R-446): both of the chart contract's hatches (the domain's end and the universal fallback) are classified forbidden; a reserved state code draws black, no physical outcome; in the three modes the outcome class holds bounded / nothing yet for running and failures. Past [0,1]² the classification is TASK-M8-05's (REQ-CHART-054). The debug views keep the hatch for failures (R-446); which view shows the η_E tags is RQ-333. R-467 (20 Oct 2026): a forbidden region draws the canvas background, not the hatch; TASK-M2-32 built the hatch and TASK-M2-34 changes it (REQ-COL-108), the changed statement re-checked at the M2 gate; the debug view hatches it (REQ-COL-109)."
 - id: REQ-COL-102
   area: COL
   kind: definition
-  statement: "How a sample's chart classification reaches the outcome view, so that the outcome palette draws a forbidden chart region with the hatch from the chart and not from the payload's decode_failed detail (R-446), must be defined in colour_composition §3 by the task that needs it and reviewed by the physics reviewer before merge: the ctx field, its type and values, and who fills it (CPU-side, R-26); the forbidden value is \"hatched by chart_decoder_contract Part 3\", evaluated on every pixel, inside [0,1]² and past it: after the extension types act, a bounded axis past its edge, a state validate's layer 2 or layer 3 rejects, or Φ fails, the axes' primary ranges playing no part (they decide only R-408's counting, so a pixel outside a primary range that passes is a system and draws its outcome); \"Φ fails\" is chart_reference §5.1's Chart::map failing to evaluate (non-finite, or outside its domain); the shared decoder's own outcomes (its DEGENERATE tags and a non-finite decoder output) never set the lane and draw black unless the types or validate hatch the pixel; validate's layer 3 marks forbidden a finite decoded state that breaks it, while a non-finite decoder output stays decode_failed/0, black."
+  statement: "How a sample's chart classification reaches the outcome view, so that the outcome palette draws a forbidden chart region from the chart (the canvas background in a presentation view, R-467; the hatch in the debug view) and not from the payload's decode_failed detail (R-446), must be defined in colour_composition §3 by the task that needs it and reviewed by the physics reviewer before merge: the ctx field, its type and values, and who fills it (CPU-side, R-26); the forbidden value is \"hatched by chart_decoder_contract Part 3\", evaluated on every pixel, inside [0,1]² and past it: after the extension types act, a bounded axis past its edge, a state validate's layer 2 or layer 3 rejects, or Φ fails, the axes' primary ranges playing no part (they decide only R-408's counting, so a pixel outside a primary range that passes is a system and draws its outcome); \"Φ fails\" is chart_reference §5.1's Chart::map failing to evaluate (non-finite, or outside its domain); the shared decoder's own outcomes (its DEGENERATE tags and a non-finite decoder output) never set the lane and draw black unless the types or validate hatch the pixel; validate's layer 3 marks forbidden a finite decoded state that breaks it, while a non-finite decoder output stays decode_failed/0, black."
   source:
   - file: docs/design/principia_colour_composition.md
     section: 3. The `ctx` contract
@@ -13242,14 +13295,17 @@
     section: "R-446 — \"Degenerate\" leaves the outcome view: black `#141418` means nothing has happened yet, up to the playhead, and bounded, running and every failure draw it; failures show in the debug views; forbidden chart regions keep the chart contract's hatch, decided from the chart's validity *(supersedes R-96, R-399 and R-441 as they apply to the outcome view)*"
   - file: docs/design/principia_chart_reference.md
     section: 5.1 One trait, one dispatch
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: review checklist
     detail: "colour_composition §3 lists the field with its type and values and says who fills it and from what: hatched by Part 3 (the types, a bounded edge, validate's layers 2 and 3, Φ as Chart::map), on every pixel, the primary ranges playing no part; the decoder's DEGENERATE tags and a non-finite decoder output never set it; the payload's decode_failed detail plays no part; the generated ctx declares it; cargo test -p render outcome_view_failures' forbidden and decoder-tag rows read it; physics reviewer approved"
   rulings:
   - R-72
   - R-446
+  - R-467
   milestone: M2
-  note: "R-446 (16 Oct 2026): the corpus does not say how the outcome view learns the chart's classification, which is computed CPU-side (R-26); applied per R-369 as a definition requirement (R-72). Closed by TASK-M2-32; TASK-M8-05 fills it past [0,1]² (REQ-CHART-054). Physics review 5548113767 on PR #226 (applied per R-369): P1, the lane is Part 3's hatching, not the area statistics' classifier, whose primary-range step decides counting; P2, Φ is Chart::map, and the decoder's own outcomes never set the lane."
+  note: "R-446 (16 Oct 2026): the corpus does not say how the outcome view learns the chart's classification, which is computed CPU-side (R-26); applied per R-369 as a definition requirement (R-72). Closed by TASK-M2-32; TASK-M8-05 fills it past [0,1]² (REQ-CHART-054). Physics review 5548113767 on PR #226 (applied per R-369): P1, the lane is Part 3's hatching, not the area statistics' classifier, whose primary-range step decides counting; P2, Φ is Chart::map, and the decoder's own outcomes never set the lane. R-467 (20 Oct 2026): the lane now decides the canvas background in every presentation view (REQ-COL-108) and the hatch in the debug view (REQ-COL-109); its definition (ctx.validity.forbidden) is unchanged."
 - id: REQ-COL-103
   area: COL
   statement: "The outcome palette must offer R-447's OKLab-uniform variant as a second named swatch set (preset), selectable where the swatches are edited, the sRGB set of REQ-COL-002 staying the default: bounded / nothing yet #141418; collision 1–2 #E7857A (OKLab hue 27°), collision 1–3 #6EB976 (147°), collision 2–3 #7FA2F2 (265°), triple collision #D99349 (65°), escape body 1 #B3A841 (103°), escape body 2 #D486C3 (335°), escape body 3 #09B9CD (208°), triple ejection #B790E2 (305°), the classes named as shown (R-449), each chromatic swatch at OKLab L = 0.72 and C = 0.123; with every other rule of the outcome view (REQ-COL-002, REQ-COL-101) unchanged."
@@ -13369,6 +13425,81 @@
   - R-443
   milestone: M7
   note: "Added in the PR #223 gui review: REQ-COL-085 covers chazy_class, chazy_status and chazy_structure (TASK-M7-37); chazy_escaper's views are TASK-M7-41's."
+- id: REQ-COL-108
+  area: COL
+  statement: "Every presentation view (every stain whose colour occupant is not a debug view, render contract Part 6: the outcome view, the Chazy stains and every library and user stain, in the shown layout, with the egui layer hidden in either F3 mode, in present mode, in every mode, greyscale and hue included, and in an image export) must draw no hatch: a pixel chart_decoder_contract Part 3 classifies as not a system (REQ-COL-102's lane: after the extension types act, a bounded axis past its edge, a state validate's layer 2 or 3 rejects, or Chart::map failing), inside [0,1]² and past it, must draw the canvas background, a render uniform the GUI sets to the colour its window is cleared to, with no legend key and outside every share and its total; a sim_failed sample of each detail, a decode_failed sample of each detail and tag, a reserved state code, a non-finite value a field or ramp reads (NaN, a ±∞ that is no declared sentinel) and a ramp's or compaction's invalid value (a sentinel the node marks invalid) must draw #141418, unless the node overrides its invalid colour; the \"not yet\" stipple, a declared sentinel's literal value and a declared ±∞ sentinel's style are unchanged, and the debug views (debug/ occupants) keep their own treatment."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: docs/design/principia_colour_composition.md
+    section: "1.4 Categorical colour-assignment — the outcome-state default palette"
+  - file: docs/design/principia_colour_composition.md
+    section: 3. The `ctx` contract
+  - file: docs/design/principia_colour_composition.md
+    section: 4.1 Backbone & `Option` occupants
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  verify:
+    method: unit test
+    detail: "cargo test -p render presentation_no_hatch: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), through the outcome view, a field ramp (the word length's and d_min's) and a test stain, in the default, greyscale and hue modes: a sample whose REQ-COL-102 lane is forbidden draws exactly the background uniform, inside [0,1]² and past it, whatever its payload; running (in the outcome view), sim_failed of each detail, decode_failed of each detail, a reserved state code, a NaN, a ±∞ that is no declared sentinel and the length ramp's 127 draw exactly #141418; with the node's invalid colour overridden, that colour; d_min's unset +∞ keeps the \"not yet\" stipple; no pixel of any presentation output equals debug_invalid's pattern; a debug/ field view of the same payload still draws the hatch; controls: a presentation occupant that draws the hatch for the forbidden lane, for sim_failed or for a NaN, one that draws the forbidden lane #141418 instead of the background, and one that decides the background from decode_failed's detail, each fail; cargo xtask golden: the goldens R-467 D15 lists are rendered and the hashes that change reported, none re-baselined before RQ-373's gate decision"
+  rulings:
+  - R-79
+  - R-136
+  - R-436
+  - R-446
+  - R-467
+  milestone: M2
+  rq:
+  - RQ-373
+  note: "R-467 (20 Oct 2026), D1 to D4, F3, F6. Closed by TASK-M2-34. The goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) wait for RQ-373's gate decision; m1-synthetic/known_escaper is expected unchanged. Past [0,1]² the lane is TASK-M8-05's."
+- id: REQ-COL-109
+  area: COL
+  statement: "The debug view (View › Debug view: the render's own debug-view flag, which its caller sets from RenderState's debug_view) must draw, over the active stain, every system pixel exactly as the stain draws it; a pixel REQ-COL-102's lane marks as not a system with the hatch, debug_invalid(frag_xy); a non-finite sample (a sim_failed with a non-finite detail: NaN in state, Inf or overflow in state, a non-finite derived quantity; a decode_failed of detail 0; a non-finite value the stain reads) with REQ-COL-110's NaN / Inf style; and any other sim_failed or decode_failed sample, a reserved state code included, with debug_invalid, reading the lane first, then non-finiteness, then the failure; and the render must count the figure's pixels drawn in each of the three categories, \"forbidden (chart)\", \"decode or sim failure\" and \"NaN / Inf\", for the legend's \"Debug\" key (raw pixel counts, not R-408's statistic)."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  verify:
+    method: unit test
+    detail: "cargo test -p render debug_view_styles: on the CPU twin and on the GPU, a synthetic payload with a valid outcome, a forbidden-lane sample of each payload, a sim_failed of each detail, a decode_failed of each detail and a reserved state code, through the outcome view and a field ramp: system pixels equal the stain's output with the toggle off, bit for bit; forbidden-lane pixels equal debug_invalid at their positions; non-finite samples equal the NaN / Inf style at their positions; other failures equal debug_invalid; the three counts equal the numbers of pixels drawn in each; controls: a debug view that reads the payload before the lane (a forbidden sim_failed drawn as a failure), one that draws a NaN sim_failed with debug_invalid, and a count taken through R-408's primary ranges, each fail"
+  rulings:
+  - R-136
+  - R-467
+  milestone: M2
+  note: "R-467 (20 Oct 2026), D5. Closed by TASK-M2-34; the GUI's toggle and legend are REQ-GUI-225 (mock) and REQ-GUI-227 (real engine). On review (PR #253): the render takes the flag as its own input; the contract field is TASK-M6-46's, wired to the render on the real engine by TASK-M8-46, so TASK-M2-34 does not wait for the GUI track."
+- id: REQ-COL-110
+  area: COL
+  kind: calibration
+  statement: "The NaN / Inf style of the debug view (R-467, clause 3: \"a separate style for NaN and Inf\") — a prelude function beside debug_invalid and debug_not_yet, drawing a pattern from the pixel position that is neither the hatch's diagonal stripes nor the stipple's dots — must be calibrated: its pattern and colours proposed with their evidence by the task that needs it, shown to collide with no palette entry and to be distinguishable from the hatch and the stipple as REQ-COL-055 measures (τ = 0.101, unsimulated and under each colour-vision simulation, R-429), checked by the gui reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: "Presentation layer (hand-written, small, reused by every debug view)"
+  - file: docs/design/principia_colour_composition.md
+    section: 6. Debug views as presets
+  verify:
+    method: review checklist
+    detail: "the proposal gives the pattern and its colours, measured against the outcome palette (both presets), the dbg_* palettes, the LUTs, the Chazy palettes, the hatch and the stipple, unsimulated and under each simulation, with the tightest distances printed; recorded in decisions.md at the M2 gate"
+  rulings:
+  - R-71
+  - R-429
+  - R-467
+  milestone: M2
+  note: "R-467 (20 Oct 2026), D6: the corpus gives no style for NaN and ±∞; a calibration requirement (R-71). Proposed by TASK-M2-34."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -14514,32 +14645,42 @@
   milestone: M8
 - id: REQ-GUI-078
   area: GUI
-  statement: "The Explore top bar must hold the File / View / Windows / Help menus, the Explore / Stain mode switch, Overlays ▾ with a count of overlays on, Run…, Profiler…, Export…, the keyboard breadcrumb, and a status line with t, fps, frame ms, quad count, 'budget-bound' while the frame budget binds, the undo / redo depth and 'F3 hide'."
+  statement: "The Explore top bar must hold the File / View / Windows / Help menus (View holding Home, F3 hide, \"F3 fills by: Extend / Fit\", Debug view and reset layout, R-466 to R-468), the Explore / Stain mode switch, Overlays ▾ with a count of overlays on, Run…, Profiler…, Export…, the keyboard breadcrumb, and a status line with t, fps, frame ms, quad count, 'budget-bound' while the frame budget binds, the undo / redo depth and 'F3 hide'."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 01 Explore — the everyday view
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: decisions.md
+    section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
   verify:
     method: GUI screenshot
     detail: "screenshot against 01_main.png's top bar; force the budget to bind and check 'budget-bound' appears; make two edits and check the undo depth reads 2"
   rulings:
   - R-52
+  - R-467
+  - R-468
   milestone: M8
+  note: "R-466 to R-468: the View menu's entries, in order (render_gui_spec §G2); built on the mock by TASK-M6-45, TASK-M6-46 and TASK-M6-47."
 - id: REQ-GUI-079
   area: GUI
   statement: "Overlays ▾ must hold the grouped toggles — Quadtree (tile bounds, depth colouring, priority heatmap, refine_flagged, split / merge activity), Integration (substep density, substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function, grid, Burrau lattice), Stain (class edges, t_end contours) — each with an Alt+digit shortcut, plus 'all off' and 'save as default'."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: GUI screenshot
     detail: "screenshot of the open menu against 01_main.png; each Alt+digit toggles its overlay; 'all off' clears the overlay set"
   rulings:
   - R-26
   - R-72
+  - R-467
   milestone: M8
-  note: "Where 'save as default' is stored: REQ-GUI-153 (definition)."
+  note: "Where 'save as default' is stored: REQ-GUI-153 (definition). R-467 (20 Oct 2026), D9, applied per R-369: the Chart group's \"forbidden region\" and the Integration group's \"NaN / invalid pixels\" stay as diagnostics the person turns on, off by default; with View › Debug view built they draw its styles (REQ-COL-109). Flagged. Whether the two toggles stay is RQ-374 (gui review 5585209592 of PR #253, G5): option (a), keep both off by default, is applied meanwhile; only TASK-M8-08's two lines for them wait."
 - id: REQ-GUI-080
   area: GUI
   statement: "There must be no global display bar: its controls must live in the Display window and the Overlays menu."
@@ -14910,7 +15051,7 @@
   note: "R-390: the GUI track builds the lock badge (with unlock and open in Inspector) and the gold reticle on mock data in TASK-M6-26, since 08_lock.png and 01_main.png show them (applied per R-369, review 5434766412 on PR #157); this requirement stays closed by TASK-M8-07, which wires them to the real engine's lock."
 - id: REQ-GUI-100
   area: GUI
-  statement: "Present mode must hide all chrome and Esc must return from it; with the chrome hidden the figure must fill the window as with F3 (REQ-GUI-180), past the chart's [0,1]² each axis extending by its declared type with the hatch fallback (R-407)."
+  statement: "Present mode must hide all chrome and Esc must return from it; with the chrome hidden the figure must fill the window as with F3 (REQ-GUI-180), in the mode View › F3 fills by sets (R-468): in Extend past the chart's [0,1]² each axis extending by its declared type with R-407's fallback, a forbidden pixel drawn as the canvas background (R-467); in Fit the view's square scaled to the window's shorter side, the rest the canvas background."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: Export & share
@@ -14920,14 +15061,20 @@
     section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
   - file: decisions.md
     section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: decisions.md
+    section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
   verify:
     method: GUI screenshot
-    detail: "screenshot in present mode shows only the figure, filling the window: over the shown figure's rect, with a stain that reads no screen-lane field, it is pixel-identical to the shown layout's capture, and the window outside it is covered with the extension R-407 gives, never the clear colour or the shown view stretched; Esc restores 01_main.png's layout"
+    detail: "screenshot in present mode shows only the figure, filling the window: in Extend, over the shown figure's rect, with a stain that reads no screen-lane field, it is pixel-identical to the shown layout's capture, and the window outside it is covered with the extension R-407 gives, a forbidden pixel the canvas background (R-467) and every other pixel never the clear colour, never the shown view stretched; in Fit it equals F3's Fit capture (REQ-GUI-230); Esc restores 01_main.png's layout"
   rulings:
   - R-406
   - R-407
+  - R-467
+  - R-468
   milestone: M8
-  note: "R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the same way, each point of the field where it is in the shown layout (flagged in R-406; the human spoke of F3). On the real engine the area past [0,1]² follows R-407, as REQ-GUI-180 does; TASK-M8-32 checks the fill, with the physics reviewer for that line (applied per R-369, R-407, A2)."
+  note: "R-406 (10 Oct 2026), applied per R-369: present mode hides the chrome as F3 does, so its figure fills the window the same way, each point of the field where it is in the shown layout (flagged in R-406; the human spoke of F3). On the real engine the area past [0,1]² follows R-407, as REQ-GUI-180 does; TASK-M8-32 checks the fill, with the physics reviewer for that line (applied per R-369, R-407, A2). R-467 (20 Oct 2026): a forbidden pixel is the canvas background, not the hatch; R-468 (20 Oct 2026), E6, applied per R-369 and flagged: present mode follows the F3 fill mode."
 - id: REQ-GUI-101
   area: GUI
   statement: "The Display window must offer the overlays grid, class edges, t_end contours and cursor crosshair."
@@ -15009,16 +15156,19 @@
     section: "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
   - file: decisions.md
     section: "R-446 — \"Degenerate\" leaves the outcome view: black `#141418` means nothing has happened yet, up to the playhead, and bounded, running and every failure draw it; failures show in the debug views; forbidden chart regions keep the chart contract's hatch, decided from the chart's validity *(supersedes R-96, R-399 and R-441 as they apply to the outcome view)*"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: unit test
-    detail: "for a test stain, every legend swatch colour equals the stain's shader output at the sampled input; for the outcome stain the keys are the nine flat swatches, the black one labelled \"bounded / nothing yet\", then the forbidden-region key \"forbidden region\", compared as the hatch style, not one colour; its share and the classes' shares count as R-408 counts, a domain-hatched pixel leaving every share and the total"
+    detail: "for a test stain, every legend swatch colour equals the stain's shader output at the sampled input; for the outcome stain the keys are the nine flat swatches, the black one labelled \"bounded / nothing yet\", with no \"forbidden region\" key (R-467); the classes' shares count as R-408 counts over the chart's systems, a pixel that is not a system (a domain's end or a forbidden state) leaving every share and the total"
   rulings:
   - R-53
   - R-408
   - R-446
   - R-449
+  - R-467
   milestone: M8
-  note: "R-399: the running swatch is the \"not yet\" style, not one flat colour, drawn through debug_not_yet or its CPU mirror; the comparison treats it as the style, as it treats sim_failed's hatch (R-136). R-444 and R-446 (16 Oct 2026): for the outcome stain the keys are the nine classes, the black one \"bounded / nothing yet\" a flat swatch, with no running or sim_failed key; a forbidden chart region's hatch is keyed as the chart's forbidden region and compared as the style (render_gui_spec §G6). Other stains keep the running style's key. R-449 (16 Oct 2026): every key's name comes from the one conversion function (REQ-GUI-188), 1-based; no key shows \"body 0\" or a pair id. Gui review 5548034323 on PR #226, G3 (applied per R-369): the forbidden-region key is one key after the nine, \"forbidden region\", in the hatch style, over every pixel REQ-COL-102's lane marks forbidden (both hatches); its share is §G7's \"forbidden in view\", counted as R-408 counts (render_gui_spec §G6)."
+  note: "R-399: the running swatch is the \"not yet\" style, not one flat colour, drawn through debug_not_yet or its CPU mirror; the comparison treats it as the style, as it treats sim_failed's hatch (R-136). R-444 and R-446 (16 Oct 2026): for the outcome stain the keys are the nine classes, the black one \"bounded / nothing yet\" a flat swatch, with no running or sim_failed key. Other stains keep the running style's key. R-449 (16 Oct 2026): every key's name comes from the one conversion function (REQ-GUI-188), 1-based; no key shows \"body 0\" or a pair id. Gui review 5548034323 on PR #226, G3 (applied per R-369), had added a \"forbidden region\" key in the hatch style after the nine; R-467 (20 Oct 2026) removes it from every presentation legend, a forbidden pixel being the canvas background, unkeyed, and outside every share and the total (render_gui_spec §G6); the debug view's \"Debug\" key is REQ-GUI-227's. Code review 5585240188 of PR #253, F4 (applied per R-369): the \"Debug\" key's check moves to REQ-GUI-227's verify, since TASK-M8-46 depends on TASK-M8-22 and this requirement's task cannot reach the debug view."
 - id: REQ-GUI-106
   area: GUI
   statement: "The legend must give each dimension its own key: categorical swatches with their shares of the view, a separate bar for brightness (or any second channel), ticks placed through the curve for number ramps (log-spaced for a log curve), a sphere key for direction fields, a colour square for coordinate maps, and line samples for post operations."
@@ -15074,14 +15224,17 @@
     section: 03 Chart builder
   - file: decisions.md
     section: "R-408 — Area statistics count each system once, through the axis types: a visible pixel counts only if every axis is inside its primary range; domain-hatched pixels leave the count and the total; only validity failures are forbidden *(closes RQ-263)*"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
   verify:
     method: unit test
     detail: "N% equals the fraction of a uniform grid over the view that validate rejects; screenshot against 03_chartbuilder.png"
   rulings:
   - R-26
   - R-408
+  - R-467
   milestone: M8
-  note: "R-408: 'forbidden in view' counts a visible pixel only if every axis is inside its primary range, a domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden (REQ-CHART-056, TASK-M8-05). With the egui layer shown the Chart builder's view is [0,1]², where nothing changes, so this requirement's statement and verify stand; TASK-M8-18's forbidden_fraction uses REQ-CHART-056's classification."
+  note: "R-408: 'forbidden in view' counts a visible pixel only if every axis is inside its primary range, a domain-hatched pixel leaves both the count and the total, and only validity failures are forbidden (REQ-CHART-056, TASK-M8-05). With the egui layer shown the Chart builder's view is [0,1]², where nothing changes, so this requirement's statement and verify stand; TASK-M8-18's forbidden_fraction uses REQ-CHART-056's classification. R-467 (20 Oct 2026), clause 6: the Domain preview keeps its hatch and 'forbidden in view: N%', a diagnostic for building charts, not a presentation view. Whether a builder chart may fail inside [0,1]² is RQ-372."
 - id: REQ-GUI-110
   area: GUI
   statement: "The chart builder must show a quick render (e.g. 64 × 64 at a short horizon) at the view's aspect."
@@ -16256,7 +16409,7 @@
   note: "R-405. Applied per R-369 (R-405): \"the bottom bar\" is read as the footer; and the console is a window under TASK-M6-28's window rule, Tab between its sections, the arrows within one, Esc closing it and returning the focus to whatever opened it (gui review 5478696211, G2). Closed by TASK-M6-28, which builds the console's controls (REQ-GUI-126) and each window's scope. R-409 (10 Oct 2026) restates the human's ask that the footer and the console be reached by keyboard, and adds that they follow §G3's two modes: the console's first filter is a landing in navigation mode. R-409's follow-up answer (F2) amends R-405 in part: the entry list's ↑ and ↓ scroll it only after Enter on it. TASK-M6-28 builds on TASK-M6-31's modes, through TASK-M6-27. R-450 (16 Oct 2026) amends R-405 and R-409 as they apply to the console: two scopes, the header bar (the filters, the search field, Copy, Clear, ×) and the log, the console opening on the header bar scope, × a focusable button and the log's Page Up, Page Down, Home and End. This statement stays as TASK-M6-28's (merged) record; REQ-GUI-189 and REQ-GUI-190, closed by TASK-M6-32, are the console's keyboard model as R-450 words it."
 - id: REQ-GUI-179
   area: GUI
-  statement: "On the mock engine, with the egui layer hidden by F3 and in present mode, the figure must fill the whole window, the stand-in showing more of the field at the same scale in every direction, each point of the field at the screen position it has in the shown layout, never the shown view stretched; past the shown figure's rect the stand-in must extend as an affine chart, with R-407's hatch fallback (a pixel the mock flags invalid hatched as forbidden); showing the layer, or Esc from present mode, must return the figure to its rect in the shown layout; and neither must send a SetField or add an undo entry."
+  statement: "On the mock engine, with the egui layer hidden by F3 and in present mode, the figure must fill the whole window, the stand-in showing more of the field at the same scale in every direction, each point of the field at the screen position it has in the shown layout, never the shown view stretched; past the shown figure's rect the stand-in must extend as an affine chart, with R-407's fallback (a pixel the mock flags invalid classified forbidden, drawn as the canvas background, the window's clear colour, in the presentation view and with the hatch only in View › Debug view, R-467); showing the layer, or Esc from present mode, must return the figure to its rect in the shown layout; and neither must send a SetField or add an undo entry."
   source:
   - file: decisions.md
     section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
@@ -16266,18 +16419,24 @@
     section: "R-390 — The GUI track starts now, on a mock engine, in parallel with the physics and renderer chain, which keeps priority for agent slots"
   - file: decisions.md
     section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: decisions.md
+    section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
   verify:
     method: GUI screenshot
-    detail: "cargo test -p gui f3_fills_window_mock and cargo xtask screenshot 01_main (mock_shell, mock_f3_off): with F3 off no pixel of the window is the clear colour; over the shown figure's rect the F3-off capture is pixel-identical to the F3-on one; outside it the capture equals the stand-in drawn at the same placement over the whole window; the tile-bounds overlay, on, draws the extra quads at the shown quads' size; F3 again restores the shown capture pixel for pixel; the undo depth is unchanged and no SetField is sent; cargo test -p gui f3_fallback_mock: with the mock's test hook flagging a region outside the shown rect invalid, that region is drawn hatched, never the stand-in or the clear colour; cargo test -p gui present_fills_window_mock and cargo xtask screenshot 01_main (mock_present): the present-mode capture equals the F3-off one and Esc restores the shown capture; controls: the shown view stretched to the window fails the check over the rect, a figure left in its rect fails the coverage check, and a flagged pixel drawn as the stand-in fails the fallback check"
+    detail: "cargo test -p gui f3_fills_window_mock and cargo xtask screenshot 01_main (mock_shell, mock_f3_off): with F3 off no pixel of the window but a flagged one is the clear colour; over the shown figure's rect the F3-off capture is pixel-identical to the F3-on one; outside it the capture equals the stand-in drawn at the same placement over the whole window; the tile-bounds overlay, on, draws the extra quads at the shown quads' size; F3 again restores the shown capture pixel for pixel; the undo depth is unchanged and no SetField is sent; cargo test -p gui f3_fallback_mock: with the mock's test hook flagging a region outside the shown rect invalid, that region is drawn the clear colour in the presentation capture, never the stand-in or the hatch, and the hatch, debug_invalid, at exactly its pixels with View › Debug view on (REQ-GUI-225); cargo test -p gui present_fills_window_mock and cargo xtask screenshot 01_main (mock_present): the present-mode capture equals the F3-off one and Esc restores the shown capture; controls: the shown view stretched to the window fails the check over the rect, a figure left in its rect fails the coverage check, a flagged pixel drawn as the stand-in fails the fallback check, and a flagged pixel hatched in the presentation capture fails it"
   rulings:
   - R-390
   - R-406
   - R-407
+  - R-467
+  - R-468
   milestone: M6
-  note: "R-406; closed by TASK-M6-30. RQ-248's decision (the figure kept in its rect with F3 off, the rest the clear colour) is revised. R-407 (10 Oct 2026): the mock needs affine plus the hatch fallback; applied per R-369 (R-407, A3), the mock's present mode, built by TASK-M6-28, fills the window the same way, and the fallback is exercised by a test hook, the stand-in being defined everywhere. The real engine's fill is REQ-GUI-180."
+  note: "R-406; closed by TASK-M6-30. RQ-248's decision (the figure kept in its rect with F3 off, the rest the clear colour) is revised. R-407 (10 Oct 2026): the mock needs affine plus the hatch fallback; applied per R-369 (R-407, A3), the mock's present mode, built by TASK-M6-28, fills the window the same way, and the fallback is exercised by a test hook, the stand-in being defined everywhere. The real engine's fill is REQ-GUI-180. R-467 (20 Oct 2026): the hook's flagged region draws the canvas background in the presentation view and the hatch only in View › Debug view (REQ-GUI-225, REQ-GUI-226, TASK-M6-46, which changes f3_fallback_mock's expectation). R-468 (20 Oct 2026): this fill is the Extend mode, the default; Fit is REQ-GUI-229. Gui review 5585209592 of PR #253, G1: the statement and verify are conformed to R-467, the flagged region the clear colour in the presentation view, the coverage check excluding it."
 - id: REQ-GUI-180
   area: GUI
-  statement: "On the real engine, with the egui layer hidden by F3, the figure must fill the whole window at the same scale in every direction, each point at the screen position it has in the shown layout, never the shown view stretched: inside the chart's [0,1]² nothing must change, and past it each axis must extend by its declared extension type (REQ-CHART-054), a pixel whose Φ fails to evaluate or whose state fails the chart's validity check hatched as forbidden; every window pixel must carry a labelled output, a hatched one tagged and never dropped; showing the layer must return the figure to its rect; and neither must send a SetField or add an undo entry."
+  statement: "On the real engine, with the egui layer hidden by F3 in its Extend mode (R-468), the figure must fill the whole window at the same scale in every direction, each point at the screen position it has in the shown layout, never the shown view stretched: inside the chart's [0,1]² nothing must change, and past it each axis must extend by its declared extension type (REQ-CHART-054), a pixel whose Φ fails to evaluate or whose state fails the chart's validity check classified forbidden, drawn as the canvas background in a presentation view and with the hatch in the debug view (R-467); every window pixel must carry a labelled output, a forbidden one tagged and never dropped; showing the layer must return the figure to its rect; and neither must send a SetField or add an undo entry."
   source:
   - file: decisions.md
     section: "R-406 — With the egui layer hidden by F3, the figure fills the window, showing more of the field at the same scale rather than stretching; showing the layer returns the layout"
@@ -16287,14 +16446,20 @@
     section: "R-407 — Past `[0,1]²` each chart axis extends by the type it declares: affine, periodic, pole-crossing or bounded, the default; a pixel that fails is hatched as forbidden *(closes RQ-262)*"
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: Past the unit square — each axis's extension type (R-407)
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: decisions.md
+    section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
   verify:
     method: GUI screenshot
-    detail: "cargo xtask screenshot 01_main (f3_off, f3_off_sphere, f3_off_invariant) on the real engine, with a stain that reads no screen-lane field, on the latent chart, the shape sphere's spherical map and an invariant chart: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; past [0,1]² the latent chart continues its formula, the sphere wraps in θ and crosses its poles with θ shifted by π, and the invariant chart is hatched on every side; cargo test -p gui f3_fill_labels: every window pixel carries a labelled output, each hatched one decode_failed, none dropped; F3 again restores the shown capture; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a window pixel left unlabelled fails the label check"
+    detail: "cargo xtask screenshot 01_main (f3_off, f3_off_sphere, f3_off_invariant) on the real engine, with a stain that reads no screen-lane field, on the latent chart, the shape sphere's spherical map and an invariant chart: the F3-off capture is pixel-identical to the F3-on one over the shown figure's rect; past [0,1]² the latent chart continues its formula, the sphere wraps in θ and crosses its poles with θ shifted by π, and the invariant chart is forbidden on every side, the canvas background in the presentation capture; cargo test -p gui f3_fill_labels: every window pixel carries a labelled output, each forbidden one decode_failed, none dropped; F3 again restores the shown capture; the undo depth is unchanged and no SetField is sent; controls: the shown view stretched to the window fails the check over the rect, and a window pixel left unlabelled fails the label check"
   rulings:
   - R-406
   - R-407
+  - R-467
+  - R-468
   milestone: M8
-  note: "R-406; closed by TASK-M8-05. RQ-262 ruled by R-407 (10 Oct 2026): the extension per axis type, with the hatch fallback (REQ-CHART-054). Applied per R-369 (R-407, A1): no quad request set is fixed beyond what R-407 implies, since a hatched pixel needs no integration; the pixel-identity check uses a stain that reads no screen-lane field, since ctx.screen.uv is taken over the window with F3 off (A4). Area statistics over the extended window are R-408's (RQ-263 ruled; REQ-CHART-056); this requirement computes none."
+  note: "R-406; closed by TASK-M8-05. RQ-262 ruled by R-407 (10 Oct 2026): the extension per axis type, with the hatch fallback (REQ-CHART-054). Applied per R-369 (R-407, A1): no quad request set is fixed beyond what R-407 implies, since a forbidden pixel needs no integration; the pixel-identity check uses a stain that reads no screen-lane field, since ctx.screen.uv is taken over the window with F3 off (A4). Area statistics over the extended window are R-408's (RQ-263 ruled; REQ-CHART-056); this requirement computes none. R-467 (20 Oct 2026): a forbidden pixel is the canvas background in a presentation view. R-468 (20 Oct 2026): this is the Extend mode; Fit is REQ-GUI-230 (TASK-M8-46)."
 - id: REQ-GUI-181
   area: GUI
   statement: "On the mock engine, the compass must show the slice plane inside the chart in a fixed orthographic view at its default angle, with no orbit: no drag and no key turns the view; it must have a Tilt and a Slice button beside it, Tilt the default, a click on one switching the mode and the buttons always showing the current mode; touching a slice slider must still switch it to Slice and touching a tilt to Tilt; in tilt mode a drag on it must tilt the plane, one SetField on the basis; and in slice mode a drag anywhere on it must move the slice plane along its normal, one SetField on z₀ per drag, the tilt and γ unchanged, and, locked, an excursion along that line through the anchor."
@@ -17164,6 +17329,127 @@
   - R-466
   milestone: M6
   note: "R-466; closed by TASK-M6-45. The corpus defines a chart preset only as a saved pair of axes (§G7, REQ-GUI-108); the mock's PRESETS are axis pairs, and its starting z₀ (MOCK_Z0) and σ = 1 are its initial state, not a preset's. The real engine's presets are REQ-GUI-082's (TASK-M8-06), saved presets REQ-GUI-108's."
+- id: REQ-GUI-225
+  area: GUI
+  statement: "On the mock engine, View › Debug view must be a check entry of the View menu after F3 hide and \"F3 fills by\", reached from the keyboard as a registered scope of the View menu, Enter acting as its click (§G3), sending RenderField::DebugView, RenderState's debug_view, undoable as an Overlays ▾ toggle is (R-69; one undo entry per toggle, no re-integration), off at launch and kept through F3, present mode and both fill modes; in the presentation view (the toggle off) the region the mock's test hook flags must draw the canvas background, the window's clear colour, with no hatch, and the outcome legend must hold the nine classes with no \"forbidden region\" key, the shares over the chart's pixels; with the toggle on the flagged region must draw the hatch, debug_invalid, and the legend must add a \"Debug\" key after the stain's, \"forbidden (chart)\", \"decode or sim failure\" and \"NaN / Inf\", each in its style (the NaN / Inf entry the REQ-COL-110 style, a placeholder on the mock until it is confirmed), drawn always with its pixel count and share."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_debug_view and cargo xtask screenshot 01_main (mock_debug_view): View › Debug view, clicked and reached by the keyboard (Enter on its scope), toggles the figure and the legend and sends one SetField DebugView, the undo depth one greater, and undo restores the toggle, nothing re-integrated; the outcome legend has no \"forbidden region\" key with the toggle off and the \"Debug\" key's three entries with it on, the forbidden count equal to the flagged region's pixel count in the window and 0 with no region flagged; mass-simplex analogue on the mock: with the hook flagging a region past the shown rect and F3 off (Extend), the presentation capture equals the clear colour at exactly the flagged pixels and the debug-view capture equals debug_invalid at exactly those pixels, every other pixel equal in both; controls: a presentation figure that hatches the flagged region, a legend that keeps the forbidden key, a toggle that adds no undo entry, and an entry the keyboard cannot reach, each fail"
+  rulings:
+  - R-390
+  - R-467
+  milestone: M6
+  note: "R-467 (20 Oct 2026), D5, D8, D12. Closed by TASK-M6-46. The real engine's is REQ-GUI-227. Gui review 5585209592 of PR #253 (applied per R-369): G4, the toggle is undoable, as Overlays is, so R-69 holds unchanged; G7, the entry is reached from the keyboard. TASK-M6-46 adds RenderState's debug_view and RenderField::DebugView to the engine contract."
+- id: REQ-GUI-226
+  area: GUI
+  statement: "On the mock engine, the invalid-pixel test hook (MockCanvas::flag_invalid, R-407 A3) must stay, shown only in the debug view, and must be turned on at launch by PRIN_MOCK_INVALID=\"s₀,t₀,s₁,t₁\" (the region in the field's (s, t)), read by the app and by the capture mode, a malformed value refused with a message naming it; a flagged region may reach inside [0,1]², where its pixels draw as past it and the console must log one warning per view, severity warn, source app, \"decoder bug: chart <name> fails validity inside [0,1]² at pixel (<x>, <y>), (s, t) = (<s>, <t>); <n> pixels in this view\", the first such pixel in row order from the bottom-left, logged again only when the view changes."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_invalid_hook: PRIN_MOCK_INVALID set at launch flags its region, as flag_invalid does; a malformed value is refused naming it; a region inside [0,1]² is drawn background (presentation) and hatched (debug view) and logs exactly one warning naming the mock's chart, the first pixel and the count; a pan logs it again once, a repaint without a view change does not; a region wholly past the square logs none; controls: a warning per frame, and a warning naming another pixel than the first, each fail"
+  rulings:
+  - R-407
+  - R-467
+  milestone: M6
+  note: "R-467 (20 Oct 2026), D7, D8. Closed by TASK-M6-46. How to turn it on: PRIN_MOCK_INVALID=-0.5,-0.5,0,1.5 cargo run -p gui --features mock, F3 (or zoom out), View › Debug view."
+- id: REQ-GUI-227
+  area: GUI
+  statement: "On the real engine, View › Debug view must draw REQ-COL-109's styles and the legend's \"Debug\" key with its three counts from the engine's classification, and a pixel a gallery chart classifies as not a system inside [0,1]² must log REQ-GUI-226's console warning naming the chart and the first such pixel, once per view; and the mass simplex, with the layer hidden in Extend mode and its square inside the window, must draw the canvas background in the presentation view and the hatch in the debug view at exactly the pixels the chart classifies forbidden."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui debug_view_mass_simplex and cargo xtask screenshot 01_main (f3_off_simplex, f3_off_simplex_debug) on the real engine: the chart's forbidden set over the window is non-empty, each of its pixels equals the background in the presentation capture and debug_invalid at its position in the debug-view capture, every other pixel equal in both, and the legend's forbidden count equals the set's size; with View › Debug view on, a \"Debug\" key follows the stain's keys, its three entries, \"forbidden (chart)\", \"decode or sim failure\" and \"NaN / Inf\", compared as their styles (R-136) and their counts equal to the pixels drawn in each, the presentation keys above it unchanged by the toggle (moved from REQ-GUI-105); cargo test -p gui decoder_bug_warning: a test chart forced to fail validate at one pixel inside [0,1]² logs exactly one warning naming it and that pixel, a gallery chart logs none; controls: a presentation capture that hatches, a debug view that hatches one pixel off, and a warning per frame, each fail"
+  rulings:
+  - R-467
+  milestone: M8
+  note: "R-467 (20 Oct 2026), D5, D7, D12. Closed by TASK-M8-46, physics-reviewed. A Chart-builder chart's warning is REQ-GUI-228 (RQ-372). The \"Debug\" key's legend check moved here from REQ-GUI-105 (code review 5585240188 of PR #253, F4, applied per R-369). RenderState's debug_view, TASK-M6-46's field, is wired here to TASK-M2-34's render flag."
+- id: REQ-GUI-228
+  area: GUI
+  statement: "On the real engine, a Chart-builder chart whose pixel inside [0,1]² fails validity (a physical-quantity axis's range beyond the slice's reach) must be drawn as every chart's is (the canvas background in a presentation view, the hatch in the debug view), and whether it logs REQ-GUI-226's decoder-bug warning, or the builder keeps its ranges feasible so that none arises, is RQ-372's ruling."
+  source:
+  - file: decisions.md
+    section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G12. Console (`12_console.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui builder_chart_in_square: a builder chart with an energy range reaching below the slice's potential draws those pixels background (presentation) and hatched (debug view); the warning's behaviour as RQ-372 rules, with its control"
+  rulings:
+  - R-408
+  - R-467
+  milestone: M8
+  rq:
+  - RQ-372
+  note: "R-467 (20 Oct 2026), F2. Waits for RQ-372; closed by TASK-M8-47, a leaf task."
+- id: REQ-GUI-229
+  area: GUI
+  statement: "On the mock engine, View must hold the row \"F3 fills by: Extend / Fit\", two radio options after F3 hide, reached from the keyboard as registered scopes of the View menu, Enter on an option choosing it (§G3), Extend at each launch and the choice kept for the session in ViewUI (never undoable, no SetField); with the layer hidden in Extend the figure must fill the window as REQ-GUI-179 has it; in Fit the view's square (UV ∈ [0,1]²) must be scaled uniformly by min(W, H) over its shown side and centred, never stretched, its extent ratio kept, the rest of the window the canvas background, the mock's fake quads chosen at the new screen scale (finer), the shown layout's and Extend's quads unchanged, with no SetField and no undo entry; present mode must follow the mode; and F3 again must return the shown layout and the view, in either mode, with nothing moved."
+  source:
+  - file: decisions.md
+    section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui f3_fill_modes and cargo xtask screenshot 01_main (mock_f3_fit): Extend: over the shown rect the F3-off capture is pixel-identical to the F3-on one; Fit, in a window wider than tall and one taller than wide: the square's drawn side equals the window's shorter side within one pixel, its horizontal and vertical scales equal, its (s, t) extent ratio 1 : 1, centred, every pixel outside it the clear colour, and the fake quads' deepest level greater than in Extend for k ≥ 2, the shown layout's and Extend's quads, and the mock_tile_bounds capture, unchanged; the row and its two options reached by the keyboard, Enter choosing; both modes: F3 twice returns the layout rects and (z₀, q₁, q₂) bit for bit and the capture pixel-identical, no SetField sent and the undo depth unchanged; present mode in Fit equals F3 in Fit; under Extend with the hook flagging a region past the square, background in the presentation view and the hatch in the debug view; controls: a Fit stretched to W × H, a Fit that edits the zoom (a SetField), quads left at the shown scale, a mode that persists across a relaunch, and a split rule that refines the shown layout's quads, each fail"
+  rulings:
+  - R-390
+  - R-406
+  - R-468
+  milestone: M6
+  note: "R-468 (20 Oct 2026), E1 to E6. Closed by TASK-M6-47. The real engine's Fit is REQ-GUI-230. Gui review 5585209592 of PR #253 (applied per R-369): G6, frac = quad width / (shown figure width × k), k = 1 outside Fit, so only Fit refines; G7, keyboard reach."
+- id: REQ-GUI-230
+  area: GUI
+  statement: "On the real engine, F3's Fit mode must scale the view's square to the window's shorter side, centred, never stretched, the rest the canvas background, asking for the quads the screen floor gives at the new scale (finer) and keeping those already computed, with no SetField and no undo entry; Extend must stay REQ-GUI-180's fill; and F3 twice must return the identical layout and view in either mode."
+  source:
+  - file: decisions.md
+    section: "R-468 — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › \"F3 fills by: Extend / Fit\" for the session, a view change and never an edit *(amends R-406)*"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G1. Rules that hold everywhere
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  verify:
+    method: GUI screenshot
+    detail: "cargo xtask screenshot 01_main (f3_fit, f3_fit_sphere) on the real engine and cargo test -p gui f3_fit_quads: the square's side equals the window's shorter side within one pixel, one scale on both axes, its extent ratio kept, the rest the background; the quads requested under Fit are finer than under Extend by about log₂ k levels and none computed before is evicted by the toggle; F3 twice in each mode returns the layout rects and (z₀, q₁, q₂) bit for bit; no SetField, the undo depth unchanged; controls: a stretched Fit, a Fit that sends a zoom SetField, and a Fit that keeps the shown quads, each fail; review (physics): the quads asked for at the new scale"
+  rulings:
+  - R-406
+  - R-407
+  - R-468
+  milestone: M8
+  note: R-468 (20 Oct 2026), E2, E3, E5. Closed by TASK-M8-46.
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

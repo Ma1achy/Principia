@@ -2,7 +2,7 @@
 
 - **Milestone:** M8
 - **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146
-- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28
+- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46
 - **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -25,14 +25,16 @@ The Export & share window offers image export (size in multiples of the view, fo
 ## Deliverables
 - `crates/gui/src/windows/export_share.rs` — calls the exporter (TASK-M8-30) and the M7 embedding.
 - `crates/gui/src/present.rs`.
-- Tests: `png_pxpack_roundtrip`, `state_share_roundtrip`; screenshot cases `04_windows/export`, `01_main/present`, `01_main/present_sphere`, `01_main/present_esc`.
-- Present mode's fill on the real engine (R-406, R-407): the figure given the window as F3 off gives it, using TASK-M8-05's extension per axis type and hatch fallback.
+- Tests: `png_pxpack_roundtrip`, `state_share_roundtrip`; screenshot cases `04_windows/export`, `01_main/present`, `01_main/present_sphere`, `01_main/present_esc`, `01_main/present_fit`.
+- Present mode's fill on the real engine (R-406, R-407, R-467, R-468): the figure given the window as F3 off gives it, in the mode View › F3 fills by sets: in Extend TASK-M8-05's extension per axis type, a forbidden pixel drawn as the canvas background (TASK-M2-34's render); in Fit TASK-M8-46's scaled square, the rest the canvas background.
+  *Was: "using TASK-M8-05's extension per axis type and hatch fallback". Stale, replaced by R-467 and R-468.*
 
 ## Acceptance tests
 - `cargo test -p gui png_pxpack_roundtrip` — export a PNG with pxpack, import it: the restored SimConfig + RenderState equal the exported ones field for field (REQ-TOOL-102).
 - `cargo test -p gui state_share_roundtrip` — round-trip each of JSON copy, saved file and share link: the state is equal after load (REQ-TOOL-103).
 - `cargo test -p gui state_canonical_text` — for one state, the `SimConfig` and `RenderState` text in the snapshot JSON, in the decoded share link and in the extracted pxpack record is byte-equal to the canonical serialisation (gui_state_contract §2) (REQ-TOOL-146, R-309).
-- `cargo xtask screenshot 01_main` (present, present_sphere; Esc restores the layout) and Review checklist (physics reviewer) on the fill — screenshot in present mode shows only the figure, filling the window: over the shown figure's rect it is pixel-identical to the shown layout's capture (with a stain that reads no screen-lane field), and the window outside it is covered with the extension R-407 gives (on the latent chart its formula continued; on the shape sphere θ wrapped and the poles crossed), never the clear colour or the shown view stretched; Esc restores 01_main.png's layout; control: a present mode left in the shown rect fails the coverage check; the physics reviewer checks the fill against R-407 (REQ-GUI-100).
+- `cargo xtask screenshot 01_main` (present, present_sphere, present_fit; Esc restores the layout) and Review checklist (physics reviewer) on the fill — as REQ-GUI-100's verify: screenshot in present mode shows only the figure, filling the window; in Extend, over the shown figure's rect it is pixel-identical to the shown layout's capture (with a stain that reads no screen-lane field), and the window outside it is covered with the extension R-407 gives (on the latent chart its formula continued; on the shape sphere θ wrapped and the poles crossed), a forbidden pixel the canvas background (R-467) and every other pixel never the clear colour, never the shown view stretched; in Fit (`present_fit`) the capture equals F3's Fit capture (REQ-GUI-230); Esc restores 01_main.png's layout; controls: a present mode left in the shown rect fails the coverage check, and one that hatches a forbidden pixel fails; the physics reviewer checks the fill against R-407 (REQ-GUI-100).
+  *Was: "`cargo xtask screenshot 01_main` (present, present_sphere; Esc restores the layout) and Review checklist (physics reviewer) on the fill — screenshot in present mode shows only the figure, filling the window: over the shown figure's rect it is pixel-identical to the shown layout's capture (with a stain that reads no screen-lane field), and the window outside it is covered with the extension R-407 gives (on the latent chart its formula continued; on the shape sphere θ wrapped and the poles crossed), never the clear colour or the shown view stretched; Esc restores 01_main.png's layout; control: a present mode left in the shown rect fails the coverage check; the physics reviewer checks the fill against R-407 (REQ-GUI-100).". Stale, replaced by R-467 and R-468.*
 
 ## Notes
 - R-390: TASK-M6-28 builds the Export & share window's frame on the mock engine; this task depends on it and wires it to the real export, keeping every requirement it closes.
@@ -45,3 +47,12 @@ The Export & share window offers image export (size in multiples of the view, fo
   and the physics reviewer joins for that line (applied per R-369, R-407, A2). Nothing here computes an area statistic
   over the extended window; R-408 (RQ-263 ruled) counts each system once, through the axis types (REQ-CHART-056,
   TASK-M8-05).
+- R-467 and R-468 (20 Oct 2026): present mode's fill is the F3-off figure, so it follows R-468's F3 fill setting
+  (View › F3 fills by: Extend / Fit; Extend, the default, is TASK-M8-05's extension; Fit draws the chart's own square,
+  scaled to fit, the rest the canvas background), and where it falls back past the formula's validity the pixel
+  draws the canvas background, not the hatch (R-467, which amends R-407 clause 2 as it applies to display). "Hatch
+  fallback" in the Deliverables line reads "background fallback"; the debug view, when on, shows the hatch in present
+  mode too (TASK-M8-46, REQ-GUI-227 and REQ-GUI-230).
+- R-467 D13 (code review 5585240188 of PR #253, F4; applied per R-369): this task depends on TASK-M2-34 (the
+  background), TASK-M6-47 (the mode's row) and TASK-M8-46 (Fit on the real engine); the note above's "background
+  fallback" reading is now the Deliverables and acceptance lines.
