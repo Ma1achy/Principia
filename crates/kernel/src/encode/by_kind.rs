@@ -9,7 +9,8 @@
 //!   system, which for `q = ê_k` is `z_k − z₀,k` itself.
 //! - **Kind 2, derived in block** ([`derived`], [`Residual`]): the block inverse's own value (`α`, `β`, a Jacobi
 //!   momentum component), plus the axis's residual convention. A mixed chart's derived axis has no residual: the
-//!   block's other control is frozen. An `m₀` axis must declare one ([`HoldRatio`], [`HoldEqual`]): the convention is
+//!   block's other control is frozen; the ternary mass plot's two axes pin the mass block together, and the shape
+//!   sphere's the configuration block (the chart map's inverse). An `m₀` axis must declare one ([`HoldRatio`], [`HoldEqual`]): the convention is
 //!   one function, [`Residual::masses`], which the forward axis ([`Residual::controls`]) and encode both call, so
 //!   encoding `m₀ = 0.4` under two conventions gives two `z`, and each round trip closes only under its own.
 //! - **Kind 3, invariant** ([`invariants`], [`fibre`]): state → chart coordinates evaluates `L_z(x)`, `E(x)` and `K(x)`
@@ -50,18 +51,19 @@
 //! invariant chart's frozen configuration never gives it; a configuration from elsewhere takes the rule on its computed
 //! norms ([`SeedRule::ByNorms`], the decoder's `construct_by_norms`), where it can.
 
-use spirv_std::num_traits::Float;
+use spirv_std::num_traits::{Float, FloatConst};
 
 use super::{encode, Encoded, SimplexClamp};
 use crate::chart::invariant::{l_max, InvariantChart, InvariantLE, InvariantLK, WarpReal};
 use crate::chart::mixed::{Coordinate, Quantity};
-use crate::chart::{ChartDecode, Constraint, Latent, Mixed};
+use crate::chart::{ChartDecode, Constraint, Latent, MassSimplex, Mixed, ShapeMap, ShapeSphere};
 use crate::decode::config::{self, Config};
 use crate::decode::invariant::{construct, construct_by_norms, infeasible, Outcome};
 use crate::decode::mass::{self, Masses};
 use crate::decode::{descriptor, Ic};
 use crate::generated::links::{Link, LinkReal, Selection};
 use crate::payload::PayloadReal;
+use crate::shape::shape_vec;
 
 /// `t` where `c` holds, else `f`: both operands are computed before the choice, so it is a select, not a branch.
 #[inline]
@@ -350,6 +352,99 @@ impl Residual for HoldEqual {
 #[inline]
 pub fn m0<R: Copy>(e: &Encoded<R>) -> R {
     e.canonical.ic.m[0]
+}
+
+/// The ternary mass plot: both axes kind 2 in the mass block, together pinning it, so no residual. The buffer is undone,
+/// `m′ = (m − ε_m)/(1 − 3ε_m)`, and the shear inverted, `u = m′₁`, `v = m′₂/(1 − u)`, as `crate::chart::mass_simplex`
+/// forms both; `v = 0` on the edge `u = 1`, where the decode does not read it. The fixed triangle and the rest start are
+/// [`encode_into`]'s comparison.
+impl<P: Copy> ByKind for MassSimplex<P>
+where
+    f64: From<P>,
+{
+    fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        let eps = <R as From<P>>::from(self.eps_m);
+        let k = R::one() - (eps + eps + eps);
+        let m = e.canonical.ic.m;
+        let u = (m[1] - eps) / k;
+        let rest = R::one() - u;
+        let v = select(rest == R::zero(), R::zero(), ((m[2] - eps) / k) / rest);
+        [Coord::At(u), Coord::At(v)]
+    }
+}
+
+/// `⟨a, b⟩` in three dimensions.
+#[inline]
+fn dot3<R: LinkReal>(a: [R; 3], b: [R; 3]) -> R {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+
+/// The spherical map inverted at the unit point `n`, `pi` the float type's π: `θ = atan2(n₁, n₀)` taken into
+/// `[0, 2π)`, `φ = atan2(√(n₀² + n₁²), n₂)`, `(s, t) = (θ/2π, 1 − φ/π)` (chart_reference §3.3). At the poles, `n₀ = n₁
+/// = 0`, `θ` is 0, selected, never `atan2(0, 0)` (R-437).
+#[inline]
+pub fn spherical_inverse<R: LinkReal>(n: [R; 3], pi: R) -> (R, R) {
+    let zero = R::zero();
+    let turn = pi + pi;
+    let pole = (n[0] == zero) & (n[1] == zero);
+    let theta = select(pole, zero, Float::atan2(n[1], n[0]));
+    let theta = select(theta < zero, theta + turn, theta);
+    let phi = Float::atan2(Float::sqrt(n[0] * n[0] + n[1] * n[1]), n[2]);
+    (theta / turn, R::one() - phi / pi)
+}
+
+/// The exponential map inverted at the unit point `n` about the frame `(n0, e1, e2)` with extent `scale`: the log map,
+/// `r = atan2(‖n⊥‖, n·n₀)`, `n⊥ = n − (n·n₀)·n₀`, `d = (r/‖n⊥‖)·n⊥`, then `u = (d·e₁/s + 1)/2`, `v = (d·e₂/s + 1)/2`
+/// (chart_reference §3.3). At `n⊥ = 0`, `d = 0`, selected: `n₀` itself, and at the antipode, which the map reaches only
+/// past its extent, the centre too, which [`encode_into`]'s comparison then refuses.
+#[inline]
+pub fn exponential_inverse<R: LinkReal>(
+    n: [R; 3],
+    (n0, e1, e2): ([R; 3], [R; 3], [R; 3]),
+    scale: R,
+) -> (R, R) {
+    let c = dot3(n, n0);
+    let perp = [n[0] - c * n0[0], n[1] - c * n0[1], n[2] - c * n0[2]];
+    let sin_r = Float::sqrt(dot3(perp, perp));
+    let k = select(
+        sin_r == R::zero(),
+        R::zero(),
+        Float::atan2(sin_r, c) / sin_r,
+    );
+    let d = [k * perp[0], k * perp[1], k * perp[2]];
+    let half = R::one() / (R::one() + R::one());
+    (
+        (dot3(d, e1) / scale + R::one()) * half,
+        (dot3(d, e2) / scale + R::one()) * half,
+    )
+}
+
+/// The shape sphere: both axes kind 2 in the configuration block, together pinning its two DOF, so no residual. The
+/// point is `n = shape_vec(ρ̃, λ̃)` of `C(x)` (`crate::shape`), on the upper hemisphere, `C` having mirrored the lower
+/// onto it (R-141), through the chart map's inverse. The held masses and momenta are [`encode_into`]'s comparison.
+impl<P: Copy + FloatConst> ByKind for ShapeSphere<P> {
+    fn coords<S, R>(&self, e: &Encoded<R>) -> [Coord<R>; 2]
+    where
+        S: Selection,
+        R: LinkReal + PayloadReal + From<P>,
+    {
+        let wide = <R as From<P>>::from;
+        let j = &e.blocks.jacobi;
+        let n = shape_vec(j.rho_t, j.lambda_t);
+        let (u, v) = match self.map {
+            ShapeMap::Spherical => spherical_inverse(n, wide(P::PI())),
+            ShapeMap::Exponential => exponential_inverse(
+                n,
+                (self.n0.map(wide), self.e1.map(wide), self.e2.map(wide)),
+                wide(self.scale),
+            ),
+        };
+        [Coord::At(u), Coord::At(v)]
+    }
 }
 
 // ── Kind 3: invariant ──────────────────────────────────────────────────────────────────────────────────────────────

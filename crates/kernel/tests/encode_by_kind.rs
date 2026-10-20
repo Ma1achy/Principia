@@ -2,7 +2,8 @@
 //! §3.1, §4 "fibre", §5 test 6; TASK-M2-17):
 //! - `encode_axis_kinds_raw_latent`, `_derived`, `_invariant`: a state the chart decodes, under a random gauge, lands
 //!   back on the chart at its own point, through kind 1 (latent charts, axis-aligned and oblique), kind 2 (mixed
-//!   charts) and kind 3 (both invariant charts), at unequal masses (PIT-9) (REQ-ENC-008).
+//!   charts, the ternary mass plot, the shape sphere under both maps, its lower hemisphere at its mirror) and kind 3
+//!   (both invariant charts), at unequal masses (PIT-9) (REQ-ENC-008).
 //! - `encode_axis_kinds_annotation`: an annotation axis gives no coordinate and is not compared (REQ-ENC-008).
 //! - `encode_axis_kinds_unaligned`: a state off every chart, another point of the invariant fibre among them, lands in
 //!   latent `z`, `E(x)`'s own (REQ-ENC-008).
@@ -27,16 +28,17 @@ use std::marker::PhantomData;
 use kernel::chart::invariant::{l_max, Invariant, InvariantLE, InvariantLK, WarpReal};
 use kernel::chart::mixed::{Alpha, Beta, Coordinate, PLambdaY, PRhoX, ZMu1, ZQ1};
 use kernel::chart::{
-    Chart, ChartDecode, ChartOut, Constraint, Float, Latent, Mixed, ValidationResult,
+    Chart, ChartDecode, ChartOut, Constraint, Float, Latent, MassSimplex, Mixed, ShapeMap,
+    ShapeSphere, ValidationResult,
 };
 use kernel::decode::config;
 use kernel::decode::invariant::{construct_by_norms, construct_seeded, Outcome, Seed};
 use kernel::decode::mass::{self, from_masses};
 use kernel::decode::{self as dec, Decoded, Ic};
 use kernel::encode::by_kind::{
-    component, derived, encode_into, feasibility, fibre, fibre_at, invariants, m0, plane, residual,
-    warp_inverse, ByKind, Coord, Feasibility, HoldEqual, HoldRatio, InvariantAxis, Landing, Lookup,
-    Residual, SeedRule,
+    component, derived, encode_into, exponential_inverse, feasibility, fibre, fibre_at, invariants,
+    m0, plane, residual, spherical_inverse, warp_inverse, ByKind, Coord, Feasibility, HoldEqual,
+    HoldRatio, InvariantAxis, Landing, Lookup, Residual, SeedRule,
 };
 use kernel::encode::{encode, Encoded};
 use kernel::generated::links::{Defaults, LinkReal, Selection};
@@ -89,12 +91,24 @@ fn check_lands<C: ByKind<Param = f64>>(
 
 /// Decodes from `from` at random interior points and checks each lands on `into` at the same point.
 fn sweep<C: ByKind<Param = f64>>(from: &C, into: &C, seed: u64, name: &str) {
+    sweep_with(from, into, seed, name, point, |u, v| (u, v));
+}
+
+/// [`sweep`] at the points `pick` draws, each landing at `lands(u, v)`.
+fn sweep_with<C: ByKind<Param = f64>>(
+    from: &C,
+    into: &C,
+    seed: u64,
+    name: &str,
+    pick: fn(&mut SplitMix) -> (f64, f64),
+    lands: fn(f64, f64) -> (f64, f64),
+) {
     let mut r = rng(seed);
     let mut worst = 0.0f64;
     for _ in 0..200 {
-        let (u, v) = point(&mut r);
+        let (u, v) = pick(&mut r);
         let x = gauged(from, u, v, &mut r);
-        worst = worst.max(check_lands(into, &x, (u, v), 1e-9));
+        worst = worst.max(check_lands(into, &x, lands(u, v), 1e-9));
     }
     eprintln!("{name}: worst landing residual {worst:e}");
 }
@@ -167,6 +181,53 @@ fn encode_axis_kinds_derived() {
     sweep(&mixed_ap(), &mixed_ap(), 20, "(α, p_ρ,x)");
     sweep(&mixed_qb(), &mixed_qb(), 21, "(z_q1, β)");
     sweep(&mixed_lm(), &mixed_lm(), 22, "(p_λ,y, z_μ1)");
+    let simplex = MassSimplex {
+        nu0: 0.4,
+        eps_m: 1e-4,
+    };
+    sweep(&simplex, &simplex, 23, "mass simplex");
+    // The edge u = 1, where the shear's v is not read: it lands at v = 0.
+    let x = simplex.decode_at::<Defaults, f64>(1.0, 0.7).ic;
+    check_lands(&simplex, &x, (1.0, 0.0), 1e-12);
+    // The shape sphere: the upper hemisphere lands at its own point, the lower at its mirror (θ, π − φ) (R-141).
+    let sphere = shape_sphere(ShapeMap::Spherical);
+    let upper = |r: &mut SplitMix| (uniform(r, 0.1, 0.9), uniform(r, 0.55, 0.95));
+    let lower = |r: &mut SplitMix| (uniform(r, 0.1, 0.9), uniform(r, 0.05, 0.45));
+    sweep_with(
+        &sphere,
+        &sphere,
+        24,
+        "shape sphere, upper",
+        upper,
+        |u, v| (u, v),
+    );
+    sweep_with(
+        &sphere,
+        &sphere,
+        25,
+        "shape sphere, lower",
+        lower,
+        |u, v| (u, 1.0 - v),
+    );
+    let exp = shape_sphere(ShapeMap::Exponential);
+    sweep(&exp, &exp, 26, "shape sphere, exponential map");
+}
+
+/// The shape sphere under `map`, its exponential frame about a point of the upper hemisphere, with an extent that keeps
+/// `[0,1]²` on it; the held blocks `SLICE`'s.
+fn shape_sphere(map: ShapeMap) -> ShapeSphere<f64> {
+    let (c, s) = (0.6f64, 0.8f64);
+    ShapeSphere {
+        map,
+        n0: [s * 0.6, s * 0.8, c],
+        e1: [0.8, -0.6, 0.0],
+        e2: [-c * 0.6, -c * 0.8, s],
+        scale: 0.5,
+        inertia: 1.7,
+        phase: 0.3,
+        z_mass: [SLICE[6], SLICE[7]],
+        z_mom: [SLICE[2], SLICE[3], SLICE[4], SLICE[5]],
+    }
 }
 
 negative_control!(
@@ -460,6 +521,15 @@ fn encode_axis_kinds_unaligned() {
         check_latent(&le, &x);
         check_latent(&lk, &x);
         check_latent(&m0c, &x);
+        check_latent(
+            &MassSimplex {
+                nu0: 0.4,
+                eps_m: 1e-4,
+            },
+            &x,
+        );
+        check_latent(&shape_sphere(ShapeMap::Spherical), &x);
+        check_latent(&shape_sphere(ShapeMap::Exponential), &x);
     }
     for (u, v) in [(0.7, 0.6), (0.2, 0.9), (0.5, 0.3)] {
         check_latent(&le, &other_fibre_point(&le, u, v));
@@ -576,6 +646,30 @@ fn check_primitives(z_shift: f64) {
     assert!(
         (t - 0.5).abs() < 1e-15 && ((2.0 * s - 1.0) * l_max(0.375) + 0.3).abs() < 1e-15,
         "warp ({s}, {t})"
+    );
+    // The shape sphere's inverses: θ taken into [0, 2π), the pole's θ selected as 0, the exponential centre.
+    let pi = std::f64::consts::PI;
+    let (s_neg, t_eq) = spherical_inverse([0.5f64.cos(), -(0.5f64.sin()), 0.0], pi);
+    assert!(
+        (s_neg - (1.0 - 0.5 / (2.0 * pi))).abs() < 1e-15 && (t_eq - 0.5).abs() < 1e-15,
+        "θ < 0: ({s_neg}, {t_eq})"
+    );
+    assert_eq!(
+        spherical_inverse([0.0, -0.0, 1.0], pi),
+        (0.0, 1.0),
+        "the pole"
+    );
+    assert_eq!(spherical_inverse([-1.0, 0.0, 0.0], pi), (0.5, 0.5), "θ = π");
+    let frame = ([0.0, 0.0, 1.0], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0]);
+    assert_eq!(
+        exponential_inverse([0.0, 0.0, 1.0], frame, 0.5),
+        (0.5, 0.5),
+        "the exponential centre"
+    );
+    let (eu, ev) = exponential_inverse([0.25f64.sin(), 0.0, 0.25f64.cos()], frame, 0.5);
+    assert!(
+        (eu - 0.75).abs() < 1e-15 && (ev - 0.5).abs() < 1e-15,
+        "the exponential map's ({eu}, {ev})"
     );
     // The residual: the largest component difference, NaN sticky.
     let mut y = x;
