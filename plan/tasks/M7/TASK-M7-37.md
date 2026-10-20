@@ -13,8 +13,10 @@ The Chazy stains with no lightness encoding, compositions on the backbone (R-442
 seven-class palette on `chazy_final` as the default final-motion stain, with B "bound, or nobody has left yet"; the
 four-family and Okabe–Ito variants; the status map on `chazy_status`, its own map; the categorical filter unchanged.
 In every stain collision is magenta `#DA85B6` and B is `#141418`; running samples draw their class, never the "not
-yet" stipple, and `sim_failed`, the decoder's own `decode_failed`, reserved codes and NaN draw `#141418`, B's black,
-never the hatch, which only the debug view draws (§7; R-467, ruling RQ-319). *Was: "and `sim_failed`, the decoder's
+yet" stipple, and `sim_failed`, reserved codes and NaN draw `#141418`, B's black, and the decoder's own
+`decode_failed` the canvas background, with no key or share (R-511, ruling RQ-379), never the hatch, which only the
+debug view draws (§7; R-467, ruling RQ-319). *Was (R-467): "and `sim_failed`, the decoder's own `decode_failed`,
+reserved codes and NaN draw `#141418`, B's black, never the hatch". Stale, replaced by R-511.* *Was: "and `sim_failed`, the decoder's
 own `decode_failed`, reserved codes and NaN the hatch (§7; RQ-319, decided per R-369)". Stale, replaced by R-467.* Greyscale and hue modes rank `chazy_final` B, OS, PE, HE, P, HP, H, collision, and the other
 fields' ranks are written (R-72). The palettes' separation is measured against τ and the palettes proposed for the M7
 gate (R-71).
@@ -34,6 +36,7 @@ gate (R-71).
 - `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
 - `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+- `decisions.md` § "R-511 — A `decode_failed` sample the chart does not classify as not a system draws blank in a presentation view, as a not-a-system pixel, the forbidden-region overlay drawing over it too; `sim_failed` keeps `#141418` *(closes RQ-379; amends R-467 and R-470)*"
 
 ## Deliverables
 - The seven-class, four-family, Okabe–Ito and status palettes as swatch sets, user-editable, and their presets; the
@@ -46,7 +49,8 @@ gate (R-71).
 - Golden images of each flat stain on a synthetic payload, and the calibration proposal for the palettes.
 
 ## Acceptance tests
-- `cargo test -p render chazy_validity` — through each Chazy stain, a running sample draws its class's colour and no pixel equals `debug_not_yet`'s pattern; `sim_failed`, a `decode_failed` sample with a `DEGENERATE` tag, a `decode_failed` sample from a non-finite decode, a reserved `state` code and NaN draw `#141418` on the CPU twin and in WGSL, and a forbidden-lane pixel draws the canvas background; no pixel equals `debug_invalid`'s pattern; controls: a control stain drawing the failures with `debug_invalid`'s hatch, and one drawing the forbidden lane `#141418`, each fail (REQ-COL-072; R-467).
+- `cargo test -p render chazy_validity` — through each Chazy stain, a running sample draws its class's colour and no pixel equals `debug_not_yet`'s pattern; `sim_failed`, a reserved `state` code and NaN draw `#141418` on the CPU twin and in WGSL, and a `decode_failed` sample with a `DEGENERATE` tag, a `decode_failed` sample from a non-finite decode and a forbidden-lane pixel draw the canvas background, outside every share (R-511); no pixel equals `debug_invalid`'s pattern; controls: a control stain drawing the failures with `debug_invalid`'s hatch, one drawing the forbidden lane `#141418`, and one drawing a `decode_failed` sample `#141418`, each fail (REQ-COL-072; R-467, R-511).
+  *Was (R-467): "`sim_failed`, a `decode_failed` sample with a `DEGENERATE` tag, a `decode_failed` sample from a non-finite decode, a reserved `state` code and NaN draw `#141418` on the CPU twin and in WGSL, and a forbidden-lane pixel draws the canvas background". Stale, replaced by R-511 (gui review 5587650119 of PR #255, G11).*
   *Was (RQ-319 per R-369): "… draw `debug_invalid`'s hatch on the CPU twin and in WGSL; a control stain drawing the `decode_failed` samples black `#141418` fails". Stale, replaced by R-467: the control is flipped.*
 - `cargo test -p render chazy_collision` — runs terminated at `r_coll` for each pair, a triple collision and a t = 0 collision read collision in `chazy_final` and `chazy_status` and render `#DA85B6` in every flat stain (REQ-COL-073).
 - `cargo xtask golden chazy` — synthetic payloads with one sample per class render exactly the seven-class colours (REQ-COL-075), the four-family colours (REQ-COL-076), the Okabe–Ito colours (REQ-COL-077) and the status colours (REQ-COL-080).
