@@ -617,3 +617,115 @@ fn mock_windows_move_resize_places_follow_the_drag_from_where_it_began() {
         )
     });
 }
+
+/// The console's lines that are hover edits the engine applied.
+fn hover_lines(app: &App<MockSide>) -> usize {
+    app.console()
+        .iter()
+        .filter(|e| e.message.contains("SetField Hover"))
+        .count()
+}
+
+/// A fast primary drag from `from` to `to` in one jump, held there a few frames with small moves, then released: each
+/// frame checks that no hover point was sent.
+fn fast_drag_sends_no_hover(h: &mut Headless, app: &mut App<MockSide>, from: Pos2, to: Pos2) {
+    let button = |pos, pressed| Event::PointerButton {
+        pos,
+        button: PointerButton::Primary,
+        pressed,
+        modifiers: NONE,
+    };
+    let start = hover_lines(app);
+    let mut frames = vec![
+        vec![Event::PointerMoved(from)],
+        vec![button(from, true)],
+        vec![Event::PointerMoved(from + vec2(8.0, 0.0))],
+        vec![Event::PointerMoved(to)],
+    ];
+    for k in 1..4 {
+        frames.push(vec![Event::PointerMoved(to + vec2(k as f32, k as f32))]);
+    }
+    frames.push(vec![button(to + vec2(3.0, 3.0), false)]);
+    frames.push(Vec::new());
+    for events in frames {
+        let _ = h.frame(app, events);
+        assert_eq!(
+            app.snapshot().render.hover.at,
+            None,
+            "a hover point sent mid-drag"
+        );
+        assert_eq!(hover_lines(app), start, "a Hover edit logged mid-drag");
+    }
+}
+
+#[test]
+fn mock_windows_move_resize_a_drag_across_the_figure_sends_no_hover() {
+    let figure = Layout::new(headless().screen(), headless().pixels_per_point()).figure;
+    // By the title bar, and by the left edge, each from the Trajectory panel's side across the figure in one jump.
+    for grip in [None, Some(Edges::of(true, false, false, false))] {
+        let mut app = mock_app();
+        let mut h = headless();
+        open(&mut h, &mut app, Window::Run);
+        let rect = drawn(&app, Window::Run);
+        let from = match grip {
+            None => on_title(rect),
+            Some(edges) => on_handle(rect, edges),
+        };
+        fast_drag_sends_no_hover(&mut h, &mut app, from, figure.center());
+        assert_ne!(
+            drawn(&app, Window::Run),
+            rect,
+            "{grip:?}: the window followed the drag"
+        );
+    }
+    // The control: the pointer crossing the figure with no drag does hover it.
+    let mut app = mock_app();
+    let mut h = headless();
+    let _ = h.frame(&mut app, Vec::new());
+    rejects("a pointer that hovers the figure", || {
+        for events in [
+            vec![Event::PointerMoved(figure.center())],
+            vec![Event::PointerMoved(figure.center() + vec2(5.0, 5.0))],
+            Vec::new(),
+        ] {
+            let _ = h.frame(&mut app, events);
+            assert_eq!(hover_lines(&app), 0);
+        }
+    });
+}
+
+#[test]
+fn mock_windows_move_resize_the_window_is_drawn_under_the_pointer_in_the_frame_it_moves() {
+    for grip in [None, Some(Edges::of(true, false, false, false))] {
+        let mut app = mock_app();
+        let mut h = headless();
+        open(&mut h, &mut app, Window::Run);
+        let rect = drawn(&app, Window::Run);
+        let from = match grip {
+            None => on_title(rect),
+            Some(edges) => on_handle(rect, edges),
+        };
+        let button = |pos, pressed| Event::PointerButton {
+            pos,
+            button: PointerButton::Primary,
+            pressed,
+            modifiers: NONE,
+        };
+        let _ = h.frame(&mut app, vec![Event::PointerMoved(from)]);
+        let _ = h.frame(&mut app, vec![button(from, true)]);
+        let _ = h.frame(&mut app, vec![Event::PointerMoved(from + vec2(-10.0, 0.0))]);
+        let by = vec2(-200.0, 0.0);
+        let _ = h.frame(&mut app, vec![Event::PointerMoved(from + by)]);
+        // This frame's drag is where the window was drawn this frame, not the frame before's.
+        let now = drawn(&app, Window::Run);
+        let want = rect.min.x + by.x;
+        assert!(
+            (now.min.x - want).abs() <= 1.0,
+            "{grip:?}: drawn at {now:?}, not at x {want}"
+        );
+        let _ = h.frame(&mut app, vec![button(from + by, false)]);
+        rejects("a window a frame behind the pointer", || {
+            assert!((rect.min.x + by.x / 2.0 - want).abs() <= 1.0)
+        });
+    }
+}

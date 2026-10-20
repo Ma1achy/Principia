@@ -235,21 +235,45 @@ impl Keys<'_> {
     }
 }
 
-/// What drawing a window's frame gave: whether it is still open, and what of it a drag holds.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct Framed {
-    /// False once its title row's × is clicked.
-    pub open: bool,
-    /// Its title bar, or edges of it, while a drag holds them (R-461): the console's never.
-    pub held: Option<place::Grip>,
+/// The id of the title bar of the window of scope `scope`: the widget a drag on it holds.
+fn title_bar_id(scope: ScopeId) -> Id {
+    Id::new(("title_bar", scope))
+}
+
+/// The id of the handle of `edges` of the window of scope `scope`.
+fn edge_id(scope: ScopeId, edges: place::Edges) -> Id {
+    Id::new((
+        "window_edge",
+        scope,
+        edges.left,
+        edges.right,
+        edges.top,
+        edges.bottom,
+    ))
+}
+
+/// What of `entry`'s window a drag holds this frame, if anything: its title bar, or edges of it (R-461). egui decides
+/// the drag as the frame begins, so a caller reads it before drawing anything: the window is drawn where this frame's
+/// drag puts it, under the pointer, and the figure takes no hover from a pointer carrying a window.
+pub fn held(ctx: &egui::Context, entry: &Entry) -> Option<place::Grip> {
+    // The console lays no title bar nor edges, so no drag holds it.
+    let dragged = ctx.dragged_id()?;
+    if dragged == title_bar_id(entry.scope) {
+        return Some(place::Grip::Title);
+    }
+    place::Edges::ALL
+        .into_iter()
+        .find(|e| dragged == edge_id(entry.scope, *e))
+        .map(place::Grip::Edges)
 }
 
 /// Draws `entry`'s window's frame at `rect`, its content scrolling when `scroll`, the window's scope placed on its
 /// rect. Every window but the console starts with a title row: its title, and its × at the right, the scope
 /// `entry.close` (the audit's finding: egui's own title-bar × is outside the scope tree, which no key reaches); the
 /// console's header bar holds its title and its × (R-450). Every window but the console is dragged by its title bar,
-/// off its ×, and resized from its edges and corners (R-461; `place`): the frame reports the drag, and the caller moves
-/// the window, egui drawing it where it is told.
+/// off its ×, and resized from its edges and corners (R-461; `place`): the frame lays their widgets, the caller reads
+/// the drag ([`held`]) and moves the window, egui drawing it where it is told. Returns whether it is still open: false
+/// once its title row's × is clicked.
 pub fn frame(
     ctx: &egui::Context,
     entry: &Entry,
@@ -257,13 +281,10 @@ pub fn frame(
     keys: &mut Keys<'_>,
     scroll: bool,
     add: impl FnOnce(&mut Ui, &mut Keys<'_>),
-) -> Framed {
+) -> bool {
     let (scope, title) = (entry.scope, entry.title);
     let movable = place::movable(entry.window);
-    let mut framed = Framed {
-        open: true,
-        held: None,
-    };
+    let mut open = true;
     let shown = egui::Window::new(title)
         .id(Id::new(("window", scope)))
         // The size first, then the rect: egui lays a new window out in an invisible sizing pass, at its default size
@@ -283,14 +304,11 @@ pub fn frame(
         .show(ctx, |ui| {
             if movable {
                 let close = title_row(ui, keys, title, entry.close);
-                framed.open = !close.clicked();
+                open = !close.clicked();
                 // The title bar off the ×, laid after the title row so a drag on its title holds it.
                 let mut bar = place::title_bar(rect);
                 bar.max.x = bar.max.x.min(close.rect.min.x);
-                let bar = ui.interact(bar, Id::new(("title_bar", scope)), Sense::drag());
-                if bar.dragged() {
-                    framed.held = Some(place::Grip::Title);
-                }
+                let _ = ui.interact(bar, title_bar_id(scope), Sense::drag());
             }
             if scroll {
                 ScrollArea::vertical()
@@ -304,46 +322,25 @@ pub fn frame(
     if let Some(shown) = shown {
         keys.keyboard.place(scope, shown.response.rect);
         if movable {
-            let layer = shown.response.layer_id;
-            if let Some(edges) = edge_handles(ctx, layer, scope, shown.response.rect) {
-                framed.held = Some(place::Grip::Edges(edges));
-            }
+            edge_handles(ctx, shown.response.layer_id, scope, shown.response.rect);
         }
     }
-    framed
+    open
 }
 
 /// Lays the edge and corner handles of the window at `rect` on its `layer`, above its content, the corners last so
-/// they take priority; shows the resize cursor over one. Returns the edges a drag holds, if any.
-fn edge_handles(
-    ctx: &egui::Context,
-    layer: LayerId,
-    scope: ScopeId,
-    rect: Rect,
-) -> Option<place::Edges> {
+/// they take priority; shows the resize cursor over one, or the one a drag holds.
+fn edge_handles(ctx: &egui::Context, layer: LayerId, scope: ScopeId, rect: Rect) {
     let builder = UiBuilder::new()
         .layer_id(layer)
         .max_rect(ctx.content_rect());
     let ui = Ui::new(ctx.clone(), Id::new(("window_edges", scope)), builder);
-    let mut held = None;
     for edges in place::Edges::ALL {
-        let id = Id::new((
-            "window_edge",
-            scope,
-            edges.left,
-            edges.right,
-            edges.top,
-            edges.bottom,
-        ));
-        let handle = ui.interact(edges.handle(rect), id, Sense::drag());
+        let handle = ui.interact(edges.handle(rect), edge_id(scope, edges), Sense::drag());
         if handle.hovered() || handle.dragged() {
             ctx.set_cursor_icon(edges.cursor());
         }
-        if handle.dragged() {
-            held = Some(edges);
-        }
     }
-    held
 }
 
 /// Draws a window's title row: `title`, centred, and its × at the right, placed as scope `close`; then a separator.

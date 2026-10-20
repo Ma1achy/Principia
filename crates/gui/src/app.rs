@@ -714,9 +714,15 @@ impl<S: EngineSide> App<S> {
         }
         let ctx = ui.ctx().clone();
         let pointer = ctx.pointer_hover_pos();
-        let over_figure = pointer
-            .and_then(|p| ctx.layer_id_at(p))
-            .is_none_or(|layer| layer == ui.layer_id());
+        // A pointer carrying a window, by its title bar or an edge, hovers no figure point (R-461; gui_state_contract
+        // §2's hover is the figure point under the cursor).
+        let carrying = windows::REGISTRY
+            .iter()
+            .any(|e| windows::held(&ctx, e).is_some());
+        let over_figure = !carrying
+            && pointer
+                .and_then(|p| ctx.layer_id_at(p))
+                .is_none_or(|layer| layer == ui.layer_id());
         self.send_hover(explore::hover_label::figure_point(
             layout.figure,
             pointer,
@@ -916,14 +922,23 @@ impl<S: EngineSide> App<S> {
         for window in open {
             let e = windows::entry(window);
             let default = windows::rect(window, layout);
-            let rect = if windows::place::movable(window) {
+            let mut rect = if windows::place::movable(window) {
                 self.places.shown(window, default, layout.window)
             } else {
                 default
             };
+            // This frame's drag first, so the window is drawn under the pointer, never a frame behind it.
+            if let Some(grip) = windows::held(ctx, e) {
+                let total = ctx
+                    .input(|i| i.pointer.total_drag_delta())
+                    .unwrap_or_default();
+                self.places.drag(window, grip, rect, total, layout.window);
+                rect = self.places.shown(window, default, layout.window);
+                held = true;
+            }
             let w = &mut self.windows;
             let snapshot = &self.snapshot;
-            let framed = windows::frame(
+            let still = windows::frame(
                 ctx,
                 e,
                 rect,
@@ -974,15 +989,8 @@ impl<S: EngineSide> App<S> {
                     }
                 },
             );
-            if !framed.open {
+            if !still {
                 closed.push(window);
-            }
-            if let Some(grip) = framed.held {
-                let total = ctx
-                    .input(|i| i.pointer.total_drag_delta())
-                    .unwrap_or_default();
-                self.places.drag(window, grip, rect, total, layout.window);
-                held = true;
             }
         }
         (closed, held)
