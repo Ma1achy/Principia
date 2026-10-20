@@ -11,6 +11,11 @@
 //! press. The menus are scopes too: the focus inside a menu opens it, and a menu the mouse opens takes the focus. In
 //! either mode the letter and Space shortcuts are egui's to read, Ctrl+Z is never the layer's, and `?` opens the
 //! shortcuts (R-409 F1, G1).
+//!
+//! Keyboard navigation is on or off, apart from the focus (render_gui_spec §G3; R-460, R-464): the layer's own flag,
+//! never `ViewUI`'s. Any key press turns it on, and any pointer press, a click's or a drag's, turns it off; a scroll
+//! or a hover leaves it. The focus moves as ever, whoever moved it, so a window the mouse opened has the focus on its
+//! landing with keyboard navigation off. Enter in navigation mode, while it is off, only turns it on, without acting.
 
 pub mod keymap;
 pub mod overlay;
@@ -46,6 +51,9 @@ struct Press {
     key: Key,
     modifiers: Modifiers,
     pressed: bool,
+    /// Pressed while keyboard navigation was off: an Enter in navigation mode then only turns it on (R-460 H1, R-464
+    /// M2).
+    reveal: bool,
 }
 
 /// What the layer took from the raw input, in order.
@@ -81,6 +89,8 @@ pub struct Keyboard {
     openers: Vec<(ScopeId, Vec<String>)>,
     /// The windows Esc left in the last run, for the app to close.
     left: Vec<ScopeId>,
+    /// Whether keyboard navigation is on: the ring and the breadcrumb's focus path drawn (R-460 H4, R-464).
+    navigating: bool,
 }
 
 impl Default for Keyboard {
@@ -121,6 +131,7 @@ impl Keyboard {
             typing: None,
             openers: Vec::new(),
             left: Vec::new(),
+            navigating: false,
         }
     }
 
@@ -150,6 +161,20 @@ impl Keyboard {
         self.typing
     }
 
+    /// Whether keyboard navigation is on: the ring and the breadcrumb's focus path are drawn only while it is
+    /// (render_gui_spec §G3; R-460 H4, R-464).
+    pub fn navigating(&self) -> bool {
+        self.navigating
+    }
+
+    /// Follows keyboard navigation through `raw`'s events while the layer takes no keys (the egui layer hidden, or
+    /// present mode): a key press turns it on, a pointer press off (R-460, R-464).
+    pub fn follow_input(&mut self, raw: &RawInput) {
+        for event in &raw.events {
+            self.navigating = navigation_after(self.navigating, event);
+        }
+    }
+
     /// Takes the table's keys out of `raw`, before egui's pass sees them, and the release of each key whose press it
     /// took; the rest are egui's, and, while the overlay is closed, so is every key while a text entry the mouse
     /// focused that is no text scope holds the keyboard, and every key but Esc, Enter, Tab and Shift+Tab while a text
@@ -171,70 +196,77 @@ impl Keyboard {
             pending,
             down,
             swallowed,
+            navigating,
             ..
         } = self;
-        raw.events.retain(|event| match *event {
-            Event::WindowFocused(false) => {
-                down.clear();
-                pending.push(Taken::FocusLost);
-                true
-            }
-            Event::Key {
-                key,
-                pressed,
-                repeat: system_repeat,
-                modifiers,
-                ..
-            } => {
-                let layers = down.contains(&key);
-                let press = Taken::Key(Press {
-                    key,
-                    modifiers,
-                    pressed,
-                });
-                if !pressed {
-                    if layers {
-                        down.retain(|k| *k != key);
-                        pending.push(press);
-                    }
-                    return !layers;
-                }
-                if system_repeat {
-                    return !layers;
-                }
-                let Some(command) = keymap::command(key, modifiers) else {
-                    return true;
-                };
-                if aside || (typing && !keymap::ends_typing(command)) {
-                    return true;
-                }
-                if !layers {
-                    down.push(key);
-                }
-                pending.push(press);
-                false
-            }
-            Event::PointerButton {
-                pos,
-                button,
-                pressed,
-                ..
-            } => {
-                if pressed {
-                    let Some(frame) = overlay else {
-                        return true;
-                    };
-                    close_overlay |= !frame.is_some_and(|r| r.contains(pos));
-                    swallowed.push(button);
-                    false
-                } else if let Some(i) = swallowed.iter().position(|b| *b == button) {
-                    swallowed.remove(i);
-                    false
-                } else {
+        raw.events.retain(|event| {
+            // Keyboard navigation as it was before this event, which then turns it on or off (R-460, R-464).
+            let was = *navigating;
+            *navigating = navigation_after(was, event);
+            match *event {
+                Event::WindowFocused(false) => {
+                    down.clear();
+                    pending.push(Taken::FocusLost);
                     true
                 }
+                Event::Key {
+                    key,
+                    pressed,
+                    repeat: system_repeat,
+                    modifiers,
+                    ..
+                } => {
+                    let layers = down.contains(&key);
+                    let press = Taken::Key(Press {
+                        key,
+                        modifiers,
+                        pressed,
+                        reveal: !was,
+                    });
+                    if !pressed {
+                        if layers {
+                            down.retain(|k| *k != key);
+                            pending.push(press);
+                        }
+                        return !layers;
+                    }
+                    if system_repeat {
+                        return !layers;
+                    }
+                    let Some(command) = keymap::command(key, modifiers) else {
+                        return true;
+                    };
+                    if aside || (typing && !keymap::ends_typing(command)) {
+                        return true;
+                    }
+                    if !layers {
+                        down.push(key);
+                    }
+                    pending.push(press);
+                    false
+                }
+                Event::PointerButton {
+                    pos,
+                    button,
+                    pressed,
+                    ..
+                } => {
+                    if pressed {
+                        let Some(frame) = overlay else {
+                            return true;
+                        };
+                        close_overlay |= !frame.is_some_and(|r| r.contains(pos));
+                        swallowed.push(button);
+                        false
+                    } else if let Some(i) = swallowed.iter().position(|b| *b == button) {
+                        swallowed.remove(i);
+                        false
+                    } else {
+                        true
+                    }
+                }
+                _ => true,
             }
-            _ => true,
         });
         if close_overlay {
             self.shortcuts_open = false;
@@ -284,6 +316,11 @@ impl Keyboard {
                 continue;
             }
             if let Some(command) = keymap::command(press.key, press.modifiers) {
+                // Enter in navigation mode with keyboard navigation off only turns it on and shows the ring where
+                // the focus is, so nothing unseen is pressed (R-460 H1, R-464 M2).
+                if press.reveal && command == Command::Enter && focus.mode == KeyMode::Navigation {
+                    continue;
+                }
                 fired.push((command, press.modifiers));
                 if keymap::repeats(command) {
                     self.repeat.press(press.key, press.modifiers, now);
@@ -626,6 +663,22 @@ impl Keyboard {
             .rev()
             .find(|(i, _)| *i == id)
             .map(|(_, p)| *p)
+    }
+}
+
+/// Keyboard navigation after `event`, from `navigating` before it: any key press turns it on, a modifier pressed alone
+/// being no event of egui's (Cmd+C, X and V come as their own events, a character with no key of egui's as its text);
+/// any pointer press, the start of a click or a drag, turns it off; everything else, a scroll and a hover among them,
+/// leaves it (R-460 H1, R-464 M2, M3).
+fn navigation_after(navigating: bool, event: &Event) -> bool {
+    match event {
+        Event::Key { pressed: true, .. }
+        | Event::Text(_)
+        | Event::Copy
+        | Event::Cut
+        | Event::Paste(_) => true,
+        Event::PointerButton { pressed: true, .. } => false,
+        _ => navigating,
     }
 }
 

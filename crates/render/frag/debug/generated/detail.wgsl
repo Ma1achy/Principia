@@ -4,10 +4,12 @@
 // through `SimState.detail` and `SimState.state`; its test, `catalogue_view_detail` in
 // `crates/kernel/tests/catalogue_views/generated.rs`, reads it through their Rust twins. Its colouring is the union's,
 // keyed by `state` (debug_tooling_plan §B; dd_colouring §3.7; `ledger::gen::catalogue::detail_segments`, the legend's
-// data): each state's palette segment is four classes of `dbg_cat(·, 17u)`, one per code: escape (0 body 0, 1 body 1, 2
-// body 2, 3 all three: triple ejection); collision (0 pair 0: bodies 1–2, 1 pair 1: bodies 0–2, 2 pair 2: bodies 0–1, 3
-// all three: triple collision); sim_failed (0 NaN in state, 1 Inf/overflow in state, 2 non-finite derived quantity, 3
-// reserved); decode_failed (0 non-finite decode output, 1 degenerate configuration, 2 invalid mass construction, 3
+// data): each state's palette segment is four classes of `dbg_cat(·, 17u)`, one per code, each code with its legend's
+// key, the name a person reads (R-449; `ledger::display`): escape (0 = escape body 1, 1 = escape body 2, 2 = escape
+// body 3, 3 = triple ejection); collision (0 = collision 2–3, 1 = collision 1–3, 2 = collision 1–2, 3 = triple
+// collision); sim_failed (0 = sim_failed: NaN in state, 1 = sim_failed: Inf/overflow in state, 2 = sim_failed:
+// non-finite derived quantity, 3 = sim_failed: reserved); decode_failed (0 = decode_failed: non-finite decode output, 1
+// = decode_failed: degenerate configuration, 2 = decode_failed: invalid mass construction, 3 = decode_failed:
 // other/reserved). Every other state, bounded, running and the reserved codes, has no `detail` and draws blank, black,
 // class 0 (payload §2).
 fn colour(ctx: Ctx) -> vec3<f32> {

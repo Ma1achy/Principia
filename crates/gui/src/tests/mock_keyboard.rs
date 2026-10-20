@@ -10,7 +10,7 @@ use std::sync::Arc;
 use eframe::egui::{self, Event, Key, Modifiers};
 use engine::contract::view_ui::{Focus, KeyMode, Mode};
 
-use super::support::{click, focus, frame_texts, headless, mock_app, press, rejects};
+use super::support::{click, focus, frame_texts, headless, mock_app, press, rejects, UNBOUND};
 use crate::capture::{shoot, Shot, Step, PIXELS_PER_POINT, SIZE, STEPS};
 use crate::explore::breadcrumb::{GLYPH, RING_WIDTH};
 use crate::explore::top_bar::{CONTROLS, KEYS_ENTRY};
@@ -1273,8 +1273,11 @@ fn mock_keyboard_registration() {
         .register(None, Scope::control("big_control", "Big"));
     let mut big = at(&["big_control"]);
     let ctx = egui::Context::default();
+    // A key first turns keyboard navigation on, so the Enter acts rather than only showing the ring (R-464 M2).
     let mut raw = egui::RawInput {
-        events: crate::capture::key(Key::Enter, NONE)[0].clone(),
+        events: [UNBOUND, Key::Enter]
+            .map(|k| crate::capture::key(k, NONE)[0][0].clone())
+            .to_vec(),
         ..Default::default()
     };
     keyboard.take_keys(&ctx, &mut raw);
