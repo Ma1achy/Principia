@@ -2976,6 +2976,26 @@
   - R-537
   milestone: M8
   note: "R-537 EX7(g). Closed by TASK-M8-56; REQ-CHART-056's statistics, read at the canonical address. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-080
+  area: CHART
+  statement: "Along an axis that mixes a periodic chart parameter with a non-periodic coordinate (a tilt, R-473), the chart must be affine (R-538 TF2.2; RQ-430 (a)): no image is drawn there and R-537 EX7(b)'s canonical address must not fold it, folding applying along an axis only where every term with non-zero weight has that period; the untilted shape sphere's maps stand."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: decisions.md
+    section: "R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Past the unit square — each axis's extension type (R-407)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel tilted_periodic_not_folded (R-538 T17): on the shape sphere tilted 30° toward z_q3 the systems decoded at s and s + 2π/cos τ differ and their quads have different canonical addresses, while on the untilted sphere the θ period still folds (R-537 EX7(b)); control: drawing the tilted chart with periodic repeats (folding s by 2π/cos τ) fails; review (physics)"
+  rulings:
+  - R-472
+  - R-473
+  - R-537
+  - R-538
+  milestone: M8
+  note: "R-538 TF2.2 (J8). Closed by TASK-M8-56. RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -18657,7 +18677,7 @@
   note: "R-537 EX9 (U13, U15). Closed by TASK-M8-55. The round-trip rule (RT1) and the steganographic tier 1 are ruled on unmerged branches; when they merge they apply here as to every export."
 - id: REQ-GUI-271
   area: GUI
-  statement: "A new trace must take principia_lines.md §8's defaults (R-538 TM2): icon set Principia, icon size 1.4×, syzygy markers off (style from the icon set), stutters faded, leaving and re-entering the reach on, the end event icon on, off-screen icons pinned faint to the edge on, window chevrons, seams and joined jumps off, length to the head with everything from t = 0, the tail off (Tail only, Δt 3 when on), the rest not shown faintly, the head marker labelled with its time on, time ticks every 2 labelled, direction arrows filled triangles of 8 px every Δt 1.0, width 2.2 px, the hover and pinned trace #FFF27A and kept traces the trace palette in turn (#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2); each setting must be a control of the trace's Lines ▾ entry, in that order, one undoable SetField that re-integrates nothing."
+  statement: "A new trace must take principia_lines.md §8's defaults (R-538 TM2): icon set Principia, icon size 1.4×, syzygy markers off (style from the icon set), stutters faded, leaving and re-entering the reach on, the end event icon on, off-screen icons pinned faint to the edge on, window chevrons, seams and joined jumps off, length to the head with everything from t = 0 (to its end while the playhead is neither played nor scrubbed, TF3), the tail off (Tail only, Δt 3 when on), the rest not shown faintly, the head marker labelled with its time on, time ticks every 2 labelled, direction arrows filled triangles of 8 px every Δt 1.0, width 2.2 px, the hover and pinned trace #FFF27A and kept traces the trace palette in turn (#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2); each setting must be a control of the trace's Lines ▾ entry, in that order, one undoable SetField that re-integrates nothing."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -18669,15 +18689,15 @@
     section: G2. Explore — the everyday view (`01_main.png`)
   verify:
     method: unit test
-    detail: "cargo test -p render trace_defaults (R-538 T1): a new trace draws from t = 0 to the head with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each control's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail"
+    detail: "cargo test -p render trace_defaults (R-538 T1): a new trace, while the playhead plays, draws from t = 0 to the head (paused, to its end: REQ-GUI-281) with no tail, no ghost and no syzygy markers, and its Trace value equals the defaults above field by field; each control's edit is one undo entry and leaves the sim key and the quad requests unchanged; controls: a fixed tail length, or syzygies on by default, fail"
   rulings:
   - R-476
   - R-538
   milestone: M8
-  note: R-538 TM2 (I1, I2). Closed by TASK-M8-58.
+  note: "R-538 TM2 (I1, I2). Closed by TASK-M8-58. R-538 TF3 (J11): T1 is measured while playing."
 - id: REQ-GUI-272
   area: GUI
-  statement: "A trace's markers must be drawn from the chosen icon set (Principia the default; Arrows, Pictures, Orbits; R-538 TM3, TM4): a star at the start (Pictures: the initial triangle in body colours, RQ-413 (a)), each end event its own icon in its outcome's colour from the active outcome palette (pair collision, triple collision with detail = 3, escape, triple ejection with detail = 3, horizon), \"?\" for an incomplete run with its last stretch dashed, the leave and re-enter rings of the chart's reach with the line dashed between them, the optional window chevrons and seam ticks, each icon over a dark halo #0B0B0E with light ink #F5F4F0; there must be no double-escape icon."
+  statement: "A trace's markers must be drawn from the chosen icon set (Principia the default; Arrows, Pictures, Orbits; R-538 TM3, TM4): a star at the start (Pictures: the initial triangle in body colours, RQ-413 (a)), each end event its own icon in its outcome's colour from the active outcome palette (pair collision, triple collision with detail = 3, escape, triple ejection with detail = 3, horizon), \"?\" for an incomplete run with its last stretch dashed, the leave and re-enter rings of the chart's reach, where R-538 TF1 says the trace leaves (REQ-GUI-277), with the line dashed between them, the optional window chevrons and seam ticks, each icon over a dark halo #0B0B0E with light ink #F5F4F0; there must be no double-escape icon."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -18692,7 +18712,7 @@
   - R-449
   - R-538
   milestone: M8
-  note: "R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a) applied meanwhile."
+  note: "R-538 TM3, TM4 (I3 to I6). Closed by TASK-M8-58. RQ-413 (a) applied meanwhile. R-538 TF1 (J3): where the trace leaves is REQ-GUI-277's."
 - id: REQ-GUI-273
   area: GUI
   statement: "When syzygy markers are on (R-538 TM5), each syzygy, a sign change of R-14's w between consecutive states, must be marked where the drawn line crosses w = 0, interpolated between the two samples, never at a sample; Principia's and Arrows' o–o–o must draw three discs in the body colours in the order the bodies lie on the line (the outer pair lowest-numbered first, the middle body in the centre), on a line #D6D3CB, dark-haloed; a stutter (the same middle body twice running) must be drawn faded unless that option is off; on a chart that carries the y-momenta a marker must be drawn at both ends of the jump; where a syzygy and an end event coincide the end event draws on top (RQ-414 (a))."
@@ -18744,7 +18764,7 @@
   note: "R-537 EX6, R-538 TM7 (I10). Closed by TASK-M8-58, after TASK-M8-55's repeats. RQ-412 (a) applied meanwhile."
 - id: REQ-GUI-276
   area: GUI
-  statement: "A trace must never be drawn through or started in a pixel that is not a system (R-538 TM8): every sample encoded into the chart, a sample whose chart point fails validate's layers 2 and 3 not drawn and the line broken there, the readout counting such samples (\"in forbidden: N samples\") and a non-zero count logged as an encode or chart-map bug in the console; a click on such a pixel must integrate nothing and draw the red ✕ (R-537), and hover there show the readout (RQ-417 (b) meanwhile) and no trace; on the mass simplex a run's chart point must not move (its masses constant), its trace a fading dot."
+  statement: "A trace must never be drawn through or started in a pixel that is not a system (R-538 TM8): every sample encoded into the chart, a sample whose chart point, on the shown axes after the types fold it, fails validate's layers 2 and 3 (never the lookup ladder on the sample's whole state, RQ-429 (a)) not drawn and the line broken there, the readout counting such samples (\"in forbidden: N samples\") and a non-zero count logged as an encode or chart-map bug in the console, a sample projected past a curve axis's bounded edge counted apart (REQ-GUI-280, RQ-425 (a)); a click on such a pixel must integrate nothing and draw the red ✕ (R-537), and hover there show the readout (RQ-417 (b) meanwhile) and no trace; on the mass simplex a run's chart point must not move (its masses constant), its trace a fading dot."
   source:
   - file: decisions.md
     section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
@@ -18758,7 +18778,123 @@
   - R-470
   - R-538
   milestone: M8
-  note: "R-538 TM8 (I7, I11). Closed by TASK-M8-58. RQ-417 (b) applied meanwhile to the readout."
+  note: "R-538 TM8 (I7, I11). Closed by TASK-M8-58. RQ-417 (b) applied meanwhile to the readout. R-538 TF2.1, TF1 (J5, J10): RQ-425 (a) and RQ-429 (a) applied meanwhile."
+- id: REQ-GUI-277
+  area: GUI
+  statement: "A trace must leave a chart only where a coordinate entering a shown axis with non-zero weight has no value (R-538 TF1): ±∞ from a saturated link, NaN, or a bounded axis's inverse outside its domain; hidden coordinates never make it leave, they are fade, and moving off the slice is never leaving; θ and φ of the shape sphere, alone or in any mix, a mass, and a physical quantity whose warp's inverse has a value never make it leave; a latent coordinate behind a saturating link makes it leave exactly when it has non-zero weight in a shown axis (on a tilt toward z_q, while the target's |q₃| ≥ q_max, RQ-424 (a)), and never on the latent z_α × z_β chart through a momentum; where it leaves, the reach rings mark it and the line is dashed until it re-enters; the trace must never run the inverse encode contract's lookup and lock validation (Part 6) on a sample's state, but encode the shown coordinates without clamping and check each shown axis on its own (TF2.1; RQ-429 (a))."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/design/principia_trajectory_viewing.md
+    section: "3. Hover trace — projection onto the current (tilted, sliced) plane"
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Part 6 — The canonical inverse policy, completed
+  verify:
+    method: unit test
+    detail: "cargo test -p render trace_leaves_per_axis (R-538 T14, T15): on the latent z_α × z_β chart a run whose momentum passes q_max keeps every sample's point (T14); over 100 runs, on the shape sphere tilted 30° toward z_q3 the trace leaves exactly while the target's |q₃| ≥ q_max, and on the same tilt toward p_λ,y it never leaves (T15); controls: reusing the lookup/lock validation drops T14's samples and fails; a whole-state check (leaving on any component) or none (never leaving) fails T15; review (physics)"
+  rulings:
+  - R-473
+  - R-509
+  - R-538
+  milestone: M8
+  note: "R-538 TF1, TF2.1 (J3, J4, J10). Closed by TASK-M8-58. RQ-424 (a) and RQ-429 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-278
+  area: GUI
+  statement: "Before a mix, each trace sample's chart parameters must be taken on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), the first sample's on the canonical branch, then mixed (R-473's tilt), then drawn in every image by the extension types (R-538 TF2.2); along an axis that mixes a periodic parameter with a non-periodic one the trace must not be repeated, the chart being affine there (RQ-430 (a)); the other θ branches of a tilted chart are not drawn (RQ-421 (a))."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/design/principia_trajectory_viewing.md
+    section: "3. Hover trace — projection onto the current (tilted, sliced) plane"
+  verify:
+    method: unit test
+    detail: "cargo test -p render trace_branch_continuity (R-538 T16, T17): on the shape sphere tilted 30° toward z_q3, the trace's screen step at every θ wrap and every pole passage is within 3× the median step (T16); the trace is drawn once along the tilted axis, with no copy at s + 2π/cos τ (T17's trace half; the field's half is REQ-CHART-080); controls: per-sample [0, 2π) θ gives a jump of 2π·cos τ and fails T16; drawing it with periodic repeats fails T17; review (physics)"
+  rulings:
+  - R-473
+  - R-537
+  - R-538
+  milestone: M8
+  note: "R-538 TF2.2 (J7, J8). Closed by TASK-M8-58. RQ-421 (a) and RQ-430 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-279
+  area: GUI
+  statement: "Every coordinate in a trace's mix must be read in the frame the chart's own parameters are defined in (R-538 TF2.3): on the full shape sphere (θ, φ) and a tilt target are read unmirrored, ρ along +x, never in the encode's canonical frame, which mirrors whenever the shape is in the lower hemisphere; on the latent momenta chart, whose parameters are canonical, the jump at every syzygy, with a marker at both ends, stands (TM5)."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/design/principia_trajectory_viewing.md
+    section: "3. Hover trace — projection onto the current (tilted, sliced) plane"
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Part 6 — The canonical inverse policy, completed
+  verify:
+    method: unit test
+    detail: "cargo test -p render trace_mix_frame (R-538 T16b): on the shape sphere tilted toward p_y, the trace's screen step at every syzygy of Burrau 3:4:5 to t = 70 is within 3× the median step; control: reading p_y in the canonical (mirrored) frame flips it at every syzygy and fails; review (physics)"
+  rulings:
+  - R-473
+  - R-538
+  milestone: M8
+  note: "R-538 TF2.3 (J9). Closed by TASK-M8-58. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-280
+  area: GUI
+  statement: "On a curve axis (Burrau's ν) a trace's point must be the curve's nearest point (inverse encode Part 5(b)), never dropped or clamped, the distance to the curve the fade where an off-plane distance is defined (R-509; RQ-426 (a)); a point whose nearest ν lies past a bounded edge must not be drawn there, the line broken with no reach ring, and counted in the trace readout's \"past the domain's end: N samples\", apart from the not-a-system count and with no warning (R-538 TF1; RQ-425 (a))."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Part 5 — Inverse by axis kind (completing the four kinds)
+  verify:
+    method: unit test
+    detail: "cargo test -p render trace_curve_axis (R-538 T18): on the right-triangle ν × dilation-rate chart, a run's shape perturbed off the curve keeps its point at the nearest ν, and where an off-plane distance is defined the fade grows with the perturbation (elsewhere the settings line says there is no fade, RQ-426 (a)); a sample whose nearest ν lies past ν's edge is not drawn, draws no ring and counts in \"past the domain's end\", not \"in forbidden\"; control: dropping or clamping the point fails; review (physics)"
+  rulings:
+  - R-509
+  - R-538
+  milestone: M8
+  note: "R-538 TF1 (J5, J6). Closed by TASK-M8-58. RQ-425 (a) and RQ-426 (a) applied meanwhile. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-GUI-281
+  area: GUI
+  statement: "With a trace animated with the playhead, the trace must be drawn from t = 0 to its end (its event or the horizon), with no head marker, whenever the playhead is not playing and its scrubber is not being dragged, and to the head, with the head marker, while it plays or is scrubbed (R-538 TF3); the static mode draws the whole trace and the own clock is always animated; a fixed window or last-Δt length is kept as chosen (RQ-427 (a)); the GUI passes the drawn extent to the line pass each frame, so the engine reads no ViewUI state."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui trace_playback (R-538 T19): paused, a pinned trace draws to its end with no head marker; playing, or with the scrubber dragged, it draws to the head with the head marker; a step while paused draws it whole; control: cutting a paused trace at the playhead fails"
+  rulings:
+  - R-476
+  - R-538
+  milestone: M8
+  note: "R-538 TF3 (J11). Closed by TASK-M8-58. RQ-427 (a) applied meanwhile."
+- id: REQ-GUI-282
+  area: GUI
+  statement: "A trace's colour along time must be a TimeRamp held in its Trace (R-538 TF4): the presets Sunset (the default once the ramp is chosen, RQ-422 (a)), Viridis, Magma, Ice, Ember, Aurora and Mono with R-538 J12's stops, Custom with three stops, Reverse and a preview bar; the stops evenly spaced and interpolated linearly over t ∈ [0, t_max]; it colours the line, its time ticks, the start star and the direction arrows, the event icons keeping the outcome palette; it is Lines' state in RenderState, never the stain graph's palette, each control one undoable SetField that re-integrates nothing, saved with the view and exported (the round-trip rule's tier 2 once it merges), a kept orbit's ramp travelling with its Trace (RQ-428 (a))."
+  source:
+  - file: decisions.md
+    section: "R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, \"?\" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*"
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: docs/design/principia_lines.md
+    section: 3. The data model
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui trace_ramp_round_trip (R-538 T20): a kept orbit's ramp (a preset, then Custom stops) survives save and load bitwise in the canonical serialisation, Reverse reverses it (its colour at t equals the unreversed colour at t_max − t), and an edit leaves the sim key and the quad requests unchanged; control: a ramp held only in GUI state fails"
+  rulings:
+  - R-476
+  - R-538
+  milestone: M8
+  note: "R-538 TF4 (J12). Closed by TASK-M8-58. RQ-422 (a) and RQ-428 (a) applied meanwhile. The round-trip rule and its tier 2 are ruled on the print-graph port's unmerged branches; when they merge they apply here as to every export (R-537 U15)."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."

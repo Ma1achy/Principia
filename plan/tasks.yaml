@@ -2650,7 +2650,7 @@
   title: "The quadtree past the square: roots tiling the plane, canonical addresses, neighbours across seams, poles and folds, scheduling by the union of images, the statistics unchanged (R-537 EX7) ⚑"
   depends_on: [TASK-M8-05, TASK-M8-44, TASK-M5-15, TASK-M6-01, TASK-M6-04, TASK-M6-11]
   needs: []
-  requirements: [REQ-SCHED-101, REQ-REF-054, REQ-CHART-079]
+  requirements: [REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-CHART-080]
   reviewers: [code, qa, physics, perf]  # ⚑ physics review required; perf for the frame quota (R-537 U2)
   pitfalls: []
 - id: TASK-M8-57
@@ -2663,11 +2663,11 @@
   pitfalls: []
 - id: TASK-M8-58
   milestone: M8
-  title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards (R-538; R-537 EX6) ⚑"
+  title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
   depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55]
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096]
-  reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards and the forbidden-sample count
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282]
+  reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
   pitfalls: []
 - id: TASK-M0-35
   milestone: M0
