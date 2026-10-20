@@ -8,7 +8,9 @@
 //! validation"; R-446, R-467 F5):
 //! - **forbidden**: `validate(u, v)` is not `Valid`, a failure of layer 2 or layer 3. `Chart::map` returns a value at
 //!   every point, so a map that fails is a panic, which fails the test, or a non-finite output, counted next;
-//! - **non-finite**: a chart output `z` or a decoded `(m, r, p)` component that is not finite;
+//! - **non-finite**: a chart output `z` or a decoded `(m, r, p)` component that is not finite, and on a mixed-axis chart
+//!   a decoder control `Mixed::controls` (its map leaves a derived axis's coordinate frozen; its decode reads the link's
+//!   inverse there, which the forward links would saturate to a finite state);
 //! - **`INVARIANT_INFEASIBLE`**: the construction's (chart_reference §2.2) `Outcome::Infeasible`, on a chart whose
 //!   decode runs it: `(L_z, E)`, `(L_z, K)`, `(ν, K)`, `Φ_θ,K`, `Φ_θ,L_z` and the `K` strip. Asserted 0 (F5 as revised);
 //! - **the other tags**, printed only (R-446: a tag never marks a pixel forbidden): the decode's `DEGENERATE` reason
@@ -178,6 +180,10 @@ struct Tally {
     z_nonfinite: Vec<Point>,
     /// The points whose decoded `(m, r, p)` has a non-finite component.
     state_nonfinite: Vec<Point>,
+    /// The points the decoder-controls lane checked: on a mixed-axis chart, every point; elsewhere none.
+    controls_checked: u32,
+    /// The points whose decoder controls, `Mixed::controls`, have a non-finite component.
+    controls_nonfinite: Vec<Point>,
     /// Whether the chart's decode runs §2.2's construction, so that it has an `Outcome`.
     construction: bool,
     /// The points the construction found infeasible, `INVARIANT_INFEASIBLE`.
@@ -198,6 +204,11 @@ type Validate<C> = fn(&C, f64, f64) -> ValidationResult;
 /// A chart's decode at `R`, with the construction's outcome where it runs one.
 type Decode<C, R> = fn(&C, R, R) -> (Decoded<R>, Option<Outcome>);
 
+/// The controls the shared decoder reads at `(u, v)`, where they are not `Chart::map`'s `z`: a mixed-axis chart's
+/// map leaves a derived axis's coordinate at its frozen value, and its decode reads `Mixed::controls`, the link's inverse
+/// at the axis's value, so a non-finite inverse is caught only here (the forward links saturate it to a finite state).
+type Controls<C, R> = fn(&C, R, R) -> [R; 8];
+
 /// Whether every component is finite.
 fn finite<R: Q>(xs: impl IntoIterator<Item = R>) -> bool {
     xs.into_iter().all(Float::is_finite)
@@ -208,6 +219,7 @@ fn sweep<R: Q, C: Chart<Param = R>>(
     chart: &C,
     validate: Validate<C>,
     decode: impl Fn(&C, R, R) -> (Decoded<R>, Option<Outcome>),
+    controls: Option<Controls<C, R>>,
 ) -> Tally {
     let mut t = Tally::default();
     for j in 0..=N {
@@ -217,6 +229,12 @@ fn sweep<R: Q, C: Chart<Param = R>>(
             let ChartOut { z } = chart.map(u, v);
             if !finite(z.z) {
                 t.z_nonfinite.push(point);
+            }
+            if let Some(controls) = controls {
+                t.controls_checked += 1;
+                if !finite(controls(chart, u, v)) {
+                    t.controls_nonfinite.push(point);
+                }
             }
             if validate(chart, u.f(), v.f()) != ValidationResult::Valid {
                 t.forbidden.push(point);
@@ -280,6 +298,14 @@ impl Report {
             t.z_nonfinite.len(),
             t.state_nonfinite.len()
         );
+        if t.controls_checked > 0 {
+            let _ = write!(
+                s,
+                ", non-finite decoder controls {} of {}",
+                t.controls_nonfinite.len(),
+                t.controls_checked
+            );
+        }
         if t.construction {
             let _ = write!(
                 s,
@@ -338,6 +364,13 @@ fn faults(r: &Report) -> Vec<String> {
             first(&t.state_nonfinite)
         ));
     }
+    if !t.controls_nonfinite.is_empty() {
+        out.push(format!(
+            "{at}: {} non-finite decoder controls{}",
+            t.controls_nonfinite.len(),
+            first(&t.controls_nonfinite)
+        ));
+    }
     if !t.infeasible.is_empty() {
         out.push(format!(
             "{at}: {} INVARIANT_INFEASIBLE pixels{}",
@@ -358,12 +391,23 @@ fn job<R: Q, C: Chart<Param = R> + Send + Sync + 'static>(
     chart: C,
     decode: Decode<C, R>,
 ) -> Job {
+    job_with(gallery_name, set, chart, decode, None)
+}
+
+/// [`job`], with the decoder-controls lane `controls` where the decode reads controls other than the map's `z`.
+fn job_with<R: Q, C: Chart<Param = R> + Send + Sync + 'static>(
+    gallery_name: &'static str,
+    set: String,
+    chart: C,
+    decode: Decode<C, R>,
+    controls: Option<Controls<C, R>>,
+) -> Job {
     Box::new(move || Report {
         chart: gallery_name,
         name: chart.name().to_string(),
         set: set.clone(),
         precision: R::LABEL,
-        tally: sweep(&chart, C::validate, decode),
+        tally: sweep(&chart, C::validate, decode, controls),
     })
 }
 
@@ -679,6 +723,11 @@ fn mixed_range<A: Quantity, R: Q>(edge: bool) -> [R; 2] {
     inward(range)
 }
 
+/// A mixed-axis chart's decoder controls, `Mixed::controls` under `Defaults`, what its decode reads.
+fn mixed_controls<H: Quantity, V: Quantity, R: Q>(chart: &Mixed<H, V, R>, u: R, v: R) -> [R; 8] {
+    chart.controls::<Defaults, R>(u, v)
+}
+
 /// The mixed-axis chart `Mixed<H, V>` at both range sets, the other six controls frozen at 0.
 fn mixed_pair<H, V, R>(jobs: &mut Vec<Job>)
 where
@@ -701,7 +750,13 @@ where
             H::NAME,
             V::NAME
         );
-        jobs.push(job("mixed-axis", set, chart, staged));
+        jobs.push(job_with(
+            "mixed-axis",
+            set,
+            chart,
+            staged,
+            Some(mixed_controls),
+        ));
     }
 }
 
@@ -959,7 +1014,7 @@ where
         "the control's set holds {below} E < U points of {}",
         expected.len()
     );
-    let tally = sweep(&chart, validate, absolute_decode);
+    let tally = sweep(&chart, validate, absolute_decode, None);
     assert_eq!(
         tally.forbidden.len(),
         expected.len(),
@@ -1027,9 +1082,12 @@ fn check_one_ulp<R: Q>(raise: fn(R) -> R) {
             k_max: R::of(k_max),
             gamma_k: R::of(gamma_k),
         });
-        let tally = sweep(&chart, InvariantLE::validate, |c, u, v| {
-            raised_decode(c, u, v, raise)
-        });
+        let tally = sweep(
+            &chart,
+            InvariantLE::validate,
+            |c, u, v| raised_decode(c, u, v, raise),
+            None,
+        );
         for j in 0..=N {
             for i in [0, N] {
                 assert!(
@@ -1125,7 +1183,7 @@ fn check_nan_column<R: Q>(column: f64) {
         },
         column: R::of(column),
     };
-    let tally = sweep(&chart, NanColumn::validate, nan_decode);
+    let tally = sweep(&chart, NanColumn::validate, nan_decode, None);
     let expected: Vec<Point> = (0..=N).map(|j| [N / 2, j]).collect();
     assert!(
         tally.z_nonfinite == expected,
@@ -1164,4 +1222,53 @@ negative_control!(
     "a chart whose non-finite column lies between the grid's columns is finite on the grid, and so must fail the control",
     expected = "the non-finite column is not caught",
     check_nan_column::<f64>(0.5 + 1.0 / 1024.0)
+);
+
+/// The `(α, p_ρ)` chart at the closed codomain edges, `α ∈ [0, π/2]`, `p ∈ [−q_max, q_max]`, swept with `controls` as
+/// its decoder-controls lane: the lane checks every point, the map's `z` holds no derived axis's control, and with its
+/// own `Mixed::controls` the chart passes the gallery check.
+fn check_mixed_controls<R: Q>(controls: Controls<Mixed<Alpha, PRhoX, R>, R>)
+where
+    f64: From<R>,
+{
+    let chart = Mixed::<Alpha, PRhoX, R>::new(
+        [R::zero(); 8],
+        mixed_range::<Alpha, R>(true),
+        mixed_range::<PRhoX, R>(true),
+    );
+    let tally = sweep(&chart, Mixed::validate, staged, Some(controls));
+    assert_eq!(
+        tally.controls_checked,
+        (N + 1) * (N + 1),
+        "the controls lane did not check every point"
+    );
+    let report = Report {
+        chart: "mixed-axis",
+        name: chart.name().into(),
+        set: "(alpha, p_rho_x), closed codomain edges".into(),
+        precision: R::LABEL,
+        tally,
+    };
+    println!("{}", report.line());
+    let found = faults(&report);
+    assert!(found.is_empty(), "at {}: {}", R::LABEL, found.join("; "));
+}
+
+#[test]
+fn gallery_sweep_unit_square_mixed_controls() {
+    check_mixed_controls::<f64>(mixed_controls);
+    check_mixed_controls::<f32>(mixed_controls);
+}
+
+negative_control!(
+    gallery_sweep_unit_square_mixed_controls,
+    "decoder controls with a NaN in the derived coordinate z_α on the column u = ½ must fail the check",
+    expected = "non-finite decoder controls",
+    check_mixed_controls::<f64>(|chart, u, v| {
+        let mut z = mixed_controls(chart, u, v);
+        if u == 0.5 {
+            z[0] = f64::NAN;
+        }
+        z
+    })
 );
