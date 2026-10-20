@@ -184,16 +184,16 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 174 requirements** (and every earlier gate still green):
+**Exit gate — 178 requirements** (and every earlier gate still green):
 
 - DEC (39): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…047
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
-- CHART (47): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055
+- CHART (48): REQ-CHART-001…036, REQ-CHART-043…051, REQ-CHART-053, REQ-CHART-055, REQ-CHART-058
 - INT (2): REQ-INT-002…003
 - PAY (5): REQ-PAY-034…035, REQ-PAY-088, REQ-PAY-095, REQ-PAY-097
 - GEN (7): REQ-GEN-013…015, REQ-GEN-025…026, REQ-GEN-034, REQ-GEN-036
 - RENDER (3): REQ-RENDER-025…027
-- COL (9): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105
+- COL (12): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105, REQ-COL-108…110
 - GUI (7): REQ-GUI-002…007, REQ-GUI-188
 - TOOL (3): REQ-TOOL-029…030, REQ-TOOL-163
 - VAL (16): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174
@@ -223,9 +223,10 @@ canonical_spec §1 item 6 and §11: "validate physics numerically", natively, be
 - The CPU-side parity suite (`computeIC`).
 
 <!-- gate:M3 -->
-**Exit gate — 200 requirements** (and every earlier gate still green):
+**Exit gate — 201 requirements** (and every earlier gate still green):
 
 - ENC (1): REQ-ENC-033
+- CHART (1): REQ-CHART-059
 - INT (67): REQ-INT-004…056, REQ-INT-073…074, REQ-INT-076…082, REQ-INT-084…085, REQ-INT-087…089
 - EVT (24): REQ-EVT-001…020, REQ-EVT-023…026
 - PAY (29): REQ-PAY-036…059, REQ-PAY-070, REQ-PAY-073, REQ-PAY-083, REQ-PAY-086, REQ-PAY-098
@@ -316,14 +317,14 @@ render_contract "→ adaptive"; deep_zoom §3 layer 2 and §4.
   slots, merges without waiting for the gates of M1 to M5, and never holds up M1 or M2.
 
 <!-- gate:M6 -->
-**Exit gate — 196 requirements** (and every earlier gate still green):
+**Exit gate — 199 requirements** (and every earlier gate still green):
 
 - DEC (5): REQ-DEC-033…035, REQ-DEC-037, REQ-DEC-042
 - PAY (5): REQ-PAY-069, REQ-PAY-080…082, REQ-PAY-084
 - GEN (1): REQ-GEN-018
 - SCHED (29): REQ-SCHED-056…071, REQ-SCHED-077…078, REQ-SCHED-080…082, REQ-SCHED-089…096
 - REF (38): REQ-REF-011…037, REQ-REF-039…040, REQ-REF-042…044, REQ-REF-046…051
-- GUI (61): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…224
+- GUI (64): REQ-GUI-010…015, REQ-GUI-162, REQ-GUI-165…179, REQ-GUI-181…183, REQ-GUI-189…226, REQ-GUI-229
 - TOOL (5): REQ-TOOL-055…058, REQ-TOOL-159
 - VAL (13): REQ-VAL-084…095, REQ-VAL-142
 - PERF (38): REQ-PERF-034…067, REQ-PERF-084, REQ-PERF-088…090
@@ -384,7 +385,7 @@ canonical_spec §11: "build the browser product on top".
   With R-443's one-body legends and the three-body panels (RQ-323).
 
 <!-- gate:M8 -->
-**Exit gate — 242 requirements** (and every earlier gate still green):
+**Exit gate — 245 requirements** (and every earlier gate still green):
 
 - ENC (3): REQ-ENC-021, REQ-ENC-028, REQ-ENC-032
 - CHART (4): REQ-CHART-040, REQ-CHART-054, REQ-CHART-056…057
@@ -392,7 +393,7 @@ canonical_spec §11: "build the browser product on top".
 - SCHED (1): REQ-SCHED-073
 - RENDER (2): REQ-RENDER-073…074
 - COL (2): REQ-COL-047…048
-- GUI (134): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187
+- GUI (137): REQ-GUI-032…047, REQ-GUI-049…150, REQ-GUI-153…161, REQ-GUI-163…164, REQ-GUI-180, REQ-GUI-184…187, REQ-GUI-227…228, REQ-GUI-230
 - TOOL (42): REQ-TOOL-073…092, REQ-TOOL-094…108, REQ-TOOL-114…115, REQ-TOOL-128…129, REQ-TOOL-135, REQ-TOOL-143, REQ-TOOL-146
 - VAL (17): REQ-VAL-099…103, REQ-VAL-105…111, REQ-VAL-113…114, REQ-VAL-116, REQ-VAL-143…144
 - PERF (12): REQ-PERF-070…076, REQ-PERF-078…080, REQ-PERF-091…092

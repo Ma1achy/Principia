@@ -343,6 +343,19 @@ pub const FGW_LENGTH_SENTINEL: ConstantBuilder = maximum(
     },
 );
 
+/// The most branch-cut crossings one accepted substep holds: one per cut, as a crossing is a sign change of a cut's
+/// signed distance between the segment's two endpoints (dd_simstate_payload §3, the half-open sign convention), and the
+/// word's generators `a` and `b` are two branch cuts (symbolic_dynamics_contract §1). The capacity of the march's
+/// per-substep crossing list (`kernel::word::SubstepCrossings`), each slot reached by a constant index.
+pub const MAX_CROSSINGS_PER_SUBSTEP: ConstantBuilder = maximum(
+    "max_crossings_per_substep",
+    2.0,
+    Citation::Corpus {
+        file: "docs/contracts/principia_symbolic_dynamics_contract.md",
+        section: "1. Generator ↔ branch-cut convention",
+    },
+);
+
 /// binary16's greatest finite value: the pack clamp, ±65504, applied before `pack2x16float`.
 pub const F16_FINITE_MAX: ConstantBuilder = maximum(
     "f16_finite_max",
@@ -891,7 +904,8 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
     provisional: None,
 };
 
-/// The register: the constants the payload ledger uses (TASK-M0-08), the chart constants the link registry reads
+/// The register: the constants the payload ledger uses (TASK-M0-08), the word's per-substep crossing capacity
+/// (TASK-M3-15), the chart constants the link registry reads
 /// (TASK-M2-01; dd_generation_root §3.9), the invariant charts' warp defaults (TASK-M2-12), the Burrau `ν = 1/2`
 /// tolerance and the Euclid plane's defaults (TASK-M2-10), the acute-angle Burrau charts' defaults (TASK-M2-11), the
 /// presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
@@ -902,6 +916,7 @@ pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
     FGW_LENGTH_SENTINEL,
+    MAX_CROSSINGS_PER_SUBSTEP,
     F16_FINITE_MAX,
     F16_MIN_SUBNORMAL,
     MU_MAX,

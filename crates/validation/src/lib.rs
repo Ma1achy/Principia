@@ -15,6 +15,7 @@ pub mod gpu;
 pub mod invariant_gradient;
 pub mod oklab;
 pub mod prop;
+pub mod reference;
 pub mod roundtrip;
 pub mod shape_roundtrip;
 pub mod spawn;
