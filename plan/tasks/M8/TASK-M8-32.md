@@ -60,3 +60,4 @@ The Export & share window offers image export (size in multiples of the view, fo
   background), TASK-M6-47 (the mode's row) and TASK-M8-46 (Fit on the real engine); the note above's "background
   fallback" reading is now the Deliverables and acceptance lines.
 - **R-471, R-472, R-473, R-474, R-475 (20 Oct 2026):** the sidecar (the pxpack, the snapshot JSON, the share link) carries `tilt_map=sheet|lean`, `f3_fill=extend|fit`, each energy-type axis's mapping, a curved chart's tilt and a saved chart's definition; present mode follows F3's fill mode (R-472 X2c).
+- R-484 RT2, RT3 (20 Oct 2026): the window's tier report is TASK-M8-53's (REQ-GUI-263); the sidecar carries the links through `SimConfig` (R-483).

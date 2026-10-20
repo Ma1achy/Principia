@@ -35,3 +35,4 @@ The real engine's Manifold view tilts and slices every chart (targets the chart'
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics.
 - **RQ-378** (a flattened oblique-latent save of a curved chart) waits on nothing; meanwhile not offered.
+- R-484 J9 (20 Oct 2026): filling the chart params clears T2's `Chart {}`; T2 is TASK-M8-53's.

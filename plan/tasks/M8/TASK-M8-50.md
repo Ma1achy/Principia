@@ -34,3 +34,4 @@ Lines ▾ beside Overlays ▾ with its count and `Alt+L`; the contour-set editor
 ## Notes
 - **qa's files (R-290, R-476 M12; applied per R-369, a ruling forcing the change).** These must change in this task's qa commit and only there, each `M` line listed with its reason: `crates/engine/tests/qa_TASK-M0-18.rs` (`RENDER_TEXT` :62-66, its doc :55), `crates/prin/tests/qa_TASK-M0-18.rs` (`expected_config_text` :165-171) and `crates/gui/tests/qa_TASK-M6-27.rs` (:951-952, :1016-1021, :1058-1062); and `xtask/tests/qa_TASK-M6-24.rs`'s `check_01_main` gains `mock_lines_menu`. The implementer's own files follow (R-476 M12's list).
 - **The mock gains no line system** (R-476 M6): it only drops the two toggles.
+- R-484 J4 (20 Oct 2026): the line system is tier 2 of the embedding.

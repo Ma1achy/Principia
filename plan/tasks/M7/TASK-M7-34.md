@@ -29,3 +29,4 @@ Before the M7 gate, re-measure the hybrid embedding at `k = 25` (REQ-TOOL-111) o
 ## Notes
 - R-385, applied per R-369: the dependencies are what produces a real rendered figure: the hybrid (TASK-M7-30), embedding in PNG export (TASK-M7-32), the §7.1 presets (TASK-M7-18) and the display chain (TASK-M7-21).
 - R-385, applied per R-369: the test measures and records the per-angle recovery on the real figures and reports it. It asserts that the measurement ran over every listed figure, size and angle and that the report was written; it does not fail on a recovery shortfall. A shortfall goes to the M7 gate for the human, because `k = 25` is the human's calibration (REQ-TOOL-111, R-71), and the reconciliation of 37.6 % with ~8 % goes in the same report. The task does not change `k`.
+- R-483 X6 (20 Oct 2026): the capacity table is re-measured at the new payload by TASK-M7-44 (REQ-TOOL-174); measure against that table.

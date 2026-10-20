@@ -40,3 +40,4 @@ The Research window adds continuation along a parameter (e.g. a mass ratio) with
 - Definitions (R-72) written here: REQ-GUI-154. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - RQ-109 ruled: R-127 — stability by the monodromy matrix's Floquet multipliers; the three Poincaré sections; transcribed with citations, physics-reviewed, confirmed at the gate (render_gui_spec §G11 conformed in step 7; the citations are this task's).
 - Closes, for gaps the corpus leaves open: REQ-GUI-159 (R-72 definition) (classification accepted by R-132).
+- R-478 (20 Oct 2026): RQ-381's robustness comparison overlaps this task's side by side (R-106); nothing changes until it is ruled.

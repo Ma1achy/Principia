@@ -106,7 +106,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] A benchmark states the work held constant (fixed slices, zoom ladder, pan path, playhead march) and sweeps settings rather than sampling one. `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability across devices"
 
 <!-- list:benchmarks -->
-*37 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*38 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M3**
 - [ ] REQ-PERF-004 — computeIC for a typical IC at t = 50 on one core < 16.7 ms (measured 6.1 ms; 1.6 ms at t = 13)
@@ -142,6 +142,7 @@ degradation (`docs/design/principia_dd_telemetry_and_tiers.md` § "6.5 The rule 
 - [ ] REQ-SYS-038 — measure deep-quad occupancy/register pressure with the two-path branch vs a baked linearised variant; record the result
 
 **M7**
+- [ ] REQ-TOOL-174 — xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record that does not fit reports not embedded and writes no partial tile
 - [ ] REQ-PERF-068 — count pipeline objects created at startup and measure startup time
 - [ ] REQ-PERF-069 — count display-res and render-res targets allocated by the built render graph and record k_d, k_r
 

@@ -172,7 +172,7 @@
   note: "The full DEGENERATE reason list and its map onto payload §2's decode_failed detail codes: REQ-DEC-038 (definition)."
 - id: REQ-DEC-009
   area: DEC
-  statement: "The chart constants must be μ_max = 5, q_max = 2, α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹² (the mirror tie on λ̃_y), ε_w = 10⁻¹⁰ (default, bounding the squared seed norm ‖w⁽²⁾‖²_m) and ε_M01 (the M01_TINY threshold, its value REQ-DEC-039's calibration), held as registry data, with the formulae written in the symbols."
+  statement: "The chart constants must be μ_max = 5 and q_max = 2 (since R-481 the defaults of two tunable link parameters), α_min = 0, ε_μ = ε_z = ε_q = 10⁻⁶, δ_λ = 10⁻¹² (the mirror tie on λ̃_y), ε_w = 10⁻¹⁰ (default, bounding the squared seed norm ‖w⁽²⁾‖²_m) and ε_M01 (the M01_TINY threshold, its value REQ-DEC-039's calibration), held as registry data, with the formulae written in the symbols."
   source:
   - file: docs/design/principia_dd_decoder.md
     section: 3. The maths
@@ -192,6 +192,8 @@
     section: R-21 — `α_min = 0` *(CD-1)*
   - file: decisions.md
     section: R-82 — One mirror test, one seed rule *(closes RQ-33)*
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
   verify:
     method: unit test
     detail: "assert the registry values equal the stated constants; grep that the decode/encode formulae reference the named constants rather than literals"
@@ -200,8 +202,9 @@
   - R-10
   - R-21
   - R-82
+  - R-481
   milestone: M2
-  note: "R-5 put the constants on the decision sheet; R-10 and R-21 settled them; R-82 fixes δ_λ's variable (λ̃ = √μ_λ·λ) and ε_w's bound on the squared norm. ε_M01 added by TASK-M2-02, applied per R-369, at REQ-DEC-039's proposal 10⁻⁵ (dd_decoder §3.1), provisional until the M2 gate."
+  note: "R-5 put the constants on the decision sheet; R-10 and R-21 settled them; R-82 fixes δ_λ's variable (λ̃ = √μ_λ·λ) and ε_w's bound on the squared norm. ε_M01 added by TASK-M2-02, applied per R-369, at REQ-DEC-039's proposal 10⁻⁵ (dd_decoder §3.1), provisional until the M2 gate. R-481 (amends R-10): μ_max and q_max become the defaults; the active value is REQ-DEC-048's."
 - id: REQ-DEC-010
   area: DEC
   statement: "The mass block must decode as μₖ = μ_max·tanh(z_μk) for k = 1,2 and (m₀, m₁, m₂) = softmax(0, μ₁, μ₂), with body 0 the softmax reference, so that z_μ = 0 gives equal masses."
@@ -897,6 +900,24 @@
   rulings:
   - R-71
   milestone: M2
+- id: REQ-DEC-048
+  area: DEC
+  statement: "Everything that reads `mu_max` or `q_max` by name must read the active value: the link trees, the codomain's bounds (host-side checks and the previews' bounds), the encode's clamps (the momenta's [−q_max, q_max], the masses' (1 − ε_μ)·mu_max cap) and encode's layer-1 validation; the register constants must keep their values as the defaults."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Three hard requirements on any registered link
+  - file: docs/contracts/principia_inverse_encode_contract.md
+    section: Chart-aware validation
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel link_params_active: at q_max = 1.5 decode keeps |q| ≤ 1.5 and encode clamps a momentum of 1.8 to 1.5 and reports layer 1 above q_max; at mu_max = 4 the mass cap is (1 − ε_μ)·4; control: at the defaults both equal today's results bit for bit"
+  rulings:
+  - R-10
+  - R-481
+  milestone: M2
+  note: R-481 A2, G4 (amends R-10; 20 Oct 2026).
 - id: REQ-ENC-001
   area: ENC
   statement: "Encode's invariant fibre point must be the chart's own forward construction (encode reuses decode), and its tolerances must be stated in physical units."
@@ -2103,7 +2124,7 @@
   rulings:
   - R-113
   milestone: M2
-  note: "R-113 (RQ-95): 'a link swap changes the sim key, recompiles and re-integrates from t = 0' is a separate M4 requirement."
+  note: "R-113 (RQ-95): 'a link swap changes the sim key, recompiles and re-integrates from t = 0' is a separate M4 requirement. R-483: the provenance's links are SimConfig's Links, ids and parameter values (REQ-SYS-083, 20 Oct 2026)."
 - id: REQ-CHART-034
   area: CHART
   statement: "Each link must satisfy: constraint preservation for all inputs incl. saturation; inverse round-trip within ε-clamp tolerance in physical units; analytic log-det matching a numeric Jacobian, the log-det being the log of the link's volume factor (log |det J|, or log √det(JᵀJ) for a non-square Jacobian such as the simplex link's 3×2, R-368); C¹ continuity."
@@ -2462,7 +2483,7 @@
   rulings:
   - R-113
   milestone: M4
-  note: Split from REQ-CHART-033 (R-113, RQ-95).
+  note: "Split from REQ-CHART-033 (R-113, RQ-95). R-483 X8: the compatibility signature gains the parameter values (REQ-SCHED-100, 20 Oct 2026)."
 - id: REQ-CHART-053
   area: CHART
   kind: calibration
@@ -2883,6 +2904,24 @@
   - R-475
   milestone: M2
   note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone."
+- id: REQ-CHART-074
+  area: CHART
+  statement: "A link parameter change must move the result where it acts: `mu_max = 4` against 5 must give different payloads on the mass simplex chart and identical payloads on a latent configuration view with both mass logits at 0."
+  source:
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Links carry a measure
+  verify:
+    method: unit test
+    detail: "cargo test -p engine link_param_moves: mu_max 4 vs 5 on the mass simplex chart, payloads differ; control (C3): the same pair on a latent configuration view with both mass logits at 0 (equal masses) gives bitwise-identical payloads, so the first arm cannot pass vacuously"
+  rulings:
+  - R-481
+  - R-482
+  milestone: M4
+  note: R-482 C3 (20 Oct 2026).
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -7271,6 +7310,7 @@
     detail: "registering a link whose codomain does not match the block's constraint type is rejected; each default resolves to the named entry"
   rulings: []
   milestone: M2
+  note: "R-479 E1: the Momenta row sets the four momentum slots to one link; R-481 G7: the parameters are values, not variants (20 Oct 2026)."
 - id: REQ-GEN-014
   area: GEN
   statement: "The link registry must span genuinely different sampling densities (e.g. softmax vs an edge-reaching simplex map, t^γ at spread-apart γ, sigmoid vs a heavier-tailed bounded map) so a robustness sweep can test whether a finding survives a link swap."
@@ -7655,6 +7695,113 @@
   - R-449
   milestone: M2
   note: "R-449 (16 Oct 2026). Closed by TASK-M2-33. Applied per R-369: which ledger key carries the base is TASK-M2-33's choice (generation root §3.8). .raw and .prnq are not defined in the live corpus (RQ-336); the requirement covers them once they are."
+- id: REQ-GEN-037
+  area: GEN
+  statement: "Each link registry entry must declare its tunable parameters, each with a name (a chart constant the entry already declares and its trees read), a default (that constant's value), a closed allowed range [lo, hi] and a citation, in a table beside the entries: today `mu_max` on `softmax_tanh` and `q_max` on `sigmoid_q`, `tanh_q` and `softsign_q`, with `alpha_min` not tunable; and `check` must refuse, at generation, an entry whose forward leaves its declared codomain and a slot given an entry of another codomain, never merely leaving it out of a list."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger link_params_declared: the registry's tunable table lists exactly mu_max on softmax_tanh and q_max on the three momentum links, each default equal to the chart constant (5, 2) and lo ≤ default ≤ hi; alpha_min is in no row. C1's control: an entry injected with a codomain its forward leaves, and a slot given an entry onto another codomain, are each refused by check with a message naming the entry, not filtered; a registry without the injection passes"
+  rulings:
+  - R-481
+  - R-482
+  milestone: M2
+  note: R-481 A1, G1; R-482 C1's control (20 Oct 2026).
+- id: REQ-GEN-038
+  area: GEN
+  kind: calibration
+  statement: "Each tunable link parameter's allowed range must be calibrated (R-71): proposed with its evidence (Part 2.5's three requirements at both ends and inside, and the inverse's conditioning at f32 and f64) by TASK-M2-41, checked by the physics reviewer, confirmed by the human at the M2 gate and recorded in decisions.md; until then the proposed ranges are used, provisionally."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Three hard requirements on any registered link
+  verify:
+    method: review checklist
+    detail: "the proposal gives lo and hi for mu_max and q_max with the check's output at both ends and the sampled interior, and the inverse's round-trip error at f32 and f64 at each end; the physics reviewer confirms each end keeps the three requirements"
+  rulings:
+  - R-71
+  - R-481
+  milestone: M2
+  note: R-481 G2, G8 (20 Oct 2026).
+- id: REQ-GEN-039
+  area: GEN
+  statement: "Each link entry's log-det must be a function of its tunable parameters, evaluated at the active values, never the defaults, so area statistics reweight at the active value and the measure travels with the link."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Links carry a measure
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel link_logdet_params: at mu_max and q_max each at both range ends and three interior values, the generated log-det equals a central finite difference of log √det(JᵀJ) of the forward within tolerance at f64, over a seeded z sample; mutation arm (C5): a log-det evaluated at the default while the forward runs at mu_max = 4 fails"
+  rulings:
+  - R-481
+  - R-482
+  milestone: M2
+  note: R-481 A4, G6; R-482 C5 (20 Oct 2026).
+- id: REQ-GEN-040
+  area: GEN
+  statement: "The generator must emit each link's forward, inverse and log-det with the tunable parameters as an argument (`LinkParams`, one field per tunable of the registry, at the float type) in place of the chart constants read by name, the link ids staying type parameters, so a parameter change is a value and not a compiled variant; the existing functions must stay, evaluated at `LinkParams::DEFAULT`, and at the default parameters the parametrised functions' outputs must be bitwise today's at f32 and f64."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel link_params_default_bitwise: over a seeded z sample with saturating controls, each entry's parametrised forward, inverse and log-det at LinkParams::DEFAULT equal the existing at-default function bit for bit, f32 and f64; grep: the generated link code reads no R::MU_MAX or R::Q_MAX; control: a parameter one ulp off its default differs from the default output somewhere in the sample"
+  rulings:
+  - R-481
+  - R-482
+  milestone: M2
+  note: "R-481 A5, G7: the uniform chosen over a rebuild per value (applied per R-369); R-482 C2 on the link functions (20 Oct 2026)."
+- id: REQ-GEN-041
+  area: GEN
+  statement: "At each declared end of every tunable parameter's range, and on a seeded sample of at least 16 interior values, under fuzzed z including saturating controls, every link must satisfy Part 2.5's three requirements: the output in its codomain, encode(decode(z)) returning z within the encode's tolerance where the forward is not saturated at f32 and f64, and C¹, its derivative from the log-det finite and agreeing with a central difference; `check` must enforce it at generation, naming the entry, parameter, value and requirement on a refusal."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Three hard requirements on any registered link
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  verify:
+    method: property test
+    detail: "cargo test -p ledger link_range_admissible: at lo, hi and the interior sample of each range, the three requirements hold at f32 and f64 under the seeded fuzz; control: a range widened past a value that breaks one (mu_max ≤ 0, q_max ≤ 0) is refused by check with the entry, parameter, value and requirement named"
+  rulings:
+  - R-481
+  - R-482
+  milestone: M2
+  note: R-481 A1, G3; R-482 C4 (20 Oct 2026).
+- id: REQ-GEN-042
+  area: GEN
+  statement: "The schema version must hash each tunable parameter's declaration (the entry, the parameter's name, its default and its range's ends by value, not its citation) as a block after the chart constants, and never an active value, so a changed default or range changes the schema version and a view at a non-default value does not."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  verify:
+    method: unit test
+    detail: "cargo test -p ledger link_params_hashed: changing a declared default, lo or hi changes the schema version; changing a citation does not; the entries' and chart constants' hashed bytes are today's; control: a view's active mu_max = 4 leaves the version unchanged"
+  rulings:
+  - R-340
+  - R-481
+  milestone: M2
+  note: R-481 A3, G5 (20 Oct 2026).
 - id: REQ-SCHED-001
   area: SCHED
   statement: "The quadtree must be built in three layers in order, each a working system: L0 flat grid (SimState, decoder, fragment contracts), L1 quad cache with ancestor fallback (FIFO queue, CPU tracks cache membership only, no sim data GPU→CPU), L2 adaptive refinement with the linearised-decoder uniforms."
@@ -8406,7 +8553,7 @@
   milestone: M5
 - id: REQ-SCHED-048
   area: SCHED
-  statement: "The sim key must comprise chart id+params, the slice plane (z₀'s out-of-plane part, span{q₁, q₂}, the in-plane orientation), warps, link ids, occupant, T/dt/thresholds, the tier's sim-key components (N, FTLE, word — E is live, cached per copy_index) and the schema; the render key must comprise the stain graph (nodes, wires, sources), node params, overlays and palette/compaction; the playhead, in-plane pan and zoom and the lock must be in neither key."
+  statement: "The sim key must comprise chart id+params, the slice plane (z₀'s out-of-plane part, span{q₁, q₂}, the in-plane orientation), warps, link ids and their tunable parameter values, occupant, T/dt/thresholds, the tier's sim-key components (N, FTLE, word — E is live, cached per copy_index) and the schema; the render key must comprise the stain graph (nodes, wires, sources), node params, overlays and palette/compaction; the playhead, in-plane pan and zoom and the lock must be in neither key."
   source:
   - file: docs/design/principia_systems_architecture.md
     section: The two keys as ladder geometry
@@ -8424,7 +8571,9 @@
   - R-64
   - R-89
   - R-92
+  - R-483
   milestone: M5
+  note: "R-483 X8: link parameter values on the sim key (REQ-SCHED-100, 20 Oct 2026)."
 - id: REQ-SCHED-049
   area: SCHED
   statement: "Cache keys must separate identity (which quad) from validity (computed how), and a preview must never satisfy a request for a refined result."
@@ -9299,6 +9448,21 @@
   - R-424
   milestone: M5
   note: "Split from REQ-TOOL-011 by R-424 (RQ-275): \"cache-valid moves to the M5 cache task, which also decides whether per-quad schema version belongs with cache-valid\"; the M5 cache task is TASK-M5-08, whose lookup is identity + signature match (applied per R-369). At M1 the schema version cell is checked against the build's PAYLOAD_SCHEMA_VERSION (REQ-TOOL-011)."
+- id: REQ-SCHED-100
+  area: SCHED
+  statement: "The sim key and the payload compatibility signature must hold each block's link id and parameter values, compared bitwise, so a cache entry made at `mu_max = 5` never serves a request at `mu_max = 4`."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p engine sim_key_link_params: two views differing only in mu_max have different sim keys and compatibility signatures and never share a cache entry (C13); control: two views with equal links and parameters share one"
+  rulings:
+  - R-483
+  milestone: M5
+  note: R-483 X8, H8, C13 (20 Oct 2026).
 - id: REQ-REF-001
   area: REF
   statement: "`QuadReduction` outcome members must be `class_histogram` (u32 × N, R-410), `dominant_outcome` (5-bit `class ⊕ detail`), `outcome_impurity` (f16, 1 − max fraction) and `terminated_fraction` (f16), all at the joint `class ⊕ detail` grain, with dominant and impurity derived from the one histogram."
@@ -11767,6 +11931,24 @@
   - R-476
   milestone: M8
   note: "R-476 L5, M10. Waits for RQ-377 (4); closed by TASK-M8-51. Meanwhile nothing is suppressed between the two."
+- id: REQ-RENDER-099
+  area: RENDER
+  statement: "The GPU kernel must read each tunable link parameter from the uniform block the chart params use, set from `SimConfig`'s `Links`, each f32 value the f64 value rounded to nearest; at the default links and parameters the GPU's payloads and the golden renders must be bitwise today's."
+  source:
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/design/principia_dd_generation_root.md
+    section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
+  verify:
+    method: golden image
+    detail: "cargo test -p engine link_params_uniform: at the defaults every existing payload and golden render is bitwise unchanged, a moved fixture being a failure and never a re-baseline; a parameter change changes only the uniform buffer and selects no other compiled variant; control: a uniform left unset (zero) changes the payload"
+  rulings:
+  - R-481
+  - R-482
+  milestone: M4
+  note: "R-481 A5, G7; R-482 C2 on renders and payloads (20 Oct 2026)."
 - id: REQ-COL-001
   area: COL
   statement: "Every ScalarField must return (value, valid) and every Ramp and Compaction must carry an explicit invalid-pixel colour/value, defaulting in a debug view to the invalid pattern REQ-COL-055 sets (a hatch colliding with no palette entry, R-132) and in a presentation view to #141418, which draws no hatch (R-467, REQ-COL-108), and overridable per node, to which every colouring must map NaN or a sentinel — except debug fields, which must show literal stored values while NaN still maps to the invalid pattern."
@@ -14558,7 +14740,7 @@
   - R-101
   - R-106
   milestone: M8
-  note: "The GUI's clock reads the transport and advances RenderState's playhead each frame through a SetField marked \"no history\" (R-101)."
+  note: "The GUI's clock reads the transport and advances RenderState's playhead each frame through a SetField marked \"no history\" (R-101). R-479 D3: Home and the resets leave the links alone (REQ-GUI-257, 20 Oct 2026)."
 - id: REQ-GUI-037
   area: GUI
   statement: "The engine must never read ViewUI, so a replacement GUI can define its own ViewUI entirely."
@@ -15727,7 +15909,7 @@
   rulings:
   - R-466
   milestone: M8
-  note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes. R-475 L3 (20 Oct 2026): saved charts (Save view as chart) sit in the preset selector's Saved group beside the builder's presets, in the same store (REQ-GUI-239)."
+  note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes. R-475 L3 (20 Oct 2026): saved charts (Save view as chart) sit in the preset selector's Saved group beside the builder's presets, in the same store (REQ-GUI-239). R-478 W3: the Chart builder shows the links read-only (REQ-GUI-253, 20 Oct 2026)."
 - id: REQ-GUI-109
   area: GUI
   statement: "The chart builder's Domain preview must show the chart's admissible region in its own coordinates, the forbidden region hatched, the current view as a rectangle, the boundary's formula and 'forbidden in view: N%', computed from the chart's validate(u, v)."
@@ -18332,6 +18514,239 @@
   - R-476
   milestone: M8
   note: "R-476 L5, M10. Waits for RQ-377 (6); closed by TASK-M8-51. Meanwhile Screen contour."
+- id: REQ-GUI-251
+  area: GUI
+  statement: "The links must be the decoder's, not the chart's: they must be chosen and tuned only in the Decoder window, and no chart edit (the preset selector, the Chart builder's Apply, Save view as chart, a reset) may change a link or a parameter."
+  source:
+  - file: decisions.md
+    section: "R-478 — Link functions belong to the decoder, which every chart passes through, not to a chart: they are chosen and tuned in a new Decoder window (Windows › Decoder…); the Manifold view's Chart section shows them in one compact row, tinted amber when any block is off its default; the Chart builder shows them read-only and owns the axis warps; a chart preset carries no links; the instruction's §6 is queued (RQ-380 to RQ-383)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_links_not_chart: after a non-default link is applied, switching preset, applying a Chart builder edit and saving the view as a chart leave Links bitwise unchanged; control: Apply in the Decoder window changes it"
+  rulings:
+  - R-478
+  milestone: M6
+  note: R-478 W1, L2 (20 Oct 2026).
+- id: REQ-GUI-252
+  area: GUI
+  statement: "The Manifold view's Chart section must show one compact Links row naming the masses, configuration and momenta links by display name with their tunable parameters' active values, and a Decoder… button that opens the Decoder window; the row must be tinted amber whenever any block is off its default, its tooltip naming the blocks."
+  source:
+  - file: decisions.md
+    section: "R-478 — Link functions belong to the decoder, which every chart passes through, not to a chart: they are chosen and tuned in a new Decoder window (Windows › Decoder…); the Manifold view's Chart section shows them in one compact row, tinted amber when any block is off its default; the Chart builder shows them read-only and owns the axis warps; a chart preset carries no links; the instruction's §6 is queued (RQ-380 to RQ-383)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_links_row: at the defaults the row reads `Links: softmax·tanh (μ_max 5) · sigmoid · sigmoid (q_max 2)` untinted; with stick-breaking masses or μ_max 4 it is amber and the tooltip names the block; α and β on different families show `α tanh / β sigmoid`; the button opens the Decoder window; control: a row left untinted off the default fails"
+  rulings:
+  - R-478
+  milestone: M6
+  note: R-478 W2, L1 (20 Oct 2026).
+- id: REQ-GUI-253
+  area: GUI
+  statement: "The Chart builder must show the active links read-only beside its Domain preview, with a link that opens the Decoder window, and must offer no control that edits them."
+  source:
+  - file: decisions.md
+    section: "R-478 — Link functions belong to the decoder, which every chart passes through, not to a chart: they are chosen and tuned in a new Decoder window (Windows › Decoder…); the Manifold view's Chart section shows them in one compact row, tinted amber when any block is off its default; the Chart builder shows them read-only and owns the axis warps; a chart preset carries no links; the instruction's §6 is queued (RQ-380 to RQ-383)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui chartbuilder_links_readonly: on the real engine the Chart builder shows the active links as the Chart section's row names them; its link opens the Decoder window; no widget in the builder sends SimField::Links; control: a non-default link shows there after Apply in the Decoder"
+  rulings:
+  - R-478
+  milestone: M8
+  note: R-478 W3 (20 Oct 2026).
+- id: REQ-GUI-254
+  area: GUI
+  statement: "A chart preset must carry no links: a preset must be a pair of axes, and selecting one must leave the links unchanged."
+  source:
+  - file: decisions.md
+    section: "R-478 — Link functions belong to the decoder, which every chart passes through, not to a chart: they are chosen and tuned in a new Decoder window (Windows › Decoder…); the Manifold view's Chart section shows them in one compact row, tinted amber when any block is off its default; the Chart builder shows them read-only and owns the axis warps; a chart preset carries no links; the instruction's §6 is queued (RQ-380 to RQ-383)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_preset_no_links: a preset's serialised form holds no link id or parameter; selecting each preset leaves Links bitwise unchanged; control: a preset struct given a links field fails the test"
+  rulings:
+  - R-478
+  milestone: M6
+  note: "R-478 W4; whether a preset may pin links is RQ-380 (meanwhile none, 20 Oct 2026)."
+- id: REQ-GUI-255
+  area: GUI
+  statement: "The Decoder window must have one row per block (Masses, Configuration α, Configuration β, Momenta, the last setting the four momentum slots together), each with a link dropdown listing exactly the registry entries onto that block's codomain, the default first and marked \"(default)\"; the link's parameters as numeric fields with sliders, each showing its allowed range and accepting no value outside it, greyed with \"no parameters\" when it has none; a preview; and a \"reset to default\" button dimmed while the row is at its default link and parameters."
+  source:
+  - file: decisions.md
+    section: "R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with \"Reset all to defaults\", \"Changing a link re-integrates every pixel\" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_decoder_rows: four rows; each dropdown equals the registry's entries onto its codomain in registry order, the default first with \"(default)\" (C1); switching link keeps a same-named parameter and defaults the rest; a value outside the range is refused; stick_breaking's fields are greyed \"no parameters\"; reset dims at the default; control: an entry onto another codomain appears in no row"
+  rulings:
+  - R-479
+  - R-482
+  milestone: M6
+  note: R-479 D1, E1–E3, E5; R-482 C1's GUI arm (20 Oct 2026).
+- id: REQ-GUI-256
+  area: GUI
+  statement: "The Decoder window's footer must have Reset all to defaults, the text \"Changing a link re-integrates every pixel\" and Apply / Revert; edits must be staged, Apply sending the whole `Links` in one `SetField` as one undo entry, Revert dropping what is staged, both dimmed with nothing staged, and closing the window keeping the staged edits."
+  source:
+  - file: decisions.md
+    section: "R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with \"Reset all to defaults\", \"Changing a link re-integrates every pixel\" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_decoder_apply: dragging a parameter sends no SetField; Apply sends exactly one SetField(SimField::Links), raising the undo depth by 1, one Ctrl+Z restoring the prior Links bitwise; Revert restores the staged state to the applied one; Apply and Revert dimmed with nothing staged; close and reopen keeps the staged edit; control: a slider that sends on drag fails"
+  rulings:
+  - R-479
+  milestone: M6
+  note: R-479 D2, E4 (20 Oct 2026).
+- id: REQ-GUI-257
+  area: GUI
+  statement: "Home and the section resets must change no link or parameter, staged or applied."
+  source:
+  - file: decisions.md
+    section: "R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with \"Reset all to defaults\", \"Changing a link re-integrates every pixel\" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_home_leaves_links: with a non-default applied link and a staged parameter edit, Home and each of the three resets leave Links and the staged state bitwise unchanged (C8); control: Reset all to defaults in the Decoder window does change them"
+  rulings:
+  - R-479
+  - R-482
+  milestone: M6
+  note: R-479 D3, E6; R-482 C8 (20 Oct 2026).
+- id: REQ-GUI-258
+  area: GUI
+  statement: "A non-default decoder must be named in a canvas badge, in the top-left corner, naming the chart by its axes and each block off its default after a \"·\" (a parameter with its value), the chart alone at the defaults, hidden with the layer as the Home button is."
+  source:
+  - file: decisions.md
+    section: "R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with \"Reset all to defaults\", \"Changing a link re-integrates every pixel\" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G2. Explore — the everyday view (`01_main.png`)
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G13. Where the artboards are overridden
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_decoder_badge: at the defaults the badge reads the chart's axes alone; with stick-breaking masses \"z_α × z_β · stick-breaking masses\"; with μ_max 4 \"z_α × z_β · μ_max 4 masses\"; hidden with F3 off; control: a non-default decoder with no block named in the badge fails"
+  rulings:
+  - R-479
+  milestone: M6
+  note: "R-479 D4, E7: the badge's place is RQ-387 (meanwhile top-left, D4 as written, 20 Oct 2026); E8: the sidecar and exports carry the links through SimConfig (REQ-SYS-083)."
+- id: REQ-GUI-259
+  area: GUI
+  statement: "Each one-dimensional block's preview (α, β, the momenta), about 160 × 110 px in the line system's styles and live while a parameter is dragged, must draw latent z against the physical value over the visible range widened by half its width each side and never narrower than [−4, 4], with dashed lines at the codomain's bounds at the active values, the window's current range of z on the block shaded, a dot at the slice centre's value, the derivative d(value)/dz faint and labelled \"resolution\", and off the default the default's curve faint behind."
+  source:
+  - file: decisions.md
+    section: "R-480 — Each link has a preview, about 160 × 110 px in the line system's styles and live while a parameter is dragged: a one-dimensional block's curve with its bounds, the visible range, the centre, its resolution and the default's ghost; the masses' simplex triangle with the image of an even grid of z lines, the view's footprint, the centre and the equal-mass point; the axis warps the same widget; every preview evaluating the generated link functions on the CPU at f64, never a reimplementation"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_preview_1d: for the α row and the Momenta row at q_max 2 and 1.5, the bounds lines sit at the active bounds, the shaded span equals the view's z range, the dot is at the centre's value, the resolution curve is the exp of the log-det, and the ghost shows only off the default; dragging a parameter updates the preview with no SetField sent; control: a preview drawn at the default while q_max is 1.5 fails"
+  rulings:
+  - R-480
+  milestone: M6
+  note: R-480 P1, F1, F3, F4, F6 (20 Oct 2026).
+- id: REQ-GUI-260
+  area: GUI
+  statement: "The masses' preview must be a triangle with corners labelled m₁, m₂, m₃, the image of an even grid of z lines through the link, the current view's footprint in mass space shaded, the slice centre a dot and the equal-mass point marked."
+  source:
+  - file: decisions.md
+    section: "R-480 — Each link has a preview, about 160 × 110 px in the line system's styles and live while a parameter is dragged: a one-dimensional block's curve with its bounds, the visible range, the centre, its resolution and the default's ghost; the masses' simplex triangle with the image of an even grid of z lines, the view's footprint, the centre and the equal-mass point; the axis warps the same widget; every preview evaluating the generated link functions on the CPU at f64, never a reimplementation"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui mock_preview_simplex: softmax_tanh's grid image stays inside the triangle short of its edges and stick_breaking's reaches them; the footprint and centre match the view; corners read m₁ m₂ m₃; control: a grid image computed with the default link while stick_breaking is staged fails"
+  rulings:
+  - R-480
+  milestone: M6
+  note: R-480 P2, F5 (20 Oct 2026).
+- id: REQ-GUI-261
+  area: GUI
+  statement: "The Chart builder must give each warped axis the same preview widget, chart coordinate t ∈ [0, 1] against the quantity, with its density and, off its default, the default's ghost; an energy-type axis's curve must be drawn at the slice centre's U, I and masses and labelled \"at the centre\"."
+  source:
+  - file: decisions.md
+    section: "R-480 — Each link has a preview, about 160 × 110 px in the line system's styles and live while a parameter is dragged: a one-dimensional block's curve with its bounds, the visible range, the centre, its resolution and the default's ghost; the masses' simplex triangle with the image of an even grid of z lines, the view's footprint, the centre and the equal-mass point; the axis warps the same widget; every preview evaluating the generated link functions on the CPU at f64, never a reimplementation"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7. Chart builder (`03_chartbuilder.png`)
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui chartbuilder_warp_preview: on the real engine, for K = K_max t^γ_K at γ 1 and 2, the curve and density match the warp evaluated directly; the energy axis's curve is labelled at the centre and equals the per-pixel warp at the centre pixel; control: a curve at the default γ while γ is 2 fails"
+  rulings:
+  - R-480
+  milestone: M8
+  note: R-480 P3, F7 (20 Oct 2026).
+- id: REQ-GUI-262
+  area: GUI
+  statement: "Every link preview must evaluate the generated link functions on the CPU at f64 through the engine's link evaluator, the code the kernel runs, and the GUI must reimplement no link formula."
+  source:
+  - file: decisions.md
+    section: "R-480 — Each link has a preview, about 160 × 110 px in the line system's styles and live while a parameter is dragged: a one-dimensional block's curve with its bounds, the visible range, the centre, its resolution and the default's ghost; the masses' simplex triangle with the image of an even grid of z lines, the view's footprint, the centre and the equal-mass point; the axis warps the same widget; every preview evaluating the generated link functions on the CPU at f64, never a reimplementation"
+  - file: decisions.md
+    section: "R-482 — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 1. The one-way dependency rule
+  verify:
+    method: unit test
+    detail: "cargo test -p gui mock_preview_is_kernel: each preview's samples equal the generated link evaluated directly at the same z and parameters, bit for bit at f64 (C7); grep: no tanh, sigmoid or softmax formula in crates/gui; control: a preview fed a perturbed parameter differs"
+  rulings:
+  - R-480
+  - R-482
+  milestone: M6
+  note: R-480 P4, F2; R-482 C7 (20 Oct 2026).
+- id: REQ-GUI-263
+  area: GUI
+  statement: "The Export & share window must report, before the share, which tiers fit the image's embedding at the chosen size (or \"not embedded\"); Import picture must report the tiers recovered and the fourth outcome \"state present, cannot recreate\" and \"links unrecorded\"; and a recreated view that is a fallback must be badged, naming what was not embedded or assumed."
+  source:
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  - file: docs/gui/principia_render_gui_spec.md
+    section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
+  verify:
+    method: GUI screenshot
+    detail: "cargo test -p gui export_tier_report: at 64² with a custom shader the window reads which tiers embed and which go to the PNG text; at a size below tier 1 it reads \"not embedded\"; importing the image reports the tiers recovered and badges the fallback; an unknown-link record reads \"cannot recreate\" naming the link; control: an import of a full record shows no fallback badge"
+  rulings:
+  - R-483
+  - R-484
+  milestone: M8
+  note: R-484 RT3, J7; R-483 X4, X5 (20 Oct 2026).
+- id: REQ-GUI-264
+  area: GUI
+  statement: "On the real engine, the Decoder window's Apply must send the staged `Links` as one `SetField` that re-integrates every pixel as one undo entry, and its previews must read the live view's range and centre."
+  source:
+  - file: decisions.md
+    section: "R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with \"Reset all to defaults\", \"Changing a link re-integrates every pixel\" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export"
+  - file: decisions.md
+    section: "R-480 — Each link has a preview, about 160 × 110 px in the line system's styles and live while a parameter is dragged: a one-dimensional block's curve with its bounds, the visible range, the centre, its resolution and the default's ghost; the masses' simplex triangle with the image of an even grid of z lines, the view's footprint, the centre and the equal-mass point; the axis warps the same widget; every preview evaluating the generated link functions on the CPU at f64, never a reimplementation"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: G7a. Decoder (no artboard; R-478 to R-482)
+  verify:
+    method: unit test
+    detail: "cargo test -p gui decoder_real_engine: Apply re-integrates (a new sim key) and is undone by one Ctrl+Z; the previews' shaded span and centre follow a pan in the next frame; control: a Revert sends nothing"
+  rulings:
+  - R-479
+  - R-480
+  milestone: M8
+  note: R-479 D2, L3 (20 Oct 2026).
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -19345,20 +19760,24 @@
   note: "Default k: REQ-TOOL-111 (calibration)."
 - id: REQ-TOOL-065
   area: TOOL
-  statement: "The embedded payload must carry the build hash, the slice (chart id + params, z₀ over the 8-D latent, q₁ and q₂ with zoom as their common scale, slice values, lock flag, z_locked, δ), the sim settings (T_horizon, dt_macro, N_max, r_sub, gamma_sub, r_coll, r_close, eps_E, eps_L, tau and the escape window, and the integrator occupant as stepper × regularisation), the ensemble (E, N, with no jitter field), the full colour spec including brightness field, polarity and ramp window, and the tier settings used, every field named as the contracts name it."
+  statement: "The embedded payload must carry the build hash, the slice (chart id + params, z₀ over the 8-D latent, q₁ and q₂ with zoom as their common scale, slice values, lock flag, z_locked, δ, and the links, each block's id and tunable parameter values), the slice frame's tilt map and targets and a curved chart's tilt, angles, targets and map, each energy axis's mapping, a saved chart's full definition by value, the sim settings (T_horizon, dt_macro, N_max, r_sub, gamma_sub, r_coll, r_close, eps_E, eps_L, tau and the escape window, and the integrator occupant as stepper × regularisation), the ensemble (E, N, with no jitter field), the full colour spec including brightness field, polarity and ramp window, and the tier settings used, every field named as the contracts name it."
   source:
   - file: docs/design/principia_dd_image_embedding.md
     section: 6. What travels
   - file: decisions.md
     section: "R-81 — The embedded record uses the contract names *(closes RQ-32)*"
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
   verify:
     method: unit test
-    detail: "embed → extract round-trips every listed field; field names match gui_state_contract §2 and integrator_contract Part 3; the record has no jitter_frac and no 10-component z0"
+    detail: "embed → extract round-trips every listed field, a non-default link and parameter and a saved tilted chart included; field names match gui_state_contract §2 and integrator_contract Part 3; the record has no jitter_frac and no 10-component z0; a saved chart is held by value, the receiver's library unread"
   rulings:
   - R-80
   - R-81
   - R-83
+  - R-483
   milestone: M7
+  note: R-483 X3, H3 (20 Oct 2026).
 - id: REQ-TOOL-066
   area: TOOL
   statement: "Recreating a slice from an embedded payload whose build hash indicates a different decoder must be refused rather than done silently."
@@ -19370,8 +19789,9 @@
     detail: payload with a mismatched build hash yields a refusal
   rulings:
   - R-72
+  - R-483
   milestone: M7
-  note: "Which hash component detects a decoder change: REQ-TOOL-112 (definition)."
+  note: "Which hash component detects a decoder change: REQ-TOOL-112 (definition). R-483 X4: the decoder is the build's registry plus the record's links; the refusals are REQ-TOOL-171 and REQ-TOOL-172 (20 Oct 2026)."
 - id: REQ-TOOL-067
   area: TOOL
   statement: "Colour modes must be embedded as enum IDs plus parameters, with WGSL source embedded only for genuinely ejected nodes, and any fallback to a different colouring on recreate must be visible to the user."
@@ -19414,8 +19834,10 @@
   verify:
     method: unit test
     detail: "figure export pixels equal renderer output bit-for-bit; share export has LSB payload and a tEXt chunk"
-  rulings: []
+  rulings:
+  - R-484
   milestone: M7
+  note: "R-484 RT1: the tEXt chunk always carries all three tiers (20 Oct 2026)."
 - id: REQ-TOOL-071
   area: TOOL
   statement: "The reader must report exactly one of three distinguishable outcomes: no embedded state, state present but corrupt, or recovered with how."
@@ -19944,7 +20366,10 @@
   - R-71
   - R-81
   - R-380
+  - R-483
+  - R-484
   milestone: M7
+  note: "R-483 H5, R-484 J5: the layout is bumped to version 4 for the filled links and the colour tier flag, a proposal confirmed with the magic at the M7 gate (20 Oct 2026)."
 - id: REQ-TOOL-110
   area: TOOL
   kind: definition
@@ -19998,7 +20423,9 @@
     detail: "dd_image_embedding §6 names the component and what changes it; the reviewer checks that a decode or chart-version change alters it and an unrelated build change does not"
   rulings:
   - R-72
+  - R-483
   milestone: M7
+  note: "R-483 X4: the schema version covers every registry entry by content (R-340); whether each recorded link carries its own entry hash is RQ-385 (20 Oct 2026)."
 - id: REQ-TOOL-113
   area: TOOL
   kind: calibration
@@ -20573,7 +21000,9 @@
     detail: "for one state, the SimConfig and RenderState text in the snapshot JSON, in the decoded share link and in the extracted pxpack record is byte-equal to the canonical serialisation"
   rulings:
   - R-309
+  - R-484
   milestone: M8
+  note: "R-484 RT2, RT3: what embeds degrades by tier, reported before the share (REQ-GUI-263, 20 Oct 2026)."
 - id: REQ-TOOL-147
   area: TOOL
   statement: "`prin profile` must stream its trace: the header line first, then each frame record as the frame completes, the file flushed at least every 60 frames or every 1 s, whichever comes first, so a run that crashes or is killed loses at most the frames since the last flush; the summary line (`leak_flags`, `hot_paths`) appended as the final line at session end. The run's memory must not grow with `--frames` beyond what the summaries themselves need. A trace left by a run killed mid-session reads as \"session incomplete\" (R-341, R-286, R-298, R-299)."
@@ -21107,6 +21536,193 @@
   - R-475
   milestone: M8
   note: R-474 R5, K6; R-475 L8. Closed by TASK-M8-33.
+- id: REQ-TOOL-171
+  area: TOOL
+  statement: "On reading any export, before anything renders, a record whose link id the reading build's registry lacks must read \"state present, cannot recreate\", naming the link and its block, and a record whose schema version differs from the reader's must be refused the same way, naming both versions; no default link may stand in for an unknown one and no default value for a missing parameter."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 9. Obligations
+  verify:
+    method: unit test
+    detail: "cargo test -p engine decoder_identity_refusal: a record naming link `heavy_tail_q` reads cannot recreate naming it and the momenta block; a record with another schema version is refused naming both; nothing is rendered; mutation arm (C11): a reader that falls back to the default link silently fails"
+  rulings:
+  - R-483
+  milestone: M7
+  note: R-483 X4, H4 (a), (c) and meanwhile (b) (20 Oct 2026).
+- id: REQ-TOOL-172
+  area: TOOL
+  statement: "A record whose link's registry entry content differs from the writer's must be refused as \"state present, cannot recreate\", naming exactly the changed link."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  verify:
+    method: unit test
+    detail: "cargo test -p engine decoder_identity_per_link: a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates"
+  rulings:
+  - R-483
+  milestone: M7
+  rq:
+  - RQ-385
+  note: "R-483 X4's per-link arm; waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026)."
+- id: REQ-TOOL-173
+  area: TOOL
+  statement: "A record or export whose links are `{}` (written before Links was filled) must be read with its links unrecorded: under the same build hash it recreates under this build's defaults, labelled so; under another it is \"state present, links unrecorded\", recreated only when the user accepts \"Recreate with this build's default links\" and then badged \"links assumed\"; the embedded record's layout version must be 4."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 2. Layout
+  verify:
+    method: unit test
+    detail: "cargo test -p render embed_old_records: a version-3 record with \"links\":{} under the same build hash recreates labelled this build's defaults; under another build hash it reads links unrecorded and recreates only on acceptance, badged links assumed (C12); a written record's version byte is 4; control: a version-4 record with \"links\":{} is refused as malformed"
+  rulings:
+  - R-483
+  - R-484
+  milestone: M7
+  note: "R-483 X5, H5; the version is REQ-TOOL-109's calibration (20 Oct 2026)."
+- id: REQ-TOOL-174
+  area: TOOL
+  statement: "The embedding's capacity must be re-measured at the new payload (non-default links, a saved tilted chart) at 64² to 1024² for tier 1 alone, tiers 1 and 2, and all three, and §7's table rewritten with the measurement; a record that does not fit must never be truncated."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 7. Measured capacity and behaviour
+  verify:
+    method: benchmark
+    detail: "xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record that does not fit reports not embedded and writes no partial tile"
+  rulings:
+  - R-483
+  - R-484
+  milestone: M7
+  note: R-483 X6, H6 (20 Oct 2026).
+- id: REQ-TOOL-175
+  area: TOOL
+  statement: "A keyframe's state must be its `SimConfig`, links included, so a change of a link or a parameter between keyframes is a sim-key change at that keyframe, a cut, and parameters must never be interpolated."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: Part 3 — The keyframe system (retained)
+  verify:
+    method: unit test
+    detail: "cargo test -p engine keyframe_link_cut: two keyframes differing only in mu_max give a cut at the second, the frames before it at 5 and from it at 4, none between; control: two keyframes differing in an in-plane pan interpolate"
+  rulings:
+  - R-483
+  milestone: M8
+  note: "R-483 X7, H7; interpolating parameters is RQ-384 (meanwhile a cut, 20 Oct 2026)."
+- id: REQ-TOOL-176
+  area: TOOL
+  statement: "Every destination (snapshot JSON, a share link, the profiler header, the embedded record, the tEXt chunk and an animation spec) must carry a non-default link and parameter that read back equal to the set value, and at the defaults every link field must still be present."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
+  - file: docs/gui/principia_render_gui_spec.md
+    section: Export & share
+  verify:
+    method: unit test
+    detail: "cargo test -p engine every_destination_links: with stick_breaking masses and q_max 1.5, each of the six destinations reads back the set ids and values; control (C9): at the defaults each destination's text names every block's id and parameter"
+  rulings:
+  - R-483
+  milestone: M8
+  note: R-483 C9 (20 Oct 2026).
+- id: REQ-TOOL-177
+  area: TOOL
+  statement: "Importing any export (snapshot JSON, share links, the pxpack record written whole, the profiler header's config, the animation spec, the PNG tEXt chunk) must be the identity on `SimConfig` and `RenderState`, the imported canonical text equal byte for byte; only the image's low-bit embedding may lose tiers."
+  source:
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: Part 5 — Determinism & reproducibility
+  - file: docs/contracts/principia_export_animation_contract.md
+    section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine round_trip_identity: T1's state (every leaf off its launch value, J11) round-trips through each path bitwise; control: the default state round-trips too; a path that drops a field fails"
+  rulings:
+  - R-309
+  - R-318
+  - R-484
+  milestone: M8
+  note: R-484 RT1, T1, J1–J3, J11 (20 Oct 2026).
+- id: REQ-TOOL-178
+  area: TOOL
+  statement: "Every struct of `SimConfig` and `RenderState`, recursively, must serialise at least one field in T1's non-default state, never `{}`; a map or a list may be empty."
+  source:
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p engine no_empty_structs: a serializer that fails on a struct with no field serialised accepts T1's state; control: a struct with no field (today's Links {} and the six others) fails it, recorded in the PR before they are filled; a link with no parameter writing \"params\":{} passes"
+  rulings:
+  - R-484
+  milestone: M8
+  note: "R-484 T2, J9, J10: fires on Links, Chart, Slice, Integrator, Collision, Quality and Palette until each is filled (20 Oct 2026)."
+- id: REQ-TOOL-179
+  area: TOOL
+  statement: "The image's low-bit embedding must drop whole tiers from the bottom when the record does not fit (tier 3, the custom source, first; then tier 2, colour), never tier 1, physics; if tier 1 alone does not give one tile, nothing is written and the image is reported not embedded."
+  source:
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 6. What travels
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 2. Layout
+  verify:
+    method: unit test
+    detail: "cargo test -p render embed_tiers: at each supported resolution, the T1 state with a custom shader embeds the largest tier set that fits; the recovered tiers equal the writer's report; tier 1 is bitwise whenever anything is embedded; at a size below tier 1 the result is not embedded and no partial record (T3); mutation arm: a writer that drops tier 1 fields before tier 3 fails"
+  rulings:
+  - R-484
+  milestone: M7
+  note: R-484 RT2, T3, J6 (20 Oct 2026).
+- id: REQ-TOOL-180
+  area: TOOL
+  statement: "The embedded record must say which tiers it holds (flag bit 2 `source` tier 3, bit 3 `colour` tier 2, any record tier 1; `source` without `colour` discarded), the writer must return the tiers embedded and those left to the tEXt chunk, and the reader must report the tiers recovered."
+  source:
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 2. Layout
+  - file: docs/design/principia_dd_image_embedding.md
+    section: 9. Obligations
+  verify:
+    method: unit test
+    detail: "cargo test -p render embed_tier_flags: a tier-1 record has bits 2 and 3 clear, a tier-1-2 record bit 3 set, all three both; the writer's report and the reader's recovered set equal the flags; control: a record with source set and colour clear is discarded whole"
+  rulings:
+  - R-484
+  milestone: M7
+  note: R-484 RT3, J5, J7 (20 Oct 2026).
+- id: REQ-TOOL-181
+  area: TOOL
+  statement: "Every field of `SimConfig` and `RenderState` must be assigned a tier in one table, `crates/engine/src/contract/tiers.rs`, exhaustive at compile time (every struct destructured with no `..`, every enum matched with no wildcard), which the writer's drop order and the tests read."
+  source:
+  - file: decisions.md
+    section: "R-484 — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p engine tier_table: TIERS assigns every leaf of both structs exactly one tier, SimConfig's all tier 1; the writer's tier bytes are built from the table; T4: a compile-fail test adding a field without a tier fails to build with the field named"
+  rulings:
+  - R-484
+  milestone: M7
+  note: R-484 RT4, T4, J4, J8 (20 Oct 2026).
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."
@@ -22727,19 +23343,22 @@
   milestone: M7
 - id: REQ-VAL-098
   area: VAL
-  statement: "Embed → PNG round-trip → extract must yield a bitwise-equal config at every supported resolution."
+  statement: "Embed → PNG round-trip → extract must yield a bitwise-equal config at every supported resolution, with a non-default link and a saved tilted chart."
   source:
   - file: docs/design/principia_dd_image_embedding.md
     section: 9. Obligations
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
   verify:
     method: golden image
-    detail: round trip at 64², 128², 256², 512², 1024²
+    detail: "round trip at 64², 128², 256², 512², 1024² of a view with a non-default link and parameter and a saved tilted chart; control (C10): the image with its low bits zeroed reads as no embedded state"
   rulings:
   - R-71
+  - R-483
   milestone: M7
-  note: "The supported-resolution list: REQ-TOOL-113 (calibration)."
+  note: "The supported-resolution list: REQ-TOOL-113 (calibration). R-483 C10 (20 Oct 2026)."
 - id: REQ-VAL-099
   area: VAL
   statement: "The parity gate must be run on a non-Metal backend (Vulkan or D3D12) before any Paper-2 numbers are produced; it gates Paper 2, not the build."
@@ -25990,22 +26609,26 @@
   milestone: M2
 - id: REQ-SYS-011
   area: SYS
-  statement: "The exported ViewState must record (z₀, q₁, q₂), the chart id and params (a curved chart's tilt, its angles, targets and map, each energy-type axis's mapping, and a saved chart's definition included), the tilt map, the axis warps and the link id per block, so any chart — tilted or not, saved or not — serialises, saves and restores exactly and a figure's provenance pins its links."
+  statement: "The exported ViewState must record (z₀, q₁, q₂), the chart id and params (a curved chart's tilt, its angles, targets and map, each energy-type axis's mapping, and a saved chart's definition included), the tilt map, the axis warps and the link id and tunable parameter values per block, so any chart — tilted or not, saved or not — serialises, saves and restores exactly and a figure's provenance pins its links."
   source:
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: "Integrity: the link is part of the experiment"
   - file: docs/contracts/principia_chart_decoder_contract.md
     section: The operation table
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
   verify:
     method: unit test
-    detail: "export a tilted view with a non-default link, reload, assert bitwise-identical z per pixel and identical link ids; likewise a tilted shape-sphere view, a linear-E view and a view on a saved chart"
+    detail: "export a tilted view with a non-default link and a non-default link parameter, reload, assert bitwise-identical z per pixel and identical link ids and parameter values; likewise a tilted shape-sphere view, a linear-E view and a view on a saved chart; control (C6): the same export with the parameter stripped fails to reproduce"
   rulings:
   - R-471
   - R-473
   - R-474
   - R-475
+  - R-482
+  - R-483
   milestone: M2
-  note: R-471 H7, R-473 J5, R-474 K6, R-475 L8 (20 Oct 2026).
+  note: "R-471 H7, R-473 J5, R-474 K6, R-475 L8 (20 Oct 2026). R-482 C6, R-483 H2: the ViewState record is SimConfig's serialisation, not a copy (20 Oct 2026)."
 - id: REQ-SYS-012
   area: SYS
   statement: "The kernel must receive only (z₀, q₁, q₂, chart id + params), identical in free and locked mode and before/after any tilt, slice or excursion; the lock, δ memory, ghost marks and direction library must live CPU-side, with no locked flag or second kernel code path."
@@ -27126,3 +27749,38 @@
   - R-427
   milestone: M1
   note: "R-427 vetoes TASK-M1-18's floors as `pub const fn`s (PR #204); `prelude::hatch()`, the precedent PR #204 cited, is the same pattern. Closed by TASK-M1-18."
+- id: REQ-SYS-083
+  area: SYS
+  statement: "`SimConfig`'s `Links` must hold, for each block (mass, alpha, beta, momenta), the link id and every tunable parameter's value (`LinkChoice { id, params }`), the one place they live, so the canonical serialisation carries them to every destination with no per-destination code and no second copy."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: decisions.md
+    section: "R-481 — Link parameters are adjustable ⚑: each registry entry declares its tunable parameters with a name, a default, an allowed range and a citation, today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, `α_min` staying fixed; every value of a range keeps Part 2.5's three hard requirements, `check` testing its ends and a sampled interior; the values are recorded beside the link id wherever it is recorded; the log-det reweights at the active value; the generated code reads the parameters as a uniform, bitwise today's at the defaults *(amends R-10)*"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: "Integrity: the link is part of the experiment"
+  verify:
+    method: unit test
+    detail: "cargo test -p engine links_filled: Links has the four blocks, each with id and params; the canonical text of a SimConfig names each block's id and parameters; grep: no other struct holds a link id or parameter value; control: a SimConfig with a non-default link serialises differently from the default"
+  rulings:
+  - R-481
+  - R-483
+  milestone: M2
+  note: R-483 X1, H1, H2; R-481 A3, G5 (20 Oct 2026).
+- id: REQ-SYS-084
+  area: SYS
+  statement: "Every block's link id and every tunable parameter must be serialised even at its default: no link field may have `skip_serializing_if` or a serde default."
+  source:
+  - file: decisions.md
+    section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
+  - file: docs/contracts/principia_gui_state_contract.md
+    section: 2. The editable state is the entire coupling surface
+  verify:
+    method: unit test
+    detail: "cargo test -p engine links_written_in_full: at the default links and parameters the canonical text names every block's id and every parameter; grep: no skip_serializing_if or serde(default) on any Links field; control: deserialising a text with one parameter removed is refused (deny_unknown_fields' companion, a missing field)"
+  rulings:
+  - R-483
+  milestone: M2
+  note: R-483 X2 (20 Oct 2026).

@@ -61,3 +61,4 @@ On the mock engine, each of the Manifold view's Slice centre, Tilt and Navigate 
 - **qa's files (R-290, R-466 K15).** No qa assertion is known to assert what R-466 changes; one that asserts a section's heading row, the View menu or the canvas holds nothing more is changed by this task's qa reviewer only.
 - **TASK-M6-43 a dependency (review round 1 of PR #243, code review F2).** `mock_home_leaves_alone` drags a splitter and moves a window, and View › Home sits above View › reset layout (K8): the splitters and reset layout are TASK-M6-43's (R-462), the movable windows TASK-M6-42's (R-461), on which TASK-M6-43 depends.
 - **Early start (R-388).** It may start off the approved head of whichever of TASK-M6-38, TASK-M6-39 and TASK-M6-43 is the last unmerged, once the other two have merged, and opens its PR once that one merges.
+- R-479 D3 (20 Oct 2026): Home and the resets leave the links alone; TASK-M6-50 tests it (REQ-GUI-257).

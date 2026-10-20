@@ -27,3 +27,4 @@ A saved chart is a chart: a latent view saved as the oblique chart `(z₀, q₁,
 
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers the composition of tilts (R-475 L5).
+- R-483 H3 (20 Oct 2026): a saved chart travels by value in every export; R-478: a saved chart carries no links.

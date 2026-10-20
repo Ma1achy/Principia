@@ -59,3 +59,4 @@ The recompute rule made mechanical. The sim key holds chart id + params, the sli
 - RQ-95 ruled: R-113 — REQ-CHART-033's "a link swap changes the sim key, recompiles and re-integrates from t = 0" is REQ-CHART-052, closed here.
 - RQ-98 ruled: R-113 — REQ-INT-026's sim-key clause is REQ-SCHED-007's; its fixture includes each SimUniforms field.
 - R-297 adds REQ-SCHED-097: the compute fast-math setting is a sim-key component (render contract Part 3; caching contract Parts 1 and 2). Scope added to this task, which builds the sim key (~30 lines).
+- R-483 X8 (20 Oct 2026): a link swap's sim-key change includes a parameter change (REQ-SCHED-100, TASK-M5-06).
