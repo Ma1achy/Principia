@@ -241,6 +241,16 @@ fn mock_compass_view_keys_the_cursor_stops_at_the_triangles_edges() {
     assert_eq!(cursor_moved((1, 4), Left, -0.1), (1, 3));
     // The first upper cell, where none is dominant.
     assert_eq!(cursor_start(&[[0.0; 8]; 8]), (0, 1));
+    // Else the dominant cell, wherever it is.
+    let mut grid = [[0.0; 8]; 8];
+    grid[3][6] = -0.8;
+    grid[1][2] = 0.5;
+    let check_start = |want: (usize, usize)| assert_eq!(cursor_start(&grid), want);
+    check_start((3, 6));
+    rejects(
+        "a cursor started on the first cell, another dominant",
+        || check_start((0, 1)),
+    );
     rejects("a cursor that passes the diagonal", || {
         check_upper(cursor_moved((3, 4), Left, -1.0));
         check_upper((3, 3));

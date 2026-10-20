@@ -537,6 +537,51 @@ fn compass_plucker_paints_the_cursor_the_readout_and_its_names() {
             "{name} under bar {k}"
         );
     }
+    // Each name turned a quarter to read upwards, centred on its column's x: the grid's above it, ending 3 pt over the
+    // grid; the readout's under it, starting 3 pt under the readout.
+    let turned = |name: &str, below: bool| {
+        painter_shapes
+            .iter()
+            .filter_map(|s| match s {
+                Shape::Text(t)
+                    if t.galley.text() == name
+                        && t.angle == -std::f32::consts::FRAC_PI_2
+                        && (t.pos.y > gauge.max.y) == below =>
+                {
+                    Some((t.pos, t.galley.size()))
+                }
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+    };
+    let check_turned = |k: usize, at: egui::Pos2, size: egui::Vec2, below: bool| {
+        let x = place.cell_rect(0, k).center().x;
+        let bottom = if below {
+            gauge.max.y + 3.0 + size.x
+        } else {
+            place.rect().min.y - 3.0
+        };
+        assert_eq!(
+            at,
+            egui::pos2(x - size.y / 2.0, bottom),
+            "name {k}, below {below}"
+        );
+    };
+    for (k, name) in AXES.iter().enumerate() {
+        for below in [false, true] {
+            let found = turned(name, below);
+            assert_eq!(found.len(), 1, "{name} turned, below {below}");
+            check_turned(k, found[0].0, found[0].1, below);
+        }
+    }
+    let (at, size) = turned(AXES[3], true)[0];
+    rejects("a readout name centred on its column's left edge", || {
+        check_turned(3, at - egui::vec2(size.y / 2.0, 0.0), size, true)
+    });
+    rejects(
+        "a readout name ending, not starting, under the readout",
+        || check_turned(3, at - egui::vec2(0.0, size.x), size, true),
+    );
     // The readout and the help text beside the grid, in the app.
     let shown = painted_texts(&shapes(&mut h, &mut app));
     assert!(shown.contains(&drawing.readout), "{shown:?}");

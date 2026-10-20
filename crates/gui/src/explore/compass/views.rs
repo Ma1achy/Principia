@@ -295,7 +295,12 @@ pub fn cell_background(visuals: &egui::Visuals) -> Color32 {
 
 /// Cell `p`'s colour: its sign's hue at intensity `|p|`, from the cell background (R-452).
 pub fn cell_colour(visuals: &egui::Visuals, p: f64) -> Color32 {
-    let hue = if p < 0.0 { NEGATIVE } else { POSITIVE };
+    // A zero, of either sign, draws the background whichever hue it takes.
+    let hue = if p.is_sign_negative() {
+        NEGATIVE
+    } else {
+        POSITIVE
+    };
     mix(cell_background(visuals), hue, p.abs())
 }
 

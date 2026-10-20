@@ -222,3 +222,7 @@ justification = "where raw == π̂ both select π̂: select(true, pi, raw) and s
 [[equivalent]]
 mutant = "crates/kernel/src/chart/burrau_acute.rs:376:33: replace > with >= in BurrauThetaLz<P>::nearest_feasible"
 justification = "nearest_feasible runs only on an infeasible v; v = 1/2 gives L_z = 0, feasible at every K >= 0, so it never reaches the comparison, and at K < 0 no v is feasible, both edges fail, and the clamp returns 1/2 either way"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass/views.rs:199:19: replace / with * in gauge"
+justification = "Z0_HALF_RANGE is 1.0 (manifold_view/mod.rs), and x / 1.0 and x * 1.0 are both x for every f64"
