@@ -222,3 +222,7 @@ justification = "where raw == π̂ both select π̂: select(true, pi, raw) and s
 [[equivalent]]
 mutant = "crates/kernel/src/chart/burrau_acute.rs:376:33: replace > with >= in BurrauThetaLz<P>::nearest_feasible"
 justification = "nearest_feasible runs only on an infeasible v; v = 1/2 gives L_z = 0, feasible at every K >= 0, so it never reaches the comparison, and at K < 0 no v is feasible, both edges fail, and the clamp returns 1/2 either way"
+
+[[equivalent]]
+mutant = "crates/validation/src/roundtrip.rs:218:43: replace | with ^ in Sides::of"
+justification = "the fold ORs in 1 << k once for each distinct index k from enumerate, so bit k is always clear in b and b ^ (1 << k) equals b | (1 << k)"
