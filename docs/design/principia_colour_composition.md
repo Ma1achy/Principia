@@ -221,20 +221,24 @@ forbidden-region treatment in the outcome view, the hatch `debug_invalid(frag_xy
 chart_decoder_contract Part 3 hatches it"; "Both hatches keep it". **`Φ` here is the
 chart map, `Chart::map`** (`principia_chart_reference.md` §5.1), not the shared decoder after it: the decoder's own
 outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any tag added later) and a
-non-finite decode, never mark a pixel forbidden; such a pixel draws black unless the types or `validate` hatch it, as
-R-446's list of failures says (applied per R-369). **The axes' primary ranges hatch nothing:** R-446's words list them
+non-finite decode, never mark a pixel forbidden; such a pixel draws blank in a presentation view, as a pixel that is
+not a system does (R-511, ruling RQ-379), the lane still unset, as R-446's list of failures says (applied per R-369).
+*Was:* "such a pixel draws black unless the types or `validate` hatch it". **The axes' primary ranges hatch nothing:** R-446's words list them
 among the chart's inputs ("types, primary ranges, validate, Φ"), quoting word for word chart_decoder_contract Part 3's
 sentence on what the area statistic reads ("The statistic reads the chart (the types, the primary ranges, `validate`,
 `Φ`)"), but under Part 3, whose treatment the ruling keeps,
 they decide what the area statistics count (R-408), not what is hatched (applied per R-369, flagged), so a pixel
 outside a primary range that the chart does not hatch (the shape sphere past its pole, a periodic redraw) is a system
 and draws its outcome, and one whose state fails `validate` there draws the background (R-467). Every other
-`decode_failed` sample draws black. **Blank is not a colour (R-470).** The canvas background a not-a-system pixel draws
+`decode_failed` sample draws blank (R-511; *was:* "draws black"). **Blank is not a colour (R-470).** The canvas background a not-a-system pixel draws
 is blank, in every view, the outcome view included: no palette, ramp, compaction or legend holds it, it is never
 counted in a legend's shares, and the only thing drawn over it outside the debug views is the optional Overlays › Chart
-› forbidden region hatch (render_gui_spec §G2). NaN, `±∞`, `sim_failed` and `decode_failed` keep their presentation
-treatment above (`#141418`) and show as themselves only in the debug views (§6); whether a `decode_failed` sample the
-chart does not classify should draw blank instead is RQ-379. *Was (R-446):* "one whose state fails `validate` there is hatched". How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
+› forbidden region hatch (render_gui_spec §G2). NaN, `±∞` and `sim_failed` keep their presentation
+treatment above (`#141418`), a `decode_failed` sample the chart does not classify draws blank, with the
+forbidden-region hatch over it (R-511, ruling RQ-379), and all of them show as themselves only in the debug views
+(§6). *Was:* "NaN, `±∞`, `sim_failed` and `decode_failed` keep their presentation treatment above (`#141418`) and show
+as themselves only in the debug views (§6); whether a `decode_failed` sample the chart does not classify should draw
+blank instead is RQ-379." *Was (R-446):* "one whose state fails `validate` there is hatched". How a sample's chart classification reaches the outcome view is REQ-COL-102's definition (R-72), written in §3
 by the task that needs it. *Was (R-96, superseded in part by R-444 to R-446):*
 "degenerate", `decode_failed`, drawn white `#ECECF0`; "collision @ t=0", a collision with `t_end_step == 0`, drawn
 orange; `running` in the neutral grey and `sim_failed` in the invalid pattern. There is **no separate `escaper` field**: the
@@ -393,8 +397,8 @@ domain), `Φ` being `principia_chart_reference.md` §5.1's `Chart::map`, the cha
 is every other sample. **What plays no part:** the axes' primary ranges, which decide only what R-408's area statistics
 count, so a pixel outside a primary range that passes is a system and draws its outcome; the shared decoder's own
 outcomes, its `DEGENERATE` tags (`M01_TINY`, `ENERGY_UNSCALABLE`, `ENERGY_INFEASIBLE`, and any added later) and a
-non-finite decoder output, which never set it, so such a sample is `decode_failed` and draws black unless the types or
-`validate` hatch it, a non-finite decode staying `decode_failed`/0; and the payload, whose `decode_failed` detail cannot
+non-finite decoder output, which never set it, so such a sample is `decode_failed` and draws blank (R-511; *was:*
+"draws black unless the types or `validate` hatch it"), a non-finite decode staying `decode_failed`/0; and the payload, whose `decode_failed` detail cannot
 tell the two hatches apart (R-446). **Who fills it, and from what:** the CPU, from the chart (R-26), per sample at its
 chart point, never the kernel and never the payload. Inside `[0,1]²` it is filled from the chart's `validate` and
 `Chart::map` (the `Chart` trait, chart_reference §5.1): forbidden where `validate` returns anything but `Valid` or

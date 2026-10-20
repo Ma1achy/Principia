@@ -78,8 +78,9 @@ data. The two words name one object. The **figure** is the rendered slice.
   diagnostic for building charts (§G7). **R-470:** such a pixel is blank, the view's background, in every view, never a
   palette colour, the outcome view included; the hatch outside the debug views is only the optional Overlays › Chart ›
   forbidden region, over those pixels alone; NaN, `±∞`, `sim_failed`, `decode_failed` and the classification behind
-  the hatch show only in the debug views (whether a `decode_failed` sample the chart does not classify is blank instead
-  of `#141418` is RQ-379).
+  the hatch show only in the debug views; a `decode_failed` sample the chart does not classify draws blank too, and
+  `sim_failed` keeps `#141418` (R-511). *Was:* "(whether a `decode_failed` sample the chart does not classify is blank
+  instead of `#141418` is RQ-379)".
 - **A chart never leaves the manifold (R-469).** Every pixel is a valid three-body system or explicitly not one, and no
   chart, tilt, slice or extension integrates a state that is not a system. Navigation stops at the edge (§G2).
 - **Contract first.** Every control reads a `Snapshot` and sends a typed `SetField`. Nothing touches simulation internals,
@@ -112,11 +113,11 @@ many are on; **Lines ▾** beside it, with a count, `Alt+L` showing or hiding al
 - Quadtree: tile bounds, depth colouring, priority heatmap, `refine_flagged`, split / merge activity.
 - Integration: substep density, substep-cap hits, NaN / invalid pixels, energy drift.
 - Chart: forbidden region (the chart's domain function, R-26), Burrau lattice (primitive triples).
-- Stain: class edges.
 
 *Was (before R-476):* "- Chart: forbidden region (the chart's domain function, R-26), grid, Burrau lattice (primitive
 triples)." and "- Stain: class edges, `t_end` contours." The grid and the `t_end` contours are presets of the line
-system now, under Lines ▾ (R-476, L2).
+system now, under Lines ▾ (R-476, L2). *Was (before R-509):* "- Stain: class edges." Class edges are the line
+system's preset too (R-509), so Overlays ▾ has no Stain group.
 
 Each entry is sorted by Part II §12.1's rule into a post node (Tier 1, derived from the address), a sim shader (Tier 2,
 already resident) or a tile debug shader (Tier 3, a scheduler verdict). The Overlays menu and the Display window (§G5)
@@ -124,7 +125,7 @@ replace the corpus's global display bar (R-67). The Chart group's "forbidden reg
 "NaN / invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view (R-467, applied per
 R-369); whether they stay beside it, go, or show only while it is on was RQ-374, ruled by R-470: **forbidden region**
 stays, off by default, and draws the hatch over exactly the pixels the chart classifies as not a system (blank pixels)
-and nothing else, in any view; **NaN / invalid pixels** draws only while a debug view is the figure (View › Debug view
+and the `decode_failed` samples, blank too (R-511), and nothing else, in any view; **NaN / invalid pixels** draws only while a debug view is the figure (View › Debug view
 on, or a debug-catalogue stain), dimmed with a tooltip saying so otherwise (RQ-374's option (c), applied per R-369).
 
 **The debug view (R-467).** View › **Debug view** switches the figure, over whatever stain is active, to the one view
@@ -142,10 +143,20 @@ the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INV
 graph, drawn over the finished figure: contours of any expression over chart, latent and payload quantities, the hover,
 pinned and kept traces, the axes (frame, ticks, labels, titles), grids and style presets. The menu lists the contour
 sets, traces and axes with their visibility, opens the contour-set editor and the style library, and holds the presets,
-among them **Grid** (contours of the chart's own axes) and **t_end** (`t_end` at the playhead), which were Overlays
+among them **Grid** (contours of the chart's own axes), **t_end** (`t_end` at the playhead) and **Class edges**
+(contours of the stain's categorical field, the edges between pixels of different class, R-509), which were Overlays
 toggles. Lines belong to the figure: they stay with F3 and present mode and are in exports; under F3's Extend they
 continue wherever the field exists and never pass through a pixel that is not a system. Editing a line is one undoable
-`SetField` that re-integrates nothing. Mock-ups: `docs/gui/reference/lines/`. Its six open questions are RQ-377.
+`SetField` that re-integrates nothing. Mock-ups: `docs/gui/reference/lines/`. Its six open questions are ruled (R-509,
+ruling RQ-377): a contour expression is typed in the stain's expression syntax; the playhead reads any payload field
+the generation root's ledger declares; a trace fades off the plane by the proxy where the chart defines one, and
+elsewhere does not fade and its settings say so (the general distance waits on RQ-341); a trace's tick labels win
+over contour labels; class edges are a Lines preset; a new contour set takes Screen contour, smart ink opt-in.
+*Was:* "Its six open questions are RQ-377." In the keyboard tree Lines ▾ follows Overlays ▾ in the top bar's scope
+and opens as it does; the contour-set editor and the style library are windows (§G5), their sections reached with
+Tab (R-476, M13). `Alt+L` is a global key (§G3). On the mock (R-390), which has no line system, Lines ▾ is shown
+dimmed, its count 0, its tooltip saying the line system draws on the real engine, and `Alt+L` does nothing (R-476,
+M6).
 
 **Left: "Manifold view" is ONE group.** Chart, navigation, centre `z₀`, slice and tilt, and rotation are one thing: how you
 view the manifold.
@@ -160,9 +171,14 @@ view the manifold.
   tilt) and adds it to the preset selector's **Saved** group, named "Saved <n>", renamed inline, its provenance (parent
   chart, map, angles, targets, and a latent view's `q₁`, `q₂`) shown beside it; it is then tilted, sliced and saved like
   any chart, so tilts compose. Saved charts are the GUI's own settings, kept across sessions, deleted as a preset is
-  (§G7). With an energy-type axis (`E`, `L_z`, `K`), the section offers each such axis's **mapping**, warped (the
-  default, every pixel feasible) or linear (an affine axis, its infeasible pixels blank), one undoable edit that
-  re-integrates (R-471).
+  (§G7), at once and not undoable; deleting the active one leaves the view as it is, the picker naming it "unsaved
+  chart" with its provenance until another chart is picked or it is saved again (R-475 L3). A latent view saved at a
+  tilt keeps its Tilt section dimmed meanwhile, its tilt waiting on RQ-404; a saved curved chart's target dropdowns do
+  not offer its saved target, which waits on RQ-403 (R-475 L4, L5). With an energy-type axis (`E`, `L_z`, `K`, `KE`)
+  or, on a Chart-builder chart, any physical-quantity axis (R-506), the section offers each such axis's **mapping**,
+  warped (the default, every pixel feasible) or linear (an affine axis, its infeasible pixels blank), one undoable edit
+  that re-integrates (R-471): one row per axis after Save view as chart, each two radio options, in that keyboard
+  order (R-471 H10). *Was:* "With an energy-type axis (`E`, `L_z`, `K`)".
 - **Navigate:** centre `(u, v)`; zoom (log₂). With the depth readout, the precision warning and the lock row (the next
   two bullets) that is all it holds, with the reset beside its heading (R-466): no grid of `z₀` values, which repeated
   the Slice centre sliders (R-457). Its **reset** returns the centre `(u, v)` to the chart preset's centre and the zoom
@@ -177,7 +193,9 @@ view the manifold.
   base point, the six coordinates off the preset's axes, tilted or not (R-466, K2). On every chart (R-473, T6) the
   sliders of the coordinates its axes do not set are its hidden coordinates and move the slice centre along them, each
   through its latent control (a mass through its logit), the physical value at the centre read out beside it (the
-  masses on the shape-sphere chart, applied per R-369); the stop (below) holds.
+  masses on the shape-sphere chart, applied per R-369); the stop (below) holds. The sliders of the coordinates a curved
+  chart's axes set (on the shape sphere `z_α`, `z_β`) stay in the section and the keyboard order, read-only and
+  dimmed, each showing the centre's value, with the tooltip "set by the chart's axes: pan to move it" (R-473, J11).
 - **Tilt** (named "Slice & tilt" before R-457): "tilt `τ₁` into [X]" and "tilt `τ₂` into [Y]", each a slider with its
   number box and a dropdown that picks the latent dimension the angle tilts into, and the rotation `γ`. `τ₁` tilts the
   horizontal axis `q₁` toward `e_X` and `τ₂` the vertical axis `q₂` toward `e_Y`: `u₁ = cos τ₁ e_a + sin τ₁ e_X`,
@@ -190,10 +208,13 @@ view the manifold.
   **The map (R-474):** "map: Tip as sheet / Lean each axis", two radio options after `γ`, Tip as sheet the default.
   With one target (`X = Y`) and both angles set, Tip as sheet turns the plane rigidly by `m = √(τ₁² + τ₂²)` about the
   in-plane axis perpendicular to `(τ₁, τ₂)`, orthonormal, and Lean each axis is the formula above; otherwise the two are
-  the same. Under Tip as sheet each angle runs over ±180°, not clamped at 90°; under Lean each axis over ±90°. The map is
+  the same. Under Tip as sheet each angle runs over ±180°, not clamped at 90°; under Lean each axis over ±90°, and choosing
+  Lean each axis clamps an angle stored past ±90° to ±90°, its sign kept, in the same undo entry as the map change
+  (R-474 K15). In the keyboard order the two radio options follow `γ` and precede the Tilt reset (R-474 K7). The map is
   `SimConfig`'s `tilt_map`, one undoable edit, and neither the Tilt reset nor Home changes it. **Every chart (R-473):**
   the section tilts every chart, curved ones included, the targets offering the chart's hidden coordinates, the
-  rotation acting on the chart's own parameters (`principia_chart_decoder_contract.md` Part 4).
+  rotation acting on the chart's own parameters (`principia_chart_decoder_contract.md` Part 4), in units that do not
+  depend on zoom: each screen axis in its full range at zoom 1, the hidden coordinate in its slider span (R-507).
 
 **Resets and Home (R-466).** "Reset" means the active chart preset's own values, never literal zero: the masses `z_μ1`,
 `z_μ2` are slice coordinates, and zeroing them would change the physical system. Each reset reads its target from the
@@ -462,6 +483,7 @@ button over the figure is not an element; the Home key does its work.
 | letters, Space | a scope's shortcuts (below), whenever the focus is in that scope, in either mode, except while a text field is being typed in (R-409) |
 | held keys | delay, then repeat (the DAS / ARR model) |
 | Ctrl+Z | undo, from the contract's history (R-52), in either mode, except while a text field is being typed in, when it undoes the text edit (R-409) |
+| Alt+L | show or hide all lines (Lines ▾, R-476), wherever the focus is, in either mode; it is not the Figure's L and never starts listening; while a text field is being typed in it types what the platform types (on macOS "¬"), as every key does there; on the mock it does nothing (R-476, M6 and M9) |
 | ? | shortcuts, over everything, in either mode, except while a text field is being typed in, when it types a character (R-409) |
 | Home | Home: Slice centre, Tilt and Navigate reset to the chart preset's values, one undoable command, wherever the focus is, in either mode, except on the console's log in interaction mode (its first entry, R-450) and while a text field is being typed in (the caret to the line's start); Shift and Alt change nothing, Ctrl and Cmd make it no Home; it does not repeat (R-466) |
 
@@ -672,7 +694,8 @@ simulation sees the final in-gamut colours.
   v1 offers plain, watercolour & pencil, and the seven print presets, named as the file names them (:2875): Default,
   Drops, Newspaper, Vintage, Poster78, Riso, Duotone.
 - **Colour-vision simulation:** off, deuteranopia, protanopia, tritanopia, achromatopsia (R-123).
-- **Overlays:** class edges, cursor crosshair. *Was (before R-476):* "grid, class edges, `t_end` contours, cursor
+- **Overlays:** cursor crosshair. *Was (before R-509):* "class edges, cursor crosshair"; class edges are a Lines ▾
+  preset (§G2; R-509). *Was (before R-476):* "grid, class edges, `t_end` contours, cursor
   crosshair"; the grid and the `t_end` contours are Lines ▾ presets (§G2; R-476, L2).
 
 The display stage stays global and outside the pipeline (Part II §12). This window and the Overlays menu (§G2) replace the
@@ -742,10 +765,11 @@ R-446; dd_decoder §3.7).** Energy
 normalisation scales the momenta, `pᵢ ← η_E·pᵢ`; with zero momenta it cannot reach any `E*` above the potential, since
 scaling zero momenta cannot raise the kinetic energy. So with `η_E` on, every pixel of a zero-momentum (free-fall)
 slice whose `E*` is above its potential `U = V₀` is tagged `DEGENERATE(ENERGY_UNSCALABLE)`, and any pixel whose `E*` is
-below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn black `#141418` in the outcome view, the
-bounded / nothing yet key of the outcome legend (colour_composition §1.4; R-446). A pixel the mass block has already
+below it `DEGENERATE(ENERGY_INFEASIBLE)`: these are `decode_failed`, drawn blank in the outcome view, as a pixel that is
+not a system, with no key or share (R-511, ruling RQ-379; colour_composition §1.4). *Was (R-446):* "drawn black
+`#141418` in the outcome view, the bounded / nothing yet key of the outcome legend". A pixel the mass block has already
 tagged, such as `DEGENERATE(M01_TINY)`, keeps that tag rather than an energy one, but it is `decode_failed` too and
-drawn the same black. The one exception to the colour is where `E* = V₀` exactly: the IC is already at the target, the
+drawn the same, blank (R-511; *was:* "drawn the same black"). The one exception to the colour is where `E* = V₀` exactly: the IC is already at the target, the
 decode is untouched and untagged, and the pixel integrates, drawn in its outcome's colour once its event fires.
 `V₀` varies over the slice and is negative, so only an `E* < 0` inside its range has such a contour
 `V₀ = E*`, between the `ENERGY_INFEASIBLE` and `ENERGY_UNSCALABLE` regions; on a sampled grid it shows only as
@@ -780,7 +804,10 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
   from its axes. **R-471:** an energy-type physical quantity (energy, `L_z`) is warped by default
   (`principia_chart_reference.md` §2.1, per pixel), every pixel of `[0,1]²` feasible and the axis bounded past its edge;
   its range mapped linearly is the option, B1's affine axis, whose infeasible pixels draw blank and log no decoder-bug
-  warning (§G12).
+  warning (§G12). **R-506:** every physical-quantity axis, the virial ratio and the mass ratio included, likewise:
+  warped to its feasible range by default (the mass ratio through the mass link), linear as an option, its pixels
+  that are not a system blank; a warp not yet written (the virial ratio's) is REQ-CHART-070's, written before the
+  builder offers the axis.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, the boundary's formula, and "forbidden in view: N%". **Each chart supplies its domain function** (R-26:
   `validate(u, v)` on the `Chart` trait). **"Forbidden in view" counts each system once (R-408):** a visible pixel
@@ -884,7 +911,9 @@ is a decoder bug: it draws the canvas background in a presentation view and the 
 console logs one warning per chart and view, severity warn, source `app`, "decoder bug: chart <name> fails validity
 inside [0,1]² at pixel (<x>, <y>), (s, t) = (<s>, <t>); <n> pixels in this view", the first such pixel in row order
 from the bottom-left, logged again only when the view or the chart changes (applied per R-369). The real engine should
-log none (REQ-CHART-058's sweep). Whether a Chart-builder chart's in-square failure warns is RQ-372. An energy-type
+log none (REQ-CHART-058's sweep). A Chart-builder chart's in-square failure warns when its physical-quantity
+axes are all warped, valid by construction there, and not when any is linear (R-506, ruling RQ-372). *Was:* "Whether
+a Chart-builder chart's in-square failure warns is RQ-372." An energy-type
 axis under its linear option (R-471, E2) has infeasible pixels inside the square by design: they draw blank and warn
 nothing.
 

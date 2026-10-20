@@ -68,7 +68,7 @@ Two behaviours follow, and both are diagnostic value that exists *because* the a
 Works in **any** chart, any tilt, any slice — uniformly, because the full CPU state supports the projection regardless.
 
 **Drawn by the line system (R-476).** The trace's drawing, the hover, pinned and kept traces with their style and
-fade, is the line system's (`principia_lines.md` §8): its integration is unchanged (`computeIC`, §6), and the same
+fade (the proxy where the chart defines one, else none, R-509), is the line system's (`principia_lines.md` §8): its integration is unchanged (`computeIC`, §6), and the same
 `Trace` and renderer serve the inspector's views (§4), nothing in them specific to the slice view (R-476, L3).
 
 ---

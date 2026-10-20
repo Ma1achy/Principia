@@ -70,7 +70,8 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **Save view as chart** (after Chart builder…, and on View ›) saves the view as a named chart in the picker's Saved
     group, to tilt and save again *(conformed to R-475)*.
   - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
-    figure outside the node graph; the grid and `t_end` contours are its presets *(conformed to R-476)*.
+    figure outside the node graph; the grid, `t_end` contours and class edges are its presets *(conformed to R-476,
+    R-509)*.
   - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
     it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It

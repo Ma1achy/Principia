@@ -2,8 +2,8 @@
 
 **Adopted by R-476 (20 Oct 2026, the human's L1: "Build the line system as specified in `principia_lines.md`").**
 This document is part of the corpus from R-476 on: where it says "proposed", the proposal is what is built, except
-where R-476 or a later ruling says otherwise, and its §11's six open questions are not ruled: they are RQ-377, and
-what is built meanwhile is RQ-377's. It is read with `decisions.md` § R-469 to R-477 (charts never leave the manifold,
+where R-476 or a later ruling says otherwise, and its §11's six open questions are RQ-377, ruled by R-509 (§11).
+*Was:* "and its §11's six open questions are not ruled: they are RQ-377, and what is built meanwhile is RQ-377's." It is read with `decisions.md` § R-469 to R-477 (charts never leave the manifold,
 blank non-systems, warped energy axes, tilt on every chart, the two tilt maps, save view as chart), which its §10
 anticipates. Its mock-ups are in `docs/gui/reference/lines/`: `images/` (every picture of the "Principia Lines"
 canvas, rendered from real data) and `canvas/` (the canvas's artboards, `.dc.html`, and its index `canvas.json`; they
@@ -317,7 +317,7 @@ can be restyled like any contour.
 
 ## 11. Open questions
 
-*Queued as RQ-377, parts (1) to (6), one per question (R-476, L5: "Queue them as RQ entries; do not rule on them"); what is built meanwhile is RQ-377's.*
+*Queued as RQ-377, parts (1) to (6), one per question (R-476, L5: "Queue them as RQ entries; do not rule on them"), and ruled by R-509 (20 Oct 2026), the human: "1 reuse the stain's expression syntax; 2 any ledger-declared payload field; 3 proxy where defined, else no fade and say so, the real distance waits on RQ-341; 4 trace labels win; 5 class edges move to the line system; 6 Screen contour default, smart ink opt-in." Where §1 keeps class edges in the stain, §4.1's expression is a mini-language, §7 orders labels and §8 fades a trace, R-509 holds. Was: "; what is built meanwhile is RQ-377's."*
 
 1. **Expression language.** A purpose-built mini-language (proposed; total, sandboxed, GPU-compilable), or reuse the
    stain graph's Code view syntax?

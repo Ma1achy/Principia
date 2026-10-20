@@ -545,8 +545,9 @@ another field, and a stain that uses lightness uses it for a named field (energy
   that under Replace-L it becomes neutral grey at the brightness field's lightness, still the one class with no hue.
   `#141418` is not quite neutral (OKLab `a ≈ 0.002`, `b ≈ −0.008`, chroma ≈ 0.008): RQ-317.
 
-The not-yet stipple never appears (§7). `sim_failed`, NaN and `decode_failed` draw B's `#141418`, as in every
-presentation view (R-467; §7); the hatch is the debug view's. *Was:* "The invalid hatch draws `sim_failed` and NaN as
+The not-yet stipple never appears (§7). `sim_failed` and NaN draw B's `#141418`, as in every
+presentation view (R-467; §7), and `decode_failed` draws blank (R-511; *was:* "`sim_failed`, NaN and `decode_failed` draw
+B's `#141418`"); the hatch is the debug view's. *Was:* "The invalid hatch draws `sim_failed` and NaN as
 everywhere".
 
 ### 10.2 Final motion: Chazy's seven (the default)
@@ -698,8 +699,9 @@ Spec 03 §10, the human's follow-up of 16 October 2026, transcribed. Which body 
 final-motion maps (the event stain carries escape of body k). These views follow one body, so the detail stays
 legible. Collision is magenta `#DA85B6` and bound is black `#141418` throughout, as everywhere else (§10.1). Like every
 stain in §10, each is a composition on the backbone, its palette a user-editable default; §7's validity rules hold in
-each (running samples hold a value; `sim_failed`, NaN and `decode_failed` `#141418`, a pixel the chart hatches the
-canvas background, R-467, ruling RQ-319; *was:* "`sim_failed` and NaN the hatch; `decode_failed` the hatch too"). The fields are §5.6's.
+each (running samples hold a value; `sim_failed` and NaN `#141418`, `decode_failed` and a pixel the chart hatches
+the canvas background, R-467, ruling RQ-319, and R-511, ruling RQ-379 (*was:* "`sim_failed`, NaN and `decode_failed`
+`#141418`, a pixel the chart hatches the canvas background"); *was:* "`sim_failed` and NaN the hatch; `decode_failed` the hatch too"). The fields are §5.6's.
 
 #### 10.11.1 Body lens
 

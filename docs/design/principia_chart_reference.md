@@ -251,9 +251,13 @@ constraint.
 **Past the unit square (R-407): both axes are bounded.** Outside `[0,1]²` the warp has no feasibility guarantee:
 `s ∉ [0,1]` gives `|L_z| = |2s − 1|·L_max(t) > L_max(t)`, so `K* < K_min`, infeasible for every `γ_K`; `t < 0` has no
 real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back onto `t > 0`). So the warp
-declares nothing beyond bounded and is hatched on every side (§5.4). Its `t > 1` side (`K > K_max`) stays feasible;
-declaring it would be a later declaration, needing physics review (R-407, clause 3), and is not made. Whether to declare
-it affine is queued: RQ-376 (R-469, §11).
+is bounded past `s`'s edges and below `t = 0` (§5.4). Its `t > 1` side (`K > K_max`) stays feasible, and it
+**continues** (R-508, ruling RQ-376, the declaration under physics review R-407 clause 3 asks for): past `t = 1` the
+formula runs on, `K = K_max·t^γ_K > K_max` and `L_max(t)` growing, so every pixel with `s ∈ [0,1]` is a system, an
+affine side, counted as R-408 counts one; the `t` axis's primary range is `t ≥ 0`. Past `t < 0`, and the `s` axis
+past either edge, the warp stays bounded. *Was:* "So the warp declares nothing beyond bounded and is hatched on
+every side (§5.4). Its `t > 1` side (`K > K_max`) stays feasible; declaring it would be a later declaration, needing
+physics review (R-407, clause 3), and is not made. Whether to declare it affine is queued: RQ-376 (R-469, §11)."
 
 **Every energy-type axis is warped by default (R-471).** Axes of kind 3 (`E`, `L_z`, `K`, `KE`, `PE`;
 `principia_chart_decoder_contract.md` Part 3) take this warp by default, wherever they appear: on these charts, the
@@ -264,13 +268,24 @@ axis takes its own line of the warp: `K` (`KE`) `= K_max·t^γ_K`, `E = U + K_ma
 yet: REQ-CHART-070 (R-72), and no chart offers one until it is. **The warp is evaluated per pixel,** with that pixel's
 own `U`, `I` and masses: a tilt or slice that moves a hidden coordinate (masses, shape) changes `U` and `I` across the
 window, and a warp computed once at the centre would put some pixels outside the feasible region; evaluated per pixel,
-every pixel stays feasible under every tilt (R-471, E3; R-473, T5). Untilted, they are `z₀`'s at every pixel (§2, the
+every pixel stays feasible under every tilt (R-471, E3; R-473, T5), each pixel whose own chart parameters lie in
+`[0,1]²`: under Tip as sheet with one target and both angles set a window pixel's `(a, b)` can leave the square, the
+axes' types then acting on it (§5.4), and what such a pixel draws is RQ-402 (R-471, H9). Untilted, they are `z₀`'s at every pixel (§2, the
 fixed geometry and masses), so nothing changes. **A linear mapping is an option per axis** (E2): the axis is affine,
 mapped onto the warp's range at the slice centre (`K ∈ [0, K_max]`, `E ∈ [U₀, U₀ + K_max]`, `L_z ∈ ±√(2 I₀ K_max)`, a
 builder axis onto its own range); its infeasible pixels in the window are not a system and draw blank (R-470), with no
 decoder-bug warning, and the navigation stop (R-469) keeps the centre feasible. The mapping is recorded in the view
 state and the export's sidecar. Under the linear option the axis is R-408's B1 axis, affine past its edge; warped, it
-is bounded, as above.
+is bounded, as above, but past `t = 1`, where it continues (R-508).
+
+**Every physical-quantity axis (R-506).** A Chart-builder physical-quantity axis that is not energy-type, the virial
+ratio, the mass ratio and the rest of render_gui_spec §G7's list, follows the same rule (R-506, ruling RQ-372):
+warped to its feasible range by default, so every pixel of `[0,1]²` is feasible, bounded past its edge; linear as an
+option, B1's affine axis, its pixels that are not a system blank. The mass ratio warps through the mass link (§0.1's
+softmax): its axis moves the mass logits, so every pixel's masses are positive and sum to 1. The warps this section
+does not write (the virial ratio's, a ratio's range in the logits) are REQ-CHART-070's definition (R-72), written here
+under physics review before a chart offers them. The decoder-bug warning (R-467, clause 4) is for a chart whose
+physical-quantity axes are all warped.
 
 ### 2.2 Deterministic momentum construction
 
@@ -784,11 +799,11 @@ existing charts:
 | `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
 | `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
 | `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end) |
-| `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded | hatched on every side; the `t > 1` side is not declared (§2.1) | out of the count and the total (the domain's end) |
+| `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded below `t = 0`; past `t = 1` it continues, affine (R-508) | blank past `s`'s edges and below `t = 0`; past `t = 1` its systems are drawn (§2.1) | past a bounded edge out of the count and the total (the domain's end); past `t = 1` counted (R-508) |
 | `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
 | Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | hatched on every side | out of the count and the total (the domain's end) |
-| Burrau family: the `(ν, K)` chart (§4.3, §4.5) | `ν` bounded (declares nothing) | `K` bounded (declares nothing; the warp's `K(t)`, §2.1) | hatched on every side | out of the count and the total (the domain's end) |
-| Burrau family: `Φ_θ,K`, the strip `Φ_strip,K` (§4.5) | `θ` bounded (declares nothing) | `K` bounded (declares nothing; as on `(ν, K)`) | hatched on every side | out of the count and the total (the domain's end) |
+| Burrau family: the `(ν, K)` chart (§4.3, §4.5) | `ν` bounded (declares nothing) | `K` bounded below `t = 0`, continuing past `t = 1` (the warp's `K(t)`, §2.1; R-508) | blank past `ν`'s edges and below `t = 0`; past `t = 1` its systems are drawn | past a bounded edge out of the count and the total; past `t = 1` counted (R-508) |
+| Burrau family: `Φ_θ,K`, the strip `Φ_strip,K` (§4.5) | `θ` bounded (declares nothing) | `K` as on `(ν, K)` (R-508) | blank past `θ`'s edges and below `t = 0`; past `t = 1` its systems are drawn | past a bounded edge out of the count and the total; past `t = 1` counted (R-508) |
 | Burrau family: `Φ_θ,L_z` (§4.5) | `θ` bounded (declares nothing) | `L_z` affine (linear at fixed `K`) | hatched past `θ`'s edges; past `L_z`'s the formula continues and the fallback hatches `L_z² > 2IK` by validation layer 2's `K ≥ L_z²/2I`; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`, with no band | past `θ`'s edges out of the count and the total; past `L_z`'s every visible pixel counts, its infeasible states forbidden |
 | Burrau family: the δm strip `Φ_strip,δm` (§4.5) | `θ` bounded (declares nothing) | δm affine (the blend is linear in `v`) | hatched past `θ`'s edges; past δm's the blend continues, `Σmᵢ = 1` kept, and the fallback hatches the zero- or negative-mass area by validation layer 2's `mᵢ > 0` | past `θ`'s edges out of the count and the total; past δm's every visible pixel counts, its zero- or negative-mass states forbidden |
 | mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1; for an energy-type axis its linear option, R-471, whose default warp is bounded, §2.1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
@@ -811,7 +826,11 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   default `m_min = 1` leaves no lattice point.
 - **`K`, bounded** (the `(ν, K)` chart's and `Φ_θ,K`'s vertical axis). It is §2.1's `K(t) = K_max·t^γ_K`, bounded for
   §2.1's reasons: `t < 0` has no real value for a non-integer `γ_K` (an odd integer gives `K < 0`, an even one folds back
-  onto `t > 0`). Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) is left undeclared, as on the warp (R-407, A5).
+  onto `t > 0`). Its `t > 1` side (`K > K_max`, feasible at `L_z = 0`) continues, affine, as on the warp (R-508, ruling
+  RQ-376), and is counted. *Was:* "is left undeclared, as on the warp (R-407, A5)". The table's rows for the warp, the
+  `(ν, K)` chart and `Φ_θ,K` follow; *was:* "bounded" (the warp's vertical axis), "`K` bounded (declares nothing; the
+  warp's `K(t)`, §2.1)", "`K` bounded (declares nothing; as on `(ν, K)`)", "hatched on every side; the `t > 1` side is
+  not declared (§2.1)", "hatched on every side" and "out of the count and the total (the domain's end)".
 - **`θ`, bounded** (every acute-angle chart's horizontal axis). The axis's edges are `θ_min` and `θ_max`
   (REQ-CHART-045), inside the domain `(0, π/4]`, so past each edge the formula first runs through real systems the
   chart does not show: below `u = 0` the thin triangles of `θ ∈ (0, θ_min)`, and above `u = 1`, where `θ_max < π/4`,
@@ -845,7 +864,9 @@ Such a physical-quantity axis is linear in its quantity over its range, so past 
 as forbidden. (R-407's port first made it bounded, by clause 1's default; corrected in R-408's port, B1, applied per
 R-369 and flagged to the human.) **Under R-471 an energy-type axis (energy, `L_z`) is warped by default** (§2.1) and
 so bounded past its edge, its pixels there the domain's end, out of the count and the total; B1's affine axis is its
-linear option. The virial ratio and the mass ratio are not energy-type axes, and B1 stands for them. A quantity behind a nonlinear warp (§1.3) declares nothing and is bounded. A new
+linear option. Under R-506 the virial ratio and the mass ratio follow the same rule, warped to their feasible ranges by default (§2.1)
+and bounded past their edges, B1 their linear option. *Was:* "The virial ratio and the mass ratio are not energy-type
+axes, and B1 stands for them." A quantity behind a nonlinear warp (§1.3) declares nothing and is bounded. A new
 declaration beyond bounded, or a new extension type, needs physics review (R-407, clause 3).
 
 **Primary ranges and area statistics (R-408).** Each type's primary range: periodic, one period of that axis (for the

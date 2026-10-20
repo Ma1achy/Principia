@@ -372,12 +372,14 @@ with dd_colouring §3.1's sRGB transfer.
 - **Blank in every view, the hatch an optional overlay, the failures debug-only (R-470).** The background a pixel that
   is not a system draws is blank, the view's background colour, never a palette colour in any view, the outcome view
   included. The hatch is drawn outside the debug views only by the optional overlay Overlays › Chart › forbidden region
-  (off by default), `debug_invalid(frag_xy)` over exactly the pixels the chart classifies as not a system and nothing
-  else (REQ-COL-111). NaN, `±∞`, `sim_failed`, `decode_failed` and the chart's classification are shown only in the
+  (off by default), `debug_invalid(frag_xy)` over exactly the pixels the chart classifies as not a system and the
+  `decode_failed` samples (R-511), and nothing else (REQ-COL-111). NaN, `±∞`, `sim_failed`, `decode_failed` and the chart's classification are shown only in the
   debug views. View › Debug view is one of them, built as a baked variant of the render's pipeline (R-41: a variant,
   never a flag bit): `RenderState`'s `debug_view` selects the variant compiled with the debug arm, and the presentation
-  variant is compiled without it, so a presentation view cannot draw a debug style. A presentation view's `#141418`
-  for a `decode_failed` sample the chart does not classify is RQ-379's to confirm.
+  variant is compiled without it, so a presentation view cannot draw a debug style. A `decode_failed` sample the chart
+  does not classify draws blank in a presentation view, as a pixel that is not a system, the overlay drawing over it;
+  `sim_failed` keeps `#141418` (R-511, ruling RQ-379). *Was:* "A presentation view's `#141418` for a `decode_failed`
+  sample the chart does not classify is RQ-379's to confirm."
 
 ### Live-state & array inspection
 
