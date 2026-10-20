@@ -137,12 +137,8 @@ pub struct Solve {
     pub joint: bool,
 }
 
-/// A chart that passed [`validate`]: only the validator builds one.
-///
-/// ```compile_fail
-/// // Nothing outside the validator can build a validated chart.
-/// let _ = engine::chart_authoring::ValidatedChart::<()> { chart: (), descriptor: todo!(), solves: vec![] };
-/// ```
+/// A chart that passed [`validate`]: only the validator builds one, its fields private (checked by
+/// `tests/validated_chart.rs` on `fixtures/validated_chart`).
 #[derive(Clone, Debug)]
 pub struct ValidatedChart<C> {
     chart: C,
