@@ -31,10 +31,12 @@ use std::mem::{align_of, size_of};
 
 use kernel::payload::{
     fgw_length_raw, fgw_reduced_length_valid, fgw_retained_prefix_length, fgw_truncated,
-    FreeGroupWord, SimStateBase, SimStateFTLE, SIMSTATE_BINDING, SIMSTATE_GROUP, WORD_BINDING,
-    WORD_GROUP,
+    FreeGroupWord, SimStateBase, SimStateFTLE, MAX_CROSSINGS_PER_SUBSTEP, SIMSTATE_BINDING,
+    SIMSTATE_GROUP, WORD_BINDING, WORD_GROUP,
 };
-use kernel::word::{fgw_mul3_add, on_substep, sample_word, CrossingHook, WordBuffer};
+use kernel::word::{
+    fgw_mul3_add, on_substep, sample_word, CrossingHook, SubstepCrossings, WordBuffer,
+};
 use proptest::prelude::*;
 use validation::reference::free_group as pr_ref;
 use validation::{negative_control, prop};
@@ -154,10 +156,23 @@ impl WordBuffer for Logged {
     }
 }
 
-type Substep = fn(&mut CrossingHook, &mut Logged, u32, &[u32]) -> u32;
+type Substep = fn(&mut CrossingHook, &mut Logged, u32, SubstepCrossings) -> u32;
+
+/// A substep's crossings, in order, as the march hands them to `on_substep`: at most
+/// [`MAX_CROSSINGS_PER_SUBSTEP`] (one per cut, payload §3), the unused slots zero.
+fn substep_crossings(c: &[u32]) -> SubstepCrossings {
+    assert!(
+        c.len() <= MAX_CROSSINGS_PER_SUBSTEP as usize,
+        "qa: a substep drew more crossings than the capacity"
+    );
+    let mut out = SubstepCrossings::default();
+    out.symbols[..c.len()].copy_from_slice(c);
+    out.count = c.len() as u32;
+    out
+}
 type Cross = fn(&mut CrossingHook, &mut Logged, u32, u32) -> u32;
 
-fn real_substep(h: &mut CrossingHook, b: &mut Logged, pa: u32, c: &[u32]) -> u32 {
+fn real_substep(h: &mut CrossingHook, b: &mut Logged, pa: u32, c: SubstepCrossings) -> u32 {
     on_substep(h, b, pa, c)
 }
 
@@ -243,12 +258,13 @@ fn any_stream() -> impl Strategy<Value = Vec<u32>> {
     ]
 }
 
-/// A lockstep march: `n` samples, each a list of substeps, each with 0…3 crossings (mostly none).
+/// A lockstep march: `n` samples, each a list of substeps, each with 0 to `MAX_CROSSINGS_PER_SUBSTEP` (2, one per cut)
+/// crossings (mostly none).
 fn march() -> impl Strategy<Value = Vec<Vec<Vec<u32>>>> {
     let substep = prop_oneof![
         6 => Just(Vec::new()),
         2 => proptest::collection::vec(0u32..4, 1..=1),
-        1 => proptest::collection::vec(0u32..4, 2..=3),
+        1 => proptest::collection::vec(0u32..4, 2..=MAX_CROSSINGS_PER_SUBSTEP as usize),
     ];
     proptest::collection::vec(proptest::collection::vec(substep, 0..120), 1..=5)
 }
@@ -270,7 +286,7 @@ fn check_march(step: Substep, march: &[Vec<Vec<u32>>]) -> Result<(), TestCaseErr
         for i in 0..n {
             let Some(c) = march[i].get(t) else { continue };
             let from = buf.len();
-            pa[i] = step(&mut hooks[i], &mut buf, pa[i], c);
+            pa[i] = step(&mut hooks[i], &mut buf, pa[i], substep_crossings(c));
             let ops = buf.ops_since(from);
             for op in &ops {
                 let (Op::Load(j) | Op::Store(j)) = *op;
@@ -343,7 +359,7 @@ fn qa_m315_binding_same_index() {
 
 /// A substep whose hook points at the next sample's word.
 #[cfg(feature = "controls")]
-fn substep_next_index(h: &mut CrossingHook, b: &mut Logged, pa: u32, c: &[u32]) -> u32 {
+fn substep_next_index(h: &mut CrossingHook, b: &mut Logged, pa: u32, c: SubstepCrossings) -> u32 {
     let mut other = *h;
     other.index = (h.index + 1) % b.words.len().max(1);
     let out = on_substep(&mut other, b, pa, c);
@@ -365,7 +381,12 @@ fn qa_m315_write_count_equals_crossings() {
 
 /// A substep that reads the word every substep, crossing or not.
 #[cfg(feature = "controls")]
-fn substep_reading_always(h: &mut CrossingHook, b: &mut Logged, pa: u32, c: &[u32]) -> u32 {
+fn substep_reading_always(
+    h: &mut CrossingHook,
+    b: &mut Logged,
+    pa: u32,
+    c: SubstepCrossings,
+) -> u32 {
     let _ = b.load(h.index);
     on_substep(h, b, pa, c)
 }
@@ -379,9 +400,10 @@ negative_control!(
 
 #[test]
 fn qa_m315_write_count_one_store_per_crossing() {
-    // A fixed march: a sample with 3 crossings in one substep, empty substeps, then a pop, beside an idle sample.
+    // A fixed march: a sample with two crossings (the capacity, one per cut) in one substep, then a pop, empty
+    // substeps, a push, a full substep that pushes and pops, beside an idle sample.
     let m = vec![
-        vec![vec![0, 2, 3], vec![], vec![], vec![2], vec![]],
+        vec![vec![0, 2], vec![3], vec![], vec![2], vec![2, 3], vec![]],
         vec![vec![], vec![], vec![]],
     ];
     check_march(real_substep, &m).unwrap();
@@ -389,8 +411,12 @@ fn qa_m315_write_count_one_store_per_crossing() {
 
 /// A substep that applies only the first of its crossings (one write per substep, not per crossing).
 #[cfg(feature = "controls")]
-fn substep_first_only(h: &mut CrossingHook, b: &mut Logged, pa: u32, c: &[u32]) -> u32 {
-    on_substep(h, b, pa, &c[..c.len().min(1)])
+fn substep_first_only(h: &mut CrossingHook, b: &mut Logged, pa: u32, c: SubstepCrossings) -> u32 {
+    let first = SubstepCrossings {
+        count: c.count.min(1),
+        ..c
+    };
+    on_substep(h, b, pa, first)
 }
 
 negative_control!(
@@ -400,7 +426,7 @@ negative_control!(
     check_march(
         substep_first_only,
         &[
-            vec![vec![0, 2, 3], vec![], vec![], vec![2], vec![]],
+            vec![vec![0, 2], vec![3], vec![], vec![2], vec![2, 3], vec![]],
             vec![vec![], vec![], vec![]]
         ]
     )
