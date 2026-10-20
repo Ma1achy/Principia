@@ -70,6 +70,11 @@ impl Headless {
         )
     }
 
+    /// Sets the window's size, in pixels, from the next frame: the GUI's window resized.
+    pub fn set_size(&mut self, size: [u32; 2]) {
+        self.size = size;
+    }
+
     /// Sets the time between frames, [`FRAME_S`] until set.
     pub fn set_frame_step(&mut self, seconds: f64) {
         self.step = seconds;
