@@ -9,8 +9,8 @@
 //! axis ties are pinned by its embed, every DOF of them (§ "The four axis kinds": "the embed pins config + mass
 //! together"): a slice or convention pin there double-writes them, and so does a second kind-4 axis on any of them,
 //! whose embed pins them again; a kind-1 or kind-2 axis inside them is a same-block collision, which pins nothing more
-//! and which the chart's `coupling` flags. The latent directions the axes and the slice write must be linearly independent, exactly: a direction written
-//! twice is double-written though the counts balance.
+//! and which the chart's `coupling` flags. The latent directions the axes and the slice write must be linearly
+//! independent, exactly: a direction written twice is double-written though the counts balance.
 //!
 //! **Kind 3.** An invariant axis sits downstream of every block it depends on, in the decoder's order mass → config →
 //! momentum; one that reads its own sector or a later one is refused. Two invariant axes solving into one sector are

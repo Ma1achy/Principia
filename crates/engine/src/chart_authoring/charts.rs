@@ -12,11 +12,10 @@
 //! (chart_reference §2.2, R-82).
 //!
 //! **`system_image`** (R-27, R-104, R-141, R-157). The shape sphere is n-to-1 with n = 2, its φ hemispheres
-//! reflection-equivalent; its descriptors are the `(θ, φ)` chart's (R-117), for either chart map, the
-//! exponential map's own value being RQ-371's. The `ν`-axis charts
-//! are `DoubleCover` where their range reaches both leg orderings and bijective otherwise (`kernel::chart::burrau`); the
-//! acute-angle charts fold the swap out and are bijective. Every other chart is bijective: its decode takes distinct
-//! points to distinct systems.
+//! reflection-equivalent; its descriptors are the `(θ, φ)` chart's (R-117), for either chart map, the exponential map's
+//! own value being RQ-371's. The `ν`-axis charts are `DoubleCover` where their range reaches both leg orderings and
+//! bijective otherwise (`kernel::chart::burrau`); the acute-angle charts fold the swap out and are bijective. Every
+//! other chart is bijective: its decode takes distinct points to distinct systems.
 
 use kernel::burrau::System;
 use kernel::chart::burrau::embed;
