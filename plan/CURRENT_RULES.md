@@ -47,7 +47,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-37** — `t_min` is a departure threshold on the shape sphere *(PL-2 (b))*
 - **R-47** — `Undetermined` is reported, terminal and flagged, until a chart shows it non-zero *(RS-7)*
 - **R-50** — The shape-sphere collision landmarks are mass-weighted *(CO-1 (a))*
-- **R-57** — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*
+- **R-57** — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*. Still in force: the Yoshida-6 coefficients are checked before they enter the shared source, now by their citation and a convergence-order test, not against the paper (R-501); the negative weight's label is fixed, and Part 6's sentence that carried it is withdrawn (R-500). Amended by R-500 and R-501.
 - **R-60** — No t = 0 escape outcome *(closes RQ-19)*
 - **R-61** — The escaper's separation is its distance to the other two's centre of mass *(amends R-29)*
 - **R-62** — `rho_mag` and `lambda_mag` *(amends R-22)*
@@ -65,11 +65,11 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-125** — The branch-cut convention is M3's, transcribed from the literature *(closes RQ-96)*
 - **R-126** — The Euler landmarks are the Euler central configurations *(closes RQ-106)*
 - **R-127** — Periodic-orbit stability is Floquet; the Poincaré sections are three *(closes RQ-109)*
-- **R-141** — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*. Still in force: the shape sphere is 2-to-1 over its φ hemispheres, and `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau chart's value (R-157). Amended by R-157.
+- **R-141** — The shape sphere is 2-to-1 over its φ hemispheres *(closes RQ-71, corrects R-104)*. Still in force: the shape sphere's spherical map is 2-to-1 over its φ hemispheres (its exponential map's value is computed from its cap, R-503), and `DoubleCover` is retired for the shape sphere only; it stays the full-range Burrau chart's value (R-157). Amended by R-503 (the exponential map); amended by R-157.
 - **R-157** — `DoubleCover` stays, for the full-range Burrau chart *(closes RQ-127, amends R-141)*
 - **R-160** — The integrator equations are transcribed into integrator_contract Part 2b
 - **R-161 ✱** — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2
-- **R-162** — The reversible occupant is logH's TTL time mode
+- **R-162** — The reversible occupant is logH's TTL time mode. Still in force: all of it; "the reversible occupant" is the profile's `run_reversible` occupant, logH's TTL time mode only (R-500). Refined by R-500.
 - **R-163** — The wedge ablation is re-run on Heggie
 - **R-164** — +0.305 and −0.082 are correlations, not controls
 - **R-168** — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*
@@ -95,6 +95,11 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-419** — `rho_ratio`'s and `r_min_pair_0`'s log floors are confirmed provisionally at M1 and re-confirmed at M2; `rho_ratio`'s assumes the mass-weighted ‖ρ̃‖/‖λ̃‖ and says so; for `r_min_pair_0` only the evidence is provisional *(closes RQ-271)*. Still in force: all of it; its M1 step is done (R-428), and the two floors are re-confirmed at the M2 gate (REQ-TOOL-163). Amended in part by R-428.
 - **R-437** — The value of every `atan2` at a possible pole of the decode, encode and canonicalisation is defined: 0, for every sign of the zeros, chosen branch-free by a select on the operands against 0, so CPU and GPU agree *(closes RQ-285)*
 - **R-438** — The encode reads `β = atan2(|λ̃_y|, λ̃_x)`, the mirror's quotient for `β` only, so `β ∈ [0, π]` holds because `β` reads `|λ̃_y|`; at `λ̃ = 0` it takes R-437's pole value by a select; R-82 is unchanged *(closes RQ-287)*
+- **R-500** — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*
+- **R-501** — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*. Still in force: the coefficients carry their citation, the paper is not added, and the convergence-order test and the algebraic order-condition check guard the transcription; Yoshida-4's printed digits are R-515's, `w₁` correctly rounded and `w₀ = 1 − 2w₁` computed in f64. Amended by R-515 (Yoshida-4's digits).
+- **R-502** — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*
+- **R-503** — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*
+- **R-515** — Yoshida-4's `w₁` is printed correctly rounded to f64 and `w₀` as `1 − 2w₁` computed in f64, so that `w₀ + 2w₁ = 1` holds exactly in f64 *(closes RQ-405; amends R-501 as to Yoshida-4's digits)*
 
 ## Design and architecture
 
@@ -278,8 +283,10 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-464** — After any mouse click or drag the ring is hidden, the focus moving exactly as R-450 A3 and R-456 say; the next key press shows it again where the focus is; a window or the console opened with the mouse takes the focus with no ring, opened from the keyboard with it *(closes RQ-367; amends R-450, R-456 and R-460 as to whether the ring is drawn)*
 - **R-465** — The compass's slice drag follows the pointer: the 2-D drag projected onto the drawn normal's direction on the screen moves the slice along that normal at R-451's rate, so the drawn plane moves with the pointer at every tilt; slice mode and tilt mode stay separate, tilt mode's drag unchanged *(closes RQ-368; amends R-451 B3's slice-mode sentence)*
 - **R-466** — Slice centre, Tilt and Navigate each have a "reset" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*
-- **R-467** — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*
+- **R-467** — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*. Still in force: all of it; D6's NaN / Inf style is proposed by TASK-M2-34 and is not magenta (R-505). Extended by R-505.
 - **R-468** — With the egui layer hidden, F3 fills the window by one of two modes: Extend, the default and R-406's, more of the field at the same scale, or Fit, the view's square scaled to the window's shorter side, never stretched, the rest canvas background; chosen in View › "F3 fills by: Extend / Fit" for the session, a view change and never an edit *(amends R-406)*
+- **R-504** — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*
+- **R-505** — The NaN / Inf style is proposed by the task that needs it, and it is not magenta, which sits at τ from escape body 2 *(extends R-467 D6)*
 
 ## Values
 
