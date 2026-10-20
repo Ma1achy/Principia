@@ -1,7 +1,7 @@
 # TASK-M3-02 — Stepper occupants and the capability profile
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032
+- **Closes:** REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032, REQ-INT-090
 - **Depends on:** TASK-M3-01
 - **Needs (earlier milestones):** REQ-INT-002
 - **Reviewers:** code, qa, physics
@@ -9,7 +9,7 @@
 - **Size:** ~450 lines
 
 ## Goal
-The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and RK4 — exist as build-time Rust variants implementing `STEP` with exactly dd_integrator §3.2's update rules and coefficients, each advertising its capability profile `{order, force_evals, symplectic, reversible, owns_time_mapping}` (the re-registration field is added by TASK-M3-08). Yoshida-6's coefficients are checked against Yoshida (1990) Table 1 solution A and the `w₂ < 0` label fixed before they enter the shared source (R-57). Integrator contract Part 2 gains the definition of how `order` sets the meaning of the `total_substeps_log2` proxy and FTLE confidence (R-72).
+The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and RK4 — exist as build-time Rust variants implementing `STEP` with exactly dd_integrator §3.2's update rules and coefficients, each advertising its capability profile `{order, force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}` (the re-registration field is added by TASK-M3-08; R-500 split `reversible` into the two flags, KDK, Yoshida-4 and Yoshida-6 step-reversible and none of them run-reversible). Yoshida-4's and Yoshida-6's coefficients carry their citation (Yoshida 1990; Yoshida-6 its Table 1, solution A) and pass a convergence-order test at orders 4 and 6 that fails on a transcription error before they enter the shared source; the paper is not added (R-57, R-501). *Was:* "Yoshida-6's coefficients are checked against Yoshida (1990) Table 1 solution A and the `w₂ < 0` label fixed". Integrator contract Part 2 gains the definition of how `order` sets the meaning of the `total_substeps_log2` proxy and FTLE confidence (R-72).
 
 ## References
 - `docs/contracts/principia_canonical_spec.md` § "1. The substrate (the defining decision)"
@@ -28,24 +28,28 @@ The five stepper occupants — Euler (debug only), KDK, Yoshida-4, Yoshida-6 and
 - `docs/design/principia_dd_integrator.md` § "5. Unit tests"
 - `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode"
 - `decisions.md` § "R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*"
+- `decisions.md` § "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+- `decisions.md` § "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
 
 ## Deliverables
 - `crates/kernel/src/occupant/mod.rs` — the `Stepper` trait (`fn step(state, dt, geom)`), `CapabilityProfile` struct, and the closed, build-time occupant set (an enum of monomorphised types; no runtime compilation or interpretation path).
 - `crates/kernel/src/occupant/{euler,kdk,yoshida4,yoshida6,rk4}.rs` — §3.2's rules; Yoshida-4 and -6 as KDK compositions with the printed drift/kick sequences.
 - `crates/kernel/src/occupant/table.rs` — the Part 2 / Part 2a profile table, including the two AZ rows' profiles (filled by TASK-M3-07), and the default tier binding per occupant; Euler reachable only from a debug selection.
 - Doc change: `docs/contracts/principia_integrator_contract.md` Part 2 — the mapping from profile `order` to the interpretation of `total_substeps_log2` and to FTLE confidence (definition, REQ-INT-078).
-- Doc change: `docs/design/principia_dd_integrator.md` §3.2 / §6 — the Yoshida-6 transcription check recorded (the digits compared with Yoshida 1990 Table 1 solution A) and the `w₂ < 0` label corrected, per R-57.
+- The coefficient blocks in `yoshida4.rs` and `yoshida6.rs` carry the citation dd §3.2 prints (R-501). The doc changes R-57 asked for here were made by R-500's and R-501's port (dd §3.2, §5 test 1a, §6; integrator contract Part 6). *Was:* "Doc change: `docs/design/principia_dd_integrator.md` §3.2 / §6 — the Yoshida-6 transcription check recorded (the digits compared with Yoshida 1990 Table 1 solution A) and the `w₂ < 0` label corrected, per R-57."
 
 ## Acceptance tests
 - Review (code): the occupant set is closed at build time; no code path compiles or interprets user-authored compute code (REQ-INT-005).
 - Review (code, physics): `CapabilityProfile` exists with the listed fields for every composed occupant, and energy-drift interpretation, the reversibility diagnostic and `total_substeps_log2`/FTLE confidence read it — grep shows no occupant-name special cases outside the profile (REQ-INT-013).
-- `cargo test -p kernel occupant_profiles` — each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables; Aarseth–Zare + time-transformed leapfrog is an allowed future occupant in Part 2a, not a v1 requirement, and is not built (R-162, R-168) (REQ-INT-014).
+- `cargo test -p kernel occupant_profiles` — each built occupant's advertised profile, `step_reversible` and `run_reversible` included, and default tier binding equals the Part 2 / Part 2a tables; controls: a table giving Yoshida-4 `step_reversible` false, or KDK `run_reversible` true, fails; Aarseth–Zare + time-transformed leapfrog is an allowed future occupant in Part 2a, not a v1 requirement, and is not built (R-162, R-168) (REQ-INT-014).
 - Review (code): Euler is absent from tier defaults and production occupant lists and present only in the debug selection (REQ-INT-015).
 - `cargo test -p kernel occupant_coefficients` — constants equal §3.2 to all printed digits; w₀ + 2w₁ = 1; Yoshida-6 w₀ = 1 − 2(w₁+w₂+w₃) (REQ-INT-037).
-- `cargo test -p kernel yoshida6_published` — Yoshida-6 coefficients equal the published digits of Yoshida (1990) Table 1 solution A, and the composition shows a 6th-order convergence slope on a Kepler fixture (REQ-INT-056).
-- `cargo test -p kernel step_reversibility` — dd test 3: STEP(dt), negate p, STEP(dt), negate p returns the state to rounding level for KDK, Yoshida-4 and Yoshida-6, without wrapper projection or substepping (REQ-VAL-032).
+- `cargo test -p kernel yoshida6_published` — the shared source's Yoshida-6 constants equal dd §3.2's printed digits, each coefficient block carrying the citation (Yoshida 1990, Table 1, solution A), and REQ-INT-090's order test passes on them (REQ-INT-056).
+- `cargo test -p kernel yoshida_convergence_order` — on the Kepler-embedded fixture, over a dt ladder, Yoshida-4's fitted order rounds to 4 and Yoshida-6's to 6; controls: each coefficient with one printed digit changed fails (REQ-INT-090).
+- `cargo test -p kernel step_reversibility` — dd test 3: STEP(dt), negate p, STEP(dt), negate p returns the state to rounding level for KDK, Yoshida-4 and Yoshida-6, without wrapper projection or substepping; control: Yoshida-4 with its stages made asymmetric (w₁, w₁, w₀) fails (REQ-VAL-032).
 - Physics reviewer approves the Part 2 definition of what `order` means for the complexity proxy and FTLE confidence (REQ-INT-078).
 
 ## Notes
-- R-57 is applied here: Yoshida-6 must not enter the shared source before the coefficient check passes.
+- R-57 is applied here: Yoshida-6 must not enter the shared source before the coefficient check passes; R-501 makes that check the citation and the convergence-order test.
+- RQ-369 ruled: R-500 (option (c)) — the flag is split; nothing is left for this task to define. The test 3 rounding-level criterion this task uses is the one TASK-M3-08 measures the regularised occupants against (REQ-VAL-190). The dt ladder and fit of the order test are this task's, named in its PR (applied per R-369, R-501).
 - Definitions written here (R-72; physics reviewer approves before merge): REQ-INT-078.

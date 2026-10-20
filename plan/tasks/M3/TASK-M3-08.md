@@ -1,7 +1,7 @@
 # TASK-M3-08 — Heggie and logH occupants, and the visible re-registration count
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171
+- **Closes:** REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190
 - **Depends on:** TASK-M3-07
 - **Needs (earlier milestones):** REQ-DEC-005, REQ-GEN-008
 - **Reviewers:** code, qa, physics
@@ -22,12 +22,13 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - `decisions.md` § "R-160 — The integrator equations are transcribed into integrator_contract Part 2b"
 - `decisions.md` § "R-161 ✱ — Heggie's default time transformation is the measured one, Eq. 22 at n = 3/2"
 - `decisions.md` § "R-162 — The reversible occupant is logH's TTL time mode"
+- `decisions.md` § "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
 - `docs/design/principia_dd_validation_orbits.md` § "2. What the suite tests that the current gates do not"
 - `decisions.md` § "R-257 — The briefs' unheld obligations: two ported, one superseded, one not standing, the kernel gates ported with values *(closes RQ-157)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
-- `crates/kernel/src/regularisation/{heggie,logh}.rs` — transcribed physics layers; logH carries its TTL time mode, the reversible occupant (R-162); Heggie's time transformation defaults to Eq. 22 at n = 3/2, with Eq. 20 selectable (R-161).
+- `crates/kernel/src/regularisation/{heggie,logh}.rs` — transcribed physics layers; logH carries its TTL time mode, the reversible occupant (R-162), its profile `run_reversible` true, the only one (R-500); Heggie's time transformation defaults to Eq. 22 at n = 3/2, with Eq. 20 selectable (R-161).
 - Doc change: `docs/contracts/principia_integrator_contract.md` § "The equations and the step control (R-160, R-161)" — the Heggie, logH and TTL equations of motion, time transformations and step control, and the predictive step limit, transcribed from `docs/reference/prin-rs/src/integrate/{heggie,logh}/` and `az/driver.rs` with citations (Heggie 1974; Mikkola & Tanikawa 1999; Preto & Tremaine 1999) (REQ-INT-084).
 - Default occupant config = Heggie; `none`, AZ, logH selectable.
 - Doc change: `docs/contracts/principia_integrator_contract.md` § "The profile gains a field" — where the re-registration count lives (definition, R-72); if a payload field: the ledger row in `crates/ledger`, its generated accessors and the schema-version change.
@@ -41,6 +42,7 @@ The regularisation slot is complete: Heggie 1974 global regularisation (three re
 - Part 2b states the choice; any payload field appears in the ledger with a schema-version change; physics reviewer approved (REQ-INT-073).
 - `cargo xtask gate radial-collision` — the radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11), run for the default occupant and AZ; the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through `d_min < 1e-10` with `|dE/E| < 1e-12` (REQ-VAL-045).
 - `cargo xtask gate hamiltonian-fd` — for each occupant, the analytic derivatives match the finite-differenced Hamiltonian within REQ-VAL-171's step and tolerance over random states; a sign-flipped derivative fails (REQ-VAL-170).
+- `cargo test -p kernel regularised_step_reversibility` — dd test 3 run on each built regularised occupant (Heggie, logH in each time mode, Aarseth–Zare + RK4): each residual and verdict printed; fails if one is missing or its profile's `step_reversible` differs from its measured verdict; a verdict other than R-500's listed values (Aarseth–Zare + RK4 false, logH's TTL time mode true) is reported for the review queue (REQ-VAL-190).
 - `cargo xtask gate hamiltonian-fd --propose` — the step and tolerance with the measured discrepancy per occupant; the human confirms them at the M3 gate and they are recorded in decisions.md (REQ-VAL-171).
 
 ## Notes

@@ -29,6 +29,7 @@ The wrapper's loop parameters are one `SimUniforms` struct in `crates/engine`, b
 ## Deliverables
 - `crates/engine/src/contract/sim_uniforms.rs` — `SimUniforms { t_horizon, dt_macro, n_max, r_sub, gamma_sub, r_coll, tau, escape_window, r_close, eps_e, eps_l, g, m_total, epsilon, n_renorm, delta0 }` with `Default`, and its sim-key byte contribution.
 - `crates/engine/src/dispatch/validate.rs` — the horizon refusal and the joint `total_substeps` bound, returning a typed error.
+- `SimUniforms` carries the `N_sub` threshold table TASK-M3-03's host generator produces from its `r_sub`, `gamma_sub` and `N_max`, as exact f32 bit patterns of the table's maximum length; dispatch returns the generator's refusal of an `N_max` above that length (R-502).
 - Provenance tag for ε > 0 runs on the sim key; no co-moving option exists.
 
 ## Acceptance tests
@@ -39,6 +40,7 @@ The wrapper's loop parameters are one `SimUniforms` struct in `crates/engine`, b
 - `cargo test -p engine horizon_default` — default T_horizon = 50 with dt_macro = 10⁻³; at T = 200, dt_macro = 200/65535 and ⌈T/dt_macro⌉ = 65535; no T in [50, 200] is refused at dispatch (REQ-INT-081).
 
 ## Notes
+- R-502 (RQ-370): the threshold table travels in `SimUniforms`, generated per sim key; it adds no sim-key field, being derived from `r_sub`, `gamma_sub` and `N_max`.
 - R-132 settles the T_horizon default (50) and dt_macro (max(10⁻³, T/65535)). Gap: Part 3 gives no value for `tau`; `SimUniforms::default()` needs it. The sync schedule of the regularised occupants (`n_sync`, `eta`) is not in the Part 3 table either.
 - The full sim-key composition is M4/M5's (REQ-SCHED-007, REQ-SCHED-048); this task provides the wrapper-parameter part of it.
 - RQ-98 ruled: R-113 — the sim-key clause and its verify half are dropped from REQ-INT-026; REQ-SCHED-007 (M4, TASK-M4-08) carries them, its fixture including each SimUniforms field.
