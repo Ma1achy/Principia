@@ -2,7 +2,7 @@
 
 - **Milestone:** M7
 - **Closes:** REQ-COL-072, REQ-COL-073, REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-080, REQ-COL-081, REQ-COL-084, REQ-COL-085, REQ-COL-086, REQ-COL-087
-- **Depends on:** TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14
+- **Depends on:** TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14, TASK-M2-34
 - **Needs (earlier milestones):** REQ-COL-002, REQ-COL-053, REQ-COL-064, REQ-COL-067, REQ-COL-068
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** PIT-5, PIT-3
@@ -74,3 +74,5 @@ gate (R-71).
   them (`chazy_validity`). A pixel the chart hatches keeps the chart's hatch (chart_decoder_contract Part 3; R-446).
 - The filter's mute is REQ-COL-058's (TASK-M7-08); the spec's preview `#3A3B40` is not a second rule (R-442, applied
   per R-369).
+- R-467 D13 (code review 5585240188 of PR #253, F4; applied per R-369): this task depends on TASK-M2-34, whose
+  render draws the forbidden lane's canvas background that `chazy_validity` (REQ-COL-072) checks.

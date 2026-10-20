@@ -9,7 +9,7 @@
 - **Size:** ~500 lines, the tests, the prelude function, the proposal's measurement and the re-rendered goldens' report included
 
 ## Goal
-In the render, every presentation view (every stain that is not a `debug/` occupant: the outcome view, the field ramps, every library and user stain, in every mode) draws no hatch (R-467): a pixel REQ-COL-102's lane marks as not a system draws the canvas background, a render uniform the GUI sets to its clear colour, and every failure, reserved `state` code, non-finite value and ramp-invalid value draws `#141418`, unless the node overrides its invalid colour. The debug view, `RenderState`'s `debug_view`, draws over the active stain: the lane's pixels with the hatch, non-finite samples with a new NaN / Inf style, other failures with `debug_invalid`, and counts each category's pixels for the legend's "Debug" key. The NaN / Inf style is proposed with its evidence for the M2 gate (REQ-COL-110). The goldens R-467 changes are rendered and reported, not re-baselined: the PR waits for RQ-373.
+In the render, every presentation view (every stain that is not a `debug/` occupant: the outcome view, the field ramps, every library and user stain, in every mode) draws no hatch (R-467): a pixel REQ-COL-102's lane marks as not a system draws the canvas background, a render uniform the GUI sets to its clear colour, and every failure, reserved `state` code, non-finite value and ramp-invalid value draws `#141418`, unless the node overrides its invalid colour. The debug view, the render's own debug-view flag (its caller sets it from `RenderState`'s `debug_view`, TASK-M6-46's field, wired on the real engine by TASK-M8-46), draws over the active stain: the lane's pixels with the hatch, non-finite samples with a new NaN / Inf style, other failures with `debug_invalid`, and counts each category's pixels for the legend's "Debug" key. The NaN / Inf style is proposed with its evidence for the M2 gate (REQ-COL-110). The goldens R-467 changes are rendered and reported, not re-baselined: the PR waits for RQ-373.
 
 ## References
 - `decisions.md` § "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
@@ -33,7 +33,7 @@ In the render, every presentation view (every stain that is not a `debug/` occup
 
 ## Deliverables
 - The presentation default (REQ-COL-108): the outcome palette's forbidden lane draws the background uniform, not `debug_invalid` (`crates/render/src/colour/outcome.rs` and its WGSL); the field ramp's and compaction's default invalid colour is `#141418` (`crates/render/src/colour/field_ramp.rs`), the node's override kept; greyscale and hue mode's closing post draws the background and `#141418` in place of the hatch; the background uniform added to the render's uniforms, the GUI's clear colour, a value the golden harness records.
-- The debug view's drawing and counts (REQ-COL-109): `RenderState`'s `debug_view` read by the render; the lane first, then non-finiteness, then the failure; the three per-category pixel counts returned for the legend.
+- The debug view's drawing and counts (REQ-COL-109): a debug-view flag among the render's inputs, set by its caller (this task adds no contract field); the lane first, then non-finiteness, then the failure; the three per-category pixel counts returned for the legend.
 - The NaN / Inf style (REQ-COL-110): a prelude function beside `debug_invalid` and `debug_not_yet` (render_gui_spec Part II §10.1) and its CPU mirror; the proposal with its measurement against every palette entry, the hatch and the stipple, unsimulated and under each simulation, as REQ-COL-055 measures (the `support/palettes.rs` run TASK-M2-32 uses).
 - The goldens (R-467 D15): `m1-outcome/outcome`, `m1-outcome/outcome_edited`, `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp` re-rendered, the hashes that change reported in the PR, `m1-synthetic/known_escaper` and the `_override` twins confirmed unchanged; no `BASELINES.md` row changed before RQ-373's ruling.
 - Tests `presentation_no_hatch` and `debug_view_styles`.
@@ -48,5 +48,17 @@ In the render, every presentation view (every stain that is not a `debug/` occup
 ## Notes
 - **Waits for RQ-373 before it merges.** The changed goldens are re-baselined only under the gate decision RQ-373 asks for (R-110; R-467 clause 8, D15). The task is built and reviewed meanwhile.
 - **Physics reviews** the order the debug view reads (the chart's lane first, then non-finiteness, then the failure) and which `sim_failed` and `decode_failed` details are non-finite (payload §2); gui reviews the styles, the background and the proposal.
-- **qa's files (R-290, R-467 D14).** `crates/render/tests/qa_TASK-M2-32.rs` asserts the outcome view's forbidden hatch; this task's qa reviewer changes those assertions in the task's qa commit, and checks `crates/render/tests/qa_TASK-M2-31.rs` for a presentation hatch, the PR listing each `M` line with its reason.
+- **qa's files (R-290, R-467 D14; code review 5585240188 of PR #253, F3).** These qa files assert a presentation hatch and
+  must change, in this task's qa commit only, the PR listing each `M` line with its reason; the implementer's head is
+  red on them until that commit, as TASK-M6-24's Notes had it:
+  - `crates/render/tests/qa_TASK-M1-09.rs`: the REQ-COL-001 block, `ramp_wants` (about :733-749), length's 127 and
+    `d_min`'s NaN through `FieldRamp` wanting the hatch, and the module doc's lines saying so.
+  - `crates/render/tests/qa_TASK-M2-31.rs`: :242-262, `d_min_look` and `d_min_scene(ramp = true)`, −∞ and NaN as
+    `Look::Invalid`, and the module doc at :9.
+  - `crates/render/tests/qa_TASK-M2-32.rs`: `want` (:386), `check_scene` (:547) and
+    `qa_m2_32_outcome_view_renders_failures_black_and_forbidden_hatched` (:579), the forbidden rows hatched;
+    `outcome_tiles` (:1377) and `qa_m2_32_goldens_outcome` (:1434), tile 22.
+  - `crates/render/tests/qa_TASK-M7-05.rs`: :544-575, `check_sentinel` (`closure_min`'s −1.0 sentinel through
+    `FieldRamp` to `debug_invalid`), and :1051-1077, `check_either_role` (FTLE's invalid samples in the colour role to
+    `debug_invalid`).
 - **Flagged readings (R-467 F1, F3, D1 to D6; applied per R-369, the human may veto):** the hatch and `debug_invalid` are one pattern, so the debug view's forbidden and failure entries share it, told apart by key and count; every hatch a presentation view drew becomes `#141418`, a field ramp being a presentation occupant.

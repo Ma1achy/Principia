@@ -43,3 +43,7 @@ Overlays ▾ holds §G2's grouped toggles (Quadtree, Integration, Chart, Stain) 
 - Calibrations (R-71) proposed here: REQ-PERF-080. Each value is confirmed by the human at the M8 gate; an unconfirmed one blocks the gate.
 - Definitions (R-72) written here: REQ-PERF-079, REQ-GUI-153. Each doc change carries the porting rule's "Removed lines" note and the physics reviewer's approval.
 - R-390: TASK-M6-27 builds Overlays ▾ on the mock engine, with the tile-bounds overlay on the mock's fake quads; this task depends on it and wires every overlay to its tier on the real engine, keeping every requirement it closes.
+- RQ-374 (filed on gui review 5585209592 of PR #253, G5): whether the Integration group's "NaN / invalid pixels" and
+  the Chart group's "forbidden region" stay beside View › Debug view, go, or show only while it is on. Option (a), keep
+  both, off by default, drawing the debug view's styles, is applied meanwhile; these two lines of REQ-GUI-079 wait for
+  the ruling, the rest of this task does not.

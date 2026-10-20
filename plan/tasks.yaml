@@ -1016,9 +1016,9 @@
 - id: TASK-M3-36
   milestone: M3
   title: "Cross-implementation checks: BodyPlane bit-for-bit and the change-10 re-run"
-  depends_on: [TASK-M3-24, TASK-M3-07]
+  depends_on: [TASK-M3-24, TASK-M3-07, TASK-M2-35]  # R-467 D11: the sweep it extends to BodyPlane
   needs: [REQ-CHART-015, REQ-CHART-028, REQ-CHART-029]
-  requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146]
+  requirements: [REQ-VAL-028, REQ-VAL-119, REQ-VAL-036, REQ-VAL-035, REQ-VAL-146, REQ-CHART-059]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M4-01
@@ -2088,7 +2088,7 @@
 - id: TASK-M7-37
   milestone: M7
   title: "The Chazy flat stains: the seven-class default, four families, Okabe–Ito, the status map, the filter, the ranks and palette separation"
-  depends_on: [TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14]
+  depends_on: [TASK-M7-36, TASK-M7-08, TASK-M7-17, TASK-M7-18, TASK-M7-20, TASK-M1-14, TASK-M2-34]  # R-467 D13: the forbidden lane's background (code review F4 on PR #253)
   needs: [REQ-COL-002, REQ-COL-053, REQ-COL-064, REQ-COL-067, REQ-COL-068]
   requirements: [REQ-COL-072, REQ-COL-073, REQ-COL-075, REQ-COL-076, REQ-COL-077, REQ-COL-080, REQ-COL-081, REQ-COL-084, REQ-COL-085, REQ-COL-086, REQ-COL-087]
   reviewers: [code, qa, gui, physics]
@@ -2160,7 +2160,7 @@
 - id: TASK-M8-05
   milestone: M8
   title: "Explore shell: top bar, footer, theme, and the figure left uncovered (01_main.png)"
-  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32]  # TASK-M2-32 for REQ-COL-102's lane (R-446)
+  depends_on: [TASK-M8-03, TASK-M8-04, TASK-M6-20, TASK-M7-21, TASK-M6-24, TASK-M6-30, TASK-M2-32, TASK-M2-34, TASK-M6-46, TASK-M6-47]  # TASK-M2-32 for REQ-COL-102's lane (R-446); TASK-M2-34 for the background, TASK-M6-46 and TASK-M6-47 for the View entries (R-467 D13, code review F4 on PR #253)
   needs: [REQ-TOOL-050, REQ-TOOL-057, REQ-GUI-010, REQ-RENDER-069, REQ-COL-102]
   requirements: [REQ-GUI-070, REQ-GUI-074, REQ-GUI-078, REQ-GUI-093, REQ-GUI-180, REQ-CHART-054, REQ-CHART-056]
   reviewers: [code, qa, gui, physics]  # physics for the extension types, the fallback (R-407) and the counting (R-408)
@@ -2376,7 +2376,7 @@
 - id: TASK-M8-32
   milestone: M8
   title: "Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)"
-  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28]
+  depends_on: [TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46]  # R-467 D13: the background and Fit (code review F4 on PR #253)
   needs: [REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072]
   requirements: [REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146]
   reviewers: [code, qa, gui, physics]  # physics for present mode's fill past [0,1]² (R-407)

@@ -26,15 +26,19 @@ On the real engine, View › Debug view draws REQ-COL-109's styles from the engi
 - `docs/contracts/principia_gui_state_contract.md` § "2. The editable state is the entire coupling surface"
 
 ## Deliverables
-- The debug view on the real engine (REQ-GUI-227): `RenderState`'s `debug_view` to the render (TASK-M2-34's), the counts into the snapshot's legend keys (TASK-M8-22's), the warning from the engine's classification of the view.
+- The debug view on the real engine (REQ-GUI-227): `RenderState`'s `debug_view` (TASK-M6-46's contract field) wired to the render's debug-view flag (TASK-M2-34's), the counts into the snapshot's legend keys (TASK-M8-22's), the warning from the engine's classification of the view.
 - Fit on the real engine (REQ-GUI-230): the scaled square as the figure's viewport, the screen floor at the new scale, the quads computed before kept.
 - Tests `debug_view_mass_simplex`, `decoder_bug_warning`, `f3_fit_quads`; capture cases `f3_off_simplex`, `f3_off_simplex_debug`, `f3_fit`, `f3_fit_sphere`.
 
 ## Acceptance tests
 - `cargo test -p gui debug_view_mass_simplex` and `cargo xtask screenshot 01_main` (`f3_off_simplex`, `f3_off_simplex_debug`) — as REQ-GUI-227's verify, with its controls (REQ-GUI-227).
 - `cargo test -p gui decoder_bug_warning` — as REQ-GUI-227's verify (REQ-GUI-227).
+- `cargo test -p render legend_swatches_equal_stain` with View › Debug view on — the "Debug" key follows the stain's keys, its three entries compared as their styles and their counts, the keys above it unchanged by the toggle (REQ-GUI-227, moved from REQ-GUI-105).
 - `cargo xtask screenshot 01_main` (`f3_fit`, `f3_fit_sphere`) and `cargo test -p gui f3_fit_quads` — as REQ-GUI-230's verify, with its controls (REQ-GUI-230).
 
 ## Notes
 - **Physics reviews** the forbidden set the mass-simplex test compares (R-407 A7, layer 2's narrowed simplex) and the quads Fit asks for (REQ-REF-011).
 - **A Chart-builder chart's warning** is TASK-M8-47's, waiting for RQ-372.
+- **The "Debug" key's legend check** moved here from REQ-GUI-105 (TASK-M8-22), which cannot reach the debug view:
+  TASK-M8-46 depends on TASK-M8-22 (R-467 D13; code review 5585240188 of PR #253, F4, applied per R-369).
+- **TASK-M8-32 depends on this task** for Fit in present mode (REQ-GUI-100).

@@ -25,16 +25,17 @@ On the mock engine, View gains the row **F3 fills by: Extend / Fit**, two radio 
 
 ## Deliverables
 - The row in `crates/gui/src/explore/top_bar.rs`, after F3 hide and before Debug view; `ViewUI`'s `F3Fill { Extend, Fit }`, the GUI's own state.
-- Fit's placement in the mock canvas (`crates/gui/src/mock/canvas.rs`, `Placement`): the scale `k = min(W, H) / w`, centred, the window outside the square the clear colour; the fake quads (`crates/gui/src/mock/quads.rs`) split by screen points, not figure fractions, so they refine at `k`.
+- Keyboard reach (§G3; gui review 5585209592 of PR #253, G7): the row and its two options registered as scopes of the View menu's scope tree, as `HIDE` is, Enter on an option choosing it.
+- Fit's placement in the mock canvas (`crates/gui/src/mock/canvas.rs`, `Placement`): the scale `k = min(W, H) / w`, centred, the window outside the square the clear colour; the fake quads (`crates/gui/src/mock/quads.rs`) split on `frac = quad width / (shown figure width × k)`, `k = 1` outside Fit, so the shown layout's and Extend's quads, and the `mock_tile_bounds` capture, stay unchanged and only Fit refines (R-468 E3; gui review 5585209592 of PR #253, G6). *Was: "split by screen points, not figure fractions, so they refine at `k`".*
 - Present mode in Fit.
 - Tests `f3_fill_modes`; a capture case `mock_f3_fit`.
 
 ## Acceptance tests
-- `cargo test -p gui f3_fill_modes` and `cargo xtask screenshot 01_main` (`mock_f3_fit`) — as REQ-GUI-229's verify: Extend pixel-identical over the shown rect; Fit's side equal to the window's shorter side within one pixel, one scale, its extent ratio 1 : 1, centred, the rest the clear colour, finer fake quads; F3 twice in both modes returning the layout and `(z₀, q₁, q₂)` bit for bit and the capture pixel-identical, no `SetField`; present mode in Fit equal to F3 in Fit; under Extend the hook's region background in the presentation view and hatched in the debug view; with its controls (REQ-GUI-229).
+- `cargo test -p gui f3_fill_modes` and `cargo xtask screenshot 01_main` (`mock_f3_fit`) — as REQ-GUI-229's verify: Extend pixel-identical over the shown rect; Fit's side equal to the window's shorter side within one pixel, one scale, its extent ratio 1 : 1, centred, the rest the clear colour, finer fake quads; F3 twice in both modes returning the layout and `(z₀, q₁, q₂)` bit for bit and the capture pixel-identical, no `SetField`; present mode in Fit equal to F3 in Fit; under Extend the hook's region background in the presentation view and hatched in the debug view; the shown layout's and Extend's quads and the `mock_tile_bounds` capture unchanged; the row and its options reached by the keyboard, Enter choosing; with its controls (REQ-GUI-229).
 
 ## Notes
 - **What to try.** `cargo run -p gui --features mock`; View › F3 fills by: Fit; press F3: the square fills the window's height, bands of background either side; F3 again: the layout is as it was. Quit and relaunch: Extend again.
 - **Depends on TASK-M6-46**: both add a View entry, and the Extend check reads View › Debug view.
 - **A GUI-track task** (R-390): it merges once its reviews pass and CI is green.
 - **Flagged (R-468 E2, E4, E6, applied per R-369):** "the chart square" read as the view's square; "remembered per session" as for the session; present mode follows the mode.
-- **qa's files (R-290, R-468 E9).** No qa assertion is known to assert what R-468 changes; one that asserts the View menu holds nothing more is changed by this task's qa reviewer only.
+- **qa's files (R-290, R-468 E9; gui review 5585209592 of PR #253, G2).** `xtask/tests/qa_TASK-M6-24.rs`:118-150, `check_01_main` (the 01_main case names "and no other"), must change in this task's qa commit only, gaining `mock_f3_fit`; the implementer's head is red on it until then. *Was: "No qa assertion is known to assert what R-468 changes".*
