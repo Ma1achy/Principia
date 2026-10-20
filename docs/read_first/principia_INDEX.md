@@ -76,6 +76,7 @@ and **`Policy::Tolerance`**.
 - `docs/design/principia_systems_architecture.md` — the ladder and six rings; §8 indexes the drill-downs
 - `docs/design/principia_dd_telemetry_and_tiers.md` — Observation. Frame record, deriving tiers, graceful failure
 - `docs/design/principia_scratchpad_pointer_channels.md` — Observation. Trace / sound / inspector
+- `docs/design/principia_listen.md` — Observation. Listen, the trajectory heard as sound: the signal, spectrum, pitch, windows, voices, instruments, events and effects, transcribed from the demo's code (adopted by R-540; its GUI is R-541's)
 - `docs/design/principia_dd_image_embedding.md` — Provenance. LSB payload
 - `docs/design/principia_memory_tiers.md`, `docs/design/principia_quality_device_note.md` — **ruled (R-40): they key off `eps`** — the eps / frame-budget / hard-cap axes fold into `QualitySettings` and the ladder, and the widths are recomputed (D6)
 - `docs/design/principia_temporal_architecture_note.md`, `docs/contracts/principia_export_animation_contract.md`
@@ -112,7 +113,7 @@ and **`Policy::Tolerance`**.
 - `docs/gui/reference/principia_nav_cube.html` — Principia — navigation cube: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/principia_plucker_compass.html` — Principia — orientation compass: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 - `docs/gui/reference/lines/` — the line system's mock-ups, `images/` (PNGs) and `canvas/` (artboards, `.dc.html`), the reference for `principia_lines.md` (R-476)
-- `docs/gui/reference/trace/` — the trace and extension demo, `trace_markers.html` (self-contained, version 27, the follow-up's), and its screenshots, `images/`: the reference for `principia_lines.md` §8's markers and icon sets, where a trace can leave, mixed axes and the time ramp (R-538) and for the view past the square with the controls shown (R-537)
+- `docs/gui/reference/trace/` — the trace and extension demo, `trace_markers.html` (self-contained, version 28, restyled to the dev GUI, its behaviour the follow-up's version 27), the Listen demo, `trace_sound.html` (version 9, the transcription source of `principia_listen.md`, R-540), their screenshots, `images/`, and the trace and Listen art boards, `artboards/` (`.dc.html`, `canvas.json`, R-541): the reference for `principia_lines.md` §8's markers and icon sets, where a trace can leave, mixed axes and the time ramp (R-538), for the view past the square with the controls shown (R-537), and for Listen and the trace's place in the dev GUI (R-540, R-541). *Was:* "the trace and extension demo, `trace_markers.html` (self-contained, version 27, the follow-up's), and its screenshots, `images/`"
 - `docs/gui/reference/principia_compass_charts.html` — Principia — compass, position & chart transform: reference for look and behaviour (R-451, R-452); its cream palette is not copied
 
 ---
@@ -168,6 +169,7 @@ standing obligation exists there and ports any that doesn't (R-112).
 | `docs/archive/principia_archive_20260828.zip` | an earlier snapshot of the corpus, 28 Aug ("archive index: everything produced in this working session") |
 | `docs/incoming/2026-10-20_extension_trace/` | the human's bundle of 20 Oct 2026 as delivered (`principia_extension_interaction.md`, `principia_trace_markers.md`, the demo, its images and the prin-rs examples): a record, ported by R-537 and R-538, whose rulings and amended docs are cited instead; its prin-rs examples and `encode_check.py` are reference only, not ported |
 | `docs/incoming/2026-10-20_trace_followup/` | the human's follow-up of 20 Oct 2026 to that bundle as delivered (`principia_trace_followup.md`, the demo version 27, its images and a prin-rs example): a record, ported into R-538 (TF1 to TF7), whose ruling and amended docs are cited instead; its demo replaces the bundle's copy in `docs/gui/reference/trace/`; its prin-rs example is reference only, not ported |
+| `docs/incoming/2026-10-21_trace_listen/` | the human's bundle of 21 Oct 2026 as delivered (`principia_listen.md`, `principia_trace_listen_gui.md`, the two demos, the art boards and the images): a record, ported by R-540 and R-541, whose rulings and amended docs are cited instead; its demos and art boards are copied to `docs/gui/reference/trace/` as reference mocks, not ported as code |
 | `docs/archive/principia_design_corpus.zip` | an earlier copy of the corpus in a numbered-folder layout (`arch/00_read_first` … `08_scratchpads`) |
 
 ---

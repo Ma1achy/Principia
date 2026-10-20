@@ -852,9 +852,13 @@ override it.
 During a gesture the frame budget governs: ancestors show, so there are never blanks, and completeness resumes at rest.
 
 ## R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*
+*Extended by R-540 (21 Oct 2026; `principia_listen.md` is Listen's normative design and defines §4's open points; the
+default signal adds the triangle's rotation to `θ(t), φ(t)`, RQ-451; §4's length floor and "never retrigger" are read
+with it, RQ-450 and RQ-452).*
 *25 Sep 2026 · applied in step 7 · amended by R-144*
 *Still in force: pointer_channels §4 is normative through render_gui_spec's "listen", its open points become R-71 and
-R-72 requirements, and the rest stays working notes; §3 is normative too (R-144).*
+R-72 requirements, and the rest stays working notes; §3 is normative too (R-144); §4 is read with `principia_listen.md`,
+which defines its open points, the reference pitch's value staying a calibration (R-540).*
 
 Through render_gui_spec's "listen". Its open points (the reference pitch, θ alone or stereo θ/φ, the whole or a
 windowed spectrum) become R-71 / R-72 calibration and definition requirements. The rest of the file stays working notes.
@@ -14267,8 +14271,11 @@ Screen contour the default; M3's class edges in Overlays ▾ and M10's meanwhile
 *Amended in part by R-538 (20 Oct 2026; `principia_lines.md` §8's markers become the icon sets, with syzygies,
 off-screen pinning, repeats and not-a-system handling, and its length and colour defaults are set; §3's `Trace`
 follows).*
-*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces, and
-§8's markers and trace defaults as adopted, which R-538 replaces.*
+*Amended in part by R-541 (21 Oct 2026; Lines ▾ no longer lists the traces, whose controls move to Overlays ▾ › Trace,
+the Trajectory panel and `Trace…`; whether Lines ▾ stays for the rest is RQ-448, its option (a) applied).*
+*Still in force: all of it but M3's keeping class edges in Overlays ▾ and M10's meanwhile, which R-509 replaces,
+§8's markers and trace defaults as adopted, which R-538 replaces, and Lines ▾'s listing of the traces, which R-541
+replaces.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (added, the bundle's design with an adoption note and
 RQ-377's pointer), `docs/gui/reference/lines/` (added: `images/`, `canvas/`), `docs/read_first/principia_INDEX.md` §
 "Design documents — the reasoning" and § "GUI" (two lines added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore
@@ -15301,6 +15308,10 @@ Adds REQ-GUI-267 to REQ-GUI-270, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-
 REQ-GUI-180, REQ-CHART-054, REQ-SCHED-056 and REQ-REF-025 (notes).
 
 ## R-538 — The trace's markers and icon sets, as `principia_trace_markers.md` gives them: a star at the start, each end event its own icon in its outcome's colour, "?" for an incomplete run, rings where the state leaves and re-enters the chart's reach, syzygies o–o–o and off by default, off-screen icons pinned faint to the edge, every icon repeated in every image of the chart, never drawn through or started in a pixel that is not a system *(amends R-476)*
+*Amended in part by R-541 (21 Oct 2026; I2's place for the trace settings, the trace's entry in Lines ▾, becomes the
+`Trace…` window, the Trajectory panel's Trace section and Overlays ▾ › Trace).*
+*Still in force: all of it but I2's place for the settings, which R-541 replaces; the settings, their order and their
+defaults stand.*
 *20 Oct 2026 · applied in `docs/design/principia_lines.md` (the adoption note, a sentence), § "3. The data model" (the
 `Trace` block, with its earlier words kept), § "8. Traces" (the markers, length, colour and incomplete-run bullets reworded, with their earlier words
 kept; bullets added) and § "12. Tests (each with an arm that can fail)" (a sentence), `docs/gui/principia_render_gui_spec.md`
@@ -15962,3 +15973,715 @@ R-537 and R-538.
 R-539 is in the "design" group of `plan/rule_groups.yaml`, with R-466.
 
 Changes REQ-GUI-074 (statement, rulings, source, note) and REQ-GUI-168 (note).
+
+## R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*
+*21 Oct 2026 · applied in `docs/design/principia_listen.md` (new: the design, transcribed from the demo's code),
+`docs/incoming/2026-10-21_trace_listen/` (the bundle as delivered), `docs/gui/reference/trace/` (`trace_sound.html`,
+version 9, and its images), `docs/design/principia_scratchpad_pointer_channels.md` (the header and § "4.
+Audio-specific constraints, which are NOT the frame budget", sentences added), `docs/design/principia_trajectory_viewing.md`
+§ "1. The single mechanism" (a sentence added), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday
+view (`01_main.png`)" (the Trajectory panel's listen bullet, reworded, with its earlier words kept) and § "G13. Where
+the artboards are overridden" (the sound mapping, with its earlier words kept), `docs/read_first/principia_INDEX.md`
+(rows), R-109's heading block, RQ-440 to RQ-444, RQ-450 to RQ-458 and RQ-464 (new), REQ-GUI-283 to REQ-GUI-297 (reqio,
+new), REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102 and REQ-VAL-103 (reqio, notes),
+TASK-M8-12 (extended), TASK-M8-59 and TASK-M8-60 (new), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by
+TASK-M8-12, TASK-M8-59 and TASK-M8-60, which wait on RQ-440 and RQ-442*
+
+The human's words, a message of 21 Oct 2026 (the bundle's `INSTRUCTION.md`), verbatim:
+
+> Two new instructions from me, Malachy, 21 Oct 2026, in `principia_trace_listen_bundle.zip` (unzip it to
+> `docs/incoming/2026-10-21_trace_listen/` and commit the bundle as-is):
+>
+> 1. `principia_listen.md`: Listen, the trajectory heard as sound. It is new, and it is a feature of the trajectory
+>    viewer.
+> 2. `principia_trace_listen_gui.md`: where the trace and Listen sit in the dev GUI's Explore mode. It amends the dev-GUI
+>    sketch: the menu bar, the left panel, the Trajectory panel and the bottom band.
+>
+> Read both in full, with `README.md`, the demos `demo/trace_sound.html` and `demo/trace_markers.html` (open them in a
+> browser; turn Sound on), and the art boards in `artboards/`, before changing anything. Docs first, then plan, then
+> code.
+>
+> Port:
+> - Each file's §0 is my words: quote them verbatim in the rulings, never paraphrased. Take the next free R-numbers, one
+>   ruling per file, with their S and G items as the applied text per R-369 (mechanical consequences and routine
+>   choices; I may veto any).
+> - `principia_listen.md` treats the demo's code as the transcription source. Where the md and the code disagree, the
+>   code wins and the disagreement is queued, not resolved. Transcribe the signal, the spectrum, the pitch mapping, the
+>   windows, the partial tracking, `INSTRUMENTS`, `makeVoice`, the events and the effects; do not re-derive them.
+> - The GUI file supersedes the earlier art-board pass's `Lines ▾` and `Listen ▾` menus, and the sketch's
+>   "listen · separations → pitch" row (queued as Q4). Record each replaced line as "stale value, replaced by R-xxx".
+> - File each "Queue, don't rule" item (Q1–Q8) as an RQ with its recommendation as option (a). Do not rule them
+>   yourself. Q1 (the audio backend) and Q3 (`RMS_FLOOR` against our integrator) need answers before Listen is built.
+> - Requirements and tasks:
+>   - Listen (S1–S12) belongs to the trajectory viewer's tasks, with the physics reviewer on S1–S3 and S7 (the signal,
+>     the pitch's scale invariance, the floor).
+>   - G1–G9 belong to the GUI. They depend on the trace markers tasks from the earlier bundles.
+>   - Every test in both files (S13, G10) gets its failing arm, as written.
+> - Put both demos under `docs/gui/reference/trace/` and the art boards under `docs/gui/reference/trace/artboards/`, as
+>   reference mocks like the lines canvas. They are not ported as code.
+>
+> Check against what is open. These files assume:
+> - the earlier bundles' trace markers and follow-up (F1–F7);
+> - R-469's centre clamp, R-470's blank-plus-overlay and R-509's fade.
+>
+> If anything here contradicts main, an open branch or a ruling — or my words contradict a ruling — tell me and queue it
+> rather than resolving it.
+>
+> Open a PR for the docs port with the rulings, and paste the doc diffs' summary and any conflicts found in the
+> description. Do not touch anything outside the repo and build or scratch directories without asking.
+
+and `principia_listen.md`'s §0, "My words", verbatim, its "…" as written:
+
+> ## 0. My words
+>
+> > "With this trace thing, can you create a second version of this, like a second version of this artifact that is like
+> > the sort of sound system? … converting the trajectory into sound and then potentially having that play as well as we
+> > hover and show the trac"
+>
+> > "Explain to me how you're producing the sound. Also, it'd be cool as well if you could listen to the sound of it
+> > evolve over time as you, the sort of like trace is drawn out…"
+>
+> > "Oh, also … the Lagrange one, you can't hear… maybe need to like clamp the volume / normalise it ? yeah maybe options
+> > to clamp min and max volume and or normalise all the volumes would be nice. also ability to change the instrument
+> > would be sick, have a fat collection of instruments"
+>
+> > "shouldn't you use the angles? i think those are more correct for you to use, you can probs account for the wrap.
+> > maybe need a larger window size idk think this could be improved."
+>
+> > "stereo by winding should be default... still can't here Lagrange btw. also maybe the window should get longer as the
+> > trajectory gets longer in time? idk could be a cool option? ah i don't like how some are too short to hear, that
+> > shouldn't be a thing."
+>
+> > "glass bell, marimba, music box, harp, analogue bass, acid, fm bass, and electric piano i don't think play correctly?
+> > they sound like a loop rather than a note?"
+>
+> > "the instruments that i listed that are broken now just play once and fade out"
+>
+> > "sound effect for close approach, collision types, ejection types, syzygy (optional can be disabled individually).
+> > yes again optional reverb on system spread, optional doppler pitch shift, option bit cruch, optional streo width.
+> > add all those other instruments"
+>
+> > "maybe the reverb should be increased along with the doppler shift and stero width effect ? make it adjustable."
+>
+> > "improve the appearance of the spectrograph and the graph above it."
+
+*The applied text (per R-369; the human may veto any).* The file's §0 is the human's words and the rest the applied
+text; its preface and S1 to S14, verbatim:
+
+> *20 Oct 2026. New. It specifies the sound system demonstrated in `demo/trace_sound.html` (version 9), which is the
+> reference implementation for every rule here: where this file and the demo disagree, the demo's code is the
+> transcription source and the disagreement is a bug in this file, to be queued. Its GUI is specified separately, in
+> `principia_trace_listen_gui.md`. Quote §0 verbatim in the ruling.*
+>
+> ## S1. What is heard
+>
+> **The sound is the spectrum of the motion of the triangle's shape, plus its rotation in space.** Nothing else drives
+> pitch. A periodic orbit is a set of lines, so it is a note or a chord; a chaotic run spreads its power, so it is
+> noise. The masses, the energy and the overall size only set the time unit (S3), so two systems that differ only by
+> scale sound identical.
+>
+> The **signal** is built from the shape vector `n̂ = (n₁, n₂, n₃)` on the shape sphere, computed straight from the
+> mass-weighted Jacobi vectors with no canonical frame (a canonical frame mirrors at every syzygy and would put a jump in
+> the signal):
+>
+> ```
+> ρ̃ = √μ_ρ ρ,  λ̃ = √μ_λ λ,   A = |ρ̃|², B = |λ̃|², I = A + B
+> n₁ = (A − B)/I,   n₂ = 2 ρ̃·λ̃ / I,   n₃ = 2 (ρ̃ × λ̃) / I
+> θ = atan2(n₂, n₁),   φ = acos(n₃),   ψ = atan2(ρ_y, ρ_x)     (ψ: the triangle's orientation in space)
+> ```
+>
+> Three signals are selectable (`Signal`):
+>
+> | Signal | Channel A (complex) | Channel B | Notes |
+> |---|---|---|---|
+> | **Angles + rotation (default)** | `w · e^{iθ}` and, summed in power, `e^{iψ}` | `φ` | Lagrange's shape is fixed and it still sounds, through `ψ` |
+> | Angles only | `w · e^{iθ}` | `φ` | Lagrange is silent: the shape does not move |
+> | Shape vector | `sin φ · e^{iθ} = n₁ + i n₂` | `cos φ = n₃` | the `sin φ` weight quietens `θ` near the poles |
+>
+> **The wrap is handled by using `e^{iθ}`, not `θ`.** `θ + 2π` is the same point, so `e^{iθ}` is exactly wrap-free; `θ`
+> itself would drift and put a sawtooth's harmonics into the spectrum. `φ` never wraps. **The pole weight**
+> `w = min(1, sin φ / 0.1)` fades `θ` within 0.1 rad of a pole, where it is undefined and swings fast (a coordinate
+> singularity, not motion).
+>
+> **The spectrum is complex, so it carries direction.** A complex FFT of `e^{iθ}` puts anticlockwise winding at positive
+> frequencies and clockwise at negative ones. That sign is what `Stereo by winding` uses (S6).
+>
+> ## S2. The spectrum
+>
+> For a window `[t₀, t₁]` of the run, `D = t₁ − t₀`:
+>
+> - **Resample** the run's samples to `N` uniform times by linear interpolation of the state (4096 for the displayed
+>   analysis, 1024 per frame of the follow track).
+> - **Detrend** (subtract the mean), **Hann-window**, **zero-pad** to `NF` (8192; 2048 per frame), FFT. `df = (N−1)/(D·NF)`
+>   cycles per unit time.
+> - **Peaks**: local maxima above `0.01 ×` the largest bin, refined by a parabola through the three bins, sorted by
+>   height, the top `K` kept (`Voices`, default 16). **Bins below 1.5 periods per window are ignored** (`k₀ =
+>   ⌈1.5/(D·df)⌉`, at least 2): a line needs one and a half cycles inside the window to be a line.
+> - **Left and right share one scale** (`ref` = the larger of the two channels' maxima), so a side with almost nothing
+>   stays almost silent instead of being normalised up to full level.
+> - **Entropy**: Shannon entropy of the normalised power spectrum over `log(bins)`, 0 for a pure line and 1 for white
+>   noise. It is read out and drives the bit-crush (S9).
+> - **Interval**: the ratio of the two strongest lines, folded below 4 and named against 13 just ratios if within 25
+>   cents (`7:5` is named, as a tritone).
+>
+> **No run is too short to hear.** Where no line clears the 1.5-period cut, the **mean rates** are played instead: the
+> winding rates of `θ` and `ψ` (unwrapped step by step, signed) and the rate of `φ` (unsigned), in cycles per unit time,
+> each at level `max(0.3, |f|/f_max)`, panned by sign. A run that moves at all makes a sound.
+>
+> ## S3. Pitch
+>
+> ```
+> Hz = f · t_c · f_ref · 2^shift
+> t_c = (2|E|)^{-3/2}   if E < 0,   else  I^{3/4}       (G = 1, total mass 1; evaluated at t = 0)
+> ```
+>
+> - `f` is in cycles per unit time, so `f · t_c` is cycles per crossing time and is **scale-free**: a system and its
+>   rescaled copy play the same notes.
+> - `f_ref` (`1/t_c is`) is 110, **220 (default)** or 440 Hz.
+> - **Fit to hearing** (default on): `shift` is the whole number of octaves that puts the whole run's strongest line in
+>   110–880 Hz. **It is chosen once per run, from the whole run**, so the pitch does not jump as the head moves, and an
+>   octave shift keeps every ratio.
+> - Lines outside 30 Hz–6 kHz are not voiced.
+>
+> Measured in the demo (its own integrator, figure-eight released from its standard ICs, `t ≤ 60`, defaults):
+> **262.6, 131.3, 393.9 and 525.2 Hz** — 2:1, 3:2 and 4:3 against the 131.3 line. The 1%-perturbed figure-eight reads
+> the same four to 0.1 Hz; Burrau 3:4:5 ends in a collision at `t = 54.84` with an unnamed ratio of 1.549 and entropy
+> 0.352 against the figure-eight's 0.309; Lagrange plays **one line at 181.7 Hz** under the default signal.
+>
+> ## S4. Follow the head, or the whole run
+>
+> | `Listen` | When | What plays |
+> |---|---|---|
+> | **Follow the head (default)** | while the trace is playing or being scrubbed | the spectrum of the window around the head, re-voiced as the head moves |
+> | Follow the head | when nothing is playing or scrubbing | **the whole run as one chord**, matching the trace being drawn whole (follow-up F3) |
+> | Whole run | always | the whole run as one chord |
+>
+> **Windows** (`Window`, in follow mode):
+>
+> | Window | Span at head time `t` |
+> |---|---|
+> | **Fixed, centred (default)** | `W = min(Fixed × t_c, t_end)` (default `6 t_c`), centred on `t`, shifted inside the run near its ends so every moment has a full window |
+> | Grows | `[0, t₁]`, everything drawn so far |
+> | Grows, last half | `[t₁/2, t₁]` |
+>
+> For the growing windows, `t₁ = min(t_end, max(t, min(t_end, 0.5 t_c)))`, so the window is never empty.
+>
+> **Frames.** In follow mode the run is pre-analysed into frames at a hop of `min(t_end/8, max(W/16, t_end/900))`. Each
+> frame holds its spectrum, its peaks in Hz with a pan (`(R−L)/(R+L)` at that bin) and its shape rms. The head reads the
+> frame at or before it.
+>
+> **After the run ends** (its event, or the horizon), follow mode is **silent**, not a held chord.
+>
+> ## S5. Voices
+>
+> - **Chord** (whole run): one voice per peak, cross-faded in as a bank over ~140 ms, and cross-faded out when the run
+>   changes. Level `0.22 × a / Σa`, ×1.3 in stereo. **Never retriggered.**
+> - **Follow track**: a pool of **32 persistent voices**. At each frame:
+>   1. Each sounding voice takes the nearest unused peak **within a semitone** and glides to it (35 ms); a voice with none
+>      fades out.
+>   2. Each unclaimed peak takes a silent voice: its pitch is set while silent, then it fades in.
+>   3. Pan follows the peak's pan × 0.9 in stereo, 0 in mono.
+>
+>   This is partial tracking: a line that drifts is heard as a glide, not as a sequence of re-attacks.
+>
+> ## S6. Channels
+>
+> | `Channels` | Left | Right |
+> |---|---|---|
+> | **Stereo by winding (default)** | anticlockwise winding (positive frequencies) | clockwise winding (negative frequencies) |
+> | Stereo | `θ` (both directions folded) | `φ` |
+> | Mono | everything summed in power | — |
+>
+> So in the default a system that winds one way round the sphere is heard on one side.
+>
+> ## S7. Loudness
+>
+> ```
+> rms = |(rms(Re A), rms(Im A), rms(B)/π [angles] or rms(B) [vector], |rms(e^{iψ})| [rotation signal only])|
+> level = 0                                    if rms ≤ RMS_FLOOR (1e-7)
+>       = clamp(√min(1, rms/0.1), min, max)    Loudness: follows the shape's movement (default)
+>       = clamp(1, min, max)                   Loudness: normalised, every system at full level
+> ```
+>
+> `Min level` defaults to 15%, `Max level` to 100%, `Volume` (the master) to 60%.
+>
+> **The floor is there so that a system that does not move is silent rather than normalised up to its rounding noise.**
+> Measured in the demo under *Angles only*: Lagrange's shape rms reads **2.65e-7**, just above the floor, so it plays at
+> the min level with lines at 181.5 Hz and above — that is the demo integrator's error, not motion. The floor was set
+> against the demo's integrator, and prin-rs's is far quieter (Q3).
+>
+> ## S8. Instruments
+>
+> **The spectrum decides the pitches and their weights; the instrument only decides the timbre each partial is voiced
+> with**, so changing instrument changes nothing that is measured or displayed. 39 instruments, default **Warm sine**.
+> Transcribe `INSTRUMENTS` and `makeVoice` from the demo; a recipe has:
+>
+> | Field | Meaning |
+> |---|---|
+> | `a` | main oscillator: sine, square, sawtooth, triangle, or a harmonic list (a periodic wave) |
+> | `b`, `mix`, `ratio`, `det` | a second oscillator, mixed at `mix`, at `ratio × f`, detuned in cents |
+> | `fm`, `fmenv` | `b` as an FM modulator at depth `fm × f`; `fmenv` makes the index fall on each note |
+> | `lp`, `q`, `formant` | low-pass at `lp × f`, or fixed-Hz band-passes (vowels) |
+> | `fenv`, `fsweep` | filter opening on each note and settling; an LFO sweeping the filter |
+> | `vib`, `bvib`, `trem` | vibrato (rate, cents), vibrato on `b` alone, tremolo |
+> | `unison` | detuned copies of `a` |
+> | `breath` | band-passed noise tracking `f` |
+> | `att`, `glide`, `oct`, `lvl` | attack, minimum glide, octave offset, level |
+> | `strike`, `sus` | **struck**: decays with time constant `strike` **to a held floor `sus`**, never to zero |
+> | `retrig` | a note event (filter or FM envelope) when the partial moves on, gain held |
+>
+> **Struck instruments** (glass bell, electric piano, marimba, music box, harp, kalimba, steel drum, vibraphone, celesta,
+> glockenspiel, tubular bells, gong; and, with `retrig` rather than `strike`, analogue bass, acid and FM bass):
+>
+> - They are **struck once and ring at their floor**. The first build re-struck them on a timer and they sounded like a
+>   loop; the second decayed to zero and they played once and died. The floor is the fix for both.
+> - **They are struck again on the trajectory's own beats** (`Strikes on`):
+>   - each syzygy the head passes (**default**);
+>   - every crossing time ÷ 1, 2 or 4;
+>   - only when a line changes, i.e. a voice's partial has moved more than a quarter-tone since it last sounded.
+>
+> Families, for the menu (GUI file G6): pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
+> textures (2).
+>
+> ## S9. Events and effects
+>
+> **Events** are one-shot sounds fired when the head passes them, each optional (`Events`), at `Event level` (80%),
+> panned by the bodies involved (bodies 1, 2, 3 at −0.8, 0, +0.8):
+>
+> | Event | Detected | Sound |
+> |---|---|---|
+> | Close approach (on) | a pair's separation at a local minimum below `0.2 R` (`R = √I`), before the run's end | a band-passed noise whoosh, brighter and louder the deeper (`depth = min(1, log₁₀(0.2R/d)/2)`) |
+> | Collision (on) | the run's terminal collision | by pair: 1–2 low tom, 1–3 snare, 2–3 rimshot; triple: a crash |
+> | Escape / ejection (on) | the run's terminal escape | a falling glide towards the escaping body's ear; a triple ejection glides to all three, staggered |
+> | Syzygy tick (off) | each syzygy | a short click panned by the middle body |
+>
+> **Effects** each have a switch and an amount (×, default in brackets); they read the run at the head (follow) or its
+> mean (chord):
+>
+> | Effect | Driven by | Mapping |
+> |---|---|---|
+> | Reverb (on, ×1.40) | spread `R/R₀` | wet `= min(1.6, a · (0.12 + 0.9 · clamp(log₂(R/R₀)/3, 0, 1)))`, 3.6 s impulse: a tight system dry, a wide one in a hall |
+> | Doppler (off, ×1.50) | scale-free expansion rate `Ṙ t_c / R` | detune `= −400 a · Ṙ t_c/R` cents, clamped to `±1200 · clamp(a, 0.25, 2)`: expanding bends down, contracting up |
+> | Bit-crush (off, ×0.60) | spectral entropy `H` | `bits = round(clamp(15 − 40 a · max(0, H − 0.12), 3, 16))`: a clean line stays clean, noise frays |
+> | Stereo width (on, ×1.50) | scale-free angular momentum `√(L_z² |E|)` | `w = clamp(a · √(L_z²|E|)/0.08, 0.15, 2)`, mixed as `L' = (1+w)/2 L + (1−w)/2 R`: released from rest is narrow, a rotating system wide |
+>
+> All four inputs are scale-free, so the effects obey S1's scale invariance too. Chain: voices and events → bit-crush →
+> width matrix → dry + convolver → compressor → output.
+>
+> ## S10. Horizon and dwell
+>
+> - While the hover is moving, the run is integrated to `t ≤ 20` (the maps' horizon), so the sound is coarse.
+> - On dwell (280 ms) or pin, the same run is integrated on to the **horizon** (`Horizon`: 20, **60**, 150, 400), and the
+>   trace and the sound both switch to it and sharpen.
+> - A run ended early by its event is a short run, so a coarse spectrum; that is information, not a fault.
+>
+> ## S11. Display
+>
+> **Spectrum** (at the head, or the whole run):
+> - log frequency 30 Hz–6 kHz, gridded at the A of each octave (A1 55 … A7 3520);
+> - dB from 0 to −60 relative to the strongest bin;
+> - the 110–880 Hz fit band shaded;
+> - left channel blue `#5ab4ff` (anticlockwise), right amber `#e0a030` (clockwise), mono `#dcdcdc`, each a filled
+>   curve;
+> - the top peaks dotted, with chips showing note, cents and Hz;
+> - the strongest line's harmonics 2f–8f as dashed ticks.
+>
+> **Spectrogram** (the whole run, on the run's own time axis):
+> - the frames, magma palette;
+> - **each frame shown in dB above its own mean over ±½ octave**, range 14 dB. On raw dB the broad slope every run
+>   carries fills the panel and hides the lines; this keeps the lines and drops the slope. **Display only — the sound is
+>   untouched**, and the panel says so;
+> - bins below the fourth are left blank: they hold the window's own leakage, not lines;
+> - an **event lane** above: syzygies as ticks in the middle body's colour, close approaches as triangles, the end event
+>   as a diamond in its outcome colour;
+> - the playhead with a time chip; blank after the run's end.
+>
+> **Readout**:
+> - pitch mapping;
+> - window;
+> - top peaks as notes;
+> - the named interval;
+> - shape rms → loudness;
+> - entropy;
+> - periods per window;
+> - the reason for any silence ("not a system", "the run ended at t = … by …").
+>
+> ## S12. Sweep and known orbits
+>
+> - **Sweep a row**: the cursor moves along the current row of the chart over `Sweep` seconds (default 10), so the
+>   sound of a slice is heard as a gesture.
+> - **Known orbit** loads a named IC as the trace, with total mass 1 and `G = 1`: figure-eight, figure-eight perturbed
+>   1%, Burrau 3:4:5, Lagrange rotating. These are the calibration set for the tests.
+>
+> ## S13. Tests (each with the arm that fires)
+>
+> | Test | Passes when | Fires on |
+> |---|---|---|
+> | Scale invariance | a system and its copy scaled by `α` (times by `α^{3/2}`) give the same peaks in Hz to 0.1 Hz | a `t_c` or `f_ref` slip; an effect input that is not scale-free |
+> | Winding sign | the figure-eight run forwards and time-reversed swap its lines between L and R under *Stereo by winding* | a real FFT, or the sign dropped |
+> | Wrap | the `θ` signal's spectrum has no lines at multiples of the winding rate that are absent from `e^{iθ}`'s | `θ` used instead of `e^{iθ}` |
+> | Figure-eight | lines in exact 2:1 / 3:2 / 4:3 ratios to ±5 cents | a windowing or peak-refinement error |
+> | Lagrange (default signal) | one line, level above the min clamp | the rotation channel dropped |
+> | Lagrange (angles only) | level 0, because the shape rms is below the floor | the floor removed, or set above prin-rs's drift (Q3) |
+> | No silent run | every run with `t_end > 0` that moves has at least one voiced line (fallback included) | the fallback missing |
+> | Struck floor | a struck voice 10 s after its strike is at `sus × level`, not 0, and was struck exactly once without a beat | a timer re-strike, or decay to zero |
+> | Silence after the end | follow mode past `t_end` voices nothing | a held chord |
+> | Spectrogram is display-only | the voiced peaks are identical with the spectrogram on and off and under any display mode | the contrast step leaking into analysis |
+>
+> ## S14. Queue, don't rule
+>
+> - **Q1. Audio backend for prin-rs.** The demo is Web Audio. Recommendation (a): a Rust synthesis graph on
+>   `cpal` for output, with the voice and effects chain transcribed node for node. (b) Keep sound web-only.
+> - **Q2. Where the analysis runs.** Recommendation (a): on the CPU, from the trajectory viewer's own samples, at the
+>   sizes in S2; it is two FFTs per frame. (b) On the GPU with the integrator.
+> - **Q3. `RMS_FLOOR` against prin-rs's integrator.** Recommendation (a): measure Lagrange's shape rms under *Angles
+>   only* with the shipped integrator over `t ≤ 400`, and set the floor at 10× its maximum. The demo's 1e-7 is its own
+>   RK4's drift.
+> - **Q4. The superseded sketch row.** The dev-GUI sketch's "listen · separations → pitch" is replaced by this file's
+>   signal. Recommendation (a): mark it stale, replaced by this ruling. (b) Keep separations as a fourth `Signal`.
+> - **Q5. Close-approach threshold** `0.2 R` and the event depth scale are demo choices. Recommendation (a): keep them,
+>   stated as parameters.
+
+*Where the words leave a choice, or the file and the demo's code disagree, decided per R-369 (routine or mechanical;
+the human may veto any), flagged where they read the words:*
+- **H1. Where it lands.** A new design document, `docs/design/principia_listen.md`, normative, transcribed from the
+  demo's code as the human's message says ("Transcribe the signal, the spectrum, the pitch mapping, the windows, the
+  partial tracking, `INSTRUMENTS`, `makeVoice`, the events and the effects; do not re-derive them"): its §1 to §12
+  follow S1 to S12, §8 carrying `INSTRUMENTS`, its 39 recipes, and `makeVoice`'s steps as the code has them, §13 the
+  tests with their requirements, §14 what the demo is that the app is not. The file itself stays in the bundle, as
+  delivered. The demo is a reference mock in `docs/gui/reference/trace/`, not ported as code.
+- **H2. The code wins.** Where the file and the code disagree, the document carries the code and each disagreement is
+  queued, not resolved: the defaults (RQ-454), the last-half window (RQ-455), the strike's time constant (RQ-456), the
+  line-change strike in every mode (RQ-457), `φ` under *Stereo by winding* (RQ-458), and the floor's own comment and
+  the demo's integrator (RQ-442). A struck chord on each new hovered run, against pointer_channels §4's "never
+  retrigger", is the code too (RQ-452). Each is applied meanwhile; a ruling other than the code is a follow-up change.
+- **H3. A feature of the trajectory viewer.** Listen reads only the `computeIC` trajectory the trace draws, of the
+  hovered, pinned or kept trajectory the Trajectory panel's tab shows (R-541 G4), in the inspector worker
+  (REQ-SYS-060); `E`, `I` and `t_c` are the run's at `t = 0`. Nothing it does reaches the sim key, the figure or the
+  contract's history: its settings are the GUI's own, as a window's place is (R-461).
+- **H4. Numbering, syzygies and events.** Bodies are named and panned 1, 2, 3 (R-449), the formulas indexing them 0, 1,
+  2. A syzygy is R-538 I9's, a sign change of `w`, its middle body the one between the other two. The end event's
+  pair or body is the payload's (R-445), so the collision's drum is chosen by its pair and the escape's glide by its
+  body.
+- **H5. The signal (S1) adds `ψ`** to pointer_channels §4's `θ(t), φ(t)` (REQ-GUI-090): R-540 extends R-109, *Angles
+  only* being §4's mapping as it was; that is RQ-451, applied meanwhile.
+- **H6. Short runs and the entropy.** S2's fallback plays every run that moves, where pointer_channels §4 sets a
+  measured floor below which "the sound is meaningless" (REQ-VAL-103): that is RQ-450, applied meanwhile with the
+  measurement setting the readout's "too short to resolve a note" warning, not a silence. REQ-VAL-102's anchors (0.076
+  against 0.177, the spectrum of `θ(t)`) stay a check of `θ(t)`'s spectrum, separate from Listen's readout, whose
+  entropy is S2's over the selected signal (RQ-453).
+- **H7. The values.** Every constant in S1 to S12 is the demo's, transcribed as given: they are the design's, not
+  missing values, so no calibration follows from them, except `RMS_FLOOR`, which waits on RQ-442. S9's close-approach
+  threshold `0.2 R` and depth scale are stated as parameters (RQ-444). The reference pitch's calibration requirement
+  (REQ-GUI-143, R-71) gains S3's 110, 220 (the default) and 440 Hz as the human's proposal; it stands, its value
+  confirmed with the M8 gate's batch.
+- **H8. Horizon and dwell (S10).** While the hover moves, the run is integrated to the map's own horizon under
+  pointer_channels §3's step budget, S10's "20" being the demo's maps'; on dwell (280 ms) or a pin, on to Listen's
+  `Horizon` where it is longer, the trace and the sound both, the map unchanged: that is RQ-464, applied meanwhile.
+- **H9. The effects (S9)** read the run at the head in follow mode and its mean over the run in the chord, as S9 says;
+  `R₀` is the spread at `t = 0` and `L_z` the total angular momentum; the events go to the output beside the master
+  volume, as the code routes them (`principia_listen.md` §9).
+- **H10. The display (S11).** The spectrogram's contrast is display only (REQ-GUI-296); where the spectrum and the
+  spectrogram sit is R-541's (G4, G7).
+- **H11. Sweep and known orbits (S12).** The known orbits' ICs are the demo's, transcribed (`principia_listen.md` §12),
+  with total mass 1 and `G = 1`, and are the tests' calibration set. A sweep moves the hover along the current row of
+  the chart, as the pointer would, and sends no `SetField`.
+- **H12. S3's and S7's measurements** are evidence of the demo and its integrator, recorded with the ruling, not
+  values, and not re-measured by the port; S13's tests measure prin-rs.
+- **H13. The queue.** Q1 to Q5 are RQ-440 to RQ-444, each with the file's recommendation as option (a). Q4's (a) is
+  applied, as the human's message says: the sketch's "listen · separations → pitch" row is stale, replaced by R-540
+  (render_gui_spec §G2's listen bullet and §G13, each with its *Was*), and REQ-GUI-090's "must not be implemented"
+  stands. Q5's (a) is applied (H7). Q2's (a) is applied when the build starts, unless it is ruled first.
+- **H14. The tasks.** Q1 and Q3 need answers before Listen is built (the human's message), so TASK-M8-12 (extended to
+  S1 to S4, S6 and S7), TASK-M8-59 (new: S5's voices, S8 and S9) and TASK-M8-60 (new: S10 to S12) wait on RQ-440 and
+  RQ-442. They are the trajectory viewer's tasks, after TASK-M8-09 and TASK-M8-11. The physics reviewer is on
+  TASK-M8-12, which builds S1 to S3 and S7 (the signal, the pitch's scale invariance, the floor), as the message says.
+- **H15. The tests (S13).** Each is a requirement's verify with the arm the file gives: Wrap and Lagrange (default
+  signal) REQ-GUI-283's; Winding sign REQ-GUI-284's; Figure-eight REQ-GUI-285's; No silent run REQ-GUI-286's; Scale
+  invariance REQ-GUI-287's; Silence after the end REQ-GUI-288's; Lagrange (angles only) REQ-GUI-290's; Struck floor
+  REQ-GUI-291's; Spectrogram is display-only REQ-GUI-296's.
+
+*Checked against `main` (229db3a8), `rulings/R-469` (e13faeef), `rulings/R-537` (02062d9c) and the rulings the files
+assume (the human's message: "If anything here contradicts main, an open branch or a ruling — or my words contradict a
+ruling — tell me and queue it rather than resolving it"):* RQ-450 to RQ-453 (against R-109 and its requirements) and
+RQ-464 (against R-144 and the Run window) are queued, not ruled; RQ-454 to RQ-458 are the file against the code. S1's
+"no canonical frame" agrees with R-538 TF2.3's frame rule: Listen's signal is computed from the Jacobi vectors, the
+trace's projection from the chart's own frame. S4's whole-run chord when nothing plays agrees with R-538 TF3. R-469's
+centre clamp, R-470's blank-plus-overlay and R-509's fade do not reach the sound: a hover on a pixel that is not a
+system makes no run, and Listen reads out "not a system".
+
+*What it extends:* **R-109** (pointer_channels §4's open points are defined, and the mapping gains the rotation, RQ-451).
+Read with R-144, R-538 and R-541.
+
+R-540 is in the "design" group of `plan/rule_groups.yaml`, with R-109 and R-538.
+
+Adds REQ-GUI-283 to REQ-GUI-297; changes REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102 and
+REQ-VAL-103 (notes).
+
+## R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*
+*21 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+(Overlays ▾'s Trace group, Lines ▾'s list, the trace settings' place, the left panel, the Trajectory panel's kept
+orbits and its order, the bottom band's Listen, the legend's bullet; sentences and paragraphs added, the replaced words
+kept), § "G3. Keyboard — a design note, not a screen (`07_keyboard.png`)" (the Figure's and the Trajectory's keys,
+sentences added), § "G5. Windows (`04_windows.png`)" (a sentence, and "Trace… — every trace setting (R-541 G5)" and
+"Listen… — every sound setting (R-541 G6)", new), § "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
+(a paragraph, "The trace block") and § "G13. Where the artboards are overridden" (a bullet), `docs/design/principia_lines.md`
+§ "2. Where it sits" and § "8. Traces" (sentences added), `docs/gui/design/GUI_DESIGN_NOTES.md` (conformed),
+`docs/read_first/principia_INDEX.md` (rows), `docs/gui/reference/trace/` (`trace_markers.html` version 28, the
+art boards in `artboards/` and the images), R-476's and R-538's heading blocks, RQ-445 to RQ-449 and RQ-459 to RQ-463
+(new), REQ-GUI-298 to REQ-GUI-307 (reqio, new), REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (reqio: statement, note),
+REQ-GUI-079 and REQ-GUI-097 (reqio, notes), TASK-M8-61 to TASK-M8-63 (new), TASK-M8-58 (deliverables, notes),
+TASK-M8-11 and TASK-M8-50 (notes), `plan/tasks.yaml` and `plan/rule_groups.yaml`; built by TASK-M8-61 to TASK-M8-63*
+
+The human's words: the second instruction of the message R-540 holds ("2. `principia_trace_listen_gui.md`: where the
+trace and Listen sit in the dev GUI's Explore mode. It amends the dev-GUI sketch: the menu bar, the left panel, the
+Trajectory panel and the bottom band.", with "The GUI file supersedes the earlier art-board pass's `Lines ▾` and
+`Listen ▾` menus, and the sketch's "listen · separations → pitch" row (queued as Q4)"), and that file's §0, "My
+words", verbatim, its "…" as written:
+
+> ## 0. My words
+>
+> > "improve the gui of the trace sound and trace artefacts to better match the gui of principia (you made an artefact a
+> > while back that was a load of the art boards of the different gui elements / windows for principia (not the webpage
+> > version.. the dev gui) i need the trace and trace sound stuff to be properly integrated in and designed well with the
+> > rest of the gui"
+>
+> > "I don't know, with the like artboard stuff, should this be integrated with the trajectory viewer stuff potentially?
+> > … we already have that like trajectory viewer thing where like on hover it shows you the shape sphere in of the
+> > trajectory, and it also shows you the trajectory in real space in those two preview windows next to each other. So
+> > should we have the stuff to do with the trace below? Maybe either you click on it and it like expands, and then also
+> > as well we could have the sound thing as well as like a button, and when you click on that it then opens up a window
+> > where you can like do all the sound stuff, and then maybe as well it like changes the it like opens up another thing
+> > where like you can see like the spectrogram or something."
+>
+> > "Yeah, please redo the artboards along these lines and also make them look consistent with how the trace should look,
+> > along with also how, and also make sure it has all the features for the trace and all the features for the sound
+> > stuff."
+>
+> > "Just maybe it needs a slightly bit more work in just considering how it's going to fit in the explore mode with the
+> > rest of the GUI, such as the NavCube compass and the legend and play bar at the bottom."
+
+*The applied text (per R-369; the human may veto any).* The file's §0 is the human's words and the rest the applied
+text; its preface and G1 to G11, verbatim:
+
+> *21 Oct 2026. New. It places the trace (`principia_trace_markers.md` and its follow-up) and Listen
+> (`principia_listen.md`) in the egui dev GUI's Explore mode. The art boards in `artboards/` are the layout reference;
+> this file is the rule where they differ. It amends the dev-GUI sketch: the Trajectory panel, the menu bar, the left
+> panel and the bottom band. Quote §0 verbatim in the ruling.*
+>
+> ## G1. The principle
+>
+> **Everything about one trajectory lives in one place: the Trajectory panel.** That covers its previews, its trace and
+> its sound. The view shows the trace, and the bottom band's Time column shows the trajectory over time.
+>
+> **Every setting appears in at most two places**: an everyday control in the panel, and the full set in a window
+> (`Trace…`, `Listen…`), opened like `Profiler…` and `Export…`. Nothing about a trajectory is in the left panel, which
+> is about the chart.
+>
+> ## G2. Menus and keys
+>
+> - **`Overlays ▾` gains a Trace group**, after Quadtree, Integration, Chart and Stain, with these items:
+>   - trace under cursor (`T`);
+>   - kept traces (`⇧T`);
+>   - syzygies (`Y`);
+>   - end event icon;
+>   - off-screen icons, pinned to the edge;
+>   - repeat in wrapped copies;
+>   - outline the chart's square;
+>   - a `Trace…` button.
+>
+>   A trace is an overlay, so it lives with the overlays.
+> - **No `Lines ▾` and no `Listen ▾`.** An earlier art-board pass had both; they are withdrawn.
+> - **Keys**: `T` trace, `⇧T` kept traces, `Y` syzygies, `K` keep the current trajectory, `L` sound on/off. Add them to
+>   the keyboard sheet.
+>
+> ## G3. The left panel
+>
+> Chart, Navigate, Centre `z₀`, Slice & tilt. **No trace controls.** The Compass moves back to the bottom band (G7),
+> where the sketch has it.
+>
+> ## G4. The Trajectory panel
+>
+> From the top:
+>
+> 1. **Header**: `Trajectory`, then tabs `under cursor`, `#1`, `#2`, …, `+ keep`. **Each kept trajectory is a tab**, with
+>    its own previews, trace and sound. The kept list moves here and into `Trace…`, and out of the left panel.
+> 2. **Status line**: running / pinned, the end event with its time, `|ΔE/E|`.
+> 3. **Previews**: real space (bodies coloured 1 yellow, 2 magenta, 3 cyan) and the shape sphere, side by side as in the
+>    sketch, with `sphere / unwrapped` and `turn`. **While Listen is on, the stretch of the shape-sphere path inside the
+>    analysis window is drawn brighter** (`#5ab4ff`, width 2.4), so what is being heard is visible.
+> 4. **Three collapsible sections**, each a single row when collapsed.
+>
+> | Section | Collapsed row | Expanded |
+> |---|---|---|
+> | **Trace** (collapsed by default) | switch · the line's colour swatch · summary (`to the head · ticks 2 · left 0×`) · `⋯` opens `Trace…` | show (up to the head / tail only, `Δt`), colour + swatch, ramp, width, time ticks + labels, arrows, then **marker chips**, then icon set |
+> | **Listen** (collapsed until first used, then remembered) | `♪` on/off · instrument · `⋯` opens `Listen…` | instrument, volume, listen mode, loudness, event and effect chips, a small spectrum at the head, the two strongest lines as notes with their sides, interval, entropy |
+> | **Numbers** (collapsed) | — | F₂ word, substeps, min sep (the sketch's existing numbers) |
+>
+> The marker chips are toggle buttons that show the icon they draw: end event, syzygies, leaving the chart, off-screen
+> pins, wrapped copies, head marker. Event and effect chips are the same idea, with short glyphs.
+>
+> ## G5. The `Trace…` window
+>
+> **Every trace setting** in `demo/trace_markers.html` and `demo/trace_sound.html`, with their defaults, under a
+> preview strip drawn with the current settings. It applies to `all traces` or to the current tab only.
+>
+> | Group | Controls (default **bold**) |
+> |---|---|
+> | Line | colour **Fixed** `#fff27a` / Ramp along time; ramp **Sunset** · Viridis · Magma · Ice · Ember · Aurora · Mono · Custom… (three stops), `rev`; width **2.2**; **fade off the slice** (momentum proxy, R-509, floor 0.18); time ticks Off · Every 1 · **Every 2** · Every 5, **labels** |
+> | Direction arrows | shape Off · **Filled triangle** · Open chevron · Half barb · Notched · Dot; size **8 px**; every N px of path · **Δt of time** · N per trace; value (**Δt 1.0**) |
+> | Animation | mode Static · **With the playhead** · Own clock; repeat Once · **Loop** · Back and forth; speed **3 t/s**; tail only (off); tail Δt **3.0**; show the rest faintly (off); **head marker, labelled with its time** |
+> | Markers | **end event icon**; syzygies, coloured by the middle body (**off**) with style From the icon set · o–o–o · Three in a row · Line and bead · Numeral tag · Crossing tick · Eclipse, and **fade stutters**; **leaving / re-entering the chart**; leaving / entering the window (off); seams (off); join jumps dotted (off) |
+> | At the edges | **off-screen icons pinned (faint)**; **repeat in wrapped copies**; **outline the chart's square**; forbidden hatch (off, R-470) |
+> | Icons | icon set **Principia** · Arrows · Pictures · Orbits, `key…` opens the icon key; icon size **1.4×** |
+> | Kept traces | one row each with its swatch, end and `×`; `clear kept` |
+>
+> Footer: `reset`, `save as default`. When nothing is playing or scrubbing, the whole trace to the horizon is drawn
+> (follow-up F3).
+>
+> ## G6. The `Listen…` window
+>
+> **Every sound setting** in `principia_listen.md`, in two columns:
+> - left: Sound, Loudness, Listen;
+> - right: Pitch & analysis, Events, Effects.
+>
+> A readout row runs under both.
+>
+> | Group | Controls (default **bold**) |
+> |---|---|
+> | Sound | **♪ sound on**, `sweep a row` + speed (**10 s**), known orbit (— · figure-eight · figure-eight 1% · Burrau 3:4:5 · Lagrange), instrument (**Warm sine**), voices (**16**), strikes on (**each syzygy** · every crossing time ÷ · only when a line changes) with ÷ **2** |
+> | Loudness | **follows the shape's movement** / normalised; min level **15%**; max **100%**; volume **60%** |
+> | Listen | **follow the head** / whole run; horizon t ≤ 20 · **60** · 150 · 400 |
+> | Pitch & analysis | signal **angles + rotation** · angles only · shape vector; channels **stereo by winding** · stereo θ/φ · mono; window **fixed, centred** · grows · grows, last half; fixed × t_c **6.0**; 1/t_c is 110 · **220** · 440 Hz; **fit to hearing**; **spectrogram strip in the Time column** |
+> | Events | **close approach**, **collision by pair**, **escape / ejection**, syzygy tick (off); event level **80%** |
+> | Effects | each a switch + amount slider + value: **reverb ← spread (×1.40)**, Doppler ← expansion (off, ×1.50), bit-crush ← entropy (off, ×0.60), **width ← angular momentum (×1.50)** |
+>
+> **The instrument menu is grouped**: pure (5), keys (3), struck (10), bowed and blown (7), voices (4), synths (8),
+> textures (2), one instrument per row in the build. The art board compresses rows to fit.
+>
+> ## G7. The bottom band
+>
+> The sketch's band stays: **Compass · Time · Legend**, 196 px, with the Compass at the Explore left panel's width and
+> the Legend at 360 px. Listen adds to the Time column and nothing else.
+>
+> | State | Band | Time column | Compass | Legend column |
+> |---|---|---|---|---|
+> | Sound off | 196 px | transport, scrubber, axis, as now | full | Legend |
+> | **Sound on** | **196 px, unchanged** | an **event lane** and a **mini spectrogram** (≈54 px) fill its spare height; `♪ strip ⏶` | full | Legend + the trace section (G8) |
+> | **Strip expanded (⏶)** | **grows upward to 420 px**; the view gives up the height | the full spectrogram on the scrubber's own time axis, with the window, signal and channels shown, and `Listen…` | **cube only** | **the spectrum at the head**, until `⏷` |
+>
+> - The spectrogram and the scrubber **share one time axis**, so the playhead is one line through both. The spectrogram
+>   is blank past the run's end, which is labelled.
+> - `F3` still hides the whole band.
+>
+> ## G8. The Legend's trace section
+>
+> While a trace is shown, the Legend gains an `on the trace` block under the stain's classes: the line (and each kept
+> trace's colour), the start star, and the end icon for this run. With sound on it adds `♪ ◀ left ▶ right`. The full key
+> is `Trace… › key…`.
+>
+> ## G9. The trace's look (consistency)
+>
+> Every board and the build draw the trace one way, the demo's defaults:
+>
+> - line `#fff27a`, width 2.2, over a dark under-stroke `w + 2.2` (the demo's `pass` halo), so it reads on any stain;
+> - time ticks every 2, labelled;
+> - filled-triangle arrows every Δt 1.0, 8 px;
+> - the start a yellow star;
+> - the head a white disc labelled with its time;
+> - icons at 1.4×.
+>
+> Syzygies are off. Kept traces take distinct colours: kept #2 is `#5ab4ff` in the boards. Spectrum and spectrogram
+> colours are `principia_listen.md` S11's.
+>
+> ## G10. Tests
+>
+> | Test | Passes when | Fires on |
+> |---|---|---|
+> | One place | no trace or sound control exists outside the Trajectory panel, `Overlays ▾ › Trace`, `Trace…`, `Listen…` and the Time column | a stray control (e.g. a surviving `Lines ▾`) |
+> | Band height | turning ♪ on changes no pixel of the view's size; expanding the strip changes it by exactly the band's growth | the strip pushing the view on sound-on |
+> | Shared axis | the spectrogram's playhead x equals the scrubber thumb's x at every `t` | two axes |
+> | Window highlight | the bright arc on the shape sphere covers exactly the samples in `windowAt(t)` | an off-by-window highlight |
+> | Tabs | switching tabs switches the trace, previews and sound together | the sound following the cursor while a kept tab is selected |
+>
+> ## G11. Queue, don't rule
+>
+> - **Q6. Listen's default collapsed state.** Recommendation (a): collapsed until first used, then remembered per user.
+>   (b) Always collapsed.
+> - **Q7. The expanded strip's spectrum in the Legend's column.** Recommendation (a): borrow the column, as G7. (b) Keep
+>   the Legend and stack the spectrum under the spectrogram, making the band ≈520 px.
+> - **Q8. Kept-trace colours.** Recommendation (a): a fixed cycle of six, distinct from the body colours and the stain
+>   classes; to be chosen against the stain palettes.
+
+*Where the words leave a choice, decided per R-369 (routine or mechanical; the human may veto any), flagged where they
+read the words:*
+- **P1. Where it lands.** render_gui_spec §G2 (Overlays ▾'s Trace group, the trace settings' place, the left panel,
+  the Trajectory panel's order, the bottom band), §G3 (the keys), §G5 (`Trace…` and `Listen…`, two subsections), §G6
+  (the trace block) and §G13 (the art boards); `principia_lines.md` §2 and §8; the design notes conformed. Each
+  replaced line keeps its earlier words (*Was*); the art boards are reference mocks in
+  `docs/gui/reference/trace/artboards/`, not ported as code.
+- **P2. Lines ▾.** G2 and the human's message withdraw "the earlier art-board pass's `Lines ▾`", which R-476 adopted
+  as the whole line system's one menu: that is RQ-448. Applied meanwhile, its option (a): the trace leaves Lines ▾ for
+  Overlays ▾ › Trace, the Trajectory panel and `Trace…`; Lines ▾ stays for the contour sets, axes, grids and presets;
+  G10's One place test reads "a surviving `Lines ▾`" as a Lines ▾ that holds a trace control. The trace's place in
+  Lines ▾ (R-538 I2, render_gui_spec §G2's "Trace settings", REQ-GUI-271, REQ-GUI-247's "traces") is stale, replaced by
+  R-541. `Listen ▾` was in no corpus file, only in the demos' mock menu bars and `workbench/`'s earlier boards, so
+  nothing in the corpus is withdrawn for it.
+- **P3. Keys.** G2's `K` "keep the current trajectory" is the Figure's lock key (R-409, §G4), where Space keeps: that
+  is RQ-449. Applied meanwhile: K stays lock and Space keep; `T`, `⇧T`, `Y` and `L` are the Figure's scope shortcuts,
+  as L is (R-409), on the shortcuts sheet.
+- **P4. At most two places.** G1's rule, where G2, G4 and G5 put some markers in three: that is RQ-460. Applied
+  meanwhile: all three stay, one field behind them, one `SetField` from any.
+- **P5. The chart's square.** G2's and G5's "outline the chart's square", on by default, meets RQ-408 (R-537 Q3),
+  open with nothing built: that is RQ-461. Applied meanwhile: its two entries are built only once RQ-408 is ruled, and
+  as it rules.
+- **P6. The panel's contents.** G4 lists the panel without the summary's FTLE and `E₀`, the panel's playhead and the
+  two buttons: that is RQ-462. Applied meanwhile, a port adding: the status line carries FTLE and `E₀` too; the
+  playhead and the buttons stay, after Numbers; the kept list moves as G4 says (REQ-GUI-088 restated).
+- **P7. `Trace…`'s scope.** "It applies to `all traces` or to the current tab only": the current tab's own settings,
+  kept with its trajectory, each edit one `SetField` as the others are (R-538 I1). The window's Kept traces rows are
+  the tabs' list. Its key… button opens the icon key (R-538 TM4).
+- **P8. `Listen…`.** Its controls are `principia_listen.md`'s with the code's defaults (RQ-454: sound off at launch,
+  Sine (pure), reverb and width off), the file's bold defaults kept as quoted. The instrument menu's families name no
+  instrument and the code has none: that is RQ-459, applied meanwhile with the task that builds the menu writing the
+  assignment (R-72), the counts met.
+- **P9. The bottom band's sizes.** G7's 196 px, 420 px and 360 px meet R-462's splitters, and "cube only" leaves the
+  compass's buttons unsaid: that is RQ-463. Applied meanwhile: the sizes are defaults, each a remembered splitter
+  position; while "cube only" the compass's buttons are hidden and out of the keyboard tree until `⏷`.
+- **P10. Colours.** G9's kept #2 `#5ab4ff` is not in R-538's trace palette and is Listen's left channel and window
+  highlight: that is RQ-447 (the file's Q8). Applied meanwhile: R-538's palette, the boards' colour illustrative. G4's
+  body colours (1 yellow, 2 magenta, 3 cyan) are R-538 I3's.
+- **P11. The queue.** Q6 to Q8 are RQ-445 to RQ-447, each with the file's recommendation as option (a). Q6's and Q7's
+  (a) are applied: Listen's section remembered per user in the GUI's own settings (R-461), the expanded strip borrowing
+  the Legend's column. Q8's is P10.
+- **P12. The art boards against other rulings.** Where the boards differ from a ruling other than R-540 and R-541, the
+  ruling stands (render_gui_spec §G13): the step under the slice (R-457), the compass's orbit (R-409), GUI labels drawn
+  over the figure (§G1, R-539), the mock menu bars (P2), the kept colour (P10); their numbers are illustrative (the
+  bundle's README). G3's "Centre `z₀`, Slice & tilt" is read with R-457's names (Navigate, Slice centre, Tilt).
+- **P13. Mechanical.** The Trace group comes after Chart: G2's "after Quadtree, Integration, Chart and Stain" names a
+  Stain group R-509 removed. G8's block comes after the stain's keys and before the debug view's key, a key of figure
+  marks (R-539), not a stain dimension. G9's dark under-stroke is the Trace style's `outline` (`principia_lines.md`
+  §3). "Repeat in wrapped copies" is R-538 TM7's repeats as a toggle, on by default. G3's "The Compass moves back to the
+  bottom band" is where §G2 already has it. The file's date (21 Oct) and its §0's sources are as delivered.
+- **P14. The tests (G10).** Each is a requirement's verify with the arm the file gives: One place REQ-GUI-298's; Tabs
+  and Window highlight REQ-GUI-300's and REQ-GUI-301's; Band height REQ-GUI-304's; Shared axis REQ-GUI-305's.
+- **P15. The tasks.** G1 to G9 are the GUI's, after the trace markers' task (TASK-M8-58, after TASK-M8-49 to
+  TASK-M8-51 and TASK-M8-55), as the human's message says: **TASK-M8-61** (G1 to G4 and G9: the panel, its tabs and
+  sections, Overlays ▾ › Trace, the keys, the window highlight, the trace's look), **TASK-M8-62** (G5 and G6: `Trace…`
+  and `Listen…`) and **TASK-M8-63** (G7 and G8: the bottom band and the legend's block), each reviewed by code, qa and
+  gui. TASK-M8-58's settings stay its own as `Lines`' state; their controls are TASK-M8-61's and TASK-M8-62's.
+
+*Checked against `main` (229db3a8), `rulings/R-469` (e13faeef), `rulings/R-537` (02062d9c) and the rulings the file
+assumes:* RQ-447 to RQ-449 and RQ-460 to RQ-463 are queued, not ruled. G4's tabs agree with §G2's (R-453's pin, the
+kept orbits); G3's Compass in the bottom band agrees with R-462's layout; G5's "When nothing is playing or scrubbing,
+the whole trace to the horizon is drawn" is R-538 TF3; G5's fade (the momentum proxy, R-509, floor 0.18) and forbidden
+hatch (off, R-470) agree with those rulings; R-469's centre clamp is not touched. The icons and the trace over the
+figure are figure marks (R-539), not a §G1 conflict.
+
+*What it amends:* **R-476** (Lines ▾ no longer lists the traces, RQ-448) and **R-538** (I2: the trace settings' place
+in the GUI). Read with R-409, R-453, R-461, R-462, R-509, R-539 and R-540.
+
+R-541 is in the "design" group of `plan/rule_groups.yaml`, with R-476 and R-538.
+
+Adds REQ-GUI-298 to REQ-GUI-307; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-088 (statement, note), REQ-GUI-079 and
+REQ-GUI-097 (notes).

@@ -55,6 +55,10 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **The hover label names a fate only once it's decided.** Before that: "undecided · still interacting at t of t_max".
 - **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs). Real space and the shape sphere side by
   side; F₂ word, substeps, min separation, |ΔE/E|; playhead; **listen** (sonification, can follow the cursor); kept orbits below.
+  Everything about one trajectory lives here: its previews, its trace and its sound. Each kept trajectory is a tab;
+  under the previews are three collapsible sections, Trace, **Listen** (the trajectory heard as sound) and Numbers, each
+  opening its window, `Trace…` or `Listen…`, for the full set *(conformed to R-540, R-541; was: "**listen**
+  (sonification, can follow the cursor); kept orbits below")*.
   - **The shape sphere turns slowly, with visible x, y, z axes,** and switches to an unwrapped (equirectangular) view.
 - **Bottom:**
   - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
@@ -75,7 +79,11 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     group, to tilt and save again *(conformed to R-475)*.
   - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
     figure outside the node graph; the grid, `t_end` contours and class edges are its presets *(conformed to R-476,
-    R-509)*.
+    R-509)*. The traces' controls are not in it: they are Overlays ▾'s Trace group, the Trajectory panel and `Trace…`
+    *(conformed to R-541; RQ-448)*.
+  - **Listen in the band:** with sound on, the Time column gains an event lane and a mini spectrogram, the band's
+    height unchanged; expanded, the band grows upward, the spectrogram sharing the scrubber's time axis and the
+    Legend's column showing the spectrum at the head *(conformed to R-541)*.
   - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
     it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It

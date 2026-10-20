@@ -3,7 +3,9 @@
 *Working notes. §3 (responsiveness) and §4 (sonification) are normative (R-109, amended by R-144): §4 through
 `principia_render_gui_spec.md`'s "listen", §3 because it supersedes `principia_trajectory_viewing.md` §1's responsiveness
 paragraph. The rest of the file stays working notes. Updates `principia_trajectory_viewing.md` where the two disagree —
-that doc's §1 mechanism stands; its §1 responsiveness paragraph is superseded by §3 below.*
+that doc's §1 mechanism stands; its §1 responsiveness paragraph is superseded by §3 below. Extended by R-540: Listen,
+the sound, is designed in `principia_listen.md`, which is normative and defines §4's open points; §4 is read with it
+(RQ-450, RQ-451, RQ-452).*
 
 ---
 
@@ -107,7 +109,13 @@ Retriggering per pixel turns the best part into clicking.
 
 **Open points, as requirements (R-109).** The reference pitch is set by calibration (R-71). Whether the sound
 uses `θ(t)` alone or stereo `θ(t)`/`φ(t)`, and whether it plays the whole trajectory's spectrum or a windowed
-spectrum tracking the playhead, are defined by the task that builds "listen" (R-72).
+spectrum tracking the playhead, are defined by the task that builds "listen" (R-72). **R-540 defines them**
+(`principia_listen.md`): the reference pitch `1/t_c is` is a choice of 110, 220 (the default) or 440 Hz (§3); the
+signal is the shape's angles plus the rotation by default, with *Angles only* and *Shape vector* selectable, and the
+channels are stereo by winding by default, stereo `θ`/`φ` or mono (§1, §6); the sound follows a window around the head
+while the trace plays or is scrubbed, and plays the whole run as one chord otherwise (§4). Its short-run fallback, the
+mean rates, meets the floor above (RQ-450), its default signal adds the rotation to `θ(t), φ(t)` (RQ-451), and a struck
+instrument's chord meets "never retrigger" (RQ-452): each is queued, R-540's text applied meanwhile.
 
 ---
 
