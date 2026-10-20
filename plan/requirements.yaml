@@ -24487,6 +24487,25 @@
   rulings:
   - R-443
   milestone: M7
+- id: REQ-VAL-192
+  area: VAL
+  statement: "`render::pipeline_runtime`'s `node_failure_isolation_unexplained_failure_keeps_the_pipeline` must not die by a signal at teardown: its process must exit by status, never by SIGSEGV after its assertions pass, on lavapipe (PRIN_GPU_BACKEND=vulkan) under the parallel suite as in CI; the cause is found and fixed, not retried or ignored."
+  source:
+  - file: decisions.md
+    section: "R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)*"
+  - file: decisions.md
+    section: "R-276 — Four follow-ups: the r217 flake, M0-06's wording, conversation resolution, reviews re-run on each review"
+  - file: decisions.md
+    section: "R-333 — The `qa_TASK-M0-06_edges` flake: the test and its control get separate scratch folders"
+  verify:
+    method: unit test
+    detail: "on ubuntu-24.04 lavapipe, the test passes 500 consecutive runs alone and 100 consecutive runs of the whole `pipeline_runtime` binary under nextest with the CI shard's parallelism, each run's exit status recorded, none by signal, the log kept on the PR; `cargo test -p render pipeline_teardown` — the found teardown sequence, run in a child process, exits by status, and the check reports a child that dies by a signal as a failure naming the signal, with a registered negative control (R-176); no retry, ignore or backend skip of the test"
+  rulings:
+  - R-276
+  - R-333
+  - R-369
+  milestone: M2
+  note: "Applied per R-369 (the orchestrator decides tooling and tests), after the precedent of R-276 (REQ-VAL-175) and R-333: the SIGSEGV at teardown seen on PR #235 (run 39048546893, attempt 1, job 117446692905) and PR #254 (run 39427866705, attempt 1, job 118650558546), each passing on re-run. In M2, the milestone in progress, since M1's gate has passed (R-432). Closed by TASK-M2-42."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
