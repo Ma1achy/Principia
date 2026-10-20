@@ -639,6 +639,19 @@ fn check_primitives(z_shift: f64) {
         None,
         "a dependent pair placed a point"
     );
+    // A near-dependent pair whose Gram product `g₁₁g₂₂` does not fit the format: the determinant's fixed form keeps its
+    // rounding error, so the first component, an exact quotient there, is exactly 2.
+    let t = 2f64.powi(-14);
+    let (n1, n2) = (
+        [1.0, t, t, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [1.0, t, -t, 0.0, 0.0, 0.0, 0.0, 0.0],
+    );
+    let dn: [f64; 8] = std::array::from_fn(|k| 2.0 * n1[k] - 3.0 * n2[k]);
+    let (an, _) = plane(&dn, &n1, &n2).expect("an independent pair");
+    assert!(
+        (an - 2.0).abs() < 1e-12,
+        "a near-dependent pair's component {an}"
+    );
     // Dependent directions whose Gram products round: the determinant's fixed form is exactly 0 there.
     let qa = [0.1, 0.2, 0.3, 0.7, -0.6, 0.35, 0.9, -0.15];
     assert_eq!(
