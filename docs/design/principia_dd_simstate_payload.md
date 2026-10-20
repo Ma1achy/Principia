@@ -232,6 +232,9 @@ would be one more row, as philosophy §7.1 says, and the generator would not for
 **`detail` failure enum — `decode_failed` is DECODER-ONLY (a valid t=0 terminal is NOT a decode failure):**
 - **`sim_failed`** (state 4, numerical breakdown *during integration*): `0` = NaN in state; `1` = Inf/overflow in state; `2` = non-finite derived quantity (energy/force blew up); `3` = reserved.
 - **`decode_failed`** (state 5, **the chart/decoder could not produce a valid physical IC** — nothing to do with dynamics): `0` = non-finite decode output; `1` = degenerate configuration (e.g. exact zero-separation collinear); `2` = invalid mass construction (a mass → 0, mass-simplex boundary); `3` = other/reserved.
+- **Which `DEGENERATE` reason writes which `decode_failed` code** (R-72; REQ-DEC-038): `principia_dd_decoder.md` §2's
+  closed cause set maps `M01_TINY` to `2`; `NO_QUALIFYING_SEED` to `1`; `INVARIANT_INFEASIBLE`, `ENERGY_INFEASIBLE`
+  and `ENERGY_UNSCALABLE` to `3`. No reason writes `0`: it is a non-finite decode output, which is not a reason.
 - **Body and pair ids (R-22).** Bodies are 0-based (`0, 1, 2`), as the decode is. **Pair id `k` names the side opposite body `k`:**
   pair 0 = bodies (1, 2), pair 1 = (2, 0), pair 2 = (0, 1). Every consumer of `detail` (collision) and `dmin_pair` uses this map.
 - **What a person reads (R-449).** The ids above are internal: the payload, `detail`, the pair map, the code, the WGSL
