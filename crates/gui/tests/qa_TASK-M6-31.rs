@@ -47,6 +47,8 @@ type Z = [f64; 8];
 const NONE: Modifiers = Modifiers::NONE;
 const SHIFT: Modifiers = Modifiers::SHIFT;
 const ALT: Modifiers = Modifiers::ALT;
+/// A key no command binds: pressed only to turn keyboard navigation on (R-460, R-464 M2).
+const UNBOUND: Key = Key::F12;
 const NAV: KeyMode = KeyMode::Navigation;
 const INTERACT: KeyMode = KeyMode::Interaction;
 /// The arrows.
@@ -151,6 +153,9 @@ impl Rig {
     }
 
     /// Puts the focus on the scope labelled `label` (the first, breadth first), in navigation mode, as a landing is.
+    /// The focus is set by hand, as no user can, so a key no command binds is then pressed to turn keyboard
+    /// navigation on, as a user arriving there by keys has it: the GUI starts with it off, and while it is off an
+    /// Enter only shows the ring (R-460, R-464 M2).
     fn focus(&mut self, label: &str) {
         let tree = self.app.keyboard.tree(Mode::Explore);
         let mut all: Vec<&'static str> = tree.children(None);
@@ -166,6 +171,11 @@ impl Rig {
             .unwrap_or_else(|| panic!("no scope `{label}`"));
         self.app.view.focus.path = tree.path_to(id);
         self.app.view.focus.mode = NAV;
+        self.key(UNBOUND, NONE);
+        assert!(
+            self.app.keyboard.navigating(),
+            "a key press left keyboard navigation off"
+        );
     }
 
     /// The focus on `label`, then Enter on it: interaction mode.
