@@ -24,13 +24,13 @@ fn start() -> Plane {
     plane(&view(20.0, -15.0, 10.0, 0.8), [0.1, -0.3, 0.25])
 }
 
-/// Clicks cell `(i, j)` of the Plücker grid, then one frame for the snapshot to follow.
 /// Ctrl+Z, the contract's undo (§G3; R-409 G5), then a frame to read the snapshot it changed.
 fn ctrl_z(h: &mut Headless, app: &mut App<MockSide>) {
     press(h, app, Key::Z, Modifiers::CTRL);
     let _ = h.frame(app, Vec::new());
 }
 
+/// Clicks cell `(i, j)` of the Plücker grid, then one frame for the snapshot to follow.
 fn click_cell(h: &mut Headless, app: &mut App<MockSide>, i: usize, j: usize) {
     let at = GridPlace::fit(square(h)).cell_rect(i, j).center();
     for events in crate::capture::click(at) {
