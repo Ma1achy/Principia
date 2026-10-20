@@ -11,6 +11,13 @@ on:
       - "crates/gui/**"
       - "docs/gui/**"
 
+# A newer push to the same ref supersedes an older run, so the older run on that ref is cancelled. On `main` each
+# run has a group of its own (its run id), so no run there is ever cancelled or queued behind another (applied per
+# R-369).
+concurrency:
+  group: screenshot-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 env:
   CARGO_TERM_COLOR: always
   # R-374: every CI job builds the dev and test profiles with line tables only. Panics and backtraces still name
