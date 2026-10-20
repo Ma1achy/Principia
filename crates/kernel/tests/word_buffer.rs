@@ -23,12 +23,12 @@ use std::mem::size_of;
 
 use kernel::payload::{
     fgw_length_raw, fgw_mixed_radix, fgw_truncated, sd_last_symbol, FreeGroupWord, SimStateFTLE,
-    FGW_CAPACITY, FGW_LENGTH_SENTINEL, FGW_NO_SYMBOL, SIMSTATE_BINDING, SIMSTATE_GROUP,
-    WORD_BINDING, WORD_GROUP,
+    FGW_CAPACITY, FGW_LENGTH_SENTINEL, FGW_NO_SYMBOL, MAX_CROSSINGS_PER_SUBSTEP, SIMSTATE_BINDING,
+    SIMSTATE_GROUP, WORD_BINDING, WORD_GROUP,
 };
 use kernel::word::{
     fgw_append, fgw_decode, on_substep, sample_word, set_last_symbol, CrossingHook, FgwAppended,
-    WordBuffer,
+    SubstepCrossings, WordBuffer,
 };
 use proptest::prelude::*;
 use validation::reference::free_group::{
@@ -43,7 +43,7 @@ type Append = fn([u32; 4], u32, u32, u32) -> FgwAppended;
 type Crossing = fn(&mut CrossingHook, &mut Counted, u32, u32) -> u32;
 
 /// One substep's word work: [`on_substep`], or a control's faulty one.
-type Substep = fn(&mut CrossingHook, &mut Counted, u32, &[u32]) -> u32;
+type Substep = fn(&mut CrossingHook, &mut Counted, u32, SubstepCrossings) -> u32;
 
 /// A `last_symbol` setter: [`set_last_symbol`], or a control's faulty one.
 type Set = fn(u32, u32) -> u32;
@@ -295,7 +295,10 @@ fn word_buffer_binding() {
     let mut words = Counted::new(vec![FreeGroupWord::default(); 3]);
     let mut hook = CrossingHook::new(1);
     for _ in 0..64 {
-        assert_eq!(on_substep(&mut hook, &mut words, 0x0a0b, &[]), 0x0a0b);
+        assert_eq!(
+            on_substep(&mut hook, &mut words, 0x0a0b, SubstepCrossings::default()),
+            0x0a0b
+        );
     }
     assert!(
         words.since(0).is_empty(),
@@ -330,6 +333,18 @@ negative_control!(
 
 // ── word_write_count (REQ-PAY-042) ───────────────────────────────────────────────────────────────────────────────────
 
+/// `crossings` (at most [`MAX_CROSSINGS_PER_SUBSTEP`]) as one substep's [`SubstepCrossings`].
+fn substep(crossings: &[u32]) -> SubstepCrossings {
+    let mut out = SubstepCrossings::default();
+    assert!(
+        crossings.len() <= MAX_CROSSINGS_PER_SUBSTEP as usize,
+        "{crossings:?}: more crossings than one substep holds"
+    );
+    out.symbols[..crossings.len()].copy_from_slice(crossings);
+    out.count = crossings.len() as u32;
+    out
+}
+
 /// Each march `(i, substeps)` of a sample at index `i` of 4, each substep its crossings' symbols in order, run through
 /// `step`: each substep writes the word once per crossing and reads it once per crossing, which the hook's append
 /// needs, and not otherwise, all at `i`; the writes over the march equal its crossings; the word is the reference's
@@ -342,17 +357,17 @@ fn check_write_count(step: Substep, marches: &[(usize, Vec<Vec<u32>>)]) {
         let mut packed_a = 0;
         for (k, crossings) in substeps.iter().enumerate() {
             let from = words.log.borrow().len();
-            packed_a = step(&mut hook, &mut words, packed_a, crossings);
+            packed_a = step(&mut hook, &mut words, packed_a, substep(crossings));
             let accesses = words.since(from);
-            assert_eq!(
-                count(&accesses, Access::Load),
-                crossings.len(),
-                "substep {k}, crossings {crossings:?}: a word read in the per-step path"
-            );
             assert_eq!(
                 count(&accesses, Access::Store),
                 crossings.len(),
                 "substep {k}, crossings {crossings:?}: word-buffer writes differ from the crossings"
+            );
+            assert_eq!(
+                count(&accesses, Access::Load),
+                crossings.len(),
+                "substep {k}, crossings {crossings:?}: a word read in the per-step path"
             );
             assert!(
                 accesses.iter().all(|&(_, j)| j == i),
@@ -373,13 +388,13 @@ fn check_write_count(step: Substep, marches: &[(usize, Vec<Vec<u32>>)]) {
     }
 }
 
-/// A synthetic march: up to 600 substeps, most with no crossing, some with one, a few with two or three (a segment's
-/// crossings, in order).
+/// A synthetic march: up to 600 substeps, most with no crossing, some with one, a few with two, the capacity (a
+/// segment's crossings, one per cut, in order).
 fn marches() -> impl Strategy<Value = Vec<(usize, Vec<Vec<u32>>)>> {
     let substep = prop_oneof![
         20 => Just(Vec::new()),
         4 => proptest::collection::vec(0..4u32, 1..=1),
-        1 => proptest::collection::vec(0..4u32, 2..=3),
+        1 => proptest::collection::vec(0..4u32, 2..=2),
     ];
     proptest::collection::vec(
         (0..4usize, proptest::collection::vec(substep, 0..=600)),
@@ -410,7 +425,7 @@ fn substep_reading(
     hook: &mut CrossingHook,
     words: &mut Counted,
     packed_a: u32,
-    crossings: &[u32],
+    crossings: SubstepCrossings,
 ) -> u32 {
     let _ = words.load(hook.index);
     on_substep(hook, words, packed_a, crossings)
@@ -421,6 +436,53 @@ negative_control!(
     "a substep reading the word every step reads it in the per-step path",
     expected = "a word read in the per-step path",
     check_write_count(substep_reading, &[(0, vec![vec![], vec![1]])])
+);
+
+/// Marches whose every substep holds [`MAX_CROSSINGS_PER_SUBSTEP`] crossings, the capacity: two, one per cut.
+fn full_marches() -> impl Strategy<Value = Vec<(usize, Vec<Vec<u32>>)>> {
+    let substep = proptest::collection::vec(0..4u32, MAX_CROSSINGS_PER_SUBSTEP as usize);
+    proptest::collection::vec(
+        (0..4usize, proptest::collection::vec(substep, 1..=60)),
+        1..4,
+    )
+}
+
+#[test]
+fn word_write_count_at_capacity() {
+    assert_eq!(
+        MAX_CROSSINGS_PER_SUBSTEP, 2,
+        "one crossing per cut, two cuts"
+    );
+    // Full substeps: a cancelling pair, a push pair, a pair crossing the cap.
+    let mut full = vec![vec![0, 1], vec![2, 0], vec![3, 1]];
+    full.extend((0..40).map(|_| vec![0, 0]));
+    check_write_count(on_substep, &[(1, full)]);
+    prop::run(&full_marches(), |marches| {
+        check_write_count(on_substep, &marches);
+        Ok(())
+    });
+}
+
+/// A substep that appends only its first crossing.
+#[cfg(feature = "controls")]
+fn substep_first_only(
+    hook: &mut CrossingHook,
+    words: &mut Counted,
+    packed_a: u32,
+    crossings: SubstepCrossings,
+) -> u32 {
+    let first = SubstepCrossings {
+        count: crossings.count.min(1),
+        ..crossings
+    };
+    on_substep(hook, words, packed_a, first)
+}
+
+negative_control!(
+    word_write_count_at_capacity,
+    "a substep appending only its first crossing drops the second at the capacity",
+    expected = "word-buffer writes differ from the crossings",
+    check_write_count(substep_first_only, &[(3, vec![vec![2, 0]])])
 );
 
 // ── last_symbol_mirror (REQ-PAY-048) ─────────────────────────────────────────────────────────────────────────────────

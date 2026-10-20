@@ -29,7 +29,7 @@ use crate::payload::{
     FGW_NO_SYMBOL,
 };
 pub use append::{fgw_append, fgw_mul3_add, FgwAppended};
-pub use binding::{on_substep, sample_word, CrossingHook, WordBuffer};
+pub use binding::{on_substep, sample_word, CrossingHook, SubstepCrossings, WordBuffer};
 
 /// The symbols of a word in order, first to last, from [`fgw_decode`]: `d₀`, then `zeros` zero digits, then each digit
 /// popped from `digits`, replayed through `continuation_symbol` from the symbol before it.
