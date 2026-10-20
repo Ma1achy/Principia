@@ -15,7 +15,7 @@
 use std::cell::Cell;
 use std::f64::consts::FRAC_PI_4;
 
-use engine::chart_authoring::axis::{no_blocks, union, COORDINATES};
+use engine::chart_authoring::axis::{no_blocks, union, within, COORDINATES};
 use engine::chart_authoring::charts::{
     nu_embed, nu_tangent, theta_embed, theta_tangent, NU_CURVE, THETA_CURVE,
 };
@@ -1498,6 +1498,20 @@ fn well_posedness_block_sets_and_messages() {
     assert_eq!(union(no_blocks(), no_blocks()), no_blocks());
     let momentum = Block::Momentum.only();
     assert_eq!(union(momentum, momentum), momentum);
+    // Inclusion, a block present on neither side, on the right only, and missing on the right.
+    let all = union(config_mass(), momentum);
+    for (a, b, inside) in [
+        (mass, mass, true),
+        (mass, config_mass(), true),
+        (config, config_mass(), true),
+        (momentum, all, true),
+        (momentum, momentum, true),
+        (config_mass(), mass, false),
+        (all, config_mass(), false),
+        (config, momentum, false),
+    ] {
+        assert_eq!(within(a, b), inside, "{a:?} within {b:?}");
+    }
     check_messages(&messages());
     // Curves are one by their parameter.
     assert_eq!(NU_CURVE, NU_CURVE);
