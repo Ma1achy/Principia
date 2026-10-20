@@ -339,16 +339,21 @@ fn button_at(shapes: &[egui::Shape], label: &str) -> Pos2 {
         .center()
 }
 
-/// The cube's edges as drawn: the line segments inside the compass in the weak text colour (the plane is drawn in the
-/// selection blue, the pin in gold).
+/// The cube's edges as drawn: the line segments inside the compass of an edge's width, `0.8 + 1.0·near` points with
+/// `near = (x + z + 2)/4` at the edge's middle, one of 0.8, 1.05, 1.3, 1.55 and 1.8 (R-451 B6, which sets the edges'
+/// opacity by depth, so their colour no longer tells them apart; the grid is 0.7 points, the outline 1.7, the pin 2).
 fn cube_edges(rig: &mut Rig) -> Vec<[Pos2; 2]> {
-    let weak = rig.visuals().weak_text_color();
     let compass = layout().compass;
+    let edge_width = |w: f32| {
+        [0.8_f32, 1.05, 1.3, 1.55, 1.8]
+            .iter()
+            .any(|e| (w - e).abs() < 1e-3)
+    };
     rig.shapes()
         .into_iter()
         .filter_map(|s| match s {
             egui::Shape::LineSegment { points, stroke }
-                if stroke.color == weak
+                if edge_width(stroke.width)
                     && compass.contains(points[0])
                     && compass.contains(points[1]) =>
             {
@@ -389,7 +394,8 @@ fn check_orthographic_cube(edges: &[[Pos2; 2]]) {
     );
 }
 
-/// The plane's polygon as drawn: the filled closed path in the compass.
+/// The plane's polygon as drawn: the filled closed path in the compass, the true cross-section of 3 to 6 vertices
+/// (R-451 B2; it was the fixed quad before).
 fn plane_polygon(shapes: &[egui::Shape]) -> Vec<Pos2> {
     let compass = layout().compass;
     shapes
@@ -397,7 +403,7 @@ fn plane_polygon(shapes: &[egui::Shape]) -> Vec<Pos2> {
         .find_map(|s| match s {
             egui::Shape::Path(p)
                 if p.closed
-                    && p.points.len() == 4
+                    && (3..=6).contains(&p.points.len())
                     && p.fill.a() > 0
                     && p.points.iter().all(|q| compass.contains(*q)) =>
             {
@@ -421,7 +427,7 @@ fn inside(poly: &[Pos2], p: Pos2) -> bool {
 fn starts(rig: &mut Rig) -> (Pos2, Pos2) {
     let shapes = rig.shapes();
     let poly = plane_polygon(&shapes);
-    let centre = poly.iter().fold(egui::Vec2::ZERO, |a, p| a + p.to_vec2()) / 4.0;
+    let centre = poly.iter().fold(egui::Vec2::ZERO, |a, p| a + p.to_vec2()) / poly.len() as f32;
     let on = centre.to_pos2();
     assert!(inside(&poly, on));
     let edges = cube_edges(rig);
@@ -635,8 +641,9 @@ fn qa_mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
             "a slice-mode drag {}",
             if on_plane { "on the plane" } else { "off it" }
         );
+        // R-451 B3: the horizontal component of a slice-mode drag moves the slice; the vertical does nothing.
         let (before, after) = one_set_field(&mut rig, &what, |r| {
-            r.drag(from, from + egui::vec2(0.0, -12.0), 5)
+            r.drag(from, from + egui::vec2(12.0, 0.0), 5)
         });
         let d = check_along_normal(&before, &after, &frame, &what);
         check_mode(&rig.shapes(), "Slice", &what);
@@ -657,7 +664,7 @@ fn qa_mock_compass_modes_a_slice_drag_anywhere_moves_along_the_normal() {
     rig.click(button_at(&shapes, "Slice"));
     let (on, _) = starts(&mut rig);
     let (before, after) = one_set_field(&mut rig, "an untilted slice drag", |r| {
-        r.drag(on, on + egui::vec2(0.0, -12.0), 5)
+        r.drag(on, on + egui::vec2(12.0, 0.0), 5)
     });
     let d = check_along_normal(&before, &after, &frame, "an untilted slice drag");
     let along = dot(&unit(&d), &frame[2]).abs();
@@ -681,11 +688,12 @@ fn qa_mock_compass_modes_locked_a_slice_drag_is_an_excursion_along_the_normal_th
     let shapes = rig.shapes();
     rig.click(button_at(&shapes, "Slice"));
     let mut snaps = vec![rig.snap()];
-    for (i, dy) in [-12.0, 20.0].into_iter().enumerate() {
+    // R-451 B3: the horizontal component of a slice-mode drag moves the slice.
+    for (i, dx) in [-12.0, 20.0].into_iter().enumerate() {
         let (on, off) = starts(&mut rig);
         let from = if i == 0 { on } else { off };
         let (before, after) = one_set_field(&mut rig, "a locked slice drag", |r| {
-            r.drag(from, from + egui::vec2(0.0, dy), 4)
+            r.drag(from, from + egui::vec2(dx, 0.0), 4)
         });
         check_along_normal(&before, &after, &frame, "a locked slice drag");
         assert!(after.sim.lock.locked, "the drag unlocked");

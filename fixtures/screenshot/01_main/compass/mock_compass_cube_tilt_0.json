@@ -1,0 +1,15 @@
+{
+ "made": "Compared in geometry and labelling, not colour (R-451 B8). The reference records and renders under reference/ were made by make_reference.py: docs/gui/reference/principia_nav_cube.html run headless in Google Chrome at the compass's 172-point square, its state set to the run's parameters, one draw() recorded (each record carries its own `made`). Positions are in points from the square's top left, within `tolerance`; an edge's opacity within `opacity_tolerance`, as the reference's canvas keeps it to 8 bits and writes it to 3 decimals. Tilt mode, every angle 0, z₀ = 0: the corners and the edges against the reference's tilt mode at 0; the polygon, the rectangle (±1, ±1, 0), against the reference's slice mode at depth 0 (its own tilt mode at 0 draws the horizontal plane, which the decoder's is not); the one label, \"q₁, q₂ → z_q3\", placed as the reference's tilt-mode label on the bottom-right edge.",
+ "tolerance": 0.01,
+ "opacity_tolerance": 0.003,
+ "reference": "reference/tilt_0.json",
+ "polygon": {
+  "from": "reference",
+  "record": "reference/slice_0.json"
+ },
+ "labels": {
+  "from": "tilt",
+  "text": "q₁, q₂ → z_q3",
+  "reference_label": 1
+ }
+}

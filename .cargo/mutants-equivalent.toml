@@ -112,6 +112,50 @@ mutant = "crates/kernel/src/canon.rs:342:10: replace < with <= in mirror_decisio
 justification = "c.m is ±0 only for c = 0, at the zero exponent, so left = m2*c^2 is 0 at the least exponent and wide_greater(left, right) is false: the mirror is not taken either way"
 
 [[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:268:34: replace / with * in point_of"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x / Z0_HALF_RANGE and x * Z0_HALF_RANGE are equal for every x"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:325:64: replace > with >= in cross_section"
+justification = "da == 0.0 already has da.abs() <= ON_PLANE, which skips the edge before (da > 0.0) is read, so da > 0.0 and da >= 0.0 agree wherever it is read"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:325:78: replace > with >= in cross_section"
+justification = "db == 0.0 already has db.abs() <= ON_PLANE, which skips the edge before (db > 0.0) is read, so db > 0.0 and db >= 0.0 agree wherever it is read"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:331:21: replace < with <= in cross_section"
+justification = "only a 3-point result is affected, returned in edge order rather than by angle: any order of three points is the same triangle, drawn and compared (same_cycle) alike"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:331:21: replace < with == in cross_section"
+justification = "only a result of three points or fewer is affected, returned unsorted rather than sorted by angle: an empty list, one point, the same segment either way round, or the same triangle in either winding, drawn and compared (same_cycle) alike"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:371:16: replace > with >= in clip"
+justification = "den == 0.0 has already continued the loop two lines above, so den > 0.0 and den >= 0.0 agree wherever it is read"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:412:47: replace + with - in grid"
+justification = "2·GRID_REACH/GRID_STEP is 7.6 to within rounding, 0.4 from any integer, so its floor is 7 whether 1e-9 is added or taken away"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:866:53: replace * with / in Drag::moved"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:985:38: replace * with / in Shown::plane"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
+
+[[equivalent]]
+mutant = "crates/gui/src/explore/compass.rs:1052:41: replace * with / in adjust"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so x * Z0_HALF_RANGE and x / Z0_HALF_RANGE are equal for every x"
+
+[[equivalent]]
+mutant = "crates/gui/src/capture.rs:116:28: replace * with / in CompassCase::edits"
+justification = "Z0_HALF_RANGE is 1.0 (crates/gui/src/explore/manifold_view/mod.rs:52), so depth * Z0_HALF_RANGE and depth / Z0_HALF_RANGE are equal for every depth"
+
+[[equivalent]]
 mutant = "crates/gui/src/explore/trajectory.rs:780:32: replace * with / in orbit_input"
 justification = "ORBIT_DEG_PER_POINT is 1.0, and x * 1.0 == x / 1.0 for every f64 x"
 

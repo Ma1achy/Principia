@@ -1,14 +1,21 @@
-# The README's build-progress banner: after every push to `main` (each merged PR), `scripts/progress_banner.py` draws
-# `progress.svg`, a square per task of `plan/tasks.yaml` grouped by milestone (green merged, amber with an open PR,
-# grey not started); `rsvg-convert` renders it to `progress.png` at 2x; and this job force-pushes both as the single
-# commit of the orphan branch `progress`. The README shows the PNG from raw.githubusercontent.com, because the GitHub
-# mobile app does not render SVG images in a README; the PNG takes the SVG's light colours, as librsvg has no dark
-# mode. Applied per R-369.
+# The README's build-progress grid: after every push to `main` (each merged PR), `scripts/progress_banner.py` draws a
+# square per task of `plan/tasks.yaml` by milestone (ink merged, ochre with an open PR, a pencil outline not started),
+# in the README's style and in two themes: `progress-light.svg` (dark ink, for a light page) and `progress-dark.svg`
+# (pale ink, for a dark page). `rsvg-convert` renders each to PNG at 2x, and this job force-pushes them as the single
+# commit of the orphan branch `progress`, with `progress.svg` and `progress.png`, copies of the light pair, which the
+# README before the light and dark pair still shows. The README shows the PNGs from raw.githubusercontent.com in a
+# <picture> that picks the theme, because the GitHub mobile app does not render SVG images in a README. Applied per
+# R-369.
+#
+# The plan data and history are always main's: a task is done when main has its PR's merge commit. A manual run
+# (workflow_dispatch) from another branch draws main's data with that branch's script and this workflow as that
+# branch has it, so a change to the grid can be published, and seen in its PR, before it merges; the next push to
+# main redraws it with main's.
 #
 # It never commits to `main`, so it needs no review and starts no CI: a push made with the workflow's GITHUB_TOKEN
 # triggers no workflow run, so the push to `progress` starts neither `ci.yml` nor any other. It runs on no pull request,
 # so it adds no check to a PR and cannot hold or satisfy a required one. Runs cancel each other: only the latest
-# push's banner matters.
+# run's grid matters.
 name: progress
 
 on:
@@ -51,25 +58,45 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh pr list --state open --limit 500 --json headRefName,isCrossRepository > "$RUNNER_TEMP/open-prs.json"
-      - name: Draw the banner
-        run: python3 scripts/progress_banner.py -o "$RUNNER_TEMP/progress.svg" --open-prs "$RUNNER_TEMP/open-prs.json"
-      # librsvg, from the runner's own Ubuntu archive, renders the SVG to PNG; the SVG's font list ends in
-      # `sans-serif`, so the runner's fonts take over.
+      # The script from the commit this run is for (main's head on a push; the dispatched branch's otherwise), run on
+      # main's tasks.yaml, MILESTONES.md and merge history; on a push to main the two are the same commit.
+      - name: Draw the grid, light and dark
+        run: |
+          set -euo pipefail
+          git show "$GITHUB_SHA:scripts/progress_banner.py" > "$RUNNER_TEMP/progress_banner.py"
+          git log --merges --format=%s > "$RUNNER_TEMP/merges.txt"
+          for theme in light dark; do
+            python3 "$RUNNER_TEMP/progress_banner.py" -o "$RUNNER_TEMP/progress-$theme.svg" --theme "$theme" \
+              --tasks plan/tasks.yaml --milestones plan/MILESTONES.md --merges "$RUNNER_TEMP/merges.txt" \
+              --commit "$(git rev-parse --short HEAD)" --open-prs "$RUNNER_TEMP/open-prs.json"
+          done
+      # librsvg, from the runner's own Ubuntu archive, renders the SVGs to PNG; the SVGs' font list falls back from
+      # `Helvetica Neue` through `Arial`, `Liberation Sans` and `DejaVu Sans` to `sans-serif`, so the runner's fonts take
+      # over. The log lists which of the list's families the runner has (librsvg takes the first it finds).
       - name: Install rsvg-convert
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends librsvg2-bin
-      - name: Render the PNG
-        run: rsvg-convert --zoom 2 --format png -o "$RUNNER_TEMP/progress.png" "$RUNNER_TEMP/progress.svg"
-      # `progress` holds one commit, the latest banner as SVG and PNG, replaced on every run.
+          fc-list : family | grep -E "Helvetica|Arial|Liberation Sans|Arimo|Nimbus Sans|DejaVu Sans" | sort -u || true
+      - name: Render the PNGs
+        run: |
+          set -euo pipefail
+          for theme in light dark; do
+            rsvg-convert --zoom 2 --format png -o "$RUNNER_TEMP/progress-$theme.png" "$RUNNER_TEMP/progress-$theme.svg"
+          done
+      # `progress` holds one commit, the latest grid in both themes as SVG and PNG, replaced on every run.
       - name: Publish to the progress branch
         run: |
           set -euo pipefail
           sha=$(git rev-parse --short HEAD)
           git switch --orphan progress
-          cp "$RUNNER_TEMP/progress.svg" progress.svg
-          cp "$RUNNER_TEMP/progress.png" progress.png
-          git add progress.svg progress.png
+          for theme in light dark; do
+            cp "$RUNNER_TEMP/progress-$theme.svg" "progress-$theme.svg"
+            cp "$RUNNER_TEMP/progress-$theme.png" "progress-$theme.png"
+          done
+          cp progress-light.svg progress.svg
+          cp progress-light.png progress.png
+          git add progress-light.svg progress-light.png progress-dark.svg progress-dark.png progress.svg progress.png
           git -c user.name="github-actions[bot]" \
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit --quiet --message "progress: main @ $sha"

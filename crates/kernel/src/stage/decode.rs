@@ -5,7 +5,9 @@
 //! **Monomorphised, never interpreted** (REQ-CHART-001, REQ-DEC-007; lowering Part 3, "Compute side"). [`sample`] is
 //! generic over the chart `C` and the link selection `S`: each `(C, S)` is its own compiled variant, a
 //! [`DecodeVariant`], whose compute entry point is a concrete `#[spirv(compute)]` wrapper ([`latent_defaults`],
-//! [`latent_stick_breaking`], [`invariant_le_defaults`], [`invariant_lk_defaults`]) calling [`entry`]. Nothing at run
+//! [`latent_stick_breaking`], [`invariant_le_defaults`], [`invariant_lk_defaults`], and the charts whose masses vary per
+//! pixel, [`mass_simplex_defaults`], [`burrau_defaults`], [`euclid_plane_defaults`] and [`mixed_mu1_alpha_defaults`])
+//! calling [`entry`]. Nothing at run
 //! time names a chart, a chart id or an axis kind: adding a chart is a `Φ` ([`crate::chart`]), its decode
 //! ([`ChartDecode`]), its [`UniformChart`] layout and one wrapper.
 //!
@@ -34,7 +36,10 @@ use spirv_std::glam::{UVec3, UVec4, Vec4};
 use spirv_std::spirv;
 
 use crate::chart::invariant::{Invariant, WarpReal};
-use crate::chart::{Chart, ChartDecode, InvariantLE, InvariantLK, Latent};
+use crate::chart::mixed::{Alpha, ZMu1};
+use crate::chart::{
+    Burrau, Chart, ChartDecode, EuclidPlane, InvariantLE, InvariantLK, Latent, MassSimplex, Mixed,
+};
 use crate::decode::{descriptor, Degenerate, Ic};
 use crate::generated::links::{
     tanh_sat, Defaults, LinkReal, Select, Selection, SigmoidAlpha, SigmoidBeta, SigmoidQ,
@@ -175,6 +180,106 @@ impl UniformChart for InvariantLK<f32> {
     }
 }
 
+/// The ternary mass plot's uniform: row 0 `(ν₀, ε_m, 0, 0)`, rows 1–5 zero.
+impl UniformChart for MassSimplex<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        MassSimplex {
+            nu0: r[0].x,
+            eps_m: r[0].y,
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let zero = Vec4::ZERO;
+        [
+            Vec4::new(self.nu0, self.eps_m, 0.0, 0.0),
+            zero,
+            zero,
+            zero,
+            zero,
+            zero,
+        ]
+    }
+}
+
+/// The `(ν, K)` chart's uniform: row 0 `(ν_min, ν_max, K_max, γ_K)`, rows 1–5 zero.
+impl UniformChart for Burrau<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        Burrau {
+            nu_range: [r[0].x, r[0].y],
+            k_max: r[0].z,
+            gamma_k: r[0].w,
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let zero = Vec4::ZERO;
+        [
+            Vec4::new(self.nu_range[0], self.nu_range[1], self.k_max, self.gamma_k),
+            zero,
+            zero,
+            zero,
+            zero,
+            zero,
+        ]
+    }
+}
+
+/// The Euclid plane's uniform: row 0 `(m_min, m_max, ν_min, ν_max)`, rows 1–5 zero.
+impl UniformChart for EuclidPlane<f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        EuclidPlane {
+            m_range: [r[0].x, r[0].y],
+            nu_range: [r[0].z, r[0].w],
+        }
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let zero = Vec4::ZERO;
+        [
+            Vec4::new(
+                self.m_range[0],
+                self.m_range[1],
+                self.nu_range[0],
+                self.nu_range[1],
+            ),
+            zero,
+            zero,
+            zero,
+            zero,
+            zero,
+        ]
+    }
+}
+
+/// The mixed chart `(z_μ1, α)`'s uniform: rows 0–1 the frozen controls, row 2 `(h_lo, h_hi, v_lo, v_hi)`, rows 3–5
+/// zero.
+impl UniformChart for Mixed<ZMu1, Alpha, f32> {
+    #[inline]
+    fn from_uniform(r: &[Vec4; 6]) -> Self {
+        Mixed::new(eight(r[0], r[1]), [r[2].x, r[2].y], [r[2].z, r[2].w])
+    }
+
+    #[inline]
+    fn uniform(&self) -> [Vec4; 6] {
+        let [a, b] = rows(&self.frozen);
+        let zero = Vec4::ZERO;
+        let ranges = Vec4::new(
+            self.h_range[0],
+            self.h_range[1],
+            self.v_range[0],
+            self.v_range[1],
+        );
+        [a, b, ranges, zero, zero, zero]
+    }
+}
+
 /// One chart and link set the kernel is built for: the chart, the selection, and the name of its compute entry point
 /// in the WGSL, as naga names it from the wrapper's module path.
 pub trait DecodeVariant {
@@ -225,6 +330,42 @@ impl DecodeVariant for InvariantLKDefaults {
     type Chart = InvariantLK<f32>;
     type Links = Defaults;
     const ENTRY: &'static str = "stage_decode_invariant_lk_defaults";
+}
+
+/// The ternary mass plot under the default links, which it does not read: its masses are its own.
+pub struct MassSimplexDefaults;
+
+impl DecodeVariant for MassSimplexDefaults {
+    type Chart = MassSimplex<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_mass_simplex_defaults";
+}
+
+/// The `(ν, K)` chart under the default links, which it does not read.
+pub struct BurrauDefaults;
+
+impl DecodeVariant for BurrauDefaults {
+    type Chart = Burrau<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_burrau_defaults";
+}
+
+/// The Euclid plane under the default links, which it does not read.
+pub struct EuclidPlaneDefaults;
+
+impl DecodeVariant for EuclidPlaneDefaults {
+    type Chart = EuclidPlane<f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_euclid_plane_defaults";
+}
+
+/// The mixed chart `(z_μ1, α)`, a mass axis and a derived configuration axis, under the default links.
+pub struct MixedMu1AlphaDefaults;
+
+impl DecodeVariant for MixedMu1AlphaDefaults {
+    type Chart = Mixed<ZMu1, Alpha, f32>;
+    type Links = Defaults;
+    const ENTRY: &'static str = "stage_decode_mixed_mu1_alpha_defaults";
 }
 
 /// One sample's decode: the integrator's input and the payload side's record of it.
@@ -487,6 +628,58 @@ pub fn invariant_lk_defaults(
     #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
 ) {
     entry::<InvariantLKDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`MassSimplexDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn mass_simplex_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<MassSimplexDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`BurrauDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn burrau_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<BurrauDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`EuclidPlaneDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn euclid_plane_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<EuclidPlaneDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
+}
+
+/// The decode stage's compute entry point for [`MixedMu1AlphaDefaults`], as [`latent_defaults`] is for the latent chart.
+#[spirv(compute(threads(64)))]
+pub fn mixed_mu1_alpha_defaults(
+    #[spirv(global_invocation_id)] id: UVec3,
+    #[spirv(uniform, descriptor_set = 0, binding = 0)] uniforms: &DecodeUniforms,
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 1)] uv: &[f32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 2)] ic: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 3)] tags: &mut [u32],
+    #[spirv(storage_buffer, descriptor_set = 0, binding = 4)] descriptors: &mut [u32],
+) {
+    entry::<MixedMu1AlphaDefaults>(id.x, uniforms, uv, ic, tags, descriptors);
 }
 
 /// The descriptor writer alone, on given `(m, r, p)`: invocation `i` reads sample `i` of `ic`, as [`write_ic`] wrote it,

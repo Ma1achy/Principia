@@ -10,6 +10,7 @@ pub mod decode;
 pub mod encode;
 pub mod generated;
 pub mod payload;
+pub mod physics;
 pub mod real;
 pub mod shape;
 pub mod stage;

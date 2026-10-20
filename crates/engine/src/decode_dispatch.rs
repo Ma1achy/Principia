@@ -214,6 +214,22 @@ impl<V: DecodeVariant> DecodeStage<V> {
         flags: u32,
         uv: &[[f32; 2]],
     ) -> Result<Words, ComputeError> {
+        let uniforms = DecodeUniforms {
+            chart: chart.uniform(),
+            flags: [flags, 0, 0, 0].into(),
+        };
+        self.dispatch_uniforms(device, queue, &uniforms, uv)
+    }
+
+    /// [`DecodeStage::dispatch`] with the uniform given word for word, `uniforms`, so that a test can write what the
+    /// chart's layout leaves unread (REQ-DEC-006: no uniform mass reaches the decode). No pipeline is created.
+    pub fn dispatch_uniforms(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        uniforms: &DecodeUniforms,
+        uv: &[[f32; 2]],
+    ) -> Result<Words, ComputeError> {
         if uv.is_empty() {
             return Ok(Words {
                 ic: Vec::new(),
@@ -222,14 +238,10 @@ impl<V: DecodeVariant> DecodeStage<V> {
             });
         }
         let n = check_samples(uv.len(), &device.limits())?;
-        let uniforms = DecodeUniforms {
-            chart: chart.uniform(),
-            flags: [flags, 0, 0, 0].into(),
-        };
         let uniform = buffer(
             device,
             "decode uniforms",
-            &uniform_words(&uniforms),
+            &uniform_words(uniforms),
             wgpu::BufferUsages::UNIFORM,
         );
         let points: Vec<u32> = uv.iter().flatten().map(|x| x.to_bits()).collect();

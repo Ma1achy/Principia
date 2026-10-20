@@ -1,49 +1,57 @@
-# Principia
+<p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/title-dark.svg">
+  <img src="docs/readme/title-light.svg" alt="Principia. Planar Three-Body Problem." width="100%">
+</picture>
+<img src="docs/readme/hero.jpg" alt="A slice of the planar three-body problem, drawn in pencil: dark rippled bands on the left break into pale curling filaments that sweep across the page." width="100%">
+</p>
 
-Principia is a physics instrument for the planar three-body problem: a browsing instrument for a space nobody browses,
-paired with a measuring instrument for the things browsing finds. One kernel, written once in Rust, runs on the GPU
-(f32, through rust-gpu to WGSL) for the interactive atlas and on the CPU (f64) for the inspector and the prebake. It
-maps initial conditions through a set of charts, integrates them with a regularised integrator, and colours each pixel
-by what happened to that trajectory, saying where it stops knowing. It is built by coding agents from the plan in this
-repository.
+You are looking through a slice of every possible beginning of the three-body problem. Each point is a complete starting configuration (three masses, their positions and velocities), followed forward until its fate is known. The colour records that fate.
 
-[![Build progress](https://raw.githubusercontent.com/Ma1achy/Principia/progress/progress.png)](plan/MILESTONES.md)
+The slice is a flat plane through an eight-dimensional space of starting conditions. It can be moved, rotated and tilted to look along any direction. Where two fates meet, the boundary is not a line: zoom in and it opens into finer structure without end.
 
-One square per task of `plan/tasks.yaml`, by milestone: green merged, amber in review, grey not started. It updates on
-every merge to `main` (`.github/workflows/progress.yml`).
+Principia is the instrument that makes these pictures, and measures what they show. Where it can't trust a result, it says so, rather than colouring a guess.
 
-## Where to start
+<p>
+<img src="docs/readme/plate-arches.jpg" alt="A slice in watercolour and pencil: nested arches of every colour, folding ever finer towards their centre." width="24.3%">
+<img src="docs/readme/plate-pencil.jpg" alt="A slice drawn in pencil: three-fold petals of graphite meeting at a point." width="24.3%">
+<img src="docs/readme/plate-spiral.jpg" alt="A slice in watercolour and pencil: red and cyan washes wound into a tight spiral." width="24.3%">
+<img src="docs/readme/plate-swirl.jpg" alt="A slice in watercolour and pencil: brick red, blue and green washes twisting into a pale centre." width="24.3%">
+</p>
+<p>
+<img src="docs/readme/plate-fan.jpg" alt="A slice in watercolour and pencil: a fan of fine arches in red, cyan and green, rising from one edge." width="32.6%">
+<img src="docs/readme/plate-threebody.jpg" alt="A slice drawn in pencil: curling eddies in graphite above a pale, smudged shelf." width="32.6%">
+<img src="docs/readme/plate-vortex.jpg" alt="A slice in watercolour and pencil: red, green and blue bands wound around a small bright vortex on black." width="32.6%">
+</p>
 
-- `docs/read_first/`: what the instrument is for (`principia_00_philosophy.md`), the failures that shaped it
-  (`principia_01_pitfalls.md`), and the map of every document (`principia_INDEX.md`).
-- `plan/WORKFLOW.md`: how a task becomes merged code: one task, one branch, one PR, the reviewers, and the gates.
-- `plan/MILESTONES.md`: the milestones M0 to M8 and each one's exit gate.
-- `plan/BUILD_READINESS.md`: what is ready and what still waits before the build starts.
+<table>
+<tr><td><b>Atlas</b></td><td><i>Browse the space of beginnings on the GPU, natively or in the browser. Pan, zoom without end, and rotate or tilt the slice in any direction.</i></td></tr>
+<tr><td><b>Charts</b></td><td><i>Flat slices, the shape sphere, Burrau's problem, or a chart built from any axes you choose.</i></td></tr>
+<tr><td><b>Fate</b></td><td><i>Every point integrated forward, regularised through close encounters, until a body escapes, two collide, or time runs out.</i></td></tr>
+<tr><td><b>Refinement</b></td><td><i>Samples go where fates change, and stay coarse where they don't.</i></td></tr>
+<tr><td><b>Stain</b></td><td><i>A graph from what was measured to how it looks, printed in watercolour, pencil or ink. The data doesn't change, only the ink.</i></td></tr>
+<tr><td><b>Inspector</b></td><td><i>Follow one beginning closely, at double precision, and watch its orbit.</i></td></tr>
+<tr><td><b>Honesty</b></td><td><i>What it can't resolve is hatched, and it reports where its precision runs out.</i></td></tr>
+<tr><td><b>Prints</b></td><td><i>Every image carries its own settings, so any view can be recreated from the picture alone.</i></td></tr>
+<tr><td><b>Results</b></td><td><i>Browsing buys hypotheses; the batch job, run at full precision, buys results.</i></td></tr>
+</table>
 
-## Running the tests
+Under construction. The foundations are laid, and the interface already runs against a stand-in engine.
 
-The suite runs through [cargo-nextest](https://nexte.st), pinned to the version CI installs, and doctests, which
-nextest does not run, through `cargo test --doc` (R-231):
+<p>
+<a href="plan/MILESTONES.md">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/Ma1achy/Principia/progress/progress-dark.png">
+  <img src="https://raw.githubusercontent.com/Ma1achy/Principia/progress/progress-light.png" alt="Build progress: one square per task of the plan, by milestone from M0 to M8, inked when merged, washed in ochre when in review and outlined when not started, with each milestone's share done and the overall percentage." width="100%">
+</picture>
+</a>
+</p>
 
-```sh
-cargo install cargo-nextest --version 0.9.146 --locked
-cargo nextest run --workspace
-cargo test --workspace --doc
-```
+<img src="docs/readme/footer.jpg" alt="A slice in watercolour: escape and collision basins in rose, ochre, cerulean and sienna, folding into one another across a field of Payne's grey." width="100%">
 
-`cargo xtask ci` runs every control and the other per-push checks (R-235).
-
-## What is authoritative
-
-1. The markdown corpus in `docs/` (contracts, design, notes, read_first, gui) is the specification (R-1).
-2. `decisions.md` records the human's rulings and overrides the docs where they differ. Open questions go to
-   `REVIEW_QUEUE.md`.
-3. `plan/` is derived from the two. Where a requirement and its source disagree, the source wins.
-
-## What is not
-
-- `workbench/`: working material (renders, prototypes, old pages).
-- `docs/reference/`: the imported prin-rs code and notes, which are reference, not authority (R-159).
-- `docs/archive/`: superseded documents and the finished untangling record.
-
-Never cite these as normative, and never implement from them.
+<p align="right">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/readme/signature-dark.svg">
+  <img src="docs/readme/signature-light.svg" alt="-M '26" height="34">
+</picture>
+</p>
