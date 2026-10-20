@@ -44,6 +44,6 @@ Every chart tilts and slices (R-473). The tilt is a rotation `R(τ₁, τ₂)` i
 ## Notes
 - **⚑ Physics review is required** (the instruction's "How to work this", 4): this task does not merge on the code reviewer's word alone; its reviewer list includes physics. It covers T2 on the shape sphere (the pole-crossing extension composed with a tilt), T3 and the anchor (R-473 ⚑).
 - **Units (R-507, ruling RQ-375).** On a curved chart `R` acts on the parameter offsets in units of each axis's full range at zoom 1 and the hidden offset in its slider span, scaled back after; the latent chart keeps the basis edit (U1, U2). REQ-CHART-064 moved here from TASK-M2-39 (applied per R-369: T2 is not built without its scale). *Was:* "Built under the meanwhile reading (R-473 J3); the ruling is TASK-M2-39's, a leaf."
-- **Under Tip as sheet** with one target and both angles set a window pixel's `(a, b)` can leave the square; the types act on it as X3a says (RQ-402, R-471 H9), and REQ-CHART-066's test covers it; what it should draw is TASK-M2-39's.
+- **Under Tip as sheet** with one target and both angles set a window pixel's `(a, b)` can leave the square; the types act on it as X3a says (R-471 H9), and REQ-CHART-066's test covers it; R-512 (ruling RQ-402) makes such a pixel past the edge, blank past a bounded one, which TASK-M2-39 tests. *Was:* "(RQ-402, R-471 H9), and REQ-CHART-066's test covers it; what it should draw is TASK-M2-39's."
 - **Re-integration (R-92):** a curved chart's tilt is a chart-param edit, a sim key.
 
