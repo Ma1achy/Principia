@@ -12,6 +12,7 @@ pub mod gate_report;
 pub mod golden;
 pub mod lint_compute;
 pub mod lint_constants;
+pub mod lint_no_alloc;
 pub mod lint_vocab;
 pub mod lint_wgsl;
 pub mod mutants_check;
