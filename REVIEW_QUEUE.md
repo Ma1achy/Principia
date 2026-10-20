@@ -1391,72 +1391,6 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
 
-## RQ-371: What is the shape sphere's `system_image` under the exponential chart map? *(silence, R-141, R-117, REQ-CHART-014; context: TASK-M2-14, PR #252)*
-
-*Found in review of PR #252 (physics review 5584063700, item 4). Nothing is chosen. For the human: physics, the
-choice changes which pixels a fold or an area statistic counts once (R-369).*
-
-- **File, section:**
-  - `docs/design/principia_chart_reference.md` § "3.3 The chart map": "Two options; state which is used", spherical
-    `(θ, φ)` and "Exponential map about a centre `n0`". Its "Hemisphere redundancy" paragraph: "The chart is a 2-to-1
-    cover: (θ, φ) ∼ (θ, π − φ) … The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
-    hemispheres". Its "Past the unit square" paragraph treats the exponential map apart: "The exponential map has no θ
-    or φ axis, so its axes declare nothing and are bounded".
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract":
-    "**n-to-1** — a fixed finite number of pixels share each system … The shape sphere is n-to-1 with n = 2: 2-to-1
-    over the φ hemispheres, which are reflection-equivalent".
-  - `decisions.md` § "R-117 — The lowering appendix's shape-sphere row uses (θ, φ) *(closes RQ-85)*": "The lowering
-    appendix's shape-sphere row is conformed to R-14's (θ, φ) map."
-- **Silence:** on the exponential map `[0,1]²` covers a cap of centre `n0` and radius up to `√2·s`. A cap inside one
-  closed hemisphere is bijective (no pixel's mirror `w → −w` is in view); a cap straddling the equator is 2-to-1 only
-  on the part whose mirror is also in view; past `r = π` the map wraps. No fixed n holds, and the corpus gives this
-  map no value of its own. By contrast §4.5 makes the `ν` charts' value depend on their range (`DoubleCover` only where
-  `ν_min < √2 − 1 < ν_max`).
-- **Options seen:**
-  - (a) `NToOne(2)` for either map, read as "subject to the hemisphere fold `w → −w`", whatever the cap.
-  - (b) Computed from the cap, as the `ν` charts' is from their range: bijective where the cap lies in one closed
-    hemisphere, and a ruling for the straddling case.
-  - (c) Another value.
-- **Applied meanwhile:** PR #252 gives both maps `NToOne(2)`, the `(θ, φ)` chart's value. The only consumer today,
-  `kernel::chart::admit_shape_fraction`, treats `Bijective` and `NToOne(_)` alike, and no shape-sphere label is shown
-  yet.
-- **Waits:** the consumers that fold or count by `system_image` on the exponential map: R-408's area statistics and
-  "downstream draws/labels one representative". TASK-M2-14's PR does not wait: it claims only the spherical map's
-  value, which R-141 settles.
-
-## RQ-373: R-467 changes two of the three outcome goldens R-454 re-baselined under RQ-330, and two field-ramp goldens; which are re-baselined, under what gate decision *(the human's question, R-467 clause 8, R-110, R-454; context: TASK-M2-34)*
-
-*Filed porting R-467 (D15), as the human asked: "The outcome goldens re-baselined under RQ-330 may need another
-re-baseline; list them, don't re-baseline without a gate decision." Nothing is re-baselined.*
-
-- **File, section:**
-  - `fixtures/golden/BASELINES.md`, the rows `m1-outcome/outcome`, `m1-outcome/outcome_edited` and
-    `m1-synthetic/known_escaper` (each "R-454 (re-baselined under R-444 to R-446, RQ-330 …)"), and the rows
-    `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`.
-  - `crates/validation/src/golden_scene.rs`, the `outcome` scene: "a sample whose chart point is forbidden
-    ([`OUTCOME_FORBIDDEN`]), a `decode_failed` one, drawn with the hatch (REQ-COL-101, REQ-COL-102)", tile 22; the
-    `length_ramp` and `d_min_ramp` scenes: "127 in the invalid pattern", "NaN in the invalid pattern".
-  - `decisions.md` § "R-110 — What CI runs, where, and against which goldens *(closes RQ-79)*": no re-baselining without
-    a gate decision.
-- **What changes under R-467:**
-  - `m1-outcome/outcome` and `m1-outcome/outcome_edited`: tile 22, the forbidden sample, from the hatch to the canvas
-    background (R-467 D2, D3). No other tile changes.
-  - `m1-synthetic/known_escaper`: no forbidden sample and no hatched pixel; expected unchanged.
-  - `m1-numeric/length_ramp` and `m1-numeric/d_min_ramp`: a field ramp is a presentation occupant (R-467 D1), so its
-    invalid value draws `#141418` (D4) where the hatch was; their `_override` twins draw the node's override colour and
-    are expected unchanged.
-  - The debug catalogue's goldens do not change (D1).
-- **Options seen:**
-  - (a) Re-baseline the changed goldens under R-467 as TASK-M2-34 renders them, each `BASELINES.md` row leading with the
-    ruling, and confirm the canvas background's value and the changed tiles at the M2 gate, with REQ-COL-110's NaN /
-    Inf style.
-  - (b) As (a), but `length_ramp` and `d_min_ramp` keep the hatch: a field ramp is read as a debug occupant, which
-    narrows R-467 D1.
-  - (c) Hold the re-baseline for the M2 gate itself, TASK-M2-34 waiting until then.
-- **Applied meanwhile:** nothing re-baselined. TASK-M2-34 is built and reviewed; its PR reports the hashes that
-  change and waits for this ruling before it merges.
-- **Waits:** TASK-M2-34's merge (REQ-COL-108's golden line, `rq: RQ-373`).
-
 ## RQ-378: Whether "Save view as chart" on a curved chart should also offer a flattened oblique-latent version, where one exists locally *(the human's queued question, R-469 §11, R-475; context: TASK-M2-40, TASK-M8-48)*
 
 *Queued by the human (R-469 §11: "Whether "Save view as chart" on a curved chart should also offer a flattened
@@ -1475,3 +1409,41 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
 - **Applied meanwhile:** (a). Nothing waits.
 - **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
   open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
+
+## RQ-470: R-503 makes the shape sphere's exponential-map pixels past `r = π` inside `[0,1]²` the domain's end by design, and R-467 clause 4, as R-506 W1 now confirms for every gallery chart, makes such a pixel a decoder bug with a console warning *(conflict, R-503, R-467 clause 4, R-506 W1, REQ-CHART-075, REQ-GUI-227; context: TASK-M2-28, TASK-M8-46)*
+
+*Found merging PR #258 (R-500 to R-505, R-515) into PR #255 (R-469 to R-477, R-506 to R-514). Nothing is chosen.
+R-503 flagged this and left it to RQ-372; R-506 has since ruled RQ-372 for the Chart builder's physical-quantity axes
+only, so the flag has no entry to wait on.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map" (R-503): "**The radius is bounded at π (R-503,
+    closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches where `s√2 > π`, is past the antipode of
+    `n0`, where the map wraps; it is the domain's end, not a system, out of the count and the total (§5.4)."
+  - `decisions.md` § "R-503 — …", "Flagged, not ruled": "a pixel past `r = π` lies inside `[0,1]²` when `s√2 > π`, an
+    in-square pixel that is not a system; R-467 makes an in-square validity failure a decoder bug with a console
+    warning, and RQ-372 (open, another batch) asks how R-467's in-square rule meets such ranges. R-503 is applied as
+    the human wrote it: the domain's end."
+  - `decisions.md` § "R-467 — …", the human's words: "Inside [0,1]², every chart is valid by construction" and clause
+    4: "Inside [0,1]², a validity failure is a decoder bug: debug view only, plus a console warning naming the chart
+    and pixel. The real engine should produce zero."
+  - `decisions.md` § "R-506 — …", W1: "Gallery charts warn as R-467 has it, their energy-type axes under the linear
+    option excepted (R-471 H5)."
+  - `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)": "Inside the square every gallery chart
+    is valid by construction, so a pixel the chart classifies as not a system there (a validity failure, or a
+    `Chart::map` that fails) is a decoder bug"; REQ-GUI-227: "a pixel a gallery chart classifies as not a system inside
+    [0,1]² must log REQ-GUI-226's console warning".
+- **Conflict:** with `s√2 > π` the exponential map classifies its pixels past `r = π` inside the square as not a system
+  (REQ-CHART-075), by design; REQ-GUI-227 and §G12 then log "decoder bug" for them on every such view, and REQ-CHART-058's
+  sweep ("the real engine should log none") would fail for that chart. R-506 W1 excepts only the energy-type axes'
+  linear option.
+- **Options seen:**
+  - (a) The exponential map's `r > π` pixels are by design, as an energy-type axis's linear option is: they draw blank
+    and log no warning; §G12 and REQ-GUI-227 name the exception.
+  - (b) The chart keeps the square inside its cap: `s` is bounded so that `s√2 ≤ π`, every pixel inside `[0,1]²` a
+    system, and R-503's `r > π` case arises only past the square.
+  - (c) The warning stands for them, as R-506 W1 reads literally.
+- **Applied meanwhile:** both texts as merged; nothing in the code changes. TASK-M2-28 builds REQ-CHART-075 as R-503
+  has it and does not wait.
+- **Waits:** REQ-GUI-227's warning for the exponential map (TASK-M8-46), and REQ-CHART-058's sweep if it covers that
+  map with `s√2 > π`.

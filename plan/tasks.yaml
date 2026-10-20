@@ -674,7 +674,7 @@
   title: "Shape-sphere display: the DoubleCover hemisphere and the equal-area projection"
   depends_on: [TASK-M2-08, TASK-M2-14]
   needs: [REQ-GUI-001, REQ-SYS-009]
-  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047]
+  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-075, REQ-CHART-078]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M2-29
@@ -794,15 +794,15 @@
   title: Stepper occupants and the capability profile
   depends_on: [TASK-M3-01]
   needs: [REQ-INT-002]
-  requirements: [REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032]
+  requirements: [REQ-INT-005, REQ-INT-013, REQ-INT-014, REQ-INT-015, REQ-INT-037, REQ-INT-056, REQ-INT-078, REQ-VAL-032, REQ-INT-090, REQ-VAL-191]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M3-03
   milestone: M3
-  title: "Substep control: the frozen N_sub bucket table and total_substeps"
+  title: "Substep control: the per-sim-key N_sub threshold table, its bucket tree and total_substeps"
   depends_on: [TASK-M3-01]
   needs: [REQ-GEN-007, REQ-PAY-013, REQ-PAY-027, REQ-TOOL-003]
-  requirements: [REQ-INT-027, REQ-INT-028, REQ-TOOL-033, REQ-TOOL-034]
+  requirements: [REQ-INT-027, REQ-INT-028, REQ-TOOL-033, REQ-TOOL-034, REQ-INT-091, REQ-INT-092, REQ-INT-094]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M3-04
@@ -842,7 +842,7 @@
   title: Heggie and logH occupants, and the visible re-registration count
   depends_on: [TASK-M3-07]
   needs: [REQ-DEC-005, REQ-GEN-008]
-  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171]
+  requirements: [REQ-INT-006, REQ-INT-018, REQ-INT-073, REQ-VAL-045, REQ-INT-084, REQ-VAL-170, REQ-VAL-171, REQ-VAL-190, REQ-INT-095]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-4, PIT-4.3, PIT-4.4]
 - id: TASK-M3-09
@@ -2537,8 +2537,8 @@
   milestone: M8
   title: "Browser gates: Tier-N on real browsers, and the Playwright fragment goldens"
   depends_on: [TASK-M8-38, TASK-M7-18]
-  needs: [REQ-VAL-064, REQ-VAL-057, REQ-VAL-017, REQ-COL-052, REQ-COL-046, REQ-VAL-059, REQ-INT-059]
-  requirements: [REQ-VAL-116, REQ-COL-048, REQ-VAL-144]
+  needs: [REQ-VAL-064, REQ-VAL-057, REQ-VAL-017, REQ-COL-052, REQ-COL-046, REQ-VAL-059, REQ-INT-059, REQ-INT-091]
+  requirements: [REQ-VAL-116, REQ-COL-048, REQ-VAL-144, REQ-INT-093]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M8-41

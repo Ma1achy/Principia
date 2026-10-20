@@ -1758,7 +1758,7 @@
   - R-141
   - R-157
   milestone: M2
-  note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values). R-113 (RQ-95): the int (m,n) lattice's 'bijective' check is in REQ-CHART-037's verify (M4)."
+  note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values). R-113 (RQ-95): the int (m,n) lattice's 'bijective' check is in REQ-CHART-037's verify (M4). R-503 (closes RQ-371): the shape sphere's n-to-1 with n = 2 is its spherical map's value; the exponential map's, computed from its cap, is REQ-CHART-075 (TASK-M2-28)."
 - id: REQ-CHART-015
   area: CHART
   statement: "D and C must be shared and written once, so adding a chart means adding only a Φ, and no chart may carry its own decoder, integrator or renderer."
@@ -2914,6 +2914,26 @@
   - R-513
   milestone: M2
   note: "R-475 S2, S3, L4 to L6; R-477 C8. Closed by TASK-M2-40. Physics review is required (⚑); it does not merge on the code reviewer's word alone. Physics review 5586890917 of PR #255, F3: the verify's \"equals R·R′ applied to (u, v, 0)\" contradicted L5's composition and is corrected; the same-target case is RQ-403. The latent saved chart's targets moved to REQ-GUI-240 and REQ-GUI-265 (RQ-404). *Was:* \"its targets the six dimensions off the saved plane\" and \"a further tilt of the saved curved chart equals R·R′ applied to (u, v, 0) to 1 ulp\". R-513 (RQ-403 ruled): the same-target case composes the rotations, REQ-CHART-077, built here too. *Was:* \"the saved target is not offered to a new tilt (RQ-403, REQ-CHART-077)\"."
+- id: REQ-CHART-075
+  area: CHART
+  statement: "The shape sphere's exponential map must compute its system_image from its cap, the pixels of [0,1]² with r = ‖d‖ ≤ π: bijective when the cap lies within one closed hemisphere; when it straddles the equator, n-to-1 with a per-pixel fold, a pixel counting 1 if its w ≥ 0 or if its mirror point (w → −w) lies outside the cap, and 0 otherwise, w = 0 being the computed w as ±0.0 and \"the mirror is in view\" the log map about n0 of the mirrored point landing in [0,1]² with r ≤ π; and a pixel with r > π must be the domain's end, not a system, out of the count and the total (R-503). How pixels exactly on r = π count is REQ-CHART-078's."
+  source:
+  - file: decisions.md
+    section: "R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  - file: docs/design/principia_chart_reference.md
+    section: "5.4 Past the unit square — each axis's extension type (R-407)"
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel exp_map_system_image: a cap inside w ≥ 0, one inside w ≤ 0 and one touching the equator from one side report bijective; a straddling cap on a grid symmetric under w → −w (n0 on the equator, e2 = ŵ, an odd resolution N, every pixel centre at least 10⁻⁶ from r = π, |r − π| > 10⁻⁶), whose mirrored pixels are the index pairs (i, j) and (i, N−1−j) and whose middle row lies at w = 0, reports the per-pixel fold and a counted total equal to the hand count by the per-pixel rule, N(N+1)/2 when s√2 < π; with s√2·(N−1)/N > π on the same grid, so at least one pixel centre in the counted half lies past r = π, the total equals the number of pixels with j ≥ (N−1)/2 and r ≤ π, enumerated from r alone; controls: a fold that counts a mirrored pair twice, one that drops the w = 0 row, one that reads a fixed n = 2 for a cap in one hemisphere, and one that counts the pixels with r > π each fail"
+  rulings:
+  - R-141
+  - R-503
+  milestone: M2
+  note: "R-503 (closes RQ-371). The spherical map keeps n-to-1 with n = 2 (R-141, REQ-CHART-014). Closed by TASK-M2-28. On review (PR #258: physics P5, P6; qa 4; applied per R-369): the per-pixel rule, the symmetric fixture and the r > π control. On review round 2 (physics P9, qa C, applied per R-369): the margin from r = π and a pixel past it in the counted half."
 - id: REQ-CHART-076
   area: CHART
   statement: "Under Tip as sheet with one target and both angles set, a window pixel inside [−1, 1]² whose own chart parameters (a, b) leave the chart's square must be past the chart's edge (R-512): its axes' types act on (a, b) as past the window (R-472 X3a), so past a bounded edge (a warped L_z's s on either side, the warp's t < 0) it is not a system and draws blank, and past the energy warp's continuing t > 1 side (R-508) it is that side's system (R-512 F1)."
@@ -2959,6 +2979,25 @@
   - R-513
   milestone: M2
   note: "R-475 L5 (physics review 5586890917 of PR #255, F3); R-513 (RQ-403 ruled, option (b)), Q1 to Q5. Closed by TASK-M2-40 with REQ-CHART-073 (applied per R-369, R-513 Q4: the composition is built once). Physics review is required (⚑); it does not merge on the code reviewer's word alone. *Was:* \"A new tilt of a saved curved chart into its own saved target must compose as RQ-403 rules (the offsets added, or the rotations composed); meanwhile the saved target is not offered.\", the verify's \"decodes as RQ-403's ruling composes it, to 1 ulp; control: the other option's composition differs\", and \"Waits for RQ-403; closed by TASK-M2-39, a leaf task.\" Physics review 5591497181 of PR #255, P3: non-parallel tilts, so the R′·R control can fail. *Was:* \"a shape-sphere view tilted 25° into a momentum control, saved, then tilted 20° into the same control,\"."
+- id: REQ-CHART-078
+  area: CHART
+  kind: definition
+  statement: "How pixels of the shape sphere's exponential map exactly on r = π count must be defined: every such pixel maps to the one point −n0, so the map is not injective there; counted once, like the equator, or as the domain's end. It is written into chart_reference §3.3 by the task that needs it and checked by the physics reviewer (R-72, R-503)."
+  source:
+  - file: decisions.md
+    section: "R-503 — The shape sphere's exponential map takes its `system_image` from its cap: bijective within one closed hemisphere, a per-pixel fold when the cap straddles the equator; its radius is bounded at π, past it the domain's end *(closes RQ-371; amends R-141 for the exponential map)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  verify:
+    method: review checklist
+    detail: "chart_reference §3.3 states the rule for r = π, and REQ-CHART-075's count follows it; physics reviewer approves before merge"
+  rulings:
+  - R-72
+  - R-503
+  milestone: M2
+  note: "R-503, review round 1 of PR #258 (physics P6, applied per R-369). Written by TASK-M2-28."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."
@@ -3173,7 +3212,7 @@
   milestone: M3
 - id: REQ-INT-013
   area: INT
-  statement: "Every occupant must advertise a capability profile `{order, force_evals, symplectic, reversible, owns_time_mapping}` (plus the re-registration field of Part 2b), and downstream features must read the profile rather than assume occupant properties."
+  statement: "Every occupant must advertise a capability profile `{order, force_evals, symplectic, step_reversible, run_reversible, owns_time_mapping}` (plus the re-registration field of Part 2b), and downstream features must read the profile rather than assume occupant properties (R-500: `reversible` split into `step_reversible` and `run_reversible`)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
@@ -3183,17 +3222,20 @@
     section: 2. Consolidated contract
   - file: decisions.md
     section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: review checklist
-    detail: "profile struct exists with these fields for every composed occupant; energy-drift interpretation, the reversibility diagnostic and total_substeps_log2/FTLE confidence all read it (grep for occupant-name special cases outside the profile)"
+    detail: "profile struct exists with these fields for every composed occupant, and no `reversible` field; energy-drift interpretation, the reversibility diagnostic (step_reversible), the reversibility test (run_reversible) and total_substeps_log2/FTLE confidence all read it (grep for occupant-name special cases outside the profile)"
   rulings:
   - R-19
   - R-72
+  - R-500
   milestone: M3
-  note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition)."
+  note: "How order sets the meaning of the total_substeps_log2 complexity proxy and FTLE confidence: REQ-INT-078 (definition). R-500 (closes RQ-369): the split flag, defined in Part 2."
 - id: REQ-INT-014
   area: INT
-  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, not reversible, debug only), KDK (2, 1, symplectic, Potato–Low default), Yoshida-4 (4, 3, symplectic, Medium–High default), Yoshida-6 (6, 7, symplectic, Ultra–Extreme default), RK4 (4, 4, not symplectic, not reversible, validation cross-check) and Aarseth–Zare + RK4 (4, 4, not symplectic, not reversible, owns time mapping). Aarseth–Zare + time-transformed leapfrog stays in Part 2a as an allowed future occupant, not a v1 requirement (R-162, R-168)."
+  statement: "The occupant table must be provided with these profiles: Euler (order 1, 1 eval, not symplectic, step_reversible false, run_reversible false, debug only), KDK (2, 1, symplectic, step_reversible true, run_reversible false, Potato–Low default), Yoshida-4 (4, 3, symplectic, step_reversible true, run_reversible false, Medium–High default), Yoshida-6 (6, 7, symplectic, step_reversible true, run_reversible false, Ultra–Extreme default), RK4 (4, 4, not symplectic, step_reversible false, run_reversible false, validation cross-check) and Aarseth–Zare + RK4 (4, 4, not symplectic, step_reversible false, run_reversible false, owns time mapping). Aarseth–Zare + time-transformed leapfrog stays in Part 2a as an allowed future occupant, not a v1 requirement (R-162, R-168). The regularised occupants' step_reversible is the one dd test 3 measures (REQ-VAL-190, R-500)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
@@ -3203,13 +3245,17 @@
     section: R-162 — The reversible occupant is logH's TTL time mode
   - file: decisions.md
     section: "R-168 — REQ-INT-014 covers the built occupants; Aarseth–Zare + TTL is an allowed future occupant *(follows R-162)*"
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: unit test
-    detail: "assert each built occupant's advertised profile and default tier binding equals the Part 2 / Part 2a tables"
+    detail: "assert each built stepper occupant's advertised profile, both reversibility flags included, and default tier binding equals the Part 2 / Part 2a tables; controls: a table giving Yoshida-4 step_reversible false, or KDK run_reversible true, fails"
   rulings:
   - R-162
   - R-168
+  - R-500
   milestone: M3
+  note: "R-500 (closes RQ-369): the table's \"(see §4)\" reads step_reversible true and run_reversible false for KDK, Yoshida-4 and Yoshida-6."
 - id: REQ-INT-015
   area: INT
   statement: "The Euler occupant must be kept as a debug occupant only (profile `symplectic: false`), never offered as a production option."
@@ -3407,7 +3453,7 @@
   milestone: M3
 - id: REQ-INT-028
   area: INT
-  statement: "`N_sub` must be chosen by a generated comparison tree of `d²` against 64 build-time-frozen f32 thresholds `THR[n] = round_f32((r_sub/n^{2/3})²)`, with no runtime sqrt, div, pow, loop or dynamic index, and must equal the specification `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)`."
+  statement: "`N_sub` must be chosen by a generated comparison tree of the position-quantised `d²` against the sim key's f32 thresholds `THR[n] = round_f32((r_sub·n^{−1/γ_sub})²)` (`(r_sub/n^{2/3})²` at γ_sub = 1.5), generated on the host for the sim key's r_sub, gamma_sub and N_max, shipped in SimUniforms as exact f32 bit patterns and read by constant index, with no runtime sqrt, div, pow, loop or dynamic index, `N_sub = min(bucket(d²), N_max)`, and must equal the specification `clamp(⌈(r_sub/r_min)^{γ_sub}⌉, 1, N_max)` for every sim key (R-502)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 4 — Determinism, and the substep as the subtle seam
@@ -3421,14 +3467,17 @@
     section: 8. Locked vocabulary
   - file: decisions.md
     section: "R-113 — The placement fixes are accepted as written *(closes RQ-93 to RQ-100)*"
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
   verify:
     method: property test
-    detail: "fuzz d² across and straddling every bucket edge; N_sub bit-identical on CPU-f64 and CPU-f32 (0 forks); table generated offline in f64 libm and only the f32 output ships"
+    detail: "fuzz d² across and straddling every bucket edge, at the default config and at configurations with r_sub, gamma_sub and N_max each changed (a non-power-of-two N_max among them): N_sub bit-identical on CPU-f64 and CPU-f32 (0 forks) and equal to the specification away from edges; control: the default config's table used under a changed r_sub or gamma_sub fails the specification check"
   rulings:
   - R-34
   - R-113
+  - R-502
   milestone: M3
-  note: "R-113 (RQ-97): the native-GPU leg is REQ-VAL-059's N_sub (M4); the browser leg is the M8 browser Tier-L requirement closed with REQ-VAL-116."
+  note: "R-113 (RQ-97): the native-GPU leg is REQ-VAL-059's N_sub (M4); the browser leg is the M8 browser Tier-L requirement closed with REQ-VAL-116. R-502 (closes RQ-370): the table is generated per sim key on the host (REQ-INT-091), the default reproduces the build-time table (REQ-INT-092), the wasm host's bits are REQ-INT-093's and the maximum length REQ-INT-094's."
 - id: REQ-INT-029
   area: INT
   statement: "The substep cap N_max must bound the substep count per macro-step without terminating: on N_sub == N_max the trajectory advances with the capped (under-resolved) step, identically on both pipelines, and the sticky saturated descriptor bit (bit 5) is set at that point and is never a state value."
@@ -3501,18 +3550,21 @@
   note: "The τ-sort, the tie tolerance and the sign convention: REQ-INT-079 (definition). R-113 (RQ-97): 'word identical CPU/GPU' is covered in M4 by REQ-VAL-072 (the word's integer arithmetic)."
 - id: REQ-INT-032
   area: INT
-  statement: "The reversibility diagnostic must either replay the recorded macro-step + substep schedule exactly in reverse or bind a fixed-step reversible occupant with COM projection disabled, and must be available only for occupants whose profile has `reversible: true`."
+  statement: "The reversibility diagnostic must either replay the recorded macro-step + substep schedule exactly in reverse or bind a fixed-step reversible occupant with COM projection disabled, and both routes must be available only for occupants whose profile has `step_reversible: true` (R-500)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
   - file: docs/contracts/principia_integrator_contract.md
     section: Part 2 — Occupants and the capability profile
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: review checklist
-    detail: "reversibility diagnostic refuses an occupant with reversible=false; implementation uses one of the two named routes"
-  rulings: []
+    detail: "the reversibility diagnostic refuses an occupant with step_reversible = false (Euler, RK4, Aarseth–Zare + RK4) on either route, and accepts KDK, Yoshida-4 and Yoshida-6; implementation uses one of the two named routes; the guard reads step_reversible, not run_reversible or an occupant name"
+  rulings:
+  - R-500
   milestone: M3
-  note: Deferred work per Part 6 / dd §6.
+  note: "Deferred work per Part 6 / dd §6. R-500 (closes RQ-369): both routes gate on step_reversible; run_reversible is REQ-VAL-044's."
 - id: REQ-INT-033
   area: INT
   statement: "v1 must handle close approaches by substepping capped at `N_max` with the `saturated` flag, with Kustaanheimo–Stiefel regularisation deferred to v2."
@@ -3580,15 +3632,22 @@
   milestone: M3
 - id: REQ-INT-037
   area: INT
-  statement: "The occupants must implement exactly the update rules and coefficients of dd_integrator §3.2: Euler, KDK, Yoshida-4 (`w₁ = 1/(2 − 2^{1/3})`, `w₀ = −2^{1/3}w₁`), Yoshida-6 solution A, and the standard RK4 tableau on `(r, p)`."
+  statement: "The occupants must implement exactly the update rules and coefficients of dd_integrator §3.2: Euler, KDK, Yoshida-4 (`w₁ = 1/(2 − 2^{1/3})` correctly rounded to f64, and `w₀ = 1 − 2w₁` as computed in f64, so that `w₀ + 2w₁ = 1` exactly, which stands in place of the closed form's `w₀ = −2^{1/3}w₁`, from which it differs by 9.9·10⁻¹⁷ relative; R-515), Yoshida-6 solution A, and the standard RK4 tableau on `(r, p)`."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 3.2 Occupants
+  - file: decisions.md
+    section: "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
+  - file: decisions.md
+    section: "R-515 — Yoshida-4's `w₁` is printed correctly rounded to f64 and `w₀` as `1 − 2w₁` computed in f64, so that `w₀ + 2w₁ = 1` holds exactly in f64 *(closes RQ-405; amends R-501 as to Yoshida-4's digits)*"
   verify:
     method: unit test
-    detail: "coefficient constants equal §3.2 to all printed digits; w₀ + 2w₁ = 1; Yoshida-6 w₀ = 1 − 2(w₁+w₂+w₃)"
-  rulings: []
+    detail: "coefficient constants equal §3.2 to all printed digits (each printed value parses to the shipped f64: Yoshida-4 w₁ = 1.3512071919596575, w₀ = −1.702414383919315); Yoshida-4 w₀ is bitwise the f64 result of 1 − 2w₁ and w₀ + 2w₁ evaluates to exactly 1.0 in f64 (R-515); control: RQ-405's interim digits (1.3512071919596578, −1.7024143839193157) give 0.9999999999999998 and fail; Yoshida-6 w₀ = 1 − 2(w₁+w₂+w₃)"
+  rulings:
+  - R-501
+  - R-515
   milestone: M3
+  note: "R-515 (closes RQ-405): option (c), w₁ correctly rounded, w₀ = 1 − 2w₁. The identity is now exact in f64, not read within rounding; TASK-M3-02 builds the new digits and closes this requirement."
 - id: REQ-INT-038
   area: INT
   statement: "The horizon test must be an integer macro-step counter against `horizon_steps = ⌈T/dt_macro⌉`, never accumulated float time."
@@ -3905,7 +3964,7 @@
   note: "R-33: 'RK45 stays the inspector's reference.' trajectory_viewing calls computeIC the Precision-ring path."
 - id: REQ-INT-056
   area: INT
-  statement: "The Yoshida-6 coefficients must be checked against Yoshida (1990) Table 1 solution A, and the w₂ < 0 label fixed, before Yoshida-6 enters the shared source."
+  statement: "The Yoshida-4 and Yoshida-6 coefficients must carry their citation where dd_integrator §3.2 prints them and in the shared source (Yoshida 1990, Phys. Lett. A 150, 262–268; Yoshida-6 its Table 1, solution A), with no copy of the paper added to the corpus, and their transcription must be checked by REQ-INT-090's convergence-order test before Yoshida-6 enters the shared source; the negative weight's label is fixed (R-57, R-501)."
   source:
   - file: decisions.md
     section: "R-57 — The Yoshida-6 coefficients are checked against Yoshida (1990), and the `w₂ < 0` label fixed *(TO-1)*"
@@ -3915,13 +3974,18 @@
     section: 6. Deferred / flagged
   - file: open-questions.md
     section: Audit section C — transcription checks
+  - file: decisions.md
+    section: "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
   verify:
     method: unit test
-    detail: "Coefficients in the shared source equal the published digits; composition order test (6th-order convergence slope on a Kepler fixture)."
+    detail: "cargo test -p kernel yoshida6_published: the shared source's Yoshida-6 constants equal dd §3.2's printed digits and their block carries the citation (Yoshida 1990, Table 1, solution A); the Yoshida-4 block carries its citation (Yoshida 1990, the fourth-order closed form); REQ-INT-090's order test and order-condition check pass on them"
   rulings:
   - R-57
+  - R-501
   milestone: M3
-  note: "R-57 also fixes the 'w₂ < 0' label in integrator contract Part 6 (the negative Yoshida-6 weight is w₁; for Yoshida-4 it is w₀) — a doc fix, not a build obligation."
+  note: "R-57 also fixes the 'w₂ < 0' label in integrator contract Part 6 (the negative Yoshida-6 weight is w₁; for Yoshida-4 it is w₀) — a doc fix, not a build obligation; R-500 withdrew that sentence's claim. R-501: the paper is not added; the citation and the order test check the transcription."
 - id: REQ-INT-057
   area: INT
   statement: "With the compute shaders' fast-math off, the default (R-297), the wrapper's branch decisions made from the current state (substep bucket N_sub, cap decision, collision, escape, horizon, SIM_FAILED and terminal) must be bit-identical across the CPU and every GPU backend on identical inputs, per step, while continuous values (positions, momenta, energy, trajectory, and the outcome class they decide near a chaotic boundary) are left free to diverge and are never reconciled, and labels on chaotic trajectories may differ across precisions and are reported, not suppressed."
@@ -4016,7 +4080,7 @@
   milestone: M4
 - id: REQ-INT-061
   area: INT
-  statement: "Every branch decision in the kernel must depend only on comparisons against compile-time constants, integer counters and single-rounded arithmetic, never on a runtime transcendental (`pow`, `sqrt`, `div`)."
+  statement: "Every branch decision in the kernel must depend only on comparisons against compile-time constants or against values every backend receives bit-identically (the sim key's N_sub threshold table, R-502), integer counters and single-rounded arithmetic, never on a runtime transcendental (`pow`, `sqrt`, `div`)."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: Rules the new kernel must hold by construction
@@ -4030,11 +4094,15 @@
     section: The discipline (each rule = one measured failure)
   - file: docs/contracts/principia_parity_contract.md
     section: "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
   verify:
     method: review checklist
     detail: "enumerate all branch inputs; none is fed by runtime pow/sqrt/div; the spike control (runtime ceil((r_sub/sqrt(d2))^1.5)) is absent"
-  rulings: []
+  rulings:
+  - R-502
   milestone: M4
+  note: "R-502: the N_sub thresholds are uniforms generated per sim key on the host, not compile-time constants."
 - id: REQ-INT-062
   area: INT
   statement: "Every march loop in the kernel must have a bound (no bare `loop {`)."
@@ -4535,6 +4603,116 @@
   - R-397
   milestone: M3
   note: "R-397 (RQ-226): the reason RQ-226 exists; built by TASK-M3-11."
+- id: REQ-INT-090
+  area: INT
+  statement: "Yoshida-4's and Yoshida-6's transcribed coefficients must pass a convergence-order test and an algebraic order-condition check that between them fail on a transcription error (R-501). The order test: on dd_integrator §5's Kepler-embedded fixture, the maximum relative energy error over one orbit, max_t |E(t) − E₀| / |E₀|, fitted against dt over a log–log ladder, gives a fitted order rounding to 4 (Yoshida-4) and 6 (Yoshida-6); each free coefficient with its 4th significant digit changed (w₀ recomputed from the consistency condition) gives one rounding lower; and the test measures and prints its detection floor, the smallest relative change it detects (estimated near 3·10⁻⁷ for Yoshida-4 and 10⁻⁹ for Yoshida-6 at f64). The algebraic check: evaluated exactly on the shipped f64 constants, the order conditions of a symmetric composition of a symmetric second-order step, |Σw − 1| and |Σw³| / Σ|w|³ (both) and, for Yoshida-6, the two fifth-order conditions |Σw⁵| / Σ|w|⁵ and the nested one (the coefficient of [A₁,[A₁,A₃]] in the composition's BCH logarithm at h⁵, divided by the same coefficient computed with |w|), complete to order 6, are at most 3·10⁻¹⁵ (Yoshida-4) and 5·10⁻¹⁴ (Yoshida-6); digits past the check's controls are REQ-INT-037's equality."
+  source:
+  - file: decisions.md
+    section: "R-501 — Yoshida's coefficients carry their citation, Yoshida (1990), Table 1 for Yoshida-6; the paper is not added; a convergence-order test at orders 4 and 6 fails on a transcription error *(amends R-57)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.2 Occupants
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel yoshida_convergence_order: fitted orders round to 4 and 6, the ladder, fit and detection floor printed; controls: Yoshida-4's w₁ and Yoshida-6's w₁, w₂, w₃, each with its 4th significant digit changed and w₀ recomputed, give a fitted order that rounds lower and fail. cargo test -p kernel yoshida_order_conditions: the residuals within the bounds (measured on the printed digits: Yoshida-4 |Σw − 1| = 0 and 5.5·10⁻¹⁷ (R-515), and Yoshida-6 5.1·10⁻¹⁵ for Σw⁵ and 4.0·10⁻¹⁶ for the nested condition); controls: each coefficient (Yoshida-6's w₀ recomputed) moved by one unit of its 15th significant digit (Yoshida-4) or its 13th (Yoshida-6), in each direction, exceeds the bound and fails (measured: at least 9.9·10⁻¹⁵ and 2.8·10⁻¹³)"
+  rulings:
+  - R-57
+  - R-501
+  - R-515
+  milestone: M3
+  note: "R-501: stands in for checking the digits against the paper, which is cited, not held. Closed by TASK-M3-02. On review (PR #258: code C5, physics P1, qa 1; applied per R-369): the controls name the digits the ladder and the check resolve; the fitted quantity and the bounds are for the physics reviewer to confirm. The last printed digits are REQ-INT-037's alone: a change there can lower a residual (Table 1's truncation, f64 rounding) or parse to the same f64. On review round 2 (qa B, applied per R-369): the nested fifth-order condition is added, at rounding level on the shipped constants; physics confirms the set is complete to order 6. R-515: Yoshida-4's measured residuals and control floor are on its new digits (was 2.9·10⁻¹⁶ and 9.8·10⁻¹⁵ on RQ-405's interim digits); the bounds are unchanged."
+- id: REQ-INT-091
+  area: INT
+  statement: "The N_sub threshold table must be generated on the host per sim key: each THR[n], n = 1 … the table's maximum length (REQ-INT-094), computed in f64 with a pinned pure-software libm (no platform libm and no compiler intrinsic for pow) and rounded once to f32, emitted as exact f32 bit patterns for SimUniforms; and the generator must refuse an N_max above the maximum length or below 1 with a typed error, never truncating (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 4 — Determinism, and the substep as the subtle seam
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel nsub_table_host: the generator's bits for a committed fixture of configurations (the default and configurations with r_sub, gamma_sub and N_max each changed) equal the fixture's bit tables; the fixture is produced independently of the generator, by a checked-in reference script (fixtures/gates/nsub-table/reference.py) that evaluates (r_sub·n^(−1/γ_sub))² in Python's decimal at 50 digits and rounds it correctly to f32 straight from the decimal value (never through float() and f64), and any entry where the generator legitimately differs from the correctly rounded value, by a double rounding through f64 or by the pinned libm's sub-ulp f64 error, is listed in the fixture with that reason and checked against the generator's own rounding; the libm crate is pinned in Cargo.lock and the generator calls no std or platform pow (review); N_max = maximum length + 1 and N_max = 0 are refused with the typed error; control: a fixture entry one ulp off fails"
+  rulings:
+  - R-71
+  - R-502
+  milestone: M3
+  note: "R-502 (closes RQ-370). The fixture is the one REQ-INT-093's wasm leg reproduces. Closed by TASK-M3-03."
+- id: REQ-INT-092
+  area: INT
+  statement: "A test must assert that the host generator at the default configuration (r_sub = 0.05, γ_sub = 1.5, N_max = 64) reproduces the build-time threshold table, generated by `cargo xtask codegen` and checked in, bit for bit (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel nsub_default_table_bitwise: the host generator's 64 default entries equal the checked-in generated table's bits; control: the checked-in table with one bit flipped fails"
+  rulings:
+  - R-502
+  milestone: M3
+  note: R-502 (closes RQ-370). Closed by TASK-M3-03.
+- id: REQ-INT-093
+  area: INT
+  statement: "The wasm build's host threshold generator must give the same bits as the native one: run under wasm32 in the browser build, it must reproduce REQ-INT-091's committed fixture of threshold tables bit for bit (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate browser-nsub-table: in Chrome stable and Safari (R-110), the wasm host generator's tables for every configuration of REQ-INT-091's fixture equal the fixture's bits; control: the fixture with one entry one ulp off fails the gate"
+  rulings:
+  - R-110
+  - R-502
+  milestone: M8
+  note: "R-502 (closes RQ-370): the wasm leg, placed with the browser build as R-113 placed REQ-INT-028's. Closed by TASK-M8-40."
+- id: REQ-INT-094
+  area: INT
+  kind: calibration
+  statement: "The N_sub threshold table's maximum length, the largest N_max the host generator accepts, must be calibrated: proposed with its evidence (the SimUniforms size it takes on every backend, the comparison tree's size and depth, and the bound horizon_steps × N_max ≤ 2³²−1) by the task that needs it, checked by the physics reviewer, confirmed by the human at the M3 gate and recorded in decisions.md (R-502)."
+  source:
+  - file: decisions.md
+    section: "R-502 — The `N_sub` thresholds are generated per sim key on the host, with a pinned pure-software libm, shipped as exact f32 bits and read by constant index; the table's maximum length is a calibration value, refused above it; a test asserts the default config reproduces the build-time table bitwise *(closes RQ-370)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.3 Substep law — and the determinism pin, made concrete
+  verify:
+    method: review checklist
+    detail: "the proposal states the maximum length with its evidence; an N_max above it is refused (REQ-INT-091); recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  - R-502
+  milestone: M3
+  note: R-502 (closes RQ-370). Proposed by TASK-M3-03.
+- id: REQ-INT-095
+  area: INT
+  kind: definition
+  statement: "The time-reversal map of each regularised occupant's state must be defined, so that dd_integrator §5's test 3 can measure it (REQ-VAL-190): for Heggie, which regularised coordinates and momenta are negated and how physical time maps; for logH, its time variable and that variable's conjugate; for logH's TTL time mode, its auxiliary W as well; for Aarseth–Zare + RK4, its regularised pairs. It is written into integrator contract Part 2b by the task that needs it and checked by the physics reviewer (R-72, R-500)."
+  source:
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  verify:
+    method: review checklist
+    detail: "Part 2b gives each regularised occupant's reversal map, each an involution on its full state, with its derivation from the occupant's equations; physics reviewer approves before merge; REQ-VAL-190's test applies it"
+  rulings:
+  - R-72
+  - R-500
+  milestone: M3
+  note: "R-500, review round 1 of PR #258 (physics P3, applied per R-369). Written by TASK-M3-08."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -14011,9 +14189,11 @@
     section: G1. Rules that hold everywhere
   - file: decisions.md
     section: "R-511 — A `decode_failed` sample the chart does not classify as not a system draws blank in a presentation view, as a not-a-system pixel, the forbidden-region overlay drawing over it too; `sim_failed` keeps `#141418` *(closes RQ-379; amends R-467 and R-470)*"
+  - file: decisions.md
+    section: "R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*"
   verify:
     method: unit test
-    detail: "cargo test -p render presentation_no_hatch: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), through the outcome view, a field ramp (the word length's and d_min's) and a test stain, in the default, greyscale and hue modes: a sample whose REQ-COL-102 lane is forbidden draws exactly the background uniform, inside [0,1]² and past it, whatever its payload; running (in the outcome view), sim_failed of each detail, a reserved state code, a NaN, a ±∞ that is no declared sentinel and the length ramp's 127 draw exactly #141418; with the node's invalid colour overridden, that colour; d_min's unset +∞ keeps the \"not yet\" stipple; no pixel of any presentation output equals debug_invalid's pattern; a debug/ field view of the same payload still draws the hatch; controls: a presentation occupant that draws the hatch for the forbidden lane, for sim_failed or for a NaN, one that draws the forbidden lane #141418 instead of the background, and one that decides the background from decode_failed's detail, each fail; cargo xtask golden: the goldens R-467 D15 lists are rendered and the hashes that change reported, none re-baselined before RQ-373's gate decision; C9 (R-477): over the outcome view, a field ramp and a test stain, no presentation output draws a palette colour on a not-a-system pixel (each such pixel equals the background uniform, the blank of R-470); control: an occupant that maps the lane to a palette entry fails; R-511: a decode_failed sample of each tag (M01_TINY, ENERGY_UNSCALABLE, ENERGY_INFEASIBLE, a non-finite decode) draws exactly the background uniform, outside every share, while REQ-COL-102's lane stays unset for it; controls: an occupant that draws decode_failed #141418, and one that draws sim_failed blank, each fail"
+    detail: "cargo test -p render presentation_no_hatch: on the CPU twin and on the GPU (gpu-metal, gpu-lavapipe), through the outcome view, a field ramp (the word length's and d_min's) and a test stain, in the default, greyscale and hue modes: a sample whose REQ-COL-102 lane is forbidden draws exactly the background uniform, inside [0,1]² and past it, whatever its payload; running (in the outcome view), sim_failed of each detail, a reserved state code, a NaN, a ±∞ that is no declared sentinel and the length ramp's 127 draw exactly #141418; with the node's invalid colour overridden, that colour; d_min's unset +∞ keeps the \"not yet\" stipple; no pixel of any presentation output equals debug_invalid's pattern; a debug/ field view of the same payload still draws the hatch; controls: a presentation occupant that draws the hatch for the forbidden lane, for sim_failed or for a NaN, one that draws the forbidden lane #141418 instead of the background, and one that decides the background from decode_failed's detail, each fail; cargo xtask golden: the goldens R-467 D15 lists as changing (m1-outcome/outcome, m1-outcome/outcome_edited, m1-numeric/length_ramp, m1-numeric/d_min_ramp) are re-baselined under R-504, each BASELINES.md row leading with R-504, the outcome goldens' decode_failed tiles drawing the background as R-511 has them (Z5), and m1-synthetic/known_escaper, the _override twins and the debug catalogue's goldens pass unchanged; C9 (R-477): over the outcome view, a field ramp and a test stain, no presentation output draws a palette colour on a not-a-system pixel (each such pixel equals the background uniform, the blank of R-470); control: an occupant that maps the lane to a palette entry fails; R-511: a decode_failed sample of each tag (M01_TINY, ENERGY_UNSCALABLE, ENERGY_INFEASIBLE, a non-finite decode) draws exactly the background uniform, outside every share, while REQ-COL-102's lane stays unset for it; controls: an occupant that draws decode_failed #141418, and one that draws sim_failed blank, each fail"
   rulings:
   - R-79
   - R-136
@@ -14022,11 +14202,10 @@
   - R-467
   - R-470
   - R-477
+  - R-504
   - R-511
   milestone: M2
-  rq:
-  - RQ-373
-  note: "R-467 (20 Oct 2026), D1 to D4, F3, F6. Closed by TASK-M2-34. The goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) wait for RQ-373's gate decision; m1-synthetic/known_escaper is expected unchanged. Past [0,1]² the lane is TASK-M8-05's. R-470 (20 Oct 2026): the background is blank, never a palette colour, in every view (N1, G1); a sim_failed or non-finite sample of a system keeps #141418 (G2); whether a decode_failed sample the chart does not classify draws blank instead is RQ-379, #141418 meanwhile, nothing waiting. R-511 (RQ-379 ruled, option (b)): such a decode_failed sample draws blank; sim_failed keeps #141418; the outcome scene's decode_failed tile changes too, for RQ-373's gate decision (Z5). *Was:* \"a decode_failed sample of each detail and tag\" among what draws #141418."
+  note: "R-467 (20 Oct 2026), D1 to D4, F3, F6. Closed by TASK-M2-34. R-504 (closes RQ-373): the goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) are re-baselined as TASK-M2-34 renders them, the canvas background's value and the changed tiles confirmed at the M2 gate with REQ-COL-110; m1-synthetic/known_escaper is expected unchanged. Past [0,1]² the lane is TASK-M8-05's. R-470 (20 Oct 2026): the background is blank, never a palette colour, in every view (N1, G1); a sim_failed or non-finite sample of a system keeps #141418 (G2); whether a decode_failed sample the chart does not classify draws blank instead is RQ-379, #141418 meanwhile, nothing waiting. R-511 (RQ-379 ruled, option (b)): such a decode_failed sample draws blank; sim_failed keeps #141418; the outcome scene's decode_failed tiles change too, re-baselined with the outcome goldens under R-504 and confirmed among the changed tiles at the M2 gate (Z5; merge of PR #258 into PR #255, applied per R-369). *Was:* \"a decode_failed sample of each detail and tag\" among what draws #141418. *Was:* \"The goldens that change (m1-outcome/outcome and m1-outcome/outcome_edited, tile 22; m1-numeric/length_ramp and m1-numeric/d_min_ramp) wait for RQ-373's gate decision\" and \"the outcome scene's decode_failed tile changes too, for RQ-373's gate decision (Z5)\"; and in the verify, \"the goldens R-467 D15 lists are rendered and the hashes that change reported, none re-baselined before RQ-373's gate decision\"."
 - id: REQ-COL-109
   area: COL
   statement: "The debug view (View › Debug view: the render's own debug-view flag, which its caller sets from RenderState's debug_view) must draw, over the active stain, every system pixel exactly as the stain draws it; a pixel REQ-COL-102's lane marks as not a system with the hatch, debug_invalid(frag_xy); a non-finite sample (a sim_failed with a non-finite detail: NaN in state, Inf or overflow in state, a non-finite derived quantity; a decode_failed of detail 0; a non-finite value the stain reads) with REQ-COL-110's NaN / Inf style; and any other sim_failed or decode_failed sample, a reserved state code included, with debug_invalid, reading the lane first, then non-finiteness, then the failure; and the render must count the figure's pixels drawn in each of the three categories, \"forbidden (chart)\", \"decode or sim failure\" and \"NaN / Inf\", for the legend's \"Debug\" key (raw pixel counts, not R-408's statistic)."
@@ -14054,7 +14233,7 @@
 - id: REQ-COL-110
   area: COL
   kind: calibration
-  statement: "The NaN / Inf style of the debug view (R-467, clause 3: \"a separate style for NaN and Inf\") — a prelude function beside debug_invalid and debug_not_yet, drawing a pattern from the pixel position that is neither the hatch's diagonal stripes nor the stipple's dots — must be calibrated: its pattern and colours proposed with their evidence by the task that needs it, shown to collide with no palette entry and to be distinguishable from the hatch and the stipple as REQ-COL-055 measures (τ = 0.101, unsimulated and under each colour-vision simulation, R-429), checked by the gui reviewer, confirmed by the human at the M2 gate and recorded in decisions.md."
+  statement: "The NaN / Inf style of the debug view (R-467, clause 3: \"a separate style for NaN and Inf\") — a prelude function beside debug_invalid and debug_not_yet, drawing a pattern from the pixel position that is neither the hatch's diagonal stripes nor the stipple's dots — must be calibrated: its pattern and colours proposed with their evidence by the task that needs it, not magenta (R-16's flat magenta #FF00FF sits at τ from escape body 2's #E034C6, R-505), so each of its colours farther than τ from #FF00FF, shown to collide with no palette entry and to be distinguishable from the hatch and the stipple as REQ-COL-055 measures (τ = 0.101, unsimulated and under each colour-vision simulation, R-429), checked by the gui reviewer, confirmed by the human at the M2 gate, with the canvas background's value and the tiles the re-baselined goldens change (R-504), and recorded in decisions.md."
   source:
   - file: decisions.md
     section: "R-467 — Forbidden pixels and non-finite values are debug-only: a presentation view draws a pixel that is not part of the chart as the canvas background, with no hatch, key or share, and every failure and non-finite value `#141418`; one switchable debug view, View › Debug view, shows the hatch, `debug_invalid` and a NaN / Inf style, each with its key and count *(amends R-446, and R-407 clause 2 as it applies to display; closes RQ-319)*"
@@ -14064,15 +14243,21 @@
     section: "Presentation layer (hand-written, small, reused by every debug view)"
   - file: docs/design/principia_colour_composition.md
     section: 6. Debug views as presets
+  - file: decisions.md
+    section: "R-505 — The NaN / Inf style is proposed by the task that needs it, and it is not magenta, which sits at τ from escape body 2 *(extends R-467 D6)*"
+  - file: decisions.md
+    section: "R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*"
   verify:
     method: review checklist
-    detail: "the proposal gives the pattern and its colours, measured against the outcome palette (both presets), the dbg_* palettes, the LUTs, the Chazy palettes, the hatch and the stipple, unsimulated and under each simulation, with the tightest distances printed; recorded in decisions.md at the M2 gate"
+    detail: "the proposal gives the pattern and its colours, measured against the outcome palette (both presets), the dbg_* palettes, the LUTs, the Chazy palettes, the hatch, the stipple and #FF00FF, unsimulated and under each simulation, with the tightest distances printed; a colour within τ of #FF00FF fails the check; recorded in decisions.md at the M2 gate with the canvas background's value and the re-baselined goldens' changed tiles (R-504)"
   rulings:
   - R-71
   - R-429
   - R-467
+  - R-504
+  - R-505
   milestone: M2
-  note: "R-467 (20 Oct 2026), D6: the corpus gives no style for NaN and ±∞; a calibration requirement (R-71). Proposed by TASK-M2-34."
+  note: "R-467 (20 Oct 2026), D6: the corpus gives no style for NaN and ±∞; a calibration requirement (R-71). Proposed by TASK-M2-34. R-505: not magenta. R-504: confirmed at the M2 gate with the background and the changed tiles."
 - id: REQ-COL-111
   area: COL
   statement: "Overlays › Chart › forbidden region, off by default, must draw the hatch debug_invalid(frag_xy) over exactly the pixels the chart classifies as not a system (REQ-COL-102's lane) and the decode_failed samples (R-511), in any view, and nothing anywhere else (C9); Overlays › Integration › NaN / invalid pixels must draw only while a debug view is the figure (View › Debug view on, or a debug-catalogue stain), shown dimmed with a tooltip otherwise."
@@ -18001,6 +18186,8 @@
   rulings:
   - R-467
   milestone: M8
+  rq:
+  - RQ-470
   note: "R-467 (20 Oct 2026), D5, D7, D12. Closed by TASK-M8-46, physics-reviewed. A Chart-builder chart's warning is REQ-GUI-228 (RQ-372). The \"Debug\" key's legend check moved here from REQ-GUI-105 (code review 5585240188 of PR #253, F4, applied per R-369). RenderState's debug_view, TASK-M6-46's field, is wired here to TASK-M2-34's render flag."
 - id: REQ-GUI-228
   area: GUI
@@ -21783,15 +21970,21 @@
   milestone: M3
 - id: REQ-VAL-032
   area: VAL
-  statement: "For each symplectic occupant, `STEP(dt)`, momentum negation, `STEP(dt)`, negation must return the state to precision (without wrapper projection or substepping)."
+  statement: "For each step-reversible stepper (KDK, Yoshida-4 and Yoshida-6, R-500), `STEP(dt)`, momentum negation, `STEP(dt)`, negation must return the state to precision (without wrapper projection or substepping), negative composition weights included."
   source:
   - file: docs/design/principia_dd_integrator.md
     section: 5. Unit tests
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 2 — Occupants and the capability profile
   verify:
     method: unit test
-    detail: "dd test 3: residual at rounding level for KDK/Yoshida-4/Yoshida-6"
-  rulings: []
+    detail: "dd test 3: residual within REQ-VAL-191's rounding-level criterion for KDK/Yoshida-4/Yoshida-6; control: Yoshida-4 with its stages made asymmetric (w₁, w₁, w₀) shows a residual above it and fails"
+  rulings:
+  - R-500
   milestone: M3
+  note: "R-500 (closes RQ-369): this is what step_reversible means; the regularised occupants' measurement is REQ-VAL-190 (TASK-M3-08). The criterion is REQ-VAL-191 (R-71), proposed by TASK-M3-02."
 - id: REQ-VAL-033
   area: VAL
   statement: A close-encounter IC must show `max|ΔE| ≫ |ΔE_final|`.
@@ -22005,7 +22198,7 @@
   milestone: M3
 - id: REQ-VAL-044
   area: VAL
-  statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162)."
+  statement: "The reversibility test on free-fall brake orbits must be implemented on the reversible occupant, logH's TTL time mode (R-162), bound through the profile's `run_reversible`, which only that occupant carries (R-500)."
   source:
   - file: docs/design/principia_dd_validation_orbits.md
     section: 3. Proposed suite
@@ -22017,14 +22210,17 @@
     section: R-162 — The reversible occupant is logH's TTL time mode
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 2a — Widening the slot: `owns_time_mapping`, and the `advance` signature"
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
   verify:
     method: numerical gate
-    detail: "runs on logH-TTL; asserts time symmetry via the reversibility measure `xi`"
+    detail: "runs on logH-TTL, selected by run_reversible; asserts time symmetry via the reversibility measure `xi`; a request to run it on an occupant with run_reversible false is refused"
   rulings:
   - R-72
   - R-162
+  - R-500
   milestone: M3
-  note: "xi: REQ-VAL-134 (definition)."
+  note: "xi: REQ-VAL-134 (definition). R-500: run_reversible is logH-TTL only."
 - id: REQ-VAL-045
   area: VAL
   statement: "The two-body radial collision gate must be kept as the regularisation test, since collisionless periodic orbits do not exercise regularisation."
@@ -24492,6 +24688,47 @@
   rulings:
   - R-443
   milestone: M7
+- id: REQ-VAL-190
+  area: VAL
+  statement: "dd_integrator §5's test 3 must measure every built regularised occupant (Heggie, logH in each time mode, Aarseth–Zare + RK4): apply STEP(dt), the occupant's time-reversal map (REQ-INT-095), STEP(dt), the map again, record the residual, taken with its norm on the full extended state, the domain of REQ-INT-095's map, and set the occupant's step_reversible profile value from the measured verdict at REQ-VAL-191's rounding-level criterion; it asserts no rounding-level bound for them (R-500)."
+  source:
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 2 — Occupants and the capability profile
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel regularised_step_reversibility: prints each built regularised occupant's residual and verdict; fails if a built regularised occupant is missing from the measurement or its profile's step_reversible differs from its measured verdict; a verdict that differs from the values R-500 lists (Aarseth–Zare + RK4 false, logH's TTL time mode true) is reported for the review queue; controls: the measurement at the same dt on a known-asymmetric stepper (RK4 on the same fixture, and REQ-VAL-032's asymmetric Yoshida-4) must read not reversible; a profile with one regularised occupant's step_reversible flipped fails; a measurement set with one built occupant left out fails"
+  rulings:
+  - R-71
+  - R-72
+  - R-162
+  - R-500
+  milestone: M3
+  note: "R-500 (closes RQ-369): \"regularised occupants measured by dd test 3, not asserted\". Closed by TASK-M3-08. On review (PR #258: physics P3, P4; qa 3; applied per R-369): the reversal map is REQ-INT-095, the criterion REQ-VAL-191, and the controls are added."
+- id: REQ-VAL-191
+  area: VAL
+  kind: calibration
+  statement: "Test 3's rounding-level criterion, the residual below which STEP(dt), reversal, STEP(dt), reversal counts as returning the state (REQ-VAL-032, REQ-VAL-190), must be calibrated: proposed with its evidence (the residuals measured for KDK, Yoshida-4 and Yoshida-6 at f64 and f32 across the dt used, and for the asymmetric controls, scaled by the state norm; for a regularised occupant the residual and the norm are taken on its full extended state, the domain of REQ-INT-095's map, so that the criterion means the same thing for the steppers and the regularised occupants) by the task that needs it, checked by the physics reviewer, confirmed by the human at the M3 gate and recorded in decisions.md (R-71, R-500)."
+  source:
+  - file: decisions.md
+    section: "R-500 — The capability profile's `reversible` is two flags: `step_reversible`, true for KDK, Yoshida-4, Yoshida-6 and the TTL leapfrog, false for Euler, RK4 and Aarseth–Zare + RK4, the regularised occupants measured; and `run_reversible`, logH-TTL only; both diagnostic routes gate on `step_reversible`, and a negative weight does not break a symmetric step *(closes RQ-369; refines R-162; amends R-57 as to integrator contract Part 6's sentence)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: docs/design/principia_dd_integrator.md
+    section: 5. Unit tests
+  verify:
+    method: review checklist
+    detail: "the proposal states the criterion with the measured residuals, the step-reversible occupants below it and the asymmetric controls above it at the same dt; recorded in decisions.md at the M3 gate"
+  rulings:
+  - R-71
+  - R-500
+  milestone: M3
+  note: "R-500, review round 1 of PR #258 (qa 3, applied per R-369). Proposed by TASK-M3-02; used by TASK-M3-08. On review round 2 (qa E, applied per R-369; physics to confirm): the extended state."
 - id: REQ-VAL-192
   area: VAL
   statement: "`render::pipeline_runtime`'s `node_failure_isolation_unexplained_failure_keeps_the_pipeline` must not die by a signal at teardown: its process must exit by status, never by SIGSEGV after its assertions pass, on lavapipe (PRIN_GPU_BACKEND=vulkan) under the parallel suite as in CI; the cause is found and fixed, not retried or ignored."

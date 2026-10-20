@@ -368,7 +368,8 @@ with dd_colouring §3.1's sRGB transfer.
   sample, a reserved `state` code, a non-finite value and a ramp's invalid value draw `#141418`, unless a node overrides
   its invalid colour. The "not yet" stipple is unchanged. The hatch stays the debug views': View › Debug view
   (`principia_render_gui_spec.md` §G2) draws it for a forbidden pixel and for a decode or sim failure, and a NaN / Inf
-  style of its own for a non-finite value, a calibration (REQ-COL-110; R-71), each with a legend key and a count.
+  style of its own for a non-finite value, a calibration (REQ-COL-110; R-71), each with a legend key and a count. The
+  task that needs the style proposes it; it is not magenta, which sits at τ from escape body 2 (R-505).
 - **Blank in every view, the hatch an optional overlay, the failures debug-only (R-470).** The background a pixel that
   is not a system draws is blank, the view's background colour, never a palette colour in any view, the outcome view
   included. The hatch is drawn outside the debug views only by the optional overlay Overlays › Chart › forbidden region

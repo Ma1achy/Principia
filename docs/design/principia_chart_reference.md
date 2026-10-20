@@ -459,7 +459,11 @@ n(u,v) = cos(r)·n0 + sin(r)·(d/‖d‖)      d = (2u−1)·s·e1 + (2v−1)·s
 ```
 with `(n0, e1, e2)` an orthonormal frame. **This is the nonlinear chart** — use it wherever a
 linearised decoder is being tested, since an affine chart makes the curvature term identically
-zero.
+zero. **The radius is bounded at π (R-503, closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches
+where `s√2 > π`, is past the antipode of `n0`, where the map wraps; it is the domain's end, not a system, out of the
+count and the total (§5.4). The pixels with `r ≤ π` are the map's **cap**, the part of the sphere in view. Every pixel
+exactly on `r = π` maps to the one point `−n0`; how such pixels count is a definition TASK-M2-28 writes (REQ-CHART-078,
+R-72), and the fixtures avoid that circle.
 
 **No polar buffer (R-12, premise corrected by R-14).** An alternative map kept a buffer $\varepsilon$ off each pole,
 $\theta(u) = \varepsilon + (\pi - 2\varepsilon)u$ and $\varphi(v) = 2\pi v$ in its own naming (θ polar, on the horizontal axis),
@@ -471,8 +475,21 @@ So nothing singular sits at a pole, and the map runs the full $\varphi \in [0, \
 takes $w \to -w$ (the canonical decode's $\beta \in [0, \pi]$ keeps $w \ge 0$, the upper hemisphere)
 (`principia_chart_decoder_contract.md` Part 1). Draw one hemisphere and say so, or draw both and flag
 the redundancy; the hemisphere toggle lives in the Manifold view's Chart section (render_gui_spec §G2, R-113). With
-one hemisphere drawn, the chart's `[0,1]` span on φ is remapped to end at the equator (R-412). The chart's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
+one hemisphere drawn, the chart's `[0,1]` span on φ is remapped to end at the equator (R-412). The spherical map's `system_image` is **n-to-1** with n = 2 — 2-to-1 over the φ
 hemispheres, which decode to the same system (`principia_chart_decoder_contract.md` Part 5, R-59 D5, R-141; `DoubleCover` is the full-range Burrau chart's, §4.5, R-157).
+*Was:* "The chart's `system_image` is **n-to-1** with n = 2", for either map; R-503 gives the exponential map its own.
+
+**The exponential map's `system_image` is computed from its cap (R-503, closing RQ-371),** as the ν charts' is from
+their range (§4.5). Where the cap lies within one closed hemisphere (`w ≥ 0` everywhere on it, or `w ≤ 0`
+everywhere), no pixel's mirror `w → −w` is in view other than itself: **bijective**. Where the cap straddles the
+equator, the value is **n-to-1 with a per-pixel fold**: a pixel whose mirror is not in view counts once; a pixel whose
+mirror is in view counts once for the pair, its representative the pixel with `w > 0` (the canonical decode's
+hemisphere, Part 1 of the decoder contract); a pixel on the equator (`w = 0`) is its own mirror and counts once. "In
+view" is the cap, `[0,1]²`'s pixels with `r ≤ π`; past the square the map is bounded (§5.4) and adds no multiplicity.
+The chart computes the value whenever `n0`, `e1`, `e2` or `s` change, and its label shows it. Per pixel the rule is:
+a pixel counts 1 if its `w ≥ 0`, or if its mirror point lies outside the cap; otherwise 0. "`w = 0`" is the computed
+`w` being ±0.0; "the mirror is in view" is the map's inverse (the log map about `n0`) of the mirrored point landing in
+`[0,1]²` with `r ≤ π` (physics review 5587467237 and qa review 5587466555 of PR #258, applied per R-369).
 
 **Projection.** The default is equirectangular: $\theta$ and $\varphi$ map linearly to the axes. It
 distorts area near the poles but keeps coordinates readable. For quantitative area comparisons, offer an
@@ -806,7 +823,7 @@ existing charts:
 |---|---|---|---|---|
 | `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
 | `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
-| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end) |
+| `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | hatched | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3) |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded below `t = 0`; past `t = 1` it continues, affine (R-508) | blank past `s`'s edges and below `t = 0`; past `t = 1` its systems are drawn (§2.1) | past a bounded edge out of the count and the total (the domain's end); past `t = 1` counted (R-508) |
 | `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
 | Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | hatched on every side | out of the count and the total (the domain's end) |
