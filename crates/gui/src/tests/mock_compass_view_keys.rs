@@ -1,7 +1,7 @@
 //! `mock_compass_view_keys` (REQ-GUI-198; render_gui_spec §G3, § "The compass: look and views (R-451, R-452)";
 //! R-452 C6): the Compass scope's seven siblings in order both ways; Enter on each view button switches the view in
 //! navigation mode; in the Plücker view Enter on the compass starts interaction on the dominant cell, the arrows move a
-//! cell cursor over the upper triangle only, Space steers to it (undone by one undo) and Esc or Enter returns; in the
+//! cell cursor over the upper triangle only, Space steers to it (undone by one Ctrl+Z) and Esc or Enter returns; in the
 //! Cube view the arrows tilt as before; the breadcrumb names the view. Each check also runs on an input it must reject
 //! (R-176, through `rejects`).
 
@@ -279,9 +279,10 @@ fn mock_compass_view_keys_space_steers_to_the_cursor_and_esc_returns() {
         at(&app),
         (vec![COMPASS, COMPASS_VIEW], KeyMode::Interaction)
     );
-    app.undo();
+    press(&mut h, &mut app, Key::Z, Modifiers::CTRL);
     let _ = h.frame(&mut app, Vec::new());
-    assert_eq!(app.snapshot().sim.plane, before, "undone by one undo");
+    assert_eq!(app.snapshot().sim.plane, before, "undone by one Ctrl+Z");
+    assert_eq!(app.snapshot().history.undo_depth, depth);
     // Esc returns to navigation mode on the compass, the cursor gone; there Space steers nothing.
     press(&mut h, &mut app, Key::Escape, NONE);
     assert_eq!(at(&app), (vec![COMPASS, COMPASS_VIEW], KeyMode::Navigation));

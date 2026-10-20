@@ -471,6 +471,7 @@ impl<S: EngineSide> App<S> {
         for scroll in self.keyboard.scrolled().to_vec() {
             windows::console::scroll(&scroll, &mut self.windows.console, &self.console);
         }
+        self.undo_keys(&ctx);
         self.shortcuts(&ctx, &mut actions, &mut edits, &mut out);
         if let Some(due) = self.keyboard.next_repeat_s() {
             ctx.request_repaint_after(std::time::Duration::from_secs_f64((due - now).max(0.0)));
@@ -766,6 +767,27 @@ impl<S: EngineSide> App<S> {
     /// compass in the Plücker view's interaction mode, Space steers to the cell cursor (R-452 C6); anywhere, Alt+digit
     /// toggles an overlay. Each acts in either mode, but not while a text field holds the keyboard or the `?`
     /// overlay is open. And + and − zoom a Trajectory view in interaction mode on it (R-453 D6).
+    /// Ctrl+Z (Cmd+Z): one undo from the contract's history a press, on either page and in either keyboard mode,
+    /// except while a text field holds the keyboard, whose own edit it undoes, or while the `?` overlay, which takes
+    /// every key, is open (§G3; R-409 G5; R-52). The system's repeats of a held press are not presses.
+    fn undo_keys(&mut self, ctx: &egui::Context) {
+        if ctx.text_edit_focused() || self.keyboard.shortcuts_open {
+            return;
+        }
+        let presses = ctx.input(|i| {
+            i.events
+                .iter()
+                .filter(|e| {
+                    matches!(e, egui::Event::Key { key, pressed: true, repeat: false, modifiers, .. }
+                        if crate::keyboard::keymap::undoes(*key, *modifiers))
+                })
+                .count()
+        });
+        for _ in 0..presses {
+            self.undo();
+        }
+    }
+
     fn shortcuts(
         &mut self,
         ctx: &egui::Context,

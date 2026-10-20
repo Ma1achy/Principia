@@ -1,15 +1,16 @@
 //! `mock_compass_steer_latent` (REQ-GUI-197; render_gui_spec § "The compass: look and views (R-451, R-452)", §G4;
 //! R-452 C5): a click on Plücker cell (i, j) sets the slice plane to `z_i × z_j`, the tilts and `γ` 0, the zoom and `z₀`
 //! kept, one `SetField` on the basis, logged in the console, the Manifold view showing `z_i × z_j`, undone exactly by
-//! one undo; locked, the plane turns about the pin. Each check also runs on an input it must reject (R-176, through
+//! one Ctrl+Z; locked, the plane turns about the pin. Each check also runs on an input it must reject (R-176, through
 //! `rejects`).
 
+use eframe::egui::{Key, Modifiers};
 use engine::contract::set_field::{Edit, SetField, SimField};
 use engine::contract::sim_config::{Lock, Plane, LATENT_DIM};
 
 use super::compass_plucker::plucker_app;
 use super::compass_support::{plane, setfields, square, view};
-use super::support::{frame_texts, rejects};
+use super::support::{frame_texts, press, rejects};
 use crate::app::App;
 use crate::explore::compass;
 use crate::explore::compass::views::{plucker, steer, upper, GridPlace};
@@ -24,6 +25,12 @@ fn start() -> Plane {
 }
 
 /// Clicks cell `(i, j)` of the Plücker grid, then one frame for the snapshot to follow.
+/// Ctrl+Z, the contract's undo (§G3; R-409 G5), then a frame to read the snapshot it changed.
+fn ctrl_z(h: &mut Headless, app: &mut App<MockSide>) {
+    press(h, app, Key::Z, Modifiers::CTRL);
+    let _ = h.frame(app, Vec::new());
+}
+
 fn click_cell(h: &mut Headless, app: &mut App<MockSide>, i: usize, j: usize) {
     let at = GridPlace::fit(square(h)).cell_rect(i, j).center();
     for events in crate::capture::click(at) {
@@ -87,10 +94,9 @@ fn mock_compass_steer_latent_every_cell_steers_to_its_coordinate_plane() {
             frame_texts(&mut h, &mut app).contains(&name),
             "Chart shows {name}"
         );
-        // One undo restores the basis exactly.
-        app.undo();
-        let _ = h.frame(&mut app, Vec::new());
-        assert_eq!(app.snapshot().sim.plane, before, "undone by one undo");
+        // One Ctrl+Z restores the basis exactly.
+        ctrl_z(&mut h, &mut app);
+        assert_eq!(app.snapshot().sim.plane, before, "undone by one Ctrl+Z");
         assert_eq!(app.snapshot().history.undo_depth, depth);
     }
     // Controls: a steer that leaves a tilt, and one that emits two SetFields.
@@ -176,9 +182,8 @@ fn mock_compass_steer_latent_locked_turns_about_the_pin() {
     check_steered(&before, &app.snapshot().sim.plane, (1, 6));
     assert_eq!(app.snapshot().sim.lock.z_locked, z0, "the anchor kept");
     assert!(app.snapshot().sim.lock.locked);
-    app.undo();
-    let _ = h.frame(&mut app, Vec::new());
-    assert_eq!(app.snapshot().sim.plane, before, "undone by one undo");
+    ctrl_z(&mut h, &mut app);
+    assert_eq!(app.snapshot().sim.plane, before, "undone by one Ctrl+Z");
     // Locked off the centre (the slice moved since): the pin's chart point keeps its latent point.
     let (mut app, mut h) = plucker_app(&start());
     let p = app.snapshot().sim.plane.clone();
