@@ -179,14 +179,12 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
   goldens' decision, are RQ-330's.
   R-454 (closing RQ-330): the M2 gate confirms the new swatches and that evidence, and the three re-rendered
   goldens are re-baselined under R-444 to R-446.
-- R-504 (closing RQ-373): the four goldens R-467 changes are re-baselined by TASK-M2-34; the M2 gate confirms the
-  canvas background's value and the changed tiles with REQ-COL-110's NaN / Inf style, which is not magenta (R-505).
 - Display names (R-449; TASK-M2-33): one conversion function names what a person reads, the bodies 1, 2, 3 and a pair
   by its two bodies, never its pair id, on every surface built so far; machine-readable exports stay 0-based and say
   so in their header or schema.
 
 <!-- gate:M2 -->
-**Exit gate — 180 requirements** (and every earlier gate still green):
+**Exit gate — 181 requirements** (and every earlier gate still green):
 
 - DEC (39): REQ-DEC-001…030, REQ-DEC-038…041, REQ-DEC-043…047
 - ENC (29): REQ-ENC-001…020, REQ-ENC-022…027, REQ-ENC-029…031
@@ -198,7 +196,7 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 - COL (12): REQ-COL-006, REQ-COL-057, REQ-COL-060, REQ-COL-070, REQ-COL-101…105, REQ-COL-108…110
 - GUI (7): REQ-GUI-002…007, REQ-GUI-188
 - TOOL (3): REQ-TOOL-029…030, REQ-TOOL-163
-- VAL (16): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174
+- VAL (17): REQ-VAL-013…024, REQ-VAL-118, REQ-VAL-120…121, REQ-VAL-174, REQ-VAL-192
 - SYS (7): REQ-SYS-010…016
 <!-- /gate:M2 -->
 
@@ -206,9 +204,8 @@ debug_tooling_plan 0c: the DECODE preset "once the WGSL decode port lands", ROUN
 
 canonical_spec §1 item 6 and §11: "validate physics numerically", natively, before the browser.
 
-- Stepper and regularisation occupants (Heggie default; AZ; logH; none), with the split reversibility flags
-  (R-500). Substep control with the N_sub bucket lookup over the threshold table generated per sim key (R-502;
-  *was:* "the frozen N_sub bucket lookup"); its maximum length is confirmed at this gate (REQ-INT-094). The fixed `dt_macro` march.
+- Stepper and regularisation occupants (Heggie default; AZ; logH; none). Substep control with the frozen
+  N_sub bucket lookup. The fixed `dt_macro` march.
 - Terminal events: collision, escape (closure + energy), ionisation, precedence, and the termination checks.
 - The full `SimState` accumulator fill on the CPU.
 - The validation orbits and ground truth. The independent convergence reference. The Inspector's RK45
