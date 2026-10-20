@@ -111,15 +111,16 @@ Each entry is sorted by Part II §12.1's rule into a post node (Tier 1, derived 
 already resident) or a tile debug shader (Tier 3, a scheduler verdict). The Overlays menu and the Display window (§G5)
 replace the corpus's global display bar (R-67). The Chart group's "forbidden region" and the Integration group's
 "NaN / invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view (R-467, applied per
-R-369).
+R-369); whether they stay beside it, go, or show only while it is on is RQ-374.
 
 **The debug view (R-467).** View › **Debug view** switches the figure, over whatever stain is active, to the one view
 that shows what the presentation views leave out: every system pixel as the stain draws it; a pixel the chart
 classifies as not a system with the hatch, `debug_invalid`; a decode or sim failure with `debug_invalid`; NaN and `±∞`
 with a style of their own (REQ-COL-110). The legend gains a "Debug" key, its three entries "forbidden (chart)",
 "decode or sim failure" and "NaN / Inf", each with its count of the figure's pixels and their share, drawn always
-(§G6; colour_composition §6). It is a render-side toggle sent as a `SetField` marked "no history": a view, not an edit,
-adding no undo entry and re-integrating nothing (gui_state_contract §2). It is off at launch, keeps its state through
+(§G6; colour_composition §6). It is a render-side toggle sent as a `SetField`, undoable as an Overlays ▾ toggle is
+(R-69), re-integrating nothing (gui_state_contract §2; applied per R-369). *Was (R-467 D5 as first ported):* "marked
+'no history': a view, not an edit, adding no undo entry". It is off at launch, keeps its state through
 F3, present mode and both fill modes, and has no key of its own; the View menu reaches it from the keyboard (§G3). On
 the mock its forbidden pixels are the region the test hook flags (`PRIN_MOCK_INVALID`, R-467 D8).
 
@@ -690,7 +691,8 @@ scattered pixels where a sample lands on it exactly, not as a drawn line. `η_E`
 preset, and the near-uniform black, with that contour its only exception, is expected, not a bug. The Chazy stains
 draw the same samples black too, Chazy B's `#141418`, as every presentation view draws a failure (R-467, ruling
 RQ-319; dd_chazy_final_motion §7), so the same slice reads black there; View › Debug view shows them as "decode or sim
-failure". *Was (RQ-319, decided per R-369):* "The Chazy stains draw the same samples with the render contract's hatch
+failure". In both systems the black key's share counts these samples, so there it reads near 100 % and is not a
+bound fraction; the debug view's counts separate them (dd_chazy_final_motion §10.10; R-467, applied per R-369). *Was (RQ-319, decided per R-369):* "The Chazy stains draw the same samples with the render contract's hatch
 (`debug_invalid`), as they draw `sim_failed`, not black, …, so the same slice reads hatched there." The
 tags show in the η_E debug view (R-446), the debug views that keep the invalid hatch and their own palettes: today
 the `state` view shows `decode_failed` and the `detail` view its failure category (debug_tooling_plan §B); which view

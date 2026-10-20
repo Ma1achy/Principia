@@ -1533,3 +1533,32 @@ re-baseline; list them, don't re-baseline without a gate decision." Nothing is r
 - **Applied meanwhile:** nothing re-baselined. TASK-M2-34 is built and reviewed; its PR reports the hashes that
   change and waits for this ruling before it merges.
 - **Waits:** TASK-M2-34's merge (REQ-COL-108's golden line, `rq: RQ-373`).
+
+## RQ-374: R-467 says presentation views "never draw the hatch", and Overlays ▾ keeps two toggles, "forbidden region" and "NaN / invalid pixels", that draw it over the presentation figure *(conflict, R-467 clauses 1 and 6, R-26, REQ-GUI-079; context: TASK-M8-08)*
+
+*Filed on gui review 5585209592 of PR #253 (G5): R-467 D9, as first ported, kept both toggles per R-369, which goes
+beyond the human's words. For the human: yes, because option (b) drops part of a requirement.*
+
+- **File, section:**
+  - `decisions.md` § "R-467 …", the human's words: "1. Presentation views (outcome, Chazy, the stains, F3 full-window)
+    never draw the hatch." and "6. The Chart builder's Domain preview "forbidden in view: N%" (R-408, §G7) stays: it is
+    a diagnostic for building charts, not a presentation view." Clause 6 names only the Domain preview.
+  - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)": "- Chart: forbidden
+    region (the chart's domain function, R-26), grid, Burrau lattice (primitive triples)." and the Integration group's
+    "NaN / invalid pixels"; R-467's sentence: "The Chart group's "forbidden region" and the Integration group's "NaN /
+    invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view".
+  - `plan/requirements.yaml` REQ-GUI-079: "Overlays ▾ must hold the grouped toggles — … Integration (substep density,
+    substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function,
+    grid, Burrau lattice) …".
+- **The conflict:** the two toggles draw the hatch (or, with the debug view built, its styles) over a presentation
+  figure on request. Clause 1 says a presentation view never draws the hatch; clause 3 asks for "one switchable view"
+  that shows these categories; the words name neither toggle.
+- **Options seen:**
+  - (a) Keep both, off by default, drawing the debug view's styles over the figure: diagnostics turned on by the person,
+    as the Domain preview is (R-467 D9 as first ported).
+  - (b) Drop both from Overlays ▾, View › Debug view being the one switchable view. This retires part of REQ-GUI-079,
+    the human's call.
+  - (c) Keep both, enabled only while View › Debug view is on, as filters of what it shows.
+- **Applied meanwhile:** (a). Nothing else waits: TASK-M6-46 and TASK-M6-47 build no Overlays entry.
+- **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
+  the rest of TASK-M8-08 proceeds.

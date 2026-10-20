@@ -94,8 +94,10 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
 - **The debug view and F3's fill mode (R-467, R-468; decided per R-369).** `RenderState`'s `debug_view: bool` is View ›
   Debug view (`principia_render_gui_spec.md` §G2): the engine reads it to draw the figure's non-system, failed and
   non-finite pixels in the debug styles and to count them for the legend's "Debug" key. Its `SetField` path is
-  `RenderField::DebugView`, always marked "no history" as the hover's is, so it never enters undo, a render key that
-  re-integrates nothing, logged as "SetField DebugView before → after (no history)"; it is off at launch. `ViewUI`'s
+  `RenderField::DebugView`, undoable as an Overlays ▾ toggle is (R-69: every `RenderState` edit is undoable), one
+  history entry per toggle, a render key that re-integrates nothing, logged as "SetField DebugView before → after"; it
+  is off at launch (applied per R-369 on gui review 5585209592 of PR #253, G4). *Was (R-467 D5 as first ported):*
+  "always marked 'no history' as the hover's is, so it never enters undo". `ViewUI`'s
   `F3Fill { Extend, Fit }` is View › "F3 fills by", Extend at each launch, the GUI's own state: never undoable, never
   read by the engine, which reads only the figure's viewport, its size and scale (R-406), not kept across sessions.
   The canvas background the presentation views draw for a pixel that is not part of the chart (R-467) is a render

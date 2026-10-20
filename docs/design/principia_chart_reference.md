@@ -836,4 +836,7 @@ any `z`): a hatched pixel there is a decoder bug, warned in the console, and REQ
 none. Extension is free for the affine charts (`Latent`, every flat or axis-aligned slice, `BodyPlane`, tilted or
 rotated: planes, the square only the current window onto them), which never produce a forbidden pixel; the types and
 the fallback matter for the charts whose square is their whole domain (the warp, the mass simplex, the Burrau family,
-the shape sphere's redraws) and for a custom chart's physical-quantity axes (R-468, clause 4).
+the shape sphere's spherical map, whose periodic and pole-crossing types redraw its own systems) and for a custom
+chart's physical-quantity axes (R-468, clause 4). The exponential map is bounded, per the table: its square covers a
+disc of radius `s√2` about `n₀`, and past it a pixel is classified not a system and draws the background, though the
+sphere holds systems there. *Was (R-468 as first ported):* "the shape sphere's redraws".

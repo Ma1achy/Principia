@@ -185,9 +185,13 @@ view keeps the hatch too, on every pixel this part hatches …".
 chart and the flat and body-plane slices, tilted or rotated, are planes, and the square is only the current window
 onto them; their axes are affine and the decoder accepts any `z`, so they never produce a forbidden pixel. The types
 and the fallback matter for the charts whose square is their whole domain (the invariant warp, the mass simplex, the
-Burrau family, and the shape sphere, whose periodic and pole-crossing types redraw its own systems) and for custom
-physical-quantity axes: past their edge, with F3 in its Extend mode, a presentation view shows the canvas background
-and the debug view the hatch (R-467). In Fit mode the figure is the view's square alone, the rest of the window the
+Burrau family, and the shape sphere's spherical map, whose periodic and pole-crossing types redraw its own systems)
+and for custom physical-quantity axes: past their edge, with F3 in its Extend mode, a presentation view shows the
+canvas background and the debug view the hatch (R-467). The shape sphere's exponential map is one of the bounded
+charts: its axes are bounded (`principia_chart_reference.md` §5.4's table) and its square covers only a disc of radius
+`s√2` about `n₀`, so past its square a pixel is classified not a system and draws the background, though the sphere
+holds systems there (physics review 5585225466 of PR #253, P6). *Was (R-468 as first ported):* "and the shape sphere,
+whose periodic and pole-crossing types redraw its own systems". In Fit mode the figure is the view's square alone, the rest of the window the
 canvas background (`principia_render_gui_spec.md` §G1).
 
 **No invented continuations.** An axis gets anything beyond bounded only by declaring it, and any new extension type

@@ -686,6 +686,12 @@ A stain with the energy channel (§10.5, §10.11.2) has §G6's separate key for 
 (or `q_k`) through `b = q/(1 + q)`, parabolic marked at ½, beside the hue swatches (applied per R-369, §G6's rule).
 Bodies are named 1, 2, 3 in every legend (§0).
 
+**B's share counts the failures (R-467).** A `sim_failed` or `decode_failed` sample, a reserved `state` code and a NaN
+draw B's black in every Chazy stain and are no category of their own (§7), so B's share of the view counts them, as the
+outcome view's black share counts its failures (R-446; `principia_render_gui_spec.md` §G6). B's share is then not a
+bound fraction: on a free-fall slice under `η_E` it reads near 100 %. View › Debug view's counts ("decode or sim
+failure", "NaN / Inf") separate them (physics review 5585225466 of PR #253, P7; applied per R-369).
+
 ### 10.11 One body at a time (R-443)
 
 Spec 03 §10, the human's follow-up of 16 October 2026, transcribed. Which body escapes is never drawn in the
