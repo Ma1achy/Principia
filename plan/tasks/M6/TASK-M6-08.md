@@ -47,3 +47,4 @@ The scheduler switches a quad to the linearised decoder (`QuadRequest` `DECODE_M
 - R-395 (RQ-242): beyond ℓ_switch REQ-TOOL-019's "no banding" holds through the per-quad local coordinates. TASK-M5-04
   builds that path (REQ-TOOL-158); this task, which builds `DECODE_MODE`'s switchover, checks that every quad past
   ℓ_switch is routed onto it (REQ-TOOL-159; the human's "M5/M6", applied per R-369).
+- **R-537 EX8 (20 Oct 2026):** in a repeat the zoom is on the canonical quad, and far from the root the f32 centre is taken relative to the root cell's own origin; TASK-M8-57 builds that on this task's path (REQ-TOOL-182).
