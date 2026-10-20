@@ -1473,7 +1473,7 @@ changes what the default view draws.*
     sheet is not offered.
 - **Applied meanwhile:** (a), the types acting as X3a says (R-471 H9); REQ-CHART-061's and REQ-CHART-069's every-pixel
   arms are narrowed to the pixels whose `(a, b)` lie in the square.
-- **Waits:** REQ-CHART-074 (`rq: RQ-402`), what such a pixel draws, closed by TASK-M2-39, a leaf task.
+- **Waits:** REQ-CHART-076 (`rq: RQ-402`), what such a pixel draws, closed by TASK-M2-39, a leaf task.
 
 ## RQ-403: Tilting a saved curved chart into its own saved target: whether the new offset `d′` and the saved `d` add, or the saved rotation acts on `(u′, v′, d′)` *(physics review, R-475 S1 and L5, R-473 J9; context: TASK-M2-40, TASK-M2-39, TASK-M8-48)*
 
@@ -1494,7 +1494,7 @@ changes what the default view draws.*
   - (b) The rotations compose: `(a, b, d) = R·(u′, v′, d′)`, that is `R·R′·(u, v, 0)`.
   - (c) The saved target is not offered to a new tilt.
 - **Applied meanwhile:** (c), a saved curved chart's target dropdowns not offering its saved target (R-475 L5).
-- **Waits:** REQ-CHART-075 (`rq: RQ-403`), closed by TASK-M2-39, a leaf task.
+- **Waits:** REQ-CHART-077 (`rq: RQ-403`), closed by TASK-M2-39, a leaf task.
 
 ## RQ-404: The tilt of a latent view saved at a tilt: only five named dimensions are orthogonal to its plane, the tilt target is not off it, and under Lean each axis the saved pair is not orthonormal, so R-475 L4's "the six dimensions off the saved plane" and both maps' formulas do not apply as written *(gui review, tilt maths, R-475 S1 and L4, R-457, R-474 K1, R-477 C5; context: TASK-M6-49, TASK-M6-51)*
 
@@ -1524,4 +1524,4 @@ changes what the default view draws.*
 - **Applied meanwhile:** a saved latent chart whose plane is spanned by two named dimensions (saved untilted) takes the
   six off it, exactly as L4 says; one saved at a tilt is sliced, saved again and reopened bitwise, and its Tilt section
   is dimmed, with a tooltip naming this entry (R-475 L4).
-- **Waits:** REQ-GUI-251 (`rq: RQ-404`), the tilt of such a chart on the mock, closed by TASK-M6-51, a leaf task.
+- **Waits:** REQ-GUI-265 (`rq: RQ-404`), the tilt of such a chart on the mock, closed by TASK-M6-51, a leaf task.

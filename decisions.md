@@ -13737,7 +13737,7 @@ The human's words, §3 of the instruction R-469 holds, with the §0 lines it res
   `X ≠ Y` keep `(a, b)` in the square. Whether E3 means the chart's own square, or the tilt must keep every window
   pixel's `(a, b)` inside it, changes what the default view draws, which the words do not settle: **RQ-402**.
   Meanwhile the types act as X3a says; REQ-CHART-061's and REQ-CHART-069's every-pixel arms are narrowed to the
-  pixels whose `(a, b)` lie in the square, and what the others draw waits (REQ-CHART-074, `rq: RQ-402`, TASK-M2-39).
+  pixels whose `(a, b)` lie in the square, and what the others draw waits (REQ-CHART-076, `rq: RQ-402`, TASK-M2-39).
 - **H10. The mapping control (gui review 5586902228 of PR #255, G7 and G9; applied per R-369).** The Chart section
   offers the mapping of each energy-type axis the chart has, `E`, `L_z`, `K` and `KE` (H1: `KE` is `K`'s quantity; no
   chart offers `PE` until REQ-CHART-070 writes its warp), and, on a Chart-builder chart, of each other
@@ -14186,7 +14186,7 @@ review; the human may veto any):*
   under Lean the pair is not orthonormal, so Tip as sheet's rotation and Lean's formula would run in a non-orthonormal
   frame and C5 would not hold. Which targets such a chart offers, and how the maps act on its pair, is tilt maths the
   words do not settle: **RQ-404**. Meanwhile such a saved chart is sliced, saved again and reopened as above, and its
-  Tilt section is dimmed, with a tooltip naming RQ-404; its tilt waits (REQ-GUI-251, `rq: RQ-404`, TASK-M6-51).
+  Tilt section is dimmed, with a tooltip naming RQ-404; its tilt waits (REQ-GUI-265, `rq: RQ-404`, TASK-M6-51).
 - **L5. S2, a curved chart.** The saved chart is the parent chart (id and parameters) with the slice centre (its own
   parameters' centre and the hidden coordinates' values) and the tilt (the angles, the targets and the map; `R` is
   recomputed from them, R-474 R3) as its base. Its own parameters are the saved view's window offsets, so a new tilt
@@ -14196,7 +14196,7 @@ review; the human may veto any):*
   never enters `R`, so it is not the 3 × 3 product `R·R′`, which would feed `d′` into `R`'s third input (physics review
   5586890917 of PR #255, F3; REQ-CHART-073's verify corrected). With the new target the saved one, whether `d′` and
   `d` add or `R` acts on `(u′, v′, d′)`, the words do not say: **RQ-403**. Meanwhile a saved curved chart's target
-  dropdowns do not offer its saved target, and that case waits (REQ-CHART-075, `rq: RQ-403`, TASK-M2-39).
+  dropdowns do not offer its saved target, and that case waits (REQ-CHART-077, `rq: RQ-403`, TASK-M2-39).
 - **L6. S3, bitwise.** Reopened at zero tilt the saved chart evaluates the same arithmetic as the view it was saved
   from: the latent chart `z₀ + u·q₁ + v·q₂` on the stored vectors; a curved one the parent's T2 path with the stored
   `R`, the new tilt's identity path taking no arithmetic (R-473, J6). C8 (R-477) tests both.
@@ -14319,7 +14319,7 @@ ruling on, read with R-469 to R-477.
   part with its options, what is built meanwhile and what waits; the requirements that wait carry `rq: RQ-377` and are
   closed by one leaf task (TASK-M8-51), so the rest of the line system does not wait. *As first ported those
   requirements carried no `rq:` key (code review 5586921473 of PR #255, F1); R-509 rules RQ-377, and only part (3)'s
-  real distance waits, on RQ-341, with the key (REQ-GUI-252, TASK-M8-54).*
+  real distance waits, on RQ-341, with the key (REQ-GUI-266, TASK-M8-54).*
 - **M11. Where it is built.** The line engine (TASK-M7-42: the pass, the model and styles, the drawing, smart ink,
   labels); contours (TASK-M7-43: the variables, evaluation, levels, extraction and L4); traces (TASK-M8-49); Lines ▾,
   the editors, axes, presets and persistence (TASK-M8-50); RQ-377's parts (TASK-M8-51, a leaf). Each test of
@@ -14587,7 +14587,7 @@ edges) and § "Display — the last stages" (the overlays, with their earlier wo
 Hover trace — projection onto the current (tilted, sliced) plane" (a clause), `docs/gui/design/GUI_DESIGN_NOTES.md` §
 "01 Explore — the everyday view" (conformed), `docs/read_first/principia_INDEX.md` § "Design documents — the
 reasoning" (a clause), R-476's heading block, `docs/archive/review_queue/M0.md` (RQ-377, moved with its ruling),
-REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249 and REQ-GUI-250 (reqio: statement, verify, rulings, note), REQ-GUI-252
+REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249 and REQ-GUI-250 (reqio: statement, verify, rulings, note), REQ-GUI-266
 (reqio, new, `rq: RQ-341`), REQ-GUI-247, REQ-GUI-079 and REQ-GUI-101 (reqio: statement, verify, rulings, note),
 TASK-M8-51 (no longer waiting), TASK-M8-50 (class edges), TASK-M8-54 (new), `plan/tasks.yaml` and
 `plan/rule_groups.yaml`; built by TASK-M8-50, TASK-M8-51 and TASK-M8-54*
@@ -14621,7 +14621,7 @@ The human's words (20 Oct 2026), ruling RQ-377, from the batch R-506 quotes:
   chart whose plane holds it at zero, the shape chart of the mock-ups, whose momenta are held at zero, so there it
   measures how far a state is off the plane; on every other chart the trace draws at full opacity and its settings say
   "fade: no off-plane distance on this chart (RQ-341)". Physics reviews "where defined" (TASK-M8-51). The general
-  definition, the encode per step and the metric RQ-341 raises, is **REQ-GUI-252** (`rq: RQ-341`), closed by a leaf
+  definition, the encode per step and the metric RQ-341 raises, is **REQ-GUI-266** (`rq: RQ-341`), closed by a leaf
   task, **TASK-M8-54**.
 - **Y4. (4)** Where a contour label and a trace's tick label would overlap, the tick label is kept and the contour's
   skipped; among contour sets §7's list order stands.
@@ -14635,14 +14635,14 @@ The human's words (20 Oct 2026), ruling RQ-377, from the batch R-506 quotes:
   on.
 - **Y7. RQ-377 is closed** and moves to the archive. REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249 and REQ-GUI-250 are
   restated with the answers; TASK-M8-51 no longer waits. As first ported they carried no `rq:` key though R-476 M10
-  said so (code review 5586921473 of PR #255, F1); only REQ-GUI-252 waits, with the key.
+  said so (code review 5586921473 of PR #255, F1); only REQ-GUI-266 waits, with the key.
 
 *What it amends:* **R-476** (M3's keeping class edges in Overlays ▾; M10's meanwhile, replaced by the answers). It closes
 **RQ-377**.
 
 R-509 is in the "design" group of `plan/rule_groups.yaml`, with R-476.
 
-Adds REQ-GUI-252 (`rq: RQ-341`); changes REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249, REQ-GUI-250, REQ-GUI-247,
+Adds REQ-GUI-266 (`rq: RQ-341`); changes REQ-RENDER-097, REQ-RENDER-098, REQ-GUI-249, REQ-GUI-250, REQ-GUI-247,
 REQ-GUI-079 and REQ-GUI-101 (statement, verify, rulings, note).
 
 ## R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied
