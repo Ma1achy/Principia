@@ -123,10 +123,11 @@ pub struct ChartEncoded<R> {
 /// The largest difference of any mass, position or momentum component of `a` and `b`; NaN where any is NaN.
 #[inline]
 pub fn residual<R: LinkReal>(a: &Ic<R>, b: &Ic<R>) -> R {
-    let mut worst = R::zero();
+    let (mut worst, mut nan) = (R::zero(), false);
     let mut take = |x: R, y: R| {
         let d = Float::abs(x - y);
-        worst = select(Float::is_nan(worst) | (d <= worst), worst, d);
+        nan |= Float::is_nan(d);
+        worst = Float::max(worst, d);
     };
     for i in 0..3 {
         take(a.m[i], b.m[i]);
@@ -135,7 +136,7 @@ pub fn residual<R: LinkReal>(a: &Ic<R>, b: &Ic<R>) -> R {
             take(a.p[i][k], b.p[i][k]);
         }
     }
-    worst
+    select(nan, R::nan(), worst)
 }
 
 /// The chart coordinate an axis's [`Coord`] places: `Some` for a finite coordinate, and 0 for an annotation axis, which
@@ -557,9 +558,8 @@ pub fn feasibility<R: WarpReal>(lz: R, k: R, low: Constraint, wide: Constraint) 
     let zero = R::zero();
     let finite = Float::is_finite(lz) & Float::is_finite(k);
     let short = finite && infeasible(R::one(), k, lz);
-    let k_c = select(k > zero, k, zero);
-    let l = l_max(k_c);
-    let lz_c = select(lz < zero, -l, l);
+    let k_c = Float::max(k, zero);
+    let lz_c = Float::copysign(l_max(k_c), lz);
     // `l > 0` exactly where `K* > 0`, so the projection keeps `L_z`'s class iff `L_z = 0` or `K* > 0`.
     let keeps = (lz == zero) | (k > zero);
     let failed = select(k < zero, low, wide);
