@@ -127,7 +127,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-64** — The stain editor is a free, typed node graph *(closes RQ-20)*
 - **R-65** — One Inspector window; the standalone IC Inspector is absorbed *(closes RQ-21)*
 - **R-66** — The time scrubber stays *(closes RQ-22)*
-- **R-67** — The display chain *(closes RQ-23)*
+- **R-67** — The display chain *(closes RQ-23)*. Still in force: the order stain → [the Print graph, where style was] → display scale → gamut clamp → colour-vision simulation → screen, the simulation seeing the final in-gamut colours; the Display window plus the Overlays menu in place of the top display bar. R-487 adds the two line passes, through before the Print graph and over after it. Amended by R-487.
 - **R-68** — Artboard values are illustrative; corpus values win *(closes RQ-24)*
 - **R-69** — What is undoable *(closes the step-6 open question)*
 - **R-74** — The research phases are settled by the vertical slice *(closes RQ-25)*
@@ -164,7 +164,6 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-123** — Achromatopsia is a fifth Display mode *(closes RQ-91)*
 - **R-128 ✱** — The checkerboard's ceiling form is chosen at the M5 gate *(closes RQ-104)*
 - **R-129 ✱** — Where the surfaces with no artboard live *(closes RQ-105)*
-- **R-130 ✱** — The styles are the poster's *(closes RQ-107)*
 - **R-131** — The video encoders *(closes RQ-108)*
 - **R-135** — The across-copy reduction is its own resolve pass *(closes RQ-113)*
 - **R-136** — `debug_invalid(frag_xy)` draws the hatch; sentinels show their value *(closes RQ-114)*. Still in force: `debug_invalid(frag_xy)` draws the hatch, a stored sentinel shows as its value, and only NaN gets the hatch; `diffusion` is no longer a sentinel (R-245). Amended by R-245.
@@ -294,6 +293,20 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-480** — Each link has a preview, about 160 × 110 px in the line system's styles and live while a parameter is dragged: a one-dimensional block's curve with its bounds, the visible range, the centre, its resolution and the default's ghost; the masses' simplex triangle with the image of an even grid of z lines, the view's footprint, the centre and the equal-mass point; the axis warps the same widget; every preview evaluating the generated link functions on the CPU at f64, never a reimplementation
 - **R-483** — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)
 - **R-484** — The round-trip rule: importing any export is the identity on `SimConfig` and `RenderState`, bitwise in the canonical serialisation, on every path but the image's low-bit embedding, which drops whole tiers from the bottom (custom source, then colour) and never tier 1, physics, writing nothing rather than a partial record; the degrading is reported by the writer, the record and the reader, and badged; every field is assigned a tier in one table, exhaustive at compile time; four tests keep it from drifting; splitting tier 2 is queued (RQ-386)
+- **R-485** — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's "Style", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*
+- **R-486** — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*
+- **R-487** — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*
+- **R-488** — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion
+- **R-489** — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain
+- **R-490** — The Print graph is deterministic, seeded only; every length is in `ref_px`, `device_px` or `fraction`; the sheet is anchored to the screen; `boil` is off by default
+- **R-491** — `RenderState.print` is recorded by value everywhere `RenderState` goes; a graph of built-in nodes is round-trip tier 2, custom WGSL tier 3
+- **R-493** — One scenario runner and one scenario registry serve `prin profile`, `cargo xtask bench` and the GUI's "Run benchmark"; they differ only in which scenarios they select
+- **R-494** — A benchmark scenario is data: a file in `bench/scenarios/`, validated at load, with a full canonical start state, a frame-indexed timeline reusing the export keyframe spec, and a suite hash
+- **R-495** — The suite is the design doc's §3 table, swept across the whole tier ladder with the quality arbiter off, plus one arbiter row per scenario; the run modes are Quick, Full and Soak
+- **R-496** — The benchmark runs from the Profiler window's "Run benchmark…" or `prin bench`; a run hides the chrome, ignores input but Esc, and on abort still writes a valid file marked incomplete
+- **R-497** — One plain-text result file, profiler schema v1 plus a benchmark block, carrying no score
+- **R-498** — `prin bench report` turns one or more result files into the design doc's §7 fixed-structure Markdown report, for agents
+- **R-499** — The benchmark's work is deterministic: the same suite on the same build does identical work on every device; the design doc's §9 tests, each with an arm that can fail
 
 ## Values
 
@@ -389,6 +402,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-439** — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)*
 - **R-477** — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating
 - **R-482** — The tests of R-478 to R-481, each with an arm that can fail: the dropdown compatible-only, the defaults bitwise today's, a parameter change moving the result, the range's ends admissible, the log-det at a non-default value, provenance reproducing bitwise, the preview the kernel's own function, and Home leaving the links alone
+- **R-492** — Fidelity to the lab is measured per node and per preset against the bundled reference renders; a deviation the design requires (units, seeding, real fields for the lab's stand-in) is listed in the node's registry entry, never tuned to match; the design doc's §11 tests, each with an arm that can fail
 
 ## CI
 
