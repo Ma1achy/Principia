@@ -13498,7 +13498,7 @@ Adds REQ-INT-091, REQ-INT-092, REQ-INT-093 and REQ-INT-094; changes REQ-INT-028 
 radius, the hemisphere-redundancy paragraph) and § "5.4 Past the unit square — each axis's extension type (R-407)"
 (the exponential map's row), `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the
 validation contract" (n-to-1), R-141's heading block (a forward line, its "Still in force" line reworded), REQ-CHART-014
-(reqio, note), REQ-CHART-060 (new), TASK-M2-28, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-371,
+(reqio, note), REQ-CHART-075 (new), TASK-M2-28, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-371,
 filed on PR #252's branch, taken from it unchanged with its ruling); built by TASK-M2-28*
 
 The human's words (R-500 quotes the message's first item):
@@ -13536,7 +13536,7 @@ spherical map's value; the exponential map's is computed from its cap.
 
 R-503 is in the "physics" group of `plan/rule_groups.yaml`, with R-141.
 
-Adds REQ-CHART-060; changes REQ-CHART-014 (note).
+Adds REQ-CHART-075; changes REQ-CHART-014 (note).
 
 ## R-504 — The goldens R-467 changes are re-baselined as TASK-M2-34 renders them, each `BASELINES.md` row leading with R-504; the canvas background's value and the changed tiles are confirmed at the M2 gate, with REQ-COL-110's NaN / Inf style *(closes RQ-373)*
 *20 Oct 2026 · applied in REQ-COL-108 and REQ-COL-110 (reqio), TASK-M2-34 (the goldens deliverable, an acceptance

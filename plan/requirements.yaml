@@ -1756,7 +1756,7 @@
   - R-141
   - R-157
   milestone: M2
-  note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values). R-113 (RQ-95): the int (m,n) lattice's 'bijective' check is in REQ-CHART-037's verify (M4). R-503 (closes RQ-371): the shape sphere's n-to-1 with n = 2 is its spherical map's value; the exponential map's, computed from its cap, is REQ-CHART-060 (TASK-M2-28)."
+  note: "R-27 adds the value for 'covers each shape twice, as two labelled systems' and corrects the stale 'ray-degenerate' description of the Euclid plane; R-104 names it DoubleCover (chart_decoder_contract Part 5 lists four values). R-113 (RQ-95): the int (m,n) lattice's 'bijective' check is in REQ-CHART-037's verify (M4). R-503 (closes RQ-371): the shape sphere's n-to-1 with n = 2 is its spherical map's value; the exponential map's, computed from its cap, is REQ-CHART-075 (TASK-M2-28)."
 - id: REQ-CHART-015
   area: CHART
   statement: "D and C must be shared and written once, so adding a chart means adding only a Φ, and no chart may carry its own decoder, integrator or renderer."
@@ -2610,7 +2610,7 @@
   - R-468
   milestone: M3
   note: "R-467 D11 as revised on physics review 5585225466 of PR #253, P3 (applied per R-369): BodyPlane does not exist at M2, so REQ-CHART-058 leaves it out and the task that builds it, TASK-M3-36, sweeps it."
-- id: REQ-CHART-060
+- id: REQ-CHART-075
   area: CHART
   statement: "The shape sphere's exponential map must compute its system_image from its cap, the pixels of [0,1]² with r = ‖d‖ ≤ π: bijective when the cap lies within one closed hemisphere; when it straddles the equator, n-to-1 with a per-pixel fold, a pixel counting once unless its mirror w → −w is in view, a mirrored pair counting once with its w > 0 pixel the representative, and an equator pixel counting once; and a pixel with r > π must be the domain's end, not a system, out of the count and the total (R-503)."
   source:

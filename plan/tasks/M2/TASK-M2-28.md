@@ -1,7 +1,7 @@
 # TASK-M2-28 — Shape-sphere display: the 2-to-1 hemisphere fold and the equal-area projection
 
 - **Milestone:** M2
-- **Closes:** REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-060
+- **Closes:** REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-075
 - **Depends on:** TASK-M2-08, TASK-M2-14
 - **Needs (earlier milestones):** REQ-GUI-001, REQ-SYS-009
 - **Reviewers:** code, qa, physics, gui
@@ -29,13 +29,13 @@ The shape-sphere chart shows its redundancy honestly: `system_image = n-to-1` wi
 
 ## Deliverables
 - The hemisphere label / redundancy flag and the projection option on the shape-sphere chart (`crates/kernel/src/chart/shape_sphere.rs`, the label carried in the render; the GUI selector and toggle are REQ-GUI-161, M8).
-- The exponential map's `system_image` computed from its cap, with its per-pixel fold and the `r > π` domain's end (`crates/kernel/src/chart/shape_sphere.rs`; REQ-CHART-060), replacing PR #252's `NToOne(2)` for that map.
+- The exponential map's `system_image` computed from its cap, with its per-pixel fold and the `r > π` domain's end (`crates/kernel/src/chart/shape_sphere.rs`; REQ-CHART-075), replacing PR #252's `NToOne(2)` for that map.
 - Golden images under `fixtures/golden/shape_sphere/`, rendered with native wgpu offscreen (R-110): one per projection and one per hemisphere label / redundancy flag (R-113).
 
 ## Acceptance tests
 - `cargo xtask golden shape-sphere` — the shape-sphere render carries either one labelled hemisphere or both with a redundancy flag; `cargo test -p engine chart_descriptors` reports n-to-1 with n = 2 (R-141) (REQ-CHART-002).
 - `cargo xtask golden shape-sphere-projection` — one golden per projection (equirectangular default, the equal-area alternative) of the shape-sphere chart (REQ-RENDER-026; the M8 selector and toggle are REQ-GUI-161, TASK-M8-06).
-- `cargo test -p kernel exp_map_system_image` — caps inside `w ≥ 0`, inside `w ≤ 0` and touching the equator from one side report bijective; a straddling cap reports the per-pixel fold and its counted total equals the number of distinct systems (a mirrored pair once, its `w > 0` pixel the representative; an equator pixel once); at `s√2 > π` the pixels past `r = π` are out of the count and the total; controls: a fold counting a pair twice, one dropping an equator pixel, and a fixed n = 2 for a one-hemisphere cap each fail (REQ-CHART-060).
+- `cargo test -p kernel exp_map_system_image` — caps inside `w ≥ 0`, inside `w ≤ 0` and touching the equator from one side report bijective; a straddling cap reports the per-pixel fold and its counted total equals the number of distinct systems (a mirrored pair once, its `w > 0` pixel the representative; an equator pixel once); at `s√2 > π` the pixels past `r = π` are out of the count and the total; controls: a fold counting a pair twice, one dropping an equator pixel, and a fixed n = 2 for a one-hemisphere cap each fail (REQ-CHART-075).
 - Definition: the equal-area projection and its keying written into chart_reference §3.3 and approved by the physics reviewer (REQ-CHART-047).
 
 ## Notes

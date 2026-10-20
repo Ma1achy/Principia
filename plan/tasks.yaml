@@ -674,7 +674,7 @@
   title: "Shape-sphere display: the DoubleCover hemisphere and the equal-area projection"
   depends_on: [TASK-M2-08, TASK-M2-14]
   needs: [REQ-GUI-001, REQ-SYS-009]
-  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-060]
+  requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-075]
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M2-29
