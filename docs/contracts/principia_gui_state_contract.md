@@ -47,7 +47,7 @@ SimConfig    (sim key)     chart id + params · z₀,q₁,q₂ · slice values �
                           (lock is chart construction, R-69) · link ids ·
                           integrator occupant · kernel variant (physics, or colour_composition Appendix A's bring-up mode, "the only sim-key item", RQ-221) · compute fast-math setting (off by default, R-297) · T/dt/thresholds/eps · collision radius r_coll · quality settings (§6 — NB not every quality field is sim-key: `render_scale`/`lock_to_native`/`MAX_REL_DEPTH`/`checkerboard_mode` invalidate nothing; the GUI's re-integrate warning keys per-FIELD off the caching blast-radius table, not off the struct's home)
 RenderState (render key)  the stain graph (nodes · wires · per-node params, §5) · overlay set ·
-                          palette/compaction params · playhead t
+                          palette/compaction params · playhead t · the Print graph (print, R-491)
 ViewUI       (pure UI)    backdrop ref · debug category visibility · keyboard focus scope · selection ·
                           kept orbits · inspector t_cursor · open windows · linked views for side by side (v2, R-106) ·
                           playback transport (play/pause/speed/loop — not undoable, not on the sim key, R-96; the
@@ -167,6 +167,20 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
   every enum by a `match` with no wildcard, so a field added without a tier does not compile; the embedding's writer
   and the tests read it (R-484, J8). No struct of either type serialises to `{}` in a state whose every field is off
   its default (R-484, T2; maps and lists may be empty).
+
+**The Print graph (R-485 to R-492; `principia_print_graph.md` §4, §9).**
+- `RenderState` gains `print: PrintGraph`, the Print graph the figure is printed through (R-491): the design doc §4.1's
+  graph object (`format` `principia.print/1`, `name`, `settings`, `nodes`, each `{ type, params, in }`, and `out`),
+  its preset, when it came from one, recorded **by value**, the graph it expanded to, with the preset's id as a label
+  (R-491). The default is Plain, the identity. It serialises with `RenderState` in the one canonical serialisation
+  (R-309, R-318), node ids sorted by JCS and carrying no meaning, so it travels everywhere `RenderState` goes and
+  round-trips bitwise (R-484, RT1). Its `SetField` path is `RenderField::Print`, the whole graph in one edit, a render
+  key that re-integrates nothing and never touches the sim key; it is undoable (R-69), a drag on one of its settings
+  coalescing into one entry (R-96), and Reset to Plain one entry. In R-484's tier table the graph with its built-in
+  nodes is tier 2 and a custom WGSL node's source tier 3 (R-491).
+- **Editor positions are `ViewUI`'s** (R-491; design doc §4.1): where each Print graph node sits on the graph editor's
+  canvas, its pan and zoom and the selection are the editor's own, never the graph's, so moving a node is no undo entry
+  and two equal graphs serialise equal, as the stain graph's are (below).
 
 **The stain graph (R-72; decided per R-369; TASK-M6-29).** `RenderState`'s stain graph is §5's graph object, the one the engine checks and lowers: its nodes, each `{ id, kind, occupant, params }`, `kind` one of `source`, `colour`, `brightness`, `combiner`, `post` and `out`, `occupant` none, a source's field, a built-in's id or a custom occupant's WGSL, and `params` its uniforms' values by name, one number per component; and its wires, each `{ from, to, port }`, `port` the in-port's position, a u32 (R-329). It serialises with `RenderState` as `{ nodes, wires }`, in id order; the default is the backbone alone, the combiner wired to `OUT`. Its `SetField` path is `RenderField::StainGraph`, the whole graph in one edit, undoable (R-69): picking a node's occupant or setting a param is one edit (REQ-GUI-016, which TASK-M7-11 keeps). It is logged as "SetField StainGraph [before] → [after]", each graph as its nodes in id order, `id kind occupant` (a custom occupant written `custom`) with its params, if any, as `{name=value, …}`, then its wires, each `from→to.port`. A node's place on the editor's canvas, the canvas's pan and zoom, and which nodes are selected are the editor's own, not the graph's (R-390, "Contract fields": the corpus names nodes, wires and per-node params only).
 
