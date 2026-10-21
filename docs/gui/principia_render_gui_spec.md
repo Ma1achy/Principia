@@ -799,11 +799,12 @@ are six, `post` among them, and the Print graph's own scopes nest under `post` (
 "(quadtree, stain + style, IC decode, readback, egui) are scopes nested under the five stages" (stale value, replaced
 by R-485 and R-534; telemetry §5's "stain + style" is "stain").
 
-**The post stage (R-488, R-497).** The Print graph is a stage of its own in the frame record, `stage_ms.post`, with the
+**The print stage (R-488, R-497).** The Print graph is a stage of its own in the frame record, `stage_ms.post`, with the
 degrade level that ran, `post_level` (`full`, `reduced` or `plain`), per frame; the profiler shows it beside the five.
 It bumps the schema to v2, `principia-profile-v2`, and every reader accepts v1, a file written before it read as
 telemetry §5 says (R-534; R-497, K3). *Was:* "It bumps the schema, whose version is RQ-399's; a file written before it
-is read as telemetry §5 says (R-497, K3)."
+is read as telemetry §5 says (R-497, K3)." The profiler names the stage "print stage" (the human's ruling on RQ-497, 21 Oct 2026), its key `post`
+(applied per R-369). *Was:* "The post stage".
 
 **For agents, the same data structured:**
 ```

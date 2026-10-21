@@ -62,10 +62,12 @@ Both are atomic counters, counted in release builds as well as debug ones, and r
 profiler/telemetry readback a frame or two late, never stalling the frame; `QuadReduction` is unchanged and stays the
 sole automatic return of simulation data (R-142, R-288).
 
-**The post stage (R-488, R-497).** The Print graph (`principia_print_graph.md`) is a stage of its own: `stage_ms` gains
+**The print stage (R-488, R-497).** The Print graph (`principia_print_graph.md`) is a stage of its own: `stage_ms` gains
 `post`, its ms, between `colour` and `upload`, and each frame records `post_level`, the degrade level that ran (`full`,
 `reduced` or `plain`; design doc §8.2), so a profile shows when the medium degraded. They bump the profiler schema to
 v2 (§5, "Schema v2"; R-534). *Was:* "They bump profiler schema v1 (§5, "The bumped schema"; the version is RQ-399)."
+The stage is named the print stage (the human's ruling on RQ-497, 21 Oct 2026: "print stage"); its keys stay `post` and `post_level`, as the
+rulings on RQ-479 and RQ-495 name them (applied per R-369). *Was:* "The post stage", here and in §5.
 
 **`stage_ms` is the load-bearing one.** Without it you know a frame was slow and not *which resource
 ran out* — and different devices will bottleneck differently. Integrated graphics is bandwidth-bound;
@@ -387,7 +389,7 @@ section changes. Schema v1 stays as defined above, and every reader accepts both
 closed set, a v2 file against v2's (R-534). *Was:* "**The bumped schema (R-488, R-497; its version and name are
 RQ-399).** The Print graph's stage and the benchmark add to schema v1 as follows; nothing else of this section
 changes."
-- **The post stage.** `stage_ms` and `stages` gain `post`, so the stages are integrate, reduce, colour, post, upload
+- **The print stage.** `stage_ms` and `stages` gain `post`, so the stages are integrate, reduce, colour, post, upload
   and present, written in that order; `post` is `null` in a frame that runs no Print graph stage (a headless scenario
   with no figure), as `present` is in a batch render. The finer category "stain + style" (below) is "stain" under
   `colour`; the Print graph's own scopes nest under `post`.
@@ -400,7 +402,7 @@ changes."
   perf review 5596612647 of PR #268, F4, applied per R-369), each scenario is bracketed by a `scenario_begin` and a `scenario_end` line, and the last line
   is the run summary. These lines are part of schema v2, one schema (R-534); a trace that is not a benchmark result
   has none of them. *Was:* "Whether these lines are part of the bumped schema or a block beside it is RQ-399."
-- **How an earlier file is read (R-497, K3).** A file written as schema v1 before the post stage stays readable: a
+- **How an earlier file is read (R-497, K3).** A file written as schema v1 before the print stage stays readable: a
   reader takes its frames, with no `post` stage and no `post_level`, and reports both as not recorded, never as 0 ms or
   `"full"`; `prin profile diff` between it and a later file lists `post` and its scopes as only in one file, as any
   missing scope is listed (`principia_render_gui_spec.md` § "Profiler"), and compares the rest; `prin bench report`

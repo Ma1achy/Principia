@@ -208,8 +208,8 @@ and in `report` and `compare`. The work is the fixed surface's (R-535), so the v
 
 **One file**, `principia-bench-<device-slug>-<YYYYMMDD-HHMM>.jsonl`, profiler schema v1 **plus** a benchmark block. It
 stays JSON Lines and plain text (§5).
-*Ruled by R-534 (RQ-399): the file is **profiler schema v2**, `principia-profile-v2`, one schema holding v1, the post
-stage, `post_level` and the benchmark lines below; readers accept v1 (telemetry §5).*
+*Ruled by R-534 (RQ-399): the file is **profiler schema v2**, `principia-profile-v2`, one schema holding v1, the print
+stage (its key `post`, the human's ruling on RQ-497), `post_level` and the benchmark lines below; readers accept v1 (telemetry §5).*
 
 1. **Line 1: the session header** (§2's session block, as today), plus `bench`:
    - `mode`, `suite_hash` and `complete`;

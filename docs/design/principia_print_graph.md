@@ -161,7 +161,11 @@ references only registered types and in-range values. A preset is data, so addin
 nodes exist.
 
 `catalogue/node_catalogue.json` in this bundle is the lab's registry exported as data: 78 types, their categories,
-docs, inputs and parameter ranges. It is the porting checklist.
+docs, inputs and parameter ranges. It is the porting checklist. The lab's `source` category, which holds the `render`
+node (labelled Render), is named **"Print source"** in the port, as the stage the graph runs in is the **print stage**
+(§8), so neither is read as the stain graph's `source` or `post` (the human's ruling on RQ-497, 21 Oct 2026: "The Print graph's "post" stage and
+"Source" category are qualified the same way ("print stage", "Print source")"). The catalogue keeps the lab's label,
+"Source", as the lab's record.
 
 ### 4.4 Payload fields as inputs
 
@@ -187,6 +191,9 @@ where the medium follows the physics: the relief is the lifetime, the wash is we
   window rule. The Print graph can never write it. *(R-526: the stain's normalisation. The stain's `range_norm` keeps a
   declared range fixed, `t_end` → lin [0, T], and measures only an unbounded field over the draw, so "over the visible
   range" and §12 q3's rescaling are queued as RQ-478; meanwhile each field's own `range_norm` rule applies.)*
+- **Not Chart position.** Chart position (R-542, the state map's `point⟨q⟩` source) is not a Print graph field input:
+  a field input reads a payload field, and Chart position is a source of the stain graph, read there only (the human's ruling on RQ-497, 21 Oct 2026:
+  "Chart position is not a Print graph field input; print_graph §4.4 says so").
 - **Absent is a defined state.** If the field is not in the payload (a tier that does not compute it), the input
   takes the node's declared default and the panel says "field not available at this tier". It is never silently
   replaced by brightness. In the lab these four presets use brightness as a stand-in, which is why they carry a `*`;
@@ -301,22 +308,26 @@ This is Malachy's ruling. While the camera moves (the frame record's `camera_del
    - `reduced`: run at half or quarter resolution and upsample; most nodes;
    - `bypass`: replaced by the identity while moving; nodes whose reduced form would look wrong, such as ASCII, where
      half-resolution characters are a different picture.
-2. If the post stage still exceeds its share of the frame budget, the **whole graph** drops a level: reduced, then
+2. If the print stage still exceeds its share of the frame budget, the **whole graph** drops a level: reduced, then
    Plain.
 3. **On settle** (no camera change for `settle_ms`, default 250 ms, with hysteresis), the graph renders at full
    quality once and holds it.
 
 The playhead advancing is **not** motion for this purpose. The view is still, so the medium renders at full quality
 and stability (§6.3) keeps it from shimmering. If full quality cannot hold the playback rate, the frame record says so
-and the tier controller treats the post stage like any other stage.
+and the tier controller treats the print stage like any other stage.
+
+*The Print graph's stage is named the **print stage** (the human's ruling on RQ-497, 21 Oct 2026); its frame-record keys stay `stage_ms.post` and
+`post_level`, as the rulings on RQ-479 and RQ-495 name them (applied per R-369). Was: "the post stage", here and in
+§8.2.*
 
 ### 8.2 The budget
 
-*Queued: the tier controller's accounting of the post stage moves the Auto rung, which sets N, E, depth and FTLE
+*Queued: the tier controller's accounting of the print stage moves the Auto rung, which sets N, E, depth and FTLE
 gating, against §3's "A Print graph cannot change any number the instrument reports": RQ-479.*
 
-The post stage is a stage in the telemetry frame record (`stage_ms.post`). It is not exempt from the tier
-controller's accounting; the tier simply has a post-stage share. Which degrade level ran is recorded per frame
+The print stage is a stage in the telemetry frame record (`stage_ms.post`). It is not exempt from the tier
+controller's accounting; the tier simply has a print-stage share. Which degrade level ran is recorded per frame
 (`post_level: full | reduced | plain`), so a profile shows when degradation happened and the benchmark (see
 `principia_benchmark.md`) measures it per node class.
 
