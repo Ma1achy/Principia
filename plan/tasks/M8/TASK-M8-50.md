@@ -40,3 +40,4 @@ Lines ▾ beside Overlays ▾ with its count and `Alt+L`; the contour-set editor
   panel's and `Trace…`'s (TASK-M8-61, TASK-M8-62). REQ-GUI-247 is restated (*was:* "it lists the contour sets, traces
   and axes with their visibility"). Whether Lines ▾ stays for the rest of the line system is RQ-448, its option (a),
   Lines ▾ kept for contours, axes, grids and presets, applied meanwhile; a ruling other than (a) is a follow-up change.
+- R-484 J4 (20 Oct 2026): the line system is tier 2 of the embedding.

@@ -1410,6 +1410,29 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
 - **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
   open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
 
+## RQ-386: Whether tier 2 of the embedding should split further, the ramp window and colour mode above the overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes *(the human's queued question, R-484 RT2; context: TASK-M7-44)*
+
+*Queued by the human (the round-trip rule, "Queue, don't rule"). For the human: yes, it changes what a small image
+carries.*
+
+- **File, section:**
+  - `decisions.md` § "R-484 — …", the human's words: "Whether tier 2 should split further, for example ramp window and
+    colour mode above overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes." and
+    RT2's table: "**2. Colour** | `RenderState` as built-ins: colour mode enum and every parameter, the ramp window,
+    overlays and the line system."
+  - `docs/design/principia_dd_image_embedding.md` § "6. What travels": "**The ramp window is not optional.** An
+    auto-ranged ramp manufactures or hides the difference it is meant to show".
+  - The same, § "7. Measured capacity and behaviour", to be re-measured with the tiers (R-483 H6, TASK-M7-44).
+- **Options seen:** (a) tier 2 whole, as RT2 has it; (b) tier 2a (the stain graph's built-ins, their parameters and the
+  ramp window) above tier 2b (overlays, lines, the playhead and hover, `f3_fill`), 2b dropping first; (c) decided by
+  TASK-M7-44's measurement: split only if tier 2 fails to fit at 64² or 128² for a typical stain.
+- **Applied meanwhile:** (a). Nothing waits; TASK-M7-44's measurement reports tier 2's size so the human can rule with
+  it.
+- **Parked:** R-522 (20 Oct 2026), the human: "RQ-386 after the capacity re-measure." A deferral by ruling: the entry
+  stays open, waiting on TASK-M7-44's capacity re-measure (REQ-TOOL-174), which reports tier 2's own size and, at
+  64² and 128², whether tiers 1 and 2 fit; it then returns to the human with those numbers. Meanwhile (a), tier 2
+  whole, stands, and nothing else waits.
+
 ## RQ-406: On a periodic axis, whether the view centre is stored unwrapped (continuous pan, an unbounded number) or canonicalised after each gesture (bounded, with an invisible jump of one period) *(the human's queued question, R-537 Q1, EX9; REQ-GUI-270; context: TASK-M8-55)*
 
 *Queued by the human (`principia_extension_interaction.md` §4, Q1). For the human: yes, it changes what the view state
