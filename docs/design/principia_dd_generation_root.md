@@ -510,7 +510,7 @@ its reduction's identity (above, "No escape (R-418)"), tested by their bits.
 | `error_ratio` | (qr_w2, 16, 16) | f16 | log | [0, ∞) | overflow inf |
 | `roundtrip_error` | (qr_w3, 0, 16) | f16 | log | [0, ∞) | overflow inf |
 | `alpha_area` | (qr_w3, 16, 16) | f16 | diverging | (−∞, ∞) | overflow inf |
-| `alpha_energy` | (qr_w4, 0, 16) | f16 | lin, centred on 1.0 | proposed (REQ-PAY-093; M5 gate) | overflow inf |
+| `alpha_energy` | (qr_w4, 0, 16) | f16 | lin | (−∞, ∞) | overflow inf |
 | `worst_energy_drift` | (qr_w4, 16, 16) | f16 | log | [0, ∞) | overflow inf |
 | `n_unresolved` | (qr_w5, 0, 16) | u-bits | lin | [0, 65535] | — |
 | `suspect_fraction` | (qr_w5, 16, 16) | f16 | lin | [0, 1] | — |
@@ -520,9 +520,18 @@ its reduction's identity (above, "No escape (R-418)"), tested by their bits.
 | `escape_time_max` | (qr_w7, 16, 16) | f16 | lin | [0, ∞) | sentinel −∞ · overflow saturate |
 | `retrograde_fraction` | (qr_w8, 0, 16) | f16 | lin | [0, 1] | — |
 | `mean_orbit_count_spread` | (qr_w8, 16, 16) | f16 | lin | [0, ∞) | overflow saturate |
-| `running_mean_divergence` | scalar-index 41 | f32 | lin | one-signed, declared by REQ-PAY-109 (built as (−∞, ∞), PR #208) | — |
+| `running_mean_divergence` | scalar-index 41 | f32 | lin | (−∞, ∞) | — |
 | `first_divergence_t` | scalar-index 42 | f32 | lin | [0, ∞) | sentinel +∞ |
-| `coherence` | scalar-index 43 | f32 | lin | one-signed, declared by REQ-PAY-109 (built as (−∞, ∞), PR #208) | — |
+| `coherence` | scalar-index 43 | f32 | lin | (−∞, ∞) | — |
+
+*The three rows as built (R-545, RQ-278).* The `alpha_energy`, `running_mean_divergence` and `coherence` rows above are
+the ledger as built, which `crates/ledger/tests/quad_reduction.rs` parses against this table; they change together with
+the ledger in TASK-M5-32, the task that implements RQ-278's ruling. Under R-545: `running_mean_divergence` and
+`coherence` are one-signed, each declared a range that does not span zero, with its formula and citation (REQ-PAY-109),
+so both stay `lin` on viridis; `alpha_energy` keeps `lin`, centred on its analytic 1.0, its range and that placement
+proposed with REQ-PAY-093 and confirmed at the M5 gate. Until TASK-M5-32 lands, the `(−∞, ∞)` here is the built value,
+not a declaration R-545 makes. *Was (fix round 1 of PR #274):* the three cells read "lin, centred on 1.0 / proposed
+(REQ-PAY-093; M5 gate)" and "one-signed, declared by REQ-PAY-109 (built as (−∞, ∞), PR #208)".
 
 **Scales (REQ-PAY-094).** A fraction, a spread, a count, a time and a crossing time are `lin`. `dominant_outcome` is
 `categorical(32)`, one category per bin, and `spread_winner` `categorical(2)`, its two codes. `error_ratio`,

@@ -1,7 +1,7 @@
 # TASK-M8-58 — The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-CHART-084
+- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-CHART-084, REQ-GUI-350
 - **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -40,6 +40,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - `cargo test -p kernel compute_ic_guards` — REQ-INT-096's verify (R-538 T11).
 - `cargo test -p render trace_leaves_per_axis` — REQ-GUI-277's verify (R-538 T14, T15).
 - `cargo test -p render trace_branch_continuity` — REQ-GUI-278's verify (R-538 T16, T17's trace half).
+- `cargo test -p gui tilt_physical_p_lambda` — REQ-GUI-350's verify: the shape sphere's Tilt offers `p_λ,x` and `p_λ,y` once REQ-CHART-084 defines them; controls: offered before the definition, or missing after it, each fail (R-554 L5).
 - `cargo test -p render trace_mix_frame` — REQ-GUI-279's verify (R-538 T16b).
 - `cargo test -p render trace_curve_axis` — REQ-GUI-280's verify (R-538 T18).
 - `cargo test -p gui trace_playback` — REQ-GUI-281's verify (R-538 T19).
@@ -54,7 +55,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - **Ruled as applied meanwhile (R-538 I8, I13; R-553, 21 Oct 2026):** RQ-412 to RQ-415's option (a); RQ-418 (a), a non-finite step ends the run `sim_failed`, its trace ending with "?"; RQ-417 (b) for the readout, its count line "not a system: N samples" in a presentation view and "in forbidden: N samples" only in a debug view (R-553 K1; REQ-GUI-276). *Was:* "**Applied meanwhile (R-538 I8, I13):**", "RQ-417 (b) for the readout." and "A ruling other than these is a follow-up change."
 - **R-541 (21 Oct 2026):** the settings' place in the GUI is `Trace…`, the Trajectory panel's Trace section and Overlays ▾ › Trace, not Lines ▾ (REQ-GUI-271 restated; RQ-448 (a), ruled so by R-556). This task keeps the settings, their order and defaults as state; the ramp control and the playback extent stay this task's: the ramp control as a widget with its round-trip test (REQ-GUI-282), hosted by TASK-M8-61's Trace section and TASK-M8-62's `Trace…`, which follow this task and no longer wait on Listen (gui review 5595359543 of PR #267, G7; applied per R-369; *was:* "the ramp control and the playback extent stay this task's, built where TASK-M8-62's `Trace…` will hold them.").
 - **REQ-GUI-245** (TASK-M8-49) no longer draws the markers; this task replaces them. The icons are figure marks (R-539).
-- **RQ-472 (a), ruled by R-554:** on a tilted view the trace's images over a pole follow REQ-SCHED-101's pole maps, only where `N_a = 0` and `N_b = 0`; no image across the equator fold is drawn on a tilted view, the human's shape sphere ruling of 21 Oct governing it (REQ-GUI-278). *Was:* "**RQ-472 waits:** the trace's images over a pole or the equator fold on a tilted view (REQ-GUI-278, `rq: RQ-472`); the rest does not wait."
+- **RQ-472 (a), ruled by R-554:** on a tilted view the trace's images over a pole follow REQ-SCHED-101's pole maps, only where `N_a = 0` and `N_b = 0` (REQ-GUI-278); the equator fold on a tilted view is not applied by R-554, the human's shape sphere ruling of 21 Oct governing it (fix round 1 of PR #274, gui G2 (a), applied per R-369; *was:* "no image across the equator fold is drawn on a tilted view, the human's shape sphere ruling of 21 Oct governing it (REQ-GUI-278)."). *Was:* "**RQ-472 waits:** the trace's images over a pole or the equator fold on a tilted view (REQ-GUI-278, `rq: RQ-472`); the rest does not wait."
 - **RQ-473 (a), ruled by R-554 as applied meanwhile:** T16 and T16b hold the step within REQ-GUI-283's calibrated threshold, not 3× (TF2.3 measures correct code at 5–97×).
 - **RQ-474 (a), ruled by R-554:** the shape sphere offers the physical `p_λ` components as tilt targets, defined by this task (REQ-CHART-084, R-72: written into `principia_chart_decoder_contract.md` § "Tilt (basis edit)", physics-reviewed, as the trace demo's tab F builds them), and T15's second arm runs on that target (REQ-GUI-277). *Was:* "**RQ-474 waits:** T15's physical-momentum arm (REQ-GUI-277, `rq: RQ-474`); R-473 offers no such tilt target."
 - **Closes, for gaps the corpus leaves open:** REQ-GUI-283 (R-71 calibration) and REQ-CHART-084 (R-72 definition, R-554: the physical `p_λ` tilt targets).

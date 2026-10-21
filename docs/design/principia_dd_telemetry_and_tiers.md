@@ -250,7 +250,10 @@ A tier that lowers `N` on a bandwidth-bound device is optimising the wrong axis.
 **Profiler schema v1: the keys and the nesting (R-56, R-72).** This is the definition REQ-TOOL-120 asks for. Its typed
 form is `engine::contract::profile`, and its JSON Schema is `crates/engine/src/contract/schema/profile_v1.json`; both
 follow it. Every object below has exactly the keys listed, all required: an absent value is `null`, never a missing
-key. A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
+key. One key is the stated exception: the frame record's `substep_histogram`, which the human's ruling adds to
+schema v1 (R-545, RQ-286), may be missing from a frame written before it; the schema and the reader both accept such a
+frame and report the histogram as not recorded, never as zeros. Where the key is present it is an array of exactly 16
+integers, never `null` (fix round 1 of PR #274, qa Q4, applied per R-369). A key named `ms` or ending in `_ms` is wall-clock milliseconds, a number ≥ 0; counts and sizes are integers ≥ 0.
 The typed form gives every count and size an explicit width, u32 or u64, never `usize` (R-329).
 
 The ranges, which the typed form and the JSON Schema both hold: `cpu_cores_available`, `cpu_cores_total`, `gpu_cores`,

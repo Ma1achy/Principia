@@ -2,7 +2,7 @@
 
 - **Milestone:** M2
 - **Closes:** REQ-DEC-011, REQ-VAL-017
-- **Depends on:** TASK-M2-02, TASK-M2-24
+- **Depends on:** TASK-M2-02, TASK-M2-24, TASK-M2-47
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-9, PIT-10
@@ -32,11 +32,16 @@ every branch input of dd_decoder §2's table in its corrected form.
   between CPU-f32 and the GPU on Metal and lavapipe at TASK-M2-02's onset crossings; control: the unfused
   `fma(m₁, 1, m₀)` evaluation flips the tag (REQ-DEC-011).
 - `cargo test -p engine decode_parity` — decoder test 12 on Metal and lavapipe: continuous outputs within the
-  f32-eps-scaled tolerance, branch tags bitwise equal (REQ-VAL-017).
+  f32-eps-scaled tolerance, branch tags bitwise equal, `C`'s mirror and guard in TASK-M2-47's form; control: on the
+  same fuzzed inputs the superseded forms (the explicit `fma(m₁, 1, m₀)`, a plain float subtract or compare) under an
+  unfused or flush-to-zero CPU emulation give a different tag on at least one input (REQ-VAL-017).
 - Review (physics) — each branch input's form and proof (REQ-DEC-011, REQ-VAL-017).
 
 ## Notes
 - Applied per R-369: TASK-M2-02 and TASK-M2-24 merged with REQ-DEC-011 and REQ-VAL-017 held (rq: RQ-298); R-547
-  rewrites and re-proves each in its own task, so they move here. REQ-DEC-017 and REQ-DEC-022, already built in the
-  corrected form, stay closed by their tasks.
+  rewrites and re-proves each in its own task, so they move here. REQ-DEC-022, already built in the corrected form, stays closed by its task; REQ-DEC-017 stands
+  except the pair differences feeding the mirror decision and the guard, rebuilt by TASK-M2-47, on which this task
+  depends because dd_decoder §2's table includes the mirror in `C` (fix round 1 of PR #274, physics P1 and qa Q5,
+  applied per R-369). *Was:* "REQ-DEC-017 and REQ-DEC-022, already built in the corrected form, stay closed by their
+  tasks."
 - The test names above are the existing tests' where they exist; the implementer keeps them.

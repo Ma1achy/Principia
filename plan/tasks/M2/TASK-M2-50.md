@@ -26,8 +26,8 @@ adds the Randomise arm, and proposes the bounds.
 ## Deliverables
 - In `cargo xtask gate inspector-roundtrip` (`crates/validation/`): the shape checks over RQ-475's families (random
   gauge elements; equal-mass equilateral triangles, `L⁺` and `L⁻`; collinear states with masses from `z_μ` on
-  `[−4, 4)²`) judged: the `lookup_clamped` bit and `z_β`'s clamp image bit for bit, `|w − 1|` and `|w|` against
-  REQ-VAL-121's bounds; each with a registered negative control (R-176).
+  `[−4, 4)²`) judged: the `lookup_clamped` bit and `z_β`'s clamp image bit for bit, `|w − 1|` and `|w|`, read on the canonical
+  state `D(E(x))` (where `C`'s mirror puts `L⁻` at `w = +1`), against REQ-VAL-121's bounds; each with a registered negative control (R-176).
 - In `cargo xtask gate inspector-handles`: the Randomise arm beside REQ-VAL-021's, its per-handle maxima reported, its
   verdict separate.
 - The calibration proposal for the shape bounds and the Randomise arm's bound, with TASK-M2-27's proposal for the
@@ -36,7 +36,7 @@ adds the Randomise arm, and proposes the bounds.
 ## Acceptance tests
 - `cargo xtask gate inspector-roundtrip` — the fixed, recorded seed's 2×10⁴ `z` in the ball `‖z‖ < 4`: max
   `‖z − E(D(z))‖ ≤ 1.2×10⁻¹³`, canonical CoM ≤ 1.7×10⁻¹⁶; every collinear state's `z_β` at its clamp image with
-  `lookup_clamped` set and no equilateral state's set, bit for bit; max `|w − 1|` and max `|w|` within REQ-VAL-121's
+  `lookup_clamped` set and no equilateral state's set, bit for bit; max `|w − 1|` and max `|w|`, read on the canonical state `D(E(x))`, within REQ-VAL-121's
   bounds; controls: a state moved off the line by one ulp is caught, and a bound tightened below the measurement fails
   (REQ-VAL-022).
 - `cargo xtask gate inspector-handles` — REQ-VAL-021's arm at 1.6×10⁻¹⁴ unchanged; the Randomise arm's max `‖Δz‖`

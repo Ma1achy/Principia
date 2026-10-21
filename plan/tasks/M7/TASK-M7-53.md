@@ -32,9 +32,20 @@ the hash and runs seam 5 end to end.
 - `cargo test -p ledger schema_version_columns` — changing one entry's `scale` leaves the schema version unchanged;
   changing a bit offset, a width, a type or a continuation-table entry changes it; control: a variant hashing `scale`
   fails (REQ-GEN-043).
+- `cargo test -p engine schema_signature_scale` — REQ-GEN-017's cache test extended: one field's `scale` changed alone
+  leaves the hash and the compatibility signature unchanged and the cached payload is served; a bit offset flipped still
+  invalidates it; control: a variant hashing `scale` fails (REQ-GEN-043).
 - `cargo test -p render ledger_scale_restyle_zero_recompute` — seam 5 end to end: with the regenerated ledger the view
   re-styles, the cache serves the same payload and the dispatch counter is unchanged (REQ-GEN-043, REQ-COL-032).
 
 ## Notes
 - Applied per R-369 (R-545 C1): REQ-COL-032 stays TASK-M7-05's (merged), its hold lifted; its zero-recompute arm runs
-  here. REQ-GEN-008 (TASK-M0-12) and REQ-GEN-017 (TASK-M5-06) are restated to "a layout or kernel change".
+  here. REQ-GEN-017 (TASK-M5-06) is restated to "a layout or kernel change"; REQ-GEN-008 (TASK-M0-12, merged) stays as
+  built. Every `scale` arm is REQ-GEN-043's, here, since neither earlier task can pass it (fix round 1 of PR #274, qa
+  Q2, applied per R-369). *Was:* "REQ-GEN-008 (TASK-M0-12) and REQ-GEN-017 (TASK-M5-06) are restated to \"a layout or
+  kernel change\"."
+- qa exception forced by R-545 (RQ-297), named per R-290 and R-369: `crates/ledger/tests/qa_TASK-M0-12.rs:143-149`, the
+  `scale` edit in `entry_edits` run by `qa_m012_every_field_of_every_entry_changes_the_version` (module doc :4), asserts
+  that a `scale` change moves the version, the opposite of the ruling. It changes here as an `M` line on a qa file whose
+  commits are all qa's (f4cb7e8e, 1c68f65c): the `scale` edit moves to a "leaves the version unchanged" arm. The code
+  reviewer confirms no other assertion is weakened.

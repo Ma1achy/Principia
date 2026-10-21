@@ -800,7 +800,7 @@
 - id: TASK-M2-48
   milestone: M2
   title: "The decoder's fma-built branch inputs rewritten to R-547's form and re-proved: M₀₁ for M01_TINY, and decode test 12 on Metal and lavapipe"
-  depends_on: [TASK-M2-02, TASK-M2-24]  # both merged with these requirements held (RQ-298); applied per R-369
+  depends_on: [TASK-M2-02, TASK-M2-24, TASK-M2-47]  # TASK-M2-02 and TASK-M2-24 merged with these requirements held (RQ-298); TASK-M2-47 rebuilds C's pair differences, which dd_decoder §2's table ("the mirror in C") and decode test 12 read (fix round 1 of PR #274, physics P1, qa Q5); applied per R-369
   needs: []
   requirements: [REQ-DEC-011, REQ-VAL-017]
   reviewers: [code, qa, physics]
@@ -2827,7 +2827,7 @@
   title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
   depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52]  # TASK-M7-52: the trace's projection is the one projection (R-542 H11; PR #270 code review 1, applied per R-369)
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-CHART-084]
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-CHART-084, REQ-GUI-350]  # REQ-GUI-350: gui review 5604048081 of PR #274, G3, applied per R-369
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
   pitfalls: []
 - id: TASK-M8-59

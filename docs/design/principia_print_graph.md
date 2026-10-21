@@ -347,7 +347,9 @@ gating, against §3's "A Print graph cannot change any number the instrument rep
 
 The print stage is a stage in the telemetry frame record (`stage_ms.post`). Its time is recorded but excluded from the
 Auto arbiter's rung solve: the rung is solved without it, and its share of the frame budget is answered only by the
-Print graph's own degrade (§8.1; R-557, RQ-479). *Was:* "It is not exempt from the tier controller's accounting; the
+Print graph's own degrade (§8.1; R-557, RQ-479). The budget the rung is solved against does not depend on which
+Print graph is active, Plain included; whether it is the whole frame budget or the budget less a fixed print share is a
+definition (R-72) for the Print graph plan PR (R-557 B2). *Was:* "It is not exempt from the tier controller's accounting; the
 tier simply has a print-stage share." (stale value, replaced by R-557). Which degrade level ran is recorded per frame
 (`post_level: full | reduced | plain`), so a profile shows when degradation happened and the benchmark (see
 `principia_benchmark.md`) measures it per node class.

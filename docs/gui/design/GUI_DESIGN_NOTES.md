@@ -33,7 +33,7 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   badge in the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks
   whether it may be there", a stale value, replaced by R-523)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
-- **Not in the dev GUI:** Chazy subtitles (captions over the figure), and the object-based stain desk. The Stain panel is the plain node-graph editor.
+- **Not in the dev GUI:** Chazy subtitles (captions over the figure), and the object-based stain desk. The Stain panel is the plain node-graph editor. *(conformed to R-548; RQ-312 (a))*
 
 ## 01 Explore — the everyday view
 

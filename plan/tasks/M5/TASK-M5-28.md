@@ -54,7 +54,9 @@ readback (R-294).
 - `cargo test -p engine frame_substep_histogram` — a synthetic frame whose pixels take known substep counts, cap hits
   among them, records `substep_histogram` with each pixel in its bin and the cap hits in the last, 16 entries summing to
   the pixel count; the next frame's histogram is reset; it comes back on the telemetry readback without stalling the
-  frame; control: a histogram not reset between frames fails (REQ-TOOL-187).
+  frame; the JSON Schema and the reader accept a v1 frame without the key and reject one with it `null` or with a
+  length other than 16; controls: a histogram not reset between frames fails, and a schema that requires the key, or
+  accepts it `null`, fails (REQ-TOOL-187).
 - `cargo test -p engine frame_record_fields` — a recorded frame deserialises with every field present (REQ-TOOL-050).
 - `cargo test -p prin report_percentiles` — synthetic frame log: percentiles and the motion-only headline match hand-computed values (REQ-TOOL-051).
 - `cargo test -p engine telemetry_bounded` — a simulated long 60 fps session with idle stretches produces a file below a bound and keeps every motion frame (REQ-TOOL-052).
@@ -67,6 +69,10 @@ readback (R-294).
 ## Notes
 - R-545 (RQ-286): `substep_histogram` is this task's (applied per R-369: it is the frame record's task and shares
   R-288's readback); REQ-TOOL-187's bin edges wait on RQ-520, the field and its readback do not.
+- A frame without `substep_histogram` (written before R-545) is telemetry §5's stated exception (fix round 1 of PR
+  #274, qa Q4, applied per R-369), so qa's hand-written v1 frames stay valid and no qa file changes:
+  `crates/engine/tests/qa_TASK-M0-17.rs` (:40-80, `check_bases_accepted`), `qa_TASK-M0-51.rs:44`,
+  `qa_TASK-M0-47_stream.rs:52`, `crates/prin/tests/qa_TASK-M0-18.rs:578`, `crates/prin/tests/qa_TASK-M0-51.rs:86`.
 - Calibrations (R-71) this task proposes: REQ-TOOL-117.
 - Definitions (R-72) this task writes: REQ-TOOL-130.
 - R-113 (RQ-93 M0-4): REQ-TOOL-006's deep_zoom_03 scenario and its 600-frame run are split off as REQ-TOOL-130 and closed here; M0 runs a synthetic scenario (TASK-M0-18).

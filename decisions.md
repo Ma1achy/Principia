@@ -20319,13 +20319,18 @@ decides the payload's layout and the kernel's output; (b) the whole-ledger hash 
 - **Seam 5 and REQ-COL-032 stand as written:** a ledger scale change re-styles the view with zero recompute.
 
 *Where the words leave a choice, decided per R-369 (reviewed by code and physics):*
-- **C1. The requirements that said "any ledger change".** REQ-GEN-008 and REQ-GEN-017 now read "any change to a column
-  that decides the payload's layout or the kernel's output", their verify changing a layout column; `scale` named as
-  excluded. Both were built in merged tasks (TASK-M0-12, and TASK-M5-06 to come), so the code change is a new task's:
+- **C1. The requirements that said "any ledger change".** REQ-GEN-017 now reads "any layout or kernel change"; REQ-GEN-008,
+  built and proved by the merged TASK-M0-12, stays as built, its note pointing here. Neither earlier task (TASK-M0-12,
+  merged; TASK-M5-06, before M7) can pass a `scale` arm, so every `scale` arm is REQ-GEN-043's and the code change is a
+  new task's (fix round 1 of PR #274, qa Q2; *was:* "REQ-GEN-008 and REQ-GEN-017 now read "any change to a column that
+  decides the payload's layout or the kernel's output", their verify changing a layout column; `scale` named as
+  excluded. Both were built in merged tasks (TASK-M0-12, and TASK-M5-06 to come), so the code change is a new task's:"):
   **TASK-M7-53** (M7, after TASK-M7-05, reviewed by code, qa and physics) closes REQ-GEN-043, `ledger::version`
   hashing only those columns, with seam 5's end-to-end test: a regenerated ledger with one field's `scale` changed keeps
   the schema version, the cache serves the same payload and the dispatch counter is unchanged, and a changed bit offset
-  moves it. REQ-COL-032 stays TASK-M7-05's, its hold lifted; its zero-recompute arm runs in TASK-M7-53.
+  moves it. REQ-COL-032 stays TASK-M7-05's, its hold lifted; its zero-recompute arm runs in TASK-M7-53. qa's
+  `crates/ledger/tests/qa_TASK-M0-12.rs:143-149`, which asserts that a `scale` change moves the version, is the qa
+  exception the ruling forces there, named in TASK-M7-53 (R-290).
 - **C2. Which columns.** The columns a ruling names render-only today: `scale` alone. A future render-only column is
   named by its own ruling.
 
@@ -20360,7 +20365,7 @@ only; (b) as (a) with the second latch stored outside the descriptor; (c) `I_max
 
 R-545 is in the "design" group of `plan/rule_groups.yaml`.
 
-Changes REQ-PAY-093, REQ-GEN-008, REQ-GEN-017 (statement, verify, rulings, note), REQ-COL-032, REQ-TOOL-098,
+Changes REQ-PAY-093, REQ-GEN-008 (note), REQ-GEN-017 (statement, rulings, note), REQ-COL-032, REQ-TOOL-098,
 REQ-PAY-105, REQ-COL-082 (`rq` removed; statement, verify, rulings, note), REQ-PAY-106 (statement, verify, kind cleared,
 `rq` removed), REQ-COL-106 (`rq` RQ-310 removed), REQ-VAL-055, REQ-PAY-056, REQ-PAY-013 and REQ-PAY-015 (notes, and
 REQ-VAL-055's statement); adds REQ-PAY-109, REQ-GEN-043 and REQ-TOOL-187.
@@ -20604,10 +20609,16 @@ split REQ-SYS-015.
   notice, `C`'s branch inputs and `τ_I`'s proposal); REQ-DEC-011 and REQ-VAL-017 to TASK-M2-48 (`M₀₁` and
   decode test 12, re-proved on Metal and lavapipe). The tasks that need REQ-DEC-002 or REQ-VAL-017 (TASK-M3-24,
   TASK-M8-14, TASK-M4-04) gain the dependency; those reaching them already need nothing.
-- **N2. Requirements already in the corrected form are not rebuilt.** REQ-DEC-017 (TASK-M2-07's mirror decision,
-  `IeeeBits::product` with no `fma`) and REQ-DEC-022 (TASK-M2-09's exact feasibility sign) are R-547's pattern; they
-  lose their hold and their tasks' proofs and sweeps stand. REQ-DEC-019 (RQ-283) and REQ-ENC-003 (RQ-360) were built as
-  ruled meanwhile, and stand. Physics confirms on this PR that N2's two proofs are the re-proof R-547 asks.
+- **N2. Requirements already in the corrected form are not rebuilt.** REQ-DEC-022 (TASK-M2-09's exact feasibility
+  sign) is R-547's pattern; it loses its hold and its task's proof and sweep stand. REQ-DEC-017 (TASK-M2-07's mirror
+  decision, `IeeeBits::product` with no `fma`) stands except the pair differences that feed it and the `ρ = 0` guard
+  (`ρ = r₁ − r₀`, `d02`, `d12`, `canon.rs:350-351`): plain float subtractions, subnormal for normal coordinates closer
+  than 2^−126, which a flushing backend returns as 0. They are rebuilt by TASK-M2-47 under REQ-DEC-002, whose seam sweep
+  gains states with normal coordinates and subnormal pair differences and a flush-to-zero control, and TASK-M2-48
+  depends on TASK-M2-47 (physics review 5603889088 of PR #274, P1). REQ-DEC-019 (RQ-283) and REQ-ENC-003 (RQ-360) were
+  built as ruled meanwhile, and stand. *Was:* "REQ-DEC-017 (TASK-M2-07's mirror decision, `IeeeBits::product` with no
+  `fma`) and REQ-DEC-022 (TASK-M2-09's exact feasibility sign) are R-547's pattern; they lose their hold and their
+  tasks' proofs and sweeps stand. … Physics confirms on this PR that N2's two proofs are the re-proof R-547 asks."
 - **N3. Unbuilt requirements are rewritten in place.** REQ-INT-058 and REQ-INT-064 (TASK-M4-01, TASK-M4-03),
   REQ-INT-066 and REQ-EVT-021 (`d²`, TASK-M4-03), REQ-INT-087 and REQ-INT-088 (`disc_input`, TASK-M3-11) and
   REQ-VAL-079 (TASK-M4-18) take the corrected rule; each task writes its form and proves it. Rule 2's `d²` form is
@@ -22095,7 +22106,13 @@ only while moving and recorded. Nothing was applied meanwhile.
 - **B2. Step 2's words.** print_graph §8.1 step 2 now reads "Under Auto only, where the print stage's cost would exceed
   its share of the frame budget, the whole graph drops a level: reduced, then Plain", the level the arbiter's, from the
   measured cost classes; the print stage's share of the budget stays R-488's calibration (R-71), which the plan PR
-  names.
+  names. The budget the rung is solved against does not depend on which Print graph is active, Plain included, since
+  a budget that did would move N, E, depth or FTLE gating with the graph, against RQ-479's words (perf review
+  5603942517 of PR #274, F1). Whether that budget is the whole frame budget or the frame budget less a fixed print
+  share is a definition (R-72) for the Print graph plan PR's post-stage budget task, beside the share's calibration; no
+  requirement on `main` holds it (B4), so it is noted here for that plan PR, whose budget requirement takes an arm with
+  a failing control: the resting rung under Auto is identical with Plain and with a heavy Print graph at the same
+  scene and device model, and a solve that reserves the share only while a graph is active fails.
 - **B3. The quality device note.** §3 says the print stage is excluded from the rung solve and its post level never
   part of the rung; §5's Medium layer names the post level beside render_scale; §10 says the fallback does not run
   with the arbiter off, `post_level` still recorded. telemetry §2 and render_gui_spec § "Profiler" say the same in a

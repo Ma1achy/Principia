@@ -27,7 +27,9 @@ dd_generation_root §3.7, and declares its range, with its citation, in the ledg
 - dd_generation_root §3.7: `running_mean_divergence`'s formula (the running mean of the per-footprint divergence whose
   latched running maximum is `running_max_divergence`) and `coherence`'s (complexity = 1 − coherence, scheduler
   contract Part 6, "Priority"), each with its declared range, which does not span zero, and its citation; the two table rows
-  conformed and the "waiting on" mark removed.
+  conformed together with the ledger (the table is what `crates/ledger/tests/quad_reduction.rs` parses against the
+  ledger, so the two change in one commit), and the note under the table ("The three rows as built") reworded to say
+  so.
 - `crates/ledger`: both entries declared with those ranges and citations; the numeric template places neither on
   `ramp_coolwarm`.
 
@@ -41,4 +43,8 @@ dd_generation_root §3.7, and declares its range, with its citation, in the ledg
 ## Notes
 - Applied per R-369 (R-545 A1): the human names TASK-M1-21, which merged before the ruling, in the M1 milestone whose
   gate has passed (R-432); the work is this follow-up's, placed at M5 beside REQ-PAY-093's confirmation.
+- qa exceptions forced by R-545 (RQ-278), named per R-290 and R-369: `crates/ledger/tests/qa_TASK-M5-01.rs:302-310` and
+  `:320` (the `running_mean_divergence` and `coherence` rows asserted `Unbounded, Unbounded`) change to the declared
+  ranges, as `M` lines on a qa file whose commits are all qa's (3aff923f, 7c0b6dc5, 892b6f08). The code reviewer confirms
+  no other assertion is weakened.
 - `alpha_energy` is not this task's: its range and placement are confirmed with REQ-PAY-093 at the M5 gate.

@@ -62,6 +62,11 @@ parameters and the latch's quantisation are proposed with their evidence for the
 - Review (physics): the proposals for ε = 0.05 (REQ-EVT-028), `h_far` = 5 with the hierarchy gate and δ = 10⁻⁵ (REQ-EVT-029), `os_ratio` = 25 measured at the snapshot cadence while the latch updates every step (REQ-EVT-030), settling off (REQ-EVT-031) each with the drill-down's §4.1 and §11.2 evidence, confirmed by the human at the M7 gate; and the latch's log half-octave 5-bit quantisation as ruled (R-545), with its measured effect on the OS-candidate labels (REQ-PAY-106).
 
 ## Notes
+- qa exceptions forced by R-545 (RQ-310: `I_max` takes descriptor bits 10–14), named per R-290 and R-369, each an `M`
+  line on a qa file whose commits are all qa's: `crates/ledger/tests/qa_TASK-M0-10.rs:106-155` (the reserved span, by then
+  10–14 after TASK-M3-11, is spent) and `crates/kernel/tests/qa_TASK-M0-10.rs:128-150` (the packer's descriptor bits);
+  and `crates/kernel/tests/qa_TASK-M0-10_r288.rs:223-289` if `set_d_min`'s kept bits change. The code reviewer confirms
+  no other assertion is weakened.
 - R-548 (21 Oct 2026) rules the order, as the drill-down's §3.2 now gives it: transient before B-stable, B-stable
   requiring E < 0 (RQ-318, option (c)); B-stable before excursion (RQ-324, option (b)); H, HP, P and the two-stage H
   only at E ≥ 0 (RQ-325, option (b)). This is `classify`'s order with three changes, so prin-rs PR #32's measurements

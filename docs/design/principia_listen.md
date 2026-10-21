@@ -469,12 +469,14 @@ Lagrange tests state their horizon or wait on RQ-442 (P1). No silent run excepts
 
 ## 14. What the demo is not
 
-The demo is Web Audio in a browser: its time constants are `setTargetAtTime`'s, which the app's backend reproduces.
-The app's voice and effects chain is one Rust synthesis graph, transcribed node for node from `trace_sound.html`
-(`makeVoice`, `INSTRUMENTS`, the bank, the effects), played natively through `cpal` on its own audio thread; the
-browser build plays the same graph's samples in TASK-M8-38's shell (an AudioWorklet or `cpal`'s WebAudio backend),
-never a second Web Audio transcription (R-555, RQ-440 (a); REQ-GUI-349); its integrator (Dormand–Prince 5(4), relative tolerance 10⁻¹¹, steps at most 0.004, a 400 000-step budget), its
-escape test and its precomputed maps are its own, and the app's are `computeIC`'s and the run's. The analysis runs on the CPU in
+The demo is Web Audio in a browser: its time constants are `setTargetAtTime`'s, which the app's backend reproduces;
+its integrator (Dormand–Prince 5(4), relative tolerance 10⁻¹¹, steps at most 0.004, a 400 000-step budget), its
+escape test and its precomputed maps are its own, and the app's are `computeIC`'s and the run's. The app's voice and
+effects chain is one Rust synthesis graph, transcribed node for node from `trace_sound.html` (`makeVoice`,
+`INSTRUMENTS`, the bank, the effects), played natively through `cpal` on its own audio thread; the browser build plays
+the same graph's samples in TASK-M8-38's shell (an AudioWorklet or `cpal`'s WebAudio backend), never a second Web
+Audio transcription (R-555, RQ-440 (a); REQ-GUI-349) (gui review 5604048081 of PR #274, G8: placed after the demo's
+integrator, which it had come before). The analysis runs on the CPU in
 the inspector worker (REQ-SYS-060), from the trajectory viewer's own `computeIC` samples, at §2's sizes; it does not use
 the GPU integrator and does not reuse frequency diffusion's FFT (R-555, RQ-441 (a); *was:* "Where the analysis runs is
 RQ-441."). The questions the human queued are RQ-440 to RQ-447; the conflicts and silences the port found, RQ-448 to

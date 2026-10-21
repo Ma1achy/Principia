@@ -46,7 +46,7 @@ A preset is an entire serialised graph that replaces the current graph wholesale
 - Review (code): no class-colour code path references entropy; the fuzziness overlay is a removable post node (REQ-RENDER-061).
 - Review (code): a post node exists for map gradient magnitude; the sphere gradient-magnitude preset is a FieldRamp over the colour node (REQ-RENDER-064).
 - Review (physics): quantitative presets document their measure; the combiner gives L to a bound brightness (REQ-COL-008).
-- `cargo test -p render debug_groups` — each debug preset sits in the group colour_composition §9.6 names, ROUNDTRIP and the agreement presets in decoded-IC (REQ-COL-028).
+- `cargo test -p render debug_groups` — each debug preset sits in the group colour_composition §9.6 names, ROUNDTRIP and the agreement presets in decoded-IC; TL = RB draws G = 0 and centre = BG draws R = 0; controls: a debug preset in another group, and an addressing preset whose third channel carries data, each fail (REQ-COL-028).
 - `cargo test -p render addressing_grey` and Review (physics) — TL = RB draws G = 0 and centre = BG draws R = 0; each of the three grey presets maps its index to grey by §9.7's written rule, in [0, 1]; control: a grey preset reading the wrong index fails; the rule's text is in §9.7, approved before merge (REQ-COL-139).
 
 ## Notes

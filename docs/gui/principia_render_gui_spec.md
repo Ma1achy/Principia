@@ -285,7 +285,10 @@ the chart; the kept trajectories are the Trajectory panel's tabs and `Trace…`'
   `SimConfig`'s `tilt_map`, one undoable edit, and neither the Tilt reset nor Home changes it. **Every chart (R-473):**
   the section tilts every chart, curved ones included, the targets offering the chart's hidden coordinates, the
   rotation acting on the chart's own parameters (`principia_chart_decoder_contract.md` Part 4), in units that do not
-  depend on zoom: each screen axis in its full range at zoom 1, the hidden coordinate in its slider span (R-507).
+  depend on zoom: each screen axis in its full range at zoom 1, the hidden coordinate in its slider span (R-507). The
+  shape sphere's targets also offer the physical `p_λ` components `p_λ,x` and `p_λ,y`, the one exception to R-473 J2's
+  hidden coordinates, once REQ-CHART-084 defines them and not before, the readout naming the physical target (R-554
+  L5, RQ-474 (a); REQ-GUI-350).
 
 **Resets and Home (R-466).** "Reset" means the active chart preset's own values, never literal zero: the masses `z_μ1`,
 `z_μ2` are slice coordinates, and zeroing them would change the physical system. Each reset reads its target from the
