@@ -1,7 +1,7 @@
 # TASK-M8-58 — The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135
+- **Closes:** REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-GUI-341
 - **Depends on:** TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui, physics
@@ -23,6 +23,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - `docs/contracts/principia_inverse_encode_contract.md` § "Part 5 — Inverse by axis kind (completing the four kinds)"
 - `decisions.md` § "R-473 — Tilt and slice on every chart ⚑: the tilt is a rotation in the 3-space of the two screen axes and the hidden target, applied to the chart's own parameters, `(a, b, d) = R(τ₁, τ₂)·(u, v, 0)`, `a` and `b` through the chart map exactly and `d` added to the hidden coordinate at the slice centre, untilted bitwise today's; a mass, and every linked coordinate, is tilted in its link's pre-image; the units are queued (RQ-375); the slice moves any hidden coordinate *(extends R-457)*"
 - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - The icon sets and markers, the syzygy detection and placement, edge pinning, repeats and the not-a-system checks in the trace renderer (`crates/render/src/lines/`), the trace settings as `Lines`' state, each one `SetField` (`crates/gui/`; their controls are TASK-M8-61's and TASK-M8-62's, R-541; *was:* "the trace settings in Lines ▾"), and the guards in `computeIC` (the CPU kernel instance).
@@ -36,6 +37,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - `cargo test -p render trace_syzygy` — REQ-GUI-273's verify (R-538 T3, T4).
 - `cargo test -p render trace_edge_pins` — REQ-GUI-274's verify (R-538 T5).
 - `cargo test -p render trace_repeats` — REQ-GUI-275's verify (R-538 T6, T7, T12).
+- `cargo test -p render trace_through_syzygy` — REQ-GUI-341's verify (R-544 item 8): the figure-eight run through a collinear configuration draws its trace across `φ = π/2` at the signed `n̂`, with no kink and its step within REQ-GUI-283's multiple of the median; control: a trace folded to `|n₂|`, which bounces at the equator, fails (REQ-GUI-341).
 - `cargo test -p render trace_not_a_system` — REQ-GUI-276's verify (R-538 T8, T9, T10).
 - `cargo test -p kernel compute_ic_guards` — REQ-INT-096's verify (R-538 T11).
 - `cargo test -p render trace_leaves_per_axis` — REQ-GUI-277's verify (R-538 T14, T15).
@@ -55,6 +57,7 @@ The trace's markers are R-538's: the four icon sets (Principia the default), the
 - **R-541 (21 Oct 2026):** the settings' place in the GUI is `Trace…`, the Trajectory panel's Trace section and Overlays ▾ › Trace, not Lines ▾ (REQ-GUI-271 restated; RQ-448, (a) applied meanwhile). This task keeps the settings, their order and defaults as state; the ramp control and the playback extent stay this task's: the ramp control as a widget with its round-trip test (REQ-GUI-282), hosted by TASK-M8-61's Trace section and TASK-M8-62's `Trace…`, which follow this task and no longer wait on Listen (gui review 5595359543 of PR #267, G7; applied per R-369; *was:* "the ramp control and the playback extent stay this task's, built where TASK-M8-62's `Trace…` will hold them.").
 - **REQ-GUI-245** (TASK-M8-49) no longer draws the markers; this task replaces them. The icons are figure marks (R-539).
 - **RQ-472 waits:** the trace's images over a pole or the equator fold on a tilted view (REQ-GUI-278, `rq: RQ-472`); the rest does not wait.
+- **R-544 (21 Oct 2026):** on the shape sphere the trace uses the signed `n̂` over the whole sphere and carries on across the equator at every syzygy (REQ-GUI-341); its repeats are θ's period and the pole crossings, never a fold at the equator, and R-538 TM7's "fold charts" and the toggle's equator fold go (REQ-GUI-275). The equator fold on a tilted view, RQ-472 (a)'s clause, waits on RQ-508 (REQ-GUI-278, `rq: RQ-508`); meanwhile none is drawn.
 - **RQ-473 (a) applied meanwhile:** T16 and T16b hold the step within REQ-GUI-283's calibrated threshold, not 3× (TF2.3 measures correct code at 5–97×).
 - **RQ-474 waits:** T15's physical-momentum arm (REQ-GUI-277, `rq: RQ-474`); R-473 offers no such tilt target.
 - **Closes, for gaps the corpus leaves open:** REQ-GUI-283 (R-71 calibration).

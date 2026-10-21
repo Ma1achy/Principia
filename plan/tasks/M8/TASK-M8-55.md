@@ -1,7 +1,7 @@
 # TASK-M8-55 — Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)
 
 - **Milestone:** M8
-- **Closes:** REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270
+- **Closes:** REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342
 - **Depends on:** TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -22,6 +22,7 @@ On the real engine the chart's extension is reached by pan and zoom with the con
 - `docs/design/principia_coordinate_conventions_note.md` § "The three coordinate spaces (they nest; each is right for its job)"
 - `docs/gui/principia_render_gui_spec.md` § "G1. Rules that hold everywhere"
 - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
+- `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
 
 ## Deliverables
 - Navigation past the square with the layer shown, the readout's repeat label and canonical coordinates, the ✕ and its readout, and the view state's unwrapped centre, in `crates/gui/` on the real engine, reading TASK-M8-56's canonical addresses.
@@ -32,9 +33,11 @@ On the real engine the chart's extension is reached by pan and zoom with the con
 - `cargo test -p gui extension_no_gaps` — REQ-GUI-268's verify (R-537 T3, T4).
 - `cargo test -p gui extension_pick` and `cargo xtask screenshot 01_main` (real engine, `extension_pick_x`) — REQ-GUI-269's verify (R-537 T5, T6; the hover arm, the ✕'s screenshot).
 - `cargo test -p gui extension_round_trip` — REQ-GUI-270's verify (R-537 EX9).
+- `cargo test -p gui shape_sphere_no_equator_repeat` — REQ-GUI-342's verify (R-544 item 4): picks at `(θ, φ)` and `(θ, π − φ)` integrate two different ICs, each the pixel's own decode bitwise; picks one period along θ and past a pole resolve to their canonical systems; control: a pick resolving the lower pixel to its twin's canonical system fails (REQ-GUI-342).
 
 ## Notes
 - **Applied meanwhile (R-537 U4, U6, U7, U9, U14):** RQ-416 (a), Fit the view's own square (R-468 E2); RQ-419 (a), the frames before the first baseline cover excepted; RQ-417 (b), the readout's label only in a debug view; RQ-406 (a), RQ-407 (a), RQ-409 (a); RQ-408's outline is not built; comments and the console's pick wait on RQ-420. A ruling other than these is a follow-up change.
 - **The mock** needs nothing (R-537 U2): its stand-in is affine everywhere and already pans past the preset's window with the controls shown.
 - **The trace's repeats** (EX6) are TASK-M8-58's, with R-538's markers.
 - *Was:* the acceptance line "`cargo test -p gui extension_pick` — REQ-GUI-269's verify (R-537 T5, T6)." (gui review 5594407176 of PR #263, G1, G3; applied per R-369).
+- **R-544 (21 Oct 2026):** the shape sphere chart is the whole sphere; its repeats are θ's period and the pole crossings only, a pixel past the equator its own system with its own pick, readout, trajectory, outcome and inspector (REQ-GUI-342); REQ-GUI-268's "hemisphere's fold" goes. It reaches TASK-M2-43's signed decode through TASK-M8-44 and TASK-M2-28.

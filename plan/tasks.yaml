@@ -671,8 +671,8 @@
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-28
   milestone: M2
-  title: "Shape-sphere display: the DoubleCover hemisphere and the equal-area projection"
-  depends_on: [TASK-M2-08, TASK-M2-14]
+  title: "Shape-sphere display: the whole sphere, the exponential map's one-to-one cap and the equal-area projection (R-544)"
+  depends_on: [TASK-M2-08, TASK-M2-14, TASK-M2-43]  # R-544: re-scoped, redone on top of TASK-M2-43 (PR #271 is redone)
   needs: [REQ-GUI-001, REQ-SYS-009]
   requirements: [REQ-CHART-002, REQ-RENDER-026, REQ-CHART-047, REQ-CHART-075, REQ-CHART-078]
   reviewers: [code, qa, physics, gui]
@@ -789,6 +789,14 @@
   requirements: [REQ-VAL-192]
   reviewers: [code, qa]
   pitfalls: [PIT-3]
+- id: TASK-M2-43
+  milestone: M2
+  title: "The shape sphere chart is the whole sphere: the signed decode, the held momentum unmirrored below the equator, the signed lookup, the spherical map's system_image one-to-one, and the tests that asserted the 2-to-1 cover (R-544) ⚑"
+  depends_on: [TASK-M2-08, TASK-M2-14, TASK-M2-17]
+  needs: []
+  requirements: [REQ-CHART-081, REQ-CHART-082, REQ-ENC-034]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: [PIT-9]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -2273,7 +2281,7 @@
 - id: TASK-M7-47
   milestone: M7
   title: "Chart position: the source, its projection onto each target's quotient, the four results, the edge clamp, the colour frame and the t = 0 identity (R-542 SM1 to SM5, SM7) ⚑"
-  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11]  # TASK-M7-52: the one projection (R-542 H11); waits on RQ-489 (the chart read from a colour occupant; a fixed t), R-542 H9
+  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11, TASK-M2-43]  # TASK-M7-52: the one projection (R-542 H11); waits on RQ-489 (the chart read from a colour occupant; a fixed t), R-542 H9; TASK-M2-43: the signed decode and lookup the sphere's identity reads (R-544, applied per R-369)
   needs: []
   requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -2664,10 +2672,10 @@
   pitfalls: []
 - id: TASK-M8-44
   milestone: M8
-  title: "The shape sphere past [0,1]² with one hemisphere drawn: φ's extension and primary range (RQ-264)"
-  depends_on: [TASK-M8-05, TASK-M8-06]
+  title: "The shape sphere past [0,1]² as the whole sphere: no hemisphere mode, and the area statistics over the whole sphere (R-544) ⚑"
+  depends_on: [TASK-M8-05, TASK-M2-28]  # R-544: re-scoped; TASK-M8-06's toggle is gone
   needs: [REQ-CHART-002]
-  requirements: [REQ-CHART-057]
+  requirements: [REQ-CHART-057, REQ-CHART-083]
   reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-45
@@ -2755,7 +2763,7 @@
   title: "Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)"
   depends_on: [TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48]
   needs: []
-  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270]
+  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-56
@@ -2779,7 +2787,7 @@
   title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
   depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52]  # TASK-M7-52: the trace's projection is the one projection (R-542 H11; PR #270 code review 1, applied per R-369)
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135]
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-GUI-341]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
   pitfalls: []
 - id: TASK-M8-59
@@ -2844,6 +2852,14 @@
   depends_on: [TASK-M7-51, TASK-M8-10, TASK-M8-22, TASK-M8-56]
   needs: []
   requirements: [REQ-COL-121, REQ-SCHED-102, REQ-GUI-339]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-67
+  milestone: M8
+  title: "The initial-condition constructor's shape sphere: every point of both halves reachable, the drag across the equator flipping the triangle, and the mirror twin shown as a faint marker with its note (R-544)"
+  depends_on: [TASK-M8-15, TASK-M2-43]
+  needs: []
+  requirements: [REQ-GUI-343, REQ-GUI-344]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M0-35
