@@ -5,6 +5,8 @@
 //!   moves it (scheduler_contract Part 5).
 //! - `stage_tag_words`: the readback's tag words, none 0, `M01_TINY` 1, `ENERGY_INFEASIBLE` 2, `ENERGY_UNSCALABLE` 3,
 //!   `INVARIANT_INFEASIBLE` 4 and `NO_QUALIFYING_SEED` 5, and every other word refused.
+//! - `stage_energy_row`: the energy target's row, `(1, E*'s bits, 0, 0)` on and zero off, read back as the same
+//!   `Option`, its switch bit 0 of `x` alone (dd_decoder §3.7, R-25: `η_E`'s off switch is a uniform flag).
 //! - `stage_words_roundtrip`: a sample's `(m, r, p)` and `ICDescriptor` written as words and read back, at its index,
 //!   every other sample's words untouched.
 //! - `stage_entry_native`: the stage's body, compiled natively at f32, writes each sample's decode, the chart read from
@@ -18,9 +20,9 @@ use kernel::decode::{Degenerate, Ic};
 use kernel::generated::links::Defaults;
 use kernel::payload::ICDescriptor;
 use kernel::stage::decode::{
-    decode_mode, descriptor_words, entry, flags, ic_words, read_descriptor, read_ic, sample, tag,
-    untag, write_descriptor, write_ic, DecodeMode, DecodeUniforms, LatentDefaults,
-    LatentStickBreaking, UniformChart,
+    decode_mode, descriptor_words, energy, entry, flags, ic_words, read_descriptor, read_ic,
+    sample, tag, target, untag, write_descriptor, write_ic, DecodeMode, DecodeUniforms,
+    LatentDefaults, LatentStickBreaking, UniformChart,
 };
 use spirv_std::glam::{UVec3, UVec4};
 use validation::negative_control;
@@ -171,6 +173,51 @@ negative_control!(
         3 => 2,
         w => w,
     })
+);
+
+// ── stage_energy_row ────────────────────────────────────────────────────────────────────────────────────────────
+
+/// Each target through the row and back is itself, bit for bit, `-0.0` and the extremes among them; the row is
+/// `(1, E*'s bits, 0, 0)` on and zero off; and only `x`'s bit 0 is the switch: `x` = 2 is off and `x` = 3 is on.
+fn check_energy(write: fn(Option<f32>) -> UVec4) {
+    assert_eq!(write(None), UVec4::ZERO, "the off row is not zero");
+    assert_eq!(target(write(None)), None, "the off row reads as a target");
+    for e in [0.0, -0.0, -0.3, 1.5, f32::MIN, f32::MAX, f32::MIN_POSITIVE] {
+        let row = write(Some(e));
+        assert_eq!(
+            row,
+            UVec4::new(1, e.to_bits(), 0, 0),
+            "the row of {e:?} is {row:?}"
+        );
+        assert_eq!(
+            target(row).map(f32::to_bits),
+            Some(e.to_bits()),
+            "the row of {e:?} reads back otherwise"
+        );
+    }
+    let e = 2.5f32.to_bits();
+    assert_eq!(
+        target(UVec4::new(2, e, 0, 0)),
+        None,
+        "x = 2, bit 0 clear, reads as on"
+    );
+    assert_eq!(
+        target(UVec4::new(3, e, 0, 0)),
+        Some(2.5),
+        "x = 3, bit 0 set, reads as off"
+    );
+}
+
+#[test]
+fn stage_energy_row() {
+    check_energy(energy);
+}
+
+negative_control!(
+    stage_energy_row,
+    "a writer that drops the switch must fail",
+    expected = "the row of 0.0 is",
+    check_energy(|e| energy(e) & UVec4::new(0, u32::MAX, 0, 0))
 );
 
 // ── stage_words_roundtrip ───────────────────────────────────────────────────────────────────────────────────────
