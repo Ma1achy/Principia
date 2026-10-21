@@ -225,7 +225,7 @@ fn ramp_in(ramp: &FieldRamp, mode: Look3) -> FieldRamp {
         Look3::Greyscale => Map::Lightness,
         Look3::Hue => Map::ramp(Ramp::Lut(Lut::Twilight)),
     };
-    FieldRamp::new(ramp.field.clone(), ramp.compaction.clone(), map)
+    FieldRamp::new(ramp.field.clone(), ramp.compaction, map)
 }
 
 /// The stain of `ramp` in `mode`: a colour ramp in the colour slot, the brightness None; a lightness in the brightness

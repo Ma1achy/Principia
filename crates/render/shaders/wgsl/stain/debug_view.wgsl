@@ -7,6 +7,10 @@
 // as the stain draws it. The chart is read first, then non-finiteness, then the failure (R-467 D5). The CPU twin is
 // `crate::debug_view`.
 //
+// The arm reads the context's members it needs as arguments, the lane, the sample and the pixel, not `Ctx` itself, so
+// that `cargo xtask lint wgsl` reads it, a file of the stain's directory, after the read side whose `SimState` it
+// takes; the generated `shade_at` passes them from its `ctx`.
+//
 // A non-finite sample is a `sim_failed` with a non-finite detail (0, NaN in state; 1, Inf or overflow in state; 2, a
 // non-finite derived quantity; payload §2), a `decode_failed` of detail 0 (a non-finite decode output), or a sample
 // whose stain read a non-finite value, which the stain notes through `note_non_finite()` (a field ramp's invalid lane,
@@ -38,19 +42,20 @@ fn debug_payload_failed(s: SimState) -> bool {
     return s.state != STATE_ESCAPE && s.state != STATE_BOUNDED && s.state != STATE_COLLISION && s.state != STATE_RUNNING;
 }
 
-// The debug view over the stain's colour `rgb` at the sample `ctx`, its pixel counted.
-fn debug_view(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32> {
-    if (ctx.validity.forbidden) {
+// The debug view over the stain's colour `rgb` at the pixel `frag_xy` of the sample `s`, whose chart classification is
+// `forbidden` (`ctx.validity.forbidden`), its pixel counted.
+fn debug_view(forbidden: bool, s: SimState, frag_xy: vec2<f32>, rgb: vec3<f32>) -> vec3<f32> {
+    if (forbidden) {
         atomicAdd(&debug_counts[0], 1u);
-        return debug_invalid(ctx.frag_xy);
+        return debug_invalid(frag_xy);
     }
-    if (debug_non_finite || debug_payload_non_finite(ctx.sample)) {
+    if (debug_non_finite || debug_payload_non_finite(s)) {
         atomicAdd(&debug_counts[2], 1u);
-        return debug_nan_inf(ctx.frag_xy);
+        return debug_nan_inf(frag_xy);
     }
-    if (debug_payload_failed(ctx.sample)) {
+    if (debug_payload_failed(s)) {
         atomicAdd(&debug_counts[1], 1u);
-        return debug_invalid(ctx.frag_xy);
+        return debug_invalid(frag_xy);
     }
     return rgb;
 }

@@ -22,7 +22,7 @@
 use std::path::Path;
 
 use ledger::gen::prelude;
-use render::assemble::{self, Kind, Node, Occupant, Stain, Tier, View, DEBUG_ARM};
+use render::assemble::{self, Kind, Node, Occupant, Stain, Tier, View};
 use render::colour::field_ramp::{FieldRamp, Reads, Shown};
 use render::colour::outcome;
 use render::debug_view::{self, Category, Sample};
@@ -341,6 +341,16 @@ fn check_over(arm: Option<&str>) {
     }
 }
 
+/// The debug arm with `from` replaced by `to`: a control's altered arm.
+#[cfg(feature = "controls")]
+fn arm_with(from: &str, to: &str) -> String {
+    assert!(
+        assemble::DEBUG_ARM.contains(from),
+        "the arm has no `{from}`"
+    );
+    assemble::DEBUG_ARM.replace(from, to)
+}
+
 #[test]
 fn debug_view_styles_over_the_stains() {
     check_over(None);
@@ -350,13 +360,12 @@ negative_control!(
     debug_view_styles_over_the_stains,
     "a debug view reading the payload before the lane draws a forbidden sim_failed as a failure, and fails",
     expected = "Outcome: forbidden sim_failed NaN (4, 0, 40)",
-    check_over(Some(&DEBUG_ARM.replace(
-        "    if (ctx.validity.forbidden) {\n        atomicAdd(&debug_counts[0], 1u);\n        return debug_invalid(ctx.frag_xy);\n    }\n",
-        "",
-    ).replace(
-        "    return rgb;\n}",
-        "    if (ctx.validity.forbidden) {\n        atomicAdd(&debug_counts[0], 1u);\n        return debug_invalid(ctx.frag_xy);\n    }\n    return rgb;\n}",
-    )))
+    {
+        let lane = "    if (forbidden) {\n        atomicAdd(&debug_counts[0], 1u);\n        return debug_invalid(frag_xy);\n    }\n";
+        let last = arm_with(lane, "");
+        assert!(last.contains("    return rgb;\n}"), "the arm has no last return");
+        check_over(Some(&last.replace("    return rgb;\n}", &format!("{lane}    return rgb;\n}}"))))
+    }
 );
 
 #[cfg(feature = "controls")]
@@ -369,9 +378,9 @@ mod debug_view_styles_over_the_stains_controls {
             debug_view_styles_over_the_stains,
             "a debug view drawing a NaN sim_failed with debug_invalid fails",
             expected = "Outcome: sim_failed (4, 0, 40)",
-            check_over(Some(&DEBUG_ARM.replace(
-                "return debug_nan_inf(ctx.frag_xy);",
-                "return debug_invalid(ctx.frag_xy);",
+            check_over(Some(&arm_with(
+                "return debug_nan_inf(frag_xy);",
+                "return debug_invalid(frag_xy);",
             )))
         );
     }
@@ -382,9 +391,10 @@ mod debug_view_styles_over_the_stains_controls {
             debug_view_styles_over_the_stains,
             "a count taken as R-408's statistic, the forbidden pixels out of it, fails",
             expected = "Outcome: the counts",
-            check_over(Some(
-                &DEBUG_ARM.replace("        atomicAdd(&debug_counts[0], 1u);\n", "")
-            ))
+            check_over(Some(&arm_with(
+                "        atomicAdd(&debug_counts[0], 1u);\n",
+                ""
+            )))
         );
     }
 }

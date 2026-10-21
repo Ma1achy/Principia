@@ -129,8 +129,8 @@ const RESERVED: [&str; 6] = [
     "debug_non_finite",
 ];
 
-/// View › Debug view's arm (R-467 D5, R-470 G4; REQ-COL-109), the debug variant's one addition: `debug_view(ctx, rgb)`
-/// over the stain's colour, `note_non_finite()`, and the counts' storage buffer at [`DEBUG_COUNTS_GROUP`]. Its CPU
+/// View › Debug view's arm (R-467 D5, R-470 G4; REQ-COL-109), the debug variant's one addition:
+/// `debug_view(forbidden, sample, frag_xy, rgb)` over the stain's colour, `note_non_finite()`, and the counts' storage buffer at [`DEBUG_COUNTS_GROUP`]. Its CPU
 /// twin is [`crate::debug_view`].
 pub const DEBUG_ARM: &str = include_str!("../shaders/wgsl/stain/debug_view.wgsl");
 
@@ -953,8 +953,8 @@ pub fn assemble_view(stain: &Stain, tier: Tier, view: View) -> Result<Fragment, 
     )
 }
 
-/// [`assemble`] with the debug arm `arm`, WGSL defining `debug_view(ctx: Ctx, rgb: vec3<f32>) -> vec3<f32>` and
-/// `note_non_finite()`, or none, the presentation variant: [`assemble_view`]'s step, open so a test's control can
+/// [`assemble`] with the debug arm `arm`, WGSL defining
+/// `debug_view(forbidden: bool, s: SimState, frag_xy: vec2<f32>, rgb: vec3<f32>) -> vec3<f32>` and `note_non_finite()`, or none, the presentation variant: [`assemble_view`]'s step, open so a test's control can
 /// assemble an altered arm.
 pub fn assemble_arm(
     stain: &Stain,
@@ -1150,7 +1150,8 @@ fn label(occupant: &Occupant) -> String {
 /// post chain, `OUT`; `shade_at`, which reads sample `i` into a context with its screen, quad, tile and validity lanes
 /// and shades it; and `shade_sample`, the same with the screen, quad and tile lanes absent (the absence NaN) and the
 /// validity lane unclassified, no sample forbidden, for a pass that places no quad (REQ-COL-102). With `debug`,
-/// `shade_at` returns the debug view's arm over the walk's colour, `debug_view(ctx, shade(ctx))` (REQ-COL-109).
+/// `shade_at` returns the debug view's arm over the walk's colour,
+/// `debug_view(ctx.validity.forbidden, ctx.sample, ctx.frag_xy, shade(ctx))` (REQ-COL-109).
 fn shade(
     stain: &Stain,
     sources: &[usize],
@@ -1209,7 +1210,7 @@ fn shade(
     );
     // The debug variant draws its arm over the walk's colour; the presentation variant returns the walk's (R-470 G4).
     out.push_str(if debug {
-        "    return debug_view(ctx, shade(ctx));\n}\n\n"
+        "    return debug_view(ctx.validity.forbidden, ctx.sample, ctx.frag_xy, shade(ctx));\n}\n\n"
     } else {
         "    return shade(ctx);\n}\n\n"
     });
