@@ -935,7 +935,6 @@ impl PipelineCache {
     }
 }
 
-/// `keys` as `stain`'s node keys: one per node, distinct.
 /// The cache's drop stops the compile worker and waits for it (TASK-M2-42, REQ-VAL-192). The worker holds a clone of
 /// the device and, through the shared state, every compiled pipeline. Left running, it released them on its own thread
 /// after the cache was gone, and where it was their last holder that was the device's and the instance's teardown:
@@ -955,6 +954,7 @@ impl Drop for PipelineCache {
     }
 }
 
+/// `keys` as `stain`'s node keys: one per node, distinct.
 fn check_keys(stain: &Stain, keys: &[NodeKey]) -> Result<(), RequestError> {
     if keys.len() != stain.nodes().len() {
         return Err(RequestError(format!(
