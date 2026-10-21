@@ -20,15 +20,17 @@ One Rust source for SM1's `P_T`, "the target chart's projection, the one the tra
 - `docs/design/principia_dd_encode.md` § "2. Consolidated contract"
 
 ## Deliverables
-- The projection module (`crates/render/`), its leaving rule and curve nearest point, generated to WGSL from the same source (R-116).
+- The projection module in `crates/kernel` beside the encode (the only crate rust-gpu compiles), its leaving rule and curve nearest point; its WGSL snippet emitted to `crates/render/wgsl/` by `cargo xtask build-kernel`, as TASK-M2-25's decode and encode are (R-116); the host trace calls the kernel function. *Was:* "The projection module (`crates/render/`), …, generated to WGSL from the same source (R-116)." (code re-review C2 of PR #270).
 - The leave definition, written into `docs/design/principia_state_map.md` SM5 with the porting rule's "Removed lines" note (REQ-COL-133).
-- Test `one_projection`.
+- Test `one_projection_agreement`.
 
 ## Acceptance tests
 - Review checklist — REQ-COL-133's verify (the definition in SM5, checked by the physics reviewer).
-- `cargo test -p render one_projection` — REQ-COL-134's verify.
+- `cargo test -p render one_projection_agreement` — REQ-COL-134's verify (native against generated WGSL; code re-review C3, option (a), applied per R-369). Each consumer's call is REQ-COL-135's, checked in its own task.
 
 ## Notes
 - **⚑ Physics review is required** (SM1, SM5): this task does not merge on the code reviewer's word alone.
 - **Cut by PR #270's code review, 1 (applied per R-369, R-542 H11):** split from TASK-M7-47 so that TASK-M8-58's trace does not wait on RQ-489 through it.
+- **Each link's margin (physics re-review note of PR #270):** since R-481 the links clamp at different margins (`tanh_q` and `softsign_q` at `q_max(1 − ε_q)`); this task writes each link's margin into SM5, per REQ-COL-133.
+- **Its consumers:** TASK-M7-47 (Chart position), TASK-M8-10 (the hover trace's `z(t)`), TASK-M8-49 (the line system's trace projection and breaks) and TASK-M8-58 (the follow-up's leaving and curve projection), each depending on this task (R-542 H11).
 - **Applied meanwhile:** RQ-498 (a), the shape-sphere target from the signed n̂; RQ-503 (a), main's `α_min = 0`.

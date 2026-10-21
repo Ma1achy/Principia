@@ -2291,8 +2291,8 @@
   title: "Chart position's Picture base, the fade off the slice and the ensemble's nominal copy (R-542 SM8, SM10)"
   depends_on: [TASK-M7-48, TASK-M7-44]  # TASK-M7-44: the picture's tier in R-484's table (R-542 H5)
   needs: []
-  requirements: [REQ-COL-130, REQ-COL-131, REQ-GUI-340]
-  reviewers: [code, qa, gui]  # gui: SM8 and SM10 are the GUI's (the human's message; PR #270 code review 2)
+  requirements: [REQ-COL-130, REQ-COL-131]
+  reviewers: [code, qa, gui]  # gui: SM8 and SM10 are the GUI's, the picture's and the fade's look (the human's message; PR #270 code review 2, gui re-review G6)
   pitfalls: []
 - id: TASK-M7-50
   milestone: M7
@@ -2307,7 +2307,7 @@
   title: "The stain editor's Chart position: the node, the point⟨q⟩ subtype, the base-and-layers inspector, switching and restoring, Problems, the presets and saved stains unchanged (R-542 SM15)"
   depends_on: [TASK-M7-48, TASK-M7-49, TASK-M7-17, TASK-M7-22, TASK-M7-23, TASK-M7-24]
   needs: []
-  requirements: [REQ-GUI-335, REQ-GUI-336, REQ-GUI-337, REQ-GUI-338]
+  requirements: [REQ-GUI-335, REQ-GUI-336, REQ-GUI-337, REQ-GUI-338, REQ-GUI-340]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-52
@@ -2393,7 +2393,7 @@
 - id: TASK-M8-10
   milestone: M8
   title: The hover trace and label on the figure
-  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33]  # TASK-M2-33 for R-449's display names
+  depends_on: [TASK-M8-09, TASK-M8-05, TASK-M6-27, TASK-M2-33, TASK-M7-52]  # TASK-M2-33 for R-449's display names; TASK-M7-52: the one projection (R-542 H11)
   needs: [REQ-RENDER-037, REQ-RENDER-044, REQ-RENDER-069, REQ-PAY-049, REQ-SYS-016, REQ-COL-002, REQ-GUI-188]
   requirements: [REQ-GUI-052, REQ-GUI-085, REQ-GUI-086, REQ-GUI-087, REQ-RENDER-073, REQ-GUI-156]
   reviewers: [code, qa, gui]
@@ -2705,7 +2705,7 @@
 - id: TASK-M8-49
   milestone: M8
   title: "Traces on the line system: the hover, pinned and kept traces drawn by §8, shared with the orbit viewer (R-476 L3)"
-  depends_on: [TASK-M7-42, TASK-M8-09, TASK-M8-10, TASK-M8-11]
+  depends_on: [TASK-M7-42, TASK-M8-09, TASK-M8-10, TASK-M8-11, TASK-M7-52]  # TASK-M7-52: the one projection (R-542 H11)
   needs: []
   requirements: [REQ-GUI-245]
   reviewers: [code, qa, gui, physics]
@@ -2779,7 +2779,7 @@
   title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
   depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52]  # TASK-M7-52: the trace's projection is the one projection (R-542 H11; PR #270 code review 1, applied per R-369)
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283]
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
   pitfalls: []
 - id: TASK-M8-59

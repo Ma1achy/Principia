@@ -37,6 +37,7 @@ The Chart position source: per sample, `colour = C_T(fold_T(P_T(E(x(t)))))`'s po
 - `cargo test -p render chart_position_invariance` — REQ-COL-118's verify.
 - `cargo test -p render chart_position_conserved` — REQ-COL-119's verify.
 - `cargo test -p render chart_position_frame` — REQ-COL-120's verify.
+- `cargo test -p render shared_projection_callers` (the Chart position arm) — REQ-COL-135's arm for this consumer: its projection is REQ-COL-134's shared source (control: a copied projection with one constant changed, and a projection defined outside `crates/kernel`, each fail).
 
 ## Notes
 - **Waits on RQ-489** (the chart read from a colour occupant; a fixed t; R-542 H9).

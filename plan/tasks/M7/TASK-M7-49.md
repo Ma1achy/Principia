@@ -1,7 +1,7 @@
 # TASK-M7-49 — Chart position's Picture base, the fade off the slice and the ensemble's nominal copy (R-542 SM8, SM10)
 
 - **Milestone:** M7
-- **Closes:** REQ-COL-130, REQ-COL-131, REQ-GUI-340
+- **Closes:** REQ-COL-130, REQ-COL-131
 - **Depends on:** TASK-M7-48, TASK-M7-44
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, gui
@@ -19,15 +19,14 @@ Image mode: a picture laid on the target's square pulled back through the flow, 
 
 ## Deliverables
 - The Picture base and its bind group, the built-in pictures, the upload path (a `RenderState` field, its tier in R-484's table), the fade (`crates/render/`).
-- The inspector's colour frame, Picture choice and upload, and fade controls (`crates/gui/`; REQ-GUI-340).
-- Tests `chart_position_picture`, `chart_position_fade`, `state_map_picture_controls`; screenshot `state_map_picture`.
+- Tests `chart_position_picture`, `chart_position_fade`.
 
 ## Acceptance tests
 - `cargo test -p render chart_position_picture` — REQ-COL-130's verify.
 - `cargo test -p render chart_position_fade` — REQ-COL-131's verify.
-- `cargo xtask screenshot state_map_picture` (board 3's Picture inspector) and `cargo test -p gui state_map_picture_controls` — REQ-GUI-340's verify.
 
 ## Notes
+- **REQ-GUI-340 moved to TASK-M7-51 (gui re-review G6 of PR #270; applied per R-369),** which builds the inspector the controls sit in; this task keeps the render side. It keeps the gui reviewer because the picture's look on the figure (mirror-repeated, dimmed past the square) and the fade are GUI-facing. *Was:* "- **Closes:** REQ-COL-130, REQ-COL-131, REQ-GUI-340", with its controls deliverable and acceptance line.
 - **gui review (PR #270 code review, 2; applied per R-369):** SM8 and SM10 are the GUI's in the human's message; the gui reviewer reads board 3 per render GUI spec §G13's R-542 bullet. *Was:* "- **Reviewers:** code, qa".
 - TASK-M7-44 builds R-484's tier table, where the picture takes its tier (R-542 H5; applied per R-369).
 - **Applied meanwhile:** RQ-484 (a); RQ-499 (a), the code's fade and no brightness under a Picture.

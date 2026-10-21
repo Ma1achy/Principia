@@ -14699,7 +14699,7 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_edge_clamp: on a target that leaves on main, the latent momenta (|q| ≥ q_max(1 − 2ε_q), REQ-COL-133) and the z_q3 tilt, over seeded random systems at a playhead time where a measured share have left, the clamp agrees with the exit point found at fine Δt on the axis it left by, the median gap falling as Δt falls (the prototype's latent-chart figures, 0.267 at Δt 0.25 → 0.033 at 0.005, are reference only, RQ-503; the app's are measured and recorded by the task); under 'none' a left pixel draws its own grey; controls: a clamp to the wrong side, a finite clamp on an infinite coordinate, and a population with no left system (the test must be able to fire), each fail"
+    detail: "cargo test -p render chart_position_edge_clamp: on a target that leaves on main, the latent momenta (at the link's clamp, REQ-COL-133) and the z_q3 tilt, over seeded random systems at a playhead time where a measured share have left, the clamp agrees with the exit point found at fine Δt on the axis it left by, the median gap at SM12's Δt 0.005 below that at its Δt 0.25 (the range SM12 gives; the prototype's figures 0.267 and 0.033 are reference only, RQ-503; the app's are measured and recorded by the task); the edge is observed where a finite clamp differs from it: on the projection's own output for a left axis (REQ-COL-134's source returns the left status with the edge side, ±∞ in chart units, never the encode's clamped z ≈ ±13.8, whose compacted s is 1.0 in f32 and so cannot tell them apart), and through a tiling base laid in chart units, where the edge takes the cell at the navigation edge it left by (SM5a's smTileXY transcription) while a clamped z ≈ 13.8 lands in a cell far past the square; under 'none' a left pixel draws its own grey; controls: a clamp to the wrong side, the clamped finite z drawn in place of the edge (fires on the projection's output and on the tiling's cell, shown firing by the test), and a population with no left system (the test must be able to fire), each fail"
   rulings:
   - R-542
   milestone: M7
@@ -14720,7 +14720,7 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: unit test
-    detail: "cargo test -p render chart_position_four_results: on the latent momenta target, the left samples are exactly those whose momentum link clamps, |q| ≥ q_max(1 − 2ε_q) (REQ-COL-133's definition, the clamp's ε_q margin); on ν × dilation the past-edge samples exactly those whose nearest ν lies outside the bounded range; with 'when it leaves: none', neither is drawn as a colour; controls: left drawn as a clamped colour, and a past-edge sample counted as left, each fail"
+    detail: "cargo test -p render chart_position_four_results: on the latent momenta target, the left samples are exactly those whose momentum link clamps, at the link's own margin written into SM5 by REQ-COL-133 (q_max(1 − 2ε_q) for the logit link; q_max(1 − ε_q) for tanh_q and softsign_q since R-481), with constructed states at either side of the margin; on ν × dilation the past-edge samples exactly those whose nearest ν lies outside the bounded range; with 'when it leaves: none', neither is drawn as a colour; controls: left drawn as a clamped colour, a past-edge sample counted as left, and a margin taken from another link, each fail"
   rulings:
   - R-542
   milestone: M7
@@ -14922,7 +14922,7 @@
 - id: REQ-COL-129
   area: COL
   kind: calibration
-  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095), the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6), and the t = 0 identity's tolerances per chart (the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted 1.9e-6, ν × h 4.9e-4; the sphere's and ν × h's re-measured on the app); proposed with the prototype's values, the gamut evidence and the app's measurements by the task that needs them, confirmed by the human at the M7 gate."
+  statement: "The state map's default constants must be calibrated: tiles across (6), the index palette's chroma (0.08), the layer line width (0.045 of a cell), the dot radius (0.13), the plane gradient (L 0.75, ±0.095), the sphere's (L 0.64 + 0.20 n₃, ±0.095), the compaction scales κ (latent 3, momenta 0.3, the tilt's s π, dilation 0.6), and the t = 0 identity's tolerances per chart (the prototype's: latent 4e-7, sphere 1.5e-6, simplex 5e-6, momenta 2.7e-8, θ × h 7e-8, tilted 1.9e-6, ν × h 4.9e-4; the sphere's and ν × h's re-measured on the app) and the one projection's native–WGSL agreement tolerance (REQ-COL-134; R-297's form); proposed with the prototype's values, the gamut evidence and the app's measurements by the task that needs them, confirmed by the human at the M7 gate."
   source:
   - file: docs/design/principia_state_map.md
     section: SM13. Queue, don't rule
@@ -14932,10 +14932,13 @@
     section: "SM11. Colouring Chart position: a base, then layers"
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   verify:
     method: review checklist
     detail: "each value is a register entry citing R-542 and RQ-487, proposed with the prototype's value and its gamut check (0 out-of-gamut samples) or, for a tolerance, the app's measured worst error, confirmed at the M7 gate; no test picks its own tolerance"
   rulings:
+  - R-71
   - R-542
   milestone: M7
   rq:
@@ -15010,16 +15013,19 @@
     section: "Part 3 — Block inverses (closed forms, with their forward mates)"
   - file: decisions.md
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
   verify:
     method: review checklist
     detail: "the definition is written into SM5 with the clamp per link and its margin, cites R-72 and R-538 TF1, and the four results' and the status tests read it; the physics reviewer checks it against the inverse encode contract's clamps"
   rulings:
+  - R-72
   - R-542
   milestone: M7
-  note: "PR #270's physics review, P4 (R-542 H12). Closed by TASK-M7-52."
+  note: "PR #270's physics review, P4 (R-542 H12). Since R-481 the links clamp at different margins (tanh_q and softsign_q at q_max(1 − ε_q)); the task writes each link's margin into SM5 (physics re-review note). Closed by TASK-M7-52."
 - id: REQ-COL-134
   area: COL
-  statement: "The target chart's projection, the leaving rule and a curve axis's nearest point must be one Rust source, shared by Chart position (generated to WGSL for the fragment, R-116) and the trace's projection."
+  statement: "The target chart's projection, the leaving rule and a curve axis's nearest point must be one Rust source in crates/kernel, beside the encode, compiled natively for the host and by rust-gpu to WGSL emitted to crates/render/wgsl/ (R-116), never hand-written."
   source:
   - file: docs/design/principia_state_map.md
     section: SM1. Definition
@@ -15031,11 +15037,31 @@
     section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
   verify:
     method: unit test
-    detail: "cargo test -p render one_projection: over seeded states per target, the trace's projected point and status and Chart position's (the CPU twin of the generated WGSL) are bitwise equal; controls: a second implementation of a target's projection or of the leaving rule in either consumer, each fail"
+    detail: "cargo test -p render one_projection_agreement: over seeded states per target, the native build's projected point and status and the generated WGSL's, run on the GPU path, agree within the calibrated agreement tolerance (REQ-COL-129; R-297's form, as the decode agreement), the statuses equal; cargo xtask build-kernel fails if the emitted snippet is edited by hand; controls: a perturbed native build (one constant changed) against the generated WGSL, and a hand-edited snippet, each fail"
   rulings:
+  - R-116
   - R-542
   milestone: M7
-  note: "PR #270's code review, 1 (R-542 H11). TASK-M8-58's trace reuses it. Closed by TASK-M7-52."
+  note: "PR #270's code review, 1, and re-review C2, C3 (R-542 H11, applied per R-369, option (a)): the source in crates/kernel, as TASK-M2-25's decode and encode; each consumer's call is REQ-COL-135's. *Was:* \"The target chart's projection, the leaving rule and a curve axis's nearest point must be one Rust source, shared by Chart position (generated to WGSL for the fragment, R-116) and the trace's projection.\" Closed by TASK-M7-52."
+- id: REQ-COL-135
+  area: COL
+  statement: "Every consumer of a target chart's projection — Chart position, the hover trace's z(t) projection, the line system's trace projection and its breaks, and the trace follow-up's per-axis leaving and curve projection — must call REQ-COL-134's shared source, never a second implementation."
+  source:
+  - file: docs/design/principia_state_map.md
+    section: SM1. Definition
+  - file: docs/design/principia_state_map.md
+    section: SM9. Legend and the hovered pixel
+  - file: docs/design/principia_lines.md
+    section: 8. Traces
+  - file: decisions.md
+    section: "R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p render shared_projection_callers: for each consumer built, its projected points and statuses over seeded states are bitwise equal to the shared source's, and no projection, leaving rule or curve nearest point is defined outside crates/kernel's module (a symbol check over crates/render and crates/gui); each consumer's task runs its own arm (TASK-M7-47, TASK-M8-10, TASK-M8-49, TASK-M8-58), this requirement closed when the last lands; controls: a consumer with a copied projection one constant changed, and a projection function defined outside crates/kernel, each fail"
+  rulings:
+  - R-542
+  milestone: M8
+  note: "PR #270's code re-review, C1 and C3 (R-542 H11, applied per R-369). Closed by TASK-M8-58; TASK-M7-47, TASK-M8-10 and TASK-M8-49 each carry its arm for their consumer."
 - id: REQ-GUI-001
   area: GUI
   statement: "Mouse/pointer picking (lock, hover, click-inspect) must flip canvas coordinates the same way before computing the picked quad or z."
@@ -20653,7 +20679,7 @@
   rulings:
   - R-542
   milestone: M7
-  note: "PR #270's code review, 2. Closed by TASK-M7-49."
+  note: "PR #270's code review, 2; closed by TASK-M7-51, which builds the inspector (gui re-review G6, applied per R-369). The Picture base's upload is its own file picker, labelled as the prototype has it (\"Your image…\"), distinct from File › Import picture (the pxpack restore). *Was:* \"Closed by TASK-M7-49.\""
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
