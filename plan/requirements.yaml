@@ -3604,7 +3604,7 @@
   milestone: M3
 - id: REQ-INT-017
   area: INT
-  statement: "Stepper (RK4, KDK, Yoshida-N) and regularisation must be two independent occupant slots, with the regularisation slot offering `none` (Cartesian, kept permanently as the independent control), Aarseth–Zare (re-registers at every sync boundary), Heggie 1974 global (no reference body) and logH (time transformation only); every pair must run, regularisation off included, and the pairs measured not to work must carry a warning, never a block (R-561)."
+  statement: "Stepper (RK4, KDK, Yoshida-N) and regularisation must be two independent occupant slots, with the regularisation slot offering `none` (Cartesian, kept permanently as the independent control), Aarseth–Zare (re-registers at every sync boundary), Heggie 1974 global (no reference body) and logH (time transformation only); every pair must run, regularisation off included, and the pairs measured not to work must carry a warning, never a block (R-561); a pair's status and its warning must be the Part 2b table's cell for the pair under the time transformation in force, never looked up by the pair alone."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
@@ -3616,12 +3616,12 @@
     section: "R-567 — The generalised (Störmer–Verlet) leapfrog's growth under Heggie is explained: it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`; Heggie × the generalised leapfrog is measured bad, with its warning, and stays allowed like every other pair *(amends R-561)*"
   verify:
     method: unit test
-    detail: "every stepper × regularisation pair, `none` included, can be selected and runs; `none` is always available; the pairs the Part 2b table marks measured bad carry its warning and the others none, the table's note 4 recording Heggie × the generalised (Störmer–Verlet) leapfrog measured bad with the warning \"does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2\" (R-567); controls: a selection that blocks a measured-bad pair fails, and a measured-bad pair with no warning fails"
+    detail: "every stepper × regularisation pair, `none` included, can be selected and runs; `none` is always available; the pairs the Part 2b table marks measured bad carry its warning and the others none, the table's note 4 recording Heggie × the generalised (Störmer–Verlet) leapfrog measured bad with the warning \"does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2\" (R-567); on a synthetic table whose Heggie Eq. 20 and Eq. 22 cells differ for one pair, the warning shown follows the selected time transformation (Eq. 20, then Eq. 22); controls: a selection that blocks a measured-bad pair fails, a measured-bad pair with no warning fails, and a lookup keyed on the pair alone (regularisation and stepper, not the time transformation) fails"
   rulings:
   - R-561
   - R-567
   milestone: M3
-  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07)."
+  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39, whose `regularisation_compose` re-run shows every pair including Heggie's, the measured-bad cells' warnings and note 4; TASK-M3-07's arm covers the Aarseth–Zare pairs and the table's data type (qa review 5607548278 of PR #277, Q8, applied per R-369; *was:* closed by TASK-M3-07). Qa re-check 5607645188 of PR #277, Q10 (applied per R-369): the status and warning are the cell's for the time transformation in force, with its arm and control. *Was (statement):* \"and the pairs measured not to work must carry a warning, never a block (R-561).\""
 - id: REQ-INT-018
   area: INT
   statement: "The regularisation's re-registration count must be visible downstream, as a `re_registrations: u32` profile field or at minimum a per-trajectory count in the payload."
