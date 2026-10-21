@@ -1368,6 +1368,8 @@ steer; RQ-344 point 2 keeps the metric on `z`. Nothing is chosen. For the human 
 - **Waits:** REQ-INT-003, REQ-CHART-018 and REQ-CHART-036 carry `rq: [RQ-355]`, held, not closed, by TASK-M2-08's PR
   (applied per R-369); the code waits for nothing, option (a) applied. Option (b)
   would change two lines of `landmarks` and the tests' expectation.
+  REQ-VAL-022's "equilateral configurations at a shape-sphere pole" is the same statement: it carries `rq: [RQ-355,
+  RQ-471]` too, held by TASK-M2-27's PR, which reports the equal-mass pole only.
 
 ## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
 
@@ -1529,3 +1531,43 @@ beyond the human's words. For the human: yes, because option (b) drops part of a
 - **Applied meanwhile:** (a). Nothing else waits: TASK-M6-46 and TASK-M6-47 build no Overlays entry.
 - **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
   the rest of TASK-M8-08 proceeds.
+
+## RQ-471: REQ-VAL-022 asks for "equilateral → pole and collinear → `w = 0` exactly", and on floating-point states neither holds bit for bit on the Rust decode and encode, nor can it in general: what does "exactly" mean? *(silence, a missing definition, R-72, REQ-VAL-022, RQ-355; context: TASK-M2-27)*
+
+*Found by TASK-M2-27 while building the `inspector-roundtrip` gate. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)" (:9): "**Verified
+    numerically:** … canonical COM = origin to 1.7×10⁻¹⁶; equilateral → shape-sphere pole and collinear → equator
+    exactly."
+  - `plan/requirements.yaml` REQ-VAL-022 (:20679): "with the canonical CoM at the origin, equilateral configurations at a
+    shape-sphere pole and collinear ones on the equator exactly"; its verify detail: "equilateral → pole and collinear
+    → w = 0 exactly".
+  - `plan/tasks/M2/TASK-M2-27.md` § "Acceptance tests": "equilateral → pole and collinear → w = 0 exactly
+    (REQ-VAL-022)".
+- **Why it is open:** no float triangle is exactly equilateral (√3 is irrational), and a collinear state on a line at
+  a general angle is not exactly collinear once its coordinates are rounded. Even an exactly collinear float state
+  (every `y` equal) is not mapped to `w = 0` bit for bit: `C`'s rotation `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, rounds
+  (`sin π ≠ 0`, R-23's step 2), and the CoM subtraction leaves the three `y` unequal by an ulp. Measured on the f64
+  encode, `w` of `C`'s output through `kernel::shape::shape`:
+  - equal-mass equilateral triangles, `L⁺` and `L⁻`, through a random gauge element (scale `2^[−4, 4)`, any turn and
+    parity, offsets and boosts on `[−2, 2)²`), random momenta: `max |w − 1| = 2.2×10⁻¹⁶`, `w = 1`
+    exactly in 876 of 2000;
+  - collinear states, random masses, through the same gauge: `max |w| = 2.7×10⁻¹⁴`, `w = 0` exactly in 0 of 2000;
+    their `z_β` sits exactly at its clamp image, with its `lookup_clamped` bit set, in 2000 of 2000 (the chart's own
+    equator, `β ∈ {0, π̂}` clamped to `ε_z`);
+  - exactly collinear float states, every `y` equal, no gauge: `w = 0` exactly in 943 of 992 with `ρ_x > 0` and 340 of
+    1008 with `ρ_x < 0`, `max |w| = 8.8×10⁻³¹`.
+  The tool's "exactly" was read on its presets; the corpus does not say on which states, or to what, it holds.
+- **Options seen:**
+  - (a) "Exactly" is "to rounding": a stated bound on `|w − 1|` and `|w|` over random gauge images (a calibration,
+    R-71; the measurement above as its evidence).
+  - (b) "Exactly" is bit for bit on the canvas presets only (equal-mass unit triangle and bodies on the `x`-axis in
+    order, no gauge), with the general case at rounding as in (a).
+  - (c) "Exactly" is the chart's: collinear → `z_β` at its clamp image with its bit set, bit for bit (holds on every
+    state measured), and equilateral → `(z_α, z_β) = (0, 0)` to rounding.
+- **Applied meanwhile:** nothing is judged. `cargo xtask gate inspector-roundtrip` reports both families' `w` and the
+  `z_β` clamp count beside its verdict, which judges the round trip and the canonical CoM only. The pole is the
+  equal-mass one, as RQ-355 holds it for other masses.
+- **Waits:** REQ-VAL-022's two shape checks; REQ-VAL-022 carries `rq: [RQ-355, RQ-471]`, held, not closed, by
+  TASK-M2-27's PR (applied per R-369). The round trip, the CoM, REQ-VAL-021 and REQ-VAL-121's proposal do not wait.
