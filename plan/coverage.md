@@ -13,18 +13,18 @@
 | EVT | 31 |
 | PAY | 106 |
 | GEN | 42 |
-| SCHED | 99 |
+| SCHED | 100 |
 | REF | 52 |
 | RENDER | 100 |
-| COL | 110 |
-| GUI | 309 |
+| COL | 131 |
+| GUI | 314 |
 | TOOL | 184 |
 | VAL | 191 |
 | PERF | 95 |
 | SYS | 84 |
-| **total** | **1659** |
+| **total** | **1686** |
 
-Of these: 141 calibration, 136 definition, 1382 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 142 calibration, 136 definition, 1408 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -37,21 +37,21 @@ Of these: 141 calibration, 136 definition, 1382 obligation. Retired (kept for th
 | M4 | 106 |
 | M5 | 176 |
 | M6 | 220 |
-| M7 | 188 |
-| M8 | 326 |
+| M7 | 212 |
+| M8 | 329 |
 
 ## Sections
 
-1313 sections in 49 files: 1088 yield at least one requirement; 225 yield none and are listed below with the reason.
+1333 sections in 50 files: 1106 yield at least one requirement; 227 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
 | gap (RQ-378) | 1 |
-| informative only | 167 |
+| informative only | 168 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 40 |
-| rationale | 10 |
+| rationale | 11 |
 | superseded (kept for the record) | 4 |
 
 
@@ -410,6 +410,13 @@ Of these: 141 calibration, 136 definition, 1382 obligation. Retired (kept for th
 | 5. The prediction worth testing early, because it is the demo | informative only | working notes: only §4 is normative (R-109) |
 | 6. What this reuses rather than adds | informative only | working notes: only §4 is normative (R-109) |
 | 7. Open | informative only | working notes: only §4 is normative (R-109) |
+
+### `docs/design/principia_state_map.md`
+
+| section | reason | note |
+|---|---|---|
+| The state map: every pixel coloured by where its system is now | informative only | preface and the port's header note (R-542); obligations in SM1 to SM15 |
+| 0. My words | rationale | the human's words, quoted verbatim in R-542; the obligations they settle are in SM1 to SM15 and R-542 |
 
 ### `docs/design/principia_systems_architecture.md`
 

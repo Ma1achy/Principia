@@ -523,6 +523,10 @@ As written in payload §3: any change to the continuation table changes the sche
 
 ## R-64 — The stain editor is a free, typed node graph *(closes RQ-20)*
 *25 Sep 2026 · applied in step 6*
+*Extended by R-542 (21 Oct 2026; the stain graph gains the `point⟨q⟩` field subtype and the Chart position source,
+`principia_state_map.md` SM15; render_gui_spec Part II §3, §3.1, §5, §6, §9 and §11).*
+*Still in force: the stain editor is a free, typed node graph, render_gui_spec Part II standing; R-542 adds a
+subtype and a source to it.*
 
 render_gui_spec Part II stands. gui_state_contract §5's four-slot, fixed-wiring description predates Part II and is
 updated to the graph. Files: gui_state_contract §5, §7; render_gui_spec Part II header.
@@ -18961,8 +18965,8 @@ queue it rather than resolving it"):* five conflicts are queued, not ruled:
   TASK-M7-50 waits.
 - **RQ-497:** main's Shape n̂ is a `vector` field with one colour editor, so SM15's Position and Bands counterparts are
   the prototype's; §6's morphing against SM15's gate; §3.1's one-param source and band-masks as posts; board 4's sphere
-  paragraph against SM11; PR #268's Print graph sharing "Palette", "Flow", "field" and "post", and RQ-478's range for a
-  payload field input. Meanwhile (a).
+  paragraph against SM11; PR #268's Print graph sharing "Palette", "Flow", "field" and "post", and that branch's queued range
+  question for a payload field input. Meanwhile (a).
 - **RQ-498:** the encode folds the mirror, so on the shape sphere Chart position and Shape n̂ read mirror points where
   `n₃ < 0` (PR #262's shape-sphere docs, R-141); in-square mirror pixels (R-141, R-503 on `task/TASK-M2-28`) agree to
   rounding, not bitwise; the trace draws a left or past-the-end sample as no value (R-538 TF1), where SM5a clamps, and
@@ -18975,9 +18979,9 @@ What agrees: R-407's four extension types and R-412's mirror hemisphere (SM3, SM
 EX4's coarse-ancestor fill (SM3); R-470's blank for not a system and R-511's for `decode_failed`, as PR #269 draws them
 (H3); PR #269's field ramps' `#141418` for a non-finite value (SM5); TF1's definition of leaving, word for word SM5's;
 PR #262's encode as the quotient map (SM1, which also removes translation and the boost); `task/TASK-M2-28`'s
-exponential map, which has no θ or φ axis (SM4); PR #268's Print graph, a separate graph after the stain, its R-533
+exponential map, which has no θ or φ axis (SM4); PR #268's Print graph, a separate graph after the stain, its ruling
 showing the bare ground where a Chart position stain draws blank. No open branch adds an R, RQ, REQ or TASK id this port
-uses; PR #268's RQ-478, RQ-479 and RQ-495 and the other agent's RQ-490 to RQ-494 are left alone.
+uses; the RQ ids PR #268 adds and the five another agent holds, between RQ-489 and RQ-496, are left alone.
 
 *What it extends:* **R-64** (the stain graph gains the `point⟨q⟩` subtype and the Chart position source; render GUI spec
 Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412, R-469, R-470, R-511, R-537 and R-538.

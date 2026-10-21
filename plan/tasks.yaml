@@ -2261,6 +2261,55 @@
   requirements: [REQ-TOOL-172, REQ-TOOL-186]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+- id: TASK-M7-46
+  milestone: M7
+  title: "The state map's docs port: principia_state_map.md, SM14's rows, the ruling and the queue (R-542)"
+  depends_on: []
+  needs: []
+  requirements: [REQ-COL-112]
+  reviewers: [code, qa, physics, gui]
+  pitfalls: []
+  status: done  # closed by R-542 (its PR, rulings/R-542), not by a task PR
+- id: TASK-M7-47
+  milestone: M7
+  title: "Chart position: the source, its projection onto each target's quotient, the four results, the edge clamp, the colour frame and the t = 0 identity (R-542 SM1 to SM5, SM7) ⚑"
+  depends_on: [TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11]  # waits on RQ-489 (the chart read from a colour occupant; a fixed t), R-542 H9
+  needs: []
+  requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M7-48
+  milestone: M7
+  title: "Chart position's colour slot: the bases (Gradient, Site blend, Palette), the layers, the brightness occupants and the calibrations (R-542 SM6, SM11)"
+  depends_on: [TASK-M7-47, TASK-M7-04, TASK-M7-05, TASK-M7-06, TASK-M7-08, TASK-M7-10]
+  needs: []
+  requirements: [REQ-COL-122, REQ-COL-123, REQ-COL-124, REQ-COL-125, REQ-COL-126, REQ-COL-127, REQ-COL-128, REQ-COL-129]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M7-49
+  milestone: M7
+  title: "Chart position's Picture base, the fade off the slice and the ensemble's nominal copy (R-542 SM8, SM10)"
+  depends_on: [TASK-M7-48, TASK-M7-44]  # TASK-M7-44: the picture's tier in R-484's table (R-542 H5)
+  needs: []
+  requirements: [REQ-COL-130, REQ-COL-131]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M7-50
+  milestone: M7
+  title: "Replace-L's chroma scaling, min(1, L/0.75, (1 − L)/0.35) (R-542 SM15)"
+  depends_on: [TASK-M7-04, TASK-M7-48]  # waits on RQ-496 (Replace-L as ruled, R-77), R-542 H9
+  needs: []
+  requirements: [REQ-COL-132]
+  reviewers: [code, qa]
+  pitfalls: []
+- id: TASK-M7-51
+  milestone: M7
+  title: "The stain editor's Chart position: the node, the point⟨q⟩ subtype, the base-and-layers inspector, switching and restoring, Problems, the presets and saved stains unchanged (R-542 SM15)"
+  depends_on: [TASK-M7-48, TASK-M7-49, TASK-M7-17, TASK-M7-22, TASK-M7-23, TASK-M7-24]
+  needs: []
+  requirements: [REQ-GUI-335, REQ-GUI-336, REQ-GUI-337, REQ-GUI-338]
+  reviewers: [code, qa, gui]
+  pitfalls: []
 - id: TASK-M8-01
   milestone: M8
   title: "The state contract: SimConfig / RenderState / ViewUI, provenance serialisation and the GUI-sized snapshot"
@@ -2779,6 +2828,14 @@
   depends_on: [TASK-M8-64, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
   needs: []
   requirements: [REQ-GUI-329]
+  reviewers: [code, qa, gui]
+  pitfalls: []
+- id: TASK-M8-66
+  milestone: M8
+  title: "The state map in Explore: the legend and its ring, never a gap past the square, copies as the canonical sample and the scheduler's firewall (R-542 SM3, SM9)"
+  depends_on: [TASK-M7-51, TASK-M8-10, TASK-M8-22, TASK-M8-56]
+  needs: []
+  requirements: [REQ-COL-121, REQ-SCHED-102, REQ-GUI-339]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M0-35

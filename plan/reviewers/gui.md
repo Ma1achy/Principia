@@ -114,7 +114,7 @@ Artboard → governing section:
 - [ ] `docs/gui/design/12_console.png` — Console → `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)"
 
 <!-- list:gui-screenshots -->
-*108 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*112 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M6**
 - [ ] REQ-GUI-014 — presence only (R-129; no layout comparison until the M8 dev GUI): the Run window's 'quality: Custom' section shows each control
@@ -148,6 +148,9 @@ Artboard → governing section:
 - [ ] REQ-GUI-019 — Node WGSL / Pipeline WGSL views show the generated code
 - [ ] REQ-GUI-020 — controls present on each map of that group (R-139)
 - [ ] REQ-GUI-031 — Against the stain-editor artboard; unit test that arbitrary typed wiring is accepted and type-mismatched wiring rejected.
+- [ ] REQ-GUI-335 — cargo xtask screenshot state_map_editor (boards 1, 3 and 4 of docs/gui/reference/state_map/boards/); cargo test -p gui chart_position_switch: switching the source between Shape n̂ and Chart position and back, and the chart from latent to shape sphere and back, restores each base's and layer's settings exactly; controls: a setting lost on a round trip, and a layer dropped (not hidden) under Shape n̂, each fail
+- [ ] REQ-GUI-336 — cargo xtask screenshot state_map_problems (board 1's Problems rows on the prototype's settings); cargo test -p gui state_map_problems: each warning raised exactly for its bases (a 1D gradient, the sphere's 3D and the cylinder's 2D gradient; Shape n̂'s position map and Bands where they exist), none for the L-fixed bases; the four counts equal the frame's statuses; controls: a warning missing on an L-spending base, and one raised on an L-fixed base, each fail
+- [ ] REQ-GUI-337 — cargo xtask screenshot state_map_presets (board 5); cargo test -p gui state_map_presets: each preset's graph equals the prototype's smPreset (source, base, layers, brightness), editable on load; control: a preset whose graph differs from smPreset, fails
 
 **M8**
 - [ ] REQ-CHART-040 — screenshot of each axis kind against 03_chartbuilder.png; normalise sets |q| = 1
@@ -227,6 +230,7 @@ Artboard → governing section:
 - [ ] REQ-GUI-332 — cargo xtask screenshot 06_legend (trace_block, sound on and off): the block sits after the stain's keys and before the debug key, its entries drawn as the figure draws them; no block while no trace is shown; control: a block shown with no trace, or one among the stain's keys, fails
 - [ ] REQ-GUI-333 — cargo xtask screenshot 01_main (trace_look): the default trace's line, outline, ticks, arrows, star, head disc and icons as stated, over a light and a dark stain; two kept traces in the palette's first two colours; controls: a trace drawn without its outline, and kept #2 drawn #5ab4ff (the boards' colour), each fail
 - [ ] REQ-GUI-334 — cargo xtask screenshot 01_main (trajectory_panel_listen: Listen collapsed, Listen expanded) and cargo test -p gui listen_section (R-541 G10 Tabs, its sound half): the section's rows and controls are §G2's; switching tabs switches the sound with the trace and the previews; Listen's collapsed state survives a restart and is not in the contract's state; with the focus in the Figure, in each mode, L toggles the sound and is on the ? sheet, and acts neither with the focus outside the Figure nor while a text field is typed in; Tab and Enter reach the section's controls in §G2's order (♪, the instrument, ⋯; expanded, volume, listen mode, loudness, the event and effect chips) in navigation mode, each changed only in interaction mode (§G3, R-409); controls: the sound following the cursor while a kept tab is selected, the state reset on restart or kept in the contract's state, L acting outside the Figure, L missing from the ? sheet, L acting while a text field is typed in, and a control unreachable, out of order or changed in navigation mode, each fail
+- [ ] REQ-GUI-339 — cargo xtask screenshot state_map_legend (board 6); cargo test -p gui state_map_never_a_gap: the black (uncovered) fraction of the canvas is 0 at every frame of a scripted drag and zoom into the extension on the latent chart and the sphere; the ring sits at the hovered pixel's own colour in the legend; controls: the old grid dropped before the new one lands, and a ring computed with other integrator settings, each fail
 - [ ] REQ-TOOL-088 — presence (R-129): the Profiler switch exists; the footer indicator is visible while passive logging is on; logging is off by default
 - [ ] REQ-TOOL-098 — screenshot against 04_windows.png's profiler; the histogram's cap marker sits at N_max; the window reads the profiler file prin profile writes, and that file's header config is REQ-GUI-039's provenance object (R-113)
 <!-- /list:gui-screenshots -->

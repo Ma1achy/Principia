@@ -2899,7 +2899,7 @@ field, stop and queue it; do not add one"): no field is added.*
   composition §4.1's R-542 paragraph). The scaling requirement carries `rq: RQ-496`, and TASK-M7-50, which builds it,
   waits on this.
 
-## RQ-497: The stain graph's types and nodes: Shape n̂ is a `vector` field with one colour editor on main, where the state map calls it `point⟨sphere⟩` with Position, Site blend and Bands nodes to swap with; a field subtype is no hard gate on main, where SM15 offers only what the source takes; a source has one param, and band-masks are posts; and the Print graph (PR #268) uses the same words *(conflict: the human's design against the render GUI spec, colour composition and an open branch; R-542, R-64, R-526; RQ-478; context: TASK-M7-51, TASK-M7-48)*
+## RQ-497: The stain graph's types and nodes: Shape n̂ is a `vector` field with one colour editor on main, where the state map calls it `point⟨sphere⟩` with Position, Site blend and Bands nodes to swap with; a field subtype is no hard gate on main, where SM15 offers only what the source takes; a source has one param, and band-masks are posts; and the Print graph (PR #268) uses the same words *(conflict: the human's design against the render GUI spec, colour composition and an open branch; R-542, R-64; PR #268; context: TASK-M7-51, TASK-M7-48)*
 
 *Found by R-542's port and its check of PR #268 (`rulings/print-graph`, 1b7ca0ed). Nothing is ruled.*
 
@@ -2923,8 +2923,8 @@ field, stop and queue it; do not add one"): no field is added.*
     blend → Site blend, Palette → Bands); the layers have no sphere form and are kept, ghosted". SM11 and the prototype
     instead give Chart position on the sphere its own bases and layers.
   - PR #268 (`rulings/print-graph`): the Print graph's nodes `palette`/`palslot` ("Palette"), `flow` ("Flow"), a field
-    input node of type `"field"`, and R-488's stage "post"; print_graph §4.4: "A graph may read a payload field as a
-    `scalar` input", by its `range_norm` (RQ-478). SM14 adds "chart position at the playhead" to payload §5's derived
+    input node of type `"field"`, and its stage "post" (the profiler's `stage_ms.post`); print_graph §4.4: "A graph may read a payload field as a
+    `scalar` input", by its `range_norm`, which that branch queues. SM14 adds "chart position at the playhead" to payload §5's derived
     table, a `point⟨q⟩` with no ledger range.
 - **The conflict:** main's Shape n̂ is `vector` with one colour editor, so the Position and Bands counterparts SM15 swaps
   with do not exist on main (they are the prototype's); SM15's gate against §6's morphing; §3.1's one-param source and
