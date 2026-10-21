@@ -992,7 +992,7 @@
   - RQ-360
 - id: REQ-ENC-004
   area: ENC
-  statement: "Encode must be a right inverse on the interior (T2), asserted per chart in physical units as ‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys over interior z, with clamp-adjacent samples asserting lookup_clamped instead of a tight residual."
+  statement: "Encode must be a right inverse on the interior (T2), asserted per chart in physical units as ‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys over interior z, with clamp-adjacent samples asserting lookup_clamped instead of a tight residual; on the shape sphere chart, whose decode at a lower-hemisphere pixel is off C's section (R-544), the reference is C(D(z)), as T3's: ‖C(D(z)) − D(E(D(z)))‖_phys ≤ ε_phys."
   source:
   - file: docs/contracts/principia_inverse_encode_contract.md
     section: "Part 1 — What encode is: a quotient map onto a section"
@@ -1010,13 +1010,16 @@
     section: 4. Seams (its side of each — the integration-test list)
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
   verify:
     method: property test
     detail: encode test 1 / decoder test 7 per chart
   rulings:
   - R-71
+  - R-544
   milestone: M2
-  note: "Value of ε_phys: REQ-ENC-024 (calibration)."
+  note: "Value of ε_phys: REQ-ENC-024 (calibration). R-544 (applied per R-369, 21 Oct 2026, a mechanical consequence; TASK-M2-43's pre-flight): a lower-hemisphere pixel of the shape sphere chart decodes off C's section, so D(E(x)) there is C(x), the mirror image Π·x, and the residual against x is of order 1; T2 on that chart is taken against C(x), as T3 (inverse_encode_contract Part 1, T2). TASK-M2-43 changes crates/kernel/tests/roundtrip.rs's t2_per_chart and re-runs it; TASK-M2-16 closed it. *Was:* \"Encode must be a right inverse on the interior (T2), asserted per chart in physical units as ‖D(z) − D(E(D(z)))‖_phys ≤ ε_phys over interior z, with clamp-adjacent samples asserting lookup_clamped instead of a tight residual.\""
 - id: REQ-ENC-005
   area: ENC
   statement: "Encode must be a left inverse modulo gauge (T3): D(E(x)) = C(x), with shape angles and masses matching, E matching after the recorded rescale, and |L_z| matching with sign consistent with lookup_mirrored."
@@ -1386,12 +1389,16 @@
     section: 5. Unit tests
   - file: decisions.md
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  - file: decisions.md
+    section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
   verify:
     method: numerical gate
-    detail: "the proposal measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and sets ε_phys above it; recorded in decisions.md"
+    detail: "the proposal measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and sets ε_phys above it, on the shape sphere chart against C of the decoded state (R-544; inverse_encode_contract Part 1, T2); recorded in decisions.md"
   rulings:
   - R-71
+  - R-544
   milestone: M2
+  note: "R-544 (applied per R-369, 21 Oct 2026, a mechanical consequence; TASK-M2-43's pre-flight): the encode-eps-phys gate's shape sphere rows compare against C(x), as T3; TASK-M2-43 changes the gate's pass condition and re-runs it. The proposal's measurements (k = 64; the worst interior residual 21.90 ε_R, seeds 2 to 9 at most 25.64, crates/ledger/src/constants.rs) were made under R-141's fold, every shape sphere decode on the upper hemisphere; they are kept with R-544 beside them, not re-measured (R-544, \"Results measured under one hemisphere\"). *Was* (verify): \"the proposal measures the physical-unit round-trip residual over interior z per chart at f64 and f32 and sets ε_phys above it; recorded in decisions.md\""
 - id: REQ-ENC-025
   area: ENC
   kind: definition
@@ -3172,7 +3179,7 @@
   note: "R-544 items 1 and 2, and the R-369 decisions \"The decode\" and \"The held momentum below the equator\". Closed by TASK-M2-43."
 - id: REQ-CHART-082
   area: CHART
-  statement: "The mirror must be tested on the shape sphere chart as a fact about fates, never identified (R-544 item 5): where every coordinate the chart holds fixed is mirror-equivariant (the held momentum its own mirror image, its y-components zero, released from rest included), mirror-invariant fields must be symmetric and signed fields antisymmetric across the equator, bitwise for the run from the exactly mirrored state Π·x against the run from x, and to rounding across the pixel pair (θ, φ) and (θ, π − φ), whose decoded states are mirror images only to the decode's rounding (R-544 §4: \"bitwise where the integration is mirror-exact, else to rounding\"); where one is not (a held L_z ≠ 0, or a held momentum with a y-component), the two hemispheres are different systems and the test must report that it does not apply, asserting nothing; the test must say which case it is in."
+  statement: "The mirror must be tested on the shape sphere chart as a fact about fates, never identified (R-544 item 5): the test must classify the coordinates the chart holds fixed as mirror-equivariant (the held momentum its own mirror image, its y-components zero, released from rest included) or not (a held L_z ≠ 0, or a held momentum with a y-component), and say which case it is in; in the first case Π·x, Π applied to a decoded state, must be that state's exact mirror image, bit for bit, and the pixel pair (θ, φ) and (θ, π − φ) must decode to mirror images to the decode's rounding (R-544 §4: \"bitwise where the integration is mirror-exact, else to rounding\"); in the second the two hemispheres are different systems and the test must report that it does not apply, asserting nothing. The runs from those states, their mirror-invariant fields symmetric and signed fields antisymmetric across the equator, are REQ-CHART-085's."
   source:
   - file: decisions.md
     section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
@@ -3182,11 +3189,11 @@
     section: Part 5 — Well-posedness and the validation contract
   verify:
     method: unit test
-    detail: "cargo test -p kernel shape_sphere_mirror_test: released from rest, and with a held momentum with zero y-components, the test reports mirror-equivariant; the run from Π·x, Π applied to a decoded state, is the run from x mirrored, bitwise; each pixel pair's shapes are mirror images, shape_vec(Π·decode(θ, φ)) against shape_vec(decode(θ, π − φ)) within REQ-CHART-053's bound, at every pixel; its decoded states agree within ε_phys (REQ-ENC-024's physical-units norm) on the pixels whose n̂ lies farther than a δ stated in the test from each of the three binary-collision landmarks (placed from chart_reference §3.1, as §3.4 places them), the test giving ulp/δ ≤ ε_phys as δ's reason, since near a landmark λ̃'s direction is conditioned as ulp/‖ρ̃‖ (§3.2) and a rounding-level difference in n̂ turns the state by O(1); on a named fixture (the masses, the pairs and a horizon stated in the test, which the test shows non-chaotic there by the pair's state separation staying below a stated bound over the horizon) the outcome and t_end are equal and L_z and the frame's winding opposite across each pixel pair; with a held p_λ,y ≠ 0 it reports \"does not apply\" and asserts nothing; controls: R-141's gauge left in (L_z and the winding equal, not opposite), a momentum rule that turns p_x below the equator (outcome, t_end or winding broken), a test asserting the symmetry in the \"does not apply\" case (it fails on the pairs), and a state comparison that includes BC₀₁'s pixel (s, t) = (0.5, 0.5) of an odd grid, each fail; review (physics)"
+    detail: "cargo test -p kernel shape_sphere_mirror_test: released from rest, and with a held momentum with zero y-components, the test reports mirror-equivariant; Π·x, Π applied to a decoded state, has every rᵢ and pᵢ of x reflected through the x-axis, bit for bit, so its L_z is −L_z(x) and its shape_vec is x's with w negated, bitwise; each pixel pair's shapes are mirror images, shape_vec(Π·decode(θ, φ)) against shape_vec(decode(θ, π − φ)) within REQ-CHART-053's bound, at every pixel; its decoded states agree within ε_phys (REQ-ENC-024's physical-units norm) on the pixels whose n̂ lies farther than a δ stated in the test from each of the three binary-collision landmarks (placed from chart_reference §3.1, as §3.4 places them), the test giving ulp/δ ≤ ε_phys as δ's reason, since near a landmark λ̃'s direction is conditioned as ulp/‖ρ̃‖ (§3.2) and a rounding-level difference in n̂ turns the state by O(1); with a held p_λ,y ≠ 0 it reports \"does not apply\" and asserts nothing; controls: R-141's gauge left in (each pair's shapes equal, not mirror images), a momentum rule that turns p_x below the equator (the pair's states not mirror images), a test asserting the symmetry in the \"does not apply\" case (it fails on the pairs), and a state comparison that includes BC₀₁'s pixel (s, t) = (0.5, 0.5) of an odd grid, each fail; review (physics)"
   rulings:
   - R-544
   milestone: M2
-  note: "R-544 item 5; INSTRUCTION.md §4's mirror symmetry and mirror control rows (checks 2 and 3 of checks/r544_check.py, the port's model). Closed by TASK-M2-43. Physics review 5603309678 of PR #273, P2 (applied per R-369, a test detail under §4's own words): the exact claims are the exactly mirrored state's; across pixel pairs, fates are compared on a named non-chaotic fixture, since a rounding-level difference in the IC changes a chaotic fate (physics.md §7, R-84). *Was:* \"mirror-invariant fields at (θ, φ) and (θ, π − φ) must be exactly equal and signed fields exactly opposite\". Physics review 5603529679 of PR #273, P6 (applied per R-369): REQ-CHART-053 bounds n̂ only, so the states are compared within ε_phys. *Was:* \"the decoded states of each pixel pair are mirror images within REQ-CHART-053's bound\". Physics review 5603638748 of PR #273, P9 (applied per R-369, a test detail under §4's \"else to rounding\"): at BC₀₁'s pixel, its own pair, the states differ by 0.89 while the shapes agree to 1e−16, so the states are compared away from the three landmarks and the shapes everywhere. *Was:* \"and its decoded states within ε_phys (REQ-ENC-024's physical-units norm)\"."
+  note: "R-544 item 5; INSTRUCTION.md §4's mirror symmetry and mirror control rows (checks 2 and 3 of checks/r544_check.py, the port's model). Closed by TASK-M2-43. Physics review 5603309678 of PR #273, P2 (applied per R-369, a test detail under §4's own words): the exact claims are the exactly mirrored state's; across pixel pairs, fates are compared on a named non-chaotic fixture, since a rounding-level difference in the IC changes a chaotic fate (physics.md §7, R-84). *Was:* \"mirror-invariant fields at (θ, φ) and (θ, π − φ) must be exactly equal and signed fields exactly opposite\". Physics review 5603529679 of PR #273, P6 (applied per R-369): REQ-CHART-053 bounds n̂ only, so the states are compared within ε_phys. *Was:* \"the decoded states of each pixel pair are mirror images within REQ-CHART-053's bound\". Physics review 5603638748 of PR #273, P9 (applied per R-369, a test detail under §4's \"else to rounding\"): at BC₀₁'s pixel, its own pair, the states differ by 0.89 while the shapes agree to 1e−16, so the states are compared away from the three landmarks and the shapes everywhere. *Was:* \"and its decoded states within ε_phys (REQ-ENC-024's physical-units norm)\". TASK-M2-43's pre-flight (applied per R-369, 21 Oct 2026; R-544's dated line): the run arms need the stepper, the wrapper and the outcome classifier (TASK-M3-02, TASK-M3-04, TASK-M3-12), which TASK-M2-43 cannot reach, so they move to REQ-CHART-085 (TASK-M3-38), the frame's winding defined by REQ-CHART-086; not a deferral, the arms move to the task that can build them. This requirement keeps the classification, the \"does not apply\" case, the shape and state pair checks and the bitwise Π·x check. *Was* (statement): \"The mirror must be tested on the shape sphere chart as a fact about fates, never identified (R-544 item 5): where every coordinate the chart holds fixed is mirror-equivariant (the held momentum its own mirror image, its y-components zero, released from rest included), mirror-invariant fields must be symmetric and signed fields antisymmetric across the equator, bitwise for the run from the exactly mirrored state Π·x against the run from x, and to rounding across the pixel pair (θ, φ) and (θ, π − φ), whose decoded states are mirror images only to the decode's rounding (R-544 §4: \"bitwise where the integration is mirror-exact, else to rounding\"); where one is not (a held L_z ≠ 0, or a held momentum with a y-component), the two hemispheres are different systems and the test must report that it does not apply, asserting nothing; the test must say which case it is in.\" *Was* (verify, the parts moved): \"the run from Π·x, Π applied to a decoded state, is the run from x mirrored, bitwise;\", \"on a named fixture (the masses, the pairs and a horizon stated in the test, which the test shows non-chaotic there by the pair's state separation staying below a stated bound over the horizon) the outcome and t_end are equal and L_z and the frame's winding opposite across each pixel pair;\", and the controls' effects \"(L_z and the winding equal, not opposite)\" and \"(outcome, t_end or winding broken)\", now the pair checks' (\"each pair's shapes equal, not mirror images\", \"the pair's states not mirror images\")."
 - id: REQ-CHART-083
   area: CHART
   statement: "Area statistics on the shape sphere chart must be counted over the whole sphere, each pixel its own system, counted once (R-544 item 7): no statistic folds the lower hemisphere onto the upper, and where R-544 item 5's symmetry holds every fate of a mirror-invariant class (outcome, escaper, collision pair) is counted twice, equally, so those fractions are equal on a fixture whose pairs stay close over the horizon, and elsewhere differ only by the pairs whose fate a rounding-level difference in the decode flips, while a signed class (a winding or braid class) maps to its mirror class; a statistic measured under one hemisphere must say so, beside R-544."
@@ -3205,6 +3212,42 @@
   - R-544
   milestone: M8
   note: "R-544 item 7, amending R-408 B3, B4 and B7 for the shape sphere; check 6 of checks/r544_check.py is the port's model. Closed by TASK-M8-44. Physics review 5603309678 of PR #273, P2 (applied per R-369): mirror-invariant classes only, on a named non-chaotic fixture. *Was:* \"a class's count over the whole sphere is twice its count over the upper half\". Physics review 5603529679 of PR #273, P7 (applied per R-369). *Was:* \"so those fractions are either hemisphere's to the decode's rounding\"."
+- id: REQ-CHART-085
+  area: CHART
+  statement: "The mirror test's runs on the shape sphere chart (R-544 item 5): where REQ-CHART-082's classification reports mirror-equivariant, the run from the exactly mirrored state Π·x must be the run from x mirrored, bitwise (R-544 §4: \"bitwise where the integration is mirror-exact\"), its outcome and t_end equal and its L_z and frame's winding (REQ-CHART-086) opposite; across the pixel pair (θ, φ) and (θ, π − φ), whose decoded states are mirror images only to the decode's rounding (\"else to rounding\"), the outcome and t_end must be equal and L_z and the frame's winding opposite on a named fixture the test shows non-chaotic over its horizon; in REQ-CHART-082's \"does not apply\" case the test must assert nothing."
+  source:
+  - file: decisions.md
+    section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  - file: docs/contracts/principia_chart_decoder_contract.md
+    section: Part 5 — Well-posedness and the validation contract
+  verify:
+    method: unit test
+    detail: "cargo test -p kernel shape_sphere_mirror_runs: released from rest, and with a held momentum with zero y-components, the run from Π·x, Π applied to a decoded state, is the run from x mirrored, bitwise, at every sampled state (positions and momenta reflected), its outcome and t_end equal, its L_z and frame's winding the negations of x's; on a named fixture (the masses, the pairs and a horizon stated in the test, which the test shows non-chaotic there by the pair's state separation staying below a stated bound over the horizon) the outcome and t_end are equal and L_z and the frame's winding opposite across each pixel pair; with a held p_λ,y ≠ 0 it reports \"does not apply\" and asserts nothing; controls: R-141's gauge left in (L_z and the winding equal, not opposite), a momentum rule that turns p_x below the equator (outcome, t_end or winding broken), a configuration-only mirror for Π (L_z not opposite), and a fixture whose pair separation passes its bound over the horizon (the test refuses it as chaotic), each fail; review (physics)"
+  rulings:
+  - R-544
+  milestone: M3
+  note: "Split from REQ-CHART-082 in TASK-M2-43's pre-flight (applied per R-369, 21 Oct 2026; R-544's dated line): these arms need real integrator runs, the stepper (TASK-M3-02), the wrapper (TASK-M3-04) and the outcome classifier (TASK-M3-12), which TASK-M2-43 cannot reach. Not a deferral: the arms move to the task that can build them. Closed by TASK-M3-38. Physics review 5603309678 of PR #273, P2's reading (the exact claims the exactly mirrored state's; across pixel pairs on a named non-chaotic fixture) carries over from REQ-CHART-082. Physics review is required (⚑)."
+- id: REQ-CHART-086
+  area: CHART
+  kind: definition
+  statement: "The frame's winding, the signed field beside L_z in the mirror test (REQ-CHART-085; chart_reference §3.3, \"the signed ones (L_z, the winding)\"), must be defined in chart_reference §3.3 by the task that needs it and reviewed by the physics reviewer before merge: which vector's turn in the plane it accumulates, at what cadence, from what start, and its value where that vector vanishes or the run ends at a collision. It is not the shape sphere's unwrapped longitude θ̃ (REQ-INT-001), which the mirror leaves unchanged."
+  source:
+  - file: docs/design/principia_chart_reference.md
+    section: 3.3 The chart map
+  - file: decisions.md
+    section: "R-72 — A missing definition is written by the task that needs it *(closes RQ-46 to RQ-55, definitions)*"
+  - file: decisions.md
+    section: "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
+  verify:
+    method: review checklist
+    detail: "chart_reference §3.3 states the frame's winding: the vector whose turn it accumulates, the cadence, its start at t = 0 and its value where the vector vanishes or at a collision; cargo test -p kernel frame_winding: a rigid rotation through 2πk winds k turns, the run from Π·x winds the negation of x's, bitwise; control: θ̃ in its place is not opposite under Π, and fails; physics reviewer approved"
+  rulings:
+  - R-72
+  - R-544
+  milestone: M3
+  note: "TASK-M2-43's pre-flight (applied per R-369, 21 Oct 2026): chart_reference §3.3 (the whole-sphere paragraph, \"the signed ones (L_z, the winding)\") and REQ-CHART-082's verify use the winding, and no requirement or passage defines it. The port's model, docs/incoming/2026-10-21_shape_sphere_whole/checks/r544_check.py's run(), accumulates the turn of ρ (r₁ − r₀) in the plane by principal-value deltas per step, from 0; a model, not a definition. Closed by TASK-M3-38."
 - id: REQ-INT-001
   area: INT
   statement: "The unwrapped phase `θ̃` must be a running SimState accumulator that adds the principal-value delta of `atan2(n_v, n_u)` each step, with `orbit_count = ⌊|θ̃|/2π⌋` and `retrograde = sign(θ̃) < 0` derived at read."

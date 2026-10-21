@@ -1093,6 +1093,14 @@
   requirements: [REQ-CHART-072]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
+- id: TASK-M3-38
+  milestone: M3
+  title: "The shape sphere's mirror test, its runs: the run from Π·x the run mirrored, bitwise, fates equal and L_z and the frame's winding opposite across pixel pairs on a named non-chaotic fixture, and the frame's winding defined (R-544) ⚑"
+  depends_on: [TASK-M3-04, TASK-M3-12, TASK-M2-43]  # R-544: REQ-CHART-082's run arms, split in TASK-M2-43's pre-flight (applied per R-369)
+  needs: [REQ-CHART-082]
+  requirements: [REQ-CHART-085, REQ-CHART-086]
+  reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: [PIT-9]
 - id: TASK-M4-01
   milestone: M4
   title: The shared kernel compiled to f32 SPIR-V and WGSL, under the compile-discipline lint
