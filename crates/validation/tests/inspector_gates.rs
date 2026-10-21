@@ -79,7 +79,7 @@ negative_control!(
 );
 
 /// `handle_samples` gives `ics` ICs, the same from one seed and others from another; each handle moves only its own
-/// component of the gauge element, at a size in proportion to the IC's own scale.
+/// component of the gauge element, at a size in proportion to the IC's own scale, reaching both ends of its range.
 fn check_handles(draw: fn(Handle, &mut SplitMix, f64) -> Gauge) {
     let mut rng = SplitMix::new(11);
     let id = Gauge::identity();
@@ -109,10 +109,13 @@ fn check_handles(draw: fn(Handle, &mut SplitMix, f64) -> Gauge) {
     }
     let spread = |h: Handle, pick: fn(&Gauge) -> f64, lo: f64| {
         let mut rng = SplitMix::new(13);
-        (0..400).any(|_| pick(&draw(h, &mut rng, 1.0)).abs() > lo)
+        let v: Vec<f64> = (0..400).map(|_| pick(&draw(h, &mut rng, 1.0))).collect();
+        v.iter().any(|&x| x > lo) && v.iter().any(|&x| x < -lo)
     };
     assert!(
         spread(Handle::Translate, |g| g.a[0], 0.8)
+            && spread(Handle::Translate, |g| g.a[1], 0.8)
+            && spread(Handle::Boost, |g| g.u[0], 0.8)
             && spread(Handle::Boost, |g| g.u[1], 0.8)
             && spread(Handle::Rotate, |g| g.theta, 2.5)
             && spread(Handle::Scale, |g| g.s.log2(), 3.2),
@@ -296,6 +299,90 @@ negative_control!(
     "a leak paired with another step's handle must fail",
     expected = "its own translate-all does not move z",
     check_localises(Leak::Boost, Handle::Translate)
+);
+
+/// The block inverses of `x` under the defaults.
+fn blocks(x: &Ic<f64>) -> [f64; 8] {
+    kernel::encode::blocks::invert::<Defaults, f64>(x).z
+}
+
+/// `x` with every momentum scaled by `k`.
+fn momenta_times(x: &Ic<f64>, k: f64) -> Ic<f64> {
+    Ic {
+        p: x.p.map(|v| v.map(|w| w * k)),
+        ..*x
+    }
+}
+
+/// Each leak's state, known from a canonical `x = D(z)` moved by a gauge element `g` that `C` undoes: the CoM leak is
+/// `x` with its momenta by `(I₀/I_in)^{1/4}`, `I₀ = s² + ‖a‖²` about the origin and `I_in = s²`; the boost leak `x`
+/// boosted by the `u` that `g` carries into its own frame; the rotation leak `R(θ)·x`; the scale leak `x` with its
+/// momenta by `s^{−1/2}`. Each within `10⁻¹⁰` of `encode`'s, over turns, parities and scales.
+fn check_leak_states(leaky: fn(&Ic<f64>, Leak) -> [f64; 8]) {
+    let mut rng = SplitMix::new(19);
+    let near = |a: [f64; 8], b: [f64; 8], what: &str| {
+        let d = z_gap(a, b);
+        assert!(d <= 1e-10, "the {what} leak's state is off by {d:e}");
+    };
+    for k in 0..200 {
+        let x = validation::inspector::decode_z(ball(&mut rng, 1.5));
+        let theta = validation::gauge::uniform(&mut rng, -3.0, 3.0);
+        let s = validation::gauge::uniform(&mut rng, -2.0, 2.0).exp2();
+        let a = [validation::gauge::uniform(&mut rng, -1.0, 1.0) * s, 0.7 * s];
+        let mirror = k % 2 == 1;
+        let id = Gauge::identity();
+        let moved = Gauge { a, theta, s, ..id };
+        let i0 = s * s + a[0] * a[0] + a[1] * a[1];
+        near(
+            leaky(&moved.act(&x), Leak::Com),
+            blocks(&momenta_times(&x, (i0 / (s * s)).sqrt().sqrt())),
+            "Com",
+        );
+        let u = [0.3, -0.2];
+        let boosted = Gauge { u, ..id }.act(&x);
+        let y = Gauge {
+            theta,
+            s,
+            mirror,
+            ..id
+        }
+        .act(&boosted);
+        near(leaky(&y, Leak::Boost), blocks(&boosted), "Boost");
+        let turned = Gauge { theta, ..id }.act(&x);
+        near(
+            leaky(&Gauge { theta, s, a, ..id }.act(&x), Leak::Rotate),
+            blocks(&turned),
+            "Rotate",
+        );
+        near(
+            leaky(&Gauge { s, a, ..id }.act(&x), Leak::Scale),
+            blocks(&momenta_times(&x, 1.0 / s.sqrt())),
+            "Scale",
+        );
+    }
+}
+
+#[test]
+fn inspector_leak_states() {
+    check_leak_states(encode_leaky);
+}
+
+negative_control!(
+    inspector_leak_states,
+    "a boost leak that leaves the momentum in, unturned, must fail",
+    expected = "the Boost leak's state",
+    check_leak_states(|x, leak| match leak {
+        Leak::Boost => {
+            let c = kernel::canon::canonicalise(x);
+            let total = [0, 1].map(|k| x.p.iter().map(|p| p[k]).sum::<f64>());
+            let mut ic = c.ic;
+            for (p, m) in ic.p.iter_mut().zip(x.m) {
+                *p = [p[0] + m * total[0], p[1] + m * total[1]];
+            }
+            blocks(&ic)
+        }
+        _ => encode_leaky(x, leak),
+    })
 );
 
 /// Under `E` itself every handle holds `z` within the gate's bound on a small sample, and a leaky `E` does not.

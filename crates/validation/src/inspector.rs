@@ -169,9 +169,10 @@ pub fn encode_leaky(x: &Ic<f64>, leak: Leak) -> [f64; 8] {
     match leak {
         Leak::None => return encode::<Defaults, f64>(x).z.z,
         Leak::Com => {
-            let k = (i_in / inertia(x.m, x.r)).sqrt();
-            ic.r = ic.r.map(|v| v.map(|w| w * k));
-            ic.p = ic.p.map(|v| v.map(|w| w / k.sqrt()));
+            // Step 0 at `I₀ = Σ mᵢ‖rᵢ‖²` about the origin: the momenta by `(I₀/I_in)^{1/4}` more. The positions'
+            // factor `√(I_in/I₀)` is left out, as `z` reads them only through `α` and `β`, which are scale-free.
+            let k = (inertia(x.m, x.r) / i_in).sqrt().sqrt();
+            ic.p = ic.p.map(|v| v.map(|w| w * k));
         }
         Leak::Boost => {
             let total = [0, 1].map(|k| x.p.iter().map(|p| p[k]).sum::<f64>());
