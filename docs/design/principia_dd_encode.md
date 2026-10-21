@@ -94,9 +94,11 @@ supplies the curve axis's coordinate, and step 4 then decides chart against late
 A chart landing needs both tests to pass: an input with `d(ν(θ)) > tol` and `d(ν*) > tol` falls back to latent `z`
 though its decode at `ν(θ)` lies within `ε_phys`, and an off-curve input within `tol` of `ν*` is placed at `ν*`, not at
 `ν(θ)`. `tol` is the caller's, as `‖·‖_phys` and `ε_phys` are (Part 6 step 4); at `tol = 0` a curve chart represents
-only a state its curve holds exactly. The curve encode (the closed form, `past_fold` among it, `d`, `ν*`, the edge flag
-and the landing on the curve) goes to the caller beside the chart point, on every curve chart. The δm strip is not a
-curve chart (above): its `θ` is the triangle's, its `v` the blend's, and step 4 alone decides.
+only a state its curve holds exactly, and rounding alone puts `d > 0` on the curve, so there it places essentially no
+state: the lookup passes REQ-ENC-026's tolerance (code review 5606284432 of PR #275, C4). The curve encode (the
+closed form, `past_fold` among it, `d`, `ν*`, the edge flag and the landing on the curve) goes to the caller beside the
+chart point, on every curve chart. The δm strip is not a curve chart (above): its `θ` is the triangle's, its `v` the
+blend's, and step 4 alone decides.
 
 **The fold: an input at `θ > π/4`** (defined per R-72, REQ-ENC-022; TASK-M2-18). On the
 acute-angle charts, `θ ∈ (0, π/4]` and `ν ∈ [√2 − 1, 1)` (§4.5), an input whose closed form gives `θ > π/4` (`a > b`,

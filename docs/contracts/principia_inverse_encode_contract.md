@@ -206,6 +206,10 @@ and its slice and conventions pin the other six (chart_decoder_contract Part 5),
 frozen blocks differ from the slice's, or, on an invariant chart, its momenta are another point of the fibre than the
 construction's. Such a state lands in latent `z` (case 3), which represents every state. An annotation axis gives no
 coordinate, and nothing is compared for it.
+On a curve chart (Part 5, kind 4) `c(x)`'s curve coordinate is kind 4's at REQ-ENC-026's curve tolerance
+(`principia_dd_encode.md` §3.1, "The composition"; code review 5606284432 of PR #275, C4, applied per R-369), and that
+tolerance is the lookup's to pass, as `‖·‖_phys` and `ε_phys` are. At a tolerance of 0 such a chart places essentially
+no state, rounding alone putting `d > 0` on its own curve, so every state would land in latent `z`.
 
 **On the shape sphere chart** (R-544; physics review 5603309678 of PR #273, P1, applied per R-369) the decode runs `C`
 with step 3 not taken, so its states lie on that chart's own section, `λ̃_y` keeping its sign. The comparison there is
