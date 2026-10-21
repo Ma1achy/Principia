@@ -7,7 +7,7 @@
 //! CI's checkout is shallow, so the merge history is passed as a file of merge-commit subjects (`--merges`), in the
 //! form `git log --merges --format=%s` prints. Each test has its negative control (R-176).
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -91,6 +91,30 @@ fn planned(tasks: &Path) -> BTreeMap<String, Vec<String>> {
         }
     }
     out
+}
+
+/// tasks.yaml's `status: done` tasks, as (milestone, task id), read from its `- id:`, `  milestone:` and `  status:`
+/// lines: the plan's own done tasks, which the banner counts done whatever the merges say.
+fn done_in_plan(tasks: &Path) -> BTreeSet<(String, String)> {
+    let text = fs::read_to_string(tasks).expect("tasks.yaml read");
+    let (mut out, mut id, mut milestone) = (BTreeSet::new(), String::new(), String::new());
+    for line in text.lines() {
+        if let Some(rest) = line.strip_prefix("- id: ") {
+            id = rest.trim().to_owned();
+        } else if let Some(m) = line.strip_prefix("  milestone: ") {
+            milestone = m.trim().to_owned();
+        } else if let Some(st) = line.strip_prefix("  status: ") {
+            if st.split('#').next().map(str::trim) == Some("done") {
+                out.insert((milestone.clone(), id.clone()));
+            }
+        }
+    }
+    out
+}
+
+/// The tasks [`MERGES`] merges, as (milestone, task id): TASK-M6-37 (#232).
+fn merged_by_fixture() -> BTreeSet<(String, String)> {
+    BTreeSet::from([("M6".to_owned(), "TASK-M6-37".to_owned())])
 }
 
 /// Each task square's (task id, state), in drawing order.
@@ -186,8 +210,11 @@ fn assert_counts(svg: &str, tasks: &Path) {
 fn progress_banner_counts_match_tasks_yaml() {
     let svg = generate("counts", &tasks_yaml(), MERGES, Some(OPEN));
     assert_counts(&svg, &tasks_yaml());
+    let done = done_in_plan(&tasks_yaml())
+        .union(&merged_by_fixture())
+        .count();
     assert!(
-        svg.contains(">2 done · 1 in review · "),
+        svg.contains(&format!(">{done} done · 1 in review · ")),
         "header counts wrong"
     );
 }
@@ -235,7 +262,7 @@ fn percent(done: usize, total: usize) -> usize {
 
 /// Each milestone's box shows `done[m]` of its tasks.yaml tasks done (0 where `done` has no entry) and that share as a
 /// whole percent, in its attributes and its text; the header shows the sum and its percent.
-fn assert_percentages(svg: &str, done: &BTreeMap<&str, usize>) {
+fn assert_percentages(svg: &str, done: &BTreeMap<String, usize>) {
     let plan = planned(&tasks_yaml());
     let mut all = 0;
     for (m, ts) in &plan {
@@ -282,10 +309,19 @@ fn merges_with_m1() -> String {
     out
 }
 
-/// What [`merges_with_m1`] merges, by milestone: TASK-M0-00 (`status: done`), all of M1, and TASK-M6-37.
-fn done_with_m1() -> BTreeMap<&'static str, usize> {
-    let m1 = planned(&tasks_yaml())["M1"].len();
-    BTreeMap::from([("M0", 1), ("M1", m1), ("M6", 1)])
+/// The tasks done with [`merges_with_m1`], counted by milestone: tasks.yaml's `status: done` tasks, all of M1, and
+/// TASK-M6-37, each once.
+fn done_with_m1() -> BTreeMap<String, usize> {
+    let mut done = done_in_plan(&tasks_yaml());
+    done.extend(merged_by_fixture());
+    for id in &planned(&tasks_yaml())["M1"] {
+        done.insert(("M1".to_owned(), id.clone()));
+    }
+    let mut out = BTreeMap::new();
+    for (m, _) in done {
+        *out.entry(m).or_insert(0) += 1;
+    }
+    out
 }
 
 #[test]
