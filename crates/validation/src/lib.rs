@@ -12,6 +12,7 @@ pub mod gate;
 pub mod gauge;
 pub mod golden_scene;
 pub mod gpu;
+pub mod inspector;
 pub mod invariant_gradient;
 pub mod oklab;
 pub mod prop;
