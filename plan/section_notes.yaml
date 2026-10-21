@@ -1070,6 +1070,10 @@
   section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement"
 - file: docs/design/principia_benchmark.md
   section: "Principia: the benchmark"
   reason: "informative only"

@@ -51,7 +51,7 @@ Of these: 144 calibration, 143 definition, 1421 obligation. Retired (kept for th
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 45 |
-| planned (the plan PR) | 59 |
+| planned (the plan PR) | 60 |
 | rationale | 11 |
 | superseded (kept for the record) | 4 |
 
@@ -197,7 +197,7 @@ Of these: 144 calibration, 143 definition, 1421 obligation. Retired (kept for th
 | R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)* | **MISSING REASON** | |
+| R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)* | planned (the plan PR) | R-485: docs first, then the plan; the Print graph plan PR's field-inputs, post-stage budget and degrade requirements cite this section (RQ-478, RQ-479, RQ-495); the PR #268 record is an act, changing no requirement |
 | R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)* | **MISSING REASON** | |
 | R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it | **MISSING REASON** | |
 
@@ -591,6 +591,5 @@ Of these: 144 calibration, 143 definition, 1421 obligation. Retired (kept for th
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*
 - uncovered section with no reason: decisions.md § R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*
 - uncovered section with no reason: decisions.md § R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it
