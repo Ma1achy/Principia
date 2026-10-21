@@ -51,7 +51,9 @@ the four, and the tests that asserted the 2-to-1 cover:
 - `crates/kernel/src/canon.rs`: the shared `C` gains a way to run with step 3 not taken (a parameter or a second entry
   over the same steps, never a copy of the steps); `crates/kernel/src/chart/shape_sphere.rs`: `decode` calls it so,
   and `held_momentum` holds `p_fixed` unmirrored at every pixel (no `mirror_decision` there).
-- `crates/kernel/src/encode/by_kind.rs` (the `ShapeSphere` coordinates, about line 450): the signed lookup.
+- `crates/kernel/src/encode/by_kind.rs` (the `ShapeSphere` coordinates, about line 450): the signed lookup, and the
+  landing test ("Where possible", the module doc's step 4) comparing, on the shape sphere chart, against `C(x)` with
+  step 3 undone on the full state (inverse_encode_contract Part 6; physics review 5603309678 of PR #273, P1).
 - `crates/engine/src/chart_authoring/charts.rs` (about line 215): the spherical map's `system_image: Bijective`.
 - Tests `shape_sphere_signed_decode`, `shape_sphere_mirror_test` and `encode_shape_sphere_signed` (`crates/kernel`),
   each with its controls.
@@ -69,13 +71,19 @@ the four, and the tests that asserted the 2-to-1 cover:
   left in (C's mirror step run), a held momentum mirrored below the equator, and a decode skipping `C`, each fail
   (REQ-CHART-081).
 - `cargo test -p kernel shape_sphere_mirror_test` — REQ-CHART-082's verify: released from rest and with a held
-  momentum whose `y`-components are zero, the test reports mirror-equivariant and the outcome and `t_end` are equal,
-  `L_z` and the frame's winding opposite, the run from the exactly mirrored IC the run mirrored, bitwise; with a held
+  momentum whose `y`-components are zero, the test reports mirror-equivariant; the run from `Π·x`, `Π` applied to a
+  decoded state, is the run from `x` mirrored, bitwise; each pixel pair's decoded states are mirror images within
+  REQ-CHART-053's bound; on a named fixture (masses, pairs and horizon stated in the test, shown non-chaotic there by
+  the pair's state separation staying below a stated bound) outcome and `t_end` are equal and `L_z` and the frame's
+  winding opposite across each pixel pair; with a held
   `p_λ,y ≠ 0` it reports "does not apply" and asserts nothing; controls: the gauge left in, a momentum rule that turns
   `p_x` below the equator, and a test asserting the symmetry in the "does not apply" case, each fail (REQ-CHART-082).
 - `cargo test -p kernel encode_shape_sphere_signed` — REQ-ENC-034's verify: a state and its mirror land at `(θ, φ)`
   and `(θ, π − φ)`; decode then lookup returns the pixel on both hemispheres; T1 holds bitwise as before for `z` and
-  every other chart; controls: a lookup that leaves the mirror in, and T1 applied to the shape sphere's coordinates,
+  every other chart; landing: a lower-hemisphere `x` with `p_y ≠ 0` whose unmirrored Jacobi momenta and masses are
+  the slice's lands on the chart and decodes back to `x` within `ε_phys`, `L_z`'s sign kept, and `Π·x` with the slice
+  unchanged goes to latent `z`; controls: a lookup that leaves the mirror in, T1 applied to the shape sphere's
+  coordinates, and a landing test comparing against the mirrored `C(x)` (every lower-hemisphere state to latent `z`),
   each fail (REQ-ENC-034).
 - `cargo test -p engine chart_descriptors` — REQ-CHART-014's amended verify: the shape sphere's spherical map reports
   `Bijective` (R-544); the full-range Burrau chart `DoubleCover` (R-157).
@@ -93,6 +101,9 @@ the four, and the tests that asserted the 2-to-1 cover:
   weakened:
   - `crates/engine/tests/qa_TASK-M2-14.rs:883` — `check_descriptor(shape(ShapeMap::Spherical), plain(NToOne(2), false))`
     becomes `Bijective` (the comment at :882 with it). Line 884, the exponential map, is TASK-M2-28's exception.
+  - `crates/engine/tests/qa_TASK-M2-14.rs:16`, the module doc's "the shape sphere is n-to-1 with n = 2 (R-141)": the
+    spherical map bijective, the exponential map's value TASK-M2-28's (a doc line, no assertion; code review 5603292175
+    of PR #273, F3).
   - `crates/kernel/tests/qa_TASK-M2-08.rs:917-925`, in `shape_sphere_roundtrip_qa_poles` — "C folds L⁻ onto L⁺
     (R-141): the decode's canonical ic is at L⁺ from either pole" becomes: the decode's `ic` at each pole is at that
     pole, `L⁻` at `t = 0`.
@@ -115,3 +126,7 @@ the four, and the tests that asserted the 2-to-1 cover:
 - REQ-CHART-014 (TASK-M2-14) and REQ-CHART-020 (TASK-M2-08) are closed by merged tasks; their verifies are amended by
   R-544 and this task re-runs them. TASK-M2-28 depends on this task and is redone on top of it (its PR #271, built under
   R-141's and R-503's fold).
+- **Review round 1 of PR #273 (applied per R-369).** The landing test on the shape sphere chart (physics P1); the
+  mirror test's precision, bitwise for the exactly mirrored state and on a named non-chaotic fixture across pixel pairs,
+  under §4's "bitwise where the integration is mirror-exact, else to rounding" (physics P2); `qa_TASK-M2-14.rs:16`
+  added to the exceptions (code F3).

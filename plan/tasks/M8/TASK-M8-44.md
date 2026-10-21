@@ -15,8 +15,9 @@ nothing is folded at the equator, a pixel below it its own system; there is no r
 R-412). TASK-M8-05 builds the extension types and the counting on the whole sphere; this task makes sure no
 shape-sphere descriptor, extension type or classifier carries a hemisphere mode, a remap or an equator fold, and adds
 the whole-sphere area statistics: each pixel its own system, counted once, no statistic folding the lower hemisphere
-onto the upper, and where R-544 item 5's symmetry holds every fate counted twice, equally, so fractions are those of
-either hemisphere.
+onto the upper, and where R-544 item 5's symmetry holds every fate of a mirror-invariant class counted twice, equally,
+so those fractions are either hemisphere's to the decode's rounding, a signed class mapping to its mirror class
+(physics review 5603309678 of PR #273, P2, applied per R-369).
 
 ## References
 - `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
@@ -42,8 +43,10 @@ either hemisphere.
   a remap or an equator fold; controls: R-412's remap `φ = (π/2)(1 − t)`, a φ axis folded at the equator, and a
   classifier counting only `w ≥ 0`, each fail; the physics reviewer checks it against R-544 (REQ-CHART-057).
 - `cargo test -p kernel area_stats_whole_sphere` and Review checklist (physics reviewer) — REQ-CHART-083's verify:
-  released from rest over a grid symmetric about the equator, every pixel integrated once and counted once, a class's
-  count over the whole sphere twice its count over the upper half and its fraction equal; with a held momentum that is
+  released from rest over a grid symmetric about the equator, every pixel integrated once and counted once; on a named
+  fixture whose pair runs the test shows non-chaotic over its horizon, a mirror-invariant class's count (outcome,
+  escaper, collision pair) over the whole sphere twice its count over the upper half and its fraction equal, and a
+  signed class's count over the lower half its mirror class's over the upper; with a held momentum that is
   not mirror-equivariant the counts are taken as they come, no symmetry assumed; controls: a count folded to `w ≥ 0`
   over the whole sphere's total, and a fold left in that copies the lower half from its twins, each fail
   (REQ-CHART-083).

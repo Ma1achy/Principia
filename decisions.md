@@ -20122,8 +20122,8 @@ surface" (pane 2), `docs/design/principia_lines.md` § "8. Traces" (repeats), `d
 Colouring Chart position: a base, then layers" (port's notes and the hemisphere row), `docs/notes/ic_inspector_scratchpad.md`
 § "Status — as built (supersedes stale details below)" (a sentence), the forward lines of R-59, R-113, R-141, R-178,
 R-408, R-412, R-503, R-537, R-538 and R-542, RQ-498 and RQ-504 (a dated line each), RQ-508 (new), the requirements
-named below (reqio), TASK-M2-43 and TASK-M8-67 (new), TASK-M2-28 and TASK-M8-44 (re-scoped), TASK-M2-36, TASK-M7-47,
-TASK-M7-48, TASK-M8-05, TASK-M8-06, TASK-M8-15, TASK-M8-55, TASK-M8-56, TASK-M8-58 and TASK-M8-66 (their requirements'
+named below (reqio), TASK-M2-43 and TASK-M8-67 (new), TASK-M2-28 and TASK-M8-44 (re-scoped), TASK-M2-36, TASK-M4-06, TASK-M7-47,
+TASK-M7-48, TASK-M8-05, TASK-M8-11, TASK-M8-06, TASK-M8-15, TASK-M8-55, TASK-M8-56, TASK-M8-58 and TASK-M8-66 (their requirements'
 changes), `plan/tasks.yaml`, `plan/MILESTONES.md`, `plan/reviewers/gui.md` and `plan/reviewers/physics.md` (regenerated)
 and `plan/rule_groups.yaml`; built by TASK-M2-43, TASK-M2-28, TASK-M8-44, TASK-M8-55, TASK-M8-56, TASK-M8-58 and
 TASK-M8-67*
@@ -20333,8 +20333,8 @@ of EX7 repeats) are not this ruling's.
 
 **Requirements.** Amended (reqio): REQ-CHART-002, REQ-CHART-014, REQ-CHART-020, REQ-CHART-037, REQ-CHART-054,
 REQ-CHART-056, REQ-CHART-057, REQ-CHART-062, REQ-CHART-075, REQ-CHART-078, REQ-CHART-079, REQ-SCHED-101, REQ-REF-054,
-REQ-COL-113, REQ-COL-115, REQ-COL-121, REQ-COL-124, REQ-GUI-060, REQ-GUI-161, REQ-GUI-268, REQ-GUI-275 and
-REQ-GUI-278; a note each on REQ-DEC-002 (`C` stays one function, the shape sphere's decode calling it with step 3 not
+REQ-COL-113, REQ-COL-115, REQ-COL-121, REQ-COL-124, REQ-GUI-054 (review round 1, G4), REQ-GUI-060, REQ-GUI-161,
+REQ-GUI-268, REQ-GUI-275 and REQ-GUI-278; a note each on REQ-DEC-002 (`C` stays one function, the shape sphere's decode calling it with step 3 not
 taken) and REQ-ENC-005 (T3 on the shape sphere, the mirror undone where `lookup_mirrored` is set). Added: REQ-CHART-081 (the signed decode), REQ-CHART-082 (the mirror test and its "does not apply" case),
 REQ-ENC-034 (the signed lookup), REQ-CHART-083 (the whole-sphere area statistics), REQ-GUI-341 (a trace through a
 syzygy), REQ-GUI-342 (no repeat at the equator), REQ-GUI-343 (the constructor's reach and the drag across the equator)
@@ -20345,7 +20345,8 @@ and REQ-GUI-344 (the twin marker and the inspector's note). No requirement for t
 whole-sphere display, the exponential map's one-to-one cap and the equal-area projection; its open PR #271 is redone
 against the new scope. TASK-M8-44 (re-scoped): no hemisphere mode past `[0,1]²`, and the whole-sphere statistics.
 TASK-M8-67 (new, M8, gui): the constructor. TASK-M2-36 (the tilted shape sphere one-to-one, its arm waiting on
-RQ-508), TASK-M7-47 (the identity point for point; it now depends on TASK-M2-43), TASK-M7-48 (a note), TASK-M8-05 (the
+RQ-508), TASK-M4-06 (the baked decode skips `C`'s mirror step; review round 1, P3), TASK-M8-11 (the panel's path
+through a syzygy; G4), TASK-M7-47 (the identity point for point; it now depends on TASK-M2-43), TASK-M7-48 (a note), TASK-M8-05 (the
 whole sphere), TASK-M8-06 (no toggle), TASK-M8-15 (no folded shading), TASK-M8-55 (no repeat at the equator), TASK-M8-56
 (no equator map), TASK-M8-58 (a trace through a syzygy) and TASK-M8-66 (no in-square mirrors) take their requirements'
 changes. The qa-file exceptions R-544 forces are named in TASK-M2-43 (`qa_TASK-M2-14.rs:883`, the fold assertions of

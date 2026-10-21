@@ -2860,8 +2860,8 @@
   depends_on: [TASK-M8-15, TASK-M2-43]
   needs: []
   requirements: [REQ-GUI-343, REQ-GUI-344]
-  reviewers: [code, qa, gui]
-  pitfalls: []
+  reviewers: [code, qa, gui, physics]  # physics: the decode of the dragged n̂ and the twin (gui review 5603356729 of PR #273, G6)
+  pitfalls: [PIT-9]
 - id: TASK-M0-35
   milestone: M0
   title: "The static layout check: overlap, coverage-or-reserved, width against range"

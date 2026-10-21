@@ -4,18 +4,22 @@
 - **Closes:** REQ-GUI-343, REQ-GUI-344
 - **Depends on:** TASK-M8-15, TASK-M2-43
 - **Needs (earlier milestones):** none
-- **Reviewers:** code, qa, gui
-- **Pitfalls:** none
+- **Reviewers:** code, qa, gui, physics
+- **Pitfalls:** PIT-9
 - **Size:** ~250 lines
 
 ## Goal
 R-544 keeps two shape spheres apart (the plain summary). The initial-condition constructor's sphere, the Inspector's
 pane 2 sphere beside the triangle and the bodies (render_gui_spec §G8; TASK-M8-15 builds the pane), is the one place
 where the mirror is information: every point of both halves is reachable, nothing blocked off; its point is the IC's
-signed `n̂`, and dragging it sets the IC's shape the way the shape sphere chart places one (the masses and the momenta
-in the frame `ρ̃` on `+x` held), so a drag across the equator flips the triangle's orientation in pane 1's triangle
-view. The current point's mirror twin is drawn as a faint marker at `(θ, π − φ)`, with the inspector's note "mirror
-twin of the system at `(θ, π − φ)`": shown, never enforced, never a snap or a limit.
+signed `n̂`. A press within 8 logical px of the point, on the 3D sphere or the unwrap, drags it; any other drag
+orbits the 3D view or pans the unwrap, as R-453 D7 and D8 give it. A drag changes the IC's shape only: the IC keeps
+its own `√I`, the direction of `ρ`, its CoM position and CoM velocity, its masses and its Jacobi momenta in the frame
+`ρ̃` on `+x`, so pane 1's triangle changes shape, and flips when the point crosses the equator, without jumping in
+size or turning. A binary-collision landmark on the equator is reachable like any point: the IC is set there and its
+run is labelled `collision` at `t = 0` by the shared path for coincident bodies (REQ-ENC-033). The current IC's mirror twin, `Π·x`, positions and momenta reflected, `L_z` opposite, whose shape sits at
+`(θ, π − φ)`, is drawn as a faint marker there, with the inspector's note "mirror twin of the system at
+`(θ, π − φ)`": shown, never enforced, never a snap or a limit.
 
 ## References
 - `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"
@@ -24,27 +28,38 @@ twin of the system at `(θ, π − φ)`": shown, never enforced, never a snap or
 - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)"
 - `docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`"
 - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
+- `decisions.md` § "R-453 — A click on the figure pins that sample's trajectory in the Trajectory panel, and hover never replaces it; the cursor moving into the panel never clears it; the panel's real-space view pans and zooms and its shape-sphere view orbits and zooms"
 
 ## Deliverables
 - In `crates/gui/src/windows/inspector/pane_canonical.rs` (TASK-M8-15's file), the sphere view's point draggable over
-  the whole sphere, a drag setting the IC's shape through the chart's decode of the dragged `n̂` (TASK-M2-43's signed
-  decode), the masses and the held Jacobi momenta kept; pane 1's triangle view following it.
+  the whole sphere by a press within 8 logical px of it (any other drag orbiting or panning, R-453 D7, D8), a drag
+  setting the IC's shape through the chart's decode of the dragged `n̂` (TASK-M2-43's signed decode) and keeping the
+  IC's `√I`, the direction of `ρ`, its CoM position and velocity, its masses and its Jacobi momenta in the frame `ρ̃`
+  on `+x`; pane 1's triangle view following it.
 - The twin marker at `(θ, π − φ)`, faint, and the inspector's note "mirror twin of the system at `(θ, π − φ)`" with the
-  twin's angles.
-- Tests `constructor_sphere_reach` (`crates/gui`) and screenshot cases `05_inspectors/constructor_upper`,
-  `05_inspectors/constructor_lower` and `05_inspectors/constructor_equator`.
+  twin's angles; the twin's readout `Π·x`.
+- Tests `constructor_sphere_reach` and `constructor_twin` (`crates/gui`) and screenshot cases
+  `05_inspectors/constructor_upper`, `05_inspectors/constructor_lower` and `05_inspectors/constructor_equator`.
 
 ## Acceptance tests
 - `cargo test -p gui constructor_sphere_reach` and `cargo xtask screenshot 05_inspectors` (a lower-hemisphere point
   and its triangle) — REQ-GUI-343's verify: drags to points of both hemispheres, the poles and the equator included,
   set the IC's `shape_vec` to the dragged point within REQ-CHART-053's bound; a drag from `(θ, φ)` to `(θ, π − φ)`
   flips the triangle's orientation (its signed area changes sign) and keeps the masses and the held Jacobi momenta;
-  controls: a drag clamped to the upper hemisphere, a snap to the twin, and a drag that mirrors the held momentum,
-  each fail (REQ-GUI-343).
-- `cargo xtask screenshot 05_inspectors` (the constructor's twin) — REQ-GUI-344's verify: with the point on each
-  hemisphere the faint marker sits at `(θ, π − φ)` and the note reads "mirror twin of the system at `(θ, π − φ)`" with
-  the twin's angles; a drag never snaps to the marker; on the equator the marker coincides with the point; controls: a
-  marker at the point itself off the equator, and a drag that stops at the marker, each fail (REQ-GUI-344).
+  after Scale × 1.25, Rotate 15° and Boost →, a drag keeps `√I`, the direction of `ρ`, the CoM position and the CoM
+  velocity; a press 4 px from the point drags it, and one 20 px away orbits (or pans) and leaves the IC unchanged; a
+  drag onto the landmark `n = (−1, 0, 0)` (`ρ̃ = 0`) sets that IC and its run reports `collision` at `t = 0`, with no
+  non-finite value; controls: a drag clamped to the upper hemisphere, a snap to the twin, a drag that mirrors the held
+  momentum, a drag that re-places the IC at `I = 1` in the canonical frame, a far press that moves the IC, a press on
+  the point that orbits, and a drag that refuses the landmark, each fail (REQ-GUI-343).
+- `cargo test -p gui constructor_twin` and `cargo xtask screenshot 05_inspectors` (the constructor's twin) —
+  REQ-GUI-344's verify: with the point on each hemisphere the marker is at `(θ, π − φ)` and the note reads "mirror twin
+  of the system at `(θ, π − φ)`" with the twin's angles; the twin's readout is `Π·x`, its `L_z` the IC's negated; with
+  held `p_y ≠ 0` a drag onto the marker gives a state whose `L_z` is not the negated one and the readout does not label
+  it the twin; a drag passes over the marker without stopping; on the equator the marker coincides with the point;
+  controls: a configuration-only twin (`L_z` unchanged), a marker at the point off the equator, a drag that stops at the
+  marker, and a readout calling the dragged state the twin when `p_y ≠ 0`, each fail; the screenshot shows the marker's
+  place and faintness and the note (REQ-GUI-344).
 
 ## Notes
 - R-544 item 9, the first addendum and the plain summary's second version; the R-369 decision "The constructor": it is
@@ -57,3 +72,7 @@ twin of the system at `(θ, π − φ)`": shown, never enforced, never a snap or
   (TASK-M2-43), so dragging the point onto the marker reaches the twin only when the held momenta have no
   `y`-component (REQ-CHART-082's equivariant case); otherwise it reaches a different system, and the marker still
   shows the twin, not the drag's target.
+- **Review round 1 of PR #273 (applied per R-369).** The hit radius and the orbit/pan split (gui G1), what a drag holds
+  (G2; the human's "Dragging across the equator flips the triangle in the triangle view" is read as a change of
+  shape, the gauge buttons' Scale, Rotate and Boost surviving a drag), the drag arms moved to `constructor_twin` (G3),
+  the collision landmarks (G5), physics and PIT-9 added (G6), and the twin on the full state (physics P5).
