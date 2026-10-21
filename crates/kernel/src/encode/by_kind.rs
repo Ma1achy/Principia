@@ -21,8 +21,9 @@
 //!   construction.
 //! - **Annotation** ([`Coord::Annotation`]): nothing to invert; the axis gives no coordinate and nothing is compared
 //!   for it.
-//! - **Kind 4, coupled curve**: the Burrau family's encode, its closed form and off-curve projection, is
-//!   TASK-M2-18's; no impl here.
+//! - **Kind 4, coupled curve** (`super::curve`): the Burrau charts' impls are there, beside the closed form, the
+//!   off-curve projection and the fold: the curve axis's coordinate is the closed form's, read off `C(x)`, and the
+//!   chart's other axis is read by its own kind.
 //!
 //! **Lowered, never interpreted** (chart_decoder_contract design axiom 4; lowering Part 2): the kind is each chart
 //! type's impl, monomorphised, as the decode is; the kernel holds no runtime axis-kind value. The authoring layer's

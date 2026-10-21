@@ -1,0 +1,45 @@
+# The curve projection's calibration evidence (REQ-ENC-026; R-71, R-24): d(ν*) under the R-24 metric, shape
+# sphere chordal ⊕ mass simplex Euclidean at unit weights, on and off the Burrau curve, and the proposed
+# tolerance k·ε_R, provisional until the M2 gate. Measured by crates/kernel/tests/encode_burrau.rs,
+# encode_curve_projection_calibration; regenerate with PRIN_WRITE_CURVE_PROJECTION=1. On the curve: γ(ν) at
+# rest under a random gauge, ν uniform on each span, 16384 draws, the largest d in ε_R; the test holds each at
+# most twice its value here and below k. Off it: γ(ν), ν uniform on [0.1, 0.9], each position moved by up to δ
+# per component and the masses by up to δ/4 along (1, −½, −½), under a random gauge, 1024 draws per δ, the
+# least, median and largest d(ν*); compared at a relative 1e-6 plus k·ε_R.
+k_curve = 1.28e2  # the proposed tolerance's k: d(ν*) ≤ k·ε_R lands (REQ-ENC-026, provisional until the M2 gate)
+on_euclid_f64_d_closed_max = 2.2986550088809576e1  # largest d(ν(θ)) on the curve, euclid span, f64, in ε_R
+on_euclid_f64_d_star_max = 2.282221305687677e1  # largest d(ν*) on the curve, euclid span, f64, in ε_R
+on_euclid_f64_nu_gap_max = 3.5e0  # largest |ν* − ν(θ)| on the curve, euclid span, f64, in ε_R
+on_fold_f64_d_closed_max = 2.4181382778312926e1  # largest d(ν(θ)) on the curve, fold span, f64, in ε_R
+on_fold_f64_d_star_max = 2.3839034707925236e1  # largest d(ν*) on the curve, fold span, f64, in ε_R
+on_fold_f64_nu_gap_max = 4e0  # largest |ν* − ν(θ)| on the curve, fold span, f64, in ε_R
+off_1e-6_f64_d_min = 1.0247892432696373e-7  # off the curve, moved by up to δ = 1e-6: the min d(ν*), f64
+off_1e-6_f64_d_median = 1.409525853481382e-6  # off the curve, moved by up to δ = 1e-6: the median d(ν*), f64
+off_1e-6_f64_d_max = 7.193440074035406e-6  # off the curve, moved by up to δ = 1e-6: the max d(ν*), f64
+off_1e-4_f64_d_min = 7.051143611014939e-6  # off the curve, moved by up to δ = 1e-4: the min d(ν*), f64
+off_1e-4_f64_d_median = 1.424296110936332e-4  # off the curve, moved by up to δ = 1e-4: the median d(ν*), f64
+off_1e-4_f64_d_max = 7.823522340534266e-4  # off the curve, moved by up to δ = 1e-4: the max d(ν*), f64
+off_1e-2_f64_d_min = 5.848502974554479e-4  # off the curve, moved by up to δ = 1e-2: the min d(ν*), f64
+off_1e-2_f64_d_median = 1.4182513631541598e-2  # off the curve, moved by up to δ = 1e-2: the median d(ν*), f64
+off_1e-2_f64_d_max = 6.652766809891725e-2  # off the curve, moved by up to δ = 1e-2: the max d(ν*), f64
+off_1e-1_f64_d_min = 1.2387902147136086e-2  # off the curve, moved by up to δ = 1e-1: the min d(ν*), f64
+off_1e-1_f64_d_median = 1.3369390298849748e-1  # off the curve, moved by up to δ = 1e-1: the median d(ν*), f64
+off_1e-1_f64_d_max = 6.766605489965756e-1  # off the curve, moved by up to δ = 1e-1: the max d(ν*), f64
+on_euclid_f32_d_closed_max = 5.151692199707031e1  # largest d(ν(θ)) on the curve, euclid span, f32, in ε_R
+on_euclid_f32_d_star_max = 5.1390281677246094e1  # largest d(ν*) on the curve, euclid span, f32, in ε_R
+on_euclid_f32_nu_gap_max = 5.5e0  # largest |ν* − ν(θ)| on the curve, euclid span, f32, in ε_R
+on_fold_f32_d_closed_max = 4.01219367980957e1  # largest d(ν(θ)) on the curve, fold span, f32, in ε_R
+on_fold_f32_d_star_max = 3.9903564453125e1  # largest d(ν*) on the curve, fold span, f32, in ε_R
+on_fold_f32_nu_gap_max = 5.5e0  # largest |ν* − ν(θ)| on the curve, fold span, f32, in ε_R
+off_1e-6_f32_d_min = 1.163817913152343e-7  # off the curve, moved by up to δ = 1e-6: the min d(ν*), f32
+off_1e-6_f32_d_median = 1.3925213124821312e-6  # off the curve, moved by up to δ = 1e-6: the median d(ν*), f32
+off_1e-6_f32_d_max = 7.1906220000528265e-6  # off the curve, moved by up to δ = 1e-6: the max d(ν*), f32
+off_1e-4_f32_d_min = 7.067189017107012e-6  # off the curve, moved by up to δ = 1e-4: the min d(ν*), f32
+off_1e-4_f32_d_median = 1.42378150485456e-4  # off the curve, moved by up to δ = 1e-4: the median d(ν*), f32
+off_1e-4_f32_d_max = 7.818547892384231e-4  # off the curve, moved by up to δ = 1e-4: the max d(ν*), f32
+off_1e-2_f32_d_min = 5.848508444614708e-4  # off the curve, moved by up to δ = 1e-2: the min d(ν*), f32
+off_1e-2_f32_d_median = 1.4182741753757e-2  # off the curve, moved by up to δ = 1e-2: the median d(ν*), f32
+off_1e-2_f32_d_max = 6.652747094631195e-2  # off the curve, moved by up to δ = 1e-2: the max d(ν*), f32
+off_1e-1_f32_d_min = 1.2387094087898731e-2  # off the curve, moved by up to δ = 1e-1: the min d(ν*), f32
+off_1e-1_f32_d_median = 1.3369376957416534e-1  # off the curve, moved by up to δ = 1e-1: the median d(ν*), f32
+off_1e-1_f32_d_max = 6.766605973243713e-1  # off the curve, moved by up to δ = 1e-1: the max d(ν*), f32
