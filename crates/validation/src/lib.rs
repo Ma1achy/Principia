@@ -38,6 +38,9 @@ pub use engine::{presets, stain};
 /// this dev-dependency: the kernel takes the ledger as a build-dependency alone (systems_architecture §7.1, R-185).
 pub use ledger::constants::R_POLE;
 
+/// dd_integrator §5 test 3's rounding-level criterion's register entry (REQ-VAL-191, proposed; TASK-M3-02), for the
+/// kernel crate's tests, as `r_pole`'s is.
+pub use ledger::constants::STEP_REVERSAL_TOL;
 /// The invariant charts' warp defaults, `K_max` and `γ_K` (REQ-CHART-044, proposed; TASK-M2-12), for the kernel crate's
 /// tests, as `r_pole` is.
 pub use ledger::constants::{GAMMA_K, K_MAX};

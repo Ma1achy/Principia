@@ -876,6 +876,62 @@ pub const EPS_PHYS: ConstantBuilder = proposed(
     "M2",
 );
 
+// ── The steppers' coefficients (dd_integrator §3.2; REQ-INT-037, REQ-INT-056; R-501, R-515) ─────────────────────
+//
+// The free weights of Yoshida's two compositions, as dd_integrator §3.2 prints them; each consistency weight `w₀` and
+// the kick sequences are derived from them in f64 by the steppers' emitter (`crate::gen::steppers`), which writes them
+// into the kernel. Pure numbers, the same in any units, so admissible as expressed in canonical units (applied per
+// R-369, as the chart constants are). Citation: Yoshida, H. (1990), "Construction of higher order symplectic
+// integrators", Phys. Lett. A 150, 262–268 (R-501); the paper is not in the corpus, and the register cites the section
+// that prints the digits.
+
+/// The section that prints the steppers' coefficients.
+const OCCUPANTS: Citation = Citation::Corpus {
+    file: "docs/design/principia_dd_integrator.md",
+    section: "3.2 Occupants",
+};
+
+/// A stepper coefficient of dd_integrator §3.2, with its citation.
+const fn coefficient(name: &'static str, value: f64) -> ConstantBuilder {
+    ConstantBuilder {
+        name,
+        value: Some(Value::Exact(value)),
+        class: Some(Admissibility::CanonicalUnits),
+        citation: Some(OCCUPANTS),
+        relative_basis: None,
+        provisional: None,
+    }
+}
+
+/// Yoshida-4's `w₁ = 1 / (2 − 2^{1/3})`, correctly rounded to f64 (Yoshida 1990, the fourth-order symmetric triple
+/// composition, in closed form; R-515).
+pub const YOSHIDA4_W1: ConstantBuilder = coefficient("yoshida4_w1", 1.3512071919596575);
+
+/// Yoshida-6's `w₁` (Yoshida 1990, Table 1, solution A).
+pub const YOSHIDA6_W1: ConstantBuilder = coefficient("yoshida6_w1", -1.17767998417887);
+
+/// Yoshida-6's `w₂` (Yoshida 1990, Table 1, solution A).
+pub const YOSHIDA6_W2: ConstantBuilder = coefficient("yoshida6_w2", 0.235573213359357);
+
+/// Yoshida-6's `w₃` (Yoshida 1990, Table 1, solution A).
+pub const YOSHIDA6_W3: ConstantBuilder = coefficient("yoshida6_w3", 0.784513610477560);
+
+/// dd_integrator §5 test 3's rounding-level criterion (REQ-VAL-191), as `k` in `k·ε_R`, `ε_R` the precision's machine
+/// epsilon: the residual of `STEP(dt)`, momentum negation, `STEP(dt)`, negation, its Euclidean norm over the positions
+/// and momenta divided by the state's, below which the state counts as returned. TASK-M3-02's proposal (R-71),
+/// provisional until the M3 gate (R-427). Its evidence, `crates/kernel/tests/occupant.rs` (`step_reversibility`), on
+/// two fixtures over dt from 10⁻¹ to 10⁻³/64: KDK, Yoshida-4 and Yoshida-6 at most 3.6 `ε_R` (Yoshida-6, f32, dt 10⁻¹),
+/// so 16 covers them by 4.4×; Yoshida-4 with its stages made asymmetric `(w₁, w₁, w₀)`, at f64, at least 49 `ε_R` (dt
+/// 10⁻³/64), 3× above it. At f32 the asymmetric control falls below it from dt 10⁻³ down (1.6 `ε_R`): there the
+/// time-asymmetry, `O(dt²)`, is under f32's rounding.
+pub const STEP_REVERSAL_TOL: ConstantBuilder = proposed(
+    "step_reversal_tol",
+    16.0,
+    Admissibility::CanonicalUnits,
+    "REQ-VAL-191",
+    "M3",
+);
+
 /// The section that defines `hue_wheel` (R-72).
 const PRELUDE_SECTION: Citation = Citation::Corpus {
     file: "docs/gui/principia_render_gui_spec.md",
@@ -911,7 +967,8 @@ pub const HUE_WHEEL_C: ConstantBuilder = ConstantBuilder {
 /// presentation constants the generated views and the prelude read: the log floors, the hatch and the hue wheel
 /// (TASK-M1-18; R-427), `r_pole` and the ‖n‖ = 1 tolerance (R-433), the shape-sphere chart's two tolerances
 /// (TASK-M2-08; REQ-CHART-049, REQ-CHART-053), and the diverging fields' `x₀` (TASK-M7-05; REQ-COL-066). No `diffusion`
-/// sentinel: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245).
+/// sentinel: an invalid fit reads NaN by the predicate `n ≥ 2` (R-245). Then the steppers' coefficients and test 3's
+/// rounding-level criterion (TASK-M3-02; REQ-INT-037, REQ-VAL-191).
 pub const REGISTER: &[ConstantBuilder] = &[
     HORIZON_STEPS_MAX,
     FGW_CAPACITY,
@@ -959,4 +1016,9 @@ pub const REGISTER: &[ConstantBuilder] = &[
     EPS_PHYS,
     DIVERGING_X0_E_0,
     DIVERGING_X0_LZ_0,
+    YOSHIDA4_W1,
+    YOSHIDA6_W1,
+    YOSHIDA6_W2,
+    YOSHIDA6_W3,
+    STEP_REVERSAL_TOL,
 ];
