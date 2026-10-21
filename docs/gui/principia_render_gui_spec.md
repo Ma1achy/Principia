@@ -807,7 +807,8 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
-  mapped linearly onto its range is affine, the fallback hatching what fails validation, and one behind a nonlinear
+  mapped linearly onto its range is affine, what fails validation not a system and blank (R-470; *was:* "the fallback
+  hatching what fails validation", a stale value, replaced by R-470), and one behind a nonlinear
   warp declares nothing and is bounded (R-408's port, B1: first made bounded, by R-407's default). B1 covers the
   non-periodic quantities listed above (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared affine
   would redraw systems and count them again, so it takes its type only by a declaration under physics review. A Burrau

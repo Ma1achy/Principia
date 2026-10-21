@@ -827,24 +827,33 @@ across charts, not which chart looks best.
 
 The rule is `principia_chart_decoder_contract.md` Part 3's (§ "Past the unit square — each axis's extension type
 (R-407)"): each axis declares **affine** (continues), **periodic** (wraps), **pole-crossing** (continues over the pole,
-the partner axis shifted by half its period) or **bounded** (hatched past its edge, the default); outside `[0,1]²` a
-pixel whose `Φ` fails to evaluate, or whose state fails `validate(u, v)`, is hatched as forbidden and labelled
-`decode_failed`; inside `[0,1]²` nothing changes. The `Chart` trait (§5.1) declares each axis's type beside `map`. The
+the partner axis shifted by half its period) or **bounded** (not a system past its edge, drawn blank, the default);
+outside `[0,1]²` a pixel whose `Φ` fails to evaluate, or whose state fails `validate(u, v)`, is not a system, drawn
+blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views), and labelled
+`decode_failed`; inside `[0,1]²` nothing changes. *Was:* "**bounded** (hatched past its edge, the default)" and "is
+hatched as forbidden and labelled `decode_failed`" (stale values, replaced by R-470; applied per R-369). The `Chart` trait (§5.1) declares each axis's type beside `map`. The
 existing charts:
 
 | chart | horizontal axis | vertical axis | past `[0,1]²` | area statistics past `[0,1]²` (R-408) |
 |---|---|---|---|---|
-| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; the fallback hatches what fails validation | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
+| `Latent` (§1.1), every flat or axis-aligned slice, `BodyPlane` | affine | affine | `z₀ + (2s−1)·q₁ + (2t−1)·q₂` continues; what fails validation is not a system, blank (R-470) | every visible pixel counts (primary ranges unbounded); a validity failure is forbidden |
 | `ShapeSphere`, spherical map (§3.3) | θ periodic | φ pole-crossing (θ shifted by π) | the sphere continues over its poles; every pixel is a system `[0,1]²` holds | not counted: each such pixel is outside θ's or φ's primary range, the chart's `[0,1]` span; with one hemisphere drawn, φ's span is pole to equator and its continuation past the equator, the mirror hemisphere, is not counted (R-412) |
 | `ShapeSphere`, exponential map (§3.3) | bounded (declares nothing) | bounded (declares nothing) | blank (R-470; the hatch only under Overlays › Chart › forbidden region and in the debug views); inside `[0,1]²` a pixel past `r = π` draws blank too, the domain's end (R-503), as does a tilted pixel whose `(a, b)` leave the square (R-512). *Was:* "hatched" | out of the count and the total (the domain's end); inside `[0,1]²`, a pixel past `r = π` is the domain's end too, and a straddling cap counts a mirrored pair once (R-503, §3.3); under a tilt the fold is the tilted view's, generically bijective (§3.3, applied per R-369) |
 | `InvariantLE / InvariantLK` (§2.1, the warp) | bounded | bounded below `t = 0`; past `t = 1` it continues, affine (R-508) | blank past `s`'s edges and below `t = 0`; past `t = 1` its systems are drawn (§2.1) | past a bounded edge out of the count and the total (the domain's end); past `t = 1` counted (R-508) |
-| `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the fallback hatches the negative-mass area by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the hatch starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
-| Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | hatched on every side | out of the count and the total (the domain's end) |
+| `MassSimplex`, the ternary plot (§4.5) | affine (R-407's sense: the formula continues; the map is bilinear) | affine (likewise) | the map continues; the negative-mass area is not a system, blank (R-470), by validation layer 2's narrowed simplex, buffered `mᵢ ≥ ε_m` (`(1−3ε_m)m + ε_m`), which is exactly raw `mᵢ ≥ 0`, so the blank starts at the edge of `[0,1]²` with no band | every visible pixel counts; its negative-mass states fail validity and count as forbidden, so "forbidden in view" rises with F3 off |
+| Burrau family: the Euclid plane (§4.5) | `m` bounded (declares nothing) | `ν` bounded (declares nothing) | blank on every side (R-470) | out of the count and the total (the domain's end) |
 | Burrau family: the `(ν, K)` chart (§4.3, §4.5) | `ν` bounded (declares nothing) | `K` bounded below `t = 0`, continuing past `t = 1` (the warp's `K(t)`, §2.1; R-508) | blank past `ν`'s edges and below `t = 0`; past `t = 1` its systems are drawn | past a bounded edge out of the count and the total; past `t = 1` counted (R-508) |
 | Burrau family: `Φ_θ,K`, the strip `Φ_strip,K` (§4.5) | `θ` bounded (declares nothing) | `K` as on `(ν, K)` (R-508) | blank past `θ`'s edges and below `t = 0`; past `t = 1` its systems are drawn | past a bounded edge out of the count and the total; past `t = 1` counted (R-508) |
-| Burrau family: `Φ_θ,L_z` (§4.5) | `θ` bounded (declares nothing) | `L_z` affine (linear at fixed `K`) | hatched past `θ`'s edges; past `L_z`'s the formula continues and the fallback hatches `L_z² > 2IK` by validation layer 2's `K ≥ L_z²/2I`; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`, with no band | past `θ`'s edges out of the count and the total; past `L_z`'s every visible pixel counts, its infeasible states forbidden |
-| Burrau family: the δm strip `Φ_strip,δm` (§4.5) | `θ` bounded (declares nothing) | δm affine (the blend is linear in `v`) | hatched past `θ`'s edges; past δm's the blend continues, `Σmᵢ = 1` kept, and the fallback hatches the zero- or negative-mass area by validation layer 2's `mᵢ > 0` | past `θ`'s edges out of the count and the total; past δm's every visible pixel counts, its zero- or negative-mass states forbidden |
+| Burrau family: `Φ_θ,L_z` (§4.5) | `θ` bounded (declares nothing) | `L_z` affine (linear at fixed `K`) | blank past `θ`'s edges (R-470); past `L_z`'s the formula continues and `L_z² > 2IK` is not a system, blank, by validation layer 2's `K ≥ L_z²/2I`; at the default `λ_L = 1` the blank starts at the edge of `[0,1]²`, with no band | past `θ`'s edges out of the count and the total; past `L_z`'s every visible pixel counts, its infeasible states forbidden |
+| Burrau family: the δm strip `Φ_strip,δm` (§4.5) | `θ` bounded (declares nothing) | δm affine (the blend is linear in `v`) | blank past `θ`'s edges (R-470); past δm's the blend continues, `Σmᵢ = 1` kept, and the zero- or negative-mass area is not a system, blank, by validation layer 2's `mᵢ > 0` | past `θ`'s edges out of the count and the total; past δm's every visible pixel counts, its zero- or negative-mass states forbidden |
 | mixed-axis (§1.3) | each axis its own: a latent-coordinate axis affine, a physical-quantity axis mapped linearly onto its range affine (R-408's port, B1; for an energy-type axis its linear option, R-471, whose default warp is bounded, §2.1), any other bounded unless declared | as horizontal | per axis | per axis, by its primary range |
+
+*Was (the "past `[0,1]²`" column; stale values, replaced by R-470, applied per R-369; the hatch is only the optional
+overlay Overlays › Chart › forbidden region and the debug views'):* `Latent`, "the fallback hatches what fails
+validation"; `MassSimplex`, "the fallback hatches the negative-mass area … so the hatch starts at the edge of `[0,1]²`
+with no band"; the Euclid plane, "hatched on every side"; `Φ_θ,L_z`, "hatched past `θ`'s edges; … the fallback
+hatches `L_z² > 2IK` …; at the default `λ_L = 1` the hatch starts at the edge of `[0,1]²`"; the δm strip, "hatched
+past `θ`'s edges; … the fallback hatches the zero- or negative-mass area".
 
 **The Burrau family's types** (defined per R-72, REQ-CHART-055; R-407 clause 3, physics-reviewed; TASK-M2-11). One
 type per axis of every Burrau-family chart (§4.5), with the reasoning:
@@ -857,7 +866,8 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   chart's range, the formula would continue through the leg swap's fixed point `√2 − 1` onto the leg-swapped twins of
   shapes a one-sided range already shows, changing the chart's `system_image` past `[0,1]²`, where it must add no
   multiplicity (R-408). Bounded is chosen anyway: one type per axis, and the twins side decides it; the real systems
-  past the range are hatched and fall out of the count and the total with the domain's end. Nothing is declared.
+  past the range are not systems, drawn blank (R-470), and fall out of the count and the total with the domain's end.
+  Nothing is declared. *Was:* "are hatched and fall out" (stale value, replaced by R-470).
 - **`m`, bounded** (the Euclid plane's horizontal axis). An annotation axis behind the exponential warp
   `m(u) = m_min·(m_max/m_min)^u`, a quantity behind a nonlinear warp, which declares nothing: its continuation would
   draw the same `ν` family again, adding no system (the decoder ignores `u`), and below `u = 0` `m < m_min`, where the
@@ -879,15 +889,18 @@ type per axis of every Burrau-family chart (§4.5), with the reasoning:
   the fold's own: continuing would undo the fold the axis exists for and count each shape twice (R-27, R-408). On a δm
   strip with an asymmetric target the blended masses do not swap with the legs, and the systems past `π/4` are new.
   Bounded is chosen anyway: one type per axis, and the twins side decides it; the real systems between the axis's
-  edges and the domain's ends are hatched and fall out of the count and the total with the domain's end.
+  edges and the domain's ends are not systems, drawn blank (R-470), and fall out of the count and the total with the
+  domain's end. *Was:* "are hatched and fall out" (stale value, replaced by R-470).
 - **`L_z`, affine** (`Φ_θ,L_z`'s vertical axis). At fixed `K`, `L_z(v) = (2v − 1)·λ_L·L_max(K)` is linear in `v`: a
   physical-quantity axis mapped linearly onto its range (R-408's port, B1, the Chart builder's `L_z` axis). Past its edge
   the formula continues, with `λ_L < 1` through feasible systems (new `L_z`, not seen in `[0,1]²`) up to
-  `|L_z| = √(2IK)`; beyond, `K < K_min`, and the fallback hatches it as forbidden.
+  `|L_z| = √(2IK)`; beyond, `K < K_min`, forbidden, not a system, drawn blank (R-470). *Was:* "and the fallback
+  hatches it as forbidden" (stale value, replaced by R-470).
 - **δm, affine** (the δm strip's vertical axis). The blend `(1 − v)·m_Burrau + v·m_target` is linear in `v` and keeps
   `Σmᵢ = 1`, as the ternary plot's map continues (R-407, A7): past `v = 1` it runs on beyond `m_target`, past `v = 0`
-  back beyond `m_Burrau`, through new mass vectors on the column's own triangle, until a mass reaches 0; the fallback
-  hatches the zero- or negative-mass area. No pixel past δm's edge is a twin of one inside: the leg swap changes the
+  back beyond `m_Burrau`, through new mass vectors on the column's own triangle, until a mass reaches 0; the zero-
+  or negative-mass area is not a system, drawn blank (R-470; *was:* "the fallback hatches the zero- or negative-mass
+  area", a stale value, replaced by R-470). No pixel past δm's edge is a twin of one inside: the leg swap changes the
   triangle, which the column holds fixed (at `θ = π/4`, where it does not, `m₁ = m₂` on the whole column for a target
   symmetric in bodies 1 and 2, the default; with an asymmetric target the column's swapped masses lie off the column).
 
@@ -898,8 +911,9 @@ A custom chart (the Chart builder, render_gui_spec §G7) takes its axes' types: 
 physical-quantity axis mapped linearly onto its range is affine, a Burrau dimension takes the Burrau family's types.
 B1 covers §G7's non-periodic quantities (energy, `L_z`, virial ratio, mass ratio); an angle-like quantity declared
 affine would redraw systems and count them again (R-408), so it is typed only by a declaration under physics review.
-Such a physical-quantity axis is linear in its quantity over its range, so past its edge its formula continues and the fallback hatches what cannot be reached
-(energy beyond what is reachable); under R-408 its primary range is unbounded, so those pixels fail validity and count
+Such a physical-quantity axis is linear in its quantity over its range, so past its edge its formula continues and what cannot be reached is not a system, drawn
+blank (R-470; *was:* "the fallback hatches what cannot be reached", a stale value, replaced by R-470) (energy beyond
+what is reachable); under R-408 its primary range is unbounded, so those pixels fail validity and count
 as forbidden. (R-407's port first made it bounded, by clause 1's default; corrected in R-408's port, B1, applied per
 R-369 and flagged to the human.) **Under R-471 an energy-type axis (energy, `L_z`) is warped by default** (§2.1) and
 so bounded past its edge, its pixels there the domain's end, out of the count and the total; B1's affine axis is its
