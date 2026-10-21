@@ -16,8 +16,9 @@ R-412). TASK-M8-05 builds the extension types and the counting on the whole sphe
 shape-sphere descriptor, extension type or classifier carries a hemisphere mode, a remap or an equator fold, and adds
 the whole-sphere area statistics: each pixel its own system, counted once, no statistic folding the lower hemisphere
 onto the upper, and where R-544 item 5's symmetry holds every fate of a mirror-invariant class counted twice, equally,
-so those fractions are either hemisphere's to the decode's rounding, a signed class mapping to its mirror class
-(physics review 5603309678 of PR #273, P2, applied per R-369).
+so those fractions are equal on a fixture whose pairs stay close over the horizon, and elsewhere differ only by
+the pairs whose fate a rounding-level difference in the decode flips, a signed class mapping to its mirror class
+(physics reviews 5603309678, P2, and 5603529679, P7, of PR #273, applied per R-369).
 
 ## References
 - `decisions.md` § "R-544 — The shape sphere chart is the whole sphere: pixel `(θ, φ)` decodes to the system whose signed `n̂` is that point, R-141's decode gauge removed for it, no hemisphere toggle, no remap and no fold at the equator, every pixel its own system; the mirror a fact about fates, tested and never identified, and shown as information in the initial-condition constructor *(amends R-113, R-141, R-537, R-59, R-178, R-408, R-503, R-538 and R-542; withdraws R-412; settles RQ-498 and RQ-504 where they turn on the hemisphere)*"

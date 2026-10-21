@@ -72,8 +72,9 @@ the four, and the tests that asserted the 2-to-1 cover:
   (REQ-CHART-081).
 - `cargo test -p kernel shape_sphere_mirror_test` — REQ-CHART-082's verify: released from rest and with a held
   momentum whose `y`-components are zero, the test reports mirror-equivariant; the run from `Π·x`, `Π` applied to a
-  decoded state, is the run from `x` mirrored, bitwise; each pixel pair's decoded states are mirror images within
-  REQ-CHART-053's bound; on a named fixture (masses, pairs and horizon stated in the test, shown non-chaotic there by
+  decoded state, is the run from `x` mirrored, bitwise; each pixel pair's shapes are mirror images,
+  `shape_vec(Π·decode(θ, φ))` against `shape_vec(decode(θ, π − φ))` within REQ-CHART-053's bound, and its decoded
+  states within `ε_phys` (REQ-ENC-024; physics review 5603529679 of PR #273, P6); on a named fixture (masses, pairs and horizon stated in the test, shown non-chaotic there by
   the pair's state separation staying below a stated bound) outcome and `t_end` are equal and `L_z` and the frame's
   winding opposite across each pixel pair; with a held
   `p_λ,y ≠ 0` it reports "does not apply" and asserts nothing; controls: the gauge left in, a momentum rule that turns

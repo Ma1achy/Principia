@@ -16,8 +16,13 @@ signed `n̂`. A press within 8 logical px of the point, on the 3D sphere or the 
 orbits the 3D view or pans the unwrap, as R-453 D7 and D8 give it. A drag changes the IC's shape only: the IC keeps
 its own `√I`, the direction of `ρ`, its CoM position and CoM velocity, its masses and its Jacobi momenta in the frame
 `ρ̃` on `+x`, so pane 1's triangle changes shape, and flips when the point crosses the equator, without jumping in
-size or turning. A binary-collision landmark on the equator is reachable like any point: the IC is set there and its
-run is labelled `collision` at `t = 0` by the shared path for coincident bodies (REQ-ENC-033). The current IC's mirror twin, `Π·x`, positions and momenta reflected, `L_z` opposite, whose shape sits at
+size or turning. A binary-collision landmark on the equator is reachable like any point. The IC is set through the
+decode, never the lookup: at `n = (−1, 0, 0)`, `ρ̃ = 0` and `r₀ = r₁`, the descriptor stores `V₀` and `E₀` as `−∞`
+(dd_decoder §3.6, R-436), with no NaN, drawn as R-436 and R-467 draw a non-finite value, and the run ends `collision`
+at `t = 0` (R-60); a lookup of that IC elsewhere reads `lookup_clamped` (R-13). At `ρ̃ = 0` the direction of `ρ` is
+undefined, so the constructor keeps the frame angle from the IC's last point with `ρ̃ ≠ 0` (the decode's R-437 angle 0
+if it never had one) and holds the momenta in that frame; a drag off the landmark restores `ρ` along it (a
+definition, R-72). The current IC's mirror twin, `Π·x`, positions and momenta reflected, `L_z` opposite, whose shape sits at
 `(θ, π − φ)`, is drawn as a faint marker there, with the inspector's note "mirror twin of the system at
 `(θ, π − φ)`": shown, never enforced, never a snap or a limit.
 
@@ -29,13 +34,17 @@ run is labelled `collision` at `t = 0` by the shared path for coincident bodies 
 - `docs/design/principia_chart_reference.md` § "3. Shape-sphere chart `(θ, φ)`"
 - `decisions.md` § "R-14 — One shape-sphere convention, the IC Inspector's *(closes RQ-12, corrects R-12's premise)*"
 - `decisions.md` § "R-453 — A click on the figure pins that sample's trajectory in the Trajectory panel, and hover never replaces it; the cursor moving into the panel never clears it; the panel's real-space view pans and zooms and its shape-sphere view orbits and zooms"
+- `decisions.md` § "R-436 — The descriptor's `±∞` at the poles are stored as computed; every consumer, CPU and GPU alike, colours a non-finite input as invalid, tested by comparing the stored value, never by arithmetic on `∞` *(closes RQ-284; extends R-79)*"
+- `decisions.md` § "R-60 — No t = 0 escape outcome *(closes RQ-19)*"
+- `docs/design/principia_dd_decoder.md` § "3.6 ICDescriptor derived quantities (decode-time, pre-integration)"
 
 ## Deliverables
 - In `crates/gui/src/windows/inspector/pane_canonical.rs` (TASK-M8-15's file), the sphere view's point draggable over
   the whole sphere by a press within 8 logical px of it (any other drag orbiting or panning, R-453 D7, D8), a drag
   setting the IC's shape through the chart's decode of the dragged `n̂` (TASK-M2-43's signed decode) and keeping the
   IC's `√I`, the direction of `ρ`, its CoM position and velocity, its masses and its Jacobi momenta in the frame `ρ̃`
-  on `+x`; pane 1's triangle view following it.
+  on `+x`, and the frame angle recorded from the last point with `ρ̃ ≠ 0` for use at `ρ̃ = 0`; pane 1's triangle view
+  following it.
 - The twin marker at `(θ, π − φ)`, faint, and the inspector's note "mirror twin of the system at `(θ, π − φ)`" with the
   twin's angles; the twin's readout `Π·x`.
 - Tests `constructor_sphere_reach` and `constructor_twin` (`crates/gui`) and screenshot cases
@@ -48,10 +57,13 @@ run is labelled `collision` at `t = 0` by the shared path for coincident bodies 
   flips the triangle's orientation (its signed area changes sign) and keeps the masses and the held Jacobi momenta;
   after Scale × 1.25, Rotate 15° and Boost →, a drag keeps `√I`, the direction of `ρ`, the CoM position and the CoM
   velocity; a press 4 px from the point drags it, and one 20 px away orbits (or pans) and leaves the IC unchanged; a
-  drag onto the landmark `n = (−1, 0, 0)` (`ρ̃ = 0`) sets that IC and its run reports `collision` at `t = 0`, with no
-  non-finite value; controls: a drag clamped to the upper hemisphere, a snap to the twin, a drag that mirrors the held
+  drag onto the landmark `n = (−1, 0, 0)` (`ρ̃ = 0`) sets that IC, with no NaN anywhere, `V₀` and `E₀` stored as
+  `−∞` (checked on their bits) and drawn as R-436 and R-467 have it, and its run reports `collision` at `t = 0`; after
+  Rotate 15°, a drag onto the landmark and off it again restores `ρ` at 15°, with `√I` and the lab-frame momenta
+  continuous; controls: a drag clamped to the upper hemisphere, a snap to the twin, a drag that mirrors the held
   momentum, a drag that re-places the IC at `I = 1` in the canonical frame, a far press that moves the IC, a press on
-  the point that orbits, and a drag that refuses the landmark, each fail (REQ-GUI-343).
+  the point that orbits, a drag that refuses the landmark, a finite sentinel for `V₀` at the landmark, and a drag off it
+  that resets `ρ` to `+x`, each fail (REQ-GUI-343).
 - `cargo test -p gui constructor_twin` and `cargo xtask screenshot 05_inspectors` (the constructor's twin) —
   REQ-GUI-344's verify: with the point on each hemisphere the marker is at `(θ, π − φ)` and the note reads "mirror twin
   of the system at `(θ, π − φ)`" with the twin's angles; the twin's readout is `Π·x`, its `L_z` the IC's negated; with
@@ -76,3 +88,6 @@ run is labelled `collision` at `t = 0` by the shared path for coincident bodies 
   (G2; the human's "Dragging across the equator flips the triangle in the triangle view" is read as a change of
   shape, the gauge buttons' Scale, Rotate and Boost surviving a drag), the drag arms moved to `constructor_twin` (G3),
   the collision landmarks (G5), physics and PIT-9 added (G6), and the twin on the full state (physics P5).
+- **Review round 2 of PR #273 (physics review 5603529679, P8; applied per R-369).** The landmark IC comes from the
+  decode (dd_decoder §3.6, R-436, R-60), not the lookup path (REQ-ENC-019, REQ-ENC-033, cited before); `V₀` and `E₀`
+  are `−∞`, not "no non-finite value"; the frame at `ρ̃ = 0` is a definition under R-72.
