@@ -784,7 +784,8 @@ rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-
 **passive logging** switch (telemetry §1.2), with its indicator in the footer (R-129). It shows:
 - the frame-time trace, with frame ms, p50, p95, p99 and the worst frame;
 - where the frame goes (a donut), stacked per-frame bars for the last 60 frames;
-- a substeps-per-pixel histogram, with the cap marked (the long tail near close encounters is the GPU divergence);
+- a substeps-per-pixel histogram, with the cap marked (the long tail near close encounters is the GPU divergence), drawn
+  from the frame record's `substep_histogram` (telemetry §2; R-545, RQ-286);
 - a flame chart of nested scopes on the main thread; GPU timestamps per pass;
 - memory (heap, GPU, tile cache) over time; live allocations by type, with their change over 60 s;
 - a **leak detector** that flags steady growth while idle;

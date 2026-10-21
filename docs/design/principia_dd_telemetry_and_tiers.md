@@ -49,6 +49,8 @@ quads_computed     new quads this frame
 quads_reused       cache hits
 samples            quads x N^2 x (E+1) — the actual integration work
 substeps_total     the honest cost measure; steps are not comparable across steppers
+substep_histogram  [u32; 16], substeps per pixel this frame: equal bins of width N_max/16, cap hits their own
+                   last bin (R-545, RQ-286; the bin edges are RQ-520)
 playhead_dt        how far time moved
 camera_delta       pan/zoom magnitude — 0 for a static frame
 tree_depth_max     and leaf count
@@ -61,6 +63,11 @@ stage_ms           breakdown: integrate / reduce / colour / upload / present
 Both are atomic counters, counted in release builds as well as debug ones, and read back asynchronously on the
 profiler/telemetry readback a frame or two late, never stalling the frame; `QuadReduction` is unchanged and stays the
 sole automatic return of simulation data (R-142, R-288).
+
+`substep_histogram` (R-545, RQ-286) is what the Profiler's substeps-per-pixel histogram draws
+(`principia_render_gui_spec.md` § "Profiler"). It is counted on the GPU beside the two counters above and read back
+with them on the existing readback, a schema v1 change made by the ruling; schema v2 (R-534) is v1 plus, so it
+carries it too. A file written before it reads with the key not recorded, never as zeros.
 
 **The print stage (R-488, R-497).** The Print graph (`principia_print_graph.md`) is a stage of its own: `stage_ms` gains
 `post`, its ms, between `colour` and `upload`, and each frame records `post_level`, the degrade level that ran (`full`,
@@ -357,6 +364,7 @@ frame's end:
 frame           the frame's index in the session, from 0 (so downsampled frames keep their place)
 frame_ms        wall clock
 quads_computed  quads_reused  samples  substeps_total
+substep_histogram  [u32; 16]: §2's per-pixel substep bins (R-545, RQ-286)
 playhead_dt     how far time moved (signed): the change in the playhead's simulation time t this frame
 camera_delta    pan/zoom magnitude: > 0 when the camera moved this frame, 0 when it did not
 tree_depth_max  leaf_count

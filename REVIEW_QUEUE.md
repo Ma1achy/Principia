@@ -7,59 +7,6 @@ Only open entries are kept here (R-292). Once an entry has a ruling it moves, un
 `docs/archive/review_queue/`: `untangling.md` holds RQ-1 to RQ-128, and `M0.md` RQ-129 onward; each later
 milestone gets its own file after its gate. Ids never change.
 
-## RQ-278: §3.7 grounds `running_mean_divergence`'s and `coherence`'s (−∞, ∞) in the default reading R-426 retires, and `alpha_energy`'s declared (−∞, ∞) `lin` would centre its view on zero where §3.7 says 1.0 *(conflict, R-426, R-400, R-403, R-71, REQ-PAY-093, REQ-PAY-094, REQ-GEN-035; context: TASK-M1-21, TASK-M5-01, the M5 gate)*
-
-*Found by TASK-M1-21's fix round (code review 5511539171 F3), once an uncited (−∞, ∞) became a gap on every ledger.
-Nothing is chosen.*
-
-- **File, section:**
-  - `docs/design/principia_dd_generation_root.md` § "3.7" "Layout and §3.8 entries", "The §3.8 entries", line 488:
-    "an f32 member §3.7 gives no range is `(−∞, ∞)`, as §3.8's worked entries are". The table below it (:500–520)
-    writes `(−∞, ∞)` for `alpha_area`, `alpha_energy`, `running_mean_divergence` and `coherence`.
-  - The same section, "Scales (REQ-PAY-094)", line 527: "`alpha_energy` is `lin`, centred on its analytic 1.0, not on
-    zero."
-  - `decisions.md` § "R-426 — …", the human's words: "an undeclared range is a ledger gap, not "spans zero"; a field
-    is diverging only when its declared range spans zero (RQ-260)". R-400: a numeric view whose field's declared range
-    spans zero is drawn on the diverging ramp, centred at zero.
-- **Conflict:**
-  - Line 488 makes `running_mean_divergence`'s and `coherence`'s (−∞, ∞) the range a member gets when §3.7 gives it
-    none: the default R-426 says declares nothing. Whether the table's row is then a declaration, or a gap the row
-    merely writes, the corpus does not say.
-  - `alpha_energy`'s row declares (−∞, ∞) and its scale is `lin`, so under R-400 its view would be on the diverging ramp
-    centred at zero; line 527 says it is centred on 1.0, not on zero. `alpha_area` (`diverging`, its range spanning
-    zero by R-403) does not conflict.
-  - The same holds in kind for `running_mean_divergence` and `coherence`. Option (a), applied to the ledger meanwhile
-    (`crates/ledger/src/reduction.rs`, the two `.cited(SECTION_3_7)` members at the end of `entries()`), makes both
-    `lin` over a declared (−∞, ∞) that spans zero, so under R-400 any view of them is drawn on cool-warm centred at
-    zero. The corpus points to both being one-signed:
-    - `coherence`: dd_generation_root.md:444 reads "| `coherence` | f32 | priority ordering
-      (`complexity = 1 − coherence`) |"; `docs/contracts/principia_scheduler_contract.md` § "Priority" (:133) reads
-      "complexity (`1 − coherence`) drives adaptive refinement". `docs/design/principia_debug_tooling_plan.md`:121
-      draws it as "| coherence / impurity | scalar heatmap | = reduction output; high where boundaries |";
-      the render contract's `RenderQuad` (:15) carries it as `coherence_score`.
-    - `running_mean_divergence`: dd_generation_root.md:406 reads "| `running_mean_divergence` | f32 | diagnostic, not
-      a split input (R-99) |": the running mean of the per-footprint divergence whose latched running maximum (:410,
-      "`running_max_divergence` (f32, max-updated,") is compared with `eps` as a spread (:413, "a footprint is
-      unresolved if its spread exceeds `eps` now, or its latched"). A spread is ≥ 0.
-    - Neither has a formula in the corpus, so no line fixes either range.
-- **Options seen:**
-  - (a) Keep the table's rows as declarations: the four are declared (−∞, ∞) citing §3.7's table, and line 488 is
-    reworded to cite the rows, not a default; `alpha_energy`'s view is then on cool-warm centred at zero, and line 527
-    is reworded.
-  - (b) Treat line 488's members as gaps until a requirement declares their ranges, as R-426 does for the payload;
-    `running_mean_divergence` and `coherence`, `lin` scalars, then fail generation until it does.
-  - (c) For `alpha_energy`, declare a range that does not span zero, or define a placement centred on 1.0 (R-72),
-    with REQ-PAY-093's proposal at the M5 gate.
-  - (d) For `running_mean_divergence` and `coherence`, make their ranges a definition requirement (R-72): it gives
-    each a formula and declares a range, with its citation, that does not span zero.
-- **Applied meanwhile:** applied per R-369 in TASK-M1-21's PR (#208): option (a)'s ledger half. The four members cite
-  §3.7's "The §3.8 entries" (`crates/ledger/src/reduction.rs`, `SECTION_3_7`), `alpha_area` and `alpha_energy` also
-  REQ-PAY-093's proposal (R-71, R-418) until the M5 gate; line 488 and line 527 are unchanged. No numeric view draws
-  a `QuadReduction` member in M1, `running_mean_divergence` and `coherence` included (`ledger::layout()` is the
-  payload's), so no ramp follows from it yet.
-- **Waits:** nothing in M1; TASK-M1-21's PR does not wait. REQ-PAY-093's confirmation at the M5 gate is where
-  `alpha_energy`'s range is settled; it is named, not marked.
-
 ## RQ-280: The addressing channel convention names two channels per position and "grey" for an index, but not the third channel of TL = RB and centre = BG, which index, or how it maps to [0, 1] *(silence, R-72, REQ-COL-054; context: TASK-M7-01, TASK-M7-17, TASK-M7-18)*
 
 *Found by TASK-M7-01, writing render GUI spec §16's standing gaps into colour_composition §9. Nothing is chosen.*
@@ -180,36 +127,6 @@ does not wait.*
   doc line is changed.
 - **Waits:** nothing.
 
-## RQ-286: profiler schema v1's frame record has no per-pixel substep field, so nothing records what the Profiler's substeps-per-pixel histogram draws *(silence, REQ-TOOL-098; context: TASK-M8-28, TASK-M6-28)*
-
-*Found by TASK-M6-28's fix round (gui review 5529720235, finding 3 of PR #212), drawing the histogram on the mock.
-Nothing is chosen.*
-
-- **File, section:**
-  - `docs/gui/principia_render_gui_spec.md` § "G5" › "Profiler", line 237: "a substeps-per-pixel histogram, with the
-    cap marked (the long tail near close encounters is the GPU divergence);". GUI_DESIGN_NOTES § "04 Windows" (:69)
-    lists it too, and REQ-TOOL-098 asks for it.
-  - `docs/design/principia_dd_telemetry_and_tiers.md` § "5. The artefact: one file, plain text, readable by the
-    sender", "The frame record" (:340–354): "**The frame record** is §2's, key for key, followed by the five stages'
-    nested sections and the memory live at the frame's end"; its one substep key is line 346's
-    "quads_computed  quads_reused  samples  substeps_total". § "2. What to record" (:46) reads "substeps_total     the
-    honest cost measure; steps are not comparable across steppers": a frame's total only.
-- **Silence:** the histogram needs a distribution of substeps over pixels, but the frame record carries only the
-  frame's total, and no other field of schema v1 (header, stages, events) carries per-pixel substeps. The corpus
-  does not say whether the histogram is a new frame-record field (its bins, their width or edges, and whether the cap
-  is its own bin), a stage section's payload, or something the GUI reads elsewhere (`total_substeps` per pixel,
-  render contract :384), nor what readback carries it (R-288 keeps `QuadReduction` unchanged).
-- **Options seen:**
-  - (a) Add a frame-record field, e.g. `substep_histogram: [u32; n]` with fixed bin edges up to `N_max` and the cap
-    hits as the last bin, read back with the telemetry counters (R-288), a schema v1 change by ruling.
-  - (b) Compute it on demand from the per-pixel `total_substeps` (a sanctioned pull), outside the trace, so a saved
-    trace does not carry it.
-  - (c) Drop the histogram from §G5 and REQ-TOOL-098.
-- **Applied meanwhile:** applied per R-369 in TASK-M6-28's PR (#212): the mock's Profiler draws placeholder bins of
-  4 substeps up to `N_max` 64 (`crates/gui/src/mock/profile.rs`, `SUBSTEPS_PER_PIXEL`), the cap marked at 64, with a
-  note naming this entry; the real engine's side has no trace, so draws nothing.
-- **Waits:** TASK-M8-28 (REQ-TOOL-098's histogram on real data). TASK-M6-28 does not wait.
-
 ## RQ-295: When `lookup_rescaled` is raised: step 0 always rescales and records `λ`, but a notice must fire only if its operation did, and canonical inputs raise none *(silence, R-72, REQ-ENC-006, REQ-ENC-014; context: TASK-M2-07, TASK-M2-15)*
 
 *Found by TASK-M2-07, building `C`. Nothing is chosen.*
@@ -308,52 +225,6 @@ Nothing is chosen.*
   state or `λ`.
 - **Waits:** REQ-DEC-002 (`rq: RQ-296`), TASK-M2-07's closing of it. TASK-M2-07's PR does not wait: it merges with
   REQ-DEC-002 held, not closed.
-
-## RQ-297: a ledger `scale` change moves the payload schema version, which invalidates every cached payload, but seam 5 says it re-styles the view "with **zero** recompute" *(conflict, R-36, REQ-COL-032; context: TASK-M7-05)*
-
-*Found by TASK-M7-05's review (qa, PR #219, `qa_ledger_scale_restyle_keeps_the_sim_key`, since restated; see
-"Waits"). Nothing is chosen.*
-
-- **File, section:**
-  - `docs/design/principia_dd_colouring.md` § "4. Seams (obligations → integration tests)", seam 5 (:243): "read
-    fields only through generated accessors + ledger metadata | field views sane; a ledger scale change re-styles the
-    view with **zero** recompute". § "2. Consolidated contract" (:17): "colour **compaction** is the third
-    compactification role — render-key, free, never re-integrates; per-field scale comes from the **ledger
-    metadata**". REQ-COL-032 repeats it, its verify detail "change a field's ledger scale; the view re-styles and the
-    dispatch counter is unchanged".
-  - `docs/design/principia_dd_generation_root.md` § "2. Consolidated contract" (:21): "From the
-    **caching/integrator contracts**: the **payload compatibility signature** includes the payload schema version — a
-    layout change must invalidate every cached payload. **The schema version is a content hash of the canonicalised
-    §3 ledger, not a hand-bumped integer (R-36).**", and § "4. Seams" (:994): "schema version (the
-    ledger's content hash, R-36) ∈ payload compatibility signature | any ledger change invalidates every cached
-    payload (cache serves nothing stale-schema'd)".
-  - `docs/contracts/principia_caching_contract.md` § "Part 1 — Two-level keying: identity vs validity", "Validity"
-    (:14): the payload compatibility signature includes the "payload schema version (a content hash of the ledger,
-    R-36). Same identity, different signature → different payload".
-  - The code: `crates/ledger/src/version.rs` (:199–209) hashes each entry's `scale` into the schema version, as R-36's
-    "canonicalised §3 ledger" reads; `scale` is one of the §3 ledger's columns.
-- **Conflict:** an edit to a field's ledger `scale` is a ledger change, so under R-36 and generation_root :994 it
-  moves the schema version, the compatibility signature changes, and every cached payload is recomputed. Seam 5 and
-  dd_colouring §2 say the same edit re-styles the view with zero recompute: `scale` is render-key metadata, which
-  changes nothing the kernel computes or the payload's layout. The corpus also differs on scope: generation_root :21
-  states the requirement as "a layout change must invalidate every cached payload", and then makes the schema version
-  a hash of the whole canonicalised §3 ledger; :994 states it as "any ledger change invalidates every cached payload".
-  A `scale` edit is a ledger change but not a layout change.
-- **Options seen:**
-  - (a) The schema version hashes only what decides the payload's layout and the kernel's output, not the colour
-    metadata: `scale` leaves the hash, with any other render-only column a ruling names; R-36 and generation_root
-    :21/:994 are reworded to say which columns, and seam 5 holds as written. It rests on :21's "a layout change".
-  - (b) Keep the whole-ledger hash and amend seam 5, dd_colouring §2 and REQ-COL-032: a ledger scale change re-styles
-    the view with zero *recompute of the view's own pass* but invalidates cached payloads, as any ledger edit does;
-    the run-time re-style without recompute is then a view override (a GUI choice of compaction), not a ledger edit.
-    It rests on :994's "any ledger change" and R-36's hash of the whole canonicalised ledger.
-- **Applied meanwhile:** nothing is chosen. TASK-M7-05's seam-5 test builds a view from an edited clone of `E_0`'s
-  entry without regenerating the ledger, so it shows the render side only (the view re-styles, the sim buffer is
-  unchanged, one fragment compile); it says so in its doc. `ledger::version` is unchanged.
-- **Waits:** TASK-M7-05's PR does not wait; REQ-COL-032 stays held until the ruling. qa has restated its test as
-  `qa_ledger_scale_restyle_leaves_the_sim_buffer`, which asserts neither side of this entry: it covers the render side
-  only (the frame re-styles, the sim buffer reads back byte for byte), and the schema-version side waits on this
-  entry.
 
 ## RQ-298: An explicit `fma` is not fused on every backend: lavapipe evaluates it as a rounded product and an add, against the determinism note's rule 6; and a GPU that flushes subnormals rounds differently from one that keeps them, which the corpus does not address *(conflict and silence: corpus premise against measurement, R-34, R-84, REQ-INT-064; context: TASK-M2-07)*
 
@@ -487,41 +358,6 @@ Nothing is chosen.*
     release profile, so a miscompile a test covers is seen. Code no test covers stays exposed.
 - **Applied meanwhile:** nothing. `stage_canon_native` is unchanged, not restructured around the fault.
 - **Waits:** nothing held: no shipped code was found with the pattern. TASK-M2-07's PR does not wait.
-
-## RQ-310: `I_max` and the "when decided" latch want descriptor bits 10–15, which payload §2 holds reserved and "never opportunistically reused", beside R-37's departed bit, whose place is open *(conflict and budget, R-442, R-37, R-36, REQ-PAY-105, REQ-PAY-106, REQ-COL-082, REQ-COL-106, REQ-VAL-055; context: TASK-M7-35, TASK-M7-40)*
-
-*Found porting the Chazy stain spec (R-442). Nothing is chosen. **For the human: yes**, as the human asked ("Two need
-me: the descriptor-bit budget …").*
-
-- **File, section:**
-  - `docs/design/principia_dd_chazy_final_motion.md` § "6. The latch: `I_max`", transcribing spec 02 §3: "A
-    log-quantised value fits the reserved descriptor bits 10–14 (32 half-octave levels up to 2¹⁶), leaving bit 15 for
-    the open departure flag. That is a versioned format change and needs a ruling (`04`)."
-  - Spec 04 §3 item 1: "**Descriptor bits.** `I_max` in reserved bits 10–14 claims space next to the open departure
-    flag (bit 15). The "when decided" view (`03` §7.1) needs a second latch and more bits. Is that budget available,
-    and is it worth it?"
-  - Spec 03 §7.1 (drill-down § "10.8.1 When it was decided"): "a second forward-only latch, the time the current
-    coarse class was first committed, reset whenever it changes. Same shape as `I_max`, and it needs its own storage
-    bits. Without that latch this view is offline only."
-  - `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest
-    reserved", line 226: "*reserved* | 10–15 | 6 | … Reserved, decode as zero, never opportunistically reused"; line 228:
-    `last_symbol`'s bits 8–9 were "a deliberate, versioned assignment — a binary-format version bump … (automatic: the
-    version is the ledger's content hash, R-36)".
-  - `open-questions.md` item 9, line 71: "**Still open:** the value of `δ_dep` (by measurement), and where the
-    per-sample "departed" bit lives" (R-37; carried by REQ-VAL-055 and REQ-PAY-056).
-- **Conflict:** the spec spends five of the six reserved bits on `I_max` and names bit 15 for the departed bit, whose
-  placement R-37 left open; payload §2 holds the six reserved. The "when decided" latch needs more storage that the
-  descriptor does not have.
-- **Options seen:**
-  - (a) Spend bits 10–14 on `I_max` (log, half-octave, 5 bits), a versioned assignment as `last_symbol`'s was; bit 15
-    for the departed bit; "when decided" offline only.
-  - (b) As (a), and give the "when decided" latch storage outside the descriptor (a new `SimState` member, a size
-    change with its memory cost), so the view is live.
-  - (c) Keep the descriptor's bits reserved and store `I_max` elsewhere (a new `SimState` member), at its own memory
-    cost.
-  - (d) Do not store `I_max`: OS-candidate is then computed from no history (it never fires), or dropped.
-- **Waits:** REQ-PAY-105's storage and REQ-PAY-106 (`rq: RQ-310`), TASK-M7-35's persisting the latch, and REQ-COL-082
-  and REQ-COL-106's lightness by time (TASK-M7-40). The local, per-step latch and the classifier's tests do not wait.
 
 ## RQ-311: the default seven-class final-motion palette sits below τ within itself (H / HP 0.083; HP / P 0.002 under deuteranopia); keep it, or move the default to Okabe–Ito *(decision at the gate, R-442, R-132, R-429, REQ-COL-075, REQ-COL-086, REQ-COL-087; context: TASK-M7-37, the M7 gate)*
 
@@ -3248,3 +3084,32 @@ Nothing is ruled.*
   - (a) An ordinary setting of the node, as the file and the code have it (which includes the debug use).
   - (b) Debug only: offered in the debug views, not in the node's inspector.
 - **Applied meanwhile:** (a), the code. REQ-COL-116 keeps the draft's words, its note citing this entry.
+
+## RQ-520: The frame record's `substep_histogram` is ruled `[u32; 16]` with "equal bins of width `N_max/16`" and "cap hits as their own last bin", but sixteen bins of width `N_max/16` fill `[0, N_max]` and leave no entry for a separate cap bin *(conflict within the human's ruling on RQ-286; R-545, R-288, REQ-TOOL-098, REQ-TOOL-187; context: TASK-M5-28, TASK-M8-28)*
+
+*Found porting R-545 (the human's batch of 21 Oct 2026). Nothing is chosen.*
+
+- **File, section:**
+  - `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` line 17, the human's ruling on RQ-286: "The frame record
+    gains `substep_histogram: [u32; 16]`: equal bins of width `N_max/16`, with cap hits as their own last bin. It is
+    read back with R-288's counters on the existing readback. This is a schema v1 change made by this ruling."
+  - `docs/design/principia_dd_telemetry_and_tiers.md` § "2. What to record — and the rule that makes it useful", the
+    `substep_histogram` line (R-545); `docs/gui/principia_render_gui_spec.md` § "Profiler": "a substeps-per-pixel
+    histogram, with the cap marked".
+  - The mock (`crates/gui/src/mock/profile.rs`, `SUBSTEPS_PER_PIXEL`, TASK-M6-28's PR #212) draws placeholder bins of 4
+    substeps up to `N_max` 64, the cap marked at 64: sixteen bins of width `N_max/16`, with no separate cap bin.
+- **The conflict:** sixteen equal bins of width `N_max/16` cover `[0, N_max]`, so a cap hit (a count of `N_max`) falls
+  in the sixteenth with every count in `[15·N_max/16, N_max)`, not in a bin of its own; a bin of cap hits alone needs a
+  seventeenth entry, or bins of another width. The words do not say which, nor which side of each edge a count on it
+  falls.
+- **Options seen:**
+  - (a) `[u32; 17]`: sixteen equal bins of width `N_max/16` over `[0, N_max)`, half-open, and the cap hits (`N_max`) in
+    a seventeenth.
+  - (b) `[u32; 16]`: fifteen equal bins of width `N_max/15` over `[0, N_max)`, half-open, and the cap hits in the
+    sixteenth.
+  - (c) `[u32; 16]`: sixteen equal bins of width `N_max/16`, the last closed at `N_max`, so the cap hits are counted in
+    the last bin with the counts just below the cap, and the Profiler marks the cap at its top edge (the mock's
+    layout).
+- **Applied meanwhile:** telemetry §2 and §5 carry `substep_histogram: [u32; 16]` as ruled; REQ-TOOL-187 (TASK-M5-28)
+  builds the field, its GPU counting and its readback, and waits on this entry for the bin edges only.
+- **Waits:** REQ-TOOL-187's bin edges (TASK-M5-28) and REQ-TOOL-098's drawing of them (TASK-M8-28).

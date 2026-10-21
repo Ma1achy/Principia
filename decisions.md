@@ -352,6 +352,11 @@ The divergence-vs-horizon table is regenerated or retired as part of the re-run.
 dd_predictability_horizon; `workbench/tb_az.py`.
 
 ## R-36 — Schema version = content hash of the ledger *(PL-1)*
+*Amended by R-545 (21 Oct 2026; RQ-297: the schema version hashes only the ledger columns that decide the payload's
+layout or the kernel's output; `scale`, and any render-only column a ruling names, leaves the hash; "a layout or kernel
+change").*
+*Still in force: the schema version is a content hash, never a hand-bumped integer, now over the ledger's layout and
+kernel columns (R-545).*
 *24 Sep 2026 · applied in step 5*
 
 Files: dd_generation_root §4, §5 test 7, §6; caching_contract :12; render_contract :59, :182; payload :161, :276.
@@ -471,7 +476,10 @@ scratchpad_pointer_channels :132–134; caching_contract :133.
 ## R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*
 *Extended by R-534 (20 Oct 2026; RQ-399: the Print graph's post stage, `post_level` and the benchmark lines make
 profiler schema v2, `principia-profile-v2`, and every reader accepts v1).*
-*Still in force: all of it; schema v1 stays as defined, five stages, and v2 is v1 plus R-534's additions.*
+*Amended in part by R-545 (21 Oct 2026; RQ-286: the frame record gains `substep_histogram: [u32; 16]`, a schema v1
+change made by the ruling).*
+*Still in force: all of it; schema v1 stays as defined, five stages, its frame record gaining `substep_histogram`
+(R-545), and v2 is v1 plus R-534's additions.*
 *24 Sep 2026 · recorded; the measurement struct lands with the first frame loop, the schema in step 6*
 
 At the top level: telemetry §2's frame record and its five stages. Beneath them: nested scopes, GPU passes, allocations and events.
@@ -20073,3 +20081,184 @@ Part II §3, §3.1, §5, §6, §9 and §11). Read with R-77, R-116, R-407, R-412
 R-542 is in the "design" group of `plan/rule_groups.yaml`, with R-64 and R-537.
 
 Adds REQ-COL-112 to REQ-COL-135, REQ-SCHED-102 and REQ-GUI-335 to REQ-GUI-340.
+
+## R-545 — The human's batch of 21 Oct 2026, ported by area as R-545 to R-559; and the ledger, payload and schema: `running_mean_divergence` and `coherence` one-signed, `alpha_energy` centred on 1.0, a substeps-per-pixel histogram in the frame record, a schema version that hashes only layout and kernel columns, and descriptor bits 10–14 for `I_max` with bit 15 R-37's departed bit *(closes RQ-278, RQ-286, RQ-297 and RQ-310; amends R-36 and R-56)*
+*21 Oct 2026 · the batch recorded whole in `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md`; applied in
+`docs/design/principia_dd_generation_root.md` § "2. Consolidated contract" (:21's sentence), § "Layout and §3.8
+entries" (the §3.8 entries' range sentence, the two one-signed rows and `alpha_energy`'s row, with their earlier words
+kept) and § "4. Seams (obligations → integration tests)" (the schema-version seam), `docs/design/principia_dd_telemetry_and_tiers.md`
+§ "2. What to record" and § "5. The artefact: one file, plain text, readable by the sender" (`substep_histogram`),
+`docs/gui/principia_render_gui_spec.md` § "G5" › "Profiler" (the histogram's source), `docs/design/principia_dd_simstate_payload.md`
+§ "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved" (bits 10–15) and the Chazy fields'
+paragraph, `docs/design/principia_dd_chazy_final_motion.md` § "6. The latch: `I_max`" (Storage), § "10.8.1 When it
+was decided" and § "11.3 Open questions" (item 1), `open-questions.md` item 9, R-36's and R-56's heading blocks,
+`docs/archive/review_queue/M0.md` (RQ-278, RQ-286, RQ-297 and RQ-310, moved with their rulings), REQ-PAY-093,
+REQ-GEN-008, REQ-GEN-017, REQ-COL-032, REQ-TOOL-098, REQ-PAY-013, REQ-PAY-015, REQ-PAY-056, REQ-PAY-105, REQ-PAY-106,
+REQ-VAL-055, REQ-COL-082 and REQ-COL-106 (reqio), REQ-PAY-109, REQ-GEN-043 and REQ-TOOL-187 (reqio, new),
+TASK-M7-35 and TASK-M7-40 (notes, deliverables), TASK-M5-28 (a requirement), TASK-M5-32 and TASK-M7-53
+(new), `plan/tasks.yaml`, `plan/section_notes.yaml` and `plan/rule_groups.yaml`; `REVIEW_QUEUE.md` gains
+RQ-520*
+
+**The batch.** The human's message of 21 Oct 2026 is recorded whole, byte for byte, in
+`docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (sha256
+`bcaad679c6e34c68ece556549fd39f35f8dfb954e7229475778b11ff4f406204`, 191 lines). It opens (lines 1–3):
+
+> A new instruction from me, Malachy, 21 Oct 2026: my rulings on the review queue, my review of PR #268, and my review of the decisions you made under R-369 since 20 Oct.
+>
+> Every ruling below is mine, in my words: quote each one verbatim in decisions.md. Where a ruling names an option letter, it is that entry's option as REVIEW_QUEUE.md words it.
+
+It leaves three entries open (line 181):
+
+> Left open, not ruled (3): RQ-378, RQ-386, RQ-391. They stay in REVIEW_QUEUE.md.
+
+RQ-378, RQ-386 and RQ-391 are each still an open entry in `REVIEW_QUEUE.md` (RQ-378 parked by R-510, RQ-386 by
+R-522, RQ-391 by R-527), and stay there unchanged.
+
+It ends with how to apply it (lines 185–192):
+
+> Applying them:
+> - Record the rulings in decisions.md from the next free R-number, grouped by area as in earlier batch rulings, each saying which entries it closes; my words verbatim, then what it decides and what it applies.
+> - Apply each to the docs it names, with the Removed lines notes, and to the requirements through plan/tools/reqio.py; then run python3 plan/check_plan.py.
+> - Move every ruled entry, unchanged, to docs/archive/review_queue/ (R-292). REVIEW_QUEUE.md keeps only the entries left open above.
+> - Where a ruling conflicts with another ruling or the corpus in a way these texts don't address, queue it as a new entry rather than resolving it. A ruling that needs a calibration value proposes it for the gate, as usual.
+> - One PR for the rulings, reviewed as usual. Paste check_plan's output and the list of entries moved into the description.
+> - Then update the state page so the queue shows only what is still open, and the R-369 list starts again from today.
+> - Do not touch anything outside the repo and build or scratch directories without asking.
+
+So the 126 rulings are recorded by area, one ruling per area, from the next free number, each naming the entries it
+closes, the human's words verbatim, then what it decides and what it applies:
+
+| Ruling | Area | Closes |
+|---|---|---|
+| R-545 | The batch, and the ledger, payload and schema | RQ-278, RQ-286, RQ-297, RQ-310 |
+| R-546 | Colour presets, debug groups and the palettes' measured figures | RQ-280, RQ-281, RQ-282, RQ-331, RQ-332, RQ-333 |
+| R-547 | Decode and encode numerics, cross-backend rounding and the toolchain | RQ-283, RQ-295, RQ-296, RQ-298, RQ-299, RQ-360, RQ-365 |
+| R-548 | The Chazy final-motion classification and its views | RQ-311 to RQ-318, RQ-320 to RQ-325 |
+| R-549 | Landmarks, body numbers, exports and the invariant charts | RQ-334, RQ-335, RQ-336, RQ-350, RQ-355 |
+| R-550 | The decoder's Jacobian and the physical views | RQ-341 to RQ-346 |
+| R-551 | The round-trip and random-IC gates | RQ-475, RQ-476, RQ-477 |
+| R-552 | The chart's extension past `[0,1]²` (R-537's questions) | RQ-406 to RQ-411, RQ-416, RQ-419, RQ-420, RQ-430 |
+| R-553 | The trace and its markers (R-538's questions) | RQ-412 to RQ-415, RQ-417, RQ-418, RQ-421 to RQ-429 |
+| R-554 | The shape sphere's exponential map, tilts and their trace tests | RQ-470 to RQ-474 |
+| R-555 | Listen (R-540's questions), with the human's Listen effects follow-up | RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464, RQ-467 |
+| R-556 | The trace and Listen in the GUI (R-541's questions) | RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465, RQ-466 |
+| R-557 | The Print graph, and the human's review of PR #268 | RQ-478, RQ-479, RQ-495 |
+| R-558 | The state map (R-542's questions) | RQ-480 to RQ-489, RQ-496 to RQ-505 |
+| R-559 | The decisions made under R-369 since 20 Oct, reviewed | — |
+
+R-557 also records the message's PR #268 section (lines 5–9), and R-559 its line 183, the human's review of the
+decisions made under R-369 since 20 Oct. Every ruled entry moves unchanged to `docs/archive/review_queue/M0.md` with a
+ruling line, so `REVIEW_QUEUE.md` keeps only RQ-378, RQ-386 and RQ-391 and the new entries this port files. Line 191's
+state page is the orchestrator's, outside the repository: nothing here changes it.
+
+**The ledger, payload and schema.** The human's words (21 Oct 2026), from the batch file (lines 12, 17, 20 and 23):
+
+> - RQ-278 (Undeclared §3.7 ranges, and `alpha_energy` centred on 1.0): (a) for `alpha_area` only; (c) for `alpha_energy`; (d) for `running_mean_divergence` and `coherence`. "`running_mean_divergence` and `coherence` are one-signed: TASK-M1-21 (R-72) gives each a formula and declares a range that does not span zero, so both stay on viridis. `alpha_energy` keeps `lin` centred on its analytic 1.0, as §3.7 line 527 says, and its range and placement are settled with REQ-PAY-093 at the M5 gate. Line 488 is reworded to cite the table's rows as declarations, not as a default for 'no range given'."
+> - RQ-286 (Substeps-per-pixel histogram has no field in schema v1): (a). "The frame record gains `substep_histogram: [u32; 16]`: equal bins of width `N_max/16`, with cap hits as their own last bin. It is read back with R-288's counters on the existing readback. This is a schema v1 change made by this ruling."
+> - RQ-297 (Ledger `scale` edit: schema bump or zero recompute): (a). "The schema version hashes only the ledger columns that decide the payload's layout or the kernel's output. `scale`, and any render-only column a ruling names, leaves the hash. R-36 and generation_root :21 and :994 are reworded to 'a layout or kernel change'. Seam 5 and REQ-COL-032 stand as written."
+> - RQ-310 (Descriptor bits 10–15 for `I_max` and the departed bit): (a). "`I_max` takes descriptor bits 10–14, log-quantised in half-octaves (32 levels to 2¹⁶), as a versioned assignment like `last_symbol`'s bits 8–9 (the version is the ledger hash, R-36). Bit 15 is R-37's per-sample departed bit. The 'when decided' view is offline only in v1."
+
+**RQ-278** asked how dd_generation_root §3.7's `(−∞, ∞)` for `alpha_area`, `alpha_energy`, `running_mean_divergence`
+and `coherence` reads under R-426, which makes an undeclared range a ledger gap: (a) the table's rows as declarations,
+line 488 reworded; (b) line 488's members as gaps until declared; (c) for `alpha_energy`, a range that does not span
+zero, or a placement centred on 1.0 (R-72), with REQ-PAY-093's proposal at the M5 gate; (d) for the other two, a
+definition requirement giving each a formula and a range that does not span zero. Option (a)'s ledger half was applied
+meanwhile in TASK-M1-21's PR (#208).
+
+*What it decides:*
+- **`alpha_area`: option (a).** Its row is a declaration: `diverging` over `(−∞, ∞)`, citing §3.7's table, its sign
+  load-bearing (R-42, R-403). Nothing changes for it.
+- **`running_mean_divergence` and `coherence`: option (d).** Both are one-signed. Each gets a formula and a declared
+  range, with its citation, that does not span zero, a definition requirement (R-72, REQ-PAY-109), so both stay
+  `lin` on viridis and never on the diverging ramp.
+- **`alpha_energy`: option (c).** It keeps `lin` centred on its analytic 1.0, as §3.7's "Scales" line says; its range
+  and that placement are settled with REQ-PAY-093's proposal at the M5 gate.
+- **Line 488 is reworded** to cite the table's rows as declarations, not as a default for "no range given".
+
+*Where the words leave a choice, decided per R-369 (ledger definitions; reviewed by physics):*
+- **A1. Who writes the formulas.** The human names TASK-M1-21, which merged in PR #208 before this ruling, in the M1
+  milestone whose gate has passed (R-432). The definition is therefore a new task's, TASK-M5-32 (M5, after
+  TASK-M1-21 and TASK-M5-01, reviewed by code, qa and physics), the follow-up of TASK-M1-21's ledger work; it writes each
+  member's formula and declared range into dd_generation_root §3.7 and the ledger entries (`crates/ledger`). It is
+  placed at M5, beside REQ-PAY-093's confirmation, because both are `QuadReduction` members built at M5 (R-306).
+- **A2. Meanwhile** the two rows keep the ledger's `(−∞, ∞)` as built in PR #208, marked in §3.7 as waiting on
+  REQ-PAY-109; no numeric view draws a `QuadReduction` member before then (RQ-278's own note).
+- **A3. `alpha_energy`'s placement.** REQ-PAY-093 now names it: the M5 gate confirms a range for `alpha_energy` with a
+  view centred on 1.0, and TASK-M5-01's proposal record carries it. Its row reads "proposed (REQ-PAY-093), centred on
+  1.0".
+
+**RQ-286** asked what records the Profiler's substeps-per-pixel histogram, since profiler schema v1's frame record
+carries only `substeps_total`: (a) a frame-record field, `substep_histogram: [u32; n]`, read back with R-288's
+counters, a schema v1 change by ruling; (b) computed on demand from `total_substeps`; (c) the histogram dropped.
+
+*What it decides:* **option (a).** The frame record gains `substep_histogram: [u32; 16]`, read back with R-288's
+counters on the existing readback, a schema v1 change made by this ruling.
+
+*Where the words leave a choice, decided per R-369 (telemetry; reviewed by perf and physics):*
+- **B1. Schema v2.** R-534 makes v2 v1 plus the print stage and the benchmark lines, so v2's frame record carries
+  `substep_histogram` too; a v1 file written before it reads with the key absent, reported as not recorded, as R-497
+  K3 reads an earlier file. The key sits after `substeps_total` in §5's frame record.
+- **B2. Who builds it.** The kernel-side counts and the readback are TASK-M5-28's, the frame record's task
+  (REQ-TOOL-187, beside REQ-TOOL-140's counters); the Profiler draws it in TASK-M8-28 (REQ-TOOL-098).
+- **B3. The bins.** The words give 16 entries, "equal bins of width `N_max/16`" and "cap hits as their own last bin";
+  16 equal bins of width `N_max/16` span `[0, N_max]` with no room for a separate cap bin, and a separate cap bin needs a
+  17th entry or a different width. That is not decided here: **RQ-520** puts it to the human. REQ-TOOL-187
+  waits on it for the bin edges only; the field, its 16-entry size as ruled, and its readback do not wait.
+
+**RQ-297** asked whether a ledger `scale` edit moves the schema version, invalidating every cached payload (R-36,
+generation_root :994), or re-styles the view with zero recompute (seam 5, REQ-COL-032): (a) the hash covers only what
+decides the payload's layout and the kernel's output; (b) the whole-ledger hash stays and seam 5 is amended.
+
+*What it decides:* **option (a).**
+- **The schema version hashes only the ledger columns that decide the payload's layout or the kernel's output.**
+  `scale`, and any render-only column a ruling names, leaves the hash.
+- **R-36 and generation_root :21 and :994 read "a layout or kernel change".** R-36's heading block carries the forward
+  line, its words kept; :21 and :994 are reworded.
+- **Seam 5 and REQ-COL-032 stand as written:** a ledger scale change re-styles the view with zero recompute.
+
+*Where the words leave a choice, decided per R-369 (reviewed by code and physics):*
+- **C1. The requirements that said "any ledger change".** REQ-GEN-008 and REQ-GEN-017 now read "any change to a column
+  that decides the payload's layout or the kernel's output", their verify changing a layout column; `scale` named as
+  excluded. Both were built in merged tasks (TASK-M0-12, and TASK-M5-06 to come), so the code change is a new task's:
+  **TASK-M7-53** (M7, after TASK-M7-05, reviewed by code, qa and physics) closes REQ-GEN-043, `ledger::version`
+  hashing only those columns, with seam 5's end-to-end test: a regenerated ledger with one field's `scale` changed keeps
+  the schema version, the cache serves the same payload and the dispatch counter is unchanged, and a changed bit offset
+  moves it. REQ-COL-032 stays TASK-M7-05's, its hold lifted; its zero-recompute arm runs in TASK-M7-53.
+- **C2. Which columns.** The columns a ruling names render-only today: `scale` alone. A future render-only column is
+  named by its own ruling.
+
+**RQ-310** asked whether `I_max` and the "when decided" latch may take descriptor bits 10–15, which payload §2 holds
+reserved: (a) bits 10–14 for `I_max`, a versioned assignment, bit 15 for R-37's departed bit, "when decided" offline
+only; (b) as (a) with the second latch stored outside the descriptor; (c) `I_max` stored elsewhere; (d) not stored.
+
+*What it decides:* **option (a).**
+- **`I_max` takes descriptor bits 10–14,** log-quantised in half-octaves (32 levels to 2¹⁶), a versioned assignment
+  like `last_symbol`'s bits 8–9, the version being the ledger hash (R-36).
+- **Bit 15 is R-37's per-sample departed bit.**
+- **The "when decided" view is offline only in v1:** no second latch is stored.
+
+*Where the words leave a choice, decided per R-369 (payload layout; reviewed by physics):*
+- **D1. The quantisation is ruled.** REQ-PAY-106 was a calibration of "log, half-octave steps, 5 bits, 32 levels up to
+  2¹⁶" as proposed; the human's words give that quantisation, so REQ-PAY-106 is no longer a calibration: it requires
+  the ruled quantisation and records its measured effect on the OS-candidate labels as evidence.
+- **D2. The layout requirements built in M0.** REQ-PAY-013 and REQ-PAY-015 (TASK-M0-10, merged) describe the layout as
+  built. Each bit is spent by the task that stores it, a ledger edit that changes the schema version: bits 10–14 by
+  TASK-M7-35 (REQ-PAY-105), bit 15 by TASK-M3-11 (REQ-VAL-055). Until each lands those bits stay reserved and decode as
+  zero; each task updates the generated layout test as `last_symbol`'s did. Their notes say so; their statements are
+  unchanged.
+- **D3. The departed bit.** REQ-VAL-055's placement half is decided (bit 15); `δ_dep`'s value stays a measurement.
+  `open-questions.md` item 9 keeps only `δ_dep` open.
+- **D4. "Offline only".** The "when it was decided" view is computed from a recorded run, as drill-down §10.8.1 says
+  without the latch; REQ-COL-082 and TASK-M7-40 drop the stored latch, and REQ-COL-106's lightness by time stays its
+  calibration.
+
+*What it amends:* **R-36** (the schema version hashes the layout and kernel columns, not the whole ledger; RQ-297) and
+**R-56** (schema v1's frame record gains `substep_histogram`; RQ-286). It closes **RQ-278**, **RQ-286**, **RQ-297** and
+**RQ-310**.
+
+R-545 is in the "design" group of `plan/rule_groups.yaml`.
+
+Changes REQ-PAY-093, REQ-GEN-008, REQ-GEN-017 (statement, verify, rulings, note), REQ-COL-032, REQ-TOOL-098,
+REQ-PAY-105, REQ-COL-082 (`rq` removed; statement, verify, rulings, note), REQ-PAY-106 (statement, verify, kind cleared,
+`rq` removed), REQ-COL-106 (`rq` RQ-310 removed), REQ-VAL-055, REQ-PAY-056, REQ-PAY-013 and REQ-PAY-015 (notes, and
+REQ-VAL-055's statement); adds REQ-PAY-109, REQ-GEN-043 and REQ-TOOL-187.

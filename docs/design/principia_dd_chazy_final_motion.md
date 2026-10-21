@@ -467,10 +467,13 @@ previous-shape latch.
   was taken at the snapshot cadence.
 - **Per copy.** Each ensemble copy carries its own `I_max`: the class is a point quantity, classified per copy and
   anti-aliased by the SSAA resolve (`principia_dd_colouring.md` §3.7).
-- **Storage (proposed, open).** A log-quantised value fits the reserved descriptor bits 10–14 (32 half-octave levels
-  up to 2¹⁶), leaving bit 15 for the open departure flag (R-37's per-sample "departed" bit, whose placement is open:
-  REQ-VAL-055). Payload §2 holds bits 10–15 "Reserved, decode as zero, never opportunistically reused", so spending
-  them is a versioned format change, as `last_symbol`'s bits 8–9 were, and needs a ruling: RQ-310.
+- **Storage (R-545, RQ-310).** `I_max` takes descriptor bits 10–14, log-quantised in half-octaves (32 levels to 2¹⁶),
+  a versioned assignment like `last_symbol`'s bits 8–9 (the version is the ledger hash, R-36); bit 15 is R-37's
+  per-sample departed bit (REQ-VAL-055). *Was:* "**Storage (proposed, open).** A log-quantised value fits the reserved
+  descriptor bits 10–14 (32 half-octave levels up to 2¹⁶), leaving bit 15 for the open departure flag (R-37's
+  per-sample "departed" bit, whose placement is open: REQ-VAL-055). Payload §2 holds bits 10–15 "Reserved, decode as
+  zero, never opportunistically reused", so spending them is a versioned format change, as `last_symbol`'s bits 8–9
+  were, and needs a ruling: RQ-310."
 
 ---
 
@@ -664,8 +667,8 @@ darkest at t = 800, grey never). On `preset_shape_h1`: 280 pixels settled by t =
 800 and 214 never (the spec's preview run of prin-rs PR #32's `examples/chazy_map.rs`).
 
 **Live implementation:** a second forward-only latch, the time the current coarse class was first committed, reset
-whenever it changes. Same shape as `I_max`, and it needs its own storage bits (RQ-310). Without that latch this view
-is offline only.
+whenever it changes. Same shape as `I_max`, and it needs its own storage bits. Without that latch this view
+is offline only, and **in v1 it is offline only** (R-545, RQ-310): no second latch is stored.
 
 #### 10.8.2 What just changed
 
@@ -950,8 +953,9 @@ What those numbers mean against the corpus's τ, as in §11.2.1:
 
 ### 11.3 Open questions
 
-1. **Descriptor bits** (RQ-310). `I_max` in reserved bits 10–14 claims space next to the open departure flag (bit 15).
+1. **Descriptor bits** (RQ-310; ruled by R-545). `I_max` in reserved bits 10–14 claims space next to the open departure flag (bit 15).
    The "when decided" view (§10.8.1) needs a second latch and more bits. Is that budget available, and is it worth it?
+   *Ruled:* `I_max` takes bits 10–14, bit 15 is R-37's departed bit, and the "when decided" view is offline only in v1.
 2. **Escape detector alignment** (RQ-313). A pixel can read "escape" in the event stain while the Chazy class reads
    excursion or B at the same playhead (§9 item 3). Acceptable, or should one gate the other?
 3. **f32 parity** (RQ-314). Measure the disagreement rate at f32 near the `K = U` sign changes before setting a
