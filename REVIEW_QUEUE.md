@@ -1982,7 +1982,7 @@ only in that the fold changes area statistics" (physics review 5594430380 of PR 
   `rq: RQ-472`); neither task waits for the rest. TASK-M2-36's §3.3 fold does not wait. The decoder contract's
   "Repeats and the canonical point" paragraph names this entry (applied per R-369, PR #263's fix round).
 
-## RQ-473: T16 and T16b hold the trace's screen step "within 3× the median" at a θ wrap, a pole passage and a syzygy, where TF2.3 measures correct code at 5–97× the median and TF1 passes θ's pole singularity as a jump *(conflict: the human's tests against the human's own measurement, R-538 TF6 T16 and T16b, TF2.3, TF1; REQ-GUI-278, REQ-GUI-279, REQ-GUI-283; context: TASK-M8-58)*
+## RQ-473: T16 and T16b hold the trace's screen step "within 3× the median" at a θ wrap, a pole passage and a syzygy, where TF2.3 measures correct code at 5–97× the median, genuine fast motion at close approach *(conflict: the human's tests against the human's own measurement, R-538 TF6 T16 and T16b, TF2.3; REQ-GUI-278, REQ-GUI-279, REQ-GUI-283; context: TASK-M8-58)*
 
 *Found by physics review 5594430380 of PR #263 (P1). Nothing is chosen. For the human: no unless the human wants it;
 the threshold is a value, and R-71 makes it a calibration requirement meanwhile.*
@@ -1995,12 +1995,13 @@ the threshold is a value, and R-71 makes it a calibration requirement meanwhile.
   - The same, F2, item 3: "Mixing the two flipped the sign of `p_y` at every syzygy, so the tilted trace jumped there: up to
     ~2000× the median step." and "Read in the sphere's own frame (`ρ` along `+x`, no mirror), the worst jump falls to
     5–97× the median, the size of genuine fast motion at close approach."
-  - The same, F1's table, θ or φ of the shape sphere: "θ is undefined at the poles, a coordinate singularity the line
-    passes as a jump."
 - **The conflict:** T16b's fixture, Burrau 3:4:5 to `t = 70`, is full of close approaches near syzygies; read in the
   right frame its worst step is up to ~97× the median by the follow-up's own measurement, so a correct implementation
-  fails "within 3×". A pole passage resolved at polar distance `ε` steps θ by about `Δ/ε`, more than 3× the median for
-  small `ε`, so T16's pole arm fails correct code too. The artefacts the tests exist for are far larger (~2000× for the
+  fails "within 3×". T16's tilted runs fail it on the same grounds: genuine fast motion at close approach, which F2
+  item 3 measures as "5–97× the median, the size of genuine fast motion at close approach", can fall at a θ wrap or a
+  pole passage, as it falls at T16b's syzygies. (A pole passage itself keeps the step small: REQ-GUI-278 takes each
+  sample on the branch nearest the previous one, over a pole θ + π with φ reflected; TF1's "passes as a jump" is the
+  unbranched coordinate's.) The artefacts the tests exist for are far larger (~2000× for the
   frame flip; `2π·cos τ` for the wrap).
 - **Options seen:** (a) the threshold is set from the measured gap between genuine motion (≤ ~97× the median, TF2.3)
   and the artefacts (the `2π·cos τ` wrap jump, the ~2000× flip), an R-71 calibration value (REQ-GUI-283); (b) the step
@@ -2009,6 +2010,11 @@ the threshold is a value, and R-71 makes it a calibration requirement meanwhile.
 - **Applied meanwhile:** (a): REQ-GUI-278's and REQ-GUI-279's verifies hold the step within REQ-GUI-283's calibrated
   threshold, their controls unchanged.
 - **Waits:** nothing; the threshold is proposed by TASK-M8-58 with its measurement and confirmed at the M8 gate.
+- *Was (physics review 5594542116 of PR #263, P8: wrong for the branch-continuous trace T16 tests):* the heading's "and
+  TF1 passes θ's pole singularity as a jump" and its "TF1;"; the File, section line "The same, F1's table, θ or φ of the
+  shape sphere: "θ is undefined at the poles, a coordinate singularity the line passes as a jump.""; and "A pole
+  passage resolved at polar distance `ε` steps θ by about `Δ/ε`, more than 3× the median for small `ε`, so T16's pole
+  arm fails correct code too."
 
 ## RQ-474: T15's second arm runs "the same tilt toward `p_λ,y`", the physical momentum, where R-473 tilts the shape sphere only toward its latent controls, so no chart offers that target *(conflict: the human's test against a ruling, R-538 TF1 and TF6 T15, R-473 J1 and J2; REQ-GUI-277; context: TASK-M8-58)*
 
