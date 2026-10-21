@@ -261,8 +261,9 @@ read, before anything renders:
   missing link and its block.
 - **A changed definition**, a link id whose registry entry's content differs from the writer's, is refused the same
   way. **Each recorded link carries its own entry hash (R-521):** the record holds, beside the build hash and the
-  schema version, one entry hash per block, the hash of that link's registry entry by its semantic content
-  (`principia_dd_generation_root.md` §3.9, "Each entry's own hash"), a u64 written as a string (R-322), four in all
+  schema version, one entry hash per block, the hash of that link's registry entry by its semantic content and of the
+  registry constants its decode reaches (`tanh_sat`, `ε_M01`, `δ_λ`, `ε_w`; `principia_dd_generation_root.md` §3.9,
+  "Each entry's own hash"), a u64 written as a string (R-322), four in all
   (about 100 B of JSON). The reader compares each against its own registry's entry of that id: a mismatch is "state
   present, cannot recreate", naming exactly that link; when all four match, a schema version other than the reader's
   refuses nothing on the links' account, and the schema version stays the whole-ledger check of what the stored
@@ -323,7 +324,7 @@ carries it whole.
 **Whether tier 2 splits waits for this re-measure (R-522).** RQ-386 asks whether tier 2 should split, its built-ins
 and the ramp window above the overlays and lines, if tier 2 often does not fit at small sizes. The human rules it after
 the re-measure: TASK-M7-44 reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default
-stain and for a typical edited one, and RQ-386 returns to the human with those numbers. Meanwhile tier 2 is whole.
+stain and for the fixture `tier2_typical_stain` (REQ-TOOL-174 names its contents), and RQ-386 returns to the human with those numbers. Meanwhile tier 2 is whole.
 
 **Config-only payload 596 B JSON → 382 B deflated. Full `frag.glsl` 11,367 B → 2,969 B.**
 

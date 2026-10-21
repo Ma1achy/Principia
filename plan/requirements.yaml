@@ -2872,7 +2872,7 @@
 - id: REQ-CHART-070
   area: CHART
   kind: definition
-  statement: "The warp of every physical-quantity axis chart_reference §2.1 does not write must be defined: a PE (potential-energy) axis (the configuration fixing the potential), the virial ratio, and how a mass-ratio range maps into the mass logits (R-506: the mass ratio warps through the mass link), and any further Chart-builder quantity; each definition (the axis's warp to its feasible range and its extension type, or that no chart offers it) is written by the task that builds E1 as a chart_reference §2.1 paragraph under physics review, and until then no chart offers that axis."
+  statement: "The warp of every physical-quantity axis chart_reference §2.1 does not write must be defined: a PE (potential-energy) axis (the configuration fixing the potential), the virial ratio, and how a mass-ratio range maps into the active mass link's inputs (R-506: the mass ratio warps through the mass link), and any further Chart-builder quantity; each definition (the axis's warp to its feasible range and its extension type, or that no chart offers it) is written by the task that builds E1 as a chart_reference §2.1 paragraph under physics review, and until then no chart offers that axis."
   source:
   - file: decisions.md
     section: "R-471 — Energy-type axes (`E`, `L_z`, `K`, `KE`, `PE`) are warped by default, as chart_reference §2.1 warps them, the warp evaluated per pixel with that pixel's own `U`, `I` and masses, so every pixel inside `[0,1]²` is feasible under every tilt; a linear mapping is an option per axis, its infeasible pixels \"not a system\" and the navigation stop keeping the centre feasible, recorded in the view state and the sidecar ⚑ *(supersedes R-408's port B1 as the default)*"
@@ -2882,7 +2882,7 @@
     section: "R-506 — Every physical-quantity axis follows R-471: warped to its feasible range by default, linear as an option with its non-systems blank; the decoder-bug warning only for a warped axis; the mass ratio warps through the mass link *(closes RQ-372; amends R-471 and R-467; supersedes R-408's port B1 as the default for every physical-quantity axis)*"
   verify:
     method: review checklist
-    detail: "review (physics): chart_reference §2.1 holds the PE, virial-ratio and mass-ratio paragraphs, each with its feasibility argument and extension type; cargo test -p kernel pe_axis and physical_axis_warps: a chart offering PE, the virial ratio or a mass ratio either warps it as written (every pixel of [0,1]² validating) or is refused by the well-posedness validator; control: an axis mapped with no written warp is refused"
+    detail: "review (physics): chart_reference §2.1 holds the PE, virial-ratio and mass-ratio paragraphs, each with its feasibility argument and extension type; cargo test -p kernel pe_axis and physical_axis_warps: a chart offering PE, the virial ratio or a mass ratio either warps it as written (every pixel of [0,1]² validating) or is refused by the well-posedness validator; the mass-ratio axis validates every pixel of [0,1]² under stick_breaking and under softmax_tanh at both ends of μ_max's allowed range; controls: an axis mapped with no written warp is refused, and a mass-ratio warp written for softmax_tanh at μ_max = 5 alone fails the stick_breaking arm or an end of μ_max's range"
   rulings:
   - R-72
   - R-471
@@ -2890,7 +2890,7 @@
   - R-481
   - R-506
   milestone: M2
-  note: "R-471 H2; R-506 W2 (the virial ratio and the mass ratio joined). A definition requirement (R-72). Closed by TASK-M2-37. *Was:* \"The warp of a PE (potential-energy) axis must be defined\". Physics review is required (⚑); it does not merge on the code reviewer's word alone. Merging the links port (applied per R-369): the mass link the mass ratio warps through is the active one, since R-478 and R-481 a registry entry at its active parameters, the default §0.1's softmax; the mass-ratio paragraph is written for it (chart_reference §2.1)."
+  note: "R-471 H2; R-506 W2 (the virial ratio and the mass ratio joined). A definition requirement (R-72). Closed by TASK-M2-37. *Was:* \"The warp of a PE (potential-energy) axis must be defined\". Physics review is required (⚑); it does not merge on the code reviewer's word alone. Merging the links port (applied per R-369): the mass link the mass ratio warps through is the active one, since R-478 and R-481 a registry entry at its active parameters, the default §0.1's softmax; the mass-ratio paragraph is written for it (chart_reference §2.1). Physics review P3 of PR #265 (applied per R-369): the statement reads \"the active mass link's inputs\" and the verify gains the arms off the defaults. *Was:* \"how a mass-ratio range maps into the mass logits\" and the verify's \"; control: an axis mapped with no written warp is refused\"."
 - id: REQ-CHART-071
   area: CHART
   statement: "Under Lean each axis, R-408's area statistics and any per-pixel area weight must multiply each pixel's area by the Gram factor √(|u₁|²|u₂|² − (u₁·u₂)²) of the skewed basis; on an affine chart it is one number over the window, so shares are unchanged and absolute areas scale by it; Tip as sheet needs none (orthonormal)."
@@ -16204,12 +16204,12 @@
     section: "R-466 — Slice centre, Tilt and Navigate each have a \"reset\" beside the heading that returns the section to the active chart preset's own values, never literal zero; Home does all three in one command, from a button in the canvas's corner, the Home key in both keyboard modes and View › Home; each is one undoable command, dimmed when already home, and drives the compass live *(extends R-409, R-457, R-458 and R-462)*"
   verify:
     method: unit test
-    detail: "save, duplicate, edit and delete a preset; the list reflects each; a saved preset stores its base point, centre and window, which a duplicate keeps and the section resets and Home of the saved preset read back exactly; control: a saved preset whose resets fall back to another preset's values fails"
+    detail: "save, duplicate, edit and delete a preset; the list reflects each; a saved preset stores its base point, centre and window, which a duplicate keeps and the section resets and Home of the saved preset read back exactly; a preset pinned under stick-breaking masses keeps its pin when saved and when duplicated (the duplicate pinned to the same Links), and deleting it removes the pin with it; controls: a saved preset whose resets fall back to another preset's values fails, and a Duplicate that drops the pin fails"
   rulings:
   - R-466
   - R-516
   milestone: M8
-  note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes. R-475 L3 (20 Oct 2026): saved charts (Save view as chart) sit in the preset selector's Saved group beside the builder's presets, in the same store (REQ-GUI-239). R-478 W3: the Chart builder shows the links read-only (REQ-GUI-253, 20 Oct 2026). R-516 (20 Oct 2026): a preset may optionally pin the links it was designed under, stored with it and applied on load (REQ-GUI-254, TASK-M6-50); the builder's Save, Duplicate and Delete keep a preset's pin with it."
+  note: "R-466 (18 Oct 2026; review round 1 of PR #243, gui review F6): a chart preset carries a base point, a centre and a window (REQ-GUI-224, defined by TASK-M6-45), and a saved preset stores them with its axes. R-475 L3 (20 Oct 2026): saved charts (Save view as chart) sit in the preset selector's Saved group beside the builder's presets, in the same store (REQ-GUI-239). R-478 W3: the Chart builder shows the links read-only (REQ-GUI-253, 20 Oct 2026). R-516 (20 Oct 2026): a preset may optionally pin the links it was designed under, stored with it and applied on load (REQ-GUI-254, TASK-M6-50); the builder's Save, Duplicate and Delete keep a preset's pin with it. Gui review G2 of PR #265 (applied per R-369): the verify gains the pin arm (R-516 K2). *Was:* the verify's \"; control: a saved preset whose resets fall back to another preset's values fails\"."
 - id: REQ-GUI-109
   area: GUI
   statement: "The chart builder's Domain preview must show the chart's admissible region in its own coordinates, the forbidden region hatched, the current view as a rectangle, the boundary's formula and 'forbidden in view: N%', computed from the chart's validate(u, v)."
@@ -18892,12 +18892,12 @@
     section: G7. Chart builder (`03_chartbuilder.png`)
   verify:
     method: unit test
-    detail: "cargo test -p gui mock_preset_pin: an unpinned preset's serialised form holds no link id or parameter and selecting it leaves Links bitwise unchanged; a preset pinned under stick-breaking masses, loaded with the defaults active, sets the chart and Links to the pin in one history entry, one Ctrl+Z restoring both bitwise, and posts exactly one console notice, naming the masses and no other block; a saved chart pinned the same way does the same; loading a pin equal to the active links adds no history entry and no notice; a snapshot exported after the load holds the active links and no pin; controls: a load that applies the pin with no notice, one that takes two undo entries, and one that switches the links for an unpinned preset each fail"
+    detail: "cargo test -p gui mock_preset_pin: an unpinned preset's serialised form holds no link id or parameter and selecting it leaves Links bitwise unchanged; a preset pinned under stick-breaking masses, loaded with the defaults active, sets the chart and Links to the pin in one history entry, one Ctrl+Z restoring both bitwise, and posts exactly one console notice, naming the masses and no other block; a saved chart pinned the same way does the same; loading a pin equal to the active links adds no history entry and no notice; a snapshot exported after the load holds the active links and no pin; a fresh preset and a fresh saved chart are unpinned; toggling Pin the active links adds no history entry and the pin survives a relaunch (the settings reread); a pinned entry shows the pin icon and its tooltip names the pinned links in the Links row's words; the toggle is reached by Tab and toggled by Enter as the entry's last control; controls: a pin on by default, a toggle that adds an undo entry, a pin lost on relaunch, a pinned entry without the icon or with a tooltip naming other links, a load that applies the pin with no notice, one that takes two undo entries, and one that switches the links for an unpinned preset each fail"
   rulings:
   - R-478
   - R-516
   milestone: M6
-  note: "R-478 W4; R-516 (RQ-380 ruled: a pin is optional, applied on load with a notice, one undo entry; 20 Oct 2026). Applied per R-369: the pin is the whole `Links`, set by \"Pin the active links\" beside the entry and kept as the GUI's own settings, never exported; the notice is a console line shown as the footer's latest message. *Was:* \"A chart preset must carry no links: a preset must be a pair of axes, and selecting one must leave the links unchanged.\", the verify's `mock_preset_no_links` and its \"control: a preset struct given a links field fails the test\", and the note's \"whether a preset may pin links is RQ-380 (meanwhile none, 20 Oct 2026).\""
+  note: "R-478 W4; R-516 (RQ-380 ruled: a pin is optional, applied on load with a notice, one undo entry; 20 Oct 2026). Applied per R-369: the pin is the whole `Links`, set by \"Pin the active links\" beside the entry and kept as the GUI's own settings, never exported; the notice is a console line shown as the footer's latest message. *Was:* \"A chart preset must carry no links: a preset must be a pair of axes, and selecting one must leave the links unchanged.\", the verify's `mock_preset_no_links` and its \"control: a preset struct given a links field fails the test\", and the note's \"whether a preset may pin links is RQ-380 (meanwhile none, 20 Oct 2026).\" Gui review G2 of PR #265 (applied per R-369): the toggle's place is written into §G7 (R-516 K2), and the verify gains the default-off, icon-and-tooltip, not-undoable-and-kept, and keyboard arms, each with its control. *Was:* the verify's \"; controls: a load that applies the pin with no notice,\"."
 - id: REQ-GUI-255
   area: GUI
   statement: "The Decoder window must have one row per block (Masses, Configuration α, Configuration β, Momenta, the last setting the four momentum slots together), each with a link dropdown listing exactly the registry entries onto that block's codomain, the default first and marked \"(default)\"; the link's parameters as numeric fields with sliders, each showing its allowed range and accepting no value outside it, greyed with \"no parameters\" when it has none; a preview; and a \"reset to default\" button dimmed while the row is at its default link and parameters."
@@ -18953,7 +18953,7 @@
   note: R-479 D3, E6; R-482 C8 (20 Oct 2026).
 - id: REQ-GUI-258
   area: GUI
-  statement: "A non-default decoder must be named in the decoder badge, in the figure's header strip (a one-line strip of the Figure panel's chrome above the plot and outside it), naming the chart by its axes and each block off its default after a \"·\" (a parameter with its value), the chart alone at the defaults, hidden with the layer as the Home button is; no badge may draw over the plot."
+  statement: "A non-default decoder must be named in the decoder badge, in the figure's header strip (a one-line strip of chrome at the top of the figure region, above the plot and outside it), naming the chart by its axes and each block off its default after a \"·\" (a parameter with its value), the chart alone at the defaults, hidden with the layer as the Home button is; no badge may draw over the plot."
   source:
   - file: decisions.md
     section: "R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with \"Reset all to defaults\", \"Changing a link re-integrates every pixel\" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export"
@@ -18967,12 +18967,12 @@
     section: G1. Rules that hold everywhere
   verify:
     method: GUI screenshot
-    detail: "cargo test -p gui mock_decoder_badge: at the defaults the badge reads the chart's axes alone; with stick-breaking masses \"z_α × z_β · stick-breaking masses\"; with μ_max 4 \"z_α × z_β · μ_max 4 masses\"; the badge's rect lies in the header strip, above the plot's rect and disjoint from it; hidden with F3 off; controls: a non-default decoder with no block named in the badge fails, and a badge whose rect meets the plot's rect fails"
+    detail: "cargo test -p gui mock_decoder_badge: at the defaults the badge reads the chart's axes alone; with stick-breaking masses \"z_α × z_β · stick-breaking masses\"; with μ_max 4 \"z_α × z_β · μ_max 4 masses\"; the badge's rect lies in the header strip, above the plot's rect and disjoint from it; the strip's height is taken from the top of Layout's figure region and the plot rect, fitted below it at its aspect (square for the slice), equals Layout's shown figure rect, the rect R-406, R-468 and REQ-GUI-229 read; hidden with F3 off; controls: a strip that overlaps the plot rect fails, and a plot rect stretched to fill the region below the strip (its aspect changed) fails, a non-default decoder with no block named in the badge fails, and a badge whose rect meets the plot's rect fails"
   rulings:
   - R-479
   - R-523
   milestone: M6
-  note: "R-479 D4, E7; R-523 (RQ-387 ruled: badges in the chrome or status line, never over the figure, 20 Oct 2026; the header strip chosen per R-369); E8: the sidecar and exports carry the links through SimConfig (REQ-SYS-083). *Was:* \"A non-default decoder must be named in a canvas badge, in the top-left corner, naming\", the verify's \"hidden with F3 off; control: a non-default decoder with no block named in the badge fails\" and the note's \"the badge's place is RQ-387 (meanwhile top-left, D4 as written, 20 Oct 2026)\"."
+  note: "R-479 D4, E7; R-523 (RQ-387 ruled: badges in the chrome or status line, never over the figure, 20 Oct 2026; the header strip chosen per R-369); E8: the sidecar and exports carry the links through SimConfig (REQ-SYS-083). *Was:* \"A non-default decoder must be named in a canvas badge, in the top-left corner, naming\", the verify's \"hidden with F3 off; control: a non-default decoder with no block named in the badge fails\" and the note's \"the badge's place is RQ-387 (meanwhile top-left, D4 as written, 20 Oct 2026)\". Gui review G1 of PR #265 (applied per R-369): the strip takes its height from the top of the figure region, the plot fitted below at its aspect being the shown rect (§G2; §G13's layout departure). *Was:* the verify's \"; hidden with F3 off; controls:\". Gui review G1 of PR #265: *was:* \"(a one-line strip of the Figure panel's chrome above the plot and outside it)\"; the spec has no Figure panel, so the strip is named by the figure region."
 - id: REQ-GUI-259
   area: GUI
   statement: "Each one-dimensional block's preview (α, β, the momenta), about 160 × 110 px in the line system's styles and live while a parameter is dragged, must draw latent z against the physical value over the visible range widened by half its width each side and never narrower than [−4, 4], with dashed lines at the codomain's bounds at the active values, the window's current range of z on the block shaded, a dot at the slice centre's value, the derivative d(value)/dz faint and labelled \"resolution\", and off the default the default's curve faint behind."
@@ -19051,14 +19051,14 @@
   - file: docs/gui/principia_render_gui_spec.md
     section: "G9. Import picture · saved views · record a sweep (`09_importrecord.png`)"
   verify:
-    method: unit test
+    method: GUI screenshot
     detail: "cargo test -p gui export_tier_report: at 64² with a custom shader the window reads which tiers embed and which go to the PNG text; at a size below tier 1 it reads \"not embedded\"; importing the image reports the tiers recovered and badges the fallback in the header strip, the badge's rect disjoint from the plot's; an unknown-link record reads \"cannot recreate\" naming the link; control: an import of a full record shows no fallback badge"
   rulings:
   - R-483
   - R-484
   - R-523
   milestone: M8
-  note: "R-484 RT3, J7; R-483 X4, X5 (20 Oct 2026). R-523: the fallback badge is the decoder badge's, in the header strip. *Was:* \"a recreated view that is a fallback must be badged, naming\" and the verify's \"badges the fallback; an unknown-link\"."
+  note: "R-484 RT3, J7; R-483 X4, X5 (20 Oct 2026). R-523: the fallback badge is the decoder badge's, in the header strip. *Was:* \"a recreated view that is a fallback must be badged, naming\" and the verify's \"badges the fallback; an unknown-link\". Code review F2 of PR #265: the method stays GUI screenshot, as it was before R-523 (the port had changed it to unit test without a ruling; restored)."
 - id: REQ-GUI-264
   area: GUI
   statement: "On the real engine, the Decoder window's Apply must send the staged `Links` as one `SetField` that re-integrates every pixel as one undo entry, and its previews must read the live view's range and centre."
@@ -20813,7 +20813,7 @@
   - R-483
   - R-521
   milestone: M7
-  note: "R-483 X4: the schema version covers every registry entry by content (R-340). R-521 (RQ-385 ruled, 20 Oct 2026): each recorded link carries its own entry hash (REQ-TOOL-172, REQ-TOOL-186), which answers the links' part; this definition still names the build-hash component that detects a chart or decode change outside the links. *Was:* \"whether each recorded link carries its own entry hash is RQ-385 (20 Oct 2026).\""
+  note: "R-483 X4: the schema version covers every registry entry by content (R-340). R-521 (RQ-385 ruled, 20 Oct 2026): each recorded link carries its own entry hash (REQ-TOOL-172, REQ-TOOL-186), which answers the links' part; this definition still names the build-hash component that detects a chart or decode change outside the links. *Was:* \"whether each recorded link carries its own entry hash is RQ-385 (20 Oct 2026).\" Physics review P2 of PR #265 (applied per R-369): the decode constants outside the entries (tanh_sat, ε_M01, δ_λ, ε_w) are in the hashes of the links they reach, so a change to them is refused through REQ-TOOL-172; this definition covers what is left, a chart-version change."
 - id: REQ-TOOL-113
   area: TOOL
   kind: calibration
@@ -21956,12 +21956,12 @@
     section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
   verify:
     method: unit test
-    detail: "cargo test -p engine decoder_identity_per_link: a record whose masses entry hash differs from the build's is refused naming the masses' link and no other; a record whose four entry hashes match but whose schema version differs (an unrelated ledger entry changed) recreates, re-integrating rather than reusing its stored payload; control: an unchanged record recreates and reuses its payload; a reader that refuses every schema change fails the second arm, and one that ignores the entry hashes fails the first"
+    detail: "cargo test -p engine decoder_identity_per_link: a record whose masses entry hash differs from the build's is refused naming the masses' link and no other; a record whose four entry hashes match but whose schema version differs because a payload-ledger entry no decode reads changed (the f16 pack clamp) recreates, re-integrating rather than reusing its stored payload; a record made before tanh_sat changed, and one made before δ_λ changed, are each refused, naming the links whose hashes those constants reach (every tanh-bearing link for tanh_sat, every link for δ_λ), never recreated silently; control: an unchanged record recreates and reuses its payload; a reader that refuses every schema change fails the payload-only arm, one that ignores the entry hashes fails the first, and an entry hash that leaves out tanh_sat or δ_λ fails the constants' arm"
   rulings:
   - R-483
   - R-521
   milestone: M7
-  note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-186. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\""
+  note: "R-483 X4's per-link arm; R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026); no longer waits. The writing side is REQ-TOOL-186. Physics review is required (⚑): which records recreate. *Was:* \"A record whose link's registry entry content differs from the writer's must be refused as \\\"state present, cannot recreate\\\", naming exactly the changed link.\", the verify's \"a record whose recorded entry hash for the masses differs from the build's is refused naming the masses' link; control: an unchanged entry recreates\", and \"waits on RQ-385 (meanwhile the schema-version refusal of REQ-TOOL-171, 20 Oct 2026).\" Physics review P2 of PR #265 (applied per R-369): an entry's hash also covers the registry constants its decode reaches (tanh_sat, ε_M01, δ_λ, ε_w; dd_generation_root §3.9), the recreate arm names a payload-only ledger change, and a control refuses a tanh_sat or δ_λ change. *Was:* the verify's \"(an unrelated ledger entry changed)\" and its controls without the constants' arm."
 - id: REQ-TOOL-173
   area: TOOL
   statement: "A record or export whose links are `{}` (written before Links was filled) must be read with its links unrecorded: under the same build hash it recreates under this build's defaults, labelled so; under another it is \"state present, links unrecorded\", recreated only when the user accepts \"Recreate with this build's default links\" and then badged \"links assumed\"; the embedded record's layout version must be 4."
@@ -21993,18 +21993,18 @@
   - file: decisions.md
     section: "R-522 — Whether tier 2 of the embedding splits is ruled after TASK-M7-44's capacity re-measure: RQ-386 is parked until then, and tier 2 stays whole meanwhile"
   verify:
-    detail: "xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7, tier 1 holding the four entry hashes (R-521); at 64² it states whether one config-only tile still holds; it reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and for a typical edited one (R-522); a record that does not fit reports not embedded and writes no partial tile"
     method: benchmark
+    detail: "xtask: the measurement table at 64², 128², 256², 512², 1024² for the three tier sets, run on the Mac, recorded in §7, tier 1 holding the four entry hashes (R-521); at 64² it states whether one config-only tile still holds; it reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and for the fixture tier2_typical_stain (R-522), which TASK-M7-44 adds: a built-in colour mode other than the default with every parameter off its default, a fixed ramp window, two overlays on, and the line system holding the Grid preset and one contour set of three levels; a record that does not fit reports not embedded and writes no partial tile"
   rulings:
   - R-483
   - R-484
   - R-521
   - R-522
   milestone: M7
-  note: "R-483 X6, H6 (20 Oct 2026). R-522: RQ-386 (whether tier 2 splits) is parked until this measurement; the PR reports tier 2's size and fit, and the orchestrator returns RQ-386 to the human with them. *Was:* the verify's \"for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record\"."
+  note: "R-483 X6, H6 (20 Oct 2026). R-522: RQ-386 (whether tier 2 splits) is parked until this measurement; the PR reports tier 2's size and fit, and the orchestrator returns RQ-386 to the human with them. *Was:* the verify's \"for the three tier sets, run on the Mac, recorded in §7; at 64² it states whether one config-only tile still holds; a record\". Physics review P4 of PR #265 (applied per R-369): the typical edited stain is the named fixture tier2_typical_stain. *Was:* the verify's \"for a typical edited one\"."
 - id: REQ-TOOL-175
   area: TOOL
-  statement: "A keyframe's state must be its `SimConfig`, links included: a change of a link id between keyframes must be a cut everywhere, and a change of a link parameter a cut in live playback; in a blocking export, between keyframes whose link ids are the same, each differing link parameter must ease linearly in its value with every frame re-integrated at its own values, a type (b) segment priced before the job runs."
+  statement: "A keyframe's state must be its `SimConfig`, links included: a change of a link id between keyframes must be a cut everywhere, and a change of a link parameter a cut in live playback; in a blocking export, between keyframes whose link ids are the same, each differing link parameter must ease linearly in its value, a + s·(b − a) with s the segment's progress under the spec's easing curve, clamped into [min(a, b), max(a, b)], each keyframe's own frame taking that keyframe's value bit for bit, with every frame re-integrated at its own values, a type (b) segment priced before the job runs."
   source:
   - file: decisions.md
     section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
@@ -22014,15 +22014,15 @@
     section: "R-520 — Link parameters interpolate across keyframes in a blocking export only, eased linearly with every frame re-integrated, and the export is flagged; live playback keeps the cut, and a changed link id is a cut everywhere *(closes RQ-384; amends R-483)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine keyframe_link_params: two keyframes with the same links differing only in mu_max (5 → 4) over n frames: a blocking export's frame k carries mu_max = 5 − k/(n − 1), each frame's sim key its own and each frame integrated; live playback of the same spec gives a cut at the second keyframe, the frames before it at 5 and from it at 4, none between; keyframes differing in the masses' link id give a cut in both; controls: a blocking export that cuts the parameter and a live playback that interpolates it each fail, and two keyframes differing only in an in-plane pan interpolate in both"
+    detail: "cargo test -p engine keyframe_link_params: two keyframes with the same links differing only in mu_max (5 → 4) over n frames: a blocking export's frame k carries mu_max = 5 − k/(n − 1), each frame's sim key its own and each frame integrated; live playback of the same spec gives a cut at the second keyframe, the frames before it at 5 and from it at 4, none between; keyframes differing in the masses' link id give a cut in both; at ends that are not dyadic, q_max from 1.3 to the top of its allowed range (b = hi) over 7 frames under a non-linear easing curve, every frame's q_max lies within [lo, hi] and within [1.3, hi], each frame's value is a + s·(b − a) clamped with s from the easing curve, and each keyframe's frame equals that keyframe's q_max bitwise, so its sim key is the keyframe's; controls: an unclamped a + s·(b − a) that rounds past hi fails, a keyframe frame computed as a + 1·(b − a) and not bitwise b fails, a blocking export that cuts the parameter and a live playback that interpolates it each fail, and two keyframes differing only in an in-plane pan interpolate in both"
   rulings:
   - R-483
   - R-520
   milestone: M8
-  note: "R-483 X7, H7; R-520 (RQ-384 ruled: blocking export only, flagged, 20 Oct 2026; the flag is REQ-TOOL-185). Physics review is required (⚑; R-520's reading of \"flagged\" includes it): each frame is a different family of ICs. *Was:* \"A keyframe's state must be its `SimConfig`, links included, so a change of a link or a parameter between keyframes is a sim-key change at that keyframe, a cut, and parameters must never be interpolated.\", the verify's `keyframe_link_cut` (\"two keyframes differing only in mu_max give a cut at the second, the frames before it at 5 and from it at 4, none between; control: two keyframes differing in an in-plane pan interpolate\") and the note's \"interpolating parameters is RQ-384 (meanwhile a cut, 20 Oct 2026).\""
+  note: "R-483 X7, H7; R-520 (RQ-384 ruled: blocking export only, flagged, 20 Oct 2026; the flag is REQ-TOOL-185). Physics review is required (⚑; R-520's reading of \"flagged\" includes it): each frame is a different family of ICs. *Was:* \"A keyframe's state must be its `SimConfig`, links included, so a change of a link or a parameter between keyframes is a sim-key change at that keyframe, a cut, and parameters must never be interpolated.\", the verify's `keyframe_link_cut` (\"two keyframes differing only in mu_max give a cut at the second, the frames before it at 5 and from it at 4, none between; control: two keyframes differing in an in-plane pan interpolate\") and the note's \"interpolating parameters is RQ-384 (meanwhile a cut, 20 Oct 2026).\" Physics review P1 of PR #265 (applied per R-369): the eased value is clamped into [min(a, b), max(a, b)], the keyframe's frame takes its value bit for bit, and the easing curve gives the progress s; the verify gains the non-dyadic arm at b = hi. *Was:* the statement's \"each differing link parameter must ease linearly in its value with every frame re-integrated at its own values,\" and the verify's \"; controls: a blocking export that cuts\"."
 - id: REQ-TOOL-176
   area: TOOL
-  statement: "Every destination (snapshot JSON, a share link, the profiler header, the embedded record, the tEXt chunk and an animation spec) must carry a non-default link and parameter that read back equal to the set value, and at the defaults every link field must still be present."
+  statement: "Every destination (snapshot JSON, a share link, the profiler header, the embedded record, the tEXt chunk and an animation spec) must carry a non-default link and parameter that read back equal to the set value, and at the defaults every link field must still be present. Each must also carry, beside the build hash and the schema version, the four entry hashes of its links (R-521)."
   source:
   - file: decisions.md
     section: "R-483 — Export, sharing and the embedded record carry the decoder: `SimConfig`'s `Links` holds each block's link id and parameter values, the one place they live, written in full even at the defaults; the embedded record's list gains the links, the tilt fields, the energy-axis mappings and a saved chart by value; a record's decoder is the build's registry plus its links, an unknown or changed link refused and never substituted; an old record reads under its own build's defaults; capacity is re-measured and a record never truncated; a link change between keyframes is a cut; the sim key and the compatibility signature gain the parameter values; two questions queued (RQ-384, RQ-385)"
@@ -22030,13 +22030,16 @@
     section: "Part 6 — Sharing: the spec is the object, the video is its shadow"
   - file: docs/gui/principia_render_gui_spec.md
     section: Export & share
+  - file: decisions.md
+    section: "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine every_destination_links: with stick_breaking masses and q_max 1.5, each of the six destinations reads back the set ids and values; control (C9): at the defaults each destination's text names every block's id and parameter"
+    detail: "cargo test -p engine every_destination_links: with stick_breaking masses and q_max 1.5, each of the six destinations reads back the set ids and values, and each of the six reads back four entry hashes equal to the build registry's for its link ids (R-521); control (C9): at the defaults each destination's text names every block's id and parameter; control (R-521): a destination missing an entry hash fails"
   rulings:
   - R-483
+  - R-521
   milestone: M8
-  note: R-483 C9 (20 Oct 2026).
+  note: "R-483 C9 (20 Oct 2026). R-521 H2, H5 (code review F1 of PR #265, applied per R-369): the animation spec (TASK-M8-31), snapshot JSON and a share link (TASK-M8-32) carry the entry hashes, and this verify checks all six destinations."
 - id: REQ-TOOL-177
   area: TOOL
   statement: "Importing any export (snapshot JSON, share links, the pxpack record written whole, the profiler header's config, the animation spec, the PNG tEXt chunk) must be the identity on `SimConfig` and `RenderState`, the imported canonical text equal byte for byte; only the image's low-bit embedding may lose tiers."
@@ -22139,7 +22142,7 @@
   note: "R-520 (RQ-384 ruled: \"blocking export only, flagged\", 20 Oct 2026); the flag's form applied per R-369. Closed by TASK-M8-31. Physics review is required (⚑)."
 - id: REQ-TOOL-186
   area: TOOL
-  statement: "Every destination (the embedded record's tier 1, the PNG tEXt chunk, snapshot JSON, a share link, the profiler header and an animation spec) must carry, beside the build hash and the schema version, one entry hash per block, the hash of that block's recorded link's registry entry by its semantic content, each a u64 written as a decimal string (R-322), outside `SimConfig`; changing one registry entry must change that entry's hash and no other's."
+  statement: "The destinations built by M7 (the embedded record's tier 1, the PNG tEXt chunk and the profiler header) must carry, beside the build hash and the schema version, one entry hash per block, the hash of that block's recorded link's registry entry and of the registry constants its decode reaches (dd_generation_root §3.9, \"Each entry's own hash\"), each a u64 written as a decimal string (R-322), outside `SimConfig`; changing one registry entry must change that entry's hash and no other's."
   source:
   - file: decisions.md
     section: "R-521 — Each recorded link carries its own registry-entry hash beside the build hash and the schema version: a mismatch refuses, naming exactly that link, and a match recreates across an unrelated schema change *(closes RQ-385; amends R-483)*"
@@ -22149,11 +22152,11 @@
     section: "3.9 The link registry (consolidated from chart contract Part 2.5)"
   verify:
     method: unit test
-    detail: "cargo test -p engine entry_hashes_written: each of the six destinations reads back four entry hashes, each equal to the build registry's entry hash for the record's link id of that block, as decimal strings; a fixture registry with softsign_q's forward altered changes softsign_q's entry hash and the schema version and leaves every other entry's hash unchanged; control: a SimConfig whose canonical text holds an entry hash fails (the hashes are the record's, not the view's)"
+    detail: "cargo test -p engine entry_hashes_written: each of the three M7 destinations (tier 1, the tEXt chunk, the profiler header) reads back four entry hashes, each equal to the build registry's entry hash for the record's link id of that block, as decimal strings; a fixture registry with softsign_q's forward altered changes softsign_q's entry hash and the schema version and leaves every other entry's hash unchanged; control: a SimConfig whose canonical text holds an entry hash fails (the hashes are the record's, not the view's)"
   rulings:
   - R-521
   milestone: M7
-  note: "R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026). Closed by TASK-M7-45. Physics review is required (⚑)."
+  note: "R-521 (RQ-385 ruled: per-link hash, option (b), 20 Oct 2026). Closed by TASK-M7-45. Physics review is required (⚑). Code review F1 of PR #265 (applied per R-369): kept to the destinations M7 builds; the animation spec, snapshot JSON and share link carry the hashes where TASK-M8-31 and TASK-M8-32 build them, checked by REQ-TOOL-176 (TASK-M8-53). *Was:* \"Every destination (the embedded record's tier 1, the PNG tEXt chunk, snapshot JSON, a share link, the profiler header and an animation spec) must carry\" and the verify's \"each of the six destinations\"."
 - id: REQ-VAL-001
   area: VAL
   statement: "Error meters and verification claims must be checked against the formulation, not only the data (e.g. COM drift must not be used as an error meter for an integrator that integrates relative coordinates)."

@@ -41,3 +41,4 @@ Every field of `SimConfig` and `RenderState` is given a tier in one compile-time
 - The version byte is REQ-TOOL-109's calibration, confirmed at the M7 gate.
 - **R-522 (20 Oct 2026):** RQ-386 (whether tier 2 splits) is parked until this task's capacity re-measure. The PR reports tier 2's own size and, at 64² and 128², whether tiers 1 and 2 fit for the default stain and a typical edited one (REQ-TOOL-174); the orchestrator then returns RQ-386 to the human with those numbers. Meanwhile tier 2 is whole. *Was:* "Splitting tier 2 is RQ-386; meanwhile tier 2 is whole."
 - **R-521:** tier 1 carries the four entry hashes beside the build hash and the schema version; the measurement includes them (TASK-M7-45, a dependency; applied per R-369).
+- **Physics review P4 of PR #265 (applied per R-369):** the "typical edited" stain is the fixture `tier2_typical_stain`, added by this task with the contents REQ-TOOL-174's verify names.

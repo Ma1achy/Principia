@@ -14459,8 +14459,10 @@ the requirement named above.
 ## R-478 — Link functions belong to the decoder, which every chart passes through, not to a chart: they are chosen and tuned in a new Decoder window (Windows › Decoder…); the Manifold view's Chart section shows them in one compact row, tinted amber when any block is off its default; the Chart builder shows them read-only and owns the axis warps; a chart preset carries no links; the instruction's §6 is queued (RQ-380 to RQ-383)
 *Amended in part by R-516 (20 Oct 2026; W4 and L2, RQ-380 closed: a preset or saved chart may optionally pin
 links, and loading a pinned one applies them with the chart, one undo entry, with a notice).*
-*Still in force: all but W4's "do not carry links" and L2's "no chart edit sends a `Links` edit", which R-516
-makes "unless pinned"; W1's rule that switching chart never switches links silently stands.*
+*Still in force: all but W4's "do not carry links", L2's "no chart edit sends a `Links` edit" and the line under
+"Against earlier rulings" that a saved chart carries no links, which R-516 makes "unless pinned" (the pin is GUI
+settings, and a saved chart's exported definition by value is unchanged); W1's rule that switching chart never
+switches links silently stands.*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)"
 (the Chart bullet's links row), § "G5. Windows (`04_windows.png`)" (the Decoder window under the window rule), § "G7.
 Chart builder (`03_chartbuilder.png`)" (the links read-only, the warps' preview), § "G7a. Decoder (no artboard; R-478
@@ -14632,7 +14634,7 @@ and REQ-GEN-013 (notes).
 ## R-479 — The Decoder window: one row per block (Masses, Configuration α, Configuration β, Momenta), each with a dropdown of only the compatible registry entries, the link's parameters with their ranges, a preview and a reset; a footer with "Reset all to defaults", "Changing a link re-integrates every pixel" and Apply / Revert, the edits staged and applied as one undo entry; Home and the section resets touch no link; a non-default decoder named in the canvas badge (RQ-387) and in every sidecar and export
 *Amended in part by R-523 (20 Oct 2026; D4 and E7, RQ-387 closed: the badge sits in the figure's header strip,
 never over the figure).*
-*Still in force: all of it but the badge's place, D4's text and its "in every sidecar and export" standing.*
+*Still in force: all of it but the badge's place; D4's text and its "in every sidecar and export" stand.*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G7a. Decoder (no artboard; R-478 to R-482)"
 (added), § "G2. Explore — the everyday view (`01_main.png`)" (Resets and Home: the links left alone; the Figure: the
 badge, meanwhile) and § "Export & share" (the sidecar), `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold
@@ -16186,8 +16188,8 @@ clause, with its earlier words kept), `docs/contracts/principia_gui_state_contra
 the entire coupling surface" (`SimField::Links`'s chart-edit sentence, with its earlier words kept),
 `docs/contracts/principia_chart_decoder_contract.md` § "Part 2.5 — Link functions & compactification (customisable)"
 (the preset sentence, with its earlier words kept), REQ-GUI-254 (reqio: statement, verify, rulings, source, note),
-REQ-GUI-108 (reqio, note), TASK-M6-50 (a dependency on TASK-M6-49, its goal, references, deliverables, acceptance and
-notes), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-380, moved with its
+REQ-GUI-108 (reqio, note; verify, review round 1 of PR #265), TASK-M6-50 (a dependency on TASK-M6-49, its goal,
+references, deliverables, acceptance and notes), TASK-M2-40 (a note, review round 1 of PR #265), `plan/tasks.yaml`, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-380, moved with its
 ruling); built by TASK-M6-50*
 
 The human's words (20 Oct 2026), ruling RQ-380 to RQ-387, in full:
@@ -16221,7 +16223,10 @@ row and the badge showing the change", and (a), presets carrying no links (R-478
 - **K2. Where it is set.** **Pin the active links**, a toggle beside each entry in the preset selector (the builder's
   presets and the Saved group) and in the Chart builder's preset list; on stores the active `Links`, off clears the pin.
   Off by default. A pinned entry shows a pin icon, its tooltip naming the pinned links in the Links row's words
-  (R-478 L1). Save, Duplicate and Delete keep or drop the pin with the preset (REQ-GUI-108).
+  (R-478 L1). Save, Duplicate and Delete keep or drop the pin with the preset (REQ-GUI-108). The toggle is reached
+  from the keyboard as the entry's last control (§G3). Written into render_gui_spec §G7, with a verify arm each for
+  the default off, the icon and tooltip, the toggle being no history entry and surviving a relaunch, the keyboard
+  reach (REQ-GUI-254) and Duplicate keeping the pin (REQ-GUI-108) (gui review G2 of PR #265, applied per R-369).
 - **K3. Where it lives.** The pin is the preset's, the GUI's own settings beside the preset and the saved chart, kept
   across sessions and never undoable, as the list of saved charts is (gui_state_contract §2). It is never `SimConfig`'s:
   an export carries the links active, which after a load are the pin, so no export or tier gains a field (R-484's
@@ -16248,7 +16253,8 @@ switching chart never switches links silently stands, and is what the notice kee
 
 R-516 is in the "design" group of `plan/rule_groups.yaml`, with R-478.
 
-Changes REQ-GUI-254 (statement, verify, rulings, source, note) and REQ-GUI-108 (note).
+Changes REQ-GUI-254 (statement, verify, rulings, source, note) and REQ-GUI-108 (note; verify, review round 1 of PR
+#265).
 
 ## R-517 — The robustness comparison is the v2 side-by-side view's "compare links", the current view under the default links and under the active ones, built with that view; the Decoder window gets no button, and until then the comparison is made by hand *(closes RQ-381)*
 *20 Oct 2026 · applied in `docs/gui/principia_render_gui_spec.md` § "G11. Research — first pass (v2) (`11_research.png`)"
@@ -16380,8 +16386,12 @@ frame re-integrated at its own values; live playback does not interpolate them; 
 - **F1. Which changes interpolate.** A link parameter (`μ_max`, `q_max`, any tunable of R-481) differing between two
   keyframes whose link ids are the same. A changed link id is a cut everywhere, as X7 has it: there is nothing between
   two links to interpolate.
-- **F2. The easing.** Linear in the parameter's value, "per its scale" with today's parameters' scale linear; every
-  frame's value lies inside the allowed range since both ends do, so R-481's three requirements hold at every frame.
+- **F2. The easing.** Linear in the parameter's value, "per its scale" with today's parameters' scale linear: the value
+  is `a + s·(b − a)`, where `s ∈ [0, 1]` is the segment's progress as the spec's `easing` curve gives it, as for every
+  eased field. In floats that can round past an end, so each value is clamped into `[min(a, b), max(a, b)]`, which
+  keeps every frame inside the allowed range and R-481's three requirements at every frame; and each keyframe's own
+  frame takes that keyframe's value bit for bit, so its sim key is the keyframe's (physics review P1 of PR #265,
+  applied per R-369; *was:* "every frame's value lies inside the allowed range since both ends do").
 - **F3. Live playback.** "Refused" reads as the cut X7 gives, at the second keyframe: live playback shows the change and
   never interpolates it.
 - **F4. The cost.** Such a segment is type (b), each frame a different family of ICs (export_animation Part 2), priced
@@ -16394,7 +16404,8 @@ frame re-integrated at its own values; live playback does not interpolate them; 
   fails.
 - **F6. The tests.** REQ-TOOL-175's verify becomes `keyframe_link_params`: a blocking export's frames carry the eased
   value and each re-integrates; live playback cuts; a link-id change cuts in both; controls, a blocking export that
-  cuts and a live playback that interpolates. REQ-TOOL-185's `export_link_param_flag`.
+  cuts and a live playback that interpolates; and an arm at ends that are not dyadic with `b = hi`, every frame within
+  `[lo, hi]` and each keyframe's frame bitwise its value (physics review P1). REQ-TOOL-185's `export_link_param_flag`.
 
 *What it amends:* **R-483**, X7's and H7's "Meanwhile parameters are never interpolated (RQ-384)": a parameter now
 interpolates in a blocking export. A link-id change, and a parameter change in live playback, stay cuts. It closes
@@ -16412,8 +16423,9 @@ bullet, with its earlier words kept, and the tier table's tier 1), `docs/design/
 decoder's identity on import, with its earlier words kept), `docs/contracts/principia_chart_decoder_contract.md` §
 "Integrity: the link is part of the experiment" (the record's sentence, with its earlier words kept), REQ-TOOL-172
 (reqio: statement, verify, rulings, source, note; `rq: RQ-385` removed), REQ-TOOL-171 (reqio: statement, verify,
-rulings, note), REQ-TOOL-112 (reqio, note), REQ-TOOL-174 (with R-522), REQ-TOOL-186 (reqio, new), TASK-M7-45 (closes
-it; no longer waits), TASK-M7-44 (a dependency on TASK-M7-45), TASK-M7-31 (a note), `plan/tasks.yaml`,
+rulings, note), REQ-TOOL-112 (reqio, note), REQ-TOOL-174 (with R-522), REQ-TOOL-186 (reqio, new), REQ-TOOL-176 (reqio: statement,
+verify, rulings, source, note; review round 1 of PR #265), TASK-M7-45 (closes it; no longer waits), TASK-M8-31,
+TASK-M8-32 and TASK-M8-53 (notes), TASK-M7-44 (a dependency on TASK-M7-45), TASK-M7-31 (a note), `plan/tasks.yaml`,
 `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-385, moved with its ruling); built by TASK-M7-45*
 
 The human's words (20 Oct 2026), ruling RQ-385, from the batch R-516 quotes:
@@ -16435,23 +16447,33 @@ the record's whole-ledger check for the payload's meaning". (a), the schema vers
 *Where the words leave a choice, decided per R-369 (the human may veto any):*
 - **H1. The hash.** An entry's own hash is the 64-bit hash of that entry's canonical bytes alone (its hashed members
   under R-340 and its tunable parameters' declarations under R-481), by the same hash as the schema version, generated
-  with the registry (dd_generation_root §3.9, "Each entry's own hash"). Changing an entry changes its hash and the
-  schema version; changing another entry, or the payload ledger, changes the schema version only.
+  with the registry (dd_generation_root §3.9, "Each entry's own hash"). It also covers, by value, the registry
+  constants outside the entries that the entry's decode reaches: `tanh_sat` for an entry with a `tanh` node, `ε_M01`
+  for a mass entry, and `δ_λ` and `ε_w` in every entry, so a change to any of them is refused naming the links it
+  reaches (physics review P2 of PR #265, applied per R-369). Changing an entry or a constant it reaches changes its
+  hash and the schema version; changing another entry, or the payload ledger, changes the schema version only.
 - **H2. Where it travels.** Per block, four in all, a decimal string each, beside the build hash and the schema version
   wherever they travel: the image record's tier 1 and every other destination's sidecar (snapshot JSON, a share link,
   the profiler header, the animation spec, the `tEXt` chunk). Not in `SimConfig`, so R-484's identity and its table
-  are unchanged. REQ-TOOL-186 (new) is the writing side.
+  are unchanged. REQ-TOOL-186 (new, M7) is the writing side for the destinations built by M7: the image record's
+  tier 1, the `tEXt` chunk and the profiler header. The animation spec (TASK-M8-31), snapshot JSON and a share link
+  (TASK-M8-32) gain the hashes where they are built, and REQ-TOOL-176's `every_destination_links` (TASK-M8-53, which
+  depends on both) checks all six (code review F1 of PR #265, applied per R-369).
 - **H3. The reader.** A block whose hash differs from the build's entry of that id: "state present, cannot recreate",
   naming exactly that link (C11's "entry hash differs" arm). All four matching: a schema version other than the
   reader's refuses nothing on the links' account; it stays the whole-ledger check of what a stored payload's bits mean,
   so a payload the record holds is not reused across it and the view re-integrates ("if nothing else in the record's
-  tier 1 changed meaning" read as: the payload is re-made, never reinterpreted). The build-hash component that detects
-  a chart or decode change outside the links (REQ-TOOL-112, a definition) still refuses what it detects.
+  tier 1 changed meaning" read as: the payload is re-made, never reinterpreted). A decode constant the links reach is
+  in their hashes (H1), so its change refuses; what matches and recreates is a change no decode reads, such as a
+  payload-ledger entry. The build-hash component that detects a chart change outside the links (REQ-TOOL-112, a
+  definition) still refuses what it detects.
 - **H4. A record with no hashes** (one written by a build between TASK-M7-31 and TASK-M7-45) is read under (a): a
   schema version other than the reader's is refused, naming its links as possibly changed (REQ-TOOL-171). A record
   written before R-483 (`"links":{}`) is X5's, unchanged.
-- **H5. The tasks.** TASK-M7-45 no longer waits and closes REQ-TOOL-172 and REQ-TOOL-186. TASK-M7-44 re-measures the
-  capacity with tier 1 holding the hashes (about 100 B of JSON), so it depends on TASK-M7-45.
+- **H5. The tasks.** TASK-M7-45 no longer waits and closes REQ-TOOL-172 and REQ-TOOL-186, the M7 destinations only.
+  TASK-M8-31 and TASK-M8-32 write the hashes into the destinations they build, and TASK-M8-53 checks every destination
+  (REQ-TOOL-176). TASK-M7-44 re-measures the capacity with tier 1 holding the hashes (about 100 B of JSON), so it
+  depends on TASK-M7-45.
 - **H6. Numbering.** REQ-TOOL-186 is numbered past the other open ports' TOOL ids.
 
 *What it amends:* **R-483**, H4 (b)'s meanwhile, the schema-version refusal for every record: it now holds only for a
@@ -16459,7 +16481,8 @@ record with no entry hashes. X4's (a) and (c), unknown ids refused and never sub
 
 R-521 is in the "design" group of `plan/rule_groups.yaml`, with R-483.
 
-Adds REQ-TOOL-186; changes REQ-TOOL-172 (statement, verify, rulings, source, note; `rq` removed), REQ-TOOL-171
+Adds REQ-TOOL-186; changes REQ-TOOL-176 (statement, verify, rulings, source, note; review round 1 of PR #265),
+REQ-TOOL-172 (statement, verify, rulings, source, note; `rq` removed), REQ-TOOL-171
 (statement, verify, rulings, note), REQ-TOOL-112 (rulings, note) and REQ-TOOL-174 (verify, rulings, note, with R-522).
 
 ## R-522 — Whether tier 2 of the embedding splits is ruled after TASK-M7-44's capacity re-measure: RQ-386 is parked until then, and tier 2 stays whole meanwhile
@@ -16483,7 +16506,9 @@ Meanwhile tier 2 is whole, and nothing waits.
 
 *Applied per R-369 (the human may veto any):*
 - **P1. What the measurement reports for it.** REQ-TOOL-174's verify gains: tier 2's own size, and, at 64² and 128²,
-  whether tiers 1 and 2 fit for the default stain and for a typical edited one; the numbers are what RQ-386's (c)
+  whether tiers 1 and 2 fit for the default stain and for the fixture `tier2_typical_stain`, which TASK-M7-44 adds
+  with the contents REQ-TOOL-174 names (physics review P4 of PR #265, applied per R-369; *was:* "for a typical edited
+  one"); the numbers are what RQ-386's (c)
   turns on. TASK-M7-44's PR reports them, and the orchestrator returns RQ-386 to the human with them.
 - **P2. Where it is written.** dd_image_embedding §7 gains a paragraph saying the split waits on the re-measure;
   TASK-M7-44's note replaces "Splitting tier 2 is RQ-386".
@@ -16497,7 +16522,7 @@ Changes REQ-TOOL-174 (verify, rulings, source, note; with R-521).
 sentence, with its earlier words kept), § "G2. Explore — the everyday view (`01_main.png`)" (the decoder badge's
 paragraph, with its earlier words kept), § "G7a. Decoder (no artboard; R-478 to R-482)" (the non-default decoder
 bullet, with its earlier words kept) and § "G13. Where the artboards are overridden" (the Decoder bullet, with its
-earlier words kept), `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere" (conformed),
+earlier words kept; the layout bullet's departure, review round 1 of PR #265), `docs/gui/design/GUI_DESIGN_NOTES.md` § "Rules that hold everywhere" (conformed),
 REQ-GUI-258 and REQ-GUI-263 (reqio: statement, verify, rulings, note), TASK-M6-50 and TASK-M8-53 (notes),
 `plan/reviewers/gui.md` (§1's figure line), `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-387,
 moved with its ruling); built by TASK-M6-50 (the mock) and TASK-M8-53 (the fallback badge)*
@@ -16523,8 +16548,11 @@ marks (the trace, contour lines, the hover label, the lock reticle, a marked poi
 Home button stays its one control (R-466 K7, the human's words).
 
 *Where the words leave a choice, decided per R-369 (the human may veto any):*
-- **B1. Which of the two.** The figure's header strip: a one-line strip of the Figure panel's chrome, above the plot
-  and outside it, left-aligned, holding badges only; the plot keeps its aspect below it. It sits beside what it
+- **B1. Which of the two.** The figure's header strip: a one-line strip of the chrome at the top of the figure region, above the plot
+  and outside it, left-aligned, holding badges only. The strip takes its height from the top of the figure region;
+  the plot is fitted into the rest at its aspect, and that plot rect is the shown rect R-406, R-468 and REQ-GUI-229
+  use; render_gui_spec §G13 records the departure from `01_main` (gui review G1 of PR #265, applied per R-369). It
+  sits beside what it
   describes, as D4's "beside the chart name" wanted, where the top bar's status would put it a panel away. The status
   line stays open to a later badge that is about the session rather than the figure.
 - **B2. Which badges.** Every badge that says what the figure is or how it was recreated: the decoder badge (R-479 D4,

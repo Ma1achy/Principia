@@ -97,9 +97,8 @@ data. The two words name one object. The **figure** is the rendered slice.
   label and the lock reticle are the figure's own marks, not notifications. The one control over the figure is the
   **Home** button in its top-right corner, by the human's words (§G2's Figure, R-466 K7).
   **Badges go in the chrome or the status line, never over the figure (R-523).** The decoder badge, and every badge
-  that says what the figure is or how it was recreated, sits in the figure's header strip, the Figure panel's chrome
-  above the plot and outside it (§G2's Figure). The figure's own marks (the trace, contour lines, the hover label, the
-  lock reticle, a marked point) draw on the figure; generic GUI panels and badges do not. *Was:* "The decoder badge in
+  that says what the figure is or how it was recreated, sits in the figure's header strip, the chrome at the top of the figure region
+  above the plot and outside it (§G2's Figure). *Was:* "The decoder badge in
   the top-left corner (§G2's Figure, R-479 D4) is applied meanwhile as a second mark; whether it may be is RQ-387."
   (stale value, replaced by R-523).
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; there is no styling beyond egui's own.
@@ -287,12 +286,15 @@ and it hides with the layer (F3, present mode). The orbit's path is drawn from t
   name the bodies 1, 2, 3 and a pair by its two bodies, "collision 1–2", never a pair id, from the one display function
   (R-449; payload §2, "What a person reads").
 
-**The decoder badge (R-479, D4; its place R-523).** A badge in the figure's header strip, a one-line strip of the
-Figure panel's chrome above the plot and outside it, left-aligned, names the chart by its axes and, while any block is
+**The decoder badge (R-479, D4; its place R-523).** A badge in the figure's header strip, a one-line strip of chrome at the
+top of the figure region above the plot and outside it, left-aligned, names the chart by its axes and, while any block is
 off its default, each block off its default after a "·", for example "z_α × z_β · stick-breaking masses" or "z_α × z_β
-· μ_max 4 masses"; at the defaults it names the chart alone. The strip holds badges only; the plot keeps its aspect
-below it, and nothing of the strip draws over the plot. It hides with the layer (F3, present mode), as the Home button
-does. A recreated view that is a fallback (an import that assumed default links, or an embedding that dropped a tier)
+· μ_max 4 masses"; at the defaults it names the chart alone. The strip holds badges only. **Where it sits (applied per
+R-369, gui review G1 of PR #265):** the strip takes its height, one line of the body font with its padding, from the
+top of the figure region (the rect `01_main`'s proportions give the figure); the plot is fitted into the rest at its
+aspect, square for the slice, centred, and that plot rect is the shown rect R-406, R-468 and REQ-GUI-229 read, so
+nothing of the strip draws over the plot and the plot is never stretched. It hides with the layer (F3, present mode),
+as the Home button does, and the figure then fills the window as R-406 and R-468 say. A recreated view that is a fallback (an import that assumed default links, or an embedding that dropped a tier)
 says so in the same badge (R-483, X5; R-484, RT3). *Was:* "**The decoder badge (R-479, D4; applied meanwhile,
 RQ-387).** A badge in the canvas's top-left corner names the chart" (stale value, replaced by R-523).
 
@@ -840,8 +842,10 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
 - **Presets are saved pairs of axes and are editable:** Save, Duplicate, Delete. Each preset also carries the values
   the resets and Home read (§G2, R-466): a base point, a centre `(u, v)` and a window, defined by TASK-M6-45 (R-72,
   REQ-GUI-224); a saved preset stores them with its axes.
-- **A preset may pin links (R-516).** Pinning is optional and off by default: a preset, or a saved chart (§G2's Save
-  view as chart), with **Pin the active links** on stores the whole `Links`, each block's id and parameter values, as
+- **A preset may pin links (R-516).** Pinning is optional and off by default. **Pin the active links** is a toggle beside
+  each entry in the preset selector (the builder's presets and the Saved group, §G2's Chart section) and beside each
+  preset in this window's preset list (R-516 K2), reached from the keyboard as the entry's last control (§G3). A preset,
+  or a saved chart (§G2's Save view as chart), with **Pin the active links** on stores the whole `Links`, each block's id and parameter values, as
   they are when it is pinned ("designed under stick-breaking"); turning it off clears the pin. The pin is the preset's,
   the GUI's own settings, kept with the preset and never in `SimConfig`. Loading a pinned preset whose pin differs from
   the active links applies the pin with the chart, one command and one undo entry (one Ctrl+Z restores the chart and
@@ -849,7 +853,8 @@ the ruling's "η_E debug view" is, is RQ-333. *Was (R-441):* drawn degenerate's 
   changed, for example "Preset 'Burrau edge' pinned its links: masses stick-breaking (was softmax·tanh μ_max 5)"; the
   Links row's amber and the decoder badge then show the change (§G2). A pin equal to the active links changes nothing
   and posts nothing; an unpinned preset leaves the links as they are (R-478, W4). The picker marks a pinned entry
-  with a pin icon, its tooltip naming the pinned links.
+  with a pin icon, its tooltip naming the pinned links. Toggling the pin is not undoable and is kept across a relaunch
+  (the GUI's own settings, K3); Save, Duplicate and Delete keep or drop the pin with the preset.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Pixels map through Φ, then the decoder. Lock replays Φ and the
   decoder on the CPU instead of the affine `z₀ + s·q₁ + t·q₂`.
 - **Each axis carries its extension type past `[0,1]²` (R-407):** a latent direction is affine; a physical-quantity axis
@@ -1074,7 +1079,9 @@ corpus, the spec follows the authority:
   (stale value, replaced by R-523).
 - **The layout and the windows' places** (R-461, R-462). The artboards' panel sizes and window positions are the
   defaults; splitters and the windows' title bars and edges change them, and View › reset layout returns the panels to
-  the artboards'.
+  the artboards'. One departure from `01_main`: the figure region's top line is the figure's header strip (R-523, §G2),
+  and the plot is fitted below it at its aspect, so the plot's rect is that much shorter than the artboard's figure
+  (applied per R-369, gui review G1 of PR #265).
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".
 - **"Legend", never "Fate"** (notes). The Stain artboard shows "Time of fate", and the Display artboard shows "fate edges".
 - **The compass and the focus ring** (R-409). The main artboard shows the compass's "slicing / tilting" labels and "drag

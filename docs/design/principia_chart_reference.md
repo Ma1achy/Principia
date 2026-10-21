@@ -291,7 +291,7 @@ ratio, the mass ratio and the rest of render_gui_spec §G7's list, follows the s
 warped to its feasible range by default, so every pixel of `[0,1]²` is feasible, bounded past its edge; linear as an
 option, B1's affine axis, its pixels that are not a system blank. The mass ratio warps through the mass link, the
 active one (§0.1's softmax at the defaults; since R-478 and R-481 the Decoder window's registry entry at its active
-parameters, merge of the links port, applied per R-369): its axis moves the mass link's inputs, so every pixel's
+parameters, merge of the links port, applied per R-369): its axis moves the active mass link's inputs, so every pixel's
 masses are positive and sum to 1. *Was:* "The mass ratio warps through the mass link (§0.1's softmax): its axis
 moves the mass logits, so every pixel's masses are positive and sum to 1." The warps this section
 does not write (the virial ratio's, a ratio's range in the logits) are REQ-CHART-070's definition (R-72), written here

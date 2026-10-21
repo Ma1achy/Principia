@@ -157,7 +157,8 @@ The GUI requirement adds **no new state** — it says *expose all of it*. Conseq
   value, replaced by R-516). `ViewUI`'s open windows gain `Decoder`, listed after Chart builder (R-478, L4).
 - **The decoder's identity on import (R-483, X4, X5; R-521).** Every export carries, beside `SimConfig` and
   `RenderState`, the build hash, the schema version and, per block, the recorded link's entry hash
-  (`principia_dd_image_embedding.md` §6; `principia_dd_generation_root.md` §3.9, "The hash"). One function of the
+  (`principia_dd_image_embedding.md` §6; `principia_dd_generation_root.md` §3.9, "Each entry's own hash", which also
+  covers the registry constants the entry's decode reaches). One function of the
   contract reads every path before anything renders: a link id the build's registry lacks is "state present, cannot
   recreate", naming the link and its block; a block whose entry hash differs from the build's entry of that id is
   refused the same way, naming exactly that link (R-521); when every block's hash matches, a schema version other than
