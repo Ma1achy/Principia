@@ -469,6 +469,9 @@ the step-6 GUI docs; gui_state_contract §2.
 scratchpad_pointer_channels :132–134; caching_contract :133.
 
 ## R-56 — Profiler schema v1 is a superset of telemetry §2, in JSON *(GU-5, amended)*
+*Extended by R-534 (20 Oct 2026; RQ-399: the Print graph's post stage, `post_level` and the benchmark lines make
+profiler schema v2, `principia-profile-v2`, and every reader accepts v1).*
+*Still in force: all of it; schema v1 stays as defined, five stages, and v2 is v1 plus R-534's additions.*
 *24 Sep 2026 · recorded; the measurement struct lands with the first frame loop, the schema in step 6*
 
 At the top level: telemetry §2's frame record and its five stages. Beneath them: nested scopes, GPU passes, allocations and events.
@@ -545,7 +548,8 @@ render_gui_spec §G2.
 ## R-67 — The display chain *(closes RQ-23)*
 *Amended by R-487 (20 Oct 2026; the human's P3: lines, traces, axes and grids are drawn over the Print graph by default,
 a line set opting in to being rendered through it, `through_medium`, as `principia_print_graph.md` §2 draws the chain;
-where the lines drawn over sit against R-476 M2 is RQ-395). Read with R-485 (the Print graph stands where style was).*
+where the lines drawn over sit against R-476 M2 is RQ-395, ruled by R-531: after the gamut clamp, R-476 M2's place).
+Read with R-485 (the Print graph stands where style was).*
 *Still in force: the order stain → [the Print graph, where style was] → display scale → gamut clamp → colour-vision
 simulation → screen, the simulation seeing the final in-gamut colours; the Display window plus the Overlays menu in
 place of the top display bar. R-487 adds the two line passes, through before the Print graph and over after it.*
@@ -1028,7 +1032,7 @@ they're checked by presence only, not layout.
 ## R-130 ✱ — The styles are the poster's *(closes RQ-107)*
 *Superseded by R-485 and R-486 (20 Oct 2026; the human's P1 and P2: post-processing is the Print graph, its node set
 and presets the lab's, and the v1 list "become[s] presets of the graph, still available"; how the eight non-plain
-styles are kept is RQ-396).*
+styles are kept is RQ-396, ruled by R-532: ported as additional presets).*
 *25 Sep 2026 · applied in step 7 · design; the human may veto*
 
 The styles are defined by the poster's implementation (`workbench/principia_poster_both_sides.html` and its press
@@ -13552,6 +13556,9 @@ undo, the slider and the readout).
 ## R-470 — A pixel that is not a system draws blank, the view's background, in every view, the outcome view included, never a palette colour; the hatch survives only as the optional Overlays › Chart › forbidden region, off by default, over blank pixels only; NaN, ±∞, `sim_failed`, `decode_failed` and the classification behind the hatch show only in the debug views; R-408's statistics are unchanged *(amends R-407, R-446 and R-467; closes RQ-374)*
 *Amended in part by R-511 (20 Oct 2026; G2's open case ruled: a `decode_failed` sample the chart does not classify
 is blank, as a not-a-system pixel, the forbidden-region overlay drawing over it; `sim_failed` keeps `#141418`).*
+*Amended in part by R-533 (20 Oct 2026; RQ-398: under a Print graph other than Plain, a pixel that is not a system
+takes the print's sheet, its Ground, Age and Viewing, never its marks; under Plain, and in every debug view, it stays blank as
+below).*
 *Still in force: all of it; G2's `#141418` stands for `sim_failed` and a system's non-finite values, and R-511 closes
 RQ-379.*
 *20 Oct 2026 · applied in `docs/contracts/principia_chart_decoder_contract.md` § "Past the unit square — each axis's
@@ -15336,6 +15343,9 @@ Adds REQ-TOOL-177 (RT1, T1), REQ-TOOL-178 (T2), REQ-TOOL-179 (RT2, T3), REQ-TOOL
 REQ-TOOL-181 (RT4, T4) and REQ-GUI-263 (RT3 in the GUI); changes REQ-TOOL-070 and REQ-TOOL-146 (notes).
 
 ## R-485 — Post-processing is the Print graph, a node graph after the stain and separate from it; it replaces the Display window's "Style", and R-130's v1 styles become presets of it, still available *(supersedes R-130)*
+*Amended in part by R-532 (20 Oct 2026; RQ-396: R-130's eight styles are ported as additional presets beside the
+lab's 103, 111 in all).*
+*Still in force: all of it; "still available" is met by R-532's eight presets.*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` (added, the bundle's design with an adoption note and
 the review queue's pointers), `docs/gui/reference/print_graph/` (added: the lab, the Python prototype, the catalogue,
 the capture tools, the reference images and the boards, with a README), `docs/read_first/principia_INDEX.md` §
@@ -15490,6 +15500,10 @@ as data; nothing in it was run.
 R-485 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*
+*Amended in part by R-532 (20 Oct 2026; RQ-396: the preset set is the lab's 103 plus R-130's eight, 111 in all) and
+by R-536 (RQ-401: each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses;
+the port reads the real field).*
+*Still in force: all of it but the preset count, which R-532 makes 111.*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` §§ 1, 4, 10 (adopted), `docs/gui/reference/print_graph/`
 (the lab, the prototype and the catalogue), `docs/contracts/principia_gui_state_contract.md` § 2 (`PrintGraph`), RQ-401
 (new); the tasks and requirements follow in the plan PR*
@@ -15519,6 +15533,9 @@ The lab's caption and the design doc §4.4 name different stand-ins for the four
 R-486 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-487 — Lines, traces, axes and grids are drawn over the Print graph by default, and a line set can opt in to being rendered through it (`through_medium`), as the design doc §2 draws R-67's chain *(amends R-67)*
+*Amended in part by R-531 (20 Oct 2026; RQ-395, option (c): the lines drawn over keep R-476 M2's place, after the
+gamut clamp and before the colour-vision simulation; the design doc §2's diagram is corrected to match).*
+*Still in force: all of it but the design doc's place for the lines drawn over; K1 and K2 stand.*
 *20 Oct 2026 · applied in `docs/design/principia_colour_composition.md` § "4.3 Display stage (terminal, outside the
 pipeline)" and § "7. Preset table & golden-image obligation", `docs/contracts/principia_render_contract.md` § "Part 4
 — Semantic rules" (the composite order), `docs/design/principia_lines.md` § "2. Where it sits" and § "3. The data model"
@@ -15597,6 +15614,11 @@ post stage's share of the budget is not given: each is a calibration (R-71), whi
 R-488 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-489 — The instrument stays honest: measurement never reads the print, goldens and scientific checks run under Plain, a styled figure is badged, and figure export defaults to Plain
+*Amended in part by R-523 (20 Oct 2026; RQ-397: the print badge sits in the figure's header strip, never over the
+figure).*
+*Amended in part by R-533 (20 Oct 2026; RQ-398: a pixel that is not a system takes the print's sheet, never its
+marks).*
+*Still in force: all of it but the badge's place, "the canvas corner badge".*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § 3 (adopted), `docs/design/principia_colour_composition.md`
 § "7. Preset table & golden-image obligation", `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic
 rules", `docs/gui/principia_render_gui_spec.md` § "Export & share" and § "Display — the last stages", RQ-397 and RQ-398
@@ -15786,6 +15808,10 @@ estimates until the first Full run on the reference machine replaces them (R-493
 R-495 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-496 — The benchmark runs from the Profiler window's "Run benchmark…" or `prin bench`; a run hides the chrome, ignores input but Esc, and on abort still writes a valid file marked incomplete
+*Amended in part by R-535 (20 Oct 2026; RQ-400: a run draws into a fixed-size offscreen surface in Fit, which the
+window only shows; present mode's fill is not used) and extended by R-530 (RQ-394: a phone run records the
+visual-viewport size, requests a wake lock and is marked "mobile, best effort").*
+*Still in force: all of it but "the figure fills the window (present mode, R-406)".*
 *20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § 5 (adopted), `docs/gui/principia_render_gui_spec.md` §
 "Profiler" (Run benchmark… and the results sheet), RQ-400 (new); the tasks and requirements follow in the plan PR*
 
@@ -15809,6 +15835,9 @@ the window's size, against R-499 (RQ-400).
 R-496 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-497 — One plain-text result file, profiler schema v1 plus a benchmark block, carrying no score
+*Amended in part by R-534 (20 Oct 2026; RQ-399: the file is profiler schema v2, `principia-profile-v2`, one schema
+holding the benchmark lines; readers accept v1).*
+*Still in force: all of it but "profiler schema v1 plus a benchmark block", which is schema v2; K3 stands for v1 files.*
 *20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § 6 (adopted), `docs/design/principia_dd_telemetry_and_tiers.md`
 § 2 and § 5 (the post stage, `post_level`, how earlier files are read, the benchmark block), RQ-399 (new); the tasks and
 requirements follow in the plan PR*
@@ -15856,6 +15885,7 @@ device comparison table, per scenario each device's p95 during motion and its bo
 R-498 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-499 — The benchmark's work is deterministic: the same suite on the same build does identical work on every device; the design doc's §9 tests, each with an arm that can fail
+*Read with R-535 (20 Oct 2026; RQ-400: the fixed-size offscreen surface makes the work independent of the window).*
 *20 Oct 2026 · applied in `docs/design/principia_benchmark.md` §§ 8, 9 (adopted); the tasks and requirements follow in the
 plan PR*
 
@@ -17161,6 +17191,424 @@ badge entry, which that port archives.
 R-523 is in the "design" group of `plan/rule_groups.yaml`, with R-479.
 
 Changes REQ-GUI-258 and REQ-GUI-263 (statement, verify, rulings, note).
+
+## R-524 — The Print graph's Palette slot acts on the finished colour, never before the stain's lightness channel is composed *(closes RQ-388)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "5. The slot chain: palette and medium compose" (a
+"Ruled" note under the table), § "12. Open questions (for the review queue, not the agent to settle)" (the note, with
+its earlier words kept) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Display — the last stages"
+(the slots' sentence), `docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause),
+`plan/rule_groups.yaml`, `plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-388, moved with its
+ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-388 to RQ-401 but RQ-397, in full:
+
+> RQ-388 no. RQ-389 Viewing off by default for screen media, with the reason shown. RQ-390 the stain's normalisation. RQ-391 later. RQ-392 prompt. RQ-393 files by hand. RQ-394 yes, best effort, marked mobile.
+> RQ-395 (c). RQ-396 port R-130's eight as additional presets. RQ-398 (c). RQ-399 bump to v2, readers accept v1. RQ-400 fixed-size offscreen surface in Fit. RQ-401 record the lab's actual stand-in; the port reads the real field.
+> Vetoable decisions: all stand.
+
+"Vetoable decisions: all stand" is the human's acceptance of the "applied per R-369" choices R-485 to R-499 made, which
+stand as applied. R-524 to R-536 port the thirteen answers, one ruling per entry, in number order, RQ-397 excepted:
+main closed it by R-523 (the human's "[the Print graph port's badge entry]"), and this port archives it with that
+ruling and applies R-523 to the print badge (`principia_print_graph.md` §3, render_gui_spec § "Display — the last
+stages").
+
+On RQ-388 the human wrote: "RQ-388 no." RQ-388 asked whether the Print graph's Palette slot may run before the stain's
+lightness channel is composed, so a limited palette quantises hue while the stain's lightness field stays exact. Its
+option (a): "no: Palette acts on the finished colour, as the lab's does and as R-485 places the whole graph"; (a) was
+applied meanwhile.
+
+*What it decides:* **option (a).** The Palette slot acts on the finished colour, the stain's output, as the lab's slot
+does; the Print graph never reaches into the stain's backbone (render contract Part 4, L-ownership), and no palette
+occupant is added to the stain's post chain.
+
+*Applied per R-369 (mechanical):* the design doc's §5 and §12 and the Print panel say so; nothing else changes.
+
+*What it amends:* none; R-485's placement stands. It closes **RQ-388**.
+
+R-524 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
+
+## R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "5. The slot chain: palette and medium compose" (a
+"Ruled" note under the table) and § "12. Open questions (for the review queue, not the agent to settle)" (the note),
+`docs/gui/principia_render_gui_spec.md` § "Display — the last stages" (the slots' sentence), `plan/rule_groups.yaml`,
+`plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-389, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-389, from the batch R-524 quotes:
+
+> RQ-389 Viewing off by default for screen media, with the reason shown.
+
+RQ-389 asked whether the Viewing slot's lighting should be disabled for screen media (CRT, LCD), where a raking light on
+a sheet is meaningless. Its options: "(a) always offered, as the lab does; (b) disabled (greyed, with the reason) while
+the Medium is a screen medium, by a registry flag on the medium's nodes; (c) offered, with a screen-specific Viewing set
+(glare, reflection) for screen media." (a) was applied meanwhile.
+
+*What it decides:* (b)'s rule with "off by default" in place of "disabled": while the Medium is a screen medium the
+Viewing slot is off by default, and the panel shows why. It is still offered: the user may turn it on.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **V1. What a screen medium is.** A registry flag, `screen_medium`, on a node type that models a display (the design
+  doc §6.2's `device_px` effects: CRT scanlines, LCD subpixels, LED pitch); a Medium is a screen medium when its
+  sub-graph holds a node with the flag. The Slots port task sets the flag from the lab's catalogue and lists the nodes
+  it set it on.
+- **V2. "Off by default".** Choosing a screen medium sets the Viewing slot empty (the identity) in the same edit, one
+  undo entry; the user may set Viewing again, and it stays as set. Leaving the screen medium does not restore an earlier
+  Viewing choice.
+- **V3. The reason.** Beneath the Viewing slot, while the Medium is a screen medium: "Viewing assumes a sheet: off by
+  default for a screen medium", shown whether or not Viewing has been turned back on.
+
+*What it amends:* none. It closes **RQ-389**.
+
+R-525 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
+
+## R-526 — A field input to the Print graph is normalised as the stain normalises it, over the visible range with the stain's own window rule *(closes RQ-390)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "4.4 Payload fields as inputs" (cited in the note)
+and § "12. Open questions (for the review queue, not the agent to settle)" (the note), `plan/rule_groups.yaml`,
+`plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-390, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-390, from the batch R-524 quotes:
+
+> RQ-390 the stain's normalisation.
+
+RQ-390 asked whether a payload field read by the Print graph at deep zoom is normalised over the visible range, as the
+stain does, or over a fixed window recorded with the graph. Its option (a): "the visible range, the stain's own window
+rule, as §4.4 has it"; (a) was applied meanwhile.
+
+*What it decides:* **option (a).** A field input is normalised exactly as the stain normalises the same field, over the
+visible range with the stain's own window rule (design doc §4.4), so a field-driven medium rescales while zooming as the
+stain does. No fixed window is recorded with the graph, and `RenderState.print` gains no field for one.
+
+*Applied per R-369 (mechanical):* the design doc's §4.4 sentence stands and its §12 note records the ruling.
+
+*What it amends:* none. It closes **RQ-390**.
+
+R-526 is in the "physics" group of `plan/rule_groups.yaml` (the field's normalisation, physics-reviewed, R-485).
+
+## R-527 — Whether the Export Styles' frames become a later Frame stage is deferred by the human, with no target: RQ-391 stays open and nothing is built
+*20 Oct 2026 · applied in `REVIEW_QUEUE.md` (RQ-391, a "Parked" line; the entry stays open),
+`docs/design/principia_print_graph.md` § "12. Open questions (for the review queue, not the agent to settle)" (the note)
+and its adoption note, `docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause),
+`plan/rule_groups.yaml` and `plan/section_notes.yaml`; nothing is built*
+
+The human's words (20 Oct 2026), on RQ-391, from the batch R-524 quotes:
+
+> RQ-391 later.
+
+RQ-391 asked whether the Export Styles' frames (Polaroid border, banknote, poster) become a later "Frame" stage after
+the Print graph. Its options: "(a) a Frame stage after the Print graph, its own design later; (b) frames as Print graph
+presets, a sub-graph like any other; (c) frames as an export option only, outside `RenderState`." Nothing was built
+meanwhile (§0: "separate, later").
+
+*What it decides:* a deferral, by the human's ruling (only the human defers, `plan/WORKFLOW.md` § "No deferral"). The
+question is not answered now and no event or date is set for it: RQ-391 stays in the review queue, open and parked, as
+R-510 and R-522 parked theirs, and returns to the human when the human raises it. Nothing is built, and the lab's
+Polaroid medium stays a medium, ported with the rest (R-486).
+
+*Applied per R-369 (flagged):*
+- **L1. The reading.** "later" is read as deferring the question, matching §0's "separate, later", not as choosing
+  option (a), whose words also say "later"; a veto turns it into (a), a Frame stage whose design is a later task.
+- **L2. Where it stays.** RQ-391 is not archived: a deferred entry stays open in the queue so that it is not lost
+  (R-510, R-522).
+
+*What it amends:* none. RQ-391 stays open.
+
+R-527 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
+
+## R-528 — On first launch an opt-in prompt offers the benchmark's Quick suite; nothing runs unless the user accepts *(closes RQ-392)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "10. Open questions (for the review queue)" (the note)
+and its adoption note, `docs/design/principia_dd_telemetry_and_tiers.md` § "4. Deriving the tier instead of choosing it"
+(the first-launch sentence), `docs/gui/principia_render_gui_spec.md` § "Profiler" (a First launch bullet),
+`docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause), `plan/rule_groups.yaml`,
+`plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-392, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-392, from the batch R-524 quotes:
+
+> RQ-392 prompt.
+
+RQ-392 asked whether a first launch shows an opt-in prompt to run the benchmark's Quick suite or runs Quick silently and
+shows the result. Its option (a): "an opt-in prompt, the design's default reading"; (a)'s reading was the design's
+meanwhile, with nothing run at launch.
+
+*What it decides:* **option (a).** The first launch asks; the suite runs only if the user accepts (telemetry §8:
+"Explicit, opt-in, run when asked").
+
+*Where the words leave a choice, decided per R-369 (the human may veto any):*
+- **F1. Once.** The prompt is shown at the first launch of an install, in the GUI and the browser build, never under
+  `prin`; its answer is kept in the GUI's own settings, never `SimConfig` or `RenderState`, and is not undoable. It is
+  not shown again whatever the answer; Run benchmark… stays in the Profiler window.
+- **F2. Its two answers.** "Run Quick…" opens the Run benchmark dialog with Quick chosen, so the plain statement of what
+  is recorded is read before anything runs (R-496); "Not now" closes it, and the device keeps the default tier.
+
+*What it amends:* none. It closes **RQ-392**.
+
+R-528 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
+
+## R-529 — Benchmark results come back as files, by hand; there is no upload *(closes RQ-393)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "6. The result file" (a paragraph) and § "10. Open
+questions (for the review queue)" (the note), `docs/gui/principia_render_gui_spec.md` § "Profiler" (a Collecting
+results bullet), `plan/rule_groups.yaml`, `plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-393,
+moved with its ruling); nothing is built beyond R-496's buttons*
+
+The human's words (20 Oct 2026), ruling RQ-393, from the batch R-524 quotes:
+
+> RQ-393 files by hand.
+
+RQ-393 asked whether results are collected only as files by hand or by an explicit upload ("Send to Malachy") that
+would need hosting. Its option (a): "by hand only (Save file…, Copy summary)"; (a) was applied meanwhile.
+
+*What it decides:* **option (a).** A result file comes back as a file its owner sends, by Save file… or Copy summary.
+There is no upload, no hosting and no "Send" button.
+
+*What it amends:* none. It closes **RQ-393**.
+
+R-529 is in the "design" group of `plan/rule_groups.yaml`, with R-497.
+
+## R-530 — A phone run records the visual-viewport size, requests a wake lock and is marked "mobile, best effort" *(closes RQ-394)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "5.3 In the browser build" (a paragraph) and § "10.
+Open questions (for the review queue)" (the note), `docs/gui/principia_render_gui_spec.md` § "Profiler" (the run's
+bullet), R-496's heading block, `plan/rule_groups.yaml`, `plan/section_notes.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-394, moved with its ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-394, from the batch R-524 quotes:
+
+> RQ-394 yes, best effort, marked mobile.
+
+RQ-394 asked whether a phone run records the visual-viewport size, requests a wake lock and is marked "mobile, best
+effort". Its option (a): "yes, all three"; meanwhile a phone ran as any browser build.
+
+*What it decides:* **option (a).** On a phone the browser build records the visual-viewport size, requests a wake lock,
+and marks the run "mobile, best effort".
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **M1. What a phone is.** A browser build whose browser reports itself mobile, by `navigator.userAgentData.mobile`
+  where it is exposed, else by the user agent string's mobile token; a browser that reports neither is not marked, and
+  the header's field is `null` (the R-308 / R-303 pattern), never guessed.
+- **M2. What is recorded.** The header's `bench` gains `mobile` ("best effort" or `null`), the visual viewport's size at
+  start (CSS width and height and the device pixel ratio) and the wake lock's outcome (`granted`, `refused`,
+  `unsupported`); a refused lock does not stop the run. The results sheet, `report` and `compare` show the mark.
+- **M3. The work.** The scenarios draw into R-535's fixed surface, so the viewport is recorded, not drawn to, and a
+  phone does the same work as any device.
+
+*What it amends:* none; it extends R-496 for phones. It closes **RQ-394**.
+
+R-530 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
+
+## R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "2. Where it sits" (the diagram corrected, the
+delivered one kept as *Was*) and its adoption note, `docs/contracts/principia_render_contract.md` § "Part 4 — Semantic
+rules" (the Print graph stage's chain, with its earlier words kept), `docs/design/principia_colour_composition.md` § "4.3
+Display stage (terminal, outside the pipeline)" (the chain and the two line passes, with their earlier words kept),
+`docs/design/principia_lines.md` § "2. Where it sits" and § "6. Smart ink" (with their earlier words kept),
+`docs/gui/principia_render_gui_spec.md` § "Display — the last stages" (the order, with its earlier words kept), R-67's
+and R-487's heading blocks, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-395, moved with its
+ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-395, from the batch R-524 quotes:
+
+> RQ-395 (c).
+
+RQ-395 asked where the lines drawn over the Print graph sit, before the display scale and the gamut clamp as the design
+doc §2 draws it, or after the gamut clamp as R-476 M2 placed the line system, and what smart ink reads for each pass.
+Its option (c): "(b), with the design doc's diagram corrected to match", where (b) is "R-476 M2's place for the lines
+drawn over (after the gamut clamp, at display resolution, crisp after any scale), only the lines drawn through moving
+before the Print graph; smart ink for the lines over reads the figure to the clamp, as REQ-RENDER-090 says, and for the
+lines through the stain's output." (b)'s placement was applied meanwhile.
+
+*What it decides:* **option (c).** The chain is SimState → stain → [the lines drawn through] → Print graph → display
+scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen. Smart ink for a line drawn over reads
+the figure to the clamp; for a line drawn through, the stain's output. The design doc §2's diagram is corrected to that
+chain, the delivered diagram kept beside it as *Was*.
+
+*Applied per R-369 (flagged):*
+- **O1. What "the figure to the clamp" holds.** With a Print graph active it includes the print: the Print graph runs
+  before the display scale, so smart ink for a line drawn over reads the printed picture, as REQ-RENDER-090's "stain
+  plus display chain to the clamp" now reads; the plan PR restates REQ-RENDER-090 with R-531 in its rulings.
+- **O2. The test.** The design doc §11 test 6 (lines over and through) stands as written, its order arm written against
+  this chain.
+
+*What it amends:* **R-487**, the design doc §2's place for the lines drawn over; K1 and K2 stand. R-67's chain, as R-487
+amended it, is this one. It closes **RQ-395**.
+
+R-531 is in the "design" group of `plan/rule_groups.yaml`, with R-487.
+
+## R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "7.1 The Print panel (replaces Display › Style)" (a
+note) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Display — the last stages" (the gallery and the
+*Was* note's heading, with their earlier words kept), R-130's, R-485's and R-486's heading blocks,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-396, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-396, from the batch R-524 quotes:
+
+> RQ-396 port R-130's eight as additional presets.
+
+RQ-396 asked how R-130's styles stay "still available" (P1) when none of watercolour & pencil and the seven print
+presets (Default, Drops, Newspaper, Vintage, Poster78, Riso, Duotone) is among the lab's 103, which P2 makes the preset
+set. Its option (a): "Eight more presets beside the 103, each a graph of lab nodes approximating its R-130 style (the
+poster's look transcribed into the design doc as each preset's definition), 111 in all." Meanwhile the 103 were
+planned and the eight waited.
+
+*What it decides:* **option (a).** The eight are ported as presets beside the lab's 103, 111 in all; Plain is the Print
+graph's Plain and needs no preset.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **S1. What each is built from.** Each of the eight is a graph of the registry's nodes whose look is R-130's,
+  transcribed from R-130's sources (the poster's `window.stainPaint` and press module, and paper.design's CMYK halftone
+  shader, Apache-2.0, as render_gui_spec's *Was* note cites them) into the design doc as the preset's definition by the
+  preset port task; `workbench/` is never cited as normative (R-159). Their fidelity reference is that definition, not
+  a lab image. A look the lab's nodes cannot make (the halftone's per-plate misregistration and cell ceiling) is a node
+  added to the registry, a definition requirement (R-72) of that task, carrying its licence.
+- **S2. Names and family.** R-130's names, as the file names them: "Watercolour & pencil" and the seven print presets
+  under their own names; the eight form a twelfth family of the gallery, "Poster (R-130)", so the gallery has 12
+  families.
+
+*What it amends:* **R-485** ("still available" is met by these eight) and **R-486** (the preset set is the lab's 103
+and these eight). R-130 stays superseded; its styles live on as presets. It closes **RQ-396**.
+
+R-532 is in the "design" group of `plan/rule_groups.yaml`, with R-485 and R-486.
+
+## R-533 — Under a Print graph the sheet prints the whole frame and the marks only where the figure is a system *(closes RQ-398; amends R-470 and R-489)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "3. What never changes because of it" (a bullet) and §
+"11. Tests (each with an arm that can fail)" (test 11), `docs/contracts/principia_render_contract.md` § "Part 4 —
+Semantic rules" (the Print graph stage, a sentence), `docs/design/principia_colour_composition.md` § "4.3 Display stage
+(terminal, outside the pipeline)" (a sentence), R-470's and R-489's heading blocks, `plan/rule_groups.yaml` and
+`docs/archive/review_queue/M0.md` (RQ-398, moved with its ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-398, from the batch R-524 quotes:
+
+> RQ-398 (c).
+
+RQ-398 asked whether the Print graph draws over a pixel that is not a system, which R-470 draws blank, the view's
+background, never a palette colour, in every view. Its option (c): "the sheet (ground, age, viewing) prints the whole
+frame, the marks only where the figure is a system." Nothing was applied meanwhile.
+
+*What it decides:* **option (c).** Under a Print graph other than Plain, a pixel that is not a system shows the
+medium's sheet, never its marks. Under Plain, and in every debug view (which the Print graph never touches, R-487 K1),
+R-470's blank is unchanged.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **G1. Sheet and marks.** The sheet is the slot chain's Ground, Age and Viewing; the marks are Palette, Medium, On the
+  ground and Unfinished (design doc §5). At a not-a-system pixel the marks are replaced by the bare Ground, and Age and
+  Viewing then act on it as on the rest of the frame; with the Ground slot empty the pixel stays the view's background
+  through them.
+- **G2. Which pixels.** Exactly those R-470 draws blank: the chart's not-a-system classification and a `decode_failed`
+  sample the chart does not classify (R-511), read from the same classification the stain reads, past a bounded edge
+  included. How a graph edited past the slot template marks its sheet nodes is a definition requirement (R-72) of the
+  executor task.
+- **G3. What stays true.** No palette colour reaches such a pixel, since the Palette is a mark (R-477 C9); no count,
+  share or legend reads it (R-470, R-489). With Overlays › Chart › forbidden region on, its hatch is drawn on those
+  pixels over the sheet, as it is drawn over blank under Plain (R-470).
+- **G4. The test.** The design doc §11 gains test 11, with C9's control.
+
+*What it amends:* **R-470**, under a Print graph other than Plain only, and **R-489**, which queued it. It closes
+**RQ-398**.
+
+R-533 is in the "design" group of `plan/rule_groups.yaml`, with R-489.
+
+## R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)*
+*20 Oct 2026 · applied in `docs/design/principia_dd_telemetry_and_tiers.md` § "1.1 The fixed suite — comparability
+across devices", § "2. What to record — and the rule that makes it useful" (the post stage) and § "5. The artefact: one
+file, plain text, readable by the sender" ("Schema v2", with the earlier words kept), `docs/design/principia_benchmark.md`
+§ "6. The result file" (a note) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Profiler" (the post
+stage and what `prin profile diff` reads, with their earlier words kept), R-56's and R-497's heading blocks,
+`plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-399, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-399, from the batch R-524 quotes:
+
+> RQ-399 bump to v2, readers accept v1.
+
+RQ-399 asked whether the post stage's bump of the closed profiler schema v1 is a new version, and whether the benchmark
+block is part of it. Its option (a): "A new version, `principia-profile-v2`: v1 plus the post stage, `post_level` and
+the benchmark lines, one schema; v1 files read as R-497 K3 says." Meanwhile the telemetry doc called it "the bumped
+schema".
+
+*What it decides:* **option (a).** Schema v2 is v1 plus the post stage, `post_level`, the header's `bench`, the
+`scenario_begin` and `scenario_end` lines and the run summary, one schema; the header line's `schema` is
+`"principia-profile-v2"`. Writers write v2; every reader accepts v1, a v1 file read as R-497 K3 says.
+
+*Applied per R-369 (the human may veto any):*
+- **W1. Both closed.** Schema v1 stays as defined (R-56: five stages), and a v1 file is checked against v1's closed
+  set, a v2 file against v2's. A v2 trace that is not a benchmark result has no benchmark lines.
+- **W2. The readers.** `prin profile diff` and `query`, `prin bench show`, `report` and `compare` and the Profiler's
+  import read both; `prin profile diff` exits 2 only when it cannot read a file as v1 or v2.
+
+*What it amends:* **R-497**, B5's "profiler schema v1 plus a benchmark block", which is schema v2. It extends **R-56**,
+whose v1 stands. It closes **RQ-399**.
+
+R-534 is in the "design" group of `plan/rule_groups.yaml`, with R-497.
+
+## R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)*
+*20 Oct 2026 · applied in `docs/design/principia_benchmark.md` § "5.1 From the GUI" (a note), § "8. Determinism of the
+work" (a bullet) and its adoption note, `docs/gui/principia_render_gui_spec.md` § "Profiler" (the run's bullet, with its
+earlier words kept), R-496's and R-499's heading blocks, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md`
+(RQ-400, moved with its ruling); the tasks and requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-400, from the batch R-524 quotes:
+
+> RQ-400 fixed-size offscreen surface in Fit.
+
+RQ-400 asked how a run's work stays the same on every device when, under R-406 and R-468's Extend, a bigger window
+shows more of the field. Its option (a), the nearest: "The scenario's `start` fixes the figure's size (a fixed render
+target, say 1024², letterboxed in the window), present mode's fill not used during a run; the work then identical on
+every device." Nothing was applied meanwhile.
+
+*What it decides:* (a)'s fixed target, as an **offscreen surface**, drawn **in Fit** (R-468): every scenario draws into
+one surface of a fixed size, the same on every device and whatever its window, so the work is the surface's (R-499).
+The window only shows that surface. Present mode's fill (R-406) is not used during a run.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **O1. The size.** One size for the suite, recorded in the header's `bench` and part of the suite hash (R-494). The
+  human named no size, so it is a calibration value (R-71), named by the plan PR's run-overlay task and confirmed at
+  its milestone gate; "say 1024²" in the entry is not taken as the value.
+- **O2. Fit.** R-468's Fit, the chart scaled to fill the surface. Which square Fit scales is open on main (RQ-416, R-537
+  EX1 against R-472 X2); either answer gives the same work on every device, since the surface is the same, so this
+  ruling does not wait on it.
+- **O3. The window.** It shows the surface scaled to fit and letterboxed, the chrome hidden and the progress strip
+  shown (R-496); showing it is display, not work, and its time is the `present` stage's. A headless `prin bench run`
+  uses the same surface.
+
+*What it amends:* **R-496**, "the figure fills the window (present mode, R-406), so every device draws the same
+surface". R-499 holds through it. It closes **RQ-400**.
+
+R-535 is in the "design" group of `plan/rule_groups.yaml`, with R-496.
+
+## R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*
+*20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "4.4 Payload fields as inputs" (the note, with its
+earlier words kept) and its adoption note, `docs/gui/reference/print_graph/README.md` (a citation), R-486's heading
+block, `plan/rule_groups.yaml` and `docs/archive/review_queue/M0.md` (RQ-401, moved with its ruling); the tasks and
+requirements follow in the plan PR*
+
+The human's words (20 Oct 2026), ruling RQ-401, from the batch R-524 quotes:
+
+> RQ-401 record the lab's actual stand-in; the port reads the real field.
+
+RQ-401 asked which stand-in the four "Driven by the data" presets use, since the lab's caption says fringe density, the
+design doc §4.4 says brightness, and the graphs use either or both. Its option (a), the nearest: "per preset, each
+stand-in node (`brightness` or `edges`) the graph contains is replaced by the field §4.4's family names ("Relief of
+lifetime" → `t_end`; "Wet where chaotic" → the ensemble spread; "Unfinished where uncertain" → the spread or the
+predictability horizon; Craquelure → a sensitivity field such as `ftle`), each listed in the registry entry as R-492's
+deviation." Nothing was applied meanwhile; the four presets' port waited.
+
+*What it decides:* each of the four presets' registry entries records, as R-492's deviation, the stand-in its lab graph
+actually uses, read from the graph, not from the caption or §4.4's sentence; and the port reads the real field in place
+of it.
+
+*Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
+- **D1. What is recorded.** From `catalogue/presets.json`, as RQ-401 read it: Relief of lifetime, `brightness`; Wet
+  where chaotic and Unfinished where uncertain, `brightness` and `edges` (fringe density); Craquelure, `edges`.
+- **D2. Every stand-in node is replaced.** Each `brightness` or `edges` node standing in for the data reads the preset's
+  real field instead: Relief of lifetime, `t_end` (§4.4's example); Wet where chaotic, the ensemble spread (§4.4: "wet
+  where the spread is high"). For Unfinished where uncertain and Craquelure the corpus names no one field, so each is a
+  definition requirement (R-72) of the field-inputs task, from the fields the ledger declares, under physics review
+  (R-485's reviewers); it is not chosen here.
+- **D3. Normalisation.** The stain's (R-526).
+
+*What it amends:* none; it applies R-492's deviation rule to R-486's four presets. It closes **RQ-401**.
+
+R-536 is in the "design" group of `plan/rule_groups.yaml`, with R-486.
 
 ## R-537 — The chart's extension past `[0,1]²` is reached by pan and zoom with the controls shown, not only under F3: wherever the view lands it renders with no gaps, every interaction works there, a pixel in a repeat resolving to its canonical system, and the quadtree, refinement and deep zoom work in extended and wrapped regions, one system computed once ⚑ *(amends R-406, R-407 and R-472)*
 *20 Oct 2026 · applied in `docs/incoming/2026-10-20_extension_trace/` (added: the bundle as delivered),

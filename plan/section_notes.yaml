@@ -1018,6 +1018,58 @@
   section: "R-499 — The benchmark's work is deterministic: the same suite on the same build does identical work on every device; the design doc's §9 tests, each with an arm that can fail"
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-524 — The Print graph's Palette slot acts on the finished colour, never before the stain's lightness channel is composed *(closes RQ-388)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-525 — The Viewing slot is off by default while the Medium is a screen medium, and the panel shows the reason *(closes RQ-389)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-526 — A field input to the Print graph is normalised as the stain normalises it, over the visible range with the stain's own window rule *(closes RQ-390)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-527 — Whether the Export Styles' frames become a later Frame stage is deferred by the human, with no target: RQ-391 stays open and nothing is built"
+  reason: gap (RQ-391)
+  note: "a deferral by the human's ruling, with no target: RQ-391 stays open; nothing is built"
+- file: decisions.md
+  section: "R-528 — On first launch an opt-in prompt offers the benchmark's Quick suite; nothing runs unless the user accepts *(closes RQ-392)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-529 — Benchmark results come back as files, by hand; there is no upload *(closes RQ-393)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-530 — A phone run records the visual-viewport size, requests a wake lock and is marked \"mobile, best effort\" *(closes RQ-394)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-531 — The lines drawn over the Print graph keep R-476 M2's place, after the gamut clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph; the design doc §2's diagram is corrected to match *(closes RQ-395; amends R-487)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-532 — R-130's eight styles are ported as additional Print graph presets beside the lab's 103, 111 in all *(closes RQ-396; amends R-485 and R-486)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-533 — Under a Print graph the sheet prints the whole frame and the marks only where the figure is a system *(closes RQ-398; amends R-470 and R-489)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
+- file: decisions.md
+  section: "R-536 — Each \"Driven by the data\" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)*"
+  reason: "planned (the plan PR)"
+  note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: docs/design/principia_benchmark.md
   section: "Principia: the benchmark"
   reason: "informative only"
@@ -1072,8 +1124,8 @@
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: docs/design/principia_benchmark.md
   section: "10. Open questions (for the review queue)"
-  reason: "gap (RQ-392, RQ-393, RQ-394)"
-  note: "the design doc's three open questions, queued"
+  reason: "planned (the plan PR)"
+  note: "the design doc's three open questions, queued as RQ-392 to RQ-394 and ruled by R-528 to R-530; the plan PR's requirements cite this section"
 - file: docs/design/principia_print_graph.md
   section: "Principia: the Print graph (post-processing)"
   reason: "informative only"
@@ -1176,5 +1228,5 @@
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: docs/design/principia_print_graph.md
   section: "12. Open questions (for the review queue, not the agent to settle)"
-  reason: "gap (RQ-388, RQ-389, RQ-390, RQ-391)"
-  note: "the design doc's four open questions, queued"
+  reason: "gap (RQ-391)"
+  note: "the design doc's four open questions, queued as RQ-388 to RQ-391: 1 to 3 ruled by R-524 to R-526, planned (the plan PR); 4 deferred by the human's ruling (R-527), RQ-391 open"

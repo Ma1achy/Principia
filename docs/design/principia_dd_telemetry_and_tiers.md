@@ -23,7 +23,8 @@ you *where the device's boundary is*, which is what a tier needs.
 
 **The suite is `principia_benchmark.md` (R-493 to R-499).** Its scenarios are data, run by one runner that `prin
 profile`, `cargo xtask bench` and the Profiler window's Run benchmark… share; its §3 is this suite written out, swept
-across the tier ladder with the arbiter off and one arbiter row; its result file is §5's artefact plus a benchmark block.
+across the tier ladder with the arbiter off and one arbiter row; its result file is §5's artefact plus a benchmark block,
+profiler schema v2 (R-534).
 
 ### 1.2 Passive telemetry — what interaction actually looks like
 
@@ -63,8 +64,8 @@ sole automatic return of simulation data (R-142, R-288).
 
 **The post stage (R-488, R-497).** The Print graph (`principia_print_graph.md`) is a stage of its own: `stage_ms` gains
 `post`, its ms, between `colour` and `upload`, and each frame records `post_level`, the degrade level that ran (`full`,
-`reduced` or `plain`; design doc §8.2), so a profile shows when the medium degraded. They bump profiler schema v1 (§5,
-"The bumped schema"; the version is RQ-399).
+`reduced` or `plain`; design doc §8.2), so a profile shows when the medium degraded. They bump the profiler schema to
+v2 (§5, "Schema v2"; R-534). *Was:* "They bump profiler schema v1 (§5, "The bumped schema"; the version is RQ-399)."
 
 **`stage_ms` is the load-bearing one.** Without it you know a frame was slow and not *which resource
 ran out* — and different devices will bottleneck differently. Integrated graphics is bandwidth-bound;
@@ -199,7 +200,8 @@ solve   for the three axes: eps, per-frame budget, hard cap
 safety. And **report which one bound**, per §3.5.
 
 **That makes the tier a function of measured capability**, and it means a device nobody tested still
-gets a sensible answer by running the suite once on first launch. The alternative — a table of device
+gets a sensible answer by running the suite once on first launch, when the user accepts the first launch's opt-in
+prompt (R-528; §8: "Explicit, opt-in, run when asked"). The alternative — a table of device
 names — is unmaintainable and wrong for anything unlisted.
 
 **Report which constraint binds**, per device: samples, bandwidth, memory, or dispatch overhead.
@@ -379,8 +381,12 @@ has no present stage (§5.5), so its `stage_ms.present` and `stages.present` are
 The two are `null` together or present together: a frame with a present time and no present sections, or the reverse,
 is neither a batch render nor an interactive frame, and is not schema v1.
 
-**The bumped schema (R-488, R-497; its version and name are RQ-399).** The Print graph's stage and the benchmark add to
-schema v1 as follows; nothing else of this section changes.
+**Schema v2 (R-488, R-497, R-534).** The Print graph's stage and the benchmark add to schema v1 as follows, and the
+result is **profiler schema v2**: the header line's `schema` is `"principia-profile-v2"`, and nothing else of this
+section changes. Schema v1 stays as defined above, and every reader accepts both: a v1 file is checked against v1's
+closed set, a v2 file against v2's (R-534). *Was:* "**The bumped schema (R-488, R-497; its version and name are
+RQ-399).** The Print graph's stage and the benchmark add to schema v1 as follows; nothing else of this section
+changes."
 - **The post stage.** `stage_ms` and `stages` gain `post`, so the stages are integrate, reduce, colour, post, upload
   and present, written in that order; `post` is `null` in a frame that runs no Print graph stage (a headless scenario
   with no figure), as `present` is in a batch render. The finer category "stain + style" (below) is "stain" under
@@ -389,12 +395,13 @@ schema v1 as follows; nothing else of this section changes.
 - **The benchmark block** (`principia_benchmark.md` §6, R-497): a benchmark result's header line carries `bench`
   (`mode`, `suite_hash`, `complete`, each scenario's `ran | skipped(reason) | aborted`, power source, low-power mode and
   thermal state at start), each scenario is bracketed by a `scenario_begin` and a `scenario_end` line, and the last line
-  is the run summary. Whether these lines are part of the bumped schema or a block beside it is RQ-399.
+  is the run summary. These lines are part of schema v2, one schema (R-534); a trace that is not a benchmark result
+  has none of them. *Was:* "Whether these lines are part of the bumped schema or a block beside it is RQ-399."
 - **How an earlier file is read (R-497, K3).** A file written as schema v1 before the post stage stays readable: a
   reader takes its frames, with no `post` stage and no `post_level`, and reports both as not recorded, never as 0 ms or
   `"full"`; `prin profile diff` between it and a later file lists `post` and its scopes as only in one file, as any
   missing scope is listed (`principia_render_gui_spec.md` § "Profiler"), and compares the rest; `prin bench report`
-  and `compare` read it as a trace with no benchmark block. Writers write only the later form.
+  and `compare` read it as a trace with no benchmark block. Writers write only the later form, v2 (R-534).
 
 `dmin_nan_unset` and `dmin_negative_floored` are telemetry §2's two per-frame `d_min` counters (R-288, closing
 RQ-171), each a u32 count for the frame: how many `d_min` values the packer received as NaN and stored as unset, and

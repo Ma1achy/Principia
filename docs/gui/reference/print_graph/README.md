@@ -35,4 +35,4 @@ Lab nodes with extra inputs are wired automatically: `flow` ← a Flow node; `pa
 `mask`, `field` ← Brightness; `ground` ← Ground. That is why Strokes shows only its strokes.
 
 **The lab's quirks are recorded, not inherited** (design doc §10): its screen-pixel units, frame-seeded noise and
-stand-ins for payload fields are where the port follows the design doc instead (R-490, R-492; the stand-ins, RQ-401).
+stand-ins for payload fields are where the port follows the design doc instead (R-490, R-492; the stand-ins, R-536, ruling RQ-401).

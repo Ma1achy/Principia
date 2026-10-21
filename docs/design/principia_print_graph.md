@@ -2,12 +2,17 @@
 
 **Adopted by R-485 to R-492 (20 Oct 2026, the human's P1 to P8).** This document is part of the corpus from those
 rulings on: where it says "proposal", the proposal is what is built, except where R-485 to R-492 or a later ruling says
-otherwise. Its §12's four open questions are not ruled: they are RQ-388 to RQ-391. Its reference material is in
+otherwise. Its §12's four open questions were queued as RQ-388 to RQ-391; the human ruled three (R-524 to R-526) and
+deferred the fourth (R-527, RQ-391 open). Its reference material is in
 `docs/gui/reference/print_graph/` (reference, not code to build on; its README): the paths below that start
-`reference/`, `catalogue/`, `images/`, `tools/` or `boards/` are relative to that folder. Read with the review queue's
-entries on points where this document and an earlier ruling or doc disagree, each named where it applies: RQ-395 (where
-the lines drawn over sit, §2), RQ-396 (R-130's styles as presets, §1), RQ-397 (the badge, §3), RQ-398 (pixels that are
-not a system, §3) and RQ-401 (the lab's stand-in, §4.4).
+`reference/`, `catalogue/`, `images/`, `tools/` or `boards/` are relative to that folder. Where this document and an
+earlier ruling or doc disagreed, the review queue's entries were ruled, each applied where it bears: RQ-395 (where the
+lines drawn over sit, §2; R-531), RQ-396 (R-130's styles as presets, §1, §7.1; R-532), RQ-397 (the badge, §3; R-523),
+RQ-398 (pixels that are not a system, §3; R-533) and RQ-401 (the lab's stand-in, §4.4; R-536). *Was:* "Its §12's four
+open questions are not ruled: they are RQ-388 to RQ-391." and "Read with the review queue's entries on points where
+this document and an earlier ruling or doc disagree, each named where it applies: RQ-395 (where the lines drawn over
+sit, §2), RQ-396 (R-130's styles as presets, §1), RQ-397 (the badge, §3), RQ-398 (pixels that are not a system, §3)
+and RQ-401 (the lab's stand-in, §4.4)."
 
 *Design document. Goes to `docs/design/principia_print_graph.md`. Supersedes R-130's v1 style list and replaces the
 Display window's "Style" with the Print graph. Everything here is a proposal for the rulings in the accompanying
@@ -42,10 +47,20 @@ The port takes the lab's nodes and the prototype's format. It does not take eith
 
 ## 2. Where it sits
 
-*The lines drawn over sit after the Print graph; whether before the display scale, as drawn below, or after the gamut
-clamp, as R-476 M2 placed the line system, is RQ-395 (R-487).*
+*Corrected by R-531 (RQ-395, the human's option (c)): the lines drawn over keep R-476 M2's place, after the gamut
+clamp and before the colour-vision simulation; the lines drawn through sit before the Print graph. Smart ink for a line
+drawn over reads the figure to the clamp, the Print graph's output included; for a line drawn through, the stain's
+output (`principia_lines.md` §6). Was: "The lines drawn over sit after the Print graph; whether before the display
+scale, as drawn below, or after the gamut clamp, as R-476 M2 placed the line system, is RQ-395 (R-487)."*
 
 R-67's chain, with the Print graph where "style" was and the line system placed explicitly:
+
+```
+SimState ─► Stain ─► [line sets marked "through the medium"] ─► Print graph ─► display scale ─► gamut clamp ─►
+          [line sets drawn over] ─► colour-vision simulation ─► screen
+```
+
+*Was (as delivered, before R-531):*
 
 ```
 SimState ─► Stain ─► [line sets marked "through the medium"] ─► Print graph ─► [line sets drawn over] ─►
@@ -68,12 +83,20 @@ SimState ─► Stain ─► [line sets marked "through the medium"] ─► Prin
   change any number the instrument reports.
 - **Goldens and scientific checks run under Plain.** A test that renders a figure sets Plain explicitly. It does not
   inherit the user's Print graph.
-- **A styled figure says so.** While any Print graph other than Plain is active, the canvas corner badge names it
-  ("Print: Linocut"). Figure export keeps embedding's existing obligation: a scientific figure is the renderer's
+- **A styled figure says so.** While any Print graph other than Plain is active, a badge names it ("Print:
+  Linocut") in the figure's header strip, the chrome above the plot, never over the figure (R-523, ruling RQ-397;
+  *was:* "the canvas corner badge names it"). Figure export keeps embedding's existing obligation: a scientific figure is the renderer's
   pixels. So the export dialog offers **Styled** and **Plain** and defaults to Plain for figure export, as embedding
   §9 already does for the low-bit record.
 - **No re-integration, no sim key.** The Print graph lives in `RenderState`, edits are colour-side and coalesce like
   any other `SetField` (R-96), and a change never touches the cache.
+- **A pixel that is not a system shows the sheet, never a mark (R-533, ruling RQ-398, the human's option (c)).** The
+  sheet, the Ground, Age and Viewing slots, prints the whole frame; the marks, the Palette, Medium, On the ground and
+  Unfinished slots, print only where the figure is a system. At a pixel R-470 draws blank (the chart's not-a-system
+  classification, a `decode_failed` sample, R-511) the marks are replaced by the bare Ground, and Age and Viewing then
+  act on it as on the rest of the frame; with the Ground slot empty that pixel stays the view's background through
+  them. No palette colour reaches such a pixel (R-477 C9), and no count or legend reads it (R-470, R-489). The optional
+  forbidden-region hatch, when on, is drawn on those pixels over the sheet. Under Plain nothing changes.
 
 ## 4. The data model
 
@@ -142,8 +165,13 @@ docs, inputs and parameter ranges. It is the porting checklist.
 
 ### 4.4 Payload fields as inputs
 
-*The lab's caption names fringe density as the stand-in, and the lab's four graphs use brightness, fringe density or
-both; the deviation each port lists is RQ-401's (R-492).*
+*Ruled by R-536 (RQ-401): each of the four presets' registry entries records the stand-in its lab graph actually uses
+(Relief of lifetime: `brightness`; Wet where chaotic and Unfinished where uncertain: `brightness` and `edges`, fringe
+density; Craquelure: `edges`), as R-492's deviation, and the port reads the real field in place of every stand-in node:
+`t_end` for the relief, the ensemble spread for the wash, and for Unfinished where uncertain and Craquelure the field
+the field-inputs task defines under physics review (R-72). The normalisation is the stain's (R-526). Was: "The lab's
+caption names fringe density as the stand-in, and the lab's four graphs use brightness, fringe density or both; the
+deviation each port lists is RQ-401's (R-492)."*
 
 A graph may read a payload field as a `scalar` input: `{ "type": "field", "params": { "name": "t_end" } }`. This is
 the lab's "Driven by the data" family (Relief of lifetime, Wet where chaotic, Craquelure, Unfinished where uncertain),
@@ -176,6 +204,10 @@ render ─► Palette ─► Medium ─► On the ground ◄─ Ground
 | **Unfinished** | how far into the picture the artist got, beyond which only the underdrawing shows; can be driven by a field | progress, from, rag |
 | **Age** | what happened afterwards: fading, yellowing, foxing, folds, varnish | years, drive, ... |
 | **Viewing** | how the light falls on it, always full frame | mode, light, elevation, strength |
+
+*Ruled:* **Palette** acts on the finished colour, as the lab's does, never before the stain's lightness channel is
+composed (R-524, RQ-388). **Viewing** is off by default while the Medium is a screen medium (a CRT, an LCD), and the
+panel shows the reason (R-525, RQ-389).
 
 **The slot chain is itself a graph.** It is the template the simple panel edits (§7.1). Each slot holds a sub-graph
 (`preset:...`), and an empty slot is the identity. So "limited palette + watercolour pencil + cold-press + 40 years"
@@ -231,7 +263,8 @@ unstable ones.
   Palette, Medium (the preset families as groups), Ground, On the ground, Unfinished, Age, Viewing. Each slot has its
   graph's **settings** beneath it, not its node parameters.
 - **Preset gallery**: the 103 presets as live thumbnails of the current view, grouped by the lab's 11 families.
-  Picking one fills the Medium slot. Thumbnails render at low resolution, lazily, at most a few per frame.
+  *(R-532, ruling RQ-396: R-130's eight styles are ported as additional presets beside them, 111 in all, the eight in
+  a twelfth family of their own.)* Picking one fills the Medium slot. Thumbnails render at low resolution, lazily, at most a few per frame.
 - **Edit graph…** opens the advanced editor (§7.2).
 - **Reset** returns to Plain, and is one undo entry.
 
@@ -327,11 +360,16 @@ The measurement decides.
 9. **Port fidelity.** Every node and preset is within tolerance of its lab reference, or listed with its reason (§10).
 10. **Round trip.** A non-Plain graph with settings, a sub-preset and a field input survives every export path bitwise
     (the round-trip rule's T1).
+11. **The sheet, not the marks, on a pixel that is not a system (R-533).** Under a non-Plain graph, every not-a-system
+    pixel equals the graph's bare sheet there (Ground, then Age and Viewing), and no palette colour appears on one
+    (R-477 C9). Control: an executor that runs the marks on every pixel must fail.
 
 ## 12. Open questions (for the review queue, not the agent to settle)
 
 *Queued as RQ-388 to RQ-391, one per question, in order (the human's point 6: "Do not rule on either doc's open
-questions"); what is built meanwhile is each entry's.*
+questions"). Ruled: 1, no, Palette acts on the finished colour (R-524); 2, Viewing off by default for screen media,
+with the reason shown (R-525); 3, the stain's normalisation, the visible range (R-526). 4 is deferred by the human's
+ruling, "later" (R-527): RQ-391 stays open and nothing is built. Was: "what is built meanwhile is each entry's."*
 
 1. Should **Palette** be allowed to run *before* the stain's lightness channel is composed, so a limited palette can
    quantise hue while keeping the stain's lightness field exact? The lab's palette slot acts on the finished colour.

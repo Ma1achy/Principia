@@ -577,8 +577,10 @@ A **fixed terminal stage** applied to the finished output, **as settings, not no
 never sees them and they are not part of any occupant or preset:
 
 ```
-[lines through]  →  print graph  →  [lines over: RQ-395]  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen
+[lines through]  →  print graph  →  render→display scale  →  gamut_clamp  →  [lines over]  →  cvd_sim(mode)  →  screen
 ```
+
+*(Was, before R-531: `[lines through]  →  print graph  →  [lines over: RQ-395]  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
 
 *(Was, before R-485 and R-487: `style  →  render→display scale  →  gamut_clamp  →  cvd_sim(mode)  →  screen`.)*
 
@@ -592,9 +594,13 @@ view and every `debug/` occupant), and are never styled.
 
 **The two line passes (R-487).** One line renderer is called twice with complementary filters on `LineStyle.through_medium`
 (`principia_lines.md` §3): the line sets marked through are composited onto the stain's output **before** the Print
-graph, so the medium draws them; the rest are drawn **after** it, crisp on any medium. Where the pass drawn over sits
-is RQ-395: the design doc §2 puts it before the display scale, R-476 M2 after the gamut clamp; until RQ-395 is ruled it
-keeps R-476 M2's place, the next paragraph's.
+graph, so the medium draws them; the rest are drawn **after** it, crisp on any medium, in R-476 M2's place, the next
+paragraph's: after the gamut clamp and before the colour-vision simulation (R-531, ruling RQ-395, the design doc §2's
+diagram corrected to match). Smart ink for a line drawn over reads the figure to the clamp, the Print graph's output
+included; for a line drawn through, the stain's output (`principia_lines.md` §6). A pixel that is not a system takes the
+Print graph's sheet, never its marks (R-533). *Was:* "Where the pass drawn over sits is RQ-395: the design doc §2 puts
+it before the display scale, R-476 M2 after the gamut clamp; until RQ-395 is ruled it keeps R-476 M2's place, the next
+paragraph's."
 
 **Order (R-67):** stain → style → display scale → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **The line system (R-476)** draws its lines after the gamut clamp and
 before the colour-vision simulation, which sees them as it sees the rest of the figure (`principia_lines.md` §2;

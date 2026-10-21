@@ -89,15 +89,20 @@ simulation, which sees the lines too; it changes no pixel's colour value and nev
 
 **The Print graph stage (R-485 to R-492; `principia_print_graph.md`).** In the display stage, where R-67 had style, the
 Print graph runs on the finished colours: SimState → stain → [the line sets marked `through_medium`] → **Print graph** →
+display scale → gamut clamp → [the line sets drawn over] → colour-vision simulation → screen (R-487; R-531, ruling
+RQ-395: the pass drawn over keeps the line system's place above, after the gamut clamp). *Was:* "→ **Print graph** →
 [the line sets drawn over] → display scale → gamut clamp → colour-vision simulation → screen (R-487; where the pass
 drawn over sits, before the display scale or after the gamut clamp as above, is RQ-395, and it keeps the place above
-until RQ-395 is ruled). It is a node graph of its own, outside the stain graph, with its own registry and WGSL; its
+until RQ-395 is ruled)". It is a node graph of its own, outside the stain graph, with its own registry and WGSL; its
 default, Plain, is the bitwise identity; it re-integrates nothing and touches no sim key (`RenderState.print`, R-491).
 It reads the stain's output and payload fields only as read-only inputs, normalised by the stain's own window rule,
 never writing them (design doc §4.4); no readback, statistic, legend, readout or golden reads its output (R-489).
 **Debug views bypass it** (R-487): View › Debug view, a baked variant of the pipeline (R-41, R-467), and every stain
 whose colour occupant is a debug view (Part 6) are drawn with Plain, never styled, because a debug view exists to show
-the data. It is a stage of the frame record, `stage_ms.post`, and degrades while the camera moves (R-488).
+the data. At a pixel that is not a system, blank above (R-470, R-511), it prints the sheet (its Ground, Age and
+Viewing slots) and never a mark (its Palette, Medium, On the ground and Unfinished slots), so no palette colour reaches
+that pixel (R-533, ruling RQ-398). It is a stage of the frame record, `stage_ms.post`, and degrades while the camera
+moves (R-488).
 
 **Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default the hatched invalid pattern (R-79, R-132). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
 **Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default `#141418` in a presentation view and the hatched invalid pattern, `debug_invalid(frag_xy)`, only in the debug views (R-79, R-132, R-467; applied per R-369). *Was:* "by default the hatched invalid pattern (R-79, R-132)" (stale value, replaced by R-467). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.

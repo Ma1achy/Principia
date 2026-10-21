@@ -2,9 +2,12 @@
 
 **Adopted by R-493 to R-499 (20 Oct 2026, the human's B1 to B7).** This document is part of the corpus from those
 rulings on, read with them; it is telemetry §1.1's fixed suite made concrete (`principia_dd_telemetry_and_tiers.md`).
-Its §10's three open questions are not ruled: they are RQ-392 to RQ-394. Read with the review queue's entries on points
-where this document and an earlier ruling or doc disagree: RQ-399 (the result file's schema version, §6) and RQ-400
-(the run's window size and the work, §5.1, §8). Its §4 times are estimates until the first Full run on the reference
+Its §10's three open questions were queued as RQ-392 to RQ-394 and are ruled (R-528 to R-530). Where this document and
+an earlier ruling or doc disagreed, the review queue's entries were ruled, each applied where it bears: RQ-399 (the
+result file's schema version, §6; R-534) and RQ-400 (the run's window size and the work, §5.1, §8; R-535). *Was:*
+"Its §10's three open questions are not ruled: they are RQ-392 to RQ-394. Read with the review queue's entries on
+points where this document and an earlier ruling or doc disagree: RQ-399 (the result file's schema version, §6) and
+RQ-400 (the run's window size and the work, §5.1, §8)." Its §4 times are estimates until the first Full run on the reference
 machine replaces them (R-493, R-495).
 
 *Design document. Goes to `docs/design/principia_benchmark.md`. It makes telemetry §1.1's "fixed suite" concrete, and
@@ -161,6 +164,10 @@ During the run:
 
 - The **chrome is hidden** and the figure fills the window (present mode, R-406), so every device draws the same
   surface.
+  *Ruled by R-535 (RQ-400): the run draws into a **fixed-size offscreen surface in Fit**, the same size on every device
+  and part of the suite hash, its size a calibration value (R-71); the window only shows that surface, scaled to fit
+  and letterboxed, with the chrome hidden. Present mode's fill (R-406, R-468's Extend) is not used during a run, so the
+  window's size never changes the work.*
 - A **thin progress strip** shows the scenario name, `n of N`, and the time remaining.
 - **Esc aborts.** The file is still written, marked `"complete": false`, with every finished scenario intact.
 - **Input is ignored except Esc.** A stray mouse move would be a camera edit, and it would change the work.
@@ -191,12 +198,18 @@ The same dialog and runner. The result is saved through the browser's download. 
 its WebGPU adapter info, and marks fields the browser does not expose as `null` (the R-308 / R-303 pattern), never
 guessed.
 
+**On a phone (R-530, ruling RQ-394):** the run records the visual-viewport size, requests a wake lock (its outcome
+recorded, the run going on without one), and is marked **"mobile, best effort"** in the header, on the results sheet
+and in `report` and `compare`. The work is the fixed surface's (R-535), so the viewport is recorded, not drawn to.
+
 ---
 
 ## 6. The result file
 
 **One file**, `principia-bench-<device-slug>-<YYYYMMDD-HHMM>.jsonl`, profiler schema v1 **plus** a benchmark block. It
 stays JSON Lines and plain text (§5).
+*Ruled by R-534 (RQ-399): the file is **profiler schema v2**, `principia-profile-v2`, one schema holding v1, the post
+stage, `post_level` and the benchmark lines below; readers accept v1 (telemetry §5).*
 
 1. **Line 1: the session header** (§2's session block, as today), plus `bench`:
    - `mode`, `suite_hash` and `complete`;
@@ -209,6 +222,9 @@ stays JSON Lines and plain text (§5).
      `= 0`, frac over 16.7 and 41.7 ms, settle frames and time, bound-axis counts, `stage_ms` percentiles per stage
      including `post`, peak resident bytes, evictions, throttling signals and `post_level` counts.
 3. **Last line:** the run summary, the suggested tier, and the inversion table it came from.
+
+**Collected by hand (R-529, ruling RQ-393):** the file comes back as a file, by **Save file…** or **Copy summary**,
+sent by its owner; there is no upload and no hosting.
 
 **Size target:** under 20 MB for Full, so it travels over Discord uncompressed. If measurement shows it doesn't,
 Full writes `.jsonl.gz` and the dialog says so.
@@ -248,6 +264,8 @@ bound axis. That table is what tells the agents whether a bottleneck is universa
 The work a scenario asks for must be identical across runs and devices; only the time may differ.
 
 - **Timelines step in frames** (§2).
+- **One surface** (R-535): every scenario draws into the same fixed-size offscreen surface in Fit, on every device,
+  whatever its window.
 - **No wall-clock-driven behaviour inside a swept row.** The arbiter is off, there are no frame-time-adaptive
   decisions, and degrade-while-moving uses its policy, not a measured budget, so the work is fixed. Its adaptive form
   is measured in the arbiter row.
@@ -282,8 +300,9 @@ The work a scenario asks for must be identical across runs and devices; only the
 
 ## 10. Open questions (for the review queue)
 
-*Queued as RQ-392 to RQ-394, one per question, in order (the human's point 6); what is built meanwhile is each
-entry's.*
+*Queued as RQ-392 to RQ-394, one per question, in order (the human's point 6), and ruled: 1, a prompt, opt-in (R-528);
+2, files by hand, no upload (R-529); 3, yes, best effort, marked mobile (R-530). Was: "what is built meanwhile is each
+entry's."*
 
 1. **First launch.** §7 says a device nobody tested gets a sensible answer "by running the fixed suite once on first
    launch". Opt-in prompt, or silent Quick with the result shown? §8 says "explicit, opt-in, run when asked", so the
