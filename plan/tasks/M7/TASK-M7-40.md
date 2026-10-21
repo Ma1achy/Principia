@@ -23,11 +23,14 @@ for the M7 gate (R-71).
 - `docs/contracts/principia_render_contract.md` § "Part 2 — Fixed pipeline, swappable slots"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+- `decisions.md` § "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
 
 ## Deliverables
 - The "when it was decided" view, offline only in v1 (R-545, RQ-310): computed over a recorded run, the first-commit
   time of the current coarse class taken from the trajectory; no second latch is stored in the payload.
-- The previous-class comparison, placed as RQ-320 rules, and the "what just changed" view.
+- The previous-class comparison, a render-side previous-class texture written each frame and bound to a post node
+  (R-548, RQ-320), with render contract Part 2's sentence on how the post node reads it (R-72), and the "what just
+  changed" view.
 - The calibration proposal for the "when it was decided" lightness by time and the "what just changed" dimming, with
   renders, in the PR (REQ-COL-106).
 
@@ -39,9 +42,11 @@ for the M7 gate (R-71).
 ## Notes
 - RQ-310 is ruled (R-545): the "when it was decided" view is offline only in v1, so REQ-COL-082 no longer waits.
   *Was:* "This task waits on two rulings: RQ-310 (the latch's bits; for the human) for REQ-COL-082, and RQ-320 (where the …".
-- This task waits on RQ-320 (where the
-  previous frame's class lives) for REQ-COL-083; REQ-COL-106 carries both. It starts when they are ruled; no other task
-  waits on it.
+- RQ-320 is ruled (R-548): the previous frame's class lives in a render-side previous-class texture written each frame
+  and bound to a post node, so REQ-COL-083 no longer waits; REQ-COL-106's dimming is a calibration this task proposes.
+  No ruling holds this task now; no other task waits on it. *Was:* "This task waits on RQ-320 (where the previous
+  frame's class lives) for REQ-COL-083; REQ-COL-106 carries both. It starts when they are ruled; no other task waits on
+  it."
 - The dimming and the time-lightness mapping are this task's calibration, REQ-COL-106, moved from REQ-COL-087 in the
   PR #223 review (R-71: proposed by the task that needs it).
 - Physics reviews this task because its first-commit latch is a second forward-only latch in the march, persisted in

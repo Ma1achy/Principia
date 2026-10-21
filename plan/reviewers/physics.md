@@ -123,7 +123,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-COL-052 — the proposal shows per-map pixel differences between the composition engine and the reference HTML renders over the §7.1 list, and the tolerance with its margin
 - [ ] REQ-TOOL-069 — capacity at 128² ≥ 1 tile of config + full shader
 - [ ] REQ-VAL-145 — on the real render with the VMF/OKLab mapping at E + 1 = 8, measure mean reconstruction error vs dt; where it crosses ~2 8-bit levels below the M5 ceiling, the ceiling is lowered to it
-- [ ] REQ-VAL-183 — `cargo xtask gate chazy-parity` (drill-down §12.2 item 8): on a gallery chart at several playheads, prints the disagreement fraction over samples and fails if a differing sample is not within the band of a sign change; the threshold on the fraction is set as RQ-314 settles
+- [ ] REQ-VAL-183 — `cargo xtask gate chazy-parity` (drill-down §12.2 item 8): on a gallery chart at several playheads, prints the disagreement fraction over samples and fails if a differing sample is not within the band of a sign change; the fraction has no threshold (R-548, RQ-314)
 - [ ] REQ-VAL-186 — Burrau smoke test (drill-down §12.2 item 1): `cargo xtask gate chazy-burrau` runs the Burrau ICs in the validation harness, past the production loop's escape stop on its post-escape march (R-103), at the pinned r_coll, which it records (REQ-VAL-049), and classifies every step to its horizon; the last label is HE and no step reads H, HP or P; a run that ends in collision at that r_coll fails the gate and is reported
 
 **M8**

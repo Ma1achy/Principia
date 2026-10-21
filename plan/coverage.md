@@ -42,13 +42,12 @@ Of these: 142 calibration, 140 definition, 1417 obligation. Retired (kept for th
 
 ## Sections
 
-1416 sections in 52 files: 1109 yield at least one requirement; 307 yield none and are listed below with the reason.
+1416 sections in 52 files: 1110 yield at least one requirement; 306 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
-| gap (RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
 | gap (RQ-378) | 1 |
 | gap (RQ-391) | 2 |
-| informative only | 170 |
+| informative only | 171 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
 | parent heading (obligations are in its subsections) | 45 |
@@ -198,7 +197,6 @@ Of these: 142 calibration, 140 definition, 1417 obligation. Retired (kept for th
 | R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)* | **MISSING REASON** | |
 | R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)* | **MISSING REASON** | |
 | R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)* | **MISSING REASON** | |
 | R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)* | **MISSING REASON** | |
@@ -351,7 +349,7 @@ Of these: 142 calibration, 140 definition, 1417 obligation. Retired (kept for th
 | 11. Decisions, calibrations and open questions | parent heading (obligations are in its subsections) | §11.1–§11.4 |
 | 11.1 Decided (R-442) | informative only | restates R-442's seven rulings, which the requirements citing R-442 carry |
 | 11.1.1 Decided (R-443) | informative only | restates R-443's ruling, which the requirements citing R-443 carry |
-| 11.3 Open questions | gap (RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | each open question is an RQ entry; the requirements waiting on them carry rq: |
+| 11.3 Open questions | informative only | the open questions, each an RQ entry, all ruled: RQ-310 by R-545, RQ-311 to RQ-318 and RQ-320 to RQ-325 by R-548, RQ-319 by R-467; their obligations are in the requirements they changed |
 | 11.4 Not done, and natural next steps | informative only | Standish's certificate and a chaotic-chart re-run, named as next steps, not obligations |
 | 12. Tests | parent heading (obligations are in its subsections) | §12.1–§12.3 |
 | 13. References | informative only | bibliography |
@@ -601,7 +599,6 @@ Of these: 142 calibration, 140 definition, 1417 obligation. Retired (kept for th
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*
 - uncovered section with no reason: decisions.md § R-549 — The Euler landmark `E_j` is the collinear configuration with body `j` in the middle, shown `E_{j+1}`; R-449's body numbers apply to Burrau too, each body's mass shown beside its number in the Burrau presets' legends and the Inspector; R-449's dump names are examples; an invariant chart's parameters are its four frozen controls, set from `z₀` or the lock; `L±` are the poles only at equal masses *(closes RQ-334, RQ-335, RQ-336, RQ-350 and RQ-355; refines R-14)*
 - uncovered section with no reason: decisions.md § R-550 — The compass's physical views and steer: an eight-column f64 central-difference Jacobian `∂x/∂z` of the decoder, read after `η_E`; Jacobi's eight `α, β`, the four Jacobi momenta and two mass fractions, Shape's `θ, φ, θ̇, φ̇, L_z, Ṙ` and the two mass fractions, both of full rank, so the steer is `J⁻¹` with the projector test refusing; each coordinate divided by a fixed reference range *(closes RQ-341, RQ-342, RQ-343, RQ-344, RQ-345 and RQ-346; amends R-452)*
 - uncovered section with no reason: decisions.md § R-551 — The Inspector's gates: a collinear state's `z_β` at its clamp image with its bit set, bit for bit, and `|w − 1|` at the pole and `|w|` at the equator within a calibrated bound; `|z| < 4` is the ball `‖z‖ < 4`; the gated random IC is `g₀·D(z)`, held at 1.6×10⁻¹⁴, and the Inspector's Randomise a second arm reported until REQ-VAL-121 calibrates its bound *(closes RQ-475, RQ-476 and RQ-477)*

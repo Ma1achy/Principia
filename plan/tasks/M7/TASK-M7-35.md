@@ -37,6 +37,7 @@ parameters and the latch's quantisation are proposed with their evidence for the
 - `docs/design/principia_dd_simstate_payload.md` § "5. Derived — computed at read, NOT stored"
 - `docs/design/principia_dd_simstate_payload.md` § "`sample_descriptor` (low 16 bits of `packed_a`) — 10 used, rest reserved"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+- `decisions.md` § "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
 - `decisions.md` § "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
 
 ## Deliverables
@@ -48,24 +49,30 @@ parameters and the latch's quantisation are proposed with their evidence for the
   in descriptor bits 10–14 (R-545, RQ-310), log-quantised in half-octaves with REQ-PAY-106's quantisation, a ledger
   edit that changes the schema version, the generated layout test updated as `last_symbol`'s was.
 - The Fewbody reference (`fewbody_resolved`, three-body) in `crates/validation`.
-- The ten fixtures of §12.1 as tests, each with its control arm; the live-playhead property test.
+- The ten fixtures of §12.1 as tests, each with its control arm, and §12.2 items 10 and 11 (R-548: the receding
+  stable hierarchy and the homothetic E < 0 expansion, their states written here); the live-playhead property test.
 - The calibration proposals for ε, `h_far` (with the gate and δ), `os_ratio`, settling τ and the latch's quantisation,
   with the drill-down's evidence, in the PR.
 
 ## Acceptance tests
-- `cargo test -p kernel chazy_fixtures` — the ten §12.1 fixtures with their control arms, on CPU-f64: HE; PE at outer `K/U = 1`, excursion at 0.5, and `coarse`; HE for the `e = 0.95` pair, its control inside the band with `K < U`; the two-stage H; H for three flying apart (E > 0); transient at E > 0 and B-so-far at rest; B-so-far with a fresh latch and OS-candidate at `I_max = 2·os_ratio·I`; B-stable with Mardling–Aarseth on, B-so-far off; the tidal gate's HE at d = 50, not at 20, the hierarchy gate committing on both; settling withholding HE when the shape moved. Every output is one of the ten labels (REQ-PAY-099).
+- `cargo test -p kernel chazy_fixtures` — the ten §12.1 fixtures with their control arms, on CPU-f64: HE; PE at outer `K/U = 1`, excursion at 0.5, and `coarse`; HE for the `e = 0.95` pair, its control inside the band with `K < U`; the two-stage H; H for three flying apart (E > 0); transient at E > 0 and B-so-far at rest; B-so-far with a fresh latch and OS-candidate at `I_max = 2·os_ratio·I`; B-stable with Mardling–Aarseth on, B-so-far off; the tidal gate's HE at d = 50, not at 20, the hierarchy gate committing on both; settling withholding HE when the shape moved; §12.2 item 10, B-stable for a stable hierarchy whose outer body is past `h_far` and receding (`v_r ≠ 0`), control: the code's order reads excursion; §12.2 item 11, B-so-far for the homothetic expansion with `E = −0.1 U₀` at 2.9 and 3.2–3.5 times its initial size, control: without the `E ≥ 0` guard it reads H, then P (R-548). Every output is one of the ten labels (REQ-PAY-099).
 - `cargo test -p validation chazy_fewbody` — the reference arms: H for three flying apart, B-stable for the hierarchy (`ma_stable` true), HE at d = 50 and unresolved at d = 20 (tidal ratios 8 × 10⁻⁶ and 1.25 × 10⁻⁴), δ = 10⁻⁵ (REQ-VAL-184).
 - `cargo test -p kernel chazy_i_max_latch` — the latch equals the offline maximum of `I` over a fixture trajectory at every step, never decreases, is `I_0` at step 0, survives persist boundaries as one uninterrupted latch, and differs between two ensemble copies of one sample (REQ-PAY-105).
 - `cargo test -p kernel chazy_live_playhead` — property test: for random ICs the label at `t` from a run stopped at `t` equals the label at `t` from the run continued; control: a variant reading the state at `t + Δ` fails (REQ-VAL-187).
 - Review (physics): the proposals for ε = 0.05 (REQ-EVT-028), `h_far` = 5 with the hierarchy gate and δ = 10⁻⁵ (REQ-EVT-029), `os_ratio` = 25 measured at the snapshot cadence while the latch updates every step (REQ-EVT-030), settling off (REQ-EVT-031) each with the drill-down's §4.1 and §11.2 evidence, confirmed by the human at the M7 gate; and the latch's log half-octave 5-bit quantisation as ruled (R-545), with its measured effect on the OS-candidate labels (REQ-PAY-106).
 
 ## Notes
-- The rule's order differs between the spec's table and the code in two places: B-stable against transient at E > 0
-  (RQ-318; no state has been shown to reach it) and B-stable against excursion (RQ-324; reachable and common). The
-  code's order is what prin-rs PR #32 measured and is built meanwhile; REQ-PAY-099 waits on the rulings for those
-  clauses only. The fixtures reach neither case.
-- `classify` enforces the E > 0 certificate by its order but never tests E in the dispersal step or the two-stage H;
-  whether to guard them with E ≥ 0 is RQ-325, and REQ-PAY-099 waits on it for those clauses (drill-down §2).
+- R-548 (21 Oct 2026) rules the order, as the drill-down's §3.2 now gives it: transient before B-stable, B-stable
+  requiring E < 0 (RQ-318, option (c)); B-stable before excursion (RQ-324, option (b)); H, HP, P and the two-stage H
+  only at E ≥ 0 (RQ-325, option (b)). This is `classify`'s order with three changes, so prin-rs PR #32's measurements
+  (the drill-down's §4) are the code's, kept as the record. Two fixtures are added (§12.2 items 10 and 11), their
+  states written here under physics review. Whether an E < 0 state that passes the dispersal step's geometric tests may
+  read HE, PE or excursion in the hierarchy step is RQ-521; REQ-PAY-099 waits on it for that clause only, and
+  no fixture reaches it.
+  *Was:* "The rule's order differs between the spec's table and the code in two places: … REQ-PAY-099 waits on the
+  rulings for those clauses only. The fixtures reach neither case." and "`classify` enforces the E > 0 certificate by
+  its order but never tests E in the dispersal step or the two-stage H; whether to guard them with E ≥ 0 is RQ-325, and
+  REQ-PAY-099 waits on it for those clauses (drill-down §2)."
 - Where `I_max` is stored is ruled (R-545, RQ-310): descriptor bits 10–14, log-quantised in half-octaves (32 levels to
   2¹⁶). REQ-PAY-105 and REQ-PAY-106 no longer wait. *Was:* "Where `I_max` is stored is RQ-310 (for the human). Until it
   rules, the latch is local and per step, and the persistence test runs on the latch's local value; REQ-PAY-105 and

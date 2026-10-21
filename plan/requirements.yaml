@@ -5372,15 +5372,17 @@
     section: "R-103 — Escape ends the production loop; the §2.4 checks run in the harness *(closes RQ-63 and RQ-69)*"
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
-    detail: "a fixture run to escape fire: chazy_class at every later playhead equals its value at the fire step, computed from the frozen state"
+    detail: "a fixture run to escape fire: chazy_class at every later playhead equals its value at the fire step, computed from the frozen state; the test asserts the freeze, not agreement with the event stain's escape (R-548, RQ-313)"
   rulings:
   - R-103
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-313
+  note: "R-548 (RQ-313, option (a)): the escape event and the Chazy class answer different questions, so the class may differ from the event stain at a pixel; the legend help says so (REQ-GUI-185)."
 - id: REQ-EVT-028
   area: EVT
   kind: calibration
@@ -7240,7 +7242,7 @@
   note: "R-426 (RQ-274, options (a) and (c)): mean_y stays on ramp_coolwarm provisionally from M1 until this re-check; closed by TASK-M3-13, which defines y (REQ-PAY-073)."
 - id: REQ-PAY-099
   area: PAY
-  statement: "`chazy_class` must be a generated read-side accessor, derived at read and never stored, beside `energy_drift`, that labels each sample (each ensemble copy on its own) at every playhead with exactly one of the ten labels H, HP, P, HE, PE, B-stable, B-so-far, transient, OS-candidate and excursion by the Chazy drill-down's §3.2 rule in its order, reading only the live Cartesian state, the masses, E_0, R_0 = √(I_0/M) and the latch I_max, with §3.1's two-body K and U (pair and outer), its parabolic band, its hierarchy ratio, §3.4's sign test for a pair's binding and `coarse` (HP, P → H; PE → HE), §3.5's Mardling–Aarseth test, §3.3's defaults, and §3.6's tidal gate and settling as options; it writes no event class (R-442, a separate system)."
+  statement: "`chazy_class` must be a generated read-side accessor, derived at read and never stored, beside `energy_drift`, that labels each sample (each ensemble copy on its own) at every playhead with exactly one of the ten labels H, HP, P, HE, PE, B-stable, B-so-far, transient, OS-candidate and excursion by the Chazy drill-down's §3.2 rule in its order as R-548 rules it (transient before B-stable, which requires E < 0; B-stable before excursion; H, HP, P and the two-stage H only at E ≥ 0), reading only the live Cartesian state, the masses, E_0, R_0 = √(I_0/M) and the latch I_max, with §3.1's two-body K and U (pair and outer), its parabolic band, its hierarchy ratio, §3.4's sign test for a pair's binding and `coarse` (HP, P → H; PE → HE), §3.5's Mardling–Aarseth test, §3.3's defaults, and §3.6's tidal gate and settling as options; it writes no event class (R-442, a separate system)."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 3.1 Inputs and definitions
@@ -7264,17 +7266,18 @@
     section: 12.1 The fixtures to port
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
-    detail: "the ten fixtures of the drill-down's §12.1 (prin-rs PR #32's tests/chazy.rs, transcribed), each with its control arm: HE; PE at outer K/U = 1 and excursion at 0.5, with coarse; HE for the e = 0.95 pair at pericentre, its control the pair inside the band and K < U (reverting the sign test fails it); the two-stage H; H for three flying apart (E > 0); transient at E > 0 and B-so-far at rest (E < 0); B-so-far with a fresh latch and OS-candidate at I_max = 2·os_ratio·I; B-stable with Mardling–Aarseth on and B-so-far with it off; the tidal gate's HE at d = 50 and not at d = 20 while the hierarchy gate commits on both; settling withholding HE when the shape moved; every output one of the ten labels; run on CPU-f64"
+    detail: "the ten fixtures of the drill-down's §12.1 (prin-rs PR #32's tests/chazy.rs, transcribed), each with its control arm: HE; PE at outer K/U = 1 and excursion at 0.5, with coarse; HE for the e = 0.95 pair at pericentre, its control the pair inside the band and K < U (reverting the sign test fails it); the two-stage H; H for three flying apart (E > 0); transient at E > 0 and B-so-far at rest (E < 0); B-so-far with a fresh latch and OS-candidate at I_max = 2·os_ratio·I; B-stable with Mardling–Aarseth on and B-so-far with it off; the tidal gate's HE at d = 50 and not at d = 20 while the hierarchy gate commits on both; settling withholding HE when the shape moved; and R-548's two (§12.2 items 10 and 11): B-stable for a bound, Mardling–Aarseth-stable hierarchy whose outer body is past h_far and receding (v_r ≠ 0), control: the code's order reads excursion; B-so-far for the homothetic equilateral expansion with E = −0.1 U₀ at 2.9 and 3.2–3.5 times its initial size, control: without the E ≥ 0 guard it reads H, then P; every output one of the ten labels; run on CPU-f64"
   rulings:
   - R-442
+  - R-548
   milestone: M7
   rq:
-  - RQ-318
-  - RQ-324
-  - RQ-325
-  note: "Spec 02 §2 says \"the nine labels of 01 §2\"; the classifier returns ten (drill-down §3.8; R-442's note). The order of B-stable and transient at E > 0 is RQ-318 (no state shown to reach it); of B-stable and excursion, RQ-324; whether the dispersal step and the two-stage H enforce E ≥ 0, RQ-325."
+  - RQ-521
+  note: "Spec 02 §2 says \"the nine labels of 01 §2\"; the classifier returns ten (drill-down §3.8; R-442's note). R-548 rules the order: RQ-318 (c), RQ-324 (b), RQ-325 (b). Whether an E < 0 state that passes the dispersal step's geometric tests may read HE, PE or excursion in the hierarchy step is RQ-521, which this requirement waits on for that clause only; no fixture reaches it."
 - id: REQ-PAY-100
   area: PAY
   statement: "`chazy_final` must be a generated read-side accessor folding `chazy_class` onto Chazy's seven plus collision by the drill-down's §5.3 table — H, HP, P, HE, PE to themselves; B-stable, B-so-far, excursion and transient to B; OS-candidate to OS; a collision-terminated sample (any pair, triple, or at t = 0) to collision — exhaustively, so that a label with no mapping fails to build."
@@ -7305,15 +7308,16 @@
     section: 12.2 New, for Principia
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
-    detail: "the fold table's status half (drill-down §12.2 item 3): every label maps to its §5.4 status, transient to transient, a collision-terminated sample to collision (item 2), exhaustive over the enum"
+    detail: "the fold table's status half (drill-down §12.2 item 3): every label maps to its §5.4 status, transient to transient, a collision-terminated sample to collision (item 2), exhaustive over the enum; a bound, Mardling–Aarseth-stable hierarchy whose outer body is past h_far and receding (§12.2 item 10) reads B-stable, not excursion (R-548)"
   rulings:
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-324
-  note: "A Mardling–Aarseth-stable bound hierarchy whose outer body is past h_far and receding reads excursion under prin-rs PR #32's order and B-stable under the spec's table: RQ-324."
+  note: "R-548 (RQ-324, option (b)): B-stable before excursion, so a Mardling–Aarseth-stable bound hierarchy reads B-stable throughout its outer orbit; excursion means far out, bound, and not certified stable."
 - id: REQ-PAY-102
   area: PAY
   statement: "`chazy_structure` must be a generated read-side accessor giving dispersal (label H, HP or P), hierarchy (the most separated body's hierarchy ratio above h_far), interacting (otherwise) or oscillatory (label OS-candidate), by the drill-down's §5.5 table and REQ-PAY-104's precedence."
@@ -13900,7 +13904,7 @@
   milestone: M7
 - id: REQ-COL-074
   area: COL
-  statement: "B's swatch must be `#141418` (R-442) and must carry no hue, so that under Replace-L B renders neutral grey at the brightness field's lightness, the one class with no hue."
+  statement: "B's swatch must be `#141418` (R-442), near-neutral, its OKLab chroma ≤ 0.009 (R-548; 0.0080 measured), so that under Replace-L B renders a near-neutral grey at the brightness field's lightness, the one class with no hue of its own."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.1 The two rules that hold in every stain
@@ -13908,15 +13912,16 @@
     section: 12.2 New, for Principia
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
-    detail: "B has no hue (drill-down §12.2 item 5): B's OKLab a and b are 0 to within the bound RQ-317 settles, and B under Replace-L at L = 0.3, 0.6 and 0.9 gives a neutral grey to that bound; control: a chromatic swatch (#14BBC2) fails the same check"
+    detail: "B is near-neutral (drill-down §12.2 item 5): B's OKLab chroma is ≤ 0.009, and B under Replace-L at L = 0.3, 0.6 and 0.9 gives a grey within that bound; control: a chromatic swatch (#14BBC2), its chroma well above the bound, fails the same check"
   rulings:
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-317
-  note: "#141418 is OKLab a ≈ 0.002, b ≈ −0.008 (chroma ≈ 0.008), not 0: RQ-317 (R-442's note)."
+  note: "#141418 is OKLab a ≈ 0.002, b ≈ −0.008 (chroma ≈ 0.008), not 0; R-548 (RQ-317, option (a)) keeps it and holds it to chroma ≤ 0.009, the bound that also covers the one-body grey #8A8A90 (REQ-COL-091)."
 - id: REQ-COL-075
   area: COL
   statement: "The default final-motion stain must be `chazy_final` in the colour slot through the drill-down's §10.2 seven-class palette (B #141418, H #14BBC2, HP #55AEE8, P #A497EA, HE #E4896A, PE #CC9C42, OS #7BB76E, collision #DA85B6), brightness None, user-editable like any swatch set, its B labelled \"bound, or nobody has left yet\"; a palette change must re-style with zero dispatches."
@@ -14052,7 +14057,7 @@
   note: "R-545 (21 Oct 2026, RQ-310, option (a)): offline only in v1, no second latch stored. The lightness by time is REQ-COL-106's calibration."
 - id: REQ-COL-083
   area: COL
-  statement: "The \"what just changed\" view must draw white where the coarse Chazy class changed since the previous playhead and dim the rest."
+  statement: "The \"what just changed\" view must draw white where the coarse Chazy class changed since the previous playhead and dim the rest, reading the previous frame's class from a render-side previous-class texture written each frame and bound to a post node (R-548), never a payload field."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.8 Time views
@@ -14060,15 +14065,18 @@
     section: 10.8.2 What just changed
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
+  - file: docs/contracts/principia_render_contract.md
+    section: Part 2 — Fixed pipeline, swappable slots
   verify:
     method: unit test
-    detail: "two frames of a fixture chart across a playhead step: exactly the samples whose coarse class changed are white, the rest dimmed by the proposed amount"
+    detail: "two frames of a fixture chart across a playhead step: exactly the samples whose coarse class changed are white, the rest dimmed by the proposed amount; the previous class is read from the render-side texture written by the previous frame, and the payload carries no previous-class field"
   rulings:
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-320
-  note: "Where the previous frame's class lives is RQ-320; the dimming is REQ-COL-106's calibration."
+  note: "R-548 (RQ-320, option (a)). How the post node reads the texture beside this frame's class is written into render contract Part 2 by TASK-M7-40 (R-72). The dimming is REQ-COL-106's calibration."
 - id: REQ-COL-084
   area: COL
   statement: "Greyscale and hue modes (REQ-COL-067, REQ-COL-068) must rank `chazy_final` B, OS, PE, HE, P, HP, H, collision, K = 8, bound first and darkest."
@@ -14117,14 +14125,17 @@
     section: "R-429 — REQ-COL-061's criterion is confirmed beside REQ-COL-055: τ is the OKLab distance from `#FF00FF` to `#E034C6`, 0.101; the hatch passes by colour, or by its pattern when its two simulated stripes are more than τ apart; the pattern argument holds at 1:1 device pixels only *(amends R-386)*"
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
     detail: "palette separation (drill-down §12.2 item 7): `cargo test -p render chazy_palette_separation` prints each palette's tightest pair and tightest style distance unsimulated and under each simulation; status (0.114, 0.111) and four-family (0.110, 0.137) clear τ unsimulated; seven-class asserts H / HP 0.083 and the simulated values of §11.2.1, Okabe–Ito asserts P / collision 0.041 unsimulated and under each simulation, the structure hues their §11.2.1 values, and every entry of each is ≥ τ from the styles unsimulated (0.137, 0.121, 0.137); cvd_hatch_distinct passes with the Chazy palettes added"
   rulings:
   - R-429
   - R-442
+  - R-548
   milestone: M7
-  note: "The seven-class default below τ within itself, and Okabe–Ito's cost (P against collision), are RQ-311, for the human at the M7 gate."
+  note: "The seven-class default, below τ within itself, stays the default with its shortfall asserted here (R-548, RQ-311, option (a)); Okabe–Ito's cost (P against collision) is recorded, Okabe–Ito a preset."
 - id: REQ-COL-087
   area: COL
   kind: calibration
@@ -14148,17 +14159,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: review checklist
-    detail: "the proposal gives the palettes as listed with REQ-COL-086's measured separations (the drill-down's §11.2.1, Okabe–Ito's 0.041 P / collision among them, and prin-rs PR #32's previews); the human confirms at the M7 gate, deciding RQ-311"
+    detail: "the proposal gives the palettes as listed with REQ-COL-086's measured separations (the drill-down's §11.2.1, Okabe–Ito's 0.041 P / collision among them, and prin-rs PR #32's previews); the human confirms at the M7 gate, the seven-class palette the default (R-548, RQ-311)"
   rulings:
   - R-71
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-311
-  - RQ-317
-  note: "R-442 makes the seven-class palette the default; B is #141418 (RQ-317). The time views' dimming and lightness by time are REQ-COL-106, closed by TASK-M7-40, which builds those views."
+  note: "R-442 makes the seven-class palette the default, and R-548 keeps it (RQ-311, option (a)), Okabe–Ito a preset one click away; B is #141418, near-neutral (R-548, RQ-317). The time views' dimming and lightness by time are REQ-COL-106, closed by TASK-M7-40, which builds those views."
 - id: REQ-COL-088
   area: COL
   kind: calibration
@@ -14211,19 +14222,20 @@
     section: 12.3 One body at a time (R-443)
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
     detail: "role table, exhaustive (drill-down §12.3 item 1): for every class label, collision, and every (k, escaper) pair the role and its sRGB are as §10.11.1 tables, OS-candidate bound black; a negative control adds an unmapped label and fails to build; golden (`cargo xtask golden chazy-lens`): a synthetic payload with one sample per role renders exactly those colours at k = 0, 1, 2"
   rulings:
   - R-443
   - R-449
+  - R-548
   milestone: M7
-  rq:
-  - RQ-321
-  note: "The escaping body is chazy_escaper as the block gives it; whether it is the event's escape detail where the run has an escape event is RQ-321. R-449: k is chosen and shown as body 1, 2 or 3 through TASK-M2-33's one display conversion (REQ-GUI-188); k stays 0-based inside."
+  note: "The escaping body is chazy_escaper always (R-548, RQ-321, option (c)); the one-body legends count the pixels where it names a different body from the event's escape detail (REQ-GUI-187). R-449: k is chosen and shown as body 1, 2 or 3 through TASK-M2-33's one display conversion (REQ-GUI-188); k stays 0-based inside."
 - id: REQ-COL-091
   area: COL
-  statement: "The body lens with energy must put §10.11.1's roles in the colour slot and `chazy_qk[k]` in the brightness slot under Replace-L's range form, b = q/(1 + q) and L = L_min + (L_max − L_min)·b with REQ-COL-088's range and REQ-COL-089's compaction, the same mapping as the seven-class × energy stain, so that the grey and black roles render as greys at body k's energy."
+  statement: "The body lens with energy must put §10.11.1's roles in the colour slot and `chazy_qk[k]` in the brightness slot under Replace-L's range form, b = q/(1 + q) and L = L_min + (L_max − L_min)·b with REQ-COL-088's range and REQ-COL-089's compaction, the same mapping as the seven-class × energy stain, so that the grey and black roles, near-neutral (OKLab chroma ≤ 0.009, R-548), render as near-neutral greys at body k's energy."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.11.2 Body lens with energy
@@ -14235,16 +14247,17 @@
     section: R-77 — Replace-L, and the state palette *(closes RQ-28)*
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
-    detail: "energy lens recovers the escape (drill-down §12.3 item 5): for body k escaping hyperbolically chazy_qk[k] > 1 and the sample's OKLab L is above L(b = ½), and for a bound k (chazy_qk[k] < 1) below it; control: the flat body lens draws two bound samples with different q_k identically"
+    detail: "energy lens recovers the escape (drill-down §12.3 item 5): for body k escaping hyperbolically chazy_qk[k] > 1 and the sample's OKLab L is above L(b = ½), and for a bound k (chazy_qk[k] < 1) below it; #8A8A90 and #141418 have OKLab chroma ≤ 0.009 (R-548); control: the flat body lens draws two bound samples with different q_k identically"
   rulings:
   - R-77
   - R-443
+  - R-548
   milestone: M7
-  rq:
-  - RQ-322
-  note: "Under Replace-L the grey and black roles draw alike at equal q_k (drill-down §10.11.2); the legend keeps them apart (REQ-GUI-187). The grey #8A8A90's chroma (≈ 0.009), against the neutral greys this requirement draws, is RQ-322."
+  note: "Under Replace-L the grey and black roles draw alike at equal q_k (drill-down §10.11.2); the legend keeps them apart (REQ-GUI-187). R-548 (RQ-322, option (a)): #8A8A90 stays, held to the chroma bound ≤ 0.009 of #141418."
 - id: REQ-COL-092
   area: COL
   statement: "The escaper map must be a Chazy stain drawing escapes only, hue by the escaping body (`chazy_escaper`) and the parabolic the darker shade of the same hue, by the drill-down's §10.11.4 table: HE body 1, 2, 3 (`chazy_escaper` 0, 1, 2) `#E58870`, `#69BA7C`, `#80A3F0`; PE `#A24B36`, `#287C42`, `#4665AE`; H, HP and P grey `#8A8A90`; bound (the B and OS folds) black `#141418`; collision magenta `#DA85B6`."
@@ -14255,16 +14268,17 @@
     section: 10.11 One body at a time (R-443)
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: golden image
     detail: "`cargo xtask golden chazy-escaper`: a synthetic payload with an HE and a PE sample per escaper body and one sample per other class renders exactly §10.11.4's colours, OS-candidate black"
   rulings:
   - R-443
   - R-449
+  - R-548
   milestone: M7
-  rq:
-  - RQ-321
-  note: "The escaping body is RQ-321's. R-449: the bodies are shown as body 1, 2, 3 through TASK-M2-33's one display conversion (REQ-GUI-188); chazy_escaper stays 0-based inside."
+  note: "The escaping body is chazy_escaper always (R-548, RQ-321); the legend counts where it differs from the event's escape detail (REQ-GUI-187). R-449: the bodies are shown as body 1, 2, 3 through TASK-M2-33's one display conversion (REQ-GUI-188); chazy_escaper stays 0-based inside."
 - id: REQ-COL-093
   area: COL
   statement: "The escaper-by-mass-rank stain must be the escaper map with hue by the escaper's mass rank instead of its label, read from the `ICDescriptor`'s masses at each sample: HE lightest, middle, heaviest `#E58870`, `#69BA7C`, `#80A3F0`, PE `#A24B36`, `#287C42`, `#4665AE` (§10.11.4's columns re-indexed by rank), falling back to the label escaper map where the escaper's rank is undefined (REQ-COL-095)."
@@ -14277,15 +14291,16 @@
     section: 12.3 One body at a time (R-443)
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: unit test
     detail: "mass rank (drill-down §12.3 item 4): on a fixture with distinct masses the rank map equals the label map composed with the rank permutation, pixel for pixel; on an equal-mass fixture it equals the label map exactly and the fallback flag is set"
   rulings:
   - R-443
+  - R-548
   milestone: M7
-  rq:
-  - RQ-321
-  note: "The escaping body is chazy_escaper as the block gives it; whether it is the event's escape detail where the run has an escape event is RQ-321."
+  note: "The escaping body is chazy_escaper always (R-548, RQ-321); the legend counts where it differs from the event's escape detail (REQ-GUI-187)."
 - id: REQ-COL-094
   area: COL
   statement: "The lightest-body and heaviest-body lenses must be the body lens with k the body of that mass rank at each sample, from the `ICDescriptor`'s masses, falling back to the label view where that rank is undefined (REQ-COL-095, REQ-COL-096)."
@@ -14373,15 +14388,16 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: review checklist
-    detail: "the proposal gives the palette with REQ-COL-097's measurements; evidence: the block's 0.084 (HE / PE, kept so the meaning carries), #4158BD clearing all by ≥ 0.177, the replaced #6C8EBF at 0.076 from the grey; the human confirms at the M7 gate, deciding RQ-322"
+    detail: "the proposal gives the palette with REQ-COL-097's measurements; evidence: the block's 0.084 (HE / PE, kept so the meaning carries), #4158BD clearing all by ≥ 0.177, the replaced #6C8EBF at 0.076 from the grey; the human confirms at the M7 gate, the grey #8A8A90 kept, near-neutral (R-548, RQ-322)"
   rulings:
   - R-71
   - R-443
+  - R-548
   milestone: M7
-  rq:
-  - RQ-322
 - id: REQ-COL-099
   area: COL
   kind: calibration
@@ -14399,15 +14415,16 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: review checklist
-    detail: "the proposal gives the palette with REQ-COL-097's measurements; evidence: the block's 0.102 at its closest (body 1 hyperbolic / collision, a 0.001 margin over τ) and §10.11.6's measured maps; the human confirms at the M7 gate, deciding RQ-322"
+    detail: "the proposal gives the palette with REQ-COL-097's measurements; evidence: the block's 0.102 at its closest (body 1 hyperbolic / collision, a 0.001 margin over τ) and §10.11.6's measured maps; the human confirms at the M7 gate, the grey #8A8A90 kept (R-548, RQ-322)"
   rulings:
   - R-71
   - R-443
+  - R-548
   milestone: M7
-  rq:
-  - RQ-322
 - id: REQ-COL-100
   area: COL
   kind: calibration
@@ -14584,10 +14601,9 @@
   - R-71
   - R-442
   - R-545
+  - R-548
   milestone: M7
-  rq:
-  - RQ-320
-  note: "Moved from REQ-COL-087 in the PR #223 review: R-71 has the value proposed by the task that needs it, and TASK-M7-40 builds the views. Where the comparison lives is RQ-320. R-545 (21 Oct 2026, RQ-310): the \"when it was decided\" view is offline only in v1, so no latch is stored; its lightness by time is still calibrated here."
+  note: "Moved from REQ-COL-087 in the PR #223 review: R-71 has the value proposed by the task that needs it, and TASK-M7-40 builds the views. The comparison is a render-side previous-class texture (R-548, RQ-320); the latch's storage is RQ-310."
 - id: REQ-COL-107
   area: COL
   kind: definition
@@ -16340,7 +16356,7 @@
   note: "R-390: closed by TASK-M6-24 on the mock engine (moved from TASK-M8-05, which re-runs its acceptance on the real engine and depends on TASK-M6-24)"
 - id: REQ-GUI-076
   area: GUI
-  statement: "The dev GUI must not include Chazy subtitles or the object-based stain desk, and its Stain mode must be the plain node-graph editor."
+  statement: "The dev GUI must not include Chazy subtitles (captions over the figure) or the object-based stain desk, and its Stain mode must be the plain node-graph editor; the ban does not cover the Chazy fields, stains or legends (R-548)."
   source:
   - file: docs/gui/principia_render_gui_spec.md
     section: G1. Rules that hold everywhere
@@ -16348,11 +16364,15 @@
     section: Rules that hold everywhere
   - file: docs/gui/design/GUI_DESIGN_NOTES.md
     section: 02 Stain — the plain node-graph editor
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: review checklist
-    detail: "no Chazy subtitle or stain-desk code path exists; Stain mode opens the Part II graph editor"
-  rulings: []
+    detail: "no Chazy subtitle code path exists; no stain-desk code path exists; Stain mode opens the Part II graph editor"
+  rulings:
+  - R-548
   milestone: M8
+  note: "R-548 (RQ-312, options (a) and (b)): the ban covers captions naming the final-motion class over the figure, and not the Chazy fields, stains or legends."
 - id: REQ-GUI-077
   area: GUI
   statement: "Each control must know whether its field is sim key (re-integrates) or render key (live) and warn per field from the caching blast-radius table, not from the struct the field lives in."
@@ -18308,7 +18328,7 @@
   note: "R-409 A4; proposed by TASK-M6-31, the first task to need it, and used provisionally until the human confirms it at the M8 gate (R-182). R-409's follow-up answer (F3): Shift ×10 and Alt ×0.1 apply to it, as everywhere; it stays a calibration (conflict 5)."
 - id: REQ-GUI-185
   area: GUI
-  statement: "The Chazy stains' legends must be generated from the stain (render GUI spec §G6) with each class's share of the view, titled with the playhead (\"Final motion (as of t = …)\"), B labelled \"bound, or nobody has left yet\" in every final-motion legend (the seven classes, the four families' bound, Okabe–Ito), the status legend naming the working states in full, and each stain with the energy channel (seven classes × energy, structure × energy) carrying §G6's separate bar for what brightness encodes: `q` through b = q/(1 + q), parabolic marked at ½."
+  statement: "The Chazy stains' legends must be generated from the stain (render GUI spec §G6) with each class's share of the view, titled with the playhead (\"Final motion (as of t = …)\"), B labelled \"bound, or nobody has left yet\" in every final-motion legend (the seven classes, the four families' bound, Okabe–Ito), the status legend naming the working states in full, its help marking OS-candidate and B-stable provisional (OS-candidate unvalidated, B-stable never fired on random starts), the final-motion and status legends' help saying that the Chazy class and the event stain's escape can differ at a pixel, and each stain with the energy channel (seven classes × energy, structure × energy) carrying §G6's separate bar for what brightness encodes: `q` through b = q/(1 + q), parabolic marked at ½."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.10 Legends
@@ -18316,38 +18336,38 @@
     section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: GUI screenshot
-    detail: "`cargo xtask screenshot chazy-legend`: the seven-class, four-family, Okabe–Ito, status, seven-class × energy and structure × energy stains' legends against 06_legend.png's layout: the title carries t, B's label in each final-motion legend, shares summing to 1, the status legend's full names, the energy stains' brightness bar for q with parabolic at ½; the legend keys equal the stain's output (REQ-GUI-105)"
+    detail: "`cargo xtask screenshot chazy-legend`: the seven-class, four-family, Okabe–Ito, status, seven-class × energy and structure × energy stains' legends against 06_legend.png's layout: the title carries t, B's label in each final-motion legend, shares summing to 1, the status legend's full names and its help marking OS-candidate and B-stable provisional, the final-motion and status legends' help on the class and the escape event differing, the energy stains' brightness bar for q with parabolic at ½; the legend keys equal the stain's output (REQ-GUI-105)"
   rulings:
   - R-442
+  - R-548
   milestone: M8
-  rq:
-  - RQ-312
-  - RQ-315
-  note: "Whether OS-candidate and B-stable are marked provisional in the legend help is RQ-315. Whether REQ-GUI-076's ban on \"Chazy subtitles\" covers these legends is RQ-312."
+  note: "R-548: OS-candidate and B-stable ship marked provisional (RQ-315, option (a)); the help on the class and the escape event is RQ-313's (a); REQ-GUI-076's ban covers captions over the figure only, not these legends (RQ-312)."
 - id: REQ-GUI-186
   area: GUI
-  statement: "The view must offer the body lens for k = 0, 1, 2 as three small panels side by side at one playhead, titled body 1, 2, 3, a layout over the body lens, not a new stain."
+  statement: "The body lens for k = 0, 1, 2 must be one figure: the view's canvas split into three small panels side by side, each the body lens at its own k, all drawn from one payload at one playhead, titled body 1, 2, 3, a GUI layout with no new stain or node."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.11.3 All three bodies
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: GUI screenshot
     detail: "`cargo xtask screenshot chazy-three-bodies`: three panels at one playhead titled body 1, 2, 3, each equal pixel for pixel to the body lens rendered alone at its k at the panel's size, chart and playhead"
   rulings:
   - R-443
   - R-449
+  - R-548
   milestone: M8
-  rq:
-  - RQ-312
-  - RQ-323
-  note: "Where the panels live is RQ-323; its options (b) and (c), which defer or drop this requirement, are the human's. R-449: the titles body 1, 2, 3 come from TASK-M2-33's one display conversion (REQ-GUI-188); k stays 0-based inside."
+  note: "R-548 (RQ-323, option (a)): one figure, not the v2 side by side. R-449: the titles body 1, 2, 3 come from TASK-M2-33's one display conversion (REQ-GUI-188); k stays 0-based inside."
 - id: REQ-GUI-187
   area: GUI
-  statement: "The one-body stains' legends must be generated from the stain (render GUI spec §G6) with each role's share of the view and the playhead in the title: the body lens names its body as body 1, 2 or 3 (never a 0-based index), the escaper map its bodies as body 1, 2, 3, the rank views their ranks; the bound row reads \"bound, or nobody has left yet\"; the body lens with energy shows its roles in their flat §10.11.1 colours with a separate bar for `q_k` (b = q/(1 + q), parabolic at ½) and says that its grey and black roles draw alike at equal q_k; where a rank view fell back to the label view the legend says so, and on an equal-mass chart it says the rank view is the label view rather than draw a rank."
+  statement: "The one-body stains' legends must be generated from the stain (render GUI spec §G6) with each role's share of the view and the playhead in the title: the body lens names its body as body 1, 2 or 3 (never a 0-based index), the escaper map its bodies as body 1, 2, 3, the rank views their ranks; the bound row reads \"bound, or nobody has left yet\"; the body lens with energy shows its roles in their flat §10.11.1 colours with a separate bar for `q_k` (b = q/(1 + q), parabolic at ½) and says that its grey and black roles draw alike at equal q_k; where a rank view fell back to the label view the legend says so, and on an equal-mass chart it says the rank view is the label view rather than draw a rank; and every one-body legend whose view reads `chazy_escaper` counts the pixels where it names a different body from the event's escape detail, a triple ejection counting as different from every body (R-548)."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 10.11.5 By mass instead of by label
@@ -18357,16 +18377,17 @@
     section: "G6. Legend — generated by evaluating the stain (`06_legend.png`)"
   - file: decisions.md
     section: "R-443 — The one-body views of the Chazy stains are added as stains: the lens body is a stain parameter, and mass rank is offered alongside label, with a tie fallback"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: GUI screenshot
-    detail: "`cargo xtask screenshot chazy-one-body-legend`: the body lens, body lens with energy, escaper map and rank views' legends against 06_legend.png's layout; the title carries t and the lens body as body 1, 2 or 3, and no legend reads body 0; the bound row's label; the energy lens's flat role key, q_k bar and note; shares sum to 1; on an equal-mass preset the rank legends read as label views; on a one-tied-pair fixture the fallback note appears; the keys equal the stain's output (REQ-GUI-105)"
+    detail: "`cargo xtask screenshot chazy-one-body-legend`: the body lens, body lens with energy, escaper map and rank views' legends against 06_legend.png's layout; the title carries t and the lens body as body 1, 2 or 3, and no legend reads body 0; the bound row's label; the energy lens's flat role key, q_k bar and note; shares sum to 1; on an equal-mass preset the rank legends read as label views; on a one-tied-pair fixture the fallback note appears; on a fixture where chazy_escaper and the event's escape detail name different bodies the legends that read chazy_escaper count exactly those pixels; the keys equal the stain's output (REQ-GUI-105)"
   rulings:
   - R-443
   - R-449
+  - R-548
   milestone: M8
-  rq:
-  - RQ-312
-  note: "R-449: every body name these legends show comes from TASK-M2-33's one display conversion (REQ-GUI-188)."
+  note: "R-449: every body name these legends show comes from TASK-M2-33's one display conversion (REQ-GUI-188). R-548 (RQ-321, option (c)): the views read chazy_escaper always, and the count shows where the event names a different body."
 - id: REQ-GUI-188
   area: GUI
   statement: "Every name a person reads for a body, a pair or an outcome event — legends, GUI labels, stain and preset names, tooltips, the Inspector, the dev GUI's legends, figure and export captions — must come from one conversion module (R-449; payload §2, \"What a person reads\"): a function of (state, detail) returning the display string, body k shown as body k + 1 and a pair by its two bodies 1-based, smaller first, never by its pair id (pair 2 \"collision 1–2\", pair 1 \"collision 1–3\", pair 0 \"collision 2–3\"; escape of body k \"escape body k + 1\"; collision detail 3 \"triple collision\"; escape detail 3 \"triple ejection\"; bounded, running, sim_failed and decode_failed with their failure category and a reserved state code by their payload §2 names), and the body and pair names it is built from, which dmin_pair's legend, the Inspector's per-body readouts, the ternary masses' legend, the k = 6 direction-cosine view's legend and the shape sphere's collision landmarks use; the module must also give the outcome palette's class names (colour_composition §1.4), which the outcome legend and swatch labels take: the black class \"bounded / nothing yet\" and each of the other eight as the function names its state and detail; the function must be exhaustive over every state and detail value, so that a new state or detail code fails to build until it has a display name."
@@ -27085,7 +27106,7 @@
   note: "Registered per R-369 (physics review 5484220393 of PR #196, F3), as REQ-TOOL-156 was for RQ-236: no doc defines the edge map REQ-VAL-012's verify compares."
 - id: REQ-VAL-183
   area: VAL
-  statement: "The Chazy class's CPU-f64 against GPU-f32 disagreement must be measured and reported on a gallery chart, not asserted zero: the fraction of samples whose class differs, with every differing sample checked to lie within the band of a sign change of a two-body energy or a K/U band edge."
+  statement: "The Chazy class's CPU-f64 against GPU-f32 disagreement must be measured and reported on a gallery chart, not asserted: `chazy_class` is a label on a real trajectory under the parity contract's scope table (R-548), and the gate is the fraction of samples whose class differs, reported with no threshold, with every differing sample checked to lie within the band of a sign change of a two-body energy or a K/U band edge."
   source:
   - file: docs/design/principia_dd_chazy_final_motion.md
     section: 8. Parity
@@ -27097,15 +27118,18 @@
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
   - file: docs/contracts/principia_parity_contract.md
     section: "Tier N — tight numerical (checkable because nothing amplifies)"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
+  - file: docs/contracts/principia_parity_contract.md
+    section: "Tier B — integer-exact *given the same branch decisions* (integer & packed fields)"
   verify:
     method: numerical gate
-    detail: "`cargo xtask gate chazy-parity` (drill-down §12.2 item 8): on a gallery chart at several playheads, prints the disagreement fraction over samples and fails if a differing sample is not within the band of a sign change; the threshold on the fraction is set as RQ-314 settles"
+    detail: "`cargo xtask gate chazy-parity` (drill-down §12.2 item 8): on a gallery chart at several playheads, prints the disagreement fraction over samples and fails if a differing sample is not within the band of a sign change; the fraction has no threshold (R-548, RQ-314)"
   rulings:
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-314
-  note: How a label fits the parity tiers is RQ-314.
+  note: "R-548 (RQ-314, option (a)): the class is reported, not asserted; the measured rate and the band check are the gate. A differing sample near a K/U band edge reads as the marginal label; near a pair's binding sign it does not (drill-down §8)."
 - id: REQ-VAL-184
   area: VAL
   statement: "The Fewbody reference test (Fregeau et al. 2004 §3.3.5, specialised to three bodies, the drill-down's §3.7) and its Mardling–Aarseth and Kepler helpers must be ported into the validation crate as the classifier's reference, never as a candidate."
@@ -27134,15 +27158,16 @@
     section: 12.2 New, for Principia
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: property test
     detail: "energy certificates (drill-down §12.2 item 4): a free-fall chart and an E > 0 chart classified at t = 10, 50, 200 and the horizon on CPU-f64; the forbidden labels count zero; control: a fixture with the energy sign flipped reaches a forbidden label"
   rulings:
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-325
-  note: "The E > 0 half and \"no transient\" hold by the rule's order; the E < 0 half (no H, HP or P) is not enforced by classify, so whether it is asserted or reported as an empirical physics result is RQ-325 (drill-down §2)."
+  note: "Both halves hold by the rule as R-548 rules it: the E > 0 half and no transient by its order, the E < 0 half (no H, HP or P) by its E ≥ 0 guard (RQ-325, option (b)); a forbidden label is a bug, not a physics result."
 - id: REQ-VAL-186
   area: VAL
   statement: "The Burrau ICs run to a horizon past their escape must end HE, with no H, HP or P at any playhead (E < 0)."
@@ -27153,15 +27178,16 @@
     section: 2. Chazy's classes
   - file: decisions.md
     section: "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+  - file: decisions.md
+    section: "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
   verify:
     method: numerical gate
     detail: "Burrau smoke test (drill-down §12.2 item 1): `cargo xtask gate chazy-burrau` runs the Burrau ICs in the validation harness, past the production loop's escape stop on its post-escape march (R-103), at the pinned r_coll, which it records (REQ-VAL-049), and classifies every step to its horizon; the last label is HE and no step reads H, HP or P; a run that ends in collision at that r_coll fails the gate and is reported"
   rulings:
   - R-442
+  - R-548
   milestone: M7
-  rq:
-  - RQ-325
-  note: "No H, HP or P on E < 0 is not enforced by classify (RQ-325): the dispersal step cannot fire for Burrau, but the two-stage H is not excluded."
+  note: "No H, HP or P on E < 0 is enforced by the rule's E ≥ 0 guard (R-548, RQ-325), so a step reading one fails the gate."
 - id: REQ-VAL-187
   area: VAL
   statement: "The Chazy classifier must pass the live-playhead test: classifying a run at playhead t, then continuing the run, never changes the label already given at t."

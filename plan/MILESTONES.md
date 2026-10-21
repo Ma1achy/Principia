@@ -348,13 +348,14 @@ contract §7, "What this contract does *not* cover"). So it builds on a working 
 - **Before the M7 gate (R-385):** the hybrid embedding (`k = 25`) re-measured on real rendered figures, and
   §5's ~8 % reconciled with the 37.6 % raw low-bit error measured on random canvases (REQ-TOOL-151, TASK-M7-34).
 - **Chazy final motion (R-442):** the classifier, its derived fields and its stains (`principia_dd_chazy_final_motion.md`;
-  TASK-M7-35 to TASK-M7-40), after the M3 event tasks and the M7 backbone tasks they use (RQ-316). Its calibrations
-  (ε, `h_far`, `os_ratio`, settling, `I_max`'s quantisation, the palettes, the energy lightness range and `q`'s
-  compaction) are confirmed at this gate; the human decides RQ-311 (the default palette) there. Requirements waiting on
-  RQ-311, RQ-313, RQ-314, RQ-317 to RQ-320 hold the gate until those are ruled (RQ-310 ruled by R-545).
+  TASK-M7-35 to TASK-M7-40), after the M3 event tasks and the M7 backbone tasks they use (RQ-316, as R-548 confirms).
+  Its calibrations (ε, `h_far`, `os_ratio`, settling, `I_max`'s quantisation, the palettes, the energy lightness range
+  and `q`'s compaction) are confirmed at this gate, the seven-class palette staying the default (R-548, RQ-311). The
+  Chazy entries are ruled (RQ-311 to RQ-318 and RQ-320 to RQ-325 by R-548, RQ-319 by R-467, RQ-310 by R-545); RQ-521
+  stays open, holding REQ-PAY-099's one clause and so the gate until it is ruled.
   The one-body views (R-443; TASK-M7-41, with `chazy_escaper` and `chazy_qk` in TASK-M7-36): their palettes and the
-  mass tie tolerance are confirmed at this gate too; the human decides RQ-321 (the escaper definition) and RQ-322 (the
-  grey `#8A8A90`) before it.
+  mass tie tolerance are confirmed at this gate too; the escaping body is `chazy_escaper` (R-548, RQ-321) and the grey
+  `#8A8A90` stays, near-neutral (R-548, RQ-322).
 
 <!-- gate:M7 -->
 **Exit gate — 218 requirements** (and every earlier gate still green):
@@ -385,7 +386,7 @@ canonical_spec §11: "build the browser product on top".
 - The browser build: wasm engine worker, `OffscreenCanvas`, and the two membranes.
 - The non-Metal parity run: the standing pre-Paper-2 action (canonical_spec §11).
 - The Chazy legends (R-442; TASK-M8-45), on the generated legend.
-  With R-443's one-body legends and the three-body panels (RQ-323).
+  With R-443's one-body legends and the three-body panels, one figure split into three (R-548, RQ-323).
 
 <!-- gate:M8 -->
 **Exit gate — 330 requirements** (and every earlier gate still green):

@@ -36,6 +36,7 @@ gate (R-71).
 - `docs/design/principia_colour_composition.md` § "4.1 Backbone & `Option` occupants"
 - `docs/design/principia_dd_colouring.md` § "3.8 Palettes and CVD"
 - `decisions.md` § "R-442 — Chazy final motion is a separate system with its own stains: hue carries the class, B is black `#141418` and one class, collision is magenta `#DA85B6`, transient draws as B, the working states have their own status map, and the seven-class palette is the default"
+- `decisions.md` § "R-548 — The Chazy entries ruled: the seven-class palette stays the default; the subtitle ban covers captions over the figure only; the class freezes at escape fire and may differ from the escape event, the legend saying so; the class is a label, reported, not asserted; OS-candidate and B-stable ship marked provisional; B `#141418` and the grey `#8A8A90` are near-neutral, held to chroma ≤ 0.009; the rule keeps transient before B-stable, puts B-stable before excursion and lets H, HP, P and the two-stage H fire only at E ≥ 0; a render-side previous-class texture; the one-body views read `chazy_escaper`; the three panels are one figure *(closes RQ-311 to RQ-318 and RQ-320 to RQ-325)*"
 - `decisions.md` § "R-511 — A `decode_failed` sample the chart does not classify as not a system draws blank in a presentation view, as a not-a-system pixel, the forbidden-region overlay drawing over it too; `sim_failed` keeps `#141418` *(closes RQ-379; amends R-467 and R-470)*"
 
 ## Deliverables
@@ -59,12 +60,14 @@ gate (R-71).
 - `cargo test -p render chazy_rank` — greyscale mode gives `chazy_final`'s class `r` the lightness `(r + ½)/8` and hue mode `t = r/8`, in the order B, OS, PE, HE, P, HP, H, collision (REQ-COL-084).
 - Review (physics): the drill-down's §10.9 gives the ranks and K of `chazy_class`, `chazy_status` and `chazy_structure`, consistent with colour_composition §4.1, and their greyscale and hue renders use them (REQ-COL-085).
 - `cargo test -p render chazy_palette_separation` — prints each palette's tightest pair and tightest style distance unsimulated and under each simulation; status (0.114, 0.111) and four-family (0.110, 0.137) clear τ = 0.101 unsimulated; seven-class asserts H / HP 0.083 and §11.2.1's simulated values, Okabe–Ito asserts P / collision 0.041 unsimulated and under each simulation, the structure hues their §11.2.1 values, and every entry of each is ≥ τ from the styles unsimulated (0.137, 0.121, 0.137); `cvd_hatch_distinct` passes with the Chazy palettes added (REQ-COL-086).
-- Review (gui): the palettes' proposal (seven-class, four families, Okabe–Ito, structure hues, status) with REQ-COL-086's measurements, Okabe–Ito's 0.041 P / collision among them, confirmed by the human at the M7 gate, deciding RQ-311 (REQ-COL-087).
+- Review (gui): the palettes' proposal (seven-class, four families, Okabe–Ito, structure hues, status) with REQ-COL-086's measurements, Okabe–Ito's 0.041 P / collision among them, confirmed by the human at the M7 gate, the seven-class palette the default (R-548, RQ-311) (REQ-COL-087).
 
 ## Notes
-- R-442: the seven-class palette is the default; whether it stays below τ or moves to Okabe–Ito (whose P sits 0.041
-  from collision) is RQ-311, for the human at the gate. REQ-COL-087 waits on it and on RQ-317 (B's chroma); this task
-  builds R-442's default meanwhile.
+- R-442: the seven-class palette is the default, and R-548 keeps it, below τ within itself, its shortfall asserted by
+  REQ-COL-086, Okabe–Ito a preset one click away (RQ-311, option (a)); B stays `#141418`, near-neutral (RQ-317).
+  REQ-COL-087 no longer waits. *Was:* "whether it stays below τ or moves to Okabe–Ito (whose P sits 0.041 from
+  collision) is RQ-311, for the human at the gate. REQ-COL-087 waits on it and on RQ-317 (B's chroma); this task builds
+  R-442's default meanwhile."
 - The time views' dimming and lightness by time are REQ-COL-106, TASK-M7-40's, not this task's (R-71: proposed by the
   task that needs them).
 - R-467 (20 Oct 2026) rules RQ-319 and replaces the note below: every failure and non-finite value draws `#141418`,
