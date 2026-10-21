@@ -110,9 +110,16 @@ pub trait IeeeBits: Real + crate::chart::invariant::WarpReal {
     /// `hh + ((hl + lh) + ll)`, within an ulp or so of `self·b`. At f64, the CPU's alone, where Rust never contracts,
     /// it is `self·b`.
     fn product(self, b: Self) -> Self;
+
+    /// `1/φ = (√5 − 1)/2`, the golden section's ratio, correctly rounded and formed from its bits (`0x3F1E_377A` at
+    /// f32, `0x3FE3_C6EF_372F_E950` at f64), so every backend holds the same value and no runtime `sqrt` forms it
+    /// (gpu_determinism_note § "The discipline"): `crate::encode::curve::nearest`'s step.
+    const INV_PHI: Self;
 }
 
 impl IeeeBits for f32 {
+    const INV_PHI: f32 = f32::from_bits(0x3F1E_377A);
+
     #[inline]
     fn or_pos_inf(self, c: bool) -> f32 {
         let bits = self.to_bits();
@@ -150,6 +157,8 @@ impl IeeeBits for f32 {
 }
 
 impl IeeeBits for f64 {
+    const INV_PHI: f64 = f64::from_bits(0x3FE3_C6EF_372F_E950);
+
     #[inline]
     fn or_pos_inf(self, c: bool) -> f64 {
         let bits = self.to_bits();

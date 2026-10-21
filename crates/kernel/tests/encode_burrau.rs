@@ -23,7 +23,8 @@
 //!   point through `by_kind::encode_into_within` at the curve tolerance, `encode_into` being it at `tol = 0`; past the
 //!   curve axis's edge the axis places nothing.
 //! - `encode_curve_primitives`: each comparison and select at its boundary: the square's floor, the bounded axis's
-//!   edges, the search's edges and its NaN start, the span test, the fold's isosceles tie, and the flat guards.
+//!   edges, the search's edges and its NaN start, the span test, the fold's isosceles tie, and the flat guards; and the
+//!   search's golden ratio, correctly rounded at both widths.
 //!
 //! **Tolerances** (applied per R-369, test decisions): the round trips are held to `ε_phys` (REQ-ENC-024, proposed by
 //! the `encode-eps-phys` gate, provisional until the M2 gate) in inverse-encode Part 4's `‖·‖_phys`
@@ -52,6 +53,7 @@ use kernel::encode::curve::{
 };
 use kernel::encode::{encode, Encoded};
 use kernel::generated::links::Defaults;
+use kernel::real::IeeeBits;
 use kernel::shape::shape;
 use validation::decode_f32_eps::SplitMix;
 use validation::gauge::{uniform, Gauge};
@@ -964,10 +966,34 @@ fn check_floor<R: Precision + Below>(expected: f64) {
     assert!(sq(R::of(3.0)) == R::of(9.0), "sq(3) is not 9");
 }
 
+/// `M·2^-bits`, `M` an integer, is `(√5 − 1)/2` correctly rounded: `(M ∓ ½)·2^-bits` brackets the root of
+/// `x² + x − 1`, in exact integer arithmetic, `x = m·2^-(bits + 1)` scaled by `2^(2·bits + 2)`.
+fn rounds_golden(m: i128, bits: u32) -> bool {
+    let p = |k: i128| k * k + k * (1i128 << (bits + 1)) - (1i128 << (2 * bits + 2));
+    p(2 * m - 1) < 0 && p(2 * m + 1) > 0
+}
+
 #[test]
 fn encode_curve_primitives() {
     check_floor::<f32>(2f64.powi(-31));
     check_floor::<f64>(2f64.powi(-255));
+
+    // The golden ratio on [½, 1): the significand over 2^24 at f32 and over 2^53 at f64.
+    let g32 = <f32 as IeeeBits>::INV_PHI;
+    let g64 = <f64 as IeeeBits>::INV_PHI;
+    assert!((0.5..1.0).contains(&g32) && (0.5..1.0).contains(&g64));
+    assert!(rounds_golden(
+        i128::from(g32.to_bits() & 0x7F_FFFF | 0x80_0000),
+        24
+    ));
+    assert!(rounds_golden(
+        i128::from(g64.to_bits() & 0xF_FFFF_FFFF_FFFF | 1 << 52),
+        53
+    ));
+    assert!(!rounds_golden(
+        i128::from(g64.to_bits() & 0xF_FFFF_FFFF_FFFF | 1 << 52) + 1,
+        53
+    ));
 
     // The bounded axis: [0, 1] placed, its edges included; one float past either edge not.
     assert_eq!(bounded(0.0f64), Coord::At(0.0));

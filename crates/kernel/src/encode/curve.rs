@@ -56,11 +56,16 @@
 //! square is `IeeeBits::product`, and the squares are added in one fixed order. No `fma` is written. They are: the
 //! search's `f < best` and the golden step's `f(c) < f(d)`; the landings' `d² ≤ tol²`, `tol² = product(tol, tol)`;
 //! [`ClosedForm::past_fold`]'s `a² > b²`; and the δm strip's guard, `‖m_t − m_B‖²` against 0. The other comparisons
-//! read a value directly, with no arithmetic between: the span test on `ν(θ)`, the grid's last point and the edge flag
-//! (`ν* = lo` or `hi`, exact), and `Φ_θ,L_z`'s band width against 0, which is 0 exactly where `K` or `λ_L` is. The
-//! values the distances are formed from are the decode's own (the embed's divisions, the weighting's `sqrt`) and `C`'s,
-//! which a backend rounds within its own bounds; two backends can differ on a comparison only where the two distances
-//! lie within those roundings of each other.
+//! read a value directly, with no arithmetic between: the span test on `ν(θ)`, the grid's last point, the edge flag
+//! (`ν* = lo` or `hi`, exact) and [`curve_axis`]'s `ν*` against the axis's ends, and `Φ_θ,L_z`'s band width against
+//! 0, which is 0 exactly where `K` or `λ_L` is. The search's points are formed alike on every backend: the golden
+//! ratio `g = (√5 − 1)/2` is `IeeeBits::INV_PHI`, correctly rounded and formed from its bits, not a runtime `sqrt`;
+//! the grid's `1/64` is `2⁻⁶` from its bits (`IeeeBits::pow2`), so `(hi − lo)·2⁻⁶` and `k·2⁻⁶` are exact (a power of
+//! two scales without rounding where the result is normal, and no division, which WGSL does not round correctly, is
+//! formed); each point is then a product in `IeeeBits::product`'s form and a lone add or subtraction. The values the
+//! distances are formed from are the decode's own (the embed's divisions, the weighting's `sqrt`) and `C`'s, which a
+//! backend rounds within its own bounds; two backends can differ on a comparison only where the two distances lie
+//! within those roundings of each other.
 
 use spirv_std::num_traits::Float;
 
@@ -84,8 +89,12 @@ fn select<T: Copy>(c: bool, t: T, f: T) -> T {
     }
 }
 
+/// The search's grid is `2^GRID_LOG2` cells, so its spacing is the span times a power of two, exact (the module's
+/// note).
+pub const GRID_LOG2: i32 = 6;
+
 /// The search's grid: `GRID` cells, `GRID + 1` points, the span's edges included.
-pub const GRID: u32 = 64;
+pub const GRID: u32 = 1 << GRID_LOG2;
 
 /// The golden-section steps inside the best grid point's two cells: each shrinks the bracket by the golden ratio, so
 /// 80 take a width of `2/64` below `10⁻¹⁷`, past f64's resolution on `(0, 1)`.
@@ -235,8 +244,10 @@ pub fn nearest<R: LinkReal + IeeeBits>(x: &Point<R>, span: [R; 2]) -> Projection
     for _ in 0..GRID {
         cells = cells + one;
     }
-    let h = (hi - lo) / cells;
-    let at = |k: R| select(k == cells, hi, lo + (hi - lo).product(k / cells));
+    let step = R::pow2(-GRID_LOG2);
+    let width = hi - lo;
+    let h = width.product(step);
+    let at = |k: R| select(k == cells, hi, lo + width.product(k.product(step)));
     let mut best = (lo, curve_distance2(x, lo));
     let mut k = R::zero();
     for _ in 0..GRID {
@@ -247,8 +258,7 @@ pub fn nearest<R: LinkReal + IeeeBits>(x: &Point<R>, span: [R; 2]) -> Projection
     let grid = best;
     let mut a = Float::max(lo, grid.0 - h);
     let mut b = Float::min(hi, grid.0 + h);
-    let two = one + one;
-    let g = (Float::sqrt(two + two + one) - one) / two;
+    let g = R::INV_PHI;
     let mut c = b - g.product(b - a);
     let mut d = a + g.product(b - a);
     let mut fc = curve_distance2(x, c);
