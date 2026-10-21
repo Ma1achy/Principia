@@ -3154,7 +3154,7 @@ Nothing is ruled.*
   - (b) Debug only: offered in the debug views, not in the node's inspector.
 - **Applied meanwhile:** (a), the code. REQ-COL-116 keeps the draft's words, its note citing this entry.
 
-## RQ-508: The human's ruling on RQ-472 keeps the equator fold on a tilted shape sphere view where `N_b = 0`, where R-544 has no folding of any kind on the shape sphere chart *(conflict: the human's batch ruling against the human's later ruling; R-544, R-537 EX7(b), RQ-472; REQ-CHART-062, REQ-SCHED-101, REQ-GUI-278; context: TASK-M2-36, TASK-M8-56, TASK-M8-58)*
+## RQ-508: The human's ruling on RQ-472 keeps the equator fold on a tilted shape sphere view where `N_b = 0`, where R-544 has no folding of any kind on the shape sphere chart *(conflict: the human's batch ruling against the human's later ruling; R-544, R-537 EX7(b), RQ-472; REQ-CHART-062, REQ-SCHED-101, REQ-REF-054, REQ-CHART-079, REQ-GUI-278; context: TASK-M2-36, TASK-M8-56, TASK-M8-58)*
 
 *Found by R-544's port. Nothing is ruled.*
 
@@ -3183,5 +3183,6 @@ Nothing is ruled.*
 - **Applied meanwhile:** (a), R-544, the later ruling and the one that says "of any kind". chart_reference §3.3's
   tilted fold is replaced by R-544's one-to-one tilted view.
 - **Waits:** the tilted shape sphere's fold arm of REQ-CHART-062 (TASK-M2-36; the rest of the task does not wait),
-  and the tilted canonical maps of REQ-SCHED-101 (TASK-M8-56) and their trace images, REQ-GUI-278 (TASK-M8-58), which
-  already wait on RQ-472. Each carries `rq: RQ-508`.
+  and the tilted canonical maps of REQ-SCHED-101 (TASK-M8-56), with the neighbours and the statistics read through
+  them, REQ-REF-054 and REQ-CHART-079, and their trace images, REQ-GUI-278 (TASK-M8-58), which already wait on RQ-472.
+  Each carries `rq: RQ-508`.
