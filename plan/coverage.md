@@ -9,7 +9,7 @@
 | DEC | 48 |
 | ENC | 34 |
 | CHART | 82 |
-| INT | 103 |
+| INT | 105 |
 | EVT | 31 |
 | PAY | 106 |
 | GEN | 42 |
@@ -22,9 +22,9 @@
 | VAL | 192 |
 | PERF | 95 |
 | SYS | 84 |
-| **total** | **1710** |
+| **total** | **1712** |
 
-Of these: 143 calibration, 139 definition, 1428 obligation. Retired (kept for their ids, not counted): 12.
+Of these: 144 calibration, 139 definition, 1429 obligation. Retired (kept for their ids, not counted): 12.
 
 ## Requirements per milestone
 
@@ -33,7 +33,7 @@ Of these: 143 calibration, 139 definition, 1428 obligation. Retired (kept for th
 | M0 | 122 |
 | M1 | 108 |
 | M2 | 207 |
-| M3 | 217 |
+| M3 | 219 |
 | M4 | 106 |
 | M5 | 177 |
 | M6 | 220 |
@@ -42,7 +42,7 @@ Of these: 143 calibration, 139 definition, 1428 obligation. Retired (kept for th
 
 ## Sections
 
-1411 sections in 52 files: 1116 yield at least one requirement; 295 yield none and are listed below with the reason.
+1413 sections in 52 files: 1118 yield at least one requirement; 295 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |

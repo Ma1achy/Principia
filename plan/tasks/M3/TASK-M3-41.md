@@ -1,7 +1,7 @@
 # TASK-M3-41 — The regularised integration floor: the step budget as a rate, undetermined on exhaustion, the counted signals and the two energies' reading (R-563, R-564, R-566)
 
 - **Milestone:** M3
-- **Closes:** REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195
+- **Closes:** REQ-INT-101, REQ-INT-102, REQ-INT-103, REQ-VAL-195, REQ-INT-106
 - **Depends on:** TASK-M3-40
 - **Needs (earlier milestones):** none
 - **Reviewers:** code, qa, physics
@@ -36,8 +36,9 @@ Under a regularised occupant the integration floor is a step budget, not a subst
 - `cargo test -p kernel budget_rate` — REQ-INT-102's verify (REQ-INT-102).
 - `cargo xtask gate step-budget --propose` — the proposed rate with per-copy rates (p50, p99, max over copies) on `burrau_nu_k`, `latent_mixed_h3`, `config_stability` and the control `latent_shape` at `t = 13` and `t = 50`, clearing every copy; the human confirms it at the M3 gate and it is recorded in decisions.md (REQ-INT-103).
 - `cargo test -p kernel energy_named` — REQ-VAL-195's verify (REQ-VAL-195).
+- `cargo xtask gate suspect-default-occupant` — REQ-INT-106's verify: Heggie × RK4's regularised drift on dd tests 2 and 7 and the predicates it lights under REQ-INT-085's proposed thresholds, recorded beside REQ-INT-085's record; what it must light is RQ-528 (d) (REQ-INT-106).
 
 ## Notes
 - Waits on RQ-526 (how exhaustion and the counts are stored and drive the floor), RQ-527 (how the rate is accounted) and RQ-528 (where the regularised drift is stored and how an event-stopped run is drawn). Nothing here is built before they are ruled.
 - R-563, R-564, R-566 (21 Oct 2026). The evidence is prin-rs's `budget_horizon_probe` and `results/step_budget/` (PR #34; `docs/incoming/2026-10-21_gap_sweep_integrator/`, a record). `error_ratio` is blind to a truncated run, so the budget's outcome is read directly, never from drift.
-- Calibration proposed here (R-71): REQ-INT-103.
+- Calibration proposed here (R-71): REQ-INT-103. REQ-INT-106 extends REQ-INT-085's evidence to the default occupant (physics review 5605806092 of PR #277, F6); the separation floor and the entry-cap hit are each occupant's, integrator contract Part 6 (F3), with `TINY` REQ-INT-105's value.

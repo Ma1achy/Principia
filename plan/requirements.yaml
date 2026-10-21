@@ -3318,6 +3318,8 @@
     section: "Part 2b — Regularisation is a SECOND swappable axis, not a property of the stepper"
   - file: decisions.md
     section: "R-562 — Regularisation is v1, not v2: integrator contract Part 6's \"v2\" text and REQ-INT-033 are removed"
+  - file: decisions.md
+    section: "R-567 — The generalised (Störmer–Verlet) leapfrog's growth under Heggie is explained: it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`; Heggie × the generalised leapfrog is measured bad, with its warning, and stays allowed like every other pair *(amends R-561)*"
   verify:
     method: unit test
     detail: "every stepper × regularisation pair, `none` included, runs a step on a fixture state; the default config selects Heggie × RK4, with Eq. 22 at n = 3/2 as Heggie's time transformation and Eq. 20 selectable (R-161); controls: a default config of Heggie × KDK fails, and a config builder that refuses any pair fails"
@@ -3327,7 +3329,9 @@
   - R-560
   - R-561
   - R-562
+  - R-567
   milestone: M3
+  note: "R-567 (21 Oct 2026): the pair table's Heggie × generalised (Störmer–Verlet) leapfrog is measured bad, with its warning (integrator contract Part 2b, note 4); whether it is a selectable stepper is RQ-532, and meanwhile it is not built, so this test's pairs are Part 2's steppers."
 - id: REQ-INT-007
   area: INT
   statement: "Integration must use a fixed dt and a deterministic count-bound schedule (on a fixed tau-schedule for occupants that own their time mapping), never wall-clock, so the same spec re-renders the same result up to cross-backend f32 tolerance with branches exact."
@@ -3513,11 +3517,14 @@
     section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
   - file: decisions.md
     section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  - file: decisions.md
+    section: "R-567 — The generalised (Störmer–Verlet) leapfrog's growth under Heggie is explained: it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`; Heggie × the generalised leapfrog is measured bad, with its warning, and stays allowed like every other pair *(amends R-561)*"
   verify:
     method: unit test
-    detail: "every stepper × regularisation pair, `none` included, can be selected and runs; `none` is always available; the pairs the Part 2b table marks measured bad carry its warning and the others none; controls: a selection that blocks a measured-bad pair fails, and a measured-bad pair with no warning fails"
+    detail: "every stepper × regularisation pair, `none` included, can be selected and runs; `none` is always available; the pairs the Part 2b table marks measured bad carry its warning and the others none, the table's note 4 recording Heggie × the generalised (Störmer–Verlet) leapfrog measured bad with the warning \"does not keep Heggie's Eq. (9); the energy breaks once its residual reaches ~2e-2\" (R-567); controls: a selection that blocks a measured-bad pair fails, and a measured-bad pair with no warning fails"
   rulings:
   - R-561
+  - R-567
   milestone: M3
 - id: REQ-INT-018
   area: INT
@@ -4960,7 +4967,7 @@
   note: "R-538 TM9 (I8). Closed by TASK-M8-58. RQ-418 (a) applied meanwhile: sim_failed, the trace ending with \"?\". Physics review is required (⚑); it does not merge on the code reviewer's word alone."
 - id: REQ-INT-097
   area: INT
-  statement: "Every stepper × regularisation pair must be defined exactly, so its results reproduce: with regularisation `none` each stepper is dd_integrator §3.2's; under Aarseth–Zare and Heggie, whose Hamiltonians are not separable, KDK must be the explicit kick–drift–kick (kick p at (u, p), drift u and t at (u, p½), kick p at (u₁, p½)), a Yoshida step the same composition with dd §3.2's coefficients, and RK4 and Euler their classical forms on the whole state; under logH each pair is written with logH's equations; each composed occupant's profile is the pair's, not the stepper's row."
+  statement: "Every stepper × regularisation pair must be defined exactly, so its results reproduce: with regularisation `none` each stepper is dd_integrator §3.2's; under Aarseth–Zare and Heggie, whose Hamiltonians are not separable, KDK must be the explicit kick–drift–kick (kick p at (u, p), drift u and t at (u, p½), kick p at (u₁, p½)), a Yoshida step the same composition with dd §3.2's coefficients, taken in §3.2's drift order (w₁, w₀, w₁ for Yoshida-4; w₃, w₂, w₁, w₀, w₁, w₂, w₃ for Yoshida-6) with adjacent half-kicks not merged, three evaluations per sub-step, and RK4 and Euler their classical forms on the whole state; under logH each pair is written with logH's equations; each composed occupant's profile is the pair's, not the stepper's row."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
@@ -4968,11 +4975,11 @@
     section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
   verify:
     method: unit test
-    detail: "cargo test -p kernel pair_definitions: for each regularised pair, one step from a fixed fixture state equals bitwise the composition integrator contract Part 2b writes, evaluated term by term in the test; Heggie × KDK's fitted order on the figure-eight at fixed fictitious step is about 1 while Heggie × RK4's rounds to 4; the composed profile of Heggie × KDK reads symplectic false; controls: a KDK whose drift reads the derivative at (u, p) instead of (u, p½) differs from the written composition and fails, and a profile copied from KDK's Part 2 row (symplectic true) fails"
+    detail: "cargo test -p kernel pair_definitions: for each regularised pair, one step from a fixed fixture state equals bitwise the composition integrator contract Part 2b writes, evaluated term by term in the test; Heggie × KDK's fitted order on the figure-eight at fixed fictitious step is about 1 while Heggie × RK4's rounds to 4; the composed profile of Heggie × KDK reads symplectic false; controls: a KDK whose drift reads the derivative at (u, p) instead of (u, p½) differs from the written composition and fails, a profile copied from KDK's Part 2 row (symplectic true) fails, and a Yoshida step with its adjacent half-kicks merged (dd §3.2's kick sequence cᵢ) differs from the written composition under Heggie and fails"
   rulings:
   - R-561
   milestone: M3
-  note: R-561 (21 Oct 2026). Closed by TASK-M3-39.
+  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39. Physics review 5605806092 of PR #277, F5 (applied per R-369): the Yoshida pairs' sub-step order and unmerged half-kicks are stated."
 - id: REQ-INT-098
   area: INT
   statement: "The pair table of integrator contract Part 2b must mark every stepper × regularisation pair measured good, measured bad or not measured, with its evidence; every measured-bad pair must carry its warning text, stating what was measured, and no other pair a warning; a status must change only by a measurement recorded in the table, and the not-measured regularised pairs must be measured."
@@ -4981,13 +4988,16 @@
     section: "Every stepper × regularisation pair runs; the pairs measured not to work carry a warning (R-561)"
   - file: decisions.md
     section: "R-561 — Every stepper × regularisation pair is allowed, regularisation off included; a pair measured not to work carries a warning beside the selector, in the Problems panel and in each export's settings, and is still defined exactly so its results reproduce; a table marks each pair measured good, measured bad or not measured"
+  - file: decisions.md
+    section: "R-567 — The generalised (Störmer–Verlet) leapfrog's growth under Heggie is explained: it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`; Heggie × the generalised leapfrog is measured bad, with its warning, and stays allowed like every other pair *(amends R-561)*"
   verify:
     method: numerical gate
-    detail: "cargo xtask gate pair-table: re-runs the design's measurement (figure-eight, fixed fictitious step, no step control, both of Heggie's time transformations: order over a halving ladder, the regularised energy over 100 orbits) on every regularised pair, prints each pair's order and energy with its verdict under REQ-INT-099's criterion, and fails if the kernel's pair table differs from the measured verdicts or from integrator contract Part 2b's table; Heggie × RK4 must read good (order about 4, energy bounded) and Heggie × KDK bad (order about 1, diverging), the design's values; a verdict that changes a status is reported for the table and the review queue; controls: a table marking Heggie × KDK good fails, and a table with a measured-bad pair whose warning is empty fails"
+    detail: "cargo xtask gate pair-table: re-runs the design's measurement (figure-eight, fixed fictitious step, no step control: order over a halving ladder, the regularised energy over 100 orbits) on every built regularised pair, each under its regularisation's own time transformation(s) — Heggie's Eq. 20 and Eq. 22, Aarseth–Zare's, logH's logH and TTL modes — prints each pair's order and energy with its verdict under REQ-INT-099's criterion, and fails if the kernel's pair table differs from the measured verdicts or from integrator contract Part 2b's table; Heggie × RK4 must read good (order about 4, energy bounded) and Heggie × KDK bad (order about 1, diverging), the design's values; Aarseth–Zare × RK4, marked good by the port on Part 2a's collision passage, is re-measured by the criterion; the table's note 4, Heggie × the generalised leapfrog measured bad (R-567), is the design's measurement and is kept, not re-measured, while that stepper is not built (RQ-532); a verdict that changes a status is reported for the table and the review queue; controls: a table marking Heggie × KDK good fails, a table with a measured-bad pair whose warning is empty fails, and a table without note 4's warning fails"
   rulings:
   - R-561
+  - R-567
   milestone: M3
-  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39. The design's measurements are the gap sweep's (prin-rs heggie_stepper_probe, PR #34; docs/incoming/2026-10-21_gap_sweep_integrator/)."
+  note: "R-561 (21 Oct 2026). Closed by TASK-M3-39. The design's measurements are the gap sweep's (prin-rs heggie_stepper_probe, PR #34; docs/incoming/2026-10-21_gap_sweep_integrator/). Physics review 5605806092 of PR #277, F7 (applied per R-369): each regularisation's own time transformations, and Aarseth–Zare × RK4's status re-measured. R-567: note 4."
 - id: REQ-INT-099
   area: INT
   kind: definition
@@ -5026,7 +5036,7 @@
   note: "R-565 (21 Oct 2026). Closed by TASK-M3-40. Δ_sync's value is REQ-INT-080 (calibration); the frame loop's side is REQ-SCHED-103; the unregularised macro-step grid is RQ-524."
 - id: REQ-INT-101
   area: INT
-  statement: "Under a regularised occupant a copy that runs out of its step budget must end undetermined, never discarded and never given a physical outcome label, and the separation floor (a pair separation below the floor, the time transformation's denominator floored) and the steps held at the entry cap must be counted, non-terminal signals that never end the run; with regularisation off the substep machinery (N_sub, N_max, the saturated bit) is unchanged."
+  statement: "Under a regularised occupant a copy that runs out of its step budget must end undetermined, never discarded and never given a physical outcome label, and the separation floor (each occupant's, integrator contract Part 6: Heggie's any Rᵢ below TINY, Aarseth–Zare's A or B below TINY, logH's drift denominator below TINY or a denominator not positive) and the entry-cap hits (a per-step size asking for more than the interval's entry size, before the predictive limit and the landing clamp) must be counted, non-terminal signals that never end the run; with regularisation off the substep machinery (N_sub, N_max, the saturated bit) is unchanged."
   source:
   - file: docs/contracts/principia_integrator_contract.md
     section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
@@ -5036,13 +5046,13 @@
     section: Part 7 — Detectors as the `SimState` producer
   verify:
     method: unit test
-    detail: "cargo test -p kernel budget_undetermined: a close-encounter fixture under Heggie × RK4 with the budget set below its need ends undetermined, its footprint reading undetermined and the copy kept, never a bounded, escape or collision label; a fixture driven below the separation floor and one held at the entry cap each count the signal and run on to the horizon; the stored form is RQ-526's; controls: the same fixture with the budget raised reaches its outcome with no undetermined copy, and a run ended by a counted signal fails"
+    detail: "cargo test -p kernel budget_undetermined: a close-encounter fixture under Heggie × RK4 with the budget set below its need ends undetermined, its footprint reading undetermined and the copy kept, never a bounded, escape or collision label; a fixture driven below the separation floor (TINY at REQ-INT-105's value) under each regularised occupant and one whose per-step size asks for more than the entry cap each count the signal and run on to the horizon, and a step cut only by the landing clamp counts no hit; the stored form is RQ-526's; controls: the same fixture with the budget raised reaches its outcome with no undetermined copy, and a run ended by a counted signal fails"
   rulings:
   - R-563
   milestone: M3
   rq:
   - RQ-526
-  note: "R-563 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-526: how the exhaustion and the two counts are stored and drive the floor."
+  note: "R-563 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-526: how the exhaustion and the two counts are stored and drive the floor. Physics review 5605806092 of PR #277, F3 (applied per R-369): the floor and the cap hit per occupant, transcribed into the contract."
 - id: REQ-INT-102
   area: INT
   statement: "A regularised occupant's step budget must be a rate, steps per unit physical time per ensemble copy, defined for a live playhead with no fixed end, accounted along the run as RQ-527 rules, so every march loop stays bounded."
@@ -5103,6 +5113,47 @@
   - R-566
   milestone: M3
   note: "R-566 (21 Oct 2026), applied per R-369: a definition (R-72) written with the equations TASK-M3-08 transcribes (R-160); closed by TASK-M3-08."
+- id: REQ-INT-105
+  area: INT
+  kind: calibration
+  statement: "The floor TINY of the regularised occupants' time-transformation denominators (Heggie's Rᵢ, S and dt/dτ, Aarseth–Zare's A and B, logH's drift denominator), one value per working precision, must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M3 gate and recorded in decisions.md; it is in neither the corpus nor the reference set."
+  source:
+  - file: docs/contracts/principia_integrator_contract.md
+    section: "Part 6 — Three boundaries stated honestly (deferred work lands here)"
+  - file: docs/contracts/principia_integrator_contract.md
+    section: Part 3 — Parameter ownership (who owns what)
+  - file: decisions.md
+    section: "R-563 — The integration floor follows the occupant: with regularisation off the substep machinery is unchanged; under a regularised occupant running out of the step budget makes the result undetermined, never discarded, and the separation floor and the entry-cap hits are counted, non-terminal signals; REQ-SCHED-063 and REQ-SCHED-077 are re-pointed"
+  - file: decisions.md
+    section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate separation-floor --propose: the proposed TINY at f32 and f64 with its evidence: the smallest pre-floor denominator (Aarseth–Zare's A and B, and Heggie's Rᵢ and logH's drift denominator once built) over the radial collision gate's passage and the close-encounter fixtures, the count of floored steps on each, and whether TINY·TINY underflows at f32 with what a step with both of Aarseth–Zare's factors floored then does; control: a TINY above the radial collision's smallest separation floors steps on it and is reported; recorded in decisions.md"
+  rulings:
+  - R-71
+  - R-563
+  milestone: M3
+  note: "Physics review 5605806092 of PR #277, F3 (applied per R-369): TINY is named by the prin-rs reference set (T::TINY) with no value, so it is a calibration (R-71). Closed by TASK-M3-07, the first task that floors at it."
+- id: REQ-INT-106
+  area: INT
+  statement: "The energy-suspect threshold proposed under REQ-INT-085 must be measured against the default occupant, Heggie × RK4 (R-560), whose regularised energy SUSPECT_ENERGY reads (R-566): its regularised drift, final and max, on dd_integrator test 2's long bounded orbit and test 7's close-encounter IC, and which suspect predicates it lights on each under the proposed thresholds, recorded with REQ-INT-085's proposal before the M3 gate confirms it."
+  source:
+  - file: docs/design/principia_dd_integrator.md
+    section: 3.5 Invariant monitoring (per `STEP`, post-projection)
+  - file: docs/contracts/principia_integrator_contract.md
+    section: COM projection and invariant monitoring
+  - file: decisions.md
+    section: "R-560 — The default occupant is Heggie × RK4, the combination every Heggie result was measured with; REQ-GUI-102's default and the Run window change with it"
+  - file: decisions.md
+    section: "R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate suspect-default-occupant: Heggie × RK4's regularised relative δE and absolute ΔL_z, final and max, on test 2's orbit and test 7's IC at the default step, at f32 and f64, printed with which predicates light under REQ-INT-085's proposed thresholds and recorded in decisions.md beside REQ-INT-085's record; whether the energy-suspect threshold must leave it unlit on test 2's orbit is RQ-528 (d), recorded meanwhile with no requirement, as RK4's is; control: the same gate fed the Cartesian drift instead of the regularised one prints a different value and fails its input check"
+  rulings:
+  - R-560
+  - R-566
+  milestone: M3
+  note: "Physics review 5605806092 of PR #277, F6 (applied per R-369): REQ-INT-085's calibration measured only the occupants with regularisation none, and TASK-M3-05, which closes it, comes before Heggie is built (TASK-M3-08), so the default occupant's measurement is its own requirement. Closed by TASK-M3-41."
 - id: REQ-EVT-001
   area: EVT
   statement: "Every pixel must get a labelled output — escape, collision or bounded (reaching the horizon is bounded), sim_failed or decode_failed, or RUNNING while in flight — with no timeout state, and substep-cap saturation a confidence flag, never a terminal."
@@ -19668,6 +19719,8 @@
     section: "R-477 — The tests of R-469 to R-476, each with an arm that can fail: the same state through two charts, tilt at zero the identity, the two maps equal where they should be and different where not, over the pole, Tip as sheet orthonormal, never leaving the manifold under fuzzed navigation, the mass tilt on the simplex, saved charts round-tripping bitwise, blank never a colour, and exactly the right views re-integrating"
   - file: docs/gui/principia_render_gui_spec.md
     section: G2. Explore — the everyday view (`01_main.png`)
+  - file: decisions.md
+    section: "R-568 — RQ-378 is parked again, a deferral by ruling with no target: the entry stays open, its option (a) stays applied, nothing waits, and it returns when the human raises it *(amends R-510)*"
   verify:
     method: GUI screenshot
     detail: "cargo test -p gui saved_curved_chart and cargo xtask screenshot 01_main (real engine): a shape-sphere view tilted into a mass logit saved and reopened at zero tilt: the figure pixel-identical and the sim key equal; its target dropdowns list its saved target, and a 20° tilt into it decodes as R·R′ applied to (u, v, 0) (REQ-CHART-077), to 1 ulp; controls: a saved curved chart that drops the slice centre differs, and dropdowns without the saved target, and a tilt into it decoded as the offsets added, each fail"
@@ -19676,8 +19729,9 @@
   - R-477
   - R-510
   - R-513
+  - R-568
   milestone: M8
-  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it. Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-513 (RQ-403 ruled): the target dropdowns offer the saved target too, a new tilt into it composing the rotations as REQ-CHART-077 says. *Was:* \"A new tilt into the saved target is RQ-403 (not offered meanwhile).\" Code review 5591496358 of PR #255, C1: the verify gains the saved-target arm and its control (R-513 Q3). *Was:* \"control: a saved curved chart that drops the slice centre differs\"."
+  note: "R-475 S2, S3, L5, L10; R-477 C8. Closed by TASK-M8-48. RQ-378 (a flattened version) was parked until RQ-341 (R-510); RQ-341 is ruled (the 21 Oct batch, PR #274) and the human parked it again with no target (R-568): it stays open, its option (a) applied, and returns when he raises it; nothing waits on it. *Was (before R-568):* \"RQ-378 (a flattened version) is parked until RQ-341 (R-510); nothing waits on it.\" Physics review is required (⚑); it does not merge on the code reviewer's word alone. R-513 (RQ-403 ruled): the target dropdowns offer the saved target too, a new tilt into it composing the rotations as REQ-CHART-077 says. *Was:* \"A new tilt into the saved target is RQ-403 (not offered meanwhile).\" Code review 5591496358 of PR #255, C1: the verify gains the saved-target arm and its control (R-513 Q3). *Was:* \"control: a saved curved chart that drops the slice centre differs\"."
 - id: REQ-GUI-245
   area: GUI
   statement: "The hover, pinned and kept traces must be drawn by the line system (principia_lines.md §8): each computeIC state projected through the chart's forward map into its own coordinates, breaking where the path leaves the chart and never joined across a pixel that is not a system, with time ticks, colour, arrows, animation, length and the incomplete-run mark as §8 has them (its markers and icon sets, R-538's, are REQ-GUI-272); the same Trace and renderer must serve the orbit viewer (the Inspector window and the Trajectory panel's views), nothing specific to the slice view."
@@ -25038,12 +25092,12 @@
     section: COM projection and invariant monitoring
   verify:
     method: numerical gate
-    detail: "radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11); the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through d_min < 1e-10 with |dE/E| < 1e-12, E the regularised energy under a regularised occupant (R-566); control: the Cartesian energy read on the same run after the passage is printed and is worse than the regularised one (the design measured 280× to 7100×), so the gate pointed at it fails"
+    detail: "radial collision case passes through d_min ≈ 1e-11 with bounded energy drift (the AZ validation reported 6.2e-15 at d_min = 1.35e-11); the gate's values (dd_validation_orbits §2, R-257): equal masses from rest, third body far away, passing through d_min < 1e-10 with |dE/E| < 1e-12, E the regularised energy under a regularised occupant (R-566); controls: the value the gate reads is bitwise the occupant's regularised-energy drift, and the Cartesian read-out of the same run after the passage is printed beside it and differs from it (the design measured it 280× to 7100× worse), so a gate whose reader returns the Cartesian value fails the reader check; and, the design §11's control, over a halving ladder of η the Cartesian read-out after the passage does not fall with η"
   rulings:
   - R-257
   - R-566
   milestone: M3
-  note: "R-566 (21 Oct 2026): the gate reads the regularised energy; the Cartesian energy is a diagnostic read only from runs that did not stop at an event (REQ-VAL-195)."
+  note: "R-566 (21 Oct 2026): the gate reads the regularised energy; the Cartesian energy is a diagnostic read only from runs that did not stop at an event (REQ-VAL-195). Physics review 5605806092 of PR #277, F1 (applied per R-369): the firing arm is the reader check, since 280× a round-off regularised value can still pass |dE/E| < 1e-12."
 - id: REQ-VAL-046
   area: VAL
   statement: "A ground-truth validation suite, separate from parity, must compare the f64 CPU instantiation against external truth in four tiers: conservation, analytic solutions (Lagrange, Euler), known periodic orbits (figure-eight, Broucke–Hadjidemetriou–Hénon, catalogue orbits), and literature benchmarks (Burrau, Lehto et al.), comparing chaotic cases (Burrau) at structural features only, never pointwise."
@@ -27582,13 +27636,13 @@
     section: "R-566 — Under a regularised occupant the energy is named twice: the two-body collision gate (REQ-VAL-045) and any per-step suspect flag read the regularised energy; the Cartesian energy is for diagnostics, read only from runs that did not stop at an event *(refines R-257 as to the radial collision gate's energy)*"
   verify:
     method: unit test
-    detail: "cargo test -p kernel energy_named: on the radial collision under Heggie × RK4 the suspect predicate reads the regularised drift and stays clear through the passage; a run stopped at a collision contributes no Cartesian drift to the diagnostic read; controls: the predicate pointed at the Cartesian drift fires on the same run, and a diagnostic aggregate that includes the event-stopped run differs and fails"
+    detail: "cargo test -p kernel energy_named: on the radial collision under Heggie × RK4 the suspect predicate reads the regularised drift and stays clear through the passage; a run stopped at a collision contributes no Cartesian drift to the diagnostic read; controls: the predicate's input is bitwise the regularised drift latch, and a variant fed the Cartesian drift receives a different input on the same run and fails the input check, and a diagnostic aggregate that includes the event-stopped run differs and fails"
   rulings:
   - R-566
   milestone: M3
   rq:
   - RQ-528
-  note: "R-566 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-528: where the regularised drift is stored and how an event-stopped run is drawn."
+  note: "R-566 (21 Oct 2026). Closed by TASK-M3-41. Waits on RQ-528: where the regularised drift is stored and how an event-stopped run is drawn. Physics review 5605806092 of PR #277, F2 (applied per R-369): the control is structural, since a post-passage Cartesian drift of 1e-12 to 1e-11 need not light the threshold."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
