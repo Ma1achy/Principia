@@ -236,9 +236,9 @@ impl<P: Copy + FloatConst> ShapeSphere<P> {
         match self.map {
             ShapeMap::Spherical => spherical(u, v, wide(P::PI())),
             ShapeMap::Exponential => exponential(
-                widen(self.n0),
-                widen(self.e1),
-                widen(self.e2),
+                widen3(self.n0),
+                widen3(self.e1),
+                widen3(self.e2),
                 wide(self.scale),
                 u,
                 v,
@@ -280,9 +280,9 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     {
         let wide = <R as From<P>>::from;
         let inertia = wide(self.inertia);
-        let masses = mass::decode::<S, R>(widen(self.z_mass));
+        let masses = mass::decode::<S, R>(widen2(self.z_mass));
         let config = place(self.point(u, v), inertia, wide(self.phase), &masses);
-        let momentum = held_momentum::<S, R>(widen(self.z_mom), &masses, &config, inertia);
+        let momentum = held_momentum::<S, R>(widen4(self.z_mom), &masses, &config, inertia);
         let ic = canon::canonicalise(&Ic {
             m: masses.m,
             r: config.r,
@@ -314,17 +314,24 @@ impl<P: Copy + FloatConst> Chart for ShapeSphere<P> {
     }
 }
 
-/// Each parameter of `a` widened to `F`, by index: the kernel's SPIR-V has no `[T; N]::map`, whose iterator
-/// casts the array to a slice (rust-gpu: "cannot cast between pointer types").
+/// Each parameter of `a` widened to `F`, at constant indices: the kernel's SPIR-V has no `[T; N]::map`, whose
+/// iterator casts the array to a slice (rust-gpu: "cannot cast between pointer types"), and a loop over a runtime index
+/// is lowered with bounds-check breaks (gpu_determinism_note rule 5), so each length has its own unrolled helper.
 #[inline]
-fn widen<P: Copy, F: Copy + From<P>, const N: usize>(a: [P; N]) -> [F; N] {
-    let mut out = [F::from(a[0]); N];
-    let mut k = 1;
-    while k < N {
-        out[k] = F::from(a[k]);
-        k += 1;
-    }
-    out
+fn widen2<P: Copy, F: From<P>>(a: [P; 2]) -> [F; 2] {
+    [F::from(a[0]), F::from(a[1])]
+}
+
+/// [`widen2`] for three parameters.
+#[inline]
+fn widen3<P: Copy, F: From<P>>(a: [P; 3]) -> [F; 3] {
+    [F::from(a[0]), F::from(a[1]), F::from(a[2])]
+}
+
+/// [`widen2`] for four parameters.
+#[inline]
+fn widen4<P: Copy, F: From<P>>(a: [P; 4]) -> [F; 4] {
+    [F::from(a[0]), F::from(a[1]), F::from(a[2]), F::from(a[3])]
 }
 
 /// `t` where `c` holds, else `f`: a select, both operands computed.
