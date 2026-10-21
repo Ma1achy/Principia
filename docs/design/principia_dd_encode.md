@@ -195,10 +195,13 @@ implementation.
   comparison reads a squared distance or a squared length, each square formed as `IeeeBits::product(x, x)` of a
   difference `x` taken as 0 below `2^⌊e/4⌋`, `e` the precision's least normal exponent (`2⁻³¹` at f32), so that its
   partial products are normal, and the squares added in one fixed order, no `fma` written: the search's comparisons,
-  `d² ≤ tol²` with `tol² = product(tol, tol)`, the fold's `a² > b²`, and the guards of the selects. The values the
-  distances are formed from are the decode's own (the embed's divisions, the weighting's `sqrt`) and `C`'s, which a
-  backend rounds within its own bounds; two backends can differ on a comparison only where two distances lie within
-  those roundings of each other.
+  `d² ≤ tol²` with `tol² = product(tol, tol)`, the fold's `a² > b²`, and the guards of the selects. The search's
+  points are formed alike on every backend: the golden ratio `(√5 − 1)/2` is a constant, correctly rounded at each
+  width and formed from its bits, never a runtime `sqrt`; the grid's `1/64` is `2⁻⁶`, formed from its bits, so the
+  spacing `(hi − lo)·2⁻⁶` and the fractions `k·2⁻⁶` are exact, no division formed; each point is then one product in
+  `IeeeBits::product`'s form and one add. The values the distances are formed from are the decode's own (the embed's
+  divisions, the weighting's `sqrt`) and `C`'s, which a backend rounds within its own bounds; two backends can differ
+  on a comparison only where two distances lie within those roundings of each other.
 
 ### 3.5 Conditioning (numbers, and the tolerance rule)
 
