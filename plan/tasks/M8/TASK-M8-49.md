@@ -29,3 +29,4 @@ The traces are drawn by the line system: projection through the chart's forward 
 - **Physics reviews** the projection onto the chart's own coordinates (R-476 M4).
 - **The fade** waits for RQ-377 (3) (REQ-GUI-249, TASK-M8-51); meanwhile none.
 - **R-509 (20 Oct 2026) rules RQ-377 (3):** the fade uses the proxy where the chart defines it, else no fade and the settings say so (REQ-GUI-249, TASK-M8-51); the general distance waits on RQ-341 (REQ-GUI-266, TASK-M8-54). The note above is kept as history (code review 5587720942 of PR #255, F7).
+- **R-538 (20 Oct 2026):** §8's markers become the icon sets, built by TASK-M8-58 (REQ-GUI-271 to REQ-GUI-276); REQ-GUI-245 no longer draws them, and this task draws the trace without markers for TASK-M8-58 to add.

@@ -89,7 +89,7 @@ zero's sign only as far as `atan2`'s operand: WGSL may ignore the sign of a zero
 
 `s_α = 2α/π` is the $\alpha_{\min} = 0$ case of the general inverse
 $s_\alpha = (\alpha - \alpha_{\min})/(\pi/2 - 2\alpha_{\min})$. $\alpha_{\min} = 0$
-(R-21). `μ_max = 5` and `q_max = 2` are settled (R-10).
+(R-21). `μ_max = 5` and `q_max = 2` are settled (R-10), as the defaults of two tunable link parameters since R-481; the inverses and the clamps read the active value.
 `s` clamped into `[ε_z, 1−ε_z]`, `ε_z = 10⁻⁶`.
 
 **Free momentum** (forward: `q_k = q_max·(2σ(z)−1)`): invert Jacobi, `p_λ = p₂`, `p_ρ = p₁ + (m₁/M₀₁)p_λ`, then
@@ -208,7 +208,9 @@ coordinate, and nothing is compared for it.
 ### Chart-aware validation
 
 Not every point of the latent hypercube $[0,1]^8$ is valid in every chart, and not every entered IC lands inside
-the hypercube. Lookup and lock validate against the **active chart's** constraints before committing.
+the hypercube. Lookup and lock validate against the **active chart's** constraints before committing. A trace does
+not: it never clamps, projects or rejects a sample's whole state by these layers, but encodes the chart's shown
+coordinates and checks each shown axis on its own (R-538 TF2.1; `principia_lines.md` §8).
 
 **Layers, in order.**
 

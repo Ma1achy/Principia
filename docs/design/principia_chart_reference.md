@@ -33,7 +33,7 @@ M01 = m0 + m1        M = m0 + m1 + m2 = 1
 
 If `M01 < ε` emit `DEGENERATE(M01_TINY)`.
 
-**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10; defined in `principia_dd_decoder.md` §3).
+**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10; defined in `principia_dd_decoder.md` §3). Since R-481 they are the defaults of tunable link parameters, chosen in the Decoder window, and every chart reads the active value.
 `α_min = 0` (R-21): full-sphere coverage.
 
 ### 0.2 Configuration — hyperspherical mass-weighted Jacobi
@@ -289,8 +289,11 @@ is bounded, as above, but past `t = 1`, where it continues (R-508).
 **Every physical-quantity axis (R-506).** A Chart-builder physical-quantity axis that is not energy-type, the virial
 ratio, the mass ratio and the rest of render_gui_spec §G7's list, follows the same rule (R-506, ruling RQ-372):
 warped to its feasible range by default, so every pixel of `[0,1]²` is feasible, bounded past its edge; linear as an
-option, B1's affine axis, its pixels that are not a system blank. The mass ratio warps through the mass link (§0.1's
-softmax): its axis moves the mass logits, so every pixel's masses are positive and sum to 1. The warps this section
+option, B1's affine axis, its pixels that are not a system blank. The mass ratio warps through the mass link, the
+active one (§0.1's softmax at the defaults; since R-478 and R-481 the Decoder window's registry entry at its active
+parameters, merge of the links port, applied per R-369): its axis moves the active mass link's inputs, so every pixel's
+masses are positive and sum to 1. *Was:* "The mass ratio warps through the mass link (§0.1's softmax): its axis
+moves the mass logits, so every pixel's masses are positive and sum to 1." The warps this section
 does not write (the virial ratio's, a ratio's range in the logits) are REQ-CHART-070's definition (R-72), written here
 under physics review before a chart offers them. The decoder-bug warning (R-467, clause 4) is for a chart whose
 physical-quantity axes are all warped.

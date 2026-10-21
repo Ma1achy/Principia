@@ -1,0 +1,19 @@
+{
+ "v": 3,
+ "createdOnFiles": {"v": 1, "at": "2026-10-20T23:40:00Z"},
+ "title": "Principia dev GUI — trace & listen",
+ "launch": {"view": "canvas"},
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {"x": 0, "y": 0, "w": 1440, "h": 900, "title": "Explore — playing, with sound on: the trace in the view, Trajectory panel, Time strip, Overlays ▾ open"},
+  "TrajectoryPanel.dc.html": {"x": 1520, "y": 0, "w": 1160, "h": 900, "title": "Trajectory panel — three states: at rest, Trace expanded, listening"},
+  "TimeDock.dc.html": {"x": 0, "y": 1020, "w": 1440, "h": 900, "title": "Bottom band — Compass · Time · Legend with sound off, sound on, strip expanded"},
+  "IconSets.dc.html": {"x": 1520, "y": 1020, "w": 760, "h": 700, "title": "Trace icons — key and icon sets"},
+  "TraceWindow.dc.html": {"x": 0, "y": 2040, "w": 940, "h": 900, "title": "Trace… window — every trace setting"},
+  "ListenWindow.dc.html": {"x": 1020, "y": 2040, "w": 1060, "h": 900, "title": "Listen… window — every sound setting"},
+  "Edges.dc.html": {"x": 0, "y": 3060, "w": 1440, "h": 620, "title": "A trace at the edges — off-screen, wrapped copies, leaving the chart, forbidden"}
+ },
+ "order": ["Main.dc.html", "TrajectoryPanel.dc.html", "TimeDock.dc.html", "IconSets.dc.html", "TraceWindow.dc.html", "ListenWindow.dc.html", "Edges.dc.html"],
+ "notes": {},
+ "designSystems": []
+}

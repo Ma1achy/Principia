@@ -3,7 +3,8 @@
 **Adopted by R-476 (20 Oct 2026, the human's L1: "Build the line system as specified in `principia_lines.md`").**
 This document is part of the corpus from R-476 on: where it says "proposed", the proposal is what is built, except
 where R-476 or a later ruling says otherwise, and its §11's six open questions are RQ-377, ruled by R-509 (§11).
-*Was:* "and its §11's six open questions are not ruled: they are RQ-377, and what is built meanwhile is RQ-377's." It is read with `decisions.md` § R-469 to R-477 (charts never leave the manifold,
+*Was:* "and its §11's six open questions are not ruled: they are RQ-377, and what is built meanwhile is RQ-377's." Its §3's `Trace` and §8 are amended by R-538 (the trace's markers and icon
+sets, syzygies, off-screen pinning, repeats and not-a-system handling, and the trace's defaults). It is read with `decisions.md` § R-469 to R-477 (charts never leave the manifold,
 blank non-systems, warped energy axes, tilt on every chart, the two tilt maps, save view as chart), which its §10
 anticipates. Its mock-ups are in `docs/gui/reference/lines/`: `images/` (every picture of the "Principia Lines"
 canvas, rendered from real data) and `canvas/` (the canvas's artboards, `.dc.html`, and its index `canvas.json`; they
@@ -57,7 +58,9 @@ stain  →  display chain  →  [ LINES ]  →  egui layer (chrome, hover label,
 - Lines belong to the **figure**, not the chrome: they stay visible with F3 and present mode, and they are in exports.
 - With F3 Extend, lines continue over the extension wherever the field exists. Where a pixel is not a system (past a
   chart's edge), no contour passes through it and a trace breaks.
-- One menu: **Lines ▾** beside Overlays ▾, with a count, `Alt+L` to show or hide all.
+- One menu: **Lines ▾** beside Overlays ▾, with a count, `Alt+L` to show or hide all. The traces are not in it: they
+  are in Overlays ▾ › Trace, the Trajectory panel and the `Trace…` window (R-541; render_gui_spec §G2, §G5), and
+  Lines ▾ holds the contour sets, the axes, the grids and the presets (RQ-448, its option (a) applied meanwhile).
 
 ---
 
@@ -93,12 +96,17 @@ Trace {
   length:  ToPlayhead | Window(t0, t1) | LastDt(dt),
   fade:    Option<{ floor }>,             // opacity per vertex from distance to the slice
   ticks:   Option<{ every, labelled }>,
-  markers: bool,                          // start ●, collision ×, escape →, horizon ▪
+  markers: { icon_set: Principia | Arrows | Pictures | Orbits, icon_size, end_icon: bool, reach_rings: bool,
+             syzygy: Option<{ style: FromSet | ThreeInARow | LineAndBead | NumeralTag | CrossingTick | Eclipse,
+                              fade_stutters: bool }>,
+             edge_pin: bool, window_chevrons: bool, seams: bool },   // §8's markers and icon sets (R-538)
+  join_jumps: bool,                       // a dotted line across a break (R-538)
   arrows:  Option<{ shape: Filled | Chevron | Barb | Notched | Dot, size_px, outline: bool,
                     every: Px(n) | Dt(dt) | PerTrace(n) }>,
-  colour:  Fixed | AutoFromPalette | AlongTime(Ramp),
+  colour:  Fixed | AutoFromPalette | AlongTime(TimeRamp),   // TimeRamp: §8's ramp along time (R-538 TF4)
   animate: Static | WithPlayhead | OwnClock { speed, repeat: Once | Loop | BackAndForth },
-  tail:    Option<{ dt, ghost_rest: bool, head_marker: bool }>,   // for the two animated modes
+  tail:    Option<{ dt, ghost_rest: bool }>,   // "Tail only", for the two animated modes (R-538: off by default)
+  head_marker: bool,                      // labelled with its time (R-538: on, with or without a tail)
   break_at_chart_exit: bool
 }
 
@@ -113,6 +121,13 @@ Axes {
 
 Lines { styles: Library, contours: [ContourSet], traces: [Trace], axes: Axes }   // part of the exported view state
 ```
+
+*`Trace` as R-538 amends it (§8):* `markers` is the icon set and its toggles, `join_jumps` is new and the head marker
+no longer sits under `tail`, since its default is on with the tail off. *Was:* "`markers: bool, // start ●, collision ×,
+escape →, horizon ▪`" and "`tail: Option<{ dt, ghost_rest: bool, head_marker: bool }>, // for the two animated modes`".
+`AlongTime` takes a `TimeRamp { preset: Sunset | Viridis | Magma | Ice | Ember | Aurora | Mono | Custom([c₀, c₁, c₂]),
+reverse: bool }`, the line system's own type, not the stain graph's `Ramp` (R-538 TF4, J12). *Was:* "`colour: Fixed |
+AutoFromPalette | AlongTime(Ramp),`".
 
 **Rules for styles.**
 
@@ -240,32 +255,138 @@ The trajectory comes from `computeIC`: the full CPU f64 state per step (`princip
 it:
 
 - **Projection.** Each state is run through the chart's forward map and read in the chart's own coordinates (§3 there).
-  On a shape chart this is exact: the state's shape maps back onto `(z_α, z_β)`.
+  On a shape chart this is exact: the state's shape maps back onto `(z_α, z_β)`. **Per shown axis, in order (R-538
+  TF2):** each sample's chart parameters are taken on the branch nearest the previous sample's (θ ± 2π; over a pole
+  θ + π with φ reflected), every coordinate of a mix read in the frame the chart's own parameters are defined in (the
+  full shape sphere's `(θ, φ)` unmirrored, `ρ` along `+x`; the latent chart's canonical); then the axes are mixed (a
+  tilt, R-473); then the point is drawn in every image by the extension types. The trace never runs the inverse
+  policy's lookup and lock validation (inverse encode Part 6) on a sample: it encodes the shown coordinates without
+  clamping and checks each shown axis on its own. On a tilted chart the θ branches are not repeats of one image: θ
+  wraps but the tilt target does not, so the chart is affine along that axis and does not repeat.
 - **Fade off the plane.** Opacity per vertex falls with the state's distance from the slice, down to a floor (0.18 in
   the mock). See §11 Q3 for what "distance" should be in general.
 - **Breaks.** The line breaks where the path leaves the chart and resumes where it comes back. It is never joined across
-  the outside.
-- **Markers.** Start ●, collision ×, escape →, horizon ▪. Optional time ticks every `Δt`, labelled.
+  the outside by default; an option, **join jumps** (off), joins a jump with a dotted line (R-538).
+- **Markers and icon sets (R-538).** One selector, **Icon set**: **Principia** (the default), Arrows, Pictures and
+  Orbits, each giving every marker below; Principia is Arrows with Orbits' two rings for leaving and re-entering the
+  reach. Every colour is the outcome palette's (colour_composition §1.4, the active preset), so an icon and the pixel
+  under it agree: collisions 1–2 `#DE2D2D`, 1–3 `#2EBC4E`, 2–3 `#3462E0`, triple collision `#F29620`; escapes body 1
+  `#F0DE32`, body 2 `#E034C6`, body 3 `#30C8DC`, triple ejection `#611597` (the sRGB default). Icons are drawn over a
+  dark halo `#0B0B0E` with light ink `#F5F4F0`, so they read on any field; bodies are shown 1, 2, 3 (R-449).
+
+  | Marker | When | Principia | Arrows | Pictures | Orbits |
+  |---|---|---|---|---|---|
+  | **Start** | `t = 0` | a five-pointed star in the trace's colour | star | the initial triangle in body colours | star |
+  | **Collision** | the run ends in a pair collision | two arrows meeting at a burst in the pair's colour, oriented along the trace | the same | two discs touching | a merger: the pair as one point in a flash ring |
+  | **Triple collision** | two or more pairs inside `r_coll` (`detail = 3`) | three arrows into a burst, `#F29620` | the same | three discs touching | three discs in a flash ring |
+  | **Escape** | one body escapes | a disc in the escaping body's colour with an arrow leaving it, along the trace | the same | a streaking disc | a bound pair (ellipse) left behind, the body leaving |
+  | **Triple ejection** | all three unbound (`detail = 3`) | three discs `#611597`, each with an arrow pointing out | the same | three discs flying apart | three dotted streaks out |
+  | **Horizon** | nothing happened by `t_max` | an hourglass | hourglass | hourglass | a closed orbit (an ellipse with a body on it) |
+  | **Incomplete** | the hover's step budget ran out | "?"; the last stretch of the line dashed | ? | ? | ? |
+  | **Leaves the chart's reach** | a coordinate entering a shown axis with non-zero weight has no value (below, "Where a trace can leave") | a dotted ring; the line dashed until it re-enters | an arrow into a bar | an open ring | a dotted ring |
+  | **Re-enters the chart's reach** | it comes back | a ring with a centre dot | a bar, then an arrow out | a filled ring | a ring with a dot |
+  | **Leaves / enters the window** (optional, off) | the line crosses the view's edge | a chevron at the edge | | | |
+  | **Seam** (optional, off) | θ wraps | a short tick at both ends of the jump | | | |
+  | **Syzygy** (off by default) | the three bodies are collinear | o–o–o | o–o–o | three in a row | an eclipse |
+
+  There is no double escape: it is not an outcome class (two bodies leaving a third is triple ejection, `detail = 3`).
+  The end event icon can be switched off. *Was:* "**Markers.** Start ●, collision ×, escape →, horizon ▪. Optional time
+  ticks every `Δt`, labelled." The leaves row's *Was* (R-538 TF1): "the state leaves what the chart can show (latent: a
+  momentum past `q_max`, or α past its limits)".
+- **Where a trace can leave (R-538 TF1).** The trace point is the state projected onto the chart's actual axes.
+  Hidden coordinates never make a trace leave: anything orthogonal to the chart's plane feeds only the off-slice
+  distance, the fade (where it has no value, R-509: no fade, and the GUI says so). A trace leaves only where a
+  coordinate entering a shown axis with non-zero weight has no value: ±∞ from a saturated link, NaN, or a bounded
+  axis's inverse outside its domain. Moving off the slice is never leaving. So it depends on the chart's axes, not its
+  name:
+
+  | Shown axis | Can it make the trace leave? |
+  |---|---|
+  | θ or φ of the shape sphere, alone or in any mix | No: `n̂` exists for every shape with `I > 0` (`I = 0` is a total collision, which has ended the run); θ's pole singularity is passed as a jump |
+  | a mass or mass ratio | No: masses are constant along a run |
+  | a physical quantity (`E`, `L_z`, `K`, a momentum, the dilation rate) | No, unless its warp's inverse has no value (`K ≥ 0` always; R-508 continues `t > 1`) |
+  | a curve axis (Burrau's ν) | No: the encode projects onto the nearest point of the curve (inverse encode Part 5(b)) and the distance to the curve is fade (R-509). A point whose nearest ν lies past a bounded edge is not drawn there, the line broken, with no ring; it is a real system the axis does not show, counted in the readout's "past the domain's end: N samples", apart from the not-a-system count (RQ-425) |
+  | a latent coordinate behind a saturating link (`z_q` past `q_max`, `z_α` past the decoder's α limits) | Yes, exactly when it has weight in the shown axis: on the latent momenta chart, or a tilt toward `z_q`; never on the latent `z_α × z_β` chart through a momentum |
+  | `z_β` at a syzygy | It runs to ±∞ and comes back: a jump at infinity, not a sample off the chart |
+
+  A tilted axis is a mix, a weighted sum of the chart's parameters and the tilt target (R-473), and leaves only through
+  a term with non-zero weight: tilted toward a latent momentum `z_q` (weight `sin τ`), the trace leaves while the
+  target's `|q| ≥ q_max` (RQ-424); tilted toward the physical momentum, it never leaves.
+- **Time ticks.** Every `Δt`, labelled; by default every 2, labelled (R-538).
+- **Syzygies (R-538), off by default.** A syzygy is an instant at which the three bodies are collinear: the
+  configuration crosses the shape sphere's equator, `w = 0` (R-14). Each has a middle body; the sequence of middle
+  bodies is the syzygy word (Montgomery), and the same letter twice running is a **stutter**, drawn faded unless "fade
+  stutters" is off. The marker sits where the line actually crosses `w = 0`, interpolated between the two samples on
+  either side, never at a sample. Principia's and Arrows' o–o–o is three discs on a short line in the body colours (each
+  body's escape colour, R-538 I3), in the order the bodies lie on the line (the outer pair lowest-numbered first, the
+  middle body in the centre), the line `#D6D3CB`, the discs dark-haloed, no other dots and no rings; the other styles
+  (Three in a row, Line and bead, Numeral tag, Crossing tick, Eclipse) stay selectable, the selector defaulting to "from
+  the icon set". On a chart that carries the y-momenta the canonical frame mirrors at every syzygy, so the trace jumps
+  there and a marker is drawn at both ends of the jump.
+- **Off-screen icons (R-538).** An icon whose point is outside the view is drawn faint, pinned to the nearest point just
+  inside the view's edge, by default; "Off-screen icons: pin to the edge (faint). Untick to hide them." Window
+  chevrons (off) mark where the line crosses the view's edge. Pins are events, chevrons the line.
+- **Repeats (R-538, R-537).** The trace works wherever the view goes. On an affine chart it runs on past the square
+  like the field. On a periodic, pole-crossing or fold chart (the shape sphere, its hemisphere) it is drawn in every
+  image of the chart in view, with every marker and icon (start, events, rings, ticks, arrows, head), at half strength;
+  repeats are never pinned to the edge, only the primary copy pins, so the edge does not fill with duplicates. A hover
+  or click in a repeat integrates the canonical system, so the trace is identical in every image. With the hemisphere
+  toggle on (R-412) the trace folds at the equator and its repeats continue into the mirror hemisphere.
+- **Not a system (R-538).** Every sample of the trajectory is encoded into the chart; a sample whose chart point is not
+  a system (fails `validate`'s layers 2 and 3, on the shown axes after the types fold the point, RQ-429) is not drawn,
+  the line breaking there. A real trajectory cannot enter such
+  a region (masses constant, energy conserved), so the readout's count of such samples, "in forbidden: N samples",
+  reads 0, and a non-zero count is reported as an encode or chart-map bug, a console warning. A trace is never started
+  in such a pixel: a click there integrates nothing and draws a red ✕ where it was clicked (R-537), and hover shows the
+  readout and no trace. On the mass simplex a run's chart point never moves (its masses are constant), so its trace is
+  a fading dot, the dot → line → curve rule (`principia_trajectory_viewing.md` §3) for a conserved axis.
 - **Colour.** One colour; or automatic, where each new pinned or kept trace takes the next colour of a trace palette,
-  any of them settable by hand; or a ramp along time from start to end.
+  any of them settable by hand; or a ramp along time from start to end. **By default (R-538)** the hover and pinned
+  trace is a fixed `#FFF27A`, and kept traces take the trace palette in turn: `#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF
+  #9EF0D2`. Width 2.2 px; icon size 1.4×.
+- **The ramp along time is selectable (R-538 TF4).** Presets: **Sunset** (the default once the ramp is chosen,
+  RQ-422, `#FFF27A #FF8A5B #E0457B #7A4CFF #3BC7FF`), Viridis, Magma, Ice, Ember, Aurora and Mono; **Custom**, three
+  colour stops; **Reverse**, which reverses the ramp; and a preview bar that shows it. The stops are evenly spaced and
+  interpolated linearly, over `t` from 0 to the horizon `t_max` (R-538 J12). It colours the line and its time ticks,
+  and the marks drawn in the trace's colour (the start star, the direction arrows) at their own time; the event icons
+  keep the outcome palette. It is part of the trace style, so it is kept with kept orbits, saved with the view and
+  travels in exports (the round-trip rule's tier 2; RQ-428). It is not the field's palette: a Chazy or outcome palette
+  is a stain (the node graph); this ramp is the line system's.
 - **Direction arrows.** Optional arrowheads along the path. Shape: filled triangle, open chevron, half barb, notched or
   dot. Size in px. They follow the line's outline. Frequency every N px of path, every Δt of time, or N per trace.
   Spacing them in time makes them bunch where the motion is slow, so speed can be read off the line.
 - **Animation.**
   - Static: the whole path at once.
   - With the playhead: a head marker sits at the playhead and moves as time is scrubbed or played, using the Time
-    panel's own play and loop.
+    panel's own play and loop. **When the playhead is not playing and is not being scrubbed (R-538 TF3)**, every trace
+    of the default length (to the head) is drawn from `t = 0` to its end (its event, or the horizon), with no head
+    marker, and a `Window` or `LastDt` length is kept as chosen (RQ-427 (a), applied meanwhile); while playing, or
+    while the scrubber is dragged, it is drawn to the head, with the head marker. A step while paused is neither
+    (R-538 J11). *Was:* "every trace is drawn from `t = 0` to its end" (gui review 5594407176 of PR #263, G2; applied
+    per R-369).
   - Own clock: the trace plays over its own window at its own speed while the figure stays put: once, looped, or back
-    and forth.
+    and forth. It is always animated (R-538 TF3); static draws the whole trace, as above.
   - Both animated modes take a tail (a bright stretch of Δt behind the head), an option to show the rest of the path
-    faintly, and a head marker labelled with its time.
-- **Length.** To the playhead (the default), a fixed window, or the last `Δt`.
+    faintly, and a head marker labelled with its time. **By default (R-538)** the tail is off ("Tail only", Δt 3 when
+    on), "show the rest faintly" is off, and the head marker, labelled with its time, is on.
+- **Length.** To the playhead (the default), a fixed window, or the last `Δt`. The default draws everything from `t = 0`
+  to the head while the playhead is played or scrubbed, and to the trace's end otherwise (R-538 TF3); a fixed window
+  or the last `Δt` is kept as chosen (RQ-427). *Was:* "The default draws everything from `t = 0` to the head (R-538)."
 - **Incomplete runs.** When the hover's step budget runs out (the pointer-channels note), the drawn part is marked
-  incomplete, e.g. its tail dashed, rather than drawn as if it were the whole trajectory.
+  incomplete, rather than drawn as if it were the whole trajectory: its end icon is "?" and its last stretch dashed
+  (R-538). *Was:* "the drawn part is marked incomplete, e.g. its tail dashed, rather than drawn as if it were the whole
+  trajectory".
 - **Kinds.**
   - **Hover:** follows the cursor.
   - **Pinned:** the clicked IC (R-453).
-  - **Kept orbits:** each has its own line, sharing a style by default, colour overridable.
+  - **Kept orbits:** each has its own line, sharing a style by default, colour overridable. Each is a tab of the
+    Trajectory panel, with its own previews, trace and sound (R-541 G4).
+- **The look (R-541 G9).** Every art board and the build draw the trace one way, these defaults: the line `#FFF27A`,
+  width 2.2, over the style's `outline` (§3), dark, of width `w + 2.2`, so it reads on any stain (the demo's halo);
+  time ticks every 2, labelled; filled-triangle arrows every Δt 1.0, 8 px; the start a yellow star; the head a white
+  disc labelled with its time; icons at 1.4×; syzygies off. Kept traces take R-538's trace palette in turn (RQ-447).
+  While Listen is on, the hover or tab's trace on the shape-sphere preview is drawn brighter inside Listen's window
+  (render_gui_spec §G2; `principia_listen.md` §4).
 
 ---
 
@@ -344,6 +465,9 @@ can be restyled like any contour.
 - **Trace projection.** On the shape chart, a trace's first vertex lands on the hovered pixel exactly.
 - **Provenance.** A print re-opened reproduces its contour sets and styles bitwise.
 - **No re-integration.** Changing any line setting leaves the simulation key and quad requests unchanged.
+- **Trace markers (R-538).** `principia_trace_markers.md` §11's tests T1 to T12, each with its arm, are in the
+  requirements R-538 adds (REQ-GUI-271 to REQ-GUI-276, REQ-INT-096). The follow-up's T14 to T20 and T16b (R-538 TF6),
+  each with its arm, are in REQ-GUI-277 to REQ-GUI-282 and REQ-CHART-080.
 
 ---
 

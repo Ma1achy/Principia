@@ -32,7 +32,9 @@ There is also a **third consumer of the same integration: sonification** — `θ
 audible range. The trace and the sound are the *same measurement*: the loop drawn on the shape sphere
 IS `θ(t), φ(t)`, and the sound is its spectrum. Measured, figure-eight vs chaotic: **spectral entropy
 0.076 vs 0.177**, one line with harmonics against four comparable peaks. They fail complementarily —
-a dense winding is visual mush and a clear high note. Scratchpad §2, §4. It runs in the dedicated inspector worker (separate from the render-loop worker — caching Part 6a, render Part 7); it never blocks the GPU survey, the frame loop, or the main thread.
+a dense winding is visual mush and a clear high note. Scratchpad §2, §4. The sound is designed in
+`principia_listen.md` (R-540), whose default signal adds the triangle's rotation `ψ` to `θ(t), φ(t)` (RQ-451) and whose
+entropy is over its own spectrum (RQ-453); the measurement above is of `θ(t)`'s. It runs in the dedicated inspector worker (separate from the render-loop worker — caching Part 6a, render Part 7); it never blocks the GPU survey, the frame loop, or the main thread.
 
 ---
 
@@ -70,6 +72,14 @@ Works in **any** chart, any tilt, any slice — uniformly, because the full CPU 
 **Drawn by the line system (R-476).** The trace's drawing, the hover, pinned and kept traces with their style and
 fade (the proxy where the chart defines one, else none, R-509), is the line system's (`principia_lines.md` §8): its integration is unchanged (`computeIC`, §6), and the same
 `Trace` and renderer serve the inspector's views (§4), nothing in them specific to the slice view (R-476, L3).
+
+**Where a trace can leave, and mixed axes (R-538 TF1, TF2).** The projection is per shown axis: hidden coordinates
+never make a trace leave, they are the fade; it leaves only where a coordinate entering a shown axis with non-zero
+weight has no value (±∞ from a saturated link, NaN, a bounded axis's inverse outside its domain), so on the shape
+sphere, the mass simplex or a physical axis it never leaves. Before the mix each sample's chart parameters are taken
+on the branch nearest the previous sample's (θ ± 2π; over a pole θ + π with φ reflected), every coordinate read in the
+frame the chart's own parameters are defined in; the trace never reuses lookup and lock's whole-state validation
+(`principia_inverse_encode_contract.md` Part 6). `principia_lines.md` §8 has the table.
 
 ---
 

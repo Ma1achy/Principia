@@ -67,6 +67,15 @@ Squashing functions appear in **three distinct roles**. They look alike (all map
 
 The last one is what "decouples palette/compactification changes from integration cost" means: recolour the payload (`SimState` buffer) without re-running the integrator. Links and axis warps are on the **integration** side; colour compactification is on the **colour** side. This is the integrate/colour seam again.
 
+**The links are the decoder's (R-478).** Links belong to the decoder, which every chart passes through
+(`principia_chart_reference.md` §0, "every chart ends here"), not to any one chart: changing a link changes what every
+chart's pixels mean, and switching chart never switches links, since this Part's robustness test is "same chart,
+different link". They are chosen and tuned in the GUI's Decoder window (`principia_render_gui_spec.md` §G7a); the axis
+warps are per-axis chart properties, owned by the Chart builder (§G7). A chart preset carries no links (R-478, W4),
+unless it pins them: a preset or a saved chart may optionally pin the links it was designed under, and loading it
+applies them, with a notice, in one undo entry, never silently (R-516; `principia_render_gui_spec.md` §G7). *Was:*
+"whether one may pin them is RQ-380" (stale value, replaced by R-516).
+
 ### Link functions — the mass-simplex / logit question
 
 A decoder stage reaches a *constrained* physical quantity from an unbounded control via a **link**. The choice is customisable, but bounded by the block's constraint type — a link is only valid if it *cannot* leave the constraint set.
@@ -84,12 +93,22 @@ The current decoder (`principia_dd_decoder.md` §3) fixes one link per block (ma
 ### Three hard requirements on any registered link
 
 1. **Constraint-preserving.** Output satisfies the block's constraint for *all* inputs — a simplex link lands in Δ², a bounded link stays in range. This is what "compactification" buys; a link that can escape the constraint is not admissible.
-2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`) and the saturation constants `μ_max = 5`, `q_max = 2` (settled, R-10). A link without a stable inverse cannot support the encode path.
+2. **Invertible, with a conditioned inverse.** Lock/lookup needs the inverse (`logit`, `artanh`, `log`). It blows up at the boundary → the ε clamps (`ε_z, ε_μ, ε_q = 10⁻⁶`) and the saturation constants `μ_max = 5`, `q_max = 2` (settled, R-10; since R-481 the defaults of two tunable parameters, below). A link without a stable inverse cannot support the encode path.
 3. **Smooth (C¹).** The deep-zoom **linearised decoder** replaces the nonlinear decode with a local Jacobian; a non-differentiable link breaks that path.
+
+**Tunable parameters (R-481 ⚑).** Each registry entry declares its tunable parameters, each with a name, a default, an
+allowed range and a citation: today `μ_max` on `softmax_tanh` and `q_max` on the momentum links, with defaults 5 and 2
+(R-10); `α_min` stays fixed (R-21; R-518, which rules that it does not become a parameter; *was:* "(R-21; RQ-382)",
+a stale value, replaced by R-518). The allowed range keeps **all three** requirements above for **every**
+value in it, and the registry's check tests them at the range's ends and on a sampled interior
+(`principia_dd_generation_root.md` §3.9). Everything that reads a parameter by name reads the active value: the link
+functions, the codomain's bounds, the encode's clamps and its layer-1 range check (`principia_inverse_encode_contract.md`
+§ "Chart-aware validation"). The generated code reads the values as a uniform, so the kernel's results at the defaults
+are bitwise unchanged (R-481, G7).
 
 ### Links carry a measure
 
-A link is **not measure-neutral**. Softmax with saturated logits is smooth but *not uniform* over the simplex; uniform-in-angle ≠ uniform-over-shapes (S² has its own area element); a power-law axis warp `K(t)=K_max·t^{γ_K}` deliberately biases density toward low `K`. Fine for exploration. But for any **quantitative** claim (basin fractions, island prevalence) you must either correct by the link's Jacobian or sample in a known measure. So **each registry entry should carry its log-det Jacobian**, so a quantitative pass can reweight. This is the one place a customisable link can silently corrupt a result — the freedom is real, but it moves the sampling measure, and the measure has to travel with the link.
+A link is **not measure-neutral**. Softmax with saturated logits is smooth but *not uniform* over the simplex; uniform-in-angle ≠ uniform-over-shapes (S² has its own area element); a power-law axis warp `K(t)=K_max·t^{γ_K}` deliberately biases density toward low `K`. Fine for exploration. But for any **quantitative** claim (basin fractions, island prevalence) you must either correct by the link's Jacobian or sample in a known measure. So **each registry entry should carry its log-det Jacobian**, so a quantitative pass can reweight. The log-det is a function of the entry's parameters, and area statistics reweight with the active value, never the default (R-481, A4). This is the one place a customisable link can silently corrupt a result — the freedom is real, but it moves the sampling measure, and the measure has to travel with the link.
 
 ### Integrity: the link is part of the experiment
 
@@ -99,7 +118,22 @@ The reason to expose the link is not flexibility — it's that a fixed, hidden l
 2. **Recorded in provenance.** The link id per block lives in the exported ViewState, beside `z₀`, the basis, and the axis warps. A figure whose provenance doesn't pin its links is *not reproducible* — a re-run under a different default samples a different measure and can return a different answer. The link is part of the experiment, so it lives in the record.
 3. **Falsifiable by re-measurement.** The real test: does a finding *survive* a link swap? Extremal under softmax **and** under a boundary-reaching simplex map **and** under a different logit saturation → a property of the *dynamics*. Moves when the link changes → a property of the *parametrisation*. This is the **tilt persistence test of Part 4 applied to the measure instead of the plane**: a structure is real iff it's invariant under the arbitrary choices you could have made differently.
 
+**The parameters are part of the record (R-481, R-483).** The parameter values are recorded beside the link id
+wherever it is recorded: `SimConfig`'s `Links` holds, per block (masses, α, β, momenta), the link id and every tunable
+parameter's value, written in full even at the defaults, so the view state, the sim key and the payload compatibility
+signature, every export and every sidecar carry them through the one canonical serialisation
+(`principia_gui_state_contract.md` §2). A figure that names its link but not its `μ_max` is not reproducible. A record's
+decoder is the reading build's registry plus the record's links: a link id the build lacks, or one whose definition
+changed, is refused ("state present, cannot recreate", naming the link), never replaced by a default
+(`principia_dd_image_embedding.md` §6; R-483, X4). Each recorded link carries its own registry-entry hash, so the
+refusal names exactly the changed link (R-521; *was:* "R-483, X4; RQ-385", a stale value, replaced by R-521).
+
 **What makes an alternative worth offering.** Not any function with the right codomain — one whose Jacobian differs *enough to stress a claim*. Two links inducing near-identical measures agree trivially and prove nothing. The registry should span genuinely different sampling densities (softmax vs. a simplex map that reaches the edges; `t^γ` at spread-apart γ; sigmoid vs. a heavier-tailed bounded map) so that agreement across them *means* something. To make that deliberate, a registry entry carries — beyond forward, inverse, and log-det — a note on **which region of the block it over- and under-samples relative to uniform**, so a robustness sweep picks alternatives that disagree where it matters rather than three flavours of the same bias.
+
+**No new entry until a study needs one (R-519).** The registry's entries stand as they are; an alternative that
+disagrees enough to stress a claim (a temperature-softmax, a bounded map heavier-tailed than softsign, a simplex map
+uniform over the simplex) is added when a study needs one, by the task that runs that study, as a definition (R-72)
+under physics review, through `principia_dd_generation_root.md` §3.9's table and its check.
 
 ---
 
@@ -135,9 +169,12 @@ Burrau introduces no fifth kind. Kind 4 *degrading* into kind 1/2 when you drop 
 
 ### Past the unit square — each axis's extension type (R-407)
 
-The figure can show more than the chart's `[0,1]²`: with the egui layer hidden (F3) or in present mode it fills the
-window at the same scale (R-406), so where the window reaches past the depth-0 root its samples take `(s,t)` beyond
-`[0,1]` on either axis. **Inside `[0,1]²` nothing changes.** Outside it, **each chart axis declares one of four
+The figure can show more than the chart's `[0,1]²`: wherever the view reaches past `[0,1]²`, by pan, by zoom out, or
+by F3 Extend (R-537; F3 and present mode fill the window at the same scale, R-406), its samples take `(s,t)` beyond
+`[0,1]` on either axis. **The extension is a property of the chart, not of F3** (R-537): it is drawn wherever the view
+reaches, the controls shown or hidden, and it never has gaps. **Inside `[0,1]²` nothing changes.** *Was (R-407):* "with
+the egui layer hidden (F3) or in present mode it fills the window at the same scale (R-406), so where the window reaches
+past the depth-0 root its samples take". Outside it, **each chart axis declares one of four
 extension types**, and the type decides what the axis does past its edge:
 
 | Type | Past the edge | Which axes |
@@ -236,6 +273,30 @@ to run from the pole to the equator; past the equator its formula continues into
 repeated), and its primary range is pole to equator, so that continuation is not counted (R-412, closing RQ-264;
 built by TASK-M8-44, REQ-CHART-057).
 
+**Repeats and the canonical point (R-537).** A pixel in a repeat (past a periodic axis's period, over a pole, past the
+hemisphere's fold) is the same system as its **canonical** point, the one inside every axis's primary range, which the
+types give by folding it: its pick, readout, trajectory, outcome and inspector are the canonical system's, the readout
+naming the pixel a repeat. A pixel on an affine extension is that point of the plane. The quadtree follows the same
+fold (EX7): a quad in a repeat maps to its canonical quad by the type group (on the shape sphere at level `L`,
+`n = 2^L`: θ's period `ix' = ix mod n`; with both hemispheres drawn, R-14's `φ = π(1 − t)`, the pole maps at both
+edges, over the pole at `t = 1` `iy' = 2n − 1 − iy` and `ix' = (ix + n/2) mod n`, over the pole at `t = 0`
+`iy' = −1 − iy` and the same shift; with one hemisphere drawn, R-412's `φ = (π/2)(1 − t)`, the pole map at `t = 1` and
+R-412's fold at the equator, `t = 0`, `iy' = −1 − iy` with `ix` unchanged, past `t = −1` the fold then the `t = 1` pole
+map (R-537 U10); composed until the address is inside the root), which is the one
+requested, computed, cached and decided, every image drawing it; neighbours (2:1 balance, the criterion's arms,
+contours, class edges, smoothing) cross seams, poles and folds through the same map, an affine neighbour is the real
+one, and past a bounded edge there is none. A quad wholly past a bounded edge is not requested; one straddling a
+validity boundary integrates its valid footprints only, the rest `decode_failed` and blank. The statistics above are
+unchanged: each system is counted once, at its canonical address (R-408). **On a tilted view** a repeat is the same
+system only where the type group's map leaves the tilt's hidden offset `d` unchanged: along an axis that mixes θ with
+a non-periodic coordinate the chart is affine and draws no image (R-538 TF2.2, J8; RQ-430 (a) applied meanwhile);
+whether the pole maps and the equator fold apply on a tilted view, against chart_reference §3.3's tilted fold, is
+RQ-472, and they are not built on a tilted view until it is ruled.
+*Was:* "with R-14's `φ = π(1 − t)`: θ's period `ix' = ix mod n`; over the pole at `t = 1`, `iy' = 2n − 1 − iy` and
+`ix' = (ix + n/2) mod n`; over the pole at `t = 0`, `iy' = −1 − iy` and the same shift; R-412's fold at the equator,
+`t = 0`, `iy' = −1 − iy` with `ix` unchanged; composed" (physics review 5594430380 of PR #263, P3: two maps on one
+edge; applied per R-369).
+
 ---
 
 ## Part 4 — Navigation is chart construction (pan, slice, zoom, tilt, lock)
@@ -258,6 +319,13 @@ Pan and slice are the **same operation** — move `z₀` — decomposed by the p
 **Filling the window is not a gesture (R-406, R-407).** With F3 or present mode hiding the chrome, the figure shows more
 of the same chart, each axis past `[0,1]²` by its extension type (Part 3): `(z₀, q₁, q₂)` is unchanged and nothing is
 edited.
+
+**Pan and zoom past the square (R-537).** Pan and zoom may take the view's window past `[0,1]²` on every chart, with
+the controls shown or hidden. The only stop is R-469's, on the centre (below): on a periodic or pole-crossing axis
+`validate` is evaluated on the centre after the types have folded it, so a pan across a seam or a pole never stops; on
+an affine latent axis there is no stop at all; on a chart whose square is its whole domain the centre stops at the
+domain's edge, while the window may still show blank past it. "Filling the window is not a gesture" stands for F3, whose
+Extend only adds window area.
 
 **Navigation stops at the edge (R-469).** Pan, slice, zoom, tilt and lock are accepted only if the chart's centre (the
 view's centre pixel, `z(½,½)`) still passes `validate`'s layers 2 and 3 after the edit. An edit that would cross stops

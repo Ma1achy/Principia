@@ -1,0 +1,10 @@
+{
+  "description": "REQ-VAL-022: 2×10⁴ random z uniform in the ball ‖z‖ < 4, decoded, canonicalised and encoded under the defaults links at f64: ‖z − E(D(z))‖, and the CoM of C(D(z)) within 1.7×10⁻¹⁶ of the origin; with 2000 equal-mass equilateral and 2000 collinear states through random gauge elements, their w reported, held by RQ-475 and RQ-355.",
+  "seed": 1,
+  "samples": 20000,
+  "radius": 4.0,
+  "encode": "defaults",
+  "shift": 0.0,
+  "shapes": 2000,
+  "expected": "pass"
+}
