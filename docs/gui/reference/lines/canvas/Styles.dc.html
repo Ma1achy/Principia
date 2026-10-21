@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Line style library</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7fb6e0}a:hover{color:#a9cff0}
+.strip{background-image:url(/_blob/f61f8a299c09c5a1ca83e66f8ffe2ad8);background-size:900px 900px;image-rendering:pixelated}
+.s1{background-position:-60px -40px}.s2{background-position:-300px -380px}.s3{background-position:-120px -620px}.s4{background-position:-420px -150px}.s5{background-position:-20px -300px}
+</style>
+</helmet>
+<div style="width: 1160px; height: 840px; box-sizing: border-box; background: #1b1c1e; color: #e4e2dc; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; padding: 26px 28px; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 28px;">
+  <div style="display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+    <div style="display: flex; align-items: baseline; gap: 14px;">
+      <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Line style library</h1>
+      <span style="color: #b9b6ad;">Named styles, shared by every contour set and trace.</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: center;">
+      <div class="strip s1" style="height: 64px; border-radius: 3px;"><svg width="300" height="64" aria-hidden="true"><path d="M8 44 C 80 10, 160 60, 292 22" fill="none" stroke="#0b0b0e" stroke-width="4" stroke-linecap="round"></path><path d="M8 44 C 80 10, 160 60, 292 22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round"></path><text x="150" y="30" fill="#ffffff" stroke="#0b0b0e" stroke-width="3" paint-order="stroke" font-family="IBM Plex Mono, monospace" font-size="11" text-anchor="middle">E −0.205</text></svg></div>
+      <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Screen contour</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">#FFFFFF 1.6 · outline #0B0B0E 1.0 · labels on, halo</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: center;">
+      <div class="strip s2" style="height: 64px; border-radius: 3px;"><svg width="300" height="64" aria-hidden="true"><path d="M8 20 C 90 60, 200 4, 292 40" fill="none" stroke="#0b0b0e" stroke-width="3" stroke-dasharray="4 3"></path><path d="M8 20 C 90 60, 200 4, 292 40" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="4 3" opacity="0.85"></path></svg></div>
+      <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Dashed secondary</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">#FFFFFF 1.1 · dash 4 3 · outline 0.8 · opacity 0.85 · no labels</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: center;">
+      <div class="strip s3" style="height: 64px; border-radius: 3px;"><svg width="300" height="64" aria-hidden="true"><path d="M8 38 C 70 6, 150 58, 292 30" fill="none" stroke="#0b0b0e" stroke-width="5.2" stroke-linecap="round"></path><path d="M8 38 C 70 6, 150 58, 292 30" fill="none" stroke="#fff27a" stroke-width="2.6" stroke-linecap="round"></path><circle cx="8" cy="38" r="4.5" fill="#fff27a" stroke="#0b0b0e" stroke-width="1.5"></circle><circle cx="118" cy="31" r="2.2" fill="#0b0b0e" stroke="#fff27a" stroke-width="1"></circle><circle cx="214" cy="33" r="2.2" fill="#0b0b0e" stroke="#fff27a" stroke-width="1"></circle></svg></div>
+      <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Trace</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">#FFF27A 2.2 · outline 1.1 · start marker · time ticks · opacity per vertex</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: center;">
+      <div class="strip s4" style="height: 64px; border-radius: 3px;"><svg width="300" height="64" aria-hidden="true"><line x1="0" y1="21" x2="300" y2="21" stroke="#f5f4f0" stroke-width="1.8" opacity="0.8"></line><line x1="0" y1="42" x2="300" y2="42" stroke="#f5f4f0" stroke-width="1.8" opacity="0.8"></line><line x1="0" y1="21" x2="300" y2="21" stroke="#111114" stroke-width="0.8" opacity="0.8"></line><line x1="0" y1="42" x2="300" y2="42" stroke="#111114" stroke-width="0.8" opacity="0.8"></line><line x1="75" y1="0" x2="75" y2="64" stroke="#f5f4f0" stroke-width="1.8" opacity="0.8"></line><line x1="75" y1="0" x2="75" y2="64" stroke="#111114" stroke-width="0.8" opacity="0.8"></line><line x1="150" y1="0" x2="150" y2="64" stroke="#f5f4f0" stroke-width="1.8" opacity="0.8"></line><line x1="150" y1="0" x2="150" y2="64" stroke="#111114" stroke-width="0.8" opacity="0.8"></line><line x1="225" y1="0" x2="225" y2="64" stroke="#f5f4f0" stroke-width="1.8" opacity="0.8"></line><line x1="225" y1="0" x2="225" y2="64" stroke="#111114" stroke-width="0.8" opacity="0.8"></line></svg></div>
+      <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Grid</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">width 0.8 · outline 0.5 · smart ink · opacity 0.8</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: center;">
+      <div style="height: 64px; border-radius: 3px; background: #f4f2ec;"><svg width="300" height="64" aria-hidden="true"><path d="M8 44 C 80 10, 160 60, 292 22" fill="none" stroke="#1c1c1f" stroke-width="1" stroke-linecap="round"></path><path d="M8 30 C 90 4, 170 48, 292 10" fill="none" stroke="#1c1c1f" stroke-width="0.7" stroke-dasharray="1 2.5" stroke-linecap="round"></path><text x="150" y="31" fill="#1c1c1f" stroke="#f4f2ec" stroke-width="3" paint-order="stroke" font-family="IBM Plex Mono, monospace" font-size="10" text-anchor="middle">−0.205</text></svg></div>
+      <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Print</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">#1C1C1F 1.0 · no outline · paper halo on labels · sized in pt</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px; align-items: center;">
+      <div class="strip s5" style="height: 64px; border-radius: 3px;"><svg width="300" height="64" aria-hidden="true"><path d="M8 18 C 90 50, 190 8, 292 36" fill="none" stroke="#0b0b0e" stroke-width="4.4" stroke-dasharray="0.1 6" stroke-linecap="round"></path><path d="M8 18 C 90 50, 190 8, 292 36" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-dasharray="0.1 6" stroke-linecap="round"></path><path d="M8 46 C 90 62, 190 30, 292 56" fill="none" stroke="#0b0b0e" stroke-width="3" stroke-dasharray="9 3 1 3"></path><path d="M8 46 C 90 62, 190 30, 292 56" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="9 3 1 3"></path></svg></div>
+      <div style="display: flex; flex-direction: column; gap: 3px;"><span style="font-weight: 500;">Dotted and dash-dot</span><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #b9b6ad;">dots: round caps, gap 6 · dash-dot: 9 3 1 3 · outlines follow the pattern</span></div>
+    </div>
+
+    <p style="margin: 6px 0 0; color: #b9b6ad; line-height: 1.5; max-width: 66ch;">The Print row is shown on paper, not over the field: a style can be sized in points for an exported print, where screen pixels mean nothing.</p>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px; padding: 18px; background: #232427; border: 1px solid #34363a; border-radius: 4px; align-self: start;">
+    <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f;">What a style holds</div>
+    <div style="display: flex; flex-direction: column; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.4;">
+      <div><span style="color: #fff27a;">stroke</span> colour · width · opacity · cap · join</div>
+      <div><span style="color: #fff27a;">dash</span> solid | dashed | dotted | dash-dot | pattern [on off …]</div>
+      <div><span style="color: #fff27a;">outline</span> colour · width (drawn under the stroke, same dashes)</div>
+      <div><span style="color: #fff27a;">ink</span> fixed | smart(radius, hysteresis, mode)</div>
+      <div><span style="color: #fff27a;">label</span> font · size · format · halo · gap · upright</div>
+      <div><span style="color: #fff27a;">units</span> screen px | print pt</div>
+    </div>
+    <div style="font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: #9b998f; margin-top: 6px;">Rules</div>
+    <ul style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; color: #b9b6ad; line-height: 1.45;">
+      <li>A line refers to a style by name and may override single fields.</li>
+      <li>Editing a style updates every line that uses it.</li>
+      <li>Styles are display settings: they never re-integrate.</li>
+      <li>Saved in the exported view, so a print reproduces its lines.</li>
+    </ul>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1160,"height":840}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

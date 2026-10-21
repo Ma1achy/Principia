@@ -1060,78 +1060,6 @@ seen.*
   reads the decoded `z_α` its seed rule needs; where the GUI takes them from (`z₀` or the lock) is not written.
 - **Waits:** nothing.
 
-## RQ-340: The compass's tilt: the code and the human's nav-cube reference both tilt the plane within one 3-space toward one shared hidden axis, but map (τ₁, τ₂) to planes differently, and the contract's two-target form is a different family; which plane a tilt means is not settled *(conflict, physics, R-451; context: TASK-M6-33)*
-
-*Found by R-451's port (16 Oct 2026), which the human asked to compare the three; restated in the fix round of PR #227
-after the physics review (P1 to P3) found the first comparison misread the reference. Nothing is chosen; the decoder's
-geometry is not changed, and the compass draws the decoder's mapping. For the human (physics: it changes which plane a
-tilt means).*
-
-- **File, section:**
-  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "`q'(τ) = normalise( cos τ · q + sin τ ·
-    d_target )        τ ∈ [−90°, +90°]`"; "The 8D has **6 directions orthogonal** to the current plane; the tilt selector
-    offers those". `docs/design/principia_chart_reference.md` §1.1: "A 2-plane in 8D has 12 tilt axes (6 hidden
-    dimensions × 2 basis vectors). Raw tilts **replace** rather than compose", and "**Arbitrary / oblique:** `q_1, q_2`
-    any orthonormal pair in ℝ⁸".
-  - The code, `crates/gui/src/explore/manifold_view/mod.rs`, `View::basis`: `u₁ = cos τ₁ e_a + sin τ₁ e_d`,
-    `u₂ = cos τ₂ e_b + sin τ₂ e_d` (one hidden axis `e_d`, `slice_axis`), then `q₁ = σ(cos γ u₁ + sin γ u₂)`,
-    `q₂ = σ(cos γ u₂ − sin γ u₁)`, with no normalisation and no orthogonalisation; `crates/gui/src/explore/compass.rs`,
-    `plane_frame`, draws the same in the frame `(e_a, e_b, e_d)`.
-  - `docs/gui/reference/principia_nav_cube.html`, `planeSpec`: "axis-angle ("joystick") map — rotate the up-normal by
-    angle m toward (τ₁,0,τ₂) … no gimbal lock (the naïve Euler form freezes q₂ at τ₁=±90°)", `n = (sin m · τ₁/m, cos m,
-    sin m · τ₂/m)`, `m = √(τ₁² + τ₂²)`; tilt mode's untilted plane is the horizontal x–z plane (`n = [0,1,0]`), its
-    labels "q₁'s target" on x and "q₂'s target" on z, and its help text: "no single coordinate perpendicular to both
-    targets".
-- **The reading:**
-  - **The code and the reference are one family.** The reference tips its plane's normal y toward x and z, so both
-    tilts tip the plane into the one unnamed vertical axis y; its "targets" x and z are the plane's own untilted in-plane
-    axes. Read geometrically, the code and the reference both give the 2-planes in one 3-space through the slice point
-    (the code's `(e_a, e_b, e_d)`, `e_d` hidden; the reference's (x, z, y), y hidden). They differ only in which
-    `(τ₁, τ₂)` gives which plane.
-  - **The code's map.** `u₁ · u₂ = sin τ₁ sin τ₂`, so with both tilts set the basis is not orthogonal, against
-    chart_reference §1.1's "any orthonormal pair", and the window's shape changes with it. Its normal is
-    `∝ (−tan τ₁, −tan τ₂, 1)`, one-to-one on the open square. At `|τ₁| = 90°`, `u₁ = ±e_d`, so the plane is
-    `span(e_b, e_d)` for every `|τ₂| < 90°`: τ₂ stops moving it along that whole edge, the gimbal lock the reference's
-    comment names (the physics review: the normal stays (−1, 0, 0) for τ₂ ∈ {0, 0.3, 1.0, 1.5}). At `τ₁ = ±τ₂ = ±90°`
-    the plane degenerates to the line `e_d`.
-  - **The reference's map.** It never degenerates inside ±90° (`m ≤ 127.3° < 180°`), but it is not one-to-one there:
-    `n` and `−n` are one plane, so `(τ₁, τ₂) = (90°, 90°)`, `m = 127.3°`, gives the plane `(−37.3°, −37.3°)` gives.
-    This bears on the contract's "sign matters".
-  - **The contract's two-target form is the different family.** With distinct targets `t₁ ⊥ t₂`, both orthogonal to
-    the plane, the two tilted vectors are already orthonormal, and the plane lies in the 4-space
-    `span(q₁, q₂, t₁, t₂)`, with no single normal: no 3D cube draws it faithfully. With one shared target the contract's
-    formula is the code's (`u₁` is unit, so `normalise` does nothing): the code is the contract's form with
-    `d_target₁ = d_target₂ = e_d`.
-- **The questions:** (i) within one 3-space, which parametrisation of the tilt pair: the code's or the reference's;
-  (ii) one shared target (the code and the reference) or two distinct targets (the contract's general form).
-- **Options seen:**
-  - (a) One shared hidden axis, the code's map (as applied): the contract states it as the tilt pair's meaning, with
-    its non-orthogonal basis against chart_reference §1.1 and its lock at `|τ₁| = 90°`; the compass draws it.
-  - (b) One shared hidden axis, the reference's axis-angle map: the reference's x, z and y read as `e_a`, `e_b` and
-    `e_d` (its untilted plane `span(e_a, e_b)`, its hidden axis `e_d`), the sign chosen so a single τ₁ moves q₁ toward
-    `e_d` as the code's does, and `q₁`, `q₂` the untilted `e_a`, `e_b` turned by the rotation taking `e_d` to `n`, then
-    by γ: orthonormal and without a lock, but one-to-one only for `m < 90°`: from the `m = 90°` circle on, `n` and `−n`
-    give one plane, so `(90°, 0)` and `(−90°, 0)` already give the same one. Like (a), a one-hidden-axis map.
-  - (c) Two distinct targets, the contract's general form: each of `q₁`, `q₂` tilted toward its own hidden direction,
-    `t₁ ⊥ t₂` (orthonormal with no further step); the plane leaves any one 3-space, so the ruling also says what the
-    compass's cube draws, and its tilt labels name the two targets.
-- **Applied meanwhile:** the compass's cube draws the decoder's mapping (`View::basis` in the cube's frame), and its
-  tilt mode names the one shared target (R-451 B1).
-- **The degenerate tilts hang on it** (fix round 4 of PR #227, physics review P13): under the decoder's map, option
-  (a), `q₁` and `q₂` span no plane at `τ₁ = ±τ₂ = ±90°`, and there the compass's cube draws no slice and its readout
-  cites this entry (R-451 B11). Under (b) or (c) those tilts give a plane, so a ruling for either revisits what the
-  cube draws there.
-- **Waits:** nothing builds on the choice yet; TASK-M6-33 does not wait, and no requirement carries `rq: RQ-340`
-  (REQ-GUI-192 cites it in its note). A ruling for (b) or (c) changes the decoder's basis, which re-integrates every
-  tilted view, and goes to a follow-up task.
-- **R-457 bears on it (18 Oct 2026, a note; the entry stays open).** The human ruled that each tilt angle tilts into a
-  latent dimension the user picks, "tilt τ₁ into [X]" and "tilt τ₂ into [Y]", the defaults today's one shared target.
-  That answers question (ii) in part: both the one-target map (`X = Y`) and the contract's two-target form (`X ≠ Y`,
-  option (c)'s family, orthonormal) are reachable, the shared target the default. Question (i), the parametrisation
-  within one 3-space when `X = Y` (options (a) and (b)), stays open, and with it R-451 B11's corner points, which arise
-  only with `X = Y`. R-459 says what the cube draws with `X ≠ Y` (each gesture exactly, and a "4D: see Plücker"
-  badge). TASK-M6-38 builds the targets with the code's map for `X = Y` (option (a), as applied).
-
 ## RQ-341: The physical compass views need the decoder's Jacobian with respect to z along all eight latent directions, into Jacobi or shape-sphere coordinates, and its Gram area factor; the corpus's J_D is the derivative with respect to the chart's (u, v) into the particle frame, not yet built, and no Gram factor is defined for it *(silence and conflict with the ruling's words, R-72, R-452; context: TASK-M6-35)*
 
 *Found by R-452's port (16 Oct 2026). Nothing is chosen. For the human: R-452 says "use the existing J_D machinery"
@@ -1463,69 +1391,108 @@ chosen. For the human: whether the scan's reach excludes read-side derived field
 - **Waits:** REQ-SYS-015 (`rq: RQ-365`): TASK-M2-15's closing of it. TASK-M2-15's PR does not wait: it merges with
   REQ-SYS-015 held, not closed.
 
-## RQ-372: R-467 says every chart is valid inside `[0,1]²`, "charts built in the Chart builder too", and makes an in-square validity failure a decoder bug with a console warning; a builder physical-quantity axis has a range that can leave the slice's reach inside the square, which the Domain preview exists to show *(conflict, R-467, R-407, R-408 B1, R-26, REQ-GUI-109, REQ-GUI-228; context: TASK-M8-18, TASK-M8-47)*
+## RQ-378: Whether "Save view as chart" on a curved chart should also offer a flattened oblique-latent version, where one exists locally *(the human's queued question, R-469 §11, R-475; context: TASK-M2-40, TASK-M8-48)*
 
-*Found porting R-467 (F2). Nothing is chosen. For the human: yes, it changes what the Chart builder must build.*
-
-- **File, section:**
-  - `decisions.md` § "R-467 — …", the human's words: "Inside [0,1]², every chart is valid by construction: the
-    feasibility warp, the simplex map, and the decode accepting any z. That holds for charts built in the Chart builder
-    too." and clause 4: "Inside [0,1]², a validity failure is a decoder bug: debug view only, plus a console warning
-    naming the chart and pixel. The real engine should produce zero."; clause 6: "The Chart builder's Domain preview
-    "forbidden in view: N%" (R-408, §G7) stays: it is a diagnostic for building charts, not a presentation view."
-  - `docs/gui/principia_render_gui_spec.md` § "G7. Chart builder (`03_chartbuilder.png`)": "physical quantity (energy,
-    `L_z`, virial ratio, mass ratio…, with a range and what is **held fixed** …)"; "a physical-quantity axis mapped
-    linearly onto its range is affine, the fallback hatching what fails validation"; "**The Domain preview:** the
-    chart's admissible region in its own coordinates, the forbidden region hatched, the current view as a rectangle, the
-    boundary's formula, and "forbidden in view: N%"."
-  - `plan/requirements.yaml` REQ-GUI-109, verify detail: "N% equals the fraction of a uniform grid over the view that
-    validate rejects"; its note: "With the egui layer shown the Chart builder's view is [0,1]²".
-  - `decisions.md` § "R-408 — …", B1: "Under this ruling its primary range is unbounded, so its unreachable pixels fail
-    validity and count as forbidden."
-- **Conflict:** nothing in the corpus makes a builder axis's range feasible on the slice. An energy axis whose range
-  reaches below the slice's potential `U` fails `validate`'s layer 2 at those pixels inside `[0,1]²`, and the Domain
-  preview's N% over `[0,1]²` is non-zero exactly then. Under clause 4 each such chart would log a "decoder bug" warning
-  for a chart the person built that way, while the context says such a chart cannot exist.
-- **Options seen:**
-  - (a) The builder keeps every chart valid inside the square: a physical-quantity axis's range is clamped or warped to
-    the slice's reach (as the invariant charts' warp is, chart_reference §2.1), so N% is 0 inside `[0,1]²` and a
-    failure there is a decoder bug, warned; the Domain preview then shows forbidden regions only past the square or
-    before Apply.
-  - (b) A builder chart may be invalid inside the square: its in-square failures draw the background (presentation)
-    and the hatch (debug view), as R-467 settles for every chart, but log no decoder-bug warning; the warning is for the
-    gallery charts (R-467 D11's list) only.
-  - (c) As (b), with a different, informational console line for a builder chart ("chart <name>: N% of the view is
-    outside its domain").
-- **Applied meanwhile:** R-467's drawing applies to every chart (R-467 D3, F6); the warning is built for the gallery
-  charts and the mock (REQ-GUI-227, TASK-M8-46; REQ-GUI-226, TASK-M6-46). Nothing in the builder changes.
-- **Waits:** REQ-GUI-228 (`rq: RQ-372`), a Chart-builder chart's in-square warning, closed by TASK-M8-47, a leaf task
-  nothing depends on.
-
-## RQ-374: R-467 says presentation views "never draw the hatch", and Overlays ▾ keeps two toggles, "forbidden region" and "NaN / invalid pixels", that draw it over the presentation figure *(conflict, R-467 clauses 1 and 6, R-26, REQ-GUI-079; context: TASK-M8-08)*
-
-*Filed on gui review 5585209592 of PR #253 (G5): R-467 D9, as first ported, kept both toggles per R-369, which goes
-beyond the human's words. For the human: yes, because option (b) drops part of a requirement.*
+*Queued by the human (R-469 §11: "Whether "Save view as chart" on a curved chart should also offer a flattened
+oblique-latent version, where one exists locally."). For the human: yes, it changes what Save view as chart builds.*
 
 - **File, section:**
-  - `decisions.md` § "R-467 …", the human's words: "1. Presentation views (outcome, Chazy, the stains, F3 full-window)
-    never draw the hatch." and "6. The Chart builder's Domain preview "forbidden in view: N%" (R-408, §G7) stays: it is
-    a diagnostic for building charts, not a presentation view." Clause 6 names only the Domain preview.
-  - `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view (`01_main.png`)": "- Chart: forbidden
-    region (the chart's domain function, R-26), grid, Burrau lattice (primitive triples)." and the Integration group's
-    "NaN / invalid pixels"; R-467's sentence: "The Chart group's "forbidden region" and the Integration group's "NaN /
-    invalid pixels" are diagnostics the person turns on, off by default, beside View › Debug view".
-  - `plan/requirements.yaml` REQ-GUI-079: "Overlays ▾ must hold the grouped toggles — … Integration (substep density,
-    substep-cap hits, NaN / invalid pixels, energy drift), Chart (forbidden region from the chart's domain function,
-    grid, Burrau lattice) …".
-- **The conflict:** the two toggles draw the hatch (or, with the debug view built, its styles) over a presentation
-  figure on request. Clause 1 says a presentation view never draws the hatch; clause 3 asks for "one switchable view"
-  that shows these categories; the words name neither toggle.
+  - `decisions.md` § "R-475 — …", the human's words, S2: on a curved chart the saved chart is "the parent chart, its
+    slice centre, and the tilt (map, angles, targets)"; on a latent view, "`(z₀, q₁, q₂)` as an oblique chart".
+  - `docs/gui/principia_render_gui_spec.md` § "G2. …", the Chart bullet's Save view as chart.
+- **The question:** a curved view near its centre is approximated by its tangent plane, an oblique latent chart
+  `(z₀, J q̂₁, J q̂₂)`; whether saving should also offer that flattened chart, and what "exists locally" requires (a
+  full-rank Jacobian at the centre, the window small enough).
+- **Options seen:** (a) no, the parent chart and its tilt only (S2 as written); (b) yes, a second option "Save as
+  flat chart", offered where the decoder's Jacobian at the centre has rank 2 (it needs the derivative RQ-341 raises);
+  (c) yes, with the flattened chart shown only as provenance, not offered.
+- **Applied meanwhile:** (a). Nothing waits.
+- **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
+  open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
+
+## RQ-470: R-503 makes the shape sphere's exponential-map pixels past `r = π` inside `[0,1]²` the domain's end by design, and R-467 clause 4, as R-506 W1 now confirms for every gallery chart, makes such a pixel a decoder bug with a console warning *(conflict, R-503, R-467 clause 4, R-506 W1, REQ-CHART-075, REQ-GUI-227; context: TASK-M2-28, TASK-M8-46)*
+
+*Found merging PR #258 (R-500 to R-505, R-515) into PR #255 (R-469 to R-477, R-506 to R-514). Nothing is chosen.
+R-503 flagged this and left it to RQ-372; R-506 has since ruled RQ-372 for the Chart builder's physical-quantity axes
+only, so the flag has no entry to wait on.*
+
+- **File, section:**
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map" (R-503): "**The radius is bounded at π (R-503,
+    closing RQ-371):** a pixel with `r = ‖d‖ > π`, which `[0,1]²` reaches where `s√2 > π`, is past the antipode of
+    `n0`, where the map wraps; it is the domain's end, not a system, out of the count and the total (§5.4)."
+  - `decisions.md` § "R-503 — …", "Flagged, not ruled": "a pixel past `r = π` lies inside `[0,1]²` when `s√2 > π`, an
+    in-square pixel that is not a system; R-467 makes an in-square validity failure a decoder bug with a console
+    warning, and RQ-372 (open, another batch) asks how R-467's in-square rule meets such ranges. R-503 is applied as
+    the human wrote it: the domain's end."
+  - `decisions.md` § "R-467 — …", the human's words: "Inside [0,1]², every chart is valid by construction" and clause
+    4: "Inside [0,1]², a validity failure is a decoder bug: debug view only, plus a console warning naming the chart
+    and pixel. The real engine should produce zero."
+  - `decisions.md` § "R-506 — …", W1: "Gallery charts warn as R-467 has it, their energy-type axes under the linear
+    option excepted (R-471 H5)."
+  - `docs/gui/principia_render_gui_spec.md` § "G12. Console (`12_console.png`)": "Inside the square every gallery chart
+    is valid by construction, so a pixel the chart classifies as not a system there (a validity failure, or a
+    `Chart::map` that fails) is a decoder bug"; REQ-GUI-227: "a pixel a gallery chart classifies as not a system inside
+    [0,1]² must log REQ-GUI-226's console warning".
+- **Also in the conflict:** REQ-CHART-078, the definition of how pixels exactly on `r = π` count, offers "counted
+  once, like the equator, or as the domain's end"; if TASK-M2-28 defines them as the domain's end, those in-square
+  pixels meet the same warning.
+- **Conflict:** with `s√2 > π` the exponential map classifies its pixels past `r = π` inside the square as not a system
+  (REQ-CHART-075), by design; REQ-GUI-227 and §G12 then log "decoder bug" for them on every such view, and REQ-CHART-058's
+  sweep ("the real engine should log none") would fail for that chart. R-506 W1 excepts only the energy-type axes'
+  linear option.
 - **Options seen:**
-  - (a) Keep both, off by default, drawing the debug view's styles over the figure: diagnostics turned on by the person,
-    as the Domain preview is (R-467 D9 as first ported).
-  - (b) Drop both from Overlays ▾, View › Debug view being the one switchable view. This retires part of REQ-GUI-079,
-    the human's call.
-  - (c) Keep both, enabled only while View › Debug view is on, as filters of what it shows.
-- **Applied meanwhile:** (a). Nothing else waits: TASK-M6-46 and TASK-M6-47 build no Overlays entry.
-- **Waits:** TASK-M8-08's two lines for these toggles (REQ-GUI-079's "NaN / invalid pixels" and "forbidden region");
-  the rest of TASK-M8-08 proceeds.
+  - (a) The exponential map's `r > π` pixels are by design, as an energy-type axis's linear option is: they draw blank
+    and log no warning; §G12 and REQ-GUI-227 name the exception.
+  - (b) The chart keeps the square inside its cap: `s` is bounded so that `s√2 ≤ π`, every pixel inside `[0,1]²` a
+    system. Past the square the exponential map is bounded and declares nothing (chart_reference §5.4; R-503, "Past
+    the square the map is bounded"), so R-503's `r > π` arm becomes unreachable: REQ-CHART-075's "a pixel with r > π
+    must be the domain's end", R-503 review round 2's fixture requirement `s√2·(N−1)/N > π`, and TASK-M2-28's
+    acceptance line and its control ("one that counts the pixels with r > π") would be retired or amended, and, if
+    TASK-M2-28 merges first, (b) changes built code.
+  - (c) The warning stands for them, as R-506 W1 reads literally.
+- **Applied meanwhile:** both texts as merged; nothing in the code changes. TASK-M2-28 builds REQ-CHART-075 as R-503
+  has it.
+- **Waits:** REQ-GUI-227's warning for the exponential map (TASK-M8-46), and REQ-CHART-058's sweep if it covers that
+  map with `s√2 > π`. Under option (b): REQ-CHART-075's `r > π` clause, its verify's fixture `s√2·(N−1)/N > π` (R-503
+  review round 2) and TASK-M2-28's acceptance line and its control; and REQ-CHART-078's "as the domain's end"
+  (physics review 5593301205 of PR #255, P2). TASK-M2-28 does not wait: it builds R-503 as written.
+
+## RQ-471: Lean each axis with one target at `|τ₁| = |τ₂| = 90°`, a reachable corner, maps the whole window onto one line of systems; the corpus gives what the chart shows there no `system_image`, fold or statistics *(silence, R-474 R8 and K15, R-451 B11, R-473, R-408; context: TASK-M2-36)*
+
+*Found answering physics review 5593414323 of PR #255 (P4), while restating the tilted fold's criterion without
+dividing by `N_d`. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Tilt (basis edit)": "**Lean each axis**, an option
+    (`lean`), is the formula above per axis, `u₁ = cos τ₁ e_a + sin τ₁ e_X`, `u₂ = cos τ₂ e_b + sin τ₂ e_X`, skewed
+    (`u₁·u₂ = sin τ₁ sin τ₂`)"; "The range `τ ∈ [−90°, +90°]` above is Lean each axis's"; "Under Lean each axis an area
+    statistic weights each pixel by the Gram factor `√(|u₁|²|u₂|² − (u₁·u₂)²)` (R-408)".
+  - `docs/contracts/principia_chart_decoder_contract.md` § "Part 5 — Well-posedness and the validation contract": the
+    four `system_image` values, "ray-degenerate — whole lines of pixels map to the same system".
+  - `docs/design/principia_chart_reference.md` § "3.3 The chart map", the tilted fold (applied per R-369): the fold is
+    kept iff `N_b = 0` for `N ∝ u₁ × u₂`.
+- **What the corpus does say (gui review 5593448572 of PR #255, G1):** the corner is reachable and handled on the GUI's
+  side. `decisions.md` § "R-474 — …", R8: the readout flags "the degenerate corner `τ₁ = ±τ₂ = ±90°`, where the plane
+  collapses to a line, which R-451 B11 already handles"; K15: Lean each axis's range is closed at ±90°, and a switch
+  to it clamps each angle to ±90°. `docs/gui/principia_render_gui_spec.md` § "G2. …", the compass: The map; the
+  Readout's "no plane drawn: s < 10⁻³ at τ₁ = <τ₁>°, τ₂ = <τ₂>° (RQ-340)" line, ending "(Lean each axis)" under that
+  map (R-451 B11, R-474); the Drag text: "a tilt-mode drag acts as anywhere else", the GUI's guards declining where
+  `s < 10⁻⁶` on the plane's own basis, no `z₀` edit sent (R-451 B11; REQ-GUI-203).
+- **Silence (narrowed):** what the chart shows there. At `|τ₁| = |τ₂| = 90°` with `X = Y`, `u₁ = ±e_X` and
+  `u₂ = ±e_X`, so `(R·e_a) × (R·e_b) = 0` and the Gram factor is 0: every pixel maps to the slice centre's `(a, b)` and
+  `d = ±u ± v`, whole lines of pixels decoding to one system. No text gives that view's `system_image`, its fold
+  (the tilted fold's criterion has no normal there) or its area statistics (every pixel's Gram weight is 0). Under
+  Tip as sheet `R` is a rotation and keeps rank 2, with two targets the tilted vectors are orthonormal, and an edge-on
+  view (`N_d = 0`) keeps rank 2; none of these is in question.
+- **Options seen:**
+  - (a) The view stays as R-474 and R-451 B11 have it and the chart reports ray-degenerate, its statistics weighted 0
+    as the Gram factor says; the label then reads ray-degenerate and every legend share is undefined (0 of a total of
+    0), which the legend would have to show.
+  - (b) The edit path refuses the second angle at 90° when the first is at 90° with one target (a stop, as R-469 P2
+    stops an edit), the readout saying why.
+  - (c) Lean each axis's range is open, `(−90°, 90°)`, for both angles together.
+  - Options (b) and (c) would amend R-474 R8 and K15, R-451 B11 and §G2's Readout and Drag lines, which reach and
+    handle the corner today.
+- **Applied meanwhile:** nothing; no task has built Lean each axis's fold.
+- **Waits:** REQ-CHART-062's fold at that corner (`rq: RQ-471`; TASK-M2-36 neither builds nor tests it until this is
+  ruled); TASK-M2-36 does not wait for the rest.

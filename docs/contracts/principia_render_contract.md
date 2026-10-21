@@ -83,9 +83,11 @@ The bake is an *implementation strategy* for the f(n̂) subset, not a contract c
 
 **Two rotations, never crossed.** `sph_uv` eats the **config-space** normal (the frame the BC/Euler/Lagrange points are fixed in). View orbit is display-only and never changes which UV a physics point maps to. Pattern auto-rotate is a UV offset *inside* the colour function — changes what colour a point shows, consistently, not which point a pixel represents. The click-to-inspect shape-sphere trajectory view answers the same question the same way.
 
-**Composite order (constitutional):** baked base → combine (L-override) → the post chain: the physics overlay (`site_overlay`, evaluated per fragment, never baked — R-121, colour_composition §4.2) and the structural/debug overlays → `OUT`; then the display stage, outside the graph (R-67): style → **display scale** (when `render_scale ≠ 1`: bilinear upscale below native, box downsample above — the step onto the display-sized swap chain; all prior stages run at render resolution) → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. Gradient-magnitude-on-the-*map* is a post occupant (screen-space finite difference over the colour buffer) — distinct from the baked |∇c| on the sphere texture.
+**Composite order (constitutional):** baked base → combine (L-override) → the post chain: the physics overlay (`site_overlay`, evaluated per fragment, never baked — R-121, colour_composition §4.2) and the structural/debug overlays → `OUT`; then the display stage, outside the graph (R-67): style → **display scale** (when `render_scale ≠ 1`: bilinear upscale below native, box downsample above — the step onto the display-sized swap chain; all prior stages run at render resolution) → gamut clamp → colour-vision simulation → screen. The simulation sees the final in-gamut colours. **The line system** (R-476; `principia_lines.md`: contours, traces,
+axes, grids) draws its own overlay pass, outside the graph and after the gamut clamp, before the colour-vision
+simulation, which sees the lines too; it changes no pixel's colour value and never touches the sim key. Gradient-magnitude-on-the-*map* is a post occupant (screen-space finite difference over the colour buffer) — distinct from the baked |∇c| on the sphere texture.
 
-**Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default the hatched invalid pattern (R-79, R-132). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
+**Sentinels, not NaN, in storage.** `diffusion` is derived at read, and an invalid streaming slope (`n < 2`) reads NaN by the predicate `n ≥ 2` (R-245, amending R-17's sentinel; `principia_dd_simstate_payload.md`, and the payload ledger, `principia_dd_generation_root.md` §3.4); **never NaN in storage buffers** (WGSL NaN behaviour is implementation-defined; `isNan` is unreliable under fast-math). A blown-up sample stores the defined failed-state values (payload §1: its f16 latches hold `0.0`), not NaN; only a tier-absent *derived* field reads NaN, at unpack. Every colouring maps NaN or a sentinel to its invalid treatment — by default `#141418` in a presentation view and the hatched invalid pattern, `debug_invalid(frag_xy)`, only in the debug views (R-79, R-132, R-467; applied per R-369). *Was:* "by default the hatched invalid pattern (R-79, R-132)" (stale value, replaced by R-467). The kernel-set `state` enum (`sim_failed`/`decode_failed`) and sticky `saturated` bit are the primary point-of-computation invalid-signals; the drift suspect gates are read-time predicates over the stored latches (payload §5); bitcast pattern tests in debug views are best-effort garnish.
 
 **The occupant rules `cargo xtask lint wgsl` checks (R-72; REQ-RENDER-015, REQ-RENDER-018, REQ-COL-005; TASK-M1-15).**
 Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §3.5 and the colouring's seams 5 and 6
@@ -368,6 +370,17 @@ with dd_colouring §3.1's sRGB transfer.
   (`principia_render_gui_spec.md` §G2) draws it for a forbidden pixel and for a decode or sim failure, and a NaN / Inf
   style of its own for a non-finite value, a calibration (REQ-COL-110; R-71), each with a legend key and a count. The
   task that needs the style proposes it; it is not magenta, which sits at τ from escape body 2 (R-505).
+- **Blank in every view, the hatch an optional overlay, the failures debug-only (R-470).** The background a pixel that
+  is not a system draws is blank, the view's background colour, never a palette colour in any view, the outcome view
+  included. The hatch is drawn outside the debug views only by the optional overlay Overlays › Chart › forbidden region
+  (off by default), `debug_invalid(frag_xy)` over exactly the pixels the chart classifies as not a system and the
+  `decode_failed` samples (R-511), and nothing else (REQ-COL-111). NaN, `±∞`, `sim_failed`, `decode_failed` and the chart's classification are shown only in the
+  debug views. View › Debug view is one of them, built as a baked variant of the render's pipeline (R-41: a variant,
+  never a flag bit): `RenderState`'s `debug_view` selects the variant compiled with the debug arm, and the presentation
+  variant is compiled without it, so a presentation view cannot draw a debug style. A `decode_failed` sample the chart
+  does not classify draws blank in a presentation view, as a pixel that is not a system, the overlay drawing over it;
+  `sim_failed` keeps `#141418` (R-511, ruling RQ-379). *Was:* "A presentation view's `#141418` for a `decode_failed`
+  sample the chart does not classify is RQ-379's to confirm."
 
 ### Live-state & array inspection
 
@@ -480,7 +493,7 @@ cross-check view and agreement preset that reads a stored value does the same.
 
 **Discipline.** One integration per settled hover, in a **dedicated inspector worker** (separate from the render-loop worker so its heavy f64 integration cannot stall the frame loop), **debounced + cancel-on-move** (generation counter, latest-wins), never awaited — it never blocks the main thread or the GPU survey. This is a *user-initiated* action outside the automatic refinement loop (it does not even read the payload — it re-integrates from the decoded IC).
 
-**Compositor placement (render-side fact).** The trace is an overlay layer above the stain graph, pure display state. **No trace over the backdrop:** if there is no current-identity payload under the cursor (a stale/blurred region), there is no IC to stand behind the cursor, so no trace — consistent with blur meaning not-current.
+**Compositor placement (render-side fact).** The trace is an overlay layer above the stain graph, pure display state, drawn by the line system (R-476; `principia_lines.md` §8: projection, fade, breaks, markers and styles), which the orbit viewer reuses; it breaks where the path leaves the chart, never joined across a pixel that is not a system. **No trace over the backdrop:** if there is no current-identity payload under the cursor (a stale/blurred region), there is no IC to stand behind the cursor, so no trace — consistent with blur meaning not-current.
 
 ---
 

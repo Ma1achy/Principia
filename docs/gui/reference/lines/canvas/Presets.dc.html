@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Line presets</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7fb6e0}a:hover{color:#a9cff0}
+</style>
+</helmet>
+<div style="width: 1160px; height: 760px; box-sizing: border-box; background: #1b1c1e; color: #e4e2dc; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; padding: 26px 28px; display: flex; flex-direction: column; gap: 16px;">
+  <div style="display: flex; align-items: baseline; gap: 14px;">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Two overlays become presets</h1>
+    <span style="color: #b9b6ad;">Today's grid and t_end contours, rebuilt on the line system.</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px;">
+    <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/_blob/c5cd3d229aebb711002ea4315cc74d07" alt="A grid drawn as contours of the chart's own axes, light over dark regions and dark over green" style="width: 540px; height: 540px; display: block; image-rendering: pixelated;">
+      <figcaption style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-weight: 500;">Grid = contours of the chart's own axes</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #fff27a;">h, v · step 0.1 · style Grid (smart ink)</span>
+        <span style="color: #b9b6ad; line-height: 1.45;">Straight here because the axes are straight. On a warped or tilted chart the same preset follows the chart, and a contour of z_α on a tilted chart shows how the axis has turned.</span>
+      </figcaption>
+    </figure>
+    <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/_blob/06c8563c32f6eb999fdac8cd255ae47c" alt="Contours of the time each run ended, broken and fragmented because the field is set by the integration" style="width: 540px; height: 540px; display: block; image-rendering: pixelated;">
+      <figcaption style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-weight: 500;">t_end contours = a playhead quantity</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #fff27a;">t_end · 3, 6, 10, 15 · read at the playhead</span>
+        <span style="color: #b9b6ad; line-height: 1.45;">Read from the payload, so it follows the quads' sampling and breaks up in the chaotic regions. That is the field itself, not a drawing fault, and why starting-state quantities are the default.</span>
+      </figcaption>
+    </figure>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1160,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

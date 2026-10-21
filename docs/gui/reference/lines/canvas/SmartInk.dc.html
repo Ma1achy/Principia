@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Smart ink</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#7fb6e0}a:hover{color:#a9cff0}
+</style>
+</helmet>
+<div style="width: 1360px; height: 640px; box-sizing: border-box; background: #1b1c1e; color: #e4e2dc; font-family: 'IBM Plex Sans', system-ui, sans-serif; font-size: 13px; padding: 26px 28px; display: flex; flex-direction: column; gap: 18px;">
+  <div style="display: flex; align-items: baseline; gap: 16px;">
+    <h1 style="margin: 0; font-size: 22px; font-weight: 500;">Smart ink</h1>
+    <span style="color: #b9b6ad;">The same five energy contours, three ways. Real outcome map, real contours.</span>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+    <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/_blob/bac8b9919c9c0cd14416bca7dca8a954" alt="Plain white contours: thin white lines and labels that wash out over the green region" style="width: 384px; height: 384px; display: block; image-rendering: pixelated;">
+      <figcaption style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-weight: 500;">Plain</span>
+        <span style="color: #b9b6ad; line-height: 1.45;">White line, no halo. Fine over the dark basins, weak over green, where white has a contrast of 2.5:1.</span>
+      </figcaption>
+    </figure>
+    <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/_blob/fd30adf925ed991c576e747e6150f4c9" alt="White contours with a black outline and haloed labels, readable on every colour" style="width: 384px; height: 384px; display: block; image-rendering: pixelated;">
+      <figcaption style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-weight: 500;">Outline</span>
+        <span style="color: #b9b6ad; line-height: 1.45;">White line on a black outline, labels on a halo. Readable everywhere, at the cost of a heavier line.</span>
+      </figcaption>
+    </figure>
+    <figure style="margin: 0; display: flex; flex-direction: column; gap: 10px;">
+      <img src="/_blob/9618cffadc123295f6c40f9cb0569b42" alt="Smart ink: the line turns dark with a light outline over green and stays light over black" style="width: 384px; height: 384px; display: block; image-rendering: pixelated;">
+      <figcaption style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-weight: 500;">Smart ink</span>
+        <span style="color: #b9b6ad; line-height: 1.45;">Each stretch of line takes whichever ink contrasts more with what is under it: dark over green, light over black. The outline takes the other.</span>
+      </figcaption>
+    </figure>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; padding-top: 14px; border-top: 1px solid #34363a;">
+    <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #fff27a;">rule</span><span style="color: #b9b6ad; line-height: 1.45;">Pick the ink with the higher WCAG contrast against the local background. The two tie at relative luminance 0.179.</span></div>
+    <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #fff27a;">radius · 6 px</span><span style="color: #b9b6ad; line-height: 1.45;">The background is averaged around the line, so one stray pixel never flips the ink.</span></div>
+    <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #fff27a;">hysteresis · 0.25</span><span style="color: #b9b6ad; line-height: 1.45;">The ink switches only once the contrast clearly favours the other side, so it does not flicker on a mottled edge or while panning.</span></div>
+    <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-family: 'IBM Plex Mono', monospace; color: #fff27a;">modes</span><span style="color: #b9b6ad; line-height: 1.45;">Light or dark (shown); or keep the hue and move only its lightness. Labels use the same rule.</span></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1360,"height":640}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
