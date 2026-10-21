@@ -182,4 +182,5 @@ Each wall, its one-line statement, and where it lives. **A file contradicting an
 > reads escape and `t_end` is fixed; time averages (FTLE's `S/T` and the like) freeze at `t_esc`; `done` is set and the
 > loop ends. The post-escape march for §2.4's checks runs only in the validation harness, on its own state; the payload
 > never sees it (R-103). The window is sampled at macro-step
-> boundaries for unregularised occupants and at sync boundaries for regularised ones.
+> boundaries for unregularised occupants and at sync boundaries for regularised ones, on the fixed grid `Δ_sync`, the
+> window stated in physical time (R-565).
