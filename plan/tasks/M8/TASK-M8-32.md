@@ -40,7 +40,7 @@ The Export & share window offers image export (size in multiples of the view, fo
 - `cargo test -p gui export_tilt_map` — REQ-TOOL-167's verify.
 - `cargo test -p gui export_f3_fill` — REQ-TOOL-168's verify.
 - `cargo test -p gui export_chart_params` — REQ-TOOL-169's verify.
-- `cargo test -p gui export_pair_warning` — an image, a snapshot and a share link exported under Heggie × KDK carry the occupant and the warning text in their sidecar, and importing each shows the warning; under Heggie × RK4 they carry the occupant and no warning; control: an export whose sidecar drops the warning under a measured-bad pair fails (REQ-GUI-353; R-561).
+- `cargo test -p gui export_pair_warning` — an image, a snapshot and a share link exported under Heggie × KDK carry the occupant and the warning text in their sidecar, and importing each shows the warning; a recording made under Heggie × KDK carries the occupant and the warning in its spec object (its `SimConfig`, TASK-M8-31) and a receiver shows it; under Heggie × RK4 they carry the occupant and no warning; control: an export whose sidecar drops the warning under a measured-bad pair fails (REQ-GUI-353; R-561; qa review 5607548278 of PR #277, Q7, applied per R-369).
 
 ## Notes
 - R-390: TASK-M6-28 builds the Export & share window's frame on the mock engine; this task depends on it and wires it to the real export, keeping every requirement it closes.
