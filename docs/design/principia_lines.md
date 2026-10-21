@@ -62,6 +62,18 @@ stain  →  display chain  →  [ LINES ]  →  egui layer (chrome, hover label,
   are in Overlays ▾ › Trace, the Trajectory panel and the `Trace…` window (R-541; render_gui_spec §G2, §G5), and
   Lines ▾ holds the contour sets, the axes, the grids and the presets (RQ-448, its option (a) applied meanwhile).
 
+**Over the Print graph, or through it (R-487; `principia_print_graph.md` §2).** Lines are drawn **over** the Print
+graph by default, so they stay crisp and readable on any medium. A line set whose style has `through_medium` (§3; a
+line may set it as an override in its `LineRef`) is instead composited onto the stain's output **before** the Print
+graph, so the medium draws it: a pencil contour comes out as watercolour pencil, a trace as a linocut line. Axes are a
+line set, so the same switch applies. The two passes are this renderer called twice with complementary filters on
+`through_medium`. The pass drawn over keeps this section's place, after the gamut clamp and before the colour-vision
+simulation (R-476 M2), and the Print graph doc §2's diagram is corrected to match; smart ink (§6) for a line drawn over
+reads the figure to the clamp, the Print graph's output included, and for a line drawn through the stain's output
+(R-531, ruling RQ-395). *Was:* "Where the pass drawn over sits against the display chain, before the display scale (the
+Print graph doc §2) or after the gamut clamp (R-476 M2), is RQ-395; so is what smart ink (§6) reads for each pass."
+Each line set's style panel shows "Through the medium", off by default (design doc §7.3).
+
 ---
 
 ## 3. The data model
@@ -74,6 +86,7 @@ LineStyle {                      // a named entry in the library
   ink:     Fixed | Smart { radius, hysteresis, mode: LightDark | KeepHue }
   label:   LabelStyle
   units:   ScreenPx | PrintPt
+  through_medium: bool            // R-487: drawn before the Print graph, through the medium; default false, drawn over
 }
 
 LabelStyle { font, size, format, halo: Option<{ colour, width }>, position: OnLine | Above | Below, offset_px,
@@ -213,7 +226,9 @@ styling, so that dashes and labels run continuously along the whole line.
 
 An option on any style, for both lines and labels.
 
-1. Take the figure **under the lines** (stain plus display chain) and compute its WCAG relative luminance.
+1. Take the figure **under the lines** (stain plus display chain) and compute its WCAG relative luminance. For a line
+   drawn over, that is the figure to the gamut clamp, the Print graph's output included; for a line drawn through the
+   medium, it is the stain's output, before the Print graph (R-531).
 2. Average it over a disc of `radius` px around each vertex, so one stray pixel never flips the ink.
 3. Compare in log contrast against the tie point, where light and dark ink give equal contrast. For the default inks
    `#F5F4F0` and `#111114` that is relative luminance 0.179.

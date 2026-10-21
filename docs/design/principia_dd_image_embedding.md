@@ -299,6 +299,15 @@ tier is never cut. Every field's tier is assigned in one table, read by the writ
 so it always carries all three tiers. A view recreated without tier 2 renders the default stain; without tier 3, each
 custom node with its slot's default built-in occupant; either is badged as a fallback (§9).
 
+**The Print graph travels in `RenderState` (R-491; `principia_print_graph.md` §9).** `RenderState.print` is part of the
+record, **by value**: a preset is the graph it expanded to, with its preset id as a label, so a later build's change to
+a built-in preset never changes what an old record reproduces. The graph, its built-in nodes, their parameters,
+settings and wires are **tier 2** (colour); a custom WGSL node's source is **tier 3** (custom source), dropped first.
+A record without tier 3 recreates the Print graph with each custom node shown as missing and the figure rendered
+without it, badged; a record without tier 2 renders Plain, badged as a fallback (§9). Whether tier 2 splits further is
+RQ-386, and a Print graph is part of what tier 2 holds there. The figure export's default is Plain (R-489), the record
+carrying the graph either way.
+
 **The ramp window is not optional.** An auto-ranged ramp manufactures or hides the difference it
 is meant to show — measured, not hypothesised — so a recreated image without it is a different
 image.

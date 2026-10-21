@@ -1,0 +1,170 @@
+{
+ "name": "Oil",
+ "doc": "Kuwahara-flattened colour dragged along the forms, low stroke ridges with bristle grooves, canvas in the thin passages, an aged varnish.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "b": {
+   "op": "expr",
+   "in": {
+    "I": "src"
+   },
+   "p": {
+    "f": "blur(I,0.8)"
+   }
+  },
+  "k1": {
+   "op": "kuwahara",
+   "in": {
+    "image": "b"
+   },
+   "p": {
+    "r": 6
+   }
+  },
+  "k2": {
+   "op": "kuwahara",
+   "in": {
+    "image": "k1"
+   },
+   "p": {
+    "r": 3
+   }
+  },
+  "f": {
+   "op": "flow",
+   "in": {
+    "image": "k2"
+   },
+   "p": {
+    "sigma": 6
+   }
+  },
+  "C": {
+   "op": "smear",
+   "in": {
+    "x": "k2",
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "length": 9
+   }
+  },
+  "s1": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 2.6,
+    "density": 0.004,
+    "length": 20,
+    "seed": "$seed"
+   }
+  },
+  "s2": {
+   "op": "strokes",
+   "in": {
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "width": 1.6,
+    "density": 0.006,
+    "length": 12,
+    "seed": "$seed+1"
+   }
+  },
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed+2"
+   }
+  },
+  "n": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "normal"
+   }
+  },
+  "ng": {
+   "op": "expr",
+   "in": {
+    "n": "n.out"
+   },
+   "p": {
+    "f": "gaussian(n,0.6)"
+   }
+  },
+  "gl": {
+   "op": "smear",
+   "in": {
+    "x": "ng",
+    "tx": "f.tx",
+    "ty": "f.ty"
+   },
+   "p": {
+    "length": 10
+   }
+  },
+  "cv": {
+   "op": "canvas",
+   "p": {
+    "period": 4.5,
+    "seed": "$seed"
+   }
+  },
+  "hgt": {
+   "op": "expr",
+   "in": {
+    "s1": "s1",
+    "s2": "s2",
+    "gl": "gl",
+    "C": "C",
+    "cv": "cv"
+   },
+   "p": {
+    "f": "strokes = maximum(s1, 0.8*s2)\ngrooves = z(gl)\nh = strokes*(1+0.08*grooves)*(0.6+0.7*lum(C)) + 0.05*cv*clip(1-strokes, 0, 1)\nout = gaussian(h, 0.7)"
+   }
+  },
+  "li": {
+   "op": "light",
+   "in": {
+    "height": "hgt"
+   },
+   "p": {
+    "strength": 2.2,
+    "shin": 36,
+    "L": [
+     -0.55,
+     -0.75,
+     0.9
+    ]
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "C": "C",
+    "diff": "li.diff",
+    "spec": "li.spec"
+   },
+   "p": {
+    "f": "out = C*(0.86+0.14*diff[..., None])\nout = out + 0.08*spec[..., None]*array([1, .97, .9])\ng = lum(out)[..., None]; out = g+(out-g)*1.1\nout = out*array([1.0, 0.975, 0.91]); out = out*0.94+0.03"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}

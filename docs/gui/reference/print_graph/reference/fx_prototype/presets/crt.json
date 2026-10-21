@@ -1,0 +1,54 @@
+{
+ "name": "CRT television",
+ "doc": "Scanlines through an aperture grille, bandwidth blur, misconvergence, glow, snow, a slow roll.",
+ "settings": {
+  "seed": 0
+ },
+ "nodes": {
+  "r": {
+   "op": "rng",
+   "p": {
+    "seed": "$seed"
+   }
+  },
+  "sn": {
+   "op": "draw",
+   "in": {
+    "rng": "r"
+   },
+   "p": {
+    "kind": "normal",
+    "shape": "HW1"
+   }
+  },
+  "ph": {
+   "op": "draw",
+   "in": {
+    "rng": "sn.rng"
+   },
+   "p": {
+    "kind": "uniform",
+    "a": 0.0,
+    "b": 1.0
+   }
+  },
+  "col": {
+   "op": "expr",
+   "in": {
+    "I": "src",
+    "sn": "sn.out",
+    "ph": "ph.out"
+   },
+   "p": {
+    "f": "C = gaussian(I, (0.3, 1.6, 0))\nC = stack([ndi.shift(C[..., 0], (0, 1.2), order=1, mode='nearest'), C[..., 1], ndi.shift(C[..., 2], (0.4, -1.2), order=1, mode='nearest')], -1)\nperiod = H/200; yc = np.arange(H)[:, None]\nph_ = (yc % period)/period\nbeam = exp(-((ph_-0.5)/(0.30 + 0.14*lum(C)))**2)\nout = C*beam[..., None]*1.55\nxs = np.arange(W) % 3.0\ngrille = stack([(xs < 1.0), (xs >= 1.0) & (xs < 2.0), (xs >= 2.0)], -1).astype(float)\ngrille = gaussian(grille, (0.5, 0))\nout = out*(0.35 + 0.65*grille[None, :, :])*1.35\nout = out + blur(out, 2.0)*0.35 + blur(out, 8.0)*0.25\nout = out + 0.025*sn\nroll = 1 + 0.04*sin(2*pi*(np.arange(H)/H*1.3 + ph))\nout = out*roll[:, None, None]\nv = 1 - 0.35*(((xx-W/2)/W)**2 + ((yy-H/2)/H)**2)*2\nout = out*v[..., None]"
+   }
+  },
+  "out": {
+   "op": "u8",
+   "in": {
+    "x": "col"
+   }
+  }
+ },
+ "out": "out"
+}
