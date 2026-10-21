@@ -342,12 +342,16 @@ of §1.1 to §1.3:
 
 - **Gradient**: Family B over the point. The 2D and 3D gradients are one-to-one on the quotient (state map SM6); the 1D
   gradients run one three-stop OKLab ramp; round θ is the hue circle.
+  The Torus gradient (R-543), on the plane and the cylinder, is periodic in chart units and one-to-one within a period
+  (state map SM6).
 - **Site blend**: Family A. On the sphere it is the §2 static sets, one code path with Shape n̂'s Site blend; on a flat
   point, §2's lattice sites, with flat distance `−|x − p|²`, the same kernels and the same blend spaces.
 - **Palette**: categorical by tile. Each tile of a tiling (square, hexagons, triangles, brick, stripes; on the sphere
   latitude × longitude cells, Fibonacci cells, meridian wedges, latitude bands) takes one swatch, by index or by golden
   angle.
 - **Picture**: an image pulled back through the flow (§3's image input; state map SM8).
+  Past its square it follows its wrap mode (Repeat, Mirror or Clamp) and a separate dim setting, Mirror and dimmed by
+  default (R-543).
 - **Layers**: `bandmask` with band patterns (grid lines, checkerboard, tile edges, stripes, rings; on the sphere its
   own), and `site_overlay` for site dots, in order, each with its spacing, colour and opacity.
 

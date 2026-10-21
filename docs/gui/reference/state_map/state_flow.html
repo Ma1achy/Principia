@@ -125,7 +125,8 @@ input[type=color]{border:1px solid var(--wb);border-radius:2px;background:var(--
           <div class="ctl" id="sm_krow"><span>κ</span><input type="range" id="sm_kappa" min="0.5" max="12" step="0.5" value="3"><output id="sm_kappa_o">3.0</output></div>
           <div class="ctl"><span>Blend space</span><select id="sm_space"><option value="oklab" selected>OKLab (desaturates at boundaries)</option><option value="rgb">RGB</option></select></div>
         </div>
-        <div id="sm_g_grad" hidden><div class="ctl"><span>Gradient</span><select id="sm_grad"></select></div></div>
+        <div id="sm_g_grad" hidden><div class="ctl"><span>Gradient</span><select id="sm_grad"></select></div>
+          <div class="ctl" id="sm_gnrow" hidden><span>Repeats</span><select id="sm_gn"><option value="1">Once across the square</option><option value="2" selected>2 across</option><option value="3">3 across</option><option value="4">4 across</option><option value="6">6 across</option><option value="8">8 across</option></select></div></div>
         <div id="sm_g_fsites" hidden>
           <div class="ctl"><span>Sites</span><select id="sm_fgen"><option value="square">Square lattice</option><option value="hex" selected>Hex lattice</option></select></div>
           <div class="ctl"><span>Across</span><select id="sm_fn"><option value="4">4</option><option value="6" selected>6</option><option value="8">8</option><option value="12">12</option><option value="18">18</option><option value="24">24</option></select></div>
@@ -140,7 +141,9 @@ input[type=color]{border:1px solid var(--wb);border-radius:2px;background:var(--
           <div class="ctl"><span>Palette</span><select id="sm_tcol"><option value="index" selected>By index (neighbours differ)</option><option value="golden">Golden-angle</option></select></div>
         </div>
         <div id="sm_g_bands" hidden><div class="ctl"><span>Bands</span><select id="sm_bands"><option>4</option><option>6</option><option selected>8</option><option>12</option></select></div></div>
-        <div id="sm_g_pic" hidden><div class="ctl"><span>Picture</span><select id="sm_img"><option value="checker" selected>Checkerboard</option><option value="grid">Grid</option><option value="rings">Rings</option><option value="upload">Your image…</option></select><input type="file" id="sm_file" accept="image/*" hidden></div></div>
+        <div id="sm_g_pic" hidden><div class="ctl"><span>Picture</span><select id="sm_img"><option value="checker" selected>Checkerboard</option><option value="tchecker">Checkerboard, tileable</option><option value="grid">Grid</option><option value="rings">Rings</option><option value="upload">Your image…</option></select><input type="file" id="sm_file" accept="image/*" hidden></div>
+          <div class="ctl"><span>Past its square</span><select id="sm_wrap"><option value="repeat">Repeat (tiles the plane)</option><option value="mirror" selected>Mirror (for photos)</option><option value="clamp">Clamp to the edge</option></select></div>
+          <label class="row"><input type="checkbox" id="sm_pdim" checked> Dim past the square</label></div>
         <div id="sm_g_layers" hidden>
         <p class="note" style="margin:10px 0 2px;color:#dcdcdc;font-weight:400">Colour · layers on top, in order</p>
           <div class="ctl"><span>Layer 1</span><select id="sm_l1"><option value="none" selected>None</option><option value="cells">Cell edges (Fibonacci)</option><option value="grid">Grid lines</option><option value="checker">Checkerboard</option><option value="hexedge">Hexagon edges</option><option value="triedge">Triangle edges</option><option value="brickedge">Brick edges</option><option value="sx">Stripes along x</option><option value="sy">Stripes along y</option><option value="rings">Rings round the centre</option><option value="dots">Site dots</option></select></div>
@@ -1058,8 +1061,16 @@ function smImageUV(tc, w) {   // → [u, v, outside]
   if (tc.id === 'G') { const h = (0.6 - w.v) / 1.2; return [wrap(w.u) / TAU, h, h < 0 || h > 1]; }
   const xr = tc.xr, yr = tc.yr, u = (w.u - xr[0]) / (xr[1] - xr[0]), v = (w.v - yr[0]) / (yr[1] - yr[0]); return [u, v, u < 0 || u > 1 || v < 0 || v > 1];
 }
+// past the picture's square: Repeat (a tileable picture tiles the plane cleanly), Mirror (a photo stays continuous across
+// the edge, but a cell picture repeats its edge row and breaks its pattern at every seam), or Clamp (the edge colour)
+function smWrapFn() { const m = val('sm_wrap');
+  if (m === 'repeat') return s => s - Math.floor(s);
+  if (m === 'clamp') return s => Math.max(0, Math.min(1 - 1e-9, s));
+  return s => { s = ((s % 2) + 2) % 2; return s > 1 ? 2 - s : s; }; }
 function smImage() { const k = val('sm_img'); if (SM.images[k]) return SM.images[k]; const N = 256, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d');
   if (k === 'checker') { for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const [r, g2, b] = oklabToRgb((i + j) % 2 ? 0.82 : 0.5, 0.12 * ((i + .5) / 4 - 1), 0.12 * (1 - (j + .5) / 4)); x.fillStyle = `rgb(${r},${g2},${b})`; x.fillRect(i * N / 8, j * N / 8, N / 8, N / 8); } }
+  else if (k === 'tchecker') { const T = SM_TORUS; for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) { const th = TAU * (i + .5) / 8, ph = TAU * (j + .5) / 8, c = 0.8 * (T.R + T.r * Math.cos(ph));   // the torus at the cell centres: the colours wrap too, so Repeat has no seam
+      const [r, g2, b] = oklabToRgb(T.L0 + 0.8 * T.rL * Math.sin(ph) + ((i + j) % 2 ? 0.07 : -0.07), c * Math.cos(th), c * Math.sin(th)); x.fillStyle = `rgb(${r},${g2},${b})`; x.fillRect(i * N / 8, j * N / 8, N / 8, N / 8); } }
   else if (k === 'grid') { x.fillStyle = '#101114'; x.fillRect(0, 0, N, N); x.strokeStyle = '#f2efe6'; x.lineWidth = 2; for (let i = 0; i <= 16; i++) { x.beginPath(); x.moveTo(i * N / 16, 0); x.lineTo(i * N / 16, N); x.moveTo(0, i * N / 16); x.lineTo(N, i * N / 16); x.stroke(); }
     x.fillStyle = '#ff5a4f'; x.fillRect(0, 0, N / 2, 6); x.fillStyle = '#4fb6ff'; x.fillRect(0, 0, 6, N / 2); }
   else if (k === 'rings') { for (let r = 18; r >= 1; r--) { const [a, b2, cc] = oklabToRgb(r % 2 ? 0.8 : 0.42, 0.1 * Math.cos(r), 0.1 * Math.sin(r)); x.fillStyle = `rgb(${a},${b2},${cc})`; x.beginPath(); x.arc(N / 2, N / 2, r * N / 36 * 1.4, 0, 7); x.fill(); } }
@@ -1089,8 +1100,8 @@ function smPaint(L, k) {
       if (!w2) { const c = w.kind === 'left' ? [62, 58, 66] : [44, 50, 58]; im.data.set([...c, 255], o); continue; }
       w2.m = e.m; w = w2; st.shown = (st.shown || 0) + 1; }
     st.ok++;
-    let c; if (img) { const [u, v, out] = smImageUV(tc, w), tri = s => { s = ((s % 2) + 2) % 2; return s > 1 ? 2 - s : s; }, iu = Math.min(img.N - 1, Math.floor(tri(u) * img.N)), iv = Math.min(img.N - 1, Math.floor(tri(v) * img.N)), q = 4 * (iv * img.N + iu);
-      c = [img.data[q], img.data[q + 1], img.data[q + 2]]; if (out) c = c.map(v2 => v2 * 0.62); if (smLayersActive().length) { const lb = smApplyLayers(tc, w, rgbLab(c)); c = oklabToRgb(...lb); } }   // past the picture's square: mirrored, and dimmed so it says so
+    let c; if (img) { const [u, v, out] = smImageUV(tc, w), wr = smWrapFn(), iu = Math.min(img.N - 1, Math.floor(wr(u) * img.N)), iv = Math.min(img.N - 1, Math.floor(wr(v) * img.N)), q = 4 * (iv * img.N + iu);
+      c = [img.data[q], img.data[q + 1], img.data[q + 2]]; if (out && opt('sm_pdim')) c = c.map(v2 => v2 * 0.62); if (smLayersActive().length) { const lb = smApplyLayers(tc, w, rgbLab(c)); c = oklabToRgb(...lb); } }   // past the picture's square: wrapped by its wrap mode, and dimmed if asked so it says so
     else { let w0 = null; if (val('sm_bright') !== 'none') { const b0 = p * S, y0 = Array.from(L.state.subarray(b0, b0 + 12)); const e0 = encode([[y0[0], y0[1]], [y0[2], y0[3]], [y0[4], y0[5]]], [[y0[6], y0[7]], [y0[8], y0[9]], [y0[10], y0[11]]]); w0 = smWhere(tc, e0, y0); w0.m = e0.m; }
       c = smOccupant(tc, w, w0); }
     let a = 255; if (fade) { let d; if (chart.project) d = chart.project(e, null, y).d; else { d = offDist(e, e); } a = 255 * Math.max(0.18, 1 / (1 + (Number.isFinite(d) ? d / 0.35 : 1e9) ** 2)); }
@@ -1103,7 +1114,7 @@ function smDraw() {   // called from frame(): true if it drew the background
   const k = Math.max(0, Math.min(SM.NK - 1, Math.round(playT / SM.DT)));
   // finest level that is complete, else the finest with anything, coarser levels underneath (the coarse-ancestor fill)
   const lv = SM.levels; let drew = false;
-  const sig = k + '|' + [val('sm_src'), val('sm_mode'), val('sm_target'), val('sm_after'), val('sm_left'), val('sm_frame'), val('sm_img'), opt('sm_fade'), val('sm_sites'), val('sm_gen'), val('sm_kernel'), val('sm_kappa'), val('sm_swatch'), val('sm_space'), val('sm_bands'), val('sm_bright'), val('sm_tpat'), val('sm_tn'), val('sm_tspace'), val('sm_tcol'), val('sm_grad'), val('sm_fgen'), val('sm_fn'), val('sm_fsw'), val('sm_fker'), val('sm_fkap'), val('sm_fspace'), ...[1, 2, 3].flatMap(k => ['', 'n', 'c', 'o'].map(x => val('sm_l' + k + x)))].join('|');
+  const sig = k + '|' + [val('sm_src'), val('sm_mode'), val('sm_target'), val('sm_after'), val('sm_left'), val('sm_frame'), val('sm_img'), opt('sm_fade'), val('sm_sites'), val('sm_gen'), val('sm_kernel'), val('sm_kappa'), val('sm_swatch'), val('sm_space'), val('sm_bands'), val('sm_bright'), val('sm_tpat'), val('sm_tn'), val('sm_tspace'), val('sm_tcol'), val('sm_grad'), val('sm_gn'), val('sm_wrap'), opt('sm_pdim'), val('sm_fgen'), val('sm_fn'), val('sm_fsw'), val('sm_fker'), val('sm_fkap'), val('sm_fspace'), ...[1, 2, 3].flatMap(k => ['', 'n', 'c', 'o'].map(x => val('sm_l' + k + x)))].join('|');
   // underneath: the last finished grid, at its own rectangle, so a pan or zoom never shows a gap while the new grid lands
   const B = SM.bases && SM.bases[chart.id]; if (B && B.got) { if (smRepeats()) drawImages(B, sig); else drawGrid(B, sig); }
   const D = SM.lastDone; if (D && D.chartId === chart.id && D.job !== SM.job) drawGrid(D, sig);
@@ -1122,7 +1133,7 @@ function smStatus() { smSyncUI(); const bn = smMode() === 'outcome' ? chart.note
   smLegend(); }
 // the legend: the colour map (or the picture) over the target chart, with this pixel's system marked where it is now
 function smLegend() { const tc = smTarget(), c = $('sm_leg'), x = c.getContext('2d'), W = c.width; let H = c.height; const k = SM.kNow || 0;
-  const key = [val('sm_src'), tc.id, smMode(), val('sm_img'), val('sm_frame'), val('sm_sites'), val('sm_gen'), val('sm_kernel'), val('sm_kappa'), val('sm_swatch'), val('sm_space'), val('sm_bands'), val('sm_tpat'), val('sm_tn'), val('sm_tspace'), val('sm_tcol'), val('sm_grad'), val('sm_fgen'), val('sm_fn'), val('sm_fsw'), val('sm_fker'), val('sm_fkap'), val('sm_fspace'), ...[1, 2, 3].flatMap(k => ['', 'n', 'c', 'o'].map(x => val('sm_l' + k + x))), val('sm_bright'), chart.id, view().xr.join(), view().yr.join()].join('|');
+  const key = [val('sm_src'), tc.id, smMode(), val('sm_img'), val('sm_frame'), val('sm_sites'), val('sm_gen'), val('sm_kernel'), val('sm_kappa'), val('sm_swatch'), val('sm_space'), val('sm_bands'), val('sm_tpat'), val('sm_tn'), val('sm_tspace'), val('sm_tcol'), val('sm_grad'), val('sm_gn'), val('sm_wrap'), opt('sm_pdim'), val('sm_fgen'), val('sm_fn'), val('sm_fsw'), val('sm_fker'), val('sm_fkap'), val('sm_fspace'), ...[1, 2, 3].flatMap(k => ['', 'n', 'c', 'o'].map(x => val('sm_l' + k + x))), val('sm_bright'), chart.id, view().xr.join(), view().yr.join()].join('|');
   if (key !== SM.legendKey) { SM.legendKey = key; const hh = Math.round(c.width * tc.H / tc.W); if (c.height !== hh) c.height = hh; H = hh; const im = x.createImageData(W, H), img = smMode() === 'image' ? smImage() : null;
     for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const u = tc.xr[0] + (tc.xr[1] - tc.xr[0]) * (i + .5) / W, v = tc.yr[0] + (tc.yr[1] - tc.yr[0]) * (j + .5) / H; let w = { kind: 'ok', u, v };
       if (tc.id === 'B') w.n = [Math.sin(v) * Math.cos(u), Math.sin(v) * Math.sin(u), Math.cos(v)];
@@ -1204,8 +1215,8 @@ const SM_TPAT = { sphere: [['latlon', 'Latitude × longitude cells'], ['cells', 
   cylinder: [['square', 'Square'], ['hex', 'Hexagons'], ['tri', 'Triangles'], ['brick', 'Brick'], ['sx', 'Stripes round θ'], ['sy', 'Bands along s']],
   simplex: [['tri', 'Triangles in the masses'], ['sx', 'Stripes in m₂'], ['sy', 'Stripes in m₃']] };
 const SM_GRAD = { sphere: [['3d', '3D: n̂ → L, a, b (one-to-one)'], ['lon', 'Round the longitude (hue circle)'], ['lat', 'Pole to pole']],
-  plane: [['2d', '2D: x → a, y → b (one lightness)'], ['x', 'Along x'], ['y', 'Along y'], ['r', 'Out from the centre']],
-  cylinder: [['2d', '2D: θ round the hue circle, s up L'], ['x', 'Round θ (hue circle)'], ['y', 'Along s']],
+  plane: [['2d', '2D: x → a, y → b (one lightness)'], ['torus', 'Torus: repeats seamlessly over the whole plane'], ['x', 'Along x'], ['y', 'Along y'], ['r', 'Out from the centre']],
+  cylinder: [['2d', '2D: θ round the hue circle, s up L'], ['torus', 'Torus: θ round the hue, s repeats seamlessly'], ['x', 'Round θ (hue circle)'], ['y', 'Along s']],
   simplex: [['2d', '2D: three primaries mixed by the masses'], ['x', 'Along m₂'], ['y', 'Along m₃']] };
 const smPick = (id, list) => { const t = val(id); return list.some(([k]) => k === t) ? t : list[0][0]; };
 function smTPat(q) { return smPick('sm_tpat', SM_TPAT[q]); }
@@ -1223,10 +1234,10 @@ function smHexRound(X, Y) { const R = 1 / Math.sqrt(3), qf = (Math.sqrt(3) / 3 *
   let q = Math.round(qf), r = Math.round(rf); const s2 = Math.round(sf), dq = Math.abs(q - qf), dr = Math.abs(r - rf), ds = Math.abs(s2 - sf);
   if (dq > dr && dq > ds) q = -r - s2; else if (dr > ds) r = -q - s2; return [q, r]; }
 function smNTheta(n) { return 6 * Math.max(1, Math.round(n / 6)); }
-function smTileXY(tc, w, n) { const q = smQuot(tc);
+function smTileXY(tc, w, n, chartUnits = false) { const q = smQuot(tc);
   if (q === 'sphere') { const nt = smNTheta(n); return [wrap(w.u) / TAU * nt, w.v / Math.PI * nt / 2]; }   // θ × φ cells, a multiple of 6 round θ
   if (q === 'simplex') { const m = w.m || [1 / 3, 1 / 3, 1 / 3]; return [m[1] * n + m[2] * n / 2, m[2] * n * Math.sqrt(3) / 2]; }   // the masses as the triangle itself
-  if (q === 'plane' && val('sm_tspace') === 'square') { const [sx, sy] = smCompact(tc, w.u, w.v); return [(sx + 1) / 2 * n, (sy + 1) / 2 * n]; }
+  if (q === 'plane' && !chartUnits && val('sm_tspace') === 'square') { const [sx, sy] = smCompact(tc, w.u, w.v); return [(sx + 1) / 2 * n, (sy + 1) / 2 * n]; }
   const nx = q === 'cylinder' ? smNTheta(n) : n, ny = Math.max(1, Math.round(nx * tc.H / tc.W));
   const R = tc.bgRange || tc.limitRect || [tc.xr[0], tc.xr[1], tc.yr[0], tc.yr[1]], cl = (x, a, b) => { const lo = Math.min(a, b), hi = Math.max(a, b), e = 1e-9 * (hi - lo); return Math.max(lo + e, Math.min(hi - e, x)); };
   let u = w.u, v = w.v; if (q === 'cylinder') u = wrap(u); else if (!Number.isFinite(u)) u = cl(u, R[0], R[1]);   // left the chart: the tile at the edge it left by
@@ -1247,7 +1258,19 @@ function smSwatch(sw, i, j, o = 0) { return sw === 'golden' ? smGolden(2 * i + o
 const srgbLin = v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }, rgbLab = c => linLab(c.map(srgbLin));
 const SM_RAMP = [[59, 47, 128], [33, 144, 141], [253, 231, 37]].map(rgbLab);
 function smRamp(t) { t = Math.max(0, Math.min(1, t)) * 2; const k = Math.min(1, Math.floor(t)), f = t - k; return SM_RAMP[k].map((v, i) => v + (SM_RAMP[k + 1][i] - v) * f); }
+// Torus: a colour map periodic on the plane, so it tiles the infinite plane with no seam and no home square. One period
+// maps onto a torus inside OKLab: x → θ round the hue, y → φ round the tube (lightness and chroma together). A torus sits
+// in 3-D colour without touching itself, so within one period the map is one-to-one and continuous; a system exactly one
+// period away has the same colour (the legend states the period; "Left its starting tile" separates them). Fixed shape,
+// never clipped per pixel: R 0.074, r 0.037, L 0.70 ± 0.12 is 0 out of gamut on a 240² sweep of (θ, φ) (torus_gam.js).
+const SM_TORUS = { L0: 0.70, rL: 0.12, R: 0.074, r: 0.037 };
+function smTorusXY(tc, w) { const q = smQuot(tc), n = +val('sm_gn');
+  if (q === 'cylinder') { const [, Y] = smTileXY(tc, w, n, true); return [wrap(w.u) / TAU, Y * n / Math.max(1, Math.round(smNTheta(n) * tc.H / tc.W))]; }   // θ once round; s repeats n times over the square
+  return smTileXY(tc, w, n, true); }   // chart units: the period is the same size everywhere, inside the square or past it
+function smTorusLab(tc, w) { const [X, Y] = smTorusXY(tc, w), th = TAU * X, ph = TAU * Y, T = SM_TORUS, c = T.R + T.r * Math.cos(ph);
+  return [T.L0 + T.rL * Math.sin(ph), c * Math.cos(th), c * Math.sin(th)]; }
 function smGradLab(tc, w) { const q = smQuot(tc), g = smPick('sm_grad', SM_GRAD[q]);
+  if (g === 'torus') return smTorusLab(tc, w);
   if (g === '2d' || g === '3d') return smPosLab(tc, w);
   if (q === 'sphere') return g === 'lon' ? hueLab(wrap(w.u) / TAU * 360, 0.75, 0.1) : smRamp(w.v / Math.PI);
   if (q === 'cylinder') return g === 'x' ? hueLab(wrap(w.u) / TAU * 360, 0.75, 0.1) : smRamp((Math.tanh(w.v / 0.6) + 1) / 2);
@@ -1347,13 +1370,13 @@ function smSyncUI() { const shape = smShapeNode(), tc = smTarget(), q = smQuot(t
   if (!shape) { fill('sm_tpat', SM_TPAT[q]); fill('sm_grad', SM_GRAD[q]); }
   $('sm_trow').hidden = shape;
   $('sm_g_sites').hidden = !(mode === 'tiles' || (mode === 'fsites' && sph)); $('sm_g_bands').hidden = mode !== 'bands'; $('sm_g_pic').hidden = mode !== 'image'; $('sm_g_src').hidden = mode === 'outcome';
-  $('sm_g_grad').hidden = mode !== 'gradient'; $('sm_g_fsites').hidden = !(mode === 'fsites' && !sph); $('sm_g_pal').hidden = mode !== 'palette'; $('sm_g_layers').hidden = shape || mode === 'outcome';
+  $('sm_g_grad').hidden = mode !== 'gradient'; $('sm_gnrow').hidden = smPick('sm_grad', SM_GRAD[q]) !== 'torus'; $('sm_g_fsites').hidden = !(mode === 'fsites' && !sph); $('sm_g_pal').hidden = mode !== 'palette'; $('sm_g_layers').hidden = shape || mode === 'outcome';
   $('sm_tsrow').hidden = q !== 'plane'; $('sm_fkrow').hidden = val('sm_fker') === 'nearest';
   for (const k of [1, 2, 3]) $('sm_l' + k + 'row').hidden = val('sm_l' + k) === 'none';
   if (sph) { $('sm_nrow').hidden = !(smGen() === 'fib' || smGen() === 'ring'); $('sm_krow').hidden = val('sm_kernel') === 'nearest'; }
   const lname = (list, id) => (list.find(([k]) => k === val(id)) || ['', ''])[1];
   const base = shape ? { colour: 'Position (linear in n̂)', tiles: 'Site blend', bands: 'Bands over n̂', image: 'Picture' }[mode]
-    : { gradient: 'Gradient · ' + lname(SM_GRAD[q], 'sm_grad').split(':')[0], fsites: 'Site blend · ' + (sph ? smGen() : (val('sm_fgen') === 'hex' ? 'hex' : 'square') + ' lattice'), palette: 'Palette · ' + lname(SM_TPAT[q], 'sm_tpat'), image: 'Picture' }[mode];
+    : { gradient: 'Gradient · ' + lname(SM_GRAD[q], 'sm_grad').split(':')[0], fsites: 'Site blend · ' + (sph ? smGen() : (val('sm_fgen') === 'hex' ? 'hex' : 'square') + ' lattice'), palette: 'Palette · ' + lname(SM_TPAT[q], 'sm_tpat'), image: 'Picture · ' + val('sm_wrap') }[mode];
   const lays = smLayersActive().map(k => `${$('sm_l' + k).selectedOptions[0].text} ×${val('sm_l' + k + 'n')}`);
   const br = { none: '— (None)', disp: 'Displacement', changed: 'Left its starting tile' }[val('sm_bright')];
   const src = shape ? '<b>Shape n̂</b> <span class="weak">(its own node)</span>' : `<b>Chart position</b>⟨${tc.name}⟩ <span class="weak">at the playhead</span>`;
@@ -1369,7 +1392,7 @@ function smPreset(k) { const set = o => { for (const [id, v] of Object.entries(o
   if (k === 'paper') set({ ...clear, sm_mode: 'gradient', sm_grad: '2d', sm_bright: 'none', sm_l1: 'checker', sm_l1n: '6', sm_l1c: 'white', sm_l1o: '0.25', sm_l2: 'grid', sm_l2n: '6', sm_l2c: 'dark', sm_l2o: '0.75' });
   if (k === 'basins') { set({ ...clear, sm_mode: 'palette', sm_tn: '6', sm_tcol: 'index', sm_bright: 'none' }); set({ sm_tpat: sph() ? 'cells' : 'hex' }); }
   if (k === 'disp') set({ ...clear, sm_mode: 'gradient', sm_grad: '2d', sm_bright: 'disp' });
-  if (k === 'flow') set({ ...clear, sm_mode: 'image', sm_img: 'checker', sm_bright: 'none' });
+  if (k === 'flow') set({ ...clear, sm_mode: 'image', sm_img: 'tchecker', sm_wrap: 'repeat', sm_pdim: false, sm_bright: 'none' });
   if (k === 'mixing') { set({ ...clear, sm_mode: 'palette', sm_tn: '6', sm_tcol: 'index', sm_bright: 'changed' }); set({ sm_tpat: sph() ? 'latlon' : 'square' }); }
   SM.uiKey = ''; smSyncUI(); }
 
@@ -1387,7 +1410,7 @@ function smClampVsLast() { const L = SM.levels[SM.levels.length - 1], tc = smTar
     const a = smPosLab(tc, w.clamp), c = smPosLab(tc, last), d = Math.hypot(a[0] - c[0], a[1] - c[1], a[2] - c[2]); n++; de.push(d); if (d > 0.04) far++; }
   M = keep; de.sort((x, y) => x - y); const q = f => de.length ? +de[Math.min(de.length - 1, Math.floor(f * de.length))].toFixed(4) : null;
   return { target: tc.id, t: k * SM.DT, left: n, p50: q(0.5), p90: q(0.9), max: q(0.999), overJND4: far }; }
-for (const id of ['sm_src', 'sm_mode', 'sm_target', 'sm_frame', 'sm_after', 'sm_left', 'sm_img', 'sm_res', 'sm_fade', 'sm_sites', 'sm_gen', 'sm_kernel', 'sm_kappa', 'sm_swatch', 'sm_space', 'sm_bands', 'sm_bright', 'sm_tpat', 'sm_tn', 'sm_tspace', 'sm_tcol', 'sm_grad', 'sm_fgen', 'sm_fn', 'sm_fsw', 'sm_fker', 'sm_fkap', 'sm_fspace', ...[1, 2, 3].flatMap(k => ['', 'n', 'c', 'o'].map(x => 'sm_l' + k + x))]) $(id).addEventListener('change', () => { SM.legendKey = ''; if (id === 'sm_img' && val('sm_img') === 'upload') $('sm_file').click(); });
+for (const id of ['sm_src', 'sm_mode', 'sm_target', 'sm_frame', 'sm_after', 'sm_left', 'sm_img', 'sm_res', 'sm_fade', 'sm_sites', 'sm_gen', 'sm_kernel', 'sm_kappa', 'sm_swatch', 'sm_space', 'sm_bands', 'sm_bright', 'sm_tpat', 'sm_tn', 'sm_tspace', 'sm_tcol', 'sm_grad', 'sm_gn', 'sm_wrap', 'sm_pdim', 'sm_fgen', 'sm_fn', 'sm_fsw', 'sm_fker', 'sm_fkap', 'sm_fspace', ...[1, 2, 3].flatMap(k => ['', 'n', 'c', 'o'].map(x => 'sm_l' + k + x))]) $(id).addEventListener('change', () => { SM.legendKey = ''; if (id === 'sm_img' && val('sm_img') === 'upload') $('sm_file').click(); });
 $('sm_kappa').addEventListener('input', () => { $('sm_kappa_o').textContent = (+val('sm_kappa')).toFixed(1); SM.legendKey = ''; });
 document.querySelectorAll('button[data-p]').forEach(b => b.addEventListener('click', () => smPreset(b.dataset.p)));
 $('sm_file').addEventListener('change', ev => { const f = ev.target.files[0]; if (!f) return; const im = new Image(); im.onload = () => { SM.upload = im; delete SM.images.upload; SM.legendKey = ''; for (const L of SM.levels) L.sig = ''; }; im.src = URL.createObjectURL(f); });
