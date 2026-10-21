@@ -488,9 +488,38 @@ fn dir() -> PathBuf {
 /// The off-curve perturbations' sizes.
 const DELTAS: [f64; 4] = [1e-6, 1e-4, 1e-2, 1e-1];
 
+/// The near-tolerance perturbations' sizes, in the precision's tolerance `k·ε_R`.
+const SCALES: [f64; 5] = [0.25, 0.5, 1.0, 2.0, 4.0];
+
 /// The on-curve and off-curve draws.
 const ON: usize = 16384;
 const OFF: usize = 1024;
+
+/// The seeds of the on-curve maxima's stability, and the draws at each.
+const SEEDS: [u64; 8] = [27, 28, 29, 30, 31, 32, 33, 34];
+const ON_SEED: usize = 4096;
+
+/// The on-curve distribution's quantiles.
+const QUANTILES: [(f64, &str); 5] = [
+    (0.5, "q50"),
+    (0.9, "q90"),
+    (0.99, "q99"),
+    (0.999, "q999"),
+    (1.0, "max"),
+];
+
+/// The value at the quantile `q` of `sorted`, ascending: its `⌊(n − 1)·q⌋`th entry.
+fn quantile(sorted: &[f64], q: f64) -> f64 {
+    sorted[((sorted.len() - 1) as f64 * q) as usize]
+}
+
+/// A curve chart's encode at `R` under the curve tolerance, as `into` does it, for the measurement's spans.
+fn lands<R: Precision, C: CurveChart<Param = R>>(chart: &C, x: &Ic<f64>) -> bool
+where
+    f64: From<R>,
+{
+    matches!(into(chart, x).landing, Landing::Chart { .. })
+}
 
 /// One precision's measurement: `(key, value, what)`.
 fn measure<R: Precision>(label: &str, out: &mut Vec<(String, f64, String)>)
@@ -498,28 +527,39 @@ where
     f64: From<R>,
 {
     let mut r = rng(26);
+    let tol = curve_tol::<R>();
     let spans = [
         ("euclid", euclid::<R>().nu_span::<R>()),
         ("fold", theta_k::<R>().nu_span::<R>()),
     ];
     for (name, span) in spans {
         let (lo, hi) = (f(span[0]), f(span[1]));
-        let (mut closed, mut star, mut gap) = (0.0f64, 0.0f64, 0.0f64);
+        let (mut closed, mut star, mut gap, mut accepted) =
+            (Vec::with_capacity(ON), 0.0f64, 0.0f64, 0usize);
         for _ in 0..ON {
             let nu = uniform(&mut r, lo, hi);
-            let e = enc::<R>(&gauged(&burrau(nu), &mut r));
-            let x = state_point(&e.canonical.ic);
+            let x = gauged(&burrau(nu), &mut r);
+            let e = enc::<R>(&x);
+            let p = state_point(&e.canonical.ic);
             let cf = closed_form(&e.canonical.ic);
-            let p = nearest(&x, span);
-            closed = closed.max(f(Float::sqrt(curve_distance2(&x, cf.nu))) / R::EPS);
-            star = star.max(f(p.distance()) / R::EPS);
-            gap = gap.max((f(p.nu) - f(cf.nu)).abs() / R::EPS);
+            let n = nearest(&p, span);
+            closed.push(f(Float::sqrt(curve_distance2(&p, cf.nu))) / R::EPS);
+            star = star.max(f(n.distance()) / R::EPS);
+            gap = gap.max((f(n.nu) - f(cf.nu)).abs() / R::EPS);
+            accepted += usize::from(if name == "euclid" {
+                lands(&euclid::<R>(), &x)
+            } else {
+                lands(&theta_k::<R>(), &x)
+            });
         }
-        out.push((
-            format!("on_{name}_{label}_d_closed_max"),
-            closed,
-            format!("largest d(ν(θ)) on the curve, {name} span, {label}, in ε_R"),
-        ));
+        closed.sort_by(f64::total_cmp);
+        for (q, qn) in QUANTILES {
+            out.push((
+                format!("on_{name}_{label}_d_closed_{qn}"),
+                quantile(&closed, q),
+                format!("d(ν(θ)) on the curve at the quantile {q}, {name} span, {label}, in ε_R"),
+            ));
+        }
         out.push((
             format!("on_{name}_{label}_d_star_max"),
             star,
@@ -530,10 +570,34 @@ where
             gap,
             format!("largest |ν* − ν(θ)| on the curve, {name} span, {label}, in ε_R"),
         ));
+        out.push((
+            format!("on_{name}_{label}_step4_frac"),
+            accepted as f64 / ON as f64,
+            format!("on the curve, {name} span, {label}: the share step 4 lands on the chart at tol and ε_phys"),
+        ));
     }
-    let span = euclid::<R>().nu_span::<R>();
+    for seed in SEEDS {
+        let mut r = rng(seed);
+        for (name, span) in spans {
+            let (lo, hi) = (f(span[0]), f(span[1]));
+            let mut worst = 0.0f64;
+            for _ in 0..ON_SEED {
+                let e = enc::<R>(&gauged(&burrau(uniform(&mut r, lo, hi)), &mut r));
+                let cf = closed_form(&e.canonical.ic);
+                let p = state_point(&e.canonical.ic);
+                worst = worst.max(f(Float::sqrt(curve_distance2(&p, cf.nu))) / R::EPS);
+            }
+            out.push((
+                format!("on_{name}_{label}_d_closed_max_seed{seed}"),
+                worst,
+                format!("largest d(ν(θ)) on the curve, {name} span, {label}, seed {seed}, {ON_SEED} draws, in ε_R"),
+            ));
+        }
+    }
+    let chart = euclid::<R>();
+    let span = chart.nu_span::<R>();
     for delta in DELTAS {
-        let mut ratios = Vec::with_capacity(OFF);
+        let mut d = Vec::with_capacity(OFF);
         for _ in 0..OFF {
             let nu = uniform(&mut r, 0.1, 0.9);
             let mut x = burrau(nu);
@@ -542,20 +606,59 @@ where
                 body[1] += delta * uniform(&mut r, -1.0, 1.0);
             }
             let s = uniform(&mut r, -1.0, 1.0) * delta / 4.0;
-            x.m = [x.m[0] + s, x.m[1] - s / 2.0, x.m[2] - s / 2.0];
+            let t = uniform(&mut r, -1.0, 1.0) * delta / 4.0;
+            x.m = [x.m[0] + s, x.m[1] - s / 2.0 + t, x.m[2] - s / 2.0 - t];
             let e = enc::<R>(&gauged(&x, &mut r));
-            let p = nearest(&state_point(&e.canonical.ic), span);
-            ratios.push(f(p.distance()) / delta);
+            d.push(f(nearest(&state_point(&e.canonical.ic), span).distance()));
         }
-        ratios.sort_by(f64::total_cmp);
-        let at = |q: f64| ratios[((ratios.len() - 1) as f64 * q) as usize];
+        d.sort_by(f64::total_cmp);
         for (q, name) in [(0.0, "min"), (0.5, "median"), (1.0, "max")] {
             out.push((
                 format!("off_{delta:e}_{label}_d_{name}"),
-                at(q) * delta,
+                quantile(&d, q),
                 format!("off the curve, moved by up to δ = {delta:e}: the {name} d(ν*), {label}"),
             ));
         }
+        let within = d.iter().filter(|&&v| v <= f(tol)).count();
+        out.push((
+            format!("off_{delta:e}_{label}_within_frac"),
+            within as f64 / OFF as f64,
+            format!("off the curve, moved by up to δ = {delta:e}: the share with d(ν*) ≤ tol, accepted by kind 4, {label}"),
+        ));
+    }
+    for scale in SCALES {
+        let (mut within, mut accepted, mut refused) = (0usize, 0usize, 0usize);
+        for _ in 0..OFF {
+            let x = gauged(
+                &perturbed(uniform(&mut r, 0.1, 0.9), scale * f(tol), &mut r),
+                &mut r,
+            );
+            let e = enc::<R>(&x);
+            let p = project(&e, span, tol);
+            if matches!(p.landing, CurveLanding::Latent) {
+                refused +=
+                    usize::from(residual_at(&e, chart.at_nu(p.closed.nu)) <= eps_phys::<R>());
+            } else {
+                within += 1;
+                accepted += usize::from(lands(&chart, &x));
+            }
+        }
+        let share = |n: usize| n as f64 / OFF as f64;
+        out.push((
+            format!("near_{scale:e}_{label}_within_frac"),
+            share(within),
+            format!("moved by up to {scale} tol: the share kind 4 accepts, d ≤ tol, {label}"),
+        ));
+        out.push((
+            format!("near_{scale:e}_{label}_step4_frac"),
+            share(accepted),
+            format!("moved by up to {scale} tol: the share kind 4 accepts and step 4 lands on the chart, {label}"),
+        ));
+        out.push((
+            format!("near_{scale:e}_{label}_refused_frac"),
+            share(refused),
+            format!("moved by up to {scale} tol: the share kind 4 refuses whose closed form step 4 alone would land, {label}"),
+        ));
     }
 }
 
@@ -577,10 +680,15 @@ fn text(values: &[(String, f64, String)]) -> String {
          # sphere chordal ⊕ mass simplex Euclidean at unit weights, on and off the Burrau curve, and the proposed\n\
          # tolerance k·ε_R, provisional until the M2 gate. Measured by crates/kernel/tests/encode_burrau.rs,\n\
          # encode_curve_projection_calibration; regenerate with PRIN_WRITE_CURVE_PROJECTION=1. On the curve: γ(ν) at\n\
-         # rest under a random gauge, ν uniform on each span, 16384 draws, the largest d in ε_R; the test holds each at\n\
-         # most twice its value here and below k. Off it: γ(ν), ν uniform on [0.1, 0.9], each position moved by up to δ\n\
-         # per component and the masses by up to δ/4 along (1, −½, −½), under a random gauge, 1024 draws per δ, the\n\
-         # least, median and largest d(ν*); compared at a relative 1e-6 plus k·ε_R.\n",
+         # rest under a random gauge, ν uniform on each span, 16384 draws at seed 26, d(ν(θ))'s quantiles in ε_R, and\n\
+         # the share step 4 lands (dd_encode §3.1, the composition, at tol and ε_phys); its maximum at seeds 27 to 34,\n\
+         # 4096 draws each. The test holds each on-curve value below k and at most twice its value here. Off it: γ(ν),\n\
+         # ν uniform on [0.1, 0.9], each position moved by up to δ per component and the masses by up to δ/4 along\n\
+         # (1, −½, −½) and up to δ/4 along (0, 1, −1), under a random gauge, 1024 draws per δ: the least, median and\n\
+         # largest d(ν*), compared at a relative 1e-6 plus k·ε_R, and the share within tol. Near the tolerance: each\n\
+         # position component and the masses along (1, 0, −1) and (0, 1, −1) moved by up to a multiple of tol, 1024\n\
+         # draws per multiple: the shares kind 4 accepts, kind 4 and step 4 land, and kind 4 refuses where step 4 alone\n\
+         # would land at the closed form. Every share is compared within 0.02.\n",
     );
     for (k, v, what) in values {
         s.push_str(&format!("{k} = {v:e}  # {what}\n"));
@@ -601,15 +709,18 @@ fn held(text: &str, k: &str) -> f64 {
         .unwrap_or_else(|| panic!("{DIR}: `{k}` holds no number"))
 }
 
-/// The fixture `text` is the measurement `values`' evidence: the proposal is the tests' `k`; each on-curve maximum is
-/// below `k` and at most twice the fixture's; each off-curve value is the fixture's within a relative 10⁻⁶ plus `k·ε_R`
-/// of its precision, a platform's `sin`, `cos` and `atan2` rounding differently; and each off-curve minimum lies above
-/// `k·ε_R`, so those draws fall back: at f64 from `δ = 10⁻⁶`, at f32 from `δ = 10⁻²`.
+/// The fixture `text` is the measurement `values`' evidence: the proposal is the tests' `k`; each share is the
+/// fixture's within 0.02, a platform rounding a draw near an edge the other way; each on-curve value is below `k` and
+/// at most twice the fixture's; each off-curve value is the fixture's within a relative 10⁻⁶ plus `k·ε_R` of its
+/// precision, a platform's `sin`, `cos` and `atan2` rounding differently; and each off-curve minimum lies above `k·ε_R`,
+/// so those draws fall back: at f64 from `δ = 10⁻⁶`, at f32 from `δ = 10⁻²`.
 fn check_measurement(text: &str, values: &[(String, f64, String)]) {
     for (k, v, _) in values {
         let h = held(text, k);
         if k == "k_curve" {
             assert!(*v == h, "{DIR}: k_curve {h} is not the tests' {v}");
+        } else if k.ends_with("_frac") {
+            assert!((v - h).abs() <= 0.02, "{k} = {v}, the fixture holds {h}");
         } else if k.starts_with("on_") {
             assert!(*v < K_CURVE, "{k} = {v} is not below k = {K_CURVE}");
             assert!(*v <= 2.0 * h, "{k} = {v} is above twice the fixture's {h}");

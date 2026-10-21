@@ -2,44 +2,139 @@
 # sphere chordal ⊕ mass simplex Euclidean at unit weights, on and off the Burrau curve, and the proposed
 # tolerance k·ε_R, provisional until the M2 gate. Measured by crates/kernel/tests/encode_burrau.rs,
 # encode_curve_projection_calibration; regenerate with PRIN_WRITE_CURVE_PROJECTION=1. On the curve: γ(ν) at
-# rest under a random gauge, ν uniform on each span, 16384 draws, the largest d in ε_R; the test holds each at
-# most twice its value here and below k. Off it: γ(ν), ν uniform on [0.1, 0.9], each position moved by up to δ
-# per component and the masses by up to δ/4 along (1, −½, −½), under a random gauge, 1024 draws per δ, the
-# least, median and largest d(ν*); compared at a relative 1e-6 plus k·ε_R.
+# rest under a random gauge, ν uniform on each span, 16384 draws at seed 26, d(ν(θ))'s quantiles in ε_R, and
+# the share step 4 lands (dd_encode §3.1, the composition, at tol and ε_phys); its maximum at seeds 27 to 34,
+# 4096 draws each. The test holds each on-curve value below k and at most twice its value here. Off it: γ(ν),
+# ν uniform on [0.1, 0.9], each position moved by up to δ per component and the masses by up to δ/4 along
+# (1, −½, −½) and up to δ/4 along (0, 1, −1), under a random gauge, 1024 draws per δ: the least, median and
+# largest d(ν*), compared at a relative 1e-6 plus k·ε_R, and the share within tol. Near the tolerance: each
+# position component and the masses along (1, 0, −1) and (0, 1, −1) moved by up to a multiple of tol, 1024
+# draws per multiple: the shares kind 4 accepts, kind 4 and step 4 land, and kind 4 refuses where step 4 alone
+# would land at the closed form. Every share is compared within 0.02.
 k_curve = 1.28e2  # the proposed tolerance's k: d(ν*) ≤ k·ε_R lands (REQ-ENC-026, provisional until the M2 gate)
-on_euclid_f64_d_closed_max = 2.2986550088809576e1  # largest d(ν(θ)) on the curve, euclid span, f64, in ε_R
+on_euclid_f64_d_closed_q50 = 1.3339257513655887e0  # d(ν(θ)) on the curve at the quantile 0.5, euclid span, f64, in ε_R
+on_euclid_f64_d_closed_q90 = 3.3260336739125176e0  # d(ν(θ)) on the curve at the quantile 0.9, euclid span, f64, in ε_R
+on_euclid_f64_d_closed_q99 = 8.728203355414937e0  # d(ν(θ)) on the curve at the quantile 0.99, euclid span, f64, in ε_R
+on_euclid_f64_d_closed_q999 = 1.3669723044926696e1  # d(ν(θ)) on the curve at the quantile 0.999, euclid span, f64, in ε_R
+on_euclid_f64_d_closed_max = 2.2986550088809576e1  # d(ν(θ)) on the curve at the quantile 1, euclid span, f64, in ε_R
 on_euclid_f64_d_star_max = 2.282221305687677e1  # largest d(ν*) on the curve, euclid span, f64, in ε_R
 on_euclid_f64_nu_gap_max = 3.5e0  # largest |ν* − ν(θ)| on the curve, euclid span, f64, in ε_R
-on_fold_f64_d_closed_max = 2.4181382778312926e1  # largest d(ν(θ)) on the curve, fold span, f64, in ε_R
+on_euclid_f64_step4_frac = 9.9993896484375e-1  # on the curve, euclid span, f64: the share step 4 lands on the chart at tol and ε_phys
+on_fold_f64_d_closed_q50 = 1.3050383136138188e0  # d(ν(θ)) on the curve at the quantile 0.5, fold span, f64, in ε_R
+on_fold_f64_d_closed_q90 = 3.4118360159890453e0  # d(ν(θ)) on the curve at the quantile 0.9, fold span, f64, in ε_R
+on_fold_f64_d_closed_q99 = 8.426627833280937e0  # d(ν(θ)) on the curve at the quantile 0.99, fold span, f64, in ε_R
+on_fold_f64_d_closed_q999 = 1.496643583690373e1  # d(ν(θ)) on the curve at the quantile 0.999, fold span, f64, in ε_R
+on_fold_f64_d_closed_max = 2.4181382778312926e1  # d(ν(θ)) on the curve at the quantile 1, fold span, f64, in ε_R
 on_fold_f64_d_star_max = 2.3839034707925236e1  # largest d(ν*) on the curve, fold span, f64, in ε_R
 on_fold_f64_nu_gap_max = 4e0  # largest |ν* − ν(θ)| on the curve, fold span, f64, in ε_R
-off_1e-6_f64_d_min = 1.0247892432696373e-7  # off the curve, moved by up to δ = 1e-6: the min d(ν*), f64
-off_1e-6_f64_d_median = 1.409525853481382e-6  # off the curve, moved by up to δ = 1e-6: the median d(ν*), f64
-off_1e-6_f64_d_max = 7.193440074035406e-6  # off the curve, moved by up to δ = 1e-6: the max d(ν*), f64
-off_1e-4_f64_d_min = 7.051143611014939e-6  # off the curve, moved by up to δ = 1e-4: the min d(ν*), f64
-off_1e-4_f64_d_median = 1.424296110936332e-4  # off the curve, moved by up to δ = 1e-4: the median d(ν*), f64
-off_1e-4_f64_d_max = 7.823522340534266e-4  # off the curve, moved by up to δ = 1e-4: the max d(ν*), f64
-off_1e-2_f64_d_min = 5.848502974554479e-4  # off the curve, moved by up to δ = 1e-2: the min d(ν*), f64
-off_1e-2_f64_d_median = 1.4182513631541598e-2  # off the curve, moved by up to δ = 1e-2: the median d(ν*), f64
-off_1e-2_f64_d_max = 6.652766809891725e-2  # off the curve, moved by up to δ = 1e-2: the max d(ν*), f64
-off_1e-1_f64_d_min = 1.2387902147136086e-2  # off the curve, moved by up to δ = 1e-1: the min d(ν*), f64
-off_1e-1_f64_d_median = 1.3369390298849748e-1  # off the curve, moved by up to δ = 1e-1: the median d(ν*), f64
-off_1e-1_f64_d_max = 6.766605489965756e-1  # off the curve, moved by up to δ = 1e-1: the max d(ν*), f64
-on_euclid_f32_d_closed_max = 5.151692199707031e1  # largest d(ν(θ)) on the curve, euclid span, f32, in ε_R
+on_fold_f64_step4_frac = 9.996337890625e-1  # on the curve, fold span, f64: the share step 4 lands on the chart at tol and ε_phys
+on_euclid_f64_d_closed_max_seed27 = 2.855694806587206e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 27, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed27 = 1.843736923947276e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 27, 4096 draws, in ε_R
+on_euclid_f64_d_closed_max_seed28 = 1.9978308549524407e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 28, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed28 = 2.9908606106575434e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 28, 4096 draws, in ε_R
+on_euclid_f64_d_closed_max_seed29 = 1.8160822963804705e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 29, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed29 = 2.0868287246385513e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 29, 4096 draws, in ε_R
+on_euclid_f64_d_closed_max_seed30 = 1.8105283339126153e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 30, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed30 = 2.193826231759537e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 30, 4096 draws, in ε_R
+on_euclid_f64_d_closed_max_seed31 = 2.2356978164686076e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 31, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed31 = 2.0310434089653434e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 31, 4096 draws, in ε_R
+on_euclid_f64_d_closed_max_seed32 = 1.7696632211411767e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 32, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed32 = 2.5264064686378934e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 32, 4096 draws, in ε_R
+on_euclid_f64_d_closed_max_seed33 = 1.704814421546833e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 33, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed33 = 2.0901301278666875e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 33, 4096 draws, in ε_R
+on_euclid_f64_d_closed_max_seed34 = 2.0984770565891946e1  # largest d(ν(θ)) on the curve, euclid span, f64, seed 34, 4096 draws, in ε_R
+on_fold_f64_d_closed_max_seed34 = 2.0231110981913474e1  # largest d(ν(θ)) on the curve, fold span, f64, seed 34, 4096 draws, in ε_R
+off_1e-6_f64_d_min = 3.993742438914967e-8  # off the curve, moved by up to δ = 1e-6: the min d(ν*), f64
+off_1e-6_f64_d_median = 1.465090777698601e-6  # off the curve, moved by up to δ = 1e-6: the median d(ν*), f64
+off_1e-6_f64_d_max = 7.238691552500529e-6  # off the curve, moved by up to δ = 1e-6: the max d(ν*), f64
+off_1e-6_f64_within_frac = 0e0  # off the curve, moved by up to δ = 1e-6: the share with d(ν*) ≤ tol, accepted by kind 4, f64
+off_1e-4_f64_d_min = 3.938829079486197e-6  # off the curve, moved by up to δ = 1e-4: the min d(ν*), f64
+off_1e-4_f64_d_median = 1.5060584951109103e-4  # off the curve, moved by up to δ = 1e-4: the median d(ν*), f64
+off_1e-4_f64_d_max = 6.877553459388563e-4  # off the curve, moved by up to δ = 1e-4: the max d(ν*), f64
+off_1e-4_f64_within_frac = 0e0  # off the curve, moved by up to δ = 1e-4: the share with d(ν*) ≤ tol, accepted by kind 4, f64
+off_1e-2_f64_d_min = 1.049874072068474e-3  # off the curve, moved by up to δ = 1e-2: the min d(ν*), f64
+off_1e-2_f64_d_median = 1.441083460584017e-2  # off the curve, moved by up to δ = 1e-2: the median d(ν*), f64
+off_1e-2_f64_d_max = 5.9190916949185594e-2  # off the curve, moved by up to δ = 1e-2: the max d(ν*), f64
+off_1e-2_f64_within_frac = 0e0  # off the curve, moved by up to δ = 1e-2: the share with d(ν*) ≤ tol, accepted by kind 4, f64
+off_1e-1_f64_d_min = 1.0998974175520983e-2  # off the curve, moved by up to δ = 1e-1: the min d(ν*), f64
+off_1e-1_f64_d_median = 1.4509996844050133e-1  # off the curve, moved by up to δ = 1e-1: the median d(ν*), f64
+off_1e-1_f64_d_max = 6.941562280797317e-1  # off the curve, moved by up to δ = 1e-1: the max d(ν*), f64
+off_1e-1_f64_within_frac = 0e0  # off the curve, moved by up to δ = 1e-1: the share with d(ν*) ≤ tol, accepted by kind 4, f64
+near_2.5e-1_f64_within_frac = 9.0234375e-1  # moved by up to 0.25 tol: the share kind 4 accepts, d ≤ tol, f64
+near_2.5e-1_f64_step4_frac = 4.12109375e-1  # moved by up to 0.25 tol: the share kind 4 accepts and step 4 lands on the chart, f64
+near_2.5e-1_f64_refused_frac = 2.9296875e-3  # moved by up to 0.25 tol: the share kind 4 refuses whose closed form step 4 alone would land, f64
+near_5e-1_f64_within_frac = 4.4921875e-1  # moved by up to 0.5 tol: the share kind 4 accepts, d ≤ tol, f64
+near_5e-1_f64_step4_frac = 9.9609375e-2  # moved by up to 0.5 tol: the share kind 4 accepts and step 4 lands on the chart, f64
+near_5e-1_f64_refused_frac = 1.26953125e-2  # moved by up to 0.5 tol: the share kind 4 refuses whose closed form step 4 alone would land, f64
+near_1e0_f64_within_frac = 8.984375e-2  # moved by up to 1 tol: the share kind 4 accepts, d ≤ tol, f64
+near_1e0_f64_step4_frac = 1.07421875e-2  # moved by up to 1 tol: the share kind 4 accepts and step 4 lands on the chart, f64
+near_1e0_f64_refused_frac = 1.953125e-3  # moved by up to 1 tol: the share kind 4 refuses whose closed form step 4 alone would land, f64
+near_2e0_f64_within_frac = 1.5625e-2  # moved by up to 2 tol: the share kind 4 accepts, d ≤ tol, f64
+near_2e0_f64_step4_frac = 3.90625e-3  # moved by up to 2 tol: the share kind 4 accepts and step 4 lands on the chart, f64
+near_2e0_f64_refused_frac = 0e0  # moved by up to 2 tol: the share kind 4 refuses whose closed form step 4 alone would land, f64
+near_4e0_f64_within_frac = 3.90625e-3  # moved by up to 4 tol: the share kind 4 accepts, d ≤ tol, f64
+near_4e0_f64_step4_frac = 9.765625e-4  # moved by up to 4 tol: the share kind 4 accepts and step 4 lands on the chart, f64
+near_4e0_f64_refused_frac = 0e0  # moved by up to 4 tol: the share kind 4 refuses whose closed form step 4 alone would land, f64
+on_euclid_f32_d_closed_q50 = 1.4819881916046143e0  # d(ν(θ)) on the curve at the quantile 0.5, euclid span, f32, in ε_R
+on_euclid_f32_d_closed_q90 = 4.300367832183838e0  # d(ν(θ)) on the curve at the quantile 0.9, euclid span, f32, in ε_R
+on_euclid_f32_d_closed_q99 = 1.180955982208252e1  # d(ν(θ)) on the curve at the quantile 0.99, euclid span, f32, in ε_R
+on_euclid_f32_d_closed_q999 = 2.132232666015625e1  # d(ν(θ)) on the curve at the quantile 0.999, euclid span, f32, in ε_R
+on_euclid_f32_d_closed_max = 5.151692199707031e1  # d(ν(θ)) on the curve at the quantile 1, euclid span, f32, in ε_R
 on_euclid_f32_d_star_max = 5.1390281677246094e1  # largest d(ν*) on the curve, euclid span, f32, in ε_R
 on_euclid_f32_nu_gap_max = 5.5e0  # largest |ν* − ν(θ)| on the curve, euclid span, f32, in ε_R
-on_fold_f32_d_closed_max = 4.01219367980957e1  # largest d(ν(θ)) on the curve, fold span, f32, in ε_R
+on_euclid_f32_step4_frac = 9.991455078125e-1  # on the curve, euclid span, f32: the share step 4 lands on the chart at tol and ε_phys
+on_fold_f32_d_closed_q50 = 1.4903662204742432e0  # d(ν(θ)) on the curve at the quantile 0.5, fold span, f32, in ε_R
+on_fold_f32_d_closed_q90 = 4.516221523284912e0  # d(ν(θ)) on the curve at the quantile 0.9, fold span, f32, in ε_R
+on_fold_f32_d_closed_q99 = 1.240244197845459e1  # d(ν(θ)) on the curve at the quantile 0.99, fold span, f32, in ε_R
+on_fold_f32_d_closed_q999 = 2.2961071014404297e1  # d(ν(θ)) on the curve at the quantile 0.999, fold span, f32, in ε_R
+on_fold_f32_d_closed_max = 4.01219367980957e1  # d(ν(θ)) on the curve at the quantile 1, fold span, f32, in ε_R
 on_fold_f32_d_star_max = 3.9903564453125e1  # largest d(ν*) on the curve, fold span, f32, in ε_R
 on_fold_f32_nu_gap_max = 5.5e0  # largest |ν* − ν(θ)| on the curve, fold span, f32, in ε_R
-off_1e-6_f32_d_min = 1.163817913152343e-7  # off the curve, moved by up to δ = 1e-6: the min d(ν*), f32
-off_1e-6_f32_d_median = 1.3925213124821312e-6  # off the curve, moved by up to δ = 1e-6: the median d(ν*), f32
-off_1e-6_f32_d_max = 7.1906220000528265e-6  # off the curve, moved by up to δ = 1e-6: the max d(ν*), f32
-off_1e-4_f32_d_min = 7.067189017107012e-6  # off the curve, moved by up to δ = 1e-4: the min d(ν*), f32
-off_1e-4_f32_d_median = 1.42378150485456e-4  # off the curve, moved by up to δ = 1e-4: the median d(ν*), f32
-off_1e-4_f32_d_max = 7.818547892384231e-4  # off the curve, moved by up to δ = 1e-4: the max d(ν*), f32
-off_1e-2_f32_d_min = 5.848508444614708e-4  # off the curve, moved by up to δ = 1e-2: the min d(ν*), f32
-off_1e-2_f32_d_median = 1.4182741753757e-2  # off the curve, moved by up to δ = 1e-2: the median d(ν*), f32
-off_1e-2_f32_d_max = 6.652747094631195e-2  # off the curve, moved by up to δ = 1e-2: the max d(ν*), f32
-off_1e-1_f32_d_min = 1.2387094087898731e-2  # off the curve, moved by up to δ = 1e-1: the min d(ν*), f32
-off_1e-1_f32_d_median = 1.3369376957416534e-1  # off the curve, moved by up to δ = 1e-1: the median d(ν*), f32
-off_1e-1_f32_d_max = 6.766605973243713e-1  # off the curve, moved by up to δ = 1e-1: the max d(ν*), f32
+on_fold_f32_step4_frac = 9.9859619140625e-1  # on the curve, fold span, f32: the share step 4 lands on the chart at tol and ε_phys
+on_euclid_f32_d_closed_max_seed27 = 3.5872657775878906e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 27, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed27 = 2.6076791763305664e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 27, 4096 draws, in ε_R
+on_euclid_f32_d_closed_max_seed28 = 3.804032516479492e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 28, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed28 = 4.291180419921875e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 28, 4096 draws, in ε_R
+on_euclid_f32_d_closed_max_seed29 = 3.003836441040039e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 29, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed29 = 3.5844093322753906e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 29, 4096 draws, in ε_R
+on_euclid_f32_d_closed_max_seed30 = 2.807530403137207e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 30, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed30 = 3.0912593841552734e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 30, 4096 draws, in ε_R
+on_euclid_f32_d_closed_max_seed31 = 2.6465171813964844e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 31, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed31 = 4.238331985473633e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 31, 4096 draws, in ε_R
+on_euclid_f32_d_closed_max_seed32 = 2.6523223876953125e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 32, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed32 = 3.653127670288086e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 32, 4096 draws, in ε_R
+on_euclid_f32_d_closed_max_seed33 = 2.5563512802124023e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 33, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed33 = 3.0556203842163086e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 33, 4096 draws, in ε_R
+on_euclid_f32_d_closed_max_seed34 = 3.217361831665039e1  # largest d(ν(θ)) on the curve, euclid span, f32, seed 34, 4096 draws, in ε_R
+on_fold_f32_d_closed_max_seed34 = 3.1338035583496094e1  # largest d(ν(θ)) on the curve, fold span, f32, seed 34, 4096 draws, in ε_R
+off_1e-6_f32_d_min = 9.884312390795458e-8  # off the curve, moved by up to δ = 1e-6: the min d(ν*), f32
+off_1e-6_f32_d_median = 1.4362624369823607e-6  # off the curve, moved by up to δ = 1e-6: the median d(ν*), f32
+off_1e-6_f32_d_max = 6.067235517548397e-6  # off the curve, moved by up to δ = 1e-6: the max d(ν*), f32
+off_1e-6_f32_within_frac = 1e0  # off the curve, moved by up to δ = 1e-6: the share with d(ν*) ≤ tol, accepted by kind 4, f32
+off_1e-4_f32_d_min = 3.915803063136991e-6  # off the curve, moved by up to δ = 1e-4: the min d(ν*), f32
+off_1e-4_f32_d_median = 1.508423447376117e-4  # off the curve, moved by up to δ = 1e-4: the median d(ν*), f32
+off_1e-4_f32_d_max = 6.874087266623974e-4  # off the curve, moved by up to δ = 1e-4: the max d(ν*), f32
+off_1e-4_f32_within_frac = 2.9296875e-3  # off the curve, moved by up to δ = 1e-4: the share with d(ν*) ≤ tol, accepted by kind 4, f32
+off_1e-2_f32_d_min = 1.0498515330255032e-3  # off the curve, moved by up to δ = 1e-2: the min d(ν*), f32
+off_1e-2_f32_d_median = 1.4410522766411304e-2  # off the curve, moved by up to δ = 1e-2: the median d(ν*), f32
+off_1e-2_f32_d_max = 5.919088050723076e-2  # off the curve, moved by up to δ = 1e-2: the max d(ν*), f32
+off_1e-2_f32_within_frac = 0e0  # off the curve, moved by up to δ = 1e-2: the share with d(ν*) ≤ tol, accepted by kind 4, f32
+off_1e-1_f32_d_min = 1.0998977348208427e-2  # off the curve, moved by up to δ = 1e-1: the min d(ν*), f32
+off_1e-1_f32_d_median = 1.4509986340999603e-1  # off the curve, moved by up to δ = 1e-1: the median d(ν*), f32
+off_1e-1_f32_d_max = 6.941561102867126e-1  # off the curve, moved by up to δ = 1e-1: the max d(ν*), f32
+off_1e-1_f32_within_frac = 0e0  # off the curve, moved by up to δ = 1e-1: the share with d(ν*) ≤ tol, accepted by kind 4, f32
+near_2.5e-1_f32_within_frac = 9.00390625e-1  # moved by up to 0.25 tol: the share kind 4 accepts, d ≤ tol, f32
+near_2.5e-1_f32_step4_frac = 4.08203125e-1  # moved by up to 0.25 tol: the share kind 4 accepts and step 4 lands on the chart, f32
+near_2.5e-1_f32_refused_frac = 2.9296875e-3  # moved by up to 0.25 tol: the share kind 4 refuses whose closed form step 4 alone would land, f32
+near_5e-1_f32_within_frac = 4.541015625e-1  # moved by up to 0.5 tol: the share kind 4 accepts, d ≤ tol, f32
+near_5e-1_f32_step4_frac = 1.025390625e-1  # moved by up to 0.5 tol: the share kind 4 accepts and step 4 lands on the chart, f32
+near_5e-1_f32_refused_frac = 1.26953125e-2  # moved by up to 0.5 tol: the share kind 4 refuses whose closed form step 4 alone would land, f32
+near_1e0_f32_within_frac = 8.984375e-2  # moved by up to 1 tol: the share kind 4 accepts, d ≤ tol, f32
+near_1e0_f32_step4_frac = 1.07421875e-2  # moved by up to 1 tol: the share kind 4 accepts and step 4 lands on the chart, f32
+near_1e0_f32_refused_frac = 9.765625e-4  # moved by up to 1 tol: the share kind 4 refuses whose closed form step 4 alone would land, f32
+near_2e0_f32_within_frac = 1.5625e-2  # moved by up to 2 tol: the share kind 4 accepts, d ≤ tol, f32
+near_2e0_f32_step4_frac = 2.9296875e-3  # moved by up to 2 tol: the share kind 4 accepts and step 4 lands on the chart, f32
+near_2e0_f32_refused_frac = 9.765625e-4  # moved by up to 2 tol: the share kind 4 refuses whose closed form step 4 alone would land, f32
+near_4e0_f32_within_frac = 3.90625e-3  # moved by up to 4 tol: the share kind 4 accepts, d ≤ tol, f32
+near_4e0_f32_step4_frac = 9.765625e-4  # moved by up to 4 tol: the share kind 4 accepts and step 4 lands on the chart, f32
+near_4e0_f32_refused_frac = 0e0  # moved by up to 4 tol: the share kind 4 refuses whose closed form step 4 alone would land, f32
