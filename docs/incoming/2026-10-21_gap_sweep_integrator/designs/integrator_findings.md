@@ -21,15 +21,22 @@ drift-kick-drift composition does not apply." Heggie runs with RK4, and every re
 rk4                   3.99        4.0      bounded, 5e-7 to 3e-6
 kdk (explicit)        0.8–1.2     3.0      diverges (to 1e78 and beyond)
 implicit midpoint     2.00        9–10     bounded, 2e-4, symplectic
-generalised leapfrog  2.0        15–20     unstable over long runs (not explained; see below)
+generalised leapfrog  2.0        15–20     unstable over long runs (explained below)
 ```
 
 - The leapfrog a reader of "Heggie with KDK" would write is **first order and diverges**. It is not a usable occupant.
 - A genuinely symplectic Heggie stepper exists but is **implicit**: implicit midpoint holds energy bounded, at 2–2.5×
   RK4's force evaluations and about 400× RK4's error at the same step.
-- The generalised (Störmer–Verlet) leapfrog, also implicit, reached order 2 over one orbit but grew without bound over
-  100, worse at smaller steps. That smell usually means my implementation, not the method; it is reported unexplained
-  and nothing below depends on it.
+- The generalised (Störmer–Verlet) leapfrog, also implicit, reaches order 2 over one orbit but grows without bound
+  over 100. **Cause, measured:** it does not keep Heggie's Eq. (9), `Σ qᵢ = 0`, which is quadratic in the regularised
+  positions (`qᵢ = Qᵢ²`). Implicit midpoint keeps every quadratic invariant exactly; a partitioned method like
+  Störmer–Verlet keeps only those mixing positions with momenta (Hairer, Lubich & Wanner, ch. IV.2), so Eq. (9) is
+  not kept. Implicit midpoint holds the residual at 1e-15–1e-13; the leapfrog's grows as h² per orbit and keeps
+  growing, and the energy breaks once it reaches about 1.8e-2, in every run, at every step size, under both time
+  transformations. The control is implicit midpoint started deliberately off the constraint: it stays bounded at
+  1e-3 and 1e-2, and at 3e-2 holds under one time transformation and diverges under the other. The earlier "worse at
+  smaller steps" was a misread: smaller steps break later (2.2, 4.4, 8.8 orbits); the figure quoted was the maximum
+  over runs that had already diverged.
 
 **Proposed:**
 - **The user chooses both, freely, and no combination is forbidden** (Malachy, 21 Oct: "don't forbid combos of

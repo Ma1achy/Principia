@@ -113,8 +113,9 @@ y' = y + (dt/6)(k₁ + 2k₂ + 2k₃ + k₄)
 
 These are the steppers with regularisation `none`, where the Hamiltonian is separable. Every stepper also runs under
 every regularisation (R-561); on a non-separable one (Aarseth–Zare, Heggie) KDK and the Yoshida steps are the explicit
-composition integrator contract Part 2b defines, and the pairs measured not to work carry a warning (its table). The
-default occupant is Heggie × RK4 (R-560).
+composition integrator contract Part 2b defines (the sub-steps in this section's drift order, their adjacent half-kicks
+not merged: the merged kick sequence above holds on a separable Hamiltonian only), and the pairs measured not to work
+carry a warning (its table). The default occupant is Heggie × RK4 (R-560).
 
 ### 3.3 Substep law — and the determinism pin, made concrete
 

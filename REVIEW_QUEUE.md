@@ -1418,6 +1418,9 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
 - **Applied meanwhile:** (a). Nothing waits.
 - **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
   open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
+- **21 Oct 2026 (evening):** RQ-341 is ruled (the 21 Oct batch, PR #274), and the human parked RQ-378 again, with no target
+  (R-568): "yeah ok we can park that for now then". The entry stays open, (a) stays applied, nothing waits, and it
+  returns when he raises it.
 
 ## RQ-386: Whether tier 2 of the embedding should split further, the ramp window and colour mode above the overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes *(the human's queued question, R-484 RT2; context: TASK-M7-44)*
 
@@ -3392,7 +3395,7 @@ Nothing is ruled.*
 - **Applied meanwhile:** none; Part 3's `step_budget_rate` row names this entry.
 - **Waits:** REQ-INT-102 and REQ-INT-103 (TASK-M3-41), `rq: RQ-527`.
 
-## RQ-528: Where the regularised energy's drift is stored, and how a drift view draws a run that stopped at an event, under R-566 *(silence: R-566, payload §5, integrator contract Part 1; REQ-VAL-195; context: TASK-M3-41, TASK-M3-05)*
+## RQ-528: Where the regularised energy's drift is stored, and how a drift view draws a run that stopped at an event, under R-566 *(silence: R-566, payload §5, integrator contract Part 1; REQ-VAL-195, REQ-INT-085, REQ-INT-106; context: TASK-M3-41, TASK-M3-05)*
 
 *Found by R-566's port. Nothing is ruled.*
 
@@ -3412,8 +3415,19 @@ Nothing is ruled.*
     it under a regularised occupant.
   - (c) For the display: a drift view draws an event-stopped run as "no data" (the not-yet style) under a regularised
     occupant; or it draws it with a badge; or it draws it as today.
-- **Applied meanwhile:** none in the payload; the contracts state the rule and name this entry.
-- **Waits:** REQ-VAL-195 (TASK-M3-41), `rq: RQ-528`.
+  - (d) *Added after physics review 5605806092 of PR #277, F6:* the energy-suspect threshold (REQ-INT-085) is one
+    value for every occupant, and its calibration measured only the occupants with regularisation `none`, asking that
+    Euler light SUSPECT_ENERGY on dd test 2's long orbit and the symplectic occupants not. The default occupant is now
+    Heggie × RK4 (R-560), not symplectic, its regularised energy drifting secularly (REQ-VAL-031), and SUSPECT_ENERGY
+    reads it (R-566). If it lights on test 2's orbit it lights across the field. Either (d1) the threshold must leave
+    Heggie × RK4 unlit on test 2's orbit at the default step, as it does the symplectic occupants; or (d2) Heggie ×
+    RK4 is measured and recorded with no requirement, as RK4 is, and a lit default reads as integrator drift
+    (integrator contract Part 2, "the suspect flag … means different things per occupant"); or (d3) the threshold is
+    per occupant (a change to the one-threshold rule).
+- **Applied meanwhile:** none in the payload; the contracts state the rule and name this entry. For (d): (d2),
+  REQ-INT-106 measures and records Heggie × RK4's regularised drift on tests 2 and 7 and which predicates it lights
+  under REQ-INT-085's proposed thresholds.
+- **Waits:** REQ-VAL-195 (TASK-M3-41), `rq: RQ-528`. Nothing waits on (d): the M3 gate reads REQ-INT-106's record.
 
 ## RQ-529: R-560's default occupant, Heggie × RK4, against integrator contract Part 2's tier column, which binds KDK at Potato–Low, Yoshida-4 at Medium–High and Yoshida-6 at Ultra–Extreme *(conflict: R-560 against R-4 and the tier table; REQ-INT-014, REQ-INT-006; context: TASK-M3-02, TASK-M3-08)*
 
@@ -3478,3 +3492,31 @@ Nothing is ruled.*
   - (c) The offsets are 1×, 2× and 3× the firing time, as the parenthesis says.
 - **Applied meanwhile:** none; REQ-EVT-013 is unchanged.
 - **Waits:** REQ-EVT-013's test (TASK-M3-33), `rq: RQ-531`.
+
+## RQ-532: R-567 says Heggie × the generalised leapfrog "stays allowed, with the warning, like every other pair", but the generalised leapfrog is not one of the contract's steppers, and the port of R-561 recorded the two implicit steppers as not occupants *(conflict: R-567 against R-561's port and integrator contract Part 2; REQ-INT-017, REQ-INT-098; context: TASK-M3-39)*
+
+*Found by R-567's port. Nothing is ruled. For the human: yes, it changes what is built (one or two implicit steppers).*
+
+- **File, section:**
+  - The human's follow-up of 21 Oct 2026 (evening), item 1: "In the warning table of REQ-INT-006/-017, the pair Heggie
+    × generalised leapfrog is **measured bad**, with that reason in one line … It stays allowed, with the warning, like
+    every other pair."
+  - `docs/contracts/principia_integrator_contract.md` § "Part 2", the occupants' table: Euler, KDK leapfrog,
+    Yoshida-4, Yoshida-6, RK4; § "Every stepper × regularisation pair runs; …": "Two implicit steppers were measured
+    under Heggie on the same fixture and are not occupants"; "A symplectic regularised occupant, if one is wanted, is
+    an implicit stepper and gets its own row in the table below."
+  - The gap sweep's design §1 (the bundle's record): "A symplectic regularised occupant, if ever wanted, is an
+    implicit stepper and gets its own entry in the table."
+- **The conflict:** "stays allowed … like every other pair" reads as a selectable pair, so a selectable stepper; the
+  contract has no generalised-leapfrog stepper (nor implicit midpoint), and "not occupants" was the port's reading,
+  applied per R-369, not the human's words.
+- **Options seen:**
+  - (a) Neither implicit stepper is selectable; the table records Heggie × the generalised leapfrog as measured bad
+    for the record (note 4), and "stays allowed" means no pair of the built steppers is blocked.
+  - (b) The generalised (Störmer–Verlet) leapfrog becomes a stepper (implicit, fixed-point iteration, its profile and
+    its pairs), selectable with its warning under Heggie; implicit midpoint stays out.
+  - (c) Both implicit steppers become steppers, the implicit midpoint rule being the symplectic regularised occupant
+    the contract and the design name.
+- **Applied meanwhile:** (a): the pair is in Part 2b's table as note 4, measured bad with its warning; neither
+  implicit stepper is built.
+- **Waits:** nothing built; TASK-M3-39 builds the pair table with note 4 under (a).
