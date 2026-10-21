@@ -10044,7 +10044,7 @@ The human's words are R-440's quote, its second remark ("Call 5").
   the outcome palette draws degenerate's white (colour_composition §1.4; R-96).
 - **A line in the GUI docs** says so, so that nobody reads the uniform tag colour as a bug.
 - **The exceptions §3.7 gives** (applied per R-369 after physics reviews 5541460731 F1 and 5541483216 F3, as they
-  follow from §3.7; the human's words above are unchanged). "Every pixel" holds for the pixels whose `E*` is above
+  follow from §3.7, and accepted by R-559; the human's words above are unchanged). "Every pixel" holds for the pixels whose `E*` is above
   their potential, and two kinds of pixel are not tagged so:
   - where `E* = V₀` exactly, the IC is already at the target: the decode is untouched and untagged, and the pixel
     integrates. On a free-fall slice `V₀` varies and is negative, so only an `E* < 0` inside its range has such a
@@ -17230,17 +17230,17 @@ marks (the trace, contour lines, the hover label, the lock reticle, a marked poi
 *Where the words leave a choice, decided per R-369 (the human may veto any):*
 - **B1. Which of the two.** The figure's header strip: a one-line strip of the chrome at the top of the figure region, above the plot
   and outside it, left-aligned, holding badges only. The strip takes its height from the top of the figure region
-  (gui review G1 of PR #265, applied per R-369). The shown rect, the rect R-406, R-468 and REQ-GUI-229 use, is the
+  (gui review G1 of PR #265, applied per R-369, accepted by R-559). The shown rect, the rect R-406, R-468 and REQ-GUI-229 use, is the
   whole of the region below the strip at that region's own aspect, the field drawn at one scale across it, more or
   less of the field showing as the region resizes and never a rescale (R-462, render_gui_spec §G2's Layout; R-537:
   no centred square, no margins, no gaps); the axis labels' strips and the Home button hang from it, so Home sits at
   its top-right, below the strip; render_gui_spec §G13 records the departure from `01_main` (gui review G3 of PR
-  #265, applied per R-369). *Was:* "; the plot is fitted into the rest at its aspect, and that plot rect is the shown
+  #265, applied per R-369, accepted by R-559). *Was:* "; the plot is fitted into the rest at its aspect, and that plot rect is the shown
   rect R-406, R-468 and REQ-GUI-229 use; render_gui_spec §G13 records the departure from `01_main`" (stale value,
   replaced by gui review G3 of PR #265, applied per R-369). At launch and after Home, the chart's unit square
   [0,1]² spans the shown rect's shorter side, centred in it, at one scale in both directions, with the extended
   field drawn around it (R-537); a resize then keeps that scale (gui review 5595357065's note on PR #265, applied
-  per R-369). It
+  per R-369, accepted by R-559). It
   sits beside what it
   describes, as D4's "beside the chart name" wanted, where the top bar's status would put it a panel away. The status
   line stays open to a later badge that is about the session rather than the figure.
@@ -20120,7 +20120,7 @@ edge clamp is the behaviour.
   built. The Problems counts reach the GUI from the engine through the snapshot, never computed in the GUI
   (gui_state_contract §1). The legend's colour block is the stain's own key, first, then the brightness key, R-541
   P13's trace block and the debug view's key (§G6).
-- **H15. The consumers' agreement and its tolerance (PR #270's code re-review, C4 and C5; applied per R-369).** The host
+- **H15. The consumers' agreement and its tolerance (PR #270's code re-review, C4 and C5; applied per R-369, accepted by R-559).** The host
   consumers (TASK-M8-10, TASK-M8-49, TASK-M8-58) call the kernel function on the CPU and stay bitwise against it; Chart
   position's fragment, which R-297 lets compile with fast-math, is held to the calibrated native–WGSL agreement
   tolerance, as REQ-COL-134 is, its control shown to exceed it; the snippet `cargo xtask build-kernel` emits to
@@ -22370,3 +22370,50 @@ note); REQ-COL-115 and REQ-COL-121 (`rq` removed, note marking the superseded cl
 `rq` removed, note); REQ-COL-125 and REQ-COL-129 (`rq` removed, note); REQ-COL-130, REQ-COL-131, REQ-COL-132,
 REQ-GUI-335 and REQ-GUI-337 (statement, verify, `rq` removed, rulings, note); adds REQ-COL-141 (Chart position's
 seam-6 exception, closed by TASK-M7-47).
+
+## R-559 — The thirteen decisions made under R-369 since 20 Oct 2026, as the orchestrator's state page listed them, are reviewed by the human and stand; each is marked accepted where the repo records it
+*21 Oct 2026 · applied in `docs/design/principia_chart_reference.md` § "3.3 The chart map" (two marks), R-441's, R-523's and R-542's
+texts (one, three and one mark), `docs/gui/principia_render_gui_spec.md` § "G2. Explore — the everyday view
+(`01_main.png`)" and § "G13. Where the artboards are overridden" (four marks), `plan/tasks/M2/TASK-M2-28.md`, `plan/tasks/M2/TASK-M2-36.md` and
+`plan/tasks/M7/TASK-M7-52.md` (four marks), the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062,
+REQ-CHART-075, REQ-GUI-258, REQ-COL-129 and REQ-COL-135 (reqio, note), `plan/rule_groups.yaml` and
+`plan/section_notes.yaml`*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (line
+183), which R-545 quotes in its opening:
+
+> Decisions under R-369 since 20 Oct: I have reviewed all 13. They stand. Mark them reviewed.
+
+The thirteen are the orchestrator's state page's list, "Decisions I made under R-369", "yours to veto, from 20 Oct
+onward. None of them held a merge", two of them flagged as the most worth a look.
+
+*What it decides:* all thirteen stand as applied, accepted by R-559. Where the repo records one, its "applied per
+R-369" (or "flagged for the human's veto") mark gains "accepted by R-559", the form a settled mark takes (R-354; as
+"applied per R-204, accepted by R-293" and R-431's "accepted by R-431"). Where one is recorded only in a PR's body, it
+is listed here, as R-431 listed #209's. Nothing else changes.
+
+| # | The decision, as the state page gave it | Where it is recorded; its mark |
+|---|---|---|
+| 1 | ⚑ PR #255, the tilted fold: a view folds only where the full `(a, b, d)` decode gives the same system; a tilted view is generically bijective, and the tilt now triggers a recompute, which changes area statistics under tilt | chart_reference §3.3, "Under a tilt the fold is the tilted view's"; TASK-M2-36's "The tilted fold" and TASK-M2-28's "Untilted only"; the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062 and REQ-CHART-075 — each "flagged for the human's veto as it changes area statistics; accepted by R-559" |
+| 2 | ⚑ R-441's "every pixel" read with §3.7's exceptions: `E* = V₀` keeps its contour on a free-fall slice, and the mass-block tags are kept, the human's quoted words unchanged | R-441, "The exceptions §3.7 gives" (applied per R-369 after physics reviews 5541460731 F1 and 5541483216 F3) — "and accepted by R-559" |
+| 3 | PR #262 (TASK-M2-24): the GPU decode variants for `BurrauThetaK`, `BurrauThetaLz`, `BurrauThetaDeltaM` (and `ShapeSphere`) are built in that task, as its goal says every chart; qa holds `C` alone to REQ-DEC-043's factor; the factor's record lists every domain a test holds it on; a nextest display override prints `qa_m224_gpu_canon_turn`'s worst in CI; qa fixed its own test's `t < 0` case | PR #262's body only (its "Decisions (applied per R-369)"); the factor's record is in `crates/validation/src/decode_f32_eps.rs`, REQ-DEC-043's proposal for the M2 gate |
+| 4 | PR #255: the fold is decided by an exact closed form on the stored angles, with Pythagorean test angles of 108° and 144°; chart_reference §4.5's "hatches its negative-mass area" reworded to "drawn blank" in the R-537 PR's next main merge | chart_reference §3.3, "The decision is exact, on the stored angles"; TASK-M2-36's "The fold is decided exactly on the stored angles"; the same five requirement notes — each "flagged for the human's veto with the tilted fold; accepted by R-559". The §4.5 reword is on `main` (§4.5, "drawn blank (R-470; §5.4)", its *Was* kept) and needs no mark |
+| 5 | PR #257 (TASK-M2-35): the latent edge is `±710`, not `±40`, because `σ(−40)` is not 0 | PR #257's body only |
+| 6 | PRs #261 and #256: `M` lines on qa files accepted where the only non-qa commit was a merge | PRs #261's and #256's bodies only (the exception is CLAUDE.md § qa's, R-290, R-369) |
+| 7 | PR #263: a full mutants run on the bundle's reference `.rs` under `docs/incoming/` accepted rather than changing the workflow | PR #263's body only |
+| 8 | PR #265: the REQ-TOOL-183 collision with #263 renumbered to REQ-TOOL-185 and REQ-TOOL-186; the header strip's height source set in §G2 and §G13; at zoom 1 and Home, `[0,1]²` spans the shown rect's shorter side, centred, with the field drawn around it (R-537) | the renumbering: PR #265's body and its commit fa202733 only; the strip and the shown rect: R-523 B1 (gui reviews G1 and G3, and 5595357065's note, of PR #265), render_gui_spec §G2's Figure and the header strip's "Where it sits" and "The shown rect", §G13's departure, and REQ-GUI-258's note — each "accepted by R-559" |
+| 9 | PR #266 (TASK-M2-27): a ball radius of ≤ 0 or NaN is refused in the judge rather than hanging; the fixtures are in their own directories (`fixtures/gates/inspector-handles/`, `fixtures/gates/inspector-roundtrip/`) | PR #266's body only |
+| 10 | PR #268: left at head 1b7ca0ed for the human's review, main merged into it afterwards | PR #268's body and the merge commit 10689a03 only; the human's approval is R-557's |
+| 11 | PR #269 (TASK-M2-34): the `d_min_ramp_override` twin re-baselined under R-504, its row saying why, and on the gate list; two qa files go red because R-511 forces it (`M` exceptions, confirmed by physics) | PR #269's body and its branch's `BASELINES.md` row, not yet on `main`; the PR is open, so its mark lands with it |
+| 12 | PR #270 (the state map): the host consumers compare bitwise, the fragment stays within REQ-COL-129's tolerance, and TASK-M7-52 proposes the agreement tolerance, so RQ-487 does not block it; until the human rules, the code's signed `n̂` applies (RQ-498) and no figure ring is drawn while a trace is shown (RQ-501); the progress banner test counts done tasks from `tasks.yaml` | R-542 H15, TASK-M7-52's "REQ-COL-129's agreement entry", and the notes of REQ-COL-129 and REQ-COL-135 — each "accepted by R-559"; RQ-498's and RQ-501's meanwhile are now the human's rulings (R-558), their entries archived unchanged; the banner test: PR #270's body only |
+| 13 | The Print graph tasks written on a branch off PR #268's approved head (R-388's early start), the PR opened only after #268 merges | the orchestrator's state page only; the branch is unpushed |
+
+*Applied per R-369 (mechanical):* a mark is added only where a decision is recorded as a live statement; the earlier
+words a doc keeps as *Was* are history and are left alone. The requirement notes take the mark through reqio
+(`note`), with no ruling added to their `rulings`, since a mark changes no requirement. Decision 4's §4.5 reword was
+done on `main` before this ruling, so it has nothing to mark.
+
+R-559 is in the "one_off" group of `plan/rule_groups.yaml`, as R-431 is.
+
+Changes the notes of REQ-CHART-002, REQ-CHART-014, REQ-CHART-037, REQ-CHART-062, REQ-CHART-075, REQ-GUI-258,
+REQ-COL-129 and REQ-COL-135 (the mark only); no statement or verify changes.

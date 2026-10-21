@@ -356,7 +356,7 @@ points, sits in the canvas's top-right corner, inset 8 points (R-466; its look a
 the shown rect below the header strip (R-523, the decoder badge below; gui review G3 of PR #265): a click on it is
 Home, never a click on the figure (it pins nothing and starts no pan); it is dimmed while all three sections are home,
 and it hides with the layer (F3, present mode). **At launch and after Home** (applied per R-369, gui review
-5595357065's note on PR #265), the chart's unit square [0,1]² spans the shown rect's shorter side, centred in it, at
+5595357065's note on PR #265; accepted by R-559), the chart's unit square [0,1]² spans the shown rect's shorter side, centred in it, at
 one scale in both directions, and the extended field is drawn around it (R-537); a resize then keeps that scale and
 shows more or less of the field (Layout, below). The orbit's path is drawn from the cursor's IC:
 - **The path is `z(t)` through the manifold, projected onto this chart's `q₁`, `q₂`** — not real space. It is drawn by
@@ -373,9 +373,9 @@ shows more or less of the field (Layout, below). The orbit's path is drawn from 
 top of the figure region above the plot and outside it, left-aligned, names the chart by its axes and, while any block is
 off its default, each block off its default after a "·", for example "z_α × z_β · stick-breaking masses" or "z_α × z_β
 · μ_max 4 masses"; at the defaults it names the chart alone. The strip holds badges only. **Where it sits (applied per
-R-369, gui review G1 of PR #265):** the strip takes its height, one line of the body font with its padding, from the
+R-369, gui review G1 of PR #265; accepted by R-559):** the strip takes its height, one line of the body font with its padding, from the
 top of the figure region (the rect `01_main`'s proportions give the figure). **The shown rect (applied per R-369, gui
-review G3 of PR #265)**, the rect R-406, R-468 and REQ-GUI-229 read, is the whole of the figure region below the strip,
+review G3 of PR #265; accepted by R-559)**, the rect R-406, R-468 and REQ-GUI-229 read, is the whole of the figure region below the strip,
 at that region's own aspect, with the field drawn at one scale in both directions across it, as Layout below says
 ("the canvas showing more or less of the field at the same scale", R-462) and as R-537's window onto the extended
 plane has it (never any gaps): there is no centred square, no margin and no gap, and nothing of the strip draws over
@@ -1391,7 +1391,7 @@ corpus, the spec follows the authority:
   the artboards'. One departure from `01_main`: the figure region's top line is the figure's header strip (R-523, §G2),
   and the shown rect is the rest of the region at its own aspect, the field at one scale across it, so the shown
   figure is one line shorter than the artboard's and shows that much less of the field at the same scale, with the
-  axis labels' strips and Home hung from it (applied per R-369, gui review G3 of PR #265). *Was:* "and the plot is
+  axis labels' strips and Home hung from it (applied per R-369, gui review G3 of PR #265; accepted by R-559). *Was:* "and the plot is
   fitted below it at its aspect, so the plot's rect is that much shorter than the artboard's figure (applied per
   R-369, gui review G1 of PR #265)." (stale value, replaced by gui review G3 of PR #265, applied per R-369).
 - **No camera** (notes, G1). The Research artboard shows "linked camera", and the console shows "SetField CameraZoom".

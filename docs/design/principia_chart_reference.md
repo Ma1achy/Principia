@@ -502,7 +502,7 @@ a pixel counts 1 if its `w ≥ 0`, or if its mirror point lies outside the cap; 
 
 **Under a tilt the fold is the tilted view's (R-473 T1, T2, J1; applied per R-369, from chart_decoder_contract Part
 5's definition of `system_image`, "how the address map … folds onto distinct systems"; flagged for the human's veto,
-as it changes area statistics).** The two values above, the spherical map's n-to-1 with n = 2 and the exponential
+as it changes area statistics; accepted by R-559).** The two values above, the spherical map's n-to-1 with n = 2 and the exponential
 map's cap and per-pixel fold, are the untilted chart's (`τ₁ = τ₂ = 0`). Two pixels fold only when their full
 `(a, b, d)` decode to the same system. Under a nonzero tilt a pixel at window offset `(u, v)` maps to
 `(a, b, d) = R·(u, v, 0)`, and `d` is added to a momentum control or a mass logit (J1). Under a tilt a pixel's
@@ -529,7 +529,7 @@ which R-474 does not lock) as for any other. Its conditions come from the active
   vertical axis and `d_Y` does unless `sin τ₂ = 0`, so the fold is kept iff `sin τ₂ = 0`.
 
 **The decision is exact, on the stored angles (physics review 5593455102 of PR #255, P5; applied per R-369, a routine
-design choice that invents no calibration; flagged for the human's veto with the tilted fold above).** In f64 the
+design choice that invents no calibration; flagged for the human's veto with the tilted fold above; accepted by R-559).** In f64 the
 computed `N_b` is not zero where the closed form is (at `m = 180°` it is about `−1e-16`, and `cos 90°` is about
 `6e-17`), so the fold is never decided by a tolerance on a computed `N_b`. It is an exact comparison on the stored tilt
 angles, in degrees as the view state holds them, from each map's closed form: Tip as sheet, `τ₂ == 0` or
