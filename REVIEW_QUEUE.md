@@ -1296,6 +1296,8 @@ steer; RQ-344 point 2 keeps the metric on `z`. Nothing is chosen. For the human 
 - **Waits:** REQ-INT-003, REQ-CHART-018 and REQ-CHART-036 carry `rq: [RQ-355]`, held, not closed, by TASK-M2-08's PR
   (applied per R-369); the code waits for nothing, option (a) applied. Option (b)
   would change two lines of `landmarks` and the tests' expectation.
+  REQ-VAL-022's "equilateral configurations at a shape-sphere pole" is the same statement: it carries `rq: [RQ-355,
+  RQ-475]` too, held by TASK-M2-27's PR, which reports the equal-mass pole only.
 
 ## RQ-360: T1 says `E(g·x) = E(x)` for every `g`, the mirror `Π` among them, but on a state `C` leaves unmirrored on both sides of `Π`, every `|λ̃_y| ≤ δ_λ` and every exactly collinear one, `E(Π·x)` and `E(x)` differ in the momenta's `y` components *(conflict, R-82, REQ-ENC-003; context: TASK-M2-15)*
 
@@ -1409,6 +1411,29 @@ oblique-latent version, where one exists locally."). For the human: yes, it chan
 - **Applied meanwhile:** (a). Nothing waits.
 - **Parked:** R-510 (20 Oct 2026), the human: "RQ-378: parked until RQ-341." A deferral by ruling: the entry stays
   open, blocked on RQ-341, and returns to the human when RQ-341 is ruled; (a) stays applied and nothing waits.
+
+## RQ-386: Whether tier 2 of the embedding should split further, the ramp window and colour mode above the overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes *(the human's queued question, R-484 RT2; context: TASK-M7-44)*
+
+*Queued by the human (the round-trip rule, "Queue, don't rule"). For the human: yes, it changes what a small image
+carries.*
+
+- **File, section:**
+  - `decisions.md` § "R-484 — …", the human's words: "Whether tier 2 should split further, for example ramp window and
+    colour mode above overlays and lines, if measurement shows tier 2 itself often does not fit at small sizes." and
+    RT2's table: "**2. Colour** | `RenderState` as built-ins: colour mode enum and every parameter, the ramp window,
+    overlays and the line system."
+  - `docs/design/principia_dd_image_embedding.md` § "6. What travels": "**The ramp window is not optional.** An
+    auto-ranged ramp manufactures or hides the difference it is meant to show".
+  - The same, § "7. Measured capacity and behaviour", to be re-measured with the tiers (R-483 H6, TASK-M7-44).
+- **Options seen:** (a) tier 2 whole, as RT2 has it; (b) tier 2a (the stain graph's built-ins, their parameters and the
+  ramp window) above tier 2b (overlays, lines, the playhead and hover, `f3_fill`), 2b dropping first; (c) decided by
+  TASK-M7-44's measurement: split only if tier 2 fails to fit at 64² or 128² for a typical stain.
+- **Applied meanwhile:** (a). Nothing waits; TASK-M7-44's measurement reports tier 2's size so the human can rule with
+  it.
+- **Parked:** R-522 (20 Oct 2026), the human: "RQ-386 after the capacity re-measure." A deferral by ruling: the entry
+  stays open, waiting on TASK-M7-44's capacity re-measure (REQ-TOOL-174), which reports tier 2's own size and, at
+  64² and 128², whether tiers 1 and 2 fit; it then returns to the human with those numbers. Meanwhile (a), tier 2
+  whole, stands, and nothing else waits.
 
 ## RQ-406: On a periodic axis, whether the view centre is stored unwrapped (continuous pan, an unbounded number) or canonicalised after each gesture (bounded, with an invisible jump of one period) *(the human's queued question, R-537 Q1, EX9; REQ-GUI-270; context: TASK-M8-55)*
 
@@ -1779,6 +1804,8 @@ mechanical consequence, unless the human wants it.*
   and "Once" holds its last frame, the whole trace; (b) TF3 for every length: paused, every trace is drawn whole;
   (c) the last `Δt` is measured back from the trace's end while paused.
 - **Applied meanwhile:** (a) (R-538 J11). Nothing waits.
+- **See also:** RQ-465, R-541 G5's footer and R-540 S4, which restate TF3 for every trace (found merging main into
+  rulings/R-540).
 
 ## RQ-428: TF4 and T20 keep a trace's ramp "with kept orbits" through save and load, where the GUI state contract puts the kept orbits in `ViewUI`, which is never serialised with `SimConfig` and `RenderState` *(conflict: the human's words against a contract, R-538 TF4, TF6 T20, R-453 D5; REQ-GUI-282; context: TASK-M8-58)*
 
@@ -1846,6 +1873,537 @@ mechanical consequence, unless the human wants it.*
 - **Applied meanwhile:** (a) (R-538 J8). Nothing waits.
 - **See also:** RQ-472, EX7(b)'s pole and equator maps on a tilted view against chart_reference §3.3's tilted fold
   (found merging main into this branch).
+
+## RQ-440: Listen's audio backend in prin-rs: a Rust synthesis graph on `cpal`, transcribed node for node from the demo's Web Audio, or sound kept web-only *(the human's queued question, R-540 Q1, S8, S9; REQ-GUI-315, REQ-GUI-317 to REQ-GUI-320; context: TASK-M8-12, TASK-M8-59)*
+
+*Queued by the human (`principia_listen.md` S14, Q1; this bundle's Q-numbers, distinct from the trace follow-up's F7
+Q5 and Q6, which are RQ-421 and RQ-422). For the human: yes; the human's message says it needs an answer before Listen
+is built.*
+
+- **File, section:** `decisions.md` § "R-540 — …", the applied text, S14: "**Q1. Audio backend for prin-rs.** The demo
+  is Web Audio. Recommendation (a): a Rust synthesis graph on `cpal` for output, with the voice and effects chain
+  transcribed node for node. (b) Keep sound web-only."; the human's message: "Q1 (the audio backend) and Q3
+  (`RMS_FLOOR` against our integrator) need answers before Listen is built."; TASK-M8-12's Deliverables: "audio out
+  with cross-fade (native: an audio-output backend; browser: WebAudio in TASK-M8-38's shell)".
+- **Options seen:** (a) a Rust synthesis graph on `cpal` for output, the voice and effects chain transcribed node for
+  node (the file's recommendation); (b) sound web-only.
+- **Applied meanwhile:** nothing is built. TASK-M8-12, TASK-M8-59 and TASK-M8-60 wait on this entry and RQ-442
+  (R-540 H14).
+
+## RQ-441: Where Listen's analysis runs: on the CPU from the trajectory viewer's own samples, or on the GPU with the integrator *(the human's queued question, R-540 Q2, S2; REQ-GUI-311, REQ-SYS-060; context: TASK-M8-12)*
+
+*Queued by the human (`principia_listen.md` S14, Q2). For the human: yes.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S14: "**Q2. Where the analysis runs.** Recommendation (a): on the
+  CPU, from the trajectory viewer's own samples, at the sizes in S2; it is two FFTs per frame. (b) On the GPU with the
+  integrator."
+- **Context:** REQ-SYS-060, "Trajectory integration and sonification must run in the dedicated inspector worker";
+  pointer_channels § "6. What this reuses rather than adds" (working notes, R-109) suggests reusing frequency
+  diffusion's FFT, a requirement retired (REQ-TOOL-093, "R-109: only pointer_channels §4 is normative; §6's FFT reuse has
+  no normative source").
+- **Options seen:** (a) the CPU, from the viewer's `computeIC` samples, at S2's sizes, in the inspector worker
+  (REQ-SYS-060) (the file's recommendation); (b) the GPU with the integrator.
+- **Applied meanwhile:** nothing is built (TASK-M8-12 waits on RQ-440 and RQ-442); when it starts, (a) unless this is
+  ruled otherwise first.
+
+## RQ-442: `RMS_FLOOR` against prin-rs's integrator: measure Lagrange's shape rms under *Angles only* over `t ≤ 400` and set the floor at 10× its maximum *(the human's queued question, R-540 Q3, S7, S13; REQ-GUI-316; context: TASK-M8-12)*
+
+*Queued by the human (`principia_listen.md` S14, Q3). For the human: yes; the human's message says it needs an answer
+before Listen is built.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S14: "**Q3. `RMS_FLOOR` against prin-rs's integrator.**
+  Recommendation (a): measure Lagrange's shape rms under *Angles only* with the shipped integrator over `t ≤ 400`, and
+  set the floor at 10× its maximum. The demo's 1e-7 is its own RK4's drift."; S7: "Measured in the demo under *Angles
+  only*: Lagrange's shape rms reads **2.65e-7**, just above the floor, so it plays at the min level with lines at
+  181.5 Hz and above — that is the demo integrator's error, not motion."; S13: "| Lagrange (angles only) | level 0,
+  because the shape rms is below the floor | the floor removed, or set above prin-rs's drift (Q3) |".
+- **Found by the port (the code is the transcription source):** the demo's code says, on the floor's line, "below this
+  the shape is not moving (the rotating Lagrange triangle reads ~1e-11)", where S7 measures 2.65e-7; and its integrator
+  is Dormand–Prince 5(4) (`// integrator: Dormand–Prince 5(4), adaptive`), where Q3 says "its own RK4's drift". With the
+  demo's floor S13's Lagrange (angles only) test fails by S7's own measurement; it passes only once the floor is set
+  against prin-rs (this entry).
+- **Found by physics review 5595386853 of PR #267, P1 (facts beside both sides; nothing chosen):**
+  - Equal-mass Lagrange is linearly unstable: Routh's 27(m₁m₂ + m₂m₃ + m₃m₁)/M² = 9 > 1, so any seed, integration error
+    or f64 rounding, grows exponentially, as e^{0.31 t}, ω/√2 (an e-fold about every 3.2 time units; *was:* "an
+    e-fold about every 0.31 time units", physics review 5595462873 of PR #267, P5, applied per R-369). The reviewer's port (DOP853, rtol
+    10⁻¹²) measured max |n⊥| at 4.0e-13 for t ≤ 20, 9.8e-8 for t ≤ 60, 2.4e-2 for t ≤ 100, and broken up by t ≈ 150;
+    the Angles-only rms 1.7e-7 over [0, 60], 3.0e-2 over [0, 100] and 0.87 over [0, 400].
+  - A floor no integrator lowers: an exactly rotating triangle in f64 reads an Angles-only rms of 4.9e-8, φ = acos(n3)
+    being quantised at √(2·2⁻⁵³) = 1.49e-8 at the pole and the pole weight multiplying it by 10. Under Shape vector it
+    reads 4.9e-9 (the code forms sin φ from acos(n3)).
+  - So Q3's (a) as worded, "over `t ≤ 400` … 10× its maximum", gives a floor of about 9, which silences every run; the
+    demo's 2.65e-7 is the instability's growth by t = 60, neither "its own RK4's drift" nor a steady integrator floor;
+    and the code comment's "~1e-11" matches neither signal.
+  - Meanwhile REQ-GUI-316's arm has no fixed horizon and waits here (`rq: RQ-442`), REQ-GUI-309's Lagrange arm states
+    t ≤ 60, and `principia_listen.md` §7 no longer asserts that prin-rs's integrator is "far quieter".
+- **Options seen:** (a) measure as the file says and set the floor at 10× the maximum (the file's recommendation);
+  (b) keep 10⁻⁷.
+- **Applied meanwhile:** nothing is built; `principia_listen.md` §7 carries 10⁻⁷ as the demo's value and points here.
+
+## RQ-443: The superseded sketch row, "listen · separations → pitch": marked stale, replaced by R-540's signal, or kept as a fourth `Signal` *(the human's queued question, R-540 Q4, S1; REQ-GUI-090; context: TASK-M8-12)*
+
+*Queued by the human (`principia_listen.md` S14, Q4). For the human: no for (a), which the human's message applies.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S14: "**Q4. The superseded sketch row.** The dev-GUI sketch's
+  "listen · separations → pitch" is replaced by this file's signal. Recommendation (a): mark it stale, replaced by this
+  ruling. (b) Keep separations as a fourth `Signal`."; the human's message: "The GUI file supersedes … the sketch's
+  "listen · separations → pitch" row (queued as Q4). Record each replaced line as "stale value, replaced by R-xxx"."
+- **Where the row is:** in the sketch's `01_main.png` (`docs/gui/design/`) and, in words, `principia_render_gui_spec.md`
+  § "G2. …", the Trajectory panel's listen bullet ("the artboard's selector ("separations → pitch") is illustrative
+  (R-68)"), § "G13. …" ("the sound mapping (`θ(t), φ(t)` → spectrum)"), REQ-GUI-090 ("the artboard's 'separations →
+  pitch' selector must not be implemented") and TASK-M8-12's Goal.
+- **Options seen:** (a) stale, replaced by R-540 (the file's recommendation); (b) separations kept as a fourth `Signal`.
+- **Applied meanwhile:** (a) (R-540 H13): the listen bullet's words are recorded stale, replaced by R-540; REQ-GUI-090's
+  "must not be implemented" stands. Nothing waits.
+
+## RQ-444: The close-approach threshold `0.2 R` and the event depth scale: kept, stated as parameters *(the human's queued question, R-540 Q5, S9; REQ-GUI-319; context: TASK-M8-59)*
+
+*Queued by the human (`principia_listen.md` S14, Q5). For the human: no for (a).*
+
+- **File, section:** `decisions.md` § "R-540 — …", S14: "**Q5. Close-approach threshold** `0.2 R` and the event depth
+  scale are demo choices. Recommendation (a): keep them, stated as parameters."; S9: "a pair's separation at a local
+  minimum below `0.2 R` (`R = √I`) … (`depth = min(1, log₁₀(0.2R/d)/2)`)".
+- **Options seen:** (a) kept, stated as parameters (the file's recommendation); (b) calibrated (R-71).
+- **Applied meanwhile:** (a) (R-540 H13): `principia_listen.md` §9 states both. Nothing waits.
+
+## RQ-445: Listen's section in the Trajectory panel: collapsed until first used, then remembered per user, or always collapsed *(the human's queued question, R-541 Q6, G4; REQ-GUI-326; context: TASK-M8-61)*
+
+*Queued by the human (`principia_trace_listen_gui.md` G11, Q6; this bundle's Q-numbers, distinct from the trace
+follow-up's F7 Q5 and Q6, RQ-421 and RQ-422). For the human: no for (a).*
+
+- **File, section:** `decisions.md` § "R-541 — …", G11: "**Q6. Listen's default collapsed state.** Recommendation (a):
+  collapsed until first used, then remembered per user. (b) Always collapsed."; G4's table: "**Listen** (collapsed until
+  first used, then remembered)".
+- **Options seen:** (a) collapsed until first used, then remembered per user (the file's recommendation); (b) always
+  collapsed.
+- **Applied meanwhile:** (a) (R-541 P11): remembered in the GUI's own settings, as a window's place is (R-461), never the
+  contract. Nothing waits.
+- **See also:** since PR #267's split (applied per R-369) the Listen section is REQ-GUI-334's, TASK-M8-64's.
+
+## RQ-446: The expanded strip's spectrum takes the Legend's column, or the Legend stays and the spectrum stacks under the spectrogram (the band ≈ 520 px) *(the human's queued question, R-541 Q7, G7; REQ-GUI-330; context: TASK-M8-63)*
+
+*Queued by the human (`principia_trace_listen_gui.md` G11, Q7). For the human: no for (a).*
+
+- **File, section:** `decisions.md` § "R-541 — …", G11: "**Q7. The expanded strip's spectrum in the Legend's column.**
+  Recommendation (a): borrow the column, as G7. (b) Keep the Legend and stack the spectrum under the spectrogram, making
+  the band ≈520 px."; G7: "| **Strip expanded (⏶)** | … | **the spectrum at the head**, until `⏷` |".
+- **Options seen:** (a) borrow the Legend's column (the file's recommendation); (b) keep the Legend, the band ≈ 520 px.
+- **Applied meanwhile:** (a) (R-541 P11). Nothing waits.
+
+## RQ-447: Kept-trace colours: a fixed cycle of six, distinct from the body colours and the stain classes, to be chosen against the stain palettes, where R-538 TM2 has already fixed a six-colour trace palette *(the human's queued question, R-541 Q8, G9; conflict with R-538 TM2; REQ-GUI-271, REQ-GUI-333; context: TASK-M8-58, TASK-M8-61)*
+
+*Queued by the human (`principia_trace_listen_gui.md` G11, Q8). Found by the port: the recommendation reads as if no
+cycle were chosen. For the human: yes, if the cycle is to change.*
+
+- **File, section:**
+  - `decisions.md` § "R-541 — …", G11: "**Q8. Kept-trace colours.** Recommendation (a): a fixed cycle of six, distinct
+    from the body colours and the stain classes; to be chosen against the stain palettes."; G9: "Kept traces take
+    distinct colours: kept #2 is `#5ab4ff` in the boards."
+  - `decisions.md` § "R-538 — …", TM2's Colour row: "fixed `#FFF27A` for the hover or pinned trace. Kept traces take
+    the trace palette in turn (`#7FE3FF #FF9EC4 #B7F28A #FFB86B #C9A7FF #9EF0D2`)"; `principia_lines.md` § "8. Traces",
+    Colour, and REQ-GUI-271 carry it.
+  - `#5ab4ff` is also Listen's left channel and the shape sphere's window highlight (R-540 S11, R-541 G4).
+- **The conflict:** R-538's six are a fixed cycle already, not checked against the stain palettes; the boards' kept #2
+  is not one of them and is a Listen colour.
+- **Options seen:** (a) a fixed cycle of six, distinct from the body colours and the stain classes, chosen against the
+  stain palettes (the file's recommendation), replacing R-538's six if they fail that check; (b) R-538's six stand; the
+  boards' `#5ab4ff` illustrative.
+- **Applied meanwhile:** R-538's six (the ruling), the boards' `#5ab4ff` illustrative (R-541 P10). Nothing waits.
+
+## RQ-448: R-541 G2 withdraws `Lines ▾` ("An earlier art-board pass had both; they are withdrawn"), where `Lines ▾` is R-476's menu for the whole line system: contours, axes, grids, presets and class edges as well as the traces *(conflict: the human's words against a ruling, R-541 G2, R-476 L2, R-509 Y5, R-538 I2; REQ-GUI-247, REQ-GUI-271, REQ-GUI-324; context: TASK-M8-50, TASK-M8-58, TASK-M8-61)*
+
+*Found by the port. Nothing is chosen. For the human: yes, it decides whether the line system keeps its menu.*
+
+- **File, section:**
+  - The human's message (R-540): "The GUI file supersedes the earlier art-board pass's `Lines ▾` and `Listen ▾`
+    menus".
+  - `decisions.md` § "R-541 — …", G2: "**No `Lines ▾` and no `Listen ▾`.** An earlier art-board pass had both; they are
+    withdrawn." and "A trace is an overlay, so it lives with the overlays."; G10's One place test: "a stray control
+    (e.g. a surviving `Lines ▾`)".
+  - `decisions.md` § "R-476 — …", L2, and `principia_lines.md` § "2. Where it sits": "One menu: **Lines ▾** beside
+    Overlays ▾, with a count, `Alt+L` to show or hide all."; `principia_render_gui_spec.md` § "G2. …": "**Lines ▾
+    (R-476).** … The menu lists the contour sets, traces and axes with their visibility, opens the contour-set editor
+    and the style library, and holds the presets, among them **Grid** …, **t_end** … and **Class edges** (… R-509),
+    which were Overlays toggles."; REQ-GUI-247 (TASK-M8-50).
+  - `decisions.md` § "R-538 — …", I2: "They are the trace's entry in Lines ▾ (render_gui_spec §G2, R-476), in TM2's
+    order".
+  - `Listen ▾` is in no corpus file: the port looked in `docs/` (less `docs/archive/` and `docs/reference/`),
+    `decisions.md`, `REVIEW_QUEUE.md` and `plan/`; it is only in the demos' mock menu bars
+    (`docs/gui/reference/trace/trace_markers.html` version 28, `trace_sound.html` version 9) and the earlier art-board
+    canvases under `workbench/`, which are not normative.
+- **The conflict:** the human's words and G2 withdraw a menu "an earlier art-board pass had"; that pass's `Lines ▾` was
+  adopted by R-476 as the line system's one menu, and G2 rehomes only the trace. Withdrawing it whole leaves contours,
+  axes, grids, the presets and class edges (R-509) without a menu.
+- **Options seen:**
+  - (a) The trace leaves `Lines ▾` for `Overlays ▾ › Trace`, the Trajectory panel and `Trace…` (G2, G4, G5); `Lines ▾`
+    stays for the line system's other lines; G10's One place test reads "a surviving `Lines ▾`" as a `Lines ▾` that holds
+    a trace control.
+  - (b) `Lines ▾` withdrawn whole: contours, axes, grids, presets and class edges move to `Overlays ▾` (a Lines group),
+    their editors staying windows, `Alt+L` kept.
+  - (c) `Lines ▾` withdrawn and the line system's controls placed by a later design pass.
+- **Applied meanwhile:** (a) (R-541 P2): the trace's place in `Lines ▾` is stale, replaced by R-541; the rest of
+  R-476's menu stands. Nothing waits; a ruling for (b) or (c) is a follow-up change to REQ-GUI-247 and TASK-M8-50.
+- **See also:** PR #263's gui review G3 gave REQ-GUI-271 a keyboard reach and order arm on the trace's `Lines ▾` entry;
+  merging main into rulings/R-540 moved it, with its presence screenshot, to REQ-GUI-328 (`Trace…`, TASK-M8-62), read
+  on R-541 G5's table order (applied per R-369).
+
+## RQ-449: R-541 G2's `K` "keep the current trajectory" is the Figure's lock key (R-409, §G4), where Space keeps the orbit; and G2 does not say in which scope `T`, `⇧T`, `Y`, `K` and `L` act *(conflict and silence, R-541 G2, R-409, R-460; REQ-GUI-097, REQ-GUI-325; context: TASK-M8-61)*
+
+*Found by the port. Nothing is chosen. For the human: yes, for `K`.*
+
+- **File, section:**
+  - `decisions.md` § "R-541 — …", G2: "**Keys**: `T` trace, `⇧T` kept traces, `Y` syzygies, `K` keep the current
+    trajectory, `L` sound on/off. Add them to the keyboard sheet."; the art board `Main.dc.html`'s top bar: "♪ L listen ·
+    T trace · K keep".
+  - `principia_render_gui_spec.md` § "G3. …": "Figure — arrows pan; + / − zoom, Space keeps the orbit, L listens, K locks
+    (§G4), P pins the sample under the pointer in the Trajectory panel (R-453)."; § "G4. …": "Locking (K, a shortcut with
+    the focus in the Figure, in either keyboard mode (§G3, R-409); …"; REQ-GUI-097.
+- **The conflict:** `K` cannot both lock and keep. `L` agrees (the Figure's L listens). `T`, `⇧T` and `Y` are bound
+  nowhere today; §G3 has no global letter keys but `Alt+L` and `?`.
+- **Options seen:** (a) `K` stays lock and Space stays keep, G2's "K keep" read as Space; `T`, `⇧T`, `Y` and `L` are the
+  Figure's scope shortcuts, as L is (R-409); (b) `K` becomes keep, lock moving to another key; (c) the five global, in
+  either mode wherever the focus is, as `Alt+L`.
+- **Applied meanwhile:** (a) (R-541 P3). Nothing waits.
+
+## RQ-450: pointer_channels §4 (normative, R-109) sets a floor on trajectory length, "roughly 20+" periods, below which "the sound is meaningless", and REQ-VAL-103 measures it; R-540 S2 plays every run that moves, the human's words "that shouldn't be a thing" *(conflict: the human's words against a ruling, R-540 S2, R-109, R-144; REQ-VAL-103, REQ-GUI-312; context: TASK-M8-12)*
+
+*Found by the port. Nothing is chosen. For the human: yes, it decides whether a short run is heard.*
+
+- **File, section:**
+  - `decisions.md` § "R-540 — …", §0: "ah i don't like how some are too short to hear, that shouldn't be a thing."; S2:
+    "**No run is too short to hear.** Where no line clears the 1.5-period cut, the **mean rates** are played instead …
+    A run that moves at all makes a sound."
+  - `docs/design/principia_scratchpad_pointer_channels.md` § "4. Audio-specific constraints, which are NOT the frame
+    budget" (normative, R-109, R-144): "**The floor on trajectory length is set by frequency resolution, not by
+    compute.** A spectrum needs enough oscillation periods to resolve a line — roughly 20+. So there is a minimum `t`
+    below which the sound is meaningless *even though the integration was cheap*. **Measure it; do not guess it.**"
+  - REQ-VAL-103: "The minimum trajectory length t for a usable spectrum (about 20+ oscillation periods) must be set by a
+    recorded measurement, not guessed." (verify: "gives the minimum t used by listen").
+  - The demo's readout (`trace_sound.html`): "— under 20: too short to resolve a note".
+- **Options seen:** (a) S2 holds: every moving run sounds, the mean rates below the 1.5-period cut; REQ-VAL-103's
+  measured minimum sets the readout's "too short to resolve a note" warning, not a silence; (b) §4 holds: below the
+  measured minimum Listen is silent and says why; (c) both: below it the mean rates play, marked as rates, not a note.
+- **Applied meanwhile:** (a) (R-540 H6), the human's later words. Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-451: R-540's default signal, "Angles + rotation", adds the triangle's orientation in space `ψ` to the sound, where R-109's mapping (pointer_channels §1 and §2, REQ-GUI-090) is `θ(t), φ(t)` → spectrum, "the same measurement" as the shape-sphere trace *(conflict: the applied text against a ruling, R-540 S1, R-109; REQ-GUI-090, REQ-GUI-309; context: TASK-M8-12)*
+
+*Found by the port. Nothing is chosen. For the human: yes (physics: what is heard).*
+
+- **File, section:**
+  - `decisions.md` § "R-540 — …", S1: "**The sound is the spectrum of the motion of the triangle's shape, plus its
+    rotation in space.**"; its table: "| **Angles + rotation (default)** | `w · e^{iθ}` and, summed in power, `e^{iψ}` |
+    `φ` | Lagrange's shape is fixed and it still sounds, through `ψ` |"; §0: "shouldn't you use the angles?" and "still
+    can't here Lagrange btw".
+  - `principia_scratchpad_pointer_channels.md` § "1. There is ONE mechanism, and it now has THREE consumers": "|
+    **sonification** | `θ(t), φ(t)` → spectrum → audible | audio out |"; § "2. Why the trace and the sound are the SAME
+    measurement": "The loop drawn on the shape sphere *is* `θ(t), φ(t)` traced out. The sound is the spectrum of that
+    same path."
+  - REQ-GUI-090: "listen … must sonify the corpus's mapping, θ(t), φ(t) → spectrum → audible range" (verify: "the audio
+    path's input is the θ(t), φ(t) series of the hovered IC's computeIC trajectory"); TASK-M8-12's test
+    `sonify_input_is_theta_phi`.
+- **The conflict:** `ψ` is not on the shape sphere, so under the default the sound is no longer the spectrum of the path
+  the trace draws there; *Angles only* is §4's mapping.
+- **Options seen:** (a) R-540 extends R-109: the default adds `ψ`, *Angles only* is §4's `θ(t), φ(t)`; REQ-GUI-090's
+  verify reads the selected signal, the input still only the `computeIC` trajectory; (b) the default is *Angles only*,
+  the rotation an option; (c) `ψ` dropped.
+- **Applied meanwhile:** (a) (R-540 H5). Nothing waits beyond RQ-440 and RQ-442; the physics reviewer checks the signal
+  either way (REQ-GUI-309).
+
+## RQ-452: A struck instrument strikes every voice of each new hovered IC's chord, where pointer_channels §4 and REQ-GUI-050 say "cross-fade, never retrigger" per pixel *(conflict: the transcribed code against a ruling, R-540 S5, S8, R-109; REQ-GUI-050, REQ-GUI-315, REQ-GUI-317; context: TASK-M8-12, TASK-M8-59)*
+
+*Found by the port. Nothing is chosen. For the human: yes, it is how a hover sweep sounds with a struck instrument.*
+
+- **File, section:**
+  - `principia_scratchpad_pointer_channels.md` § "4. …": "**Cross-fade, never retrigger.** Hovering across a basin
+    boundary is the most interesting moment available — you would *hear* one basin become another — but only if the
+    sound is continuous. Retriggering per pixel turns the best part into clicking."; REQ-GUI-050: "Sonification must
+    cross-fade between hovered ICs and never retrigger per pixel."
+  - `decisions.md` § "R-540 — …", S5: "**Chord** (whole run): one voice per peak, cross-faded in as a bank over ~140 ms,
+    and cross-faded out when the run changes. … **Never retriggered.**"; S8: "They are **struck once and ring at their
+    floor**."
+  - The demo's code, the chord for each new run (`makeBank`): "`if (v.struck) v.strike(lv, now); else v.setG(lv, now,
+    0.01);`", the bank's gain then cross-faded in.
+- **The conflict:** a hover moving across pixels makes a new chord per run; with a struck instrument each is struck
+  (its attack under the bank's cross-fade), which reads as a retrigger per pixel; with the default instrument nothing
+  is struck.
+- **Options seen:** (a) as the code: the bank cross-fades, and a struck instrument's strike on a new chord is its timbre,
+  not a retrigger; (b) a new hovered IC's chord enters a struck instrument at its held floor, unstruck, struck only on
+  the trajectory's beats; (c) struck instruments silent while the hover moves, struck on dwell.
+- **Applied meanwhile:** (a), the code (R-540 H2). Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-453: REQ-VAL-102's anchors, spectral entropy 0.076 for the figure-eight against 0.177 for a chaotic IC (the spectrum of `θ(t)`), and R-540's entropy, over the mono spectrum of the selected signal, measured 0.309 against Burrau's 0.352 *(conflict: the applied text against a requirement, R-540 S2, S3; REQ-VAL-102, REQ-VAL-114; context: TASK-M8-12)*
+
+*Found by the port. Nothing is chosen. For the human: yes, it is an M8 gate test.*
+
+- **File, section:**
+  - REQ-VAL-102: "The sonification spectrum of θ(t) must separate periodic from chaotic orbits: spectral entropy 0.076
+    for the figure-eight against 0.177 for the scratchpad's chaotic IC."; `principia_trajectory_viewing.md` § "1. The
+    single mechanism": "Measured, figure-eight vs chaotic: **spectral entropy 0.076 vs 0.177**".
+  - `decisions.md` § "R-540 — …", S2: "**Entropy**: Shannon entropy of the normalised power spectrum over `log(bins)`";
+    S3: "Burrau 3:4:5 … entropy 0.352 against the figure-eight's 0.309".
+- **The conflict:** the anchors are for a different signal and spectrum; under R-540's the two orbits are far closer.
+- **Options seen:** (a) REQ-VAL-102 stays a check of the `θ(t)` spectrum as it says, separate from Listen's readout; (b)
+  re-anchored to R-540's entropy, the values measured with prin-rs's integrator and confirmed at the M8 gate
+  (REQ-VAL-114); (c) both.
+- **Applied meanwhile:** (a) (R-540 H6). Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-454: Listen's defaults in the files against the demo's code: the instrument (Warm sine against Sine (pure)), reverb and stereo width (on against off) and the sound itself (on against off) *(conflict: the human's files against the transcription source, R-540 S8, S9, R-541 G6; REQ-GUI-317, REQ-GUI-320, REQ-GUI-329; context: TASK-M8-59, TASK-M8-62)*
+
+*Found by the port. Nothing is chosen. For the human: yes (one line: which defaults).*
+
+- **File, section:**
+  - `decisions.md` § "R-540 — …", S8: "39 instruments, default **Warm sine**."; S9: "| Reverb (on, ×1.40) |" and "|
+    Stereo width (on, ×1.50) |".
+  - `decisions.md` § "R-541 — …", G6: "| Sound | **♪ sound on**, … instrument (**Warm sine**) …" and "| Effects | … **reverb
+    ← spread (×1.40)**, … **width ← angular momentum (×1.50)** |" (bold the default).
+  - The demo's code (`docs/gui/reference/trace/trace_sound.html`, the transcription source): `<option value="sine"
+    selected>Sine (pure)</option>` with `inst()` falling back to `INSTRUMENTS.sine`; `<input type="checkbox" id="fx_rev">`
+    and `<input type="checkbox" id="fx_width">`, unchecked, no script checking them; `SND = { … on: false, … }`, the
+    button reading "Sound on" until pressed. The art board `TrajectoryPanel.dc.html`'s at-rest state shows "♪ off".
+- **Options seen:** (a) the code's: Sine (pure), reverb off, width off, sound off at launch; (b) the files': Warm sine,
+  reverb on, width on, sound on.
+- **Applied meanwhile:** (a), the human's message making the code the transcription source (R-540 H2). Nothing waits
+  beyond RQ-440 and RQ-442.
+
+## RQ-455: "Grows, last half": the file's window `[t₁/2, t₁]`, the code's `[t₁ − W, t₁]` with `W = max(min(t₁, ½t_c), t₁/2)` *(conflict: the human's file against the transcription source, R-540 S4; REQ-GUI-314; context: TASK-M8-12)*
+
+*Found by the port. Nothing is chosen. For the human: no; the code is applied, as the human's message says.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S4: "| Grows, last half | `[t₁/2, t₁]` |"; the demo's code
+  (`windowAt`): "`W = m === 'grow' ? t1 : Math.max(Math.min(t1, 0.5 * tcr), t1 / 2); return [t1 - W, t1];`".
+- **The conflict:** below `t₁ = t_c` the code's window is half a crossing time long (or the whole drawn run), not half
+  the drawn run.
+- **Options seen:** (a) the code's; (b) the file's.
+- **Applied meanwhile:** (a) (R-540 H2). Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-456: A struck note's decay: the file's "time constant `strike`", the code's `strike/3` (and the attack's `att/3`) *(conflict: the human's file against the transcription source, R-540 S8; REQ-GUI-317; context: TASK-M8-59)*
+
+*Found by the port. Nothing is chosen. For the human: no; the code is applied.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S8's table: "| `strike`, `sus` | **struck**: decays with time constant
+  `strike` **to a held floor `sus`**, never to zero |"; the demo's code (`makeVoice`'s `strike`):
+  "`out.gain.setTargetAtTime(ng2, now, 0.004); out.gain.setTargetAtTime(ng2 * (I.sus ?? 0.25), now + 0.02, I.strike /
+  3);`"; `setG`: "`Math.max(tc, (I.att || 0) / 3)`".
+- **Options seen:** (a) the code's: rise at 4 ms, from 20 ms a decay at time constant `strike/3` to `sus × level`
+  (`sus` default 0.25); an attack at `att/3`; (b) the file's: the time constant `strike`.
+- **Applied meanwhile:** (a) (R-540 H2). Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-457: "Strikes on": the file makes "only when a line changes" one of three options; the code re-strikes a voice whose line has moved more than a quarter-tone in every mode *(conflict: the human's file against the transcription source, R-540 S8; REQ-GUI-318; context: TASK-M8-59)*
+
+*Found by the port. Nothing is chosen. For the human: no; the code is applied.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S8: "**They are struck again on the trajectory's own beats**
+  (`Strikes on`): each syzygy the head passes (**default**); every crossing time ÷ 1, 2 or 4; only when a line changes,
+  i.e. a voice's partial has moved more than a quarter-tone since it last sounded."; the demo's code (`trackTo`, every
+  frame, whatever the mode): "`const moved = !x.lastNote || Math.abs(Math.log2(p.f / x.lastNote)) > 1 / 48; if
+  (x.struck) { if (moved) { x.strike(lv, now); x.lastNote = p.f; } } else { … if (x.retrig && moved) { x.note(now); …`";
+  the beats (`soundTick`): "`if (mode === 'syz') … else if (mode === 'tc') …`", *only when a line changes* adding none.
+- **Options seen:** (a) the code's: the line-change strike in every mode, the mode adding beats; (b) the file's: the line
+  change only under its own option.
+- **Applied meanwhile:** (a) (R-540 H2). S13's Struck floor test ("struck exactly once without a beat") holds for a line
+  that does not move. Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-458: Under *Stereo by winding* the chord voices only the winding spectra, so channel B, `φ`, is not heard in it, while the follow track finds its lines in the mono sum, `φ` included *(silence, R-540 S1, S6; REQ-GUI-310; context: TASK-M8-12)*
+
+*Found by the port. Nothing is chosen. For the human: yes, it is what is heard in the default.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S1's table: "| **Angles + rotation (default)** | … | `φ` |" (Channel
+  B); S6: "| **Stereo by winding (default)** | anticlockwise winding (positive frequencies) | clockwise winding
+  (negative frequencies) |", with no word on B; the demo's code: "`L = ch === 'wind' ? { mag: pos, … } : fold, R = ch ===
+  'wind' ? { mag: neg, … } : { mag: sp.mag, … }`" (the chord's sides), and the frames' "`peaks(mono, K)`" panned by
+  "`(R - L) / (L + R || 1)`".
+- **The question:** whether `φ`'s lines are heard in the default chord, and how a `φ`-only line is panned.
+- **Options seen:** (a) as the code: the chord drops `φ`, the follow track hears it, a `φ`-only line panned by the
+  winding spectra at its bin; (b) `φ` added to both sides of the chord, centred; (c) `φ` only under *Stereo*.
+- **Applied meanwhile:** (a) (R-540 H2). Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-459: The instrument menu's families and their counts (pure 5, keys 3, struck 10, bowed and blown 7, voices 4, synths 8, textures 2) name no instrument, and the code has none *(silence: a definition, R-540 S8, R-541 G6, R-72; REQ-GUI-329; context: TASK-M8-62)*
+
+*Found by the port. Nothing is chosen. For the human: no; the task that builds the menu can write it (R-72), unless the
+human wants to.*
+
+- **File, section:** `decisions.md` § "R-540 — …", S8: "Families, for the menu (GUI file G6): pure (5), keys (3), struck
+  (10), bowed and blown (7), voices (4), synths (8), textures (2)."; § "R-541 — …", G6: "**The instrument menu is
+  grouped**: pure (5), keys (3), struck (10), …, one instrument per row in the build."; the demo's menu groups 19
+  instruments ungrouped, 15 under "More" and 5 under "Synths"; S8 lists twelve `strike` instruments, against "struck
+  (10)", and five named synths, against "synths (8)".
+- **Options seen:** (a) TASK-M8-62 writes the assignment (R-72), meeting the counts (the electric piano among keys, the
+  chiptune, raw saw and sub drone among synths, say), reviewed by gui; (b) the human gives it.
+- **Applied meanwhile:** (a) (R-541 P8). Nothing waits.
+- **See also:** since PR #267's split (applied per R-369) the assignment is TASK-M8-65's (`Listen…`).
+
+## RQ-460: R-541 G1's "Every setting appears in at most two places", where G2, G4 and G5 put the syzygies, the end event icon, the off-screen pins and the wrapped copies in three: `Overlays ▾ › Trace`, the Trajectory panel's marker chips and `Trace…` *(conflict: the applied text against itself, R-541 G1, G2, G4, G5; REQ-GUI-324; context: TASK-M8-61, TASK-M8-62)*
+
+*Found by the port. Nothing is chosen. For the human: no for (a), which keeps every control the file names.*
+
+- **File, section:** `decisions.md` § "R-541 — …", G1: "**Every setting appears in at most two places**: an everyday
+  control in the panel, and the full set in a window (`Trace…`, `Listen…`)"; G2: "`Overlays ▾` gains a Trace group … :
+  trace under cursor (`T`); kept traces (`⇧T`); syzygies (`Y`); end event icon; off-screen icons, pinned to the edge;
+  repeat in wrapped copies; outline the chart's square; a `Trace…` button."; G4: "The marker chips are toggle buttons
+  that show the icon they draw: end event, syzygies, leaving the chart, off-screen pins, wrapped copies, head marker.";
+  G5's Markers and At the edges rows.
+- **Options seen:** (a) all three stay, one state behind them: G1 is read as settings, `Overlays ▾ › Trace` as the view's
+  toggles of the same fields, a third route to the same `SetField`; (b) the panel's chips lose the items `Overlays ▾`
+  has; (c) `Overlays ▾ › Trace` keeps only the trace, kept traces and `Trace…`.
+- **Applied meanwhile:** (a) (R-541 P4). Nothing waits.
+- **See also:** RQ-466, the Inspector's listen, a third place for sound (gui review 5595359543 of PR #267, G1).
+
+## RQ-461: R-541 G2 and G5 turn "outline the chart's square" on by default in `Overlays ▾ › Trace` and `Trace…`, where RQ-408 (R-537 Q3) is open, nothing built meanwhile, its recommendation an Overlays › Chart toggle, off by default *(conflict: the applied text against an open entry, R-541 G2, G5, R-537 Q3; REQ-GUI-324, REQ-GUI-328; context: TASK-M8-61, TASK-M8-62, TASK-M8-55)*
+
+*Found by the port. Nothing is chosen. For the human: yes, with RQ-408.*
+
+- **File, section:** `decisions.md` § "R-541 — …", G2: "outline the chart's square"; G5's At the edges row:
+  "**outline the chart's square**" (bold the default); the art board `Main.dc.html`'s Trace group shows it ticked;
+  RQ-408: "(a) an Overlays › Chart toggle, off by default and on in the debug view (the file's recommendation); (b)
+  always drawn while the view shows past the square; (c) none." and "**Applied meanwhile:** nothing is built: no outline
+  is drawn and Overlays › Chart gains no toggle until this is ruled".
+- **Options seen:** (a) RQ-408 governs: the outline's entries in the Trace group and `Trace…` are built only once RQ-408
+  is ruled, as it rules; (b) R-541 answers RQ-408: an outline toggle, on by default, in the Trace group and `Trace…`.
+- **Applied meanwhile:** (a) (R-541 P5). Only the outline's two entries wait.
+
+## RQ-462: R-541 G4 lists the Trajectory panel from the top and leaves out the summary's FTLE and `E₀`, the panel's own playhead and the Open full viewer… and IC Inspector… buttons, which §G2 and REQ-GUI-088 have *(silence, R-541 G4, R-65, R-453; REQ-GUI-088, REQ-GUI-326; context: TASK-M8-11, TASK-M8-61)*
+
+*Found by the port. Nothing is chosen. For the human: yes, it decides what the panel shows.*
+
+- **File, section:** `decisions.md` § "R-541 — …", G4: "1. **Header** … 2. **Status line**: running / pinned, the end
+  event with its time, `|ΔE/E|`. 3. **Previews** … 4. **Three collapsible sections**"; "The kept list moves here and into
+  `Trace…`, and out of the left panel."; G1: "the bottom band's Time column shows the trajectory over time"; the art
+  board `TrajectoryPanel.dc.html`'s state A ends with "Open full viewer…" and "IC Inspector…".
+  `principia_render_gui_spec.md` § "G2. …", the Trajectory panel: "a one-line summary (fate, `t_end`, FTLE, `E₀`)", "a
+  playhead for this orbit", "**Open full viewer…** and **IC Inspector…** (both open §G8)", "**Kept orbits** below, each
+  with its fate and time, removable"; REQ-GUI-088.
+- **Options seen:** (a) a port adds: the status line carries the summary (fate and `t_end`, FTLE, `E₀`) with G4's items;
+  the panel's playhead and the two buttons stay, after Numbers, as art board A has them; the kept list moves as G4 says;
+  (b) G4 is the whole panel: FTLE, `E₀` and the panel's playhead go, the buttons stay; (c) G4 is the whole panel, the
+  buttons going too.
+- **Applied meanwhile:** (a) (R-541 P6). Nothing waits.
+
+## RQ-463: R-541 G7 fixes the bottom band's sizes (196 px, 420 px expanded, the Compass at the left panel's width, the Legend 360 px), where every panel boundary is a remembered splitter (R-462); and "Compass: cube only" does not say what becomes of the compass's buttons, which are keyboard siblings *(conflict and silence, R-541 G7, R-462, R-409, R-452, R-459; REQ-GUI-213, REQ-GUI-330; context: TASK-M8-63)*
+
+*Found by the port. Nothing is chosen. For the human: no for (a), which reads the sizes as R-462 reads the artboards'.*
+
+- **File, section:**
+  - `decisions.md` § "R-541 — …", G7: "**Compass · Time · Legend**, 196 px, with the Compass at the Explore left panel's
+    width and the Legend at 360 px"; "| **Strip expanded (⏶)** | **grows upward to 420 px**; the view gives up the
+    height | … | **cube only** | …"; G10's Band height test: "expanding the strip changes it by exactly the band's
+    growth".
+  - `principia_render_gui_spec.md` § "G2. …", "Layout: every panel boundary is a splitter (R-462)": "Each panel has a
+    minimum size; a double-click on a splitter resets that splitter to its default; the layout is remembered across
+    sessions"; § "G13. …": "The artboards' panel sizes and window positions are the defaults".
+  - § "G3. …": "The Compass scope holds the compass, then its Tilt and Slice buttons, then its view buttons Cube,
+    Plücker, Jacobi and Shape, then the cube's axis buttons H, V and D and, while it is shown, the "4D: see Plücker"
+    badge".
+- **Options seen:** (a) the sizes are defaults (R-462): the band's splitter keeps its height, 196 px by default; the
+  expanded strip is the band's second height, 420 px by default, its own splitter position, remembered; while "cube
+  only" the compass draws its cube in its current view and mode, its buttons hidden and out of the keyboard tree until
+  `⏷`, a drag on it working as before; (b) fixed sizes, the band's splitter disabled while the strip shows; (c) the
+  compass keeps its buttons, the cube shrunk.
+- **Applied meanwhile:** (a) (R-541 P9). Nothing waits.
+
+## RQ-464: Listen's horizon and dwell: R-540 S10 integrates a moving hover to `t ≤ 20` ("the maps' horizon") and, after a 280 ms dwell or a pin, on to Listen's own `Horizon` (20, 60, 150, 400), the trace switching with it, where pointer_channels §3 bounds the moving hover by a step budget, the dwell lifting it, and the hover runs to the sim key's horizon, set in the Run window *(conflict: the applied text against a ruling and the GUI spec, R-540 S10, R-541 G6, R-144; REQ-GUI-321, REQ-GUI-329; context: TASK-M8-60)*
+
+*Found by the port. Nothing is chosen. For the human: yes, it decides how long a trace runs.*
+
+- **File, section:**
+  - `decisions.md` § "R-540 — …", S10: "While the hover is moving, the run is integrated to `t ≤ 20` (the maps'
+    horizon), so the sound is coarse." and "On dwell (280 ms) or pin, the same run is integrated on to the **horizon**
+    (`Horizon`: 20, **60**, 150, 400), and the trace and the sound both switch to it and sharpen."; § "R-541 — …", G6's
+    Listen row: "horizon t ≤ 20 · **60** · 150 · 400".
+  - `principia_scratchpad_pointer_channels.md` § "3. UPDATE TO THE RESPONSIVENESS MODEL — hover is affordable, and the
+    earlier caution was wrong" (normative, R-144): "**Give the hover trajectory a STEP BUDGET. If it exhausts it, report
+    what it got and mark it incomplete.**" and "**Dwell releases the bound.**"
+  - `principia_render_gui_spec.md` § "G2. …": "**Run settings are NOT on the page** (they're rarely changed). Horizon,
+    integrator, escape settings, quality, budget, and recompute / cancel live in the Run window (§G5)."; the hover
+    integrates with the sim key (`principia_trajectory_viewing.md` § "1. The single mechanism": "`traj =
+    computeIC(chart, uv, simKey)`").
+- **The conflict:** 20 is the demo's precomputed maps' horizon, not prin-rs's; S10's moving-hover bound is a time, §3's a
+  step budget; Listen's `Horizon` extends the trace past the run's horizon, from a control outside the Run window.
+- **Options seen:** (a) moving: the map's own horizon (the sim key's `t_max`) under §3's step budget, "20" read as the
+  demo's; on dwell (280 ms) or a pin, on to Listen's `Horizon` where it is longer, the trace and the sound both, the map
+  unchanged; (b) Listen uses the run's horizon only, its `Horizon` control dropped; (c) as the file: 20 while moving.
+- **Applied meanwhile:** (a) (R-540 H8). Nothing waits beyond RQ-440 and RQ-442.
+
+## RQ-465: R-541 G5's footer and R-540 S4 restate R-538 TF3 for every trace, "the whole trace to the horizon is drawn" when nothing plays, where PR #263 (merged to main after this port began) applies RQ-427 (a): only a trace of the default length is drawn whole while paused, a `Window` or `LastDt` length kept as chosen *(conflict: the human's words against an applied option, R-541 G5, R-540 S4, R-538 TF3, RQ-427; REQ-GUI-281, REQ-GUI-314, REQ-GUI-328; context: TASK-M8-58, TASK-M8-12, TASK-M8-62)*
+
+*Found merging main (7daf689b) into rulings/R-540. Nothing is chosen. For the human: yes if G5 was meant to answer
+RQ-427; RQ-427 itself said the orchestrator may rule it.*
+
+- **File, section:**
+  - `decisions.md` § "R-541 — …", G5 (`principia_trace_listen_gui.md` §G5): "Footer: `reset`, `save as default`. When
+    nothing is playing or scrubbing, the whole trace to the horizon is drawn (follow-up F3)."
+  - `decisions.md` § "R-540 — …", S4 (`principia_listen.md` S4): "| Follow the head | when nothing is playing or
+    scrubbing | **the whole run as one chord**, matching the trace being drawn whole (follow-up F3) |".
+  - `docs/design/principia_lines.md` § "8. Traces", Animation, as PR #263 left it: "every trace of the default length
+    (to the head) is drawn from `t = 0` to its end (its event, or the horizon), with no head marker, and a `Window` or
+    `LastDt` length is kept as chosen (RQ-427 (a), applied meanwhile)"; `principia_render_gui_spec.md` § "G2. …", the
+    same; REQ-GUI-281's arm "paused, a Window(t0, t1) trace still draws exactly [t0, t1] and a LastDt trace its last Δt
+    (RQ-427 (a)); control: either drawn whole while paused fails" (gui review 5594407176 of PR #263, G2).
+  - RQ-427: "(a) TF3 is the default length's (`ToPlayhead`): a fixed window or the last `Δt` is kept as chosen, … (b)
+    TF3 for every length: paused, every trace is drawn whole".
+- **The conflict:** the bundle's two files, written after TF3, say the whole trace is drawn whenever nothing plays, with
+  no word on a chosen length; main now draws a `Window` or `LastDt` trace as chosen while paused, and tests that it
+  does. If the files mean every trace, they are RQ-427's option (b) and REQ-GUI-281's new arm fails correct code; if
+  they mean the default trace, they agree with (a). S4's chord is the whole run either way, so under (a) a paused
+  `Window` trace and Listen's chord no longer "match".
+- **Options seen:** (a) RQ-427 (a) stands: G5's footer and S4's "matching" read as the default length's; a paused
+  `Window` or `LastDt` trace is drawn as chosen while Listen plays the whole run; (b) the files answer RQ-427 as (b):
+  paused, every trace is drawn whole, REQ-GUI-281's `Window` / `LastDt` arm reversed; (c) as (a) for the trace, and
+  Listen's paused chord follows the trace's drawn span.
+- **Applied meanwhile:** (a): main's text and tests stand; `principia_render_gui_spec.md`'s `Trace…` footer and
+  `principia_listen.md` S4 carry "of the default length (RQ-427 (a), RQ-465)". Nothing waits.
+
+## RQ-466: render_gui_spec §G8 puts listen in the Inspector ("**listen** is here too") and REQ-GUI-090 says "listen (in the Trajectory panel and the Inspector)", where R-541 G1 puts everything about one trajectory, its sound included, in the Trajectory panel, and REQ-GUI-324's One place test fails a sound control anywhere else *(conflict: the applied text against the GUI spec and a requirement, R-541 G1, R-65, R-109; REQ-GUI-090, REQ-GUI-324; context: TASK-M8-12, TASK-M8-61)*
+
+*Found by gui review 5595359543 of PR #267, G1. Nothing is chosen. For the human: no; the orchestrator may decide it
+as a routine design choice, unless the human wants it.*
+
+- **File, section:**
+  - `principia_render_gui_spec.md` § "G8. Inspector — one IC, its trajectory, one timeline (`05_inspectors.png`)":
+    "Integration is `computeIC` on the CPU in f64 (trajectory_viewing §1); the engine is reached only through it (§6).
+    **listen** is here too."
+  - REQ-GUI-090's statement: "listen (in the Trajectory panel and the Inspector) must sonify the corpus's mapping".
+  - `decisions.md` § "R-541 — …", G1 (`principia_trace_listen_gui.md` §G1): "**Everything about one trajectory lives in
+    one place: the Trajectory panel.** That covers its previews, its trace and its sound." and "**Every setting appears
+    in at most two places**: an everyday control in the panel, and the full set in a window (`Trace…`, `Listen…`)".
+  - REQ-GUI-324's verify (R-541 G10 One place): "walking the widget tree finds no trace or sound control outside the
+    Trajectory panel, Overlays ▾ › Trace, Trace…, Listen… and the Time column".
+- **The conflict:** the Inspector's listen either fails the One place test or is dropped against REQ-GUI-090.
+- **Options seen:** (a) R-541 G1 holds: listen in the Trajectory panel only; the Inspector holds no sound control, and
+  REQ-GUI-090's "and the Inspector" and §G8's sentence are stale; (b) the Inspector keeps listen as a view of the same
+  Listen state, and the One place test's list adds the Inspector window (a third place for sound, see RQ-460).
+- **Applied meanwhile:** (a) (applied per R-369, PR #267's fix round): §G8 and REQ-GUI-090's note carry it, and
+  REQ-GUI-324's control fails a listen control in the Inspector. A ruling for (b) is a follow-up change to REQ-GUI-324,
+  TASK-M8-61 and §G8.
+
+## RQ-467: Listen's pitch silences moving runs, against R-540 S2's "A run that moves at all makes a sound" and S13's "No silent run": a bound run with small |E| (t_c = (2|E|)^{−3/2} unbounded as E → 0⁻, Fit to hearing capped at ±8 octaves), and the code's runs with `t_end ≤ 10⁻⁶` or fewer than three samples *(conflict: the transcription source against the human's file, physics, R-540 S2, S3, S13, R-109; REQ-GUI-312, REQ-GUI-313; context: TASK-M8-12)*
+
+*Found by physics review 5595386853 of PR #267, P2. Nothing is chosen. For the human: yes; it changes what is heard
+along the bound / escape boundary (physics, CLAUDE.md "When to ask the human").*
+
+- **File, section:**
+  - `decisions.md` § "R-540 — …", S2 (`principia_listen.md` S2): "**No run is too short to hear.** … A run that moves at
+    all makes a sound."; S13: "| No silent run | every run with `t_end > 0` that moves has at least one voiced line
+    (fallback included) | the fallback missing |".
+  - The transcription source, `docs/gui/reference/trace/trace_sound.html` v9:
+    `return E < 0 ? Math.pow(2 * -E, -1.5) : Math.pow(I, 0.75);` (`crossingTime`);
+    `while (f * 2 ** k > 880 && k > -8) k--; while (f * 2 ** k < 110 && k < 8) k++;` (`fitShift`);
+    `if (!(tEnd > 1e-6) || sim.samples.length < 3) return null;` (`analyseSound`); and only lines strictly between
+    30 Hz and 6 kHz voiced (`principia_listen.md` §3).
+- **The physics review's measurements** (figure-eight ICs with the velocities scaled to a target E, t ≤ 20, the
+  defaults): E = −1e-3, t_c 1.1e4, shift −8, 8 lines voiced; E = −3e-4, t_c 6.8e4, shift −8, 0 lines (the strongest at
+  11.4 kHz); E = −1e-4, t_c 3.5e5, shift −8, 0 lines; E = +1e-4, t_c 0.74, shift +2, 16 lines. The fallback never fires,
+  because mono peaks exist, only out of band. Across E = 0 the pitch mapping jumps by about 19 octaves. With Fit off,
+  lines outside 30 Hz to 6 kHz are silent too.
+- **The conflict:** a moving bound run near E = 0, which a hover crosses at the bound / escape boundary, makes no sound,
+  as does a moving run too short to analyse.
+- **Options seen:** the file recommends none. (a) the code as transcribed: the silences stand, REQ-GUI-312's test
+  excepts them, and the readout names the reason; (b) Fit to hearing uncapped, any whole number of octaves, so every
+  moving run with a peak is brought into 110–880 Hz (the jump across E = 0 stays); (c) a crossing time continuous across
+  E = 0, a scale-free definition to be given (R-72), removing the silence and the jump; (d) as (a), (b) or (c), and a
+  run with `t_end ≤ 10⁻⁶` or fewer than three samples that moves plays its mean rates from the samples it has.
+- **Applied meanwhile:** (a) (R-540 H2, the code wins): REQ-GUI-312's verify names the gap and does not assert it;
+  `principia_listen.md` §3 points here. TASK-M8-12 waits on RQ-440 and RQ-442 already; a ruling other than (a) is a
+  follow-up change to §3 and REQ-GUI-312 / -313.
 
 ## RQ-470: R-503 makes the shape sphere's exponential-map pixels past `r = π` inside `[0,1]²` the domain's end by design, and R-467 clause 4, as R-506 W1 now confirms for every gallery chart, makes such a pixel a decoder bug with a console warning *(conflict, R-503, R-467 clause 4, R-506 W1, REQ-CHART-075, REQ-GUI-227; context: TASK-M2-28, TASK-M8-46)*
 
@@ -2034,3 +2592,106 @@ target; it changes what the Tilt section offers.*
   dropped, TF1's row kept as the reason.
 - **Applied meanwhile:** nothing; REQ-GUI-277's latent-momentum arm and its controls stand.
 - **Waits:** REQ-GUI-277's physical-momentum arm (`rq: RQ-474`); TASK-M8-58 does not wait for the rest.
+
+## RQ-475: REQ-VAL-022 asks for "equilateral → pole and collinear → `w = 0` exactly", and on floating-point states neither holds bit for bit on the Rust decode and encode, nor can it in general: what does "exactly" mean? *(silence, a missing definition, R-72, REQ-VAL-022, RQ-355; context: TASK-M2-27)*
+
+*Found by TASK-M2-27 while building the `inspector-roundtrip` gate. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)" (:9): "**Verified
+    numerically:** … canonical COM = origin to 1.7×10⁻¹⁶; equilateral → shape-sphere pole and collinear → equator
+    exactly."
+  - `plan/requirements.yaml` REQ-VAL-022 (:20679): "with the canonical CoM at the origin, equilateral configurations at a
+    shape-sphere pole and collinear ones on the equator exactly"; its verify detail: "equilateral → pole and collinear
+    → w = 0 exactly".
+  - `plan/tasks/M2/TASK-M2-27.md` § "Acceptance tests": "equilateral → pole and collinear → w = 0 exactly
+    (REQ-VAL-022)".
+- **Why it is open:** no float triangle is exactly equilateral (√3 is irrational), and a collinear state on a line at
+  a general angle is not exactly collinear once its coordinates are rounded. Even an exactly collinear float state
+  (every `y` equal) is not mapped to `w = 0` bit for bit: `C`'s rotation `R(−φ)`, `φ = atan2(ρ_y, ρ_x)`, rounds
+  (`sin π ≠ 0`, R-23's step 2), and the CoM subtraction leaves the three `y` unequal by an ulp. Measured on the f64
+  encode, `w` of `C`'s output through `kernel::shape::shape`:
+  - equal-mass equilateral triangles, at rest, through a random gauge element (scale `2^[−4, 4)`, any turn, either
+    parity, so `L⁺` and `L⁻` both, offsets and boosts on `[−2, 2)²`): `max |w − 1| = 2.2×10⁻¹⁶`, `w = 1` exactly in
+    1067 of 2000;
+  - collinear states, bodies on the `x`-axis, masses from the mass block at `z_μ` on `[−4, 4)²`, through the same
+    gauge: `max |w| = 6.8×10⁻¹⁴`, `w = 0` exactly in 0 of 2000; their `z_β` sits exactly at its clamp image, with its
+    `lookup_clamped` bit set, in 2000 of 2000 (the chart's own equator, `β ∈ {0, π̂}` clamped to `ε_z`), and no
+    equilateral state's does;
+  - exactly collinear float states, every `y` equal, no gauge: `w = 0` exactly in 943 of 992 with `ρ_x > 0` and 340 of
+    1008 with `ρ_x < 0`, `max |w| = 8.8×10⁻³¹`.
+  The tool's "exactly" was read on its presets; the corpus does not say on which states, or to what, it holds.
+- **Options seen:**
+  - (a) "Exactly" is "to rounding": a stated bound on `|w − 1|` and `|w|` over random gauge images (a calibration,
+    R-71; the measurement above as its evidence).
+  - (b) "Exactly" is bit for bit on the canvas presets only (equal-mass unit triangle and bodies on the `x`-axis in
+    order, no gauge), with the general case at rounding as in (a).
+  - (c) "Exactly" is the chart's: collinear → `z_β` at its clamp image with its bit set, bit for bit (holds on every
+    state measured), and equilateral → `(z_α, z_β) = (0, 0)` to rounding.
+- **Applied meanwhile:** nothing is judged. `cargo xtask gate inspector-roundtrip` reports both families' `w` and the
+  `z_β` clamp count beside its verdict, which judges the round trip and the canonical CoM only. The pole is the
+  equal-mass one, as RQ-355 holds it for other masses.
+- **Waits:** REQ-VAL-022's two shape checks; REQ-VAL-022 carries `rq: [RQ-355, RQ-475]`, held, not closed, by
+  TASK-M2-27's PR (applied per R-369). The round trip, the CoM, REQ-VAL-021 and REQ-VAL-121's proposal do not wait.
+
+## RQ-476: REQ-VAL-022's "2×10⁴ random z with |z| < 4" does not say whether `|z|` is the vector's norm (the ball `‖z‖ < 4`) or each component's (the cube `[−4, 4]⁸`), and the Rust round trip passes the reference's bound under one and fails it under the other *(silence, a missing definition, R-72, R-71, REQ-VAL-022, REQ-VAL-121; context: TASK-M2-27)*
+
+*Found by TASK-M2-27's physics review (5594956833, P1) and qa review (5595411216, Q3) of PR #266. Nothing is chosen.*
+
+- **File, section:**
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built (supersedes stale details below)" (:23): "round-trip
+    `decode→canonicalise→z` max `‖z−z'‖ = 1.2×10⁻¹³` over 2×10⁴ random `z` (|z|<4; residual
+    boundary-conditioning-dominated, as expected)". The domain is written with single bars, `|z|<4`, and the error
+    with double bars, `‖z−z'‖`; "boundary-conditioning-dominated" fits draws that reach `|zₖ| → 4`.
+  - `plan/requirements.yaml` REQ-VAL-022: "over 2×10⁴ random z with |z| < 4"; its verify detail: "2×10⁴ random z,
+    |z| < 4: max round-trip error ≤ 1.2×10⁻¹³".
+  - `plan/tasks/M2/TASK-M2-27.md` § "Notes": "|z| < 4 keeps s(1−s) ≥ ~0.018", true under both readings.
+- **Measured on the f64 Rust decode and encode, the defaults links** (`‖z − E(D(z))‖`, Euclidean):
+  - **ball** `‖z‖ < 4`: 9.73×10⁻¹⁴ at the gate's seed over 2×10⁴; 5.8×10⁻¹⁴ to 1.21×10⁻¹³ over 8 seeds; over 10⁶
+    draws max 1.67×10⁻¹³, p99.999 1.09×10⁻¹³, 6 per million past 1.2×10⁻¹³.
+  - **cube** `[−4, 4)⁸`: 2.4 to 2.65×10⁻¹³ on every seed over 2×10⁴; over 10⁶ draws max 3.15×10⁻¹³, p99.999
+    2.66×10⁻¹³, p99.99 2.42×10⁻¹³, 9150 per million past 1.2×10⁻¹³. The tail is the mass block's `artanh` near
+    `|z_μ| → 4`.
+  - **The handles gate under the cube reading** (REQ-VAL-021 names no domain; its ICs `g₀·D(z)` draw `z` from the same
+    reading): 5.0 to 6.6×10⁻¹⁴ over 2×10⁴ on seeds 1–3, against 1.6×10⁻¹⁴ (174 to 198 handle applications past it),
+    and 1.54×10⁻¹³ over 5×10⁵ ICs. qa measured 3.03×10⁻¹⁴ on the Inspector's Randomise ICs kept inside the cube.
+    Under the ball it passes: 8.45×10⁻¹⁵ at the gate's seed, 1.02×10⁻¹⁴ over 5×10⁵ ICs.
+- **Options seen:**
+  - (a) The ball, with the gate at the reference's 1.2×10⁻¹³ on the seeded 2×10⁴ sample.
+  - (b) The ball, with the gate above its measured distribution, at or above 1.67×10⁻¹³.
+  - (c) The cube, with the gate above its measured distribution (above 3.15×10⁻¹³), and the handles gate's bound
+    reconsidered with it (REQ-VAL-121).
+- **Applied meanwhile:** (a). `inspector-roundtrip` and `inspector-handles` draw `z` in the ball, the round trip
+  gated at 1.2×10⁻¹³; both thresholds stay provisional under REQ-VAL-121.
+- **Waits:** REQ-VAL-022 and REQ-VAL-121 carry `rq: RQ-476`, held, not closed, by TASK-M2-27's PR. The gates run
+  meanwhile.
+
+## RQ-477: REQ-VAL-021's "2×10⁴ random ICs" does not say what a random IC is, and the Rust handles hold the reference's 1.6×10⁻¹⁴ on one distribution and not on the reference tool's own *(silence, a missing definition, R-72, R-71, REQ-VAL-021, REQ-VAL-121; context: TASK-M2-27)*
+
+*Found by TASK-M2-27's qa review (5595411216, Q2) of PR #266. Nothing is chosen.*
+
+- **File, section:**
+  - `plan/requirements.yaml` REQ-VAL-021: "Translate-all, boost-all, rotate-all and scale-all must each leave z fixed,
+    to the bound verified in the reference tool (1.6×10⁻¹⁴)"; its verify detail: "2×10⁴ random ICs, each handle
+    applied: max ‖Δz‖ ≤ 1.6×10⁻¹⁴ (the reference tool's re-verified bound)".
+  - `docs/notes/ic_inspector_scratchpad.md` § "Status — as built" (:23): "all four gauge handles hold `z` to
+    `1.6×10⁻¹⁴`", and (:14) "Plus Reset / Randomise / Burrau-ish presets"; no distribution is given.
+  - The reference tool's Randomise (`docs/gui/reference/ic_inspector.html`:710–712, record only, R-159): masses on
+    `[0.4, 1.8]` (normalised), positions on `±0.9`, velocities on `±0.6`, each uniform.
+- **Measured on the f64 Rust encode:**
+  - **The gate's distribution**, `g₀·D(z)` with `z` in the ball `‖z‖ < 4` (RQ-476) and `g₀` a random gauge element
+    with offsets and boosts up to the state's own size: 8.45×10⁻¹⁵ at the gate's seed over 2×10⁴; 1.02×10⁻¹⁴ over
+    5×10⁵ ICs. At offsets and boosts up to twice the state's size, one sample in 2×10⁴ reaches 1.75×10⁻¹⁴.
+  - **Randomise** (qa, kept where `‖E(x)‖ < 4`, handles at the tool's button sizes and at random sizes): rotate-all
+    1.82×10⁻¹⁴ and scale-all 1.69×10⁻¹⁴ in qa's test run; the worst over seeds 1–5 1.91, 2.48, 1.56, 1.75 and 1.48×10⁻¹⁴, so
+    3 of 5 seeds fail, on rotate-all at any turn and on translate-all.
+  - **The canonical CoM on a Randomise IC** (qa, exact reading): 1.35×10⁻¹⁵ from the origin, against 1.16×10⁻¹⁶ on
+    `C(D(z))`, REQ-VAL-022's domain and 1.7×10⁻¹⁶ bound.
+- **Options seen:**
+  - (a) The gate's `g₀·D(z)`, `z` in RQ-476's domain.
+  - (b) The Inspector's Randomise, where the Rust handles reach 1.82×10⁻¹⁴ (rotate-all) and 1.69×10⁻¹⁴ (scale-all),
+    and 3 of 5 seeds fail 1.6×10⁻¹⁴: the bound would need a ruling (REQ-VAL-121), not a loosening here.
+  - (c) Both, each with its own bound.
+- **Applied meanwhile:** (a). The 1.6×10⁻¹⁴ bound is not loosened.
+- **Waits:** REQ-VAL-021 and REQ-VAL-121 carry `rq: RQ-477`, held, not closed, by TASK-M2-27's PR (REQ-VAL-121's
+  handles gate value depends on the answer). The gate runs meanwhile.

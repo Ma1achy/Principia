@@ -27,6 +27,11 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   control over it is the Home button in its top-right corner, by the human's words *(conformed to R-466)*. The rule is
   about panels and chrome: figure marks, the trace and its icons, contour lines and icons for points of interest, may
   cover the figure *(conformed to R-539)*.
+  Badges go in the chrome or the status line, never over the figure: the decoder badge, naming the chart and any link
+  off its default, sits in the figure's header strip above the plot, a badge being chrome and not a figure mark *(conformed to R-479, R-523
+  and R-539; was: "A decoder
+  badge in the top-left corner names the chart and any link off its default, applied meanwhile while RQ-387 asks
+  whether it may be there", a stale value, replaced by R-523)*.
 - **Dark default egui theme, Ubuntu / Ubuntu Mono.** It's a dev tool; no styling beyond egui's own.
 - **Not in the dev GUI:** Chazy subtitles, and the object-based stain desk. The Stain panel is the plain node-graph editor.
 
@@ -55,6 +60,10 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
   - **The hover label names a fate only once it's decided.** Before that: "undecided · still interacting at t of t_max".
 - **Right: the Trajectory panel,** for the IC under the cursor or a kept orbit (tabs). Real space and the shape sphere side by
   side; F₂ word, substeps, min separation, |ΔE/E|; playhead; **listen** (sonification, can follow the cursor); kept orbits below.
+  Everything about one trajectory lives here: its previews, its trace and its sound. Each kept trajectory is a tab;
+  under the previews are three collapsible sections, Trace, **Listen** (the trajectory heard as sound) and Numbers, each
+  opening its window, `Trace…` or `Listen…`, for the full set *(conformed to R-540, R-541; was: "**listen**
+  (sonification, can follow the cursor); kept orbits below")*.
   - **The shape sphere turns slowly, with visible x, y, z axes,** and switches to an unwrapped (equirectangular) view.
 - **Bottom:**
   - **Compass** (the nav cube), bottom left under the view controls. It shows the slice plane inside the chart, in a fixed
@@ -75,7 +84,11 @@ the pictures can't. Where the two disagree, this file wins. Where either disagre
     group, to tilt and save again *(conformed to R-475)*.
   - **Lines ▾** (beside Overlays ▾): the line system, contours of any expression, traces, axes and grids, drawn over the
     figure outside the node graph; the grid, `t_end` contours and class edges are its presets *(conformed to R-476,
-    R-509)*.
+    R-509)*. The traces' controls are not in it: they are Overlays ▾'s Trace group, the Trajectory panel and `Trace…`
+    *(conformed to R-541; RQ-448)*.
+  - **Listen in the band:** with sound on, the Time column gains an event lane and a mini spectrogram, the band's
+    height unchanged; expanded, the band grows upward, the spectrogram sharing the scrubber's time axis and the
+    Legend's column showing the spectrum at the head *(conformed to R-541)*.
   - **Layout:** every panel boundary is a draggable splitter; the layout is remembered, View › reset layout restores
     it, and resizing the canvas re-frames the figure without re-integrating *(conformed to R-462)*.
   - **Time:** play, step, a scrubber. **Scrubbing back re-integrates** to that time, so the figure refines progressively. It
@@ -100,6 +113,8 @@ inspector holds every setting the old dev GUI had.
 - **A physical-quantity axis makes the chart nonlinear (Φ).** Lock then replays Φ and the decoder on the CPU.
 - **The Domain preview:** the chart's admissible region in its own coordinates, the forbidden region hatched, the current view
   as a rectangle, and "forbidden in view: N%". Each chart supplies its domain function (CD-6). **Both previews are square.**
+- **The links are shown, not edited, here:** read-only beside the Domain preview, with a link to the Decoder window; the
+  axis warps get the Decoder's preview widget *(conformed to R-478, R-480)*.
 
 ## 04 Windows
 
@@ -113,6 +128,9 @@ position and size across sessions *(conformed to R-461)*.
   - **For agents, the same data structured:** `prin profile --scenario … --json`, `prin profile diff base new --threshold`,
     `prin profile query … --live`. Schema v1 (GU-5): telemetry §2's frame record and five stages at the top, with nested scopes,
     GPU passes, allocations and events beneath. JSON. Leak flags and hot-path summaries precomputed.
+- **Decoder:** one row per block (masses, α, β, momenta), each a compatible-only link dropdown, its parameters, a live
+  preview and "reset to default"; a footer with Reset all, Apply / Revert and "Changing a link re-integrates every
+  pixel" *(conformed to R-478, R-479, R-480)*.
 - **Export & share:** PNG with pxpack (and optionally the stain's WGSL), snapshot JSON, share link, present mode.
 - **Display:** fixed order — SimState *(conformed to R-111)* → stain → style → display scale → gamut clamp → colour-vision simulation → screen; the
   simulation sees the final in-gamut colours *(conformed to R-67)*. Style is optional and applies to the

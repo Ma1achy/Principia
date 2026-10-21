@@ -32,7 +32,7 @@ From **totality** (scheduler/render): invalid decodes are **tagged, never droppe
 
 Exact. The one shared source, at either precision, must produce these numbers; continuous values agree to precision, branch tags bit-exactly.
 
-**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10). The formulae below keep the symbols.
+**Chart constants.** `μ_max = 5` and `q_max = 2` (settled, R-10). The formulae below keep the symbols. Since R-481 the two are the defaults of tunable link parameters, each within an allowed range, and every formula reads the active value (`principia_dd_generation_root.md` §3.9, "Tunable parameters").
 `α_min = 0` (R-21): full-sphere coverage.
 
 ### 3.1 Mass

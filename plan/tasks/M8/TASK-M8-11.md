@@ -39,3 +39,8 @@ The right-hand Trajectory panel shows, for the IC under the cursor or a kept orb
   frame (its Deliverables name `crates/gui/src/explore/{time,legend,trajectory}.rs`); this task fills it, applied per
   R-369 (TASK-M1-14's pre-flight; was `trajectory_panel.rs`).
 - R-449 (16 Oct 2026): the shape sphere's landmark labels, the kept orbits' rows and the summary name the bodies 1-based through TASK-M2-33's conversion function: `BC₀₁`, `BC₁₂`, `BC₂₀` are shown `BC₁₂`, `BC₂₃`, `BC₁₃` (dd_integrator §3.7). The Euler landmarks' index is not defined; this task writes how they are shown (R-72), its reviewers deciding per R-369: RQ-334.
+- R-541 G4 (21 Oct 2026): the kept orbits become the header's tabs, each with its own previews, trace and sound
+  (REQ-GUI-088, restated); this task builds the tabs and the panel's items as REQ-GUI-088 has them, and TASK-M8-61 the
+  order, the status line and the Trace and Numbers sections over them (REQ-GUI-326), TASK-M8-64 the Listen section
+  (REQ-GUI-334; PR #267's split, *was:* "the Trace, Listen and Numbers sections over them (REQ-GUI-326)"). What G4 leaves out (FTLE,
+  `E₀`, the playhead, the two buttons) is kept: RQ-462, its option (a) applied meanwhile.

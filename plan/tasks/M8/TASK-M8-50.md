@@ -36,3 +36,8 @@ Lines ▾ beside Overlays ▾ with its count and `Alt+L`; the contour-set editor
 - **The mock gains no line system** (R-476 M6): it drops the three toggles and shows Lines ▾ dimmed, its count 0, with a tooltip, `Alt+L` doing nothing there (gui review G5 of PR #255). *Was:* "it only drops the two toggles".
 - **Class edges (R-509 Y5):** the preset Class edges, contours of the stain's categorical field; `Overlays` loses `class_edges` too, so the canonical text holds eleven toggles. The qa files above change in the same lines for it (R-476 M12's list, its reason extended), `qa_TASK-M6-27.rs`'s Stain group (:952) going; the code reviewer confirms no other assertion is weakened.
 - **Keyboard and captures (R-476 M9, M13; gui review G5 to G7 of PR #255):** `Alt+L` is global and never the Figure's L; Lines ▾ follows Overlays ▾ in the top bar's scope; the editors are windows. REQ-GUI-247's verify takes the mock capture `mock_lines_dimmed` and a real-engine capture `lines_menu`; `check_01_main` gains `mock_lines_dimmed` (*was:* `mock_lines_menu`). REQ-GUI-078's Lines ▾ clause is REQ-GUI-247's.
+- **R-541 (21 Oct 2026):** Lines ▾ lists no trace: the traces' controls are Overlays ▾ › Trace's, the Trajectory
+  panel's and `Trace…`'s (TASK-M8-61, TASK-M8-62). REQ-GUI-247 is restated (*was:* "it lists the contour sets, traces
+  and axes with their visibility"). Whether Lines ▾ stays for the rest of the line system is RQ-448, its option (a),
+  Lines ▾ kept for contours, axes, grids and presets, applied meanwhile; a ruling other than (a) is a follow-up change.
+- R-484 J4 (20 Oct 2026): the line system is tier 2 of the embedding.

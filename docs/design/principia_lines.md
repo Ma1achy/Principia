@@ -58,7 +58,9 @@ stain  →  display chain  →  [ LINES ]  →  egui layer (chrome, hover label,
 - Lines belong to the **figure**, not the chrome: they stay visible with F3 and present mode, and they are in exports.
 - With F3 Extend, lines continue over the extension wherever the field exists. Where a pixel is not a system (past a
   chart's edge), no contour passes through it and a trace breaks.
-- One menu: **Lines ▾** beside Overlays ▾, with a count, `Alt+L` to show or hide all.
+- One menu: **Lines ▾** beside Overlays ▾, with a count, `Alt+L` to show or hide all. The traces are not in it: they
+  are in Overlays ▾ › Trace, the Trajectory panel and the `Trace…` window (R-541; render_gui_spec §G2, §G5), and
+  Lines ▾ holds the contour sets, the axes, the grids and the presets (RQ-448, its option (a) applied meanwhile).
 
 ---
 
@@ -377,7 +379,14 @@ it:
 - **Kinds.**
   - **Hover:** follows the cursor.
   - **Pinned:** the clicked IC (R-453).
-  - **Kept orbits:** each has its own line, sharing a style by default, colour overridable.
+  - **Kept orbits:** each has its own line, sharing a style by default, colour overridable. Each is a tab of the
+    Trajectory panel, with its own previews, trace and sound (R-541 G4).
+- **The look (R-541 G9).** Every art board and the build draw the trace one way, these defaults: the line `#FFF27A`,
+  width 2.2, over the style's `outline` (§3), dark, of width `w + 2.2`, so it reads on any stain (the demo's halo);
+  time ticks every 2, labelled; filled-triangle arrows every Δt 1.0, 8 px; the start a yellow star; the head a white
+  disc labelled with its time; icons at 1.4×; syzygies off. Kept traces take R-538's trace palette in turn (RQ-447).
+  While Listen is on, the hover or tab's trace on the shape-sphere preview is drawn brighter inside Listen's window
+  (render_gui_spec §G2; `principia_listen.md` §4).
 
 ---
 
