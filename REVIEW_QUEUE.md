@@ -3171,7 +3171,7 @@ and the disagreement is queued. Nothing is ruled.*
 - **Applied meanwhile:** (a). REQ-GUI-339 carries the legend's period and the readout (TASK-M8-66), REQ-GUI-340 the
   node's label (TASK-M7-51), each with `rq: RQ-506`; REQ-COL-136's verify uses the code's counts.
 
-## RQ-507: Under a Torus gradient, "Left its starting tile" compares the Palette's tile, so it separates systems one Torus period apart only where that tile ends within one period of the system, which depends on the Palette's tiling, counts, spacing and the chart's aspect, and the brightness node it needs replaces the L the Torus spends *(conflict: the ruling against R-542 and itself; R-543, R-542; REQ-COL-128; context: TASK-M7-48)*
+## RQ-507: Under a Torus gradient, "Left its starting tile" compares the Palette's tile, so it separates systems one Torus period apart only where that tile ends within one period ahead of the system, in the move's direction, which depends on the Palette's tiling, counts, spacing and the chart's aspect, and the brightness node it needs replaces the L the Torus spends *(conflict: the ruling against R-542 and itself; R-543, R-542; REQ-COL-128; context: TASK-M7-48)*
 
 *Found by R-543's port. Nothing is ruled.*
 
@@ -3185,50 +3185,64 @@ and the disagreement is queued. Nothing is ruled.*
 - **The conflict:** the tile is the Palette's, from its own tiling, its count `m` and its spacing setting, not the
   Torus's Repeats `n`. **The exact condition (applied per R-369, the coordinator's decision on PR #272's physics
   review 5602225811):** a one-period move along an axis changes the Palette tile at a position exactly when the Palette
-  tile containing that position, measured in chart units along that axis, ends within one Torus period of it. Both
+  tile containing that position, measured in chart units along that axis, ends within one Torus period ahead of it, in
+  the move's direction (a move of −P tests the tile's other end). Both
   counts per axis are `smTileXY`'s: along x `m` and `n`; along y `max(1, round(m·H/W))` and `max(1, round(n·H/W))`;
   on the cylinder, along `s`, the Palette's own count `max(1, round(n_θ(m)·H/W))` against the Torus's `n`; under the
   squashed-square spacing the Palette's tile is measured through the compaction, the Torus's period never. The
   consequences, each measured on a transcription of the prototype's `smTile`, `smPattern`, `smTileXY`, `smHexRound`
   and `smTorusXY` (a one-period move from each of 200² positions in the home square unless stated; the survey and its
-  output are in R-543's PR), are examples of that condition, not further rules:
-  - **square and triangles, square chart (latent A):** separated at every position when `m ≥ n` (0 of 40,000 stay at
-    `m = n`); not when `m < n` (squares at `m = 6`, `n = 8`: 10,000 of 40,000 stay on each axis).
-  - **hexagons** (pointy-top, one unit wide, `2/√3 ≈ 1.155` tall), square chart: along x as squares (at `m = n`, 0 of
-    40,000 stay at 4 and 6, 14 at 8, on tile edges); along y the move must be at least `2/√3` tile units, so `m = n` is
-    not enough (936 to 1,032 of 40,000 stay at `m = n` = 4, 6, 8; 0 at `m = 6`, `n = 4`).
-  - **brick** (2 units wide, 1 tall), square chart: along y as squares; along x the move must be at least 2 tile units
-    (at `m = n` half the positions stay; 10,000 of 40,000 at `m = 6`, `n = 4`; 0 at `m = 8`, `n = 4`).
-  - **stripes:** the tile has no end across the stripes, so stripes along x never separate a move along y, nor stripes
-    along y a move along x (40,000 of 40,000 stay), whatever `m`.
-  - **squashed-square spacing** (`sm_tspace = square`; latent chart A, square tiles, along x): the tiles grow toward
-    the square's edge, so separation fails there even inside the square, and always far enough past it. Inside, of
-    2,001 starts with both ends in the square, 512 stay at `m = n = 8` (`X(2.0) = 6.331`, `X(2.75) = 6.897`, one tile),
-    331 at 6, 132 at 4, 12 at `m = 12`, `n = 8`; past it, at `m = 6`, `n = 2`, the move from `u = 0` to 3 changes the
-    tile and those from 3 to 6, 6 to 9 and 9 to 12 do not (10,000 of 10,000 stay over `[3, 30]²`).
+  output are in R-543's PR; "every offered pair" means every `m` in {4, 6, 8, 12, 18, 24} with every `n` in {1, 2, 3,
+  4, 6, 8}), are examples of that condition, not further rules:
+  - **square and triangles, square chart (latent A):** at every offered pair with `m ≥ n`, 0 of 10,000 positions (100²)
+    stay on either axis (and 0 of 40,000 at `m = n` = 4, 6, 8); at `m = 6`, `n = 8`, squares 10,000 of 40,000 stay on
+    each axis, triangles 2,442 along x and 724 along y.
+  - **hexagons** (pointy-top, one unit wide, `2/√3 ≈ 1.155` tall), chart A: along x, at `m = n`, 0 of 40,000 stay at 4
+    and 6, 14 at 8, on tile edges; along y the move must be at least `2/√3` tile units, and at `m = n` = 4, 6, 8, 1,032,
+    968 and 936 of 40,000 stay; 0 at `m = 6`, `n = 4`, at `m = 8`, `n = 4` and at `m = 12`, `n = 6`.
+  - **brick** (2 units wide, 1 tall), chart A: along y, 0 of 40,000 stay at `m = n` = 4, 6, 8 and at `m/n` = 6/4, 8/4
+    and 12/6; along x the move must be at least 2 tile units: 20,000 of 40,000 stay at `m = n` = 4, 6, 8, 10,000 at
+    `m = 6`, `n = 4`, and 0 at `m = 8`, `n = 4` and `m = 12`, `n = 6`.
+  - **stripes:** the tile has no end across the stripes: on chart A, at every offered pair, stripes along x leave
+    10,000 of 10,000 positions in their tile under a move along y, and stripes along y under a move along x.
+  - **squashed-square spacing** (`sm_tspace = square`; latent chart A, square tiles, a move along x). Inside the square
+    (2,001 starts on a line, both ends in the square): positions stay at 8 offered pairs, each with `m < 2n`: 132,
+    801 and 1,144 at `m = 4` with `n` = 4, 6, 8; 331 and 698 at `m = 6` with `n` = 6, 8; 216 and 512 at `m = 8` with
+    `n` = 6, 8; 12 at `m = 12`, `n = 8` (at `m = n = 8`, `X(2.0) = 6.331` and `X(2.75) = 6.897`, one tile). At every
+    other offered pair with `n ≥ 2`, 0 of 2,001 stay (at `n = 1` the period is the whole square). Past the square
+    (100² starts over `[3, 30]²`), positions stay at every offered pair: 8,900 to 10,000 of 10,000; at `m = 6`,
+    `n = 2`, the move from `u = 0` to 3 changes the tile and those from 3 to 6, 6 to 9 and 9 to 12 do not.
   - **a non-square flat chart:** the y move is `round(m·H/W)/round(n·H/W)` tile units, not `m/n`. On the tilted charts
     E and F (720 × 360), hexagons at `m = 4`, `n = 3` have both y counts 2, so the y move is 1 tile unit and 824 of
     40,000 stay, though `m/n = 1.33 ≥ 2/√3`; at `m = n = 4` likewise 824. On ν × dilation H (600 × 420), hexagons at
-    `m = n = 4` (y counts 3 and 3): 1,080 stay. Squares and triangles stay separated along y at `m ≥ n` on E and H for
-    the offered counts (0 stay in every pair measured); brick along x behaves as on the square chart (13,200 of 40,000
-    stay at `m = 4`, `n = 3` on E and H).
+    `m = n = 4` (y counts 3 and 3): 1,080 stay. Squares and triangles on E and H, at every offered pair with `m ≥ n`:
+    0 of 10,000 stay on either axis. Brick along x on E and H: 13,200 of 40,000 stay at `m = 4`, `n = 3`, 20,000 at
+    `m = n = 4`, 10,000 at `m = 6`, `n = 4`, 13,600 at `m = 8`, `n = 6`, 0 at `m = 6`, `n = 3`.
   - **the cylinder** (G, 720 × 360): round θ there is nothing to separate (the Torus's θ is once round and θ + 2π is
     the same system), so the cost is in `s` only, where the Palette's `s` count is 3 for every `m` in {4, 6, 8} (then
-    6, 9, 12 for 12, 18, 24): square tiles at `m = 6` or `8`, `n = 4` stay at 2,500 of 10,000 positions; at `m = 12`,
-    `n = 4` or `6`, and `m = 24`, `n = 8`, 0.
+    6, 9, 12 for 12, 18, 24). The cylinder's tiles are in chart units and it offers squares and triangles, and they
+    fail along `s` at `m ≥ n` (a one-period move in `s`, 100² positions): squares 2,500 of 10,000 stay at `m = 4`,
+    `6` or `8` with `n = 4`, 5,000 at `m = 6` or `8` with `n = 6`, 6,200 at `m = n = 8`, 2,400 at `m = 12`, `n = 8`;
+    triangles 204 at `m = 4`, `6` or `8` with `n = 4`, 2,012 at `m = 6` or `8` with `n = 6`, 3,468 at `m = n = 8`, 232
+    at `m = 12`, `n = 8`. At every other offered pair with `m ≥ n`, 0 of 10,000 stay for both.
 
   And the separation is a brightness node, which replaces the L the Torus spends on position, so it costs the
   one-to-one map within a period that the Torus is for (the warning §2.1 names). It also tells a system that moved one
   period from one that stayed, but not one period from two.
 - **Options seen:**
   - (a) As the code has it: the Palette's tile, its tiling, counts and spacing the Palette's; a one-period move is
-    separated only where the exact condition above holds, which the examples show fails for some offered settings of
-    every tiling but squares and triangles at `m ≥ n` in chart units, and the legend says which tile is compared.
+    separated only where the exact condition above holds. In the measured cases above, every offered tiling has
+    positions that stay at some offered pair: hexagons, brick, stripes and squashed spacing on chart A, and the
+    cylinder's squares and triangles along `s` at `m ≥ n`. Squares and triangles on the flat charts A, E and H are
+    the measured exception: 0 stay at every offered pair with `m ≥ n`. The legend says which tile is compared.
   - (b) Under a Torus base, Left its starting tile compares the Torus's own period cell, `(⌊X⌋, ⌊Y⌋)` in periods.
-  - (c) The Palette's count is held to a whole multiple of the Torus's Repeats while both are in the graph. Of the
-    examples above this cures squares and triangles at `m < n` only: hexagons along y and brick along x still fail at
-    `m = n`; stripes never separate across their direction; the y and `s` counts are rounded from `m` and `n`, so a
-    multiple of `n` in `m` does not make them multiples on a non-square chart or on the cylinder; and under squashed
-    spacing it separates only near the square's centre. Only (b), the Torus's own period cell, separates a one-period
-    move in every case.
+  - (c) The Palette's count is held to a whole multiple of the Torus's Repeats while both are in the graph. In the
+    measured cases above: squares and triangles on A, E and H then stay separated (0 stay at every offered pair with
+    `m ≥ n`); hexagons along y and brick along x on chart A still have positions that stay at `m = n` = 4, 6, 8;
+    stripes leave 10,000 of 10,000 in their tile across their direction at every offered pair; the y and `s` counts
+    are rounded from `m` and `n`, so on the cylinder squares and triangles still stay at the multiples `m = n` = 4,
+    6, 8 and at `m = 8`, `n = 4`; and under squashed spacing, inside the square, positions stay at `m = n` = 4, 6, 8
+    (132, 331 and 512 of 2,001) and at no other multiple with `n ≥ 2`, while past the square they stay at every
+    offered pair. Of the three options, (b) is the one that changes the compared cell on every one-period move, by
+    construction (`⌊X + 1⌋ = ⌊X⌋ + 1`).
 - **Applied meanwhile:** (a), the code. REQ-COL-128 is unchanged; REQ-COL-136's note cites this entry.

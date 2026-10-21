@@ -19268,14 +19268,20 @@ conflicts are queued, not ruled:
   the wrap mode in the prototype, and the code's period counts (`max(1, round(n·H/W))`; `s` `n` times over the
   cylinder's square) go past the text's. Meanwhile (a): the ruling's text where the code is silent, the code's counts.
 - **RQ-507:** "Left its starting tile" separates systems one Torus period apart only where the Palette's tile
-  containing the system ends, in chart units along the move's axis, within one Torus period of it, since under Chart
+  containing the system ends, in chart units along the move's axis, within one Torus period ahead of it, in the
+  move's direction, since under Chart
   position the tile is the Palette's (SM11). Both counts per axis are `smTileXY`'s (rounded along y and along the
-  cylinder's `s`), and under squashed spacing the tile is measured through the compaction. So it fails for some
-  offered settings of hexagons, brick, stripes, squashed spacing (toward the square's edge and past it), non-square
-  charts and the cylinder's `s`; only (b), the Torus's own period cell, separates in every case. And the brightness
+  cylinder's `s`), and under squashed spacing the tile is measured through the compaction. So, in the cases the
+  port's survey measured, positions stay at some offered settings of hexagons, brick, stripes, squashed spacing
+  (inside the square at 8 offered pairs, each with `m < 2n`; past it at every offered pair), non-square charts, and
+  the cylinder's squares and triangles along `s`; squares and triangles on the flat charts measured stay separated at
+  every offered pair with `m ≥ n`. Of the three options, (b), the Torus's own period cell, changes on every
+  one-period move by construction. And the brightness
   node it needs replaces the L the Torus spends. Meanwhile (a), the code. *Was (PR #272's physics review, P1):* "only
   when the Palette's count is at least the Torus's Repeats". *Was (physics review 5602225811, P1 and P2):* the
-  per-case list, its squashed-spacing case "not past the square" and its y conditions in `m/n`.
+  per-case list, its squashed-spacing case "not past the square" and its y conditions in `m/n`. *Was (physics
+  review 5602328075, P1 to P3):* "within one Torus period of it", with no direction; "(toward the square's edge and
+  past it)"; "only (b), the Torus's own period cell, separates in every case".
 
 What agrees: SM6's rule, a fixed chroma never clipped per pixel (the Torus's gamut, 0 of 240²); SM6's circle × circle
 row, which the Torus realises; SM11's chart units by default and its whole periods on the cylinder; SM3's copies, which
