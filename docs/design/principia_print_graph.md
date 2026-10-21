@@ -8,7 +8,9 @@ deferred the fourth (R-527, RQ-391 open). Its reference material is in
 `reference/`, `catalogue/`, `images/`, `tools/` or `boards/` are relative to that folder. Where this document and an
 earlier ruling or doc disagreed, the review queue's entries were ruled, each applied where it bears: RQ-395 (where the
 lines drawn over sit, §2; R-531), RQ-396 (R-130's styles as presets, §1, §7.1; R-532), RQ-397 (the badge, §3; R-523),
-RQ-398 (pixels that are not a system, §3; R-533) and RQ-401 (the lab's stand-in, §4.4; R-536). *Was:* "Its §12's four
+RQ-398 (pixels that are not a system, §3; R-533) and RQ-401 (the lab's stand-in, §4.4; R-536). PR #268's review queued
+three more, ruled by R-557 (21 Oct 2026): RQ-478 (a field input's range, §4.4, §12), RQ-479 (the print stage's cost
+and the Auto rung, §3, §8.2) and RQ-495 (who owns the post level, §8.1). *Was:* "Its §12's four
 open questions are not ruled: they are RQ-388 to RQ-391." and "Read with the review queue's entries on points where
 this document and an earlier ruling or doc disagree, each named where it applies: RQ-395 (where the lines drawn over
 sit, §2), RQ-396 (R-130's styles as presets, §1), RQ-397 (the badge, §3), RQ-398 (pixels that are not a system, §3)
@@ -80,7 +82,9 @@ SimState ─► Stain ─► [line sets marked "through the medium"] ─► Prin
 
 - **Measurement reads the stain, never the print.** The Inspector, Measure, the legend, the colour readout under the
   cursor, area statistics and every scientific check read the pre-print colours or the payload. A Print graph cannot
-  change any number the instrument reports.
+  change any number the instrument reports. Nor does its cost: the print stage's time never enters the Auto
+  arbiter's rung solve, so a Print graph never moves N, E, depth, render_scale or FTLE gating (R-557, ruling RQ-479;
+  §8.2).
 - **Goldens and scientific checks run under Plain.** A test that renders a figure sets Plain explicitly. It does not
   inherit the user's Print graph.
 - **A styled figure says so.** While any Print graph other than Plain is active, a badge names it ("Print:
@@ -177,7 +181,8 @@ ensemble spread for the wash, and for Unfinished where uncertain and Craquelure 
 under physics review (R-72). The windows stay, on the real field, their `lo` and `hi` a calibration (R-71) of that
 task. What an invalid sample of a present field (a NaN spread, a `sim_failed` sample's `t_end`, an FTLE failing
 `ftle_valid`) feeds the neighbourhood nodes is a definition requirement (R-72) of the same task. The normalisation is
-the stain's (R-526; its range is RQ-478). Was (R-536 as first ported, before physics review P1 of PR #268): "Wet where
+the stain's (R-526); its range is R-557's, ruling RQ-478 (the Read-only bullet below; *was:* "(R-526; its range is
+RQ-478)"). Was (R-536 as first ported, before physics review P1 of PR #268): "Wet where
 chaotic and Unfinished where uncertain: `brightness` and `edges`, fringe density; Craquelure: `edges`" and "in place of
 every stand-in node". Was: "The lab's
 caption names fringe density as the stand-in, and the lab's four graphs use brightness, fringe density or both; the
@@ -187,10 +192,14 @@ A graph may read a payload field as a `scalar` input: `{ "type": "field", "param
 the lab's "Driven by the data" family (Relief of lifetime, Wet where chaotic, Craquelure, Unfinished where uncertain),
 where the medium follows the physics: the relief is the lifetime, the wash is wet where the spread is high.
 
-- **Read-only.** The field is the same value the stain reads, normalised over the visible range with the stain's own
-  window rule. The Print graph can never write it. *(R-526: the stain's normalisation. The stain's `range_norm` keeps a
-  declared range fixed, `t_end` → lin [0, T], and measures only an unbounded field over the draw, so "over the visible
-  range" and §12 q3's rescaling are queued as RQ-478; meanwhile each field's own `range_norm` rule applies.)*
+- **Read-only.** The field is the same value the stain reads. The Print graph can never write it. **Its range (R-557,
+  ruling RQ-478, the human's option (c)):** a field input uses the stain's window for that field when the stain colours
+  by the same field, `RANGE_AUTO` included. Otherwise it uses the field's own `range_norm` default: its ledger-declared
+  range where it has one (`t_end` → lin [0, T]), measured over the draw where it has none. Relief of lifetime therefore
+  does not rescale while zooming unless the stain's `t_end` is set to auto. *(R-526: the stain's normalisation.)*
+  *Was:* "The field is the same value the stain reads, normalised over the visible range with the stain's own window
+  rule." and "*(… so "over the visible range" and §12 q3's rescaling are queued as RQ-478; meanwhile each field's own
+  `range_norm` rule applies.)*" (stale value, replaced by R-557).
 - **Not Chart position.** Chart position (R-542, the state map's `point⟨q⟩` source) is not a Print graph field input:
   a field input reads a payload field, and Chart position is a source of the stain graph, read there only (the human's ruling on RQ-497, 21 Oct 2026:
   "Chart position is not a Print graph field input; print_graph §4.4 says so").
@@ -297,9 +306,13 @@ Each line set's style panel gets "Through the medium" (§2), off by default.
 
 ### 8.1 Degrade while moving
 
-*Queued: who owns the whole-graph fallback (step 2), the Auto arbiter or the Print graph, and whether it runs under a
-pinned tier, is RQ-495 (the quality device note's one writer, no per-frame setting change, the arbiter off under a named
-tier).*
+*Ruled by R-557 (RQ-495, the human's option (a), worded as a motion-regime lever): the post level is the arbiter's, a
+motion-regime lever beside render_scale (`principia_quality_device_note.md` §5, "Medium"). It is never part of the
+rung and is solved from the measured cost classes (§8.3), not from a per-frame reading. It runs only under Auto. Under
+a named tier or Custom the arbiter is off, and only the per-node motion policies (step 1) and settle (step 3) apply;
+the whole-graph fallback does not run. `post_level` is recorded in every case. Was: "Queued: who owns the whole-graph
+fallback (step 2), the Auto arbiter or the Print graph, and whether it runs under a pinned tier, is RQ-495 (the
+quality device note's one writer, no per-frame setting change, the arbiter off under a named tier)."*
 
 This is Malachy's ruling. While the camera moves (the frame record's `camera_delta > 0`), or a drag is in progress:
 
@@ -308,26 +321,36 @@ This is Malachy's ruling. While the camera moves (the frame record's `camera_del
    - `reduced`: run at half or quarter resolution and upsample; most nodes;
    - `bypass`: replaced by the identity while moving; nodes whose reduced form would look wrong, such as ASCII, where
      half-resolution characters are a different picture.
-2. If the print stage still exceeds its share of the frame budget, the **whole graph** drops a level: reduced, then
-   Plain.
+2. Under Auto only, where the print stage's cost would exceed its share of the frame budget, the **whole graph** drops
+   a level: reduced, then Plain. The arbiter sets that level, the post level, from the measured cost classes (§8.3),
+   never from a per-frame reading; under a named tier or Custom this step does not run (R-557, RQ-495). *Was:* "If the
+   print stage still exceeds its share of the frame budget, the **whole graph** drops a level: reduced, then Plain."
 3. **On settle** (no camera change for `settle_ms`, default 250 ms, with hysteresis), the graph renders at full
    quality once and holds it.
 
 The playhead advancing is **not** motion for this purpose. The view is still, so the medium renders at full quality
-and stability (§6.3) keeps it from shimmering. If full quality cannot hold the playback rate, the frame record says so
-and the tier controller treats the print stage like any other stage.
+and stability (§6.3) keeps it from shimmering. If full quality cannot hold the playback rate, the frame record says so,
+and nothing else changes (R-557, RQ-479). *Was:* "If full quality cannot hold the playback rate, the frame record says
+so and the tier controller treats the print stage like any other stage."
 
 *The Print graph's stage is named the **print stage** (the human's ruling on RQ-497, 21 Oct 2026); its frame-record keys stay `stage_ms.post` and
-`post_level`, as the rulings on RQ-479 and RQ-495 name them (applied per R-369). Was: "the post stage", here and in
+`post_level`, as the human's rulings on RQ-479 and RQ-495 name them (R-557; applied per R-369). Was: "the post stage", here and in
 §8.2.*
 
 ### 8.2 The budget
 
-*Queued: the tier controller's accounting of the print stage moves the Auto rung, which sets N, E, depth and FTLE
-gating, against §3's "A Print graph cannot change any number the instrument reports": RQ-479.*
+*Ruled by R-557 (RQ-479, the human's option (a)): the print stage's time is recorded (`stage_ms.post`, `post_level`)
+but is excluded from the arbiter's rung solve. Only the Print graph's own degrade answers it: per-node motion policies,
+the whole-graph fallback, then Plain (§8.1). A Print graph never moves N, E, depth, render_scale or FTLE gating. Was:
+"Queued: the tier controller's accounting of the print stage moves the Auto rung, which sets N, E, depth and FTLE
+gating, against §3's "A Print graph cannot change any number the instrument reports": RQ-479."*
 
-The print stage is a stage in the telemetry frame record (`stage_ms.post`). It is not exempt from the tier
-controller's accounting; the tier simply has a print-stage share. Which degrade level ran is recorded per frame
+The print stage is a stage in the telemetry frame record (`stage_ms.post`). Its time is recorded but excluded from the
+Auto arbiter's rung solve: the rung is solved without it, and its share of the frame budget is answered only by the
+Print graph's own degrade (§8.1; R-557, RQ-479). The budget the rung is solved against does not depend on which
+Print graph is active, Plain included; whether it is the whole frame budget or the budget less a fixed print share is a
+definition (R-72) for the Print graph plan PR (R-557 B2). *Was:* "It is not exempt from the tier controller's accounting; the
+tier simply has a print-stage share." (stale value, replaced by R-557). Which degrade level ran is recorded per frame
 (`post_level: full | reduced | plain`), so a profile shows when degradation happened and the benchmark (see
 `principia_benchmark.md`) measures it per node class.
 
@@ -394,16 +417,21 @@ The measurement decides.
 
 *Queued as RQ-388 to RQ-391, one per question, in order (the human's point 6: "Do not rule on either doc's open
 questions"). Ruled: 1, no, Palette acts on the finished colour (R-524); 2, Viewing off by default for screen media,
-with the reason shown (R-525); 3, the stain's normalisation (R-526; which range that is, and so whether a relief
-rescales while zooming, is RQ-478; *was:* "the stain's normalisation, the visible range"). 4 is deferred by the human's
+with the reason shown (R-525); 3, the stain's normalisation (R-526), its range ruled by R-557 (RQ-478): the stain's window where the stain
+colours by the same field, else the field's own `range_norm` default, so a relief of lifetime does not rescale while
+zooming unless the stain's `t_end` is set to auto (§4.4); *was:* "(R-526; which range that is, and so whether a relief
+rescales while zooming, is RQ-478; *was:* "the stain's normalisation, the visible range")". 4 is deferred by the human's
 ruling, "later" (R-527): RQ-391 stays open and nothing is built. Was: "what is built meanwhile is each entry's."*
 
 1. Should **Palette** be allowed to run *before* the stain's lightness channel is composed, so a limited palette can
    quantise hue while keeping the stain's lightness field exact? The lab's palette slot acts on the finished colour.
 2. The **Viewing** slot's lighting assumes a sheet. Should it be disabled for screen media (CRT, LCD), where a raking
    light is meaningless?
-3. **Field inputs at deep zoom.** A field normalised over the visible range changes its normalisation while zooming,
-   so a "Relief of lifetime" relief rescales as you zoom. Normalise over the visible range (consistent with the stain),
+3. **Field inputs at deep zoom.** A field normalised over a measured range changes its normalisation while zooming;
+   under the stain's window rule a declared range does not (R-557, ruling RQ-478, corrects
+   this premise), so a "Relief of lifetime" relief rescales as you zoom only where the stain's `t_end` is set to auto. *Was:*
+   "A field normalised over the visible range changes its normalisation while zooming, so a "Relief of lifetime"
+   relief rescales as you zoom." Normalise over the visible range (consistent with the stain),
    or over a fixed window recorded with the graph?
 4. Should the **Export Styles** frames (Polaroid border, banknote, poster) become a later "Frame" stage after the
    Print graph? Ruled out of scope for this bundle.

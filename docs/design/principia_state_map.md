@@ -13,6 +13,8 @@ reference only. §0 is the human's words; SM1 to SM15 are the applied text (R-36
 the prototype (R-542)* are the port's: what the prototype's code does where this file is silent. Where the file and the
 code disagree the code is carried, the file's words kept, and the disagreement queued (RQ-499). SM13's questions are
 RQ-480 to RQ-488; the conflicts the port found with the corpus and the open branches are RQ-489 and RQ-496 to RQ-499.
+R-558 (21 Oct 2026, the human's batch) rules them all, with RQ-500 to RQ-505, which PR #270's review added; each ruling
+is noted where it applies, and SM13's "Ruled" paragraph lists them.
 The prototype was read as source; it was not run in a browser. The trace's "F1" this file cites is R-538's TF1
 (`principia_lines.md` §8).*
 
@@ -170,7 +172,12 @@ chart (`principia_dd_colouring.md` §4, seam 6; render contract Part 4), where C
 its inverse (the view chart's inverse is already in the encode `ROUNDTRIP` runs, dd_encode §2; only a target other
 than the view's chart needs a second one); and SM11's "a fixed t" needs a state other than the playhead's, which `SimState` does not hold (both RQ-489). Item 3's "the brightness slot is None" meets L-ownership
 (render contract Part 4: "resolved by combiner choice") and SM11 and SM15, which let a brightness node follow an L-fixed
-base (RQ-496). The prototype offers no fixed t; meanwhile Chart position reads the playhead or `t = 0` only.
+base (RQ-496). Both are ruled by R-558. Chart position has a named seam-6 exception, as ROUNDTRIP and DECODE have,
+listed in render contract Part 4 and in the lint, the target chart's inverse generated to WGSL from the one Rust
+source (R-116); its times are the playhead and `t = 0` only, "a fixed t" struck from SM11 and SM15 (RQ-489 (a)).
+Item 3 means that a base spending L on position takes a brightness node only with the Problems warning, Multiply
+keeping its L (RQ-496 (a)). *Was:* "The prototype offers no fixed t; meanwhile Chart position reads the playhead or
+`t = 0` only."
 
 ## SM3. Source side: the extension comes for free, because the colour is a property of the system
 
@@ -301,12 +308,16 @@ not stored (§0, R-542).
 *Port's note (R-542).* The trace draws a left sample and a past-the-end one as no value (R-538 TF1, `principia_lines.md`
 §8: "not drawn there, the line broken"), where SM5a's default clamps; SM9's "the trace is this field for one pixel"
 holds for on-chart samples only; "past a bounded edge" is R-470 N1's and R-472's term for a source pixel drawn blank;
-and on the latent chart "the navigation edge it left by" (SM11) can only be the compacted edge `s = ±1`. Queued as
-RQ-498; meanwhile the clamp is the default, as the file and the prototype have it. The latent-chart figures above are
+and on the latent chart "the navigation edge it left by" (SM11) can only be the compacted edge `s = ±1`. Ruled by
+R-558 (RQ-498 (a)): the clamp stays the default, the Four results test runs with "when it leaves: none", the clamp's
+edge on an affine chart is the compacted edge `s = ±1`, and the base grid is a demo device, the app filling gaps with
+EX4's coarse ancestor. *Was:* "Queued as RQ-498; meanwhile the clamp is the default, as the file and the prototype
+have it." The latent-chart figures above are
 the prototype's, whose latent chart has `AMIN = 0.05` where R-21 sets `α_min = 0`, so on main a system leaves the latent
-chart almost only at a collision (RQ-503); main's encode clamps and never returns a non-finite `z`, so the app's "left"
-is read from a shown coordinate's clamp (REQ-COL-133). Whether "none" is an ordinary setting or a debug option is
-RQ-505.
+chart almost only at a collision (RQ-503, ruled (a) by R-558: `α_min = 0` stands, these figures are kept for
+reference only, the edge-clamp test runs on the latent momenta and the α case on a constructed state); main's encode clamps and never returns a non-finite `z`, so the app's "left"
+is read from a shown coordinate's clamp (REQ-COL-133). "None" is an ordinary setting of the node (RQ-505 (a),
+R-558). *Was:* "Whether "none" is an ordinary setting or a debug option is RQ-505."
 
 ## SM6. Colour maps: one-to-one on the quotient, so they own lightness
 
@@ -415,7 +426,8 @@ an 8 × 8 checkerboard, its cells at OKLab `L = 0.82` or `0.50`, `(a, b) = 0.12(
 grid of 2 px lines `#f2efe6` on `#101114`, with a red bar `#ff5a4f` along the top half of the top edge and a blue bar
 `#4fb6ff` down the top half of the left edge, so orientation reads; and 18 rings, alternately `L = 0.80` and `0.42`,
 `(a, b) = 0.1(cos r, sin r)`. The user's picture is scaled to the same 256 × 256. Layers (SM11) apply over a picture as
-over any base. The brightness slot does not apply under Picture in the prototype (RQ-499).
+over any base. The brightness slot does not apply under Picture in the prototype; the file's words govern (RQ-499, ruled by R-558):
+the brightness slot applies to every base, Picture included, and the prototype skipped it.
 
 *Transcribed from the prototype (R-543; `smWrapFn`, `smImage`'s `tchecker` branch, `smPaint`, `smSyncUI`).* The
 paragraph above is the default, Mirror with dimming on. The wrap mode maps each coordinate before the texel look-up
@@ -458,7 +470,7 @@ not marked and the readout says why.
 *Transcribed from the prototype (R-542; `smPaint`).* The fade is applied as the pixel's opacity over the canvas,
 `a = max(0.18, 1/(1 + (d/0.35)²))`, `d` the off-slice distance the trace's fade reads (the chart's projection's distance,
 or the momentum proxy `|q|`, R-509), a non-finite `d` faded to the floor; the trace's own fade is `max(0.18, e^{−d/1.2})`
-(RQ-499). The prototype integrates with Dormand–Prince 5(4) at relative tolerance `10⁻¹⁰`, `h ≤ 0.02`, landing on each
+(RQ-499). The app has one fade everywhere, the trace's (RQ-499, ruled by R-558); the prototype's is reference only. The prototype integrates with Dormand–Prince 5(4) at relative tolerance `10⁻¹⁰`, `h ≤ 0.02`, landing on each
 stored time, to the horizon `t = 20`; a failed step stores NaN from there on ("not data: never held"). These are the
 demo's, not the app's: the app reads the live `SimState` (SM2).
 
@@ -483,8 +495,9 @@ chart. On the shape sphere chart the two read the same point, and are still two 
 Chart position takes a base and layers. The backbone is unchanged: one colour slot, one brightness slot, Replace-L or
 Multiply, the post chain.
 
-**Chart position ⟨chart⟩** — chart (default: the view's own) · at (playhead · t = 0 · a fixed t) · when it leaves the
-chart (clamp to the edge · none) · after its run ends (hold · outcome colour). Stores nothing.
+**Chart position ⟨chart⟩** — chart (default: the view's own) · at (playhead · t = 0) · when it leaves the
+chart (clamp to the edge · none) · after its run ends (hold · outcome colour). Stores nothing. ("A fixed t" is struck,
+R-558, RQ-489; *was:* "at (playhead · t = 0 · a fixed t)".)
 
 **Its colour slot is a base plus layers** — the same shape as the shape sphere's colouring (a Family A or B occupant,
 then `bandmask` / `site_overlay` combinators, colour composition §1.1–§1.3):
@@ -676,6 +689,24 @@ samples read the stated texels, and the arm that moves the rule fires).
 applied meanwhile, as the prototype has it, and a ruling otherwise is a follow-up change. Q4 records the existing vMF
 shape colouring and changes nothing in it.
 
+*Ruled (R-558, 21 Oct 2026).* Q1 to Q9 are each ruled (a): any chart may be a target, its inverse generated beside the
+view's from R-116's one Rust source (RQ-480); a tilted target takes the branch nearest the slice, `k ∈ [−4, 4]`, the
+smallest `|w|`, a stated choice named in SM4 (RQ-481); the state map is never a criterion input, SM12's Firewall test
+holding it (RQ-482); the vMF colouring is kept and colour composition §4.1 states that it is not one-to-one (RQ-483);
+the nominal copy (RQ-484); an ended run held, "outcome colour" an option (RQ-485); history fields out of scope
+(RQ-486); the prototype's values the starting values, the port's additions included, confirmed at the M7 gate
+(RQ-487); the grey origin accepted (RQ-488). The conflicts: Chart position a named seam-6 exception, with no fixed t
+(RQ-489); Replace-L's chroma scaling an option, "keep in gamut", off by default and on in the Displacement and Mixing
+presets, so SM12's "Shape n̂ unchanged" and "Replace-L in gamut" rows read it with the option on, and every saved
+stain renders bitwise at the default (RQ-496); Shape n̂ stays `vector`, `point⟨q⟩` is Chart position's alone, Site
+blend ↔ Site blend the only swap, board 4's sphere paragraph superseded by SM11, and "Palette base" and "Picture
+flow" where both graphs show (RQ-497); the code's reading of the mirror and the clamp, the Four results test under
+"none" (RQ-498, its two mirror clauses superseded by the human's second addendum to the shape sphere ruling); the
+file's preset names, the brightness slot under a Picture and the trace's fade, with the code's triangle lightness and
+Fibonacci swatches (RQ-499); "Edit stain…" (RQ-500); no figure ring while the trace is shown (RQ-501); one colour
+node, boards 1 and 4 redrawn to match (RQ-502); `α_min = 0` (RQ-503); the full sphere with the signed `n̂` as the
+target (RQ-504); and "none" a setting of the node (RQ-505).
+
 ## SM14. What this changes
 
 | Doc | Change |
@@ -707,8 +738,9 @@ Shape n̂ ─→ its own colouring (unchanged), an alternative source in the sam
 quotient plus the SM5 status (ok, clamped, past edge, undetermined). Port types and wire colours are unchanged. Shape
 n̂ is a `point⟨sphere⟩`, and its nodes accept exactly that, as now.
 
-**The node.** *Chart position ⟨chart⟩* — chart (default: the view's own), at (playhead · t = 0 · a fixed t), when it
-leaves the chart (clamp · none), after its run ends (hold · outcome); stores nothing. At t = 0 it is the pixel's own IC
+**The node.** *Chart position ⟨chart⟩* — chart (default: the view's own), at (playhead · t = 0), when it
+leaves the chart (clamp · none), after its run ends (hold · outcome); stores nothing ("a fixed t" struck by R-558,
+RQ-489; *was:* "at (playhead · t = 0 · a fixed t)"). At t = 0 it is the pixel's own IC
 through the projection, with no march. It is one node; a brightness field that compares two times takes two copies of
 it. *Shape n̂* is a separate node and is unchanged; on the shape sphere chart both are offered.
 
@@ -720,13 +752,18 @@ dots), each with spacing, colour and opacity (SM11). Layers are the existing `ba
 each removable.
 
 **Brightness slot and combine.** Unchanged: Displacement and Left its starting tile are brightness occupants like any
-other, and Replace-L scales chroma by `min(1, L/0.75, (1 − L)/0.35)` along with L, so every level stays in gamut (0 of
-99,710 samples out). Before that, the 0.30 level clipped to near-black, the undetermined colour.
+other. Replace-L's option **keep in gamut**, off by default, scales chroma by `min(1, L/0.75, (1 − L)/0.35)` along with
+L, so every level stays in gamut (0 of 99,710 samples out); the Displacement and Mixing presets set it on. Before
+that, the 0.30 level clipped to near-black, the undetermined colour. Replace-L as ruled stays the default, so every
+saved stain renders bitwise as before (R-558, RQ-496 (a)). *Was:* "and Replace-L scales chroma by `min(1, L/0.75,
+(1 − L)/0.35)` along with L, so every level stays in gamut (0 of 99,710 samples out)."
 
 **Inspector.** The library and the drag-off-a-pin menu offer only what the wired source takes. Swapping the source
 between Shape n̂ and Chart position puts each base's counterpart in its place (Position ↔ Gradient, Site blend ↔ Site
 blend, Bands ↔ Palette); changing Chart position's chart re-offers the bases and layers that exist on the new one. Every
-setting stays on the graph, so switching back restores it exactly.
+setting stays on the graph, so switching back restores it exactly. On main Shape n̂ stays `vector` with its one colour
+editor, so Site blend ↔ Site blend is the only swap, and "offer only what the wired source takes" applies to the
+library and the drag-off-a-pin menu only, render GUI spec §6's morphing staying between subtypes (R-558, RQ-497 (a)).
 
 **Problems.** Warning where a brightness node replaces L that the base spends on position (Shape n̂'s position map and
 Bands; a 1D gradient; the sphere's 3D and the cylinder's 2D gradient). Warning where a brightness node replaces L under lightness layers.
@@ -765,7 +802,8 @@ checkerboard differs from checkerboard over grid wherever both are in band.
 
 *Transcribed from the prototype (R-542; `smPreset`, `smSyncUI`, `smSpendsL`).* The preset buttons read "Classic shape
 colour", "Where now", "Graph paper", "Basin tiles", "Displacement", "Picture flow" and "Mixing" (the file and board 5
-name them Where, Basins and Flow; RQ-499). Each preset sets: Classic — the shape sphere chart, the Shape n̂ node, Site
+name them Where, Basins and Flow; RQ-499). The file's names are the presets' (R-558, RQ-499): Where, Basins and Flow,
+"Where now" being the node's retired name. Each preset sets: Classic — the shape sphere chart, the Shape n̂ node, Site
 blend `axes6`, Full swatches, vMF κ 3, OKLab, no brightness; Where now — Gradient 2D, the view's own chart; Graph paper
 — Gradient 2D, layer 1 checkerboard ×6 white 25 %, layer 2 grid lines ×6 dark 75 %; Basin tiles — Palette, 6 across, by
 index, hexagons (Fibonacci cells on the sphere); Displacement — Gradient 2D with Displacement; Picture flow — Picture,

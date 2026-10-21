@@ -1,7 +1,7 @@
 # TASK-M7-11 — The stain graph model: node kinds, typed ports, wire rules and RenderState serialisation
 
 - **Milestone:** M7
-- **Closes:** REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-025, REQ-GUI-026, REQ-GUI-016
+- **Closes:** REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-025, REQ-GUI-026, REQ-GUI-016, REQ-COL-140
 - **Depends on:** TASK-M7-01, TASK-M7-03, TASK-M2-23
 - **Needs (earlier milestones):** REQ-RENDER-009, REQ-RENDER-075, REQ-GUI-007
 - **Reviewers:** code, qa, gui
@@ -21,12 +21,17 @@ The stain is a data object in the engine crate's contract module: nodes {id, kin
 - `docs/gui/principia_render_gui_spec.md` § "6. Port typing & wire rules"
 - `docs/contracts/principia_gui_state_contract.md` § "3. The registry is the scanned filesystem — for the *fragment* side; compute occupants are Rust build variants"
 - `decisions.md` § "R-52 — Undo lives in the state contract *(GU-1 (a))*"
+- `decisions.md` § "R-546 — Colour presets, debug groups and the palettes' measured figures: the addressing convention's third channels are 0 and each index has its own grey preset; the debug groups' membership; gradient magnitude is a derived-field ramp, custom stops defined apart; the sRGB palette's closest pair is 0.175; C = 0.123 is in gamut at every listed hue; the η_E debug view is the `state` and `detail` views *(closes RQ-280, RQ-281, RQ-282, RQ-331, RQ-332 and RQ-333; amends R-444 and R-447)*"
+- `docs/design/principia_colour_composition.md` § "9. The stain editor's composition resolutions (R-72; REQ-COL-054)"
 
 ## Deliverables
 - `crates/engine/src/contract/stain/graph.rs`, `ports.rs` — the graph, node kinds, port types.
 - `crates/engine/src/contract/stain/edit.rs` — add / delete / duplicate / wire / unwire / reorder as typed edits with refusal reasons; each accepted edit is a `SetField` (R-52 undo).
 - `RenderState` carrying the graph (serde), replacing the pre-R-64 four-slot object.
 - Unit and property tests under `crates/engine/src/contract/tests/`.
+- The custom-stop ramp of render GUI spec §9's gradient editor, defined in colour_composition §9.4 (R-546, RQ-282;
+  R-72, REQ-COL-140): its stops, their positions, its interpolation space and how `cyclic` applies, as the graph
+  model's ramp type.
 
 ## Acceptance tests
 - `cargo test -p engine stain_node_kinds` — construct each kind; its port list and types equal §3.1's row (REQ-GUI-021).
@@ -35,6 +40,7 @@ The stain is a data object in the engine crate's contract module: nodes {id, kin
 - `cargo test -p engine stain_wire_types` — vec3 → f32 and field → vec3 drops are refused and leave the graph unchanged; matching drops attach; a categorical field onto a gradient colour node is accepted (REQ-GUI-025).
 - `cargo test -p engine stain_port_arity` — a second wire dropped on an in-port removes the first; an out-port holds five wires (REQ-GUI-026).
 - `cargo test -p engine stain_renderstate_roundtrip` — round-trip a graph through RenderState; choosing an occupant emits one SetField (REQ-GUI-016).
+- `cargo test -p engine stain_custom_stop_ramp` and Review (gui) — a custom-stop ramp round-trips through RenderState and evaluates as §9.4 defines it, `cyclic` wrapping its ends; control: a ramp interpolated in the other space fails; the definition is in §9.4, approved before merge (REQ-COL-140).
 
 ## Notes
 - The canonical graph form (REQ-RENDER-075, M1) is the serialised order; this task must not define a second one.

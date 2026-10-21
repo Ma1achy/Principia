@@ -466,7 +466,7 @@
   title: "Decoder: the latent type, the mass block and the configuration block"
   depends_on: [TASK-M2-01]
   needs: [REQ-PAY-017, REQ-SYS-004, REQ-PAY-014]
-  requirements: [REQ-DEC-010, REQ-DEC-011, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044]
+  requirements: [REQ-DEC-010, REQ-DEC-039, REQ-DEC-012, REQ-DEC-013, REQ-DEC-015, REQ-DEC-028, REQ-SYS-010, REQ-INT-002, REQ-DEC-044]  # REQ-DEC-011, merged held (RQ-298), moves to TASK-M2-48 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-03
@@ -506,7 +506,7 @@
   title: "Canonicaliser C: the ordered procedure, the mirror tie and the scale gauge"
   depends_on: [TASK-M2-06]
   needs: [REQ-PAY-017]
-  requirements: [REQ-DEC-002, REQ-DEC-017, REQ-DEC-018, REQ-DEC-023, REQ-ENC-015, REQ-ENC-006, REQ-ENC-016]
+  requirements: [REQ-DEC-017, REQ-DEC-018, REQ-DEC-023, REQ-ENC-015, REQ-ENC-016]  # REQ-DEC-002 and REQ-ENC-006, merged held (RQ-296, RQ-298, RQ-295), move to TASK-M2-47 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M2-08
@@ -570,7 +570,7 @@
   title: "Encode: block inverses, E = inverses ∘ C, the discard notices and T1"
   depends_on: [TASK-M2-01, TASK-M2-07]
   needs: [REQ-SYS-004]
-  requirements: [REQ-ENC-007, REQ-ENC-003, REQ-ENC-014, REQ-SYS-015, REQ-DEC-014]
+  requirements: [REQ-ENC-007, REQ-ENC-003, REQ-SYS-015, REQ-DEC-014]  # REQ-ENC-014, merged held (RQ-295), moves to TASK-M2-47 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M2-16
@@ -642,7 +642,7 @@
   title: "Decode across backends and decode totality: every pixel labelled, every chart"
   depends_on: [TASK-M2-06, TASK-M2-09, TASK-M2-14]
   needs: [REQ-GEN-004, REQ-VAL-007, REQ-PAY-014]
-  requirements: [REQ-VAL-017, REQ-DEC-008, REQ-DEC-038, REQ-DEC-025]
+  requirements: [REQ-DEC-008, REQ-DEC-038, REQ-DEC-025]  # REQ-VAL-017, merged held (RQ-298), moves to TASK-M2-48 (R-547, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-9, PIT-10]
 - id: TASK-M2-25
@@ -650,7 +650,7 @@
   title: Portable WGSL decode and encode, the DECODE preset and the agreement preset
   depends_on: [TASK-M2-16, TASK-M2-24, TASK-M1-14, TASK-M1-16, TASK-M1-19]  # TASK-M1-19 for REQ-TOOL-011, split from TASK-M1-14, applied per R-369 (RQ-273)
   needs: [REQ-COL-003, REQ-RENDER-005, REQ-RENDER-008, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-001, REQ-COL-001, REQ-COL-063]
-  requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057]
+  requirements: [REQ-COL-006, REQ-RENDER-027, REQ-TOOL-029, REQ-COL-057, REQ-SYS-085]  # REQ-SYS-085: the read side's shape() from the translation (R-547, RQ-365 (c))
   reviewers: [code, qa, physics]
   pitfalls: [PIT-1.7, PIT-9, PIT-5]
 - id: TASK-M2-26
@@ -666,7 +666,7 @@
   title: The Inspector's invariance and round-trip gates on the Rust decode and encode
   depends_on: [TASK-M2-16]
   needs: [REQ-VAL-007, REQ-VAL-006]
-  requirements: [REQ-VAL-021, REQ-VAL-022, REQ-VAL-121]
+  requirements: [REQ-VAL-021]  # REQ-VAL-022 and REQ-VAL-121, merged held (RQ-355, RQ-475 to RQ-477), move to TASK-M2-50 (R-551, applied per R-369)
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3, PIT-9]
 - id: TASK-M2-28
@@ -797,6 +797,38 @@
   requirements: [REQ-CHART-081, REQ-CHART-082, REQ-ENC-034]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: [PIT-9]
+- id: TASK-M2-47
+  milestone: M2
+  title: "Canonicalisation's step 0 per R-547: skipped within τ_I with lookup_rescaled raised exactly when it ran, the two-step rescale, I_in = 0 kept, and C's branch inputs in the exact form"
+  depends_on: [TASK-M2-07, TASK-M2-15, TASK-M2-43]  # TASK-M2-07 and TASK-M2-15 merged with these requirements held (RQ-295, RQ-296, RQ-298); TASK-M2-43's canon.rs change runs before this task's (merge of main into PR #274); applied per R-369
+  needs: []
+  requirements: [REQ-ENC-006, REQ-ENC-014, REQ-DEC-002, REQ-ENC-035]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3, PIT-9]
+- id: TASK-M2-48
+  milestone: M2
+  title: "The decoder's fma-built branch inputs rewritten to R-547's form and re-proved: M₀₁ for M01_TINY, and decode test 12 on Metal and lavapipe"
+  depends_on: [TASK-M2-02, TASK-M2-24, TASK-M2-47]  # TASK-M2-02 and TASK-M2-24 merged with these requirements held (RQ-298); TASK-M2-47 rebuilds C's pair differences, which dd_decoder §2's table ("the mirror in C") and decode test 12 read (fix round 1 of PR #274, physics P1, qa Q5); applied per R-369
+  needs: []
+  requirements: [REQ-DEC-011, REQ-VAL-017]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-9, PIT-10]
+- id: TASK-M2-49
+  milestone: M2
+  title: "The native build without MIR GVN on the pinned nightly, a release-profile CI job, and the upstream report (R-547)"
+  depends_on: [TASK-M0-14, TASK-M2-07]  # the pin, and stage_canon_native; applied per R-369
+  needs: []
+  requirements: [REQ-TOOL-188, REQ-TOOL-189]
+  reviewers: [code, qa]
+  pitfalls: [PIT-3]
+- id: TASK-M2-50
+  milestone: M2
+  title: "The Inspector's gates per R-551: the pole and equator checks judged, the Randomise arm reported, and the gates' bounds proposed"
+  depends_on: [TASK-M2-27, TASK-M2-47]  # TASK-M2-27 merged with REQ-VAL-022 and REQ-VAL-121 held; TASK-M2-47 changes C's step 0, which the round trip runs; applied per R-369
+  needs: [REQ-VAL-007, REQ-VAL-006]
+  requirements: [REQ-VAL-022, REQ-VAL-121, REQ-VAL-193]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3, PIT-9]
 - id: TASK-M3-01
   milestone: M3
   title: "Kernel core: the generic Real, the force and the shared pair distances"
@@ -984,7 +1016,7 @@
 - id: TASK-M3-24
   milestone: M3
   title: "The ground-truth harness: Path A, Path B, the fixture set and the golden anchors"
-  depends_on: [TASK-M3-19, TASK-M2-26]
+  depends_on: [TASK-M3-19, TASK-M2-26, TASK-M2-47]  # TASK-M2-47: REQ-DEC-002 moved there (R-547, applied per R-369)
   needs: [REQ-ENC-002, REQ-ENC-012, REQ-VAL-014, REQ-VAL-016, REQ-VAL-018, REQ-DEC-002]
   requirements: [REQ-VAL-029, REQ-VAL-046, REQ-VAL-048, REQ-VAL-049, REQ-VAL-126, REQ-VAL-128, REQ-VAL-129]
   reviewers: [code, qa, physics]
@@ -1120,7 +1152,7 @@
 - id: TASK-M4-04
   milestone: M4
   title: "Tier B and Tier N: integer fields exact, continuous values within measured native-wgpu tolerances"
-  depends_on: [TASK-M4-02]
+  depends_on: [TASK-M4-02, TASK-M2-48]  # TASK-M2-48: REQ-VAL-017 moved there (R-547, applied per R-369)
   needs: [REQ-PAY-013, REQ-PAY-051, REQ-PAY-052, REQ-PAY-053, REQ-PAY-027, REQ-PAY-043, REQ-GEN-006, REQ-VAL-017, REQ-DEC-043, REQ-ENC-004, REQ-ENC-024, REQ-INT-031]
   requirements: [REQ-VAL-060, REQ-VAL-061, REQ-VAL-064, REQ-VAL-072, REQ-VAL-073, REQ-VAL-075, REQ-SYS-026, REQ-VAL-140, REQ-VAL-141]
   reviewers: [code, qa, physics]
@@ -1482,7 +1514,7 @@
   title: The frame record, percentiles and the bounded telemetry file
   depends_on: [TASK-M5-21]
   needs: [REQ-TOOL-001, REQ-TOOL-002, REQ-TOOL-005, REQ-TOOL-006, REQ-TOOL-008]
-  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140]
+  requirements: [REQ-TOOL-050, REQ-TOOL-051, REQ-TOOL-052, REQ-TOOL-053, REQ-TOOL-054, REQ-TOOL-117, REQ-TOOL-130, REQ-TOOL-140, REQ-TOOL-187]  # REQ-TOOL-187: R-545 (RQ-286), applied per R-369; its bin edges wait on RQ-520
   reviewers: [code, qa, perf, physics]
   pitfalls: []
 - id: TASK-M5-29
@@ -1507,6 +1539,14 @@
   depends_on: [TASK-M5-02, TASK-M3-06]  # R-420: the echo row moved after TASK-M5-02 and TASK-M3-06
   needs: [REQ-INT-026, REQ-TOOL-011]
   requirements: [REQ-TOOL-164, REQ-TOOL-165]
+  reviewers: [code, qa, physics]
+  pitfalls: [PIT-3]
+- id: TASK-M5-32
+  milestone: M5
+  title: "`running_mean_divergence` and `coherence`: formulas and one-signed declared ranges (R-545, RQ-278)"
+  depends_on: [TASK-M1-21, TASK-M5-01]  # R-545 A1: the follow-up of TASK-M1-21's ledger work (merged in PR #208), applied per R-369
+  needs: [REQ-GEN-035]
+  requirements: [REQ-PAY-109]
   reviewers: [code, qa, physics]
   pitfalls: [PIT-3]
 - id: TASK-M6-01
@@ -1776,9 +1816,9 @@
 - id: TASK-M6-35
   milestone: M6
   title: "The compass's Jacobi and Shape views and the physical steer (R-452)"
-  depends_on: [TASK-M6-34]  # waits on RQ-341 to RQ-346 as well (R-452)
+  depends_on: [TASK-M6-34]  # RQ-341 to RQ-346 ruled by R-550; no longer waits
   needs: []
-  requirements: [REQ-GUI-199, REQ-GUI-200]
+  requirements: [REQ-GUI-199, REQ-GUI-200, REQ-DEC-049, REQ-GUI-346, REQ-GUI-347]
   reviewers: [code, qa, gui, physics]
   pitfalls: []
 - id: TASK-M6-36
@@ -1994,7 +2034,7 @@
   title: "The stain graph model: node kinds, typed ports, wire rules and RenderState serialisation"
   depends_on: [TASK-M7-01, TASK-M7-03, TASK-M2-23]
   needs: [REQ-RENDER-009, REQ-RENDER-075, REQ-GUI-007]
-  requirements: [REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-025, REQ-GUI-026, REQ-GUI-016]
+  requirements: [REQ-GUI-021, REQ-GUI-022, REQ-GUI-023, REQ-GUI-025, REQ-GUI-026, REQ-GUI-016, REQ-COL-140]  # REQ-COL-140: R-546 (RQ-282)
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M7-12
@@ -2042,7 +2082,7 @@
   title: "The preset library: presets as whole graphs, debug views as locked presets"
   depends_on: [TASK-M7-01, TASK-M7-08, TASK-M7-10, TASK-M7-12, TASK-M7-13, TASK-M5-18]
   needs: [REQ-GEN-011, REQ-RENDER-022, REQ-RENDER-024, REQ-RENDER-025, REQ-RENDER-027, REQ-TOOL-011, REQ-TOOL-019, REQ-RENDER-053]
-  requirements: [REQ-GUI-028, REQ-GUI-029, REQ-GUI-030, REQ-COL-028, REQ-RENDER-061, REQ-RENDER-064, REQ-COL-008]
+  requirements: [REQ-GUI-028, REQ-GUI-029, REQ-GUI-030, REQ-COL-028, REQ-RENDER-061, REQ-RENDER-064, REQ-COL-008, REQ-COL-139]  # REQ-COL-139: R-546 (RQ-280)
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M7-18
@@ -2281,9 +2321,9 @@
 - id: TASK-M7-47
   milestone: M7
   title: "Chart position: the source, its projection onto each target's quotient, the four results, the edge clamp, the colour frame and the t = 0 identity (R-542 SM1 to SM5, SM7) ⚑"
-  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11, TASK-M2-43]  # TASK-M7-52: the one projection (R-542 H11); waits on RQ-489 (the chart read from a colour occupant; a fixed t), R-542 H9; TASK-M2-43: the signed decode and lookup the sphere's identity reads (R-544, applied per R-369)
+  depends_on: [TASK-M7-52, TASK-M1-01, TASK-M1-04, TASK-M2-25, TASK-M2-26, TASK-M7-03, TASK-M7-11, TASK-M2-43]  # TASK-M7-52: the one projection (R-542 H11); RQ-489 ruled by R-558, no longer waits; TASK-M2-43: the signed decode and lookup the sphere's identity reads (R-544, applied per R-369)
   needs: []
-  requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120]
+  requirements: [REQ-COL-113, REQ-COL-114, REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-118, REQ-COL-119, REQ-COL-120, REQ-COL-141]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
   pitfalls: []
 - id: TASK-M7-48
@@ -2304,8 +2344,8 @@
   pitfalls: []
 - id: TASK-M7-50
   milestone: M7
-  title: "Replace-L's chroma scaling, min(1, L/0.75, (1 − L)/0.35) (R-542 SM15)"
-  depends_on: [TASK-M7-04, TASK-M7-48]  # waits on RQ-496 (Replace-L as ruled, R-77), R-542 H9
+  title: "Replace-L's keep in gamut option: chroma scaled by min(1, L/0.75, (1 − L)/0.35), off by default (R-542 SM15, R-558)"
+  depends_on: [TASK-M7-04, TASK-M7-48]  # RQ-496 ruled by R-558 (an option, off by default); no longer waits
   needs: []
   requirements: [REQ-COL-132]
   reviewers: [code, qa]
@@ -2313,7 +2353,7 @@
 - id: TASK-M7-51
   milestone: M7
   title: "The stain editor's Chart position: the node, the point⟨q⟩ subtype, the base-and-layers inspector, switching and restoring, Problems, the presets and saved stains unchanged (R-542 SM15)"
-  depends_on: [TASK-M7-48, TASK-M7-49, TASK-M7-17, TASK-M7-22, TASK-M7-23, TASK-M7-24]
+  depends_on: [TASK-M7-48, TASK-M7-49, TASK-M7-50, TASK-M7-17, TASK-M7-22, TASK-M7-23, TASK-M7-24]  # TASK-M7-50: keep in gamut, which Displacement and Mixing set on (R-558 S2)
   needs: []
   requirements: [REQ-GUI-335, REQ-GUI-336, REQ-GUI-337, REQ-GUI-338, REQ-GUI-340]
   reviewers: [code, qa, gui]
@@ -2325,6 +2365,14 @@
   needs: []
   requirements: [REQ-COL-133, REQ-COL-134]
   reviewers: [code, qa, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
+  pitfalls: []
+- id: TASK-M7-53
+  milestone: M7
+  title: "The schema version hashes only the layout and kernel columns; a ledger scale edit re-styles with zero recompute (R-545, RQ-297)"
+  depends_on: [TASK-M7-05, TASK-M5-06]  # R-545 C1, applied per R-369
+  needs: [REQ-GEN-008, REQ-GEN-017]
+  requirements: [REQ-GEN-043]
+  reviewers: [code, qa, physics]
   pitfalls: []
 - id: TASK-M8-01
   milestone: M8
@@ -2371,7 +2419,7 @@
   title: "Manifold view panel: Chart, Navigate, depth readout, Slice centre, Tilt, and the figure's axis labels"
   depends_on: [TASK-M8-05, TASK-M6-26, TASK-M6-38]
   needs: [REQ-GUI-002, REQ-GUI-003, REQ-GUI-006, REQ-GUI-012, REQ-CHART-005, REQ-CHART-012, REQ-CHART-028, REQ-SYS-014, REQ-CHART-002, REQ-RENDER-026]
-  requirements: [REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161]
+  requirements: [REQ-GUI-082, REQ-GUI-083, REQ-GUI-084, REQ-GUI-034, REQ-GUI-161, REQ-GUI-345]  # REQ-GUI-345: an invariant chart's frozen controls (R-549, RQ-350)
   reviewers: [code, qa, physics, gui]
   pitfalls: []
 - id: TASK-M8-07
@@ -2417,9 +2465,9 @@
 - id: TASK-M8-12
   milestone: M8
   title: "Listen, 1: the signal, spectrum, pitch, windows, channels and loudness from the one computeIC integration, with the audio out (R-540 S1 to S4, S6, S7) ⚑"
-  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]  # RQ-440 and RQ-442 ruled by R-555; no longer waits
   needs: [REQ-SYS-017, REQ-CHART-036, REQ-TOOL-028, REQ-VAL-041]
-  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313, REQ-GUI-314, REQ-GUI-316]
+  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313, REQ-GUI-314, REQ-GUI-316, REQ-VAL-194]
   reviewers: [code, qa, physics, gui, perf]  # ⚑ physics review required: the signal, the pitch's scale invariance, the floor (R-540 S1 to S3, S7)
   pitfalls: [PIT-3]
 - id: TASK-M8-13
@@ -2433,7 +2481,7 @@
 - id: TASK-M8-14
   milestone: M8
   title: "Inspector window and pane 1: the editable IC on the physical canvas (05_inspectors.png)"
-  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28]
+  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M4-16, TASK-M6-28, TASK-M2-47]  # TASK-M2-47: REQ-DEC-002 moved there (R-547, applied per R-369)
   needs: [REQ-GUI-008, REQ-TOOL-040, REQ-SYS-016, REQ-GUI-001, REQ-DEC-002, REQ-ENC-008, REQ-GUI-188]
   requirements: [REQ-GUI-112, REQ-GUI-113, REQ-GUI-061, REQ-GUI-062, REQ-GUI-063, REQ-GUI-068]
   reviewers: [code, qa, physics, gui]
@@ -2441,7 +2489,7 @@
 - id: TASK-M8-15
   milestone: M8
   title: "Inspector pane 2: the canonical representative, the gauge buttons, the round-trip ghost, the JS oracle"
-  depends_on: [TASK-M8-14, TASK-M2-27]
+  depends_on: [TASK-M8-14, TASK-M2-27, TASK-M2-50]  # TASK-M2-50: REQ-VAL-022 moved there (R-551, applied per R-369)
   needs: [REQ-DEC-002, REQ-VAL-022, REQ-CHART-036, REQ-INT-003, REQ-VAL-023, REQ-ENC-020, REQ-SYS-015]
   requirements: [REQ-GUI-057, REQ-GUI-058, REQ-GUI-059, REQ-GUI-060, REQ-GUI-064, REQ-GUI-065, REQ-GUI-114, REQ-GUI-118, REQ-VAL-109]
   reviewers: [code, qa, physics, gui]
@@ -2752,8 +2800,8 @@
   pitfalls: []
 - id: TASK-M8-54
   milestone: M8
-  title: "The trace fade's general off-plane distance, as RQ-341 rules (R-509 part 3) ⚑"
-  depends_on: [TASK-M8-51]  # R-509 Y3: a leaf, waiting for RQ-341; numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
+  title: "The trace fade's general off-plane distance, as RQ-522 rules (R-509 part 3, R-550 J7) ⚑"
+  depends_on: [TASK-M8-51]  # R-509 Y3, R-550 J7: a leaf, waiting for RQ-522 (RQ-341 ruled by R-550); numbered past the links port's (unmerged) TASK-M8-52 and TASK-M8-53
   needs: []
   requirements: [REQ-GUI-266]
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required; not merged on the code reviewer's word alone
@@ -2763,7 +2811,7 @@
   title: "Past the square with the controls shown: pan and zoom past [0,1]², drawn with no gaps, every interaction working there, a repeat resolving to its canonical system, the ✕ and the round trip (R-537 EX1 to EX5, EX9)"
   depends_on: [TASK-M8-56, TASK-M8-05, TASK-M8-08, TASK-M8-09, TASK-M8-32, TASK-M8-44, TASK-M8-48]
   needs: []
-  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342]
+  requirements: [REQ-GUI-267, REQ-GUI-268, REQ-GUI-269, REQ-GUI-270, REQ-GUI-342, REQ-GUI-348]
   reviewers: [code, qa, gui]
   pitfalls: []
 - id: TASK-M8-56
@@ -2787,21 +2835,21 @@
   title: "The trace's markers and icon sets, its defaults, syzygies, off-screen pins, repeats, not-a-system handling and computeIC's guards; where a trace can leave, mixed axes, playback and the time ramp (R-538; R-537 EX6) ⚑"
   depends_on: [TASK-M8-49, TASK-M8-50, TASK-M8-51, TASK-M8-55, TASK-M7-52]  # TASK-M7-52: the trace's projection is the one projection (R-542 H11; PR #270 code review 1, applied per R-369)
   needs: []
-  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-GUI-341]
+  requirements: [REQ-GUI-271, REQ-GUI-272, REQ-GUI-273, REQ-GUI-274, REQ-GUI-275, REQ-GUI-276, REQ-INT-096, REQ-GUI-277, REQ-GUI-278, REQ-GUI-279, REQ-GUI-280, REQ-GUI-281, REQ-GUI-282, REQ-GUI-283, REQ-COL-135, REQ-GUI-341, REQ-CHART-084, REQ-GUI-350]  # REQ-GUI-350: gui review 5604048081 of PR #274, G3, applied per R-369
   reviewers: [code, qa, gui, physics]  # ⚑ physics review required for the syzygy test, the guards, the forbidden-sample count, and the follow-up's per-axis check, branches, frame and curve projection
   pitfalls: []
 - id: TASK-M8-59
   milestone: M8
   title: "Listen, 2: the voices, the 39 instruments and makeVoice, strikes on the trajectory's beats, the events and the effects (R-540 S5, S8, S9)"
-  depends_on: [TASK-M8-12]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  depends_on: [TASK-M8-12, TASK-M8-38]  # RQ-440 and RQ-442 ruled by R-555; TASK-M8-38's shell plays the graph's samples (R-555 A1)
   needs: []
-  requirements: [REQ-GUI-315, REQ-GUI-317, REQ-GUI-318, REQ-GUI-319, REQ-GUI-320]
+  requirements: [REQ-GUI-315, REQ-GUI-317, REQ-GUI-318, REQ-GUI-319, REQ-GUI-320, REQ-GUI-349]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-60
   milestone: M8
   title: "Listen, 3: horizon and dwell, the spectrum, spectrogram and readout, sweep a row and the known orbits (R-540 S10 to S12)"
-  depends_on: [TASK-M8-12, TASK-M8-49]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  depends_on: [TASK-M8-12, TASK-M8-49]  # RQ-440 and RQ-442 ruled by R-555; no longer waits
   needs: []
   requirements: [REQ-GUI-321, REQ-GUI-322, REQ-GUI-323]
   reviewers: [code, qa, gui]
@@ -2825,7 +2873,7 @@
 - id: TASK-M8-63
   milestone: M8
   title: "The trace and Listen in Explore, 3: Listen in the bottom band, the shared time axis and the legend's trace block (R-541 G7, G8)"
-  depends_on: [TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22]  # waits on RQ-440 and RQ-442 through TASK-M8-60 and TASK-M8-64
+  depends_on: [TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22]  # RQ-440 and RQ-442 ruled by R-555; no longer waits
   needs: []
   requirements: [REQ-GUI-330, REQ-GUI-331, REQ-GUI-332]
   reviewers: [code, qa, gui]
@@ -2833,7 +2881,7 @@
 - id: TASK-M8-64
   milestone: M8
   title: "Listen in Explore, 1: the Trajectory panel's Listen section, the Figure's L and the window highlight (R-541 G2, G4)"
-  depends_on: [TASK-M8-61, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  depends_on: [TASK-M8-61, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # RQ-440 and RQ-442 ruled by R-555; PR #267's split
   needs: []
   requirements: [REQ-GUI-334, REQ-GUI-327]
   reviewers: [code, qa, gui]
@@ -2841,7 +2889,7 @@
 - id: TASK-M8-65
   milestone: M8
   title: "Listen in Explore, 2: the Listen… window (R-541 G6)"
-  depends_on: [TASK-M8-64, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  depends_on: [TASK-M8-64, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # RQ-440 and RQ-442 ruled by R-555; PR #267's split
   needs: []
   requirements: [REQ-GUI-329]
   reviewers: [code, qa, gui]
