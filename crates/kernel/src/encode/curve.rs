@@ -60,7 +60,7 @@
 //! read a value directly, with no arithmetic between: the span test on `ν(θ)`, the grid's last point, the edge flag
 //! (`ν* = lo` or `hi`, exact) and [`curve_axis`]'s `ν*` against the axis's ends, and `Φ_θ,L_z`'s band width against
 //! 0, which is 0 exactly where `K` or `λ_L` is. The search's points are formed alike on every backend: the golden
-//! ratio `g = (√5 − 1)/2` is `IeeeBits::INV_PHI`, correctly rounded and formed from its bits, not a runtime `sqrt`;
+//! ratio `g = (√5 − 1)/2` is `IeeeBits::INV_PHI`, a constant correctly rounded at each width, not a runtime `sqrt`;
 //! the grid's `1/64` is `2⁻⁶` from its bits (`IeeeBits::pow2`), so `(hi − lo)·2⁻⁶` and `k·2⁻⁶` are exact (a power of
 //! two scales without rounding where the result is normal, and no division, which WGSL does not round correctly, is
 //! formed); each point is then a product in `IeeeBits::product`'s form and a lone add or subtraction. The values the
@@ -75,6 +75,7 @@ use super::{blocks, Encoded};
 use crate::chart::burrau::{embed, Burrau, EuclidPlane};
 use crate::chart::burrau_acute::{nu_of, BurrauThetaDeltaM, BurrauThetaK, BurrauThetaLz};
 use crate::decode::Ic;
+use crate::generated::constants;
 use crate::generated::links::{LinkReal, Selection};
 use crate::payload::PayloadReal;
 use crate::real::IeeeBits;
@@ -91,15 +92,15 @@ fn select<T: Copy>(c: bool, t: T, f: T) -> T {
 }
 
 /// The search's grid is `2^GRID_LOG2` cells, so its spacing is the span times a power of two, exact (the module's
-/// note).
-pub const GRID_LOG2: i32 = 6;
+/// note): the register's `curve_grid_log2`.
+pub const GRID_LOG2: i32 = constants::CURVE_GRID_LOG2;
 
-/// The search's grid: `GRID` cells, `GRID + 1` points, the span's edges included.
-pub const GRID: u32 = 1 << GRID_LOG2;
+/// The search's grid: `GRID` cells, `GRID + 1` points, the span's edges included (the register's `curve_grid_log2`).
+pub const GRID: u32 = constants::CURVE_GRID;
 
 /// The golden-section steps inside the best grid point's two cells: each shrinks the bracket by the golden ratio, so
-/// 80 take a width of `2/64` below `10⁻¹⁷`, past f64's resolution on `(0, 1)`.
-pub const GOLDEN_STEPS: u32 = 80;
+/// 80 take a width of `2/64` below `10⁻¹⁷`, past f64's resolution on `(0, 1)` (the register's `curve_golden_steps`).
+pub const GOLDEN_STEPS: u32 = constants::CURVE_GOLDEN_STEPS;
 
 // ── The metric ─────────────────────────────────────────────────────────────────────────────────────────────────────
 
