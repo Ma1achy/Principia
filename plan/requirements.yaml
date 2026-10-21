@@ -16019,13 +16019,12 @@
   - R-96
   - R-109
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-440
-  note: "The reference pitch: REQ-GUI-143 (calibration). Normative through render_gui_spec's listen, which cites pointer_channels §4, its one normative part (R-109). R-540 S3 (21 Oct 2026): Hz = f·t_c·f_ref·2^shift, the octave shift chosen once per run, keeping every ratio (REQ-GUI-313)."
+  note: "The reference pitch: REQ-GUI-143 (calibration). Normative through render_gui_spec's listen, which cites pointer_channels §4, its one normative part (R-109). R-540 S3 (21 Oct 2026): Hz = f·t_c·f_ref·2^shift, the octave shift chosen once per run, keeping every ratio (REQ-GUI-313). RQ-440 ruled by R-555 (a): one Rust synthesis graph, natively through cpal (REQ-GUI-345)."
 - id: REQ-GUI-050
   area: GUI
-  statement: "Sonification must cross-fade between hovered ICs and never retrigger per pixel."
+  statement: "Sonification must cross-fade between hovered ICs and never retrigger per pixel. The bank cross-fades over 140 ms. A struck instrument's strike on a new run's chord is its timbre and happens under that cross-fade; it is not a per-pixel retrigger."
   source:
   - file: docs/design/principia_scratchpad_pointer_channels.md
     section: "4. Audio-specific constraints, which are NOT the frame budget"
@@ -16033,17 +16032,17 @@
     section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   - file: docs/design/principia_listen.md
     section: 5. Voices
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
-    detail: "the audio buffer across an IC change has no discontinuity (no click)"
+    detail: "the audio buffer across an IC change has no discontinuity (no click); with a struck instrument, a new run's chord is struck under the bank's 140 ms cross-fade, the bank's gain continuous across the change, and the default instrument (Sine (pure)) strikes nothing; control: a new chord's strike outside the cross-fade (a gain step at the bank change) fails"
   rulings:
   - R-109
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-440
-  - RQ-452
-  note: "R-540 S5 (21 Oct 2026): the chord cross-fades as a bank; a struck instrument strikes each new hovered run's chord, which is RQ-452 against this requirement, the code applied meanwhile (REQ-GUI-315, REQ-GUI-317)."
+  note: "R-540 S5 (21 Oct 2026): the chord cross-fades as a bank; a struck instrument strikes each new hovered run's chord, which is RQ-452 against this requirement, the code applied meanwhile (REQ-GUI-315, REQ-GUI-317). R-555 rules RQ-452 (a), as the code: the sentence on a struck instrument is the human's, added to the statement; RQ-440 ruled (a). *Was (statement):* \"Sonification must cross-fade between hovered ICs and never retrigger per pixel.\" *Was (verify):* \"the audio buffer across an IC change has no discontinuity (no click)\"."
 - id: REQ-GUI-051
   area: GUI
   statement: "Hover and click must map the pointer through the single Y-flip (v = 1 − event.y / H) exactly as the render does, decode the IC on the CPU, and integrate it with one f64 computeIC returning the full state r(t), p(t)."
@@ -16714,20 +16713,21 @@
     section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   - file: docs/design/principia_listen.md
     section: 1. What is heard
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
-    detail: "the audio path's input is the θ(t), φ(t) series of the hovered IC's computeIC trajectory; no separations-based mapping exists"
+    detail: "the audio path's input is only the hovered IC's computeIC trajectory, its series the selected Signal's (Angles + rotation by default); under Angles only it is exactly the θ(t), φ(t) series; no separations-based mapping exists"
   rulings:
   - R-68
   - R-96
   - R-109
   - R-540
+  - R-555
   milestone: M8
   rq:
-  - RQ-443
-  - RQ-451
   - RQ-466
-  note: "The artboard's selector is illustrative (R-68). Only pointer_channels §4 is normative, through render_gui_spec's listen (R-109). Its open choices: REQ-GUI-144 (definition); the reference pitch: REQ-GUI-143 (calibration). R-540 (21 Oct 2026) extends the mapping: the default signal adds the rotation e^{iψ}, Angles only being θ(t), φ(t) (REQ-GUI-309; RQ-451, applied meanwhile); the verify's input is the selected signal's series, still only the computeIC trajectory's. The selector's row is stale, replaced by R-540 (RQ-443, (a) applied); no separations mapping exists. Gui review 5595359543 of PR #267, G1: the statement's \"in the Trajectory panel and the Inspector\" and render_gui_spec §G8's \"listen is here too\" against R-541 G1's one place and REQ-GUI-324's One place test are RQ-466; (a) applied meanwhile: listen in the Trajectory panel only, the Inspector holding no sound control."
+  note: "The artboard's selector is illustrative (R-68). Only pointer_channels §4 is normative, through render_gui_spec's listen (R-109). Its open choices: REQ-GUI-144 (definition); the reference pitch: REQ-GUI-143 (calibration). R-540 (21 Oct 2026) extends the mapping: the default signal adds the rotation e^{iψ}, Angles only being θ(t), φ(t) (REQ-GUI-309; RQ-451, applied meanwhile); the verify's input is the selected signal's series, still only the computeIC trajectory's. The selector's row is stale, replaced by R-540 (RQ-443, (a) applied); no separations mapping exists. Gui review 5595359543 of PR #267, G1: the statement's \"in the Trajectory panel and the Inspector\" and render_gui_spec §G8's \"listen is here too\" against R-541 G1's one place and REQ-GUI-324's One place test are RQ-466; (a) applied meanwhile: listen in the Trajectory panel only, the Inspector holding no sound control. R-555 (21 Oct 2026) rules RQ-443 (a) and RQ-451 (a): the selector's row is stale, replaced by R-540, with no fourth Signal; R-540 extends R-109, the verify reading the selected signal, and sonify_input_is_theta_phi asserting that the input is only the computeIC trajectory and, under Angles only, exactly θ, φ. *Was (verify):* \"the audio path's input is the θ(t), φ(t) series of the hovered IC's computeIC trajectory; no separations-based mapping exists\"."
 - id: REQ-GUI-091
   area: GUI
   statement: "The compass (nav cube) must sit bottom left under the view controls and show the slice plane inside the chart in a fixed orthographic view at its default angle, with no orbit (R-409); have a Tilt and a Slice button, Tilt the default, a click on one switching the mode and the buttons always showing the current mode, while touching a slice slider still switches it to slicing and touching a tilt to tilting; tilt the plane when dragged in tilt mode, and move the slice plane along its normal, its tilt fixed, when dragged anywhere on it in slice mode; carry a gold pin at the pivot when locked with the plane turning about it; and read out the tilt and rotation angles."
@@ -20399,10 +20399,9 @@
   rulings:
   - R-109
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-451
-  note: "R-540 S1, H5; ⚑ physics review (the signal). The default's ψ against R-109's θ(t), φ(t) is RQ-451, applied meanwhile. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P1, applied per R-369: the equal-mass Lagrange triangle is linearly unstable and breaks up (3 lines at t ≤ 80, 9 at t ≤ 150), so the arm states its horizon, t ≤ 60. *Was (verify):* \"cargo test -p engine listen_signal (R-540 S13 Wrap; Lagrange (default signal)): the θ series' own spectrum has lines at multiples of the winding rate that e^{iθ}'s does not, and Listen's has none of them; Lagrange rotating under the default signal voices one line, its level above the min clamp; controls: θ used in place of e^{iθ} (Wrap) and the rotation channel dropped (Lagrange), each fail\""
+  note: "R-540 S1, H5; ⚑ physics review (the signal). The default's ψ against R-109's θ(t), φ(t) is RQ-451, applied meanwhile. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P1, applied per R-369: the equal-mass Lagrange triangle is linearly unstable and breaks up (3 lines at t ≤ 80, 9 at t ≤ 150), so the arm states its horizon, t ≤ 60. *Was (verify):* \"cargo test -p engine listen_signal (R-540 S13 Wrap; Lagrange (default signal)): the θ series' own spectrum has lines at multiples of the winding rate that e^{iθ}'s does not, and Listen's has none of them; Lagrange rotating under the default signal voices one line, its level above the min clamp; controls: θ used in place of e^{iθ} (Wrap) and the rotation channel dropped (Lagrange), each fail\" RQ-451 ruled (a) by R-555: the default adds ψ, Angles only is θ(t), φ(t)."
 - id: REQ-GUI-310
   area: GUI
   statement: "Listen's spectrum must be a complex forward FFT of the complex channels, so that anticlockwise winding (θ increasing) lies at positive frequencies and clockwise at negative ones; Channels must be Stereo by winding (the default: pos left, neg right), Stereo (fold left, φ's b right) or Mono (mono), as principia_listen.md §6 gives them."
@@ -20413,15 +20412,16 @@
     section: 6. Channels
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
     detail: "cargo test -p engine listen_winding_sign (R-540 S13 Winding sign): under Stereo by winding the figure-eight run forwards and time-reversed swap their side levels: each line's level on L forwards equals its level on R reversed, and on R forwards its level on L reversed, to 1 %; and forwards the sides differ, the strongest line's L and R levels unequal; controls: a real FFT (|X[k]| = |X[NF−k]|, so L = R) and the sign dropped, each fail the sides-differ or the swap arm"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-458
-  note: "R-540 S1, S6; φ under Stereo by winding is RQ-458, the code applied meanwhile. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P3, applied per R-369: both sides hold the same frequencies and differ only in level, so the test asserts levels and that the sides differ, and its controls fail. *Was (verify):* \"cargo test -p engine listen_winding_sign (R-540 S13 Winding sign): the figure-eight run forwards and time-reversed swap its lines between L and R under Stereo by winding, line for line; controls: a real FFT, or the sign dropped, each fail\""
+  note: "R-540 S1, S6; φ under Stereo by winding is RQ-458, the code applied meanwhile. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P3, applied per R-369: both sides hold the same frequencies and differ only in level, so the test asserts levels and that the sides differ, and its controls fail. *Was (verify):* \"cargo test -p engine listen_winding_sign (R-540 S13 Winding sign): the figure-eight run forwards and time-reversed swap its lines between L and R under Stereo by winding, line for line; controls: a real FFT, or the sign dropped, each fail\" RQ-458 ruled (a) by R-555: under Stereo by winding the chord voices only the winding spectra, φ heard through the follow track, a φ-only line panned by the winding spectra at its bin."
 - id: REQ-GUI-311
   area: GUI
   statement: "Listen's spectrum must be principia_listen.md §2's: the window's samples resampled linearly to N uniform times (4096 for the analysis shown, 1024 per frame), each series less its mean, Hann-windowed and zero-padded to NF (8192, 2048), df = (N−1)/(D·NF); peaks above 0.01 of the largest bin from k₀ = max(2, ⌈1.5/(D·df)⌉), refined by the parabola through three bins, the top Voices (default 16) kept; left and right found on one shared scale; the entropy, the interval and the periods per window as §2 defines them."
@@ -20430,51 +20430,52 @@
     section: 2. The spectrum
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
     detail: "cargo test -p engine listen_spectrum (R-540 S13 Figure-eight): the figure-eight from its standard ICs (§12), t ≤ 60, the defaults, gives lines in exact 2:1, 3:2 and 4:3 ratios to ±5 cents; a channel with no line stays near silent beside the other on their shared scale; controls: a windowing error, or a peak-refinement error, each fail"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-441
-  - RQ-453
-  note: "R-540 S2; ⚑ physics review (the spectrum). Where it runs is RQ-441 (its option (a), the CPU in the inspector worker, applied when the build starts unless ruled first); the entropy against REQ-VAL-102's anchors is RQ-453. Closed by TASK-M8-12."
+  note: "R-540 S2; ⚑ physics review (the spectrum). Where it runs is RQ-441 (its option (a), the CPU in the inspector worker, applied when the build starts unless ruled first); the entropy against REQ-VAL-102's anchors is RQ-453. Closed by TASK-M8-12. R-555 rules RQ-441 (a): the analysis runs on the CPU in the inspector worker (REQ-SYS-060) from the viewer's own computeIC samples at S2's sizes, never the GPU integrator nor frequency diffusion's FFT; and RQ-453 (c): the entropy here gets its own anchors (REQ-VAL-194), REQ-VAL-102 staying θ(t)'s."
 - id: REQ-GUI-312
   area: GUI
-  statement: "Where no mono peak of a window clears the 1.5-period cut, Listen must play the mean rates of principia_listen.md §2 (θ's and, under the default signal, ψ's signed winding rates, φ's unsigned rate), so that every run that moves makes a sound; a run with t_end ≤ 10⁻⁶ or fewer than three samples has no analysis and is silent."
+  statement: "Where no mono peak of a window clears the 1.5-period cut, Listen must play the mean rates of principia_listen.md §2 (θ's and, under the default signal, ψ's signed winding rates, φ's unsigned rate), so that every run that moves makes a sound; a moving run with t_end ≤ 10⁻⁶ or fewer than three samples has no spectrum and plays its mean rates from the samples it has, a rate dropped only when it is exactly 0."
   source:
   - file: docs/design/principia_listen.md
     section: 2. The spectrum
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine listen_no_silent_run (R-540 S13 No silent run): every run with t_end > 0 that moves has at least one voiced line, the fallback included, over the known orbits and the same orbits cut short at t = 0.5, 1 and 2; control: the fallback removed fails. The transcribed code also silences a moving run with t_end ≤ 10⁻⁶ or fewer than three samples, and a bound run with small |E| whose lines Fit to hearing's ±8 octaves cannot bring under 6 kHz; these are RQ-467, the code applied meanwhile, and the test does not assert them"
+    detail: "cargo test -p engine listen_no_silent_run (R-540 S13 No silent run, with no exceptions, R-555): every run with t_end > 0 that moves has at least one voiced line, the fallback included, over the known orbits, the same orbits cut short at t = 0.5, 1 and 2, the figure-eight's ICs with their velocities scaled to E = −3×10⁻⁴ and −10⁻⁴ (the bound runs with small |E| the physics review of PR #267 found silent under the ±8-octave fit), a moving run of two samples and one with t_end = 10⁻⁷; controls: the fallback removed, Fit to hearing capped at ±8 octaves, and the short runs' fallback removed (or their rates dropped under the 10⁻⁶ cut), each fail"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-450
-  - RQ-467
-  note: "R-540 S2, H6. Against pointer_channels §4's measured floor (REQ-VAL-103) this is RQ-450, applied meanwhile: the measured minimum sets the readout's warning. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P2, applied per R-369: the gap is named, not tested. *Was (verify):* \"cargo test -p engine listen_no_silent_run (R-540 S13 No silent run): every run with t_end > 0 that moves has at least one voiced line, the fallback included, over the known orbits and the same orbits cut short at t = 0.5, 1 and 2; control: the fallback removed fails\""
+  note: "R-540 S2, H6. Against pointer_channels §4's measured floor (REQ-VAL-103) this is RQ-450, applied meanwhile: the measured minimum sets the readout's warning. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P2, applied per R-369: the gap is named, not tested. *Was (verify):* \"cargo test -p engine listen_no_silent_run (R-540 S13 No silent run): every run with t_end > 0 that moves has at least one voiced line, the fallback included, over the known orbits and the same orbits cut short at t = 0.5, 1 and 2; control: the fallback removed fails\" R-555 rules RQ-450 (a) (every moving run sounds; REQ-VAL-103's measured minimum sets the readout's warning) and RQ-467 (b) + (d) (the fit uncapped; the short runs play their mean rates; R-555 A6: their rates dropped only at exactly 0): the test asserts S13 with no exceptions. *Was (statement):* \"… so that every run that moves makes a sound; a run with t_end ≤ 10⁻⁶ or fewer than three samples has no analysis and is silent.\" *Was (verify):* the arm list ending \"control: the fallback removed fails. The transcribed code also silences a moving run with t_end ≤ 10⁻⁶ or fewer than three samples, and a bound run with small |E| whose lines Fit to hearing's ±8 octaves cannot bring under 6 kHz; these are RQ-467, the code applied meanwhile, and the test does not assert them\"."
 - id: REQ-GUI-313
   area: GUI
-  statement: "Listen's pitch must be Hz = f·t_c·f_ref·2^shift (principia_listen.md §3): t_c = (2|E|)^{−3/2} for E < 0, else I^{3/4}, at t = 0; f_ref (1/t_c is) 110, 220 (the default) or 440 Hz; Fit to hearing (on by default) choosing shift, a whole number of octaves from −8 to 8, once per run from the whole run's strongest mono line into 110–880 Hz; only lines strictly between 30 Hz and 6 kHz voiced."
+  statement: "Listen's pitch must be Hz = f·t_c·f_ref·2^shift (principia_listen.md §3): t_c = (2|E|)^{−3/2} for E < 0, else I^{3/4}, at t = 0; f_ref (1/t_c is) 110, 220 (the default) or 440 Hz; Fit to hearing (on by default) choosing shift, any whole number of octaves, once per run from the whole run's strongest mono line into 110–880 Hz; only lines strictly between 30 Hz and 6 kHz voiced; the jump across E = 0 kept, the readout naming t_c's branch."
   source:
   - file: docs/design/principia_listen.md
     section: 3. Pitch
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine listen_scale_invariance (R-540 S13 Scale invariance): a system and its copy scaled by α (positions ×α, velocities ×α^{−1/2}, so times ×α^{3/2}) give the same voiced peaks in Hz to 0.1 Hz and the same four effect inputs (§9); and the known answer: Lagrange rotating (§12) over t ≤ 60 at shift 0 (Fit to hearing off, or the shift asserted 0) voices its line at f·t_c = 3√3/(2π) times f_ref, 181.94 Hz at 220, within S13's ±5 cents; controls: a t_c or f_ref slip (a constant factor, e.g. |E|^{−3/2} for (2|E|)^{−3/2}, failing the known-answer arm), and an effect input that is not scale-free, each fail"
+    detail: "cargo test -p engine listen_scale_invariance (R-540 S13 Scale invariance, with no exceptions, R-555): a system and its copy scaled by α (positions ×α, velocities ×α^{−1/2}, so times ×α^{3/2}) give the same voiced peaks in Hz to 0.1 Hz and the same four effect inputs (§9); the known answer: Lagrange rotating (§12) over t ≤ 60 at shift 0 (Fit to hearing off, or the shift asserted 0) voices its line at f·t_c = 3√3/(2π) times f_ref, 181.94 Hz at 220, within S13's ±5 cents; a bound run at E = −10⁻⁴ (the figure-eight's ICs, velocities scaled) is shifted past −8 octaves, its strongest line in 110–880 Hz, and the readout names t_c's branch on each side of E = 0; controls: a t_c or f_ref slip (a constant factor, e.g. |E|^{−3/2} for (2|E|)^{−3/2}, failing the known-answer arm), an effect input that is not scale-free, and the fit capped at ±8 octaves, each fail"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-467
-  note: "R-540 S3; ⚑ physics review (the pitch's scale invariance). f_ref's value is REQ-GUI-143's calibration. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P4, applied per R-369: a constant f_ref or t_c error is itself scale-invariant, so the known-answer arm makes S13's slip control testable (the demo's 181.7 Hz is −2.3 cents). *Was (verify):* \"cargo test -p engine listen_scale_invariance (R-540 S13 Scale invariance): a system and its copy scaled by α (positions ×α, velocities ×α^{−1/2}, so times ×α^{3/2}) give the same voiced peaks in Hz to 0.1 Hz and the same four effect inputs (§9); controls: a t_c or f_ref slip, and an effect input that is not scale-free, each fail\" RQ-467 (physics review 5595386853 of PR #267, P2): t_c = (2|E|)^{−3/2} grows without bound as E → 0⁻, so a bound run with small |E| voices nothing, and the pitch jumps about 19 octaves across E = 0; the code applied meanwhile."
+  note: "R-540 S3; ⚑ physics review (the pitch's scale invariance). f_ref's value is REQ-GUI-143's calibration. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P4, applied per R-369: a constant f_ref or t_c error is itself scale-invariant, so the known-answer arm makes S13's slip control testable (the demo's 181.7 Hz is −2.3 cents). *Was (verify):* \"cargo test -p engine listen_scale_invariance (R-540 S13 Scale invariance): a system and its copy scaled by α (positions ×α, velocities ×α^{−1/2}, so times ×α^{3/2}) give the same voiced peaks in Hz to 0.1 Hz and the same four effect inputs (§9); controls: a t_c or f_ref slip, and an effect input that is not scale-free, each fail\" RQ-467 (physics review 5595386853 of PR #267, P2): t_c = (2|E|)^{−3/2} grows without bound as E → 0⁻, so a bound run with small |E| voices nothing, and the pitch jumps about 19 octaves across E = 0; the code applied meanwhile. R-555 rules RQ-467 (b) + (d): the fit takes any whole number of octaves, the ~19-octave jump across E = 0 stays and the readout names it (R-555 A7: t_c's branch). *Was (statement):* \"… shift, a whole number of octaves from −8 to 8, once per run …; only lines strictly between 30 Hz and 6 kHz voiced.\""
 - id: REQ-GUI-314
   area: GUI
   statement: "Listen must follow the head or play the whole run as principia_listen.md §4 gives it: in Follow the head, while the trace is played, scrubbed or animates on its own clock, the frame at or before the head, its window Fixed, centred (W = min(Fixed·t_c, t_end), default 6 t_c, shifted inside the run), Grows or Grows, last half, the frames at §4's hop; otherwise, and under Whole run, the whole run as one chord; past the run's end follow mode is silent."
@@ -20489,9 +20490,9 @@
   rulings:
   - R-538
   - R-540
+  - R-555
   milestone: M8
   rq:
-  - RQ-455
   - RQ-465
   note: "R-540 S4; the last-half window is the code's, RQ-455. Closed by TASK-M8-12. RQ-465, (a) applied meanwhile: paused, the chord is the whole run whatever the trace's length; a Window or LastDt trace is drawn as chosen (RQ-427 (a), PR #263)."
 - id: REQ-GUI-315
@@ -20508,47 +20509,45 @@
   rulings:
   - R-109
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-440
-  - RQ-452
-  note: "R-540 S5; with a struck instrument the chord strikes, against REQ-GUI-050's never retrigger: RQ-452, the code applied meanwhile. Closed by TASK-M8-59."
+  note: "R-540 S5; with a struck instrument the chord strikes, against REQ-GUI-050's never retrigger: RQ-452, the code applied meanwhile. Closed by TASK-M8-59. R-555 rules RQ-452 (a), as the code: the struck chord's strike is the instrument's timbre under the bank's cross-fade (REQ-GUI-050); RQ-440 ruled (a), one synthesis graph (REQ-GUI-345)."
 - id: REQ-GUI-316
   area: GUI
-  statement: "Listen's loudness must be principia_listen.md §7's: the window's shape rms (with the rotation's under the default signal); level 0 unless rms > RMS_FLOOR; otherwise clamp(√min(1, rms/0.1), Min, Max) under Loudness: follows the shape's movement (the default), or clamp(1, Min, Max) normalised; Min level 15 %, Max level 100 %, Volume 60 % by default."
+  statement: "Listen's loudness must be principia_listen.md §7's: the window's shape rms (with the rotation's under the default signal); level 0 unless rms > RMS_FLOOR, RMS_FLOOR being 10× the larger of the f64 floor of an exactly rotating triangle under Angles only, 4.9e-8, and L₆₀, the maximum shape rms under Angles only of Lagrange rotating over t ≤ 60 with the shipped integrator, measured and recorded in §7; otherwise clamp(√min(1, rms/0.1), Min, Max) under Loudness: follows the shape's movement (the default), or clamp(1, Min, Max) normalised; Min level 15 %, Max level 100 %, Volume 60 % by default."
   source:
   - file: docs/design/principia_listen.md
     section: 7. Loudness
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
-    detail: "cargo test -p engine listen_loudness (R-540 S13 Lagrange (angles only)): Lagrange rotating under Angles only, integrated by prin-rs's computeIC over the horizon RQ-442 sets, reads level 0, its shape rms below RMS_FLOOR; the level follows √min(1, rms/0.1) within the clamps; controls: the floor removed, or set above prin-rs's drift (RQ-442), each fail"
+    detail: "cargo test -p engine listen_loudness (R-540 S13 Lagrange (angles only), pinned at t ≤ 60, R-555): L₆₀ re-measured with prin-rs's computeIC at the defaults (§12's Lagrange rotating, every follow-mode frame's window and the whole-run chord within [0, 60]) equals §7's record, and RMS_FLOOR = 10 × max(4.9e-8, L₆₀); Lagrange rotating under Angles only over t ≤ 60 reads level 0, its shape rms below RMS_FLOOR; a perturbed Lagrange (body 1's v_x × 1.01) under Angles only over t ≤ 60 sounds, its level above 0; the level follows √min(1, rms/0.1) within the clamps; controls: the floor removed (Lagrange sounds), and the floor set so high that the perturbed Lagrange is silent, each fail"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-442
-  note: "R-540 S7; ⚑ physics review (the floor). RMS_FLOOR's value waits on RQ-442 (the demo's 10⁻⁷ is its own integrator's); the task does not start until it is ruled. Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P1, applied per R-369: equal-mass Lagrange is linearly unstable (Routh 27Σm_im_j/M² = 9 > 1); max |n⊥| 4e-13 at t ≤ 20, 1e-7 at t ≤ 60, 2.4e-2 at t ≤ 100, broken up by 150; the f64 acos floor at the pole reads 4.9e-8 under Angles only; so no fixed t ≤ 400 can pass on correct code and the arm's horizon waits on RQ-442 (rq). *Was (verify):* \"cargo test -p engine listen_loudness (R-540 S13 Lagrange (angles only)): Lagrange rotating under Angles only, integrated by prin-rs's computeIC over t ≤ 400, reads level 0, its shape rms below RMS_FLOOR; the level follows √min(1, rms/0.1) within the clamps; controls: the floor removed, or set above prin-rs's drift (RQ-442), each fail\""
+  note: "R-540 S7; ⚑ physics review (the floor). R-555 rules RQ-442, a reconciliation of its (a) and (b): RMS_FLOOR = 10 × max(4.9e-8, L₆₀), L₆₀ measured by TASK-M8-12 and recorded in principia_listen.md §7 with its method (R-555 A2), the test pinned at t ≤ 60 with the perturbed Lagrange's failing arm (A3). Closed by TASK-M8-12. Physics review 5595386853 of PR #267, P1, applied per R-369: equal-mass Lagrange is linearly unstable (Routh 27Σm_im_j/M² = 9 > 1); max |n⊥| 4e-13 at t ≤ 20, 1e-7 at t ≤ 60, 2.4e-2 at t ≤ 100, broken up by 150; the f64 acos floor at the pole reads 4.9e-8 under Angles only. *Was (statement):* \"… level 0 unless rms > RMS_FLOOR; otherwise …\". *Was (verify):* \"cargo test -p engine listen_loudness (R-540 S13 Lagrange (angles only)): Lagrange rotating under Angles only, integrated by prin-rs's computeIC over the horizon RQ-442 sets, reads level 0, its shape rms below RMS_FLOOR; the level follows √min(1, rms/0.1) within the clamps; controls: the floor removed, or set above prin-rs's drift (RQ-442), each fail\"; before PR #267's review, \"… over t ≤ 400 …\". *Was (note):* \"RMS_FLOOR's value waits on RQ-442 (the demo's 10⁻⁷ is its own integrator's); the task does not start until it is ruled.\""
 - id: REQ-GUI-317
   area: GUI
-  statement: "Listen's instruments must be the 39 recipes of principia_listen.md §8's INSTRUMENTS, voiced by makeVoice's steps as §8 transcribes them; the instrument decides only the timbre, so it changes nothing measured or displayed; a struck instrument is struck once and rings at its floor, sus × the level, never decaying to zero."
+  statement: "Listen's instruments must be the 39 recipes of principia_listen.md §8's INSTRUMENTS, voiced by makeVoice's steps as §8 transcribes them, the default Sine (pure); the instrument decides only the timbre, so it changes nothing measured or displayed; a struck instrument is struck once and rings at its floor: on a strike the note rises over 4 ms, then from 20 ms decays with time constant strike/3 to sus × level (sus 0.25 by default), never to zero; an attack's time constant is att/3."
   source:
   - file: docs/design/principia_listen.md
     section: 8. Instruments
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui listen_struck_floor (R-540 S13 Struck floor): a struck voice 10 s after its strike is at sus × level, not 0, and was struck exactly once, with no beat and its line unmoved; the voiced peaks and the display are identical under every instrument; each recipe's fields equal §8's; controls: a timer re-strike, or a decay to zero, each fail"
+    detail: "cargo test -p gui listen_struck_floor (R-540 S13 Struck floor): a struck voice 10 s after its strike is at sus × level, not 0, and was struck exactly once, with no beat and its line unmoved; its gain rises over 4 ms and from 20 ms follows the strike/3 decay to sus × level; the default instrument is Sine (pure); the voiced peaks and the display are identical under every instrument; each recipe's fields equal §8's; controls: a timer re-strike, a decay to zero, and a decay at time constant strike, each fail"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-440
-  - RQ-454
-  - RQ-456
-  note: "R-540 S8; the default instrument (Sine (pure) in the code, Warm sine in the file) is RQ-454 and the strike's time constant RQ-456, the code applied meanwhile. Closed by TASK-M8-59."
+  note: "R-540 S8. R-555 rules RQ-454 (Sine (pure) the default, with the human's Listen effects follow-up) and RQ-456 (a) (strike/3 to sus × level; att/3), the code's; RQ-440 ruled (a). Closed by TASK-M8-59. *Was (note):* \"R-540 S8; the default instrument (Sine (pure) in the code, Warm sine in the file) is RQ-454 and the strike's time constant RQ-456, the code applied meanwhile. Closed by TASK-M8-59.\" *Was (verify):* \"… each recipe's fields equal §8's; controls: a timer re-strike, or a decay to zero, each fail\"."
 - id: REQ-GUI-318
   area: GUI
   statement: "Listen's struck and retrig voices must sound again on the trajectory's own beats in follow mode (Strikes on: each syzygy the head passes, the default; every crossing time ÷ 1, 2 or 4, default 2; only when a line changes, adding no beats), and, in every mode, when their line has moved by more than a quarter-tone since it last sounded."
@@ -20557,16 +20556,16 @@
     section: 8. Instruments
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
     detail: "cargo test -p gui listen_strikes_on: in follow mode a struck voice is struck once per syzygy the head passes (the default), once per t_c/2 under ÷ 2, and once on its line moving by more than 1/48 octave in each mode; a retrig voice gets a note event, its gain held; control: a strike on a timer of its own fails"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-440
-  - RQ-457
-  note: "R-540 S8; the line-change strike in every mode is the code's, RQ-457. Closed by TASK-M8-59."
+  note: "R-540 S8; R-555 rules RQ-457 (a), the code's: a voice whose line has moved more than a quarter-tone is struck again in every mode, Strikes on adds the beats, and only when a line changes adds none; RQ-440 ruled (a). Closed by TASK-M8-59. *Was:* \"R-540 S8; the line-change strike in every mode is the code's, RQ-457. Closed by TASK-M8-59.\""
 - id: REQ-GUI-319
   area: GUI
   statement: "Listen's events must be principia_listen.md §9's, each with its switch, at Event level (80 % by default), fired as the head passes them in follow mode and panned by the bodies involved (1, 2, 3 at −0.8, 0, +0.8): a close approach below 0.2 R (on), the terminal collision by its pair (on), the terminal escape or ejection (on), and a syzygy tick (off)."
@@ -20580,29 +20579,27 @@
     detail: "cargo test -p gui listen_events: as the head passes, a pair's separation minimum below 0.2 R fires one whoosh at §9's depth, the terminal collision its pair's drum, a triple collision the crash, the escape a falling glide towards the escaping body's side, and a syzygy a tick only when switched on; each switch silences only its own event; nothing fires outside follow mode; controls: an event fired twice, or with its switch off, each fail"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-440
-  - RQ-444
-  note: "R-540 S9, H4; the 0.2 R threshold and depth scale are parameters, RQ-444 (a) applied. Closed by TASK-M8-59."
+  note: "R-540 S9, H4; R-555 rules RQ-444 (a): the 0.2 R threshold and the depth scale are stated parameters in principia_listen.md §9, not calibrated; RQ-440 ruled (a). Closed by TASK-M8-59. *Was:* \"R-540 S9, H4; the 0.2 R threshold and depth scale are parameters, RQ-444 (a) applied. Closed by TASK-M8-59.\""
 - id: REQ-GUI-320
   area: GUI
-  statement: "Listen's effects must be principia_listen.md §9's, each a switch and an amount read at the head (or the run's mean for a chord): reverb from the spread R/R₀, Doppler from Ṙ t_c / R, bit-crush from the entropy H and stereo width from √(L_z²|E|), all scale-free, chained voices and events → bit-crush → width → dry and convolver → compressor → output."
+  statement: "Listen's effects must be principia_listen.md §9's, each a switch and an amount read at the head (or the run's mean for a chord): reverb from the spread R/R₀, Doppler from Ṙ t_c / R, bit-crush from the entropy H and stereo width from √(L_z²|E|), all scale-free, chained voices and events → bit-crush → width → dry and convolver → compressor → output; by default reverb (×1.40), Doppler (×1.50) and stereo width (×1.50) are on and bit-crush (×0.60) is off."
   source:
   - file: docs/design/principia_listen.md
     section: 9. Events and effects
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
-    detail: "cargo test -p gui listen_effects: each effect's parameter equals §9's mapping of its input over a sweep of inputs and amounts, and its off state is the identity (wet 0, detune 0, 16 bits, w = 1); each input is equal for a system and its scaled copy; the graph's order is §9's chain; control: an input that is not scale-free fails"
+    detail: "cargo test -p gui listen_effects: each effect's parameter equals §9's mapping of its input over a sweep of inputs and amounts, and its off state is the identity (wet 0, detune 0, 16 bits, w = 1); the default state has reverb, Doppler and width on at ×1.40, ×1.50 and ×1.50 and bit-crush off; each input is equal for a system and its scaled copy; the graph's order is §9's chain; Doppler detunes every voice of the follow track by the same amount and never a chord (Ṙ taken as 0); controls: an input that is not scale-free fails, and with each of reverb, Doppler and width switched off from the default the output equals that effect's identity (wet 0, detune 0, w = 1), so the off states are still the identity"
   rulings:
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-440
-  - RQ-454
-  note: "R-540 S9, H9; reverb and width are off by default in the code, on in the file: RQ-454, the code applied meanwhile. Closed by TASK-M8-59."
+  note: "R-540 S9, H9. R-555 rules RQ-454 with the human's Listen effects follow-up (21 Oct 2026): reverb, Doppler and stereo width on by default at their existing amounts, bit-crush off; the demo's code (trace_sound.html), the transcription source, has the three unchecked, and the ruling overrides it for these three switches only; RQ-440 ruled (a). Closed by TASK-M8-59. *Was (note):* \"R-540 S9, H9; reverb and width are off by default in the code, on in the file: RQ-454, the code applied meanwhile. Closed by TASK-M8-59.\" *Was (verify):* \"… the graph's order is §9's chain; control: an input that is not scale-free fails\"."
 - id: REQ-GUI-321
   area: GUI
   statement: "Listen must sharpen on dwell as principia_listen.md §10 gives it: a moving hover's run integrated to the map's own horizon under pointer_channels §3's step budget; after a 280 ms dwell, or at once for a pin, a run that reached it without an event is integrated on to Listen's Horizon (20, 60 by default, 150, 400) where that is longer, the trace and the sound both switching to it; a run ended by its event is not extended."
@@ -20611,16 +20608,17 @@
     section: 10. Horizon and dwell
   - file: decisions.md
     section: "R-540 — Listen, the trajectory heard as sound, as `principia_listen.md` gives it and its demo's code transcribes it: the spectrum of the motion of the triangle's shape plus its rotation, complex so that the winding's sign is the stereo side, pitched by the crossing time so that it is scale-free, following the head or played whole, every moving run heard; the instrument voices it and changes nothing measured; events and effects; its build waits on RQ-440 and RQ-442 *(extends R-109)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: unit test
     detail: "cargo test -p gui listen_dwell: a hover held 280 ms (a pin at once) on a run that reached the moving horizon without an event is integrated on to Horizon, the trace and the sound switching in the same frame (cross-fade 260 ms); a run ended by its event is not extended; a pointer that moves on cancels it; the map's quads are unchanged; controls: the sound switching without the trace, or an extension of an ended run, each fail"
   rulings:
   - R-144
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-464
-  note: "R-540 S10, H8; the moving bound and Listen's horizon against R-144's step budget and the Run window are RQ-464, (a) applied meanwhile. Closed by TASK-M8-60."
+  note: "R-540 S10, H8; R-555 rules RQ-464 (a): the moving hover to the sim key's t_max under pointer_channels §3's step budget, S10's 20 read as the demo's maps' horizon, on to Listen's Horizon on dwell or a pin, the trace and the sound together, the map unchanged. Closed by TASK-M8-60. *Was:* \"R-540 S10, H8; the moving bound and Listen's horizon against R-144's step budget and the Run window are RQ-464, (a) applied meanwhile. Closed by TASK-M8-60.\""
 - id: REQ-GUI-322
   area: GUI
   statement: "Listen's spectrum and spectrogram must be drawn as principia_listen.md §11 gives them: the spectrum on log frequency 30 Hz–6 kHz, 0 to −60 dB, the fit band, the channels in #5ab4ff, #e0a030 and #dcdcdc, the top peaks as notes and the harmonics; the spectrogram's frames in magma, each in dB above its own mean over ±½ octave, display only, with its event lane and playhead; and the readout's lines."
@@ -20761,17 +20759,19 @@
     section: "R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*"
   - file: docs/design/principia_listen.md
     section: 8. Instruments
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
-    detail: "cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key, Horizon included; only Horizon starts an integration, of the shown trajectory through computeIC; Tab and Enter reach the controls column by column (Sound, Loudness, Listen; then Pitch & analysis, Events, Effects), group by group in §G5's order, in navigation mode, each changed only in interaction mode (§G3, R-409); controls: a sound setting of principia_listen.md missing, a Listen edit that changes the sim key or the quad requests, a non-Horizon Listen edit that calls computeIC (the call counter, as REQ-GUI-269 reads it), and a control out of that order or changed in navigation mode, each fail"
     method: GUI screenshot
+    detail: "cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with its default (§G5's Listen… table: the code's, but reverb, Doppler and width on, R-555), the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key, Horizon included; only Horizon starts an integration, of the shown trajectory through computeIC; Tab and Enter reach the controls column by column (Sound, Loudness, Listen; then Pitch & analysis, Events, Effects), group by group in §G5's order, in navigation mode, each changed only in interaction mode (§G3, R-409); controls: a sound setting of principia_listen.md missing, a Listen edit that changes the sim key or the quad requests, a non-Horizon Listen edit that calls computeIC (the call counter, as REQ-GUI-269 reads it), and a control out of that order or changed in navigation mode, each fail"
   rulings:
   - R-540
   - R-541
+  - R-555
   milestone: M8
   rq:
-  - RQ-454
   - RQ-459
-  note: "R-541 G6, P8; defaults the code's (RQ-454); the family assignment is written by the task (RQ-459, R-72). Gui review 5595359543 of PR #267, G3 (Listen never touches the sim key: §G5, R-540 H3, REQ-GUI-321) and G2 (the keyboard reach and order arm), applied per R-369. Closed by TASK-M8-65 (split from TASK-M8-62, code review 5595371779 F2); *was:* \"Closed by TASK-M8-62\". *Was (verify):* \"cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key but Horizon's extension; control: a sound setting of principia_listen.md missing fails\" Gui review 5595467390 of PR #267, H2, applied per R-369: a control on the only-Horizon-integrates arm. *Was (verify):* \"cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key, Horizon included; only Horizon starts an integration, of the shown trajectory through computeIC; Tab and Enter reach the controls column by column (Sound, Loudness, Listen; then Pitch & analysis, Events, Effects), group by group in §G5's order, in navigation mode, each changed only in interaction mode (§G3, R-409); controls: a sound setting of principia_listen.md missing, a Listen edit that changes the sim key or the quad requests, and a control out of that order or changed in navigation mode, each fail\""
+  note: "R-541 G6, P8; defaults the code's (RQ-454); the family assignment is written by the task (RQ-459, R-72). Gui review 5595359543 of PR #267, G3 (Listen never touches the sim key: §G5, R-540 H3, REQ-GUI-321) and G2 (the keyboard reach and order arm), applied per R-369. Closed by TASK-M8-65 (split from TASK-M8-62, code review 5595371779 F2); *was:* \"Closed by TASK-M8-62\". *Was (verify):* \"cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key but Horizon's extension; control: a sound setting of principia_listen.md missing fails\" Gui review 5595467390 of PR #267, H2, applied per R-369: a control on the only-Horizon-integrates arm. *Was (verify):* \"cargo xtask screenshot listen_window (instrument menu open): every control of §G5's Listen… table with the code's default, the two columns, the readout row and the grouped menu, each family holding its count; cargo test -p gui listen_window: each control sets its Listen field and none touches the sim key, Horizon included; only Horizon starts an integration, of the shown trajectory through computeIC; Tab and Enter reach the controls column by column (Sound, Loudness, Listen; then Pitch & analysis, Events, Effects), group by group in §G5's order, in navigation mode, each changed only in interaction mode (§G3, R-409); controls: a sound setting of principia_listen.md missing, a Listen edit that changes the sim key or the quad requests, and a control out of that order or changed in navigation mode, each fail\" R-555 rules RQ-454 with the human's Listen effects follow-up: the defaults are the code's (sound off at launch, Sine (pure)) but for reverb, Doppler and width, on by default. *Was (verify):* \"every control of §G5's Listen… table with the code's default, …\"."
 - id: REQ-GUI-330
   area: GUI
   statement: "Listen must add to the bottom band's Time column and nothing else (R-541 G7): with sound on the band keeps its height (196 px by default) and an event lane and mini spectrogram fill the Time column's spare height; expanded (⏶), the band grows upward to its second height (420 px by default), the view giving up exactly that, the Time column showing the full spectrogram, the Compass its cube only (its buttons out of the keyboard tree) and the Legend's column the spectrum at the head until ⏷; F3 hides the whole band."
@@ -21047,6 +21047,24 @@
   - R-552
   milestone: M8
   note: "R-552 (RQ-408 (a); its default by RQ-461, R-556), E1, E2. Closed by TASK-M8-55. The Trace group's and Trace…'s routes to the same state are RQ-461's (R-556), built by TASK-M8-61 and TASK-M8-62."
+- id: REQ-GUI-345
+  area: GUI
+  statement: "Listen's voice and effects chain must be one Rust synthesis graph, transcribed node for node from trace_sound.html (makeVoice, INSTRUMENTS, the bank, the effects); natively it must play through cpal on its own audio thread, and the browser build must play the same graph's samples in TASK-M8-38's shell (an AudioWorklet or cpal's WebAudio backend), never a second Web Audio transcription."
+  source:
+  - file: docs/design/principia_listen.md
+    section: 5. Voices
+  - file: docs/design/principia_listen.md
+    section: 9. Events and effects
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
+  verify:
+    method: unit test
+    detail: "cargo test -p gui listen_graph: the graph rendered offline, with no audio device, gives the same samples as the native output's callback, the cpal stream running on a thread of its own, never the frame loop's or the main thread; every node of trace_sound.html's makeVoice, INSTRUMENTS, the bank and the effects chain has its node in the graph (the test's table, checked against principia_listen.md §5, §8 and §9); the browser build's audio path takes its samples from the same graph (one synthesis module, named in the build); controls: a node missing from the graph, the output on the frame loop's thread, and a second synthesis path in the browser build, each fail"
+  rulings:
+  - R-540
+  - R-555
+  milestone: M8
+  note: "R-555 (RQ-440 (a), with the one point the human made explicit). Closed by TASK-M8-59, which depends on TASK-M8-38 for the browser shell (R-555 A1); TASK-M8-12's audio out is the native cpal stream."
 - id: REQ-TOOL-001
   area: TOOL
   statement: "Each session must record once: device (GPU/CPU model, core counts, VRAM or unified memory size in its own field), backend and driver version, precision support and f64 rate, build (commit hash, profile, feature flags) and display (resolution, refresh, DPI scale)."
@@ -25885,6 +25903,8 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: numerical gate
     detail: "spectral entropy for the figure-eight ≈ 0.076 and for the chaotic reference ≈ 0.177; periodic < chaotic"
@@ -25893,10 +25913,9 @@
   - R-96
   - R-109
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-453
-  note: "Measured values used as an anchor, stated in trajectory_viewing §1 (pointer_channels §2 is working notes, R-109). The chaotic IC and the tolerance: REQ-VAL-113 (definition); REQ-VAL-114 (calibration). R-540 (21 Oct 2026): Listen's entropy is over the mono spectrum of the selected signal (0.309 against Burrau's 0.352 in the demo), not θ(t)'s; this check stays θ(t)'s, separate from Listen's readout, RQ-453 (a) applied meanwhile."
+  note: "Measured values used as an anchor, stated in trajectory_viewing §1 (pointer_channels §2 is working notes, R-109). The chaotic IC and the tolerance: REQ-VAL-113 (definition); REQ-VAL-114 (calibration). R-540 (21 Oct 2026): Listen's entropy is over the mono spectrum of the selected signal (0.309 against Burrau's 0.352 in the demo), not θ(t)'s; this check stays θ(t)'s, separate from Listen's readout, RQ-453 (a) applied meanwhile. R-555 rules RQ-453 (c): this check stays θ(t)'s with its anchors, 0.076 against 0.177; Listen's readout entropy gets its own anchors (REQ-VAL-194), the demo's 0.309 against 0.352 recorded as the demo's value."
 - id: REQ-VAL-103
   area: VAL
   statement: "The minimum trajectory length t for a usable spectrum (about 20+ oscillation periods) must be set by a recorded measurement, not guessed."
@@ -25907,16 +25926,17 @@
     section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
   - file: docs/design/principia_listen.md
     section: 2. The spectrum
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: numerical gate
     detail: "a recorded measurement of spectral line resolution vs t gives the minimum t used by listen"
   rulings:
   - R-109
   - R-540
+  - R-555
   milestone: M8
-  rq:
-  - RQ-450
-  note: "R-540 S2 (21 Oct 2026): every run that moves makes a sound (the mean-rate fallback, REQ-GUI-312); the measured minimum sets the readout's \"under 20: too short to resolve a note\" warning, not a silence: RQ-450, (a) applied meanwhile."
+  note: "R-540 S2 (21 Oct 2026): every run that moves makes a sound (the mean-rate fallback, REQ-GUI-312); the measured minimum sets the readout's \"under 20: too short to resolve a note\" warning, not a silence: RQ-450, (a) applied meanwhile. R-555 rules RQ-450 (a): the minimum is still measured and recorded and sets the readout's warning, not a silence; pointer_channels §4's \"below which the sound is meaningless\" reads \"below which no line is resolved, and Listen says so\"."
 - id: REQ-VAL-104
   area: VAL
   statement: "The two sonification predictions must be tested on inspector data: a line of ICs across a known fractal boundary sounds a note dissolving into noise and re-forming as a different note, and a 3:2 resonance gives a 3:2 frequency ratio (a fifth)."
@@ -26076,7 +26096,7 @@
 - id: REQ-VAL-114
   area: VAL
   kind: calibration
-  statement: "The tolerance on the spectral-entropy anchor values (0.076 figure-eight, 0.177 chaotic) must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
+  statement: "The tolerance on the spectral-entropy anchor values (0.076 figure-eight, 0.177 chaotic), and on Listen's readout entropy anchors (REQ-VAL-194), must be calibrated: proposed with its evidence by the task that needs it, checked by a reviewer, confirmed by the human at the M8 gate and recorded in decisions.md."
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
@@ -26084,13 +26104,17 @@
     section: "R-71 — A missing value becomes a calibration requirement *(closes RQ-46 to RQ-55, values)*"
   - file: decisions.md
     section: "R-109 — Only pointer_channels §4 is normative *(closes RQ-70)*"
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: numerical gate
     detail: "the proposal shows the entropy's spread under the spectrum's windowing and trajectory-length choices and a tolerance that still separates the two orbits"
   rulings:
   - R-71
   - R-109
+  - R-555
   milestone: M8
+  note: "R-555 (RQ-453 (c)): Listen's readout entropy gets its own anchors, confirmed at the M8 gate with this tolerance. *Was (statement):* \"The tolerance on the spectral-entropy anchor values (0.076 figure-eight, 0.177 chaotic) must be calibrated: …\"."
 - id: REQ-VAL-115
   area: VAL
   statement: "The logH falsification check of the re-registration mechanism must be run in M3 — logH (no coordinate transformation) against Heggie under the same RK4 and the same step control — and if logH does not match or beat Heggie the re-registration mechanism must be recorded as wrong."
@@ -27514,6 +27538,24 @@
   - R-551
   milestone: M2
   note: "R-551 (RQ-477 (c)): qa measured rotate-all 1.82×10⁻¹⁴ and scale-all 1.69×10⁻¹⁴ on this distribution, 3 of 5 seeds past 1.6×10⁻¹⁴. Closed by TASK-M2-46."
+- id: REQ-VAL-194
+  area: VAL
+  kind: calibration
+  statement: "Listen's readout entropy anchors, principia_listen.md §2's entropy of the selected signal's mono spectrum over the whole run at the defaults (Horizon 60), for the figure-eight and Burrau 3:4:5 (§12's known orbits, Burrau to its collision), must be calibrated: measured with prin-rs's integrator by the task that needs them, proposed with their evidence, checked by a reviewer, confirmed by the human at the M8 gate with REQ-VAL-114's tolerance and recorded in decisions.md; the figure-eight's below Burrau's."
+  source:
+  - file: docs/design/principia_listen.md
+    section: 2. The spectrum
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
+  verify:
+    method: numerical gate
+    detail: "cargo xtask gate listen-entropy: the figure-eight's and Burrau 3:4:5's readout entropies, measured with prin-rs's computeIC at the defaults, are recorded with the proposal and the figure-eight's is below Burrau's; once confirmed, each lies within REQ-VAL-114's tolerance of its anchor; the demo's 0.309 and 0.352 are evidence, not the anchors"
+  rulings:
+  - R-71
+  - R-540
+  - R-555
+  milestone: M8
+  note: "R-555 (RQ-453 (c)). REQ-VAL-102 stays θ(t)'s check with 0.076 against 0.177. Closed by TASK-M8-12, which proposes it; confirmed at the M8 gate."
 - id: REQ-PERF-001
   area: PERF
   statement: "The per-step energy evaluation must reuse the pairwise distances from the force computation."
@@ -29892,11 +29934,15 @@
   source:
   - file: docs/design/principia_trajectory_viewing.md
     section: 1. The single mechanism
+  - file: decisions.md
+    section: "R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*"
   verify:
     method: benchmark
     detail: "frame times with continuous hover + listen equal the no-hover baseline within noise; the work runs on the inspector worker"
-  rulings: []
+  rulings:
+  - R-555
   milestone: M8
+  note: "R-555 rules RQ-441 (a): Listen's analysis runs here, on the CPU, from the trajectory viewer's own computeIC samples at principia_listen.md §2's sizes; it does not use the GPU integrator, and it does not reuse frequency diffusion's FFT (REQ-TOOL-093 stays retired)."
 - id: REQ-SYS-061
   area: SYS
   statement: "The interactive atlas must state its predictability horizon, and nothing downstream may treat an atlas pixel past the horizon as a result."

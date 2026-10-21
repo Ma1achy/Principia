@@ -9,7 +9,7 @@
 - **Size:** ~400 lines, the tests included
 
 ## Goal
-Listen's half of R-541 G2 and G4, split from TASK-M8-61 so that the trace's GUI does not wait on Listen's RQs: the Trajectory panel's Listen section between Trace and Numbers, collapsed until first used and then remembered per user; each kept tab's own sound, switching with the tab; the Figure's L; and the shape-sphere preview's window highlight while Listen is on. **It waits on RQ-440 and RQ-442** through TASK-M8-12.
+Listen's half of R-541 G2 and G4, split from TASK-M8-61 so that the trace's GUI does not wait on Listen's RQs: the Trajectory panel's Listen section between Trace and Numbers, collapsed until first used and then remembered per user; each kept tab's own sound, switching with the tab; the Figure's L; and the shape-sphere preview's window highlight while Listen is on. It waited on RQ-440 and RQ-442 through TASK-M8-12; R-555 rules both.
 
 ## References
 - `decisions.md` § "R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*"

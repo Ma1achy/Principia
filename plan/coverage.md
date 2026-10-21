@@ -17,14 +17,14 @@
 | REF | 52 |
 | RENDER | 100 |
 | COL | 136 |
-| GUI | 319 |
+| GUI | 320 |
 | TOOL | 187 |
-| VAL | 192 |
+| VAL | 193 |
 | PERF | 95 |
 | SYS | 85 |
-| **total** | **1706** |
+| **total** | **1708** |
 
-Of these: 143 calibration, 143 definition, 1420 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 144 calibration, 143 definition, 1421 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -38,11 +38,11 @@ Of these: 143 calibration, 143 definition, 1420 obligation. Retired (kept for th
 | M5 | 178 |
 | M6 | 223 |
 | M7 | 218 |
-| M8 | 333 |
+| M8 | 335 |
 
 ## Sections
 
-1416 sections in 52 files: 1116 yield at least one requirement; 300 yield none and are listed below with the reason.
+1416 sections in 52 files: 1117 yield at least one requirement; 299 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-378) | 1 |
@@ -197,7 +197,6 @@ Of these: 143 calibration, 143 definition, 1420 obligation. Retired (kept for th
 | R-534 — The post stage and the benchmark lines make profiler schema v2, `principia-profile-v2`; every reader accepts v1 *(closes RQ-399; amends R-497; extends R-56)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-535 — A benchmark run draws into a fixed-size offscreen surface in Fit, the same on every device; the window only shows it *(closes RQ-400; amends R-496)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
 | R-536 — Each "Driven by the data" preset's registry entry records the stand-in its lab graph actually uses; the port reads the real field *(closes RQ-401)* | planned (the plan PR) | R-485: docs first, then the plan; the plan PR's requirements cite this section |
-| R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)* | **MISSING REASON** | |
 | R-556 — The trace and Listen in the GUI, R-541's questions ruled: Listen's section collapsed until first used, then remembered per user; the expanded strip's spectrum in the Legend's column; R-538's six kept-trace colours, tested against the body colours and the stain classes; only the trace leaves Lines ▾; K the lock and Space keep; TASK-M8-65 writes the instrument families; every setting set in at most two places; one outline toggle, on by default; the Trajectory panel keeps its summary, playhead and buttons; the band's heights are splitter defaults; a paused trace drawn whole at the default length only; Listen in the Trajectory panel only *(closes RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465 and RQ-466; amends R-540 and R-541)* | **MISSING REASON** | |
 | R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)* | **MISSING REASON** | |
 | R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)* | **MISSING REASON** | |
@@ -443,7 +442,7 @@ Of these: 143 calibration, 143 definition, 1420 obligation. Retired (kept for th
 |---|---|---|
 | Principia — Listen: the trajectory heard as sound | parent heading (obligations are in its subsections) | §1–§14; the italic preface names the sources and the RQs Listen's build waits on (R-540) |
 | 13. Tests (each with the arm that fires) | informative only | a table mapping each R-540 S13 test to the requirement whose verify carries it (REQ-GUI-309 to REQ-GUI-322) |
-| 14. What the demo is not | informative only | where the demo differs from the app, with pointers to RQ-440, RQ-441 and the queued entries |
+| 14. What the demo is not | informative only | where the demo differs from the app; the app's synthesis graph and where its analysis runs (R-555, ruling RQ-440 and RQ-441) are stated there and carried by REQ-GUI-345 and REQ-SYS-060 |
 
 ### `docs/design/principia_print_graph.md`
 
@@ -593,7 +592,6 @@ Of these: 143 calibration, 143 definition, 1420 obligation. Retired (kept for th
 
 ## Errors
 
-- uncovered section with no reason: decisions.md § R-555 — Listen's questions ruled: one Rust synthesis graph out through `cpal`, the analysis on the CPU in the inspector worker, `RMS_FLOOR` set above f64's floor from Lagrange measured to t ≤ 60, every moving run heard with Fit to hearing uncapped, the code's windows, strikes and channels; the defaults Sine (pure) and sound off at launch, with reverb, Doppler and stereo width on *(closes RQ-440 to RQ-444, RQ-450 to RQ-458, RQ-464 and RQ-467; amends R-540 and R-541)*
 - uncovered section with no reason: decisions.md § R-556 — The trace and Listen in the GUI, R-541's questions ruled: Listen's section collapsed until first used, then remembered per user; the expanded strip's spectrum in the Legend's column; R-538's six kept-trace colours, tested against the body colours and the stain classes; only the trace leaves Lines ▾; K the lock and Space keep; TASK-M8-65 writes the instrument families; every setting set in at most two places; one outline toggle, on by default; the Trajectory panel keeps its summary, playhead and buttons; the band's heights are splitter defaults; a paused trace drawn whole at the default length only; Listen in the Trajectory panel only *(closes RQ-445 to RQ-449, RQ-459 to RQ-463, RQ-465 and RQ-466; amends R-540 and R-541)*
 - uncovered section with no reason: decisions.md § R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*
 - uncovered section with no reason: decisions.md § R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*

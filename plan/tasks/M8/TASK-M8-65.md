@@ -9,7 +9,7 @@
 - **Size:** ~500 lines, the tests included
 
 ## Goal
-The `Listen…` window of R-541 G6, split from TASK-M8-62: every sound setting of `principia_listen.md` in two columns with the readout row, the instrument menu grouped by family, the code's defaults, nothing on the sim key. **It waits on RQ-440 and RQ-442** through TASK-M8-12.
+The `Listen…` window of R-541 G6, split from TASK-M8-62: every sound setting of `principia_listen.md` in two columns with the readout row, the instrument menu grouped by family, R-555's defaults (the code's, sound off at launch and Sine (pure), but reverb, Doppler and width on), nothing on the sim key. It waited on RQ-440 and RQ-442 through TASK-M8-12; R-555 rules both.
 
 ## References
 - `decisions.md` § "R-541 — The trace and Listen in the dev GUI's Explore mode, as `principia_trace_listen_gui.md` places them: everything about one trajectory in the Trajectory panel, each kept trajectory a tab with its own previews, trace and sound, its Trace, Listen and Numbers sections opening `Trace…` and `Listen…`; a Trace group in Overlays ▾; no trace control in the left panel or in Lines ▾; Listen adding to the bottom band's Time column and nothing else *(amends R-476 and R-538)*"

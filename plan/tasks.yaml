@@ -2457,9 +2457,9 @@
 - id: TASK-M8-12
   milestone: M8
   title: "Listen, 1: the signal, spectrum, pitch, windows, channels and loudness from the one computeIC integration, with the audio out (R-540 S1 to S4, S6, S7) ⚑"
-  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  depends_on: [TASK-M8-09, TASK-M8-11, TASK-M3-28]  # RQ-440 and RQ-442 ruled by R-555; no longer waits
   needs: [REQ-SYS-017, REQ-CHART-036, REQ-TOOL-028, REQ-VAL-041]
-  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313, REQ-GUI-314, REQ-GUI-316]
+  requirements: [REQ-GUI-049, REQ-GUI-050, REQ-GUI-090, REQ-GUI-143, REQ-GUI-144, REQ-VAL-102, REQ-VAL-103, REQ-VAL-113, REQ-VAL-114, REQ-SYS-060, REQ-GUI-309, REQ-GUI-310, REQ-GUI-311, REQ-GUI-312, REQ-GUI-313, REQ-GUI-314, REQ-GUI-316, REQ-VAL-194]
   reviewers: [code, qa, physics, gui, perf]  # ⚑ physics review required: the signal, the pitch's scale invariance, the floor (R-540 S1 to S3, S7)
   pitfalls: [PIT-3]
 - id: TASK-M8-13
@@ -2833,15 +2833,15 @@
 - id: TASK-M8-59
   milestone: M8
   title: "Listen, 2: the voices, the 39 instruments and makeVoice, strikes on the trajectory's beats, the events and the effects (R-540 S5, S8, S9)"
-  depends_on: [TASK-M8-12]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  depends_on: [TASK-M8-12, TASK-M8-38]  # RQ-440 and RQ-442 ruled by R-555; TASK-M8-38's shell plays the graph's samples (R-555 A1)
   needs: []
-  requirements: [REQ-GUI-315, REQ-GUI-317, REQ-GUI-318, REQ-GUI-319, REQ-GUI-320]
+  requirements: [REQ-GUI-315, REQ-GUI-317, REQ-GUI-318, REQ-GUI-319, REQ-GUI-320, REQ-GUI-345]
   reviewers: [code, qa, gui, perf]
   pitfalls: []
 - id: TASK-M8-60
   milestone: M8
   title: "Listen, 3: horizon and dwell, the spectrum, spectrogram and readout, sweep a row and the known orbits (R-540 S10 to S12)"
-  depends_on: [TASK-M8-12, TASK-M8-49]  # waits on RQ-440 and RQ-442 as well (R-540 H14)
+  depends_on: [TASK-M8-12, TASK-M8-49]  # RQ-440 and RQ-442 ruled by R-555; no longer waits
   needs: []
   requirements: [REQ-GUI-321, REQ-GUI-322, REQ-GUI-323]
   reviewers: [code, qa, gui]
@@ -2865,7 +2865,7 @@
 - id: TASK-M8-63
   milestone: M8
   title: "The trace and Listen in Explore, 3: Listen in the bottom band, the shared time axis and the legend's trace block (R-541 G7, G8)"
-  depends_on: [TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22]  # waits on RQ-440 and RQ-442 through TASK-M8-60 and TASK-M8-64
+  depends_on: [TASK-M8-64, TASK-M8-65, TASK-M8-60, TASK-M8-07, TASK-M8-22]  # RQ-440 and RQ-442 ruled by R-555; no longer waits
   needs: []
   requirements: [REQ-GUI-330, REQ-GUI-331, REQ-GUI-332]
   reviewers: [code, qa, gui]
@@ -2873,7 +2873,7 @@
 - id: TASK-M8-64
   milestone: M8
   title: "Listen in Explore, 1: the Trajectory panel's Listen section, the Figure's L and the window highlight (R-541 G2, G4)"
-  depends_on: [TASK-M8-61, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  depends_on: [TASK-M8-61, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # RQ-440 and RQ-442 ruled by R-555; PR #267's split
   needs: []
   requirements: [REQ-GUI-334, REQ-GUI-327]
   reviewers: [code, qa, gui]
@@ -2881,7 +2881,7 @@
 - id: TASK-M8-65
   milestone: M8
   title: "Listen in Explore, 2: the Listen… window (R-541 G6)"
-  depends_on: [TASK-M8-64, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # waits on RQ-440 and RQ-442 as well (R-540 H14); PR #267's split
+  depends_on: [TASK-M8-64, TASK-M8-12, TASK-M8-59, TASK-M8-60]  # RQ-440 and RQ-442 ruled by R-555; PR #267's split
   needs: []
   requirements: [REQ-GUI-329]
   reviewers: [code, qa, gui]

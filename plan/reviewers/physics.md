@@ -15,7 +15,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] Each gate is shown able to fail — a control (sign-flipped variant, known-answer field, a comparison that must differ) is run and fails. `docs/read_first/principia_00_philosophy.md` § "4.4 A test that cannot fail is not a test"; `docs/read_first/principia_01_pitfalls.md` § "9. A PARITY CHECK THAT MASKS THE BITS THE FORK LANDS IN"
 
 <!-- list:numerical-gates -->
-*109 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
+*110 requirements, generated from `plan/requirements.yaml` — do not edit by hand.*
 
 **M0**
 - [ ] REQ-VAL-004 — R-171: order samples coarse → fine (strides 32, 4, 1, 0; stride 0 unstrided, the finest); r_k = |x_k − x_{k−1}| / |x_{k−1}|; pass iff r_k strictly decreasing and the finest r_k below the threshold (provisional 0.1 against REQ-VAL-135 until M3). The recorded sequence 0.2153 → 0.4423 → 0.5494 → 0.0947 (r = 1.054, 0.242, 0.828) must fail; a strictly shrinking fixture must pass.
@@ -141,6 +141,7 @@ its calibration requirement's proposal is attached** (`decisions.md` § "R-71 �
 - [ ] REQ-VAL-110 — on a fixture region of known boundary dimension, D = 2 − α is reported with its fit error; the method, samples, ε range and classifier are shown
 - [ ] REQ-VAL-114 — the proposal shows the entropy's spread under the spectrum's windowing and trajectory-length choices and a tolerance that still separates the two orbits
 - [ ] REQ-VAL-116 — the browser build runs the Tier-N suite on Chrome stable and on Safari; every quantity falls within the native-wgpu tolerance; out-of-tolerance quantities are recorded
+- [ ] REQ-VAL-194 — cargo xtask gate listen-entropy: the figure-eight's and Burrau 3:4:5's readout entropies, measured with prin-rs's computeIC at the defaults, are recorded with the proposal and the figure-eight's is below Burrau's; once confirmed, each lies within REQ-VAL-114's tolerance of its anchor; the demo's 0.309 and 0.352 are evidence, not the anchors
 <!-- /list:numerical-gates -->
 
 ## 2. The load-bearing invariants (canonical_spec §9 — the walls)
