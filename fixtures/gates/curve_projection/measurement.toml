@@ -10,7 +10,7 @@
 # largest d(ν*), compared at a relative 1e-6 plus k·ε_R, and the share within tol. Near the tolerance: each
 # position component and the masses along (1, 0, −1) and (0, 1, −1) moved by up to a multiple of tol, 1024
 # draws per multiple: the shares kind 4 accepts, kind 4 and step 4 land, and kind 4 refuses where step 4 alone
-# would land at the closed form. Every share is compared within 0.02. On the curve
+# would land at the closed form. Every share is compared within four draws of its sample. On the curve
 # too, the largest d(ν(θ)) at ν > 0.9 and at ν ≤ 0.9 apart, and step 4's residual ‖D(Φ(c(x))) − C(x)‖_phys
 # in ε_R at the quantiles 0.99, 0.999 and 1, held below 256 and at most twice its value here, with the ν of
 # its largest, held above 0.9: REQ-ENC-024's evidence for the M2 gate's ε_phys (physics review P4).

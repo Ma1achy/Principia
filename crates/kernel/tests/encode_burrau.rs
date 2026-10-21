@@ -530,6 +530,13 @@ const NU_END: f64 = 0.9;
 /// M2 gate decides, so the test bounds its tail without proposing a value.
 const STEP4_BOUND: f64 = 256.0;
 
+/// The draws a share is held to: the fixture's within four draws of its sample (code review C6), the on-curve shares
+/// out of [`ON`], the rest out of [`OFF`].
+fn share_tol(k: &str) -> f64 {
+    let n = if k.starts_with("on_") { ON } else { OFF };
+    4.0 / n as f64
+}
+
 /// [`lands`] with step 4's residual `‖D(Φ(c(x))) − C(x)‖_phys` in `ε_R`, `None` where an axis placed nothing.
 fn step4<R: Precision, C: CurveChart<Param = R>>(chart: &C, x: &Ic<f64>) -> (bool, Option<f64>)
 where
@@ -745,7 +752,7 @@ fn text(values: &[(String, f64, String)]) -> String {
          # largest d(ν*), compared at a relative 1e-6 plus k·ε_R, and the share within tol. Near the tolerance: each\n\
          # position component and the masses along (1, 0, −1) and (0, 1, −1) moved by up to a multiple of tol, 1024\n\
          # draws per multiple: the shares kind 4 accepts, kind 4 and step 4 land, and kind 4 refuses where step 4 alone\n\
-         # would land at the closed form. Every share is compared within 0.02. On the curve\n\
+         # would land at the closed form. Every share is compared within four draws of its sample. On the curve\n\
          # too, the largest d(ν(θ)) at ν > 0.9 and at ν ≤ 0.9 apart, and step 4's residual ‖D(Φ(c(x))) − C(x)‖_phys\n\
          # in ε_R at the quantiles 0.99, 0.999 and 1, held below 256 and at most twice its value here, with the ν of\n\
          # its largest, held above 0.9: REQ-ENC-024's evidence for the M2 gate's ε_phys (physics review P4).\n",
@@ -770,7 +777,7 @@ fn held(text: &str, k: &str) -> f64 {
 }
 
 /// The fixture `text` is the measurement `values`' evidence: the proposal is the tests' `k`; each share is the
-/// fixture's within 0.02, a platform rounding a draw near an edge the other way;
+/// fixture's within four draws of its sample ([`share_tol`]), a platform rounding a draw near an edge the other way;
 /// each on-curve step-4 residual is below [`STEP4_BOUND`] and at most twice the fixture's, and the `ν` of the largest
 /// lies above [`NU_END`]; each other on-curve value is below `k` and at most twice the fixture's; each off-curve value
 /// is the fixture's within a relative 10⁻⁶ plus `k·ε_R` of its precision, a platform's `sin`, `cos` and `atan2`
@@ -782,7 +789,10 @@ fn check_measurement(text: &str, values: &[(String, f64, String)]) {
         if k == "k_curve" {
             assert!(*v == h, "{DIR}: k_curve {h} is not the tests' {v}");
         } else if k.ends_with("_frac") {
-            assert!((v - h).abs() <= 0.02, "{k} = {v}, the fixture holds {h}");
+            assert!(
+                (v - h).abs() <= share_tol(k),
+                "{k} = {v}, the fixture holds {h}"
+            );
         } else if k.starts_with("nu_") {
             assert!(
                 *v > NU_END && *v < 1.0,
@@ -849,6 +859,76 @@ negative_control!(
             &values,
         );
     }
+);
+
+/// Whether the fixture, with `k = h` read first, holds the measurement `k = v` ([`check_measurement`]).
+fn holds(k: &str, v: f64, h: f64) -> bool {
+    let fixture = std::fs::read_to_string(dir().join("measurement.toml")).expect("the measurement");
+    let text = format!("{k} = {h:e}\n{fixture}");
+    let values = [(k.to_string(), v, String::new())];
+    std::panic::catch_unwind(|| check_measurement(&text, &values)).is_ok()
+}
+
+/// The fixture check's edges (code review C6, physics review P4): a share within four draws of its sample and not
+/// five, on the curve out of [`ON`] and off it out of [`OFF`]; a step-4 residual below [`STEP4_BOUND`] and at most
+/// twice the fixture's; the `ν` of the largest above [`NU_END`] and below 1.
+fn check_holds(draws: f64) {
+    for (k, n) in [
+        ("on_euclid_f64_step4_frac", ON),
+        ("near_1e0_f64_within_frac", OFF),
+    ] {
+        let step = 1.0 / n as f64;
+        assert!(
+            holds(k, 0.5 + draws * step, 0.5),
+            "{k}: {draws} draws off is refused"
+        );
+        assert!(
+            holds(k, 0.5 - draws * step, 0.5),
+            "{k}: {draws} draws under is refused"
+        );
+        assert!(
+            !holds(k, 0.5 + 5.0 * step, 0.5),
+            "{k}: five draws off holds"
+        );
+        assert!(
+            !holds(k, 0.5 - 5.0 * step, 0.5),
+            "{k}: five draws under holds"
+        );
+    }
+    let r = "on_euclid_f32_step4_residual_max";
+    assert!(
+        holds(r, 255.0, 200.0),
+        "a residual below the bound is refused"
+    );
+    assert!(
+        !holds(r, STEP4_BOUND, 200.0),
+        "a residual at the bound holds"
+    );
+    assert!(
+        holds(r, 200.0, 100.0),
+        "a residual twice the fixture's is refused"
+    );
+    assert!(
+        !holds(r, 201.0, 100.0),
+        "a residual past twice the fixture's holds"
+    );
+    let nu = "nu_euclid_f32_step4_residual_max";
+    assert!(holds(nu, 0.9 + 1e-9, 0.95), "a ν above the end is refused");
+    assert!(!holds(nu, NU_END, 0.95), "a ν at the end holds");
+    assert!(holds(nu, 1.0 - 1e-9, 0.95), "a ν below 1 is refused");
+    assert!(!holds(nu, 1.0, 0.95), "a ν at 1 holds");
+}
+
+#[test]
+fn encode_curve_projection_holds() {
+    check_holds(4.0);
+}
+
+negative_control!(
+    encode_curve_projection_holds,
+    "a share five draws off is not the fixture's",
+    expected = "draws off is refused",
+    check_holds(5.0)
 );
 
 // ── The metric against a brute-force search (REQ-ENC-020) ──────────────────────────────────────────────────────────
