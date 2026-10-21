@@ -1,8 +1,8 @@
 # TASK-M8-32 — Export & share window: image with pxpack, state snapshot and share link, present mode (04_windows.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146
-- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46
+- **Closes:** REQ-TOOL-102, REQ-TOOL-103, REQ-GUI-100, REQ-TOOL-146, REQ-TOOL-167, REQ-TOOL-168, REQ-TOOL-169
+- **Depends on:** TASK-M8-30, TASK-M8-31, TASK-M8-05, TASK-M7-32, TASK-M6-28, TASK-M2-34, TASK-M6-47, TASK-M8-46, TASK-M6-48, TASK-M2-37, TASK-M2-40
 - **Needs (earlier milestones):** REQ-TOOL-059, REQ-TOOL-065, REQ-TOOL-067, REQ-TOOL-070, REQ-TOOL-071, REQ-TOOL-072
 - **Reviewers:** code, qa, gui, physics
 - **Pitfalls:** none
@@ -35,6 +35,9 @@ The Export & share window offers image export (size in multiples of the view, fo
 - `cargo test -p gui state_canonical_text` — for one state, the `SimConfig` and `RenderState` text in the snapshot JSON, in the decoded share link and in the extracted pxpack record is byte-equal to the canonical serialisation (gui_state_contract §2) (REQ-TOOL-146, R-309).
 - `cargo xtask screenshot 01_main` (present, present_sphere, present_fit; Esc restores the layout) and Review checklist (physics reviewer) on the fill — as REQ-GUI-100's verify: screenshot in present mode shows only the figure, filling the window; in Extend, over the shown figure's rect it is pixel-identical to the shown layout's capture (with a stain that reads no screen-lane field), and the window outside it is covered with the extension R-407 gives (on the latent chart its formula continued; on the shape sphere θ wrapped and the poles crossed), a forbidden pixel the canvas background (R-467) and every other pixel never the clear colour, never the shown view stretched; in Fit (`present_fit`) the capture equals F3's Fit capture (REQ-GUI-230); Esc restores 01_main.png's layout; controls: a present mode left in the shown rect fails the coverage check, and one that hatches a forbidden pixel fails; the physics reviewer checks the fill against R-407 (REQ-GUI-100).
   *Was: "`cargo xtask screenshot 01_main` (present, present_sphere; Esc restores the layout) and Review checklist (physics reviewer) on the fill — screenshot in present mode shows only the figure, filling the window: over the shown figure's rect it is pixel-identical to the shown layout's capture (with a stain that reads no screen-lane field), and the window outside it is covered with the extension R-407 gives (on the latent chart its formula continued; on the shape sphere θ wrapped and the poles crossed), never the clear colour or the shown view stretched; Esc restores 01_main.png's layout; control: a present mode left in the shown rect fails the coverage check; the physics reviewer checks the fill against R-407 (REQ-GUI-100).". Stale, replaced by R-467 and R-468.*
+- `cargo test -p gui export_tilt_map` — REQ-TOOL-167's verify.
+- `cargo test -p gui export_f3_fill` — REQ-TOOL-168's verify.
+- `cargo test -p gui export_chart_params` — REQ-TOOL-169's verify.
 
 ## Notes
 - R-390: TASK-M6-28 builds the Export & share window's frame on the mock engine; this task depends on it and wires it to the real export, keeping every requirement it closes.
@@ -56,3 +59,4 @@ The Export & share window offers image export (size in multiples of the view, fo
 - R-467 D13 (code review 5585240188 of PR #253, F4; applied per R-369): this task depends on TASK-M2-34 (the
   background), TASK-M6-47 (the mode's row) and TASK-M8-46 (Fit on the real engine); the note above's "background
   fallback" reading is now the Deliverables and acceptance lines.
+- **R-471, R-472, R-473, R-474, R-475 (20 Oct 2026):** the sidecar (the pxpack, the snapshot JSON, the share link) carries `tilt_map=sheet|lean`, `f3_fill=extend|fit`, each energy-type axis's mapping, a curved chart's tilt and a saved chart's definition; present mode follows F3's fill mode (R-472 X2c).

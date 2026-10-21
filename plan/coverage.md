@@ -8,23 +8,23 @@
 |---|---|
 | DEC | 47 |
 | ENC | 33 |
-| CHART | 56 |
+| CHART | 74 |
 | INT | 89 |
 | EVT | 31 |
 | PAY | 106 |
 | GEN | 36 |
 | SCHED | 97 |
 | REF | 51 |
-| RENDER | 86 |
-| COL | 106 |
-| GUI | 202 |
-| TOOL | 165 |
-| VAL | 188 |
+| RENDER | 98 |
+| COL | 110 |
+| GUI | 251 |
+| TOOL | 169 |
+| VAL | 189 |
 | PERF | 95 |
 | SYS | 82 |
-| **total** | **1470** |
+| **total** | **1558** |
 
-Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for their ids, not counted): 11.
+Of these: 136 calibration, 134 definition, 1288 obligation. Retired (kept for their ids, not counted): 11.
 
 ## Requirements per milestone
 
@@ -32,24 +32,25 @@ Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for th
 |---|---|
 | M0 | 122 |
 | M1 | 108 |
-| M2 | 174 |
-| M3 | 200 |
+| M2 | 193 |
+| M3 | 202 |
 | M4 | 104 |
 | M5 | 175 |
-| M6 | 175 |
-| M7 | 170 |
-| M8 | 242 |
+| M6 | 210 |
+| M7 | 180 |
+| M8 | 264 |
 
 ## Sections
 
-1215 sections in 47 files: 996 yield at least one requirement; 219 yield none and are listed below with the reason.
+1268 sections in 48 files: 1046 yield at least one requirement; 222 yield none and are listed below with the reason.
 | reason | sections |
 |---|---|
 | gap (RQ-310, RQ-311, RQ-312, RQ-313, RQ-314, RQ-315, RQ-316, RQ-317, RQ-318, RQ-319, RQ-320, RQ-321, RQ-322, RQ-323, RQ-324, RQ-325) | 1 |
-| informative only | 164 |
+| gap (RQ-378) | 1 |
+| informative only | 165 |
 | out of v1 (R-125) | 1 |
 | out of v1 (R-420) | 1 |
-| parent heading (obligations are in its subsections) | 38 |
+| parent heading (obligations are in its subsections) | 39 |
 | rationale | 10 |
 | superseded (kept for the record) | 4 |
 
@@ -145,7 +146,6 @@ Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for th
 | R-365 — RQ-196's A1 and A2 stand as built: each `xtask-ci` shard builds the kernel before its controls; `h = 0` gives 0 *(closes RQ-196)* | informative only | closes RQ-196: R-360's and R-361's items applied per R-204 stand and their marks name it: build-kernel in every xtask-ci shard before its controls (TASK-M0-45), and the horizon_steps > 0u guard outermost, so h = 0 gives 0 as REQ-RENDER-019 says (payload §6, TASK-M0-15, PR #116's veto item); archives RQ-196; changes no requirement |
 | R-366 — qa updates TASK-M0-45's pinned CI step lines; nextest shards by `hash:<k>/4`; #117's other items stand *(closes RQ-197; amends R-290, R-336 and R-360 as they apply)* | informative only | closes RQ-197 (option 1): a named exception to R-290, as R-335 and R-336 are: in TASK-M0-45's qa commit qa changes only the CI step matches in qa_TASK-M0-22_r235.rs and support/qa_m0_01.rs to the exact sharded forms, and the code reviewer confirms nothing else changed; the ci job's nextest shards use --partition hash:<k>/4, not slice:; PR #117's other items stand (4 shards, ci-checks, doctests in shard 1, the gate jobs, shared cache keys); a shard still over ~10.5 min is answered by splitting the long tests, first qa_cargo_xtask_alias_runs_deps, before raising n; its number is open in RQ-198; plan/OPERATIONS.md lists the exception; archives RQ-197; changes no requirement |
 | R-367 — The overnight self-merge condition "within budget" is dropped; #114 and #116 merge *(amends R-234 and R-264)* | superseded (kept for the record) | the overnight self-merge condition "within budget" is dropped (amends R-234 and R-264); #114 and #116 merge; superseded by R-369, the next ruling; records how R-370 to R-372 were numbered; changes no requirement |
-| R-369 — Standing rule on autonomy: no size gate; decide and continue; ask the human only for the five kinds listed *(supersedes R-234 and R-367; amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357)* | informative only | the standing rule on autonomy (messages B and C, C governing): no size gate, the reviewers judge size; the orchestrator and reviewers decide everything not on its list and record each decision in the PR as "applied per R-369", no "veto?"; a PR merges once its reviews pass and CI is green, the human away or not; ask only for physics that changes results and the docs don't settle, calibration values, passing a gate, dropping or deferring a requirement, and anything outside the repo or irreversible; file those in REVIEW_QUEUE and carry on; report in one batched summary; supersedes R-234 and R-367, amends R-175, R-204, R-208, R-211, R-264, R-283, R-290 and R-357; CLAUDE.md, plan/OPERATIONS.md and plan/WORKFLOW.md rewritten to it; the veto-mark check stays as it is; changes no requirement |
 | R-370 — R-366's number stands *(closes RQ-198)* | informative only | closes RQ-198: R-366's number stands; its numbering mark names R-370; archives RQ-198; changes no requirement |
 | R-371 — R-366's exception covers the four unsharded step strings in `qa_TASK-M0-29.rs` *(closes RQ-199; amends R-290 and R-366)* | informative only | closes RQ-199 (option 1): R-366's exception covers the four unsharded step strings in xtask/tests/qa_TASK-M0-29.rs, changed by qa to the exact sharded forms, the code reviewer confirming nothing else changed; plan/OPERATIONS.md lists it; TASK-M0-45 names it; archives RQ-199; changes no requirement |
 | R-373 — Reviewers post with one fixed form, `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -` *(amends R-357)* | informative only | every reviewer posts its verdict with exactly `gh api repos/Ma1achy/Principia/pulls/<N>/reviews --method POST --input -`, path first and flags after, the JSON object {event, commit_id, body} on standard input, written first to a scratch file by its own python3 json.dumps command fed by a heredoc, then posted by a command that begins with `gh api` (applied per R-369; a command beginning with python3 matched no allow rule); the only form the human's allow rule matches; no other form, a blocked post is stopped and reported; amends R-357; the five reviewer files and plan/OPERATIONS.md updated; changes no requirement |
@@ -167,6 +167,7 @@ Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for th
 | R-439 — A local mutants run that mutates the gui crate uses hard limits: one job, 90 s a mutant, one test thread and a narrow nextest filter; other crates keep R-388's run *(amends R-388)* | informative only | the human's ruling of 15 Oct 2026 on local mutation testing: a local run that mutates the gui crate takes -j 1, --timeout 90, a generous --build-timeout, nextest at one test thread, RUST_TEST_THREADS=1 and a narrow filter; other crates keep R-388's run; the orchestrator keeps a memory guard; process, applied in plan/OPERATIONS.md and .claude/agents/implementer.md; changes no requirement |
 | R-440 — A counter's starting zero, written `Cell::default()`, is not a constants-register value; this covers counters only, never real values *(scopes R-427)* | informative only | the human's remarks of 15 Oct 2026: no veto; a counter's starting zero is not a register value, scoped to counters, never real values; with the orchestrator's R-369 decision on IEEE format constants written from their std names; applied in a sentence of dd_generation_root §3.8, whose constants lint REQ-SYS-082 already covers; changes no requirement |
 | R-441 — η_E cannot raise a zero-momentum slice above its potential: a free-fall slice's pixels with `E* > U` are tagged `ENERGY_UNSCALABLE`, and the GUI docs say the near-uniform colour is expected, not a bug | informative only | the human's remark of 15 Oct 2026 (R-440 quotes it): dd_decoder §3.7's outcome stands, REQ-DEC-041's, built by TASK-M2-04; a line in render_gui_spec §G6 says a free-fall slice under η_E is near-uniformly degenerate white by design, the contour E* = V₀ (E* < 0 only, scattered pixels) its one exception in colour and mass-block tags (e.g. M01_TINY, also white) an exception in tag only; changes no requirement. Superseded in part by R-446 (16 Oct 2026): the line is reworded, the tagged pixels drawn black #141418 in the outcome view, not white |
+| R-510 — RQ-378 is parked until RQ-341 is ruled: whether Save view as chart on a curved chart also offers a flattened oblique-latent version waits on the decoder's Jacobian; the entry stays open and its option (a) stays applied | gap (RQ-378) | a deferral by the human's ruling: RQ-378 stays open, parked until RQ-341; nothing is built (REQ-GUI-244's note) |
 
 ### `docs/contracts/principia_canonical_spec.md`
 
@@ -374,6 +375,14 @@ Of these: 135 calibration, 132 definition, 1203 obligation. Retired (kept for th
 | section | reason | note |
 |---|---|---|
 | Principia — deep zoom & adaptive sampling | informative only | preamble |
+
+### `docs/design/principia_lines.md`
+
+| section | reason | note |
+|---|---|---|
+| Principia — the line system: contours and traces | informative only | the adoption note (R-476), the proposal's status line and its summary |
+| 4. Contours | parent heading (obligations are in its subsections) |  |
+| 13. About the mock-ups | informative only | how the mock-ups were drawn (R-476 M1: the scripts are not kept) |
 
 ### `docs/design/principia_quality_device_note.md`
 

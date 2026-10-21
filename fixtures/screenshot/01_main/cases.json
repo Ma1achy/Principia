@@ -105,6 +105,16 @@
       "surface": { "kind": "gui", "screen": "01_main", "steps": ["compass_case_tilt_hex"] },
       "artboard": "docs/gui/design/01_main.png",
       "compass": "compass/mock_compass_cube_tilt_hex.json"
+    },
+    {
+      "name": "mock_compass_views",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "enter", "arrow_right", "arrow_right", "arrow_right", "enter"] },
+      "artboard": "docs/gui/design/01_main.png"
+    },
+    {
+      "name": "mock_compass_plucker",
+      "surface": { "kind": "gui", "screen": "01_main", "steps": ["tab", "tab", "enter", "arrow_down", "arrow_down", "arrow_down", "enter", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "enter", "arrow_down", "arrow_down", "enter", "shift_arrow_up", "shift_arrow_up", "shift_arrow_up", "tab", "tab", "tab", "enter", "arrow_right", "arrow_right", "arrow_right", "arrow_right", "enter", "arrow_left", "arrow_left", "arrow_left", "arrow_left", "enter", "arrow_right"] },
+      "artboard": "docs/gui/design/01_main.png"
     }
   ]
 }

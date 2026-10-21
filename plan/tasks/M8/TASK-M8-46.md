@@ -39,6 +39,8 @@ On the real engine, View › Debug view draws REQ-COL-109's styles from the engi
 ## Notes
 - **Physics reviews** the forbidden set the mass-simplex test compares (R-407 A7, layer 2's narrowed simplex) and the quads Fit asks for (REQ-REF-011).
 - **A Chart-builder chart's warning** is TASK-M8-47's, waiting for RQ-372.
+- **R-506 (20 Oct 2026) rules RQ-372:** the warning is TASK-M8-47's, which no longer waits, logged only when the chart's physical-quantity axes are all warped (W1; REQ-GUI-228). The note above is kept as history (code review 5587720942 of PR #255, F7).
 - **The "Debug" key's legend check** moved here from REQ-GUI-105 (TASK-M8-22), which cannot reach the debug view:
   TASK-M8-46 depends on TASK-M8-22 (R-467 D13; code review 5585240188 of PR #253, F4, applied per R-369).
 - **TASK-M8-32 depends on this task** for Fit in present mode (REQ-GUI-100).
+- **R-470 (20 Oct 2026):** the real engine's View › Debug view selects the baked debug variant (REQ-COL-109's note, R-41); scope unchanged.

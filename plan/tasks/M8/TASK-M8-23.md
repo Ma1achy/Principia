@@ -29,3 +29,5 @@ The Display window holds the fixed last stages (style, display scale, gamut clam
 
 ## Notes
 - R-390: TASK-M6-28 builds the Display window's frame on the mock engine; this task depends on it and keeps REQ-GUI-101 and REQ-GUI-080.
+- **R-476 (20 Oct 2026):** REQ-GUI-101 is reworded: the Display window's overlays are class edges and the cursor crosshair; the grid and t_end contours are Lines ▾ presets (TASK-M8-50).
+- **R-509 (20 Oct 2026), Y5:** class edges move to the line system too, a Lines ▾ preset (TASK-M8-50); REQ-GUI-101 now reads "The Display window must offer the overlay cursor crosshair; the grid, the t_end contours and the class edges are Lines ▾ presets", so the Display window's one overlay is the cursor crosshair. The Goal's "the overlays grid, class edges, t_end contours and cursor crosshair" and R-476's note above are kept as history (code review 5587720942 of PR #255, F6).

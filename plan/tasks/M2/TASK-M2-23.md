@@ -49,3 +49,4 @@ The lock is CPU-side chart construction held in `SimConfig` (R-69): setting it c
 ## Notes
 - Gap G16 applies to "re-centred to the nearest feasible point".
 - Lock is undoable (R-69) through the contract's history; the GUI binding (K, right-click) lands at M8.
+- **R-473 (20 Oct 2026):** REQ-CHART-007 is reworded: the tangent tilt keeps its lock, and the GUI's tilt of a curved chart is the rotation on the chart's own parameters (REQ-CHART-062, TASK-M2-36), which needs none.

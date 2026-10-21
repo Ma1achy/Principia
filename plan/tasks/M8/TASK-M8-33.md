@@ -1,8 +1,8 @@
 # TASK-M8-33 — Import picture, saved views, and record a time sweep (09_importrecord.png)
 
 - **Milestone:** M8
-- **Closes:** REQ-TOOL-104, REQ-TOOL-105, REQ-TOOL-106, REQ-TOOL-107
-- **Depends on:** TASK-M8-32, TASK-M8-08
+- **Closes:** REQ-TOOL-104, REQ-TOOL-105, REQ-TOOL-106, REQ-TOOL-107, REQ-TOOL-170
+- **Depends on:** TASK-M8-32, TASK-M8-08, TASK-M6-48, TASK-M6-49
 - **Needs (earlier milestones):** REQ-TOOL-061, REQ-TOOL-063, REQ-TOOL-066, REQ-TOOL-071, REQ-SYS-011
 - **Reviewers:** code, qa, physics
 - **Pitfalls:** PIT-1
@@ -27,7 +27,9 @@ Import picture (drop a Principia PNG or File › Import picture…) reads the px
 - `cargo test -p gui saved_view_go` — save a view, change it, press go: the state equals the saved one (REQ-TOOL-105).
 - `cargo test -p engine record_frames_pxpack` — record 5 frames as PNG frames: each carries a pxpack whose time is its own frame time; size aspect equals the view's; natively MP4 is offered only when a system ffmpeg is found; in the browser MP4/WebM is offered only where WebCodecs supports it (R-131) (REQ-TOOL-106).
 - `cargo xtask golden record-sweep` — a recorded frame at t equals a fresh blocking render at t pixel for pixel (REQ-TOOL-107).
+- `cargo test -p gui saved_view_tilt_map` — REQ-TOOL-170's verify.
 
 ## Notes
 - "Open side by side" opens the v2 side-by-side view of TASK-M8-36 once it lands; until then the action is asserted to request it.
 - RQ-108 ruled: R-131 — the formats offered per build (TASK-M8-30 builds the sinks).
+- **R-474, R-475 (20 Oct 2026):** a saved view reopens under its tilt map, a pre-R-474 one under Lean; a saved view on a saved chart carries its definition.

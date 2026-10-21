@@ -46,3 +46,4 @@ On the mock engine, the Manifold view's Navigate section loses its grid of eight
 - **R-459 G4 here (review round 1 of PR #243, gui review F4, applied per R-369).** The slice-axis rule for a preset change and Chart's basis edits is built with the slice frame, so no merge window leaves the normal in the plane; TASK-M6-40 applies the same rule to the H and V picks and the Plücker steer.
 - **qa's files (R-290, R-457 E9).** A qa assertion of the Navigate grid, the step slider, the old names or the shared target asserts what R-457 changes; this task's qa reviewer changes those, and only those, and the PR lists each.
 - **Early start (R-388).** It may start off TASK-M6-33's approved head (PR #240) and opens its PR once that merges.
+- **R-474 (20 Oct 2026, ruling RQ-340):** this task builds `X = Y` with the code's map, which becomes the Lean each axis option; TASK-M6-48 adds Tip as sheet as the default.
