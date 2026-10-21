@@ -18,6 +18,7 @@ pub mod prop;
 pub mod reference;
 pub mod roundtrip;
 pub mod shape_roundtrip;
+pub mod shape_scene;
 pub mod spawn;
 pub mod structural_scene;
 

@@ -1,0 +1,10 @@
+{
+  "render": { "harness": "shape_equal_area", "width": 128, "height": 64 },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass",
+  "lines": {
+    "row_16": { "from": [0, 16], "to": [127, 16] },
+    "row_32": { "from": [0, 32], "to": [127, 32] }
+  }
+}

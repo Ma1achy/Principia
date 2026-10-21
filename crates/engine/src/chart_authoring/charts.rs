@@ -11,9 +11,10 @@
 //! strips the construction's deterministic seed pins the momentum block's two DOF the two invariants leave
 //! (chart_reference §2.2, R-82).
 //!
-//! **`system_image`** (R-27, R-104, R-141, R-157). The shape sphere is n-to-1 with n = 2, its φ hemispheres
-//! reflection-equivalent; its descriptors are the `(θ, φ)` chart's (R-117), for either chart map, the exponential map's
-//! own value being RQ-371's. The `ν`-axis charts are `DoubleCover` where their range reaches both leg orderings and
+//! **`system_image`** (R-27, R-104, R-141, R-157, R-503). The shape sphere's spherical map is n-to-1 with n = 2, its φ
+//! hemispheres reflection-equivalent; its exponential map's value is computed from its cap, bijective within one closed
+//! hemisphere and n-to-1 with the per-pixel fold where the cap straddles the equator (`kernel::chart::shape_sphere`);
+//! its other descriptors are the `(θ, φ)` chart's (R-117), for either chart map. The `ν`-axis charts are `DoubleCover` where their range reaches both leg orderings and
 //! bijective otherwise (`kernel::chart::burrau`); the acute-angle charts fold the swap out and are bijective. Every
 //! other chart is bijective: its decode takes distinct points to distinct systems.
 
@@ -189,10 +190,13 @@ where
 
 impl<P> Authored for ShapeSphere<P>
 where
+    P: Copy,
+    f64: From<P>,
     ShapeSphere<P>: Chart,
 {
     /// The shape's two angles, kind 2 in the configuration, each the other's residual; `z₀`'s mass and momentum blocks
-    /// held. n-to-1 with n = 2 (R-141), the `(θ, φ)` chart's (R-117).
+    /// held, the `(θ, φ)` chart's (R-117). The chart's own `system_image`: the spherical map's n-to-1 with n = 2
+    /// (R-141), the exponential map's from its cap (R-503).
     fn descriptor(&self) -> ChartDescriptor {
         let (h, v) = match self.map {
             ShapeMap::Spherical => ("θ, the azimuth", "φ, the polar angle"),
@@ -212,7 +216,7 @@ where
             ],
             slice: frozen(|c| Block::of(c) != Block::Config),
             conventions: vec![],
-            system_image: SystemImage::NToOne(2),
+            system_image: self.system_image(),
             has_feasibility_boundary: false,
             coupling: Coupling::none(),
             annotation: false,

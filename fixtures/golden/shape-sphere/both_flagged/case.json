@@ -1,0 +1,10 @@
+{
+  "render": { "harness": "shape_equirectangular", "width": 128, "height": 64 },
+  "reference": "reference.png",
+  "tolerance": "REQ-VAL-138",
+  "expect": "pass",
+  "lines": {
+    "row_16": { "from": [0, 16], "to": [127, 16] },
+    "row_48": { "from": [0, 48], "to": [127, 48] }
+  }
+}
