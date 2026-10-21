@@ -721,8 +721,11 @@ rung, headroom, recent decisions and why; `principia_quality_device_note.md`, R-
 
 **Schema v1 (R-56):** telemetry §2's frame record and its **five stages** (integrate / reduce / colour / upload / present)
 at the top level; nested scopes, GPU passes, allocations and events beneath them. JSON. Leak flags and hot-path summaries
-are precomputed, so an agent reads conclusions, not raw traces. The artboard's finer categories (quadtree, stain + style,
-IC decode, readback, egui) are scopes nested under the five stages.
+are precomputed, so an agent reads conclusions, not raw traces. The artboard's finer categories (quadtree, stain, IC
+decode, readback, egui) are scopes nested under the five stages, the stain under `colour`; under schema v2 the stages
+are six, `post` among them, and the Print graph's own scopes nest under `post` (telemetry §5, R-534). *Was:*
+"(quadtree, stain + style, IC decode, readback, egui) are scopes nested under the five stages" (stale value, replaced
+by R-485 and R-534; telemetry §5's "stain + style" is "stain").
 
 **The post stage (R-488, R-497).** The Print graph is a stage of its own in the frame record, `stage_ms.post`, with the
 degrade level that ran, `post_level` (`full`, `reduced` or `plain`), per frame; the profiler shows it beside the five.
@@ -754,7 +757,7 @@ and `chrome://tracing`, R-207), Open in Tracy, Headless render….
   which axis bound; the suggested tier, "the highest `eps` and budget that held 16.7 ms"; **Save file…**, **Copy
   summary** and **Apply suggested tier**, applying it one undo entry and never automatic. The file is one plain-text
   JSON Lines file with no score (R-497). The look is `docs/gui/reference/print_graph/boards/bench.png` (layout only; no
-  value in it is a measurement).
+  value in it is a measurement; its IBM Plex is not copied, the dev GUI being Ubuntu and Ubuntu Mono, §G1 and §G13).
 - **First launch:** an opt-in prompt offers the Quick suite once; nothing runs unless the user accepts, and declining
   leaves the default tier (R-528).
 - **Collecting results:** by hand, the saved file or the copied summary; there is no upload (R-529).
@@ -769,8 +772,9 @@ either file as schema v1 or v2 (R-534; *was:* "as schema v1").
 - **The statistic.** A scope's p95 is the nearest-rank 95th percentile of its per-frame ms over the file's frames: the
   samples sorted ascending, the ⌈0.95 n⌉-th, counted from 1 (telemetry §3: percentiles, not means). `prin` and the
   interactive path share the percentile code (telemetry §5.5).
-- **The scope set.** The frame (its `frame_ms`); each of the five stages (its `stage_ms`, in the frames where it is not
-  `null`); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
+- **The scope set.** The frame (its `frame_ms`); each of the file's schema's stages, five in v1 and six in v2, `post`
+  compared wherever both files have it (its `stage_ms`, in the frames where it is not `null`; R-534, applied per R-369,
+  perf review 5596612647 of PR #268, F3; *was:* "each of the five stages"); each CPU scope, named by its stage and the names from the stage down to it (`integrate/quadtree`); and each
   GPU pass, by its stage and name. A scope that occurs more than once in a frame gives that frame the sum of its ms; a
   frame where it does not occur gives it no sample.
 - **A missing scope.** A scope in only one of the two files is listed, as only in BASE or only in NEW, and is not
@@ -834,14 +838,17 @@ scale → gamut clamp → colour-vision simulation → screen (R-111). The stain
     by default, R-490). Palette acts on the finished colour (R-524). While the Medium is a screen medium, Viewing is
     off by default and the panel shows why, "Viewing assumes a sheet: off by default for a screen medium" (R-525).
   - A **preset gallery**: the 111 presets as live thumbnails of the current view, grouped in 12 families, the lab's 103
-    in its 11 and R-130's eight in a twelfth (R-532; *was:* "the 103 presets … grouped by the lab's 11 families");
+    in its 11 and R-130's eight in a twelfth, labelled "Poster", its "Default" always shown as "Poster › Default", never
+    a bare "Default" (R-532; *was:* "the 103 presets … grouped by the lab's 11 families");
     picking one fills the Medium slot. Thumbnails render at low resolution, lazily, at most a few per frame.
   - **Edit graph…** opens the graph editor, the Stain's node editor reused (same wiring, typed ports, undo and keyboard
     scopes) on the same graph the slots show (design doc §7.2).
   - **Reset to Plain**, one undo entry.
   - While any Print graph but Plain is active, a badge names it ("Print: Linocut", R-489) in the figure's header strip,
     above the plot, never over the figure (R-523, ruling RQ-397; *was:* "its place on the canvas is RQ-397"). Measurement never reads the print, and goldens and scientific checks run under Plain (R-489). The look is
-    `docs/gui/reference/print_graph/boards/panel.png` (reference only, R-485).
+    `docs/gui/reference/print_graph/boards/panel.png` (reference only, R-485), with three departures (§G13): its canvas
+    corner badge is the header strip's (R-523), its "103 in 11 families" is 111 in 12 (R-532), and its IBM Plex is not
+    copied, the dev GUI being Ubuntu and Ubuntu Mono (§G1).
 - *Was (before R-485, which with R-486 supersedes R-130; R-130's eight styles are ported as additional Print graph
   presets, R-532, ruling RQ-396, where this note read "R-130's styles are kept as RQ-396 decides"):*
   **Style** is optional and applies to the figure only. Scientific checks run with **plain**. The styles are the poster's
@@ -1211,6 +1218,12 @@ corpus, the spec follows the authority:
 - **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
   (`N_max`, default 64), and the sound mapping (`θ(t), φ(t)` → spectrum). The Run window exposes the parameters the
   contracts define, under their contract names — so the artboard's integrator "tolerance" field has no counterpart.
+- **The Print graph and benchmark boards** (R-485, R-496; `docs/gui/reference/print_graph/boards/`). `panel.png`'s
+  footer, "Canvas corner badge while active", is overridden by R-523: the print badge sits in the figure's header strip,
+  never over the figure; its gallery header, "103 in 11 families", is 111 in 12 by R-532 (R-130's eight in a family of
+  their own, "Poster"). `panel.png` and `bench.png` are drawn in IBM Plex (`boards/source/boards.html`); their fonts
+  are not copied, the dev GUI's being Ubuntu and Ubuntu Mono (§G1). (gui review 5596618095 of PR #268, G4, applied per
+  R-369.)
 
 ## G14. Settled by the notes (record)
 
@@ -1283,8 +1296,8 @@ Overlays menu (R-67).*
   (§10).
 - **Node inspector** (right) — the editor for the selected node; morphs to the node/source type;
   Advanced-WGSL at the bottom (§9).
-- **Display window + Overlays menu** (R-67; was the global display bar, top) — style / render-scale / gamut / CVD; applied to `OUT`,
-  *outside* the pipeline (§12).
+- **Display window + Overlays menu** (R-67; was the global display bar, top) — the Print graph (R-485) / render-scale / gamut / CVD; applied to `OUT`,
+  *outside* the pipeline (§12). *(Was: "style / render-scale / gamut / CVD"; R-485 puts the Print graph where style was.)*
 
 A live **preview** (shape-sphere or illustrative slice, toggle) renders the current `OUT`.
 
@@ -1630,12 +1643,18 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
 
 ## 12. Display stage — global, outside the pipeline
 
-*Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.*
+*Order (R-67, R-487, R-531): stain → [the lines drawn through] → Print graph → display scale → gamut clamp → [the lines drawn over] → colour-vision simulation → screen (§G5, Display). The simulation sees the final in-gamut colours.* *(Was: "Order (R-67): stain → style → display scale → gamut clamp → colour-vision simulation → screen (§G5, Display).")*
 
-Applied to `OUT` after the graph, as **settings, never nodes** (no OUT-downstream graph):
+Applied to `OUT` after the graph, as **settings, never nodes** of the stain graph (no OUT-downstream node in it):
 
-- **style** (optional, figure only), **render→display scale**, **gamut clamp**, **CVD simulation** (models the viewer,
-  not the visualisation) — in that order (R-67). *(Was: gamut clamp, CVD simulation, render→display scale.)*
+- **the Print graph** (R-485; `principia_print_graph.md`; Plain, the identity, by default; figure only), **render→display
+  scale**, **gamut clamp**, **CVD simulation** (models the viewer, not the visualisation) — in that order (R-67, R-487).
+  *(Was: gamut clamp, CVD simulation, render→display scale.)* *(Was, before R-485: "**style** (optional, figure only)".)*
+- **The Print graph is a node graph of its own** (R-485), as `principia_colour_composition.md` §4.3 has it: its registry,
+  codegen and WGSL are its own, the stain's codegen never sees it, and it is no stain occupant or preset, so the stain
+  graph still has nothing downstream of `OUT`; in the stain graph's terms the Print graph is a display setting,
+  `RenderState.print` (R-491). *(Was: "Applied to `OUT` after the graph, as **settings, never nodes** (no
+  OUT-downstream graph):"; R-485's node graph is a separate graph, so "never nodes" holds for the stain graph only.)*
 
 ### 12.1 Structural overlays and tile debug shaders
 
@@ -1757,8 +1776,8 @@ preview; tile debug shaders are toggles in the Overlays menu but are *shaders*, 
    can't be reconstructed from dissolved code.
 10. **Presets are whole graphs**; catalogue default-composition = preset payload; debug locked →
     fork-on-edit.
-11. **Display stage (style / scale / gamut / CVD, in that order — R-67) is global**, outside the pipeline; its controls are
-    the Display window and the Overlays menu. *(Was: "gamut / CVD / scale / boundary overlay"; boundaries are a post node, §12.1.)*
+11. **Display stage (Print graph / scale / gamut / CVD, in that order — R-67, R-485; the lines drawn over after the gamut clamp, R-531) is global**, outside the pipeline; its controls are
+    the Display window and the Overlays menu. *(Was: "gamut / CVD / scale / boundary overlay"; boundaries are a post node, §12.1.)* *(Was, before R-485 and R-531: "style / scale / gamut / CVD, in that order — R-67".)*
 
 ---
 

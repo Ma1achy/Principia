@@ -113,7 +113,7 @@ it is listed (R-293). The one-off acts, such as a split, an acceptance or a merg
 - **R-515** — Yoshida-4's `w₁` is printed correctly rounded to f64 and `w₀` as `1 − 2w₁` computed in f64, so that `w₀ + 2w₁ = 1` holds exactly in f64 *(closes RQ-405; amends R-501 as to Yoshida-4's digits)*
 - **R-518** — `α_min` does not become a link parameter: it stays fixed at 0, as R-21 and R-481 A1 have it *(closes RQ-382)*
 - **R-519** — No new link registry entry until a study needs one; that study's own task adds it as a definition under physics review *(closes RQ-383)*
-- **R-526** — A field input to the Print graph is normalised as the stain normalises it, over the visible range with the stain's own window rule *(closes RQ-390)*
+- **R-526** — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*
 
 ## Design and architecture
 

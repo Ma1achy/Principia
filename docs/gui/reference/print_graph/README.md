@@ -18,7 +18,7 @@ Nothing here is run by the build, CI or any test.
 | `images/source_config_stability.jpg` | the input every reference image was rendered from | the port renders the same graph on the same image |
 | `images/lines_over_through.jpg` | the same contours drawn over three presets, and through them | R-487's two line passes |
 | `tools/` | the Playwright scripts that made every image here (`capture_nodes.js`, `capture_presets.js`, `capture_slot_chain.js`) and exported the catalogue (`export_catalogue.js`) | regenerating the references as exact PNGs at any size, below |
-| `boards/*.png`, `boards/source/` | the five design boards (`pipeline`, `slots`, `panel`, `degrade`, `bench`) and the HTML and images that draw them | the look of the design; the degrade board's reduced frames are downsamples of the full render, an illustration, not a run; the bench board shows layout only, no value in it is a measurement |
+| `boards/*.png`, `boards/source/` | the five design boards (`pipeline`, `slots`, `panel`, `degrade`, `bench`) and the HTML and images that draw them | the look of the design; the degrade board's reduced frames are downsamples of the full render, an illustration, not a run; the bench board shows layout only, no value in it is a measurement; where the boards differ from the rulings the spec follows the rulings (render_gui_spec §G13): the panel board's canvas corner badge is the figure's header strip (R-523), its "103 in 11 families" is 111 in 12 (R-532), and the boards' IBM Plex is not the dev GUI's Ubuntu and Ubuntu Mono (§G1) |
 
 **Regenerating the reference images** (the bundle's own recipe, for a port task on the human's Mac; nothing in CI runs
 it). From this folder, serve the lab and run the capture scripts with Chromium under SwiftShader

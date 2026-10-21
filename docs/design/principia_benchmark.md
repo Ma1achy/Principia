@@ -214,7 +214,9 @@ stage, `post_level` and the benchmark lines below; readers accept v1 (telemetry 
 1. **Line 1: the session header** (§2's session block, as today), plus `bench`:
    - `mode`, `suite_hash` and `complete`;
    - the list of scenarios with `ran | skipped(reason) | aborted`;
-   - power source, low-power mode and thermal state at start.
+   - power source, low-power mode and thermal state at start;
+   - `surface`, the offscreen surface's `{width, height}` (R-535), and `mobile`, `visual_viewport` and `wake_lock`
+     (R-530), each `null` off a phone (telemetry §5, "Schema v2").
 2. **Per scenario:**
    - a `scenario_begin` line with its canonical `start` state and its sweep row;
    - the frame records (§2), downsampled by §5's rule (every frame during motion, every Nth while idle);

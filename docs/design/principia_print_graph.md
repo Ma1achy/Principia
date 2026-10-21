@@ -166,10 +166,16 @@ docs, inputs and parameter ranges. It is the porting checklist.
 ### 4.4 Payload fields as inputs
 
 *Ruled by R-536 (RQ-401): each of the four presets' registry entries records the stand-in its lab graph actually uses
-(Relief of lifetime: `brightness`; Wet where chaotic and Unfinished where uncertain: `brightness` and `edges`, fringe
-density; Craquelure: `edges`), as R-492's deviation, and the port reads the real field in place of every stand-in node:
-`t_end` for the relief, the ensemble spread for the wash, and for Unfinished where uncertain and Craquelure the field
-the field-inputs task defines under physics review (R-72). The normalisation is the stain's (R-526). Was: "The lab's
+(Relief of lifetime: `brightness`; Wet where chaotic, Unfinished where uncertain and Craquelure: `edges`, fringe
+density; in Wet and Unfinished the `brightness` node is a threshold window on `edges`' output, not a stand-in), as
+R-492's deviation, and the port reads the real field in place of the stand-in node only: `t_end` for the relief, the
+ensemble spread for the wash, and for Unfinished where uncertain and Craquelure the field the field-inputs task defines
+under physics review (R-72). The windows stay, on the real field, their `lo` and `hi` a calibration (R-71) of that
+task. What an invalid sample of a present field (a NaN spread, a `sim_failed` sample's `t_end`, an FTLE failing
+`ftle_valid`) feeds the neighbourhood nodes is a definition requirement (R-72) of the same task. The normalisation is
+the stain's (R-526; its range is RQ-478). Was (R-536 as first ported, before physics review P1 of PR #268): "Wet where
+chaotic and Unfinished where uncertain: `brightness` and `edges`, fringe density; Craquelure: `edges`" and "in place of
+every stand-in node". Was: "The lab's
 caption names fringe density as the stand-in, and the lab's four graphs use brightness, fringe density or both; the
 deviation each port lists is RQ-401's (R-492)."*
 
@@ -178,7 +184,9 @@ the lab's "Driven by the data" family (Relief of lifetime, Wet where chaotic, Cr
 where the medium follows the physics: the relief is the lifetime, the wash is wet where the spread is high.
 
 - **Read-only.** The field is the same value the stain reads, normalised over the visible range with the stain's own
-  window rule. The Print graph can never write it.
+  window rule. The Print graph can never write it. *(R-526: the stain's normalisation. The stain's `range_norm` keeps a
+  declared range fixed, `t_end` → lin [0, T], and measures only an unbounded field over the draw, so "over the visible
+  range" and §12 q3's rescaling are queued as RQ-478; meanwhile each field's own `range_norm` rule applies.)*
 - **Absent is a defined state.** If the field is not in the payload (a tier that does not compute it), the input
   takes the node's declared default and the panel says "field not available at this tier". It is never silently
   replaced by brightness. In the lab these four presets use brightness as a stand-in, which is why they carry a `*`;
@@ -264,7 +272,7 @@ unstable ones.
   graph's **settings** beneath it, not its node parameters.
 - **Preset gallery**: the 103 presets as live thumbnails of the current view, grouped by the lab's 11 families.
   *(R-532, ruling RQ-396: R-130's eight styles are ported as additional presets beside them, 111 in all, the eight in
-  a twelfth family of their own.)* Picking one fills the Medium slot. Thumbnails render at low resolution, lazily, at most a few per frame.
+  a twelfth family of their own, labelled "Poster"; R-130's "Default" is always shown as "Poster › Default".)* Picking one fills the Medium slot. Thumbnails render at low resolution, lazily, at most a few per frame.
 - **Edit graph…** opens the advanced editor (§7.2).
 - **Reset** returns to Plain, and is one undo entry.
 
@@ -281,6 +289,10 @@ Each line set's style panel gets "Through the medium" (§2), off by default.
 ## 8. Cost and motion
 
 ### 8.1 Degrade while moving
+
+*Queued: who owns the whole-graph fallback (step 2), the Auto arbiter or the Print graph, and whether it runs under a
+pinned tier, is RQ-495 (the quality device note's one writer, no per-frame setting change, the arbiter off under a named
+tier).*
 
 This is Malachy's ruling. While the camera moves (the frame record's `camera_delta > 0`), or a drag is in progress:
 
@@ -299,6 +311,9 @@ and stability (§6.3) keeps it from shimmering. If full quality cannot hold the 
 and the tier controller treats the post stage like any other stage.
 
 ### 8.2 The budget
+
+*Queued: the tier controller's accounting of the post stage moves the Auto rung, which sets N, E, depth and FTLE
+gating, against §3's "A Print graph cannot change any number the instrument reports": RQ-479.*
 
 The post stage is a stage in the telemetry frame record (`stage_ms.post`). It is not exempt from the tier
 controller's accounting; the tier simply has a post-stage share. Which degrade level ran is recorded per frame
@@ -368,7 +383,8 @@ The measurement decides.
 
 *Queued as RQ-388 to RQ-391, one per question, in order (the human's point 6: "Do not rule on either doc's open
 questions"). Ruled: 1, no, Palette acts on the finished colour (R-524); 2, Viewing off by default for screen media,
-with the reason shown (R-525); 3, the stain's normalisation, the visible range (R-526). 4 is deferred by the human's
+with the reason shown (R-525); 3, the stain's normalisation (R-526; which range that is, and so whether a relief
+rescales while zooming, is RQ-478; *was:* "the stain's normalisation, the visible range"). 4 is deferred by the human's
 ruling, "later" (R-527): RQ-391 stays open and nothing is built. Was: "what is built meanwhile is each entry's."*
 
 1. Should **Palette** be allowed to run *before* the stain's lightness channel is composed, so a limited palette can

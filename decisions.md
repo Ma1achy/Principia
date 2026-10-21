@@ -15497,6 +15497,11 @@ as data; nothing in it was run.
 *What it amends:* it supersedes R-130 (with R-486, its heading block says so) and replaces render_gui_spec § "Display
 — the last stages"'s Style, whose earlier words are kept there as a *Was* note.
 
+*Also applied (gui review 5596618095 of PR #268, G2 and G3): `docs/gui/principia_render_gui_spec.md` § "1. Layout —
+four surfaces" (Part II), § "12. Display stage — global, outside the pipeline" (the order, the Print graph in style's place and as a
+node graph of its own, as colour_composition §4.3 has it) and § "13. Invariants" (11), and `docs/gui/design/GUI_DESIGN_NOTES.md`
+§ Display (conformed), each with its earlier words kept.*
+
 R-485 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-486 — The Print graph's node set is the lab's, all 78 node types and all 103 presets, ported from GLSL to WGSL; its data format is the Python prototype's, as the design doc §4 merges them *(supersedes R-130, with R-485)*
@@ -15585,6 +15590,9 @@ which no earlier ruling places.
 *What it amends:* R-67's chain, "stain → style → display scale → gamut clamp → colour-vision simulation → screen": the
 Print graph stands where style was (R-485), the lines drawn through sit before it and the lines drawn over after it
 (RQ-395 for exactly where). R-67's other words stand.
+
+*Also applied (gui review 5596618095 of PR #268, G2 and G3), with R-531: render_gui_spec § "12. Display stage —
+global, outside the pipeline" (the order) and § "13. Invariants" (11), and GUI_DESIGN_NOTES § Display (conformed).*
 
 R-487 is in the "design" group of `plan/rule_groups.yaml`.
 
@@ -17261,7 +17269,7 @@ Viewing slot is off by default, and the panel shows why. It is still offered: th
 
 R-525 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
 
-## R-526 — A field input to the Print graph is normalised as the stain normalises it, over the visible range with the stain's own window rule *(closes RQ-390)*
+## R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "4.4 Payload fields as inputs" (cited in the note)
 and § "12. Open questions (for the review queue, not the agent to settle)" (the note), `plan/rule_groups.yaml`,
 `plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-390, moved with its ruling); the tasks and
@@ -17275,11 +17283,18 @@ RQ-390 asked whether a payload field read by the Print graph at deep zoom is nor
 stain does, or over a fixed window recorded with the graph. Its option (a): "the visible range, the stain's own window
 rule, as §4.4 has it"; (a) was applied meanwhile.
 
-*What it decides:* **option (a).** A field input is normalised exactly as the stain normalises the same field, over the
-visible range with the stain's own window rule (design doc §4.4), so a field-driven medium rescales while zooming as the
-stain does. No fixed window is recorded with the graph, and `RenderState.print` gains no field for one.
+*What it decides:* the stain's normalisation, not a fixed window recorded with the graph: a field input is normalised
+as the stain normalises the same field, and `RenderState.print` gains no field for a window. Option (a)'s "visible
+range" is not decided: the stain's `range_norm` keeps a field's declared range fixed (`t_end` → lin [0, T]) and measures
+only an unbounded field over the draw, so whether a field-driven medium rescales while zooming, and which range applies
+when the stain does not colour by that field, is queued as RQ-478 (physics review 5596610796 of PR #268, P2). Meanwhile
+the human's words apply literally: each field's own `range_norm` rule. *Was:* "**option (a).** A field input is
+normalised exactly as the stain normalises the same field, over the visible range with the stain's own window rule
+(design doc §4.4), so a field-driven medium rescales while zooming as the stain does. No fixed window is recorded with
+the graph, and `RenderState.print` gains no field for one." (stale value, replaced by P2's RQ-478).
 
-*Applied per R-369 (mechanical):* the design doc's §4.4 sentence stands and its §12 note records the ruling.
+*Applied per R-369 (mechanical):* the design doc's §4.4 sentence stands, with a note pointing to RQ-478, and its §12
+note records the ruling.
 
 *What it amends:* none. It closes **RQ-390**.
 
@@ -17461,8 +17476,11 @@ graph's Plain and needs no preset.
   a lab image. A look the lab's nodes cannot make (the halftone's per-plate misregistration and cell ceiling) is a node
   added to the registry, a definition requirement (R-72) of that task, carrying its licence.
 - **S2. Names and family.** R-130's names, as the file names them: "Watercolour & pencil" and the seven print presets
-  under their own names; the eight form a twelfth family of the gallery, "Poster (R-130)", so the gallery has 12
-  families.
+  under their own names; the eight form a twelfth family of the gallery, labelled "Poster", so the gallery has 12
+  families; the label carries no ruling id, and the docs cite R-130 and R-532 beside it. R-130's "Default" is always
+  shown with its family, "Poster › Default", never as a bare "Default", so it is not read as Plain, the Print graph's
+  default (gui review 5596618095 of PR #268, G5, applied per R-369). *Was:* "the eight form a twelfth family of the
+  gallery, "Poster (R-130)", so the gallery has 12 families." (stale value, replaced by G5).
 
 *What it amends:* **R-485** ("still available" is met by these eight) and **R-486** (the preset set is the lab's 103
 and these eight). R-130 stays superseded; its styles live on as presets. It closes **RQ-396**.
@@ -17597,14 +17615,29 @@ actually uses, read from the graph, not from the caption or §4.4's sentence; an
 of it.
 
 *Where the words leave a choice, decided per R-369 (the human may veto any; flagged):*
-- **D1. What is recorded.** From `catalogue/presets.json`, as RQ-401 read it: Relief of lifetime, `brightness`; Wet
-  where chaotic and Unfinished where uncertain, `brightness` and `edges` (fringe density); Craquelure, `edges`.
-- **D2. Every stand-in node is replaced.** Each `brightness` or `edges` node standing in for the data reads the preset's
-  real field instead: Relief of lifetime, `t_end` (§4.4's example); Wet where chaotic, the ensemble spread (§4.4: "wet
-  where the spread is high"). For Unfinished where uncertain and Craquelure the corpus names no one field, so each is a
-  definition requirement (R-72) of the field-inputs task, from the fields the ledger declares, under physics review
-  (R-485's reviewers); it is not chosen here.
-- **D3. Normalisation.** The stain's (R-526).
+- **D1. What is recorded.** From `catalogue/presets.json`, read by the node each graph feeds from the image: Relief of
+  lifetime, `brightness` (`n0 → br → bb → rl.height`, the only graph whose `brightness` reads the image); Wet where
+  chaotic, Unfinished where uncertain and Craquelure, `edges` (fringe density). In Wet where chaotic and Unfinished
+  where uncertain the `brightness` node reads `edges`' output, `n0 → ed → th → mx2.mask`: it is a threshold window on
+  the stand-in (Wet: `lo 0.45, hi 0.65`; Unfinished: `lo 0.5, hi 0.62`), not a stand-in (physics review 5596610796 of
+  PR #268, P1, applied per R-369). *Was:* "Relief of lifetime, `brightness`; Wet where chaotic and Unfinished where
+  uncertain, `brightness` and `edges` (fringe density); Craquelure, `edges`." (stale value, replaced by P1's reading of
+  the graphs).
+- **D2. Only the stand-in node is replaced.** The node standing in for the data reads the preset's real field instead:
+  Relief of lifetime's `brightness`, `t_end` (§4.4's example); Wet where chaotic's `edges`, the ensemble spread (§4.4:
+  "wet where the spread is high"); Unfinished where uncertain's and Craquelure's `edges`, a field the corpus does not
+  name, so each is a definition requirement (R-72) of the field-inputs task, from the fields the ledger declares, under
+  physics review (R-485's reviewers); it is not chosen here. The threshold windows stay, now on the normalised real
+  field; their `lo` and `hi` were set against fringe density, so they are a calibration (R-71) of the field-inputs task,
+  never tuned to match the lab (R-492) (P1). *Was:* "**D2. Every stand-in node is replaced.** Each `brightness` or
+  `edges` node standing in for the data reads the preset's real field instead" (stale value, replaced by P1).
+- **D3. Normalisation.** The stain's (R-526; which range that is, is RQ-478).
+- **D4. Invalid samples.** A present field can be invalid at one sample: a NaN ensemble spread where the spread is
+  undetermined, a `t_end` from a `sim_failed` sample, an FTLE that fails `ftle_valid`. The field-driven nodes are
+  neighbourhood operations (Relief's blur on the height, the wash's mask feeding a blur), so what such a sample feeds
+  them, excluded by its validity predicate and never by NaN propagation (render contract Part 2, R-255), is a
+  definition requirement (R-72) of the field-inputs task under physics review (physics review 5596610796, P4, applied
+  per R-369). Not resolved here.
 
 *What it amends:* none; it applies R-492's deviation rule to R-486's four presets. It closes **RQ-401**.
 

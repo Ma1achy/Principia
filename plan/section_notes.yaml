@@ -1027,7 +1027,7 @@
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: decisions.md
-  section: "R-526 — A field input to the Print graph is normalised as the stain normalises it, over the visible range with the stain's own window rule *(closes RQ-390)*"
+  section: "R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*"
   reason: "planned (the plan PR)"
   note: "R-485: docs first, then the plan; the plan PR's requirements cite this section"
 - file: decisions.md

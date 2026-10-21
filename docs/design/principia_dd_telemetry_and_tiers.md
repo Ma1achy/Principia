@@ -394,7 +394,10 @@ changes."
 - **`post_level`**, per frame: `"full"`, `"reduced"` or `"plain"` (R-488), or `null` where `post` is `null`.
 - **The benchmark block** (`principia_benchmark.md` §6, R-497): a benchmark result's header line carries `bench`
   (`mode`, `suite_hash`, `complete`, each scenario's `ran | skipped(reason) | aborted`, power source, low-power mode and
-  thermal state at start), each scenario is bracketed by a `scenario_begin` and a `scenario_end` line, and the last line
+  thermal state at start; `surface`, the run's offscreen surface, `{width, height}` in pixels (R-535); and, for a phone
+  (R-530), `mobile`, `"best effort"` or `null`, `visual_viewport`, `{width, height, device_pixel_ratio}` at start in CSS
+  pixels, or `null`, and `wake_lock`, `"granted"`, `"refused"`, `"unsupported"` or `null`, each `null` off a phone;
+  perf review 5596612647 of PR #268, F4, applied per R-369), each scenario is bracketed by a `scenario_begin` and a `scenario_end` line, and the last line
   is the run summary. These lines are part of schema v2, one schema (R-534); a trace that is not a benchmark result
   has none of them. *Was:* "Whether these lines are part of the bumped schema or a block beside it is RQ-399."
 - **How an earlier file is read (R-497, K3).** A file written as schema v1 before the post stage stays readable: a
