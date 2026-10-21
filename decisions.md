@@ -19518,6 +19518,10 @@ Adds REQ-GUI-324 to REQ-GUI-333; changes REQ-GUI-271, REQ-GUI-247 and REQ-GUI-08
 REQ-GUI-097 (notes).
 
 ## R-542 — The state map, as `principia_state_map.md` gives it and its prototype's code transcribes it: each sample coloured by where its own system is now on a chosen chart, through one stain node, Chart position, on every chart, the shape sphere included, coloured by a base and layers; Shape n̂ a separate node, unchanged; a system that leaves the chart drawn at the edge it left by, its last position not stored; no sim struct changed; Chart position waits on RQ-489 *(extends R-64)*
+*Amended by R-558.*
+*Still in force: all of it but what R-558 rules: "a fixed t" struck from SM11 and SM15; the presets' names, the
+brightness slot under a Picture and the fade's function the file's; Replace-L's chroma scaling an option, off by
+default; Chart position a named seam-6 exception, no longer waiting on RQ-489.*
 *21 Oct 2026 · applied in `docs/design/principia_state_map.md` (new: the design, every line kept, with the
 prototype's code transcribed), `docs/incoming/2026-10-21_state_map/` (the bundle as delivered),
 `docs/gui/reference/state_map/` (`state_flow.html` and `boards/`), `docs/design/principia_dd_simstate_payload.md` § "5.
@@ -22108,3 +22112,261 @@ R-557 is in the "design" group of `plan/rule_groups.yaml`, with R-488 (RQ-478's 
 
 Changes no requirement on `main`: none holds these entries, and the Print graph's requirements are the plan PR's.
 `plan/section_notes.yaml` gains this heading, "planned (the plan PR)", as R-524 to R-536 have.
+
+## R-558 — The state map's twenty entries are ruled: any chart may be a target, its inverse generated beside the view's; a tilted target the branch nearest the slice; never a criterion input; the vMF colouring kept and stated not one-to-one; the nominal copy; an ended run held; no history fields; the prototype's constants the starting values; Chart position a named seam-6 exception, with no fixed t; Replace-L's chroma scaling an option, "keep in gamut", off by default; Shape n̂ stays `vector`; the code's reading of the mirror and the clamp; the file's preset names and the trace's fade; "Edit stain…"; no figure ring under the trace; one colour node; `α_min = 0`; "none" a setting of the node *(closes RQ-480 to RQ-489 and RQ-496 to RQ-505; amends R-542)*
+*21 Oct 2026 · applied in `docs/design/principia_state_map.md` (the adoption note; SM2's, SM5a's and SM10's notes; SM8's
+last sentence; SM11's and SM15's node lines, "a fixed t" struck; SM15's brightness and inspector paragraphs and its
+transcription's preset sentence; a "Ruled" paragraph after SM13; each with its earlier words kept),
+`docs/design/principia_colour_composition.md` § "1.5 A point on a chart: Chart position's colour slot (R-542)" (the
+calibration sentence), § "3. The `ctx` contract" (Chart position's reads) and § "4.1 Backbone & `Option` occupants"
+(the Chart position paragraph, and Q4's statement added), `docs/design/principia_dd_colouring.md` § "3.2 The vMF
+engine", § "3.5 Combiners" and § "5. Unit tests" (test 6), `docs/contracts/principia_render_contract.md` § "Part 4 —
+Semantic rules" (Chart position named among the exceptions), `docs/gui/principia_render_gui_spec.md` § "G13. Where the
+artboards are overridden" (the state map bullet), Part II § "3.1 Node kinds", § "6. Port typing & wire rules", § "9.
+Node inspector — morphing editors" and § "11. Presets = whole graphs", R-542's heading block,
+`docs/archive/review_queue/M0.md` (RQ-480 to RQ-489 and RQ-496 to RQ-505, moved with their rulings), REQ-COL-113,
+REQ-COL-115, REQ-COL-116, REQ-COL-117, REQ-COL-121, REQ-COL-124, REQ-COL-125, REQ-COL-129, REQ-COL-130, REQ-COL-131,
+REQ-COL-132, REQ-SCHED-102, REQ-GUI-335, REQ-GUI-337, REQ-GUI-338 and REQ-GUI-339 (reqio: `rq` removed; statement,
+verify and note where the ruling changes them), REQ-COL-141 (reqio, new), TASK-M7-47 and TASK-M7-50 (no longer
+waiting), TASK-M7-48, TASK-M7-49, TASK-M7-51, TASK-M7-52 and TASK-M8-66 (notes), `plan/tasks.yaml` and
+`plan/rule_groups.yaml`; built by TASK-M7-47 to TASK-M7-52 and TASK-M8-66*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+135–147 and 150–179), which R-545 quotes in its opening:
+
+> - RQ-480 (Chart position may target any chart): (a). "A Chart position target may be any chart. Its inverse is generated into the fragment pipeline beside the view's own, from R-116's one Rust source." Whether a colour occupant may read a chart at all stays with RQ-489.
+>
+> - RQ-481 (Tilted targets use the branch nearest the slice): (a). "A tilted target (E, F) takes the branch nearest the slice: `k ∈ [−4, 4]`, smallest `|w|`, as `smWhere` does. It is a stated choice, named in SM4."
+>
+> - RQ-482 (State map never feeds the criterion): (a). "The state map is a colouring and never a criterion input (the firewall). SM12's Firewall test holds it." Any spread over it can come back as a separately proposed and measured candidate.
+>
+> - RQ-483 (vMF stays the hue carrier, documented as not one-to-one): (a). "The vMF shape colouring stays as it is, the hue carrier. Colour composition §4.1 states that it is not one-to-one (SM6: antipodal shapes `±(1,1,1)/√3` share one grey bin at κ = 1, 3, 6)."
+>
+> - RQ-484 (Ensemble colour: nominal copy or OKLab mean): (a). Chart position colours by the nominal copy (copy 0). An OKLab mean over the copies is not offered.
+>
+> - RQ-485 (After the run ends: hold or outcome palette): (a). An ended run holds its end state by default; "outcome colour" stays an option of the node.
+>
+> - RQ-486 (History fields): (a). Out of scope. Each needs an accumulator, which is a struct change, and SM2 forbids that.
+>
+> - RQ-487 (State-map constants as calibration values): (a). Take the prototype's values as the starting values, confirmed at the M7 gate. That covers the port's additions too: κ (3, 0.3, π, 0.6), layer line width 0.045, dot radius 0.13, and the plane gradient's L 0.75 and chroma 0.095.
+>
+> - RQ-488 (Grey origin of the plane gradient): (a). Accept it. On the latent charts the origin is the Lagrange landmark.
+>
+> - RQ-489 (Chart position against seam 6; "a fixed t"): (a), with the fixed t dropped.
+>   - Chart position gets a named seam-6 exception, as ROUNDTRIP and DECODE have, listed in render contract Part 4 and in the lint.
+>   - The target chart's inverse is generated to WGSL from the one Rust source (R-116).
+>   - The node's times are the playhead and t = 0 only. "A fixed t" was a mistake in my spec: it needs a stored state or a second march, and SM2 forbids both. Strike it from SM11 and SM15.
+>
+> - RQ-496 (Replace-L chroma scaling; SM2's "brightness slot is None"): (a).
+>   - Replace-L as ruled is unchanged and stays the default, so every saved stain renders bitwise as before.
+>   - The chroma scaling `min(1, L/0.75, (1 − L)/0.35)` becomes an option on the Replace-L combiner, "keep in gamut", default off. The state-map presets that use a brightness node (Displacement, Mixing) set it on.
+>   - SM2 item 3 means: a base that spends L on position takes a brightness node only with the Problems warning; Multiply keeps its L.
+>
+> - RQ-497 (Stain graph types and the Shape n̂ node): (a).
+>   - Shape n̂ stays a `vector` field with its one colour editor, exactly as on main.
+>   - `point⟨q⟩` is a fourth subtype that only Chart position carries. Site blend ↔ Site blend is the only swap.
+>   - §6's morphing stays; SM15's "offer only what the source takes" applies to the library and the drag-off menu only.
+>   - Chart position is a source with its own settings, and its layers are combinators inside the colour occupant.
+>   - Board 4's sphere paragraph is superseded by SM11.
+>   - Where both graphs show, the GUI says "Palette base" and "Picture flow".
+>   - Chart position is not a Print graph field input; print_graph §4.4 says so.
+>   - The Print graph's "post" stage and "Source" category are qualified the same way ("print stage", "Print source").
+>
+> - RQ-498 (The mirror, R-141's gauge, left samples, the navigation edge): (a), the code's reading, throughout.
+>   - Chart position ⟨shape sphere⟩ reads the signed n̂ over the full sphere. The t = 0 identity on the sphere is stated modulo the mirror, under R-141.
+>   - Bitwise copies hold for EX7 repeats; in-square mirrors match to rounding.
+>   - The clamp stays the default. The Four results test runs with "when it leaves: none".
+>   - On an affine chart the clamp's edge is the compacted edge s = ±1. The base grid is a demo device; the app fills gaps with EX4's coarse ancestor.
+>
+> - RQ-499 (Prototype code against the text, five items): (c), each on its own:
+>   - Preset names: the file's: Classic shape colour, Where, Graph paper, Basins, Displacement, Flow, Mixing. "Where now" is the node's retired name.
+>   - Triangle palette L: the code's, 0.69 / 0.75 by orientation.
+>   - Picture under a brightness node: the file's. The brightness slot applies to every base, Picture included; the prototype skipped it.
+>   - The fade: one fade everywhere, the trace's `max(0.18, e^{−d/1.2})`.
+>   - Fibonacci cells: the code's, golden-angle always, because an index palette can't guarantee different neighbours on a Voronoi tiling.
+>
+> - RQ-500 (Two "Edit graph…" buttons): (a). Explore's stain button reads "Edit stain…"; the Print panel keeps PR #268's "Edit graph…". Until the shell builds it, (c) as applied.
+>
+> - RQ-501 (Board 6's ring against the hover trace): (a). The hover trace and its "L listen" label stay as R-541 and §G2 give them. The figure draws no ring while the trace is shown; the trace's start star marks the pixel and the legend carries SM9's ring.
+>
+> - RQ-502 (LAYERS as a node or inside the colour occupant): (a). One colour node, with the base and the layer stack in its inspector. Boards 1 and 4 get redrawn to match.
+>
+> - RQ-503 (The prototype's AMIN = 0.05 against R-21): (a). α_min = 0 stands. SM5a's latent figures are the prototype's, kept for reference only. The edge-clamp test runs on the latent momenta, and the α case is tested on a constructed state.
+>
+> - RQ-504 (The hemisphere view's target): (a). The one-hemisphere view targets the full sphere with the signed n̂, consistent with RQ-498 (a).
+>
+> - RQ-505 ("none" as debug-only or a node setting): (a). "None" is an ordinary setting of the node. REQ-COL-116's "debug option" wording is reworded to "an option of the node".
+
+The human's second addendum to the shape sphere ruling (21 Oct 2026), verbatim, which supersedes two clauses of the
+RQ-498 ruling above:
+
+> Second addendum from me, Malachy, to the shape sphere ruling: it supersedes the two mirror clauses of my RQ-498
+> ruling in rulings_2026-10-21.md ("the t = 0 identity on the sphere is stated modulo the mirror, under R-141" and
+> "in-square mirrors match to rounding"). On the shape sphere there is no mirror identification now, so the identity
+> holds point for point.
+
+and the human's later plain summary of it: "One tidy-up: this supersedes the two mirror clauses of my RQ-498 ruling in
+rulings_2026-10-21.md (…). On the shape sphere chart the identity now holds point for point." The human's reply on the
+overlap: "Where the rulings file overlaps the hemisphere question, queue only real clashes. The state map answers there
+already chose the full sphere with signed n̂, so they should agree."
+
+These twenty entries are the state map's (R-542): SM13's nine questions, Q1 to Q9 (RQ-480 to RQ-488), each with its
+recommendation as option (a) and that (a) applied meanwhile; the conflicts R-542's port found (RQ-489, RQ-496 to
+RQ-499); and those PR #270's review found (RQ-500 to RQ-505). Most rulings confirm what was applied meanwhile; four
+change it (RQ-489's fixed t struck and the seam exception named, RQ-496's scaling made an option, RQ-497's qualified
+names, RQ-499's names, Picture brightness and fade), and two only reword (RQ-483 in colour composition §4.1, RQ-505 in
+REQ-COL-116).
+
+**RQ-480 to RQ-488: SM13's questions.** Each asked the human to choose between SM13's recommendation (a) and its
+alternative (b).
+
+*What it decides:*
+- **RQ-480 (a).** A Chart position target may be any chart. Its inverse is generated into the fragment pipeline beside
+  the view's own, from R-116's one Rust source; that a colour occupant may read a chart at all is RQ-489's, ruled below.
+- **RQ-481 (a).** A tilted target (E, F) takes the branch nearest the slice: `k ∈ [−4, 4]`, the smallest `|w|`, as
+  `smWhere` does. It is a stated choice, and SM4's table names it ("this is a choice, Q2").
+- **RQ-482 (a).** The state map is a colouring and never a criterion input (the firewall), held by SM12's Firewall test
+  (REQ-SCHED-102). A spread over it may come back only as a separately proposed and measured candidate.
+- **RQ-483 (a).** The vMF shape colouring stays the hue carrier it is, unchanged, and colour composition §4.1 now says
+  it is not one-to-one (SM6: the antipodal shapes `±(1,1,1)/√3` share one grey bin at κ = 1, 3 and 6). SM6's sphere map
+  is not offered as a shape colouring.
+- **RQ-484 (a).** Chart position colours by the nominal copy (copy 0); no OKLab mean over the copies is offered.
+- **RQ-485 (a).** An ended run holds its end state by default; "outcome colour" stays an option of the node.
+- **RQ-486 (a).** History fields (winding on any chart, time in a tile, first passage) are out of scope: each needs an
+  accumulator, a struct change, which SM2 forbids.
+- **RQ-487 (a).** The prototype's values are the starting values, confirmed at the M7 gate: tiles across 6, the index
+  palette's chroma 0.08, and the port's additions, κ (3, 0.3, π, 0.6), the layer line width 0.045, the dot radius 0.13
+  and the plane gradient's L 0.75 and chroma 0.095. They are REQ-COL-129's calibration values (R-71).
+- **RQ-488 (a).** The plane's 2D gradient is grey at the chart origin, accepted: on the latent charts the origin is the
+  Lagrange landmark.
+
+**RQ-489: Chart position against seam 6, and "a fixed t".** It asked how Chart position, a colour occupant, may read
+the target chart and its inverse where seam 6 and render contract Part 4 keep every chart identifier from a colour
+occupant, and how "a fixed t" could read a state `SimState` does not hold. Option (a): a stated seam-6 exception, as for
+ROUNDTRIP and DECODE, the target's inverse generated from the one Rust source, a fixed t dropped.
+
+*What it decides:* **(a), with the fixed t dropped.**
+- **Chart position gets a named seam-6 exception**, as ROUNDTRIP and DECODE have, listed in render contract Part 4 and
+  in the lint (`cargo xtask lint wgsl`).
+- **The target chart's inverse is generated to WGSL from the one Rust source** (R-116).
+- **The node's times are the playhead and `t = 0` only.** "A fixed t" was a mistake in the human's spec (it needs a
+  stored state or a second march, which SM2 forbids) and is struck from SM11 and SM15, its earlier words kept.
+
+**RQ-496: Replace-L's chroma scaling, and SM2's "brightness slot is None".** It asked whether SM15's chroma scaling
+changes Replace-L for every stain, against dd_colouring §3.5, its test 6 and the §4.1 truth table, and what SM2 item 3
+means under L-ownership. Option (a): item 3 read as a Problems warning, Multiply keeping L; the scaling an option, the
+default unchanged.
+
+*What it decides:* **(a).**
+- **Replace-L as ruled (R-77) is unchanged and stays the default,** so every saved stain renders bitwise as before;
+  dd_colouring §3.5, its test 6 and colour composition §4.1's truth table hold at the default.
+- **The chroma scaling `min(1, L/0.75, (1 − L)/0.35)` becomes an option on the Replace-L combiner, "keep in gamut",
+  default off.** The state-map presets that use a brightness node, Displacement and Mixing, set it on.
+- **SM2 item 3 means:** a base that spends L on position takes a brightness node only with the Problems warning;
+  Multiply keeps its L.
+
+**RQ-497: the stain graph's types and nodes.** It set main's `vector` Shape n̂ with one colour editor against the
+state map's `point⟨sphere⟩` with Position, Site blend and Bands counterparts, SM15's hard filter against §6's morphing,
+§3.1's one-param source against Chart position's params and layers, board 4 against SM11, and two graphs sharing
+"Palette", "Flow", "field" and "post". Option (a) was the list the human's eight points now give.
+
+*What it decides:* **(a).**
+- **Shape n̂ stays a `vector` field with its one colour editor,** exactly as on main.
+- **`point⟨q⟩` is a fourth subtype that only Chart position carries.** Site blend ↔ Site blend is the only swap.
+- **§6's morphing stays;** SM15's "offer only what the source takes" applies to the library and the drag-off menu only.
+- **Chart position is a source with its own settings,** and its layers are combinators inside the colour occupant.
+- **Board 4's sphere paragraph is superseded by SM11.**
+- **Where both graphs show, the GUI says "Palette base" and "Picture flow".**
+- **Chart position is not a Print graph field input,** and the Print graph's "post" stage and "Source" category are
+  qualified the same way ("print stage", "Print source"). Both are already on main: PR #268's follow-ups wrote them
+  into print_graph §4.4, the frame record's stage name and the Print source node (R-557 records that review); this
+  port only cites them.
+
+**RQ-498: the mirror, R-141's gauge, left samples, the navigation edge.** Option (a), the code's reading throughout, was
+applied meanwhile: Chart position ⟨shape sphere⟩ from the signed `n̂` over the full sphere; the `t = 0` identity stated
+modulo the mirror; bitwise copies for EX7 repeats and rounding-level in-square mirrors; the clamp kept as the default,
+Four results under "none"; the clamp's edge `s = ±1` on an affine chart, the base grid a demo device.
+
+*What it decides:* **(a), the code's reading,** but for the two clauses the human's second addendum supersedes:
+- **Chart position ⟨shape sphere⟩ reads the signed `n̂` over the full sphere,** as applied (payload §5's `n`, no stored
+  field).
+- **Bitwise copies hold for EX7 repeats.**
+- **The clamp stays the default; the Four results test runs with "when it leaves: none".**
+- **On an affine chart the clamp's edge is the compacted edge `s = ±1`.** The base grid is a demo device; the app fills
+  gaps with EX4's coarse ancestor.
+- **Superseded, not applied:** "The t = 0 identity on the sphere is stated modulo the mirror, under R-141." and "in-square
+  mirrors match to rounding". The human's second addendum to the shape sphere ruling supersedes both ("On the shape
+  sphere there is no mirror identification now, so the identity holds point for point"). That ruling's own port (on its
+  own branch, not yet merged) governs the shape sphere chart's identity and its mirror pixels and writes them where they
+  apply; this port writes neither clause anywhere and edits none of that ruling's sites. The text applied meanwhile
+  that still states them (REQ-COL-115's "on the shape sphere modulo the mirror", REQ-COL-121's note, TASK-M7-47's and
+  TASK-M8-66's notes, and state map SM3, SM4 and SM7's notes) is marked superseded where it is a note here, and left for
+  that port where it is the shape sphere's site.
+
+**RQ-499: the prototype's code against the file, five items.** Option (c), each on its own, as the human rules them:
+
+*What it decides:*
+- **Preset names: the file's** — Classic shape colour, Where, Graph paper, Basins, Displacement, Flow, Mixing. "Where
+  now" is the node's retired name. *Was (applied meanwhile, (a)):* the prototype's labels, Where now, Basin tiles and
+  Picture flow.
+- **The triangle palette's L: the code's,** 0.69 / 0.75 by orientation, as applied.
+- **Picture under a brightness node: the file's.** The brightness slot applies to every base, Picture included; the
+  prototype skipped it. *Was (applied meanwhile):* no brightness under a Picture.
+- **The fade: one fade everywhere, the trace's** `max(0.18, e^{−d/1.2})`. *Was (applied meanwhile):* the prototype's
+  `max(0.18, 1/(1 + (d/0.35)²))`.
+- **Fibonacci cells: the code's,** golden-angle always, because an index palette can't guarantee different neighbours on
+  a Voronoi tiling; as applied.
+
+**RQ-500 to RQ-505: PR #270's review.**
+
+*What it decides:*
+- **RQ-500 (a).** Explore's stain button reads "Edit stain…"; the Print panel keeps PR #268's "Edit graph…". Until the
+  shell builds that button, (c) as applied: no stain button is added to Explore's top bar by the state map.
+- **RQ-501 (a).** The hover trace and its "L listen" label stay as R-541 and §G2 give them. The figure draws no ring
+  while the trace is shown; the trace's start star marks the pixel, and the legend carries SM9's ring. As applied.
+- **RQ-502 (a).** One colour node, with the base and the layer stack in its inspector. Boards 1 and 4 are redrawn to
+  match.
+- **RQ-503 (a).** `α_min = 0` stands (R-21). SM5a's latent figures are the prototype's, kept for reference only. The
+  edge-clamp test runs on the latent momenta, and the α case is tested on a constructed state. As applied.
+- **RQ-504 (a).** The one-hemisphere view targets the full sphere with the signed `n̂`, consistent with RQ-498 (a). The
+  shape sphere ruling (its port on its own branch) removes the one-hemisphere view, and its full sphere with the signed
+  `n̂` is this answer, so the two agree, as the human's reply says; nothing hemisphere-specific is applied here.
+- **RQ-505 (a).** "None" is an ordinary setting of the node. REQ-COL-116's "debug option" is reworded to "an option of
+  the node".
+
+*Where the words leave a choice, decided per R-369 (state map tasks under their named reviewers; gui on the labels and
+boards, physics on the projection):*
+- **S1. The seam-6 exception is a requirement and a deliverable.** REQ-COL-141 asks for it: Chart position named in
+  render contract Part 4's exceptions and in the lint's list, with its reason, by TASK-M7-47, the task that builds the
+  source, as Part 4's rule for its other exceptions has it ("excepted by the task that builds it"). Part 4 names it now
+  as one to be added when built, as it names DECODE and ROUNDTRIP. TASK-M7-47 no longer waits.
+- **S2. "Keep in gamut" is built by TASK-M7-50** as a parameter of the Replace-L combiner (default off; its inspector
+  shows a checkbox), REQ-COL-132 restated; TASK-M7-50 no longer waits, and its "retired if (c)" note goes. The
+  Displacement and Mixing presets set it on (REQ-GUI-337, TASK-M7-51), so TASK-M7-51 now depends on TASK-M7-50.
+- **S3. "Where both graphs show"** is read as any window, panel or menu that lists the stain graph's and the Print
+  graph's nodes or presets together; there the stain graph's Palette base reads "Palette base" and its Flow preset
+  "Picture flow", and elsewhere the file's names stand (REQ-GUI-335, REQ-GUI-337; gui review).
+- **S4. Boards 1 and 4 are redrawn by TASK-M7-51,** the task the gui reviewer reviews against `boards/`: board 1's BASE
+  and LAYERS nodes become one colour node with the stack in its inspector, and board 4's Layer port row is dropped;
+  until then render GUI spec §G13 reads them so.
+- **S5. "Edit stain…" has no requirement yet,** as no task builds Explore's stain button; the label is recorded in §G13
+  and TASK-M8-66's note for the task that does.
+- **S6. RQ-497's print names** stay cited on main as "the human's ruling on RQ-497, 21 Oct 2026", which resolves to the
+  archived entry and its ruling line naming R-558; they are not reworded here.
+- **S7. RQ-498's superseded clauses.** Where text applied meanwhile states one of them as this port's own note
+  (REQ-COL-121's note, TASK-M7-47's and TASK-M8-66's notes) it is marked "superseded by the human's second addendum to
+  the shape sphere ruling", its words kept; REQ-COL-115's statement, REQ-COL-121's verify (the hemisphere's fold among
+  the repeat pairs) and state map SM3, SM4 and SM7's notes are the shape sphere ruling's sites, left for its port.
+
+*What it amends:* **R-542** (its applied text, SM1 to SM15: "a fixed t" struck from SM11 and SM15; the presets' names,
+the brightness slot under a Picture and the fade's function now the file's; Replace-L's chroma scaling an option,
+default off; Chart position a named seam-6 exception; and its queued entries closed). Read with R-21, R-77, R-116 and
+R-509, which it leaves as ruled. It closes **RQ-480 to RQ-489 and RQ-496 to RQ-505**.
+
+R-558 is in the "design" group of `plan/rule_groups.yaml`, with R-542.
+
+Changes REQ-COL-113, REQ-COL-117, REQ-COL-124, REQ-SCHED-102, REQ-GUI-338 and REQ-GUI-339 (`rq` removed, rulings,
+note); REQ-COL-115 and REQ-COL-121 (`rq` removed, note marking the superseded clause); REQ-COL-116 (statement reworded,
+`rq` removed, note); REQ-COL-125 and REQ-COL-129 (`rq` removed, note); REQ-COL-130, REQ-COL-131, REQ-COL-132,
+REQ-GUI-335 and REQ-GUI-337 (statement, verify, `rq` removed, rulings, note); adds REQ-COL-141 (Chart position's
+seam-6 exception, closed by TASK-M7-47).

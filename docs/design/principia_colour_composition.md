@@ -358,7 +358,7 @@ of §1.1 to §1.3:
   own), and `site_overlay` for site dots, in order, each with its spacing, colour and opacity.
 
 The definitions, values and tests are state map SM6, SM8, SM11 and SM12. The tiling defaults are starting calibrations
-(R-71; RQ-487).
+(R-71): the prototype's values, confirmed at the M7 gate (RQ-487 (a), R-558).
 
 ---
 
@@ -488,7 +488,9 @@ payload lane's live state at the playhead and its masses, through the encode `RO
 field to any lane's buffer. A Picture base reads one image, a texture bound in a render-side bind group, never a sim
 struct. The uploaded picture is a `RenderState` field, assigned its tier in R-484's table by the task that builds it
 (applied per R-369). Chart position also reads the target chart and its inverse, which seam 6 and render contract
-Part 4 keep from a colour occupant; that is RQ-489, and the source waits on it.
+Part 4 keep from a colour occupant; it is a named exception to seam 6, as ROUNDTRIP and DECODE are, listed in render
+contract Part 4 and in the lint, the target's inverse generated to WGSL from the one Rust source (R-116; R-558,
+RQ-489 (a)). *Was:* "that is RQ-489, and the source waits on it."
 
 ---
 
@@ -606,12 +608,22 @@ palette (§1.4) in the colour slot, the brightness None; its field is the outcom
 all three OKLab axes, lightness included, which is what makes them one-to-one on the quotient. A brightness node after
 an L-spending base (a 1D gradient, the sphere's 3D gradient or the cylinder's 2D gradient), or under lightness layers,
 raises a Problems warning (render GUI spec Part II §1). The plane's 2D gradient, the sphere's longitude gradient, Site
-blend and the index Palette hold L fixed, so a brightness node can take it. SM2's "the brightness slot is None" meets
-the combiner choice of render contract Part 4 and SM11, and SM15's Replace-L chroma scaling meets the truth table
-above (RQ-496); meanwhile the truth table stands for every stain, Replace-L unscaled. Its statuses keep their own style
+blend and the index Palette hold L fixed, so a brightness node can take it. SM2's "the brightness slot is None" means that a
+base spending L on position takes a brightness node only with that Problems warning, Multiply keeping its L, and
+SM15's Replace-L chroma scaling is an option of the Replace-L combiner, "keep in gamut", off by default and set on by
+the Displacement and Mixing presets, so the truth table above stands for every stain at the default (R-558, RQ-496
+(a)). *Was:* "SM2's "the brightness slot is None" meets the combiner choice of render contract Part 4 and SM11, and
+SM15's Replace-L chroma scaling meets the truth table above (RQ-496); meanwhile the truth table stands for every
+stain, Replace-L unscaled." Its statuses keep their own style
 in every mode, as above: a left or past-the-end sample under "none" its grey, `sim_failed` `#141418`, `decode_failed`
 and not a system blank (R-511, R-470); with a brightness node the stain ends in the one post that draws each style over
 the combiner's output, as greyscale mode does (applied per R-369).
+
+**The vMF shape colouring is not one-to-one (R-558, RQ-483 (a)).** It stays the hue carrier it is, and nothing in it
+changes: at a fixed L no continuous colouring of the sphere is one-to-one, and the vMF blend gives the antipodal
+shapes `±(1,1,1)/√3` one grey bin at κ = 1, 3 and 6 (`principia_state_map.md` SM6; `principia_dd_colouring.md`
+§3.2). The one-to-one sphere map is Chart position's 3D gradient, a separate node; it is not offered as a shape
+colouring.
 
 ### 4.2 Post chain
 

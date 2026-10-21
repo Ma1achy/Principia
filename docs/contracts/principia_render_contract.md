@@ -175,7 +175,9 @@ Part 2's validity rules, the shadow rule of `principia_dd_generation_root.md` §
   built, the DECODE view, its agreement presets and ROUNDTRIP, which read `ctx.chart.z` (the chart's; Part 6's field
   views), the impurity-mask cross-check, which reads the quad's `dominant_outcome` (the scheduler's; Part 6's
   cross-checks), and the diffusion (Welford) cross-check, which reads `ctx.params.dt_macro` to recompute `C_tt(n)` (the
-  integrator's; dd_generation_root §3.5).
+  integrator's; dd_generation_root §3.5). Chart position, the state map's source, is one too (R-558, ruling RQ-489):
+  when built, it reads the target chart, its parameters and its inverse, generated to WGSL from the one Rust source
+  (R-116; `principia_state_map.md` SM2), past seam 6's chart rule, and TASK-M7-47 adds it here and to the lint's list.
 
 ---
 

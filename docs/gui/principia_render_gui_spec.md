@@ -1415,14 +1415,16 @@ corpus, the spec follows the authority:
 - **The state map's art boards** (R-542; `docs/gui/reference/state_map/boards/`). They are read for their new elements
   only: the Chart position node, its inspectors, ports and presets, the legend's colour block and the Problems rows; the
   shell follows `02_stain.png` and `01_main.png`, and the hover trace and its label stay as R-541 and §G2 give them
-  (RQ-501). Their fonts (Ubuntu, Ubuntu Mono) conform, and they badge nothing over the figure. Where they depart, the
+  (RQ-501 (a), R-558). Their fonts (Ubuntu, Ubuntu Mono) conform, and they badge nothing over the figure. Where they depart, the
   spec stands: board 1's top bar (a stain-name dropdown, "Compile", "Apply to view" and the Graph / Pipeline WGSL / Node
   WGSL tabs), its library groups (Sources / Colour·Base / Colour·Layers) and its Problems pane spanning the window with a
-  WGSL tab; board 1's two nodes BASE and LAYERS (RQ-502); board 6's floating legend over the figure's edge, its
-  placeholder compass, its status box beside the figure, its top-bar "Stain [Chart position]" and "Edit graph…" (RQ-500),
-  and its ring with no hover trace (RQ-501); board 4's "Shape n̂ already is one — point(sphere)" and its row "Shape n̂'s
-  nodes | point(sphere)" (RQ-497 (a): Shape n̂ stays `vector`), its "at: … fixed t" (RQ-489) and its last paragraph
-  (RQ-497); board 3's header promising Position ↔ Gradient and Bands ↔ Palette (RQ-497 (a): Site blend ↔ Site blend
+  WGSL tab; board 1's two nodes BASE and LAYERS (RQ-502 (a), R-558: one colour node, boards 1 and 4 redrawn
+  to match by TASK-M7-51); board 6's floating legend over the figure's edge, its
+  placeholder compass, its status box beside the figure, its top-bar "Stain [Chart position]" and "Edit graph…" (RQ-500 (a), R-558: Explore's stain
+  button reads "Edit stain…" when the shell builds it, the Print panel keeping "Edit graph…"; until then none is added),
+  and its ring with no hover trace (RQ-501 (a), R-558); board 4's "Shape n̂ already is one — point(sphere)" and its row "Shape n̂'s
+  nodes | point(sphere)" (RQ-497 (a): Shape n̂ stays `vector`), its "at: … fixed t" (struck, RQ-489 (a), R-558) and its last paragraph
+  (superseded by SM11, RQ-497 (a), R-558); board 3's header promising Position ↔ Gradient and Bands ↔ Palette (RQ-497 (a): Site blend ↔ Site blend
   only). Board 1's Problems-row buttons ("Use Multiply", "Show as grey", "Use outcome colour") and board 4's "Set both to
   this chart" are not in SM15's text and are board-only, not built (applied per R-369).
 - **Artboard values are illustrative; corpus values win (R-68):** the outcome palette's hex values, the substep cap
@@ -1565,10 +1567,13 @@ composition.md` §5).
 
 **Chart position (R-542).** A `source` whose out-port is `point⟨q⟩`. Its params are the chart (default: the view's
 own), at (playhead · `t = 0`), when it leaves the chart (clamp · none) and after its run ends (hold · outcome colour)
-(state map SM15; SM15's "a fixed t" waits on RQ-489). The graph draws one colour node for the base and its layers
-(RQ-502, (a) applied meanwhile). Its layers are combinators inside the colour occupant (colour
-composition §1.3, §1.5), not `post` nodes. That this table gives `source` one param, and that SM15 seats the layers in
-the colour slot, are in RQ-497; they apply meanwhile as written here.
+(state map SM15; "a fixed t" is struck, RQ-489 (a), R-558; *was:* "SM15's "a fixed t" waits on RQ-489"). The graph
+draws one colour node for the base and its layers (RQ-502 (a), R-558). Its layers are combinators inside the colour occupant (colour
+composition §1.3, §1.5), not `post` nodes. Chart position is a source with its own settings beside this table's one-param
+`source`, and its layers sit in the colour slot, as written here (R-558, RQ-497 (a)). Where the stain graph and the
+Print graph show together (a window, panel or menu listing both graphs' nodes or presets), the stain graph's Palette
+base reads "Palette base" and its Flow preset "Picture flow". *Was:* "That this table gives `source` one param, and
+that SM15 seats the layers in the colour slot, are in RQ-497; they apply meanwhile as written here."
 
 ---
 
@@ -1618,8 +1623,9 @@ combiner's two inputs.
 - **Out-port arity: unbounded** (fan-out, §5).
 - **`point⟨q⟩` (R-542).** Two `point⟨q⟩` inputs of different quotients on one node (Displacement) have no distance
   between them: a Problems error, never a silent cast (state map SM15, test 3). SM15's "the library and the
-  drag-off-a-pin menu offer only what the wired source takes" meets this section's morphing rule; that is RQ-497, and
-  meanwhile the rule above stands between subtypes.
+  drag-off-a-pin menu offer only what the wired source takes" applies to the library and that menu only, and the rule
+  above stands between subtypes (R-558, RQ-497 (a); *was:* "meets this section's morphing rule; that is RQ-497, and
+  meanwhile the rule above stands between subtypes").
 
 ---
 
@@ -1679,7 +1685,8 @@ The source-type-morph is **automatic**: the wire *is* the type, so there is no m
 field-ramp toggle (unlike the standalone explorer prototype — the toggle collapses into the wire).
 
 **Switching the source (R-542).** Swapping between Shape n̂ and Chart position puts each base's counterpart in its
-place (Site blend ↔ Site blend; Position ↔ Gradient and Bands ↔ Palette where Shape n̂ has those nodes, RQ-497), and
+place (Site blend ↔ Site blend, the only swap while Shape n̂ stays `vector`, R-558, RQ-497 (a); *was:* "Site blend ↔
+Site blend; Position ↔ Gradient and Bands ↔ Palette where Shape n̂ has those nodes, RQ-497"), and
 changing Chart position's chart re-offers the bases and layers the new quotient has. Every setting stays on the graph,
 so switching back restores it exactly (state map SM15).
 
@@ -1880,9 +1887,12 @@ confirmed at the M1 gate, R-433 and R-434: the grey `#4E4E4E`, 2 × 2 px dots of
   combiner inputs occupied — one `source→colour`, one `source→brightness` — i.e. the second slot
   filled. There is no special bivariate UI; the family is just *the brightness slot occupied*.
 - **State map presets (R-542; state map SM15, board 5).** Classic shape colour (Shape n̂ → Site blend, as today), and
-  on Chart position, on any chart: Where now, Graph paper, Basin tiles, Displacement, Picture flow and Mixing, the
-  prototype's labels (RQ-499 (a); the file's names, Where, Basins and Flow, are the queued alternative). Each inserts an
-  ordinary editable graph; the settings are in state map SM15. *Was:* "Where, Graph paper, Basins, Displacement, Flow and
+  on Chart position, on any chart: Where, Graph paper, Basins, Displacement, Flow and Mixing, the file's names (R-558,
+  RQ-499; "Where now" is the node's retired name), Flow reading "Picture flow" where the Print graph shows too
+  (RQ-497); Displacement and Mixing set Replace-L's keep in gamut on (RQ-496). Each inserts an ordinary editable graph;
+  the settings are in state map SM15. *Was (RQ-499 (a), applied meanwhile):* "Where now, Graph paper, Basin tiles,
+  Displacement, Picture flow and Mixing, the prototype's labels (RQ-499 (a); the file's names, Where, Basins and Flow,
+  are the queued alternative)." *Was:* "Where, Graph paper, Basins, Displacement, Flow and
   Mixing … (the names differ: RQ-499)"
 
 ---
