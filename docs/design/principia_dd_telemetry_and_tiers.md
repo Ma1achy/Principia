@@ -74,7 +74,8 @@ carries it too. A file written before it reads with the key not recorded, never 
 `reduced` or `plain`; design doc §8.2), so a profile shows when the medium degraded. They bump the profiler schema to
 v2 (§5, "Schema v2"; R-534). *Was:* "They bump profiler schema v1 (§5, "The bumped schema"; the version is RQ-399)."
 The stage is named the print stage (the human's ruling on RQ-497, 21 Oct 2026: "print stage"); its keys stay `post` and `post_level`, as the
-rulings on RQ-479 and RQ-495 name them (applied per R-369). *Was:* "The post stage", here and in §5.
+human's rulings on RQ-479 and RQ-495 name them (R-557; applied per R-369). The stage's time is recorded but excluded
+from the Auto arbiter's rung solve, and `post_level` is recorded under every tier, Auto, named or Custom (R-557). *Was:* "The post stage", here and in §5.
 
 **`stage_ms` is the load-bearing one.** Without it you know a frame was slow and not *which resource
 ran out* — and different devices will bottleneck differently. Integrated graphics is bandwidth-bound;

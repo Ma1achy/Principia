@@ -67,63 +67,6 @@ later." For the human: yes, whether there is a Frame stage at all.*
   stays open and returns to the human when the human raises it. Nothing is built; the lab's Polaroid medium stays a
   medium (R-486).
 
-## RQ-478: R-526 rules a field input "the stain's normalisation", and the design doc §4.4 and §12 q3 take that to be "over the visible range", rescaling while zooming; but the stain normalises by `range_norm`, a field's declared range fixed (`t_end` → lin [0, T]) and only an unbounded field measured over the draw; and which range applies when the stain does not colour by that field *(conflict: the human's words and the bundle against docs on origin/main, render_gui_spec §10.1 and render contract Part 6, R-526, R-486, R-536; context: the plan PR's field-inputs task)*
-
-*Found by physics review 5596610796 of PR #268 (P2). For the human: yes, it decides whether a field-driven medium
-rescales while zooming; physics, since it is the field's normalisation.*
-
-- **File, section:**
-  - `decisions.md` § "R-526 — …", the human's words: "RQ-390 the stain's normalisation."
-  - `docs/design/principia_print_graph.md` § "4.4 Payload fields as inputs": "The field is the same value the stain
-    reads, normalised over the visible range with the stain's own window rule." § "12. Open questions …", question 3:
-    "A field normalised over the visible range changes its normalisation while zooming, so a "Relief of lifetime"
-    relief rescales as you zoom."
-  - `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library", `range_norm`: "**`auto = false`** uses
-    the **fixed `[lo,hi]`** — a per-field domain **declared in the manifest** … (a `u16` step index
-    `[0, horizon_steps]`; …). **`auto = true`** ignores the declared range and uses the **measured min/max** of the
-    field over the current draw".
-  - `docs/gui/principia_render_gui_spec.md` § "10.1 The shared prelude library", the debug fields' `colour()`:
-    "`RANGE_AUTO` is the fixed↔auto flag, editable identically in the node inspector, on the node in the graph, and in
-    the code": a setting of the stain's node that colours by the field.
-  - `docs/contracts/principia_render_contract.md` § "Part 6 — The debug catalogue (first build target)": "`t_end` → lin
-    [0, T]".
-- **The conflict:** under the stain's own rule `t_end` has a declared range and does not rescale while zooming, so
-  Relief of lifetime would not rescale, against §4.4's "visible range" and §12 q3's premise; the ensemble spread, with
-  no declared bound, would. And the stain's `RANGE_AUTO` belongs to the field the stain colours by: when the stain does
-  not bind the Print graph's field, there is no stain window to share.
-- **Options seen:**
-  - (a) Each field's own `range_norm` rule: fixed over its ledger-declared range where it has one, measured over the
-    draw where it does not; a field the stain does not bind takes its ledger default.
-  - (b) The visible range for every field input (measured over the draw), as §4.4 words it, whatever the stain does.
-  - (c) The stain's window when the stain binds the same field, (a) otherwise.
-- **Applied meanwhile:** the human's words literally: each field's own `range_norm` rule, fixed where the ledger
-  declares a range and measured over the draw where it does not (option (a)). R-526's text no longer decides "visible
-  range". What waits: the plan PR's field-inputs task writes the normalisation from the ruling.
-
-## RQ-479: R-488 counts the Print graph's post stage in the tier controller's accounting, and the Auto arbiter's rungs set N, E, depth and FTLE gating, so a heavy Print graph changes numbers the instrument reports, against R-489 and the design doc §3 *(conflict: the human's P4 against the human's P5 and `principia_quality_device_note.md` §3 on origin/main, R-488, R-489; context: the plan PR's post-stage budget task)*
-
-*Found by physics review 5596610796 of PR #268 (P3). For the human: yes, it decides whether a look can change a
-measurement.*
-
-- **File, section:**
-  - `decisions.md` § "R-488 — …", what it decides (P4): "The post stage is a stage of the telemetry frame record
-    (`stage_ms.post`), the tier controller's accounting includes it". `docs/design/principia_print_graph.md` § "8.2 The
-    budget": "It is not exempt from the tier controller's accounting; the tier simply has a post-stage share."
-  - `docs/design/principia_quality_device_note.md` § "3. The quality ladder": "each a complete preset (N, E, depth,
-    render_scale, FTLE/word gating, live-set size) … **The policy's whole output is one integer: the rung.**"
-  - `decisions.md` § "R-489 — …", the human's P5: "measurement never reads the print". `principia_print_graph.md` § "3.
-    What never changes because of it": "A Print graph cannot change any number the instrument reports."
-- **The conflict:** under Auto, a heavy Print graph's cost lowers the resting rung, which changes E (and so the
-  ensemble spread's value and presence), N and depth (the Inspector's quad statistics and the area statistics) and can
-  gate FTLE out: the print feeds back into measurement through the cost loop.
-- **Options seen (the physics review's):**
-  - (a) The post stage's cost is excluded from the arbiter's rung solve; only §8.1's own degrade (reduced, then Plain)
-    answers it.
-  - (b) The post stage counts only toward render-key rungs (render_scale), never E, N, depth or FTLE.
-  - (c) As written, with §3's sentence amended to allow it.
-- **Applied meanwhile:** none; both texts stand as written. What waits: the plan PR's post-stage budget task and the
-  arbiter's accounting of `post`.
-
 ## RQ-480: A Chart position target other than the view's own chart: allowed, with the target's inverse generated into the fragment pipeline, or the view's own chart only? *(question, the state map's Q1, R-542, R-116; context: TASK-M7-47)*
 
 *Filed by R-542's port from `principia_state_map.md` SM13 (the file's "Queue, don't rule"). Nothing is ruled.*
@@ -292,30 +235,6 @@ field, stop and queue it; do not add one"): no field is added.*
   - (c) Chart position not offered until the seam is re-ruled; a fixed t as a second march, measured for cost first.
 - **Applied meanwhile:** the playhead and `t = 0` only, no fixed t; no field is added. TASK-M7-47, which builds the
   source, waits on this.
-
-## RQ-495: R-488's whole-graph fallback reads the measured post-stage time each frame, and the quality device note gives every knob one writer, model-based, with no per-frame setting change, and switches the arbiter off under a named tier: who owns the post level, and does the fallback run under a pinned tier *(silence and conflict: the human's P4 against `principia_quality_device_note.md` §1, §2, §5 and §10 on origin/main, R-488, R-499; context: the plan PR's degrade task)*
-
-*Found by perf review 5596612647 of PR #268 (F2). For the human: yes, it decides whether a pinned tier can still be
-overridden while moving.*
-
-- **File, section:**
-  - `decisions.md` § "R-488 — …", the human's P4: "a whole-graph fallback when over budget".
-    `docs/design/principia_print_graph.md` § "8.1 Degrade while moving", step 2: "If the post stage still exceeds its
-    share of the frame budget, the **whole graph** drops a level: reduced, then Plain." `docs/design/principia_benchmark.md`
-    § "8. Determinism of the work": degrade-while-moving "uses its policy, not a measured budget" in a swept row.
-  - `docs/design/principia_quality_device_note.md` § "1. One arbiter, many sensors": "a single policy owns every knob
-    write"; § "2. Model-based, not reactive"; § "5. Timescale cascade", the per-frame layer: "**No settings change,
-    ever.**"; § "10. Two sanctities": "Named tier or custom → the arbiter is OFF, entirely."
-- **The gap:** neither R-488 nor the design doc says whether the post level is the arbiter's lever or a second,
-  reactive writer, nor whether the over-budget fallback runs when the user has pinned a named tier or Custom.
-- **Options seen:**
-  - (a) The post level is one of the arbiter's levers: the fallback runs only under Auto, model-based, and never under a
-    named tier or Custom, where only the per-node motion policies (step 1) and settle (step 3) apply.
-  - (b) The fallback is part of the Print graph itself, outside the arbiter, and runs under every tier, as §8.1 words
-    it; the quality device note's rules are read as covering the tier's knobs only.
-  - (c) (b) under Auto, and under a pinned tier the fallback runs only while moving and is recorded, the tier untouched.
-- **Applied meanwhile:** none; §8.1 stands as written. What waits: the plan PR's degrade task writes the owner from the
-  ruling.
 
 ## RQ-496: SM2's "the brightness slot is None" against L-ownership's combiner choice, and SM15's Replace-L chroma scaling against Replace-L as ruled, "`(a, b_ab)` untouched" *(conflict: the human's design against the render contract, a design doc's tests and a ruling's truth table; R-542, R-77, R-64; REQ-COL Replace-L requirements; context: TASK-M7-50, TASK-M7-48)*
 

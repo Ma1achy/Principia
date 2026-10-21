@@ -15654,6 +15654,10 @@ global, outside the pipeline" (the order) and § "13. Invariants" (11), and GUI_
 R-487 is in the "design" group of `plan/rule_groups.yaml`.
 
 ## R-488 — Degrade while moving: each Print graph node runs by its motion policy (`full`, `reduced`, `bypass`), the whole graph falls back a level while over budget, and full quality returns on settle; the playhead advancing is not motion
+*Amended in part by R-557 (21 Oct 2026; RQ-479: the print stage's time is recorded but excluded from the arbiter's
+rung solve; RQ-495: the whole-graph fallback is the arbiter's post level, under Auto only).*
+*Still in force: all of it but "the tier controller's accounting includes it", and the fallback's owner and reach: the
+whole-graph fallback runs only under Auto, as the arbiter's post level, solved from the measured cost classes.*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § 8 (adopted), `docs/design/principia_dd_telemetry_and_tiers.md`
 § 2 and § 5 (`stage_ms.post`, `post_level`); the tasks and requirements follow in the plan PR*
 
@@ -17330,6 +17334,7 @@ Viewing slot is off by default, and the panel shows why. It is still offered: th
 R-525 is in the "design" group of `plan/rule_groups.yaml`, with R-485.
 
 ## R-526 — A field input to the Print graph is normalised as the stain normalises that field, not over a fixed window recorded with the graph; which range that is, is RQ-478 *(closes RQ-390)*
+*RQ-478, the range it left open, is ruled by R-557 (21 Oct 2026).*
 *20 Oct 2026 · applied in `docs/design/principia_print_graph.md` § "4.4 Payload fields as inputs" (cited in the note)
 and § "12. Open questions (for the review queue, not the agent to settle)" (the note), `plan/rule_groups.yaml`,
 `plan/section_notes.yaml` and `docs/archive/review_queue/M0.md` (RQ-390, moved with its ruling); the tasks and
@@ -21972,3 +21977,134 @@ Changes REQ-GUI-324, REQ-GUI-328, REQ-GUI-330 and REQ-GUI-333 (statement, verify
 REQ-GUI-090 and REQ-GUI-329 (statement, rulings, source, `rq` removed, note), REQ-GUI-325 and REQ-GUI-334 (statement,
 rulings, `rq` removed, note), and REQ-GUI-088, REQ-GUI-247, REQ-GUI-271, REQ-GUI-281, REQ-GUI-314 and REQ-GUI-326
 (rulings, `rq` removed, note). REQ-GUI-090's RQ-443 and RQ-451, REQ-GUI-314's RQ-455 and REQ-GUI-329's RQ-454 are R-555's.
+
+## R-557 — A Print graph field input takes the stain's window when the stain colours by the same field, else the field's own `range_norm` default; the print stage's time is recorded but never moves the Auto rung, and its post level is the arbiter's motion-regime lever, under Auto only; the human approves PR #268 with its follow-ups *(closes RQ-478, RQ-479 and RQ-495; amends R-488)*
+*21 Oct 2026 · applied in `docs/design/principia_print_graph.md` (the adoption note; § "3. What never changes because
+of it", a sentence; § "4.4 Payload fields as inputs", the note and the Read-only bullet, with their earlier words kept;
+§ "8.1 Degrade while moving", the note, step 2 and the playback sentence, with their earlier words kept; § "8.2 The
+budget", the note and the accounting sentence, with their earlier words kept; § "12. Open questions (for the review
+queue, not the agent to settle)", the note and question 3's premise, with their earlier words kept),
+`docs/design/principia_quality_device_note.md` § "3. The quality ladder", § "5. Timescale cascade (each layer absorbs
+what's too fast for the one above)" and § "10. Two sanctities: the user, and observability" (a sentence each),
+`docs/design/principia_dd_telemetry_and_tiers.md` § "2. What to record — and the rule that makes it useful" (the print
+stage's paragraph, a sentence), `docs/gui/principia_render_gui_spec.md` § "Profiler" (the print stage's paragraph, a
+sentence),
+`docs/read_first/principia_INDEX.md` § "Design documents — the reasoning" (a clause), R-488's and R-526's heading
+blocks, `docs/archive/review_queue/M0.md` (RQ-478, RQ-479 and RQ-495, moved with their rulings),
+`plan/rule_groups.yaml` and `plan/section_notes.yaml`; no requirement on `main` holds these entries: the Print graph
+plan PR's field-inputs, post-stage budget and degrade tasks, on an unmerged branch, write their requirements from this
+ruling*
+
+The human's words (21 Oct 2026), from the batch file `docs/incoming/2026-10-21_rulings/rulings_2026-10-21.md` (lines
+5–9, 131–134 and 148–149), which R-545 quotes in its opening. On PR #268:
+
+> PR #268: I have reviewed it and approve it. With these follow-ups:
+> - Merge main into it and resolve the four conflicts (REVIEW_QUEUE.md, plan/rule_groups.yaml, plan/section_notes.yaml, docs/read_first/principia_INDEX.md), re-run python3 plan/check_plan.py, the reviewers re-check, then it merges.
+> - print_graph §4.4 says Chart position is not a field input.
+> - My rulings on RQ-479 and RQ-495 below land before the print graph plan PR's budget and degrade tasks.
+> - The Print graph's "post" stage and "Source" category take qualified names, as my RQ-497 ruling says.
+
+And on the three entries PR #268's reviews queued:
+
+> - RQ-478 (which range a Print graph field input is normalised over): (c).
+>   > "A field input uses the stain's window for that field when the stain colours by the same field, `RANGE_AUTO` included. Otherwise it uses the field's own `range_norm` default: its ledger-declared range where it has one (`t_end` → lin [0, T]), measured over the draw where it has none. Relief of lifetime therefore does not rescale while zooming unless the stain's `t_end` is set to auto. §4.4's 'over the visible range' and §12 q3's premise are corrected to match."
+>
+> - RQ-479 (whether post-stage cost may move the Auto rung): (a).
+>   > "The post stage's time is recorded (`stage_ms.post`, `post_level`) but is excluded from the arbiter's rung solve. Only the Print graph's own degrade answers it: per-node motion policies, the whole-graph fallback, then Plain. A Print graph never moves N, E, depth, render_scale or FTLE gating. R-488's 'the tier controller's accounting includes it' and §8.2's 'not exempt' are amended to match. §8.1's playback sentence becomes: if full quality cannot hold the playback rate, the frame record says so, and nothing else changes."
+>
+> - RQ-495 (who owns the post level, and whether the fallback runs under a pinned tier): (a), worded as a motion-regime lever.
+>   > "The post level is the arbiter's, a motion-regime lever beside render_scale (quality note §5, 'Medium'). It is never part of the rung and is solved from the measured cost classes (§8.3), not from a per-frame reading. It runs only under Auto. Under a named tier or Custom the arbiter is off, and only the per-node motion policies (step 1) and settle (step 3) apply; the whole-graph fallback does not run. `post_level` is recorded in every case."
+
+**PR #268.** The human approves it with four follow-ups, and all four are done on `main`. Main was merged into it
+with the four conflicts resolved (10689a03, "Merge main into rulings/print-graph (human review of PR #268, 21 Oct)"),
+`python3 plan/check_plan.py` re-run and the reviewers' re-checks posted; it merged at 45caf8be. Follow-ups 2 and 4
+are commit 765fe6d0: print_graph §4.4's bullet "**Not Chart position.**" says Chart position is not a Print graph
+field input, and the Print graph's stage is the **print stage** (print_graph §8.1, §8.2, telemetry §2 and §5,
+render_gui_spec § "Profiler") and the lab's `source` category the **"Print source"** (print_graph §4.3), its
+frame-record keys staying `stage_ms.post`, `post` and `post_level` (applied per R-369 in that commit). The RQ-497
+ruling they follow is R-558's. Follow-up 3 is this ruling: the rulings on RQ-479 and RQ-495 land in the docs here,
+before the print graph plan PR's budget and degrade tasks, which are written on an unmerged branch and take them from
+this ruling. Nothing else is left to apply for the PR #268 section.
+
+**RQ-478** asked which range a Print graph field input is normalised over: R-526 ruled "the stain's normalisation",
+and print_graph §4.4 and §12 q3 read that as "over the visible range", rescaling while zooming, where the stain's
+`range_norm` keeps a declared range fixed (`t_end` → lin [0, T]) and measures only an unbounded field over the draw;
+and nothing said which range applies when the stain does not colour by that field. Its options: (a) each field's own
+`range_norm` rule; (b) the visible range for every field input; (c) the stain's window when the stain binds the same
+field, (a) otherwise. Option (a) was applied meanwhile.
+
+*What it decides:*
+- **Option (c).** A field input uses the stain's window for that field when the stain colours by the same field,
+  `RANGE_AUTO` included; otherwise the field's own `range_norm` default: its ledger-declared range where it has one,
+  measured over the draw where it has none.
+- **Relief of lifetime does not rescale while zooming** unless the stain's `t_end` is set to auto.
+- **§4.4's "over the visible range" and §12 q3's premise are corrected,** each with its earlier words kept. It settles
+  the range R-526 left to RQ-478; R-526's text stands, its heading block naming this ruling.
+
+*Where the words leave a choice, decided per R-369 (the normalisation under physics review, as R-526's; the routine
+placements):*
+- **A1. "The same field".** The stain colours by the same field when a node of the stain's backbone reads that field
+  through `range_norm` (render_gui_spec §10.1); the window shared is that node's, fixed or `RANGE_AUTO`, as its
+  inspector sets it. Where two stain nodes read the field with different windows, which one the input takes is the
+  field-inputs task's definition (R-72), written under physics review in print_graph §4.4; it invents no value.
+- **A2. Where it lands.** print_graph §4.4 carries the rule; §12's note and q3's premise follow. No requirement on
+  `main` holds RQ-478: the Print graph plan PR's field-inputs requirement takes it.
+
+**RQ-479** asked whether the print stage's cost may move the Auto rung: R-488 counts it in the tier controller's
+accounting, and the rung sets N, E, depth and FTLE gating, so a heavy Print graph would change what the instrument
+reports, against R-489 and print_graph §3. Its options (the physics review's): (a) the post stage's cost excluded from
+the arbiter's rung solve, only §8.1's own degrade answering it; (b) it counts only toward render-key rungs; (c) as
+written, §3 amended. Nothing was applied meanwhile.
+
+*What it decides:*
+- **Option (a).** The print stage's time is recorded (`stage_ms.post`, `post_level`) but excluded from the arbiter's
+  rung solve. Only the Print graph's own degrade answers it: per-node motion policies, the whole-graph fallback, then
+  Plain.
+- **A Print graph never moves N, E, depth, render_scale or FTLE gating.** print_graph §3 says so beside "A Print graph
+  cannot change any number the instrument reports".
+- **R-488's "the tier controller's accounting includes it" and §8.2's "not exempt" go,** each kept as *Was*; R-488's
+  heading block names this ruling.
+- **§8.1's playback sentence becomes:** "If full quality cannot hold the playback rate, the frame record says so, and
+  nothing else changes."
+
+**RQ-495** asked who owns the post level, R-488's whole-graph fallback that reads the measured post-stage time each
+frame, against the quality device note's one writer, model-based, with no per-frame setting change and the arbiter off
+under a named tier; and whether the fallback runs under a pinned tier. Its options: (a) the post level is one of the
+arbiter's levers, the fallback running only under Auto, model-based, never under a named tier or Custom; (b) the
+fallback part of the Print graph, outside the arbiter, under every tier; (c) (b) under Auto, and under a pinned tier
+only while moving and recorded. Nothing was applied meanwhile.
+
+*What it decides:*
+- **Option (a), worded as a motion-regime lever.** The post level is the arbiter's, a lever of the motion regime
+  beside render_scale (the quality device note §5, "Medium"). It is never part of the rung, and it is solved from the
+  measured cost classes (print_graph §8.3), not from a per-frame reading.
+- **It runs only under Auto.** Under a named tier or Custom the arbiter is off, and only the per-node motion policies
+  (§8.1 step 1) and settle (step 3) apply; the whole-graph fallback (step 2) does not run.
+- **`post_level` is recorded in every case,** Auto, named tier or Custom.
+
+*Where the words leave a choice, decided per R-369 (routine and mechanical):*
+- **B1. RQ-479 and RQ-495 together.** RQ-479's "Only the Print graph's own degrade answers it: …, the whole-graph
+  fallback, then Plain" and RQ-495's "The post level is the arbiter's" are read as one rule: the arbiter writes the
+  post level (the fallback's level) under Auto, and the rung's solve never reads the print stage's time. The quality
+  device note's one writer holds (§1): the post level has one writer, the arbiter, and under a named tier or Custom no
+  writer, the level then set only by the per-node policies and settle. No clash is queued.
+- **B2. Step 2's words.** print_graph §8.1 step 2 now reads "Under Auto only, where the print stage's cost would exceed
+  its share of the frame budget, the whole graph drops a level: reduced, then Plain", the level the arbiter's, from the
+  measured cost classes; the print stage's share of the budget stays R-488's calibration (R-71), which the plan PR
+  names.
+- **B3. The quality device note.** §3 says the print stage is excluded from the rung solve and its post level never
+  part of the rung; §5's Medium layer names the post level beside render_scale; §10 says the fallback does not run
+  with the arbiter off, `post_level` still recorded. telemetry §2 and render_gui_spec § "Profiler" say the same in a
+  sentence each. The benchmark's swept rows run with the arbiter off (R-495), so under this ruling the fallback does not
+  run there; benchmark §8's "uses its policy, not a measured budget" agrees and is unchanged.
+- **B4. No requirement on `main`** holds RQ-479 or RQ-495; the Print graph plan PR's post-stage budget and degrade
+  requirements take them.
+
+*What it amends:* **R-488** (P4's "the tier controller's accounting includes it", and the whole-graph fallback's owner
+and reach: under Auto only, as the arbiter's post level). Read with R-489 (P5, unchanged, now explicit for the cost
+loop) and R-526 (its open range, settled). It closes **RQ-478**, **RQ-479** and **RQ-495**.
+
+R-557 is in the "design" group of `plan/rule_groups.yaml`, with R-488 (RQ-478's part physics-reviewed, as R-526 is).
+
+Changes no requirement on `main`: none holds these entries, and the Print graph's requirements are the plan PR's.
+`plan/section_notes.yaml` gains this heading, "planned (the plan PR)", as R-524 to R-536 have.
